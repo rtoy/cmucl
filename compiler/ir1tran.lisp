@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.142 2003/04/08 12:16:57 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.143 2003/04/11 14:24:21 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,6 +121,26 @@
   DEFUNs is used when compiling calls to that function.  If false, only
   information from FTYPE proclamations will be used.")
 
+
+;; returns non-nil if X and Y name the same function. This is more
+;; involved than a simple call to EQ due to support for generalized
+;; function names. In the IR1 representation, the local function INNER
+;; in the following
+;;
+;;   (defun outer (a)
+;;      (flet ((inner (x) (random x)))
+;;         (declaim (inline inner))
+;;         (inner a)))
+;;
+;; will have a lambda-name of (FLET INNER OUTER). Some parts of the
+;; compiler may search for it under the name INNER. 
+(defun function-name-eqv-p (x y)
+  (or (equal x y)
+      (and (consp y)
+           (member (car y) '(flet labels))
+           (equal x (cadr y)))))
+
+
 
 ;;;; Namespace management utilities:
 
@@ -131,14 +151,14 @@
 ;;;    Return a Global-Var structure usable for referencing the global function
 ;;; Name.
 ;;;
-(defun find-free-really-function (name)
+(defun find-free-really-function (name &optional context)
   (unless (info function kind name)
     (setf (info function kind name) :function)
     (setf (info function where-from name) :assumed))
   
   (let ((where (info function where-from name)))
     (when (eq where :assumed)
-      (note-undefined-reference name :function))
+      (note-undefined-reference name :function context))
     (make-global-var :kind :global-function  :name name
 		     :type (if (or *derive-function-types*
 				   (eq where :declared))
@@ -206,7 +226,7 @@
 		     (let ((info (info function accessor-for name)))
 		       (etypecase info
 			 (null
-			  (find-free-really-function name))
+			  (find-free-really-function name context))
 			 (kernel::structure-class
 			  (find-structure-slot-accessor info name))
 			 (class
@@ -214,8 +234,8 @@
 							(%class-name info)))
 				     'defstruct-description)
 			      (find-structure-slot-accessor info name)
-			      (find-free-really-function name))))))))))))
-			  
+			      (find-free-really-function name context))))))))))))
+
 
 ;;; Find-Lexically-Apparent-Function  --  Internal
 ;;;
@@ -952,7 +972,7 @@
   (let ((type (specifier-type spec)))
     (collect ((res nil cons))
       (dolist (name names)
-	(let ((found (find name fvars :key #'leaf-name :test #'equal)))
+	(let ((found (find name fvars :key #'leaf-name :test #'function-name-eqv-p)))
 	  (cond
 	   (found
 	    (setf (leaf-type found) type)
@@ -1031,7 +1051,7 @@
   (let ((sense (cdr (assoc (first spec) inlinep-translations :test #'eq)))
 	(new-fenv ()))
     (dolist (name (rest spec))
-      (let ((fvar (find name fvars :key #'leaf-name :test #'equal)))
+      (let ((fvar (find name fvars :key #'leaf-name :test #'function-name-eqv-p)))
 	(if fvar
 	    (setf (functional-inlinep fvar) sense)
 	    (let ((found
@@ -1065,17 +1085,13 @@
 			  name))
 	(find fn-name fvars
 	      :key #'leaf-name
-	      :test (lambda (x y)
-		       (or (equal x y)
-			   (and (consp y)
-				(member (car y) '(flet labels))
-				(equal x (cadr y)))))))
+	      :test #'function-name-eqv-p))
       (find-in-bindings vars name)))
 
 
 ;;; PROCESS-IGNORE-DECLARATION  --  Internal
 ;;;
-;;;    Process an ignore/ignorable declaration, checking for variious losing
+;;;    Process an ignore/ignorable declaration, checking for various losing
 ;;; conditions.
 ;;;
 (defun process-ignore-declaration (spec vars fvars)
@@ -2342,6 +2358,8 @@
 
 ;;; Not really a special form, but...
 ;;;
+;;; emarsden2003-04-09 should get rid of this, since it causes
+;;; (special-operator-p 'declare) to be true
 (def-ir1-translator declare ((&rest stuff) start cont)
   (declare (ignore stuff))
   start cont; Ignore hack
@@ -3495,6 +3513,7 @@
 	  ((dolist (x functions nil)
 	     (let ((name (car x))
 		   (what (cdr x)))
+               ;; emarsden2003-04-09 change to #'FUNCTION-NAME-EQV-P ?
 	       (when (eq x (assoc name functions :test #'equal))
 		 (typecase what
 		   (cons

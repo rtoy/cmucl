@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.90 2003/03/24 21:41:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.91 2003/04/11 14:24:21 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2078,14 +2078,14 @@
 ;;; which can potentially be invoked outside the compiler, hence the BOUNDP
 ;;; check.
 ;;;
-(defun note-undefined-reference (name kind)
+(defun note-undefined-reference (name kind &optional context)
   (unless (and (boundp '*lexical-environment*) (policy nil (= brevity 3)))
     (let* ((found (dolist (warn *undefined-warnings* nil)
 		    (when (and (equal (undefined-warning-name warn) name)
 			       (eq (undefined-warning-kind warn) kind))
 		      (return warn))))
 	   (res (or found
-		    (make-undefined-warning :name name :kind kind))))
+		    (make-undefined-warning :name name :kind kind :context context))))
       (unless found (push res *undefined-warnings*))
       (when (or (not *undefined-warning-limit*)
 		(< (undefined-warning-count res) *undefined-warning-limit*))

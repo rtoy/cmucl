@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.133 2003/03/31 11:13:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.134 2003/04/11 14:24:22 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -566,10 +566,11 @@
 	  (dolist (undef undefs)
 	    (let ((name (undefined-warning-name undef))
 		  (kind (undefined-warning-kind undef))
+                  (context (undefined-warning-context undef))
 		  (warnings (undefined-warning-warnings undef))
 		  (count (undefined-warning-count undef)))
 	      (dolist (*compiler-error-context* warnings)
-		(compiler-warning "Undefined ~(~A~): ~S" kind name))
+		(compiler-warning "Undefined ~(~A~) ~S~@[ ~A~]" kind name context))
 	      
 	      (let ((warn-count (length warnings)))
 		(when (and warnings (> count warn-count))

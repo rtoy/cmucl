@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.38 2003/03/22 16:15:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.39 2003/04/11 14:24:22 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1329,6 +1329,10 @@
   ;;
   ;; The kind of reference to Name.
   (kind (required-argument) :type (member :function :type :variable))
+
+  ;;
+  ;; The context within which the warning occurred. 
+  (context nil :type (or null string))
   ;;
   ;; The number of times this thing was used.
   (count 0 :type unsigned-byte)
