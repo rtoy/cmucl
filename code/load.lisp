@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.18 1990/11/21 10:08:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.19 1990/11/24 08:41:46 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -576,11 +576,11 @@
     (%make-complex (pop-stack) im)))
 
 (define-fop (fop-single-float 46)
-  (vm:make-single-float (load-s-integer 4)))
+  (make-single-float (load-s-integer 4)))
 
 (define-fop (fop-double-float 47)
   (let ((lo (ldb (byte 32 0) (load-s-integer 4))))
-    (vm:make-double-float (load-s-integer 4) lo)))
+    (make-double-float (load-s-integer 4) lo)))
 
 
 ;;;; Loading lists:
