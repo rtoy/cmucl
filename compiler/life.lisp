@@ -123,8 +123,7 @@
 	  (let* ((tn (tn-ref-tn ref))
 		 (local (tn-local tn))
 		 (kind (tn-kind tn)))
-	    (unless (or (eq kind :constant)
-			(eq kind :environment))
+	    (when (eq kind :normal)
 	      (unless (eq local block)
 		(when (= ltn-num local-tn-limit)
 		  (return-from find-local-references vop))
@@ -497,34 +496,34 @@
 
 ;;; Convert-To-Environment-TN  --  Internal
 ;;;
-;;;    If TN isn't already a :Environment TN, then make it into one.  This
-;;; requires deleting the existing conflict info.
+;;;    Convert a :Normal TN to an :Environment TN.  This requires deleting the
+;;; existing conflict info.
 ;;;
 (defun convert-to-environment-tn (tn)
   (declare (type tn tn))
-  (ecase (tn-kind tn)
-    (:environment)
-    (:normal
-     (let ((confs (tn-global-conflicts tn)))
-       (if confs
-	   (do ((conf confs (global-conflicts-tn-next conf)))
-	       ((null conf))
-	     (let ((block (global-conflicts-block conf)))
-	       (unless (eq (global-conflicts-kind conf) :live)
-		 (let ((ltns (ir2-block-local-tns block))
-		       (num (global-conflicts-number conf)))
-		   (assert (not (eq (svref ltns num) :more)))
-		   (setf (svref ltns num) nil)))
-	       (deletef-in global-conflicts-next (ir2-block-global-tns block)
-			   conf)))
-	   (setf (svref (ir2-block-local-tns (tn-local tn))
-			(tn-local-number tn))
-		 nil))
-       (setf (tn-local tn) nil)
-       (setf (tn-local-number tn) nil)
-       (setf (tn-global-conflicts tn) nil)
-       (setf (tn-kind tn) :environment)
-       (push tn (ir2-environment-live-tns (tn-environment tn))))))
+  (assert (eq (tn-kind tn) :normal))
+  (let ((confs (tn-global-conflicts tn)))
+    (if confs
+	(do ((conf confs (global-conflicts-tn-next conf)))
+	    ((null conf))
+	  (let ((block (global-conflicts-block conf)))
+	    (unless (eq (global-conflicts-kind conf) :live)
+	      (let ((ltns (ir2-block-local-tns block))
+		    (num (global-conflicts-number conf)))
+		(assert (not (eq (svref ltns num) :more)))
+		(setf (svref ltns num) nil)))
+	    (deletef-in global-conflicts-next (ir2-block-global-tns block)
+			conf)))
+	(setf (svref (ir2-block-local-tns (tn-local tn))
+		     (tn-local-number tn))
+	      nil))
+    (setf (tn-local tn) nil)
+    (setf (tn-local-number tn) nil)
+    (setf (tn-global-conflicts tn) nil)
+    (setf (tn-kind tn) :environment)
+    (push tn (ir2-environment-live-tns
+	      (environment-info
+	       (tn-environment tn)))))
   (undefined-value))
 
 
@@ -558,7 +557,7 @@
       (let ((tn (tn-ref-tn r)))
 	(ecase (tn-kind tn)
 	  (:normal (setf (sbit live (tn-local-number tn)) 0))
-	  (:environment))))
+	  (:environment :component))))
     live))
 
 
@@ -643,8 +642,9 @@
 	      (setf (vop-save-set vop) ss)
 	      (when (eq save-p :force-to-stack)
 		(do-live-tns (tn ss block)
-		  (force-tn-to-stack tn)
-		  (convert-to-environment-tn tn))))))
+		  (when (eq (tn-kind tn) :normal)
+		    (force-tn-to-stack tn)
+		    (convert-to-environment-tn tn)))))))
 	
 	(do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
 	    ((null ref))
@@ -756,10 +756,9 @@
     (do ((conf (tn-global-conflicts y) (global-conflicts-tn-next conf)))
 	((null conf)
 	 nil)
-      (when (eq (environment-info
-		 (lambda-environment
-		  (block-lambda
-		   (ir2-block-block (global-conflicts-block conf)))))
+      (when (eq (lambda-environment
+		 (block-lambda
+		  (ir2-block-block (global-conflicts-block conf))))
 		env)
 	(return t)))))
 
@@ -770,37 +769,41 @@
 ;;;
 (defun tns-conflict-environment-local (x y)
   (declare (type tn x y))
-  (eq (environment-info
-       (lambda-environment
-	(block-lambda
-	 (ir2-block-block (tn-local y)))))
+  (eq (lambda-environment
+       (block-lambda
+	(ir2-block-block (tn-local y))))
       (tn-environment x)))
 
 
 ;;; TNs-Conflict  --  Interface
 ;;;
-;;;    Return true if the lifetimes of X and Y overlap at any point.
+;;;    Return true if X and Y are distinct and the lifetimes of X and Y overlap
+;;; at any point.
 ;;;
 (defun tns-conflict (x y)
   (declare (type tn x y))
-  (cond ((eq (tn-kind x) :environment)
-	 (cond ((tn-global-conflicts y)
-		(tns-conflict-environment-global x y))
-	       ((eq (tn-kind y) :environment)
-		(eq (tn-environment x) (tn-environment y)))
-	       (t
-		(tns-conflict-environment-local x y))))
-	((eq (tn-kind y) :environment)
-	 (if (tn-global-conflicts x)
-	     (tns-conflict-environment-global y x)
-	     (tns-conflict-environment-local y x)))
-	((tn-global-conflicts x)
-	 (if (tn-global-conflicts y)
-	     (tns-conflict-global-global x y)
-	     (tns-conflict-local-global y x)))
-	((tn-global-conflicts y)
-	 (tns-conflict-local-global x y))
-	(t
-	 (and (eq (tn-local x) (tn-local y))
-	      (not (zerop (sbit (tn-local-conflicts x)
-				(tn-local-number y))))))))
+  (let ((x-kind (tn-kind x))
+	(y-kind (tn-kind y)))
+    (cond ((eq x y) nil)
+	  ((eq x-kind :environment)
+	   (cond ((tn-global-conflicts y)
+		  (tns-conflict-environment-global x y))
+		 ((eq (tn-kind y) :environment)
+		  (eq (tn-environment x) (tn-environment y)))
+		 (t
+		  (tns-conflict-environment-local x y))))
+	  ((eq y-kind :environment)
+	   (if (tn-global-conflicts x)
+	       (tns-conflict-environment-global y x)
+	       (tns-conflict-environment-local y x)))
+	  ((or (eq x-kind :component) (eq y-kind :component)) t)
+	  ((tn-global-conflicts x)
+	   (if (tn-global-conflicts y)
+	       (tns-conflict-global-global x y)
+	       (tns-conflict-local-global y x)))
+	  ((tn-global-conflicts y)
+	   (tns-conflict-local-global x y))
+	  (t
+	   (and (eq (tn-local x) (tn-local y))
+		(not (zerop (sbit (tn-local-conflicts x)
+				  (tn-local-number y)))))))))
