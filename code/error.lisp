@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.51 1998/07/19 01:13:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.52 1998/08/14 07:16:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,8 +19,8 @@
 (use-package "KERNEL")
 
 (in-package "KERNEL")
-(export '(layout-invalid simple-style-warning condition-function-name
-			 simple-program-error simple-file-error))
+(export '(layout-invalid condition-function-name simple-control-error
+	  simple-file-error simple-program-error simple-style-warning))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -193,7 +193,7 @@
    non-nil restart name, then a control-error is signalled."
   (let ((real-restart (find-restart restart)))
     (unless real-restart
-      (error 'control-error
+      (error 'simple-control-error
 	     :format-control "Restart ~S is not active."
 	     :format-arguments (list restart)))
     (apply (restart-function real-restart) values)))
@@ -204,7 +204,7 @@
    currently active non-nil restart name, then a control-error is signalled."
   (let ((real-restart (find-restart restart)))
     (unless real-restart
-      (error 'control-error
+      (error 'simple-control-error
 	     :format-control "Restart ~S is not active."
 	     :format-arguments (list restart)))
     (apply (restart-function real-restart)
@@ -906,8 +906,9 @@
   ((pathname :reader file-error-pathname :initarg :pathname)))
 
 ;;; INTERNAL
-(define-condition simple-file-error   (simple-condition file-error)())
-(define-condition simple-program-error(simple-condition program-error)())
+(define-condition simple-file-error    (simple-condition file-error)())
+(define-condition simple-program-error (simple-condition program-error)())
+(define-condition simple-control-error (simple-condition control-error)())
 
 (define-condition package-error (error)
   ((package :reader package-error-package :initarg :package)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.34 1998/07/24 17:17:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.35 1998/08/14 07:16:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -259,19 +259,19 @@
 	 :expected-type 'system-area-pointer))
 
 (deferr invalid-unwind-error ()
-  (error 'control-error
+  (error 'simple-control-error
 	 :function-name name
 	 :format-control
 	 "Attempt to RETURN-FROM a block or GO to a tag that no longer exists"))
 
 (deferr unseen-throw-tag-error (tag)
-  (error 'control-error
+  (error 'simple-control-error
 	 :function-name name
 	 :format-control "Attempt to THROW to a tag that does not exist: ~S"
 	 :format-arguments (list tag)))
 
 (deferr nil-function-returned-error (function)
-  (error 'control-error
+  (error 'simple-control-error
 	 :function-name name
 	 :format-control
 	 "Function with declared result type NIL returned:~%  ~S"
