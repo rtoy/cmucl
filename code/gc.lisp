@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.31 2003/01/06 15:10:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.32 2003/01/28 02:49:15 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,8 +20,7 @@
 	  *bytes-consed-between-gcs* *gc-verbose* *gc-inhibit-hook*
 	  *gc-notify-before* *gc-notify-after* get-bytes-consed
 	  *gc-run-time* bytes-consed-between-gcs
-	  get-bytes-consed-integer get-bytes-consed-single-float
-	  get-bytes-consed-dfixnum get-bytes-consed-new))
+	  get-bytes-consed-dfixnum))
 
 (in-package "LISP")
 (export '(room))
