@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.6 1992/08/14 01:34:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.7 1993/07/22 12:42:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,33 +224,37 @@
   SPLICING indicates whether a comma-escape return should be modified for
   splicing with other forms: a value of T or :NCONC meaning that an extra
   level of parentheses should be added."
-  (if (atom form)
-      (backq-unparse-expr form splicing)
-      (case (car form)
-	(backq-list
-	 (mapcar #'backq-unparse (cdr form)))
-	(backq-list*
-	 (do ((tail (cdr form) (cdr tail))
-	      (accum nil))
-	     ((null (cdr tail))
-	      (nconc (nreverse accum)
-		     (backq-unparse (car tail) t)))
-	   (push (backq-unparse (car tail)) accum)))
-	(backq-append
-	 (mapcan #'(lambda (el) (backq-unparse el t))
-		 (cdr form)))
-	(backq-nconc
-	 (mapcan #'(lambda (el) (backq-unparse el :nconc))
-		 (cdr form)))
-	(backq-cons
-	 (cons (backq-unparse (cadr form) nil)
-	       (backq-unparse (caddr form) t)))
-	(backq-vector
-	 (coerce (backq-unparse (cadr form)) 'vector))
-	(quote
-	 (cadr form))
-	(t
-	 (backq-unparse-expr form splicing)))))
+  (cond
+   ((atom form)
+    (backq-unparse-expr form splicing))
+   ((not (null (cdr (last form))))
+    "### illegal dotted backquote form ###")
+   (t
+    (case (car form)
+      (backq-list
+       (mapcar #'backq-unparse (cdr form)))
+      (backq-list*
+       (do ((tail (cdr form) (cdr tail))
+	    (accum nil))
+	   ((null (cdr tail))
+	    (nconc (nreverse accum)
+		   (backq-unparse (car tail) t)))
+	 (push (backq-unparse (car tail)) accum)))
+      (backq-append
+       (mapcan #'(lambda (el) (backq-unparse el t))
+	       (cdr form)))
+      (backq-nconc
+       (mapcan #'(lambda (el) (backq-unparse el :nconc))
+	       (cdr form)))
+      (backq-cons
+       (cons (backq-unparse (cadr form) nil)
+	     (backq-unparse (caddr form) t)))
+      (backq-vector
+       (coerce (backq-unparse (cadr form)) 'vector))
+      (quote
+       (cadr form))
+      (t
+       (backq-unparse-expr form splicing))))))
 
 (defun pprint-backquote (stream form &rest noise)
   (declare (ignore noise))
