@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.5 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.6 1995/12/14 18:11:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.5 1994/10/31 04:46:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.6 1995/12/14 18:11:28 ram Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -182,11 +182,7 @@
     (let ((done (gen-label)))
       (inst andcc temp x 3)
       (inst b :eq done)
-      (sc-case y
-	(signed-reg
-	 (inst sra y x 2))
-	(unsigned-reg
-	 (inst srl y x 2)))
+      (inst sra y x 2)
       
       (loadw y x bignum-digits-offset other-pointer-type)
       
