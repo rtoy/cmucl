@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.3 1994/03/27 16:41:13 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.4 1994/06/10 20:34:10 hallgren Exp $ */
 #include <machine/regdef.h>
 #include <machine/pal.h>
 
@@ -248,4 +248,37 @@ closure_tramp_offset:
 	.text
 	.globl	end_of_tramps
 end_of_tramps:
+
+
+/*
+ * Function-end breakpoint magic.
+ */
+
+	.text
+	.align	2
+	.set	noreorder
+	.globl	function_end_breakpoint_guts
+function_end_breakpoint_guts:
+	.word	type_ReturnPcHeader
+	br	zero, function_end_breakpoint_trap
+	nop
+	mov	reg_CSP, reg_OCFP
+	addl	reg_CSP, 4, reg_CSP
+	addl	zero, 4, reg_NARGS
+	mov	reg_NULL, reg_A1
+	mov	reg_NULL, reg_A2
+	mov	reg_NULL, reg_A3
+	mov	reg_NULL, reg_A4
+	mov	reg_NULL, reg_A5
+1:
+
+	.globl	function_end_breakpoint_trap
+function_end_breakpoint_trap:
+	call_pal PAL_gentrap
+	.long	trap_FunctionEndBreakpoint
+	br	zero, function_end_breakpoint_trap
+
+	.globl	function_end_breakpoint_end
+function_end_breakpoint_end:
+
 

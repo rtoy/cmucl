@@ -15,6 +15,8 @@
 
 extern char call_into_lisp_LRA[], call_into_lisp_end[];
 
+#define BREAKPOINT_INST 0
+
 char *arch_init(void)
 {
   if(mmap((os_vm_address_t) call_into_lisp_LRA_page,OS_VM_DEFAULT_PAGESIZE,
@@ -22,7 +24,8 @@ char *arch_init(void)
      == (os_vm_address_t) -1)
     perror("mmap");
   bcopy(call_into_lisp_LRA,call_into_lisp_LRA_page,OS_VM_DEFAULT_PAGESIZE);
-  os_flush_icache(call_into_lisp_LRA_page,OS_VM_DEFAULT_PAGESIZE);
+  os_flush_icache((os_vm_address_t)call_into_lisp_LRA_page,
+		  OS_VM_DEFAULT_PAGESIZE);
   return NULL;
 }
 
@@ -42,12 +45,13 @@ os_vm_address_t arch_get_bad_addr(int sig, int code, struct sigcontext *scp)
 
   if((badinst>>27)!=0x16) return NULL;
 
-  return scp->sc_regs[(badinst>>16)&0x1f] + (badinst&0xffff);
+  return (os_vm_address_t)(scp->sc_regs[(badinst>>16)&0x1f]+(badinst&0xffff));
 }
 
 void arch_skip_instruction(scp)
 struct sigcontext *scp;
 {
+  scp->sc_pc=+4;
 }
 
 unsigned char *arch_internal_error_arguments(struct sigcontext *scp)
@@ -69,19 +73,129 @@ void arch_set_pseudo_atomic_interrupted(struct sigcontext *scp)
 
 unsigned long arch_install_breakpoint(void *pc)
 {
+  unsigned int *ptr = (unsigned int *)pc;
+  unsigned long result = (unsigned long) *ptr;
+  *ptr = BREAKPOINT_INST;
+  
+  os_flush_icache((os_vm_address_t)ptr, sizeof(unsigned long));
+
+  return result;
 }
 
 void arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
+  unsigned int *ptr=(unsigned int)pc;
+  *ptr = orig_inst;
+  os_flush_icache((os_vm_address_t)pc, sizeof(unsigned long));
 }
 
-static unsigned long *skipped_break_addr, displaced_after_inst;
+static unsigned int *skipped_break_addr, displaced_after_inst,
+     after_breakpoint;
 static int orig_sigmask;
+
+unsigned int
+emulate_branch(struct sigcontext *scp,unsigned long orig_inst)
+{
+  int op = orig_inst >> 26;
+  int reg_a = (orig_inst >> 21) & 0x1f;
+  int reg_b = (orig_inst >> 16) & 0x1f;
+  int fn = orig_inst & 0xffff;
+  int disp = (orig_inst&(1<<20)) ? orig_inst | (-1 << 21) : orig_inst&0x1fffff;
+  int next_pc = scp->sc_pc;
+  int branch = NULL;	      
+
+  switch(op) {
+  case 0x1a: /* jmp, jsr, jsr_coroutine, ret */
+    scp->sc_regs[reg_a]=scp->sc_pc;
+    scp->sc_pc=scp->sc_regs[reg_b]& ~3;
+    break;
+  case 0x30: /* br */
+    scp->sc_regs[reg_a]=scp->sc_pc;
+    branch = 1;
+    break;
+  case 0x31: /* fbeq */
+    if(scp->sc_fpregs[reg_a]==0) branch = 1;
+    break;
+  case 0x32: /* fblt */
+    if(scp->sc_fpregs[reg_a]<0) branch = 1;
+    break;
+  case 0x33: /* fble */
+    if(scp->sc_fpregs[reg_a]<=0) branch = 1;
+    break;
+  case 0x34: /* bsr */
+    scp->sc_regs[reg_a]=scp->sc_pc;
+    branch = 1;
+    break;
+  case 0x35: /* fbne */
+    if(scp->sc_regs[reg_a]!=0) branch = 1;
+    break;
+  case 0x36: /* fbge */
+    if(scp->sc_fpregs[reg_a]>=0) branch = 1;
+    break;
+  case 0x37: /* fbgt */
+    if(scp->sc_fpregs[reg_a]>0) branch = 1;
+    break;
+  case 0x38: /* blbc */
+    if((scp->sc_regs[reg_a]&1) == 0) branch = 1;
+    break;
+  case 0x39: /* beq */
+    if(scp->sc_regs[reg_a]==0) branch = 1;
+    break;
+  case 0x3a: /* blt */
+    if(scp->sc_regs[reg_a]<0) branch = 1;
+    break;
+  case 0x3b: /* ble */
+    if(scp->sc_regs[reg_a]<=0) branch = 1;
+    break;
+  case 0x3c: /* blbs */
+    if((scp->sc_regs[reg_a]&1)!=0) branch = 1;
+    break;
+  case 0x3d: /* bne */
+    if(scp->sc_regs[reg_a]!=0) branch = 1;
+    break;
+  case 0x3e: /* bge */
+    if(scp->sc_regs[reg_a]>=0) branch = 1;
+    break;
+  case 0x3f: /* bgt */
+    if(scp->sc_regs[reg_a]>0) branch = 1;
+    break;
+  }
+  if(branch) next_pc += disp*4;
+  return next_pc;
+}
 
 void arch_do_displaced_inst(struct sigcontext *scp,
 				   unsigned long orig_inst)
 {
+  unsigned int *pc=scp->sc_pc;
+  unsigned int *next_pc;
+  unsigned int next_inst;
+  int op = orig_inst >> 26;;
+  
+  orig_sigmask = scp->sc_mask;
+  scp->sc_mask = BLOCKABLE;
+
+  /* Figure out where the displaced inst is going */
+  if(op == 0x1a || op&0xf == 0x30) /* branch...ugh */
+    next_pc = (unsigned int *)emulate_branch(scp,orig_inst);
+  else
+    next_pc = pc+1;
+
+  /* Put the original instruction back. */
+  *pc = orig_inst;
+  os_flush_icache((os_vm_address_t)pc, sizeof(unsigned long));
+  skipped_break_addr = pc;
+
+  /* set the after breakpoint */
+  displaced_after_inst = *next_pc;
+  *next_pc = BREAKPOINT_INST;
+  after_breakpoint=1;
+  os_flush_icache((os_vm_address_t)next_pc, sizeof(unsigned long));
+
+  sigreturn(scp);
 }
+
+#define AfterBreakpoint 100
 
 static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 {
@@ -89,7 +203,10 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
     /* use debugger breakpoints anywhere in here. */
     sigsetmask(scp->sc_mask);
 
-    code=*(u32 *)(scp->sc_pc);
+    if( *(unsigned int*)(scp->sc_pc-4) == BREAKPOINT_INST) {
+      if(after_breakpoint) code = AfterBreakpoint;
+      else code = trap_Breakpoint;
+    } else code=*(u32 *)scp->sc_pc;
 
     switch (code) {
       case trap_PendingInterrupt:
@@ -107,23 +224,27 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 	break;
 
       case trap_Breakpoint:
+        scp->sc_pc -=4;
 	handle_breakpoint(signal, code, scp);
 	break;
 
       case trap_FunctionEndBreakpoint:
+        scp->sc_pc -=4;
 	scp->sc_pc = (int)handle_function_end_breakpoint(signal, code, scp);
 	break;
-/*
-      case trap_AfterBreakpoint:
-	*skipped_break_addr = (trap_Breakpoint << 16) | 0xd;
+
+      case AfterBreakpoint:
+        scp->sc_pc -=4;
+	*skipped_break_addr = BREAKPOINT_INST;
 	os_flush_icache((os_vm_address_t)skipped_break_addr,
 			sizeof(unsigned long));
 	skipped_break_addr = NULL;
-	*(unsigned long *)scp->sc_pc = displaced_after_inst;
+	*(unsigned int *)scp->sc_pc = displaced_after_inst;
 	os_flush_icache((os_vm_address_t)scp->sc_pc, sizeof(unsigned long));
 	scp->sc_mask = orig_sigmask;
+        after_breakpoint=NULL;
 	break;
-*/
+
       default:
 	interrupt_handle_now(signal, code, scp);
 	break;
