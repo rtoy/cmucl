@@ -772,7 +772,8 @@
 	     (or (eq (sb-kind target-sb) :unbounded)
 		 (member loc (sc-locations sc)))
 	     (= (sc-element-size target-sc) (sc-element-size sc))
-	     (not (conflicts-in-sc tn sc loc)))
+	     (not (conflicts-in-sc tn sc loc))
+	     (zerop (mod loc (sc-alignment sc))))
 	loc
 	nil)))
 
@@ -840,9 +841,10 @@
   (declare (type tn tn) (type sc sc) (inline member))
   (let* ((sb (sc-sb sc))
 	 (element-size (sc-element-size sc))
+	 (alignment (sc-alignment sc))
 	 (size (finite-sb-current-size sb))
 	 (start-offset (finite-sb-last-offset sb)))
-    (let ((current-start start-offset)
+    (let ((current-start (* (ceiling start-offset alignment) alignment))
 	  (wrap-p nil))
       (declare (type index current-start))
       (loop
@@ -859,9 +861,10 @@
 			(return-from select-location current-start))
 	      (let ((offset (+ current-start i)))
 		(when (offset-conflicts-in-sb tn sb offset)
-		  (setq current-start (1+ offset))
+		  (setq current-start
+			(* (ceiling (1+ offset) alignment) alignment))
 		  (return))))
-	    (incf current-start))))))
+	    (incf current-start alignment))))))
 
 
 ;;;; Load TN packing:
