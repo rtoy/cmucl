@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.7 1997/12/28 04:33:01 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.8 1997/12/29 03:11:31 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -572,6 +572,43 @@
   (values))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Double-float timing functions for use by the scheduler.
+
+;;; The timing functions use double-floats here for accuracy. In most
+;;; cases consing is avoided.
+
+;;; Get-Real-Time
+;;;
+(declaim (inline get-real-time))
+;;;
+(defun get-real-time ()
+  "Return the real time in seconds."
+  (declare (optimize (speed 3) (safety 0)))
+  (multiple-value-bind (ignore seconds useconds)
+      (unix:unix-gettimeofday)
+    (declare (ignore ignore)
+	     (type (unsigned-byte 32) seconds useconds))
+    (+ (coerce seconds 'double-float)
+       (* (coerce useconds 'double-float) 1d-6))))
+
+;;; Get-Run-Time
+;;;
+(declaim (inline get-run-time))
+;;;
+(defun get-run-time ()
+  "Return the run time in secondes"
+  (declare (optimize (speed 3) (safety 0)))
+  (multiple-value-bind (ignore utime-sec utime-usec stime-sec stime-usec)
+      (unix:unix-fast-getrusage unix:rusage_self)
+    (declare (ignore ignore)
+	     (type (unsigned-byte 31) utime-sec stime-sec)
+	     (type (mod 1000000) utime-usec stime-usec))
+    (+ (coerce utime-sec 'double-float) (coerce stime-sec 'double-float)
+       (* (+ (coerce utime-usec 'double-float)
+	     (coerce stime-usec 'double-float))
+	  1d-6))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Multi-process support. The interface is based roughly on the
 ;;;; CLIM-SYS spec. and support needed for cl-http.
 
@@ -595,7 +632,16 @@
   (wait-timeout nil :type (or null fixnum))
   (wait-return-value nil :type t)
   (interrupts '() :type list)
-  (stack-group nil :type (or null stack-group)))
+  (stack-group nil :type (or null stack-group))
+  ;;
+  ;; The real and run times when the current process was last
+  ;; scheduled or yielded.
+  (scheduled-real-time (get-real-time) :type double-float)
+  (scheduled-run-time (get-run-time) :type double-float)
+  ;;
+  ;; Accrued real and run times in seconds.
+  (%real-time 0d0 :type double-float)
+  (%run-time 0d0 :type double-float))
 
 (defun process-whostate (process)
   (cond ((eq (process-state process) :killed)
@@ -631,11 +677,6 @@
   "Return a list of all the live processes."
   *all-processes*)
 
-(defun show-processes ()
-  (dolist (process *all-processes*)
-    (format t "~s ~s ~a~%" process (process-whostate process) 
-	    (process-state process))))
-
 (declaim (type (or null process) *intial-process*))
 (defvar *initial-process* nil)
 
@@ -668,7 +709,7 @@
     (pop ,place)))
 
 
-;;; Make-process
+;;; Make-Process
 ;;;
 (defun make-process (function &key (name "Anonymous"))
   (declare (type (or null function) function))
@@ -843,8 +884,30 @@
    (sys:serve-all-events *idle-loop-timeout*)
    (process-yield)))
 
-;;; Scheduler.
+;;; Update the processes times for the current and new processes at a
+;;; scheduling process switch.
+;;;
+(defun update-process-timers (current-process new-process)
+  (declare (type process current-process new-process)
+	   (optimize (speed 3) (safety 0)))
+  (let ((real-time (get-real-time)))
+    (incf (process-%real-time current-process)
+	  (- real-time (process-scheduled-real-time current-process)))
+    (setf (process-scheduled-real-time current-process) real-time)
+    (setf (process-scheduled-real-time new-process) real-time))
+  (let ((run-time (get-run-time)))
+    (incf (process-%run-time current-process)
+	  (- run-time (process-scheduled-run-time current-process)))
+    (setf (process-scheduled-run-time current-process) run-time)
+    (setf (process-scheduled-run-time new-process) run-time))
+  (values))
+
+;;; Process-Yield
+;;;
+;;; The Scheduler.
+;;;
 (defun process-yield ()
+  (declare (optimize (speed 3)))
   "Allow other processes to run."
   (unless *inhibit-scheduling*
     ;; Catch any FP exceptions before entering the scheduler.
@@ -881,6 +944,7 @@
 	       ;; processes.
 	       (when (or (not (eq next *idle-process*))
 			 (run-idle-process-p))
+		 (update-process-timers *current-process* next)
 		 (setf *current-process* next)
 		 (stack-group-resume (process-stack-group next))))
 	      (t
@@ -898,6 +962,7 @@
 			  (setf (process-wait-timeout next) nil)
 			  (setf (process-wait-function next) nil)
 			  (setf (process-%whostate next) nil)
+			  (update-process-timers current-process next)
 			  (stack-group-resume (process-stack-group next)))
 			 (t
 			  ;; Timeout?
@@ -910,6 +975,7 @@
 			      (setf (process-wait-timeout next) nil)
 			      (setf (process-wait-function next) nil)
 			      (setf (process-%whostate next) nil)
+			      (update-process-timers current-process next)
 			      (stack-group-resume
 			       (process-stack-group next)))))))
 		 ;; Restore the *current-process*.
@@ -977,8 +1043,50 @@
 			   (return))))))))))))
     (setf *inhibit-scheduling* nil)))
 
+;;; Process-Real-Time
+;;;
+;;; The real time in seconds accrued while the process was scheduled.
+;;;
+(defun process-real-time (process)
+  (declare (type process process))
+  (if (eq process *current-process*)
+      (without-scheduling
+       (let ((real-time (get-real-time)))
+	 (+ (process-%real-time process)
+	    (- real-time (process-scheduled-real-time process)))))
+      (process-%real-time process)))
+
+;;; Process-Run-Time
+;;;
+;;; The run time in seconds accrued while the process was scheduled.
+;;;
+(defun process-run-time (process)
+  (declare (type process process))
+  (if (eq process *current-process*)
+      (without-scheduling
+       (let ((run-time (get-run-time)))
+	 (+ (process-%run-time process)
+	    (- run-time (process-scheduled-run-time process)))))
+      (process-%run-time process)))
+
+;;; Process-Idle-Time
+;;;
+;;; The real time in seconds elapsed since the process was last
+;;; de-scheduled.
+;;;
+(defun process-idle-time (process)
+  (declare (type process process))
+  (if (eq process *current-process*)
+      0
+      (without-scheduling
+       (let ((real-time (get-real-time)))
+	 (- real-time (process-scheduled-real-time process))))))
+
+;;; Start-Sigalrm-Yield
+;;;
 ;;; Start a regular interrupt to switch processes. This may not be a
-;;; good idea yet on the X86 port which isn't too interrupt safe.
+;;; good idea yet as the CMUCL code is not too interrupt safe.
+;;;
 (defun start-sigalrm-yield (&optional (sec 0) (usec 500000))
   (declare (fixnum sec usec))
   ;; Disable the gencgc pointer filter to improve interrupt safety.
@@ -997,6 +1105,7 @@
 
 ;;; Initialise the initial process, must be called before use of the
 ;;; other multi-process function.
+;;;
 (defun init-processes ()
   (unless *initial-process*
     (init-stack-groups)
@@ -1008,11 +1117,25 @@
     (setf *current-process* *initial-process*)
     (setf *all-processes* (list *initial-process*))
     (setf *remaining-processes* *all-processes*)
+    ;;
     #+nil (start-sigalrm-yield)
     (setf *inhibit-scheduling* nil))
+  ;;
   (values))
 
 (pushnew 'init-processes ext:*after-save-initializations*)
+
+;;; Show-Processes
+;;;
+(defun show-processes (&optional verbose)
+  (dolist (process *all-processes*)
+    (format t "~s ~s ~a~%" process (process-whostate process) 
+	    (process-state process))
+    (when verbose
+      (format t "~4TRun time: ~,3f; Real time: ~,3f; Idle time: ~,3f~%"
+	      (process-run-time process)
+	      (process-real-time process)
+	      (process-idle-time process)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Simple Locking.
