@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.16 1992/01/25 14:39:55 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.17 1992/03/08 18:39:54 wlott Exp $ */
 
 #include <stdio.h>
 
@@ -121,11 +121,11 @@ static lispobj ptrans_boxed(thing, header, constant)
     return result;
 }
 
-static lispobj ptrans_symbol(thing, header)
+static lispobj ptrans_fdefn(thing, header)
 {
     int nwords;
     lispobj result, *new, *old, oldfn;
-    struct symbol *sym;
+    struct fdefn *fdefn;
 
     nwords = 1 + HeaderValue(header);
 
@@ -140,13 +140,13 @@ static lispobj ptrans_symbol(thing, header)
     /* Deposit forwarding pointer. */
     result = (lispobj)new | LowtagOf(thing);
     *old = result;
-        
+
     /* Scavenge the function. */
-    sym = (struct symbol *)new;
-    oldfn = sym->function;
-    pscav(&sym->function, 1, FALSE);
-    if ((char *)oldfn + RAW_ADDR_OFFSET == sym->raw_function_addr)
-        sym->raw_function_addr = (char *)sym->function + RAW_ADDR_OFFSET;
+    fdefn = (struct fdefn *)new;
+    oldfn = fdefn->function;
+    pscav(&fdefn->function, 1, FALSE);
+    if ((char *)oldfn + RAW_ADDR_OFFSET == fdefn->raw_addr)
+        fdefn->raw_addr = (char *)fdefn->function + RAW_ADDR_OFFSET;
 
     return result;
 }
@@ -421,7 +421,7 @@ static lispobj ptrans_otherptr(thing, header, constant)
         return ptrans_boxed(thing, header, FALSE);
 
       case type_SymbolHeader:
-        return ptrans_symbol(thing, header);
+        return ptrans_boxed(thing, header, FALSE);
 
       case type_SimpleString:
         return ptrans_vector(thing, 8, 1, FALSE, constant);
@@ -459,40 +459,27 @@ static lispobj ptrans_otherptr(thing, header, constant)
       case type_ReturnPcHeader:
         return ptrans_returnpc(thing, header);
 
+      case type_Fdefn:
+	return ptrans_fdefn(thing, header);
+
       default:
         /* Should only come across other pointers to the above stuff. */
         gc_abort();
     }
 }
 
-static int pscav_symbol(symbol)
-     struct symbol *symbol;
+static int pscav_fdefn(fdefn)
+     struct fdefn *fdefn;
 {
     boolean fix_func;
 
-    fix_func = ((char *)(symbol->function + RAW_ADDR_OFFSET) ==
-                symbol->raw_function_addr);
-    pscav(&symbol->value, sizeof(struct symbol)/sizeof(lispobj) - 1, FALSE);
+    fix_func = ((char *)(fdefn->function+RAW_ADDR_OFFSET) == fdefn->raw_addr);
+    pscav(&fdefn->name, 1, TRUE);
+    pscav(&fdefn->function, 1, FALSE);
     if (fix_func)
-        symbol->raw_function_addr =
-            (char *)(symbol->function + RAW_ADDR_OFFSET);
-    return sizeof(struct symbol) / sizeof(lispobj);
+        fdefn->raw_addr = (char *)(fdefn->function + RAW_ADDR_OFFSET);
+    return sizeof(struct fdefn) / sizeof(lispobj);
 }
-
-#if 0
-static int pscav_code(addr)
-     lispobj *addr;
-{
-    struct code *code;
-
-    code = (struct code *)addr;
-
-    pscav_later(&code->debug_info, 1);
-    pscav(code->constants, HeaderValue(code->header)-4, TRUE);
-
-    return HeaderValue(code->header) + FIXNUM_TO_INT(code->code_size);
-}    
-#endif
 
 static lispobj *pscav(addr, nwords, constant)
      lispobj *addr;
@@ -552,11 +539,6 @@ static lispobj *pscav(addr, nwords, constant)
               case type_Sap:
                 /* It's an unboxed simple object. */
                 count = HeaderValue(thing)+1;
-                break;
-
-              case type_SymbolHeader:
-                /* Symbols must have the raw function addr fixed up. */
-                count = pscav_symbol((struct symbol *)addr);
                 break;
 
               case type_SimpleVector:

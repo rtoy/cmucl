@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.16 1991/11/10 22:32:59 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.17 1992/03/08 18:39:57 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -65,7 +65,8 @@ char *subtype_Names[] = {
     "SAP",
     "unbound marker",
     "weak pointer",
-    "structure header"
+    "structure header",
+    "fdefn"
 };
 
 static void indent(in)
@@ -347,14 +348,15 @@ long *ptr;
             print_obj("???: ", *ptr++);
 }
 
-static char *symbol_slots[] = {"value: ", "function: ", "raw fn addr: ",
-"setf fn: ", "plist: ", "name: ", "package: ", NULL};
+static char *symbol_slots[] = {"value: ", "unused: ",
+    "plist: ", "name: ", "package: ", NULL};
 static char *ratio_slots[] = {"numer: ", "denom: ", NULL};
 static char *complex_slots[] = {"real: ", "imag: ", NULL};
 static char *code_slots[] = {"words: ", "entry: ", "debug: ", NULL};
 static char *fn_slots[] = {"self: ", "next: ", "name: ", "arglist: ", "type: ", NULL};
 static char *closure_slots[] = {"fn: ", NULL};
 static char *weak_pointer_slots[] = {"value: ", NULL};
+static char *fdefn_slots[] = {"name: ", "function: ", "raw_addr: ", NULL};
 
 static void print_otherptr(obj)
 lispobj obj;
@@ -486,6 +488,10 @@ lispobj obj;
                 printf("pointer to an immediate?");
                 break;
 
+	      case type_Fdefn:
+		print_slots(fdefn_slots, count, ptr);
+		break;
+		
             default:
                 NEWLINE;
                 printf("Unknown header object?");

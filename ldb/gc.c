@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.32 1992/03/02 03:56:01 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.33 1992/03/08 18:39:38 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1108,22 +1108,22 @@ lispobj *where;
 	return length;
 }
 
-/* Note: on the sparc we don't have to do anything special for symbols, */
-/* cause the raw-function-addr has the correct lowtag. */
+/* Note: on the sparc we don't have to do anything special for fdefns, */
+/* cause the raw-addr has a function lowtag. */
 #ifndef sparc
 static
-scav_symbol(where, object)
+scav_fdefn(where, object)
 lispobj *where, object;
 {
-    struct symbol *symbol;
+    struct fdefn *fdefn;
 #define RAW_ADDR_OFFSET (6*sizeof(lispobj) - type_FunctionPointer)
 
-    symbol = (struct symbol *)where;
+    fdefn = (struct fdefn *)where;
     
-    if ((char *)(symbol->function + RAW_ADDR_OFFSET) == symbol->raw_function_addr) {
-        scavenge(where + 1, sizeof(struct symbol)/sizeof(lispobj) - 1);
-        symbol->raw_function_addr = (char *)(symbol->function + RAW_ADDR_OFFSET);
-        return sizeof(struct symbol) / sizeof(lispobj);
+    if ((char *)(fdefn->function + RAW_ADDR_OFFSET) == fdefn->raw_addr) {
+        scavenge(where + 1, sizeof(struct fdefn)/sizeof(lispobj) - 1);
+        fdefn->raw_addr = (char *)(fdefn->function + RAW_ADDR_OFFSET);
+        return sizeof(struct fdefn) / sizeof(lispobj);
     }
     else
         return 1;
@@ -1804,17 +1804,17 @@ gc_init()
 	scavtab[type_ClosureHeader] = scav_boxed;
 	scavtab[type_FuncallableInstanceHeader] = scav_boxed;
 	scavtab[type_ValueCellHeader] = scav_boxed;
-#ifndef sparc
-        scavtab[type_SymbolHeader] = scav_symbol;
-#else
         scavtab[type_SymbolHeader] = scav_boxed;
-#endif
 	scavtab[type_BaseChar] = scav_immediate;
 	scavtab[type_Sap] = scav_unboxed;
 	scavtab[type_UnboundMarker] = scav_immediate;
 	scavtab[type_WeakPointer] = scav_weak_pointer;
         scavtab[type_StructureHeader] = scav_boxed;
-
+#ifndef sparc
+        scavtab[type_Fdefn] = scav_fdefn;
+#else
+        scavtab[type_Fdefn] = scav_boxed;
+#endif
 
 	/* Transport Other Table */
 	for (i = 0; i < 256; i++)
@@ -1853,6 +1853,7 @@ gc_init()
 	transother[type_UnboundMarker] = trans_immediate;
 	transother[type_WeakPointer] = trans_weak_pointer;
         transother[type_StructureHeader] = trans_vector;
+	transother[type_Fdefn] = trans_boxed;
 
 	/* Size table */
 
@@ -1906,6 +1907,7 @@ gc_init()
 	sizetab[type_UnboundMarker] = size_immediate;
 	sizetab[type_WeakPointer] = size_weak_pointer;
         sizetab[type_StructureHeader] = size_vector;
+	sizetab[type_Fdefn] = size_boxed;
 }
 
 
