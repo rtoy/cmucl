@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.39 1990/12/12 03:09:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.40 1990/12/12 14:00:01 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -328,7 +328,7 @@
   (:translate truncate)
   (:results (q :scs (any-reg))
 	    (r :scs (any-reg)))
-  (:result-types signed-num signed-num)
+  (:result-types tagged-num tagged-num)
   (:temporary (:scs (non-descriptor-reg) :to :eval) temp)
   (:vop-var vop)
   (:save-p :compute-only)
