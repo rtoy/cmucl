@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.17.2.2 2000/05/23 16:36:51 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.17.2.3 2000/08/10 13:16:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,30 +107,32 @@
 	     (T ,@(if check-type `((check-type ,svar ,check-type)))
 		,svar)))))
 
-;;; With-Mumble-Stream calls the function in the given Slot of the
+;;; With-Mumble-Stream calls the function in the given slot of the
 ;;; Stream with the Args for lisp-streams, or the Function with the
 ;;; Args for fundamental-streams.
 ;;;
-(defmacro with-in-stream (stream (slot &rest args) &optional stream-dispatch)
+(defmacro with-in-stream (stream (lisp-stream-slot &rest args)
+			  &optional stream-dispatch)
   `(let ((stream (in-synonym-of ,stream)))
     ,(if stream-dispatch
 	 `(if (lisp-stream-p stream)
-	      (funcall (,slot stream) stream ,@args)
+	      (funcall (,lisp-stream-slot stream) stream ,@args)
 	      ,@(when stream-dispatch
 		  `(,(destructuring-bind (function &rest args) stream-dispatch
 					 `(,function stream ,@args)))))
-	 `(funcall (,slot stream) stream ,@args))))
+	 `(funcall (,lisp-stream-slot stream) stream ,@args))))
 
 
-(defmacro with-out-stream (stream (slot &rest args) &optional stream-dispatch)
+(defmacro with-out-stream (stream (lisp-stream-slot &rest args)
+			   &optional stream-dispatch)
   `(let ((stream (out-synonym-of ,stream)))
     ,(if stream-dispatch
 	 `(if (lisp-stream-p stream)
-	      (funcall (,slot stream) stream ,@args)
+	      (funcall (,lisp-stream-slot stream) stream ,@args)
 	      ,@(when stream-dispatch
 		  `(,(destructuring-bind (function &rest args) stream-dispatch
 					 `(,function stream ,@args)))))
-	 `(funcall (,slot stream) stream ,@args))))
+	 `(funcall (,lisp-stream-slot stream) stream ,@args))))
 
 
 ;;;; These are hacks to make the reader win.
