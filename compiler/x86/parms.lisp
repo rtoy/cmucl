@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.24 2003/03/23 21:23:41 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.25 2003/09/26 15:37:11 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
 (setf (backend-fasl-file-type *target-backend*) "x86f")
 (setf (backend-fasl-file-implementation *target-backend*)
       x86-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) #x18e)
+(setf (backend-fasl-file-version *target-backend*) byte-fasl-file-version)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :little-endian)
 
