@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.103 2004/04/08 14:00:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.104 2004/04/16 15:09:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -414,13 +414,13 @@
 ;;; Utilities for source location recording.  SOURCE-LOCATION returns
 ;;; a data structure describing the source location of the call site.
 ;;; The structure includes form numbers and the filename, if we
-;;; compile a file, or the user supplied info, if we compile from a
-;;; stream.
+;;; compile a file, the user supplied info, if we compile from a
+;;; stream, or the source form, if we compile a form directly.
 ;;;
 ;;; Some effort was made to keep the structures small.  We restrict
 ;;; form numbers to two 14 bit integers and encode them in a single
-;;; fixnum.  Both FILE-SOURCE-LOCATION and STREAM-SOURCE-LOCATION
-;;; require 4 words (usually 16 bytes).
+;;; fixnum.  The returned structures require 4 words (usually 16
+;;; bytes).
 
 (defstruct (form-numbers)
   ;; The tlf-number and form-number encoded in a fixnum.
@@ -438,6 +438,12 @@
 	     (:pure t))
   user-info)
 
+(defstruct (lisp-source-location
+	     (:include form-numbers)
+	     (:make-load-form-fun :just-dump-it-normally)
+	     (:pure t))
+  form)
+
 (defun encode-form-numbers (tlf-number form-number)
   "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
   (declare (type (unsigned-byte 14) tlf-number form-number))
@@ -453,19 +459,25 @@
   nil)
 
 (define-compiler-macro source-location ()
-  (let ((file-info (car (source-info-current-file *source-info*)))
+  (let ((file-info (let ((rest (source-info-current-file *source-info*)))
+		     (cond (rest (car rest))
+			   ;; MAKE-LISP-SOURCE-INFO doesn't set current-file
+			   (t (car (source-info-files *source-info*))))))
 	(form-numbers (encode-form-numbers
 		       (source-path-tlf-number *current-path*)
 		       (source-path-form-number *current-path*))))
-    (when file-info
-      (etypecase (file-info-name file-info)
-	((member :stream)
-	 `(quote ,(make-stream-source-location :form-numbers form-numbers
-					       :user-info *user-source-info*)))
-	(pathname
-	 `(quote ,(make-file-source-location 
-		   :form-numbers form-numbers
-		   :pathname (namestring-for-debug-source file-info))))))))
+    (etypecase (file-info-name file-info)
+      (pathname
+       `(quote ,(make-file-source-location 
+		 :form-numbers form-numbers
+		 :pathname (namestring-for-debug-source file-info))))
+      ((member :stream)
+       `(quote ,(make-stream-source-location :form-numbers form-numbers
+					     :user-info *user-source-info*)))
+      ((member :lisp)
+       `(quote ,(make-lisp-source-location 
+		 :form-numbers form-numbers
+		 :form (aref (file-info-forms file-info) 0)))))))
 
 
 ;;; MAKE-LEXENV  --  Interface
