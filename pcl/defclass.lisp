@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.14 1999/03/11 16:51:04 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.15 1999/03/14 01:14:13 dtc Exp $")
 ;;;
 
 (in-package :pcl)
@@ -124,10 +124,9 @@
 	    (return t))))
 
     (let ((*initfunctions* ())
-          (*accessors* ())                         ;Truly a crock, but we got
-          (*readers* ())                           ;to have it to live nicely.
+          (*readers* ())
           (*writers* ()))
-      (declare (special *initfunctions* *accessors* *readers* *writers*))
+      (declare (special *initfunctions* *readers* *writers*))
       (let ((canonical-slots
 	      (mapcar #'(lambda (spec)
 			  (canonicalize-slot-specification name spec))
@@ -141,7 +140,6 @@
 				(and mclass
 				     (*subtypep mclass 
 						*the-class-structure-class*))))))
-	(do-standard-defsetfs-for-defclass *accessors*)
         (let ((defclass-form 
                  (make-top-level-form `(defclass ,name)
                    (if defstruct-p '(load eval) *defclass-times*)
@@ -150,8 +148,6 @@
 				    `(declaim (ftype (function (t) t) ,x)))
 				#+cmu *readers* #-cmu nil)
 		      ,@(mapcar #'(lambda (x)
-				    #-setf (when (consp x)
-					     (setq x (get-setf-function-name (cadr x))))
 				    `(declaim (ftype (function (t t) t) ,x)))
 				#+cmu *writers* #-cmu nil)
 		      (let ,(mapcar #'cdr *initfunctions*)
@@ -162,8 +158,7 @@
 				       (list ,@(apply #'append 
 						      (when defstruct-p
 							'(:from-defclass-p t))
-						      other-initargs))
-				       ',*accessors*))))))
+						      other-initargs))))))))
           (if defstruct-p
               (progn
                 (eval defclass-form) ; define the class now, so that
@@ -197,7 +192,7 @@
 	   (cadr entry)))))
 
 (defun canonicalize-slot-specification (class-name spec)
-  (declare (special *accessors* *readers* *writers*))
+  (declare (special *readers* *writers*))
   (cond ((and (symbolp spec)
 	      (not (keywordp spec))
 	      (not (memq spec '(t nil))))		   
@@ -219,8 +214,7 @@
 		(initform (getf spec :initform unsupplied)))
 	   (doplist (key val) spec
 	     (case key
-	       (:accessor (push val *accessors*)
-			  (push val readers)
+	       (:accessor (push val readers)
 			  (push `(setf ,val) writers))
 	       (:reader   (push val readers))
 	       (:writer   (push val writers))
@@ -408,12 +402,10 @@
   (bootstrap-get-slot 'class class 'direct-subclasses))
 
 (proclaim '(notinline load-defclass))
-(defun load-defclass
-       (name metaclass supers canonical-slots canonical-options accessor-names)
+(defun load-defclass (name metaclass supers canonical-slots canonical-options)
   (setq supers  (copy-tree supers)
 	canonical-slots   (copy-tree canonical-slots)
 	canonical-options (copy-tree canonical-options))
-  (do-standard-defsetfs-for-defclass accessor-names)
   (when (eq metaclass 'standard-class)
     (inform-type-system-about-std-class name))
   (let ((ecd

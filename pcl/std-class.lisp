@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.23 1999/03/11 16:51:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.24 1999/03/14 01:14:14 dtc Exp $")
 ;;;
 
 (in-package :pcl)
@@ -319,8 +319,7 @@
 
 
 
-(defun real-load-defclass (name metaclass-name supers slots other accessors)
-  (do-standard-defsetfs-for-defclass accessors)	                ;***
+(defun real-load-defclass (name metaclass-name supers slots other)
   (let ((res (apply #'ensure-class name :metaclass metaclass-name
 		    :direct-superclasses supers
 		    :direct-slots slots
@@ -557,7 +556,7 @@
 	(unless (structure-type-p name) (eval defstruct-form))
 	(mapc #'(lambda (dslotd reader-name writer-name)
 		  (let* ((reader (gdefinition reader-name))
-			 (writer (when (gboundp writer-name)
+			 (writer (when (fboundp writer-name)
 				   (gdefinition writer-name))))
 		    (setf (slot-value dslotd 'internal-reader-function) reader)
 		    (setf (slot-value dslotd 'internal-writer-function) writer)))

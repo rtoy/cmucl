@@ -167,7 +167,7 @@
 	    ((and (or (symbolp (car form))
 		      (and (consp (car form))
 			   (eq (caar form) 'setf)))
-		  (gboundp (car form))
+		  (fboundp (car form))
 		  (if (eq *boot-state* 'complete)
 		      (standard-generic-function-p (gdefinition (car form)))
 		      (funcallable-instance-p (gdefinition (car form)))))

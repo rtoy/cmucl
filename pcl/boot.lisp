@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.18 1999/03/11 16:51:01 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.19 1999/03/14 01:14:13 dtc Exp $")
 
 (in-package :pcl)
 
@@ -167,8 +167,6 @@ work during bootstrapping.
   (expand-defgeneric function-specifier lambda-list options))
 
 (defun expand-defgeneric (function-specifier lambda-list options)
-  (when (listp function-specifier)
-    (do-standard-defsetf-1 (cadr function-specifier)))
   (let ((initargs ())
 	(methods ()))
     (flet ((duplicate-option (name)
@@ -229,7 +227,6 @@ work during bootstrapping.
        `,(function ,function-specifier)))))
 
 (defun load-defgeneric (function-specifier lambda-list &rest initargs)
-  (when (listp function-specifier) (do-standard-defsetf-1 (cadr function-specifier)))
   (apply #'ensure-generic-function
 	 function-specifier
 	 :lambda-list lambda-list
@@ -256,7 +253,7 @@ work during bootstrapping.
 (defun prototypes-for-make-method-lambda (name)
   (if (not (eq *boot-state* 'complete))	  
       (values nil nil)
-      (let ((gf? (and (gboundp name)
+      (let ((gf? (and (fboundp name)
 		      (gdefinition name))))
 	(if (or (null gf?)
 		(not (generic-function-p gf?)))
@@ -280,7 +277,7 @@ work during bootstrapping.
 ;;; NOTE that during bootstrapping, this function is allowed to return NIL.
 ;;; 
 (defun method-prototype-for-gf (name)      
-  (let ((gf? (and (gboundp name)
+  (let ((gf? (and (fboundp name)
 		  (gdefinition name))))
     (cond ((neq *boot-state* 'complete) nil)
 	  ((or (null gf?)
@@ -298,7 +295,6 @@ work during bootstrapping.
 (defvar *asv-boundps*)
 
 (defun expand-defmethod (name proto-gf proto-method qualifiers lambda-list body env)
-  (when (listp name) (do-standard-defsetf-1 (cadr name)))
   (let ((*make-instance-function-keys* nil)
 	(*optimize-asv-funcall-p* t)
 	(*asv-readers* nil) (*asv-writers* nil) (*asv-boundps* nil))
@@ -1000,7 +996,7 @@ work during bootstrapping.
 		(consp (cdr name))
 		(symbolp (cadr name))
 		(null (cddr name))))
-       (gboundp name)
+       (fboundp name)
        (if (eq *boot-state* 'complete)
 	   (standard-generic-function-p (gdefinition name))
 	   (funcallable-instance-p (gdefinition name)))))
@@ -1082,7 +1078,6 @@ work during bootstrapping.
   `(method-function-get ,method-function 'closure-generator))
 
 (defun load-defmethod (class name quals specls ll initargs &optional pv-table-symbol)
-  (when (listp name) (do-standard-defsetf-1 (cadr name)))
   (setq initargs (copy-tree initargs))
   (let ((method-spec (or (getf initargs ':method-spec)
 			 (make-method-spec name quals specls))))
@@ -1093,7 +1088,6 @@ work during bootstrapping.
 (defun load-defmethod-internal
     (method-class gf-spec qualifiers specializers lambda-list 
 		  initargs pv-table-symbol)
-  (when (listp gf-spec) (do-standard-defsetf-1 (cadr gf-spec)))
   (when pv-table-symbol
     (setf (getf (getf initargs ':plist) :pv-table-symbol)
 	  pv-table-symbol))
@@ -1238,8 +1232,6 @@ work during bootstrapping.
 
 (defun proclaim-defgeneric (spec lambda-list)
   #-cmu (declare (ignore lambda-list))
-  (when (consp spec)
-    (setq spec (get-setf-function-name (cadr spec))))
   (let (#+cmu
 	(decl `(ftype ,(ftype-declaration-from-lambda-list lambda-list #+cmu spec)
 		      ,spec)))
@@ -1257,7 +1249,7 @@ work during bootstrapping.
 				&allow-other-keys)
   (declare (ignore environment))
   #+copy-&rest-arg (setq all-keys (copy-list all-keys))
-  (let ((existing (and (gboundp function-specifier)		       
+  (let ((existing (and (fboundp function-specifier)		       
 		       (gdefinition function-specifier))))
     (if (and existing
 	     (eq *boot-state* 'complete)
@@ -1990,7 +1982,7 @@ work during bootstrapping.
 		       (make-symbol (format nil "~S" method))))
 	(multiple-value-bind (gf-spec quals specls)
 	    (parse-defmethod spec)
-	  (and (setq gf (and (or errorp (gboundp gf-spec))
+	  (and (setq gf (and (or errorp (fboundp gf-spec))
 			     (gdefinition gf-spec)))
 	       (let ((nreq (compute-discriminating-function-arglist-info gf)))
 		 (setq specls (append (parse-specializers specls)

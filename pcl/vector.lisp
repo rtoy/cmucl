@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.13 1999/03/11 16:51:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.14 1999/03/14 01:14:14 dtc Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -360,9 +360,7 @@
 (defun maybe-expand-accessor-form (form required-parameters slots env)
   (let* ((fname (car form))
 	 #||(len (length form))||#
-	 (gf (if (symbolp fname)
-		 (unencapsulated-fdefinition fname)
-		 (gdefinition fname))))
+	 (gf (gdefinition fname)))
     (macrolet ((maybe-optimize-reader ()
 		 `(let ((parameter
 			 (can-optimize-access1 (cadr form)
@@ -414,11 +412,7 @@
       (maybe-expand-accessor-form form required-parameters slots env)
       (let* ((fname (car form))
 	     (len (length form))
-	     (gf (if (symbolp fname)
-		     (and (fboundp fname)
-			  (unencapsulated-fdefinition fname))
-		     (and (gboundp fname)
-			  (gdefinition fname))))
+	     (gf (and (fboundp fname) (gdefinition fname)))
 	     (gf-name (and (fsc-instance-p gf)
 			   (if (early-gf-p gf)
 			       (early-gf-name gf)
@@ -707,11 +701,7 @@
   (declare (ignore class))
   `(instance-write-internal .pv. ,(slot-vector-symbol position)
     ,pv-offset ,new-value
-    (,(if (consp gf-name)
-	  (get-setf-function-name gf-name)
-	  gf-name)
-     (instance-accessor-parameter ,parameter)
-     ,new-value)
+    (,gf-name (instance-accessor-parameter ,parameter) ,new-value)
     :instance))
 
 (defmacro instance-boundp-internal (pv slots pv-offset default

@@ -59,40 +59,19 @@
 
 
 ;;;
-;;; This is like fdefinition on the Lispm.  If Common Lisp had something like
-;;; function specs I wouldn't need this.  On the other hand, I don't like the
-;;; way this really works so maybe function specs aren't really right either?
-;;; 
-;;; I also don't understand the real implications of a Lisp-1 on this sort of
-;;; thing.  Certainly some of the lossage in all of this is because these
-;;; SPECs name global definitions.
-;;;
-;;; Note that this implementation is set up so that an implementation which
-;;; has a 'real' function spec mechanism can use that instead and in that way
-;;; get rid of setf generic function names.
-;;;
-(defmacro parse-gspec (spec
-		       (non-setf-var . non-setf-case)
-		       (setf-var . setf-case))
-  (declare (indentation 1 1))
-  (declare (ignore setf-var setf-case))
-  (once-only (spec)
-    `(cond (t
-	    (let ((,non-setf-var ,spec)) ,@non-setf-case)))))
-
-;;;
 ;;; If symbol names a function which is traced or advised, return the
 ;;; unadvised, traced etc. definition.  This lets me get at the generic
 ;;; function object even when it is traced.
 ;;;
-(defun unencapsulated-fdefinition (symbol)
+(declaim (inline gdefinition))
+(defun gdefinition (symbol)
   (fdefinition symbol))
 
 ;;;
 ;;; If symbol names a function which is traced or advised, redefine
 ;;; the `real' definition without affecting the advise.
 ;;;
-(defun fdefine-carefully (name new-definition)
+(defun (setf gdefinition) (new-definition name)
   #+cmu (progn
 	  (c::%%defun name new-definition nil)
 	  (c::note-name-defined name :function)
@@ -100,25 +79,6 @@
   #-(or cmu)
   (setf (symbol-function name) new-definition))
 
-(defun gboundp (spec)
-  (parse-gspec spec
-    (name (fboundp name))
-    (name (fboundp (get-setf-function-name name)))))
-
-(defun gmakunbound (spec)
-  (parse-gspec spec
-    (name (fmakunbound name))
-    (name (fmakunbound (get-setf-function-name name)))))
-
-(defun gdefinition (spec)
-  (parse-gspec spec
-    (name (or (unencapsulated-fdefinition name)))
-    (name (unencapsulated-fdefinition (get-setf-function-name name)))))
-
-(defun (setf gdefinition) (new-value spec)
-  (parse-gspec spec
-    (name (fdefine-carefully name new-value))
-    (name (fdefine-carefully (get-setf-function-name name) new-value))))
 
 
 (proclaim '(special *the-class-t* 

@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.19 1999/03/11 16:51:05 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.20 1999/03/14 01:14:14 dtc Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -526,19 +526,17 @@ and load your system with:
    ))
 
 (defun compile-pcl (&optional m)
-  (let ()
-    (cond ((null m)        (operate-on-system 'pcl :compile))
-	  ((eq m :print)   (operate-on-system 'pcl :compile () t))
-	  ((eq m :query)   (operate-on-system 'pcl :query-compile))
-	  ((eq m :confirm) (operate-on-system 'pcl :confirm-compile))
-	  ((eq m 't)       (operate-on-system 'pcl :recompile))        
-	  ((listp m)       (operate-on-system 'pcl :compile-from m))
-	  ((symbolp m)     (operate-on-system 'pcl :recompile-some `(,m))))))
+  (cond ((null m)        (operate-on-system 'pcl :compile))
+	((eq m :print)   (operate-on-system 'pcl :compile () t))
+	((eq m :query)   (operate-on-system 'pcl :query-compile))
+	((eq m :confirm) (operate-on-system 'pcl :confirm-compile))
+	((eq m 't)       (operate-on-system 'pcl :recompile))        
+	((listp m)       (operate-on-system 'pcl :compile-from m))
+	((symbolp m)     (operate-on-system 'pcl :recompile-some `(,m)))))
 
 (defun load-pcl (&optional m)
-  (let ()
-    (cond ((null m)      (operate-on-system 'pcl :load))
-	  ((eq m :query) (operate-on-system 'pcl :query-load)))))
+  (cond ((null m)      (operate-on-system 'pcl :load))
+	((eq m :query) (operate-on-system 'pcl :query-load))))
 
 
 (defun bug-report-info (&optional (stream *standard-output*))
