@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.18 1991/12/11 16:51:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.19 1991/12/11 17:58:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -376,7 +376,13 @@
 ;;;
 (defun merge-1-tl-lambda (result-lambda lambda)
   (declare (type clambda result-lambda lambda))
-
+  ;;
+  ;; Delete the lambda, and combine the lets and entries.
+  (setf (functional-kind lambda) :deleted)
+  (dolist (let (lambda-lets lambda))
+    (setf (lambda-home let) result-lambda)
+    (setf (lambda-environment let) (lambda-environment result-lambda))
+    (push let (lambda-lets result-lambda)))
   (setf (lambda-entries result-lambda)
 	(nconc (lambda-entries result-lambda)
 	       (lambda-entries lambda)))
