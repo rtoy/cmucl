@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.6 1990/02/14 21:51:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.7 1990/02/18 06:00:27 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -19,10 +19,11 @@
 
 (in-package "VM")
 
-(export '(cons-structure cons-car-slot cons-cdr-slot
+(export '(cons-structure cons-size cons-car-slot cons-cdr-slot
 
-	  symbol-structure symbol-value-slot symbol-function-slot
-	  symbol-plist-slot symbol-name-slot symbol-package-slot
+	  symbol-structure symbol-size symbol-value-slot
+	  symbol-function-slot symbol-plist-slot symbol-name-slot
+	  symbol-package-slot
 
 	  vector-structure vector-length-slot vector-data-offset
 
@@ -62,8 +63,12 @@
   (let ((compile-time nil)
 	(load-time nil)
 	(index (if header 1 0))
-	(slot-names (if header '(header))))
+	(slot-names (if header '(header)))
+	(did-rest nil))
     (dolist (slot slots)
+      (when did-rest
+	(error "Rest slot ~S in defslots of ~S is not the last one."
+	       did-rest name))
       (multiple-value-bind
 	  (slot-name rest boxed ref-vop ref-trans set-vop set-trans docs)
 	  (parse-slot slot)
@@ -85,8 +90,17 @@
 		    ,@(if (not boxed) '(:boxed nil))
 		    ,@(if rest '(:rest t)))
 		  slot-name)
-	      slot-names))
+	      slot-names)
+	(when rest
+	  (setf did-rest slot-name)))
       (incf index))
+    (unless did-rest
+      (push `(defconstant ,(intern (concatenate 'simple-string
+						(string name)
+						"-SIZE"))
+	       ,index
+	       ,(format nil "Number of slots used by each ~S." name))
+	    compile-time))
     `(progn
        (eval-when (compile load eval)
 	 ,@(nreverse compile-time))
