@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.10 1993/08/31 21:56:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.10.1.1 1994/10/24 18:26:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -771,8 +771,11 @@
 				#.c:rt-fasl-file-implementation
 				#.c:rt-afpa-fasl-file-implementation
 				#.c:x86-fasl-file-implementation
+				#+svr4
+				#.c:sparc-fasl-file-implementation
 				#.c:hppa-fasl-file-implementation)
 			       (lookup-foreign-symbol "undefined_tramp"))
+			      #-svr4
 			      (#.c:sparc-fasl-file-implementation
 			       (lookup-foreign-symbol "_undefined_tramp"))))))
 	  fdefn))))
