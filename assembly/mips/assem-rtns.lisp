@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.10 1990/05/23 06:15:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.11 1990/05/24 13:34:07 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -56,7 +56,7 @@
 (define-assembly-routine (unwind
 			  ()
 			  (:arg block any-reg a0-offset)
-			  (:arg start any-reg args-offset)
+			  (:arg start any-reg old-fp-offset)
 			  (:arg count any-reg nargs-offset)
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
@@ -93,7 +93,7 @@
 (define-assembly-routine (throw
 			  ()
 			  (:arg target any-reg a0-offset)
-			  (:arg start any-reg args-offset)
+			  (:arg start any-reg old-fp-offset)
 			  (:arg count any-reg nargs-offset)
 			  (:temp catch any-reg a1-offset)
 			  (:temp tag descriptor-reg a2-offset)
