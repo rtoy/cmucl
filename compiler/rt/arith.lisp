@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.5 1991/04/15 15:51:09 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.6 1991/04/20 17:02:47 wlott Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -614,14 +614,15 @@
 	 (b :scs (unsigned-reg))
 	 (carry-in :scs (any-reg)))
   (:arg-types unsigned-num unsigned-num positive-fixnum)
-  (:results (result :scs (unsigned-reg))
-	    (carry :scs (unsigned-reg) :from :eval))
+  (:results (result :scs (unsigned-reg) :from (:argument 0))
+	    (carry :scs (unsigned-reg)))
   (:result-types unsigned-num positive-fixnum)
-  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg) :to (:argument 2)) temp)
   (:generator 5
-    (move result a)
     ;; Set the carry condition bit.
     (inst a temp carry-in -1)
+    ;; Add A & B.
+    (move result a)
     (inst ae result b)
     ;; Set carry to the condition bit.
     ;; Add zero to zero and see if we get a one.
@@ -656,11 +657,14 @@
   (:vop-var vop)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg))
-	 (carry-in :scs (unsigned-reg unsigned-stack) :to :save))
+	 (carry-in :scs (unsigned-reg unsigned-stack) :to (:eval 1)))
   (:arg-types unsigned-num unsigned-num unsigned-num)
   (:temporary (:scs (unsigned-reg) :from (:eval 0)) temp)
-  (:results (high :scs (unsigned-reg) :from :load)
-	    (low :scs (unsigned-reg)))
+  (:temporary (:scs (unsigned-reg) :to (:result 0) :target high-res) high)
+  (:temporary (:scs (unsigned-reg) :from (:eval 0) :to (:result 1)
+		    :target low-res) low)
+  (:results (high-res :scs (unsigned-reg))
+	    (low-res :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:generator 76
     ;; Do the multiply.
@@ -673,7 +677,9 @@
        (inst a low temp))
       (unsigned-reg
        (inst a low carry-in)))
-    (inst ae high 0)))
+    (inst ae high 0)
+    (move high-res high)
+    (move low-res low)))
 
 (define-vop (bignum-mult-and-add-4-arg)
   (:translate bignum::%multiply-and-add)
@@ -681,12 +687,15 @@
   (:policy :fast-safe)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg))
-	 (prev :scs (unsigned-reg unsigned-stack) :to :save)
-	 (carry-in :scs (unsigned-reg unsigned-stack) :to :save))
+	 (prev :scs (unsigned-reg unsigned-stack) :to (:eval 1))
+	 (carry-in :scs (unsigned-reg unsigned-stack) :to (:eval 1)))
   (:arg-types unsigned-num unsigned-num unsigned-num unsigned-num)
   (:temporary (:scs (unsigned-reg) :from (:eval 0)) temp)
-  (:results (high :scs (unsigned-reg) :from :load)
-	    (low :scs (unsigned-reg)))
+  (:temporary (:scs (unsigned-reg) :to (:result 0) :target high-res) high)
+  (:temporary (:scs (unsigned-reg) :from (:eval 0) :to (:result 1)
+		    :target low-res) low)
+  (:results (high-res :scs (unsigned-reg))
+	    (low-res :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:generator 81
     ;; Do the multiply.
@@ -708,7 +717,9 @@
        (inst a low temp))
       (unsigned-reg
        (inst a low prev)))
-    (inst ae high 0)))
+    (inst ae high 0)
+    (move high-res high)
+    (move low-res low)))
 
 (define-vop (bignum-mult)
   (:translate bignum::%multiply)
