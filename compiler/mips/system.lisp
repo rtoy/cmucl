@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.3 1990/03/06 19:59:02 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.4 1990/03/06 22:11:28 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -228,11 +228,11 @@
 
 
 
-(define-vop (pointer-sap-ref sap-ref)
+(define-vop (sap-system-ref sap-ref)
   (:results (result :scs (descriptor-reg sap-reg)))
   (:variant :pointer nil))
 
-(define-vop (pointer-sap-set sap-set)
+(define-vop (sap-system-set sap-set)
   (:arg-types sap fixnum sap)
   (:variant :pointer))
 
