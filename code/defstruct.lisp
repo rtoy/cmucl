@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.18 1990/12/18 20:39:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.19 1990/12/19 00:23:49 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -594,7 +594,7 @@
 						       ,(dsd-index slot))
 					,thing))
 			     slots thing)
-		   `(truly-the ,(dd-name defstruct) ,temp))))
+		   (truly-the ,(dd-name defstruct) ,temp))))
 	     (vector
 	      `(vector ,@initial-cruft ,@thing))
 	     (t
