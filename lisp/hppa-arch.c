@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <mach.h>
 #include <machine/trap.h>
 
 #include "lisp.h"
@@ -21,6 +20,23 @@ os_vm_address_t arch_get_bad_addr(int signal,
 				  int code,
 				  struct sigcontext *scp)
 {
+#ifdef hpux
+    struct save_state *state;
+    os_vm_address_t addr;
+
+    state = (struct save_state *)(&(scp->sc_sl.sl_ss));
+
+    if (state == NULL)
+	return NULL;
+
+    /* Check the instruction address first. */
+    addr = scp->sc_pcoq_head & ~3;
+    if (addr < 0x1000)
+	return addr;
+
+    /* Otherwise, it must have been a data fault. */
+    return state->ss_cr21;
+#else
     struct hp800_thread_state *state;
     os_vm_address_t addr;
 
@@ -36,11 +52,16 @@ os_vm_address_t arch_get_bad_addr(int signal,
 
     /* Otherwise, it must have been a data fault. */
     return state->cr21;
+#endif
 }
 
 unsigned char *arch_internal_error_arguments(struct sigcontext *scp)
 {
+#ifdef hpux
+    return (unsigned char *)((scp->sc_pcoq_head&~0x3)+4);
+#else
     return (unsigned char *)((scp->sc_pcoqh&~0x3)+4);
+#endif
 }
 
 boolean arch_pseudo_atomic_atomic(struct sigcontext *scp)
@@ -63,8 +84,13 @@ void arch_set_pseudo_atomic_interrupted(struct sigcontext *scp)
 void arch_skip_instruction(struct sigcontext *scp)
 {
     /* Skip the offending instruction */
+#ifdef hpux
+    scp->sc_pcoq_head = scp->sc_pcoq_tail;
+    scp->sc_pcoq_tail += 4;
+#else
     scp->sc_pcoqh = scp->sc_pcoqt;
     scp->sc_pcoqt += 4;
+#endif
 }
 
 unsigned long arch_install_breakpoint(void *pc)
@@ -90,13 +116,22 @@ void arch_do_displaced_inst(struct sigcontext *scp, unsigned long orig_inst)
     /* after executing that one instruction, at which time we can put */
     /* the breakpoint back in. */
 
+#ifdef hpux
+    scp->sc_sl.sl_ss.ss_cr0 = 1;
+    scp->sc_flags |= 0x10;
+#else
     ((struct hp800_thread_state *)scp->sc_ap)->cr0 = 1;
     scp->sc_ps |= 0x10;
+#endif
     *(unsigned long *)SC_PC(scp) = orig_inst;
 
     undo_fake_foreign_function_call(scp);
 
+#ifdef hpux
+    printf("ERROR: arch_do_displaced_inst doesn't work because no sigreturn\n");
+#else
     sigreturn(scp);
+#endif
 }
 
 static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
@@ -110,7 +145,11 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 	   SC_REG(scp,reg_ALLOC));
 #endif
 
+#ifdef hpux
+    bad_inst = *(unsigned long *)(scp->sc_pcoq_head & ~3);
+#else
     bad_inst = *(unsigned long *)(scp->sc_pcoqh & ~3);
+#endif
 
     if (bad_inst & 0xfc001fe0)
 	interrupt_handle_now(signal, code, scp);
@@ -145,8 +184,13 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 	    {
 		void *pc;
 		pc = handle_function_end_breakpoint(signal, code, scp);
+#ifdef hpux
+		scp->sc_pcoq_head = (unsigned long)pc;
+		scp->sc_pcoq_tail = (unsigned long)pc + 4;
+#else
 		scp->sc_pcoqh = (unsigned long)pc;
 		scp->sc_pcoqt = (unsigned long)pc + 4;
+#endif
 	    }
 	    undo_fake_foreign_function_call(scp);
 	    break;
@@ -244,6 +288,9 @@ static void sigfpe_handler(int signal, int code, struct sigcontext *scp)
 
 void arch_install_interrupt_handlers(void)
 {
+#ifdef hpux
+    interrupt_install_low_level_handler(SIGILL,sigtrap_handler);
+#endif
     interrupt_install_low_level_handler(SIGTRAP,sigtrap_handler);
     interrupt_install_low_level_handler(SIGFPE,sigfpe_handler);
 }
