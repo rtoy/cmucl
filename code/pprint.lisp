@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.14 1993/01/23 01:02:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.15 1993/02/11 14:05:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -140,7 +140,7 @@
 
 (defun pretty-out (stream char)
   (declare (type pretty-stream stream)
-	   (type base-character char))
+	   (type base-char char))
   (cond ((char= char #\newline)
 	 (enqueue-newline stream :literal))
 	(t

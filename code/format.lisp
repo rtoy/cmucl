@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.25 1992/11/06 04:15:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.26 1993/02/11 14:05:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
   (string (required-argument) :type simple-string)
   (start (required-argument) :type (and unsigned-byte fixnum))
   (end (required-argument) :type (and unsigned-byte fixnum))
-  (character (required-argument) :type base-character)
+  (character (required-argument) :type base-char)
   (colonp nil :type (member t nil))
   (atsignp nil :type (member t nil))
   (params nil :type list))
