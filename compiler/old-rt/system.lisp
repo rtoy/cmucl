@@ -85,11 +85,12 @@
   (:args (x :scs (any-reg descriptor-reg))
 	 (y :scs (any-reg descriptor-reg)))
   (:variant-vars condition not-p error)
-  (:node-var node)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:policy :fast-safe)
   (:generator 3
     (inst c x y)
-    (let ((target (generate-error-code node error x y)))
+    (let ((target (generate-error-code vop error x y)))
       (if not-p
 	  (inst bb condition target)
 	  (inst bnb condition target)))))

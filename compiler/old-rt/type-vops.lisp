@@ -26,10 +26,11 @@
   (:results
    (result :scs (any-reg descriptor-reg)))
   (:variant-vars type-code error-code)
-  (:node-var node)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:temporary (:type random  :scs (non-descriptor-reg)) temp)
   (:generator 4
-    (let ((err-lab (generate-error-code node error-code value)))
+    (let ((err-lab (generate-error-code vop error-code value)))
       (test-simple-type value temp err-lab t type-code)
       (unless (location= value result)
 	(inst lr result value)))))
@@ -126,7 +127,8 @@ simple-integer-vector-p?
   (:results
    (res :scs (any-reg descriptor-reg)))
   (:temporary (:scs (any-reg) :type fixnum) temp)
-  (:node-var node))
+  (:vop-var vop)
+  (:save-p :compute-only))
 
   
 (macrolet ((frob (pred-name check-name error-code &rest types)
@@ -144,7 +146,7 @@ simple-integer-vector-p?
 		      `((define-vop (,check-name check-hairy-type)
 			  (:generator ,cost
 			    (let ((err-lab (generate-error-code
-					    node ,error-code obj)))
+					    vop ,error-code obj)))
 			      (test-hairy-type obj temp err-lab t ,@types))
 			    (unless (location= obj res)
 			      (inst lr res obj))))))))))
@@ -205,7 +207,7 @@ simple-integer-vector-p?
 		    ,@body))
 		(define-vop (,check-name check-list-symbol)
 		  (:generator 12
-		    (let ((target (generate-error-code node ,error-code obj))
+		    (let ((target (generate-error-code vop ,error-code obj))
 			  (not-p t))
 		      ,@body
 		      (unless (location= obj res)
