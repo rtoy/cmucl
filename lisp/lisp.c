@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.20 2000/10/24 13:32:32 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.21 2000/10/24 17:45:57 dtc Exp $
  *
  */
 
@@ -192,8 +192,8 @@ void main(int argc, char *argv[], char *envp[])
     }
 
     os_init();
-    gc_init();
     validate();
+    gc_init();
 
     /* This is the first use of malloc() and must come after the
      * static memory layout is mmapped to avoid conflicts with possible
