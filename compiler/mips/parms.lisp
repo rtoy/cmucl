@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.93 1991/03/14 21:45:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.94 1991/03/20 03:05:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.93 1991/03/14 21:45:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.94 1991/03/20 03:05:36 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -126,7 +126,9 @@
 ;;;; Other non-type constants.
 
 (export '(atomic-flag interrupted-flag halt-trap pending-interrupt-trap
-	  error-trap cerror-trap breakpoint-trap))
+	  error-trap cerror-trap breakpoint-trap
+	  trace-table-normal trace-table-call-site
+	  trace-table-function-prologue trace-table-function-epilogue))
 
 (defenum (:suffix -flag)
   atomic
@@ -139,10 +141,17 @@
   cerror
   breakpoint)
 
+(defenum (:prefix trace-table-)
+  normal
+  call-site
+  function-prologue
+  function-epilogue)
 
 
 
 ;;;; Static symbols.
+
+(export '(static-symbols exported-static-symbols))
 
 ;;; These symbols are loaded into static space directly after NIL so
 ;;; that the system can compute their address by adding a constant
@@ -162,6 +171,7 @@
     lisp::%initial-function
     lisp::maybe-gc
     kernel::internal-error
+    di::handle-breakpoint
 
     ;; Free Pointers
     lisp::*read-only-space-free-pointer*
@@ -183,12 +193,7 @@
     two-arg-<= two-arg->= two-arg-/= eql %negate
     two-arg-and two-arg-ior two-arg-xor
     length two-arg-gcd two-arg-lcm
-
-    ;; Extra shit that should really be earlier, but isn't because we don't
-    ;; want to recompile everything.
-    di::handle-breakpoint
     ))
 
 (defparameter exported-static-symbols
-  (append (subseq static-symbols 0 (position 'two-arg-+ static-symbols))
-	  '(di::handle-breakpoint)))
+  (subseq static-symbols 0 (position 'two-arg-+ static-symbols)))
