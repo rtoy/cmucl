@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.21 2002/09/07 13:16:48 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.22 2002/11/21 22:14:19 pmai Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 
@@ -72,8 +72,6 @@
 	   "FIND-CLASS"
 	   "FIND-METHOD"
 	   "FUNCTION-KEYWORDS"
-	   "GENERIC-FLET"
-	   "GENERIC-LABELS"
 	   "INITIALIZE-INSTANCE"
 	   "INVALID-METHOD-ERROR"
 	   "MAKE-INSTANCE"
@@ -100,7 +98,6 @@
 	   "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS"
 	   "UPDATE-INSTANCE-FOR-REDEFINED-CLASS"
 	   "WITH-ACCESSORS"
-	   "WITH-ADDED-METHODS"
 	   "WITH-SLOTS"
 	   )
   
