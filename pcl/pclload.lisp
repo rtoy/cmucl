@@ -2,6 +2,7 @@
 (import 'kernel:funcallable-instance-p)
 (load "pcl:defsys")
 (load-pcl)
+(use-package "PCL" "USER")
 
 ;; hack, hack...
 #+nil
