@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.48.1.2 1993/01/27 12:52:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.48.1.3 1993/02/10 23:40:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1108,7 +1108,7 @@
 	   (pcl:print-object instance))
 	  (t
 	   (print-unreadable-object (stream instance :identity t)
-	     (write-string stream "Unprintable Instance"))))))
+	     (write-string "Unprintable Instance" stream))))))
 
 
 ;;;; Integer, ratio, and complex printing.  (i.e. everything but floats)
