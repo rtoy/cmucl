@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.83 2001/04/12 19:45:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.84 2001/09/24 15:25:38 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1222,11 +1222,11 @@
 			 (iy (imagpart y)))
 		    (if (> (abs ry) (abs iy))
 			(let* ((r (/ iy ry))
-			       (dn (* ry (+ 1 (* r r)))))
+			       (dn (+ ry (* r iy))))
 			  (complex (/ (+ rx (* ix r)) dn)
 				   (/ (- ix (* rx r)) dn)))
 			(let* ((r (/ ry iy))
-			       (dn (* iy (+ 1 (* r r)))))
+			       (dn (+ iy (* r ry))))
 			  (complex (/ (+ (* rx r) ix) dn)
 				   (/ (- (* ix r) rx) dn))))))
 	       ;; Multiply a complex by a real or vice versa
@@ -1237,6 +1237,19 @@
 	       ;; Divide a complex by a real
 	       (deftransform / ((w z) ((complex ,type) real) *)
 		 '(complex (/ (realpart w) z) (/ (imagpart w) z)))
+	       ;; Divide a real by a complex
+	       (deftransform / ((rx y) (real (complex ,type)) *)
+		 '(let* ((ry (realpart y))
+			 (iy (imagpart y)))
+		    (if (> (abs ry) (abs iy))
+			(let* ((r (/ iy ry))
+			       (dn (+ ry (* r iy))))
+			  (complex (/ rx dn)
+				   (/ (- (* rx r)) dn)))
+			(let* ((r (/ ry iy))
+			       (dn (+ iy (* r ry))))
+			  (complex (/ (* rx r) dn)
+				   (/ (- rx) dn))))))
 	       ;; Conjugate of complex number
 	       (deftransform conjugate ((z) ((complex ,type)) *)
 		 '(complex (realpart z) (- (imagpart z))))
