@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.173 2000/08/10 10:55:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.174 2000/08/24 16:39:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,7 +255,7 @@
              "SIGTTOU" "EEXIST" "SIGPROF" "SIGSTOP" "ENETRESET" "SIGURG"
              "ENOBUFS" "EPROCLIM" "EROFS" "ETOOMANYREFS" "UNIX-FILE-KIND"
              "ELOCAL" "UNIX-SIGSETMASK" "EREMOTE" "ESOCKTNOSUPPORT"
-	     "TIOCSIGSEND" "SIGWAITING"
+	     "TIOCSIGSEND" "SIGWAITING" "SIGABRT"
 	     "C-IFLAG" "UNIX-TCGETATTR" "C-LFLAG" "C-OFLAG" "C-CFLAG"
 	     "TCSAFLUSH" "C-CC" "C-ISPEED" "C-OSPEED" "SIOCSPGRP" "TERMIOS"
 	     "UNIX-TCSETATTR" "O_NDELAY" "O_NOCTTY"
