@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.4 1998/02/19 19:35:04 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.5 1998/06/16 18:20:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,25 +115,9 @@
 	 ;; low tag of 1 added.  When the nil symbol value with its
 	 ;; low tag of 3 is added the resulting value points to the
 	 ;; raw address slot of the fdefn (at +4).
-	 #-x86-lra
 	 (inst call (make-ea :dword
 			     :disp (+ nil-value
 				      (static-function-offset function))))
-	 #+x86-lra
-	 (progn
-	   ;; Push the return address.
-	   (inst push (make-fixup nil :code-object return))
-	   (inst jmp (make-ea :dword
-			      :disp (+ nil-value
-				       (static-function-offset function))))
-	   (align lowtag-bits #x90)
-	   (inst lra-header-word)
-	   (inst nop)
-	   (inst nop)
-	   (inst nop))
-	 #+x86-lra
-	 RETURN
-
 	 ,(collect ((bindings) (links))
 		   (do ((temp (temp-names) (cdr temp))
 			(name 'values (gensym))

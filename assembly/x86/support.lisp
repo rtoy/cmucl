@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/support.lisp,v 1.1 1997/01/21 00:30:28 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/support.lisp,v 1.2 1998/06/16 18:20:43 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -26,21 +26,8 @@
       nil))
     (:full-call
      (values
-      #-x86-lra
       `((note-this-location ,vop :call-site)
 	(inst call (make-fixup ',name :assembly-routine))
-	(note-this-location ,vop :single-value-return)
-	(move esp-tn ebx-tn))
-      #+x86-lra
-      `((note-this-location ,vop :call-site)
-	(inst push (make-fixup nil :code-object return))
-	(inst jmp (make-fixup ',name :assembly-routine))
-	(align lowtag-bits #x90)
-	(inst lra-header-word)
-	(inst nop)
-	(inst nop)
-	(inst nop)
-	RETURN
 	(note-this-location ,vop :single-value-return)
 	(move esp-tn ebx-tn))
       '((:save-p :compute-only))))

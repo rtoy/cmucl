@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.11 1998/02/19 19:35:01 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.12 1998/06/16 18:20:44 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,13 +224,6 @@
   (:save-p :force-to-stack)
   (:vop-var vop)
   (:generator 30
-    #+x86-lra
-    (progn 
-      (align lowtag-bits #x90)
-      (inst lra-header-word)
-      (inst nop)
-      (inst nop)
-      (inst nop))
     (emit-label label)
     (note-this-location vop :non-local-entry)
 
@@ -266,12 +259,5 @@
   (:ignore block start count)
   (:vop-var vop)
   (:generator 0
-    #+x86-lra
-    (progn 
-      (align lowtag-bits #x90)
-      (inst lra-header-word)
-      (inst nop)
-      (inst nop)
-      (inst nop))
     (emit-label label)
     (note-this-location vop :non-local-entry)))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.14 1998/02/19 19:34:47 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.15 1998/06/16 18:20:44 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -571,13 +571,6 @@
 
     (note-this-location vop :call-site)
     (inst jmp target)
-    #+x86-lra
-    (progn 
-      (align lowtag-bits #x90)
-      (inst lra-header-word)
-      (inst nop)
-      (inst nop)
-      (inst nop))
     RETURN
     (default-unknown-values vop values nvals)
     (trace-table-entry trace-table-normal)))
@@ -619,13 +612,6 @@
 
     (note-this-location vop :call-site)
     (inst jmp target)
-    #+x86-lra
-    (progn 
-      (align lowtag-bits #x90)
-      (inst lra-header-word)
-      (inst nop)
-      (inst nop)
-      (inst nop))
     RETURN
     (note-this-location vop :unknown-return)
     (receive-unknown-values values-start nvals start count)
@@ -676,13 +662,6 @@
 
     (note-this-location vop :call-site)
     (inst jmp target)
-    #+x86-lra
-    (progn 
-      (align lowtag-bits #x90)
-      (inst lra-header-word)
-      (inst nop)
-      (inst nop)
-      (inst nop))
     RETURN
     (note-this-location vop :known-return)
     (trace-table-entry trace-table-normal)))
@@ -903,10 +882,7 @@
 
     ,@(when (eq return :tail)
 	    '((:temporary (:sc unsigned-reg
-			   :from (:argument 1) :to (:argument 2)) old-fp-tmp)
-	      #+x86-lra
-	      (:temporary (:sc unsigned-reg
-			   :from (:argument 2) :to (:argument 3)) ret-pc-tmp)))
+			   :from (:argument 1) :to (:argument 2)) old-fp-tmp)))
 
     (:generator ,(+ (if named 5 0)
 		    (if variable 19 1)
@@ -959,17 +935,6 @@
 		     (format t "** tail-call old-fp in reg not S0~%")
 		   (storew old-fp ebp-tn (- (1+ ocfp-save-offset)))))
 
-		#+x86-lra
-		(sc-case return-pc
-		  ((sap-stack)
-		   (unless (= return-pc-save-offset (tn-offset return-pc))
-		     (format t "** tail-call ret-pc not S1~%")
-		     (move ret-pc-tmp return-pc)
-		     (storew ret-pc-tmp ebp-tn (- (1+ return-pc-save-offset)))))
-		  ((sap-reg)
-		   (format t "** tail-call ret-pc in reg not S1~%")
-		   (storew return-pc ebp-tn (- (1+ return-pc-save-offset)))))
-		
 		;; For tail call, we have to push the return-pc so
 		;; that it looks like we CALLed despite the fact that
 		;; we are going to JMP.
@@ -995,22 +960,12 @@
 		(storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
 
 		;; Save the return address.
-		#+x86-lra
-		(storew (make-fixup nil :code-object return)
-			new-fp (- (1+ return-pc-save-offset)))
-
 		(move ebp-tn new-fp)	; NB - now on new stack frame.
-		
-		;; Push the return address.
-		#+x86-lra
-		(inst push (make-fixup nil :code-object return))
-;		(inst push (make-ea :dword :base new-fp :disp -8))
 		))
 	     )
   
      (note-this-location vop :call-site)
 
-     #-x86-lra
      (inst ,(if (eq return :tail) 'jmp 'call)
       (make-ea :dword :base eax
 	       :disp ,(if named
@@ -1018,42 +973,12 @@
 			    other-pointer-type)
 			  '(- (* closure-function-slot word-bytes)
 			    function-pointer-type))))
-
-     #+x86-lra
-     (inst jmp (make-ea :dword :base eax
-			:disp ,(if named
-				   '(- (* fdefn-raw-addr-slot word-bytes)
-				       other-pointer-type)
-				 '(- (* closure-function-slot word-bytes)
-				     function-pointer-type))))
-     
      ,@(ecase return
 	      (:fixed
-		 #+x86-lra
-		 '((align lowtag-bits #x90)
-		   (inst lra-header-word)
-		   (inst nop)
-		   (inst nop)
-		   (inst nop)
-		   RETURN
-		   (default-unknown-values vop values nvals))
-		 #-x86-lra
-		 '((default-unknown-values vop values nvals))
-		 )
+		 '((default-unknown-values vop values nvals)))
 	      (:unknown
-	       #+x86-lra
-	       '((align lowtag-bits #x90)
-		 (inst lra-header-word)
-		 (inst nop)
-		 (inst nop)
-		 (inst nop)
-		 RETURN
-		 (note-this-location vop :unknown-return)
-		 (receive-unknown-values values-start nvals start count))
-	       #-x86-lra
 	       '((note-this-location vop :unknown-return)
-		 (receive-unknown-values values-start nvals start count))
-	       )
+		 (receive-unknown-values values-start nvals start count)))
 	      (:tail))
      (trace-table-entry trace-table-normal))))
 
