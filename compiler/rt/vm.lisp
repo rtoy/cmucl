@@ -432,6 +432,10 @@
 	  (part-of list))
 	 (t
 	  (any))))
+      (function-type
+       (exactly function))
+      (structure-type
+       (part-of structure))
       (ctype
        (any)))))
 
