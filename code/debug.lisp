@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.13 1990/12/15 14:07:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.14 1991/01/31 02:08:21 wlott Exp $
 ;;;
 ;;; CMU Common Lisp Debugger.  This is a very basic command-line oriented
 ;;; debugger.
@@ -247,6 +247,7 @@
      (t
       (when number
 	(format t "~&~S: " (di:frame-number frame)))
+  (mach:unix-sigsetmask 0)
     (when (>= verbosity 2)
       (let ((loc (di:frame-code-location frame)))
 	 (*debug-abort* (find-restart 'abort))
