@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.28 1991/04/24 12:26:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.29 1991/07/25 15:19:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.28 1991/04/24 12:26:50 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.29 1991/07/25 15:19:23 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -132,7 +132,16 @@
     vm:sap-type object-not-sap-error)
 
   (frob weak-pointer-p check-weak-pointer weak-pointer
-    vm:weak-pointer-type object-not-weak-pointer-error))
+    vm:weak-pointer-type object-not-weak-pointer-error)
+
+  (frob code-component-p nil nil nil
+    code-header-type)
+
+  (frob lra-p nil nil nil
+    return-pc-header-type)
+
+  (frob scavenger-hook-p nil nil nil
+    0))
 
 
 ;;; Slightly tenser versions for FIXNUM's
