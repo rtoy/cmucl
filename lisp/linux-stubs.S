@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.7 1999/03/13 06:23:17 dtc Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.8 1999/09/13 08:27:09 dtc Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -69,6 +69,7 @@ PVE_stub_ ## fct: ;\
  doe(getpgrp)
  doe(getpid)
  doe(getppid)
+ doe(getrlimit)
  doe(getrusage)
  doe(getsockname)
  doe(gettimeofday)
@@ -96,6 +97,7 @@ PVE_stub_ ## fct: ;\
  doe(recv)
  doe(rename)
  doe(rmdir)
+ doe(sched_yield)
  doe(select)
  doe(send)
  doe(setitimer)
@@ -103,6 +105,7 @@ PVE_stub_ ## fct: ;\
  doe(setpgrp)
  doe(setregid)
  doe(setreuid)
+ doe(setrlimit)
  doe(sigblock)
  doe(sigpause)
  doe(sigsetmask)
@@ -375,7 +378,6 @@ PVE_stub_ ## fct: ;\
 /*  doe(getpwent) */
 /*  doe(getpwnam) */
 /*  doe(getpwuid) */
-/*  doe(getrlimit) */
 /*  doe(getrpcbyname) */
 /*  doe(getrpcbynumber) */
 /*  doe(getrpcent) */
@@ -580,12 +582,6 @@ PVE_stub_ ## fct: ;\
 /*  doe(prev_ustat) */
 /*  doe(printf) */
 /*  doe(psignal) */
-/*  doe(pthread_cond_signal) */
-/*  doe(pthread_cond_wait) */
-/*  doe(pthread_mutex_lock) */
-/*  doe(pthread_mutex_unlock) */
-/*  doe(pthread_once) */
-/*  doe(pthread_yield) */
 /*  doe(ptrace) */
 /*  doe(putc) */
 /*  doe(putchar) */
@@ -700,7 +696,6 @@ PVE_stub_ ## fct: ;\
 /*  doe(setpwent) */
 /*  doe(setregid) */
 /*  doe(setreuid) */
-/*  doe(setrlimit) */
 /*  doe(setrpcent) */
 /*  doe(setservent) */
 /*  doe(setsgent) */
