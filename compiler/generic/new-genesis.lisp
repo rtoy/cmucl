@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.54 2003/03/23 21:23:41 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.55 2003/05/28 14:17:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2288,7 +2288,7 @@
 		    (- (* (vm:slot-offset slot) vm:word-bytes) lowtag)))
 	  (terpri))))
     (format t "#endif /* LANGUAGE_ASSEMBLY */~2%"))
-
+  ;;
   ;; Write out static symbols
   (dolist (symbol (cons nil vm:static-symbols))
     (format t "#define ~A LISPOBJ(0x~X)~%"
@@ -2304,6 +2304,13 @@
 		   vm:word-bytes
 		   vm:other-pointer-type
 		   (if symbol (vm:static-symbol-offset symbol) 0)))))
+  ;;
+  ;; Write out features.
+  (format t "~%/* Features when built. */~2%")
+  (dolist (feature (c:backend-features c:*backend*))
+    (format t "#define FEATURE_~a 1~%"
+	    (substitute #\_ #\- (symbol-name feature))))
+  ;;
   (format t "~%#endif~%"))
 
 ;;; FILES-DIFFER --- internal
@@ -2341,8 +2348,9 @@
 				     ".OLD"))
 	   (unix:unix-chmod unix-newname #o444)
 	   (rename-file new-name name)
-	   (warn "The C header file has changed.~%Be sure to ~
-		  re-compile the startup code."))
+	   (format t "The C header file has changed.~%~
+                      Be sure to re-compile the startup code.")
+	   (unix:unix-exit 1))
 	  (t
 	   (unix:unix-unlink unix-newname))))
   (undefined-value))
