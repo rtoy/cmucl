@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.35 2002/06/26 20:48:25 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.36 2002/11/22 18:17:31 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,9 +19,10 @@
 (use-package "ALIEN")
 (use-package "C-CALL")
 
-(export '(htonl ntohl htons ntohs lookup-host-entry host-entry host-entry-name
-	  host-entry-aliases host-entry-addr-list host-entry-addr
-	  create-unix-socket connect-to-unix-socket create-inet-socket
+(export '(htonl ntohl htons ntohs lookup-host-entry host-entry
+	  host-entry-name host-entry-aliases host-entry-addr-list
+	  host-entry-addr ip-string create-unix-socket connect-to-unix-socket
+	  create-unix-listener accept-unix-connection create-inet-socket
 	  connect-to-inet-socket create-inet-listener accept-tcp-connection
 	  close-socket ipproto-tcp ipproto-udp inaddr-any add-oob-handler
 	  remove-oob-handler remove-all-oob-handlers
@@ -47,19 +48,19 @@
 #+linux
 (defconstant sock-packet 10)
 
-(defconstant af-unix 1)
-(defconstant af-inet 2)
+(defconstant af-unix 1)        ; Unix domain sockets
+(defconstant af-inet 2)        ; Internet IP Protocol
 #+linux
 (progn
- (defconstant af-ax25 3)
- (defconstant af-ipx 4)
- (defconstant af-appletalk 5)
- (defconstant af-netrom 6)
- (defconstant af-bridge 7)
- (defconstant af-aal5 9)
- (defconstant af-x25 9)
- (defconstant af-inet6 10)
- (defconstant af-max 12))
+  (defconstant af-ax25 3)      ; Amateur Radio AX.25
+  (defconstant af-ipx 4)       ; Novell IPX
+  (defconstant af-appletalk 5) ; Appletalk DDP
+  (defconstant af-netrom 6)    ; Amateur radio NetROM
+  (defconstant af-bridge 7)    ; Multiprotocol bridge
+  (defconstant af-aal5 9)      ; Reserved for Werner's ATM
+  (defconstant af-x25 9)       ; Reserved for X.25 project
+  (defconstant af-inet6 10)    ; IP version 6
+  (defconstant af-max 12))
  
 (defconstant msg-oob 1)
 (defconstant msg-peek 2)
@@ -232,6 +233,13 @@ struct in_addr {
 		       (ntohl (deref (deref (slot hostent 'addr-list) index))))
 		      (repeat (1+ index)))))))))))
 
+(defun ip-string (addr)
+  (format nil "~D.~D.~D.~D"
+	  (ldb (byte 8 24) addr)
+	  (ldb (byte 8 16) addr)
+	  (ldb (byte 8 8) addr)
+	  (ldb (byte 8 0) addr)))
+
 (defun create-unix-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
 		       (internet-protocol kind)
@@ -259,6 +267,45 @@ struct in_addr {
 	       path (unix:get-unix-error-msg)))
       socket)))
 
+(defun create-unix-listener (path &optional (kind :stream)
+				  &key
+				  reuse-address
+				  (backlog 5)
+				  )
+  (declare (simple-string path))
+  (let ((socket (create-unix-socket kind)))
+    (with-alien ((sockaddr unix-sockaddr)) ;; I'm here (MSM)
+      (setf (slot sockaddr 'family) af-unix)
+      (kernel:copy-to-system-area path
+				  (* vm:vector-data-offset vm:word-bits)
+				  (alien-sap (slot sockaddr 'path))
+				  0
+				  (* (1+ (length path)) vm:byte-bits))
+      (when (minusp (unix:unix-bind socket
+				    (alien-sap sockaddr)
+				    (+ (alien-size inet-sockaddr :bytes)
+				       (length path))))
+	(unix:unix-close socket)
+	(error "Error binding socket to port ~a: ~a"
+	       port
+	       (unix:get-unix-error-msg))))
+    (when (eq kind :stream)
+      (when (minusp (unix:unix-listen socket backlog))
+	(unix:unix-close socket)
+	(error "Error listening to socket: ~A" (unix:get-unix-error-msg))))
+    socket))
+
+(defun accept-unix-connection (unconnected)
+  (declare (fixnum unconnected))
+  #+MP (mp:process-wait-until-fd-usable unconnected :input)
+  (with-alien ((sockaddr unix-sockaddr))
+    (let ((connected (unix:unix-accept unconnected
+				       (alien-sap sockaddr)
+				       (alien-size unix-sockaddr :bytes))))
+      (when (minusp connected)
+	(error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
+      (values connected (slot sockaddr 'path)))))
+
 (defun create-inet-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
 		       (internet-protocol kind)
@@ -285,11 +332,7 @@ struct in_addr {
 	(error "Error connecting socket to [~A:~A]: ~A"
 	       (if (stringp host)
 		   host
-		   (format nil "~D.~D.~D.~D"
-			   (ldb (byte 8 24) addr)
-			   (ldb (byte 8 16) addr)
-			   (ldb (byte 8 8) addr)
-			   (ldb (byte 8 0) addr)))
+		 (ip-string addr))
 	       port
 	       (unix:get-unix-error-msg)))
       socket)))
@@ -322,10 +365,15 @@ struct in_addr {
 
 (defun create-inet-listener (port &optional (kind :stream)
 				  &key
+				  (host 0)
 				  reuse-address
 				  (backlog 5)
 				  )
   (let ((socket (create-inet-socket kind)))
+        (addr (if (stringp host)
+		  (host-entry-addr (or (lookup-host-entry host)
+				       (error "Unknown host: ~S." host)))
+		host)))
     (when reuse-address
       (multiple-value-bind (optval errno)
 	  (set-socket-option socket sol-socket so-reuseaddr 1)
@@ -334,7 +382,7 @@ struct in_addr {
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
-      (setf (slot sockaddr 'addr) 0)
+      (setf (slot sockaddr 'addr) addr)
       (when (minusp (unix:unix-bind socket
 				    (alien-sap sockaddr)
 				    (alien-size inet-sockaddr :bytes)))
