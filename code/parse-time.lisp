@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.11 2003/08/29 19:22:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.12 2004/12/23 14:49:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -23,6 +23,7 @@
 (defconstant whitespace-chars '(#\space #\tab #\newline #\, #\' #\`))
 (defconstant time-dividers '(#\: #\.))
 (defconstant date-dividers '(#\\ #\/ #\-))
+(defconstant date-time-dividers '(#\T #\t))
 
 (defvar *error-on-mismatch* nil
   "If t, an error will be signalled if parse-time is unable
@@ -85,7 +86,8 @@
 	    ("edt" . 4) ("cst" . 6)
 	    ("cdt" . 5) ("mst" . 7)
 	    ("mdt" . 6)	("pst" . 8)
-	    ("pdt" . 7) ("utc" . 0)) 
+	    ("pdt" . 7) ("utc" . 0)
+	    ("z" . 0)) 
 	  *zone-strings*)
 
 (hashlist '(("yesterday" . yesterday)  ("today" . today)
@@ -135,6 +137,10 @@
 	   hour (time-divider) (minute) (time-divider) (secondp)
 	   (am-pm) (date-divider) (zone))
     (year (date-divider) month (date-divider) day
+	  hour (time-divider) (minute) (time-divider) (secondp)
+	  (am-pm) (date-divider) (zone))
+    (year (date-divider) month (date-divider) day
+          (date-time-divider)
 	  hour (time-divider) (minute) (time-divider) (secondp)
 	  (am-pm) (date-divider) (zone))
     (month (date-divider) year
@@ -396,6 +402,11 @@
 (defun date-divider (character)
   (and (characterp character)
        (member character date-dividers :test #'char=)))
+
+(defun date-time-divider (character)
+  (and (characterp character)
+       (member character date-dime-dividers :test #'char=)))
+
 
 ;;; Match-substring takes a string argument and tries to match it with
 ;;; the strings in one of the four hash tables: *weekday-strings*, *month-
@@ -436,7 +447,10 @@
 	  (prev-char (if (= string-index start)
 			 nil
 			 (char string (1- string-index)))))
-      (cond ((alpha-char-p next-char)
+      (cond ((member next-char date-time-dividers :test #'char=)
+	     (push (cons 'date-time-divider next-char) parts-list)
+	     (incf string-index))
+	    ((alpha-char-p next-char)
 	     ;; Alphabetic character - scan to the end of the substring.
 	     (do ((scan-index (1+ string-index) (1+ scan-index)))
 		 ((or (eq scan-index end)
@@ -597,6 +611,7 @@
 	(weekday (setf (decoded-time-dotw parsed-values) form-value))
 	(am-pm (deal-with-am-pm form-value parsed-values))
 	(noon-midn (deal-with-noon-midn form-value parsed-values))
+	(date-time-divider 0)
 	(special (funcall form-value parsed-values))
 	(t (error "Unrecognized symbol in form list: ~A." form-type))))))
 
