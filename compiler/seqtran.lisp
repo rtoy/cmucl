@@ -521,7 +521,7 @@ member map concatenate position find
 
 
 (macrolet ((frob (name result-fun)
-	     `(deftransform string/=*
+	     `(deftransform ,name
 			    ((string1 string2 start1 end1 start2 end2)
 			     (simple-string simple-string t t t t))
 		'(,result-fun
