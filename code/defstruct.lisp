@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.8 1993/02/14 16:38:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.9 1993/02/16 10:52:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -302,7 +302,7 @@
 	(let ((inherits (inherits-for-structure defstruct)))
 	  `(progn
 	     (%defstruct ',defstruct ',inherits)
-	     (eval-when (compile)
+	     (eval-when (compile eval)
 	       (%compiler-only-defstruct ',defstruct ',inherits))
 	     (%compiler-defstruct ',defstruct)
 	     ,@(define-raw-accessors defstruct)
@@ -964,7 +964,7 @@
 ;;; the type's layout.
 ;;;
 (proclaim '(inline typep-to-layout))
-(defun typep-to-structure (obj layout)
+(defun typep-to-layout (obj layout)
   (declare (type layout layout) (optimize (speed 3) (safety 0)))
   (when (layout-invalid layout)
     (error "Obsolete structure accessor function called."))
@@ -990,7 +990,7 @@
 (defun structure-slot-accessor (layout dsd)
   #'(lambda (structure)
       (declare (optimize (speed 3) (safety 0)))
-      (unless (typep-to-structure structure layout)
+      (unless (typep-to-layout structure layout)
 	(error "Structure for accessor ~S is not a ~S:~% ~S"
 	       (dsd-accessor dsd) (class-name (layout-class layout))
 	       structure))
@@ -999,7 +999,7 @@
 (defun structure-slot-setter (layout dsd)
   #'(lambda (new-value structure)
       (declare (optimize (speed 3) (safety 0)))
-      (unless (typep-to-structure structure layout)
+      (unless (typep-to-layout structure layout)
 	(error "Structure for setter ~S is not a ~S:~% ~S"
 	       `(setf ,(dsd-accessor dsd)) (class-name (layout-class layout))
 	       structure))
