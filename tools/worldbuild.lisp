@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.16 1992/09/08 22:27:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.17 1993/01/15 18:18:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,9 +125,9 @@
     "target:code/debug"
     ))
 
-(if (c:target-featurep '(and :mach :sparc))
-    (setf *genesis-core-name* "/usr/tmp/kernel.core")
-    (setf *genesis-core-name* "target:lisp/kernel.core"))
+(setf *genesis-core-name*
+      #+(and mach sparc) "/usr/tmp/kernel.core"
+      #-(and mach sparc) "target:lisp/kernel.core")
 (setf *genesis-c-header-name* "target:lisp/internals.h")
 (setf *genesis-map-name* nil)
 (setf *genesis-symbol-table* "target:lisp/lisp.nm")
