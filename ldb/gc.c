@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.10 1990/07/02 05:20:29 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.11 1990/07/18 10:49:45 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -142,7 +142,9 @@ collect_garbage()
 	unsigned long size_retained, size_discarded;
 	int oldmask;
 	
+#ifdef PRINTNOISE
 	printf("[Collecting garbage ... \n");
+#endif
 
 	getrusage(RUSAGE_SELF, &start_rusage);
 	gettimeofday(&start_tv, (struct timezone *) 0);
@@ -175,33 +177,45 @@ collect_garbage()
 
 
 	/* Scavenge all of the roots. */
+#ifdef PRINTNOISE
 	printf("Scavenging interrupt contexts ...\n");
+#endif
 	scavenge_interrupt_contexts();
 
+#ifdef PRINTNOISE
 	printf("Scavenging interrupt handlers (%d bytes) ...\n",
 	       sizeof(interrupt_handlers));
+#endif
 	scavenge((lispobj *) interrupt_handlers,
 		 sizeof(interrupt_handlers) / sizeof(lispobj));
 
 	control_stack_size = current_control_stack_pointer - control_stack;
+#ifdef PRINTNOISE
 	printf("Scavenging the control stack (%d bytes) ...\n",
 	       control_stack_size * sizeof(lispobj));
+#endif
 	scavenge(control_stack, control_stack_size);
 
 	binding_stack_size = current_binding_stack_pointer - binding_stack;
+#ifdef PRINTNOISE
 	printf("Scavenging the binding stack (%d bytes) ...\n",
 	       binding_stack_size * sizeof(lispobj));
+#endif
 	scavenge(binding_stack, binding_stack_size);
 
 	static_space_size = current_static_space_free_pointer - static_space;
+#ifdef PRINTNOISE
 	printf("Scavenging static space (%d bytes) ...\n",
 	       static_space_size * sizeof(lispobj));
+#endif
 	scavenge(static_space, static_space_size);
 
 
 	/* Scavenge newspace. */
+#ifdef PRINTNOISE
 	printf("Scavenging new space (%d bytes) ...\n",
 	       (new_space_free_pointer - new_space) * sizeof(lispobj));
+#endif
 	scavenge_newspace();
 
 
@@ -210,12 +224,16 @@ collect_garbage()
 #endif
 
 	/* Scan the weak pointers. */
+#ifdef PRINTNOISE
 	printf("Scanning weak pointers ...\n");
+#endif
 	scan_weak_pointers();
 
 
 	/* Flip spaces. */
+#ifdef PRINTNOISE
 	printf("Flipping spaces ...\n");
+#endif
 
 	os_zero((os_vm_address_t) current_dynamic_space,
 		(os_vm_size_t) DYNAMIC_SPACE_SIZE);
@@ -228,13 +246,17 @@ collect_garbage()
 
 
 	/* Flush the icache. */
+#ifdef PRINTNOISE
 	printf("Flushing instruction cache ...\n");
+#endif
 	os_flush_icache((os_vm_address_t) new_space,
 			(os_vm_size_t) size_retained);
 
 
 	/* Zero stack. */
+#ifdef PRINTNOISE
 	printf("Zeroing empty part of control stack ...\n");
+#endif
 	os_zero((os_vm_address_t) current_control_stack_pointer,
 		(os_vm_size_t) (CONTROL_STACK_SIZE -
 				control_stack_size * sizeof(lispobj)));
@@ -245,27 +267,37 @@ collect_garbage()
 	gettimeofday(&stop_tv, (struct timezone *) 0);
 	getrusage(RUSAGE_SELF, &stop_rusage);
 
+#ifdef PRINTNOISE
 	printf("done.]\n");
-
+#endif
 	
 	percent_retained = (((float) size_retained) /
 			     ((float) size_discarded)) * 100.0;
 
+#ifdef PRINTNOISE
 	printf("Total of %d bytes out of %d bytes retained (%3.2f%%).\n",
 	       size_retained, size_discarded, percent_retained);
+#endif
 
 	real_time = tv_diff(&stop_tv, &start_tv);
 	user_time = tv_diff(&stop_rusage.ru_utime, &start_rusage.ru_utime);
 	system_time = tv_diff(&stop_rusage.ru_stime, &start_rusage.ru_stime);
 
+#ifdef PRINTNOISE
 	printf("Statistics:\n");
 	printf("%10.2f sec of real time\n", real_time);
 	printf("%10.2f sec of user time,\n", user_time);
 	printf("%10.2f sec of system time.\n", system_time);
-	
+#else
+        printf("Statistics: %10.2fs real, %10.2fs user, %10.2fs system.\n",
+               real_time, user_time, system_time);
+#endif        
+
+#ifdef PRINTNOISE
 	gc_rate = ((float) size_retained / (float) (1<<20)) / real_time;
 
 	printf("%10.2f M bytes/sec collected.\n", gc_rate);
+#endif
 }
 
 
@@ -854,13 +886,16 @@ lispobj object;
 	/* paging. */
 
 	while (1) {
-		lispobj cdr, new_cdr;
+		lispobj cdr, new_cdr, first;
 		struct cons *cdr_cons, *new_cdr_cons;
 
 		cdr = cons->cdr;
 
-		if (!((LowtagOf(cdr) == type_ListPointer) && from_space_p(cdr)))
-			break;
+                if (LowtagOf(cdr) != type_ListPointer ||
+                    !from_space_p(cdr) ||
+                    (Pointerp(first = *(lispobj *)PTR(cdr)) &&
+                     new_space_p(first)))
+                	break;
 
 		cdr_cons = (struct cons *) PTR(cdr);
 
