@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.10 1990/08/15 02:55:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.11 1990/11/03 03:25:32 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions of some general purpose memory
 ;;; reference VOPs inherited by basic memory reference operations.
@@ -17,7 +17,7 @@
 ;;; Converted by William Lott.
 ;;; 
 
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;; Cell-Ref and Cell-Set are used to define VOPs like CAR, where the offset to

@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.9 1990/07/02 09:33:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.10 1990/11/03 03:25:27 wlott Exp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;; Converted for the MIPS R2000 by Christopher Hoover.
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 
 

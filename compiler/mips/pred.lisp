@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.4 1990/04/24 02:56:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.5 1990/11/03 03:25:41 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of predicate VOPs for the MIPS.
 ;;;
@@ -16,7 +16,7 @@
 ;;; Converted by William Lott.
 ;;; 
 
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; The Branch VOP.

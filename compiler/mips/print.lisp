@@ -7,13 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.5 1990/07/20 00:40:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.6 1990/11/03 03:25:43 wlott Exp $
 ;;;
 ;;; This file contains temporary printing utilities and similar noise.
 ;;;
 ;;; Written by William Lott.
 
-(in-package "C")
+(in-package "MIPS")
 
 
 (define-vop (print)

@@ -7,13 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.16 1990/07/07 01:01:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.17 1990/11/03 03:25:46 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
 ;;; Written by William Lott.
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; Moves and coercions:

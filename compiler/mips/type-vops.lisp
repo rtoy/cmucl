@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.22 1990/10/14 22:39:06 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.23 1990/11/03 03:25:59 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -16,7 +16,7 @@
 ;;;
 ;;; Converted for the MIPS R2000 by Christopher Hoover.
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; Simple type checking and testing:

@@ -7,13 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.9 1990/10/24 16:23:11 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.10 1990/11/03 03:25:31 wlott Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; Move functions:

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.32 1990/10/04 23:23:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.33 1990/11/03 03:25:56 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; Mips conversion by William Lott and Christopher Hoover.
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; Random pointer comparison VOPs

@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.12 1990/09/21 00:48:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.13 1990/11/03 03:24:27 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
 ;;; Written by William Lott.
 ;;; 
 
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; LIST and LIST*

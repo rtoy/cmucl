@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.10 1990/07/03 06:31:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.11 1990/11/03 03:26:01 wlott Exp $
 ;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -16,7 +16,7 @@
 ;;; Converted for MIPS by William Lott.
 ;;; 
 
-(in-package "C")
+(in-package "MIPS")
 
 (define-vop (reset-stack-pointer)
   (:args (ptr :scs (any-reg)))

@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.39 1990/08/23 18:51:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.40 1990/11/03 03:25:35 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
 ;;; Written by William Lott and Christopher Hoover.
 ;;; 
 
-(in-package "C")
+(in-package "MIPS")
 
 ;;; Handy macro for defining top-level forms that depend on the compile
 ;;; environment.

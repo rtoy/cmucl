@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.23 1990/10/24 16:23:56 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.24 1990/11/03 03:25:38 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -15,7 +15,7 @@
 ;;; Written by Rob MacLachlan.
 ;;; MIPS conversion by William Lott.
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 
 (define-move-function (load-immediate 1) (vop x y)

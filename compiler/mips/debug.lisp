@@ -7,13 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.4 1990/07/02 04:48:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.5 1990/11/03 03:25:29 wlott Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
 ;;; Written by William Lott.
 ;;; 
-(in-package "C")
+(in-package "MIPS")
 
 (in-package "DI")
 (import '(c::current-fp))
@@ -21,7 +21,7 @@
 		     function-code-header make-lisp-obj get-lisp-obj-address)
 	(find-package "C"))
 
-(in-package "C")
+(in-package "MIPS")
 
 
 (defknown current-sp () system-area-pointer (movable flushable))
