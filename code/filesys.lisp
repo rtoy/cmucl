@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.16 1991/12/16 10:31:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.17 1991/12/16 12:50:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -666,6 +666,10 @@
 	 (original-namestring (unix-namestring original t))
 	 (new-name (merge-pathnames new-name original))
 	 (new-namestring (unix-namestring new-name nil)))
+    (unless original-namestring
+      (error "~S doesn't exist." file))
+    (unless new-namestring
+      (error "~S can't be created." new-name))
     (multiple-value-bind (res error)
 			 (mach:unix-rename original-namestring
 					   new-namestring)
@@ -708,22 +712,27 @@
 ;;;
 (defun file-write-date (file)
   "Return file's creation date, or NIL if it doesn't exist."
-  (multiple-value-bind (res dev ino mode nlink uid gid
-			    rdev size atime mtime)
-		       (mach:unix-stat (unix-namestring file t))
-    (declare (ignore dev ino mode nlink uid gid rdev size atime))
-    (when res
-      (+ unix-to-universal-time mtime))))
+  (let ((name (unix-namestring file t)))
+    (when name
+      (multiple-value-bind
+	  (res dev ino mode nlink uid gid rdev size atime mtime)
+	  (mach:unix-stat name)
+	(declare (ignore dev ino mode nlink uid gid rdev size atime))
+	(when res
+	  (+ unix-to-universal-time mtime))))))
 
 ;;; File-Author  --  Public
 ;;;
 (defun file-author (file)
   "Returns the file author as a string, or nil if the author cannot be
    determined.  Signals an error if file doesn't exist."
-  (multiple-value-bind (winp dev ino mode nlink uid)
-		       (mach:unix-stat (unix-namestring (pathname file) t))
-    (declare (ignore dev ino mode nlink))
-    (if winp (lookup-login-name uid))))
+  (let ((name (unix-namestring (pathname file) t)))
+    (unless name
+      (error "~S doesn't exist." file))
+    (multiple-value-bind (winp dev ino mode nlink uid)
+			 (mach:unix-stat file)
+      (declare (ignore dev ino mode nlink))
+      (if winp (lookup-login-name uid)))))
 
 
 
@@ -1056,14 +1065,17 @@
   "File-writable accepts a pathname and returns T if the current
   process can write it, and NIL otherwise."
   (let ((name (unix-namestring name nil)))
-    (values
-     (if (mach:unix-file-kind name)
-	 (mach:unix-access name mach:w_ok)
-	 (mach:unix-access (subseq name
-				   0
-				   (or (position #\/ name :from-end t)
-				       0))
-			   (logior mach:w_ok mach:x_ok))))))
+    (cond ((null name)
+	   nil)
+	  ((mach:unix-file-kind name)
+	   (values (mach:unix-access name mach:w_ok)))
+	  (t
+	   (values
+	    (mach:unix-access (subseq name
+				      0
+				      (or (position #\/ name :from-end t)
+					  0))
+			      (logior mach:w_ok mach:x_ok)))))))
 
 
 ;;; Pathname-Order  --  Internal
@@ -1098,12 +1110,15 @@
 ;;; %Set-Default-Directory  --  Internal
 ;;; 
 (defun %set-default-directory (new-val)
-  (multiple-value-bind (gr error)
-		       (mach:unix-chdir (unix-namestring new-val t))
-    (if gr
-	(setf (search-list "default:") (default-directory))
-	(error (mach:get-unix-error-msg error))))
-  new-val)
+  (let ((namestring (unix-namestring new-val t)))
+    (unless namestring
+      (error "~S doesn't exist." new-val))
+    (multiple-value-bind (gr error)
+			 (mach:unix-chdir namestring)
+      (if gr
+	  (setf (search-list "default:") (default-directory))
+	  (error (mach:get-unix-error-msg error))))
+    new-val))
 ;;;
 (defsetf default-directory %set-default-directory)
 
