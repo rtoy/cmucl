@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.17 1993/08/26 15:26:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.18 1993/08/30 15:06:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,17 +40,6 @@
   (bout #'ill-bout :type function)		; Byte output function
   (sout #'ill-out :type function)		; String output function
   (misc #'do-nothing :type function))		; Less used methods
-
-
-;;; Condition structures:
-
-(in-package "CONDITIONS")
-
-(defstruct (condition (:constructor |constructor for condition|)
-                      (:predicate nil)
-                      (:print-function condition-print))
-  )
-
 
 
 ;;; Alien value structures:
