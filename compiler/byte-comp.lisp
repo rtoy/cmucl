@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.15 1993/05/25 20:35:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.16 1993/08/19 23:42:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1128,7 +1128,7 @@
 	       (if (null closure)
 		   (output-push-load-time-constant segment :entry leaf)
 		   (let ((my-env (node-environment ref)))
-		     (output-push-load-time-constant segment :xep leaf)
+		     (output-push-load-time-constant segment :entry leaf)
 		     (dolist (thing closure)
 		       (etypecase thing
 			 (lambda-var
