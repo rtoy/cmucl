@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.3 1992/02/25 22:55:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.4 1992/02/26 00:20:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,6 @@
 (load "vm:array")
 (load "vm:pred")
 (load "vm:type-vops")
-(load "vm:vm-tran")
 
 (load "assem:assem-rtns")
 
@@ -64,6 +63,5 @@
 (load "assem:alloc")
 
 (load "c:pseudo-vops")
-(load "vm:vm-tran")
 
 (check-move-function-consistency)
