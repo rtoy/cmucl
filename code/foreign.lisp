@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.11 1992/03/04 18:15:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.12 1992/07/17 16:03:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,7 +166,9 @@
 
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
-			   (base-file "path:lisp")
+			   (base-file
+			    (merge-pathnames *command-line-utility-name*
+					     "path:"))
 			   (env ext:*environment-list*))
   "Load-foreign loads a list of C object files into a running Lisp.  The files
   argument should be a single file or a list of files.  The files may be
