@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.1 1991/10/16 15:52:07 ram Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.2 1991/10/18 18:25:47 ram Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -55,7 +55,8 @@ loads any existing compiled binary, or the ".lisp" source if none.
 .BR \-hinit " filename"
 Similar to \-init, but specifies the name of the
 .I Hemlock
-init file (default `~/hemlock-init'), which is loaded only when
+init file (default `~/hemlock-init' or ~/.hemlock-init), which is loaded only
+when
 .I Hemlock
 is started.
 .TP
@@ -130,7 +131,7 @@ Script used by LOAD-FOREIGN to run "ld".
 User customization files loaded at lisp startup; either name is acceptable.
 Init files can be compiled.
 .TP
-.BR ~/hemlock-init.lisp
+.BR ~/hemlock-init.lisp, ~/.hemlock-init.lisp
 Hemlock initialization file, loaded when Hemlock starts.
 .PP
 
