@@ -1,4 +1,4 @@
-	    Release notes for CMU Common Lisp 16d, 23 April 92
+	    Release notes for CMU Common Lisp 16d, 30 May 92
 
 16d is our first version 16 general release, and incorporates many changes not
 present in the 15 series.  It is currently fairly close to our current
