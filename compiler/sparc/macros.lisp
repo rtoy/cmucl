@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.26 2003/10/09 19:04:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.27 2003/10/16 16:25:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.26 2003/10/09 19:04:28 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.27 2003/10/16 16:25:19 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -574,14 +574,14 @@
   `(progn
      ;; Set the pseudo-atomic flag
      (without-scheduling ()
-       (inst add alloc-tn pseudo-atomic-value))
+       (inst or alloc-tn pseudo-atomic-value))
      ,@forms
      ;; Reset the pseudo-atomic flag
      (without-scheduling ()
        ;; Remove the pseudo-atomic flag.  (Could do subtraction here,
        ;; but the disassembler prints some notes based on the add
        ;; instruction.)
-       (inst add alloc-tn (- pseudo-atomic-value))
+       (inst andn alloc-tn pseudo-atomic-value)
        ;; Check to see if pseudo-atomic interrupted flag is set (bit 0 = 1)
        (inst andcc zero-tn alloc-tn pseudo-atomic-interrupted-value)
        ;; The C code needs to process this correctly and fixup alloc-tn.

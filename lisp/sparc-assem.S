@@ -105,7 +105,7 @@ _call_into_lisp:
         load(_current_control_frame_pointer, reg_OCFP)
 
         /* No longer atomic, and check for interrupt. */
-	sub	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	andn	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
 	tne	trap_PseudoAtomic
 
@@ -141,7 +141,7 @@ lra:
         mov     reg_A0, %i0
 
         /* Turn on pseudo_atomic */
-	add	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	or	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 
         /* Store LISP state */
 	andn	reg_ALLOC, lowtag_Mask, reg_NL1
@@ -154,7 +154,7 @@ lra:
         store(reg_NL1,_foreign_function_call_active)
 
         /* Were we interrupted? */
-	sub	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	andn	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
 	tne	trap_PseudoAtomic
 
@@ -185,7 +185,7 @@ _call_into_c:
         st      reg_CODE, [reg_CFP+8]
 
         /* Turn on pseudo-atomic. */
-	add	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	or	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 
 	/* Convert the return address to an offset and save it on the stack. */
 	sub	reg_LIP, reg_CODE, reg_L0
@@ -206,7 +206,7 @@ _call_into_c:
         store(reg_CSP,_foreign_function_call_active)
 
         /* Were we interrupted? */
-	sub	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	andn	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
 	tne	trap_PseudoAtomic
 
@@ -244,7 +244,7 @@ _call_into_c:
 	sub	reg_LIP, type_OtherPointer, reg_LIP
 
         /* No longer atomic. */
-	sub	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	andn	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
 	tne	trap_PseudoAtomic
 
