@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.22 1993/07/20 15:38:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.23 1993/08/19 17:36:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -120,7 +120,8 @@
 ;;;    If FIND-CLASS is called on a constant class, locate the CLASS-CELL at
 ;;; load time.
 ;;; 
-(deftransform find-class ((name) ((constant-argument symbol)))
+(deftransform find-class ((name) ((constant-argument symbol)) *
+			  :where :both)
   (let* ((name (continuation-value name))
 	 (cell (find-class-cell name)))
     `(or (class-cell-class ',cell)
