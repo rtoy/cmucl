@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.13 1990/04/26 20:09:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.14 1990/04/26 21:45:22 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -34,6 +34,7 @@
   (nuke "CONCAT-PNAMES" "LISP")
   (nuke "ONCE-ONLY" "COMPILER")
   (nuke "CONSTANT" "COMPILER")
+  (nuke "SAP+" "COMPILER")
   (nuke "SAP+" "LISP"))
 
 (labels
