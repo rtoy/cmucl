@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.153 1998/05/04 01:27:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.154 1998/05/09 22:13:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -554,7 +554,7 @@
              "WRITE-LINE" "WRITE-STRING" "WRITE-TO-STRING"
 	     "WRITE-SEQUENCE" "Y-OR-N-P" "YES-OR-NO-P" "ZEROP"
 
-             "ADD-METHOD" "CALL-METHOD"
+             "ADD-METHOD" "ALLOCATE-INSTANCE" "CALL-METHOD"
              "CALL-NEXT-METHOD" "CHANGE-CLASS"
              "COMPUTE-APPLICABLE-METHODS" "DEFCLASS" "DEFGENERIC"
              "DEFINE-METHOD-COMBINATION" "DEFMETHOD" "DESCRIBE-OBJECT"
