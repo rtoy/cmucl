@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.23 2003/05/11 11:30:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.24 2003/06/15 14:06:26 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -51,19 +51,19 @@
 		       (slot-value
 			(make-method-function
 			 (lambda (obj)
-			   (slot-missing (class-of obj) obj slot-name
-					 'slot-value))))
+			   (values (slot-missing (class-of obj) obj slot-name
+						 'slot-value)))))
 		       (slot-boundp
 			(make-method-function
 			 (lambda (obj)
-			   (slot-missing (class-of obj) obj slot-name
-					 'slot-boundp))))
+			   (not (not (slot-missing (class-of obj) obj slot-name
+						   'slot-boundp))))))
 		       (setf
 			(make-method-function
 			 (lambda (val obj)
-			   (declare (ignore val))
 			   (slot-missing (class-of obj) obj slot-name
-					 'setf))))))
+					 'setf)
+			   val)))))
 		    (initargs (copy-tree initargs)))
 	       (setf (getf (getf initargs :plist) :slot-name-lists)
 		     (list (list nil slot-name)))
@@ -127,9 +127,12 @@
 			 (setq object object-var)))))
 	 (writer-name (slot-writer-name slot-name))
 	 (form `(let ((.ignore. (load-time-value
-				 (ensure-accessor 'writer ',writer-name ',slot-name))))
+				 (ensure-accessor 'writer ',writer-name
+						  ',slot-name)))
+		      (.new-value. ,new-value))
 		  (declare (ignore .ignore.))
-		  (funcall #',writer-name ,new-value ,object))))
+		  (funcall #',writer-name .new-value. ,object)
+		  .new-value.)))
     (if bindings
 	`(let ,bindings ,form)
 	form)))
@@ -182,19 +185,19 @@
 		   (check-obsolete-instance instance)
 		   (let ((value (%slot-ref (fsc-instance-slots instance) index)))
 		     (if (eq value +slot-unbound+)
-			 (slot-unbound (class-of instance) instance slot-name)
+			 (values (slot-unbound (class-of instance) instance slot-name))
 			 value)))
 		 (lambda (instance)
 		   (check-obsolete-instance instance)
 		   (let ((value (%slot-ref (std-instance-slots instance) index)))
 		     (if (eq value +slot-unbound+)
-			 (slot-unbound (class-of instance) instance slot-name)
+			 (values (slot-unbound (class-of instance) instance slot-name))
 			 value)))))
      (cons   (lambda (instance)
 	       (check-obsolete-instance instance)
 	       (let ((value (cdr index)))
 		 (if (eq value +slot-unbound+)
-		     (slot-unbound (class-of instance) instance slot-name)
+		     (values (slot-unbound (class-of instance) instance slot-name))
 		     value)))))
    `(reader ,slot-name)))
 
@@ -304,21 +307,21 @@
 		  (check-obsolete-instance instance)
 		  (let ((value (%slot-ref (fsc-instance-slots instance) index)))
 		    (if (eq value +slot-unbound+)
-			(slot-unbound class instance slot-name)
+			(values (slot-unbound class instance slot-name))
 			value)))
 		(lambda (class instance slotd)
 		  (declare (ignore slotd))
 		  (check-obsolete-instance instance)
 		  (let ((value (%slot-ref (std-instance-slots instance) index)))
 		    (if (eq value +slot-unbound+)
-			(slot-unbound class instance slot-name)
+			(values (slot-unbound class instance slot-name))
 			value)))))
     (cons   (lambda (class instance slotd)
 	      (declare (ignore slotd))
 	      (check-obsolete-instance instance)
 	      (let ((value (cdr index)))
 		(if (eq value +slot-unbound+)
-		    (slot-unbound class instance slot-name)
+		    (values (slot-unbound class instance slot-name))
 		    value))))))
 
 (defun make-optimized-std-setf-slot-value-using-class-method-function
@@ -374,12 +377,12 @@
 		      (fixnum 	
 		       (let ((value (%slot-ref (get-slots instance) index)))
 			 (if (eq value +slot-unbound+)
-			     (slot-unbound (class-of instance) instance slot-name)
+			     (values (slot-unbound (class-of instance) instance slot-name))
 			     value)))
 		      (cons
 		       (let ((value (cdr index)))
 			 (if (eq value +slot-unbound+)
-			     (slot-unbound (class-of instance) instance slot-name)
+			     (values (slot-unbound (class-of instance) instance slot-name))
 			     value)))
 		      (t
 		       (error "~@<The wrapper for class ~S does not have ~

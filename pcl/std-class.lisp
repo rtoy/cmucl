@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.69 2003/06/10 09:20:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.70 2003/06/15 14:06:26 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1644,7 +1644,7 @@
 	  (lambda (x)
 	    (handler-case 
 		(conditions::condition-reader-function x slot-name)
-	      (error () (slot-unbound class x slot-name)))))
+	      (error () (values (slot-unbound class x slot-name))))))
     (setf (slot-definition-writer-function slotd)
 	  (lambda (v x)
 	    (conditions::condition-writer-function x v slot-name)))

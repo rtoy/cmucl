@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.25 2003/06/12 09:06:30 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.26 2003/06/15 14:06:26 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -87,7 +87,7 @@
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
     (if (null slot-definition)
-	(slot-missing class object slot-name 'slot-value)
+	(values (slot-missing class object slot-name 'slot-value))
 	(slot-value-using-class class object slot-definition))))
 
 (defun set-slot-value (object slot-name new-value)
@@ -96,7 +96,8 @@
     (if (null slot-definition)
 	(slot-missing class object slot-name 'setf new-value)
 	(setf (slot-value-using-class class object slot-definition) 
-	      new-value))))
+	      new-value))
+    new-value))
 
 (define-compiler-macro slot-value (&whole form object slot-name)
   (if (and (constantp slot-name)
@@ -114,7 +115,7 @@
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
     (if (null slot-definition)
-	(slot-missing class object slot-name 'slot-boundp)
+	(not (not (slot-missing class object slot-name 'slot-boundp)))
 	(slot-boundp-using-class class object slot-definition))))
 
 (define-compiler-macro slot-boundp (&whole form object slot-name)
@@ -128,7 +129,8 @@
          (slot-definition (find-slot-definition class slot-name)))
     (if (null slot-definition)
         (slot-missing class object slot-name 'slot-makunbound)
-        (slot-makunbound-using-class class object slot-definition))))
+        (slot-makunbound-using-class class object slot-definition))
+    object))
 
 (defun slot-exists-p (object slot-name)
   (let ((class (class-of object)))
@@ -173,7 +175,7 @@
                            method.~@:>"
 			  slotd :instance :class 'slot-value-using-class)))))
     (if (eq value +slot-unbound+)
-	(slot-unbound class object (slot-definition-name slotd))
+	(values (slot-unbound class object (slot-definition-name slotd)))
 	value)))
 
 (defmethod (setf slot-value-using-class)
@@ -316,13 +318,14 @@
   (error 'unbound-slot :name slot-name :slot slot-name :instance instance))
 
 (defun slot-unbound-internal (instance position)
-  (slot-unbound (class-of instance) instance 
-		(etypecase position
-		  (fixnum 
-		   (nth position 
-			(wrapper-instance-slots-layout (wrapper-of instance))))
-		  (cons
-		   (car position)))))
+  (values
+   (slot-unbound (class-of instance) instance 
+		 (etypecase position
+		   (fixnum 
+		    (nth position 
+			 (wrapper-instance-slots-layout (wrapper-of instance))))
+		   (cons
+		    (car position))))))
 
 
 (defmethod allocate-instance ((class standard-class) &rest initargs &key)

@@ -52,7 +52,7 @@
 ;;;
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.4 2003/05/08 11:21:33 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.5 2003/06/15 14:06:26 gerd Exp $")
  
 (in-package "PCL")
 
@@ -364,7 +364,7 @@
 	`(the ,slot-type ,read-form))))
 
 (defun inline-slot-unbound (instance slot-name)
-  (slot-unbound (class-of instance) instance slot-name))
+  (values (slot-unbound (class-of instance) instance slot-name)))
 
 (defmacro inline-slot-boundp (class slot-name slots-variable)
   (multiple-value-bind (read-form slot-type)
