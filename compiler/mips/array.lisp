@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.43 1993/06/12 21:35:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.44 1993/08/25 23:26:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -200,7 +200,7 @@
 		 (- (* vector-data-offset word-bytes)
 		    other-pointer-type))
 	   (inst and temp index ,(1- elements-per-word))
-	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
+	   ,@(when (eq (backend-byte-order *target-backend*) :big-endian)
 	       `((inst xor temp ,(1- elements-per-word))))
 	   ,@(unless (= bits 1)
 	       `((inst sll temp ,(1- (integer-length bits)))))
@@ -224,7 +224,7 @@
 	 (:result-types positive-fixnum)
 	 (:generator 15
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
-	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
+	     ,@(when (eq (backend-byte-order *target-backend*) :big-endian)
 		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (loadw result object (+ word vector-data-offset) 
 		    other-pointer-type)
@@ -253,7 +253,7 @@
 		 (- (* vector-data-offset word-bytes)
 		    other-pointer-type))
 	   (inst and shift index ,(1- elements-per-word))
-	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
+	   ,@(when (eq (backend-byte-order *target-backend*) :big-endian)
 	       `((inst xor shift ,(1- elements-per-word))))
 	   ,@(unless (= bits 1)
 	       `((inst sll shift ,(1- (integer-length bits)))))
@@ -301,7 +301,7 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp old)
 	 (:generator 20
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
-	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
+	     ,@(when (eq (backend-byte-order *target-backend*) :big-endian)
 		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (inst lw old object
 		   (- (* (+ word vector-data-offset) word-bytes)
