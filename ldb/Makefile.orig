@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.26 1991/11/08 00:27:25 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.27 1991/11/08 00:31:02 wlott Exp $ */
 INCLS = -I. -I/usr/misc/.X11/include
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -21,7 +21,7 @@ ARCH_SRC="rt-arch.c"
 #endif
 
 #ifdef sparc
-CFLAGS = -g ${INCLS}
+CFLAGS = -O ${INCLS}
 UNDEFSYMPATTERN=_&
 ASSEMFILE='sparc-assem.s'
 ARCH_SRC="sparc-arch.c"
