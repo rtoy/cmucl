@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.12 1990/10/11 18:18:16 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.13 1990/11/18 07:37:14 wlott Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -16,13 +16,13 @@
 ;;; Modified by Bill Chiles to adhere to
 ;;;
 (in-package "LISP")
-(export '(defvar defparameter defconstant when unless loop setf
+(export '(defvar defparameter defconstant when unless setf
 	  defsetf define-setf-method psetf shiftf rotatef push pushnew pop
 	  incf decf remf case typecase with-open-file
 	  with-open-stream with-input-from-string with-output-to-string
 	  locally etypecase ctypecase ecase ccase
 	  get-setf-method get-setf-method-multiple-value
-          define-modify-macro
+          define-modify-macro destructuring-bind
           otherwise)) ; Sacred to CASE and related macros.
 
 (in-package "EXTENSIONS")
@@ -66,48 +66,24 @@
 
 ;;;; DEFMACRO:
 
-#-new-compiler
-(proclaim '(special *in-compilation-unit*))
-
-(defparameter defmacro-error-string "Macro ~S cannot be called with ~S args.")
-
 ;;; Defmacro  --  Public
 ;;;
 ;;;    Parse the definition and make an expander function.  The actual
 ;;; definition is done by %defmacro which we expand into.
 ;;;
 (defmacro defmacro (name lambda-list &body body)
-  (let ((whole (gensym)) (environment (gensym)))
+  (let ((whole (gensym "WHOLE-"))
+	(environment (gensym "ENV-")))
     (multiple-value-bind
 	(body local-decs doc)
-	(parse-defmacro lambda-list whole body name
-			:environment environment
-			:error-string 'defmacro-error-string)
+	(parse-defmacro lambda-list whole body name 'defmacro
+			:environment environment)
       (let ((def `(lambda (,whole ,environment)
 		    ,@local-decs
 		    (block ,name
 		      ,body))))
-	;;
-	;; ### Bootstrap hack...
-	;; When in old compiler, call %%defmacro with #'(lambda ...) so that
-	;; the function gets compiled.  When in old interpreter (neither in old
-	;; or new compiler), just setf the macro-function so that we can have
-	;; interpreted macros.
-	(cond #-new-compiler
-	      (system:*in-the-compiler*
-	       `(c::%%defmacro ',name #',def ,doc))
-	      #-new-compiler
-	      ((not *in-compilation-unit*)
-	       `(setf (symbol-function ',name)
-		      (cons 'macro #',def)))
-	      (t
-	       `(c::%defmacro ',name
-			      #+new-compiler #',def
-			      #-new-compiler ',def
-			      ',lambda-list ,doc)))))))
+	`(c::%defmacro ',name #',def ',lambda-list ,doc)))))
 
-
-(eval-when (#-new-compiler compile load eval)
 
 ;;; %Defmacro, %%Defmacro  --  Internal
 ;;;
@@ -121,104 +97,38 @@
 ;;; for the functional value.
 ;;;
 (defun c::%defmacro (name definition lambda-list doc)
-  #+new-compiler
-  ;; ### bootstrap hack...
-  ;; This WHEN only necessary to make cross-compiling of this file work.
-  ;; Necessary because the EVAL-WHEN COMPILE goes into the bootstrap
-  ;; environment, but is read with the NEW-COMPILER feature.
-  (when (fboundp 'eval:interpreted-function-p)
-    (assert (eval:interpreted-function-p definition))
-    (setf (eval:interpreted-function-name definition)
-	  (format nil "DEFMACRO ~S" name))
-    (setf (eval:interpreted-function-arglist definition) lambda-list))
+  (assert (eval:interpreted-function-p definition))
+  (setf (eval:interpreted-function-name definition)
+	(format nil "DEFMACRO ~S" name))
+  (setf (eval:interpreted-function-arglist definition) lambda-list)
   (c::%%defmacro name definition doc))
 ;;;
 (defun c::%%defmacro (name definition doc)
   (clear-info function where-from name)
-  #+new-compiler
   (setf (macro-function name) definition)
-  #-new-compiler
-  (progn
-    (setf (info function macro-function name) definition)
-    (setf (info function kind name) :macro))
   (setf (documentation name 'function) doc)
   name)
 
-); Eval-When
-
-;;; ### Bootstrap hack...
-;;;
-;;; Redefine the top-level defmacro handler to do nothing special when
-;;; *bootstrap-defmacro* is true so that our defmacro gets called.
-;;;
-#-new-compiler
-(eval-when (compile load eval)
-  (defvar *old-pdm* #'clc::process-defmacro)
-  (defvar *bootstrap-defmacro* nil)
-  (defun clc::process-defmacro (form)
-    (ecase *bootstrap-defmacro*
-      ((t)
-       (clc::process-random (macroexpand form) nil))
-      ((nil)
-       (funcall *old-pdm* form))
-      (:both
-       (clc::process-random (macroexpand form) nil)
-       (funcall *old-pdm* form))))))
-
-;;; ### Bootstrap hack...
-;;; At load time, get defmacro from the old place and store it in the new
-;;; place.
-#-new-compiler
-(c::%%defmacro 'defmacro (macro-function 'defmacro) nil)
-
-
-;;; ### Bootstrap hack...
-;;; Install macro definitions in this file only into the new compiler's
-;;; environment.
-(eval-when (compile)
-  (setq *bootstrap-defmacro* t))
-
 
 ;;; DEFTYPE is a lot like DEFMACRO.
-
-(defparameter deftype-error-string "Type ~S cannot be used with ~S args.")
-
-#-new-compiler
-(defvar *bootstrap-deftype* :both)
-
-(compiler-let ((*bootstrap-defmacro* :both))
 
 (defmacro deftype (name arglist &body body)
   "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
     (error "~S -- Type name not a symbol." name))
   
-  (let ((whole (gensym)))
+  (let ((whole (gensym "WHOLE-")))
     (multiple-value-bind (body local-decs doc)
-			 (parse-defmacro arglist whole body name
-					 :default-default ''*
-					 :error-string 'deftype-error-string)
-      (let ((guts `(%deftype ',name
-			     #'(lambda (,whole)
-				 ,@local-decs
-				 (block ,name ,body))
-			     ,@(when doc `(,doc)))))
-	#-new-compiler
-	(unless (member :new-compiler *features*)
-	  (setf guts
-		`(let ((*bootstrap-deftype* ,*bootstrap-deftype*))
-		   ,guts)))
-	`(eval-when (compile load eval)
-	   ,guts)))))
-
-); compile-let
+			 (parse-defmacro arglist whole body name 'deftype
+					 :default-default ''*)
+      `(eval-when (compile load eval)
+	 (%deftype ',name
+		   #'(lambda (,whole)
+		       ,@local-decs
+		       (block ,name ,body))
+		   ,@(when doc `(,doc)))))))
 ;;;
 (defun %deftype (name expander &optional doc)
-  #-new-compiler
-  (unless (or (eq *bootstrap-deftype* t)
-	      (member :new-compiler *features*))
-    (setf (get name 'deftype-expander)
-	  expander))
   (ecase (info type kind name)
     (:primitive
      (error "Illegal to redefine standard type: ~S." name))
@@ -226,9 +136,8 @@
      (warn "Redefining structure type ~S with DEFTYPE." name)
      (c::undefine-structure (info type structure-info name)))
     ((nil :defined)))
-  (when #-new-compiler *bootstrap-deftype* #+new-compiler t
-    (setf (info type kind name) :defined)
-    (setf (info type expander name) expander))
+  (setf (info type kind name) :defined)
+  (setf (info type expander name) expander)
   (when doc
     (setf (documentation name 'type) doc))
   ;; ### Bootstrap hack -- we need to define types before %note-type-defined
@@ -242,8 +151,6 @@
 
 (defparameter defsetf-error-string "Setf expander for ~S cannot be called with ~S args.")
 
-(compiler-let ((*bootstrap-defmacro* :both))
-
 (defmacro define-setf-method (access-fn lambda-list &body body)
   "Syntax like DEFMACRO, but creates a Setf-Method generator.  The body
   must be a form that returns the five magical values."
@@ -251,28 +158,35 @@
     (error "~S -- Access-function name not a symbol in DEFINE-SETF-METHOD."
 	   access-fn))
 
-  (let ((whole (gensym)) (environment (gensym)))
+  (let ((whole (gensym "WHOLE-"))
+	(environment (gensym "ENV-")))
     (multiple-value-bind (body local-decs doc)
 			 (parse-defmacro lambda-list whole body access-fn
-					 :environment environment
-					 :error-string 'defsetf-error-string)
+					 'define-setf-method
+					 :environment environment)
       `(eval-when (load compile eval)
 	 (setf (info setf inverse ',access-fn) nil)
 	 (setf (info setf expander ',access-fn)
 	       #'(lambda (,whole ,environment)
 		   ,@local-decs
 		   (block ,access-fn ,body)))
-	 ,@(unless (member :new-compiler *features*)
-	     `((remprop ',access-fn 'setf-inverse)
-	       (setf (get ',access-fn 'setf-method-expander)
-		     #'(lambda (,whole ,environment)
-			 ,@local-decs
-			 (block ,access-fn ,body)))))
 	 ,@(when doc
 	     `((setf (documentation ',access-fn 'setf) ,doc)))
 	 ',access-fn))))
 
-); compiler-let
+
+;;;; Destructuring-bind
+
+(defmacro destructuring-bind (lambda-list arg-list &rest body)
+  "Bind the variables in LAMBDA-LIST to the contents of ARG-LIST."
+  (let* ((arg-list-name (gensym "ARG-LIST-")))
+    (multiple-value-bind
+	(body)
+	(parse-defmacro lambda-list arg-list-name body
+			'destructuring-bind 'destructuring-bind
+			:annonymousp t :doc-string-allowed nil)
+      `(let ((,arg-list-name ,arg-list))
+	 ,body))))
 
 
 ;;;; Defun, Defvar, Defparameter, Defconstant:
@@ -282,7 +196,7 @@
 ;;;    Very similar to Defmacro, but simpler.  We don't have to parse the
 ;;; lambda-list.
 ;;;
-(defmacro defun (name lambda-list &body (body decls doc) &whole source)
+(defmacro defun (&whole source name lambda-list &body (body decls doc))
   (let ((def `(lambda ,lambda-list
 		,@decls
 		(block ,(if (and (consp name) (eq (car name) 'setf))
@@ -314,9 +228,7 @@
 ;;;
 (defun c::%defun (name def doc source)
   (declare (ignore source))
-  #+new-compiler
   (assert (eval:interpreted-function-p def))
-  #+new-compiler
   (setf (eval:interpreted-function-name def) name)
   (c::%%defun name def doc))
 
@@ -522,18 +434,13 @@
 ;;; of value forms, a list of the single store-value form, a storing function,
 ;;; and an accessing function.
 
-;;; ### bootstrap hack...
-;;; Rename get-setf-method so that we don't blow away setf in the bootstrap
-;;; lisp.  All references in this file are to the renamed function, and should
-;;; eventually be renamed back.
-;;;
-#+new-compiler
-(defun get-setf-method (form &optional environment)
-  (foo-get-setf-method form environment))
+;;; Left over in case someone is still trying to call this.
+(defun foo-get-setf-method (form &optional environment)
+  (get-setf-method form environment))
 
 (eval-when (compile load eval)
 ;;;
-(defun foo-get-setf-method (form &optional environment)
+(defun get-setf-method (form &optional environment)
   "Returns five values needed by the SETF machinery: a list of temporary
   variables, a list of values with which to fill them, the temporary for the
   new value in a list, the setting function, and the accessing function."
@@ -556,7 +463,7 @@
 	   (multiple-value-bind (res win)
 				(macroexpand-1 form environment)
 	     (if win
-		 (foo-get-setf-method res environment)
+		 (get-setf-method res environment)
 		 (get-setf-method-inverse form
 					  `(funcall #'(setf ,(car form)))
 					  t)))))))
@@ -607,8 +514,6 @@
 ) ; End of Eval-When.
 
 
-(compiler-let ((*bootstrap-defmacro* :both))
-
 (defmacro defsetf (access-fn &rest rest &environment env)
   "Associates a SETF update function or macro with the specified access
   function or macro.  The format is complex.  See the manual for
@@ -616,12 +521,6 @@
   (cond ((not (listp (car rest)))
 	 `(eval-when (load compile eval)
 	    (setf (info setf inverse ',access-fn) ',(car rest))
-	    ;;
-	    ;; ### Bootstrap hack...
-	    ;; In bootstrap env, also install inverse in old place so that we
-	    ;; can still compile defstructs.
-	    #-new-compiler
-	    (setf (get ',access-fn 'setf-inverse) ',(car rest))
 	    (setf (info setf expander ',access-fn) nil)
 	    ,@(if (and (car rest) (stringp (cadr rest)))
 		  `((eval-when (load eval)
@@ -662,8 +561,6 @@
 	      ',access-fn)))
 	(t (error "Ill-formed DEFSETF for ~S." access-fn))))
 
-); Compiler-Let
-
 (defmacro setf (&rest args &environment env)
   "Takes pairs of arguments like SETQ.  The first is a place and the second
   is the value that is supposed to go into that place.  Returns the last
@@ -678,7 +575,7 @@
 		 ((setq temp (info setf inverse (caar args)))
 		  `(,temp ,@(cdar args) ,(cadr args)))
 		 (t (multiple-value-bind (dummies vals newval setter getter)
-					 (foo-get-setf-method (car args) env)
+					 (get-setf-method (car args) env)
 		      (declare (ignore getter))
 		      (do* ((d dummies (cdr d))
 			    (v vals (cdr v))
@@ -711,7 +608,7 @@
     (if (atom (cdr a))
 	(error "Odd number of args to PSETF."))
     (multiple-value-bind (dummies vals newval setter getter)
-      (foo-get-setf-method (car a) env)
+      (get-setf-method (car a) env)
       (declare (ignore getter))
       (do* ((d dummies (cdr d))
 	    (v vals (cdr v)))
@@ -738,7 +635,7 @@
 	 (push (list next-var (car a)) let-list)
 	 `(let* ,(nreverse let-list) ,@(nreverse setf-list) ,leftmost))
       (multiple-value-bind (dummies vals newval setter getter)
-	(foo-get-setf-method (car a) env)
+	(get-setf-method (car a) env)
 	(do* ((d dummies (cdr d))
 	      (v vals (cdr v)))
 	     ((null d))
@@ -763,7 +660,7 @@
 		  (rplaca fix-me next-var)
 		  `(let* ,(nreverse let-list) ,@(nreverse setf-list) nil))
 	       (multiple-value-bind (dummies vals newval setter getter)
-                 (foo-get-setf-method (car a) env)
+                 (get-setf-method (car a) env)
 		 (do ((d dummies (cdr d))
 		      (v vals (cdr v)))
 		     ((null d))
@@ -775,8 +672,6 @@
 		 (push setter setf-list)
 		 (setq next-var (car newval)))))))
 
-
-(compiler-let ((*bootstrap-defmacro* :both))
 
 (defmacro define-modify-macro (name lambda-list function &optional doc-string)
   "Creates a new read-modify-write macro like PUSH or INCF."
@@ -809,7 +704,7 @@
     `(defmacro ,name (,reference ,@lambda-list &environment ,env)
        ,doc-string
        (multiple-value-bind (dummies vals newval setter getter)
-	 (foo-get-setf-method ,reference ,env)
+	 (get-setf-method ,reference ,env)
 	 (do ((d dummies (cdr d))
 	      (v vals (cdr v))
 	      (let-list nil (cons (list (car d) (car v)) let-list)))
@@ -823,7 +718,6 @@
 	      `(let* ,(nreverse let-list)
 		 ,setter)))))))
 
-); Compiler-Let
 
 
 (defmacro push (obj place &environment env)
@@ -832,7 +726,7 @@
   (if (symbolp place)
       `(setq ,place (cons ,obj ,place))
       (multiple-value-bind (dummies vals newval setter getter)
-			   (foo-get-setf-method place env)
+			   (get-setf-method place env)
 	(do* ((d dummies (cdr d))
 	      (v vals (cdr v))
 	      (let-list nil))
@@ -851,7 +745,7 @@
   (if (symbolp place)
       `(setq ,place (adjoin ,obj ,place ,@keys))
       (multiple-value-bind (dummies vals newval setter getter)
-			   (foo-get-setf-method place env)
+			   (get-setf-method place env)
 	(do* ((d dummies (cdr d))
 	      (v vals (cdr v))
 	      (let-list nil))
@@ -869,7 +763,7 @@
   (if (symbolp place)
       `(prog1 (car ,place) (setq ,place (cdr ,place)))
       (multiple-value-bind (dummies vals newval setter getter)
-			   (foo-get-setf-method place env)
+			   (get-setf-method place env)
 	(do* ((d dummies (cdr d))
 	      (v vals (cdr v))
 	      (let-list nil))
@@ -898,7 +792,7 @@
   remove the property specified by the indicator.  Returns T if such a
   property was present, NIL if not."
   (multiple-value-bind (dummies vals newval setter getter)
-		       (foo-get-setf-method place env)
+		       (get-setf-method place env)
     (do* ((d dummies (cdr d))
 	  (v vals (cdr v))
 	  (let-list nil)
@@ -999,7 +893,7 @@
 
 (define-setf-method getf (place prop &optional default &environment env)
   (multiple-value-bind (temps values stores set get)
-		       (foo-get-setf-method place env)
+		       (get-setf-method place env)
     (let ((newval (gensym))
 	  (ptemp (gensym))
 	  (def-temp (gensym)))
@@ -1058,7 +952,7 @@
       (error
        "Setf of Apply is only defined for function args of form #'symbol."))
   (multiple-value-bind (dummies vals newval setter getter)
-		       (foo-get-setf-method (cons function args) env)
+		       (get-setf-method (cons function args) env)
     ;; Special case aref and svref.
     (cond ((or (eq function 'aref) (eq function 'svref))
 	   (let ((nargs (subseq setter 0 (1- (length setter))))
@@ -1084,7 +978,7 @@
   acceptable to SETF.  Replaces the specified byte of the number in this
   place with bits from the low-order end of the new value."
   (multiple-value-bind (dummies vals newval setter getter)
-		       (foo-get-setf-method place env)
+		       (get-setf-method place env)
     (if (and (consp bytespec) (eq (car bytespec) 'byte))
 	(let ((n-size (gensym))
 	      (n-pos (gensym))
@@ -1113,7 +1007,7 @@
   acceptable to SETF.  Replaces the specified byte of the number in this place
   with bits from the corresponding position in the new value."
   (multiple-value-bind (dummies vals newval setter getter)
-		       (foo-get-setf-method place env)
+		       (get-setf-method place env)
     (let ((btemp (gensym))
 	  (gnuval (gensym)))
       (values (cons btemp dummies)
@@ -1127,7 +1021,7 @@
 
 (define-setf-method the (type place &environment env)
   (multiple-value-bind (dummies vals newval setter getter)
-		       (foo-get-setf-method place env)
+		       (get-setf-method place env)
       (values dummies
 	      vals
 	      newval
@@ -1439,13 +1333,6 @@
 
 ;;;; Iteration macros:
 
-(defmacro loop (&rest body)
-  "Executes the body repeatedly until the form is exited by a Throw or
-  Return.  The body is surrounded by an implicit block with name NIL."
-  (let ((tag (gensym)))
-    `(block nil (tagbody ,tag ,@body (go ,tag)))))
-
-
 (defmacro dotimes ((var count &optional (result nil)) &body body)
   (cond ((numberp count)
          `(do ((,var 0 (1+ ,var)))
@@ -1516,12 +1403,6 @@
       (push (car pairs) setqs)
       (push gen setqs))))
 
-;;; ### Bootstrap hack...
-;;; Restore defmacro processing to normal.
-;;;
-(eval-when (compile)
-  (setq *bootstrap-defmacro* nil))
-
 
 ;;;; With-Compilation-Unit:
 
@@ -1534,8 +1415,6 @@
 ;;; current active WITH-COMPILATION-UNIT that were unwound out of.
 ;;;
 (defvar *aborted-compilation-units*)
-
-(compiler-let ((*bootstrap-defmacro* :both))
 
 ;;; With-Compilation-Unit  --  Public
 ;;;
@@ -1580,4 +1459,3 @@
 		   (setq ,n-abort-p nil))
 	       (when ,n-abort-p
 		 (incf *aborted-compilation-units*))))))))
-); Compiler-Let
