@@ -696,14 +696,10 @@
 
 (defprinter template
   name
-  (arg-types :prin1 (mapcar #'primitive-type-name arg-types))
-  (result-types :prin1 (if (listp result-types)
-			   (mapcar #'primitive-type-name result-types)
-			   result-types))
-  (more-args-type :test more-args-type
-		  :prin1 (primitive-type-name more-args-type))
-  (more-results-type :test more-results-type
-		     :prin1 (primitive-type-name more-results-type))
+  arg-types
+  result-types
+  (more-args-type :test more-args-type :prin1 more-args-type)
+  (more-results-type :test more-results-type :prin1 more-results-type)
   policy
   cost
   (note :test note)
