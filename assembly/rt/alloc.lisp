@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.1 1991/02/18 15:43:28 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.2 1991/04/04 13:51:42 chiles Exp $
 ;;;
 ;;; Stuff to handle allocating simple objects.
 ;;;
@@ -74,20 +74,20 @@
 			(inst sl temp (- type-bits word-shift))
 			(inst oil temp ,header)
 			(storew temp result 0 ,lowtag)
-			(inst cal alloc (+ (fixnum 1) lowtag-mask))
+			(inst cal alloc alloc (+ (fixnum 1) lowtag-mask))
 			(inst li temp (lognot lowtag-mask))
 			(inst n alloc temp)))
 		     (variable-length
 		      (error ":REST-P T with no header in ~S?"
 			     (primitive-object-name obj)))
 		     (header
-		      `((inst cal alloc (pad-data-block ,size))
+		      `((inst cal alloc alloc (pad-data-block ,size))
 			(inst li temp
 			      ,(logior (ash (1- size) type-bits)
 				       (symbol-value header)))
 			(storew temp result 0 ,lowtag)))
 		     (t
-		      `((inst cal alloc (pad-data-block ,size)))))
+		      `((inst cal alloc alloc (pad-data-block ,size)))))
 	     ,@(when need-unbound-marker
 		 `((inst li temp unbound-marker-type)))
 	     ,@(init-forms)))))))
