@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.6 1998/03/03 17:35:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.7 1998/03/10 18:35:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,8 +188,6 @@
 		    other-pointer-type)
 		  lip)
 	   (inst and index ,(1- elements-per-word) temp)
-	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
-	       `((inst xor temp ,(1- elements-per-word) temp)))
 	   ,@(unless (= bits 1)
 	       `((inst sll temp ,(1- (integer-length bits)) temp)))
 	   (inst srl result temp result)
@@ -212,8 +210,6 @@
 	 (:result-types positive-fixnum)
 	 (:generator 15
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
-	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
-		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (loadw result object (+ word vector-data-offset) 
 		    other-pointer-type)
 	     (unless (zerop extra)
@@ -242,8 +238,6 @@
 		    other-pointer-type)
 		 lip)
 	   (inst and index ,(1- elements-per-word) shift)
-	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
-	       `((inst xor shift ,(1- elements-per-word) shift)))
 	   ,@(unless (= bits 1)
 	       `((inst sll shift ,(1- (integer-length bits)) shift)))
 	   (unless (and (sc-is value immediate)
@@ -291,8 +285,6 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp old)
 	 (:generator 20
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
-	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
-		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (inst ldl object
 		   (- (* (+ word vector-data-offset) word-bytes)
 		      other-pointer-type)
