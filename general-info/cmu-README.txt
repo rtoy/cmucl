@@ -1,11 +1,13 @@
 To get CMU Common Lisp, run:
     /usr/cs/etc/modmisc - cs.misc.cmucl
+
 This establishes /usr/misc/.cmucl as a symbolic link to the release area.
-In your .login, and CMU CL to your path:
+In your .login, add CMU CL to your path:
     setpath -i /usr/misc/.cmucl
-Add /usr/misc/.cmucl/bin to your PATH, then run "lisp".  Note that the first
-time you run Lisp, it will take AFS several minutes to copy the image into its
-local cache.  Subsequent starts will be much faster.
+
+Then run "lisp".  Note that the first time you run Lisp, it will take AFS
+several minutes to copy the image into its local cache.  Subsequent starts
+will be much faster.
 
 Or, you can run directly out of the AFS release area (which may be necessary on
 SunOS machines).  Put this in your .login shell script:
@@ -16,11 +18,8 @@ After setting your path, "man cmucl" will give an introduction to CMU CL and
 "man lisp" will describe command line options.  For SunOS installation notes,
 see the README file in the SunOS release area. 
 
-See /usr/misc/.cmucl/doc for release notes and documentation.  Hardcopy
-documentation is available in the document room.  For documentation of recent
-compiler extensions (block compilation, profiler, etc.) you can print:
-    /afs/cs/project/clisp/scribe/cmu-user/compiler-update.ps (60 pages)
-This replaces chapters 6 and 7 of the hardcopy User's Manual.
+See /usr/misc/.cmucl/doc for release notes and documentation.  Rather old
+hardcopy documentation is available as tech reports in the document room.
 
 Send bug reports and questions to cmucl-bugs@cs.cmu.edu.  If you send a bug
 report to gripe, they will just forward it to this mailing list.
