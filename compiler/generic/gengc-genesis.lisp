@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.3 1993/05/18 19:19:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.4 1993/05/18 23:42:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1556,11 +1556,9 @@
 (define-cold-fop (fop-sanctify-for-execution)
   (pop-stack))
 
-(defun cold-verify-code-format ()
-  (unless *current-code-format*
-    (error "Can't load code until after FOP-CODE-FORMAT."))
-  (let ((implementation (car *current-code-format*))
-	(version (cdr *current-code-format*)))
+(define-cold-fop (fop-code-format :nope)
+  (let ((implementation (read-arg 1))
+	(version (read-arg 1)))
     (unless (= implementation (c:backend-fasl-file-implementation c:*backend*))
       (error
        "~A was compiled for a ~A, but we are trying to build a core for a ~A"
@@ -1577,7 +1575,6 @@
 
 (defmacro define-cold-code-fop (name nconst size)
   `(define-cold-fop (,name)
-     (cold-verify-code-format)
      (let* ((nconst ,nconst)
 	    (inst-words ,size)
 	    (header-size
@@ -1657,7 +1654,6 @@
     code-object))
 
 (define-cold-fop (fop-assembler-code)
-  (cold-verify-code-format)
   (let* ((length (read-arg 4))
 	 (header-size
 	  ;; Note: we round the number of constants up to assure that
@@ -1706,6 +1702,8 @@
 		   (descriptor-bits code-object)
 		   kind)
     code-object))
+
+(not-cold-fop fop-make-byte-compiled-function)
 
 
 ;;; Cold-Load loads stuff into the core image being built by rebinding
