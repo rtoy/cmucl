@@ -1,11 +1,11 @@
-@make[Manual] @comment{-*- Dictionary: /afs/cs/project/clisp/new-compiler/scribe/hem/hem; Mode: spell; Package: Hemlock; Log: /usr/lisp/scribe/hem/hem-docs.log -*-}
+@make[Manual] @comment{-*- Dictionary: /afs/cs/project/clisp/docs/hem/hem; Mode: spell; Package: Hemlock; Log: /usr/lisp/scribe/hem/hem-docs.log -*-}
 @Device[postscript]
 @style(FontFamily = TimesRoman)
 @Style(Spacing = 1.2 lines)
 @Style(StringMax = 5000)
 @style(Hyphenation = On)
 @style(Date="March 1952")
-@use(database "/afs/cs/project/clisp/new-compiler/scribe/database/")
+@use(database "/afs/cs/project/clisp/docs/database/")
 @Style [DoubleSided]
 @Libraryfile[ArpaCredit]
 @Libraryfile[Hem]
