@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.23 1993/02/26 08:25:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.24 1993/05/29 07:00:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -139,12 +139,12 @@
 (defun default-describe (x)
   (format t "~&~S is a ~S." x (type-of x)))
 
-(defun describe-instance (x)
+(defun describe-instance (x &optional (kind :structure))
   (cond ((and (fboundp 'pcl::std-instance-p)
 	      (pcl::std-instance-p x))
 	 (pcl::describe-object x *standard-output*))
 	(t
-	 (format t "~&~S is a structure of type ~A." x (type-of x))
+	 (format t "~&~S is a ~(~A~) of type ~A." x kind (type-of x))
 	 (dolist (slot (cddr (inspect::describe-parts x)))
 	   (format t "~%~A: ~S." (car slot) (cdr slot))))))
 
@@ -317,6 +317,10 @@
   (print-compiled-from x))
 
 
+(defun describe-funcallabe-instance (fin)
+  (describe-instance fin :funcallable-instance))
+  
+
 ;;; DESCRIBE-FUNCTION  --  Internal
 ;;;
 ;;;    Describe a function with the specified kind and name.  The latter
@@ -344,7 +348,7 @@
     ((#.vm:function-header-type #.vm:closure-function-header-type)
      (describe-function-compiled x kind name))
     (#.vm:funcallable-instance-header-type
-     (pcl::describe-object x *standard-output*))
+     (describe-funcallabe-instance x))
     (t
      (format t "~&It is an unknown type of function."))))
 

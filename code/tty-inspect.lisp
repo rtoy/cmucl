@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.12 1993/02/26 08:26:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.13 1993/05/29 07:01:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,8 +149,11 @@
 (defun describe-parts (object)
   (typecase object
     (symbol (describe-symbol-parts object))
-    (instance (describe-instance-parts object))
-    (function (describe-function-parts object))
+    (instance (describe-instance-parts object :structure))
+    (function
+     (if (kernel:funcallable-instance-p object)
+	 (describe-instance-parts object :funcallabe-instance)
+	 (describe-function-parts object)))
     (vector (describe-vector-parts object))
     (array (describe-array-parts object))
     (cons (describe-cons-parts object))
@@ -167,11 +170,10 @@
 	(cons "Plist" (symbol-plist object))
 	(cons "Package" (symbol-package object))))
 
-(defun describe-instance-parts (object)
-  (let ((dd-slots
-	 (dd-slots (layout-info (%instance-layout object))))
+(defun describe-instance-parts (object kind)
+  (let ((dd-slots (dd-slots (layout-info (kernel:layout-of object))))
 	(parts-list ()))
-    (push (format nil "~s is a structure.~%" object) parts-list)
+    (push (format nil "~s is a ~(~A~).~%" object kind) parts-list)
     (push t parts-list)
     (dolist (dd-slot dd-slots (nreverse parts-list))
       (push (cons (dsd-%name dd-slot)
