@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.36 2004/08/28 04:39:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.37 2004/08/28 05:13:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -389,11 +389,14 @@
 	(colnum (tab-colnum tab))
 	(colinc (tab-colinc tab)))
     (cond ((tab-relativep tab)
-	   (unless (<= colinc 1)
-	     (let ((newposn (+ column colnum)))
-	       (let ((rem (rem newposn colinc)))
-		 (unless (zerop rem)
-		   (incf colnum (- colinc rem))))))
+	   (cond ((tab-sectionp tab)
+		  (setf colnum (* colinc (ceiling colnum colinc))))
+		 (t
+		  (unless (<= colinc 1)
+		    (let ((newposn (+ column colnum)))
+		      (let ((rem (rem newposn colinc)))
+			(unless (zerop rem)
+			  (incf colnum (- colinc rem))))))))
 	   colnum)
 	  ((< column (+ colnum origin))
 	   (- (+ colnum origin) column))
