@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.54 2001/12/12 20:18:25 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.55 2001/12/13 01:10:18 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 	  do-debug-command))
 
 (in-package "LISP")
-(export '(invoke-debugger *debugger-hook*))
+(export '(invoke-debugger *debugger-hook* step))
 
 (in-package "DEBUG")
 
@@ -436,7 +436,7 @@ See the CMU Common Lisp User's Manual for more information.
 
 
 
-;;; STEP -- Internal.
+;;; SET-STEP-BREAKPOINT -- Internal.
 ;;;
 ;;; Sets breakpoints at the next possible code-locations.  After calling
 ;;; this either (continue) if in the debugger or just let program flow
@@ -468,6 +468,42 @@ See the CMU Common Lisp User's Manual for more information.
 	  (push (create-breakpoint-info debug-function bp 0)
 		*step-breakpoints*))))))))
 
+;;; STEP-INTERNAL -- Internal.
+;;;
+(defun step-internal (function form)
+  (when (eval:interpreted-function-p function)
+    ;; The stepper currently only supports compiled functions So we
+    ;; try to compile the passed-in function, bailing out if it fails.
+    (handler-case
+	(setq function (compile nil function))
+      (error (c)
+	(error "Currently only compiled code can be stepped.~%~
+                Trying to compile the passed form resulted in ~
+                the following error:~%  ~A" c))))
+  (let ((*print-length* *debug-print-length*)
+	(*print-level* *debug-print-level*))
+    (format *debug-io* "~2&Stepping the form~%  ~S~%" form)
+    (format *debug-io* "~&using the debugger.  Type HELP for help.~2%"))
+  (let* ((debug-function (di:function-debug-function function))
+	 (bp (di:make-breakpoint #'main-hook-function debug-function
+				 :kind :function-start)))
+    (di:activate-breakpoint bp)
+    (push (create-breakpoint-info debug-function bp 0)
+	  *step-breakpoints*))
+  (funcall function))
+
+;;; STEP -- Public.
+;;;
+(defmacro step (form)
+  "STEP implements a debugging paradigm wherein the programmer is allowed
+   to step through the evaluation of a form.  We use the debugger's stepping
+   facility to step through an anonymous function containing only form.
+
+   Currently the stepping facility only supports stepping compiled code,
+   so step will try to compile the resultant anonymous function.  If this
+   fails, e.g. because it closes over a non-null lexical environment, an
+   error is signalled."
+  `(step-internal #'(lambda () ,form) ',form))
 
 
 ;;;; Backtrace:
