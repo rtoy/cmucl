@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.6 1997/02/19 05:09:52 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.7 1997/04/20 21:03:14 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -228,7 +228,8 @@ static void sigill_handler(HANDLER_ARGS)
 #ifdef SOLARIS
     else if (CODE(code) == ILL_ILLTRP)
 #else
-    else if (CODE(code) >= T_SOFTWARE_TRAP + 16 & CODE(code) < T_SOFTWARE_TRAP + 32)
+    else if (CODE(code) >= T_SOFTWARE_TRAP + 16 &&
+	     CODE(code) < T_SOFTWARE_TRAP + 32)
 #endif
 	interrupt_internal_error(signal, code, context, FALSE);
     else
