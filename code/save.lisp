@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.9 1991/08/30 16:45:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.10 1991/09/03 20:44:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -90,6 +90,10 @@
 	      *environment-list*))))
   (setf (search-list "default:") (list (default-directory)))
   (setf (search-list "path:") (parse-unix-search-list :path))
+  (setf (search-list "home:")
+	(or (parse-unix-search-list :home)
+	    (list (default-directory))))
+
   (setf (search-list "library:")
 	(or (parse-unix-search-list :cmucllib)
 	    '("/usr/misc/.cmucl/lib/"))))
@@ -170,8 +174,7 @@
 			  (or (cmd-switch-value cl-switch)
 			      (car (cmd-switch-words cl-switch))))))
 	  (if name
-	      (load (merge-pathnames name (user-homedir-pathname))
-		    :if-does-not-exist nil)
+	      (load (merge-pathnames name #p"home:") :if-does-not-exist nil)
 	      (or (load "home:init" :if-does-not-exist nil)
 		  (load "home:.cmucl-init" :if-does-not-exist nil))))))
     (when enable-gc
