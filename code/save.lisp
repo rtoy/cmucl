@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.32 1997/11/04 16:00:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.33 1997/12/30 16:39:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,6 +146,7 @@
   :print-herald
       If true (the default), print out the lisp system herald when starting."
 
+  #+mp (mp::shutdown-multi-processing)
   (when (fboundp 'eval:flush-interpreted-function-cache)
     (eval:flush-interpreted-function-cache))
   (when (fboundp 'cancel-finalization)
