@@ -22,39 +22,26 @@
 ;;;
 (in-package 'lisp)
 
-(export '(char-code-limit char-font-limit char-bits-limit standard-char-p
-	  graphic-char-p string-char-p alpha-char-p upper-case-p lower-case-p
-	  both-case-p digit-char-p alphanumericp char= char/= char< char>
-	  char<= char>= char-equal char-not-equal char-lessp char-greaterp
-	  char-not-greaterp char-not-lessp character char-code char-bits
-	  char-font code-char make-char char-upcase char-downcase
-	  digit-char char-int int-char char-name name-char char-control-bit
-	  char-meta-bit char-hyper-bit char-super-bit char-bit set-char-bit))
+(export '(char-code-limit standard-char-p graphic-char-p 
+	  alpha-char-p upper-case-p lower-case-p both-case-p digit-char-p
+	  alphanumericp char= char/= char< char> char<= char>= char-equal
+	  char-not-equal char-lessp char-greaterp char-not-greaterp
+	  char-not-lessp character char-code code-char char-upcase
+	  char-downcase digit-char char-int char-name name-char))
 
 
 ;;; Compile some trivial character operations via inline expansion:
 ;;;
-(proclaim '(inline standard-char-p
-		   graphic-char-p string-char-p alpha-char-p upper-case-p
-		   lower-case-p both-case-p alphanumericp char-bits
+(proclaim '(inline standard-char-p graphic-char-p alpha-char-p
+		   upper-case-p lower-case-p both-case-p alphanumericp
 		   char-int))
 
 
 (defconstant char-code-limit 256
   "The upper exclusive bound on values produced by CHAR-CODE.")
-(defconstant char-font-limit 1
-  "The upper exclusive bound on values produced by CHAR-FONT.")
-(defconstant char-bits-limit 256
-  "The upper exclusive bound on values produced by CHAR-BITS.")
 
-(defconstant char-control-bit 1
-  "This bit indicates a control character.")
-(defconstant char-meta-bit 2
-  "This bit indicates a meta character.")
-(defconstant char-super-bit 4
-  "This bit indicates a super character.")
-(defconstant char-hyper-bit 8
-  "This bit indicates a hyper character.")
+(deftype char-code ()
+  `(integer 0 (,char-code-limit)))
 
 
 (defparameter char-name-alist
@@ -63,11 +50,11 @@
 	  ("BACKSPACE" . ,(code-char 8)) ("BS" . ,(code-char 8))
 	  ("TAB" . ,(code-char 9))
 	  ("LINEFEED" . ,(code-char 10)) ("LF" . ,(code-char 10))
+	  ("NEWLINE" . ,(code-char 10)) ("NL" . ,(code-char 10))  
 	  ("VT" . ,(code-char 11))
 	  ("PAGE" . ,(code-char 12)) ("FORM" . ,(code-char 12))
 	  ("FORMFEED" . ,(code-char 12)) ("FF" . ,(code-char 12))
-	  ("RETURN" . ,(code-char 13)) ("NL" . ,(code-char 10))
-	  ("NEWLINE" . ,(code-char 10))  ("CR" . ,(code-char 13))
+	  ("RETURN" . ,(code-char 13)) ("CR" . ,(code-char 13))
 	  ("ALTMODE" . ,(code-char 27)) ("ALT" . ,(code-char 27))
 	  ("ESCAPE" . ,(code-char 27)) ("ESC" . ,(code-char 27))
 	  ("SPACE" . ,(code-char 32)) ("SP" . ,(code-char 32))
@@ -80,54 +67,21 @@
 ;;;; Accessor functions:
 
 (defun char-code (char)
-  "Given a character object argument, char-code returns the code attribute
-   of that object as a non-negative integer."
-  (ldb %character-code-byte (char-int char)))
+  "Returns the integer code of CHAR."
+  (etypecase char
+    (base-character (char-code (truly-the base-character char)))))
 
-(defun char-bits (char)
-  "Given a character object argument, char-code returns the bits attribute
-   of that object as a non-negative integer."
-  (ldb %character-control-byte (char-int char)))
-
-(defun char-font (char)
-  "Given a character object argument, char-code returns the font attribute
-   of that object as 0."
-  (declare (ignore char))
-  0)
 
 (defun char-int (char)
-  "The argument must be a character-object.  Returns the font, bits, and
-  code fields as a single non-negative integer.  Implementation dependent.
-  Used mostly for hashing."
-  (declare (character char))
-  (%primitive make-fixnum char))
+  "Returns the integer code of CHAR.  This is the same as char-code, as
+   CMU Common Lisp does not implement character bits or fonts."
+  (char-code char))
 
 
-(defun int-char (n)
-  "Performs the inverse of char-int.  The argument must be a non-negative
-  integer of the appropriate size.  It is turned into a character object."
-  (declare (type unsigned-byte n))
-  (cond ((or (not (fixnump n))
-	     (not (<= 0 (the fixnum n) %character-int-mask)))
-	 nil)
-	((zerop (ldb %character-control-byte (the fixnum n)))
-	 (%primitive make-immediate-type n %string-char-type))
-	(t
-	 (%primitive make-immediate-type n %bitsy-char-type))))
-
-
-(defun code-char (code &optional (bits 0) (font 0))
-  "All three arguments, must be non-negative integers; the last two are 
-   optional with default values of 0 (for the bits and font attributes).
-   Returns a character object with the specified code, bits, and font,
-   or returns NIL if this is not possible."
-  (cond ((not (and (< -1 code char-code-limit) (zerop font))) nil)
-	((zerop bits) (code-char code))
-	((< -1 bits char-bits-limit)
-	 (%primitive make-immediate-type 
-		     (dpb bits %character-control-byte code)
-		     %bitsy-char-type))
-	(t nil)))
+(defun code-char (code)
+  "Returns the character with the code CODE."
+  (declare (type char-code code))
+  (code-char code))
 
 
 (defun character (object)
@@ -135,24 +89,16 @@
   characters, strings and symbols of length 1, and integers."
   (typecase object
     (character object)
-    (integer (int-char object))
-    (string (if (= 1 (the fixnum (length (the string object))))
+    (char-code (code-char object))
+    (string (if (= 1 (length (the string object)))
 		(char object 0)
 		(error "String is not of length one: ~S" object)))
-    (symbol (if (= 1 (the fixnum (length (symbol-name object))))
+    (symbol (if (= 1 (length (symbol-name object)))
 		(schar (symbol-name object) 0)
 		(error "Symbol name is not of length one: ~S" object)))
     (t
      (error "~S cannot be coerced to a character."))))
 
-
-(defun make-char (char &optional (bits 0) (font 0))
-  "Replaces the bits and font attributes of the specified character with
-  those supplied by the user as fixnums.  Bits and font both default to 0."
-  (declare (character char))
-  (and (< -1 bits char-bits-limit)
-       (zerop font)
-       (int-char (dpb bits %character-control-byte (char-code char)))))
 
 
 (defun char-name (char)
@@ -167,32 +113,6 @@
   (cdr (assoc (string name) char-name-alist :test #'string-equal)))
 
 
-(defun char-bit (char name)
-  "Returns T if the named bit is set in character object CHAR.  Else,
-  returns NIL.  Legal names are :CONTROL, :META, :HYPER, and :SUPER."
-  (logtest (case name
-	     (:control char-control-bit)
-	     (:meta char-meta-bit)
-	     (:hyper char-hyper-bit)
-	     (:super char-super-bit))
-	   (char-bits char)))
-
-
-(defun set-char-bit (char name newvalue)
-  "Returns a character just like CHAR except that the named bit is
-  set or cleared, according to whether NEWVALUE is non-null or NIL.
-  Legal bit names are :CONTROL, :META, :HYPER, and :SUPER."
-  (let ((bit (case name
-	      (:control char-control-bit)
-	      (:meta char-meta-bit)
-	      (:hyper char-hyper-bit)
-	      (:super char-super-bit)
-	      (t 0))))
-    (code-char (char-code char)
-	       (if newvalue
-		   (logior bit (char-bits char))
-		   (logand (lognot bit) (char-bits char)))
-	       (char-font char))))
 
 
 ;;;; Predicates:
@@ -202,8 +122,8 @@
    argument is a standard character -- one of the 95 ASCII printing characters
    or <return>."
   (declare (character char))
-  (and (typep char 'string-char)
-       (let ((n (char-code (the string-char char))))
+  (and (typep char 'base-character)
+       (let ((n (char-code (the base-character char))))
 	 (or (< 31 n 127)
 	     (= n 13)
 	     (= n 10)))))
@@ -214,17 +134,10 @@
   argument is a printing character (space through ~ in ASCII), otherwise
   returns ()."
   (declare (character char))
-  (and (typep char 'string-char)
+  (and (typep char 'base-character)
        (< 31
-	  (char-code (the string-char char))
+	  (char-code (the base-character char))
 	  127)))
-
-
-(defun string-char-p (char)
-  "The argument must be a character object.  String-char-p returns T if the
-   argument can be stored in a string."
-  (declare (character char))
-  (typep char 'string-char))
 
 
 (defun alpha-char-p (char)
@@ -433,34 +346,23 @@
 ;;;; Miscellaneous functions:
 
 (defun char-upcase (char)
-  "Returns a character with the same bits and font as the input character,
-  converted to upper-case if that is possible."
+  "Returns CHAR converted to upper-case if that is possible."
   (declare (character char))
-  (cond ((typep char 'string-char)
-	 (char-upcase (the string-char char)))
-	((lower-case-p char)
-	 (int-char (- (char-int char) 32)))
-	(t
-	 char)))
-
+  (if (lower-case-p char)
+      (code-char (- (char-code char) 32))
+      char))
 
 (defun char-downcase (char)
-  "Returns a character with the same bits and font as the input character,
-  converted to lower-case if that is possible."
+  "Returns CHAR converted to lower-case if that is possible."
   (declare (character char))
-  (cond ((typep char 'string-char)
-	 (char-downcase (the string-char char)))
-	((upper-case-p char)
-	 (int-char (+ (char-int char) 32)))
-	(t
-	 char)))
+  (if (upper-case-p char)
+      (code-char (+ (char-code char) 32))
+      char))
 
-
-(defun digit-char (weight &optional (radix 10) (font 0))
+(defun digit-char (weight &optional (radix 10))
   "All arguments must be integers.  Returns a character object that
   represents a digit of the given weight in the specified radix.  Returns
   NIL if no such character exists.  The character will have the specified
   font attributes."
   (and (>= weight 0) (< weight radix) (< weight 36)
-       (code-char (if (< weight 10) (+ 48 weight) (+ 55 weight))
-		  0 font)))
+       (code-char (if (< weight 10) (+ 48 weight) (+ 55 weight)))))

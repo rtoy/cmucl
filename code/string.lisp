@@ -59,18 +59,19 @@
 	(data-end (gensym))
 	(offset (gensym)))
     `(progn
-      (if (symbolp ,string) (setq ,string (symbol-name ,string)))
-      (if (array-header-p ,string)
-	  (with-array-data ((,data ,string :offset-var ,offset)
-			    (,data-start ,start)
-			    (,data-end (or ,end
-					   (%primitive header-ref ,string
-						       %array-fill-pointer-slot))))
-			   (psetq ,string ,data
-				  ,cum-offset ,offset
-				  ,start ,data-start
-				  ,end ,data-end))
-	  (if (not ,end) (setq ,end (length (the simple-string ,string)))))
+       (if (symbolp ,string)
+	   (setf ,string (symbol-name ,string)))
+       (if (array-header-p ,string)
+	   (with-array-data ((,data ,string :offset-var ,offset)
+			     (,data-start ,start)
+			     (,data-end (or ,end
+					    (length (the simple-string
+							 ,string)))))
+	     (psetq ,string ,data
+		    ,cum-offset ,offset
+		    ,start ,data-start
+		    ,end ,data-end))
+	   (if (not ,end) (setq ,end (length (the simple-string ,string)))))
       ,@forms)))
 
 )
@@ -86,8 +87,7 @@
      (if (array-header-p ,string)
 	 (with-array-data ((data ,string)
 			   (data-start start)
-			   (data-end (%primitive header-ref ,string
-						 %array-fill-pointer-slot)))
+			   (data-end (length (the simple-string ,string))))
 	   (psetq ,string data
 		  start data-start
 		  end data-end))
@@ -114,26 +114,27 @@
 	  (with-array-data ((,data ,string1 :offset-var ,offset)
 			    (,data-start ,start1)
 			    (,data-end (or ,end1
-					   (%primitive header-ref ,string1
-						       %array-fill-pointer-slot))))
-			   (psetq ,string1 ,data
-				  ,cum-offset-1 ,offset
-				  ,start1 ,data-start
-				  ,end1 ,data-end))
+					   (length (the simple-string
+							,string1)))))
+	    (psetq ,string1 ,data
+		   ,cum-offset-1 ,offset
+		   ,start1 ,data-start
+		   ,end1 ,data-end))
 	  (if (not ,end1) (setq ,end1 (length (the simple-string ,string1)))))
       (if (array-header-p ,string2)
 	  (with-array-data ((,data ,string2)
 			    (,data-start ,start2)
 			    (,data-end (or ,end2
-					   (%primitive header-ref ,string2
-						       %array-fill-pointer-slot))))
-			   (psetq ,string2 ,data
-				  ,start2 ,data-start
-				  ,end2 ,data-end))
+					   (length (the simple-string
+							,string2)))))
+	    (psetq ,string2 ,data
+		   ,start2 ,data-start
+		   ,end2 ,data-end))
 	  (if (not ,end2) (setq ,end2 (length (the simple-string ,string2)))))
       ,@forms)))
 
 )
+
 
 (defun char (string index)
   "Given a string and a non-negative integer index less than the length of

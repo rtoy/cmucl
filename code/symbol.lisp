@@ -82,19 +82,17 @@
 (defun %put (symbol indicator value)
   "The VALUE is added as a property of SYMBOL under the specified INDICATOR.
   Returns VALUE."
-  (%primitive put symbol indicator value)
-#|  (do ((pl (symbol-plist symbol) (cddr pl)))
-      ((atom pl)
+  (do ((pl (symbol-plist symbol) (cddr pl)))
+      ((endp pl)
        (setf (symbol-plist symbol)
 	     (list* indicator value (symbol-plist symbol)))
        value)
-    (cond ((atom (cdr pl))
+    (cond ((endp (cdr pl))
 	   (error "~S has an odd number of items in its property list."
 		  symbol))
 	  ((eq (car pl) indicator)
 	   (rplaca (cdr pl) value)
-	   (return value))))|#
-  )
+	   (return value)))))
 
 (defun remprop (symbol indicator)
   "Look on property list of SYMBOL for property with specified
