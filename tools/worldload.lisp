@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.19 1991/02/08 13:36:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.20 1991/04/26 02:04:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,6 +84,7 @@
 (load "code:foreign")
 
 ;;; Load the compiler.
+#-no-compiler
 (load "c:loadcom.lisp")
 
 ;;; Load the pretty printer after the compiler, 'cause it compiles stuff
