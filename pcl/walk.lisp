@@ -1,4 +1,4 @@
-;;;-*- Mode:LISP; Package:(WALKER LISP 1000); Base:10; Syntax:Common-lisp -*-
+;;;-*- Mode:LISP; Package:WALKER -*-
 ;;;
 ;;; *************************************************************************
 ;;; Copyright (c) 1985, 1986, 1987, 1988, 1989, 1990 Xerox Corporation.
@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.18 2000/09/01 16:38:05 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.19 2000/11/15 19:07:31 pw Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -134,11 +134,25 @@
 
 ;;; In CMU Common Lisp, the environment is represented with a structure
 ;;; that holds alists for the functional things, variables, blocks, etc.
-;;; Only the c::lexenv-functions slot is relevent.  It holds:
+;;; Except for symbol-macrolet, only the c::lexenv-functions slot is
+;;; relevent.  It holds:
 ;;; Alist (name . what), where What is either a Functional (a local function)
 ;;; or a list (MACRO . <function>) (a local macro, with the specifier
 ;;; expander.)    Note that Name may be a (SETF <name>) function.
 
+;;; If WITH-AUGMENTED-ENVIRONMENT is called from WALKER-ENVIRONMENT-BIND
+;;; this code hides the WALKER version of an environment
+;;; inside the C::LEXENV structure. It makes a list of lists of form
+;;; (<gensym-name> MACRO . #<interpreted-function>) which makes up
+;;; the :functions slot in a c::lexenv. This seems to be a form that
+;;; the compiler guts will accept as valid and otherwise ignore it.
+;;; The <interpreted-function> is used as a structure to hold the
+;;; bits of interest, {function, form, declarations, lexical-variables}.
+;;; and is otherwise not a valid interpreted-function, eg describe will
+;;; barf on it. Accessors are defined below, eg (env-walk-function env)
+;;;
+;;; MACROEXPAND-1 is the only cmucl function that gets called with the
+;;; constructed environment argument.
 
 (defmacro with-augmented-environment
 	  ((new-env old-env &key functions macros) &body body)
@@ -154,9 +168,17 @@
   ;; we have no idea what to use for the environment.  So we just blow it
   ;; off, 'cause anything real we do would be wrong.  We still have to
   ;; make an entry so we can tell functions from macros.
-  (let ((env (or env (c::make-null-environment))))
+
+  (let* ((env (or env (c::make-null-environment)))
+	 (tem (first macros))
+	 ;; A symbol-macro spec suitable for macroexpand-1
+	 (variables 
+	  (and (eql (first tem) *key-to-walker-environment*)
+	       (loop for item in (fourth (cadr tem))
+		 collect (substitute 'c::macro :macro item)))))
     (c::make-lexenv 
       :default env
+      :variables variables
       :functions
       (append (mapcar #'(lambda (f)
 			  (cons (car f) (c::make-functional :lexenv env)))
@@ -180,6 +202,7 @@
 	   (eq (cadr entry) 'c::macro)
 	   (values (function-lambda-expression (cddr entry)))))))
 
+;;; End of CMUCL specific environment hacking.
 
 
 (defmacro with-new-definition-in-environment
