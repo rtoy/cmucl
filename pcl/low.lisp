@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.29 2003/05/18 18:09:30 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.30 2003/05/19 19:16:26 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -462,9 +462,15 @@ the compiler as completely as possible.  Currently this means that
 (defun structure-slotd-reader-function (slotd)
   (fdefinition (kernel:dsd-accessor slotd)))
 
-(defun structure-slotd-writer-function (slotd)
-  (unless (kernel:dsd-read-only slotd)
-    (fdefinition `(setf ,(kernel:dsd-accessor slotd)))))
+(defun structure-slotd-writer-function (type dsd)
+  (if (kernel:dsd-read-only dsd)
+      (multiple-value-bind (accessor offset data)
+	  (kernel::slot-accessor-form (get-structure-dd type) dsd)
+	(compile-lambda
+	 `(lambda (new-value kernel::object)
+	    (setf (,accessor ,data ,offset) new-value)
+	    new-value)))
+      (fdefinition `(setf ,(kernel:dsd-accessor dsd)))))
 
 (defun structure-slotd-type (slotd)
   (kernel:dsd-type slotd))

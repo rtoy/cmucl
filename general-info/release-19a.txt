@@ -116,6 +116,8 @@ New in this release:
      - DEFMETHOD and DEFGENERIC detecting doubled lambda variables.
      - DEFGENERIC :ARGUMENT-PRECEDENCE-ORDER option checking.
      - SLOT-VALUE, (SETF SLOT-VALUE), SLOT-BOUNDP working with conditions.
+     - (SETF SLOT-VALUE) working on read-only structure slots like
+       in other implementations.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

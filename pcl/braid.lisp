@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.41 2003/05/15 15:43:56 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.42 2003/05/19 19:16:26 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -535,7 +535,7 @@
 		   `(:internal-reader-function
 		     ,(structure-slotd-reader-function slotd)
 		     :internal-writer-function
-		     ,(structure-slotd-writer-function slotd)))
+		     ,(structure-slotd-writer-function name slotd)))
 	       :type ,(or (structure-slotd-type slotd) t)
 	       :initform ,(structure-slotd-init-form slotd)
 	       :initfunction ,(eval-form (structure-slotd-init-form slotd)))))
