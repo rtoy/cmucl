@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.26 1993/02/26 08:25:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.27 1993/05/29 07:02:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -478,16 +478,14 @@
       (handler-case
 	  (let ((*finding-name* t))
 	    (do ((frame (di:top-frame) (di:frame-down frame)))
-		((or (null frame)
-		     (and (di::compiled-frame-p frame)
-			  (di::compiled-frame-escaped frame)))
-		 (if (di::compiled-frame-p frame)
-		     (values (di:debug-function-name
-			      (di:frame-debug-function frame))
-			     (progn
-			       (di:flush-frames-above frame)
-			       frame))
-		     (values "<error finding name>" nil)))))
+		((null frame)
+		 (values "<error finding name>" nil))
+	      (when (and (di::compiled-frame-p frame)
+			 (di::compiled-frame-escaped frame))
+		(di:flush-frames-above frame)
+		(return (values (di:debug-function-name
+				 (di:frame-debug-function frame))
+				frame)))))
 	(error ()
 	  (values "<error finding name>" nil))
 	(di:debug-condition ()
