@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/system.lisp,v 1.1 1992/07/13 03:48:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/system.lisp,v 1.2 1993/07/26 20:07:29 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,7 @@
     (inst comib := other-pointer-type result other-ptr :nullify t)
     (inst comib := function-pointer-type result function-ptr :nullify t)
     (inst bb t object 31 done :nullify t)
-    (inst extru object 31 2 result :<>)
+    (inst extru object 31 2 result :=)
     (inst extru object 31 8 result)
     (inst nop :tr)
 
