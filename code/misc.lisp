@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.23.2.3 1997/09/03 20:29:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.23.2.4 1997/09/04 06:18:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,9 +53,6 @@
 		(kernel:funcallable-instance-function x))))))))
     (when (and name (typep name '(or symbol cons)))
       (values (info function documentation name)))))
-
-(eval-when (compile load eval)
-  (shadow 'documentation "PCL"))
 
 (defun documentation (x doc-type)
   "Returns the documentation string of Doc-Type for X, or NIL if

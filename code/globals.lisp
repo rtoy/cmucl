@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.12.2.1 1997/08/17 19:59:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.12.2.2 1997/09/04 06:18:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,8 +47,7 @@
 (declaim (ftype (function * *)
 		find-keyword keyword-test assert-error
 		assert-prompt check-type-error case-body-error print-object
-		pcl::describe-object pcl::check-wrapper-validity
-		pcl::documentation))
+		pcl::describe-object pcl::check-wrapper-validity))
 
 #-clx
 (declaim (ftype (function * *)
