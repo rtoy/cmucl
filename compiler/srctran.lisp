@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.90 1998/11/13 04:49:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.91 1999/01/25 12:22:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -524,34 +524,40 @@
 	(y-lo (interval-low y))
 	(y-hi (interval-high y)))
     (labels
-	((opposite-bound (p)
-	   ;; If p is an open bound, make it closed.  If p is a closed
+	((test-lower-bound (p int)
+	   ;; Test if the low bound P is in the interval INT.
+	   (if p
+	       (if (interval-contains-p (bound-value p)
+					(interval-closure int))
+		   (let ((lo (interval-low int))
+			 (hi (interval-high int)))
+		     ;; Check for endpoints
+		     (cond ((and lo (= (bound-value p) (bound-value lo)))
+			    (not (and (numberp p) (consp lo))))
+			   ((and hi (= (bound-value p) (bound-value hi)))
+			    (and (numberp p) (numberp hi)))
+			   (t t))))
+	       (not (interval-bounded-p int 'below))))
+	 (test-upper-bound (p int)
+	   ;; Test if the upper bound P is in the interval INT.
+	   (if p
+	       (if (interval-contains-p (bound-value p)
+					(interval-closure int))
+		   (let ((lo (interval-low int))
+			 (hi (interval-high int)))
+		     ;; Check for endpoints
+		     (cond ((and lo (= (bound-value p) (bound-value lo)))
+			    (and (numberp p) (numberp lo)))
+			   ((and hi (= (bound-value p) (bound-value hi)))
+			    (not (and (numberp p) (consp hi))))
+			   (t t))))
+	       (not (interval-bounded-p int 'above))))
+	 (opposite-bound (p)
+	   ;; If P is an open bound, make it closed.  If P is a closed
 	   ;; bound, make it open.
 	   (if (listp p)
 	       (first p)
-	       (list p)))
-	 (test-number (p int)
-	   ;; Test if P is in the interval.
-	   (when (interval-contains-p (bound-value p)
-				      (interval-closure int))
-	     (let ((lo (interval-low int))
-		   (hi (interval-high int)))
-	       ;; Check for endpoints
-	       (cond ((and lo (= (bound-value p) (bound-value lo)))
-		      (not (and (consp p) (numberp lo))))
-		     ((and hi (= (bound-value p) (bound-value hi)))
-		      (not (and (numberp p) (consp hi))))
-		     (t t)))))
-	 (test-lower-bound (p int)
-	   ;; P is a lower bound of an interval.
-	   (if p
-	       (test-number p int)
-	       (not (interval-bounded-p int 'below))))
-	 (test-upper-bound (p int)
-	   ;; P is an upper bound of an interval
-	   (if p
-	       (test-number p int)
-	       (not (interval-bounded-p int 'above)))))
+	       (list p))))
       (let ((x-lo-in-y (test-lower-bound x-lo y))
 	    (x-hi-in-y (test-upper-bound x-hi y))
 	    (y-lo-in-x (test-lower-bound y-lo x))
