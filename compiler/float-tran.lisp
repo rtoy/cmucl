@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.86 2002/03/08 18:38:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.87 2002/03/14 21:30:51 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,7 +97,7 @@
 (defknown %unary-ftruncate/double-float (double-float) double-float
 	  (movable foldable flushable))
 
-(defknown %unary-ftruncate (float) float
+(defknown %unary-ftruncate (real) float
 	  (movable foldable flushable))
 
 ;; Convert (ftruncate x y) to the obvious implementation.  We only
@@ -106,7 +106,7 @@
 ;; should be removed by other deftransforms.)
 
 (deftransform ftruncate ((x &optional (y 1))
-			(float &optional (or float integer)))
+			 (float &optional (or float integer)))
   '(let ((res (%unary-ftruncate (/ x y))))
      (values res (- x (* y res)))))
 
