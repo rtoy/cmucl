@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.5 1990/05/26 01:20:17 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.6 1990/07/02 05:21:34 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -25,13 +25,15 @@ struct sigcontext *context;
 	int were_in_lisp;
 	union interrupt_handler handler;
 	lispobj *args;
-	lispobj callname, function;
+        lispobj callname, function;
+        long mask;
 
 	handler = interrupt_handlers[signal];
 	were_in_lisp = !foreign_function_call_active;
 
 	if (were_in_lisp) {
 		int context_index;
+                lispobj oldcont;
 
 		/* Get current LISP state from context */
 		current_dynamic_space_free_pointer =
@@ -43,12 +45,38 @@ struct sigcontext *context;
                 /* Build a fake stack frame */
                 current_control_frame_pointer =
                         (lispobj *) context->sc_regs[CSP];
-                current_control_stack_pointer = 
-                        current_control_frame_pointer + 8;
-                current_control_frame_pointer[0] =
-                        context->sc_regs[CONT];
-                current_control_frame_pointer[1] = 
-                        context->sc_regs[CODE];
+                if ((lispobj *)context->sc_regs[CONT] == current_control_frame_pointer) {
+                    /* There is a small window during call where the callee's frame isn't built yet. */
+                    if (TypeOf(context->sc_regs[CODE]) == type_FunctionPointer) {
+                        /* We have called, but not built the new frame, so
+                          build it for them. */
+                        current_control_frame_pointer[0] =
+                          context->sc_regs[OLDCONT];
+                        current_control_frame_pointer[1] =
+                          context->sc_regs[LRA];
+                        current_control_frame_pointer += 8;
+                        /* Build our frame on top of it. */
+                        oldcont = (lispobj)context->sc_regs[CONT];
+                    }
+                    else {
+                        /* We haven't yet called, build our frame as if the
+                            partial frame wasn't there. */
+                        oldcont = (lispobj)context->sc_regs[OLDCONT];
+                    }
+                }
+                /* ### We can't tell if we are still in the caller if it had to
+                    allocate the stack frame due to stack arguments. */
+                /* ### Can anything strange happen during return? */
+                else
+                    /* Normal case. */
+                    oldcont = (lispobj)context->sc_regs[CONT];
+
+                current_control_stack_pointer =
+                    current_control_frame_pointer + 8;
+                current_control_frame_pointer[0] = oldcont;
+                current_control_frame_pointer[1] = NIL;
+                current_control_frame_pointer[2] =
+                    (lispobj)context->sc_regs[CODE];
 
 		/* Restore the GP */
 		set_global_pointer(saved_global_pointer);
@@ -71,6 +99,9 @@ struct sigcontext *context;
 		/* No longer in Lisp now. */
 		foreign_function_call_active = 1;
 	}
+
+        /* Allow signals again. */
+        sigsetmask(context->sc_mask);
 
 	if (LowtagOf(handler.lisp) == type_EvenFixnum ||
 	    LowtagOf(handler.lisp) == type_OddFixnum)
