@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.1 1998/06/23 11:22:01 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.2 2000/07/31 09:55:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -279,8 +279,39 @@ struct in_addr {
 	       (unix:get-unix-error-msg)))
       socket)))
 
-(defun create-inet-listener (port &optional (kind :stream))
+;;; Socket levels.
+(defconstant sol-socket 1)
+
+;;; Socket options.
+(defconstant so-reuseaddr 2)
+
+(defun get-socket-option (socket level optname)
+  "Get an integer value socket option."
+  (declare (type unix:unix-fd socket)
+	   (type (signed-byte 32) level optname))
+  (with-alien ((optval signed))
+    (if (minusp (unix:unix-getsockopt socket level optname
+				      (alien-sap (addr optval)) 4))
+	(values nil unix:unix-errno)
+	(values optval 0))))
+
+(defun set-socket-option (socket level optname optval)
+  "Set an integer value socket option."
+  (declare (type unix:unix-fd socket)
+	   (type (signed-byte 32) level optname optval))
+  (with-alien ((optval signed optval))
+    (if (minusp (unix:unix-setsockopt socket level optname
+				      (alien-sap (addr optval)) 4))
+	(values nil unix:unix-errno)
+	(values optval 0))))
+
+(defun create-inet-listener (port &optional (kind :stream) &key reuse-address)
   (let ((socket (create-inet-socket kind)))
+    (when reuse-address
+      (multiple-value-bind (optval errno)
+	  (set-socket-option socket sol-socket so-reuseaddr 1)
+	(or optval (error "Error ~s setting socket option on socket ~d."
+			  (unix:get-unix-error-msg errno) socket))))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
