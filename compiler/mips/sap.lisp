@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.26 1992/07/28 20:37:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.27 1993/01/13 15:58:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,7 @@
   (:args (x :scs (sap-reg) :target sap))
   (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
-  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
+  #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (y :scs (descriptor-reg)))
   (:note "system area pointer allocation")
   (:generator 20

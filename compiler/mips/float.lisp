@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.16 1992/07/28 20:37:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.17 1993/01/13 15:58:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,7 +70,7 @@
   (:args (x :to :save))
   (:results (y))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
-  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
+  #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:variant-vars double-p size type data)
   (:note "float to pointer coercion")
   (:generator 13
