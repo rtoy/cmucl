@@ -55,7 +55,7 @@
 
 (proclaim '(special *current-cookie* *default-cookie*))
 
-(eval-when (compile load eval)
+(eval-when (#-new-compiler compile load eval)
 (defconstant policy-parameter-slots
   '((speed . cookie-speed) (space . cookie-space) (safety . cookie-safety)
     (cspeed . cookie-cspeed) (brevity . cookie-brevity)
@@ -115,7 +115,7 @@
 
 ;;;; Source-hacking defining forms:
 
-(eval-when (compile load eval)
+(eval-when (#-new-compiler compile load eval)
 
 ;;; Symbolicate  --  Interface
 ;;;
@@ -237,7 +237,7 @@
 ;;; lambda-list.
 
 
-(eval-when (compile load eval)
+(eval-when (#-new-compiler compile load eval)
 
 ;;; Parse-Lambda-List  --  Interface
 ;;;
@@ -907,7 +907,7 @@
 
 (deftype attributes () 'fixnum)
 
-(eval-when (compile load eval)
+(eval-when (#-new-compiler compile load eval)
 ;;; Compute-Attribute-Mask  --  Internal
 ;;;
 ;;;    Given a list of attribute names and an alist that translates them to
@@ -990,7 +990,7 @@
 
 ;;;; The Event statistics/trace utility:
 
-(eval-when (compile load eval)
+(eval-when (#-new-compiler compile load eval)
 
 (defstruct event-info
   ;;
