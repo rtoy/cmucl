@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.49 1993/02/04 13:39:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.50 1993/08/25 23:26:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,7 +78,7 @@
   (once-only ((n-target target)
 	      (n-source source)
 	      (n-offset offset))
-    (ecase (backend-byte-order *backend*)
+    (ecase (backend-byte-order *target-backend*)
       (:little-endian
        `(inst lbu ,n-target ,n-source ,n-offset ))
       (:big-endian
