@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.25 1990/06/18 14:47:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.26 1990/06/25 21:14:24 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -106,6 +106,8 @@
 
 
 (define-vop (get-header-data)
+  (:translate get-header-data)
+  (:policy :fast-safe)
   (:args (x :scs (descriptor-reg)))
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
@@ -114,8 +116,10 @@
     (inst srl res res vm:type-bits)))
 
 (define-vop (set-header-data)
+  (:translate set-header-data)
+  (:policy :fast-safe)
   (:args (x :scs (descriptor-reg) :target res)
-	 (data :scs (any-reg immediate)))
+	 (data :scs (any-reg immediate zero)))
   (:arg-types * positive-fixnum)
   (:results (res :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
@@ -127,7 +131,8 @@
        (inst sll t2 data (- vm:type-bits 2))
        (inst or t1 t2))
       (immediate
-       (inst or t1 (ash (tn-value data) vm:type-bits))))
+       (inst or t1 (ash (tn-value data) vm:type-bits)))
+      (zero))
     (storew t1 x 0 vm:other-pointer-type)
     (move res x)))
 
@@ -202,7 +207,8 @@
 
 (define-vop (compute-function)
   (:args (code :scs (descriptor-reg))
-	 (offset :scs (any-reg)))
+	 (offset :scs (signed-reg unsigned-reg)))
+  (:arg-types * positive-fixnum)
   (:results (func :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 10
