@@ -421,6 +421,7 @@
       (let* ((mask (xlib:make-event-mask event-class))
 	     (key (cons (widget-id widget) event-class))
 	     (new-list (delete data (gethash key table) :test #'equal)))
+	(setf (gethash key table) new-list)
 	(unless new-list
 	  (setf (widget-events widget)
 		(delete event-class (widget-events widget)))
@@ -429,6 +430,7 @@
       (let* ((mask 0) ; NoEventMask
 	     (key (cons (widget-id widget) :non-maskable-mask))
 	     (new-list (delete data (gethash key table) :test #'equal)))
+	(setf (gethash key table) new-list)
 	(unless new-list
 	  (setf (widget-events widget)
 		(delete :non-maskable-mask (widget-events widget)))
