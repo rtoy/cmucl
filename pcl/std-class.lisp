@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.54 2003/04/25 17:43:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.55 2003/04/26 17:35:08 gerd Exp $")
 
 (in-package :pcl)
 
@@ -792,7 +792,11 @@
 
 (defun update-cpl (class cpl)
   (if (class-finalized-p class)
-      (unless (equal (class-precedence-list class) cpl)
+      (unless (and (equal (class-precedence-list class) cpl)
+		   (loop for c in cpl never
+			   (loop for s in (class-direct-slots c) thereis
+				   (eq (slot-definition-allocation s)
+				       :class))))
 	;; Need to have the cpl setup before update-lisp-class-layout
 	;; is called on CMUCL.
 	(setf (slot-value class 'class-precedence-list) cpl)
