@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.63 1991/12/19 22:10:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.64 1992/02/07 14:42:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -657,7 +657,7 @@
 	
 	(dolist (spec aux)
 	  (cond ((atom spec)
-		 (let ((var (varify-lambda-arg spec (names-so-far))))
+		 (let ((var (varify-lambda-arg spec nil)))
 		   (aux-vars var)
 		   (aux-vals nil)
 		   (names-so-far spec)))
@@ -666,7 +666,7 @@
 		   (compiler-error "Malformed &aux binding specifier: ~S."
 				   spec))
 		 (let* ((name (first spec))
-			(var (varify-lambda-arg name (names-so-far))))
+			(var (varify-lambda-arg name nil)))
 		   (aux-vars var)
 		   (aux-vals (second spec))
 		   (names-so-far name)))))
@@ -677,18 +677,23 @@
 ;;; Find-In-Bindings  --  Internal
 ;;;
 ;;;    Given a list of Lambda-Var structures and a variable name, return the
-;;; structure for that name, or NIL if it isn't found.
+;;; structure for that name, or NIL if it isn't found.  We return the *last*
+;;; variable with that name, since let* bindings may be duplicated, and
+;;; declarations always apply to the last.
 ;;;
 (proclaim '(function find-in-bindings (list symbol) (or lambda-var null)))
 (defun find-in-bindings (vars name)
-  (dolist (var vars)
-    (when (eq (leaf-name var) name) (return var))
-    (let ((info (lambda-var-arg-info var)))
-      (when info
-	(let ((supplied-p (arg-info-supplied-p info)))
-	  (when (and supplied-p
-		     (eq (leaf-name supplied-p) name))
-	    (return supplied-p)))))))
+  (let ((found nil))
+    (dolist (var vars)
+      (when (eq (leaf-name var) name)
+	(setq found var))
+      (let ((info (lambda-var-arg-info var)))
+	(when info
+	  (let ((supplied-p (arg-info-supplied-p info)))
+	    (when (and supplied-p
+		       (eq (leaf-name supplied-p) name))
+	      (setq found supplied-p))))))
+    found))
 
 
 ;;; Find-Lexically-Apparent-Function  --  Internal
@@ -2688,20 +2693,26 @@
   (collect ((vars)
 	    (vals)
 	    (names))
-    (dolist (spec bindings)
-      (cond ((atom spec)
-	     (let ((var (varify-lambda-arg spec (names))))
-	       (vars var)
-	       (names (cons spec var)) 
-	       (vals nil)))
-	    (t
-	     (unless (<= 1 (length spec) 2)
-	       (compiler-error "Malformed ~S binding spec: ~S." context spec))
-	     (let* ((name (first spec))
-		    (var (varify-lambda-arg name (names))))
-	       (vars var)
-	       (names name)
-	       (vals (second spec))))))
+    (flet ((get-var (name)
+	     (varify-lambda-arg name
+				(if (eq context 'let*)
+				    nil
+				    (names)))))
+      (dolist (spec bindings)
+	(cond ((atom spec)
+	       (let ((var (get-var spec)))
+		 (vars var)
+		 (names (cons spec var)) 
+		 (vals nil)))
+	      (t
+	       (unless (<= 1 (length spec) 2)
+		 (compiler-error "Malformed ~S binding spec: ~S."
+				 context spec))
+	       (let* ((name (first spec))
+		      (var (get-var name)))
+		 (vars var)
+		 (names name)
+		 (vals (second spec)))))))
 
     (values (vars) (vals) (names))))
 
