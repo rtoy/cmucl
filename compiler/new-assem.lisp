@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.3 1992/06/12 05:39:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.4 1992/06/22 13:52:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1109,10 +1109,11 @@
 		   (unless (= new-size old-size)
 		     (error "~S emitted ~D bytes, but claimed it's was ~D"
 			    note new-size old-size)))
-		 (setf prev (segment-last-annotation segment))
-		 (if prev
-		     (setf (cdr prev) next)
-		     (setf (segment-annotations segment) next)))))
+		 (let ((tail (segment-last-annotation segment)))
+		   (if tail
+		       (setf (cdr tail) next)
+		       (setf (segment-annotations segment) next)))
+		 (setf next (cdr prev)))))
 	(cond ((back-patch-p note)
 	       (fill-in (back-patch-function note)
 			(back-patch-size note)))
