@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.43 2003/10/29 22:34:32 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.44 2004/01/09 04:42:57 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2899,10 +2899,15 @@
   (declare (type segment segment)
 	   (type (or null di:debug-function) debug-function)
 	   (type (or null source-form-cache) sfcache))
-  (let ((last-block-pc -1))
+  (let ((last-block-pc -1)
+	(segment-base 
+	 (- (seg-virtual-location segment)
+	    (sys:sap-int
+	     (kernel:code-instructions 
+	      (di::compiled-debug-function-component debug-function))))))
     (flet ((add-hook (pc fun &optional before-address)
 	     (push (make-offs-hook
-		    :offset pc ;; ##### FIX to account for non-zero offs in code
+		    :offset (code-insts-offs-to-segment-offs pc segment)
 		    :function fun
 		    :before-address before-address)
 		   (seg-hooks segment))))
@@ -2912,6 +2917,13 @@
 	      (di:do-debug-block-locations (loc block)
 		(let ((pc (di::compiled-code-location-pc loc)))
 
+		  ;; Print the code-location-kind
+		  (let ((kind (di::compiled-code-location-kind loc)))
+		    (add-hook pc 
+			      (lambda (stream dstate)
+				(declare (ignore stream))
+				(note (format nil "[~S]" kind) dstate))))
+		  
 		  ;; Put blank lines in at block boundaries
 		  (when (and first-location-in-block-p
 			     (/= pc last-block-pc))
