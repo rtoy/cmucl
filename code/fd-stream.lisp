@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.33 1994/01/08 18:42:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.34 1994/08/23 18:31:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1222,10 +1222,7 @@ non-server method is also significantly more efficient for large reads.
                        :overwrite, :append, :supersede or nil
    :if-does-not-exist - one of :error, :create or nil
   See the manual for details."
-
-  (unless (eq external-format :default)
-    (cerror "use default ASCII format"
-	    "External format must be :DEFAULT: ~S" external-format))
+  (declare (ignore external-format))
 
   ;; First, make sure that DIRECTION is valid. Allow it to be changed if not.
   (setf direction
@@ -1243,14 +1240,17 @@ non-server method is also significantly more efficient for large reads.
 	(:probe (values t nil unix:o_rdonly)))
     (declare (type index mask))
     (let* ((pathname (pathname filename))
-	   (namestring (unix-namestring pathname input)))
+	   (namestring
+	    (cond ((unix-namestring pathname input))
+		  ((and input (eq if-does-not-exist :create))
+		   (unix-namestring pathname nil)))))
       ;; Process if-exists argument if we are doing any output.
       (cond (output
 	     (unless if-exists-given
 	       (setf if-exists
 		     (if (eq (pathname-version pathname) :newest)
-		       :new-version
-		       :error)))
+			 :new-version
+			 :error)))
 	     (setf if-exists
 		   (assure-one-of if-exists
 				  '(:error :new-version :rename
