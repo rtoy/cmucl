@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.32 1992/08/15 15:18:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.33 1993/01/13 16:05:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -211,7 +211,7 @@
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
-  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
+  #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:note "signed word to integer coercion")
   (:generator 18
     (move x arg)
@@ -244,6 +244,7 @@
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+  #-gengc
   (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:note "unsigned word to integer coercion")
   (:generator 20
@@ -252,15 +253,26 @@
     (inst beq temp done)
     (inst sll y x 2)
       
+    #-gengc
     (pseudo-atomic
 	(pa-flag :extra (pad-data-block (+ bignum-digits-offset 2)))
       (inst or y alloc-tn other-pointer-type)
       (inst slt temp x zero-tn)
       (inst sll temp type-bits)
       (inst addu temp (logior (ash 1 type-bits) bignum-type))
-      (storew temp y 0 other-pointer-type)
-      (storew x y bignum-digits-offset other-pointer-type))
-    DONE))
+      (storew temp y 0 other-pointer-type))
+
+    #+gengc
+    (progn
+      (inst slt temp x zero-tn)
+      (inst sll temp type-bits)
+      (inst addu temp (logior (ash 1 type-bits) bignum-type))
+      (inst or y alloc-tn other-pointer-type)
+      (storew temp alloc-tn)
+      (inst addu alloc-tn (pad-data-block (+ bignum-digits-offset 2))))
+
+     (storew x y bignum-digits-offset other-pointer-type)
+     DONE))
 ;;;
 (define-move-vop move-from-unsigned :move
   (unsigned-reg) (descriptor-reg))
