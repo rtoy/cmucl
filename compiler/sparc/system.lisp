@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.7 1992/02/25 07:13:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.8 1992/04/14 02:59:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,6 +63,27 @@
       (inst nop)
       
       (emit-label done))))
+
+(define-vop (function-subtype)
+  (:translate function-subtype)
+  (:policy :fast-safe)
+  (:args (function :scs (descriptor-reg)))
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 6
+    (load-type result function (- vm:function-pointer-type))))
+
+(define-vop (set-function-subtype)
+  (:translate (setf function-subtype))
+  (:policy :fast-safe)
+  (:args (type :scs (unsigned-reg) :target result)
+	 (function :scs (descriptor-reg)))
+  (:arg-types positive-fixnum *)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 6
+    (inst stb type function (- 3 function-pointer-type))
+    (move result type)))
 
 (define-vop (get-header-data)
   (:translate get-header-data)

@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.43 1992/02/14 23:50:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.44 1992/04/14 02:59:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.43 1992/02/14 23:50:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.44 1992/04/14 02:59:51 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -105,6 +105,28 @@
       (inst nop)
       
       (emit-label done))))
+
+(define-vop (function-subtype)
+  (:translate function-subtype)
+  (:policy :fast-safe)
+  (:args (function :scs (descriptor-reg)))
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 6
+    (load-type result function (- vm:function-pointer-type))))
+
+(define-vop (set-function-subtype)
+  (:translate (setf function-subtype))
+  (:policy :fast-safe)
+  (:args (type :scs (unsigned-reg) :target result)
+	 (function :scs (descriptor-reg)))
+  (:arg-types positive-fixnum *)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 6
+    (inst sb type function (- function-pointer-type))
+    (move result type)))
+
 
 (define-vop (get-header-data)
   (:translate get-header-data)
