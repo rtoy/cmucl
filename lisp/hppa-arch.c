@@ -152,11 +152,14 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 
 static void sigfpe_handler(int signal, int code, struct sigcontext *scp)
 {
-    if (code == I_OVFLO) {
-	unsigned long badinst = *(unsigned long *)(SC_PC(scp)&~3);
-	int opcode = badinst >> 26;
-	int r1, r2, t;
-	long op1, op2, res;
+    unsigned long badinst;
+    int opcode, r1, r2, t;
+    long op1, op2, res;
+
+    switch (code) {
+      case I_OVFLO:
+	badinst = *(unsigned long *)(SC_PC(scp)&~3);
+	opcode = badinst >> 26;
 
 	if (opcode == 2) {
 	    /* reg/reg inst. */
@@ -200,10 +203,28 @@ static void sigfpe_handler(int signal, int code, struct sigcontext *scp)
 	SC_REG(scp, reg_ALLOC)
 	    = (unsigned long)current_dynamic_space_free_pointer;
 	arch_skip_instruction(scp);
-    }
-    else
+
+	break;
+
+      case I_COND:
+	badinst = *(unsigned long *)(SC_PC(scp)&~3);
+	if ((badinst&0xfffff800) == (0xb000e000|reg_ALLOC<<21|reg_ALLOC<<16)) {
+	    /* It is an ADDIT,OD i,ALLOC,ALLOC instruction that trapped. */
+	    /* That means that it is the end of a pseudo-atomic.  So do the */
+	    /* add stripping off the pseudo-atomic-interrupted bit, and then */
+	    /* tell the machine-independent code to process the pseudo- */
+	    /* atomic. */
+	    int immed = ((int)(badinst<<21))>>21;
+	    SC_REG(scp,reg_ALLOC) += (immed-1);
+	    arch_skip_instruction(scp);
+	    interrupt_handle_pending(scp);
+	    break;
+	}
+	/* else drop-through. */
+      default:
       not_interesting:
 	interrupt_handle_now(signal, code, scp);
+    }
 }
 
 void arch_install_interrupt_handlers(void)
