@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.3 1992/02/25 07:10:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.4 1992/02/25 19:45:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -169,7 +169,7 @@
 	 (:generator 5
 	   (inst ,(ecase size
 		    (:byte (if signed 'ldsb 'ldub))
-		    (:short (if signed 'ldsh 'lsuh))
+		    (:short (if signed 'ldsh 'lduh))
 		    (:long 'ld)
 		    (:single 'ldf)
 		    (:double 'lddf))
@@ -185,7 +185,7 @@
 	 (:generator 4
 	   (inst ,(ecase size
 		    (:byte (if signed 'ldsb 'ldub))
-		    (:short (if signed 'ldsh 'lsuh))
+		    (:short (if signed 'ldsh 'lduh))
 		    (:long 'ld)
 		    (:single 'ldf)
 		    (:double 'lddf))
