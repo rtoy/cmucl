@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.80 2001/05/30 16:56:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.81 2001/10/16 19:19:54 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -470,7 +470,8 @@
 ;;;
 (defun load (filename &key (verbose nil verbose-p) (print nil print-p)
 		      (if-source-newer nil if-source-newer-p)
-		      (if-does-not-exist :error) (external-format :default))
+		      (if-does-not-exist :error) contents
+		      (external-format :default))
   "Loads the file named by Filename into the Lisp environment.  The file type
    (a.k.a extension) is defaulted if missing.  These options are defined:
 
@@ -493,7 +494,7 @@
        If true, print information about loaded values.  When loading the
        source, the result of evaluating each top-level form is printed.
 
-   :EXTERNAL-FORMAT {:DEFAULT | :SOURCE | :BINARY}
+   :CONTENTS {NIL | :SOURCE | :BINARY}
        Forces the input to be interpreted as a source or object file, instead
        of guessing based on the file type.  This also inhibits file type
        defaulting.  Probably only necessary if you have source files with a
@@ -505,7 +506,8 @@
    keyword affects nested loads.  The variables EXT:*LOAD-SOURCE-TYPES*,
    EXT:*LOAD-OBJECT-TYPES*, and EXT:*LOAD-LP-OBJECT-TYPES* determine the file
    types that we use for defaulting when none is specified."
-  (declare (type (member :default :source :binary) external-format))
+  (declare (type (or null (member :source :binary)) contents)
+	   (ignore external-format))
   (collect ((vars)
 	    (vals))
     (macrolet ((frob (wot)
@@ -523,10 +525,7 @@
     (progv (vars) (vals)
       (let ((*package* *package*)
 	    (*readtable* *readtable*)
-	    (*load-depth* (1+ *load-depth*))
-	    (contents (if (eq external-format :default)
-			  nil
-			  external-format)))
+	    (*load-depth* (1+ *load-depth*)))
 	(values 
 	 (with-simple-restart (continue "Return NIL from load of ~S." filename)
 	   (if (streamp filename)
