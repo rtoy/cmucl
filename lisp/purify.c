@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.14 1998/01/16 07:22:10 dtc Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.15 1998/01/18 15:45:35 dtc Exp $ 
 
    */
 #include <stdio.h>
@@ -440,11 +440,12 @@ pscav_i386_stack(void)
   for (i = 0; i < num_valid_stack_ra_locations; i++) {
     lispobj code_obj = valid_stack_ra_code_objects[i];
     pscav(&code_obj, 1, FALSE);
-    fprintf(stderr,"*C moved RA %x to %x; for code object %x to %x\n",
-	    *valid_stack_ra_locations[i],
-	    (int)(*valid_stack_ra_locations[i])
-	    - ((int)valid_stack_ra_code_objects[i] - (int)code_obj),
-	    valid_stack_ra_code_objects[i], code_obj);
+    if (pointer_filter_verbose)
+      fprintf(stderr,"*C moved RA %x to %x; for code object %x to %x\n",
+	      *valid_stack_ra_locations[i],
+	      (int)(*valid_stack_ra_locations[i])
+	      - ((int)valid_stack_ra_code_objects[i] - (int)code_obj),
+	      valid_stack_ra_code_objects[i], code_obj);
     *valid_stack_ra_locations[i] = 
       (lispobj *)((int)(*valid_stack_ra_locations[i])
 		  - ((int)valid_stack_ra_code_objects[i] - (int)code_obj));
