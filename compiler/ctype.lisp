@@ -345,12 +345,13 @@
 
 (defstruct (approximate-key-info)
   ;;
-  ;; The keyword name of this argument.
-  (name nil :type keyword)
+  ;; The keyword name of this argument.  Although keyword names don't have to
+  ;; be keywords, we only match on keywords when figuring an approximate type.
+  (name (required-argument) :type keyword)
   ;;
   ;; The position at which this keyword appeared.  0 if it appeared as the
   ;; first argument, etc.
-  (position nil :type fixnum)
+  (position (required-argument) :type fixnum)
   ;;
   ;; A list of all the argument types that have been used with this keyword.
   (types nil :type list)
@@ -565,7 +566,7 @@
 ;;;
 ;;;    Intersect Lambda's var types with Types, giving a warning if there is a
 ;;; mismatch.  If all intersections are non-null, we return lists of the
-;;; variables, intersections and T.
+;;; variables and intersections, otherwise we return NIL, NIL.
 ;;;
 (defun try-type-intersections (vars types where)
   (declare (list vars types) (string where))
@@ -589,10 +590,27 @@
 
 ;;; FIND-OPTIONAL-DISPATCH-TYPES  --  Internal
 ;;;
-;;;    Check that the optional-dispatch OD conforms to Type.  We return two
-;;; values: the first is a list of types extracted from the function type that
-;;; should be applied to the variables of the main entry.  The second is a
-;;; boolean flag true when no syntax problems were detected.
+;;;    Check that the optional-dispatch OD conforms to Type.  We return the
+;;; values of TRY-TYPE-INTERSECTIONS if there are no syntax problems, otherwise
+;;; NIL, NIL.
+;;;
+;;;    Note that the variables in the returned list are the actual original
+;;; variables (extracted from the optional dispatch arglist), rather than the
+;;; variables that are arguments to the main entry.  This difference is
+;;; significant only for keyword args with hairy defaults.  Returning the
+;;; actual vars allows us to use the right variable name in warnings.
+;;;
+;;;    A slightly subtle point: with keywords and optionals, the type in the
+;;; function type is only an assertion on calls --- it doesn't constrain the
+;;; type of default values.  So we have to union in the type of the default.
+;;; With optionals, we can't do any assertion unless the default is constant.
+;;;
+;;;    With keywords, we exploit our knowledge about how hairy keyword
+;;; defaulting is done when computing the type assertion to put on the
+;;; main-entry argument.  If the default is hairy (non-constant), then the
+;;; value of the main-entry arg in the unsupplied case is NIL, whatever the
+;;; actual default value is.  So we only have to union in NULL, and not totally
+;;; blow off doing any type assertion.
 ;;;
 (defun find-optional-dispatch-types (od type where)
   (declare (type optional-dispatch od) (type function-type type)
@@ -615,10 +633,10 @@
 		x what where y))))
       (frob (optional-dispatch-keyp od) (function-type-keyp type)
 	    "keyword args")
-      (frob (and (not (null (optional-dispatch-more-entry od)))
-		 (not (optional-dispatch-keyp od)))
-	    (not (null (function-type-rest type)))
-	    "rest args")
+      (unless (optional-dispatch-keyp od)
+	(frob (not (null (optional-dispatch-more-entry od)))
+	      (not (null (function-type-rest type)))
+	      "rest args"))
       (frob (optional-dispatch-allowp od) (function-type-allowp type)
 	    "&allow-other-keys"))
 
@@ -634,9 +652,8 @@
 	   ((lambda-var-arg-info arg)
 	    (let* ((info (lambda-var-arg-info arg))
 		   (default (arg-info-default info))
-		   (def-type (if (constantp default)
-				 (ctype-of (eval default))
-				 *universal-type*)))
+		   (def-type (when (constantp default)
+			       (ctype-of (eval default)))))
 	      (ecase (arg-info-kind info)
 		(:keyword
 		 (let* ((key (arg-info-keyword info))
@@ -644,14 +661,16 @@
 		   (cond
 		    (kinfo
 		     (res (type-union (key-info-type kinfo)
-				      def-type)))
+				      (or def-type (specifier-type 'null)))))
 		    (t
 		     (note-lossage
 		      "Defining a ~S keyword not present in previous ~A."
 		      key where)
 		     (res *universal-type*)))))
 		(:required (res (pop req)))
-		(:optional (res (type-union (pop opt) def-type)))
+		(:optional
+		 (res (type-union (pop opt)
+				  (or def-type *universal-type*))))
 		(:rest
 		 (when (function-type-rest type)
 		   (res (specifier-type 'list)))))
@@ -695,10 +714,11 @@
 	 (req (function-type-required type))
 	 (nreq (length req)))
     (unless (= nvars nreq)
-      (note-lossage
-       "Definition has ~R arg~:P, but the previous ~A had ~R."
-       nvars where nreq)
-      (try-type-intersections vars req where))))
+      (note-lossage "Definition has ~R arg~:P, but the previous ~A had ~R."
+		    nvars where nreq))
+    (if *lossage-detected*
+	(values nil nil)
+	(try-type-intersections vars req where))))
 
 
 ;;; ASSERT-DEFINITION-TYPE  --  Interface
