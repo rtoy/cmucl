@@ -22,7 +22,7 @@ New in this release:
      - Stack overflow checking added for FreeBSD/x86 and Linux/x86.
      - LISP:FIND-CLASS and LISP:CLASS-OF now return CLOS classes.  The
        symbols LISP:STARDARD-CLASS, LISP:BUILT-IN-CLASS, and
-       LISP:STRUCTURE-CLASS name CLOS class.  It is no longer
+       LISP:STRUCTURE-CLASS name CLOS classes.  It is no longer
        necessary to SHADOWING-IMPORT these from PCL when doing MOP
        programming, and it fixes some non-compliances as well.
      - Weak hash tables have been added for x86 systems.
