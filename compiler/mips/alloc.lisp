@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.17 1992/07/28 20:34:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.18 1992/08/02 20:24:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,23 +185,17 @@
 			  (inst and temp temp2)
 			  (inst addu alloc-tn temp)
 			  (inst addu temp extra-words (fixnum (1- ,size)))
-			  (inst sll temp extra-words
-				(- type-bits word-shift))
+			  (inst sll temp (- type-bits word-shift))
 			  (inst or temp temp ,header)
 			  (storew temp result 0 ,lowtag)))
 		       (variable-length
 			(error ":REST-P T with no header in ~S?"
 			       (primitive-object-name obj)))
 		       (header
-			`((inst addu alloc-tn alloc-tn
-				(pad-data-block ,size))
-			  (inst li temp
+			`((inst li temp
 				,(logior (ash (1- size) type-bits)
 					 (symbol-value header)))
-			  (storew temp result 0 ,lowtag)))
-		       (t
-			`((inst addu alloc-tn alloc-tn
-				(pad-data-block ,size)))))
+			  (storew temp result 0 ,lowtag))))
 	       ,@(when need-unbound-marker
 		   `((inst li temp unbound-marker-type)))
 	       ,@(init-forms)
