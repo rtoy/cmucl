@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.73 1998/08/23 12:39:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.74 1998/09/20 15:13:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -581,7 +581,7 @@
 (defun coerce-numeric-bound (bound type)
   (when bound
     (if (consp bound)
-	(consp (coerce (car bound) type))
+	(list (coerce (car bound) type))
 	(coerce bound type))))
 
 ;;; Compute a specifier like '(or float (complex float)), except float
