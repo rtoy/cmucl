@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.25 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.26 1995/02/17 18:04:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.25 1994/10/31 04:11:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.26 1995/02/17 18:04:08 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -353,7 +353,7 @@
 	(canonical-complex (,op (realpart x) (realpart y))
 			   (,op (imagpart x) (imagpart y))))
        (((foreach bignum fixnum ratio single-float double-float) complex)
-	(complex (,op x (realpart y)) (imagpart y)))
+	(complex (,op x (realpart y)) (,op (imagpart y))))
        ((complex (or rational float))
 	(complex (,op (realpart x) y) (imagpart x)))
        
