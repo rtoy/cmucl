@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.33 1998/04/03 03:58:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.34 1998/05/29 06:41:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -395,83 +395,78 @@
 	`(%typep ,obj ',(type-specifier type)))))
 
 
-;;; SOURCE-TRANSFORM-INSTANCE-TYPEP  --  Internal
+;;; Instance typep IR1 transform  --  Internal
 ;;;
-;;;    Transform a type test against some instance type.  If not properly
-;;; named, error.  If sealed and has no subclasses, just test for layout-EQ.
-;;; If a structure, call S-T-STRUCTURE-TYPEP.  Otherwise, look up the indirect
-;;; class-cell and call CLASS-CELL-TYPEP at runtime.
+;;;    Transform a type test against some instance type. The type test is
+;;; flushed if the result is known at compile time.  If not properly named,
+;;; error.  If sealed and has no subclasses, just test for layout-EQ.  If a
+;;; structure then test for layout-EQ and then a general test based on
+;;; layout-inherits. If safety is important, then we also check if the layout
+;;; for the object is invalid and signal an error if so.  Otherwise, look up
+;;; the indirect class-cell and call CLASS-CELL-TYPEP at runtime.
 ;;;
-(defun source-transform-instance-typep (obj class)
-  (let* ((name (class-name class))
+(deftransform %instance-typep ((object spec))
+  (assert (constant-continuation-p spec))
+  (let* ((spec (continuation-value spec))
+	 (class (specifier-type spec))
+	 (name (class-name class))
+	 (otype (continuation-type object))
 	 (layout (let ((res (info type compiler-layout name)))
-		   (if (and res
-			    (member (layout-invalid res) '(:compiler nil)))
+		   (if (and res (member (layout-invalid res) '(:compiler nil)))
 		       res
 		       nil))))
-    (multiple-value-bind
-	(pred get-layout)
-	(cond ((csubtypep class (specifier-type 'funcallable-instance))
-	       (values 'funcallable-instance-p '%funcallable-instance-layout))
-	      ((csubtypep class (specifier-type 'instance))
-	       (values '%instancep '%instance-layout))
-	      (t
-	       (values '(lambda (x) (declare (ignore x)) t) 'layout-of)))
-      (cond
-       ((not (and name (eq (find-class name) class)))
-	(compiler-error "Can't compile TYPEP of anonymous or undefined ~
-			 class:~%  ~S"
-			class))
-       ((and (eq (class-state class) :sealed) layout
-	     (not (class-subclasses class)))
-	(source-transform-sealed-typep obj layout pred get-layout))
-       ((and (typep class 'basic-structure-class) layout)
-	(source-transform-structure-typep obj layout pred get-layout))
-       (t
-	(once-only ((object obj))
-	  `(and (,pred ,object)
-		(class-cell-typep (,get-layout ,object)
-				  ',(find-class-cell name)
-				  ,object))))))))
-
-
-;;; SOURCE-TRANSFORM-STRUCTURE-TYPEP  --  Internal
-;;;
-;;;    Transform a call to an actual structure type predicate with the
-;;; specified layout.  Do the EQ test and then a general test based on
-;;; layout-inherits.  If safety is important, then we also check if the layout
-;;; for the object is invalid and signal an error if so.
-;;;
-(defun source-transform-structure-typep (obj layout pred get-layout)
-  (let ((idepth (layout-inheritance-depth layout))
-	(n-layout (gensym)))
-    (once-only ((object obj))
-      `(and (,pred ,object)
-	    (let ((,n-layout (,get-layout ,object)))
-	      ,@(when (policy nil (>= safety speed))
-		  `((when (layout-invalid ,n-layout)
-		      (%layout-invalid-error ,object ',layout))))
-	      (if (eq ,n-layout ',layout)
-		  t
-		  (and (> (layout-inheritance-depth ,n-layout) ,idepth)
-		       (locally (declare (optimize (safety 0)))
-				(eq (svref (layout-inherits ,n-layout) ,idepth)
-				    ',layout)))))))))
-
-
-;;; SOURCE-TRANSFORM-SEALED-TYPEP  --  Internal
-;;;
-;;;    Transform a typep test of any sealed class w/ no subclasses.
-;;;
-(defun source-transform-sealed-typep (obj layout pred get-layout)
-  (let ((n-layout (gensym)))
-    (once-only ((object obj))
-      `(and (,pred ,object)
-	    (let ((,n-layout (,get-layout ,object)))
-	      ,@(when (policy nil (>= safety speed))
-		  `((when (layout-invalid ,n-layout)
-		      (%layout-invalid-error ,object ',layout))))
-	      (eq ,n-layout ',layout))))))
+    (cond
+      ;; Flush tests whose result is known at compile time.
+      ((not (types-intersect otype class)) 'nil)
+      ((csubtypep otype class) 't)
+      ;; If not properly named, error.
+      ((not (and name (eq (find-class name) class)))
+       (compiler-error "Can't compile TYPEP of anonymous or undefined ~
+			class:~%  ~S"
+		       class))
+      (t
+       ;; Otherwise transform the type test.
+       (multiple-value-bind
+	     (pred get-layout)
+	   (cond
+	     ((csubtypep class (specifier-type 'funcallable-instance))
+	      (values 'funcallable-instance-p '%funcallable-instance-layout))
+	     ((csubtypep class (specifier-type 'instance))
+	      (values '%instancep '%instance-layout))
+	     (t
+	      (values '(lambda (x) (declare (ignore x)) t) 'layout-of)))
+	 (cond
+	   ((and (eq (class-state class) :sealed) layout
+		 (not (class-subclasses class)))
+	    ;; Sealed and has no subclasses.
+	    (let ((n-layout (gensym)))
+	      `(and (,pred object)
+		    (let ((,n-layout (,get-layout object)))
+		      ,@(when (policy nil (>= safety speed))
+			      `((when (layout-invalid ,n-layout)
+				  (%layout-invalid-error object ',layout))))
+		      (eq ,n-layout ',layout)))))
+	   ((and (typep class 'basic-structure-class) layout)
+	    ;; Structure type tests; hierarchal layout depths.
+	    (let ((idepth (layout-inheritance-depth layout))
+		  (n-layout (gensym)))
+	      `(and (,pred object)
+		    (let ((,n-layout (,get-layout object)))
+		      ,@(when (policy nil (>= safety speed))
+			      `((when (layout-invalid ,n-layout)
+				  (%layout-invalid-error object ',layout))))
+		      (if (eq ,n-layout ',layout)
+			  t
+			  (and (> (layout-inheritance-depth ,n-layout) ,idepth)
+			       (locally (declare (optimize (safety 0)))
+				 (eq (svref (layout-inherits ,n-layout) 
+					    ,idepth)
+				     ',layout))))))))
+	   (t
+	    `(and (,pred object)
+		  (class-cell-typep (,get-layout object)
+				    ',(find-class-cell name)
+				    object)))))))))
 
 
 ;;; Source-Transform-Typep  --  Internal
@@ -481,14 +476,15 @@
 ;;; constant, but we can't transform the call, then we convert to %Typep.  We
 ;;; only pass when the type is non-constant.  This allows us to recognize
 ;;; between calls that might later be transformed sucessfully when a constant
-;;; type is discovered.  We don't given an efficiency note when we pass, since
+;;; type is discovered.  We don't give an efficiency note when we pass, since
 ;;; the IR1 transform will give one if necessary and appropriate.
 ;;;
 ;;; If the type is Type= to a type that has a predicate, then expand to that
 ;;; predicate.  Otherwise, we dispatch off of the type's type.  These
 ;;; transformations can increase space, but it is hard to tell when, so we
 ;;; ignore policy and always do them.  When byte-compiling, we only do
-;;; transforms that have potential for control simplification.
+;;; transforms that have potential for control simplification. Instance type
+;;; tests are converted to %instance-typep to allow type propagation.
 ;;;
 (def-source-transform typep (object spec)
   (if (and (consp spec) (eq (car spec) 'quote))
@@ -513,7 +509,7 @@
 		   (numeric-type
 		    (source-transform-numeric-typep object type))
 		   (class
-		    (source-transform-instance-typep object type))
+		    `(%instance-typep ,object ,spec))
 		   (array-type
 		    (source-transform-array-typep object type))
 		   (t nil)))

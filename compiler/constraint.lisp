@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.18 1997/09/08 00:09:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.19 1998/05/29 06:41:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,7 @@
 		  (basic-combination-fun use)))
 	   (args (basic-combination-args use)))
        (case name
-	 (%typep
+	 ((%typep %instance-typep)
 	  (let ((type (second args)))
 	    (when (constant-continuation-p type)
 	      (let ((val (continuation-value type)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.82 1998/05/11 14:32:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.83 1998/05/29 06:41:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1137,6 +1137,8 @@
 ;;; Can't fold in general because of SATISFIES.  There is a special optimizer
 ;;; anyway.
 (defknown %typep (t (or type-specifier ctype)) boolean
+  (movable flushable explicit-check))
+(defknown %instance-typep (t (or type-specifier ctype)) boolean
   (movable flushable explicit-check))
 
 (defknown %cleanup-point () void)
