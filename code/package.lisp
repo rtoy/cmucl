@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.66 2003/05/12 16:30:41 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.67 2003/06/02 16:00:03 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,8 +163,9 @@
 
 
 (defmacro without-package-locks (&body body)
-  `(let ((*enable-package-locked-errors* nil))
-      ,@body))
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+    (let ((*enable-package-locked-errors* nil))
+      ,@body)))
 
 
 ;; trap attempts to redefine a function in a locked package, and

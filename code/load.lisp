@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.85 2002/11/12 02:05:32 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.86 2003/06/02 16:00:03 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; Loader for Spice Lisp.
+;;; Loader for CMUCL.
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
 (in-package "LISP")
@@ -533,6 +533,7 @@
     (progv (vars) (vals)
       (let ((*package* *package*)
 	    (*readtable* *readtable*)
+            (*enable-package-locked-errors* *enable-package-locked-errors*)
 	    (*load-depth* (1+ *load-depth*)))
 	(values 
 	 (with-simple-restart (continue "Return NIL from load of ~S." filename)
