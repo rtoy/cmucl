@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.6 1997/11/18 10:53:27 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.7 1998/02/14 21:09:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996, 1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996, 1997, 1998.
 ;;;
 
 (in-package :x86)
@@ -307,18 +307,6 @@
 
   ;; A catch or unwind block.
   (catch-block stack :element-size vm:catch-block-size)
-  
-  ;; added by jrd.  need to define non-descriptor-reg-sc-number for the
-  ;; debug code, among others.  this doesn't actually get used in any code.
-  (non-descriptor-reg registers
-		      :locations #.dword-regs
-		      :element-size 2
-		      :reserve-locations ())
-  ;; this one too
-  (interior-reg registers
-		      :locations #.dword-regs
-		      :element-size 2
-		      :reserve-locations ())
   )
 
 (eval-when (compile load eval)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.87 1998/01/25 06:02:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.88 1998/02/14 21:09:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3137,10 +3137,6 @@
       (#.vm:unsigned-reg-sc-number
        (with-escaped-value (val)
 	 val))
-      (#.vm:non-descriptor-reg-sc-number
-       (error "Local non-descriptor register access?"))
-      (#.vm:interior-reg-sc-number
-       (error "Local interior register access?"))
       (#.vm:single-reg-sc-number
        (escaped-float-value single-float))
       (#.vm:double-reg-sc-number
@@ -3388,10 +3384,6 @@
        (set-escaped-value (logand value (1- (ash 1 vm:word-bits)))))
       (#.vm:unsigned-reg-sc-number
        (set-escaped-value value))
-      (#.vm:non-descriptor-reg-sc-number
-       (error "Local non-descriptor register access?"))
-      (#.vm:interior-reg-sc-number
-       (error "Local interior register access?"))
       (#.vm:single-reg-sc-number
 	#+nil ;; don't have escaped floats.
        (set-escaped-float-value single-float value))
