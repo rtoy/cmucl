@@ -82,15 +82,22 @@
 
 (deftransform member ((e l &key (test #'eql)) * * :node node)
   (unless (constant-continuation-p l) (give-up))
-  (let ((val (continuation-value l)))
+  
+  (let ((val (continuation-value l))
+	(if-p (if-p (continuation-dest (node-cont node)))))
     (unless (policy node
 		    (or (= speed 3)
 			(and (>= speed space)
 			     (<= (length val) 5))))
       (give-up))
-    `(or ,@(mapcar #'(lambda (x) `(funcall test e ',x))
-		   val))))
-
+    
+    (labels ((frob (els)
+	       (if els
+		   `(if (funcall test e ',(car els))
+			',(if if-p t els)
+			,(frob (cdr els)))
+		   'nil)))
+      (frob val))))
 
 
 #|Inline expansion is available...
