@@ -1,0 +1,55 @@
+========================== C M U C L  18 e =============================
+
+[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
+
+The CMUCL project is pleased to announce the release of CMUCL 19a.
+This is a major release which contains numerous enhancements and
+bugfixes from the 18e release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multimethods and a metaobject protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+       
+  * Feature enhancements:
+     - Stack overflow checking added for FreeBSD/x86 and Linux/x86.
+     - LISP:FIND-CLASS and LISP:CLASS-OF now return CLOS classes.  The
+       symbols LISP:STARDARD-CLASS, LISP:BUILT-IN-CLASS, and
+       LISP:STRUCTURE-CLASS name CLOS class.  It is no longer
+       necessary to SHADOWING-IMPORT these from PCL when doing MOP
+       programming, and it fixes some non-compliances as well.
+
+  * Numerous ANSI compliance fixes:
+
+  * Numerous bugfixes:
+
+  * Other changes:
+
+  * Numerous improvements to the PCL implementation of CLOS:
+     - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
+       AMOP non-compliances, and adds various new optimizations (also
+       see the CMU User Manual).
+
+  * Improvements to Hemlock, the Emacs-like editor:
+
+  * Changes to rebuilding procedure:
+      
+  * Deprecated features:
+  
+
+This release is not binary compatible with code compiled using CMUCL
+18e; you will need to recompile FASL files. 
+
+See <URL:http://www.cons.org/cmucl/> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!
+
