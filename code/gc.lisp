@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.10 1992/02/14 23:44:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.11 1992/02/19 19:19:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,8 @@
 (in-package "EXTENSIONS")
 (export '(*before-gc-hooks* *after-gc-hooks* gc gc-on gc-off
 	  *bytes-consed-between-gcs* *gc-verbose* *gc-inhibit-hook*
-	  *gc-notify-before* *gc-notify-after* get-bytes-consed))
+	  *gc-notify-before* *gc-notify-after* get-bytes-consed
+	  *gc-run-time*))
 
 (in-package "LISP")
 (export '(room))
@@ -31,22 +32,27 @@
 (proclaim '(special *read-only-space-free-pointer*
 		    *static-space-free-pointer*))
 
-(macrolet ((frob (lisp-fun c-var-name)
-	     `(progn
-		(declaim (inline ,lisp-fun))
-		(defun ,lisp-fun ()
-		  (alien:extern-alien ,c-var-name (alien:unsigned 32))))))
-  (frob read-only-space-start "read_only_space")
-  (frob static-space-start "static_space")
-  (frob dynamic-0-space-start "dynamic_0_space")
-  (frob dynamic-1-space-start "dynamic_1_space")
-  (frob control-stack-start "control_stack")
-  (frob binding-stack-start "binding_stack")
-  (frob current-dynamic-space-start "current_dynamic_space"))
+(eval-when (compile eval)
+  (defmacro c-var-frob (lisp-fun c-var-name)
+    `(progn
+       (declaim (inline ,lisp-fun))
+       (defun ,lisp-fun ()
+	 (alien:extern-alien ,c-var-name (alien:unsigned 32))))))
+
+(c-var-frob read-only-space-start "read_only_space")
+(c-var-frob static-space-start "static_space")
+(c-var-frob dynamic-0-space-start "dynamic_0_space")
+(c-var-frob dynamic-1-space-start "dynamic_1_space")
+(c-var-frob control-stack-start "control_stack")
+(c-var-frob binding-stack-start "binding_stack")
+(c-var-frob current-dynamic-space-start "current_dynamic_space")
+
+(declaim (inline dynamic-usage))
 
 (defun dynamic-usage ()
-  (- (system:sap-int (c::dynamic-space-free-pointer))
-     (current-dynamic-space-start)))
+  (the (unsigned-byte 32)
+       (- (system:sap-int (c::dynamic-space-free-pointer))
+	  (current-dynamic-space-start))))
 
 (defun static-space-usage ()
   (- (* lisp::*static-space-free-pointer* vm:word-bytes)
@@ -125,18 +131,22 @@
 (defvar *last-bytes-in-use* nil)
 (defvar *total-bytes-consed* 0)
 
-;;;
+(declaim (type (or index null) *last-bytes-in-use*))
+(declaim (type index *total-bytes-consed*))
+
 ;;; GET-BYTES-CONSED -- Exported
 ;;; 
 (defun get-bytes-consed ()
   "Returns the number of bytes consed since the first time this function
   was called.  The first time it is called, it returns zero."
+  (declare (optimize (speed 3) (safety 0)))
   (cond ((null *last-bytes-in-use*)
 	 (setq *last-bytes-in-use* (dynamic-usage))
 	 (setq *total-bytes-consed* 0))
 	(t
 	 (let ((bytes (dynamic-usage)))
-	   (incf *total-bytes-consed* (- bytes *last-bytes-in-use*))
+	   (incf *total-bytes-consed*
+		 (the index (- bytes *last-bytes-in-use*)))
 	   (setq *last-bytes-in-use* bytes))))
   *total-bytes-consed*)
 
@@ -155,12 +165,21 @@
   "This number specifies the minimum number of bytes of dynamic space
   that must be consed before the next gc will occur.")
 
+;;; Public
+(defvar *gc-run-time* 0
+  "The total CPU time spend doing garbage collection (as reported by
+   GET-INTERNAL-RUN-TIME.)")
+
+(declaim (type index *bytes-consed-between-gcs* *gc-run-time*))
+
 ;;; Internal trigger.  When the dynamic usage increases beyond this
 ;;; amount, the system notes that a garbage collection needs to occur by
 ;;; setting *NEED-TO-COLLECT-GARBAGE* to T.  It starts out as NIL meaning
 ;;; nobody has figured out what it should be yet.
 ;;; 
 (defvar *gc-trigger* nil)
+
+(declaim (type (or index null) *gc-trigger*))
 
 ;;; On the RT, we store the GC trigger in a ``static'' symbol instead of
 ;;; letting magic C code handle it.  It gets initialized by the startup
@@ -334,8 +353,9 @@
 (defun sub-gc (verbose-p force-p)
   (unless *already-maybe-gcing*
     (let* ((*already-maybe-gcing* t)
+	   (start-time (get-internal-run-time))
 	   (pre-gc-dyn-usage (dynamic-usage)))
-      (unless (integerp *bytes-consed-between-gcs*)
+      (unless (integerp (symbol-value '*bytes-consed-between-gcs*))
 	(warn "The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~
 	       integer.  Reseting it to ~D." *bytes-consed-between-gcs*
 	       default-bytes-consed-between-gcs)
@@ -374,7 +394,8 @@
 	      (when verbose-p
 		(carefully-funcall *gc-notify-after*
 				   post-gc-dyn-usage bytes-freed
-				   *gc-trigger*))))))))
+				   *gc-trigger*))))))
+      (incf *gc-run-time* (- (get-internal-run-time) start-time))))
   nil)
 
 ;;;
