@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.29 1991/07/25 15:19:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.30 1991/07/25 15:48:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.29 1991/07/25 15:19:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.30 1991/07/25 15:48:14 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -132,16 +132,23 @@
     vm:sap-type object-not-sap-error)
 
   (frob weak-pointer-p check-weak-pointer weak-pointer
-    vm:weak-pointer-type object-not-weak-pointer-error)
+    vm:weak-pointer-type object-not-weak-pointer-error))
 
-  (frob code-component-p nil nil nil
-    code-header-type)
 
-  (frob lra-p nil nil nil
-    return-pc-header-type)
+(define-vop (code-component-p simple-type-predicate)
+  (:variant code-header-type)
+  (:variant-cost 9)
+  (:translate code-component-p))
 
-  (frob scavenger-hook-p nil nil nil
-    0))
+(define-vop (lra-p simple-type-predicate)
+  (:variant return-pc-header-type)
+  (:variant-cost 9)
+  (:translate lra-p))
+
+(define-vop (scavenger-hook-p simple-type-predicate)
+  (:variant 0)
+  (:variant-cost 9)
+  (:translate scavenger-hook-p))
 
 
 ;;; Slightly tenser versions for FIXNUM's
