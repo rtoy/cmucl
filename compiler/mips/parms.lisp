@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.69 1990/09/09 20:39:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.70 1990/09/17 23:44:14 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -20,7 +20,7 @@
 
 (in-package "VM")
 
-(eval-when (compile load eval)
+;(eval-when (compile load eval)
 
 
 ;;;; Compiler constants.
@@ -458,6 +458,12 @@
 	 :setf-vop set)
   (function :setf-vop c::set-symbol-function
 	    :set-trans c::%sp-set-definition)
+  (raw-function-addr :c-type "char *"
+		     :ref-known (c::flushable)
+		     :ref-trans symbol-raw-function-addr
+		     :set-known (c::unsafe)
+		     :set-trans %set-symbol-raw-function-addr)
+  (setf-function)
   (plist :ref-trans symbol-plist
 	 :setf-vop c::set-symbol-plist
 	 :set-trans c::%sp-set-plist)
@@ -527,7 +533,6 @@
     lisp::*initial-symbols*
     lisp::*lisp-initialization-functions*
     lisp::%initial-function
-    lisp::*the-undefined-function*
 
     ;; Free Pointers
     lisp::*read-only-space-free-pointer*
@@ -541,16 +546,14 @@
 
     ;; Interrupt Handling
     lisp::*free-interrupt-context-index*
+    mach::*interrupts-enabled*
+    mach::*interrupt-pending*
 
     ;; Static functions.
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
     two-arg-<= two-arg->= two-arg-/= %negate
     two-arg-and two-arg-ior two-arg-xor
     length two-arg-gcd two-arg-lcm
-
-    ;; Stuff for without interrupts.  ### Should be with free-interrupt-context
-    ;; above, but we don't want to have to recompile everything just right now.
-    mach::*interrupts-enabled* mach::*interrupt-pending*
     ))
 
 (defparameter exported-static-symbols
@@ -562,7 +565,6 @@
     lisp::*initial-symbols*
     lisp::*lisp-initialization-functions*
     lisp::%initial-function
-    lisp::*the-undefined-function*
 
     ;; Free Pointers
     lisp::*read-only-space-free-pointer*
@@ -640,6 +642,4 @@
 (defparameter vm-version "DECstation 3100/Mach 0.0")
 
 
-
-
-); Eval-When (Compile Load Eval)
+;); Eval-When (Compile Load Eval)

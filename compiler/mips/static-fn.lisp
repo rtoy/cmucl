@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.11 1990/07/03 06:34:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.12 1990/09/17 23:44:18 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -27,8 +27,6 @@
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
   (:temporary (:sc descriptor-reg :offset cname-offset) cname)
-  (:temporary (:sc descriptor-reg :offset lexenv-offset) lexenv)
-  (:temporary (:scs (descriptor-reg)) function)
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
   (:temporary (:sc any-reg :offset old-fp-offset) old-fp)
@@ -91,15 +89,15 @@
 	     ,@(moves (temp-names) (arg-names))
 	     (inst li nargs (fixnum ,num-args))
 	     (load-symbol cname symbol)
-	     (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
+	     (inst lw lip cname
+		   (- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
+		      vm:other-pointer-type))
 	     (when cur-nfp
 	       (store-stack-tn nfp-save cur-nfp))
-	     (move old-fp fp-tn)
-	     (move fp-tn csp-tn)
+	     (inst move old-fp fp-tn)
 	     (inst compute-lra-from-code lra code-tn lra-label temp)
-	     (loadw function lexenv vm:closure-function-slot
-		    vm:function-pointer-type)
-	     (lisp-jump function lip)
+	     (inst j lip)
+	     (inst move fp-tn csp-tn)
 	     (emit-return-pc lra-label)
 	     (note-this-location vop :unknown-return)
 	     ,(collect ((bindings) (links))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.41 1990/08/15 02:55:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.42 1990/09/17 23:43:54 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -113,6 +113,15 @@
     (let ((err-lab (generate-error-code vop undefined-symbol-error obj-temp)))
       (test-simple-type value temp err-lab t vm:function-pointer-type))))
 
+#+nil
+(define-vop (symbol-setf-function checked-cell-ref)
+  (:translate symbol-setf-function)
+  (:generator 10
+    (move obj-temp object)
+    (loadw value obj-temp vm:symbol-setf-function-slot vm:other-pointer-type)
+    (let ((err-lab (generate-error-code vop undefined-symbol-error obj-temp)))
+      (test-simple-type value temp err-lab t vm:function-pointer-type))))
+
 
 ;;; Like CHECKED-CELL-REF, only we are a predicate to see if the cell is bound.
 (define-vop (boundp-frob)
@@ -148,6 +157,16 @@
     (loadw value object vm:symbol-function-slot vm:other-pointer-type)
     (test-simple-type value temp target not-p vm:function-pointer-type)))
 
+(defknown fboundp/setf (t) boolean (flushable))
+;;;
+(deftransform fboundp ((x) (cons))
+  '(foundp/setf (cadr x)))
+;;;
+(define-vop (fboundp/setf boundp-frob)
+  (:translate fboundp/setf)
+  (:generator 10
+    (loadw value object vm:symbol-setf-function-slot vm:other-pointer-type)
+    (test-simple-type value temp target not-p vm:function-pointer-type)))
 
 (define-vop (fast-symbol-value cell-ref)
   (:variant vm:symbol-value-slot vm:other-pointer-type)

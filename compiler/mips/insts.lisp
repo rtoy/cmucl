@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.24 1990/08/21 19:12:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.25 1990/09/17 23:44:06 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -694,10 +694,9 @@
 		(inst addu dst src temp)))))))
 
 
-;; code = fn - fn-tag - header - label-offset + other-pointer-tag
+;; code = fn - header - label-offset + other-pointer-tag
 (define-compute-instruction compute-code-from-fn
 			    (- vm:other-pointer-type
-			       vm:function-pointer-type
 			       (label-position label)
 			       (component-header-length)))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.28 1990/09/06 17:41:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.29 1990/09/17 23:43:48 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -168,14 +168,19 @@
 (define-vop (xep-allocate-frame)
   (:info start-lab)
   (:vop-var vop)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 1
-    ;; Make sure the label is aligned.
+    ;; Make sure the function is aligned.
     (align vm:lowtag-bits)
-    (emit-label start-lab)
     ;; Allocate function header.
     (inst function-header-word)
     (dotimes (i (1- vm:function-header-code-offset))
       (inst word 0))
+    ;; The start of the actual code.
+    (emit-label start-lab)
+    ;; Fix CODE, cause the function object was passed in.
+    (inst compute-code-from-fn code-tn lip-tn start-lab temp)
+    ;; Build our stack frames.
     (inst addu csp-tn fp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (let ((nfp-tn (current-nfp-tn vop)))
@@ -431,7 +436,7 @@ default-value-5
   (:save-p t)
   (:move-args :local-call)
   (:info arg-locs callee target nvals)
-  (:ignore arg-locs args nfp)
+  (:ignore arg-locs args)
   (:vop-var vop)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -617,12 +622,12 @@ default-value-5
 	  '((new-fp :scs (any-reg) :to :eval)))
 
       ,(if named
-	   '(name :scs (descriptor-reg) :target name-pass)
-	   '(arg-fun :scs (descriptor-reg) :target lexenv :to :eval))
+	   '(name :target name-pass)
+	   '(arg-fun :target lexenv))
       
       ,@(when (eq return :tail)
-	  '((old-fp :scs (any-reg) :target old-fp-pass)
-	    (return-pc :scs (descriptor-reg) :target return-pc-pass)))
+	  '((old-fp :target old-fp-pass)
+	    (return-pc :target return-pc-pass)))
       
       ,@(unless variable '((args :more t))))
 
@@ -655,20 +660,20 @@ default-value-5
 		  :to :eval)
 		 return-pc-pass)
 
-     ,@(when named 
+     ,@(if named
 	 `((:temporary (:sc descriptor-reg :offset cname-offset
 			:from (:argument ,(if (eq return :tail) 0 1))
 			:to :eval)
-		       name-pass)))
+		       name-pass))
 
-     (:temporary (:sc descriptor-reg :offset lexenv-offset
-		  :from (:argument ,(if (eq return :tail) 0 1)) :to :eval)
-		 lexenv)
+	 `((:temporary (:sc descriptor-reg :offset lexenv-offset
+			:from (:argument ,(if (eq return :tail) 0 1))
+			:to :eval)
+		       lexenv)
+	   (:temporary (:scs (descriptor-reg) :from (:argument 0) :to :eval)
+		       function)))
 
-     (:temporary (:scs (descriptor-reg) :from (:argument 0) :to :eval)
-		 function)
-
-     (:temporary (:sc descriptor-reg :offset nargs-offset :to :eval)
+     (:temporary (:sc any-reg :offset nargs-offset :to :eval)
 		 nargs-pass)
 
      ,@(when variable
@@ -692,62 +697,130 @@ default-value-5
 		     (if (eq return :tail) 0 10)
 		     15
 		     (if (eq return :unknown) 25 0))
-       
-       ,@(if named
-	     `((move name-pass name)
-	       (loadw lexenv name-pass
-		      vm:symbol-function-slot vm:other-pointer-type))
-	     `((move lexenv arg-fun)))
-       
-       ,@(if variable
-	     `((inst subu nargs-pass csp-tn new-fp)
-	       ,@(let ((index -1))
-		   (mapcar #'(lambda (name)
-			       `(loadw ,name new-fp ,(incf index)))
-			   register-arg-names)))
-	     `((inst li nargs-pass (fixnum nargs))))
-       
-       (let ((cur-nfp (current-nfp-tn vop))
-	     ,@(unless (eq return :tail)
-		 '((lra-label (gen-label)))))
-	 ,@(unless (eq return :tail)
-	     `((inst compute-lra-from-code
-		     return-pc-pass code-tn lra-label temp)))
+       (let* ((cur-nfp (current-nfp-tn vop))
+	      ,@(unless (eq return :tail)
+		  '((lra-label (gen-label))))
+	      (filler
+	       (remove nil
+		       (list :load-nargs
+			     ,@(if (eq return :tail)
+				   '((unless (location= old-fp old-fp-pass)
+				       :load-old-fp)
+				     (unless (location= return-pc
+							return-pc-pass)
+				       :load-return-pc)
+				     (when cur-nfp
+				       :frob-nfp))
+				   '(:comp-lra
+				     (when cur-nfp
+				       :frob-nfp)
+				     :save-fp
+				     :load-fp))))))
+	 (flet ((do-next-filler ()
+		  (let* ((next (pop filler))
+			 (what (if (consp next) (car next) next)))
+		    (ecase what
+		      (:load-nargs
+		       ,@(if variable
+			     `((inst subu nargs-pass csp-tn new-fp)
+			       ,@(let ((index -1))
+				   (mapcar #'(lambda (name)
+					       `(inst lw ,name new-fp
+						      ,(ash (incf index)
+							    vm:word-shift)))
+					   register-arg-names)))
+			     '((inst li nargs-pass (fixnum nargs)))))
+		      ,@(if (eq return :tail)
+			    '((:load-old-fp
+			       (sc-case old-fp
+				 (any-reg
+				  (inst move old-fp-pass old-fp))
+				 (control-stack
+				  (inst lw old-fp-pass fp-tn
+					(ash (tn-offset old-fp)
+					     vm:word-shift)))))
+			      (:load-return-pc
+			       (sc-case return-pc
+				 (any-reg
+				  (inst move return-pc-pass return-pc))
+				 (control-stack
+				  (inst lw return-pc-pass fp-tn
+					(ash (tn-offset return-pc)
+					     vm:word-shift)))))
+			      (:frob-nfp
+			       (inst addu nsp-tn cur-nfp
+				     (bytes-needed-for-non-descriptor-stack-frame))))
+			    `((:comp-lra
+			       (inst compute-lra-from-code
+				     return-pc-pass code-tn lra-label temp))
+			      (:frob-nfp
+			       (store-stack-tn nfp-save cur-nfp))
+			      (:save-fp
+			       (inst move old-fp-pass fp-tn))
+			      (:load-fp
+			       ,(if variable
+				    '(move fp-tn new-fp)
+				    '(if (> nargs register-arg-count)
+					 (move fp-tn new-fp)
+					 (move fp-tn csp-tn))))))
+		      ((nil)
+		       (inst nop))))))
 
-	 (loadw function lexenv vm:closure-function-slot
-		vm:function-pointer-type)
-	 (inst addu lip function (- (ash vm:function-header-code-offset
-					 vm:word-shift)
-				    vm:function-pointer-type))
-
-	 ,@(if (eq return :tail)
-	       '((move old-fp-pass old-fp)
-		 (move return-pc-pass return-pc)
-		 (when cur-nfp
-		   (inst addu nsp-tn cur-nfp
-			 (bytes-needed-for-non-descriptor-stack-frame)))
-		 (inst j lip)
-		 (move code-tn function))
-	       `((move old-fp-pass fp-tn)
-		 (when cur-nfp
-		   (store-stack-tn nfp-save cur-nfp))
-		 ,(if variable
-		      '(move fp-tn new-fp)
-		      '(if (> nargs register-arg-count)
-			   (move fp-tn new-fp)
-			   (move fp-tn csp-tn)))
-		 (inst j lip)
-		 (move code-tn function)
-		 (emit-return-pc lra-label)))
+	   ,@(if named
+		 `((sc-case name
+		     (descriptor-reg (move name-pass name))
+		     (control-stack
+		      (inst lw name-pass fp-tn
+			    (ash (tn-offset name) vm:word-shift))
+		      (do-next-filler))
+		     (constant
+		      (inst lw name-pass code-tn
+			    (- (ash (tn-offset name) vm:word-shift)
+			       vm:other-pointer-type))
+		      (do-next-filler)))
+		   (inst lw lip name-pass
+			 (- (ash vm:symbol-raw-function-addr-slot
+				 vm:word-shift)
+			    vm:other-pointer-type))
+		   (do-next-filler))
+		 `((sc-case arg-fun
+		     (descriptor-reg (move lexenv arg-fun))
+		     (control-stack
+		      (inst lw lexenv fp-tn
+			    (ash (tn-offset arg-fun) vm:word-shift))
+		      (do-next-filler))
+		     #+nil
+		     (constant
+		      (inst lw lexenv code-tn
+			    (- (ash (tn-offset arg-fun) vm:word-shift)
+			       vm:other-pointer-type))
+		      (do-next-filler)))
+		   (inst lw function lexenv
+			 (- (ash vm:closure-function-slot vm:word-shift)
+			    vm:function-pointer-type))
+		   (do-next-filler)
+		   (inst addu lip function
+			 (- (ash vm:function-header-code-offset
+				 vm:word-shift)
+			    vm:function-pointer-type))))
+	   (loop
+	     (if (cdr filler)
+		 (do-next-filler)
+		 (return)))
+	   
+	   (inst j lip)
+	   (do-next-filler))
 
 	 ,@(ecase return
 	     (:fixed
-	      '((note-this-location vop :unknown-return)
+	      '((emit-return-pc lra-label)
+		(note-this-location vop :unknown-return)
 		(default-unknown-values values nvals move-temp temp lra-label)
 		(when cur-nfp
 		  (load-stack-tn cur-nfp nfp-save))))
 	     (:unknown
-	      '((note-this-location vop :unknown-return)
+	      '((emit-return-pc lra-label)
+		(note-this-location vop :unknown-return)
 		(receive-unknown-values values-start nvals start count
 					lra-label temp)
 		(when cur-nfp
@@ -1029,10 +1102,10 @@ default-value-5
 ;;;
 (define-vop (setup-environment)
   (:info label)
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:generator 5
-    ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn code-tn code-tn label temp)))
+  (:ignore label)
+  (:generator 0
+    ;; Don't bother doing anything.
+    ))
 
 ;;; Return the current Env as our result, then indirect throught the closure
 ;;; and the closure-entry to find the constant pool
@@ -1041,12 +1114,10 @@ default-value-5
   (:temporary (:sc descriptor-reg :offset lexenv-offset :target closure
 	       :to (:result 0))
 	      lexenv)
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (closure :scs (descriptor-reg)))
   (:info label)
+  (:ignore label)
   (:generator 6
-    ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn code-tn code-tn label temp)
     ;; Get result.
     (move closure lexenv)))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.10 1990/07/16 17:40:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.11 1990/09/17 23:42:28 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -105,28 +105,23 @@
       (storew null-tn result vm:code-debug-info-slot vm:other-pointer-type))))
 
 (define-vop (make-symbol)
-  (:args (name :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) ndescr temp)
-  (:temporary (:scs (descriptor-reg) :to (:result 0) :target real-result)
-	      result)
-  (:results (real-result :scs (descriptor-reg)))
+  (:args (name :scs (descriptor-reg) :to :eval))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (result :scs (descriptor-reg) :from :argument))
   (:policy :fast-safe)
   (:translate make-symbol)
   (:generator 37
-    (pseudo-atomic (ndescr)
-      (inst addu result alloc-tn vm:other-pointer-type)
-      (inst addu alloc-tn alloc-tn (pad-data-block vm:symbol-size))
-      (inst li temp (logior (ash (1- vm:symbol-size) vm:type-bits)
-			    vm:symbol-header-type))
-      (storew temp result 0 vm:other-pointer-type)
+    (with-fixed-allocation (result temp vm:symbol-header-type vm:symbol-size)
       (inst li temp vm:unbound-marker-type)
       (storew temp result vm:symbol-value-slot vm:other-pointer-type)
-      (load-symbol-value temp lisp::*the-undefined-function*)
       (storew temp result vm:symbol-function-slot vm:other-pointer-type)
+      (storew temp result vm:symbol-setf-function-slot vm:other-pointer-type)
+      (inst li temp (make-fixup 'undefined-function :assembly-routine))
+      (storew temp result vm:symbol-raw-function-addr-slot
+	      vm:other-pointer-type)
       (storew null-tn result vm:symbol-plist-slot vm:other-pointer-type)
       (storew name result vm:symbol-name-slot vm:other-pointer-type)
-      (storew null-tn result vm:symbol-package-slot vm:other-pointer-type)
-      (move real-result result))))
+      (storew null-tn result vm:symbol-package-slot vm:other-pointer-type))))
 
 
 ;;;; Automatic allocators for primitive objects.
