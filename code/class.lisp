@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.3 1993/02/08 22:20:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.4 1993/02/10 23:20:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,8 @@
 		 class-init))
 
 (in-package "LISP")
-(export '(class structure-class class-name find-class class-of built-in-class))
+(export '(class structure-class class-name find-class class-of built-in-class
+		generic-function))
 
 (in-package "KERNEL")
 
@@ -39,6 +40,7 @@
 ;;; describing the layouts it created at cold-load time.
 ;;;
 (defvar *forward-referenced-layouts*)
+(defvar lisp::*initial-layouts*)
 (cold-load-init
   (setq *forward-referenced-layouts* (make-hash-table :test #'equal))
 #-ns-boot
@@ -74,7 +76,7 @@
 				(layout-class s) (layout-invalid s)))))
 		   (:make-load-form-fun :ignore-it))
   ;;
-  ;; Some hash bits for this layout.  Sleazily accessed via STRUCTURE-REF, see
+  ;; Some hash bits for this layout.  Sleazily accessed via %INSTANCE-REF, see
   ;; LAYOUT-HASH.
   (hash0 0 :type index)
   (hash1 0 :type index)
@@ -113,8 +115,11 @@
 (declaim (inline layout-hash))
 (defun layout-hash (layout i)
   (declare (type layout layout) (type index i))
-  (truly-the index (structure-ref layout (1+ i))))
-
+  (truly-the index (%instance-ref layout (1+ i))))
+(declaim (inline (setf layout-hash)))
+(defun (setf layout-hash) (new-value layout i)
+  (declare (type layout layout) (type index new-value i))
+  (setf (%instance-ref layout (1+ i)) new-value)))
 
 ;;; The CLASS structure is a supertype of all CLASS types.  A CLASS is also a
 ;;; CTYPE structure as recognized by the type system.
@@ -190,7 +195,7 @@
 (defstruct (structure-class (:include class))
   ;;
   ;; Structure print function, or NIL if none.
-  (print-function nil :type (or function null))
+  (print-function nil :type (or function symbol null))
   ;;
   ;; MAKE-LOAD-FORM method, or NIL if none. :J-D-I-N dumps the slots.
   ;; :IGNORE-IT is used for magic structures which the compiler inserts in IR1,
@@ -402,7 +407,9 @@
 (cold-load-init
   (setq built-in-classes
 	'((t :state :read-only :translation t)
-	  (character :enumerable t :codes (#.vm:base-char-type))
+	  (character :enumerable t)
+	  (base-char :enumerable t :inherits (character)
+		     :codes (#.vm:base-char-type))
 	  
 	  (array :translation array
 		 :codes
@@ -678,7 +685,7 @@
 		(when diff
 		  (warn
 		   "In class ~S:~%  ~
-		    ~A definition of superclass ~S incompatible with ~
+		    ~:(~A) definition of superclass ~S incompatible with~%  ~
 		    ~A definition."
 		   name old-context (layout-proper-name (svref oldi diff))
 		   new-context)
@@ -695,7 +702,7 @@
 	    t))
 	(when (/= (layout-inheritance-depth old)
 		  (layout-inheritance-depth new))
-	  (warn "Change in the inheritance structure of class ~S~@
+	  (warn "Change in the inheritance structure of class ~S~%  ~
 		 between the ~A definition and the ~A definition."
 		name old-context new-context)
 	  t))))
