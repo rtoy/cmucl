@@ -100,12 +100,16 @@
 
 (defmacro wide-copy ()
   '(let ((aligned (gen-label)))
+     ;; Check to see if they are aligned.
      (inst beq src-bit-offset dst-bit-offset aligned)
-     (inst nop)
+
+     ;; Calc src-shift
+     (inst subu src-shift dst-offset src-offset)
+     (inst and src-shift (fixnum 31))
 
      (macrolet
-	 ((get-src ()
-	    '(progn
+	 ((middle (&rest before-last-inst)
+	    `(progn
 	       (inst lw ntemp1 src)
 	       (inst lw ntemp2 src 4)
 	       (inst addu src 4)
@@ -113,22 +117,39 @@
 	       (inst sll ntemp2 ntemp2 ntemp3)
 	       (inst subu ntemp3 zero-tn ntemp3)
 	       (inst srl ntemp1 ntemp1 ntemp3)
-	       (inst or ntemp1 ntemp2))))
-       ;; Possibly fix src if we need to get bits from the previous word.
-       (inst sltu ntemp1 src-bit-offset dst-bit-offset)
-       (inst sll ntemp1 2)
-       (inst subu src ntemp1)
-       
-       ;; Calc src-shift
-       (inst subu src-shift dst-offset src-offset)
-       (inst and src-shift (fixnum 31))
-       
+	       ,@before-last-inst
+	       (inst or ntemp1 ntemp2)))
+	  (get-src (where)
+	     (ecase where
+	       (:left
+		'(let ((dont-load (gen-label))
+		       (done-load (gen-label)))
+		   (inst sltu ntemp1 src-bit-offset dst-bit-offset)
+		   (inst bne ntemp1 dont-load)
+		   (middle (inst b done-load))
+		   (emit-label dont-load)
+		   (inst sra ntemp3 src-shift 2)
+		   (inst sll ntemp1 ntemp3)
+		   (emit-label done-load)))
+	       (:middle '(middle))
+	       (:right
+		'(let ((dont-load (gen-label))
+		       (done-load (gen-label)))
+		   (inst sltu ntemp1 src-shift final-bits)
+		   (inst beq ntemp1 dont-load)
+		   (middle (inst b done-load))
+		   (emit-label dont-load)
+		   (inst sra ntemp3 src-shift 2)
+		   (inst subu ntemp3 zero-tn ntemp3)
+		   (inst srl ntemp1 ntemp3)
+		   (emit-label done-load))))))
        (wide-copy-aux)
        (inst b done)
        (inst nop))
 
      (macrolet
-	 ((get-src ()
+	 ((get-src (where)
+	    (declare (ignore where))
 	    '(progn
 	       (inst lw ntemp1 src)
 	       (inst addu src 4))))
@@ -144,7 +165,7 @@
      (inst beq dst-bit-offset left-aligned)
      (inst nop)
      
-     (get-src)
+     (get-src :left)
      (inst li ntemp3 (make-fixup "bit_bash_low_masks" :foreign))
      (inst addu ntemp3 dst-bit-offset)
      (inst lw ntemp3 ntemp3)
@@ -162,13 +183,11 @@
      (inst and final-bits (fixnum 31))
      (inst subu ntemp1 length final-bits)
      (inst srl ntemp1 7)
+     (inst beq ntemp1 check-right)
      (inst sll interior ntemp1 2)
 
-     (inst beq interior check-right)
-     (inst nop)
-
      (emit-label loop)
-     (get-src)
+     (get-src :middle)
      (inst sw ntemp1 dst)
      (check-for-interrupts)
      (inst subu interior 4)
@@ -179,7 +198,7 @@
      (inst beq final-bits done)
      (inst nop)
 
-     (get-src)
+     (get-src :right)
      (inst li ntemp3 (make-fixup "bit_bash_low_masks" :foreign))
      (inst addu ntemp3 final-bits)
      (inst lw ntemp3 ntemp3)
@@ -308,10 +327,10 @@
       (inst subu src src-arg vm:other-pointer-type)
       (inst subu dst dst-arg vm:other-pointer-type)
       (macrolet
-	  ((check-for-interrupt ()
-	     '(let ((label ((gen-label))))
+	  ((check-for-interrupts ()
+	     '(let ((label (gen-label)))
 		(inst and ntemp1 flags-tn (ash 1 interrupted-flag))
-		(inst bne ntemp1 label)
+		(inst beq ntemp1 label)
 		(inst nop)
 		(inst subu src src-arg)
 		(inst subu dst dst-arg)
