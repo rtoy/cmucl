@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.37 2002/11/14 16:54:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.38 2002/12/07 18:21:22 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,20 +148,22 @@
 	   (format t "~%~A: ~S." (car slot) (cdr slot))))))
 
 (defun describe-array (x)
-  (let ((rank (array-rank x)))
-    (cond ((> rank 1)
-	   (format t "~&~S is " x)
-	   (write-string (if (%array-displaced-p x) "a displaced" "an"))
-	   (format t " array of rank ~A." rank)
-	   (format t "~%Its dimensions are ~S." (array-dimensions x)))
-	  (t
+  (let ((rank (array-rank x))
+	(element-type (array-element-type x)))
+    (cond ((= rank 1)
 	   (format t "~&~S is a ~:[~;displaced ~]vector of length ~D." x
 		   (and (array-header-p x) (%array-displaced-p x)) (length x))
 	   (if (array-has-fill-pointer-p x)
 	       (format t "~&It has a fill pointer, currently ~d"
 		       (fill-pointer x))
-	       (format t "~&It has no fill pointer."))))
-  (format t "~&Its element type is ~S." (array-element-type x))))
+	       (format t "~&It has no fill pointer.")))
+	  (t
+	   (format t "~&~S is " x)
+	   (write-string (if (%array-displaced-p x) "a displaced" "an"))
+	   (format t " array of rank ~A." rank)
+	   (format t "~%Its dimensions are ~S." (array-dimensions x))))
+    (unless (eq t element-type)
+      (format t "~&Its element type is specialized to ~S." element-type))))
 
 (defun describe-fixnum (x)
   (cond ((not (or *describe-verbose* (zerop *current-describe-level*))))
