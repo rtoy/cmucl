@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.2 1991/04/22 19:22:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.3 1991/04/28 20:13:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.2 1991/04/22 19:22:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.3 1991/04/28 20:13:53 wlott Exp $
 ;;;
 ;;; This file contains the RT specific runtime stuff.
 ;;;
@@ -74,8 +74,25 @@
 ;;; 
 (defun internal-error-arguments (sc)
   (alien-bind ((sc sc mach:sigcontext t))
-    (values (error-number-or-lose 'unknown-error)
-	    nil)))
+    (let ((pc (alien-access (mach:sigcontext-iar (alien-value sc)))))
+      (declare (type system-area-pointer pc))
+      (let* ((length (sap-ref-8 pc 4))
+	     (vector (make-array length :element-type '(unsigned-byte 8))))
+	(declare (type (unsigned-byte 8) length)
+		 (type (simple-array (unsigned-byte 8) (*)) vector))
+	(copy-from-system-area pc (* vm:byte-bits 5)
+			       vector (* vm:word-bits
+					 vm:vector-data-offset)
+			       (* length vm:byte-bits))
+	(let* ((index 0)
+	       (error-number (c::read-var-integer vector index)))
+	  (collect ((sc-offsets))
+	    (loop
+	      (when (>= index length)
+		(return))
+	      (sc-offsets (c::read-var-integer vector index)))
+	    (values error-number (sc-offsets))))))))
+
 
 
 ;;; SIGCONTEXT-FLOATING-POINT-MODES  --  Interface
