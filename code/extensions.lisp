@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.9 1991/04/24 20:30:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.10 1991/04/24 21:04:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -309,24 +309,17 @@
   variable to the result, and wrapping the Let* around the result of the
   evaluation of Body.  Within the body, each Var is bound to the corresponding
   temporary variable."
-  (let ((n-binds (gensym))
-	(n-temp (gensym)))
-    (collect ((names)
-	      (temp-binds))
-      (dolist (spec specs)
-	(when (/= (length spec) 2)
-	  (error "Malformed Once-Only binding spec: ~S." spec))
-	(let ((name (first spec))
-	      (exp (second spec)))
-	  (names `(,name ,exp))
-	  (temp-binds
-	   `(let ((,n-temp (gensym)))
-	      (,n-binds `(,,n-temp ,,name))
-	      (setq ,name ,n-temp)))))
-      `(let* ,(names)
-	 (collect ((,n-binds))
-	   ,@(temp-binds)
-	   (list 'let* (,n-binds) (progn ,@body)))))))
+  (collect ((gensym-binds)
+	    (temp-binds))
+    (dolist (spec specs)
+      (when (/= (length spec) 2)
+	(error "Malformed Once-Only binding spec: ~S." spec))
+      (let ((name (first spec))
+	    (exp (second spec)))
+	(gensym-binds `(,name (gensym "OO-")))
+	(temp-binds ``(,,name ,,exp))))
+    `(let ,(gensym-binds)
+       (list 'let* (list ,@(temp-binds)) (progn ,@body)))))
 
 
 ;;;; DO-ANONYMOUS:
