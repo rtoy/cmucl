@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.10 1991/12/06 05:25:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.11 1992/12/10 01:11:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -334,6 +334,7 @@
      (%ts-stream-listen stream))
     (:unread
      (%ts-stream-unread stream arg1))
+    (:interactive-p t)
     (:get-command
      (wait-for-typescript-input stream)
      (system:without-interrupts
