@@ -949,6 +949,8 @@
 ;;; structure containing the info used to special-case compilation.
 (define-info-type function info (or function-info null) nil)
 
+(define-info-type function documentation (or string null) nil)
+
 ); defun function-info-init
 
 #|
@@ -994,6 +996,8 @@
 
 (define-info-type variable alien-value (or lisp::ct-a-val null) nil)
 
+(define-info-type variable documentation (or string null) nil)
+
 (define-info-class type)
 
 ;;; The kind of type described.  We return :Structure for standard types that
@@ -1010,6 +1014,8 @@
 ;;; Defstruct description information for a structure type.
 (define-info-type type structure-info (or defstruct-description null) nil)
 
+(define-info-type type documentation (or string null))
+
 (define-info-class declaration)
 (define-info-type declaration recognized boolean)
 
@@ -1023,9 +1029,17 @@
 
 (define-info-type setf inverse (or symbol null) nil)
 
+(define-info-type setf documentation (or string null) nil)
+
 ;;; ### bootstrap hack...
 ;;; Allow List for function for now.
 ;;;
 (define-info-type setf expander (or function null list) nil)
+
+;;; Used for storing random documentation types.  The stuff is an alist
+;;; translating documentation kinds to values.
+;;;
+(define-info-class random-documentation)
+(define-info-type random-documentation stuff list ())
 
 ); defun other-info-init
