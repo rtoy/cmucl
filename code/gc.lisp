@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (Scott.Fahlman@CS.CMU.EDU). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.4 1990/08/24 18:11:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.5 1990/10/13 04:51:06 wlott Exp $
 ;;; 
 ;;; Garbage collection and allocation related code.
 ;;;
@@ -150,9 +150,10 @@
 
 ;;; Internal trigger.  When the dynamic usage increases beyond this
 ;;; amount, the system notes that a garbage collection needs to occur by
-;;; setting *NEED-TO-COLLECT-GARBAGE* to T.
+;;; setting *NEED-TO-COLLECT-GARBAGE* to T.  It starts out as NIL meaning
+;;; nobody has figured out what it should be yet.
 ;;; 
-(defvar *gc-trigger* default-bytes-consed-between-gcs)
+(defvar *gc-trigger* nil)
 
 
 ;;;
@@ -255,6 +256,14 @@
 
 (def-c-routine ("collect_garbage" collect-garbage) (int))
 
+(def-c-routine ("set_auto_gc_trigger" set-auto-gc-trigger)
+	       (void)
+  (dynamic-usage unsigned-long))
+
+(def-c-routine ("clear_auto_gc_trigger" clear-auto-gc-trigger)
+	       (void))
+
+
 (defun %gc ()
   (let ((old-usage (dynamic-usage)))
     (collect-garbage)
@@ -303,10 +312,11 @@
 	(warn "The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~
 	integer.  Reseting it to 2000000" *bytes-consed-between-gcs*)
 	(setf *bytes-consed-between-gcs* default-bytes-consed-between-gcs))
-      (when (> *bytes-consed-between-gcs* *gc-trigger*)
-	(setf *gc-trigger* *bytes-consed-between-gcs*))
-      (when (> pre-gc-dyn-usage *gc-trigger*)
-	(setf *need-to-collect-garbage* t))
+      (when *gc-trigger*
+	(when (> *bytes-consed-between-gcs* *gc-trigger*)
+	  (setf *gc-trigger* *bytes-consed-between-gcs*))
+	(when (> pre-gc-dyn-usage *gc-trigger*)
+	  (setf *need-to-collect-garbage* t)))
       (when (or force-p
 		(and *need-to-collect-garbage* (not *gc-inhibit*)))
 	(setf *gc-inhibit* t) ; Set *GC-INHIBIT* to T before calling the hook
@@ -320,12 +330,15 @@
 	    (carefully-funcall *gc-notify-before* pre-gc-dyn-usage))
 	  (dolist (hook *before-gc-hooks*)
 	    (carefully-funcall hook))
+	  (when *gc-trigger*
+	    (clear-auto-gc-trigger))
 	  (funcall *internal-gc*)
 	  (let* ((post-gc-dyn-usage (dynamic-usage))
 		 (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
 	    (setf *need-to-collect-garbage* nil)
 	    (setf *gc-trigger*
 		  (+ post-gc-dyn-usage *bytes-consed-between-gcs*))
+	    (set-auto-gc-trigger *gc-trigger*)
 	    (dolist (hook *after-gc-hooks*)
 	      (carefully-funcall hook))
 	    (when verbose-p
@@ -359,9 +372,13 @@
 
 ;;;; Auxiliary Functions.
 
+
 (defun gc-on ()
   "Enables the garbage collector."
   (setq *gc-inhibit* nil)
+  (unless *gc-trigger*
+    (setf *gc-trigger* *bytes-consed-between-gcs*)
+    (set-auto-gc-trigger *gc-trigger*))
   (when *need-to-collect-garbage*
     (sub-gc *gc-verbose* nil))
   nil)
