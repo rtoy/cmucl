@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.13 1991/12/14 08:58:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.14 1992/02/12 17:22:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,7 +118,8 @@
 	      (t
 	       (cerror "Make this package."
 		       "~S is not the name of a package." thing)
-	       (make-package thing))))))  
+	       (make-package thing))))))
+
 
 ;;;; Package-Hashtables
 ;;;
@@ -1409,9 +1410,7 @@
     (makunbound '*initial-symbols*) ; So it gets GC'ed.
     
     ;; Make some other packages that should be around in the cold load:
-    (in-package "SYSTEM")
-    (in-package "USER")
-    (in-package "DEBUG")
+    (make-package "COMMON-LISP-USER" :nicknames '("CL-USER" "USER"))
 
     ;; Now do the *deferred-use-packages*:
     (dolist (args *deferred-use-packages*)
