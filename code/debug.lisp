@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.41 1994/03/19 23:48:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.42 1994/10/02 22:35:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1587,7 +1587,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 
 (def-debug-command "EDIT-SOURCE" ()
-  (unless (typep *terminal-io* 'ed::ts-stream)
+  (unless (ed::ts-stream-p *terminal-io*)
     (error "The debugger's EDIT-SOURCE command only works in slave Lisps ~
 	    connected to a Hemlock editor."))
   (let* ((wire (ed::ts-stream-wire *terminal-io*))
