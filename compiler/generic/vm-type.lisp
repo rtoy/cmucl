@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28.1.1 1993/01/14 21:02:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28.1.2 1993/02/04 22:40:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,15 +33,6 @@
 (setf (info type kind 'short-float) :defined)
 (deftype short-float (&optional low high)
   `(single-float ,low ,high))
-
-;;; Compiled-function is the same as function in this implementation.
-;;;
-(deftype compiled-function () 'function)
-
-;;; Character is the same as base-char.
-(setf (info type builtin 'character) nil)
-(setf (info type kind 'character) :defined)
-(deftype character () 'base-char)
 
 ;;;
 ;;; An index into an integer.
@@ -83,6 +74,9 @@
 (deftype bignum-element-type () `(unsigned-byte ,vm:word-bits))
 (deftype bignum-type () 'bignum)
 (deftype bignum-index () 'index)
+
+#+ns-boot
+(deftype structure-index () `(unsigned-byte ,(- vm:word-bits vm:type-bits)))
 
 (deftype instance-index () `(unsigned-byte ,(- vm:word-bits vm:type-bits)))
 
