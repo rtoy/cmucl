@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.16 1990/03/12 23:40:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.17 1990/03/23 21:58:28 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -189,8 +189,7 @@
 
 (def-primitive-type base-character
 		    (base-character-reg any-reg base-character-stack
-					control-stack)
-  :type string-char) ; ### base-character
+					control-stack))
 
 ;;; 
 (def-primitive-type function (descriptor-reg control-stack))
@@ -246,7 +245,8 @@
 
 ;;; 
 (defvar *simple-array-primitive-types*
-  '((string-char . simple-string)
+  '((base-character . simple-string)
+    (string-char . simple-string)
     (bit . simple-bit-vector)
     ((unsigned-byte 2) . simple-array-unsigned-byte-2)
     ((unsigned-byte 4) . simple-array-unsigned-byte-4)
@@ -318,7 +318,7 @@
      (case (named-type-name type)
        ((t bignum ratio complex function system-area-pointer)
 	(values (primitive-type-or-lose (named-type-name type)) t))
-       (string-char
+       ((character base-character string-char)
 	(values (primitive-type-or-lose 'base-character) t))
        (standard-char
 	(values (primitive-type-or-lose 'base-character) nil))
