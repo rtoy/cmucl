@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.23 2002/11/02 23:18:21 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.24 2003/02/24 10:04:10 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,7 +100,7 @@
 	 (cond ((null rest-of-args) nil)
 	       ;; Varlist is dotted, treat as &rest arg and exit.
 	       (t (push-let-binding rest-of-args path nil)
-		  (setf restp t))))
+		  (setf restp :dotted))))
       (let ((var (car rest-of-args)))
 	(cond ((eq var '&whole)
 	       (cond ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
@@ -252,7 +252,7 @@
 	       (simple-program-error "Non-symbol in lambda-list - ~S." var)))))
     ;; Generate code to check the number of arguments, unless dotted
     ;; in which case length will not work.
-    (unless restp
+    (unless (eq restp :dotted)
        (push `(unless (<= ,minimum
 			  (length (the list ,(if top-level
 						 `(cdr ,arg-list-name)

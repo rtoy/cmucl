@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.2 1998/06/02 02:43:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.3 2003/02/24 10:04:11 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,25 +23,25 @@
     (:documentation "Base class for all CLOS streams")))
 
 ;;; Define the stream classes.
-(defclass fundamental-input-stream (fundamental-stream))
+(defclass fundamental-input-stream (fundamental-stream) ())
 
-(defclass fundamental-output-stream (fundamental-stream))
+(defclass fundamental-output-stream (fundamental-stream) ())
 
-(defclass fundamental-character-stream (fundamental-stream))
+(defclass fundamental-character-stream (fundamental-stream) ())
 
-(defclass fundamental-binary-stream (fundamental-stream))
+(defclass fundamental-binary-stream (fundamental-stream) ())
 
 (defclass fundamental-character-input-stream
-    (fundamental-input-stream fundamental-character-stream))
+    (fundamental-input-stream fundamental-character-stream) ())
 
 (defclass fundamental-character-output-stream
-    (fundamental-output-stream fundamental-character-stream))
+    (fundamental-output-stream fundamental-character-stream) ())
 
 (defclass fundamental-binary-input-stream
-    (fundamental-input-stream fundamental-binary-stream))
+    (fundamental-input-stream fundamental-binary-stream) ())
 
 (defclass fundamental-binary-output-stream
-    (fundamental-output-stream fundamental-binary-stream))
+    (fundamental-output-stream fundamental-binary-stream) ())
 
 
 ;;; Example character input and output streams.
