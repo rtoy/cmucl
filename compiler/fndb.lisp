@@ -163,7 +163,7 @@
 
 (defknown coerce (t type-specifier) t
 	  (movable foldable)			  ; Is defined to signal errors. 
-  :derive-type 'type-spec-arg2)
+  #|:derive-type 'type-spec-arg2|#)
 
 (defknown type-of (t) t (foldable flushable))
 
@@ -194,7 +194,7 @@
 (defknown fboundp ((or symbol cons)) boolean (flushable))
 (defknown special-form-p (symbol) t (movable foldable flushable)) ; They never change...
 (defknown set (symbol t) t (unsafe)
-  :derive-type 'result-type-arg2)
+  #|:derive-type 'result-type-arg2|#)
 (defknown fdefinition ((or symbol cons)) function)
 (defknown %set-fdefinition ((or symbol cons) function) function)
 (defknown makunbound (symbol) symbol)
@@ -284,19 +284,19 @@
 (defknown (= /=) (number &rest number) boolean (movable foldable flushable))
 (defknown (< > <= >=) (real &rest real) boolean (movable foldable flushable))
 (defknown (max min) (real &rest real) real (movable foldable flushable)
-  :derive-type 'numeric-result-type)
+  #|:derive-type 'numeric-result-type|#)
 (defknown + (&rest number) number (movable foldable flushable)
-  :derive-type 'numeric-result-type)
+  #|:derive-type 'numeric-result-type|#)
 (defknown - (number &rest number) number (movable foldable flushable)
-  :derive-type 'numeric-result-type)
+  #|:derive-type 'numeric-result-type|#)
 (defknown * (&rest number) number (movable foldable flushable)
-  :derive-type 'numeric-result-type)
+  #|:derive-type 'numeric-result-type|#)
 (defknown / (number &rest number) number (movable foldable flushable)
-  :derive-type '/-result-type)
+  #|:derive-type '/-result-type|#)
 (defknown (1+ 1-) (number) number (movable foldable flushable))
 (defknown conjugate (number) number (movable foldable flushable))
 (defknown gcd (&rest integer) unsigned-byte (movable foldable flushable)
-  :derive-type 'boolean-result-type)
+  #|:derive-type 'boolean-result-type|#)
 (defknown lcm (&rest integer) unsigned-byte (movable foldable flushable))
 
 (defknown exp (number) irrational (movable foldable flushable))
@@ -310,7 +310,7 @@
 (defknown (sin cos tan asin acos sinh cosh tanh asinh acosh atanh)
   (number) irrational (movable foldable flushable))
 (defknown float (real &optional float) float (movable foldable flushable)
-  :derive-type 'float-result-type)
+  #|:derive-type 'float-result-type|#)
 (defknown (rational rationalize) (real) rational (movable foldable flushable))
 (defknown (numerator denominator) (rational) integer (movable foldable flushable))
 (defknown (floor ceiling truncate round)
@@ -325,7 +325,7 @@
 ;  :derive-type 'result-type-arg1   But not really...
 )
 (defknown scale-float (float float-exponent) float (movable foldable flushable)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 (defknown float-radix (float) float-radix (movable foldable flushable))
 (defknown float-sign (float &optional float) float (movable foldable flushable))
 (defknown (float-digits float-precision) (float) float-digits (movable foldable flushable))
@@ -342,7 +342,7 @@
 
 (defknown boole (t t boole-code) integer (movable foldable flushable))
 (defknown lognot (integer) t (movable foldable flushable)
-  :derive-type 'boolean-result-type)
+  #|:derive-type 'boolean-result-type|#)
 (defknown logtest (t integer) boolean (movable foldable flushable))
 (defknown logbitp (bit-index integer) boolean (movable foldable flushable))
 (defknown ash (integer ash-index) integer (movable foldable flushable))
@@ -402,24 +402,24 @@
 (defknown elt (sequence index) t (foldable flushable))
 
 (defknown subseq (sequence index &optional sequence-end) consed-sequence
-  (foldable flushable) :derive-type 'result-type-arg1)
+  (foldable flushable) #|:derive-type 'result-type-arg1|#)
 
 (defknown copy-seq (sequence) consed-sequence (foldable flushable)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown length (sequence) index (foldable flushable))
 
 (defknown reverse (sequence) consed-sequence (foldable flushable)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown nreverse (sequence) sequence (unsafe)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown make-sequence (type-specifier index &key (initial-element t)) consed-sequence
-  (movable flushable unsafe) :derive-type 'type-spec-arg1)
+  (movable flushable unsafe) #|:derive-type 'type-spec-arg1|#)
 
 (defknown concatenate (type-specifier &rest sequence) consed-sequence
-  (foldable flushable) :derive-type 'type-spec-arg1)
+  (foldable flushable) #|:derive-type 'type-spec-arg1|#)
 
 (defknown map (type-specifier callable sequence &rest sequence) consed-sequence
   (flushable call)
@@ -441,12 +441,12 @@
 
 (defknown fill (sequence t &key (start index) (end sequence-end)) sequence
   (unsafe)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown replace (sequence sequence &key (start1 index) (end1 sequence-end)
 			    (start2 index) (end2 sequence-end))
   consed-sequence (unsafe)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown remove
   (t sequence &key (from-end t) (test callable)
@@ -454,7 +454,7 @@
      (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  :derive-type 'result-type-arg2)
+  #|:derive-type 'result-type-arg2|#)
 
 (defknown substitute
   (t t sequence &key (from-end t) (test callable)
@@ -462,21 +462,21 @@
      (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  :derive-type 'result-type-arg2)
+  #|:derive-type 'result-type-arg2|#)
 
 (defknown (remove-if remove-if-not)
   (callable sequence &key (from-end t) (start index) (end sequence-end)
 	    (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  :derive-type 'result-type-arg2)
+  #|:derive-type 'result-type-arg2|#)
 
 (defknown (substitute-if substitute-if-not)
   (t callable sequence &key (from-end t) (start index) (end sequence-end)
      (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  :derive-type 'result-type-arg2)
+  #|:derive-type 'result-type-arg2|#)
 
 (defknown delete
   (t sequence &key (from-end t) (test callable)
@@ -484,7 +484,7 @@
      (count sequence-end) (key callable))
   sequence
   (flushable call unsafe)
-  :derive-type 'result-type-arg2)
+  #|:derive-type 'result-type-arg2|#)
 
 (defknown nsubstitute
   (t t sequence &key (from-end t) (test callable)
@@ -492,35 +492,35 @@
      (count sequence-end) (key callable))
   sequence
   (flushable call unsafe)
-  :derive-type 'result-type-arg3)
+  #|:derive-type 'result-type-arg3|#)
 
 (defknown (delete-if delete-if-not)
   (callable sequence &key (from-end t) (start index) (end sequence-end)
 	    (count sequence-end) (key callable))
   sequence
   (flushable call unsafe)
-  :derive-type 'result-type-arg2)
+  #|:derive-type 'result-type-arg2|#)
 
 (defknown (nsubstitute-if nsubstitute-if-not)
   (t callable sequence &key (from-end t) (start index) (end sequence-end)
      (count sequence-end) (key callable))
   sequence
   (flushable call unsafe)
-  :derive-type 'result-type-arg3)
+  #|:derive-type 'result-type-arg3|#)
 
 (defknown remove-duplicates
   (sequence &key (test callable) (test-not callable) (start index) (from-end t)
 	    (end sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown delete-duplicates
   (sequence &key (test callable) (test-not callable) (start index) (from-end t)
 	    (end sequence-end) (key callable))
   sequence
   (flushable call unsafe)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown find (t sequence &key (test callable) (test-not callable)
 		  (start index) (from-end t) (end sequence-end) (key callable))
@@ -567,13 +567,13 @@
 ;;; Not flushable, since vector sort guaranteed in-place...
 (defknown (stable-sort sort) (sequence callable &key (key callable)) sequence
   (call)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown merge (type-specifier sequence sequence callable
 				&key (key callable))
   sequence
   (flushable call)
-  :derive-type 'type-spec-arg1)
+  #|:derive-type 'type-spec-arg1|#)
 
 
 ;;;; In the "Manipulating List Structure" chapter:
@@ -696,12 +696,12 @@
   ((array bit) (array bit) &optional (or (array bit) (member t)))
   (array bit)
   (foldable)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown bit-not ((array bit) &optional (or (array bit) (member t)))
   (array bit)
   (foldable)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown array-has-fill-pointer-p (array) boolean (movable foldable flushable))
 (defknown fill-pointer (vector) index (foldable flushable))
@@ -845,10 +845,10 @@
      (circle t) (pretty t) (level (or unsigned-byte null))
      (length (or unsigned-byte null)) (case t) (array t) (gensym t)) t
   (any)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 (defknown (prin1 print princ) (t &optional streamlike) t (any)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 ;;; xxx-TO-STRING not foldable because they depend on the dynamic environment. 
 (defknown write-to-string
@@ -1008,7 +1008,7 @@
   () simple-string (flushable))
 
 (defknown identity (t) t (movable foldable flushable unsafe)
-  :derive-type 'result-type-arg1)
+  #|:derive-type 'result-type-arg1|#)
 
 
 ;;;; Magical compiler frobs:
