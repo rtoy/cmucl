@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.13 1990/04/29 03:22:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.14 1990/05/06 05:22:00 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -168,27 +168,6 @@
     (loadw res vec clc::g-vector-header-words)
     (inst niuo res res clc::g-vector-words-mask-16)))
 
-
-(define-vop (get-vector-subtype)
-  (:args (x :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) temp)
-  (:results (res :scs (any-reg descriptor-reg)))
-  (:generator 6
-    (loadw temp x 0 vm:other-pointer-type)
-    (inst sra temp temp vm:type-bits)
-    (inst sll res temp 2)))
-
-(define-vop (set-vector-subtype)
-  (:args (x :scs (descriptor-reg) :target res)
-	 (subtype :scs (any-reg descriptor-reg)))
-  (:results (res :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
-  (:generator 6
-    (loadw t1 x 0 vm:other-pointer-type)
-    (inst li t2 vm:type-mask)
-    (inst and t1 t1 t2)
-    (inst sll t2 subtype (- vm:type-bits 2))
-    (inst or t1 t1 t2)
-    (storew t1 x 0 vm:other-pointer-type)
-    (move res x)))
+(define-vop (get-vector-subtype get-header-data))
+(define-vop (set-vector-subtype set-header-data))
 
