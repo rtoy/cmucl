@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.15 1991/10/22 18:38:09 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.16 1992/03/08 18:42:40 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -146,8 +146,7 @@ char *envp[];
 	if (restore_state)
             restore();
 	else
-	    call_into_lisp(INITIAL_FUNCTION, SymbolFunction(INITIAL_FUNCTION),
-			   current_control_stack_pointer, 0);
+	    funcall_sym(INITIAL_FUNCTION, current_control_stack_pointer, 0);
 	printf("%INITIAL-FUNCTION returned?");
     }
     while (1)

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.31 1991/11/07 00:08:17 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.32 1992/03/08 18:42:36 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -128,8 +128,7 @@ void undo_fake_foreign_function_call(context)
 }
 
 #define call_maybe_gc() \
-    call_into_lisp(MAYBE_GC, SymbolFunction(MAYBE_GC), \
-                   current_control_stack_pointer, 0)
+    funcall_sym(MAYBE_GC, current_control_stack_pointer, 0)
 
 void interrupt_internal_error(signal, code, context, continuable)
      struct sigcontext *context;
@@ -147,8 +146,7 @@ void interrupt_internal_error(signal, code, context, continuable)
 	    args[1] = T;
 	else
 	    args[1] = NIL;
-	call_into_lisp(INTERNAL_ERROR, SymbolFunction(INTERNAL_ERROR),
-		       args, 2);
+	funcall_sym(INTERNAL_ERROR, args, 2);
 	undo_fake_foreign_function_call(context);
 	if (continuable)
 	    arch_skip_instruction(context);
@@ -202,7 +200,7 @@ struct sigcontext *context;
     int were_in_lisp;
     union interrupt_handler handler;
     lispobj *args;
-    lispobj callname, function;
+    lispobj function;
     
     handler = interrupt_handlers[signal];
 
@@ -232,12 +230,8 @@ struct sigcontext *context;
         args[0] = fixnum(signal);
         args[1] = fixnum(code);
         args[2] = alloc_sap(context);
-        callname = handler.lisp;
-        if (LowtagOf(callname) == type_FunctionPointer)
-            function = callname;
-        else
-            function = ((struct symbol *)PTR(callname))->function;
-        call_into_lisp(callname, function, args, 3);
+	function = handler.lisp;
+        call_into_lisp(function, function, args, 3);
     }
     
     if (were_in_lisp)

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.16 1991/10/22 18:38:12 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.17 1992/03/08 18:42:41 wlott Exp $ */
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -206,31 +206,14 @@ char **ptr;
 {
     extern lispobj call_into_lisp();
 
-    lispobj call_name = parse_lispobj(ptr);
-    lispobj function, result, *args;
+    lispobj function = parse_lispobj(ptr);
+    lispobj result, *args;
     int numargs;
 
-    if (LowtagOf(call_name) == type_OtherPointer) {
-        struct symbol *sym = (struct symbol *)PTR(call_name);
-
-        if (TypeOf(sym->header) == type_SymbolHeader) {
-            function = sym->function;
-            if (LowtagOf(function) != type_FunctionPointer) {
-                printf("undefined function: ``%s''\n", (char *)PTR(sym->name) + 8);
-                return;
-            }
-        }
-        else {
-            printf("0x%x is not a function pointer.\n", call_name);
-            return;
-        }
-    }
-    else if (LowtagOf(call_name) != type_FunctionPointer) {
-        printf("0x%x is not a function pointer.\n", call_name);
+    if (LowtagOf(function) != type_FunctionPointer) {
+        printf("0x%x is not a function pointer.\n", function);
         return;
     }
-    else
-        function = call_name;
 
     numargs = 0;
     args = current_control_stack_pointer;
@@ -240,7 +223,7 @@ char **ptr;
         numargs++;
     }
 
-    result = call_into_lisp(call_name, function, args, numargs);
+    result = call_into_lisp(function, function, args, numargs);
 
     print(result);
 }
@@ -259,34 +242,17 @@ char **ptr;
 
     lispobj args[16];
 
-    lispobj call_name = parse_lispobj(ptr);
-    lispobj function, result, *argptr;
+    lispobj function = parse_lispobj(ptr);
+    lispobj result, *argptr;
     int numargs;
     struct timeval start_tv, stop_tv;
     struct rusage start_rusage, stop_rusage;
     double real_time, system_time, user_time;
 
-    if (LowtagOf(call_name) == type_OtherPointer) {
-        struct symbol *sym = (struct symbol *)PTR(call_name);
-
-        if (TypeOf(sym->header) == type_SymbolHeader) {
-            function = sym->function;
-            if (LowtagOf(function) != type_FunctionPointer) {
-                printf("undefined function: ``%s''\n", (char *)PTR(sym->name) + 8);
-                return;
-            }
-        }
-        else {
-            printf("0x%x is not a function pointer.\n", call_name);
-            return;
-        }
-    }
-    else if (LowtagOf(call_name) != type_FunctionPointer) {
-        printf("0x%x is not a function pointer.\n", call_name);
+    if (LowtagOf(function) != type_FunctionPointer) {
+        printf("0x%x is not a function pointer.\n", function);
         return;
     }
-    else
-        function = call_name;
 
     numargs = 0;
     argptr = args;
@@ -299,7 +265,7 @@ char **ptr;
 
     getrusage(RUSAGE_SELF, &start_rusage);
     gettimeofday(&start_tv, (struct timezone *) 0);
-    result = call_into_lisp(call_name, function, args, numargs);
+    result = call_into_lisp(function, function, args, numargs);
     gettimeofday(&stop_tv, (struct timezone *) 0);
     getrusage(RUSAGE_SELF, &stop_rusage);
 

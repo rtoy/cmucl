@@ -112,8 +112,7 @@ lispobj code;
     args[0] = fixnum(calc_offset(codeptr, scp->sc_pc));
     args[1] = code;
     args[2] = alloc_sap(scp);
-    call_into_lisp(HANDLE_BREAKPOINT, SymbolFunction(HANDLE_BREAKPOINT),
-		   args, 3);
+    funcall_sym(HANDLE_BREAKPOINT, args, 3);
     scp->sc_mask = sigblock(0);
 }
 
