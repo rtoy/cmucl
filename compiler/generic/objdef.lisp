@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.14 1991/12/15 08:12:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.15 1992/02/24 00:45:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.14 1991/12/15 08:12:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.15 1992/02/24 00:45:51 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -411,17 +411,18 @@
 
 (define-primitive-object (symbol :lowtag other-pointer-type
 				 :header symbol-header-type)
-  (value :set-trans set
+  (value :set-trans %set-symbol-value
 	 :setf-vop set)
   (function)
   (raw-function-addr :c-type "char *")
   (setf-function)
   (plist :ref-trans symbol-plist
-	 :setf-vop c::set-symbol-plist
-	 :set-trans c::%sp-set-plist)
+	 :setf-vop %set-symbol-plist
+	 :set-trans %set-symbol-plist)
   (name :ref-trans symbol-name)
   (package :ref-trans symbol-package
-	   :setf-vop c::set-package))
+	   :setf-vop %set-symbol-package
+	   :set-trans %set-symbol-package))
 
 (define-primitive-object (sap :lowtag other-pointer-type
 			      :header sap-type)
