@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.31 2003/10/27 18:30:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.32 2003/11/05 15:14:53 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -631,12 +631,12 @@
 	  (imag-tn (complex-single-reg-imag-tn value)))
       (cond ((typep (+ offset 4) '(signed-byte 13))
 	     (inst ldf real-tn object offset)
-	     (inst ldf real-tn object (+ offset 4)))
+	     (inst ldf imag-tn object (+ offset 4)))
 	    (t
 	     (inst li temp offset)
 	     (inst ldf real-tn object temp)
 	     (inst add temp 4)
-	     (inst ldf real-tn object temp))))))
+	     (inst ldf imag-tn object temp))))))
 
 (define-vop (data-vector-set/simple-array-complex-single-float)
   (:note "inline array store")
