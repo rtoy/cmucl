@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.9 1990/03/30 12:35:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.10 1990/04/10 14:43:18 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -27,12 +27,18 @@
 ;;; This is be expanded before the translator gets a chance, so we will get
 ;;; precedence.
 ;;;
+;;; ### Bootstrap hack: if we frob these types in the old compiler environment,
+;;; subtypep will break.
+;;; 
+(compiler-let ((lisp::*bootstrap-deftype* t))
+
 (deftype long-float (&optional low high)
   `(double-float ,low ,high))
 ;;;
 (deftype short-float (&optional low high)
   `(single-float ,low ,high))
 
+); compiler-let
 ;;; Compiled-function is the same as function in this implementation.
 ;;;
 (deftype compiled-function () 'function)
