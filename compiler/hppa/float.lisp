@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/float.lisp,v 1.1 1992/07/13 03:48:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/float.lisp,v 1.2 1992/07/14 03:45:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,8 +73,8 @@
   (:variant-vars size type data)
   (:note "float to pointer coercion")
   (:generator 13
-    (with-fixed-allocation (y ndescr type size)
-      (inst fsts x (- (* data word-bytes) other-pointer-type) y))))
+    (with-fixed-allocation (y ndescr type size))
+    (inst fsts x (- (* data word-bytes) other-pointer-type) y)))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
@@ -146,9 +146,12 @@
   (:note "inline float arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:node-var node)
   (:generator 0
-    (note-this-location vop :internal-error)
-    (inst fbinop operation x y r)))
+    (inst fbinop operation x y r)
+    (when (policy node (or (= debug 3) (> safety speed)))
+      (note-next-instruction vop :internal-error)
+      (inst fsts fp-single-zero-tn 0 csp-tn))))
 
 (macrolet ((frob (name sc zero-sc ptype)
 	     `(define-vop (,name float-op)
@@ -187,9 +190,12 @@
 		(:note "inline float arithmetic")
 		(:vop-var vop)
 		(:save-p :compute-only)
+		(:node-var node)
 		(:generator 1
-		  (note-this-location vop :internal-error)
-		  ,inst))))
+		  ,inst
+		  (when (policy node (or (= debug 3) (> safety speed)))
+		    (note-next-instruction vop :internal-error)
+		    (inst fsts fp-single-zero-tn 0 csp-tn))))))
   (frob abs/single-float abs single-reg single-float
     (inst funop :abs x y))
   (frob abs/double-float abs double-reg double-float
@@ -212,9 +218,9 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 3
-    (note-this-location vop :internal-error)
     ;; This is the condition to nullify the branch, so it is inverted.
     (inst fcmp (if not-p condition complement) x y)
+    (note-next-instruction vop :internal-error)
     (inst ftest)
     (inst b target :nullify t)))
 
@@ -252,9 +258,12 @@
 		(:translate ,translate)
 		(:vop-var vop)
 		(:save-p :compute-only)
+		(:node-var node)
 		(:generator 2
-		  (note-this-location vop :internal-error)
-		  (inst fcnvff x y)))))
+		  (inst fcnvff x y)
+		  (when (policy node (or (= debug 3) (> safety speed)))
+		    (note-next-instruction vop :internal-error)
+		    (inst fsts fp-single-zero-tn 0 csp-tn))))))
   (frob %single-float/double-float %single-float
     double-reg double-float
     single-reg single-float)
@@ -275,6 +284,7 @@
 		(:translate ,translate)
 		(:vop-var vop)
 		(:save-p :compute-only)
+		(:node-var node)
 		(:temporary (:scs (signed-stack) :from (:argument 0))
 			    stack-temp)
 		(:temporary (:scs (single-reg) :to (:result 0) :target y)
@@ -296,8 +306,10 @@
 			  (t
 			   (inst ldo offset zero-tn index)
 			   (inst fldx index nfp fp-temp)))
-		    (note-this-location vop :internal-error)
-		    (inst fcnvxf fp-temp y))))))
+		    (inst fcnvxf fp-temp y)
+		    (when (policy node (or (= debug 3) (> safety speed)))
+		      (note-next-instruction vop :internal-error)
+		      (inst fsts fp-single-zero-tn 0 csp-tn)))))))
   (frob %single-float/signed %single-float
     single-reg single-float)
   (frob %double-float/signed %double-float
@@ -329,12 +341,13 @@
 			    (signed-stack y)
 			    (signed-reg stack-temp)))
 			 (offset (* (tn-offset stack-tn) word-bytes)))
-		    (note-this-location vop :internal-error)
 		    (inst ,inst x fp-temp)
 		    (cond ((< offset (ash 1 4))
+			   (note-next-instruction vop :internal-error)
 			   (inst fsts fp-temp offset nfp))
 			  (t
 			   (inst ldo offset zero-tn index)
+			   (note-next-instruction vop :internal-error)
 			   (inst fstx fp-temp index nfp)))
 		    (unless (eq y stack-tn)
 		      (loadw y nfp (tn-offset stack-tn))))))))
