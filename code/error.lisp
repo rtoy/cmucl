@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.28 1993/07/21 23:33:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.29 1993/07/22 00:23:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -669,6 +669,9 @@
    (format-arguments :init-form '()
 		     :accessor internal-simple-condition-format-arguments))
   (:report simple-condition-printer))
+
+(setf (symbol-plist 'simple-condition)
+      (symbol-plist 'internal-simple-condition))
 
 (deftype simple-condition ()
   '(or internal-simple-condition simple-warning simple-type-error
