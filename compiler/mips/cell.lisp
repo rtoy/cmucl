@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.8 1990/02/20 16:04:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.9 1990/02/20 18:21:28 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -50,6 +50,8 @@
 
 	  closure-structure closure-function-slot closure-info-offset
 
+	  value-cell-structure value-cell-size value-cell-value-slot
+
 	  symbol-structure symbol-size symbol-value-slot
 	  symbol-function-slot symbol-plist-slot symbol-name-slot
 	  symbol-package-slot))
@@ -62,16 +64,20 @@
 
 (eval-when (compile eval load)
   (defun parse-slot (slot)
-    (if (atom slot)
-	(values slot nil t nil nil nil nil nil)
-	(values (car slot)
-		(getf (cdr slot) :rest)
-		(getf (cdr slot) :boxed t)
-		(getf (cdr slot) :ref-vop)
-		(getf (cdr slot) :ref-trans)
-		(getf (cdr slot) :set-vop)
-		(getf (cdr slot) :set-trans)
-		(getf (cdr slot) :docs)))))
+    (multiple-value-bind
+	(name props)
+	(if (atom slot)
+	    (values slot nil)
+	    (values (car slot) (cdr slot)))
+      (values name
+	      (getf props :rest)
+	      (getf props :boxed t)
+	      (getf props :ref-vop)
+	      (getf props :ref-trans)
+	      (getf props :set-vop)
+	      (getf props :setf-vop)
+	      (getf props :set-trans)
+	      (getf props :docs)))))
 
 (defmacro defslots ((name &key (header t) (lowtag 0)) &rest slots)
   (let ((compile-time nil)
@@ -84,7 +90,8 @@
 	(error "Rest slot ~S in defslots of ~S is not the last one."
 	       did-rest name))
       (multiple-value-bind
-	  (slot-name rest boxed ref-vop ref-trans set-vop set-trans docs)
+	  (slot-name rest boxed ref-vop ref-trans
+		     set-vop setf-vop set-trans docs)
 	  (parse-slot slot)
 	(let ((const (intern (concatenate 'simple-string
 					  (string name)
@@ -95,9 +102,19 @@
 		   ,index
 		   ,@(if docs (list docs)))
 		compile-time)
-	  (when (or set-vop set-trans ref-vop ref-trans)
-	    (push `(define-cell-accessors ,const ,lowtag
-		     ,ref-vop ,ref-trans ,set-vop ,set-trans)
+	  (when (or set-vop setf-vop)
+	    (push `(define-vop ,(cond (rest `(,set-vop slot-set))
+				      (set-vop `(,set-vop cell-set))
+				      (t `(,setf-vop cell-setf)))
+		     (:variant ,const ,lowtag)
+		     ,@(when set-trans
+			 `((:translate ,set-trans))))
+		  load-time))
+	  (when ref-vop
+	    (push `(define-vop (,ref-vop ,(if rest 'slot-ref 'cell-ref))
+		     (:variant ,const ,lowtag)
+		     ,@(when ref-trans
+			 `((:translate ,ref-trans))))
 		  load-time)))
 	(push (if (or (not boxed) rest)
 		  `(,slot-name
@@ -128,9 +145,9 @@
 
 (defslots (cons :lowtag list-pointer-type :header nil)
   (car :ref-vop car :ref-trans car
-       :set-vop set-car :set-trans %rplaca)
+       :setf-vop set-car :set-trans %rplaca)
   (cdr :ref-vop cdr :ref-trans cdr
-       :set-vop set-cdr :set-trans %rplacd))
+       :setf-vop set-cdr :set-trans %rplacd))
 
 
 (defslots (bignum :lowtag other-pointer-type)
@@ -182,16 +199,19 @@
 
 (defslots (closure :lowtag function-pointer-type)
   function
-  (info :rest t))
+  (info :rest t :set-vop closure-init :ref-vop closure-ref))
+
+(defslots (value-cell :lowtag other-pointer-type)
+  (value :set-vop value-cell-set :ref-vop value-cell-ref))
 
 (defslots (symbol :lowtag other-pointer-type)
-  (value :set-vop set :set-trans set)
-  (function :set-vop set-symbol-function :set-trans %sp-set-definition)
+  (value :setf-vop set :set-trans set)
+  (function :setf-vop set-symbol-function :set-trans %sp-set-definition)
   (plist :ref-vop symbol-plist :ref-trans symbol-plist
-	 :set-vop set-symbol-plist :set-trans %sp-set-plist)
+	 :setf-vop set-symbol-plist :set-trans %sp-set-plist)
   (name :ref-vop symbol-name :ref-trans symbol-name)
   (package :ref-vop symbol-package :ref-trans symbol-package
-	   :set-vop set-package))
+	   :setf-vop set-package))
 
 
 
@@ -292,30 +312,9 @@
 
 
 
-;;;; Value cell and closure hackery:
-
-#+nil
-(define-miscop make-value-cell (val))
-#+nil
-(define-miscop make-closure (nvars entry))
-
-#+nil
-(define-vop (value-cell-ref cell-ref)
-  (:variant (+ clc::g-vector-header-size-in-words
-	       system:%function-value-cell-value-slot)))
-
-#+nil
-(define-vop (value-cell-set cell-set)
-  (:variant (+ clc::g-vector-header-size-in-words
-	       system:%function-value-cell-value-slot)))
-
-#+nil
-(define-vop (closure-init slot-set))
-#+nil
-(define-vop (closure-ref slot-ref))
-
-
 ;;;; Structure hackery:
+
+;;; ### This is only necessary until we get real structures up and running.
 
 (define-vop (structure-ref slot-ref)
   (:variant vm:vector-data-offset vm:other-pointer-type))
