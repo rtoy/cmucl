@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.59 1991/11/13 19:30:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.60 1991/11/25 13:08:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,7 +112,12 @@
 ;;;    Bind *compiler-error-bailout* to a function throws out of the body and
 ;;; converts a proxy form instead.
 ;;;
-(defmacro ir1-error-bailout ((start cont form) &body body)
+(defmacro ir1-error-bailout
+	  ((start cont form
+	    &optional
+	    (proxy '`(error "Execution of a form compiled with errors:~% ~S"
+			    ',*bailout-form*)))
+	   &body body)
   `(catch 'ir1-error-abort 
      (let ((*bailout-start* ,start)
 	   (*bailout-cont* ,cont)
@@ -121,10 +126,7 @@
 	    #'(lambda ()
 		(declare (special *bailout-start* *bailout-cont*
 				  *bailout-form*))
-		(ir1-convert
-		 *bailout-start* *bailout-cont*
-		 `(error "Execution of a form compiled with errors:~% ~S"
-			 ',*bailout-form*))
+		(ir1-convert *bailout-start* *bailout-cont* ,proxy)
 		(throw 'ir1-error-abort nil))))
        (declare (special *bailout-start* *bailout-cont* *bailout-form*))
        ,@body
@@ -1702,19 +1704,83 @@
 
 ;;; Reference-Constant  --  Internal
 ;;;
-;;;    Generate a reference to a manifest constant, creating a new leaf if
-;;; necessary.  We disallow odd type constants, except in the interpreter.
+;;; Generate a reference to a manifest constant, creating a new leaf if
+;;; necessary.  If we are producing a fasl-file, make sure MAKE-LOAD-FORM
+;;; gets used on any parts of the constant that it needs to be.
 ;;;
 (defun reference-constant (start cont value)
   (declare (type continuation start cont))
-  (unless (or *converting-for-interpreter*
-	      (typep value '(or list number array symbol character structure)))
-    (compiler-error "~S constants not supported." (type-of value)))
-  (let* ((leaf (find-constant value))
-	 (res (make-ref (leaf-type leaf) leaf nil)))
-    (push res (leaf-refs leaf))
-    (prev-link res start)
-    (use-continuation res cont))
+  (ir1-error-bailout
+      (start cont value
+       '(error "Attempt to reference undumpable constant."))
+    (when (producing-fasl-file)
+      (maybe-emit-make-load-forms value))
+    (let* ((leaf (find-constant value))
+	   (res (make-ref (leaf-type leaf) leaf nil)))
+      (push res (leaf-refs leaf))
+      (prev-link res start)
+      (use-continuation res cont)))
+  (undefined-value))
+
+;;; MAYBE-EMIT-MAKE-LOAD-FORMS  --  internal
+;;;
+;;; Grovel over CONSTANT checking for any sub-parts that need to be processed
+;;; with MAKE-LOAD-FORM.  We have to be careful, because CONSTANT might be
+;;; circular.  We also check that the constant (and any subparts) are dumpable
+;;; at all.
+;;; 
+(defconstant list-to-hash-table-threshold 32)
+;;;
+(defun maybe-emit-make-load-forms (constant)
+  (let ((things-processed nil)
+	(count 0))
+    (declare (type (or list hash-table) things-processed)
+	     (type (integer 0 #.(1+ list-to-hash-table-threshold)) count))
+    (labels ((grovel (value)
+	       (etypecase things-processed
+		 (list
+		  (when (member value things-processed)
+		    (return-from grovel nil))
+		  (push value things-processed)
+		  (incf count)
+		  (when (> count list-to-hash-table-threshold)
+		    (let ((things things-processed))
+		      (setf things-processed
+			    (make-hash-table :test #'eq))
+		      (dolist (thing things)
+			(setf (gethash thing things-processed) t)))))
+		 (hash-table
+		  (when (gethash value things-processed)
+		    (return-from grovel nil))
+		  (setf (gethash value things-processed) t)))
+	       (typecase value
+		 (cons
+		  (grovel (car value))
+		  (grovel (cdr value)))
+		 ((or symbol number character unboxed-array))
+		 (simple-vector
+		  (dotimes (i (length value))
+		    (grovel (svref value i))))
+		 ((vector t)
+		  (dotimes (i (length value))
+		    (grovel (aref value i))))
+		 ((simple-array t)
+		  ;; Even though the (array t) branch does the exact same
+		  ;; thing as this branch we do this seperate so that
+		  ;; the compiler can use faster versions of array-total-size
+		  ;; and row-major-aref.
+		  (dotimes (i (array-total-size value))
+		    (grovel (row-major-aref value i))))
+		 ((array t)
+		  (dotimes (i (array-total-size value))
+		    (grovel (row-major-aref value i))))
+		 (structure
+		  (emit-make-load-form value))
+		 (t
+		  (compiler-error
+		   "Cannot dump objects of type ~S into fasl files."
+		   (type-of value))))))
+      (grovel constant)))
   (undefined-value))
 
 
@@ -2135,58 +2201,12 @@
       (ir1-convert-progn-body start cont body))))
 
 
-#-new-compiler
-;;;
 ;;; This flag is used by Eval-When to keep track of when code has already been
 ;;; evaluated so that it can avoid multiple evaluation of nested Eval-When
 ;;; (Compile)s.
-(defvar *already-evaled-this* nil)
-
-#-new-compiler
-;;; DO-EVAL-WHEN-STUFF  --  Interface
 ;;;
-;;;    Do stuff to do an EVAL-WHEN.  This is split off from the IR1 convert
-;;; method so that it can be shared by the special-case top-level form
-;;; processing code.  We play with the dynamic environment and eval stuff, then
-;;; call Fun with a list of forms to be processed at load time.
-;;; 
-;;;    We have to go through serious contortions to ensure that the forms get
-;;; eval'ed exactly once.  If *already-evaled-this* is true then we *do not*
-;;; eval since some enclosing eval-when already did.  If we do eval, we
-;;; throw a binding of the funny lexical variable %compiler-eval-when-marker%
-;;; into the %venv% before we eval the code.  This is to inform the eval-when
-;;; in the interpreter that it should eval forms even if they contain only
-;;; a COMPILE.  We don't want to use a special as a flag, since that would
-;;; pervasively alter the semantics of eval-when, when we just want to
-;;; alter it within the lexical scope of this eval-when.
-;;;
-;;;    We know we are eval'ing for load since we wouldn't get called otherwise.
-;;; If LOAD is a situation we convert the body like a progn.  If we eval'ed the
-;;; body, then we bind *already-evaled-this* to T around the conversion of body
-;;; inhibiting the evaluation of any nested eval-when's.  If we aren't
-;;; evaluating for load, then we just convert NIL for the result of the
-;;; Eval-When.
-;;;
-(defun do-eval-when-stuff (situations body fun)
-  (when (or (not (listp situations))
-	    (set-difference situations '(compile load eval)))
-    (compiler-error "Bad Eval-When situation list: ~S." situations))
-
-  (let* ((compilep (member 'compile situations))
-	 (evalp (member 'eval situations))
-	 (do-eval (and compilep (not *already-evaled-this*))))
-    (when do-eval
-      (let ((lisp::%venv% '((lisp::%compile-eval-when-marker% t))))
-	(lisp::eval-as-progn body)))
-    (if (member 'load situations)
-	(let ((*already-evaled-this* (or do-eval (and *already-evaled-this* evalp))))
-	  (funcall fun body))
-	(funcall fun ()))))
-
-#+new-compiler
 (proclaim '(special lisp::*already-evaled-this*))
 
-#+new-compiler
 ;;; DO-EVAL-WHEN-STUFF  --  Interface
 ;;;
 ;;;    Do stuff to do an EVAL-WHEN.  This is split off from the IR1 convert
@@ -3108,6 +3128,7 @@
       (assert (not (continuation-dest dummy-result)))
       (delete-continuation dummy-result)
       (remove-from-dfo end-block))))
+
 
 
 ;;;; Interface to defining macros:
