@@ -669,7 +669,7 @@
     (wm-resources database window :key key :test test :test-not test-not)
     database))
 
-(defun set-root-resources (screen &key test test-not (write 'princ) database)
+(defun set-root-resources (screen &key test test-not (write #'princ) database)
   "Changes the contents of the root window RESOURCE_MANAGER property for the
    given SCREEN. If SCREEN is a display, then its default screen is used. 
 
