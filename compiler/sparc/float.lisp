@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.35 2002/10/07 17:44:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.36 2002/11/26 03:59:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1775,10 +1775,10 @@
 		     (ri (,imag-part r)))
 		 (inst ,fop rr x yr)
 		 (,@fneg ri yi))))
-       ))
+       )))
 
   (frob single fsubs (inst fnegs) 2)
-  (frob double fsubd (negate-double-reg) 2)))
+  (frob double fsubd (negate-double-reg) 2))
 
 ;; Multiply two complex numbers
 
