@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.18 1990/02/27 00:09:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.19 1990/02/27 11:37:15 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -143,7 +143,7 @@
   `(progn
      (align vm:lowtag-bits)
      (emit-label ,label)
-     (inst return-pc-header)))
+     (inst lra-header-word)))
 
 
 
