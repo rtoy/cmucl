@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.7 1992/12/16 18:21:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.8 1992/12/16 19:46:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,7 +119,7 @@
 
 
 (define-vop (make-closure)
-  (:args (function :to :save))
+  (:args (function :to :save :scs (descriptor-reg)))
   (:info length)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
@@ -134,7 +134,7 @@
 ;;; The compiler likes to be able to directly make value cells.
 ;;; 
 (define-vop (make-value-cell)
-  (:args (value :to :save))
+  (:args (value :to :save :scs (descriptor-reg any-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
