@@ -14,17 +14,7 @@ void arch_init()
 os_vm_address_t arch_get_bad_addr(context)
 struct sigcontext *context;
 {
-    if (!SymbolValue(PSEUDO_ATOMIC_ATOMIC))
-	/* If we are not pseudo-atomic, then we could only have hit the */
-	/* trigger if the allocation pointer points beyond the trigger. */
-	return (os_vm_address_t)SymbolValue(ALLOCATION_POINTER);
-    else
-	/* Otherwise, we might be inside an allocator.  The best we can do */
-	/* is to try turning off the trigger and seeing if the problem goes */
-	/* away.  If it does, then we guessed right.  If it doesn't, we will */
-	/* end up back here, except current_auto_gc_trigger will be NULL, */
-	/* so we will take the sigbus at that time. */
-	return (os_vm_address_t)current_auto_gc_trigger;
+    return 0;
 }
 
 void arch_skip_instruction(context)

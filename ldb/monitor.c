@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.15 1991/04/13 13:58:46 chiles Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.16 1991/10/22 18:38:12 wlott Exp $ */
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -127,10 +127,13 @@ char **ptr;
 #endif
 
     printf("DYNAMIC\t=\t0x%08x\n", current_dynamic_space);
-#ifndef ibmrt
+#ifdef ibmrt
+    printf("ALLOC\t=\t0x08x\n", SymbolValue(ALLOCATION_POINTER));
+    printf("TRIGGER\t=\t0x08x\n", SymbolValue(INTERNAL_GC_TRIGGER));
+#else
     printf("ALLOC\t=\t0x%08x\n", current_dynamic_space_free_pointer);
-#endif
     printf("TRIGGER\t=\t0x%08x\n", current_auto_gc_trigger);
+#endif
     printf("STATIC\t=\t0x%08x\n", SymbolValue(STATIC_SPACE_FREE_POINTER));
     printf("RDONLY\t=\t0x%08x\n", SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
 

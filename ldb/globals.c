@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.7 1991/02/16 01:00:19 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.8 1991/10/22 18:38:02 wlott Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
@@ -33,8 +33,8 @@ lispobj *binding_stack;
 lispobj *current_dynamic_space;
 #ifndef ibmrt
 lispobj *current_dynamic_space_free_pointer;
-#endif
 lispobj *current_auto_gc_trigger;
+#endif
 
 globals_init()
 {

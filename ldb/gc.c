@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.29 1991/09/27 10:45:45 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.30 1991/10/22 18:37:56 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1893,6 +1893,8 @@ gc_init()
 
 /* Noise to manipulate the gc trigger stuff. */
 
+#ifndef ibmrt
+
 void set_auto_gc_trigger(dynamic_usage)
      unsigned long dynamic_usage;
 {
@@ -1900,17 +1902,12 @@ void set_auto_gc_trigger(dynamic_usage)
     os_vm_size_t length=
 	DYNAMIC_SPACE_SIZE + (os_vm_address_t)current_dynamic_space - addr;
 
-#ifdef ibmrt
-#define CURDYNFREEPTR (os_vm_address_t)SymbolValue(ALLOCATION_POINTER)
-#else
-#define CURDYNFREEPTR (os_vm_address_t)current_dynamic_space_free_pointer
-#endif
-
-    if(addr < CURDYNFREEPTR) {
+    if(addr < (os_vm_address_t)current_dynamic_space_free_pointer) {
 	fprintf(stderr,
-		"set_auto_gc_trigger: tried to set gc trigger too low! (%d < %d)\n",
+	   "set_auto_gc_trigger: tried to set gc trigger too low! (%d < %d)\n",
 		dynamic_usage,
-		CURDYNFREEPTR - (os_vm_address_t)current_dynamic_space);
+		(os_vm_address_t)current_dynamic_space_free_pointer
+		- (os_vm_address_t)current_dynamic_space);
 	return;
     }
     else if (length < 0) {
@@ -1950,3 +1947,5 @@ void clear_auto_gc_trigger()
 	current_auto_gc_trigger = NULL;
     }
 }
+
+#endif

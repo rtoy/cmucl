@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.6 1991/02/16 00:59:03 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.7 1991/10/22 18:36:50 wlott Exp $ */
 #include "lisp.h"
 #include "ldb.h"
 #include "alloc.h"
@@ -8,10 +8,16 @@
 #define GET_FREE_POINTER() ((lispobj *)SymbolValue(ALLOCATION_POINTER))
 #define SET_FREE_POINTER(new_value) \
     (SetSymbolValue(ALLOCATION_POINTER,(lispobj)(new_value)))
+#define GET_GC_TRIGGER() ((lispobj *)SymbolValue(INTERNAL_GC_TRIGGER))
+#define SET_GC_TRIGGER(new_value) \
+    (SetSymbolValue(INTERNAL_GC_TRIGGER,(lispobj)(new_value)))
 #else
 #define GET_FREE_POINTER() current_dynamic_space_free_pointer
 #define SET_FREE_POINTER(new_value) \
     (current_dynamic_space_free_pointer = (new_value))
+#define GET_GC_TRIGGER() current_auto_gc_trigger
+#define SET_GC_TRIGGER(new_value) \
+    clear_auto_gc_trigger(); set_auto_gc_trigger(new_value);
 #endif
 
 
@@ -31,12 +37,9 @@ int bytes;
     result = GET_FREE_POINTER();
     SET_FREE_POINTER(result + (bytes / sizeof(lispobj)));
 
-    if (current_auto_gc_trigger &&
-        GET_FREE_POINTER() > current_auto_gc_trigger) {
-        /* We can't GC while in C land, so just dink the trigger. */
-        clear_auto_gc_trigger();
-        set_auto_gc_trigger((char *)GET_FREE_POINTER() -
-                            (char *)current_dynamic_space);
+    if (GET_GC_TRIGGER() && GET_FREE_POINTER() > GET_GC_TRIGGER()) {
+	SET_GC_TRIGGER((char *)GET_FREE_POINTER()
+		       - (char *)current_dynamic_space);
     }
 
     return result;

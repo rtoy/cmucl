@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mach-os.c,v 1.2 1991/05/24 19:27:45 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mach-os.c,v 1.3 1991/10/22 18:38:11 wlott Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -153,6 +153,7 @@ vm_address_t test;
     return FALSE;
 }
 
+#ifndef ibmrt
 static void sigbus_handler(signal, code, context)
 int signal, code;
 struct sigcontext *context;
@@ -160,10 +161,13 @@ struct sigcontext *context;
     if(!interrupt_maybe_gc(context))
 	interrupt_handle_now(signal, code, context);
 }
+#endif
 
 void os_install_interrupt_handlers()
 {
+#ifndef ibmrt
     interrupt_install_low_level_handler(SIGBUS,sigbus_handler);
+#endif
 #ifdef mips
     interrupt_install_low_level_handler(SIGSEGV,sigbus_handler);
 #endif

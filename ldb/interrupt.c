@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.29 1991/09/27 10:31:55 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.30 1991/10/22 18:38:06 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -278,6 +278,8 @@ struct sigcontext *context;
 * Stuff to detect and handle hitting the gc trigger.             *
 \****************************************************************/
 
+#ifndef ibmrt
+
 static boolean gc_trigger_hit(context)
      struct sigcontext *context;
 {
@@ -329,6 +331,8 @@ struct sigcontext *context;
     }else
 	return FALSE;
 }
+
+#endif
 
 /****************************************************************\
 * Noise to install handlers.                                     *
