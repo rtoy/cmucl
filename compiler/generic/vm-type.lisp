@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.12 1990/04/29 02:00:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.13 1990/05/06 05:29:53 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -86,6 +86,9 @@
 ;;; Internal time format.  Not a fixnum (blag...)
 (deftype internal-time () 'unsigned-byte)
 
+(deftype bignum-element-type () `(unsigned-byte ,vm:word-bits))
+(deftype bignum-type () 'bignum)
+(deftype bignum-index () 'index)
 
 
 ;;;; Hooks into type system:
@@ -136,6 +139,21 @@
     type))
 
 
+;;; Contaning-Integer-Type  --  Interface
+;;;
+;;; Return the most specific integer type that can be quickly checked that
+;;; includes the given type.
+;;; 
+(defun containing-integer-type (subtype)
+  (dolist (type '(fixnum
+		  (signed-byte 32)
+		  (unsigned-byte 32)
+		  integer)
+		(error "~S isn't an integer type?" subtype))
+    (when (csubtypep subtype (specifier-type type))
+      (return type))))
+
+
 ;;; Hairy-Type-Check-Template  --  Interface
 ;;;
 ;;;    If Type has a CHECK-xxx template, but doesn't have a corresponding
@@ -149,6 +167,14 @@
        (cons 'c::check-cons)
        (symbol 'c::check-symbol)
        (t nil)))
+    (numeric-type
+     (cond ((type= type (specifier-type 'fixnum))
+	    'c::check-fixnum)
+	   ((type= type (specifier-type '(signed-byte 32)))
+	    'c::check-signed-byte-32)
+	   ((type= type (specifier-type '(unsigned-byte 32)))
+	    'c::check-unsigned-byte-32)
+	   (t nil)))
     (union-type
      (if (type= type (specifier-type '(or function symbol)))
 	 'c::check-function-or-symbol
