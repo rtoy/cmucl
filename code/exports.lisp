@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.22 1990/05/15 01:25:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.23 1990/05/16 01:08:16 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -26,6 +26,7 @@
 		  (symbol (find-symbol name package)))
 	     (when symbol
 	       (unintern symbol package)))))
+  (nuke "REAL" "XLIB")
   (nuke "FORM" "LISP")
   (nuke "INDEX" "LISP")
   (nuke "LEXICAL-ENVIRONMENT" "LISP")
@@ -273,9 +274,10 @@
 	  bit-bash-andc1 bit-bash-andc2 bit-bash-orc1 bit-bash-orc2
 	  bit-index boole-code boolean byte-specifier callable char-int
 	  consed-sequence constant-type constant-type-p constant-type-type
-	  containing-integer-type csubtypep ctype ctype-of ctype-p ctypep
-	  data-vector-ref data-vector-set filename float-digits
-	  float-exponent float-format-max float-radix form function-type
+	  containing-integer-type copy-from-system-area copy-to-system-area
+	  csubtypep ctype ctype-of ctype-p ctypep data-vector-ref
+	  data-vector-set filename float-digits float-exponent
+	  float-format-max float-radix form function-type
 	  function-type-allowp function-type-keyp function-type-keywords
 	  function-type-optional function-type-p function-type-required
 	  function-type-rest function-type-returns function-type-wild-args
@@ -294,10 +296,11 @@
 	  pathname-type pathname-version pathnamelike sequence-end
 	  simple-unboxed-array single-value-type specifier-type streamlike
 	  stringable stringlike structure-type structure-type-name
-	  structure-type-p truth type-expand type-init two-arg-* two-arg-+
-	  two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<= two-arg-=
-	  two-arg-> two-arg->= two-arg-and two-arg-ior two-arg-xor
-	  type-difference type-intersect type-intersection type-specifier
+	  structure-type-p system-area-clear system-area-copy truth
+	  type-expand type-init two-arg-* two-arg-+ two-arg-- two-arg-/
+	  two-arg-/= two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->=
+	  two-arg-and two-arg-ior two-arg-xor type-difference
+	  type-intersect type-intersection type-specifier
 	  type-specifier-symbols type-union type/= type= types-intersect
 	  unboxed-array union-type union-type-p union-type-types
 	  unknown-type unknown-type-p unknown-type-specifier
@@ -535,9 +538,9 @@
 (import 'vm:bignum-type)
 
 (export '(add-bignums bignum-ashift-left bignum-ashift-right bignum-compare
-	  bignum-deposit-byte bignum-gcd bignum-integer-length
-	  bignum-load-byte bignum-logcount bignum-logical-and
-	  bignum-logical-ior bignum-logical-not bignum-logical-xor
-	  bignum-plus-p bignum-to-double-float bignum-to-single-float
-	  bignum-truncate make-small-bignum multiply-bignums negate-bignum
-	  subtract-bignum))
+	  bignum-deposit-byte bignum-element-type bignum-gcd bignum-index
+	  bignum-integer-length bignum-load-byte bignum-logcount
+	  bignum-logical-and bignum-logical-ior bignum-logical-not
+	  bignum-logical-xor bignum-plus-p bignum-to-double-float
+	  bignum-to-single-float bignum-truncate bignum-type make-small-bignum
+	  multiply-bignums negate-bignum subtract-bignum))
