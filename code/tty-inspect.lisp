@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.21 2003/02/05 12:34:08 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.22 2003/05/12 14:20:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,6 +148,7 @@
 (defun describe-parts (object)
   (typecase object
     (symbol (describe-symbol-parts object))
+    (standard-object (describe-standard-object-parts object))
     (instance (describe-instance-parts object :structure))
     (function
      (if (kernel:funcallable-instance-p object)
@@ -168,6 +169,17 @@
 			     %illegal-object%))
 	(cons "Plist" (symbol-plist object))
 	(cons "Package" (symbol-package object))))
+
+(defun describe-standard-object-parts (object)
+  (collect ((parts))
+    (let ((class (class-of object)))
+      (parts (format nil "~s is an instance of ~s.~%" object class))
+      (parts t)
+      (dolist (slot (mop:class-slots class) (parts))
+	(parts (cons (mop:slot-definition-name slot)
+		     (if (mop:slot-boundp-using-class class object slot)
+			 (mop:slot-value-using-class class object slot)
+			 "- (slot is unbound)")))))))
 
 (defun describe-instance-parts (object kind)
   (let ((info (layout-info (kernel:layout-of object)))

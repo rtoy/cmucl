@@ -31,6 +31,7 @@ New in this release:
      - Compiler checking control string and number of args to FORMAT.
      - TRACE automatically using encapsulation when function-end
        breakpoints cannot be used.
+     - INSPECT working on CLOS instances.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
