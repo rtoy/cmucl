@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.34 1997/09/05 11:36:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.35 1997/09/05 18:23:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -877,72 +877,58 @@
 		  :low (if pos 0 nil)
 		  :high nil))))))))
 
-
 (defoptimizer (log derive-type) ((x &optional y))
-  (cond ((null y)
-	 ;; The easy one arg case
-	 (elfun-derive-type-union
-	  (continuation-type x)
-	  #'(lambda (lo hi)
-	      (declare (ignore hi))
-	      (and lo
-		   (>= (bound-value lo) 0)))
-	  #'(lambda (lo hi)
-	      (values (if (zerop (bound-value lo))
-			  nil
-			  (set-bound (log (bound-value lo)) (consp lo)))
-		      (if hi
-			  (set-bound (log (bound-value hi)) (consp hi))
-			  nil)))))
-	(t
-	 ;; Hack patch.
-	 (specifier-type '(or float (complex float)))
-	 #+nil
-	 ;; The hard case with a base given.  Use the definition of
-	 ;; (log x y) = (/ (log x) (log y)) to figure out what the
-	 ;; answer should be.
-	 (flet ((derive-type (arg)
-		  (elfun-derive-type-union
-		   (continuation-type arg)
-		   #'(lambda (lo hi)
-		       (declare (ignore hi))
-		       (and lo
-			    (>= (bound-value lo) 0)))
-		   #'(lambda (lo hi)
-		       (values
-			(if (zerop (bound-value lo))
-			    nil
-			    (set-bound (log (bound-value lo)) (consp lo)))
-			(if hi
-			    (set-bound (log (bound-value hi)) (consp hi))
-			    nil)))
-		   (specifier-type 'complex))))
+  (flet ((derive-type (arg)
+	   (elfun-derive-type-union
+	    (continuation-type arg)
+	    #'(lambda (lo hi)
+		(declare (ignore hi))
+		(and lo
+		     (>= (bound-value lo) 0)))
+	    #'(lambda (lo hi)
+		(values
+		 (if (zerop (bound-value lo))
+		     nil
+		     (set-bound (log (bound-value lo)) (consp lo)))
+		 (if hi
+		     (set-bound (log (bound-value hi)) (consp hi))
+		     nil))))))
+    (cond ((null y)
+	   ;; The easy one arg case
+	   (derive-type x))
+	  (t
+	   ;; The hard case with a base given.  Use the definition of
+	   ;; (log x y) = (/ (log x) (log y)) to figure out what the
+	   ;; answer should be.
 	   (let ((log-x (derive-type x))
 		 (log-y (derive-type y)))
-	     ;; This stolen from the optimizer for /. 
-	     (derive-real-numeric-or-union-type
-	      log-x log-y
-	      #'(lambda (x y)
-		  (declare (type numeric-type x y))
-		  (let ((result (interval-div (numeric-type->interval x)
-					      (numeric-type->interval y)))
-			(result-type (numeric-contagion x y)))
-		    ;; If the result type is a float, we need to be sure to
-		    ;; coerce the bounds into the correct type.
-		    (when (eq (numeric-type-class result-type) 'float)
-		      (setf result (interval-func
-				    #'(lambda (x)
-					(coerce x (or (numeric-type-format result-type)
-						      'float)))
-				    result)))
-		    (values (interval-low result)
-			    (interval-high result)
-			    (numeric-type-class result-type)
-			    (numeric-type-format result-type))))))))))
-	 
-  
+	     (cond ((and (numeric-type-real-p log-x)
+			 (numeric-type-real-p log-y))
+		    ;; This stolen from the optimizer for /. 
+		    (derive-real-numeric-or-union-type
+		     log-x log-y
+		     #'(lambda (x y)
+			 (declare (type numeric-type x y))
+			 (let ((result (interval-div (numeric-type->interval x)
+						     (numeric-type->interval y)))
+			       (result-type (numeric-contagion x y)))
+			   ;; If the result type is a float, we need to be sure to
+			   ;; coerce the bounds into the correct type.
+			   (when (eq (numeric-type-class result-type) 'float)
+			     (setf result (interval-func
+					   #'(lambda (x)
+					       (coerce x (or (numeric-type-format result-type)
+							     'float)))
+					   result)))
+			   (values (interval-low result)
+				   (interval-high result)
+				   (numeric-type-class result-type)
+				   (numeric-type-format result-type))))))
+		   (t
+		    ;; Should do a better job than this and specialize
+		    ;; the float type if we can.
+		    (specifier-type '(or float (complex float))))))))))
 
-  
 (defoptimizer (atan derive-type) ((y &optional x))
   (cond ((null x)
 	 ;; Let's handle the easy one arg case
