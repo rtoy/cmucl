@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.4 1993/05/18 23:42:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.5 1993/05/21 15:47:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -488,7 +488,7 @@
   (when (>= (integer-length num)
 	    (1+ (- vm:word-bits vm:lowtag-bits)))
     (error "~D is too big for a fixnum." num))
-  (make-random-descriptor (ash num (1- vm:lowtag-bits))))
+  (make-random-descriptor (ldb (byte vm:word-bits 0) (ash num 2))))
 
 (defun make-other-immediate-descriptor (data type)
   (make-random-descriptor (logior (ash data vm:type-bits) type)))
