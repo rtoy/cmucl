@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum-test.lisp,v 1.2 1991/02/08 13:30:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum-test.lisp,v 1.3 1991/05/24 19:35:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,12 +18,17 @@
 
 (defvar *in-bignum-wrapper* nil)
 
-(defmacro def-bignum-wrapper (name args &body body)
+(defmacro def-bignum-wrapper (name lambda-list &body body)
   (let ((var-name (ext:symbolicate "*OLD-" name "*"))
-	(wrap-name (ext:symbolicate "WRAP-" name)))
+	(wrap-name (ext:symbolicate "WRAP-" name))
+	(args (mapcar #'(lambda (x)
+			  (if (listp x) (car x) x))
+		      (remove-if #'(lambda (x)
+				     (member x lambda-list-keywords))
+				 lambda-list))))
     `(progn
        (defvar ,var-name (fdefinition ',name))
-       (defun ,wrap-name ,args
+       (defun ,wrap-name ,lambda-list
 	 (if *in-bignum-wrapper*
 	     (funcall ,var-name ,@args)
 	     (let ((*in-bignum-wrapper* t))
@@ -51,8 +56,8 @@
 	  (assert (and (zerop r) (big= q y)))))
     res))
 
-(def-bignum-wrapper negate-bignum (x)
-  (let ((res (funcall *old-negate-bignum* x)))
+(def-bignum-wrapper negate-bignum (x &optional (fully-normalized t))
+  (let ((res (funcall *old-negate-bignum* x fully-normalized)))
     (assert (big= (- res) x))
     res))
 
