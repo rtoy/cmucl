@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.15 1993/05/17 10:17:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.16 1993/05/17 21:51:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,10 +202,20 @@
 
 (defun stack-copy (dest src count)
   (declare (type stack-pointer dest src count))
-  (dotimes (i count)
-    (setf (eval-stack-ref dest) (eval-stack-ref src))
-    (incf dest)
-    (incf src)))
+  (let ((stack *eval-stack*))
+    (if (< dest src)
+	(dotimes (i count)
+	  (setf (svref stack dest) (svref stack src))
+	  (incf dest)
+	  (incf src))
+	(do ((si (1- (+ src count))
+		 (1- si))
+	     (di (1- (+ dest count))
+		 (1- di)))
+	    ((< si src))
+	  (declare (fixnum si di))
+	  (setf (svref stack di) (svref stack si)))))
+  (undefined-value))
 
 
 ;;;; Component access magic.
@@ -1254,7 +1264,7 @@
 					      (cons (eval-stack-ref index)
 						    result)))
 				     ((< index more-args-start) result)
-				   (declare (type index index))))))
+				   (declare (fixnum index))))))
 		 (declare (type index more-args-supplied)
 			  (type stack-pointer more-args-start))
 		 (cond
@@ -1266,7 +1276,15 @@
 		   (unless (evenp more-args-supplied)
 		     (with-debugger-info (old-component ret-pc old-fp)
 		       (error "Odd number of keyword arguments.")))
-		   (let* ((num-more-args (hairy-byte-function-num-more-args xep))
+		   ;;
+		   ;; If there are keyword args, then we need to leave the
+		   ;; defaulted and supplied-p values where the more args
+		   ;; currently are.  There might be more or fewer.  And also,
+		   ;; we need to flatten the parsed args with the defaults
+		   ;; before we scan the keywords.  So we copy all the more
+		   ;; args to a temporary area at the end of the stack.
+		   (let* ((num-more-args
+			   (hairy-byte-function-num-more-args xep))
 			  (new-sp (+ more-args-start num-more-args))
 			  (temp (max sp new-sp))
 			  (temp-sp (+ temp more-args-supplied))
@@ -1286,13 +1304,14 @@
 			   (setf (eval-stack-ref index) nil)
 			   (incf index))))
 		     (let ((index temp-sp)
-			   (allow (eq (hairy-byte-function-keywords-p xep) :allow-others))
+			   (allow (eq (hairy-byte-function-keywords-p xep)
+				      :allow-others))
 			   (bogus-key nil)
 			   (bogus-key-p nil))
-		       (declare (type stack-pointer index))
+		       (declare (type fixnum index))
 		       (loop
 			 (decf index 2)
-			 (when (< index more-args-start)
+			 (when (< index temp)
 			   (return))
 			 (let ((key (eval-stack-ref index))
 			       (value (eval-stack-ref (1+ index))))
