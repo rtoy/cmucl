@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.3 1990/03/05 21:07:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.4 1990/03/06 19:33:53 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -222,20 +222,43 @@
 
 
 (define-vop (nlx-entry-multiple)
-  (:args (top :scs (descriptor-reg))
-	 (start)
-	 (count))
+  (:args (top :scs (descriptor-reg) :target dst)
+	 (start :target src)
+	 (count :target num))
   (:results (new-start) (new-count))
+  (:temporary (:scs (any-reg descriptor-reg) :type fixnum :from (:argument 0))
+	      dst)
+  (:temporary (:scs (any-reg descriptor-reg) :type fixnum :from (:argument 1))
+	      src)
+  (:temporary (:scs (any-reg descriptor-reg) :type fixnum :from (:argument 2))
+	      num)
+  (:temporary (:scs (descriptor-reg)) temp)
   (:save-p :force-to-stack)
-  #+nil
   (:generator 30
-    (unless (location= a0 top)
-      (inst lr a0 top))
-    (inst miscop 'clc::nlx-entry-receive-values)
-    (unless (location= a0 r)
-      (inst lr r a0))
-    (unless (location= a1 r1)
-      (inst lr r1 a1))))
+    (let ((loop (gen-label))
+	  (done (gen-label)))
+      
+      ;; Copy args.
+      (move dst top)
+      (move src start)
+      (move num count)
+      
+      ;; Establish results.
+      (move new-start dst)
+      (inst beq num zero-tn done)
+      (move new-count num t)
+      
+      ;; Copy stuff on stack.
+      (emit-label loop)
+      (loadw temp src)
+      (inst addiu src src (fixnum 1))
+      (storew temp dst)
+      (inst addiu num num (fixnum -1))
+      (inst bne num zero-tn loop)
+      (inst addiu dst dst (fixnum 1))
+
+      (emit-label done)
+      (move csp-tn dst))))
 
 
 ;;; This VOP is just to force the TNs used in the cleanup onto the stack.
