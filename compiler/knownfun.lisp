@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.19 1993/05/11 13:55:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.20 1993/05/13 12:52:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,7 +175,8 @@
 (proclaim '(function %deftransform
 		     (t list function &optional (or string null)
 			(member t nil) (member :native :byte :both))))
-(defun %deftransform (name type fun &optional note important when)
+(defun %deftransform (name type fun &optional note important
+			   (when :native))
   (let* ((ctype (specifier-type type))
 	 (note (or note "optimize"))
 	 (info (function-info-or-lose name))
