@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.15 1994/02/14 13:13:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.16 1994/02/14 13:48:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,7 @@
 					     :name environment-name)
 		   (rest *info-environment*)))
       ;; next 2 lines for GC.
-      (shrink-vector (c::volatile-info-env-table *old-ie*) 0)
+      (shrink-vector (c::volatile-info-env-table old-ie) 0)
       (setq old-ie nil)))
 
   (let ((*gc-notify-before*
