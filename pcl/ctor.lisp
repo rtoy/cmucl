@@ -46,7 +46,7 @@
 ;;; is called.
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.2 2003/03/22 16:15:17 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.3 2003/03/30 00:43:27 gerd Exp $")
 
 (in-package "PCL")
 
@@ -331,8 +331,6 @@
       (fake-initialization-emf ctor ii-methods si-methods)
     (setf (ctor-state ctor) 'optimized)
     `(kernel:instance-lambda ,(make-ctor-parameter-list ctor)
-       (declare (optimize (speed 3)))
-       (declare (ext:optimize-interface (speed 3)))
        ,(wrap-in-allocate-forms ctor body before-method-p))))
 
 ;;;
