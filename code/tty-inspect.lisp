@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.16 1998/03/26 13:12:31 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.17 2000/04/02 20:25:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -199,9 +199,13 @@
 	 (coerce object 'list)))
 
 (defun describe-cons-parts (object)
-  (list* (format nil "Object is a LIST of length ~d.~%" (length object))
-	 nil
-	 object))
+  (if (listp (cdr object))
+      (list* (format nil "Object is a LIST of length ~d.~%" (length object))
+	     nil
+	     object)
+      (list (format nil "Object is a CONS.~%") t
+	    (cons "Car" (car object))
+	    (cons "Cdr" (cdr object)))))
 
 ;;; ### Copied from inspect.lisp.  Remove when it is up.
 ;;; 
