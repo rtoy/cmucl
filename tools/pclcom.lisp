@@ -2,8 +2,12 @@
 (in-package "USER")
 
 (when (find-package "PCL")
+  ;; Load the lisp:documentation functions.
+  (load "target:code/misc")
+
   ;;
-  ;; Blow away make-instance optimizer so that it doesn't confuse bootstrapping.
+  ;; Blow away make-instance optimizer so that it doesn't confuse
+  ;; bootstrapping.
   (setf (compiler-macro-function 'make-instance) nil)
   ;;
   ;; Undefine all generic functions exported from Lisp so that bootstrapping
