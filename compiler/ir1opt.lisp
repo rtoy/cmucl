@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.58 1993/03/14 19:32:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.59 1993/03/19 17:05:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -947,7 +947,7 @@
       (:full
        (multiple-value-bind
 	   (leaf info)
-	   (validate-call-type call (continuation-derived-type fun-cont) nil)
+	   (validate-call-type call (continuation-type fun-cont) nil)
 	 (cond ((functional-p leaf)
 		(convert-call-if-possible
 		 (continuation-use (basic-combination-fun call))
