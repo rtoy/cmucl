@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.5 1994/10/31 04:53:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.6 2001/12/12 20:21:13 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 
 (setf (getf ext:*herald-items* :motif)
       `("    Motif toolkit and graphical debugger 1.0"))
+
+(provide :clm)
 
 (defpackage "INTERFACE"
   (:use "TOOLKIT" "LISP" "EXTENSIONS" "KERNEL")
