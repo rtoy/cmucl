@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.8 1991/08/30 15:40:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.9 1991/08/30 16:45:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -90,8 +90,9 @@
 	      *environment-list*))))
   (setf (search-list "default:") (list (default-directory)))
   (setf (search-list "path:") (parse-unix-search-list :path))
-  (setf (search-list "library:") (parse-unix-search-list :cmucllib)))
-
+  (setf (search-list "library:")
+	(or (parse-unix-search-list :cmucllib)
+	    '("/usr/misc/.cmucl/lib/"))))
 
 (defun save-lisp (core-file-name &key
 				 (purify t)
