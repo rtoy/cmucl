@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.17 1998/01/03 03:18:57 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.18 1998/01/04 22:41:41 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1304,6 +1304,100 @@
 	 (scrub-stack-group-stacks stack-group))))))
 ;;;
 (pushnew 'scrub-all-processes-stacks ext:*before-gc-hooks*)
+
+
+;;; Process-Wait-Until-FD-Usable -- Public.
+;;;
+;;; Wait until FD is usable for DIRECTION.
+;;;
+(defun process-wait-until-fd-usable (fd direction &optional timeout)
+  "Wait until FD is usable for DIRECTION. DIRECTION should be either :INPUT or
+  :OUTPUT. TIMEOUT, if supplied, is the number of seconds to wait before giving
+  up."
+  (declare (type kernel:index fd)
+	   (type (or real null) timeout)
+	   (optimize (speed 3)))
+  (if (or (eq *current-process* *initial-process*)
+	  ;; Can't call process-wait if the scheduling is inhibited.
+	  *inhibit-scheduling*)
+      ;; The initial-process calls the event server to block.
+      (sys:wait-until-fd-usable fd direction timeout)
+      ;; Other processes use process-wait.
+      (flet ((fd-usable-for-input ()
+	       (declare (optimize (speed 3) (safety 1)))
+	       (not (eql (alien:with-alien ((read-fds
+					     (alien:struct unix:fd-set)))
+			   (unix:fd-zero read-fds)
+			   (unix:fd-set fd read-fds)
+			   (unix:unix-fast-select
+			    (1+ fd) (alien:addr read-fds) nil nil 0 0))
+			 0)))
+	     (fd-usable-for-output ()
+	       (declare (optimize (speed 3) (safety 1)))
+	       (not (eql (alien:with-alien ((write-fds
+					     (alien:struct unix:fd-set)))
+			   (unix:fd-zero write-fds)
+			   (unix:fd-set fd write-fds)
+			   (unix:unix-fast-select
+			    (1+ fd) nil (alien:addr write-fds) nil 0 0))
+			 0))))
+
+	(ecase direction
+	  (:input
+	   (unless (fd-usable-for-input)
+	     ;; Wait until input possible.
+	     (sys:with-fd-handler (fd :input
+				   #'(lambda (fd)
+				       (declare (ignore fd)
+						(optimize (speed 3)
+							  (safety 0)))
+				       (mp:process-yield)))
+	       (if timeout
+		   (mp:process-wait-with-timeout "Input Wait" timeout
+						 #'fd-usable-for-input)
+		   (mp:process-wait "Input Wait" #'fd-usable-for-input)))))
+	  (:output
+	   (unless (fd-usable-for-output)
+	     ;; Wait until output possible.
+	     (sys:with-fd-handler (fd :output
+				   #'(lambda (fd)
+				       (declare (ignore fd)
+						(optimize (speed 3)
+							  (safety 0)))
+				       (mp:process-yield)))
+	       (if timeout
+		   (mp:process-wait-with-timeout "Output Wait" timeout
+						 #'fd-usable-for-output)
+		   (mp:process-wait "Output Wait"
+				    #'fd-usable-for-output)))))))))
+
+
+;;; Sleep -- Public
+;;;
+;;; Redefine the sleep function to call process-wait-with-timeout,
+;;; rather than blocking.
+;;;
+(defun sleep (n)
+  "This function causes execution to be suspended for N seconds.  N may
+  be any non-negative, non-complex number."
+  (when (or (not (realp n))
+	    (minusp n))
+    (error "Invalid argument to SLEEP: ~S.~%~
+            Must be a non-negative, non-complex number."
+	   n))
+  (cond ((or (eq *current-process* *initial-process*)
+	     ;; Can't call process-wait if the scheduling is inhibited.
+	     *inhibit-scheduling*)
+	 ;; The initial-process may block.
+	 (multiple-value-bind (sec usec)
+	     (if (integerp n)
+		 (values n 0)
+		 (values (truncate n)
+			 (truncate (* n 1000000))))
+	   (unix:unix-select 0 0 0 0 sec usec))
+	 nil)
+	(t
+	 (process-wait-with-timeout "Sleep" n (constantly nil)))))
 
 
 ;;; Show-Processes

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.53 1997/11/21 12:16:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.54 1998/01/04 22:41:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -439,6 +439,7 @@
       (throw '%end-of-the-world 0)))
 
 
+#-mp ; Multi-processing version defined in multi-proc.lisp.
 (defun sleep (n)
   "This function causes execution to be suspended for N seconds.  N may
   be any non-negative, non-complex number."
