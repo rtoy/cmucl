@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.23 1992/09/07 15:35:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.24 1992/09/29 17:58:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -481,6 +481,7 @@
 	(merge-1-tl-lambda result-lambda lambda)))
      (t
       (dolist (lambda (rest lambdas))
+	(setf (functional-entry-function lambda) nil)
 	(delete-component
 	 (block-component
 	  (node-block (lambda-bind lambda)))))))
