@@ -264,8 +264,11 @@
 	  (let ((name (c::debug-source-name source)))
 	    (ecase (c::debug-source-from source)
 	      (:file
-	       (format t "~&~A " (namestring name))
-	       (ext:format-universal-time t (c::debug-source-created source)))
+	       (format t "~&~A~%  Created: " (namestring name))
+	       (ext:format-universal-time t (c::debug-source-created source))
+	       (let ((comment (c::debug-source-comment source)))
+		 (when comment
+		   (format t "~&  Comment: ~A" comment))))
 	      (:stream (format t "~&~S" name))
 	      (:lisp (format t "~&~S" name)))))))))
 
