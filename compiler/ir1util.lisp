@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.53 1992/04/09 20:06:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.54 1992/04/18 12:06:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1046,12 +1046,32 @@
   (do-nodes (node cont block)
     (typecase node
       (ref (delete-ref node))
+      (cif
+       (flush-dest (if-test node)))
+      ;;
+      ;; The next two cases serve to maintain the invariant that a LET always
+      ;; has a well-formed COMBINATION, REF and BIND.  We delete the lambda
+      ;; whenever we delete any of these, but we must be careful that this LET
+      ;; has not already been partially deleted.
       (basic-combination
+       (when (and (eq (basic-combination-kind node) :local)
+		  ;; Guards COMBINATION-LAMBDA agains the REF being deleted.
+		  (continuation-use (basic-combination-fun node)))
+	 (let ((fun (combination-lambda node)))
+	   ;; If our REF was the 2'nd to last ref, and has been deleted, then
+	   ;; Fun may be a LET for some other combination.
+	   (when (and (member (functional-kind fun) '(:let :mv-let))
+		      (eq (let-combination fun) node))
+	     (delete-lambda fun))))
        (flush-dest (basic-combination-fun node))
        (dolist (arg (basic-combination-args node))
 	 (when arg (flush-dest arg))))
-      (cif
-       (flush-dest (if-test node)))
+      (bind
+       (let ((lambda (bind-lambda node)))
+	 (unless (eq (functional-kind lambda) :deleted)
+	   (assert (member (functional-kind lambda)
+			   '(:let :mv-let :assignment)))
+	   (delete-lambda lambda))))
       (exit
        (let ((value (exit-value node))
 	     (entry (exit-entry node)))
