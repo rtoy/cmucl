@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.53 1998/07/16 13:30:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.54 1998/12/19 16:03:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -271,6 +271,13 @@
 	    (unless (= tail-start tail-end)
 	      (setf pieces (butlast pieces))
 	      (extract-name-type-and-version namestr tail-start tail-end)))
+	;; PVE: Make sure there are no illegal characters in the name
+	;; such as #\Null and #\/.
+	(when (and (stringp name)
+                   (find-if #'(lambda (x)
+				(or (char= x #\Null) (char= x #\/)))
+			    name))
+	  (error 'parse-error))
 	;; Now we have everything we want.  So return it.
 	(values nil ; no host for unix namestrings.
 		nil ; no devices for unix namestrings.
@@ -649,7 +656,9 @@
       (let ((names (names)))
 	(when names
 	  (when (cdr names)
-	    (error "~S is ambiguous:~{~%  ~A~}" pathname names))
+	    (error 'simple-file-error
+		   :format-control "~S is ambiguous:~{~%  ~A~}"
+		   :format-arguments (list pathname names)))
 	  (return (car names))))))))
 
 
