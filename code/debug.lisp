@@ -718,17 +718,28 @@
     (cond ((not (eq :file (di:debug-source-from d-source)))
 	   (format t "~%Source did not come from a file."))
 	  ((not (probe-file name))
-	   (format t "~%Source file no longer exists -- ~A."
+	   (format t "~%Source file no longer exists:~%  ~A."
 		   (namestring name)))
-	  ((= (di:debug-source-created d-source)
-	      (file-write-date name))
+	  (t
 	   (let* ((tlf-offset (di:code-location-top-level-form-offset
 			       location))
 		  (char-offset (aref (di:debug-source-start-positions
 				      d-source)
 				     tlf-offset)))
 	     (with-open-file (f name)
-	       (file-position f char-offset)
+	       (cond
+		((= (di:debug-source-created d-source)
+		    (file-write-date name))
+		 (file-position f char-offset))
+		(t
+		 (format t "~%File has been modified since compilation:~%  ~A~@
+		             Using form offset instead of character position.~%"
+			 (namestring name))
+		 (dotimes (i tlf-offset)
+		   (read f))))
+	   ((not any-valid-p)
+	       (format t "File: ~A~%" (namestring name))
+		  
 	       (let* ((tlf (read f))
 		      (translations (di:form-number-translations
 				     tlf tlf-offset))
@@ -738,10 +749,7 @@
 			 tlf
 			 (svref translations
 				(di:code-location-form-number location))
-			 context))))))
-	    (t
-	     (format t "~%File has been modified since compilation -- ~A."
-		     (namestring name))))))
+			 context)))))))))
 		  (setf *possible-breakpoints*
 			(possible-breakpoints
 			 *default-breakpoint-debug-function*))))))
