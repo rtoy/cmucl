@@ -9,9 +9,10 @@
 ;;;
 ;;;    This file implements local call analysis.  A local call is a function
 ;;; call between functions being compiled at the same time.  If we can tell at
-;;; compile time that such a call is legal, then we modify the flow graph to
-;;; represent the control transfers previously implicit in the call.  This
-;;; change allows us to do inter-routine flow analysis.
+;;; compile time that such a call is legal, then we change the combination
+;;; to call the correct lambda, mark it as local, and add this link to our call
+;;; graph.  Once a call is local, it is then eligible for let conversion, which
+;;; places the body of the function inline.
 ;;;
 ;;;    We cannot always do a local call even when we do have the function being
 ;;; called.  Local call can be explicitly disabled by a NOTINLINE declaration.
@@ -342,8 +343,8 @@
 ;;; we give a warning and mark the Ref as :Notinline to remove it from future
 ;;; consideration.  If the argcount is O.K. then we just convert it.
 ;;;
-(proclaim '(function convert-lambda-call (ref combination lambda) void))
 (defun convert-lambda-call (ref call fun)
+  (declare (type ref ref) (type combination call) (type clambda fun))
   (let ((nargs (length (lambda-vars fun)))
 	(call-args (length (combination-args call))))
     (cond ((= call-args nargs)
@@ -407,9 +408,9 @@
 ;;; new function and the entry point immediately so that everything gets
 ;;; converted during the single pass.
 ;;;
-(proclaim '(function convert-hairy-fun-entry
-		     (ref combination lambda list list list)))
 (defun convert-hairy-fun-entry (ref call entry vars ignores args)
+  (declare (list vars ignores args) (type ref ref) (type combination call)
+	   (type clambda entry))
   (let ((new-fun
 	 (with-ir1-environment call
 	   (ir1-convert-lambda
