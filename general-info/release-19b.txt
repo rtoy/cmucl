@@ -30,6 +30,7 @@ New in this release:
 	   o Memory-mapped file streams.
       - Large file support for Solaris, so CMUCL can handle files
         larger than 2GB.
+      - Support for Mac OS X
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -39,6 +40,12 @@ New in this release:
       - When constructing logical pathnames, all components will be
         automatically upcased.  Needed for print/read consistency, and
         fixes an issue with ASDF and logical pathnames.
+      - Numerous fixes to the float printer, including a new float
+        printer.
+      - Justification (~< ~>) works better.
+      - ~V with the value of NIL in format strings is treated to mean
+        as if it weren't given at all, as specified by ANSI CL.
+      - Characters print consistently with ~:C and ~S.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -48,7 +55,7 @@ New in this release:
         
   * Other changes:
      
-  * Numerous improvements to the PCL implementation of CLOS:
+  * Improvements to the PCL implementation of CLOS:
 
   * Improvements to Hemlock, the Emacs-like editor:
 
