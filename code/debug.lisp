@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.47 1997/12/31 18:01:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.48 1998/01/05 20:09:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1489,6 +1489,7 @@ See the CMU Common Lisp User's Manual for more information.
 		  (setf function (eval (pop command-line)))
 		  (setf *default-breakpoint-debug-function*
 			(di:function-debug-function function))
+                  (setf place *default-breakpoint-debug-function*)
 		  (setf *possible-breakpoints*
 			(possible-breakpoints
 			 *default-breakpoint-debug-function*))))))
