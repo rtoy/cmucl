@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.116 2000/04/06 11:05:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.117 2000/05/23 05:45:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1081,7 +1081,7 @@
 	  (case (car form)
 	    ((make-package shadow shadowing-import export
 	      unexport use-package unuse-package import
-	      old-in-package %in-package)
+	      old-in-package %in-package %defpackage)
 	     (process-cold-load-form form path t))
 	    ((error cerror break signal)
 	     (process-cold-load-form form path nil))
