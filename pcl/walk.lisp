@@ -946,16 +946,14 @@
 (defun walker-environment-bind-1 (env &key (walk-function nil wfnp)
 					   (walk-form nil wfop)
 					   (declarations nil decp)
-					   (lexical-variables nil lexp)
-					   (symbol-macros nil symmacp))
+					   (lexical-variables nil lexp))
   (let ((lock (environment-macro env *key-to-walker-environment*)))
     (list
       (list *key-to-walker-environment*
 	    (list (if wfnp walk-function     (car lock))
 		  (if wfop walk-form         (cadr lock))
 		  (if decp declarations      (caddr lock))
-		  (if lexp lexical-variables (cadddr lock))
-		  (if symmacp symbol-macros  (fifth lock)))))))
+		  (if lexp lexical-variables (cadddr lock)))))))
 		  
 (defun env-walk-function (env)
   (car (env-lock env)))
@@ -969,30 +967,31 @@
 (defun env-lexical-variables (env)
   (cadddr (env-lock env)))
 
-(defun env-symbol-macros (env)
-  (fifth (env-lock env)))
-
 
 (defun note-declaration (declaration env)
-  (let ((lock (env-lock env)))
-    (setf (caddr lock)
-	  (cons declaration (caddr lock)))))
+  (push declaration (caddr (env-lock env))))
 
 (defun note-lexical-binding (thing env)
-  (let ((lock (env-lock env)))
-    (push thing (cadddr lock))
-    (setf (fifth lock) (remove thing (fifth lock) :key #'car))))
+  (push (list thing :lexical-var) (cadddr (env-lock env))))
 
 
 (defun VARIABLE-LEXICAL-P (var env)
-  (member var (env-lexical-variables env)))
+  (let ((entry (member var (env-lexical-variables env) :key #'car)))
+    (when (eq (cadar entry) :lexical-var)
+      entry)))
+
+(defun variable-symbol-macro-p (var env)
+  (let ((entry (member var (env-lexical-variables env) :key #'car)))
+    (when (eq (cadar entry) :macro)
+      entry)))
+
 
 (defvar *VARIABLE-DECLARATIONS* '(special))
 
 (defun VARIABLE-DECLARATION (declaration var env)
   (if (not (member declaration *variable-declarations*))
       (error "~S is not a reckognized variable declaration." declaration)
-      (let ((id (or (member var (env-lexical-variables env)) var)))
+      (let ((id (or (variable-lexical-p var env) var)))
 	(dolist (decl (env-declarations env))
 	  (when (and (eq (car decl) declaration)
 		     (eq (cadr decl) id))
@@ -1309,11 +1308,11 @@
 	 ((not (eq form newform))
 	  (walk-form-internal newform context env))
 	 ((not (consp newform))
-	  (let ((symmac (assoc newform (env-symbol-macros env))))
+	  (let ((symmac (car (variable-symbol-macro-p newform env))))
 	    (if symmac
-		(let ((newnewform (walk-form-internal (cadr symmac)
+		(let ((newnewform (walk-form-internal (cddr symmac)
 						      context env)))
-		  (if (eq newnewform (cadr symmac))
+		  (if (eq newnewform (cddr symmac))
 		      newform
 		      newnewform))
 		newform)))
@@ -1648,11 +1647,10 @@
       env)))
 
 (defun walk-multiple-value-setq (form context env)
-  (let ((symmacs (env-symbol-macros env))
-	(vars (cadr form)))
-    (if (dolist (var vars)
-	  (when (member var symmacs :key #'car)
-	    (return t)))
+  (let ((vars (cadr form)))
+    (if (some #'(lambda (var)
+		  (variable-symbol-macro-p var env))
+	      vars)
 	(let* ((expanded
 		(loop
 		  for var in vars
@@ -1771,9 +1769,9 @@
 	    `(progn ,@walked)))
       (let* ((var (cadr form))
 	     (val (caddr form))
-	     (symmac (assoc var (env-symbol-macros env))))
+	     (symmac (car (variable-symbol-macro-p var env))))
 	(if symmac
-	    (let* ((expanded `(setf ,(cadr symmac) ,val))
+	    (let* ((expanded `(setf ,(cddr symmac) ,val))
 		   (walked (walk-form-internal expanded context env)))
 	      (if (eq expanded walked)
 		  form
@@ -1787,12 +1785,12 @@
   (let* ((bindings (cadr form)))
     (walker-environment-bind
 	(new-env old-env
-		 :lexical-variables (remove-if #'(lambda (x)
-						   (member x bindings
-							   :key #'car))
-					       (env-lexical-variables old-env))
-		 :symbol-macros (append bindings
-					(env-symbol-macros old-env)))
+		 :lexical-variables
+		 (append (mapcar #'(lambda (binding)
+				     `(,(car binding)
+				       :macro . ,(cadr binding)))
+				 bindings)
+			 (env-lexical-variables old-env)))
       (relist* form 'symbol-macrolet bindings
 	       (walk-repeat-eval (cddr form) new-env)))))
 
