@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.18 1998/01/04 22:41:41 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.19 1998/01/11 20:24:25 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -855,8 +855,10 @@
 			     ;; Catch throws to the %end-of-the-world.
 			     (setf *quitting-lisp*
 				   (catch 'lisp::%end-of-the-world
-				     (setf *inhibit-scheduling* nil)
-				     (funcall function)
+				     (with-simple-restart
+					 (destroy "Destroy the process")
+				       (setf *inhibit-scheduling* nil)
+				       (funcall function))
 				     ;; Normal exit.
 				     (throw '%end-of-the-process nil))))
 			(setf *inhibit-scheduling* t)
@@ -925,9 +927,11 @@
 		    ;; Catch throws to the %end-of-the-world.
 		    (setf *quitting-lisp*
 			  (catch 'lisp::%end-of-the-world
-			    (setf *inhibit-scheduling* nil)
-			    (apply (process-initial-function process)
-				   (process-initial-args process))
+			    (with-simple-restart
+				(destroy "Destroy the process")
+			      (setf *inhibit-scheduling* nil)
+			      (apply (process-initial-function process)
+				     (process-initial-args process)))
 			    ;; Normal exit.
 			    (throw '%end-of-the-process nil))))
 	       (setf *inhibit-scheduling* t)
