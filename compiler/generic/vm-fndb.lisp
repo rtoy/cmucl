@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.32 1990/12/18 20:44:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.33 1991/01/08 18:06:44 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -97,7 +97,7 @@
   (unsafe))
 
 
-(defknown make-structure (structure-index t) structure
+(defknown make-structure (structure-index) structure
   (unsafe))
 (defknown structure-type (structure) t
   (foldable flushable))
