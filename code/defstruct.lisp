@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.68 1999/09/22 15:07:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.69 1999/09/23 16:14:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1249,7 +1249,7 @@
 		   (let ((aname (dsd-accessor slot)))
 		     (fmakunbound aname)
 		     (unless (dsd-read-only slot)
-		       (fmakunbound `(setf ,aname slot))))))))
+		       (fmakunbound `(setf ,aname))))))))
 	   (%redefine-defstruct class old-layout layout)
 	   (setq layout (class-layout class))))
 
