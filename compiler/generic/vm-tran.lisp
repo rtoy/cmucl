@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.25 1991/11/05 16:57:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.26 1991/11/16 03:55:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.25 1991/11/05 16:57:09 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.26 1991/11/16 03:55:17 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -250,7 +250,7 @@
     (bit-orc2 32bit-logical-orc2)) do
   (deftransform bitfun
 		((bit-array-1 bit-array-2 result-bit-array)
-		 (simple-bit-vector simple-bit-vector simple-bit-vector) *
+		 '(simple-bit-vector simple-bit-vector simple-bit-vector) '*
 		 :eval-name t  :node node  :policy (>= speed space))
     `(progn
        ,@(unless (policy node (zerop safety))
