@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/transport.lisp,v 1.2 1994/10/31 04:54:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/transport.lisp,v 1.3 1998/12/19 18:44:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,7 +110,8 @@
 			      (4 'system:sap-ref-32)))
 		   (bits (* size 8)))
 	       `(defun ,name (packet data)
-		  (declare (type (signed-byte ,bits) data))
+		  (declare (type (or (signed-byte ,bits)
+		                     (unsigned-byte ,bits)) data))
 		  (let ((fill (system:sap+ (packet-head packet)
 					   (packet-fill packet))))
 		    (setf (,sap-ref fill 0) data)
@@ -126,7 +127,8 @@
 		  (let* ((fill (system:sap+ (packet-head packet)
 					    (packet-fill packet)))
 			 (data (,sap-ref fill 0)))
-		    (declare (type (signed-byte ,bits) data))
+		    (declare (type (or (signed-byte ,bits)
+		                       (unsigned-byte ,bits)) data))
 		    (incf (packet-fill packet) ,size)
 		    data)))))
   (def-packet-writer packet-put-byte 1)
