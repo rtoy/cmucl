@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.24 1993/08/20 22:58:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.25 1993/08/21 00:23:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,7 @@
 (export '(byte-function byte-function-name initialize-byte-compiled-function
 			byte-closure byte-closure-function
 			byte-closure-data byte-function-or-closure
+			byte-function-type
 			*eval-stack* *eval-stack-top*))
 (in-package "C")
 
@@ -133,6 +134,38 @@
     (format stream "Byte function ~S" (byte-function-name s))))
 
 (declaim (freeze-type byte-function-or-closure))
+
+
+;;; BYTE-FUNCTION-TYPE  --  Interface
+;;;
+;;;    Return a function type approximating the type of a byte compiled
+;;; function.  We really only capture the arg signature.
+;;;
+(defun byte-function-type (x)
+  (specifier-type
+   (etypecase x
+     (simple-byte-function
+      `(function ,(make-list (simple-byte-function-num-args x)
+			     :initial-element 't)
+		 *))
+     (hairy-byte-function
+      (collect ((res))
+	(let ((min (hairy-byte-function-min-args x))
+	      (max (hairy-byte-function-max-args x)))
+	  (dotimes (i min) (res 't))
+	  (when (> max min)
+	    (res '&optional)
+	    (dotimes (i (- max min))
+	      (res 't))))
+	(when (hairy-byte-function-rest-arg-p x)
+	  (res '&rest 't))
+	(ecase (hairy-byte-function-keywords-p x)
+	  ((t) (res '&key))
+	  (:allow-others (res '&key '&allow-other-keys))
+	  ((nil)))
+	(dolist (key (hairy-byte-function-keywords x))
+	  (res `(,(car key) t)))
+	`(function ,(res) *))))))
 
 
 ;;;; The stack.
@@ -473,6 +506,22 @@
 (defun two-arg-string= (x y) (string= x y))
 (defun two-arg-string< (x y) (string= x y))
 (defun two-arg-string> (x y) (string= x y))
+
+
+;;;; Misc primitive stubs:
+
+(macrolet ((frob (name &optional (args '(x)))
+	     `(defun ,name ,args (,name ,@args))))
+  (frob %CODE-CODE-SIZE)
+  (frob %CODE-DEBUG-INFO)
+  (frob %CODE-ENTRY-POINTS)
+  (frob %FUNCALLABLE-INSTANCE-FUNCTION)
+  (frob %FUNCALLABLE-INSTANCE-LAYOUT)
+  (frob %FUNCALLABLE-INSTANCE-LEXENV)
+  (frob %FUNCTION-NEXT)
+  (frob %FUNCTION-SELF)
+  (frob %SET-FUNCALLABLE-INSTANCE-FUNCTION (fin new-val))
+  (frob %SXHASH-SIMPLE-SUBSTRING (str count)))
 
 
 ;;;; Funny functions:
@@ -888,7 +937,7 @@
 				 (+ operand vm:code-constants-offset))))
       (unless (if (functionp type)
 		  (funcall type value)
-		  (kernel:%typep value type))
+		  (%typep value type))
 	(with-debugger-info (component old-pc fp)
 	  (error 'type-error
 		 :datum value
