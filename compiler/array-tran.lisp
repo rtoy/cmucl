@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.7 1991/01/13 23:08:25 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.8 1991/01/14 10:52:45 ram Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -536,7 +536,7 @@
   ;;
   ;; If result its T, make it the first arg.
   (deftransform fun ((bit-array-1 bit-array-2 result-bit-array)
-		     (bit-vector bit-vector (constant-argument t)) *
+		     (bit-vector bit-vector (member t)) *
 		     :eval-name t)
     `(,fun bit-array-1 bit-array-2 bit-array-1)))
 
