@@ -22,7 +22,7 @@
 		    *continuation-number* *continuation-numbers*
 		    *number-continuations* *tn-id* *tn-ids* *id-tns*
 		    *label-ids* *label-id* *id-labels* *sb-list*
-		    *unknown-functions* *compiler-error-count*
+		    *compiler-error-count*
 		    *compiler-warning-count* *compiler-note-count*
 		    *compiler-error-output* *compiler-error-bailout*
 		    *compiler-trace-output*
@@ -65,7 +65,6 @@
 	   (*last-format-args* nil)
 	   (*last-message-count* 0)
 	   ;;
-	   (*unknown-functions* nil)
 	   (*compiler-error-count* 0)
 	   (*compiler-warning-count* 0)
 	   (*compiler-note-count* 0)
@@ -75,31 +74,32 @@
       ;;
       ;; This LET comes from COMPILE-TOP-LEVEL.
       ;; The noted DOLIST is a splice from a call that COMPILE-TOP-LEVEL makes.
-      (let* ((*converting-for-interpreter* t)
-	     (lambdas (list (ir1-top-level form 0 t))))
-	(declare (list lambdas))
-	(dolist (lambda lambdas)
-	  (let* ((component
-		  (block-component (node-block (lambda-bind lambda))))
-		 (*all-components* (list component)))
-	    (local-call-analyze component)))
-	(let* ((components (find-initial-dfo lambdas))
-	       (*all-components* components))
-	  (when *check-consistency*
-	    (maybe-mumble "[Check]~%")
-	    (check-ir1-consistency components))
-	  ;;
-	  ;; This DOLIST body comes from the beginning of COMPILE-COMPONENT.
-	  (dolist (component components)
-	    (let ((*compile-component* component))
-	      (maybe-mumble "Env ")
-	      (environment-analyze component))
-	    (annotate-component-for-eval component))
-	  (when *check-consistency*
-	    (maybe-mumble "[Check]~%")
-	    (check-ir1-consistency components)))
-	(ir1-finalize)
-	(car lambdas)))))
+      (with-compilation-unit ()
+	(let* ((*converting-for-interpreter* t)
+	       (lambdas (list (ir1-top-level form 0 t))))
+	  (declare (list lambdas))
+	  (dolist (lambda lambdas)
+	    (let* ((component
+		    (block-component (node-block (lambda-bind lambda))))
+		   (*all-components* (list component)))
+	      (local-call-analyze component)))
+	  (let* ((components (find-initial-dfo lambdas))
+		 (*all-components* components))
+	    (when *check-consistency*
+	      (maybe-mumble "[Check]~%")
+	      (check-ir1-consistency components))
+	    ;;
+	    ;; This DOLIST body comes from the beginning of COMPILE-COMPONENT.
+	    (dolist (component components)
+	      (let ((*compile-component* component))
+		(maybe-mumble "Env ")
+		(environment-analyze component))
+	      (annotate-component-for-eval component))
+	    (when *check-consistency*
+	      (maybe-mumble "[Check]~%")
+	      (check-ir1-consistency components)))
+	  (ir1-finalize)
+	  (car lambdas))))))
 
 
 ;;;; Annotating IR1 for interpretation.
