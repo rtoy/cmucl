@@ -11,4 +11,5 @@
 	    *sc-numbers* *sb-list* *template-names* *sc-names* *sb-names*
 	    *meta-sc-numbers* *primitive-type-names* *move-costs* *save-scs*
 	    *save-costs* *restore-costs* *parsed-vops*
-	    *compiler-error-context*))
+	    *compiler-error-context* *word-length* target-byte-order
+	    *undefined-warnings* *meta-sb-names* *meta-sc-names*))
