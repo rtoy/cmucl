@@ -7,11 +7,11 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.17 1990/02/24 17:02:50 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.18 1990/02/26 18:18:38 ch Exp $
 ;;;
-;;;    This file contains some parameterizations of various VM attributes for
-;;; the MIPS.  This file is separate from other stuff so that it can be compiled
-;;; and loaded earlier.
+;;;    This file contains some parameterizations of various VM
+;;; attributes for the MIPS.  This file is separate from other stuff so 
+;;; that it can be compiled and loaded earlier. 
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
@@ -20,17 +20,16 @@
 
 (in-package "VM")
 
-
 (export '(sc-number-limit most-positive-cost word-bits byte-bits word-shift
 	  word-bytes target-byte-order target-read-only-space-start
 	  target-static-space-start target-dynamic-space-start
 	  target-control-stack-start target-binding-stack-start
 	  target-heap-start target-heap-length lowtag-bits lowtag-mask
 	  lowtag-limit type-bits type-mask pad-data-block even-fixnum-type
-	  function-pointer-type other-immediate-type list-pointer-type
-	  odd-fixnum-type structure-pointer-type other-pointer-type
-	  bignum-type ratio-type single-float-type double-float-type
-	  complex-type simple-array-type simple-string-type
+	  function-pointer-type other-immediate-0-type other-immediate-1-type
+	  list-pointer-type odd-fixnum-type structure-pointer-type
+	  other-pointer-type bignum-type ratio-type single-float-type
+	  double-float-type complex-type simple-array-type simple-string-type
 	  simple-bit-vector-type simple-vector-type
 	  simple-array-unsigned-byte-2-type
 	  simple-array-unsigned-byte-4-type
@@ -59,8 +58,9 @@
 (defconstant sc-number-limit 20)
 
 ;;; The inclusive upper bound on a cost.  We want to write cost frobbing
-;;; code so that it is portable, but works on fixnums.  This constant should be
-;;; defined so that adding two costs cannot result in fixnum overflow.
+;;; code so that it is portable, but works on fixnums.  This constant
+;;; should be defined so that adding two costs cannot result in fixnum
+;;; overflow.
 ;;;
 (defconstant most-positive-cost (1- (expt 2 20)))
 
@@ -81,14 +81,16 @@
   "Number of bytes in a word.")
 
 (defconstant target-byte-order :little-endian
-  "The byte order of the target machine.  :big-endian has the MSB first (RT)
-  and :little-endian has the MSB last (VAX).")
+  "The byte order of the target machine.  Should either be :big-endian
+  which has the MSB first (RT) or :little-endian which has the MSB last
+  (VAX).")
 
 
 
 ;;;; Description of the target address space.
 
 ;;; Where to put the different spaces and stacks.
+;;; 
 (defconstant target-read-only-space-start #x20000000)
 (defconstant target-static-space-start #x30000000)
 (defconstant target-dynamic-space-start #x40000000)
@@ -96,6 +98,7 @@
 (defconstant target-binding-stack-start #x60000000)
 
 ;;; How much memory to validate for lisp.
+;;; 
 (defconstant target-heap-start #x20000000)
 (defconstant target-heap-length #x50000000)
 
@@ -149,23 +152,23 @@
 
 ;;; The main types.  These types are represented by the low three bits of the
 ;;; pointer or immeditate object.
-
+;;; 
 (defenum (:suffix -type)
   even-fixnum
   function-pointer
-  other-immediate
+  other-immediate-0
   list-pointer
   odd-fixnum
   structure-pointer
-  unused
+  other-immediate-1
   other-pointer)
 
-;;; The number types.  Each of these types is in the header of non-fixnum
-;;; numbers on the heap.
-
+;;; The heap types.  Each of these types is in the header of objects in
+;;; the heap.
+;;; 
 (defenum (:suffix -type
-	  :start (+ (ash 1 lowtag-bits) other-immediate-type)
-	  :step (ash 1 lowtag-bits))
+	  :start (+ (ash 1 lowtag-bits) other-immediate-0-type)
+	  :step (ash 1 (1- lowtag-bits)))
   bignum
   ratio
   single-float
@@ -195,8 +198,8 @@
   closure-header
   value-cell-header
   symbol-header
-  character
-  SAP
+  base-character
+  sap
   unbound-marker)
 
 
@@ -214,8 +217,9 @@
 
 ;;;; Static symbols.
 
-;;; These symbols are loaded into static space directly after NIL so that
-;;; the system can compute their address by adding a constant amount to NIL.
+;;; These symbols are loaded into static space directly after NIL so
+;;; that the system can compute their address by adding a constant
+;;; amount to NIL.
 ;;;
 
 (defparameter static-symbols
