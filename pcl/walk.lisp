@@ -810,8 +810,8 @@
 
 ;;; In CMU Common Lisp, the environment (well, the function/macro part of
 ;;; the environment) is represented as a list of entries, with each entry
-;;; being of the form (name type . fn) where type is either macro or
-;;; function.
+;;; being of the form (name . thing), where thing is either
+;;; (macro . <interpreted-function) or a C::FUNCTIONAL structure.
 
 #+:CMU
 (progn
@@ -834,24 +834,25 @@
     (c::make-lexenv
      :functions
      (append (mapcar #'(lambda (f)
-			 (list (car f) 'function))
+			 (cons (car f) (c::make-functional)))
 		     functions)
 	     (mapcar #'(lambda (m)
-			 (list* (car m) 'lisp::macro (cadr m)))
+			 (list* (car m) 'c::macro
+				(coerce (cadr m) 'function)))
 		     macros)))))
 
 (defun environment-function (env fn)
   (when env
-    (let ((entry (assoc fn (c::lexenv-functions env) :test #'eq)))
-      (and entry 
-	   (eq (cadr entry) 'function)
-	   (cddr entry)))))
+    (let ((entry (assoc fn (c::lexenv-functions env) :test #'equal)))
+      (and entry
+	   (c::functional-p (cdr entry))
+	   (cdr entry)))))
 
 (defun environment-macro (env macro)
   (when env
     (let ((entry (assoc macro (c::lexenv-functions env) :test #'eq)))
       (and entry 
-	   (eq (cadr entry) 'lisp::macro)
+	   (eq (cadr entry) 'c::macro)
 	   (cddr entry)))))
 
 ); end of #+:CMU
