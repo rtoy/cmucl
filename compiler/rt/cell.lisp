@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.5 1992/01/01 15:06:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.6 1992/01/15 18:15:06 ram Exp $
 ;;;
 ;;; This file contains the VM definition of various primitive memory access
 ;;; VOPs for the IBM RT.
@@ -264,9 +264,9 @@
       (load-symbol-value bsp *binding-stack-pointer*)
       (inst c where bsp)
       (inst bc :eq done)
-      (loadw symbol bsp (- vm:binding-symbol-slot vm:binding-size))
 
       (emit-label loop)
+      (loadw symbol bsp (- vm:binding-symbol-slot vm:binding-size))
       (inst c symbol 0)
       (inst bc :eq skip)
       (loadw value bsp (- vm:binding-value-slot vm:binding-size))
@@ -278,8 +278,7 @@
       (inst dec bsp (* vm:binding-size vm:word-bytes))
       (store-symbol-value bsp *binding-stack-pointer*)
       (inst c where bsp)
-      (inst bncx :eq loop)
-      (loadw symbol bsp (- vm:binding-symbol-slot vm:binding-size))
+      (inst bnc :eq loop)
 
       (emit-label done))))
 
