@@ -12,14 +12,14 @@
 ;;; written prior permission.
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/package.lisp,v 1.5 1999/03/16 23:37:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/package.lisp,v 1.6 2004/03/23 12:16:47 emarsden Exp $")
 
 ;;; The ANSI Common Lisp way
 
 (common-lisp:in-package :common-lisp-user)
 
-(defpackage xlib
-  (:use common-lisp)
+(defpackage :xlib
+  (:use :common-lisp)
   (:size 3000)
   (:export
     *version* access-control access-error access-hosts

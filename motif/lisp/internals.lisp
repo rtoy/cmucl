@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/internals.lisp,v 1.8 2003/04/11 12:09:10 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/internals.lisp,v 1.9 2004/03/23 12:16:49 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -69,7 +69,7 @@
 	      (ext:connect-to-inet-socket host (+ *xt-tcp-port*
 						  (unix:unix-getuid)))))
 	  (handler-case
-	      (ext::connect-to-unix-socket
+	      (ext:connect-to-unix-socket
 	       (if pid
 		   (format nil "/tmp/.motif_socket-p~D" pid)
 		   (format nil "/tmp/.motif_socket-u~D" (unix:unix-getuid))))

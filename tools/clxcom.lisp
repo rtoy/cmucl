@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.28 2003/11/25 22:07:29 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.29 2004/03/23 12:16:48 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,7 +14,7 @@
   (when (find-package "XLIB")
     (rename-package (find-package "XLIB") "OLD-XLIB"))
   
-  (make-package "XLIB" :use '("LISP")))
+  (make-package "XLIB" :use '("COMMON-LISP")))
 
 #+(and (not pcl) (not no-pcl-clx))
 (progn
