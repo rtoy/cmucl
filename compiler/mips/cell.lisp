@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.7 1990/02/18 06:00:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.8 1990/02/20 16:04:50 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -21,15 +21,22 @@
 
 (export '(cons-structure cons-size cons-car-slot cons-cdr-slot
 
-	  symbol-structure symbol-size symbol-value-slot
-	  symbol-function-slot symbol-plist-slot symbol-name-slot
-	  symbol-package-slot
+	  bignum-structure bignum-size bignum-digits-offset
 
-	  vector-structure vector-length-slot vector-data-offset
+	  ratio-structure ratio-size ratio-numerator-slot
+	  ratio-denominator-slot
+
+	  single-float-structure single-float-size single-float-value-slot
+
+	  double-float-structure double-float-size double-float-value-slot
+
+	  complex-structure complex-size complex-real-slot complex-imag-slot
 
 	  array-structure array-fill-pointer-slot array-elements-slot
 	  array-data-slot array-displacement-slot array-displaced-p-slot
 	  array-dimensions-offset
+
+	  vector-structure vector-length-slot vector-data-offset
 
 	  code-structure code-code-size-slot code-entry-points-slot
 	  code-debug-info-slot code-constants-offset
@@ -39,7 +46,14 @@
 	  function-header-arglist-slot function-header-type-slot
 	  function-header-code-offset
 
-	  closure-structure closure-function-slot closure-info-offset))
+	  return-pc-structure return-pc-return-point-offset
+
+	  closure-structure closure-function-slot closure-info-offset
+
+	  symbol-structure symbol-size symbol-value-slot
+	  symbol-function-slot symbol-plist-slot symbol-name-slot
+	  symbol-package-slot))
+
 
 (in-package "C")
 
@@ -99,7 +113,9 @@
 						(string name)
 						"-SIZE"))
 	       ,index
-	       ,(format nil "Number of slots used by each ~S." name))
+	       ,(format nil
+		  "Number of slots used by each ~S~@[ including the header~]."
+		  name header))
 	    compile-time))
     `(progn
        (eval-when (compile load eval)
@@ -117,19 +133,23 @@
        :set-vop set-cdr :set-trans %rplacd))
 
 
-(defslots (symbol :lowtag other-pointer-type)
-  (value :set-vop set :set-trans set)
-  (function :set-vop set-symbol-function :set-trans %sp-set-definition)
-  (plist :ref-vop symbol-plist :ref-trans symbol-plist
-	 :set-vop set-symbol-plist :set-trans %sp-set-plist)
-  (name :ref-vop symbol-name :ref-trans symbol-name)
-  (package :ref-vop symbol-package :ref-trans symbol-package
-	   :set-vop set-package))
+(defslots (bignum :lowtag other-pointer-type)
+  (digits :rest t :boxed nil))
 
+(defslots (ratio :lowtag other-pointer-type)
+  numerator
+  denominator)
 
-(defslots (vector :lowtag other-pointer-type)
-  length
-  (data :rest t :boxed nil))
+(defslots (single-float :lowtag other-pointer-type)
+  value)
+
+(defslots (double-float :lowtag other-pointer-type)
+  value
+  more-value)
+
+(defslots (complex :lowtag other-pointer-type)
+  real
+  imag)
 
 (defslots (array :lowtag other-pointer-type)
   fill-pointer
@@ -138,6 +158,10 @@
   displacement
   displaced-p
   (dimensions :rest t))
+
+(defslots (vector :lowtag other-pointer-type)
+  length
+  (data :rest t :boxed nil))
 
 (defslots (code :lowtag other-pointer-type)
   code-size
@@ -153,9 +177,21 @@
   type
   (code :rest t :boxed nil))
 
+(defslots (return-pc :lowtag other-pointer-type)
+  (return-point :boxed nil :rest t))
+
 (defslots (closure :lowtag function-pointer-type)
   function
   (info :rest t))
+
+(defslots (symbol :lowtag other-pointer-type)
+  (value :set-vop set :set-trans set)
+  (function :set-vop set-symbol-function :set-trans %sp-set-definition)
+  (plist :ref-vop symbol-plist :ref-trans symbol-plist
+	 :set-vop set-symbol-plist :set-trans %sp-set-plist)
+  (name :ref-vop symbol-name :ref-trans symbol-name)
+  (package :ref-vop symbol-package :ref-trans symbol-package
+	   :set-vop set-package))
 
 
 
@@ -178,10 +214,10 @@
 ;;;
 (define-vop (symbol-value checked-cell-ref)
   (:translate symbol-value)
+  #+nil
   (:generator 9
     (move obj-temp object)
     (loadw value obj-temp symbol-value-slot)
-    #+nil
     (let ((err-lab (generate-error-code node clc::error-symbol-unbound
 					obj-temp)))
       (test-special-value value temp '%trap-object err-lab nil))))
@@ -191,10 +227,10 @@
 ;;;
 (define-vop (symbol-function checked-cell-ref)
   (:translate symbol-function)
+  #+nil
   (:generator 10
     (move obj-temp object)
     (loadw value obj-temp symbol-function-slot)
-    #+nil
     (let ((err-lab (generate-error-code node clc::error-symbol-undefined
 					obj-temp)))
       (test-simple-type value temp err-lab t system:%function-type))))
@@ -238,12 +274,12 @@
 
 
 (define-vop (fast-symbol-value cell-ref)
-  (:variant symbol-value-slot other-pointer-type)
+  (:variant vm:symbol-value-slot vm:other-pointer-type)
   (:policy :fast)
   (:translate symbol-value))
 
 (define-vop (fast-symbol-function cell-ref)
-  (:variant symbol-function-slot other-pointer-type)
+  (:variant vm:symbol-function-slot vm:other-pointer-type)
   (:policy :fast)
   (:translate symbol-function))
 
@@ -254,11 +290,6 @@
 #+nil
 (define-miscop unbind (num) :results ())
 
-
-;;;; List hackery:
-
-#+nil
-(define-miscop cons (x y) :translate cons)
 
 
 ;;;; Value cell and closure hackery:
@@ -286,10 +317,8 @@
 
 ;;;; Structure hackery:
 
-#+nil
 (define-vop (structure-ref slot-ref)
-  (:variant vector-header-length other-pointer-type))
+  (:variant vm:vector-data-offset vm:other-pointer-type))
 
-#+nil
 (define-vop (structure-set slot-set)
-  (:variant vector-header-length other-pointer-type))
+  (:variant vm:vector-data-offset vm:other-pointer-type))
