@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.13 1993/08/25 18:05:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.14 1993/08/26 01:26:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
     (:raw
      (let (#+gengc (ra (make-symbol "RA")))
        (values
-	`((inst jal #+gengc ra (make-fixup ',name :assembly-routine))
+	`((inst jal #+gengc ,ra (make-fixup ',name :assembly-routine))
 	  (inst nop))
 	`(#+gengc
 	  (:temporary (:sc descriptor-reg :from (:eval 0) :to (:eval 1)
