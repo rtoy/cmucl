@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.17 1991/05/24 19:35:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.18 1991/06/10 13:24:20 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2144,9 +2144,8 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 ;;; - | g*y1 high | g*y1 low |   0   |
 ;;;    ------------------------------
 ;;;                ...                   <   guess*y2     ???
-;;; I'm not sure why, but we test this ignoring the high digit, comparing only
-;;; the bottom two digits with the two digits of guess*y2.  If guess*y2 is
-;;; greater, then we need to decrement the guess and test again.
+;;; If guess*y2 is greater, then we decrement our guess by one and try again.
+;;; This returns a guess that is either correct or one too large.
 ;;;
 (defun bignum-truncate-guess (y1 y2 x-i x-i-1 x-i-2)
   (declare (type bignum-element-type y1 y2 x-i x-i-1 x-i-2))
@@ -2157,20 +2156,24 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
     (loop
       (multiple-value-bind (high-guess*y1 low-guess*y1)
 			   (%multiply guess y1)
-	(declare (type bignum-element-type low-guess*y1)
-		 (ignore high-guess*y1))
+	(declare (type bignum-element-type low-guess*y1 high-guess*y1))
 	(multiple-value-bind (high-guess*y2 low-guess*y2)
 			     (%multiply guess y2)
 	  (declare (type bignum-element-type high-guess*y2 low-guess*y2))
-	  (let ((middle-digit (%subtract-with-borrow x-i-1 low-guess*y1 1)))
+	  (multiple-value-bind (middle-digit borrow)
+			       (%subtract-with-borrow x-i-1 low-guess*y1 1)
+	    (declare (type bignum-element-type middle-digit)
+		     (fixnum borrow))
 	    ;; Supplying borrow of 1 means there was no borrow, and we know
 	    ;; x-i-2 minus 0 requires no borrow.
-	    (declare (type bignum-element-type middle-digit))
-	    (if (or (%digit-greater high-guess*y2 middle-digit)
-		    (and (%digit-compare middle-digit high-guess*y2)
-			 (%digit-greater low-guess*y2 x-i-2)))
-		(setf guess (%subtract-with-borrow guess 1 1))
-		(return guess))))))))
+	    (let ((high-digit (%subtract-with-borrow x-i high-guess*y1 borrow)))
+	      (declare (type bignum-element-type high-digit))
+	      (if (and (%digit-compare high-digit 0)
+		       (or (%digit-greater high-guess*y2 middle-digit)
+			   (and (%digit-compare middle-digit high-guess*y2)
+				(%digit-greater low-guess*y2 x-i-2))))
+		  (setf guess (%subtract-with-borrow guess 1 1))
+		  (return guess)))))))))
 
 ;;; SHIFT-Y-FOR-TRUNCATE -- Internal.
 ;;;
