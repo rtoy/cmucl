@@ -187,7 +187,11 @@
 
   (let ((name (dd-name info)))
     (dolist (inc (dd-includes info))
-      (pushnew name (dd-included-by (info type structure-info inc))))
+      (let ((info (info type structure-info inc)))
+	(unless info
+	  (error "Structure type ~S is included by ~S but not defined."
+		 inc name))
+	(pushnew name (dd-included-by info))))
 
     (let ((old (info type structure-info name)))
       (when old
@@ -197,10 +201,6 @@
     (setf (info type structure-info name) info)
     (when (info type expander name)
       (setf (info type expander name) nil)))
-
-  (dolist (inc (dd-includes info))
-    (pushnew (dd-name info)
-	     (dd-included-by (info type structure-info inc))))
 
   ;;; ### Should declare arg/result types. 
   (let ((copier (dd-copier info)))
