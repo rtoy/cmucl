@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pseudo-vops.lisp,v 1.6 1992/06/04 15:52:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pseudo-vops.lisp,v 1.7 1992/06/04 16:13:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,6 +25,7 @@
 (define-vop (note-environment-start)
   (:info start-lab)
   (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 0
     (emit-label start-lab)
     (note-debug-location vop start-lab :non-local-entry)))
