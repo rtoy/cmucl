@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/interface.lisp,v 1.12 2001/07/08 17:41:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/interface.lisp,v 1.13 2003/06/18 11:26:06 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -773,7 +773,7 @@
 	     (ext:process-alive-p xt::*local-motif-server*))
     (ext:process-kill xt::*local-motif-server* :sigint)))
 
-(pushnew #'cleanup-motif cl::*cleanup-functions*)
+(pushnew #'cleanup-motif lisp::*cleanup-functions*)
 
 ;;(in-package "EXT")
 ;;
