@@ -1,3 +1,23 @@
+3/15/93 to 4/3/93  [no PCL or CLM]
+
+Compiler:
+
+Fixed call to CONTINUATION-DERIVED-TYPE to be CONTINUATION-TYPE so that we
+don't choke on values types in the functional position.
+
+Fixed FREEZE-TYPE to seal all subclasses.
+
+Profile.lisp updated for new assembler and block-compiler ir1opt.
+
+Fixed sparc GET-TYPE vop.
+
+
+Purify:
+
+Fixed ptrans_instance to actually return the result of calling ptrans_boxed
+instead of relying on the result still being in the correct register.
+
+
 
 Interface: [note, not loaded in this release, because of PCL]
 The debugger will now reuse old debugging panes rather than creating
