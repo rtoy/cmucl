@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.22 1992/02/14 23:45:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.23 1992/03/10 18:35:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -651,19 +651,23 @@
 ;;;
 (defun find-caller-name ()
   (if *finding-name*
-      "<error finding name>"
+      (values "<error finding name>" nil)
       (handler-case
-	  (let ((*finding-name* t))
-	    (di:debug-function-name
-	     (di:frame-debug-function
-	      (di:frame-down (di:frame-down (di:top-frame))))))
-	(error () "<error finding name>")
-	(di:debug-condition () "<error finding name>"))))
+	  (let* ((*finding-name* t)
+		 (frame (di:frame-down (di:frame-down (di:top-frame))))
+		 (name (di:debug-function-name
+			(di:frame-debug-function frame))))
+	    (di:flush-frames-above frame)
+	    (values name frame))
+	(error ()
+	  (values "<error finding name>" nil))
+	(di:debug-condition ()
+	  (values "<error finding name>" nil)))))
 
 
 (defun find-interrupted-name ()
   (if *finding-name*
-      "<error finding name>"
+      (values "<error finding name>" nil)
       (handler-case
 	  (let ((*finding-name* t))
 	    (do ((frame (di:top-frame) (di:frame-down frame)))
@@ -671,11 +675,14 @@
 		     (and (di::compiled-frame-p frame)
 			  (di::compiled-frame-escaped frame)))
 		 (if (di::compiled-frame-p frame)
-		     (di:debug-function-name
-		      (di:frame-debug-function frame))
-		     "<error finding name>"))))
-	(error () "<error finding name>")
-	(di:debug-condition () "<error finding name>"))))
+		     (values (di:debug-function-name
+			      (di:frame-debug-function frame))
+			     frame)
+		     (values "<error finding name>" nil)))))
+	(error ()
+	  (values "<error finding name>" nil))
+	(di:debug-condition ()
+	  (values "<error finding name>" nil)))))
 
 
 ;;;; internal-error signal handler.
@@ -687,34 +694,36 @@
      (multiple-value-bind
 	 (error-number arguments)
 	 (vm:internal-error-arguments scp)
-       (let ((fp (int-sap (vm:sigcontext-register scp vm::cfp-offset)))
-	     (name (find-interrupted-name))
-	     (info (and (< -1 error-number (length *internal-errors*))
-			(svref *internal-errors* error-number))))
-	 (cond ((null info)
-		(error 'simple-error
-		       :function-name name
-		       :format-string
-		       "Unknown internal error, ~D?  args=~S"
-		       :format-arguments
-		       (list error-number
-			     (mapcar #'(lambda (sc-offset)
-					 (di::sub-access-debug-var-slot
-					  fp sc-offset scp))
-				     arguments))))
-	       ((null (error-info-function info))
-		(error 'simple-error
-		       :function-name name
-		       :format-string
-		       "Internal error ~D: ~A.  args=~S"
-		       :format-arguments
-		       (list error-number
-			     (error-info-description info)
-			     (mapcar #'(lambda (sc-offset)
-					 (di::sub-access-debug-var-slot
-					  fp sc-offset scp))
-				     arguments))))
-		(t
-		 (funcall (error-info-function info) name fp scp
-			  arguments))))))))
+       (multiple-value-bind
+	   (name debug:*stack-top-hint*)
+	   (find-interrupted-name)
+	 (let ((fp (int-sap (vm:sigcontext-register scp vm::cfp-offset)))
+	       (info (and (< -1 error-number (length *internal-errors*))
+			  (svref *internal-errors* error-number))))
+	   (cond ((null info)
+		  (error 'simple-error
+			 :function-name name
+			 :format-string
+			 "Unknown internal error, ~D?  args=~S"
+			 :format-arguments
+			 (list error-number
+			       (mapcar #'(lambda (sc-offset)
+					   (di::sub-access-debug-var-slot
+					    fp sc-offset scp))
+				       arguments))))
+		 ((null (error-info-function info))
+		  (error 'simple-error
+			 :function-name name
+			 :format-string
+			 "Internal error ~D: ~A.  args=~S"
+			 :format-arguments
+			 (list error-number
+			       (error-info-description info)
+			       (mapcar #'(lambda (sc-offset)
+					   (di::sub-access-debug-var-slot
+					    fp sc-offset scp))
+				       arguments))))
+		 (t
+		  (funcall (error-info-function info) name fp scp
+			   arguments)))))))))
 
