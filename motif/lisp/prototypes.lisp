@@ -703,7 +703,7 @@
   ((w widget))
   ((member t nil) fixnum fixnum))
 
-(def-toolkit-request "XmTextGetString" text-get-stringtring :confirm
+(def-toolkit-request "XmTextGetString" text-get-string :confirm
   "Accesses the string value of a Text widget."
   ((w widget)) (simple-string))
 
