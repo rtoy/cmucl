@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.10 1990/05/13 19:16:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.11 1990/05/19 09:42:50 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -359,7 +359,7 @@ default-value-5
   (:results
    (start :scs (descriptor-reg))
    (count :scs (descriptor-reg)))
-  (:temporary (:sc descriptor-reg :offset args-offset
+  (:temporary (:sc descriptor-reg :offset old-fp-offset
 		   :from :eval :to (:result 0))
 	      values-start)
   (:temporary (:sc any-reg :offset nargs-offset
@@ -713,15 +713,13 @@ default-value-5
      (function-arg :scs (descriptor-reg) :target lexenv)
      (old-fp-arg :scs (descriptor-reg) :target old-fp)
      (return-pc-arg :scs (descriptor-reg) :target return-pc)
-     (args-arg :scs (descriptor-reg) :target args))
+     (args :scs (descriptor-reg)))
     (:temporary (:sc any-reg :offset lexenv-offset :from (:argument 0))
 		lexenv)
     (:temporary (:sc any-reg :offset old-fp-offset :from (:argument 1))
 		old-fp)
     (:temporary (:sc any-reg :offset lra-offset :from (:argument 2))
 		return-pc)
-    (:temporary (:sc any-reg :offset args-offset :from (:argument 3))
-		args)
     (:temporary (:sc any-reg :offset nargs-offset) nargs)
     (:temporary (:scs (descriptor-reg)) function)
     ,@(mapcar #'(lambda (offset name)
@@ -734,11 +732,11 @@ default-value-5
     (:generator 75
       (let ((loop (gen-label))
 	    (test (gen-label)))
+	;; Move these into the passing locations if they are not already there.
 	(move lexenv function-arg)
 	(move old-fp old-fp-arg)
 	(move return-pc return-pc-arg)
-	(move args args-arg)
-	
+
 	;; Calculate NARGS (as a fixnum)
 	(inst subu nargs csp-tn args)
 	
