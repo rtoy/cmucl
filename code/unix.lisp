@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.71 2001/02/23 12:46:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.72 2001/03/04 20:12:46 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -528,7 +528,7 @@
       (setf (svref array (car error)) (cdr error)))
     `(progn
        (defvar *unix-errors* ',array)
-       (proclaim '(simple-vector *unix-errors*)))))
+       (declaim (simple-vector *unix-errors*)))))
 
 ) ;eval-when
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.34 2001/03/01 21:45:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.35 2001/03/04 20:12:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,15 +136,15 @@
   "If an interpreted function goes uncalled for more than this many GCs, then
   it is eligible for flushing from the cache.")
 
-(proclaim '(type c::index
-		 *interpreted-function-cache-minimum-size*
-		 *interpreted-function-cache-threshold*))
+(declaim (type c::index
+	       *interpreted-function-cache-minimum-size*
+	       *interpreted-function-cache-threshold*))
 
 
 ;;; The list of INTERPRETED-FUNCTIONS that have translated definitions.
 ;;;
 (defvar *interpreted-function-cache* nil)
-(proclaim '(type list *interpreted-function-cache*))
+(declaim (type list *interpreted-function-cache*))
 
 
 ;;; MAKE-INTERPRETED-FUNCTION  --  Interface

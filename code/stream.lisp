@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.44 2000/08/24 19:55:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.45 2001/03/04 20:12:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -309,7 +309,7 @@
 ;;; We proclaim them inline here, then proclaim them notinline at EOF,
 ;;; so, except in this file, they are not inline by default, but they can be.
 ;;;
-(proclaim '(inline read-char unread-char read-byte listen))
+(declaim (inline read-char unread-char read-byte listen))
 (defun read-char (&optional (stream *standard-input*) (eof-errorp t) eof-value
 			    recursive-p)
   "Inputs a character from Stream and returns it."
@@ -1376,7 +1376,7 @@
 	   (stream-misc-dispatch sub-stream operation arg1 arg2))))))
 
 
-(proclaim '(maybe-inline read-char unread-char read-byte listen))
+(declaim (maybe-inline read-char unread-char read-byte listen))
 
 
 

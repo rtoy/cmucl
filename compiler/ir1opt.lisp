@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.73 2000/09/26 16:40:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.74 2001/03/04 20:12:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,7 +88,7 @@
 ;;; slot is true, just return that value, otherwise recompute and stash the
 ;;; value there.
 ;;;
-(proclaim '(inline continuation-derived-type))
+(declaim (inline continuation-derived-type))
 (defun continuation-derived-type (cont)
   (declare (type continuation cont))
   (or (continuation-%derived-type cont)
@@ -116,7 +116,7 @@
 ;;;    Call CONTINUATION-DERIVED-TYPE to make sure the slot is up to date, then
 ;;; return it.
 ;;;
-(proclaim '(inline continuation-type-check))
+(declaim (inline continuation-type-check))
 (defun continuation-type-check (cont)
   (declare (type continuation cont))
   (continuation-derived-type cont)

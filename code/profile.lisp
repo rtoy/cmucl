@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.18 1998/01/19 05:54:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.19 2001/03/04 20:12:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,9 +176,9 @@
 (defvar *enclosed-time* 0)
 (defvar *enclosed-consing* 0)
 (defvar *enclosed-profilings* 0)
-(proclaim '(type time-type *enclosed-time*))
-(proclaim '(type consing-type *enclosed-consing*))
-(proclaim '(fixnum *enclosed-profilings*))
+(declaim (type time-type *enclosed-time*))
+(declaim (type consing-type *enclosed-consing*))
+(declaim (fixnum *enclosed-profilings*))
 
 
 ;;; The number of seconds a bare function call takes.  Factored into the other
@@ -195,8 +195,8 @@
 ;;;
 (defvar *total-profile-overhead*)
 
-(proclaim '(single-float *call-overhead* *internal-profile-overhead*
-			 *total-profile-overhead*))
+(declaim (single-float *call-overhead* *internal-profile-overhead*
+		       *total-profile-overhead*))
 
 
 ;;;; Profile encapsulations:
@@ -570,7 +570,7 @@
 ;;;    Dummy function we profile to find profiling overhead.  Declare
 ;;; debug-info to make sure we have arglist info.
 ;;;
-(proclaim '(notinline compute-time-overhead-aux))
+(declaim (notinline compute-time-overhead-aux))
 (defun compute-time-overhead-aux (x)
   (declare (ext:optimize-interface (debug 2)))
   (declare (ignore x)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.41 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.42 2001/03/04 20:12:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,7 +60,7 @@
 
 ;;; IR2-BLOCK-ENVIRONMENT  --  Interface
 ;;;
-(proclaim '(inline ir2-block-environment))
+(declaim (inline ir2-block-environment))
 (defun ir2-block-environment (2block)
   (declare (type ir2-block 2block))
   (block-environment (ir2-block-block 2block)))
@@ -100,7 +100,7 @@
 ;;; The PC for the location most recently dumped.
 ;;;
 (defvar *previous-location*)
-(proclaim '(type index *previous-location*))
+(declaim (type index *previous-location*))
 
 ;;; DUMP-1-LOCATION  --  Internal
 ;;;

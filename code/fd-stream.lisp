@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.54 2000/10/16 17:30:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.55 2001/03/04 20:12:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,7 @@
 ;;;
 ;;; Returns the next available buffer, creating one if necessary.
 ;;;
-(proclaim '(inline next-available-buffer))
+(declaim (inline next-available-buffer))
 ;;;
 (defun next-available-buffer ()
   (if *available-buffers*

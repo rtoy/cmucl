@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.61 2000/10/16 17:31:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.62 2001/03/04 20:12:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -257,8 +257,8 @@
 ;;; %End-Of-The-World.  We quit this way so that all outstanding cleanup forms
 ;;; in Unwind-Protects will get executed.
 
-(proclaim '(special *lisp-initialization-functions*
-		    *load-time-values*))
+(declaim (special *lisp-initialization-functions*
+		  *load-time-values*))
 
 (eval-when (compile)
   (defmacro print-and-call (name)

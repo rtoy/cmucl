@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.44 2000/07/07 09:33:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.45 2001/03/04 20:12:22 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
 	  def-boolean-attribute attributes-union attributes-intersection
 	  attributes=))
 
-(proclaim '(special *wild-type* *universal-type* *compiler-error-context*))
+(declaim (special *wild-type* *universal-type* *compiler-error-context*))
 
 ;;;; Deftypes:
 
@@ -46,7 +46,7 @@
 
 ;;;; The Policy macro:
 
-(proclaim '(special *lexical-environment*))
+(declaim (special *lexical-environment*))
 
 (eval-when (compile load eval)
 (defconstant policy-parameter-slots
@@ -109,7 +109,7 @@
 ;;;    Concatenate together the names of some strings and symbols, producing
 ;;; a symbol in the current package.
 ;;;
-(proclaim '(function symbolicate (&rest (or string symbol)) symbol))
+(declaim (function symbolicate (&rest (or string symbol)) symbol))
 (defun symbolicate (&rest things)
   (declare (values symbol))
   (values (intern (reduce #'(lambda (x y)
@@ -132,7 +132,7 @@
 ;;; Passed to parse-defmacro when we want compiler errors instead of real
 ;;; errors.
 ;;;
-(proclaim '(inline convert-condition-into-compiler-error))
+(declaim (inline convert-condition-into-compiler-error))
 (defun convert-condition-into-compiler-error (datum &rest stuff)
   (if (stringp datum)
       (apply #'compiler-error datum stuff)
@@ -167,7 +167,7 @@
 			      :environment n-env
 			      :error-fun 'convert-condition-into-compiler-error)
       `(progn
-	 (proclaim '(function ,fn-name (continuation continuation t) void))
+	 (declaim (function ,fn-name (continuation continuation t) void))
 	 (defun ,fn-name (,start-var ,cont-var ,n-form)
 	   (let ((,n-env *lexical-environment*))
 	     ,@decls
@@ -965,7 +965,7 @@
   `(the attributes
 	(logand ,@(mapcar #'(lambda (x) `(the attributes ,x)) attributes))))
 ;;;
-(proclaim '(inline attributes=))
+(declaim (inline attributes=))
 (defun attributes= (attr1 attr2)
   (declare (type attributes attr1 attr2))
   "Returns true if the attributes present in Attr1 are indentical to those in
@@ -1074,7 +1074,7 @@
        (setf (gethash ',name *event-info*) ,var-name)
        ',name)))
 
-(proclaim '(type unsigned-byte *event-note-threshold*))
+(declaim (type unsigned-byte *event-note-threshold*))
 (defvar *event-note-threshold* 1
   "This variable is a non-negative integer specifying the lowest level of
   event that will print a Note when it occurs.")
@@ -1120,7 +1120,7 @@
 
 ;;;; Generic list (?) functions:
 
-(proclaim '(inline find-in position-in map-in))
+(declaim (inline find-in position-in map-in))
 
 ;;; Find-In  --  Interface
 ;;;

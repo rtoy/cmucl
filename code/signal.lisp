@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.29 2000/08/24 16:39:29 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.30 2001/03/04 20:12:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 (defconstant sig_dfl 0)
 (defconstant sig_ign 1)
 
-(proclaim '(special lisp::lisp-command-line-list))
+(declaim (special lisp::lisp-command-line-list))
 
 
 
@@ -169,7 +169,7 @@
 
 ;;;; System calls that deal with signals.
 
-(proclaim '(inline real-unix-kill))
+(declaim (inline real-unix-kill))
 
 (alien:def-alien-routine ("kill" real-unix-kill) c-call:int
   (pid c-call:int)
@@ -182,7 +182,7 @@
   (real-unix-kill pid (unix-signal-number signal)))
 
 
-(proclaim '(inline real-unix-killpg))
+(declaim (inline real-unix-killpg))
 
 (alien:def-alien-routine ("killpg" real-unix-killpg) c-call:int
   (pgrp c-call:int)

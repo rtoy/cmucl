@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.28 2001/02/22 20:28:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.29 2001/03/04 20:12:37 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,7 +94,7 @@
 		     ,(* (- bytes 1 i) 8))
 	       ldbs))))))
 
-(proclaim '(inline htonl ntohl htons ntohs))
+(declaim (inline htonl ntohl htons ntohs))
 
 (defun htonl (x)
   (maybe-byte-swap x 4))

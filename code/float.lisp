@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.22 2000/05/22 17:43:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.23 2001/03/04 20:12:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,7 +219,7 @@
 
 ;;;; Float predicates and environment query:
 
-(proclaim '(maybe-inline float-denormalized-p float-infinity-p float-nan-p
+(declaim (maybe-inline float-denormalized-p float-infinity-p float-nan-p
 			 float-trapping-nan-p))
 
 ;;; FLOAT-DENORMALIZED-P  --  Public
@@ -298,7 +298,7 @@
 ;;; actual exponent (and hence how denormalized it is), otherwise we just
 ;;; return the number of digits or 0.
 ;;;
-(proclaim '(maybe-inline float-precision))
+(declaim (maybe-inline float-precision))
 (defun float-precision (f)
   "Returns a non-negative number of significant digits in it's float argument.
   Will be less than FLOAT-DIGITS if denormalized or zero."
@@ -346,7 +346,7 @@
     #+long-float
     (long-float vm:long-float-digits)))
 
-(proclaim '(inline float-digits float-radix))
+(declaim (inline float-digits float-radix))
 
 (defun float-digits (f)
   "Returns a non-negative number of radix-b digits used in the
@@ -368,8 +368,8 @@
 
 ;;;; INTEGER-DECODE-FLOAT and DECODE-FLOAT:
 
-(proclaim '(maybe-inline integer-decode-single-float
-			 integer-decode-double-float))
+(declaim (maybe-inline integer-decode-single-float
+		       integer-decode-double-float))
 
 ;;; INTEGER-DECODE-SINGLE-DENORM  --  Internal
 ;;;
@@ -559,7 +559,7 @@
      (integer-decode-long-float x))))
 
 
-(proclaim '(maybe-inline decode-single-float decode-double-float))
+(declaim (maybe-inline decode-single-float decode-double-float))
 
 ;;; DECODE-SINGLE-DENORM  --  Internal
 ;;;
@@ -707,7 +707,7 @@
 
 ;;;; SCALE-FLOAT:
 
-(proclaim '(maybe-inline scale-single-float scale-double-float))
+(declaim (maybe-inline scale-single-float scale-double-float))
 
 ;;; SCALE-FLOAT-MAYBE-UNDERFLOW  --  Internal
 ;;;

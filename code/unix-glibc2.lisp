@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.14 2001/01/23 17:21:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.15 2001/03/04 20:12:44 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -169,7 +169,7 @@
       (setf (svref array (car error)) (cdr error)))
     `(progn
        (defvar *unix-errors* ',array)
-       (proclaim '(simple-vector *unix-errors*)))))
+       (declaim (simple-vector *unix-errors*)))))
 
 )
 
@@ -755,7 +755,7 @@
 				       "%"
 				       (string-upcase name)))))
     `(progn
-       (proclaim '(inline ,function))
+       (declaim (inline ,function))
        (export ',function)
        (alien:def-alien-routine (,name ,function) double-float
 	 ,@(let ((results nil))
@@ -770,7 +770,7 @@
 				       "%"
 				       (string-upcase name)))))
     `(progn
-       (proclaim '(inline ,function))
+       (declaim (inline ,function))
        (export ',function)
        (alien:def-alien-routine (,name ,function) double-float
 	 (ARG-1 'integer)

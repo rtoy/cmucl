@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.122 2001/03/03 16:50:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.123 2001/03/04 20:12:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,14 +31,14 @@
 (in-package "C")
 
 
-(proclaim '(special *compiler-error-bailout*))
+(declaim (special *compiler-error-bailout*))
 
 
 ;;; The lexical environment we are currently converting in.  See the LEXENV
 ;;; structure.
 ;;;
 (defvar *lexical-environment*)
-(proclaim '(type lexenv *lexical-environment*))
+(declaim (type lexenv *lexical-environment*))
 
 ;;; That variable is used to control the context-sensitive declarations
 ;;; mechanism (see WITH-COMPILATION-UNIT).  Each entry is a function which is
@@ -62,14 +62,14 @@
 ;;;
 (defvar *free-variables*)
 (defvar *free-functions*)
-(proclaim '(hash-table *free-variables* *free-functions*))
+(declaim (hash-table *free-variables* *free-functions*))
 
 ;;; We use the same Constant structure to represent all equal anonymous
 ;;; constants.  This hashtable translates from constants to the Leafs that
 ;;; represent them.
 ;;;
 (defvar *constants*)
-(proclaim '(hash-table *constants*))
+(declaim (hash-table *constants*))
 
 ;;; When compiling Dylan, we don't coalesce constants, because the dylan
 ;;; test suite implies that doing so is a bozo-no-no.
@@ -83,7 +83,7 @@
 ;;; arbitary permutations of the code happen.  This table is initialized by
 ;;; calling Find-Source-Paths on the original source.
 ;;;
-(proclaim '(hash-table *source-paths*))
+(declaim (hash-table *source-paths*))
 (defvar *source-paths*)
 
 ;;; *Current-Component* is the Component structure which we link blocks into as
@@ -92,13 +92,13 @@
 ;;; is really going on.  We need to keep track of all the blocks generated so
 ;;; that we can delete them if they turn out to be unreachable.
 ;;;
-(proclaim '(type (or component null) *current-component*))
+(declaim (type (or component null) *current-component*))
 (defvar *current-component*)
 
 ;;; *Current-Path* is the source path of the form we are currently translating.
 ;;; See NODE-SOURCE-PATH in the NODE structure.
 ;;;
-(proclaim '(list *current-path*))
+(declaim (list *current-path*))
 (defvar *current-path* nil)
 
 ;;; *Converting-For-Interpreter* is true when we are creating IR1 to be
@@ -474,7 +474,7 @@
 ;;; number to associate with a source path.  This should be bound to 0 around
 ;;; the processing of each truly top-level form.
 ;;;
-(proclaim '(type index *current-form-number*))
+(declaim (type index *current-form-number*))
 (defvar *current-form-number*)
 
 ;;; Find-Source-Paths  --  Interface

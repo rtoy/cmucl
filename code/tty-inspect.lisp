@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.18 2001/02/22 20:28:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.19 2001/03/04 20:12:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,7 @@
 (defparameter inspect-length 10)
 (defparameter inspect-level 1)
 
-(proclaim '(inline numbered-parts-p))
+(declaim (inline numbered-parts-p))
 (defun numbered-parts-p (parts)
   (second parts))
 

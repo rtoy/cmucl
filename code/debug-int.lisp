@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.99 2000/11/15 11:42:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.100 2001/03/04 20:12:31 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -772,7 +772,7 @@
 ;;; Debug-sources
 ;;;
 
-(proclaim '(inline debug-source-root-number))
+(declaim (inline debug-source-root-number))
 ;;;
 (defun debug-source-root-number (debug-source)
   "Returns the number of top-level forms processed by the compiler before

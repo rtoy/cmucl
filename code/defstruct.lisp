@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.71 2001/01/06 05:21:38 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.72 2001/03/04 20:12:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1084,7 +1084,7 @@
 	      (index (dsd-index slot))
 	      (slot-type `(and ,(dsd-type slot)
 			       ,(dd-element-type defstruct))))
-	  (stuff `(proclaim '(inline ,aname (setf ,aname))))
+	  (stuff `(declaim (inline ,aname (setf ,aname))))
 	  (stuff `(defun ,aname (structure)
 		    (declare (type ,ltype structure))
 		    (the ,slot-type (elt structure ,index))))
@@ -1137,7 +1137,7 @@
 ;;; Layout.  This is called by the accessor closures, which have a handle on
 ;;; the type's layout.
 ;;;
-(proclaim '(inline typep-to-layout))
+(declaim (inline typep-to-layout))
 (defun typep-to-layout (obj layout)
   (declare (type layout layout) (optimize (speed 3) (safety 0)))
   (when (layout-invalid layout)

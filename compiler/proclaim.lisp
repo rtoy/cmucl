@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.34 2001/03/03 16:50:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.35 2001/03/04 20:12:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,7 @@
 ;;; old uses will still get the old values.  *default-interface-cookie* holds
 ;;; any values specified by an OPTIMIZE-INTERFACE declaration.
 ;;;
-(proclaim '(type cookie *default-cookie* *default-interface-cookie*))
+(declaim (type cookie *default-cookie* *default-interface-cookie*))
 (defvar *default-cookie*)
 (defvar *default-interface-cookie*)
 
@@ -73,7 +73,7 @@
 ;;; functions.  This is bound by WITH-COMPILATION-UNIT.
 ;;;
 (defvar *undefined-warnings*)
-(proclaim '(list *undefined-warnings*))
+(declaim (list *undefined-warnings*))
 
 ;;; NOTE-NAME-DEFINED  --  Interface
 ;;;

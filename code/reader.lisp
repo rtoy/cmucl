@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.29 2000/05/23 06:37:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.30 2001/03/04 20:12:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,7 +158,7 @@
 ;;; In case we get an error trying to parse a symbol, we want to rebind the
 ;;; above stuff so it's cool.
 
-(proclaim '(special *package* *keyword-package* *read-base*))
+(declaim (special *package* *keyword-package* *read-base*))
 
 
 
@@ -197,7 +197,7 @@
 
 ;;; Make this a function, since other people want to use it.
 ;;;
-(proclaim '(inline whitespacep))
+(declaim (inline whitespacep))
 (defun whitespacep (char &optional (rt *readtable*))
   (test-attribute char whitespace rt))
 
@@ -470,7 +470,7 @@
 ;;
 (defvar *sharp-equal-alist* ())
 
-(proclaim '(special *standard-input*))
+(declaim (special *standard-input*))
  
 ;;; READ-PRESERVING-WHITESPACE behaves just like read only it makes sure
 ;;; to leave terminating whitespace in the stream.

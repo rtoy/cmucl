@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.120 2001/03/01 21:45:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.121 2001/03/04 20:12:23 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,20 +25,20 @@
 			    compile-file-pathname))
 (in-package "C")
 
-(proclaim '(special *constants* *free-variables* *compile-component*
-		    *code-vector* *next-location* *result-fixups*
-		    *free-functions* *source-paths*
-		    *continuation-number* *continuation-numbers*
-		    *number-continuations* *tn-id* *tn-ids* *id-tns*
-		    *label-ids* *label-id* *id-labels*
-		    *undefined-warnings* *compiler-error-count*
-		    *compiler-warning-count* *compiler-note-count*
-		    *compiler-error-output* *compiler-error-bailout*
-		    *compiler-trace-output*
-		    *last-source-context* *last-original-source*
-		    *last-source-form* *last-format-string* *last-format-args*
-		    *last-message-count* *lexical-environment*
-		    *coalesce-constants*))
+(declaim (special *constants* *free-variables* *compile-component*
+		  *code-vector* *next-location* *result-fixups*
+		  *free-functions* *source-paths*
+		  *continuation-number* *continuation-numbers*
+		  *number-continuations* *tn-id* *tn-ids* *id-tns*
+		  *label-ids* *label-id* *id-labels*
+		  *undefined-warnings* *compiler-error-count*
+		  *compiler-warning-count* *compiler-note-count*
+		  *compiler-error-output* *compiler-error-bailout*
+		  *compiler-trace-output*
+		  *last-source-context* *last-original-source*
+		  *last-source-form* *last-format-string* *last-format-args*
+		  *last-message-count* *lexical-environment*
+		  *coalesce-constants*))
 
 ;;; Exported:
 (defvar *block-compile-default* :specified
@@ -1065,7 +1065,7 @@
       (convert-and-maybe-compile form path)))
 
 
-(proclaim '(special *compiler-error-bailout*))
+(declaim (special *compiler-error-bailout*))
 
 ;;; PROCESS-FORM  --  Internal
 ;;;

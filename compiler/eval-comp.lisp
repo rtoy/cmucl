@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.28 1999/11/25 15:54:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.29 2001/03/04 20:12:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,22 +17,22 @@
 
 (in-package "C")
 
-(proclaim '(special *constants* *free-variables* *compile-component*
-		    *code-vector* *next-location* *result-fixups*
-		    *free-functions* *source-paths* *failed-optimizations*
-		    *continuation-number* *continuation-numbers*
-		    *number-continuations* *tn-id* *tn-ids* *id-tns*
-		    *label-ids* *label-id* *id-labels*
-		    *compiler-error-count*
-		    *compiler-warning-count* *compiler-note-count*
-		    *compiler-error-output* *compiler-error-bailout*
-		    *compiler-trace-output*
-		    *last-source-context* *last-original-source*
-		    *last-source-form* *last-format-string* *last-format-args*
-		    *last-message-count* *check-consistency*
-		    *all-components* *converting-for-interpreter*
-		    *source-info* *block-compile* *current-path*
-		    *current-component* *lexical-environment*))
+(declaim (special *constants* *free-variables* *compile-component*
+		  *code-vector* *next-location* *result-fixups*
+		  *free-functions* *source-paths* *failed-optimizations*
+		  *continuation-number* *continuation-numbers*
+		  *number-continuations* *tn-id* *tn-ids* *id-tns*
+		  *label-ids* *label-id* *id-labels*
+		  *compiler-error-count*
+		  *compiler-warning-count* *compiler-note-count*
+		  *compiler-error-output* *compiler-error-bailout*
+		  *compiler-trace-output*
+		  *last-source-context* *last-original-source*
+		  *last-source-form* *last-format-string* *last-format-args*
+		  *last-message-count* *check-consistency*
+		  *all-components* *converting-for-interpreter*
+		  *source-info* *block-compile* *current-path*
+		  *current-component* *lexical-environment*))
 
 (export '(compile-for-eval lambda-eval-info-frame-size
 	  lambda-eval-info-args-passed lambda-eval-info-entries

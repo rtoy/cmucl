@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.24 1999/12/04 16:02:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.25 2001/03/04 20:12:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,8 +27,8 @@
 
 ;;;; DYNAMIC-USAGE and friends.
 
-(proclaim '(special *read-only-space-free-pointer*
-		    *static-space-free-pointer*))
+(declaim (special *read-only-space-free-pointer*
+		  *static-space-free-pointer*))
 
 (eval-when (compile eval)
   (defmacro c-var-frob (lisp-fun c-var-name)

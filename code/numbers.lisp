@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.35 1999/11/11 16:34:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.36 2001/03/04 20:12:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -217,7 +217,7 @@
 ;;; used when we know that realpart and imagpart are the same type, but
 ;;; rational canonicalization might still need to be done.
 ;;;
-(proclaim '(inline canonical-complex))
+(declaim (inline canonical-complex))
 (defun canonical-complex (realpart imagpart)
   (if (eql imagpart 0)
       realpart
@@ -241,7 +241,7 @@
 ;;; a canonical rational.  We make the denominator positive, and check whether
 ;;; it is 1.
 ;;;
-(proclaim '(inline build-ratio))
+(declaim (inline build-ratio))
 (defun build-ratio (num den)
   (multiple-value-bind (num den)
 		       (if (minusp den)
@@ -256,7 +256,7 @@
 ;;;
 ;;;    Truncate X and Y, but bum the case where Y is 1.
 ;;;
-(proclaim '(inline maybe-truncate))
+(declaim (inline maybe-truncate))
 (defun maybe-truncate (x y)
   (if (eql y 1)
       x

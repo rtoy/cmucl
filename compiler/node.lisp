@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.36 2000/06/18 15:45:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.37 2001/03/04 20:12:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,11 +19,11 @@
 (export '(component component-info block-number))
 
 ;;; Defvars for these variables appear later.
-(proclaim '(special *current-path* *lexical-environment* *current-component*
-		    *default-cookie* *default-interface-cookie*))
+(declaim (special *current-path* *lexical-environment* *current-component*
+		  *default-cookie* *default-interface-cookie*))
   
 
-(proclaim '(inline internal-make-lexenv))
+(declaim (inline internal-make-lexenv))
 
 ;;; The LEXENV represents the lexical environment used for IR1 conversion.
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.11 1998/05/01 01:02:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.12 2001/03/04 20:12:44 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 
 
 ;;; Defvars for these come later, after we have enough stuff defined.
-(proclaim '(special *wild-type* *universal-type* *empty-type*))
+(declaim (special *wild-type* *universal-type* *empty-type*))
 
 
 ;;;; Cold load hack magic.

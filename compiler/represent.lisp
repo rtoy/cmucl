@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.35 1997/12/22 15:21:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.36 2001/03/04 20:12:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -543,7 +543,7 @@
 ;;; Dest-TN is the destination TN if we are doing a move or move-arg, and is
 ;;; NIL otherwise.  This is only used for efficiency notes.
 ;;;
-(proclaim '(inline coerce-some-operands))
+(declaim (inline coerce-some-operands))
 (defun coerce-some-operands (ops dest-tn load-scs before)
   (declare (type (or tn-ref null) ops) (list load-scs)
 	   (type (or tn null) dest-tn) (type (or vop null) before))
@@ -685,7 +685,7 @@
 ;;; that this should be called after TN has been referenced, since it must
 ;;; iterate over the referencing environments.
 ;;;
-(proclaim '(inline note-if-number-stack))
+(declaim (inline note-if-number-stack))
 (defun note-if-number-stack (tn 2comp restricted)
   (declare (type tn tn) (type ir2-component 2comp))
   (when (if restricted

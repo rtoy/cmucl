@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.104 2001/01/04 05:49:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.105 2001/03/04 20:12:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,7 +278,7 @@
     (%make-interval :low (normalize-bound low)
 		    :high (normalize-bound high))))
 
-(proclaim '(inline bound-value set-bound))
+(declaim (inline bound-value set-bound))
 
 ;;; Extract the numeric value of a bound.  Return NIL, if X is NIL.
 ;;;

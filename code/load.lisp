@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.74 1999/02/25 13:02:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.75 2001/03/04 20:12:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,7 +233,7 @@
 
 ;;;; Utilities for reading from the fasl file.
 
-(proclaim '(inline read-byte))
+(declaim (inline read-byte))
 
 ;;; Fast-Read-U-Integer  --  Internal
 ;;;
@@ -1375,4 +1375,4 @@
     code-object))
 
 
-(proclaim '(maybe-inline read-byte))
+(declaim (maybe-inline read-byte))

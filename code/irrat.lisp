@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.30 1999/11/19 14:55:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.31 2001/03/04 20:12:37 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
 				       "%"
 				       (string-upcase name)))))
     `(progn
-       (proclaim '(inline ,function))
+       (declaim (inline ,function))
        (export ',function)
        (alien:def-alien-routine (,name ,function) double-float
 	 ,@(let ((results nil))
@@ -625,7 +625,7 @@
 ;;; complex-valued arguments.  Some of these functions suffer from
 ;;; severe round-off error or unnecessary overflow.
   
-(proclaim '(inline mult-by-i))
+(declaim (inline mult-by-i))
 (defun mult-by-i (number)
   (complex (- (imagpart number))
 	   (realpart number)))
