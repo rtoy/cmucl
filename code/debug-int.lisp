@@ -785,11 +785,11 @@
 		(possibly-an-interpreted-frame
 		 (compute-calling-frame
 		  (get-context-value
-		   frame
+		   real
 		   c::old-fp-save-offset
 		   (c::compiled-debug-function-old-fp c-d-f))
 		  (get-context-value
-		   frame
+		   real
 		   c::return-pc-save-offset
 		   (c::compiled-debug-function-return-pc c-d-f))
 		  frame)
