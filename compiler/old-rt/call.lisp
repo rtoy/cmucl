@@ -92,6 +92,28 @@
    (make-restricted-tn *any-primitive-type* register-arg-scn)))
 
 
+;;; MAKE-STACK-POINTER-TN ()
+;;; 
+(defun make-stack-pointer-tn ()
+  (make-normal-tn *any-primitive-type*))
+
+
+;;; MAKE-NUMBER-STACK-POINTER-TN ()
+;;; 
+(defun make-number-stack-pointer-tn ()
+  (make-normal-tn *any-primitive-type*))
+
+
+;;; Make-Unknown-Values-Locations  --  Interface
+;;;
+;;;    Return a list of TNs that can be used to represent an unknown-values
+;;; continuation within a function.
+;;;
+(defun make-unknown-values-locations ()
+  (list (make-stack-pointer-tn)
+	(make-normal-tn *any-primitive-type*)))
+
+
 ;;; Select-Component-Format  --  Interface
 ;;;
 ;;;    This function is called by the Entry-Analyze phase, allowing
