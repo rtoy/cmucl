@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.55 1992/09/24 16:41:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.56 1992/11/03 07:04:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -523,7 +523,8 @@
 ;;;
 ;;;    We call MAYBE-CONVERT-TAIL-LOCAL-CALL on each local non-MV combination,
 ;;; which may change the succesor of the call to be the called function, and if
-;;; so, checks if the call can become an assignment.
+;;; so, checks if the call can become an assignment.   If we convert to an
+;;; assignment, we abort, since the RETURN has been deleted.
 ;;;
 (defun find-result-type (node)
   (declare (type creturn node))
@@ -535,7 +536,8 @@
 	       (assert (eq (lambda-tail-set (node-home-lambda use))
 			   (lambda-tail-set (combination-lambda use))))
 	       (when (combination-p use)
-		 (maybe-convert-tail-local-call use)))
+		 (when (nth-value 1 (maybe-convert-tail-local-call use))
+		   (return-from find-result-type (undefined-value)))))
 	      (t
 	       (use-union (node-derived-type use)))))
       (let ((int (values-type-intersection
