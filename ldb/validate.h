@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/validate.h,v 1.1 1990/03/29 21:14:32 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/validate.h,v 1.2 1990/04/05 00:48:37 wlott Exp $ */
 
 #if !defined(_INCLUDE_VALIDATE_H_)
 #define _INCLUDE_VALIDATE_H_
@@ -14,9 +14,9 @@
 #define DYNAMIC_SPACE_SIZE	(0x08000000)
 
 #define CONTROL_STACK_START	(0x50000000)
-#define CONTROL_STACK_SIZE	(0x02000000)
+#define CONTROL_STACK_SIZE	(0x00100000)
 
 #define BINDING_STACK_START	(0x60000000)
-#define BINDING_STACK_SIZE	(0x02000000)
+#define BINDING_STACK_SIZE	(0x00100000)
 
 #endif
