@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.20 2003/05/16 12:20:58 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.21 2003/07/02 21:48:23 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,67 +126,94 @@
 	    #+long-float (some #'alien-long-float-type-p arg-types)
 	    (and (alien-integer-type-p result-type)
 		 (> (alien::alien-integer-type-bits result-type) 32)))
-	(collect ((new-args) (lambda-vars) (new-arg-types))
-		 (dolist (type arg-types)
-		   (let ((arg (gensym)))
-		     (lambda-vars arg)
-		     (cond ((and (alien-integer-type-p type)
-				 (> (alien::alien-integer-type-bits type) 32))
-			    ;; 64-bit long long types are stored in
-			    ;; consecutive locations, most significant word
-			    ;; first (big-endian).
-			    (new-args `(ash ,arg -32))
-			    (new-args `(logand ,arg #xffffffff))
-			    (if (alien-integer-type-signed type)
-				(new-arg-types (parse-alien-type '(signed 32)))
-				(new-arg-types (parse-alien-type '(unsigned 32))))
-			    (new-arg-types (parse-alien-type '(unsigned 32))))
-			   ((alien-single-float-type-p type)
-			    (new-args `(single-float-bits ,arg))
-			    (new-arg-types (parse-alien-type '(signed 32))))
-			   ((alien-double-float-type-p type)
-			    (new-args `(double-float-high-bits ,arg))
-			    (new-args `(double-float-low-bits ,arg))
-			    (new-arg-types (parse-alien-type '(signed 32)))
-			    (new-arg-types (parse-alien-type '(unsigned 32))))
-			   #+long-float
-			   ((alien-long-float-type-p type)
-			    (new-args `(long-float-exp-bits ,arg))
-			    (new-args `(long-float-high-bits ,arg))
-			    (new-args `(long-float-mid-bits ,arg))
-			    (new-args `(long-float-low-bits ,arg))
-			    (new-arg-types (parse-alien-type '(signed 32)))
-			    (new-arg-types (parse-alien-type '(unsigned 32)))
-			    (new-arg-types (parse-alien-type '(unsigned 32)))
-			    (new-arg-types (parse-alien-type '(unsigned 32))))
-			   (t
-			    (new-args arg)
-			    (new-arg-types type)))))
-		 (cond ((and (alien-integer-type-p result-type)
-			     (> (alien::alien-integer-type-bits result-type) 32))
-			(let ((new-result-type
-			       (let ((alien::*values-type-okay* t))
-				 (parse-alien-type
-				  (if (alien-integer-type-signed result-type)
-				      '(values (signed 32) (unsigned 32))
-				      '(values (unsigned 32) (unsigned 32)))))))
-			  `(lambda (function type ,@(lambda-vars))
-			    (declare (ignore type))
-			    (multiple-value-bind (high low)
-				(%alien-funcall function
-						',(make-alien-function-type
-						   :arg-types (new-arg-types)
-						   :result-type new-result-type)
-						,@(new-args))
-			      (logior low (ash high 32))))))
-		       (t
-			`(lambda (function type ,@(lambda-vars))
-			  (declare (ignore type))
-			  (%alien-funcall function
-			   ',(make-alien-function-type
-			      :arg-types (new-arg-types)
-			      :result-type result-type)
-			   ,@(new-args))))))
+	(collect ((new-args) (lambda-vars) (new-arg-types) (mv-vars) (mv-form))
+	  (dolist (type arg-types)
+	    (let ((arg (gensym)))
+	      (lambda-vars arg)
+	      (cond ((and (alien-integer-type-p type)
+			  (> (alien::alien-integer-type-bits type) 32))
+		     ;; 64-bit long long types are stored in
+		     ;; consecutive locations, most significant word
+		     ;; first (big-endian).
+		     (new-args `(ash ,arg -32))
+		     (new-args `(logand ,arg #xffffffff))
+		     (if (alien-integer-type-signed type)
+			 (new-arg-types (parse-alien-type '(signed 32)))
+			 (new-arg-types (parse-alien-type '(unsigned 32))))
+		     (new-arg-types (parse-alien-type '(unsigned 32))))
+		    ((alien-single-float-type-p type)
+		     (new-args `(single-float-bits ,arg))
+		     (new-arg-types (parse-alien-type '(signed 32))))
+		    ((alien-double-float-type-p type)
+		     ;; Use double-float-bits instead of
+		     ;; double-float-hi/lo-bits to get the bits
+		     ;; out.  This gives a some improvement
+		     ;; because there's only store of the FP value.
+		     ;;
+		     ;; Sparc calling conventions say floats must be
+		     ;; passed in the integer registers.
+		     (let ((mvarg1 (gensym))
+			   (mvarg2 (gensym)))
+		       (mv-vars `(,mvarg1 ,mvarg2))
+		       (mv-form `(double-float-bits ,arg))
+		       (new-args mvarg1)
+		       (new-args mvarg2)
+		       (new-arg-types (parse-alien-type '(signed 32)))
+		       (new-arg-types (parse-alien-type '(unsigned 32)))))
+		    #+long-float
+		    ((alien-long-float-type-p type)
+		     (new-args `(long-float-exp-bits ,arg))
+		     (new-args `(long-float-high-bits ,arg))
+		     (new-args `(long-float-mid-bits ,arg))
+		     (new-args `(long-float-low-bits ,arg))
+		     (new-arg-types (parse-alien-type '(signed 32)))
+		     (new-arg-types (parse-alien-type '(unsigned 32)))
+		     (new-arg-types (parse-alien-type '(unsigned 32)))
+		     (new-arg-types (parse-alien-type '(unsigned 32))))
+		    (t
+		     (new-args arg)
+		     (new-arg-types type)))))
+	  (flet ((mv (vars forms body)
+		   ;; Create the set of nested mv-binds
+		   (let ((res body))
+		     (do ((v (reverse vars) (cdr v))
+			  (f (reverse forms) (cdr f)))
+			 ((null v))
+		       (setf res `(multiple-value-bind ,(car v)
+				   ,(car f)
+				   ,res)))
+		     res)))
+	    (cond ((and (alien-integer-type-p result-type)
+			(> (alien::alien-integer-type-bits result-type) 32))
+		   (let* ((new-result-type
+			   (let ((alien::*values-type-okay* t))
+			     (parse-alien-type
+			      (if (alien-integer-type-signed result-type)
+				  '(values (signed 32) (unsigned 32))
+				  '(values (unsigned 32) (unsigned 32))))))
+			  (body (mv (mv-vars)
+				    (mv-form)
+				    `(multiple-value-bind (high low)
+				      (%alien-funcall function
+				       ',(make-alien-function-type
+					  :arg-types (new-arg-types)
+					  :result-type new-result-type)
+				       ,@(new-args))
+				      (logior low (ash high 32))))))
+		     `(lambda (function type ,@(lambda-vars))
+		       (declare (ignore type))
+		       ,body)))
+		  (t
+		   (let ((body (mv (mv-vars)
+				   (mv-form)
+				   `(%alien-funcall function
+				     ',(make-alien-function-type
+					:arg-types (new-arg-types)
+					:result-type result-type)
+				     ,@(new-args)))))
+		     `(lambda (function type ,@(lambda-vars))
+		       (declare (ignore type))
+		       ,body))))))
 	(c::give-up))))
 
 
