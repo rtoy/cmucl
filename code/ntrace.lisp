@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.3 1991/11/15 14:52:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.4 1991/11/26 17:54:03 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
 	  *trace-frame* *max-trace-indentation*))
 
 (defvar *traced-function-list* nil
-  "A list of function names which are traced.")
+  "A list of functions which are traced.")
 
 (defvar *trace-print-length* nil
   "Tracing output occurs with *print-length* bound to this value.")
@@ -50,10 +50,13 @@
 ;;; TRACE -- Public.
 ;;;
 (defmacro trace (&rest specs)
-  "Establishes tracing for specified functions and pushes their names on
-   *traced-function-list*.  Each specification is either the name of a function
-   or a list of the form:
-      (function-name <trace-option> <value> <trace-option> <value> ...)
+  "Establishes tracing for specified functions and pushes them on
+   *traced-function-list*.  Each specification is one of the following:
+      function
+      the name of a function
+      a list form
+   If it is a list form, it has the following structure:
+      (function-or-name <trace-option> <value> <trace-option> <value> ...)
    If you supply no specifications, TRACE returns the list of traced functions.
    The following options are valid:
       :condition
@@ -92,13 +95,13 @@
 	(multiple-value-bind
 	    (name options)
 	    (typecase spec
-	      (symbol
+	      ((or symbol function)
 	       (values spec nil))
 	      (list
 	       (let ((fun (car spec)))
 		 (cond ((eq fun 'quote)
 			(error "Do NOT quote function names."))
-		       ((symbolp fun)
+		       ((or (symbolp fun) (functionp fun))
 			(values fun (cdr spec)))
 		       ((not (and (consp fun) (= (length fun) 2)))
 			(error "Illegal function name:  ~S." fun))
@@ -151,20 +154,22 @@
 ;;;
 (defvar *traced-entries* nil)
 
-;;; This maps function names to the two breakpoints created in TRACE-1, so we
-;;; can get rid of them in UNTRACE-1.
+;;; This maps functions to the two breakpoints created in TRACE-1, so we can
+;;; get rid of them in UNTRACE-1.
 ;;;
 (defvar *trace-breakpoints* (make-hash-table :test #'eq))
 ;;;
 (defun clear-trace-breakpoint-record (fname new-value)
   (declare (ignore new-value))
-  (let ((bpts (gethash fname *trace-breakpoints*)))
-    (when bpts
-      ;; Free breakpoint bookkeeping data.
-      (di:delete-breakpoint (car bpts))
-      (di:delete-breakpoint (cdr bpts))
-      ;; Free TRACE bookkeeping data.
-      (setf (gethash fname *trace-breakpoints*) nil))))
+  (when (fboundp fname)
+    (let* ((fun (fdefinition fname))
+	   (bpts (gethash fun *trace-breakpoints*)))
+      (when bpts
+	;; Free breakpoint bookkeeping data.
+	(di:delete-breakpoint (car bpts))
+	(di:delete-breakpoint (cdr bpts))
+	;; Free TRACE bookkeeping data.
+	(setf (gethash fun *trace-breakpoints*) nil)))))
 ;;;
 (push #'clear-trace-breakpoint-record ext:*setf-fdefinition-hook*)
 
@@ -173,67 +178,73 @@
 ;;; This establishes :function-start and :function-end breakpoints with
 ;;; appropriate hook functions to TRACE function-name as described by the user.
 ;;;
-(defun trace-1 (function-name condition break break-after where-in print
+(defun trace-1 (function-or-name condition break break-after where-in print
 		 print-after)
-  (cond
-   ((member function-name *traced-function-list*)
-    (warn "Function ~S already TRACE'd, ignoring this request."
-	  function-name))
-   (t
-    (when where-in
-      (dolist (f where-in)
-	(unless (fboundp f)
-	  (error "Undefined :where-in name -- ~S." f))))
-    (let* ((debug-fun (di:function-debug-function (fdefinition function-name)))
-	   ;; The start and end hooks use conditionp for communication.
-	   (conditionp nil)
-	   (start (di:make-breakpoint
-		   #'(lambda (frame bpt)
-		       (let ((*trace-frame* frame))
-			 (cond ((and (or (not condition) ;Save a call to EVAL
-					 (eval condition))
-				     (or (not where-in)
-					 (trace-where-in-p frame where-in)))
-				(setf conditionp t)
-				(print-trace-start frame bpt print))
-			       (t (setf conditionp nil)))
-			 (when (and break (eval break))
-			   (break "Breaking before TRACE'd call to ~S."
-				  (di:debug-function-name
-				   (di:frame-debug-function frame))))))
-		   debug-fun :kind :function-start))
-	   (end (di:make-breakpoint
-		 #'(lambda (frame bpt values cookie)
-		     (let ((*trace-frame* frame))
-		       (when conditionp
-			 (print-trace-end frame bpt values cookie print-after))
-		       (pop *traced-entries*)
-		       (when (and break-after (eval break-after))
-			 (break "Breaking after TRACE'd call to ~S."
-				(di:debug-function-name
-				 (di:frame-debug-function frame))))))
-		 debug-fun :kind :function-end
-		 :function-end-cookie
-		 #'(lambda (frame x)
-		     (when (and *traced-entries*
-				(not (di:function-end-cookie-valid-p
-				      frame (car *traced-entries*))))
-		       (format t "~&WARNING: dynamic flow of control occurred ~
-				  while TRACE'ing.~%")
-		       (loop
-			 (pop *traced-entries*)
-			 (when (or (not *traced-entries*)
-				   (di:function-end-cookie-valid-p
-				    frame (car *traced-entries*)))
-			   (return))))
-		     (push x *traced-entries*)))))
-      (setf (gethash function-name *trace-breakpoints*) (cons start end))
-      ;; The next two forms must be in the order in which they appear.  They
-      ;; rely on a documented property that later activated breakpoint hooks
-      ;; run first, and the end breakpoint establishes a starting helper bpt.
-      (di:activate-breakpoint start)
-      (di:activate-breakpoint end))
-    (push function-name *traced-function-list*))))
+  (let ((fun (if (functionp function-or-name)
+		 function-or-name
+		 (fdefinition function-or-name))))
+    (cond
+     ((member fun *traced-function-list*)
+      (warn "Function ~S already TRACE'd, ignoring this request."
+	    fun))
+     (t
+      (when where-in
+	(dolist (f where-in)
+	  (unless (fboundp f)
+	    (error "Undefined :where-in name -- ~S." f))))
+      (let* ((debug-fun (di:function-debug-function fun))
+	     ;; The start and end hooks use conditionp for communication.
+	     (conditionp nil)
+	     (start (di:make-breakpoint
+		     #'(lambda (frame bpt)
+			 (let ((*trace-frame* frame))
+			   (cond ((and (or (not condition) ;Save a call to EVAL
+					   (eval condition))
+				       (or (not where-in)
+					   (trace-where-in-p frame where-in)))
+				  (setf conditionp t)
+				  (print-trace-start frame bpt print))
+				 (t (setf conditionp nil)))
+			   (when (and break (eval break))
+			     (break "Breaking before TRACE'd call to ~S."
+				    (di:debug-function-name
+				     (di:frame-debug-function frame))))))
+		     debug-fun :kind :function-start))
+	     (end (di:make-breakpoint
+		   #'(lambda (frame bpt values cookie)
+		       (if (member fun *traced-function-list*)
+			   (let ((*trace-frame* frame))
+			     (when conditionp
+			       (print-trace-end frame bpt values cookie
+						print-after))
+			     (pop *traced-entries*)
+			     (when (and break-after (eval break-after))
+			       (break "Breaking after TRACE'd call to ~S."
+				      (di:debug-function-name
+				       (di:frame-debug-function frame)))))
+			   (pop *traced-entries*)))
+		   debug-fun :kind :function-end
+		   :function-end-cookie
+		   #'(lambda (frame x)
+		       (when (and *traced-entries*
+				  (not (di:function-end-cookie-valid-p
+					frame (car *traced-entries*))))
+			 (format t "~&WARNING: dynamic flow of control occurred ~
+				    while TRACE'ing.~%")
+			 (loop
+			   (pop *traced-entries*)
+			   (when (or (not *traced-entries*)
+				     (di:function-end-cookie-valid-p
+				      frame (car *traced-entries*)))
+			     (return))))
+		       (push x *traced-entries*)))))
+	(setf (gethash fun *trace-breakpoints*) (cons start end))
+	;; The next two forms must be in the order in which they appear.  They
+	;; rely on a documented property that later activated breakpoint hooks
+	;; run first, and the end breakpoint establishes a starting helper bpt.
+	(di:activate-breakpoint start)
+	(di:activate-breakpoint end))
+      (push fun *traced-function-list*)))))
 
 ;;; PRINT-TRACE-START -- Internal.
 ;;;
@@ -297,21 +308,36 @@
 
 ;;;; N-UNTRACE.
 
-(defmacro untrace (&rest names)
-  "Removes tracing from the functions named.  With no args, untraces all
+(defmacro untrace (&rest specs)
+  "Removes tracing from the specified functions.  With no args, untraces all
    functions."
-  (let ((names (or names *traced-function-list*))
+  (let ((specs (or specs *traced-function-list*))
 	(untrace-1-forms nil))
-    (dolist (name names `(progn ,@(nreverse untrace-1-forms) t))
-      (if (symbolp name)
-	  (push `(untrace-1 ',name) untrace-1-forms)
-	  (error "Illegal function name -- ~S." name)))))
+    (dolist (spec specs `(progn ,@(nreverse untrace-1-forms) t))
+      (let ((fun (typecase spec
+		   (symbol (fdefinition spec))
+		   (function spec)
+		   (list
+		    (let ((fun (car spec)))
+		      (cond ((eq fun 'quote)
+			     (error "Do NOT quote function names."))
+			    ((symbolp fun)
+			     (fdefinition fun))
+			    ((functionp fun)
+			     fun)
+			    ((not (and (consp fun) (= (length fun) 2)))
+			     (error "Illegal function specifier:  ~S." fun))
+			    ((eq (car fun) 'setf)
+			     (fdefinition fun))
+			    (t (error "Illegal function specifier:  ~S." fun)))))
+		   (t (error "Illegal function specifier:  ~S." spec)))))
+	(push `(untrace-1 ',fun) untrace-1-forms)))))
 
-(defun untrace-1 (name)
-  (cond ((member name *traced-function-list*)
-	 (let ((breakpoints (gethash name *trace-breakpoints*)))
+(defun untrace-1 (fun)
+  (cond ((member fun *traced-function-list*)
+	 (let ((breakpoints (gethash fun *trace-breakpoints*)))
 	   (di:delete-breakpoint (car breakpoints))
 	   (di:delete-breakpoint (cdr breakpoints))
-	   (setf (gethash name *trace-breakpoints*) nil))
-	 (setf *traced-function-list* (delete name *traced-function-list*)))
-	(t (warn "Function is not TRACE'd -- ~S." name))))
+	   (setf (gethash fun *trace-breakpoints*) nil))
+	 (setf *traced-function-list* (delete fun *traced-function-list*)))
+	(t (warn "Function is not TRACE'd -- ~S." fun))))
