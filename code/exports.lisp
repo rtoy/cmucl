@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.81 1992/05/18 23:03:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.82 1992/05/21 23:26:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1645,7 +1645,7 @@
 (defpackage "NEW-ASSEM"
   (:export "EMIT-BYTE" "EMIT-SKIP" "EMIT-BACK-PATCH" "EMIT-CHOOSER"
 	   "DEFINE-EMITTER" "DEFINE-INSTRUCTION" "DEFINE-INSTRUCTION-MACRO"
-	   "DEF-ASSEMBLER-PARAMS"
+	   "DEF-ASSEMBLER-PARAMS" "EMIT-POSTIT"
 
 	   "MAKE-SEGMENT" "SEGMENT-NAME" "ASSEMBLE" "ALIGN" "INST"
 	   "LABEL" "LABEL-P" "GEN-LABEL" "EMIT-LABEL" "LABEL-POSITION"
