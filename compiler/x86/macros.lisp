@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.15 2000/08/20 14:44:23 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.16 2002/08/27 22:18:28 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,6 +94,12 @@
 			   (- other-pointer-type)))
 	 ,reg))
 
+(defun make-symbol-value-ea (symbol)
+  (make-ea :dword
+	   :disp (+ nil-value
+		    (static-symbol-offset symbol)
+		    (ash symbol-value-slot word-shift)
+		    (- other-pointer-type))))
 
 (defmacro load-type (target source &optional (offset 0))
   "Loads the type bits of a pointer into target independent of
@@ -109,6 +115,11 @@
        `(inst mov ,n-target
 	      (make-ea :byte :base ,n-source :disp (+ ,n-offset 3)))))))
 
+(defmacro load-foreign-data-symbol (reg name )
+  #+linkage-table `(inst mov ,reg (make-fixup (extern-alien-name ,name)
+					      :foreign-data))
+  #-linkage-table `(inst lea ,reg (make-fixup (extern-alien-name ,name)
+					      :foreign)))
 
 ;;;; Allocation helpers
 
@@ -140,11 +151,9 @@
 	    ;; register as alloc-tn.
 	    (load-size alloc-tn size)
 	    (inst add alloc-tn
-		  (make-fixup (extern-alien-name "current_region_free_pointer")
-			      :foreign))
+		  (make-symbol-value-ea '*current-region-free-pointer*))
 	    (inst cmp alloc-tn
-		  (make-fixup (extern-alien-name "current_region_end_addr")
-			      :foreign))
+		  (make-symbol-value-ea '*current-region-end-addr*))
 	    (inst jmp :be OK)
 	    ;; Dispatch to the appropriate overflow routine. There is a
 	    ;; routine for each destination.
@@ -168,9 +177,7 @@
 	       (inst call (make-fixup (extern-alien-name "alloc_overflow_edi")
 				      :foreign))))
 	    (emit-label ok)
-	    (inst xchg (make-fixup
-			(extern-alien-name "current_region_free_pointer")
-			:foreign)
+	    (inst xchg (make-symbol-value-ea '*current-region-free-pointer*)
 		  alloc-tn))
 	  ;; C call to allocate via dispatch routines. Each
 	  ;; destination has a special entry point. The size may be a

@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.7 2002/03/13 08:02:04 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.8 2002/08/27 22:18:30 moore Exp $
  *
  */
 
@@ -32,6 +32,7 @@
 #include <signal.h>
 /* #include <sys/sysinfo.h> */
 #include <sys/proc.h>
+#include <dlfcn.h>
 #include "validate.h"
 vm_size_t os_vm_page_size;
 
@@ -205,4 +206,23 @@ void os_install_interrupt_handlers(void)
 {
   interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
   interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
+}
+
+void *os_dlsym(const char *sym_name, lispobj lib_list)
+{
+    if (lib_list != NIL) {
+	lispobj lib_list_head;
+
+	for (lib_list_head = lib_list;
+	     lib_list_head != NIL;
+	     lib_list_head = (CONS(lib_list_head))->cdr) {
+	    struct cons *lib_cons = (CONS(lib_list_head))->car;
+	    struct sap *dlhandle = (CONS(lib_cons))->car;
+	    void *sym_addr = dlsym((void *)dlhandle->pointer, sym_name);
+
+	    if (sym_addr)
+		return sym_addr;
+	}
+    }
+    return dlsym(RTLD_DEFAULT, sym_name);
 }

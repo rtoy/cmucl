@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.75 2002/04/07 00:14:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.76 2002/08/27 22:18:26 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,6 +278,32 @@
     (dump-fop 'lisp::fop-pop file)
     (incf (fasl-file-table-free file))))
 
+;;; circular-cons-p -- Internal
+;;;
+;;; Test for the kind of circularities that would cause equal not to
+;;; return, but allow other kinds of shared structure.
+
+(defun circular-cons-p (obj)
+  (unless (consp obj)
+    (return-from circular-cons-p nil))
+  (let ((circ-hash (make-hash-table :test #'eq)))
+    (labels ((circular-cons-p-aux (obj top-level)
+	       (do* ((sublist obj (cdr sublist)))
+		   ((not (consp sublist))
+		    nil)
+		 (let ((car-list (car sublist)))
+		   (when (gethash sublist circ-hash)
+		     (return-from circular-cons-p t))
+		   (setf (gethash sublist circ-hash) t)
+		   (when (consp car-list)
+		     (circular-cons-p-aux car-list nil))))
+	       (when (not top-level)
+		 (do ((sublist obj (cdr sublist)))
+		   ((not (consp sublist))
+		    nil)
+		 (remhash sublist circ-hash)))
+	       nil))
+      (circular-cons-p-aux obj t))))
 
 ;;; EQUAL-CHECK-TABLE  --  Internal
 ;;;
@@ -587,9 +613,11 @@
 	   (dump-object name file))
 	 (dump-fop 'lisp::fop-maybe-cold-load file)
 	 (dump-fop 'lisp::fop-assembler-fixup file))
-	(:foreign
+	((:foreign :foreign-data)
 	 (assert (stringp name))
-	 (dump-fop 'lisp::fop-foreign-fixup file)
+	 (if (eq flavor :foreign)
+	     (dump-fop 'lisp::fop-foreign-fixup file)
+	     (dump-fop 'lisp::fop-foreign-data-fixup file))
 	 (let ((len (length name)))
 	   (assert (< len 256))
 	   (dump-byte len file)
@@ -869,7 +897,7 @@
 	   (typecase x
 	     (symbol (dump-symbol x file))
 	     (list
-	      (cond (*coalesce-constants*
+	      (cond (*coalesce-constants* ;(and (not (circular-cons-p x)))
 		     (unless (equal-check-table x file)
 			     (dump-list x file)
 			     (equal-save-object x file)))

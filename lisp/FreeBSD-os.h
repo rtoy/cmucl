@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.3 2000/04/12 17:31:19 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.4 2002/08/27 22:18:30 moore Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -26,12 +26,17 @@ typedef int os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
+int
+sc_reg(struct sigcontext*,int);
+void
+os_save_context();
+/* #define SAVE_CONTEXT os_save_context*/
+
 /* I *think* this is when things became incompatible with old
    signals.
 */
 #if __FreeBSD_version > 400010
 #define POSIX_SIGS
-int
 /* If we used SA_SIGINFO in sigaction() the third argument to signal
    handlers would be a struct ucontext_t.  (The manpage for
    sigaction(2) is wrong!)  Sigcontext and ucontext_t are
@@ -40,6 +45,4 @@ int
 */
 #define USE_SA_SIGINFO 0
 #define uc_sigmask sc_mask
-sc_reg(struct sigcontext*,int);
 #endif
-

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.51 2001/06/01 12:49:39 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.52 2002/08/27 22:18:23 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1357,19 +1357,24 @@
   (setf (info variable alien-info lisp-name)
 	(make-heap-alien-info :type type
 			      :sap-form `(foreign-symbol-address
-					  ',alien-name))))
+					  ',alien-name :flavor :data))))
 
 ;;; EXTERN-ALIEN -- public.
 ;;; 
 (defmacro extern-alien (name type)
   "Access the alien variable named NAME, assuming it is of type TYPE.  This
    is setfable."
-  (let ((alien-name (etypecase name
-		      (symbol (guess-alien-name-from-lisp-name name))
-		      (string name))))
+  (let* ((alien-name (etypecase name
+		       (symbol (guess-alien-name-from-lisp-name name))
+		       (string name)))
+	 (alien-type (parse-alien-type type))
+	 (flavor (if (alien-function-type-p alien-type)
+		     :code
+		     :data)))
     `(%heap-alien ',(make-heap-alien-info
-		     :type (parse-alien-type type)
-		     :sap-form `(foreign-symbol-address ',alien-name)))))
+		     :type alien-type
+		     :sap-form `(foreign-symbol-address ',alien-name
+				 :flavor ',flavor)))))
 
 ;;; WITH-ALIEN -- public.
 ;;;
@@ -1391,7 +1396,10 @@
       (destructuring-bind
 	  (symbol type &optional (opt1 nil opt1p) (opt2 nil opt2p))
 	  binding
-	(let ((alien-type (parse-alien-type type)))
+	(let* ((alien-type (parse-alien-type type))
+	       (flavor (if (alien-function-type-p alien-type)
+			   :code
+			   :data)))
 	  (multiple-value-bind
 	      (allocation initial-value)
 	      (if opt2p
@@ -1421,7 +1429,8 @@
 		     (let ((info (make-heap-alien-info
 				  :type alien-type
 				  :sap-form `(foreign-symbol-address
-					      ',initial-value))))
+					      ',initial-value
+					      :flavor ',flavor))))
 		       `((symbol-macrolet
 			  ((,symbol (%heap-alien ',info)))
 			  ,@body))))

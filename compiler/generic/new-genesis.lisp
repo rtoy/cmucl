@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.47 2002/08/23 17:01:00 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.48 2002/08/27 22:18:27 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,6 +28,9 @@
 
 (defvar *read-only* nil)
 (defparameter read-only-space-id 3)
+
+(defvar *foreign-linkage* nil)
+(defparameter foreign-linkage-space-id 4)
 
 (defmacro round-up (num size)
   "Rounds number up to be an integral multiple of size."
@@ -114,7 +117,7 @@
       (truncate address space-alignment)
     (declare (ignore ignore))
     (unless (zerop remainder)
-      (error "The address #x~X is not aligned on a #x~X boundry."
+      (error "The address #x~X is not aligned on a #x~X boundary."
 	     address space-alignment)))
   (let* ((actual-size (round-up initial-size
 			       (c:backend-page-size c:*backend*)))
@@ -714,7 +717,8 @@
     (frob *batch-mode* (cold-intern nil))
 
     (frob *initial-layouts* (list-all-layouts))
-
+    #+linkage-table
+    (frob system::*global-table* (cold-intern nil))
     (let ((res *nil-descriptor*))
       (dolist (cpkg *cold-packages*)
 	(let* ((pkg (car cpkg))
@@ -1366,6 +1370,42 @@
 		     (make-fixnum-descriptor total-elements)))
     result))
 
+(defun make-cold-linkage-vector (vec)
+  (let* ((result (allocate-boxed-object *dynamic*
+					(+ vm:array-dimensions-offset 1)
+					vm:other-pointer-type))
+	 (vec-length (length vec))
+	 (data-vec (allocate-vector-object *dynamic*
+					   vm:word-bits
+					   vec-length
+					   vm:simple-vector-type)))
+    (loop for i from 0 below vec-length
+	  for vec-elem = (aref vec i)
+	  do (write-indexed data-vec (+ i vm:vector-data-offset)
+			    (etypecase vec-elem
+			      (string
+			       (string-to-core vec-elem))
+			      (number
+			       (number-to-core vec-elem))
+			      (null
+			       *nil-descriptor*))))
+    (write-memory result
+		  (make-other-immediate-descriptor vm:array-dimensions-offset
+						   vm:complex-vector-type))
+    (write-indexed result vm:array-elements-slot (number-to-core vec-length))
+    (write-indexed result vm:array-displacement-slot (number-to-core 0))
+    (write-indexed result vm:array-displaced-p-slot *nil-descriptor*)
+    (write-indexed result vm:array-data-slot data-vec)
+    (write-indexed result
+		   vm:array-fill-pointer-slot
+		   (number-to-core vec-length))
+    (write-indexed result vm:array-fill-pointer-p-slot (cold-intern t))
+    (write-indexed result
+		   vm:array-dimensions-offset
+		   (number-to-core vec-length))
+    result))
+
+
 ;;; Loading numbers.
 
 (defmacro cold-number (fop)
@@ -1699,7 +1739,22 @@
 	 (sym (make-string len)))
     (read-n-bytes *fasl-file* sym 0 len)
     (let ((offset (read-arg 4))
-	  (value (lookup-foreign-symbol sym)))
+	  (value #+linkage-table (cold-register-foreign-linkage sym :code)
+		 #-linkage-table (lookup-maybe-prefix-foreign-symbol sym)))
+      (do-cold-fixup code-object offset value kind))
+    code-object))
+
+;;; Should we do something for this in the non linkage table case, or should we
+;;; count on not emitting them at all?
+
+(define-cold-fop (fop-foreign-data-fixup)
+  (let* ((kind (pop-stack))
+	 (code-object (pop-stack))
+	 (len (read-arg 1))
+	 (sym (make-string len)))
+    (read-n-bytes *fasl-file* sym 0 len)
+    (let ((offset (read-arg 4))
+	  (value (cold-register-foreign-linkage sym :data)))
       (do-cold-fixup code-object offset value kind))
     code-object))
 
@@ -1812,43 +1867,45 @@
       version)))
 
 (defun lookup-foreign-symbol (name)
-  (let ((linux-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+  (flet ((lookup-sym (name)
+	   #-linkage-table
+	   (gethash name *cold-foreign-symbol-table* nil)
+	   #+linkage-table
+	   (cold-register-foreign-linkage name :code)))
+    (let ((linux-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			    #.c:x86-fasl-file-implementation)
+			(c:backend-featurep :linux)))
+	  (bsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
 			  #.c:x86-fasl-file-implementation)
-		      (c:backend-featurep :linux)))
-	(bsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			    #.c:x86-fasl-file-implementation)
-			(c:backend-featurep :bsd)))
-	(bsd-elf-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			    #.c:x86-fasl-file-implementation)
-			(c:backend-featurep :bsd)
-			(c:backend-featurep :elf)))
-	(freebsd4-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			    #.c:x86-fasl-file-implementation)
-			 (c:backend-featurep :freebsd4))))
-    (cond
-     ((and bsd-p (not bsd-elf-p)
-	   (gethash (concatenate 'string "_" name)
-		    *cold-foreign-symbol-table* nil)))
-     ((and (or linux-p freebsd4-p)
-	   (gethash (concatenate 'string "PVE_stub_" name)
-		    *cold-foreign-symbol-table* nil)))
-     ;; Non-linux case
-     (#-irix
-      (gethash name *cold-foreign-symbol-table* nil)
-      #+irix
-      (let ((value (gethash name *cold-foreign-symbol-table* nil)))
-        (when (and (numberp value) (zerop value))
-	  (warn "Not-really-defined foreign symbol: ~S" name))
-        value))
-     ((and linux-p (gethash (concatenate 'string "__libc_" name)
-			    *cold-foreign-symbol-table* nil)))
-     ((and linux-p (gethash (concatenate 'string "__" name)
-			    *cold-foreign-symbol-table* nil)))
-     ((and linux-p (gethash (concatenate 'string "_" name)
-			    *cold-foreign-symbol-table* nil)))
-     (t
-      (warn "Undefined foreign symbol: ~S" name)
-      0))))
+		      (c:backend-featurep :bsd)))
+	  (bsd-elf-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			      #.c:x86-fasl-file-implementation)
+			  (c:backend-featurep :bsd)
+			  (c:backend-featurep :elf)))
+	  (freebsd4-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			       #.c:x86-fasl-file-implementation)
+			   (c:backend-featurep :freebsd4))))
+      (cond
+	((and bsd-p (not bsd-elf-p)
+	      (lookup-sym (concatenate 'string "_" name))))
+	((and #+linkage-table nil
+	      (or linux-p freebsd4-p)
+	      (lookup-sym (concatenate 'string "PVE_stub_" name))))
+	;; Non-linux case
+	(#-irix
+	 (lookup-sym name)
+	 #+irix
+	 (let ((value (lookup-sym name)))
+	   (when (and (numberp value) (zerop value))
+	     (warn "Not-really-defined foreign symbol: ~S" name))
+	   value))
+	((and linux-p (lookup-sym (concatenate 'string "__libc_" name))))
+	((and linux-p (lookup-sym (concatenate 'string "__" name))))
+	((and linux-p (lookup-sym (concatenate 'string "_" name))))
+	(t
+	 (warn "Undefined foreign symbol: ~S" name)
+	 0)))))
+
 
 ;; FreeBSD wants C language symbols prefixed with "_" including all the
 ;; syscalls and Unix library things. Linux doesn't or maybe does
@@ -1881,6 +1938,24 @@
 		       "")) ; Linux and ELF FreeBSD V3+, NetBSD
 		  )
 		name)))
+
+(defvar *cold-linkage-table* (make-array 8192 :adjustable t :fill-pointer 0))
+(defvar *cold-foreign-hash* (make-hash-table :test #'equal))
+
+
+(defun cold-register-foreign-linkage (sym type)
+  (let ((entry-num (register-foreign-linkage sym
+					     type
+					     *cold-linkage-table*
+					     *cold-foreign-hash*)))
+    (+ vm:target-foreign-linkage-space-start
+       (* entry-num vm:target-foreign-linkage-entry-size))))
+
+(defun init-foreign-linkage ()
+  (setf (fill-pointer *cold-linkage-table*) 0)
+  (clrhash *cold-foreign-hash*)
+  ;; This has gotta be the first entry.
+  (cold-register-foreign-linkage "resolve_linkage_tramp" :code))
 
 (defvar *cold-assembler-routines* nil)
 
@@ -2126,7 +2201,9 @@
 				(cold-intern (car rtn))
 				(number-to-core (cdr rtn)))
 		 result))
-    (cold-setq (cold-intern '*initial-assembler-routines*) result)))
+    (cold-setq (cold-intern '*initial-assembler-routines*) result))
+  (cold-setq (cold-intern '*linkage-table-data*)
+	     (make-cold-linkage-vector *cold-linkage-table*)))
 
 
 
@@ -2314,7 +2391,7 @@
 			  (header-name *genesis-c-header-name*))
   "Builds a kernel Lisp image from the .FASL files specified in the given
   File-List and writes it to a file named by Core-Name."
-  (unless symbol-table
+  (unless (or #+linkage-table t symbol-table)
     (error "Can't genesis without a symbol-table."))
   (format t "~&Building ~S for the ~A~%"
 	  core-name (c:backend-version c:*backend*))
@@ -2326,8 +2403,11 @@
 	(progn
 	  (clrhash *fdefn-objects*)
 	  (clrhash *cold-symbols*)
-	  (init-foreign-symbol-table)
-	  (let ((version (load-foreign-symbol-table symbol-table)))
+	  #-linkage-table (init-foreign-symbol-table)
+	  #+linkage-table (init-foreign-linkage)
+	  (let ((version #-linkage-table (load-foreign-symbol-table
+					  symbol-table)
+			 #+linkage-table 0))
 	    (initialize-spaces)
 	    (initialize-symbols)
 	    (initialize-layouts)

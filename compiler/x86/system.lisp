@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.10 2000/01/17 16:46:10 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.11 2002/08/27 22:18:29 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,8 +386,8 @@
 				vm:other-pointer-type))
 	  esp-tn)
     (inst inc index)
-    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
-				:foreign))
+    (load-foreign-data-symbol stack "control_stack_end")
+    (inst mov stack (make-ea :dword :base stack))
     (inst jmp-short LOOP)
 
     FRESH-STACK
@@ -395,8 +395,8 @@
 
     ;; Setup the return context.
     (inst push (make-fixup nil :code-object return))
-    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
-				:foreign))
+    (load-foreign-data-symbol stack "control_stack_end")
+    (inst mov stack (make-ea :dword :base stack))
     ;; New FP is the Top of the stack.
     (inst push stack)
     ;; Save the stack.
@@ -474,8 +474,8 @@
 				vm:other-pointer-type))
 	  esp-tn)
     (inst inc index)
-    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
-				:foreign))
+    (load-foreign-data-symbol stack "control_stack_end")
+    (inst mov stack (make-ea :dword :base stack))
     LOOP
     (inst cmp stack esp-tn)
     (inst jmp :le STACK-SAVE-DONE)
@@ -500,8 +500,8 @@
 		   :disp (- (* vm:vector-data-offset vm:word-bytes)
 			    vm:other-pointer-type)))
     (inst inc index)
-    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
-				:foreign))
+    (load-foreign-data-symbol stack "control_stack_end")
+    (inst mov stack (make-ea :dword :base stack))
     LOOP2
     (inst cmp stack esp-tn)
     (inst jmp :le STACK-RESTORE-DONE)
@@ -543,8 +543,8 @@
 		   :disp (- (* vm:vector-data-offset vm:word-bytes)
 			    vm:other-pointer-type)))
     (inst inc index)
-    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
-				:foreign))
+    (load-foreign-data-symbol stack "control_stack_end")
+    (inst mov stack (make-ea :dword :base stack))
     LOOP
     (inst cmp stack esp-tn)
     (inst jmp :le STACK-RESTORE-DONE)

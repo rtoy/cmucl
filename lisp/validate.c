@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.9 2000/10/27 19:32:52 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.10 2002/08/27 22:18:33 moore Exp $
  *
  * Memory Validation
  */
@@ -59,7 +59,10 @@ void validate(void)
 	/* Binding Stack */
 	binding_stack = (lispobj *) BINDING_STACK_START;
 	ensure_space(binding_stack, BINDING_STACK_SIZE);
-
+#ifdef LINKAGE_TABLE
+	ensure_space((lispobj *)FOREIGN_LINKAGE_SPACE_START,
+		     FOREIGN_LINKAGE_SPACE_SIZE);
+#endif
 #ifdef sparc
 	make_holes();
 #endif

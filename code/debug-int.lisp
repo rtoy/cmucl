@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.100 2001/03/04 20:12:31 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.101 2002/08/27 22:18:23 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -4342,11 +4342,14 @@
    the PC offset for the trap instruction."
   (system:without-gcing
    (let* ((src-start (system:foreign-symbol-address
-		      "function_end_breakpoint_guts"))
+		      "function_end_breakpoint_guts"
+		      :flavor :data))
 	  (src-end (system:foreign-symbol-address
-		    "function_end_breakpoint_end"))
+		    "function_end_breakpoint_end"
+		    :flavor :data))
 	  (trap-loc (system:foreign-symbol-address
-		     "function_end_breakpoint_trap"))
+		     "function_end_breakpoint_trap"
+		     :flavor :data))
 	  (length (system:sap- src-end src-start))
 	  (code-object
 	   (system:%primitive

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.33 2002/01/11 16:26:29 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.34 2002/08/27 22:18:26 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -978,13 +978,15 @@
 		(declaim (fixnum ,counter))
 		
 		(defun ,fto (x)
-		  (or (gethash x ,vto)
-		      (let ((num (incf ,counter)))
-			(setf (gethash num ,vfrom) x)
-			(setf (gethash x ,vto) num))))
-		
+		  (if (boundp ',vto)
+		      (or (gethash x ,vto)
+			  (let ((num (incf ,counter)))
+			    (setf (gethash num ,vfrom) x)
+			    (setf (gethash x ,vto) num)))
+		      "???"))		;Silly placeholder value
 		(defun ,ffrom (num)
-		  (values (gethash num ,vfrom))))))
+		  (when (boundp ',vfrom)
+		    (values (gethash num ,vfrom)))))))
   (frob *continuation-number*
         *continuation-numbers* *number-continuations*
         cont-num num-cont)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.83 2002/04/07 00:14:12 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.84 2002/08/27 22:18:24 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1340,9 +1340,12 @@
   (dolist (symbol *initial-foreign-symbols*)
     (setf (gethash (car symbol) *foreign-symbols*) (cdr symbol)))
   (makunbound '*initial-assembler-routines*)
-  (makunbound '*initial-foreign-symbols*))
+  (makunbound '*initial-foreign-symbols*)
+  (foreign-linkage-init))
 
-(defun foreign-symbol-address-aux (symbol)
+#-linkage-table
+(defun foreign-symbol-address-aux (symbol flavor)
+  (declare (ignore flavor))
   (multiple-value-bind
       (value found)
       (gethash symbol *foreign-symbols* 0)
@@ -1356,8 +1359,13 @@
 	    (error "Unknown foreign symbol: ~S" symbol))
 	  value))))
 
-(defun foreign-symbol-address (symbol)
-  (int-sap (foreign-symbol-address-aux (vm:extern-alien-name symbol))))
+(defun foreign-symbol-address (symbol &key (flavor :code))
+  (let ((maybe-link-table-addr
+	 (foreign-symbol-address-aux (vm:extern-alien-name symbol) flavor)))
+    (if (or #-linkage-table t (eq flavor :code))
+	(int-sap maybe-link-table-addr)
+	;;; Get address out of linkage table
+	(int-sap (sap-ref-32 maybe-link-table-addr 0)))))
 
 (define-fop (fop-foreign-fixup 147)
   (let* ((kind (pop-stack))
@@ -1366,7 +1374,18 @@
 	 (sym (make-string len)))
     (read-n-bytes *fasl-file* sym 0 len)
     (vm:fixup-code-object code-object (read-arg 4)
-			  (foreign-symbol-address-aux sym)
+			  (foreign-symbol-address-aux sym :code)
+			  kind)
+    code-object))
+
+(define-fop (fop-foreign-data-fixup 150)
+  (let* ((kind (pop-stack))
+	 (code-object (pop-stack))
+	 (len (read-arg 1))
+	 (sym (make-string len)))
+    (read-n-bytes *fasl-file* sym 0 len)
+    (vm:fixup-code-object code-object (read-arg 4)
+			  (foreign-symbol-address-aux sym :data)
 			  kind)
     code-object))
 

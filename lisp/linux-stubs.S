@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.10 2001/01/22 10:49:52 dtc Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.11 2002/08/27 22:18:32 moore Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -19,7 +19,19 @@ PVE_stub_ ## fct: ;\
 	jmp fct ;\
 .L ## fct ## e1: ;\
 	.size	 PVE_stub_ ## fct,.L ## fct ## e1-PVE_stub_ ## fct  ;
-
+#if defined(LINKAGE_TABLE) && !defined(__FreeBSD__)
+ /* This is a workaround for glibc braindamage.  These symbols are
+    magically transformed by the preprocessor and linker so that
+    these symbols of don't appear in libc.so.  These stubs
+    are here so that os_dlsym will still work with them.
+    Eventually we'll autogenerate this list of symbols by looking
+    of the output of 'nm /usr/lib/libc_nonshared.a'. */
+ doe(atexit)
+ doe(stat)
+ doe(fstat)
+ doe(lstat)
+ doe(mknod)
+#else
  doe(accept)
  doe(access)
  doe(acos)
@@ -910,3 +922,4 @@ PVE_stub_ ## fct: ;\
 /*  doe(yp_unbind) */
 /*  doe(yperr_string) */
 /*  doe(ypprot_err) */
+#endif /* defined(LINKAGE_TABLE) && !defined(__FreeBSD__) */

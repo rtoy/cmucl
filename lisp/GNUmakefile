@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.16 2001/12/06 22:15:34 pmai Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.17 2002/08/27 22:18:30 moore Exp $
 
 all: lisp.nm
 
@@ -22,14 +22,6 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 
 ### Don't look in RCS for the files, because we might not want the latest.
 %: RCS/%,v
-
-### Special target used to make a lisp.nm file for genesis.
-### Use when internals.h does not yet exist.
-### This is the same 'lisp.nm' but not depending on an existing build.
-initial-map: version
-	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
-	$(NM) lisp | grep -v " F \| U " >> ,lisp.nm
-	mv ,lisp.nm lisp.nm
 
 lisp.nm: lisp
 	echo 'Map file for lisp version ' `cat version` > ,lisp.nm

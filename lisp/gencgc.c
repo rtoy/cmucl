@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.26 2002/01/28 20:19:39 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.27 2002/08/27 22:18:31 moore Exp $
  *
  */
 
@@ -255,6 +255,21 @@ struct generation {
  */
 static struct generation generations[NUM_GENERATIONS + 1];
 
+/* Statistics about a generation, extracted from the generations
+   array.  This gets returned to Lisp.
+*/
+
+struct generation_stats {
+  int  bytes_allocated;
+  int  gc_trigger;
+  int  bytes_consed_between_gc;
+  int  num_gc;
+  int  trigger_age;
+  int  cum_sum_bytes_allocated;
+  double  min_av_mem_age;
+};
+  
+
 /*
  * The oldest generation that will currently be GCed by default.
  * Valid values are: 0, 1, ... (NUM_GENERATIONS - 1)
@@ -441,7 +456,42 @@ static void print_generation_stats(int  verbose)
   fpu_restore(fpu_state);
 }
 
+/* Get statistics that are kept "on the fly" out of the generation
+   array.
+*/
+void get_generation_stats(int gen, struct generation_stats *stats)
+{
+  if (gen <= NUM_GENERATIONS) {
+    stats->bytes_allocated = generations[gen].bytes_allocated;
+    stats->gc_trigger = generations[gen].gc_trigger;
+    stats->bytes_consed_between_gc = generations[gen].bytes_consed_between_gc;
+    stats->num_gc = generations[gen].num_gc;
+    stats->trigger_age = generations[gen].trigger_age;
+    stats->cum_sum_bytes_allocated = generations[gen].cum_sum_bytes_allocated;
+    stats->min_av_mem_age = generations[gen].min_av_mem_age;
+  }
+}
 
+void set_gc_trigger(int gen, int trigger)
+{
+  if (gen <= NUM_GENERATIONS) {
+    generations[gen].gc_trigger = trigger;
+  }
+}
+
+void set_trigger_age(int gen, int trigger_age)
+{
+  if (gen <= NUM_GENERATIONS) {
+    generations[gen].trigger_age = trigger_age;
+  }
+}
+
+void set_min_mem_age(int gen, double min_mem_age)
+{
+  if (gen <= NUM_GENERATIONS) {
+    generations[gen].min_av_mem_age = min_mem_age;
+  }
+}
 
 /*
  * Allocation routines.
@@ -499,11 +549,13 @@ static void print_generation_stats(int  verbose)
 struct alloc_region  boxed_region;
 struct alloc_region  unboxed_region;
 
+#if 0
 /*
  * X hack. current lisp code uses the following. Need coping in/out.
  */
 void *current_region_free_pointer;
 void *current_region_end_addr;
+#endif
 
 /* The generation currently being allocated to. X */
 static int  gc_alloc_generation;
@@ -5670,13 +5722,15 @@ static void verify_zero_fill(void)
 void gencgc_verify_zero_fill(void)
 {
   /* Flush the alloc regions updating the tables. */
-  boxed_region.free_pointer = current_region_free_pointer;
+  
+  boxed_region.free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER);
   gc_alloc_update_page_tables(0, &boxed_region);
   gc_alloc_update_page_tables(1, &unboxed_region);
   fprintf(stderr, "* Verifying zero fill\n");
   verify_zero_fill();
-  current_region_free_pointer = boxed_region.free_pointer;
-  current_region_end_addr = boxed_region.end_addr;
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER,
+		 (lispobj)boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj)boxed_region.end_addr);
 }
 
 static void verify_dynamic_space(void)
@@ -5965,7 +6019,7 @@ void	collect_garbage(unsigned last_gen)
   int gen_to_wp;
   int i;
 
-  boxed_region.free_pointer = current_region_free_pointer;
+  boxed_region.free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER);
 
   /* Check last_gen */
   if (last_gen > NUM_GENERATIONS) {
@@ -6075,8 +6129,8 @@ void	collect_garbage(unsigned last_gen)
 
   update_x86_dynamic_space_free_pointer();
 
-  current_region_free_pointer = boxed_region.free_pointer;
-  current_region_end_addr = boxed_region.end_addr;
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
 
   /* Call the scavenger hook functions */
   {
@@ -6187,8 +6241,8 @@ void	gc_free_heap(void)
   last_free_page = 0;
   SetSymbolValue(ALLOCATION_POINTER, (lispobj) heap_base);
 
-  current_region_free_pointer = boxed_region.free_pointer;
-  current_region_end_addr = boxed_region.end_addr;
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
 
   if (verify_after_free_heap) {
     /* Check if purify has left any bad pointers. */
@@ -6263,8 +6317,8 @@ void gc_init(void)
 
   last_free_page = 0;
 
-  current_region_free_pointer = boxed_region.free_pointer;
-  current_region_end_addr = boxed_region.end_addr;
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
 }
 
 /*
@@ -6297,8 +6351,8 @@ void	gencgc_pickup_dynamic(void)
   generations[0].bytes_allocated = PAGE_SIZE * page;
   bytes_allocated = PAGE_SIZE * page;
 
-  current_region_free_pointer = boxed_region.free_pointer;
-  current_region_end_addr = boxed_region.end_addr;
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
 }
 
 
@@ -6330,7 +6384,7 @@ int alloc_entered = 0;
 char *alloc(int nbytes)
 {
   /* Check for alignment allocation problems. */
-  gc_assert(((unsigned) current_region_free_pointer & 0x7) == 0
+  gc_assert(((unsigned) SymbolValue(CURRENT_REGION_FREE_POINTER) & 0x7) == 0
 	    && (nbytes & 0x7) == 0);
 
   if (SymbolValue(PSEUDO_ATOMIC_ATOMIC)) {
@@ -6342,12 +6396,12 @@ char *alloc(int nbytes)
       fprintf(stderr,"* Alloc re-entered\n");
 
     /* Check if there is room in the current region. */
-    new_free_pointer = current_region_free_pointer + nbytes;
+    new_free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER) + nbytes;
 
     if (new_free_pointer <= boxed_region.end_addr) {
       /* If so then allocate from the current region. */
-      void  *new_obj = current_region_free_pointer;
-      current_region_free_pointer = new_free_pointer;
+      void  *new_obj = SymbolValue(CURRENT_REGION_FREE_POINTER);
+      SetSymbolValue(CURRENT_REGION_FREE_POINTER, new_free_pointer);
       alloc_entered--;
       return (void *) new_obj;
     }
@@ -6368,11 +6422,11 @@ char *alloc(int nbytes)
       goto retry1;
     }
     /* Call gc_alloc */
-    boxed_region.free_pointer = current_region_free_pointer;
+    boxed_region.free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER);
     {
       void *new_obj = gc_alloc(nbytes);
-      current_region_free_pointer = boxed_region.free_pointer;
-      current_region_end_addr = boxed_region.end_addr;
+      SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
+      SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
       alloc_entered--;
       return new_obj;
     }
@@ -6401,12 +6455,12 @@ char *alloc(int nbytes)
       fprintf(stderr,"* Alloc re-entered\n");
 
     /* Check if there is room in the current region. */
-    new_free_pointer = current_region_free_pointer + nbytes;
+    new_free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER) + nbytes;
 
     if (new_free_pointer <= boxed_region.end_addr) {
       /* If so then allocate from the current region. */
-      void *new_obj = current_region_free_pointer;
-      current_region_free_pointer = new_free_pointer;
+      void *new_obj = SymbolValue(CURRENT_REGION_FREE_POINTER);
+      SetSymbolValue(CURRENT_REGION_FREE_POINTER, new_free_pointer);
 
       alloc_entered--;
       SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
@@ -6433,10 +6487,10 @@ char *alloc(int nbytes)
     }
 
     /* Else call gc_alloc */
-    boxed_region.free_pointer = current_region_free_pointer;
+    boxed_region.free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER);
     result = gc_alloc(nbytes);
-    current_region_free_pointer = boxed_region.free_pointer;
-    current_region_end_addr = boxed_region.end_addr;
+    SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
+    SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
 
     alloc_entered--;
     SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));

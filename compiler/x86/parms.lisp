@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.19 2002/03/31 14:48:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.20 2002/08/27 22:18:28 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,7 +173,9 @@
 
 (export '(target-read-only-space-start
 	  target-static-space-start
-	  target-dynamic-space-start))
+	  target-dynamic-space-start
+	  target-foreign-linkage-space-start
+	  target-foreign-linkage-entry-size))
 
 ;;; Where to put the different spaces.
 ;;; 
@@ -181,6 +183,8 @@
 (defparameter target-static-space-start    #+FreeBSD #x28F00000
 	      #-FreeBSD #x28000000)
 (defparameter target-dynamic-space-start   #x48000000)
+(defparameter target-foreign-linkage-space-start #xB0000000)
+(defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
 ;;; Given that NIL is the first thing allocated in static space, we
 ;;; know its value at compile time:
@@ -312,7 +316,14 @@
       
       ;; Used by CGC.
       *x86-cgc-active-p*
+      ;; Foreign linkage stuff
+      lisp::*linkage-table-data*
+      system::*global-table*
+      *current-region-free-pointer*
+      *current-region-end-addr*
       *static-blue-bag*		; Must be last or change C code
+
+      
       ))
 
 (defparameter static-functions

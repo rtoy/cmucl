@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.9 2002/01/28 20:17:11 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.10 2002/08/27 22:18:33 moore Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -101,5 +101,8 @@ extern boolean valid_addr(os_vm_address_t test);
     (os_vm_size_t)(((long)(size))&~(os_vm_page_size-1))
 #define os_round_up_size_to_page(size) \
     os_trunc_size_to_page((size)+(os_vm_page_size-1))
+
+extern void os_foreign_linkage_init(void);
+extern void *os_dlsym (const char *sym_name, lispobj lib_list);
 
 #endif

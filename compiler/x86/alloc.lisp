@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.7 1998/02/19 19:34:35 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.8 2002/08/27 22:18:28 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,6 +234,7 @@
   (:translate make-symbol)
   (:args (name :scs (descriptor-reg) :to :eval))
   (:temporary (:sc unsigned-reg :from :eval) temp)
+  (:temporary (:sc unsigned-reg :from :eval) state-addr)
   (:results (result :scs (descriptor-reg) :from :argument))
   (:node-var node)
   (:generator 37
@@ -242,12 +243,12 @@
       (storew unbound-marker-type result symbol-value-slot other-pointer-type)
       ;; Setup a random hash value for the symbol.  Perhaps the object
       ;; address could be used for even faster and smaller code!
+      (load-foreign-data-symbol state-addr "fast_random_state")
       (inst imul temp
-	    (make-fixup (extern-alien-name "fast_random_state") :foreign)
+	    (make-ea :dword :base state-addr)
 	    1103515245)
       (inst add temp 12345)
-      (inst mov (make-fixup (extern-alien-name "fast_random_state") :foreign)
-	    temp)
+      (inst mov (make-ea :dword :base state-addr) temp)
       ;; Want a positive fixnum for the hash value, discard the LS bits.
       (inst shr temp 1)
       (inst and temp #xfffffffc)

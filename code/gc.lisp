@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.26 2001/04/10 13:42:44 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.27 2002/08/27 22:18:24 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -487,3 +487,41 @@
     (if (< *gc-trigger* (dynamic-usage))
 	(sub-gc)
 	(set-auto-gc-trigger *gc-trigger*))))
+
+;;; setters and accessors for gencgc parameters
+
+#+gencgc(eval-when (load eval)
+(alien:def-alien-type nil
+  (alien:struct generation-stats
+    (bytes-allocated c-call:int)
+    (gc-trigger c-call:int)
+    (bytes-consed-between-gc c-call:int)
+    (num-gc c-call:int)
+    (trigger-age c-call:int)
+    (cum-sum-bytes-allocated c-call:int)
+    (min-av-mem-age c-call:double)))
+
+(defun gencgc-stats (generation)
+  (alien:with-alien ((stats (alien:struct generation-stats)))
+    (alien:alien-funcall (alien:extern-alien "get_generation_stats"
+					     (function c-call:void
+						       c-call:int
+						       (* (alien:struct
+							   generation-stats))))
+			 generation
+			 (alien:addr stats))
+    (values (alien:slot stats 'bytes-allocated)
+	    (alien:slot stats 'gc-trigger)
+	    (alien:slot stats 'bytes-consed-between-gc)
+	    (alien:slot stats 'num-gc)
+	    (alien:slot stats 'trigger-age)
+	    (alien:slot stats 'cum-sum-bytes-allocated)
+	    (alien:slot stats 'min-av-mem-age))))
+
+(alien:def-alien-routine set-gc-trigger c-call:void
+			 (gen c-call:int) (trigger c-call:int))
+(alien:def-alien-routine set-trigger-age c-call:void
+			 (gen c-call:int) (trigger-age c-call:int))
+(alien:def-alien-routine set-min-mem-age c-call:void
+			 (gen c-call:int) (min-mem-age c-call:double))
+)

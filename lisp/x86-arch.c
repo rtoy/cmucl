@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.16 2002/01/28 20:17:12 pmai Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.17 2002/08/27 22:18:33 moore Exp $ 
  *
  */
 
@@ -342,3 +342,58 @@ lispobj  funcall3(lispobj function, lispobj arg0, lispobj arg1, lispobj arg2)
     args[2] = arg2;
     return call_into_lisp(function, args, 3);
 }
+
+/* Linkage entry size is 8, for no good reason. */
+#define LINKAGE_ENTRY_SIZE 8
+
+#ifdef LINKAGE_TABLE
+void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
+{
+    char *reloc_addr = (char *)(FOREIGN_LINKAGE_SPACE_START
+				+ linkage_entry * LINKAGE_ENTRY_SIZE);
+
+    if (type == 1) {			/* code reference */
+        /* Make JMP to function entry. */
+	/* JMP offset is calculated from next instruction. */
+	long offset = (char *)target_addr - (reloc_addr + 5);
+	int i;
+	
+	*reloc_addr++ = 0xe9;		/* opcode for JMP rel32 */
+	for (i = 0; i < 4; i++) {
+	    *reloc_addr++ = offset & 0xff;
+	    offset >>= 8;
+	}
+	/* write a nop for good measure. */
+	*reloc_addr = 0x90;
+    } else if (type == 2) {
+	*(unsigned long *)reloc_addr = (unsigned long)target_addr;
+    }
+}
+
+/* Make a call to the first function in the linkage table, which is
+   resolve_linkage_tramp. */
+void arch_make_lazy_linkage(long linkage_entry)
+{
+    char *reloc_addr = (char *)(FOREIGN_LINKAGE_SPACE_START
+				+ linkage_entry * LINKAGE_ENTRY_SIZE);
+    long offset = (char *)(FOREIGN_LINKAGE_SPACE_START) - (reloc_addr + 5);
+    int i;
+
+    *reloc_addr++ = 0xe8;		/* opcode for CALL rel32 */
+    for (i = 0; i < 4; i++) {
+	*reloc_addr++ = offset & 0xff;
+	offset >>= 8;
+    }
+    /* write a nop for good measure. */
+    *reloc_addr = 0x90;
+}
+
+/* Get linkage entry.  The initial instruction in the linkage
+   entry is a CALL; the return address we're passed points to the next
+   instruction. */
+
+long arch_linkage_entry(unsigned long retaddr)
+{
+    return ((retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LINKAGE_ENTRY_SIZE;
+}
+#endif /* LINKAGE_TABLE */

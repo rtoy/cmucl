@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.52 2002/08/26 20:45:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.53 2002/08/27 22:18:35 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,6 +67,8 @@
 (defvar c::*target-backend* (c::make-backend))
 
 (comf (vmdir "target:compiler/parms") :proceed t)
+;(when *load-stuff*
+;  (load (vmdir "target:compiler/parms")))
 
 (comf "target:compiler/generic/objdef" :proceed t)
 (comf "target:compiler/generic/interr")
@@ -90,6 +92,8 @@
   (load "target:compiler/meta-vmdef"))
 (comf "target:compiler/disassem" :byte-compile *byte-compile*)
 (comf "target:compiler/new-assem")
+(when *load-stuff*
+  (load "target:compiler/new-assem"))
 (comf "target:compiler/alloc")
 (comf "target:compiler/knownfun")
 (comf "target:compiler/fndb")

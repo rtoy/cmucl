@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.11 1999/09/15 15:11:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.12 2002/08/27 22:18:27 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,8 +20,37 @@
 ;;;; Defknowns
 
     
-(defknown foreign-symbol-address (simple-string) system-area-pointer
+(defknown foreign-symbol-address (simple-string &key (:flavor t))
+  system-area-pointer
   (movable flushable))
+
+(defknown foreign-symbol-code-address (simple-string) system-area-pointer
+  (movable flushable))
+
+(defknown foreign-symbol-data-address (simple-string) system-area-pointer
+  (movable flushable))
+
+;;; Preserve compatibility for ports that don't use linkage table yet
+(deftransform foreign-symbol-address ((symbol &key flavor)
+				      (simple-string &rest *))
+  (if (not flavor)
+      (progn
+	#+linkage-table (compiler-error "FOREIGN-SYMBOL-ADDRESS must be qualified with :CODE or :DATA")
+	#-linkage-table (give-up))
+      (let ((flav (cond ((not (constant-continuation-p flavor))
+			 (compiler-error "FOREIGN-SYMBOL-ADDRESS flavor is not constant."
+					 flavor))
+			(t (continuation-value flavor)))))
+	(cond ((eq flav :code)
+	       `(#+linkage-table foreign-symbol-code-address
+		 #-linkage-table foreign-symbol-address
+		 symbol))
+	      ((eq flav :data)
+	       `(#+linkage-table foreign-symbol-data-address
+		 #-linkage-table foreign-symbol-address
+		 symbol))
+	      (t (compiler-error
+		  "FOREIGN-SYMBOL-ADDRESS flavor ~S is not :CODE or :DATA"))))))
 
 (defknown (sap< sap<= sap= sap>= sap>)
 	  (system-area-pointer system-area-pointer) boolean

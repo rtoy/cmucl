@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.20 2002/05/06 18:02:05 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.21 2002/08/27 22:18:25 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -218,7 +218,7 @@
 ;;;
 ;;; Counter to measure the storage overhead.
 (defvar *num-fixups* 0)
-;;;
+;;; XXX
 (defun fixup-code-object (code offset fixup kind)
   (declare (type index offset))
   (flet ((add-fixup (code offset)
@@ -478,8 +478,9 @@
   #-(and bsd (not elf))
   name)
 
-#+(or linux (and freebsd elf))
-(defun lisp::foreign-symbol-address-aux (name)
+#+(and (or linux (and freebsd elf)) (not linkage-table))
+(defun lisp::foreign-symbol-address-aux (name flavor)
+  (declare (ignore flavor))
   (multiple-value-bind (value found)
       (gethash name lisp::*foreign-symbols* 0)
     (if found
@@ -494,6 +495,7 @@
 		(when (zerop value)
 		  (error "Unknown foreign symbol: ~S" name))
 		value))))))
+
 
 
 ;;; SANCTIFY-FOR-EXECUTION -- Interface.
@@ -657,3 +659,19 @@
 		       ,n-vect ,n-index ,old-list ,new-list)
 		      ,old-list)
 	      (return ,new-list))))))))
+
+#+linkage-table
+(progn
+(defun lisp::foreign-symbol-address-aux (name flavor)
+  (let ((entry-num (lisp::register-foreign-linkage name flavor)))
+    (+ #.vm:target-foreign-linkage-space-start
+       (* entry-num vm:target-foreign-linkage-entry-size))))
+
+(defun lisp::find-foreign-symbol (addr)
+  (declare (type (unsigned-byte 32) addr))
+  (when (>= addr vm:target-foreign-linkage-space-start)
+    (let ((entry (/ (- addr vm:target-foreign-linkage-space-start)
+		    vm:target-foreign-linkage-entry-size)))
+      (when (< entry (lisp::foreign-linkage-symbols))
+	(lisp::foreign-linkage-entry entry)))))
+)

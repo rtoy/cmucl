@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.39 1999/02/25 13:03:12 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.40 2002/08/27 22:18:27 moore Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,9 +93,13 @@
 	    (:assembly-routine
 	     (assert (symbolp name))
 	     (gethash name lisp::*assembler-routines*))
-	    (:foreign
+	    ((:foreign :foreign-data)
 	     (assert (stringp name))
-	     (let ((val (lisp::foreign-symbol-address-aux name)))
+	     (let ((val (lisp::foreign-symbol-address-aux name
+							  (if (eq flavor
+								  :foreign)
+							      :code
+							      :data))))
 	       ;; Foreign-symbol-address-aux always signals exactly
 	       ;; the same error we would if the symbol isn't found
 	       (values val t)))

@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.25 2002/01/29 01:23:33 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.26 2002/08/27 22:18:32 moore Exp $
  *
  */
 
@@ -206,7 +206,9 @@ int main(int argc, char *argv[], char *envp[])
     globals_init();
 
     initial_function = load_core_file(core);
-
+#if defined LINKAGE_TABLE
+    os_foreign_linkage_init();
+#endif /* LINKAGE_TABLE */
 
 #if defined GENCGC
     gencgc_pickup_dynamic();

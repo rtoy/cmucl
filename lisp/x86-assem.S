@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.21 2002/08/23 17:01:02 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.22 2002/08/27 22:18:34 moore Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -732,7 +732,7 @@ GNAME(alloc_overflow_eax):
 	pushl	%ecx		# Save ecx
 	pushl	%edx		# Save edx
 	/* Calculate the size for the allocation. */
-	subl	GNAME(current_region_free_pointer),%eax
+	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%eax
 	pushl	%eax		# Push the size
 	call	GNAME(alloc)
 	addl	$4,%esp	# pop the size arg.
@@ -751,7 +751,7 @@ GNAME(alloc_overflow_ecx):
 	pushl	%eax		# Save eax
 	pushl	%edx		# Save edx
 	/* Calculate the size for the allocation. */
-	subl	GNAME(current_region_free_pointer),%ecx
+	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%ecx
 	pushl	%ecx		# Push the size
 	call	GNAME(alloc)
 	addl	$4,%esp	# pop the size arg.
@@ -771,7 +771,7 @@ GNAME(alloc_overflow_edx):
 	pushl	%eax		# Save eax
 	pushl	%ecx		# Save ecx
 	/* Calculate the size for the allocation. */
-	subl	GNAME(current_region_free_pointer),%edx
+	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%edx
 	pushl	%edx		# Push the size
 	call	GNAME(alloc)
 	addl	$4,%esp	# pop the size arg.
@@ -792,7 +792,7 @@ GNAME(alloc_overflow_ebx):
 	pushl	%ecx		# Save ecx
 	pushl	%edx		# Save edx
 	/* Calculate the size for the allocation. */
-	subl	GNAME(current_region_free_pointer),%ebx
+	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%ebx
 	pushl	%ebx		# Push the size
 	call	GNAME(alloc)
 	addl	$4,%esp	# pop the size arg.
@@ -814,7 +814,7 @@ GNAME(alloc_overflow_esi):
 	pushl	%ecx		# Save ecx
 	pushl	%edx		# Save edx
 	/* Calculate the size for the allocation. */
-	subl	GNAME(current_region_free_pointer),%esi
+	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%esi
 	pushl	%esi		# Push the size
 	call	GNAME(alloc)
 	addl	$4,%esp	# pop the size arg.
@@ -836,7 +836,7 @@ GNAME(alloc_overflow_edi):
 	pushl	%ecx		# Save ecx
 	pushl	%edx		# Save edx
 	/* Calculate the size for the allocation. */
-	subl	GNAME(current_region_free_pointer),%edi
+	subl	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%edi
 	pushl	%edi		# Push the size
 	call	GNAME(alloc)
 	addl	$4,%esp	# pop the size arg.
@@ -850,4 +850,81 @@ GNAME(alloc_overflow_edi):
 
 #endif
 
+/* Call into C code to resolve a linkage entry.  The initial code in the 
+ * linkage entry has done a call to here; pass that return entry along as a 
+ * parameter.
+ *
+ * We could be called from raw Lisp code or from a foreign call site, so we 
+ * have to save all the registers...
+ */	
+	.align	align_4byte
+	.globl	GNAME(resolve_linkage_tramp)
+	.type	GNAME(resolve_linkage_tramp),@function
+GNAME(resolve_linkage_tramp):
+	pushl	%ebp		# save old frame pointer
+	movl	%esp,%ebp	# establish new frame
+	pushl	%eax
+	pushl	%ebx
+	pushl	%ecx
+	pushl	%edx
+	pushl	%edi
+	pushl	%esi
+	/* calling location (plus offset) was on top of stack */
+	movl	4(%ebp), %eax
+	pushl	%eax		# push for C function
+	call	GNAME(lazy_resolve_linkage)
+	/* real address of target is in %eax.  Replace return address on stack
+	 * with it.  That way we can get out of here without trashing any 
+	 *registers!
+	 */
+	movl	%eax,4(%ebp)
+	addl	$4, %esp	# bump off argument to lazy_resolve_linkage
+	popl	%esi
+	popl	%edi
+	popl	%edx
+	popl	%ecx
+	popl	%ebx
+	popl	%eax
+	popl	%ebp
+	ret			# jump to the real target
+	.size	 GNAME(resolve_linkage_tramp),.-GNAME(resolve_linkage_tramp)
+
+/*
+ * The undefined-ff-function trampoline.
+ */
+	.text
+	.align	align_4byte,0x90
+	.global GNAME(undefined_ff_tramp)
+	.type	GNAME(undefined_ff_tramp),@function
+GNAME(undefined_ff_tramp):
+	/* C Calling Convention, move one arg to EAX */
+        pushl %ebp
+        movl %esp,%ebp
+        movl 8(%ebp),%eax
+
+	/* Now trap to Lisp */
+	int3
+	/* The trap code: */
+	.byte	trap_Error
+	/* The number of arguments, including the error code */
+        .byte   2
+	/* The error code, which varies with long-float availability */
+	/* Here we use undefined-foreign-symbol-error. */
+#ifdef type_LongFloat
+        .byte   67
+#else
+        .byte   66
+#endif
+	/* Now the real args.  Each arg is provided via a SC-OFFSET.
+	   SC-OFFSETS are defined in code/debug-info.lisp.  They
+	   encode the storage class and storage class offset in
+	   one 27bit integer, the storage class taking the 5 LSBs,
+	   with the 22 MSBs indicating the offset.  */
+        .byte   sc_DescriptorReg | 0x00 # EAX in the Descriptor-reg SC.
+
+	/* C Calling Convention */
+	/* Doesn't matter here, but could if we'd use trap_Cerror */
+	leave
+	ret
+	.size	GNAME(undefined_ff_tramp), .-GNAME(undefined_ff_tramp)
 	.end

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.10 1998/07/24 17:22:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.11 2002/08/27 22:18:27 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,4 +184,6 @@
   (nil-function-returned
    "Function with declared result type NIL returned.")
   (layout-invalid
-   "Layout is invalid (instance obsolete.)"))
+   "Layout is invalid (instance obsolete.)")
+  (undefined-foreign-symbol
+   "No value for foreign symbol."))

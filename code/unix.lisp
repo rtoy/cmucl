@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.75 2002/08/24 01:59:37 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.76 2002/08/27 22:18:25 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1962,7 +1962,9 @@
     #+irix (declaim (notinline fakeout-compiler))
     #+irix (defun fakeout-compiler (name dst)
              (unless unix-tzname-addr
-               (setf unix-tzname-addr (system:foreign-symbol-address name)))
+               (setf unix-tzname-addr (system:foreign-symbol-address
+				       name
+				       :flavor :data)))
               (deref (sap-alien unix-tzname-addr (array c-string 2)) dst))
     (def-alien-routine get-timezone c-call:void
 		       (when c-call:long :in)

@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.12 2000/10/24 13:32:30 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.13 2002/08/27 22:18:31 moore Exp $
  *
  */
 
@@ -42,6 +42,8 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <netdb.h>
+#include <link.h>
+#include <dlfcn.h>
 
 #include "validate.h"
 size_t os_vm_page_size;
@@ -278,4 +280,51 @@ void os_install_interrupt_handlers(void)
 {
   interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
   interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
+}
+
+/* Some symbols, most notably stat and lstat, don't appear at all in
+   the glibc .so files as a result of preprocessor and linker magic /
+   braindamage.  So, try falling back to a stub in linux-stubs.S that
+   will call the proper function if it's one of those. */
+
+static void *dlsym_fallback(void *handle, const char *name)
+{
+    char newsym[1024];
+    void *sym_addr;
+
+    strcpy(newsym, "PVE_stub_");
+    strcat(newsym, name);
+    if ((sym_addr = dlsym(handle, newsym)) == 0) {
+	fputs(dlerror(), stderr);
+    }
+    return sym_addr;
+}
+
+void *os_dlsym(const char *sym_name, lispobj lib_list)
+{
+    static void *program_handle;
+    void *sym_addr = 0;
+
+    if (!program_handle)
+	program_handle = dlopen((void *)0, RTLD_LAZY | RTLD_GLOBAL);
+    if (lib_list != NIL) {
+	lispobj lib_list_head;
+
+	for (lib_list_head = lib_list;
+	     lib_list_head != NIL;
+	     lib_list_head = (CONS(lib_list_head))->cdr) {
+	    struct cons *lib_cons = (struct cons *)(CONS(lib_list_head))->car;
+	    struct sap *dlhandle = (struct sap *)(CONS(lib_cons))->car;
+
+	    sym_addr = dlsym((void *)dlhandle->pointer, sym_name);
+	    if (sym_addr)
+		return sym_addr;
+	}
+    }
+    sym_addr = dlsym(program_handle, sym_name);
+    if (!sym_addr && dlerror()) {
+	return dlsym_fallback(program_handle,sym_name);
+    } else {
+	return sym_addr;
+    }
 }

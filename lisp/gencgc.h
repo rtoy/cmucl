@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.6 2000/10/27 19:25:55 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.7 2002/08/27 22:18:32 moore Exp $
  *
  */
 
@@ -159,4 +159,4 @@ lispobj * component_ptr_from_pc(lispobj *pc);
 
 void gc_alloc_update_page_tables(int unboxed,
 				 struct alloc_region *alloc_region);
-#endif _GENCGC_H_
+#endif /* _GENCGC_H_ */

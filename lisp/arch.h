@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.5 2000/10/27 19:25:54 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.6 2002/08/27 22:18:31 moore Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -32,5 +32,10 @@ extern lispobj funcall3(lispobj function, lispobj arg0, lispobj arg1,
 
 extern void fpu_save(void *);
 extern void fpu_restore(void *);
+
+extern void arch_make_linkage_entry(long, void *, long);
+extern long arch_linkage_entry(unsigned long);
+void arch_make_lazy_linkage(long linkage_entry);
+long arch_linkage_entry(unsigned long retaddr);
 
 #endif /* __ARCH_H__ */

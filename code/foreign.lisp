@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.40 2002/05/06 18:02:04 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.41 2002/08/27 22:18:24 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -513,7 +513,7 @@ to skip undefined symbols which don't have an address."
 					     "path:")
 			    #+hpux "library:cmucl.orig")
 			   (env ext:*environment-list*)
-		           (verbose *load-verbose*))
+		     	   (verbose *load-verbose*))
   "Load-foreign loads a list of C object files into a running Lisp.  The files
   argument should be a single file or a list of files.  The files may be
   specified as namestrings or as pathnames.  The libraries argument should be a
@@ -616,6 +616,7 @@ to skip undefined symbols which don't have an address."
 ;;; save--this is primarily for irix, which resolves tzname at
 ;;; runtime, resulting in *global-table* being set in the saved core
 ;;; image, resulting in havoc upon restart.
+#-linkage-table
 (pushnew #'(lambda () (setq *global-table* nil))
 	 ext:*after-save-initializations*)
 
@@ -650,10 +651,39 @@ to skip undefined symbols which don't have an address."
   (ensure-lisp-table-opened)
   ; rtld global: so it can find all the symbols previously loaded
   ; rtld now: that way dlopen will fail if not all symbols are defined.
-  (let ((sap (dlopen file (logior rtld-now rtld-global))))
-       (if (zerop (sap-int sap))
-	   (error "Can't open object ~S: ~S" file (dlerror))
-	   (pushnew sap *global-table* :test #'sap=))))
+  (let* ((filename (namestring file ))
+	 (sap (dlopen filename (logior rtld-now rtld-global))))
+    (cond ((zerop (sap-int sap))
+	   (error "Can't open object ~S: ~S" file (dlerror)))
+	  ((null (assoc sap *global-table* :test #'sap=))
+	   (setf *global-table* (acons sap file *global-table*)))
+	  (t nil))))
+
+;;; Clear close all dlopened libraries and clear out the entries in
+;;; *global-table*, prior to doing a save-lisp.
+
+(defun close-global-table ()
+  (loop for lib-entry in *global-table*
+	for (sap) = lib-entry
+	do (progn
+	     (dlclose sap)
+	     ;; Probably not necessary, but neater than leaving around
+	     ;; stale handles in the saved image.
+	     (setf (car lib-entry) (int-sap 0)))))
+
+;;; Open all the libraries in *global-table*
+(defun reinitialize-global-table ()
+  (loop for lib-entry in *global-table*
+	for (sap . lib-path) = lib-entry
+	for new-sap = (dlopen (namestring lib-path)
+			      (logior rtld-now rtld-global))
+	do (progn
+	     (when (zerop (sap-int new-sap))
+	       ;; We're going down
+	       (error "Couldn't open library ~S: ~S" lib-path (dlerror)))
+	     (setf (car lib-entry) new-sap)))
+  (alien:alien-funcall (alien:extern-alien "os_resolve_data_linkage"
+					   (alien:function c-call:void))))
 
 (defun alternate-get-global-address (symbol)
   (ensure-lisp-table-opened)
@@ -686,7 +716,7 @@ to skip undefined symbols which don't have an address."
   (let ((output-file (pick-temporary-file-name
 		      (concatenate 'string "/tmp/~D~C" (string (gensym)))))
 	(error-output (make-string-output-stream)))
-
+ 
     (when verbose
       (format t ";;; Running ~A...~%" *dso-linker*)
       (force-output))

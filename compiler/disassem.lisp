@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.31 2001/06/25 16:47:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.32 2002/08/27 22:18:26 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3671,7 +3671,9 @@ symbol object that we know about.")
   (declare (type disassem-state dstate))
   (unless (typep address 'address)
     (return-from maybe-note-assembler-routine nil))
-  (let ((name (find-assembler-routine address)))
+  (let ((name (#+linkage-table lisp::find-foreign-symbol
+	       #-linkage-table find-assembler-routine
+	       address)))
     (unless (null name)
       (note #'(lambda (stream)
 		(if NOTE-ADDRESS-P
