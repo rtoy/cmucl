@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.54 2003/09/05 11:25:28 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.55 2003/09/09 12:33:39 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1040,7 +1040,8 @@
   "Returns the bit-wise or of its arguments.  Args must be integers."
   (declare (list integers))
   (if integers
-      (do ((result (pop integers) (logior result (pop integers))))
+      (do ((result (the integer (pop integers))
+		   (logior result (pop integers))))
 	  ((null integers) result))
       0))
 
@@ -1048,7 +1049,8 @@
   "Returns the bit-wise exclusive or of its arguments.  Args must be integers."
   (declare (list integers))
   (if integers
-      (do ((result (pop integers) (logxor result (pop integers))))
+      (do ((result (the integer (pop integers))
+		   (logxor result (pop integers))))
 	  ((null integers) result))
       0))
 
@@ -1056,7 +1058,8 @@
   "Returns the bit-wise and of its arguments.  Args must be integers."
   (declare (list integers))
   (if integers
-      (do ((result (pop integers) (logand result (pop integers))))
+      (do ((result (the integer (pop integers))
+		   (logand result (pop integers))))
 	  ((null integers) result))
       -1))
 
@@ -1064,7 +1067,8 @@
   "Returns the bit-wise equivalence of its arguments.  Args must be integers."
   (declare (list integers))
   (if integers
-      (do ((result (pop integers) (logeqv result (pop integers))))
+      (do ((result (the integer (pop integers))
+		   (logeqv result (pop integers))))
 	  ((null integers) result))
       -1))
 
