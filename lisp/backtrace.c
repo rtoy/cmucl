@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.7 2003/07/28 13:31:46 gerd Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.8 2003/07/28 17:43:11 gerd Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -246,6 +246,7 @@ backtrace(int nframes)
 #else /* i386 */
 
 #include "x86-validate.h"
+#include "gc.h"
 
 #define VM_OCFP_SAVE_OFFSET		0
 #define VM_RETURN_PC_SAVE_OFFSET	1
@@ -273,81 +274,63 @@ deref (unsigned p, int offset)
 static void
 print_entry_name (lispobj name)
 {
-  lispobj *object = (lispobj *) PTR (name);
-
-  if (TypeOf (*object) == type_SymbolHeader)
+  if (LowtagOf (name) == type_ListPointer)
     {
-      struct symbol *symbol = (struct symbol *) object;
-      struct vector *string;
-
-      if (symbol->package != NIL)
+      putchar ('(');
+      while (name != NIL)
 	{
-	  struct instance *pkg = (struct instance *) PTR (symbol->package);
-	  lispobj pkg_name = pkg->slots[2];
-	  string = (struct vector *) PTR (pkg_name);
-	  printf ("%s::", (char *) string->data);
+	  struct cons *cons = (struct cons *) PTR (name);
+	  print_entry_name (cons->car);
+	  name = cons->cdr;
+	  if (name != NIL)
+	    putchar (' ');
 	}
-      
-      object = (lispobj *) PTR (symbol->name);
-      string = (struct vector *) object;
-      printf ("%s", (char *) string->data);
+      putchar (')');
     }
-  else if (TypeOf (*object) == type_SimpleString)
+  else if (LowtagOf (name) == type_OtherPointer)
     {
-      struct vector *string = (struct vector *) object;
-      printf ("\"%s\"", (char *) string->data);
+      lispobj *object = (lispobj *) PTR (name);
+
+      if (TypeOf (*object) == type_SymbolHeader)
+	{
+	  struct symbol *symbol = (struct symbol *) object;
+	  struct vector *string;
+
+	  if (symbol->package != NIL)
+	    {
+	      struct instance *pkg = (struct instance *) PTR (symbol->package);
+	      lispobj pkg_name = pkg->slots[2];
+	      string = (struct vector *) PTR (pkg_name);
+	      printf ("%s::", (char *) string->data);
+	    }
+      
+	  object = (lispobj *) PTR (symbol->name);
+	  string = (struct vector *) object;
+	  printf ("%s", (char *) string->data);
+	}
+      else if (TypeOf (*object) == type_SimpleString)
+	{
+	  struct vector *string = (struct vector *) object;
+	  printf ("\"%s\"", (char *) string->data);
+	}
+      else
+	printf ("<??? type %d>", (int) TypeOf (*object));
     }
   else
-    printf ("<??? type %d>", TypeOf (*object));
+    printf ("<??? lowtag %d>", (int) LowtagOf (name));
 }
   
-static void
-print_entry_list (lispobj name)
-{
-  putchar ('(');
-  while (name != NIL)
-    {
-      struct cons *cons = (struct cons *) PTR (name);
-      print_entry_name (cons->car);
-      name = cons->cdr;
-      if (name != NIL)
-	putchar (' ');
-    }
-  putchar (')');
-}
-
 static void
 print_entry_points (struct code *code)
 {
-  lispobj function;
-  
-  function = code->entry_points;
+  lispobj function = code->entry_points;
 
   while (function != NIL)
     {
-      struct function *header;
-      lispobj name;
-
-      header = (struct function *) PTR (function);
-      name = header->name;
-
-      switch (LowtagOf (name))
-	{
-	case type_OtherPointer:
-	  print_entry_name (name);
-	  break;
-
-	case type_ListPointer:
-	  print_entry_list (name);
-	  break;
-
-	default:
-	  printf ("<??? lowtag %d>", LowtagOf (name));
-	  break;
-	}
-
+      struct function *header = (struct function *) PTR (function);
+      print_entry_name (header->name);
+      
       function = header->next;
-
       if (function != NIL)
 	printf (", ");
     }
@@ -410,37 +393,131 @@ x86_call_context (unsigned fp, unsigned *ra, unsigned *ocfp)
   return 1;
 }
 
+struct compiled_debug_info
+{
+  lispobj header;
+  lispobj layout;
+  lispobj name;
+  lispobj source;
+  lispobj package;
+  lispobj function_map;
+};
+
+struct compiled_debug_function
+{
+  lispobj header;
+  lispobj layout;
+  lispobj name;
+  lispobj kind;
+  lispobj variables;
+  lispobj blocks;
+  lispobj tlf_number;
+  lispobj arguments;
+  lispobj returns;
+  lispobj return_pc;
+  lispobj old_fp;
+  lispobj nfp;
+  lispobj start_pc;
+  lispobj elsewhere_pc;
+};
+
+static int
+array_of_type_p (lispobj obj, int type)
+{
+  return (LowtagOf (obj) == type_OtherPointer
+	  && TypeOf (*(lispobj *) PTR (obj)) == type);
+}
+
+struct compiled_debug_function *
+debug_function_from_pc (struct code* code, unsigned pc)
+{
+  unsigned code_header_len = sizeof (lispobj) * HeaderValue (code->header);
+  unsigned offset = pc - (unsigned) code - code_header_len;
+
+  if (LowtagOf (code->debug_info) == type_InstancePointer)
+    {
+      struct compiled_debug_info *di
+	= (struct compiled_debug_info *) PTR (code->debug_info);
+
+      if (array_of_type_p (di->function_map, type_SimpleVector))
+	{
+	  struct vector *v = (struct vector *) PTR (di->function_map);
+	  int i, len = fixnum_value (v->length);
+	  struct compiled_debug_function *df
+	    = (struct compiled_debug_function *) PTR (v->data[0]);
+	  
+	  if (len == 1)
+	    return df;
+	  else
+	    {
+	      int elsewhere_p = offset >= fixnum_value (df->elsewhere_pc);
+	      for (i = 1;; i += 2)
+		{
+		  unsigned next_pc;
+		  
+		  if (i == len)
+		    return ((struct compiled_debug_function *)
+			    PTR (v->data[i - 1]));
+
+		  if (elsewhere_p)
+		    {
+		      struct compiled_debug_function *p
+			= ((struct compiled_debug_function *)
+			   PTR (v->data[i + 1]));
+		      next_pc = fixnum_value (p->elsewhere_pc);
+		    }
+		  else
+		    next_pc = fixnum_value (v->data[i]);
+
+		  if (offset < next_pc)
+		    return ((struct compiled_debug_function *)
+			    PTR (v->data[i - 1]));
+		}
+	    }
+	}
+      else if (array_of_type_p (di->function_map,
+				type_SimpleArrayUnsignedByte8))
+	{
+	  /* Minimal debug info as described in debug-int.lisp.
+	     Not implemented.  */
+	}
+    }
+
+  return NULL;
+}
+
 void
 backtrace (int nframes)
 {
-  unsigned ra, fp, next_fp;
+  unsigned fp;
   int i;
 
   asm ("movl %%ebp,%0" : "=g" (fp));
 
-  for (i = 0; nframes--; ++i)
+  for (i = 0; i < nframes; ++i)
     {
-      lispobj *cp;
+      lispobj *p;
+      unsigned ra, next_fp;
       
       if (!x86_call_context (fp, &ra, &next_fp))
 	break;
 
       printf ("%4d: ", i);
       
-      cp = component_ptr_from_pc ((lispobj *) ra);
-      if (cp)
+      p = (lispobj *) component_ptr_from_pc ((lispobj *) ra);
+      if (p && TypeOf (*p) == type_CodeHeader)
 	{
-	  switch (TypeOf (*cp))
-	    {
-	    case type_CodeHeader:
-	      print_entry_points ((struct code *) cp);
-	      break;
-		  
-	    default:
-	      printf ("<Not implemented, type = %d>", TypeOf (*cp));
-	      break;
-	    }
+	  struct code *cp = (struct code *) p;
+	  struct compiled_debug_function *df;
+	  
+	  df  = debug_function_from_pc (cp, ra);
+	  if (df)
+	    print_entry_name (df->name);
+	  else
+	    print_entry_points (cp);
 	}
+      else if (p)
+	printf ("<Not implemented, type = %d>", (int) TypeOf (*p));
       else
 	printf ("Foreign fp = 0x%x, ra = 0x%x", next_fp, ra);
 
