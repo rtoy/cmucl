@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.31 2003/05/25 14:33:49 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.32 2003/05/26 16:03:08 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -149,10 +149,25 @@
 the compiler as completely as possible.  Currently this means that
 `*compile-print*' will be bound to nil during compilation.")
 
-(defun compile-lambda (lambda-form)
-  (when *compile-lambda-break-p* (break))
-  (let ((*compile-print* (if *compile-lambda-silent-p* nil *compile-print*)))
-    (compile nil lambda-form)))
+;;;
+;;; Compile LAMBDA and return the compiled function.  If NAME is
+;;; specified, set NAME's function definition to the result.  If
+;;; INLINE is specified, arrange for calls to NAME to be inlined.  If
+;;; INLINE is :INLINE, arrange to always inline.  If INLINE is
+;;; :MAYBE-INLINE, let it be inlined only if explicitly requested at
+;;; call sites with (DECLARE (INLINE NAME)).
+;;;
+(defun compile-lambda (lambda &key name inline)
+  (declare (type (member nil :inline :maybe-inline) inline)
+	   (type (or null symbol cons) name))
+  (when *compile-lambda-break-p*
+    (break))
+  (let* ((*compile-print* (unless *compile-lambda-silent-p* *compile-print*))
+	 (fn (compile name lambda)))
+    (when inline
+      (setf (info function inlinep name) inline
+	    (info function inline-expansion name) lambda))
+    (if name (fdefinition name) fn)))
 
 ;;;
 ;;; This macro will precompile various PCL-generated code fragments,
@@ -161,7 +176,6 @@ the compiler as completely as possible.  Currently this means that
 ;;; needs to be put in a file, which is compiled via `compile-file',
 ;;; and then loaded.
 ;;;
-
 (defmacro precompile-random-code-segments (&optional system)
   `(progn
      (eval-when (:compile-toplevel)
