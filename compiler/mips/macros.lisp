@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.6 1990/02/06 23:26:24 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.7 1990/02/08 19:37:13 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -25,8 +25,11 @@
   is nil)."
   (once-only ((n-dst dst)
 	      (n-src src))
-    `(unless (and (location= ,n-dst ,n-src) (not always-emit-code-p))
-       (inst or ,n-dst ,n-src zero-tn))))
+    (if always-emit-code-p
+	`(inst or ,n-dst ,n-src zero-tn)
+	`(unless (location= ,n-dst ,n-src)
+	   (inst or ,n-dst ,n-src zero-tn)))))
+
 
 (defmacro b (label)
   "Unconditional branch"
