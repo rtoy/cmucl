@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.19 1993/08/06 13:14:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.20 1993/08/06 15:39:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,7 +148,7 @@
      (when (funcall test item (car l)) (return i))))
 
 (deftransform position ((item vec &key (test #'eql) (start 0)
-			      (end (length seq)))
+			      (end (length vec)))
 			(t simple-array &key (:start t) (:end index)))
   "open code"
   '(do ((i start (1+ i)))
