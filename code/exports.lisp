@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.10 1990/04/24 15:43:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.11 1990/04/24 18:49:41 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -282,21 +282,21 @@
 	  never-subtypep numeric-contagion numeric-type numeric-type-class
 	  numeric-type-complexp numeric-type-format numeric-type-high
 	  numeric-type-low numeric-type-p parse-unknown-type
-	  pathname-device pathname-directory pathname-host pathname-name
-	  pathname-type pathname-version pathnamelike sequence-end
-	  single-value-type specifier-type streamlike stringable stringlike
-	  structure-type structure-type-name structure-type-p truth
-	  type-init two-arg-* two-arg-+ two-arg-- two-arg-/ two-arg-/=
-	  two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->= two-arg-and
-	  two-arg-ior two-arg-xor type-difference type-intersect
-	  type-intersection type-specifier type-specifier-symbols
-	  type-union type/= type= types-intersect union-type union-type-p
-	  union-type-types unknown-type unknown-type-p values-subtypep
-	  values-type values-type-allowp values-type-intersect
-	  values-type-intersection values-type-keyp values-type-keywords
-	  values-type-optional values-type-p values-type-required
-	  values-type-rest values-type-union values-types
-	  values-types-intersect void))
+	  parse-unknown-type-specifier pathname-device pathname-directory
+	  pathname-host pathname-name pathname-type pathname-version
+	  pathnamelike sequence-end single-value-type specifier-type
+	  streamlike stringable stringlike structure-type
+	  structure-type-name structure-type-p truth type-init two-arg-*
+	  two-arg-+ two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<=
+	  two-arg-= two-arg-> two-arg->= two-arg-and two-arg-ior
+	  two-arg-xor type-difference type-intersect type-intersection
+	  type-specifier type-specifier-symbols type-union type/= type=
+	  types-intersect union-type union-type-p union-type-types
+	  unknown-type unknown-type-p values-subtypep values-type
+	  values-type-allowp values-type-intersect values-type-intersection
+	  values-type-keyp values-type-keywords values-type-optional
+	  values-type-p values-type-required values-type-rest
+	  values-type-union values-types values-types-intersect void))
 
 
 (in-package "EXTENSIONS")
