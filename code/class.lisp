@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.11 1993/02/23 11:51:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.12 1993/02/23 15:51:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -653,7 +653,7 @@
 	(class (layout-class layout)))
     (dotimes (i (length inherits))
       (let* ((super (svref inherits i))
-	     (subs (class-subclasses super)))
+	     (subs (class-subclasses (layout-class super))))
 	(when subs
 	  (remhash class subs)))))
   (undefined-value))
@@ -674,15 +674,17 @@
 (defun register-layout (layout invalidate-p destruct-p)
   (declare (type layout layout))
   (let* ((class (layout-class layout))
-	 (class-layout (class-layout class)))
+	 (class-layout (class-layout class))
+	 (subclasses (class-subclasses class)))
     (assert (not (eq class-layout layout)))
     (when class-layout
       (modify-class class)
-      (do-hash (c l (class-subclasses class))
-	(modify-class c)
-	(when invalidate-p (invalidate-layout l)))
+      (when subclasses
+	(do-hash (c l subclasses)
+	  (modify-class c)
+	  (when invalidate-p (invalidate-layout l))))
       (when invalidate-p
-	(invalidate-layout layout)
+	(invalidate-layout class-layout)
 	(setf (class-subclasses class) nil)))
     
     (cond (destruct-p
