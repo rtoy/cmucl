@@ -17,8 +17,8 @@
 
 (export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
 	  *debug-print-level* *debug-print-length* *debug-prompt*
-
-	  var arg))
+	  
+	  *auto-eval-in-frame* var arg))
 
 
 (in-package "LISP")
@@ -381,9 +381,17 @@
 		    (funcall cmd-fun)
 		    (debug-eval-print exp))))))))))
 				    (when *flush-debug-errors*
+				      (clear-input *debug-io*)
+				      (princ condition)
+				      (format t "~&Error flushed ...")
+				      (throw 'debug-loop-catcher nil)))))
+	    ;; Must bind level for restart function created by
 	    ;; WITH-SIMPLE-RESTART.
 	    (let ((level *debug-command-level*)
-  (let* ((values (multiple-value-list (eval -)))
+		  (restart-commands (make-restart-commands)))
+	      (with-simple-restart (abort "Return to debug level ~D." level)
+		(funcall *debug-prompt*)
+		(let ((input (ext:get-stream-command *debug-io*)))
 		  (cond (input
 			 (let ((cmd-fun (debug-command-p
 					 (ext:stream-command-name input)
@@ -407,7 +415,7 @@
 				    (format t "   ~A~%" ele)))
 				 (t
 
-;;; VARS -- Public.
+		    '(di:debug-variable-value (car vars) *current-frame*))
 		   (:set
 		    `(setf (di:debug-variable-value (car vars) *current-frame*)
 			   ,value-var))))
@@ -711,45 +719,86 @@
 (def-debug-command "VSOURCE"
   (print-frame-source-form *current-frame* (read-if-available 0) t))
 			d-fun
+
+;;; PRINT-FRAME-SOURCE-FORM -- Internal.
+	    (setf any-p t)
 (defun print-frame-source-form (frame context &optional verbose)
-  (let* ((location (di:frame-code-location frame))
+  (let* ((location (maybe-block-start-location (di:frame-code-location frame)))
 	      (format t "~A~:[#~D~;~*~]  =  ~S~%"
 		      (di:debug-variable-name v)
-    (cond ((not (eq :file (di:debug-source-from d-source)))
-	   (format t "~%Source did not come from a file."))
-	  ((not (probe-file name))
-	   (format t "~%Source file no longer exists:~%  ~A."
-		   (namestring name)))
-	  (t
-	   (let* ((tlf-offset (di:code-location-top-level-form-offset
-			       location))
-		  (char-offset (aref (di:debug-source-start-positions
-				      d-source)
-				     tlf-offset)))
-	     (with-open-file (f name)
-	       (cond
-		((= (di:debug-source-created d-source)
-		    (file-write-date name))
-		 (file-position f char-offset))
-		(t
-		 (format t "~%File has been modified since compilation:~%  ~A~@
-		             Using form offset instead of character position.~%"
-			 (namestring name))
-		 (dotimes (i tlf-offset)
-		   (read f))))
+		      (zerop (di:debug-variable-id v))
+		      (di:debug-variable-id v)
+		      (di:debug-variable-value v *current-frame*))))
+      (:lisp
+       (print-frame-source
+	name ;the top-level form
+	0 ;top-level form offset is always zero when we have it in hand.
+	location context verbose))
+      (:stream
+       (format t "~%Source extracted from some stream.  Sorry.")))))
 	   ((not any-valid-p)
-	       (format t "File: ~A~%" (namestring name))
-		  
-	       (let* ((tlf (read f))
-		      (translations (di:form-number-translations
-				     tlf tlf-offset))
-		      (*print-level* (if verbose nil *debug-print-level*))
-		      (*print-length* (if verbose nil *debug-print-length*)))
-		 (print (di:source-path-context
-			 tlf
-			 (svref translations
-				(di:code-location-form-number location))
-			 context)))))))))
+	    (format t "All variables ~@[starting with ~A ~]currently ~
+	               have invalid values."
+		    prefix))))
+	(write-line "No variable information available."))))
+
+(def-debug-command-alias "L" "LIST-LOCALS")
+
+(def-debug-command "SOURCE" ()
+  (fresh-line)
+  (print-code-location-source-form (di:frame-code-location *current-frame*)
+				   (read-if-available 0)))
+
+(def-debug-command "VSOURCE" ()
+  (fresh-line)
+  (print-code-location-source-form (di:frame-code-location *current-frame*)
+				   (read-if-available 0)
+				   t))
+
+
+;;;; Source location printing:
+
+;;; We cache a stream to the last valid file debug source so that we won't have
+;;; to repeatedly open the file.
+;;;
+(defvar *cached-debug-source* nil)
+(declaim (type (or di:debug-source null) *cached-debug-source*))
+(defvar *cached-source-stream* nil)
+(declaim (type (or stream null) *cached-source-stream*))
+
+(pushnew #'(lambda ()
+	 (let* ((tlf-offset (di:code-location-top-level-form-offset
+			     location))
+		(char-offset (aref (di:debug-source-start-positions
+				    d-source)
+				   tlf-offset)))
+;;;
+(defvar *cached-top-level-form-offset* nil)
+(declaim (type (or kernel:index null) *cached-top-level-form-offset*))
+(defvar *cached-top-level-form*)
+(defvar *cached-form-number-translations*)
+
+
+;;; GET-TOP-LEVEL-FORM  --  Internal
+;;;
+	       (dotimes (i tlf-offset)
+		 (read f))))
+;;;
+(defun get-top-level-form (location)
+  (let ((d-source (di:code-location-debug-source location)))
+    (if (and (eq d-source *cached-debug-source*)
+	     (eql (di:code-location-top-level-form-offset location)
+		  *cached-top-level-form-offset*))
+	(values *cached-form-number-translations* *cached-top-level-form*)
+  (let ((translations (di:form-number-translations
+		       tlf tlf-offset))
+	(*print-level* (if verbose nil *debug-print-level*))
+	(*print-length* (if verbose nil *debug-print-length*)))
+	  (setq *cached-top-level-form-offset* offset)
+	  (values (setq *cached-form-number-translations*
+	    (svref translations
+		  (setq *cached-top-level-form* res))))))
+
 		  (setf *possible-breakpoints*
 			(possible-breakpoints
 			 *default-breakpoint-debug-function*))))))
