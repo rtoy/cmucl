@@ -26,7 +26,7 @@
 ;;; 12/10/87	LGO	Created
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/input.lisp,v 1.8 2001/05/12 15:09:17 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/input.lisp,v 1.9 2002/04/10 17:18:53 pw Exp $")
 
 (in-package :xlib)
 
@@ -910,7 +910,7 @@
   (boolean override-redirect-p))
 
 (declare-event :configure-request
-  ((data (member :above :below :top-if :bottom-if :opposite)) stack-mode)
+  ((data (member8 :above :below :top-if :bottom-if :opposite)) stack-mode)
   (card16 sequence)
   (window (parent event-window) window)
   ((or null window) above-sibling)
