@@ -72,8 +72,7 @@
     (functional
      (let* ((where (info function where-from name))
 	    (dtype (leaf-type leaf))
-	    (node (lambda-bind (main-entry leaf)))
-	    (*compiler-error-context* node))
+	    (*compiler-error-context* (lambda-bind (main-entry leaf))))
        (note-name-defined name :function)
 
        (when (function-type-p dtype)
@@ -84,10 +83,6 @@
 		(valid-approximate-type approx-type dtype))))
 	   ((:declared :defined)
 	    ))
-	 
-	 (when (and (eq (function-type-returns dtype) *empty-type*)
-		    (policy node (>= safety brevity)))
-	   (compiler-note "Function does not return."))
 	 
 	 (setf (info function type name) dtype)
 	 (clear-info function assumed-type name))
