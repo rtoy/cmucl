@@ -18,6 +18,10 @@
 (export '(with-fd-handler add-fd-handler remove-fd-handler invalidate-descriptor
 	  serve-event serve-all-events wait-until-fd-usable))
 
+(in-package "EXTENSIONS")
+
+(export '(*display-event-handlers*))
+
 (in-package "LISP")
 
 
@@ -243,6 +247,12 @@
 
 ;;;; Serve-all-events, serve-event, and friends.
 
+(defvar *display-event-handlers* nil
+  "This is an alist mapping displays to user functions to be called when
+   SYSTEM:SERVE-EVENT notices input on a display connection.  Do not modify
+   this directly; use EXT:ENABLE-CLX-EVENT-HANDLING.  A given display
+   should be represented here only once.")
+
 ;;; SERVE-ALL-EVENTS -- public
 ;;;
 ;;;   Wait for up to timeout seconds for an event to happen. Make sure all
@@ -258,6 +268,7 @@
       ((null sval) res)
     (setq res t)))
 
+
 ;;; SERVE-EVENT -- public
 ;;;
 ;;;   Serve a single event.
@@ -268,7 +279,7 @@
   seconds) and then return, otherwise it will wait until something happens.
   Server returns T if something happened and NIL otherwise."
   ;; First, check any X displays for any pending events.
-  (dolist (d/h ext::*display-event-handlers*)
+  (dolist (d/h *display-event-handlers*)
     (let ((d (car d/h)))
       (when (xlib::event-listen d)
 	(handler-bind ((error #'(lambda (condx)
