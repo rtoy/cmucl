@@ -271,6 +271,10 @@ New in this release:
        that the method is used.
      - Redefining a generic function with a different method
        combination now recomputes effective methods.
+     - Slot access and gf-call optimizations are no longer performed
+       for method parameters being assigned to in a method body, because
+       we can't tell what type of object the method parameter actually
+       contains.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
