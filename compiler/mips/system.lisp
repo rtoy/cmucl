@@ -7,13 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.2 1990/03/06 19:14:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.3 1990/03/06 19:59:02 ch Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-;;; Mips conversion by William Lott.
+;;; Mips conversion by William Lott and Christopher Hoover.
 ;;;
 (in-package "C")
 
@@ -34,8 +34,6 @@
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
     (inst subu res ptr1 ptr2)))
-
-
 
 #+nil
 (define-vop (vector-word-length)
@@ -61,22 +59,18 @@
       (loadw res x (/ clc::bignum-header-size 4))
       (emit-label fixp))))
 
-#+nil
 (define-vop (pointer-compare)
   (:args (x :scs (any-reg descriptor-reg))
 	 (y :scs (any-reg descriptor-reg)))
+  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
   (:note "inline comparison")
   (:variant-vars condition)
   (:generator 3
-    (inst cl x y)
-    (if not-p
-	(inst bnb condition target)
-	(inst bb condition target))))
+    (three-way-comparison x y condition :unsigned not-p target temp)))
 
-#+nil
 (macrolet ((frob (name cond)
 	     `(progn
 		(def-primitive-translator ,name (x y) `(,',name ,x ,y))
@@ -87,29 +81,23 @@
   (frob pointer< :lt)
   (frob pointer> :gt))
 
-#+nil
 (define-vop (check-op)
   (:args (x :scs (any-reg descriptor-reg))
 	 (y :scs (any-reg descriptor-reg)))
+  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
   (:variant-vars condition not-p error)
   (:node-var node)
   (:policy :fast-safe)
-  #+nil
   (:generator 3
-    (inst c x y)
     (let ((target (generate-error-code node error x y)))
-      (if not-p
-	  (inst bb condition target)
-	  (inst bnb condition target)))))
+      (three-way-comparison x y condition :signed not-p target temp))))
 
-#+nil
 (define-vop (check<= check-op)
-  (:variant :gt t clc::error-not-<=)
+  (:variant :gt t di:not-<=-error)
   (:translate check<=))
 
-#+nil
 (define-vop (check= check-op)
-  (:variant :eq nil clc::error-not-=)
+  (:variant :eq nil di:not-=-error)
   (:translate check=))
 
 
