@@ -173,7 +173,8 @@
 		    (:compile
 		     (note-region note))
 		    (:compile-file
-		     (buffer-region (note-buffer note)))
+		     (let ((buff (note-buffer note)))
+		       (and buff (buffer-region buff))))
 		    (t
 		     (error "Compiler error in ~S?" note)))))
       (when region
