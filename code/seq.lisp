@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.14 1993/08/25 01:15:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.15 1993/11/02 16:12:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2028,10 +2028,11 @@
        ((= index (the fixnum end)) count)
      (declare (fixnum index count))
      (if test-not
-	 (if (funcall test-not ,item (apply-key key (aref ,sequence index)))
-	     (setq count (1+ count)))
-	 (if (funcall test ,item (apply-key key (aref ,sequence index)))
-	     (setq count (1+ count))))))
+	 (unless (funcall test-not ,item
+			  (apply-key key (aref ,sequence index)))
+	   (setq count (1+ count)))
+	 (when (funcall test ,item (apply-key key (aref ,sequence index)))
+	   (setq count (1+ count))))))
 
 (defmacro list-count (item sequence)
   `(do ((sequence (nthcdr start ,sequence))
@@ -2040,10 +2041,10 @@
        ((or (= index (the fixnum end)) (null sequence)) count)
      (declare (fixnum index count))
      (if test-not
-	 (if (funcall test-not ,item (apply-key key (pop sequence)))
-	     (setq count (1+ count)))
-	 (if (funcall test ,item (apply-key key (pop sequence)))
-	     (setq count (1+ count))))))
+	 (unless (funcall test-not ,item (apply-key key (pop sequence)))
+	   (setq count (1+ count)))
+	 (when (funcall test ,item (apply-key key (pop sequence)))
+	   (setq count (1+ count))))))
 
 )
 
