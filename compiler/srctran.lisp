@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.71 1998/01/05 23:00:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.72 1998/01/05 23:05:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -597,9 +597,11 @@
 		  nil)
 		 ((or (and (numberp x) (zerop x))
 		      (and (numberp y) (zerop y)))
-		  ;; Multiply by closed zero is special.  The result is
-		  ;; always a closed bound
-		  0)
+		  ;; Multiply by closed zero is special.  The result
+		  ;; is always a closed bound.  But don't replace this
+		  ;; with zero; we want the multiplication to produce
+		  ;; the correct signed zero, if needed.
+		  (* (bound-value x) (bound-value y)))
 		 ((or (and (floatp x) (float-infinity-p x))
 		      (and (floatp y) (float-infinity-p y)))
 		  ;; Infinity times anything is infinity
