@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.28 1991/12/03 00:01:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.29 1991/12/05 05:12:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 (export '(*print-readably* *print-escape* *print-pretty* *print-circle*
 	  *print-base* *print-radix* *print-case* *print-gensym* *print-level*
 	  *print-length* *print-array* *print-lines* *print-right-margin*
-	  *print-miser-width* with-standard-io-syntax
+	  *print-miser-width* *print-pprint-dispatch* with-standard-io-syntax
 	  write prin1 print princ pprint
 	  write-to-string prin1-to-string princ-to-string
 	  print-unreadable-object))
@@ -63,11 +63,19 @@
 (defvar *print-gensym* t
   "If true, symbols with no home package are printed with a #: prefix.
   If false, no prefix is printed.")
-
-(defvar *print-lines* nil)
-(defvar *print-right-margin* nil)
-(defvar *print-miser-width* nil)
-(defvar *print-pprint-dispatch* nil)
+(defvar *print-lines* nil
+  "The maximum number of lines to print.  If NIL, unlimited.")
+(defvar *print-right-margin* nil
+  "The position of the right margin in ems.  If NIL, try to determine this
+   from the stream in use.")
+(defvar *print-miser-width* nil
+  "If the remaining space between the current column and the right margin
+   is less than this, then print using ``miser-style'' output.  Miser
+   style conditional newlines are turned on, and all indentations are
+   turned off.  If NIL, never use miser mode.")
+(defvar *print-pprint-dispatch* nil
+  "The pprint-dispatch-table that controls how to pretty print objects.  See
+   COPY-PPRINT-DISPATH, PPRINT-DISPATCH, and SET-PPRINT-DISPATCH.")
 
 (defmacro with-standard-io-syntax (&body body)
   "Bind the reader and printer control variables to values that enable READ
@@ -942,13 +950,14 @@
 	     (not (eq (array-element-type array) t)))
     (error "Arrays of element-type ~S cannot be printed readably."
 	   (array-element-type array)))
-  (write-char #\# stream)
-  (let ((*print-base* 10))
-    (output-integer (array-rank array) stream))
-  (write-char #\A stream)
-  (with-array-data ((data array) (start) (end))
-    (declare (ignore end))
-    (sub-output-array-guts data (array-dimensions array) stream start)))
+  (decend-into (array stream)
+    (write-char #\# stream)
+    (let ((*print-base* 10))
+      (output-integer (array-rank array) stream))
+    (write-char #\A stream)
+    (with-array-data ((data array) (start) (end))
+      (declare (ignore end))
+      (sub-output-array-guts data (array-dimensions array) stream start))))
 
 (defun sub-output-array-guts (array dimensions stream index)
   (declare (simple-vector array) (fixnum index))
