@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.9 1991/05/06 15:01:22 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.10 1991/06/13 16:37:48 wlott Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -349,7 +349,7 @@
       (inst s temp 1)
       (inst n number temp)
       (inst bncx :eq loop)
-      (inst a res 1)
+      (inst a res (fixnum 1))
       ;; We're done and res already has result.
       (emit-label done))))      
 
