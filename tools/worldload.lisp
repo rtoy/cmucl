@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.32 1991/07/16 17:38:47 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.33 1991/09/26 13:28:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,9 +43,6 @@
 (setf (ext:search-list "clx:") '("lisp:clx/"))
 (setf (ext:search-list "pcl:") '("lisp:pcl/"))
 (setf (ext:search-list "tools:") '("lisp:tools/"))
-
-;;; This must be here, because it's where assert-user-package is defined.
-(load "code:save")
 
 ;;; Make sure the core will start up in the user package.
 (lisp::assert-user-package)
