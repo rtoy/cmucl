@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.14 1997/04/02 18:19:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.15 1997/04/02 19:18:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,12 +145,7 @@
   positive-fixnum unsigned-reg)
 (def-data-vector-frobs simple-array-unsigned-byte-32 word-index
   unsigned-num unsigned-reg)
-#+signed-array
-(def-data-vector-frobs simple-array-signed-byte-8 signed-byte-index
-  tagged-num signed-reg)
-#+signed-array
-(def-data-vector-frobs simple-array-signed-byte-16 signed-halfword-index
-  tagged-num signed-reg)
+
 #+signed-array
 (def-data-vector-frobs simple-array-signed-byte-30 word-index
   tagged-num any-reg)
@@ -455,3 +450,45 @@
 (define-vop (get-vector-subtype get-header-data))
 (define-vop (set-vector-subtype set-header-data))
 
+
+;;;
+#+signed-array
+(define-vop (data-vector-ref/simple-array-signed-byte-8 signed-byte-index-ref)
+  (:note "inline array access")
+  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:translate data-vector-ref)
+  (:arg-types simple-array-signed-byte-8 positive-fixnum)
+  (:results (value :scs (signed-reg)))
+  (:result-types tagged-num))
+#+signed-array
+(define-vop (data-vector-set/simple-array-signed-byte-8 byte-index-set)
+  (:note "inline array store")
+  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:translate data-vector-set)
+  (:arg-types simple-array-signed-byte-8 positive-fixnum tagged-num)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg zero immediate))
+	 (value :scs (signed-reg)))
+  (:results (result :scs (signed-reg)))
+  (:result-types tagged-num))
+
+#+signed-array
+(define-vop (data-vector-ref/simple-array-signed-byte-16
+	     signed-halfword-index-ref)
+  (:note "inline array access")
+  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:translate data-vector-ref)
+  (:arg-types simple-array-signed-byte-16 positive-fixnum)
+  (:results (value :scs (signed-reg)))
+  (:result-types tagged-num))
+#+signed-array
+(define-vop (data-vector-set/simple-array-signed-byte-16 halfword-index-set)
+  (:note "inline array store")
+  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:translate data-vector-set)
+  (:arg-types simple-array-signed-byte-16 positive-fixnum tagged-num)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg zero immediate))
+	 (value :scs (signed-reg)))
+  (:results (result :scs (signed-reg)))
+  (:result-types tagged-num))
