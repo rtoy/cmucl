@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.1.1.5 1991/02/08 16:34:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.1.1.6 1991/10/25 23:10:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,9 +88,20 @@
 	  (write-line help s)
 	  (cond (pns
 		 (write-line "Possible completions of what you have typed:" s)
-		 (dolist (pn pns)
-		   (format s " ~A~25T ~A~%" (file-namestring pn)
-			   (directory-namestring pn))))
+		 (let ((width (- (window-width (current-window)) 27)))
+		   (dolist (pn pns)
+		     (let* ((dir (directory-namestring pn))
+			    (len (length dir)))
+		       (unless (<= len width)
+			 (let ((slash (position #\/ dir
+						:start (+ (- len width) 3))))
+			   (setf dir
+				 (if slash
+				     (concatenate 'string "..."
+						  (subseq dir slash))
+				     "..."))))
+		       (format s " ~A~25T ~A~%"
+			       (file-namestring pn) dir)))))
 		(t
 		 (write-line 
  "There are no possible completions of what you have typed." s))))))
