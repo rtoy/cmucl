@@ -52,7 +52,7 @@
 ;;;
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.3 2003/05/04 13:11:21 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.4 2003/05/08 11:21:33 gerd Exp $")
  
 (in-package "PCL")
 
@@ -511,12 +511,19 @@
     (let ((slot-type (if use-type-p slot-type t)))
       (if check-bound-p
 	  `(the ,slot-type
-	     (let* ((.location. (%svref .pv. ,pv-offset))
-		    (.slot-value. (if ,predicate ,read-form +slot-unbound+)))
+	     (locally
 	       (declare #.*optimize-speed*)
-	       (if (eq .slot-value. +slot-unbound+)
-		   ,fallback-access
-		   .slot-value.)))
+	       (block nil
+		 (let ((.location. (%svref .pv. ,pv-offset)))
+		   (tagbody
+		      (unless ,predicate
+			(go miss))
+		      (let ((.slot-value. ,read-form))
+			(when (eq +slot-unbound+ .slot-value.)
+			  (go miss))
+			(return .slot-value.))
+		    miss
+		      (return ,fallback-access))))))
 	  `(the ,slot-type
 	     (let ((.location. (%svref .pv. ,pv-offset)))
 	       (declare #.*optimize-speed*)
