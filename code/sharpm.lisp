@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.5 1991/02/14 18:41:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.6 1991/08/22 16:01:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,7 @@
 (defun sharp-quote (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
   ;; 4th arg tells read that this is a recrusive call.
-  `(function ,(read stream () () t)))
+  `(function ,(read stream t nil t)))
 
 (defun sharp-left-paren (stream ignore length)
   (declare (ignore ignore))
@@ -104,7 +104,7 @@
 (defun sharp-colon (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
   (when *read-suppress*
-	(read stream () () t)
+	(read stream t nil t)
 	(return-from sharp-colon nil))
   (let ((token (read-extended-token stream)))
     (declare (simple-string token))
@@ -120,12 +120,12 @@
 
 (defun sharp-dot (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
-  (let ((token (read stream () () t)))
+  (let ((token (read stream t nil t)))
     (unless *read-suppress*  (eval token))))
 
 (defun sharp-comma (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
-  (let ((token (read stream () () t)))
+  (let ((token (read stream t nil t)))
     (unless *read-suppress*  (eval token))))
 
 (defun sharp-R (stream ignore radix)
@@ -192,7 +192,7 @@
 (defun sharp-A (stream ignore dimensions)
   (declare (ignore ignore))
   (when *read-suppress*
-    (read stream () () t)
+    (read stream t nil t)
     (return-from sharp-A nil))
   (unless dimensions (error "No dimensions argument to #A."))
   (unless (and (integerp dimensions) (>= dimensions 0))
@@ -220,7 +220,7 @@
   (declare (ignore ignore1 ignore2))
   ;;this needs to know about defstruct implementation
   (when *read-suppress*
-	(read stream () () t)
+	(read stream t nil t)
 	(return-from sharp-S nil))
   (let ((body (if (char= (read-char stream t) #\( )
 		  (read-list stream nil)
@@ -313,7 +313,7 @@
   (unless (integerp label)
 	  (error "non-integer label #~S=" label))
   (push (cons label ref) sharp-sharp-alist)
-  (let ((obj (read stream () () t)))
+  (let ((obj (read stream t nil t)))
     (push (cons ref obj) sharp-equal-alist)
     (clrhash sharp-cons-table)
     (circle-subst sharp-equal-alist obj)))
@@ -334,31 +334,31 @@
 (defun sharp-plus (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
   (cond (*read-suppress*
-	 (read stream () () t)
+	 (read stream t nil t)
 	 (values))
 	((featurep (let ((*package* *keyword-package*))
-		     (read stream () () t)))
-	 (read stream () () t))
+		     (read stream t nil t)))
+	 (read stream t nil t))
 	(t (let ((*read-suppress* t))
-	     (read stream () () t)
+	     (read stream t nil t)
 	     (values)))))
 
 (defun sharp-minus (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
   (cond (*read-suppress*
-	 (read stream () () t)
+	 (read stream t nil t)
 	 (values))
 	((not (featurep (let ((*package* *keyword-package*))
-			  (read stream () () t))))
-	 (read stream () () t))
+			  (read stream t nil t))))
+	 (read stream t nil t))
 	(t (let ((*read-suppress* t))      
-	     (read stream () () t)
+	     (read stream t nil t)
 	     (values)))))
 
 (defun sharp-C (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
   ;;next thing better be a list of two numbers.
-  (let ((cnum (read stream () () t)))
+  (let ((cnum (read stream t nil t)))
     (when *read-suppress* (return-from sharp-c nil))
     (if (= (length cnum) 2)
 	(complex (car cnum) (cadr cnum))
@@ -385,6 +385,9 @@
   (declare (ignore ignore1 ignore2))
   (error "Illegal sharp character ~S" sub-char))
 
+(defun sharp-P (stream sub-char argument)
+  (declare (ignore sub-char argument))
+  (parse-namestring (read stream t nil t)))
 
 (defun sharp-init ()
   (declare (special std-lisp-readtable))
@@ -417,6 +420,8 @@
     (set-dispatch-macro-character #\# #\C #'sharp-C)
     (set-dispatch-macro-character #\# #\c #'sharp-C)
     (set-dispatch-macro-character #\# #\| #'sharp-vertical-bar)
+    (set-dispatch-macro-character #\# #\p #'sharp-p)
+    (set-dispatch-macro-character #\# #\P #'sharp-p)
     (set-dispatch-macro-character #\# #\tab #'sharp-illegal)
     (set-dispatch-macro-character #\# #\  #'sharp-illegal)
     (set-dispatch-macro-character #\# #\) #'sharp-illegal)
