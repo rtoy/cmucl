@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.23 1992/02/16 17:24:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.24 1992/03/07 08:44:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -890,7 +890,7 @@
 ;;; in the stream's queue.
 ;;;
 (defun get-editor-tty-input (fd)
-  (alien:with-alien ((buf (alien:array c-call:char 256)))
+  (alien:with-alien ((buf (alien:array c-call:unsigned-char 256)))
     (multiple-value-bind
 	(len errno)
 	(unix:unix-read fd (alien:alien-sap buf) 256)
