@@ -61,6 +61,7 @@ New in this release:
        of where it appears in a lambda-list.
      - VALUES types no longer accepting &KEY or &ALLOW-OTHER-KEYS.
      - THE conforming to ANSI.
+     - SLOT-EXISTS-P can be used with conditions.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
