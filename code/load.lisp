@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.53 1993/05/11 23:08:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.54 1993/05/26 20:29:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1015,7 +1015,9 @@
   (declare (fixnum box-num code-length))
   (with-fop-stack t
     (let ((code (%primitive allocate-code-object box-num code-length))
-	  (index (+ vm:code-trace-table-offset-slot box-num)))
+	  (index (+ #-gengc vm:code-trace-table-offset-slot
+		    #+gengc vm:code-debug-info-slot
+		    box-num)))
       (declare (type index index))
       #-gengc (setf (%code-debug-info code) (pop-stack))
       (dotimes (i box-num)
@@ -1023,7 +1025,8 @@
 	(setf (code-header-ref code (decf index)) (pop-stack)))
       (system:without-gcing
 	(read-n-bytes *fasl-file* (code-instructions code) 0
-		      code-length))
+		      #-gengc code-length
+		      #+gengc (* code-length vm:word-bytes)))
       code)))
 
 (define-fop (fop-code 58 :nope)
