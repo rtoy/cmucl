@@ -11,9 +11,10 @@
 ;;;
 ;;; Written by Blaine Burks
 
+;;;
 (in-package "INSPECT")
 
-;;; The tty inspector views LISP objects as being composed of parts.  A list,
+;;; The Tty inspector views LISP objects as being composed of parts.  A list,
 ;;; for example, would be divided into it's members, and a structure into its
 ;;; slots.  These parts are stored in a list.  The first two elements of this
 ;;; list are for bookkeeping.  The first element is a preamble string that will
@@ -53,11 +54,12 @@
 (defun input-loop (object parts s)
   (tty-display-object parts s)
   (loop
-    (format s "~%> ")
+    (format s "~&> ")
     (let ((command (read))
+	  ;; Use 2 less than length because first 2 elements are bookkeeping.
 	  (parts-len-2 (- (length parts) 2)))
       (typecase command
-	(number
+	(integer
 	 (cond ((< -1 command parts-len-2)
 		(cond ((eq (nth-parts parts command) %illegal-object%)
 		       (format s "~%That slot is unbound.~%"))
@@ -67,7 +69,10 @@
 		       (setf parts (describe-parts object))
 		       (tty-display-object parts s))))
 	       (t
-		(format s "~%Enter a VALID number.~%"))))
+		(if (= parts-len-2 0)
+		    (format s "~%This object contains nothing to inspect.~%~%")
+		    (format s "~%Enter a VALID number (~:[0-~D~;0~]).~%~%"
+			    (= parts-len-2 1) (1- parts-len-2))))))
 	(symbol
 	 (case (find-symbol (symbol-name command) (find-package "KEYWORD"))
 	   ((:q :e)
@@ -87,7 +92,19 @@
 	   ((:h :? :help)
 	    (show-help s))
 	   (t
-	    (format s "~%Invalid command.  Type H for help.~%"))))))))
+	    (do-tty-inspect-eval command s))))
+	(t
+	 (do-tty-inspect-eval command s))))))
+
+(defun do-tty-inspect-eval (command stream)
+  (let ((result-list (restart-case (multiple-value-list (eval command))
+		       (nil () :report "Return to the TTY-INSPECTOR"
+			  (format stream "~%Returning to INPSECTOR.~%")
+			  (return-from do-tty-inspect-eval nil)))))
+    (setf /// // // / / result-list)
+    (setf +++ ++ ++ + + - - command)
+    (setf *** ** ** * * (car /))
+    (format stream "~&~{~S~%~}" /)))
 
 (defun show-help (s)
   (terpri)
