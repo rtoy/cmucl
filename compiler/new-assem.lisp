@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.14 1992/07/30 04:47:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.15 1992/07/30 05:34:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -333,7 +333,7 @@
     (dolist (read reads)
       (let ((writer (assoc read writers :test #'eq)))
 	(when writer
-	  (let ((prev-inst (cdr writer)))
+	  (let ((prev-inst (cadr writer)))
 	    (pushnew prev-inst read-dependencies)
 	    (pushnew inst (inst-read-dependents prev-inst))
 	    (setf emittable-insts
@@ -350,9 +350,10 @@
 	    (setf emittable-insts
 		  (delete prev-inst emittable-insts :test #'eq)))
 	  (setf readers (delete reader readers :test #'eq))))
-      (setf writers
-	    (acons write inst
-		   (delete write writers :test #'eq :key #'car))))
+      (let ((writer (assoc write writers :test #'eq)))
+	(if writer
+	    (push inst (cdr writer))
+	    (push (list write inst) writers))))
     #+debug
     (when read-dependencies
       (format *trace-output* " Reads values produced by ~:S.~%"
@@ -402,6 +403,24 @@
     (return-from schedule-pending-instructions
 		 (ext:undefined-value)))
   ;;
+  ;; Note that any values live at the end of the block have to be computed
+  ;; last.
+  (let ((emittable-insts (segment-emittable-insts segment)))
+    (dolist (writer (segment-writers segment))
+      (let ((inst (second writer))
+	    (overwritten (cddr writer)))
+	(when overwritten
+	  (let ((write-dependencies (inst-write-dependencies inst)))
+	    (dolist (other-inst (cddr writer))
+	      (pushnew inst (inst-write-dependents other-inst))
+	      (pushnew other-inst write-dependencies)
+	      (setf emittable-insts
+		    (delete other-inst emittable-insts :test #'eq)))
+	    (setf (inst-write-dependencies inst) write-dependencies)))
+	;; If the value is live at the end of the block, we can't flush it.
+	(setf (instruction-attributep (inst-attributes inst) flushable) nil)))
+    (setf (segment-emittable-insts segment) emittable-insts))
+  ;;
   ;; Grovel through the entire graph in the forward direction finding all
   ;; the leaf instructions.
   (labels ((grovel-inst (inst)
@@ -420,9 +439,7 @@
 		     (setf max dep-depth))))
 	       (cond ((and (null (inst-read-dependents inst))
 			   (instruction-attributep (inst-attributes inst)
-						   flushable)
-			   (not (member inst (segment-writers segment)
-					:key #'cdr :test #'eq)))
+						   flushable))
 		      #+debug
 		      (format *trace-output* "Flushing ~S~%" inst)
 		      (setf (inst-emitter inst) nil)
