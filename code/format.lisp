@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.36 1997/05/02 20:40:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.37 1997/08/14 17:06:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -933,7 +933,7 @@
 	      ((plusp number)
 	       (write-string "th" stream))
 	      (t
-	       (write-string "zeroeth" stream)))))))
+	       (write-string "zeroth" stream)))))))
 
 ;;; Print Roman numerals
 
