@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.14 1998/07/14 18:12:23 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.15 1998/07/16 13:30:53 pw Exp $")
 
 (in-package :pcl)
 
@@ -172,7 +172,7 @@ work during bootstrapping.
   (let ((initargs ())
 	(methods ()))
     (flet ((duplicate-option (name)
-	     (error 'lisp::simple-program-error
+	     (error 'kernel:simple-program-error
 		    :format-control "The option ~S appears more than once."
 		    :format-arguments (list name)))
 	   (define-method(gf-name q-a-b)
@@ -220,6 +220,8 @@ work during bootstrapping.
 	      (if (initarg :method-class)
 		  (duplicate-option :method-class)
 		  (initarg :method-class `',(cadr option))))
+	    (:method
+	     (push (cdr option) methods))
 	    (t ;unsuported things must get a 'program-error
 	     (error 'lisp::simple-program-error
 		    :format-control "Unsupported option ~S."
@@ -1286,7 +1288,7 @@ work during bootstrapping.
 (defun generic-clobbers-function (function-specifier)
   #+Lispm (zl:signal 'generic-clobbers-function :name function-specifier)
   #+cmu
-  (error 'lisp::simple-program-error
+  (error 'kernel:simple-program-error
 	 :format-control
 	 "~S already names an ordinary function or a macro,~%~
 	  you may want to replace it with a generic function, but doing so~%~

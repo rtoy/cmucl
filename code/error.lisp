@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.49 1998/07/14 18:12:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.50 1998/07/16 13:30:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,8 +20,7 @@
 
 (in-package "KERNEL")
 (export '(layout-invalid simple-style-warning condition-function-name
-			 ;;simple-program-error simple-file-error
-			 ))
+			 simple-program-error simple-file-error))
 
 (in-package "LISP")
 (export '(break error warn cerror
