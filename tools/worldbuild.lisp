@@ -97,7 +97,9 @@
     "target:code/debug"
     ))
 
-(setf *genesis-core-name* "target:ldb/kernel.core")
+(setf *genesis-core-name*
+      #+mips "target:ldb/kernel.core"
+      #+sparc "/usr/tmp/kernel.core")
 (setf *genesis-c-header-name* "target:ldb/lisp.h")
 (setf *genesis-map-name* "target:ldb/lisp.map")
 (setf *genesis-symbol-table* "target:ldb/ldb.map")
