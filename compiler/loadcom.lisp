@@ -8,7 +8,9 @@
 
 (load "vm:vm-macs")
 (load "c:backend")
-(load "vm:parms")
+#-rt (load "vm:parms")
+#+rt (load "vm:params")
+(load 
 (load "vm:objdef")
 (load "c:macros")
 (load "c:sset")
@@ -57,8 +59,8 @@
 #+pmax (load "code:pmax-disassem")
 #+pmax (load "vm:mips-insts")
 #+pmax (load "vm:mips-macs")
-#+sparc (load "vm:insts")
-#+sparc (load "vm:macros")
+#-pmax (load "vm:insts")
+#-pmax (load "vm:macros")
 (load "vm:utils")
 (load "c:aliencomp")
 (load "c:debug-dump")
@@ -67,7 +69,7 @@
 (load "vm:core")
 
 (load "vm:vm")
-(load "vm:primtype")
+#-rt (load "vm:primtype")
 (load "vm:move")
 (load "vm:sap")
 (load "vm:system")
@@ -91,7 +93,7 @@
 (load "vm:vm-tran")
 
 (load "assem:assem-rtns")
-(load "assem:bit-bash")
+#-rt (load "assem:bit-bash")
 (load "assem:array")
 (load "assem:arith")
 (load "assem:alloc")
