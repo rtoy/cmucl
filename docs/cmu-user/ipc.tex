@@ -250,32 +250,33 @@ first process, the system converts the token back to the same
 \end{defun}
 
 
-\subsection{Host Addresses}
+% This stuff has been moved to internet.tex.  *** Remove me someday ***
+% \subsection{Host Addresses}
 
-The operating system maintains a database of all the valid host
-addresses.  You can use this database to convert between host names
-and addresses and vice-versa.
+% The operating system maintains a database of all the valid host
+% addresses.  You can use this database to convert between host names
+% and addresses and vice-versa.
 
-\begin{defun}{ext:}{lookup-host-entry}{\args{\var{host}}}
+% \begin{defun}{ext:}{lookup-host-entry}{\args{\var{host}}}
   
-  \code{lookup-host-entry} searches the database for the given
-  \var{host} and returns a host-entry structure for it.  If it fails
-  to find \var{host} in the database, it returns \nil.  \var{Host} is
-  either the address (as an integer) or the name (as a string) of the
-  desired host.
-\end{defun}
+%   \code{lookup-host-entry} searches the database for the given
+%   \var{host} and returns a host-entry structure for it.  If it fails
+%   to find \var{host} in the database, it returns \nil.  \var{Host} is
+%   either the address (as an integer) or the name (as a string) of the
+%   desired host.
+% \end{defun}
 
-\begin{defun}{ext:}{host-entry-name}{\args{\var{host-entry}}}
-  \defunx[ext:]{host-entry-aliases}{\args{\var{host-entry}}}
-  \defunx[ext:]{host-entry-addr-list}{\args{\var{host-entry}}}
-  \defunx[ext:]{host-entry-addr}{\args{\var{host-entry}}}
+% \begin{defun}{ext:}{host-entry-name}{\args{\var{host-entry}}}
+%   \defunx[ext:]{host-entry-aliases}{\args{\var{host-entry}}}
+%   \defunx[ext:]{host-entry-addr-list}{\args{\var{host-entry}}}
+%   \defunx[ext:]{host-entry-addr}{\args{\var{host-entry}}}
 
-  \code{host-entry-name}, \code{host-entry-aliases}, and
-  \code{host-entry-addr-list} each return the indicated slot from the
-  host-entry structure.  \code{host-entry-addr} returns the primary
-  (first) address from the list returned by
-  \code{host-entry-addr-list}.
-\end{defun}
+%   \code{host-entry-name}, \code{host-entry-aliases}, and
+%   \code{host-entry-addr-list} each return the indicated slot from the
+%   host-entry structure.  \code{host-entry-addr} returns the primary
+%   (first) address from the list returned by
+%   \code{host-entry-addr-list}.
+% \end{defun}
 
 
 \section{The WIRE Package}

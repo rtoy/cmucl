@@ -58,15 +58,15 @@ DNS lookups. The function
  
   returns a structure of type \var{host-entry} (explained below) for
   the given \var{host}.  If \var{host} is an integer, it will be
-  assumed to be the IP adress in host (byte-)order. If it is a string,
-  it can contain either the host name or the IP adress in dotted
+  assumed to be the IP address in host (byte-)order. If it is a string,
+  it can contain either the host name or the IP address in dotted
   format.
   
   This function works by completing the structure \var{host-entry}.
-  That is, if the user provides the IP adress, then the structure will
+  That is, if the user provides the IP address, then the structure will
   contain that information and also the domain names. If the user
   provides the domain name, the structure will be complemented with
-  the IP adresses along with the any aliases the host might have.
+  the IP addresses along with the any aliases the host might have.
 
 \end{defun}
 
@@ -76,20 +76,20 @@ DNS lookups. The function
     \var{addr-type} \var{addr-list}}
   
   This structure holds all information available at request time on a
-  given host. The entries are selfexplanatory. Aliases is a list of
+  given host. The entries are self-explanatory. Aliases is a list of
   strings containing alternative names of the host, and addr-list a
-  list of adresses stored in host byte order. The field
-  \var{addr-type} contains the number of the adress family, as
-  specified in \var{socket.h}, to which the addresses belong. Since
-  only adresses of the IPv4 family are currently supported, this slot
-  allways has the value $2$.
+  list of addresses stored in host byte order. The field
+  \var{addr-type} contains the number of the address family, as
+  specified in {\tt socket.h}, to which the addresses belong. Since
+  only addresses of the IPv4 family are currently supported, this slot
+  always has the value $2$.
 
 \end{deftp}
 
 \begin{defun}{extensions:}{ip-string}{%
     \args{\var{addr}}}
   
-  This function takes an IP adress in host order and returns a string
+  This function takes an IP address in host order and returns a string
   containing it in dotted format.
 
 \end{defun}
@@ -103,12 +103,12 @@ are documented.
     \args{\var{port} \ampoptional{} \var{kind}  %
       \keys{\kwd{reuse-address} \kwd{backlog} \kwd{interface}}}}
                      
-  Creates a socket and binds it to a port, prepared to recieve
+  Creates a socket and binds it to a port, prepared to receive
   connections of kind \var{kind} (which defaults to \kwd{stream}),
   queuing up to \var{backlog} of them. If \kwd{reuse-address} \var{T}
   is used, the option SO\_REUSEADDR is used in the call to \var{bind}.
   If no value is given for \kwd{interface}, it will try to bind to the
-  default IP adress of the machine where the Lisp process is running.
+  default IP address of the machine where the Lisp process is running.
 
 \end{defun}
 
@@ -117,7 +117,7 @@ are documented.
       \kwd{backlog}}}
   
   Creates a socket and binds it to the file name given by \var{path},
-  prepared to recieve connections of kind \var{kind} (which defaults
+  prepared to receive connections of kind \var{kind} (which defaults
   to \kwd{stream}), queuing up to \var{backlog} of them. If
   \kwd{reuse-address} \var{T} is used, then the file given by
   \var{path} is unlinked first.
@@ -156,20 +156,22 @@ remote hosts.
 
 \begin{defun}{extensions:}{connect-to-inet-socket}{%
     \args{\var{host} \var{port} \ampoptional{} \var{kind}}}
-
+  
   Tries to open a connection to the remote host \var{host} (which may
-  be an IP adress in host order, or a string with either a host name
-  or an IP adress in dotted format). Returns the file descriptor of
-  the connection.
+  be an IP address in host order, or a string with either a host name
+  or an IP address in dotted format) on port \var{port}. Returns the
+  file descriptor of the connection.  The optional parameter
+  \var{kind} can be either \kwd{stream} (the default) or \kwd{datagram}.
 
 \end{defun}
 
 \begin{defun}{extensions:}{connect-to-unix-socket}{%
     \args{\var{path} \ampoptional{} \var{kind}}}
   
-  Opens a connection of type \var{kind} (default: \kwd{stream}) to the
-  unix ``adress'' given by \var{path}. Returns the file descriptor of
-  the connection.
+  Opens a connection to the unix ``adress'' given by \var{path}.
+  Returns the file descriptor of the connection.  The type of
+  connection is given by \var{kind}, which can be either \kwd{stream}
+  (the default) or \kwd{datagram}.
 
 \end{defun}
 
@@ -204,7 +206,7 @@ reliably be sent this way.
     \args{\var{fd}}}
 
   After calling this function, the connection whose descriptor is
-  \var{fd} will ignore any out-of-band character it recieves.
+  \var{fd} will ignore any out-of-band character it receives.
 
 \end{defun}
 
@@ -219,12 +221,12 @@ reliably be sent this way.
 \section{Unbound Sockets, Socket Options, and Closing Sockets}
 
 These functions create unbound sockets. This is usually not necessary,
-since conectors and listeners create their own.
+since connectors and listeners create their own.
 
 \begin{defun}{extensions:}{create-unix-socket}{%
     \args{\ampoptional{} \var{type}}}
   
-  Creates a unix socket for the unix adress family, of type
+  Creates a unix socket for the unix address family, of type
   \var{:stream} and (on success) returns its file descriptor.
 
 \end{defun}
@@ -232,19 +234,19 @@ since conectors and listeners create their own.
 \begin{defun}{extensions:}{create-inet-socket}{%
     \args{\ampoptional{} \var{type}}}
   
-  Creates a unix socket for the internet adress family, of type
+  Creates a unix socket for the internet address family, of type
   \var{:stream} and (on success) returns its file descriptor.
 
 \end{defun}
 
 Further, it is desirable to be able to change socket options. This is
-performed by the following two functions:
+performed by the following two functions, which are essentially
+wrappers for system calls to {\tt getsockopt} and {\tt setsockopt}.
 
 \begin{defun}{extensions:}{get-socket-option}{%
     \args{\var{socket} \var{level} \var{optname}}}
   
   Gets the value of option \var{optname} from the socket \var{socket}.
-  \var{level} should have the value \var{sol-socket}.
 
 \end{defun}
 
@@ -252,10 +254,13 @@ performed by the following two functions:
     \args{\var{socket} \var{level} \var{optname} \var{optval}}}
   
   Sets the value of option \var{optname} from the socket \var{socket}
-  to the value \var{optval}. As in get-socket-options, \var{level}
-  should have the value \var{sol-socket}.
+  to the value \var{optval}.
 
 \end{defun}
+
+For information on possible options and values we refer to the
+manpages of {\tt getsockopt} and {\tt setsockopt}, and to {\tt
+ socket.h}
 
 Finally, the function
 
