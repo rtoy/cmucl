@@ -336,33 +336,57 @@
   (undefined-value))
 
 
-;;; Failed-To-Pack-Load-TN-Error  --  Internal
+;;; FAILED-TO-PACK-LOAD-TN-ERROR  --  Internal
 ;;;
 ;;;    If load TN packing fails, try to give a helpful error message.  We find
 ;;; which operand is losing, and flame if there is no way the restriction could
 ;;; ever be satisfied.
 ;;;
-(defun failed-to-pack-load-tn-error (op)
-  (declare (type tn-ref op))
+(defun failed-to-pack-load-tn-error (sc op)
+  (declare (type sc sc) (type tn-ref op))
   (multiple-value-bind (arg-p n more-p costs load-scs incon)
 		       (get-operand-info op)
-    (declare (ignore costs))
+    (declare (ignore costs load-scs))
     (assert (not more-p))
-    (let ((load-sc (svref *sc-numbers*
-			  (svref load-scs
-				 (sc-number
-				  (tn-sc (tn-ref-tn op)))))))
-      (assert load-sc)
-      (error "Unable to pack a Load-TN in SC ~S for the ~:R ~
-              ~:[result~;argument~] to~@
-              the ~S VOP.~@
-	      Perhaps all SC elements already in use by VOP?~:[~;~@
+    (error "Unable to pack a Load-TN in SC ~S for the ~:R ~
+            ~:[result~;argument~] to~@
+	    the ~S VOP.~@
+	    Perhaps all SC elements already in use by VOP?~:[~;~@
+	    Current cost info inconsistent with that in effect at compile ~
+	    time.  Recompile.~%Compilation order may be incorrect.~]"
+	   (sc-name sc)
+	   n arg-p
+	   (vop-info-name (vop-info (tn-ref-vop op)))
+	   incon))
+  (undefined-value))
+
+
+;;; NO-LOAD-SCS-ALLOWED-BY-PRIMITIVE-TYPE-ERROR  --  Internal
+;;;
+;;;    Called when none of the SCs that we can load Op into are allowed by Op's
+;;; primitive-type.
+;;;
+(defun no-load-scs-allowed-by-primitive-type-error (ref)
+  (declare (type tn-ref ref))
+  (let* ((tn (tn-ref-tn ref))
+	 (ptype (tn-primitive-type tn)))
+    (multiple-value-bind (arg-p pos more-p costs load-scs incon)
+			 (get-operand-info ref)
+      (declare (ignore costs))
+      (assert (not more-p))
+      (error "~S is not valid as the ~:R ~:[result~;argument~] to VOP:~
+              ~%  ~S,~@
+	      since the TN's primitive type ~S doesn't allow any of the SCs~@
+	      allowed by the operand restriction:~%  ~S~
+	      ~:[~;~@
 	      Current cost info inconsistent with that in effect at compile ~
 	      time.  Recompile.~%Compilation order may be incorrect.~]"
-	     (sc-name load-sc)
-	     n arg-p
-	     (vop-info-name (vop-info (tn-ref-vop op)))
-	     incon))))
+	     tn pos arg-p
+	     (template-name (vop-info (tn-ref-vop ref)))
+	     (primitive-type-name ptype)
+	     (mapcar #'sc-name (listify-restrictions load-scs))
+	     incon)))
+  (undefined-value))
 
 
 ;;;; Register saving:
@@ -784,7 +808,7 @@
 ;;; conditional block if it currently drops through.
 ;;;
 (defun spill-conditional-arg-tn (victim vop)
-  (declare (type tn tn) (type vop vop))
+  (declare (type tn victim) (type vop vop))
   (let* ((info-args (vop-codegen-info vop))
 	 (lab (first info-args))
 	 (node (vop-node vop))
@@ -833,7 +857,7 @@
     (event spill-tn (vop-node vop))
     
     (dolist (loc (sc-locations sc)
-		 (failed-to-pack-load-tn-error op))
+		 (failed-to-pack-load-tn-error sc op))
       (when (do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
 		((null ref) t)
 	      (let ((op (tn-ref-tn ref)))
@@ -859,23 +883,33 @@
 
 ;;; Pack-Load-TN  --  Internal
 ;;;
-;;;    Try to pack a load TN in the sc indicated by SCs.  If this fails, then
-;;; we let Spill-And-Pack-Load-TN do its thing.  We return the packed load TN.
+;;;    Try to pack a load TN in the SCs indicated by Load-SCs.  If this fails,
+;;; then we let Spill-And-Pack-Load-TN do its thing.  We return the packed load
+;;; TN.
 ;;;
-(defun pack-load-tn (scs op)
-  (declare (type sc-vector scs) (type tn-ref op))
+(defun pack-load-tn (load-scs op)
+  (declare (type sc-vector load-scs) (type tn-ref op))
   (let ((vop (tn-ref-vop op)))
     (compute-live-tns (vop-block vop) vop))
   
-  (let* ((sc (svref *sc-numbers*
-		    (svref scs (sc-number (tn-sc (tn-ref-tn op))))))
-	 (loc (or (find-load-tn-target op sc)
-		  (select-load-tn-location op sc))))
-    (if loc
-	(let ((res (make-tn 0 :load nil sc)))
-	  (setf (tn-offset res) loc)
-	  res)
-	(spill-and-pack-load-tn sc op))))
+  (let* ((tn (tn-ref-tn op))
+	 (ptype (tn-primitive-type tn)))
+    (let ((scs (svref load-scs (sc-number (tn-sc tn))))
+	  (allowed nil))
+      (loop
+	(when (null scs)
+	  (unless allowed (no-load-scs-allowed-by-primitive-type-error op))
+	  (return (spill-and-pack-load-tn allowed op)))
+	
+	(let ((sc (svref *sc-numbers* (pop scs))))
+	  (when (sc-allowed-by-primitive-type sc ptype)
+	    (setq allowed sc)
+	    (let ((loc (or (find-load-tn-target op sc)
+			   (select-load-tn-location op sc))))
+	      (when loc
+		(let ((res (make-tn 0 :load nil sc)))
+		  (setf (tn-offset res) loc)
+		  (return res))))))))))
 
 
 ;;; Check-Operand-Restrictions  --  Internal
@@ -891,7 +925,7 @@
        (op ops (tn-ref-across op)))
       ((null scs))
     (let ((ref-scn (sc-number (tn-sc (tn-ref-tn op)))))
-      (unless (eql (svref (car scs) ref-scn) ref-scn)
+      (unless (eq (svref (car scs) ref-scn) t)
 	(setf (tn-ref-load-tn op) (pack-load-tn (car scs) op)))))
   (undefined-value))
 	
