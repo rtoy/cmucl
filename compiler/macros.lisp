@@ -646,7 +646,8 @@
 ;;;
 ;;;    In the forward case, we terminate on Last-Cont so that we don't have to
 ;;; worry about our termination condition being changed when new code is added
-;;; during the iteration.  In the backward case, we do NODE-PREV before
+;;; during the iteration.  If CONT gets deleted out from under us, go again
+;;; from the previous CONT.  In the backward case, we do NODE-PREV before
 ;;; evaluating the body so that we can keep going when the current node is
 ;;; deleted.
 ;;;
@@ -655,11 +656,15 @@
   Iterate over the nodes in Block, binding Node-Var to the each node and
   Cont-Var to the node's Cont."
   (let ((n-block (gensym))
-	(n-last-cont (gensym)))
+	(n-last-cont (gensym))
+	(n-prev-cont (gensym)))
     `(let* ((,n-block ,block)
 	    (,n-last-cont (node-cont (block-last ,n-block))))
        (do* ((,node-var (continuation-next (block-start ,n-block))
-			(continuation-next ,cont-var))
+			(if (eq (continuation-kind ,cont-var) :deleted)
+			    (continuation-next ,n-prev-cont)
+			    (continuation-next ,cont-var)))
+	     (,n-prev-cont nil ,cont-var)
 	     (,cont-var (node-cont ,node-var) (node-cont ,node-var)))
 	    (())
 	 ,@body
@@ -958,24 +963,23 @@
 (defstruct event-info
   ;;
   ;; The name of this event.
-  (name nil :type symbol)
+  (name (required-argument) :type symbol)
   ;;
   ;; The string rescribing this event.
-  (description nil :type string)
+  (description (required-argument) :type string)
   ;;
   ;; The name of the variable we stash this in.
-  (var nil :type symbol)
+  (var (required-argument) :type symbol)
   ;;
   ;; The number of times this event has happened.
   (count 0 :type fixnum)
   ;;
   ;; The level of significance of this event.
-  (level nil :type unsigned-byte)
+  (level (required-argument) :type unsigned-byte)
   ;;
   ;; If true, a function that gets called with the node that the event happened
   ;; to.
   (action nil :type (or function null)))
-
 
 ;;; A hashtable from event names to event-info structures.
 ;;;
