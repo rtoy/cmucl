@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.12 1991/10/12 21:05:37 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.13 1992/02/15 01:05:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -151,7 +151,7 @@
   (when (server-info-wire server)
     (let ((fd (wire:wire-fd (server-info-wire server))))
       (system:invalidate-descriptor fd)
-      (mach:unix-close fd))
+      (unix:unix-close fd))
     (setf (server-info-wire server) nil))
   (when (server-info-slave-info server)
     (ts-buffer-wire-died (server-info-slave-info server))

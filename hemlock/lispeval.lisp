@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.9 1992/01/14 14:25:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.10 1992/02/15 01:06:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,7 +243,7 @@
 	  (let ((new-name (make-pathname :type "fasl"
 					 :defaults (note-input-file note))))
 	    (rename-file file new-name)
-	    (mach:unix-chmod (namestring new-name) #o644))
+	    (unix:unix-chmod (namestring new-name) #o644))
 	  (delete-file file)))
     (maybe-send-next-note server))
   (values))
@@ -422,13 +422,13 @@
 				file)))
 		       (unless (probe-file f) (return f))))))
     (multiple-value-bind (fd err)
-			 (mach:unix-open (namestring ofile)
-					 mach:o_creat #o666)
+			 (unix:unix-open (namestring ofile)
+					 unix:o_creat #o666)
       (unless fd
 	(editor-error "Couldn't create compiler temporary output file:~%~
-	~A" (mach:get-unix-error-msg err)))
-      (mach:unix-fchmod fd #o666)
-      (mach:unix-close fd))
+	~A" (unix:get-unix-error-msg err)))
+      (unix:unix-fchmod fd #o666)
+      (unix:unix-close fd))
     (let ((net-ofile (pathname-for-remote-access ofile)))
       (values (make-pathname :directory (pathname-directory net-ofile)
 			     :defaults file)

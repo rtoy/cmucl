@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.9 1991/06/20 10:05:44 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.10 1992/02/15 01:06:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -396,7 +396,7 @@
       (ecase (ext:process-status process)
 	(:running "running")
 	(:stopped "stopped")
-	(:signaled "killed by signal ~D" (mach:unix-signal-name
+	(:signaled "killed by signal ~D" (unix:unix-signal-name
 					  (ext:process-exit-code process)))
 	(:exited (format nil "exited with status ~D"
 			 (ext:process-exit-code process)))))))
