@@ -569,9 +569,11 @@ default-value-5
 ;;;
 (define-vop (known-return)
   (:args (old-fp :scs (word-pointer-reg control-stack))
-	 (return-pc :scs (descriptor-reg control-stack))
+	 (return-pc-arg :scs (descriptor-reg control-stack)
+			:target return-pc)
 	 (vals :more t))
   (:temporary (:scs (interior-reg) :type interior) lip)
+  (:temporary (:sc descriptor-reg :from (:argument 1)) return-pc)
   (:move-args :known-return)
   (:info val-locs)
   (:ignore val-locs vals)
@@ -582,10 +584,11 @@ default-value-5
       (when cur-nfp
 	(inst cal nsp-tn cur-nfp
 	      (component-non-descriptor-stack-usage))))
+    (maybe-load-stack-tn return-pc return-pc-arg)
     ;; Skip over a word, the LRA header, and subtract out low-tag bits.
     (inst cal lip return-pc (- vm:word-bytes vm:other-pointer-type))
     (inst bx lip)
-    (move cfp-tn old-fp)))
+    (maybe-load-stack-tn cfp-tn old-fp)))
 
 
 
