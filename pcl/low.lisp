@@ -1,4 +1,4 @@
-;;;-*-Mode:LISP; Package:(PCL LISP 1000); Base:10; Syntax:Common-lisp -*-
+;;;-*-Mode:LISP; Package: PCL -*-
 ;;;
 ;;; *************************************************************************
 ;;; Copyright (c) 1985, 1986, 1987, 1988, 1989, 1990 Xerox Corporation.
@@ -26,15 +26,18 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.12 2001/04/10 22:37:23 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.13 2001/04/11 20:05:08 pw Exp $")
+
+;;; 
+;;; This file contains optimized low-level constructs for PCL.
+;;; 
 
 (in-package :pcl)
 
-(eval-when (compile load eval)
 (defvar *optimize-speed*
   '(optimize (speed 3) (safety 0) (ext:inhibit-warnings 3) #+small (debug 0.5))
   "This variable is used in various places in PCL as an optimization
-declaration."))
+declaration.")
 
 ;;; Various macros that include necessary declarations for maximum
 ;;; performance.
