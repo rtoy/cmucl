@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.42 2003/10/13 19:01:36 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.43 2003/10/13 20:42:56 toy Exp $
  *
  */
 
@@ -1467,7 +1467,7 @@ static void *gc_alloc(int nbytes)
  */
 static inline void *gc_quick_alloc(int nbytes)
 {
-  void *new_free_pointer;
+  char *new_free_pointer;
 
   /* Check if there is room in the current region. */
   new_free_pointer = boxed_region.free_pointer + nbytes;
@@ -1491,7 +1491,7 @@ static inline void *gc_quick_alloc(int nbytes)
  */
 static inline void *gc_quick_alloc_large(int nbytes)
 {
-  void *new_free_pointer;
+  char *new_free_pointer;
 
   if (nbytes >= large_object_size)
     return gc_alloc_large(nbytes,0,&boxed_region);
@@ -1515,7 +1515,7 @@ static inline void *gc_quick_alloc_large(int nbytes)
 
 static void *gc_alloc_unboxed(int nbytes)
 {
-  void *new_free_pointer;
+  char *new_free_pointer;
 
 #if 0
   fprintf(stderr, "gc_alloc_unboxed %d\n",nbytes);
@@ -1587,7 +1587,7 @@ static void *gc_alloc_unboxed(int nbytes)
 
 static inline void *gc_quick_alloc_unboxed(int nbytes)
 {
-  void *new_free_pointer;
+  char *new_free_pointer;
 
   /* Check if there is room in the current region. */
   new_free_pointer = unboxed_region.free_pointer + nbytes;
@@ -1613,7 +1613,7 @@ static inline void *gc_quick_alloc_unboxed(int nbytes)
  */
 static inline void *gc_quick_alloc_large_unboxed(int nbytes)
 {
-  void *new_free_pointer;
+  char *new_free_pointer;
 
   if (nbytes >= large_object_size)
     return gc_alloc_large(nbytes,1,&unboxed_region);
@@ -1765,7 +1765,7 @@ static lispobj copy_large_object(lispobj object, int nwords)
        * WP flag to avoid redundant calls.
        */
       if (PAGE_WRITE_PROTECTED(next_page)) {
-	os_protect(page_address(next_page), PAGE_SIZE, OS_VM_PROT_ALL);
+	os_protect((os_vm_address_t) page_address(next_page), PAGE_SIZE, OS_VM_PROT_ALL);
 	page_table[next_page].flags &= ~PAGE_WRITE_PROTECTED_MASK;
       }
       remaining_bytes -= PAGE_SIZE;
@@ -5218,7 +5218,7 @@ static int update_page_write_prot(unsigned page)
    */
 
   for (j = 0; j < num_words; j++) {
-    void *ptr = *(page_addr + j);
+    char *ptr = *(page_addr + j);
     int index = find_page_index(ptr);
 
     /* Check that it's in the dynamic space */
@@ -5245,7 +5245,7 @@ static int update_page_write_prot(unsigned page)
     fprintf(stderr, "* WP page %d of gen %d\n", page, gen);
 #endif
 
-    os_protect((void *) page_addr, PAGE_SIZE,
+    os_protect((os_vm_address_t) page_addr, PAGE_SIZE,
 	       OS_VM_PROT_READ | OS_VM_PROT_EXECUTE);
 
     /* Note the page as protected in the page tables */
@@ -5698,7 +5698,7 @@ static void unprotect_oldspace(void)
        * WP flag to avoid redundant calls.
        */
       if (PAGE_WRITE_PROTECTED(i)) {
-	os_protect(page_start, PAGE_SIZE, OS_VM_PROT_ALL);
+	os_protect((os_vm_address_t) page_start, PAGE_SIZE, OS_VM_PROT_ALL);
 	page_table[i].flags &= ~PAGE_WRITE_PROTECTED_MASK;
       }
     }
@@ -5751,7 +5751,7 @@ static int free_oldspace(void)
 	void  *page_start = (void *)page_address(last_page);
 
 	if (PAGE_WRITE_PROTECTED(last_page)) {
-	  os_protect(page_start, PAGE_SIZE, OS_VM_PROT_ALL);
+	  os_protect((os_vm_address_t) page_start, PAGE_SIZE, OS_VM_PROT_ALL);
 	  page_table[last_page].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 	}
       }
@@ -5764,12 +5764,12 @@ static int free_oldspace(void)
 
     /* Zero pages from first_page to (last_page - 1) */
     if (gencgc_unmap_zero) {
-      void *page_start, *addr;
+      char *page_start, *addr;
 
-      page_start = (void *) page_address(first_page);
+      page_start = page_address(first_page);
 
-      os_invalidate(page_start, PAGE_SIZE * (last_page - first_page));
-      addr = os_validate(page_start, PAGE_SIZE * (last_page - first_page));
+      os_invalidate((os_vm_address_t) page_start, PAGE_SIZE * (last_page - first_page));
+      addr = (char *) os_validate((os_vm_address_t) page_start, PAGE_SIZE * (last_page - first_page));
       if(addr == NULL || addr != page_start)
 	fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
 		(unsigned long) page_start, (unsigned long) addr);
@@ -6167,7 +6167,7 @@ static void write_protect_generation_pages(int generation)
 
       page_start = (void *) page_address(i);
 
-      os_protect(page_start, PAGE_SIZE, OS_VM_PROT_READ | OS_VM_PROT_EXECUTE);
+      os_protect((os_vm_address_t) page_start, PAGE_SIZE, OS_VM_PROT_READ | OS_VM_PROT_EXECUTE);
 
       /* Note the page as protected in the page tables */
       page_table[i].flags |= PAGE_WRITE_PROTECTED_MASK;
@@ -6652,7 +6652,7 @@ void	gc_free_heap(void)
   for (page = 0; page < dynamic_space_pages; page++)
     /* Skip Free pages which should already be zero filled. */
     if (PAGE_ALLOCATED(page)) {
-      void *page_start, *addr;
+      char *page_start, *addr;
 
       /*
        * Mark the page free. The other slots are assumed invalid when
@@ -6667,11 +6667,11 @@ void	gc_free_heap(void)
       page_start = (void *) page_address(page);
 
       /* First remove any write protection */
-      os_protect(page_start, PAGE_SIZE, OS_VM_PROT_ALL);
+      os_protect((os_vm_address_t) page_start, PAGE_SIZE, OS_VM_PROT_ALL);
       page_table[page].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 
-      os_invalidate(page_start, PAGE_SIZE);
-      addr = os_validate(page_start, PAGE_SIZE);
+      os_invalidate((os_vm_address_t) page_start, PAGE_SIZE);
+      addr = (char *) os_validate((os_vm_address_t) page_start, PAGE_SIZE);
       if(addr == NULL || addr != page_start)
 	fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
 		(unsigned long) page_start, (unsigned long) addr);
@@ -6817,8 +6817,8 @@ void gc_init(void)
 void	gencgc_pickup_dynamic(void)
 {
   int page = 0;
-  int addr = DYNAMIC_0_SPACE_START;
-  int alloc_ptr = get_alloc_pointer();
+  unsigned long addr = DYNAMIC_0_SPACE_START;
+  unsigned long alloc_ptr = (unsigned long) get_alloc_pointer();
 
   /* Initialise the first region. */
   do {
@@ -6875,7 +6875,7 @@ alloc (int nbytes)
   for (;;)
     {
       void *new_obj;
-      void *new_free_pointer
+      char *new_free_pointer
   	= (void *) (SymbolValue (CURRENT_REGION_FREE_POINTER) + nbytes);
 	  
       if (new_free_pointer <= boxed_region.end_addr)
