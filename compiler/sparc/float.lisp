@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.2 1990/12/01 22:34:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.3 1990/12/06 17:35:27 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -500,9 +500,7 @@
 
 ;;;; Float mode hackery:
 
-#|
-
-(deftype float-modes () '(unsigned-byte 24))
+(deftype float-modes () '(unsigned-byte 32))
 (defknown floating-point-modes () float-modes (flushable))
 (defknown ((setf floating-point-modes)) (float-modes)
   float-modes)
@@ -512,9 +510,13 @@
   (:result-types unsigned-num)
   (:translate floating-point-modes)
   (:policy :fast-safe)
+  (:vop-var vop)
+  (:temporary (:sc unsigned-stack) temp)
   (:generator 3
-    (inst cfc1 res 31)
-    (inst nop)))
+    (let ((nfp (current-nfp-tn vop)))
+      (inst stfsr nfp (* word-bytes (tn-offset temp)))
+      (loadw res nfp (tn-offset temp))
+      (inst nop))))
 
 (define-vop (set-floating-point-modes)
   (:args (new :scs (unsigned-reg) :target res))
@@ -523,8 +525,10 @@
   (:result-types unsigned-num)
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
+  (:temporary (:sc unsigned-stack) temp)
+  (:vop-var vop)
   (:generator 3
-    (inst ctc1 res 31)
-    (move res new)))
-
-|#
+    (let ((nfp (current-nfp-tn vop)))
+      (storew new nfp (tn-offset temp))
+      (inst ldfsr nfp (* word-bytes (tn-offset temp)))
+      (move res new))))
