@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.11 1992/05/15 17:56:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.12 1992/05/15 19:25:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,7 +100,7 @@
   (etypecase sequence
     (list
      (do ((count index (1- count))
-	  (list list (cdr list)))
+	  (list sequence (cdr list)))
 	 ((= count 0) (car list))
        (declare (fixnum count))
        (when (endp list)
@@ -1278,7 +1278,7 @@
    is null are removed"
   (declare (fixnum start count))
   (let* ((length (length sequence))
-	 (end (or length end)))
+	 (end (or end length)))
     (declare (type index length end))
     (seq-dispatch sequence
 		  (if from-end
@@ -1937,7 +1937,7 @@
   (declare (fixnum start))
   (seq-dispatch sequence
     (list-find* item sequence from-end test test-not start end key)
-    (vector-find* item sequence from-end test test-not start end key))))
+    (vector-find* item sequence from-end test test-not start end key)))
 
 
 ;;; The support routines for FIND are used by compiler transforms, so we
@@ -2118,13 +2118,14 @@
      (declare (fixnum inc start1 start2 end1 end2))
      ,@body))
 
-(defmacro matchify-list (sequence start length end)
+(defmacro matchify-list ((sequence start length end) &body body)
   (declare (ignore end)) ;; ### Should END be used below?
-  `(setq ,sequence
-	 (if from-end
-	     (nthcdr (- (the fixnum ,length) (the fixnum ,start) 1)
-		     (reverse (the list ,sequence)))
-	     (nthcdr ,start ,sequence))))
+  `(let ((,sequence (if from-end
+			(nthcdr (- (the fixnum ,length) (the fixnum ,start) 1)
+				(reverse (the list ,sequence)))
+			(nthcdr ,start ,sequence))))
+     (declare (type list ,sequence))
+     ,@body))
 
 )
 
@@ -2144,7 +2145,8 @@
 	 (test-not
 	  (if (funcall test-not (apply-key key ,elt1) (apply-key key ,elt2))
 	      (return (if from-end (1+ (the fixnum index1)) index1))))
-	 (t (if (not (funcall test (apply-key key ,elt1) (apply-key key ,elt2)))
+	 (t (if (not (funcall test (apply-key key ,elt1)
+			      (apply-key key ,elt2)))
 		(return (if from-end (1+ (the fixnum index1)) index1))))))
 
 (defmacro mumble-mumble-mismatch ()
@@ -2182,13 +2184,13 @@
 (defun mismatch (sequence1 sequence2 &key from-end (test #'eql) test-not 
 			   (start1 0) end1 (start2 0) end2 key)
   "The specified subsequences of Sequence1 and Sequence2 are compared
-  element-wise.  If they are of equal length and match in every element, the
-  result is Nil.  Otherwise, the result is a non-negative integer, the index
-  within Sequence1 of the leftmost position at which they fail to match; or, if
-  one is shorter than and a matching prefix of the other, the index within
-  Sequence1 beyond the last position tested is returned.  If a non-Nil :From-End
-  keyword argument is given, then one plus the index of the rightmost position in
-  which the sequences differ is returned."
+   element-wise.  If they are of equal length and match in every element, the
+   result is Nil.  Otherwise, the result is a non-negative integer, the index
+   within Sequence1 of the leftmost position at which they fail to match; or,
+   if one is shorter than and a matching prefix of the other, the index within
+   Sequence1 beyond the last position tested is returned.  If a non-Nil
+   :From-End keyword argument is given, then one plus the index of the
+   rightmost position in which the sequences differ is returned."
   (declare (fixnum start1 start2))
   (let* ((length1 (length sequence1))
 	 (end1 (or end1 length1))
@@ -2197,15 +2199,15 @@
     (declare (type index length1 end1 length2 end2))
     (match-vars
      (seq-dispatch sequence1
-      (progn (matchify-list sequence1 start1 length1 end1)
-	     (seq-dispatch sequence2
-			   (progn (matchify-list sequence2 start2 length2 end2)
-				  (list-list-mismatch))
-			   (list-mumble-mismatch)))
-      (seq-dispatch sequence2
-		    (progn (matchify-list sequence2 start2 length2 end2)
-			   (mumble-list-mismatch))
-		    (mumble-mumble-mismatch))))))
+       (matchify-list (sequence1 start1 length1 end1)
+	 (seq-dispatch sequence2
+	   (matchify-list (sequence2 start2 length2 end2)
+	     (list-list-mismatch))
+	   (list-mumble-mismatch)))
+       (seq-dispatch sequence2
+	 (matchify-list (sequence2 start2 length2 end2)
+	   (mumble-list-mismatch))
+	 (mumble-mumble-mismatch))))))
 
 
 ;;; Search comparison functions:
