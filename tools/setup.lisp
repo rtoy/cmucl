@@ -152,21 +152,16 @@
 	   (close *log-file*)))))
 
 
-(defun comf (name &key always-once proceed load output-file assem)
-  (declare (ignore always-once))
+(defun comf (name &rest keys &key proceed assem &allow-other-keys)
   (when (and *log-file*
 	     (> (- (file-position *log-file*) *last-file-position*) 10000))
     (setq *last-file-position* (file-position *log-file*))
     (force-output *log-file*))
 
   (let* ((src (merge-pathnames name (make-pathname :type "lisp")))
-	 (obj (if output-file
-		  (pathname output-file)
-		  (make-pathname :defaults src
-				 :type
-				 (if assem
-				     "assem"
-				     (c:backend-fasl-file-type c:*backend*))))))
+	 (obj (if assem
+		  (make-pathname :defaults src :type "assem")
+		  (apply #'compile-file-pathname src keys))))
 
     (unless (and (probe-file obj)
 		 (>= (file-write-date obj) (file-write-date src)))
@@ -181,9 +176,7 @@
 	   (*interactive*
 	    (if assem
 		(c::assemble-file src :output-file obj)
-		(compile-file src  :error-file nil  :output-file obj))
-	    (when load
-	      (load obj :verbose t)))
+		(apply #'compile-file src :allow-other-keys t keys)))
 	   (t
 	    (handler-bind
 		((error #'(lambda (condition)
@@ -204,9 +197,7 @@
 			      (return-from comf)))))
 	      (if assem
 		  (c::assemble-file src :output-file obj)
-		  (compile-file src  :error-file nil  :output-file obj))
-	      (when load
-		(load obj :verbose t))))))))))
+		  (apply #'compile-file src :allow-other-keys t keys))))))))))
 
 
 
@@ -214,8 +205,13 @@
 
 (defun cat-if-anything-changed (output-file &rest input-files)
   (flet ((add-correct-type (pathname)
-	   (make-pathname :type (c:backend-fasl-file-type c:*target-backend*)
-			  :defaults pathname)))
+	   (or (probe-file
+		(make-pathname :type (c:backend-byte-fasl-file-type
+				      c:*target-backend*)
+			       :defaults pathname))
+	       (make-pathname :type (c:backend-fasl-file-type
+				     c:*target-backend*)
+			      :defaults pathname))))
     (let* ((output-file (add-correct-type output-file))
 	   (write-date (file-write-date output-file))
 	   (input-namestrings
