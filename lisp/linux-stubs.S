@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.3 1997/09/13 10:02:44 dtc Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.4 1997/10/02 17:10:32 dtc Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -149,7 +149,6 @@ PVE_stub_ ## fct: ;\
  doe(erfc)
  doe(erfcl)
  doe(erfl)
- doe(errno)
  doe(execl)
  doe(execle)
  doe(execlp)
