@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.6 1991/02/16 01:00:41 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.7 1991/05/24 18:34:59 wlott Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -11,6 +11,24 @@
 #include "parse.h"
 #include "interrupt.h"
 #include "lispregs.h"
+
+static int strcasecmp(s1,s2)
+char *s1,*s2;
+{
+    int c1, c2;
+
+    do{
+	c1=(*s1++);
+	if(isupper(c1))
+	    c1=tolower(c1);
+
+	c2=(*s2++);
+	if(isupper(c2))
+	    c2=tolower(c2);
+    }while(c1==c2 && c1!=0);
+
+    return c1-c2;
+}
 
 static void skip_ws(ptr)
 char **ptr;
