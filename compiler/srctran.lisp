@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.134 2003/09/24 21:29:07 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.135 2003/09/24 22:38:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -908,7 +908,7 @@
 	      ;; member types.
 	      (dolist (member (member-type-members arg))
 		(push (if (numberp member)
-			  (make-member-type :members (list member))
+			  (specifier-type `(eql ,member))
 			  *empty-type*)
 		      new-args))
 	      (push arg new-args)))
