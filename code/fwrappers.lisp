@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.1 2003/05/23 13:39:56 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.2 2003/05/23 15:10:16 gerd Exp $")
 
 (in-package :fwrappers)
 
@@ -267,6 +267,6 @@
 
 (defun encapsulated-p (name type)
   "This function is deprecated; use fwrappers instead."
-  (funwrap name :type type))
+  (not (null (find-fwrapper name :type type))))
 
 ;;; end of file
