@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.3 1990/03/28 22:49:10 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.4 1990/04/02 23:50:26 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -206,7 +206,7 @@ call_into_c:
 	sw	t0, foreign_function_call_active
 
 	/* Restore GP */
-	lw	gp, current_global_pointer
+	lw	gp, saved_global_pointer
 
 	/* Were we interrupted? */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))
