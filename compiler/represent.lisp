@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.31 1992/02/13 20:39:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.32 1992/02/24 05:50:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -235,8 +235,6 @@
 	      (warn "No move function defined to save SC ~S to alternate ~
 	             SC ~S."
 		    (sc-name sc) (sc-name alt)))))))))
-;;;
-(check-move-function-consistency)
 
 
 ;;;; Representation selection:
