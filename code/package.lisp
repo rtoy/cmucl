@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.25 1992/05/18 19:20:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.26 1992/11/04 19:23:32 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 ;;;
 (in-package 'lisp)
 (export '(package packagep *package* make-package in-package find-package
-	  package-name package-nicknames rename-package
+	  package-name package-nicknames rename-package delete-package
 	  package-use-list package-used-by-list package-shadowing-symbols
 	  list-all-packages intern find-symbol unintern export
 	  unexport import shadowing-import shadow use-package
@@ -833,6 +833,45 @@
     (setf (package-%nicknames package) ())
     (enter-new-nicknames package nicknames)
     package))
+
+;;; Delete-Package -- Public
+;;;
+;;; Delete the package (string or package) from the package system data
+;;; structures.
+;;;
+(defun delete-package (package)
+  (let ((pack-struc nil)
+	(pack-name nil)
+	(use-list nil))
+    (cond ((packagep package) ; Package argument is a package-object.
+	   (setf pack-name (package-name package)
+		 pack-struc package
+		 use-list (package-used-by-list package)))
+	  ((stringp package) ; Package argument is a name.
+	   (setf pack-struc (find-package package))
+	   (if pack-struc
+	       (setf pack-name (package-name pack-struc)))
+	   (unless pack-struc
+	     ;; Package argument is a name, but there is no package-object
+	     ;; of that name.
+	     (cerror "Return NIL" "No package of name ~S." package)
+	     (return-from delete-package nil))
+	   (when pack-struc
+	     (setf use-list (package-used-by-list pack-struc)))))
+    (when (and pack-struc (not pack-name)) ; Package already deleted.
+      (return-from delete-package nil))
+    (when use-list ; The package is used by other packages.
+      ;; Correctable error, if continued, then effectively unuse-package on all.
+      (cerror "Remove dependency in other packages."
+	      "~S is used by package(s) ~S" package use-list)
+      (dolist (p use-list)
+	(unuse-package pack-name p)))
+    ;; Delete package slot for all symbols in the package by uninterning them.
+    (loop for s being each present-symbol of pack-struc
+      do (unintern s pack-struc))
+    (setf (package-%name pack-struc) nil
+	  (package-%nicknames pack-struc) nil)
+    (return-from delete-package t)))
 
 ;;; List-All-Packages  --  Public
 ;;;
