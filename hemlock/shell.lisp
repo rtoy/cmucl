@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.7 1991/06/15 12:44:43 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.8 1991/06/17 12:59:41 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,7 +186,7 @@
 				     ,command)
 			   :help "Where output from this process will appear.")
 			  (new-shell-name)))
-	 (buffer (make-buffer
+	 (temp (make-buffer
 		  buffer-name
 		  :modes '("Fundamental" "Process")
 		  :delete-hook
@@ -195,17 +195,22 @@
 			      (setf (value current-shell) nil))
 			    (delete-string (buffer-name buffer) *shell-names*)
 			    (kill-process (variable-value 'process
-							  :buffer buffer)))))))
-    (unless buffer
-      (setf buffer (getstring buffer-name *buffer-names*))
-      (buffer-end (buffer-point buffer)))
+							  :buffer buffer))))))
+	 (buffer (or temp (getstring buffer-name *buffer-names*)))
+	 (stream (variable-value 'process-output-stream :buffer buffer))
+	 (output-stream
+	  ;; If we re-used an old shell buffer, this isn't necessary.
+	  (if (hemlock-output-stream-p stream)
+	      (setf (variable-value 'process-output-stream :buffer buffer)
+		    (make-shell-filter-stream buffer stream))
+	      stream)))
+    (buffer-end (buffer-point buffer))
     (defhvar "Process"
       "The process for Shell and Process buffers."
       :buffer buffer
       :value (ext::run-program "/bin/sh" (list "-c" command)
 			       :wait nil
-			       :pty (variable-value 'process-output-stream
-						    :buffer buffer)
+			       :pty output-stream
 			       :env (frob-environment-list
 				     (car (buffer-windows buffer)))
 			       :status-hook #'(lambda (process)
@@ -220,12 +225,7 @@
     (update-process-buffer buffer)
     (when (and (not (value current-shell)) set-current-shell-p)
       (setf (value current-shell) buffer))
-    (change-to-buffer buffer)
-    (let ((stream (value process-output-stream)))
-      ;; If we re-used an old shell buffer, this isn't necessary.
-      (when (hemlock-output-stream-p stream)
-	(setf (value process-output-stream)
-	      (make-shell-filter-stream buffer stream))))))
+    (change-to-buffer buffer)))
 
 ;;; GET-COMMAND-LINE -- Internal.
 ;;;
