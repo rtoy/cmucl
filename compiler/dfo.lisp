@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.19 1991/12/11 17:58:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.20 1992/02/12 19:20:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,11 +115,6 @@
 
 ;;; Walk-Home-Call-Graph  --  Internal
 ;;;
-;;;   This function ensures that all the blocks in a given environment will be
-;;; in the same component, even when they might not seem reachable from the
-;;; environment entry.  Consider the case of code that is only reachable from a
-;;; non-local exit.
-;;;
 ;;;    This function is called on each block by Find-Initial-DFO-Aux before it
 ;;; walks the successors.  It looks at the home lambda's bind block to see if
 ;;; that block is in some other component:
@@ -127,6 +122,10 @@
 ;;;    the home function to move it into component.
 ;;; -- If the block is in some other component, join Component into it and
 ;;;    return that component.
+;;; -- If the home function is deleted, do nothing.  Block must eventually be
+;;;    discovered to be unreachable as well.  This can happen when we have a
+;;;    NLX into a function with no references.  The escape function still has
+;;;    refs (in the deleted function).
 ;;;
 ;;; This ensures that all the blocks in a given environment will be in the same
 ;;; component, even when they might not seem reachable from the environment
@@ -135,16 +134,18 @@
 ;;;
 (defun walk-home-call-graph (block component)
   (declare (type cblock block) (type component component))
-  (let* ((home (block-home-lambda block))
-	 (bind-block (node-block (lambda-bind home)))
-	 (home-component (block-component bind-block)))
-    (cond ((eq (component-kind home-component) :initial)
-	   (dfo-walk-call-graph home component))
-	  ((eq home-component component)
-	   component)
-	  (t
-	   (join-components home-component component)
-	   home-component))))
+  (let ((home (block-home-lambda block)))
+    (if (eq (functional-kind home) :deleted)
+	component
+	(let* ((bind-block (node-block (lambda-bind home)))
+	       (home-component (block-component bind-block)))
+	  (cond ((eq (component-kind home-component) :initial)
+		 (dfo-walk-call-graph home component))
+		((eq home-component component)
+		 component)
+		(t
+		 (join-components home-component component)
+		 home-component))))))
 
 
 ;;; Find-Initial-DFO-Aux  --  Internal
