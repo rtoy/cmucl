@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.13 1993/02/07 21:17:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.14 1993/07/05 01:47:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -191,21 +191,24 @@
 
     (format t ";;; Running library:load-foreign.csh...~%")
     (force-output)
-    (let ((proc (ext:run-program "library:load-foreign.csh"
-				 (list* (or *previous-linked-object-file*
-					    (namestring (truename base-file)))
-					(format nil "~X"
-						*foreign-segment-free-pointer*)
-					output-file
-					symbol-table-file
-					(append (if (atom files)
-						    (list files)
-						    files)
-						libraries))
-				 :env env
-				 :input nil
-				 :output error-output
-				 :error :output)))
+    (let ((proc (ext:run-program
+		 "library:load-foreign.csh"
+		 (list* (or *previous-linked-object-file*
+			    (namestring (truename base-file)))
+			(format nil "~X"
+				*foreign-segment-free-pointer*)
+			output-file
+			symbol-table-file
+			(append (mapcar #'(lambda (name)
+					    (unix-namestring name nil))
+					(if (atom files)
+					    (list files)
+					    files))
+				libraries))
+		 :env env
+		 :input nil
+		 :output error-output
+		 :error :output)))
       (unless proc
 	(error "Could not run library:load-foreign.csh"))
       (unless (zerop (ext:process-exit-code proc))
