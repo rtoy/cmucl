@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.30 1991/07/11 14:58:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.31 1991/07/16 12:01:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,6 +85,8 @@
 (load "code:run-program")
 (load "code:query")
 (load "code:loop")
+(load "code:syscall") ; syscall gets cold-loaded, but we need to re-run some
+		      ; of the exports.
 (load "code:internet")
 (load "code:wire")
 (load "code:remote")
