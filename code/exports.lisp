@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.3 1990/04/01 23:50:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.4 1990/04/02 00:10:47 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -249,20 +249,23 @@
 (use-package "EXT")
 (use-package "SYSTEM")
 
-(export '(*empty-type* *eval-stack-top* *null-type* *universal-type*
-	  *wild-type* always-subtypep args-type args-type-allowp
-	  args-type-keyp args-type-keywords args-type-optional args-type-p
-	  args-type-required args-type-rest array-rank array-total-size
-	  array-type array-type-complexp array-type-dimensions
-	  array-type-element-type array-type-p
+(export '(%array-fill-pointer %array-available-elements %array-data-vector
+	  %array-displacement %array-displaced-p %array-dimension
+	  %check-bound *empty-type* *eval-stack-top* *null-type*
+	  *universal-type* *wild-type* always-subtypep args-type
+	  args-type-allowp args-type-keyp args-type-keywords
+	  args-type-optional args-type-p args-type-required args-type-rest
+	  array-rank array-total-size array-type array-type-complexp
+	  array-type-dimensions array-type-element-type array-type-p
 	  array-type-specialized-element-type ash-index bit-index
 	  boole-code boolean byte-specifier callable char-int
-	  consed-sequence csubtypep ctype ctype-of ctype-p ctypep filename
-	  float-digits float-exponent float-format-max float-radix form
-	  function-type function-type-allowp function-type-keyp
-	  function-type-keywords function-type-optional function-type-p
-	  function-type-required function-type-rest function-type-returns
-	  hairy-type hairy-type-check-template hairy-type-specifier index
+	  consed-sequence csubtypep ctype ctype-of ctype-p ctypep
+	  data-vector-ref filename float-digits float-exponent
+	  float-format-max float-radix form function-type
+	  function-type-allowp function-type-keyp function-type-keywords
+	  function-type-optional function-type-p function-type-required
+	  function-type-rest function-type-returns hairy-type
+	  hairy-type-check-template hairy-type-specifier index
 	  internal-time irrational key-info key-info-name key-info-p
 	  key-info-type lexical-environment make-args-type
 	  make-function-type make-key-info make-member-type make-named-type
@@ -408,10 +411,8 @@
 
 (use-package "KERNEL")
 
-(export '(%array-fill-pointer %array-available-elements %array-data-vector
-	  %array-displacement %array-displaced-p %array-dimension
-	  %check-bound *assembly-unit-length* *primitive-objects*
-	  array-data-slot array-dimensions-offset array-displaced-p-slot
+(export '(*assembly-unit-length* *primitive-objects* array-data-slot
+	  array-dimensions-offset array-displaced-p-slot
 	  array-displacement-slot array-elements-slot
 	  array-fill-pointer-slot atomic-flag base-character-type
 	  bignum-digits-offset bignum-type binding-size binding-symbol-slot
@@ -425,7 +426,7 @@
 	  code-header-type complex-array-type complex-bit-vector-type
 	  complex-imag-slot complex-real-slot complex-size
 	  complex-string-type complex-type complex-vector-type
-	  cons-car-slot cons-cdr-slot cons-size data-vector-ref
+	  cons-car-slot cons-cdr-slot cons-size 
 	  define-for-each-primitive-object double-float-size
 	  double-float-type double-float-value-slot error-trap
 	  even-fixnum-type exported-static-symbols fixnum
