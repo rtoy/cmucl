@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.8 1992/02/25 07:03:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.9 1992/02/26 00:15:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -183,7 +183,7 @@
 
 
 (define-vop (set-symbol-function)
-  (:translate %sp-set-definition)
+  (:translate %set-symbol-function)
   (:policy :fast-safe)
   (:args (symbol :scs (descriptor-reg))
 	 (function :scs (descriptor-reg) :target result))
