@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.38 1991/04/09 23:34:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.39 1991/04/20 14:12:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,10 +79,11 @@
 (declaim (type (or pathname null) *compile-file-pathname*
 	       *compile-file-truename*))
 
-;;; The values of *Package* and *Default-Cookie* when compilation started.
+;;; The values of *Package* and policy when compilation started.
 ;;;
 (defvar *initial-package*)
 (defvar *initial-cookie*)
+(defvar *initial-interface-cookie*)
 
 ;;; The source-info structure for the current compilation.  This is null
 ;;; globally to indicate that we aren't currently in any identifiable
@@ -676,7 +677,7 @@
 ;;;
 ;;;    If Stream is present, return it, otherwise open a stream to the current
 ;;; file.  There must be a current file.  When we open a new file, we also
-;;; reset *Package* and *Default-Cookie*.  This gives the effect of rebinding
+;;; reset *Package* and policy.  This gives the effect of rebinding
 ;;; around each file.
 ;;;
 (defun get-source-stream (info)
@@ -685,6 +686,8 @@
 	(t
 	 (setq *package* *initial-package*)
 	 (setq *default-cookie* (copy-cookie *initial-cookie*))
+	 (setq *default-interface-cookie*
+	       (copy-cookie *initial-interface-cookie*))
 	 (let* ((finfo (first (source-info-current-file info)))
 		(name (file-info-name finfo)))
 	   (setq *compile-file-truename* name)
@@ -784,20 +787,24 @@
 ;;; form, but delay compilation, pushing the result on *TOP-LEVEL-LAMBDAS*
 ;;; instead.
 ;;;
-;;;   The *DEFAULT-COOKIE* at this time becomes the default policy for
-;;; compiling the form.  Any enclosed PROCLAIMs will affect only subsequent
-;;; forms.
-;;; 
+;;;   The cookies at this time becomes the default policy for compiling the
+;;; form.  Any enclosed PROCLAIMs will affect only subsequent forms.
+;;;
 (defun convert-and-maybe-compile (form path object)
   (declare (list path) (type object object))
-  (let* ((*lexical-environment*
-	  (make-lexenv :cookie *default-cookie*))
-	 (tll (ir1-top-level form path nil)))
-    (cond ((eq *block-compile* t) (push tll *top-level-lambdas*))
-	  (t
-	   (compile-top-level (list tll) object))))
-  #+new-compiler
-  (lisp::maybe-gc))
+  ;;
+  ;; This W/O GC is pretty much of a hack, and should be replaced with a less
+  ;; drastic GC procrastination mechanism.  The problem is that in addition to
+  ;; wasting time GC'ing during a compilation (when there is lots of dynamic
+  ;; stuff), it also seems to cause a memory leak.
+  (without-gcing
+    (let* ((*lexical-environment*
+	    (make-lexenv :cookie *default-cookie*
+			 :interface-cookie *default-interface-cookie*))
+	   (tll (ir1-top-level form path nil)))
+      (cond ((eq *block-compile* t) (push tll *top-level-lambdas*))
+	    (t
+	     (compile-top-level (list tll) object))))))
 
 
 ;;; PROCESS-PROGN  --  Internal
@@ -828,7 +835,7 @@
 ;;;    Process a top-level use of LOCALLY.  We parse declarations and then
 ;;; recursively process the body.
 ;;;
-;;;    Binding *DEFAULT-COOKIE* is pretty much of a hack, since it causes
+;;;    Binding *DEFAULT-xxx-COOKIE* is pretty much of a hack, since it causes
 ;;; LOCALLY to "capture" enclosed proclamations.  It is necessary because
 ;;; CONVERT-AND-MAYBE-COMPILE uses the value of *DEFAULT-COOKIE* as the policy.
 ;;; The need for this hack is due to the quirk that there is no way to
@@ -841,7 +848,9 @@
       (system:parse-body (cdr form) *lexical-environment* nil)
     (let* ((*lexical-environment*
 	    (process-declarations decls nil nil (make-continuation)))
-	   (*default-cookie* (lexenv-cookie *lexical-environment*)))
+	   (*default-cookie* (lexenv-cookie *lexical-environment*))
+	   (*default-interface-cookie*
+	    (lexenv-interface-cookie *lexical-environment*)))
       (process-progn body path object))))
 
 
@@ -1120,7 +1129,10 @@
 	   (*package* *package*)
 	   (*initial-package* *package*)
 	   (*initial-cookie* *default-cookie*)
+	   (*initial-interface-cookie* *default-interface-cookie*)
 	   (*default-cookie* (copy-cookie *initial-cookie*))
+	   (*default-interface-cookie*
+	    (copy-cookie *initial-interface-cookie*))
 	   (*lexical-environment* (make-null-environment))
 	   (*converting-for-interpreter* nil)
 	   (*source-info* info)
