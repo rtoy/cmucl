@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.53 1992/09/21 15:38:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.54 1992/09/23 13:45:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1401,9 +1401,9 @@
 (defun ir1-optimize-mv-combination (node)
   (ecase (basic-combination-kind node)
     (:local
-     (let ((fun (basic-combination-fun node)))
-       (when (continuation-reoptimize fun)
-	 (setf (continuation-reoptimize fun) nil)
+     (let ((fun-cont (basic-combination-fun node)))
+       (when (continuation-reoptimize fun-cont)
+	 (setf (continuation-reoptimize fun-cont) nil)
 	 (maybe-let-convert (combination-lambda node))))
      (setf (continuation-reoptimize (first (basic-combination-args node))) nil)
      (when (eq (functional-kind (combination-lambda node)) :mv-let)
@@ -1422,7 +1422,8 @@
 	 (let ((use (continuation-use fun)))
 	   (when (and (ref-p use) (functional-p (ref-leaf use)))
 	     (convert-call-if-possible use node)
-	     (maybe-let-convert (ref-leaf use)))))
+	     (when (eq (basic-combination-kind node) :local)
+	       (maybe-let-convert (ref-leaf use))))))
        (unless (or (eq (basic-combination-kind node) :local)
 		   (eq (continuation-function-name fun) '%throw))
 	 (ir1-optimize-mv-call node))
