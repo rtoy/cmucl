@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.82 1997/12/15 06:42:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.83 1997/12/30 16:32:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -895,10 +895,13 @@
 #+x86
 (defun ra-pointer-valid-p (ra)
   (declare (type system:system-area-pointer ra))
-  ;; Not a Lisp stack pointer.
-  (or (system:sap< ra (kernel:current-sp))
-      (system:sap> ra (alien:alien-sap
-		       (alien:extern-alien "control_stack_end" (* t))))))
+  (and
+   ;; Not the first page which is unmapped.
+   (>= (sys:sap-int ra) 4096)
+   ;; Not a Lisp stack pointer.
+   (or (sys:sap< ra (kernel:current-sp))
+       (sys:sap>= ra (alien:alien-sap
+		      (alien:extern-alien "control_stack_end" (* t)))))))
 
 ;;; Try to find a valid previous stack. This is complex on the x86 as
 ;;; it can jump between C and Lisp frames. To help find a valid frame
