@@ -58,7 +58,6 @@
 (load "assem:rompconst")
 (load "assem:disassemble")
 
-
 (load "c:loadcom.lisp")
 
 (setq lisp::original-lisp-environment NIL)
@@ -164,6 +163,4 @@
 				extensions:save-lisp
 				,lisp::fop-codes
 				compile-file)
-	     :init-function #'(lambda ()
-				(gc-on)
-				(abort))))
+	     :init-function #'lisp::world-load-init-function))
