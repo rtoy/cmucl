@@ -11,6 +11,11 @@
 ;;;
 (in-package "C")
 
+(export '(make-sc-offset sc-offset-scn sc-offset-offset
+	  read-var-integer write-var-integer
+	  read-var-string write-var-string
+	  read-packed-bit-vector write-packed-bit-vector))
+
 
 ;;;; SC-Offsets:
 ;;;
