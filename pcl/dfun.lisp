@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.11 2001/04/10 22:37:22 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.12 2001/05/26 18:30:18 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -1026,23 +1026,19 @@ And so, we are saved.
 ;;;               in the object argument.
 ;;;
 (defun cache-miss-values (gf args state)
-  (if (null (if (early-gf-p gf)
-		(early-gf-methods gf)
-		(generic-function-methods gf)))
-      (apply #'no-applicable-method gf args)
-      (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
-	  (get-generic-function-info gf)
-	(declare (ignore nreq applyp nkeys))
-	(with-dfun-wrappers (args metatypes)
-	  (dfun-wrappers invalid-wrapper-p wrappers classes types)
-	  (error "The function ~S requires at least ~D arguments"
-		 gf (length metatypes))
-	  (multiple-value-bind (emf methods accessor-type index)
-	      (cache-miss-values-internal gf arg-info wrappers classes types state)
-	    (values emf methods
-		    dfun-wrappers
-		    invalid-wrapper-p
-		    accessor-type index))))))
+  (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
+      (get-generic-function-info gf)
+    (declare (ignore nreq applyp nkeys))
+    (with-dfun-wrappers (args metatypes)
+      (dfun-wrappers invalid-wrapper-p wrappers classes types)
+      (error "The function ~S requires at least ~D arguments"
+	     gf (length metatypes))
+      (multiple-value-bind (emf methods accessor-type index)
+	  (cache-miss-values-internal gf arg-info wrappers classes types state)
+	(values emf methods
+		dfun-wrappers
+		invalid-wrapper-p
+		accessor-type index)))))
 
 (defun cache-miss-values-internal (gf arg-info wrappers classes types state)
   (let* ((for-accessor-p (eq state 'accessor))
