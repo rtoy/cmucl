@@ -20,7 +20,7 @@
 (import '(
 	  ct-a-val-sap ct-a-val-type ct-a-val-offset ct-a-val-size
 	  ct-a-val-p ct-a-val make-ct-a-val ct-a-val-alien
-	  check<= check= %alien-indirect %bind-aligned-sap
+	  check<= check= %alien-indirect %aligned-sap
 	  naturalize-integer deport-integer naturalize-boolean deport-boolean
 	  sap-ref-8 sap-ref-16 sap-ref-32
 	  signed-sap-ref-8 signed-sap-ref-16 signed-sap-ref-32
