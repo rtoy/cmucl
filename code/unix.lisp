@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.99 2004/09/21 11:59:16 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.100 2005/01/27 15:23:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -169,6 +169,8 @@
 	  unix-recv unix-send unix-getpeername unix-getsockname
 	  unix-getsockopt unix-setsockopt
 
+	  unix-recvfrom unix-sendto unix-shutdown
+	  
           unix-getpwnam unix-getpwuid unix-getgrnam unix-getgrgid
           user-info user-info-name user-info-password user-info-uid
           user-info-gid user-info-gecos user-info-dir user-info-shell
@@ -2964,6 +2966,28 @@
   (optname int)
   (optval (* t))
   (optlen unsigned))
+
+;; Datagram support
+
+(def-alien-routine ("recvfrom" unix-recvfrom) int
+  (fd int)
+  (buffer c-string)
+  (length int)
+  (flags int)
+  (sockaddr (* t))
+  (len int :in-out))
+
+(def-alien-routine ("sendto" unix-sendto) int
+  (fd int)
+  (buffer c-string)
+  (length int)
+  (flags int)
+  (sockaddr (* t))
+  (len int))
+
+(def-alien-routine ("shutdown" unix-shutdown) int
+  (socket int)
+  (level int))
 
 
 ;;;

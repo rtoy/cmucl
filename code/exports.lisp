@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.239 2004/12/24 15:05:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.240 2005/01/27 15:23:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -304,7 +304,9 @@
 	   "VSUSP" "VSTART" "VSTOP" "VDSUSP" "UNIX-TCSENDBREAK"
 	   "UNIX-TCDRAIN" "UNIX-TCFLUSH" "UNIX-TCFLOW"
 	   #+(or svr4 bsd linux) "O_NDELAY"
-	   "CHECK")
+	   "CHECK"
+
+	   "UNIX-RECVFROM" "UNIX-SENDTO" "UNIX-SHUTDOWN")
   #+(or svr4 linux)
   (:export "EADDRINUSE" "EADDRNOTAVAIL" "EADV" "EAFNOSUPPORT"
 	   "EALREADY" "EBADE" "EBADFD" "EBADMSG" "EBADR" "EBADRQC"
@@ -1340,7 +1342,10 @@
 	     ;; PCL declaration identifiers.
 	     "SLOTS" "AUTO-COMPILE" "NOT-AUTO-COMPILE"
 
-	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"))
+	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"
+
+	     "INET-RECVFROM" "INET-SENDTO" "INET-SHUTDOWN"
+	     "SHUT-RD" "SHUT-WR" "SHUT-RDWR"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.43 2004/12/13 15:19:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.44 2005/01/27 15:23:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,10 @@
 	  connect-to-inet-socket create-inet-listener accept-tcp-connection
 	  close-socket ipproto-tcp ipproto-udp inaddr-any add-oob-handler
 	  remove-oob-handler remove-all-oob-handlers
-	  send-character-out-of-band))
+	  send-character-out-of-band
+
+	  inet-recvfrom inet-sendto inet-shutdown
+	  shut-rd shut-wr shut-rdwr))
 
 
 #-svr4
@@ -684,3 +687,37 @@ struct in_addr {
 	     char
 	     fd
 	     (unix:get-unix-error-msg)))))
+
+(defun inet-recvfrom (fd buffer size &key (flags 0))
+  "A packaging of the unix recvfrom call.  Returns three values:
+bytecount, source address as integer, and source port.  bytecount
+can of course be negative, to indicate faults."
+  #+mp (mp:process-wait-until-fd-usable fd :input)
+  (with-alien ((sockaddr inet-sockaddr))
+    (let* ((bytecount (unix:unix-recvfrom fd buffer size flags
+					  (alien-sap sockaddr)
+					  (alien-size inet-sockaddr :bytes))))
+      (values bytecount (ntohl (slot sockaddr 'addr)) (ntohs (slot sockaddr 'port))))))
+
+(defun inet-sendto (fd buffer size addr port &key (flags 0))
+  "A packaging of the unix sendto call.  Return value like sendto"
+    (with-alien ((sockaddr inet-sockaddr))
+      (setf (slot sockaddr 'family) af-inet)
+      (setf (slot sockaddr 'port) (htons port))
+      (setf (slot sockaddr 'addr) (htonl addr))
+      (unix:unix-sendto fd
+			 buffer
+			 size
+			 flags
+			 (alien-sap sockaddr)
+			 (alien-size inet-sockaddr :bytes))))
+(defconstant shut-rd 0)
+(defconstant shut-wr 1)
+(defconstant shut-rdwr 2)
+
+(defun inet-shutdown (fd level)
+  (when (minusp (unix:unix-shutdown fd level))
+    (error 'socket-error
+	   :format-control "Error on shutdown of socket: ~A"
+	   :format-arguments (list (unix:get-unix-error-msg))
+	   :errno (unix:unix-errno))))
