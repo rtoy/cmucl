@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.42 1992/02/24 05:52:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.43 1992/02/24 06:31:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,6 +114,7 @@
 	(list* (make-info-environment)
 	       (compact-info-environment
 		(first *info-environment*)
+		:name
 		(concatenate 'string (c:backend-name c:*backend*) " backend"))
 	       (rest *info-environment*)))
   (purify :root-structures '(compile-file)))
