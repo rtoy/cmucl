@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.14 1990/10/03 09:58:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.15 1990/12/11 23:59:54 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -559,7 +559,8 @@
 
 ;;; Declare these guys inline to let them get optimized a little.  Round and
 ;;; Fround are not declared inline since they seem too obscure and too
-;;; big to inline-expand by default.
+;;; big to inline-expand by default.  Also, this gives the compiler a chance to
+;;; pick off the unary float case.
 ;;;
 (proclaim '(inline ceiling floor rem mod fceiling ffloor ftruncate))
 
@@ -595,25 +596,25 @@
 	(values tru rem))))
 
 
-(defun round (number &optional (divisor 1) &aux thresh)
+(defun round (number &optional (divisor 1))
   "Rounds number (or number/divisor) to nearest integer.
   The second returned value is the remainder."
-  (multiple-value-bind (tru rem) (truncate number divisor)
-    (if (eql divisor 1)
-	(setq thresh 0.5)
-	(setq thresh (/ (abs divisor) 2)))
-    (cond ((or (> rem thresh)
-	       (and (= rem thresh) (oddp tru)))
-	   (if (minusp divisor)
-	       (values (- tru 1) (+ rem divisor))
-	       (values (+ tru 1) (- rem divisor))))
-	  ((let ((-thresh (- thresh)))
-	     (or (< rem -thresh)
-		 (and (= rem -thresh) (oddp tru))))
-	   (if (minusp divisor)
-	       (values (+ tru 1) (- rem divisor))
-	       (values (- tru 1) (+ rem divisor))))
-	  (t (values tru rem)))))
+  (if (eql divisor 1)
+      (round number)
+      (multiple-value-bind (tru rem) (truncate number divisor)
+	(let ((thresh (/ (abs divisor) 2)))
+	  (cond ((or (> rem thresh)
+		     (and (= rem thresh) (oddp tru)))
+		 (if (minusp divisor)
+		     (values (- tru 1) (+ rem divisor))
+		     (values (+ tru 1) (- rem divisor))))
+		((let ((-thresh (- thresh)))
+		   (or (< rem -thresh)
+		       (and (= rem -thresh) (oddp tru))))
+		 (if (minusp divisor)
+		     (values (+ tru 1) (- rem divisor))
+		     (values (- tru 1) (+ rem divisor))))
+		(t (values tru rem)))))))
 
 
 (defun rem (number divisor)
