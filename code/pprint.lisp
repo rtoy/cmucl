@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.42 2004/09/10 14:42:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.43 2004/09/27 21:54:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1132,6 +1132,15 @@
   nil)
 
 
+(defun array-readably-printable-p (array)
+  (and (eq (array-element-type array) t)
+       (let ((zero (position 0 (array-dimensions array)))
+             (number (position 0 (array-dimensions array)
+                               :test (complement #'eql)
+                               :from-end t)))
+         (or (null zero) (null number) (> zero number)))))
+
+
 ;;;; Standard pretty-printing routines.
 
 (defun pprint-array (stream array)
@@ -1139,7 +1148,8 @@
 	     (stringp array)
 	     (bit-vector-p array))
 	 (output-ugly-object array stream))
-	((and *print-readably* (not (eq (array-element-type array) t)))
+	((and *print-readably*
+	      (not (lisp::array-readably-printable-p array)))
 	 (pprint-raw-array stream array))
 	((vectorp array)
 	 (pprint-vector stream array))

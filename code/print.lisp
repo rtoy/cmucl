@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.97 2004/09/03 03:05:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.98 2004/09/27 21:54:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1002,6 +1002,16 @@
 
 |#
 
+
+(defun array-readably-printable-p (array)
+  (and (eq (array-element-type array) t)
+       (let ((zero (position 0 (array-dimensions array)))
+             (number (position 0 (array-dimensions array)
+                               :test (complement #'eql)
+                               :from-end t)))
+         (or (null zero) (null number) (> zero number)))))
+
+
 ;;;; Recursive objects.
 
 (defun output-list (list stream)
@@ -1041,7 +1051,7 @@
 	     (0 (write-char #\0 stream))
 	     (1 (write-char #\1 stream)))))
 	((and *print-readably*
-	      (not (eq (array-element-type vector) 't)))
+	      (not (array-readably-printable-p vector)))
 	 (output-array vector stream))
 	(t
 	 (descend-into (stream)
