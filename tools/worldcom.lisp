@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.55 1993/07/23 13:46:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.56 1993/08/15 14:40:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,6 +208,7 @@
 (comf "target:code/internet")
 (comf "target:code/wire")
 (comf "target:code/remote")
+(comf "target:code/cmu-site")
 
 (comf "target:code/setf-funs")
 (comf "target:code/exports" :proceed t)
