@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.78 1999/01/23 13:59:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.79 1999/07/13 15:42:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,8 +57,41 @@
 				       (constant-argument (member 1))))
 		  '(let ((res (,ufun x)))
 		     (values res (- x res)))))))
-  (frob truncate %unary-truncate)
   (frob round %unary-round))
+
+(defknown %unary-truncate (real) integer
+	  (movable foldable flushable))
+
+;; Convert (truncate x y) to the obvious implementation.  We only want
+;; this when under certain conditions and let the generic truncate
+;; handle the rest.  (Note: if y = 1, the divide and multiply by y
+;; should be removed by other deftransforms.)
+
+(deftransform truncate ((x &optional y)
+			(float &optional (or float integer)))
+  '(let ((res (%unary-truncate (/ x y))))
+     (values res (- x (* y res)))))
+
+(deftransform floor ((number &optional divisor)
+		     (float &optional (or integer float)))
+  '(multiple-value-bind (tru rem) (truncate number divisor)
+    (if (and (not (zerop rem))
+	     (if (minusp divisor)
+		 (plusp number)
+		 (minusp number)))
+	(values (1- tru) (+ rem divisor))
+	(values tru rem))))
+
+(deftransform ceiling ((number &optional divisor)
+		       (float &optional (or integer float)))
+  '(multiple-value-bind (tru rem) (truncate number divisor)
+    (if (and (not (zerop rem))
+	     (if (minusp divisor)
+		 (minusp number)
+		 (plusp number)))
+	(values (1+ tru) (- rem divisor))
+	(values tru rem))))
+
 
 ;;; Random:
 ;;;
@@ -1224,20 +1257,6 @@
 			 (iy (imagpart y)))
 		    (complex (- (* rx ry) (* ix iy))
 			     (+ (* rx iy) (* ix ry)))))
-	       (deftransform / ((x y) ((complex ,type) (complex ,type)) *)
-		 '(let* ((rx (realpart x))
-			 (ix (imagpart x))
-			 (ry (realpart y))
-			 (iy (imagpart y)))
-		    (if (> (abs ry) (abs iy))
-			(let* ((r (/ iy ry))
-			       (dn (* ry (+ 1 (* r r)))))
-			  (complex (/ (+ rx (* ix r)) dn)
-				   (/ (- ix (* rx r)) dn)))
-			(let* ((r (/ ry iy))
-			       (dn (* iy (+ 1 (* r r)))))
-			  (complex (/ (+ (* rx r) ix) dn)
-				   (/ (- (* ix r) rx) dn))))))
 	       ;; Multiply a complex by a real or vice versa
 	       (deftransform * ((w z) ((complex ,type) real) *)
 		 '(complex (* (realpart w) z) (* (imagpart w) z)))
@@ -1264,6 +1283,53 @@
 
   (frob single-float)
   (frob double-float))
+
+;; These functions implement complex division for single and double-floats.
+(macrolet ((frob (type)
+	     (let ((name (intern (concatenate 'string "COMPLEX-" (symbol-name type) "-/"))))
+	       `(progn
+		 (defknown ,name ((complex ,type) (complex ,type)) (complex ,type) (movable foldable flushable))
+		 (defun ,name (x y)
+		   (declare (type (complex ,type) x y)
+			    (optimize (speed 3) (safety 0)))
+		   (let* ((rx (realpart x))
+			  (ix (imagpart x))
+			  (ry (realpart y))
+			  (iy (imagpart y)))
+		     (if (> (abs ry) (abs iy))
+			 (let* ((r (/ iy ry))
+				(dn (* ry (+ 1 (* r r)))))
+			   (complex (/ (+ rx (* ix r)) dn)
+				    (/ (- ix (* rx r)) dn)))
+			 (let* ((r (/ ry iy))
+				(dn (* iy (+ 1 (* r r)))))
+			   (complex (/ (+ (* rx r) ix) dn)
+				    (/ (- (* ix r) rx) dn))))))))))
+  (frob single-float)
+  (frob double-float)
+  #+long
+  (frob long-float))
+
+;; Only inline the complex division if the speed and space are right.
+(macrolet ((frob (name type)
+	     `(deftransform / ((x y) ((complex ,type) (complex ,type)) * :node node)
+	       (if (policy node (> speed space))
+		   '(let* ((rx (realpart x))
+			   (ix (imagpart x))
+			   (ry (realpart y))
+			   (iy (imagpart y)))
+		     (if (> (abs ry) (abs iy))
+			 (let* ((r (/ iy ry))
+				(dn (* ry (+ 1 (* r r)))))
+			   (complex (/ (+ rx (* ix r)) dn)
+				    (/ (- ix (* rx r)) dn)))
+			 (let* ((r (/ ry iy))
+				(dn (* iy (+ 1 (* r r)))))
+			   (complex (/ (+ (* rx r) ix) dn)
+				    (/ (- (* ix r) rx) dn)))))
+		   `(,',name x y)))))
+  (frob c::complex-single-float-/ single-float)
+  (frob c::complex-double-float-/ double-float))
 
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
 ;;; produce a minimal range for the result; the result is the widest
