@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.10 1991/09/28 17:41:44 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.11 1991/10/22 16:41:22 wlott Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -180,12 +180,13 @@
     kernel::internal-error
     di::handle-breakpoint
 
-    ;; Free Pointers
+    ;; Free Pointers and the like
     lisp::*read-only-space-free-pointer*
     lisp::*static-space-free-pointer*
     lisp::*initial-dynamic-space-free-pointer*
-    rt::*allocation-pointer*
-    rt::*binding-stack-pointer*
+    *allocation-pointer*
+    *internal-gc-trigger*
+    *binding-stack-pointer*
 
     ;; Things needed for non-local-exit.
     lisp::*current-catch-block*
