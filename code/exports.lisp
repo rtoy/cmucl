@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.64 1990/12/07 22:52:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.65 1990/12/12 16:56:45 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -292,7 +292,7 @@
 	  double-float-high-bits double-float-low-bits
 	  single-float-p double-float-p base-char-p simple-array-p
 	  %raw-bits %set-raw-bits %sp-set-definition
-	  make-array-header allocate-vector
+	  make-array-header allocate-vector %unary-round
 
 	  ))
 
@@ -693,7 +693,7 @@
 	  define-register-file dump-segment emit-code-vector emit-label
 	  finalize-segment fixup fixup-flavor fixup-name fixup-offset
 	  fixup-p gen-label insert-segment inst label label-id label-position
-	  make-fixup make-segment nuke-segment))
+	  make-fixup make-segment nuke-segment count-instructions))
 
 
 (in-package "EVAL")
