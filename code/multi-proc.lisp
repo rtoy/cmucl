@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.9 1997/12/29 06:19:00 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.10 1997/12/29 19:02:54 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -897,17 +897,12 @@
       (return nil))))
 
 ;;; A useful idle process loop, waiting on events using the select
-;;; based event server, and yielding periodically.
-;;;
-;;; Timeout for the idle loop, something acceptable by
-;;; sever-all-events.
-(defvar *idle-loop-timeout* 1)
+;;; based event server, which is assumed to be setup to call
+;;; process-yielding periodically.
 ;;;
 (defun idle-process-loop ()
   (loop
-   (sys:serve-all-events *idle-loop-timeout*)
-   (process-yield)))
-
+   (sys:serve-all-events)))
 
 ;;; Process-Yield
 ;;;
