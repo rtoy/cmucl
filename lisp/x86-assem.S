@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.3 1997/02/22 19:19:47 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.3.2.1 1997/09/07 23:30:53 dtc Exp $
  *
  * Author:	Paul F. Werkowski <pw@snoopy.mv.com>
  *
@@ -69,11 +69,14 @@ GNAME(call_into_c):
 	popl	%ebx
 
 /* Setup the NPX for C */
-	pushl	%ecx		# Make a little temp room.
-	fnstcw  (%esp)		# save exception masks
-	fninit
-	fldcw	(%esp)		# restore exception masks
-	popl	%ecx		# Restore the stack.
+	fstp	%st(0)
+	fstp	%st(0)
+	fstp	%st(0)
+	fstp	%st(0)
+	fstp	%st(0)
+	fstp	%st(0)
+	fstp	%st(0)
+	fstp	%st(0)
 
 	call	*%eax		# normal callout using Lisp stack
 
