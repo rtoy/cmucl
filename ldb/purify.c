@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.12 1991/02/16 01:00:44 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.13 1991/03/24 23:20:11 wlott Exp $ */
 
 
 #include <mach.h>
@@ -242,7 +242,7 @@ static lispobj ptrans_code(thing)
     pscav_later(&new->debug_info, 1);
 
     /* Scavenge the constants. */
-    pscav(new->constants, HeaderValue(new->header)-4, TRUE);
+    pscav(new->constants, HeaderValue(new->header)-5, TRUE);
 
     /* Scavenge all the functions. */
     pscav(&new->entry_points, 1, TRUE);
