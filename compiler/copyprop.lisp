@@ -166,8 +166,9 @@
 	   (return nil)))
        (let ((info (vop-info vop)))
 	 (not (and (eq (vop-info-move-args info) :local-call)
-		   (>= (position-in #'tn-ref-across arg (vop-args vop)
-				    :key #'tn-ref-tn)
+		   (>= (or (position-in #'tn-ref-across arg (vop-args vop)
+					:key #'tn-ref-tn)
+			   (error "Couldn't find REF?"))
 		       (length (template-arg-types info))))))))
 
 

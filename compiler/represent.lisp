@@ -47,7 +47,10 @@
 		 ((null costs)
 		  (assert more-cost)
 		  (values arg-p
-			  (+ n (position-in #'tn-ref-across ref refs) 1)
+			  (+ n
+			     (or (position-in #'tn-ref-across ref refs)
+				 (error "Couldn't find REF?"))
+			     1)
 			  t
 			  more-cost
 			  nil
