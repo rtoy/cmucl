@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.69 1992/08/02 19:40:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.70 1992/08/03 12:36:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -286,15 +286,7 @@
 	      (length trace-table fixups)
 	      (generate-code component)
 	    
-	    (when (and *compiler-trace-output*
-		       (not (backend-featurep :new-assembler)))
-	      (format *compiler-trace-output*
-		      "~|~%Assembly code for ~S~2%"
-		      component)
-	      (assem:dump-segment *code-segment* :stream *compiler-trace-output*))
-	    
-	    (when (and *compiler-trace-output*
-		       (backend-featurep :new-assembler))
+	    (when *compiler-trace-output*
 	      (format *compiler-trace-output*
 		      "~|~%Disassembly of code for ~S~2%" component)
 	      (disassem:disassemble-blocks *code-segment*
@@ -320,13 +312,10 @@
 				    *compile-object*))
 	      (null))))
 	    
-      (cond ((backend-featurep :new-assembler)
-	     (when *code-segment*
-	       (new-assem:release-segment *code-segment*))
-	     (when *elsewhere*
-	       (new-assem:release-segment *elsewhere*)))
-	    (t
-	     (assem:nuke-segment *code-segment*)))))
+      (when *code-segment*
+	(new-assem:release-segment *code-segment*))
+      (when *elsewhere*
+	(new-assem:release-segment *elsewhere*))))
 
   ;; We are done, so don't bother keeping anything around.
   (clear-ir2-info component)

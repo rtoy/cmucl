@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.43 1992/07/14 03:40:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.44 1992/08/03 12:36:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,13 +290,9 @@
 	     (setf (svref (sc-move-functions to-sc) num) ',name)
 	     (setf (svref (sc-load-costs to-sc) num) ',cost)))))
 
-     ,(if (target-featurep :new-assembler)
-	  `(defun ,name ,lambda-list
-	     (new-assem:assemble (*code-segment* ,(first lambda-list))
-	       ,@body))
-	  `(defun ,name ,lambda-list
-	     (assem:assemble (*code-segment* ,(first lambda-list))
-	       ,@body)))))
+     (defun ,name ,lambda-list
+       (new-assem:assemble (*code-segment* ,(first lambda-list))
+	 ,@body))))
 
 
 (defconstant sc-vop-slots '((:move . sc-move-vops)
@@ -1205,11 +1201,8 @@
 		  ,@(binds))
 	     (declare (ignore ,@(vop-parse-ignores parse)))
 	     ,@(loads)
-	     ,(if (target-featurep :new-assembler)
-		  `(new-assem:assemble (*code-segment* ,n-vop)
-		     ,@(vop-parse-body parse))
-		  `(assem:assemble (*code-segment* ,n-vop)
-		     ,@(vop-parse-body parse)))
+	     (new-assem:assemble (*code-segment* ,n-vop)
+	       ,@(vop-parse-body parse))
 	     ,@(saves))))))
 
 
@@ -2463,7 +2456,6 @@
    Similar to NOTE-THIS-LOCATION, except the use the location of the next
    instruction for the code location, wherever the scheduler decided to put
    it."
-  (assert (backend-featurep :new-assembler))
   (new-assem:emit-postit #'(lambda (segment posn)
 			     (declare (ignore segment))
 			     (note-debug-location vop posn kind))))

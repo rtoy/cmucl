@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.43 1992/08/02 19:41:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.44 1992/08/03 12:37:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.43 1992/08/02 19:41:09 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.44 1992/08/03 12:37:12 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -502,10 +502,7 @@
 	       (dump-unsigned-32 total-length file))))
 
       (flush-fasl-file-buffer file)
-      (if (backend-featurep :new-assembler)
-	  (dump-segment code-segment code-length file)
-	  (setf fixups
-		(assem:emit-code-vector (fasl-file-stream file) code-segment)))
+      (dump-segment code-segment code-length file)
       (dump-i-vector trace-table file t)
       (let ((handle (dump-pop file)))
 	(dump-fixups handle fixups file)
@@ -519,14 +516,11 @@
   (dump-fop 'lisp::fop-assembler-code file)
   (dump-unsigned-32 length file)
   (flush-fasl-file-buffer file)
-  (if (backend-featurep :new-assembler)
-      (let ((stream (fasl-file-stream file)))
-	(new-assem:segment-map-output
-	 code-segment
-	 #'(lambda (sap amount)
-	     (system:output-raw-bytes stream sap 0 amount))))
-      (setf fixups
-	    (assem:emit-code-vector (fasl-file-stream file) code-segment)))
+  (let ((stream (fasl-file-stream file)))
+    (new-assem:segment-map-output
+     code-segment
+     #'(lambda (sap amount)
+	 (system:output-raw-bytes stream sap 0 amount))))
   (dolist (routine routines)
     (dump-fop 'lisp::fop-normal-load file)
     (let ((*cold-load-dump* t))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.17 1992/05/21 22:46:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.18 1992/08/03 12:36:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,8 +18,12 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package :c)
 
+(in-package :new-assem)
+(import '(label gen-label emit-label label-position) :c)
+
+(in-package :c)
 (export '(component-header-length sb-allocated-size current-nfp-tn
 	  callee-nfp-tn callee-return-pc-tn *code-segment* *elsewhere*
 	  trace-table-entry pack-trace-table note-fixup
@@ -122,12 +126,9 @@
 (defvar *elsewhere* nil)
 (defvar *elsewhere-label* nil)
 
-(defvar *assembly-optimize* t
+(defvar *assembly-optimize* nil
   "Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
   rather than policy control.")
-
-(defvar *assembly-check* nil
-  "Set to T to enable lifetime consistency checking of the assembly code.")
 
 
 ;;;; Noise to emit an instruction trace.
@@ -159,41 +160,18 @@
 
 
 
-;;;; Hooks used to dispatch between the two different assemblers.
+;;;; Generate-code and support routines.
 
 (defun make-segment (&optional name)
-  (if (backend-featurep :new-assembler)
-      (new-assem:make-segment
-       :name name
-       :run-scheduler
-       (and *assembly-optimize*
-	    (policy (lambda-bind
-		     (block-home-lambda
-		      (block-next (component-head *compile-component*))))
-		    (or (>= speed cspeed) (>= space cspeed))))
-       :inst-hook (if *compiler-trace-output* #'trace-instruction))
-      (assem:make-segment)))
-
-(deftype label ()
-  '(or new-assem:label assem:label))
-
-(defun gen-label ()
-  (if (backend-featurep :new-assembler)
-      (new-assem:gen-label)
-      (assem:gen-label)))
-
-(defun emit-label (label)
-  (if (backend-featurep :new-assembler)
-      (new-assem:emit-label label)
-      (assem:emit-label label)))
-
-(defun label-position (label)
-  (if (backend-featurep :new-assembler)
-      (new-assem:label-position label)
-      (assem:label-position label)))
-
-
-;;;; Generate-code and support routines.
+  (new-assem:make-segment
+   :name name
+   :run-scheduler
+   (and *assembly-optimize*
+	(policy (lambda-bind
+		 (block-home-lambda
+		  (block-next (component-head *compile-component*))))
+		(or (>= speed cspeed) (>= space cspeed))))
+   :inst-hook (if *compiler-trace-output* #'trace-instruction)))
 
 ;;; Init-Assembler  --  Interface
 ;;; 
@@ -205,7 +183,7 @@
 ;;; Generate-Code  --  Interface
 ;;;
 (defun generate-code (component)
-  (when (and *compiler-trace-output* (backend-featurep :new-assembler))
+  (when *compiler-trace-output*
     (format *compiler-trace-output*
 	    "~|~%Assembly code for ~S~2%"
 	    component))
@@ -214,20 +192,16 @@
 	(*prev-segment* nil)
 	(*prev-vop* nil)
 	(*fixups* nil))
-    (when (backend-featurep :new-assembler)
-      (let ((label (new-assem:gen-label)))
-	(setf *elsewhere-label* label)
-	(new-assem:assemble (*elsewhere*)
-	  (new-assem:emit-label label))))
+    (let ((label (new-assem:gen-label)))
+      (setf *elsewhere-label* label)
+      (new-assem:assemble (*elsewhere*)
+	(new-assem:emit-label label)))
     (do-ir2-blocks (block component)
       (let ((1block (ir2-block-block block)))
 	(when (and (eq (block-info 1block) block)
 		   (block-start 1block))
-	  (if (backend-featurep :new-assembler)
-	      (new-assem:assemble (*code-segment*)
-		(new-assem:emit-label (block-label 1block)))
-	      (assem:assemble (*code-segment* nil)
-		(assem:emit-label (block-label 1block))))
+	  (new-assem:assemble (*code-segment*)
+	    (new-assem:emit-label (block-label 1block)))
 	  (let ((env (block-environment 1block)))
 	    (unless (eq env prev-env)
 	      (let ((lab (gen-label)))
@@ -244,38 +218,18 @@
 	      (format t "Missing generator for ~S.~%"
 		      (template-name (vop-info vop)))))))
     
-    (cond ((backend-featurep :new-assembler)
-	   (new-assem:append-segment *code-segment* *elsewhere*)
-	   (setf *elsewhere* nil)
-	   (values (new-assem:finalize-segment *code-segment*)
-		   (nreverse *trace-table-info*)
-		   *fixups*))
-	  (t
-	   (assem:assemble (*code-segment* nil)
-	     (assem:insert-segment *elsewhere*))
-	   (assem:expand-pseudo-instructions *code-segment*)
-	   (when *assembly-check*
-	     (assem:segment-check-registers *code-segment* *elsewhere*))
-	   (when (and (policy (lambda-bind
-			       (block-home-lambda
-				(block-next (component-head component))))
-			      (or (>= speed cspeed) (>= space cspeed)))
-		      *assembly-optimize*)
-	     (assem:optimize-segment *code-segment*))
-	   (let ((length (assem:finalize-segment *code-segment*)))
-	     (values length (nreverse *trace-table-info*)))))))
+    (new-assem:append-segment *code-segment* *elsewhere*)
+    (setf *elsewhere* nil)
+    (values (new-assem:finalize-segment *code-segment*)
+	    (nreverse *trace-table-info*)
+	    *fixups*)))
 
 (defun emit-label-elsewhere (label)
-  (if (backend-featurep :new-assembler)
-      (new-assem:assemble (*elsewhere*)
-	(new-assem:emit-label label))
-      (assem:assemble (*elsewhere* nil)
-	(assem:emit-label label))))
+  (new-assem:assemble (*elsewhere*)
+    (new-assem:emit-label label)))
 
 (defun label-elsewhere-p (label-or-posn)
-  (<= (label-position (if (backend-featurep :new-assembler)
-			  *elsewhere-label*
-			  *elsewhere*))
+  (<= (label-position *elsewhere-label*)
       (etypecase label-or-posn
 	(label
 	 (label-position label-or-posn))
