@@ -272,5 +272,5 @@
 	   "target:hemlock/debug"
 	   "target:hemlock/netnews"
 	   "target:hemlock/bindings"))
- :output (make-pathname :defaults "target:hemlock/hemlock-library
+ :output (make-pathname :defaults "target:hemlock/hemlock-library"
 			:type (c:backend-fasl-file-type c:*target-backend*)))
