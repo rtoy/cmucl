@@ -405,15 +405,43 @@ _resolve_linkage_tramp:
 		
 	.global _undefined_foreign_symbol_trap
 	FUNCDEF(_undefined_foreign_symbol_trap)
-_undefined_foreign_symbol_trap:	
+#define	SC_OFFSET_HI(sc, reg)	((sc | (reg << 5)) >> 8)
+#define	SC_OFFSET_LO(sc, reg)	((sc | (reg << 5)) & 0xff)
+/*
+ * When we get called, %o0 contains the address of the data_vector object 
+ * which is a string naming the bad symbol.
+ */
+_undefined_foreign_symbol_trap:
+	/*
+	   Need to restore all the global registers with the Lisp values that 
+	   were saved away in call_into_c.  (This routine is only called from 
+	   os_link_one_symbol, which is called from resolve_linkage_tramp, which 
+	   is called from call_into_c.)
+
+	   The global registers are volatile across function calls, so who
+	   knows what values have been they contain now!
+		
+	*/
+
+	load(_current_dynamic_space_free_pointer, reg_ALLOC)
+        load(_current_binding_stack_pointer, reg_BSP)
+        load(_current_control_stack_pointer, reg_CSP)
+        load(_current_control_frame_pointer, reg_CFP)
+		
+	set	NIL, reg_NIL
+
+	mov	%o0, reg_A0			
 	unimp	trap_Error
-	.byte	2	/* Number of argument bytes */
+	.byte	4	/* Number of argument bytes */
 	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR
-        /* Escape to create 16bit BE number from following two values */
+        /* Escape to create 16bit BE number from following two values
+	   but bytes are given in little-endian order (!) */
         .byte	254
-        /* SC_OFFSET(sc_DescriptorReg,NL0) NL0 = %o0 */
-	.byte	sc_NonDescriptorReg
-	.byte	0
+        /* SC_OFFSET(sc_DescriptorReg,A0) = (offset << 5) | sc_DescriptorReg */
+	/* reg_A0 = 16.  See the defref for a0 in sparc/vm.lisp */
+		
+	.byte	SC_OFFSET_LO(sc_DescriptorReg, 16)
+	.byte	SC_OFFSET_HI(sc_DescriptorReg, 16)
 	.align	4
 					
 #endif
