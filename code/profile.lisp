@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.14 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.15 1997/02/11 18:46:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,8 @@
 ;;;
 (in-package "PROFILE")
 
-(export '(*timed-functions* profile unprofile report-time reset-time))
+(export '(*timed-functions* profile profile-all unprofile report-time
+	  report-times reset-time))
 
 
 ;;;; Implementation dependent interfaces:
@@ -265,12 +266,19 @@
 				    `(apply old-definition
 					    ,@required-args optional-args)
 				    `(funcall old-definition ,@required-args))
-			     (setq time-inc (- (quickly-get-time) start-time))
+			     (setq time-inc
+				   #-FreeBSD
+				   (- (quickly-get-time) start-time)
+				   #+FreeBSD
+				   (max (- (quickly-get-time) start-time) 0))
 			     (setq cons-inc (- (total-consing) start-consed))
 			     (setq profile-inc *enclosed-profilings*)
 			     (incf time
 				   (the time-type
-					(- time-inc *enclosed-time*)))
+					#-FreeBSD
+					(- time-inc *enclosed-time*)
+					#+FreeBSD
+					(max (- time-inc *enclosed-time*) 0)))
 			     (incf consed
 				   (the consing-type
 					(- cons-inc *enclosed-consing*)))
@@ -365,6 +373,26 @@
 	   (push `(profile-1-function ',name ,callers) res)))))
     `(progn ,@res (values))))
 
+;;; PROFILE-ALL -- Public
+;;;
+;;; Add profiling to all symbols in the given package.
+;;;
+(defun profile-all (&key (package *package*) (callers-p nil))
+  "PROFILE-ALL
+
+ Wraps profiling code around all functions in PACKAGE, which defaults
+ to *PACKAGE*. If a function is already profiled, then unprofile and
+ reprofile (useful to notice function redefinition.)  If a name is
+ undefined, then we give a warning and ignore it.  If CALLERS-P is T
+ names have counts of the most common calling functions recorded. See
+ also UNPROFILE, REPORT-TIME and RESET-TIME. "
+  (let ((package (if (symbolp package)
+		     (find-package package)
+		     package)))
+    (do-symbols (symbol package (values))
+      (when (and (eq (symbol-package symbol) package)
+		 (fboundp symbol))
+	(profile-1-function symbol callers-p)))))
 
 ;;; UNPROFILE  --  Public
 ;;;
