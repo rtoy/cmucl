@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.98 2004/09/27 21:54:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.99 2004/10/14 16:32:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -487,12 +487,13 @@
 	  ((or *circularity-hash-table*
 	       (consp object)
 	       (%instancep object)
-	       (typep object '(array t *)))
-	   ;; If we have already started circularity detection, this object
-	   ;; might be a sharded reference.  If we have not, then if it is
-	   ;; a cons, a instance, or an array of element type t it might
-	   ;; contain a circular reference to itself or multiple shared
-	   ;; references.
+	       (typep object '(array t *))
+	       (typep object 'weak-pointer))
+	   ;; If we have already started circularity detection, this
+	   ;; object might be a shared reference.  If we have not,
+	   ;; then if it is a cons, a instance, an array of element
+	   ;; type t, or a weak-pointer it might contain a circular
+	   ;; reference to itself or multiple shared references.
 	   (check-it stream))
 	  (t
 	   (print-it stream)))))
