@@ -693,6 +693,17 @@
 		   (setq fallback template)))))))))
 
 
+(defvar *efficency-note-limit* 2
+  "This is the maximum number of possible optimization alternatives will be
+  mentioned in a particular efficency note.  NIL means no limit.")
+(proclaim '(type (or index null) *efficency-note-limit*))
+
+(defvar *efficency-note-cost-threshold* 1
+  "This is the minumum cost difference between the chosen implementation and
+  the next alternative that justifies an efficency note.")
+(proclaim '(type index *efficency-note-cost-threshold*))
+
+
 ;;; Note-Rejected-Templates  --  Internal
 ;;;
 ;;;    This function emits efficiency notes describing all of the templates
@@ -721,26 +732,36 @@
 	   (type (or template null) template))
 
   (collect ((losers))
-    (let ((safe-p (policy-safe-p policy)))
+    (let ((safe-p (policy-safe-p policy))
+	  (verbose-p (policy call (= brevity 0)))
+	  (max-cost (- (template-cost (or template
+					  (template-or-lose 'call-named)))
+		       *efficency-note-cost-threshold*)))
       (dolist (try (function-info-templates (basic-combination-kind call)))
-	(when (eq try template) (return))
+	(when (> (template-cost try) max-cost) (return))
 	(let ((guard (template-guard try)))
 	  (when (and (template-note try)
 		     (or (not guard) (funcall guard))
 		     (or (not safe-p)
 			 (policy-safe-p (template-policy try)))
-		     (valid-function-use
-		      call (template-type try)
-		      :argument-test #'types-intersect
-		      :result-test #'values-types-intersect))
+		     (or verbose-p
+			 (valid-function-use
+			  call (template-type try)
+			  :argument-test #'types-intersect
+			  :result-test #'values-types-intersect)))
 	    (losers try)))))
 
-    (when (losers)
-      (collect ((messages))
+    (when (and (losers))
+      (collect ((messages)
+		(count 0 +))
 	(flet ((frob (string &rest stuff)
 		 (messages string)
 		 (messages stuff)))
 	  (dolist (loser (losers))
+	    (when (and *efficency-note-limit*
+		       (>= (count) *efficency-note-limit*))
+	      (frob "etc.")
+	      (return))
 	    (let* ((type (template-type loser))
 		   (valid (valid-function-use call type))
 		   (strict-valid (valid-function-use call type
@@ -756,7 +777,8 @@
 		    ((not strict-valid)
 		     (assert (policy-safe-p policy))
 		     (frob "Can't trust output type assertion under safe ~
-		            policy."))))))
+		            policy."))))
+	    (count 1)))
 
 	(let ((*compiler-error-context* call))
 	  (compiler-note "~{~?~^~&~6T~}"
