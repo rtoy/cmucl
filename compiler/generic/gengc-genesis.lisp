@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.1 1993/05/07 07:25:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.2 1993/05/07 15:41:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,7 +100,7 @@
 (defconstant gen-tenure-policy 1)
 
 (defstruct (generation
-	    (:constructor %make-generation (num policy))
+	    (:constructor make-generation (num policy))
 	    (:print-function %print-generation))
   ;;
   ;; The generation number for this generation.  0 is the youngest.
@@ -122,15 +122,6 @@
   (print-unreadable-object (gen stream :type t)
     (format stream "~D" (generation-num gen))))
 
-(defun make-generation (num policy)
-  (%make-generation num policy))
-
-(defun make-generations (&rest policies)
-  (loop
-    for policy in policies
-    for num from 0
-    collect (make-generation num policy)))
-
 (defun add-remset-entry (generation address)
   (declare (type generation generation) (type address address))
   (setf (gethash address (generation-remset generation)) t))
@@ -138,13 +129,6 @@
 
 
 ;;;; Step representation.
-
-;;; Initially there are two generations, one for static stuff and one for
-;;; dynamic stuff.  Each generation has only one step.
-
-(defvar *static*)
-(defvar *dynamic*)
-
 
 (defstruct (block
 	    (:print-function %print-block))
@@ -176,17 +160,24 @@
 (defconstant step-tenure-policy 1)
 
 (defstruct (step
-	    (:constructor %make-step (num policy gen))
+	    (:constructor %make-step (num gen prom-step max-blocks policy))
 	    (:print-function %print-step))
   ;;
   ;; The number for this step.
   (num 0 :type index)
   ;;
-  ;; The policy number for this step.
-  (policy 0 :type index)
-  ;;
   ;; The generation this step is part of.
   (gen (required-argument) :type generation)
+  ;;
+  ;; The step (number) to promote into.  Just passed on through to the initial
+  ;; core file.
+  (prom-step 0 :type index)
+  ;;
+  ;; The max number of blocks (just a hint).  Also just passed on through.
+  (max-blocks 0 :type index)
+  ;;
+  ;; The policy number for this step.
+  (policy 0 :type index)
   ;;
   ;; Chain of blocks allocated to this step.
   (block nil :type (or null block))
@@ -203,8 +194,8 @@
   (print-unreadable-object (step stream :type t)
     (format stream "~D" (step-num step))))
 
-(defun make-step (num policy gen)
-  (let ((step (%make-step num policy gen)))
+(defun make-step (num gen prom-step max-blocks policy)
+  (let ((step (%make-step num gen prom-step max-blocks policy)))
     (push step (generation-steps gen))
     step))
 
@@ -224,6 +215,40 @@
       (decf (block-remaining block) padded)
       (values (+ (block-base block) offset)
 	      (sap+ (block-sap block) offset)))))
+
+
+;;;; Generation/Step setup.
+
+(defparameter *initial-generation-setup*
+  '((:policy gen-default-policy
+     :steps ((:step 0 :max-blocks 1 :policy step-default-policy :prom-step 1)))
+    (:policy gen-default-policy
+     :steps ((:step 1 :is :dynamic :max-blocks 32
+	      :policy step-default-policy :prom-step 1)))
+    (:policy gen-tenure-policy
+     :steps ((:step 2 :is :static :policy step-tenure-policy :prom-step 2)))))
+
+(defvar *static*)
+(defvar *dynamic*)
+
+
+(defun make-generations ()
+  (loop
+    for gen-num from 0
+    for info in *initial-generation-setup*
+    collect
+    (destructuring-bind (&key policy steps) info
+      (let ((gen (make-generation gen-num (eval policy))))
+	(dolist (step-info steps)
+	  (destructuring-bind
+	      (&key step is (max-blocks 0) policy prom-step)
+	      step-info
+	    (let ((step
+		   (make-step step gen prom-step max-blocks (eval policy))))
+	      (case is
+		(:static (setf *static* step))
+		(:dynamic (setf *dynamic* step))))))
+	gen))))
 
 
 ;;;; Large object stuff
@@ -2044,10 +2069,9 @@
 	  core-name (c:backend-version c:*backend*))
   (with-allocation-pool
     (let* ((*block-owners* (make-array 16 :initial-element nil))
-	   (generations
-	    (make-generations gen-default-policy gen-tenure-policy))
-	   (*static* (make-step 1 step-tenure-policy (second generations)))
-	   (*dynamic* (make-step 0 step-default-policy (first generations)))
+	   (*static* nil)
+	   (*dynamic* nil)
+	   (generations (make-generations))
 	   (*current-los-cluster* nil)
 	   (*current-init-functions-cons* nil)
 	   (*cold-packages* nil)
@@ -2296,9 +2320,9 @@
       (write-long (length steps))
       (dolist (step steps)
 	(write-long 0) ; step pointer
-	(write-long (step-num step)) ; step number
-	(write-long (step-num step)) ; promotion step
-	(write-long 0) ; max blocks
+	(write-long (step-num step))
+	(write-long (step-prom-step step))
+	(write-long (step-max-blocks step))
 	(write-long (step-policy step))
 	(do ((block (step-block step) (block-next block)))
 	    ((null block))
@@ -2306,10 +2330,14 @@
 	    (write-long base)
 	    (write-long (+ base (block-free block)))))
 	(write-long 0)
-	(let* ((block (step-block step))
-	       (base (block-base block)))
-	  (write-long (+ base (block-free block)))
-	  (write-long (+ base block-bytes)))
+	(let ((block (step-block step)))
+	  (if block
+	      (let ((base (block-base block)))
+		(write-long (+ base (block-free block)))
+		(write-long (+ base block-bytes)))
+	      (progn
+		(write-long 0)
+		(write-long 0))))
 	(write-long (step-first-LO step))
 	(write-long (step-last-LO step))))
     (maphash #'(lambda (address ignore)
