@@ -2022,15 +2022,21 @@
 ;;; This controls macro expansion, and isn't changable at run-time You will
 ;;; probably want to set this to nil if you want good performance at
 ;;; production time.
-(defconstant *type-check?* #+Genera nil #-Genera t)
+(defconstant *type-check?* #+(or cmu Genera) nil #-(or cmu Genera) t)
 
 ;; TYPE? is used to allow the code to do error checking at a different level from
 ;; the declarations.  It also does some optimizations for systems that don't have
 ;; good compiler support for TYPEP.  The definitions for CARD32, CARD16, INT16, etc.
 ;; include range checks.  You can modify TYPE? to do less extensive checking
 ;; for these types if you desire.
+;;
+;; ### This comment is a lie!  TYPE? is really also used for run-time type
+;; dispatching, not just type checking.  -- Ram.
 
 (defmacro type? (object type)
+  #+cmu
+  `(typep ,object ,type)
+  #-cmu
   (if (not (constantp type))
       `(typep ,object ,type)
     (progn
