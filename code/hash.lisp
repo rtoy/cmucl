@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.24 1993/05/22 21:17:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.25 1993/06/10 16:16:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,8 +21,7 @@
 	  gethash remhash maphash clrhash
 	  hash-table-count with-hash-table-iterator
 	  hash-table-rehash-size hash-table-rehash-threshold
-	  hash-table-size hash-table-test hash-table-weak-p
-	  sxhash))
+	  hash-table-size hash-table-test sxhash))
 
 (in-package :ext)
 (export '(define-hash-table-test))
