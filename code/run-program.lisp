@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.4 1991/06/17 17:35:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.5 1991/06/17 20:31:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -535,6 +535,8 @@
 	    #'(lambda (fd)
 		(declare (ignore fd))
 		(loop
+		  (unless handler
+		    (return))
 		  (multiple-value-bind
 		      (result readable/errno)
 		      (mach:unix-select (1+ descriptor) (ash 1 descriptor)
@@ -553,11 +555,13 @@
 				    (eql errno mach:eio))
 			       (eql count 0))
 			   (system:remove-fd-handler handler)
+			   (setf handler nil)
 			   (decf (car cookie))
 			   (mach:unix-close descriptor)
 			   (return))
 			  ((null count)
 			   (system:remove-fd-handler handler)
+			   (setf handler nil)
 			   (decf (car cookie))
 			   (error "Could not read input from sub-process: ~A"
 				  (mach:get-unix-error-msg errno)))
