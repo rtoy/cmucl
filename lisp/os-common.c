@@ -68,7 +68,11 @@ os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 	if(len_diff<0)
 	    os_invalidate(addr+len,-len_diff);
 	else if(len_diff!=0){
+#if 1
+	    os_vm_address_t new= NULL;
+#else
 	    os_vm_address_t new=os_validate(addr+old_len,len_diff);
+#endif
 
 	    if(new==NULL || new!=addr+old_len){
 		if(new!=NULL)
@@ -84,6 +88,10 @@ os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 		
 		addr=new;
 	    }
+#if 0
+	    else
+	    fprintf(stderr,"Map grow: [0x%08x] %x -> %x\n", addr, old_len,len);
+#endif
 	}
 	
 	return addr;

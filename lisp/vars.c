@@ -1,10 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.1 1992/07/28 20:15:38 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.1.1.1 1994/10/24 19:53:01 ram Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
 
 #include "lisp.h"
 #include "vars.h"
+#include "os.h"
 
 #define NAME_BUCKETS 31
 #define OBJ_BUCKETS 31
