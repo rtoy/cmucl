@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.12 1997/11/05 14:59:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.13 1997/11/07 17:05:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,6 @@
 (progn
 (defun ea-for-csf-real-desc(tn)
   (ea-for-xf-desc tn vm:complex-single-float-real-slot))
-
 (defun ea-for-csf-imag-desc(tn)
   (ea-for-xf-desc tn vm:complex-single-float-imag-slot))
 
@@ -2621,21 +2620,49 @@
   (:variant-vars offset)
   (:policy :fast-safe)
   (:generator 3
-    (let ((value-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				    :offset (+ offset (tn-offset x)))))
-      (unless (location= value-tn r)
-	(cond ((zerop (tn-offset r))
-	       (copy-fp-reg-to-fr0 value-tn))
-	      ((zerop (tn-offset value-tn))
-	       (inst fstd r))
-	      (t
-	       (inst fxch value-tn)
-	       (inst fstd r)
-	       (inst fxch value-tn)))))))
+    (cond ((sc-is x complex-single-reg complex-double-reg)
+	   (let ((value-tn
+		  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+				  :offset (+ offset (tn-offset x)))))
+	     (unless (location= value-tn r)
+	       (cond ((zerop (tn-offset r))
+		      (copy-fp-reg-to-fr0 value-tn))
+		     ((zerop (tn-offset value-tn))
+		      (inst fstd r))
+		     (t
+		      (inst fxch value-tn)
+		      (inst fstd r)
+		      (inst fxch value-tn))))))
+	  ((sc-is r single-reg)
+	   (let ((ea (sc-case x
+		       (complex-single-stack
+			(ecase offset
+			  (0 (ea-for-csf-real-stack x))
+			  (1 (ea-for-csf-imag-stack x))))
+		       (descriptor-reg
+			(ecase offset
+			  (0 (ea-for-csf-real-desc x))
+			  (1 (ea-for-csf-imag-desc x)))))))
+	     (with-empty-tn@fp-top(r)
+	       (inst fld ea))))
+	  ((sc-is r double-reg)
+	   (let ((ea (sc-case x
+		       (complex-double-stack
+			(ecase offset
+			  (0 (ea-for-cdf-real-stack x))
+			  (1 (ea-for-cdf-imag-stack x))))
+		       (descriptor-reg
+			(ecase offset
+			  (0 (ea-for-cdf-real-desc x))
+			  (1 (ea-for-cdf-imag-desc x)))))))
+	     (with-empty-tn@fp-top(r)
+	       (inst fldd ea))))
+	  (t (error "Complex-float-value VOP failure")))))
 
 (define-vop (complex-single-float-real complex-float-value)
   (:translate complex-single-float-real)
-  (:args (x :scs (complex-single-reg) :target r))
+  (:args (x :scs (complex-single-reg complex-single-stack descriptor-reg)
+	    :target r))
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
@@ -2643,7 +2670,8 @@
 
 (define-vop (complex-double-float-real complex-float-value)
   (:translate complex-double-float-real)
-  (:args (x :scs (complex-double-reg) :target r))
+  (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)
+	    :target r))
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
@@ -2651,7 +2679,8 @@
 
 (define-vop (complex-single-float-imag complex-float-value)
   (:translate complex-single-float-imag)
-  (:args (x :scs (complex-single-reg) :target r))
+  (:args (x :scs (complex-single-reg complex-single-stack descriptor-reg)
+	    :target r))
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
@@ -2659,7 +2688,8 @@
 
 (define-vop (complex-double-float-imag complex-float-value)
   (:translate complex-double-float-imag)
-  (:args (x :scs (complex-double-reg) :target r))
+  (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)
+	    :target r))
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
