@@ -2485,8 +2485,10 @@
 		  (compiler-warning "Unrecognized proclamation: ~S." form)))))
 
 	(unless ignore
-	  (funcall #'%proclaim form)
-	  (ir1-convert start cont `(%proclaim ,what)))))))
+	  (funcall #'%proclaim form))
+	(if ignore
+	    (ir1-convert start cont nil)
+	    (ir1-convert start cont `(%proclaim ,what)))))))
 
 
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
