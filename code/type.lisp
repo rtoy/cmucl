@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.43 2002/10/16 18:35:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.44 2002/10/22 13:09:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1561,13 +1561,15 @@
 	 (lb (if (consp l) (1+ (car l)) l))
 	 (h (check-bound high integer))
 	 (hb (if (consp h) (1- (car h)) h)))
-    (when (and hb lb (< hb lb))
-      (simple-program-error
-       "Lower bound ~S is greater than upper bound ~S." l h))
-    (make-numeric-type :class 'integer  :complexp :real
-		       :enumerable (not (null (and l h)))
-		       :low lb
-		       :high hb)))
+    (if (and hb lb (< hb lb))
+	;; This used to signal an error when the lb > hb, but the CLHS
+	;; doesn't say that this is an error, so we silently accept it
+	;; (as the empty type).
+	*empty-type*
+	(make-numeric-type :class 'integer  :complexp :real
+			   :enumerable (not (null (and l h)))
+			   :low lb
+			   :high hb))))
 
 (deftype mod (n)
   (unless (and (integerp n) (> n 0))
@@ -1596,10 +1598,12 @@
   `(def-type-translator ,type (&optional low high)
      (let ((lb (check-bound low ,type))
 	   (hb (check-bound high ,type)))
-       (unless (numeric-bound-test* lb hb <= <)
-	 (simple-program-error
-	  "Lower bound ~S is not less than upper bound ~S." low high))
-       (make-numeric-type :class ',class :format ',format :low lb :high hb))))
+       ;; We used to signal an error here if the lower bound was
+       ;; greater then the upper, but the CLHS doesn't say we should,
+       ;; so we silently accept it as the empty type.
+       (if (numeric-bound-test* lb hb <= <)
+	   (make-numeric-type :class ',class :format ',format :low lb :high hb)
+	   *empty-type*))))
 
 (def-bounded-type rational rational nil)
 (def-bounded-type float float nil)
