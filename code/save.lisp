@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.5 1991/02/08 13:35:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.6 1991/04/09 14:39:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.5 1991/02/08 13:35:22 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.6 1991/04/09 14:39:43 ram Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.
@@ -94,7 +94,8 @@
 
   :enable-gc
       If true, turn GC on if it was off."
-  
+
+  (eval:flush-interpreted-function-cache)
   (if purify
       (purify :root-structures root-structures :constants constants)
       (gc))
