@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.32 2003/07/16 15:33:13 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.33 2004/07/16 09:05:25 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -388,7 +388,7 @@
 
 ;;;; Conditions signaled at runtime by the resultant body.
 
-(define-condition defmacro-lambda-list-bind-error (error)
+(define-condition defmacro-lambda-list-bind-error (program-error)
   ((kind :reader defmacro-lambda-list-bind-error-kind
 	 :initarg :kind)
    (name :reader defmacro-lambda-list-bind-error-name
