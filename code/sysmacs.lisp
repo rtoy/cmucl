@@ -49,30 +49,6 @@
        (maybe-gc nil))))
 
 
-(defmacro with-interrupts (&body body)
-  `(let ((iin %sp-interrupts-inhibited))
-     (setq %sp-interrupts-inhibited NIL)
-     (when (consp iin)
-       (dolist (x iin)
-	 (let ((f (svref *software-interrupt-vector* (car x))))
-	   (when f (apply f x)))))
-     (unwind-protect
-	 (progn ,@body)
-       (if iin (setq %sp-interrupts-inhibited T)))))
-
-(defmacro without-interrupts (&rest body)
-  "Evaluates the forms in the Body without allowing interrupts."
-  `(let* ((old-interrupts-inhibited %sp-interrupts-inhibited)
-	  (%sp-interrupts-inhibited (or %sp-interrupts-inhibited T)))
-     (multiple-value-prog1
-       (progn ,@body)
-       (when (and (null old-interrupts-inhibited)
-		  (consp %sp-interrupts-inhibited))
-	 (dolist (x %sp-interrupts-inhibited)
-	   (let ((f (svref *software-interrupt-vector* (car x))))
-	     (when f (apply f x))))))))
-
-
 (defmacro with-enabled-interrupts (interrupt-list &body body)
   "With-enabled-interrupts ({(interrupt function [character])}*) {form}*
   Establish function as a handler for the Unix signal interrupt which
