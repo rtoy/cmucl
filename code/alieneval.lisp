@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.7 1990/11/13 23:25:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.8 1990/11/13 23:36:34 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -23,7 +23,7 @@
 	  null-terminated-string c-procedure unstructured
 	  sap+ sap- sap-ref-sap sap-ref-32 sap-ref-16 sap-ref-8
 	  sap-ref-single sap-ref-double))
-(in-package "KERNEL"
+(in-package "KERNEL")
 (export '(%set-sap-ref-sap %set-sap-ref-32 %set-sap-ref-16
 	  %set-sap-ref-8 %set-sap-ref-single %set-sap-ref-double))
 
