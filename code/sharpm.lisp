@@ -261,7 +261,7 @@
     (cond ((listp body)
 	   (unless (symbolp (car body))
 	     (error "Structure type is not a symbol: ~S" (car body)))
-	   (let ((defstruct (info type structure-info (car body))))
+	   (let ((defstruct (info type defined-structure-info (car body))))
 	     (unless defstruct
 	       (error "~S is not a defined structure type." (car body)))
 	     (unless (c::dd-constructor defstruct)
