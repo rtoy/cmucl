@@ -648,34 +648,52 @@
 ;;;
 ;;;    In the forward case, we terminate on Last-Cont so that we don't have to
 ;;; worry about our termination condition being changed when new code is added
-;;; during the iteration.  If CONT gets deleted out from under us, go again
-;;; from the previous CONT.  In the backward case, we do NODE-PREV before
+;;; during the iteration.  In the backward case, we do NODE-PREV before
 ;;; evaluating the body so that we can keep going when the current node is
 ;;; deleted.
 ;;;
-(defmacro do-nodes ((node-var cont-var block &optional result) &body body)
-  "Do-Nodes (Node-Var Cont-Var Block [Result]) {Declaration}* {Form}*
+;;; When Restart-P is supplied to DO-NODES, we start iterating over again at
+;;; the beginning of the block when we run into a continuation whose block
+;;; differs from the one we are trying to iterate over, either beacuse the
+;;; block was split, or because a node was deleted out from under us (hence its
+;;; block is NIL.)  If the block start is deleted, we just punt.  With
+;;; Restart-P, we are also more careful about termination, re-indirecting the
+;;; BLOCK-LAST each time.
+;;;
+(defmacro do-nodes ((node-var cont-var block &key restart-p) &body body)
+  "Do-Nodes (Node-Var Cont-Var Block {Key Value}*) {Declaration}* {Form}*
   Iterate over the nodes in Block, binding Node-Var to the each node and
-  Cont-Var to the node's Cont."
+  Cont-Var to the node's Cont.  The only keyword option is Restart-P, which
+  causes iteration to be restarted when a node is deleted out from under us (if
+  not supplied, this is an error.)"
   (let ((n-block (gensym))
-	(n-last-cont (gensym))
-	(n-prev-cont (gensym)))
+	(n-last-cont (gensym)))
     `(let* ((,n-block ,block)
-	    (,n-last-cont (node-cont (block-last ,n-block))))
+	    ,@(unless restart-p
+		`((,n-last-cont (node-cont (block-last ,n-block))))))
        (do* ((,node-var (continuation-next (block-start ,n-block))
-			(if (eq (continuation-kind ,cont-var) :deleted)
-			    (continuation-next ,n-prev-cont)
-			    (continuation-next ,cont-var)))
-	     (,n-prev-cont nil ,cont-var)
+			,(if restart-p
+			     `(cond
+			       ((eq (continuation-block ,cont-var) ,n-block)
+				(assert (continuation-next ,cont-var))
+				(continuation-next ,cont-var))
+			       (t
+				(let ((start (block-start ,n-block)))
+				  (unless (eq (continuation-kind start)
+					      :block-start)
+				    (return nil))
+				  (continuation-next start))))
+			     `(continuation-next ,cont-var)))
 	     (,cont-var (node-cont ,node-var) (node-cont ,node-var)))
 	    (())
 	 ,@body
-	 (when (eq ,cont-var ,n-last-cont)
-	   (return ,result))))))
+	 (when ,(if restart-p
+		    `(eq ,node-var (block-last ,n-block))
+		    `(eq ,cont-var ,n-last-cont))
+	   (return nil))))))
 ;;;
-(defmacro do-nodes-backwards ((node-var cont-var block &optional result)
-			      &body body)
-  "Do-Nodes-Backwards (Node-Var Cont-Var Block [Result]) {Declaration}* {Form}*
+(defmacro do-nodes-backwards ((node-var cont-var block) &body body)
+  "Do-Nodes-Backwards (Node-Var Cont-Var Block) {Declaration}* {Form}*
   Like Do-Nodes, only iterates in reverse order."
   (let ((n-block (gensym))
 	(n-start (gensym))
@@ -690,7 +708,7 @@
 	    (())
 	 ,@body
 	 (when (eq ,n-next ,n-start)
-	   (return ,result))))))
+	   (return nil))))))
 
 
 ;;; With-IR1-Environment  --  Interface
@@ -749,7 +767,7 @@
 ;;;    These functions are called by the expansion of the Defprinter
 ;;; macro to do the actual printing.
 ;;;
-(proclaim '(ftype (function (symbol t stream) void)
+(proclaim '(ftype (function (symbol t stream &optional t) void)
 		  defprinter-prin1 defprinter-princ))
 (defun defprinter-prin1 (name value stream &optional indent)
   (declare (ignore indent))
