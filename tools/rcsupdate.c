@@ -1,6 +1,6 @@
 /* rcsupdate: utility to update a tree of RCS files.
 
-$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/rcsupdate.c,v 1.2 1991/05/17 09:12:55 wlott Exp $
+$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/rcsupdate.c,v 1.3 1992/03/03 10:18:39 wlott Exp $
 
 */
 #include <sys/types.h>
@@ -12,7 +12,7 @@ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/rcsupdate.c,v
 #include <strings.h>
 #include <errno.h>
 
-static int quiet = 0;
+static int quiet = 1;
 
 extern int errno;
 
@@ -82,7 +82,7 @@ char *localfile, *rcsfile;
     long modtime;
 
     if (stat(rcsfile, &statbuf) < 0)
-        return 0;
+        return -1;
 
     strcpy(cachefile, localfile);
     ptr = rindex(cachefile, '/');
@@ -120,22 +120,24 @@ char *localfile, *rcsfile;
 
         sprintf(buf, "rcstime %s", rcsfile);
         stream = popen(buf, "r");
-        if (stream == NULL) {
-            perror("oops");
-            return;
-        }
+        if (stream == NULL)
+	    return -1;
 
         fgets(buf, sizeof(buf), stream);
-        pclose(stream);
+	if (pclose(stream)) {
+	    /* There is no associated time. */
+	    entry->rcstime = statbuf.st_mtime;
+	    entry->modtime = 0;
+	} else {
+	    modtime = atoi(buf);
+	    if (modtime == 0) {
+		printf("bogus: ``%s''\n", buf);
+		return 0;
+	    }
 
-        modtime = atoi(buf);
-        if (modtime == 0) {
-            printf("bogus: ``%s''\n", buf);
-            return 0;
-        }
-
-        entry->rcstime = statbuf.st_mtime;
-        entry->modtime = modtime;
+	    entry->rcstime = statbuf.st_mtime;
+	    entry->modtime = modtime;
+	}
         dirty = 1;
     }
 
@@ -152,8 +154,10 @@ char *localfile, *rcsfile;
     if (stat(localfile, &statbuf) < 0) {
         switch (errno) {
           case ENOENT:
-	    if (!quiet)
+	    if (!quiet) {
 		printf("local: <doesn't exist>\trcs: ");
+		fflush(stdout);
+	    }
             localtime = 0;
             break;
 
@@ -167,32 +171,34 @@ char *localfile, *rcsfile;
     }
     else {
         localtime = statbuf.st_mtime;
-	if (!quiet)
+	if (!quiet) {
 	    printf("local: %ld\trcs: ", localtime);
+	    fflush(stdout);
+	}
     }
     
     rcstime = last_ci_time(localfile, rcsfile);
-    if (rcstime == 0) {
+    if (rcstime < 0) {
 	if (quiet)
 	    perror(rcsfile);
 	else
 	    perror("oops");
-        return;
     }
-
-    if (!quiet)
-	printf("%ld\t", rcstime);
-
-    if (localtime < rcstime) {
-        if (!quiet)
-	    printf("out of date.\n");
-        sprintf(buf, "rcsco %s %s", localfile, rcsfile);
-        system(buf);
-    }
-    else
+    else {
 	if (!quiet)
-	    printf("up to date.\n");
-    fflush(stdout);
+	    printf("%ld\t", rcstime);
+
+	if (localtime < rcstime) {
+	    if (!quiet)
+		printf("out of date.\n");
+	    sprintf(buf, "rcsco %s %s", localfile, rcsfile);
+	    system(buf);
+	}
+	else
+	    if (!quiet)
+		printf("up to date.\n");
+	fflush(stdout);
+    }
 }
 
 void update_rcs_files(dirname)
@@ -278,6 +284,8 @@ char *argv[];
     while (*++argv != NULL) {
 	if (strcmp(*argv, "-q") == 0)
 	    quiet = 1;
+	else if (strcmp(*argv, "-v") == 0)
+	    quiet = 0;
 	else if (stat(*argv, &buf)!=-1 && (buf.st_mode&S_IFMT)==S_IFDIR) {
 	    update_directory(*argv);
 	    did_anything = 1;
