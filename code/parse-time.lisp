@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.7 2000/06/07 12:35:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.8 2000/11/27 17:23:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -489,9 +489,11 @@
 	    (t
 	     ;; Unrecognized character - barf voraciously.
 	     (if *error-on-mismatch*
-		 (error (concatenate 'simple-string ">>> " string
-				     "~%~VT^-- Bogus character encountered here.")
-			(+ string-index 4))
+		 (error
+		  'simple-error
+		  :format-control "Can't parse time/date string.~%>>> ~A~
+				   ~%~VT^-- Bogus character encountered here."
+		  :format-arguments (list string (+ string-index 4)))
 		 (return-from decompose-string nil)))))))
 
 ;;; Match-pattern-element tries to match a pattern element with a datum
