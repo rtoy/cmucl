@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.18 1992/05/15 20:30:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.19 1992/09/19 17:45:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -360,13 +360,16 @@
    else returns NIL.  Note: if the name is shadowed in ENV by a local
    definition, or declared NOTINLINE, NIL is returned.  Can be
    set with SETF."
-  (unless (or (and env (assoc name (c::lexenv-functions env) :test #'equal))
-	      (eq (or (and env
-			   (cdr (assoc name (c::lexenv-inlines env)
-				       :key #'c::leaf-name :test #'equal)))
-		      (info function inlinep name))
-		  :notinline))
-    (values (info function compiler-macro-function name))))
+  (let ((found (and env
+		    (cdr (assoc name (c::lexenv-functions env)
+				:test #'equal)))))
+    (unless (eq (cond ((c::defined-function-p found)
+		       (c::defined-function-inlinep found))
+		      (found :notinline)
+		      (t
+		       (info function inlinep name)))
+		:notinline)
+      (values (info function compiler-macro-function name)))))
 
 (defun (setf compiler-macro-function) (function name)
   (declare (type (or symbol list) name)
