@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.44 1992/07/14 17:51:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.45 1992/12/13 15:12:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,8 +201,7 @@
 		    nil))))
     (cond (closure
 	   (let ((this-env (node-environment node)))
-	     (vop make-closure node block (emit-constant (length closure))
-		  entry res)
+	     (vop make-closure node block entry (length closure) res)
 	     (loop for what in closure and n from 0 do
 	       (unless (and (lambda-var-p what)
 			    (null (leaf-refs what)))
@@ -242,8 +241,7 @@
        (ecase (global-var-kind leaf)
 	 ((:special :global)
 	  (assert (symbolp (leaf-name leaf)))
-	  (vop set node block (emit-constant (leaf-name leaf)) val
-	       (make-normal-tn (backend-any-primitive-type *backend*)))))))
+	  (vop set node block (emit-constant (leaf-name leaf)) val)))))
 
     (when locs
       (emit-move node block val (first locs))
