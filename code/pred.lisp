@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.36 1997/02/05 16:15:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.37 1997/02/06 00:34:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,7 +237,7 @@
     (member-type
      (if (member object (member-type-members type)) t))
     (class
-     (class-typep (layout-of object) type))
+     (class-typep (layout-of object) type object))
     (union-type
      (dolist (type (union-type-types type))
        (when (%%typep object type)
@@ -287,22 +287,25 @@
 ;;;    Do type test from a class cell, allowing forward reference and
 ;;; redefinition.
 ;;;
-(defun class-cell-typep (obj-layout cell)
+;;; 2-Feb-97 add third arg optional for back compatibility and boot
+(defun class-cell-typep (obj-layout cell &optional object)
   (let ((class (class-cell-class cell)))
     (unless class
       (error "Class has not yet been defined: ~S" (class-cell-name cell)))
-    (class-typep obj-layout class)))
+    (class-typep obj-layout class object)))
 
 
 ;;; CLASS-TYPEP  --  Internal
 ;;;
 ;;;    Test whether Obj-Layout is from an instance of Class.
 ;;;
-(defun class-typep (obj-layout class)
+(defun class-typep (obj-layout class object)
   (declare (optimize speed))
   (when (layout-invalid obj-layout)
-    (error "TYPEP on obsolete object (was class ~S)."
-	   (class-proper-name (layout-class obj-layout))))
+    (if (and (typep class 'standard-class) object)
+	(setq obj-layout (pcl::check-wrapper-validity object))
+	(error "TYPEP on obsolete object (was class ~S)."
+	       (class-proper-name (layout-class obj-layout)))))
   (let ((layout (class-layout class))
 	(obj-inherits (layout-inherits obj-layout)))
     (when (layout-invalid layout)

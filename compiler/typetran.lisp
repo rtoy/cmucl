@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.28 1996/07/12 21:01:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.29 1997/02/06 00:34:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -385,7 +385,8 @@
 	(once-only ((object obj))
 	  `(and (,pred ,object)
 		(class-cell-typep (,get-layout ,object)
-				  ',(find-class-cell name)))))))))
+				  ',(find-class-cell name)
+				  ,object))))))))
 
 
 ;;; SOURCE-TRANSFORM-STRUCTURE-TYPEP  --  Internal
