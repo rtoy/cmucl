@@ -1058,31 +1058,31 @@
 	(cond
 	 (load-scs
 	  (dolist (alt load-scs)
-	    (let* ((altn (sc-number alt))
-		   (name (if load-p
-			     (svref (sc-move-functions sc) altn)
-			     (svref (sc-move-functions alt) scn)))
-		   (found (or (assoc alt (funs) :test #'member)
-			      (rassoc name (funs)))))
-	      (unless name
-		(error "No move function defined to ~:[save~;load~] SC ~S~
-		        ~:[to~;from~] from SC ~S."
-		       load-p sc-name load-p (sc-name alt)))
-	      
-	      (cond (found
-		     (unless (eq (cdr found) name)
-		       (error "Can't tell whether to ~:[save~;load~] with ~S~@
-		               or ~S when operand is in SC ~S."
-			      load-p name (cdr found) (sc-name alt)))
-		     (pushnew alt (car found)))
-		    (t
-		     (funs (cons (list alt) name)))))))
+	    (unless (member (sc-name alt) (operand-parse-scs op) :test #'eq)
+	      (let* ((altn (sc-number alt))
+		     (name (if load-p
+			       (svref (sc-move-functions sc) altn)
+			       (svref (sc-move-functions alt) scn)))
+		     (found (or (assoc alt (funs) :test #'member)
+				(rassoc name (funs)))))
+		(unless name
+		  (error "No move function defined to ~:[save~;load~] SC ~S~
+			  ~:[to~;from~] from SC ~S."
+			 load-p sc-name load-p (sc-name alt)))
+		
+		(cond (found
+		       (unless (eq (cdr found) name)
+			 (error "Can't tell whether to ~:[save~;load~] with ~S~@
+				 or ~S when operand is in SC ~S."
+				load-p name (cdr found) (sc-name alt)))
+		       (pushnew alt (car found)))
+		      (t
+		       (funs (cons (list alt) name))))))))
 	 ((eq (sb-kind (sc-sb sc)) :non-packed))
 	 (t
 	  (error "SC ~S has no alternate~:[~; or constant~] SCs, yet it is~@
 	          mentioned in the restriction for operand ~S."
 		 sc-name load-p (operand-parse-name op))))))
-
     (funs)))
 
 
@@ -1171,8 +1171,9 @@
 	  ((:argument :result)
 	   (let ((temp (operand-parse-temp op))
 		 (name (operand-parse-name op)))
-	     (binds `(,(operand-parse-load-tn op) (tn-ref-load-tn ,temp)))
 	     (cond ((and (operand-parse-load op) (operand-parse-scs op))
+		    (binds `(,(operand-parse-load-tn op)
+			     (tn-ref-load-tn ,temp)))
 		    (binds `(,name ,(decide-to-load parse op)))
 		    (if (eq (operand-parse-kind op) :argument)
 			(loads (call-move-function parse op t))
