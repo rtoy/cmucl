@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.41 1997/11/16 14:05:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.42 1997/11/27 02:50:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1054,35 +1054,45 @@
 
 #+complex-float
 (progn
-;;; Make REALPART and IMAGPART return the appropriate types.  This
-;;; helps a lot in optimized code.
 
 (deftransform realpart ((x) ((complex rational)) *)
   '(kernel:%realpart x))
 (deftransform imagpart ((x) ((complex rational)) *)
   '(kernel:%imagpart x))
+) ;end progn complex-float
 
+;;; Make REALPART and IMAGPART return the appropriate types.  This
+;;; should help a lot in optimized code.
 (defoptimizer (realpart derive-type) ((num))
-  (let ((type (continuation-type num)))
+  (flet ((realpart-derive (type)
     (cond ((numeric-type-real-p type)
-	   ;; The realpart of a real has the same type and range as the input.
+		  ;; The realpart of a real has the same type and
+		  ;; range as the input.
 	   (make-numeric-type :class (numeric-type-class type)
 			      :format (numeric-type-format type)
 			      :complexp :real
 			      :low (numeric-type-low type)
 			      :high (numeric-type-high type)))
 	  (t
-	   ;; We have a complex number.  The result has the same type
-	   ;; as the real part, except that it's real, not complex,
-	   ;; obviously.
+		  ;; We have a complex number.  The result has the
+		  ;; same type as the real part, except that it's
+		  ;; real, not complex, obviously.
 	   (make-numeric-type :class (numeric-type-class type)
 			      :format (numeric-type-format type)
 			      :complexp :real
 			      :low (numeric-type-low type)
 			      :high (numeric-type-high type))))))
+    (let ((type (continuation-type num)))
+      (cond ((union-type-p type)
+	     (let ((result '()))
+	       (dolist (x (union-type-types type))
+		 (push (realpart-derive x) result))
+	       (make-union-type result)))
+	    (t
+	     (realpart-derive type))))))
 
 (defoptimizer (imagpart derive-type) ((num))
-  (let ((type (continuation-type num)))
+  (flet ((imagpart-derive (type)
     (cond ((numeric-type-real-p type)
 	   ;; The imagpart of a real has the same type as the input,
 	   ;; except that it's zero
@@ -1100,9 +1110,119 @@
 			      :complexp :real
 			      :low (numeric-type-low type)
 			      :high (numeric-type-high type))))))
+    (let ((type (continuation-type num)))
+      (cond ((union-type-p type)
+	     (let ((result '()))
+	       (dolist (x (union-type-types type))
+		 (push (imagpart-derive x) result))
+	       (make-union-type result)))
+	    (t
+	     (imagpart-derive type))))))
 
+(defoptimizer (complex derive-type) ((re im))
+  (let* ((re-type (continuation-type re))
+	 (im-type (continuation-type im))
+	 (element-type (numeric-contagion re-type im-type)))
+    ;; Need to check to make sure numeric-contagion returns the right
+    ;; type for what we want here.
+    (make-numeric-type :class (numeric-type-class element-type)
+		       :format (numeric-type-format element-type)
+		       :complexp :complex)))
+			      
+(macrolet ((frob (op type)
+	     `(progn
+	       (deftransform ,op ((w z) ((complex ,type) (complex ,type))
+				  (complex ,type))
+		 '(complex (,op (realpart w) (realpart z))
+		           (,op (imagpart w) (imagpart z)))))))
+  ;; Complex addition and subtraction
+  (frob + single-float)
+  (frob + double-float)
+  (frob - single-float)
+  (frob - double-float))
+
+(macrolet ((frob (type)
+	     `(progn
+	       (deftransform + ((w z) ((complex ,type) ,type)
+				  (complex ,type))
+		 '(complex (+ (realpart w) z)
+		           (imagpart w)))
+	       (deftransform + ((z w) (,type (complex ,type))
+				  (complex ,type))
+		 '(complex (+ (realpart w) z)
+		           (imagpart w))))))
+
+  ;; Add and sub between a complex number and a float.
+  (frob single-float)
+  (frob double-float))
+
+(macrolet ((frob (type)
+	     `(progn
+	       (deftransform - ((w z) ((complex ,type) ,type)
+				  (complex ,type))
+		 '(complex (- (realpart w) z)
+		           (imagpart w)))
+	       (deftransform - ((z w) (,type (complex ,type))
+				  (complex ,type))
+		 '(complex (- z (realpart w))
+		           (- (imagpart w)))))))
+
+  ;; Add and sub between a complex number and a float.
+  (frob single-float)
+  (frob double-float))
+
+(macrolet ((frob (type)
+	     `(progn
+	       (deftransform * ((x y) ((complex ,type) (complex ,type))
+				(complex ,type))
+		 '(let* ((rx (realpart x))
+			 (ix (imagpart x))
+			 (ry (realpart y))
+			 (iy (imagpart y)))
+		    (complex (- (* rx ry) (* ix iy))
+			     (+ (* rx iy) (* ix ry)))))
+	       (deftransform / ((x y) ((complex ,type) (complex ,type))
+				(complex ,type))
+		 '(let* ((rx (realpart x))
+			 (ix (imagpart x))
+			 (ry (realpart y))
+			 (iy (imagpart y)))
+		    (if (> (abs ry) (abs iy))
+			(let* ((r (/ iy ry))
+			       (dn (* ry (+ 1 (* r r)))))
+			  (complex (/ (+ rx (* ix r)) dn)
+				   (/ (- ix (* rx r)) dn)))
+			(let* ((r (/ ry iy))
+			       (dn (* iy (+ 1 (* r r)))))
+			  (complex (/ (+ (* rx r) ix) dn)
+				   (/ (- (* ix r) rx) dn))))))
+	       )))
+  ;; Multiplication and division for complex numbers
+  (frob single-float)
+  (frob double-float))
+
+(macrolet ((frob (type)
+	     `(progn
+	       (deftransform * ((w z) ((complex ,type) ,type)
+				(complex ,type))
+		 '(complex (* (realpart w) z)
+		           (* (imagpart w) z)))
+	       (deftransform * ((z w) (,type (complex ,type))
+				(complex ,type))
+		 '(complex (* (realpart w) z)
+		           (* (imagpart w) z))))))
+  (frob single-float)
+  (frob double-float))
+
+(macrolet ((frob (type)
+	     `(progn
+	       (deftransform / ((w z) ((complex ,type) ,type)
+				(complex ,type))
+		 '(complex (/ (realpart w) z)
+		           (/ (imagpart w) z))))))
   
-) ;end progn complex-float
+  (frob single-float)
+  (frob double-float))
 	   
 
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
