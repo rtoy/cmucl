@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.5 1991/05/24 20:25:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.6 1991/05/24 20:37:08 wlott Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -193,7 +193,7 @@
 ;;;; Other non-type constants.
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
-	  breakpoint-trap))
+	  breakpoint-trap function-end-breakpoint-trap))
 
 (defenum (:suffix -trap :start 8)
   halt
