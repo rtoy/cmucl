@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.3 1990/04/01 17:43:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.4 1990/04/01 18:05:07 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -36,11 +36,15 @@
 	  (not-list (generate-cerror-code node di:object-not-list-error
 					  object)))
       (move ptr object)
-      (inst beq ptr null-tn done)
       (move count zero-tn)
-      (simple-test-simple-type ptr temp not-list t vm:list-pointer-type)
 
       (emit-label loop)
+
+      (inst beq ptr null-tn done)
+      (nop)
+
+      (simple-test-simple-type ptr temp not-list t vm:list-pointer-type)
+
       (loadw ptr ptr vm:cons-cdr-slot vm:list-pointer-type)
       (inst addiu count count (fixnum 1))
       (simple-test-simple-type ptr temp loop nil vm:list-pointer-type)
@@ -49,7 +53,7 @@
 
       (emit-label done)
       (move result count))))
-
+       
 
 (define-static-function length (object) :translate length)
 
