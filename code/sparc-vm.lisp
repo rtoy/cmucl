@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.17 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.18 1998/03/21 23:22:27 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,7 +201,9 @@
     (let ((sap (alien-sap (slot (slot scp 'sc-g1) 'fpregs))))
       (ecase format
 	(single-float (system:sap-ref-single sap (* index vm:word-bytes)))
-	(double-float (system:sap-ref-double sap (* index vm:word-bytes)))))))
+	(double-float (system:sap-ref-double sap (* index vm:word-bytes)))
+	#+long-float
+	(long-float (system:sap-ref-long sap (* index vm:word-bytes)))))))
 ;;;
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (type (alien (* sigcontext)) scp))
@@ -211,7 +213,10 @@
 	(single-float
 	 (setf (sap-ref-single sap (* index vm:word-bytes)) new-value))
 	(double-float
-	 (setf (sap-ref-double sap (* index vm:word-bytes)) new-value))))))
+	 (setf (sap-ref-double sap (* index vm:word-bytes)) new-value))
+	#+long-float
+	(long-float
+	 (setf (sap-ref-long sap (* index vm:word-bytes)) new-value))))))
 ;;;
 (defsetf sigcontext-float-register %set-sigcontext-float-register)
 
