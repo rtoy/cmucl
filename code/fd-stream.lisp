@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.34 1994/08/23 18:31:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.35 1994/10/02 22:43:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1213,7 +1213,11 @@ non-server method is also significantly more efficient for large reads.
 	     (element-type 'base-char)
 	     (if-exists nil if-exists-given)
 	     (if-does-not-exist nil if-does-not-exist-given)
-	     (external-format :default))
+	     (external-format :default)
+	     &aux ; Squelch assignment warning.
+	     (direction direction)
+	     (if-does-not-exist if-does-not-exist)
+	     (if-exists if-exists))
   "Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe
