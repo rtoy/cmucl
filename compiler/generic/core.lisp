@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.29 1993/09/14 00:09:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.30 1993/12/05 11:58:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,10 +189,9 @@
 		(setf (code-header-ref code-obj index)
 		      (locally
 		       (declare (optimize (inhibit-warnings 3)))
-		       (dylan::lookup-varinfo-value
-			(cadr const)
-			(dylan::find-module (cddr const))
-			t)))))))))))
+		       (dylan::lookup-variable-value (cadr const)
+						     (cddr const)
+						     t)))))))))))
   (undefined-value))
 
 
@@ -250,10 +249,9 @@
 		(setf (code-header-ref code-obj code-obj-index)
 		      (locally
 		       (declare (optimize (inhibit-warnings 3)))
-		       (dylan::lookup-varinfo-value
-			(cadr const)
-			(dylan::find-module (cddr const))
-			t))))
+		       (dylan::lookup-variable-value (cadr const)
+						     (cddr const)
+						     t))))
 	       (:type-predicate
 		(let ((*unparse-function-type-simplify* t))
 		  (setf (code-header-ref code-obj code-obj-index)

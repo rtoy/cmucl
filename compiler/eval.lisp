@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.26 1993/08/25 01:42:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.27 1993/12/05 11:58:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -977,10 +977,9 @@
        (locally
 	 (declare (optimize (ext:inhibit-warnings 3)))
 	 (setf (dylan::value-datum
-		(dylan::lookup-varinfo-value (c::dylan-var-name var)
-					     (dylan::find-module
-					      (c::dylan-var-module-name var))
-					     t))
+		(dylan::lookup-variable-value (c::dylan-var-name var)
+					      (c::dylan-var-module-name var)
+					      t))
 	       value))))))
 
 ;;; SET-LEAF-VALUE-LAMBDA-VAR -- Internal Interface.
@@ -1052,10 +1051,9 @@
        (locally
 	 (declare (optimize (ext:inhibit-warnings 3)))
 	 (dylan::value-datum
-	  (dylan::lookup-varinfo-value (c::dylan-var-name leaf)
-				       (dylan::find-module
-					(c::dylan-var-module-name leaf))
-				       t))))
+	  (dylan::lookup-variable-value (c::dylan-var-name leaf)
+					(c::dylan-var-module-name leaf)
+					t))))
       (c::lambda-var
        (leaf-value-lambda-var node leaf frame-ptr closure))
       (c::functional
