@@ -7,13 +7,17 @@
 
 
 #define READ_ONLY_SPACE_START   (0x01000000)
-#define READ_ONLY_SPACE_SIZE    (0x01800000) /* 24MB!! */
+#ifdef GENCGC
+#define READ_ONLY_SPACE_SIZE    (0x02000000) /* 32MB */
+#else
+#define READ_ONLY_SPACE_SIZE    (0x01800000) /* 24MB */
+#endif
 
 #define STATIC_SPACE_START	(0x05000000)
 #ifdef GENCGC
 #define STATIC_SPACE_SIZE	(0x00fff000) /* 16MB - 1 page */
 #else
-#define STATIC_SPACE_SIZE	(0x02fff000) /* 64MB - 1 page */
+#define STATIC_SPACE_SIZE	(0x02fff000) /* 48MB - 1 page */
 #endif
 
 /* Note that GENCGC only uses dynamic_space 0. */
@@ -23,7 +27,7 @@
 #define DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
 #else
 #define DYNAMIC_1_SPACE_START	(0x0d000000)
-#define DYNAMIC_SPACE_SIZE	(0x04000000)
+#define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
 #endif
 
 /* Note that i386 has the control stack growing from high to low
