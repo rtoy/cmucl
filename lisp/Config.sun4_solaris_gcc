@@ -22,7 +22,7 @@ vpath %.S .:$(PATH1)
 # instructions, even if we don't use the 64-bit registers.
 
 #CC_V8PLUS = -xarch=v8plus
-#AS_V8PLUS = -Wa,-xarch=v8plus
+AS_V8PLUS = -Wa,-xarch=v8plus
 
 # Enable support for :linkage-table feature.
 
@@ -30,7 +30,7 @@ LINKAGE = -DLINKAGE_TABLE
 
 CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE)
 
-CC = gcc
+CC = gcc -O
 CPP = gcc -E
 CFLAGS = -g $(AS_V8PLUS)
 
@@ -46,6 +46,6 @@ ARCH_SRC = sparc-arch.c
 # This has been checked out on Solaris 2.7 (aka 7) without problems.
 # The resulting binaries work ok on 2.5.
 
-OS_SRC = solaris-os.c os-common.c undefineds.c
+OS_SRC = solaris-os.c os-common.c undefineds.c elf.c
 OS_LINK_FLAGS=
 OS_LIBS= -lsocket -lnsl -ldl
