@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.37 1992/03/11 21:20:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.38 1992/04/19 13:14:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.37 1992/03/11 21:20:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.38 1992/04/19 13:14:01 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -463,10 +463,7 @@
 	       (:load-time-value
 		(dump-push (cdr entry) file))
 	       (:fdefinition
-		(dump-fop 'lisp::fop-normal-load file)
-		(let ((*cold-load-dump* t))
-		  (dump-object (cdr entry) file))
-		(dump-fop 'lisp::fop-maybe-cold-load file)
+		(dump-object (cdr entry) file)
 		(dump-fop 'lisp::fop-fdefinition file))))
 	    (null
 	     (dump-fop 'lisp::fop-misc-trap file)))))
@@ -579,10 +576,7 @@
     (dump-unsigned-32 (label-position (entry-info-offset entry)) file)
     (let ((handle (dump-pop file)))
       (when (and name (or (symbolp name) (listp name)))
-	(dump-fop 'lisp::fop-normal-load file)
-	(let ((*cold-load-dump* t))
-	  (dump-object name file))
-	(dump-fop 'lisp::fop-maybe-cold-load file)
+	(dump-object name file)
 	(dump-push handle file)
 	(dump-fop 'lisp::fop-fset file))
       handle)))
@@ -628,6 +622,115 @@
 	    (remhash entry (fasl-file-patch-table file)))))))
   (undefined-value))
 
+
+;;; DUMP-BYTE-CODE-OBJECT -- internal.
+;;; 
+(defun dump-byte-code-object (output constants file)
+  (declare (type byte-output output)
+	   (type vector constants)
+	   (type fasl-file file))
+  (collect ((entry-patches) (xep-patches))
+    ;; No trace table in byte-compiled functions.
+    (dump-object 0 file)
+
+    ;; Dump the constants.
+    (dotimes (i (length constants))
+      (let ((entry (aref constants i)))
+	(etypecase entry
+	  (constant
+	   (dump-object (constant-value entry) file))
+	  (null
+	   (dump-fop 'lisp::fop-misc-trap file))
+	  (list
+	   (ecase (car entry)
+	     (:entry
+	      (let* ((info (leaf-info (cdr entry)))
+		     (handle (gethash info (fasl-file-entry-table file))))
+		(cond
+		 (handle
+		  (dump-push handle file))
+		 (t
+		  (entry-patches (cons info i))
+		  (dump-fop 'lisp::fop-misc-trap file)))))
+	     (:load-time-value
+	      (dump-push (cdr entry) file))
+	     (:fdefinition
+	      (dump-object (cdr entry) file)
+	      (dump-fop 'lisp::fop-fdefinition file))
+	     (:xep
+	      (xep-patches (cons (cdr entry) i))
+	      (dump-fop 'lisp::fop-misc-trap file)))))))
+
+    ;; ### No debug info for now.
+
+    (let ((num-consts (1+ (length constants)))
+	  (length (byte-output-length output)))
+      (cond ((and (< num-consts #x100) (< length #x10000))
+	     (dump-fop 'lisp::fop-small-code file)
+	     (dump-byte num-consts file)
+	     (dump-var-signed length 2 file))
+	    (t
+	     (dump-fop 'lisp::fop-code file)
+	     (dump-unsigned-32 num-consts file)
+	     (dump-unsigned-32 length file))))
+    (flush-fasl-file-buffer file)
+    (output-byte-output output (fasl-file-stream file))
+    (let ((code-handle (dump-pop file))
+	  (patch-table (fasl-file-patch-table file)))
+      (dolist (patch (entry-patches))
+	(push (cons code-handle (cdr patch))
+	      (gethash (car patch) patch-table)))
+      (values code-handle (xep-patches)))))
+
+;;; FASL-DUMP-BYTE-COMPONENT  --  Interface
+;;;
+;;; Dump a byte-component.  This is similar to FASL-DUMP-COMPONENT, but
+;;; different.
+;;;
+(defun fasl-dump-byte-component (output constants xeps file)
+  (declare (type byte-output output)
+	   (type vector constants)
+	   (type list xeps)
+	   (type fasl-file file))
+
+  (dump-fop 'lisp::fop-verify-empty-stack file)
+  (dump-fop 'lisp::fop-verify-table-size file)
+  (dump-unsigned-32 (fasl-file-table-free file) file)
+  
+  (multiple-value-bind
+      (code-handle xep-patches)
+      (dump-byte-code-object output constants file)
+    (dump-fop 'lisp::fop-verify-empty-stack file)
+    (dolist (noise xeps)
+      (let* ((lambda (car noise))
+	     (info (lambda-info lambda))
+	     (xep (cdr noise))
+	     (fake-component (list nil)))
+	(setf (byte-xep-component xep) fake-component)
+	(setf (gethash fake-component (fasl-file-eq-table file)) code-handle)
+	(let ((*dump-only-valid-structures* nil))
+	  (dump-object xep file))
+	(let ((patches (remove lambda xep-patches :key #'car :test-not #'eq)))
+	  (cond
+	   (patches
+	    ;; We only have direct references to XEPs for closures.  Therefore,
+	    ;; there better not be any :entry references to it.
+	    (assert (null (gethash info (fasl-file-patch-table file))))
+	    (let ((xep-handle (dump-pop file)))
+	      (dolist (patch patches)
+		(alter-code-object code-handle (cdr patch) xep-handle file))))
+	   (t
+	    (dump-fop 'lisp::fop-make-byte-compiled-function file)
+	    (let* ((entry-handle (dump-pop file))
+		   (patch-table (fasl-file-patch-table file))
+		   (old (gethash info patch-table)))
+	      (setf (gethash info (fasl-file-entry-table file)) entry-handle)
+	      (when old
+		(dolist (patch old)
+		  (alter-code-object (car patch) (cdr patch)
+				     entry-handle file))
+		(remhash info patch-table)))))))))
+  (undefined-value))
 
 ;;; FASL-DUMP-TOP-LEVEL-LAMBDA-CALL  --  Interface
 ;;;
