@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.27 1991/10/28 20:21:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.28 1991/11/05 16:50:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,14 +96,16 @@
 (defknown (symbol-value symbol-function) (symbol) t ())
 
 (defknown boundp (symbol) boolean (flushable))
-(defknown fboundp ((or symbol cons)) boolean (flushable))
+(defknown fboundp ((or symbol cons)) boolean (flushable explicit-check))
 (defknown special-form-p (symbol) t (movable foldable flushable)) ; They never change...
 (defknown set (symbol t) t (unsafe)
   :derive-type #'result-type-last-arg)
-(defknown fdefinition ((or symbol cons)) function)
-(defknown %set-fdefinition ((or symbol cons) function) function)
+(defknown fdefinition ((or symbol cons)) function (unsafe explicit-check))
+(defknown %set-fdefinition ((or symbol cons) function) function
+  (unsafe explicit-check))
 (defknown makunbound (symbol) symbol)
-(defknown fmakunbound ((or symbol cons)) (or symbol cons))
+(defknown fmakunbound ((or symbol cons)) (or symbol cons)
+  (unsafe explicit-check))
 (defknown (get-setf-method get-setf-method-multiple-value)
   ((or list symbol) &optional lexical-environment)
   (values list list list form form)
