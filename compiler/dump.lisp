@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.40 1992/06/09 06:56:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.41 1992/07/11 02:12:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.40 1992/06/09 06:56:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.41 1992/07/11 02:12:51 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -1361,8 +1361,8 @@
 	   (dotimes (index elements)
 	     (multiple-value-bind (byte-index additional)
 				  (truncate index elements-per-byte)
-	       (let ((src-idx (+ byte-index
-				 (- elements-per-byte additional 1))))
+	       (let ((src-idx (- (* (1+ byte-index) elements-per-byte)
+				 (1+ additional))))
 		 (setf (aref result index)
 		       (if (>= src-idx len)
 			   0
