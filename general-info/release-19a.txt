@@ -160,7 +160,9 @@ New in this release:
        This is to prevent overflows and divide-by-zero errors when
        creating a hash-table with a too-small rehash-threshold.
      - MACROLET now accepts declarations, as prescribed by ANSI CL.
-
+     - MAKE-PATHNAME signals an error on invalid combinations
+       (:absolute or :wild-inferiors followed by :back or :up).
+     
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
        wrt to duplicate elements.
@@ -227,6 +229,8 @@ New in this release:
        support x86/Linux
      - The trap for floating-point underflow is turned off by default
        for all platforms now.
+     - A continuable error is signaled when defining a logical
+       pathname host that has the same name as a search-list host. 
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
