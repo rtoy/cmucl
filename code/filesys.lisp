@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.55 1999/02/02 12:18:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.56 1999/06/03 15:55:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -638,7 +638,10 @@
 ;;; 
 (defun unix-namestring (pathname &optional (for-input t) executable-only)
   "Convert PATHNAME into a string that can be used with UNIX system calls.
-   Search-lists and wild-cards are expanded."
+   Search-lists and wild-cards are expanded. If optional argument
+   FOR-INPUT is true and PATHNAME doesn't exist, NIL is returned.
+   If optional argument EXECUTABLE-ONLY is true, NIL is returned
+   unless an executable version of PATHNAME exists."
   ;; toy@rtp.ericsson.se: Let unix-namestring also handle logical
   ;; pathnames too.
   (let ((path (let ((lpn (pathname pathname)))
