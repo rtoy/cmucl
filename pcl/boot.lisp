@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.68 2003/06/05 08:33:45 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.69 2003/09/06 19:38:17 gerd Exp $")
 
 (in-package :pcl)
 
@@ -724,7 +724,8 @@ work during bootstrapping.
 (defmacro simple-lexical-method-functions
     ((lambda-list method-args next-methods &rest lmf-options) 
      &body body)
-  `(locally
+  `(let ((,method-args ,method-args)
+	 (,next-methods ,next-methods))
      (declare (ignorable ,method-args ,next-methods))
      (bind-simple-lexical-method-macros (,method-args ,next-methods)
        (bind-lexical-method-functions (,@lmf-options)
