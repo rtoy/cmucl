@@ -3,12 +3,6 @@
 (defun %sp-byte-blt (src start dest dstart end)
   (%primitive byte-blt src start dest dstart end))
 
-(defun %sp-find-character (string start end char)
-  (%primitive find-character string start end char))
-
-(defun %sp-find-character-with-attribute (a b c d e)
-  (%primitive find-character-with-attribute a b c d e))
-
 (defun lisp::sap-to-fixnum (x) (sap-int x))
 (defun lisp::fixnum-to-sap (x) (int-sap x))
 (defun lisp::%sp-make-fixnum (x) (%primitive make-fixnum x))
