@@ -7,14 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.18 1994/02/12 14:21:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.19 1994/10/02 22:39:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; CMU Common Lisp pretty printer.
 ;;; Written by William Lott.  Algorithm stolen from Richard Waters' XP.
 ;;;
-(in-package "PRETTY-PRINT" :nicknames '("PP"))
+(in-package "PRETTY-PRINT")
 (use-package "EXT")
 (use-package "KERNEL")
 
