@@ -24,6 +24,7 @@
 (in-package "HEMLOCK-INTERNALS"
 	    :nicknames '("HI")
 	    :use '("LISP" "EXTENSIONS" "SYSTEM"))
+
 ;;;
 (in-package "HEMLOCK"
 	    :nicknames '("ED")
@@ -33,8 +34,14 @@
 (export '(%sp-byte-blt %sp-find-character %sp-find-character-with-attribute
 		       %sp-reverse-find-character-with-attribute))
 
+
 (in-package "C")
 (export 'compile-from-stream)
+
+;;; Hack...
+
+(dolist (x (apropos-list "key-event" "HI"))
+  (unintern x "HI"))
 
 (in-package "USER")
 
@@ -45,11 +52,11 @@
 
 (comf "code:globals" :always-once t)
 (comf "code:struct" :always-once t)
+(comf "hem:key-event" :load t)
 (comf "hem:struct" :always-once t)
 (comf "hem:struct-ed" :always-once t)
 (comf "hem:rompsite" :always-once t)
 (comf "hem:charmacs" :always-once t)
-(comf "hem:key-event" :load t)
 ;;;
 ;;; This is necessary since all the #k uses in Hemlock will expand into
 ;;; EXT:MAKE-KEY-EVENT calls with keysyms and bits from the compiling Lisp, not
@@ -60,7 +67,7 @@
 ;;;
 (ext::re-initialize-key-events)
 (comf "hem:keysym-defs" :load t)
-(comf "hem:input.lisp")
+(comf "hem:input")
 (comf "hem:macros" :always-once t)
 (comf "hem:line" :always-once t)
 (comf "hem:ring")
