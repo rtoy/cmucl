@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.17 2002/08/27 22:18:33 moore Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.18 2002/08/28 13:29:25 pmai Exp $ 
  *
  */
 
@@ -343,10 +343,11 @@ lispobj  funcall3(lispobj function, lispobj arg0, lispobj arg1, lispobj arg2)
     return call_into_lisp(function, args, 3);
 }
 
+#ifdef LINKAGE_TABLE
+
 /* Linkage entry size is 8, for no good reason. */
 #define LINKAGE_ENTRY_SIZE 8
 
-#ifdef LINKAGE_TABLE
 void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
 {
     char *reloc_addr = (char *)(FOREIGN_LINKAGE_SPACE_START

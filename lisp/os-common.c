@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.5 2002/08/27 22:18:33 moore Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.6 2002/08/28 13:29:25 pmai Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -103,11 +103,13 @@ os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
     }
 }
 
+#ifdef LINKAGE_TABLE
 extern void resolve_linkage_tramp(void);
 
 /* In words */
-
 #define LINKAGE_DATA_ENTRY_SIZE 3
+#endif
+
 void os_foreign_linkage_init (void)
 {
 #ifdef LINKAGE_TABLE
@@ -187,8 +189,9 @@ os_resolve_data_linkage(void)
 
 /* Make entry for the symbol at entry in LINKAGE_TABLE_DATA.  Called
    from register-foreign-linkage. */
-
-extern void undefined_ff_tramp(lispobj arg);
+#ifdef LINKAGE_TABLE
+extern void undefined_foreign_symbol_trap(lispobj arg);
+#endif
 
 unsigned long os_link_one_symbol(long entry)
 {
@@ -213,7 +216,7 @@ unsigned long os_link_one_symbol(long entry)
     target_addr = os_dlsym((char *)symbol_name->data,
 			   data_vector->data[table_index + 2]);
     if (!target_addr) {
-	undefined_ff_tramp((lispobj)data_vector->data[table_index]);
+	undefined_foreign_symbol_trap((lispobj)data_vector->data[table_index]);
     }
     arch_make_linkage_entry(entry, target_addr, type);
     return target_addr;

@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.14 2002/08/28 07:16:38 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.15 2002/08/28 13:29:25 pmai Exp $
  *
  */
 
@@ -294,9 +294,12 @@ static void *dlsym_fallback(void *handle, const char *name)
 
     strcpy(newsym, "PVE_stub_");
     strcat(newsym, name);
-    if ((sym_addr = dlsym(handle, newsym)) == 0) {
+    sym_addr = dlsym(handle, newsym);
+#ifdef DEBUG
+    if (sym_addr == 0) {
 	fputs(dlerror(), stderr);
     }
+#endif
     return sym_addr;
 }
 

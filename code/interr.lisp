@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.38 2001/10/27 17:41:49 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.39 2002/08/28 13:29:26 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -469,6 +469,12 @@
 	 :datum object
 	 :expected-type 'instance))
 
+#+linkage-table
+(deferr undefined-foreign-symbol-error (symbol)
+  (error 'simple-program-error
+         :function-name name
+	 :format-control "Undefined foreign symbol: ~S"
+	 :format-arguments (list symbol)))
 
 
 ;;; INFINITE-ERROR-PROTECT is used by ERROR and friends to keep us out of

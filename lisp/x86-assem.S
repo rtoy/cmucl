@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.22 2002/08/27 22:18:34 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.23 2002/08/28 13:29:25 pmai Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -850,6 +850,8 @@ GNAME(alloc_overflow_edi):
 
 #endif
 
+#ifdef LINKAGE_TABLE
+
 /* Call into C code to resolve a linkage entry.  The initial code in the 
  * linkage entry has done a call to here; pass that return entry along as a 
  * parameter.
@@ -890,13 +892,13 @@ GNAME(resolve_linkage_tramp):
 	.size	 GNAME(resolve_linkage_tramp),.-GNAME(resolve_linkage_tramp)
 
 /*
- * The undefined-ff-function trampoline.
+ * The C-callable undefined-foreign-symbol trapping function.
  */
 	.text
 	.align	align_4byte,0x90
-	.global GNAME(undefined_ff_tramp)
-	.type	GNAME(undefined_ff_tramp),@function
-GNAME(undefined_ff_tramp):
+	.global GNAME(undefined_foreign_symbol_trap)
+	.type	GNAME(undefined_foreign_symbol_trap),@function
+GNAME(undefined_foreign_symbol_trap):
 	/* C Calling Convention, move one arg to EAX */
         pushl %ebp
         movl %esp,%ebp
@@ -904,27 +906,18 @@ GNAME(undefined_ff_tramp):
 
 	/* Now trap to Lisp */
 	int3
-	/* The trap code: */
 	.byte	trap_Error
-	/* The number of arguments, including the error code */
+        /* Number of argument bytes */
         .byte   2
-	/* The error code, which varies with long-float availability */
-	/* Here we use undefined-foreign-symbol-error. */
-#ifdef type_LongFloat
-        .byte   67
-#else
-        .byte   66
-#endif
-	/* Now the real args.  Each arg is provided via a SC-OFFSET.
-	   SC-OFFSETS are defined in code/debug-info.lisp.  They
-	   encode the storage class and storage class offset in
-	   one 27bit integer, the storage class taking the 5 LSBs,
-	   with the 22 MSBs indicating the offset.  */
-        .byte   sc_DescriptorReg | 0x00 # EAX in the Descriptor-reg SC.
+	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR
+        /* SC_OFFSET(sc_DescriptorReg,reg_EAX) */
+        .byte   SC_OFFSET(sc_DescriptorReg,0)
 
 	/* C Calling Convention */
 	/* Doesn't matter here, but could if we'd use trap_Cerror */
 	leave
 	ret
-	.size	GNAME(undefined_ff_tramp), .-GNAME(undefined_ff_tramp)
+	.size	GNAME(undefined_foreign_symbol_trap), .-GNAME(undefined_foreign_symbol_trap)
 	.end
+
+#endif /* LINKAGE_TABLE */
