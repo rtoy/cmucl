@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.125 2003/08/25 20:51:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.126 2003/09/11 18:22:39 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -336,7 +336,7 @@
 
 (defknown lognot (integer) integer (movable foldable flushable explicit-check))
 (defknown logtest (integer integer) boolean (movable foldable flushable))
-(defknown logbitp (bit-index integer) boolean (movable foldable flushable))
+(defknown logbitp (unsigned-byte integer) boolean (movable foldable flushable))
 (defknown ash (integer ash-index) integer (movable foldable flushable explicit-check))
 (defknown (logcount integer-length) (integer) bit-index
   (movable foldable flushable explicit-check))
