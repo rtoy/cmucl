@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.1 1990/11/18 07:40:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.2 1990/11/18 11:43:37 wlott Exp $
 ;;;
 ;;; Loop facility, written by William Lott.
 ;;; 
@@ -195,7 +195,9 @@
 
 ;;;; LOOP itself.
 
-(defmacro new-loop (&rest stuff)
+(defmacro loop (&rest stuff)
+  "General iteration facility.  See the manual for details, 'cause it's
+  very confusing."
   (if (some #'atom stuff)
       (parse-loop stuff)
       (let ((repeat (gensym "REPEAT-"))
