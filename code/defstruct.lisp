@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.15 1990/10/15 01:09:35 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.16 1990/10/17 03:47:59 ram Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -316,11 +316,17 @@
 ;;;    This function is called when we are redefining a structure from Old to
 ;;; New.  If the slots are different, we flame loudly, but give the luser a
 ;;; chance to proceed.  We flame especially loudly if there are structures that
-;;; include this one.  If proceeded, we FMAKUNBOUND all the old accessors.
+;;; include this one.  If proceeded, we FMAKUNBOUND all the old accessors.  If
+;;; the redefinition is not incompatible, we make the INCLUDED-BY of the new
+;;; definition be the same as the old one.
 ;;;
 (defun %redefine-defstruct (old new)
   (declare (type defstruct-description old new))
-  (unless (equalp (dd-slots old) (dd-slots new))
+  (cond
+   ((and (equalp (dd-slots old) (dd-slots new))
+	 (equal (dd-includes old) (dd-includes new)))
+    (setf (dd-included-by new) (dd-included-by old)))
+   (t
     (let ((name (dd-name old))
 	  (included-by (dd-included-by old)))
       (cerror
@@ -336,7 +342,7 @@
       (dolist (slot (dd-slots old))
 	(fmakunbound (dsd-accessor slot))
 	(unless (dsd-read-only slot)
-	  (fmakunbound `(setf ,(dsd-accessor slot)))))))
+	  (fmakunbound `(setf ,(dsd-accessor slot))))))))
 
   (undefined-value))
 
