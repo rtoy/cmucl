@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.5 1993/02/23 14:44:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.6 1993/02/25 02:24:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2174,12 +2174,8 @@
 	       :init-form cold-load-init)
 	      ((x eq))
   (typecase x
-    (character
-     (specifier-type
-      (if (standard-char-p x)
-	  'standard-char
-	  'base-char)))
-    (compiled-function (specifier-type 'compiled-function))
+    (base-char (specifier-type 'base-char))
+    (function (specifier-type 'function))
     (cons (specifier-type 'cons))
     (symbol
      (make-member-type :members (list x)))
