@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.7 2004/08/02 03:15:17 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.8 2004/10/06 23:58:46 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -351,6 +351,7 @@
 	 (cond
 	  ((and (minusp amount) (< amount -31)) (move result zero-tn))
 	  ((minusp amount) (inst srwi result number (- amount)))
+	  ((> amount 31) (move result zero-tn))
 	  (t (inst slwi result number amount))))))))
 
 (define-vop (fast-ash/signed=>signed)
@@ -411,6 +412,21 @@
       (emit-label nonneg)
       (inst slwi shift shift 2)
       (inst subfic res  shift (fixnumize 32)))))
+
+(define-vop (unsigned-byte-32-len)
+  (:translate integer-length)
+  (:note "inline (unsigned-byte 32) integer-length")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:temporary (:scs (non-descriptor-reg) :to (:argument 0)) shift)
+  (:generator 6
+    ; (integer-length arg) = (- 32 (cntlz arg)))
+    (inst cntlzw shift arg)
+    (inst slwi shift shift 2)
+    (inst subfic res  shift (fixnumize 32))))
 
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
