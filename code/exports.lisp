@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.144 1998/03/03 17:35:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.145 1998/03/10 18:23:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -597,9 +597,9 @@
        "%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF" "%SETELT" "%SETNTH"
        "%SP-STRING-COMPARE" "%SVSET" "%TYPEP" "*READ-ONLY-SPACE-FREE-POINTER*"
        "*STATIC-SPACE-FREE-POINTER*" "CURRENT-DYNAMIC-SPACE-START"
-       "DYNAMIC-0-SPACE-START" "DYNAMIC-1-SPACE-START" "FIXNUM" "LONG-FLOAT-P"
-       "READ-ONLY-SPACE-START" "SHORT-FLOAT-P" "STATIC-SPACE-START" "STRING/=*"
-       "STRING<*" "STRING<=*" "STRING=*" "STRING>*" "STRING>=*"))
+       "DYNAMIC-0-SPACE-START" "DYNAMIC-1-SPACE-START" "FIXNUM"
+       "READ-ONLY-SPACE-START" "SHORT-FLOAT-P" "STATIC-SPACE-START"
+       "STRING/=*" "STRING<*" "STRING<=*" "STRING=*" "STRING>*" "STRING>=*"))
   (intern name "LISP"))
 (dolist (name '("%PRIMITIVE" "%STANDARD-CHAR-P"))
   (intern name "SYSTEM"))
@@ -607,7 +607,7 @@
 (dolist
     (name
      '("%SP-SET-DEFINITION" "%SP-SET-PLIST" "ARRAY-HEADER-P" "BASE-CHAR-P"
-       "DOUBLE-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
+       "DOUBLE-FLOAT-P" "LONG-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
   (intern name "KERNEL"))
 (defpackage #+pmax "PMAX" #+sparc "SPARC" #+ibmrt "RT"
             #+x86 "X86" #+hppa "HPPA" #+alpha "ALPHA" #+sgi "SGI"
@@ -622,9 +622,9 @@
              "%SVSET" "%TYPEP" "*READ-ONLY-SPACE-FREE-POINTER*"
              "*STATIC-SPACE-FREE-POINTER*" "CURRENT-DYNAMIC-SPACE-START"
              "DYNAMIC-0-SPACE-START" "DYNAMIC-1-SPACE-START" "FIXNUM"
-             "LONG-FLOAT-P" "READ-ONLY-SPACE-START" "SHORT-FLOAT-P"
-             "STATIC-SPACE-START" "STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
-             "STRING>*" "STRING>=*")
+             "READ-ONLY-SPACE-START" "SHORT-FLOAT-P" "STATIC-SPACE-START"
+	     "STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
+	     "STRING>*" "STRING>=*")
   (:export "*ASSEMBLY-UNIT-LENGTH*" "*PRIMITIVE-OBJECTS*"
 	   "AFTER-BREAKPOINT-TRAP"
 	   "ANY-REG-SC-NUMBER" "ARRAY-DATA-SLOT" "ARRAY-DIMENSIONS-OFFSET"
@@ -1043,7 +1043,7 @@
        "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
        "%SET-FDEFINITION" "%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF"
        "%SET-SAP-REF-DESCRIPTOR" "%SETELT" "%SETNTH" "%SP-STRING-COMPARE"
-       "%SVSET" "%TYPEP" "LONG-FLOAT-P" "SHORT-FLOAT-P"
+       "%SVSET" "%TYPEP" "SHORT-FLOAT-P"
        "STRING/=*" "STRING<*" "STRING<=*" "STRING=*" "STRING>*" "STRING>=*"))
   (intern name "LISP"))
 
@@ -1055,8 +1055,8 @@
 		"%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF"
 		"%SET-SAP-REF-DESCRIPTOR" "%SETELT" "%SETNTH"
 		"%SP-STRING-COMPARE"
-		"%SVSET" "%TYPEP" "LONG-FLOAT-P"
-		"SHORT-FLOAT-P" "STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
+		"%SVSET" "%TYPEP" "SHORT-FLOAT-P"
+		"STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
 		"STRING>*" "STRING>=*")
   (:export "%ALIEN-FUNCALL" "%CATCH-BREAKUP" "%CONTINUE-UNWIND" "&MORE"
 	   "%LISTIFY-REST-ARGS" "%MORE-ARG" "%MORE-ARG-VALUES"
@@ -1466,7 +1466,7 @@
 	   "INVALID-UNWIND-ERROR" "IRRATIONAL" "KEY-INFO" "KEY-INFO-NAME"
 	   "KEY-INFO-P" "KEY-INFO-TYPE"
 	   "LAYOUT-INVALID-ERROR"
-	   "LEXICAL-ENVIRONMENT" "LRA"
+	   "LEXICAL-ENVIRONMENT" "LONG-FLOAT-P" "LRA"
 	   "LRA-CODE-HEADER" "LRA-P" "MAKE-ALIEN-TYPE-TYPE" "MAKE-ARGS-TYPE"
 	   "MAKE-ARRAY-HEADER" "MAKE-DOUBLE-FLOAT" "MAKE-FUNCTION-TYPE"
 	   "MAKE-KEY-INFO" "MAKE-LISP-OBJ" "MAKE-MEMBER-TYPE"
