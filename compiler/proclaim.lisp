@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.24 1992/02/18 02:01:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.25 1992/03/09 14:56:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -560,11 +560,12 @@
   (dolist (slot (dd-slots info))
     (let* ((fun (dsd-accessor slot))
 	   (setf-fun `(setf ,fun)))
+      (when fun
       (define-defstruct-name fun)
       (setf (info function accessor-for fun) info)
       (unless (dsd-read-only slot)
 	(define-defstruct-name setf-fun)
-	(setf (info function accessor-for setf-fun) info))))
+	(setf (info function accessor-for setf-fun) info)))))
   (undefined-value))
 
 (setf (symbol-function '%compiler-defstruct) #'%%compiler-defstruct)
