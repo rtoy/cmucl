@@ -1,4 +1,4 @@
-@make[Manual] @comment{-*- Dictionary: bld:scribe/hem/hem; Mode: spell; Package: Hemlock; Log: /usr/lisp/scribe/hem/hem-docs.log -*-}
+@make[Manual] @comment{-*- Dictionary: /afs/cs/project/clisp/scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
 @Device[postscript]
 @Style(Spacing = 1.2 lines)
 @Style(StringMax = 5000)
@@ -1686,6 +1686,10 @@ The default values implement the heuristic described above.
 
 @comment[@chap(Mail Interface)]
 @include(mail)
+
+
+@comment[@chap(Netnews Interface)]
+@include(netnews)
 
 
 
