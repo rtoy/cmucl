@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.33 2001/09/24 15:37:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.34 2002/03/08 18:38:21 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -942,6 +942,60 @@
   (frob %unary-round single-reg single-float fstoir)
   #-sun4
   (frob %unary-round double-reg double-float fdtoir))
+
+(define-vop (fast-unary-ftruncate/single-float)
+  (:args (x :scs (single-reg)))
+  (:arg-types single-float)
+  (:results (r :scs (single-reg)))
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:guard (not (backend-featurep :sparc-v9)))
+  (:note "inline ftruncate")
+  (:generator 2
+    (inst fstoi r x)
+    (inst fitos r r)))
+
+(define-vop (fast-unary-ftruncate/double-float)
+  (:args (x :scs (double-reg) :target r))
+  (:arg-types double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:guard (not (backend-featurep :sparc-v9)))
+  (:note "inline ftruncate")
+  (:generator 2
+    (inst fdtoi r x)
+    (inst fitod r r)))
+
+;; The V9 architecture can convert 64-bit integers.
+(define-vop (v9-fast-unary-ftruncate/single-float)
+  (:args (x :scs (single-reg)))
+  (:arg-types single-float)
+  (:results (r :scs (single-reg)))
+  (:result-types single-float)
+  (:temporary (:scs (double-reg)) temp)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:guard (backend-featurep :sparc-v9))
+  (:note "inline ftruncate")
+  (:generator 2
+    (inst fstox temp x)
+    (inst fxtos r temp)))
+
+(define-vop (v9-fast-unary-ftruncate/double-float)
+  (:args (x :scs (double-reg) :target r))
+  (:arg-types double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:guard (backend-featurep :sparc-v9))
+  (:note "inline ftruncate")
+  (:generator 2
+    (inst fdtox r x)
+    (inst fxtod r r)))
 
 #+sun4
 (deftransform %unary-round ((x) (float) (signed-byte 32))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.85 2002/02/25 16:23:11 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.86 2002/03/08 18:38:20 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,21 +110,31 @@
   '(let ((res (%unary-ftruncate (/ x y))))
      (values res (- x (* y res)))))
 
+#+sparc
+(defknown fast-unary-ftruncate ((or single-float double-float))
+  (or single-float double-float)
+  (movable foldable flushable))
+
 ;; Convert %unary-ftruncate to unary-ftruncate/{single,double}-float
 ;; if x is known to be of the right type.  Also, if the result is
 ;; known to fit in the same range as a (signed-byte 32), convert this
 ;; to %unary-truncate, which might be a single instruction, and float
-;; the result.
+;; the result.  However, for sparc, we have a vop to do this so call
+;; that, and for Sparc V9, we can actually handle a 64-bit integer
+;; range.
 
 (macrolet ((frob (ftype func)
 	     `(deftransform %unary-ftruncate ((x) (,ftype))
 		(let* ((x-type (continuation-type x))
 		       (lo (numeric-type-low x-type))
-		       (hi (numeric-type-high x-type)))
+		       (hi (numeric-type-high x-type))
+		       (limit-lo (- (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
+		       (limit-hi (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
 		  (if (and (numberp lo) (numberp hi)
-			   (< (- (ash 1 31)) lo)
-			   (< hi (ash 1 31)))
-		      '(coerce (%unary-truncate x) ',ftype)
+			   (< limit-lo lo)
+			   (< hi limit-hi))
+		      #-sparc '(coerce (%unary-truncate x) ',ftype)
+		      #+sparc '(fast-unary-ftruncate x)
 		      '(,func x))))))
   (frob single-float %unary-ftruncate/single-float)
   (frob double-float %unary-ftruncate/double-float))
