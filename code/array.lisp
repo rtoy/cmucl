@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.29 1998/07/24 17:17:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.30 2000/05/12 20:54:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -583,7 +583,10 @@
   "Returns values of :displaced-to and :displaced-index-offset options to
    make-array, or the defaults nil and 0 if not a displaced array."
   (declare (array array))
-  (values (%array-data-vector array) (%array-displacement array)))
+  (if (and (array-header-p array) (%array-displaced-p array))
+      (values (%array-data-vector array)
+            (truly-the fixnum (%array-displacement array)))
+      (values nil 0)))
 
 (defun adjustable-array-p (array)
   "Returns T if (adjust-array array...) would return an array identical
