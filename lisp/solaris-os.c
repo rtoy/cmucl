@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.12 2004/01/10 05:10:42 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.13 2004/05/04 12:39:45 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -26,6 +26,8 @@
 #include <sys/param.h>
 
 #include <dlfcn.h>
+
+#include <sys/resource.h>
 
 #if defined(GENCGC)
 #include "lisp.h"
@@ -230,6 +232,44 @@ void segv_handler(HANDLER_ARGS)
     return;
   }
 
+  /*
+   * Could be a C stack overflow.  Let's check
+   */
+  
+  {
+    struct rlimit rlimit;
+    
+    if (getrlimit(RLIMIT_STACK, &rlimit) == 0)
+      {
+        /* The stack top here is based on the notes in sparc-validate.h */
+        char* stack_top = (char*) 0xffbf0000;
+        char* stack_bottom;
+
+        stack_bottom = stack_top - rlimit.rlim_cur;
+
+        /*
+         * Add a fudge factor.  Don't know why, but we get the signal
+         * sometime after the bottom of the stack, as computed above,
+         * has been reached.  (It seems to be 8K, so we use something
+         * larger.)
+         */
+
+        stack_bottom -= 16384;
+        
+        if ((stack_bottom <= addr) && (addr <= stack_top))
+          {
+            fprintf(stderr, "\nsegv_handler:  C stack overflow.  Try increasing stack limit (%ld).\n",
+                    rlimit.rlim_cur);
+            
+            interrupt_handle_now(signal, code, context);
+          }
+      }
+    else
+      {
+        perror("getrlimit");
+      }
+  }
+    
   /* a *real* protection fault */
   fprintf(stderr, "segv_handler: Real protection violation: 0x%08x\n",
           addr);
