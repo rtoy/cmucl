@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.20 1992/05/15 19:11:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.21 1992/05/15 20:59:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -711,16 +711,16 @@
 			(intern sym-name other-package)))
 		  package))))
     ;; Exports.
-    (let ((exports nil))
+    (let ((old-exports nil))
       (do-external-symbols (sym package)
-	(push sym exports))
+	(push sym old-exports))
       (dolist (sym-name exports)
 	(let ((sym (intern sym-name package)))
 	  (export sym package)
-	  (setf exports (delete sym exports :test #'eq))))
-      (when exports
+	  (setf old-exports (delete sym old-exports :test #'eq))))
+      (when old-exports
 	(warn "~A also exports the following symbols:~%  ~S"
-	      name exports)))
+	      name old-exports)))
     package))
 
 
