@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-buf.lisp,v 1.8 1991/05/20 15:40:32 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-buf.lisp,v 1.9 1991/10/01 17:51:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -297,6 +297,12 @@
    causing it to throw to the top level REP loop."
   (declare (ignore p))
   (send-oob-to-slave "T"))
+
+(defcommand "Typescript Slave Status" (p)
+  "Interrupt the slave and cause it to print status information."
+  "Interrupt the slave and cause it to print status information."
+  (declare (ignore p))
+  (send-oob-to-slave "S"))
 
 (defun send-oob-to-slave (string)
   (let* ((ts (typescript-data-or-lose))
