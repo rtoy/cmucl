@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.13 1998/03/21 08:15:03 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.14 1998/06/19 14:26:13 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -201,23 +201,12 @@ Ldone:
 	/* alloc new frame */
 	mov	%esp,%ebx	# current sp marks start of new frame
 	push	%ebp		# fp in save location S0
+	sub	$8,%esp		# Ensure 3 slots are allocated, one above.
 	mov	%ebx,%ebp	# switch to new frame
 
-	/* lra in the save location */
-	pushl	$Llra
-
-	/* push the lra for backward compatibility */
-	pushl	$Llra
-
 	/* indirect the closure */
-	jmp	*CLOSURE_FUNCTION_OFFSET(%eax)
+	call	*CLOSURE_FUNCTION_OFFSET(%eax)
 	
-	.align	align_8byte
-        .long   type_ReturnPcHeader
-	nop
-	nop
-	nop
-Llra:
 	/* Multi-value return - blow off any extra values */
 	mov	%ebx, %esp
 	/* Single value return */	

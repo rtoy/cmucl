@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.15 1998/06/16 18:20:44 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.16 1998/06/19 14:26:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -944,10 +944,9 @@
 	      ;; For non-tail call, we have to save our frame pointer
 	      ;; and install the new frame pointer.  We can't load stack
 	      ;; tns after this point.
-	      `(
-		;; Python doesn't seem to allocate a frame here which
+	      `(;; Python doesn't seem to allocate a frame here which
 		;; doesn't leave room for the ofp/ret stuff.
-
+		
 		;; The variable args are on the stack and become the
 		;; frame, but there may be <3 args and 3 stack slots
 		;; are assumed allocate on the call. So need to ensure
@@ -959,10 +958,8 @@
 		;; Save the fp
 		(storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
 
-		;; Save the return address.
 		(move ebp-tn new-fp)	; NB - now on new stack frame.
-		))
-	     )
+		)))
   
      (note-this-location vop :call-site)
 
