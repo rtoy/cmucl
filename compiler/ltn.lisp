@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.29 1992/01/10 17:10:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.30 1992/02/13 09:30:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 ;;;
 (in-package "C")
 (in-package "EXTENSIONS")
-(export '(*efficency-note-limit* *efficency-note-cost-threshold*))
+(export '(*efficiency-note-limit* *efficiency-note-cost-threshold*))
 (in-package "C")
 
 
@@ -766,15 +766,15 @@
 		     (setq fallback template))))))))))
 
 
-(defvar *efficency-note-limit* 2
+(defvar *efficiency-note-limit* 2
   "This is the maximum number of possible optimization alternatives will be
-  mentioned in a particular efficency note.  NIL means no limit.")
-(proclaim '(type (or index null) *efficency-note-limit*))
+  mentioned in a particular efficiency note.  NIL means no limit.")
+(proclaim '(type (or index null) *efficiency-note-limit*))
 
-(defvar *efficency-note-cost-threshold* 5
+(defvar *efficiency-note-cost-threshold* 5
   "This is the minumum cost difference between the chosen implementation and
-  the next alternative that justifies an efficency note.")
-(proclaim '(type index *efficency-note-cost-threshold*))
+  the next alternative that justifies an efficiency note.")
+(proclaim '(type index *efficiency-note-cost-threshold*))
 
 
 ;;; STRANGE-TEMPLATE-FAILURE  --  Internal
@@ -853,7 +853,7 @@
 	  (max-cost (- (template-cost
 			(or template
 			    (template-or-lose 'call-named *backend*)))
-		       *efficency-note-cost-threshold*)))
+		       *efficiency-note-cost-threshold*)))
       (dolist (try (function-info-templates (basic-combination-kind call)))
 	(when (> (template-cost try) max-cost) (return))
 	(let ((guard (template-guard try)))
@@ -875,8 +875,8 @@
 		 (messages string)
 		 (messages stuff)))
 	  (dolist (loser (losers))
-	    (when (and *efficency-note-limit*
-		       (>= (count) *efficency-note-limit*))
+	    (when (and *efficiency-note-limit*
+		       (>= (count) *efficiency-note-limit*))
 	      (frob "etc.")
 	      (return))
 	    (let* ((type (template-type loser))
