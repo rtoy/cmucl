@@ -103,6 +103,7 @@
 ;;; We reallocate the ports that were in use when we were
 ;;; unwound, since they may have random messages hanging on them.
 ;;;
+#+nil
 (defmacro with-reply-port ((var) &body body)
   "With-Reply-Port (Var) {Form}*
   Binds Var to a port during the evaluation of the Forms."
