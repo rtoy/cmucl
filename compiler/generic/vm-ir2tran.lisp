@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.6 1993/05/07 07:22:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.7 1993/05/21 21:39:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,27 +150,28 @@
 		   (functional
 		    (assert (eq (functional-kind leaf) :top-level-xep))
 		    nil))))
-    (cond (closure
-	   (let ((this-env (node-environment node)))
-	     (cond
-	      ((backend-featurep :gengc)
-	       (do-fixed-alloc node block 'make-closure
-			       (+ (length closure) vm:closure-info-offset)
-			       vm:closure-header-type vm:function-pointer-type
-			       res)
-	       (vop %set-function-self node block res entry))
-	      (t
-	       (vop make-closure node block entry (length closure) res)))
-	     (loop for what in closure and n from 0 do
-	       (unless (and (lambda-var-p what)
-			    (null (leaf-refs what)))
-		 (vop closure-init node block
-		      res
-		      (find-in-environment what this-env)
-		      n
-		      nil)))))
-	  (t
-	   (emit-move node block entry res))))
+    (if closure
+	(let ((this-env (node-environment node)))
+	  (if (backend-featurep :gengc)
+	      (let ((temp (make-normal-tn
+			   (backend-any-primitive-type *backend*))))
+		(do-fixed-alloc node block 'make-closure
+				(+ (length closure) vm:closure-info-offset)
+				vm:closure-header-type
+				vm:function-pointer-type
+				res)
+		(emit-move node block entry temp)
+		(vop %set-function-self node block temp res temp))
+	      (vop make-closure node block entry (length closure) res))
+	  (loop for what in closure and n from 0 do
+	    (unless (and (lambda-var-p what)
+			 (null (leaf-refs what)))
+	      (vop closure-init node block
+		   res
+		   (find-in-environment what this-env)
+		   n
+		   nil))))
+	(emit-move node block entry res)))
   (undefined-value))
 
 
