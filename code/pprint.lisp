@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.19 1994/10/02 22:39:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.20 1994/10/27 02:55:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -466,7 +466,7 @@
 		 (amount (cdr insertion))
 		 (dstpos (+ srcpos additional)))
 	    (replace new-buffer buffer :start1 dstpos :start2 srcpos :end2 end)
-	    (fill new-buffer #\space :start srcpos :end dstpos)
+	    (fill new-buffer #\space :start (- dstpos amount) :end dstpos)
 	    (decf additional amount)
 	    (setf end srcpos)))
 	(unless (eq new-buffer buffer)
