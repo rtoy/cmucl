@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.33 1991/11/09 02:07:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.34 1991/11/17 17:08:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.33 1991/11/09 02:07:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.34 1991/11/17 17:08:12 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -28,73 +28,12 @@
 (use-package "ASSEM")
 (use-package "EXT")
 
+(disassem:set-disassem-params :instruction-alignment 32) 
 
 
 ;;;; Resources.
 
 (define-resources high low memory float-status)
-
-
-;;;; Formats.
-
-(defconstant special-op #b000000)
-(defconstant bcond-op #b0000001)
-(defconstant cop0-op #b010000)
-(defconstant cop1-op #b010001)
-(defconstant cop2-op #b010010)
-(defconstant cop3-op #b010011)
-
-
-(define-format (immediate 32)
-  (op (byte 6 26))
-  (rs (byte 5 21) :read t)
-  (rt (byte 5 16) :write t)
-  (immediate (byte 16 0)))
-
-(define-format (jump 32)
-  (op (byte 6 26))
-  (target (byte 26 0)))
-
-(define-format (register 32)
-  (op (byte 6 26))
-  (rs (byte 5 21) :read t)
-  (rt (byte 5 16) :read t)
-  (rd (byte 5 11) :write t)
-  (shamt (byte 5 6) :default 0)
-  (funct (byte 6 0)))
-
-
-(define-format (break 32)
-  (op (byte 6 26) :default special-op)
-  (code (byte 10 16))
-  (subcode (byte 10 6) :default 0)
-  (funct (byte 6 0) :default #b001101))
-
-
-(define-format (coproc-branch 32 :use (float-status))
-  (op (byte 6 26))
-  (funct (byte 10 16))
-  (offset (byte 16 0)))
-
-(define-format (float 32 :use (float-status) :clobber (float-status))
-  (op (byte 6 26) :default #b010001)
-  (filler (byte 1 25) :default #b1)
-  (format (byte 4 21))
-  (ft (byte 5 16) :read t)
-  (fs (byte 5 11) :read t)
-  (fd (byte 5 6) :write t)
-  (funct (byte 6 0)))
-
-(define-format (float-aux 32 :use (float-status) :clobber (float-status))
-  (op (byte 6 26) :default #b010001)
-  (filler-1 (byte 1 25) :default #b1)
-  (format (byte 4 21))
-  (ft (byte 5 16) :read t :default 0)
-  (fs (byte 5 11) :read t)
-  (fd (byte 5 6) :write t)
-  (funct (byte 2 4))
-  (sub-funct (byte 4 0)))
-
 
 
 ;;;; Special argument types and fixups.
@@ -117,7 +56,9 @@
 
 (define-argument-type register
   :type '(satisfies register-p)
-  :function tn-register-number)
+  :function tn-register-number
+  :disassem-printer #'(lambda (value stream)
+			(format stream "$~A" (aref *register-names* value))))
 
 (defun fp-reg-p (object)
   (and (tn-p object)
@@ -126,7 +67,9 @@
 
 (define-argument-type fp-reg
   :type '(satisfies fp-reg-p)
-  :function tn-offset)
+  :function tn-offset
+  :disassem-printer #'(lambda (value stream)
+			(format stream "$~A~D" 'f value)))
 
 (define-argument-type odd-fp-reg
   :type '(satisfies fp-reg-p)
@@ -142,9 +85,11 @@
 
 (define-argument-type relative-label
   :type 'label
-  :function label-offset)
-
-
+  :function label-offset
+  :sign-extend t
+  :disassem-use-label #'(lambda (value dstate)
+			  (declare (type disassem:disassem-state dstate))
+			  (+ (ash value 2) (disassem:dstate-curpos dstate))))
 
 (defun float-format-value (format)
   (ecase format
@@ -157,14 +102,10 @@
   :function float-format-value)
 
 
-(eval-when (compile load eval)
-
 (defconstant compare-kinds
   '(:f :un :eq :ueq :olt :ult :ole :ule :sf :ngle :seq :ngl :lt :nge :le :ngt))
-
-(defconstant float-operations '(+ - * /))
-
-); eval-when
+(defconstant compare-kinds-vec
+  (map 'vector #'symbol-name compare-kinds))
 
 (defun compare-kind (kind)
   (or (position kind compare-kinds)
@@ -174,7 +115,13 @@
 
 (define-argument-type compare-kind
   :type `(member ,@compare-kinds)
-  :function compare-kind)
+  :function compare-kind
+  :disassem-printer compare-kinds-vec)
+
+
+(defconstant float-operations '(+ - * /))
+(defconstant float-operations-vec
+  (map 'vector #'symbol-name float-operations))
 
 (defun float-operation (op)
   (or (position op float-operations)
@@ -184,12 +131,85 @@
 
 (define-argument-type float-operation
   :type `(member ,@float-operations)
-  :function float-operation)
-
+  :function float-operation
+  :disassem-printer float-operations-vec)
 
 (define-fixup-type :jump)
 (define-fixup-type :lui)
 (define-fixup-type :addi)
+
+
+
+;;;; Formats.
+
+(defconstant special-op #b000000)
+(defconstant bcond-op #b0000001)
+(defconstant cop0-op #b010000)
+(defconstant cop1-op #b010001)
+(defconstant cop2-op #b010010)
+(defconstant cop3-op #b010011)
+
+
+(define-format (immediate 32
+		:disassem-printer '(:name :tab
+				    rt ", "
+				    (:unless (:same-as rt) rs ", ")
+				    immediate))
+  (op (byte 6 26))
+  (rs (byte 5 21) :read t :default-type register)
+  (rt (byte 5 16) :write t :default-type register)
+  (immediate (byte 16 0) :default-type (signed-byte 16)))
+
+(define-format (jump 32
+		:disassem-printer '(:name :tab target))
+  (op (byte 6 26))
+  (target (byte 26 0)))
+
+(define-format (register 32
+		:disassem-printer '(:name :tab rd ", "
+				    (:unless (:same-as rd) rs ", ")
+				    rt))
+  (op (byte 6 26))
+  (rs (byte 5 21) :read t)
+  (rt (byte 5 16) :read t)
+  (rd (byte 5 11) :write t)
+  (shamt (byte 5 6) :default 0)
+  (funct (byte 6 0)))
+
+
+(define-format (break 32
+		:disassem-printer
+		'(:name :tab code (:unless (:constant 0) subcode)))
+  (op (byte 6 26) :default special-op)
+  (code (byte 10 16))
+  (subcode (byte 10 6) :default 0)
+  (funct (byte 6 0) :default #b001101))
+
+
+(define-format (coproc-branch 32 :use (float-status))
+  (op (byte 6 26))
+  (funct (byte 10 16))
+  (offset (byte 16 0)))
+
+(define-format (float 32 :use (float-status) :clobber (float-status)
+		:disassem-printer '(name :tab fd ", " fs "," ft))
+  (op (byte 6 26) :default #b010001)
+  (filler (byte 1 25) :default #b1)
+  (format (byte 4 21))
+  (ft (byte 5 16) :read t)
+  (fs (byte 5 11) :read t)
+  (fd (byte 5 6) :write t)
+  (funct (byte 6 0)))
+
+(define-format (float-aux 32 :use (float-status) :clobber (float-status))
+  (op (byte 6 26) :default #b010001)
+  (filler-1 (byte 1 25) :default #b1)
+  (format (byte 4 21))
+  (ft (byte 5 16) :read t :default 0)
+  (fs (byte 5 11) :read t)
+  (fd (byte 5 6) :write t)
+  (funct (byte 2 4))
+  (sub-funct (byte 4 0)))
 
 
 
@@ -633,7 +653,8 @@
 
 ;;;; Pseudo-instructions
 
-(define-instruction (move)
+(define-instruction (move
+		     :disassem-printer '(:name :tab rd ", " rs))
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :argument register)
@@ -652,9 +673,7 @@
     ((signed-byte 16)
      (inst addu reg zero-tn value))
     ((or (signed-byte 32) (unsigned-byte 32))
-     (inst lui reg
-	   #+new-compiler (ldb (byte 16 16) value)
-	   #-new-compiler (logand #xffff (ash value -16)))
+     (inst lui reg (ldb (byte 16 16) value))
      (let ((low (ldb (byte 16 0) value)))
        (unless (zerop low)
 	 (inst or reg low))))
@@ -670,7 +689,8 @@
 	     (rt :constant 0)
 	     (immediate :argument relative-label)))
 
-(define-instruction (nop :attributes (nop))
+(define-instruction (nop :attributes (nop)
+			 :disassem-printer '(:name))
   (register (op :constant 0)
 	    (rd :constant 0)
 	    (rt :constant 0)
