@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.13 1991/12/19 18:08:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.14 1991/12/20 02:44:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,8 +127,7 @@
 (defparameter *implementation-properties*
   '(%loaded-address CONDITIONS::MAKE-FUNCTION CONDITIONS::REPORT-FUNCTION
 		    CONDITIONS::CONC-NAME CONDITIONS::SLOTS
-		    CONDITIONS::PARENT-TYPE
-		    #+pcl walker::walker-template))
+		    CONDITIONS::PARENT-TYPE))
 
 
 ;;;; Miscellaneous DESCRIBE methods:
