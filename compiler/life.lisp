@@ -648,7 +648,7 @@
 		 (dolist (tn save-set)
 		   (force-tn-to-stack tn)
 		   (convert-to-environment-tn tn)))
-		((t)
+		((t :compute-only)
 		 (setf (first (vop-codegen-info vop)) save-set))))))
 
 	(do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
