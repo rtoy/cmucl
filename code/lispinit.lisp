@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.56 1998/04/10 11:42:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.57 1998/09/26 18:24:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -453,13 +453,12 @@
             Must be a non-negative, non-complex number."
 	   n))
   (multiple-value-bind (sec usec)
-		       (if (integerp n)
-			   (values n 0)
-			   (values (truncate n)
-				   (truncate (* n 1000000))))
+    (if (integerp n)
+	(values n 0)
+	(multiple-value-bind (sec frac)(truncate n)
+	  (values sec(truncate frac 1e-6))))
     (unix:unix-select 0 0 0 0 sec usec))
   nil)
-
 
 ;;;; SCRUB-CONTROL-STACK
 

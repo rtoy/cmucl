@@ -1,10 +1,11 @@
+;;; -*- Mode: Lisp; Package: Multiprocessing -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.30 1998/08/14 07:15:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.31 1998/09/26 18:24:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1518,8 +1519,8 @@
 	 (multiple-value-bind (sec usec)
 	     (if (integerp n)
 		 (values n 0)
-		 (values (truncate n)
-			 (truncate (* n 1000000))))
+		 (multiple-value-bind (sec frac)(truncate n)
+		   (values sec (truncate frac 1e-6))))
 	   (unix:unix-select 0 0 0 0 sec usec))
 	 nil)
 	(t
