@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.5 1991/05/28 17:25:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.6 1992/05/15 17:50:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -488,7 +488,7 @@
 	  ((= index (the fixnum end)))
 	(declare (fixnum index))
 	(setf (schar string index) (char-downcase (schar string index)))))
-    save-header)))
+    save-header))
 
 (defun nstring-capitalize (string &key (start 0) end)
   "Given a string, returns that string with the first
