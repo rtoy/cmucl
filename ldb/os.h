@@ -1,34 +1,47 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/os.h,v 1.1 1990/06/03 22:37:50 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/os.h,v 1.2 1991/05/24 17:57:40 wlott Exp $
  *
- * OS-dependent header file.
- *
- * This is the Mach version.
+ * Common interface for os-dependent functions.
  *
  */
 
 #if !defined(_OS_H_INCLUDED_)
 
-#include <mach.h>
-#include "ldb.h"
+#define _OS_H_INCLUDED_
 
-typedef vm_address_t os_vm_address_t;
-typedef vm_size_t os_vm_size_t;
-typedef vm_offset_t os_vm_offset_t;
-typedef vm_prot_t os_vm_prot_t;
+#ifdef MACH
+#include "mach-os.h"
+#else
+#ifdef sun
+#include "sunos-os.h"
+#endif
+#endif
+
+#define OS_VM_PROT_ALL (OS_VM_PROT_READ|OS_VM_PROT_WRITE|OS_VM_PROT_EXECUTE)
 
 extern os_vm_size_t os_vm_page_size;
 
-extern void os_validate();
+extern void os_install_interrupt_handlers();
+
+extern os_vm_address_t os_allocate(), os_reallocate();
+void os_deallocate();
+
+extern os_vm_address_t os_validate();
 extern void os_invalidate();
 extern void os_zero();
-extern void os_map();
+extern os_vm_address_t os_map();
 extern void os_flush_icache();
 extern void os_protect();
 extern boolean valid_addr();
 
-#define OS_VM_PROT_READ VM_PROT_READ
-#define OS_VM_PROT_WRITE VM_PROT_WRITE
-#define OS_VM_PROT_EXECUTE VM_PROT_EXECUTE
+#define os_trunc_to_page(addr) \
+    (os_vm_address_t)((long)addr&~(os_vm_page_size-1))
+#define os_round_up_to_page(addr) \
+    os_trunc_to_page(addr+(os_vm_page_size-1))
+
+#define os_trunc_size_to_page(size) \
+    (os_vm_size_t)((long)size&~(os_vm_page_size-1))
+#define os_round_up_size_to_page(size) \
+    os_trunc_size_to_page(size+(os_vm_page_size-1))
 
 #endif
