@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.10 1990/08/24 18:22:50 wlott Exp $
+;;;
 ;;; CMU Common Lisp Debugger.  This is a very basic command-line oriented
 ;;; debugger.
 ;;;
@@ -219,8 +221,7 @@
 	  (write-char #\])))
     (di:lambda-list-unavailable ()
       (let ((d-fun (di:frame-debug-function frame)))
-	(format t "(~S <lambda-list-unavailable>)) ~S)"
-		(di:debug-function-name d-fun)
+	(format t " <lambda-list-unavailable>)~@[ [~S]~]"
 		(di:debug-function-kind d-fun))))))
 
 (defun print-frame-call-arg (var location frame)
@@ -233,6 +234,7 @@
 
 ;;;; ROBS-BACKTRACE.
 
+#+nil
 (defun robs-backtrace (&optional (frames most-positive-fixnum)
 			    (*standard-output* *debug-io*))
   "Show a listing of the call stack going down from the current frame.  Frames
@@ -273,6 +275,7 @@
 	 (t
 	  (format t "~%<invalid frame>")))))))
 
+#+nil
 (defun print-code-and-stuff (env pc)
   (let* ((code (system:%primitive header-ref env system:%function-code-slot))
 	 (code-int (system:%primitive make-fixnum code)))
@@ -281,6 +284,7 @@
 	    (logior code-int (ash system:%code-type 27))
 	    (- (system:%primitive make-fixnum pc) code-int))))
 
+#+nil
 (defun check-valid (x)
   (unless (di::cstack-pointer-valid-p x)
     (error "Invalid control stack pointer."))

@@ -7,6 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.5 1990/08/24 18:22:55 wlott Exp $
 ;;;    
 (in-package "LISP")
 (export '(eval constantp quote proclaim
@@ -147,17 +148,13 @@
 ;;;
 (defun eval:interpreted-function-p (x)
   (and (functionp x)
-       (= (%primitive get-vector-subtype x) %function-closure-subtype)
+       (= (get-type x) vm:closure-header-type)
        (fboundp 'eval::leaf-value)
-       (let ((const (%primitive header-ref
-				(%primitive header-ref x %function-name-slot)
-				%function-entry-constants-slot)))
-	 (or (eq (%primitive header-ref #'eval::leaf-value
-			     %function-entry-constants-slot)
-		 const)
-	     (eq (%primitive header-ref #'eval:make-interpreted-function
-			     %function-entry-constants-slot)
-		 const)))))
+       (let ((code-component (di::function-code-header (%closure-function x))))
+	 (or (eq (di::function-code-header #'eval::leaf-value)
+		 code-component)
+	     (eq (di::function-code-header #'eval:make-interpreted-function)
+		 code-component)))))
 
 
 ;;; FUNCTION-LAMBDA-EXPRESSION  --  Public
@@ -176,45 +173,31 @@
   (declare (type function fun))
   (if (eval:interpreted-function-p fun)
       (eval:interpreted-function-lambda-expression fun)
-      (case (%primitive get-vector-subtype fun)
-	(#.%function-closure-subtype
-	 (function-lambda-expression
-	  (%primitive header-ref fun %function-name-slot)))
-	((#.%function-entry-subtype #.%function-closure-entry-subtype)
-	 (let ((name (%primitive header-ref fun %function-name-slot))
-	       (info (%primitive header-ref
-				 (%primitive header-ref fun
-					     %function-entry-constants-slot)
-				 %function-constants-debug-info-slot)))
-	   (if info
-	       (let ((source (first (c::compiled-debug-info-source info))))
-		 (cond ((eq (c::debug-source-from source) :lisp)
-			(let ((def (c::debug-source-name source)))
-			  (if (and (consp def) (eq (car def) 'function))
-			      (let ((def (cadr def)))
-				(if (and (consp def) (eq (car def) 'lambda))
-				    (values def nil name)
-				    (values nil t name)))
-			      (values nil t name))))
-		       ((stringp name)
-			(values nil t name))
-		       (t
-			(let ((exp (info function inline-expansion name)))
-			  (if exp
-			      (values exp nil name)
-			      (values nil t name))))))
-	       (values nil t name)))))))
-
+      (let* ((fun (%primitive c::function-self fun))
+	     (name (%primitive c::function-name fun))
+	     (code (di::function-code-header fun))
+	     (info (di::code-debug-info code)))
+	(if info
+	    (let ((source (first (c::compiled-debug-info-source info))))
+	      (cond ((eq (c::debug-source-from source) :lisp)
+		     (values (c::debug-source-name source)
+			     nil name))
+		    ((stringp name)
+		     (values nil t name))
+		    (t
+		     (let ((exp (info function inline-expansion name)))
+		       (if exp
+			   (values exp nil name)
+			   (values nil t name))))))
+	    (values nil t name)))))
 
 ;;; FIND-IF-IN-CLOSURE  --  Interface
 ;;;
 ;;;    Like FIND-IF, only we do it on a compiled closure's environment.
 ;;;
 (defun find-if-in-closure (test fun)
-  (do ((i %function-closure-variables-offset (1+ i))
-       (len (%primitive header-length fun)))
-      ((= i len) nil)
-    (let ((elt (%primitive header-ref fun i)))
+  (dotimes (index (1- (get-closure-length fun)))
+    (let ((elt (%closure-index-ref fun index)))
       (when (funcall test elt)
 	(return elt)))))
 
@@ -284,7 +267,7 @@
       nil))
 
 
-(defun (setf macro-function) (symbol function)
+(defun (setf macro-function) (function symbol)
   (declare (symbol symbol) (type function function))
 
   (when (eq (info function kind symbol) :special-form)
@@ -292,7 +275,9 @@
 
   (setf (info function kind symbol) :macro)
   (setf (info function macro-function symbol) function)
-  (fmakunbound symbol)
+  (setf (symbol-function symbol)
+	#'(lambda (&rest args) (declare (ignore args))
+	    (error "Cannot funcall macro functions.")))
   function)
 
 
@@ -306,22 +291,6 @@
     (symbol
      (eq (info variable kind object) :constant))
     (list (eq (car object) 'quote))))
-
-
-;;; Type-Expand  --  Interface
-;;;
-;;;    Similar to Macroexpand, but expands deftypes.  We don't bother returning
-;;; a second value.
-;;;
-(defun type-expand (form)
-  (let ((def (cond ((symbolp form)
-		    (info type expander form))
-		   ((and (consp form) (symbolp (car form)))
-		    (info type expander (car form)))
-		   (t nil))))
-    (if def
-	(type-expand (funcall def (if (consp form) form (list form))))
-	form)))
 
 
 ;;; Function invocation:

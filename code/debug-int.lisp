@@ -16,6 +16,9 @@
 ;;;
 
 (in-package "DEBUG-INTERNALS" :nicknames '("DI"))
+(use-package "SYSTEM")
+(use-package "EXT")
+(use-package "KERNEL")
 
 ;;; The compiler's debug-source structure is almost exactly what we want, so
 ;;; just get these symbols and export them.
@@ -446,6 +449,13 @@
   ;; This is the ir1 lambda this debug-function represents.
   (ir1-lambda nil :type c::clambda))
 
+(defstruct (bogus-debug-function
+	    (:include debug-function)
+	    (:constructor make-bogus-debug-function
+			  (%name &aux (%lambda-list nil) (debug-vars nil)
+				 (blocks nil) (%function nil))))
+  %name)
+
 (defvar *ir1-lambda-debug-function* (make-hash-table :test #'eq))
 
 (defun make-interpreted-debug-function (ir1-lambda)
@@ -693,43 +703,36 @@
 
 ;;;; Frames.
 
-(proclaim '(inline pointer+offset pointer- stack-ref env-valid-p
-		   cstack-pointer-valid-p %set-stack-ref))
-
+;;; These are magically converted by the compiler.
 ;;;
-;;; These are only used by stack parsing and making frame objects.
-;;;
-
-(defun pointer- (next previous)
-  (system:%primitive pointer- next previous))
-
-(defun pointer+offset (x y)
-  (system:%primitive sap+ x (ash y 2)))
-
-(defun env-valid-p (env)
-  (and (functionp env)
-       (eql (system:%primitive get-vector-subtype env)
-	    system:%function-constants-subtype)))
-
-(defun cstack-pointer-valid-p (x)
-  (and (system:%primitive pointer< x (system:%primitive current-sp))
-       (not (system:%primitive pointer< x
-			       (system:%primitive make-immediate-type 0
-						  system:%control-stack-type)))))
-
-
-;;;
-;;; STACK-REF needs to exist on MIPS and future implementations.
-;;;
-
-(defun stack-ref (s n)
-  (system:%primitive read-control-stack (pointer+offset s n)))
-
-(defun %set-stack-ref (s n value)
-  (system:%primitive write-control-stack (pointer+offset s n) value))
+(defun current-sp () (current-sp))
+(defun current-fp () (current-fp))
+(defun stack-ref (s n) (stack-ref s n))
+(defun %set-stack-ref (s n value) (%set-stack-ref s n value))
+(defun function-code-header (fun) (function-code-header fun))
+(defun lra-code-header (lra) (lra-code-header lra))
+(defun make-lisp-obj (value) (make-lisp-obj value))
+(defun get-lisp-obj-address (thing) (get-lisp-obj-address thing))
 ;;;
 (defsetf stack-ref %set-stack-ref)
 
+(def-c-variable "control_stack" system-area-pointer)
+
+(proclaim '(inline cstack-pointer-valid-p))
+(defun cstack-pointer-valid-p (x)
+  (declare (type system-area-pointer x))
+  (and (pointer< x (current-sp))
+       (not (pointer< x (alien-access (alien-value control_stack))))))
+
+
+(def-c-array interrupt-array mach:*sigcontext 4096)
+
+(def-c-variable "lisp_interrupt_contexts" interrupt-array)
+
+
+;;; These are the names of all the functions that the system could have called
+;;; while interpreting.  We need to detect these when parsing the stack and
+;;; make frames representing the code the intepreter is evaluating.
 
 ;;; FRAME-REAL-FRAME  --  Internal
 ;;;
@@ -796,6 +799,80 @@
 		 frame)))
 	down)))
 
+;;; CODE-OBJECT-FROM-BITS  --  internal.
+;;;
+;;; Find the code object corresponding to the object represented by bits and
+;;; return it.  We assume bogus functions correspond to the
+;;; undefined-function.
+;;; 
+(defun code-object-from-bits (bits)
+  (declare (type (unsigned-byte 32) bits))
+  (let ((object (make-lisp-obj bits)))
+    (if (functionp object)
+	(or (function-code-header object)
+	    :undefined-function)
+	(let ((lowtag (get-lowtag object)))
+	  (if (= lowtag vm:other-pointer-type)
+	      (let ((type (get-type object)))
+		(cond ((= type vm:code-header-type)
+		       object)
+		      ((= type vm:return-pc-header-type)
+		       (lra-code-header object))
+		      (t
+		       nil))))))))
+
+(defun find-escaped-frame (frame-pointer)
+  (declare (type system-area-pointer frame-pointer))
+  (dotimes (index lisp::*free-interrupt-context-index*
+		  (values nil 0 nil))
+    (alien-bind ((scp (interrupt-array-ref
+		       (alien-value lisp_interrupt_contexts)
+		       index)
+		      (alien mach:sigcontext 2400)
+		      t)
+		 (sc (mach:indirect-*sigcontext scp)
+		     mach:sigcontext
+		     t)
+		 (regs (mach:sigcontext-regs (alien-value sc))
+		       mach:int-array
+		       t))
+      (when (= (sap-int frame-pointer)
+	       (alien-access
+		(mach:int-array-ref regs c::fp-offset)))
+	(system:without-gcing
+	 (let ((code (code-object-from-bits
+		      (alien-access
+		       (mach:int-array-ref regs c::code-offset)))))
+	   (when (symbolp code)
+	     (return (values code 0 (alien-value sc))))
+	   (let* ((code-header-len (* (get-header-data code) vm:word-bytes))
+		  (pc-offset
+		   (- (sap-int
+		       (alien-access
+			(mach:sigcontext-pc (alien-value sc))))
+		      (- (get-lisp-obj-address code) vm:other-pointer-type)
+		      code-header-len)))
+	     ;; Check to see if we were executing in a branch delay slot.
+	     (when (logbitp 31 (alien-access
+				(mach:sigcontext-cause (alien-value sc))))
+	       (incf pc-offset vm:word-bytes))
+	     (unless (<= 0
+			 pc-offset
+			 (* (truly-the lisp::index
+				       (%primitive c::code-code-size code))
+			    vm:word-bytes))
+	       ;; We were in an assembly routine.  Therefore, use the LRA as
+	       ;; the pc.
+	       (setf pc-offset
+		     (- (escape-register (alien-value sc)
+					 c::lra-offset)
+			(get-lisp-obj-address code)
+			code-header-len)))
+	     (return
+	      (values code
+		      pc-offset
+		      (alien-value sc))))))))))
+
 (defvar *debugging-interpreter* nil
   "When set, the debugger foregoes making interpreted-frames, so you can
    debug the functions that manifest the interpreter.")
@@ -855,130 +932,44 @@
 ;;; want, and the current frame contains the pc at which we will continue
 ;;; executing upon returning to that previous frame.
 ;;;
-(defun compute-calling-frame (caller caller-pc up-frame)
+(defun compute-calling-frame (caller lra up-frame)
+  (declare (type system-area-pointer caller))
   (unless (cstack-pointer-valid-p caller)
     (return-from compute-calling-frame nil))
-  (multiple-value-bind (env env-fp escaped)
-		       (fp-env caller caller-pc)
-    (if escaped
-	;; If env-fp is escaped, then caller is the escape frame.
-	(multiple-value-bind
-	    (env pc)
-	    (pc-offset (escape-register caller c::return-pc-offset)
-		       env up-frame)
-	  (let ((d-fun (debug-function-from-pc env pc)))
-	    (make-compiled-frame env-fp up-frame d-fun
-				 (code-location-from-pc d-fun pc escaped)
-				 (if up-frame (1+ (frame-number up-frame)) 0)
-				 escaped)))
-	(multiple-value-bind
-	    (env pc)
-	    (pc-offset caller-pc env up-frame)
-	  (let ((d-fun (debug-function-from-pc env pc)))
-	    ;; env-fp = caller.
-	    (make-compiled-frame env-fp up-frame d-fun
-				 (code-location-from-pc d-fun pc escaped)
-				 (if up-frame
-				     (1+ (frame-number up-frame))
-				     0)))))))
+  (when (cstack-pointer-valid-p caller)
+    (multiple-value-bind
+	(code pc-offset escaped)
+	(if lra
+	    (let ((word-offset (get-header-data lra))
+		  (code (lra-code-header lra)))
+	      (if code
+		  (values code
+			  (* (1+ (- word-offset (get-header-data code)))
+			     vm:word-bytes)
+			  nil)
+		  (values :foreign-function
+			  0
+			  nil)))
+	    (find-escaped-frame caller))
+      (let ((d-fun (case code
+		     (:undefined-function
+		      (make-bogus-debug-function
+		       "The Undefined Function"))
+		     (:foreign-function
+		      (make-bogus-debug-function
+		       "Foreign function call land"))
+		     ((nil)
+		      (make-bogus-debug-function
+		       "Bogus stack frame"))
+		     (t
+		      (debug-function-from-pc code pc-offset)))))
+	(make-frame caller
+		    up-frame
+		    d-fun
+		    (code-location-from-pc d-fun pc-offset)
+		    (if up-frame (1+ (frame-number up-frame)) 0)
+		    escaped)))))
 
-;;; PC-OFFSET -- Internal.
-;;;
-;;; THIS FUNCTION BECOMES TOTALLY UNNECESSARY IN THE NEW SYSTEM WHEN PC'S
-;;; ALWAYS DIRECTLY POINT TO COMPONENTS (OR ENVIRONMENTS).
-;;;
-;;; This takes a pc in the form of an interior pointer, the environment (code
-;;; component) in which to interpret the pc, and next frame up the stack.
-;;; Conceptually, we fetch the code vector from the environment and subtract
-;;; the code vector's address from pc, turning pc into an offset.  We also
-;;; subtract off the code vector's header size.  This leaves a pc that is an
-;;; offset into the code vector.
-;;;
-;;; We actually have to be careful performing the above activity.  Sometimes
-;;; the argument env is not a function or environment due to funny calling
-;;; conventions.  That is, someone accessed a slot in a frame to get the env,
-;;; but the particular calling convention used blew off storing a valid env in
-;;; the slot.  In this situation, use the frame's debug-function's environment
-;;; and call CHECK-PC to compute and check the offset's validity, signalling
-;;; an error if for some weird reason we still don't have a valid environment.
-;;;
-;;; Otherwise, assume the argument env is the environment and call CHECK-PC
-;;; without signalling an error when env is invalid.  The problem here is the
-;;; test described in the previous paragraph could yield a valid environment
-;;; object, but it isn't our environment as determined by CHECK-PC on the pc's
-;;; offset validity.  In this situation, as above, use the frame's
-;;; debug-function's environment and call CHECK-PC signalling an error if we
-;;; don't have a good environment still.
-;;;
-;;; CHECK-PC:
-;;;    We check the offset's validity by making sure it is a valid index into
-;;; the code vector.  If the pc, as an interior pointer, pointed into some
-;;; other code vector, then the address arithmetic would yield an invalid
-;;; index.  When the index is invalid, so is the environment, and we have to
-;;; iterate up the stack to find a frame that saved the appropriate
-;;; environment.  Not every frame saves its environment due to optimized local
-;;; calling conventions.  In this code, we always know someone has saved the
-;;; environment because before we get here, we know someone has used the full
-;;; call sequence (due to calling a debugger routine, calling ERROR, etc.), or
-;;; some frame has escaped.  We only have to look up the stack one frame since
-;;; the appropriate environment propagates down through the frame objects.
-;;;
-(defun pc-offset (pc env up-frame)
-  (flet ((check-pc (pc env errorp)
-	  (let* ((code-vector (system:%primitive header-ref env
-						 system:%function-code-slot))
-		 (offset (- (pointer- pc code-vector)
-			    clc::i-vector-header-size)))
-	    (cond ((<= 0 offset (length code-vector))
-		   (values env offset))
-		  (errorp
-		   (error "Unexpected inappropriate environment for pc."))
-		  (t nil)))))
-    (if (not (and (functionp env)
-		  (eql (system:%primitive get-vector-subtype env)
-		       #.system:%function-constants-subtype)))
-	(check-pc pc
-		  (compiled-debug-function-component
-		   (frame-debug-function up-frame))
-		  t)
-	(multiple-value-bind (env offset) (check-pc pc env nil)
-	  (if env
-	      (values env offset)
-	      (check-pc pc
-			(compiled-debug-function-component
-			 (frame-debug-function up-frame))
-			t))))))
-
-;;; FP-ENV -- Internal.
-;;;
-;;; This takes a frame pointer and returns its saved environment, taking care
-;;; if fp points to an escape frame.  As multiple values, this returns the
-;;; environment, the appropriate frame pointer for the environment, and whether
-;;; fp referenced an escape.  If fp is an escape frame, then we return fp as
-;;; the last value for convenience in accessing data saved in the escape frame.
-;;;
-(defun fp-env (fp caller-pc)
-  (let ((env (stack-ref fp c::env-save-offset)))
-    (if (and (eql env 0)
-	     ;; If env is zero, then see if it is really an escape frame by
-	     ;; checking whether its pc points into an assembler routine for
-	     ;; interrupts.
-	     (= (system:%primitive get-type caller-pc)
-		 system:%assembler-code-type))
-	;; Get the env of the interrupted frame.
-	(let ((env (escape-register fp c::env-offset)))
-	  (cond ((eql (system:%primitive get-type env) system:%trap-type)
-		 ;; Just ignore these for frame handling.
-		 )
-		((env-valid-p env)
-		 (values env
-			 ;; This is valid since the escape frame must be
-			 ;; preceded by some frame.
-			 (stack-ref fp c::old-fp-save-offset)
-			 fp))
-		(t
-		 (error "Escaping frame ENV invalid?"))))
-	(values env fp nil))))
 
 ;;;
 ;;; Frame utilities.
@@ -987,24 +978,30 @@
 ;;; ESCAPE-REGISTER -- Internal.
 ;;;
 ;;; An escape register saves the value of a register for a frame that someone
-;;; interrupts.  This function returns the n'th saved register.  F is the
-;;; frame pointer to the escape frame which notes that someone interrupted the
-;;; previous frame.
+;;; interrupts.  
 ;;;
-(defun escape-register (f n)
-  (stack-ref f (+ n system:%escape-frame-general-register-start-slot)))
+(defun escape-register (scp index)
+  (alien-bind ((sc scp mach:sigcontext t)
+	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+    (alien-access (mach:int-array-ref (alien-value regs) index))))
+
+(defun %set-escape-register (scp index new)
+  (alien-bind ((sc scp mach:sigcontext t)
+	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+    (setf (alien-access (mach:int-array-ref (alien-value regs) index)) new)))
+
+(defsetf escape-register %set-escape-register)
+
 
 ;;; DEBUG-FUNCTION-FROM-PC -- Internal.
 ;;;
-;;; This returns a compiled-debug-function for env and pc.  We fetch the
+;;; This returns a compiled-debug-function for code and pc.  We fetch the
 ;;; c::debug-info and run down its function-map to get a
 ;;; c::compiled-debug-function from the pc.  The result only needs to reference
 ;;; the component, for function constants, and the c::compiled-debug-function.
 ;;;
-(defun debug-function-from-pc (env pc)
-  (let* ((component (function-code-header env))
-	 (info (system:%primitive header-ref component
-				  system:%function-constants-debug-info-slot)))
+(defun debug-function-from-pc (component pc)
+  (let ((info (code-debug-info component)))
     (unless info
       (debug-signal 'no-debug-info))
     (let* ((function-map (c::compiled-debug-info-function-map info))
@@ -1032,39 +1029,17 @@
 			 component)))
 	      (incf i 2)))))))
 
-;;; FUNCTION-CODE-HEADER -- Internal.
-;;;
-;;; This returns a pointer to the code data-block containing the function.  The
-;;; code header contains constants and debug-info.  First we fetch the
-;;; function's header word and shift out the type tag, leaving the offset back
-;;; to the code header.  Negate that and add it to the pointer to fun.
-;;;
-;;; IGNORE THE ABOVE COMMENT UNTIL RUNNING WITH THE NEW DATA FORMAT FOR THE
-;;; NEW SYSTEM.
-;;;
-(defun function-code-header (fun)
-  (ecase (system:%primitive get-vector-subtype fun)
-    ((#.system:%function-entry-subtype #.system:%function-closure-entry-subtype)
-     (system:%primitive header-ref fun system:%function-entry-constants-slot))
-    (#.system:%function-closure-subtype
-     (system:%primitive header-ref
-			(system:%primitive header-ref fun
-					   system:%function-name-slot)
-			system:%function-entry-constants-slot))
-    (#.system:%function-constants-subtype
-     fun)))
-
-
 ;;; CODE-LOCATION-FROM-PC -- Internal.
 ;;;
 ;;; This returns a code-location for the compiled-debug-function, debug-fun,
 ;;; and the pc into its code vector.  If there is debug-block info, we assume
 ;;; the code-location is known by making a default one.  It may later prove
-;;; to be unknown as :unparsed slots are accessed.
+;;; to be unknown as :unparsed slots are accessed.  Code locations in bogus
+;;; debug funs are always unknown.
 ;;;
 (defun code-location-from-pc (debug-fun pc escaped)
-  ;; For now, and this might be right:
-  (if (and (c::compiled-debug-function-blocks
+  (if (and (compiled-debug-function-p debug-fun)
+	   (c::compiled-debug-function-blocks
 	    (compiled-debug-function-compiler-debug-fun debug-fun))
 	   (not escaped))
       (make-compiled-code-location pc debug-fun)
@@ -1077,7 +1052,7 @@
   "Returns an a-list mapping catch tags to code-locations.  These are
    code-locations at which execution would continue with frame as the top
    frame if someone threw to the corresponding tag."
-  (let ((catch (system:%primitive active-catch-frame))
+  (let ((catch (int-sap (* lisp::*current-catch-block* vm:word-bytes)))
 	(res nil)
 	(fp (etypecase frame
 	      (compiled-frame (frame-pointer frame))
@@ -1085,14 +1060,15 @@
 				  (interpreted-frame-real-frame frame))))))
     (loop
       (when (eql catch 0) (return (nreverse res)))
-      (when (eq fp (stack-ref catch system:%unwind-block-current-fp))
-	(push (cons (stack-ref catch system:%catch-block-tag)
-		    (make-compiled-code-location
-		     (- (stack-ref catch system:%unwind-block-entry-pc)
-			clc::i-vector-header-size)
-		     (frame-debug-function frame)))
-	      res))
-      (setf catch (stack-ref catch system:%catch-block-previous-catch)))))
+      (when (eq fp (stack-ref catch vm:catch-block-current-cont-slot))
+	(let* ((lra (stack-ref catch vm:catch-block-entry-pc-slot))
+	       (word-offset (get-header-data lra)))
+	  (push (cons (stack-ref catch vm:catch-block-tag-slot)
+		      (make-code-location
+		       (* word-offset vm:word-bytes)
+		       (frame-debug-function frame)))
+		res)))
+      (setf catch (stack-ref catch vm:catch-block-previous-catch-slot)))))
 
 
 
@@ -1135,23 +1111,26 @@
 
 ;;; DEBUG-FUNCTION-FUNCTION -- Public.
 ;;;
-;;; ??? Can't work on the RT before back porting the new system from the MIPS.
+;;; ### Should hack compiled functions someday, now that the new object format
+;;; allows it.
 ;;;
 (defun debug-function-function (debug-function)
   "Returns the Common Lisp function associated with the debug-function.  This
    returns nil if the function is unavailable or is non-existent as a user
    callable function object."
-  (etypecase debug-function
-    (compiled-debug-function
-     (setf (debug-function-%function debug-function) nil))
-    (interpreted-debug-function
-     (c::lambda-eval-info-function
-      (c::leaf-info (interpreted-debug-function-ir1-lambda debug-function))))))
+  (let ((cached-value (debug-function-%function debug-function)))
+    (if (eq cached-value :unparsed)
+	(setf (debug-function-%function debug-function)
+	      (etypecase debug-function
+		(compiled-debug-function nil)
+		(interpreted-debug-function
+		 (c::lambda-eval-info-function
+		  (c::leaf-info
+		   (interpreted-debug-function-ir1-lambda debug-function))))))
+	cached-value)))
+
 
 ;;; DEBUG-FUNCTION-NAME -- Public.
-;;;
-;;; NOTE: This doesn't cache the name making the the DEBUG-FUNCTION-%FUNCTION
-;;; slot useless.
 ;;;
 (defun debug-function-name (debug-function)
   "Returns the name of the function represented by debug-function.  This may
@@ -1161,7 +1140,10 @@
      (c::compiled-debug-function-name
       (compiled-debug-function-compiler-debug-fun debug-function)))
     (interpreted-debug-function
-     (c::lambda-name (interpreted-debug-function-ir1-lambda debug-function)))))
+     (c::lambda-name (interpreted-debug-function-ir1-lambda debug-function)))
+    (bogus-debug-function
+     (bogus-debug-function-%name debug-function))))
+
 
 ;;; FUNCTION-DEBUG-FUNCTION -- Public.
 ;;;
@@ -1172,10 +1154,12 @@
 	(make-interpreted-debug-function
 	 (or (eval::eval-function-definition eval-fun)
 	     (eval::convert-eval-fun eval-fun))))
-      (debug-function-from-pc
-       fun
-       (- (system:%primitive header-ref fun system:%function-offset-slot)
-	  clc::i-vector-header-size))))
+      (let ((code (function-code-header fun)))
+	(debug-function-from-pc
+	 code
+	 (* (- (get-header-data fun) (get-header-data code))
+	    vm:word-bytes)))))
+
 
 ;;; DEBUG-FUNCTION-KIND -- Public.
 ;;;
@@ -1187,7 +1171,9 @@
      (c::compiled-debug-function-kind
       (compiled-debug-function-compiler-debug-fun debug-function)))
     (interpreted-debug-function
-     (c::lambda-kind (interpreted-debug-function-ir1-lambda debug-function)))))
+     (c::lambda-kind (interpreted-debug-function-ir1-lambda debug-function)))
+    (bogus-debug-function
+     nil)))
 
 ;;; DEBUG-VARIABLE-INFO-AVAILABLE -- Public.
 ;;;
@@ -1373,6 +1359,8 @@
 		 (debug-signal 'lambda-list-unavailable
 			       :debug-function debug-function))))
 	  (lambda-list)
+	  ((bogus-debug-function-p debug-function)
+	   nil)
 	  ((c::compiled-debug-function-arguments
 	    (compiled-debug-function-compiler-debug-fun
 	     debug-function))
@@ -1462,10 +1450,7 @@
 ;;; COMPILED-DEBUG-FUNCTION-DEBUG-INFO -- Internal.
 ;;;
 (defun compiled-debug-function-debug-info (debug-fun)
-  (system:%primitive header-ref
-		     (compiled-debug-function-component debug-fun)
-		     system:%function-constants-debug-info-slot))
-
+  (code-debug-info (compiled-debug-function-component debug-fun)))
 
 
 ;;;; Unpacking variable and basic block data.
@@ -1544,8 +1529,11 @@
   (etypecase debug-function
     (compiled-debug-function
      (parse-compiled-debug-blocks debug-function))
+    (bogus-debug-function
+     (debug-signal 'no-debug-blocks :debug-function debug-function))
     (interpreted-debug-block
      (parse-interpreted-debug-blocks debug-function))))
+
 
 ;;; PARSE-COMPILED-DEBUG-BLOCKS -- Internal.
 ;;;
@@ -1637,9 +1625,11 @@
 	      (etypecase debug-function
 		(compiled-debug-function
 		 (parse-compiled-debug-variables debug-function))
+		(bogus-debug-function nil)
 		(interpreted-debug-function
 		 (parse-interpreted-debug-variables debug-function))))
 	vars)))
+
 
 ;;; PARSE-INTERPRETED-DEBUG-VARIABLES -- Internal.
 ;;;
@@ -2083,8 +2073,7 @@
      (check-type frame compiled-frame)
      (let ((res (access-compiled-debug-var-slot debug-var frame)))
        (if (indirect-value-cell-p res)
-	   (system:%primitive header-ref res
-			      system:%function-value-cell-value-slot)
+	   (system:%primitive c::value-cell-ref res)
 	   res)))
     (interpreted-debug-variable
      (check-type frame interpreted-frame)
@@ -2116,23 +2105,61 @@
 ;;; SUB-ACCESS-DEBUG-VAR-SLOT -- Internal.
 ;;;
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
-  (ecase (c::sc-offset-scn sc-offset)
-    ((0 1) ;; Any register or descriptor register.
-     (if escaped
-	 (stack-ref escaped (+ system:%escape-frame-general-register-start-slot
-			       (c::sc-offset-offset sc-offset)))
-	 :invalid-value-for-unescaped-register-storage))
-    (2 (error "Local non-descriptor register access?"))
-    (3 ;; String-char register (w/o tag bits)
-     (if escaped
-	 (code-char
-	  (stack-ref escaped (+ system:%escape-frame-general-register-start-slot
-				(c::sc-offset-offset sc-offset))))
-	 :invalid-value-for-unescaped-register-storage))
-    (4 ;; Descriptors on the stack.
-     (stack-ref fp (c::sc-offset-offset sc-offset)))
-    (5 ;; String-chars on the stack (w/o tag bits).
-     (code-char (stack-ref fp (c::sc-offset-offset sc-offset))))))
+  (macrolet ((with-escaped-value ((var) &body forms)
+	       `(if escaped
+		    (let ((,var (escape-register
+				 escaped
+				 (c::sc-offset-offset sc-offset))))
+		      ,@forms)
+		    :invalid-value-for-unescaped-register-storage))
+	     (with-nfp ((var) &body body)
+	       `(let ((,var (if escaped
+				(int-sap (escape-register escaped
+							  c::nfp-offset))
+				(sap-ref-sap fp c::nfp-save-offset))))
+		  ,@body)))
+    (ecase (c::sc-offset-scn sc-offset)
+      ((#.c:any-reg-sc-number #.c:descriptor-reg-sc-number)
+       (system:without-gcing
+	(with-escaped-value (val)
+	  (make-lisp-obj val))))
+      (#.c:base-character-reg-sc-number
+       (with-escaped-value (val)
+	 (code-char val)))
+      (#.c:sap-reg-sc-number
+       (with-escaped-value (val)
+	 (int-sap val)))
+      (#.c:signed-reg-sc-number
+       (with-escaped-value (val)
+	 (if (logbitp (1- vm:word-bits) val)
+	     (logior val (ash -1 vm:word-bits))
+	     val)))
+      (#.c:unsigned-reg-sc-number
+       (with-escaped-value (val)
+	 val))
+      (#.c:non-descriptor-reg-sc-number
+       (error "Local non-descriptor register access?"))
+      (#.c:interior-reg-sc-number
+       (error "Local interior register access?"))
+      ((#.c:single-reg-sc-number
+	#.c:double-reg-sc-number
+	#.c:single-stack-sc-number
+	#.c:double-stack-sc-number)
+       (error "No floating point stuff yet."))
+      (#.c:control-stack-sc-number
+       (stack-ref fp (c::sc-offset-offset sc-offset)))
+      (#.c:base-character-stack-sc-number
+       (with-nfp (nfp)
+	 (code-char (sap-ref-32 nfp (c::sc-offset-offset sc-offset)))))
+      (#.c:unsigned-stack-sc-number
+       (with-nfp (nfp)
+	 (sap-ref-32 nfp (c::sc-offset-offset sc-offset))))
+      (#.c:signed-stack-sc-number
+       (with-nfp (nfp)
+	 (signed-sap-ref-32 nfp (c::sc-offset-offset sc-offset))))
+      (#.c:sap-stack-sc-number
+       (with-nfp (nfp)
+	 (sap-ref-sap nfp (c::sc-offset-offset sc-offset)))))))
 
 
 ;;; %SET-DEBUG-VARIABLE-VALUE -- Internal.
@@ -2149,9 +2176,7 @@
      (check-type frame compiled-frame)
      (let ((current-value (access-compiled-debug-var-slot debug-var frame)))
        (if (indirect-value-cell-p current-value)
-	   (system:%primitive header-set current-value
-			      system:%function-value-cell-value-slot
-			      value)
+	   (system:%primitive c::value-cell-set current-value value)
 	   (set-compiled-debug-variable-slot debug-var frame value))))
     (interpreted-debug-variable
      (check-type frame interpreted-frame)
@@ -2159,8 +2184,7 @@
       (interpreted-code-location-ir1-node (frame-code-location frame))
       (interpreted-debug-variable-ir1-var debug-var)
       (frame-pointer frame)
-      (interpreted-frame-closure frame)
-      value)))
+      (interpreted-frame-closure frame))))
   value)
 ;;;
 (defsetf debug-variable-value %set-debug-variable-value)
@@ -2187,27 +2211,60 @@
 ;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
 ;;;
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
-  (ecase (c::sc-offset-scn sc-offset)
-    ((0 1) ;; Any register or descriptor register.
-     (if escaped
-	 (setf (stack-ref escaped
-			  (+ system:%escape-frame-general-register-start-slot
-			     (c::sc-offset-offset sc-offset)))
-	       value)
-	 value))
-    (2 (error "Local non-descriptor register access?"))
-    (3 ;; String-char register (w/o tag bits)
-     (if escaped
-	 (setf (stack-ref escaped
-			  (+ system:%escape-frame-general-register-start-slot
-			     (c::sc-offset-offset sc-offset)))
-	       (char-code value))
-	 value))
-    (4 ;; Descriptors on the stack.
-     (setf (stack-ref fp (c::sc-offset-offset sc-offset)) value))
-    (5 ;; String-chars on the stack (w/o tag bits).
-     (setf (stack-ref fp (c::sc-offset-offset sc-offset))
-	   (char-code value)))))
+  (macrolet ((set-escaped-value (val)
+	       `(if escaped
+		    (setf (escape-register escaped
+					   (c::sc-offset-offset sc-offset))
+			  ,val)
+		    value))
+	     (with-nfp ((var) &body body)
+	       `(let ((,var (if escaped
+				(int-sap (escape-register escaped
+							  c::nfp-offset))
+				(sap-ref-sap fp c::nfp-save-offset))))
+		  ,@body)))
+    (ecase (c::sc-offset-scn sc-offset)
+      ((#.c:any-reg-sc-number #.c:descriptor-reg-sc-number)
+       (system:without-gcing
+	(set-escaped-value
+	  (get-lisp-obj-address value))))
+      (#.c:base-character-reg-sc-number
+       (set-escaped-value (char-code value)))
+      (#.c:sap-reg-sc-number
+       (set-escaped-value (sap-int value)))
+      (#.c:signed-reg-sc-number
+       (set-escaped-value (logand value (1- (ash 1 vm:word-bits)))))
+      (#.c:unsigned-reg-sc-number
+       (set-escaped-value value))
+      (#.c:non-descriptor-reg-sc-number
+       (error "Local non-descriptor register access?"))
+      (#.c:interior-reg-sc-number
+       (error "Local interior register access?"))
+      ((#.c:single-reg-sc-number
+	#.c:double-reg-sc-number
+	#.c:single-stack-sc-number
+	#.c:double-stack-sc-number)
+       (error "No floating point stuff yet."))
+      (#.c:control-stack-sc-number
+       (setf (stack-ref fp (c::sc-offset-offset sc-offset)) value))
+      (#.c:base-character-stack-sc-number
+       (with-nfp (nfp)
+	 (setf (stack-ref-32 nfp (c::sc-offset-offset sc-offset))
+	       (char-code (the character value)))))
+      (#.c:unsigned-stack-sc-number
+       (with-nfp (nfp)
+	 (setf (stack-ref-32 nfp (c::sc-offset-offset sc-offset))
+	       (the (unsigned-byte 32) value))))
+      (#.c:signed-stack-sc-number
+       (with-nfp (nfp)
+	 (setf (signed-stack-ref-32 nfp (c::sc-offset-offset sc-offset))
+	       (the (signed-byte 32) value))))
+      (#.c:sap-stack-sc-number
+       (with-nfp (nfp)
+	 (setf (sap-ref-sap nfp (c::sc-offset-offset sc-offset))
+	       (the system-area-pointer value)))))))
+
+(defsetf debug-variable-value %set-debug-variable-value)
 
 
 ;;; INDIRECT-VALUE-CELL-P -- Internal.
@@ -2217,9 +2274,8 @@
 ;;; cell.
 ;;;
 (defun indirect-value-cell-p (x)
-  (and (functionp x)
-       (eql (system:%primitive get-vector-subtype x)
-	    system:%function-value-cell-subtype)))
+  (and (= (get-lowtag x) vm:other-pointer-type)
+       (= (get-type x) vm:value-cell-header-type)))
 
 
 ;;; DEBUG-VARIABLE-VALIDITY -- Public.
