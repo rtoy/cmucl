@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/array.lisp,v 1.3 1992/07/08 01:37:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/array.lisp,v 1.4 1992/07/08 03:09:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,7 +100,7 @@
 
   (inst addi (fixnum 4) length length)
   (inst comb := zero-tn length done :nullify t)
-  (inst uaddcm zero-tn length length)
+  (inst sub zero-tn length length)
   (inst sll length 1 length)
   (inst mtctl length :sar)
   (inst shd zero-tn data :variable data)
