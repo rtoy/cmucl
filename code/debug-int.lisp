@@ -944,14 +944,23 @@
 ;;; want, and the current frame contains the pc at which we will continue
 ;;; executing upon returning to that previous frame.
 ;;;
+;;; Note: Sometimes LRA is actually a fixnum.  This happens when lisp calls
+;;; into C.  In this case, the code object is stored on the stack after the
+;;; LRA, and the LRA is the word offset.
+;;; 
 (defun compute-calling-frame (caller lra up-frame)
   (declare (type system-area-pointer caller))
   (when (cstack-pointer-valid-p caller)
     (multiple-value-bind
 	(code pc-offset escaped)
 	(if lra
-	    (let ((word-offset (get-header-data lra))
-		  (code (lra-code-header lra)))
+	    (multiple-value-bind
+		(word-offset code)
+		(if (fixnump lra)
+		    (let ((fp (frame-pointer up-frame)))
+		      (values lra
+			      (stack-ref fp (1+ vm::lra-save-offset))))
+		    (values (get-header-data lra) (lra-code-header lra)))
 	      (if code
 		  (values code
 			  (* (1+ (- word-offset (get-header-data code)))
