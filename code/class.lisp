@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.9 1993/02/17 18:01:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.10 1993/02/18 01:13:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -501,7 +501,10 @@
       (let ((class (make-built-in-class
 		    :enumerable enumerable
 		    :name name
-		    :translation (if trans-p :initializing nil))))
+		    :translation (if trans-p :initializing nil)))
+	    (inherits (if (eq name 't)
+			  ()
+			  (cons 't (reverse inherits)))))
 	(setf (info type kind name) :primitive)
 	(setf (info type class name) class)
 	(unless trans-p
@@ -511,10 +514,8 @@
 		      (map 'vector
 			   #'(lambda (x)
 			       (class-layout (find-class x)))
-			   (if (eq name 't)
-			       ()
-			       (cons 't (reverse inherits))))
-		      (if hierarchical (1+ (length inherits)) -1))
+			   inherits)
+		      (if hierarchical (length inherits) -1))
 	 nil nil)))))
 
 
