@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.27 1992/02/21 21:59:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.28 1992/02/24 00:51:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -902,8 +902,8 @@
 (defsetf %array-dimension %set-array-dimension)
 (defsetf %raw-bits %set-raw-bits)
 (defsetf symbol-value set)
-(defsetf symbol-function %sp-set-definition)
-(defsetf symbol-plist %sp-set-plist)
+(defsetf symbol-function fset)
+(defsetf symbol-plist %set-symbol-plist)
 (defsetf documentation %set-documentation)
 (defsetf nth %setnth)
 (defsetf fill-pointer %set-fill-pointer)
