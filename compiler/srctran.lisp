@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.48 1997/02/12 22:12:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.49 1997/02/15 23:53:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2050,7 +2050,21 @@
 	  (give-up))
 	(if (minusp val) minus-result result)))))
 
-
+;;; Fold (expt x n) into multiplications for small integral values of N.
+(deftransform expt ((x y) (t (constant-argument real)) *)
+  "recode as multiplication"
+  (let ((val (continuation-value y)))
+    ;; If Y would cause the result to be promoted to the same type as
+    ;; Y, we give up.  If not, then the result will be the same type
+    ;; as X, so we can replace the exponentiation with simple
+    ;; multiplication and division for small integral powers.
+    (unless (not-more-contagious y x)
+      (give-up))
+    (cond ((= val 2) '(* x x))
+	  ((= val -2) '(/ (* x x)))
+	  ((= val 3) '(* x x x))
+	  ((= val -3) '(/ (* x x x)))
+	  (t (give-up)))))
 
 (dolist (name '(ash /))
   (deftransform name ((x y) '((constant-argument (integer 0 0)) integer) '*
