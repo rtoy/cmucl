@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.40 2001/03/04 20:12:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.41 2001/03/13 16:52:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -327,7 +327,7 @@
 		(get-info-value ,name ,(type-info-number info)
 				,@(when env-list `(,env-list))))))
 ;;;
-(define-setf-method info (class type name &optional env-list)
+(define-setf-expander info (class type name &optional env-list)
   "Set the global information for Name."
   (let* ((n-name (gensym))
 	 (n-env-list (if env-list (gensym)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.24 2001/03/04 20:12:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.25 2001/03/13 16:52:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,7 +128,7 @@
 	   ,form)))))
 
 
-(define-setf-method logbitp (index int &environment env)
+(define-setf-expander logbitp (index int &environment env)
   (multiple-value-bind (temps vals stores store-form access-form)
 		       (get-setf-method int env)
     (let ((ind (gensym))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.48 1999/09/15 15:14:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.49 2001/03/13 16:52:13 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1777,7 +1777,7 @@
   (declare (ignore info))
   (setf (deref alien) value))
 
-(define-setf-method local-alien (&whole whole info alien)
+(define-setf-expander local-alien (&whole whole info alien)
   (let ((value (gensym))
 	(info (if (and (consp info)
 		       (eq (car info) 'quote))

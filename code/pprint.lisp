@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.28 2001/03/13 02:10:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.29 2001/03/13 16:52:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1440,7 +1440,7 @@
     (ctypecase pprint-typecase)
     (defconstant pprint-block)
     (define-modify-macro pprint-defun)
-    (define-setf-method pprint-defun)
+    (define-setf-expander pprint-defun)
     (defmacro pprint-defun)
     (defparameter pprint-block)
     (defsetf pprint-defun)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.45 2001/03/04 20:12:22 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.46 2001/03/13 16:52:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -922,8 +922,8 @@
 	   `(logtest ,(compute-attribute-mask attribute-names ,const-name)
 		     (the attributes ,attributes)))
 
-	 (define-setf-method ,test-name (place &rest attributes
-					       &environment env)
+	 (define-setf-expander ,test-name (place &rest attributes
+						 &environment env)
 	   
 	   "Automagically generated boolean attribute setter.  See
 	    Def-Boolean-Attribute."

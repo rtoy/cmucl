@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.67 2001/03/13 02:10:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.68 2001/03/13 16:52:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,7 +219,7 @@
 (defparameter defsetf-error-string "Setf expander for ~S cannot be called with ~S args.")
 
 (defmacro define-setf-expander (access-fn lambda-list &body body)
-  "Syntax like DEFMACRO, but creates a Setf-Method generator.  The body
+  "Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body
   must be a form that returns the five magical values."
   (unless (symbolp access-fn)
     (error "~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
