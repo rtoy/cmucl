@@ -34,9 +34,11 @@ int *count;
 
     while (search_for_type(type_SymbolHeader, start, count)) {
         symbol = (struct symbol *)PTR((lispobj)*start);
-        symbol_name = (struct vector *)PTR(symbol->name);
-        if (valid_addr(symbol_name) && TypeOf(symbol_name->header) == type_SimpleString && strcmp((char *)symbol_name->data, name) == 0)
-            return TRUE;
+	if (LowtagOf(symbol->name) == type_OtherPointer) {
+            symbol_name = (struct vector *)PTR(symbol->name);
+            if (valid_addr(symbol_name) && TypeOf(symbol_name->header) == type_SimpleString && strcmp((char *)symbol_name->data, name) == 0)
+                return TRUE;
+	}
         (*start) += 2;
     }
     return FALSE;
