@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.8 2001/05/18 16:22:54 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.9 2001/09/25 21:28:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -73,13 +73,14 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y base-char-reg))))
   (:results (y))
+  (:temporary (:sc non-descriptor-reg) temp)
   (:note "character arg move")
   (:generator 0
     (sc-case y
       (base-char-reg
        (move y x))
       (base-char-stack
-       (storew x fp (tn-offset y))))))
+       (storew x fp (tn-offset y) 0 temp)))))
 ;;;
 (define-move-vop move-base-char-argument :move-argument
   (any-reg base-char-reg) (base-char-reg))
