@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.36 1993/09/01 00:23:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.37 1993/10/25 13:44:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -354,7 +354,12 @@
   (default-initargs () :type list)
   ;;
   ;; CPL as a list of class objects, with all non-condition classes removed.
-  (cpl () :type list))
+  (cpl () :type list)
+  ;;
+  ;; A list of all the effective instance allocation slots of this class that
+  ;; have a non-constant initform or default-initarg.  Values for these slots
+  ;; must be computed in the dynamic environment of MAKE-CONDITION.
+  (hairy-slots nil :type list))
 
 ); eval-when (compile load eval)
 
@@ -525,6 +530,14 @@
 	(let ((val (getf args initarg *empty-slot*)))
 	  (unless (eq val *empty-slot*)
 	    (setf (car (condition-slot-cell cslot)) val)))))
+    ;;
+    ;; Default any slots with non-constant defaults now.
+    (dolist (hslot (condition-class-hairy-slots class))
+      (when (dolist (initarg (condition-slot-initargs hslot) t)
+	      (unless (eq (getf initarg args *empty-slot*) *empty-slot*)
+		(return nil)))
+	(setf (getf (condition-assigned-slots res) (condition-slot-name hslot))
+	      (find-slot-default class hslot))))
 
     res))
 
@@ -542,7 +555,6 @@
     (cond ((not old-layout)
 	   (register-layout layout))
 	  ((not *type-system-initialized*)
-	   (setf (layout-info old-layout) (layout-info layout))
 	   (setf (layout-class old-layout) class)
 	   (setq layout old-layout)
 	   (unless (eq (class-layout class) layout)
@@ -552,6 +564,9 @@
 	   (register-layout layout :invalidate t))
 	  ((not (class-layout class))
 	   (register-layout layout)))
+
+    (setf (layout-info layout)
+	  (layout-info (class-layout (find-class 'condition))))
 
     (setf (find-class name) class)
     ;;
@@ -571,6 +586,35 @@
 
 ); eval-when (compile load eval)
   
+
+;;; COMPUTE-EFFECTIVE-SLOTS  --  Internal
+;;;
+;;;   Compute the effective slots of class, copying inherited slots and
+;;; side-effecting direct slots.
+;;;
+(defun compute-effective-slots (class)
+  (collect ((res (copy-list (condition-class-slots class))))
+    (dolist (sclass (condition-class-cpl class))
+      (dolist (sslot (condition-class-slots sclass))
+	(let ((found (find (condition-slot-name sslot) (res)
+			   :test #'eq)))
+	  (cond (found
+		 (setf (condition-slot-initargs found)
+		       (union (condition-slot-initargs found)
+			      (condition-slot-initargs sslot)))
+		 (unless (condition-slot-initform-p found)
+		   (setf (condition-slot-initform-p found)
+			 (condition-slot-initform-p sslot))
+		   (setf (condition-slot-initform found)
+			 (condition-slot-initform sslot)))
+		 (unless (condition-slot-allocation found)
+		   (setf (condition-slot-allocation found)
+			 (condition-slot-allocation sslot))))
+		(t
+		 (res (copy-structure cslot)))))))
+    (res)))
+
+
 (defun %define-condition (name slots documentation report default-initargs)
   (let ((class (find-class name)))
     (setf (slot-class-print-function class) #'%print-condition)
@@ -580,36 +624,9 @@
     (setf (documentation name 'type) documentation)
     
     (dolist (slot slots)
-      (let* ((name (condition-slot-name slot))
-	     (islot (find-slot (cdr (condition-class-cpl class)) name)))
-	;;
-	;; Handle :allocation.  If a new class slot, allocate cell.  If NIL,
-	;; default it.
-	(ecase (condition-slot-allocation slot)
-	  (:class
-	   (setf (condition-slot-cell slot)
-		 (list (if (condition-slot-initform-p slot)
-			   (let ((initform (condition-slot-initform slot)))
-			     (if (functionp initform)
-				 (funcall initform)
-				 initform))
-			   *empty-slot*))))
-	  (:instance)
-	  ((nil)
-	   (when islot
-	     (setf (condition-slot-allocation slot)
-		   (condition-slot-allocation islot)))))
-	
-	;;
-	;; Default initform.
-	(when (and islot (not (condition-slot-initform-p slot)))
-	  (setf (condition-slot-initform slot)
-		(condition-slot-initform islot))
-	  (setf (condition-slot-initform-p slot)
-		(condition-slot-initform-p islot)))
-	
-	;;
-	;; Set up reader & writer functions.
+      ;;
+      ;; Set up reader & writer functions.
+      (let ((name (condition-slot-name slot)))
 	(dolist (reader (condition-slot-readers slot))
 	  (setf (fdefinition reader)
 		#'(lambda (condition)
@@ -618,37 +635,33 @@
 	  (setf (fdefinition writer)
 		#'(lambda (new-value condition)
 		    (condition-writer-function condition new-value name))))))
-    
-    (collect ((class-slots))
-      ;;
-      ;; Direct class slots:
-      (dolist (slot slots)
-	(when (eq (condition-slot-allocation slot) :class)
-	  (class-slots slot)))
-      ;;
-      ;; Indirect class slots:
-      (dolist (sclass (class-direct-superclasses class))
-	(dolist (cslot (condition-class-class-slots sclass))
-	  (when (and (eq (condition-slot-allocation
-			  (find-slot (condition-class-cpl class)
-				     (condition-slot-name cslot)))
-			 :class)
-		     (not (member cslot (class-slots)
-				  :key #'condition-slot-name
-				  :test #'eq)))
-	    (class-slots (copy-structure cslot)))))
-      
-      (dolist (slot (union slots (class-slots)))
-	(let ((name (condition-slot-name slot)))
-	  (collect ((initargs (condition-slot-initargs slot) union))
-	    (dolist (super (class-direct-superclasses class))
-	      (dolist (sslot (condition-class-slots super))
-		(when (eq (condition-slot-name sslot) name)
-		  (initargs (condition-slot-initargs sslot)))))
-	    (setf (condition-slot-initargs slot) (initargs)))))
-      
-      (setf (condition-class-class-slots class) (class-slots))))
-  
+
+    ;;
+    ;; Compute effective slots and set up the class and hairy slots (subsets of
+    ;; the effective slots.)
+    (let ((eslots (compute-effective-slots class))
+	  (e-def-initargs
+	   (reduce #'append
+		   (mapcar #'condition-class-default-initargs
+			   (condition-class-cpl class)))))
+      (dolist (slot eslots)
+	(ecase (condition-slot-allocation slot)
+	  (:class
+	   (unless (condition-slot-cell slot)
+	     (setf (condition-slot-cell slot)
+		   (list (if (condition-slot-initform-p slot)
+			     (let ((initform (condition-slot-initform slot)))
+			       (if (functionp initform)
+				   (funcall initform)
+				   initform))
+			     *empty-slot*))))
+	   (push slot (condition-class-class-slots class)))
+	  (:instance
+	   (when (or (functionp (condition-slot-initform slot))
+		     (dolist (initarg (condition-slot-initargs slot) nil)
+		       (when (functionp (getf initarg e-def-initargs))
+			 (return t))))
+	     (push slot (condition-class-hairy-slots class))))))))
   name)
 
 
