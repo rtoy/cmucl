@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.3 1990/03/08 21:39:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.4 1990/03/21 23:36:16 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -71,3 +71,75 @@
 (def-primitive-translator header-length (obj)
   (warn "Someone used HEADER-LENGTH.")
   `(%primitive vector-length ,obj))
+
+
+
+;;; Transforms for data-vector-ref for strange array types.
+
+
+(deftransform data-vector-ref ((array index)
+			       (simple-array t))
+  (let ((array-type (continuation-type array)))
+    (unless (array-type-p array-type)
+      (give-up))
+    (let ((dims (array-type-dimensions array-type)))
+      (when (or (atom dims) (= (length dims) 1))
+	(give-up))
+      (let ((el-type (array-type-element-type array-type))
+	    (total-size (if (member '* dims)
+			    '*
+			    (reduce #'* dims))))
+	`(data-vector-ref (truly-the (simple-array ,(type-specifier el-type)
+						   (,total-size))
+				     (%array-data-vector array))
+			  index)))))
+
+(deftransform data-vector-set ((array index new-value)
+			       (simple-array t t))
+  (let ((array-type (continuation-type array)))
+    (unless (array-type-p array-type)
+      (give-up))
+    (let ((dims (array-type-dimensions array-type)))
+      (when (or (atom dims) (= (length dims) 1))
+	(give-up))
+      (let ((el-type (array-type-element-type array-type))
+	    (total-size (if (member '* dims)
+			    '*
+			    (reduce #'* dims))))
+	`(data-vector-ref (truly-the (simple-array ,(type-specifier el-type)
+						   (,total-size))
+				     (%array-data-vector array))
+			  index
+			  new-value)))))
+
+
+;;; Transforms for getting at arrays of unsigned-byte n when n < 8.
+
+#+nil
+(macrolet
+    ((frob (type bits)
+       `(progn
+	  (deftransform data-vector-ref ((vector index)
+					 (,type *))
+	    `(multiple-value-bind (word bit)
+				  (floor index ,(truncate 16 ,bits))
+	       (ldb ,(ecase vm:target-byte-order
+		       (:little-endian '(byte ,bits bit))
+		       (:big-endian '(byte 1 (- 16 ,bits bit))))
+		    (%raw-bits vector (+ (* word 16)
+					 (* vm:vector-data-offset
+					    vm:word-bits))))))
+	  (deftransform data-vector-set ((vector index new-value)
+					 (,type * *))
+	    `(multiple-value-bind (word bit)
+				  (floor index ,(truncate 16 ,bits))
+	       (setf (ldb ,(ecase vm:target-byte-order
+			     (:little-endian '(byte ,bits bit))
+			     (:big-endian '(byte 1 (- 16 ,bits bit))))
+			  (%raw-bits vector (+ (* word 16)
+					       (* vm:vector-data-offset
+						  vm:word-bits))))
+		     new-value))))))
+  (frob simple-bit-vector 1)
+  (frob (simple-array (unsigned-byte 2) (*)) 2)
+  (frob (simple-array (unsigned-byte 4) (*)) 4))
