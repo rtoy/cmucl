@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.2 1990/11/10 19:20:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.3 1990/11/10 19:39:06 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -18,13 +18,13 @@
 
 ;;;; Derive-Type Optimizers
 
-;;; ASSERT-NUMBER-OF-ARGS  -- internal
+;;; ASSERT-ARRAY-RANK  -- internal
 ;;;
 ;;; Array operations that use a specific number of indices implicitly assert
 ;;; that the array is of that rank.
 ;;; 
-(defun assert-continuation-rank (array rank)
-  (assert-array-type
+(defun assert-array-rank (array rank)
+  (assert-continuation-type
    array
    (specifier-type `(array * ,(make-list rank :initial-element '*)))))
   
