@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.46 2004/04/22 14:38:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.47 2004/04/23 12:32:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1140,7 +1140,7 @@
 	    (prog ()
 	       SYMBOL-LOOP
 	       (ouch-read-buffer char)
-	       (setq char (fast-read-char nil nil))
+	       (setq char (stream::%read-char stream nil nil t t))
 	       (unless char (go RETURN-SYMBOL))
 	       (case (char-class char attribute-table)
 		 (#.escape (go ESCAPE))
