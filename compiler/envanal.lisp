@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.14 1991/03/18 13:06:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.15 1991/08/28 02:59:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,17 +67,24 @@
 
 ;;; GET-LAMBDA-ENVIRONMENT  --  Internal
 ;;;
-;;;    If Fun has an environment, return it, otherwise assign one.
+;;;    If Fun has an environment, return it, otherwise assign one.  We clean
+;;; any deleted variables out of an existing environments closure.  This is
+;;; necessary because pre-analysis is done before optimization.
 ;;;
 (defun get-lambda-environment (fun)
   (declare (type clambda fun))
-  (let ((fun (lambda-home fun)))
-    (or (lambda-environment fun)
-	(let ((res (make-environment :function fun)))
-	  (setf (lambda-environment fun) res)
-	  (dolist (lambda (lambda-lets fun))
-	    (setf (lambda-environment lambda) res))
-	  res))))
+  (let* ((fun (lambda-home fun))
+	 (env (lambda-environment fun)))
+    (cond (env
+	   (setf (environment-closure env)
+		 (delete-if-not #'leaf-refs (environment-closure env)))
+	   env)
+	  (t
+	   (let ((res (make-environment :function fun)))
+	     (setf (lambda-environment fun) res)
+	     (dolist (lambda (lambda-lets fun))
+	       (setf (lambda-environment lambda) res))
+	     res)))))
 
 
 ;;; GET-NODE-ENVIRONMENT  --  Internal
