@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.23 2003/08/27 17:18:00 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.24 2003/09/05 16:49:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.23 2003/08/27 17:18:00 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.24 2003/09/05 16:49:35 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -238,49 +238,41 @@
 		(inst add alloc-tn ,size))))
 	 #+gencgc
 	 (t
-	  ;; The OR instruction MUST come just before the TRAP
-	  ;; instruction, because the C code depends on this to figure
-	  ;; out what to do.
-	  (without-scheduling ()
-	    (let ((done (gen-label))
-		  (full-alloc (gen-label)))
-	      ;; See if we can do an inline allocation.  The updated
-	      ;; free pointer should not point past the end of the
-	      ;; current region.  If it does, a full alloc needs to be
-	      ;; done.
-	      (load-symbol-value ,result-tn *current-region-free-pointer*)
-	      (load-symbol-value ,temp-tn *current-region-end-addr*)
-	      (inst add ,result-tn ,size)
-	      ;; Do we need to round up?  I hope not because result-tn
-	      ;; is descriptor!
+	  (let ((done (gen-label))
+		(full-alloc (gen-label)))
+	    ;; See if we can do an inline allocation.  The updated
+	    ;; free pointer should not point past the end of the
+	    ;; current region.  If it does, a full alloc needs to be
+	    ;; done.
+	    (load-symbol-value ,result-tn *current-region-free-pointer*)
+	    (load-symbol-value ,temp-tn *current-region-end-addr*)
+	    (inst add ,result-tn ,size)
 	      
-	      ;;(inst add ,result-tn vm:lowtag-mask)
-	      ;;(inst andn ,result-tn vm:lowtag-mask)
-	      
-	      ;; result-tn points to the new end of region.  Did we go
-	      ;; past the actual end of the region?  If so, we need a
-	      ;; full alloc.
-	      (inst cmp ,result-tn ,temp-tn)
-	      (inst b :gt full-alloc #+sparc-v9 :pn)
-	      (inst nop)
-	      ;; Inline allocation worked, so update the free pointer
-	      ;; and go.  Should really do a swap instruction here to
-	      ;; swap memory with a register.
-	      (load-symbol-value ,temp-tn *current-region-free-pointer*)
-	      (store-symbol-value ,result-tn *current-region-free-pointer*)
-	      (inst b done)
-	      (move ,result-tn ,temp-tn)
+	    ;; result-tn points to the new end of region.  Did we go
+	    ;; past the actual end of the region?  If so, we need a
+	    ;; full alloc.
+	    (inst cmp ,result-tn ,temp-tn)
+	    (inst b :gt full-alloc #+sparc-v9 :pn)
+	    (load-symbol ,temp-tn '*current-region-free-pointer*)
+	    ;; Inline allocation worked, so update the free pointer
+	    ;; and go.
+	    (inst b done)
+	    (inst swap ,result-tn ,temp-tn (- (ash symbol-value-slot word-shift) other-pointer-type))
 
-	      (emit-label full-alloc)
-	      ;; Full alloc via trap to the C allocator.  Tell the
-	      ;; allocator what the result-tn and size are, using the
-	      ;; OR instruction.  Then trap to the allocator.
+	    (emit-label full-alloc)
+	    ;; Full alloc via trap to the C allocator.  Tell the
+	    ;; allocator what the result-tn and size are, using the
+	    ;; OR instruction.  Then trap to the allocator.
+	    (without-scheduling ()
+	      ;; The OR instruction MUST come just before the TRAP
+	      ;; instruction, because the C code depends on this to
+	      ;; figure out what to do.
 	      (inst or zero-tn ,result-tn ,size)
-	      (inst t :t allocation-trap)
+	      (inst t :t allocation-trap))
 	      
-	      (emit-label done)
-	      ;; Set lowtag appropriately
-	      (inst or ,result-tn ,lowtag))))))
+	    (emit-label done)
+	    ;; Set lowtag appropriately
+	    (inst or ,result-tn ,lowtag)))))
 
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size)
