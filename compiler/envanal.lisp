@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.17 1991/09/23 14:17:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.18 1991/11/09 22:07:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,9 +173,10 @@
 ;;; passed the NLX-Info as an argument so that the back end knows what entry is
 ;;; being done.
 ;;;
-;;; The link from the Exit block to the entry stub is changed to be a lonk to
-;;; the component head.  This leaves the entry stub reachable, but makes the
-;;; flow graph less confusing to flow analysis.
+;;; The link from the Exit block to the entry stub is changed to be a link to
+;;; the component head.  Similarly, the Exit block is linked to the component
+;;; tail.  This leaves the entry stub reachable, but makes the flow graph less
+;;; confusing to flow analysis.
 ;;;
 ;;; If a catch or an unwind-protect, then we set the Lexenv for the last node
 ;;; in the cleanup code to be the enclosing environment, to represent the fact
@@ -195,9 +196,11 @@
 	 (new-block (insert-cleanup-code exit-block next-block
 					 entry
 					 `(%nlx-entry ',info)
-					 (entry-cleanup entry))))
+					 (entry-cleanup entry)))
+	 (component (block-component new-block)))
     (unlink-blocks exit-block new-block)
-    (link-blocks (component-head (block-component new-block)) new-block)
+    (link-blocks exit-block (component-tail component))
+    (link-blocks (component-head component) new-block)
     
     (setf (nlx-info-target info) new-block)
     (push info (environment-nlx-info env))
@@ -215,7 +218,7 @@
 ;;; Env.  This is called for each non-local exit node, of which there may be
 ;;; several per exit continuation.  This is what we do:
 ;;; -- If there isn't any NLX-Info entry in the environment, make an entry
-;;;    stub, otherwise just unlink the exit block from its successor. 
+;;;    stub, otherwise just move the exit block link to the component tail.
 ;;; -- Close over the NLX-Info in the exit environment.
 ;;; -- If the exit is from an :Escape function, then substitute a constant
 ;;;    reference to NLX-Info structure for the escape function reference.  This
@@ -234,7 +237,8 @@
     (if (find-nlx-info entry cont)
 	(let ((block (node-block exit)))
 	  (assert (= (length (block-succ block)) 1))
-	  (unlink-blocks block (first (block-succ block))))
+	  (unlink-blocks block (first (block-succ block)))
+	  (link-blocks block (component-tail (block-component block))))
 	(insert-nlx-entry-stub exit env))
 
     (let ((info (find-nlx-info entry cont)))
