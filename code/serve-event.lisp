@@ -212,7 +212,7 @@
       (unless (or (handler-active handler)
 		  (handler-bogus handler))
 	(let ((fd (handler-descriptor handler)))
-	  (case (handler-direction handler)
+	  (ecase (handler-direction handler)
 	    (:input
 	     (setf read-mask (logior read-mask (ash 1 fd))))
 	    (:output
@@ -307,7 +307,7 @@
 	     (let ((result nil))
 	       (dolist (handler *descriptor-handlers*)
 		 (when (not (zerop (logand (ash 1 (handler-descriptor handler))
-					   (case (handler-direction handler)
+					   (ecase (handler-direction handler)
 					     (:input readable)
 					     (:output writeable)))))
 		   (unwind-protect
@@ -323,7 +323,7 @@
 							    (handler-descriptor
 							     handler)))
 					       ,var))))
-		     (case (handler-direction handler)
+		     (ecase (handler-direction handler)
 		       (:input (frob readable))
 		       (:output (frob writeable))))
 		   (setf result t)))
