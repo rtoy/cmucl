@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.21 1992/05/15 20:59:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.22 1992/05/15 21:51:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -575,7 +575,7 @@
 	(error "Bogus DEFPACKAGE option: ~S" option))
       (case (car option)
 	(:nicknames
-	 (let ((new (stringify-names (cdr options) "package")))
+	 (let ((new (stringify-names (cdr option) "package")))
 	   (setf nicknames (append-unique new nicknames :nicknames))))
 	(:size
 	 (cond (size
@@ -601,7 +601,7 @@
 		 (setf shadowing-imports
 		       (acons package-name names shadowing-imports))))))
 	(:use
-	 (let ((new (stringify-names (cdr options) "package")))
+	 (let ((new (stringify-names (cdr option) "package")))
 	   (setf use (append-unique new nicknames :use))
 	   (setf use-p t)))
 	(:import-from
@@ -676,13 +676,7 @@
       (dolist (simports-from shadowing-imports)
 	(let ((other-package (package-or-lose (car simports-from))))
 	  (dolist (sym-name (cdr simports-from))
-	    (let ((sym (or (find-symbol sym-name other-package)
-			   (progn
-			     (cerror "INTERN it."
-				     "~A does not contain a symbol ~A"
-				     (package-name other-package)
-				     sym-name)
-			     (intern sym-name other-package)))))
+	    (let ((sym (find-or-make-symbol sym-name other-package)))
 	      (shadowing-import sym package)
 	      (setf old-shadows (remove sym old-shadows))))))
       (when old-shadows
@@ -702,14 +696,7 @@
     (dolist (imports-from imports)
       (let ((other-package (package-or-lose (car imports-from))))
 	(dolist (sym-name (cdr imports-from))
-	  (import (or (find-symbol sym-name other-package)
-		      (progn
-			(cerror "INTERN it."
-				"~A does not contain a symbol ~A"
-				(package-name other-package)
-				sym-name)
-			(intern sym-name other-package)))
-		  package))))
+	  (import (find-or-make-symbol sym-name other-package) package))))
     ;; Exports.
     (let ((old-exports nil))
       (do-external-symbols (sym package)
@@ -722,6 +709,19 @@
 	(warn "~A also exports the following symbols:~%  ~S"
 	      name old-exports)))
     package))
+
+(defun find-or-make-symbol (name package)
+  (multiple-value-bind
+      (symbol how)
+      (find-symbol name package)
+    (cond (how
+	   symbol)
+	  (t
+	   (cerror "INTERN it."
+		   "~A does not contain a symbol ~A"
+		   (package-name package)
+		   name)
+	   (intern name package)))))
 
 
 ;;; Enter-New-Nicknames  --  Internal
