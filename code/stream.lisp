@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.20 1994/03/16 11:35:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.21 1994/08/23 18:36:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -713,8 +713,6 @@
 	 (if (equal in-type out-type)
 	     in-type `(and ,in-type ,out-type))))
       (:close 
-       (funcall in-method in :close arg1)
-       (funcall out-method out :close arg1)
        (set-closed-flame stream))
       (t
        (or (funcall in-method in operation arg1 arg2)
@@ -782,8 +780,6 @@
 		      ;; Nothing available yet.
 		      (return nil))))))
 	  (:close
-	   (dolist (stream (concatenated-stream-streams stream))
-	     (funcall (stream-misc stream) stream :close arg1))
 	   (set-closed-flame stream))
 	  (t
 	   (funcall misc current operation arg1 arg2)))))))
@@ -828,8 +824,6 @@
 	 (if (equal in-type out-type)
 	     in-type `(and ,in-type ,out-type))))
       (:close
-       (funcall in-method in :close arg1)
-       (funcall out-method out :close arg1)
        (set-closed-flame stream))
       (t
        (or (funcall in-method in operation arg1 arg2)
@@ -849,13 +843,15 @@
 ;;;; String Input Streams:
 
 (defstruct (string-input-stream
-	    (:include stream
-		      (in #'string-inch)
-		      (misc #'string-in-misc))
-	    (:print-function %print-string-input-stream)
-	    ;(:constructor nil)
-	    (:constructor internal-make-string-input-stream
-			  (string current end)))
+	     (:include stream
+		       (in #'string-inch)
+		       (bin #'string-binch)
+		       (n-bin #'string-stream-read-n-bytes)
+		       (misc #'string-in-misc))
+	     (:print-function %print-string-input-stream)
+					;(:constructor nil)
+	     (:constructor internal-make-string-input-stream
+			   (string current end)))
   (string nil :type simple-string)
   (current nil :type fixnum)
   (end nil :type fixnum))
@@ -873,6 +869,37 @@
 	  (t
 	   (setf (string-input-stream-current stream) (1+ index))
 	   (aref string index)))))
+
+(defun string-binch (stream eof-errorp eof-value)
+  (let ((string (string-input-stream-string stream))
+	(index (string-input-stream-current stream)))
+    (declare (simple-string string) (fixnum index))
+    (cond ((= index (the fixnum (string-input-stream-end stream)))
+	   (eof-or-lose stream eof-errorp eof-value))
+	  (t
+	   (setf (string-input-stream-current stream) (1+ index))
+	   (char-code (aref string index))))))
+
+(defun string-stream-read-n-bytes (stream buffer start requested eof-errorp)
+  (declare (type string-input-stream stream)
+	   (type index start requested))
+  (let ((string (string-input-stream-string stream))
+	(index (string-input-stream-current stream))
+	(end (string-input-stream-end stream)))
+    (declare (simple-string string) (fixnum index end))
+    (cond ((>= (+ index requested) end)
+	   (eof-or-lose stream eof-errorp nil))
+	  (t
+	   (setf (string-input-stream-current stream) (+ index requested))
+	   (system:without-gcing
+	    (system-area-copy (vector-sap string)
+			      (* index vm:byte-bits)
+			      (if (typep buffer 'system-area-pointer)
+				  buffer
+				  (vector-sap buffer))
+			      (* start vm:byte-bits)
+			      (* requested vm:byte-bits)))
+	   requested))))
 
 (defun string-in-misc (stream operation &optional arg1 arg2)
   (declare (ignore arg2))
