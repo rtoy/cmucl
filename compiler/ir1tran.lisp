@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.89 1993/07/03 14:55:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.90 1993/07/14 13:46:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -361,7 +361,7 @@
 	  ((start cont form
 	    &optional
 	    (proxy ``(error "Execution of a form compiled with errors:~% ~S"
-			    ',',form)))
+			    ',,form)))
 	   &body body)
   (let ((skip (gensym)))
     `(block ,skip
