@@ -11,6 +11,16 @@ usage() {
     echo "   version     Version (usually date and/or other version info)"
     echo "   arch        Architecture (x86, sparc, etc.)"
     echo "   os          OS (linux, solaris8, etc.)"
+    echo ""
+    echo "Make a CMUCL distribution consisting of two tar files.  One holds"
+    echo "the main files including the C runtime, the lisp core, and PCL library."
+    echo "The second tar file contains extra libraries such as CLX, CLM, and"
+    echo "Hemlock."
+    echo ""
+    echo "The tar files have the form cmucl-<version>-<arch>-<os>.tar.<c>"
+    echo "and cmucl-<version>-<arch>-<os>.extra.tar.<c> where <version>,"
+    echo "<arch>, and <os> are given values, and <c> is gz or bz2 depending"
+    echo "on the selected compression method."
     exit 1
 }
 
