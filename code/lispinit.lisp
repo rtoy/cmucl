@@ -20,7 +20,7 @@
 			       ++ +++ ** *** // ///))
 
 
-(in-package "SYSTEM")
+(in-package "SYSTEM" :nicknames '("SYS"))
 (export '(add-port-death-handler remove-port-death-handler sap-int
 	  int-sap sap-ref-8 sap-ref-16 sap-ref-32 without-gcing
 	  *in-the-compiler* compiler-version *pornography-of-death*
@@ -34,12 +34,12 @@
 	  *nameserverport* *usertypescript* *userwindow* *typescriptport*
 	  *task-self* *task-data* *task-notify* *file-input-handlers*
 	  with-interrupts with-enabled-interrupts enable-interrupt
-	  ignore-interrupt default-interrupt serve-all))
+	  ignore-interrupt default-interrupt))
 
 (in-package "EXTENSIONS")
 (export '(quit *prompt* print-herald save-lisp gc-on gc-off
 	       *before-save-initializations* *after-save-initializations*
-	       *editor-lisp-p* *clx-server-displays* *display-event-handlers*))
+	       *editor-lisp-p* *clx-server-displays*))
 
 (in-package "LISP")
 
@@ -57,26 +57,23 @@
 
 ;;; Make the error system enable interrupts.
 
-(defconstant most-positive-fixnum 134217727
+(defconstant most-positive-fixnum (1- (ash 1 30))
   "The fixnum closest in value to positive infinity.")
 
-(defconstant most-negative-fixnum -134217728
+(defconstant most-negative-fixnum (ash -1 30)
   "The fixnum closest in value to negative infinity.")
-
-
-(defvar *prompt* "* " "The string with which Lisp prompts you.")
 
 
 ;;; Random information:
 
 (defvar compiler-version "???")
-(defvar *lisp-implementation-version* "2.7(?)")
+(defvar *lisp-implementation-version* "3.0(?)")
 
-(defvar *in-the-compiler* ()
+(defvar *in-the-compiler* nil
   "Bound to T while running code inside the compiler.  Macros may test this to
   see where they are being expanded.")
 
-(defparameter %fasl-code-format 6)
+(defparameter %fasl-code-format vm:target-fasl-code-format)
 
 
 ;;;; Global ports:
@@ -90,8 +87,11 @@
 (defvar *nameserverport* ()
   "Port to the name server.")
 
+
 
 ;;; GC stuff.
+
+#| Again, will be different.
 
 (defvar *gc-inhibit* nil)	; Inhibits GC's.
 
@@ -101,293 +101,8 @@
   "*Need-to-collect-garbage* is set to T when GC is disabled, but the system
   needs to do a GC.  When GC is enabled again, the GC is done then.")
 
-
-;;; Software interrupt stuff.
+|#
 
-(defvar *in-server* NIL
-  "*In-server* is set to T when the SIGMSG interrupt has been enabled
-  in Server.")
-
-(defvar server-unique-object (cons 1 2))
-
-(defconstant lockout-interrupts (logior (mach:sigmask mach:sigint)
-					(mach:sigmask mach:sigquit)
-					(mach:sigmask mach:sigfpe)
-					(mach:sigmask mach:sigsys)
-					(mach:sigmask mach:sigpipe)
-					(mach:sigmask mach:sigalrm)
-					(mach:sigmask mach:sigurg)
-					(mach:sigmask mach:sigstop)
-					(mach:sigmask mach:sigtstp)
-					(mach:sigmask mach:sigcont)
-					(mach:sigmask mach:sigchld)
-					(mach:sigmask mach:sigttin)
-					(mach:sigmask mach:sigttou)
-					(mach:sigmask mach:sigio)
-					(mach:sigmask mach:sigxcpu)
-					(mach:sigmask mach:sigxfsz)
-					(mach:sigmask mach:sigvtalrm)
-					(mach:sigmask mach:sigprof)
-					(mach:sigmask mach:sigwinch)
-					(mach:sigmask mach:sigmsg)
-					(mach:sigmask mach:sigemsg)))
-
-(defconstant interrupt-stack-size 4096
-  "Size of stack for Unix interrupts.")
-
-(defvar software-interrupt-stack NIL
-  "Address of the stack used by Mach to send signals to Lisp.")
-
-(defvar %sp-interrupts-inhibited nil
-  "True if emergency message interrupts should be inhibited, false otherwise.")
-
-(defvar *software-interrupt-vector*
-  (make-array mach::maximum-interrupts)
-  "A vector that associates Lisp functions with Unix interrupts.")
-
-(defun enable-interrupt (interrupt function &optional character)
-  "Enable one Unix interrupt and associate a Lisp function with it.
-  Interrupt should be the number of the interrupt to enable.  Function
-  should be a funcallable object that will be called with three
-  arguments: the signal code, a subcode, and the context of the
-  interrupt.  The optional character should be an ascii character or
-  an integer that causes the interrupt from the keyboard.  This argument
-  is only used for SIGINT, SIGQUIT, and SIGTSTP interrupts and is ignored
-  for any others.  Returns the old function associated with the interrupt
-  and the character that generates it if the interrupt is one of SIGINT,
-  SIGQUIT, SIGTSTP and character was specified."
-  (unless (< 0 interrupt mach::maximum-interrupts)
-    (error "Interrupt number ~D is not between 1 and ~D."
-	   mach::maximum-interrupts))
-  (let ((old-fun (svref *software-interrupt-vector* interrupt))
-	(old-char ()))
-    (when (and character
-	       (or (eq interrupt mach:sigint)
-		   (eq interrupt mach:sigquit)
-		   (eq interrupt mach:sigtstp)))
-      (when (characterp character)
-	(setq character (char-code character)))
-      (when (mach:unix-isatty 0)
-	(if (or (eq interrupt mach:sigint)
-		(eq interrupt mach:sigquit))
-	    (mach:with-trap-arg-block mach:tchars tc
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl 0 mach:TIOCGETC
-				   (alien-value-sap mach:tchars))
-		(if (null val)
-		    (error "Failed to get tchars information, unix error ~S."
-			   (mach:get-unix-error-msg err))))
-	      (cond ((eq interrupt mach:sigint)
-		     (setq old-char
-			   (alien-access (mach::tchars-intrc (alien-value tc))))
-		     (setf (alien-access (mach::tchars-intrc (alien-value tc)))
-			   character))
-		    (T
-		     (setq old-char
-			   (alien-access (mach::tchars-quitc (alien-value tc))))
-		     (setf (alien-access (mach::tchars-quitc (alien-value tc)))
-			   character)))
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl 0 mach:tiocsetc
-				   (alien-value-sap mach:tchars))
-		(if (null val)
-		    (error "Failed to set tchars information, unix error ~S."
-			   (mach:get-unix-error-msg err)))))
-	    (mach:with-trap-arg-block mach:ltchars tc
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl 0 mach:TIOCGLTC
-				   (alien-value-sap mach:ltchars))
-		(if (null val)
-		    (error "Failed to get ltchars information, unix error ~S."
-			   (mach:get-unix-error-msg err))))
-	      (setq old-char
-		    (alien-access (mach::ltchars-suspc (alien-value tc))))
-	      (setf (alien-access (mach::ltchars-suspc (alien-value tc)))
-		    character)
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl 0 mach:TIOCSLTC
-				   (alien-value-sap mach:ltchars))
-		(if (null val)
-		    (error "Failed to set ltchars information, unix error ~S."
-			   (mach:get-unix-error-msg err))))))))
-    (setf (svref *software-interrupt-vector* interrupt) function)
-    (if (null function)
-	(mach:unix-sigvec interrupt mach:sig_dfl 0 0)
-	(let ((diha (+ (ash clc::romp-data-base 16)
-		       clc::software-interrupt-offset)))
-	  (mach:unix-sigvec interrupt diha lockout-interrupts 1)))
-    (if old-char
-	(values old-fun old-char)
-	old-fun)))
-
-(defun ignore-interrupt (interrupt)
-  "The Unix interrupt handling mechanism is set up so that interrupt is
-  ignored."
-  (unless (< 0 interrupt mach::maximum-interrupts)
-    (error "Interrupt number ~D is not between 1 and 31."))
-  (let ((old-fun (svref *software-interrupt-vector* interrupt)))
-    (mach:unix-sigvec interrupt mach:sig_ign 0 0)
-    (setf (svref *software-interrupt-vector* interrupt) NIL)
-    old-fun))
-
-(defun default-interrupt (interrupt)
-  "The Unix interrupt handling mechanism is set up to do the default action
-  under mach.  Lisp will not get control of the interrupt."
-  (unless (< 0 interrupt mach::maximum-interrupts)
-    (error "Interrupt number ~D is not between 1 and 31."))
-  (let ((old-fun (svref *software-interrupt-vector* interrupt)))
-    (mach:unix-sigvec interrupt mach:sig_dfl 0 0)
-    (setf (svref *software-interrupt-vector* interrupt) NIL)
-    old-fun))
-
-
-;;; %SP-Software-Interrupt-Handler is called by the miscops when a Unix
-;;; signal arrives.  The three arguments correspond to the information
-;;; passed to a normal Unix signal handler, i.e.:
-;;;	signal -- the Unix signal number.
-;;;	code -- a code for those signals which can be caused by more
-;;;		than one kind of event.  This code specifies the sub-event.
-;;;	scp -- a pointer to the context of the signal.
-
-;;; Because of the way %sp-software-interrupt-handler returns, it doesn't
-;;; unwind the binding stack properly.  The only variable affected by this
-;;; is software-interrupt-stack, so it must be handled specially.
-
-(defun %sp-software-interrupt-handler (signal code scp stack)
-  (declare (optimize (speed 3) (safety 0)))
-  (if (and %sp-interrupts-inhibited
-	   (not (memq signal '(#.mach:sigill #.mach:sigbus #.mach:sigsegv))))
-      (progn
-	(let ((iin %sp-interrupts-inhibited))
-	  (setq %sp-interrupts-inhibited
-		(nconc (if (consp iin) iin)
-		       (list `(,signal ,code ,scp))))
-	  (mach:unix-sigsetmask 0)))
-      (let* ((old-stack software-interrupt-stack)
-	     (new-stack ())
-	     (%sp-interrupts-inhibited T))
-	(unwind-protect
-	    (progn
-	      (when *in-server*
-		(mach:unix-sigvec mach:sigmsg mach::sig_dfl 0 0))
-	      (multiple-value-bind (gr addr)
-				   (mach:vm_allocate *task-self* 0
-						     interrupt-stack-size t)
-		(gr-error 'mach:vm_allocate gr '%sp-software-interrupt-handler)
-		(setq software-interrupt-stack
-		      (int-sap (+ addr interrupt-stack-size))))
-	      (setq new-stack software-interrupt-stack)
-	      (mach:unix-sigstack new-stack 0)
-	      (mach:unix-sigsetmask 0)
-	      (funcall (svref *software-interrupt-vector* signal)
-		       signal code scp)
-	      (mach:unix-sigsetmask lockout-interrupts))
-	  (mach:vm_deallocate *task-self*
-			      (- (sap-int new-stack)
-				 interrupt-stack-size)
-			      interrupt-stack-size)
-	  (setq software-interrupt-stack old-stack)
-	  (mach:unix-sigstack old-stack 0)
-	  (when *in-server*
-	    (let ((diha (+ (ash clc::romp-data-base 16)
-			   clc::software-interrupt-offset)))
-	      (mach:unix-sigvec mach:sigmsg diha lockout-interrupts 1)))
-	  (mach:unix-sigsetmask 0))))
-  (%primitive break-return stack))
-
-
-(defun ih-sigint (signal code scp)
-  (declare (ignore signal code scp))
-  (without-hemlock
-   (with-interrupts
-    (break "Software Interrupt" t))))
-
-(defun ih-sigquit (signal code scp)
-  (declare (ignore signal code scp))
-  (throw 'top-level-catcher nil))
-
-(defun ih-sigtstp (signal code scp)
-  (declare (ignore signal code scp))
-  (without-hemlock
-;   (reset-keyboard 0)
-   (mach:unix-kill (mach:unix-getpid) mach:sigstop)))
-
-(defun ih-sigill (signal code scp)
-  (declare (ignore signal code))
-  (alien-bind ((context (make-alien-value scp 0 (record-size 'mach:sigcontext)
-					  'mach:sigcontext)
-			mach:sigcontext T))
-    (error "Illegal instruction encountered at IAR ~X."
-	   (alien-access (mach::sigcontext-iar (alien-value context))))))
-
-(defun ih-sigbus (signal code scp)
-  (declare (ignore signal code))
-  (alien-bind ((context (make-alien-value scp 0 (record-size 'mach:sigcontext)
-					  'mach:sigcontext)
-			mach:sigcontext T))
-    (with-interrupts
-     (error "Bus error encountered at IAR ~X."
-	    (alien-access (mach::sigcontext-iar (alien-value context)))))))
-
-(defun ih-sigsegv (signal code scp)
-  (declare (ignore signal code))
-  (alien-bind ((context (make-alien-value scp 0 (record-size 'mach:sigcontext)
-					  'mach:sigcontext)
-			mach:sigcontext T))
-    (with-interrupts
-     (error "Segment violation encountered at IAR ~X."
-	    (alien-access (mach::sigcontext-iar (alien-value context)))))))
-
-(defun ih-sigfpe (signal code scp)
-  (declare (ignore signal code))
-  (alien-bind ((context (make-alien-value scp 0 (record-size 'mach:sigcontext)
-					  'mach:sigcontext)
-			mach:sigcontext T))
-    (with-interrupts
-     (error "Floating point exception encountered at IAR ~X."
-	    (alien-access (mach::sigcontext-iar (alien-value context)))))))
-
-;;; When we're in server then throw back to server.  If we're not
-;;; in server then just ignore the sigmsg interrupt.  We can't handle
-;;; it and we should never get it anyway.  But of course we do -- it's
-;;; dealing with interrupts and there funny at best.
-(defun ih-sigmsg (signal code scp)
-  (declare (ignore signal code scp))
-  (mach:unix-sigsetmask (mach:sigmask mach:sigmsg))
-  (default-interrupt mach:sigmsg)
-  (when *in-server*
-    (setq *in-server* nil)
-    (throw 'server-catch server-unique-object)))
-
-(defun ih-sigemsg (signal code scp)
-  (declare (ignore signal code scp))
-  (service-emergency-message-interrupt))
-
-(defun init-mach-signals ()
-  (declare (optimize (speed 3) (safety 0)))
-  (multiple-value-bind (gr addr)
-		       (mach:vm_allocate *task-self* 0 interrupt-stack-size t)
-    (gr-error 'mach:vm_allocate gr 'enable-interrupt)
-    (setq software-interrupt-stack
-	  (int-sap (+ addr interrupt-stack-size))))
-  (let ((iha (get 'clc::interrupt-handler '%loaded-address))
-	(diha (+ (ash clc::romp-data-base 16) clc::software-interrupt-offset)))
-    (%primitive pointer-system-set diha 0 iha))
-  (mach:unix-sigstack software-interrupt-stack 0)
-  (enable-interrupt mach:sigint #'ih-sigint)
-  (enable-interrupt mach:sigquit #'ih-sigquit)
-  (enable-interrupt mach:sigtstp #'ih-sigtstp)
-  (enable-interrupt mach:sigill #'ih-sigill)
-  (enable-interrupt mach:sigbus #'ih-sigbus)
-  (enable-interrupt mach:sigsegv #'ih-sigsegv)
-  (enable-interrupt mach:sigemsg #'ih-sigemsg)
-  (enable-interrupt mach:sigfpe #'ih-sigfpe)
-;  (reset-keyboard 0)
-  )
 
 
 ;;;; Reply port allocation.
@@ -395,6 +110,9 @@
 ;;;    We maintain a global stack of reply ports which is shared among
 ;;; all matchmaker interfaces, and could be used by other people as well.
 ;;;
+
+#| More stuff that will probably be drastically different.
+
 ;;;    The stack is represented by a vector, and a pointer to the first
 ;;; free port.  The stack grows upward.  There is always at least one
 ;;; NIL entry in the stack after the last allocated port.
@@ -467,6 +185,7 @@
 	(gr-call mach:port_deallocate *task-self* port)
 	(setf (svref stack i)
 	      (gr-call* mach:port_allocate *task-self*))))))
+|#
 
 
 ;;;; Server stuff:
@@ -592,180 +311,7 @@
 ;;;
 (defsetf object-set-operation %set-object-set-operation
   "Sets the handler function for an object set operation.")
-
-;;;; Server function:
-;;;
-;;; SERVER makes use of a defined alien, server-event, that lives at address 0.
-;;; This is a bogus alien used just as a dynamic variable that is declared
-;;; appropriately for the compiler.  This alien variable is bound to stuff in
-;;; an alien stack by the same name, server-event, which contains elements much
-;;; bigger than necessary to accommodate whatever will come back in the future
-;;; from waiting across ports, sockets, file descriptors, etc.  The defined
-;;; alien operators allow easy access to server-event as different types of
-;;; event by declaring the necessary type for the compiler when the operator
-;;; is used.
 
-
-;;;    Currently the server message is 4k bytes, thus serving larger requests
-;;; is impossible.  If anyone is bothered by this, the size can be increased.
-;;; X events are only 24 bytes.
-;;; 
-
-(defconstant server-message-size 4096)
-(defalien server-message server-message (bytes server-message-size) 0)
-
-(define-alien-stack server-message server-message (bytes server-message-size))
-
-(defrecord server-message
-  (msg mach:msg #.(record-size 'mach:msg)))
-
-(defvar *file-input-handlers* ()
-  "Is an association list of file descriptors and functions to call when
-  input is available on the particular file descriptor.")
-
-(defvar *clx-server-displays* ()
-  "Is a list of CLX displays that may have some activity on them.")
-
-(defvar *display-event-handlers* nil
-  "This is an alist mapping displays to user functions to be called when
-   SYSTEM:SERVER notices input on a display connection.  Do not modify this
-   directly; use EXT:ENABLE-CLX-EVENT-HANDLING.  A given display should be
-   represented here only once.")
-
-
-;;; Default-Default-Handler  --  Internal
-;;;
-;;;    If no such operation defined, signal an error.
-;;;
-(defun default-default-handler (object)
-  (alien-bind ((msg (server-message-msg server-message)))
-    (error "No operation for ID ~D on ~S in ~S."
-	   (alien-access (mach:msg-id (alien-value msg))) object
-	   (car (gethash (alien-access (mach:msg-localport (alien-value msg)))
-			 *port-table*)))))
-
-
-;;; Server  --  Public
-;;;
-(defun server (&optional (timeout 0 todef))
-  "Receive on all ports and Xevents and dispatch to the appropriate handler
-  function.  If timeout is specified, server will wait the specified time
-  and then return, otherwise it will wait until something happens.  Server
-  returns T if something happened and NIL otherwise."
-  (cond ((dolist (d/h ext::*display-event-handlers* nil)
-	   (let ((d (car d/h)))
-	     (when (xlib::event-listen d)
-	       (handler-bind ((error #'(lambda (condx)
-					 (declare (ignore condx))
-					 (flush-display-events d))))
-		 (funcall (cdr d/h) d))
-	       (return t))))
-	 T)
-	(T
-	 (let* ((to (if todef (round (* timeout 1000000))))
-		(fd-mask 0)
-		(omask 0)
-		(value (catch 'server-catch
-			 (unwind-protect
-			     (progn
-			       (setq omask (mach:unix-sigsetmask
-					    (mach:sigmask mach:sigmsg)))
-			       (unless (grab-message-loop)
-				 (let ((*in-server* T))
-				   (enable-interrupt mach:sigmsg #'ih-sigmsg)
-				   (multiple-value-bind
-				       (to1 to2)
-				       (if todef (truncate to 1000000))
-				     (multiple-value-bind
-					 (nfd fdm)
-					 (get-fd-info)
-				       (mach:unix-sigsetmask 0)
-				       (multiple-value-bind
-					   (nfnd rfdm)
-					   (mach:unix-select nfd fdm 0 0
-							     to1 to2)
-					 (mach:unix-sigsetmask
-					  (mach:sigmask mach:sigmsg))
-					 (default-interrupt mach:sigmsg)
-					 (setq fd-mask rfdm)
-					 nfnd))))))
-			   (default-interrupt mach:sigmsg)
-			   (mach:unix-sigsetmask omask)))))
-	   (cond ((or (null value) (and todef (eq value 0))) NIL)
-		 ((eq value server-unique-object)
-		  (grab-message-loop)
-		  T)
-		 ((file-descriptor-ready fd-mask) T))))))
-
-;;; Get-fd-info turns the association list in *file-input-handlers*
-;;; into information that unix-select can be called with.
-(defun Get-fd-info ()
-  (do* ((fdl *file-input-handlers* (cdr fdl)) ; 
-	(FD (caar fdl) (caar fdl))
-	(mfd 0)
-	(fdm 0))
-       ((null fdl)
-	(values (1+ mfd) fdm))
-    (setq mfd (max mfd fd))
-    (setq fdm (logior fdm (ash 1 fd)))))
-
-;;; File-descriptor-ready is called when server determines that a file
-;;; descriptor has input ready on one ore more of them.  It calls the
-;;; appropriate handler with the file-descriptor as its argument.
-;;; It checks for an xevent first, so they are handled as quickly as
-;;; possible.
-(defun file-descriptor-ready (rfdm)
-  (do ((fd 0 (1+ fd))
-       (ms rfdm (ash ms -1)))
-      ((eq ms 0))
-    (when (/= (the fixnum (logand ms 1)) 0)
-      (let ((info (assoc fd *file-input-handlers* :test #'eq)))
-	(when info
-	  (funcall (cdr info) fd)))))
-  T)
-
-;;; Grab-message-loop calls the appropiate handler for an IPC message.
-(defun grab-message-loop ()
-  (do* ((gr (server-grab-message) (server-grab-message))
-	(flag (/= gr mach:rcv-timed-out)
-	      (if (/= gr mach:rcv-timed-out) t flag)))
-       ((= gr mach:rcv-timed-out) flag)))
-
-(defun server-grab-message ()
-  (with-stack-alien (sm server-message)
-    (alien-bind ((msg (server-message-msg (alien-value sm))))
-      (setf (alien-access (mach:msg-msgsize (alien-value msg)))
-	    server-message-size)
-      (setf (alien-access (mach:msg-localport (alien-value msg)))
-	    mach::port-enabled)
-      (let ((gr (mach:msg-receive (alien-value sm) mach::rcv-timeout 0)))
-	(when (eql gr mach:rcv-timed-out)
-	  (return-from server-grab-message gr))
-	(unless (eql gr mach:rcv-success)
-	  (gr-error 'mach:msg-receive gr))
-	(let* ((server-message (alien-value sm))
-	       (port (alien-access (mach:msg-localport (alien-value msg))))
-	       (id (alien-access (mach:msg-id (alien-value msg))))
-	       (x (gethash port *port-table*))
-	       (set (cdr x)))
-	  (unless x
-	    (error "~D is not known to server (operation: ~D)." port id))
-	  (let ((gr (funcall (gethash id (object-set-table set)
-				      (object-set-default-handler set))
-			     (car x))))
-	    (unless (eql gr mach:kern-success)
-	      (gr-error 'server gr)))))))
-  mach:kern-success)
-
-(defun serve-all (&optional (timeout 0))
-  "Serve-all calls server with the specified timeout.  If server does
-  something (returns T) it loops over server with timeout 0 until all
-  events have been served.  Serve-all returns T if server did something
-  and other NIL."
-  (do ((res NIL)
-       (sval (server timeout) (server 0)))
-      ((null sval) res)
-    (setq res T)))
 
 
 ;;;; Emergency Message Handling:
@@ -776,6 +322,8 @@
 ;;; receive an emergency message, so we can't receive on all ports.
 ;;; Instead, we use MessagesWaiting to find the ports with emergency
 ;;; messages.
+
+#| still more noise that will be different.
 
 (defalien waiting-ports nil (long-words 128))
 
@@ -912,6 +460,9 @@
 
 (pushnew 'clear-port-tables *before-save-initializations*)
 
+|#
+
+
 
 ;;; %Initial-Function is called when a cold system starts up.  First we zoom
 ;;; down the *Lisp-Initialization-Functions* doing things that wanted to happen
@@ -932,7 +483,7 @@
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
   (setq *already-maybe-gcing* t)
-  (setf *gc-inhibit* nil)
+  (setf *gc-inhibit* t)
   (setf *need-to-collect-garbage* nil)
   (%primitive print "In initial-function, and running.")
 
@@ -1043,6 +594,7 @@
 (defvar *editor-lisp-p* nil
   "This is true if and only if the lisp was started with the -edit switch.")
 
+#+nil ;; Can't save lisps yet
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
@@ -1127,6 +679,7 @@
       (throw '%end-of-the-world nil)))
 
 
+#| might be something different.
 
 (defalien sleep-msg mach:msg (record-size 'mach:msg))
 (setf (alien-access (mach:msg-simplemsg sleep-msg)) T)
@@ -1152,6 +705,8 @@
 		 (gr-error 'mach:receive gr)))))))
   nil)
 
+|#
+
 
 ;;;; TOP-LEVEL loop.
 
@@ -1166,44 +721,76 @@
 (defvar ++ nil "Gets the previous value of + when a new value is read.")
 (defvar +++ nil "Gets the previous value of ++ when a new value is read.")
 (defvar - nil "Holds the form curently being evaluated.")
-(defvar *prompt* nil "The top-level prompt string.")
-(defvar %temp% nil "Random temporary, clobbered by top level loop.")
+(defvar *prompt* "* "
+  "The top-level prompt string.  This also may be a function of no arguments
+   that returns a simple-string.")
 (defvar *in-top-level-catcher* nil
   "True if we are within the Top-Level-Catcher.  This is used by interrupt
   handlers to see whether it is o.k. to throw.")
 
+(defun interactive-eval (form)
+  "Evaluate FORM, returning whatever it returns but adjust ***, **, *, +++, ++,
+  +, ///, //, /, and -."
+  (setf +++ ++
+	++ +
+	+ -
+	- form)
+  (let ((results (multiple-value-list (eval form))))
+    (setf /// //
+	  // /
+	  / results
+	  *** **
+	  ** *
+	  * (car results)))
+  (unless (boundp '*)
+    ;; The bogon returned an unbound marker.
+    (setf * nil)
+    (cerror "Go on with * set to NIL."
+	    "EVAL returned an unbound marker."))
+  (values-list /))
+
+(defconstant eofs-before-quit 10)
+
 (defun %top-level ()
   "Top-level READ-EVAL-PRINT loop.  Do not call this."
-  (let  ((this-eval nil) (* nil) (** nil) (*** nil)
+  (let  ((* nil) (** nil) (*** nil)
 	 (- nil) (+ nil) (++ nil) (+++ nil)
-	 (/// nil) (// nil) (/ nil) (%temp% nil))
+	 (/// nil) (// nil) (/ nil)
+	 (magic-eof-cookie (cons :eof nil))
+	 (number-of-eofs 0))
     (loop
      (with-simple-restart (abort "Return to Top-Level.")
        (catch 'top-level-catcher
-	 ;;
-	 ;; Prevent the user from irrevocably wedging the hooks.
-	 (setq *evalhook* nil)
-	 (setq *applyhook* nil)
 	 (let ((*in-top-level-catcher* t))
 	   (loop
-	    (fresh-line)
-	    (princ *prompt*)
-	    (setq +++ ++ ++ + + - - (read))
-	    (setq this-eval (multiple-value-list (eval -)))
-	    (dolist (x this-eval)
-	      (fresh-line)
-	      (prin1 x))
-	    (setq /// // // / / this-eval)
-	    (setq %temp% (car this-eval))
-	    ;;
-	    ;; Make sure nobody passes back an unbound marker.
-	    (unless (boundp '%temp%)
-	      (setq %temp% nil)
-	      (cerror "Go on, but set * to NIL."
-		      "Eval returned an unbound marker."))
-	    (setq *** ** ** * * %temp%))))))))
+	     (fresh-line)
+	     (princ (if (functionp *prompt*)
+			(funcall *prompt*)
+			*prompt*))
+	     (force-output)
+	     (let ((form (read *standard-input* nil magic-eof-cookie)))
+	       (cond ((not (eq form magic-eof-cookie))
+		      (let ((results
+			     (multiple-value-list (interactive-eval form))))
+			(dolist (result results)
+			  (fresh-line)
+			  (prin1 result)))
+		      (setf number-of-eofs 0))
+		     ((eql (incf number-of-eofs) 1)
+		      (let ((stream (make-synonym-stream '*terminal-io*)))
+			(setf *standard-input* stream)
+			(setf *standard-output* stream)
+			(format t "~&Received EOF on *standard-input*, ~
+			          switching to *terminal-io*.~%")))
+		     ((> number-of-eofs eofs-before-quit)
+		      (format t "~&Received more than ~D EOFs; Aborting.~%"
+			      eofs-before-quit)
+		      (quit))
+		     (t
+		      (format t "~&Received EOF.~%")))))))))))
 
 
+
 ;;; %Halt  --  Interface
 ;;;
 ;;;    A convenient way to get into the assembly level debugger.
