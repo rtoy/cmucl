@@ -1,21 +1,19 @@
-;;; -*- Mode: Lisp; Package: Profile; Log: profile.log -*-
+;;; -*- Package: Profile -*-
 ;;;
-;;; This code has been placed in the public domain by the author.
-;;; It is distributed without warranty of any kind.
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.2 1991/05/06 13:34:09 ram Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; Description: Simple profiling facility.
 ;;;
 ;;; Author: Skef Wholey, Rob MacLachlan
-;;;
-;;; Current maintainer:	Rob MacLachlan
-;;;
-;;; Address: Carnegie-Mellon University
-;;;          Computer Science Department
-;;;	     Pittsburgh, PA 15213
-;;;
-;;; Net address: ram@cs.cmu.edu
-;;;
-;;; Copyright status: Public domain.
 ;;;
 ;;; Compatibility: Runs in any valid Common Lisp.  Three small implementation-
 ;;;   dependent changes can be made to improve performance and prettiness.
@@ -27,11 +25,12 @@
 ;;;   consing: in unknown implementations 0 will be used.
 ;;;   See the "Implementation Parameters" section.
 ;;;
-;;; Note: a timing overhead factor is computed at load time.  This will be
-;;;   incorrect if profiling code is run in a different environment than this
-;;;   file was loaded in.  For example, saving a core image on a high
-;;;   performance machine and running it on a low performance one will result
-;;;   in use of an erroneously small timing overhead factor.
+;;; Note: a timing overhead factor is computed when REPORT-TIME is first
+;;; called.  This will be incorrect if profiling code is run in a different
+;;; environment than the first call to REPORT-TIME.  For example, saving a core
+;;; image on a high performance machine and running it on a low performance one
+;;; will result in use of an erroneously small timing overhead factor.  In CMU
+;;; CL, this cache is invalidated when a core is saved.
 ;;;
 (in-package "PROFILE")
 
@@ -40,7 +39,7 @@
 
 ;;;; Implementation dependent interfaces:
 
-#-new-compiler
+#+(and cmu (not new-compiler))
 (eval-when (compile eval)
   (defmacro fdefinition (x)
     `(lisp::careful-symbol-function ,x))
@@ -93,41 +92,24 @@
 			   system:%function-keyword-arg-slot))))
 	    (values min (or (/= min max) (/= rest 0) (/= key 0))))
 	  (values 0 t))))
-  #+(and new-compiler (not pmax))
+  #+new-compiler
   (defun required-arguments (name)
-    (let* ((function (symbol-function name))
-	   (stype (system:%primitive get-vector-subtype function)))
-      (if (eql stype system:%function-entry-subtype)
-	  (let* ((args (cadr (system:%primitive
-			      header-ref
-			      function
-			      system:%function-entry-type-slot)))
-		 (pos (position-if #'(lambda (x)
-				       (and (symbolp x)
-					    (let ((name (symbol-name x)))
-					      (and (>= (length name) 1)
-						   (char= (schar name 0)
-							  #\&)))))
-				   args)))
-	    (if pos
-		(values pos t)
-		(values (length args) nil)))
-	  (values 0 t))))
-  #+(and new-compiler pmax)
-  (defun required-arguments (name)
-    (let* ((function (symbol-function name)))
+    (let* ((function (fdefinition name)))
       (if (eql (kernel:get-type function) vm:function-header-type)
-	  (let* ((args (cadr (kernel:%function-header-type function)))
-		 (pos (position-if #'(lambda (x)
-				       (and (symbolp x)
-					    (let ((name (symbol-name x)))
-					      (and (>= (length name) 1)
-						   (char= (schar name 0)
-							  #\&)))))
-				   args)))
-	    (if pos
-		(values pos t)
-		(values (length args) nil)))
+	  (let ((type (kernel:%function-header-type function)))
+	    (if type
+		(let* ((args (cadr type))
+		       (pos (position-if
+			     #'(lambda (x)
+				 (and (symbolp x)
+				      (let ((name (symbol-name x)))
+					(and (>= (length name) 1)
+					     (char= (schar name 0) #\&)))))
+			     args)))
+		  (if pos
+		      (values pos t)
+		      (values (length args) nil)))
+		(values 0 t)))
 	  (values 0 t)))))
 
 #-cmu
@@ -176,10 +158,10 @@
 (defvar *profile-info* (make-hash-table :test #'equal))
 (defstruct profile-info
   (name nil)
-  (old-definition nil :type function)
-  (new-definition nil :type function)
-  (read-time nil :type function)
-  (reset-time nil :type function))
+  (old-definition (error "Required keyword arg not supplied.") :type function)
+  (new-definition (error "Required keyword arg not supplied.") :type function)
+  (read-time (error "Required keyword arg not supplied.") :type function)
+  (reset-time (error "Required keyword arg not supplied.") :type function))
 
 ;;; PROFILE-INFO-OR-LOSE  --  Internal
 ;;;
@@ -428,6 +410,8 @@
 
 
 (defun %report-times (names)
+  (unless (boundp '*call-overhead*)
+    (compute-time-overhead))
   (let ((info ())
 	(no-call ()))
     (dolist (name names)
@@ -541,4 +525,7 @@
 		       (float timer-overhead-iterations))))))
       (unprofile compute-time-overhead-aux))))
 
-(compute-time-overhead)
+#+cmu
+(pushnew #'(lambda ()
+	     (makunbound '*call-overhead*))
+	 ext:*before-save-initializations*)
