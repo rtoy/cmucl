@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.55 2003/04/16 13:07:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.56 2003/04/17 21:19:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2234,7 +2234,7 @@
 
 (deftype signed-byte (&optional s)
   (cond ((eq s '*) 'integer)
-	((and (integerp s) (> s 1))
+	((and (integerp s) (> s 0))
 	 (let ((bound (ash 1 (1- s))))
 	   `(integer ,(- bound) ,(1- bound))))
 	(t
