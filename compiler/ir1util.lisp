@@ -374,6 +374,14 @@
 ;;;
 ;;;    Makes Node the Last node in its block, splitting the block if necessary.
 ;;;
+;;;    If the mess-up for one of Block's End-Cleanups is moved into the new
+;;; block, then we must adjust the end/start cleanups of the new and old blocks
+;;; to reflect the movement of the mess-up.  If any of the old end cleanups
+;;; were in the new block, then we scan up from that cleanup trying to find one
+;;; that isn't.  When we do, that becomes the new start/end cleanup of the
+;;; old/new block.  We set the start/end as a pair, since we don't want anyone
+;;; to think that a cleanup is necessary.
+;;;
 (defun node-ends-block (node)
   (declare (type node node))
   (let* ((block (node-block node))
@@ -406,6 +414,22 @@
 	     (when (eq (continuation-kind last-cont) :inside-block)
 	       (setf (continuation-block last-cont) new-block)))
 	  (setf (continuation-block cont) new-block))
+
+	(do ((cup (find-enclosing-cleanup cleanup)
+		  (find-enclosing-cleanup (cleanup-enclosing cup))))
+	    ((null cup))
+	  (when (eq (continuation-block (cleanup-start cup)) new-block)
+	    (do ((cup (find-enclosing-cleanup (cleanup-enclosing cup))
+		      (find-enclosing-cleanup (cleanup-enclosing cup))))
+		((null cup)
+		 (let ((start-cleanup (block-start-cleanup block)))
+		   (setf (block-end-cleanup block) start-cleanup)
+		   (setf (block-start-cleanup new-block) start-cleanup)))
+	      (unless (eq (continuation-block (cleanup-start cup)) new-block)
+		(setf (block-end-cleanup block) cup)
+		(setf (block-start-cleanup new-block) cup)
+		(return)))
+	    (return)))
 
 	(setf (block-type-asserted block) t)
 	(setf (block-test-modified block) t))))
