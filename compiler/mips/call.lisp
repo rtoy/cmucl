@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.42 1992/03/11 21:26:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.43 1992/04/01 19:56:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.42 1992/03/11 21:26:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.43 1992/04/01 19:56:11 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -304,10 +304,14 @@ default-value-8
 	(inst entry-point)
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
-	    (defaulting-done (gen-label)))
+	    (defaulting-done (gen-label))
+	    (default-stack-vals (gen-label)))
 	;; Branch off to the MV case.
 	(inst b regs-defaulted)
-	(inst nop)
+	;; If there are no stack results, clear the stack now.
+	(if (> nvals register-arg-count)
+	    (inst addu temp nargs-tn (fixnum (- register-arg-count)))
+	    (move csp-tn old-fp-tn))
 	(inst entry-point)
 	
 	;; Do the single value calse.
@@ -316,14 +320,14 @@ default-value-8
 	    ((= i (min nvals register-arg-count)))
 	  (move (tn-ref-tn val) null-tn))
 	(when (> nvals register-arg-count)
-	  (inst li nargs-tn (fixnum 1))
+	  (inst b default-stack-vals)
 	  (move old-fp-tn csp-tn))
 	
 	(emit-label regs-defaulted)
-	(inst compute-code-from-lra code-tn code-tn lra-label temp)
 	
 	(when (> nvals register-arg-count)
-	  (inst addu temp nargs-tn (fixnum (- register-arg-count)))
+	  ;; If there are stack results, we have to default them
+	  ;; and clear the stack.
 	  (collect ((defaults))
 	    (do ((i register-arg-count (1+ i))
 		 (val (do ((i 0 (1+ i))
@@ -345,17 +349,20 @@ default-value-8
 	    (move csp-tn old-fp-tn)
 	    
 	    (let ((defaults (defaults)))
-	      (when defaults
-		(assemble (*elsewhere*)
-		  (trace-table-entry trace-table-call-site)
-		  (do ((remaining defaults (cdr remaining)))
-		      ((null remaining))
-		    (let ((def (car remaining)))
-		      (emit-label (car def))
-		      (when (null (cdr remaining))
-			(inst b defaulting-done))
-		      (store-stack-tn (cdr def) null-tn)))
-		  (trace-table-entry trace-table-normal))))))))
+	      (assert defaults)
+	      (assemble (*elsewhere*)
+		(trace-table-entry trace-table-call-site)
+		(emit-label default-stack-vals)
+		(do ((remaining defaults (cdr remaining)))
+		    ((null remaining))
+		  (let ((def (car remaining)))
+		    (emit-label (car def))
+		    (when (null (cdr remaining))
+		      (inst b defaulting-done))
+		    (store-stack-tn (cdr def) null-tn)))
+		(trace-table-entry trace-table-normal)))))
+
+	(inst compute-code-from-lra code-tn code-tn lra-label temp)))
   (undefined-value))
 
 
