@@ -130,7 +130,7 @@ struct sigcontext *scp;
 
     lra = codeptr->constants[REAL_LRA_SLOT];
     if (codeptr->constants[KNOWN_RETURN_P_SLOT] == NIL)
-	scp->sc_regs[LRA] = lra;
+	scp->sc_regs[CODE] = lra;
     scp->sc_pc = lra - type_OtherPointer+sizeof(lispobj);
 }
 
