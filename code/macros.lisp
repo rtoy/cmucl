@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.30 1992/03/31 05:26:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.31 1992/04/02 02:01:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -951,20 +951,16 @@
 		       (get-setf-method place env)
     (let ((newval (gensym))
 	  (ptemp (gensym))
-	  (def-temp (gensym)))
-      (values `(,@temps ,(car stores) ,ptemp ,@(if default `(,def-temp)))
-	      `(,@values ,get ,prop ,@(if default `(,default)))
+	  (def-temp (if default (gensym))))
+      (values `(,@temps ,ptemp ,@(if default `(,def-temp)))
+	      `(,@values ,prop ,@(if default `(,default)))
 	      `(,newval)
-	      `(progn (setq ,(car stores)
-			    (%putf ,(car stores) ,ptemp ,newval))
-		      ,set
-		      ,newval)
-	      `(getf ,(car stores) ,ptemp ,@(if default `(,def-temp)))))))
+	      `(let ((,(car stores) (%putf ,get ,ptemp ,newval)))
+		 ,set
+		 ,newval)
+	      `(getf ,get ,ptemp ,@(if default `(,def-temp)))))))
 
 (define-setf-method get (symbol prop &optional default)
-  "Get turns into %put. Don't put in the default unless it really is supplied
-   and non-nil, so that we can transform into the get instruction whenever
-   possible."
   (let ((symbol-temp (gensym))
 	(prop-temp (gensym))
 	(def-temp (gensym))
