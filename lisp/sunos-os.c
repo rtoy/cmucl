@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.4 1997/02/19 05:41:22 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.5 1997/06/18 08:57:23 dtc Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -986,11 +986,4 @@ sigsetmask(int mask)
 
 }
 
-/* This is a hack to get tzname defined in the executable. Putting
-   tzname in undefineds.h doesn't do it on Solaris systems. */
-char*
-hack_to_get_tzname()
-{
-    return tzname[0];
-}
 #endif /* SOLARIS */
