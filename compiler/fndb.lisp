@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.55 1993/06/23 19:37:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.56 1993/07/21 12:40:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1126,7 +1126,7 @@
 ;;; functions, although the var remains the Slot-Accessor describing the actual
 ;;; function called.
 ;;;
-(defknown %slot-accessor (t) t (foldable flushable))
+(defknown %slot-accessor (t) t (flushable))
 (defknown %slot-setter (t t) t (unsafe))
 
 
