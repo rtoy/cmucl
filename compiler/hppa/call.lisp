@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.3 1992/10/16 16:35:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.4 1993/01/15 01:31:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,7 +175,7 @@
     (emit-label start-lab)
     ;; Allocate function header.
     (inst function-header-word)
-    (dotimes (i (1- function-header-code-offset))
+    (dotimes (i (1- function-code-offset))
       (inst word 0))
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
@@ -823,7 +823,7 @@ default-value-8
 		   (loadw function lexenv closure-function-slot
 			  function-pointer-type)
 		   (do-next-filler)
-		   (inst addi (- (ash function-header-code-offset word-shift)
+		   (inst addi (- (ash function-code-offset word-shift)
 				 function-pointer-type)
 			 function lip)))
 	   (loop

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/macros.lisp,v 1.2 1992/10/13 13:18:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/macros.lisp,v 1.3 1993/01/15 01:31:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -69,8 +69,7 @@
   "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
      (inst addi
-	   (- (ash function-header-code-offset word-shift)
-	      function-pointer-type)
+	   (- (ash function-code-offset word-shift) function-pointer-type)
 	   ,function
 	   lip-tn)
      (inst bv lip-tn)
