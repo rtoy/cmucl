@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.26 1991/05/05 02:21:17 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.27 1991/05/24 04:59:04 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -508,7 +508,7 @@ static sigtrap_handler(signal, code, context)
      int signal, code;
      struct sigcontext *context;
 {
-    switch ((*(unsigned long *)context->sc_iar) & 0xffff) {
+    switch (*((unsigned short *)context->sc_iar+1)) {
       case trap_PendingInterrupt:
 	handle_pending_interrupt(context);
 	break;
