@@ -146,6 +146,26 @@
 	      (truncate (cddr info) (cadr info)))))
   (values))
 
+(defun save-vop-counts (filename)
+  (with-open-file (stream filename :direction :output :if-exists :supersede)
+    (maphash #'(lambda (key value)
+		 (print (cons key value) stream))
+	     *vop-counts*)))
+
+(defun augment-vop-counts (filename)
+  (with-open-file (stream filename)
+    (loop
+      (let ((stuff (read stream nil :eof)))
+	(when (eq stuff :eof)
+	  (return))
+	(multiple-value-bind (entry found) (gethash (car stuff) *vop-counts*)
+	  (cond (found
+		 (incf (car entry) (cadr stuff))
+		 (incf (cdr entry) (cddr stuff)))
+		(t
+		 (setf (gethash (car stuff) *vop-counts*)
+		       (cdr stuff)))))))))
+
 
 ;;;; Component compilation:
 
