@@ -94,7 +94,7 @@
 		   (:assembly-routine "Undefined assembler routine: ~S")
 		   (:foreign "Unknown foreign symbol: ~S"))
 		 name))
-	(lisp::fixup-code-object code offset value kind)))))
+	(vm:fixup-code-object code offset value kind)))))
 
 
 ;;; REFERENCE-CORE-FUNCTION  --  Internal
