@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.39 1991/04/20 14:12:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.40 1991/05/06 14:58:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -892,7 +892,8 @@
 ;;; PROCESS-PROCLAIM  --  Internal
 ;;;
 ;;;    If a special block compilation delimiter, then start or end the block as
-;;; appropriate.  Otherwise, just convert-and-maybe-compile the form.
+;;; appropriate.  Otherwise, just convert-and-maybe-compile the form.  If
+;;; *BLOCK-COMPILE* is NIL, then we ignore block declarations.
 ;;;
 (defun process-proclaim (form path object)
   (if (and (eql (length form) 2) (constantp (cadr form)))
@@ -900,10 +901,12 @@
 	(if (consp spec)
 	    (case (first spec)
 	      (start-block
-	       (finish-block-compilation object)
-	       (setq *block-compile* t)
-	       (setq *entry-points* (rest spec)))
-	      (end-block (finish-block-compilation object))
+	       (when *block-compile*
+		 (finish-block-compilation object)
+		 (setq *block-compile* t)
+		 (setq *entry-points* (rest spec))))
+	      (end-block
+	       (finish-block-compilation object))
 	      (t
 	       (convert-and-maybe-compile form path object)))
 	    (convert-and-maybe-compile form path object)))
@@ -1106,11 +1109,12 @@
 ;;;
 (defun finish-block-compilation (object)
   (declare (type object object))
-  (when *top-level-lambdas*
-    (compile-top-level (nreverse *top-level-lambdas*) object)
-    (setq *top-level-lambdas* ()))
-  (setq *block-compile* :specified)
-  (setq *entry-points* nil))
+  (when *block-compile*
+    (when *top-level-lambdas*
+      (compile-top-level (nreverse *top-level-lambdas*) object)
+      (setq *top-level-lambdas* ()))
+    (setq *block-compile* :specified)
+    (setq *entry-points* nil)))
 
 
 ;;; Sub-Compile-File  --  Internal
