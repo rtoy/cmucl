@@ -7,15 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.74 1992/02/29 03:08:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.75 1992/03/07 17:47:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.74 1992/02/29 03:08:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.75 1992/03/07 17:47:27 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
-;;;
-;;; Machine generated.  Don't edit it unless you know what you are doing.
 ;;;
 
 (in-package "LISP")
@@ -1617,4 +1615,6 @@
              "VALUES-TYPE-KEYWORDS" "VALUES-TYPE-OPTIONAL" "VALUES-TYPE-P"
              "VALUES-TYPE-REQUIRED" "VALUES-TYPE-REST" "VALUES-TYPE-UNION"
              "VALUES-TYPES" "VALUES-TYPES-INTERSECT" "VOID"
-             "WITH-CIRCULARITY-DETECTION" "WRONG-NUMBER-OF-INDICES-ERROR"))
+             "WITH-CIRCULARITY-DETECTION" "WRONG-NUMBER-OF-INDICES-ERROR"
+	     "FDEFN" "MAKE-FDEFN" "FDEFN-P" "FDEFN-NAME" "FDEFN-FUNCTION"
+	     "FDEFN-MAKUNBOUND"))
