@@ -2,7 +2,8 @@
 (in-package "USER")
 
 (when (find-package "PCL")
-  (rename-package "PCL" "OLD-PCL"))
+  (rename-package "PCL" "OLD-PCL")
+  (make-package "PCL"))
 (when (find-package  "SLOT-ACCESSOR-NAME")
   (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
 
