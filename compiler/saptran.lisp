@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.15 2003/08/16 11:45:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.16 2003/10/15 13:16:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,15 +71,19 @@
   system-area-pointer (movable))
 
 
-(defknown sap-ref-8 (system-area-pointer fixnum) (unsigned-byte 8)
+(defknown sap-ref-8 (system-area-pointer (signed-byte #-alpha #.vm:word-bits #+alpha 64))
+  (unsigned-byte 8)
   (flushable))
-(defknown %set-sap-ref-8 (system-area-pointer fixnum (unsigned-byte 8))
+(defknown %set-sap-ref-8 (system-area-pointer (signed-byte #-alpha #.vm:word-bits #+alpha 64)
+					      (unsigned-byte 8))
   (unsigned-byte 8)
   ())
 
-(defknown sap-ref-16 (system-area-pointer fixnum) (unsigned-byte 16)
+(defknown sap-ref-16 (system-area-pointer (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63))
+  (unsigned-byte 16)
   (flushable))
-(defknown %set-sap-ref-16 (system-area-pointer fixnum (unsigned-byte 16))
+(defknown %set-sap-ref-16 (system-area-pointer (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63)
+					       (unsigned-byte 16))
   (unsigned-byte 16)
   ())
 
@@ -96,15 +100,19 @@
   ())
 
 
-(defknown signed-sap-ref-8 (system-area-pointer fixnum) (signed-byte 8)
+(defknown signed-sap-ref-8 (system-area-pointer (signed-byte #-alpha #.vm:word-bits #+alpha 64))
+  (signed-byte 8)
   (flushable))
-(defknown %set-signed-sap-ref-8 (system-area-pointer fixnum (signed-byte 8))
+(defknown %set-signed-sap-ref-8 (system-area-pointer (signed-byte #-alpha #.vm:word-bits #+alpha 64)
+						     (signed-byte 8))
   (signed-byte 8)
   ())
 
-(defknown signed-sap-ref-16 (system-area-pointer fixnum) (signed-byte 16)
+(defknown signed-sap-ref-16 (system-area-pointer (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63))
+  (signed-byte 16)
   (flushable))
-(defknown %set-signed-sap-ref-16 (system-area-pointer fixnum (signed-byte 16))
+(defknown %set-signed-sap-ref-16 (system-area-pointer (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63)
+						      (signed-byte 16))
   (signed-byte 16)
   ())
 
@@ -121,9 +129,11 @@
   ())
 
 
-(defknown sap-ref-sap (system-area-pointer fixnum) system-area-pointer
+(defknown sap-ref-sap (system-area-pointer (signed-byte #-alpha #.vm:word-bits #+alpha 64))
+  system-area-pointer
   (flushable))
-(defknown %set-sap-ref-sap (system-area-pointer fixnum system-area-pointer)
+(defknown %set-sap-ref-sap (system-area-pointer (signed-byte #-alpha #.vm:word-bits #+alpha 64)
+						system-area-pointer)
   system-area-pointer
   ())
 

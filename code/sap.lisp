@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.17 1999/09/15 15:14:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.18 2003/10/15 13:16:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,7 +64,7 @@
 (defun sap+ (sap offset)
   "Return a new sap OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (fixnum offset))
+	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (sap+ sap offset))
 
 (defun sap- (sap1 sap2)
@@ -85,13 +85,13 @@
 (defun sap-ref-8 (sap offset)
   "Returns the 8-bit byte at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (fixnum offset))
+	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (sap-ref-8 sap offset))
 
 (defun sap-ref-16 (sap offset)
   "Returns the 16-bit word at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (fixnum offset))
+	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset))
   (sap-ref-16 sap offset))
 
 (defun sap-ref-32 (sap offset)
@@ -109,7 +109,7 @@
 (defun sap-ref-sap (sap offset)
   "Returns the 32-bit system-area-pointer at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (fixnum offset))
+	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (sap-ref-sap sap offset))
 
 (defun sap-ref-single (sap offset)
@@ -134,13 +134,13 @@
 (defun signed-sap-ref-8 (sap offset)
   "Returns the signed 8-bit byte at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (fixnum offset))
+	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (signed-sap-ref-8 sap offset))
 
 (defun signed-sap-ref-16 (sap offset)
   "Returns the signed 16-bit word at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
-	   (fixnum offset))
+	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset))
   (signed-sap-ref-16 sap offset))
 
 (defun signed-sap-ref-32 (sap offset)
@@ -157,13 +157,13 @@
 
 (defun %set-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (fixnum offset)
+	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset)
 	   (type (unsigned-byte 8) new-value))
   (setf (sap-ref-8 sap offset) new-value))
 
 (defun %set-sap-ref-16 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (fixnum offset)
+	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset)
 	   (type (unsigned-byte 16) new-value))
   (setf (sap-ref-16 sap offset) new-value))
 
@@ -181,13 +181,13 @@
 
 (defun %set-signed-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (fixnum offset)
+	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset)
 	   (type (signed-byte 8) new-value))
   (setf (signed-sap-ref-8 sap offset) new-value))
 
 (defun %set-signed-sap-ref-16 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (fixnum offset)
+	   (type (signed-byte #-alpha #.(1- vm:word-bits) #+alpha 63) offset)
 	   (type (signed-byte 16) new-value))
   (setf (signed-sap-ref-16 sap offset) new-value))
 
@@ -205,7 +205,7 @@
 
 (defun %set-sap-ref-sap (sap offset new-value)
   (declare (type system-area-pointer sap new-value)
-	   (fixnum offset))
+	   (type (signed-byte #-alpha #.vm:word-bits #+alpha 64) offset))
   (setf (sap-ref-sap sap offset) new-value))
 
 (defun %set-sap-ref-single (sap offset new-value)
