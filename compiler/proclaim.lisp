@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.19 1991/11/08 15:23:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.20 1991/12/11 16:43:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -397,6 +397,7 @@
       (let ((this-info (info type structure-info type)))
 	(setf (info type kind type) nil)
 	(setf (info type structure-info type) nil)
+	(setf (info type frozen type) nil)
 	(undefine-function-name (dd-copier this-info))
 	(undefine-function-name (dd-predicate this-info))
 	(dolist (slot (dd-slots this-info))
