@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.14 2003/03/23 21:23:41 gerd Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.15 2004/05/18 22:18:03 cwang Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -13,7 +13,6 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/signal.h>
-#include <asm/sigcontext.h>
 #include <string.h> 
  /* #include <dlfcn.h> */
 #include <sys/time.h>
@@ -68,7 +67,7 @@ typedef struct sigcontext_struct sigcontext;
    so there is no need to define the following for Alpha 
    Linux 
 */
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define HANDLER_ARGS int signal, struct sigcontext contextstruct
@@ -88,9 +87,14 @@ typedef struct sigcontext_struct sigcontext;
 #define sv_onstack      sa_mask /* ouch, this one really hurts */
 #endif
 #define uc_sigmask 	oldmask
+#if defined (__x86_64)
+#define sc_pc		rip
+#define sc_sp		rsp
+#else
 #define sc_pc		eip
-#define sc_mask		oldmask 
 #define sc_sp		esp
+#endif
+#define sc_mask		oldmask 
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define sigcontext	sigcontext 
 #else
@@ -98,6 +102,17 @@ typedef struct sigcontext_struct sigcontext;
 #endif
 #define sc_efl		eflags
 
+#ifdef __x86_64
+#define sc_rax rax
+#define sc_rcx rcx
+#define sc_rdx rdx
+#define sc_rbx rbx
+#define sc_rsp rsp
+#define sc_rbp rbp
+#define sc_rsi rsi
+#define sc_rdi rdi
+#define sc_rip rip
+#else
 #define sc_eax eax
 #define sc_ecx ecx
 #define sc_edx edx
@@ -107,6 +122,7 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_esi esi
 #define sc_edi edi
 #define sc_eip eip
+#endif
 
 #endif /* i386 */
 
