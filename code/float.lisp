@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.8 1991/02/08 13:32:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.9 1992/02/07 11:20:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.8 1991/02/08 13:32:47 ram Exp $
 ;;;
 ;;;    This file contains the definitions of float specific number support
 ;;; (other than irrational stuff, which is in irrat.)  There is code in here
@@ -26,7 +24,27 @@
 (export '(least-positive-normalized-short-float
 	  least-positive-normalized-single-float
 	  least-positive-normalized-double-float
-	  least-positive-normalized-long-float))
+	  least-positive-normalized-long-float
+	  least-negative-normalized-short-float
+	  least-negative-normalized-single-float
+	  least-negative-normalized-double-float
+	  least-negative-normalized-long-float
+	  least-positive-single-float
+	  least-positive-short-float
+	  least-negative-single-float
+	  least-negative-short-float
+	  least-positive-double-float
+	  least-positive-long-float
+	  least-negative-double-float
+	  least-negative-long-float
+	  most-positive-single-float
+	  most-positive-short-float
+	  most-negative-single-float
+	  most-negative-short-float
+	  most-positive-double-float
+	  most-positive-long-float
+	  most-negative-double-float
+	  most-negative-long-float))
 
 (in-package "EXTENSIONS")
 (export '(single-float-positive-infinity short-float-positive-infinity
