@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.6 1993/08/30 21:20:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.7 1993/08/31 09:02:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,13 +53,6 @@
 
 ;;; Defvars for these come later, after we have enough stuff defined.
 (proclaim '(special *wild-type* *universal-type* *empty-type*))
-
-
-;;; This condition is signalled whenever we make a UNKNOWN-TYPE so that
-;;; compiler warnings can be emitted as appropriate.
-;;;
-(define-condition parse-unknown-type (condition)
-  ((specifier :reader parse-unknown-type-specifier :initarg :specifier)))
 
 
 ;;;; Cold load hack magic.
