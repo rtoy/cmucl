@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.88 1993/07/22 08:42:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.89 1993/07/22 11:17:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -868,7 +868,9 @@
 	     (res (careful-read stream eof pos language)))
 	(unless (eq res eof)
 	  (let ((form (ecase language
-			(:dylan (dylan::convert-top-level res))
+			(:dylan
+			 (let ((*error-output* *compiler-error-output*))
+			   (dylan::convert-top-level res)))
 			(:lisp res))))
 	    (let* ((forms (file-info-forms file))
 		   (current-idx (+ (fill-pointer forms)
