@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.50 1994/01/06 16:32:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.51 1994/03/23 12:45:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -893,7 +893,7 @@
 
 ;;;; Load TN packing:
 
-(declaim (start-block pack-load-tns))
+(declaim (start-block pack-load-tns load-tn-conflicts-in-sc))
 
 ;;; These variables indicate the last location at which we computed the
 ;;; Live-TNs.  They hold the Block and VOP values that were passed to
