@@ -3,9 +3,11 @@
 (in-package "USER")
 
 #+bootstrap
-(copy-packages '("ASSEM" "MIPS" "C"))
+(copy-packages (cons (c::backend-name c::*target-backend*) '("ASSEM" "C")))
 #+bootstrap
 (export '(assem::nop) "ASSEM")
+
+(defparameter *load-stuff* #+bootstrap t #-bootstrap nil)
 
 ;;; Import so that these types which appear in the globldb are the same...
 #+bootstrap
@@ -18,9 +20,9 @@
 
 (declaim (optimize (speed 2) (space 2) (inhibit-warnings 2)))
 
-(comf "target:compiler/macros" :load t)
-(comf "target:compiler/generic/vm-macs" :load t :proceed t)
-(comf "target:compiler/backend" :load t :proceed t)
+(comf "target:compiler/macros" :load *load-stuff*)
+(comf "target:compiler/generic/vm-macs" :load *load-stuff* :proceed t)
+(comf "target:compiler/backend" :load *load-stuff* :proceed t)
 
 (defvar c::*target-backend* (c::make-backend))
 
@@ -42,7 +44,7 @@
 (comf "target:compiler/node")
 (comf "target:compiler/ctype")
 (comf "target:compiler/vop" :proceed t)
-(comf "target:compiler/vmdef" :load t :proceed t)
+(comf "target:compiler/vmdef" :load *load-stuff* :proceed t)
 
 (comf "target:compiler/assembler" :proceed t) 
 (comf "target:compiler/alloc")
@@ -75,14 +77,14 @@
 
 (comf "target:compiler/debug-dump")
 (comf "target:compiler/generic/utils")
-(comf "target:assembly/assemfile" :load t)
+(comf "target:assembly/assemfile" :load *load-stuff*)
 
 (when (string= (old-c:backend-name old-c:*backend*) "PMAX")
   (comf "target:compiler/mips/mips-insts")
-  (comf "target:compiler/mips/mips-macs" :load t)
+  (comf "target:compiler/mips/mips-macs" :load *load-stuff*)
   (comf "target:compiler/mips/vm")
   (comf "target:compiler/generic/primtype")
-  (comf "target:assembly/mips/support" :load t)
+  (comf "target:assembly/mips/support" :load *load-stuff*)
   (comf "target:compiler/mips/move")
   (comf "target:compiler/mips/sap")
   (comf "target:compiler/mips/system")
@@ -112,7 +114,7 @@
 
 (when (string= (old-c:backend-name old-c:*backend*) "SPARC")
   (comf "target:compiler/sparc/insts")
-  (comf "target:compiler/sparc/macros" :load t)
+  (comf "target:compiler/sparc/macros" :load *load-stuff*)
   (comf "target:compiler/sparc/vm")
   (comf "target:compiler/generic/primtype")
   (comf "target:compiler/sparc/move")
@@ -136,7 +138,7 @@
   (comf "target:compiler/sparc/pred")
   (comf "target:compiler/sparc/type-vops")
 
-  (comf "target:assembly/sparc/support")
+  (comf "target:assembly/sparc/support" :load *load-stuff*)
   (comf "target:assembly/sparc/assem-rtns")
   (comf "target:assembly/sparc/bit-bash")
   (comf "target:assembly/sparc/array")
