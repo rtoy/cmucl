@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.3 1994/03/27 15:19:14 hallgren Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.4 1994/10/25 17:31:52 ram Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -8,6 +8,7 @@
 #include "lisp.h"
 #include "internals.h"
 #include "globals.h"
+#include "os.h"
 #include "interrupt.h"
 #include "lispregs.h"
 
@@ -218,9 +219,9 @@ backtrace(int nframes)
                         string = (struct vector *) object;
                         printf("%s, ", (char *) string->data);
                     } else
-                        printf("(Not simple string???), ");
+                        printf("(Not simple string??\?), ");
                 } else
-                    printf("(Not other pointer???), ");
+                    printf("(Not other pointer??\?), ");
 
 
                 function = header->next;
@@ -237,7 +238,7 @@ backtrace(int nframes)
         if (info.pc)
             printf("PC: 0x%x>\n", info.pc);
         else
-            printf("PC: ???>\n");
+            printf("PC: ??\?>\n");
 
     } while (--nframes > 0 && previous_info(&info));
 }
@@ -248,7 +249,7 @@ void
 backtrace(nframes)
 int nframes;
 {
-    printf("Can't backtrace on the x86.\n");
+    printf("Can't backtrace on this hardware platform.\n");
 }
 
 #endif
