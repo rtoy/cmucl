@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.29 1991/08/19 22:50:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.30 1991/12/14 09:06:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -753,7 +753,8 @@
 ;;;
 (defstruct (vop-info
 	    (:include template)
-	    (:print-function %print-template))
+	    (:print-function %print-template)
+	    (:make-load-form-fun :ignore-it))
   ;;
   ;; Side-effects of this VOP and side-effects that affect the value of this
   ;; VOP.
