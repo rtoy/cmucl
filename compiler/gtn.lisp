@@ -11,10 +11,6 @@
 ;;; that hold the values of lexical variables and determines the calling
 ;;; conventions and passing locations used in function calls.
 ;;;
-;;; ### For now, restrict all passing locations to T so that the special move
-;;; operations for call/return don't have to worry about doing representation
-;;; conversions.
-;;;
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package 'c)
@@ -55,10 +51,11 @@
       (let* ((type (if (lambda-var-indirect var)
 		       *any-primitive-type*
 		       (primitive-type (leaf-type var))))
+	     (temp (make-normal-tn type))
 	     (res (if (or let-p
 			  (policy (lambda-bind fun) (= speed 3)))
-		      (make-normal-tn type)
-		      (make-environment-tn type (lambda-environment fun)))))
+		      temp
+		      (environment-live-tn temp (lambda-environment fun)))))
 	(setf (tn-leaf res) var)
 	(setf (leaf-info var) res))))
   (undefined-value))
@@ -86,8 +83,7 @@
 		      (if (minusp i)
 			  (make-argument-count-location)
 			  (standard-argument-location i))
-		      (make-normal-tn #|(primitive-type (leaf-type var))||#
-				      *any-primitive-type*))))))
+		      (make-normal-tn (primitive-type (leaf-type var))))))))
       
       (dolist (thing (environment-closure env))
 	(let ((ptype (etypecase thing
@@ -100,12 +96,11 @@
       (let ((res 
 	     (make-ir2-environment
 	      :arg-locs (args)  :environment (env)
-	      :old-cont-pass (make-old-cont-passing-location xep-p)
-	      :return-pc-pass (make-return-pc-passing-location xep-p)
-	      :argument-pointer (make-argument-pointer-location xep-p))))
+	      :old-fp-pass (make-old-fp-passing-location xep-p)
+	      :return-pc-pass (make-return-pc-passing-location xep-p))))
 	(setf (environment-info env) res)
-	(setf (ir2-environment-old-cont res)
-	      (make-old-cont-save-location env))
+	(setf (ir2-environment-old-fp res)
+	      (make-old-fp-save-location env))
 	(setf (ir2-environment-return-pc res)
 	      (make-return-pc-save-location env)))))
   
@@ -168,9 +163,7 @@
   (declare (type tail-set tails))
   (multiple-value-bind (types count)
 		       (values-types (tail-set-type tails))
-    (let ((ptypes #|(mapcar #'primitive-type types)|#
-		  (make-list (length types)
-			     :initial-element *any-primitive-type*)))
+    (let ((ptypes (mapcar #'primitive-type types)))
       (if (or (eq count :unknown)
 	      (use-standard-returns tails))
 	  (make-return-info :kind :unknown  :count count  :types ptypes)
@@ -186,7 +179,7 @@
 ;;;    If Env has a Tail-Set, and the Tail-Set doesn't have any Info, then make
 ;;; a Return-Info for it.  If we choose a return convention other than
 ;;; :Unknown, and this environment is for an XEP, then break tail recursion on
-;;; the XEP calls, since we must always use unknown values when returining from
+;;; the XEP calls, since we must always use unknown values when returning from
 ;;; an XEP.
 ;;;
 (defun assign-return-locations (fun)
@@ -206,20 +199,17 @@
 ;;; Assign-IR2-NLX-Info  --  Internal
 ;;;
 ;;;   Make an IR2-NLX-Info structure for each NLX entry point recorded.  We
-;;; make the Save-SP an environment TN and force it to stack so that it can be
-;;; referenced on NLX entry.  The NLX-Entry VOP's :Force-To-Stack Save-P value
-;;; doesn't do this, since the SP is an argument to the VOP, and thus isn't
-;;; live afterwards.
-;;; 
+;;; call a VM supplied function to make the Save-SP restricted on the stack.
+;;; The NLX-Entry VOP's :Force-To-Stack Save-P value doesn't do this, since the
+;;; SP is an argument to the VOP, and thus isn't live afterwards.
+;;;
 (defun assign-ir2-nlx-info (fun)
   (declare (type clambda fun))
   (let ((env (lambda-environment fun)))
     (dolist (nlx (environment-nlx-info env))
-      (let ((sp (make-environment-tn *any-primitive-type* env)))
-	(force-tn-to-stack sp)
-	(setf (nlx-info-info nlx)
-	      (make-ir2-nlx-info
-	       :home (when (eq (cleanup-kind (nlx-info-cleanup nlx)) :entry)
-		       (make-normal-tn *any-primitive-type*))
-	       :save-sp sp)))))
+      (setf (nlx-info-info nlx)
+	    (make-ir2-nlx-info
+	     :home (when (eq (cleanup-kind (nlx-info-cleanup nlx)) :entry)
+		     (make-normal-tn *any-primitive-type*))
+	     :save-sp (make-nlx-sp-tn env)))))
   (undefined-value))
