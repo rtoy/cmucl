@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.4 1990/10/03 09:55:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.5 1990/11/10 18:37:16 wlott Exp $
 ;;;
 ;;; Functions to implement arrays for CMU Common Lisp.
 ;;; Written by Skef Wholey.
@@ -129,17 +129,14 @@
 	  (declare (type (unsigned-byte 8) type)
 		   (type (integer 1 64) bits))
 	  (let* ((length (car dimensions))
-		 (array (%primitive
-			 allocate-vector
+		 (array (allocate-vector
 			 type
 			 length
-			 (the index
-			      (ceiling (* (if (= type
-						 vm:simple-string-type)
-					      (1+ length)
-					      length)
-					  bits)
-				       vm:word-bits)))))
+			 (ceiling (* (if (= type vm:simple-string-type)
+					 (1+ length)
+					 length)
+				     bits)
+				  vm:word-bits))))
 	    (declare (type index length))
 	    (when initial-element-p
 	      (fill array initial-element))
@@ -160,8 +157,7 @@
 			 (data-vector-from-inits
 			  dimensions total-size element-type
 			  initial-contents initial-element initial-element-p)))
-	       (array (%primitive
-		       make-array-header
+	       (array (make-array-header
 		       (cond ((= array-rank 1)
 			      (%complex-vector-type-code element-type))
 			     (simple vm:simple-array-type)
