@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.81 2000/04/02 18:45:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.82 2000/07/06 04:38:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -695,9 +695,7 @@
   (etypecase arg
     (numeric-type
      (cond ((eq (numeric-type-complexp arg) :complex)
-	    (make-numeric-type :class (numeric-type-class arg)
-			       :format (numeric-type-format arg)
-			       :complexp :complex))
+	    (complex-float-type arg))
 	   ((numeric-type-real-p arg)
 	    ;; The argument is real, so let's find the intersection
 	    ;; between the argument and the domain of the function.
@@ -1330,9 +1328,7 @@
   (etypecase arg
     (numeric-type
      (cond ((eq (numeric-type-complexp arg) :complex)
-	    (make-numeric-type :class (numeric-type-class arg)
-			       :format (numeric-type-format arg)
-			       :complexp :complex))
+	    (complex-float-type arg))
 	   ((numeric-type-real-p arg)
 	    (let* ((format (case (numeric-type-class arg)
 			     ((integer rational) 'single-float)
@@ -1405,8 +1401,7 @@
 (defoptimizer (cis derive-type) ((num))
   (one-arg-derive-type num
      #'(lambda (arg)
-	 (c::specifier-type
-	  `(complex ,(or (numeric-type-format arg) 'float))))
+	 (specifier-type `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
 ) ; end progn
