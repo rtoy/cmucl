@@ -16,13 +16,6 @@
 
 (export '(int-array int-array-ref))
 
-(export '(sigcontext-onstack sigcontext-mask sigcontext-pc sigcontext-regs
-	  sigcontext-mdlo sigcontext-mdhi sigcontext-ownedfp sigcontext-fpregs
-	  sigcontext-fpc_csr sigcontext-fpc_eir sigcontext-cause
-	  sigcontext-badvaddr sigcontext-badpaddr sigcontext *sigcontext
-	  indirect-*sigcontext))
-
-
 (def-c-type c-string (pointer simple-base-string))
 
 (defrecord Msg
@@ -45,24 +38,7 @@
   (minuteswest (signed-byte 32) (long-words 1))
   (dsttime (signed-byte 32) (long-words 1)))
 
-#+new-compiler
 (def-c-array int-array unsigned-long 32)
-
-#+new-compiler
-(def-c-record sigcontext
-  (onstack unsigned-long)
-  (mask unsigned-long)
-  (pc system-area-pointer)
-  (regs int-array)
-  (mdlo unsigned-long)
-  (mdhi unsigned-long)
-  (ownedfp unsigned-long)
-  (fpregs int-array)
-  (fpc_csr unsigned-long)
-  (fpc_eir unsigned-long)
-  (cause unsigned-long)
-  (badvaddr system-area-pointer)
-  (badpaddr system-area-pointer))
 
 (eval-when (compile load eval)
 
@@ -85,17 +61,12 @@
 ); eval-when (compile load eval)
 
 
-#-new-compiler
-(eval-when (compile)
-  (setq lisp::*bootstrap-defmacro* t))
-
 (defmacro with-trap-arg-block (type var &body forms)
   `(with-stack-alien (,var ,type (record-size ',type))
      ,@forms))
 
 ;;; SIGMASK -- Public
 ;;;
-#-new-compiler
 (defmacro sigmask (&rest signals)
   "Returns a mask given a set of signals."
   (apply #'logior
@@ -103,6 +74,3 @@
 		     (ash 1 (1- (unix-signal-number signal))))
 		 signals)))
 
-#-new-compiler
-(eval-when (compile)
-  (setq lisp::*bootstrap-defmacro* nil))
