@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.31 1993/03/13 16:53:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.32 1993/03/14 17:19:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,7 +118,6 @@
 ;;; than type-of.  In particular, speed is more important than precision, and
 ;;; it is not permitted to return member types.
 ;;; 
-#-reload
 (defun type-of (object)
   "Return the type of OBJECT."
   (if (typep object '(or function array))
