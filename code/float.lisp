@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.19 1999/11/11 14:46:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.20 1999/11/19 15:12:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1102,11 +1102,12 @@ rounding modes & do ieee round-to-integer.
 		   (den 1 (+ (* a den) oden))
 		   (onum 1 num)
 		   (oden 0 den))
-		  ((and (not (zerop den))
-			(not (> (abs (/ (- x (/ (float num x)
-						(float den x)))
-					x))
-				eps)))
+		  ((or (= xx (float a x))
+		       (and (not (zerop den))
+			    (not (> (abs (/ (- x (/ (float num x)
+						    (float den x)))
+					    x))
+                                    eps))))
 		   (integer-/-integer num den))
 		(declare ((dispatch-type x) xx)))))))
     ((rational) x)))
