@@ -30,8 +30,8 @@
   (:args (x))
   (:results (y))
   (:info name)
-  (:node-var node)
+  (:vop-var vop)
   (:generator 0
     (unassemble
-      (funcall (symbol-function name) node x y))))
+      (funcall (symbol-function name) vop x y))))
 
