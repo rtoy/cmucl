@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.28 2000/12/05 03:06:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.29 2001/01/03 08:45:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -223,10 +223,13 @@
 ;; Currently only %icc and %xcc are used of the four possible values
 
 (defconstant integer-condition-registers
-  '(:icc :invalid-1 :xcc :invalid-2))
+  '(:icc :reserved :xcc :reserved))
 
 (defconstant integer-cond-reg-name-vec
   (coerce integer-condition-registers 'vector))
+
+(deftype integer-condition-register ()
+  `(member ,@(remove :reserved integer-condition-registers)))
 
 (defparameter integer-condition-reg-symbols
   (map 'vector
@@ -557,6 +560,20 @@
   (rcond :field (byte 3 10) :type 'register-condition)
   (immed :field (byte 10 0) :sign-extend t))
 
+(defconstant trap-printer
+  `(:name rd :tab cc ", " immed))
+
+(disassem:define-instruction-format
+    (format-4-trap 32 :default-printer trap-printer)
+  (op    :field (byte 2 30))
+  (rd    :field (byte 5 25) :type 'reg)
+  (op3   :field (byte 6 19))
+  (rs1   :field (byte 5 14) :type 'reg)
+  (i     :field (byte 1 13) :value 1)
+  (cc    :field (byte 2 11) :type 'integer-condition-register)
+  (immed :field (byte 11 0) :sign-extend t))	; usually sign extended
+
+
 (defconstant cond-fp-move-integer-printer
   `(:name opf1 :tab rs1 ", " rs2 ", " rd))
 
@@ -627,6 +644,10 @@
   (byte 2 30) (byte 5 25) (byte 6 19) (byte 5 14) (byte 1 13) (byte 3 10)
   (byte 10 0))
 
+(define-emitter emit-format-4-trap 32
+  (byte 2 30) (byte 5 25) (byte 6 19) (byte 5 14) (byte 1 13) (byte 2 11)
+  (byte 11 0))
+  
 
 ;;;; Most of the format-3-instructions.
 
@@ -1063,6 +1084,7 @@
 
 #+sparc-v9
 (defun emit-relative-branch-integer (segment a op2 cond-or-target target &optional (cc :icc) (pred :pt))
+  (declare (type integer-condition-register cc))
   (emit-back-patch segment 4
     #'(lambda (segment posn)
 	(unless target
@@ -1080,7 +1102,7 @@
 	    offset)))))
 
 #+sparc-v9
-(defun emit-relative-branch-fp (segment a op2 cond-or-target target &optional (cc :icc) (pred :pt))
+(defun emit-relative-branch-fp (segment a op2 cond-or-target target &optional (cc :fcc0) (pred :pt))
   (emit-back-patch segment 4
     #'(lambda (segment posn)
 	(unless target
@@ -1114,7 +1136,7 @@
    (emit-relative-branch segment 0 #b010 cond-or-target target)))
 
 #+sparc-v9
-(define-instruction b (segment cond-or-target &optional target cc pred)
+(define-instruction b (segment cond-or-target &optional target pred cc)
   (:declare (type (or label branch-condition) cond-or-target)
 	    (type (or label null) target))
   (:printer format-2-branch-pred ((op #b00) (op2 #b001))
@@ -1140,7 +1162,7 @@
    (emit-relative-branch segment 1 #b010 cond-or-target target)))
 
 #+sparc-v9
-(define-instruction ba (segment cond-or-target &optional target cc pred)
+(define-instruction ba (segment cond-or-target &optional target pred cc)
   (:declare (type (or label branch-condition) cond-or-target)
 	    (type (or label null) target))
   (:printer format-2-branch ((op #b00) (op2 #b001) (a 1))
@@ -1154,10 +1176,11 @@
 
 ;; This doesn't cover all of the possible formats for the trap
 ;; instruction.  We really only want a trap with a immediate trap
-;; value.  Also, the Sparc Compliance Definition 2.4.1 says only trap
-;; numbers 16-31 are allowed for user code.  All other trap numbers
-;; have other uses.  The restriction on target will prevent us from
-;; using bad trap numbers by mistake.
+;; value and with RS1 = register 0.  Also, the Sparc Compliance
+;; Definition 2.4.1 says only trap numbers 16-31 are allowed for user
+;; code.  All other trap numbers have other uses.  The restriction on
+;; target will prevent us from using bad trap numbers by mistake.
+#-sparc-v9
 (define-instruction t (segment condition target)
   (:declare (type branch-condition condition)
 	    (type (integer 16 31) target))
@@ -1171,6 +1194,26 @@
   (:delay 0)
   (:emitter (emit-format-3-immed segment #b10 (branch-condition condition)
 				 #b111010 0 1 target)))
+
+#+sparc-v9
+(define-instruction t (segment condition target &optional (cc #-sparc-64 :icc #+sparc-64 :xcc))
+  (:declare (type branch-condition condition)
+	    (type (integer 16 31) target)
+	    (type integer-condition-register cc))
+  (:printer format-4-trap ((op #b10)
+                            (rd nil :type 'branch-condition)
+                            (op3 #b111010)
+                            (rs1 0))
+            trap-printer)
+  (:attributes branch)
+  (:dependencies (reads :psr))
+  (:delay 0)
+  (:emitter (emit-format-4-trap segment
+				#b10
+				(branch-condition condition)
+				#b111010 0 1
+				(integer-condition cc)
+				target)))
 
 ;; Same as for the branch instructions.  On the Sparc V9, we will use
 ;; the FP branch with prediction instructions instead.
