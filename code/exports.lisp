@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.24 1990/05/18 01:09:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.25 1990/05/18 22:34:46 ch Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -494,7 +494,8 @@
 	  vector-data-offset vector-length-slot vector-normal-subtype
 	  vector-structure-subtype vector-valid-hashing-subtype
 	  vector-must-rehash-subtype vm-version word-bits word-bytes
-	  word-shift))
+	  word-shift weak-pointer-type weak-pointer-size
+	  weak-pointer-value-slot weak-pointer-next-slot))
 
 
 (in-package "C")
