@@ -271,6 +271,7 @@ _save_state:
 	std	%g4, [%sp+SA(MINFRAME)+16]
 	std	%g6, [%sp+SA(MINFRAME)+24]
 	! ### Should also save the FP state.
+	mov	%i1, %o1
 	call	%i0
 	mov	%sp, %o0
 	mov	%o0, %i0
