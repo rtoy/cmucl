@@ -6,12 +6,17 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.66 1993/08/19 21:30:54 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.67 1993/08/19 21:33:19 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file loads the parts of the system that aren't cold loaded and saves
 ;;; the resulting core image.  It writes "lisp.core" in the DEFAULT-DIRECTORY.
+
+;;; Make sure the core will start up in the user package.
+(lisp::assert-user-package)
+
+(in-package "LISP")
 
 ;;; Load the rest of the reader (may be byte-compiled.)
 (load "target:code/sharpm")
@@ -49,12 +54,6 @@
 (setf (ext:search-list "clx:") '("target:clx/"))
 (setf (ext:search-list "pcl:") '("target:pcl/"))
 (setf (ext:search-list "tools:") '("target:tools/"))
-
-;;; Make sure the core will start up in the user package.
-(lisp::assert-user-package)
-
-;;; We want to be in the LISP package for the rest of the file.
-(in-package "LISP")
 
 ;;; Make sure the package structure is correct.
 ;;;
