@@ -196,6 +196,11 @@
 		 :description spec
 		 :size size
 		 :alignment (find-alignment size)))))
+	   (pointer
+	    (make-primitive-type
+	     :description spec
+	     :size vm:word-bits
+	     :alignment vm:word-bits))
 	   (alien
 	    (let ((size (third spec)))
 	      (unless size
@@ -598,7 +603,9 @@
 	       (setf (routine-info-arg-size info)
 		     (+ offset size))
 	       (push `(defoperator (,(arg-info-buffer arg)
-				    ,(c-type-description (arg-info-type arg)))
+				    ,(c-type-description
+				      (pointer-type-to
+				       (arg-info-type arg))))
 				   ((foo ,(routine-info-stack-record info)))
 			`(alien-index (alien-value ,foo) ,,offset ,,size))
 		     top-level-forms)
@@ -626,10 +633,14 @@
 				 ,,(arg-info-offset arg)
 				 ,,size))
 		top-level-forms))
-	(push `(setf (alien-access (,(arg-info-accessor arg)
-				    (alien-value stack)))
-		     ,(arg-info-passing-form arg))
-	      arg-set-forms))
+	(push
+	 `(setf (alien-access (,(arg-info-accessor arg)
+			       (alien-value stack))
+			      ,@(when (or (not (eq (arg-info-mode arg) :in))
+					  (pointer-type-p (arg-info-type arg)))
+				  '('system-area-pointer)))
+		,(arg-info-passing-form arg))
+	 arg-set-forms))
 
       (when (member (arg-info-mode arg) '(:out :in-out))
 	(push `(alien-access (,(arg-info-buffer arg) stack))
@@ -807,16 +818,16 @@
 	   (c-size (c-type-size c-info)))
       `(progn
 	 (defparameter ,symbol
-	   (make-alien ',type ,size
+	   (make-alien ',c-type ,c-size
 		       (%primitive c::foreign-symbol-address ,name)))
 	 (eval-when ,*alien-eval-when*
-	   (setf (info variable alien-value ',name)
+	   (setf (info variable alien-value ',symbol)
 		 (lisp::make-ct-a-val
-		  :type ',type
-		  :size ,size
+		  :type ',c-type
+		  :size ,c-size
 		  :offset 0
-		  :sap '(%primitive c::foreign-symbol-addres ,name)
-		  :alien ',name)))))))
+		  :sap '(%primitive c::foreign-symbol-address ,name)
+		  :alien ',symbol)))))))
 
 #|
 ;;; Def-C-Procedure defines data structures etc. so that C can be passed
