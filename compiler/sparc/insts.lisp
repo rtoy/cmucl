@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.13 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.14 1997/04/23 02:24:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -697,6 +697,11 @@
 		      (fp-reg-tn-encoding src1 odd) opf
 		      (fp-reg-tn-encoding src2 odd)))
 
+(defun emit-fp-inst-no-dst (segment opf op3 src1 src2 &optional odd)
+  (emit-format-3-fpop segment #b10 0 op3
+		      (fp-reg-tn-encoding src1 odd) opf
+		      (fp-reg-tn-encoding src2 odd)))
+
 (eval-when (compile eval)
 
 (defmacro define-unary-fp-inst (name opf &key reads odd)
@@ -729,6 +734,24 @@
 	   `((:delay ,delay))
 	   '((:delay 0)))
      (:emitter (emit-fp-inst segment ,opf ,op3 dst src1 src2))))
+
+(defmacro define-binary-fp-inst-no-dst (name opf
+					     &key (op3 #b110100) reads writes
+					     delay)
+  `(define-instruction ,name (segment src1 src2)
+     (:declare (type tn src1 src2))
+     (:printer format-3-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
+     (:dependencies
+      ,@(when reads
+	  `((reads ,reads)))
+      (reads src1)
+      (reads src2)
+      ,@(when writes
+	  `((writes ,writes))))
+     ,@(if delay
+	   `((:delay ,delay))
+	   '((:delay 0)))
+     (:emitter (emit-fp-inst-no-dst segment ,opf ,op3 src1 src2))))
   
 ); eval-when (compile eval)
 
@@ -782,12 +805,18 @@
 (define-binary-fp-inst fdivd #b001001110)
 (define-binary-fp-inst fdivx #b001001111)
 
-(define-binary-fp-inst fcmps #b001010001 :op3 #b110101 :writes :fsr :delay 1)
-(define-binary-fp-inst fcmpd #b001010010 :op3 #b110101 :writes :fsr :delay 1)
-(define-binary-fp-inst fcmpx #b001010011 :op3 #b110101 :writes :fsr :delay 1)
-(define-binary-fp-inst fcmpes #b001010101 :op3 #b110101 :writes :fsr :delay 1)
-(define-binary-fp-inst fcmped #b001010110 :op3 #b110101 :writes :fsr :delay 1)
-(define-binary-fp-inst fcmpex #b001010111 :op3 #b110101 :writes :fsr :delay 1)
+(define-binary-fp-inst-no-dst fcmps #b001010001 :op3 #b110101 :writes :fsr
+			      :delay 1)
+(define-binary-fp-inst-no-dst fcmpd #b001010010 :op3 #b110101 :writes :fsr
+			      :delay 1)
+(define-binary-fp-inst-no-dst fcmpx #b001010011 :op3 #b110101 :writes :fsr
+			      :delay 1)
+(define-binary-fp-inst-no-dst fcmpes #b001010101 :op3 #b110101 :writes :fsr
+			      :delay 1)
+(define-binary-fp-inst-no-dst fcmped #b001010110 :op3 #b110101 :writes :fsr
+			      :delay 1)
+(define-binary-fp-inst-no-dst fcmpex #b001010111 :op3 #b110101 :writes :fsr
+			      :delay 1)
 
 
 
