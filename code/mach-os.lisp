@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: Lisp; Log: code.log -*-
+;;; -*- Package: SYSTEM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.4 1992/02/15 12:47:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.5 1992/02/19 16:28:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,7 +51,7 @@
     (multiple-value-bind (gr ps fc ac ic wc zf ra in ot)
 			 (mach:vm_statistics *task-self*)
       (declare (ignore ps fc ac ic wc zf ra))
-      (gr-error 'mach:vm_statistics gr)
+      (mach:gr-error 'mach:vm_statistics gr)
       
       (values utime stime (+ in ot)))))
 
