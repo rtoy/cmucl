@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.136 1998/01/11 17:36:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.137 1998/01/20 19:03:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1633,7 +1633,8 @@
 	   "ATOMIC-PUSH" "CURRENT-PROCESS" "DESTROY-PROCESS" "DISABLE-PROCESS"
 	   "ENABLE-PROCESS" "INIT-STACK-GROUPS" "LOCK" "MAKE-STACK-GROUP"
 	   "MAKE-LOCK" "MAKE-PROCESS" "PROCESS-ACTIVE-P" "PROCESS-ALIVE-P"
-	   "PROCESS-INTERRUPT" "PROCESS-NAME" "PROCESS-PRESET"
+	   "PROCESS-IDLE-TIME" "PROCESS-INTERRUPT" "PROCESS-NAME"
+	   "PROCESS-PRESET" "PROCESS-REAL-TIME" "PROCESS-RUN-TIME"
 	   "PROCESS-STATE" "PROCESS-WAIT-UNTIL-FD-USABLE"
 	   "PROCESS-WAIT" "PROCESS-WAIT-WITH-TIMEOUT" 
 	   "PROCESS-WHOSTATE" "PROCESS-YIELD" "PROCESSP" "RESTART-PROCESS" 
