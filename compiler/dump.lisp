@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.36 1991/12/21 23:07:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.37 1992/03/11 21:20:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.36 1991/12/21 23:07:24 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.37 1992/03/11 21:20:35 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -461,7 +461,13 @@
 		    (patches (cons info i))
 		    (dump-fop 'lisp::fop-misc-trap file)))))
 	       (:load-time-value
-		(dump-push (cdr entry) file))))
+		(dump-push (cdr entry) file))
+	       (:fdefinition
+		(dump-fop 'lisp::fop-normal-load file)
+		(let ((*cold-load-dump* t))
+		  (dump-object (cdr entry) file))
+		(dump-fop 'lisp::fop-maybe-cold-load file)
+		(dump-fop 'lisp::fop-fdefinition file))))
 	    (null
 	     (dump-fop 'lisp::fop-misc-trap file)))))
 
@@ -572,8 +578,11 @@
     (dump-fop 'lisp::fop-function-entry file)
     (dump-unsigned-32 (label-position (entry-info-offset entry)) file)
     (let ((handle (dump-pop file)))
-      (when (and name (symbolp name))
-	(dump-object name file)
+      (when (and name (or (symbolp name) (listp name)))
+	(dump-fop 'lisp::fop-normal-load file)
+	(let ((*cold-load-dump* t))
+	  (dump-object name file))
+	(dump-fop 'lisp::fop-maybe-cold-load file)
 	(dump-push handle file)
 	(dump-fop 'lisp::fop-fset file))
       handle)))
