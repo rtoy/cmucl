@@ -41,8 +41,8 @@ FILES = *.tex
 %.gz : %
 	gzip --best $<
 
-.INTERMEDIATE: cmucl--user-letter.tex
-cmucl-user-letter.tex: cmucl-user.tex
+.INTERMEDIATE: cmu-user-letter.tex
+cmu-user-letter.tex: cmu-user.tex
 	cp $< $@
 	perl -pi -e 's/documentclass\[a4paper\]/documentclass\[letter\]/' $@
 
@@ -59,7 +59,7 @@ clean:
 
 
 index:
-	makeindex cmucl-user.tdx -o cmucl-user.tnd
-	makeindex cmucl-user.vdx -o cmucl-user.vnd
-	makeindex cmucl-user.fdx -o cmucl-user.fnd
-	makeindex cmucl-user.cdx -o cmucl-user.cnd
+	makeindex cmu-user.tdx -o cmu-user.tnd
+	makeindex cmu-user.vdx -o cmu-user.vnd
+	makeindex cmu-user.fdx -o cmu-user.fnd
+	makeindex cmu-user.cdx -o cmu-user.cnd
