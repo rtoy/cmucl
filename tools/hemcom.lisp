@@ -43,7 +43,8 @@
 				 :type (c:backend-fasl-file-type c:*backend*)))
   #+(and (not pcl) (not no-pcl-clx))
   (load "target:pcl/pclload")
-  (load "target:clx/clx-library"))
+  (load "target:clx/clx-library")
+  (ext:purify))
   
 (with-compiler-log-file
     ("target:compile-hemlock.log"
