@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.52 2001/02/22 20:28:51 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.53 2001/07/12 20:10:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -802,9 +802,11 @@ See the CMU Common Lisp User's Manual for more information.
 (defun debug-eval-print (exp)
   (setq +++ ++ ++ + + - - exp)
   (let* ((values (multiple-value-list
-		  (if (and (fboundp 'compile) *auto-eval-in-frame*)
-		      (di:eval-in-frame *current-frame* -)
-		      (eval -))))
+		  (cond ((and (fboundp 'cl::commandp)(funcall 'cl::commandp exp))
+			 (funcall 'cl::invoke-command-interactive exp))
+			((and (fboundp 'compile) *auto-eval-in-frame*)
+			 (di:eval-in-frame *current-frame* -))
+			(t (eval -)))))
 	 (*standard-output* *debug-io*))
     (fresh-line)
     (if values (prin1 (car values)))
