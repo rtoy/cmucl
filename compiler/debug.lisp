@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.20 1992/05/18 18:52:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.21 1992/06/09 06:57:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1008,8 +1008,11 @@
      (format stream "optional-dispatch ~S" (leaf-name leaf)))
     (functional
      (assert (eq (functional-kind leaf) :top-level-xep))
-     (format stream "TL-XEP ~S" (entry-info-name (leaf-info leaf))))))
-
+     (format stream "TL-XEP ~S"
+	     (let ((info (leaf-info leaf)))
+	       (etypecase info
+		 (entry-info (entry-info-name info))
+		 (byte-lambda-info :byte-compiled-entry)))))))
 
 ;;; Block-Or-Lose  --  Interface
 ;;;
