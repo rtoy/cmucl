@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/system.lisp,v 1.2 2004/10/09 01:08:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/system.lisp,v 1.3 2004/10/09 02:47:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,16 +274,4 @@
       (move lo temp-lo))))
 
 (defun read-cycle-counter ()
-  (multiple-value-bind (lo hi)
-      (read-time-base)
-    ;; Based on some simple tests by reading the time-base, sleeping
-    ;; for 1 sec, and reading the time-base again, it seems that on an
-    ;; iMac G3/400 MHz, the time base value is incremented once for
-    ;; each clock cycle.  Is that true for other iMacs?  I hope so.
-    ;;
-    ;; So, left shift the time-base value by 4 to figure out how many
-    ;; cycles have elapsed.
-    (let ((overflow (ldb (byte 4 28) lo)))
-      (values (ldb (byte 32 0) (ash lo 4))
-	      (ldb (byte 32 0) (+ overflow 
-				  (ash hi 4)))))))
+  (read-time-base))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.26 2004/10/09 01:08:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.27 2004/10/09 02:47:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -369,7 +369,7 @@
 		     ~S second~:P of real time~%  ~
 		     ~S second~:P of user run time~%  ~
 		     ~S second~:P of system run time~%  ~
-                     ~:D CPU cycles~%  ~
+                     ~:D ~A cycles~%  ~
 		     ~@[[Run times include ~S second~:P GC run time]~%  ~]~
 		     ~S page fault~:P and~%  ~
 		     ~:D bytes consed.~%"
@@ -379,6 +379,9 @@
 		    (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
 		    (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
 		    (truncate cycle-count)
+		    ;; The counter for PPC isn't the number of CPU
+		    ;; cycles, unlike x86 and Ultrasparc.
+		    #+ppc "time-base" #-ppc "CPU"
 		    (unless (zerop gc-run-time)
 		      (/ (float gc-run-time)
 			 (float internal-time-units-per-second)))
