@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.5 1991/10/01 17:10:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.6 1991/10/01 17:23:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,8 @@
   error-file		      ; The file to dump errors into
   load			      ; Load compiled file or not?
   (errors 0)		      ; Count of compiler errors.
-  (warnings 0))		      ; Count of compiler warnings.
+  (warnings 0)		      ; Count of compiler warnings.
+  (notes 0))		      ; Count of compiler notes.
 ;;;
 (defun %print-note (note stream d)
   (declare (ignore d))
@@ -171,7 +172,8 @@
     (message "~A" message)
     (case severity
       (:error (incf (note-errors note)))
-      (:warning (incf (note-warnings note))))
+      (:warning (incf (note-warnings note)))
+      (:note (incf (note-notes note))))
     (let ((region (case (note-kind note)
 		    (:compile
 		     (note-region note))
@@ -215,13 +217,16 @@
     (setf (note-server note) nil)
 
     (if abortp
-      (loud-message "The ~A aborted." (note-context note))
-      (let ((errors (note-errors note))
-	    (warnings (note-warnings note)))
-	(message "The ~A complete.~@[ ~D error~:P~]~@[ ~D warning~:P~]"
-		 (note-context note)
-		 (and (plusp errors) errors)
-		 (and (plusp warnings) warnings))))
+	(loud-message "The ~A aborted." (note-context note))
+	(let ((errors (note-errors note))
+	      (warnings (note-warnings note))
+	      (notes (note-notes note)))
+	  (message "The ~A complete.~
+		    ~@[ ~D error~:P~]~@[ ~D warning~:P~]~@[ ~D note~:P~]"
+		   (note-context note)
+		   (and (plusp errors) errors)
+		   (and (plusp warnings) warnings)
+		   (and (plusp notes) notes))))
 
     (let ((region (note-region note)))
       (when (regionp region)
@@ -235,11 +240,11 @@
 	       file)
       (if (> (file-write-date file)
 	     (note-output-date note))
-	(let ((new-name (make-pathname :type "fasl"
-				       :defaults (note-input-file note))))
-	  (rename-file file new-name)
-	  (mach:unix-chmod (namestring new-name) #o644))
-	(delete-file file)))
+	  (let ((new-name (make-pathname :type "fasl"
+					 :defaults (note-input-file note))))
+	    (rename-file file new-name)
+	    (mach:unix-chmod (namestring new-name) #o644))
+	  (delete-file file)))
     (maybe-send-next-note server))
   (values))
 
