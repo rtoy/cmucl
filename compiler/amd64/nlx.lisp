@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/nlx.lisp,v 1.2 2004/07/06 20:21:09 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/nlx.lisp,v 1.3 2004/07/27 23:28:41 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -181,7 +181,7 @@
 	  ((= nvals 1)
 	   (let ((no-values (gen-label)))
 	     (inst mov (tn-ref-tn values) nil-value)
-	     (inst jecxz no-values)
+	     (inst jrcxz no-values)
 	     (loadw (tn-ref-tn values) start -1)
 	     (emit-label no-values)))
 	  (t
@@ -240,7 +240,7 @@
     (move num rcx)
     (inst shr rcx word-shift)		; word count for <rep movs>
     ;; If we got zero, we be done.
-    (inst jecxz done)
+    (inst jrcxz done)
     ;; Copy them down.
     (inst std)
     (inst rep)

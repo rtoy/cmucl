@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/values.lisp,v 1.1 2004/05/24 22:35:00 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/values.lisp,v 1.2 2004/07/27 23:28:41 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,7 +121,7 @@
     
     (move temp1 count)
     (inst mov start rsp-tn)
-    (inst jecxz done)  ; check for 0 count?
+    (inst jrcxz done)  ; check for 0 count?
     
     (inst shr temp1 word-shift) ; convert the fixnum to a count.
     

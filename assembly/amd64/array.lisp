@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/array.lisp,v 1.2 2004/07/14 20:51:49 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/array.lisp,v 1.3 2004/07/27 23:28:41 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,11 +85,11 @@
   (inst xor result result)
   ;; Get the count.  If it's zero, blow out.
   (inst mov rcx length)
-  (inst jecxz done) ; I'd probably change all jecxz to jrcxz
+  (inst jrcxz done)
   ;; Convert it into count of the number of full words.  If zero, then skip
   ;; to the part that handles the tail.
   (inst shr rcx 5) ; 2 tag bits + 3
-  (inst jecxz do-extra)
+  (inst jrcxz do-extra)
   ;; Clear the direction flag, so we advance through memory.
   (inst cld)
 
@@ -107,7 +107,7 @@
   ;; here.  Otherwise, multiply by 8.
   (inst mov rcx length)
   (inst and rcx (fixnumize 7))
-  (inst jecxz done)
+  (inst jrcxz done)
   ;; some bytes are left
   (inst shl rcx 1)
 

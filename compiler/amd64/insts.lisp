@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/insts.lisp,v 1.4 2004/07/14 21:05:13 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/insts.lisp,v 1.5 2004/07/27 23:28:41 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2094,7 +2094,7 @@
 	 (t
 	  (emit-byte segment #b11000011)))))
 
-(define-instruction jecxz (segment target)
+(define-instruction jrcxz (segment target)
   (:printer short-jump ((op #b0011)))
   (:emitter
    (emit-byte segment #b11100011)
@@ -2103,7 +2103,7 @@
 (define-instruction loop (segment target)
   (:printer short-jump ((op #b0010)))
   (:emitter
-   (emit-byte segment #b11100010)	; pfw this was 11100011, or jecxz!!!!
+   (emit-byte segment #b11100010)
    (emit-byte-displacement-backpatch segment target)))
 
 (define-instruction loopz (segment target)

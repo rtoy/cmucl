@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/assem-rtns.lisp,v 1.2 2004/07/27 21:05:33 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/assem-rtns.lisp,v 1.3 2004/07/27 23:28:41 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -42,7 +42,7 @@
      (:temp rdi unsigned-reg rdi-offset))
      
   ;; Pick off the cases where everything fits in register args.
-  (inst jecxz zero-values)
+  (inst jrcxz zero-values)
   (inst cmp rcx (fixnumize 1))
   (inst jmp :e one-value)
   (inst cmp rcx (fixnumize 2))
