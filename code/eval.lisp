@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.17 1992/04/20 19:07:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.18 1992/05/15 20:30:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,6 +168,12 @@
 	    (when (> args 0)
 	      (dolist (x (butlast (rest exp)) (eval (car (last exp))))
 		(eval x))))
+	   ((eval-when)
+	    (if (and (> args 0) (member 'eval (second exp)))
+		(when (> args 1)
+		  (dolist (x (butlast (cddr exp)) (eval (car (last exp))))
+		    (eval x)))
+		(eval:internal-eval original-exp)))
 	   (t
 	    (if (and (symbolp name)
 		     (eq (info function kind name) :function))
