@@ -8,107 +8,136 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; Spice Lisp routines to suspend a process and create a core file.
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.1 1990/06/17 02:08:50 wlott Exp $
+;;;
+;;; Dump the current lisp image into a core file.  All the real work is done
+;;; be C.
+;;;
+;;; Written by William Lott.
 ;;; 
-;;; Written David B. McDonald.
 ;;;
-;;;**********************************************************************
-;;;
-;;; To see the format of Spice Lisp core files look at the document
-;;; prva:<slisp.docs>core.mss.
 (in-package "LISP")
 
 (in-package "EXTENSIONS")
-(export '(*environment-list*))
-(defvar *environment-list* nil)
+(export '(print-herald save-lisp *before-save-initializations*
+	  *after-save-initializations* *environment-list* *editor-lisp-p*))
 (in-package "LISP")
 
+(defvar *before-save-initializations* nil
+  "This is a list of functions which are called before creating a saved core
+  image.  These functions are executed in the child process which has no ports,
+  so they cannot do anything that tries to talk to the outside world.")
 
-(proclaim '(special *task-self*))
+(defvar *after-save-initializations* nil
+  "This is a list of functions which are called when a saved core image starts
+  up.  The system itself should be initialized at this point, but applications
+  might not be.")
 
-(defconstant save-block-size (* 64 1024)
-  "Amount to write for each call to write.  This is due to RFS limitations.")
+(defvar *environment-list* nil
+  "An alist mapping environment variables (as keywords) to either values")
 
+(defvar *editor-lisp-p* nil
+  "This is true if and only if the lisp was started with the -edit switch.")
+
+
+
+;;; Filled in by the startup code.
 (defvar lisp-environment-list)
-(defvar original-lisp-environment)
 
-;;;; Global state:
 
-(defun save (file)
-  "Save the current lisp core image in a core file.  When it returns in
-  the current process, the number of bytes written is returned.
-  When the saved core image is resumed, Nil is returned."
-  (declare (optimize (speed 3) (safety 0)))
-  (format t "~&[Building saved core image: ")
-  (finish-output)
-  (let ((size-to-allocate (* (current-space-usage) 2)))
-    (declare (fixnum size-to-allocate))
-    (let* ((addr (int-sap (gr-call* mach::vm_allocate *task-self*
-				    0 size-to-allocate t)))
-	   (byte-size (%primitive save *current-alien-free-pointer*
-				  NIL addr)))
-      (cond ((null byte-size)
-	     (mach::vm_deallocate *task-self* addr size-to-allocate)
-	     (error "Save failed."))
-	    ((eq byte-size T)
-	     (dolist (f *before-save-initializations*) (funcall f))
-	     (dolist (f *after-save-initializations*) (funcall f))
-	     (reinit)
-	     (setq original-lisp-environment lisp-environment-list)
-	     (let ((result nil))
-	       (dolist (ele lisp-environment-list
-			    (setf *environment-list* result))
-		 (let ((=pos (position #\= (the simple-string ele))))
-		   ;;
-		   ;; This is dubious since all the strings have an =.
-		   ;; What if one doesn't?  What does that mean?
-		   (when =pos
-		     (push (cons (intern (string-upcase (subseq ele 0 =pos))
-					 *keyword-package*)
-				 (subseq ele (1+ =pos)))
-			   result)))))
-	     NIL)
-	    (T
-	     (format t "~D bytes.~%" byte-size)
-	     (format t "Writing to file: ~A~%" file)
-	     (finish-output)
-	     (multiple-value-bind (fd err) (mach:unix-creat file #o644)
-	       (if (null fd)
-		   (error "Failed to open file ~A, unix error: ~A"
-			  file (mach:get-unix-error-msg err)))
-	       
-	       (do ((left byte-size (- left save-block-size))
-		    (index 0 (+ index save-block-size)))
-		   ((< left save-block-size)
-		    (when (> left 0)
-		      (multiple-value-bind (res err)
-					   (mach:unix-write fd addr index left)
-			(if (null res)
-			    (error "Failed to write file ~A, unix error: ~A"
-				   file (mach:get-unix-error-msg err))))))
-		 (declare (fixnum left index))
-		 (multiple-value-bind (res err)
-				      (mach:unix-write fd addr index
-						       save-block-size)
-		   (if (null res)
-		       (error "Failed to write file ~A, unix error: ~A"
-			      file (mach:get-unix-error-msg err)))))
-	       (multiple-value-bind (res err) (mach:unix-close fd)
-		 (if (null res)
-		     (error "Failed to close file ~A, unix error: ~A"
-			    file (mach:get-unix-error-msg err)))))
-	     (format t "done.]~%")
-	     (mach::vm_deallocate *task-self* addr size-to-allocate)
-	     (finish-output)
-	     byte-size)))))
+(def-c-routine "save" (boolean)
+  (file (pointer simple-string)))
 
-(defun current-space-usage ()
-  (declare (optimize (speed 3) (safety 0)))
-  (do ((sum 0)
-       (type 0 (1+ type)))
-      ((> type %last-pointer-type) sum)
-    (declare (fixnum type sum))
-    (if (not (or (eq type %short-+-float-type) (eq type %short---float-type)))
-	(multiple-value-bind (dyn stat ro) (space-usage type)
-	  (declare (fixnum dyn stat ro))
-	  (setq sum (+ sum dyn stat ro))))))
+
+(defun save-lisp (core-file-name &key
+				 (purify t)
+				 (root-structures ())
+				 (init-function
+				  #'(lambda ()
+				      (throw 'top-level-catcher nil)))
+				 (load-init-file t)
+				 (print-herald t)
+				 (process-command-line t))
+  "Saves a CMU Common Lisp core image in the file of the specified name.  The
+  following keywords are defined:
+  
+  :purify
+      If true, do a purifying GC which moves all dynamically allocated
+  objects into static space so that they stay pure.  This takes somewhat
+  longer than the normal GC which is otherwise done, but GC's will done
+  less often and take less time in the resulting core file.
+
+  :root-structures
+      This should be a list of the main entry points in any newly loaded
+  systems.  This need not be supplied, but locality will be better if it
+  is.  This is meaningless if :purify is Nil.
+  
+  :init-function
+      This is a function which is called when the created core file is
+  resumed.  The default function simply aborts to the top level
+  read-eval-print loop.  If the function returns it will be the value
+  of Save-Lisp.
+  
+  :load-init-file
+      If true, then look for an init.lisp or init.fasl file when the core
+  file is resumed.
+  
+  :print-herald
+      If true, print out the lisp system herald when starting."
+  
+  (declare (ignore purify root-structures))
+  #+nil
+  (if purify
+      (purify :root-structures root-structures)
+      (gc))
+  (unless (save (namestring core-file-name))
+    (dolist (f *before-save-initializations*) (funcall f))
+    (dolist (f *after-save-initializations*) (funcall f))
+    (reinit)
+    (dolist (ele lisp-environment-list)
+      (let ((=pos (position #\= (the simple-string ele))))
+	(when =pos
+	  (push (cons (intern (string-upcase (subseq ele 0 =pos))
+			      *keyword-package*)
+		      (subseq ele (1+ =pos)))
+		*environment-list*))))
+    (setf (search-list "default:") (list (default-directory)))
+    (setf (search-list "path:") (setup-path-search-list))
+    (when process-command-line (ext::process-command-strings))
+    (setf *editor-lisp-p* nil)
+    (macrolet ((find-switch (name)
+		 `(find ,name *command-line-switches*
+			:key #'cmd-switch-name
+			:test #'(lambda (x y)
+				  (declare (simple-string x y))
+				  (string-equal x y)))))
+      (when (and process-command-line (find-switch "edit"))
+	(setf *editor-lisp-p* t))
+      (when (and load-init-file
+		 (not (and process-command-line (find-switch "noinit"))))
+	(let* ((cl-switch (find-switch "init"))
+	       (name (or (and cl-switch
+			      (or (cmd-switch-value cl-switch)
+				  (car (cmd-switch-words cl-switch))
+				  "init"))
+			 "init")))
+	  (load (merge-pathnames name (user-homedir-pathname))
+		:if-does-not-exist nil))))
+    (when print-herald
+      (print-herald))
+    (when process-command-line
+      (ext::invoke-switch-demons *command-line-switches*
+				 *command-switch-demons*))
+    (funcall init-function)))
+
+
+
+(defun print-herald ()
+  (write-string "CMU Common Lisp ")
+  (write-line (lisp-implementation-version))
+  (write-string "Hemlock ")
+  (write-string *hemlock-version*)
+  (write-string ", Compiler ")
+  (write-line #+nil compiler-version #-nil "What compiler?")
+  (write-line "Send bug reports and questions to Gripe.")
+  (values))
