@@ -7,16 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.13 1990/09/25 23:36:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.14 1990/10/22 02:23:36 wlott Exp $
 ;;;
-;;; Initialization and low-level interrupt support for the Spice Lisp system.
+;;; Initialization stuff for CMU Common Lisp, plus some other random functions
+;;; that we don't have any better place for.
+;;; 
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
 (in-package "LISP" :use '("SYSTEM" "DEBUG"))
-
-(in-package "XLIB")
-
-(in-package "LISP")
 
 (export '(most-positive-fixnum most-negative-fixnum sleep
 			       ++ +++ ** *** // ///))
@@ -559,12 +557,11 @@
 (defvar *task-notify* NIL)
 
 (defun reinit ()
-  (%primitive print "In REINIT.")
   (without-interrupts
    (setf *already-maybe-gcing* t)
-   (print-and-call os-init)
-   (print-and-call kernel::signal-init)
-   (print-and-call stream-reinit)
+   (os-init)
+   (kernel::signal-init)
+   (stream-reinit)
    (setf *already-maybe-gcing* nil))
   #+nil
   (mach:port_enable (mach:mach-task_self) *task-notify*)
