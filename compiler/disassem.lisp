@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.11 1992/08/31 11:53:27 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.12 1992/09/02 13:26:02 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -286,6 +286,26 @@
     (t t)))
 
 ;;; ----------------------------------------------------------------
+;;; Some simple functions that help avoid consing when we're just
+;;; recursively filtering things that usually don't change.
+
+(defun sharing-cons (old-cons car cdr)
+  "If CAR is eq to the car of OLD-CONS and CDR is eq to the CDR, return
+  OLD-CONS, otherwise return (cons CAR CDR)."
+  (if (and (eq car (car old-cons)) (eq cdr (cdr old-cons)))
+      old-cons
+      (cons car cdr)))
+
+(defun sharing-mapcar (fun list)
+  "A simple (one list arg) mapcar that avoids consing up a new list
+  as long as the results of calling FUN on the elements of LIST are
+  eq to the original."
+  (and list
+       (sharing-cons list
+		     (funcall fun (car list))
+		     (sharing-mapcar fun (cdr list)))))
+
+;;; ----------------------------------------------------------------
 ;;; A Dchunk contains the bits we look at to decode an
 ;;; instruction.
 ;;; I tried to keep this abstract so that if using integers > the machine
@@ -545,7 +565,7 @@
 (defun arg-or-lose (name funstate)
   (let ((arg (find name (funstate-args funstate) :key #'arg-name)))
     (when (null arg)
-      (error "Unknown argument ~s" name))
+      (pd-error "Unknown argument ~s" name))
     arg))
 
 (defun get-arg-temp (arg kind funstate)
@@ -692,6 +712,12 @@
 	       (equal (arg-sign-extend-p new-arg)
 		      (arg-sign-extend-p old-arg))))
 
+(defun valsrc-equal (f1 f2)
+  (if (null f1)
+      (null f2)
+      (equal (value-or-source f1)
+	     (value-or-source f2))))
+
 (def-arg-form-kind (:filtering)
   :producer #'(lambda (arg funstate)
 		(let ((sign-extended-forms
@@ -704,12 +730,7 @@
 		       t)
 		      (values sign-extended-forms nil))))
   :checker #'(lambda (new-arg old-arg)
-	       (let ((pf1 (arg-prefilter new-arg))
-		     (pf2 (arg-prefilter old-arg)))
-		 (if (null pf1)
-		     (null pf2)
-		     (equal (value-or-source pf1)
-			    (value-or-source pf2))))))
+	       (valsrc-equal (arg-prefilter new-arg) (arg-prefilter old-arg))))
 
 (def-arg-form-kind (:filtered :unadjusted)
   :producer #'(lambda (arg funstate)
@@ -735,12 +756,7 @@
 				      ,(source-form use-label)))
 		      filtered-forms)))
   :checker #'(lambda (new-arg old-arg)
-	       (let ((lf1 (arg-use-label new-arg))
-		     (lf2 (arg-use-label old-arg)))
-		 (if (null lf1)
-		     (null lf2)
-		     (equal (value-or-source lf1)
-			    (value-or-source lf2))))))
+	       (valsrc-equal (arg-use-label new-arg) (arg-use-label old-arg))))
 
 (def-arg-form-kind (:labelled :final)
   :producer #'(lambda (arg funstate)
@@ -761,6 +777,18 @@
 	       (let ((lf1 (arg-use-label new-arg))
 		     (lf2 (arg-use-label old-arg)))
 		 (if (null lf1) (null lf2) t))))
+
+;;; This is a bogus kind that's just used to ensure that printers are
+;;; compatible...
+(def-arg-form-kind (:printed)
+  :producer #'(lambda (&rest noise)
+		(declare (ignore noise))
+		(pd-error "Bogus!  Can't use the :printed value of an arg!"))
+  :checker #'(lambda (new-arg old-arg)
+	       (valsrc-equal (arg-printer new-arg) (arg-printer old-arg))))
+
+(defun remember-printer-use (arg funstate)
+  (set-arg-temps nil nil arg :printed funstate))
 
 ;;; ----------------------------------------------------------------
 
@@ -830,7 +858,7 @@
 
 ;;; ----------------------------------------------------------------
 
-(defun find-first-symbol (tree)
+(defun find-first-field-name (tree)
   "Returns the first non-keyword symbol in a depth-first search of TREE."
   (cond ((null tree)
 	 nil)
@@ -838,9 +866,11 @@
 	 tree)
 	((atom tree)
 	 nil)
+	((eq (car tree) 'quote)
+	 nil)
 	(t
-	 (or (find-first-symbol (car tree))
-	     (find-first-symbol (cdr tree))))))
+	 (or (find-first-field-name (car tree))
+	     (find-first-field-name (cdr tree))))))
 
 (defun string-or-qsym-p (thing)
   (or (stringp thing)
@@ -880,6 +910,7 @@
 	 (printer (or printer (arg-printer arg)))
 	 (printer-val (value-or-source printer))
 	 (printer-src (source-form printer)))
+    (remember-printer-use arg funstate)
     (cond ((stringp printer-val)
 	   `(local-format-arg ,(arg-value-form arg funstate) ,printer-val))
 	  ((vectorp printer-val)
@@ -930,26 +961,16 @@
 	 `(local-princ ,source))
 	((eq (car source) 'function)
 	 `(local-call-global-printer ,source))
-	((member (car source) '(:unless :when))
-	 `(,(if (eq (car source) :when) 'when 'unless)
-	    ,(compile-test (find-first-symbol (cddr source))
-			   (cadr source)
-			   funstate)
-	    ,@(compile-printer-list (cddr source) funstate)))
 	((eq (car source) :cond)
 	 `(cond ,@(mapcar #'(lambda (clause)
-			      `(,(compile-test (find-first-symbol
+			      `(,(compile-test (find-first-field-name
 						(cdr clause))
 					       (car clause)
 					       funstate)
 				,@(compile-printer-list (cdr clause)
 							funstate)))
 			  (cdr source))))
-	((eq (car source) :if)
-	 `(if ,(compile-test (find-first-symbol (cddr source))
-			     (cadr source)
-			     funstate)
-	      ,@(compile-printer-list (cddr source) funstate)))
+	;; :if, :unless, and :when are replaced by :cond during preprocessing
 	(t
 	 `(progn ,@(compile-printer-list source funstate)))))
 
@@ -1012,12 +1033,6 @@
 
 ;;; ----------------------------------------------------------------
 
-(defun choose-in-printer-p (printer)
-  "Returns non-NIL if :CHOOSE occurs somewhere in PRINTER."
-  (if (atom printer)
-      (eq printer :choose)
-      (some #'choose-in-printer-p printer)))
-
 (defun all-arg-refs-relevent-p (printer args)
   (cond ((or (null printer) (keywordp printer) (eq printer t))
 	 t)
@@ -1026,27 +1041,103 @@
 	((listp printer)
 	 (every #'(lambda (x) (all-arg-refs-relevent-p x args))
 		printer))
-	(t
-	 t)))
+	(t t)))
 
 (defun pick-printer-choice (choices args)
   (dolist (choice choices
-		  (pd-error "No suitable choice found in ~s" choices))
-    (when (choose-in-printer-p choice)
-      (setf choice (preprocess-printer choice args)))
+	   (pd-error "No suitable choice found in ~s" choices))
     (when (all-arg-refs-relevent-p choice args)
       (return choice))))
 
+(defun preprocess-chooses (printer args)
+  (cond ((atom printer)
+	 printer)
+	((eq (car printer) :choose)
+	 (pick-printer-choice (cdr printer) args))
+	(t
+	 (sharing-mapcar #'(lambda (sub) (preprocess-chooses sub args))
+			 printer))))
+
+;;; ----------------------------------------------------------------
+
+(defun preprocess-test (subj form args)
+  (multiple-value-bind (subj test)
+      (if (and (consp form) (symbolp (car form)) (not (keywordp (car form))))
+	  (values (car form) (cdr form))
+	  (values subj form))
+    (let ((key (if (consp test) (car test) test))
+	  (body (if (consp test) (cdr test) nil)))
+      (case key
+	(:constant
+	 (if (null body)
+	     ;; if no supplied constant values, just any constant is ok, just
+	     ;; see if there's some constant value in the arg.
+	     (not
+	      (null
+	       (arg-value
+		(or (find subj args :key #'arg-name)
+		    (pd-error "Unknown argument ~s" subj)))))
+	     ;; otherwise, defer to run-time
+	     form))
+	((:or :and :not)
+	 (sharing-cons
+	  form
+	  subj
+	  (sharing-cons
+	   test
+	   key
+	   (sharing-mapcar
+	    #'(lambda (sub-test)
+		(preprocess-test subj sub-test args))
+	    body))))
+	(t form)))))
+
+(defun preprocess-conditionals (printer args)
+  (if (atom printer)
+      printer
+      (case (car printer)
+	(:unless
+	 (preprocess-conditionals
+	  `(:cond ((:not ,(nth 1 printer)) ,@(nthcdr 2 printer)))
+	  args))
+	(:when
+	 (preprocess-conditionals `(:cond (,(cdr printer))) args))
+	(:if
+	 (preprocess-conditionals
+	  `(:cond (,(nth 1 printer) ,(nth 2 printer))
+		  (t ,(nth 3 printer)))
+	  args))
+	(:cond
+	 (sharing-cons
+	  printer
+	  :cond
+	  (sharing-mapcar
+	   #'(lambda (clause)
+	       (let ((filtered-body
+		      (sharing-mapcar
+		       #'(lambda (sub-printer)
+			   (preprocess-conditionals sub-printer args))
+		       (cdr clause))))
+		 (sharing-cons
+		  clause
+		  (preprocess-test (find-first-field-name filtered-body)
+				   (car clause)
+				   args)
+		  filtered-body)))
+	   (cdr printer))))
+	(quote printer)
+	(t
+	 (sharing-mapcar
+	  #'(lambda (sub-printer)
+	      (preprocess-conditionals sub-printer args))
+	  printer)))))
+
 (defun preprocess-printer (printer args)
-  "Returns a version of the disassembly-template PRINTER with any :CHOOSE
-  operators resolved properly for the args ARGS.  (:CHOOSE Sub*)
-  simply returns the first Sub in which every field reference refers to a
-  valid arg."
-  (if (and (choose-in-printer-p printer) (listp printer))
-      (if (eq (car printer) :choose)
-	  (pick-printer-choice (cdr printer) args)
-	  (mapcar #'(lambda (sub) (preprocess-printer sub args)) printer))
-      printer))
+  "Returns a version of the disassembly-template PRINTER with compile-time
+  tests (e.g. :constant without a value), and any :CHOOSE operators resolved
+  properly for the args ARGS.  (:CHOOSE Sub*) simply returns the first Sub in
+  which every field reference refers to a valid arg."
+  (preprocess-conditionals (preprocess-chooses printer args) args))
 
 ;;; ----------------------------------------------------------------
 
@@ -1083,12 +1174,15 @@
 		      (make-cached-function :name ,name-var
 					    :funstate ,funstate-var
 					    :constraint ,constraint-var)))
-		(push ,cache-var ,cache-place)
 		#+nil
 		(format t "~&; Making new function ~s~%"
 			(cached-fun-name ,cache-var))
-		(values (cached-fun-name ,cache-var)
-			(progn ,@defun-maker-forms))))))))
+		(multiple-value-prog1
+		 (values (cached-fun-name ,cache-var)
+			 (progn ,@defun-maker-forms))
+		 ;; Add to the cache second, so errors in defun-maker-forms
+		 ;; will result in nothing being added.
+		 (push ,cache-var ,cache-place))))))))
 
 ;;; ----------------------------------------------------------------
 
@@ -1385,7 +1479,8 @@
     `(progn
        ,@wrapper-defs
        (eval-when (compile eval)
-	 ,(update-args-form (arg-type-table-name) `',name args evalp)))))
+	 ,(update-args-form (arg-type-table-name) `',name args evalp))
+       ',name)))
 
 (defun maybe-quote (evalp form)
   (if (or evalp (self-evaluating-p form)) form `',form))
@@ -2052,12 +2147,13 @@
 	   (type segment segment))
   (setf (dstate-segment dstate) segment)
   (setf (dstate-cur-offs-hooks dstate)
-	(sort (copy-list (seg-hooks segment))
-	      #'(lambda (oh1 oh2)
-		  (or (< (offs-hook-offset oh1) (offs-hook-offset oh2))
-		      (and (= (offs-hook-offset oh1) (offs-hook-offset oh2))
-			   (offs-hook-before-address oh1)
-			   (not (offs-hook-before-address oh2)))))))
+	(stable-sort (nreverse (copy-list (seg-hooks segment)))
+		     #'(lambda (oh1 oh2)
+			 (or (< (offs-hook-offset oh1) (offs-hook-offset oh2))
+			     (and (= (offs-hook-offset oh1)
+				     (offs-hook-offset oh2))
+				  (offs-hook-before-address oh1)
+				  (not (offs-hook-before-address oh2)))))))
   (setf (dstate-cur-offs dstate) 0)
   (setf (dstate-cur-labels dstate) (dstate-labels dstate)))
 
