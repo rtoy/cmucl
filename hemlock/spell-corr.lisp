@@ -701,7 +701,7 @@
   (let ((incr (gensym)))
     `(let* ((,incr (hash2-increment ,hash))
 	    (,location-var ,loc)
-	    ,contents-var)
+	    (,contents-var 0))
 	(declare (fixnum ,location-var ,contents-var ,incr))
        (loop (setf ,location-var
 		   (rem (+ ,location-var ,incr) (the fixnum *dictionary-size*)))

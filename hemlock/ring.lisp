@@ -58,7 +58,8 @@
 (defun ring-push (object ring)
   "Push an object into a ring, deleting an element if necessary."
   (let ((first (ring-first ring))
-	(vec (ring-vector ring)) victim)
+	(vec (ring-vector ring))
+	(victim 0))
     (declare (simple-vector vec) (fixnum first victim))
     (cond
      ;; If zero, wrap around to end.
