@@ -1252,6 +1252,18 @@
 ;;; and pass it in separately.  Rest is the rest arg var, or NIL if there is no
 ;;; rest arg.  Keys is a list of the keyword argument vars.
 ;;;
+;;;    When there are keyword arguments, we introduce temporary gensym
+;;; variables to hold the values while keyword defaulting is in progress to get
+;;; the required sequential binding semantics.
+;;;
+;;;    This gets interesting mainly when there are keyword arguments with
+;;; supplied-p vars or non-constant defaults.  In either case, pass in a
+;;; supplied-p var.  If the default is non-constant, we introduce an IF in the
+;;; main entry that tests the supplied-p var and decides whether to evaluate
+;;; the default or not.  In this case, the real incoming value is NIL, so we
+;;; must union NULL with the declared type when computing the type for the main
+;;; entry's argument.
+;;;
 (defun ir1-convert-more (res default-vars default-vals entry-vars entry-vals
 			     rest keys supplied-p-p body aux-vars aux-vals
 			     cont)
@@ -1274,10 +1286,12 @@
 	     (supplied-p (arg-info-supplied-p info))
 	     (n-val (make-symbol (format nil "~A-DEFAULTING-TEMP"
 					 (leaf-name key))))
-	     (val-temp (make-lambda-var :name n-val
-					:type (if hairy-default
-						  *universal-type*
-						  (leaf-type key)))))
+	     (key-type (leaf-type key))
+	     (val-temp (make-lambda-var
+			:name n-val
+			:type (if hairy-default
+				  (type-union key-type (specifier-type 'null))
+				  key-type))))
 	(main-vars val-temp)
 	(bind-vars key)
 	(cond ((or hairy-default supplied-p)
@@ -1287,8 +1301,12 @@
 		   (setf (arg-info-supplied-p info) supplied-temp))
 		 (setf (arg-info-default info) nil)
 		 (main-vars supplied-temp)
-		 (main-vals nil nil)
-		 (bind-vals `(if ,n-supplied ,n-val ,default))
+		 (cond (hairy-default
+			(main-vals nil nil)
+			(bind-vals `(if ,n-supplied ,n-val ,default)))
+		       (t
+			(main-vals (arg-info-default info) nil)
+			(bind-vals n-val)))
 		 (when supplied-p
 		   (bind-vars supplied-p)
 		   (bind-vals n-supplied))))
