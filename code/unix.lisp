@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.25 1993/07/03 00:41:54 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.26 1993/07/26 19:30:03 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,8 +52,14 @@
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
 	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
 	  tcsetpgrp tcgetpgrp tty-process-group
-	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase tty-cbreak
-	  tty-tandem TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
+	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase
+	  #-hpux tty-cbreak #-hpux tty-tandem #+hpux termios #+hpux c-lflag
+	  #+hpux c-iflag #+hpux c-oflag #+hpux tty-icrnl #+hpux tty-ocrnl
+	  #+hpux vdsusp #+hpux veof #+hpux vintr #+hpux vquit #+hpux vstart
+	  #+hpux vstop #+hpux vsusp #+hpux c-cflag
+	  #+hpux c-cc #+hpux tty-icanon #+hpux vmin #+hpux vtime
+	  #+hpux tcsaflush #+hpux unix-tcgetattr #+hpux unix-tcsetattr
+	  TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
 	  KBDSCLICK FIONREAD unix-exit unix-stat unix-lstat unix-fstat
@@ -84,7 +90,7 @@
 (def-alien-type uid-t unsigned-short)
 (def-alien-type gid-t unsigned-short)
 
-(defconstant FD-SETSIZE 256)
+(defconstant FD-SETSIZE #-hpux 256 #+hpux 2048)
 
 (def-alien-type nil
   (struct fd-set
@@ -162,7 +168,7 @@
     (sg-ospeed char)			; output speed
     (sg-erase char)			; erase character
     (sg-kill char)			; kill character
-    (sg-flags short)))			; mode flags
+    (sg-flags #-hpux short #+hpux int))); mode flags
 
 (def-alien-type nil
   (struct winsize
@@ -170,6 +176,19 @@
     (ws-col unsigned-short)		; columns, in characters
     (ws-xpixel unsigned-short)		; horizontal size, pixels
     (ws-ypixel unsigned-short)))	; veritical size, pixels
+
+
+;;; From sys/termio.h
+
+#+hpux
+(def-alien-type nil
+  (struct termios
+    (c-iflag unsigned-int)
+    (c-oflag unsigned-int)
+    (c-cflag unsigned-int)
+    (c-lflag unsigned-int)
+    (c-reserved unsigned-int)
+    (c-cc (array unsigned-char 16))))
 
 ;;; From sys/dir.h
 
@@ -606,9 +625,9 @@
 (defconstant FNDELAY  #o0004   "Non-blocking reads")
 (defconstant FAPPEND  #o0010   "Append on each write")
 (defconstant FASYNC   #o0100   "Signal pgrp when data ready")
-(defconstant FCREAT   #o1000   "Create if nonexistant")
-(defconstant FTRUNC   #o2000   "Truncate to zero length")
-(defconstant FEXCL    #o4000   "Error if already created")
+(defconstant FCREAT   #-hpux #o1000 #+hpux #o0400  "Create if nonexistant")
+(defconstant FTRUNC   #-hpux #o2000 #+hpux #o1000  "Truncate to zero length")
+(defconstant FEXCL    #-hpux #o4000 #+hpux #o2000  "Error if already created")
 
 (defun unix-fcntl (fd cmd arg)
   "Unix-fcntl manipulates file descriptors according to the
@@ -955,8 +974,27 @@
 (defconstant tty-crmod #o20)
 (defconstant tty-echo #o10)
 (defconstant tty-lcase #o4)
+#-hpux
 (defconstant tty-cbreak #o2)
+#-hpux
 (defconstant tty-tandem #o1)
+#+hpux
+(progn
+  (defconstant tty-icanon #o2)
+  (defconstant tty-icrnl #o400)
+  (defconstant tty-ocrnl #o10)
+  (defconstant vdsusp 21)
+  (defconstant veof 4)
+  (defconstant vintr 0)
+  (defconstant vquit 1)
+  (defconstant vstart 14)
+  (defconstant vstop 15)
+  (defconstant vsusp 13)
+    
+  (defconstant vmin 11)
+  (defconstant vtime 12)
+  (defconstant tcsaflush 2))
+
 
 (eval-when (compile load eval)
 
@@ -991,14 +1029,24 @@
 (define-ioctl-command TIOCFLUSH #\t 16 int :in)
 (define-ioctl-command TIOCSETC #\t 17 (struct tchars) :in)
 (define-ioctl-command TIOCGETC #\t 18 (struct tchars) :out)
-(define-ioctl-command TIOCGWINSZ #\t 104 (struct winsize) :out)
-(define-ioctl-command TIOCSWINSZ #\t 103 (struct winsize) :in)
+(define-ioctl-command TIOCGWINSZ #\t #-hpux 104 #+hpux 107 (struct winsize)
+  :out)
+(define-ioctl-command TIOCSWINSZ #\t #-hpux 103 #+hpux 106 (struct winsize)
+  :in)
 
 (define-ioctl-command TIOCNOTTY #\t 113 nil :void)
-(define-ioctl-command TIOCSLTC #\t 117 (struct ltchars) :in)
-(define-ioctl-command TIOCGLTC #\t 116 (struct ltchars) :out)
-(define-ioctl-command TIOCSPGRP #\t 118 int :in)
-(define-ioctl-command TIOCGPGRP #\t 119 int :out)
+#-hpux
+(progn
+  (define-ioctl-command TIOCSLTC #\t 117 (struct ltchars) :in)
+  (define-ioctl-command TIOCGLTC #\t 116 (struct ltchars) :out)
+  (define-ioctl-command TIOCSPGRP #\t 118 int :in)
+  (define-ioctl-command TIOCGPGRP #\t 119 int :out))
+#+hpux
+(progn
+  (define-ioctl-command TIOCSLTC #\T 23 (struct ltchars) :in)
+  (define-ioctl-command TIOCGLTC #\T 24 (struct ltchars) :out)
+  (define-ioctl-command TIOCSPGRP #\T 29 int :in)
+  (define-ioctl-command TIOCGPGRP #\T 30 int :out))
 
 ;;; File ioctl commands.
 (define-ioctl-command FIONREAD #\f 127 int :out)
@@ -1011,6 +1059,18 @@
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) cmd))
   (void-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
+
+#+hpux
+(defun unix-tcgetattr (fd termios)
+  "Get terminal attributes."
+  (declare (type unix-fd fd))
+  (void-syscall ("tcgetattr" int (* (struct termios))) fd termios))
+
+#+hpux
+(defun unix-tcsetattr (fd opt termios)
+  "Set terminal attributes."
+  (declare (type unix-fd fd))
+  (void-syscall ("tcsetattr" int int (* (struct termios))) fd opt termios))
 
 (defun tcsetpgrp (fd pgrp)
   "Set the tty-process-group for the unix file-descriptor FD to PGRP."
