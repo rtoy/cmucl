@@ -1276,9 +1276,9 @@
 	(setf (functional-kind fun) :let)
 	(flush-dest (first (basic-combination-args dest)))
 	(unlink-node dest)
-	(propagate-to-args node fun)
 	(when vals
-	  (reoptimize-continuation (first vals))))
+	  (reoptimize-continuation (first vals)))
+	(propagate-to-args node fun))
       t)))
 
 
