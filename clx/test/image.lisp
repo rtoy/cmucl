@@ -28,7 +28,6 @@
 
 (defun image-test
        (&key
-	(host *image-test-host*)
 	(nimages *image-test-nimages*)
 	(copy *image-test-copy*)
 	(copy-random-subimage *image-test-copy-random-subimage*)
@@ -44,7 +43,7 @@
       (setq images nil)
       (unwind-protect
 	  (progn
-	    (setq display (open-display host))
+	    (setq display (ext:open-clx-display))
 	    (let* ((screen (display-default-screen display))
 		   (window (screen-root screen))
 		   (gcontext (create-gcontext
@@ -92,8 +91,10 @@
 	     (image-z :z-pixmap)))
 	 (image (get-image window :x x :y y :width width :height height
 			   :format format :result-type result-type)))
-    (setf (image-x-hot image) (- x))
-    (setf (image-y-hot image) (- y))
+    ;; XCreatePixmapCursor(3X11) says that x,y for hotspot are
+    ;; unsigned
+    ;; (setf (image-x-hot image) (- x))
+    ;; (setf (image-y-hot image) (- y))
     image))
 
 (defun image-test-subimage-parameters (image random-subimage-p)
@@ -125,8 +126,8 @@
   (multiple-value-bind (src-x src-y width height)
       (image-test-subimage-parameters image random-subimage-p)
     (let* ((border-width 1)
-	   (x (- src-x (image-x-hot image) border-width))
-	   (y (- src-y (image-y-hot image) border-width)))
+	   (x (- src-x #+nil (image-x-hot image) border-width))
+	   (y (- src-y #+nil (image-y-hot image) border-width)))
       (unless (or (zerop width) (zerop height))
 	(let ((window
 		(create-window
