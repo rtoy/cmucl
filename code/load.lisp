@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.19 1990/11/24 08:41:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.20 1990/12/01 11:27:25 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -862,7 +862,7 @@
 	(gethash sym *foreign-symbols* 0)
       (unless found
 	(error "Unknown foreign symbol: ~S" sym))
-      (fixup-code-object code-object (read-arg 4) value kind))
+      (vm:fixup-code-object code-object (read-arg 4) value kind))
     code-object))
 
 (define-fop (fop-assembler-code 144)
@@ -880,7 +880,7 @@
 	(gethash routine *assembler-routines*)
       (unless found
 	(error "Undefined assembler routine: ~S" routine))
-      (fixup-code-object code-object (read-arg 4) value kind))
+      (vm:fixup-code-object code-object (read-arg 4) value kind))
     code-object))
 
 
