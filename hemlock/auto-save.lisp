@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/auto-save.lisp,v 1.2 1991/02/08 16:32:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/auto-save.lisp,v 1.3 1992/03/24 00:38:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -33,7 +33,7 @@
 	    (:print-function print-auto-save-state))
   "Per buffer state for auto-save"
   (buffer nil)				   ; buffer this state is for; for printing
-  (key-signature :type fixnum)		   ; buffer-signature at last keystroke
+  (key-signature 0 :type fixnum)	   ; buffer-signature at last keystroke
   (last-ckp-signature 0 :type fixnum)	   ; buffer-signature at last checkpoint
   (key-count 0 :type fixnum)		   ; # destructive keystrokes since ckp
   (pathname nil))			   ; pathname used to write last ckp file
