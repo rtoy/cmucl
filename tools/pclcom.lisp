@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.22 2001/03/15 18:01:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.23 2002/12/03 01:42:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,8 +87,9 @@
 
 (import 'kernel:funcallable-instance-p (find-package "PCL"))
 
-(with-compilation-unit
-    (:optimize '(optimize (debug #+small .5 #-small 2)
+(with-compiler-log-file
+    ("target:compile-pcl.log"
+     :optimize '(optimize (debug #+small .5 #-small 2)
 			  (speed 2) (safety #+small 0 #-small 2)
 			  (inhibit-warnings 2))
      :optimize-interface '(optimize-interface #+small (safety 1))
