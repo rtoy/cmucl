@@ -48,6 +48,9 @@
     "target:compiler/globaldb"
     "target:code/pred"
 
+    "target:code/pathname"
+    "target:code/filesys"
+
     "target:code/kernel"
     "target:code/bit-bash"
     "target:code/array"
@@ -99,8 +102,6 @@
     ,@(when (string= (c:backend-name c:*backend*) "RT")
 	'("target:code/rt-vm"
 	  "target:code/rt-machdef"))
-    "target:code/filesys"
-    "target:code/search-list"
 
     "target:code/signal"
     "target:code/interr"
