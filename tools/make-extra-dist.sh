@@ -82,7 +82,7 @@ fi
 if [ -n "$ENABLE_BZIP" ]; then
     echo "  Compressing with bzip"
     ( cd $DESTDIR ; tar cf - lib ) | \
-	bzip2 -c > cmucl-$VERSION-$ARCH-$OS.extra.tar.bz2
+	bzip2 > cmucl-$VERSION-$ARCH-$OS.extra.tar.bz2
 fi
 
 echo Cleaning $DESTDIR
