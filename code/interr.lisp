@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.16 1991/02/08 13:33:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.17 1991/05/24 19:55:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.16 1991/02/08 13:33:35 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.17 1991/05/24 19:55:09 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -604,8 +604,7 @@
 			       #.(c-sizeof 'mach:sigcontext)
 			       scp)
 		   mach:sigcontext
-		   t)
-	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+		   t))
     (multiple-value-bind
 	(error-number arguments)
 	(vm:internal-error-arguments (alien-value sc))
