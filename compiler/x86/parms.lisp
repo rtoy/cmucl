@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4.2.4 2000/05/23 16:38:02 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4.2.5 2000/10/16 17:32:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,6 +237,7 @@
       ;; The C startup code must fill these in.
       lisp::lisp-environment-list
       lisp::lisp-command-line-list
+      ext::*batch-mode*
       lisp::*initial-fdefn-objects*
 
       ;; Functions that the C code needs to call
