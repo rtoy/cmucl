@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.10 1997/08/30 18:21:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.11 1997/09/02 04:26:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,6 +198,10 @@
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;
 (defmacro with-float-traps-masked (traps &body body)
+  "Execute BODY with the floating point exceptions listed in TRAPS
+  masked (disabled).  TRAPS should be a list of possible exceptions
+  which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
+  :DIVIDE-BY-ZERO."
   (let ((trap-mask (dpb (lognot (float-trap-mask traps))
 			float-traps-byte #xffffffff))
 	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
