@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.7 1990/09/18 00:34:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.8 1990/10/16 17:14:12 wlott Exp $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
@@ -244,6 +244,8 @@
 			  (:temp ntemp2 non-descriptor-reg nl2-offset)
 			  (:temp ntemp3 non-descriptor-reg nl3-offset))
 
+  (progn res) ; don't complain that it's unused.
+
   (inst subu src src-arg vm:other-pointer-type)
   (inst and ntemp1 dst 3)
   (inst xor dst ntemp1)
@@ -273,6 +275,8 @@
 			  (:temp ntemp1 non-descriptor-reg nl1-offset)
 			  (:temp ntemp2 non-descriptor-reg nl2-offset)
 			  (:temp ntemp3 non-descriptor-reg nl3-offset))
+  (progn res) ; don't complain that it's unused.
+
   (inst and ntemp1 src 3)
   (inst xor src ntemp1)
   (inst sll ntemp1 5)
@@ -302,6 +306,8 @@
 			  (:temp ntemp1 non-descriptor-reg nl2-offset)
 			  (:temp ntemp2 non-descriptor-reg nl3-offset)
 			  (:temp ntemp3 non-descriptor-reg nl4-offset))
+  (progn res) ; don't complain that it's unused.
+
   (inst and ntemp1 src 3)
   (inst xor src ntemp1)
   (inst sll ntemp1 5)
@@ -334,6 +340,8 @@
 			  (:temp ntemp1 non-descriptor-reg nl2-offset)
 			  (:temp ntemp2 non-descriptor-reg nl3-offset)
 			  (:temp ntemp3 non-descriptor-reg nl4-offset))
+  (progn res) ; don't complain that it's unused.
+
   (let ((done (gen-label)))
     (pseudo-atomic (ntemp1)
       (inst subu src src-arg vm:other-pointer-type)
