@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.33 1991/11/16 15:41:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.34 1991/12/11 16:55:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,6 +190,13 @@
     (unless (eq node-type rtype)
       (let ((int (values-type-intersection node-type rtype)))
 	(when (type/= node-type int)
+	  (when (and (eq int *empty-type*)
+		     (not (eq rtype *empty-type*)))
+	    (let ((*compiler-error-context* node))
+	      (compiler-warning
+	       "New inferred type ~S conflicts with old type:~
+		~%  ~S~%*** Bug?"
+	       (type-specifier rtype) (type-specifier node-type))))
 	  (setf (node-derived-type node) int)
 	  (reoptimize-continuation (node-cont node))))))
   (undefined-value))
@@ -450,9 +457,11 @@
 ;;;    This function is called on RETURN nodes that have their REOPTIMIZE flag
 ;;; set.  It iterates over the uses of the RESULT, looking for interesting
 ;;; stuff to update the TAIL-SET:
-;;;  -- If a use is a local call, then we check that the called function has
-;;;     the tail set Tails.  If we encounter any different tail set, we return
-;;;     the second value true.
+;;;  -- If a use is a tail local call, then we check that the called function
+;;;     has the tail set Tails.  If we encounter any different tail set, we
+;;;     return true.  If NODE-TAIL-P is not set, we also call
+;;;     CONVERT-TAIL-LOCAL-CALL, which changes the succesor of the call to be
+;;;     the called function and checks if the call can become an assignment.
 ;;;  -- If a use isn't a local call, then we union its type together with the
 ;;;     types of other such uses.  We assign to the RETURN-RESULT-TYPE the
 ;;;     intersection of this type with the RESULT's asserted type.  We can make
@@ -465,11 +474,14 @@
 	(retry nil))
     (collect ((use-union *empty-type* values-type-union))
       (do-uses (use result)
-	(if (and (basic-combination-p use)
-		 (eq (basic-combination-kind use) :local))
-	    (when (merge-tail-sets use tails)
-	      (setq retry t))
-	    (use-union (node-derived-type use))))
+	(cond ((and (basic-combination-p use)
+		    (eq (basic-combination-kind use) :local)
+		    (immediately-used-p result use))
+	       (when (merge-tail-sets use tails)
+		 (setq retry t))
+	       (maybe-convert-tail-local-call use))
+	      (t
+	       (use-union (node-derived-type use)))))
       (let ((int (values-type-intersection
 		  (continuation-asserted-type result)
 		  (use-union))))
@@ -487,13 +499,10 @@
 ;;; destructively modify the set for the returning function to represent both,
 ;;; and then change all the functions in callee's set to reference the first.
 ;;;
-;;;    If the called function has no tail set, then do nothing; if it doesn't
-;;; return, then it can't affect the callers value.
-;;;
 (defun merge-tail-sets (call ret-set)
   (declare (type basic-combination call) (type tail-set ret-set))
   (let ((fun-set (lambda-tail-set (combination-lambda call))))
-    (when (and fun-set (not (eq ret-set fun-set)))
+    (unless (eq ret-set fun-set)
       (let ((funs (tail-set-functions fun-set)))
 	(dolist (fun funs)
 	  (setf (lambda-tail-set fun) ret-set))
@@ -536,10 +545,11 @@
 	  (let ((funs (tail-set-functions tails)))
 	    (dolist (fun funs)
 	      (let ((return (lambda-return fun)))
-		(when (node-reoptimize return)
-		  (setf (node-reoptimize node) nil)
-		  (when (find-result-type return tails) (return-from RETRY)))
-		(res (return-result-type return)))))
+		(when return
+		  (when (node-reoptimize return)
+		    (setf (node-reoptimize node) nil)
+		    (when (find-result-type return tails) (return-from RETRY)))
+		  (res (return-result-type return))))))
 	  (return)))
       
       (when (type/= (res) (tail-set-type tails))
@@ -829,10 +839,10 @@
 	  ((functional-p (ref-leaf use))
 	   (let ((leaf (ref-leaf use)))
 	     (cond ((eq (combination-kind call) :local)
-		    (let ((tail-set (lambda-tail-set leaf)))
-		      (when tail-set
-			(derive-node-type
-			 call (tail-set-type tail-set)))))
+		    (unless (member (functional-kind leaf)
+				    '(:let :assignment))
+		      (derive-node-type
+		       call (tail-set-type (lambda-tail-set leaf)))))
 		   ((not (eq (ref-inlinep use) :notinline))
 		    (convert-call-if-possible use call)
 		    (maybe-let-convert leaf)))))
@@ -1136,6 +1146,7 @@
       (assert (member (continuation-kind arg)
 		      '(:block-start :deleted-block-start :inside-block)))
       (assert-continuation-type arg (continuation-asserted-type cont))
+      (setf (node-derived-type ref) *wild-type*)
       (change-ref-leaf ref (find-constant nil))
       (substitute-continuation arg cont)
       (reoptimize-continuation arg)
@@ -1531,6 +1542,7 @@
   (when (typep (continuation-dest (node-cont node))
 	       '(or creturn exit mv-combination))
     (give-up))
+  (setf (node-derived-type node) *wild-type*)
   (if vals
       (let ((dummies (loop repeat (1- (length vals))
 		       collect (gensym))))
