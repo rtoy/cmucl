@@ -104,7 +104,7 @@
 ;;; 
 (defun get-node-environment (node)
   (declare (type node node))
-  (get-lambda-environment (lexenv-lambda (node-lexenv node))))
+  (get-lambda-environment (node-home-lambda node)))
 
 
 ;;; Compute-Closure  --  Internal
@@ -118,21 +118,14 @@
 (defun compute-closure (fun)
   (declare (type clambda fun))
   (let ((env (get-lambda-environment fun)))
+    (note-unreferenced-vars fun)
     (dolist (var (lambda-vars fun))
-      (unless (or (leaf-ever-used var)
-		  (lambda-var-ignorep var))
-	(let ((*compiler-error-context* (lambda-bind fun)))
-	  (compiler-warning "Variable ~S defined but never used."
-			    (leaf-name var))
-	  (setf (leaf-ever-used var) t)))
-      
       (dolist (ref (leaf-refs var))
 	(let ((ref-env (get-node-environment ref)))
 	  (unless (eq ref-env env)
 	    (when (lambda-var-sets var)
 	      (setf (lambda-var-indirect var) t))
 	    (close-over var ref-env env))))
-      
       (dolist (set (basic-var-sets var))
 	(let ((set-env (get-node-environment set)))
 	  (unless (eq set-env env)
