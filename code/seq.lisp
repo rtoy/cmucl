@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.27 1998/03/21 08:12:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.28 1998/04/03 03:45:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1341,7 +1341,7 @@
 				(nthcdr (1+ start) result)
 				:test test
 				:test-not test-not
-				:key (if key key #'identity))))
+				:key key)))
 	      (and (not from-end)
 		   (not (do ((it (apply-key key (car current)))
 			     (l (cdr current) (cdr l))
