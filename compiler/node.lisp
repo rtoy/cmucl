@@ -445,8 +445,8 @@
 (defstruct (cleanup (:print-function %print-cleanup))
   ;;
   ;; The kind of thing that has to be cleaned up.
-  (kind nil :type (member :special-bind :catch :unwind-protect :block
-			  :tagbody))
+  (kind (required-argument)
+	:type (member :special-bind :catch :unwind-protect :block :tagbody))
   ;;
   ;; The node that messes things up.  This is the last node in the
   ;; non-messed-up environment.  Null only temporarily.  This could be deleted
@@ -468,7 +468,7 @@
 (defstruct (environment (:print-function %print-environment))
   ;;
   ;; The function that allocates this environment.
-  (function nil :type clambda)
+  (function (required-argument) :type clambda)
   ;;
   ;; A list of all the Lambdas that allocate variables in this environment.
   (lambdas nil :type list)
@@ -534,7 +534,7 @@
   ;; is the :Catch or :Unwind-Protect cleanup, and not the cleanup for the
   ;; escape block.  The Cleanup-Kind of this thus provides a good indication of
   ;; what kind of exit is being done.
-  (cleanup nil :type cleanup)
+  (cleanup (required-argument) :type cleanup)
   ;;
   ;; The continuation exited to (the CONT of the EXIT nodes.)  If this exit is
   ;; from an escape function (CATCH or UNWIND-PROTECT), then environment
@@ -546,7 +546,7 @@
   ;; find the NLX-Info that corresponds to a given exit.  For this purpose, the
   ;; Entry must also be used to disambiguate, since exits to different places
   ;; may deliver their result to the same continuation.
-  (continuation nil :type continuation)
+  (continuation (required-argument) :type continuation)
   ;;
   ;; The entry stub inserted by environment analysis.  This is a block
   ;; containing a call to the %NLX-Entry funny function that has the original
@@ -629,7 +629,8 @@
 		       (:print-function %print-global-var))
   ;;
   ;; Kind of variable described.
-  (kind nil :type (member :special :global-function :constant :global)))
+  (kind (required-argument)
+	:type (member :special :global-function :constant :global)))
 
 (defprinter global-var
   name
@@ -647,10 +648,10 @@
 			  (:print-function %print-slot-accessor))
   ;;
   ;; The description of the structure that this is an accessor for.
-  (for nil :type defstruct-description)
+  (for (required-argument) :type defstruct-description)
   ;;
   ;; The slot description of the slot.
-  (slot nil :type defstruct-slot-description))
+  (slot (required-argument) :type defstruct-slot-description))
 
 (defprinter slot-accessor
   name
@@ -777,8 +778,10 @@
   ;;
   ;; The Bind node for this Lambda.  This node marks the beginning of the
   ;; lambda, and serves to explicitly represent the lambda binding semantics
-  ;; within the flow graph representation.
-  (bind nil :type bind)
+  ;; within the flow graph representation.  Null in deleted functions, and also
+  ;; in LETs where we deleted the call & bind (because there are no variables
+  ;; left), but have not yet actually deleted the lambda yet.
+  (bind nil :type (or bind null))
   ;;
   ;; The Return node for this Lambda, or NIL if it has been deleted.  This
   ;; marks the end of the lambda, receiving the result of the body.  In a let,
@@ -808,8 +811,12 @@
   ;; The structure which represents the environment that this Function's
   ;; variables are allocated in.  This is filled in by environment analysis.
   ;; In a let, this is EQ to our home's environment.
-  (environment nil :type (or environment null)))
-
+  (environment nil :type (or environment null))
+  ;;
+  ;; In a LET, this is the NODE-LEXENV of the combination node.  We retain it
+  ;; so that if the let is deleted (due to a lack of vars), we will still have
+  ;; caller's lexenv to figure out which cleanup is in effect.
+  (call-lexenv nil :type (or lexenv null)))
 
 (defprinter lambda
   name
@@ -902,7 +909,7 @@
   ;;
   ;; The kind of argument being described.  Required args only have arg
   ;; info structures if they are special.
-  (kind nil :type (member :required :optional :keyword :rest))
+  (kind (required-argument) :type (member :required :optional :keyword :rest))
   ;;
   ;; If true, the Var for supplied-p variable of a keyword or optional arg.
   ;; This is true for keywords with non-constant defaults even when there is no
@@ -1009,12 +1016,12 @@
 		(:copier copy-if))
   ;;
   ;; Continuation for the predicate.
-  (test nil :type continuation)
+  (test (required-argument) :type continuation)
   ;;
   ;; The blocks that we execute next in true and false case, respectively (may
   ;; be the same.)
-  (consequent nil :type cblock)
-  (alternative nil :type cblock))
+  (consequent (required-argument) :type cblock)
+  (alternative (required-argument) :type cblock))
 
 (defprinter if
   (test :prin1 (continuation-use test))
@@ -1031,10 +1038,10 @@
 		 (:copier copy-set))
   ;;
   ;; Descriptor for the variable set.
-  (var nil :type basic-var)
+  (var (required-argument) :type basic-var)
   ;;
   ;; Continuation for the value form.
-  (value nil :type continuation))
+  (value (required-argument) :type continuation))
 
 (defprinter set
   var
@@ -1050,7 +1057,7 @@
 (defstruct (basic-combination (:include node))
   ;;
   ;; Continuation for the function.
-  (fun nil :type continuation)
+  (fun (required-argument) :type continuation)
   ;;
   ;; List of continuations for the args.  In a local call, an argument
   ;; continuation may be replaced with NIL to indicate that the corresponding
@@ -1127,7 +1134,7 @@
   (lambda nil :type (or clambda null))
   ;;
   ;; The continuation which yields the value of the lambda.
-  (result nil :type continuation)
+  (result (required-argument) :type continuation)
   ;;
   ;; The union of the node-derived-type of all uses of the result other than by
   ;; a local call, intersected with the result's asserted-type.  If there are
@@ -1198,7 +1205,7 @@
   (name nil :type (or symbol list))
   ;;
   ;; The kind of reference to Name.
-  (kind nil :type (member :function :type :variable))
+  (kind (required-argument) :type (member :function :type :variable))
   ;;
   ;; The number of times this thing was used.
   (count 0 :type unsigned-byte)
@@ -1207,3 +1214,9 @@
   ;; thing was used.  Note that we only record the first
   ;; *UNDEFINED-WARNING-LIMIT* calls.
   (warnings () :type list))
+
+
+;;;; Freeze some structure types to speed type testing:
+
+(declaim (freeze-type node leaf lexenv continuation cblock component cleanup
+		      environment tail-set nlx-info))
