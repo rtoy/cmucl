@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.8 1991/10/04 17:18:47 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.9 1991/10/17 16:12:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,15 +255,15 @@
 	   &key (init t)
 	        (display (cdr (assoc :display ext:*environment-list*))))
   "Invokes the editor, Hemlock.  If X is supplied and is a symbol, the
-   definition of X is put into a buffer, and that buffer is selected.  If X
-   is a pathname, the file specified by X is visited in a new buffer.  If X
-   is not supplied or Nil, the editor is entered in the same state as when
-   last exited.  When :init is supplied as t (the default), the file
-   \"hemlock-init.fasl\" or \"hemlock-init.lisp\" is loaded from the home or
-   default directory, but the Lisp command line switch -hinit can be used to
-   specify a different name.  If the argument is non-nil and not t, then it
-   should be a pathname that will be merged with the home or default directory.
-   The display argument is not currently supported."
+   definition of X is put into a buffer, and that buffer is selected.  If X is
+   a pathname, the file specified by X is visited in a new buffer.  If X is not
+   supplied or Nil, the editor is entered in the same state as when last
+   exited.  When :init is supplied as t (the default), the file
+   \"hemlock-init.lisp\", or \".hemlock-init.lisp\" is loaded from the home
+   directory, but the Lisp command line switch -hinit can be used to specify a
+   different name.  Any compiled version of the source is preferred when
+   choosing the file to load.  If the argument is non-nil and not t, then it
+   should be a pathname that will be merged with the home directory."
   (when *in-the-editor* (error "You are already in the editor, you bogon!"))
   (let ((*in-the-editor* t)
 	(display (unless *editor-has-been-entered*
@@ -313,19 +313,20 @@
 
 (defun maybe-load-hemlock-init (init)
   (when init
-    (let* ((name (case init
-		   ((t) (let ((switch (find "hinit" *command-line-switches*
-					    :test #'string-equal
-					    :key #'cmd-switch-name)))
-			  (if switch
-			      (or (cmd-switch-value switch)
-				  (car (cmd-switch-words switch))
-				  "hemlock-init")
-			      "hemlock-init")))
-		   (t (pathname init)))))
-      (load (merge-pathnames name (user-homedir-pathname))
-	    :if-does-not-exist nil))))
-
+    (let* ((switch (find "hinit" *command-line-switches*
+			 :test #'string-equal
+			 :key #'cmd-switch-name))
+	   (spec-name
+	    (if (not (eq init t))
+		init
+		(and switch
+		     (or (cmd-switch-value switch)
+			 (car (cmd-switch-words switch)))))))
+      (if spec-name
+	  (load (merge-pathnames spec-name (user-homedir-pathname))
+		:if-does-not-exist nil)
+	  (or (load "home:hemlock-init" :if-does-not-exist nil)
+	      (load "home:.hemlock-init" :if-does-not-exist nil))))))
 
 
 ;;;; SAVE-ALL-BUFFERS.
