@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.88 2003/03/10 11:29:02 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.89 2003/03/10 13:35:12 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1855,7 +1855,7 @@
 	    (values (simple-condition-format-control condition)
 		    (simple-condition-format-arguments condition))
 	    (values "~a"
-		    (with-output-to-string (s) (princ condition s))))
+		    (list (with-output-to-string (s) (princ condition s)))))
       (let ((stream *compiler-error-output*)
 	    (context (find-error-context format-args)))
 	(cond
