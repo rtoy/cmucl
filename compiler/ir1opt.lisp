@@ -201,7 +201,8 @@
 ;;;
 ;;;    Similar to Derive-Node-Type, but asserts that it is an error for Cont's
 ;;; value not to be typep to Type.  If we improve the assertion, we set
-;;; BLOCK-TYPE-CHECK to guarantee that the new assertion will be checked.
+;;; TYPE-CHECK and TYPE-ASSERTED to guarantee that the new assertion will be
+;;; checked.
 ;;;
 (defun assert-continuation-type (cont type)
   (declare (type continuation cont) (type ctype type))
@@ -211,9 +212,9 @@
 	(when (type/= cont-type int)
 	  (setf (continuation-asserted-type cont) int)
 	  (do-uses (node cont)
-	    (let ((block (node-block node)))
-	      (setf (block-type-check block) t)
-	      (setf (block-type-asserted block) t)))
+	    (setf (block-attributep (block-flags (node-block node))
+				    type-check type-asserted)
+		  t))
 	  (reoptimize-continuation cont)))))
   (undefined-value))
 
@@ -254,8 +255,8 @@
 ;;; IR1-Optimize  --  Interface
 ;;;
 ;;;    Do one forward pass over Component, deleting unreachable blocks and
-;;; doing IR1 optimizations.  We can ignore all blocks that don't have
-;;; Block-Reoptimize set.  If Component-Reoptimize is true when we are done,
+;;; doing IR1 optimizations.  We can ignore all blocks that don't have the
+;;; Reoptimize flag set.  If Component-Reoptimize is true when we are done,
 ;;; then another iteration would be beneficial.
 ;;;
 ;;;    We delete blocks when there is either no predecessor or the block is in
@@ -270,7 +271,7 @@
     (cond
      ((or (block-delete-p block)
 	  (null (block-pred block))
-	  (eq (functional-kind (block-lambda block)) :deleted))
+	  (eq (functional-kind (block-home-lambda block)) :deleted))
       (delete-block block))
      (t
       (loop
@@ -289,13 +290,11 @@
 	(unless (join-successor-if-possible block)
 	  (return)))
 
-      (when (and (block-reoptimize block)
-		 (block-component block))
+      (when (and (block-reoptimize block) (block-component block))
 	(assert (not (block-delete-p block)))
 	(ir1-optimize-block block))
 
-      (when (and (block-flush-p block)
-		 (block-component block))
+      (when (and (block-flush-p block) (block-component block))
 	(assert (not (block-delete-p block)))
 	(flush-dead-code block)))))
 
@@ -377,20 +376,17 @@
 (defun join-successor-if-possible (block)
   (declare (type cblock block))
   (let ((next (first (block-succ block))))
-    (when (block-lambda next)
+    (when (block-start next)
       (let* ((last (block-last block))
 	     (last-cont (node-cont last))
-	     (next-cont (block-start next))
-	     (cleanup (block-end-cleanup block))
-	     (next-cleanup (block-start-cleanup next))
-	     (lambda (block-lambda block))
-	     (next-lambda (block-lambda next)))
+	     (next-cont (block-start next)))
 	(cond ((or (rest (block-pred next))
 		   (not (eq (continuation-use last-cont) last))
 		   (eq next block)
-		   (not (eq (lambda-home lambda) (lambda-home next-lambda)))
-		   (not (eq (find-enclosing-cleanup cleanup)
-			    (find-enclosing-cleanup next-cleanup))))
+		   (not (eq (block-end-cleanup block)
+			    (block-start-cleanup next)))
+		   (not (eq (block-home-lambda block)
+			    (block-home-lambda next))))
 	       nil)
 	      ((eq last-cont next-cont)
 	       (join-blocks block next)
@@ -413,9 +409,8 @@
 ;;;
 ;;;    Join together two blocks which have the same ending/starting
 ;;; continuation.  The code in Block2 is moved into Block1 and Block2 is
-;;; deleted from the DFO.  The End-Cleanup for Block1 is set to that for
-;;; Block2 so that we don't lose cleanup info.  We combine the optimize flags
-;;; for the two blocks so that any indicated optimization gets done.
+;;; deleted from the DFO.  We combine the optimize flags for the two blocks so
+;;; that any indicated optimization gets done.
 ;;;
 (defun join-blocks (block1 block2)
   (declare (type cblock block1 block2))
@@ -437,18 +432,10 @@
     (setf (block-last block1) last)
     (setf (continuation-kind start2) :inside-block))
 
-  (setf (block-end-cleanup block1) (block-end-cleanup block2))
-
-  (when (block-reoptimize block2)
-    (setf (block-reoptimize block1) t))
-  (when (block-flush-p block2)
-    (setf (block-flush-p block1) t))
-  (when (block-type-check block2)
-    (setf (block-type-check block1) t))
-  (assert (not (block-delete-p block2)))
-
-  (setf (block-type-asserted block1) t)
-  (setf (block-test-modified block1) t)
+  (setf (block-flags block1)
+	(attributes-union (block-flags block1)
+			  (block-flags block2)
+			  (block-attributes type-asserted test-modified)))
   
   (let ((next (block-next block2))
 	(prev (block-prev block2)))
@@ -625,7 +612,7 @@
 	   (use-block (node-block use))
 	   (dummy-cont (make-continuation))
 	   (new-cont (make-continuation))
-	   (new-node (make-if :test new-cont  :source (node-source node)
+	   (new-node (make-if :test new-cont
 			      :consequent cblock  :alternative ablock))
 	   (new-block (continuation-starts-block new-cont)))
       (prev-link new-node new-cont)
@@ -670,8 +657,8 @@
 	(entry (exit-entry node))
 	(cont (node-cont node)))
     (when (and entry
-	       (eq (lambda-home (block-lambda (node-block node)))
-		   (lambda-home (block-lambda (node-block entry)))))
+	       (eq (node-home-lambda node) (node-home-lambda entry)))
+      (setf (entry-exits entry) (delete node (entry-exits entry)))
       (prog1
 	  (unlink-node node)
 	(when value
@@ -871,7 +858,7 @@
 (defun transform-call (node res)
   (declare (type combination node) (list res))
   (with-ir1-environment node
-    (let ((new-fun (ir1-convert-lambda res (node-source node)))
+    (let ((new-fun (ir1-convert-global-lambda res))
 	  (ref (continuation-use (combination-fun node))))
       (change-ref-leaf ref new-fun)
       (setf (combination-kind node) :full)
@@ -907,7 +894,6 @@
 	(with-ir1-environment call
 	  (let* ((leaf (find-constant (first values)))
 		 (node (make-ref (leaf-type leaf)
-				 (node-source call)
 				 leaf
 				 nil))
 		 (dummy (make-continuation))
@@ -1025,7 +1011,7 @@
     (when (and (eq (continuation-use cont) ref)
 	       dest
 	       (not (typep dest '(or creturn exit mv-combination)))
-	       (eq (lambda-home (block-lambda (node-block ref)))
+	       (eq (node-home-lambda ref)
 		   (lambda-home (lambda-var-home var)))
 	       (member (continuation-type-check arg) '(t nil))
 	       (member (continuation-type-check cont) '(t nil)))
@@ -1199,4 +1185,3 @@
 
   (setf (block-flush-p block) nil)
   (undefined-value))
-
