@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.17 1992/12/10 00:35:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.18 1993/08/06 13:06:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,6 +29,9 @@
 (in-package "KERNEL")
 (export '(%with-array-data))
 (in-package "LISP")
+
+(declaim (inline fill-pointer array-has-fill-pointer-p adjustable-array-p
+		 array-displacement))
 
 (defconstant array-rank-limit 65529
   "The exclusive upper bound on the rank of an array.")
@@ -497,22 +500,22 @@
 
 (defun array-rank (array)
   "Returns the number of dimensions of the Array."
-  (cond ((array-header-p array)
-	 (%array-rank array))
-	((vectorp array)
-	 1)
-	(t
-	 (error "~S is not an array." array))))
+  (if (array-header-p array)
+      (%array-rank array)
+      1))
 
 (defun array-dimension (array axis-number)
   "Returns length of dimension Axis-Number of the Array."
   (declare (array array) (type index axis-number))
-  (when (>= axis-number (array-rank array))
-    (error "~D is too big; ~S only has ~D dimension~:P"
-	   axis-number array (array-rank array)))
-  (if (array-header-p array)
-      (%array-dimension array axis-number)
-      (length (the (simple-array * (*)) array))))
+  (cond ((not (array-header-p array))
+	 (unless (= axis-number 0)
+	   (error "Vector axis is not zero: ~S" axis-number))
+	 (length (the (simple-array * (*)) array)))
+	((>= axis-number (%array-rank array))
+	 (error "~D is too big; ~S only has ~D dimension~:P"
+		axis-number array (%array-rank array)))
+	(t
+	 (%array-dimension array axis-number))))
 
 (defun array-dimensions (array)
   "Returns a list whose elements are the dimensions of the array"
@@ -540,7 +543,7 @@
   "Returns T if (adjust-array array...) would return an array identical
    to the argument, this happens for complex arrays."
   (declare (array array))
-  (not (typep array '(simple-array * (*)))))
+  (not (typep array 'simple-array)))
 
 
 ;;;; Fill pointer frobbing stuff.
