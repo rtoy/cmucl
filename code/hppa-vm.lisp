@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.3 1992/06/18 11:54:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.4 1992/07/09 16:36:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,8 +20,9 @@
 (use-package "UNIX")
 
 (export '(fixup-code-object internal-error-arguments
-	  sigcontext-register sigcontext-float-register
-	  sigcontext-floating-point-modes extern-alien-name))
+	  sigcontext-program-counter sigcontext-register
+	  sigcontext-float-register sigcontext-floating-point-modes
+	  extern-alien-name))
 
 
 ;;;; The sigcontext structure.
@@ -40,9 +41,9 @@
     (sc-fp system-area-pointer)
     (sc-ap (* save-state))
     (sc-pcsqh unsigned-long)
-    (sc-pc system-area-pointer) ; HP calls it the sc-pcoqh.
+    (sc-pcoqh unsigned-long)
     (sc-pcsqt unsigned-long)
-    (sc-pcoqt system-area-pointer)
+    (sc-pcoqt unsigned-long)
     (sc-ps unsigned-long)))
 
 
@@ -108,7 +109,7 @@
 (defun internal-error-arguments (scp)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (let ((pc (slot scp 'sc-pc)))
+    (let ((pc (sigcontext-program-counter scp)))
       (declare (type system-area-pointer pc))
       (let* ((length (sap-ref-8 pc 4))
 	     (vector (make-array length :element-type '(unsigned-byte 8))))
@@ -130,7 +131,14 @@
 
 ;;;; Sigcontext access functions.
 
-;;; SIGCONTEXT-REGISTER -- Internal.
+;;; SIGCONTEXT-PROGRAM-COUNTER -- Interface
+;;;
+(defun sigcontext-program-counter (scp)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (int-sap (logandc2 (slot scp 'sc-pcoqh) 3))))
+
+;;; SIGCONTEXT-REGISTER -- Interface
 ;;;
 ;;; An escape register saves the value of a register for a frame that someone
 ;;; interrupts.  
@@ -149,7 +157,7 @@
 (defsetf sigcontext-register %set-sigcontext-register)
 
 
-;;; SIGCONTEXT-FLOAT-REGISTER  --  Internal
+;;; SIGCONTEXT-FLOAT-REGISTER  --  Interface
 ;;;
 ;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
 ;;; Format is the type of float to return.
