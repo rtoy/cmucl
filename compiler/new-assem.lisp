@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.9 1992/07/27 16:45:11 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.10 1992/07/27 16:49:38 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -471,7 +471,7 @@
     (setf (segment-run-scheduler segment) nil)
     (dolist (inst results)
       (if (eq inst :nop)
-	  (emit-nop segment)
+	  (c:emit-nop segment)
 	  (funcall (inst-emitter inst) segment)))
     (setf (segment-run-scheduler segment) t))
   ;;
