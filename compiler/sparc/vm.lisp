@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.7.2.3 2000/05/23 16:37:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.7.2.4 2000/10/27 19:40:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,50 +42,49 @@
 
 
 ;; Globals.  These are difficult to extract from a sigcontext.
-(defreg zero 0)
-(defreg alloc 1)
-(defreg null 2)
-(defreg csp 3)
-(defreg cfp 4)
-(defreg bsp 5)
-(defreg nfp 6)
-(defreg cfunc 7)
+(defreg zero 0)				; %g0
+(defreg alloc 1)			; %g1
+(defreg null 2)				; %g2
+(defreg csp 3)				; %g3
+(defreg cfp 4)				; %g4
+(defreg bsp 5)				; %g5
+;; %g6 and %g7 are supposed to be reserved for the system.
 
 ;; Outs.  These get clobbered when we call into C.
-(defreg nl0 8)
-(defreg nl1 9)
-(defreg nl2 10)
-(defreg nl3 11)
-(defreg nl4 12)
-(defreg nl5 13)
-(defreg nsp 14)
-(defreg nargs 15)
+(defreg nl0 8)				; %o0
+(defreg nl1 9)				; %o1
+(defreg nl2 10)				; %o2
+(defreg nl3 11)				; %o3
+(defreg nl4 12)				; %o4
+(defreg nl5 13)				; %o5
+(defreg nsp 14)				; %o6
+(defreg nargs 15)			; %o7
 
 ;; Locals.  These are preserved when we call into C.
-(defreg a0 16)
-(defreg a1 17)
-(defreg a2 18)
-(defreg a3 19)
-(defreg a4 20)
-(defreg a5 21)
-(defreg ocfp 22)
-(defreg lra 23)
+(defreg a0 16)				; %l0
+(defreg a1 17)				; %l1
+(defreg a2 18)				; %l2
+(defreg a3 19)				; %l3
+(defreg a4 20)				; %l4
+(defreg a5 21)				; %l5
+(defreg ocfp 22)			; %l6
+(defreg lra 23)				; %l7
 
 ;; Ins.  These are preserved just like locals.
-(defreg cname 24)
-(defreg lexenv 25)
-(defreg l0 26)
-(defreg l1 27)
-(defreg l2 28)
-(defreg code 29)
+(defreg cname 24)			; %i0
+(defreg lexenv 25)			; %i1
+(defreg l0 26)				; %i2
+(defreg nfp 27)				; %i3
+(defreg cfunc 28)			; %i4
+(defreg code 29)			; %i5
 ;; we can't touch reg 30 if we ever want to return
-(defreg lip 31)
+(defreg lip 31)				; %i7
 
 (defregset non-descriptor-regs
   nl0 nl1 nl2 nl3 nl4 nl5 cfunc nargs nfp)
 
 (defregset descriptor-regs
-  a0 a1 a2 a3 a4 a5 ocfp lra cname lexenv l0 l1 l2)
+  a0 a1 a2 a3 a4 a5 ocfp lra cname lexenv l0)
 
 (defregset register-arg-offsets
   a0 a1 a2 a3 a4 a5)
