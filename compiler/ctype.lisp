@@ -85,9 +85,9 @@
 ;;; used to determine whether the result type matches the specified result.
 ;;;
 ;;; Unlike the argument test, the result test may be called on values or
-;;; function types.  If Strict-Result is true, then the Node-Derived-Type is
-;;; always used.  If Strict-Result is false and Cont's Type-Check is true, then
-;;; the Node-Derived-Type is intersected with the Cont's Asserted-Type.
+;;; function types.  If Strict-Result is true and safety is non-zero, then the
+;;; Node-Derived-Type is always used.  Otherwise, if Cont's Type-Check is true,
+;;; then the Node-Derived-Type is intersected with the Cont's Asserted-Type.
 ;;;
 ;;; The error and warning functions are functions that are called to explain
 ;;; the result.  We bind *compiler-error-context* to the combination node so
@@ -142,7 +142,8 @@
 	   (return-type (function-type-returns type))
 	   (cont (node-cont call))
 	   (out-type
-	    (if (or strict-result (not (continuation-type-check cont)))
+	    (if (or (not (continuation-type-check cont))
+		    (and strict-result (policy call (/= safety 0))))
 		dtype
 		(values-type-intersection (continuation-asserted-type cont)
 					  dtype))))
@@ -760,13 +761,16 @@
 	  (note-lossage
 	   "The result type from ~A:~%  ~S~@
 	   conflicts with the definition's result type assertion:~%  ~S"
-	   where (type-specifier type-returns) (type-specifier atype)))
+	   where (type-specifier type-returns) (type-specifier atype))
+	  nil)
 	 (*lossage-detected* nil)
 	 ((not really-assert) t)
 	 (t
 	  (when atype
 	    (assert-continuation-type (return-result return) atype))
-	  (mapc #'(lambda (var type)
-		    (setf (leaf-type var) type))
-		vars types)
+	  (loop for var in vars and type in types do
+	    (unless (basic-var-sets var)
+	      (setf (leaf-type var) type)
+	      (dolist (ref (leaf-refs var))
+		(derive-node-type ref type))))
 	  t))))))
