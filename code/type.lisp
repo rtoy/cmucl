@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.14 1993/08/25 01:15:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.15 1993/08/31 09:01:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -846,7 +846,8 @@
 	    (cond (fun (funcall fun lspec))
 		  ((or (and (consp spec) (symbolp (car spec)))
 		       (symbolp spec))
-		   (signal 'parse-unknown-type :specifier spec)
+		   (when *type-system-initialized*
+		     (signal 'parse-unknown-type :specifier spec))
 		   ;;
 		   ;; Inhibit caching...
 		   (return-from values-specifier-type
