@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.12 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.13 2003/02/25 15:54:55 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,3 +246,34 @@
       (inst ld count count-vector offset)
       (inst add count 1)
       (inst st count count-vector offset))))
+
+;; The RDTICK instruction on Sparc V9s allows access to a 63-bit cycle
+;; counter.
+
+(defknown read-cycle-counter ()
+  (values (unsigned-byte 32) (unsigned-byte 32)))
+
+;; Note: This should probably really only be used sparc-v8plus because
+;; the tick counter is returned in a 64-bit register.
+(define-vop (read-cycle-counter)
+  (:translate read-cycle-counter)
+  (:guard (backend-featurep :sparc-v9))
+  (:args)
+  (:policy :fast-safe)
+  (:results (lo :scs (unsigned-reg))
+	    (hi :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  ;; The temporary can be any of the 64-bit non-descriptor regs.  It
+  ;; can't be any non-descriptor reg because they might not get saved
+  ;; on a task switch, since we're still a 32-bit app.  Arbitrarily
+  ;; select nl5.
+  (:temporary (:sc unsigned-reg :offset nl5-offset) tick)
+  (:generator 3
+    (inst rdtick tick)
+    ;; Get the hi and low parts of the counter into the results.
+    (inst srlx hi tick 32)
+    (inst srl lo tick 0)))
+
+#+sparc-v9
+(defun read-cycle-counter ()
+  (read-cycle-counter))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.37 2002/09/12 15:59:29 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.38 2003/02/25 15:54:55 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 
 (def-assembler-params
     :scheduler-p t
-  :max-locations 100)
+  :max-locations 101)
 
 
 ;;;; Constants, types, conversion functions, some disassembler stuff.
@@ -90,7 +90,8 @@ Otherwise, use the Sparc register names")
        (:memory 0)
        (:psr 97)
        (:fsr 98)
-       (:y 99)))))
+       (:y 99)
+       (:tick 100)))))
 
 ;;; symbols used for disassembly printing
 ;;;
@@ -1265,6 +1266,16 @@ about function addresses and register values.")
      (integer
       (emit-format-3-immed segment #b10 0 #b110000 (reg-tn-encoding src1) 1
 			   src2)))))
+
+;; Read the tick register available on sparc v9
+(define-instruction rdtick (segment dst)
+  (:declare (type tn dst))
+  (:printer format-3-immed ((op #b10) (op3 #b101000) (rs1 4) (immed 0))
+            '('RD :tab '%TICK ", " rd))
+  (:dependencies (reads :tick) (writes dst))
+  (:delay 0)
+  (:emitter (emit-format-3-immed segment #b10 (reg-tn-encoding dst) #b101000
+				 4 0 0)))
 
 (defun snarf-error-junk (sap offset &optional length-only)
   (let* ((length (system:sap-ref-8 sap offset))

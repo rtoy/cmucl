@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.11 2002/08/27 22:18:29 moore Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.12 2003/02/25 15:54:56 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -559,3 +559,50 @@
     ;; Pop the frame pointer, and resume at the return address.
     (inst pop ebp-tn)
     (inst ret)))
+
+
+;; the RDTSC instruction (present on Pentium processors and
+;; successors) allows you to access the time-stamp counter, a 64-bit
+;; model-specific register that counts executed cycles. The
+;; instruction returns the low cycle count in EAX and high cycle count
+;; in EDX.
+;;
+;; In order to obtain more significant results on out-of-order
+;; processors (such as the Pentium II and later), we issue a
+;; serializing CPUID instruction before reading the cycle counter.
+;; This instruction is used for its side effect of emptying the
+;; processor pipeline, to ensure that the RDTSC instruction is
+;; executed once all pending instructions have been completed.
+;;
+;; Note that cache effects mean that the cycle count can vary for
+;; different executions of the same code (it counts cycles, not
+;; retired instructions). Furthermore, the results are per-processor
+;; and not per-process, so are unreliable on multiprocessor machines
+;; where processes can migrate between processors.
+;;
+;; This method of obtaining a cycle count has the advantage of being
+;; very fast (around 20 cycles), and of not requiring a system call.
+;; However, you need to know your processor's clock speed to translate
+;; this into real execution time.
+
+(defknown read-cycle-counter () (values (unsigned-byte 32) (unsigned-byte 32)) ())
+
+(define-vop (read-cycle-counter)
+  (:translate read-cycle-counter)
+  (:guard (backend-featurep :pentium))
+  (:args )
+  (:policy :fast-safe)
+  (:results (lo :scs (unsigned-reg))
+            (hi :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:temporary (:sc unsigned-reg :offset eax-offset :target lo) eax)
+  (:temporary (:sc unsigned-reg :offset edx-offset :target hi) edx)
+  (:generator 1
+     (inst cpuid)
+     (inst rdtsc)
+     (move hi edx)
+     (move lo eax)))
+
+#+pentium
+(defun read-cycle-counter ()
+  (read-cycle-counter))

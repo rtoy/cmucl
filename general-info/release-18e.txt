@@ -36,6 +36,8 @@ New in this release:
      - Support for generalized function names of the form
        (<SYMBOL> ...) has been added.  See EXT:DEFINE-FUNCTION-NAME-SYNTAX
        and EXT:VALID-FUNCTION-NAME-P.
+     - Access to the hardware cycle counters on Pentium and UltraSPARC
+       processors has been added, and is reported by the TIME macro.
 
   * Numerous ANSI compliance fixes:
      - SYMBOL-MACROLET signals an error when an attempt is made to

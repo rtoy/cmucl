@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.24 2002/09/19 17:46:03 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.25 2003/02/25 15:54:56 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2052,6 +2052,20 @@
   (:printer byte ((op #b11001111)))
   (:emitter
    (emit-byte segment #b11001111)))
+
+;; read-time-stamp instruction, that counts executed cycles, present
+;; from Pentium onwards
+(define-instruction rdtsc (segment)
+  (:printer two-bytes ((op '(#x0f #x31))))
+  (:emitter
+   (emit-byte segment #x0f)
+   (emit-byte segment #x31)))
+
+(define-instruction cpuid (segment)
+  (:printer two-bytes ((op '(#x0f #xa2))))
+  (:emitter
+   (emit-byte segment #x0f)
+   (emit-byte segment #xa2)))
 
 
 ;;;; Processor control

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.21 2003/01/06 15:10:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.22 2003/02/25 15:54:54 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -281,6 +281,16 @@
 		       (system:get-system-info)
     (values user sys faults (get-bytes-consed))))
 
+#+(or pentium sparc-v9)
+(defun cycle-count/float ()
+  (multiple-value-bind (lo hi)
+      (vm::read-cycle-counter)
+    (+ (* hi (expt 2.0d0 32)) lo)))
+
+#-(or pentium sparc-v9)
+(defun cycle-count/float () 0.0)
+
+
 ;;; %TIME  --  Internal
 ;;;
 ;;;    The guts of the TIME macro.  Compute overheads, run the (compiled)
@@ -299,6 +309,7 @@
         real-time-overhead
         run-utime-overhead
         run-stime-overhead
+        cycle-count
         page-faults-overhead
         old-bytes-consed
         new-bytes-consed
@@ -328,9 +339,11 @@
         (old-run-utime old-run-stime old-page-faults old-bytes-consed)
       (time-get-sys-info))
     (let ((start-gc-run-time *gc-run-time*))
+    (setq cycle-count (- (cycle-count/float)))
     (multiple-value-prog1
         ;; Execute the form and return its values.
         (funcall fun)
+      (incf cycle-count (cycle-count/float))
       (multiple-value-setq
 	  (new-run-utime new-run-stime new-page-faults new-bytes-consed)
 	(time-get-sys-info))
@@ -343,6 +356,7 @@
 		 ~S second~:P of real time~%  ~
 		 ~S second~:P of user run time~%  ~
 		 ~S second~:P of system run time~%  ~
+                 ~D CPU cycles~%  ~
 		 ~@[[Run times include ~S second~:P GC run time]~%  ~]~
 		 ~S page fault~:P and~%  ~
 		 ~:D bytes consed.~%"
@@ -351,6 +365,7 @@
 		       0.0)
 		  (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
 		  (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
+                  (truncate cycle-count)
 		  (unless (zerop gc-run-time)
 		    (/ (float gc-run-time)
 		       (float internal-time-units-per-second)))
