@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.4 1990/09/21 06:04:43 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.5 1990/09/26 22:22:37 wlott Exp $ */
 
 
 #include <mach.h>
@@ -24,6 +24,9 @@ static lispobj *pscav();
 
 #define NWORDS(x,y) (CEILING((x),(y)) / (y))
 
+#define RAW_ADDR_OFFSET (6*sizeof(lispobj) - type_FunctionPointer)
+
+
 static boolean forwarding_pointer_p(obj)
      lispobj obj;
 {
@@ -42,7 +45,9 @@ static boolean dynamic_pointer_p(ptr)
 }
 
 
-static lispobj ptrans_boxed(thing, header)
+static lispobj ptrans_boxed(thing, header, constant)
+     lispobj thing, header;
+     boolean constant;
 {
     int nwords;
     lispobj result, *new, *old;
@@ -51,8 +56,14 @@ static lispobj ptrans_boxed(thing, header)
 
     /* Allocate it */
     old = (lispobj *)PTR(thing);
-    new = static_free;
-    static_free += CEILING(nwords, 2);
+    if (constant) {
+        new = read_only_free;
+        read_only_free += CEILING(nwords, 2);
+    }
+    else {
+        new = static_free;
+        static_free += CEILING(nwords, 2);
+    }
 
     /* Copy it. */
     bcopy(old, new, nwords * sizeof(lispobj));
@@ -62,7 +73,7 @@ static lispobj ptrans_boxed(thing, header)
     *old = result;
         
     /* Scavenge it. */
-    pscav(new, nwords);
+    pscav(new, nwords, constant);
 
     return result;
 }
@@ -70,7 +81,8 @@ static lispobj ptrans_boxed(thing, header)
 static lispobj ptrans_symbol(thing, header)
 {
     int nwords;
-    lispobj result, *new, *old;
+    lispobj result, *new, *old, oldfn;
+    struct symbol *sym;
 
     nwords = 1 + HeaderValue(header);
 
@@ -86,8 +98,12 @@ static lispobj ptrans_symbol(thing, header)
     result = (lispobj)new | LowtagOf(thing);
     *old = result;
         
-    /* Scavenge it. */
-    pscav(&((struct symbol *)new)->function, 1);
+    /* Scavenge the function. */
+    sym = (struct symbol *)new;
+    oldfn = sym->function;
+    pscav(&sym->function, 1, FALSE);
+    if ((char *)oldfn + RAW_ADDR_OFFSET == sym->raw_function_addr)
+        sym->raw_function_addr = (char *)sym->function + RAW_ADDR_OFFSET;
 
     return result;
 }
@@ -101,8 +117,8 @@ static lispobj ptrans_unboxed(thing, header)
 
     /* Allocate it */
     old = (lispobj *)PTR(thing);
-    new = static_free;
-    static_free += CEILING(nwords, 2);
+    new = read_only_free;
+    read_only_free += CEILING(nwords, 2);
 
     /* Copy it. */
     bcopy(old, new, nwords * sizeof(lispobj));
@@ -114,10 +130,10 @@ static lispobj ptrans_unboxed(thing, header)
     return result;
 }
 
-static lispobj ptrans_vector(thing, bits, extra, boxed)
+static lispobj ptrans_vector(thing, bits, extra, boxed, constant)
      lispobj thing;
      int bits, extra;
-     boolean boxed;
+     boolean boxed, constant;
 {
     struct vector *vector;
     int nwords;
@@ -126,7 +142,7 @@ static lispobj ptrans_vector(thing, bits, extra, boxed)
     vector = (struct vector *)PTR(thing);
     nwords = 2 + (CEILING((FIXNUM_TO_INT(vector->length)+extra)*bits,32)>>5);
 
-    if (boxed) {
+    if (boxed && !constant) {
         new = static_free;
         static_free += CEILING(nwords, 2);
     }
@@ -141,7 +157,7 @@ static lispobj ptrans_vector(thing, bits, extra, boxed)
     vector->header = result;
 
     if (boxed)
-        pscav(new, nwords);
+        pscav(new, nwords, constant);
 
     return result;
 }
@@ -178,7 +194,7 @@ static lispobj ptrans_code(thing)
     }
 
     /* Scavenge the constants. */
-    pscav((lispobj *)new + 1, HeaderValue(new->header) - 1);
+    pscav((lispobj *)new + 1, HeaderValue(new->header) - 1, TRUE);
 
     /* Scavenge all the functions. */
     for (func = new->entry_points;
@@ -187,14 +203,16 @@ static lispobj ptrans_code(thing)
         gc_assert(LowtagOf(func) == type_FunctionPointer);
         gc_assert(!dynamic_pointer_p(func));
         pscav((lispobj *)PTR(func) + 1,
-              (sizeof(struct function_header) / sizeof(lispobj)) - 1);
+              (sizeof(struct function_header) / sizeof(lispobj)) - 1,
+              TRUE);
     }
 
     return result;
 }
 
-static lispobj ptrans_func(thing, header)
+static lispobj ptrans_func(thing, header, constant)
      lispobj thing, header;
+     boolean constant;
 {
     lispobj code;
     struct function_header *function;
@@ -205,7 +223,7 @@ static lispobj ptrans_func(thing, header)
     /* object. */
 
     if (TypeOf(header) == type_ClosureHeader)
-        return ptrans_boxed(thing, header);
+        return ptrans_boxed(thing, header, constant);
     else {
         gc_assert(TypeOf(header) == type_FunctionHeader ||
                   TypeOf(header) == type_ClosureFunctionHeader);
@@ -246,20 +264,30 @@ static lispobj ptrans_returnpc(thing, header)
 
 #define WORDS_PER_CONS CEILING(sizeof(struct cons) / sizeof(lispobj), 2)
 
-static lispobj ptrans_list(thing)
+static lispobj ptrans_list(thing, constant)
      lispobj thing;
+     boolean constant;
 {
     struct cons *old, *new, *orig;
     int length;
 
-    orig = (struct cons *)static_free;
+    if (constant)
+        orig = (struct cons *)read_only_free;
+    else
+        orig = (struct cons *)static_free;
     length = 0;
 
     do {
         /* Allocate a new cons cell. */
         old = (struct cons *)PTR(thing);
-        new = (struct cons *)static_free;
-        static_free += WORDS_PER_CONS;
+        if (constant) {
+            new = (struct cons *)read_only_free;
+            read_only_free += WORDS_PER_CONS;
+        }
+        else {
+            new = (struct cons *)static_free;
+            static_free += WORDS_PER_CONS;
+        }
 
         /* Copy the cons cell and keep a pointer to the cdr. */
         new->car = old->car;
@@ -275,21 +303,23 @@ static lispobj ptrans_list(thing)
              !(forwarding_pointer_p(*(lispobj *)PTR(thing))));
 
     /* Scavenge the list we just copied. */
-    pscav(orig, length * WORDS_PER_CONS);
+    pscav(orig, length * WORDS_PER_CONS, constant);
 
     return ((lispobj)orig) | type_ListPointer;
 }
 
-static lispobj ptrans_struct(thing, header)
+static lispobj ptrans_struct(thing, header, constant)
      lispobj thing, header;
+     boolean constant;
 {
     /* Shouldn't be any structures in dynamic space. */
     gc_assert(0);
     return NIL;
 }
 
-static lispobj ptrans_otherptr(thing, header)
+static lispobj ptrans_otherptr(thing, header, constant)
      lispobj thing, header;
+     boolean constant;
 {
     switch (TypeOf(header)) {
       case type_Bignum:
@@ -307,40 +337,40 @@ static lispobj ptrans_otherptr(thing, header)
       case type_ClosureHeader:
       case type_ValueCellHeader:
       case type_WeakPointer:
-        return ptrans_boxed(thing, header);
+        return ptrans_boxed(thing, header, constant);
 
       case type_SymbolHeader:
         return ptrans_symbol(thing, header);
 
       case type_SimpleString:
-        return ptrans_vector(thing, 8, 1, FALSE);
+        return ptrans_vector(thing, 8, 1, FALSE, constant);
 
       case type_SimpleBitVector:
-        return ptrans_vector(thing, 1, 0, FALSE);
+        return ptrans_vector(thing, 1, 0, FALSE, constant);
 
       case type_SimpleVector:
-        return ptrans_vector(thing, 32, 0, TRUE);
+        return ptrans_vector(thing, 32, 0, TRUE, constant);
 
       case type_SimpleArrayUnsignedByte2:
-        return ptrans_vector(thing, 2, 0, FALSE);
+        return ptrans_vector(thing, 2, 0, FALSE, constant);
 
       case type_SimpleArrayUnsignedByte4:
-        return ptrans_vector(thing, 4, 0, FALSE);
+        return ptrans_vector(thing, 4, 0, FALSE, constant);
 
       case type_SimpleArrayUnsignedByte8:
-        return ptrans_vector(thing, 8, 0, FALSE);
+        return ptrans_vector(thing, 8, 0, FALSE, constant);
 
       case type_SimpleArrayUnsignedByte16:
-        return ptrans_vector(thing, 16, 0, FALSE);
+        return ptrans_vector(thing, 16, 0, FALSE, constant);
 
       case type_SimpleArrayUnsignedByte32:
-        return ptrans_vector(thing, 32, 0, FALSE);
+        return ptrans_vector(thing, 32, 0, FALSE, constant);
 
       case type_SimpleArraySingleFloat:
-        return ptrans_vector(thing, 32, 0, FALSE);
+        return ptrans_vector(thing, 32, 0, FALSE, constant);
 
       case type_SimpleArrayDoubleFloat:
-        return ptrans_vector(thing, 64, 0, FALSE);
+        return ptrans_vector(thing, 64, 0, FALSE, constant);
 
       case type_CodeHeader:
         return ptrans_code(thing);
@@ -357,15 +387,15 @@ static lispobj ptrans_otherptr(thing, header)
 static int pscav_symbol(symbol)
      struct symbol *symbol;
 {
-#define RAW_ADDR_OFFSET (sizeof(struct function_header)-1-type_FunctionHeader)
+    boolean fix_func;
 
-    if ((char *)(symbol->function + RAW_ADDR_OFFSET) == symbol->raw_function_addr) {
-        pscav(&symbol->value, sizeof(struct symbol)/sizeof(lispobj) - 1);
-        symbol->raw_function_addr = (char *)(symbol->function + RAW_ADDR_OFFSET);
-        return sizeof(struct symbol) / sizeof(lispobj);
-    }
-    else
-        return 1;
+    fix_func = ((char *)(symbol->function + RAW_ADDR_OFFSET) ==
+                symbol->raw_function_addr);
+    pscav(&symbol->value, sizeof(struct symbol)/sizeof(lispobj) - 1, FALSE);
+    if (fix_func)
+        symbol->raw_function_addr =
+            (char *)(symbol->function + RAW_ADDR_OFFSET);
+    return sizeof(struct symbol) / sizeof(lispobj);
 }
 
 static int pscav_code(addr)
@@ -375,14 +405,15 @@ static int pscav_code(addr)
 
     code = (struct code *)addr;
 
-    pscav(addr+1, HeaderValue(code->header)-1);
+    pscav(addr+1, HeaderValue(code->header)-1, TRUE);
 
     return HeaderValue(code->header) + FIXNUM_TO_INT(code->code_size);
 }    
 
-static lispobj *pscav(addr, nwords)
+static lispobj *pscav(addr, nwords, constant)
      lispobj *addr;
      int nwords;
+     boolean constant;
 {
     lispobj thing, *thingp, header;
     int count;
@@ -403,19 +434,19 @@ static lispobj *pscav(addr, nwords)
                     /* Nope, copy the object. */
                     switch (LowtagOf(thing)) {
                       case type_FunctionPointer:
-                        thing = ptrans_func(thing, header);
+                        thing = ptrans_func(thing, header, constant);
                         break;
                     
                       case type_ListPointer:
-                        thing = ptrans_list(thing);
+                        thing = ptrans_list(thing, constant);
                         break;
                     
                       case type_StructurePointer:
-                        thing = ptrans_struct(thing, header);
+                        thing = ptrans_struct(thing, header, constant);
                         break;
                     
                       case type_OtherPointer:
-                        thing = ptrans_otherptr(thing, header);
+                        thing = ptrans_otherptr(thing, header, constant);
                         break;
 
                       default:
@@ -510,7 +541,7 @@ static lispobj *pscav(addr, nwords)
               case type_WeakPointer:
                 /* Weak pointers get preserved during purify, 'cause I don't */
                 /* feel like figuring out how to break them. */
-                pscav(addr+1, 2);
+                pscav(addr+1, 2, constant);
                 count = 4;
                 break;
 
@@ -557,26 +588,27 @@ lispobj roots;
     printf(" roots");
     fflush(stdout);
 #endif
-    pscav(&roots, 1);
+    pscav(&roots, 1, FALSE);
 
 #ifdef PRINTNOISE
     printf(" handlers");
     fflush(stdout);
 #endif
     pscav((lispobj *) interrupt_handlers,
-          sizeof(interrupt_handlers) / sizeof(lispobj));
+          sizeof(interrupt_handlers) / sizeof(lispobj),
+          FALSE);
 
 #ifdef PRINTNOISE
     printf(" stack");
     fflush(stdout);
 #endif
-    pscav(control_stack, current_control_stack_pointer - control_stack);
+    pscav(control_stack, current_control_stack_pointer - control_stack, FALSE);
 
 #ifdef PRINTNOISE
     printf(" bindings");
     fflush(stdout);
 #endif
-    pscav(binding_stack, current_binding_stack_pointer - binding_stack);
+    pscav(binding_stack, current_binding_stack_pointer - binding_stack, FALSE);
 
 #ifdef PRINTNOISE
     printf(" static");
@@ -584,7 +616,7 @@ lispobj roots;
 #endif
     clean = static_space;
     while (clean != static_free)
-        clean = pscav(clean, static_free - clean);
+        clean = pscav(clean, static_free - clean, FALSE);
 
 #ifdef PRINTNOISE
     printf(" cleanup");
