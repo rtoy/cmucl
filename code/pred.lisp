@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.27 1992/04/15 17:05:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28 1992/12/05 22:10:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,7 @@
       simple-array-unsigned-byte-32-p
       simple-array-single-float-p
       simple-array-double-float-p
+      dylan::dylan-function-p
       )))
 
 (macrolet
@@ -198,6 +199,13 @@
   (declare (type (or list symbol) type))
   (%typep object type))
 
+(eval-when (compile eval)
+  (defmacro only-if-bound (name object)
+    `(and (fboundp ',name)
+	  (let ((object ,object))
+	    (declare (optimize (inhibit-warnings 3)))
+	    (,name object)))))
+  
 ;;; %TYPEP -- internal.
 ;;;
 ;;; The actual typep engine.  The compiler only generates calls to this
@@ -213,7 +221,7 @@
   (declare (type ctype type))
   (etypecase type
     (named-type
-     (ecase (named-type-name type)
+     (case (named-type-name type)
        ((* t)
 	t)
        ((nil)
@@ -236,7 +244,27 @@
        (lra (lra-p object))
        (fdefn (fdefn-p object))
        (scavenger-hook (scavenger-hook-p object))
-       (structure (structurep object))))
+       (structure (structurep object))
+       (dylan::dylan-function (dylan::dylan-function-p object))
+       (dylan::generic-function
+	(only-if-bound dylan::generic-function-p object))
+       (dylan::exit-function
+	(only-if-bound dylan::exit-function-p object))
+       (dylan::next-method-func
+	(only-if-bound dylan::next-method-func-p object))
+       (dylan::method
+	(only-if-bound dylan::method-p object))
+       (dylan::defined-method
+	(only-if-bound dylan::defined-method-p object))
+       (dylan::builtin-method
+	(only-if-bound dylan::builtin-method-p object))
+       (dylan::slot-accessor-method
+	(only-if-bound dylan::slot-accessor-method-p object))
+       (dylan::slot-setter-method
+	(only-if-bound dylan::slot-setter-method-p object))
+       (dylan::slot-getter-method
+	(only-if-bound dylan::slot-getter-method-p object))
+       (t nil)))
     (numeric-type
      (and (numberp object)
 	  (let ((num (if (complexp object) (realpart object) object)))
