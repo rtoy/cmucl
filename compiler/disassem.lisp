@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.9 1992/07/23 16:32:20 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.10 1992/07/30 13:18:56 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by Miles Bader <miles@cogsci.ed.ac.uk>
 ;;;
 
-(in-package :disassem :nicknames '(:disassem))
+(in-package :disassem)
 
 (use-package :extensions)
 
@@ -36,6 +36,7 @@
 	  disassemble-memory
 	  disassemble-function
 	  disassemble-code-component
+	  disassemble-blocks
 
 	  ;; some variables to set
 	  *opcode-column-width*
@@ -2298,10 +2299,10 @@
 	   (leading-zeros
 	    (truncate (- printed-bits (integer-length printed-value)) 4)))
       (dotimes (i leading-zeros)
-	(write-char #\0))
+	(write-char #\0 stream))
       (unless (zerop printed-value)
 	(write printed-value :stream stream :base 16 :radix nil))
-      (write-char #\:))
+      (write-char #\: stream))
 
     ;; print any labels
     (loop
@@ -3189,6 +3190,103 @@
     (when use-labels
       (label-segments segments dstate))
     (disassemble-segments segments stream dstate)))
+
+;;; Code for disassembling segments.
+
+(defconstant max-instruction-size 16)
+
+(defun sap-to-vector (sap start end)
+    (let* ((length (- end start))
+	   (result (make-array length :element-type '(unsigned-byte 8)))
+	   (sap (system:sap+ sap start)))
+      (dotimes (i length)
+	(setf (aref result i) (system:sap-ref-8 sap i)))
+      result))
+
+(defun add-block-segments (sap amount seglist location connecting-vec dstate)
+  (declare (type list seglist)
+	   (type integer location)
+	   (type (or null (vector (unsigned-byte 8))) connecting-vec)
+	   (type disassem:disassem-state dstate))
+  (flet ((addit (seg overflow)
+	   (let ((length (+ (disassem:seg-length seg) overflow)))
+	     (when (> length 0)
+	       (setf (disassem:seg-length seg) length)
+	       (incf location length)
+	       (push seg seglist)))))
+    (let ((connecting-overflow 0))
+      (when connecting-vec
+	;; tack on some of the new block to the old overflow vector
+	(let* ((beginning-of-block-amount
+		(if sap (min max-instruction-size amount) 0))
+	       (connecting-vec
+		(if sap
+		    (concatenate
+		     '(vector (unsigned-byte 8))
+		     connecting-vec
+		     (sap-to-vector sap 0 beginning-of-block-amount))
+		    connecting-vec)))
+	  (when (> (length connecting-vec) 0)
+	    (let ((seg
+		   (disassem:make-vector-segment connecting-vec
+						 0
+						 (- (length connecting-vec)
+						    beginning-of-block-amount)
+						 :virtual-location location)))
+	      (setf connecting-overflow (disassem:segment-overflow seg dstate))
+	      (addit seg connecting-overflow)))))
+      (if sap
+	  (let* ((initial-length
+		  (max (- amount
+			  connecting-overflow
+			  max-instruction-size)
+		       0))
+		 (seg
+		  (disassem:make-segment
+		   #'(lambda ()
+		       (system:sap+ sap connecting-overflow))
+		       initial-length
+		       :virtual-location location))
+		 (overflow
+		  (disassem:segment-overflow seg dstate)))
+	    (addit seg overflow)
+	    (values seglist location
+		    (sap-to-vector sap
+				   (+ connecting-overflow
+				      (disassem:seg-length seg)
+				      overflow)
+				   amount)))
+	  (values seglist location nil)))))
+
+(defun blocks-to-segments (segment dstate)
+  (declare (type new-assem:segment segment)
+	   (type disassem:disassem-state dstate))
+  (let ((location 0)
+	(segments nil)
+	(connecting-vec nil))
+    (new-assem:segment-map-output
+     segment
+     #'(lambda (sap amount)
+	 (multiple-value-setq (segments location connecting-vec)
+	   (add-block-segments sap amount segments location connecting-vec
+			       dstate))))
+    (when connecting-vec
+      (setf segments
+	    (add-block-segments nil nil segments location connecting-vec
+				dstate)))
+    (sort segments #'< :key #'disassem:seg-virtual-location))) 
+
+(defun disassemble-blocks (segment stream backend)
+  "Disassemble the machine code instructions associated with
+  SEGMENT (of type new-assem::segment)."
+  (declare (type new-assem:segment segment)
+	   (type stream stream)
+	   (type c::backend backend))
+  (let* ((dstate (disassem:make-dstate (c:backend-disassem-params backend)))
+	 (segments (blocks-to-segments segment dstate)))
+    (disassem:label-segments segments dstate)
+    (disassem:disassemble-segments segments stream dstate)))
+
 
 ;;; ----------------------------------------------------------------
 ;;; Routines to find things in the lisp environment.  Obviously highly
