@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.6 1993/05/11 17:26:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.7 1993/05/11 17:29:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 (in-package "C")
 
 (in-package "KERNEL")
-(export '(byte-function byte-function-name initialize-byte-function
+(export '(byte-function byte-function-name initialize-byte-compiled-function
 			byte-closure byte-closure-function
 			byte-closure-data byte-function-or-closure))
 (in-package "C")
