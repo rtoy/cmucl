@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.44 1992/05/18 19:57:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.45 1992/05/24 01:52:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -431,7 +431,11 @@
   (compiler-debug-fun nil :type c::compiled-debug-function)
   ;;
   ;; Code object.  (unexported).
-  component)
+  component
+  ;;
+  ;; The :function-start breakpoint (if any) used to facilitate function
+  ;; end breakpoints.
+  (end-starter nil :type (or null breakpoint)))
 
 ;;; This maps c::compiled-debug-functions to compiled-debug-functions, so we
 ;;; can get at cached stuff and not duplicate compiled-debug-function
@@ -622,8 +626,11 @@
   ;; Code-location or debug-function.
   (what nil :type (or code-location debug-function))
   ;;
-  ;; :code-location, :function-start, or :function-end.
-  (kind nil :type (member :code-location :function-start :function-end))
+  ;; :code-location, :function-start, or :function-end for that kind of
+  ;; breakpoint.  :unknown-return-partner if this is the partner of a
+  ;; :code-location breakpoint at an :unknown-return code-location.
+  (kind nil :type (member :code-location :function-start :function-end
+			  :unknown-return-partner))
   ;;
   ;; Status helps the user and the implementation.
   (status :inactive :type (member :active :inactive :deleted))
@@ -631,11 +638,10 @@
   ;; This is a backpointer to a breakpoint-data.
   (internal-data nil :type (or null breakpoint-data))
   ;;
-  ;; With code-locations whose type is :unknown-return, execution flows through
-  ;; starting at one of two instructions.  In this situation, we make two
-  ;; breakpoints, giving the user one, and link them together through this
-  ;; slot.  If execution goes from one instruction to the other, we must make
-  ;; sure we only invoke the hook-functions once.
+  ;; With code-locations whose type is :unknown-return, there are really
+  ;; two breakpoints: one at the multiple-value entry point, and one at
+  ;; the single-value entry point.  This slot holds the breakpoint for the
+  ;; other one, or NIL if this isn't at an :unknown-return code location.
   (unknown-return-partner nil :type (or null breakpoint))
   ;;
   ;; :function-end breakpoints use a breakpoint at the :function-start to
@@ -753,13 +759,10 @@
 
 (defstruct (compiled-code-location
 	    (:include code-location)
-	    (:constructor make-compiled-code-location
-			  (pc debug-function &optional
-			      %tlf-offset %form-number %live-set kind
-			      ;; Any optional means it's known.
-			      (%unknown-p (not kind))))
-	    (:constructor make-unknown-code-location
-			  (pc debug-function &aux (%unknown-p :unsure))))
+	    (:constructor make-known-code-location
+			  (pc debug-function %tlf-offset %form-number
+			      %live-set kind &aux (%unknown-p nil)))
+	    (:constructor make-compiled-code-location (pc debug-function)))
   ;;
   ;; This is an index into debug-function's component slot.
   (pc nil :type c::index)
@@ -1165,19 +1168,22 @@
 ;;; CODE-LOCATION-FROM-PC -- Internal.
 ;;;
 ;;; This returns a code-location for the compiled-debug-function, debug-fun,
-;;; and the pc into its code vector.  If there is debug-block info, we assume
-;;; the code-location is known by making a default one.  It may later prove
-;;; to be unknown as :unparsed slots are accessed.  Code locations in bogus
-;;; debug funs are always unknown.
+;;; and the pc into its code vector.  If we stopped at a breakpoint, find
+;;; the code-location for that breakpoint.  Otherwise, make an :unsure code
+;;; location, so it can be filled in when we figure out what is going on.
 ;;;
 (defun code-location-from-pc (debug-fun pc escaped)
-  (if (and (compiled-debug-function-p debug-fun)
-	   (c::compiled-debug-function-blocks
-	    (compiled-debug-function-compiler-debug-fun debug-fun))
-	   (not escaped))
-      (make-compiled-code-location pc debug-fun)
-      (make-unknown-code-location pc debug-fun)))
-
+  (or (and (compiled-debug-function-p debug-fun)
+	   escaped
+	   (let ((data (breakpoint-data
+			(compiled-debug-function-component debug-fun)
+			pc nil)))
+	     (when (and data (breakpoint-data-breakpoints data))
+	       (let ((what (breakpoint-what
+			    (first (breakpoint-data-breakpoints data)))))
+		 (when (compiled-code-location-p what)
+		   what)))))
+      (make-compiled-code-location pc debug-fun)))
 
 ;;; FRAME-CATCHES -- Public.
 ;;;
@@ -1195,17 +1201,19 @@
 		   (* (kernel:stack-ref catch vm:catch-block-current-cont-slot)
 		      vm:word-bytes)))
 	(let* ((lra (kernel:stack-ref catch vm:catch-block-entry-pc-slot))
-	       (word-offset (kernel:get-header-data lra)))
+	       (component
+		(kernel:stack-ref catch vm:catch-block-current-code-slot))
+	       (word-offset (- (1+ (kernel:get-header-data lra))
+			       (kernel:get-header-data component))))
 	  (push (cons (kernel:stack-ref catch vm:catch-block-tag-slot)
 		      (make-compiled-code-location
 		       (* word-offset vm:word-bytes)
 		       (frame-debug-function frame)))
 		res)))
       (setf catch
-	    (system:int-sap
-	     (* (kernel:stack-ref catch
-				  vm:catch-block-previous-catch-slot)
-		vm:word-bytes))))))
+	    (system:sap-ref-sap catch
+				(* vm:catch-block-previous-catch-slot
+				   vm:word-bytes))))))
 
 ;;; FRAME-REAL-FRAME -- Internal.
 ;;;
@@ -1755,7 +1763,7 @@
 			      (form-number (c::read-var-integer blocks i))
 			      (live-set (c::read-packed-bit-vector
 					 live-set-len blocks i)))
-			  (vector-push-extend (make-compiled-code-location
+			  (vector-push-extend (make-known-code-location
 					       pc debug-function tlf-offset
 					       form-number live-set kind)
 					      locations-buffer)
@@ -2253,7 +2261,8 @@
 	    (interpreted-code-location-ir1-node obj2)))))))
 ;;;
 (defun sub-compiled-code-location= (obj1 obj2)
-  (= (compiled-code-location-pc obj1) (compiled-code-location-pc obj2)))
+  (= (compiled-code-location-pc obj1)
+     (compiled-code-location-pc obj2)))
 
 ;;; FILL-IN-CODE-LOCATION -- Internal.
 ;;;
@@ -2264,6 +2273,7 @@
 ;;; set or going to be set.
 ;;;
 (defun fill-in-code-location (code-location)
+  (declare (type compiled-code-location code-location))
   (let* ((debug-function (code-location-debug-function code-location))
 	 (blocks (debug-function-debug-blocks debug-function)))
     (declare (simple-vector blocks))
@@ -2869,17 +2879,6 @@
 ;;; User visible interface.
 ;;;
 
-;;; This maps debug-functions, for which there are :function-end breakpoints,
-;;; to internal starter breakpoints that actually establish the :function-end
-;;; breakpoint upon entry to the routine.  We want these starter breakpoints to
-;;; be unique for every routine regardless of how many :function-end
-;;; breakpoints exist.  Otherwise, we can't support multiple :function-end
-;;; breakpoints.  These starter breakpoints' info slot points to a list of
-;;; :function-end breakpoints that use them, and upon deletion of the last such
-;;; breakpoint, we remove the starter from this table.
-;;;
-(defvar *function-end-debug-funs* (make-hash-table :test #'eq))
-
 (defun make-breakpoint (hook-function what
 			&key (kind :code-location) info function-end-cookie)
   "This creates and returns a breakpoint.  When program execution encounters
@@ -2918,7 +2917,9 @@
 	 (compiled-code-location
 	  ;; This slot is filled in due to calling CODE-LOCATION-UNKNOWN-P.
 	  (when (eq (compiled-code-location-kind what) :unknown-return)
-	    (let ((other-bpt (%make-breakpoint hook-function what kind info)))
+	    (let ((other-bpt (%make-breakpoint hook-function what
+					       :unknown-return-partner
+					       info)))
 	      (setf (breakpoint-unknown-return-partner bpt) other-bpt)
 	      (setf (breakpoint-unknown-return-partner other-bpt) bpt)))))
        bpt))
@@ -2928,12 +2929,12 @@
 	(%make-breakpoint hook-function what kind info))
        (:function-end
 	(let* ((bpt (%make-breakpoint hook-function what kind info))
-	       (starter (gethash what *function-end-debug-funs*)))
+	       (starter (compiled-debug-function-end-starter what)))
 	  (unless starter
 	    (setf starter (%make-breakpoint #'list what :function-start nil))
 	    (setf (breakpoint-hook-function starter)
 		  (function-end-starter-hook starter what))
-	    (setf (gethash what *function-end-debug-funs*) starter))
+	    (setf (compiled-debug-function-end-starter what) starter))
 	  (setf (breakpoint-start-helper bpt) starter)
 	  (push bpt (breakpoint-%info starter))
 	  (setf (breakpoint-cookie-fun bpt) function-end-cookie)
@@ -3072,11 +3073,18 @@
 (defun activate-compiled-code-location-breakpoint (breakpoint)
   (declare (type breakpoint breakpoint))
   (let ((loc (breakpoint-what breakpoint)))
+    (declare (type compiled-code-location loc))
     (sub-activate-breakpoint
      breakpoint
      (breakpoint-data (compiled-debug-function-component
 		       (code-location-debug-function loc))
-		      (compiled-code-location-pc loc)))))
+		      (+ (compiled-code-location-pc loc)
+			 (if (or (eq (breakpoint-kind breakpoint)
+				     :unknown-return-partner)
+				 (eq (compiled-code-location-kind loc)
+				     :single-value-return))
+			     vm:single-value-return-byte-offset
+			     0))))))
 
 ;;; ACTIVATE-COMPILED-FUNCTION-START-BREAKPOINT -- Internal.
 ;;;
@@ -3114,79 +3122,41 @@
 ;;;
 (defun deactivate-breakpoint (breakpoint)
   "This stops the system from invoking the breakpoint's hook-function."
-  (unless (eq (breakpoint-status breakpoint) :inactive)
+  (when (eq (breakpoint-status breakpoint) :active)
     (system:without-interrupts
-     (ecase (breakpoint-kind breakpoint)
-       (:code-location
-	(let ((loc (breakpoint-what breakpoint)))
-	  (etypecase loc
-	    (interpreted-code-location
-	     (error
-	      "Breakpoints in interpreted code are currently unsupported."))
-	    (compiled-code-location
-	     (deactivate-compiled-code-location-breakpoint breakpoint)
-	     (let ((other (breakpoint-unknown-return-partner breakpoint)))
-	       (when other
-		 (deactivate-compiled-code-location-breakpoint other)))))))
-       (:function-start
-	(etypecase (breakpoint-what breakpoint)
-	  (compiled-debug-function
-	   (deactivate-compiled-function-start-breakpoint breakpoint))
-	  (interpreted-debug-function
-	   (error ":function-start breakpoints for interpreted-debug-functions ~
-		   are unsupported currently -- ~S."
-		  breakpoint))))
-       (:function-end
-	(etypecase (breakpoint-what breakpoint)
-	  (compiled-debug-function
-	   (let ((starter (breakpoint-start-helper breakpoint)))
-	     (unless (find-if #'(lambda (bpt)
-				  (and (not (eq bpt breakpoint))
-				       (eq (breakpoint-status bpt) :active)))
-			      (breakpoint-%info starter))
-	       (deactivate-compiled-function-start-breakpoint starter)))
-	   (setf (breakpoint-status breakpoint) :inactive))
-	  (interpreted-debug-function
-	   (error ":function-end breakpoints for interpreted-debug-functions ~
-		   are unsupported currently -- ~S."
-		  breakpoint)))))))
+     (let ((loc (breakpoint-what breakpoint)))
+       (etypecase loc
+	 ((or interpreted-code-location interpreted-debug-function)
+	  (error
+	   "Breakpoints in interpreted code are currently unsupported."))
+	 ((or compiled-code-location compiled-debug-function)
+	  (deactivate-compiled-breakpoint breakpoint)
+	  (let ((other (breakpoint-unknown-return-partner breakpoint)))
+	    (when other
+	      (deactivate-compiled-breakpoint other))))))))
   breakpoint)
 
-;;; DEACTIVATE-COMPILED-CODE-LOCATION-BREAKPOINT -- Internal.
-;;;
-(defun deactivate-compiled-code-location-breakpoint (breakpoint)
-  (declare (type breakpoint breakpoint))
-  (let* ((loc (breakpoint-what breakpoint))
-	 (component (compiled-debug-function-component
-		     (code-location-debug-function loc)))
-	 (offset (compiled-code-location-pc loc)))
-    (sub-deactivate-breakpoint breakpoint (breakpoint-data component offset)
-			       component offset)))
-
-;;; DEACTIVATE-COMPILED-FUNCTION-START-BREAKPOINT -- Internal.
-;;;
-(defun deactivate-compiled-function-start-breakpoint (breakpoint)
-  (declare (type breakpoint breakpoint))
-  (let* ((debug-fun (breakpoint-what breakpoint))
-	 (component (compiled-debug-function-component debug-fun))
-	 (offset (c::compiled-debug-function-start-pc
-		  (compiled-debug-function-compiler-debug-fun debug-fun))))
-    (sub-deactivate-breakpoint breakpoint (breakpoint-data component offset)
-			       component offset)))
-
-;;; SUB-DEACTIVATE-BREAKPOINT -- Internal.
-;;;
-(defun sub-deactivate-breakpoint (breakpoint data component offset)
-  (declare (type breakpoint breakpoint)
-	   (type breakpoint-data data)
-	   (type c::index offset))
-  (let ((bpts (delete breakpoint (breakpoint-data-breakpoints data))))
-    (unless bpts
-      (system:without-gcing
-       (breakpoint-remove (kernel:get-lisp-obj-address component)
-			  offset (breakpoint-data-instruction data))))
-    (setf (breakpoint-data-breakpoints data) bpts))
-  (setf (breakpoint-status breakpoint) :inactive))
+(defun deactivate-compiled-breakpoint (breakpoint)
+  (if (eq (breakpoint-kind breakpoint) :function-end)
+      (let ((starter (breakpoint-start-helper breakpoint)))
+	(unless (find-if #'(lambda (bpt)
+			     (and (not (eq bpt breakpoint))
+				  (eq (breakpoint-status bpt) :active)))
+			 (breakpoint-%info starter))
+	  (deactivate-compiled-breakpoint starter)))
+      (let* ((data (breakpoint-internal-data breakpoint))
+	     (bpts (delete breakpoint (breakpoint-data-breakpoints data))))
+	(setf (breakpoint-internal-data breakpoint) nil)
+	(setf (breakpoint-data-breakpoints data) bpts)
+	(unless bpts
+	  (system:without-gcing
+	   (breakpoint-remove (kernel:get-lisp-obj-address
+			       (breakpoint-data-component data))
+			      (breakpoint-data-offset data)
+			      (breakpoint-data-instruction data)))
+	  (delete-breakpoint-data data))))
+  (setf (breakpoint-status breakpoint) :inactive)
+  breakpoint)
 
 ;;;
 ;;; BREAKPOINT-INFO.
@@ -3227,25 +3197,22 @@
    never become active again."
   (let ((status (breakpoint-status breakpoint)))
     (unless (eq status :deleted)
-      (ecase status
-	(:active
-	 (setf (breakpoint-status breakpoint) :deleted)
-	 (deactivate-breakpoint breakpoint)
-	 (let ((other (breakpoint-unknown-return-partner breakpoint)))
-	   (when other
-	     (setf (breakpoint-status other) :deleted))))
-	(:inactive
-	 (setf (breakpoint-status breakpoint) :deleted)
-	 (let ((other (breakpoint-unknown-return-partner breakpoint)))
-	   (when other
-	     (setf (breakpoint-status other) :deleted)))))
+      (when (eq status :active)
+	(deactivate-breakpoint breakpoint))
+      (setf (breakpoint-status breakpoint) :deleted)
+      (let ((other (breakpoint-unknown-return-partner breakpoint)))
+	(when other
+	  (setf (breakpoint-status other) :deleted)))
       (when (eq (breakpoint-kind breakpoint) :function-end)
-	(let* ((debug-fun (breakpoint-what breakpoint))
-	       (starter (gethash debug-fun *function-end-debug-funs*)))
-	  (setf (breakpoint-info starter)
-		(delete breakpoint (the list (breakpoint-info starter))))
-	  (when (zerop (length (the list (breakpoint-%info starter))))
-	    (remhash debug-fun *function-end-debug-funs*))))))
+	(let* ((starter (breakpoint-start-helper breakpoint))
+	       (breakpoints (delete breakpoint
+				    (the list (breakpoint-info starter)))))
+	  (setf (breakpoint-info starter) breakpoints)
+	  (unless breakpoints
+	    (delete-breakpoint starter)
+	    (setf (compiled-debug-function-end-starter
+		   (breakpoint-what breakpoint))
+		  nil))))))
   breakpoint)
 
 ;;;
@@ -3294,12 +3261,13 @@
 ;;; This returns the breakpoint-data associated with component cross offset.
 ;;; If none exists, this makes one, installs it, and returns it.
 ;;;
-(defun breakpoint-data (component offset)
+(defun breakpoint-data (component offset &optional (create t))
   (flet ((install-breakpoint-data ()
-	   (let ((data (make-breakpoint-data component offset)))
-	     (push (cons offset data)
-		   (gethash component *component-breakpoint-offsets*))
-	     data)))
+	   (when create
+	     (let ((data (make-breakpoint-data component offset)))
+	       (push (cons offset data)
+		     (gethash component *component-breakpoint-offsets*))
+	       data))))
     (let ((offsets (gethash component *component-breakpoint-offsets*)))
       (if offsets
 	  (let ((data (assoc offset offsets)))
@@ -3310,13 +3278,18 @@
 
 ;;; DELETE-BREAKPOINT-DATA -- Internal.
 ;;;
-;;; We use this for :function-end breakpoints which use fake components that
-;;; exist only from the start of the function until we hit the end breakpoint.
+;;; We use this when there are no longer any active breakpoints corresponding
+;;; to data.
 ;;;
 (defun delete-breakpoint-data (data)
-  (setf (gethash (breakpoint-data-component data)
-		 *component-breakpoint-offsets*)
-	nil))
+  (let* ((component (breakpoint-data-component data))
+	 (offsets (delete (breakpoint-data-offset data)
+			  (gethash component *component-breakpoint-offsets*)
+			  :key #'car)))
+    (if offsets
+	(setf (gethash component *component-breakpoint-offsets*) offsets)
+	(remhash component *component-breakpoint-offsets*)))
+  (ext:undefined-value))
 
 ;;; HANDLE-BREAKPOINT -- Internal Interface.
 ;;;
@@ -3352,28 +3325,28 @@
 (defun handle-breakpoint-aux (breakpoints data offset component signal-context)
   (let ((after (breakpoint-data-after-breakpoint data)))
     (when after
-      (handle-after-breakpoint after breakpoints data offset component))
-    (when breakpoints
-      (unless (member data *executing-breakpoint-hooks*)
-	(let ((*executing-breakpoint-hooks* (cons data
-						  *executing-breakpoint-hooks*)))
-	  (invoke-breakpoint-hooks breakpoints component offset after)))
-      ;; At this point breakpoints may not hold the same list as
-      ;; BREAKPOINT-DATA-BREAKPOINTS since invoking hooks may have allowed
-      ;; a breakpoint deactivation.  If there are no more active at this
-      ;; location, then the normal instruction has been put back, and we do
-      ;; no need an after breakpoint to re-install a break instruction.
-      (when (breakpoint-data-breakpoints data)
-	;; Restore instruction.  Do this before SET-AFTER-BREAKPOINTS which
-	;; uses CALL-BREAKPOINT-AFTER-OFFSET.
-	(system:without-gcing
-	 (breakpoint-remove (kernel:get-lisp-obj-address component) offset
-			    (breakpoint-data-instruction data)))
-	(set-after-breakpoints component data signal-context))
-      ;; Set the sigmask, to keep the system running until we can
-      ;; remove the after breakpoints and re-install the user breakpoints.
-      (setf (breakpoint-data-sigmask data)
-	    (unix:unix-sigblock (unix:sigmask :sigint :sigquit :sigtstp))))))
+      (handle-after-breakpoint after breakpoints data offset component)))
+  (when breakpoints
+    (unless (member data *executing-breakpoint-hooks*)
+      (let ((*executing-breakpoint-hooks* (cons data
+						*executing-breakpoint-hooks*)))
+	(invoke-breakpoint-hooks breakpoints component offset)))
+    ;; At this point breakpoints may not hold the same list as
+    ;; BREAKPOINT-DATA-BREAKPOINTS since invoking hooks may have allowed
+    ;; a breakpoint deactivation.  If there are no more active at this
+    ;; location, then the normal instruction has been put back, and we do
+    ;; no need an after breakpoint to re-install a break instruction.
+    (when (breakpoint-data-breakpoints data)
+      ;; Restore instruction.  Do this before SET-AFTER-BREAKPOINTS which
+      ;; uses CALL-BREAKPOINT-AFTER-OFFSET.
+      (system:without-gcing
+       (breakpoint-remove (kernel:get-lisp-obj-address component) offset
+			  (breakpoint-data-instruction data)))
+      (set-after-breakpoints component data signal-context))
+    ;; Set the sigmask, to keep the system running until we can
+    ;; remove the after breakpoints and re-install the user breakpoints.
+    (setf (breakpoint-data-sigmask data)
+	  (unix:unix-sigblock (unix:sigmask :sigint :sigquit :sigtstp)))))
 
 (defun handle-after-breakpoint (after breakpoints data offset component)
   (let ((previous-data (after-breakpoint-previous-data after)))
@@ -3385,7 +3358,8 @@
       (system:without-gcing
        (breakpoint-remove (kernel:get-lisp-obj-address component) offset
 			  (breakpoint-data-instruction data)))
-      (setf (breakpoint-data-after-breakpoint data) nil))
+      (setf (breakpoint-data-after-breakpoint data) nil)
+      (delete-breakpoint-data data))
     ;; Ditto for the partner of the after-breakpoint (if there were two).
     (let ((partner (after-breakpoint-partner after)))
       (when partner
@@ -3396,7 +3370,8 @@
 				 (breakpoint-data-component partner-data))
 				(breakpoint-data-offset partner-data)
 				(breakpoint-data-instruction partner-data)))
-	    (setf (breakpoint-data-after-breakpoint partner-data) nil)))))
+	    (setf (breakpoint-data-after-breakpoint partner-data) nil)
+	    (delete-breakpoint-data partner-data)))))
     ;; Put back previous's break instruction.
     ;; We don't need to store the replaced instruction in the data since we
     ;; have it from installing the break instruction before.
@@ -3407,24 +3382,20 @@
     ;; Restore sigmask that we saved before executing previous's inst.
     (unix:unix-sigsetmask (breakpoint-data-sigmask previous-data))))
 
-(defun invoke-breakpoint-hooks (breakpoints component offset after)
+(defun invoke-breakpoint-hooks (breakpoints component offset)
   (let* ((debug-fun (debug-function-from-pc component offset))
 	 (frame (do ((f (top-frame) (frame-down f)))
 		    ((eq debug-fun (frame-debug-function f)) f)))) 
-    (if after
-	;; If there's an after-bpt here, and any breakpoint whose hook we
-	;; may invoke has an unknown-return-partner, then the after-bpt may
-	;; be for the unknown-return-partner.  This means we already ran
-	;; this breakpoint's hook when we hit its partner one instruction
-	;; previous.  Don't invoke it twice for one virtual break.
-	(let ((previous-data (after-breakpoint-previous-data after)))
-	  (dolist (bpt breakpoints)
-	    (let ((partner (breakpoint-unknown-return-partner bpt)))
-	      (unless (and partner
-			   (eq (breakpoint-internal-data partner) previous-data))
-		(funcall (breakpoint-hook-function bpt) frame bpt)))))
-	(dolist (bpt breakpoints)
-	  (funcall (breakpoint-hook-function bpt) frame bpt)))))
+    (dolist (bpt breakpoints)
+      (funcall (breakpoint-hook-function bpt)
+	       frame
+	       ;; If this is an :unknown-return-partner, then pass the
+	       ;; hook function the original breakpoint, so that users
+	       ;; arn't forced to confront the fact that some breakpoints
+	       ;; really are two.
+	       (if (eq (breakpoint-kind bpt) :unknown-return-partner)
+		   (breakpoint-unknown-return-partner bpt)
+		   bpt)))))
 
 (defun set-after-breakpoints (component data signal-context)
   (multiple-value-bind (after-1 after-2)
@@ -3514,8 +3485,8 @@
 (defun make-bogus-lra (real-lra &optional known-return-p)
   "Make a bogus LRA object that signals a breakpoint trap when returned to.  If
    the breakpoint trap handler returns, REAL-LRA is returned to.  Three values
-   are returned: the bogus LRA object, the code component it is part of, and the
-   PC offset for the trap instruction."
+   are returned: the bogus LRA object, the code component it is part of, and
+   the PC offset for the trap instruction."
   (system:without-gcing
    (let* ((src-start (system:foreign-symbol-address
 		      "function_end_breakpoint_guts"))
@@ -3877,3 +3848,16 @@
        (no-debug-blocks (condx)
 	 (declare (ignore condx))
 	 nil)))))
+
+
+
+(defun print-code-locations (function)
+  (let ((debug-fun (function-debug-function function)))
+    (do-debug-function-blocks (block debug-fun)
+      (do-debug-block-locations (loc block)
+	(fill-in-code-location loc)
+	(format t "~S code location at ~D"
+		(compiled-code-location-kind loc)
+		(compiled-code-location-pc loc))
+	(debug::print-code-location-source-form loc 0)
+	(terpri)))))
