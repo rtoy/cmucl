@@ -15,6 +15,11 @@
 (in-package 'c)
 
 
+(defvar *byte-buffer*
+  (make-array 10 :element-type '(unsigned-byte 8)
+	      :fill-pointer 0  :adjustable t))
+
+
 ;;; DEBUG-SOURCE-FOR-INFO  --  Interface
 ;;;
 ;;;    Return a list of DEBUG-SOURCE structures containing information derived
@@ -42,73 +47,112 @@
 	  (source-info-files info)))
 
 
-;;; DEBUG-LOCATION-FOR  --  Internal
+;;; TN-SC-OFFSET  --  Internal
 ;;;
-;;;    Return a COMPILED-LOCATION structure describing Leaf.  If we already
-;;; have a location for this var in this function, then return that.  If the
-;;; var has no refs, return DELETED.
+;;;    Return a SC-OFFSET describing TN's location.
 ;;;
-(defun debug-location-for (leaf var-locs)
-  (declare (type lambda-var leaf) (type hash-table var-locs))
-  (cond ((gethash leaf var-locs))
-	((null (leaf-refs leaf)) 'deleted)
-	(t
-	 (let* ((name (leaf-name leaf))
-		(package (symbol-package name))
-		(loc (make-compiled-location
-		      :name (symbol-name name)
-		      :package-name (when package (package-name package))
-		      :type (type-specifier (leaf-type leaf))))
-		(tn (leaf-info leaf)))
-	   
-	   (setf (compiled-location-offset loc)
-		 (tn-offset tn))
-	   (setf (compiled-location-sc loc)
-		 (sc-number (tn-sc tn)))
-	   
-	   (let ((save (or (tn-save-tn tn) tn)))
-	     (setf (compiled-location-save-offset loc)
-		   (tn-offset save))
-	     (setf (compiled-location-save-sc loc)
-		   (sc-number (tn-sc tn))))
-	   
-	   (setf (gethash leaf var-locs)
-		 loc)))))
+(defun tn-sc-offset (tn)
+  (declare (type tn tn))
+  (make-sc-offset (sc-number (tn-sc tn))
+		  (tn-offset tn)))
+
+
+;;; DUMP-1-LOCATION  --  Internal
+;;;
+;;;    Dump info to represent Var's location being TN.  ID is an integer that
+;;; makes Var's name unique in the function.  Buffer is the vector we stick the
+;;; result in.
+;;;
+(defun dump-1-location (var tn id buffer)
+  (declare (type lambda-var var) (type tn tn) (type unsigned-byte id))
+  (let* ((name (leaf-name var))
+	 (package (symbol-package name))
+	 (package-p (and package (not (eq package *package*))))
+	 (save-tn (tn-save-tn tn))
+	 (flags 0))
+    (unless package
+      (setq flags (logior flags compiled-location-uninterned)))
+    (when package-p
+      (setq flags (logior flags compiled-location-packaged)))
+    (when (eq (tn-kind tn) :environment)
+      (setq flags (logior flags compiled-location-environment-live)))
+    (when save-tn
+      (setq flags (logior flags compiled-location-save-loc-p)))
+    (unless (zerop id)
+      (setq flags (logior flags compiled-location-id-p)))
+    (vector-push-extend flags buffer)
+    (write-var-string (symbol-name name) buffer)
+    (when package-p
+      (write-var-string (package-name package) buffer))
+    (unless (zerop id)
+      (write-var-integer id buffer))
+    (write-var-integer (tn-sc-offset tn) buffer)
+    (when save-tn
+      (write-var-integer (tn-sc-offset save-tn) buffer)))
+  (undefined-value))
 
 
 ;;; COMPUTE-VARIABLES  --  Internal
 ;;;
 ;;;    Return a vector suitable for use as the DEBUG-FUNCTION-VARIABLES of Fun.
-;;; If Max-Info-P is true, we dump gensym variables as well as named ones.
+;;; Level is the current DEBUG-INFO quality.  Var-Locs is a hashtable in which
+;;; we enter the translation from LAMBDA-VARS to the relative position of that
+;;; variable's location in the resulting vector.
 ;;;
-(defun compute-variables (fun max-info-p var-locs)
+(defun compute-variables (fun level var-locs)
   (declare (type clambda fun) (type hash-table var-locs))
-  (collect ((locs))
-    (flet ((frob (x)
-	     (dolist (leaf (lambda-vars x))
+  (collect ((vars))
+    (labels ((frob-leaf (leaf tn gensym-p)
 	       (let ((name (leaf-name leaf)))
 		 (when (and name (leaf-refs leaf)
-			    (or max-info-p (symbol-package name)))
-		   (locs (debug-location-for leaf var-locs)))))))
-      (frob fun)
-      (dolist (let (lambda-lets fun))
-	(frob let)))
+			    (or gensym-p (symbol-package name)))
+		   (vars (cons leaf tn)))))
+	     (frob-lambda (x gensym-p)
+	       (dolist (leaf (lambda-vars x))
+		 (frob-leaf leaf (leaf-info leaf) gensym-p))))
+      (frob-lambda fun t)
+      (when (>= level 2)
+	(dolist (x (ir2-environment-environment
+		    (environment-info (lambda-environment fun))))
+	  (let ((thing (car x)))
+	    (when (lambda-var-p thing)
+	      (frob-leaf thing (cdr x) (= level 3)))))
+	
+	(dolist (let (lambda-lets fun))
+	  (frob let (= level 3)))))
     
-    (let ((res (coerce (sort (locs)
-			     #'(lambda (x y)
-				 (string< (compiled-location-name x)
-					  (compiled-location-name y))))
-		       'simple-vector)))
-      (let ((prev-name nil))
-	(declare (type (or simple-string null) prev-name))
-	(dotimes (i (length res))
-	  (let* ((loc (svref res i))
-		 (name (compiled-location-name loc)))
-	    (when (and prev-name (string= prev-name name))
-	      (setf (compiled-location-id loc)
-		    (1+ (compiled-location-id (svref res (1- i))))))
-	    (setq prev-name name))))
-      res)))
+    (setf (fill-pointer *byte-buffer*) 0)
+    (let ((sorted (sort (vars) #'string<
+			:key #'(lambda (x)
+				 (symbol-name (leaf-name (car x))))))
+	  (prev-name nil)
+	  (id 0)
+	  (i 0))
+      (declare (type (or simple-string null) prev-name))
+      (dolist (x sorted)
+	(let* ((var (car x))
+	       (name (symbol-name (leaf-name var))))
+	  (cond ((and prev-name (string= prev-name name))
+		 (incf id))
+		(t
+		 (setq id 0  prev-name name)))
+	  (dump-1-location var (cdr x) id *byte-buffer*))
+	(setf (gethash var var-locs) i)
+	(incf i)))
+
+    (copy-seq *byte-buffer*)))
+
+
+;;; DEBUG-LOCATION-FOR  --  Internal
+;;;
+;;;    Return Var's relative position in the function's variables (determined
+;;; from the Var-Locs hashtable.)
+;;;
+(defun debug-location-for (var var-locs)
+  (declare (type lambda-var var) (type hashtable var-locs))
+  (let ((res (gethash var var-locs)))
+    (assert res () "No location for ~S?" var)
+    res))
 
 
 ;;; COMPUTE-ARGUMENTS  --  Internal
@@ -153,13 +197,14 @@
 ;;; return from Fun.
 ;;;
 (defun compute-debug-returns (fun)
-  (collect ((res))
-    (dolist (tn (return-info-locations (tail-set-info (lambda-tail-set fun))))
-      (let ((loc (make-compiled-location :name "RETURN-LOCATION")))
-	(setf (compiled-location-offset loc) (tn-offset tn))
-	(setf (compiled-location-sc loc) (sc-number (tn-sc tn)))
-	(res loc)))
-    (coerce (res) 'simple-vector)))
+  (let* ((locs (return-info-locations (tail-set-info (lambda-tail-set fun))))
+	 (len (length locs))
+	 (res (make-array len :element-type '(unsigned-byte 32))))
+    (do ((i 0 (1+ i))
+	 (loc locs (cdr loc)))
+	((null loc))
+      (setf (aref res i) (tn-sc-offset (car loc))))
+    res))
 
 
 ;;; DEBUG-INFO-FOR-COMPONENT  --  Interface
@@ -171,15 +216,9 @@
 (defun debug-info-for-component (component assem-nodes count)
   (declare (type component component) (simple-vector assem-nodes)
 	   (type index count))
-  (let ((min-info-p
-	 (policy nil (or (= debug 0)
-			 (and (> space debug) (= space 3)))))
-	(normal-info-p
-	 (policy nil (>= debug space)))
-	(max-info-p
-	 (policy nil (= debug 3)))
-	(res (make-compiled-debug-info :name (component-name component))))
-
+  (let ((level (cookie-debug *default-cookie*))
+	(res (make-compiled-debug-info :name (component-name component)
+				       :package (package-name *package*))))
     (collect ((dfuns))
       (let ((var-locs (make-hash-table :test #'eq)))
 	(dolist (fun (component-lambdas component))
@@ -192,11 +231,11 @@
 				    (component-name component)))
 		       :kind (functional-kind fun))))
 	    
-	    (when normal-info-p
+	    (when (>= level 1)
 	      (setf (compiled-debug-function-variables dfun)
-		    (compute-variables fun max-info-p var-locs)))
+		    (compute-variables fun level var-locs)))
 
-	    (unless min-info-p
+	    (unless (= level 0)
 	      (setf (compiled-debug-function-arguments dfun)
 		    (compute-arguments fun var-locs)))
 
@@ -206,7 +245,7 @@
 		  (cond ((eq (return-info-kind info) :unknown)
 			 (setf (compiled-debug-function-returns dfun)
 			       :standard))
-			((not min-info-p)
+			((/= level 0)
 			 (setf (compiled-debug-function-returns dfun)
 			       (compute-debug-returns fun)))))))
 
