@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/osf1-os.lisp,v 1.3 1997/03/26 20:38:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/osf1-os.lisp,v 1.3.2.1 1997/07/09 12:10:54 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,8 +26,7 @@
   "Returns a string describing version of the supporting software."
   (string-trim '(#\newline)
 	       (with-output-to-string (stream)
-		 (run-program "/usr/cs/etc/version" ; Site dependent???
-			      nil :output stream))))
+		 (run-program "/usr/bin/uname" '("-sr") :output stream))))
 
 
 ;;; OS-Init initializes our operating-system interface.  It sets the values
