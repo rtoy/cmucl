@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.15 2001/04/26 17:20:28 pw Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.16 2001/12/06 22:15:34 pmai Exp $
 
 all: lisp.nm
 
@@ -59,10 +59,10 @@ internals.h:
 clean:
 	rm -f Depends *.o lisp lisp.nm core
 
-depend: ${SRCS}
+depend: Depends
+
+Depends: ${SRCS}
 	$(CC) -MM -E ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $? > ,depends
 	mv ,depends Depends
 
-ifneq (,$(wildcard Depends))
 include Depends
-endif
