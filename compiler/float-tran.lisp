@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.20 1993/08/25 00:15:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.21 1993/11/08 01:41:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -256,7 +256,7 @@
 ;;;; Irrational transforms:
 
 (defknown (%sin %cos %tan %asin %acos %atan %sinh %cosh %tanh %asinh
-		%acosh %atanh %exp %expm1 %log %log10 %log1p %cbrt %sqrt)
+		%acosh %atanh %exp %log %log10 %sqrt)
 	  (double-float) double-float
   (movable foldable flushable))
 
