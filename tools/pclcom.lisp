@@ -38,15 +38,17 @@
 		(t
 		 (setf (kernel:class-pcl-class class) nil)))))))
 
-  ;; Shadowing-import 'pcl::class so that this symbol is the same as
-  ;; used by the compiler in ir1tran.
-  (let ((class 'pcl::class))
+  ;; Rename the PCL package to OLD-PCL, then restoring pcl::class and
+  ;; pcl::..slot-unbound.. back to the PCL package as they need be
+  ;; consistent with the symbols recognised by the compiler.
+  (let ((class 'pcl::class)
+	(slot-unbound 'pcl::..slot-unbound..))
     (rename-package "PCL" "OLD-PCL")
     (make-package "PCL")
     (shadowing-import class "PCL")
-    ;; Move class back to the PCL package so that the respective debug
-    ;; variable has a valid package name.
-    (kernel:%set-symbol-package class (find-package "PCL"))))
+    (kernel:%set-symbol-package class (find-package "PCL"))
+    (import slot-unbound "PCL")
+    (kernel:%set-symbol-package slot-unbound (find-package "PCL"))))
 
 (when (find-package  "SLOT-ACCESSOR-NAME")
   (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
