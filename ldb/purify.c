@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.17 1992/03/08 18:39:54 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.18 1992/04/15 00:40:00 wlott Exp $ */
 
 #include <stdio.h>
 
@@ -270,52 +270,10 @@ static lispobj ptrans_func(thing, header, constant)
     /* Otherwise we have to do something strange, 'cause it is buried inside */
     /* a code object. */
 
-    if (TypeOf(header) == type_ClosureHeader) {
-        nwords = 1 + HeaderValue(header);
+    if (TypeOf(header) == type_FunctionHeader ||
+        TypeOf(header) == type_ClosureFunctionHeader) {
 
-        /* Allocate it.  Closures can always go in read-only space, 'caues */
-        /* they never change. */
-        old = (lispobj *)PTR(thing);
-        new = read_only_free;
-        read_only_free += CEILING(nwords, 2);
-
-        /* Copy it. */
-        bcopy(old, new, nwords * sizeof(lispobj));
-
-        /* Deposit forwarding pointer. */
-        result = (lispobj)new | LowtagOf(thing);
-        *old = result;
-
-        /* Scavenge it. */
-        pscav(new, nwords, constant);
-
-        return result;
-    }
-    else if (TypeOf(header) == type_FuncallableInstanceHeader) {
-        nwords = 1 + HeaderValue(header);
-
-        /* Allocate it.  It *must* not go in read_only space. */
-        old = (lispobj *)PTR(thing);
-        new = static_free;
-        static_free += CEILING(nwords, 2);
-
-        /* Copy it. */
-        bcopy(old, new, nwords * sizeof(lispobj));
-
-        /* Deposit forwarding pointer. */
-        result = (lispobj)new | LowtagOf(thing);
-        *old = result;
-
-        /* Scavenge it. */
-        pscav(new, nwords, constant);
-
-        return result;
-    }
-    else {
-        gc_assert(TypeOf(header) == type_FunctionHeader ||
-                  TypeOf(header) == type_ClosureFunctionHeader);
-
-        /* We can only end up here if the code object has not been */
+	/* We can only end up here if the code object has not been */
         /* scavenged, because if it had been scavenged, forwarding pointers */
         /* would have been left behind for all the entry points. */
 
@@ -329,6 +287,36 @@ static lispobj ptrans_func(thing, header, constant)
 
         /* So we can just return that. */
         return function->header;
+    }
+    else {
+	/* It's some kind of closure-like thing. */
+        nwords = 1 + HeaderValue(header);
+        old = (lispobj *)PTR(thing);
+
+	/* Allocate the new one. */
+	if (TypeOf(header) == type_FuncallableInstanceHeader) {
+	    /* FINs *must* not go in read_only space. */
+	    new = static_free;
+	    static_free += CEILING(nwords, 2);
+	}
+	else {
+	    /* Closures can always go in read-only space, 'caues */
+	    /* they never change. */
+	    new = read_only_free;
+	    read_only_free += CEILING(nwords, 2);
+	}
+
+        /* Copy it. */
+        bcopy(old, new, nwords * sizeof(lispobj));
+
+        /* Deposit forwarding pointer. */
+        result = (lispobj)new | LowtagOf(thing);
+        *old = result;
+
+        /* Scavenge it. */
+        pscav(new, nwords, constant);
+
+        return result;
     }
 }
 
@@ -412,10 +400,8 @@ static lispobj ptrans_otherptr(thing, header, constant)
       case type_ComplexString:
       case type_ComplexVector:
       case type_ComplexArray:
-      case type_ClosureHeader:
         return ptrans_boxed(thing, header, constant);
 
-      case type_FuncallableInstanceHeader:
       case type_ValueCellHeader:
       case type_WeakPointer:
         return ptrans_boxed(thing, header, FALSE);
@@ -610,6 +596,12 @@ static lispobj *pscav(addr, nwords, constant)
                 pscav(addr+1, 2, constant);
                 count = 4;
                 break;
+
+	      case type_Fdefn:
+		/* We have to handle fdefn objects specially, so we can fix */
+		/* up the raw function address. */
+		count = pscav_fdefn((struct fdefn *)addr);
+		break;
 
               default:
                 count = 1;
