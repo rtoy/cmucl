@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.9 1993/08/24 15:51:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.10 1993/08/24 15:58:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,10 +96,8 @@
     (mapc #'load tk-files)
     (xt::build-toolkit-interface))
 
-  (with-compilation-unit (:optimize '(optimize #+small (speed 0)
-					       #+small (debug .5)))
-    (dolist (f interface-files)
-      (comf f :load t))))
+  (dolist (f interface-files)
+    (comf f :load t :byte-compile t)))
 
 (apply #'cat-if-anything-changed
        "target:interface/clm-library"
