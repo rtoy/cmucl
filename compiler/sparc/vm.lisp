@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.23 2004/05/13 14:34:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.24 2004/05/14 16:08:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,7 +96,7 @@
   ;; disassemble code that uses these registers.  (Callbacks use %fp).
   ;; So manually give names to these registers
   (setf (aref *register-names* 6) "G6")
-  (setf (aref *register-names* 7) "G7")
+  #+nil(setf (aref *register-names* 7) "G7")
   (setf (aref *register-names* 30) "FP")
   )
 
