@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.1 1997/01/18 14:31:23 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.2 1997/02/08 21:38:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,15 +103,14 @@
   (:generator 20
     (sc-case skip
       (immediate
-       (if (zerop (tn-value skip))
-	   (progn 
-	     (move src context)
-	     (move count num))
-	   (progn
-	     (inst lea src (make-ea :dword :base context
-				    :disp (- (* (tn-value skip) word-bytes))))
-	     (move count num)
-	     (inst sub count (* (tn-value skip) word-bytes)))))
+       (cond ((zerop (tn-value skip))
+	      (move src context)
+	      (move count num))
+	     (t
+	      (inst lea src (make-ea :dword :base context
+				     :disp (- (* (tn-value skip) word-bytes))))
+	      (move count num)
+	      (inst sub count (* (tn-value skip) word-bytes)))))
       
       (any-reg
        (move src context)
