@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.4 1992/05/22 15:32:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.5 1992/08/04 08:22:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.4 1992/05/22 15:32:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.5 1992/08/04 08:22:44 wlott Exp $
 ;;;
 ;;; Functions and utilities for collecting statistics on static vop usages.
 ;;;
@@ -45,7 +45,9 @@
 ;;; component.
 ;;; 
 (defun count-vops (component)
-  (assert (not (backend-featurep :new-assembler)))
+  (declare (ignore component))
+  (error "Vop counting not implemented for the new assembler.")
+  #+nil
   (flet ((vop-entry (vop)
 	   (let* ((name (vop-info-name (vop-info vop)))
 		  (entry (gethash name *vop-counts*)))
