@@ -33,6 +33,7 @@
 (pushnew :command-bits *features*)
 (pushnew :buffered-lines *features*)
 
+
 (with-compiler-log-file
     ("target:compile-hemlock.log"
      :optimize
@@ -103,6 +104,7 @@
 (comf "target:hemlock/echocoms")
 (comf "target:hemlock/defsyn")
 
+
 (with-compilation-unit
     (:optimize
      '(optimize (safety 2))
@@ -158,9 +160,12 @@
 (comf "target:hemlock/completion")
 (comf "target:hemlock/shell")
 (comf "target:hemlock/debug")
-    ); WITH-COMPILATION-UNIT for commands
+(comf "target:hemlock/netnews")
+
+) ;WITH-COMPILATION-UNIT for commands
+
 
 (comf "target:hemlock/bindings")
 (comf "target:hemlock/hacks")
 
-); With-Compiler-Log-File
+) ;WITH-COMPILER-LOG-FILE
