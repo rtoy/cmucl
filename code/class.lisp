@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.36.2.2 2000/05/23 16:36:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.36.2.3 2000/08/06 19:13:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,6 +173,51 @@
       (setf (layout-hash layout i)
 	    (1+ (random layout-hash-max seed)))))
   layout)
+
+;;; order-layout-inherits  --  Interface
+;;;
+;;; Arrange the inherited layouts to appear at their expected depth, ensuring
+;;; that hierarchical type tests succeed. Layouts with a specific depth are
+;;; placed first, then the non-hierarchical layouts fill remaining elements.
+;;; Any empty elements are filled with layout copies ensuring that all
+;;; elements have a valid layout. This re-ordering may destroy CPL ordering so
+;;; the inherits should not be read as being in CPL order, and further
+;;; duplicates may be introduced.
+;;;
+(defun order-layout-inherits (layouts)
+  (declare (simple-vector layouts))
+  (let ((length (length layouts))
+	(max-depth -1))
+    (dotimes (i length)
+      (let ((depth (layout-inheritance-depth (svref layouts i))))
+	(when (> depth max-depth)
+	  (setf max-depth depth))))
+    (let* ((new-length (max (1+ max-depth) length))
+	   (inherits (make-array new-length)))
+      (dotimes (i length)
+	(let* ((layout (svref layouts i))
+	       (depth (layout-inheritance-depth layout)))
+	  (unless (eql depth -1)
+	    (unless (eql (svref inherits depth) 0)
+	      (error "Layout depth confict: ~S~%" layouts))
+	    (setf (svref inherits depth) layout))))
+      (do ((i 0 (1+ i))
+	   (j 0))
+	  ((>= i length))
+	(declare (type index i j))
+	(let* ((layout (svref layouts i))
+	       (depth (layout-inheritance-depth layout)))
+	  (when (eql depth -1)
+	    (loop (when (eql (svref inherits j) 0)
+		    (return))
+		  (incf j))
+	    (setf (svref inherits j) layout))))
+      (do ((i (1- new-length) (1- i)))
+	  ((< i 0))
+	(declare (type fixnum i))
+	(when (eql (svref inherits i) 0)
+	  (setf (svref inherits i) (svref inherits (1+ i)))))
+      inherits)))
 
 
 ;;; The CLASS structure is a supertype of all CLASS types.  A CLASS is also a
@@ -758,8 +803,7 @@
 			   generic-sequence collection symbol)
 		:direct-superclasses (list symbol))
 
-	  (stream :hierarchical nil :state :read-only
-		  :inherits (instance t)))))
+	  (stream :state :read-only :depth 3 :inherits (instance)))))
 
 ;;; See also type-init.lisp where we finish setting up the translations for
 ;;; built-in types.
@@ -767,7 +811,7 @@
 (cold-load-init
   (dolist (x built-in-classes)
     (destructuring-bind (name &key (translation nil trans-p) inherits codes
-			      enumerable state (hierarchical t)
+			      enumerable state (hierarchical t) depth
 			      (direct-superclasses
 			       (if inherits (list (car inherits)) '(t))))
 			x
@@ -787,7 +831,9 @@
 	(setf (class-cell-class (find-class-cell name)) class)
 	(unless trans-p
 	  (setf (info type builtin name) class))
-	(let* ((inheritance-depth (if hierarchical (length inherits) -1))
+	(let* ((inheritance-depth (if hierarchical
+				      (or depth (length inherits))
+				      -1))
 	       (inherit-layouts
 		(map 'vector
 		     #'(lambda (x)
@@ -804,20 +850,20 @@
 ;;; correctly and the lisp layout replaced by a PCL wrapper after PCL
 ;;; is loaded and the class defined.
 (cold-load-init
-  (dolist (x '((fundamental-stream (t instance stream))))
+  (dolist (x '((fundamental-stream (t instance stream stream))))
     (let* ((name (first x))
 	   (inherits (second x))
-	   (class (lisp::make-standard-class :name name))
-	   (class-cell (lisp::find-class-cell name)))
-      (setf (lisp::class-cell-class class-cell) class)
+	   (class (make-standard-class :name name))
+	   (class-cell (find-class-cell name)))
+      (setf (class-cell-class class-cell) class)
       (setf (info type class name) class-cell)
       (setf (info type kind name) :instance)
       (let ((inherit-layouts
 	     (map 'vector #'(lambda (x)
-			      (lisp::class-layout (lisp:find-class x)))
+			      (class-layout (lisp:find-class x)))
 		  inherits)))
-	(lisp::register-layout (lisp::find-layout name 0 inherit-layouts -1)
-			       :invalidate nil)))))
+	(register-layout (find-layout name 0 inherit-layouts -1)
+			 :invalidate nil)))))
 
 ;;; Now that we have set up the class heterarchy, seal the sealed classes.
 ;;; This must be done after the subclasses have been set up.

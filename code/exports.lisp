@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.9 2000/07/31 09:54:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.10 2000/08/06 19:13:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1573,7 +1573,8 @@
 	   "OBJECT-NOT-INSTANCE-ERROR" "OBJECT-NOT-SYMBOL-ERROR"
 	   "OBJECT-NOT-TYPE-ERROR" "OBJECT-NOT-UNSIGNED-BYTE-32-ERROR"
 	   "OBJECT-NOT-VECTOR-ERROR" "OBJECT-NOT-WEAK-POINTER-ERROR"
-	   "ODD-KEYWORD-ARGUMENTS-ERROR" "OUTPUT-OBJECT" "OUTPUT-UGLY-OBJECT"
+	   "ODD-KEYWORD-ARGUMENTS-ERROR" "ORDER-LAYOUT-INHERITS"
+	   "OUTPUT-OBJECT" "OUTPUT-UGLY-OBJECT"
 	   "PARSE-LAMBDA-LIST" "PARSE-UNKNOWN-TYPE"
 	   "PARSE-UNKNOWN-TYPE-SPECIFIER" "PATHNAME-DEVICE"
 	   "PATHNAME-DIRECTORY" "PATHNAME-HOST" "PATHNAME-NAME"

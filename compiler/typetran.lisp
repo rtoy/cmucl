@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.29.2.2 2000/05/23 16:37:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.29.2.3 2000/08/06 19:13:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -470,7 +470,7 @@
 				  (%layout-invalid-error object ',layout))))
 		      (eq ,n-layout ',layout)))))
 	   ((and (typep class 'basic-structure-class) layout)
-	    ;; Structure type tests; hierarchal layout depths.
+	    ;; Structure type tests; hierarchical layout depths.
 	    (let ((idepth (layout-inheritance-depth layout))
 		  (n-layout (gensym)))
 	      `(and (,pred object)
@@ -481,6 +481,22 @@
 		      (if (eq ,n-layout ',layout)
 			  t
 			  (and (> (layout-inheritance-depth ,n-layout) ,idepth)
+			       (locally (declare (optimize (safety 0)))
+				 (eq (svref (layout-inherits ,n-layout) 
+					    ,idepth)
+				     ',layout))))))))
+	   ((and layout (>= (layout-inheritance-depth layout) 0))
+	    ;; Hierarchical layout depths.
+	    (let ((idepth (layout-inheritance-depth layout))
+		  (n-layout (gensym)))
+	      `(and (,pred object)
+		    (let ((,n-layout (,get-layout object)))
+		      ,@(when (policy nil (>= safety speed))
+			      `((when (layout-invalid ,n-layout)
+				  (%layout-invalid-error object ',layout))))
+		      (if (eq ,n-layout ',layout)
+			  t
+			  (and (> (length (layout-inherits ,n-layout)) ,idepth)
 			       (locally (declare (optimize (safety 0)))
 				 (eq (svref (layout-inherits ,n-layout) 
 					    ,idepth)
