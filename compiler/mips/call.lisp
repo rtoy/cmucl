@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.56 1993/02/26 08:48:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.57 1993/05/22 16:15:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1297,20 +1297,20 @@ default-value-8
     (without-scheduling ()
       (inst or dst alloc-tn list-pointer-type)
       (inst addu alloc-tn (pad-data-block cons-size)))
-    (inst sw dst temp cons-cdr-slot)
+    (storew dst temp cons-cdr-slot list-pointer-type)
 
     ENTRY
     ;; Copy the next more arg into the car of the current cons cell.
     (inst lw temp src 0)
     (inst addu src word-bytes)
-    (inst sw temp dst cons-car-slot)
+    (storew temp dst cons-car-slot list-pointer-type)
 
     ;; If that wasn't the last one, go back for more.
     (inst bne src end loop)
     (inst move temp dst)
 
     ;; Deposit NIL in the cdr of the last one.
-    (inst sw null-tn dst cons-cdr-slot)
+    (storew null-tn dst cons-cdr-slot list-pointer-type)
 
     DONE))
 
