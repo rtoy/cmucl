@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.61 1990/07/02 16:35:12 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.62 1990/07/04 18:58:51 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -336,7 +336,8 @@
 
 (define-primitive-object (ratio :lowtag other-pointer-type
 				:header ratio-type
-				:alloc-vop c::make-ratio)
+				:alloc-vop c::make-ratio
+				:alloc-trans %make-ratio)
   (numerator :ref-vop numerator :init :arg)
   (denominator :ref-vop denominator :init :arg))
 
@@ -350,7 +351,8 @@
 
 (define-primitive-object (complex :lowtag other-pointer-type
 				  :header complex-type
-				  :alloc-vop c::make-complex)
+				  :alloc-vop c::make-complex
+				  :alloc-trans %make-complex)
   (real :ref-vop realpart :init :arg)
   (imag :ref-vop imagpart :init :arg))
 
@@ -407,9 +409,18 @@
 					  :header function-header-type)
   (self :ref-vop c::function-self :set-vop c::set-function-self)
   (next :ref-vop c::function-next :set-vop c::set-function-next)
-  (name :ref-vop c::function-name :set-vop c::set-function-name)
-  (arglist :ref-vop c::function-arglist :set-vop c::set-function-arglist)
-  (type :ref-vop c::function-type :set-vop c::set-function-type)
+  (name :ref-vop c::function-name
+	:ref-known (c::flushable)
+	:ref-trans %function-header-name
+	:set-vop c::set-function-name)
+  (arglist :ref-vop c::function-arglist
+	   :ref-known (c::flushable)
+	   :ref-trans lisp::%function-header-arglist
+	   :set-vop c::set-function-arglist)
+  (type :ref-vop c::function-type
+	:ref-known (c::flushable)
+	:ref-trans lisp::%function-header-type
+	:set-vop c::set-function-type)
   (code :rest-p t :c-type "unsigned char"))
 
 (define-primitive-object (return-pc :lowtag other-pointer-type :header t)
@@ -418,7 +429,10 @@
 (define-primitive-object (closure :lowtag function-pointer-type
 				  :header closure-header-type
 				  :alloc-vop c::make-closure)
-  (function :init :arg :ref-vop c::closure-function)
+  (function :init :arg
+	    :ref-vop c::closure-function
+	    :ref-known (c::flushable)
+	    :ref-trans %closure-function)
   (info :rest-p t :set-vop c::closure-init :ref-vop c::closure-ref))
 
 (define-primitive-object (value-cell :lowtag other-pointer-type
