@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.1 1992/05/29 14:08:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.2 1993/01/14 02:23:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,11 +25,13 @@
       (fresh-line)
       (format t " 1: specify result file (currently ~S)~%"
 	      (namestring output-file))
-      (format t " 2: ~:[enable~;disable~] loading of the CLX X library.~%"
+      (format t " 2: toggle loading of the CLX X library, currently ~
+		 ~:[dis~;en~]abled.~%"
 	      load-clx)
-      (format t " 3: ~:[enable~;disable~] loading the Hemlock editor~
-		 ~:[ (forces loading of CLX.)~;.~]~%"
-	      load-hemlock load-hemlock)
+      (format t " 3: toggle loading the Hemlock editor, currently ~
+		 ~:[dis~;en~]abled.~
+		 ~:[~%    (would force loading of CLX.)~;~]~%"
+	      load-hemlock load-clx)
       (format t " 4: specify some site-specific file to load.~@
 		 ~@[    Current files:~%~{      ~S~%~}~]"
 	      (mapcar #'namestring other))
