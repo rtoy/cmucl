@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.20 1991/10/12 21:01:52 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.21 1991/10/16 11:39:26 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -326,14 +326,14 @@
     (debug-loop)))
 
 
-					 (stream-command-name input))))
-			   (cond ((not cmd-fun)
-				  (error "Unknown stream-command -- ~S." input))
-				 ((consp cmd-fun)
-				  (error "Ambiguous debugger command: ~S."
-					 cmd-fun))
-				 (t
-				  (apply cmd-fun (stream-command-args input))))))
+					 (ext:stream-command-name input))))
+
+(defvar *flush-debug-errors* t
+  "When set, avoid calling INVOKE-DEBUGGER recursively when errors occur while
+   executing in the debugger.  The 'flush' command toggles this.")
+
+(defun debug-loop ()
+  (let* ((*debug-command-level* (1+ *debug-command-level*))
 	 (*real-stack-top* (di:top-frame))
 	 (*stack-top* (or *stack-top-hint* *real-stack-top*))
 				(cmd-fun (debug-command-p exp)))
