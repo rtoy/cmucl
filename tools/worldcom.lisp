@@ -118,6 +118,7 @@
 (comf "target:code/commandline")
 
 (comf "target:code/gc")
+(comf "target:code/room")
 (comf "target:code/purify")
 (comf "target:code/save")
 
