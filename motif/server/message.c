@@ -206,8 +206,9 @@ message_t message_read(int socket) {
   count=first->total;
   if( !count && !first->current ) {
     kill_deferred_message(first->serial);
-    if( global_will_trace )
+    if( global_will_trace ) {
       printf("Got cancellation for serial %d\n",first->serial);
+      fflush(stdout); }
   } else if( count == 1 ) {
     new = message_new(next_serial++);
     new->packets = first;

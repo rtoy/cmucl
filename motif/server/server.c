@@ -32,6 +32,7 @@ void fatal_error(char *message)
   fprintf(stderr,"%s\n",message);
   if( errno )
     perror(NULL);
+  fflush(stderr);
 
   close(client_socket);
   if( !will_fork ) {
@@ -47,6 +48,7 @@ void MyErrorHandler(String errmsg)
   message_add_packet(reply);
 
   fprintf(stderr,"Error: %s\n",errmsg);
+  fflush(stderr);
   message_put_dblword(reply,ERROR_REPLY);
   message_write_string(reply,errmsg,string_tag);
   message_send(client_socket,reply);
@@ -62,6 +64,7 @@ void MyWarningHandler(String errmsg)
   message_add_packet(reply);
 
   fprintf(stderr,"Warning: %s\n",errmsg);
+  fflush(stderr);
   message_put_dblword(reply,WARNING_REPLY);
   message_write_string(reply,errmsg,string_tag);
   message_send(client_socket,reply);
@@ -73,14 +76,16 @@ void get_input(caddr_t closure, int *socket, XtInputId *id)
 {
   message_t message;
 
-  if( global_will_trace )
+  if( global_will_trace ) {
     printf("get_input:  Receiving incoming packet.\n");
+    fflush(stdout);}
   message = message_read(*socket);
 
   process_request(message,*socket);
 
-  if( global_will_trace )
+  if( global_will_trace ) {
     printf("get_input:  Successfully digested packet.  Now freeing.\n");
+    fflush(stdout);}
 
   message_free(message);
 }
@@ -97,8 +102,9 @@ void greet_client(int socket) {
   else if( result == 1 )  read(socket,&byte+1,1);
 
   swap_bytes = (byte!=1);
-  if( global_will_trace )
+  if( global_will_trace ) {
     printf("swap_bytes is: %d (from %d)\n",swap_bytes,byte);
+    fflush(stdout);}
 
   /* Read initial packet */
   first = message_read(socket);
@@ -112,9 +118,10 @@ void greet_client(int socket) {
   global_app_class = XtNewString(app_class);
   global_app_name  = XtNewString(app_name);
 
-  if( global_will_trace )
+  if( global_will_trace ) {
     printf("Opening display on '%s' for app '%s' class '%s'\n",dpy_name,
 	   app_name,app_class);
+    fflush(stdout)};
   display = XtOpenDisplay(app_context, dpy_name,
 			  app_name, app_class,
 			  NULL, 0,
@@ -168,8 +175,9 @@ void serve_client(int socket)
   XtAppSetWarningHandler(app_context, MyWarningHandler);
 
   /* Here is where we want to return on errors */
-  if( setjmp(env) )
+  if( setjmp(env) ) {
     printf("Attempting to recover from error.\n");
+    fflush(stdout);}
   while( !terminate_server ) {
     XtAppNextEvent(app_context, &event);
     XtDispatchEvent(&event);

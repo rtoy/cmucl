@@ -362,6 +362,7 @@ void write_event(message_t reply,XEvent *event)
     break;
   default:
     printf("Unknown event type %d\n",event->type);
+    fflush(stdout);
     break;
   }
 }

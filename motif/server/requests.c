@@ -155,8 +155,9 @@ void process_request(message_t message,int socket)
   message_get_byte(message);   /* This is ignored at the moment */
 
   handler = request_table[request_op];
-  if( global_will_trace )
+  if( global_will_trace ) {
     printf("Dispatching request for %d\n",request_op);
+    fflush(stdout);}
   (*handler)(message);
   if( must_confirm )
     send_confirmation(message,socket);

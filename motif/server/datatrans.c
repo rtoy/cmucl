@@ -154,11 +154,13 @@ void message_write_int_list(message_t message,IntList *list,int tag)
 void message_write_widget_list(message_t message,MyWidgetList *list,int tag)
 {
   fprintf(stderr,">>>>> Warning:write_widget_list:We shouldn't be here!\n");
+  fflush(stderr);
 }
 
 void message_write_resource_names(message_t message,ResourceList *list,int tag)
 {
   fprintf(stderr,">>>>> Warning:write_resource_names:We shouldn't be here!\n");
+  fflush(stderr);
 }
 
 void message_write_xm_string(message_t message,XmString xs,int tag)
@@ -384,6 +386,7 @@ void message_read_widget_list(message_t message,MyWidgetList *list,
 void message_read_int_list(message_t message,IntList *list,int tag,int length)
 {
   fprintf(stderr,">>>>> Warning:message_read_int_list: Shouldn't be here.\n");
+  fflush(stderr);
 }
 
 void message_read_translation_table(message_t m,XtTranslations *t,
@@ -436,6 +439,7 @@ void message_read_color(message_t m,XColor *color,int tag, int red)
 void message_read_float(message_t m,float *f,int tag,int data)
 {
   fprintf(stderr,">>>>> Warning:message_read_float: Not implemented.\n");
+  fflush(stderr);
 }
 
 
@@ -448,6 +452,7 @@ void toolkit_write_value(message_t message, caddr_t value, String type)
   type_tag = find_type_entry(type);
   if( type_tag < 0 ) {
     fprintf(stderr,"Choked on type %s\n",type);
+    fflush(stderr);
     fatal_error("Illegal type specified.");
   }
     

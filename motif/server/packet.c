@@ -119,6 +119,7 @@ void packet_send(int socket, packet_t packet) {
     printf("packet_send:     length = %u\n",packet->length);
     printf("packet_send:     this is packet %d of %d\n",packet->current,
 	   packet->total);
+    fflush(stdout);
   }
   packet_build_header(packet);
 
@@ -159,6 +160,7 @@ void packet_read(int socket, packet_t packet) {
     printf("packet_read:     length = %u\n",packet->length);
     printf("packet_read:     This is packet %d of %d\n",packet->current,
 	   packet->total);
+    fflush(stdout);
   }
 
   while( target ) {

@@ -202,6 +202,7 @@ void write_text_callback(message_t reply,XmTextVerifyCallbackStruct *info)
     message_write_int(reply,info->text->format,int_tag);
     printf("modifying_text_value: %s ; length=%d\n",info->text->ptr,
 	   info->text->length);
+    fflush(stdout);
   }
 }
 

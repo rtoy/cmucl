@@ -124,6 +124,7 @@ void establish_client(int s)
   else
     printf("Server not forking.\n");
 
+  fflush(stdout);
   switch( pid ) {
   case 0:    /*  The child process */
     close(unix_socket);
@@ -197,6 +198,8 @@ main(int argc, char **argv)
   else
     printf("   No Unix domain socket created.\n");
 
+  fflush(stdout);
+
   start_server(port, socket_path);
 
   /* Catch signals and remove our sockets before going away. */
@@ -205,6 +208,7 @@ main(int argc, char **argv)
   signal(SIGQUIT, server_shutdown);
 
   printf("Waiting for connection.\n");
+  fflush(stdout);
 
   FD_ZERO(&rfds);
   nfds = MAX(unix_socket,inet_socket)+1;
@@ -217,10 +221,12 @@ main(int argc, char **argv)
 
     if( FD_ISSET(unix_socket, &rfds) ) {
       printf("Accepting client on Unix socket.\n");
+      fflush(stdout);
       establish_client(unix_socket);
     }
     if( FD_ISSET(inet_socket, &rfds) ) {
       printf("Accepting client on Inet socket.\n");
+      fflush(stdout);
       establish_client(inet_socket);
     }
     /* Prevent zombie children under Mach */
