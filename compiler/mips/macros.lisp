@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.34 1990/06/20 21:34:53 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.35 1990/07/03 06:35:44 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -451,8 +451,9 @@
 ;;;; Error Code
 
 (eval-when (compile load eval)
-  (defun emit-error-break (kind code values)
-    `((inst break ,kind)
+  (defun emit-error-break (vop kind code values)
+    `((note-this-location ,vop :internal-error)
+      (inst break ,kind)
       (inst byte (error-number-or-lose ',code))
       ,@(mapcar #'(lambda (tn)
 		    `(let ((tn ,tn))
@@ -462,29 +463,29 @@
       (inst byte 0)
       (align vm:word-shift))))
 
-(defmacro error-call (error-code &rest values)
+(defmacro error-call (vop error-code &rest values)
   "Cause an error.  ERROR-CODE is the error to cause."
   (cons 'progn
-	(emit-error-break vm:error-trap error-code values)))
+	(emit-error-break vop vm:error-trap error-code values)))
 
 
-(defmacro cerror-call (label error-code &rest values)
+(defmacro cerror-call (vop label error-code &rest values)
   "Cause a continuable error.  If the error is continued, execution resumes at
   LABEL."
   `(progn
      (inst b ,label)
-     ,@(emit-error-break vm:cerror-trap error-code values)))
+     ,@(emit-error-break vop vm:cerror-trap error-code values)))
 
-(defmacro generate-error-code (error-code &rest values)
+(defmacro generate-error-code (vop error-code &rest values)
   "Generate-Error-Code Error-code Value*
   Emit code for an error with the specified Error-Code and context Values."
   `(assemble (*elsewhere*)
      (let ((start-lab (gen-label)))
        (emit-label start-lab)
-       (error-call ,error-code ,@values)
+       (error-call ,vop ,error-code ,@values)
        start-lab)))
 
-(defmacro generate-cerror-code (error-code &rest values)
+(defmacro generate-cerror-code (vop error-code &rest values)
   "Generate-CError-Code Error-code Value*
   Emit code for a continuable error with the specified Error-Code and
   context Values.  If the error is continued, execution resumes after
@@ -496,7 +497,7 @@
        (assemble (*elsewhere*)
 	 (let ((,error (gen-label)))
 	   (emit-label ,error)
-	   (cerror-call ,continue ,error-code ,@values)
+	   (cerror-call ,vop ,continue ,error-code ,@values)
 	   ,error)))))
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
