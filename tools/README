@@ -466,7 +466,7 @@ Then you need to do the following steps.
 
 2.  Create a directory for the compiled target:
 
-           src/tools/create-target.sh xcross <other options>
+           src/tools/create-target.sh xtarget <other options>
 
 3.  Build the cross compiler and target:
 
@@ -490,9 +490,9 @@ Then you need to do the following steps.
 	src/tools/load-world.sh xtarget <label>
 
 
-    You may get into the debugger when doing this.  The first one is
-    an error about OLD-X86 (OLD-SPARC) package already existing.
-    Ignore it and continue.  Then you will probably get a not about
+    You may get into the debugger when doing this.  The first one may
+    be an error about OLD-X86 (OLD-SPARC) package already existing.
+    Ignore it and continue.  Then you will probably get a note about
     PCL not existing.  Select restart 3, which is to return NIL from
     pclload or something.  (Yes, these should be fixed.)
 
