@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.12 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.12.2.1 2000/06/19 16:46:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -117,6 +117,7 @@
     (setf (continuation-asserted-type structure) *wild-type*)
     (setf (continuation-%derived-type structure) nil)
     (setf (continuation-use structure) nil)
+    (setf (continuation-refs structure) nil)
     (setf (continuation-block structure) nil)
     (setf (continuation-reoptimize structure) t)
     (setf (continuation-%type-check structure) t))

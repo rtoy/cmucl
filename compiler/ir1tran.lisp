@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.3 2000/05/23 16:37:11 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.4 2000/06/19 16:46:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2068,9 +2068,11 @@
     (setf (entry-cleanup entry) cleanup)
     (prev-link entry start)
     (use-continuation entry dummy)
-    (let ((*lexical-environment*
-	   (make-lexenv :blocks (list (cons name (list entry cont)))
-			:cleanup cleanup)))
+    (let* ((cont-ref (make-cont-ref :cont cont))
+	   (*lexical-environment*
+	    (make-lexenv :blocks (list (cons name (list entry cont-ref)))
+			 :cleanup cleanup)))
+      (push cont-ref (continuation-refs cont))
       (ir1-convert-progn-body dummy cont forms))))
 
 ;;; We make Cont start a block just so that it will have a block assigned.
@@ -2093,7 +2095,7 @@
     (setf (continuation-dest value-cont) exit)
     (ir1-convert start value-cont value)
     (prev-link exit value-cont)
-    (use-continuation exit (second found))))
+    (use-continuation exit (cont-ref-cont (second found)))))
 
 
 ;;; Parse-Tagbody  --  Internal
@@ -2153,11 +2155,12 @@
 	      (conts))
       (starts dummy)
       (dolist (segment (rest segments))
-	(let ((tag-cont (make-continuation)))
+	(let* ((tag-cont (make-continuation))
+	       (tag-cont-ref (make-cont-ref :cont tag-cont)))
 	  (conts tag-cont)
 	  (starts tag-cont)
 	  (continuation-starts-block tag-cont)
-	  (tags (list (car segment) entry tag-cont))))
+	  (tags (list (car segment) entry tag-cont-ref))))
       (conts cont)
       
       (let ((*lexical-environment*
@@ -2182,7 +2185,7 @@
 	 (exit (make-exit :entry entry)))
     (push exit (entry-exits entry))
     (prev-link exit start)
-    (use-continuation exit (second found))))
+    (use-continuation exit (cont-ref-cont (second found)))))
 
 
 ;;;; Translators for compiler-magic special forms:
