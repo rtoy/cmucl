@@ -136,6 +136,8 @@ New in this release:
      - Byte-compiler and -interpreter not handling C:&MORE.
      - Some TYPE-ERRORs being signaled with unbound slots, which
        made them undisplayable.
+     - Structure predicates no longer signaling an error when applied
+       to obsolete instances.
 
   * Other changes:
      - Removed obsolete alias from MAKE-VECTOR to MAKE-ARRAY
