@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.74 2003/04/30 07:10:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.75 2003/05/03 11:22:09 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -626,7 +626,7 @@
     (dolist (sclass (cdr (condition-class-cpl class)))
       (dolist (sslot (condition-class-slots sclass))
 	(let ((found (find (condition-slot-name sslot) (res)
-			   :test #'eq)))
+			   :key #'condition-slot-name :test #'eq)))
 	  (cond (found
 		 (setf (condition-slot-initargs found)
 		       (union (condition-slot-initargs found)
