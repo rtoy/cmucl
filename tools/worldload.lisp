@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.52 1993/01/20 12:44:47 garland Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.53 1993/02/27 01:04:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,12 +89,19 @@
 (load "code:foreign")
 (load "code:setf-funs")
 (load "code:module")
+(load "code:room")
 
+(defvar *old-ie*)
+
+(setq *old-ie* (car *info-environment*))
 (setq *info-environment*
       (list* (make-info-environment)
 	     (compact-info-environment (first *info-environment*)
 				       :name "Kernel")
 	     (rest *info-environment*)))
+(funcall #'(setf c::volatile-info-env-table) #() *old-ie*)
+(setq *old-ie* nil)
+
 (purify :root-structures
 	`(lisp::%top-level extensions:save-lisp ,lisp::fop-codes))
 
@@ -102,15 +109,20 @@
 #-no-compiler
 (progn
   (load "c:loadcom.lisp")
+  (setq *old-ie* (car *info-environment*))
   (setq *info-environment*
 	(list* (make-info-environment)
 	       (compact-info-environment (first *info-environment*)
 					 :name "Compiler")
 	       (rest *info-environment*)))
+  (funcall #'(setf c::volatile-info-env-table) #() *old-ie*)
+
   (load "c:loadbackend.lisp")
   ;; If we want a small core, blow away the meta-compile time VOP info.
   #+small (setf (c::backend-parsed-vops c:*backend*)
 		(make-hash-table :test #'eq))
+
+  (setq *old-ie* (car *info-environment*))
   (setq *info-environment*
 	(list* (make-info-environment)
 	       (compact-info-environment
@@ -118,11 +130,11 @@
 		:name
 		(concatenate 'string (c:backend-name c:*backend*) " backend"))
 	       (rest *info-environment*)))
-  (purify :root-structures '(compile-file)))
 
-#-no-compiler
-;;; Depends on backend definition for object format info...
-(load "code:room")
+  (funcall #'(setf c::volatile-info-env-table) #() *old-ie*)
+  (setq *old-ie* nil))
+
+(purify :root-structures '(compile-file)))
 
 ;;; The pretty printer is part of the kernel core, but we can't turn in on
 ;;; until after the compiler is loaded because it compiles some lambdas
@@ -179,11 +191,14 @@
 (lisp::clear-all-search-lists)
 
 ;; set up the initial info environment.
+(setq *old-ie* (car *info-environment*))
 (setq *info-environment*
       (list* (make-info-environment :name "Working")
 	     (compact-info-environment (first *info-environment*)
 				       :name "Auxiliary")
 	     (rest *info-environment*)))
+(funcall #'(setf c::volatile-info-env-table) #() *old-ie*)
+(setq *old-ie* nil)
 
 ;;; Okay, build the thing!
 ;;;
@@ -209,4 +224,5 @@
   (gc-on)
   ;;
   ;; Save the lisp.
+  (purify)
   (save-lisp "lisp.core"))
