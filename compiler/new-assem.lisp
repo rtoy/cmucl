@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.33 2003/08/16 11:45:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.34 2004/08/02 16:04:42 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,7 +76,7 @@
 
 ;;; MAX-ALIGNMENT -- The maximum alignment we can guarentee given the object
 ;;; format.  If the loader only loads objects 8-byte aligned, we can't do
-;;; any better then that ourselves.
+;;; any better than that ourselves.
 ;;;
 (defconstant max-alignment 3)
 
