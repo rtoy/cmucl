@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.20 1992/12/16 18:13:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.21 1992/12/16 19:07:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,8 +104,16 @@
     (inst sll ndescr boxed (- type-bits word-shift))
     (inst or ndescr code-header-type)
     
-    (#-gengc pseudo-atomic #-gengc (pa-flag)
-     #+gengc without-scheduling #+gengc ()
+    #-gengc
+    (pseudo-atomic (pa-flag)
+      (inst or result alloc-tn other-pointer-type)
+      (storew ndescr result 0 other-pointer-type)
+      (storew unboxed result code-code-size-slot other-pointer-type)
+      (storew null-tn result code-entry-points-slot other-pointer-type)
+      (inst addu alloc-tn boxed)
+      (inst addu alloc-tn unboxed))
+    #+gengc
+    (without-scheduling ()
       (inst or result alloc-tn other-pointer-type)
       (storew ndescr alloc-tn 0)
       (storew unboxed alloc-tn code-code-size-slot)
@@ -141,7 +149,7 @@
       (inst li temp (logior (ash (1- size) type-bits) closure-header-type))
       (pseudo-atomic (pa-flag :extra (pad-data-block size))
 	(inst or result alloc-tn function-pointer-type)
-	(storew temp alloc-tn))
+	(storew temp result 0 function-pointer-type))
       (storew function result closure-function-slot function-pointer-type))
     #+gengc
     (let ((size (+ length closure-info-offset)))
