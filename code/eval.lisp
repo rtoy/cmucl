@@ -9,8 +9,7 @@
 ;;;
 ;;;    
 (in-package "LISP")
-(export '(eval *evalhook*
-	  *applyhook* evalhook applyhook constantp quote proclaim
+(export '(eval constantp quote proclaim
 	  eval-when progn prog1 prog2 let let*
 	  do do* dotimes dolist progv and or cond if the
 	  macro-function special-form-p *macroexpand-hook*
@@ -32,6 +31,10 @@
 	  ;; Magical markers...
 	  lambda &optional &rest &key &aux &body &whole
 	  &allow-other-keys &environment))
+
+#| Not implemented:
+*evalhook* *applyhook* evalhook applyhook 
+|#
 
 (export '(eval::interpreted-function-p
 	  eval::interpreted-function-lambda-expression)
@@ -209,35 +212,6 @@
     (let ((elt (%primitive header-ref fun i)))
       (when (funcall test elt)
 	(return elt)))))
-
-(defvar *evalhook* nil
-  "Used to substitute another function for EVAL, for use by STEP, etc.
-  If *EVALHOOK* is not NIL, its value must be a function of the two
-  arguments, the form to evaluate and the environment to evaluate in.
-  This function does the evaluation instead of EVAL.")
-
-(defvar *applyhook* nil
-  "Used to substitute another function for the implicit APPLY normally done
-  within EVAL.  If *APPLYHOOK* is not NIL, its value must be a function 
-  which takes as arguments the function to be applied, the list of arguments
-  it is to be applied to, and the lexical environment.  This function does
-  the application instead of EVAL.")
-
-#|
-(defun evalhook (form evalhookfn applyhookfn &optional env)
-  "Evaluates Form with *Evalhook* bound to Evalhookfn and *Applyhook* bound
-  to applyhookfn.  Ignores these hooks once, for the top-level evaluation
-  of Form."
-  ###)
-|#
-
-#|
-(defun applyhook (function args evalhookfn applyhookfn &optional env)
-  "Applies Function to Args, with *Evalhook* bound to Evalhookfn and with
-  *Applyhook* bound to Applyhookfn.  Ignores the hook function once, for the
-  top-level application of Function to Args."
-  ###)
-|#
 
 
 ;;;; Syntactic environment access:
