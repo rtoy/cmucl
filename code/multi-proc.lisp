@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.10 1997/12/29 19:02:54 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.11 1997/12/30 06:03:17 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,15 +163,6 @@
 	  (aref save-stack index)))
   (values))
 
-#+nil
-(defun tst-alien ()
-  (alien:with-alien ((buf (array char 256)))
-    (format t "~s~%" buf)
-    (multiple-value-bind (save-stack size alien-stack)
-	(save-alien-stack (make-array 0 :element-type '(unsigned-byte 32)))
-      (restore-alien-stack save-stack size alien-stack))
-    (format t "~s~%" buf)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Interrupt contexts.
 
@@ -209,7 +200,7 @@
 ;;;;
 
 ;;; The control stacks need special handling on the x86 as they
-;;; contain conservative root. When placed in the *control-stacks*
+;;; contain conservative roots. When placed in the *control-stacks*
 ;;; vector they will be scavenged for conservative roots by the
 ;;; garbage collector.
 (declaim (type (simple-array (or null (simple-array (unsigned-byte 32) (*)))
@@ -218,7 +209,7 @@
   (make-array 0 :element-type '(or null (unsigned-byte 32))
 	      :initial-element nil))
 
-;;; Stack-group stucture.
+;;; Stack-group structure.
 (defstruct (stack-group
 	     (:constructor %make-stack-group)
 	     (:print-function
@@ -574,7 +565,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Double-float timing functions for use by the scheduler.
 
-;;; The timing functions use double-floats here for accuracy. In most
+;;; These timer functions use double-floats for accuracy. In most
 ;;; cases consing is avoided.
 
 ;;; Get-Real-Time
@@ -596,7 +587,7 @@
 (declaim (inline get-run-time))
 ;;;
 (defun get-run-time ()
-  "Return the run time in secondes"
+  "Return the run time in seconds"
   (declare (optimize (speed 3) (safety 0)))
   (multiple-value-bind (ignore utime-sec utime-usec stime-sec stime-usec)
       (unix:unix-fast-getrusage unix:rusage_self)
@@ -708,6 +699,13 @@
   `(without-scheduling
     (pop ,place)))
 
+;;; If a process other than the initial process throws to the
+;;; %end-of-the-world then *quitting-lisp* is set to the exit value,
+;;; after which further process creation blocks. If the initial
+;;; process is running the idle loop then it will perform the exit
+;;; when it runs.
+;;;
+(defvar *quitting-lisp* nil)
 
 ;;; Update-Process-Timers -- Internal
 ;;;
@@ -734,7 +732,10 @@
 ;;;
 (defun make-process (function &key (name "Anonymous"))
   (declare (type (or null function) function))
-  (cond ((null function)
+  (cond (*quitting-lisp*
+	 ;; No more processes if about to quit lisp.
+	 (process-wait "Quitting Lisp" #'(lambda () nil)))
+	((null function)
 	 ;; If function is nil then create a dead process; can be
 	 ;; restarted with process-preset.
 	 (%make-process :initial-function nil :name name :state :killed))
@@ -750,9 +751,14 @@
 		  name 
 		  #'(lambda ()
 		      (unwind-protect
-			   (progn
-			     (setf *inhibit-scheduling* nil)
-			     (funcall function))
+			   (catch '%end-of-the-process
+			     ;; Catch throws to the %end-of-the-world.
+			     (setf *quitting-lisp*
+				   (catch 'lisp::%end-of-the-world
+				     (setf *inhibit-scheduling* nil)
+				     (funcall function)
+				     ;; Normal exit.
+				     (throw '%end-of-the-process nil))))
 			(setf *inhibit-scheduling* t)
 			;; About to return to the resumer's
 			;; stack-group, which in this case is the
@@ -791,7 +797,7 @@
     ;; scheduled.
     (without-scheduling
      (push #'(lambda ()
-	       (throw 'lisp::%end-of-the-world 0))
+	       (throw '%end-of-the-process nil))
 	   (process-interrupts process)))
     ;; Should we wait until it's dead?
     (process-yield)))
@@ -803,16 +809,24 @@
   (process-wait "Waiting for process to die" 
 		#'(lambda ()
 		    (eq (process-state process) :killed)))
+  ;; No more processes if about to quit lisp.
+  (when *quitting-lisp*
+    (process-wait "Quitting Lisp" #'(lambda () nil)))
   ;; Create a new stack-group.
   (setf (process-stack-group process)
 	(make-stack-group
 	 (process-name process)
 	 #'(lambda ()
 	     (unwind-protect 
-		  (progn
-		    (setf *inhibit-scheduling* nil)
-		    (apply (process-initial-function process)
-			   (process-initial-args process)))
+		  (catch '%end-of-the-process
+		    ;; Catch throws to the %end-of-the-world.
+		    (setf *quitting-lisp*
+			  (catch 'lisp::%end-of-the-world
+			    (setf *inhibit-scheduling* nil)
+			    (apply (process-initial-function process)
+				   (process-initial-args process))
+			    ;; Normal exit.
+			    (throw '%end-of-the-process nil))))
 	       (setf *inhibit-scheduling* t)
 	       ;; About to return to the resumer's stack-group, which
 	       ;; in this case is the initial process's stack-group.
@@ -901,8 +915,20 @@
 ;;; process-yielding periodically.
 ;;;
 (defun idle-process-loop ()
-  (loop
-   (sys:serve-all-events)))
+  (do ()
+      (*quitting-lisp*)
+    (sys:serve-all-events))
+  ;; Try to gracefully destroy all the processes.
+  (dolist (process *all-processes*)
+    (unless (eq process *current-process*)
+      (destroy-process process)))
+  (do ((cnt 0 (1+ cnt)))
+      ((or (null (rest *all-processes*))
+	   (> cnt 10)))
+    (declare (type lisp::index cnt))
+    (format t " ~d" (length *all-processes*))
+    (process-yield))
+  (throw 'lisp::%end-of-the-world *quitting-lisp*))
 
 ;;; Process-Yield
 ;;;
