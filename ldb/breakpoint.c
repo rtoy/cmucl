@@ -15,6 +15,7 @@ typedef unsigned long inst;
 
 #define REAL_LRA_SLOT 0
 #define KNOWN_RETURN_P_SLOT 1
+#define BOGUS_LRA_CONSTANTS 2
 
 static inst swap_insts(code_obj, pc_offset, new_inst)
      lispobj code_obj;
@@ -120,7 +121,8 @@ struct sigcontext *scp;
 
     lispobj code = scp->sc_pc - (unsigned long)function_end_breakpoint_trap
 	+ (unsigned long)function_end_breakpoint_guts -
-	((sizeof(struct code)+7)&~7) + type_OtherPointer;
+	((sizeof(struct code)+((BOGUS_LRA_CONSTANTS-1)*sizeof(lispobj))+7)&~7)
+	+ type_OtherPointer;
     struct code *codeptr = (struct code *)PTR(code);
     lispobj lra;
 
