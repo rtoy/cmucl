@@ -1,4 +1,4 @@
-;;; -*- Package: VM -*-
+;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.5 1990/12/06 17:40:17 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.6 1990/12/17 19:34:16 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
@@ -56,23 +56,80 @@
 (defun internal-error-arguments (sc)
   (alien-bind ((sc sc mach:sigcontext t))
     (let* ((pc (alien-access (mach:sigcontext-pc (alien-value sc))))
+	   (bad-inst (sap-ref-32 pc 0))
+	   (op (ldb (byte 2 30) bad-inst))
+	   (op2 (ldb (byte 3 22) bad-inst))
+	   (op3 (ldb (byte 6 19) bad-inst)))
+      (cond ((and (= op #b00) (= op2 #b000))
+	     (args-for-unimp-inst sc))
+	    ((and (= op #b10) (= (ldb (byte 4 2) op3) #b1000))
+	     (args-for-tagged-add-inst sc bad-inst))
+	    ((and (= op #b10) (= op3 #b111010))
+	     (args-for-tcc-inst bad-inst))
+	    (t
+	     (values (error-number-or-lose 'unknown-error)
+		     nil))))))
+
+(defun args-for-unimp-inst (sc)
+  (alien-bind ((sc sc mach:sigcontext t))
+    (let* ((pc (alien-access (mach:sigcontext-pc (alien-value sc))))
 	   (length (sap-ref-8 pc 4))
 	   (vector (make-array length :element-type '(unsigned-byte 8))))
       (declare (type system-area-pointer pc)
 	       (type (unsigned-byte 8) length)
 	       (type (simple-array (unsigned-byte 8) (*)) vector))
-      (copy-from-system-area pc (* vm:byte-bits 5)
-			     vector (* vm:word-bits
-				       vm:vector-data-offset)
-			     (* length vm:byte-bits))
+      (copy-from-system-area pc (* sparc:byte-bits 5)
+			     vector (* sparc:word-bits
+				       sparc:vector-data-offset)
+			     (* length sparc:byte-bits))
       (let* ((index 0)
 	     (error-number (c::read-var-integer vector index)))
 	(collect ((sc-offsets))
-	  (loop
-	    (when (>= index length)
-	      (return))
-	    (sc-offsets (c::read-var-integer vector index)))
-	  (values error-number (sc-offsets)))))))
+		 (loop
+		   (when (>= index length)
+		     (return))
+		   (sc-offsets (c::read-var-integer vector index)))
+		 (values error-number (sc-offsets)))))))
+
+(defun args-for-tagged-add-inst (sc bad-inst)
+  (alien-bind ((sc sc mach:sigcontext t)
+	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+    (let* ((rs1 (ldb (byte 5 14) bad-inst))
+	   (op1 (di::make-lisp-obj
+		 (alien-access
+		  (mach:int-array-ref (alien-value regs)
+				      rs1)))))
+      (if (fixnump op1)
+	  (if (zerop (ldb (byte 1 13) bad-inst))
+	      (let* ((rs2 (ldb (byte 5 0) bad-inst))
+		     (op2 (di::make-lisp-obj
+			   (alien-access
+			    (mach:int-array-ref (alien-value regs)
+						rs2)))))
+		(if (fixnump op2)
+		    (values (error-number-or-lose 'unknown-error)
+			    nil)
+		    (values (error-number-or-lose 'object-not-fixnum-error)
+			    (list (c::make-sc-offset
+				   sparc:descriptor-reg-sc-number
+				   rs2)))))
+	      (values (error-number-or-lose 'unknown-error)
+		      nil))
+	  (values (error-number-or-lose 'object-not-fixnum-error)
+		  (list (c::make-sc-offset sparc:descriptor-reg-sc-number
+					   rs1)))))))
+
+(defun args-for-tcc-inst (bad-inst)
+  (let* ((trap-number (ldb (byte 8 0) bad-inst))
+	 (reg (ldb (byte 5 8) bad-inst)))
+    (values (case trap-number
+	      (#.sparc:object-not-list-trap
+	       (error-number-or-lose 'object-not-list-error))
+	      (#.sparc:object-not-structure-trap
+	       (error-number-or-lose 'object-not-structure-error))
+	      (t
+	       (error-number-or-lose 'unknown-error)))
+	    (list (c::make-sc-offset sparc:descriptor-reg-sc-number reg)))))
 
 
 ;;; SIGCONTEXT-FLOATING-POINT-MODES  --  Interface
