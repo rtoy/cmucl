@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.22 1998/01/13 19:20:10 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.23 1998/01/15 14:36:25 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -217,9 +217,10 @@
 		(declare (type stack-group stack-group)
 			 (stream stream)
 			 (ignore depth))
-		(format stream "#<Stack-group ~a, ~a>"
-			(stack-group-name stack-group)
-			(stack-group-state stack-group)))))
+		(print-unreadable-object (stack-group stream :identity t)
+		 (format stream "Stack-group ~a, ~a"
+			 (stack-group-name stack-group)
+			 (stack-group-state stack-group))))))
   ;; Must have a name.
   (name "Anonymous" :type simple-base-string)
   ;; State: :active or :inactive.
@@ -709,10 +710,9 @@
 	     (:predicate processp)
 	     (:print-function
 	      (lambda (process stream depth)
-		(declare (type process process)
-			 (stream stream)
-			 (ignore depth))
-		(format stream "#<Process ~a>" (process-name process)))))
+		(declare (type process process) (stream stream) (ignore depth))
+		(print-unreadable-object (process stream :identity t)
+		 (format stream "Process ~a" (process-name process))))))
   (name "Anonymous" :type simple-base-string)
   (state :killed :type (member :killed :active :inactive))
   (%whostate nil :type (or null simple-base-string))
@@ -1474,100 +1474,112 @@
 ;;; Create a process to listen for connections on a TCP port and start
 ;;; a new top-level process for each connection.
 ;;;
-(defun start-lisp-connection-listener (&optional (port 1025))
+(defun start-lisp-connection-listener (&key (port 1025)
+					    (password (random (expt 2 24))))
   (declare (type (unsigned-byte 16) port))
-  "Create a Lisp connection listener on the given port."
-  (let ((listener-password nil))
-    (labels (;; The session top level read eval. loop.
-	     (start-top-level (fd)
-	       (let ((stream (sys:make-fd-stream fd :input t :output t)))
-		 (unwind-protect
-		     (let* ((*terminal-io* stream)
-			    (*standard-input*
-			     (make-synonym-stream '*terminal-io*))
-			    (*standard-output* *standard-input*)
-			    (*error-output* *standard-input*)
-			    (*debug-io* *standard-input*)
-			    (*query-io* *standard-input*)
-			    (*trace-output* *standard-input*))
-		       ;;
-		       (format t "Enter password: ")
-		       (finish-output)
-		       (unless (eql (read) listener-password)
-			 (return-from start-top-level))
-		       (ext:print-herald)
-		       ;;
-		       (top-level))
-		   (handler-case 
-		       (close stream)
-		     (error ())))))
-	     ;;
-	     ;; Turn internet address into string format
-	     (ip-address-string (address)
-	       (format nil "~D.~D.~D.~D"
-		       (ldb (byte 8 24) address)
-		       (ldb (byte 8 16) address)
-		       (ldb (byte 8 8)  address)
-		       (ldb (byte 8 0)  address)))
-	     ;;
-	     ;; The body of the connection listener.
-	     (listener ()
-	       (declare (optimize (speed 3)))
-	       (let ((fd nil))
-		 (unwind-protect
-		     (progn
-		       ;; Start the listener.
-		       (do ()
-			   (fd)
-			 (handler-case
-			     (setf fd (ext:create-inet-listener port))
-			   (error () (incf port))))
+  "Create a Lisp connection listener, listening on a TCP port for new
+  connections and starting a new top-level loop form each."
+  (labels (;; The session top level read eval. loop.
+	   (start-top-level (fd)
+	     (let ((stream (sys:make-fd-stream fd :input t :output t)))
+	       (unwind-protect
+		    (let* ((*terminal-io* stream)
+			   (*standard-input*
+			    (make-synonym-stream '*terminal-io*))
+			   (*standard-output* *standard-input*)
+			   (*error-output* *standard-input*)
+			   (*debug-io* *standard-input*)
+			   (*query-io* *standard-input*)
+			   (*trace-output* *standard-input*))
+		      ;;
+		      (format t "Enter password: ")
+		      (finish-output)
+		      (let* ((*read-eval* nil)
+			     (read-password
+			      (handler-case 
+			       (read)
+			       (error () (return-from start-top-level)))))
+			(unless (equal read-password password)
+			  (return-from start-top-level)))
+		      (ext:print-herald)
+		      ;;
+		      (top-level))
+		 (handler-case 
+		  (close stream)
+		  (error ())))))
+	   ;;
+	   ;; Turn internet address into string format
+	   (ip-address-string (address)
+	     (format nil "~D.~D.~D.~D"
+		     (ldb (byte 8 24) address)
+		     (ldb (byte 8 16) address)
+		     (ldb (byte 8 8)  address)
+		     (ldb (byte 8 0)  address)))
+	   ;;
+	   ;; The body of the connection listener.
+	   (listener ()
+	     (declare (optimize (speed 3)))
+	     (let ((fd nil))
+	       (unwind-protect
+		    (progn
+		      ;; Start the listener.
+		      (do ()
+			  (fd)
+			(handler-case
+			 (setf fd (ext:create-inet-listener port))
+			 (error () (incf port))))
 
-		       (setf (process-name *current-process*)
-			 (format nil "Lisp connection listener on port ~d"
-				 port))
+		      (setf (process-name *current-process*)
+			    (format nil "Lisp connection listener on port ~d"
+				    port))
 
-		       (setf listener-password (random (expt 2 24)))
-		       (format t "~&;;; Started lisp connection listener on ~
+		      (format t "~&;;; Started lisp connection listener on ~
  				  port ~d with password ~d~%"
-			       port listener-password)
+			      port password)
 
-		       (loop
-			 ;; Wait until input ready.
-			 (process-wait-until-fd-usable fd :input)
-			 (multiple-value-bind (new-fd remote-host)
-			     (ext:accept-tcp-connection fd)
-			   (let ((host-entry (ext:lookup-host-entry
-					      remote-host)))
-			     (make-process
-			      #'(lambda ()
-				  (start-top-level new-fd))
-			      :name (format nil "Lisp session from ~A"
-					    (if host-entry
-						(ext:host-entry-name
-						 host-entry)
+		      (loop
+		       ;; Wait for new connections.
+		       (process-wait-until-fd-usable fd :input)
+		       (multiple-value-bind (new-fd remote-host)
+			   (ext:accept-tcp-connection fd)
+			 (let ((host-entry (ext:lookup-host-entry
+					    remote-host)))
+			   (make-process
+			    #'(lambda ()
+				(start-top-level new-fd))
+			    :name (format nil "Lisp session from ~A"
+					  (if host-entry
+					      (ext:host-entry-name host-entry)
 					      (ip-address-string
 					       remote-host))))))))
-		   ;; Close the listener stream.
-		   (when fd
-		     (unix:unix-close fd))))))
+		 ;; Close the listener stream.
+		 (when fd
+		   (unix:unix-close fd))))))
 
-      ;; Make the listening thread.
-      (make-process #'listener))))
+    ;; Make the listening thread.
+    (make-process #'listener)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Simple Locking.
 
 (defstruct (lock
 	     (:constructor make-lock (&optional name))
-	     (:print-function
-	      (lambda (lock stream depth)
-		(declare (type lock lock)
-			 (stream stream)
-			 (ignore depth))
-		(format stream "#<Lock ~a>" (lock-name lock)))))
-  (name nil)
+	     (:print-function %print-lock))
+  (name nil :type (or null simple-base-string))
   (process nil :type (or null process)))
+
+(defun %print-lock (lock stream depth)
+  (declare (type lock lock) (stream stream) (ignore depth))
+  (print-unreadable-object (lock stream :identity t)
+    (write-string "Lock" stream)
+    (let ((name (lock-name lock)))
+      (when name
+	(format stream " ~a" name)))
+    (let ((process (lock-process lock)))
+      (cond (process
+	     (format stream ", held by process ~a" (process-name process)))
+	    (t
+	     (write-string ", free" stream))))))
 
 ;;; Lock-Wait
 ;;;
