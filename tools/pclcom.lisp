@@ -15,5 +15,8 @@
 
 (import 'kernel:funcallable-instance-p (find-package "PCL"))
 
-(with-compilation-unit ()
-  (pcl::compile-pcl))
+(with-compilation-unit
+    (:optimize '(optimize (debug-info #+small 1 #-small 2)
+			  (speed 2)
+			  (inhibit-warnings 2)))
+ (pcl::compile-pcl))
