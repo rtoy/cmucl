@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.21 2000/01/10 14:46:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.22 2000/12/05 03:07:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -65,13 +65,20 @@
 
 ); eval-when (compile eval)
 
+;; Don't use this because it uses the deprecated taddcctv instruction.
+#+nil
+(progn
 (def-type-vops fixnump nil nil nil vm:even-fixnum-type vm:odd-fixnum-type)
 (define-vop (check-fixnum check-type)
   (:ignore temp)
   (:generator 1
     (inst taddcctv result value zero-tn)))
 (primitive-type-vop check-fixnum (:check) fixnum)
+)
 
+;; This avoids the taddcctv instruction
+(def-type-vops fixnump check-fixnum fixnum object-not-fixnum-error
+	       vm:even-fixnum-type vm:odd-fixnum-type)
 
 (def-type-vops functionp check-function function
   object-not-function-error vm:function-pointer-type)
