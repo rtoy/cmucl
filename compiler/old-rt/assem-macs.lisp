@@ -129,6 +129,21 @@
 	   (storew ,n-reg fp-tn (tn-offset ,n-stack))))))))
 
 
+;;; MAYBE-LOAD-STACK-TN  --  Interface
+;;;
+(defmacro maybe-load-stack-tn (reg reg-or-stack)
+  "Move the TN Reg-Or-Stack into Reg if it isn't already there."
+  (once-only ((n-reg reg)
+	      (n-stack reg-or-stack))
+    `(sc-case ,n-reg
+       ((any-reg descriptor-reg string-char-reg)
+	(sc-case ,n-stack
+	  ((any-reg descriptor-reg string-char-reg)
+	   (unless (location= ,n-reg ,n-stack)
+	     (inst lr ,n-reg ,n-stack)))
+	  ((stack string-char-stack)
+	   (loadw ,n-reg fp-tn (tn-offset ,n-stack))))))))
+
 
 (defmacro test-simple-type (register temp target not-p type-code)
   "Emit conditional code that tests whether Register holds an object with the
@@ -263,7 +278,8 @@
 	      (inst miscopx 'clc::error2)))
 	   (t
 	    (error "Can't use Error-Call with ~D values." (length values))))
-       (loadi (first register-argument-tns) ,n-error-code))))
+       ;; Always do a 32bit load so that we can NOTE-THIS-LOCATION.
+       (inst cal (first register-argument-tns) zero-tn ,n-error-code))))
 
 
 (defmacro generate-error-code (vop error-code &rest values)
