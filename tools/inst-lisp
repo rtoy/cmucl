@@ -1,18 +1,24 @@
 #!/bin/csh -fx
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/inst-lisp,v 1.7 1993/08/16 18:45:54 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/inst-lisp,v 1.8 1994/03/17 17:34:25 ram Exp $
 #
 # Utility for installing an alpha core.
 #
 
-if ($#argv) then
+if ($#argv > 0) then
 	set subdir = $argv[1]
 else
 	set subdir = alpha
 endif
 
+if ($#argv > 1) then
+	set destver = $argv[2]
+else
+	set destver = alpha
+endif
+
 set src = /afs/cs/project/clisp/build/@sys/$subdir
-set dst = /afs/cs/project/clisp-3/alphas/@sys
+set dst = /afs/cs/project/clisp-3/${destver}s/@sys
 
 rm -f $dst/lisp
 rm -f $dst/lisp.core
