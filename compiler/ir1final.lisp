@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.13 1991/03/18 13:07:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.14 1991/10/03 18:31:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,11 +32,12 @@
 	      (not (function-info-p (combination-kind node))))
     (let ((*compiler-error-context* node))
       (dolist (failure failures)
-	(let ((what (cdr failure)))
+	(let ((what (cdr failure))
+	      (note (transform-note (car failure))))
 	  (cond
 	   ((consp what)
-	    (compiler-note "Unable to optimize because:~%~6T~?"
-			   (first what) (rest what)))
+	    (compiler-note "Unable to ~A because:~%~6T~?"
+			   note (first what) (rest what)))
 	   ((valid-function-use node what
 				:argument-test #'types-intersect
 				:result-test #'values-types-intersect)
@@ -48,9 +49,9 @@
 				    :warning-function #'frob
 				    :error-function #'frob))
 	      
-	      (compiler-note "Unable to optimize due to type uncertainty:~@
+	      (compiler-note "Unable to ~A due to type uncertainty:~@
 	                      ~{~6T~?~^~&~}"
-			     (messages))))))))))
+			     note (messages))))))))))
 
 
 ;;; FINALIZE-XEP-DEFINITION  --  Internal
