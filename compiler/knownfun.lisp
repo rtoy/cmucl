@@ -73,7 +73,7 @@
 	    (:print-function %print-function-info))
   ;;
   ;; Boolean attributes of this function.
-  (attributes nil :type attributes)
+  (attributes (required-argument) :type attributes)
   ;;
   ;; The transforms for this function.  An alist of (Function-Type . Function),
   ;; where Function-Type is the type that the call must have for Function to be
