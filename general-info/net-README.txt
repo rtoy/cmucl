@@ -43,8 +43,10 @@ The latest SunOS Sparc release is:
     15a-sun4c_41.tar.Z
 This tar file is 10 megabytes, and the resulting tree is 23 megabytes.
 
-Major release announcements will be made to comp.lang.lisp until there is
-enough volume to warrant a comp.lang.lisp.cmu.
+The release area also contains source distributions and other binary
+distributions.  A listing of the current contents of the release are is in
+release/FILES.  Major release announcements will be made to comp.lang.lisp
+until there is enough volume to warrant a comp.lang.lisp.cmu.
 
 SunOS credit:
 
@@ -79,10 +81,11 @@ i/o based on TERM and /etc/termcap.
 Source availability:
 
 Lisp and documentation sources are available via anonymous FTP ftp to any CMU
-CS machine.  [See the "Distribution" section for FTP instructions.]  All CMU
-written code is public domain, but CMU CL also makes use of several imported
-packages: PCL, CLX and XP.  Although these packages are copyrighted, they may
-be freely distributed without any licensing agreement or fee.
+CS machine.  [See the "Distribution" section for FTP instructions and source
+distribution information.]  All CMU written code is public domain, but CMU CL
+also makes use of several imported packages: PCL, CLX and XP.  Although these
+packages are copyrighted, they may be freely distributed without any licensing
+agreement or fee.
 
 Totally machine-independent compiler code:
     /afs/cs/project/clisp/pmax_mach/alpha/compiler/*.lisp
