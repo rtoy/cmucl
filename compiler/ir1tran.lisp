@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.68 1992/04/01 15:22:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.69 1992/04/02 03:35:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -689,18 +689,21 @@
 ;;; variable with that name, since let* bindings may be duplicated, and
 ;;; declarations always apply to the last.
 ;;;
-(proclaim '(function find-in-bindings (list symbol) (or lambda-var null)))
+(proclaim '(function find-in-bindings (list symbol) (or lambda-var list)))
 (defun find-in-bindings (vars name)
   (let ((found nil))
     (dolist (var vars)
-      (when (eq (leaf-name var) name)
-	(setq found var))
-      (let ((info (lambda-var-arg-info var)))
-	(when info
-	  (let ((supplied-p (arg-info-supplied-p info)))
-	    (when (and supplied-p
-		       (eq (leaf-name supplied-p) name))
-	      (setq found supplied-p))))))
+      (cond ((leaf-p var)
+	     (when (eq (leaf-name var) name)
+	       (setq found var))
+	     (let ((info (lambda-var-arg-info var)))
+	       (when info
+		 (let ((supplied-p (arg-info-supplied-p info)))
+		   (when (and supplied-p
+			      (eq (leaf-name supplied-p) name))
+		     (setq found supplied-p))))))
+	    ((and (consp var) (eq (car var) name))
+	     (setf found var))))
     found))
 
 
@@ -758,9 +761,9 @@
 		     (t
 		      (restr (cons var int))))))
 	    (cons
-	     (assert (eq (car var) 'MACRO))
+	     (assert (and (consp (cdr var)) (eq (cadr var) 'MACRO)))
 	     (new-vars `(,var-name . (MACRO . (the ,(first decl)
-						   ,(cdr var))))))
+						   ,(cddr var))))))
 	    (heap-alien-info
 	     (compiler-error "Can't declare type of Alien variable: ~S."
 			     var-name)))))
@@ -810,17 +813,23 @@
   (declare (list spec vars) (type lexenv res))
   (collect ((new-venv nil cons))
     (dolist (name (cdr spec))
-      (let ((var (find-in-bindings vars name))
-	    (specvar (specvar-for-binding name)))
-	(cond (var
-	       (when (lambda-var-ignorep var)
-		 (compiler-warning
-		  "Ignored variable ~S is being declared special."
-		  name))
-	       (setf (lambda-var-specvar var) specvar))
-	      ((assoc name (new-venv)))
-	      (t
-	       (new-venv (cons name specvar))))))
+      (let ((var (find-in-bindings vars name)))
+	(etypecase var
+	  (cons
+	   (if (and (consp (cdr var)) (eq (cadr var) 'MACRO))
+	       (compiler-error "Declaring symbol-macro ~S special."
+			       name)
+	       (error "Strange thing in vars: ~S" var)))
+	  (lambda-var
+	   (when (lambda-var-ignorep var)
+	     (compiler-warning
+	      "Ignored variable ~S is being declared special."
+	      name))
+	   (setf (lambda-var-specvar var)
+		 (specvar-for-binding name)))
+	  (null
+	   (unless (assoc name (new-venv))
+	     (new-venv (cons name (specvar-for-binding name))))))))
     (if (new-venv)
 	(make-lexenv :default res  :variables (new-venv))
 	res)))
@@ -881,6 +890,9 @@
        ((not var)
 	(compiler-warning
 	 "Ignore declaration for unknown variable ~S." name))
+       ((and (consp var) (consp (cdr var)) (eq (cadr var) 'macro))
+	;; Just ignore the ignore decl.
+	)
        ((functional-p var)
 	(setf (leaf-ever-used var) t))
        ((lambda-var-specvar var)
@@ -2505,8 +2517,8 @@
 
 ;;;; Symbol macros:
 
-(def-ir1-translator symbol-macrolet ((specs &body body) start cont)
-  "SYMBOL-MACROLET {(Name Expansion)}* Form*
+(def-ir1-translator symbol-macrolet ((specs &body (body decls)) start cont)
+  "SYMBOL-MACROLET {(Name Expansion)}* Decl* Form*
   Define the Names as symbol macros with the given Expansions.  Within the
   body, references to a Name will effectively be replaced with the Expansion."
   (collect ((res))
@@ -2521,7 +2533,8 @@
 	  (compiler-warning "Repeated name in SYMBOL-MACROLET: ~S." name))
 	(res `(,name . (MACRO . ,def)))))
 
-    (let ((*lexical-environment* (make-lexenv :variables (res))))
+    (let* ((*lexical-environment* (make-lexenv :variables (res)))
+	   (*lexical-environment* (process-declarations decls (res) nil cont)))
       (ir1-convert-progn-body start cont body))))
 
 
