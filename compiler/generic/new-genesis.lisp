@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.3.1.2 1993/02/08 22:16:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.3.1.3 1993/02/16 21:55:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -864,20 +864,19 @@
   (clrhash *cold-layouts*)
   (setq *layout-layout* *nil-descriptor*)
   (setq *layout-layout*
-	(make-cold-layout 'layout *nil-descriptor*
-			  (number-to-core target-layout-length)
-			  (number-to-core 3)))
+	(make-cold-layout 'layout (number-to-core target-layout-length)
+			  *nil-descriptor* (number-to-core 3)))
   (write-indexed *layout-layout* vm:instance-slots-offset *layout-layout*)
   (let* ((t-layout
-	  (make-cold-layout 't (cold-vector)
-			    (number-to-core 0) (number-to-core 0)))
+	  (make-cold-layout 't (number-to-core 0)
+			    (cold-vector) (number-to-core 0)))
 	 (inst-layout
-	  (make-cold-layout 'instance (cold-vector t-layout)
-			    (number-to-core 0) (number-to-core 1)))
+	  (make-cold-layout 'instance (number-to-core 0)
+			    (cold-vector t-layout) (number-to-core 1)))
 	 (so-layout
-	  (make-cold-layout 'structure-object
+	  (make-cold-layout 'structure-object (number-to-core 1)
 			    (cold-vector t-layout inst-layout)
-			    (number-to-core 1) (number-to-core 2))))
+			    (number-to-core 2))))
     (write-indexed *layout-layout*
 		   (+ vm:instance-slots-offset layout-hash-length 1 2)
 		   (cold-vector t-layout inst-layout so-layout))))
@@ -1939,17 +1938,29 @@
 			   (push (cons name (descriptor-bits addr))
 				 funs)))))
 	       *fdefn-objects*)
-      (format t "~2%Initially defined functions:~2%")
+      (format t "~%~|~%Initially defined functions:~2%")
       (dolist (info (sort funs #'< :key #'cdr))
 	(format t "#x~8,'0X: ~S~%" (cdr info) (car info)))
-      (format t "~2%Undefined function references:~2%")
+      (format t "~%~|~%Undefined function references:~2%")
       (labels ((key (name)
 		 (etypecase name
 		   (symbol (symbol-name name))
 		   (integer (prin1-to-string name))
 		   (list (key (second name))))))
 	(dolist (fun (sort undefs #'string< :key #'key))
-	  (format t "~S~%" fun)))))
+	  (format t "~S~%" fun)))
+
+      (format t "~%~|~%Layout names:~2%")
+      (collect ((stuff))
+	(maphash #'(lambda (name desc)
+		     (stuff (cons (logior (ash (descriptor-high desc)
+					       descriptor-low-bits)
+					  (descriptor-low desc))
+				  name)))
+		 *cold-layouts*)
+	(dolist (x (sort (stuff) #'< :key #'car))
+	  (format t "~8,'0X: ~S~%" (car x) (cdr x))))))
+	      
   (undefined-value))
 
 
