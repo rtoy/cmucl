@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.2 1993/02/08 22:22:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.3 1993/02/10 23:41:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,7 +185,7 @@
 ;;; FUNCTION.  Useful when we want a type that we can pass to TYPEP.
 ;;;
 (defvar *unparse-function-type-simplify*)
-(cold-load-init (setq *unparse-function-type-simplify* t))
+(cold-load-init (setq *unparse-function-type-simplify* nil))
 
 
 (define-type-method (function :unparse) (type)
@@ -1532,21 +1532,25 @@
 		   (case eltype
 		     (bit 'bit-vector)
 		     (base-char 'base-string)
+		     (character 'string)
 		     (* 'vector)
 		     (t `(vector ,eltype)))
 		   (case eltype
 		     (bit `(bit-vector ,(car dims)))
 		     (base-char `(base-string ,(car dims)))
+		     (character `(string ,(car dims)))
 		     (t `(vector ,eltype ,(car dims)))))
 	       (if (eq (car dims) '*)
 		   (case eltype
 		     (bit 'simple-bit-vector)
 		     (base-char 'simple-base-string)
+		     (character 'simple-string)
 		     ((t) 'simple-vector)
 		     (t `(simple-array ,eltype (*))))
 		   (case eltype
 		     (bit `(simple-bit-vector ,(car dims)))
 		     (base-char `(simple-base-string ,(car dims)))
+		     (character `(simple-string ,(car dims)))
 		     ((t) `(simple-vector ,(car dims)))
 		     (t `(simple-array ,eltype ,dims))))))
 	  (t
@@ -2227,10 +2231,6 @@
 (deftype extended-char ()
   "Type of characters that aren't base-char's.  None in CMU CL."
   'nil)
-
-(deftype base-char ()
-  "An 8-bit ASCII character.  Really the same as CHARACTER."
-  'character)
 
 (deftype standard-char ()
   "Type corresponding to the charaters required by the standard."
