@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.75 1992/09/15 15:43:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.76 1992/09/21 15:35:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -529,7 +529,7 @@
 		(typecase lexical-def
 		  (null (ir1-convert-global-functoid start cont form))
 		  (functional
-		   (ir1-convert-combination start cont form lexical-def))
+		   (ir1-convert-local-combination start cont form lexical-def))
 		  (global-var
 		   (ir1-convert-srctran start cont lexical-def form))
 		  (t
@@ -795,6 +795,19 @@
       (setf (continuation-%type-check fun-cont) nil)))
 
   (undefined-value))
+
+
+;;; IR1-CONVERT-LOCAL-COMBINATION  --  Internal
+;;;
+;;;    Convert a call to a local function.  If the function has already been
+;;; let converted, then throw FUN to LOCAL-CALL-LOSSAGE.  This should only
+;;; happen when we are converting inline expansions for local functions during
+;;; optimization.
+;;;
+(defun ir1-convert-local-combination (start cont form fun)
+  (if (functional-kind fun)
+      (throw 'local-call-lossage fun)
+      (ir1-convert-combination start cont form fun)))
 
 
 ;;;; PROCESS-DECLARATIONS:
@@ -3378,7 +3391,7 @@
 ;;; global inline expansion.
 ;;;
 (defun ir1-convert-lambda-for-defun
-       (lambda var converter parent-form)
+       (lambda var expansion converter parent-form)
   (declare (cons lambda) (function converter) (type defined-function var))
   (let* ((name (leaf-name var))
 	 (fun (funcall converter lambda name parent-form))
@@ -3394,7 +3407,11 @@
 		     (or (function-info-transforms function-info)
 			 (function-info-templates function-info)
 			 (function-info-ir2-convert function-info))))
-      (substitute-leaf fun var))
+      (substitute-leaf fun var)
+      ;;
+      ;; If in a simple environment, then we can allow backward references
+      ;; to this function from following top-level forms.
+      (when expansion (setf (defined-function-functional var) fun)))
     fun))
 	
 
@@ -3438,13 +3455,9 @@
       (when (eq (leaf-where-from var) :defined)
 	(setf (leaf-type var) (specifier-type 'function)))
       
-      (let ((fun (ir1-convert-lambda-for-defun lambda var #'ir1-convert-lambda
+      (let ((fun (ir1-convert-lambda-for-defun lambda var expansion
+					       #'ir1-convert-lambda
 					       'defun)))
-	;;
-	;; If in a simple environment, then we can allow backward references
-	;; to this function from following top-level forms.
-	(when expansion (setf (defined-function-functional var) fun))
-
 	(ir1-convert
 	 start cont
 	 (if (and *block-compile* *entry-points*
