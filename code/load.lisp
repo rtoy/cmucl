@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.49 1993/03/01 18:16:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.50 1993/05/11 13:41:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,9 @@
   "The source file types which LOAD recognizes.")
 
 (defvar *load-object-types*
-  '(#.(c:backend-fasl-file-type c:*backend*) "fasl")
+  '(#.(c:backend-fasl-file-type c:*backend*)
+    #.(c:backend-byte-fasl-file-type c:*backend*)
+    "fasl")
   "A list of the object file types recognized by LOAD.")
 
 (declaim (list *load-source-types* *load-object-types*))
@@ -67,8 +69,6 @@
 (declaim (type index *load-depth*))
 (defvar *fasl-file*)
 (declaim (type stream fasl-file))
-(defvar *current-code-format*)
-(declaim (type (or cons null) *current-code-format*))
 
 
 ;;; LOAD-FRESH-LINE -- internal.
@@ -376,8 +376,7 @@
 (defun load-group (file)
   (when (check-header file)
     (catch 'group-end
-      (let ((*current-code-format* nil)
-	    (*current-fop-table-index* 0))
+      (let ((*current-fop-table-index* 0))
 	(loop
 	  (let ((byte (read-byte file)))
 	    #+debug ; Add :debug to *features* to get a trace of the fops.
@@ -984,51 +983,52 @@
 ;;;; Loading functions:
 
 (define-fop (fop-code-format 57 :nope)
-  (setf *current-code-format*
-	(cons (read-arg 1) (read-arg 1))))
+  (let ((implementation (read-arg 1))
+	(version (read-arg 1)))
+    (flet ((check-version (imp vers)
+	     (when (and (eql imp implementation)
+			(not (eql version vers)))
+	       (error "~A was compiled for fasl-file version ~A, ~
+		       but this is version ~A"
+		      *Fasl-file* version vers)))
+	   (imp-name (imp)
+	     (or (nth imp c:fasl-file-implementations)
+		 "unknown machine")))
+    (unless (or (check-version #.(c:backend-fasl-file-implementation
+				  c:*backend*)
+			       #.(c:backend-fasl-file-version
+				  c:*backend*))
+		(check-version #.(c:backend-byte-fasl-file-implementation
+				  c:*backend*)
+			       c:byte-fasl-file-version))
+      (error "~A was compiled for a ~A, but this is a ~A"
+	     *Fasl-file*
+	     (imp-name implementation)
+	     (imp-name #.(c:backend-fasl-file-implementation *backend*)))))))
+
 
 ;;; Load-Code loads a code object.  NItems objects are popped off the stack for
 ;;; the boxed storage section, then Size bytes of code are read in.
 ;;;
-(defmacro load-code (nitems size)
-  `(if *current-code-format*
-       (let ((implementation (car *current-code-format*))
-	     (version (cdr *current-code-format*)))
-	 (unless (eql implementation
-		    #.(c:backend-fasl-file-implementation c:*backend*))
-	   (error "~A was compiled for a ~A, but this is a ~A"
-		  *Fasl-file*
-		  (or (elt (the list c:fasl-file-implementations)
-			   implementation)
-		      "unknown machine")
-		  (or (elt (the list c:fasl-file-implementations)
-			   #.(c:backend-fasl-file-implementation c:*backend*))
-		      "unknown machine")))
-	 (unless (eql version #.(c:backend-fasl-file-version c:*backend*))
-	   (error "~A was compiled for fasl-file version ~A, ~
-	           but this is version ~A"
-	    *Fasl-file* version #.(c:backend-fasl-file-version c:*backend*)))
-	 (let ((box-num ,nitems)
-	       (code-length ,size))
-	   (declare (fixnum box-num code-length))
-	   (let ((code (%primitive allocate-code-object box-num code-length))
-		 (index (+ vm:code-trace-table-offset-slot box-num)))
-	     (declare (type index index))
-	     #-gengc (setf (%code-debug-info code) (pop-stack))
-	     (dotimes (i box-num)
-	       (declare (fixnum i))
-	       (setf (code-header-ref code (decf index)) (pop-stack)))
-	     (system:without-gcing
-	      (read-n-bytes *fasl-file* (code-instructions code) 0
-			    code-length))
-	     code)))
-       (error
-	"Code Format not set?  Can't load code until after FOP-CODE-FORMAT.")))
+(defun load-code (box-num code-length)
+  (declare (fixnum box-num code-length))
+  (with-fop-stack t
+    (let ((code (%primitive allocate-code-object box-num code-length))
+	  (index (+ vm:code-trace-table-offset-slot box-num)))
+      (declare (type index index))
+      #-gengc (setf (%code-debug-info code) (pop-stack))
+      (dotimes (i box-num)
+	(declare (fixnum i))
+	(setf (code-header-ref code (decf index)) (pop-stack)))
+      (system:without-gcing
+	(read-n-bytes *fasl-file* (code-instructions code) 0
+		      code-length))
+      code)))
 
-(define-fop (fop-code 58)
+(define-fop (fop-code 58 :nope)
   (load-code (read-arg 4) (read-arg 4)))
 
-(define-fop (fop-small-code 59)
+(define-fop (fop-small-code 59 :nope)
   (load-code (read-arg 1) (read-arg 2)))
 
 (define-fop (fop-fdefinition 60)
@@ -1075,8 +1075,11 @@
       fun)))
 
 (define-fop (fop-make-byte-compiled-function 143)
-  (c::make-byte-compiled-function (pop-stack)))
-
+  (let ((fun (c::make-byte-compiled-function (pop-stack))))
+    (when *load-print*
+      (load-fresh-line)
+      (format t "~S defined~%" fun))
+    fun))
 
 
 ;;;; Linkage fixups.
