@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.3 1990/07/05 17:15:11 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.4 1990/07/06 21:22:32 wlott Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -1262,7 +1262,7 @@
 	  (coerce number 'single-float))))
 
 
-(macrolet ((frob (name type bigfun)
+(macrolet ((frob (name type)
 	     `(defun ,name (x)
 		(number-dispatch ((x real))
 		  (((foreach single-float double-float fixnum))
