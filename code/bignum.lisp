@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.34 2003/05/26 20:20:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.35 2004/06/01 22:42:06 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -122,7 +122,7 @@
 
 (eval-when (compile load eval) ;Necessary for DEFTYPE.
 
-(defconstant digit-size 32)
+(defconstant digit-size #+amd64 64 #-amd64 32)
 
 (defconstant maximum-bignum-length (1- (ash 1 (- 32 vm:type-bits))))
 
@@ -287,7 +287,7 @@
 ;;;
 (defun %ashr (data count)
   (declare (type bignum-element-type data)
-	   (type (mod 32) count))
+	   (type (mod #+amd64 64 #-amd64 32) count))
   (%ashr data count))
 
 ;;; %ASHL -- Internal.
@@ -3042,7 +3042,7 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
       (%bignum-set-length result newlen))
     (if (= newlen 1)
 	(let ((digit (%bignum-ref result 0)))
-	  (if (= (%ashr digit 29) (%ashr digit (1- digit-size)))
+	  (if (= (%ashr digit #+amd64 61 #-amd64 29) (%ashr digit (1- digit-size)))
 	      (%fixnum-digit-with-correct-sign digit)
 	      result))
 	result)))
