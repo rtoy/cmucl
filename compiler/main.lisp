@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.56 1992/03/29 21:38:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.57 1992/04/14 03:01:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,6 +41,9 @@
 
 (defvar *block-compile-default* :specified
   "The default value for the :Block-Compile argument to COMPILE-FILE.")
+
+(defvar *byte-compile* :maybe
+  "Whether or not to use the byte-compiler.  Can be T, NIL, or :MAYBE")
 
 (defvar compiler-version "1.0")
 
@@ -208,27 +211,11 @@
   (undefined-value))
 
 
-;;; Compile-Component  --  Internal
+;;; Native-Compile-Component  --  Internal
 ;;;
-(defun compile-component (component)
-  (when *compile-print*
-    (compiler-mumble "~&Compiling ~A: " (component-name component)))
-  
-  (ir1-phases component)
-  
-  #|
-  (maybe-mumble "Dom ")
-  (find-dominators component)
-  (maybe-mumble "Loop ")
-  (loop-analyze component)
-  |#
-
-  (let ((*compile-component* component)
-	(*code-segment* nil)
+(defun native-compile-component (component)
+  (let ((*code-segment* nil)
 	(*elsewhere* nil))
-    (maybe-mumble "Env ")
-    (environment-analyze component)
-    (dfo-as-needed component)
     (maybe-mumble "GTN ")
     (gtn-analyze component)
     (maybe-mumble "LTN ")
@@ -316,6 +303,40 @@
 
   (when *compile-print*
     (compiler-mumble "~&"))
+
+  ;; We are done, so don't bother keeping anything around.
+  (clear-ir2-info component)
+  
+  (undefined-value))
+
+
+;;; COMPILE-COMPONENT -- internal.
+;;;
+(defun compile-component (component)
+  (let ((*compile-component* component))
+    (when *compile-print*
+      (compiler-mumble "~&Compiling ~A: " (component-name component)))
+
+    (ir1-phases component)
+
+    #|
+    (maybe-mumble "Dom ")
+    (find-dominators component)
+    (maybe-mumble "Loop ")
+    (loop-analyze component)
+    |#
+
+    (maybe-mumble "Env ")
+    (environment-analyze component)
+    (dfo-as-needed component)
+
+    (if (ecase *byte-compile*
+	  ((t) t)
+	  ((nil) nil)
+	  (:maybe nil))
+	(byte-compile-component component)
+	(native-compile-component component)))
+
   (undefined-value))
 
 
@@ -1059,7 +1080,6 @@
 	 (component (block-component (node-block (lambda-bind lambda)))))
     (setf (component-name component) (leaf-name lambda))
     (compile-component component)
-    (clear-ir2-info component)
     (clear-ir1-info component)))
 
 
@@ -1221,7 +1241,6 @@
 			   (merge-top-level-lambdas pending)
 	(setq *pending-top-level-lambdas* ())
 	(compile-component component)
-	(clear-ir2-info component)
 	(clear-ir1-info component)
 	(object-call-top-level-lambda tll))))
   (undefined-value))
@@ -1292,7 +1311,6 @@
       
       (dolist (component components)
 	(compile-component component)
-	(clear-ir2-info component)
 	(when (replace-top-level-xeps component)
 	    (setq top-level-closure t)))
       
@@ -1721,8 +1739,7 @@
 			       (find-initial-dfo (list lambda))
 	    (let ((*all-components* (append components top-components)))
 	      (dolist (component *all-components*)
-		(compile-component component)
-		(clear-ir2-info component))))
+		(compile-component component))))
 	  
 	  (let* ((res (core-call-top-level-lambda lambda *compile-object*))
 		 (return (or name res)))
