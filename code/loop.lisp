@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.19 2003/02/20 16:39:50 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.20 2003/02/21 16:25:08 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -144,7 +144,7 @@
 
 (defun loop-gentemp (&optional (pref 'loopvar-))
   (if *loop-gentemp*
-      (gentemp (string pref))
+      (gensym (string pref))
       (gensym)))
 
 
@@ -2052,6 +2052,9 @@ collected result will be returned as the value of the LOOP."
 		     dummy-predicate-var (loop-when-it-variable))
       (let* ((key-var nil)
 	     (val-var nil)
+	     (temp-val-var (loop-gentemp 'loop-hash-val-temp-))
+	     (temp-key-var (loop-gentemp 'loop-hash-key-temp-))
+	     (temp-predicate-var (loop-gentemp 'loop-hash-predicate-var-))
 	     (variable (or variable (loop-gentemp)))
 	     (bindings `((,variable nil ,data-type)
 			 (,ht-var ,(cadar prep-phrases))
@@ -2072,7 +2075,20 @@ collected result will be returned as the value of the LOOP."
 	  ()					;prologue
 	  ()					;pre-test
 	  ()					;parallel steps
-	  (not (multiple-value-setq (,dummy-predicate-var ,key-var ,val-var) (,next-fn)))	;post-test
+	  (not
+	   (multiple-value-bind (,temp-predicate-var ,temp-key-var ,temp-val-var)
+	       (,next-fn)
+	     ;; We use M-V-BIND instead of M-V-SETQ because we only
+	     ;; want to assign values to the key and val vars when we
+	     ;; are in the hash table.  When we reach the end,
+	     ;; TEMP-PREDICATE-VAR is NIL, and so are temp-key-var and
+	     ;; temp-val-var.  This might break any type declarations
+	     ;; on the key and val vars.
+	     (when ,temp-predicate-var
+	       (setq ,val-var ,temp-val-var)
+	       (setq ,key-var ,temp-key-var))
+	     (setq ,dummy-predicate-var ,temp-predicate-var)
+	     ))	;post-test
 	  ,post-steps)))))
 
 
