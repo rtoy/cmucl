@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.20 1991/12/20 02:29:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.21 1992/02/06 19:22:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,7 +293,7 @@
        (ecase symbol
 	 (and
 	  (or (atom hairy-spec)
-	      (dolist (spec (cdr hairy-spec))
+	      (dolist (spec (cdr hairy-spec) t)
 		(unless (%%typep object (specifier-type spec))
 		  (return nil)))))
 	 (not
