@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.17 1991/02/20 14:57:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.18 1991/03/11 17:13:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,6 +100,7 @@
 	      ;; This DOLIST body comes from the beginning of
 	      ;; COMPILE-COMPONENT.
 	      (dolist (component *all-components*)
+		(ir1-finalize component)
 		(let ((*compile-component* component))
 		  (maybe-mumble "Env ")
 		  (environment-analyze component))
@@ -107,7 +108,6 @@
 	    (when *check-consistency*
 	      (maybe-mumble "[Check]~%")
 	      (check-ir1-consistency *all-components*))))
-	  (maphash #'check-free-function *free-functions*)
 	  (car lambdas))))))
 
 
