@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.45 1991/11/08 15:28:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.46 1991/11/13 19:34:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -155,6 +155,24 @@
 (defevent reoptimize-maxed-out
   "*REOPTIMIZE-AFTER-TYPE-CHECK-MAX* exceeded.")
 
+
+;;; DFO-AS-NEEDED  --  Internal
+;;;
+;;;    Iterate doing FIND-DFO until no new dead code is discovered.
+;;;
+(defun dfo-as-needed (component)
+  (declare (type component component))
+  (when (component-reanalyze component)
+    (maybe-mumble "DFO")
+    (loop
+      (find-dfo component)
+      (unless (component-reanalyze component)
+	(maybe-mumble " ")
+	(return))
+      (maybe-mumble ".")))
+  (undefined-value))
+
+
 ;;; IR1-Phases  --  Internal
 ;;;
 ;;;    Do all the IR1 phases for a non-top-level component.
@@ -166,9 +184,7 @@
     (declare (special *constraint-number*))
     (loop
       (ir1-optimize-until-done component)
-      (when (component-reanalyze component)
-	(maybe-mumble "DFO ")
-	(find-dfo component))
+      (dfo-as-needed component)
       (when *constraint-propagate*
 	(maybe-mumble "Constraint ")
 	(constraint-propagate component))
@@ -191,7 +207,7 @@
 ;;;
 (defun compile-component (component object)
   (when *compile-print*
-    (compiler-mumble "Compiling ~A: " (component-name component)))
+    (compiler-mumble "~&Compiling ~A: " (component-name component)))
   
   (ir1-phases component)
   
@@ -207,9 +223,7 @@
 	(*elsewhere* nil))
     (maybe-mumble "Env ")
     (environment-analyze component)
-    (when (component-reanalyze component)
-      (maybe-mumble "DFO ")
-      (find-dfo component))
+    (dfo-as-needed component)
     (maybe-mumble "GTN ")
     (gtn-analyze component)
     (maybe-mumble "LTN ")
@@ -219,13 +233,12 @@
 
     (when (ir2-component-values-receivers (component-info component))
       (maybe-mumble "Stack ")
-      (stack-analyze component))
-
-    ;; Assign BLOCK-NUMBER for any cleanup blocks introduced by environment
-    ;; or stack analysis.  There shouldn't be any unreachable code after
-    ;; control, so this won't delete anything.
-    (when (component-reanalyze component)
-      (find-dfo component))
+      (stack-analyze component)
+      ;;
+      ;; Assign BLOCK-NUMBER for any cleanup blocks introduced by stack
+      ;; analysis.  There shouldn't be any unreachable code after control, so
+      ;; this won't delete anything.
+      (dfo-as-needed component))
 
     (maybe-mumble "IR2Tran ")
     (init-assembler)
@@ -241,6 +254,8 @@
     (when *check-consistency*
       (maybe-mumble "Check2 ")
       (check-ir2-consistency component))
+
+    (delete-unreferenced-tns component)
     
     (maybe-mumble "Life ")
     (lifetime-analyze component)
@@ -248,8 +263,6 @@
     (when *compile-progress*
       (compiler-mumble "") ; Sync before doing random output.
       (pre-pack-tn-stats component *compiler-error-output*))
-
-    (delete-unreferenced-tns component)
 
     (when *check-consistency*
       (maybe-mumble "CheckL ")
@@ -1067,7 +1080,7 @@
 ;;;
 (defun compile-top-level (lambdas object)
   (declare (list lambdas) (type object object))
-  (maybe-mumble "Local call analyze")
+  (maybe-mumble "Locall ")
   (loop
     (let ((did-something nil))
       (dolist (lambda lambdas)
@@ -1077,9 +1090,8 @@
 	    (setq did-something t)
 	    (local-call-analyze component))))
       (unless did-something (return))))
-  (maybe-mumble ".~%")
   
-  (maybe-mumble "Find components")
+  (maybe-mumble "IDFO ")
   (multiple-value-bind (components top-components hairy-top)
 		       (find-initial-dfo lambdas)
     (let ((*all-components* (append components top-components))
@@ -1277,7 +1289,7 @@
 ;;;
 (defun finish-error-output (source-info won)
   (declare (type source-info source-info))
-  (compiler-mumble "Compilation ~:[aborted after~;finished in~] ~A.~&"
+  (compiler-mumble "~&Compilation ~:[aborted after~;finished in~] ~A.~&"
 		   won
 		   (elapsed-time-to-string
 		    (- (get-universal-time)
