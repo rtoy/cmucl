@@ -1,14 +1,15 @@
 ;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.28 1992/07/28 20:43:19 wlott Exp $")
+;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.27 1990/11/03 17:22:57 wlott Exp $
-;;;
 ;;;
 (in-package "MIPS")
 
@@ -23,7 +24,7 @@
      ;; These four are really arguments.
     ((:temp nvals any-reg nargs-offset)
      (:temp vals any-reg nl0-offset)
-     (:temp old-fp any-reg nl1-offset)
+     (:temp ocfp any-reg nl1-offset)
      (:temp lra descriptor-reg lra-offset)
 
      ;; These are just needed to facilitate the transfer
@@ -63,7 +64,7 @@
 
   ;; Copy the remaining args to the top of the stack.
   (inst addu src vals (* 6 vm:word-bytes))
-  (inst addu dst fp-tn (* 6 vm:word-bytes))
+  (inst addu dst cfp-tn (* 6 vm:word-bytes))
 
   LOOP
   (inst lw temp src)
@@ -90,9 +91,9 @@
   DONE
   
   ;; Clear the stack.
-  (move old-fp-tn fp-tn)
-  (move fp-tn old-fp)
-  (inst addu csp-tn old-fp-tn nvals)
+  (move ocfp-tn cfp-tn)
+  (move cfp-tn ocfp)
+  (inst addu csp-tn ocfp-tn nvals)
   
   ;; Return.
   (lisp-return lra lip))
@@ -147,7 +148,7 @@
   (inst addu count nargs (fixnum (- register-arg-count)))
   (inst blez count done)
   (inst addu src args (* vm:word-bytes register-arg-count))
-  (inst addu dst fp-tn (* vm:word-bytes register-arg-count))
+  (inst addu dst cfp-tn (* vm:word-bytes register-arg-count))
 	
   LOOP
   ;; Copy one arg.
@@ -171,7 +172,7 @@
 			  (:translate %continue-unwind)
 			  (:policy :fast-safe))
 			 ((:arg block (any-reg descriptor-reg) a0-offset)
-			  (:arg start (any-reg descriptor-reg) old-fp-offset)
+			  (:arg start (any-reg descriptor-reg) ocfp-offset)
 			  (:arg count (any-reg descriptor-reg) nargs-offset)
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
@@ -192,7 +193,7 @@
 
   do-exit
       
-  (loadw fp-tn cur-uwp vm:unwind-block-current-cont-slot)
+  (loadw cfp-tn cur-uwp vm:unwind-block-current-cont-slot)
   (loadw code-tn cur-uwp vm:unwind-block-current-code-slot)
   (loadw lra cur-uwp vm:unwind-block-entry-pc-slot)
   (lisp-return lra lip :frob-code nil)
@@ -206,7 +207,7 @@
 
 (define-assembly-routine throw
 			 ((:arg target descriptor-reg a0-offset)
-			  (:arg start any-reg old-fp-offset)
+			  (:arg start any-reg ocfp-offset)
 			  (:arg count any-reg nargs-offset)
 			  (:temp catch any-reg a1-offset)
 			  (:temp tag descriptor-reg a2-offset))
