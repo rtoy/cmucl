@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.64 2004/01/09 04:52:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.65 2004/05/14 13:40:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -561,10 +561,15 @@
 		 (or *cold-symbol-allocation-space* *dynamic*)
 		 vm:word-bits (1- vm:symbol-size) vm:symbol-header-type)))
     (write-indexed symbol vm:symbol-value-slot unbound-marker)
-    (when (c:backend-featurep :x86)
-      (write-indexed
-       symbol #+x86 vm:symbol-hash-slot #-x86 vm:symbol-unused-slot
-       (make-fixnum-descriptor (1+ (random vm:target-most-positive-fixnum)))))
+    (when (or (c:backend-featurep :x86)
+	      (c:backend-featurep :sparc))
+      (let ((offset #+(or x86 sparc) vm:symbol-hash-slot
+		    #-(or x86 sparc) vm:symbol-unused-slot)
+	    (value #+x86 (1+ (random vm:target-most-positive-fixnum))
+		   #+sparc (sxhash name)))
+	
+      (write-indexed symbol offset (make-fixnum-descriptor value))))
+
     (write-indexed symbol vm:symbol-plist-slot *nil-descriptor*)
     (write-indexed symbol vm:symbol-name-slot (string-to-core name *dynamic*))
     (write-indexed symbol vm:symbol-package-slot *nil-descriptor*)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.28 2003/12/01 22:08:11 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.29 2004/05/14 13:40:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -929,7 +929,8 @@
 	 (sxhash-instance s-expr)))
     ;; Other-pointer types.
     (simple-string (sxhash-simple-string s-expr))
-    (symbol (sxhash-simple-string (symbol-name s-expr)))
+    (symbol #-sparc (sxhash-simple-string (symbol-name s-expr))
+	    #+sparc (kernel:symbol-hash s-expr))
     (number
      (etypecase s-expr
        (integer (ldb sxhash-bits-byte s-expr))

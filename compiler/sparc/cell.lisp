@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.23 2004/03/29 16:33:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.24 2004/05/14 13:40:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,18 @@
   (:policy :fast)
   (:translate symbol-value))
 
+(define-vop (symbol-hash)
+  (:policy :fast-safe)
+  (:translate symbol-hash)
+  (:args (symbol :scs (descriptor-reg null)))
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:generator 2
+    ;; the symbol-hash slot of NIL holds NIL because it is also the cdr
+    ;; slot, so we have to strip off the two low bits to make sure it is
+    ;; a fixnum.
+    (loadw res symbol symbol-hash-slot other-pointer-type)
+    (inst andn res vm:fixnum-tag-mask)))
 
 ;;;; Fdefinition (fdefn) objects.
 
