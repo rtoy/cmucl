@@ -32,11 +32,11 @@
 ;;;
 (defun node-enclosing-cleanup (node)
   (declare (type node node))
-  (let ((env (node-lexenv node)))
-    (or (lexenv-cleanup env)
-	(let ((lambda (lexenv-lambda env)))
-	  (and (member (functional-kind lambda) '(:mv-let :let))
-	       (node-enclosing-cleanup (let-combination lambda)))))))
+  (do ((lexenv (node-lexenv node)
+	       (lambda-call-lexenv (lexenv-lambda lexenv))))
+      ((null lexenv) nil)
+    (let ((cup (lexenv-cleanup lexenv)))
+      (when cup (return cup)))))
 
 
 ;;; Insert-Cleanup-Code  --  Interface
@@ -235,22 +235,33 @@
 
 ;;;; Misc shortand functions:
 
+;;; NODE-HOME-LAMBDA  --  Interface
+;;;
+;;;    Return the home (i.e. enclosing non-let) lambda for Node.  Since the
+;;; LEXENV-LAMBDA may be deleted, we must chain up the LAMBDA-CALL-LEXENV
+;;; thread until we find a lambda that isn't deleted, and then return its home.
+;;;
+(declaim (maybe-inline node-home-lambda))
+(defun node-home-lambda (node)
+  (declare (type node node))
+  (do ((fun (lexenv-lambda (node-lexenv node))
+	    (lexenv-lambda (lambda-call-lexenv fun))))
+      ((not (eq (functional-kind fun) :deleted))
+       (lambda-home fun))
+    (when (eq (lambda-home fun) fun)
+      (return fun))))
+
 ;;; NODE-xxx  --  Interface
 ;;;
-(proclaim '(inline node-block node-home-lambda node-environment
-		   node-tlf-number))
+(declaim (inline node-block node-tlf-number))
+(declaim (maybe-inline node-environment))
 (defun node-block (node)
   (declare (type node node))
   (the cblock (continuation-block (node-prev node))))
 ;;;
-(defun node-home-lambda (node)
-  (declare (type node node))
-  (lambda-home (lexenv-lambda (node-lexenv node))))
-;;;
 (defun node-environment (node)
-  (declare (type node node))
-  (the environment (lambda-environment (lexenv-lambda (node-lexenv node)))))
-
+  (declare (type node node) (inline node-home-lambda))
+  (the environment (lambda-environment (node-home-lambda node))))
 
 
 ;;; BLOCK-xxx-CLEANUP  --  Interface
@@ -272,8 +283,8 @@
 ;;;    Return the non-let lambda that holds Block's code.
 ;;;
 (defun block-home-lambda (block)
-  (declare (type cblock block))
-  (lambda-home (lexenv-lambda (node-lexenv (block-last block)))))
+  (declare (type cblock block) (inline node-home-lambda))
+  (node-home-lambda (block-last block)))
 
 
 ;;; BLOCK-ENVIRONMENT  --  Interface
@@ -281,8 +292,8 @@
 ;;;    Return the IR1 environment for Block.
 ;;;
 (defun block-environment (block)
-  (declare (type cblock block))
-  (lambda-environment (lexenv-lambda (node-lexenv (block-last block)))))
+  (declare (type cblock block) (inline node-home-lambda))
+  (lambda-environment (node-home-lambda (block-last block))))
 
 
 ;;; SOURCE-PATH-TLF-NUMBER  --  Interface
@@ -603,7 +614,8 @@ inlines
 ;;;    If the function isn't a Let, we unlink the function head and tail from
 ;;; the component head and tail to indicate that the code is unreachable.  We
 ;;; also delete the function Component-Lambdas (it won't be there before local
-;;; call analysis, but no matter.)
+;;; call analysis, but no matter.)  If the lambda was never referenced, we give
+;;; a note.
 ;;;
 ;;;    If the lambda is an XEP, then we null out the Entry-Function in its
 ;;; Entry-Function so that people will know that it is not an entry point
@@ -611,18 +623,25 @@ inlines
 ;;;
 (defun delete-lambda (leaf)
   (declare (type clambda leaf))
-  (let ((kind (functional-kind leaf)))
+  (let ((kind (functional-kind leaf))
+	(bind (lambda-bind leaf)))
     (assert (not (member kind '(:deleted :optional :top-level))))
     (setf (functional-kind leaf) :deleted)
+    (setf (lambda-bind leaf) nil)
     (dolist (let (lambda-lets leaf))
+      (setf (lambda-bind let) nil)
       (setf (functional-kind let) :deleted))
 
     (if (or (eq kind :let) (eq kind :mv-let))
 	(let ((home (lambda-home leaf)))
 	  (setf (lambda-lets home) (delete leaf (lambda-lets home))))
-	(let* ((bind-block (node-block (lambda-bind leaf)))
+	(let* ((bind-block (node-block bind))
 	       (component (block-component bind-block))
 	       (return (lambda-return leaf)))
+	  (unless (leaf-ever-used leaf)
+	    (let ((*compiler-error-context* bind))
+	      (compiler-note "Deleting unused function~[.~;~:*~%  ~S~]"
+			     (leaf-name leaf))))
 	  (unlink-blocks (component-head component) bind-block)
 	  (when return
 	    (unlink-blocks (node-block return) (component-tail component)))
@@ -738,6 +757,23 @@ inlines
 	    (delete fun (tail-set-functions tail-set)))
       (setf (lambda-tail-set fun) nil))
     (setf (lambda-return fun) nil))
+  (undefined-value))
+
+
+;;; NOTE-UNREFERENCED-VARS  --  Interface
+;;;
+;;;    If any of the Vars in fun were never referenced and was not declared
+;;; IGNORE, then complain.
+;;;
+(defun note-unreferenced-vars (fun)
+  (declare (type clambda fun))
+  (dolist (var (lambda-vars fun))
+    (unless (or (leaf-ever-used var)
+		(lambda-var-ignorep var))
+      (let ((*compiler-error-context* (lambda-bind fun)))
+	(compiler-warning "Variable ~S defined but never used."
+			  (leaf-name var))
+	(setf (leaf-ever-used var) t))))
   (undefined-value))
 
 
@@ -874,35 +910,33 @@ inlines
 ;;; check to see if any of the code about to die appeared in the original
 ;;; source, and emit a note if so.
 ;;;
-;;;    If the block was in a lambda is now deleted, but used to be a
-;;; optional-dispatch entry point or XEP, then we ignore the whole block.  We
-;;; also ignore the deletion of CRETURN nodes, since it is somewhat reasonable
-;;; for a function to not return, and there is a different note for that case
-;;; anyway.
+;;;    If the block was in a lambda is now deleted, then we ignore the whole
+;;; block, since this case is picked off in DELETE-LAMBDA.  We also ignore the
+;;; deletion of CRETURN nodes, since it is somewhat reasonable for a function
+;;; to not return, and there is a different note for that case anyway.
 ;;;
 ;;;    If the actual source is an atom, then we use a bunch of heuristics to
 ;;; guess whether this reference really appeared in the original source:
-;;; -- If a symbol, it must be interned.
-;;; -- It must not be an easily introduced constant (T or NIL).
+;;; -- If a symbol, it must be interned and not a keyword.
+;;; -- It must not be an easily introduced constant (T or NIL, a fixnum or a
+;;;    character.)
 ;;; -- The atom must be "present" in the original source form, and present in
 ;;;    all intervening actual source forms.
 ;;;
 (defun note-block-deletion (block)
   (let ((home (block-home-lambda block)))
-    (unless (and (eq (functional-kind home) :deleted)
-		 (or (functional-entry-function home)
-		     (let ((od (lambda-optional-dispatch home)))
-		       (and od
-			    (not (eq (optional-dispatch-main-entry od)
-				     home))))))
+    (unless (eq (functional-kind home) :deleted)
       (do-nodes (node cont block)
 	(let* ((path (node-source-path node))
 	       (first (first path)))
 	  (when (or (eq first 'original-source-start)
 		    (and (atom first)
 			 (or (not (symbolp first))
-			     (symbol-package first))
+			     (let ((pkg (symbol-package first)))
+			       (and pkg
+				    (not (eq pkg (symbol-package :end))))))
 			 (not (member first *deletion-ignored-objects*))
+			 (not (typep first '(or fixnum character)))
 			 (every #'(lambda (x)
 				    (present-in-form first x 0))
 				(source-path-forms path))
@@ -1293,13 +1327,13 @@ inlines
   (source nil :type list)
   ;;
   ;; The stringified form in the original source that expanded into Source.
-  (original-source nil :type simple-string)
+  (original-source (required-argument) :type simple-string)
   ;;
   ;; A list of prefixes of "interesting" forms that enclose original-source.
   (context nil :type list)
   ;;
   ;; The FILE-INFO-NAME for the relevant FILE-INFO.
-  (file-name nil :type (or pathname (member :lisp :stream)))
+  (file-name (required-argument) :type (or pathname (member :lisp :stream)))
   ;;
   ;; The file position at which the top-level form starts, if applicable.
   (file-position nil :type (or index null))
