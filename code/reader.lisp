@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.10 1992/02/04 16:21:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.11 1992/02/12 01:33:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,13 +16,19 @@
 ;;; Package system interface by Lee Schumacher.
 ;;; Runs in the standard Spice Lisp environment.
 ;;;
-(in-package 'lisp)
+
+(in-package "EXTENSIONS")
+(export '*ignore-extra-close-parentheses*)
+
+(in-package "LISP")
 (export '(readtable readtable-case readtablep *read-base* *readtable*
 	  copy-readtable set-syntax-from-char set-macro-character
 	  get-macro-character make-dispatch-macro-character
 	  set-dispatch-macro-character get-dispatch-macro-character read
 	  *read-default-float-format* read-preserving-whitespace
-	  read-delimited-list parse-integer read-from-string *read-suppress*))
+	  read-delimited-list parse-integer read-from-string *read-suppress*
+	  reader-error))
+
 
 ;;;Random global variables
 
@@ -30,34 +36,44 @@
 
 (defvar *readtable* () "Variable bound to current readtable.")
 
+
+;;;; Reader errors:
 
+(define-condition reader-error (stream-error)
+  (format-control
+   (format-arguments ()))
+  (:report
+   (lambda (condition stream)
+     (let ((error-stream (stream-error-stream condition)))
+       (format stream "Reader error ~@[at ~D ~]on ~S:~%~?"
+	       (file-position error-stream) error-stream
+	       (reader-error-format-control condition)
+	       (reader-error-format-arguments condition))))))
+
+(define-condition reader-package-error (reader-error))
+
+;;; %READ-ERROR  --  Interface
+;;;
+;;;    Like, signal a READ-ERROR, man...
+;;;
+(defun %reader-error (stream control &rest args)
+  (error 'reader-error :stream stream  :format-control control
+	 :format-arguments args))
+
+(define-condition reader-eof-error (end-of-file)
+  (context)
+  (:report
+   (lambda (condition stream)
+     (format stream "Unexpected EOF on ~S ~A."
+	     (stream-error-stream condition)
+	     (reader-eof-error-context condition)))))
+
+(defun reader-eof-error (stream context)
+  (error 'reader-eof-error :stream stream  :context context))
+  
 
 ;;;; Readtable implementation.
 
-;;; The readtable is a structure with three components: the
-;;; CHARACTER-ATTRIBUTE-TABLE is a vector of CHAR-CODE-LIMIT integers for
-;;; describing the character type.  Conceptually, there are 4 distinct
-;;; "primary" character attributes (WHITESPACE, TERMINATING-MACRO, ESCAPE, and
-;;; CONSTITUENT -- non-terminating macros have the attribute CONSTITUENT, and
-;;; the symbol reader is implemented as a non-terminating macro), and a number
-;;; of "secondary" attributes that are used by the function
-;;; READ-QUALIFIED-TOKEN, which apply only when the primary attribute is
-;;; CONSTITUENT.  In order to make the READ-QUALIFIED-TOKEN fast, all this
-;;; information is stored in the character attribute table by having different
-;;; varieties of constituents.  In order to conform with the white pages, the
-;;; primary attributes should be moved by SET-SYNTAX-FROM-CHARACTER and
-;;; SET-MACRO-CHARACTER, while the secondary attributes are constant properties
-;;; of the characters (as long as they are constituents).
-
-
-;;; The CHARACTER-MACRO-TABLE is a vector of CHAR-CODE-LIMIT functions.  One of
-;;; these functions called with appropriate arguments whenever any
-;;; non-WHITESPACE character is encountered inside READ-PRESERVING-WHITESPACE.
-;;; These functions are used to implement user-defined read-macros, system
-;;; read-macros, and the number-symbol reader.  Finally, there is a
-;;; DISPATCH-TABLES entry, which is an alist from dispatch characters to
-;;; vectors of CHAR-CODE-LIMIT functions, for use in defining dispatching
-;;; macros (like #-macro).
 
 (defvar std-lisp-readtable ()
   "Standard lisp readtable. This is for recovery from broken
@@ -74,8 +90,28 @@
 		 (prin1 'readtable stream)))))
   "Readtable is a data structure that maps characters into syntax
    types for the Common Lisp expression reader."
-  (character-attribute-table (make-character-attribute-table) :type simple-vector)
+  ;; The CHARACTER-ATTRIBUTE-TABLE is a vector of CHAR-CODE-LIMIT integers for
+  ;; describing the character type.  Conceptually, there are 4 distinct
+  ;; "primary" character attributes: WHITESPACE, TERMINATING-MACRO, ESCAPE, and
+  ;; CONSTITUENT.  Non-terminating macros (such as the symbol reader) have the
+  ;; attribute CONSTITUENT.
+  ;;
+  ;; In order to make the READ-TOKEN fast, all this information is
+  ;; stored in the character attribute table by having different varieties of
+  ;; constituents.
+  (character-attribute-table (make-character-attribute-table)
+			     :type simple-vector)
+  ;;
+  ;; The CHARACTER-MACRO-TABLE is a vector of CHAR-CODE-LIMIT functions.  One
+  ;; of these functions called with appropriate arguments whenever any
+  ;; non-WHITESPACE character is encountered inside READ-PRESERVING-WHITESPACE.
+  ;; These functions are used to implement user-defined read-macros, system
+  ;; read-macros, and the number-symbol reader.
   (character-macro-table (make-character-macro-table) :type simple-vector)
+  ;;
+  ;; DISPATCH-TABLES entry, which is an alist from dispatch characters to
+  ;; vectors of CHAR-CODE-LIMIT functions, for use in defining dispatching
+  ;; macros (like #-macro).
   (dispatch-tables () :type list)
   (readtable-case :upcase :type (member :upcase :downcase :preserve :invert)))
 
@@ -92,12 +128,11 @@
   (defconstant constituent-slash 6)
   (defconstant constituent-digit 7)
   (defconstant constituent-sign 8)
-  (defconstant sharp-sign 9)
+  ; 9
   (defconstant multiple-escape 10)
   (defconstant package-delimiter 11)
   ;;fake attribute for use in read-unqualified-token
   (defconstant delimiter 12))
-
 
 
 ;;;; Package specials.
@@ -139,16 +174,15 @@
 (defun make-character-macro-table ()
   (make-array char-code-limit :element-type t
 	      :initial-element #'undefined-macro-char))
-(defun undefined-macro-char (ignore char)
-  (declare (ignore ignore))
-  (unless *read-suppress*
-    (error "Undefined read-macro character ~S" char)))
 
+(defun undefined-macro-char (stream char)
+  (unless *read-suppress*
+    (%reader-error stream "Undefined read-macro character ~S" char)))
 
 ;;; The character attribute table is a CHAR-CODE-LIMIT vector of integers. 
 
 (defmacro test-attribute (char whichclass rt)
-  `(= (the fixnum (get-cat-entry ,char ,rt)) ,whichclass)))
+  `(= (the fixnum (get-cat-entry ,char ,rt)) ,whichclass))
 
 ;;; Predicates for testing character attributes
 
@@ -177,6 +211,9 @@
 
 
 ;;;; Secondary attribute table.
+
+;;; There are a number of "secondary" attributes which are constant properties
+;;; of characters characters (as long as they are constituents).
 
 (defvar secondary-attribute-table ())
 
@@ -403,48 +440,40 @@
 
 ;;;; READ-PRESERVING-WHITESPACE, READ-DELIMITED-LIST, and READ.
 
-(defvar right-paren-whitespace t
-  "Flag that READ uses to tell when it's ok to treat right parens as
-  whitespace.")
+(defvar *ignore-extra-close-parentheses* t
+  "If true, only warn when there is an extra close paren, otherwise error.")
 
-;; Alist for sharp-equal. Used to keep track of objects with labels assigned
-;; that have been completly read.
-(defvar sharp-equal-alist ())
-
-;; Alist for sharp-sharp. Assoc's a number with a symbol produced by gensym.
-;; Used by sharp-sharp as an unforgeable label, instead of the number.
-(defvar sharp-sharp-alist ())
+;; Alist for #=. Used to keep track of objects with labels assigned that have
+;; been completly read.  Entry is (integer-tag gensym-tag value).
+;;
+(defvar *sharp-equal-alist* ())
 
 (proclaim '(special *standard-input*))
  
 ;;; READ-PRESERVING-WHITESPACE behaves just like read only it makes sure
 ;;; to leave terminating whitespace in the stream.
 ;;;
-
 (defun read-preserving-whitespace (&optional (stream *standard-input*)
 					     (eof-errorp t) (eof-value nil)
 					     (recursivep nil))
   "Reads from stream and returns the object read, preserving the whitespace
    that followed the object."
-  (unless recursivep
-    ;; The scope of these two lists is the top level read, so they have to be
-    ;; reset here.
-    (setf sharp-equal-alist nil)
-    (setf sharp-sharp-alist nil))
-  ;; Loop for repeating when a macro returns nothing.
-  (loop
-    (let ((char (read-char stream nil eof-object)))
-      (cond ((eofp char)
-	     (if eof-errorp
-		 (error "Unexpected end-of-file encountered.")
-		 (return eof-value)))
-	    ((whitespacep char))
-	    (t
-	     (let* ((macrofun (get-cmt-entry char *readtable*))
-		    (result (multiple-value-list
-			     (funcall macrofun stream char))))
-	       ;; Repeat if macro returned nothing.
-	       (if result (return (car result)))))))))
+  (cond
+   (recursivep
+    ;; Loop for repeating when a macro returns nothing.
+    (loop
+      (let ((char (read-char stream eof-errorp eof-object)))
+	(cond ((eofp char) (return eof-value))
+	      ((whitespacep char))
+	      (t
+	       (let* ((macrofun (get-cmt-entry char *readtable*))
+		      (result (multiple-value-list
+			       (funcall macrofun stream char))))
+		 ;; Repeat if macro returned nothing.
+		 (if result (return (car result)))))))))
+   (t
+    (let ((*sharp-equal-alist* nil))
+      (read-preserving-whitespace stream eof-errorp eof-value t)))))
 
 
 (defun read-maybe-nothing (stream char)
@@ -456,12 +485,12 @@
     (if retval (rplacd retval nil))))
 
 (defun read (&optional (stream *standard-input*) (eof-errorp t)
-			   (eof-value ()) (recursivep ()))
+		       (eof-value ()) (recursivep ()))
   "Reads in the next object in the stream, which defaults to
-  *standard-input*. For details see the I/O chapter of
-  the manual."
-   (prog1
-    (read-preserving-whitespace stream eof-errorp eof-value recursivep)
+   *standard-input*. For details see the I/O chapter of
+   the manual."
+  (prog1
+      (read-preserving-whitespace stream eof-errorp eof-value recursivep)
     (let ((whitechar (read-char stream nil eof-object)))
       (if (and (not (eofp whitechar))
 	       (or (not (whitespacep whitechar))
@@ -509,7 +538,7 @@
 	    (let ((nextchar (read-char stream t)))
 	      (cond ((token-delimiterp nextchar)
 		     (cond ((eq listtail thelist)
-			    (error "Nothing appears before . in list."))
+			    (%reader-error stream "Nothing appears before . in list."))
 			   ((whitespacep nextchar)
 			    (setq nextchar (flush-whitespace stream))))
 		     (rplacd listtail
@@ -530,7 +559,7 @@
   (let ((lastobj ()))
     (do ((char firstchar (flush-whitespace stream)))
 	((char= char #\) )
-	 (error "Nothing appears after . in list."))
+	 (%reader-error stream "Nothing appears after . in list."))
       ;;see if there's something there.
       (setq lastobj (read-maybe-nothing stream char))
       (when lastobj (return t)))
@@ -541,7 +570,7 @@
 	((char= lastchar #\) ) lastobj)	;success!
       ;;try reading virtual whitespace
       (if (read-maybe-nothing stream lastchar)
-	  (error "More than one object follows . in list.")))))
+	  (%reader-error stream "More than one object follows . in list.")))))
 
 (defun read-string (stream closech)
   ;;this accumulates chars until it sees same char that invoked it.
@@ -555,38 +584,63 @@
       (ouch-read-buffer char)))
   (read-buffer-to-string))
 
-(defun read-right-paren (ig1 ig2)
-  (declare (ignore ig1 ig2))
-  (if right-paren-whitespace
-      (values)
-      (error "Unmatched right parenthesis.")))
+(defun read-right-paren (stream ignore)
+  (declare (ignore ignore))
+  (cond (*ignore-extra-close-parentheses*
+	 (warn "Ignoring unmatched close parenthesis.")
+	 (values))
+	(t
+	 (%reader-error stream "Unmatched close parenthesis."))))
 
-(defun internal-read-extended-token (stream firstchar
-					    &aux (escape-appearedp nil))
-  ;;read the string up to the next delimiter.  Leaves resulting token
-  ;;in read-buffer, returns a flag that is true if an escape (\\)
-  ;;appeared, meaning that it has to be a symbol.
-  ;;needs to have package hacks added.
+;;; INTERNAL-READ-EXTENDED-TOKEN  --  Internal
+;;;
+;;; Read from the stream up to the next delimiter.  Leaves resulting token in
+;;; read-buffer, returns two values:
+;;; -- a list of the escaped character positions, and
+;;; -- The position of the first package delimiter (or NIL).
+;;;
+(defun internal-read-extended-token (stream firstchar)
   (reset-read-buffer)
-  (do ((char firstchar (read-char stream nil eof-object)))
-      ;;for now, treat #\: as a constituent:
-      ;; does this cond need same fix as the top-level read did ??
+  (do ((char firstchar (read-char stream nil eof-object))
+       (escapes ())
+       (colon nil))
       ((cond ((eofp char) t)
 	     ((token-delimiterp char)
 	      (unread-char char stream)
 	      t)
 	     (t nil))
-       escape-appearedp)
+       (values escapes colon))
     (cond ((escapep char)
 	   ;;it can't be a number, even if it's 1\23.
-	   (setq escape-appearedp t)
-	   ;;read next char here, so it won't be upper-casified.
+	   ;;read next char here, so it won't be casified.
+	   (push ouch-ptr escapes)
 	   (let ((nextchar (read-char stream nil eof-object)))
 	     (if (eofp nextchar)
-		 (error "End-of-file after escape character.")
+		 (reader-eof-error stream "after escape character")
 		 (ouch-read-buffer nextchar))))
-	  (t (ouch-read-buffer (char-upcase char))))))
-
+	  ((multiple-escape-p char)
+	   ;; read to next multiple-escape, escaping single chars along
+	   ;; the way
+	   (loop
+	     (let ((ch (read-char stream nil eof-object)))
+	       (cond
+		((eofp ch)
+		 (reader-eof-error stream "inside extended token"))
+		((multiple-escape-p ch) (return))
+		((escapep ch)
+		 (let ((nextchar (read-char stream nil eof-object)))
+		   (if (eofp nextchar)
+		       (reader-eof-error stream "after escape character")
+		       (ouch-read-buffer nextchar))))
+		(t
+		 (push ouch-ptr escapes)
+		 (ouch-read-buffer ch))))))
+	  (t
+	   (when (and (constituentp char)
+		      (eql (get-secondary-attribute char) #.package-delimiter)
+		      (not colon))
+	     (setq colon ouch-ptr))
+	   (ouch-read-buffer char)))))
 
 
 ;;;; Character classes.
@@ -646,6 +700,7 @@
 (defvar *read-base* 10
   "The radix that Lisp reads numbers in.")
 
+
 ;;; CASIFY-READ-BUFFER  --  Internal
 ;;;
 ;;;    Modify the read-buffer according to READTABLE-CASE, ignoring escapes.
@@ -702,9 +757,10 @@
   ;;"unqualified-token".  Leave the result in the READ-BUFFER.
   ;;Return next char after token (last char read).
   (when *read-suppress*
-    (return-from read-token (internal-read-extended-token stream firstchar)))
+    (internal-read-extended-token stream firstchar)
+    (return-from read-token nil))
   (let ((attribute-table (character-attribute-table *readtable*))
-	(package *package*)
+	(package nil)
 	(colons 0)
 	(possibly-rational t)
 	(possibly-float t)
@@ -739,7 +795,7 @@
       ;;saw "[sign] {digit}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (return (make-integer)))
+      (unless char (return (make-integer stream)))
       (case (char-class3 char attribute-table)
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-dot (if possibly-float
@@ -749,7 +805,7 @@
 	(#.constituent-slash (if possibly-rational
 				 (go RATIO)
 				 (go SYMBOL)))
-	(#.delimiter (unread-char char stream) (return (make-integer)))
+	(#.delimiter (unread-char char stream) (return (make-integer stream)))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -759,12 +815,14 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (let ((*read-base* 10))
-			     (make-integer))))
+			     (make-integer stream))))
       (case (char-class char attribute-table)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-expt (go EXPONENT))
-	(#.delimiter (unread-char char stream) (return (let ((*read-base* 10))
-							 (make-integer))))
+	(#.delimiter
+	 (unread-char char stream)
+	 (return (let ((*read-base* 10))
+		   (make-integer stream))))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -797,11 +855,11 @@
       ;;saw "dot"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (error "Dot context error."))
+      (unless char (%reader-error stream "Dot context error."))
       (case (char-class char attribute-table)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-dot (go DOTS))
-	(#.delimiter  (error "Dot context error."))
+	(#.delimiter  (%reader-error stream "Dot context error."))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -870,10 +928,12 @@
       ;;saw "dot {dot}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (error "Too many dots."))
+      (unless char (%reader-error stream "Too many dots."))
       (case (char-class char attribute-table)
 	(#.constituent-dot (go DOTS))
-	(#.delimiter (unread-char char stream) (error "Too many dots."))
+	(#.delimiter
+	 (unread-char char stream)
+	 (%reader-error stream "Too many dots."))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -903,7 +963,7 @@
       ;;read-next char, put in buffer (no case conversion).
       (let ((nextchar (read-char stream nil nil)))
 	(unless nextchar
-	  (error "End-of-file after escape character."))
+	  (reader-eof-error stream "after escape character"))
 	(push ouch-ptr escapes)
 	(ouch-read-buffer nextchar))
       (setq char (read-char stream nil nil))
@@ -930,19 +990,20 @@
 	(t (go SYMBOL)))
       COLON
       (casify-read-buffer escapes)
-      (cond ((zerop colons)
-	     (setq colons 1)
-	     (setq package (find-package (read-buffer-to-string)))
-	     (unless package (error "Package ~S not found."
-				    (read-buffer-to-string))))
-	    (t (error "Too many colons in ~S" (read-buffer-to-string))))
+      (unless (zerop colons)
+	(%reader-error stream "Too many colons in ~S"
+		      (read-buffer-to-string)))
+      (setq colons 1)
+      (setq package (read-buffer-to-string))
+
       (reset-read-buffer)
       (setq char (read-char stream nil nil))
-      (unless char (error "End of file encountered after reading a colon."))
+      (unless char (reader-eof-error stream "after reading a colon"))
       (case (char-class char attribute-table)
-	(#.delimiter (unread-char char stream)
-		     (error "Illegal terminating character after a colon, ~S."
-			    char))
+	(#.delimiter
+	 (unread-char char stream)
+	 (%reader-error stream "Illegal terminating character after a colon, ~S."
+		       char))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go INTERN))
@@ -950,41 +1011,54 @@
       INTERN
       (setq colons 2)
       (setq char (read-char stream nil nil))
-      (unless char (error "End of file encountered after reading a colon."))
+      (unless char
+	(reader-eof-error stream "after reading a colon"))
       (case (char-class char attribute-table)
-	(#.delimiter (unread-char char stream)
-		     (error "Illegal terminating character after a colon, ~S"
-			    char))
+	(#.delimiter
+	 (unread-char char stream)
+	 (%reader-error stream "Illegal terminating character after a colon, ~S"
+		       char))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
-	(#.package-delimiter (error "To many colons after ~S:"
-				    (package-name package)))
+	(#.package-delimiter
+	 (%reader-error stream "To many colons after ~S:" package))
 	(t (go SYMBOL)))
       RETURN-SYMBOL
       (casify-read-buffer escapes)
-      (if (or (zerop colons) (= colons 2) (eq package *keyword-package*))
-	  (return (intern* read-buffer ouch-ptr package))
-	  (multiple-value-bind (symbol test)
-			       (find-symbol* read-buffer ouch-ptr package)
-	    (cond ((eq test :external) (return symbol))
-		  ((null test)
-		   (error "Symbol ~S not found in the ~A package."
-			  (read-buffer-to-string) (package-name package)))
-		  (t (cerror "use symbol anyway."
+      (let ((package (if package (find-package package) *package*)))
+	(unless package
+	  (error 'reader-package-error :stream stream
+		 :format-arguments (list package)
+		 :format-control "Package ~S not found."))
+
+	(if (or (zerop colons) (= colons 2) (eq package *keyword-package*))
+	    (return (intern* read-buffer ouch-ptr package))
+	    (multiple-value-bind (symbol test)
+				 (find-symbol* read-buffer ouch-ptr package)
+	      (when (eq test :external) (return symbol))
+	      (let ((name (read-buffer-to-string)))
+		(with-simple-restart (continue "Use symbol anyway.")
+		  (error 'reader-package-error :stream stream
+			 :format-arguments (list name (package-name package))
+			 :format-control
+			 (if test
 			     "The symbol ~S is not external in the ~A package."
-			     (read-buffer-to-string) (package-name package))
-		     (return symbol)))))))))
+			     "Symbol ~S not found in the ~A package.")))
+		(return (intern name package)))))))))
 
 
 (defun read-extended-token (stream &optional (*readtable* *readtable*))
-  ;;for semi-external use: returns 2 values: the string for the token,
-  ;;and a flag for whether there was an escape char.
+  "For semi-external use: returns 3 values: the string for the token,
+   a flag for whether there was an escape char, and the position of any
+   package delimiter."
   (let ((firstch (read-char stream nil nil t)))
-    (if firstch
-	(let ((escape-appearedp (internal-read-extended-token stream firstch)))
-	  (values (read-buffer-to-string) escape-appearedp))
-	(values "" nil))))
-
+    (cond (firstch
+	   (multiple-value-bind (escapes colon)
+				(internal-read-extended-token stream firstch)
+	     (casify-read-buffer escapes)
+	     (values (read-buffer-to-string) (not (null escapes)) colon)))
+	  (t
+	   (values "" nil nil)))))
 
 
 ;;;; Number reading functions.
@@ -1028,14 +1102,14 @@
 	    (expt base digits)))))
 |#
 
-(defun make-integer ()
+(defun make-integer (stream)
   "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
   then multiplying by a power of the base and adding."
   (let* ((base (if (boundp '*read-base*)
 		  (if (and (fixnump *read-base*)
 			   (<= 1 *read-base* 36))
 		      *read-base*
-		      (error "~A not a valid number for *read-base*."
+		      (%reader-error stream "~A not a valid number for *read-base*."
 			     *read-base*))
 		  10.))
 	 (digits-per (aref *integer-reader-safe-digits* base))
@@ -1166,11 +1240,11 @@
 (defun make-char-dispatch-table ()
   (make-array char-code-limit :initial-element #'dispatch-char-error))
 
-(defun dispatch-char-error (ig1 sub-char ig2)
-  (declare (ignore ig1 ig2))
+(defun dispatch-char-error (stream sub-char ignore)
+  (declare (ignore ignore))
   (if *read-suppress*
       (values)
-      (error "No dispatch function defined for ~S." sub-char)))
+      (%reader-error stream "No dispatch function defined for ~S." sub-char)))
 
 (defun make-dispatch-macro-character (char &optional
 					   (non-terminating-p nil)
@@ -1186,7 +1260,7 @@
 	   (error "Dispatch character already exists"))
 	  (t
 	   (setf (dispatch-tables rt)
-	    (push (cons char (make-char-dispatch-table)) dalist))))))
+		 (push (cons char (make-char-dispatch-table)) dalist))))))
 
 (defun set-dispatch-macro-character
   (disp-char sub-char function &optional (rt *readtable*))
@@ -1226,7 +1300,7 @@
 	      (not (setq dig (digit-char-p ch))))
 	  ;;take care of the extra char.
 	  (if (eofp ch)
-	      (error "End-of-file inside dispatch character.")
+	      (reader-eof-error stream "inside dispatch character")
 	      (setq sub-char ch)))
 	 (setq numargp t)
 	 (setq numarg (+ (* numarg 10) dig)))
@@ -1237,7 +1311,7 @@
 	  (funcall (elt (the simple-vector (cdr dpair))
 			(char-code sub-char))
 		   stream sub-char (if numargp numarg nil))
-	  (error "No dispatch table for dispatch char.")))))
+	  (%reader-error stream "No dispatch table for dispatch char.")))))
 
 
 
