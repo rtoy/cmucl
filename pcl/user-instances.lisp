@@ -18,9 +18,9 @@
 ;;; Suggestions, bugs, criticism and questions to lange@cs.ucla.edu
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.2 1998/12/20 04:30:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.3 1999/05/30 23:14:09 pw Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -129,7 +129,7 @@
 (defmacro get-user-instance-slots (x)
   `(user-vector-instance-slots ,x))
 
-(eval-when (eval #+cmu load)
+(eval-when (eval load)
   (force-compile 'user-instance-p)
   (force-compile 'user-instance-slots)
   (force-compile 'user-instance-wrapper)

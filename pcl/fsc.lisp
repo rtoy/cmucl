@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.8 1998/12/20 04:30:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.9 1999/05/30 23:14:00 pw Exp $")
 ;;;
 ;;; This file contains the definition of the FUNCALLABLE-STANDARD-CLASS
 ;;; metaclass.  Much of the implementation of this metaclass is actually

@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.11 1999/03/11 16:51:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.12 1999/05/30 23:14:06 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -309,7 +309,7 @@
      (slotd structure-effective-slot-definition))
   (let* ((function (slot-definition-internal-reader-function slotd))
 	 (value (funcall function object)))
-    #+cmu (declare (type function function))
+    (declare (type function function))
     (if (eq value *slot-unbound*)
 	(slot-unbound class object (slot-definition-name slotd))
 	value)))
@@ -319,7 +319,7 @@
 	       (object structure-object)
 	       (slotd structure-effective-slot-definition))
   (let ((function (slot-definition-internal-writer-function slotd)))
-    #+cmu (declare (type function function))
+    (declare (type function function))
     (funcall function new-value object)))
 
 (defmethod slot-boundp-using-class

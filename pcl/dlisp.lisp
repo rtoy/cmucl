@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.6 1999/03/11 16:51:05 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.7 1999/05/30 23:13:58 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -108,7 +108,7 @@
 	 (lambda `(lambda ,closure-variables
 		    ,@(when (member 'miss-fn closure-variables)
 			`((declare (type function miss-fn))))
-		    #'(#+cmu kernel:instance-lambda #-cmu lambda ,args
+		    #'(kernel:instance-lambda ,args
 			#+copy-&rest-arg
 			,@(when rest
 			    `((setq .lap-rest-arg.

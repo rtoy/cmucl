@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.10 1999/03/11 16:51:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.11 1999/05/30 23:14:03 pw Exp $")
 ;;;
 ;;; This file contains portable versions of low-level functions and macros
 ;;; which are ripe for implementation specific customization.  None of the
@@ -113,22 +113,12 @@
 ;;;
 ;;;  Very Low-Level representation of instances with meta-class standard-class.
 ;;;
-#-new-kcl-wrapper
-(progn
-#-cmu17
-(defstruct (std-instance (:predicate std-instance-p)
-			 (:conc-name %std-instance-)
-			 (:constructor %%allocate-instance--class ())
-			 (:print-function print-std-instance))
-  (wrapper nil)
-  (slots nil))
 
 (defmacro %instance-ref (slots index)
   `(%svref ,slots ,index))
 
 (defmacro instance-ref (slots index)
   `(svref ,slots ,index))
-)
 
 (defmacro std-instance-wrapper (x) `(%std-instance-wrapper ,x))
 (defmacro std-instance-slots   (x) `(%std-instance-slots ,x))
@@ -266,13 +256,9 @@
 ;;;
 (defvar *compiler-present-p* t)
 
-(defvar *compiler-speed*
-	#+(or KCL IBCL GCLisp CMU) :slow
-	#-(or KCL IBCL GCLisp CMU) :fast)
+(defvar *compiler-speed* :slow)
 
-(defvar *compiler-reentrant-p*
-	#+(and (not XKCL) (or KCL IBCL)) nil
-	#-(and (not XKCL) (or KCL IBCL)) t)
+(defvar *compiler-reentrant-p* t)
 
 (defun in-the-compiler-p ()
   )

@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.19 1999/03/14 01:14:13 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.20 1999/05/30 23:13:51 pw Exp $")
 
 (in-package :pcl)
 
@@ -590,7 +590,6 @@ work during bootstrapping.
   (function #'identity :type function)
   call-method-args)
 
-#+cmu
 (declaim (ext:freeze-type method-call))
 
 (defmacro invoke-method-call1 (function args cm-args)
@@ -614,7 +613,6 @@ work during bootstrapping.
   next-method-call
   arg-info)
 
-#+cmu
 (declaim (ext:freeze-type fast-method-call))
 
 (defmacro fmc-funcall (fn pv-cell next-method-call &rest args)
@@ -629,7 +627,6 @@ work during bootstrapping.
 (defstruct fast-instance-boundp
   (index 0 :type fixnum))
 
-#+cmu
 (declaim (ext:freeze-type fast-instance-boundp))
 
 (eval-when (compile load eval)
@@ -679,9 +676,8 @@ work during bootstrapping.
   (setq restp (eval restp))
   `(progn
      (trace-emf-call ,emf ,restp (list ,@required-args+rest-arg))
-     (cond (#-(or lucid excl) (typep ,emf 'fast-method-call)
-	    #+(or lucid excl) (fast-method-call-p ,emf)
-	     (invoke-fast-method-call ,emf ,@required-args+rest-arg))
+     (cond ((typep ,emf 'fast-method-call)
+	    (invoke-fast-method-call ,emf ,@required-args+rest-arg))
 	   ,@(when (and (null restp) (= 1 (length required-args+rest-arg)))
 	       `(((typep ,emf 'fixnum)
 		  (let* ((.slots. (get-slots-or-nil
@@ -1200,42 +1196,39 @@ work during bootstrapping.
 	(intern (symbol-name key) (find-package "KEYWORD"))
 	(car key))))
 
-(defun ftype-declaration-from-lambda-list (lambda-list #+cmu name)
+(defun ftype-declaration-from-lambda-list (lambda-list name)
   (multiple-value-bind (nrequired noptional keysp restp allow-other-keys-p
 				  keywords keyword-parameters)
       (analyze-lambda-list lambda-list)
     (declare (ignore keyword-parameters))
-    (let* (#+cmu (old (c::info function type name))
-	   #+cmu (old-ftype (if (c::function-type-p old) old nil))
-	   #+cmu (old-restp (and old-ftype (c::function-type-rest old-ftype)))
-	   #+cmu (old-keys (and old-ftype
-				(mapcar #'c::key-info-name
-					(c::function-type-keywords old-ftype))))
-	   #+cmu (old-keysp (and old-ftype (c::function-type-keyp old-ftype)))
-	   #+cmu (old-allowp (and old-ftype (c::function-type-allowp old-ftype)))
-	   (keywords #+cmu (union old-keys (mapcar #'keyword-spec-name keywords))
-		     #-cmu (mapcar #'keyword-spec-name keywords)))
+    (let* ((old (c::info function type name))
+	   (old-ftype (if (c::function-type-p old) old nil))
+	   (old-restp (and old-ftype (c::function-type-rest old-ftype)))
+	   (old-keys (and old-ftype
+			  (mapcar #'c::key-info-name
+				  (c::function-type-keywords old-ftype))))
+	   (old-keysp (and old-ftype (c::function-type-keyp old-ftype)))
+	   (old-allowp (and old-ftype (c::function-type-allowp old-ftype)))
+	   (keywords (union old-keys (mapcar #'keyword-spec-name keywords))))
       `(function ,(append (make-list nrequired :initial-element 't)
 			  (when (plusp noptional)
 			    (append '(&optional)
 				    (make-list noptional :initial-element 't)))
-			  (when (or restp #+cmu old-restp)
+			  (when (or restp old-restp)
 			    '(&rest t))
-			  (when (or keysp #+cmu old-keysp)
+			  (when (or keysp old-keysp)
 			    (append '(&key)
 				    (mapcar #'(lambda (key)
 						`(,key t))
 					    keywords)
-				    (when (or allow-other-keys-p #+cmu old-allowp)
+				    (when (or allow-other-keys-p old-allowp)
 				      '(&allow-other-keys)))))
 		 *))))
 
 (defun proclaim-defgeneric (spec lambda-list)
-  #-cmu (declare (ignore lambda-list))
-  (let (#+cmu
-	(decl `(ftype ,(ftype-declaration-from-lambda-list lambda-list #+cmu spec)
+  (let ((decl `(ftype ,(ftype-declaration-from-lambda-list lambda-list spec)
 		      ,spec)))
-    #+cmu (proclaim decl)
+    (proclaim decl)
    ))
 
 ;;;; Early generic-function support
@@ -1259,7 +1252,6 @@ work during bootstrapping.
 	       existing function-specifier all-keys))))
 
 (defun generic-clobbers-function (function-specifier)
-  #+cmu
   (error 'kernel:simple-program-error
 	 :format-control
 	 "~S already names an ordinary function or a macro,~%~
@@ -1267,14 +1259,7 @@ work during bootstrapping.
 	  will require that you decide what to do with the existing function~%~
 	  definition.~%~
 	  The PCL-specific function MAKE-SPECIALIZABLE may be useful to you."
-	 :format-arguments (list function-specifier))
-  #-(or cmu)
-  (error "~S already names an ordinary function or a macro,~%~
-	  you may want to replace it with a generic function, but doing so~%~
-	  will require that you decide what to do with the existing function~%~
-	  definition.~%~
-	  The PCL-specific function MAKE-SPECIALIZABLE may be useful to you."
-	 function-specifier))
+	 :format-arguments (list function-specifier)))
 
 (defvar *sgf-wrapper* 
   (boot-make-wrapper (early-class-size 'standard-generic-function)
@@ -1332,7 +1317,6 @@ work during bootstrapping.
   (gf-info-c-a-m-emf-std-p t)
   gf-info-fast-mf-p)
 
-#+cmu
 (declaim (ext:freeze-type arg-info))
 
 (defun arg-info-valid-p (arg-info)
@@ -1533,13 +1517,13 @@ work during bootstrapping.
      fin 
      (or function
 	 (if (eq spec 'print-object)
-	     #'(#+cmu kernel:instance-lambda #-cmu lambda (instance stream)
+	     #'(kernel:instance-lambda (instance stream)
 		 (printing-random-thing (instance stream)
-		   (format stream "std-instance")))
-	     #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+					(format stream "std-instance")))
+	     #'(kernel:instance-lambda (&rest args)
 		 (declare (ignore args))
 		 (error "The function of the funcallable-instance ~S~
-                         has not been set" fin)))))
+			 has not been set" fin)))))
     (setf (gdefinition spec) fin)
     (bootstrap-set-slot 'standard-generic-function fin 'name spec)
     (bootstrap-set-slot 'standard-generic-function fin 'source (load-truename))
@@ -2072,7 +2056,7 @@ work during bootstrapping.
 (defmacro with-slots (slots instance &body body)
   (let ((in (gensym)))
     `(let ((,in ,instance))
-       #+cmu (declare (ignorable ,in))
+       (declare (ignorable ,in))
        ,@(let ((instance (if (and (consp instance) (eq (car instance) 'the))
                              (third instance)
                              instance)))
@@ -2097,7 +2081,7 @@ work during bootstrapping.
 (defmacro with-accessors (slots instance &body body)
   (let ((in (gensym)))
     `(let ((,in ,instance))
-       #+cmu (declare (ignorable ,in))
+       (declare (ignorable ,in))
        ,@(let ((instance (if (and (consp instance) (eq (car instance) 'the))
                              (third instance)
                              instance)))

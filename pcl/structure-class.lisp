@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/structure-class.lisp,v 1.2 1998/12/20 04:30:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/structure-class.lisp,v 1.3 1999/05/30 23:14:09 pw Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -94,9 +94,7 @@
          (conc-name
            (or (if defstruct-form (defstruct-form-conc-name defstruct-form))
                (slot-value class 'defstruct-conc-name)
-               (format nil #-excl "~s structure class "
-                           #+excl "~s_STRUCTURE.CLASS_"
-                           name)))
+               (format nil "~s structure class " name)))
          (defstruct-predicate
            (if defstruct-form (defstruct-form-predicate-name defstruct-form)))
          (pred-name  ;; Predicate name for class

@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/cmu-low.lisp,v 1.17 1998/12/20 04:30:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/cmu-low.lisp,v 1.18 1999/05/30 23:13:53 pw Exp $")
 ;;; 
 ;;; This is the CMU Lisp version of the file low.
 ;;; 
@@ -83,31 +83,7 @@
 	       (eval:interpreted-function
 		(setf (eval:interpreted-function-name fcn) new-name))))
          fcn)
-        (t
-	 ;; pw-- This seems wrong and causes trouble. Tests show
-	 ;; that loading CL-HTTP resulted in ~5400 closures being
-	 ;; passed through this code of which ~4000 of them pointed
-	 ;; to but 16 closure-functions, including 1015 each of
-	 ;; DEFUN MAKE-OPTIMIZED-STD-WRITER-METHOD-FUNCTION
-	 ;; DEFUN MAKE-OPTIMIZED-STD-READER-METHOD-FUNCTION
-	 ;; DEFUN MAKE-OPTIMIZED-STD-BOUNDP-METHOD-FUNCTION.
-	 ;; Since the actual functions have been moved by PURIFY
-	 ;; to memory not seen by GC, changing a pointer there
-	 ;; not only clobbers the last change but leaves a dangling
-	 ;; pointer invalid  after the next GC. Comments in low.lisp
-	 ;; indicate this code need do nothing. Setting the
-	 ;; function-name to NIL loses some info, and not changing
-	 ;; it loses some info of potential hacking value. So,
-	 ;; lets not do this...
-	 #+nil
-         (let ((header (kernel:%closure-function fcn)))
-	   #+cmu17
-	   (setf (c::%function-name header) new-name)
-	   #-cmu17
-           (system:%primitive c::set-function-name header new-name))
-
-	 ;; Maybe add better scheme here someday.
-	 fcn)))
+        (t fcn)))
 
 (in-package "C")
 
@@ -201,8 +177,6 @@
 
 
 ;;;; Structure-instance stuff:
-
-(pushnew :structure-wrapper *features*)
 
 (defun structure-functions-exist-p ()
   t)

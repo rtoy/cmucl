@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/construct.lisp,v 1.11 1998/12/20 04:30:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/construct.lisp,v 1.12 1999/05/30 23:13:54 pw Exp $")
 ;;;
 ;;; This file defines the defconstructor and other make-instance optimization
 ;;; mechanisms.
@@ -130,13 +130,7 @@
        ;; tell the compile time environment that a function with this
        ;; name and this argument list has been defined.  The portable
        ;; way to do this is with defun.
-       #-cmu (proclaim '(notinline ,name))
-       #-cmu
-       (defun ,name ,lambda-list
-	 (declare (ignore ,@(extract-parameters lambda-list)))
-	 (error "Constructor ~S not loaded." ',name))
        ;; But the derived result type for the above is wrong under CMUCL.
-       #+cmu
        (proclaim '(ftype ,(ftype-declaration-from-lambda-list lambda-list name)
 		         ,name))
 
@@ -302,7 +296,7 @@
 (defmethod install-lazy-constructor-installer ((constructor constructor))
   (let ((class (constructor-class constructor)))
     (set-constructor-code constructor
-			  #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+			  #'(kernel:instance-lambda (&rest args)
 			      (multiple-value-bind (code type)
 				  (compute-constructor-code class constructor)
 				(set-constructor-code constructor code type)
@@ -633,7 +627,7 @@
      (lambda (&rest ignore)
        (declare (ignore ignore))
        (function
-	 (#+cmu kernel:instance-lambda #-cmu lambda ,arglist
+	 (kernel:instance-lambda ,arglist
 	   (make-instance
 	     ',(class-name class)
 	     ,@(gathering1 (collecting)
@@ -675,7 +669,7 @@
 		      (null (non-pcl-or-after-shared-initialize-methods-p
 			      shared)))
 	     (function
-	       (#+cmu kernel:instance-lambda #-cmu lambda ,arglist
+	       (kernel:instance-lambda ,arglist
 		 (declare #.*optimize-speed*)
 		 (let* ((.instance. (,raw-allocator .wrapper. .constants.))
 			(.slots. (,slots-fetcher .instance.))
@@ -835,7 +829,7 @@
 	   (when (and .constants.
 		      (null (non-pcl-initialize-instance-methods-p init))
 		      (null (non-pcl-shared-initialize-methods-p shared)))
-	     #'(#+cmu kernel:instance-lambda #-cmu lambda ,arglist
+	     #'(kernel:instance-lambda ,arglist
 		 (declare #.*optimize-speed*)
 		 (let* ((.instance. (,raw-allocator .wrapper. .constants.))
 			(.slots. (,slots-fetcher .instance.))
@@ -969,7 +963,7 @@
 						',supplied-initargs)
 	     (when .constants.
 	       (function
-		 (#+cmu kernel:instance-lambda #-cmu lambda ,arglist
+		 (kernel:instance-lambda ,arglist
 		   (declare #.*optimize-speed*)
 		   (let* ((.instance. (,raw-allocator .wrapper. .constants.))
 			  (.slots. (,slots-fetcher .instance.))

@@ -72,14 +72,9 @@
 ;;; the `real' definition without affecting the advise.
 ;;;
 (defun (setf gdefinition) (new-definition name)
-  #+cmu (progn
-	  (c::%%defun name new-definition nil)
-	  (c::note-name-defined name :function)
-	  new-definition)
-  #-(or cmu)
-  (setf (symbol-function name) new-definition))
-
-
+  (c::%%defun name new-definition nil)
+  (c::note-name-defined name :function)
+  new-definition)
 
 (proclaim '(special *the-class-t* 
 	            *the-class-vector* *the-class-symbol*
@@ -146,7 +141,6 @@
 					 :object (coerce-to-class (car args))))
 	       (class-eq (class-eq-specializer (coerce-to-class (car args))))
 	       (eql      (intern-eql-specializer (car args))))))
-	#+cmu17
 	((and (null args) (typep type 'lisp:class))
 	 (or (kernel:class-pcl-class type)
 	     (find-structure-class (lisp:class-name type))))
@@ -242,8 +236,7 @@
     ((not and or) `(,(car type) ,@(mapcar #'convert-to-system-type
 					  (cdr type))))
     ((class class-eq) ; class-eq is impossible to do right
-     #-cmu17 (class-name (cadr type))
-     #+cmu17 (kernel:layout-class (class-wrapper (cadr type))))
+     (kernel:layout-class (class-wrapper (cadr type))))
     (eql type)
     (t (if (null (cdr type))
 	   (car type)
@@ -281,13 +274,7 @@
 			 (convert-to-system-type type2))))))))
 
 (defun do-satisfies-deftype (name predicate)
-  #+cmu17 (declare (ignore name predicate))
-  #-(or cmu17)
-  ;; This is the default for ports for which we don't know any
-  ;; better.  Note that for most ports, providing this definition
-  ;; should just speed up class definition.  It shouldn't have an
-  ;; effect on performance of most user code.
-  (eval `(deftype ,name () '(satisfies ,predicate))))
+  (declare (ignore name predicate)))
 
 (defun make-type-predicate-name (name &optional kind)
   (if (symbol-package name)
@@ -423,7 +410,6 @@
 		 list)     ()                       (symbol list sequence t)
      nil)))
 
-#+cmu17
 (labels ((direct-supers (class)
 	   (if (typep class 'lisp:built-in-class)
 	       (kernel:built-in-class-direct-superclasses class)
@@ -464,24 +450,22 @@
 (defclass t () ()
   (:metaclass built-in-class))
 
-#+cmu17
-(progn
-  (defclass kernel:instance (t) ()
-    (:metaclass built-in-class))
-  
-  (defclass function (t) ()
-    (:metaclass built-in-class))
+(defclass kernel:instance (t) ()
+  (:metaclass built-in-class))
 
-  (defclass kernel:funcallable-instance (function) ()
-    (:metaclass built-in-class))
+(defclass function (t) ()
+  (:metaclass built-in-class))
 
-  (defclass stream (t) ()
-    (:metaclass built-in-class)))
+(defclass kernel:funcallable-instance (function) ()
+  (:metaclass built-in-class))
+
+(defclass stream (t) ()
+  (:metaclass built-in-class))
 
 (defclass slot-object (t) ()
   (:metaclass slot-class))
 
-(defclass structure-object (slot-object #+cmu17 kernel:instance) ()
+(defclass structure-object (slot-object kernel:instance) ()
   (:metaclass structure-class))
 
 (defstruct (dead-beef-structure-object
@@ -491,10 +475,10 @@
 (defclass std-object (slot-object) ()
   (:metaclass std-class))
 
-(defclass standard-object (std-object #+cmu17 kernel:instance) ())
+(defclass standard-object (std-object kernel:instance) ())
 
 (defclass funcallable-standard-object (std-object
-				       #+cmu17 kernel:funcallable-instance)
+				       kernel:funcallable-instance)
      ()
   (:metaclass funcallable-standard-class))
 

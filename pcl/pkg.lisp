@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.15 1998/12/20 04:30:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.16 1999/05/30 23:14:05 pw Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 ;;; Note that at this time CMUCL is not in compliance with ANSI
@@ -55,19 +55,12 @@
 	   "*ITERATE-WARNINGS*"))
 
 (defpackage "PCL" (:use :common-lisp :walker :iterate)
-  #+CMU
   (:shadow "DESTRUCTURING-BIND")
-  #+cmu17
   (:shadow "FIND-CLASS" "CLASS-NAME" "CLASS-OF"
 	   "CLASS" "BUILT-IN-CLASS" "STRUCTURE-CLASS"
 	   "STANDARD-CLASS")
-
-  #+cmu
   (:shadow "DOTIMES")
-
-  #+cmu
   (:import-from :kernel "FUNCALLABLE-INSTANCE-P")
-
   (:shadow "DOCUMENTATION")
 
 
@@ -115,12 +108,9 @@
 	   "SLOT-UNBOUND"
 	   "SLOT-VALUE"
 	   "STANDARD"
-	   #-CMU17 "STANDARD-CLASS"
 	   "STANDARD-GENERIC-FUNCTION"
 	   "STANDARD-METHOD"
 	   "STANDARD-OBJECT"
-	   #-CMU17 "STRUCTURE-CLASS"
-	   #-CMU17 "SYMBOL-MACROLET"
 	   "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS"
 	   "UPDATE-INSTANCE-FOR-REDEFINED-CLASS"
 	   "WITH-ACCESSORS"
@@ -146,9 +136,7 @@
 	   "STANDARD-EFFECTIVE-SLOT-DEFINITION"
 	   "SPECIALIZER"
 	   "EQL-SPECIALIZER"
-	   #-CMU17 "BUILT-IN-CLASS"
 	   "FORWARD-REFERENCED-CLASS"
-	   #-CMU17 "STANDARD-CLASS"
 	   "FUNCALLABLE-STANDARD-CLASS"
 	   "FUNCALLABLE-STANDARD-OBJECT")
 

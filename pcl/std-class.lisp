@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.24 1999/03/14 01:14:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.25 1999/05/30 23:14:08 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -330,8 +330,7 @@
     ;; have a wrapper. RES is the incomplete PCL class. The Lisp class
     ;; does not yet exist. Maybe should return NIL in that case as RES
     ;; is not useful to the user?
-    #+cmu17 (and (class-wrapper res)(kernel:layout-class (class-wrapper res)))
-    #-cmu17 res))
+    (and (class-wrapper res)(kernel:layout-class (class-wrapper res)))))
 
 (setf (gdefinition 'load-defclass) #'real-load-defclass)
 
@@ -567,11 +566,7 @@
   (setf (slot-value class 'class-precedence-list) 
 	(compute-class-precedence-list class))
   (setf (slot-value class 'slots) (compute-slots class))
-  #-(or cmu17)
-  (unless (slot-value class 'wrapper) 
-    (setf (slot-value class 'wrapper) (make-wrapper 0 class)))
-  #+cmu17
- (let ((lclass (lisp:find-class (class-name class))))
+  (let ((lclass (lisp:find-class (class-name class))))
     (setf (kernel:class-pcl-class lclass) class)
     (setf (slot-value class 'wrapper) (kernel:class-layout lclass)))
   (update-pv-table-cache-info class)
@@ -709,7 +704,6 @@
 		   (class-wrapper class)))))
 
       (with-slots (wrapper slots) class
-	#+cmu17
 	(update-lisp-class-layout class nwrapper)
 	(setf slots eslotds
 	      (wrapper-instance-slots-layout nwrapper) nlayout
@@ -1045,7 +1039,6 @@
 	(setf (wrapper-class-slots nwrapper)
 	      (wrapper-class-slots owrapper))
 	(without-interrupts
-	  #+cmu17
 	  (update-lisp-class-layout class nwrapper)
 	  (setf (slot-value class 'wrapper) nwrapper)
 	  (invalidate-wrapper owrapper ':flush nwrapper))))))
@@ -1070,7 +1063,6 @@
       (setf (wrapper-class-slots nwrapper)
 	    (wrapper-class-slots owrapper))
       (without-interrupts
-	#+cmu17
 	(update-lisp-class-layout class nwrapper)
 	(setf (slot-value class 'wrapper) nwrapper)
 	(invalidate-wrapper owrapper ':obsolete nwrapper)
@@ -1112,7 +1104,6 @@
 (defvar *the-wrapper-of-structure-object* 
   (class-wrapper (find-class 'structure-object)))
 
-#+cmu17
 (define-condition obsolete-structure (error)
   ((datum :reader obsolete-structure-datum :initarg :datum))
   (:report
@@ -1125,16 +1116,10 @@
 	     (type-of (obsolete-structure-datum condition))))))
 
 (defun obsolete-instance-trap (owrapper nwrapper instance)
-  (if (not #-(or cmu17)
-           (or (std-instance-p instance) (fsc-instance-p instance))
-	   #+cmu17
-           (pcl-instance-p instance))
+  (if (not (pcl-instance-p instance))
       (if *in-obsolete-instance-trap*
           *the-wrapper-of-structure-object* 
            (let ((*in-obsolete-instance-trap* t))
-	     #-cmu17
-             (error "The structure ~S is obsolete." instance)
-	     #+cmu17
 	     (error 'obsolete-structure :datum instance)))
       (let* ((class (wrapper-class* nwrapper))
 	     (copy (allocate-instance class)) ;??? allocate-instance ???
@@ -1292,7 +1277,7 @@
 (defmethod class-default-initargs        ((class built-in-class)) ())
 
 (defmethod validate-superclass ((c class) (s built-in-class))
-  (or (eq s *the-class-t*) #+cmu (eq s *the-class-stream*)))
+  (or (eq s *the-class-t*) (eq s *the-class-stream*)))
 
 
 

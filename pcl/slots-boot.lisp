@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.7 1999/03/11 16:51:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.8 1999/05/30 23:14:06 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -196,7 +196,7 @@
    `(boundp ,slot-name)))
 
 (defun make-optimized-structure-slot-value-using-class-method-function (function)
-  #+cmu (declare (type function function))
+  (declare (type function function))
   #'(lambda (class object slotd)
       (let ((value (funcall function object)))
 	(if (eq value *slot-unbound*)
@@ -204,13 +204,13 @@
 	    value))))	    
 
 (defun make-optimized-structure-setf-slot-value-using-class-method-function (function)
-  #+cmu (declare (type function function))
+  (declare (type function function))
   #'(lambda (nv class object slotd)
       (declare (ignore class slotd))
       (funcall function nv object)))
 
 (defun make-optimized-structure-slot-boundp-using-class-method-function (function)
-  #+cmu (declare (type function function))
+  (declare (type function function))
   #'(lambda (class object slotd)
       (declare (ignore class slotd))
       (not (eq (funcall function object) *slot-unbound*))))
@@ -237,7 +237,7 @@
 		 #'make-optimized-std-setf-slot-value-using-class-method-function)
 		(boundp 
 		 #'make-optimized-std-slot-boundp-using-class-method-function))))
-	#+cmu (declare (type function function))
+	(declare (type function function))
 	(values (funcall function fsc-p slot-name index) index))))
 
 (defun make-optimized-std-slot-value-using-class-method-function

@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.12 1999/03/11 16:51:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.13 1999/05/30 23:13:59 pw Exp $")
 ;;;
 
   ;;   
@@ -152,12 +152,10 @@ explicitly marked saying who wrote it.
   ;; The debug-name for this function.
   (funcallable-instance-name nil))
 
-#+CMU
 ;;; Note: returns true for non-pcl funcallable structures.
 (import 'kernel:funcallable-instance-p)
 
-#+CMU
-(progn
+
 ;;; SET-FUNCALLABLE-INSTANCE-FUNCTION  --  Interface
 ;;;
 ;;;    Set the function that is called when FIN is called.
@@ -182,10 +180,6 @@ explicitly marked saying who wrote it.
 
 (defmacro pcl-funcallable-instance-wrapper (x)
   `(kernel:%funcallable-instance-layout ,x))
-                
-); End of #+cmu progn
-
-
 
   
 ;;;; Slightly Higher-Level stuff built on the implementation-dependent stuff.

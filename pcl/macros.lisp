@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.13 1999/04/25 12:46:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.14 1999/05/30 23:14:03 pw Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -38,15 +38,15 @@
 (in-package :pcl)
 
 (proclaim '(declaration
-	     #-Genera values          ;I use this so that Zwei can remind
-				      ;me what values a function returns.
+	    values ;;I use this so that Zwei can remind
+	           ;;me what values a function returns.
 	     
-	     #-Genera arglist	      ;Tells me what the pretty arglist
-				      ;of something (which probably takes
-				      ;&rest args) is.
+	    arglist ;;Tells me what the pretty arglist
+	            ;;of something (which probably takes
+		    ;;&rest args) is.
 
-	     #-Genera indentation     ;Tells ZWEI how to indent things
-			              ;like defclass.
+	    indentation     ;;Tells ZWEI how to indent things
+			    ;;like defclass.
 	     class
 	     variable-rebinding
 	     pcl-fast-call
@@ -164,10 +164,6 @@
 	(return-from get-declaration (cdr form))))))
 
 
-#+Lucid
-(eval-when (compile load eval)
-  (eval `(defstruct ,(intern "FASLESCAPE" (find-package 'lucid)))))
-
 (defvar *keyword-package* (find-package 'keyword))
 
 (defun make-keyword (symbol)
@@ -260,18 +256,15 @@
 	  ((null pat) ())
 	(if (symbolp (setq var (car pat)))
 	    (progn
-	      #-:coral (unless (memq var '(nil ignore))
-			 (push var *destructure-vars*))
-	      #+:coral (push var *destructure-vars*)	      
+	      (unless (memq var '(nil ignore))
+			 (push var *destructure-vars*))	      
 	      (cond ((null (cdr pat))
 		     (push (make-pop var form ()) setqs))
 		    ((symbolp (cdr pat))
 		     (push (make-pop var form (cdr pat)) setqs)
 		     (push (cdr pat) *destructure-vars*)
 		     (return ()))
-		    #-:coral
 		    ((memq var '(nil ignore)) (incf pending-pops))
-		    #-:coral
 		    ((memq (cadr pat) '(nil ignore))
 		     (push (make-pop var form ()) setqs)
 		     (incf pending-pops 1))
@@ -335,18 +328,7 @@
 ;;; Similar to printing-random-object in the lisp machine but much simpler
 ;;; and machine independent.
 (defmacro printing-random-thing ((thing stream) &body body)
-  #+cmu17
-  `(print-unreadable-object (,thing ,stream :identity t) ,@body)
-  #-cmu17
-  (once-only (thing stream)
-    `(progn
-       (when *print-readably*
-	 (error "~S cannot be printed readably." thing))
-       (format ,stream "#<")
-       ,@body
-       (format ,stream " ")
-       (printing-random-thing-internal ,thing ,stream)
-       (format ,stream ">"))))
+  `(print-unreadable-object (,thing ,stream :identity t) ,@body))
 
 (defun printing-random-thing-internal (thing stream)
   (declare (ignore thing stream))
@@ -375,23 +357,6 @@
 	     (setq flag t)
 	     (unless dashes-p (setf (elt string i) #\space)))
 	    (t (setq flag nil))))))
-
-#-(or lucid kcl)
-(eval-when (compile load eval)
-;(warn "****** Things will go faster if you fix define-compiler-macro")
-)
-
-#-cmu
-(defmacro define-compiler-macro (name arglist &body body)
-  #+(or lucid kcl)
-  `(#+lucid lcl:def-compiler-macro #+kcl si::define-compiler-macro
-	    ,name ,arglist
-	    ,@body)
-  #-(or kcl lucid)
-  (declare (ignore name arglist body))
-  #-(or kcl lucid)
-  nil)
-
 
 ;;;
 ;;; FIND-CLASS
@@ -463,7 +428,7 @@
 
 ; Use this definition in any CL implementation supporting 
 ; both define-compiler-macro and load-time-value.
-#+cmu ; Note that in CMU, lisp:find-class /= pcl:find-class
+; Note that in CMU, lisp:find-class /= pcl:find-class
 (define-compiler-macro find-class (&whole form
 				   symbol &optional (errorp t) environment)
   (declare (ignore environment))
@@ -476,9 +441,6 @@
 	    (class-cell (make-symbol "CLASS-CELL")))	
 	`(let ((,class-cell (load-time-value (find-class-cell ',symbol))))
 	   (or (find-class-cell-class ,class-cell)
-	       #-cmu17
-	       (find-class-from-cell ',symbol ,class-cell ,errorp)
-	       #+cmu17
 	       ,(if errorp
 		    `(find-class-from-cell ',symbol ,class-cell t)
 		    `(and (kernel:class-cell-class 
@@ -537,12 +499,10 @@
 	         (setq tail (funcall ,by tail))))))
 
 (defmacro function-funcall (form &rest args)
-  #-cmu `(funcall ,form ,@args)
-  #+cmu `(funcall (the function ,form) ,@args))
+  `(funcall (the function ,form) ,@args))
 
 (defmacro function-apply (form &rest args)
-  #-cmu `(apply ,form ,@args)
-  #+cmu `(apply (the function ,form) ,@args))
+  `(apply (the function ,form) ,@args))
 
 
 (defsetf slot-value set-slot-value)

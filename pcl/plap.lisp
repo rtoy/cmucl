@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/plap.lisp,v 1.8 1998/12/20 04:30:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/plap.lisp,v 1.9 1999/05/30 23:14:06 pw Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -97,9 +97,6 @@
 	   (*lap-rest-p* (not (null rest))))
       `(lambda ,cvars
 	 #'(lambda ,args
-	     #-CMU (declare ,*lap-optimize-declaration*)
-	     #-CMU ,(make-lap-prog-internal i-regs v-regs fv-regs t-regs lap)
-	     #+CMU
              ;;
              ;; Use LOCALLY instead of a declare on the lambda so that we don't
              ;; suppress arg count checking...
@@ -123,10 +120,8 @@
 		    (append i-regs v-regs fv-regs t-regs))
 	   (declare (type fixnum ,@(mapcar #'lap-reg *lap-i-regs*))
 		    (type simple-vector ,@(mapcar #'lap-reg *lap-v-regs*))
-		    (type #+structure-wrapper cache-number-vector
-		          #-structure-wrapper (simple-array fixnum)
-		          ,@(mapcar #'lap-reg *lap-fv-regs*))
-	            #-cmu ,*lap-optimize-declaration*)
+		    (type  cache-number-vector
+		          ,@(mapcar #'lap-reg *lap-fv-regs*)))
 	   ,.code)))
 
 (defvar *empty-vector* '#())
@@ -189,7 +184,7 @@
     (:exit-lap-in-lisp () `(go exit-lap-in-lisp))
     
     (:break ()      `(break))
-    (:beep  ()      #+Genera`(zl:beep))
+    (:beep  ()      )
     (:print (val)   (lap-operands 'print val))
     ))
 
@@ -253,12 +248,10 @@
 (proclaim '(declaration pcl-fast-call))
 
 (defmacro RUNTIME\ FUNCALL (fn &rest args)
-  #+CMU `(funcall (the function ,fn) ,.args)
-  #-CMU `(funcall ,fn ,.args))
+  `(funcall (the function ,fn) ,.args))
 
 (defmacro RUNTIME\ APPLY (fn &rest args)
-  #+CMU `(apply (the function ,fn) ,.args)
-  #-CMU `(apply ,fn ,.args))
+  `(apply (the function ,fn) ,.args))
 
 (defmacro RUNTIME\ EMF-CALL (emf restp &rest required-args+rest-arg)
   `(invoke-effective-method-function ,emf ,restp ,@required-args+rest-arg))
@@ -311,30 +304,18 @@
 ;;; Some compilers are so stupid...
 ;;;
 (defmacro RUNTIME\ IREF (vector index)
-  #-structure-wrapper
-  `(svref (the simple-vector ,vector) (the fixnum ,index))
-  #+structure-wrapper
   `(aref ,vector (the fixnum ,index)))
 
 (defmacro RUNTIME\ ISET (vector index value)
   `(setf (svref (the simple-vector ,vector) (the fixnum ,index)) ,value))
 
 (defmacro RUNTIME\ INSTANCE-REF (vector index)
-  #-new-kcl-wrapper
-  `(svref (the simple-vector ,vector) (the fixnum ,index))
-  #+new-kcl-wrapper
-  `(%instance-ref ,vector (the fixnum ,index)))
+  `(svref (the simple-vector ,vector) (the fixnum ,index)))
 
 (defmacro RUNTIME\ INSTANCE-SET (vector index value)
-  #-new-kcl-wrapper
-  `(setf (svref (the simple-vector ,vector) (the fixnum ,index)) ,value)
-  #+new-kcl-wrapper
-  `(setf (%instance-ref ,vector (the fixnum ,index)) ,value))
+  `(setf (svref (the simple-vector ,vector) (the fixnum ,index)) ,value))
 
 (defmacro RUNTIME\ SVREF (vector fixnum)
-  #-structure-wrapper
-  `(svref (the simple-vector ,vector) (the fixnum ,fixnum))
-  #+structure-wrapper
   `(aref ,vector (the fixnum ,fixnum)))
 
 (defmacro RUNTIME\ I+ (index1 index2)
@@ -347,8 +328,7 @@
   `(the fixnum (1+ (the fixnum ,index))))
 
 (defmacro RUNTIME\ ILOGAND (index1 index2)
-  #-Lucid `(the fixnum (logand (the fixnum ,index1) (the fixnum ,index2)))
-  #+Lucid `(%logand ,index1 ,index2))
+  `(the fixnum (logand (the fixnum ,index1) (the fixnum ,index2))))
 
 (defmacro RUNTIME\ ILOGXOR (index1 index2)
   `(the fixnum (logxor (the fixnum ,index1) (the fixnum ,index2))))

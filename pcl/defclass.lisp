@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.15 1999/03/14 01:14:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.16 1999/05/30 23:13:55 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -54,14 +54,9 @@
 		       (capitalize-words (car name) ()) (cdr name))
 	       (format nil "~S" name))))
     (definition-name)
-
-    #+cmu
     (if (member 'compile times)
         `(eval-when ,times ,form)
-        form)
-
-    #-(or cmu)
-    (make-progn `',name `(eval-when ,times ,form))))
+        form)))
 
 (defun make-progn (&rest forms)
   (let ((progn-form nil))
@@ -112,9 +107,6 @@
 		     "The value of the :metaclass option (~S) is not a~%~
 		      legal class name."
 		     :format-arguments (list (cadr option))))
-	    #-cmu17
-            (setq metaclass (cadr option))
-	    #+cmu17
 	    (setq metaclass
 		  (case (cadr option)
 		    (lisp:standard-class 'standard-class)
@@ -146,10 +138,10 @@
 		   `(progn
 		      ,@(mapcar #'(lambda (x)
 				    `(declaim (ftype (function (t) t) ,x)))
-				#+cmu *readers* #-cmu nil)
+				*readers*)
 		      ,@(mapcar #'(lambda (x)
 				    `(declaim (ftype (function (t t) t) ,x)))
-				#+cmu *writers* #-cmu nil)
+				*writers*)
 		      (let ,(mapcar #'cdr *initfunctions*)
 			(load-defclass ',name
 				       ',metaclass

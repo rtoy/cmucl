@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.6 1998/12/20 04:30:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.7 1999/05/30 23:13:58 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -95,7 +95,7 @@
   (if cached-emf-p
       #'(lambda (cache miss-fn)
 	  (declare (type function miss-fn))
-	  #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+	  #'(kernel:instance-lambda (&rest args)
 	      (declare #.*optimize-speed*)
 	      #+copy-&rest-arg (setq args (copy-list args))
 	      (with-dfun-wrappers (args metatypes)
@@ -111,7 +111,7 @@
 			      (invoke-emf emf args))))))))
       #'(lambda (cache emf miss-fn)
 	  (declare (type function miss-fn))
-	  #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+	  #'(kernel:instance-lambda (&rest args)
 	      (declare #.*optimize-speed*)
 	      #+copy-&rest-arg (setq args (copy-list args))
 	      (with-dfun-wrappers (args metatypes)

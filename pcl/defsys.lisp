@@ -24,9 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.20 1999/03/14 01:14:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.21 1999/05/30 23:13:56 pw Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -80,7 +80,6 @@
 
 (defvar *pcl-system-date* "September 16 92 PCL (f)")
 
-#+cmu
 (setf (getf ext:*herald-items* :pcl)
       `("    CLOS based on PCL version:  " ,*pcl-system-date*))
 
@@ -144,8 +143,7 @@ and load your system with:
 ;;; defsys use the value of *port* rather than #+ and #- to conditionalize
 ;;; the way they work.
 ;;; 
-(defvar *port*
-        '(#+:CMU                 CMU))
+(defvar *port* '(CMU))
 
 ;;;
 ;;; When you get a copy of PCL (by tape or by FTP), the sources files will
@@ -173,7 +171,7 @@ and load your system with:
 ;;;       "mv *.lisp *.lsp".
 ;;;
 (defvar *default-pathname-extensions*
-  (car '(#+cmu ("lisp" . #.(c:backend-fasl-file-type c:*backend*)))))
+  (car '(("lisp" . #.(c:backend-fasl-file-type c:*backend*)))))
 
 (defvar *pathname-extensions*
   (let ((proper-extensions *default-pathname-extensions*))
@@ -363,7 +361,6 @@ and load your system with:
   (declare (ignore ignore))
   't)
 
-#+cmu17
 (defparameter *byte-files* '(defclass defcombin iterate env))
 
 (defun operate-on-system (name mode &optional arg print-only)
@@ -388,7 +385,7 @@ and load your system with:
 				   (make-pathname :defaults
 						  (make-binary-pathname name)
 						  :version :newest)
-				   #+cmu17 :byte-compile #+cmu17
+				   :byte-compile
 				   (if (and (member name *byte-files*)
 					    (member :small *features*))
 				       t
@@ -465,14 +462,6 @@ and load your system with:
   (declare (ignore errorp))
   *load-truename*)
 
-#-(or cmu Symbolics)
-(defvar *pcl-directory*
-	(or (load-truename t)
-	    (error "Because load-truename is not implemented in this port~%~
-                    of PCL, you must manually edit the definition of the~%~
-                    variable *pcl-directory* in the file defsys.lisp.")))
-
-#+cmu 
 (defvar *pcl-directory* (pathname "target:pcl/"))
 
 (defsystem pcl	   
@@ -592,8 +581,6 @@ and load your system with:
     (do-symbols (sym pkg)
       (when (eq pkg (symbol-package sym))
 	(if (or (constantp sym)
-		#-cmu (member sym '(wrapper cache arg-info pv-table))
-		#+cmu
 		(or (c::info setf inverse sym)
 		    (c::info setf expander sym)
 		    (c::info type kind sym)
@@ -605,6 +592,5 @@ and load your system with:
 	      (unless (or (eq sym 'reset-pcl-package)
 			  (eq sym 'reset-package))
 		(fmakunbound sym)
-		#+cmu
 		(fmakunbound `(setf ,sym)))
 	      (setf (symbol-plist sym) nil)))))))

@@ -16,9 +16,9 @@
 ;;; Suggestions, bugs, criticism and questions to lange@cs.ucla.edu
 ;;; *************************************************************************
 ;;;
-#+cmu
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.2 1998/12/20 04:30:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.3 1999/05/30 23:13:58 pw Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -491,10 +491,6 @@
             variable-accessors))
        ,@body))))
 
-
-#-(or KCL IBCL)
 (export *extensions-exports* *the-pcl-package*)
 
-#+(or KCL IBCL)
-(mapc 'export (list *extensions-exports*) (list *the-pcl-package*))
 
