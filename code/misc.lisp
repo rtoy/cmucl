@@ -7,13 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.9 1991/03/19 13:30:43 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.10 1991/08/30 15:38:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.9 1991/03/19 13:30:43 chiles Exp $
-;;;
-;;; Assorted miscellaneous functions for Spice Lisp.
+;;; Environment query functions, documentation and dribble.
 ;;;
 ;;; Written and maintained mostly by Skef Wholey and Rob MacLachlan.
 ;;; Scott Fahlman, Dan Aronson, and Steve Handerson did stuff here, too.
@@ -23,6 +21,10 @@
 	  lisp-implementation-type lisp-implementation-version machine-type
 	  machine-version machine-instance software-type software-version
 	  short-site-name long-site-name dribble))
+
+(in-package "SYSTEM")
+(export '(*software-type* *short-site-name* *long-site-name*))
+(in-package "LISP")
 
 
 (defun documentation (name doc-type)
@@ -60,7 +62,7 @@
 		 (info random-documentation stuff name))))))
   string)
 
-(defvar *features* '(:common :cmu :mach :new-compiler)
+(defvar *features* '(:common :cmu :new-compiler)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 
@@ -91,25 +93,26 @@
   "Returns a string giving the name of the local machine."
   (mach::unix-gethostname))
 
+(defvar *software-type* "Unix"
+  "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")
+
 (defun software-type ()
   "Returns a string describing the supporting software."
-  "MACH/4.3BSD")
+  *software-type*)
 
-(defun software-version ()
-  "Returns a string describing version of the supporting software."
-  (string-trim
-   '(#\newline)
-   (with-output-to-string (stream)
-     (run-program "/usr/cs/etc/version" nil :output stream))))
+(defvar *short-site-name* "Unknown"
+  "The value of SHORT-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun short-site-name ()
   "Returns a string with the abbreviated site name."
-  "CMU-SCS")
+  *short-site-name*)
+
+(defvar *long-site-name* "Site name not initialized"
+  "The value of LONG-SITE-NAME.  Set in library:site-init.lisp.")
 
 (defun long-site-name ()
   "Returns a string with the long form of the site name."
-  "Carnegie-Mellon University School of Computer Science")
-
+  *long-site-name*)
 
 
 ;;;; Dribble stuff:
