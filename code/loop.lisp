@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.25 2004/10/05 21:55:12 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.26 2004/10/19 18:13:16 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1255,6 +1255,8 @@ collected result will be returned as the value of the LOOP."
 
 
 (defun loop-make-iteration-variable (name initialization dtype)
+  (when (and name (loop-variable-p name))
+    (loop-error "Variable ~S has already been used" name))
   (loop-make-variable name initialization dtype t))
 
 
