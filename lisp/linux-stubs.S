@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.14 2003/03/02 16:13:38 emarsden Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.15 2003/03/08 17:51:52 pmai Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -34,6 +34,7 @@ PVE_stub_ ## fct: ;\
  doe(fstat64)
  doe(lstat64)
  doe(mknod)
+ doe(readdir64)
 #else
  doe(accept)
  doe(access)

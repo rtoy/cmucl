@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.23 2003/03/05 15:54:52 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.24 2003/03/08 17:51:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,11 +33,25 @@
 ;; 64-bit wide versions of the data structures. The most ugly aspect
 ;; is that some of the stat functions are not available via dlsym, so
 ;; we reference them explicitly from linux-stubs.S. Another amusing
-;; fact is that stat64() returns a struct stat with a 32-bit inode_t,
-;; whereas readdir64() returns a struct dirent that contains a 64-bit
-;; inode_t. 
-
-
+;; fact is that on glibc 2.2, stat64() returns a struct stat with a
+;; 32-bit ino_t, whereas readdir64() returns a struct dirent that
+;; contains a 64-bit ino_t.  On glibc 2.1, OTOH, both stat64 and
+;; readdir64 use structs with 32-bit ino_t.
+;;
+;; The current version deals with this by going with the glibc 2.2
+;; definitions, unless the keyword :glibc2.1 also occurs on *features*,
+;; in addition to :glibc2, in which case we go with the glibc 2.1
+;; definitions.  Note that binaries compiled against glibc 2.1 do in
+;; fact work fine on glibc 2.2, because readdir64 is available in both
+;; glibc 2.1 and glibc 2.2 versions in glibc 2.2, disambiguated through
+;; ELF symbol versioning.  We use an entry for readdir64 in linux-stubs.S
+;; in order to force usage of the correct version of readdir64 at runtime.
+;;
+;; So in order to compile for glibc 2.2 and newer, just compile CMUCL
+;; on a glibc 2.2 system, and make sure that :glibc2.1 doesn't appear
+;; on the *features* list.  In order to compile for glibc 2.1 and newer,
+;; compile CMUCL on a glibc 2.1 system, and make sure that :glibc2.1 does
+;; appear on the *features* list.
 
 (in-package "UNIX")
 (use-package "ALIEN")
@@ -373,6 +387,9 @@
 
 (def-alien-type nil
   (struct dirent
+    #+glibc2.1
+    (d-ino ino-t)                       ; inode number of entry
+    #-glibc2.1
     (d-ino ino64-t)                     ; inode number of entry
     (d-off off-t)                       ; offset of next disk directory entry
     (d-reclen unsigned-short)		; length of this record
