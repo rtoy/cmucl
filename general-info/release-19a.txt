@@ -129,6 +129,8 @@ New in this release:
        or SLOT-MISSING are called and return.
      - NTH and NTHCDR accepting bignums as first argument.
      - First arg of CERROR may be a function.
+     - Lambda-lists of the form (X . Y) in DESTRUCTURING-BIND and macros
+       are now equivalent to (X &REST Y).
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR

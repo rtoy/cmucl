@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.29 2003/06/01 19:35:05 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.30 2003/07/15 13:39:02 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,32 +76,31 @@
 	 minimum
 	 maximum)))))
 
+(defun restify-dotted-lambda-list (lambda-list)
+  (collect ((new))
+    (do ((tail lambda-list (cdr tail)))
+	((atom tail) (progn
+		       (unless (null tail) (new '&rest tail))
+		       (new)))
+      (new (car tail)))))
 
 (defun parse-defmacro-lambda-list
        (lambda-list arg-list-name name error-kind error-fun
 		    &optional top-level env-illegal env-arg-name)
   (let ((path (if top-level `(cdr ,arg-list-name) arg-list-name))
+	(lambda-list (restify-dotted-lambda-list lambda-list))
 	(now-processing :required)
 	(maximum 0)
 	(minimum 0)
 	(keys ())
 	(key-seen nil)
 	rest-name restp allow-other-keys-p env-arg-used)
-    ;; This really strange way to test for '&whole is neccessary because member
-    ;; does not have to work on dotted lists, and dotted lists are legal
-    ;; in lambda-lists.
-    (when (and (do ((list lambda-list (cdr list)))
-		   ((atom list) nil)
-		 (when (eq (car list) '&whole) (return t)))
+    (when (and (member '&whole lambda-list)
 	       (not (eq (car lambda-list) '&whole)))
       (simple-program-error "&Whole must appear first in ~S lambda-list."
                             error-kind))
     (do ((rest-of-args lambda-list (cdr rest-of-args)))
-	((atom rest-of-args)
-	 (cond ((null rest-of-args) nil)
-	       ;; Varlist is dotted, treat as &rest arg and exit.
-	       (t (push-let-binding rest-of-args path nil)
-		  (setf restp :dotted))))
+	((null rest-of-args))
       (let ((var (car rest-of-args)))
 	(cond ((eq var '&whole)
 	       (cond ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
@@ -273,30 +272,27 @@
 		  (push-let-binding var nil nil))))
 	      (t
 	       (simple-program-error "Non-symbol in lambda-list - ~S." var)))))
-    ;; Generate code to check the number of arguments, unless dotted
-    ;; in which case length will not work.
-    (unless (eq restp :dotted)
-       (push `(unless (<= ,minimum
-			  (length (the list ,(if top-level
-						 `(cdr ,arg-list-name)
-					       arg-list-name)))
-			  ,@(unless restp
-				    (list maximum)))
-		      ,(let ((arg (if top-level
-				      `(cdr ,arg-list-name)
-				    arg-list-name)))
-			 (if (eq error-fun 'error)
-			     `(do-arg-count-error ',error-kind ',name ,arg
-						  ',lambda-list ,minimum
-						  ,(unless restp maximum))
-			   `(,error-fun 'defmacro-ll-arg-count-error
+    (push `(unless (<= ,minimum
+		       (length (the list ,(if top-level
+					      `(cdr ,arg-list-name)
+					      arg-list-name)))
+		       ,@(unless restp
+			   (list maximum)))
+	     ,(let ((arg (if top-level
+			     `(cdr ,arg-list-name)
+			     arg-list-name)))
+		(if (eq error-fun 'error)
+		    `(do-arg-count-error ',error-kind ',name ,arg
+					 ',lambda-list ,minimum
+					 ,(unless restp maximum))
+		    `(,error-fun 'defmacro-ll-arg-count-error
 				 :kind ',error-kind
 				 ,@(when name `(:name ',name))
 				 :argument ,arg
 				 :lambda-list ',lambda-list
 				 :minimum ,minimum
 				 ,@(unless restp `(:maximum ,maximum))))))
-	     *arg-tests*))
+	  *arg-tests*)
     (when key-seen
       (let ((problem (gensym "KEY-PROBLEM-"))
 	    (info (gensym "INFO-")))
