@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/insts.lisp,v 1.4 1997/06/07 19:04:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/insts.lisp,v 1.5 2003/03/06 14:13:08 pmai Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -440,14 +440,26 @@
 
 (define-instruction  excb (segment)
   (:emitter (emit-lword segment #x63ff0400)))
-  
+
 (define-instruction trapb (segment)
   (:emitter (emit-lword segment #x63ff0000)))
+
+(define-instruction imb (segment)
+  (:emitter (emit-pal segment 0 #x000086)))
 
 (define-instruction gentrap (segment code)
   (:printer call-pal ((palcode #xaa0000)))
   (:emitter
-   (emit-pal segment 0 #x0000aa)
+	 ; BAU: This *might* cause troubles on Alphas that only have ARC firmware,
+	 ; as the Alpha Architecture Handbook lists the bugchk PALcode instruction
+	 ; only for the OpenVMS/Digital UNIX PALcode (SRM firmware), but not for
+	 ; the Windows NT PALcode (ARC firmware) (see p. C-19 in the AAH,
+	 ; opcode 00.0081)
+	 ; Oddly enough, even though the gentrap instruction is defined for all
+	 ; three PALcode instruction sets, Eric Marsden noticed that it was not
+	 ; working as expected under some PALcode setups.
+   (emit-pal segment 0 #x000081)      ; actually bugchk PALcode instruction
+   ;; (emit-pal segment 0 #x0000aa)   ; gentrap PALcode instruction
    (emit-lword segment code)))
 
 (define-instruction-macro move (src dst)

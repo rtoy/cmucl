@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/system.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/system.lisp,v 1.3 2003/03/06 14:13:08 pmai Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -236,6 +236,12 @@
 (define-vop (halt)
   (:generator 1
     (inst gentrap halt-trap)))
+
+(defknown istream-memory-barrier () (values))
+(define-vop (c::istream-memory-barrier)
+  (:translate istream-memory-barrier)
+  (:generator 1
+    (inst imb)))
 
 
 ;;;; Dynamic vop count collection support

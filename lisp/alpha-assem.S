@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.9 2002/08/23 17:01:00 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.10 2003/03/06 14:13:09 pmai Rel $ */
 #ifndef	__linux__
 #include <machine/regdef.h>
 #include <machine/pal.h>
@@ -60,10 +60,9 @@ call_into_lisp:
 	ldl	reg_OCFP,current_control_frame_pointer
 	mov	a1,reg_CFP
 
-#ifndef __linux__	
 	.set	noat
-#endif	
 	ldil	reg_L2,0
+        .set at
 	/* End of pseudo-atomic. */
 
 	/* Establish lisp arguments. */
@@ -188,8 +187,10 @@ call_into_c:
 	mov	reg_ZERO, reg_A4
 	mov	reg_ZERO, reg_A5
 	mov	reg_ZERO, reg_L0
+	.set noat
 	mov	reg_ZERO, reg_L2
-
+        .set at
+        
 	/* Turn on pseudo-atomic. */
 	lda	reg_ALLOC,1(reg_ZERO)
 
