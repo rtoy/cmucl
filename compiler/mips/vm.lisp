@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.12 1990/02/26 22:55:51 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.13 1990/03/05 21:12:05 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -110,7 +110,11 @@
   ;; Objects that are easier to create using immediate loads than to fetch
   ;; from the constant pool, but which aren't directly usable as immediate
   ;; operands.  These are only recognized by move VOPs.
-  (random-immediate immediate-constant))
+  (random-immediate immediate-constant)
+
+  ;; A catch or unwind block.
+  (catch-block control-stack :element-size vm:catch-block-size))
+
 
 
 ;;;; Interfaces for stack sizes.
@@ -212,8 +216,10 @@
 
 (def-primitive-type sap (sap-reg sap-stack))
 
-(def-primitive-type random (non-descriptor-reg))
-(def-primitive-type interior (interior-reg))
+(def-primitive-type random (non-descriptor-reg) :type nil)
+(def-primitive-type interior (interior-reg) :type nil)
+(def-primitive-type catch-block (catch-block) :type nil)
+
 
 ;;;
 #|
@@ -327,6 +333,7 @@
 
 (eval-when (compile eval load)
   (defconstant zero-offset 0)
+  (defconstant lip-offset 1)
   (defconstant null-offset 20)
   (defconstant bsp-offset 21)
   (defconstant cont-offset 22)
@@ -342,6 +349,13 @@
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
 		  :offset zero-offset))
+
+;;; 
+;;; Lisp-interior-pointer register.
+(defparameter lip-tn
+  (make-random-tn :kind :normal
+		  :sc (sc-or-lose 'any-reg)
+		  :offset lip-offset))
 
 ;;;
 ;;; ``Wired'' NIL
