@@ -158,6 +158,28 @@
 (def-source-transform ldb-test (bytespec integer)
   `(not (zerop (ldb ,bytespec ,integer))))
 
+
+;;; With the ratio and complex accessors, we pick off the "identity" case, and
+;;; use a primitive to handle the cell access case.
+;;;
+(macrolet ((frob (fun)
+	     `(def-source-transform ,fun (num)
+		(once-only ((n-num `(the rational ,num)))
+		  `(if (ratiop ,n-num)
+		       (%primitive ,',fun ,n-num)
+		       ,n-num)))))
+  (frob numerator)
+  (frob denominator))
+
+(macrolet ((frob (fun)
+	     `(def-source-transform ,fun (num)
+		(once-only ((n-num num))
+		  `(if (complexp ,n-num)
+		       (%primitive ,',fun ,n-num)
+		       ,n-num)))))
+  (frob realpart)
+  (frob imagpart))
+
 
 ;;;; Numeric Derive-Type methods:
 
