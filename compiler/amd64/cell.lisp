@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/cell.lisp,v 1.2 2004/06/10 01:39:06 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/cell.lisp,v 1.3 2004/07/06 20:12:08 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,10 +195,12 @@
   (:translate fdefn-makunbound)
   (:args (fdefn :scs (descriptor-reg) :target result))
   (:results (result :scs (descriptor-reg)))
+  (:temporary (:sc any-reg) temp)
   (:generator 38
     (storew nil-value fdefn fdefn-function-slot other-pointer-type)
-    (storew (make-fixup (extern-alien-name "undefined_tramp") :foreign)
-	    fdefn fdefn-raw-addr-slot other-pointer-type)
+    (inst mov-imm temp
+	  (make-fixup (extern-alien-name "undefined_tramp") :foreign))
+    (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result fdefn)))
 
 

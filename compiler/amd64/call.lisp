@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/call.lisp,v 1.1 2004/05/24 22:34:59 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/call.lisp,v 1.2 2004/07/06 20:11:24 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -541,6 +541,7 @@
   (:args (fp)
 	 (nfp)
 	 (args :more t))
+  (:temporary (:sc any-reg) temp-tn) ; from/to?
   (:results (values :more t))
   (:save-p t)
   (:move-args :local-call)
@@ -563,8 +564,8 @@
 	 #+nil (format t "*call-local: ret-tn on stack; offset=~s~%"
 		       (tn-offset ret-tn))
 	 ;; Stack
-	 (storew (make-fixup nil :code-object return)
-		 rbp-tn (- (1+ (tn-offset ret-tn)))))
+	 (inst mov-imm temp-tn (make-fixup nil :code-object return))
+	 (storew temp-tn rbp-tn (- (1+ (tn-offset ret-tn)))))
 	((sap-reg)
 	 ;; Register
 	 (inst lea ret-tn (make-fixup nil :code-object return)))))
@@ -583,6 +584,7 @@
   (:args (fp)
 	 (nfp)
 	 (args :more t))
+  (:temporary (:sc any-reg) temp-tn) ; from/to?
   (:save-p t)
   (:move-args :local-call)
   (:info save callee target)
@@ -604,8 +606,8 @@
 	 #+nil (format t "*multiple-call-local: ret-tn on stack; offset=~s~%"
 		       (tn-offset ret-tn))
 	 ;; Stack
-	 (storew (make-fixup nil :code-object return)
-		 rbp-tn (- (1+ (tn-offset ret-tn)))))
+	 (inst mov-imm temp-tn (make-fixup nil :code-object return))
+	 (storew temp-tn rbp-tn (- (1+ (tn-offset ret-tn)))))
 	((sap-reg)
 	 ;; Register
 	 (inst lea ret-tn (make-fixup nil :code-object return)))))
