@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.5 1991/11/09 03:05:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.6 1992/02/15 01:02:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,7 +213,7 @@
 	 (buffer (lisp::stream-in-buffer stream))
 	 (start 0)
 	 (len 0))
-    (declare (fixnum length charpos last-charpos start len)
+    (declare (fixnum length charpos start len)
 	     (simple-string chars))
     (cond 
      ((eq line last-line)

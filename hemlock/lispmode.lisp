@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.15 1991/12/10 16:58:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.16 1992/02/15 01:01:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -465,7 +465,6 @@
 ;;; the buffer beginning or end), then return both values NIL.
 ;;;
 (defun find-ignore-region (mark forwardp)
-  (declare (fixnum pos))
   (flet ((scan (line pos)
 	   (declare (fixnum pos))
 	   (let ((info (getf (line-plist line) 'lisp-info)))
