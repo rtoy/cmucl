@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.112 2003/04/26 19:34:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.113 2003/04/27 13:58:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -415,6 +415,11 @@
   (flushable call)
 ;  :derive-type 'type-spec-arg1  Nope... (map nil ...) returns null, not nil.
   )
+
+(defknown map-into (sequence callable &rest sequence)
+  sequence
+  (call)
+  :derive-type #'result-type-first-arg)
 
 ;;; Returns predicate result... 
 (defknown some (callable sequence &rest sequence) t

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.26 2003/04/21 15:56:31 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.27 2003/04/27 13:58:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -69,6 +69,37 @@
 
 (def-source-transform mapcon (function list &rest more-lists)
   (mapper-transform function (cons list more-lists) :nconc nil))
+
+
+;;; MAP-INTO
+(deftransform map-into ((result fun &rest seqs)
+                        (vector * &rest *)
+                        *)
+  "open code"
+  (let ((seqs-names (mapcar (lambda (x)
+                              (declare (ignore x))
+                              (gensym))
+                            seqs)))
+    `(lambda (result fun ,@seqs-names)
+       (let ((length (array-dimension result 0))
+             (i 0))
+         (declare (type index i))
+         (declare (ignorable i))
+         ,(cond ((null seqs)
+                 `(dotimes (j length (setq i length))
+                    (setf (aref result j) (funcall fun))))
+                (t
+                 `(block nil
+                    (map nil
+                         (lambda (,@seqs-names)
+                           (when (= i length) (return))
+                           (setf (aref result i)
+                                 (funcall fun ,@seqs-names))
+                           (incf i))
+                         ,@seqs-names))))
+         (when (array-has-fill-pointer-p result)
+           (setf (fill-pointer result) i))
+         result))))
 
 (deftransform elt ((s i) ((simple-array * (*)) *) * :when :both)
   '(aref s i))
