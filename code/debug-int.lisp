@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.53 1992/12/13 15:46:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.54 1992/12/17 09:04:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1004,7 +1004,7 @@
 			  0
 			  nil)))
 	    (find-escaped-frame caller))
-      (if (eq (kernel:code-debug-info code) :bogus-lra)
+      (if (eq (kernel:%code-debug-info code) :bogus-lra)
 	  (let ((real-lra (kernel:code-header-ref code real-lra-slot)))
 	    (compute-calling-frame caller real-lra up-frame))
 	  (let ((d-fun (case code
@@ -1061,7 +1061,7 @@
 			  (kernel:get-lisp-obj-address code)
 			  code-header-len)))
 	       (return
-		(if (eq (kernel:code-debug-info code) :bogus-lra)
+		(if (eq (kernel:%code-debug-info code) :bogus-lra)
 		    (let ((real-lra (kernel:code-header-ref code
 							    real-lra-slot)))
 		      (values (kernel:lra-code-header real-lra)
@@ -1103,7 +1103,7 @@
 ;;; the component, for function constants, and the c::compiled-debug-function.
 ;;;
 (defun debug-function-from-pc (component pc)
-  (let ((info (kernel:code-debug-info component)))
+  (let ((info (kernel:%code-debug-info component)))
     (cond
      ((not info)
       (debug-signal 'no-debug-info))
@@ -1295,7 +1295,7 @@
 			    (eq (c::compiled-debug-function-name x) name)
 			    (eq (c::compiled-debug-function-kind x) nil)))
 		   (get-debug-info-function-map
-		    (kernel:code-debug-info component)))))
+		    (kernel:%code-debug-info component)))))
 	(if res
 	    (make-compiled-debug-function res component)
 	    ;; This used to be the non-interpreted branch, but William wrote it
@@ -1605,7 +1605,7 @@
 ;;; COMPILED-DEBUG-FUNCTION-DEBUG-INFO -- Internal.
 ;;;
 (defun compiled-debug-function-debug-info (debug-fun)
-  (kernel:code-debug-info (compiled-debug-function-component debug-fun)))
+  (kernel:%code-debug-info (compiled-debug-function-component debug-fun)))
 
 
 
@@ -3431,8 +3431,7 @@
      (declare (type system:system-area-pointer
 		    src-start src-end dst-start trap-loc)
 	      (type kernel:index length))
-     (setf (kernel:code-header-ref code-object vm:code-debug-info-slot)
-	   :bogus-lra)
+     (setf (kernel:%code-debug-info code-object) :bogus-lra)
      (setf (kernel:code-header-ref code-object vm:code-trace-table-offset-slot)
 	   length)
      (setf (kernel:code-header-ref code-object real-lra-slot) real-lra)
@@ -3591,7 +3590,7 @@
 ;;; it is in the result vector.
 ;;;
 (defun sub-generate-component-source-paths (component)
-  (let ((info (kernel:code-debug-info component)))
+  (let ((info (kernel:%code-debug-info component)))
     (unless info (debug-signal 'no-debug-info))
     (let* ((function-map (get-debug-info-function-map info))
 	   (result *source-paths-buffer*))

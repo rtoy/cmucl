@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.21 1992/12/13 16:04:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.22 1992/12/17 09:07:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,7 +275,7 @@
 ;;;    Print information from the debug-info about where X was compiled from.
 ;;;
 (defun print-compiled-from (x)
-  (let ((info (kernel:code-debug-info (kernel:function-code-header x))))
+  (let ((info (kernel:%code-debug-info (kernel:function-code-header x))))
     (when info
       (let ((sources (c::compiled-debug-info-source info)))
 	(format t "~&On ~A it was compiled from:"
