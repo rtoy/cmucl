@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.37 1992/02/18 18:43:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.38 1992/02/19 16:41:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -545,12 +545,12 @@
 	(*load-pathname* pathname))
     (case contents
       (:source
-       (with-open-file (file pathname
+       (with-open-file (file truename
 			     :direction :input
 			     :if-does-not-exist if-does-not-exist)
 	 (sloload file)))
       (:binary
-       (with-open-file (file pathname
+       (with-open-file (file truename
 			     :direction :input
 			     :if-does-not-exist if-does-not-exist
 			     :element-type '(unsigned-byte 8))
