@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.24 1991/02/20 15:17:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.25 1991/11/05 16:57:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.24 1991/02/20 15:17:32 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.25 1991/11/05 16:57:09 ram Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -25,9 +25,6 @@
 ;;;
 (def-source-transform short-float-p (x) `(single-float-p ,x))
 (def-source-transform long-float-p (x) `(double-float-p ,x))
-
-(def-source-transform funcallable-instance-p (x)
-  `(eql (get-type ,x) vm:funcallable-instance-header-type))
 
 (def-source-transform compiled-function-p (x)
   `(functionp ,x))
@@ -328,3 +325,35 @@
 	     (bit-bash-copy src (+ src-start vector-data-bit-offset)
 			    dst (+ dst-start vector-data-bit-offset)
 			    length))))))))
+
+;;;; SXHASH:
+
+;;; Should be in VM:
+
+(defconstant sxhash-bits-byte (byte 23 0))
+(defconstant sxmash-total-bits 26)
+(defconstant sxmash-rotate-bits 7)
+
+(deftransform sxhash ((s-expr) (integer))
+  '(ldb sxhash-bits-byte s-expr))
+
+(deftransform sxhash ((s-expr) (simple-string))
+  '(%sxhash-simple-string s-expr))
+
+(deftransform sxhash ((s-expr) (symbol))
+  (%sxhash-simple-string (symbol-name s-expr)))
+
+(deftransform sxhash ((s-expr) (single-float))
+  '(let ((bits (single-float-bits s-expr)))
+     (ldb sxhash-bits-byte
+	  (logxor (ash bits (- sxmash-rotate-bits))
+		  bits))))
+
+(deftransform sxhash ((s-expr) (double-float))
+  '(let* ((val s-expr)
+	  (lo (double-float-low-bits val))
+	  (hi (double-float-high-bits val)))
+     (ldb sxhash-bits-byte
+	  (logxor (ash lo (- sxmash-rotate-bits))
+		  (ash hi (- sxmash-rotate-bits))
+		  lo hi))))
