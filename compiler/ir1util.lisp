@@ -886,11 +886,11 @@
 (defun node-deleted (node)
   (declare (type node node))
   (let ((prev (node-prev node)))
-    (and prev
-	 (not (eq (continuation-kind prev) :deleted))
-	 (let ((block (continuation-block prev)))
-	   (and (block-component block)
-		(not (block-delete-p block)))))))
+    (not (and prev
+	      (not (eq (continuation-kind prev) :deleted))
+	      (let ((block (continuation-block prev)))
+		(and (block-component block)
+		     (not (block-delete-p block))))))))
   
 
 ;;;; Leaf hackery:
@@ -1152,13 +1152,18 @@
 ;;; FIND-ENCLOSING-SOURCE  --  Internal
 ;;;
 ;;;    Look at the DEST of node, and return the source for it, along with a
-;;; description of how the value is used by the DEST.
+;;; description of how the value is used by the DEST.  This is inhibited when
+;;; the DEST has a different source path from NODE.  This ensures that the
+;;; enclosing source results from macroexpansion of the orignal source (or is
+;;; the orignal source).  Otherwise, we might return a form enclosing the
+;;; orignal source, which would be confusing.
 ;;;
 (defun find-enclosing-source (node)
   (declare (type node node))
   (let* ((cont (node-cont node))
 	 (dest (continuation-dest cont)))
-    (when dest
+    (when (and dest
+	       (equal (node-source-path dest) (node-source-path node)))
       (values
 	(node-source dest)
 	(etypecase dest
