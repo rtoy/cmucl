@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.18 1998/03/04 15:02:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.19 1998/03/10 21:42:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -391,8 +391,7 @@
 			vm:other-pointer-type))
     (inst stdf value object offset)
     (unless (location= result value)
-      (inst fmovs result value)
-      (inst fmovs-odd result value))))
+      (move-double-reg result value))))
 
 
 ;;;; Misc. Array VOPs.
@@ -545,15 +544,13 @@
 			  vm:other-pointer-type))
       (inst stdf value-real object offset)
       (unless (location= result-real value-real)
-	(inst fmovs result-real value-real)
-	(inst fmovs-odd result-real value-real)))
+	(move-double-reg result-real value-real)))
     (let ((value-imag (complex-double-reg-imag-tn value))
 	  (result-imag (complex-double-reg-imag-tn result)))
       (inst add offset (* 2 vm:word-bytes))
       (inst stdf value-imag object offset)
       (unless (location= result-imag value-imag)
-	(inst fmovs result-imag value-imag)
-	(inst fmovs-odd result-imag value-imag)))))
+	(move-double-reg result-imag value-imag)))))
 
 ) ; end progn complex-float
 

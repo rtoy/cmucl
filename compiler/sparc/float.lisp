@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.19 1998/03/10 18:50:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.20 1998/03/10 21:42:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,6 +45,16 @@
 
 ;;;; Move VOPs:
 
+;;; Exploit the V9 double-float move instruction. This is conditional
+;;; on the :sparc-v9 feature.
+(defun move-double-reg (dst src)
+  (cond ((backend-featurep :sparc-v9)
+	 ;; May need to re-map of the register numbers?
+	 (inst fmovd dst-tn src-tn))
+	(t
+	 (inst fmovs dst src)
+	 (inst fmovs-odd dst src))))
+
 (macrolet ((frob (vop sc double-p)
 	     `(progn
 		(define-vop (,vop)
@@ -56,9 +66,9 @@
 		  (:note "float move")
 		  (:generator 0
 		    (unless (location= y x)
-		      (inst fmovs y x)
-		      ,@(when double-p
-			  '((inst fmovs-odd y x))))))
+		      ,@(if double-p
+			  `((move-double-reg y x))
+			  `((inst fmovs y x))))))
 		(define-move-vop ,vop :move (,sc) (,sc)))))
   (frob single-move single-reg nil)
   (frob double-move double-reg t))
@@ -114,9 +124,9 @@
 		    (sc-case y
 		      (,sc
 		       (unless (location= x y)
-			 (inst fmovs y x)
-			 ,@(when double-p
-			     '((inst fmovs-odd y x)))))
+			 ,@(if double-p
+			     '((move-double-reg y x))
+			     '((inst fmovs y x)))))
 		      (,stack-sc
 		       (let ((offset (* (tn-offset y) vm:word-bytes)))
 			 (inst ,(if double-p 'stdf 'stf) x nfp offset))))))
@@ -213,12 +223,10 @@
        ;; float register so there is not need to worry about overlap.
        (let ((x-real (complex-double-reg-real-tn x))
 	     (y-real (complex-double-reg-real-tn y)))
-	 (inst fmovs y-real x-real)
-	 (inst fmovs-odd y-real x-real))
+	 (move-double-reg y-real x-real))
        (let ((x-imag (complex-double-reg-imag-tn x))
 	     (y-imag (complex-double-reg-imag-tn y)))
-	 (inst fmovs y-imag x-imag)
-	 (inst fmovs-odd y-imag x-imag)))))
+	 (move-double-reg y-imag x-imag)))))
 ;;;
 (define-move-vop complex-double-move :move
   (complex-double-reg) (complex-double-reg))
@@ -336,12 +344,10 @@
        (unless (location= x y)
 	 (let ((x-real (complex-double-reg-real-tn x))
 	       (y-real (complex-double-reg-real-tn y)))
-	   (inst fmovs y-real x-real)
-	   (inst fmovs-odd y-real x-real))
+	   (move-double-reg y-real x-real))
 	 (let ((x-imag (complex-double-reg-imag-tn x))
 	       (y-imag (complex-double-reg-imag-tn y)))
-	   (inst fmovs y-imag x-imag)
-	   (inst fmovs-odd y-imag x-imag))))
+	   (move-double-reg y-imag x-imag))))
       (complex-double-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-double-reg-real-tn x)))
@@ -801,12 +807,10 @@
   (:generator 5
     (let ((r-real (complex-double-reg-real-tn r)))
       (unless (location= x r-real)
-	(inst fmovs r-real x)
-	(inst fmovs-odd r-real x)))
+	(move-double-reg r-real x)))
     (let ((r-imag (complex-double-reg-imag-tn r)))
       (unless (location= y r-imag)
-	(inst fmovs r-imag y)
-	(inst fmovs-odd r-imag y)))))
+	(move-double-reg r-imag y)))))
 
 
 (define-vop (complex-single-float-value)
@@ -845,8 +849,7 @@
 				     :sc (sc-or-lose 'double-reg *backend*)
 				     :offset (+ offset (tn-offset x)))))
        (unless (location= value-tn r)
-	 (inst fmovs r value-tn)
-	 (inst fmovs-odd r value-tn)))))
+	 (move-double-reg r value-tn)))))
 
 (define-vop (realpart/complex-double-float complex-double-float-value)
   (:translate realpart)
