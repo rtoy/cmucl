@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.5 1991/10/03 16:35:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.6 1991/10/05 17:11:42 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (in-package "WIRE")
 
-(export '(remote-object-p
+(export '(remote-object-p remote-object
 	  remote-object-local-p remote-object-eq
 	  remote-object-value make-remote-object forget-remote-translation
 	  make-wire wire-p wire-fd wire-listen wire-get-byte wire-get-number
