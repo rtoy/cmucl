@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.23 1992/02/23 17:43:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.24 1992/04/21 04:15:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -383,11 +383,27 @@
   ;; merit of being tested by its IF predecessor.
   (test-constraint nil :type (or sset null)))
 
-
 (defun %print-block (s stream d)
   (declare (ignore d))
   (format stream "#<Block ~X, Start = c~D>" (system:%primitive make-fixnum s)
 	  (cont-num (block-start s))))
+
+
+;;; The Block-Annotation structure is shared (via :include) by different
+;;; block-info annotation structures so that code (specifically control
+;;; analysis) can be shared.
+;;; 
+(defstruct (block-annotation
+	    (:constructor nil))
+  ;;
+  ;; The IR1 block that this block is in the Info for.  
+  (block (required-argument) :type cblock)
+  ;;
+  ;; The next and previous block in emission order (not DFO).  This determines
+  ;; which block we drop though to, and also used to chain together overflow
+  ;; blocks that result from splitting of IR2 blocks in lifetime analysis.
+  (next nil :type (or block-annotation null))
+  (prev nil :type (or block-annotation null)))
 
 
 ;;; The Component structure provides a handle on a connected piece of the flow
