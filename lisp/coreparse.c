@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.6 1997/03/16 15:52:51 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.7 2004/05/18 22:46:57 cwang Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -55,7 +55,7 @@ static void process_directory(int fd, long *ptr, int count)
 		 && addr != (os_vm_address_t)dynamic_1_space)
 		printf("Strange ... dynamic space lossage.\n");
 		current_dynamic_space = (lispobj *)addr;
-#if defined(ibmrt) || defined(i386)
+#if defined(ibmrt) || defined(i386) || defined(__x86_64)
 	    SetSymbolValue(ALLOCATION_POINTER, (lispobj)free_pointer);
 #else
 	    current_dynamic_space_free_pointer = free_pointer;
@@ -78,7 +78,7 @@ static void process_directory(int fd, long *ptr, int count)
 lispobj load_core_file(char *file)
 {
     int fd = open(file, O_RDONLY), count;
-#ifndef alpha
+#if !(defined(alpha) || defined(__x86_64))
     long header[CORE_PAGESIZE / sizeof(long)], val, len, *ptr;
 #else
     u32 header[CORE_PAGESIZE / sizeof(u32)], val, len, *ptr;
@@ -130,7 +130,7 @@ lispobj load_core_file(char *file)
 
 	  case CORE_NDIRECTORY:
 	    process_directory(fd, ptr,
-#ifndef alpha
+#if !(defined(alpha) || defined(__x86_64))
 		  (len-2) / (sizeof(struct ndir_entry) / sizeof(long)));
 #else
 		  (len-2) / (sizeof(struct ndir_entry) / sizeof(u32)));
