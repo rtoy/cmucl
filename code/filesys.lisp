@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.50 1998/05/05 00:14:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.51 1998/07/13 17:44:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,6 +27,11 @@
 (export '(print-directory complete-file ambiguous-files default-directory
 			  file-writable unix-namestring))
 (in-package "LISP")
+
+;;; A condition type of type FILE-ERROR that uses the simple-error
+;;; reporting format.
+
+(define-condition simple-file-error (simple-condition file-error)())
 
 
 ;;;; Unix pathname host support.
@@ -664,12 +669,12 @@
   An error of type file-error is signalled if no such file exists,
   or the pathname is wild."
   (if (wild-pathname-p pathname)
-      (error 'file-error
+      (error 'simple-file-error
 	     :format-control "Bad place for a wild pathname."
 	     :pathname pathname)
       (let ((result (probe-file pathname)))
 	(unless result
-	  (error 'file-error
+	  (error 'simple-file-error
 		 :pathname pathname
 		 :format-control "The file ~S does not exist."
 		 :format-arguments (list (namestring pathname))))
@@ -683,7 +688,7 @@
   "Return a pathname which is the truename of the file if it exists, NIL
   otherwise. An error of type file-error is signaled if pathname is wild."
   (if (wild-pathname-p pathname)
-      (error 'file-error 
+      (error 'simple-file-error 
 	     :pathname pathname
 	     :format-control "Bad place for a wild pathname.")
       (let ((namestring (unix-namestring pathname t)))
@@ -708,7 +713,7 @@
 	 (new-name (merge-pathnames new-name original))
 	 (new-namestring (unix-namestring new-name nil)))
     (unless new-namestring
-      (error 'file-error
+      (error 'simple-file-error
 	     :pathname new-name
 	     :format-control "~S can't be created."
 	     :format-arguments (list new-name)))
@@ -716,7 +721,7 @@
 			 (unix:unix-rename original-namestring
 					   new-namestring)
       (unless res
-	(error 'file-error
+	(error 'simple-file-error
 	       :pathname new-name
 	       :format-control "Failed to rename ~A to ~A: ~A"
 	       :format-arguments (list original new-name
@@ -735,14 +740,14 @@
     (when (streamp file)
       (close file :abort t))
     (unless namestring
-      (error 'file-error
+      (error 'simple-file-error
 	     :pathname file
 	     :format-control "~S doesn't exist."
 	     :format-arguments (list file)))
 
     (multiple-value-bind (res err) (unix:unix-unlink namestring)
       (unless res
-	(error 'file-error
+	(error 'simple-file-error
 	       :pathname namestring
 	       :format-control "Could not delete ~A: ~A."
 	       :format-arguments (list namestring
@@ -766,7 +771,7 @@
   "Return file's creation date, or NIL if it doesn't exist.
  An error of type file-error is signaled if file is a wild pathname"
   (if (wild-pathname-p file)
-      (error 'file-error 
+      (error 'simple-file-error 
 	     :pathname file
 	     :format-control "Bad place for a wild pathname.")
       (let ((name (unix-namestring file t)))
@@ -785,12 +790,12 @@
  determined.  Signals an error of type file-error if file doesn't exist,
  or file is a wild pathname."
   (if (wild-pathname-p file)
-      (error 'file-error
+      (error 'simple-file-error
 	     :pathname file
 	     "Bad place for a wild pathname.")
       (let ((name (unix-namestring (pathname file) t)))
 	(unless name
-	  (error 'file-error
+	  (error 'simple-file-error
 		 :pathname file
 		 :format-control "~S doesn't exist."
 		 :format-arguments (list file)))
@@ -1216,7 +1221,7 @@
 		       pathname))
 	 (created-p nil))
     (when (wild-pathname-p pathname)
-      (error 'file-error
+      (error 'simple-file-error
 	     :format-control "Bad place for a wild pathname."
 	     :pathname pathspec))
     (enumerate-search-list (pathname pathname)
@@ -1233,7 +1238,7 @@
 				  namestring))
 			(unix:unix-mkdir namestring mode)
 			(unless (probe-file namestring)
-			  (error 'file-error
+			  (error 'simple-file-error
 				 :pathname pathspec
 				 :format-control "Can't create directory ~A."
 				 :format-arguments (list namestring)))
