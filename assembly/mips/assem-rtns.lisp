@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.7 1990/04/27 19:30:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.8 1990/05/15 01:26:12 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -116,38 +116,3 @@
   (inst nop))
 
 
-
-
-;;;; Byte-blt
-
-(define-assembly-routine (byte-blt (:arg src :sc sap-reg :offset nl0-offset)
-				   (:arg src-offset :sc any-reg)
-				   (:arg dst :sc sap-reg :offset nl1-offset)
-				   (:arg dst-offset :sc any-reg)
-				   (:arg dst-end :sc any-reg)
-				   (:temp temp :sc non-descriptor-reg))
-
-  ;; If there is nothing to do, don't do it.
-  (inst beq dst-offset dst-end done)
-
-  ;; Fix up the src and dst offsets.
-
-  (inst sra temp src-offset 2)
-  (inst addu src temp)
-  (inst sra temp dst-offset 2)
-  (inst addu dst temp)
-
-  ;; The loop
-
-  loop
-
-  (inst lbu temp src)
-  (inst addu src 1)
-  (inst sb temp dst)
-  (inst addu dst-offset (fixnum 1))
-  (inst bne dst-offset dst-end loop)
-  (inst addu dst 1)
-  
-  done
-
-  )
