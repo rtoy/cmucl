@@ -32,7 +32,7 @@
 	  char->card8
 	  card8->char
 	  default-error-handler
-	  #-(ansi-common-lisp CMU) define-condition))
+	  #-(or ansi-common-lisp CMU) define-condition))
 
 #+explorer
 (zwei:define-indentation event-case (1 1))
