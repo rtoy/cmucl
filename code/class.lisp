@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.34 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.35 1997/04/01 19:23:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -600,6 +600,38 @@
 	  (simple-array-unsigned-byte-32
 	   :translation (simple-array (unsigned-byte 32) (*))
 	   :codes (#.vm:simple-array-unsigned-byte-32-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
+	  #+signed-array 
+	  (simple-array-signed-byte-8
+	   :translation (simple-array (signed-byte 8) (*))
+	   :codes (#.vm:simple-array-signed-byte-8-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
+	  #+signed-array 
+	  (simple-array-signed-byte-16
+	   :translation (simple-array (signed-byte 16) (*))
+	   :codes (#.vm:simple-array-signed-byte-16-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
+	  #+signed-array 
+	  (simple-array-signed-byte-30
+	   :translation (simple-array (signed-byte 30) (*))
+	   :codes (#.vm:simple-array-signed-byte-30-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
+	  #+signed-array 
+	  (simple-array-signed-byte-32
+	   :translation (simple-array (signed-byte 32) (*))
+	   :codes (#.vm:simple-array-signed-byte-32-type)
 	   :direct-superclasses (vector simple-array)
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection

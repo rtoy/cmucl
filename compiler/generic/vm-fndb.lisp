@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.53 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.54 1997/04/01 19:24:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,6 +51,10 @@
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
+	   #+signed-array simple-array-signed-byte-8-p
+	   #+signed-array simple-array-signed-byte-16-p
+	   #+signed-array simple-array-signed-byte-30-p
+	   #+signed-array simple-array-signed-byte-32-p
 	   simple-array-single-float-p simple-array-double-float-p
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
 	   weak-pointer-p scavenger-hook-p code-component-p lra-p

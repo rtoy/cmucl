@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.8 1997/02/05 18:01:18 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.9 1997/04/01 19:24:20 dtc Exp $ */
 
 /* This file has been hacked a bunch by Werkowski as part of
  * the x86 port. Stack direction changes as well as more conservative
@@ -117,6 +117,18 @@ maybe_can_move_p(lispobj thing)
       case type_SimpleArrayUnsignedByte8:
       case type_SimpleArrayUnsignedByte16:
       case type_SimpleArrayUnsignedByte32:
+#ifdef type_SimpleArraySignedByte8
+      case type_SimpleArraySignedByte8:
+#endif
+#ifdef type_SimpleArraySignedByte16
+      case type_SimpleArraySignedByte16:
+#endif
+#ifdef type_SimpleArraySignedByte30
+      case type_SimpleArraySignedByte30:
+#endif
+#ifdef type_SimpleArraySignedByte32
+      case type_SimpleArraySignedByte32:
+#endif
       case type_SimpleArraySingleFloat:
       case type_SimpleArrayDoubleFloat:
       case type_CodeHeader:
@@ -546,12 +558,24 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
         return ptrans_vector(thing, 4, 0, FALSE, constant);
 
       case type_SimpleArrayUnsignedByte8:
+#ifdef type_SimpleArraySignedByte8
+      case type_SimpleArraySignedByte8:
+#endif
         return ptrans_vector(thing, 8, 0, FALSE, constant);
 
       case type_SimpleArrayUnsignedByte16:
+#ifdef type_SimpleArraySignedByte16
+      case type_SimpleArraySignedByte16:
+#endif
         return ptrans_vector(thing, 16, 0, FALSE, constant);
 
       case type_SimpleArrayUnsignedByte32:
+#ifdef type_SimpleArraySignedByte30
+      case type_SimpleArraySignedByte30:
+#endif
+#ifdef type_SimpleArraySignedByte32
+      case type_SimpleArraySignedByte32:
+#endif
         return ptrans_vector(thing, 32, 0, FALSE, constant);
 
       case type_SimpleArraySingleFloat:
@@ -719,16 +743,28 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
                 break;
 
               case type_SimpleArrayUnsignedByte8:
+#ifdef type_SimpleArraySignedByte8
+              case type_SimpleArraySignedByte8:
+#endif
                 vector = (struct vector *)addr;
                 count = CEILING(NWORDS(fixnum_value(vector->length),4)+2,2);
                 break;
 
               case type_SimpleArrayUnsignedByte16:
+#ifdef type_SimpleArraySignedByte16
+              case type_SimpleArraySignedByte16:
+#endif
                 vector = (struct vector *)addr;
                 count = CEILING(NWORDS(fixnum_value(vector->length),2)+2,2);
                 break;
 
               case type_SimpleArrayUnsignedByte32:
+#ifdef type_SimpleArraySignedByte30
+              case type_SimpleArraySignedByte30:
+#endif
+#ifdef type_SimpleArraySignedByte32
+              case type_SimpleArraySignedByte32:
+#endif
                 vector = (struct vector *)addr;
                 count = CEILING(fixnum_value(vector->length)+2,2);
                 break;

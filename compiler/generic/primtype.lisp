@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.14 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.15 1997/04/01 19:24:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,6 +100,18 @@
   :type (simple-array (unsigned-byte 16) (*)))
 (def-primitive-type simple-array-unsigned-byte-32 (descriptor-reg)
   :type (simple-array (unsigned-byte 32) (*)))
+#+signed-array 
+(def-primitive-type simple-array-signed-byte-8 (descriptor-reg)
+  :type (simple-array (signed-byte 8) (*)))
+#+signed-array 
+(def-primitive-type simple-array-signed-byte-16 (descriptor-reg)
+  :type (simple-array (signed-byte 16) (*)))
+#+signed-array 
+(def-primitive-type simple-array-signed-byte-30 (descriptor-reg)
+  :type (simple-array (signed-byte 30) (*)))
+#+signed-array 
+(def-primitive-type simple-array-signed-byte-32 (descriptor-reg)
+  :type (simple-array (signed-byte 32) (*)))
 (def-primitive-type simple-array-single-float (descriptor-reg)
   :type (simple-array single-float (*)))
 (def-primitive-type simple-array-double-float (descriptor-reg)
@@ -143,6 +155,10 @@
     ((unsigned-byte 8) . simple-array-unsigned-byte-8)
     ((unsigned-byte 16) . simple-array-unsigned-byte-16)
     ((unsigned-byte 32) . simple-array-unsigned-byte-32)
+    #+signed-array ((signed-byte 8) . simple-array-signed-byte-8)
+    #+signed-array ((signed-byte 16) . simple-array-signed-byte-16)
+    #+signed-array (fixnum . simple-array-signed-byte-30)
+    #+signed-array ((signed-byte 32) . simple-array-signed-byte-32)
     (single-float . simple-array-single-float)
     (double-float . simple-array-double-float)
     (t . simple-vector))

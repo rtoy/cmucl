@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.11 1997/02/17 09:17:15 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.12 1997/04/01 19:24:17 dtc Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1795,6 +1795,18 @@ void gc_init(void)
 	scavtab[type_SimpleArrayUnsignedByte8] = scav_vector_unsigned_byte_8;
 	scavtab[type_SimpleArrayUnsignedByte16] = scav_vector_unsigned_byte_16;
 	scavtab[type_SimpleArrayUnsignedByte32] = scav_vector_unsigned_byte_32;
+#ifdef type_SimpleArraySignedByte8
+	scavtab[type_SimpleArraySignedByte8] = scav_vector_unsigned_byte_8;
+#endif
+#ifdef type_SimpleArraySignedByte16
+	scavtab[type_SimpleArraySignedByte16] = scav_vector_unsigned_byte_16;
+#endif
+#ifdef type_SimpleArraySignedByte30
+	scavtab[type_SimpleArraySignedByte30] = scav_vector_unsigned_byte_32;
+#endif
+#ifdef type_SimpleArraySignedByte32
+	scavtab[type_SimpleArraySignedByte32] = scav_vector_unsigned_byte_32;
+#endif
 	scavtab[type_SimpleArraySingleFloat] = scav_vector_single_float;
 	scavtab[type_SimpleArrayDoubleFloat] = scav_vector_double_float;
 	scavtab[type_ComplexString] = scav_boxed;
@@ -1849,6 +1861,18 @@ void gc_init(void)
 	transother[type_SimpleArrayUnsignedByte8] = trans_vector_unsigned_byte_8;
 	transother[type_SimpleArrayUnsignedByte16] = trans_vector_unsigned_byte_16;
 	transother[type_SimpleArrayUnsignedByte32] = trans_vector_unsigned_byte_32;
+#ifdef type_SimpleArraySignedByte8
+	transother[type_SimpleArraySignedByte8] = trans_vector_unsigned_byte_8;
+#endif
+#ifdef type_SimpleArraySignedByte16
+	transother[type_SimpleArraySignedByte16] = trans_vector_unsigned_byte_16;
+#endif
+#ifdef type_SimpleArraySignedByte30
+	transother[type_SimpleArraySignedByte30] = trans_vector_unsigned_byte_32;
+#endif
+#ifdef type_SimpleArraySignedByte32
+	transother[type_SimpleArraySignedByte32] = trans_vector_unsigned_byte_32;
+#endif
 	transother[type_SimpleArraySingleFloat] = trans_vector_single_float;
 	transother[type_SimpleArrayDoubleFloat] = trans_vector_double_float;
 	transother[type_ComplexString] = trans_boxed;
@@ -1902,6 +1926,18 @@ void gc_init(void)
 	sizetab[type_SimpleArrayUnsignedByte8] = size_vector_unsigned_byte_8;
 	sizetab[type_SimpleArrayUnsignedByte16] = size_vector_unsigned_byte_16;
 	sizetab[type_SimpleArrayUnsignedByte32] = size_vector_unsigned_byte_32;
+#ifdef type_SimpleArraySignedByte8
+	sizetab[type_SimpleArraySignedByte8] = size_vector_unsigned_byte_8;
+#endif
+#ifdef type_SimpleArraySignedByte16
+	sizetab[type_SimpleArraySignedByte16] = size_vector_unsigned_byte_16;
+#endif
+#ifdef type_SimpleArraySignedByte30
+	sizetab[type_SimpleArraySignedByte30] = size_vector_unsigned_byte_32;
+#endif
+#ifdef type_SimpleArraySignedByte32
+	sizetab[type_SimpleArraySignedByte32] = size_vector_unsigned_byte_32;
+#endif
 	sizetab[type_SimpleArraySingleFloat] = size_vector_single_float;
 	sizetab[type_SimpleArrayDoubleFloat] = size_vector_double_float;
 	sizetab[type_ComplexString] = size_boxed;

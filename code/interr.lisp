@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.29 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.30 1997/04/01 19:23:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -356,6 +356,34 @@
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (unsigned-byte 32) (*))))
+
+#+signed-array 
+(deferr object-not-simple-array-signed-byte-8-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (signed-byte 8) (*))))
+
+#+signed-array 
+(deferr object-not-simple-array-signed-byte-16-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (signed-byte 16) (*))))
+
+#+signed-array 
+(deferr object-not-simple-array-signed-byte-30-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (signed-byte 30) (*))))
+
+#+signed-array 
+(deferr object-not-simple-array-signed-byte-32-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (signed-byte 32) (*))))
 
 (deferr object-not-simple-array-single-float-error (object)
   (error 'type-error

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.22 1997/02/23 09:53:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.23 1997/04/01 19:23:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,6 +128,14 @@
     ((unsigned-byte 8) (values #.vm:simple-array-unsigned-byte-8-type 8))
     ((unsigned-byte 16) (values #.vm:simple-array-unsigned-byte-16-type 16))
     ((unsigned-byte 32) (values #.vm:simple-array-unsigned-byte-32-type 32))
+    #+signed-array ((signed-byte 8)
+		    (values #.vm:simple-array-signed-byte-8-type 8))
+    #+signed-array ((signed-byte 16)
+		    (values #.vm:simple-array-signed-byte-16-type 16))
+    #+signed-array ((signed-byte 30)
+		    (values #.vm:simple-array-signed-byte-30-type 32))
+    #+signed-array ((signed-byte 32)
+		    (values #.vm:simple-array-signed-byte-32-type 32))
     (single-float (values #.vm:simple-array-single-float-type 32))
     (double-float (values #.vm:simple-array-double-float-type 64))
     (t (values #.vm:simple-vector-type #.vm:word-bits))))
@@ -316,6 +324,10 @@
        (unsigned-byte 8)
        (unsigned-byte 16)
        (unsigned-byte 32)
+       #+signed-array (signed-byte 8)
+       #+signed-array (signed-byte 16)
+       #+signed-array (signed-byte 30)
+       #+signed-array (signed-byte 32)
        single-float
        double-float))))
 
@@ -340,6 +352,10 @@
        (unsigned-byte 8)
        (unsigned-byte 16)
        (unsigned-byte 32)
+       #+signed-array (signed-byte 8)
+       #+signed-array (signed-byte 16)
+       #+signed-array (signed-byte 30)
+       #+signed-array (signed-byte 32)
        single-float
        double-float))))
 
@@ -494,6 +510,10 @@
        (vm:simple-array-unsigned-byte-8-type '(unsigned-byte 8))
        (vm:simple-array-unsigned-byte-16-type '(unsigned-byte 16))
        (vm:simple-array-unsigned-byte-32-type '(unsigned-byte 32))
+       #+signed-array (vm:simple-array-signed-byte-8-type '(signed-byte 8))
+       #+signed-array (vm:simple-array-signed-byte-16-type '(signed-byte 16))
+       #+signed-array (vm:simple-array-signed-byte-30-type '(signed-byte 30))
+       #+signed-array (vm:simple-array-signed-byte-32-type '(signed-byte 32))
        (vm:simple-array-single-float-type 'single-float)
        (vm:simple-array-double-float-type 'double-float)
        ((vm:simple-array-type vm:complex-vector-type vm:complex-array-type)
@@ -782,6 +802,10 @@
 	((simple-array (unsigned-byte 8) (*)) 0)
 	((simple-array (unsigned-byte 16) (*)) 0)
 	((simple-array (unsigned-byte 32) (*)) 0)
+	#+signed-array ((simple-array (signed-byte 8) (*)) 0)
+	#+signed-array ((simple-array (signed-byte 16) (*)) 0)
+	#+signed-array ((simple-array (signed-byte 30) (*)) 0)
+	#+signed-array ((simple-array (signed-byte 32) (*)) 0)
 	((simple-array single-float (*)) (coerce 0 'single-float))
 	((simple-array double-float (*)) (coerce 0 'double-float)))))
   ;; Only arrays have fill-pointers, but vectors have their length parameter

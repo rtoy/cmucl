@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.4 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.5 1997/04/01 19:24:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,6 +137,18 @@
    "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 16) (*)).")
   (object-not-simple-array-unsigned-byte-32
    "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 32) (*)).")
+  #+signed-array 
+  (object-not-simple-array-signed-byte-8
+   "Object is not of type (SIMPLE-ARRAY (SIGNED-BYTE 8) (*)).")
+  #+signed-array 
+  (object-not-simple-array-signed-byte-16
+   "Object is not of type (SIMPLE-ARRAY (SIGNED-BYTE 16) (*)).")
+  #+signed-array 
+  (object-not-simple-array-signed-byte-30
+   "Object is not of type (SIMPLE-ARRAY FIXNUM (*)).")
+  #+signed-array 
+  (object-not-simple-array-signed-byte-32
+   "Object is not of type (SIMPLE-ARRAY (SIGNED-BYTE 32) (*)).")
   (object-not-simple-array-single-float
    "Object is not of type (SIMPLE-ARRAY SINGLE-FLOAT (*)).")
   (object-not-simple-array-double-float

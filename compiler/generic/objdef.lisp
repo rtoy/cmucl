@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.37 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.38 1997/04/01 19:24:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,10 +24,11 @@
 	  single-float-type double-float-type complex-type
 	  simple-array-type simple-string-type simple-bit-vector-type
 	  simple-vector-type simple-array-unsigned-byte-2-type
-	  simple-array-unsigned-byte-4-type
-	  simple-array-unsigned-byte-8-type
-	  simple-array-unsigned-byte-16-type
-	  simple-array-unsigned-byte-32-type simple-array-single-float-type
+	  simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
+	  simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
+	  simple-array-signed-byte-8-type simple-array-signed-byte-16-type
+	  simple-array-signed-byte-30-type simple-array-signed-byte-32-type
+	  simple-array-single-float-type
 	  simple-array-double-float-type complex-string-type
 	  complex-bit-vector-type complex-vector-type complex-array-type
 	  code-header-type function-header-type closure-header-type
@@ -119,6 +120,10 @@
   simple-array-unsigned-byte-8
   simple-array-unsigned-byte-16
   simple-array-unsigned-byte-32
+  #+signed-array simple-array-signed-byte-8
+  #+signed-array simple-array-signed-byte-16
+  #+signed-array simple-array-signed-byte-30
+  #+signed-array simple-array-signed-byte-32
   simple-array-single-float
   simple-array-double-float
   complex-string

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.31 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.32 1997/04/01 19:24:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,8 +86,11 @@
 ;;; The kinds of specialised array that actually exist in this implementation.
 ;;;
 (defparameter specialized-array-element-types
-  '(bit (unsigned-byte 2) (unsigned-byte 4) (unsigned-byte 8) (unsigned-byte 16)
-	(unsigned-byte 32) base-char single-float double-float))
+  '(bit (unsigned-byte 2) (unsigned-byte 4) (unsigned-byte 8)
+    (unsigned-byte 16) (unsigned-byte 32)
+    #+signed-array (signed-byte 8) #+signed-array (signed-byte 16)
+    #+signed-array (signed-byte 30) #+signed-array (signed-byte 32)
+    base-char single-float double-float))
 
 (deftype unboxed-array (&optional dims)
   (collect ((types (list 'or)))

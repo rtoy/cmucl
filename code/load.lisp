@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.61 1997/02/11 00:28:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.62 1997/04/01 19:23:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -920,6 +920,38 @@
       (make-array n :element-type `(unsigned-byte ,size)
 		  :initial-element value))))
 
+;;; FOP-SIGNED-INT-VECTOR
+;;;
+;;; Same as FOP-INT-VECTOR, except this is for signed simple-arrays.
+;;; It appears that entry 50 and 51 are clear.
+#+signed-array
+(define-fop (fop-signed-int-vector 50)
+  (prepare-for-fast-read-byte *fasl-file*
+    (let* ((len (fast-read-u-integer 4))
+	   (size (fast-read-byte))
+	   (res (case size
+ 		  (8 (make-array len :element-type '(signed-byte 8)))
+ 		  (16 (make-array len :element-type '(signed-byte 16)))
+ 		  (30 (make-array len :element-type '(signed-byte 30)))
+ 		  (32 (make-array len :element-type '(signed-byte 32)))
+ 		  (t (error "Losing i-vector element size: ~S" size)))))
+      (declare (type index len))
+      (done-with-fast-read-byte)
+      (read-n-bytes *fasl-file* res 0
+ 		    (ceiling (the index (* size len)) vm:byte-bits))
+      res)))
+
+;;; Same as fop-uniform-int-vector, but for signed integers
+#+signed-array
+(define-fop (fop-uniform-signed-int-vector 51)
+   (prepare-for-fast-read-byte *fasl-file*
+     (let* ((n (fast-read-u-integer 4))
+	    (size (fast-read-byte))
+	    (value (fast-read-variable-u-integer (ceiling size 8))))
+       (done-with-fast-read-byte)
+       (make-array n :element-type `(signed-byte ,size)
+		   :initial-element value))))
+ 
 (define-fop (fop-eval 53)
   (let ((result (eval (pop-stack))))
     (when *load-print*

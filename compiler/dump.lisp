@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.63 1997/02/18 01:35:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.64 1997/04/01 19:23:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1335,6 +1335,7 @@
 ;;; then just write the bits.  Otherwise, dispatch off of the target byte order
 ;;; and write the vector one element at a time.
 ;;;
+#-signed-array
 (defun dump-i-vector (vec file &optional data-only)
   (declare (type (simple-array * (*)) vec))
   (let* ((ac (etypecase vec
@@ -1353,6 +1354,44 @@
       (dump-unsigned-32 len file)
       (dump-byte size file))
     (dump-data-maybe-byte-swapping vec bytes size file)))
+
+#+signed-array
+(defun dump-i-vector (vec file &optional data-only)
+  (declare (type (simple-array * (*)) vec))
+  (let ((len (length vec)))
+    (labels ((dump-unsigned (size bytes)
+	       (unless data-only
+		 (dump-fop 'lisp::fop-int-vector file)
+		 (dump-unsigned-32 len file)
+		 (dump-byte size file))
+	       (dump-data-maybe-byte-swapping vec bytes size file))
+	     (dump-signed (size bytes)
+	       (unless data-only
+		 (dump-fop 'lisp::fop-signed-int-vector file)
+		 (dump-unsigned-32 len file)
+		 (dump-byte size file))
+	       (dump-data-maybe-byte-swapping vec bytes size file)))
+      (etypecase vec
+	(simple-bit-vector
+	 (dump-unsigned 1 (ash (+ (the index len) 7) -3)))
+	((simple-array (unsigned-byte 2) (*))
+	 (dump-unsigned 2 (ash (+ (the index (ash len 1)) 7) -3)))
+	((simple-array (unsigned-byte 4) (*))
+	 (dump-unsigned 4 (ash (+ (the index (ash len 2)) 7) -3)))
+	((simple-array (unsigned-byte 8) (*))
+	 (dump-unsigned 8 len))
+	((simple-array (unsigned-byte 16) (*))
+	 (dump-unsigned 16 (* 2 len)))
+	((simple-array (unsigned-byte 32) (*))
+	 (dump-unsigned 32 (* 4 len)))
+	((simple-array (signed-byte 8) (*))
+	 (dump-signed 8 len))
+	((simple-array (signed-byte 16) (*))
+	 (dump-signed 16 (* 2 len)))
+	((simple-array (signed-byte 30) (*))
+	 (dump-signed 30 (* 4 len)))
+	((simple-array (signed-byte 32) (*))
+	 (dump-signed 32 (* 4 len)))))))
 
 ;;; DUMP-SINGLE-FLOAT-VECTOR  --  internal.
 ;;; 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.38 1997/02/07 20:27:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.39 1997/04/01 19:23:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,6 +89,10 @@
       simple-array-unsigned-byte-8-p
       simple-array-unsigned-byte-16-p
       simple-array-unsigned-byte-32-p
+      #+signed-array simple-array-signed-byte-8-p
+      #+signed-array simple-array-signed-byte-16-p
+      #+signed-array simple-array-signed-byte-30-p
+      #+signed-array simple-array-signed-byte-32-p
       simple-array-single-float-p
       simple-array-double-float-p
       dylan::dylan-function-p

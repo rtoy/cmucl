@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.11 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.12 1997/04/01 19:24:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.11 1994/10/31 04:38:06 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.12 1997/04/01 19:24:10 dtc Exp $
 ;;;
 ;;; This file contains the implimentation specific type transformation magic.
 ;;; Basically, the various non-standard predicates that can be used in typep
@@ -45,6 +45,18 @@
 		       (simple-array (unsigned-byte 16) (*)))
 (define-type-predicate simple-array-unsigned-byte-32-p
 		       (simple-array (unsigned-byte 32) (*)))
+#+signed-array 
+(define-type-predicate simple-array-signed-byte-8-p
+		       (simple-array (signed-byte 8) (*)))
+#+signed-array 
+(define-type-predicate simple-array-signed-byte-16-p
+		       (simple-array (signed-byte 16) (*)))
+#+signed-array 
+(define-type-predicate simple-array-signed-byte-30-p
+		       (simple-array (signed-byte 30) (*)))
+#+signed-array 
+(define-type-predicate simple-array-signed-byte-32-p
+		       (simple-array (signed-byte 32) (*)))
 (define-type-predicate simple-array-single-float-p
 		       (simple-array single-float (*)))
 (define-type-predicate simple-array-double-float-p

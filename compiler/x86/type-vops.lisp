@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.1 1997/01/18 14:31:23 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.2 1997/04/01 19:24:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -334,6 +334,34 @@
   object-not-simple-array-unsigned-byte-32-error
   simple-array-unsigned-byte-32-type)
 
+#+signed-array
+(def-type-vops simple-array-signed-byte-8-p
+  check-simple-array-signed-byte-8
+  simple-array-signed-byte-8
+  object-not-simple-array-signed-byte-8-error
+  simple-array-signed-byte-8-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-16-p
+  check-simple-array-signed-byte-16
+  simple-array-signed-byte-16
+  object-not-simple-array-signed-byte-16-error
+  simple-array-signed-byte-16-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-30-p
+  check-simple-array-signed-byte-30
+  simple-array-signed-byte-30
+  object-not-simple-array-signed-byte-30-error
+  simple-array-signed-byte-30-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-32-p
+  check-simple-array-signed-byte-32
+  simple-array-signed-byte-32
+  object-not-simple-array-signed-byte-32-error
+  simple-array-signed-byte-32-type)
+
 (def-type-vops simple-array-single-float-p check-simple-array-single-float
   simple-array-single-float object-not-simple-array-single-float-error
   simple-array-single-float-type)
@@ -384,15 +412,23 @@
   simple-string-type simple-bit-vector-type simple-vector-type
   simple-array-unsigned-byte-2-type simple-array-unsigned-byte-4-type
   simple-array-unsigned-byte-8-type simple-array-unsigned-byte-16-type
-  simple-array-unsigned-byte-32-type simple-array-single-float-type
-  simple-array-double-float-type complex-string-type
-  complex-bit-vector-type complex-vector-type)
+  simple-array-unsigned-byte-32-type
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
+  simple-array-single-float-type simple-array-double-float-type
+  complex-string-type complex-bit-vector-type complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
   simple-array-type simple-string-type simple-bit-vector-type
   simple-vector-type simple-array-unsigned-byte-2-type
   simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
   simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
@@ -400,6 +436,10 @@
   simple-vector-type simple-array-unsigned-byte-2-type
   simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
   simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
   complex-string-type complex-bit-vector-type complex-vector-type
   complex-array-type)

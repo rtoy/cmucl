@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.3 1997/03/25 16:59:26 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.4 1997/04/01 19:24:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,10 +132,12 @@
 ); eval-when (compile eval)
 
 (def-full-data-vector-frobs simple-vector * descriptor-reg any-reg)
-
-
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
+#+signed-array 
+(def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num any-reg)
+#+signed-array 
+(def-full-data-vector-frobs simple-array-signed-byte-32 signed-num signed-reg)
 
 ;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
 ;;; and 4-bit vectors.
@@ -591,9 +593,9 @@
   (:result-types positive-fixnum)
   (:generator 5
     (move eax value)
-    (inst mov
-	  (make-ea :byte :base object :index index :scale 1
-		   :disp (- (* vector-data-offset word-bytes) other-pointer-type))
+    (inst mov (make-ea :byte :base object :index index :scale 1
+		       :disp (- (* vector-data-offset word-bytes)
+				other-pointer-type))
 	  al-tn)
     (move result eax)))
 
@@ -613,10 +615,9 @@
   (:result-types positive-fixnum)
   (:generator 4
     (move eax value)
-    (inst mov
-	  (make-ea :byte :base object
-		   :disp (- (+ (* vector-data-offset word-bytes) index)
-			    other-pointer-type))
+    (inst mov (make-ea :byte :base object
+		       :disp (- (+ (* vector-data-offset word-bytes) index)
+				other-pointer-type))
 	  al-tn)
     (move result eax)))
 
@@ -649,8 +650,7 @@
   (:generator 4
     (inst movzx value
 	  (make-ea :word :base object
-		   :disp (- (+ (* vector-data-offset word-bytes)
-			       (* 2 index))
+		   :disp (- (+ (* vector-data-offset word-bytes) (* 2 index))
 			    other-pointer-type)))))
 
 
@@ -681,7 +681,8 @@
   (:args (object :scs (descriptor-reg) :to (:eval 0))
 	 (value :scs (unsigned-reg signed-reg) :target eax))
   (:info index)
-  (:arg-types simple-array-unsigned-byte-16 (:constant (signed-byte 30)) positive-fixnum)
+  (:arg-types simple-array-unsigned-byte-16 (:constant (signed-byte 30))
+	      positive-fixnum)
   (:temporary (:sc dword-reg :offset eax-offset :target result
 		   :from (:argument 1) :to (:result 0))
 	      eax)
@@ -689,11 +690,10 @@
   (:result-types positive-fixnum)
   (:generator 4
     (move eax value)
-    (inst mov
-	  (make-ea :word :base object
-		   :disp (- (+ (* vector-data-offset word-bytes)
-			       (* 2 index))
-			    other-pointer-type))
+    (inst mov (make-ea :word :base object
+		       :disp (- (+ (* vector-data-offset word-bytes)
+				   (* 2 index))
+				other-pointer-type))
 	  ax-tn)
     (move result eax)))
 
@@ -717,7 +717,8 @@
   (:generator 5
     (inst mov al-tn
 	  (make-ea :byte :base object :index index :scale 1
-		   :disp (- (* vector-data-offset word-bytes) other-pointer-type)))
+		   :disp (- (* vector-data-offset word-bytes)
+			    other-pointer-type)))
     (move value al-tn)))
 
 (define-vop (data-vector-ref-c/simple-string)
@@ -768,16 +769,87 @@
   (:result-types base-char)
   (:generator 4
    (inst mov (make-ea :byte :base object
-		      :disp (- (+ (* vector-data-offset word-bytes)
-				  index)
+		      :disp (- (+ (* vector-data-offset word-bytes) index)
 			       other-pointer-type))
 	 value)
    (move result value)))
 
+#+signed-array 
+(progn
+
+;;; signed-byte-8
+
+(define-vop (data-vector-ref/simple-array-signed-byte-8)
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (unsigned-reg)))
+  (:arg-types simple-array-signed-byte-8 positive-fixnum)
+  (:results (value :scs (signed-reg)))
+  (:result-types tagged-num)
+  (:generator 5
+    (inst movsx value
+	  (make-ea :byte :base object :index index :scale 1
+		   :disp (- (* vector-data-offset word-bytes)
+			    other-pointer-type)))))
+
+(define-vop (data-vector-ref-c/simple-array-signed-byte-8)
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types simple-array-signed-byte-8 (:constant (signed-byte 30)))
+  (:results (value :scs (signed-reg)))
+  (:result-types tagged-num)
+  (:generator 4
+    (inst movsx value
+	  (make-ea :byte :base object
+		   :disp (- (+ (* vector-data-offset word-bytes) index)
+			    other-pointer-type)))))
+
+(define-vop (data-vector-set/simple-array-signed-byte-8)
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to (:eval 0))
+	 (index :scs (unsigned-reg) :to (:eval 0))
+	 (value :scs (signed-reg) :target eax))
+  (:arg-types simple-array-signed-byte-8 positive-fixnum tagged-num)
+  (:temporary (:sc dword-reg :offset eax-offset :target result
+		   :from (:argument 2) :to (:result 0))
+	      eax)
+  (:results (result :scs (signed-reg)))
+  (:result-types tagged-num)
+  (:generator 5
+    (move eax value)
+    (inst mov (make-ea :byte :base object :index index :scale 1
+		       :disp (- (* vector-data-offset word-bytes)
+				other-pointer-type))
+	  al-tn)
+    (move result eax)))
+
+(define-vop (data-vector-set-c/simple-array-signed-byte-8)
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to (:eval 0))
+	 (value :scs (signed-reg) :target eax))
+  (:info index)
+  (:arg-types simple-array-signed-byte-8 (:constant (signed-byte 30))
+	      tagged-num)
+  (:temporary (:sc dword-reg :offset eax-offset :target result
+		   :from (:argument 1) :to (:result 0))
+	      eax)
+  (:results (result :scs (signed-reg)))
+  (:result-types tagged-num)
+  (:generator 4
+    (move eax value)
+    (inst mov (make-ea :byte :base object
+		       :disp (- (+ (* vector-data-offset word-bytes) index)
+				other-pointer-type))
+	  al-tn)
+    (move result eax)))
 
 ;;; signed-byte-16
 
-#+nil
 (define-vop (data-vector-ref/simple-array-signed-byte-16)
   (:translate data-vector-ref)
   (:policy :fast-safe)
@@ -792,7 +864,6 @@
 		   :disp (- (* vector-data-offset word-bytes)
 			    other-pointer-type)))))
 
-#+nil
 (define-vop (data-vector-ref-c/simple-array-signed-byte-16)
   (:translate data-vector-ref)
   (:policy :fast-safe)
@@ -808,7 +879,6 @@
 			       (* 2 index))
 			    other-pointer-type)))))
 
-#+nil
 (define-vop (data-vector-set/simple-array-signed-byte-16)
   (:translate data-vector-set)
   (:policy :fast-safe)
@@ -829,7 +899,6 @@
 	  ax-tn)
     (move result eax)))
 
-#+nil
 (define-vop (data-vector-set-c/simple-array-signed-byte-16)
   (:translate data-vector-set)
   (:policy :fast-safe)
@@ -851,3 +920,5 @@
 			    other-pointer-type))
 	  ax-tn)
     (move result eax)))
+
+) ; end signed-array
