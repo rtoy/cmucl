@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51 1997/06/05 00:33:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51.2.1 1997/06/16 18:53:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2253,13 +2253,37 @@ turned off"
 ;;; result type is not affected by the type of X.  That is, Y is at least as
 ;;; contagious as X.
 ;;;
+#+nil
 (defun not-more-contagious (x y)
   (declare (type continuation x y))
   (let ((x (continuation-type x))
 	(y (continuation-type y)))
     (values (type= (numeric-contagion x y)
 		   (numeric-contagion y y)))))
-
+;;;
+;;; Patched version by Raymond Toy. dtc: Should be safer although it
+;;; needs more work as valid transforms are missed; some cases are
+;;; specific to particular transform functions so the use of this
+;;; function may need a re-think.
+;;;
+(defun not-more-contagious (x y)
+  (declare (type continuation x y))
+  (flet ((simple-numeric-type (num)
+	   ;; Return non-NIL if NUM is integer, rational, or a float
+	   ;; of some type (but not FLOAT)
+	   (case (numeric-type-class num)
+	     ((integer rational)
+	      t)
+	     (float
+	      (numeric-type-format num))
+	     (t
+	      nil))))
+    (let ((x (continuation-type x))
+	  (y (continuation-type y)))
+      (if (and (simple-numeric-type x)
+	       (simple-numeric-type y))
+	  (values (type= (numeric-contagion x y)
+			 (numeric-contagion y y)))))))
 
 ;;; Fold (OP x 0).
 ;;;
