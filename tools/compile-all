@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.2 1991/11/26 22:10:18 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.3 1991/12/12 02:35:37 wlott Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -14,7 +14,7 @@ set dest = /afs/cs/project/clisp/build/@sys/$subdir
 set src = /afs/cs/project/clisp/src/$subdir
 
 if ($?LISP) then
-	set lisp = $LISP
+	set lisp = "$LISP"
 else
 	set lisp = lisp
 endif
