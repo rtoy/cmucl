@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.20 1990/03/07 18:40:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.21 1990/03/08 11:11:26 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -240,8 +240,8 @@
 
 (defslots (ratio :lowtag other-pointer-type :header ratio-type
 		 :alloc-vop make-ratio)
-  (numerator :ref-vop numerator)
-  (denominator :ref-vop denominator))
+  (numerator :ref-vop numerator :init :arg)
+  (denominator :ref-vop denominator :init :arg))
 
 (defslots (single-float :lowtag other-pointer-type :header single-float-type)
   (value :c-type "float"))
@@ -251,8 +251,8 @@
 
 (defslots (complex :lowtag other-pointer-type :header complex-type
 		   :alloc-vop make-complex)
-  (real :ref-vop realpart)
-  (imag :ref-vop imagpart))
+  (real :ref-vop realpart :init :arg)
+  (imag :ref-vop imagpart :init :arg))
 
 (defslots (array :lowtag other-pointer-type :header t)
   fill-pointer
