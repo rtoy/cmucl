@@ -6,7 +6,7 @@
 
 (in-package :user)
 
-(setq cl::*enable-package-locked-errors* nil)
+(setq lisp::*enable-package-locked-errors* nil)
 
 (defun unintern-in-all-packages (name)
   (dolist (pkg (list-all-packages))
