@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.41 2003/08/27 14:01:56 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.42 2003/08/27 14:38:35 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1026,7 +1026,8 @@
   (declare (type code-component component)
 	   (type pc pc)
 	   (type stack-pointer fp)
-	   (type (unsigned-byte 8) byte))
+	   (type (unsigned-byte 8) byte)
+	   (optimize (speed 3) (safety 0)))
   #+nil
   (locally (declare (optimize (inhibit-warnings 3)))
     (when *byte-trace*
