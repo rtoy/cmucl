@@ -54,6 +54,8 @@ New in this release:
       - Simple support for datagram networking added: INET-RECVFROM,
         INET-SENDTO, INET-SHUTDOWN.
       - Linkage table support for PPC and Darwin.
+      - A socket reset signals a SOCKET-ERROR condition instead of a
+        general ERROR condition.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -104,6 +106,8 @@ New in this release:
         READ-DELIMITED-LIST, and READ-FROM-STRING now return NIL, as
         specified by ANSI CL.  (Previously, CMUCL would return a list
         of NILs.)
+      - Pathname components of type :UNSPECIFIC are not printed in
+        namestrings anymore.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
