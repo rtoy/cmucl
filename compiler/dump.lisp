@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.13 1990/10/04 15:08:02 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.14 1990/10/10 13:13:05 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -80,7 +80,7 @@
 (defstruct circularity
   ;;
   ;; Kind of modification to make to create circularity.
-  (type nil :type (member :rplaca :rplacd :svset))
+  (type nil :type (member :rplaca :rplacd :svset :struct-set))
   ;;
   ;; Object containing circularity.
   object
@@ -665,10 +665,10 @@
 	       (dump-fop 'lisp::fop-nthcdr file)
 	       (quick-dump-number i 4 file)))))
       
-      (dump-fop (case (circularity-type info)
+      (dump-fop (ecase (circularity-type info)
 		  (:rplaca 'lisp::fop-rplaca)
 		  (:rplacd 'lisp::fop-rplacd)
-		  (:svset 'lisp::fop-svset))
+		  ((:svset :struct-set) 'lisp::fop-svset))
 		file)
       (quick-dump-number (gethash (circularity-object info) table) 4 file)
       (quick-dump-number (circularity-index info) 4 file))))
@@ -1068,7 +1068,23 @@
 
 ;;; Dump a structure.
 
-(defun dump-structure (obj file)
-  (dump-vector obj file)
-  (dump-fop 'lisp::fop-structure file))
+(defun dump-structure (struct file)
+  (note-potential-circularity struct file)
+  (do ((index 0 (1+ index))
+       (length (structure-length struct))
+       (circ (fasl-file-circularity-table file)))
+      ((= index length)
+       (dump-fop* length lisp::fop-small-struct lisp::fop-struct file))
+    (let* ((obj (structure-ref struct index))
+	   (ref (gethash obj circ)))
+      (cond (ref
+	     (push (make-circularity :type :struct-set
+				     :object struct
+				     :index index
+				     :value obj
+				     :enclosing-object ref)
+		   *circularities-detected*)
+	     (sub-dump-object nil file))
+	    (t
+	     (sub-dump-object obj file))))))
 
