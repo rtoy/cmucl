@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.9 1990/08/24 18:12:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.10 1990/09/18 22:42:23 ram Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -1190,22 +1190,17 @@
 
 ;;; OUTPUT-CHARACTER  --  Internal
 ;;;
-;;;    If *print-escape* is false, just do a WRITE-CHAR, otherwise output
-;;; any bits and then the character or name, escaping if necessary.  In
-;;; either case, we blast the bits or font before writing the character
-;;; itself to the stream.
+;;;    If *print-escape* is false, just do a WRITE-CHAR, otherwise output the
+;;; character name or the character in the #\char format.
 ;;;
 (defun output-character (char stream)
   (if *print-escape*
       (let ((name (char-name char)))
 	(write-string "#\\" stream)
-	(cond (name (write-string name stream))
-	      (t
-	       (when (funny-character-char-p char)
-		 (write-char #\\ stream))
-	       (write-char char stream))))
+	(if name
+	    (write-string name stream)
+	    (write-char char stream)))
       (write-char char stream)))
-
 
 
 ;;;; Random and Miscellaneous Print Subfunctions
