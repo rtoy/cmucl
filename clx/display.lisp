@@ -19,11 +19,36 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.8 1999/03/16 23:37:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.9 2002/07/22 17:10:56 toy Exp $")
 
 (in-package :xlib)
 
-;;; Authorizaton
+;;; X11 Authorization: to prevent malicious users from snooping on an
+;;; display, X servers may require connection requests to be
+;;; authorized. The X server (or display manager) will create a random
+;;; key on startup, and store it as an entry in a file generally named
+;;; $HOME/.Xauthority (see the function AUTHORITY-PATHNAME). Clients
+;;; must extract from this file the "magic cookie" that corresponds to
+;;; the server they wish to connect to, and send it as authorization
+;;; data when opening the display.
+;;;
+;;; Users can manipulate the contents of their .Xauthority file using
+;;; the xauth command. 
+;;;
+;;; The function GET-BEST-AUTHORIZATION is responsible for parsing the
+;;; .Xauthority file and extracting the cookie for DISPLAY on HOST.
+;;; The HOST argument is the hostname of the target display as a
+;;; string, and DISPLAY is a number. The PROTOCOL argument determines
+;;; whether the server connection is using an Internet protocol
+;;; (values of :tcp or :internet) or a non-network protocol such as
+;;; Unix domain sockets (value of :unix). GET-BEST-AUTHORITY returns
+;;; two strings: an authorization name (very likely the string
+;;; "MIT-MAGIC-COOKIE-1") and an authorization key, represented as
+;;; fixnums in a vector. If the function fails to find an appropriate
+;;; cookie, it returns two empty strings.
+;;;
+;;; The format of the .Xauthority file is documented in the XFree
+;;; sources, in the file xc/lib/Xau/README.
 
 (defparameter *known-authorizations* '("MIT-MAGIC-COOKIE-1"))
 
@@ -59,6 +84,12 @@
 				     (rest (host-address host host-family))))
 		   (best-name nil)
 		   (best-data nil))
+	      ;; Check for the localhost address, in which case we're
+	      ;; really FamilyLocal.
+	      (when (and (= host-family 0)
+			 (equal host-address '(127 0 0 1)))
+		(setq host-address (map 'list #'char-int (machine-instance)))
+		(setq host-family 256))
 	      (loop
 	       (let ((family (read-short stream nil)))
 		 (when (null family)
