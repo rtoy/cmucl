@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.49 1993/03/12 15:36:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.50 1993/03/12 21:16:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,8 @@
 (export '(%caller-frame-and-pc))
 (in-package "C")
 
-(export '(safe-fdefn-function return-single instance-ref instance-set))
+(export '(safe-fdefn-function return-single instance-ref instance-set
+			      funcallable-instance-lexenv))
 
 
 
@@ -1106,18 +1107,18 @@
     (let ((ef (functional-entry-function fun)))
       (when (and (optional-dispatch-p ef)
 		 (optional-dispatch-more-entry ef))
-	(vop copy-more-arg node block (optional-dispatch-max-args ef))))
-    
-    (if (ir2-environment-environment env)
-	(let ((closure
-	       (make-normal-tn (backend-any-primitive-type *backend*))))
-	  (vop setup-closure-environment node block start-label closure)
- 	  (when (getf (functional-plist ef) :fin-function)
- 	    (vop funcallable-instance-lexenv node block closure closure))
-	  (let ((n -1))
-	    (dolist (loc (ir2-environment-environment env))
-	      (vop closure-ref node block closure (incf n) (cdr loc)))))
-	(vop setup-environment node block start-label))
+	(vop copy-more-arg node block (optional-dispatch-max-args ef)))
+      
+      (if (ir2-environment-environment env)
+	  (let ((closure
+		 (make-normal-tn (backend-any-primitive-type *backend*))))
+	    (vop setup-closure-environment node block start-label closure)
+	    (when (getf (functional-plist ef) :fin-function)
+	      (vop funcallable-instance-lexenv node block closure closure))
+	    (let ((n -1))
+	      (dolist (loc (ir2-environment-environment env))
+		(vop closure-ref node block closure (incf n) (cdr loc)))))
+	  (vop setup-environment node block start-label)))
     
     (unless (eq (functional-kind fun) :top-level)
       (let ((vars (lambda-vars fun))
