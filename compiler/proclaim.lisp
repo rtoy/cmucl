@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.27 1993/02/26 08:39:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.28 1993/03/16 01:52:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -346,9 +346,14 @@
 		    (setf (info function where-from name) :declared)))))))
       (freeze-type
        (dolist (type args)
-	 (specifier-type type); Give undefined type warnings...
-	 (when (eq (info type kind type) :instance)
-	   (setf (class-state (find-class type)) :sealed))))
+	 (let ((class (specifier-type type)))
+	   (when (typep class 'class)
+	     (setf (class-state class) :sealed)
+	     (let ((subclasses (class-subclasses class)))
+	       (when subclasses
+		 (do-hash (subclass layout subclasses)
+		   (declare (ignore layout))
+		   (setf (class-state subclass) :sealed))))))))
       (function
        ;;
        ;; Handle old-style FUNCTION declaration, which is a shorthand for
