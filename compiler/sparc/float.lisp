@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.27 2000/02/18 01:24:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.28 2000/02/24 14:40:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,7 +121,7 @@
 ;;; on the :sparc-v9 feature.
 (defun move-long-reg (dst src)
   (cond ((backend-featurep :sparc-v9)
-	 (inst fmovx dst src))
+	 (inst fmovq dst src))
 	(t
 	 (dotimes (i 4)
 	   (let ((dst (make-random-tn :kind :normal
@@ -645,10 +645,10 @@
 		  (:translate ,op)
 		  (:generator ,lcost
 		    (inst ,linst r x y)))))
-  (frob + faddx +/long-float 2)
-  (frob - fsubx -/long-float 2)
-  (frob * fmulx */long-float 6)
-  (frob / fdivx //long-float 20))
+  (frob + faddq +/long-float 2)
+  (frob - fsubq -/long-float 2)
+  (frob * fmulq */long-float 6)
+  (frob / fdivq //long-float 20))
 
 
 (macrolet ((frob (name inst translate sc type)
@@ -668,6 +668,36 @@
   (frob abs/single-float fabss abs single-reg single-float)
   (frob %negate/single-float fnegs %negate single-reg single-float))
 
+(defun negate-double-reg (dst src)
+  (cond ((backend-featurep :sparc-v9)
+	 (inst fnegd dst src))
+	(t
+	 ;; Negate the MS part of the numbers, then copy over the rest
+	 ;; of the bits.
+	 (inst fnegs dst src)
+	 (let ((dst-odd (make-random-tn :kind :normal
+					:sc (sc-or-lose 'single-reg *backend*)
+					:offset (+ 1 (tn-offset dst))))
+	       (src-odd (make-random-tn :kind :normal
+					:sc (sc-or-lose 'single-reg *backend*)
+					:offset (+ 1 (tn-offset src)))))
+	   (inst fmovs dst-odd src-odd)))))
+
+(defun abs-double-reg (dst src)
+  (cond ((backend-featurep :sparc-v9)
+	 (inst fabsd dst src))
+	(t
+	 ;; Abs the MS part of the numbers, then copy over the rest
+	 ;; of the bits.
+	 (inst fabss dst src)
+	 (let ((dst-2 (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'single-reg *backend*)
+				      :offset (+ 1 (tn-offset dst))))
+	       (src-2 (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'single-reg *backend*)
+				      :offset (+ 1 (tn-offset src)))))
+	   (inst fmovs dst-2 src-2)))))
+
 (define-vop (abs/double-float)
   (:args (x :scs (double-reg)))
   (:results (y :scs (double-reg)))
@@ -680,17 +710,7 @@
   (:save-p :compute-only)
   (:generator 1
     (note-this-location vop :internal-error)
-    (cond ((backend-featurep :sparc-v9)
-	   (inst fabsd y x))
-	  (t
-	   (inst fabss y x)
-	   (let ((y-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset y))))
-		 (x-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset x)))))
-	     (inst fmovs y-odd x-odd))))))
+    (abs-double-reg y x)))
 
 (define-vop (%negate/double-float)
   (:args (x :scs (double-reg)))
@@ -704,17 +724,7 @@
   (:save-p :compute-only)
   (:generator 1
     (note-this-location vop :internal-error)
-    (cond ((backend-featurep :sparc-v9)
-	   (inst fnegd y x))
-	  (t
-	   (inst fnegs y x)
-	   (let ((y-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset y))))
-		 (x-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset x)))))
-	     (inst fmovs y-odd x-odd))))))
+    (negate-double-reg y x)))
 
 #+long-float
 (define-vop (abs/long-float)
@@ -730,7 +740,7 @@
   (:generator 1
     (note-this-location vop :internal-error)
     (cond ((backend-featurep :sparc-v9)
-	   (inst fabsx y x))
+	   (inst fabsq y x))
 	  (t
 	   (inst fabss y x)
 	   (dotimes (i 3)
@@ -758,7 +768,7 @@
   (:generator 1
     (note-this-location vop :internal-error)
     (cond ((backend-featurep :sparc-v9)
-	   (inst fnegx y x))
+	   (inst fnegq y x))
 	  (t
 	   (inst fnegs y x)
 	   (dotimes (i 3)
@@ -789,7 +799,7 @@
     (ecase format
       (:single (inst fcmps x y))
       (:double (inst fcmpd x y))
-      (:long (inst fcmpx x y)))
+      (:long (inst fcmpq x y)))
     ;; The SPARC V9 doesn't need an instruction between a
     ;; floating-point compare and a floating-point branch.
     (unless (backend-featurep :sparc-v9)
@@ -865,7 +875,7 @@
   (frob %single-float/signed %single-float fitos single-reg single-float)
   (frob %double-float/signed %double-float fitod double-reg double-float)
   #+long-float
-  (frob %long-float/signed %long-float fitox long-reg long-float))
+  (frob %long-float/signed %long-float fitoq long-reg long-float))
 
 (macrolet ((frob (name translate inst from-sc from-type to-sc to-type)
 	     `(define-vop (,name)
@@ -884,18 +894,18 @@
   (frob %single-float/double-float %single-float fdtos
     double-reg double-float single-reg single-float)
   #+long-float
-  (frob %single-float/long-float %single-float fxtos
+  (frob %single-float/long-float %single-float fqtos
     long-reg long-float single-reg single-float)
   (frob %double-float/single-float %double-float fstod
     single-reg single-float double-reg double-float)
   #+long-float
-  (frob %double-float/long-float %double-float fxtod
+  (frob %double-float/long-float %double-float fqtod
     long-reg long-float double-reg double-float)
   #+long-float
-  (frob %long-float/single-float %long-float fstox
+  (frob %long-float/single-float %long-float fstoq
     single-reg single-float long-reg long-float)
   #+long-float
-  (frob %long-float/double-float %long-float fdtox
+  (frob %long-float/double-float %long-float fdtoq
     double-reg double-float long-reg long-float))
 
 (macrolet ((frob (trans from-sc from-type inst)
@@ -927,7 +937,7 @@
   (frob %unary-truncate single-reg single-float fstoi)
   (frob %unary-truncate double-reg double-float fdtoi)
   #+long-float
-  (frob %unary-truncate long-reg long-float fxtoi)
+  (frob %unary-truncate long-reg long-float fqtoi)
   #-sun4
   (frob %unary-round single-reg single-float fstoir)
   #-sun4
@@ -1248,6 +1258,24 @@
       (loadw res nfp (tn-offset temp))
       (inst nop))))
 
+#+nil
+(define-vop (floating-point-modes)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate floating-point-modes)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:temporary (:sc double-stack) temp)
+  (:generator 3
+    (let* ((nfp (current-nfp-tn vop))
+	   (offset (* 4 (tn-offset temp))))
+      (inst stxfsr nfp offset)
+      ;; The desired FP mode data is in the least significant 32
+      ;; bits, which is stored at the next higher word in memory.
+      (loadw res nfp (+ offset 4))
+      ;; Is this nop needed? (toy@rtp.ericsson.se)
+      (inst nop))))
+
 (define-vop (set-floating-point-modes)
   (:args (new :scs (unsigned-reg) :target res))
   (:results (res :scs (unsigned-reg)))
@@ -1261,6 +1289,57 @@
     (let ((nfp (current-nfp-tn vop)))
       (storew new nfp (tn-offset temp))
       (inst ldfsr nfp (* word-bytes (tn-offset temp)))
+      (move res new))))
+
+#+nil
+(define-vop (set-floating-point-modes)
+  (:args (new :scs (unsigned-reg) :target res))
+  (:results (res :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:result-types unsigned-num)
+  (:translate (setf floating-point-modes))
+  (:policy :fast-safe)
+  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc unsigned-reg) my-fsr)
+  (:vop-var vop)
+  (:generator 3
+    (let ((nfp (current-nfp-tn vop))
+	  (offset (* word-bytes (tn-offset temp))))
+      (pseudo-atomic ()
+        ;; Get the current FSR, so we can get the new %fcc's
+        (inst stxfsr nfp offset)
+	(inst ldx my-fsr nfp offset)
+	;; Carefully merge in the new mode bits with the rest of the
+	;; FSR.  This is only needed if we care about preserving the
+	;; high 32 bits of the FSR, which contain the additional
+	;; %fcc's on the sparc V9.  If not, we don't need this, but we
+	;; do need to make sure that the unused bits are written as
+	;; zeroes, according the the V9 architecture manual.
+	(inst sra new 0)
+	(inst srlx my-fsr 32)
+	(inst sllx my-fsr 32)
+	(inst or my-fsr new)
+	;; Save it back and load it into the fsr register
+	(inst stx my-fsr nfp offset)
+	(inst ldxfsr nfp offset)
+	(move res new)))))
+
+#+nil
+(define-vop (set-floating-point-modes)
+  (:args (new :scs (unsigned-reg) :target res))
+  (:results (res :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:result-types unsigned-num)
+  (:translate (setf floating-point-modes))
+  (:policy :fast-safe)
+  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc unsigned-reg) my-fsr)
+  (:vop-var vop)
+  (:generator 3
+    (let ((nfp (current-nfp-tn vop))
+	  (offset (* word-bytes (tn-offset temp))))
+      (inst stx new nfp offset)
+      (inst ldxfsr nfp offset)
       (move res new))))
 
 
@@ -1285,7 +1364,7 @@
     (inst fsqrtd y x)))
 
 #+long-float
-(define-vop (fsqrt)
+(define-vop (fsqrt-long)
   (:args (x :scs (long-reg)))
   (:results (y :scs (long-reg)))
   (:translate %sqrt)
@@ -1297,7 +1376,7 @@
   (:save-p :compute-only)
   (:generator 1
     (note-this-location vop :internal-error)
-    (inst fsqrtx y x)))
+    (inst fsqrtq y x)))
 
 
 ;;;; Complex float VOPs
