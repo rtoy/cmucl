@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.14 1991/10/03 18:31:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.15 1992/09/07 15:38:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 
 ;;; Note-Failed-Optimization  --  Internal
@@ -87,7 +87,27 @@
 	   (setf (info function type name)
 		 (if global-p dtype (specifier-type 'function))))))))
   (undefined-value))
-      
+
+
+;;; NOTE-ASSUMED-TYPES  --  Internal
+;;;
+;;;    Find all calls in Component to assumed functions and update the assumed
+;;; type information.  This is delayed until now so that we have the best
+;;; possible information about the actual argument types.
+;;;
+(defun note-assumed-types (component name var)
+  (when (eq (leaf-where-from var) :assumed)
+    (assert  (and (eq (info function where-from name) :assumed)
+		  (eq (info function kind name) :function)))
+    (let ((atype (info function assumed-type name)))
+      (dolist (ref (leaf-refs var))
+	(let ((dest (continuation-dest (node-cont ref))))
+	  (when (and (eq (block-component (node-block ref)) component)
+		     (combination-p dest)
+		     (eq (continuation-use (basic-combination-fun dest)) ref))
+	    (setq atype (note-function-use dest atype)))))
+      (setf (info function assumed-type name) atype))))
+
 
 ;;; IR1-FINALIZE  --  Interface
 ;;;
@@ -106,7 +126,11 @@
        (finalize-xep-definition fun))
       ((nil)
        (setf (leaf-type fun) (definition-type fun)))))
-
-  (maphash #'note-failed-optimization *failed-optimizations*)
-  (clrhash *failed-optimizations*)
+  
+  (maphash #'note-failed-optimization
+	   (component-failed-optimizations component))
+  
+  (maphash #'(lambda (k v)
+	       (note-assumed-types component k v))
+	   *free-functions*)
   (undefined-value))
