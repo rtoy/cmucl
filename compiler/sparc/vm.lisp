@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.19 2002/09/04 14:04:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.20 2002/10/28 19:57:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,7 +57,7 @@
 (defreg nl3 11)				; %o3
 (defreg nl4 12)				; %o4
 (defreg nl5 13)				; %o5
-(defreg nsp 14)				; %o6
+(defreg nsp 14)				; %o6, aka %sp
 (defreg nargs 15)			; %o7
 
 ;; Locals.  These are preserved when we call into C.
