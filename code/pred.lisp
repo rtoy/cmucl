@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.23 1992/02/14 23:45:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.24 1992/03/04 17:42:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,7 +148,14 @@
 	     (symbol-package :foo))
 	 'keyword
 	 'symbol))
-    (structure (structure-ref object 0))
+    (structure
+     (let ((name (structure-ref object 0)))
+       (case name
+	 (alien-internals:alien-value
+	  `(alien:alien
+	    ,(alien-internals:unparse-alien-type
+	      (alien-internals:alien-value-type object))))
+	 (t name))))
     (array (type-specifier (ctype-of object)))
     (system-area-pointer 'system-area-pointer)
     (weak-pointer 'weak-pointer)
