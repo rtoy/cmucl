@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.13 1997/11/07 17:05:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.14 1997/11/08 15:32:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2561,8 +2561,7 @@
 #+complex-float
 (progn
 (eval-when (compile load eval)
-  (export '(make-complex-single-float make-complex-double-float
-	    complex-single-float-real complex-double-float-real
+  (export '(complex-single-float-real complex-double-float-real
 	    complex-single-float-imag complex-double-float-imag)))
 
 (define-vop (make-complex-float)
