@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.62 1997/04/01 19:23:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.63 1997/06/11 18:22:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -938,7 +938,9 @@
       (declare (type index len))
       (done-with-fast-read-byte)
       (read-n-bytes *fasl-file* res 0
- 		    (ceiling (the index (* size len)) vm:byte-bits))
+ 		    (ceiling (the index (* (if (= size 30)
+					       32 ; Adjust for (signed-byte 30)
+					       size) len)) vm:byte-bits))
       res)))
 
 ;;; Same as fop-uniform-int-vector, but for signed integers
