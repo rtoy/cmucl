@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/assem-rtns.lisp,v 1.1 2004/05/21 22:46:43 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/assem-rtns.lisp,v 1.2 2004/07/27 21:05:33 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -240,7 +240,8 @@
 			 ((:arg block (any-reg descriptor-reg) rax-offset)
 			  (:arg start (any-reg descriptor-reg) rbx-offset)
 			  (:arg count (any-reg descriptor-reg) rcx-offset)
-			  (:temp uwp unsigned-reg rsi-offset))
+			  (:temp uwp unsigned-reg rsi-offset)
+			  (:temp temp unsigned-reg r11-offset))
   (declare (ignore start count))
 
   (let ((error (generate-error-code nil invalid-unwind-error)))
@@ -261,7 +262,7 @@
   (move block uwp)
   ;; Set next unwind protect context.
   (loadw uwp uwp unwind-block-current-uwp-slot)
-  (store-symbol-value uwp lisp::*current-unwind-protect-block*)
+  (store-symbol-value uwp lisp::*current-unwind-protect-block* temp)
   
   DO-EXIT
   
