@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.119 2000/10/04 15:53:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.120 2000/10/06 15:10:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2791,6 +2791,15 @@
 	   (fun (ir1-convert-lambda-body body vars)))
       (reference-leaf start fun-cont fun)
       (ir1-convert-combination-args fun-cont cont values))))
+
+(def-ir1-translator locally ((&body (body decls))
+                            start cont)
+  "LOCALLY Declaration* Form*
+   Sequentially evaluates a body of Form's in a lexical environment
+   where the given Declaration's have effect."
+  (let* ((*lexical-environment* (process-declarations decls nil nil cont)))
+    (ir1-convert-progn-body start cont body)))
+        
 
 
 (def-ir1-translator let* ((bindings &body (body decls))
