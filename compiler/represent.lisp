@@ -254,10 +254,10 @@
 
 ;;; EMIT-COERCE-VOP  --  Internal
 ;;;
-;;;    Emit a coercion VOP for Op or die trying.  SCS is the operand's LOAD-SCS
-;;; vector, which we use to determine what SCs the VOP will accept.  We pick
-;;; any acceptable coerce VOP, since it practice it seems uninteresting to have
-;;; more than one applicable.
+;;;    Emit a coercion VOP for Op Before the specifed VOP or die trying.  SCS
+;;; is the operand's LOAD-SCS vector, which we use to determine what SCs the
+;;; VOP will accept.  We pick any acceptable coerce VOP, since it practice it
+;;; seems uninteresting to have more than one applicable.
 ;;;
 ;;;    What we do is look at each SC allowed by the operand restriction, and
 ;;; see if there is a move VOP which moves between the operand's SC and load
@@ -267,8 +267,8 @@
 ;;;    If the TN is an unused result TN, then we don't actually emit the move;
 ;;; we just change to the right kind of TN.
 ;;;
-(defun emit-coerce-vop (op scs)
-  (declare (type tn-ref op) (type sc-vector scs))
+(defun emit-coerce-vop (op scs before)
+  (declare (type tn-ref op) (type sc-vector scs) (type (or vop null) before))
   (let* ((op-tn (tn-ref-tn op))
 	 (op-sc (tn-sc op-tn))
 	 (op-scn (sc-number op-sc))
@@ -287,33 +287,48 @@
 	      (change-tn-ref-tn op temp)
 	      (cond
 	       ((not write-p)
-		(emit-move-template node block res op-tn temp vop))
+		(emit-move-template node block res op-tn temp before))
 	       ((null (tn-reads op-tn)))
 	       (t
-		(emit-move-template node block res temp op-tn (vop-next vop)))))
+		(emit-move-template node block res temp op-tn before))))
 	    (return)))))))
+
+
+;;; COERCE-SOME-OPERANDS  --  Internal
+;;;
+;;;    Scan some operands and call EMIT-COERCE-VOP on any for which we can't
+;;; load the operand.  The coerce VOP is inserted Before the specified VOP.
+;;;
+(proclaim '(inline coerce-some-operands))
+(defun coerce-some-operands (ops load-scs before)
+  (declare (type (or tn-ref null) ops) (list load-scs)
+	   (type (or vop null) before))
+  (do ((op ops (tn-ref-across op))
+       (scs load-scs (cdr scs)))
+      ((null scs))
+    (unless (svref (car scs)
+		   (sc-number (tn-sc (tn-ref-tn op))))
+      (emit-coerce-vop op (car scs) before)))
+  (undefined-value))
 
 
 ;;; COERCE-VOP-OPERANDS  --  Internal
 ;;;
-;;;    Scan the operands to VOP and call EMIT-COERCE-VOP on any for which we
-;;; can't load the operand.
+;;;    Emit coerce VOPs for the args and results, as needed.
 ;;;
 (defun coerce-vop-operands (vop)
   (declare (type vop vop))
   (let ((info (vop-info vop)))
-    (macrolet ((scan (ops load-scs)
-		 `(do ((op ,ops (tn-ref-across op))
-		       (scs ,load-scs (cdr scs)))
-		      ((null scs))
-		    (unless (svref (car scs)
-				   (sc-number (tn-sc (tn-ref-tn op))))
-		      (emit-coerce-vop op (car scs))))))
-      (scan (vop-args vop) (vop-info-arg-load-scs info))
-      (scan (vop-results vop) (vop-info-result-load-scs info)))))
+    (coerce-some-operands (vop-args vop) (vop-info-arg-load-scs info) vop)
+    (coerce-some-operands (vop-results vop) (vop-info-result-load-scs info)
+			  (vop-next vop))))
 
 
 ;;; EMIT-ARG-MOVES  --  Internal
+;;;
+;;;    Iterate over the more operands to a call VOP, emitting move-arg VOPs and
+;;; any necessary coercions.  We determine which FP to use by looking at the
+;;; MOVE-ARGS annotation.
 ;;;
 (defun emit-arg-moves (vop)
   (let* ((info (vop-info vop))
@@ -325,7 +340,8 @@
 	 (nfp-tn (if (eq how :local-call)
 		     (tn-ref-tn (tn-ref-across args))
 		     nil))
-	 (pass-locs (first (vop-codegen-info vop))))
+	 (pass-locs (first (vop-codegen-info vop)))
+	 (prev (vop-prev vop)))
     (do ((val (do ((arg args (tn-ref-across arg))
 		   (req (template-arg-types info) (cdr req)))
 		  ((null req) arg))
@@ -340,20 +356,25 @@
 			 (sc-number (tn-sc val-tn)))))
 	(unless res
 	  (bad-move-arg-error val-tn pass-tn))
-
-	(let ((this-fp
-	       (cond ((not (sc-number-stack-p pass-sc)) fp-tn)
-		     (nfp-tn)
-		     (t
-		      (assert (eq how :known-return))
-		      (setq nfp-tn
-			    (make-representation-tn
-			     (first (primitive-type-scs
-				     *any-primitive-type*))))
-		      (emit-context-template node block nfp-tn vop)
-		      nfp-tn))))
-	(emit-move-arg-template node block res val-tn this-fp pass-tn vop)))))
-
+	
+	(change-tn-ref-tn val pass-tn)
+	(let* ((this-fp
+		(cond ((not (sc-number-stack-p pass-sc)) fp-tn)
+		      (nfp-tn)
+		      (t
+		       (assert (eq how :known-return))
+		       (setq nfp-tn
+			     (make-representation-tn
+			      (first (primitive-type-scs
+				      *any-primitive-type*))))
+		       (emit-context-template node block nfp-tn vop)
+		       nfp-tn)))
+	       (new (emit-move-arg-template node block res val-tn this-fp
+					    pass-tn vop)))
+	  (coerce-some-operands (vop-args new) (vop-info-arg-load-scs res)
+				(if prev
+				    (vop-next prev)
+				    (ir2-block-start-vop block)))))))
   (undefined-value))
 
 
