@@ -2934,8 +2934,9 @@ arithmetic, several constraints must be met:
 \end{itemize}
 
 The ``good types'' are \w{\code{(signed-byte 32)}},
-\w{\code{(unsigned-byte 32)}}, \code{single-float} and
-\code{double-float}.  See sections \ref{fixnums}, \ref{word-integers}
+\w{\code{(unsigned-byte 32)}}, \code{single-float},
+\code{double-float}, \code{(complex single-float)}, and \code{(complex
+  double-float)}.  See sections \ref{fixnums}, \ref{word-integers}
 and \ref{float-efficiency} for more discussion of good numeric types.
 
 \code{float} is not a good type, since it might mean either
@@ -2950,16 +2951,19 @@ would be at a loss if there was no declaration at all
 useful in this regard, since they can often be strengthened to a good
 integer type.
 
-Arithmetic with \code{complex} numbers is inefficient in comparison to
-float and integer arithmetic.  Complex numbers are always represented
-with a pointer descriptor (causing consing overhead), and complex
-arithmetic is always closed coded using the general generic arithmetic
-functions.  But arithmetic with complex types such as:
+% Arithmetic with \code{complex} numbers is inefficient in comparison to
+% float and integer arithmetic.  Complex numbers are always represented
+% with a pointer descriptor (causing consing overhead), and complex
+% arithmetic is always closed coded using the general generic arithmetic
+As noted above, \cmucl{} has support for \code{(complex single-float)}
+and \code{(complex double-float)}.  These can be unboxed and, thus,
+are quite efficient.  However, arithmetic with complex types such as:
 \begin{lisp}
 (complex float)
 (complex fixnum)
 \end{lisp}
-is still faster than \code{bignum} or \code{ratio} arithmetic, since the
+will be significantly slower than the good complex types but is still
+faster than \code{bignum} or \code{ratio} arithmetic, since the
 implementation is much simpler.
 
 Note: don't use \code{/} to divide integers unless you want the
@@ -3189,7 +3193,7 @@ The derived result of the function is \code{(OR SINGLE-FLOAT
 actually a complex number.  Because of this, the generic complex log
 routine is used.
 
-If the declaration for \code{x} were \code{(single-float (0f0))} so 0
+If the declaration for \code{x} were \code{(single-float (0f0))} so $+0.0$
 is not included or \code{(or (single-float (0f0)) (member 0f0))} so
   $+0.0$ is include but not $-0.0$, the derived type would be
   \code{single-float} for both cases.  By declaring \code{x} this way,
@@ -3280,6 +3284,8 @@ representations.  These types (and subtypes of these types) are supported:
 (unsigned-byte 32)
 single-float
 double-float
+(complex single-float)
+(complex double-float)
 \end{lisp}
 
 The primary advantage of specialized slot representations is a large
