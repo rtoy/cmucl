@@ -1,24 +1,32 @@
 (in-package :cl-user)
 
-;;; Rename the X86 package and backend so that new-backend does the
+;;; Rename the SPARC package and backend so that new-backend does the
 ;;; right thing.
 (rename-package "SPARC" "OLD-SPARC")
 (setf (c:backend-name c:*native-backend*) "OLD-SPARC")
 
 (c::new-backend "SPARC"
    ;; Features to add here
-   '(:sparc :sparc-v8
+   '(:sparc :sparc-v9
      :complex-fp-vops
      :linkage-table
+     :stack-checking
+     :gencgc
      :conservative-float-type
      :hash-new :random-mt19937
-     :cmu :cmu18 :cmu18e
+     :cmu :cmu19 :cmu19a
      )
    ;; Features to remove from current *features* here
-   '(:sparc-v9 :x86 :x86-bootstrap :alpha :osf1 :mips
+   '(:sparc-v8 :sparc-v7 :x86 :x86-bootstrap :alpha :osf1 :mips
      :propagate-fun-type :propagate-float-type :constrain-float-type
      :openbsd :freebsd :glibc2 :linux :pentium
      :long-float :new-random :small))
+
+;;; May need to add some symbols to *features* and
+;;; sys::*runtime-features* as well.  This might be needed even if we
+;;; have those listed above, because of the code checks for things in
+;;; *features* and not in the backend-features..  So do that here.
+
 
 ;;; Extern-alien-name for the new backend.
 (in-package :vm)
@@ -183,6 +191,9 @@
 
 (defparameter *load-stuff* nil)
 
+;; Sometimes during cross-compile sparc::any-reg isn't defined during
+;; cross-compile.
+;;
 ;; hack, hack, hack: Make old-sparc::any-reg the same as
 ;; sparc::any-reg as an SC.  Do this by adding old-sparc::any-reg
 ;; to the hash table with the same value as sparc::any-reg.
