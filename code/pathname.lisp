@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.21 1993/08/04 10:40:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.22 1993/08/04 10:58:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1374,7 +1374,9 @@
 	 ,result))))
 
 (defun %enumerate-search-list (pathname function)
-  (let* ((pathname (translate-logical-pathname pathname))
+  (let* ((pathname (if (logical-pathname-p pathname)
+		       (translate-logical-pathname pathname)
+		       pathname))
 	 (search-list (extract-search-list pathname nil)))
     (cond
      ((not search-list)
@@ -1771,6 +1773,7 @@
 	   (return (translate-logical-pathname
 		    (translate-pathname pathname from to)))))))
     (pathname pathname)
+    (stream (translate-logical-pathname (pathname pathname)))
     (t (translate-logical-pathname (logical-pathname pathname)))))
 
 (defvar *logical-pathname-defaults*
