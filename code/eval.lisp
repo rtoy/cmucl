@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.21 1992/12/17 09:08:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.22 1993/06/23 19:31:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,9 +15,8 @@
 (export '(eval constantp quote proclaim
 	  eval-when progn prog1 prog2 let let*
 	  do do* dotimes dolist progv and or cond if the
-	  macro-function special-form-p *macroexpand-hook*
+	  macro-function special-operator-p *macroexpand-hook*
 	  macroexpand-1 macroexpand block return-from
-	  compiler-macroexpand compiler-macroexpand-1
 	  compiler-macro-function
 	  return function setq psetq apply funcall
 	  compiler-let progv flet labels macrolet
@@ -254,9 +253,8 @@
 
 ;;;; Syntactic environment access:
 
-(defun special-form-p (symbol)
-  "If the symbol globally names a special form, returns the definition in a
-  mysterious internal format (a FEXPR), else returns NIL."
+(defun special-operator-p (symbol)
+  "If the symbol globally names a special form, returns T, otherwise NIL."
   (declare (symbol symbol))
   (eq (info function kind symbol) :special-form))
 
@@ -379,6 +377,9 @@
   (setf (info function compiler-macro-function name) function)
   function)
 
+#|These seem to have been dropped from the spec, and we don't use them
+internally...
+
 (defun compiler-macroexpand-1 (form &optional env)
   "If FORM is a function call for which a compiler-macro has been defined,
    invoke the expander function using *macroexpand-hook* and return the
@@ -401,7 +402,7 @@
 		   (frob new-form t)
 		   (values new-form expanded)))))
     (frob form env)))
-
+|#
 
 (defun constantp (object)
   "True of any Lisp object that has a constant value: types that eval to
