@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.18 1992/05/24 15:57:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.19 1992/07/27 16:55:57 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,19 +290,21 @@ default-value-8
 	   (type unsigned-byte nvals) (type tn move-temp temp))
   (if (<= nvals 1)
       (progn
-	(note-this-location vop :single-value-return)
-	(move csp-tn ocfp-tn)
-	(inst nop)
+	(new-assem:without-scheduling ()
+	  (note-this-location vop :single-value-return)
+	  (move csp-tn ocfp-tn)
+	  (inst nop))
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label))
 	    (default-stack-vals (gen-label)))
 	;; Branch off to the MV case.
-	(note-this-location vop :unknown-return)
-	(inst b regs-defaulted)
-	(if (> nvals register-arg-count)
-	    (inst subcc temp nargs-tn (fixnum register-arg-count))
-	    (move csp-tn ocfp-tn))
+	(new-assem:without-scheduling ()
+	  (note-this-location vop :unknown-return)
+	  (inst b regs-defaulted)
+	  (if (> nvals register-arg-count)
+	      (inst subcc temp nargs-tn (fixnum register-arg-count))
+	      (move csp-tn ocfp-tn)))
 	
 	;; Do the single value calse.
 	(do ((i 1 (1+ i))
@@ -378,8 +380,9 @@ default-value-8
   (declare (type tn args nargs start count temp))
   (let ((variable-values (gen-label))
 	(done (gen-label)))
-    (inst b variable-values)
-    (inst nop)
+    (new-assem:without-scheduling ()
+      (inst b variable-values)
+      (inst nop))
     
     (inst compute-code-from-lra code-tn code-tn lra-label temp)
     (inst add csp-tn 4)
