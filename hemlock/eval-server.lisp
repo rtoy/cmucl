@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.11 1991/10/01 17:52:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.12 1991/10/12 21:05:37 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,9 +35,7 @@
 			      ;  "background" buffer.
   background-buffer	      ; Buffer "background" typescript is in.
   (errors		      ; Array of errors while compiling
-   (make-array 16
-	       :adjustable t
-	       :fill-pointer 0))
+   (make-array 16 :adjustable t :fill-pointer 0))
   error-index)		      ; Index of current error.
 ;;;
 (defun print-server-info (obj stream n)
@@ -170,7 +168,10 @@
     (dolist (var '(current-eval-server current-compile-server server-info))
       (when (and (hemlock-bound-p var :buffer buffer)
 		 (eq (variable-value var :buffer buffer) server))
-	(delete-variable var :buffer buffer)))))
+	(delete-variable var :buffer buffer))))
+  (setf *breakpoints* (delete-if #'(lambda (b)
+				     (eq (breakpoint-info-slave b) server))
+				 *breakpoints*)))
 
 ;;; SERVER-CLEANUP -- Internal.
 ;;;
