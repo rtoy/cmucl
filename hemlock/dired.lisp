@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dired.lisp,v 1.1.1.5 1992/06/05 19:28:07 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dired.lisp,v 1.1.1.6 1993/09/01 09:47:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,15 +15,15 @@
 ;;; Written by Bill Chiles.
 ;;;
 
+(defpackage "DIRED"
+  (:shadow "RENAME-FILE" "DELETE-FILE")
+  (:export "COPY-FILE" "RENAME-FILE" "FIND-FILE" "DELETE-FILE"
+	   "MAKE-DIRECTORY"
+	   "*UPDATE-DEFAULT*" "*CLOBBER-DEFAULT*" "*RECURSIVE-DEFAULT*"
+	   "*REPORT-FUNCTION*" "*ERROR-FUNCTION*" "*YESP-FUNCTION*"
+	   "PATHNAMES-FROM-PATTERN"))
+  
 (in-package "DIRED")
-
-(shadow '(rename-file delete-file))
-
-(export '(copy-file rename-file find-file delete-file make-directory
-	  *update-default* *clobber-default* *recursive-default*
-	  *report-function* *error-function* *yesp-function*
-	  pathnames-from-pattern))
-
 
 
 ;;;; Exported parameters.
