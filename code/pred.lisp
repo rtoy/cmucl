@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28 1992/12/05 22:10:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.1 1993/01/15 15:29:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,8 +16,8 @@
 ;;; Written by William Lott.
 ;;;
 
-(in-package "EXTENSIONS")
-(export '(structurep fixnump bignump bitp ratiop weak-pointer-p))
+(in-package "KERNEL")
+(export '(%instancep instance fixnump bignump bitp ratiop weak-pointer-p))
 
 (in-package "SYSTEM")
 (export '(system-area-pointer system-area-pointer-p))
@@ -36,7 +36,7 @@
 	  null number ratio rational real sequence short-float signed-byte
 	  simple-array simple-bit-vector simple-string simple-vector
 	  single-float standard-char string string-char symbol t
-	  unsigned-byte vector structure satisfies))
+	  unsigned-byte vector satisfies))
 
 
 
@@ -78,7 +78,7 @@
       simple-vector-p
       single-float-p
       stringp
-      structurep
+      %instancep
       symbolp
       system-area-pointer-p
       weak-pointer-p
@@ -150,14 +150,14 @@
 	     (symbol-package :foo))
 	 'keyword
 	 'symbol))
-    (structure
-     (let ((name (structure-ref object 0)))
+    (instance
+     (let ((name (class-proper-name (layout-class (%instance-layout object))))
        (case name
 	 (alien-internals:alien-value
 	  `(alien:alien
 	    ,(alien-internals:unparse-alien-type
 	      (alien-internals:alien-value-type object))))
-	 (t name))))
+	 (t name)))))
     (array (type-specifier (ctype-of object)))
     (system-area-pointer 'system-area-pointer)
     (weak-pointer 'weak-pointer)
@@ -221,50 +221,9 @@
   (declare (type ctype type))
   (etypecase type
     (named-type
-     (case (named-type-name type)
-       ((* t)
-	t)
-       ((nil)
-	nil)
-       (character (characterp object))
-       (base-char (base-char-p object))
-       (standard-char (and (characterp object) (standard-char-p object)))
-       (extended-char
-	(and (characterp object) (not (base-char-p object))))
-       (function (functionp object))
-       (cons (consp object))
-       (symbol (symbolp object))
-       (keyword
-	(and (symbolp object)
-	     (eq (symbol-package object)
-		 (symbol-package :foo))))
-       (system-area-pointer (system-area-pointer-p object))
-       (weak-pointer (weak-pointer-p object))
-       (code-component (code-component-p object))
-       (lra (lra-p object))
-       (fdefn (fdefn-p object))
-       (scavenger-hook (scavenger-hook-p object))
-       (structure (structurep object))
-       (dylan::dylan-function (dylan::dylan-function-p object))
-       (dylan::generic-function
-	(only-if-bound dylan::generic-function-p object))
-       (dylan::exit-function
-	(only-if-bound dylan::exit-function-p object))
-       (dylan::next-method-func
-	(only-if-bound dylan::next-method-func-p object))
-       (dylan::method
-	(only-if-bound dylan::method-p object))
-       (dylan::defined-method
-	(only-if-bound dylan::defined-method-p object))
-       (dylan::builtin-method
-	(only-if-bound dylan::builtin-method-p object))
-       (dylan::slot-accessor-method
-	(only-if-bound dylan::slot-accessor-method-p object))
-       (dylan::slot-setter-method
-	(only-if-bound dylan::slot-setter-method-p object))
-       (dylan::slot-getter-method
-	(only-if-bound dylan::slot-getter-method-p object))
-       (t nil)))
+     (ecase (named-type-name type)
+       (* t)
+       ((nil) nil)))
     (numeric-type
      (and (numberp object)
 	  (let ((num (if (complexp object) (realpart object) object)))
@@ -316,8 +275,8 @@
 		     (specifier-type (array-element-type object))))))
     (member-type
      (if (member object (member-type-members type)) t))
-    (structure-type
-     (structure-typep object (structure-type-name type)))
+    (class
+     (%instance-typep (layout-of object) type))
     (union-type
      (dolist (type (union-type-types type))
        (when (%%typep object type)
@@ -364,23 +323,24 @@
 
 
 
-;;; Structure-Typep  --  Internal
+;;; CLASS-TYPEP  --  Internal
 ;;;
-;;; This is called by %typep when it tries to match against a structure type,
-;;; and typep of types that are known to be structure types at compile time
-;;; are converted to this.
+;;;    Test whether Obj-Layout is from an instance of Class.
 ;;;
-(defun structure-typep (object type)
+(defun class-typep (obj-layout class)
   (declare (optimize speed))
-  (let ((info (info type defined-structure-info type)))
-    (if info
-	(and (structurep object)
-	     (let ((obj-name (structure-ref object 0)))
-	       (or (eq obj-name type)
-		   (if (member obj-name (c::dd-included-by info)
-			       :test #'eq)
-		       t nil))))
-	(error "~S is an unknown structure type specifier." type))))
+  (when (layout-invalid obj-layout)
+    (error "TYPEP on obsolete object (was class ~S)."
+	   (class-proper-name (layout-class obj-layout))))
+  (let* ((layout (class-layout class))
+	 (subclasses (class-subclasses layout)))
+    (when (layout-invalid layout)
+      (error "Class is currently invalid: ~S" class))
+    (if (or (eq obj-layout layout)
+	    (and subclasses
+		 (gethash (layout-class obj-layout) subclasses)))
+	t
+	nil)))
 
 
 ;;;; Equality predicates.
@@ -441,13 +401,17 @@
 	      (equalp (cdr x) (cdr y))))
 	((pathnamep x)
 	 (and (pathnamep y) (pathname= x y)))
-	((structurep x)
-	 (let ((length (structure-length x)))
-	   (and (structurep y)
-		(= length (structure-length y))
-		(dotimes (i length t)
-		  (let ((x-el (structure-ref x i))
-			(y-el (structure-ref y i)))
+	((%instancep x)
+	 (let* ((layout-x (%instance-layout x))
+		(length (layout-length layout-x)))
+	   (and (%instancep y)
+		(eq layout-x (%instance-layout y))
+		(structure-class-p (layout-class layout-x))
+		(do ((i 1 (1+ i)))
+		    ((= i len) t)
+		  (declare (fixnum i))
+		  (let ((x-el (%instance-ref x i))
+			(y-el (%instance-ref y i)))
 		    (unless (or (eq x-el y-el)
 				(equalp x-el y-el))
 		      (return nil)))))))
