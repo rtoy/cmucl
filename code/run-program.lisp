@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.5 1991/06/17 20:31:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.6 1991/09/25 15:13:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -339,11 +339,11 @@
 	  (mach:unix-dup2 stdout 1))
 	(when stderr
 	  (mach:unix-dup2 stderr 2))
-	;; Close all other descriptors.
+	;; Arange for all the unused FD's to be closed.
 	(do ((fd (1- (mach:unix-getdtablesize))
 		 (1- fd)))
 	    ((= fd 3))
-	  (mach:unix-close fd))
+	  (mach:unix-fcntl fd mach:f-setfd 1))
 	;; Do the before-execve
 	(when before-execve
 	  (funcall before-execve))
