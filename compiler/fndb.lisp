@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.39 1991/12/22 03:38:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.40 1992/02/07 12:37:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,6 +71,11 @@
   :derive-type (result-type-specifier-nth-arg 2))
 
 (defknown type-of (t) t (foldable flushable))
+
+;;; Can be affected by type definitions...
+(defknown (upgraded-complex-part-type upgraded-array-element-type)
+	  (type-specifier) type-specifier
+  (flushable))
 
 
 ;;;; In the "Predicates" chapter:
