@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.4 1996/05/08 14:56:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,12 +132,18 @@
    this signals an error.  Otherwise, this makes a key-event with the keysym
    and bits formed by mapping the X bits to key-event bits.
 
+   If any state bit is set that has no suitable modifier translation, it is
+   passed to XLIB:DEFAULT-KEYSYM-INDEX in order to handle Mode_Switch keys
+   appropriately.
+
    Otherwise, this makes a key-event with the keysym and bits formed by mapping
    the X bits to key-event bits."
   (let ((new-bits 0)
 	shiftp lockp)
     (dolist (map *modifier-translations*)
       (unless (zerop (logand (car map) bits))
+	;; ignore the bits of the mapping for the determination of a key index
+	(setq bits (logxor bits (car map)))
 	(cond
 	 ((string-equal (cdr map) "Shift")
 	  (setf shiftp t))
@@ -145,7 +151,10 @@
 	  (setf lockp t))
 	 (t (setf new-bits
 		  (logior new-bits (key-event-modifier-mask (cdr map))))))))
-    (let ((keysym (xlib:keycode->keysym display scan-code (if shiftp 1 0))))
+    ;; here pass any remaining modifier bits to clx
+    (let* ((index  (and (not (zerop bits))
+			(xlib:default-keysym-index display scan-code bits)))
+	   (keysym (xlib:keycode->keysym display scan-code (or index (if shiftp 1 0)))))
       (cond ((null (keysym-names keysym))
 	     nil)
 	    ((and (not shiftp) lockp (<= 97 keysym 122)) ; small-alpha-char-p
