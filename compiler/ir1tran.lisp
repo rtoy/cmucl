@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.47 1991/05/23 17:51:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.48 1991/05/24 01:03:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -500,6 +500,7 @@
 	   #'(lambda (x)
 	       (not (eq (ref-inlinep x) :notinline)))
 	   fun dummy)
+	  (substitute-leaf var dummy)
 	  (setf (gethash name *free-functions*)
 		(if (eq inlinep :inline)
 		    var
