@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.34 1993/08/27 14:39:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.35 1993/08/27 16:24:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -397,6 +397,7 @@
   (pending-signal :c-type "int")
   (pending-code :c-type "int")
   (pending-mask :c-type "int")
+  (gc-pending :c-type "boolean")
   ;; Stacks.
   (control-stack-base :c-type "lispobj *")
   (control-stack-pointer :c-type "lispobj *")
