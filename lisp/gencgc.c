@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.37 2003/09/15 16:41:12 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.38 2003/09/16 11:13:46 gerd Exp $
  *
  */
 
@@ -78,14 +78,67 @@
 #error gencgc is not supported on this platform
 #endif
 
+/* Define for activating assertions.  */
+
+#ifdef sparc
+#define GC_ASSERTIONS 1
+#endif
+
+/* Check for references to stack-allocated objects.  */
+
+#ifdef GC_ASSERTIONS
+
+static void *invalid_stack_start, *invalid_stack_end;
+
+static inline void
+check_escaped_stack_object (lispobj *where, lispobj obj)
+{
+  void *p;
+  if (Pointerp (obj)
+      && (p = (void *) PTR (obj),
+	  (p >= (void *) CONTROL_STACK_START
+	   && p < (void *) CONTROL_STACK_END)))
+    {
+      char *space;
+      
+      if (where >= (lispobj *) DYNAMIC_0_SPACE_START
+	  && where < (lispobj *) (DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE))
+	space = "dynamic space";
+      else if (where >= (lispobj *) STATIC_SPACE_START
+	       && where < (lispobj *) (STATIC_SPACE_START + STATIC_SPACE_SIZE))
+	space = "static space";
+      else
+	space = "read-only space";
+
+      /* GC itself uses some stack, so we can't tell exactly where the
+	 invalid stack area starts.  Usually, it should be an error if a
+	 reference to a stack-allocated object is found, although it
+	 is valid to store a reference to a stack-allocated object
+	 temporarily in another reachable object, as long as the
+	 reference goes away at the end of a dynamic extent.  */
+      
+      if (p >= invalid_stack_start && p < invalid_stack_end)
+	lose ("Escaped stack-allocated object 0x%08lx at %p in %s\n",
+	      (unsigned long) obj, where, space);
+      else
+	fprintf (stderr,
+		 "Reference to stack-allocated object 0x%08lx at %p in %s\n",
+		 (unsigned long) obj, where, space);
+    }
+}
+
+#endif /* GC_ASSERTIONS */
+
+
 /*
  * Leave the gc_asserts enabled on sparc for a while yet until this
  * stabilizes.
  */
-#if defined(sparc)
-#define gc_assert(ex) do { \
-	if (!(ex)) gc_abort(); \
-} while (0)
+#ifdef GC_ASSERTIONS
+#define gc_assert(ex)		\
+  do {				\
+    if (!(ex)) gc_abort ();     \
+  } while (0)
 #else
 #define gc_assert(ex)  (void) 0
 #endif
@@ -1953,54 +2006,54 @@ static lispobj copy_large_unboxed_object(lispobj object, int nwords)
 
 #define DIRECT_SCAV 0
 
-static void scavenge(lispobj *start, long nwords)
+static void
+scavenge (lispobj *start, long nwords)
 {
-  while (nwords > 0) {
-    lispobj object;
-    int words_scavenged;
+  while (nwords > 0)
+    {
+      lispobj object;
+      int words_scavenged;
 
-    object = *start;
-
-    gc_assert(object != 0x01); /* Not a forwarding pointer. */
+      object = *start;
+      /* Not a forwarding pointer. */
+      gc_assert (object != 0x01);
 
 #if DIRECT_SCAV
-    words_scavenged = (scavtab[TypeOf(object)])(start, object);
-#else
-    if (Pointerp(object))
-      /* It be a pointer. */
-      if (from_space_p(object)) {
-	/*
-	 * It currently points to old space.  Check for a forwarding
-	 * pointer.
-	 */
-	lispobj *ptr = (lispobj *) PTR(object);
-	lispobj first_word = *ptr;
-
-	if(first_word == 0x01) {
-	  /* Yep, there be a forwarding pointer. */
-	  *start = ptr[1];
-	  words_scavenged = 1;
-	}
-	else
-	  /* Scavenge that pointer. */
-	  words_scavenged = (scavtab[TypeOf(object)])(start, object);
-      }
-      else
-	/* It points somewhere other than oldspace.  Leave it alone. */
-	words_scavenged = 1;
-    else
-      if ((object & 3) == 0)
-	/* It's a fixnum.  Real easy. */
-	words_scavenged = 1;
-      else
-	/* It's some random header object. */
-	words_scavenged = (scavtab[TypeOf(object)])(start, object);
+      words_scavenged = scavtab[TypeOf (object)] (start, object);
+#else  /* not DIRECT_SCAV */
+      if (Pointerp (object))
+	{
+#ifdef GC_ASSERTIONS
+	  check_escaped_stack_object (start, object);
 #endif
+	  
+	  if (from_space_p (object))
+	    {
+	      lispobj *ptr = (lispobj *) PTR (object);
+	      lispobj first_word = *ptr;
 
-    start += words_scavenged;
-    nwords -= words_scavenged;
-  }
-  gc_assert(nwords == 0);
+	      if (first_word == 0x01)
+		{
+		  *start = ptr[1];
+		  words_scavenged = 1;
+		}
+	      else
+		words_scavenged = scavtab[TypeOf (object)] (start, object);
+	    }
+	  else
+	    words_scavenged = 1;
+	}
+      else if ((object & 3) == 0)
+	words_scavenged = 1;
+      else
+	words_scavenged = scavtab[TypeOf (object)] (start, object);
+#endif /* not DIRECT_SCAV */
+
+      start += words_scavenged;
+      nwords -= words_scavenged;
+    }
+  
+  gc_assert (nwords == 0);
 }
 
 
@@ -2690,6 +2743,7 @@ static int size_code_header(lispobj *where)
 	return nwords;
 }
 
+#ifndef i386
 
 static int scav_return_pc_header(lispobj *where, lispobj object)
 {
@@ -2700,6 +2754,8 @@ static int scav_return_pc_header(lispobj *where, lispobj object)
     lose(NULL);
     return 0;
 }
+
+#endif /* not i386 */
 
 static lispobj trans_return_pc_header(lispobj object)
 {
@@ -2723,6 +2779,7 @@ static lispobj trans_return_pc_header(lispobj object)
  * the function object.
  */
 #ifdef i386
+
 static int scav_closure_header(lispobj *where, lispobj object)
 {
   struct closure *closure;
@@ -2738,7 +2795,10 @@ static int scav_closure_header(lispobj *where, lispobj object)
 
   return 2;
 }
-#endif
+
+#endif /* i386 */
+
+#ifndef i386
 
 static int scav_function_header(lispobj *where, lispobj object)
 {
@@ -2749,6 +2809,8 @@ static int scav_function_header(lispobj *where, lispobj object)
     lose(NULL);
     return 0;
 }
+
+#endif /* not i386 */
 
 static lispobj trans_function_header(lispobj object)
 {
@@ -6099,10 +6161,21 @@ static void write_protect_generation_pages(int generation)
  * Garbage collect a generation. If raise is 0 the remains of the
  * generation are not raised to the next generation.
  */
-static void	garbage_collect_generation(int generation, int raise)
+static void
+garbage_collect_generation (int generation, int raise)
 {
   unsigned long i;
   unsigned long read_only_space_size, static_space_size;
+
+#ifdef GC_ASSERTIONS
+#ifdef i386
+  invalid_stack_start = (void *) CONTROL_STACK_START;
+  invalid_stack_end = (void *) &raise;
+#else /* not i386 */
+  invalid_stack_start = (void *) &raise;
+  invalid_stack_end = (void *) CONTROL_STACK_END;
+#endif /* not i386 */
+#endif /* GC_ASSERTIONS */
 
   gc_assert(generation <= NUM_GENERATIONS - 1);
 
@@ -6228,15 +6301,15 @@ static void	garbage_collect_generation(int generation, int raise)
 #endif
         
 #ifdef PRINTNOISE
-    printf("Scavenging the binding stack (%d bytes) ...\n",
-           ((lispobj *) get_binding_stack_pointer() - binding_stack) * sizeof(lispobj));
+  printf("Scavenging the binding stack (%d bytes) ...\n",
+	 ((lispobj *) get_binding_stack_pointer() - binding_stack) * sizeof(lispobj));
 #endif
   /* Scavenge the binding stack. */
   scavenge(binding_stack,
 	   (lispobj *) get_binding_stack_pointer() - binding_stack);
 
 #ifdef PRINTNOISE
-    printf("Done scavenging the binding stack.\n");
+  printf("Done scavenging the binding stack.\n");
 #endif
   /*
    * Scavenge the scavenge_hooks in case this refers to a hook added
@@ -6246,11 +6319,11 @@ static void	garbage_collect_generation(int generation, int raise)
    */
 
 #ifdef PRINTNOISE
-    printf("Scavenging the scavenger hooks ...\n");
+  printf("Scavenging the scavenger hooks ...\n");
 #endif
   scavenge((lispobj *) &scavenger_hooks, 1);
 #ifdef PRINTNOISE
-    printf("Done scavenging the scavenger hooks.\n");
+  printf("Done scavenging the scavenger hooks.\n");
 #endif
 
   if (SymbolValue(SCAVENGE_READ_ONLY_SPACE) != NIL) {
