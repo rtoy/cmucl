@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.63 2001/04/07 14:10:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.64 2001/07/08 17:41:41 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -433,6 +433,9 @@
 
 ;;;; Miscellaneous external functions:
 
+(defvar *cleanup-functions* nil
+  "Functions to be invoked during cleanup at Lisp exit.")
+
 ;;; Quit gets us out, one way or another.
 
 (defun quit (&optional recklessly-p)
@@ -440,7 +443,9 @@
   non-Nil."
   (if recklessly-p
       (unix:unix-exit 0)
-      (throw '%end-of-the-world 0)))
+      (progn
+        (mapc (lambda (fn) (ignore-errors (funcall fn))) *cleanup-functions*)
+        (throw '%end-of-the-world 0))))
 
 
 #-mp ; Multi-processing version defined in multi-proc.lisp.
@@ -455,8 +460,8 @@
   (multiple-value-bind (sec usec)
     (if (integerp n)
 	(values n 0)
-	(multiple-value-bind (sec frac)(truncate n)
-	  (values sec(truncate frac 1e-6))))
+	(multiple-value-bind (sec frac) (truncate n)
+	  (values sec (truncate frac 1e-6))))
     (unix:unix-select 0 0 0 0 sec usec))
   nil)
 
