@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.64 2002/08/23 18:31:04 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.65 2003/02/15 23:41:30 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -440,6 +440,11 @@
 
 (defun %print-condition (s stream d)
   (declare (ignore d))
+  (if (fboundp 'print-object)
+      (print-object s stream)
+      (real-print-condition s stream)))
+
+(defun real-print-condition (s stream)
   (if *print-escape*
       (print-unreadable-object (s stream :identity t :type t))
       (dolist (class (condition-class-cpl (class-of s))
