@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.2 1992/08/19 02:49:35 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.3 1992/09/04 08:11:54 wlott Exp $
 
 all: lisp.nm
 
@@ -36,7 +36,7 @@ version:
 
 undefineds: undefineds.src
 	${CPP} undefineds.src | \
-	sed -e '/^#/d' -e '/^[ 	]*$$/d' -e 's/.*/-Xlinker -u -Xlinker ${UNDEFSYMPATTERN}/' | \
+	sed -e '/^#/d' -e '/^[ 	]*$$/d' -e 's/.*/${UNDEFSYMPATTERN}/' | \
 	sort -u > ,undefineds
 	mv ,undefineds undefineds
 
@@ -52,7 +52,7 @@ clean:
 	rm -f Depends undefineds *.o lisp lisp.nm
 
 depend:
-	$(CC) -MM ${CFLAGS} ${CPPFLAGS} ${SRCS} > ,depends
+	$(CC) -MM -E ${CFLAGS} ${CPPFLAGS} ${SRCS} > ,depends
 	mv ,depends Depends
 
 include Depends
