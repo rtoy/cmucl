@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.4 2000/09/14 14:35:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.5 2000/10/16 17:33:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -598,16 +598,6 @@
 		       (quit))
 		      (t
 		       (format t "~&Received EOF.~%")))))))))))
-
-(defun %handled-top-level ()
-  "Wrap %top-level read-eval-print loop in an error handler for *batch-mode*."
-  (handler-case
-      (progn
-	(%top-level)
-	(quit))
-    (error (cond)
-      (format *error-output* "Error in batch processing:~%~A" cond)
-      (throw '%end-of-the-world 1))))
 
 
 ;;; %Halt  --  Interface
