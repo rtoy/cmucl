@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.13 1991/11/13 19:36:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.14 1991/11/18 15:50:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,26 +53,28 @@
 ;;;
 ;;;    Remove all TNs with no references from the lists of unpacked TNs.  We
 ;;; null out the Offset so that nobody will mistake deleted wired TNs for
-;;; properly packed TNs.
+;;; properly packed TNs.  We mark non-deleted alias TNs so that aliased TNs
+;;; aren't considered to be unreferenced.
 ;;;
 (defun delete-unreferenced-tns (component)
-  (let ((2comp (component-info component)))
+  (let* ((2comp (component-info component))
+	 (aliases (make-array (1+ (ir2-component-global-tn-counter 2comp))
+			      :element-type 'bit :initial-element 0)))
     (labels ((delete-some (getter setter)
 	       (let ((prev nil))
 		 (do ((tn (funcall getter 2comp) (tn-next tn)))
 		     ((null tn))
-		   (let ((kind (tn-kind tn)))
-		     (cond
-		      ((or (tn-reads tn) (tn-writes tn)
-			   (eq kind :component))
-		       (setq prev tn))
-		      ((eq kind :specified-save)
-		       (let ((actual (tn-save-tn tn)))
-			 (unless (or (tn-reads actual) (tn-writes actual)
-				     (eq (tn-kind actual) :component))
-			   (delete-1 tn prev setter))))
-		      (t
-		       (delete-1 tn prev setter)))))))
+		   (cond
+		    ((or (used-p tn)
+			 (and (eq (tn-kind tn) :specified-save)
+			      (used-p (tn-save-tn tn))))
+		     (setq prev tn))
+		    (t
+		     (delete-1 tn prev setter))))))
+	     (used-p (tn)
+	       (or (tn-reads tn) (tn-writes tn)
+		   (member (tn-kind tn) '(:component :environment))
+		   (not (zerop (sbit aliases (tn-number tn))))))
 	     (delete-1 (tn prev setter)
 	       (if prev
 		   (setf (tn-next prev) (tn-next tn))
@@ -88,15 +90,18 @@
 	     (clear-live (tn getter setter)
 	       (let ((env (environment-info (tn-environment tn))))
 		 (funcall setter (delete tn (funcall getter env)) env))))
-      (declare (inline delete-some delete-1 clear-live))
+      (declare (inline used-p delete-some delete-1 clear-live))
+      (delete-some #'ir2-component-alias-tns
+		   #'(setf ir2-component-alias-tns))
+      (do ((tn (ir2-component-alias-tns 2comp) (tn-next tn)))
+	  ((null tn))
+	(setf (sbit aliases (tn-number (tn-save-tn tn))) 1))
       (delete-some #'ir2-component-normal-tns
 		   #'(setf ir2-component-normal-tns))
       (delete-some #'ir2-component-restricted-tns
 		   #'(setf ir2-component-restricted-tns))
       (delete-some #'ir2-component-wired-tns
-		   #'(setf ir2-component-wired-tns))
-      (delete-some #'ir2-component-alias-tns
-		   #'(setf ir2-component-alias-tns))))
+		   #'(setf ir2-component-wired-tns))))
   (undefined-value))
 
 
