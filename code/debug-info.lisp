@@ -94,12 +94,12 @@
 ;;; Index.
 ;;;
 (defmacro read-var-string (vec index)
-  (once-only ((len `(read-var-integer ,vec ,index))
-	      (res `(make-string ,len)))
-    `(progn
-       (%primitive byte-blt ,vec ,index ,res 0 ,len)
-       (incf ,index ,len)
-       ,res)))
+  (once-only ((len `(read-var-integer ,vec ,index)))
+    (once-only ((res `(make-string ,len)))
+      `(progn
+	 (%primitive byte-blt ,vec ,index ,res 0 ,len)
+	 (incf ,index ,len)
+	 ,res))))
 
 
 ;;; WRITE-VAR-STRING  --  Interface
@@ -112,8 +112,8 @@
   (let ((len (length string)))
     (write-var-integer len vec)
     (dotimes (i len)
-      (vector-push-extend (code-char (schar string i)) vec)))
-  (undefined-value))
+      (vector-push-extend (char-code (schar string i)) vec)))
+  (undefined))
 
 
 ;;;; Compiled debug locations:
