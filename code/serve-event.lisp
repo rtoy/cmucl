@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.8 1991/05/22 00:19:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.9 1991/05/22 17:47:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -269,7 +269,14 @@
   #+clx
   (dolist (d/h *display-event-handlers*)
     (let ((d (car d/h)))
-      (when (xlib::event-listen d)
+      (declare (inline member))
+      ;;
+      ;; If in the *descriptor-handlers*, then we are already waiting for input
+      ;; on that display, and we don't want to do it recursively.
+      (when (and (not (member (fd-stream-fd (xlib::display-input-stream d))
+			      *descriptor-handlers*
+			      :key #'handler-descriptor))
+		 (xlib::event-listen d))
 	(handler-bind ((error #'(lambda (condx)
 				  (declare (ignore condx))
 				  (flush-display-events d))))
