@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.8 1990/06/18 14:47:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.9 1990/07/02 09:33:10 wlott Exp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;
@@ -66,7 +66,7 @@
 (define-vop (move-base-character-argument)
   (:args (x :target y
 	    :scs (base-character-reg))
-	 (fp :scs (descriptor-reg)
+	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y base-character-reg))))
   (:results (y))
   (:generator 0
@@ -95,14 +95,16 @@
   (:policy :fast-safe)
   (:args (ch :scs (base-character-reg) :target res))
   (:arg-types base-character)
-  (:results (res :scs (any-reg descriptor-reg)))
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
   (:generator 1
     (inst sll res ch 2)))
 
 (define-vop (code-char)
   (:translate code-char)
   (:policy :fast-safe)
-  (:args (code :scs (any-reg descriptor-reg) :target res))
+  (:args (code :scs (any-reg) :target res))
+  (:arg-types positive-fixnum)
   (:results (res :scs (base-character-reg)))
   (:result-types base-character)
   (:generator 1
