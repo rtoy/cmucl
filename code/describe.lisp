@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.18 1992/03/26 16:41:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.19 1992/05/06 08:52:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,10 +66,9 @@
 ;;; DESCRIBE sets up the output stream and calls DESCRIBE-AUX, which does the
 ;;; hard stuff.
 ;;;
-(defun describe (x &optional (stream *standard-output*))
-  "Prints a description of the object X.
-  See also *describe-level*, defdescribe, *describe-verbose*,
-  *describe-print-level*, *describe-print-length*, and *describe-indentation*."
+(defun describe (x &optional stream)
+  "Prints a description of the object X."
+  (declare (type (or stream (member t nil)) stream))
   (unless *describe-output*
     (setq *describe-output* (make-indenting-stream *standard-output*)))
   (cond (*in-describe*
@@ -79,7 +78,11 @@
 	     (indenting-further *describe-output* *describe-indentation*
 	       (describe-aux x)))))
 	(t
-	 (setf (indenting-stream-stream *describe-output*) stream)
+	 (setf (indenting-stream-stream *describe-output*)
+	       (case stream
+		 ((t) *terminal-io*)
+		 ((nil) *standard-output*)
+		 (t stream)))
 	 (let ((*standard-output* *describe-output*)
 	       (*print-level* (or *describe-print-level* *print-level*))
 	       (*print-length* (or *describe-print-length* *print-length*))
