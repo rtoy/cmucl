@@ -8,6 +8,7 @@
 (declaim (ftype (function (t) *) local-call-analyze))
 (declaim (ftype (function (t) *) delete-block))
 (declaim (ftype (function (t) *) join-successor-if-possible))
+(declaim (ftype (function (t) *) ir1-optimize))
 (declaim (ftype (function (t) *) ir1-optimize-block))
 (declaim (ftype (function (t) *) flush-dead-code))
 (declaim (ftype (function (t) *) generate-type-checks))
@@ -26,23 +27,31 @@
 (declaim (ftype (function (t) *) pack))
 (declaim (ftype (function (t) *) generate-code))
 (declaim (ftype (function (t t t t t t) *) fasl-dump-component))
+(declaim (ftype (function (t) *) debug-info-for-component))
 (declaim (ftype (function (t) *) clear-ir2-info))
 (declaim (ftype (function (t) *) macerate-ir1-component))
 (declaim (ftype (function (t) *) merge-top-level-lambdas))
 (declaim (ftype (function (t t) *) note-failed-optimization))
-(declaim (ftype (function () *) clear-stuff))
+(declaim (ftype (function (&optional t) *) clear-stuff))
 (declaim (ftype (function (t) *) read-source-form))
 (declaim (ftype (function (t t) *) fasl-dump-source-info))
 (declaim (ftype (function (t t) *) fasl-dump-top-level-lambda-call))
+(declaim (ftype (function (t t) *) new-assem:append-segment))
+(declaim (ftype (function (t) *) new-assem:finalize-segment))
+(declaim (ftype (function (t) *) new-assem::schedule-pending-instructions))
 
-(profile ir1-top-level
+(profile new-assem:append-segment
+	 new-assem:finalize-segment
+	 new-assem::schedule-pending-instructions
+	 ir1-top-level
 	 find-initial-dfo
 	 find-dfo
 	 local-call-analyze
 	 delete-block
-	 join-successor-if-possible
-	 ir1-optimize-block
-	 flush-dead-code
+	 ir1-optimize
+;	 join-successor-if-possible
+;	 ir1-optimize-block
+;	 flush-dead-code
 	 generate-type-checks
 	 constraint-propagate
 	 pre-environment-analyze-top-level
@@ -73,6 +82,7 @@
 	 emit-saves
 |#
 	 generate-code
+	 debug-info-for-component
 	 fasl-dump-component
 	 clear-ir2-info
 	 macerate-ir1-component
