@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.27 1998/03/21 08:05:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.28 2000/10/16 17:30:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -220,6 +220,7 @@
     ;; The C startup code must fill these in.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
+    ext::*batch-mode*
     lisp::*initial-fdefn-objects*
 
     ;; Functions that the C code needs to call
