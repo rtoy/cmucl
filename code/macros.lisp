@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.87 2003/02/08 11:33:39 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.88 2003/02/18 16:55:49 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1243,11 +1243,17 @@
   (let ((keyform-value (gensym))
 	(clauses ())
 	(keys ()))
-    (dolist (case cases)
+    (do* ((case-list cases (cdr case-list))
+	  (case (first case-list) (first case-list)))
+	 ((null case-list))
       (cond ((atom case)
 	     (error "~S -- Bad clause in ~S." case name))
 	    ((and (not allow-otherwise)
-		 (memq (car case) '(t otherwise)))
+		  (null (cdr case-list))
+		  (memq (car case) '(t otherwise)))
+	     ;; The CLHS says OTHERWISE clause is an OTHERWISE clause
+	     ;; only if it's the last case.  Otherwise, it's just a
+	     ;; normal clause.
 	     (if errorp
 		 (error "No default clause allowed in ~S: ~S" name case)
 		 (push `(t nil ,@(rest case)) clauses)))
