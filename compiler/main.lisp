@@ -276,7 +276,6 @@
   (clrhash *free-functions*)
   (clrhash *free-variables*)
   (clrhash *constants*)
-  (clrhash *source-paths*)
   (clrhash *failed-optimizations*)
   ;;
   ;; Clear debug counters and tables.
