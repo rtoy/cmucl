@@ -45,6 +45,10 @@ New in this release:
       - Callbacks supported on Mac OS X.
       - Loop analysis code added to the compiler.  It's incorporated
         into the build, but not used in any way yet.
+      - Errors from socket functions signal a SOCKET-ERROR instead of
+        ERROR. 
+      - Efficiency notes are no longer printed if inhibit-warnings >=
+        2.5.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -88,6 +92,8 @@ New in this release:
         should signal a program-error.
       - LOOP INITIALLY clauses occur after variable initialization for
         FOR, WITH, and AS clauses, as required by ANSI CL.
+      - Format bugs in ~{ and ~@[X~], as noted by ansi-tests, have
+        been fixed.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -126,12 +132,23 @@ New in this release:
         outside the range of single-float numbers no longer cause
         compiler errors.
       - Fix source-form reporting in the disassembler.
-
+      - Arrays in fasl files had non-NIL fill-pointer.  Make them NIL.
+      - FILE-POSITION was incorrectly set for simple-streams after a
+        READ-VECTOR. 
+      - Printing 1d23 no longer causes an error.
+      - Work around the problem of (concatenate 'fixnum '(1)) causing
+        deletion of all following code.
+      - A directory with a component of :WILD was not correctly
+        handled.
+      - CREATE-INET-LISTENER was missing a call to htonl.
+ 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
         sequence types that are too hairy for CMUCL should no longer
         occur.  But CMUCL will now signal an error, which may not be
         compliant either.
+      - Compiler is a little smarter in deriving the result type of
+        MAP.
      
   * Improvements to the PCL implementation of CLOS:
 
