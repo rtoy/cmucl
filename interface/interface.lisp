@@ -317,6 +317,7 @@
 (defconstant *history-size* 25)
 
 (defvar *inspector-history*)
+(defvar *current-inspector-objects* nil)
 
 (defstruct (inspector-history
 	    (:print-function print-inspector-history)
@@ -359,6 +360,7 @@
 	  (with-busy-cursor (pane)
 	    (text-set-string widget "")
 	    (display-inspector-pane object)
+	    (push object *current-inspector-objects*)
 	    (inspector-add-history-item object)))
       (error (e)
         (interface-error (format nil "~a" e) (xti:widget-user-data widget))))))
@@ -371,6 +373,7 @@
     (with-busy-cursor (pane)
       (update-display widget)
       (display-inspector-pane object)
+      (push object *current-inspector-objects*)
       (list-deselect-pos widget pos))))
 
 
@@ -396,6 +399,12 @@
 (defvar *file-selection-hook* #'load)
 
 (defvar *file-list* nil)
+
+(defun close-all-callback (widget call-data)
+  (declare (ignore widget call-data))
+  (dolist (object *current-inspector-objects*)
+    (destroy-interface-pane object))
+  (setf *current-inspector-objects* nil))
 
 (defun file-selection-callback (widget call-data)
   (declare (ignore widget))
@@ -581,6 +590,7 @@
 					      #'compile-file)
 					(manage-child fsel)))
 		   "-----"
+		   ("Close Inspection Panes" ,#'close-all-callback)
 		   ("Close Control Panel" ,#'popdown-callback ,pane)
 		   ("Quit Lisp" ,#'(lambda (w c pane)
 				     (declare (ignore w c))
