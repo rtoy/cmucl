@@ -1,19 +1,78 @@
 ;;; -*- Package: RT -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/mc68881.lisp,v 1.8 1991/07/23 12:11:50 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; The following code is to support the MC68881 floating point chip on the APC
-;;; card.  Adapted by Rob MacLachlan the Sparc support, written by Rob
+;;; card.  Adapted by Rob MacLachlan from the Sparc support, written by Rob
 ;;; MacLachlan and William Lott, with some stuff from Dave McDonald's original
 ;;; RT miscops.
 ;;;
 (in-package "RT")
 
+(eval-when (compile eval load)
+
+;;; The actual positions of the info in the mc68881 FPCR and FPSR.
+;;;
+(defconstant mc68881-fpcr-rounding-mode-byte (byte 2 4))
+(defconstant mc68881-fpcr-rounding-precision-byte (byte 2 6))
+(defconstant mc68881-fpcr-traps-byte (byte 8 8))
+(defconstant mc68881-fpsr-accrued-exceptions-byte (byte 5 3))
+(defconstant mc68881-fpsr-current-exceptions-byte (byte 8 8))
+(defconstant mc68881-fpsr-condition-code-byte (byte 4 24))
+
+;;; Amount to shift by the get the condition code, - 16.
+;;;
+(defconstant mc68881-fpsr-condition-code-shift-16 8)
+
+;;; The condition code bits.
+;;;
+(defconstant mc68881-nan-condition (ash 1 0))
+(defconstant mc68881-infinity-condition (ash 1 1))
+(defconstant mc68881-zero-condition (ash 1 2))
+(defconstant mc68881-negative-condition (ash 1 3))
+
+;;; Masks that map the extended set of exceptions implemented by the 68881 to
+;;; the IEEE exceptions.  This extended format is used for the enabled traps
+;;; and the current exceptions.
+;;;
+(defconstant mc68881-invalid-exception (ash #b111 5))
+(defconstant mc68881-overflow-exception (ash 1 4))
+(defconstant mc68881-underflow-exception (ash 1 3))
+(defconstant mc68881-divide-zero-exception (ash 1 2))
+(defconstant mc68881-inexact-exception (ash #b11 0))
+
+;;; Encoding of float exceptions in the FLOATING-POINT-MODES result.  This is
+;;; also the encoding used in the mc68881 accrued exceptions.
+;;;
+(defconstant float-inexact-trap-bit (ash 1 0))
+(defconstant float-divide-by-zero-trap-bit (ash 1 1))
+(defconstant float-underflow-trap-bit (ash 1 2))
+(defconstant float-overflow-trap-bit (ash 1 3))
+(defconstant float-invalid-trap-bit (ash 1 4))
+
+(defconstant float-round-to-nearest 0)
+(defconstant float-round-to-zero 1)
+(defconstant float-round-to-negative 2)
+(defconstant float-round-to-positive 3)
+
+;;; Positions of bits in the FLOATING-POINT-MODES result.
+;;;
+(defconstant float-rounding-mode (byte 2 0))
+(defconstant float-sticky-bits (byte 5 2))
+(defconstant float-traps-byte (byte 5 7))
+(defconstant float-exceptions-byte (byte 5 12))
+(defconstant float-fast-bit 0)
+
+); eval-when
 
 ;;; When compared to the 68881 documentation, the RT only uses the low 16 bits
 ;;; of the instruction.  Memory access is controlled in an RT specific way.
@@ -22,30 +81,7 @@
 
 ;;;; Move functions:
 ;;;
-;;;    Since moving between memory and a FP register reqires *two* temporaries,
-;;; we need a special temporary to form the magic address we store to do a
-;;; floating point operation.  We get this temp by always spilling NL0 on the
-;;; number stack.  This appears rather grody, but actually the 68881 is so slow
-;;; compared to the ROMP that this overhead is not very great.
-;;;
-;;; Note: The RT interrupt handler preserves 64 bytes beyond the current stack
-;;; pointer, so we don't need to dink the stack pointer.  We can just use the
-;;; space beyond it.
-;;;
-;;; We also use LIP to form the address of the data location that we are
-;;; reading or writing.
-
-(defvar *in-with-fp-temp* nil)
-
-(eval-when (compile eval)
-  (defmacro with-fp-temp ((var) &body body)
-    `(if *in-with-fp-temp*
-	 (error "Can only have one FP temp.")
-	 (let ((,var nl0-tn)
-	       (*in-with-fp-temp* t))
-	   (storew ,var nsp-tn -1)
-	   (multiple-value-prog1 (progn ,@body)
-	     (loadw ,var nsp-tn -1))))))
+;;; See With-FP-Temp comment...
 
 (define-move-function (load-single 7) (vop x y)
   ((single-stack) (mc68881-single-reg))
