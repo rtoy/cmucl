@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.20 1992/09/10 02:46:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.21 1992/11/23 13:42:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 (in-package :new-assem)
 (export '(emit-byte emit-skip emit-back-patch emit-chooser emit-postit
 	  define-emitter define-instruction define-instruction-macro
-	  def-assembler-params branch flushable reads writes
+	  def-assembler-params branch flushable variable-length reads writes
 
 	  segment make-segment segment-name
 	  assemble align inst without-scheduling 
@@ -228,6 +228,10 @@
   ;; For test instructions, the delay is used to determine how many
   ;; instructions follow the branch.
   branch
+  ;;
+  ;; This attribute indicates that this ``instruction'' can be variable length,
+  ;; and therefore better never be used in a branch delay slot.
+  variable-length
   )
 
 (defstruct (instruction
@@ -381,7 +385,9 @@
   (assert (segment-run-scheduler segment))
   (let ((countdown (segment-branch-countdown segment)))
     (when countdown
-      (decf countdown))
+      (decf countdown)
+      (assert (not (instruction-attributep (inst-attributes inst)
+					   variable-length))))
     (cond ((instruction-attributep (inst-attributes inst) branch)
 	   (unless countdown
 	     (setf countdown (inst-delay inst)))
@@ -509,7 +515,7 @@
 		       (return inst))))
 	      (push (or (maybe-schedule-dependent (inst-read-dependents inst))
 			(maybe-schedule-dependent (inst-write-dependents inst))
-			(schedule-one-inst segment)
+			(schedule-one-inst segment t)
 			:nop)
 		    results))
 	    (advance-one-inst segment)
@@ -522,7 +528,7 @@
     ;;
     ;; Keep scheduling stuff until we run out.
     (loop
-      (let ((inst (schedule-one-inst segment)))
+      (let ((inst (schedule-one-inst segment nil)))
 	(unless inst
 	  (return))
 	(push inst results)
@@ -568,27 +574,43 @@
 ;;; now, but there is more work to be done, return :NOP to indicate that
 ;;; a nop must be emitted.  If we are all done, return NIL.
 ;;; 
-(defun schedule-one-inst (segment)
-  (let ((inst (pop (segment-emittable-insts-queue segment))))
-    (cond (inst
-	   ;; We've got us a live one here.  Go for it.
-	   #+debug
-	   (format *Trace-output* "Emitting ~S~%" inst)
-	   (note-resolved-dependencies segment inst)
-	   ;; Are we wanting to flush this instruction?
-	   (if (inst-emitter inst)
-	       ;; Nope, it's still a go.  So return it.
-	       inst
-	       ;; Yep.  Find some other instruction to do.
-	       (schedule-one-inst segment)))
-	  ((segment-delayed segment)
-	   ;; No emittable instructions, but we have more work to do.  Emit
-	   ;; a NOP to fill in a delay slot.
-	   #+debug (format *trace-output* "Emitting a NOP.~%")
-	   :nop)
-	  (t
-	   ;; All done.
-	   nil))))
+(defun schedule-one-inst (segment delay-slot-p)
+  (do ((prev nil remaining)
+       (remaining (segment-emittable-insts-queue segment) (cdr remaining)))
+      ((null remaining))
+    (let ((inst (car remaining)))
+      (unless (and delay-slot-p
+		   (instruction-attributep (inst-attributes inst)
+					   variable-length))
+	;; We've got us a live one here.  Go for it.
+	#+debug
+	(format *Trace-output* "Emitting ~S~%" inst)
+	;; Delete it from the list of insts.
+	(if prev
+	    (setf (cdr prev) (cdr remaining))
+	    (setf (segment-emittable-insts-queue segment)
+		  (cdr remaining)))
+	;; Note that this inst has been emitted.
+	(note-resolved-dependencies segment inst)
+	;; And return.
+	(return-from schedule-one-inst
+		     ;; Are we wanting to flush this instruction?
+		     (if (inst-emitter inst)
+			 ;; Nope, it's still a go.  So return it.
+			 inst
+			 ;; Yes, so pick a new one.  We have to start over,
+			 ;; because note-resolved-dependencies might have
+			 ;; changed the emittable-insts-queue.
+			 (schedule-one-inst segment delay-slot-p))))))
+  ;; Nothing to do, so make something up.
+  (cond ((segment-delayed segment)
+	 ;; No emittable instructions, but we have more work to do.  Emit
+	 ;; a NOP to fill in a delay slot.
+	 #+debug (format *trace-output* "Emitting a NOP.~%")
+	 :nop)
+	(t
+	 ;; All done.
+	 nil)))
 
 ;;; NOTE-RESOLVED-DEPENDENCIES -- internal.
 ;;;
