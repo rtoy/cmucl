@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.17 1990/10/12 02:52:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.18 1990/10/13 20:23:53 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -416,30 +416,23 @@
 	     (name (fixup-name fixup))
 	     (flavor (fixup-flavor fixup))
 	     (offset (third info)))
-	(ecase kind
-	  (:addi
-	   ;; ### The lui fixup assumes that an addi follows it.
-	   )
-	  (:lui
-	   (ecase flavor
-	     (:assembly-routine
-	      (assert (symbolp name))
-	      (dump-object name file)
-	      (dump-fop 'lisp::fop-assembler-fixup file)
-	      (quick-dump-number offset 4 file))
-	     (:foreign
-	      (assert (stringp name))
-	      (dump-fop 'lisp::fop-foreign-fixup file)
-	      (quick-dump-number offset 4 file)
-	      (let ((len (length name)))
-		(assert (< len 256))
-		(dump-byte len file)
-		(dotimes (i len)
-		  (dump-byte (char-code (schar name i)) file))))))
-	  #+nil
-	  (:jump
-	   ;; ### Need to impliment this.
-	   ))))
+	(ecase flavor
+	  (:assembly-routine
+	   (assert (symbolp name))
+	   (dump-object name file)
+	   (dump-fop 'lisp::fop-assembler-fixup file))
+	  (:foreign
+	   (assert (stringp name))
+	   (dump-fop 'lisp::fop-foreign-fixup file)
+	   (let ((len (length name)))
+	     (assert (< len 256))
+	     (dump-byte len file)
+	     (dotimes (i len)
+	       (dump-byte (char-code (schar name i)) file)))))
+	(quick-dump-number offset 4 file)
+	(quick-dump-number (cdr (or (assoc kind *fixup-values*)
+				    (error "Unknown fixup kind ~S?" kind)))
+			   1 file)))
     (dump-fop 'lisp::fop-pop-for-effect file))
   (undefined-value))
 
