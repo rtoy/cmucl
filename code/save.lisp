@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.30 1997/02/05 16:15:59 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.31 1997/03/15 16:58:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,6 +148,8 @@
 
   (when (fboundp 'eval:flush-interpreted-function-cache)
     (eval:flush-interpreted-function-cache))
+  (when (fboundp 'cancel-finalization)
+    (cancel-finalization sys:*tty*))
   (if purify
       (purify :root-structures root-structures
 	      :environment-name environment-name)
