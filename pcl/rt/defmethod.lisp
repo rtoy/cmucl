@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defmethod.lisp,v 1.4 2003/04/14 21:45:22 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defmethod.lisp,v 1.5 2003/05/30 09:33:32 gerd Rel $")
 
 (in-package "PCL-TEST")
 
@@ -116,3 +116,28 @@
       (values r (null c)))
   3 t)
 
+(deftest defmethod-setf-fdefinition.0
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defgeneric dsf.0 (x))
+	  (defmethod dsf.0 ((x integer)) x)
+	  (setf (fdefinition 'dsf.1) #'dsf.0)
+	  (defmethod dsf.1 ((x string)) x)
+	  (list (length (mop:generic-function-methods #'dsf.0))
+		(equal (mop:generic-function-methods #'dsf.1)
+		       (mop:generic-function-methods #'dsf.0))))
+      (values r (null c)))
+  (2 t) t)
+
+(deftest defmethod-setf-fdefinition.1
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defgeneric dsf.2 (x))
+	  (defmethod dsf.2 ((x integer)) x)
+	  (setf (fdefinition 'dsf.3) #'dsf.2)
+	  (defmethod dsf.3 ((x integer)) x)
+	  (list (length (mop:generic-function-methods #'dsf.2))
+		(equal (mop:generic-function-methods #'dsf.3)
+		       (mop:generic-function-methods #'dsf.2))))
+      (values r (null c)))
+  (1 t) t)
