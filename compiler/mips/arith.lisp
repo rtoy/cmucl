@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.20 1990/05/13 22:48:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.21 1990/05/18 10:45:39 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -200,57 +200,49 @@
 
 ;;; Shifting
 
-(define-vop (fast-ash/fixnum=>fixnum)
-  (:note "inline fixnum arithmetic")
-  (:args (number :scs (any-reg descriptor-reg) :target num)
-	 (amount :scs (any-reg descriptor-reg immediate negative-immediate zero)
-		 :target ndesc))
-  (:arg-types tagged-num tagged-num)
-  (:results (result :scs (any-reg descriptor-reg)))
-  (:result-types tagged-num)
+(define-vop (fast-ash)
+  (:note "inline ASH")
+  (:args (number :scs (signed-reg unsigned-reg))
+	 (amount :scs (signed-reg immediate negative-immediate)))
+  (:arg-types (:or signed-num unsigned-num) *)
+  (:results (result :scs (signed-reg unsigned-reg)))
+  (:result-types (:or signed-num unsigned-num))
   (:translate ash)
   (:policy :fast-safe)
-  (:temporary (:scs (any-reg) :type fixnum :from (:argument 0))
-	      num)
+  (:temporary (:scs (non-descriptor-reg) :type random :to (:result 0))
+	      ndesc)
   (:temporary (:scs (non-descriptor-reg) :type random :from (:argument 1))
-	      ndesc foo)
+	      foo)
   (:generator 3
     (sc-case amount
-      ((any-reg descriptor-reg)
-       (let ((negative (gen-label))
-	     (very-negative (gen-label))
+      (signed-reg
+       (let ((positive (gen-label))
 	     (done (gen-label)))
-	 (move num number)
-	 (inst bltz amount negative)
-	 (inst sra ndesc amount 2)
+	 (inst bgez amount positive)
+	 (inst subu ndesc zero-tn amount)
+	 (inst and foo ndesc #x1f)
+	 (inst beq foo ndesc done)
+	 (inst sra result number ndesc)
+	 (inst b done)
+	 (inst sra result number 31)
 
-	 ;; The fixnum result-type assures us that this shift will not overflow.
-	 (inst sll result num ndesc)
-	 (emit-label done)
+	 (emit-label positive)
+	 ;; The result-type assures us that this shift will not overflow.
+	 (inst sll result number amount)
 
-	 (assemble (*elsewhere*)
-	   (emit-label negative)
-	   (inst nor ndesc ndesc ndesc)
-	   (inst addu ndesc ndesc 3)
-	   (inst and foo ndesc #x1f)
-	   (inst beq foo ndesc very-negative)
-	   
-	   (inst sra ndesc num ndesc)
-	   (inst b done)
-	   (inst sll result ndesc 2)
-	   
-	   (emit-label very-negative)
-	   (inst sra ndesc num 31)
-	   (inst b done)
-	   (inst sll result ndesc 2))))
-      (immediate
-       (inst sll result number (tn-value amount)))
-      (negative-immediate
-       (inst sra ndesc number (min 31 (+ 2 (abs (tn-value amount)))))
-       (inst sll result ndesc 2))
-      (zero
-       ;; Someone should have optimized this away.
-       (move result number)))))
+	 (emit-label done)))
+
+      ((immediate negative-immediate)
+       (let ((amount (tn-value amount)))
+	 (if (minusp amount)
+	     (sc-case result
+	       (unsigned-reg
+		(inst srl result number (- amount)))
+	       (t
+		(inst sra result number (- amount))))
+	     (inst sll result number amount)))))))
+
+
 
 (define-vop (signed-byte-32-len)
   (:translate integer-length)
@@ -741,6 +733,9 @@
 
 
 ;;;; Static functions.
+
+(define-static-function two-arg-gcd (x y) :translate gcd)
+(define-static-function two-arg-lcm (x y) :translate lcm)
 
 (define-static-function two-arg-+ (x y) :translate +)
 (define-static-function two-arg-- (x y) :translate -)
