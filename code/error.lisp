@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.13 1992/01/21 17:11:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.14 1992/03/06 11:28:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -591,7 +591,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 	(muffle-warning ()
 	  :report "Skip warning."
 	  (return-from warn nil)))
-      (format *error-output* "~&Warning:~%~A~%" condition)))
+      (format *error-output* "~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
   nil)
 
 
@@ -632,7 +632,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 
 (defun print-simple-error (condition stream)
-  (format stream "~&Error in function ~S.~%~?"
+  (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
 	  (internal-simple-error-function-name condition)
 	  (internal-simple-error-format-string condition)
 	  (internal-simple-error-format-arguments condition)))
@@ -660,7 +660,7 @@ The previous version is uglier, but it sets up unique run-time tags.
    expected-type)
   (:report
    (lambda (condition stream)
-     (format stream "Type-error in ~S:~%  ~S is not of type ~S"
+     (format stream "~@<Type-error in ~S:  ~3i~:_~S is not of type ~S~:>"
 	     (type-error-function-name condition)
 	     (type-error-datum condition)
 	     (type-error-expected-type condition)))))
@@ -682,7 +682,7 @@ The previous version is uglier, but it sets up unique run-time tags.
    possibilities)
   (:report
     (lambda (condition stream)
-      (format stream "~S fell through ~S expression.~%Wanted one of ~:S."
+      (format stream "~@<~S fell through ~S expression.  ~:_Wanted one of ~:S.~:>"
 	      (type-error-datum condition)
 	      (case-failure-name condition)
 	      (case-failure-possibilities condition)))))
@@ -712,7 +712,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 
 (defun print-control-error (condition stream)
-  (format stream "~&Error in function ~S.~%~?"
+  (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
 	  (control-error-function-name condition)
 	  (control-error-format-string condition)
 	  (control-error-format-arguments condition)))
@@ -737,7 +737,7 @@ The previous version is uglier, but it sets up unique run-time tags.
   (:report
    (lambda (condition stream)
      (format stream
-	     "Error in ~S: the variable ~S is unbound."
+	     "Error in ~S:  the variable ~S is unbound."
 	     (cell-error-function-name condition)
 	     (cell-error-name condition)))))
   
@@ -745,7 +745,7 @@ The previous version is uglier, but it sets up unique run-time tags.
   (:report
    (lambda (condition stream)
      (format stream
-	     "Error in ~S: the function ~S is undefined."
+	     "Error in ~S:  the function ~S is undefined."
 	     (cell-error-function-name condition)
 	     (cell-error-name condition)))))
 
