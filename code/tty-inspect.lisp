@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.22 2003/05/12 14:20:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.23 2003/05/12 19:46:12 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,10 +175,10 @@
     (let ((class (class-of object)))
       (parts (format nil "~s is an instance of ~s.~%" object class))
       (parts t)
-      (dolist (slot (mop:class-slots class) (parts))
-	(parts (cons (mop:slot-definition-name slot)
-		     (if (mop:slot-boundp-using-class class object slot)
-			 (mop:slot-value-using-class class object slot)
+      (dolist (slot (pcl::class-slots class) (parts))
+	(parts (cons (pcl::slot-definition-name slot)
+		     (if (pcl::slot-boundp-using-class class object slot)
+			 (pcl::slot-value-using-class class object slot)
 			 "- (slot is unbound)")))))))
 
 (defun describe-instance-parts (object kind)
