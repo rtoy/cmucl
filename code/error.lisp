@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.30 1993/07/22 01:08:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.31 1993/08/19 12:45:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -511,6 +511,8 @@
   "When (typep condition *break-on-signals*) is true, then calls to SIGNAL will
    enter the debugger prior to signalling that condition.")
 
+(declaim (optimize (speed 2))) ; Turn off byte compiler.
+
 (defun signal (datum &rest arguments)
   "Invokes the signal facility on a condition formed from datum and arguments.
    If the condition is not handled, nil is returned.  If
@@ -642,6 +644,8 @@
 	  (return-from warn nil)))
       (format *error-output* "~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
   nil)
+
+(declaim (optimize (speed 0))); Turn byte compiler back on.
 
 
 ;;;; Condition definitions.
