@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.97 1993/08/19 23:13:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.98 1993/08/20 17:42:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1736,7 +1736,7 @@
     (dolist (key keys)
       (let* ((info (lambda-var-arg-info key))
 	     (default (arg-info-default info))
-	     (hairy-default (not (compiler-constantp default)))
+	     (hairy-default (not (constantp default)))
 	     (supplied-p (arg-info-supplied-p info))
 	     (n-val (make-symbol (format nil "~A-DEFAULTING-TEMP"
 					 (leaf-name key))))
