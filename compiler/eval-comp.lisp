@@ -202,6 +202,7 @@
 		    ((and leaf (typep leaf 'clambda)
 			  (member (functional-kind leaf)
 				  non-closed-function-kinds))
+		     (assert (not (eq (functional-kind leaf) :escape)))
 		     :unused)
 		    (t
 		     (typecase dest
