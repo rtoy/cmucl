@@ -177,6 +177,13 @@ New in this release:
        RECURSIVE-P is true.
      - FILE-LENGTH now signals a TYPE-ERROR when the stream is not a
        stream associated with a file.
+     - Floats are now printed and read accurately, preserving
+       read/print consistency.  (Was sometimes off by a bit in the
+       least significant bit.)
+     - Printing of rationals should generate correct results now for
+       all cases of *print-base* and *print-radix*.
+     - Symbol printer should print better with unusual settings of
+       *print-case* and friends.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
