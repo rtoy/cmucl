@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.8 1997/02/18 01:16:11 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.9 1997/03/16 15:59:41 pw Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -295,6 +295,10 @@ maybe_now_maybe_later(HANDLER_ARGS)
 #endif
 
     SAVE_CONTEXT(); /**/
+
+#ifdef __linux__
+    __setfpucw(contextstruct.fpstate->cw);
+#endif
 
     if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
         pending_signal = signal;
