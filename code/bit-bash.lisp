@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.10 1991/04/23 01:24:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.11 1991/04/28 01:10:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -381,7 +381,7 @@
 	      ;; We need to loop from right to left.
 	      (incf dst-word-offset words)
 	      (incf src-word-offset
-		    (floor (+ src-bit-offset length) unit-bits))
+		    (1- (ceiling (+ src-bit-offset length) unit-bits)))
 	      (let ((next 0)
 		    (prev (funcall src-ref-fn src src-word-offset)))
 		(declare (type unit prev next))
@@ -391,7 +391,7 @@
 					   (decf src-word-offset)))))
 		  (declare (inline get-next-src))
 		  (unless (zerop final-bits)
-		    (unless (> (- unit-bits src-shift) final-bits)
+		    (when (> final-bits (- unit-bits src-shift))
 		      (get-next-src))
 		    (let ((value (32bit-logical-or
 				  (shift-towards-end next (- src-shift))
