@@ -518,11 +518,14 @@
 		   (sc (tn-sc tn))
 		   (scn (sc-number sc))
 		   (temp-tn (make-representation-tn (tn-primitive-type tn)
-						    scn)))
+						    scn))
+		   (move-arg-vops (svref (sc-move-arg-vops sc) scn)))
 	      (assert arg)
+	      (assert (= (length move-arg-vops) 1) ()
+		      "No unique move-arg-vop for moves in SC ~S."
+		      (sc-name sc))
 	      (emit-move call block (continuation-tn call block arg) temp-tn)
-	      (emit-move-arg-template call block
-				      (svref (sc-move-arg-vops sc) scn)
+	      (emit-move-arg-template call block (first move-arg-vops)
 				      temp-tn nsp tn)))
 	  (assert (null args))))
 
