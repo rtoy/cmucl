@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.101 2003/01/29 02:16:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.102 2003/01/29 02:47:31 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -719,12 +719,12 @@
 
 (defknown (bit-and bit-ior bit-xor bit-eqv bit-nand bit-nor bit-andc1 bit-andc2
 		   bit-orc1 bit-orc2)
-  ((array bit) (array bit) &optional (or (array bit) (member t)))
+  ((array bit) (array bit) &optional (or (array bit) (member nil t)))
   (array bit)
   (foldable)
   #|:derive-type #'result-type-last-arg|#)
 
-(defknown bit-not ((array bit) &optional (or (array bit) (member t)))
+(defknown bit-not ((array bit) &optional (or (array bit) (member nil t)))
   (array bit)
   (foldable)
   #|:derive-type #'result-type-last-arg|#)
