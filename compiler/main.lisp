@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.60 1992/05/16 01:11:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.61 1992/05/16 23:51:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -928,15 +928,13 @@
 ;;;
 (defun process-cold-load-form (form path eval)
   (let ((object *compile-object*))
-    (typecase object
-      (fasl-file
-       (compile-top-level-lambdas () t)))
-    (when eval (eval form))
     (etypecase object
       (fasl-file
+       (compile-top-level-lambdas () t)
        (fasl-dump-cold-load-form form object))
       ((or null core-object)
-       (convert-and-maybe-compile form path)))))
+       (convert-and-maybe-compile form path)))
+    (when eval (eval form))))
 
 
 ;;; PROCESS-PROCLAIM  --  Internal
