@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.12 1997/11/22 14:38:21 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.13 1997/11/25 15:27:31 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -199,10 +199,14 @@ interrupt_handle_pending(struct sigcontext *context)
 
     if (maybe_gc_pending) {
 	maybe_gc_pending = FALSE;
+#ifndef i386
 	if (were_in_lisp)
+#endif
 	    fake_foreign_function_call(context);
 	funcall0(SymbolFunction(MAYBE_GC));
+#ifndef i386
 	if (were_in_lisp)
+#endif
 	    undo_fake_foreign_function_call(context);
     }
 
@@ -261,7 +265,9 @@ interrupt_handle_now(HANDLER_ARGS)
     SAVE_CONTEXT(); /**/
 
     were_in_lisp = !foreign_function_call_active;
+#ifndef i386
     if (were_in_lisp)
+#endif
         fake_foreign_function_call(context);
     
     if (handler.c==SIG_DFL)
@@ -303,7 +309,9 @@ interrupt_handle_now(HANDLER_ARGS)
 #endif
     }
     
+#ifndef i386
     if (were_in_lisp)
+#endif
         undo_fake_foreign_function_call(context);
 }
 
@@ -331,8 +339,11 @@ maybe_now_maybe_later(HANDLER_ARGS)
         context->sc_mask |= BLOCKABLE;
 #endif
         SetSymbolValue(INTERRUPT_PENDING, T);
-    } else if ((!foreign_function_call_active)
-	       && arch_pseudo_atomic_atomic(context)) {
+    } else if (
+#ifndef i386
+	       (!foreign_function_call_active) &&
+#endif
+	       arch_pseudo_atomic_atomic(context)) {
         pending_signal = signal;
         pending_code = DEREFCODE(code);
 #ifdef POSIX_SIGS
@@ -403,25 +414,6 @@ boolean interrupt_maybe_gc(HANDLER_ARGS)
 	return TRUE;
     }else
 	return FALSE;
-}
-#endif
-
-#ifdef i386
-void set_maybe_gc_pending(void)
-{
-  maybe_gc_pending = TRUE;
-  if (pending_signal == 0) {
-    /* Block all blockable signals */
-#ifdef POSIX_SIGS
-    sigset_t block;
-    sigemptyset(&block);
-    FILLBLOCKSET(&block);
-    sigprocmask(SIG_BLOCK, &block, &pending_mask);
-#else
-    pending_mask = sigblock(BLOCKABLE);
-#endif
-  }
-  SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(1));
 }
 #endif
 
