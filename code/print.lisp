@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.99 2004/10/14 16:32:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.100 2004/12/06 21:35:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1798,16 +1798,21 @@ radix-R.  If you have a power-list then pass it in as PL."
 	    (result (make-array 50 :element-type 'base-char
 				:fill-pointer 0 :adjustable t)))
 	(labels ((scale (r s m+ m-)
+		   ;; Keep increasing k until it's big enough
 		   (do ((k 0 (1+ k))
 			(s s (* s print-base)))
-		       ((not (or (> (+ r m+) s)
-				 (and high-ok (= (+ r m+) s))))
+		       ((not (let ((test (+ r m+)))
+			       (or (> test s)
+				   (and high-ok (= test s)))))
+			;; k is too big.  Decrease until
 			(do ((k k (1- k))
 			     (r r (* r print-base))
 			     (m+ m+ (* m+ print-base))
 			     (m- m- (* m- print-base)))
-			    ((not (or (< (* (+ r m+) print-base) s)
-				      (and high-ok (= (* (+ r m+) print-base) s))))
+			    ((not (let ((test (* (+ r m+) print-base)))
+				    (or (< test s)
+					(and (not high-ok) (= test s)))))
+			     ;; k is correct.  Generate the digits.
 			     (values k (generate r s m+ m-)))))))
 		 (generate (r s m+ m-)
 		   (multiple-value-bind (d r)
@@ -1815,8 +1820,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 		     (let ((m+ (* m+ print-base))
 			   (m- (* m- print-base)))
 		       (let ((tc1 (or (< r m-) (and low-ok (= r m-))))
-			     (tc2 (or (> (+ r m+) s)
-				      (and high-ok (= (+ r m+) s)))))
+			     (tc2 (let ((test (+ r m+)))
+				    (or (> test s)
+					(and high-ok (= test s))))))
 			 (cond
 			   ((and (not tc1) (not tc2))
 			    (vector-push-extend (char *digits* d) result)
