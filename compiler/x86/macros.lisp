@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.12 1999/11/25 17:50:48 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.13 1999/12/04 16:05:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,7 +119,7 @@
 
 ;;; For GENCGC it is possible to inline object allocation, to permit
 ;;; this set the following variable to True.
-(defvar *maybe-use-inline-allocation* t)
+(defparameter *maybe-use-inline-allocation* t)
 
 ;;;; Call into C.
 (defun allocation (alloc-tn size &optional inline)
@@ -320,7 +320,7 @@
 
 ;;;; PSEUDO-ATOMIC.
 
-(defvar *enable-pseudo-atomic* t)
+(defparameter *enable-pseudo-atomic* t)
 
 ;;; PSEUDO-ATOMIC -- Internal Interface.
 ;;;
