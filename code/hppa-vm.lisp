@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.5 1992/10/08 22:10:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.6 1993/07/26 19:28:04 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,12 +27,73 @@
 
 ;;;; The sigcontext structure.
 
+#+hpux
+(def-alien-type save-state
+  (struct nil
+    (regs (array unsigned-long 32))
+    (ss-cr11 unsigned-long)
+    (ss-pcoq-head unsigned-long)
+    (ss-pcsq-head unsigned-long)
+    (ss-pcoq-tail unsigned-long)
+    (ss-pcsq-tail unsigned-long)
+    (ss_cr15 unsigned-long)
+    (ss_cr19 unsigned-long)
+    (ss_cr20 unsigned-long)
+    (ss_cr21 unsigned-long)
+    (ss_cr22 unsigned-long)
+    (ss_cpustate unsigned-long)
+    (ss_sr4 unsigned-long)
+    (ss_sr0 unsigned-long)
+    (ss_sr1 unsigned-long)
+    (ss_sr2 unsigned-long)
+    (ss_sr3 unsigned-long)
+    (ss_sr5 unsigned-long)
+    (ss_sr6 unsigned-long)
+    (ss_sr7 unsigned-long)
+    (ss_cr0 unsigned-long)
+    (ss_cr8 unsigned-long)
+    (ss_cr9 unsigned-long)
+    (ss_cr10 unsigned-long)
+    (ss_cr12 unsigned-long)
+    (ss_cr13 unsigned-long)
+    (ss_cr24 unsigned-long)
+    (ss_cr25 unsigned-long)
+    (ss_cr26 unsigned-long)
+    (ss_mpsfu_high unsigned-long)
+    (ss_mpsfu_low unsigned-long)
+    (ss_mpsfu_ovflo unsigned-long)
+    (ss_pad unsigned-long)
+    (fpregs (array unsigned-long 32)))) ; union here
+
+#+hpux
+(def-alien-type siglocal
+  (struct nil
+    (sl-syscall unsigned-long)
+    (sl-onstack unsigned-long)
+    (sl-mask unsigned-long)
+    (sl-syscall-action unsigned-char)
+    (sl-eosys unsigned-char)
+    (sl-error unsigned-short)
+    (sl-rval1 unsigned-long)
+    (sl-rval2 unsigned-long)
+    (sl-arg (array unsigned-long 4)) ; ### ?
+    (sl-ss save-state)))
+
+#+hpux
+(def-alien-type sigcontext
+  (struct nil
+    (sc-sl siglocal)
+    ; the rest of this structure left out (since save-state not complete?)
+    ))
+
+#+MACH
 (def-alien-type save-state
   (struct nil
     (regs (array unsigned-long 32))
     (filler (array unsigned-long 32))
     (fpregs (array unsigned-long 32))))
 
+#+MACH
 (def-alien-type sigcontext
   (struct nil
     (sc-onstack unsigned-long)
@@ -136,7 +197,11 @@
 (defun sigcontext-program-counter (scp)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (int-sap (logandc2 (slot scp 'sc-pcoqh) 3))))
+    #+hpux
+    (int-sap (logandc2 (slot (slot (slot scp 'sc-sl) 'sl-ss) 'ss-pcoq-head) 3))
+    #+MACH
+    (int-sap (logandc2 (slot scp 'sc-pcoqh) 3))
+    ))
 
 ;;; SIGCONTEXT-REGISTER -- Interface
 ;;;
@@ -146,11 +211,18 @@
 (defun sigcontext-register (scp index)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (deref (slot (slot scp 'sc-ap) 'regs) index)))
+    #+hpux
+    (deref (slot (slot (slot scp 'sc-sl) 'sl-ss) 'regs) index)
+    #+MACH
+    (deref (slot (slot scp 'sc-ap) 'regs) index)
+    ))
 
 (defun %set-sigcontext-register (scp index new)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
+    #+hpux
+    (setf (deref (slot (slot (slot scp 'sc-sl) 'sl-ss) 'regs) index) new)
+    #+MACH
     (setf (deref (slot (slot scp 'sc-ap) 'regs) index) new)
     new))
 
@@ -164,7 +236,7 @@
 ;;;
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
-  (error "sigcontext-float-register not implimented." scp index format)
+  (error "sigcontext-float-register not implemented." scp index format)
   #+nil
   (with-alien ((scp (* sigcontext) scp))
     (let ((sap (alien-sap (slot scp 'sc-fpregs))))
@@ -174,7 +246,7 @@
 ;;;
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (type (alien (* sigcontext)) scp))
-  (error "%set-sigcontext-float-register not implimented."
+  (error "%set-sigcontext-float-register not implemented."
 	 scp index format new-value)
   #+nil
   (with-alien ((scp (* sigcontext) scp))
