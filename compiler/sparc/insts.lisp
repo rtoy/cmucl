@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.20 1999/06/22 14:30:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.21 1999/08/13 15:57:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,7 +252,7 @@
 
 (disassem:define-instruction-format
     (format-binary-fpop 32
-     :default-printer '(:name :tab rd ", " rs1 ", " rs2))
+     :default-printer '(:name :tab rs1 ", " rs2 ", " rd))
   (op	:field (byte 2 30))
   (rd 	:field (byte 5 25) :type 'fp-reg)
   (op3  :field (byte 6 19))
@@ -262,7 +262,7 @@
 
 ;;; Floating point load/save instructions encoding.
 (disassem:define-instruction-format
-    (format-unary-fpop 32 :default-printer '(:name :tab rd ", " rs2))
+    (format-unary-fpop 32 :default-printer '(:name :tab rs2 ", " rd))
   (op	:field (byte 2 30))
   (rd 	:field (byte 5 25) :type 'fp-reg)
   (op3  :field (byte 6 19))
@@ -283,7 +283,7 @@
 ;;; Double and long float instruction format of the sparc v9.
 (disassem:define-instruction-format
     (format-binary-ext-fpop 32
-     :default-printer '(:name :tab rd ", " rs1 ", " rs2))
+     :default-printer '(:name :tab rs1 ", " rs2 ", " rd))
   (op	:field (byte 2 30))
   (rd 	:field (byte 5 25) :type 'fp-ext-reg)
   (op3  :field (byte 6 19))
@@ -293,7 +293,7 @@
 
 ;;; Double and long floating point load/save instructions encoding.
 (disassem:define-instruction-format
-    (format-unary-ext-fpop 32 :default-printer '(:name :tab rd ", " rs2))
+    (format-unary-ext-fpop 32 :default-printer '(:name :tab rs2 ", " rd))
   (op	:field (byte 2 30))
   (rd 	:field (byte 5 25) :type 'fp-ext-reg)
   (op3  :field (byte 6 19))
