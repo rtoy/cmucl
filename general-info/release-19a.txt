@@ -113,6 +113,7 @@ New in this release:
      - Class precedence list of NULL not having SYMBOL before LIST,
        precedence list of STANDARD-METHOD not having METHOD before
        STANDARD-OBJECT.
+     - ADD-METHOD returning its first argument, the generic function.
      - DEFCLASS redefining a class with the given name only if the
        name is the proper name of an existing class.
 
