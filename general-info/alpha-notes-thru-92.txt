@@ -8,12 +8,6 @@ in more cases, and be easier to port to other machines now.
 When printing the initial frame in the debugger, ignore errors that occur
 while looking for the source.
 
-Change to the function %enumerate-files to permit versions to match on :wild
-and :newest for UNIX filesystems (the only kind currently supported by
-CMUCL).
-
-Added LOGICAL-PATHNAME support.
-
 Changed DOLIST not to introduce the spurious let around the result form when
 there is no result form.  Also, just read the var in the spurious let, instead
 of using IGNORABLE, since the var might be special.
