@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.14 1990/10/19 20:46:45 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.15 1990/10/21 14:40:20 wlott Exp $ */
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -6,7 +6,16 @@ OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	search.o validate.o gc.o globals.o dynbind.o \
 	regnames.o backtrace.o bitbash.o save.o purify.o socket.o
 
-all: Makefile ldb.map
+#ifdef mips
+UNDEFSYMPATERN=&
+ASSEMFILE='mips-assem.s'
+#endif
+#ifdef ibmrt
+UNDEFSYMPATERN=_&
+ASSEMFILE='rt-assem.s'
+#endif
+
+all: ldb.map
 
 ldb.map: ldb
 	echo -n 'Map file for ldb version ' > ldb.map
@@ -25,21 +34,13 @@ version:
 	echo 0 > version
 
 undefineds: undefineds.src
-#ifdef mips
-	sed -e '/^;/d' -e 's/.*/-u &/' undefineds.src | sort -u > ,undefineds
-#endif
-#ifdef ibmrt
-	sed -e '/^;/d' -e 's/.*/-u _&/' undefineds.src | sort -u > ,undefineds
-#endif
+	/lib/cpp undefineds.src | \
+	sed -e '/^#/d' -e '/^[ 	]*$$/d' -e 's/.*/-u ${UNDEFSYMPATERN}/' | \
+	sort -u > ,undefineds
 	mv ,undefineds undefineds
 
 assem.s:
-#ifdef mips
-	ln -s mips-assem.s assem.s
-#endif
-#ifdef ibmrt
-	ln -s rt-assem.s assem.s
-#endif
+	ln -s ${ASSEMFILE} assem.s
 
 
 #ifdef mips
@@ -73,11 +74,6 @@ socket.o: socket.c
 lisp.h:
 	@echo "You must run genesis to create lisp.h!"
 	@false
-
-Makefile: Makefile.orig
-	/lib/cpp < Makefile.orig > Makefile.NEW
-	mv Makefile.NEW Makefile
-
 
 depend: depends
 
