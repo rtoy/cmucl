@@ -210,7 +210,12 @@ call_into_c:
 	.globl	undefined_tramp
 undefined_tramp:
 	ti	7, r0, trap_Error
-
+	.byte	4
+	.byte	23
+	.byte	254
+	.byte	43
+	.byte	1
+	.align	2
 
 	.globl	closure_tramp
 closure_tramp:
