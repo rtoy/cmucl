@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.31 1991/05/31 14:22:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.32 1991/08/19 22:49:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1459,9 +1459,11 @@
 	 (res (make-stack-pointer-tn))
 	 (target-label (ir2-nlx-info-target 2info)))
 
+    (vop current-binding-pointer node block
+	 (car (ir2-nlx-info-dynamic-state 2info)))
     (vop* save-dynamic-state node block
 	  (nil)
-	  ((reference-tn-list (ir2-nlx-info-dynamic-state 2info) t)))
+	  ((reference-tn-list (cdr (ir2-nlx-info-dynamic-state 2info)) t)))
     (vop current-stack-pointer node block (ir2-nlx-info-save-sp 2info))
 
     (ecase kind
@@ -1567,9 +1569,11 @@
 	   (1- (block-number (ir2-block-block block)))))
 
     (vop* restore-dynamic-state node block
-	  ((reference-tn-list (ir2-nlx-info-dynamic-state 2info) nil))
-	  (nil))))
-	    
+	  ((reference-tn-list (cdr (ir2-nlx-info-dynamic-state 2info)) nil))
+	  (nil))
+    (vop unbind-to-here node block
+	 (car (ir2-nlx-info-dynamic-state 2info)))))
+
 
 ;;;; N-arg functions:
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.28 1991/05/15 19:41:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.29 1991/08/19 22:50:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -501,7 +501,9 @@
   (save-sp (required-argument) :type tn)
   ;;
   ;; The list of dynamic state save TNs.
-  (dynamic-state (make-dynamic-state-tns) :type list)
+  (dynamic-state (list* (make-stack-pointer-tn)
+			(make-dynamic-state-tns))
+		 :type list)
   ;;
   ;; The target label for NLX entry.
   (target (gen-label) :type label))
