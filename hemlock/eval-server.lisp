@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.6 1991/03/21 14:48:50 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.7 1991/04/21 23:45:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,6 +118,12 @@
    whatever reason."
   :value t)
 
+
+(defhvar "Slave GC Alarm"
+  "Determines that is done when the slave notifies that it is GCing.
+  :MESSAGE prints a message in the echo area, :LOUD-MESSAGE beeps as well.
+  NIL does nothing."
+  :value :message)
 
 
 ;;;; Slave destruction.
@@ -639,13 +645,18 @@
 (defun slave-gc-notify-before (remote-ts message)
   (let ((ts (wire:remote-object-value remote-ts)))
     (ts-buffer-output-string ts message t)
-    (message "~A is GC'ing." (buffer-name (ts-data-buffer ts)))
-    (system:beep)))
+    (when (value slave-gc-alarm)
+      (message "~A is GC'ing." (buffer-name (ts-data-buffer ts)))
+      (when (eq (value slave-gc-alarm) :loud-message)
+	(beep)))))
+
 (defun slave-gc-notify-after (remote-ts message)
   (let ((ts (wire:remote-object-value remote-ts)))
     (ts-buffer-output-string ts message t)
-    (message "~A is done GC'ing." (buffer-name (ts-data-buffer ts)))
-    (system:beep)))
+    (when (value slave-gc-alarm)
+      (message "~A is done GC'ing." (buffer-name (ts-data-buffer ts)))
+      (when (eq (value slave-gc-alarm) :loud-message)
+	(beep)))))
 
 ;;; EDITOR-DIED -- internal
 ;;;
