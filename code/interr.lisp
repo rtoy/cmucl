@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.14 1990/11/26 18:46:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.15 1990/12/11 15:18:29 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -138,6 +138,7 @@
 					 (nthcdr ,rest-pos ,sc-offsets))))))
 		      ,@body))))))
 
+
 ) ; Eval-When (Compile Eval)
 
 (defun %deferr (name number description #+new-compiler function)
@@ -162,193 +163,305 @@
 (deferr object-not-function-error
   "Object is not of type FUNCTION."
   (object)
-  (error "Expected a function, but got: ~S" object))
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'function))
 
 (deferr object-not-list-error
   "Object is not of type LIST."
-  (&rest args)
-  (error "object-not-list:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'list))
 
 (deferr object-not-bignum-error
   "Object is not of type BIGNUM."
-  (&rest args)
-  (error "object-not-bignum:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'bignum))
 
 (deferr object-not-ratio-error
   "Object is not of type RATIO."
-  (&rest args)
-  (error "object-not-ratio:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'ratio))
 
 (deferr object-not-single-float-error
   "Object is not of type SINGLE-FLOAT."
-  (&rest args)
-  (error "object-not-single-float:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'single-float))
 
 (deferr object-not-double-float-error
   "Object is not of type DOUBLE-FLOAT."
-  (&rest args)
-  (error "object-not-double-float:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'double-float))
 
 (deferr object-not-simple-string-error
   "Object is not of type SIMPLE-STRING."
-  (&rest args)
-  (error "object-not-simple-string:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'simple-string))
 
 (deferr object-not-simple-bit-vector-error
   "Object is not of type SIMPLE-BIT-VECTOR."
-  (&rest args)
-  (error "object-not-simple-bit-vector:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'simple-bit-vector))
 
 (deferr object-not-simple-vector-error
   "Object is not of type SIMPLE-VECTOR."
-  (&rest args)
-  (error "object-not-simple-vector:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'simple-vector))
 
 (deferr object-not-fixnum-error
   "Object is not of type FIXNUM."
-  (&rest args)
-  (error "object-not-fixnum:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'fixnum))
 
 (deferr object-not-function-or-symbol-error
-  "Object is not of type FUNCTION or of type SYMBOL."
-  (&rest args)
-  (error "object-not-function-or-symbol:~{ ~S~}" args))
+  "Object is not of type FUNCTION or SYMBOL."
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(or function symbol)))
 
 (deferr object-not-vector-error
   "Object is not of type VECTOR."
-  (&rest args)
-  (error "object-not-vector:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'vector))
 
 (deferr object-not-string-error
   "Object is not of type STRING."
-  (&rest args)
-  (error "object-not-string:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'string))
 
 (deferr object-not-bit-vector-error
   "Object is not of type BIT-VECTOR."
-  (&rest args)
-  (error "object-not-bit-vector:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'bit-vector))
 
 (deferr object-not-array-error
   "Object is not of type ARRAY."
-  (&rest args)
-  (error "object-not-array:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'array))
 
 (deferr object-not-number-error
   "Object is not of type NUMBER."
-  (&rest args)
-  (error "object-not-number:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'number))
 
 (deferr object-not-rational-error
   "Object is not of type RATIONAL."
-  (&rest args)
-  (error "object-not-rational:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'rational))
 
 (deferr object-not-float-error
   "Object is not of type FLOAT."
-  (&rest args)
-  (error "object-not-float:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'float))
 
 (deferr object-not-real-error
   "Object is not of type REAL."
-  (&rest args)
-  (error "object-not-real:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'real))
 
 (deferr object-not-integer-error
   "Object is not of type INTEGER."
-  (&rest args)
-  (error "object-not-integer:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'integer))
 
 (deferr object-not-cons-error
   "Object is not of type CONS."
-  (&rest args)
-  (error "object-not-cons:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'cons))
 
 (deferr object-not-symbol-error
   "Object is not of type SYMBOL."
-  (&rest args)
-  (error "object-not-symbol:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'symbol))
 
 (deferr undefined-symbol-error
   "Undefined symbol."
-  (&rest args)
-  (error "undefined-symbol:~{ ~S~}" args))
+  (symbol)
+  (error 'undefined-function
+	 :function-name name
+	 :name symbol))
 
 (deferr object-not-coercable-to-function-error
   "Object is not coercable to type FUNCTION."
-  (&rest args)
-  (error "object-not-coercable-to-function:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'coercable-to-function))
 
 (deferr invalid-argument-count-error
   "Invalid argument count."
   (nargs)
-  (error "Invalid number of arguments: ~S" nargs))
+  (error 'simple-error
+	 :function-name name
+	 :format-string "Invalid number of arguments: ~S"
+	 :format-arguments (list nargs)))
 
 (deferr bogus-argument-to-values-list-error
   "Bogus argument to VALUES-LIST."
-  (&rest args)
-  (error "bogus-argument-to-values-list:~{ ~S~}" args))
+  (list)
+  (error 'simple-error
+	 :function-name name
+	 :format-string "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
+	 :format-arguments (list list)))
 
 (deferr unbound-symbol-error
   "Unbound symbol."
-  (&rest args)
-  (error "unbound-symbol:~{ ~S~}" args))
+  (symbol)
+  (error 'unbound-variable :function-name name :name symbol))
 
 (deferr object-not-base-character-error
   "Object is not of type BASE-CHARACTER."
-  (&rest args)
-  (error "object-not-base-character:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'base-character))
 
 (deferr object-not-sap-error
   "Object is not a System Area Pointer (SAP)."
-  (&rest args)
-  (error "object-not-sap:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'system-area-pointer))
 
 (deferr invalid-unwind-error
   "Attempt to RETURN-FROM a block that no longer exists."
-  (&rest args)
-  (error "invalid-unwind:~{ ~S~}" args))
+  ()
+  (error 'control-error
+	 :function-name name
+	 :format-string
+	 "Attempt to RETURN-FROM a block or GO to a tag that no longer exists"))
 
 (deferr unseen-throw-tag-error
   "Attempt to THROW to a non-existent tag."
-  (&rest args)
-  (error "unseen-throw-tag:~{ ~S~}" args))
+  (tag)
+  (error 'control-error
+	 :function-name name
+	 :format-string "Attempt to THROW to a tag that does not exist: ~S"
+	 :format-arguments (list tag)))
 
 (deferr division-by-zero-error
   "Attempt to divide by zero."
-  (&rest args)
-  (error "division-by-zero:~{ ~S~}" args))
+  (this that)
+  (error 'division-by-zero
+	 :function-name name
+	 :operation 'division
+	 :operands (list this that)))
 
 (deferr object-not-type-error
   "Object is of the wrong type."
-  (&rest args)
-  (error "object-not-type:~{ ~S~}" args))
+  (object type)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type type))
 
 (deferr odd-keyword-arguments-error
   "Odd number of keyword arguments."
-  (&rest args)
-  (error "odd-keyword-arguments:~{ ~S~}" args))
+  ()
+  (error 'simple-error
+	 :function-name name
+	 :format-string "Odd number of keyword arguments."))
 
 (deferr unknown-keyword-argument-error
   "Unknown keyword."
-  (&rest args)
-  (error "unknown-keyword-argument:~{ ~S~}" args))
+  (key)
+  (error 'simple-error
+	 :function-name name
+	 :format-string "Unknown keyword: ~S"
+	 :format-arguments (list key)))
 
 (deferr not-<=-error
   "Not less than or equal."
-  (&rest args)
-  (error "not-<=:~{ ~S~}" args))
+  (this that)
+  (error 'simple-error
+	 :function-name name
+	 :format-string "Assertion that ~S <= ~S failed."
+	 :format-arguments (list this that)))
 
 (deferr not-=-error
   "Not equal."
-  (&rest args)
-  (error "not-=:~{ ~S~}" args))
+  (this that)
+  (error 'simple-error
+	 :function-name name
+	 :format-string "Assertion that ~S = ~S failed."
+	 :format-arguments (list this that)))
 
 (deferr invalid-array-index-error
   "Invalid array index."
-  (&rest args)
-  (error "invalid-array-index:~{ ~S~}" args))
+  (array bound index)
+  (error 'simple-error
+	 :function-name name
+	 :format-string
+	 "Invalid array index, ~D for ~S.  Should have been less than ~D"
+	 :format-arguments (list index array bound)))
 
+
+;;; ### Is this used?
 (deferr wrong-number-of-indices-error
   "Wrong number of indices."
   (&rest args)
@@ -356,71 +469,108 @@
 
 (deferr object-not-simple-array-error
   "Object is not of type SIMPLE-ARRAY."
-  (&rest args)
-  (error "object-not-simple-array:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'simple-array))
 
 (deferr object-not-signed-byte-32-error
   "Object is not of type (SIGNED-BYTE 32)."
-  (&rest args)
-  (error "object-not-signed-byte-32:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(signed-byte 32)))
 
 (deferr object-not-unsigned-byte-32-error
   "Object is not of type (UNSIGNED-BYTE 32)."
-  (&rest args)
-  (error "object-not-unsigned-byte-32:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(unsigned-byte 32)))
 
 (deferr object-not-simple-array-unsigned-byte-2-error
   "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 2) (*))."
-  (&rest args)
-  (error "object-not-simple-array-unsigned-byte-2:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (unsigned-byte 2) (*))))
 
 (deferr object-not-simple-array-unsigned-byte-4-error
   "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 4) (*))."
-  (&rest args)
-  (error "object-not-simple-array-unsigned-byte-4:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (unsigned-byte 4) (*))))
 
 (deferr object-not-simple-array-unsigned-byte-8-error
   "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 8) (*))."
-  (&rest args)
-  (error "object-not-simple-array-unsigned-byte-8:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (unsigned-byte 8) (*))))
 
 (deferr object-not-simple-array-unsigned-byte-16-error
   "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 16) (*))."
-  (&rest args)
-  (error "object-not-simple-array-unsigned-byte-16:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (unsigned-byte 16) (*))))
 
 (deferr object-not-simple-array-unsigned-byte-32-error
   "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 32) (*))."
-  (&rest args)
-  (error "object-not-simple-array-unsigned-byte-32:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (unsigned-byte 32) (*))))
 
 (deferr object-not-simple-array-single-float-error
   "Object is not of type (SIMPLE-ARRAY SINGLE-FLOAT (*))."
-  (&rest args)
-  (error "object-not-simple-array-single-float:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array single-float (*))))
 
 (deferr object-not-simple-array-double-float-error
   "Object is not of type (SIMPLE-ARRAY DOUBLE-FLOAT (*))."
-  (&rest args)
-  (error "object-not-simple-array-double-float:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array double-float (*))))
 
 (deferr object-not-complex-error
   "Object is not of type COMPLEX."
-  (&rest args)
-  (error "object-not-complex:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'complex))
 
 (deferr object-not-weak-pointer-error
   "Object is not a WEAK-POINTER."
-  (&rest args)
-  (error "object-not-weak-pointer:~{ ~S~}" args))
+  (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type 'weak-pointer))
 
 (deferr object-not-structure-error
 	"Object is not a STRUCTURE."
   (object)
-  (error 'simple-error
+  (error 'type-error
 	 :function-name name
-	 :format-string "~S isn't a structure."
-	 :format-arguments (list object)))
+	 :datum object
+	 :expected-type 'structure))
+
 
 
 ;;;; internal-error signal handler.
