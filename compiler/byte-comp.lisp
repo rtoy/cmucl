@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.17 1993/08/20 16:45:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.18 1993/08/20 20:04:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1811,10 +1811,13 @@
 		    (incf num-more)
 		    (setf rest-arg-p t))
 		   (:keyword
-		    (let ((s-p (arg-info-supplied-p arg-info)))
+		    (let ((s-p (arg-info-supplied-p arg-info))
+			  (default (arg-info-default arg-info)))
 		      (incf num-more (if s-p 2 1))
 		      (keywords (list (arg-info-keyword arg-info)
-				      (arg-info-default arg-info)
+				      (if (constantp default)
+					  (eval default)
+					  nil)
 				      (if s-p t nil))))))))
 	     (make-hairy-byte-function
 	      :name (leaf-name entry)
