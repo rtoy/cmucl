@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.17 1993/04/28 01:56:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.18 1993/08/22 11:06:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,10 +116,10 @@
   following keywords are defined:
   
   :purify
-      If true, do a purifying GC which moves all dynamically allocated
-  objects into static space so that they stay pure.  This takes somewhat
-  longer than the normal GC which is otherwise done, but GC's will done
-  less often and take less time in the resulting core file.
+      If true (the default), do a purifying GC which moves all dynamically
+  allocated objects into static space so that they stay pure.  This takes
+  somewhat longer than the normal GC which is otherwise done, but GC's will
+  done less often and take less time in the resulting core file.
 
   :root-structures
   :constants
@@ -129,7 +129,7 @@
   will be better if they are.  They are meaningless if :purify is NIL.
   
   :init-function
-      This is a function which is called when the created core file is
+      This is the function that starts running when the created core file is
   resumed.  The default function simply invokes the top level
   read-eval-print loop.  If the function returns the lisp will exit.
   
@@ -142,7 +142,7 @@
       library:site-init.  No error if this does not exist.
 
   :print-herald
-      If true, print out the lisp system herald when starting."
+      If true (the default), print out the lisp system herald when starting."
 
   (when (fboundp 'eval:flush-interpreted-function-cache)
     (eval:flush-interpreted-function-cache))
