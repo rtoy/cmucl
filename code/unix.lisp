@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.45 1997/05/05 23:13:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.46 1997/05/17 16:54:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -216,18 +216,6 @@
     (t-lnextc char)))			; literal next character
 
 
-
-#+(or svr4 hpux linux)
-(def-alien-type nil
-  (struct termios
-    (c-iflag unsigned-int)
-    (c-oflag unsigned-int)
-    (c-cflag unsigned-int)
-    (c-lflag unsigned-int)
-    #+(or linux hpux)
-    (c-reserved #-linux unsigned-int #+linux unsigned-char)
-    (c-cc (array unsigned-char #+hpux 16 #+(or linux solaris) 19 #+irix 23))))
-
 (def-alien-type nil
   (struct sgttyb
     #+linux (sg-flags #+mach short #-mach int) ; mode flags 	  
@@ -250,18 +238,49 @@
 
 ;;; From sys/termio.h
 
-#+(or svr4 hpux freebsd linux)
+;;; NOTE: There is both a  termio (SYSV) and termios (POSIX)
+;;; structure with similar but incompatible definitions. It may be that
+;;; the non-BSD variant of termios below is really a termio but I (pw)
+;;; can't verify. The BSD variant uses the Posix termios def. Some systems
+;;; (Ultrix and OSF1) seem to support both if used independently.
+;;; The 17f version of this seems a bit confused wrt the conditionals.
+;;; Please check these defs for your system.
+
+#+(or hpux irix linux solaris)			; SVR4??
+(progn
+(defconstant +NCC+
+  #+hpux 16
+  #+irix 23
+  #+(or lunux solaris) 19
+  "Size of control character vector.")
+
 (def-alien-type nil
-  (struct termios
+  (struct termios	      ; <<< as in 17f -- may really be termio.
     (c-iflag unsigned-int)
     (c-oflag unsigned-int)
     (c-cflag unsigned-int)
     (c-lflag unsigned-int)
     #+(or linux hpux)
     (c-reserved #-linux unsigned-int #+linux unsigned-char)
-    (c-cc (array unsigned-char #+hpux 16 #+(or linux solaris) 19 #+irix 23 #+freebsd 20))
-    ;; FreeBSD also has c-ispeed and c-ospeed?
+    (c-cc (array unsigned-char #.+NCC+))))
+)
+
+;;; From sys/termios.h
+
+#+(or BSD OSF1)
+(progn
+(defconstant +NCCS+ 20 "Size of control character vector.")
+(def-alien-type nil
+  (struct termios
+    (c-iflag unsigned-int)
+    (c-oflag unsigned-int)
+    (c-cflag unsigned-int)
+    (c-lflag unsigned-int)
+    (c-cc (array unsigned-char #.+NCCS+))
+    (c-ispeed unsigned-int)
+    (c-ospeed unsigned-int)
     ))
+) ; ngorp
 
 ;;; From sys/dir.h
 #-bsd
@@ -287,7 +306,7 @@
 ;;; From sys/stat.h
 ;; oh boy, in linux-> 2 stat(s)!!
 
-#-(or svr4 freebsd linux)
+#-(or svr4 alpha freebsd linux)
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
