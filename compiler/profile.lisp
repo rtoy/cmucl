@@ -22,19 +22,24 @@
 	 ir2-convert
 	 copy-propagate
 	 select-representations
+
+	 lifetime-analyze
+#|
 	 lifetime-pre-pass
 	 lifetime-flow-analysis
 	 reset-current-conflict
 	 lifetime-post-pass
+|#
 	 delete-unreferenced-tns
-
+	 pack
+#|
 	 pack-wired-tn
 	 pack-tn
 	 pack-load-tns
 	 assign-tn-costs
 	 optimized-emit-saves
 	 emit-saves
-
+|#
 	 generate-code
 	 fasl-dump-component
 	 clear-ir2-info
