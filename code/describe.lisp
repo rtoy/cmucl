@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.16 1991/12/20 19:09:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.17 1992/01/30 07:24:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,9 +23,13 @@
 ;;;
 
 (in-package "LISP")
+(export '(describe))
 
-(export '(describe *describe-level* *describe-verbose* *describe-print-level*
-		   *describe-print-length* *describe-indentation*))
+(in-package "EXT")
+(export '(*describe-level* *describe-verbose* *describe-print-level*
+	  *describe-print-length* *describe-indentation*))
+
+(in-package "LISP")
 
 
 ;;;; DESCRIBE public switches.
