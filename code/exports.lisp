@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.51 1990/10/02 05:43:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.52 1990/10/03 09:56:42 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -332,7 +332,7 @@
 	  integer-decode-single-float integer-decode-double-float
 	  scale-single-float scale-double-float single-float-exponent
 	  double-float-exponent float-format-digits get-closure-length
-	  set-header-data signal-init))
+	  set-header-data signal-init %mask-field %deposit-field))
 
 
 (in-package "EXTENSIONS")
