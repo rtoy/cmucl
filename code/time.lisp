@@ -96,6 +96,7 @@
   (+ (* (- weeks weeks-offset) seconds-in-week)
      (- (truncate msec 1000) seconds-offset)))
 
+
 ;;; Get-Universal-Time  --  Public
 ;;;
 ;;;
@@ -106,25 +107,17 @@
     (declare (ignore res))
     (+ secs unix-to-universal-time)))
 
-;;; Get-Decoded-Time  --  Public
-;;;
-;;;
-
 (defun get-decoded-time ()
   "Returns nine values specifying the current time as follows:
-  second, minute, hour, date, month, year, day of week (0 = Monday),
-  T (daylight savings times) or NIL (standard time), and timezone."
+   second, minute, hour, date, month, year, day of week (0 = Monday), T
+   (daylight savings times) or NIL (standard time), and timezone."
   (decode-universal-time (get-universal-time)))
 
-;;; Decode-Universal-Time  --  Public
-;;;
-;;;
-
 (defun decode-universal-time (universal-time &optional time-zone)
-  "Converts a universal-time to decoded time format returning
-  the following nine values: second, minute, hour, date, month,
-  year, day of week (0 = Monday), T (daylight savings time) or
-  NIL (standard time), and timezone."
+  "Converts a universal-time to decoded time format returning the following
+  nine values: second, minute, hour, date, month, year, day of week (0 =
+  Monday), T (daylight savings time) or NIL (standard time), and timezone.
+  Completely ignores daylight-savings-time when time-zone is supplied."
   (declare (type (or fixnum null) time-zone))
   (multiple-value-bind (weeks secs)
 		       (truncate (+ universal-time seconds-offset)
@@ -161,16 +154,17 @@
 	    (let ((days-since-mar0 (1+ (truncate (mod t2 quarter-days-per-year)
 						 4))))
 	      (setq day (mod (+ tday weekday-november-17-1858) 7))
-	      (if (setq daylight (dst-check days-since-mar0 hour day))
-		  (cond ((eq hour 23)
-			 (setq hour 0)
-			 (setq day (mod (1+ day) 7))
-			 (setq days-since-mar0 (1+ days-since-mar0))
-			 (if (>= days-since-mar0 366)
-			     (if (or (> days-since-mar0 366)
-				     (not-leap-year (1+ year)))
-				 (setq days-since-mar0 368))))
-			(T (setq hour (1+ hour)))))
+	      (unless time-zone
+		(if (setq daylight (dst-check days-since-mar0 hour day))
+		    (cond ((eq hour 23)
+			   (setq hour 0)
+			   (setq day (mod (1+ day) 7))
+			   (setq days-since-mar0 (1+ days-since-mar0))
+			   (if (>= days-since-mar0 366)
+			       (if (or (> days-since-mar0 366)
+				       (not-leap-year (1+ year)))
+				   (setq days-since-mar0 368))))
+			  (T (setq hour (1+ hour))))))
 	      (let ((t3 (+ (* days-since-mar0 5) 456)))
 		(cond ((>= t3 1989)
 		       (setq t3 (- t3 1836))
