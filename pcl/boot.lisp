@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.42 2002/11/22 00:15:48 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.43 2002/11/22 00:39:55 pmai Exp $")
 
 (in-package :pcl)
 
@@ -601,6 +601,7 @@ work during bootstrapping.
 			   (simple-lexical-method-functions
 			       (,lambda-list .method-args. .next-methods.
 				:call-next-method-p ,call-next-method-p 
+				:method-name-declaration ,name-decl
 				:next-method-p-p ,next-method-p-p
 				:closurep ,closurep
 				:applyp ,applyp)
@@ -615,9 +616,9 @@ work during bootstrapping.
   (setf (gdefinition 'make-method-lambda)
 	(symbol-function 'real-make-method-lambda)))
 
-(defmacro simple-lexical-method-functions ((lambda-list method-args next-methods
-							&rest lmf-options) 
-					   &body body)
+(defmacro simple-lexical-method-functions
+    ((lambda-list method-args next-methods &rest lmf-options) 
+     &body body)
   `(progn
      ,method-args ,next-methods
      (bind-simple-lexical-method-macros (,method-args ,next-methods)
@@ -625,28 +626,36 @@ work during bootstrapping.
          (bind-args (,lambda-list ,method-args)
 	   ,@body)))))
 
-(defmacro fast-lexical-method-functions ((lambda-list next-method-call args rest-arg
-						      &rest lmf-options)
-					 &body body)
+(defmacro fast-lexical-method-functions
+    ((lambda-list next-method-call args rest-arg &rest lmf-options)
+     &body body)
  `(bind-fast-lexical-method-macros (,args ,rest-arg ,next-method-call)
     (bind-lexical-method-functions (,@lmf-options)
       (bind-args (,(nthcdr (length args) lambda-list) ,rest-arg)
         ,@body))))
 
-(defmacro bind-simple-lexical-method-macros ((method-args next-methods) &body body)
+(defun call-no-next-method (method-name-declaration &rest args)
+  (destructuring-bind (name qualifiers specializers)
+      (car method-name-declaration)
+    (let ((method (find-method (gdefinition name) qualifiers specializers)))
+      (apply #'no-next-method (method-generic-function method) method args))))
+
+(defmacro bind-simple-lexical-method-macros
+    ((method-args next-methods) &body body)
   `(macrolet ((call-next-method-bind (&body body)
 		`(let ((.next-method. (car ,',next-methods))
 		       (,',next-methods (cdr ,',next-methods)))
 		   .next-method. ,',next-methods
 		   ,@body))
-	      (call-next-method-body (cnm-args)
+	      (call-next-method-body (method-name-declaration cnm-args)
 		`(if .next-method.
 		     (funcall (if (std-instance-p .next-method.)
 				  (method-function .next-method.)
 				  .next-method.) ; for early methods
 			      (or ,cnm-args ,',method-args)
 		              ,',next-methods)
-		     (error "No next method.")))
+		     (apply #'call-no-next-method ',method-name-declaration
+                            (or ,cnm-args ,',method-args))))
 	      (next-method-p-body ()
 	        `(not (null .next-method.))))
      ,@body))
@@ -835,11 +844,11 @@ work during bootstrapping.
     (function
      (apply emf args))))
 
-(defmacro bind-fast-lexical-method-macros ((args rest-arg next-method-call)
-					   &body body)
+(defmacro bind-fast-lexical-method-macros
+    ((args rest-arg next-method-call) &body body)
   `(macrolet ((call-next-method-bind (&body body)
 		`(let () ,@body))
-	      (call-next-method-body (cnm-args)
+	     (call-next-method-body (method-name-declaration cnm-args)
 		`(if ,',next-method-call
 		     ,(if (and (null ',rest-arg)
 			       (consp cnm-args)
@@ -858,13 +867,22 @@ work during bootstrapping.
 					     ,cnm-args)
 					    ,call)
 				 ,call)))
-		     (error "No next method.")))
+                     ,(if (and (null ',rest-arg)
+                               (consp cnm-args)
+                               (eq (car cnm-args) 'list))
+                          `(call-no-next-method ',method-name-declaration
+                                                ,@(cdr cnm-args))
+                          `(call-no-next-method ',method-name-declaration
+                                                ,@',args
+                                                ,@',(when rest-arg
+                                                      `(,rest-arg))))))
 	      (next-method-p-body ()
 	        `(not (null ,',next-method-call))))
      ,@body))
 
 (defmacro bind-lexical-method-functions 
-    ((&key call-next-method-p next-method-p-p closurep applyp)
+    ((&key call-next-method-p next-method-p-p closurep applyp
+           method-name-declaration)
      &body body)
   (cond ((and (null call-next-method-p) (null next-method-p-p)
 	      (null closurep)
@@ -876,19 +894,22 @@ work during bootstrapping.
 	 ;; (else APPLYP would be true).
 	 `(call-next-method-bind
 	    (macrolet ((call-next-method (&rest cnm-args)
-			 `(call-next-method-body ,(when cnm-args `(list ,@cnm-args))))
+			 `(call-next-method-body
+			    ,',method-name-declaration
+			    ,(when cnm-args `(list ,@cnm-args))))
 		       (next-method-p ()
 			 `(next-method-p-body)))
 	       ,@body)))
 	(t
 	 `(call-next-method-bind
 	    (flet (,@(and call-next-method-p
-		       '((call-next-method (&rest cnm-args)
+		       `((call-next-method (&rest cnm-args)
 			  #+copy-&rest-arg (setq args (copy-list args))
-			  (call-next-method-body cnm-args))))
-		     ,@(and next-method-p-p
-			 '((next-method-p ()
-			    (next-method-p-body)))))
+			  (call-next-method-body ,method-name-declaration
+						 cnm-args))))
+		   ,@(and next-method-p-p
+		       '((next-method-p ()
+			   (next-method-p-body)))))
 	      ,@body)))))
 
 (defmacro bind-args ((lambda-list args) &body body)

@@ -2,7 +2,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.13 2002/10/19 13:27:41 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.14 2002/11/22 00:39:56 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -571,6 +571,8 @@
 
 (defgeneric map-dependents (metaobject function))
 ;          (dependent-update-mixin t)
+
+(defgeneric no-next-method (generic-function method &rest args))
 
 ;(defgeneric maybe-update-constructors (generic-function method))
 ;           (generic-function method)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.26 2002/10/29 16:20:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.27 2002/11/22 00:39:55 pmai Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -620,3 +620,20 @@ when called with arguments ~S."
           :function generic-function
           :arguments args)
   (apply generic-function args))
+
+(define-condition no-next-method (type-error)
+  ((method :reader no-next-method-method :initarg :method)
+   (arguments :reader no-next-method-arguments :initarg :arguments))
+  (:report (lambda (condition stream)
+             (format stream
+		     "In method ~S:~%No next method for arguments ~S"
+                     (no-next-method-method condition)
+                     (no-next-method-arguments condition)))))
+
+(defmethod no-next-method ((generic-function standard-generic-function)
+			   (method standard-method)
+			   &rest args)
+  (cerror "Try again." 'no-next-method :method method :arguments args)
+  (apply generic-function args))
+
+
