@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.15 1992/03/07 13:32:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.16 1992/03/21 19:39:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,76 +18,20 @@
 ;;;
 (in-package "C")
 
-(export '(def-vm-support-routine *backend* *target-backend* *native-backend*
-	   backend-name backend-version backend-fasl-file-type
-	   backend-fasl-file-implementation backend-fasl-file-version
-	   backend-register-save-penalty backend-byte-order
-	   backend-any-primitive-type backend-info-environment
-	   backend-instruction-formats backend-instruction-flavors
-	   backend-assembler-resources backend-special-arg-types
-	   backend-features backend-disassem-params
-
-	   ;; The various backends need to call these support routines
-	   make-stack-pointer-tn primitive-type primitive-type-of))
-
-
-;;;; VM support routine stuff.
-
-(eval-when (compile eval load)
-
-(defconstant vm-support-routines
-  '(;; From VM.LISP
-    immediate-constant-sc
-    location-print-name
-    
-    ;; From PRIMTYPE.LISP
-    primitive-type-of
-    primitive-type
-    
-    ;; From C-CALL.LISP
-    make-call-out-nsp-tn
-    make-call-out-argument-tns
-    make-call-out-result-tn
-    
-    ;; From CALL.LISP
-    standard-argument-location
-    make-return-pc-passing-location
-    make-old-fp-passing-location
-    make-old-fp-save-location
-    make-return-pc-save-location
-    make-argument-count-location
-    make-nfp-tn
-    make-stack-pointer-tn
-    make-number-stack-pointer-tn
-    make-unknown-values-locations
-    select-component-format
-    
-    ;; From NLX.LISP
-    make-nlx-sp-tn
-    make-dynamic-state-tns
-    
-    ;; From SUPPORT.LISP
-    generate-call-sequence
-    generate-return-sequence))
-
-); eval-when
-
-
-(defmacro def-vm-support-routine (name ll &body body)
-  (unless (member (intern (string name) (find-package "C"))
-		  vm-support-routines)
-    (warn "Unknown VM support routine: ~A" name))
-  (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
-    `(progn
-       (defun ,local-name ,ll ,@body)
-       (setf (,(intern (concatenate 'simple-string "BACKEND-" (string name))
-		       (find-package "C"))
-	      *target-backend*)
-	     #',local-name))))
-
+(export '(*backend* *target-backend* *native-backend* def-vm-support-routine
+	  backend-name backend-version backend-fasl-file-type
+	  backend-fasl-file-implementation backend-fasl-file-version
+	  backend-register-save-penalty backend-byte-order
+	  backend-any-primitive-type backend-info-environment
+	  backend-instruction-formats backend-instruction-flavors
+	  backend-assembler-resources backend-special-arg-types
+	  backend-disassem-params backend-internal-errors
+	  
+	  ;; The various backends need to call these support routines
+	  make-stack-pointer-tn primitive-type primitive-type-of))
 
 
-;;;; The actual backend structure.
+;;;; The backend structure.
 
 (defstruct (backend
 	    (:print-function %print-backend))
@@ -102,6 +46,9 @@
   (fasl-file-type nil)
   (fasl-file-implementation nil)
   (fasl-file-version nil)
+
+  ;; The VM support routines.
+  (support-routines (make-vm-support-routines) :type vm-support-routines)
 
   ;; The number of references that a TN must have to offset the overhead of
   ;; saving the TN across a call.
@@ -174,17 +121,23 @@
   (special-arg-types (make-hash-table :test #'eq) :type hash-table)
   (assembler-resources nil :type list)
 
-  ;; The backend specific features list, if any.
-  (features nil :type list)
+  ;; The backend specific features list, if any.  During a compilation,
+  ;; *features* is bound to *features* - misfeatures + features.
+  (%features nil :type list)
+  (misfeatures nil :type list)
 
   ;; Disassembler information.
   (disassem-params nil :type t)
 
-  . #.(mapcar #'(lambda (slot)
-		  `(,slot nil :type (or null function)))
-	      (sort (copy-list vm-support-routines)
-		    #'string<
-		    :key #'symbol-name)))
+  ;; Mappings between CTYPE structures and the corresponding predicate.
+  ;; The type->predicate mapping hash is an alist because there is no
+  ;; such thing as a type= hash table.
+  (predicate-types (make-hash-table :test #'eq) :type hash-table)
+  (type-predicates nil :type list)
+
+  ;; Vector of the internal errors defined for this backend, or NIL if
+  ;; they haven't been installed yet.
+  (internal-errors nil :type (or simple-vector null)))
 
 
 (defprinter backend
@@ -196,46 +149,160 @@
 (defvar *target-backend* *native-backend*
   "The backend we are attempting to compile.")
 (defvar *backend* *native-backend*
-  "The backend we are using to compile.")
+  "The backend we are using to compile with.")
 
 
 
-;;;; Generate the stubs.
+;;;; VM support routine stuff.
 
-(macrolet
-    ((frob ()
-       `(progn
-	  ,@(mapcar
-	     #'(lambda (name)
-		 `(defun ,name (&rest args)
-		    (apply (or (,(symbolicate "BACKEND-" name) *backend*)
-			       (error "Machine specific support routine ~S ~
-					undefined for ~S"
-				      ',name *backend*))
-			   args)))
-	     vm-support-routines))))
-  (frob))
+(eval-when (compile eval)
+
+(defmacro def-vm-support-routines (&rest routines)
+  `(progn
+     (eval-when (compile load eval)
+       (defparameter vm-support-routines ',routines))
+     (defstruct (vm-support-routines
+		 (:print-function %print-vm-support-routines))
+       ,@(mapcar #'(lambda (routine)
+		     `(,routine nil :type (or function null)))
+		 routines))
+     ,@(mapcar
+	#'(lambda (name)
+	    `(defun ,name (&rest args)
+	       (apply (or (,(symbolicate "VM-SUPPORT-ROUTINES-" name)
+			   (backend-vm-support-routines *backend*))
+			  (error "Machine specific support routine ~S ~
+				  undefined for ~S"
+				 ',name *backend*))
+		      args)))
+	routines)))
+
+); eval-when
+
+(def-vm-support-routines
+  ;; From VM.LISP
+  immediate-constant-sc
+  location-print-name
+  
+  ;; From PRIMTYPE.LISP
+  primitive-type-of
+  primitive-type
+  
+  ;; From C-CALL.LISP
+  make-call-out-tns
+  
+  ;; From CALL.LISP
+  standard-argument-location
+  make-return-pc-passing-location
+  make-old-fp-passing-location
+  make-old-fp-save-location
+  make-return-pc-save-location
+  make-argument-count-location
+  make-nfp-tn
+  make-stack-pointer-tn
+  make-number-stack-pointer-tn
+  make-unknown-values-locations
+  select-component-format
+  
+  ;; From NLX.LISP
+  make-nlx-sp-tn
+  make-dynamic-state-tns
+  
+  ;; From SUPPORT.LISP
+  generate-call-sequence
+  generate-return-sequence)
+
+(defprinter vm-support-routines)
+
+(defmacro def-vm-support-routine (name ll &body body)
+  (unless (member (intern (string name) (find-package "C"))
+		  vm-support-routines)
+    (warn "Unknown VM support routine: ~A" name))
+  (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
+    `(progn
+       (defun ,local-name ,ll ,@body)
+       (setf (,(intern (concatenate 'simple-string
+				    "VM-SUPPORT-ROUTINES-"
+				    (string name))
+		       (find-package "C"))
+	      (backend-vm-support-routines *target-backend*))
+	     #',local-name))))
 
 
 
-;;;; Other utility functions for accessing the backend.
+;;;; Other utility functions for fiddling with the backend.
 
-(export '(target-featurep backend-featurep native-featurep))
+(export '(backend-features target-featurep backend-featurep native-featurep))
+
+(defun backend-features (backend)
+  "Compute the *FEATURES* list to use with BACKEND."
+  (union (backend-%features backend)
+	 (set-difference *features*
+			 (backend-misfeatures backend))))
 
 (defun target-featurep (feature)
   "Same as EXT:FEATUREP, except use the features found in *TARGET-BACKEND*."
-  (let ((*features* (or (backend-features *target-backend*)
-			*features*)))
+  (let ((*features* (backend-features *target-backend*)))
     (featurep feature)))
 
 (defun backend-featurep (feature)
   "Same as EXT:FEATUREP, except use the features found in *BACKEND*."
-  (let ((*features* (or (backend-features *target-backend*)
-			*features*)))
+  (let ((*features* (backend-features *target-backend*)))
     (featurep feature)))
 
 (defun native-featurep (feature)
   "Same as EXT:FEATUREP, except use the features found in *NATIVE-BACKEND*."
-  (let ((*features* (or (backend-features *native-backend*)
-			*features*)))
+  (let ((*features* (backend-features *native-backend*)))
     (featurep feature)))
+
+
+;;; NEW-BACKEND
+;;;
+;;; Utility for creating a new backend structure for use with cross
+;;; compilers.
+;;;
+(defun new-backend (name features misfeatures)
+  ;; If VM names a different package, rename that package so that VM doesn't
+  ;; name it.  
+  (let ((pkg (find-package "VM")))
+    (when pkg
+      (let ((pkg-name (package-name pkg)))
+	(unless (string= pkg-name name)
+	  (rename-package pkg pkg-name
+			  (remove "VM" (package-nicknames pkg)
+				  :test #'string=))
+	  (unuse-package pkg "C")))))
+  ;; Make sure VM names our package, creating it if necessary.
+  (let* ((pkg (or (find-package name)
+		  (make-package name :nicknames '("VM"))))
+	 (nicknames (package-nicknames pkg)))
+    (unless (member "VM" nicknames :test #'string=)
+      (rename-package pkg name (cons "VM" nicknames)))
+    ;; And make sure we are using the necessary packages.
+    (use-package "C" pkg)
+    (use-package "ASSEM" pkg)
+    (use-package "EXT" pkg)
+    (use-package "KERNEL" pkg)
+    (use-package "SYSTEM" pkg)
+    (use-package "ALIEN" pkg)
+    (use-package "C-CALL" pkg))
+  ;; Make sure the native info env list is stored in *native-backend*
+  (unless (backend-info-environment *native-backend*)
+    (setf (backend-info-environment *native-backend*) *info-environment*))
+  ;; Cons up a backend structure, filling in the info-env and features slots.
+  (let ((backend (make-backend
+		  :name name
+		  :info-environment
+		  (cons (make-info-environment
+			 :name
+			 (concatenate 'string name " backend"))
+			(remove-if #'(lambda (name)
+				       (let ((len (length name)))
+					 (and (> len 8)
+					      (string= name " backend"
+						       :start1 (- len 8)))))
+				   *info-environment*
+				   :key #'info-env-name))
+		  :%features features
+		  :misfeatures misfeatures)))
+    (setf *target-backend* backend)))
