@@ -10,6 +10,9 @@
 
 (in-package "USER")
 
+(c::%proclaim '(optimize (speed 2) (space 2) (c::brevity 2)))
+(setq *print-pretty* nil)
+
 (with-compiler-log-file ("code:compile-lisp.log")
 
 ;;; these guys need to be first.
