@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.29 1992/04/27 19:47:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.30 1992/06/02 18:48:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -710,19 +710,26 @@
 ;;; must be restored to normal calls which transfer to Next-Block (Fun's
 ;;; return point.)
 ;;;
+;;;    The called function might be an assignment in the case where we are
+;;; currently converting that function.  In steady-state, assignments never
+;;; appear in the lambda-calls.
+;;;
 (defun unconvert-tail-calls (fun call next-block)
   (dolist (called (lambda-calls fun))
     (dolist (ref (leaf-refs called))
       (let ((this-call (continuation-dest (node-cont ref))))
 	(when (and (node-tail-p this-call)
 		   (eq (node-home-lambda this-call) fun))
-	  (assert (member (functional-kind called) '(nil :cleanup :optional)))
 	  (setf (node-tail-p this-call) nil)
-	  (let ((block (node-block this-call)))
-	    (unlink-blocks block (first (block-succ block)))
-	    (link-blocks block next-block)
-	    (delete-continuation-use this-call)
-	    (add-continuation-use this-call (node-cont call)))))))
+	  (ecase (functional-kind called)
+	    ((nil :cleanup :optional)
+	     (let ((block (node-block this-call)))
+	       (unlink-blocks block (first (block-succ block)))
+	       (link-blocks block next-block)
+	       (delete-continuation-use this-call)
+	       (add-continuation-use this-call (node-cont call))))
+	    (:assignment
+	     (assert (eq called fun))))))))
   (undefined-value))
 
 
@@ -921,8 +928,8 @@
 		  (unless (node-tail-p dest)
 		    (when (or non-tail (eq home fun)) (return nil))
 		    (setq non-tail dest)))))
+	(setf (functional-kind fun) :assignment)
 	(let-convert fun (or non-tail
 			     (continuation-dest
 			      (node-cont (first (leaf-refs fun))))))
-	(setf (functional-kind fun) :assignment)
 	t))))
