@@ -146,16 +146,12 @@
 		  (logior new-bits (key-event-modifier-mask (cdr map))))))))
     (let ((keysym (xlib:keycode->keysym display scan-code (if shiftp 1 0))))
       (cond ((null (keysym-names keysym))
-	     (if (<= 65505 keysym 65518) ;modifier keys.
-		 nil
-		 (error "Undefined keysym ~S, describe EXT:DEFINE-KEYSYM."
-			keysym)))
+	     nil)
 	    ((and (not shiftp) lockp (<= 97 keysym 122)) ; small-alpha-char-p
 	     (let ((keysym (xlib:keycode->keysym display scan-code 1)))
-	       (unless (keysym-names keysym)
-		 (error "Undefined keysym ~S, describe EXT:DEFINE-KEYSYM."
-			keysym))
-	       (make-key-event keysym new-bits)))
+	       (if (keysym-names keysym)
+		   (make-key-event keysym new-bits)
+		   nil)))
 	    (t
 	     (make-key-event keysym new-bits))))))
 
