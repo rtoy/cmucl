@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.10 1992/03/11 21:29:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.11 1992/04/14 02:58:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,18 +149,11 @@
   (:temporary (:scs (non-descriptor-reg)) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
-    (let ((closure (gen-label))
-	  (normal-fn (gen-label)))
+    (let ((normal-fn (gen-label)))
       (load-type type function (- function-pointer-type))
-      (inst nop)
-      (inst cmp type closure-header-type)
-      (inst b :eq closure)
-      (inst cmp type funcallable-instance-header-type)
-      (inst b :eq closure)
       (inst cmp type function-header-type)
       (inst b :eq normal-fn)
       (inst move lip function)
-      (emit-label closure)
       (inst li lip (make-fixup "_closure_tramp" :foreign))
       (emit-label normal-fn)
       (storew function fdefn fdefn-function-slot other-pointer-type)
