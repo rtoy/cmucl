@@ -215,9 +215,16 @@
 ;;; 
 (proclaim '(declaration pcl-fast-call))
 
+#+CMU
+(defmacro RUNTIME\ FUNCALL (fn &rest args)
+  `(funcall (the function ,fn) ,.args))
+#-CMU
 (defmacro RUNTIME\ FUNCALL (fn &rest args)
   `(funcall ,fn ,.args))
 
+#+CMU
+(defmacro RUNTIME\ APPLY (fn &rest args) `(apply (the function ,fn) ,.args))
+#-CMU
 (defmacro RUNTIME\ APPLY (fn &rest args) `(apply ,fn ,.args))
 
 (defmacro RUNTIME\ STD-WRAPPER (x)
