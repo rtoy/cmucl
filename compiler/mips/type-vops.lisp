@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.39 1993/01/13 16:00:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.40 1993/02/26 08:49:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,8 +252,8 @@
 (def-type-vops listp check-list list object-not-list-error
   list-pointer-type)
 
-(def-type-vops structurep check-structure structure object-not-structure-error
-  structure-pointer-type)
+(def-type-vops %instancep check-instance instance object-not-instance-error
+  instance-pointer-type)
 
 (def-type-vops bignump check-bigunm bignum
   object-not-bignum-error bignum-type)
