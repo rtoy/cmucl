@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.28 1993/12/09 12:56:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.29 1994/02/11 19:30:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,7 @@
 	  #+hpux vdsusp #+hpux veof #+hpux vintr #+hpux vquit #+hpux vstart
 	  #+hpux vstop #+hpux vsusp #+hpux c-cflag
 	  #+hpux c-cc #+hpux tty-icanon #+hpux vmin #+hpux vtime
+	  #+hpux tty-ixon
 	  #+hpux tcsaflush #+hpux unix-tcgetattr #+hpux unix-tcsetattr
 	  TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
@@ -985,6 +986,8 @@
   (defconstant tty-icanon #o2)
   (defconstant tty-icrnl #o400)
   (defconstant tty-ocrnl #o10)
+  (defconstant tty-ixon #o2000)
+
   (defconstant vdsusp 21)
   (defconstant veof 4)
   (defconstant vintr 0)
