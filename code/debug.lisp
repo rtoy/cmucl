@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.45 1997/02/12 20:09:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.46 1997/12/07 18:22:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -485,9 +485,10 @@ See the CMU Common Lisp User's Manual for more information.
     (do ((frame (if *in-the-debugger* *current-frame* (di:top-frame))
 		(di:frame-down frame))
 	 (count count (1- count)))
-	((or (null frame) (zerop count))
-	 (values))
-      (print-frame-call frame :number t))))
+	((or (null frame) (zerop count)))
+      (print-frame-call frame :number t))
+    (fresh-line *standard-output*)
+    (values)))
 
 
 ;;;; Frame printing:
