@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.6 1990/04/25 23:33:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.7 1990/04/26 20:23:02 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -44,8 +44,8 @@
       (inst addu y alloc-tn vm:other-pointer-type)
       (inst addu alloc-tn alloc-tn (vm:pad-data-block vm:sap-size))
       (inst li ndescr (logior (ash vm:sap-size vm:type-bits) vm:sap-type))
-      (storew y ndescr 0 vm:other-pointer-type)
-      (storew y sap vm:sap-pointer-slot vm:other-pointer-type))))
+      (storew ndescr y 0 vm:other-pointer-type)
+      (storew sap y vm:sap-pointer-slot vm:other-pointer-type))))
 ;;;
 (define-move-vop move-from-sap :move
   (sap-reg) (descriptor-reg))
@@ -99,22 +99,20 @@
 
 (define-vop (sap-int)
   (:args (sap :scs (sap-reg) :target int))
-  (:results (int :scs (any-reg descriptor-reg)))
+  (:results (int :scs (unsigned-reg)))
   (:arg-types system-area-pointer)
   (:translate sap-int)
   (:policy :fast-safe)
-  (:generator 0
-    ;; ### Need to check for fixnum overflow.
-    (inst sll int sap 2)))
+  (:generator 1
+    (move int sap)))
 
 (define-vop (int-sap)
-  (:args (int :scs (any-reg descriptor-reg) :target sap))
+  (:args (int :scs (unsigned-reg) :target sap))
   (:results (sap :scs (sap-reg)))
   (:translate int-sap)
   (:policy :fast-safe)
-  (:generator 0
-    ;; ### Need to check to see if it is a bignum first.
-    (inst srl sap int 2)))
+  (:generator 1
+    (move sap int)))
 
 
 
@@ -168,7 +166,7 @@
 	 (:short
 	  (inst sra temp offset 1)
 	  (inst addu sap object temp))
-	 ((:long :pointer)
+	 (:long
 	  (inst addu sap object offset)))))
     (ecase size
       (:byte
@@ -179,7 +177,7 @@
        (if signed
 	   (inst lh result sap 0)
 	   (inst lhu result sap 0)))
-      ((:long :pointer)
+      (:long
        (inst lw result sap 0)))
     (inst nop)))
 
@@ -211,14 +209,14 @@
 	 (:short
 	  (inst sra temp offset 1)
 	  (inst addu sap object temp))
-	 ((:long :pointer)
+	 (:long
 	  (inst addu sap object offset)))))
     (ecase size
       (:byte
        (inst sb value sap 0))
       (:short
        (inst sh value sap 0))
-      ((:long :pointer)
+      (:long
        (inst sw value sap 0)))
     (move result value)))
 
@@ -227,7 +225,7 @@
 (define-vop (sap-system-ref sap-ref)
   (:translate sap-ref-sap)
   (:results (result :scs (sap-reg)))
-  (:variant :pointer nil))
+  (:variant :long nil))
 
 (define-vop (sap-system-set sap-set)
   (:translate (setf sap-ref-sap))
@@ -237,7 +235,7 @@
 	 (value :scs (sap-reg) :target result))
   (:arg-types system-area-pointer fixnum system-area-pointer)
   (:results (result :scs (sap-reg)))
-  (:variant :pointer))
+  (:variant :long))
 
 
 
@@ -281,6 +279,17 @@
   (:translate (setf sap-ref-8))
   (:arg-types system-area-pointer fixnum fixnum)
   (:variant :byte))
+
+
+
+;;; Noise to convert normal lisp data objects into SAPs.
+
+(define-vop (vector-sap)
+  (:args (vector :scs (descriptor-reg)))
+  (:results (sap :scs (sap-reg)))
+  (:generator 2
+    (inst addu sap vector
+	  (- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))))
 
 
 
