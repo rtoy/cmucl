@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.36 1992/02/13 16:01:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.37 1992/02/18 18:43:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
 
 (declaim (list *load-source-types* *load-object-types*))
 
-(defvar *load-verbose* ()
+(defvar *load-verbose* t
   "The default for the :VERBOSE argument to Load.")
 
 (defvar *load-print* ()
@@ -464,7 +464,7 @@
        If NIL, simply return NIL (LOAD normally returns T.)
 
    :VERBOSE {T | NIL}
-       If true, print a line describing each file loaded.
+       If true (the default), print a line describing each file loaded.
 
    :PRINT {T | NIL}
        If true, print information about loaded values.  When loading the
