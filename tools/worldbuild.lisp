@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.28 1993/08/31 09:03:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.29 1993/08/31 11:15:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,6 +136,7 @@
       #-(and mach sparc) "target:lisp/kernel.core")
 (setf *genesis-c-header-name* "target:lisp/internals.h")
 (setf *genesis-symbol-table* "target:lisp/lisp.nm")
+(setf *genesis-map-name* "target:lisp/lisp.map")
 
 (when (boundp '*target-page-size*)
   (locally (declare (optimize (inhibit-warnings 3)))
