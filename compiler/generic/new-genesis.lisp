@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.50 2002/11/19 13:17:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.51 2003/02/01 19:47:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2391,6 +2391,17 @@
 (defvar *genesis-c-header-name* t)
 (defvar *genesis-symbol-table* nil)
 
+#+linkage-table
+(defun symbol-table-version (filename)
+  "Return the version number from the symbol table file Filename.
+  Value is 0 if Filename is null or the file doesn't exist."
+  (if (and filename (probe-file filename))
+      (with-open-file (file filename)
+	(let* ((version-line (read-line file))
+	       (last-space (position #\Space version-line :from-end t)))
+	  (parse-integer version-line :start (1+ last-space))))
+      0))
+
 (defun genesis (file-list &optional
 			  (symbol-table *genesis-symbol-table*)
 			  (core-name *genesis-core-name*)
@@ -2414,7 +2425,8 @@
 	  #+linkage-table (init-foreign-linkage)
 	  (let ((version #-linkage-table (load-foreign-symbol-table
 					  symbol-table)
-			 #+linkage-table 0))
+			 #+linkage-table (symbol-table-version
+					  symbol-table)))
 	    (initialize-spaces)
 	    (initialize-symbols)
 	    (initialize-layouts)
