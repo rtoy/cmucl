@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.15 1992/03/10 18:33:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.16 1992/03/23 15:13:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -389,13 +389,27 @@ The previous version is uglier, but it sets up unique run-time tags.
 (defmacro define-condition (name (parent-type) &optional slot-specs
 				 &rest options)
   "(DEFINE-CONDITION name (parent-type)
-   ( {slot-name | (slot-name) | (slot-name default-value)}*)
-   options)"
+      ( {slot-name | (slot-name {slot-option}*)}*)
+      options)"
   (let ((constructor (let ((*package* (find-package "CONDITIONS")))
 		       ;; Bind for the INTERN and the FORMAT.
 		       (intern (format nil "Constructor for ~S" name)))))
     (let ((slots (mapcar #'(lambda (slot-spec)
-			     (if (atom slot-spec) (list slot-spec) slot-spec))
+			     (cond
+			      ((atom slot-spec)
+			       (list slot-spec))
+			      ((atom (cdr slot-spec))
+			       slot-spec)
+			      ((atom (cddr slot-spec))
+			       (warn "Old style slot specifier: ~S" slot-spec)
+			       slot-spec)
+			      (t
+			       (destructuring-bind
+				   (name &key (type nil typep) initform
+					 &allow-other-keys)
+				   slot-spec
+				 `(,name ,initform
+					 ,@(when typep `(:type ,type)))))))
 			 slot-specs)))
       (multiple-value-bind (new-slots used-slots)
           (parse-new-and-used-slots slots parent-type)
