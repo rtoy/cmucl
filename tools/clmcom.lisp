@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.14 1994/10/28 22:23:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.15 1994/10/28 22:30:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,12 +93,13 @@
     
     (dolist (f tk-files)
       (comf f :load t))
+
+    (let ((btki (intern "BUILD-TOOLKIT-INTERFACE" "XT")))
+      (unless (fboundp btki)
+	(mapc #'load tk-internals-files)
+	(mapc #'load tk-files))
     
-    (unless (fboundp 'xt::build-toolkit-interface)
-      (mapc #'load tk-internals-files)
-      (mapc #'load tk-files))
-    
-    (xt::build-toolkit-interface)
+      (funcall (fdefinition btki)))
     
     (dolist (f interface-files)
       (comf f :load t #+small :byte-compile #+small t))))
