@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.8 2003/08/22 13:20:03 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.9 2003/10/13 18:59:37 toy Exp $
  *
  */
 
@@ -16,7 +16,7 @@
 
 void  gc_free_heap(void);
 inline int  find_page_index(void *);
-inline void  *page_address(int);
+inline char  *page_address(int);
 
 
 
@@ -140,13 +140,13 @@ extern struct page *page_table;
  */
 struct alloc_region {
   /* These two are needed for quick allocation */
-  void  *free_pointer;
-  void  *end_addr;     /* Pointer to the byte after the last usable byte */
+  char  *free_pointer;
+  char  *end_addr;     /* Pointer to the byte after the last usable byte */
   
   /* Needed when closing the region. */
   int  first_page;
   int  last_page;
-  void  *start_addr;
+  char  *start_addr;
 };
 
 extern struct alloc_region  boxed_region;
