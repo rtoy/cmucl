@@ -118,8 +118,10 @@
 ;;; Create the list-style description of a G-vector.
 
 (defun type-of-g-vector (object)
-  (cond ((structurep object) (svref object 0))
-	(t `(simple-vector ,(%primitive vector-length object)))))
+  (if (structurep object)
+      (%primitive header-ref object
+		  %g-vector-structure-name-slot)
+      `(simple-vector ,(%primitive vector-length object))))
 
 ;;; I-Vector-Element-Type  --  Internal
 ;;;
