@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <signal.h>
 
+#include "ldb.h"
 #include "lisp.h"
 #include "os.h"
 #include "lispregs.h"

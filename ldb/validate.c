@@ -1,10 +1,11 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/validate.c,v 1.4 1990/10/22 12:28:28 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/validate.c,v 1.5 1991/05/24 17:22:14 wlott Exp $
  *
  * Memory Validation
  */
 
 #include <stdio.h>
+#include "ldb.h"
 #include "lisp.h"
 #include "os.h"
 #include "globals.h"
