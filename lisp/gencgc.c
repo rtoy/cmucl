@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.60 2004/07/20 22:38:26 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.61 2004/07/24 03:52:45 rtoy Exp $
  *
  */
 
@@ -106,7 +106,7 @@
 
 /* Define for activating assertions.  */
 
-#ifdef sparc
+#if 0
 #define GC_ASSERTIONS 1
 #endif
 
@@ -171,10 +171,6 @@ check_escaped_stack_object (lispobj *where, lispobj obj)
 #endif /* GC_ASSERTIONS */
 
 
-/*
- * Leave the gc_asserts enabled on sparc for a while yet until this
- * stabilizes.
- */
 #ifdef GC_ASSERTIONS
 #define gc_assert(ex)		\
   do {				\
