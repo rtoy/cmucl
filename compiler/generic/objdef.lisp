@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.29 1993/03/13 12:06:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.30 1993/05/07 07:19:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -359,20 +359,24 @@
 (define-primitive-object (weak-pointer :type weak-pointer
 				       :lowtag other-pointer-type
 				       :header weak-pointer-type
-				       :alloc-trans c::%make-weak-pointer)
-  (value :ref-trans c::%weak-pointer-value
-	 :ref-known (flushable)
-	 :set-trans (setf c::%weak-pointer-value)
-	 :set-known (unsafe)
+				       :alloc-trans make-weak-pointer)
+  (value :ref-trans c::%weak-pointer-value :ref-known (flushable)
 	 :init :arg)
   (broken :type (member t nil)
-	  :ref-trans c::%weak-pointer-broken
-	  :ref-known (flushable)
-	  :set-trans (setf c::%weak-pointer-broken)
-	  :set-known (unsafe)
-	  :init :arg)
+	  :ref-trans c::%weak-pointer-broken :ref-known (flushable)
+	  :init :null)
   (next :c-type "struct weak_pointer *"))
 
+(define-primitive-object (scavenger-hook :type scavenger-hook
+					 :lowtag other-pointer-type
+					 :header scavenger-hook-type
+					 :alloc-trans c::%make-scavenger-hook)
+  (value :ref-trans scavenger-hook-value :ref-known (flushable)
+	 :init :arg)
+  (function :ref-trans scavenger-hook-function :ref-known (flushable)
+	    :set-trans (setf scavenger-hook-function) :set-known (unsafe)
+	    :init :arg)
+  (next :c-type "struct scavenger_hook *"))
 
 ;;; Other non-heap data blocks.
 
@@ -401,11 +405,8 @@
   (thread)
   ;; Signal control magic.
   (foreign-fn-call-active :c-type "boolean")
-  (interrupts-enabled :c-type "boolean")
-  (interrupt-pending :c-type "boolean")
-  (pending-signal :c-type "int")
-  (pending-code :c-type "int")
-  (pending-mask :c-type "unsigned long")
+  (suspends-disabled-count :c-type "int")
+  (suspend-pending :c-type "boolean")
   ;; Stacks.
   (control-stack-base :c-type "lispobj *")
   (control-stack-pointer :c-type "lispobj *")
