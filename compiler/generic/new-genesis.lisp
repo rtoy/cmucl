@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.16 1994/10/24 23:07:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.17 1994/10/25 00:41:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -777,8 +777,10 @@
 		   (ecase type
 		     (#.vm:function-header-type
 		      (make-random-descriptor
-		       (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
-			  (ash vm:function-code-offset vm:word-shift))))
+		       (if (c:backend-featurep :sparc)
+			   defn
+			   (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
+			      (ash vm:function-code-offset vm:word-shift)))))
 		     (#.vm:closure-header-type
 		      (make-random-descriptor
 		       (lookup-maybe-prefix-foreign-symbol "closure_tramp")))))
