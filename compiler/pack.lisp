@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.33 1991/02/26 22:07:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.34 1991/03/25 08:44:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -340,28 +340,71 @@
   (undefined-value))
 
 
+;;; DESCRIBE-TN-USE  --  Internal
+;;;
+;;;    Return a list of format arguments describing how TN is used in Op's VOP.
+;;;
+(defun describe-tn-use (loc tn op)
+  (let* ((vop (tn-ref-vop op))
+	 (args (vop-args vop))
+	 (results (vop-results vop))
+	 (name (with-output-to-string (stream)
+		 (print-tn tn stream)))
+	 temp)
+    (cond
+     ((setq temp (position-in #'tn-ref-across tn args :key #'tn-ref-tn))
+      `("~2D: ~A (~:R argument)" ,loc ,name ,(1+ temp)))
+     ((setq temp (position-in #'tn-ref-across tn results :key #'tn-ref-tn))
+      `("~2D: ~A (~:R result)" ,loc ,name ,(1+ temp)))
+     ((setq temp (position-in #'tn-ref-across tn args :key #'tn-ref-load-tn))
+      `("~2D: ~A (~:R argument load TN)" ,loc ,name ,(1+ temp)))
+     ((setq temp (position-in #'tn-ref-across tn results :key
+			      #'tn-ref-load-tn))
+      `("~2D: ~A (~:R result load TN)" ,loc ,name ,(1+ temp)))
+     ((setq temp (position-in #'tn-ref-across tn (vop-temps vop)
+			      :key #'tn-ref-tn))
+      `("~2D: ~A (temporary ~A)" ,loc ,name
+	,(operand-parse-name (elt (vop-parse-temps
+				   (vop-parse-or-lose
+				    (vop-info-name  (vop-info vop))))
+				  temp))))
+     (t
+      `("~2D: not referenced?" ,loc)))))
+
+
 ;;; FAILED-TO-PACK-LOAD-TN-ERROR  --  Internal
 ;;;
 ;;;    If load TN packing fails, try to give a helpful error message.  We find
-;;; which operand is losing, and flame if there is no way the restriction could
-;;; ever be satisfied.
+;;; a TN in each location that conflicts, and print it.
 ;;;
 (defun failed-to-pack-load-tn-error (sc op)
   (declare (type sc sc) (type tn-ref op))
-  (multiple-value-bind (arg-p n more-p costs load-scs incon)
-		       (get-operand-info op)
-    (declare (ignore costs load-scs))
-    (assert (not more-p))
-    (error "Unable to pack a Load-TN in SC ~S for the ~:R ~
-            ~:[result~;argument~] to~@
-	    the ~S VOP.~@
-	    Perhaps all SC elements already in use by VOP?~:[~;~@
-	    Current cost info inconsistent with that in effect at compile ~
-	    time.  Recompile.~%Compilation order may be incorrect.~]"
-	   (sc-name sc)
-	   n arg-p
-	   (vop-info-name (vop-info (tn-ref-vop op)))
-	   incon))
+  (collect ((used)
+	    (unused))
+    (assert (eq (sb-kind (sc-sb sc)) :finite))
+    (dolist (el (sc-locations sc))
+      (let ((conf (load-tn-conflicts-in-sc op sc el t)))
+	(if conf
+	    (used (describe-tn-use el conf op))
+	    (unused el))))
+	
+    (multiple-value-bind (arg-p n more-p costs load-scs incon)
+			 (get-operand-info op)
+      (declare (ignore costs load-scs))
+      (assert (not more-p))
+      (error "Unable to pack a Load-TN in SC ~S for the ~:R ~
+              ~:[result~;argument~] to~@
+	      the ~S VOP,~@
+	      ~:[since all SC elements are in use:~:{~%~@?~}~%~;~
+	         ~:*but these SC elements are not in use:~%  ~S~%Bug?~*~]~
+	      ~:[~;~@
+	      Current cost info inconsistent with that in effect at compile ~
+	      time.  Recompile.~%Compilation order may be incorrect.~]"
+	     (sc-name sc)
+	     n arg-p
+	     (vop-info-name (vop-info (tn-ref-vop op)))
+	     (unused) (used)
+	     incon)))
   (undefined-value))
 
 
@@ -1009,66 +1052,65 @@
 
 ;;; LOAD-TN-OFFSET-CONFLICTS-IN-SB  --  Internal
 ;;;
-;;;    Kind of like Offset-Conflicts-In-SB, except that it uses the Live-TNs
-;;; (must already be computed) and the VOP refs to determine whether a Load-TN
-;;; for OP could be packed in the specified location.  There is a conflict if
-;;; either:
-;;;  1] Live-TNs is non-null for that location.  This means that there is a
-;;;     live non-load TN in that location after the VOP.
-;;;  2] The reference is a result, and the same location is either:
+;;;    Kind of like Offset-Conflicts-In-SB, except that it uses the VOP refs to
+;;; determine whether a Load-TN for OP could be packed in the specified
+;;; location, disregarding conflicts with TNs not referenced by this VOP.
+;;; There is a conflict if either:
+;;;  1] The reference is a result, and the same location is either:
 ;;;     -- Used by some other result.
 ;;;     -- Used in any way after the reference (exclusive).
-;;;  3] The reference is an argument, and the same location is either:
+;;;  2] The reference is an argument, and the same location is either:
 ;;;     -- Used by some other argument.
 ;;;     -- Used in any way before the reference (exclusive).
 ;;;
-;;;    In 2 (and 3) above, the first bullet corresponds to result-result
+;;;    In 1 (and 2) above, the first bullet corresponds to result-result
 ;;; (and argument-argument) conflicts.  We need this case because there aren't
 ;;; any TN-REFs to represent the implicit reading of results or writing of
 ;;; arguments.
 ;;;
-;;;    In 2 and 3 above, the second bullet corresponds conflicts with
-;;; temporaries or between arguments and results.
+;;;    The second bullet corresponds conflicts with temporaries or between
+;;; arguments and results.
 ;;;
-;;;    In 2 and 3 above, we consider both the TN-REF-TN and the TN-REF-LOAD-TN
-;;; (if any) to be referenced simultaneously and in the same way.  This causes
-;;; load-TNs to appear live to the beginning (or end) of the VOP, as
-;;; appropriate.
+;;;    We consider both the TN-REF-TN and the TN-REF-LOAD-TN (if any) to be
+;;; referenced simultaneously and in the same way.  This causes load-TNs to
+;;; appear live to the beginning (or end) of the VOP, as appropriate.
+;;;
+;;; We return a conflicting TN if there is a conflict.
 ;;;
 (defun load-tn-offset-conflicts-in-sb (op sb offset)
   (declare (type tn-ref op) (type finite-sb sb) (type index offset))
   (assert (eq (sb-kind sb) :finite))
-  (or (svref (finite-sb-live-tns sb) offset)
-      (let ((vop (tn-ref-vop op)))
-	(labels ((tn-overlaps (tn)
-		   (let ((sc (tn-sc tn))
-			 (tn-offset (tn-offset tn)))
-		     (and (eq (sc-sb sc) sb)
-			  (<= tn-offset offset)
-			  (< offset
-			     (the index
-				  (+ tn-offset (sc-element-size sc)))))))
-		 (same (ref)
-		   (let ((tn (tn-ref-tn ref))
-			 (ltn (tn-ref-load-tn ref)))
-		     (or (tn-overlaps tn)
-			 (and ltn (tn-overlaps ltn)))))
-		 (is-op (ops)
-		   (do ((ops ops (tn-ref-across ops)))
-		       ((null ops) nil)
-		     (when (and (same ops)
-				(not (eq ops op)))
-		       (return t))))
-		 (is-ref (refs end)
-		   (do ((refs refs (tn-ref-next-ref refs)))
-		       ((eq refs end) nil)
-		     (when (same refs) (return t)))))
-	  (declare (inline is-op is-ref tn-overlaps))
-	  (if (tn-ref-write-p op)
-	      (or (is-op (vop-results vop))
-		  (is-ref (vop-refs vop) op))
-	      (or (is-op (vop-args vop))
-		  (is-ref (tn-ref-next-ref op) nil)))))))
+  (let ((vop (tn-ref-vop op)))
+    (labels ((tn-overlaps (tn)
+	       (let ((sc (tn-sc tn))
+		     (tn-offset (tn-offset tn)))
+		 (when (and (eq (sc-sb sc) sb)
+			    (<= tn-offset offset)
+			    (< offset
+			       (the index
+				    (+ tn-offset (sc-element-size sc)))))
+		   tn)))
+	     (same (ref)
+	       (let ((tn (tn-ref-tn ref))
+		     (ltn (tn-ref-load-tn ref)))
+		 (or (tn-overlaps tn)
+		     (and ltn (tn-overlaps ltn)))))
+	     (is-op (ops)
+	       (do ((ops ops (tn-ref-across ops)))
+		   ((null ops) nil)
+		 (when (and (same ops)
+			    (not (eq ops op)))
+		   (return (tn-ref-tn ops)))))
+	     (is-ref (refs end)
+	       (do ((refs refs (tn-ref-next-ref refs)))
+		   ((eq refs end) nil)
+		 (when (same refs) (return (tn-ref-tn refs))))))
+      (declare (inline is-op is-ref tn-overlaps))
+      (if (tn-ref-write-p op)
+	  (or (is-op (vop-results vop))
+	      (is-ref (vop-refs vop) op))
+	  (or (is-op (vop-args vop))
+	      (is-ref (tn-ref-next-ref op) nil))))))
 
 
 ;;; LOAD-TN-CONFLICTS-IN-SC  --  Internal
@@ -1077,13 +1119,19 @@
 ;;; allocating a TN in SC at Offset, checking for conflict with load-TNs or
 ;;; other TNs (live in the LIVE-TNS, which must be set up.)  We also return
 ;;; true if there aren't enough locations after Offset to hold a TN in SC.
+;;; If Ignore-Live is true, then we ignore the live-TNs, considering only
+;;; references within Op's VOP.
 ;;;
-(defun load-tn-conflicts-in-sc (op sc offset)
+;;;    We return a conflicting TN, or :OVERFLOW if the TN won't fit.
+;;;
+(defun load-tn-conflicts-in-sc (op sc offset ignore-live)
   (let* ((sb (sc-sb sc))
 	 (size (finite-sb-current-size sb)))
     (loop for i from offset
           repeat (sc-element-size sc)
-          thereis (or (>= i size)
+          thereis (or (when (>= i size) :overflow)
+		      (and (not ignore-live)
+			   (svref (finite-sb-live-tns sb) offset))
 		      (load-tn-offset-conflicts-in-sb op sb i)))))
 
 
@@ -1102,7 +1150,7 @@
 	     (loc (tn-offset tn)))
 	(if (and (eq (sc-sb sc) (sc-sb (tn-sc tn)))
 		 (member (the index loc) (sc-locations sc))
-		 (not (load-tn-conflicts-in-sc op sc loc)))
+		 (not (load-tn-conflicts-in-sc op sc loc nil)))
 	    loc
 	    nil)))))
 
@@ -1115,7 +1163,7 @@
 (defun select-load-tn-location (op sc)
   (declare (type tn-ref op) (type sc sc))
   (dolist (loc (sc-locations sc) nil)
-    (unless (load-tn-conflicts-in-sc op sc loc)
+    (unless (load-tn-conflicts-in-sc op sc loc nil)
       (return loc))))
 
 
@@ -1186,28 +1234,24 @@
     (dolist (loc (sc-locations sc)
 		 (failed-to-pack-load-tn-error sc op))
       (declare (type index loc))
-      (when (do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
-		((null ref) t)
-	      (let ((op (tn-ref-tn ref)))
-		(when (and (eq (sc-sb (tn-sc op)) sb)
-			   (eql (tn-offset op) loc))
-		  (return nil)))
-	      (let ((ltn (tn-ref-load-tn ref)))
-		(when (and ltn
-			   (eq (sc-sb (tn-sc ltn)) sb)
-			   (eql (tn-offset ltn) loc))
-		  (return nil))))
-	(let ((victim (svref (finite-sb-live-tns sb) loc)))
-	  (assert victim)
-	  (unless (eq (tn-kind victim) :component)
+      (unless (load-tn-conflicts-in-sc op sc loc t)
+	(collect ((spilled))
+	  (loop for i from loc
+	        as victim = (svref (finite-sb-live-tns sb) loc)
+	        repeat (sc-element-size sc)
+	        unless (or (null victim)
+			   (eq (tn-kind victim) :component)
+			   (member victim (spilled))) do
 	    (basic-save-tn victim vop)
 	    (note-spilled-tn victim vop)
 	    (when (eq (template-result-types (vop-info vop)) :conditional)
 	      (spill-conditional-arg-tn victim vop))
+	    (spilled victim))
+	  (assert (spilled))
 	    
-	    (let ((res (make-tn 0 :load nil sc)))
-	      (setf (tn-offset res) loc)
-	      (return res))))))))
+	  (let ((res (make-tn 0 :load nil sc)))
+	    (setf (tn-offset res) loc)
+	    (return-from spill-and-pack-load-tn res)))))))
 
 
 ;;; Pack-Load-TN  --  Internal
