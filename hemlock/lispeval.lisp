@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.10 1992/02/15 01:06:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.11 1993/07/22 11:45:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -101,12 +101,26 @@
     (setf (note-state note) :pending)
     (message "Sending ~A." (note-context note))
     (case (note-kind note)
+      (:dylan-eval
+       (wire:remote wire
+	 (server-eval-dylan-text remote
+				 (note-package note)
+				 (note-text note)
+				 (and ts (ts-data-stream ts)))))
       (:eval
        (wire:remote wire
 	 (server-eval-text remote
 			   (note-package note)
 			   (note-text note)
 			   (and ts (ts-data-stream ts)))))
+      (:dylan-compile
+       (wire:remote wire
+	 (server-compile-dylan-text remote
+				    (note-package note)
+				    (note-text note)
+				    (note-input-file note)
+				    (and ts (ts-data-stream ts))
+				    (and bg (ts-data-stream bg)))))
       (:compile
        (wire:remote wire
 	 (server-compile-text remote
@@ -267,9 +281,13 @@
   (when (server-info-notes server-info)
     (editor-error "Server ~S is currently busy.  See \"List Operations\"."
 		  (server-info-name server-info)))
-  (multiple-value-bind (values error)
-		       (wire:remote-value (server-info-wire server-info)
-			 (server-eval-form package form))
+  (multiple-value-bind
+      (values error)
+      (if (dylan-mode-p)
+	  (wire:remote-value (server-info-wire server-info)
+	    (server-eval-dylan-form package form))
+	  (wire:remote-value (server-info-wire server-info)
+	    (server-eval-form package form)))
     (when error
       (editor-error "The server died before finishing"))
     values))
@@ -296,7 +314,7 @@
    string.  If package is not supplied, the string is eval'ed in the slave's
    current package."
   (declare (simple-string string))
-  (queue-note (make-note :kind :eval
+  (queue-note (make-note :kind (if (dylan-mode-p) :dylan-eval :eval)
 			 :context context
 			 :package package
 			 :text string)
@@ -312,7 +330,7 @@
    is not supplied, the string is eval'ed in the slave's current package."
   (let ((region (region (copy-mark (region-start region) :left-inserting)
 			(copy-mark (region-end region) :left-inserting))))
-    (queue-note (make-note :kind :eval
+    (queue-note (make-note :kind (if (dylan-mode-p) :dylan-eval :eval)
 			   :context context
 			   :region region
 			   :package package
@@ -331,7 +349,7 @@
 	 (buf (line-buffer (mark-line (region-start region))))
 	 (pn (and buf (buffer-pathname buf)))
 	 (defined-from (if pn (namestring pn) "unknown")))
-    (queue-note (make-note :kind :compile
+    (queue-note (make-note :kind (if (dylan-mode-p) :dylan-compile :compile)
 			   :context (region-context region "compilation")
 			   :buffer (and region
 					(region-start region)
