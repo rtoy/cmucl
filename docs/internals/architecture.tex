@@ -237,7 +237,7 @@ is to make a fake lisp.nm file that has nothing in it by a version number:
 \end{verbatim}
 and then run genesis with NIL for the list of files:
 \begin{verbatim}
-	* (load ".../compiler/generic/genesis")
+	* (load ".../compiler/generic/new-genesis") ; compile before loading
 	* (lisp::genesis nil ".../lisp/lisp.nm" "/dev/null"
 		".../lisp/lisp.map" ".../lisp/lisp.h")
 \end{verbatim}
@@ -300,6 +300,7 @@ system.  These symbols are:
 \item[:no-clx] don't load CLX.
 \item[:no-hemlock] don't load hemlock.
 \item[:no-pcl] don't load PCL.
+\item[:runtime] build a runtime code, implies all of the above, and then some.
 \end{description}
 
 Note: if you don't load the compiler, you can't (successfully) load the
