@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.8 1991/05/04 17:00:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.9 1991/11/07 12:37:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,6 +162,11 @@
 ;;; 
 (defvar *gc-trigger* nil)
 
+;;; On the RT, we store the GC trigger in a ``static'' symbol instead of
+;;; letting magic C code handle it.  It gets initialized by the startup
+;;; code.
+#+ibmrt
+(defvar rt::*internal-gc-trigger*)
 
 ;;;
 ;;; The following specials are used to control when garbage collection
@@ -266,12 +271,26 @@
 
 (def-c-routine ("collect_garbage" collect-garbage) (int))
 
+#-ibmrt
 (def-c-routine ("set_auto_gc_trigger" set-auto-gc-trigger)
 	       (void)
   (dynamic-usage unsigned-long))
 
+#+ibmrt
+(defun set-auto-gc-trigger (bytes)
+  (let ((words (ash (+ (current-dynamic-space-start) bytes) -2)))
+    (unless (and (fixnump words) (plusp words))
+      (clear-auto-gc-trigger)
+      (warn "Attempt to set GC trigger to something bogus: ~S" bytes))
+    (setf rt::*internal-gc-trigger* words)))
+
+#-ibmrt
 (def-c-routine ("clear_auto_gc_trigger" clear-auto-gc-trigger)
 	       (void))
+
+#+ibmrt
+(defun clear-auto-gc-trigger ()
+  (setf rt::*internal-gc-trigger* -1))
 
 
 (defun %gc ()
