@@ -318,7 +318,7 @@
 			  (:temp temp2 descriptor-reg l0-offset)
 			  (:temp src-shift descriptor-reg cname-offset)
 			  (:temp src-bit-offset descriptor-reg lexenv-offset)
-			  (:temp dst-bit-offset descriptor-reg l0-offset)
+			  (:temp dst-bit-offset descriptor-reg l1-offset)
 			  (:temp ntemp1 non-descriptor-reg nl2-offset)
 			  (:temp ntemp2 non-descriptor-reg nl3-offset)
 			  (:temp ntemp3 non-descriptor-reg nl4-offset))
