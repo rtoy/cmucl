@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.68 2004/11/10 16:00:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.69 2005/02/21 14:52:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1137,6 +1137,27 @@
 	  ((null (cdr simplified)) (car simplified))
 	  (t (make-union-type simplified)))))
 
+(defun simplify-big-integer-union (first rest)
+  ;;
+  (let ((lowest (numeric-type-low first))
+	(highest (numeric-type-high first)))
+    (dolist (type rest)
+      (multiple-value-bind (type-lo type-hi)
+	  (values (numeric-type-low type)
+		  (numeric-type-high type))
+	(if (and (numberp lowest) (numberp type-lo))
+	    (setf lowest (min lowest type-lo))
+	    (setf lowest nil))
+	(if (and (numberp highest) (numberp type-hi))
+	    (setf highest (max highest type-hi))
+	    (setf highest nil))))
+    (list (specifier-type `(integer ,(or lowest *) ,(or highest *))))))
+	
+
+(defparameter *union-length-threshold* 50
+  "The maximum length of a union of integer types before we take a
+  short cut and return a simpler union.")
+	    
 (defun simplify-unions (types)
   (when types
     (multiple-value-bind (first rest)
@@ -1145,10 +1166,23 @@
 		    (append (cdr (union-type-types (car types)))
 			    (cdr types)))
 	    (values (car types) (cdr types)))
-      (let ((rest (simplify-unions rest)) u)
-	(dolist (r rest (cons first rest))
-	  (when (setq u (type-union2 first r))
-	    (return (simplify-unions (nsubstitute u r rest)))))))))
+      (cond
+	((and (> (length rest) *union-length-threshold*)
+	      (every #'(lambda (x)
+			 (and (numeric-type-p x)
+			      (eq (numeric-type-class x) 'integer)))
+		     (cons first rest)))
+	 ;; FIXME: We sometimes spend huge amounts of time computing
+	 ;; the union of a bunch of disjoint integer types.  This is a
+	 ;; hack to shortcut that.  If the union is long enough and
+	 ;; they're all integer types, we give up and try to return an
+	 ;; interval that is a superset of each type.
+	 (simplify-big-integer-union first rest))
+	(t
+	 (let ((rest (simplify-unions rest)) u)
+	   (dolist (r rest (cons first rest))
+	     (when (setq u (type-union2 first r))
+	       (return (simplify-unions (nsubstitute u r rest)))))))))))
 
 (defun-cached (type-union2 :hash-function type-cache-hash
 			   :hash-bits 8
