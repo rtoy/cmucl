@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.6 1990/04/26 22:25:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.7 1990/04/27 19:30:31 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -120,9 +120,9 @@
 
 ;;;; Byte-blt
 
-(define-assembly-routine (byte-blt (:arg src :sc sap-reg)
+(define-assembly-routine (byte-blt (:arg src :sc sap-reg :offset nl0-offset)
 				   (:arg src-offset :sc any-reg)
-				   (:arg dst :sc sap-reg)
+				   (:arg dst :sc sap-reg :offset nl1-offset)
 				   (:arg dst-offset :sc any-reg)
 				   (:arg dst-end :sc any-reg)
 				   (:temp temp :sc non-descriptor-reg))
