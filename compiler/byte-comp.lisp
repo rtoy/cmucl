@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.7 1993/05/11 22:03:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.8 1993/05/14 09:11:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1836,21 +1836,20 @@
 ;;;
 ;;;    Given a byte-compiled function, disassemble it to standard output.
 ;;;
-(defun disassem-byte-fun (fun)
+(defun disassem-byte-fun (xep)
   (declare (optimize (inhibit-warnings 3)))
-  (let ((xep (system:find-if-in-closure #'byte-function-p fun)))
-    (disassem-byte-component
-     (byte-function-component xep)
-     (etypecase xep
-       (simple-byte-function
-	(list (simple-byte-function-entry-point xep)))
-       (hairy-byte-function
-	(sort (copy-list
-	       (if (hairy-byte-function-more-args-entry-point xep)
-		   (cons (hairy-byte-function-more-args-entry-point xep)
-			 (hairy-byte-function-entry-points xep))
-		   (hairy-byte-function-entry-points xep)))
-	      #'<))))))
+  (disassem-byte-component
+   (byte-function-component xep)
+   (etypecase xep
+     (simple-byte-function
+      (list (simple-byte-function-entry-point xep)))
+     (hairy-byte-function
+      (sort (copy-list
+	     (if (hairy-byte-function-more-args-entry-point xep)
+		 (cons (hairy-byte-function-more-args-entry-point xep)
+		       (hairy-byte-function-entry-points xep))
+		 (hairy-byte-function-entry-points xep)))
+	    #'<)))))
 	 
 
 ;;; DISASSEM-BYTE-COMPONENT  --  Interface
