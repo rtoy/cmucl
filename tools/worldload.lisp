@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.50 1992/08/20 23:12:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.51 1992/12/16 10:50:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,6 +88,7 @@
 (load "code:remote")
 (load "code:foreign")
 (load "code:setf-funs")
+(load "code:module")
 
 (setq *info-environment*
       (list* (make-info-environment)
