@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.2 1990/02/26 19:11:04 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.3 1990/02/28 18:26:09 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -124,7 +124,7 @@ lispobj obj;
     printf(", %s", subtype_Names[TypeOf(obj)>>3]);
 
     switch (TypeOf(obj)) {
-        case type_Character:
+        case type_BaseCharacter:
             printf(": font=0x%x, bits=0x%x, char=0x%x", (obj>>24)&0xff, (obj>>16)&0xff, c = ((obj>>8)&0xff));
             if (c >= ' ' && c <= '~')
                 printf(" (%c)", c);
@@ -198,7 +198,7 @@ lispobj obj;
         char *cptr, buffer[16];
 
         print_obj("header: ", header);
-        if (LowtagOf(header) != type_OtherImmediate) {
+        if (LowtagOf(header) != type_OtherImmediate0 && LowtagOf(header) != type_OtherImmediate1) {
             NEWLINE;
             printf("(invalid header object)");
             return;
@@ -291,7 +291,7 @@ lispobj obj;
                 printf("0x%08x", *ptr);
                 break;
 
-            case type_Character:
+            case type_BaseCharacter:
             case type_UnboundMarker:
                 NEWLINE;
                 printf("pointer to an immediate?\n");
