@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/values.lisp,v 1.2 2004/07/27 23:28:41 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/values.lisp,v 1.3 2004/07/28 19:22:27 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,7 +79,8 @@
 
     DONE
     (inst mov count start)		; start is high address
-    (inst sub count rsp-tn)))		; stackp is low address
+    (inst sub count rsp-tn)		; stackp is low address
+    (inst shr count 1))) ; this is unnecessary if we use 4-bit low-tag
 
 ;;; Copy the more arg block to the top of the stack so we can use them
 ;;; as function arguments.
