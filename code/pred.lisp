@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.25 1992/03/08 18:31:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.26 1992/04/07 19:26:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;;
 
 (in-package "EXTENSIONS")
-(export '(structurep fixnump bignump bitp ratiop realp weak-pointer-p))
+(export '(structurep fixnump bignump bitp ratiop weak-pointer-p))
 
 (in-package "SYSTEM")
 (export '(system-area-pointer system-area-pointer-p))
@@ -28,7 +28,7 @@
 	  floatp complexp characterp stringp bit-vector-p vectorp
 	  simple-vector-p simple-string-p simple-bit-vector-p arrayp
 	  functionp compiled-function-p commonp eq eql equal equalp not
-	  type-of upgraded-array-element-type
+	  type-of upgraded-array-element-type realp
 	  ;; Names of types...
 	  array atom bignum bit bit-vector character common
 	  compiled-function complex cons double-float
@@ -250,7 +250,7 @@
 		 (double-float (typep object 'double-float))
 		 (long-float (typep object 'long-float))
 		 ((nil) (floatp num))))
-	      ((nil) t)))
+	      (nil t)))
 	  (flet ((bound-test (val)
 			     (let ((low (numeric-type-low type))
 				   (high (numeric-type-high type)))
@@ -264,10 +264,8 @@
 	      ((nil) t)
 	      (:complex
 	       (and (complexp object)
-		    (let ((re (realpart object))
-			  (im (imagpart object)))
-		      (and (bound-test (min re im))
-			   (bound-test (max re im))))))
+		    (bound-test (realpart object))
+		    (bound-test (imagpart object))))
 	      (:real
 	       (and (not (complexp object))
 		    (bound-test object)))))))
