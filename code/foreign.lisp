@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.38 2002/03/13 08:01:55 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.39 2002/03/15 00:37:32 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,7 +89,7 @@
 ;;; The following definitions are taken from
 ;;; /usr/include/sys/elf_common.h and /usr/include/sys/elf32.h.
 ;;;
-#+(or NetBSD (and FreeBSD elf) (not FreeBSD4))
+#+(or NetBSD (and FreeBSD elf (not FreeBSD4)))
 (progn
 (alien:def-alien-type elf-address      (alien:unsigned 32))
 (alien:def-alien-type elf-half-word    (alien:unsigned 16))
