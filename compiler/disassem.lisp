@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.25 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.26 1997/02/10 23:18:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2666,7 +2666,8 @@
 				  (warn "Source file ~s has been modified; ~@
 					 Using form offset instead of file index"
 					name)
-				  (dotimes (i local-tlf-index) (read f))))
+				  (let ((*read-suppress* t))
+				    (dotimes (i local-tlf-index) (read f)))))
 			   (read f)
 			   ))))))))
       ((:lisp :stream)
