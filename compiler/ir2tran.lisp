@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.61.2.2 2000/05/23 16:37:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.61.2.3 2000/07/09 14:03:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -599,7 +599,7 @@
 ;;;
 ;;;    Return a list of TNs usable in a Call to Template delivering values to
 ;;; Cont.  As an efficiency hack, we pick off the common case where the
-;;; contiuation is fixed values and has locations that satisfy the result
+;;; continuation is fixed values and has locations that satisfy the result
 ;;; restrictions.  This can fail when there is a type check or a values count
 ;;; mismatch.
 ;;;

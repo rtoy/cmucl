@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.2.2.4 2000/07/06 06:18:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.2.2.5 2000/07/09 14:03:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -863,12 +863,13 @@
   (let ((data (gensym))
 	(start (gensym))
 	(end (gensym)))
-    `(with-array-data ((,data (the string ,sequence))
+    `(with-array-data ((,data (the (values string &rest t) ,sequence))
 		       (,start)
 		       (,end))
        (if (zerop ,start)
 	   (%sxhash-simple-substring ,data ,end)
-	   (sxhash-simple-string (coerce (the string ,sequence)
+	   (sxhash-simple-string (coerce (the (values string &rest t)
+					      ,sequence)
 					 'simple-string))))))
 
 (defmacro sxhash-list (sequence depth &key (equalp nil))

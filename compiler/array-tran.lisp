@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.19.2.3 2000/05/23 16:36:59 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.19.2.4 2000/07/09 14:03:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,7 +58,8 @@
 (defun assert-new-value-type (new-value array)
   (let ((type (continuation-type array)))
     (when (array-type-p type)
-      (assert-continuation-type new-value (array-type-element-type type))))
+      (assert-continuation-optional-type new-value
+					 (array-type-element-type type))))
   (continuation-type new-value))
 
 ;;; Unsupplied-Or-NIL  --  Internal
@@ -193,7 +194,7 @@
 					  (initial-element #\NULL))
   (if (byte-compiling)
       (values nil t)
-      `(make-array (the index ,length)
+      `(make-array (the (values index &rest t) ,length)
 		   :element-type ,element-type
 		   :initial-element ,initial-element)))
 
