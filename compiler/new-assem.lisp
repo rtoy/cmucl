@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.15 1992/07/30 05:34:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.16 1992/07/31 00:22:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1600,7 +1600,9 @@
 	 (writes nil)
 	 (delay nil)
 	 (pinned nil)
-	 (pdefs nil))
+	 (pdefs nil)
+	 (scheduler-p (assem-params-scheduler-p
+		       (c:backend-assembler-params c:*target-backend*))))
     (dolist (option-spec options)
       (multiple-value-bind
 	  (option args)
@@ -1617,19 +1619,28 @@
 	  (:attributes
 	   (setf attributes (append attributes args)))
 	  (:reads
-	   (when (or reads (cdr args))
-	     (error
-	      "Can only specify one reads expression per instruction."))
-	   (setf reads (car args)))
+	   (cond ((not scheduler-p)
+		  (warn "Ignoring :READS because scheduler turned off."))
+		 ((or reads (cdr args))
+		  (error
+		   "Can only specify one reads expression per instruction."))
+		 (t
+		  (setf reads (car args)))))
 	  (:writes
-	   (when (or writes (cdr args))
-	     (error
-	      "Can only specify one writes expression per instruction."))
-	   (setf writes (car args)))
+	   (cond ((not scheduler-p)
+		  (warn "Ignoring :WRITES because scheduler turned off."))
+		 ((or writes (cdr args))
+		  (error
+		   "Can only specify one writes expression per instruction."))
+		 (t
+		  (setf writes (car args)))))
 	  (:delay
-	   (when delay
-	     (error "Can only specify delay once per instruction."))
-	   (setf delay args))
+	   (cond ((not scheduler-p)
+		  (warn "Ignoring :DELAY because scheduler turned off."))
+		 (delay 
+		  (error "Can only specify delay once per instruction."))
+		 (t
+		  (setf delay args))))
 	  (:pinned
 	   (setf pinned t))
 	  (:vop-var
