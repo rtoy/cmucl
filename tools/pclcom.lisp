@@ -1,6 +1,9 @@
 
 (in-package "USER")
 
+(when (find-package "PCL")
+  (rename-package "PCL" "OLD-PCL"))
+
 (setf c:*suppress-values-declaration* t)
 
 (setf (search-list "pcl:") '("target:pcl/"))
