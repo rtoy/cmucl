@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.20 2003/03/03 13:46:42 pmai Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.21 2003/05/30 02:46:53 toy Exp $
 
 all: lisp.nm
 
@@ -55,7 +55,7 @@ clean:
 depend: Depends
 
 Depends: ${SRCS}
-	$(DEPEND) ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $? > ,depends
+	$(DEPEND) ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $^ > ,depends
 	mv ,depends Depends
 
 include Depends
