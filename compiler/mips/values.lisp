@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.15 1993/09/14 22:16:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.16 1993/09/14 23:15:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,7 +115,7 @@
       (zero
        (move src context))
       (immediate
-       (inst addu src context (tn-value skip)))
+       (inst addu src context (* (tn-value skip) word-bytes)))
       (any-reg
        (inst addu src context skip)))
     (move count num)
