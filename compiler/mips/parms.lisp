@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.7 1990/02/18 20:24:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.8 1990/02/20 18:19:04 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -23,7 +23,7 @@
 
 (export '(sc-number-limit most-positive-cost word-bits byte-bits word-shift
 	  word-bytes target-byte-order lowtag-bits lowtag-mask type-bits
-	  type-mask even-fixnum-type function-pointer-type
+	  type-mask pad-data-block even-fixnum-type function-pointer-type
 	  other-immediate-type list-pointer-type odd-fixnum-type
 	  structure-pointer-type other-pointer-type bignum-type ratio-type
 	  single-float-type double-float-type complex-type
@@ -93,6 +93,9 @@
 (defconstant type-mask (1- (ash 1 type-bits))
   "Mask to extract the type from a header word.")
 
+(defmacro pad-data-block (words)
+  `(logandc2 (+ (ash ,words vm:word-shift) lowtag-mask) lowtag-mask))
+
 
 (defmacro defenum ((&key (prefix "") (suffix "") (start 0) (step 1))
 		   &rest identifiers)
@@ -141,40 +144,30 @@
   ratio
   single-float
   double-float
-  complex)
-
-;;; The array types.
-
-(defenum (:suffix -type
-	  :start (+ (ash 8 lowtag-bits) other-immediate-type)
-	  :step (ash 1 lowtag-bits))
-  ;; The simple arrays:
-    simple-array
-    ;; The vectors:
-      simple-string
-      simple-bit-vector
-      simple-vector
-      simple-array-unsigned-byte-2
-      simple-array-unsigned-byte-4
-      simple-array-unsigned-byte-8
-      simple-array-unsigned-byte-16
-      simple-array-unsigned-byte-32
-      simple-array-single-float
-      simple-array-double-float
-    complex-string
-    complex-bit-vector
-    complex-vector
-  complex-array)
-
-;;; The other random types:
-
-(defenum (:suffix -type
-	  :start (+ (ash 24 lowtag-bits) other-immediate-type)
-	  :step (ash 1 lowtag-bits))
+  complex
+  
+  simple-array
+  simple-string
+  simple-bit-vector
+  simple-vector
+  simple-array-unsigned-byte-2
+  simple-array-unsigned-byte-4
+  simple-array-unsigned-byte-8
+  simple-array-unsigned-byte-16
+  simple-array-unsigned-byte-32
+  simple-array-single-float
+  simple-array-double-float
+  complex-string
+  complex-bit-vector
+  complex-vector
+  complex-array
+  
   code-header
   function-header
+  closure-function-header
   return-pc-header
   closure-header
+  value-cell-header
   symbol-header
   character
   SAP
@@ -208,12 +201,10 @@
   (let ((posn (position symbol initial-symbols)))
     (unless posn
       (error "~S isn't one of the initial symbols." symbol))
-    (macrolet ((round-to-dual-word (x) `(logandc2 (1+ ,x) 1)))
-      (+ (ash (+ (* posn (round-to-dual-word symbol-size))
-		 (round-to-dual-word (1- symbol-size)))
-	      word-shift)
-	 other-pointer-type
-	 (- list-pointer-type)))))
+    (+ (* posn (pad-data-block symbol-size))
+       (pad-data-block (1- symbol-size))
+       other-pointer-type
+       (- list-pointer-type))))
 
 
 
