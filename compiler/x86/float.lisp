@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.6 1997/05/11 11:43:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.7 1997/07/22 13:48:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -313,6 +313,22 @@
 ;;; memory operand to the FP instructions - not so on the PPro.
 ;;;
 ;;; It may also be useful to handle constant args?
+;;;
+;;; 22-Jul-97: descriptor args lose in some simple cases when
+;;; a function result computed in a loop. Then Python insists
+;;; on consing the intermediate values! For example
+#|
+(defun test(a n)
+  (declare (type (simple-array double-float (*)) a)
+	   (fixnum n))
+  (let ((sum 0d0))
+    (declare (type double-float sum))
+  (dotimes (i n)
+    (incf sum (* (aref a i)(aref a i))))
+    sum))
+|#
+;;; So, disabling descriptor args until this can be fixed elsewhere.
+;;;
 (macrolet
     ((frob (op fop-sti fopr-sti
 	       fop fopr sname scost
@@ -320,9 +336,9 @@
        `(progn
 	 (define-vop (,sname)
 	   (:translate ,op)
-	   (:args (x :scs (single-reg single-stack descriptor-reg)
+	   (:args (x :scs (single-reg single-stack #+nil descriptor-reg)
 		     :to :eval)
-		  (y :scs (single-reg single-stack descriptor-reg)
+		  (y :scs (single-reg single-stack #+nil descriptor-reg)
 		     :to :eval))
 	   (:temporary (:sc single-reg :offset fr0-offset
 			    :from :eval :to :result) fr0)
@@ -466,9 +482,9 @@
 	       
 	 (define-vop (,dname)
 	   (:translate ,op)
-	   (:args (x :scs (double-reg double-stack descriptor-reg)
+	   (:args (x :scs (double-reg double-stack #+nil descriptor-reg)
 		     :to :eval)
-		  (y :scs (double-reg double-stack descriptor-reg)
+		  (y :scs (double-reg double-stack #+nil descriptor-reg)
 		     :to :eval))
 	   (:temporary (:sc double-reg :offset fr0-offset
 			    :from :eval :to :result) fr0)
