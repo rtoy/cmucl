@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.181 2001/03/13 16:39:07 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.182 2001/03/15 18:01:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -875,10 +875,12 @@
 
 (intern "CHAR" "LISP")
 (defpackage "EXTENSIONS"
-	    (:nicknames "EXTENSIONS")
-            (:import-from "LISP" "GET-SETF-METHOD")
-            (:export "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
-             "*ALL-MODIFIER-NAMES*" "*AUTOLOAD-TRANSLATIONS*"
+  (:nicknames "EXTENSIONS")
+  (:import-from "LISP" "GET-SETF-METHOD")
+  (:import-from "KERNEL" "*ANSI-DEFSTRUCT-OPTIONS-P*")
+  (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
+	     "*ALL-MODIFIER-NAMES*" "*ANSI-DEFSTRUCT-OPTIONS-P*"
+	     "*AUTOLOAD-TRANSLATIONS*"
 	     "*BACKUP-EXTENSION*" "*BEFORE-GC-HOOKS*"
              "*BEFORE-SAVE-INITIALIZATIONS*" "*BLOCK-COMPILE-DEFAULT*"
              "*BYTES-CONSED-BETWEEN-GCS*" "*CHAR" "*CLX-FDS-TO-DISPLAYS*"
@@ -1438,7 +1440,8 @@
 (defpackage "KERNEL"
   (:import-from "LISP" "BOOLEAN")
   (:import-from "C-CALL" "VOID")
-  (:export "%ACOS" "%ACOSH" "%ARRAY-AVAILABLE-ELEMENTS"
+  (:export "*ANSI-DEFSTRUCT-OPTIONS-P*"
+	   "%ACOS" "%ACOSH" "%ARRAY-AVAILABLE-ELEMENTS"
 	   "%ARRAY-DATA-VECTOR" "%ARRAY-DIMENSION" "%ARRAY-DISPLACED-P"
 	   "%ARRAY-DISPLACEMENT" "%ARRAY-FILL-POINTER"
 	   "%ARRAY-FILL-POINTER-P" "%ASIN" "%ASINH" "%ATAN" "%ATAN2" "%ATANH"

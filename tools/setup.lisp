@@ -3,14 +3,20 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.30 2001/02/11 14:22:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.31 2001/03/15 18:01:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Set up package environment and search lists for compiler.  Also some
 ;;; compilation utilities.
 ;;;
+
+;;; Ensure pre-ANSI defstruct processing occurs during system builds.
+(in-package "KERNEL")
+(defparameter *ansi-defstruct-options-p* nil)
+
 (in-package "USER")
+
 
 
 ;;; DUMP-PACKAGE-STATE  --  Public

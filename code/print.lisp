@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.79 2001/01/01 11:41:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.80 2001/03/15 18:01:37 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1127,6 +1127,39 @@
 ;;; Instance Printing.  If it's a structure, call the structure printer.
 ;;; Otherwise, call PCL if it's loaded.  If not, print unreadably.
 
+(defun output-instance (instance stream)
+  (let ((layout (typecase instance
+		  (instance (%instance-ref instance 0))
+		  (funcallable-instance
+		   (%funcallable-instance-layout instance)))))
+
+    (if (typep layout 'layout)
+	(let ((class (layout-class layout)))
+	  (cond
+	   ((typep class 'slot-class) ; has slot print-function
+	    (if (layout-invalid layout)
+		(print-unreadable-object
+		    (instance stream :identity t :type t)
+		  (write-string "Obsolete Instance" stream))
+		(cond (;; non-CLOS :print-function option
+		       (slot-class-print-function class)
+		       (funcall (slot-class-print-function class)
+				instance stream *current-level*))
+		      ;; When CLOS loaded, use PRINT-OBJECT.
+		      ((fboundp 'print-object)
+		       (print-object instance stream))
+		      (t
+		       (default-structure-print
+			   instance stream *current-level*)))))
+	   ((fboundp 'print-object)
+	    (print-object instance stream))
+	   (t
+	    (print-unreadable-object (instance stream :identity t)
+	      (write-string "Unprintable Instance" stream)))))
+	(print-unreadable-object (instance stream :identity t)
+	  (write-string "Unprintable Instance" stream)))))
+
+#+ORIGINAL
 (defun output-instance (instance stream)
   (let ((layout (typecase instance
 		  (instance (%instance-ref instance 0))

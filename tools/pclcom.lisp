@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.21 2000/06/29 07:52:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.22 2001/03/15 18:01:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,6 +68,9 @@
 
 (when (find-package "CLOS-MOP")
   (rename-package "CLOS-MOP" "OLD-CLOS-MOP"))
+
+;;; Inhibit ANSI :print-function and :print-object defstruct options.
+(setq kernel::*ansi-defstruct-options-p* nil)
 
 (setf c:*suppress-values-declaration* t)
 (pushnew :setf *features*)

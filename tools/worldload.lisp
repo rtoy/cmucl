@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.90 2001/03/13 14:14:50 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.91 2001/03/15 18:01:40 pw Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -216,6 +216,9 @@
   ;;; Reset the counter of the number of native code fixups.
   #+x86 (setf x86::*num-fixups* 0)
 
+  ;; Maybe enable ANSI defstruct :print-function/:print-object processing
+  #-NO-PCL
+  (setq ext:*ansi-defstruct-options-p* t)
   ;;
   ;; Save the lisp.  If RUNTIME, there is nothing new to purify, so don't.
   (save-lisp "lisp.core"
