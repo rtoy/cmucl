@@ -258,6 +258,11 @@
 	    (character
 	     (output-character object stream))
 	    (vector
+	     #+new-compiler
+	     (if (eql (%primitive get-type object) system:%code-type)
+		 (output-random object stream)
+		 (output-vector object stream))
+	     #-new-compiler
 	     (output-vector object stream))
 	    (array
 	     (output-array object stream (1+ currlevel))) 
