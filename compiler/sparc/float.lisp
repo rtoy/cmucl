@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.29 2000/04/02 18:44:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.30 2000/09/26 15:15:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2385,24 +2385,62 @@
   (frob %min double-float)
   (frob %min single-float))
 
-(defknown (%%max %%min) ((or (unsigned-byte 32) (signed-byte 32)
+(defknown (%%max %%min) ((or (unsigned-byte #.vm:word-bits)
+			     (signed-byte #.vm:word-bits)
 			     single-float double-float)
-			 (or (unsigned-byte 32) (signed-byte 32)
+			 (or (unsigned-byte #.vm:word-bits)
+			     (signed-byte #.vm:word-bits)
 			     single-float double-float))
-  (or (unsigned-byte 32) (signed-byte 32)
+  (or (unsigned-byte #.vm:word-bits)
+      (signed-byte #.vm:word-bits)
       single-float double-float)
   (movable foldable flushable))
 
+#+nil
 (defun %%max (x y)
-  (declare (type (or (unsigned-byte 32) (signed-byte 32)
+  (declare (type (or (unsigned-byte #.vm:word-bits)
+		     (signed-byte #.vm:word-bits)
 		     single-float double-float) x y))
-  (%%max x y))
+  (cond ((and (typep x '(signed-byte #.vm:word-bits))
+	      (typep y '(signed-byte #.vm:word-bits)))
+	 (%%max x y))
+	((and (typep x '(unsigned-byte #.vm:word-bits))
+	      (typep y '(unsigned-byte #.vm:word-bits)))
+	 (%%max x y))
+	((and (typep x 'double-float)
+	      (typep y 'double-float))
+	 (%%max x y))
+	((and (typep x 'single-float)
+	      (typep y 'single-float))
+	 (%%max x y))
+	(t
+	 (max x y))))
 
+#+nil
 (defun %%min (x y)
   (declare (type (or (unsigned-byte 32) (signed-byte 32)
 		     single-float double-float) x y))
   (%%min x y))
 
+#+nil
+(defun %%min (x y)
+  (declare (type (or (unsigned-byte #.vm:word-bits)
+		     (signed-byte #.vm:word-bits)
+		     single-float double-float) x y))
+  (cond ((and (typep x '(signed-byte #.vm:word-bits))
+	      (typep y '(signed-byte #.vm:word-bits)))
+	 (%%min x y))
+	((and (typep x '(unsigned-byte #.vm:word-bits))
+	      (typep y '(unsigned-byte #.vm:word-bits)))
+	 (%%min x y))
+	((and (typep x 'double-float)
+	      (typep y 'double-float))
+	 (%%min x y))
+	((and (typep x 'single-float)
+	      (typep y 'single-float))
+	 (%%min x y))
+	(t
+	 (min x y))))
 
 (macrolet
     ((frob (name sc-type type compare cmov cost cc max min note)
@@ -2497,3 +2535,143 @@
 	     (inst cmove :l r y :fcc0))))))
     
 )
+
+(in-package "C")
+;;#+(and sparc-v9 fast-maxmin)
+#+sparc-v9
+(progn
+
+(in-package "C")
+;;; The sparc-v9 architecture has conditional move instructions that
+;;; can be used.  This should be faster than using the obvious if
+;;; expression since we don't have to do branches.
+  
+(def-source-transform min (&rest args)
+  (case (length args)
+    ((0 2) (values nil t))
+    (1 `(values ,(first args)))
+    (t (c::associate-arguments 'min (first args) (rest args)))))
+
+(def-source-transform max (&rest args)
+  (case (length args)
+    ((0 2) (values nil t))
+    (1 `(values ,(first args)))
+    (t (c::associate-arguments 'max (first args) (rest args)))))
+
+;; Derive the types of max and min
+(defoptimizer (max derive-type) ((x y))
+  (multiple-value-bind (definitely-< definitely->=)
+      (ir1-transform-<-helper x y)
+    (cond (definitely-<
+	      (continuation-type y))
+	  (definitely->=
+	      (continuation-type x))
+	  (t
+	   (make-canonical-union-type (list (continuation-type x)
+					    (continuation-type y)))))))
+
+(defoptimizer (min derive-type) ((x y))
+  (multiple-value-bind (definitely-< definitely->=)
+      (ir1-transform-<-helper x y)
+    (cond (definitely-<
+	      (continuation-type x))
+	  (definitely->=
+	      (continuation-type y))
+	  (t
+	   (make-canonical-union-type (list (continuation-type x)
+					    (continuation-type y)))))))
+
+#+nil
+(macrolet
+    ((frob (name vop)
+       `(deftransform ,name ((x y) (number number) * :when :both)
+	  (let ((x-type (continuation-type x))
+		(y-type (continuation-type y))
+		(signed (specifier-type '(signed-byte #.vm:word-bits)))
+		(unsigned (specifier-type '(unsigned-byte #.vm:word-bits)))
+		(d-float (specifier-type 'double-float))
+		(s-float (specifier-type 'single-float)))
+	    ;; Use %%max if both args are good types of the same type.  As a
+	    ;; last resort, use the obvious comparison to select the desired
+	    ;; element.
+	    (cond ((and (csubtypep x-type signed)
+			(csubtypep y-type signed))
+		   `(,',vop x y))
+		  ((and (csubtypep x-type unsigned)
+			(csubtypep y-type unsigned))
+		   `(,',vop x y))
+		  ((and (csubtypep x-type d-float)
+			(csubtypep y-type d-float))
+		   `(,',vop x y))
+		  ((and (csubtypep x-type s-float)
+			(csubtypep y-type s-float))
+		   `(,',vop x y))
+		  (t
+		   (let ((arg1 (gensym))
+			 (arg2 (gensym)))
+		     `(let ((,arg1 x)
+			    (,arg2 y))
+		       (if (> ,arg1 ,arg2)
+			   ,arg1 ,arg2)))))))))
+  (frob max sparc::%%max)
+  (frob min sparc::%%min))
+
+(deftransform max ((x y) (number number) * :when :both)
+  (let ((x-type (continuation-type x))
+	(y-type (continuation-type y))
+	(signed (specifier-type '(signed-byte #.vm:word-bits)))
+	(unsigned (specifier-type '(unsigned-byte #.vm:word-bits)))
+	(d-float (specifier-type 'double-float))
+	(s-float (specifier-type 'single-float)))
+    ;; Use %%max if both args are good types of the same type.  As a
+    ;; last resort, use the obvious comparison to select the desired
+    ;; element.
+    (cond ((and (csubtypep x-type signed)
+		(csubtypep y-type signed))
+	   `(sparc::%%max x y))
+	  ((and (csubtypep x-type unsigned)
+		(csubtypep y-type unsigned))
+	   `(sparc::%%max x y))
+	  ((and (csubtypep x-type d-float)
+		(csubtypep y-type d-float))
+	   `(sparc::%%max x y))
+	  ((and (csubtypep x-type s-float)
+		(csubtypep y-type s-float))
+	   `(sparc::%%max x y))
+	  (t
+	   (let ((arg1 (gensym))
+		 (arg2 (gensym)))
+	     `(let ((,arg1 x)
+		    (,arg2 y))
+	       (if (> ,arg1 ,arg2)
+		   ,arg1 ,arg2)))))))
+
+(deftransform min ((x y) (real real) * :when :both)
+  (let ((x-type (continuation-type x))
+	(y-type (continuation-type y))
+	(signed (specifier-type '(signed-byte #.vm:word-bits)))
+	(unsigned (specifier-type '(unsigned-byte #.vm:word-bits)))
+	(d-float (specifier-type 'double-float))
+	(s-float (specifier-type 'single-float)))
+    (cond ((and (csubtypep x-type signed)
+		(csubtypep y-type signed))
+	   `(sparc::%%min x y))
+	  ((and (csubtypep x-type unsigned)
+		(csubtypep y-type unsigned))
+	   `(sparc::%%min x y))
+	  ((and (csubtypep x-type d-float)
+		(csubtypep y-type d-float))
+	   `(sparc::%%min x y))
+	  ((and (csubtypep x-type s-float)
+		(csubtypep y-type s-float))
+	   `(sparc::%%min x y))
+	  (t
+	   (let ((arg1 (gensym))
+		 (arg2 (gensym)))
+	     `(let ((,arg1 x)
+		    (,arg2 y))
+		(if (< ,arg1 ,arg2)
+		    ,arg1 ,arg2)))))))
+
+)
+
