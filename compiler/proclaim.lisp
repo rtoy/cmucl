@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.26.1.2 1993/01/23 14:39:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.26.1.3 1993/01/27 12:57:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,8 @@
 (in-package "EXTENSIONS")
 (export '(inhibit-warnings freeze-type optimize-interface constant-function))
 (in-package "KERNEL")
-(export '(note-name-defined *type-system-initialized*))
+(export '(note-name-defined define-function-name undefine-function-name
+			    *type-system-initialized* %note-type-defined))
 (in-package "LISP")
 (export '(declaim proclaim))
 (in-package "C")
@@ -238,6 +239,28 @@
   name)
 
 
+;;; UNDEFINE-FUNCTION-NAME  --  Interface
+;;;
+;;;    Make Name no longer be a function name: clear everything back to the
+;;; default.
+;;;
+(defun undefine-function-name (name)
+  (when name
+    (macrolet ((frob (type &optional val)
+		 `(unless (eq (info function ,type name) ,val)
+		    (setf (info function ,type name) ,val))))
+      (frob info)
+      (frob type (specifier-type 'function))
+      (frob where-from :assumed)
+      (frob inlinep)
+      (frob kind)
+      (frob accessor-for)
+      (frob inline-expansion)
+      (frob source-transform)
+      (frob assumed-type)))
+  (undefined-value))
+
+
 ;;; Process-Optimize-Declaration  --  Interface
 ;;;
 ;;;    Return a new cookie containing the policy information represented by the
@@ -324,8 +347,8 @@
       (freeze-type
        (dolist (type args)
 	 (specifier-type type); Give undefined type warnings...
-	 (when (eq (info type kind type) :structure)
-	   (freeze-structure-type type))))
+	 (when (eq (info type kind type) :instance)
+	   (setf (class-state (find-class type)) :sealed))))
       (function
        ;;
        ;; Handle old-style FUNCTION declaration, which is a shorthand for
