@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.45 2000/08/07 14:27:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.46 2000/08/08 13:41:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 		 built-in-class-direct-superclasses
 		 find-class-cell class-cell-name class-cell-class
 		 make-layout make-undefined-class insured-find-class
-		 redefine-layout-warning))
+		 redefine-layout-warning std-compute-class-precedence-list))
 
 (in-package "LISP")
 (export '(class structure-class standard-class class-name find-class class-of
@@ -1124,6 +1124,90 @@
 		     name)
 	       old)))
 	  (t old))))
+
+
+;;; Class precedence lists
+
+;;; topological-sort  --  Public.
+;;;
+;;; Topologically sort the list of objects to meet a set of ordering
+;;; constraints given by pairs (A . B) constraining A to precede B.  When
+;;; there are multiple objects to choose, the tie-breaker function is called
+;;; with both the list of object to choose from and the reverse ordering built
+;;; so far.
+;;;
+(defun topological-sort (objects constraints tie-breaker)
+  (declare (list objects constraints)
+	   (function tie-breaker))
+  (let ((obj-info (make-hash-table :size (length objects)))
+	(free-objs nil)
+	(result nil))
+    (dolist (constraint constraints)
+      (let ((obj1 (car constraint))
+	    (obj2 (cdr constraint)))
+	(let ((info2 (gethash obj2 obj-info)))
+	  (if info2
+	      (incf (first info2))
+	      (setf (gethash obj2 obj-info) (list 1))))
+	(let ((info1 (gethash obj1 obj-info)))
+	  (if info1
+	      (push obj2 (rest info1))
+	      (setf (gethash obj1 obj-info) (list 0 obj2))))))
+    (dolist (obj objects)
+      (let ((info (gethash obj obj-info)))
+	(when (or (not info) (zerop (first info)))
+	  (push obj free-objs))))
+    (loop
+     (flet ((next-result (obj)
+	      (push obj result)
+	      (dolist (successor (rest (gethash obj obj-info)))
+		(let* ((successor-info (gethash successor obj-info))
+		       (count (1- (first successor-info))))
+		  (setf (first successor-info) count)
+		  (when (zerop count)
+		    (push successor free-objs))))))
+       (cond ((endp free-objs)
+	      (do-hash (obj info obj-info)
+		(unless (zerop (first info))
+		  (error "Topological sort failed due to constrain on ~S."
+			 obj)))
+	      (return (nreverse result)))
+	     ((endp (rest free-objs))
+	      (next-result (pop free-objs)))
+	     (t
+	      (let ((obj (funcall tie-breaker free-objs result)))
+		(setf free-objs (remove obj free-objs))
+		(next-result obj))))))))
+
+
+;;; std-compute-class-precedence-list  --  Internal.
+;;;
+;;; Standard class precedence list computation.
+;;;
+(defun std-compute-class-precedence-list (class)
+  (let ((classes nil)
+	(constraints nil))
+    (labels ((note-class (class)
+	       (unless (member class classes)
+		 (push class classes)
+		 (let ((superclasses (class-direct-superclasses class)))
+		   (do ((prev class)
+			(rest superclasses (rest rest)))
+		       ((endp rest))
+		     (let ((next (first rest)))
+		       (push (cons prev next) constraints)
+		       (setf prev next)))
+		   (dolist (class superclasses)
+		     (note-class class)))))
+	     (std-cpl-tie-breaker (free-classes rev-cpl)
+	       (dolist (class rev-cpl (first free-classes))
+		 (let* ((superclasses (class-direct-superclasses class))
+			(intersection (intersection free-classes
+						    superclasses)))
+		   (when intersection
+		     (return (first intersection)))))))
+      (note-class class)
+      (topological-sort classes constraints #'std-cpl-tie-breaker))))
 
 
 ;;; PCL stuff:

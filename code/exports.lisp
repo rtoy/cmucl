@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.171 2000/08/06 19:12:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.172 2000/08/08 13:41:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1594,6 +1594,7 @@
 	   "SIMPLE-ARRAY-SIGNED-BYTE-32-P" "SIMPLE-ARRAY-SIGNED-BYTE-8-P" 
 	   "SIMPLE-UNBOXED-ARRAY" "SINGLE-FLOAT-BITS" "SINGLE-FLOAT-EXPONENT"
 	   "SINGLE-FLOAT-P" "SINGLE-VALUE-TYPE" "SPECIFIER-TYPE" "STACK-REF"
+	   "STD-COMPUTE-CLASS-PRECEDENCE-LIST"
 	   "STREAMLIKE" "STRINGABLE" "STRINGLIKE"
 	   "%INSTANCE-LENGTH"
 	   "%INSTANCE-REF" "%INSTANCE-SET"

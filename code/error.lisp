@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.56 2000/08/06 19:12:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.57 2000/08/08 13:41:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -437,9 +437,6 @@
 
 ;;;; Condition reporting:
 
-;;; 7/13/98 BUG? CPL is not sorted and results here depend on order of
-;;; superclasses in define-condition call!
-
 (defun %print-condition (s stream d)
   (declare (ignore d))
   (if *print-escape*
@@ -583,18 +580,10 @@
 
     (setf (find-class name) class)
     ;;
-    ;; Initialize CPL slot from layout.
-    (collect ((cpl))
-      (cpl class)
-      (let ((inherits (layout-inherits layout)))
-	(do ((i (1- (length inherits)) (1- i)))
-	    ((minusp i))
-	  (let ((super (find-class
-			(class-name
-			 (layout-class (svref inherits i))))))
-	    (when (typep super 'condition-class)
-	      (cpl super)))))
-      (setf (condition-class-cpl class) (cpl))))
+    ;; Initialize CPL slot.
+    (setf (condition-class-cpl class)
+	  (remove-if-not #'condition-class-p 
+			 (std-compute-class-precedence-list class))))
   (undefined-value))
 
 ); eval-when (compile load eval)
