@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.11 1999/02/20 15:54:45 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.12 2000/09/05 09:32:31 dtc Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -12,7 +12,7 @@ static int max_lines = 20, cur_lines = 0;
 static int max_depth = 5, brief_depth = 2, cur_depth = 0;
 static int max_length = 5;
 static boolean dont_decend = FALSE, skip_newline = FALSE;
-static cur_clock = 0;
+static int cur_clock = 0;
 
 static void print_obj(char *prefix, lispobj obj);
 
