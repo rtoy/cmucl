@@ -362,7 +362,7 @@
 
 (eval-when (compile eval)
 
-
+(defconstant sxhash-bits-byte (byte 23 0))
 (defconstant sxmash-total-bits 26)
 (defconstant sxmash-rotate-bits 7)
 
@@ -418,7 +418,7 @@
     ;; The pointers and immediate types.
     (list (sxhash-list s-expr depth))
     (fixnum
-     (ldb (byte 23 0) s-expr))
+     (ldb sxhash-bits-byte s-expr))
     #+nil
     (structure ???)
     ;; Other-pointer types.
@@ -426,11 +426,20 @@
     (symbol (sxhash-simple-string (symbol-name s-expr)))
     (number
      (etypecase s-expr
-       (integer (ldb (byte 23 0) s-expr))
-       (float (multiple-value-bind (significand exponent)
-				   (integer-decode-float s-expr)
-		(logxor (the fixnum (ldb (byte 23 0) significand))
-			(the fixnum (ldb (byte 23 0) exponent)))))
+       (integer (ldb sxhash-bits-byte s-expr))
+       (single-float
+	(let ((bits (vm:single-float-bits s-expr)))
+	  (ldb sxhash-bits-byte
+	       (logxor (ash bits (- sxmash-rotate-bits))
+		       bits))))
+       (double-float
+	(let* ((val s-expr)
+	       (lo (vm:double-float-low-bits val))
+	       (hi (vm:double-float-high-bits val)))
+	  (ldb sxhash-bits-byte
+	       (logxor (ash lo (- sxmash-rotate-bits))
+		       (ash hi (- sxmash-rotate-bits))
+		       lo hi))))
        (ratio (the fixnum (+ (internal-sxhash (numerator s-expr) 0)
 			     (internal-sxhash (denominator s-expr) 0))))
        (complex (the fixnum (+ (internal-sxhash (realpart s-expr) 0)
@@ -442,4 +451,4 @@
     #+nil
     (compiled-function (%primitive header-length s-expr))
     ;; Everything else.
-    (t (%primitive make-fixnum s-expr))))
+    (t 42)))
