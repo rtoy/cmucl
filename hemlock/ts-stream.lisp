@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.4 1991/02/08 16:38:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.5 1991/05/27 11:56:28 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,57 @@
 ;;;
 
 (in-package "HEMLOCK")
+
+
+
+;;;; Public interface from "EXTENSIONS" package.
+
+(in-package "EXT")
+
+(export '(get-stream-command stream-command stream-command-p stream-command-name
+	  stream-command-args make-stream-command))
+
+(defstruct (stream-command (:print-function print-stream-command)
+			   (:constructor make-stream-command
+					 (name &optional args)))
+  (name nil :type symbol)
+  (args nil :type list))
+
+(defun print-stream-command (obj str n)
+  (declare (ignore n))
+  (format str "#<Stream-Cmd ~S>" (stream-command-name obj)))
+
+
+;;; GET-STREAM-COMMAND -- Public.
+;;;
+;;; We can't simply call the stream's misc method because because nil is an
+;;; ambiguous return value: does it mean text arrived, or does it mean the
+;;; stream's misc method had no :get-command implementation.  We can't return
+;;; nil until there is text input.  We don't need to loop because any stream
+;;; implementing :get-command would wait until it had some input.  If the
+;;; LISTEN fails, then we have some random stream we must wait on.
+;;;
+(defun get-stream-command (stream)
+  "This takes a stream and waits for text or a command to appear on it.  If
+   text appears before a command, this returns nil, and otherwise it returns
+   a command."
+  (let ((cmdp (funcall (lisp::stream-misc stream) stream :get-command)))
+    (cond (cmdp)
+	  ((listen stream)
+	   nil)
+	  (t
+	   ;; This waits for input and returns nil when it arrives.
+	   (unread-char (read-char stream) stream)))))
+
+
+
+;;;; Package for rest of file.
+
+(in-package "HEMLOCK")
+
+
+
+;;;; Ts-streams.
 
 (defconstant ts-stream-output-buffer-size 512)
 
@@ -36,34 +87,59 @@
   ;;
   ;; The current output character position on the line, returned by the
   ;; :CHARPOS method.
-  (char-pos 0)
+  (char-pos 0 :type fixnum)
   ;;
   ;; The current length of a line of output.  Returned by the :LINE-LENGTH
   ;; method.
   (line-length 80)
-  current-input
+  ;;
+  ;; This is a list of strings and stream-commands whose order manifests the
+  ;; input provided by remote procedure calls into the slave of
+  ;; TS-STREAM-ACCEPT-INPUT.
+  (current-input nil :type list)
   (input-read-index 0 :type fixnum))
 
 (defun %ts-stream-print (ts stream depth)
   (declare (ignore ts depth))
   (write-string "#<TS Stream>" stream))
 
-;;; TS-STREAM-ACCEPT-INPUT --- internal interface.
+
+
+;;;; Conditions.
+
+(define-condition unexpected-stream-command (error)
+  ;; Context is a string to be plugged into the report text.
+  ((context))
+  (:report (lambda (condition stream)
+	     (format stream "~&Unexpected stream-command while ~A."
+		     (unexpected-stream-command-context condition)))))
+
+
+
+;;;; Editor remote calls into slave.
+
+;;; TS-STREAM-ACCEPT-INPUT -- Internal Interface.
 ;;;
-;;; This routine is called by the editor to indicate that the user has typed
-;;; more input.
+;;; The editor calls this remotely in the slave to indicate that the user has
+;;; provided input.  Input is a string, symbol, or list.  If it is a list, the
+;;; the CAR names the command, and the CDR is the arguments.
 ;;;
-(defun ts-stream-accept-input (remote string)
+(defun ts-stream-accept-input (remote input)
   (let ((stream (wire:remote-object-value remote)))
     (system:without-interrupts
      (system:without-gcing
       (setf (ts-stream-current-input stream)
 	    (nconc (ts-stream-current-input stream)
-		   (list string)))
-      (setf (ts-stream-char-pos stream) 0))))
+		   (list (etypecase input
+			   (string input)
+			   (cons
+			    (ext:make-stream-command (car input)
+						     (cdr input)))
+			   (symbol
+			    (ext:make-stream-command input)))))))))
   nil)
 
-;;; TS-STREAM-SET-LINE-LENGTH  --  Internal interface
+;;; TS-STREAM-SET-LINE-LENGTH -- Internal Interface.
 ;;;
 ;;; This function is called by the editor to indicate that the line-length for
 ;;; a TS stream should now be Length.
@@ -72,7 +148,11 @@
   (let ((stream (wire:remote-object-value remote)))
     (setf (ts-stream-line-length stream) length)))
 
-;;; %TS-STREAM-LISTEN --- internal.
+
+
+;;;; Stream methods.
+
+;;; %TS-STREAM-LISTEN -- Internal.
 ;;;
 ;;; Determine if there is any input available.  If we don't think so, process
 ;;; all pending events, and look again.
@@ -82,11 +162,14 @@
 	   (system:without-interrupts
 	    (system:without-gcing
 	     (loop
-	       (let ((current (ts-stream-current-input stream)))
+	       (let* ((current (ts-stream-current-input stream))
+		      (first (first current)))
 		 (cond ((null current)
 			(return nil))
+		       ((ext:stream-command-p first)
+			(return t))
 		       ((>= (ts-stream-input-read-index stream)
-			    (length (the simple-string (car current))))
+			    (length (the simple-string first)))
 			(pop (ts-stream-current-input stream))
 			(setf (ts-stream-input-read-index stream) 0))
 		       (t
@@ -96,7 +179,55 @@
 	  (system:serve-all-events 0)
 	  (check)))))
 
-;;; WAIT-FOR-TYPESCRIPT-INPUT --- internal.
+;;; %TS-STREAM-IN -- Internal.
+;;;
+;;; The READ-CHAR stream method.
+;;; 
+(defun %ts-stream-in (stream &optional eoferr eofval)
+  (declare (ignore eoferr eofval)) ; EOF's are impossible.
+  (wait-for-typescript-input stream)
+  (system:without-interrupts
+   (system:without-gcing
+    (let ((first (first (ts-stream-current-input stream))))
+      (etypecase first
+	(string
+	 (prog1 (schar first (ts-stream-input-read-index stream))
+	   (incf (ts-stream-input-read-index stream))))
+	(ext:stream-command
+	 (error 'unexpected-stream-command
+		:context "in the READ-CHAR method")))))))
+
+;;; %TS-STREAM-READ-LINE -- Internal.
+;;;
+;;; The READ-LINE stream method.  Note: here we take advantage of the fact that
+;;; newlines will only appear at the end of strings.
+;;; 
+(defun %ts-stream-read-line (stream eoferr eofval)
+  (declare (ignore eoferr eofval))
+  (macrolet
+      ((next-str ()
+	 '(progn
+	    (wait-for-typescript-input stream)
+	    (system:without-interrupts
+	     (system:without-gcing
+	      (let ((first (first (ts-stream-current-input stream))))
+		(etypecase first
+		  (string
+		   (prog1 (if (zerop (ts-stream-input-read-index stream))
+			      (pop (ts-stream-current-input stream))
+			      (subseq (pop (ts-stream-current-input stream))
+				      (ts-stream-input-read-index stream)))
+		     (setf (ts-stream-input-read-index stream) 0)))
+		  (ext:stream-command
+		   (error 'unexpected-stream-command
+			  :context "in the READ-CHAR method")))))))))
+    (do ((result (next-str) (concatenate 'simple-string result (next-str))))
+	((char= (schar result (1- (length result))) #\newline)
+	 (values (subseq result 0 (1- (length result)))
+		 nil))
+      (declare (simple-string result)))))
+
+;;; WAIT-FOR-TYPESCRIPT-INPUT -- Internal.
 ;;;
 ;;; Keep calling server until some input shows up.
 ;;; 
@@ -112,44 +243,6 @@
 	(system:serve-all-events)
 	(when (%ts-stream-listen stream)
 	  (return))))))
-
-;;; %TS-STREAM-IN --- internal.
-;;;
-;;; The READ-CHAR stream method.
-;;; 
-(defun %ts-stream-in (stream &optional eoferr eofval)
-  (declare (ignore eoferr eofval)) ; EOF's are impossible.
-  (wait-for-typescript-input stream)
-  (system:without-interrupts
-   (system:without-gcing
-    (prog1
-	(schar (car (ts-stream-current-input stream))
-	       (ts-stream-input-read-index stream))
-      (incf (ts-stream-input-read-index stream))))))
-
-;;; %TS-STREAM-READ-LINE --- internal.
-;;;
-;;; The READ-LINE stream method.  Note: here we take advantage of the fact that
-;;; newlines will only appear at the end of strings.
-;;; 
-(defun %ts-stream-read-line (stream eoferr eofval)
-  (declare (ignore eoferr eofval))
-  (macrolet ((next-str ()
-	       '(progn
-		  (wait-for-typescript-input stream)
-		  (system:without-interrupts
-		   (system:without-gcing
-		    (prog1
-			(if (zerop (ts-stream-input-read-index stream))
-			    (pop (ts-stream-current-input stream))
-			    (subseq (pop (ts-stream-current-input stream))
-				    (ts-stream-input-read-index stream)))
-		      (setf (ts-stream-input-read-index stream) 0)))))))
-    (do ((result (next-str) (concatenate 'simple-string result (next-str))))
-	((char= (schar result (1- (length result))) #\newline)
-	 (values (subseq result 0 (1- (length result)))
-		 nil))
-      (declare (simple-string result)))))
 
 ;;; %TS-STREAM-FLSBUF --- internal.
 ;;;
@@ -231,21 +324,21 @@
 		  (+ (ts-stream-char-pos stream)
 		     length))))))))
 
-;;; %TS-STREAM-UNREAD --- internal.
+;;; %TS-STREAM-UNREAD -- Internal.
 ;;;
 ;;; Unread a single character.
 ;;; 
 (defun %ts-stream-unread (stream char)
   (system:without-interrupts
    (system:without-gcing
-    (cond ((and (ts-stream-current-input stream)
-		(> (ts-stream-input-read-index stream) 0))
-	   (setf (schar (car (ts-stream-current-input stream))
-			(decf (ts-stream-input-read-index stream)))
-		 char))
-	  (t
-	   (push (string char) (ts-stream-current-input stream))
-	   (setf (ts-stream-input-read-index stream) 0))))))
+    (let ((first (first (ts-stream-current-input stream))))
+      (cond ((and (stringp first)
+		  (> (ts-stream-input-read-index stream) 0))
+	     (setf (schar first (decf (ts-stream-input-read-index stream)))
+		   char))
+	    (t
+	     (push (string char) (ts-stream-current-input stream))
+	     (setf (ts-stream-input-read-index stream) 0)))))))
 
 ;;; %TS-STREAM-CLOSE --- internal.
 ;;;
@@ -256,7 +349,7 @@
     (force-output stream))
   (lisp::set-closed-flame stream))
 
-;;; %TS-STREAM-CLEAR-INPUT --- internal.
+;;; %TS-STREAM-CLEAR-INPUT -- Internal.
 ;;;
 ;;; Pass the request to the editor and clear any buffered input.
 ;;;
@@ -269,7 +362,7 @@
     (setf (ts-stream-current-input stream) nil
 	  (ts-stream-input-read-index stream) 0))))
 
-;;; %TS-STREAM-MISC --- internal.
+;;; %TS-STREAM-MISC -- Internal.
 ;;;
 ;;; The misc stream method.
 ;;; 
@@ -281,6 +374,15 @@
      (%ts-stream-listen stream))
     (:unread
      (%ts-stream-unread stream arg1))
+    (:get-command
+     (wait-for-typescript-input stream)
+     (system:without-interrupts
+      (system:without-gcing
+       (etypecase (first (ts-stream-current-input stream))
+	 (stream-command
+	  (setf (ts-stream-input-read-index stream) 0)
+	  (pop (ts-stream-current-input stream)))
+	 (string nil)))))
     (:close
      (%ts-stream-close stream arg1))
     (:clear-input
