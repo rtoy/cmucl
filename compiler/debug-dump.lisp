@@ -22,8 +22,8 @@
 ;;;; Debug blocks:
 
 (deftype location-kind ()
-  '(:unknown-return :known-return :internal-error :non-local-exit
-		    :block-start))
+  '(member :unknown-return :known-return :internal-error :non-local-exit
+	   :block-start))
 
 
 ;;; The Location-Info structure holds the information what we need about
@@ -96,7 +96,7 @@
 (defun dump-1-location (node block kind tlf-num label live var-locs)
   (declare (type node node) (type ir2-block block)
 	   (type local-tn-bit-vector live) (type label label)
-	   (type location-kind location) (type (or index null) tlf-num)
+	   (type location-kind kind) (type (or index null) tlf-num)
 	   (type hash-table var-locs))
   
   (vector-push-extend
@@ -108,8 +108,8 @@
     (setq *previous-location* loc))
   
   (unless tlf-num
-    (write-var-integer (node-tlf-number node)))
-  (write-var-integer (first (node-source-path node)))
+    (write-var-integer (node-tlf-number node) *byte-buffer*))
+  (write-var-integer (first (node-source-path node)) *byte-buffer*)
   
   (write-packed-bit-vector (compute-live-vars live block var-locs)
 			   *byte-buffer*)
@@ -158,8 +158,8 @@
 	    (setf (block-flag block) num)
 	    (incf num)
 	    (unless (eql (node-tlf-number
-			  (continuation-next (block-start block))
-			  tlf-num))
+			  (continuation-next (block-start block)))
+			 tlf-num)
 	      (setq tlf-num nil)))
 	  
 	  (dolist (loc (ir2-block-locations 2block))
@@ -178,8 +178,9 @@
 	      (dolist (b succ)
 		(write-var-integer (block-flag b) *byte-buffer*)))
 	    (dump-1-location (continuation-next (block-start block))
-			     2block (ir2-block-live-out 2block)
-			     :block-start tlf-num (ir2-block-%label 2block)
+			     2block :block-start tlf-num
+			     (ir2-block-%label 2block)
+			     (ir2-block-live-out 2block)
 			     var-locs))
 	  
 	  (dolist (loc (ir2-block-locations 2block))
@@ -209,8 +210,10 @@
 			  :created (file-info-write-date x)
 			  :compiled (source-info-start-time info)
 			  :source-root (file-info-source-root x)
-			  :start-position (coerce-to-smallest-eltype
-					   (file-info-positions info)))))
+			  :start-positions
+			  (when (policy nil (>= debug 2))
+			    (coerce-to-smallest-eltype
+			     (file-info-positions x))))))
 		(cond ((pathnamep name)
 		       (setf (debug-source-name res) name))
 		      (t
@@ -235,7 +238,7 @@
 			(setq max val))
 		      (setq max nil))))
       (if (listp seq)
-	  (dolist (elt seq)
+	  (dolist (val seq)
 	    (frob))
 	  (dotimes (i (length seq))
 	    (let ((val (aref seq i)))
@@ -320,7 +323,7 @@
 	      (frob-leaf thing (cdr x) (= level 3)))))
 	
 	(dolist (let (lambda-lets fun))
-	  (frob let (= level 3)))))
+	  (frob-lambda let (= level 3)))))
     
     (setf (fill-pointer *byte-buffer*) 0)
     (let ((sorted (sort (vars) #'string<
@@ -447,7 +450,7 @@
 
 	    (when (>= level 2)
 	      (multiple-value-bind (blocks tlf-num)
-				   (compute-debug-blocks fun)
+				   (compute-debug-blocks fun var-locs)
 		(setf (debug-function-tlf-number dfun) tlf-num)
 		(setf (debug-function-blocks dfun) blocks)))
 
