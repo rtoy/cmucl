@@ -65,8 +65,7 @@
 	   (with-array-data ((,data ,string :offset-var ,offset)
 			     (,data-start ,start)
 			     (,data-end (or ,end
-					    (length (the simple-string
-							 ,string)))))
+					    (length (the vector ,string)))))
 	     (psetq ,string ,data
 		    ,cum-offset ,offset
 		    ,start ,data-start
@@ -87,7 +86,7 @@
      (if (array-header-p ,string)
 	 (with-array-data ((data ,string)
 			   (data-start start)
-			   (data-end (length (the simple-string ,string))))
+			   (data-end (length (the vector ,string))))
 	   (psetq ,string data
 		  start data-start
 		  end data-end))
@@ -114,8 +113,7 @@
 	  (with-array-data ((,data ,string1 :offset-var ,offset)
 			    (,data-start ,start1)
 			    (,data-end (or ,end1
-					   (length (the simple-string
-							,string1)))))
+					   (length (the vector ,string1)))))
 	    (psetq ,string1 ,data
 		   ,cum-offset-1 ,offset
 		   ,start1 ,data-start
@@ -125,8 +123,7 @@
 	  (with-array-data ((,data ,string2)
 			    (,data-start ,start2)
 			    (,data-end (or ,end2
-					   (length (the simple-string
-							,string2)))))
+					   (length (the vector ,string2)))))
 	    (psetq ,string2 ,data
 		   ,start2 ,data-start
 		   ,end2 ,data-end))
