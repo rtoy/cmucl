@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.13 1991/11/06 19:46:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.14 1992/12/31 13:36:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 		read-char-no-edit listen-skip-whitespace concat-pnames
 		iterate once-only collect do-anonymous undefined-value
 		required-argument define-hash-cache defun-cached
-		cache-hash-eq))
+		cache-hash-eq do-hash))
 
 (import 'lisp::whitespace-char-p)
 
@@ -376,6 +376,20 @@
   of the DO."
   (lisp::do-do-body varlist endlist body decls 'let 'psetq
 		    'do-anonymous (gensym)))
+
+(defmacro do-hash ((key-var value-var table &optional result)
+		   &body (body decls))
+  "DO-HASH (Key-Var Value-Var Table [Result]) Declaration* Form*
+   Iterate over the entries in a hash-table."
+  (let ((gen (gensym))
+	(n-more (gensym)))
+    `(with-hash-table-iterator (,gen ,table)
+       (loop
+	 (multiple-value-bind (,n-more ,key-var ,value-var)
+			      (,gen)
+	   ,@decls
+	   (unless ,n-more (return ,result))
+	   ,@body)))))
 
 
 ;;;; Hash cache utility:
