@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.38 2003/10/13 17:25:09 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.39 2004/05/19 22:42:53 cwang Exp $
  *
  */
 
@@ -48,7 +48,7 @@
 
 static void sigint_handler(HANDLER_ARGS)
 {
-#if ( defined( __linux__ ) && defined( i386 ) )
+#if ( defined( __linux__ ) && ( defined( i386 ) || defined ( __x86_64 ) ) )
   GET_CONTEXT
 #endif
 
@@ -373,7 +373,7 @@ prepend_core_path(char* lib, char* corefile)
 */
 
 int builtin_image_flag = 0;
-int initial_function_addr = 0;
+long initial_function_addr = 0;
 
 /* And here be main. */
 
