@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.31 1991/03/10 18:30:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.32 1991/03/11 16:05:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1701,10 +1701,10 @@ inlines
   (print-error-message :warning format-string format-args))
 ;;;
 (defun compiler-note (format-string &rest format-args)
-  (incf *compiler-note-count*)
   (unless (if *compiler-error-context*
 	      (policy *compiler-error-context* (= brevity 3))
 	      (policy nil (= brevity 3)))
+    (incf *compiler-note-count*)
     (print-error-message :note format-string format-args)))
 
 
