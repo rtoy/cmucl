@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.18 1992/02/15 01:04:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.19 1992/02/15 13:09:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -908,7 +908,7 @@
       (incf i))))
 
 (defun editor-tty-listen (stream)
-  (alien:with-alien (nc c-call:int)
+  (alien:with-alien ((nc c-call:int))
     (and (unix:unix-ioctl (tty-editor-input-fd stream)
 			  unix::FIONREAD
 			  (alien:alien-sap (alien:addr nc)))
@@ -994,7 +994,7 @@
 	    (unix:unix-ioctl fd unix:TIOCSLTC (alien-sap tc))
 	  (unless val
 	    (error "Failed to set ltchars, unix error ~S."
-		   (unx:get-unix-error-msg err))))))))
+		   (unix:get-unix-error-msg err))))))))
 	
 (defun reset-input ()
   (when (unix:unix-isatty 0)
