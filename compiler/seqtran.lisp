@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.25 2003/02/21 16:06:57 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.26 2003/04/21 15:56:31 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,13 +73,13 @@
 (deftransform elt ((s i) ((simple-array * (*)) *) * :when :both)
   '(aref s i))
 
-(deftransform elt ((s i) (list *) * :when :both)
+(deftransform elt ((s i) (list *) * :when :both :policy (< safety 3))
   '(nth i s))
 
 (deftransform %setelt ((s i v) ((simple-array * (*)) * *) * :when :both)
   '(%aset s i v))
 
-(deftransform %setelt ((s i v) (list * *))
+(deftransform %setelt ((s i v) (list * *) * :policy (< safety 3))
   '(setf (car (nthcdr i s)) v))
 
 
