@@ -470,21 +470,32 @@ _closure_tramp:
 
 	SET_SIZE(xclosure_tramp)
 
-	GFUNCDEF(function_end_breakpoint_trap)
-	.long 0
-	SET_SIZE(function_end_breakpoint_trap)
-
-	GFUNCDEF(function_end_breakpoint)
-	.long 0
-	SET_SIZE(function_end_breakpoint)
-
-	GFUNCDEF(function_end_breakpoint_guts)
-	.long 0
-	SET_SIZE(function_end_breakpoint_guts)
-
-	GFUNCDEF(function_end_breakpoint_end)
-	.long 0
-	SET_SIZE(function_end_breakpoint_end)
+/*
+ * Function-end breakpoint magic.  See MAKE-BOGUS-LRA in
+ * code/debug-int.lisp.
+ */			
+	.text
+	.align 3
+	.globl _function_end_breakpoint_guts
+_function_end_breakpoint_guts:	
+	.long	type_ReturnPcHeader
+	b	1f
+	/*
+	 * Are these really necessary? I'm cargo-culting from the sparc port 
+	 */
+	mr	reg_OCFP, reg_CSP
+	addi	reg_CSP, reg_CSP, 4
+	li	reg_NARGS, 4
+	mr	reg_A1, reg_NULL	
+	mr	reg_A2, reg_NULL
+	mr	reg_A3, reg_NULL
+1:					
+	.globl _function_end_breakpoint_trap
+_function_end_breakpoint_trap:
+	twllei	reg_ZERO, trap_FunctionEndBreakpoint
+	b	1b
+	.globl _function_end_breakpoint_end
+_function_end_breakpoint_end:
 
 
 	GFUNCDEF(ppc_flush_cache_line)

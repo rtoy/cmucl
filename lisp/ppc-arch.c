@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.2 2005/02/06 19:43:15 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.3 2005/03/18 05:30:50 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -40,6 +40,16 @@
 #ifndef PT_DSISR
 #define PT_DSISR	42
 #endif
+
+/* 
+ * A macro to generate the instruction
+ *
+ * twllei r0, code
+ *
+ * This is what the ppc port uses to signal various traps like
+ * breakpoints and stuff.
+ */
+#define TWLLEI_R0(code) ((3<<26) | (6 << 21) | code)
 
 char * arch_init(void)
 {
@@ -101,7 +111,10 @@ arch_install_breakpoint(void *pc)
 {
   unsigned long *ptr = (unsigned long *)pc;
   unsigned long result = *ptr;
-  *ptr = (3<<26) | (5 << 21) | trap_Breakpoint;
+  /* 
+   * Insert a twllei r0, trap_Breakpoint instruction.
+   */
+  *ptr = TWLLEI_R0(trap_Breakpoint);
   os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
   return result;
 }
@@ -119,15 +132,25 @@ static sigset_t orig_sigmask;
 void 
 arch_do_displaced_inst(os_context_t *scp, unsigned long orig_inst)
 {
-  unsigned long *pc = (unsigned long *)SC_PC(scp);
+  unsigned int *pc = (unsigned long *)SC_PC(scp);
 
   orig_sigmask = scp->uc_sigmask;
   sigemptyset(&scp->uc_sigmask);
   FILLBLOCKSET(&scp->uc_sigmask);
 
+  /* Put the original instruction back */
   *pc = orig_inst;
-  os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
+  os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
   skipped_break_addr = pc;
+
+  /*
+   * Replace the next instruction with a 
+   * twllei r0, trap_AfterBreakpoint 
+   */
+  displaced_after_inst = *++pc;
+  *pc = TWLLEI_R0(trap_AfterBreakpoint);
+  os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
+  sigreturn(scp);
 }
 
 static void 
@@ -141,6 +164,11 @@ sigill_handler(HANDLER_ARGS)
 
   sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
   opcode = *((int *) SC_PC(context));
+
+#if 0
+  printf("SIGILL entry:  opcode = 0x%08x\n", opcode);
+  fflush(stdout);
+#endif
 
   if (opcode == ((3 << 26) | (16 << 21) | (reg_ALLOC << 16))) {
     /* twlti reg_ALLOC,0 - check for deferred interrupt */
@@ -158,6 +186,11 @@ sigill_handler(HANDLER_ARGS)
     /* twllei reg_ZERO,N will always trap if reg_ZERO = 0 */
     int trap = opcode & 0x1f, extra = (opcode >> 5) & 0x1f;
     
+#if 0
+    printf("SIGILL:  TWLLEI, code = %d\n", trap);
+    fflush(stdout);
+#endif
+
     switch (trap) {
     case trap_Halt:
       fake_foreign_function_call(context);
@@ -174,15 +207,24 @@ sigill_handler(HANDLER_ARGS)
       break;
 
     case trap_Breakpoint:
+#if 0
+      printf("trap_Breakpoint\n");
+      fflush(stdout);
+#endif
       handle_breakpoint(signal, code, context);
       break;
       
     case trap_FunctionEndBreakpoint:
+#if 0
+      printf("trap_FunctionEndBreakpoint\n");
+      fflush(stdout);
+#endif
       SC_PC(context)=(int)handle_function_end_breakpoint(signal, code, context);
       break;
 
     case trap_AfterBreakpoint:
-      *skipped_break_addr = trap_Breakpoint;
+      /* Put our breakpoint instruction back in */
+      *skipped_break_addr = TWLLEI_R0(trap_Breakpoint);
       skipped_break_addr = NULL;
       *(unsigned long *)SC_PC(context) = displaced_after_inst;
       context->uc_sigmask = orig_sigmask;

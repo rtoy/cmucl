@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.15 2005/03/17 23:13:55 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.16 2005/03/18 05:30:50 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -119,7 +119,7 @@ static int compute_offset(os_context_t *scp, lispobj code, boolean function_end)
 	    int offset = pc - code_start;
 	    if (offset >= codeptr->code_size) {
               if (function_end) {
-#ifdef sparc
+#if defined(sparc) || defined(DARWIN)
                 /*
                  * We're in a function end breakpoint.  Compute the
                  * offset from the (known) breakpoint location and the
@@ -203,6 +203,13 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     code = find_code(scp);
     codeptr = (struct code *)PTR(code);
     offset = compute_offset(scp, code, 1);
+#if 0
+    printf("handle_function_end:\n");
+    printf(" code    = 0x%08x\n", code);
+    printf(" codeptr = %p\n", codeptr);
+    printf(" offset  = %d\n", fixnum_value(offset));
+    fflush(stdout);
+#endif
 
     if (offset < 0)
       {
@@ -213,7 +220,7 @@ void *handle_function_end_breakpoint(int signal, int subcode,
          * appropriately so the breakpoint handler can do the right
          * thing.
          */
-        unsigned long pc;
+        unsigned int pc;
 
         pc = SC_PC(scp);
         
@@ -228,6 +235,12 @@ void *handle_function_end_breakpoint(int signal, int subcode,
         code -= sizeof(struct code) + BOGUS_LRA_CONSTANTS*sizeof(lispobj);
         code += type_OtherPointer;
         codeptr = (struct code *) PTR(code);
+#if 0
+	printf("  pc   = 0x%08x\n", pc);
+	printf("  code    = 0x%08x\n", code);
+	printf("  codeptr = %p\n", codeptr);
+	fflush(stdout);
+#endif
       }
     
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
