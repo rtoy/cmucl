@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.8 1990/05/09 12:00:13 ram Exp $
+;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
 ;;; compiler.  ### and other IR1 transforms and stuff.  Some code adapted from
@@ -330,6 +332,31 @@
 	       (values (if one-neg (lognot mag) 0) mag))
 	     (values (if one-neg nil 0) nil))))))
 
+;;; All we attempt to do is determine the maximum integer length that the
+;;; result can take on, as that is all that is interesting.
+
+(defoptimizer (logxor derive-type) ((x y))
+  (derive-integer-type
+   x y
+   #'(lambda (x y)
+       (let* ((x-high (numeric-type-high x))
+	      (x-pos (plusp (or x-high 1)))
+	      (y-high (numeric-type-high y))
+	      (y-pos (plusp (or y-high 1)))
+	      (x-low (numeric-type-low x))
+	      (x-neg (minusp (or x-low -1)))
+	      (y-low (numeric-type-low y))
+	      (y-neg (minusp (or y-low -1)))
+	      (signed (or (and x-pos y-neg) (and x-neg y-pos))))
+	 (if (and x-high y-high x-low y-low)
+	     (let ((max (max (integer-length x-high)
+			     (integer-length x-low)
+			     (integer-length y-high)
+			     (integer-length y-low))))
+	       (values (if signed (ash -1 max) 0)
+		       (1- (ash 1 max))))
+	     (values (if signed nil 0) nil))))))
+
 (macrolet ((frob (fun)
 	     `#'(lambda (type type2)
 		  (declare (ignore type2))
@@ -344,7 +371,7 @@
     (derive-integer-type int int (frob lognot))))
 
 
-;;;; Miscellaneous derive-type optimizers:
+;;;; Array derive-type optimizers:
 
 (defoptimizer (aref derive-type) ((array &rest indices))
   (let ((type (continuation-type array)))
@@ -358,6 +385,7 @@
 	    (eltype (array-type-element-type type)))
 	(assert-continuation-type val eltype)
 	(continuation-type val)))))
+
 
 ;;; Unsupplied-Or-NIL  --  Internal
 ;;;
@@ -395,8 +423,19 @@
 	    (t
 	     '*)))))
 
+
+;;;; Miscellaneous derive-type methods:
+
+
 (defoptimizer (code-char derive-type) ((code))
   (specifier-type 'string-char))
+
+
+(defoptimizer (values derive-type) ((&rest values))
+  (specifier-type
+   `(values ,@(mapcar #'(lambda (x)
+			  (type-specifier (continuation-type x)))
+		      values))))
 
 
 ;;;; Byte operations:
