@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.54 1993/05/11 13:42:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.55 1993/06/24 14:18:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,8 @@
 	  *print-miser-width* *print-pprint-dispatch* with-standard-io-syntax
 	  write prin1 print princ pprint
 	  write-to-string prin1-to-string princ-to-string
-	  print-unreadable-object))
+	  print-unreadable-object print-not-readable
+	  print-not-readable-object))
 
 (in-package "KERNEL")
 (export '(*current-level* *pretty-printer* output-object output-ugly-object
@@ -244,9 +245,15 @@
 				  `#'(lambda () ,@body)
 				  nil)))
 
+(define-condition print-not-readable (error) (object)
+  (:report
+   (lambda (condition stream)
+    (format stream "~S cannot be printed readably."
+	    (print-not-readable-object condition)))))
+
 (defun %print-unreadable-object (object stream type identity body)
   (when *print-readably*
-    (error "~S cannot be printed readably." object))
+    (error 'print-not-readable :object object))
   (write-string "#<" stream)
   (when type
     (write (type-of object) :stream stream :circle nil
@@ -1016,7 +1023,7 @@
 	(t
 	 (when (and *print-readably*
 		    (not (eq (array-element-type vector) 't)))
-	   (error "Cannot print ~S in a readable format." vector))
+	   (error 'print-not-readable :object vector))
 	 (descend-into (stream)
 	   (write-string "#(" stream)
 	   (dotimes (i (length vector))
@@ -1058,8 +1065,7 @@
 (defun output-array-guts (array stream)
   (when (and *print-readably*
 	     (not (eq (array-element-type array) t)))
-    (error "Arrays of element-type ~S cannot be printed readably."
-	   (array-element-type array)))
+    (error 'print-not-readable :object (array-element-type array)))
   (write-char #\# stream)
   (let ((*print-base* 10))
     (output-integer (array-rank array) stream))
@@ -1550,7 +1556,7 @@
   (cond (*read-eval*
 	 (write-string "#." stream))
 	(*print-readably*
-	 (error "Unable to print infinities readably without #."))
+	 (error 'print-not-readable :object x))
 	(t
 	 (write-string "#<" stream)))
   (write-string "EXT:" stream)
@@ -1567,12 +1573,10 @@
 ;;;    Output a #< NaN or die trying.
 ;;;
 (defun output-float-nan (x stream)
-  (when *print-readably*
-    (error "Can't print NaN's readably."))
-  (write-string "#<" stream)
-  (write-string (float-format-name x) stream)
-  (write-string (if (float-trapping-nan-p x) " Trapping" " Quiet") stream)
-  (write-string " NaN>" stream))
+  (print-unreadable-object (x stream)
+    (write-string (float-format-name x) stream)
+    (write-string (if (float-trapping-nan-p x) " Trapping" " Quiet") stream)
+    (write-string " NaN" stream)))
 
 
 ;;; OUTPUT-FLOAT  --  Internal
@@ -1642,26 +1646,22 @@
   (cond (*read-eval*
 	 (format stream "#.(~S #x~8,'0X)"
 		 'int-sap (sap-int sap)))
-	((not *print-readably*)
-	 (format stream "#<System-Area-Pointer: #x~8,'0X>"
-		 (sap-int sap)))
 	(t
-	 (error "Cannot print system-area-pointers with *READ-EVAL* NIL and ~
-		 *PRINT-READABLY* T."))))
+	 (print-unreadable-object (sap stream)
+	   (format stream "System-Area-Pointer: #x~8,'0X"
+		   (sap-int sap))))))
 
 (defun output-weak-pointer (weak-pointer stream)
   (declare (type weak-pointer weak-pointer))
-  (when *print-readably*
-    (error "Cannot print weak poinrts with *PRINT-READABLY* T."))
-  (multiple-value-bind
-      (value validp)
-      (weak-pointer-value weak-pointer)
-    (cond (validp
-	   (write-string "#<Weak Pointer: " stream)
-	   (write value :stream stream)
-	   (write-char #\> stream))
-	  (t
-	   (write-string "#<Broken Weak Pointer>" stream)))))
+  (print-unreadable-object (weak-pointer stream)
+    (multiple-value-bind
+	(value validp)
+	(weak-pointer-value weak-pointer)
+      (cond (validp
+	     (write-string "Weak Pointer: " stream)
+	     (write value :stream stream))
+	    (t
+	     (write-string "Broken Weak Pointer" stream))))))
 
 (defun output-code-component (component stream)
   (print-unreadable-object (component stream :identity t)
