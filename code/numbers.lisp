@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.43 2002/07/10 16:15:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.44 2002/08/12 21:12:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -280,9 +280,24 @@
 	#+long-float
 	((subtypep spec 'long-float)
 	 'long-float)
-	((subtypep spec 'rational)
-	 'rational)
-	(t)))
+	((subtypep spec 'real)
+	 ;; CMUCL doesn't have a specialized type for any other type
+	 ;; of complex---only single-float and double-float (and
+	 ;; long-float) have specialized complex types.
+	 'real)
+	((kernel::hairy-type-p (specifier-type spec))
+	 ;; Do we really want to produce this error here?
+	 (cerror "Assume this is a subtype of REAL anyway."
+		 "Cannot determine if ~S is a subtype of REAL."
+		 spec)
+	'real)
+	(t
+	 ;; Expected type really should be something else...
+	 (error 'type-error
+		:datum spec
+		:expected-type 'real
+		:format-control "Complex numbers cannot have components of type ~S."
+		:format-arguments (list spec)))))
 
 (defun complex (realpart &optional (imagpart 0))
   "Builds a complex number from the specified components."
