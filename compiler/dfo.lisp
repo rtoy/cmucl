@@ -251,25 +251,30 @@
 ;;; FIND-TOP-LEVEL-COMPONENTS  --  Internal
 ;;;
 ;;;    Compute the result of FIND-INITIAL-DFO given the list of all resulting
-;;; components.  We find components that contain a :Top-Level lambda, marking
-;;; them as :Top-Level.
+;;; components.  We find components that contain a :Top-Level lambda.  If there
+;;; is no normal XEP, then we mark the component as :Top-Level.  If there is a
+;;; :Top-Level lambda, and also a normal XEP, then we treat the component as
+;;; normal, but also return such components in a list as the third value.
 ;;;
 (defun find-top-level-components (components)
   (declare (list components))
   (collect ((real)
-	    (top))
+	    (top)
+	    (real-top))
     (dolist (com components)
       (unless (eq (block-next (component-head com)) (component-tail com))
-	(let ((funs (component-lambdas com)))
-	  (cond ((find :top-level funs :key #'functional-kind)
-		 (assert (not (find :external funs :key #'functional-kind)))
+	(let* ((funs (component-lambdas com))
+	       (has-top (find :top-level funs :key #'functional-kind)))
+	  (cond ((and has-top
+		      (not (find :external funs :key #'functional-kind)))
 		 (setf (component-kind com) :top-level)
 		 (setf (component-name com) "Top-Level Form")
 		 (top com))
 		(t
 		 (setf (component-name com) (find-component-name com))
-		 (real com))))))
-    (values (real) (top))))
+		 (real com)
+		 (when has-top (real-top com)))))))
+    (values (real) (top) (real-top))))
 	    
 
 ;;; Find-Initial-DFO  --  Interface
