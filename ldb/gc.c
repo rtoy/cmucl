@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.4 1990/05/10 17:29:15 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.5 1990/05/13 15:30:39 ch Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -38,7 +38,7 @@ lispobj object;
 {
 	lispobj *ptr;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	ptr = (lispobj *) PTR(object);
 
@@ -51,7 +51,7 @@ lispobj object;
 {
 	lispobj *ptr;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	ptr = (lispobj *) PTR(object);
 		
@@ -92,7 +92,7 @@ int nwords;
 	lispobj *new;
 	lispobj *source, *dest;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 	gc_assert(from_space_p(object));
 	gc_assert((nwords & 0x01) == 0);
 
@@ -416,7 +416,7 @@ lispobj *from_space, *from_space_free_pointer;
 		lispobj header;
 
 		object = *start;
-		forwardp = pointerp(object) && new_space_p(object);
+		forwardp = Pointerp(object) && new_space_p(object);
 
 		if (forwardp) {
 			int tag;
@@ -464,7 +464,7 @@ static
 scav_function_pointer(where, object)
 lispobj *where, object;
 {
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	if (from_space_p(object)) {
 		lispobj first, *first_pointer;
@@ -474,7 +474,7 @@ lispobj *where, object;
 		first_pointer = (lispobj *) PTR(object);
 		first = *first_pointer;
 		
-		if (!(pointerp(first) && new_space_p(first))) {
+		if (!(Pointerp(first) && new_space_p(first))) {
 			int type;
 
 			/* must transport object -- object may point */
@@ -494,7 +494,7 @@ lispobj *where, object;
 			}
 		}
 
-		gc_assert(pointerp(first));
+		gc_assert(Pointerp(first));
 		gc_assert(!from_space_p(first));
 
 		*where = first;
@@ -519,7 +519,7 @@ struct code *code;
 
 	/* if object has already been transported, just return pointer */
 	first = code->header;
-	if (pointerp(first) && new_space_p(first))
+	if (Pointerp(first) && new_space_p(first))
 		return (struct code *) PTR(first);
 	
 	gc_assert(TypeOf(first) == type_CodeHeader);
@@ -528,7 +528,7 @@ struct code *code;
 	l_code = (lispobj) code | type_OtherPointer;
 
 	ncode_words = FIXNUM_TO_INT(code->code_size);
-	nheader_words = HEADER_VALUE(code->header);
+	nheader_words = HeaderValue(code->header);
 	nwords = ncode_words + nheader_words;
 	nwords = CEILING(nwords, 2);
 
@@ -591,7 +591,7 @@ lispobj *where, object;
 
 	code = (struct code *) where;
 	ncode_words = FIXNUM_TO_INT(code->code_size);
-	nheader_words = HEADER_VALUE(object);
+	nheader_words = HeaderValue(object);
 	nwords = ncode_words + nheader_words;
 	nwords = CEILING(nwords, 2);
 
@@ -650,7 +650,7 @@ lispobj *where;
 	code = (struct code *) where;
 	
 	ncode_words = FIXNUM_TO_INT(code->code_size);
-	nheader_words = HEADER_VALUE(code->header);
+	nheader_words = HeaderValue(code->header);
 	nwords = ncode_words + nheader_words;
 	nwords = CEILING(nwords, 2);
 
@@ -678,7 +678,7 @@ lispobj object;
 	struct code *code, *ncode;
 	
 	return_pc = (struct function_header *) PTR(object);
-	offset = HEADER_VALUE(return_pc->header) * 4;
+	offset = HeaderValue(return_pc->header) * 4;
 
 	/* Transport the whole code object */
 	code = (struct code *) ((unsigned long) return_pc - offset);
@@ -708,7 +708,7 @@ lispobj object;
 	struct code *code, *ncode;
 	
 	fheader = (struct function_header *) PTR(object);
-	offset = HEADER_VALUE(fheader->header) * 4;
+	offset = HeaderValue(fheader->header) * 4;
 
 	/* Transport the whole code object */
 	code = (struct code *) ((unsigned long) fheader - offset);
@@ -738,7 +738,7 @@ lispobj object;
 	struct code *code, *ncode;
 	
 	fheader = (struct function_header *) PTR(object);
-	offset = HEADER_VALUE(fheader->header) * 4;
+	offset = HeaderValue(fheader->header) * 4;
 
 	/* Transport the whole code object */
 	code = (struct code *) ((unsigned long) fheader - offset);
@@ -772,7 +772,7 @@ static
 scav_list_pointer(where, object)
 lispobj *where, object;
 {
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	if (from_space_p(object)) {
 		lispobj first, *first_pointer;
@@ -782,10 +782,10 @@ lispobj *where, object;
 		first_pointer = (lispobj *) PTR(object);
 		first = *first_pointer;
 		
-		if (!(pointerp(first) && new_space_p(first)))
+		if (!(Pointerp(first) && new_space_p(first)))
 			first = *first_pointer = trans_list(object);
 
-		gc_assert(pointerp(first));
+		gc_assert(Pointerp(first));
 		gc_assert(!from_space_p(first));
 	
 		*where = first;
@@ -849,7 +849,7 @@ static
 scav_other_pointer(where, object)
 lispobj *where, object;
 {
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	if (from_space_p(object)) {
 		lispobj first, *first_pointer;
@@ -859,11 +859,11 @@ lispobj *where, object;
 		first_pointer = (lispobj *) PTR(object);
 		first = *first_pointer;
 		
-		if (!(pointerp(first) && new_space_p(first)))
+		if (!(Pointerp(first) && new_space_p(first)))
 			first = *first_pointer = 
 				(transother[TypeOf(first)])(object);
 
-		gc_assert(pointerp(first));
+		gc_assert(Pointerp(first));
 		gc_assert(!from_space_p(first));
 
 		*where = first;
@@ -919,10 +919,10 @@ lispobj object;
 	lispobj header;
 	unsigned long length;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	header = *((lispobj *) PTR(object));
-	length = HEADER_VALUE(header) + 1;
+	length = HeaderValue(header) + 1;
 	length = CEILING(length, 2);
 
 	return copy_object(object, length);
@@ -936,7 +936,7 @@ lispobj *where;
 	unsigned long length;
 
 	header = *where;
-	length = HEADER_VALUE(header) + 1;
+	length = HeaderValue(header) + 1;
 	length = CEILING(length, 2);
 
 	return length;
@@ -949,7 +949,7 @@ lispobj *where, object;
 {
 	unsigned long length;
 
-	length = HEADER_VALUE(object) + 1;
+	length = HeaderValue(object) + 1;
 	length = CEILING(length, 2);
 
 	return length;
@@ -963,10 +963,10 @@ lispobj object;
 	unsigned long length;
 
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	header = *((lispobj *) PTR(object));
-	length = HEADER_VALUE(header) + 1;
+	length = HeaderValue(header) + 1;
 	length = CEILING(length, 2);
 
 	return copy_object(object, length);
@@ -980,7 +980,7 @@ lispobj *where;
 	unsigned long length;
 
 	header = *where;
-	length = HEADER_VALUE(header) + 1;
+	length = HeaderValue(header) + 1;
 	length = CEILING(length, 2);
 
 	return length;
@@ -1014,7 +1014,7 @@ trans_string(object)
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	/* NOTE: Strings contain one more byte of data than the length */
 	/* slot indicates. */
@@ -1050,12 +1050,22 @@ lispobj object;
 {
 	struct vector *vector;
 	int length, nwords;
+	int subtype;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
+
 	length = FIXNUM_TO_INT(vector->length);
 	nwords = CEILING(length + 2, 2);
+
+	/* When transporting an EQ hashtable, GC must change subtype */
+	/* so that the hash functions will know to rehash it.  */
+
+	subtype = HeaderValue(vector->header);
+	if (subtype == subtype_VectorValidHashing)
+		vector->header = (subtype_VectorMustRehash<<8) |
+			type_SimpleVector;
 
 	return copy_object(object, nwords);
 }
@@ -1096,7 +1106,7 @@ lispobj object;
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
@@ -1141,7 +1151,7 @@ lispobj object;
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
@@ -1186,7 +1196,7 @@ lispobj object;
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
@@ -1231,7 +1241,7 @@ lispobj object;
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
@@ -1276,7 +1286,7 @@ lispobj object;
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
@@ -1321,7 +1331,7 @@ lispobj object;
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
@@ -1366,7 +1376,7 @@ lispobj object;
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
@@ -1411,7 +1421,7 @@ lispobj object;
 	struct vector *vector;
 	int length, nwords;
 
-	gc_assert(pointerp(object));
+	gc_assert(Pointerp(object));
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
@@ -1602,4 +1612,3 @@ gc_init()
 	sizetab[type_Sap] = size_unboxed;
 	sizetab[type_UnboundMarker] = size_immediate;
 }
-
