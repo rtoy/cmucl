@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.1 1992/05/18 17:56:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.2 1992/05/28 23:40:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;;
 (in-package :new-assem)
 
-(export '(emit-byte emit-skip emit-back-patch emit-chooser
+(export '(emit-byte emit-skip emit-back-patch emit-chooser emit-postit
 	  define-emitter define-instruction define-instruction-macro
 	  def-assembler-params
 
@@ -153,6 +153,9 @@
   (final-index 0 :type index)
   ;;
   ;; *** State used by the scheduler during instruction queueing.
+  ;;
+  ;; List of postit's.  These are accumulated between instructions.
+  (postits nil :type list)
   ;;
   ;; A-lists mapping locations to the instruction that reads them and
   ;; instructions that write them.  If maintaining these as a-lists is
@@ -859,14 +862,18 @@
   (setf (segment-block-end segment) (system:int-sap 0))
   (ext:undefined-value))
 
-;;; EMIT-LABEL -- internal.
+;;; %EMIT-LABEL -- internal.
 ;;;
 ;;; EMIT-LABEL (the interface) basically just expands into this, supplying
-;;; the segment.
+;;; the segment and vop.
 ;;; 
 (defun %emit-label (segment vop label)
   (when (segment-run-scheduler segment)
     (schedule-pending-instructions segment))
+  (let ((postits (segment-postits segment)))
+    (setf (segment-postits segment) nil)
+    (dolist (postit postits)
+      (emit-back-patch segment 0 postit)))
   (let ((hook (segment-inst-hook segment)))
     (when hook
       (funcall hook segment vop :label label)))
@@ -924,6 +931,16 @@
   (dotimes (i max-alignment max-alignment)
     (when (logbitp i offset)
       (return i))))
+
+;;; EMIT-POSTIT -- Internal.
+;;;
+;;; Emit a postit.  The function will be called as a back-patch with the
+;;; position the following instruction is finally emitted.  Postits do not
+;;; interfere at all with scheduling.
+;;;
+(defun %emit-postit (segment function)
+  (push function (segment-postits segment))
+  (ext:undefined-value))
 
 
 
@@ -1173,6 +1190,11 @@
   "Emit LABEL at this location in the current segment."
   `(%emit-label *current-segment* *current-vop* ,label))
 
+;;; EMIT-POSTIT -- interface.
+;;;
+(defmacro emit-postit (function)
+  `(%emit-postit *current-segment* ,function))
+
 ;;; ALIGN -- interface.
 ;;; 
 (defmacro align (bits)
@@ -1194,6 +1216,12 @@
 (defun append-segment (segment other-segment)
   "Append OTHER-SEGMENT to the end of SEGMENT.  Don't use OTHER-SEGMENT
    for anything after this."
+  (when (segment-run-scheduler segment)
+    (schedule-pending-instructions segment))
+  (let ((postits (segment-postits segment)))
+    (setf (segment-postits segment) (segment-postits other-segment))
+    (dolist (postit postits)
+      (emit-back-patch segment 0 postit)))
   (emit-alignment segment nil max-alignment)
   (let ((offset-in-last-block (rem (segment-current-index segment)
 				   output-block-size)))
@@ -1235,6 +1263,10 @@
    covered by this segment."
   (when (segment-run-scheduler segment)
     (schedule-pending-instructions segment))
+  (let ((postits (segment-postits segment)))
+    (setf (segment-postits segment) nil)
+    (dolist (postit postits)
+      (emit-back-patch segment 0 postit)))
   (setf (segment-final-index segment) (segment-current-index segment))
   (setf (segment-final-posn segment) (segment-current-posn segment))
   (setf (segment-inst-hook segment) nil)
@@ -1453,6 +1485,7 @@
 (defmacro define-instruction (name lambda-list &rest options)
   (let* ((sym-name (symbol-name name))
 	 (defun-name (ext:symbolicate sym-name "-INST-EMITTER"))
+	 (postits (gensym "POSTITS-"))
 	 (emitter nil)
 	 (decls nil)
 	 (attributes nil)
@@ -1501,6 +1534,9 @@
 		 (funcall hook ,segment-name ,vop-name ,sym-name
 			  ,arg-reconstructor)))
 	    emitter)
+      (push `(dolist (postit ,postits)
+	       (emit-back-patch ,segment-name 0 postit))
+	    emitter)
       (when (assem-params-scheduler-p
 	     (c:backend-assembler-params c:*target-backend*))
 	(if pinned
@@ -1526,8 +1562,11 @@
 	 (defun ,defun-name ,new-lambda-list
 	   ,@(when decls
 	       `((declare ,@decls)))
-	   (symbol-macrolet ((*current-segment* ,segment-name))
-			    ,@emitter)
+	   (let ((,postits (segment-postits ,segment-name)))
+	     (setf (segment-postits ,segment-name) nil)
+	     (symbol-macrolet ((*current-segment* ,segment-name)
+			       (*current-vop* ,vop-name))
+	       ,@emitter))
 	   (ext:undefined-value))
 	 (eval-when (compile load eval)
 	   (%define-instruction ,sym-name ',defun-name))))))
