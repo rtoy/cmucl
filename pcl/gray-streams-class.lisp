@@ -4,11 +4,12 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.1 1998/05/05 00:33:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.2 1998/06/02 02:43:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Class definitions for the CMUCL Gray streams implementation.
+;;; Based on the stream-definition-by-user proposal by David N. Gray.
 ;;;
 
 (in-package "LISP")
