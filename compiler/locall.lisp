@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.23 1991/12/11 17:14:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.24 1992/02/23 17:43:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -782,14 +782,14 @@
   (declare (type clambda fun))
   (let ((refs (leaf-refs fun)))
     (when (and refs (null (rest refs))
-	       (not (block-delete-p (node-block (first refs))))
 	       (member (functional-kind fun) '(nil :assignment))
 	       (not (functional-entry-function fun)))
       (let* ((ref-cont (node-cont (first refs)))
 	     (dest (continuation-dest ref-cont)))
 	(when (and (basic-combination-p dest)
 		   (eq (basic-combination-fun dest) ref-cont)
-		   (eq (basic-combination-kind dest) :local))
+		   (eq (basic-combination-kind dest) :local)
+		   (not (block-delete-p (node-block dest))))
 	  (let-convert fun dest)
 	  (setf (functional-kind fun)
 		(if (mv-combination-p dest) :mv-let :let))))
