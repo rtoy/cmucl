@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.46 2003/10/05 11:41:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.47 2004/05/06 14:36:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1165,6 +1165,11 @@
 (define-info-class random-documentation)
 (define-info-type random-documentation stuff list ())
 
+;;; Used to record the source-location of definitions.
+;;;
+(define-info-class source-location)
+(define-info-type source-location defvar (or form-numbers null) nil)
+		   
 ); defun other-info-init
 
 (declaim (freeze-type info-env))

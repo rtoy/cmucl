@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.42 2003/03/26 17:15:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.43 2004/05/06 14:36:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -448,4 +448,10 @@
       ((null plist) ())
     (unless (member (car plist) *implementation-properties*)
       (format t "~&Its ~S property is ~S." (car plist) (cadr plist))
-      (describe (cadr plist)))))
+      (describe (cadr plist))))
+
+  ;; Describe where it was defined.
+  (let ((locn (info :source-location :defvar x)))
+    (when locn
+      (format t "~&It is defined in:~&~A" (c::file-source-location-pathname locn)))))
+
