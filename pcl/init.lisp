@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.17 2003/04/23 15:12:14 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.18 2003/04/23 16:47:35 gerd Exp $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
@@ -46,6 +46,13 @@
   ;;
   (unless (class-finalized-p class)
     (finalize-inheritance class))
+  ;;
+  ;; ANSI 7.1.2: :ALLOW-OTHER-KEYS NIL is implicitly there, which
+  ;; matters if some slot has an :INITARG :ALLOW-OTHER-KEYS.
+  (when (eq (getf initargs :allow-other-keys '.not-there.)
+	    '.not-there.)
+    (setq initargs (append initargs '(:allow-other-keys nil))))
+  ;;
   (let ((class-default-initargs (class-default-initargs class)))
     (when class-default-initargs
       (setf initargs (default-initargs class initargs class-default-initargs)))
