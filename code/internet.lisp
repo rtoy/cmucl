@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.37 2002/11/25 15:07:15 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.38 2002/12/03 01:43:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -286,8 +286,8 @@ struct in_addr {
 				    (+ (alien-size inet-sockaddr :bytes)
 				       (length path))))
 	(unix:unix-close socket)
-	(error "Error binding socket to port ~a: ~a"
-	       port
+	(error "Error binding socket to path ~a: ~a"
+	       path
 	       (unix:get-unix-error-msg))))
     (when (eq kind :stream)
       (when (minusp (unix:unix-listen socket backlog))
