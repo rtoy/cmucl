@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.24 1998/03/26 19:06:27 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.25 1998/03/26 21:38:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,7 +219,7 @@
    The default value of the number is the current value of *gensym-counter*
    which is incremented each time it is used."
   (let ((old *gensym-counter*))
-    (when (numberp thing)
+    (unless (numberp thing)
       (let ((new (etypecase old
 		   (index (1+ old))
 		   (unsigned-byte (1+ old)))))
