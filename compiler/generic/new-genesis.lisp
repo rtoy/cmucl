@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.4 1993/02/26 08:42:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.5 1993/04/28 02:03:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1915,7 +1915,11 @@
 				     header-name
 				     (make-pathname :type "h")))
 				core-name)))
-	    (write-initial-core-file core-name version)))
+	    (write-initial-core-file
+	     core-name version
+	     (let ((fdefn (cold-fdefinition-object
+			   (cold-intern '%initial-function))))
+	       (read-indexed fdefn vm:fdefn-function-slot)))))
       (dolist (space (list *static* *dynamic* *read-only*))
 	(when space
 	  (deallocate-space space))))))
@@ -1974,6 +1978,7 @@
 (defparameter validate-entry-type-code 3845)
 (defparameter directory-entry-type-code 3841)
 (defparameter new-directory-entry-type-code 3861)
+(defparameter initial-function-entry-type-code 3863)
 (defparameter end-entry-type-code 3840)
 
 (defun write-long (num)
@@ -2031,7 +2036,7 @@
     (write-long pages)
     (incf *data-page* pages)))
 
-(defun write-initial-core-file (name version)
+(defun write-initial-core-file (name version initial-function)
   (format t "[Building Initial Core File (version ~D) in file ~S: ~%"
 	  version (namestring name))
   (force-output)
@@ -2062,6 +2067,10 @@
       (output-space *static*)
       (output-space *dynamic*)
       
+      (write-long initial-function-entry-type-code)
+      (write-long 3)
+      (write-long (descriptor-bits initial-function))
+
       ;; Write the End entry.
       ;; 
       (write-long end-entry-type-code)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.16 1992/08/06 01:44:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.17 1993/04/28 01:56:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,10 +45,6 @@
 
 ;;; Filled in by the startup code.
 (defvar lisp-environment-list)
-
-
-(alien:def-alien-routine "save" (alien:boolean)
-  (file c-call:c-string))
 
 
 ;;; PARSE-UNIX-SEARCH-LIST  --  Internal
@@ -99,13 +95,19 @@
 	(or (parse-unix-search-list :cmucllib)
 	    '("/usr/misc/.cmucl/lib/"))))
 
+
+
+;;;; SAVE-LISP itself.
+
+(alien:def-alien-routine "save" (alien:boolean)
+  (file c-call:c-string)
+  (initial-function (alien:unsigned #.vm:word-bits)))
+
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
 				 (constants nil)
-				 (init-function
-				  #'(lambda ()
-				      (throw 'top-level-catcher nil)))
+				 (init-function #'%top-level)
 				 (load-init-file t)
 				 (site-init "library:site-init")
 				 (print-herald t)
@@ -128,9 +130,8 @@
   
   :init-function
       This is a function which is called when the created core file is
-  resumed.  The default function simply aborts to the top level
-  read-eval-print loop.  If the function returns it will be the value
-  of Save-Lisp.
+  resumed.  The default function simply invokes the top level
+  read-eval-print loop.  If the function returns the lisp will exit.
   
   :load-init-file
       If true, then look for an init.lisp or init.fasl file when the core
@@ -148,39 +149,57 @@
   (if purify
       (purify :root-structures root-structures :constants constants)
       (gc))
-  (unless (save (unix-namestring core-file-name nil))
-    (reinit)
-    (dolist (f *before-save-initializations*) (funcall f))
-    (dolist (f *after-save-initializations*) (funcall f))
-    (environment-init)
-    (when site-init (load site-init :if-does-not-exist nil :verbose nil))
-    (when process-command-line (ext::process-command-strings))
-    (setf *editor-lisp-p* nil)
-    (macrolet ((find-switch (name)
-		 `(find ,name *command-line-switches*
-			:key #'cmd-switch-name
-			:test #'(lambda (x y)
-				  (declare (simple-string x y))
-				  (string-equal x y)))))
-      (when (and process-command-line (find-switch "edit"))
-	(setf *editor-lisp-p* t))
-      (when (and load-init-file
-		 (not (and process-command-line (find-switch "noinit"))))
-	(let* ((cl-switch (find-switch "init"))
-	       (name (and cl-switch
-			  (or (cmd-switch-value cl-switch)
-			      (car (cmd-switch-words cl-switch))))))
-	  (if name
-	      (load (merge-pathnames name #p"home:") :if-does-not-exist nil)
-	      (or (load "home:init" :if-does-not-exist nil)
-		  (load "home:.cmucl-init" :if-does-not-exist nil))))))
-    (when process-command-line
-      (ext::invoke-switch-demons *command-line-switches*
-				 *command-switch-demons*))
-    (when print-herald
-      (print-herald))
-    (funcall init-function)))
+  (flet
+      ((restart-lisp ()
+	 (catch '%end-of-the-world
+	   (with-simple-restart (abort "Skip remaining initializations.")
+	     (catch 'top-level-catcher
+	       (reinit)
+	       (dolist (f *before-save-initializations*) (funcall f))
+	       (dolist (f *after-save-initializations*) (funcall f))
+	       (environment-init)
+	       (when site-init
+		 (load site-init :if-does-not-exist nil :verbose nil))
+	       (when process-command-line
+		 (ext::process-command-strings))
+	       (setf *editor-lisp-p* nil)
+	       (macrolet ((find-switch (name)
+			    `(find ,name *command-line-switches*
+				   :key #'cmd-switch-name
+				   :test #'(lambda (x y)
+					     (declare (simple-string x y))
+					     (string-equal x y)))))
+		 (when (and process-command-line (find-switch "edit"))
+		   (setf *editor-lisp-p* t))
+		 (when (and load-init-file
+			    (not (and process-command-line
+				      (find-switch "noinit"))))
+		   (let* ((cl-switch (find-switch "init"))
+			  (name (and cl-switch
+				     (or (cmd-switch-value cl-switch)
+					 (car (cmd-switch-words
+					       cl-switch))))))
+		     (if name
+			 (load (merge-pathnames name #p"home:")
+			       :if-does-not-exist nil)
+			 (or (load "home:init" :if-does-not-exist nil)
+			     (load "home:.cmucl-init"
+				   :if-does-not-exist nil))))))
+	       (when process-command-line
+		 (ext::invoke-switch-demons *command-line-switches*
+					    *command-switch-demons*))
+	       (when print-herald
+		 (print-herald))))
+	   (funcall init-function))
+	 (unix:unix-exit 0)))
+    (let ((initial-function (get-lisp-obj-address #'restart-lisp)))
+      (without-gcing
+	(save (unix-namestring core-file-name nil) initial-function))))
+  nil)
 
+
+
+;;;; PRINT-HERALD support.
 
 (defvar *herald-items* ()
   "Determines what PRINT-HERALD prints (the system startup banner.)  This is a

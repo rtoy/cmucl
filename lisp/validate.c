@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.3 1993/01/18 02:12:17 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.4 1993/04/28 01:58:43 wlott Exp $
  *
  * Memory Validation
  */
@@ -74,11 +74,6 @@ void validate(void)
 	/* Binding Stack */
 	binding_stack = (lispobj *) BINDING_STACK_START;
 	ensure_space(binding_stack, BINDING_STACK_SIZE);
-
-	/* Number stack */
-#ifndef SUNOS
-	ensure_space((lispobj *)NUMBER_STACK_START, NUMBER_STACK_SIZE);
-#endif
 
 #ifdef HOLES
 	make_holes();

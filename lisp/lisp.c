@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.3 1993/02/09 14:02:37 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.4 1993/04/28 01:58:33 wlott Exp $
  *
  */
 
@@ -28,9 +28,6 @@
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
-
-lispobj lisp_nil_reg = NIL;
-char *lisp_csp_reg, *lisp_bsp_reg;
 
 
 /* SIGINT handler that invokes the monitor. */
@@ -71,31 +68,14 @@ static lispobj alloc_str_list(char *list[])
 }
 
 
-/* stuff to start a kernel core */
-
-extern void call_on_stack(void fn(), os_vm_address_t new_sp);
-
-void call_initial_function()
-{
-    funcall0(SymbolFunction(INITIAL_FUNCTION));
-    printf("%%INITIAL-FUNCTION returned?\n");
-}
-
-void call_ldb_monitor()
-{
-    while (1)
-	ldb_monitor();
-}
-
-
-
 /* And here be main. */
 
 void main(int argc, char *argv[], char *envp[])
 {
     char *arg, **argptr;
     char *core = NULL, *default_core;
-    boolean restore_state, monitor;
+    boolean monitor;
+    lispobj initial_function;
 
 #ifdef MACH
     mach_init();
@@ -166,16 +146,14 @@ void main(int argc, char *argv[], char *envp[])
     validate();
     globals_init();
 
-    restore_state = load_core_file(core);
+    initial_function = load_core_file(core);
 
-    if (!restore_state) {
 #ifdef BINDING_STACK_POINTER
-	SetSymbolValue(BINDING_STACK_POINTER, (lispobj)binding_stack);
+    SetSymbolValue(BINDING_STACK_POINTER, (lispobj)binding_stack);
 #endif
 #ifdef INTERNAL_GC_TRIGGER
-	SetSymbolValue(INTERNAL_GC_TRIGGER, fixnum(-1));
+    SetSymbolValue(INTERNAL_GC_TRIGGER, fixnum(-1));
 #endif
-    }
 
     interrupt_init();
 
@@ -196,19 +174,12 @@ void main(int argc, char *argv[], char *envp[])
     /* install it's own. */
     sigint_init();
 
-    if (restore_state) {
-	if (monitor) {
-	    printf("exit ldb monitor to restore\n");
+    if (monitor)
+	while (1)
 	    ldb_monitor();
-	}
-	restore();
+    else {
+	funcall0(initial_function);
+	printf("Initial function returned?\n");
+	exit(1);
     }
-    else
-	call_on_stack(monitor ? call_ldb_monitor : call_initial_function,
-#ifdef NUMBER_STACK_GROWS_UP
-			NUMBER_STACK_START
-#else
-			NUMBER_STACK_START+NUMBER_STACK_SIZE
-#endif
-			);
 }

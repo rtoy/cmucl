@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.2 1992/12/17 13:20:45 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.3 1993/04/28 01:59:00 wlott Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -22,7 +22,6 @@
 #include "gc.h"
 #include "search.h"
 #include "purify.h"
-#include "save.h"
 
 extern boolean isatty(int fd);
 
@@ -31,7 +30,7 @@ typedef void cmd(char **ptr);
 static cmd call_cmd, dump_cmd, print_cmd, quit, help;
 static cmd flush_cmd, search_cmd, regs_cmd, exit_cmd;
 static cmd gc_cmd, print_context_cmd;
-static cmd backtrace_cmd, purify_cmd, catchers_cmd, save_cmd;
+static cmd backtrace_cmd, purify_cmd, catchers_cmd;
 static cmd grab_sigs_cmd;
 
 static struct cmd {
@@ -55,7 +54,6 @@ static struct cmd {
     {"p", NULL, print_cmd},
     {"quit", "quit.", quit},
     {"regs", "display current lisp regs.", regs_cmd},
-    {"save", "save the current lisp image.", save_cmd},
     {"search", "search for TYPE starting at ADDRESS for a max of COUNT words.", search_cmd},
     {"s", NULL, search_cmd},
     {NULL, NULL, NULL}
@@ -391,14 +389,6 @@ static void catchers_cmd(char **ptr)
             catch = catch->previous_catch;
         }
     }
-}
-
-static void save_cmd(char **ptr)
-{
-    if (more_p(ptr))
-        save(*ptr);
-    else
-        save("lisp.core");
 }
 
 static void grab_sigs_cmd(char **ptr)
