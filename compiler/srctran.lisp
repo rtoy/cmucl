@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.88 1998/10/03 05:18:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.89 1998/11/02 13:44:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -365,17 +365,6 @@
 ;;; For an interval X, if X >= POINT, return '+.  If X <= POINT, return
 ;;; '-. Otherwise return NIL.
 ;;;
-#+nil
-(defun interval-range-info (x &optional (point 0))
-  (declare (type interval x))
-  (let ((lo (interval-low x))
-	(hi (interval-high x)))
-    (cond ((and lo (signed-zero->= (bound-value lo) point))
-	   '+)
-	  ((and hi (signed-zero->= point (bound-value hi)))
-	   '-)
-	  (t
-	   nil))))
 (defun interval-range-info (x &optional (point 0))
   (declare (type interval x))
   (labels ((signed->= (x y)
@@ -3005,51 +2994,59 @@
   "convert (* x 0) to 0."
   0)
 
-
-;;; NOT-MORE-CONTAGIOUS  --  Interface
+;;; Not-More-Contagious  --  Interface
 ;;;
-;;;    Return T if in an arithmetic op including continuations X and Y, the
-;;; result type is not affected by the type of X.  That is, Y is at least as
-;;; contagious as X.
-;;;
-#+nil
-(defun not-more-contagious (x y)
-  (declare (type continuation x y))
-  (let ((x (continuation-type x))
-	(y (continuation-type y)))
-    (values (type= (numeric-contagion x y)
-		   (numeric-contagion y y)))))
-;;;
-;;; Patched version by Raymond Toy. dtc: Should be safer although it
-;;; needs more work as valid transforms are missed; some cases are
-;;; specific to particular transform functions so the use of this
-;;; function may need a re-think.
+;;;    Return T if in an arithmetic OP including continuations X and
+;;; Y, the result type is not affected by the type of X. The main
+;;; checks performed here are that the type of X does not cause a
+;;; change in the float format of the result, or change the result to
+;;; a complex float. It is assumed that the caller considers the
+;;; affect of X on Value of the result. Thus with rational
+;;; canonicalisation, X is permitted to be a rational or complex
+;;; rational even if Y is only an integer or complex integer assuming
+;;; that the result will be canonacilisted to the correct type.
 ;;;
 (defun not-more-contagious (x y)
   (declare (type continuation x y))
-  (flet ((simple-numeric-type (num)
-	   (and (numeric-type-p num)
-		;; Return non-NIL if NUM is integer, rational, or a float
-		;; of some type (but not FLOAT)
-		(case (numeric-type-class num)
-		  ((integer rational)
-		   t)
-		  (float
-		   (numeric-type-format num))
-		  (t
-		   nil)))))
-    (let ((x (continuation-type x))
-	  (y (continuation-type y)))
-      (if (and (simple-numeric-type x)
-	       (simple-numeric-type y))
-	  (values (type= (numeric-contagion x y)
-			 (numeric-contagion y y)))))))
+  (let ((type1 (continuation-type x))
+	(type2 (continuation-type y)))
+    (if (and (numeric-type-p type1) (numeric-type-p type2))
+	(let ((class1 (numeric-type-class type1))
+	      (class2 (numeric-type-class type2))
+	      (format1 (numeric-type-format type1))
+	      (format2 (numeric-type-format type2))
+	      (complexp1 (numeric-type-complexp type1))
+	      (complexp2 (numeric-type-complexp type2)))
+	  (cond ((or (null complexp1) (null class1)) Nil)
+		((member class1 '(integer rational)) 'T)
+		((and (eq class1 'float) (null complexp2)) Nil)
+		((and (eq class1 'float) (null class2)) Nil)
+		((and (eq class1 'float) (eq class2 'float))
+		 (and (ecase complexp2
+			(:real (eq complexp1 :real))
+			(:complex 'T))
+		      (ecase format2
+			((nil short-float single-float)
+			 (member format1 '(short-float single-float)))
+			#-long-float
+			((double-float long-float) 'T)
+			#+long-float
+			(double-float
+			 (member format1 '(short-float single-float
+					   double-float)))
+			#+long-float
+			(long-float 'T))))
+		((and (eq class1 'float) (member class2 '(integer rational)))
+		 Nil)
+		(t
+		 (error "Unexpected types: ~s ~s~%" type1 type2)))))))
 
 ;;; Fold (+ x 0).
 ;;;
-;;;    If y is not constant, not zerop, or is contagious, or a
-;;; positive float +0.0 then give up.
+;;;    If y is not constant, not zerop, or is contagious, or a positive
+;;; float +0.0 then give up because (+ -0.0 0.0) is 0.0 not -0.0.
 ;;;
+#+nil
 (deftransform + ((x y) (t (constant-argument t)) * :when :both)
   "fold zero arg"
   (let ((val (continuation-value y)))
@@ -3059,10 +3056,20 @@
       (give-up)))
   'x)
 
+;;; Fold (+ x 0).
+;;;
+;;; Restricted to rationals, because (+ -0.0 0) is 0.0, not -0.0.
+;;;
+(deftransform + ((x y) (rational (constant-argument (member 0))) *
+		 :when :both)
+  "fold zero arg"
+  'x)
+
+
 ;;; Fold (- x 0).
 ;;;
-;;;    If y is not constant, not zerop, or is contagious, or a
-;;; negative float -0.0 then give up.
+;;;    If y is not constant, not zerop, or is contagious, or a negative
+;;; float -0.0 then give up because (- -0.0 -0.0) is 0.0, not -0.0.
 ;;;
 (deftransform - ((x y) (t (constant-argument t)) * :when :both)
   "fold zero arg"
