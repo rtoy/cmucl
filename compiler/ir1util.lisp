@@ -473,6 +473,26 @@
   (undefined-value))
 
 
+;;; REOPTIMIZE-LAMBDA-VAR  --  Internal
+;;;
+;;;    Note that something interesting has happened to Var.  We only deal with
+;;; LET variables, marking the corresponding initial value arg as needing to be
+;;; reoptimized.
+;;;
+(defun reoptimize-lambda-var (var)
+  (declare (type lambda-var var))
+  (let ((fun (lambda-var-home var)))
+    (when (and (eq (functional-kind fun) :let)
+	       (leaf-refs var))
+      (reoptimize-continuation
+       (elt (basic-combination-args
+	     (continuation-dest
+	      (node-cont
+	       (first (leaf-refs fun)))))
+	    (position var (lambda-vars fun))))))
+  (undefined-value))
+
+
 ;;; Delete-Lambda  --  Internal
 ;;;
 ;;;    Deal with deleting the last reference to a lambda.  Since there is only
@@ -592,7 +612,8 @@
 		(delete-optional-dispatch leaf)))))
 	  ((null (rest refs))
 	   (typecase leaf
-	     (clambda (maybe-let-convert leaf))))))
+	     (clambda (maybe-let-convert leaf))
+	     (lambda-var (reoptimize-lambda-var leaf))))))
 
   (undefined-value))
 
@@ -1223,8 +1244,9 @@
 ;;; indication of how many times it was repeated.  We reset the message count
 ;;; when we are done.
 ;;;
-(defun note-message-repeats ()
-  (cond ((= *last-message-count* 1) (terpri *compiler-error-output*))
+(defun note-message-repeats (&optional (terpri t))
+  (cond ((= *last-message-count* 1)
+	 (when terpri (terpri *compiler-error-output*)))
 	((> *last-message-count* 1)
 	 (format *compiler-error-output* "[Last message occurs ~D times]~2%"
 		 *last-message-count*)))
@@ -1264,7 +1286,7 @@
 	  (setq *last-source-context* context)
 	  (setq *last-original-source* nil)
 	  (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" context))
-l	
+
 	(unless (tree-equal form *last-original-source*)
 	  (note-message-repeats)
 	  (setq *last-original-source* form)
@@ -1273,8 +1295,9 @@ l
 	  (format stream "  ~S~%" form))
 
 	(unless (or (tree-equal source form)
-		    (member source form))
-	  (unless (tree-equal enclosing *last-enclosing-source*)
+		    (and (member source form) (member source format-args)))
+	  (unless (or (tree-equal enclosing *last-enclosing-source*)
+		      (tree-equal enclosing form))
 	    (note-message-repeats)
 	    (setq *last-source-form* '#(invalid))
 	    (setq *last-enclosing-source* enclosing)
@@ -1294,7 +1317,7 @@ l
     
     (unless (and (equal format-string *last-format-string*)
 		 (tree-equal format-args *last-format-args*))
-      (note-message-repeats)
+      (note-message-repeats nil)
       (setq *last-format-string* format-string)
       (setq *last-format-args* format-args)
       (format stream "~&~A: ~?~&" what format-string format-args)))
@@ -1353,11 +1376,9 @@ l
 ;;;
 (proclaim '(function compiler-mumble (string &rest t) void))
 (defun compiler-mumble (format-string &rest format-args)
-  (when *last-format-string*
-    (note-message-repeats)
-    (terpri *compiler-error-output*)
-    (setq *last-source-context* nil)
-    (setq *last-format-string* nil))
+  (note-message-repeats)
+  (setq *last-source-context* nil)
+  (setq *last-format-string* nil)
   (apply #'format *compiler-error-output* format-string format-args)
   (force-output *compiler-error-output*))
 
