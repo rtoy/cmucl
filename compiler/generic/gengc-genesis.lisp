@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.10 1993/05/26 13:14:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.11 1993/08/25 17:04:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -180,6 +180,7 @@
   (policy 0 :type index)
   ;;
   ;; Chain of blocks allocated to this step.
+  (first-block nil :type (or null block))
   (block nil :type (or null block))
   ;;
   ;; Address of the first and last large object in this step.
@@ -207,9 +208,13 @@
       (multiple-value-bind
 	  (addr sap)
 	  (allocate-blocks 1)
-	(setf block (make-block :step step :base addr :sap sap :next block))
-	(set-address-owner addr 1 block)
-	(setf (step-block step) block)))
+	(let ((new (make-block :step step :base addr :sap sap)))
+	  (set-address-owner addr 1 new)
+	  (setf (step-block step) new)
+	  (if block
+	      (setf (block-next block) new)
+	      (setf (step-first-block step) new))
+	  (setf block new))))
     (let ((offset (block-free block)))
       (setf (block-free block) (+ offset (* padded vm:word-bytes)))
       (decf (block-remaining block) padded)
@@ -2228,7 +2233,7 @@
 					 (list (cons sap bytes))))))))))
       (dolist (gen generations)
 	(dolist (step (generation-steps gen))
-	  (do ((block (step-block step) (block-next block)))
+	  (do ((block (step-first-block step) (block-next block)))
 	      ((null block))
 	    (write-range (block-sap block)
 			 (block-base block)
@@ -2333,7 +2338,7 @@
 	(write-long (step-prom-step step))
 	(write-long (step-max-blocks step))
 	(write-long (step-policy step))
-	(do ((block (step-block step) (block-next block)))
+	(do ((block (step-first-block step) (block-next block)))
 	    ((null block))
 	  (let ((base (block-base block)))
 	    (write-long base)
@@ -2341,12 +2346,8 @@
 	(write-long 0)
 	(let ((block (step-block step)))
 	  (if block
-	      (let ((base (block-base block)))
-		(write-long (+ base (block-free block)))
-		(write-long (+ base block-bytes)))
-	      (progn
-		(write-long 0)
-		(write-long 0))))
+	      (write-long (+ base block-bytes))
+	      (write-long 0)))
 	(write-long (step-first-LO step))
 	(write-long (step-last-LO step))))
     (maphash #'(lambda (address ignore)
