@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.35 2003/01/08 23:28:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.36 2003/01/10 17:19:22 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -401,10 +401,10 @@
 	       ;; subtracting 1 from it, and converting it to
 	       ;; double-float is accurate.
 	       (if (= (integer-length top)
-			       (integer-length bot))
+		      (integer-length bot))
 		   (coerce (%log1p (coerce (- number 1) 'double-float))
 			   'single-float)
-		   (coerce (- (log2 top) (log2 bot)) 'single-float)))))
+		   (coerce (- (log top) (log bot)) 'single-float)))))
 	(((foreach single-float double-float))
 	 ;; Is (log -0) -infinity (libm.a) or -infinity + i*pi (Kahan)?
 	 ;; Since this doesn't seem to be an implementation issue
