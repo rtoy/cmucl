@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.3 1992/02/25 07:02:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.4 1992/03/02 01:59:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,6 +60,12 @@
 (def-alien-type-method (double-float :result-tn) (type)
   (declare (ignore type))
   (my-make-wired-tn 'double-float 'double-reg 0))
+
+(def-alien-type-method (values :result-tn) (type)
+  (mapcar #'(lambda (type)
+	      (invoke-alien-type-method :result-tn type))
+	  (alien-values-type-values type)))
+
 
 (def-vm-support-routine make-call-out-argument-tns (type)
   (declare (type alien-function-type type))
