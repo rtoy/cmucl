@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.20 1991/05/24 17:25:00 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.21 1991/06/05 20:35:36 wlott Exp $ */
 INCLS = -I.
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -90,7 +90,7 @@ arch.c:
 arch.o: arch.c
 	cc ${CFLAGS} -G 0 -c arch.c
 interrupt.o: interrupt.c
-	cc ${CFLAGS} -G 0 -c interrupt.o
+	cc ${CFLAGS} -G 0 -c interrupt.c
 
 assem.o: assem.s lisp.h lispregs.h globals.h
 	as -G 0 -o $@ assem.s
