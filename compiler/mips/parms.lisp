@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.62 1990/07/04 18:58:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.63 1990/07/07 13:10:58 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -86,6 +86,17 @@
 (defconstant double-float-normal-exponent-min 0)
 (defconstant double-float-normal-exponent-max #x7FF)
 (defconstant double-float-hidden-bit (ash 1 20))
+
+(defconstant single-float-digits
+  (+ (byte-size single-float-significand-byte) 1))
+
+(defconstant double-float-digits
+  (+ (byte-size double-float-significand-byte) word-bits 1))
+
+(defun float-format-digits (format)
+  (ecase format
+    ((short-float single-float) single-float-digits)
+    ((double-float long-float) double-float-digits)))
 
 
 ;;;; Description of the target address space.
