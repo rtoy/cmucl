@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.14 1992/09/03 17:39:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.15 1993/01/13 15:57:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -111,6 +111,7 @@
 	(inst b done)
 	(move code null-tn)))))
 
+#-gengc
 (define-vop (code-from-lra code-from-mumble)
   (:translate lra-code-header)
   (:variant vm:other-pointer-type))
