@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.8 1998/03/21 08:15:00 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.9 1998/06/03 02:24:11 dtc Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -387,6 +387,7 @@ static char *complex_slots[] = {"real: ", "imag: ", NULL};
 static char *code_slots[] = {"words: ", "entry: ", "debug: ", NULL};
 static char *fn_slots[] = {"self: ", "next: ", "name: ", "arglist: ", "type: ", NULL};
 static char *closure_slots[] = {"fn: ", NULL};
+static char *funcallable_instance_slots[] = {"fn: ", "lexenv: ", "layout: ", NULL};
 static char *weak_pointer_slots[] = {"value: ", NULL};
 static char *fdefn_slots[] = {"name: ", "function: ", "raw_addr: ", NULL};
 static char *value_cell_slots[] = {"value: ", NULL};
@@ -569,6 +570,10 @@ static void print_otherptr(lispobj obj)
 
             case type_ClosureHeader:
                 print_slots(closure_slots, count, ptr);
+                break;
+
+            case type_FuncallableInstanceHeader:
+                print_slots(funcallable_instance_slots, count, ptr);
                 break;
 
             case type_ValueCellHeader:
