@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.12 1993/04/04 10:02:25 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.13 1993/08/19 13:22:42 ram Exp $
 
 set features = ()
 set misfeatures = ()
@@ -96,7 +96,7 @@ Try these:
 	than once.
 
   -clean <no arg>
-	Delete all *.*f, *.assem, *.log and *.log.OLD in the destination.
+	Delete *.*f, *.fasl, *.assem, *.log and *.log.OLD in the destination.
 
   -noupdate <no arg>
 	If specified, inhibits rcsupdate of the source tree.
@@ -174,7 +174,8 @@ echo "Target directory: $dest"
 if $clean then
     echo "Cleaning up binaries and logs in $dest ..."
     (cd  $dest;\
-     find . \( -name '*.*f' -o -name '*.assem' \) -print -exec rm {} \; ;\
+     find . \( -name '*.*f' -o -name '*.assem' -o -name '*.fasl' \) \
+	     -print -exec rm {} \; ;\
      rm *.log *.log.OLD)
 else
     if ({(echo $dest/*.log>/dev/null)}) then
