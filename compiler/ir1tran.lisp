@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.150 2003/05/08 14:52:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.151 2003/05/08 15:00:58 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3020,7 +3020,13 @@
 		   (make-values-type
 		    :required (mapcar #'or-null (values-type-required ctype))
 		    :optional (values-type-optional ctype)
-		    :rest (or (values-type-rest ctype) *universal-type*)))))
+		    :rest (let ((rest (values-type-rest ctype)))
+			    (cond ((null rest)
+				   *universal-type*)
+				  ((eq rest (specifier-type nil))
+				   nil)
+				  (t
+				   rest)))))))
 	  ((csubtypep (specifier-type 'null) ctype)
 	   (setq ctype (make-values-type :optional (list ctype)
 					 :rest *universal-type*)))
