@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.21 1992/03/09 20:17:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.22 1992/12/10 01:09:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,9 @@
 
 
 (in-package "LISP")
+
+(export '(file-stream))
+(deftype file-stream () 'fd-stream)
 
 
 ;;;; Buffer manipulation routines.
@@ -1011,6 +1014,8 @@ non-server method is also significantly more efficient for large reads.
        (system:serve-all-events)))
     (:element-type
      (fd-stream-element-type stream))
+    (:interactive-p
+     (unix:unix-isatty (fd-stream-fd stream)))
     (:line-length
      80)
     (:charpos
