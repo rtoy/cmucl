@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.26 1992/03/21 22:22:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.27 1992/05/18 18:05:03 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -36,25 +36,33 @@
 	 (*lap-output-file* (open-fasl-file (pathname output-file) name))
 	 (*assembler-routines* nil)
 	 (*load-verbose* nil)
-	 (won nil))
+	 (won nil)
+	 (*code-segment* nil)
+	 (*elsewhere* nil)
+	 (*fixups* nil))
     (unwind-protect
-	(let (*code-segment*
-	      *elsewhere*
-	      #-new-compiler (lisp::*in-compilation-unit* nil))
+	(progn
 	  (pushnew :assembler *features*)
 	  (init-assembler)
 	  (load (merge-pathnames name (make-pathname :type "lisp")))
 	  (fasl-dump-cold-load-form `(in-package ,(package-name *package*))
 				    *lap-output-file*)
-	  (assemble (*code-segment* nil)
-	    (insert-segment *elsewhere*))
-	  (expand-pseudo-instructions *code-segment*)
-	  (let ((length (finalize-segment *code-segment*)))
+	  (let ((length
+		 (cond ((target-featurep :new-assembler)
+			(new-assem:append-segment *code-segment* *elsewhere*)
+			(setf *elsewhere* nil)
+			(new-assem:finalize-segment *code-segment*))
+		       (t
+			(assem:assemble (*code-segment* nil)
+			  (assem:insert-segment *elsewhere*))
+			(assem:expand-pseudo-instructions *code-segment*)
+			(assem:finalize-segment *code-segment*)))))
 	    (dump-assembler-routines *code-segment*
 				     length
 				     *assembler-routines*
+				     *fixups*
 				     *lap-output-file*))
-	  (when trace-file
+	  (when (and trace-file (not (target-featurep :new-assembler)))
 	    (with-open-file (file (if (eq trace-file t)
 				      (make-pathname :defaults name
 						     :type "trace")
@@ -66,6 +74,10 @@
 	      (fresh-line file)))
 	  (setq won t))
       (deletef :assembler *features*)
+      (when (target-featurep :new-assembler)
+	(new-assem:release-segment *code-segment*)
+	(when *elsewhere*
+	  (new-assem:release-segment *elsewhere*)))
       (close-fasl-file *lap-output-file* (not won)))
     won))
 
