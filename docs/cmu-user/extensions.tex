@@ -2465,6 +2465,12 @@ innermost fwrapper.
 \section{Dynamic-Extent Declarations}
 \cindex{dynamic-extent}
 
+\emph{Note:  As of the 19a release, \code{dynamic-extent} is
+  unfortunately disabled by default.  It is known to cause some issues
+  with CLX and Hemlock.  The cause is not known, but causes random
+  errors and brokeness.  Enable at your own risk.  However, it is safe
+  enough for build all of CMUCL without problems.}
+
 On x86 and sparc, \cmucl{} can exploit \code{dynamic-extent}
 declarations by allocating objects on the stack instead of the heap.
 
@@ -2565,3 +2571,48 @@ Please note that the \code{setq} of \code{x} in the example program
 assigns to \code{x} a list that is allocated from the heap.  This is
 another arbitrary restriction that exists because other Lisps behave
 that way.
+
+\section{Modular Arithmetic}
+\cindex{modular-arith}
+
+This section is mostly taken, with permission,  from the documentation
+for SBCL.
+
+Some numeric functions have a property: \code{N} lower bits of
+the result depend only on \code{N} lower bits of (all or some)
+arguments. If the compiler sees an expression of form \code{(logand
+exp mask)}, where \code{exp} is a tree of such ``good'' functions
+and \code{mask} is known to be of type \code{(unsigned-byte
+w)}, where \code{w} is a "good" width, all intermediate results
+will be cut to \code{w} bits (but it is not done for variables
+and constants!). This often results in an ability to use simple
+machine instructions for the functions.
+
+Consider an example.
+\begin{lisp}
+(defun i (x y)
+  (declare (type (unsigned-byte 32) x y))
+  (ldb (byte 32 0) (logxor x (lognot y))))
+\end{lisp}
+The result of \code{(lognot y)} will be negative and of
+type \code{(signed-byte 33)}, so a naive implementation on a 32-bit
+platform is unable to use 32-bit arithmetic here. But modular
+arithmetic optimizer is able to do it: because the result is cut down
+to 32 bits, the compiler will replace \code{logxor}
+and \code{lognot} with versions cutting results to 32 bits, and
+because terminals (here---expressions \code{x} and \code{y})
+are also of type \code{(unsigned-byte 32)}, 32-bit machine
+arithmetic can be used.
+
+
+Currently ``good'' functions
+are \code{+}, \code{-}, \code{*}; \code{logand}, \code{logior},
+\code{logxor}, \code{lognot} and their combinations;
+and \code{ash} with the positive second argument. ``Good'' widths
+are 32 on HPPA, MIPS, PPC, Sparc and X86 and 64 on Alpha. While it is
+possible to support smaller widths as well, currently it is not
+implemented.
+
+A more extensive description of modular arithmetic can be found in the
+paper ``Efficient Hardware Arithmetic in Common Lisp'' by Alexey
+Dejneka, and Christophe Rhodes, to be published.
