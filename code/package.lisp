@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.10 1991/02/11 13:24:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.11 1991/03/13 00:21:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -831,10 +831,10 @@
     (unless (or (not found) (eq found package))
       (error "A package named ~S already exists." name))
     (remhash (package-%name package) *package-names*)
-    (setf (package-%name package) name)
-    (setf (gethash name *package-names*) package)
     (dolist (n (package-%nicknames package))
       (remhash n *package-names*))
+     (setf (package-%name package) name)
+    (setf (gethash name *package-names*) package)
     (setf (package-%nicknames package) ())
     (enter-new-nicknames package nicknames)
     package))
