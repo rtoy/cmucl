@@ -1,11 +1,11 @@
-;;; -*- Mode: completion; Log: code.log; Package: bignum -*-
+;;; -*- Mode: Lisp; Log: code.log; Package: bignum -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.25 1998/03/21 08:11:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.26 1999/11/11 16:34:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 	  bignum-logical-and bignum-logical-ior bignum-logical-xor
 	  bignum-logical-not bignum-load-byte bignum-deposit-byte
 	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
-	  bignum-logcount))
+	  bignum-logcount bignum-logbitp))
 
 ;;; These symbols define the interface to the compiler.
 
@@ -1161,6 +1161,20 @@
       (let ((digit (%bignum-ref bignum index)))
 	(declare (type bignum-element-type digit))
 	(incf result (logcount (if plusp digit (%lognot digit))))))))
+
+(defun bignum-logbitp (index bignum)
+  (declare (type bignum-type bignum))
+  ;; For bignums, locate the word we're interested in and test
+  ;; the appropriate bit.  As in the fixnum case, if the index
+  ;; is too big, the answer is the sign of the number.
+  (let ((len (bignum::%bignum-length bignum)))
+    (multiple-value-bind (word-index bit-index)
+	(floor index digit-size)
+      (if (>= word-index len)
+	  (not (bignum-plus-p bignum))
+	  (not (zerop (logand (ash 1 bit-index)
+			      (%bignum-ref bignum word-index))))))))
+  
 
 
 ;;;; Logical operations.

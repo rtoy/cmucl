@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.34 1998/07/24 17:17:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.35 1999/11/11 16:34:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1039,8 +1039,11 @@
   (logtest integer1 integer2))
 
 (defun logbitp (index integer)
-  "Predicate returns T if bit index of integer is a 1."
-  (logbitp index integer))
+  "Predicate returns T if bit index of integer is a 1.  The least
+significant bit of INTEGER is bit 0."
+  (etypecase integer
+    (fixnum (logbitp index integer))
+    (bignum (bignum-logbitp index integer))))
 
 (defun ash (integer count)
   "Shifts integer left by count places preserving sign.  - count shifts right."
