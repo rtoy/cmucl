@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.33 2002/10/07 14:31:06 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.34 2003/01/06 15:10:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2428,12 +2428,13 @@
 	   (type disassem-state dstate))
   (with-print-restrictions
     (dolist (note (dstate-notes dstate))
-      (format stream "~vt; " *note-column*)
-      (etypecase note
-	(string
-	 (write-string note stream))
-	(function
-	 (funcall note stream)))
+      (format stream "~vt" *note-column*)
+      (pprint-logical-block (stream nil :per-line-prefix "; ")
+	(etypecase note
+	  (string
+	   (write-string note stream))
+	  (function
+	   (funcall note stream))))
       (terpri stream))
     (fresh-line stream)
     (setf (dstate-notes dstate) nil)))

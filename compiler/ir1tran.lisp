@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.134 2002/12/13 19:25:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.135 2003/01/06 15:10:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3344,7 +3344,7 @@
       (ir1-convert start cont `(%%defmacro ',name ,fun ,doc)))
 
     (when *compile-print*
-      (compiler-mumble "Converted ~S.~%" name))))
+      (compiler-mumble "~&; Converted ~S.~%" name))))
 
 
 (defun do-compiler-macro-compile-time (name def)
@@ -3370,7 +3370,7 @@
       (ir1-convert start cont `(%%define-compiler-macro ',name ,fun ,doc)))
 
     (when *compile-print*
-      (compiler-mumble "Converted ~S.~%" name))))
+      (compiler-mumble "~&; Converted ~S.~%" name))))
 
 
 ;;; Update the global environment to correspond to the new definition.
@@ -3634,4 +3634,4 @@
 		       ,@(when save-expansion `(',save-expansion)))))
 
 	(when *compile-print*
-	  (compiler-mumble "Converted ~S.~%" name))))))
+	  (compiler-mumble "~&; Converted ~S.~%" name))))))

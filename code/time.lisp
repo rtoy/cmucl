@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.20 2002/11/05 22:45:41 cracauer Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.21 2003/01/06 15:10:16 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -336,22 +336,25 @@
 	(time-get-sys-info))
       (setq new-real-time (- (get-internal-real-time) real-time-overhead))
       (let ((gc-run-time (max (- *gc-run-time* start-gc-run-time) 0)))
-	(format *trace-output*
-		"~&Evaluation took:~%  ~
+	(terpri *trace-output*)
+	(pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
+	  (format *trace-output*
+		  "Evaluation took:~%  ~
 		 ~S second~:P of real time~%  ~
 		 ~S second~:P of user run time~%  ~
 		 ~S second~:P of system run time~%  ~
 		 ~@[[Run times include ~S second~:P GC run time]~%  ~]~
 		 ~S page fault~:P and~%  ~
 		 ~:D bytes consed.~%"
-		(max (/ (- new-real-time old-real-time)
-			(float internal-time-units-per-second))
-		     0.0)
-		(max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
-		(max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
-		(unless (zerop gc-run-time)
-		  (/ (float gc-run-time)
-		     (float internal-time-units-per-second)))
-		(max (- new-page-faults old-page-faults) 0)
-		(max (- new-bytes-consed old-bytes-consed cons-overhead)
-		     0)))))))
+		  (max (/ (- new-real-time old-real-time)
+			  (float internal-time-units-per-second))
+		       0.0)
+		  (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
+		  (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
+		  (unless (zerop gc-run-time)
+		    (/ (float gc-run-time)
+		       (float internal-time-units-per-second)))
+		  (max (- new-page-faults old-page-faults) 0)
+		  (max (- new-bytes-consed old-bytes-consed cons-overhead)
+		       0))))
+	(terpri *trace-output*)))))

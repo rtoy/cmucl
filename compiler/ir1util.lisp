@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.86 2002/08/26 19:57:07 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.87 2003/01/06 15:10:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1698,7 +1698,7 @@
 	(*print-lines* (or *error-print-lines* *print-lines*))
 	(*print-pretty* pretty))
     (if pretty
-	(format nil "  ~S~%" form)
+	(format nil "~@<; ~@;  ~S~:>~%" form)
 	(prin1-to-string form))))
 
 	  
@@ -1824,8 +1824,10 @@
   (cond ((= *last-message-count* 1)
 	 (when terpri (terpri *compiler-error-output*)))
 	((> *last-message-count* 1)
-	 (format *compiler-error-output* "[Last message occurs ~D times]~2%"
-		 *last-message-count*)))
+	 (pprint-logical-block (*compiler-error-output* nil :per-line-prefix "; ")
+	   (format *compiler-error-output* "[Last message occurs ~D times]"
+		   *last-message-count*))
+	 (format *compiler-error-output* "~2%")))
   (setq *last-message-count* 0))
 
 
@@ -1857,65 +1859,75 @@
       (let ((stream *compiler-error-output*)
 	    (context (find-error-context format-args)))
 	(cond
-	 (context
-	  (let ((file (compiler-error-context-file-name context))
-		(in (compiler-error-context-context context))
-		(form (compiler-error-context-original-source context))
-		(enclosing (compiler-error-context-enclosing-source context))
-		(source (compiler-error-context-source context))
-		(last *last-error-context*))
-	    (compiler-notification what context)
+	  (context
+	   (let ((file (compiler-error-context-file-name context))
+		 (in (compiler-error-context-context context))
+		 (form (compiler-error-context-original-source context))
+		 (enclosing (compiler-error-context-enclosing-source context))
+		 (source (compiler-error-context-source context))
+		 (last *last-error-context*))
+	     (compiler-notification what context)
 	    
-	    (unless (and last
-			 (equal file (compiler-error-context-file-name last)))
-	      (when (pathnamep file)
-		(note-message-repeats)
-		(setq last nil)
-		(format stream "~2&File: ~A~%" (namestring file))))
+	     (unless (and last
+			  (equal file (compiler-error-context-file-name last)))
+	       (when (pathnamep file)
+		 (note-message-repeats)
+		 (setq last nil)
+		 (format stream "~2&")
+		 (pprint-logical-block (stream nil :per-line-prefix "; ")
+		   (format stream "~2&File: ~A" (namestring file)))
+		 (format stream "~%")))
 	    
-	    (unless (and last
-			 (equal in (compiler-error-context-context last)))
-	      (note-message-repeats)
-	      (setq last nil)
-	      (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" in))
+	     (unless (and last
+			  (equal in (compiler-error-context-context last)))
+	       (note-message-repeats)
+	       (setq last nil)
+	       (format stream "~2&")
+	       (pprint-logical-block (stream nil :per-line-prefix "; ")
+		 (format stream "In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}" in))
+	       (format stream "~2%"))
 	    
-	    (unless (and last
-			 (string= form
-				  (compiler-error-context-original-source last)))
-	      (note-message-repeats)
-	      (setq last nil)
-	      (write-string form stream))
+	     (unless (and last
+			  (string= form
+				   (compiler-error-context-original-source last)))
+	       (note-message-repeats)
+	       (setq last nil)
+	       (write-string form stream))
 	    
-	    (unless (and last
-			 (equal enclosing
-				(compiler-error-context-enclosing-source last)))
-	      (when enclosing
-		(note-message-repeats)
-		(setq last nil)
-		(format stream "--> ~{~<~%--> ~1:;~A~> ~}~%" enclosing)))
+	     (unless (and last
+			  (equal enclosing
+				 (compiler-error-context-enclosing-source last)))
+	       (when enclosing
+		 (note-message-repeats)
+		 (setq last nil)
+		 (format stream "; --> ~{~<~%; --> ~1:;~A~> ~}~%" enclosing)))
 	    
-	    (unless (and last
-			 (equal source (compiler-error-context-source last)))
-	      (setq *last-format-string* nil)
-	      (when source
-		(note-message-repeats)
-		(dolist (src source)
-		  (write-line "==>" stream)
-		  (write-string src stream))))))
-	 (t
-	  (compiler-notification what nil)
-	  (note-message-repeats)
-	  (setq *last-format-string* nil)
-	  (format stream "~2&")))
+	     (unless (and last
+			  (equal source (compiler-error-context-source last)))
+	       (setq *last-format-string* nil)
+	       (when source
+		 (note-message-repeats)
+		 (dolist (src source)
+		   (write-line "; ==>" stream)
+		   (write-string src stream))))))
+	  (t
+	   (pprint-logical-block (stream nil :per-line-prefix "; ")
+	     (compiler-notification what nil))
+	   (note-message-repeats)
+	   (setq *last-format-string* nil)
+	   (format stream "~2&")))
 
-    (setq *last-error-context* context)
+	(setq *last-error-context* context)
     
-    (unless (and (equal format-string *last-format-string*)
-		 (tree-equal format-args *last-format-args*))
-      (note-message-repeats nil)
-      (setq *last-format-string* format-string)
-      (setq *last-format-args* format-args)
-      (format stream "~&~:(~A~): ~?~&" what format-string format-args)))))
+	(unless (and (equal format-string *last-format-string*)
+		     (tree-equal format-args *last-format-args*))
+	  (note-message-repeats nil)
+	  (setq *last-format-string* format-string)
+	  (setq *last-format-args* format-args)
+	  (format stream "~&")
+	  (let ((*print-lines* nil))
+	    (pprint-logical-block (stream nil :per-line-prefix "; ")
+	      (format stream "~:(~A~): ~?~&" what format-string format-args)))))))
   
   (incf *last-message-count*)
   (undefined-value))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.37 1994/10/31 04:57:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.38 2003/01/06 15:10:15 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -129,7 +129,7 @@
 	 ,@(generate-return-sequence
 	    (or (cadr (assoc :return-style options)) :raw)))
        (when *compile-print*
-	 (format *error-output* "~S assembled~%" ',name)))))
+	 (format *error-output* "; ~S assembled~%" ',name)))))
 
 (defun arg-or-res-spec (reg)
   `(,(reg-spec-name reg)

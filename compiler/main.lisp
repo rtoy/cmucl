@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.129 2002/11/19 12:55:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.130 2003/01/06 15:10:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -418,7 +418,7 @@
 		 (return nil)))))))
 
     (when *compile-print*
-      (compiler-mumble "~&~:[~;Byte ~]Compiling ~A: "
+      (compiler-mumble "~&; ~:[~;Byte ~]Compiling ~A: "
 		       *byte-compiling*
 		       (component-name component)))
 
@@ -585,11 +585,11 @@
 		   (zerop *compiler-warning-count*)
 		   (zerop *compiler-note-count*)))
     (compiler-mumble
-     "~2&Compilation unit ~:[finished~;aborted~].~
-      ~[~:;~:*~&  ~D fatal error~:P~]~
-      ~[~:;~:*~&  ~D error~:P~]~
-      ~[~:;~:*~&  ~D warning~:P~]~
-      ~[~:;~:*~&  ~D note~:P~]~2%"
+     "~2&; Compilation unit ~:[finished~;aborted~].~
+      ~[~:;~:*~&;   ~D fatal error~:P~]~
+      ~[~:;~:*~&;   ~D error~:P~]~
+      ~[~:;~:*~&;   ~D warning~:P~]~
+      ~[~:;~:*~&;   ~D note~:P~]~2%"
      abort-p
      abort-count
      *compiler-error-count*
@@ -1021,7 +1021,7 @@
 	   (let ((comment (coerce (second form) 'simple-string)))
 	     (setf (file-info-comment file) comment)
 	     (when *compile-verbose*
-	       (compiler-mumble "~&Comment: ~A~2&" comment)))))))
+	       (compiler-mumble "~&; Comment: ~A~2&" comment)))))))
 
 
 ;;; PROCESS-COLD-LOAD-FORM  --  Internal
@@ -1618,14 +1618,14 @@
 ;;;
 (defun start-error-output (source-info)
   (declare (type source-info source-info))
-  (compiler-mumble "~2&Python version ~A, VM version ~A on ~A.~%"
+  (compiler-mumble "~2&; Python version ~A, VM version ~A on ~A.~%"
 		   compiler-version (backend-version *backend*)
 		   (ext:format-universal-time nil (get-universal-time)
 					      :style :government
 					      :print-weekday nil
 					      :print-timezone nil))
   (dolist (x (source-info-files source-info))
-    (compiler-mumble "Compiling: ~A ~A~%"
+    (compiler-mumble "; Compiling: ~A ~A~%"
 		     (namestring (file-info-name x))
 		     (ext:format-universal-time nil (file-info-write-date x)
 						:style :government
@@ -1636,7 +1636,7 @@
 ;;;
 (defun finish-error-output (source-info won)
   (declare (type source-info source-info))
-  (compiler-mumble "~&Compilation ~:[aborted after~;finished in~] ~A.~&"
+  (compiler-mumble "~&; Compilation ~:[aborted after~;finished in~] ~A.~&"
 		   won
 		   (elapsed-time-to-string
 		    (- (get-universal-time)
@@ -1769,7 +1769,7 @@
 	(close-fasl-file fasl-file (not compile-won))
 	(setq output-file-pathname (pathname (fasl-file-stream fasl-file)))
 	(when (and compile-won *compile-verbose*)
-	  (compiler-mumble "~2&~A written.~%"
+	  (compiler-mumble "~2&; ~A written.~%"
 			   (namestring output-file-pathname))))
 
       (when *compile-verbose*

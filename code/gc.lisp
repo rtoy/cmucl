@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.30 2002/11/19 12:38:55 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.31 2003/01/06 15:10:16 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -319,7 +319,7 @@
 (defun default-gc-notify-before (bytes-in-use)
   (when (eq *gc-verbose* :beep)
     (system:beep *standard-output*))
-  (format t "~&[GC threshold exceeded with ~:D bytes in use.  ~
+  (format t "~&; [GC threshold exceeded with ~:D bytes in use.  ~
              Commencing GC.]~%" bytes-in-use)
   (finish-output))
 ;;;
@@ -329,9 +329,9 @@
   bytes).  It should notify the user that the system is going to GC.")
 
 (defun default-gc-notify-after (bytes-retained bytes-freed new-trigger)
-  (format t "[GC completed with ~:D bytes retained and ~:D bytes freed.]~%"
+  (format t "~&; [GC completed with ~:D bytes retained and ~:D bytes freed.]~%"
 	  bytes-retained bytes-freed)
-  (format t "[GC will next occur when at least ~:D bytes are in use.]~%"
+  (format t "~&; [GC will next occur when at least ~:D bytes are in use.]~%"
 	  new-trigger)
   (when (eq *gc-verbose* :beep)
     (system:beep *standard-output*))
