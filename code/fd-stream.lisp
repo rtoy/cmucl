@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.30 1993/08/04 12:26:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.31 1993/08/30 21:19:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,7 +116,8 @@
 	  (fd-stream-name fd-stream)))
 
 
-(define-condition io-timeout (stream-error) (direction)
+(define-condition io-timeout (stream-error)
+  ((direction :reader io-timeout-direction :initarg :direction))
   (:report
    (lambda (condition stream)
      (declare (stream stream))

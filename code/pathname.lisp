@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.23 1993/08/15 14:44:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.24 1993/08/30 21:20:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -740,10 +740,11 @@
 	  (namestring-parse-error-offset condition)))
 
 (define-condition namestring-parse-error (parse-error)
-  ((complaint :init-form (required-argument))
-   (arguments :init-form nil)
-   (namestring :init-form (required-argument))
-   (offset :init-form (required-argument)))
+  ((complaint :reader namestring-parse-error-complaint :initarg :complaint)
+   (arguments :reader namestring-parse-error-arguments :initarg :arguments
+	      :initform nil)
+   (namestring :reader namestring-parse-error-namestring :initarg :namestring)
+   (offset :reader namestring-parse-error-offset :initarg :offset))
   (:report %print-namestring-parse-error))
 
 

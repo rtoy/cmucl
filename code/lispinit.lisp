@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.42 1993/08/26 15:27:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.43 1993/08/30 21:20:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,12 +179,12 @@
     (let ((condition (coerce-to-condition datum arguments
 					  'simple-error 'error))
 	  (debug:*stack-top-hint* debug:*stack-top-hint*))
-      (unless (and (error-function-name condition) debug:*stack-top-hint*)
+      (unless (and (condition-function-name condition) debug:*stack-top-hint*)
 	(multiple-value-bind
 	    (name frame)
 	    (kernel:find-caller-name)
-	  (unless (error-function-name condition)
-	    (setf (error-function-name condition) name))
+	  (unless (condition-function-name condition)
+	    (setf (condition-function-name condition) name))
 	  (unless debug:*stack-top-hint*
 	    (setf debug:*stack-top-hint* frame))))
       (let ((debug:*stack-top-hint* nil))
@@ -203,12 +203,13 @@
 			   (coerce-to-condition datum arguments
 						'simple-error 'error)))
 	    (debug:*stack-top-hint* debug:*stack-top-hint*))
-	(unless (and (error-function-name condition) debug:*stack-top-hint*)
+	(unless (and (condition-function-name condition)
+		     debug:*stack-top-hint*)
 	  (multiple-value-bind
 	      (name frame)
 	      (kernel:find-caller-name)
-	    (unless (error-function-name condition)
-	      (setf (error-function-name condition) name))
+	    (unless (condition-function-name condition)
+	      (setf (condition-function-name condition) name))
 	    (unless debug:*stack-top-hint*
 	      (setf debug:*stack-top-hint* frame))))
 	(with-condition-restarts condition (list (find-restart 'continue))

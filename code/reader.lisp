@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.18 1993/08/25 01:14:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.19 1993/08/30 21:20:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,16 +44,14 @@
 
 ;;;; Reader errors:
 
-(define-condition reader-error (stream-error)
-  (format-control
-   (format-arguments :init-form ()))
+(define-condition reader-error (simple-condition stream-error) ()
   (:report
    (lambda (condition stream)
      (let ((error-stream (stream-error-stream condition)))
        (format stream "Reader error ~@[at ~D ~]on ~S:~%~?"
 	       (file-position error-stream) error-stream
-	       (reader-error-format-control condition)
-	       (reader-error-format-arguments condition))))))
+	       (simple-condition-format-control condition)
+	       (simple-condition-format-arguments condition))))))
 
 (define-condition reader-package-error (reader-error))
 
@@ -66,7 +64,7 @@
 	 :format-arguments args))
 
 (define-condition reader-eof-error (end-of-file)
-  (context)
+  ((context :reader reader-eof-error-context :initarg :context))
   (:report
    (lambda (condition stream)
      (format stream "Unexpected EOF on ~S ~A."

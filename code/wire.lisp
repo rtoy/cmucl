@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.9 1992/05/15 17:51:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.10 1993/08/30 21:20:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,7 +103,7 @@
   id)
 
 (define-condition wire-error (error)
-  (wire)
+  ((wire :reader wire-error-wire :initarg :wire))
   (:report (lambda (condition stream)
 	     (format stream "There is a problem with ~A."
 		     (wire-error-wire condition)))))
@@ -112,15 +112,15 @@
   ()
   (:report (lambda (condition stream)
 	     (format stream "Recieved EOF on ~A."
-		     (wire-eof-wire condition)))))
+		     (wire-error-wire condition)))))
 
 (define-condition wire-io-error (wire-error)
-  ((when :init-form "using")
-   (msg :init-form "Failed."))
+  ((when :reader wire-io-error-when :initarg :when :initform "using")
+   (msg :reader wire-io-error-msg :initarg :msg :initform "Failed."))
   (:report (lambda (condition stream)
 	     (format stream "Error ~A ~A: ~A."
 		     (wire-io-error-when condition)
-		     (wire-io-error-wire condition)
+		     (wire-error-wire condition)
 		     (wire-io-error-msg condition)))))
 
 

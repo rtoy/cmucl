@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.5 1993/02/23 11:32:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.6 1993/08/30 21:20:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,7 @@
 ;;; compiler warnings can be emitted as appropriate.
 ;;;
 (define-condition parse-unknown-type (condition)
-  (specifier))
+  ((specifier :reader parse-unknown-type-specifier :initarg :specifier)))
 
 
 ;;;; Cold load hack magic.

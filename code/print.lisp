@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.62 1993/08/30 14:55:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.63 1993/08/30 21:20:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -245,7 +245,8 @@
 				  `#'(lambda () ,@body)
 				  nil)))
 
-(define-condition print-not-readable (error) (object)
+(define-condition print-not-readable (error)
+  ((object :reader print-not-readable-object :initarg :object))
   (:report
    (lambda (condition stream)
     (format stream "~S cannot be printed readably."

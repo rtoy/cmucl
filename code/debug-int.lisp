@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.61 1993/07/24 01:45:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.62 1993/08/30 21:19:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by Bill Chiles and Rob Maclachlan.
 ;;;
 
-(in-package "DEBUG-INTERNALS" :nicknames '("DI"))
+(in-package "DEBUG-INTERNALS")
 
 
 ;;; The compiler's debug-source structure is almost exactly what we want, so
@@ -108,7 +108,8 @@
 	     (write-line "No debugging information available." stream))))
 
 (define-condition no-debug-function-returns (debug-condition)
-  (debug-function)
+  ((debug-function :reader no-debug-function-returns-debug-function
+		   :initarg :debug-function))
   (:documentation
    "The system could not return values from a frame with debug-function since
     it lacked information about returning values.")
@@ -122,21 +123,24 @@
 		       fun)))))
 
 (define-condition no-debug-blocks (debug-condition)
-  (debug-function)
+  ((debug-function :reader no-debug-blocks-debug-function
+		   :initarg :debug-function))
   (:documentation "The debug-function has no debug-block information.")
   (:report (lambda (condition stream)
 	     (format stream "~&~S has no debug-block information."
 		     (no-debug-blocks-debug-function condition)))))
 
 (define-condition no-debug-variables (debug-condition)
-  (debug-function)
+  ((debug-function :reader no-debug-variables-debug-function
+		   :initarg :debug-function))
   (:documentation "The debug-function has no debug-variable information.")
   (:report (lambda (condition stream)
 	     (format stream "~&~S has no debug-variable information."
 		     (no-debug-variables-debug-function condition)))))
 
 (define-condition lambda-list-unavailable (debug-condition)
-  (debug-function)
+  ((debug-function :reader lambda-list-unavailable-debug-function
+		   :initarg :debug-function))
   (:documentation
    "The debug-function has no lambda-list since argument debug-variables are
     unavailable.")
@@ -145,16 +149,17 @@
 		     (lambda-list-unavailable-debug-function condition)))))
 
 (define-condition invalid-value (debug-condition)
-  ((debug-variable)
-   (frame))
+  ((debug-variable :reader invalid-value-debug-variable
+		   :initarg :debug-variable)
+   (frame :reader invalid-value-frame :initarg :frame))
   (:report (lambda (condition stream)
 	     (format stream "~&~S has :invalid or :unknown value in ~S."
 		     (invalid-value-debug-variable condition)
 		     (invalid-value-frame condition)))))
 
 (define-condition ambiguous-variable-name (debug-condition)
-  ((name)
-   (frame))
+  ((name :reader ambiguous-variable-name-name :initarg :name)
+   (frame :reader ambiguous-variable-name-frame :initarg :frame))
   (:report (lambda (condition stream)
 	     (format stream "~&~S names more than one valid variable in ~S."
 		     (ambiguous-variable-name-name condition)
@@ -177,20 +182,23 @@
     tools inherit from this type."))
 
 (define-condition unhandled-condition (debug-error)
-  ((condition))
+  ((condition :reader unhandled-condition-condition :initarg :condition))
   (:report (lambda (condition stream)
 	     (format stream "~&Unhandled debug-condition:~%~A"
 		     (unhandled-condition-condition condition)))))
 
 (define-condition unknown-code-location (debug-error)
-  ((code-location))
+  ((code-location :reader unknown-code-location-code-location
+		  :initarg :code-location))
   (:report (lambda (condition stream)
 	     (format stream "~&Invalid use of an unknown code-location -- ~S."
 		     (unknown-code-location-code-location condition)))))
 
 (define-condition unknown-debug-variable (debug-error)
-  ((debug-variable)
-   (debug-function))
+  ((debug-variable :reader unknown-debug-variable-debug-variable
+		   :initarg :debug-variable)
+   (debug-function :reader unknown-debug-variable-debug-function
+		   :initarg :debug-function))
   (:report (lambda (condition stream)
 	     (format stream "~&~S not in ~S."
 		     (unknown-debug-variable-debug-variable condition)
@@ -204,9 +212,10 @@
 	     (write-string "Invalid control stack pointer." stream))))
 
 (define-condition frame-function-mismatch (debug-error)
-  ((code-location)
-   (frame)
-   (form))
+  ((code-location :reader frame-function-mismatch-code-location
+		  :initarg :code-location)
+   (frame :reader frame-function-mismatch-frame :initarg :frame)
+   (form :reader frame-function-mismatch-form :initarg :form))
   (:report (lambda (condition stream)
 	     (format stream
 		     "~&Form was preprocessed for ~S,~% but called on ~S:~%  ~S"

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.15 1993/08/19 17:14:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.16 1993/08/30 21:19:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -324,14 +324,16 @@
 
 ;;;; Conditions signaled at runtime by the resultant body.
 
-(define-condition defmacro-lambda-list-bind-error (error) (kind name))
+(define-condition defmacro-lambda-list-bind-error (error)
+  ((kind :reader defmacro-lambda-list-bind-error-kind :initarg :kind)
+   (name :reader defmacro-lambda-list-bind-error-name :initarg :name)))
 
 (defun print-defmacro-ll-bind-error-intro (condition stream)
   (if (null (defmacro-lambda-list-bind-error-name condition))
       (format stream
 	      "Error while parsing arguments to ~A in ~S:~%"
 	      (defmacro-lambda-list-bind-error-kind condition)
-	      (defmacro-lambda-list-bind-error-function-name condition))
+	      (condition-function-name condition))
       (format stream
 	      "Error while parsing arguments to ~A ~S:~%"
 	      (defmacro-lambda-list-bind-error-kind condition)
@@ -339,7 +341,9 @@
 
 (define-condition defmacro-bogus-sublist-error
 		  (defmacro-lambda-list-bind-error)
-  (object lambda-list)
+  ((object :reader defmacro-bogus-sublist-error-object :initarg :object)
+   (lambda-list :reader defmacro-bogus-sublist-error-lambda-list
+		:initarg :lambda-list))
   (:report
    (lambda (condition stream)
      (print-defmacro-ll-bind-error-intro condition stream)
@@ -349,7 +353,11 @@
 	     (defmacro-bogus-sublist-error-lambda-list condition)))))
 
 (define-condition defmacro-ll-arg-count-error (defmacro-lambda-list-bind-error)
-  (argument lambda-list minimum maximum)
+  ((argument :reader defmacro-ll-arg-count-error-argument :initarg :argument)
+   (lambda-list :reader defmacro-ll-arg-count-error-lambda-list
+		:initarg :lambda-list)
+   (minimum :reader defmacro-ll-arg-count-error-minimum :initarg :minimum)
+   (maximum :reader defmacro-ll-arg-count-error-maximum :initarg :maximum))
   (:report
    (lambda (condition stream)
      (print-defmacro-ll-bind-error-intro condition stream)
@@ -375,7 +383,9 @@
 
 (define-condition defmacro-ll-broken-key-list-error
 		  (defmacro-lambda-list-bind-error)
-  (problem info)
+  ((problem :reader defmacro-ll-broken-key-list-error-problem
+	    :initarg :problem)
+   (info :reader defmacro-ll-broken-key-list-error-info :initarg :info))
   (:report (lambda (condition stream)
 	     (print-defmacro-ll-bind-error-intro condition stream)
 	     (format stream
