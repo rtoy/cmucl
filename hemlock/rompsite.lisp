@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.14 1991/11/22 15:14:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.15 1991/11/23 21:28:32 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -187,41 +187,10 @@
 (defvar *editor-windowed-input* nil)
 
 ;;; These are used for selecting X events.
-;;; 
-;;; This says to send :key-press, :button-press, :button-release, :enter-notify,
-;;; and :leave-notify events.
-;;;
-#+clx
-(eval-when (compile load eval)
-  (defconstant input/boundary-xevents-selection-keys
-    '(:key-press :button-press :button-release :enter-window :leave-window)))
-#+clx
-(defconstant input/boundary-xevents-mask
-  (apply #'xlib:make-event-mask input/boundary-xevents-selection-keys))
-;;;
-;;; This says to send :exposure, :destroy-notify, :unmap-notify, :map-notify,
-;;; :reparent-notify, :configure-notify, :gravity-notify, and :circulate-notify
-;;; in addition to the above events.  Of those enumerated here, we only care
-;;; about :exposure and :configure-notify.
-;;;
-#+clx
-(eval-when (compile load eval)
-  (defconstant interesting-xevents-receive-keys
-    '(:key-press :button-press :button-release :enter-notify :leave-notify
-		 :exposure :graphics-exposure :configure-notify :destroy-notify
-		 :unmap-notify :map-notify :reparent-notify :gravity-notify
-		 :circulate-notify)))
-#+clx
-(defconstant interesting-xevents-mask
-  (apply #'xlib:make-event-mask
-	 (append input/boundary-xevents-selection-keys
-		 '(:exposure :structure-notify))))
-
 #+clx
 (eval-when (compile load eval)
   (defconstant group-interesting-xevents
     '(:structure-notify)))
-
 #+clx
 (defconstant group-interesting-xevents-mask
   (apply #'xlib:make-event-mask group-interesting-xevents))
@@ -231,7 +200,6 @@
   (defconstant child-interesting-xevents
     '(:key-press :button-press :button-release :structure-notify :exposure
 		 :enter-window :leave-window)))
-
 #+clx
 (defconstant child-interesting-xevents-mask
   (apply #'xlib:make-event-mask child-interesting-xevents))
@@ -241,7 +209,6 @@
   (defconstant random-typeout-xevents
     '(:key-press :button-press :button-release :enter-window :leave-window
 		 :exposure)))
-
 #+clx
 (defconstant random-typeout-xevents-mask
   (apply #'xlib:make-event-mask random-typeout-xevents))
