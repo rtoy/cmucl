@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.20 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.21 2000/07/09 16:05:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,7 +83,17 @@
 	     (setf (info function type name) dtype)
 	     (setf (info function assumed-type name) nil))
 	   (setf (info function where-from name) :defined))
-	  (:declared); Just keep declared type.
+	  (:declared
+	   (let ((type (info function type name)))
+	     (when (and type (function-type-p dtype))
+	       (let ((type-returns (function-type-returns type))
+		     (dtype-returns (function-type-returns dtype))
+		     (*error-function* #'compiler-warning))
+		 (unless (values-types-intersect type-returns dtype-returns)
+		   (note-lossage "The result type from previous declaration:~%  ~S~@
+				  conflicts with the result type:~%  ~S"
+				 (type-specifier type-returns)
+				 (type-specifier dtype-returns)))))))
 	  (:defined
 	   (when global-p
 	     (setf (info function type name) dtype)))))))
