@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.20 1992/02/07 11:33:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.21 1993/03/01 16:11:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.20 1992/02/07 11:33:23 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.21 1993/03/01 16:11:25 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -1213,6 +1213,32 @@
 	       ((or (= r 0) (> d q)) (/= r 0))
 	     (declare (fixnum inc))
 	     (multiple-value-setq (q r) (truncate x d))))))
+
+;;; ISQRT  --  Public
+;;;
+;;;    From discussion on comp.lang.lisp and Akira Kurihara.
+;;;
+(defun isqrt (n)
+  "Returns the root of the nearest integer less than n which is a perfect
+   square."
+  (declare (type unsigned-byte n) (values unsigned-byte))
+  ;; theoretically (> n 7) ,i.e., n-len-quarter > 0
+  (if (and (fixnump n) (<= n 24))
+      (cond ((> n 15) 4)
+	    ((> n  8) 3)
+	    ((> n  3) 2)
+	    ((> n  0) 1)
+	    (t 0))
+      (let* ((n-len-quarter (ash (integer-length n) -2))
+	     (n-half (ash n (- (ash n-len-quarter 1))))
+	     (n-half-isqrt (isqrt n-half))
+	     (init-value (ash (1+ n-half-isqrt) n-len-quarter)))
+	(loop
+	  (let ((iterated-value
+		 (ash (+ init-value (truncate n init-value)) -1)))
+	    (unless (< iterated-value init-value)
+	      (return init-value))
+	    (setq init-value iterated-value))))))
 
 
 ;;;; Random number predicates:
