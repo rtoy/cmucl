@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.9 1992/02/25 07:07:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.10 1992/10/20 03:10:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,10 +72,10 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:variant-vars double-p size type data)
   (:generator 13
-    (with-fixed-allocation (y ndescr type size)
-      (if double-p
-	  (inst stdf x y (- (* data vm:word-bytes) vm:other-pointer-type))
-	  (inst stf x y (- (* data vm:word-bytes) vm:other-pointer-type))))))
+    (with-fixed-allocation (y ndescr type size))
+    (if double-p
+	(inst stdf x y (- (* data vm:word-bytes) vm:other-pointer-type))
+	(inst stf x y (- (* data vm:word-bytes) vm:other-pointer-type)))))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
