@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.24 2003/07/24 13:59:51 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.25 2003/07/26 17:42:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,11 +292,13 @@
 
 (defvar *time-consing* nil)
 (defvar *last-time-consing* nil)
+(defvar *in-get-time-consing* nil)
 
 (defun get-time-consing ()
-  (when (null *time-consing*)
-    (time nil)
-    (setq *time-consing* *last-time-consing*)))
+  (when (and (null *time-consing*) (not *in-get-time-consing*))
+    (let ((*in-get-time-consing* t))
+      (time nil)
+      (setq *time-consing* *last-time-consing*))))
 
 
 ;;; %TIME  --  Internal
@@ -304,7 +306,7 @@
 ;;;    The guts of the TIME macro.  Compute overheads, run the (compiled)
 ;;; function, report the times.
 ;;;
-(defun %time (fun)
+(defun %time (fun &optional get-time-p)
   (let ((fun (massage-time-function fun))
 	old-run-utime
         new-run-utime
@@ -359,27 +361,28 @@
       (setq new-real-time (- (get-internal-real-time) real-time-overhead))
       (let ((gc-run-time (max (- *gc-run-time* start-gc-run-time) 0))
 	    (bytes-consed (- new-bytes-consed old-bytes-consed cons-overhead)))
-	(terpri *trace-output*)
-	(pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
-	  (format *trace-output*
-		  "Evaluation took:~%  ~
-		 ~S second~:P of real time~%  ~
-		 ~S second~:P of user run time~%  ~
-		 ~S second~:P of system run time~%  ~
-                 ~:D CPU cycles~%  ~
-		 ~@[[Run times include ~S second~:P GC run time]~%  ~]~
-		 ~S page fault~:P and~%  ~
-		 ~:D bytes consed.~%"
-		  (max (/ (- new-real-time old-real-time)
-			  (float internal-time-units-per-second))
-		       0.0)
-		  (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
-		  (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
-                  (truncate cycle-count)
-		  (unless (zerop gc-run-time)
-		    (/ (float gc-run-time)
-		       (float internal-time-units-per-second)))
-		  (max (- new-page-faults old-page-faults) 0)
-		  (max (- bytes-consed (or *time-consing* 0)) 0)))
-	(terpri *trace-output*)
-	(setq *last-time-consing* bytes-consed)))))))
+	(unless *in-get-time-consing*
+	  (terpri *trace-output*)
+	  (pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
+	    (format *trace-output*
+		    "Evaluation took:~%  ~
+		     ~S second~:P of real time~%  ~
+		     ~S second~:P of user run time~%  ~
+		     ~S second~:P of system run time~%  ~
+                     ~:D CPU cycles~%  ~
+		     ~@[[Run times include ~S second~:P GC run time]~%  ~]~
+		     ~S page fault~:P and~%  ~
+		     ~:D bytes consed.~%"
+		    (max (/ (- new-real-time old-real-time)
+			    (float internal-time-units-per-second))
+			 0.0)
+		    (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
+		    (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
+		    (truncate cycle-count)
+		    (unless (zerop gc-run-time)
+		      (/ (float gc-run-time)
+			 (float internal-time-units-per-second)))
+		    (max (- new-page-faults old-page-faults) 0)
+		    (max (- bytes-consed (or *time-consing* 0)) 0)))
+	  (terpri *trace-output*))
+	(setq *last-time-consing* bytes-consed))))))
