@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/sunos-os.c,v 1.1 1991/05/24 18:43:45 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/sunos-os.c,v 1.2 1991/09/04 15:01:36 wlott Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -35,6 +35,8 @@
 
 #define MAX_SEGS 64
 
+extern char *getenv();
+
 /* ---------------------------------------------------------------- */
 
 #define ADJ_OFFSET(off,adj) (((off)==OFFSET_NONE) ? OFFSET_NONE : ((off)+(adj)))
@@ -58,12 +60,15 @@ static os_vm_size_t real_page_size_difference=0;
 
 void os_init()
 {
-    void sunos_segv_handler();
+    char *empty_file=getenv("CMUCL_EMPTYFILE");
+
+    if(empty_file==NULL)
+	empty_file=EMPTYFILE;
+
+    empty_fd=open(empty_file,O_RDONLY|O_CREAT);
+    unlink(empty_file);
 
     zero_fd=open(ZEROFILE,O_RDONLY);
-
-    empty_fd=open(EMPTYFILE,O_RDONLY|O_CREAT);
-    unlink(EMPTYFILE);
 
     os_vm_page_size=getpagesize();
 
@@ -660,15 +665,33 @@ caddr_t addr;
      * note that we check for a gc-trigger hit even if it's not a PROT error
      */
     else if(!maybe_gc(context)){
-	if(code == SEGV_NOMAP)
-	    fprintf(stderr, "segv_handler: No mapping fault: 0x%08x\n",addr);
-	else if (SEGV_CODE(code) == SEGV_OBJERR) {
+	static int nomap_count=0;
+
+	if(code==SEGV_NOMAP){
+	    if(nomap_count==0){
+		fprintf(stderr,
+			"segv_handler: No mapping fault: 0x%08x\n",addr);
+		nomap_count++;
+	    }else{
+		/*
+		 * There should be higher-level protection against stack
+		 * overflow somewhere, but at least this prevents infinite
+		 * puking of error messages...
+		 */
+		fprintf(stderr,
+			"segv_handler: Recursive no mapping fault (stack overflow?)\n");
+		exit(-1);
+	    }
+	}else if(SEGV_CODE(code)==SEGV_OBJERR){
 	    extern int errno;
 	    errno=SEGV_ERRNO(code);
 	    perror("segv_handler: Object error");
 	}
 
 	interrupt_handle_now(sig,code,context);
+
+	if(code==SEGV_NOMAP)
+	    nomap_count--;
     }
 }
 
