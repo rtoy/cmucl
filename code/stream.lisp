@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.15 1992/12/11 15:56:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.16 1993/02/10 22:17:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1187,7 +1187,7 @@
 
 (defun case-frob-upcase-out (stream char)
   (declare (type case-frob-stream stream)
-	   (type base-character char))
+	   (type base-char char))
   (let ((target (case-frob-stream-target stream)))
     (funcall (stream-out target) target (char-upcase char))))
 
@@ -1208,7 +1208,7 @@
 
 (defun case-frob-downcase-out (stream char)
   (declare (type case-frob-stream stream)
-	   (type base-character char))
+	   (type base-char char))
   (let ((target (case-frob-stream-target stream)))
     (funcall (stream-out target) target (char-downcase char))))
 
@@ -1229,7 +1229,7 @@
 
 (defun case-frob-capitalize-out (stream char)
   (declare (type case-frob-stream stream)
-	   (type base-character char))
+	   (type base-char char))
   (let ((target (case-frob-stream-target stream)))
     (cond ((alphanumericp char)
 	   (funcall (stream-out target) target (char-upcase char))
@@ -1267,7 +1267,7 @@
 
 (defun case-frob-capitalize-aux-out (stream char)
   (declare (type case-frob-stream stream)
-	   (type base-character char))
+	   (type base-char char))
   (let ((target (case-frob-stream-target stream)))
     (cond ((alphanumericp char)
 	   (funcall (stream-out target) target (char-downcase char)))
@@ -1305,7 +1305,7 @@
 
 (defun case-frob-capitalize-first-out (stream char)
   (declare (type case-frob-stream stream)
-	   (type base-character char))
+	   (type base-char char))
   (let ((target (case-frob-stream-target stream)))
     (cond ((alphanumericp char)
 	   (funcall (stream-out target) target (char-upcase char))
