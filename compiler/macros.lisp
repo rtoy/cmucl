@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.36 1993/07/21 14:36:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.37 1993/08/06 13:12:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -785,7 +785,7 @@
   may be used to determine the name equality predicate."
   (once-only ((n-res `(assoc ,name (,(symbolicate "LEXENV-" slot)
 				    *lexical-environment*)
-			     ,@(when test `(:test ,test)))))
+			     :test ,(or test '#'eq))))
     `(if ,n-res
 	 (values (cdr ,n-res) t)
 	 (values nil nil))))
