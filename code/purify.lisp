@@ -31,9 +31,7 @@
   (setq *already-maybe-gcing* t)
   ;;
   ;; Move symbols to static space, constants to read-only space.
-  #| But don't until it works...
   (localify root-structures)
-  |#
   ;;
   ;; Move everything else to either static or read-only space, depending
   ;; on type.
@@ -111,11 +109,10 @@
 ;;;
 (defmacro inlinep (sym)
   `(or (info function source-transform ,sym)
-       (and (boundp 'c::*function-info*)
-	    (let ((info (gethash ,sym c::*function-info*)))
-	      (and info
-		   (or (c::function-info-templates info)
-		       (c::function-info-ir2-convert info)))))))
+       (let ((info (info function info ,sym)))
+	 (and info
+	      (or (c::function-info-templates info)
+		  (c::function-info-ir2-convert info))))))
 
 
 ;;; Next-Symbol, Next-Cons  --  Internal
@@ -272,29 +269,49 @@
   (unless (purep fun)
     (let ((def (ecase (%primitive get-vector-subtype fun)
 		 (#.%function-entry-subtype
+		  (transport-function-object fun)
 		  (%primitive header-ref fun %function-entry-constants-slot))
 		 (#.%function-closure-subtype
-		  (%primitive header-ref
-			      (%primitive header-ref fun %function-name-slot)
-			      %function-entry-constants-slot))
+		  (let ((entry (%primitive header-ref fun
+					   %function-name-slot)))
+		    (transport-function-object entry)
+		    (%primitive header-ref entry
+				%function-entry-constants-slot)))
 		 (#.%function-funcallable-instance-subtype
 		  nil))))
-      (when def
-	(do ((i %function-constants-constants-offset (1+ i))
-	     (length (%primitive header-length def)))
-	    ((= i length))
-	  (let ((const (%primitive header-ref def i)))
-	    (typecase const
-	      (symbol
-	       (unless (zerop (logand worthwhile-bit (symbol-bits const)))
-		 (transport-symbol const)))
-	      (cons
-	       (transport-cons const))
-	      (compiled-function
-	       (transport-function const))
-	      (simple-vector
-	       (transport-g-vector const)))))))))
+      (when (and def (not (purep def)))
+	(let ((length (%primitive header-length def)))
+	  (transport-function-object def)
+	  (do ((i %function-constants-constants-offset (1+ i)))
+	      ((= i length))
+	    (let ((const (%primitive header-ref def i)))
+	      (typecase const
+		(symbol
+		 (unless (zerop (logand worthwhile-bit (symbol-bits const)))
+		   (transport-symbol const)))
+		(cons
+		 (transport-cons const))
+		(compiled-function
+		 (transport-function const))
+		(simple-vector
+		 (transport-g-vector const))))))))))
 
+
+;;; TRANSPORT-FUNCTION-OBJECT  --  Internal
+;;;
+;;;    Copy a function object into read-only space.  This only moves the
+;;; function (entry or constants) object itself, and lets GC scavenge.
+;;;
+(defun transport-function-entry (fun)
+  (%primitive set-allocation-space %read-only-space)
+  (let* ((len (%primitive header-length fun))
+	 (res (%primitive alloc-function len)))
+    (%primitive set-vector-subtype res (%primitive get-vector-subtype fun))
+    (dotimes (i len)
+      (%primitive header-set res i (%primitive header-ref fun i)))
+    (poke fun (%primitive make-immediate-type res %gc-forward-type)))
+  (%primitive set-allocation-space %static-space))
+ 
 
 ;;; Transport-Cons  --  Internal
 ;;;
@@ -307,19 +324,19 @@
     (let* ((free-ptr-loc (free-pointer-location %list-type %read-only-space))
 	   (clean-ptr (peek free-ptr-loc)))
       (loop
-       (loop
-	(let ((new (cons (car cons) (cdr cons))))
-	  (poke cons (%primitive make-immediate-type new %gc-forward-type))
-	  (setq cons (cdr cons))
-	  (when (or (atom cons) (purep cons)) (return nil))))
-       (let ((free-ptr (peek free-ptr-loc)))
-	 (loop
-	  (when (eq clean-ptr free-ptr)
-	    (%primitive set-allocation-space %static-space)
-	    (return-from transport-cons nil))
-	  (setq cons (car clean-ptr))
-	  (setq clean-ptr (next-cons clean-ptr))
-	  (unless (or (atom cons) (purep cons)) (return nil))))))))
+	(loop
+	  (let ((new (cons (car cons) (cdr cons))))
+	    (poke cons (%primitive make-immediate-type new %gc-forward-type))
+	    (setq cons (cdr cons))
+	    (when (or (atom cons) (purep cons)) (return nil))))
+	(let ((free-ptr (peek free-ptr-loc)))
+	  (loop
+	    (when (eq clean-ptr free-ptr)
+	      (%primitive set-allocation-space %static-space)
+	      (return-from transport-cons nil))
+	    (setq cons (car clean-ptr))
+	    (setq clean-ptr (next-cons clean-ptr))
+	    (unless (or (atom cons) (purep cons)) (return nil))))))))
 
 ;;; Transport-G-Vector  --  Internal
 ;;;
@@ -394,33 +411,14 @@
   ;; Do anything else that wants to be done...
   (do-allocated-symbols (sym %dynamic-space)
     ;;
-    ;; Move some selected property values into read-only space.
-    (macrolet ((movec (prop)
-		 `(let ((val (get sym ',prop)))
-		    (when val (transport-cons val))))
-	       (movev (prop)
-		 `(let ((val (get sym ',prop)))
-		    (when val (transport-g-vector val t)))))
-      (movec inline-expansion)
-      (movec clc::clc-transforms)
-      (movec clc::clc-args)
-      (movev %structure-definition)
-      (movev alien-variable)
-      (movev alien-stack-info)
-      (movev alien-operator-info)
-      (movev enumeration-info))
-    ;;
     ;; Move some types of variable value...
     (when (boundp sym)
       (let ((val (symbol-value sym)))
 	(cond ((purep val))
-	      ((get sym '%constant)
+	      ((eq (info variable kind sym) :constant)
 	       (typecase val
 		 (cons (transport-cons val))
-		 (simple-vector (transport-g-vector val t))))
-	      ((and (structurep val)
-		    (memq (svref val 0) '(clc::%instruction alien-value)))
-	       (transport-g-vector val t)))))
+		 (simple-vector (transport-g-vector val t)))))))
     ;;
     ;; Move any interned symbol that's left...
     (unless (or (purep sym) (not (symbol-package sym)))
@@ -448,12 +446,6 @@
 ;;; referenced and doing a GC.  We also blow away random debug info.
 
 
-(defparameter garbage-properties
-  '(%constant globally-special %constant %fun-documentation %var-documentation
-	      %struct-documentation %type-documentation
-	      %setf-documentation %documentation
-	      setf-method-expander setf-inverse))
-
 ;;; Save-Stand-Alone-Lisp  --  Public
 ;;;
 (defun save-stand-alone-lisp (file root-function)
@@ -467,7 +459,6 @@
     (force-output)
     ;;
     ;; Mark all external symbols so that we can find them later...
-    ;; We could do this with a property, but this is more fun.
     (dolist (p all-packages)
       (do-external-symbols (s p)
 	(setf (symbol-bits s) 1)))
@@ -476,6 +467,7 @@
     (dolist (p all-packages)
       (make-package-hashtable 10 (package-internal-symbols p))
       (make-package-hashtable 10 (package-external-symbols p)))
+    #|
     ;;
     ;; Nuke random garbage on all symbols...
     (do-allocated-symbols (s %dynamic-space)
@@ -486,24 +478,24 @@
 	  (cond ((compiled-function-p fun)
 		 (%primitive header-set fun %function-arg-names-slot ()))
 		((and (consp fun) (compiled-function-p (cdr fun)))
-		 (%primitive header-set (cdr fun) %function-arg-names-slot ())))))
+		 (%primitive header-set (cdr fun) %function-arg-names-slot
+			     ()))))
+    
       ;;
       ;; Nuke unnecessary properties...
       (when (symbol-plist s)
 	(dolist (p garbage-properties)
 	  (when (get s p)
-	    (remprop s p)))))
+	    (remprop s p))))))
+    |#
+      
     (write-string "]
 [GC'ing it away")
     (force-output)
     ;;
     ;; GC it away....
     (gc nil)
-    (sleep 30)
-    (write-string "]
-[Snoozing for a minute to let dirty pages get written")
-    (force-output)
-    (sleep 60)
+    (write-string "]")
     ;;
     ;; Rebuild packages...
     (write-string "]
@@ -529,10 +521,6 @@
 	(remprop s 'purify-symbol-bits)))
     (write-line "]")
     (purify :root-structures (list root-function))
-    (write-string "[Snoozing for two minutes to let dirty pages get written")
-    (force-output)
-    (sleep 120)
-    (write-line "]")
     (if (save file)
 	(quit)
 	(funcall root-function))))
