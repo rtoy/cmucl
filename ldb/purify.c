@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.1 1990/07/01 04:51:15 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.2 1990/07/02 05:21:04 wlott Exp $ */
 
 
 #include <mach.h>
@@ -396,6 +396,13 @@ static lispobj *pscav(addr, nwords)
               case type_Sap:
                 /* It's an unboxed simple object. */
                 count = HeaderValue(thing)+1;
+                break;
+
+              case type_SimpleVector:
+                if (HeaderValue(thing) == subtype_VectorValidHashing)
+                    *addr = (subtype_VectorMustRehash<<type_Bits) |
+                        type_SimpleVector;
+                count = 1;
                 break;
 
               case type_SimpleString:

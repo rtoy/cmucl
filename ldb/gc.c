@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.9 1990/07/01 04:40:45 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.10 1990/07/02 05:20:29 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1084,6 +1084,16 @@ lispobj *where;
 	return nwords;
 }
 
+static
+scav_vector(where, object)
+lispobj *where, object;
+{
+    if (HeaderValue(object) == subtype_VectorValidHashing)
+        *where = (subtype_VectorMustRehash<<type_Bits) | type_SimpleVector;
+
+    return 1;
+}
+
 
 static lispobj
 trans_vector(object)
@@ -1099,14 +1109,6 @@ lispobj object;
 
 	length = FIXNUM_TO_INT(vector->length);
 	nwords = CEILING(length + 2, 2);
-
-	/* When transporting an EQ hashtable, GC must change subtype */
-	/* so that the hash functions will know to rehash it.  */
-
-	subtype = HeaderValue(vector->header);
-	if (subtype == subtype_VectorValidHashing)
-		vector->header = (subtype_VectorMustRehash<<8) |
-			type_SimpleVector;
 
 	return copy_object(object, nwords);
 }
@@ -1637,7 +1639,7 @@ gc_init()
 	scavtab[type_SimpleArray] = scav_boxed;
 	scavtab[type_SimpleString] = scav_string;
 	scavtab[type_SimpleBitVector] = scav_vector_bit;
-	scavtab[type_SimpleVector] = scav_boxed;
+	scavtab[type_SimpleVector] = scav_vector;
 	scavtab[type_SimpleArrayUnsignedByte2] = scav_vector_unsigned_byte_2;
 	scavtab[type_SimpleArrayUnsignedByte4] = scav_vector_unsigned_byte_4;
 	scavtab[type_SimpleArrayUnsignedByte8] = scav_vector_unsigned_byte_8;
