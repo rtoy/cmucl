@@ -45,6 +45,9 @@ inst breakpoint_install(code_obj, pc_offset)
 #ifdef sparc
 		      trap_Breakpoint
 #endif
+#ifdef ibmrt
+		      0 \* hack *\
+#endif
 	);
 }
 
