@@ -146,7 +146,8 @@
 ;;;
 (define-vop (allocate-frame)
   (:results (res :scs (any-reg descriptor-reg)) (nfp))
-  (:ignore nfp)
+  (:info callee)
+  (:ignore nfp callee)
   (:generator 2
     (inst lr res sp-tn)
     (inst cal sp-tn sp-tn (* 4 (sb-allocated-size 'stack)))))
