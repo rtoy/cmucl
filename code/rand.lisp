@@ -20,10 +20,10 @@
 
 (defconstant random-const-a 8373)
 (defconstant random-const-c 101010101)
-(defconstant random-upper-bound 134217726)
+(defconstant random-upper-bound (1- most-positive-fixnum))
 (defconstant random-max 54)
+(defconstant %fixnum-length (integer-length most-positive-fixnum))
 (defvar rand-seed 0)
-(defvar *random-state*)
 
 (defstruct (random-state (:constructor make-random-object))
   (j 24 :type integer)
@@ -39,6 +39,10 @@
 (defun rand1 ()
    (setq rand-seed (mod (+ (* rand-seed random-const-a) random-const-c)
 			(1+ random-upper-bound))))
+
+
+(defvar *random-state* (make-random-object))
+
 
 ;;; rand3  --  Internal
 ;;;
@@ -61,21 +65,6 @@
 				    (if (= k 0) random-max (1- k)))))))
 	    (if (minusp a) (- a) (- random-upper-bound a))))))
 
-
-(defun random-init ()
-  (setq *random-state*
-	(make-random-object :seed
-	 (make-array (1+ random-max) :initial-contents
-		     '(45117816 133464727 86324180 99419799 68851957 87250180
-		      52971860 84081967 30854110 121122797 70449044 18801152
-		      45149898 15881380 27398356 117706009 49915564 80620628
-		      120974070 98193932 43883764 53717012 100954825 82579490
-		      17280729 118523949 42282975 127220348 6288263 56575578
-		      2474156 47934425 561006 21989698 74046730 105055318
-		      113363907 48749716 78183593 109613585 37323232 65101428
-		      46453209 76906562 5371267 86544820 33922642 60765033
-		      41889257 77176406 38775255 78514879 72553872 66916641
-		      100613180)))))
 
 (defun copy-state (cur-state)
   (let ((state (make-random-object
@@ -111,11 +100,7 @@
     (float
      (unless (plusp arg)
        (error "Non-positive argument, ~A, to RANDOM." arg))
-     (let ((arg-length (typecase arg
-			 (short-float %short-float-mantissa-length)
-			 (single-float %single-float-mantissa-length)
-			 (double-float %double-float-mantissa-length)
-			 (long-float %long-float-mantissa-length))))
+     (let ((arg-length (float-digits arg)))
        (* arg (/ (float (random (ash 2 arg-length) state))
 		 (float (ash 2 arg-length))))))
     (integer
