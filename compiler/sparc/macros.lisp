@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.15 2001/09/24 15:59:43 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.16 2002/05/10 14:48:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.15 2001/09/24 15:59:43 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.16 2002/05/10 14:48:24 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -169,6 +169,28 @@
 
 ;;;; Storage allocation:
 
+;; Allocation macro
+;;
+;; This macro does the appropriate stuff to allocate space.
+;;
+;; The allocated space is stored in RESULT-TN with the lowtag LOWTAG
+;; applied.  The amount of space to be allocated is SIZE bytes (which
+;; must be a multiple of the lisp object size).
+(defmacro allocation (result-tn size lowtag)
+  ;; We assume we're in a pseudo-atomic so the pseudo-atomic bit is
+  ;; set.  If the lowtag also has a 1 bit in the same position, we're all
+  ;; set.  Otherwise, we need to zap out the lowtag from alloc-tn, and
+  ;; then or in the lowtag.
+  `(if (logbitp (1- lowtag-bits) ,lowtag)
+     (progn
+       (inst or ,result-tn alloc-tn ,lowtag)
+       (inst add alloc-tn ,size))
+     (progn
+       (inst andn ,result-tn alloc-tn lowtag-mask)
+       (inst or ,result-tn ,lowtag)
+       (inst add alloc-tn ,size))))
+
+
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size)
 				 &body body)
   "Do stuff to allocate an other-pointer object of fixed Size with a single
@@ -178,8 +200,8 @@
   initializes the object."
   (once-only ((result-tn result-tn) (temp-tn temp-tn)
 	      (type-code type-code) (size size))
-    `(pseudo-atomic (:extra (pad-data-block ,size))
-       (inst or ,result-tn alloc-tn other-pointer-type)
+    `(pseudo-atomic ()
+       (allocation ,result-tn (pad-data-block ,size) other-pointer-type)
        (inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
        (storew ,temp-tn ,result-tn 0 other-pointer-type)
        ,@body)))
@@ -466,7 +488,6 @@
        ,@forms
        ;; Reset the pseudo-atomic flag
        (without-scheduling ()
-	 #+nil (inst taddcctv alloc-tn (- ,n-extra 4))
 	;; Remove the pseudo-atomic flag
 	(inst add alloc-tn (- ,n-extra 4))
 	;; Check to see if pseudo-atomic interrupted flag is set (bit 0 = 1)

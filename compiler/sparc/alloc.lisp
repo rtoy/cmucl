@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.12 2001/05/18 16:22:53 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.13 2002/05/10 14:48:23 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,9 +46,8 @@
 			temp)))))
 	     (let* ((cons-cells (if star (1- num) num))
 		    (alloc (* (pad-data-block cons-size) cons-cells)))
-	       (pseudo-atomic (:extra alloc)
-		 (inst andn res alloc-tn lowtag-mask)
-		 (inst or res list-pointer-type)
+	       (pseudo-atomic ()
+		 (allocation res alloc list-pointer-type)
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (storew (maybe-load (tn-ref-tn things)) ptr
@@ -80,6 +79,7 @@
 	 (unboxed-arg :scs (any-reg)))
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:temporary (:scs (non-descriptor-reg)) size)
   (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
@@ -92,9 +92,8 @@
       ;; Note: we don't have to subtract off the 4 that was added by
       ;; pseudo-atomic, because oring in other-pointer-type just adds
       ;; it right back.
-      (inst or result alloc-tn other-pointer-type)
-      (inst add alloc-tn boxed)
-      (inst add alloc-tn unboxed)
+      (inst add size boxed unboxed)
+      (allocation result size other-pointer-type)
       (inst sll ndescr boxed (- type-bits word-shift))
       (inst or ndescr code-header-type)
       (storew ndescr result 0 other-pointer-type)
@@ -123,9 +122,8 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (let ((size (+ length closure-info-offset)))
-      (pseudo-atomic (:extra (pad-data-block size))
-	(inst andn result alloc-tn lowtag-mask)
-	(inst or result function-pointer-type)
+      (pseudo-atomic ()
+        (allocation result (pad-data-block size) function-pointer-type)
 	(inst li temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
     (storew function result closure-function-slot function-pointer-type)))
@@ -158,12 +156,8 @@
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
-    (pseudo-atomic (:extra (pad-data-block words))
-      (cond ((logbitp (1- lowtag-bits) lowtag)
-	     (inst or result alloc-tn lowtag))
-	    (t
-	     (inst andn result alloc-tn lowtag-mask)
-	     (inst or result lowtag)))
+    (pseudo-atomic ()
+      (allocation result (pad-data-block words) lowtag)
       (when type
 	(inst li temp (logior (ash (1- words) type-bits) type))
 	(storew temp result 0 lowtag)))))
@@ -175,6 +169,7 @@
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (any-reg)) bytes header)
+  (:temporary (:scs (descriptor-reg)) temp)
   (:generator 6
     (inst add bytes extra (* (1+ words) word-bytes))
     (inst sll header bytes (- type-bits 2))
@@ -182,11 +177,6 @@
     (inst and bytes (lognot lowtag-mask))
     (pseudo-atomic ()
       ;; Need to be careful if the lowtag and the pseudo-atomic flag
-      ;; are not compatible.
-      (cond ((logbitp (1- lowtag-bits) lowtag)
-	     (inst or result alloc-tn lowtag))
-	    (t
-	     (inst andn result alloc-tn lowtag-mask)
-	     (inst or result lowtag)))
-      (storew header result 0 lowtag)
-      (inst add alloc-tn alloc-tn bytes))))
+      ;; are not compatible
+      (allocation result bytes lowtag)
+      (storew header result 0 lowtag))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.29 2001/09/25 21:28:04 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.30 2002/05/10 14:48:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1189,12 +1189,11 @@ default-value-8
     (pseudo-atomic ()
       (assemble ()
 	;; Allocate a cons (2 words) for each item.
-	(inst andn result alloc-tn lowtag-mask)
-	(inst or result list-pointer-type)
-	(move dst result)
 	(inst sll temp count 1)
+	(allocation result temp list-pointer-type)
 	(inst b enter)
-	(inst add alloc-tn temp)
+	(move dst result)
+
 
 	;; Compute the next cons and store it in the current one.
 	LOOP
