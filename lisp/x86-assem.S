@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.11 1998/02/19 15:19:10 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.12 1998/02/21 16:52:20 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -243,8 +243,8 @@ GNAME(fpu_save):
 	ret
 	.size	GNAME(fpu_save),.-GNAME(fpu_save)
 
-	.global	_fpu_restore
-	.type	_fpu_restore,@function
+	.global	GNAME(fpu_restore)
+	.type	GNAME(fpu_restore),@function
 	.align	2,0x90
 GNAME(fpu_restore):
 	movl	4(%esp),%eax
