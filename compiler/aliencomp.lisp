@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.13 1991/04/22 18:24:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.14 1991/04/22 19:30:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -540,10 +540,11 @@
 	(assert (null args)))
 
       (let ((results (and return-type (make-call-out-result-tn return-type))))
+	(unless (listp results)
+	  (setf results (list results)))
 	(vop* call-out call block
 	      ((reference-tn-list arg-tns nil))
-	      ((reference-tn-list (if (listp results) results (list results))
-				  t))
+	      ((reference-tn-list results t))
 	      name)
 	(vop dealloc-number-stack-space call block stack-frame-size)
 	(move-continuation-result call block results cont)))))
