@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.36 1998/03/21 07:55:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.37 1999/09/06 06:49:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,16 +57,23 @@
     (unless (array-type-p array-type)
       (give-up))
     (let ((dims (array-type-dimensions array-type)))
-      (when (or (atom dims) (= (length dims) 1))
+      (when (and (consp dims) (= (length dims) 1))
 	(give-up))
-      (let ((el-type (array-type-element-type array-type))
-	    (total-size (if (member '* dims)
-			    '*
-			    (reduce #'* dims))))
-	`(data-vector-ref (truly-the (simple-array ,(type-specifier el-type)
-						   (,total-size))
-				     (%array-data-vector array))
-			  index)))))
+      (let* ((el-type (array-type-element-type array-type))
+	     (total-size (if (or (atom dims) (member '* dims))
+			     '*
+			     (reduce #'* dims)))
+	     (vector-type `(simple-array ,(type-specifier el-type)
+					 (,total-size))))
+	(if (atom dims)
+	    `(data-vector-ref (truly-the ,vector-type
+					 (if (array-header-p array)
+					     (%array-data-vector array)
+					     array))
+			      index)
+	    `(data-vector-ref (truly-the ,vector-type
+					 (%array-data-vector array))
+			      index))))))
 
 (deftransform data-vector-set ((array index new-value)
 			       (simple-array t t))
@@ -74,17 +81,25 @@
     (unless (array-type-p array-type)
       (give-up))
     (let ((dims (array-type-dimensions array-type)))
-      (when (or (atom dims) (= (length dims) 1))
+      (when (and (consp dims) (= (length dims) 1))
 	(give-up))
-      (let ((el-type (array-type-element-type array-type))
-	    (total-size (if (member '* dims)
-			    '*
-			    (reduce #'* dims))))
-	`(data-vector-set (truly-the (simple-array ,(type-specifier el-type)
-						   (,total-size))
-				     (%array-data-vector array))
-			  index
-			  new-value)))))
+      (let* ((el-type (array-type-element-type array-type))
+	     (total-size (if (or (atom dims) (member '* dims))
+			     '*
+			     (reduce #'* dims)))
+	     (vector-type `(simple-array ,(type-specifier el-type)
+					 (,total-size))))
+	(if (atom dims)
+	    `(data-vector-set (truly-the ,vector-type
+					 (if (array-header-p array)
+					     (%array-data-vector array)
+					     array))
+			      index
+			      new-value)
+	    `(data-vector-set (truly-the ,vector-type
+					 (%array-data-vector array))
+			      index
+			      new-value))))))
 
 
 ;;; Transforms for getting at arrays of unsigned-byte n when n < 8.
