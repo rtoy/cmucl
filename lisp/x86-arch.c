@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.22 2004/07/07 15:03:12 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.23 2004/07/08 03:31:15 rtoy Exp $ 
  *
  */
 
@@ -43,7 +43,7 @@ void arch_skip_instruction(os_context_t *context)
 {
   int vlen,code;
 
-  DPRINTF(0,(stderr,"[arch_skip_inst at %x>]\n", SC_PC(context)));
+  DPRINTF(0,(stderr,"[arch_skip_inst at %lx>]\n", SC_PC(context)));
 
   /* Get and skip the lisp error code. */
   code = *(char*) SC_PC(context)++;
@@ -72,7 +72,7 @@ void arch_skip_instruction(os_context_t *context)
       break;
     }
 
-  DPRINTF(0,(stderr,"[arch_skip_inst resuming at %x>]\n", SC_PC(context)));
+  DPRINTF(0,(stderr,"[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
 }
 
 unsigned char * arch_internal_error_arguments(os_context_t *context)

@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.57 2004/07/07 20:31:06 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.58 2004/07/08 03:31:15 rtoy Exp $
  *
  */
 
@@ -521,6 +521,7 @@ static int count_dont_move_pages(void)
  * Work through the pages and add up the number of bytes used for the
  * given generation.
  */
+#ifdef GC_ASSERTIONS
 static int generation_bytes_allocated (int generation)
 {
   int i;
@@ -536,6 +537,7 @@ static int generation_bytes_allocated (int generation)
   }
   return bytes_allocated;
 }
+#endif
 
 /*
  * Return the average age of the memory in a generation.
@@ -5077,7 +5079,7 @@ static void scavenge_thread_stacks(void)
 	  unsigned long stack_pointer = stack->data[0];
 	  if ((char *) stack_pointer < (char *) control_stack ||
 	      (char *) stack_pointer > (char *) control_stack_end)
-	    fprintf(stderr, "*E Invalid stack pointer %x\n", stack_pointer);
+	    fprintf(stderr, "*E Invalid stack pointer %lx\n", stack_pointer);
 	  if ((char *) stack_pointer > (char *) control_stack &&
 	      (char *) stack_pointer < (char *) control_stack_end) {
 	    unsigned int length = ((int) control_stack_end - stack_pointer) / sizeof(lispobj);
@@ -6099,7 +6101,7 @@ static void write_protect_generation_pages(int generation)
 
 
 static void
-scavenge_interrupt_handlers()
+scavenge_interrupt_handlers(void)
 {
   int i;
   
