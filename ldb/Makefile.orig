@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.28 1992/03/02 04:26:53 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.29 1992/03/06 12:39:06 wlott Exp $ */
 INCLS = -I. -I/usr/misc/.X11/include
 
 SRCS = ldb.c egets.c coreparse.c alloc.c monitor.c print.c \
@@ -136,6 +136,9 @@ socket.o: socket.c
 lisp.h:
 	@echo "You must run genesis to create lisp.h!"
 	@false
+
+clean:
+	rm -f lisp.h os.c arch.c assem.s undefineds *.o ldb ldb.map
 
 depend: depends
 
