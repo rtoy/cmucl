@@ -35,13 +35,8 @@
 
 (export '(compile-for-eval lambda-eval-info-frame-size
 	  lambda-eval-info-args-passed lambda-eval-info-entries
-	  entry-node-info-st-top entry-node-info-nlx-tag))
-
-;;; EVAL will pick off some special forms; for example, global variable
-;;; references, c::package-frobbers, etc.  I note this because the compilation
-;;; stuff EVAL's these forms instead of compiling code for them.
-;;;
-
+	  lambda-eval-info-function entry-node-info-st-top
+	  entry-node-info-nlx-tag))
 
 
 ;;; COMPILE-FOR-EVAL -- Public.
@@ -113,7 +108,8 @@
 					   (frame-size args-passed entries)))
   frame-size		;Number of stack locations needed to hold locals.
   args-passed		;Number of referenced arguments passed to lambda.
-  entries)		;A-list mapping entry nodes to stack locations.
+  entries		;A-list mapping entry nodes to stack locations.
+  (function nil))	;A function object corresponding to this lambda.
 
 (defun print-lambda-eval-info (obj str n)
   (declare (ignore n obj))
