@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.9 1999/11/29 17:04:07 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.10 2000/01/19 18:15:15 dtc Exp $
  *
  */
 
@@ -118,27 +118,9 @@ void os_set_context(void)
 {
 }
 
-int do_mmap(os_vm_address_t *addr, os_vm_size_t len, int flags)
-{
-  /* We _must_ have the memory where we want it... */
-  os_vm_address_t old_addr = *addr;
-
-  *addr = mmap(*addr, len, OS_VM_PROT_ALL, flags, -1, 0);
-  if ((old_addr != NULL && *addr != old_addr) || 
-      *addr == (os_vm_address_t) -1)
-    {
-      fprintf(stderr, "Error in allocating memory, do you have more then 16MB of memory+swap?\n");
-      perror("mmap");
-      return 1;
-    }
- return 0;
-}
-
 os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
-  int flags = MAP_PRIVATE | MAP_ANONYMOUS;
-  os_vm_address_t oa = addr;
-  os_vm_size_t olen = len;
+  int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
 
   if (addr)
     flags |= MAP_FIXED;
@@ -146,33 +128,18 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
     flags |= MAP_VARIABLE;
 
   DPRINTF(0, (stderr, "os_validate %x %d => ", addr, len));
-  if (addr)
+
+  addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
+
+  if(addr == (os_vm_address_t) -1)
     {
-      do {
-	if (len <= 0x1000000 )
-	  {
-	    if (do_mmap(&addr, len, flags))
-	      return NULL;
-	    len = 0;
-	  }
-	else
-	  {
-	    len = len - 0x1000000;
-	    if (do_mmap(&addr, 0x1000000, flags))
-		return NULL;
-	    addr += 0x1000000;
-	  }
-      }
-      while (len > 0);
+      perror("mmap");
+      return NULL;
     }
-  else
-    {
-      if (do_mmap(&addr, len, flags))
-	  return NULL;
-      return addr;
-    }
+
   DPRINTF(0, (stderr, "%x\n", addr));
-  return oa;
+
+  return addr;
 }
 
 void os_invalidate(os_vm_address_t addr, os_vm_size_t len)
