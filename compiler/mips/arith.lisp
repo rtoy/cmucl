@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.28 1990/07/03 06:07:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.29 1990/07/03 17:27:59 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -379,106 +379,74 @@
   (:affected)
   (:policy :fast-safe))
 
+(deftype integer-with-a-bite-out (s bite)
+  (cond ((eq s '*) 'integer)
+	((and (integerp s) (> s 1))
+	 (let ((bound (ash 1 (1- s))))
+	   `(integer ,(- bound) ,(- bound bite 1))))
+	(t
+	 (error "Bad size specified for SIGNED-BYTE type specifier: ~S." s))))
+
 (define-vop (fast-conditional/fixnum fast-conditional)
   (:args (x :scs (any-reg))
 	 (y :scs (any-reg)))
   (:arg-types tagged-num tagged-num)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:note "inline fixnum comparison"))
 
-#+nil
 (define-vop (fast-conditional-c/fixnum fast-conditional/fixnum)
-  (:arg-types tagged-num (:constant (signed-byte 14)))
+  (:args (x :scs (any-reg)))
+  (:arg-types tagged-num (:constant (integer-with-a-bite-out 14 #.(fixnum 1))))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:info target not-p y))
 
 (define-vop (fast-conditional/signed fast-conditional)
   (:args (x :scs (signed-reg))
 	 (y :scs (signed-reg)))
   (:arg-types signed-num signed-num)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:note "inline (signed-byte 32) comparison"))
 
-#+nil
 (define-vop (fast-conditional-c/signed fast-conditional/signed)
-  (:arg-types tagged-num (:constant (signed-byte 16)))
+  (:args (x :scs (signed-reg)))
+  (:arg-types signed-num (:constant (integer-with-a-bite-out 16 1)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:info target not-p y))
 
 (define-vop (fast-conditional/unsigned fast-conditional)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg)))
   (:arg-types unsigned-num unsigned-num)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:note "inline (unsigned-byte 32) comparison"))
 
-#+nil
 (define-vop (fast-conditional-c/unsigned fast-conditional/unsigned)
-  (:arg-types tagged-num (:constant (unsigned-byte 15)))
+  (:args (x :scs (unsigned-reg)))
+  (:arg-types unsigned-num (:constant (and (integer-with-a-bite-out 16 1)
+					   unsigned-byte)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:info target not-p y))
 
 
 (defmacro define-conditional-vop (translate &rest generator)
   `(progn
-     (define-vop (,(intern (concatenate 'simple-string
-					"FAST-IF-"
-					(string translate)
-					"/FIXNUM"))
-		  fast-conditional/fixnum)
-       (:translate ,translate)
-       (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
-       (:generator 4
-	 (let ((signed t))
-	   ,@generator)))
-     #+nil
-     (define-vop (,(intern (concatenate 'simple-string
-					"FAST-IF-"
-					(string translate)
-					"-C/FIXNUM"))
-		  fast-conditional-c/fixnum)
-       (:translate ,translate)
-       (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
-       (:generator 4
-	 (let ((signed t)
-	       (y (fixnum y)))
-	   ,@generator)))
-     (define-vop (,(intern (concatenate 'simple-string
-					"FAST-IF-"
-					(string translate)
-					"/SIGNED"))
-		  fast-conditional/signed)
-       (:translate ,translate)
-       (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
-       (:generator 5
-	 (let ((signed t))
-	   ,@generator)))
-     #+nil
-     (define-vop (,(intern (concatenate 'simple-string
-					"FAST-IF-"
-					(string translate)
-					"-C/SIGNED"))
-		  fast-conditional-c/signed)
-       (:translate ,translate)
-       (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
-       (:generator 5
-	 (let ((signed t))
-	   ,@generator)))
-     (define-vop (,(intern (concatenate 'simple-string
-					"FAST-IF-"
-					(string translate)
-					"/UNSIGNED"))
-		  fast-conditional/unsigned)
-       (:translate ,translate)
-       (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
-       (:generator 5
-	 (let ((signed nil))
-	   ,@generator)))
-     #+nil
-     (define-vop (,(intern (concatenate 'simple-string
-					"FAST-IF-"
-					(string translate)
-					"-C/UNSIGNED"))
-		  fast-conditional-c/unsigned)
-       (:translate ,translate)
-       (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
-       (:generator 5
-	 (let ((signed nil))
-	   ,@generator)))))
+     ,@(mapcar #'(lambda (suffix cost signed)
+		   (unless (and (member suffix '(/fixnum -c/fixnum))
+				(eq translate 'eql))
+		     `(define-vop (,(intern (format nil "~:@(FAST-IF-~A~A~)"
+						    translate suffix))
+				   ,(intern
+				     (format nil "~:@(FAST-CONDITIONAL~A~)"
+					     suffix)))
+			(:translate ,translate)
+			(:generator ,cost
+			  (let* ((signed ,signed)
+				 (-c/fixnum ,(eq suffix '-c/fixnum))
+				 (y (if -c/fixnum (fixnum y) y)))
+			    ,@generator)))))
+	       '(/fixnum -c/fixnum /signed -c/signed /unsigned -c/unsigned)
+	       '(3 2 5 4 5 4)
+	       '(t t t t nil nil))))
 
 (define-conditional-vop <
   (cond ((and signed (eql y 0))
@@ -499,6 +467,14 @@
 	 (if not-p
 	     (inst blez x target)
 	     (inst bgtz x target)))
+	((integerp y)
+	 (let ((y (+ y (if -c/fixnum (fixnum 1) 1))))
+	   (if signed
+	       (inst slt temp x y)
+	       (inst sltu temp x y))
+	   (if not-p
+	       (inst bne temp zero-tn target)
+	       (inst beq temp zero-tn target))))
 	(t
 	 (if signed
 	     (inst slt temp y x)
@@ -508,7 +484,10 @@
 	     (inst bne temp zero-tn target))))
   (inst nop))
 
-(define-conditional-vop =
+;;; EQL/FIXNUM is funny because the first arg can be of any type, not just a
+;;; known fixnum.
+
+(define-conditional-vop eql
   (declare (ignore signed))
   (when (integerp y)
     (inst li temp y)
@@ -521,6 +500,34 @@
 
 
 
+(define-vop (fast-eql/fixnum fast-conditional)
+  (:args (x :scs (any-reg descriptor-reg))
+	 (y :scs (any-reg)))
+  (:arg-types * tagged-num)
+  (:note "inline fixnum comparison")
+  (:translate eql)
+  (:generator 2
+    (if not-p
+	(inst bne x y target)
+	(inst beq x y target))
+    (inst nop)))
+
+(define-vop (fast-eql-c/fixnum fast-conditional/fixnum)
+  (:args (x :scs (any-reg descriptor-reg)))
+  (:arg-types * (:constant (signed-byte 14)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
+  (:info target not-p y)
+  (:translate eql)
+  (:generator 3
+    (let ((y (cond ((eql y 0) zero-tn)
+		   (t
+		    (inst li temp (fixnum y))
+		    temp))))
+      (if not-p
+	  (inst bne x y target)
+	  (inst beq x y target))
+      (inst nop))))
+  
 
 ;;;; 32-bit logical operations
 
@@ -806,4 +813,3 @@
 (define-static-function two-arg-and (x y) :translate logand)
 (define-static-function two-arg-ior (x y) :translate logior)
 (define-static-function two-arg-xor (x y) :translate logxor)
-
