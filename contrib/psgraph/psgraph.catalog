@@ -1,0 +1,61 @@
+Name:
+   PSgrapher
+
+Description:
+   The PSgrapher is a set of Lisp routines that can be called to produce
+Postscript commands that display a directed acyclic graph.
+
+Author:
+   Joseph Bates.  Skef put the whole thing in the PSGRPAPH package and added
+functionality which allows the user to specify EQ, EQUAL, or EQUALP as the
+node equivalence function.  Bill made all exported symbols have stars on them.
+
+Address:
+   Carnegie-Mellon University
+   Computer Science Department
+   Pittsburgh, PA 15213
+
+Net Address:
+   Joseph.Bates@CS.CMU.EDU
+
+Copyright Status:
+   Public Domain.
+
+Files:
+   psgraph.lisp, psgraph.fasl, psgraph.doc, psgraph.log, psgraph.catalog
+
+How to Get:
+   The following unix command will copy the pertinent files into directory
+<spec>.
+   cp /afs/cs.cmu.edu/project/clisp/library/psgraph/* <spec>
+
+Portability:
+   Should run in any legal Common Lisp.  Requires Postscript for printing.
+
+Instructions:
+   See psgraph.doc.
+
+Bugs:
+   This code blindly outputs what the user gives it as node labels.  It should
+run through the output escaping any PS control characters.  For example, if
+node labels contain parentheses, your output PS file will not print.
+
+Examples:
+   Skef Wholey submitted this as a reasonable example:
+
+;;; I use this in my compiler so I can look at code trees without
+;;; crawling around them in the inspector.  The postsript previewer
+;;; groks the generated ps file, which is bitchin' marvy.
+
+   (defun code-graph-to-file (s file &optional shrink insert)
+     (let ((psgraph:*fontname* "Times-Roman")
+	   (psgraph:*fontsize* 8)
+	   (psgraph:*second-fontname* "Times-BoldItalic")
+	   (psgraph:*second-fontsize* 6)
+	   (psgraph:*boxgray* "0")
+	   (psgraph:*edgegray* "0")
+	   (psgraph:*extra-x-spacing* 30))
+       (with-open-file (*standard-output* file
+					  :direction :output
+					  :if-exists :supersede)
+	 (psgraph:psgraph s #'psg-children #'psg-info shrink insert #'eq))))

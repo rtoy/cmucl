@@ -1,0 +1,125 @@
+Here is a brief summary of how to use the PSgrapher.
+
+The PSgrapher is a set of Lisp routines that can be called to produce
+Postscript commands to display a directed acyclic graph.  It uses the same
+basic algorithm as the ISI Grapher.  It is slower than the ISI grapher, but
+produces much prettier output than using Xdump to copy an ISI Grapher screen
+image to a Postscript printer.  It also allows arbitrary information to be
+displayed with a node, and can print as many output pages as are necessary to
+accomodate large graphs (subject to Postscript printer limits, typically one or
+two thousand nodes).
+
+The PSgrapher is small enough and easy enough to use to be included in other
+systems without pain.  It is also free and not copyrighted.
+
+Copy the file /afs/cs/project/clisp/library/psgraph/psgraph.lisp to your
+directory.  It is written in Common Lisp, and has been tested on CMU Common
+Lisp on RTs and Lucid on SUNs.  All interfaces described below are exported
+from the "PSGRAPH" package.
+
+There are several useful global variables that can be modified and one function
+to be called.  The variables affect the style of the printed image, the
+function walks a graph and produces output.
+
+A graph is defined by a root node and a function for getting children of a
+node.  Nodes are named by Lisp objects, and these names are checked using a
+user-supplied test function (defaults to EQUAL) for purposes of walking the
+graph and topologically sorting it.  Typically one uses atoms to name nodes,
+for example in graphing an inheritence net one could use the class names as
+node names.
+
+To produce a graph call the function:
+    (psgraph:psgraph root-node-name
+		     child-function
+		     info-function
+		     &optional (shrink nil)
+		     &optional (insert nil)
+		     &optional (test #'equal))
+
+Root-node-name is a Lisp object naming the root of the graph (there must be
+exactly one root).
+
+Child-function takes a node name and returns a list of node names.
+
+Info-function takes a node name and returns a list of strings.  Each string
+shows up as one line in the printed form of the node, with the first string
+displayed in one font (determined by variables *fontname*, *fontsize*) and the
+others in another font (determined by variables *second-fontname*,
+*second-fontsize*).  Typically the first string is just the name of the node,
+eg, (string node-name).
+
+Shrink is a boolean.  It defaults to nil, and in this case the graph
+prints on as many pages as are needed to show the whole thing.  If shrink
+is t then the entire graph is squashed appropriately to fit on one page
+of output.
+
+Insert is a boolean.  It defaults to nil, and in this case the generated
+Postscript file contains commands to print the output.  If insert is t
+then the output file is always shrunk (shrink is t) and no commands are
+generated to print the page.  This means the resulting file can be included
+in Scribe files, for example, and Scribe can decide when to print the page.
+
+Test is a function that return whether two nodes are the same.
+
+After loading psgraph, one can play with the various global variables, all of
+which have string values (except for the two font size variables).  *fontname*,
+*fontsize*, *second-fontname*, *second-fontsize* are as described above.  They
+default to "Helvetica" in 10 point and "Helvetica-Oblique" in 8 point,
+respectively.  *boxgray* and *boxkind* determine how the boxes around nodes
+look.  *boxkind* is either "fill" or "stroke", for solid or outline boxes, and
+*boxgray* is "0" for solid black, "1" for solid white, or in between.  These
+default to ".2" and "stroke".
+
+Other variables:
+   *max-psnodes*
+   *extra-x-spacing*
+   *extra-y-spacing*
+   *edgewidth*
+   *edgegray*
+   *edgecap*
+   *textgray*
+   *pageheight*
+   *pagewidth*
+   *boxradius*
+   *boxedge*
+   *chunksize*
+
+
+Psgraph sends its output to *standard-output*, so typically it is called
+from within (with-open-file  ....).  For example, one might use it like this:
+
+   (load "psgraph.fasl")
+   (setf psgraph:*boxkind* "fill")
+   (setf psgraph:*boxgray* ".8")
+   (setf psgraph:*fontsize* 8)
+   (setf psgraph:*second-fontsize* 6)
+
+   (defun graph (&optional (shrink t))
+     (with-open-file (*standard-output* "g.ps"
+		      :direction :output
+		      :if-exists :supersede)
+	  (psgraph:psgraph 'A #'children #'info shrink nil #'eq)))
+
+   (defun children (x)
+      (cond ((eq x 'A) '(B C D))
+	    ((member x '(B C D)) '(E F G))
+	    ((member x '(E F G)) '(H))
+	    (t nil)))
+
+   (defun info (x)
+      (list (string x)))
+
+
+Another example:
+   (defun code-graph-to-file (s file &optional shrink insert)
+     (let ((psgraph:*fontname* "Times-Roman")
+	   (psgraph:*fontsize* 8)
+	   (psgraph:*second-fontname* "Times-BoldItalic")
+	   (psgraph:*second-fontsize* 6)
+	   (psgraph:*boxgray* "0")
+	   (psgraph:*edgegray* "0")
+	   (psgraph:*extra-x-spacing* 30))
+       (with-open-file (*standard-output* file
+					  :direction :output
+					  :if-exists :supersede)
+	 (psgraph:psgraph s #'psg-children #'psg-info shrink insert #'eq))))
