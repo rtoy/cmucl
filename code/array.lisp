@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.6 1990/12/12 22:51:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.7 1991/01/13 23:38:31 ram Exp $
 ;;;
 ;;; Functions to implement arrays for CMU Common Lisp.
 ;;; Written by Skef Wholey.
@@ -859,7 +859,7 @@
 	      bit-array-1 result-bit-array))
      result-bit-array)))
 
-(defmacro def-bit-array-op (name function 32bit-function)
+(defmacro def-bit-array-op (name function)
   `(defun ,name (bit-array-1 bit-array-2 &optional result-bit-array)
      ,(format nil
 	      "Perform a bit-wise ~A on the elements of BIT-ARRAY-1 and ~
@@ -877,18 +877,8 @@
        (if (and (simple-bit-vector-p bit-array-1)
 		(simple-bit-vector-p bit-array-2)
 		(simple-bit-vector-p result-bit-array))
-	   (do ((index vm:vector-data-offset (1+ index))
-		(end (+ vm:vector-data-offset
-			(truncate (the index
-				       (+ (length bit-array-1)
-					  vm:word-bits -1))
-				  vm:word-bits))))
-	       ((= index end) result-bit-array)
-	     (declare (optimize (speed 3))
-		      (type index index end))
-	     (setf (%raw-bits result-bit-array index)
-		   (,32bit-function (%raw-bits bit-array-1 index)
-				    (%raw-bits bit-array-2 index))))
+	   (locally (declare (optimize (speed 3) (safety 0)))
+	     (,name bit-array-1 bit-array-2 result-bit-array))
 	   (with-array-data ((data1 bit-array-1) (start1) (end1))
 	     (declare (ignore end1))
 	     (with-array-data ((data2 bit-array-2) (start2) (end2))
@@ -904,16 +894,16 @@
 					    (sbit data2 index-2))
 				 1))))))))))
 
-(def-bit-array-op bit-and logand 32bit-logical-and)
-(def-bit-array-op bit-ior logior 32bit-logical-or)
-(def-bit-array-op bit-xor logxor 32bit-logical-xor)
-(def-bit-array-op bit-eqv logeqv 32bit-logical-eqv)
-(def-bit-array-op bit-nand lognand 32bit-logical-nand)
-(def-bit-array-op bit-nor lognor 32bit-logical-nor)
-(def-bit-array-op bit-andc1 logandc1 32bit-logical-andc1)
-(def-bit-array-op bit-andc2 logandc2 32bit-logical-andc2)
-(def-bit-array-op bit-orc1 logorc1 32bit-logical-orc1)
-(def-bit-array-op bit-orc2 logorc2 32bit-logical-orc2)
+(def-bit-array-op bit-and logand)
+(def-bit-array-op bit-ior logior)
+(def-bit-array-op bit-xor logxor)
+(def-bit-array-op bit-eqv logeqv)
+(def-bit-array-op bit-nand lognand)
+(def-bit-array-op bit-nor lognor)
+(def-bit-array-op bit-andc1 logandc1)
+(def-bit-array-op bit-andc2 logandc2)
+(def-bit-array-op bit-orc1 logorc1)
+(def-bit-array-op bit-orc2 logorc2)
 
 (defun bit-not (bit-array &optional result-bit-array)
   "Performs a bit-wise logical NOT on the elements of BIT-ARRAY,
@@ -925,16 +915,8 @@
   (let ((result-bit-array (pick-result-array result-bit-array bit-array)))
     (if (and (simple-bit-vector-p bit-array)
 	     (simple-bit-vector-p result-bit-array))
-	(do ((index vm:vector-data-offset (1+ index))
-	     (end (+ vm:vector-data-offset
-		     (truncate (the index
-				    (+ (length bit-array) vm:word-bits -1))
-			       vm:word-bits))))
-	    ((= index end) result-bit-array)
-	  (declare (type index index end)
-		   (optimize (speed 3)))
-	  (setf (%raw-bits result-bit-array index)
-		(32bit-logical-not (%raw-bits bit-array index))))
+	(locally (optimize (speed 3) (safety 0))
+	  (bit-not bit-array result-bit-array))
 	(with-array-data ((src bit-array) (src-start) (src-end))
 	  (declare (ignore src-end))
 	  (with-array-data ((dst result-bit-array) (dst-start) (dst-end))
@@ -944,4 +926,3 @@
 	      (declare (type index src-index dst-index))
 	      (setf (sbit dst dst-index)
 		    (logxor (sbit src src-index) 1))))))))
-
