@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.29 1991/11/11 23:13:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.30 1991/12/22 01:27:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -291,7 +291,10 @@
 				       (sc-number rep))))
 		       (when res
 			 (incf (svref costs scn) res))))
-		   (add-costs (sc-move-costs rep))))))
+		   (dolist (scn scs)
+		     (let ((res (svref (sc-move-costs rep) scn)))
+		       (when res
+			 (incf (svref costs scn) res))))))))
 	  (t
 	   (do ((cost (funcall costs-slot info) (cdr cost))
 		(op (funcall ops-slot vop) (tn-ref-across op)))
