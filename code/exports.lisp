@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.9 1990/04/24 07:15:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.10 1990/04/24 15:43:06 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -326,7 +326,7 @@
  	  cmd-switch-name cmd-switch-value cmd-switch-words collect
  	  command-line-switch command-line-switch-p
  	  compact-info-environment compile-from-stream compiledp
- 	  complete-file concat-pnames connect-to-inet-socket
+ 	  complete-file concat-pnames connect-to-inet-socket constant
  	  constant-argument create-inet-listener create-inet-socket debug
  	  def-c-array def-c-pointer def-c-procedure def-c-record
  	  def-c-routine def-c-type def-c-variable default-clx-event-handler
