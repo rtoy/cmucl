@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.21 1994/02/14 13:14:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.22 1994/03/10 16:31:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,7 +94,7 @@
   (setf (search-list "library:")
 	(or (parse-unix-search-list :cmucllib)
 	    '(#-hpux "/usr/misc/.cmucl/lib/"
-	      #+hpux "/usr/local/cmucl/lib/"))))
+	      #+hpux "/usr/local/lib/cmucl/lib/"))))
 
 
 
