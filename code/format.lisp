@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.24 1992/05/15 17:51:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.25 1992/11/06 04:15:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,14 +49,14 @@
   (make-array char-code-limit :initial-element nil))
 
 (defun %print-format-error (condition stream)
-  (format stream
-	  "~:[~;Error in format: ~]~
-	   ~?~@[~%  ~A~%  ~V@T^~]"
-	  (format-error-print-banner condition)
-	  (format-error-complaint condition)
-	  (format-error-arguments condition)
-	  (format-error-control-string condition)
-	  (format-error-offset condition)))
+  (cl:format stream
+	     "~:[~;Error in format: ~]~
+	      ~?~@[~%  ~A~%  ~V@T^~]"
+	     (format-error-print-banner condition)
+	     (format-error-complaint condition)
+	     (format-error-arguments condition)
+	     (format-error-control-string condition)
+	     (format-error-offset condition)))
 
 (defvar *default-format-error-control-string* nil)
 (defvar *default-format-error-offset* nil)
@@ -428,8 +428,9 @@
      (pop args)))
 
 (defmacro def-complex-format-directive (char lambda-list &body body)
-  (let ((defun-name (intern (format nil "~:@(~:C~)-FORMAT-DIRECTIVE-EXPANDER"
-				    char)))
+  (let ((defun-name (intern (cl:format nil
+				       "~:@(~:C~)-FORMAT-DIRECTIVE-EXPANDER"
+				       char)))
 	(directive (gensym))
 	(directives (if lambda-list (car (last lambda-list)) (gensym))))
     `(progn
@@ -504,8 +505,8 @@
 
 (defmacro def-complex-format-interpreter (char lambda-list &body body)
   (let ((defun-name
-	    (intern (format nil "~:@(~:C~)-FORMAT-DIRECTIVE-INTERPRETER"
-			    char)))
+	    (intern (cl:format nil "~:@(~:C~)-FORMAT-DIRECTIVE-INTERPRETER"
+			       char)))
 	(directive (gensym))
 	(directives (if lambda-list (car (last lambda-list)) (gensym))))
     `(progn
@@ -2297,14 +2298,16 @@
 	(pprint-logical-block
 	    (stream arg :per-line-prefix prefix :suffix suffix)
 	  (let ((*logical-block-popper* #'(lambda () (pprint-pop))))
-	    (interpret-directive-list stream insides
-				      (if atsignp orig-args arg)
-				      arg)))
+	    (catch 'up-and-out
+	      (interpret-directive-list stream insides
+					(if atsignp orig-args arg)
+					arg))))
 	(pprint-logical-block (stream arg :prefix prefix :suffix suffix)
 	  (let ((*logical-block-popper* #'(lambda () (pprint-pop))))
-	    (interpret-directive-list stream insides
-				      (if atsignp orig-args arg)
-				      arg)))))
+	    (catch 'up-and-out
+	      (interpret-directive-list stream insides
+					(if atsignp orig-args arg)
+					arg))))))
   (if atsignp nil args))
 
 (def-complex-format-directive #\> ()
