@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.40 1993/02/26 08:48:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.41 1993/05/25 19:07:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,8 +61,9 @@
   (:generator 13
     (inst addu a0 rank (fixnum (1+ array-dimensions-offset)))
     (inst addu nl1 rank (fixnum (1- array-dimensions-offset)))
-    (inst sll nl1 (- type-bits 2))
+    (inst sll nl1 type-bits)
     (inst or nl1 type)
+    (inst srl nl1 2)
     (inst jal (make-fixup 'var-alloc :assembly-routine))
     (inst li nl0 other-pointer-type)
     (move result a0)))
