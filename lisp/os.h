@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.5 1994/10/25 00:11:29 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.6 1997/01/21 00:28:13 ram Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -25,6 +25,14 @@
 #else
 #ifdef irix
 #include "irix-os.h"
+#else
+#ifdef __FreeBSD__
+#include "FreeBSD-os.h"
+#else
+#ifdef __linux__
+#include "Linux-os.h"
+#endif
+#endif
 #endif
 #endif
 #endif

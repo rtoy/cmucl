@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.2 1994/10/25 00:09:21 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.3 1997/01/21 00:28:13 ram Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -15,7 +15,7 @@
 #include "arch.h"
 #include "search.h"
 
-#if !defined(MACH) && !defined(SVR4)
+#if !defined(MACH) && !defined(SVR4) && !defined(__linux__)
 
 static int strcasecmp(s1,s2)
 char *s1,*s2;
@@ -234,8 +234,8 @@ char **ptr;
         result &= ~3;
     }
 
-    if (!valid_addr(result)) {
-        printf("Invalid address: 0x%x\n", result);
+    if (!valid_addr((os_vm_address_t)result)) {
+        printf("Invalid address: 0x%lx\n", result);
         throw_to_monitor();
     }
 
@@ -258,7 +258,7 @@ static boolean lookup_symbol(char *name, lispobj *result)
 
     /* Search dynamic space */
     headerptr = current_dynamic_space;
-#ifndef ibmrt
+#if !defined(ibmrt) && !defined(i386)
     count = current_dynamic_space_free_pointer - current_dynamic_space;
 #else
     count = (lispobj *)SymbolValue(ALLOCATION_POINTER) - current_dynamic_space;
@@ -336,7 +336,7 @@ char **ptr;
     } else if (token[0] == '@') {
         if (string_to_long(token+1, &pointer)) {
             pointer &= ~3;
-            if (valid_addr(pointer))
+            if (valid_addr((os_vm_address_t)pointer))
                 result = *(lispobj *)pointer;
             else {
                 printf("Invalid address: ``%s''\n", token+1);

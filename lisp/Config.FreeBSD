@@ -1,0 +1,19 @@
+PATH1=../../../p86/lisp
+PATH2=../../../17f/lisp
+vpath %.h $(PATH1):$(PATH2)
+vpath %.c $(PATH1):$(PATH2)
+vpath %.S $(PATH1)
+CPPFLAGS = -I. -I$(PATH1) -I$(PATH2) -I- -I/usr/X11R6/include
+CC = gcc # -Wall -Wstrict-prototypes -Wmissing-prototypes
+LD = ld
+CPP = cpp
+CFLAGS =   -m486 -g -DWANT_CGC -O2
+ASFLAGS = -g 
+NM = nm -gp
+UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
+ASSEM_SRC = x86-assem.S
+ARCH_SRC = x86-arch.c
+OS_SRC = FreeBSD-os.c os-common.c
+OS_LINK_FLAGS=-static
+OS_LIBS= -lgnumalloc
+GC_SRC= cgc.c

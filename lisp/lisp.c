@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.10 1994/11/01 19:35:49 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11 1997/01/21 00:28:13 ram Exp $
  *
  */
 
@@ -39,9 +39,13 @@
 
 static void sigint_handler(HANDLER_ARGS)
 {
+#ifdef __linux__
+  GET_CONTEXT
+#endif
+
     SAVE_CONTEXT();
 
-    printf("\nSIGINT hit at 0x%08X\n", SC_PC(context));
+    printf("\nSIGINT hit at 0x%08lX\n", SC_PC(context));
     ldb_monitor();
 }
 
@@ -87,7 +91,7 @@ void main(int argc, char *argv[], char *envp[])
 #ifdef MACH
     mach_init();
 #endif
-#ifdef SVR4
+#if defined(SVR4) || defined(__linux__)
     tzset();
 #endif
 
@@ -145,11 +149,15 @@ void main(int argc, char *argv[], char *envp[])
 	}
 	if (core == NULL) {
 	    /* Note: the /usr/misc/.cmucl/lib/ default path is also wired
-	    /* into the lisp code in .../code/save.lisp. */
+	       into the lisp code in .../code/save.lisp. */
 #ifdef MACH
 	    strcpy(buf, "/usr/misc/.cmucl/lib/");
 #else
+#ifdef __linux__
+	    strcpy(buf, "/usr/lib/cmucl/");
+#else
 	    strcpy(buf, "/usr/local/lib/cmucl/lib/");
+#endif
 #endif
 	    strcat(buf, default_core);
 	    core = buf;
@@ -163,10 +171,19 @@ void main(int argc, char *argv[], char *envp[])
 
     initial_function = load_core_file(core);
 
+#if defined WANT_CGC && defined X86_CGC_ACTIVE_P
+    {
+      extern int use_cgc_p;
+      lispobj x = SymbolValue(X86_CGC_ACTIVE_P);
+      if(x != type_UnboundMarker && x != NIL)
+	use_cgc_p = 1;		/* enable allocator */
+    }
+#endif
+
 #ifdef BINDING_STACK_POINTER
     SetSymbolValue(BINDING_STACK_POINTER, (lispobj)binding_stack);
 #endif
-#ifdef INTERNAL_GC_TRIGGER
+#if defined INTERNAL_GC_TRIGGER && !defined i386
     SetSymbolValue(INTERNAL_GC_TRIGGER, fixnum(-1));
 #endif
 

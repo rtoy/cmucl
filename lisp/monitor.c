@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.5 1994/10/24 20:06:50 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.6 1997/01/21 00:28:13 ram Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -102,7 +102,7 @@ static void dump_cmd(char **ptr)
 
     while (count-- > 0) {
 #ifndef alpha
-        printf("0x%08X: ", (unsigned long) addr);
+        printf("0x%08lX: ", (unsigned long) addr);
 #else
         printf("0x%08X: ", (u32) addr);
 #endif
@@ -115,7 +115,7 @@ static void dump_cmd(char **ptr)
             unsigned short *sptr = (unsigned short *)addr;
             unsigned char *cptr = (unsigned char *)addr;
 
-            printf("0x%08x   0x%04x 0x%04x   0x%02x 0x%02x 0x%02x 0x%02x    %c%c%c%c\n", lptr[0], sptr[0], sptr[1], cptr[0], cptr[1], cptr[2], cptr[3], visable(cptr[0]), visable(cptr[1]), visable(cptr[2]), visable(cptr[3]));
+            printf("0x%08lx   0x%04x 0x%04x   0x%02x 0x%02x 0x%02x 0x%02x    %c%c%c%c\n", lptr[0], sptr[0], sptr[1], cptr[0], cptr[1], cptr[2], cptr[3], visable(cptr[0]), visable(cptr[1]), visable(cptr[2]), visable(cptr[3]));
         }
         else
             printf("invalid address\n");
@@ -135,23 +135,26 @@ static void print_cmd(char **ptr)
 
 static void regs_cmd(char **ptr)
 {
-    printf("CSP\t=\t0x%08X\n", (unsigned long)current_control_stack_pointer);
-    printf("FP\t=\t0x%08X\n", (unsigned long)current_control_frame_pointer);
-#ifndef ibmrt
+    printf("CSP\t=\t0x%08lX\n", (unsigned long)current_control_stack_pointer);
+    printf("FP\t=\t0x%08lX\n", (unsigned long)current_control_frame_pointer);
+#if !defined(ibmrt) && !defined(i386)
     printf("BSP\t=\t0x%08X\n", (unsigned long)current_binding_stack_pointer);
 #endif
+#ifdef i386
+    printf("BSP\t=\t0x%08X\n", SymbolValue(BINDING_STACK_POINTER));
+#endif
 
-    printf("DYNAMIC\t=\t0x%08X\n", (unsigned long)current_dynamic_space);
-#ifdef ibmrt
-    printf("ALLOC\t=\t0x08X\n", SymbolValue(ALLOCATION_POINTER));
-    printf("TRIGGER\t=\t0x08X\n", SymbolValue(INTERNAL_GC_TRIGGER));
+    printf("DYNAMIC\t=\t0x%08lX\n", (unsigned long)current_dynamic_space);
+#if defined(ibmrt) || defined(i386)
+    printf("ALLOC\t=\t0x%08lX\n", SymbolValue(ALLOCATION_POINTER));
+    printf("TRIGGER\t=\t0x%08lX\n", SymbolValue(INTERNAL_GC_TRIGGER));
 #else
     printf("ALLOC\t=\t0x%08X\n",
 	   (unsigned long)current_dynamic_space_free_pointer);
     printf("TRIGGER\t=\t0x%08X\n", (unsigned long)current_auto_gc_trigger);
 #endif
-    printf("STATIC\t=\t0x%08X\n", SymbolValue(STATIC_SPACE_FREE_POINTER));
-    printf("RDONLY\t=\t0x%08X\n", SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
+    printf("STATIC\t=\t0x%08lX\n", SymbolValue(STATIC_SPACE_FREE_POINTER));
+    printf("RDONLY\t=\t0x%08lX\n", SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
 
 #ifdef MIPS
     printf("FLAGS\t=\t0x%08x\n", current_flags_register);
@@ -198,10 +201,10 @@ static void search_cmd(char **ptr)
     start = end = addr;
     lastcount = count;
 
-    printf("searching for 0x%x at 0x%08X\n", val, (unsigned long)end);
+    printf("searching for 0x%x at 0x%08lX\n", val, (unsigned long)end);
 
     while (search_for_type(val, &end, &count)) {
-        printf("found 0x%x at 0x%08X:\n", val, (unsigned long)end);
+        printf("found 0x%x at 0x%08lX:\n", val, (unsigned long)end);
         obj = *end;
         addr = end;
         end += 2;
@@ -232,26 +235,26 @@ static void call_cmd(char **ptr)
 		    goto fdefn;
 		}
 	    }
-	    printf("symbol 0x%08x is undefined.\n", thing);
+	    printf("symbol 0x%08lx is undefined.\n", thing);
 	    return;
 
 	  case type_Fdefn:
 	  fdefn:
 	    function = FDEFN(thing)->function;
 	    if (function == NIL) {
-		printf("fdefn 0x%08x is undefined.\n", thing);
+		printf("fdefn 0x%08lx is undefined.\n", thing);
 		return;
 	    }
 	    break;
 	  default:
 	    printf(
-	      "0x%08x is not a function pointer, symbol, or fdefn object.\n",
+	      "0x%08lx is not a function pointer, symbol, or fdefn object.\n",
 		   thing);
 	    return;
 	}
     }
     else if (LowtagOf(thing) != type_FunctionPointer) {
-        printf("0x%08x is not a function pointer, symbol, or fdefn object.\n",
+        printf("0x%08lx is not a function pointer, symbol, or fdefn object.\n",
 	       thing);
         return;
     }
@@ -335,7 +338,7 @@ static void print_context(struct sigcontext *context)
 		printf("%s:\t", lisp_register_names[i]);
 		brief_print((lispobj) SC_REG(context, i));
 	}
-	printf("PC:\t\t  0x%08x\n", SC_PC(context));
+	printf("PC:\t\t  0x%08lx\n", SC_PC(context));
 }
 
 static void print_context_cmd(char **ptr)
@@ -392,7 +395,7 @@ static void catchers_cmd(char **ptr)
         printf("There are no active catchers!\n");
     else {
         while (catch != NULL) {
-            printf("0x%08X:\n\tuwp: 0x%08X\n\tfp: 0x%08X\n\tcode: 0x%08x\n\tentry: 0x%08x\n\ttag: ", (unsigned long)catch, (unsigned long)(catch->current_uwp), (unsigned long)(catch->current_cont), catch->current_code, catch->entry_pc);
+            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ", (unsigned long)catch, (unsigned long)(catch->current_uwp), (unsigned long)(catch->current_cont), catch->current_code, catch->entry_pc);
             brief_print((lispobj)catch->tag);
             catch = catch->previous_catch;
         }

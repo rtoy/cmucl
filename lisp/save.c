@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.4 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.5 1997/01/21 00:28:13 ram Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -75,7 +75,26 @@ static void output_space(FILE *file, int id, lispobj *addr, lispobj *end)
 boolean save(char *filename, lispobj init_function)
 {
     FILE *file;
+#if defined WANT_CGC
+    volatile lispobj*func_ptr = &init_function;
+    char sbuf[128];
+    strcpy(sbuf,filename);
+    filename=sbuf;
+    /* Get rid of remnant stuff. This is a MUST so that
+     * the memory manager can get started correctly when
+     * we restart after this save. Purify is going to
+     * maybe move the args so we need to consider them volatile,
+     * especially if the gcc optimizer is working!!
+     */
+    purify(NIL,NIL);
 
+    init_function = *func_ptr;
+    /* Set dynamic space pointer to base value so we don't write out
+     * MBs of just cleared heap.
+     */
+    if(SymbolValue(X86_CGC_ACTIVE_P) != NIL)
+      SetSymbolValue(ALLOCATION_POINTER,DYNAMIC_0_SPACE_START);
+#endif
     /* Open the file: */
     unlink(filename);
     file = fopen(filename, "w");
@@ -90,7 +109,9 @@ boolean save(char *filename, lispobj init_function)
     SetSymbolValue(CURRENT_UNWIND_PROTECT_BLOCK, 0);
     SetSymbolValue(EVAL_STACK_TOP, 0);
     printf("done]\n");
-
+#if defined WANT_CGC && defined X86_CGC_ACTIVE_P
+    SetSymbolValue(X86_CGC_ACTIVE_P, T);
+#endif
     printf("[Saving current lisp image into %s:\n", filename);
 
     putw(CORE_MAGIC, file);

@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.8 1994/10/30 21:43:03 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.9 1997/01/21 00:28:13 ram Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -75,7 +75,9 @@ mknod,
 mount,
 open,
 pipe,
+#ifndef __linux__
 profil,
+#endif
 ptrace,
 #ifdef mach
 quota,
@@ -123,13 +125,15 @@ shutdown,
 sigblock,
 #endif
 sigpause,
-#if !defined(ibmrt) && !defined(hpux) && !defined(SVR4)
+#if !defined(ibmrt) && !defined(hpux) && !defined(SVR4) && !defined(i386)
 sigreturn,
 #endif
-#ifndef SVR4
+#if !defined SVR4 && !defined __FreeBSD__
 sigsetmask,
+#ifndef __linux__
 sigstack,
 sigvec,
+#endif
 #endif
 socket,
 socketpair,
@@ -140,7 +144,7 @@ swapon,
 symlink,
 sync,
 syscall,
-#if defined(hpux) || defined(SVR4)
+#if defined(__linux__) || defined(hpux) || defined(SVR4)
 closedir,
 opendir,
 readdir,
@@ -149,7 +153,8 @@ tcsetattr,
 #endif
 truncate,
 umask,
-#if !defined(SUNOS) && !defined(parisc) && !defined(SOLARIS)
+#if !defined(SUNOS) && !defined(parisc) && !defined(SOLARIS) \
+  && !defined(__FreeBSD__)
 umount,
 #endif
 unlink,
@@ -159,7 +164,7 @@ utimes,
 #ifndef irix
 vfork,
 #endif
-#ifndef osf1
+#if !defined osf1 && !defined __FreeBSD__
 vhangup,
 #endif
 wait,
@@ -170,8 +175,10 @@ write,
 writev,
 
 /* Math routines. */
+#ifndef i386
 cos,
 sin,
+#endif
 tan,
 acos,
 asin,
@@ -198,7 +205,9 @@ pow,
 #ifndef hpux
 cbrt,
 #endif
+#ifndef i386
 sqrt,
+#endif
 hypot,
 
 /* Network support. */
@@ -206,17 +215,19 @@ gethostbyname,
 gethostbyaddr,
 
 /* Other random things. */
-#ifdef SVR4
+#if defined(SVR4) || defined(__linux__)
 setpgid,
 getpgid,
 timezone,
 altzone,
 daylight,
 tzname,
+#ifndef __linux__
 dlopen,
 dlsym,
 dlclose,
 dlerror,
+#endif
 #endif
 #ifndef SOLARIS
 getwd,

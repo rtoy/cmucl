@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.2 1994/03/27 15:27:35 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.3 1997/01/21 00:28:13 ram Exp $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_
@@ -18,8 +18,14 @@
 #define SYMBOL(obj) ((struct symbol *)((obj)-type_OtherPointer))
 #define FDEFN(obj) ((struct fdefn *)((obj)-type_OtherPointer))
 
-#ifndef alpha
+#if !defined alpha
 typedef unsigned long lispobj;
+
+#if defined(__FreeBSD__) || defined(__linux__)
+typedef unsigned int u32;
+typedef signed int s32;
+#endif
+
 #else
 typedef unsigned int u32;
 typedef signed int s32;

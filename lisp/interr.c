@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.2 1994/10/24 20:04:27 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.3 1997/01/21 00:28:13 ram Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -113,10 +113,10 @@ void internal_error(struct sigcontext *context)
 	    printf("\t0x%08x\n", SC_REG(context, offset));
 	    break;
 	  case sc_SignedReg:
-	    printf("\t%ld\n", SC_REG(context, offset));
+	    printf("\t%d\n", SC_REG(context, offset));
 	    break;
 	  case sc_UnsignedReg:
-	    printf("\t%lu\n", SC_REG(context, offset));
+	    printf("\t%u\n", SC_REG(context, offset));
 	    break;
 #ifdef sc_SingleFloatReg
 	  case sc_SingleFloatReg:

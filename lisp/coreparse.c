@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.4 1994/07/05 16:06:45 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.5 1997/01/21 00:28:13 ram Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -35,12 +35,12 @@ static void process_directory(int fd, long *ptr, int count)
 	if (len != 0) {
 	    os_vm_address_t real_addr;
 #ifdef PRINTNOISE
-	    printf("Mapping %d bytes at 0x%x.\n", len, addr);
+	    printf("Mapping %ld bytes at 0x%lx.\n", len, addr);
 #endif
 	    real_addr=os_map(fd, offset, addr, len);
 	    if(real_addr!=addr)
 	    fprintf(stderr,
-	"process_directory: file mapped in wrong place! (0x%08x != 0x%08x)\n",
+	"process_directory: file mapped in wrong place! (0x%08x != 0x%08lx)\n",
 		real_addr,
 		addr);
 	}
@@ -55,7 +55,7 @@ static void process_directory(int fd, long *ptr, int count)
 		 && addr != (os_vm_address_t)dynamic_1_space)
 		printf("Strange ... dynamic space lossage.\n");
 		current_dynamic_space = (lispobj *)addr;
-#ifdef ibmrt
+#if defined(ibmrt) || defined(i386)
 	    SetSymbolValue(ALLOCATION_POINTER, (lispobj)free_pointer);
 #else
 	    current_dynamic_space_free_pointer = free_pointer;
@@ -68,7 +68,7 @@ static void process_directory(int fd, long *ptr, int count)
 	    /* Don't care about read only space */
 	    break;
 	  default:
-	    printf("Strange space ID: %d; ignored.\n", id);
+	    printf("Strange space ID: %ld; ignored.\n", id);
 	    break;
 	}
 	entry++;
@@ -105,7 +105,7 @@ lispobj load_core_file(char *file)
     val = *ptr++;
 
     if (val != CORE_MAGIC) {
-	fprintf(stderr, "Invalid magic number: 0x%x should have been 0x%x.\n",
+	fprintf(stderr, "Invalid magic number: 0x%lx should have been 0x%x.\n",
 	val, CORE_MAGIC); 
 	exit(1);
     }
@@ -147,7 +147,7 @@ lispobj load_core_file(char *file)
 	    break;
 
 	  default:
-	    printf("Unknown core file entry: %d; skipping.\n", val);
+	    printf("Unknown core file entry: %ld; skipping.\n", val);
 	    break;
 	}
 

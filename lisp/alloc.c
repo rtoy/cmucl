@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.2 1994/03/27 15:19:55 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.3 1997/01/21 00:28:13 ram Exp $ */
 
 #include "lisp.h"
 #include "internals.h"
@@ -22,12 +22,14 @@
     clear_auto_gc_trigger(); set_auto_gc_trigger(new_value);
 #endif
 
-
+#define ALIGNED_SIZE(n) (n+lowtag_Mask) & ~lowtag_Mask
 
 /****************************************************************
 Allocation Routines.
 ****************************************************************/
-
+#if defined WANT_CGC
+extern lispobj *alloc(int bytes);
+#else
 static lispobj *alloc(int bytes)
 {
     lispobj *result;
@@ -45,12 +47,13 @@ static lispobj *alloc(int bytes)
 
     return result;
 }
+#endif
 
 static lispobj *alloc_unboxed(int type, int words)
 {
     lispobj *result;
 
-    result = alloc((1 + words) * sizeof(lispobj));
+    result = alloc(ALIGNED_SIZE((1 + words) * sizeof(lispobj)));
 
     *result = (lispobj) (words << type_Bits) | type;
 
@@ -61,7 +64,8 @@ static lispobj alloc_vector(int type, int length, int size)
 {
     struct vector *result;
 
-    result = (struct vector *)alloc((2 + (length*size + 31) / 32) * sizeof(lispobj));
+    result = (struct vector *)
+      alloc(ALIGNED_SIZE((2 + (length*size + 31) / 32) * sizeof(lispobj)));
 
     result->header = type;
     result->length = make_fixnum(length);
@@ -71,7 +75,7 @@ static lispobj alloc_vector(int type, int length, int size)
 
 lispobj alloc_cons(lispobj car, lispobj cdr)
 {
-    struct cons *ptr = (struct cons *)alloc(sizeof(struct cons));
+    struct cons *ptr = (struct cons *)alloc(ALIGNED_SIZE(sizeof(struct cons)));
 
     ptr->car = car;
     ptr->cdr = cdr;

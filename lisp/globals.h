@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.3 1994/10/24 20:03:32 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.4 1997/01/21 00:28:13 ram Exp $ */
 
 #if !defined(_INCLUDE_GLOBALS_H_)
 #define _INCLUDED_GLOBALS_H_
@@ -11,7 +11,7 @@ extern int foreign_function_call_active;
 
 extern lispobj *current_control_stack_pointer;
 extern lispobj *current_control_frame_pointer;
-#ifndef ibmrt
+#if !defined(ibmrt) && !defined(i386)
 extern lispobj *current_binding_stack_pointer;
 #endif
 
@@ -21,9 +21,11 @@ extern lispobj *dynamic_0_space;
 extern lispobj *dynamic_1_space;
 extern lispobj *control_stack;
 extern lispobj *binding_stack;
-
+#ifdef i386
+extern lispobj *control_stack_end;
+#endif
 extern lispobj *current_dynamic_space;
-#ifndef ibmrt
+#if !defined(ibmrt) && !defined(i386)
 extern lispobj *current_dynamic_space_free_pointer;
 extern lispobj *current_auto_gc_trigger;
 #endif
@@ -48,11 +50,19 @@ extern void globals_init(void);
 #define EXTERN(name,bytes) .globl _/**/name
 #endif
 
+#ifdef i386
+#ifdef __linux__
+#define EXTERN(name,bytes) .globl _/**/name
+#else
+#define EXTERN(name,bytes) .global _ ## name
+#endif
+#endif
+
 EXTERN(foreign_function_call_active, 4)
 
 EXTERN(current_control_stack_pointer, 4)
 EXTERN(current_control_frame_pointer, 4)
-#ifndef ibmrt
+#if !defined(ibmrt) && !defined(i386)
 EXTERN(current_binding_stack_pointer, 4)
 EXTERN(current_dynamic_space_free_pointer, 4)
 #endif

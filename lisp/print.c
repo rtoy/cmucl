@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.3 1994/03/27 15:18:07 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.4 1997/01/21 00:28:13 ram Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -125,7 +125,7 @@ static void newline(char *label)
 static void brief_fixnum(lispobj obj)
 {
 #ifndef alpha
-    printf("%d", ((long)obj)>>2);
+    printf("%ld", ((long)obj)>>2);
 #else
     printf("%d", ((s32)obj)>>2);
 #endif
@@ -134,7 +134,7 @@ static void brief_fixnum(lispobj obj)
 static void print_fixnum(lispobj obj)
 {
 #ifndef alpha
-    printf(": %d", ((long)obj)>>2);
+    printf(": %ld", ((long)obj)>>2);
 #else
     printf(": %d", ((s32)obj)>>2);
 #endif
@@ -214,7 +214,7 @@ static void print_otherimm(lispobj obj)
             break;
 
         default:
-            printf(": data=%d", (obj>>8)&0xffffff);
+            printf(": data=%ld", (obj>>8)&0xffffff);
             break;
     }
 }
@@ -224,7 +224,7 @@ static void brief_list(lispobj obj)
     int space = FALSE;
     int length = 0;
 
-    if (!valid_addr(obj))
+    if (!valid_addr((os_vm_address_t)obj))
 	    printf("(invalid address)");
     else if (obj == NIL)
         printf("NIL");
@@ -256,7 +256,7 @@ static void brief_list(lispobj obj)
 
 static void print_list(lispobj obj)
 {
-    if (!valid_addr(obj))
+    if (!valid_addr((os_vm_address_t)obj))
 	    printf("(invalid address)");
     else if (obj == NIL)
         printf(" (NIL)");
@@ -270,7 +270,7 @@ static void print_list(lispobj obj)
 
 static void brief_struct(lispobj obj)
 {
-    printf("#<ptr to 0x%08x instance>",
+    printf("#<ptr to 0x%08lx instance>",
            ((struct instance *)PTR(obj))->slots[0]);
 }
 
@@ -296,7 +296,7 @@ static void brief_otherptr(lispobj obj)
 
     ptr = (lispobj *) PTR(obj);
 
-    if (!valid_addr(obj)) {
+    if (!valid_addr((os_vm_address_t)obj)) {
 	    printf("(invalid address)");
 	    return;
     }
@@ -353,7 +353,7 @@ static char *fdefn_slots[] = {"name: ", "function: ", "raw_addr: ", NULL};
 
 static void print_otherptr(lispobj obj)
 {
-    if (!valid_addr(obj))
+    if (!valid_addr((os_vm_address_t)obj))
 	    printf("(invalid address)");
     else {
 #ifndef alpha
@@ -392,7 +392,7 @@ static void print_otherptr(lispobj obj)
                 NEWLINE;
                 printf("0x");
                 while (count-- > 0)
-                    printf("%08x", *--ptr);
+                    printf("%08lx", *--ptr);
                 break;
 
             case type_Ratio:
@@ -409,12 +409,12 @@ static void print_otherptr(lispobj obj)
 
             case type_SingleFloat:
                 NEWLINE;
-                printf("%f", ((struct single_float *)PTR(obj))->value);
+                printf("%g", ((struct single_float *)PTR(obj))->value);
                 break;
 
             case type_DoubleFloat:
                 NEWLINE;
-                printf("%f", ((struct double_float *)PTR(obj))->value);
+                printf("%g", ((struct double_float *)PTR(obj))->value);
                 break;
 
             case type_SimpleString:
@@ -429,7 +429,7 @@ static void print_otherptr(lispobj obj)
             case type_SimpleVector:
             case type_InstanceHeader:
                 NEWLINE;
-                printf("length = %d", length);
+                printf("length = %ld", length);
                 ptr++;
                 index = 0;
                 while (length-- > 0) {
@@ -473,7 +473,7 @@ static void print_otherptr(lispobj obj)
             case type_Sap:
                 NEWLINE;
 #ifndef alpha
-                printf("0x%08x", *ptr);
+                printf("0x%08lx", *ptr);
 #else
                 printf("0x%016lx", *(long*)(ptr+1));
 #endif
@@ -535,7 +535,7 @@ static void print_obj(char *prefix, lispobj obj)
         }
         else
             newline(NULL);
-        printf("%s0x%08x: ", prefix, obj);
+        printf("%s0x%08lx: ", prefix, obj);
         if (cur_depth < brief_depth) {
             fputs(lowtag_Names[type], stdout);
             (*verbose_fns[type])(obj);

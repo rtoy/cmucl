@@ -1,7 +1,11 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.6 1993/03/29 03:39:58 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.7 1997/01/21 00:28:13 ram Exp $ */
 
+/* This file has been hacked a bunch by Werkowski as part of
+ * the x86 port. Stack direction changes as well as more conservative
+ * decisions about pointers. It probably doesn't work yet.
+ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -15,10 +19,16 @@
 #include "purify.h"
 #include "interr.h"
 
+#undef PRINTNOISE
+
+#if defined(ibmrt) || defined(i386)
+static lispobj *current_dynamic_space_free_pointer;
+#endif
+
 #define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__)
 
-#if 0
+#if 1
 #define gc_assert(ex) do { \
 	if (!(ex)) gc_abort(); \
 } while (0)
@@ -26,7 +36,7 @@
 #define gc_assert(ex)
 #endif
 
-
+
 /* These hold the original end of the read_only and static spaces so we can */
 /* tell what are forwarding pointers. */
 
@@ -55,8 +65,9 @@ static int later_count = 0;
 #else
 #define RAW_ADDR_OFFSET (6*sizeof(lispobj) - type_FunctionPointer)
 #endif
-
-static boolean forwarding_pointer_p(lispobj obj)
+
+static boolean 
+forwarding_pointer_p(lispobj obj)
 {
     lispobj *ptr;
 
@@ -66,12 +77,92 @@ static boolean forwarding_pointer_p(lispobj obj)
             (read_only_end <= ptr && ptr <= read_only_free));
 }
 
-static boolean dynamic_pointer_p(lispobj ptr)
+static boolean 
+dynamic_pointer_p(lispobj ptr)
 {
-    return ptr >= (lispobj)dynamic_0_space;
+#ifndef i386
+    return (ptr >= (lispobj)dynamic_0_space);
+#else
+    /* Be more conservative, and remember, this is a maybe */
+    return (ptr >= (lispobj)current_dynamic_space
+	    &&
+	    ptr < (lispobj)current_dynamic_space_free_pointer);
+#endif
 }
-
-static void pscav_later(lispobj *where, int count)
+
+static int
+maybe_can_move_p(lispobj thing)
+{
+  lispobj *thingp,header;
+  if (dynamic_pointer_p(thing)) { /* in dynamic space */
+    thingp = (lispobj*)PTR(thing);
+    header = *thingp;
+    if(Pointerp(header) && forwarding_pointer_p(header))
+      return -1;		/* must change it */
+    if(LowtagOf(thing) == type_ListPointer)
+      return type_ListPointer;	/* can we check this somehow */
+    else if (thing & 3) {	/* not fixnum */
+      int kind = TypeOf(header);
+      /* printf(" %x %x",header,kind); */
+      switch (kind) {		/* something with a header */
+      case type_Bignum:
+      case type_SingleFloat:
+      case type_DoubleFloat:
+      case type_Sap:
+      case type_SimpleVector:
+      case type_SimpleString:
+      case type_SimpleBitVector:
+      case type_SimpleArrayUnsignedByte2:
+      case type_SimpleArrayUnsignedByte4:
+      case type_SimpleArrayUnsignedByte8:
+      case type_SimpleArrayUnsignedByte16:
+      case type_SimpleArrayUnsignedByte32:
+      case type_SimpleArraySingleFloat:
+      case type_SimpleArrayDoubleFloat:
+      case type_CodeHeader:
+      case type_FunctionHeader:
+      case type_ClosureFunctionHeader:
+      case type_ReturnPcHeader:
+      case type_ClosureHeader:
+      case type_FuncallableInstanceHeader:
+      case type_InstanceHeader:
+      case type_ValueCellHeader:
+      case type_ByteCodeFunction:
+      case type_ByteCodeClosure:
+      case type_DylanFunctionHeader:
+      case type_WeakPointer:
+      case type_Fdefn:
+	return kind;
+	break;
+      default:
+	return 0;
+      }}}
+  return 0;
+}
+
+static int pverbose=0;
+#define PVERBOSE pverbose
+static void
+carefully_pscav_stack(lispobj*lowaddr, lispobj*base)
+{
+  lispobj*sp = lowaddr;
+  while(sp < base)
+    { int k;
+      lispobj thing = *sp;
+      if((unsigned)thing & 0x3)	/* may be pointer */
+	{
+	  /* need to check for valid float/double? */
+	  k = maybe_can_move_p(thing);
+	  if(PVERBOSE)printf("%8x %8x %d\n",sp, thing, k);
+	  if(k)
+	    pscav(sp, 1, FALSE);
+	}
+      sp++;
+    }
+}
+
+static void 
+pscav_later(lispobj *where, int count)
 {
     struct later *new;
 
@@ -234,6 +325,13 @@ static lispobj ptrans_code(lispobj thing)
     code = (struct code *)PTR(thing);
     nwords = HeaderValue(code->header) + fixnum_value(code->code_size);
 
+    /* Moving machine code around does not work on the x86 port, but
+       byte compiled function code blocks can be moved.  Perhaps for
+       all byte compiled code blocks the entry_points slot is nil.
+       Check and print a warning. */
+    if ( (code->entry_points) != NIL )
+      fprintf(stderr,"** ptrans_code(%x)\n",thing);
+
     new = (struct code *)read_only_free;
     read_only_free += CEILING(nwords, 2);
 
@@ -256,6 +354,13 @@ static lispobj ptrans_code(lispobj thing)
 
     /* Arrange to scavenge the debug info later. */
     pscav_later(&new->debug_info, 1);
+
+    if(new->trace_table_offset & 0x3)
+#if 0
+      pscav(&new->trace_table_offset, 1, FALSE);
+#else
+      new->trace_table_offset = NIL; /* limit lifetime */
+#endif
 
     /* Scavenge the constants. */
     pscav(new->constants, HeaderValue(new->header)-5, TRUE);
@@ -289,6 +394,10 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
     if (TypeOf(header) == type_FunctionHeader ||
         TypeOf(header) == type_ClosureFunctionHeader) {
 
+      /* Moving code around is not good on the x86 port; print a
+	 warning. */
+      fprintf(stderr,"ptrans_function(%x, %x)\n",thing,header);
+
 	/* We can only end up here if the code object has not been */
         /* scavenged, because if it had been scavenged, forwarding pointers */
         /* would have been left behind for all the entry points. */
@@ -318,10 +427,10 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
 	else {
 	    /* Closures can always go in read-only space, 'caues */
 	    /* they never change. */
+
 	    new = read_only_free;
 	    read_only_free += CEILING(nwords, 2);
 	}
-
         /* Copy it. */
         bcopy(old, new, nwords * sizeof(lispobj));
 
@@ -479,16 +588,49 @@ static int pscav_fdefn(struct fdefn *fdefn)
 }
 
 #ifdef i386
-static int pscav_closure_header(closure)
-     struct closure *closure;
+/* now putting code objects in static space */
+static int
+pscav_code(struct code*code)
 {
-    lispobj fun = closure->function - RAW_ADDR_OFFSET;
-    int nwords = HeaderValue(closure->header);
+    int nwords;
+    lispobj func;
+    nwords = HeaderValue(code->header) + fixnum_value(code->code_size);
 
-    pscav(&fun, 1, TRUE);
-    pscav(closure->info, nwords-1, TRUE);
-    return nwords+1;
+
+    /* pw--The trace_table_offset slot can contain a list pointer. This
+     * occurs when the code object is a top level form that initializes
+     * a byte-compiled function. The fact that purify was ignoring this
+     * slot may be a bug unrelated to the x86 port, except that TLF's
+     * normally become unreachable after the loader calls them and 
+     * won't be seen by purify at all!!
+     */
+    if(code->trace_table_offset & 0x3)
+#if 0
+      pscav(&code->trace_table_offset, 1, FALSE);
+#else
+      code->trace_table_offset = NIL; /* limit lifetime */
+#endif
+
+    /* Arrange to scavenge the debug info later. */
+    pscav_later(&code->debug_info, 1);
+
+    /* Scavenge the constants. */
+    pscav(code->constants, HeaderValue(code->header)-5, TRUE);
+
+    /* Scavenge all the functions. */
+    pscav(&code->entry_points, 1, TRUE);
+    for (func = code->entry_points;
+         func != NIL;
+         func = ((struct function *)PTR(func))->next) {
+        gc_assert(LowtagOf(func) == type_FunctionPointer);
+        gc_assert(!dynamic_pointer_p(func));
+        pscav(&((struct function *)PTR(func))->self, 2, TRUE);
+        pscav_later(&((struct function *)PTR(func))->name, 3);
+    }
+
+    return CEILING(nwords,2);
 }
+
 #endif
 
 static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
@@ -601,15 +743,23 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
                 break;
 
               case type_CodeHeader:
+#ifndef i386
                 gc_abort(); /* No code headers in static space */
+#else
+		count = pscav_code((struct code*)addr);
+#endif
                 break;
 
               case type_FunctionHeader:
               case type_ClosureFunctionHeader:
               case type_ReturnPcHeader:
-                /* We should never hit any of these, 'cause they occure */
+                /* We should never hit any of these, 'cause they occur */
                 /* buried in the middle of code objects. */
+
                 gc_abort();
+
+		
+		break;
 
 #ifdef i386
 	      case type_ClosureHeader:
@@ -617,7 +767,14 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 	      case type_ByteCodeFunction:
 	      case type_ByteCodeClosure:
 	      case type_DylanFunctionHeader:
-		count = pscav_closure_header((struct closure *)addr);
+ 		/* The function self pointer needs special care on the
+		   x86 because it is the real entry point. */
+ 		{
+ 		  lispobj fun = ((struct closure *)addr)->function
+ 		    - RAW_ADDR_OFFSET;
+ 		  pscav(&fun, 1, constant);
+ 		}
+ 		count = 2;
 		break;
 #endif
 
@@ -668,6 +825,11 @@ int purify(lispobj static_roots, lispobj read_only_roots)
         return 0;
     }
 
+#if defined(ibmrt) || defined(i386)
+    current_dynamic_space_free_pointer = 
+      (lispobj*)SymbolValue(ALLOCATION_POINTER);
+#endif
+
     read_only_end = read_only_free =
         (lispobj *)SymbolValue(READ_ONLY_SPACE_FREE_POINTER);
     static_end = static_free =
@@ -692,13 +854,18 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     printf(" stack");
     fflush(stdout);
 #endif
+#ifndef i386
     pscav(control_stack, current_control_stack_pointer - control_stack, FALSE);
+#else
+    gc_assert(control_stack_end > ((&read_only_roots)+1));
+    carefully_pscav_stack(((&read_only_roots)+1), control_stack_end);
+#endif
 
 #ifdef PRINTNOISE
     printf(" bindings");
     fflush(stdout);
 #endif
-#ifndef ibmrt
+#if !defined(ibmrt) && !defined(i386)
     pscav(binding_stack, current_binding_stack_pointer - binding_stack, FALSE);
 #else
     pscav(binding_stack, (lispobj *)SymbolValue(BINDING_STACK_POINTER) - binding_stack, FALSE);
@@ -739,22 +906,65 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     printf(" cleanup");
     fflush(stdout);
 #endif
+
+/* well, something seems messed up in FreeBSD VM, hacking to resolve it.
+ * Nope -- problem was 'auto-gc-trigger' mprotecting pages in background.
+ */
+#if defined X86_CGC_ACTIVE_P
+    if(SymbolValue(X86_CGC_ACTIVE_P) != T)
+      os_zero((os_vm_address_t) current_dynamic_space,
+	      (os_vm_size_t) DYNAMIC_SPACE_SIZE);
+#else
     os_zero((os_vm_address_t) current_dynamic_space,
             (os_vm_size_t) DYNAMIC_SPACE_SIZE);
-
+#endif
     /* Zero stack. */
+#ifndef i386
     os_zero((os_vm_address_t) current_control_stack_pointer,
             (os_vm_size_t) (CONTROL_STACK_SIZE -
                             ((current_control_stack_pointer - control_stack) *
                              sizeof(lispobj))));
+#else
+    /* os_zero won't work cause it things the junk is above the 
+     * start address where here it is below. I don't see why we want
+     * to zero stuff anyhow.
+     */
+#endif
 
-#ifndef ibmrt
+#if defined STATIC_BLUE_BAG
+    {
+      lispobj bag = SymbolValue(STATIC_BLUE_BAG);
+      struct cons*cons = (struct cons*)static_free;
+      struct cons*pair = cons + 1;
+      static_free += 2*WORDS_PER_CONS;
+      if(bag == type_UnboundMarker)
+	bag = NIL;
+      cons->cdr = bag;
+      cons->car = (lispobj)pair | type_ListPointer;
+      pair->car = (lispobj)static_end;
+      pair->cdr = (lispobj)static_free;
+      bag = (lispobj)cons | type_ListPointer;
+      SetSymbolValue(STATIC_BLUE_BAG, bag);
+    }
+#endif
+
+    /* It helps to update the heap free pointers so that free_heap can
+       verify after it's done. */
+    SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj)read_only_free);
+    SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj)static_free);
+    
+#if !defined(ibmrt) && !defined(i386)
     current_dynamic_space_free_pointer = current_dynamic_space;
+#endif
+
+#if defined X86_CGC_ACTIVE_P
+    if(SymbolValue(X86_CGC_ACTIVE_P) != T)
+      SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
+    else
+      cgc_free_heap();
 #else
     SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
 #endif
-    SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj)read_only_free);
-    SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj)static_free);
 
 #ifdef PRINTNOISE
     printf(" Done.]\n");

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.4 1993/04/28 01:58:43 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.5 1997/01/21 00:28:13 ram Exp $
  *
  * Memory Validation
  */
@@ -69,6 +69,10 @@ void validate(void)
 
 	/* Control Stack */
 	control_stack = (lispobj *) CONTROL_STACK_START;
+#ifdef i386
+	control_stack_end = (lispobj *) (CONTROL_STACK_START
+					 + CONTROL_STACK_SIZE);
+#endif
 	ensure_space(control_stack, CONTROL_STACK_SIZE);
 
 	/* Binding Stack */

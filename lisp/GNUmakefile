@@ -1,18 +1,22 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.11 1995/02/17 00:51:01 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.12 1997/01/21 00:28:13 ram Exp $
 
 all: lisp.nm
 
 CC = gcc
+
 DEPEND_FLAGS =
 
 include Config
 
+ifndef GC_SRC
+GC_SRC = gc.c
+endif
+
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
-	vars.c parse.c interrupt.c search.c validate.c gc.c globals.c \
+	vars.c parse.c interrupt.c search.c validate.c globals.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
 	socket.c runprog.c time.c undefineds.c \
-	${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC}
-
+	${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 
@@ -21,7 +25,7 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 
 lisp.nm: lisp
 	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
-	$(NM) lisp >> ,lisp.nm
+	$(NM) lisp | grep -v " F \| U " >> ,lisp.nm
 	mv ,lisp.nm lisp.nm
 
 lisp: version.c ${OBJS} version

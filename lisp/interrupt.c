@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.5 1994/10/24 20:05:30 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.6 1997/01/21 00:28:13 ram Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -26,6 +26,7 @@
 #include "interr.h"
 
 boolean internal_errors_enabled = 0;
+boolean my_error_stuff_ok = 1;
 
 struct sigcontext *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
@@ -56,10 +57,10 @@ static boolean maybe_gc_pending = FALSE;
 * Utility routines used by various signal handlers.              *
 \****************************************************************/
 
-void fake_foreign_function_call(struct sigcontext *context)
+void 
+fake_foreign_function_call(struct sigcontext *context)
 {
     int context_index;
-    lispobj oldcont;
     
     /* Get current LISP state from context */
 #ifdef reg_ALLOC
@@ -130,7 +131,8 @@ void fake_foreign_function_call(struct sigcontext *context)
     foreign_function_call_active = 1;
 }
 
-void undo_fake_foreign_function_call(struct sigcontext *context)
+void 
+undo_fake_foreign_function_call(struct sigcontext *context)
 {
     /* Block all blockable signals */
 #ifdef POSIX_SIGS
@@ -156,16 +158,21 @@ void undo_fake_foreign_function_call(struct sigcontext *context)
 #endif
 }
 
-void interrupt_internal_error(HANDLER_ARGS,
+void 
+interrupt_internal_error(HANDLER_ARGS,
 			      boolean continuable)
 {
+#ifdef __linux__
+  GET_CONTEXT
+#endif
+
 #ifdef POSIX_SIGS
     sigprocmask(SIG_SETMASK,&context->uc_sigmask, 0);
 #else
     sigsetmask(context->sc_mask);
 #endif
     fake_foreign_function_call(context);
-    if (internal_errors_enabled)
+    if (internal_errors_enabled && my_error_stuff_ok)
 	funcall2(SymbolFunction(INTERNAL_ERROR), alloc_sap(context),
 		 continuable ? T : NIL);
     else
@@ -175,7 +182,8 @@ void interrupt_internal_error(HANDLER_ARGS,
 	arch_skip_instruction(context);
 }
 
-void interrupt_handle_pending(struct sigcontext *context)
+void 
+interrupt_handle_pending(struct sigcontext *context)
 {
     boolean were_in_lisp = !foreign_function_call_active;
 
@@ -199,8 +207,12 @@ void interrupt_handle_pending(struct sigcontext *context)
 	signal = pending_signal;
 	code = pending_code;
 	pending_signal = 0;
-	/* pending_code = 0; /**/
+	/* pending_code = 0; */
+#ifdef __linux__
+        interrupt_handle_now(signal,*context);
+#else
 	interrupt_handle_now(signal, PASSCODE(code), context);
+#endif
     }
 #ifdef POSIX_SIGS
     context->uc_sigmask = pending_mask;
@@ -217,10 +229,19 @@ void interrupt_handle_pending(struct sigcontext *context)
 *    the two main signal handlers.                               *
 \****************************************************************/
 
-void interrupt_handle_now(HANDLER_ARGS)
+void 
+interrupt_handle_now(HANDLER_ARGS)
 {
+#ifdef __linux__
+  GET_CONTEXT
+#endif
+
     int were_in_lisp;
     union interrupt_handler handler;
+
+#ifdef __linux__
+    __setfpucw(contextstruct.fpstate->cw);
+#endif
     
     handler = interrupt_handlers[signal];
 
@@ -254,14 +275,23 @@ void interrupt_handle_now(HANDLER_ARGS)
 	         alloc_sap(context));
 #endif
     else
+#ifdef __linux__
+        (*handler.c)(signal, contextstruct);
+#else
         (*handler.c)(signal, code, context);
+#endif
     
     if (were_in_lisp)
         undo_fake_foreign_function_call(context);
 }
 
-static void maybe_now_maybe_later(HANDLER_ARGS)
+static void 
+maybe_now_maybe_later(HANDLER_ARGS)
 {
+#ifdef __linux__
+  GET_CONTEXT
+#endif
+
     SAVE_CONTEXT(); /**/
 
     if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
@@ -288,7 +318,11 @@ static void maybe_now_maybe_later(HANDLER_ARGS)
 #endif
 	arch_set_pseudo_atomic_interrupted(context);
     } else
+#ifdef __linux__
+        interrupt_handle_now(signal,contextstruct);
+#else
         interrupt_handle_now(signal, code, context);
+#endif
 }
 
 /****************************************************************\
@@ -312,6 +346,10 @@ static boolean gc_trigger_hit(HANDLER_ARGS)
 
 boolean interrupt_maybe_gc(HANDLER_ARGS)
 {
+#ifdef __linux__
+  GET_CONTEXT
+#endif
+
     if (!foreign_function_call_active
 #ifndef INTERNAL_GC_TRIGGER
 		  && gc_trigger_hit(signal, code, context)
@@ -363,15 +401,35 @@ void interrupt_install_low_level_handler
 
     sigaction(signal, &sa, NULL);
 #else
+#if defined __FreeBSD__ && 0	/* hack in progress */
+/* sort of like POSIX -- maybe fixed in new release */
+#define FILLBLOCKSET(s) (sigaddset(s,SIGHUP), sigaddset(s,SIGINT), \
+		   sigaddset(s,SIGQUIT), sigaddset(s,SIGPIPE), \
+		   sigaddset(s,SIGALRM), sigaddset(s,SIGURG), \
+		   sigaddset(s,SIGTSTP), sigaddset(s,SIGCHLD), \
+		   sigaddset(s,SIGIO), sigaddset(s,SIGXCPU), \
+                   sigaddset(s,SIGXFSZ), sigaddset(s,SIGVTALRM), \
+		   sigaddset(s,SIGPROF), sigaddset(s,SIGWINCH), \
+		   sigaddset(s,SIGUSR1), sigaddset(s,SIGUSR2))
+
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    FILLBLOCKSET(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART | SA_SIGINFO;
+    sa.sa_flags |= SA_ONSTACK;
+#else
     struct sigvec sv;
 
     sv.sv_handler=handler;
     sv.sv_mask=BLOCKABLE;
     sv.sv_flags=0;
-
+#if defined USE_SIG_STACK
+    sv.sv_flags |= SV_ONSTACK;	/* use separate stack */
+#endif
     sigvec(signal,&sv,NULL);
 #endif
-
+#endif    
     interrupt_low_level_handlers[signal]=(handler==SIG_DFL ? 0 : handler);
 }
 
@@ -430,7 +488,9 @@ unsigned long install_handler(int signal,
 
 	sv.sv_mask = BLOCKABLE;
 	sv.sv_flags = 0;
-
+#if defined USE_SIG_STACK
+	sv.sv_flags = SV_ONSTACK;
+#endif
 	sigvec(signal, &sv, NULL);
     }
 

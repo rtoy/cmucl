@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/dynbind.c,v 1.1 1992/07/28 20:14:22 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/dynbind.c,v 1.2 1997/01/21 00:28:13 ram Exp $
  * 
  * Support for dynamic binding from C.
  */
@@ -9,7 +9,7 @@
 #include "globals.h"
 #include "dynbind.h"
 
-#ifdef ibmrt
+#if defined(ibmrt) || defined(i386)
 #define GetBSP() ((struct binding *)SymbolValue(BINDING_STACK_POINTER))
 #define SetBSP(value) SetSymbolValue(BINDING_STACK_POINTER, (lispobj)(value))
 #else
