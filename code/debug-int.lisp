@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.111 2004/07/30 01:05:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.112 2004/08/03 11:59:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1409,6 +1409,7 @@
 	       (return
 		(values code pc-offset scp))))))))))
 
+#-(or gengc x86 amd64)
 (defun find-pc-from-assembly-fun (code scp)
   "find the PC"
   (let ((return-machine-address
