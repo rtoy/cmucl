@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.57 1993/05/21 15:08:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.58 1993/05/27 01:36:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -328,11 +328,12 @@
   (%catches :unparsed :type (or list (member :unparsed)))
   ;;
   ;; Pointer to frame on control stack.  (unexported)
-  ;; When is an interpreted-frame, this is an index into the interpreter's stack.
+  ;; When is an interpreted-frame, this is an index into the interpreter's
+  ;; stack.
   pointer
   ;;
   ;; This is the frame's number for prompt printing.  Top is zero.
-  number)
+  (number 0 :type index))
 
 (setf (documentation 'frame-up 'function)
   "Returns the frame immediately above frame on the stack.  When frame is
@@ -352,10 +353,18 @@
 	    (:print-function print-compiled-frame)
 	    (:constructor make-compiled-frame
 			  (pointer up debug-function code-location number
-			   &optional escaped)))
+				   #+gengc saved-state-chain
+				   &optional escaped)))
+  ;;
+  ;; List of saps to saved states.  Each time we unwind past an exception,
+  ;; we pop the next entry off this list.  When we get to the end of the
+  ;; list, there is nothing else on the stack.
+  #+gengc (saved-state-chain nil :type list)
   ;;
   ;; Indicates whether someone interrupted frame.  (unexported).
-  ;; If escaped, this is a pointer to the escape frame on the control stack.
+  ;; If escaped, this is a pointer to the state that was saved when we were
+  ;; interrupted.  On the non-gengc system, this is a sigcontext pointer.
+  ;; On the gengc system, this is a state pointer from saved-state-chain.
   escaped)
 
 (defun print-compiled-frame (obj str n)
@@ -814,7 +823,7 @@
 (defun kernel:stack-ref (s n) (kernel:stack-ref s n))
 (defun kernel:%set-stack-ref (s n value) (kernel:%set-stack-ref s n value))
 (defun kernel:function-code-header (fun) (kernel:function-code-header fun))
-(defun kernel:lra-code-header (lra) (kernel:lra-code-header lra))
+#-gengc (defun kernel:lra-code-header (lra) (kernel:lra-code-header lra))
 (defun kernel:make-lisp-obj (value) (kernel:make-lisp-obj value))
 (defun kernel:get-lisp-obj-address (thing) (kernel:get-lisp-obj-address thing))
 (defun kernel:function-word-offset (fun) (kernel:function-word-offset fun))
@@ -825,9 +834,20 @@
 (defun cstack-pointer-valid-p (x)
   (declare (type system:system-area-pointer x))
   (and (system:sap< x (kernel:current-sp))
-       (system:sap<= (alien:alien-sap (alien:extern-alien "control_stack"
-							  (* t)))
-		     x)))
+       (system:sap<= #-gengc (alien:alien-sap
+			      (alien:extern-alien "control_stack" (* t)))
+		     #+gengc (kernel:mutator-control-stack-base)
+		     x)
+       (zerop (logand (system:sap-int x) #b11))))
+
+;;; DESCRIPTOR-SAP -- internal
+;;;
+;;; Convert the descriptor into a SAP.  The bits all stay the same, we just
+;;; change our notion of what we think they are.
+;;; 
+(declaim (inline descriptor-sap))
+(defun descriptor-sap (x)
+  (system:int-sap (kernel:get-lisp-obj-address x)))
 
 ;;; TOP-FRAME -- Public.
 ;;;
@@ -837,9 +857,9 @@
   (multiple-value-bind (fp pc)
 		       (kernel:%caller-frame-and-pc)
     (possibly-an-interpreted-frame
-     (compute-calling-frame (system:int-sap (* (ext:truly-the fixnum fp)
-					       vm:word-bytes))
-			    pc nil)
+     (compute-calling-frame (descriptor-sap fp)
+			    #-gengc pc #+gengc (descriptor-sap pc)
+			    nil)
      nil)))
 
 ;;; FLUSH-FRAMES-ABOVE -- public.
@@ -872,23 +892,33 @@
 				 debug-fun)))
 		     (possibly-an-interpreted-frame
 		      (compute-calling-frame
-		       (system:int-sap
-			(* (get-context-value
-			    real vm::ocfp-save-offset
-			    (c::compiled-debug-function-old-fp c-d-f))
-			   vm:word-bytes))
+		       (descriptor-sap
+			(get-context-value
+			 real vm::ocfp-save-offset
+			 (c::compiled-debug-function-old-fp c-d-f)))
+		       #-gengc
 		       (get-context-value
 			real vm::lra-save-offset
 			(c::compiled-debug-function-return-pc c-d-f))
+		       #+gengc
+		       (descriptor-sap
+			(get-context-value
+			 real vm::ra-save-offset
+			 (c::compiled-debug-function-return-pc c-d-f)))
 		       frame)
 		      frame)))
 		  (bogus-debug-function
 		   (let ((fp (frame-pointer real)))
-		     (compute-calling-frame
-		      (system:sap-ref-sap fp (* vm::ocfp-save-offset
-						vm:word-bytes))
-		      (kernel:stack-ref fp vm::lra-save-offset)
-		      frame))))))
+		     (when (cstack-pointer-valid-p fp)
+		       (compute-calling-frame
+			(system:sap-ref-sap fp (* vm::ocfp-save-offset
+						  vm:word-bytes))
+			#-gengc
+			(kernel:stack-ref fp vm::lra-save-offset)
+			#+gengc
+			(system:sap-ref-sap fp (* vm::ra-save-offset
+						  vm:word-bytes))
+			frame)))))))
 	down)))
 
 
@@ -981,6 +1011,7 @@
 ;;; into C.  In this case, the code object is stored on the stack after the
 ;;; LRA, and the LRA is the word offset.
 ;;; 
+#-gengc
 (defun compute-calling-frame (caller lra up-frame)
   (declare (type system:system-area-pointer caller))
   (when (cstack-pointer-valid-p caller)
@@ -1026,6 +1057,7 @@
 				 (if up-frame (1+ (frame-number up-frame)) 0)
 				 escaped))))))
 
+#-gengc
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
@@ -1076,6 +1108,7 @@
 ;;; return it.  We assume bogus functions correspond to the
 ;;; undefined-function.
 ;;; 
+#-gengc
 (defun code-object-from-bits (bits)
   (declare (type (unsigned-byte 32) bits))
   (let ((object (kernel:make-lisp-obj bits)))
@@ -1091,6 +1124,202 @@
 		       (kernel:lra-code-header object))
 		      (t
 		       nil))))))))
+
+;;; *SAVED-STATE-CHAIN* -- maintained by the C code as a list of saps, each
+;;; sap pointing to a saved exception state.
+;;;
+#+gengc
+(declaim (special kernel::*saved-state-chain*))
+
+#+gengc
+(alien:def-alien-routine component-ptr-from-pc (system:system-area-pointer)
+  (pc system:system-area-pointer))
+
+#+gengc
+(defun component-from-component-ptr (component-ptr)
+  (declare (type system:system-area-pointer component-ptr))
+  (kernel:make-lisp-obj
+   (logior (system:sap-int component-ptr)
+	   vm:other-pointer-type)))
+
+#+gengc
+(defun lookup-trace-table-entry (component pc)
+  (declare (type code-component component)
+	   (type unsigned-byte pc))
+  ;; ### Need to do something real.
+  (declare (ignore component pc))
+  (random 4))
+
+;;; EXTRACT-INFO-FROM-STATE -- internal.
+;;;
+;;; Examine the interrupt state and figure out where we were when the interrupt
+;;; hit.  Return three values, the debug-function, the pc-offset, and the
+;;; control-frame-pointer.
+;;;
+;;; First, we check to see what component the PC is in the middle of.  There
+;;; are a couple interesting cases:
+;;;
+;;; - no component:
+;;;    we were either in one of the C trampoline routines:
+;;;     - call_into_lisp
+;;;     - call_into_c
+;;;     - undefined_tramp
+;;;     - closure_tramp
+;;;     - function_end_breakpoint
+;;;        arn't ever actually in it, because we copy it into a bogus-lra
+;;;        component before every actually using it.
+;;;    or someone jumped someplace strange, in which case we can't do anything.
+;;; - component w/ :ASSEMBLER-ROUTINE for debug-info:
+;;;    we are in an assembly routine.  RA will point back into the regular
+;;;    component.  In order to find the CFP we need to check the trace table:
+;;;     - normal: CFP will hold the correct stack pointer.
+;;;     - call-site: OCFP will hold the correct stack pointer.
+;;;     - prologue & epilogue: not used
+;;; - component w/ :BOGUS-LRA for debug-info:
+;;;    we are in the middle of a function-end-breakpoint.
+;;; - regular component:
+;;;    check the trace table:
+;;;     - normal: everything fine: PC & CFP hold the info we want.
+;;;     - call-site: same as normal, except use OCFP for the frame pointer.
+;;;     - prologue: this frame hasn't been initialized.  Use the caller, who
+;;;        can be found by looking at RA and OCFP.
+;;;     - epilogue: we are in a world of hurt, because we have trashed the
+;;;        current frame and can't reliably find the caller.
+;;;
+#+gengc
+(defun extract-info-from-state (state)
+  (declare (type (alien:alien (* unix:sigcontext)) state)
+	   (values debug-function unsigned-byte system:system-area-pointer))
+  (let* ((pc (vm:sigcontext-program-counter state))
+	 (component-ptr (component-ptr-from-pc pc)))
+    (if (zerop (system:sap-int component-ptr))
+	;; We were in one of the trampoline routines or off in the ether.
+	;; ### Need to figure out which one, and do something better.
+	(values (make-bogus-debug-function "Trampoline routine")
+		0
+		(system:int-sap 0))
+	;; We have a real component.
+	(let* ((component (component-from-component-ptr component-ptr))
+	       (pc-offset (- (sap- pc component-ptr)
+			     (* (kernel:get-header-data component)
+				vm:word-bytes))))
+	  (case (kernel:%code-debug-info component)
+	    (:assembler-routine
+	     (ecase (lookup-trace-table-entry component pc-offset)
+	       (#.vm:trace-table-normal
+		;; ### Need to do something real.
+		(values (make-bogus-debug-function "Assembler routine.")
+			0
+			(system:int-sap
+			 (vm:sigcontext-register state vm::cfp-offset))))
+	       (#.vm:trace-table-call-site
+		;; ### Need to do something real.
+		(values (make-bogus-debug-function "Assembler routine.")
+			0
+			(system:int-sap
+			 (vm:sigcontext-register state vm::ocfp-offset))))
+	       (#.vm:trace-table-function-prologue
+		(values (make-bogus-debug-function
+			 "Function-Prologue in an assembler routine?")
+			0
+			(system:int-sap 0)))
+	       (#.vm:trace-table-function-epilogue
+		(values (make-bogus-debug-function
+			 "Function-Epilogue in an assembler routine?")
+			0
+			(system:int-sap 0)))))
+	    (:bogus-lra
+	     (values (make-bogus-debug-function "Function-end breakpoing")
+		     0
+		     (system:int-sap 0)))
+	    (t
+	     (ecase (lookup-trace-table-entry component pc-offset)
+	       (#.vm:trace-table-normal
+		(values (debug-function-from-pc component pc-offset)
+			pc-offset
+			(system:int-sap
+			 (vm:sigcontext-register state vm::cfp-offset))))
+	       (#.vm:trace-table-call-site
+		(values (debug-function-from-pc component pc-offset)
+			pc-offset
+			(system:int-sap
+			 (vm:sigcontext-register state vm::ocfp-offset))))
+	       (#.vm:trace-table-function-prologue
+		#+nil ;; ### Need to do something real.
+		(let* ((ra (system:int-sap
+			    (vm:sigcontext-register state vm::ra-offset)))
+		       (caller-ptr (component-ptr-from-pc ra)))
+		  ...)
+		(values (make-bogus-debug-function
+			 "Interrupted function prologue")
+			0
+			(system:int-sap 0)))
+	       (#.vm:trace-table-function-epilogue
+		(values (make-bogus-debug-function
+			 "Interrupted function epiloge.")
+			0
+			(system:int-sap 0))))))))))
+
+;;; COMPUTE-CALLING-FRAME -- GenGC version.
+;;;
+;;; Compute the frame that called us.  The information we have available is
+;;; the old control-frame-pointer and the return-address.
+;;; 
+;;; On the gengc system, there are fewer special cases that compute-calling-
+;;; frame needs to take into account.
+;;;
+#+gengc
+(defun compute-calling-frame (ocfp ra up-frame)
+  (declare (type system:system-area-pointer ocfp ra))
+  (flet ((make-frame (dfun pc-offset &optional (cfp ocfp) state
+			   (chain (if up-frame
+				      (compiled-frame-saved-state-chain
+				       (frame-real-frame up-frame))
+				      kernel::*saved-state-chain*)))
+	   (make-compiled-frame
+	    cfp up-frame dfun
+	    (code-location-from-pc dfun pc-offset nil)
+	    (if up-frame (1+ (frame-number up-frame)) 0)
+	    chain state)))
+    (cond
+     ((zerop (system:sap-int ocfp))
+      ;; If the ocfp is NULL, then we are the first stack frame after an
+      ;; exception (or at the start).
+      (let ((saved-state-chain (if up-frame
+				   (compiled-frame-saved-state-chain
+				    (frame-real-frame up-frame))
+				   kernel::*saved-state-chain*)))
+	(when saved-state-chain
+	  ;; Well, there are more saved states.
+	  (let ((state
+		 (locally
+		  (declare (optimize (inhibit-warnings 3)))
+		  (alien:sap-alien (car saved-state-chain)
+				   (* unix:sigcontext)))))
+	    (multiple-value-bind
+		(dfun pc-offset cfp)
+		(extract-info-from-state state)
+	      (make-frame dfun pc-offset cfp state
+			  (cdr saved-state-chain)))))))
+     ((cstack-pointer-valid-p ocfp)
+      ;; The ocfp is valid.  Find the code component that ra points into.
+      (let ((component-ptr (component-ptr-from-pc ra)))
+	(if (zerop (system:sap-int component-ptr))
+	    ;; There isn't a component.  We must have been called from C.
+	    (make-frame (make-bogus-debug-function "Foreign function land") 0)
+	    ;; There is a component.  Figure out what it is.
+	    (let ((component (component-from-component-ptr component-ptr)))
+	      ;; ### Should check to see if it is a bogus lra.
+	      (let* ((pc-offset
+		      (- (sap- ra component-ptr)
+			 (* (kernel:get-header-data component)
+			    vm:word-bytes))))
+		(make-frame (debug-function-from-pc component pc-offset)
+			    pc-offset))))))
+     (t
+      ;; ocfp isn't NULL and isn't valid: we can't tell anything about the
+      ;; caller.  This shouldn't happen, and if it does, do something sane.
+      (make-frame (make-bogus-debug-function "Bogus stack frame") 0)))))
 
 ;;;
 ;;; Frame utilities.
@@ -1158,24 +1387,36 @@
   "Returns an a-list mapping catch tags to code-locations.  These are
    code-locations at which execution would continue with frame as the top
    frame if someone threw to the corresponding tag."
-  (let ((catch (system:int-sap (* lisp::*current-catch-block* vm:word-bytes)))
+  (let ((catch
+	 #-gengc (descriptor-sap lisp::*current-catch-block*)
+	 #+gengc (kernel:mutator-current-catch-block))
 	(res nil)
 	(fp (frame-pointer (frame-real-frame frame))))
     (loop
       (when (zerop (sap-int catch)) (return (nreverse res)))
       (when (sap= fp
-		  (system:int-sap
-		   (* (kernel:stack-ref catch vm:catch-block-current-cont-slot)
-		      vm:word-bytes)))
-	(let* ((lra (kernel:stack-ref catch vm:catch-block-entry-pc-slot))
+		  (system:sap-ref-sap catch
+				      (* vm:catch-block-current-cont-slot
+					 vm:word-bytes)))
+	(let* (#-gengc
+	       (lra (kernel:stack-ref catch vm:catch-block-entry-pc-slot))
+	       #+gengc
+	       (ra (system:sap-ref-sap
+		    catch (* vm:catch-block-entry-pc-slot vm:word-bytes)))
 	       (component
 		(kernel:stack-ref catch vm:catch-block-current-code-slot))
-	       (word-offset (- (1+ (kernel:get-header-data lra))
-			       (kernel:get-header-data component))))
+	       (offset
+		#-gengc (* (- (1+ (kernel:get-header-data lra))
+			      (kernel:get-header-data component))
+			   vm:word-bytes)
+		#+gengc
+		(+ (- (system:sap-int ra)
+		      (kernel:get-lisp-obj-address component)
+		      (kernel:get-header-data component))
+		   vm:other-pointer-type)))
 	  (push (cons (kernel:stack-ref catch vm:catch-block-tag-slot)
 		      (make-compiled-code-location
-		       (* word-offset vm:word-bytes)
-		       (frame-debug-function frame)))
+		       offset (frame-debug-function frame)))
 		res)))
       (setf catch
 	    (system:sap-ref-sap catch
@@ -2988,9 +3229,14 @@
 	      (compiled-debug-function-compiler-debug-fun debug-fun))))
 	(multiple-value-bind (lra component offset)
 			     (make-bogus-lra
-			      (get-context-value frame vm::lra-save-offset
+			      (get-context-value frame
+						 #-gengc vm::lra-save-offset
+						 #+gengc vm::ra-save-offset
 						 lra-sc-offset))
-	  (setf (get-context-value frame vm::lra-save-offset lra-sc-offset)
+	  (setf (get-context-value frame
+				   #-gengc vm::lra-save-offset
+				   #+gengc vm::ra-save-offset
+				   lra-sc-offset)
 		lra)
 	  (let ((end-bpts (breakpoint-%info starter-bpt)))
 	    (let ((data (breakpoint-data component offset)))
@@ -3023,7 +3269,8 @@
       (when (and (compiled-frame-p frame)
 		 (eq lra
 		     (get-context-value frame
-					vm::lra-save-offset
+					#-gengc vm::lra-save-offset
+					#+gengc vm::ra-save-offset
 					lra-sc-offset)))
 	(return t)))))
 
@@ -3381,7 +3628,10 @@
 ;;;
 (defun handle-function-end-breakpoint-aux (breakpoints data signal-context)
   (delete-breakpoint-data data)
-  (let* ((scp (alien:sap-alien signal-context (* unix:sigcontext)))
+  (let* ((scp
+	  (locally
+	    (declare (optimize (ext:inhibit-warnings 3)))
+	    (alien:sap-alien signal-context (* unix:sigcontext))))
 	 (frame (do ((cfp (vm:sigcontext-register scp vm::cfp-offset))
 		     (f (top-frame) (frame-down f)))
 		    ((= cfp (system:sap-int (frame-pointer f))) f)
