@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.8 1993/07/25 21:16:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.9 1993/08/17 16:40:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,6 +50,8 @@
   (defconstant quick-time-units-per-second internal-time-units-per-second)
   
   (defmacro quickly-get-time ()
+    #+hpux 0
+    #-hpux
     `(the time-type (get-internal-run-time))))
 
 
@@ -113,6 +115,19 @@
 (deftype consing-type () '(unsigned-byte 29))
 #-cmu
 (deftype consing-type () 'unsigned-byte)
+
+#+cmu
+(progn
+  (defmacro get-caller-info ()
+    `(nth-value 1 (kernel:%caller-frame-and-pc)))
+  (defun print-caller-info (info stream)
+    (prin1 (kernel:lra-code-header info) stream)))
+
+#-cmu
+(progn
+  (defmacro get-caller-info () 'unknown)
+  (defun print-caller-info (info stream)
+    (prin1 "no caller info" stream)))
 
 
 ;;;; Global data structures:
@@ -195,11 +210,12 @@
   (let ((required-args ()))
     (dotimes (i min-args)
       (push (gensym) required-args))
-    `(lambda (name)
+    `(lambda (name callers-p)
        (let* ((time 0)
 	      (count 0)
 	      (consed 0)
 	      (profile 0)
+	      (callers ())
 	      (old-definition (fdefinition name)))
 	 (declare (type time-type time) (type consing-type consed)
 		  (fixnum count))
@@ -210,6 +226,24 @@
 			  ,@(if optionals-p
 				`(&rest optional-args)))
 		   (incf count)
+		   (when callers-p
+		     (let ((caller (get-caller-info)))
+		       (do ((prev nil current)
+			    (current callers (cdr current)))
+			   ((null current)
+			    (push (cons caller 1) callers))
+			 (let ((old-caller-info (car current)))
+			   (when (eq caller (car old-caller-info))
+			     (if prev
+				 (setf (cdr prev) (cdr current))
+				 (setq callers (cdr current)))
+			     (setf (cdr old-caller-info)
+				   (the fixnum
+					(+ (cdr old-caller-info) 1)))
+			     (setf (cdr current) callers)
+			     (setq callers current)
+			     (return))))))
+			       
 		   (let ((time-inc 0) (cons-inc 0) (profile-inc 0))
 		     (declare (type time-type time-inc)
 			      (type consing-type cons-inc)
@@ -247,13 +281,14 @@
 		:new-definition (fdefinition name)
 		:read-time
 		#'(lambda ()
-		    (values count time consed profile))
+		    (values count time consed profile callers))
 		:reset-time
 		#'(lambda ()
 		    (setq count 0)
 		    (setq time 0)
 		    (setq consed 0)
 		    (setq profile 0)
+		    (setq callers ())
 		    t)))))))
 
 ); EVAL-WHEN (COMPILE LOAD EVAL)
@@ -284,7 +319,7 @@
 ;;;
 ;;;    Profile the function Name.  If already profiled, unprofile first.
 ;;;
-(defun profile-1-function (name)
+(defun profile-1-function (name callers-p)
   (cond ((fboundp name)
 	 (when (gethash name *profile-info*)
 	   (warn "~S already profiled, so unprofiling it first." name)
@@ -297,7 +332,8 @@
 				       *existing-encapsulations*)
 			      (compile nil (make-profile-encapsulation
 					    min-args optionals-p))))
-		    name)))
+		    name
+		    callers-p)))
 	(t
 	 (warn "Ignoring undefined function ~S." name))))
 
@@ -306,16 +342,24 @@
 ;;;
 (defmacro profile (&rest names)
   "PROFILE Name*
-  Wraps profiling code around the named functions.  As in TRACE, the names are
-  not evaluated.  If a function is already profiled, then unprofile and
-  reprofile (useful to notice function redefinition.)  If a name is undefined,
-  then we give a warning and ignore it.  See also UNPROFILE, REPORT-TIME and
-  RESET-TIME."
-  `(progn
-     ,@(mapcar #'(lambda (name)
-		   `(profile-1-function ',name))
-	       names)
-     (values)))
+   Wraps profiling code around the named functions.  As in TRACE, the names are
+   not evaluated.  If a function is already profiled, then unprofile and
+   reprofile (useful to notice function redefinition.)  If a name is undefined,
+   then we give a warning and ignore it.  If :CALLERS T appears, subsequent
+   names have counts of the most common calling functions recorded.
+   See also UNPROFILE, REPORT-TIME and RESET-TIME."
+  (let ((names names)
+	(callers nil)
+	(res ()))
+    (loop
+      (unless names (return))
+      (let ((name (pop names)))
+	(case name
+	  (:callers
+	   (setq callers (pop names)))
+	  (t
+	   (push `(profile-1-function ',name ,callers) res)))))
+    `(progn ,@res (values))))
 
 
 ;;; UNPROFILE  --  Public
@@ -348,11 +392,12 @@
 
 
 (defstruct (time-info
-	    (:constructor make-time-info (name calls time consing)))
+	    (:constructor make-time-info (name calls time consing callers)))
   name
   calls
   time
-  consing)
+  consing
+  callers)
 
 
 ;;; COMPENSATE-TIME  --  Internal
@@ -391,13 +436,15 @@
 	         PROFILE it again to record calls to the new definition."
 		name))
 	(multiple-value-bind
-	    (calls time consing profile)
+	    (calls time consing profile callers)
 	    (funcall (profile-info-read-time pinfo))
 	  (if (zerop calls)
 	      (push name no-call)
 	      (push (make-time-info name calls
 				    (compensate-time calls time profile)
-				    consing)
+				    consing
+				    (sort (copy-seq callers)
+					  #'>= :key #'cdr))
 		    info)))))
     
     (setq info (sort info #'>= :key #'time-info-time))
@@ -419,7 +466,14 @@
 		(time-info-consing time)
 		(time-info-calls time)
 		(/ (time-info-time time) (float (time-info-calls time)))
-		(time-info-name time)))
+		(time-info-name time))
+	(let ((callers (time-info-callers time)))
+	  (when callers
+	    (dolist (x (subseq callers 0 (min (length callers) 5)))
+	      (format *trace-output* "~10:D: " (cdr x))
+	      (print-caller-info (car x) *trace-output*)
+	      (terpri *trace-output*))
+	    (terpri *trace-output*))))
       (format *trace-output*
 	      "------------------------------------------------------~@
 	      ~10,3F | ~9:D | ~7:D |            | Total~%"
