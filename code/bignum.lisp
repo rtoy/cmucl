@@ -14,6 +14,7 @@
 (in-package "BIGNUM")
 
 (export '(add-bignums multiply-bignums negate-bignum subtract-bignum
+	  multiply-bignum-and-fixnum multiply-fixnums
 	  bignum-ashift-right bignum-ashift-left bignum-gcd
 	  bignum-to-single-float bignum-to-double-float bignum-integer-length
 	  bignum-logical-and bignum-logical-ior bignum-logical-xor
@@ -514,6 +515,51 @@
 		(setf carry temp-carry)))))))
     (when negate-res (negate-bignum-in-place res))
     (%normalize-bignum res len-res)))
+
+(defun multiply-bignum-and-fixnum (bignum fixnum)
+  (declare (type bignum-type bignum) (type fixnum fixnum))
+  (let* ((bignum-plus-p (%bignum-0-or-plusp bignum (%bignum-length bignum)))
+	 (fixnum-plus-p (not (minusp fixnum)))
+	 (bignum (if bignum-plus-p bignum (negate-bignum bignum)))
+	 (bignum-len (%bignum-length bignum))
+	 (fixnum (%fixnum-to-digit (if fixnum-plus-p fixnum (- fixnum))))
+	 (result (%allocate-bignum (1+ bignum-len)))
+	 (carry 0))
+    (declare (type bignum-type bignum result)
+	     (type bignum-index bignum-len)
+	     (type bignum-element-type fixnum carry))
+    (dotimes (index bignum-len)
+      (declare (type bignum-index index))
+      (multiple-value-bind
+	  (high low)
+	  (%multiply (%bignum-ref bignum index) fixnum)
+	(declare (type bignum-element-type high low))
+	(multiple-value-bind
+	    (digit new-carry)
+	    (%add-with-carry low carry 0)
+	  (declare (type bignum-element-type digit new-carry))
+	  (setf (%bignum-ref result index) digit)
+	  (setf carry (%add-with-carry high new-carry 0))))
+      (setf (%bignum-ref result bignum-len) carry))
+    (unless (eq bignum-plus-p fixnum-plus-p)
+      (negate-bignum-in-place result))
+    (%normalize-bignum result (1+ bignum-len))))
+
+(defun multiply-fixnums (a b)
+  (declare (fixnum a b))
+  (let ((result (%allocate-bignum 2))
+	(a-neg-p (minusp a))
+	(b-neg-p (minusp b)))
+    (declare (type bignum-type result))
+    (multiple-value-bind (high low)
+			 (%multiply (%fixnum-to-digit (if a-neg-p (- a) a))
+				    (%fixnum-to-digit (if b-neg-p (- b) b)))
+      (declare (type bignum-element-type high low))
+      (setf (%bignum-ref result 0) low)
+      (setf (%bignum-ref result 1) high))
+    (unless (eq a-neg-p b-neg-p)
+      (negate-bignum-in-place result))
+    (%normalize-bignum result 2)))
 
 
 
