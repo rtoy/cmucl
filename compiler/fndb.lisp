@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.79 1998/02/13 16:09:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.80 1998/04/14 12:45:19 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,20 +175,20 @@
 ;;;; In the "Packages" chapter:
 
 
-(deftype packagelike () '(or stringlike package))
+(deftype packagelike () '(or stringable package))
 (deftype symbols () '(or list symbol))
 
 ;;; Should allow a package name, I think, tho CLtL II doesn't say so...
 (defknown gentemp (&optional string packagelike) symbol)
 
-(defknown make-package (stringlike &key (:use list) (:nicknames list)
+(defknown make-package (stringable &key (:use list) (:nicknames list)
 				   ;; ### Extensions...
 				   (:internal-symbols index) (:external-symbols index))
 	  package)
-(defknown find-package (stringlike) (or package null) (flushable))
+(defknown find-package (stringable) (or package null) (flushable))
 (defknown package-name (packagelike) (or simple-string null) (flushable))
 (defknown package-nicknames (packagelike) list (flushable))
-(defknown rename-package (packagelike stringlike &optional list) package)
+(defknown rename-package (packagelike packagelike &optional list) package)
 (defknown package-use-list (packagelike) list (flushable))
 (defknown package-used-by-list (packagelike) list (flushable))
 (defknown package-shadowing-symbols (packagelike) list (flushable))
@@ -205,7 +205,7 @@
 (defknown shadowing-import (symbols &optional packagelike) truth)
 (defknown shadow ((or symbol string list) &optional packagelike) truth)
 (defknown (use-package unuse-package) ((or list packagelike) &optional packagelike) truth)
-(defknown find-all-symbols (stringlike) list (flushable))
+(defknown find-all-symbols (stringable) list (flushable))
 
 
 ;;;; In the "Numbers" chapter:
@@ -1091,8 +1091,8 @@
   t)
 (defknown dribble (&optional filename &key (:if-exists t)) t)
 
-(defknown apropos (stringlike &optional packagelike t) (values))
-(defknown apropos-list (stringlike &optional packagelike t) list (flushable))
+(defknown apropos (stringable &optional packagelike t) (values))
+(defknown apropos-list (stringable &optional packagelike t) list (flushable))
 
 (defknown get-decoded-time ()
   (values (integer 0 59) (integer 0 59) (integer 0 23) (integer 1 31)
