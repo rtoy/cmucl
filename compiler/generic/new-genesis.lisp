@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.3.1.1 1993/01/24 19:22:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.3.1.2 1993/02/08 22:16:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -459,6 +459,9 @@
     (write-indexed dest 1 cdr)
     dest))
 
+(defmacro cold-push (thing list)
+  "Generates code to push the THING onto the given cold load LIST."
+  `(setq ,list (allocate-cons *dynamic* ,thing ,list)))
 
 ;;; COLD-VECTOR  --  Internal
 ;;;
@@ -861,7 +864,7 @@
   (clrhash *cold-layouts*)
   (setq *layout-layout* *nil-descriptor*)
   (setq *layout-layout*
-	(make-cold-layout 'layout *nil-handle*
+	(make-cold-layout 'layout *nil-descriptor*
 			  (number-to-core target-layout-length)
 			  (number-to-core 3)))
   (write-indexed *layout-layout* vm:instance-slots-offset *layout-layout*)
@@ -882,12 +885,13 @@
 
 ;;; LIST-ALL-LAYOUTS  --  Internal
 ;;;
-;;;    Return a cold alist that we're going to store in INITIAL-LAYOUTS.
+;;;    Return a cold alist that we're going to store in *INITIAL-LAYOUTS*.
 ;;;
 (defun list-all-layouts ()
   (let ((result *nil-descriptor*))
     (maphash #'(lambda (key value)
-		 (cold-push (cold-cons (cold-intern key) value) result))
+		 (cold-push (allocate-cons *dynamic* (cold-intern key) value)
+			    result))
 	     *cold-layouts*)
     result))
 
