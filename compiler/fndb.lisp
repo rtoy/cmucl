@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.33 1991/12/02 23:41:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.34 1991/12/05 05:47:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -874,7 +874,8 @@
 (defknown write-byte (integer stream) integer
   (explicit-check))
 
-(defknown format ((or streamlike string) string &rest t) (or string null)
+(defknown format ((or streamlike string) (or string function) &rest t)
+  (or string null)
   (explicit-check))
 
 (defknown (y-or-n-p yes-or-no-p) (&optional string &rest t) boolean
