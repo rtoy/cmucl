@@ -7,13 +7,15 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.1.1.2 1990/03/26 21:57:20 wlott Exp $
+;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
 ;;; simpler code that can be compiled inline.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 
 ;;;; Type predicate translation:
@@ -96,6 +98,7 @@
 ;;;    Flush %Typep tests whose result is known at compile time.
 ;;;
 (deftransform %typep ((object type))
+  (unless (constant-continuation-p type) (give-up))
   (ir1-transform-type-predicate
    object
    (specifier-type (continuation-value type))))
@@ -229,7 +232,8 @@
 		      'fixnum
 		      'integer))
 		 (rational 'rational)
-		 (float (or (numeric-type-format type) 'float)))))
+		 (float (or (numeric-type-format type) 'float))
+		 ((nil) 'number))))
     (once-only ((n-object object))
       (ecase (numeric-type-complexp type)
 	(:real
