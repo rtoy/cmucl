@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.6 1996/07/12 19:26:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.6.2.1 2000/06/07 12:49:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -98,10 +98,10 @@
 ;;; patterns are specified below determines the order of search.
 
 ;;; Choices of pattern symbols are: second, minute, hour, day, month,
-;;; year, time-divider, date-divider, am-pm, zone, weekday, noon-midn,
-;;; and any special symbol.
+;;; year, time-divider, date-divider, am-pm, zone, izone, weekday,
+;;; noon-midn, and any special symbol.
 
-(defparameter patterns
+(defparameter *default-date-time-patterns*
   '( 
      ;; Date formats.
     ((weekday) month (date-divider) day (date-divider) year (noon-midn))
@@ -186,6 +186,20 @@
     (tomorrow (noon-midn))
     ((noon-midn) tomorrow)
 ))
+
+;;; HTTP header style date/time patterns: RFC1123/RFC822, RFC850, ANSI-C.
+(defparameter *http-date-time-patterns*
+  '( 
+     ;; RFC1123/RFC822 and RFC850.
+    ((weekday) day (date-divider) month (date-divider) year
+     hour time-divider minute (time-divider) (secondp) izone)
+    ((weekday) day (date-divider) month (date-divider) year
+     hour time-divider minute (time-divider) (secondp) (zone))
+
+     ;; ANSI-C.
+    ((weekday) month day
+     hour time-divider minute (time-divider) (secondp) year)))
+
 
 ;;; The decoded-time structure holds the time/date values which are
 ;;; eventually passed to 'encode-universal-time' after parsing.
@@ -200,7 +214,7 @@
   (day    1    :type integer)    ; Value between 1 and 31.
   (month  1    :type integer)    ; Value between 1 and 12.
   (year   1900 :type integer)    ; Value above 1899 or between 0 and 99.
-  (zone   0    :type integer)    ; Value between 0 and 23.
+  (zone   0    :type rational)   ; Value between -24 and 24 inclusive.
   (dotw   0    :type integer))   ; Value between 0 and 6.
 
 ;;; Make-default-time returns a decoded-time structure with the default
@@ -256,7 +270,7 @@
       default-time)))
 
 ;;; Converts the values in the decoded-time structure to universal time
-;;; by calling extensions:encode-universal-time.
+;;; by calling encode-universal-time.
 ;;; If zone is in numerical form, tweeks it appropriately.
 
 (defun convert-to-unitime (parsed-values)
@@ -267,7 +281,7 @@
 			   (decoded-time-day parsed-values)
 			   (decoded-time-month parsed-values)
 			   (decoded-time-year parsed-values)
-			   (if (or (> zone 23) (< zone -23))
+			   (if (or (> zone 24) (< zone -24))
 			       (let ((new-zone (/ zone 100)))
 				 (cond ((minusp new-zone) (- new-zone))
 				       ((plusp new-zone) (- 24 new-zone))
@@ -278,9 +292,10 @@
 ;;; Sets the current values for the time and/or date parts of the 
 ;;; decoded time structure.
 
-(defun set-current-value (values-structure &key (time nil) (date nil) (zone nil))
+(defun set-current-value (values-structure &key (time nil) (date nil)
+						(zone nil))
   (multiple-value-bind (sec min hour day mon year dotw dst tz)
-		       (get-decoded-time)
+      (get-decoded-time)
     (declare (ignore dst))
     (when time
       (setf (decoded-time-second values-structure) sec)
@@ -345,7 +360,14 @@
   (or (and (simple-string-p thing) (gethash thing *zone-strings*))
       (if (integerp thing)
 	  (let ((zone (/ thing 100)))
-	    (and (integerp zone) (<= -23 zone 23))))))
+	    (and (integerp zone) (<= -24 zone 24))))))
+
+;;; Internet numerical time zone, e.g. RFC1123, in hours and minutes.
+(defun izone (thing)
+  (if (integerp thing)
+      (multiple-value-bind (hours mins)
+	  (truncate thing 100)
+	(and (<= -24 hours 24) (<= -59 mins 59)))))
 
 (defun special-string-p (string)
   (and (simple-string-p string) (gethash string *special-strings*)))
@@ -547,6 +569,12 @@
 		     (mod (+ hour 12) 24))))
 	  (t (error "~A isn't AM/PM - this shouldn't happen.")))))
 
+;;; Internet numerical time zone, e.g. RFC1123, in hours and minutes.
+(defun deal-with-izone (form-value parsed-values)
+  (multiple-value-bind (hours mins)
+      (truncate form-value 100)
+    (setf (decoded-time-zone parsed-values) (- (+ hours (/ mins 60))))))
+
 ;;; Set-time-values uses the association list of symbols and values
 ;;; to set the time in the decoded-time structure.
 
@@ -562,6 +590,7 @@
 	(month (setf (decoded-time-month parsed-values) form-value))
 	(year (setf (decoded-time-year parsed-values) form-value))
 	(zone (setf (decoded-time-zone parsed-values) form-value))
+	(izone (deal-with-izone form-value parsed-values))
 	(weekday (setf (decoded-time-dotw parsed-values) form-value))
 	(am-pm (deal-with-am-pm form-value parsed-values))
 	(noon-midn (deal-with-noon-midn form-value parsed-values))
@@ -569,7 +598,8 @@
 	(t (error "Unrecognized symbol in form list: ~A." form-type))))))
 
 (defun parse-time (time-string &key (start 0) (end (length time-string))
-			       (error-on-mismatch nil)			       
+			       (error-on-mismatch nil)
+			       (patterns *default-date-time-patterns*)
 			       (default-seconds nil) (default-minutes nil)
 			       (default-hours nil) (default-day nil)
 			       (default-month nil) (default-year nil)
