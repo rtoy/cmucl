@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.11 1991/09/12 11:24:01 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.12 1991/12/15 19:10:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -510,7 +510,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 	 datum)
         ((symbolp datum) ;Roughly, (subtypep datum 'condition).
          (apply #'make-condition datum arguments))
-        ((stringp datum)
+        ((or (stringp datum) (functionp datum))
 	 (make-condition default-type
                          :format-string datum
                          :format-arguments arguments))
