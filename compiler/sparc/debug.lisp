@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/debug.lisp,v 1.2 1991/03/12 17:52:44 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/debug.lisp,v 1.3 1992/02/25 07:06:23 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -41,23 +43,29 @@
   (:generator 1
     (move res cfp-tn)))
 
-(define-vop (read-control-stack sap-ref)
-  (:translate di::stack-ref)
-  (:policy :fast-safe)
-  (:results (result :scs (descriptor-reg)))
-  (:result-types *)
-  (:variant :long nil))
-
-(define-vop (write-control-stack sap-set)
-  (:translate di::%set-stack-ref)
+(define-vop (read-control-stack)
+  (:translate kernel:stack-ref)
   (:policy :fast-safe)
   (:args (sap :scs (sap-reg))
-	 (offset :scs (any-reg signed-reg zero immediate))
+	 (offset :scs (any-reg)))
+  (:arg-types system-area-pointer positive-fixnum)
+  (:results (result :scs (descriptor-reg)))
+  (:result-types *)
+  (:generator 5
+    (inst ld result sap offset)))
+
+(define-vop (write-control-stack)
+  (:translate kernel:%set-stack-ref)
+  (:policy :fast-safe)
+  (:args (sap :scs (sap-reg))
+	 (offset :scs (any-reg))
 	 (value :scs (descriptor-reg) :target result))
   (:arg-types system-area-pointer positive-fixnum *)
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
-  (:variant :long))
+  (:generator 5
+    (inst st value sap offset)
+    (move result value)))
 
 (define-vop (code-from-mumble)
   (:policy :fast-safe)
