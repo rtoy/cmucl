@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.9 1991/02/20 14:56:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.10 1991/04/24 23:51:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.9 1991/02/20 14:56:29 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.10 1991/04/24 23:51:00 ram Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -93,6 +93,21 @@
 ;;;
 (defoptimizer (data-vector-set derive-type) ((array index new-value))
   (assert-new-value-type new-value array))
+
+;;; %WITH-ARRAY-DATA  --  derive-type optimizer.
+;;;
+;;;    Figure out the type of the data vector if we know the argument element
+;;; type.
+;;;
+(defoptimizer (%with-array-data derive-type) ((array start end))
+  (let ((atype (continuation-type array)))
+    (when (array-type-p atype)
+      (values-specifier-type
+       `(values (simple-array ,(type-specifier
+				(array-type-element-type atype))
+			      (*))
+		index index index)))))
+
 
 ;;; ARRAY-ROW-MAJOR-INDEX  --  derive-type optimizer.
 ;;;
