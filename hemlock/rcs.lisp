@@ -1,8 +1,8 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.11 1990/03/03 00:40:10 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.12 1990/03/03 00:49:54 ch Exp $
 ;;;
-;;; Various commands for dealing with RCS under hemlock.
+;;; Various commands for dealing with RCS under Hemlock.
 ;;; 
 (in-package "HEMLOCK")
 
@@ -149,7 +149,7 @@
     (in-directory pathname
       (do-command "rcsci" `(,@(if keep-lock '("-l"))
 			      "-u"
-			      ,(file-namestring pathname))
+			      ,filename)
 		  :input log-stream)
       ;; 
       ;; Set the times on the user's file to be equivalent to that of
