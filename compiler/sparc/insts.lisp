@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.18 1998/03/21 08:05:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.19 1999/06/19 15:51:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -519,6 +519,8 @@
 (define-f3-inst mulx #b10 #b001001)	; v9 for both signed and unsigned
 (define-f3-inst sdivx #b10 #b101101)	; v9
 (define-f3-inst udivx #b10 #b001101)	; v9
+
+(define-f3-inst popc #b10 #b101110)	; v9: count one bits
 
 
 ;;;; Random instructions.
