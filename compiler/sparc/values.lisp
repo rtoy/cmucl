@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.3 1993/10/07 11:41:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.4 1993/12/02 18:50:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,6 +102,7 @@
   (:temporary (:sc any-reg :from (:argument 0)) src)
   (:temporary (:sc any-reg :from (:argument 2)) dst)
   (:temporary (:sc descriptor-reg :from (:argument 1)) temp)
+  (:temporary (:sc any-reg) i)
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))
   (:generator 20
@@ -117,9 +118,10 @@
     (inst move start csp-tn)
     (inst move dst csp-tn)
     (inst add csp-tn count)
+    (inst move i count)
     LOOP
-    (inst subcc count 4)
-    (inst ld temp src count)
+    (inst subcc i 4)
+    (inst ld temp src i)
     (inst b :ne loop)
-    (inst st temp dst count)
+    (inst st temp dst i)
     DONE))
