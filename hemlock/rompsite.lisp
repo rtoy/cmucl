@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.13 1991/10/21 15:23:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.14 1991/11/22 15:14:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -748,7 +748,7 @@
   "Takes a symbol or function and returns the pathname for the file the function
    was defined in.  If it was not defined in some file, nil is returned."
   (typecase function
-    (symbol (fun-defined-from-pathname (careful-symbol-function function)))
+    (symbol (fun-defined-from-pathname (fdefinition function)))
     (compiled-function
      (let ((info (di::code-debug-info (di::function-code-header function))))
        (when info
