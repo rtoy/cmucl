@@ -279,6 +279,24 @@
   (merge-bits shift prev next))
 
 
+;;; These are supported as primitives.
+
+(defun 32bit-logical-not (x)
+  (32bit-logical-not x))
+
+(defun 32bit-logical-and (x y)
+  (32bit-logical-and x y))
+
+(defun 32bit-logical-or (x y)
+  (32bit-logical-or x y))
+
+(defun 32bit-logical-xor (x y)
+  (32bit-logical-or x y))
+
+(defun 32bit-logical-nor (x y)
+  (32bit-logical-nor x y))
+
+
 ;;; These are not supported as primitives.
 
 (proclaim '(inline 32bit-logical-eqv 32bit-logical-nand 32bit-logical-andc1
