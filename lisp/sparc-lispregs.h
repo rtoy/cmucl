@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.3 1994/10/25 00:15:24 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.4 1997/04/21 00:52:24 dtc Exp $ */
 
 
 
@@ -81,7 +81,7 @@
 
 #define BOXED_REGISTERS { \
     reg_A0, reg_A1, reg_A2, reg_A3, reg_A4, reg_A5, reg_FDEFN, reg_LEXENV, \
-    reg_NFP, reg_OCFP, reg_LRA, reg_L0, reg_L1, reg_L2, reg_CODE \
+    reg_OCFP, reg_LRA, reg_L0, reg_L1, reg_L2, reg_CODE \
 }
 
 #ifndef LANGUAGE_ASSEMBLY
