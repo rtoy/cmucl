@@ -14,22 +14,13 @@
 ;;;
 (in-package 'c)
 
-;;;
-;;; Translates from SC numbers to SC info structures.  SC numbers are always
-;;; used instead of names at run time, so changing this vector changes all the
-;;; references.
-(defvar *sc-numbers* (make-array sc-number-limit))
-(proclaim '(type sc-vector *sc-numbers*))
-
-;;;
-;;; A list of all the SBs defined, so that we can easily iterate over them.
-(defvar *sb-list* ())
-(proclaim '(type list *sb-list*))
-
-;;;
-;;; Translates from template names to template structures.
-(defvar *template-names* (make-hash-table :test #'eq))
-(proclaim '(type hash-table *template-names*))
+(export '(template-or-lose sc-or-lose sb-or-lose sc-number-or-lose
+	  meta-sc-or-lose meta-sb-or-lose meta-sc-number-or-lose
+	  define-storage-base define-storage-class define-move-function
+	  define-move-function define-move-vop 
+	  primitive-type-or-lose meta-primitive-type-or-lose
+	  def-primitive-type def-primitive-type-alias
+	  primitive-type-vop define-vop sc-case sc-is note-this-location))
 
 ;;; Template-Or-Lose  --  Internal
 ;;;
@@ -37,26 +28,8 @@
 ;;;
 (defun template-or-lose (x)
   (the template
-       (or (gethash x *template-names*)
+       (or (gethash x (backend-template-names *backend*))
 	   (error "~S is not a defined template." x))))
-
-
-(eval-when (compile load eval)
-
-;;; Hashtable from SC and SB names the corresponding structures.  The META
-;;; versions are only used at meta-compile and load times, so the defining
-;;; macros can change these at meta-compile time without breaking the compiler.
-;;;
-(defvar *sc-names* (make-hash-table :test #'eq))
-(defvar *sb-names* (make-hash-table :test #'eq))
-(defvar *meta-sc-names* (make-hash-table :test #'eq))
-(defvar *meta-sb-names* (make-hash-table :test #'eq))
-(proclaim '(hash-table *sc-names* *sb-names*))
-
-;;;
-;;; Like *SC-Numbers*, but is updated at meta-compile time.
-(defvar *meta-sc-numbers* (make-array sc-number-limit))
-(proclaim '(type sc-vector *meta-sc-numbers*))
 
 
 ;;; SC-Or-Lose, SB-Or-Lose, SC-Number-Or-Lose  --  Internal
@@ -66,17 +39,19 @@
 ;;;
 (defun sc-or-lose (x)
   (the sc
-       (or (gethash x *sc-names*)
+       (or (gethash x (backend-sc-names *backend*))
 	   (error "~S is not a defined storage class." x))))
 ;;;
 (defun sb-or-lose (x)
   (the sb
-       (or (gethash x *sb-names*)
+       (or (gethash x (backend-sb-names *backend*))
 	   (error "~S is not a defined storage base." x))))
 ;;;
 (defun sc-number-or-lose (x)
   (the sc-number (sc-number (sc-or-lose x))))
 
+
+(eval-when (compile eval load)
 
 ;;; META-SC-OR-LOSE, META-SB-OR-LOSE, META-SC-NUMBER-OR-LOSE  --  Internal
 ;;;
@@ -86,18 +61,18 @@
 ;;;
 (defun meta-sc-or-lose (x)
   (the sc
-       (or (gethash x *meta-sc-names*)
+       (or (gethash x (backend-meta-sc-names *backend*))
 	   (error "~S is not a defined storage class." x))))
 ;;;
 (defun meta-sb-or-lose (x)
   (the sb
-       (or (gethash x *meta-sb-names*)
+       (or (gethash x (backend-meta-sb-names *backend*))
 	   (error "~S is not a defined storage base." x))))
 ;;;
 (defun meta-sc-number-or-lose (x)
   (the sc-number (sc-number (meta-sc-or-lose x))))
 
-); Eval-When (Compile Load Eval)
+); eval-when
 
 
 ;;;; Storage class and storage base definition:
@@ -130,9 +105,10 @@
 		 (make-finite-sb :name name :kind kind :size size))))
     `(progn
        (eval-when (compile load eval)
-	 (setf (gethash ',name *meta-sb-names*) ',res))
+	 (setf (gethash ',name (backend-meta-sb-names *backend*)) ',res))
        ,(if (eq kind :non-packed)
-	    `(setf (gethash ',name *sb-names*) (copy-sb ',res))
+	    `(setf (gethash ',name (backend-sb-names *backend*))
+		   (copy-sb ',res))
 	    `(let ((res (copy-finite-sb ',res)))
 	       (setf (finite-sb-always-live res)
 		     (make-array ',size :initial-element #*))
@@ -140,10 +116,12 @@
 		     (make-array ',size :initial-element '#()))
 	       (setf (finite-sb-live-tns res)
 		     (make-array ',size :initial-element nil))
-	       (setf (gethash ',name *sb-names*) res)))
+	       (setf (gethash ',name (backend-sb-names *backend*)) res)))
 
-       (setq *sb-list* (cons (sb-or-lose ',name)
-			     (remove ',name *sb-list* :key #'sb-name)))
+       (setf (backend-sb-list *backend*)
+	     (cons (sb-or-lose ',name)
+		   (remove ',name (backend-sb-list *backend*)
+			   :key #'sb-name)))
        ',name)))
 
 
@@ -225,17 +203,18 @@
 						    ',alternate-scs)
 			     :constant-scs (mapcar #'meta-sc-or-lose
 						   ',constant-scs))))
-	   (setf (gethash ',name *meta-sc-names*) res)
-	   (setf (svref *meta-sc-numbers* ',number) res)
+	   (setf (gethash ',name (backend-meta-sc-names *backend*)) res)
+	   (setf (svref (backend-meta-sc-numbers *backend*) ',number) res)
 	   (setf (svref (sc-load-costs res) ',number) 0)))
 
-       (let ((old (svref *sc-numbers* ',number)))
+       (let ((old (svref (backend-sc-numbers *backend*) ',number)))
 	 (when (and old (not (eq (sc-name old) ',name)))
 	   (warn "Redefining SC number ~D from ~S to ~S." ',number
 		 (sc-name old) ',name)))
        
-       (setf (svref *sc-numbers* ',number) (meta-sc-or-lose ',name))
-       (setf (gethash ',name *sc-names*) (meta-sc-or-lose ',name))
+       (setf (svref (backend-sc-numbers *backend*) ',number) (meta-sc-or-lose ',name))
+       (setf (gethash ',name (backend-sc-names *backend*))
+	     (meta-sc-or-lose ',name))
        (setf (sc-sb (sc-or-lose ',name)) (sb-or-lose ',sb-name))
        ',name)))
 
@@ -350,24 +329,6 @@
 
 ;;;; Primitive type definition:
 
-;;; Translates from primitive type names to the corresponding primitive-type
-;;; structure.
-;;;
-(defvar *primitive-type-names* (make-hash-table :test #'eq))
-
-;;; Establishes a convenient handle on primitive type unions, or whatever.
-;;; These names can only be used as the :arg-types or :result-types for VOPs
-;;; and can map to anything else that can be used as :arg-types or
-;;; :result-types (e.g. :or, :constant).
-;;; 
-(defvar *primitive-type-aliases* (make-hash-table :test #'eq))
-
-;;; Meta-compile time translation from names to primitive types.
-;;;
-(eval-when (compile load eval)
-  (defvar *meta-primitive-type-names* (make-hash-table :test #'eq)))
-
-
 ;;; PRIMITIVE-TYPE-OR-LOSE, META-PRIMITIVE-TYPE-OR-LOSE  --  Interface
 ;;;
 ;;;    Return the primitive type corresponding to the specified name, or die
@@ -375,27 +336,17 @@
 ;;;
 (defun primitive-type-or-lose (name)
   (the primitive-type
-       (or (gethash name *primitive-type-names*)
+       (or (gethash name (backend-primitive-type-names *backend*))
 	   (error "~S is not a defined primitive type." name))))
 ;;;
+(eval-when (compile eval load)
+
 (defun meta-primitive-type-or-lose (name)
   (the primitive-type
-       (or (gethash name *meta-primitive-type-names*)
+       (or (gethash name (backend-meta-primitive-type-names *backend*))
 	   (error "~S is not a defined primitive type." name))))
 
-
-;;; The primitive type T is somewhat magical, in that it is the only primitive
-;;; type that overlaps with other primitive types.  An object of primitive-type
-;;; T is in the canonical descriptor (boxed or pointer) representation.
-;;;
-;;; We stick the T primitive-type in a variable so that people who have to
-;;; special-case it can get at it conveniently.  This is done by the machine
-;;; specific VM definition, since the DEF-PRIMITIVE-TYPE for T must specify the
-;;; SCs that boxed objects can be allocated in.
-;;;
-(proclaim '(special *any-primitive-type*))
-(proclaim '(type primitive-type *any-primitive-type*))
-
+); eval-when
 
 ;;; Def-Primitive-Type  --  Public
 ;;;
@@ -419,17 +370,19 @@
 	(get-type `(specifier-type ',type)))
     `(progn
        (eval-when (compile load eval)
-	 (setf (gethash ',name *meta-primitive-type-names*)
+	 (setf (gethash ',name (backend-meta-primitive-type-names *backend*))
 	       (make-primitive-type :name ',name  :scs ',scns
 				    :type ,get-type)))
-       ,(once-only ((n-old `(gethash ',name *primitive-type-names*))
+       ,(once-only ((n-old `(gethash ',name
+				     (backend-primitive-type-names *backend*)))
 		    (n-type get-type))
 	  `(progn
 	     (cond (,n-old
 		    (setf (primitive-type-scs ,n-old) ',scns)
 		    (setf (primitive-type-type ,n-old) ,n-type))
 		   (t
-		    (setf (gethash ',name *primitive-type-names*)
+		    (setf (gethash ',name
+				   (backend-primitive-type-names *backend*))
 			  (make-primitive-type :name ',name  :scs ',scns
 					       :type ,n-type))))
 	     ',name)))))
@@ -443,7 +396,7 @@
   "DEF-PRIMITIVE-TYPE-ALIAS Name Result
   Define name to be an alias for Result in VOP operand type restrictions."
   `(eval-when (compile load eval)
-     (setf (gethash ',name *primitive-type-aliases*)
+     (setf (gethash ',name (backend-primitive-type-aliases *backend*))
 	   ',result)
      ',name))
 
@@ -483,21 +436,23 @@
 ;;; SC-ALLOWED-BY-PRIMITIVE-TYPE  --  Interface
 ;;;
 ;;;    Return true if SC is either one of Ptype's SC's, or one of those SC's
-;;; alternate or constant SCs.  If Meta-P is true, use meta-compile time info.
+;;; alternate or constant SCs.  The META- version uses meta-compile time info.
 ;;;
-(defun sc-allowed-by-primitive-type (sc ptype &optional meta-p)
-  (declare (type sc sc) (type primitive-type ptype))
-  (let ((scn (sc-number sc)))
-    (dolist (allowed (primitive-type-scs ptype) nil)
-      (when (eql allowed scn)
-	(return t))
-      (let ((allowed-sc (svref (if meta-p
-				   *meta-sc-numbers*
-				   *sc-numbers*)
-			       allowed)))
-	(when (or (member sc (sc-alternate-scs allowed-sc))
-		  (member sc (sc-constant-scs allowed-sc)))
-	  (return t))))))
+(macrolet
+    ((frob (name sc-numbers-fun)
+       `(defun ,name (sc ptype)
+	  (declare (type sc sc) (type primitive-type ptype))
+	  (let ((scn (sc-number sc)))
+	    (dolist (allowed (primitive-type-scs ptype) nil)
+	      (when (eql allowed scn)
+		(return t))
+	      (let ((allowed-sc (svref (,sc-numbers-fun *backend*) allowed)))
+		(when (or (member sc (sc-alternate-scs allowed-sc))
+			  (member sc (sc-constant-scs allowed-sc)))
+		  (return t))))))))
+  (frob sc-allowed-by-primitive-type backend-sc-numbers)
+  (eval-when (compile eval load)
+    (frob meta-sc-allowed-by-primitive-type backend-meta-sc-numbers)))
 
 
 ;;;; VOP definition structures:
@@ -507,12 +462,6 @@
 ;;; retain the information so that it can be inherited by other VOPs.
 
 (eval-when (compile load eval)
-
-;;;
-;;; Hashtable translating from VOP names to the corresponding VOP-Parse
-;;; structures.  This information is only used at meta-compile time.
-(defvar *parsed-vops* (make-hash-table :test #'eq))
-(proclaim '(type hash-table *parsed-vops*))
 
 ;;; The VOP-Parse structure holds everything we need to know about a VOP at
 ;;; meta-compile time.
@@ -629,8 +578,9 @@
   (name nil :type symbol)
   ;;
   ;; The way this operand is used:
-  (kind nil :type (member :argument :result :temporary
-			  :more-argument :more-result))
+  (kind (required-argument)
+	:type (member :argument :result :temporary
+		      :more-argument :more-result))
   ;;
   ;; If true, the name of an operand that this operand is targeted to.  This is
   ;; only meaningful in :Argument and :Temporary operands.
@@ -709,7 +659,7 @@
 ;;;
 (defun vop-parse-or-lose (name)
   (the vop-parse
-       (or (gethash name *parsed-vops*)
+       (or (gethash name (backend-parsed-vops *backend*))
 	   (error "~S is not the name of a defined VOP." name))))
 
 
@@ -1047,6 +997,8 @@
 ;;; restrictions to :non-packed (constant) SCs, since we don't load into those
 ;;; SCs.
 ;;;
+(eval-when (compile load eval)
+
 (defun find-move-functions (op load-p)
   (collect ((funs))
     (dolist (sc-name (operand-parse-scs op))
@@ -1085,6 +1037,7 @@
 		 sc-name load-p (operand-parse-name op))))))
     (funs)))
 
+); eval-when
 
 ;;; CALL-MOVE-FUNCTION  --  Internal
 ;;;
@@ -1441,6 +1394,8 @@
 ;;; In both vectors, unused entries are NIL.  Load-P specifies the direction:
 ;;; if true, we are loading, if false we are saving.
 ;;;
+(eval-when (compile load eval)
+
 (defun compute-loading-costs (op load-p)
   (declare (type operand-parse op))
   (let ((scs (operand-parse-scs op))
@@ -1473,7 +1428,7 @@
 
 	(dotimes (i sc-number-limit)
 	  (unless (svref costs i)
-	    (let ((op-sc (svref *meta-sc-numbers* i)))
+	    (let ((op-sc (svref (backend-meta-sc-numbers *backend*) i)))
 	      (when op-sc
 		(let ((cost (if load-p
 				(svref (sc-move-costs load-sc) i)
@@ -1483,6 +1438,7 @@
 
     (values costs load-scs)))
 
+); eval-when
 
 (defparameter no-costs
   (make-array sc-number-limit  :initial-element 0))
@@ -1556,7 +1512,9 @@
   (labels ((parse-operand-type (spec)
 	     (cond ((eq spec '*) spec)
 		   ((symbolp spec)
-		    (let ((alias (gethash spec *primitive-type-aliases*)))
+		    (let ((alias (gethash spec
+					  (backend-primitive-type-aliases
+					   *backend*))))
 		      (if alias
 			  (parse-operand-type alias)
 			  `(:or ,spec))))
@@ -1572,7 +1530,9 @@
 			     (error "Bad PRIMITIVE-TYPE name in ~S: ~S"
 				    spec item))
 			   (let ((alias
-				  (gethash item *primitive-type-aliases*)))
+				  (gethash item
+					   (backend-primitive-type-aliases
+					    *backend*))))
 			     (if alias
 				 (let ((alias (parse-operand-type alias)))
 				   (unless (eq (car alias) :or)
@@ -1607,6 +1567,8 @@
 ;;; in the restriction.  With *, we require that T satisfy the first test, and
 ;;; omit the second.
 ;;;
+(eval-when (compile eval load)
+
 (defun check-operand-type-scs (parse op type load-p)
   (declare (type vop-parse parse) (type operand-parse op))
   (let ((ptypes (if (eq type '*) (list 't) (rest type)))
@@ -1632,10 +1594,9 @@
       (dolist (sc scs)
 	(unless (or (eq type '*)
 		    (dolist (ptype ptypes nil)
-		      (when (sc-allowed-by-primitive-type
+		      (when (meta-sc-allowed-by-primitive-type
 			     (meta-sc-or-lose sc)
-			     (meta-primitive-type-or-lose ptype)
-			     t)
+			     (meta-primitive-type-or-lose ptype))
 			(return t))))
 	  (warn "~:[Result~;Argument~] ~A to VOP ~S~@
 	         has SC restriction ~S which is ~
@@ -1645,6 +1606,7 @@
 
   (undefined-value))
 
+); eval-when
 
 ;;; Check-Operand-Types  --  Internal
 ;;;
@@ -2098,10 +2060,10 @@
       
     `(progn
        (eval-when (compile load eval)
-	 (setf (gethash ',name *parsed-vops*) ',parse))
+	 (setf (gethash ',name (backend-parsed-vops *backend*)) ',parse))
 
        (let ((,n-res ,(set-up-vop-info iparse parse)))
-	 (setf (gethash ',name *template-names*) ,n-res)
+	 (setf (gethash ',name (backend-template-names *backend*)) ,n-res)
 	 (setf (template-type ,n-res)
 	       (specifier-type (template-type-specifier ,n-res)))
 	 ,@(set-up-function-translation parse n-res))
@@ -2420,62 +2382,3 @@
        (emit-label ,n-lab)
        (note-debug-location ,vop ,n-lab ,kind))))
 
-
-;;;; Utilities for defining miscops:
-
-(eval-when (compile load eval)
-  
-;;; Miscop-Name  --  Internal
-;;;
-;;;    Return the name for a miscop with the specified args/results.
-;;;
-(defun miscop-name (nargs nresults conditional)
-  (intern (if conditional
-	      (format nil "~:@(~R-ARG-CONDITIONAL-MISCOP~)"
-		      nargs)
-	      (format nil "~:@(~R-ARG~[-NO-VALUE~;~:;-~:*~R-VALUE~]-MISCOP~)"
-		      nargs nresults))
-	  (find-package "C")))
-
-); Eval-When (Compile Load Eval)
-
-
-;;; Define-Miscop-Variants  --  Interface
-;;;
-;;;    Define a bunch of miscops VOPs that inherit the specified VOP and whose
-;;; Template name, Miscop name and translate function are all the same.
-;;; 
-;;; ### We intern the Variant name in the COMPILER package to get around
-;;; bootstrapping package lossage.
-;;;
-(defmacro define-miscop-variants (vop &rest names)
-  (collect ((res))
-    (dolist (name names)
-      (res `(define-vop (,name ,vop)
-	      (:translate ,name)
-	      (:variant ',(intern (symbol-name name)
-				  (find-package "COMPILER"))))))
-    `(progn ,@(res))))
-
-
-;;; Define-Miscop  --  Interface
-;;;
-;;;    Define a miscop with the specified args/results and options.
-;;;
-(defmacro define-miscop (name args &key (results '(r)) translate
-			      policy arg-types result-types
-			      cost conditional)
-  `(define-vop (,name ,(miscop-name (length args) (length results)
-				    conditional))
-     (:variant ',(intern (symbol-name name)
-			 (find-package "COMPILER")))
-     ,@(when arg-types
-	 `((:arg-types ,@arg-types)))
-     ,@(when result-types
-	 `((:result-types ,@result-types)))
-     ,@(when policy
-	 `((:policy ,policy)))
-     ,@(when cost
-	 `((:variant-cost ,cost)))
-     ,@(when translate
-	 `((:translate ,translate)))))
