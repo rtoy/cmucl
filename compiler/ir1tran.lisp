@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.52 1991/10/01 19:11:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.53 1991/10/02 13:07:38 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3250,7 +3250,7 @@
 	(let ((for-real (eq where-from :declared)))
 	  (assert-definition-type
 	   fun save-type
-	   :error-function (if for-real #'compiler-warning #'compiler-note)
+	   :error-function #'compiler-warning
 	   :warning-function (cond (function-info #'compiler-warning)
 				   (for-real #'compiler-note)
 				   (t nil))
