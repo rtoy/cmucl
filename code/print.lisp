@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.53 1993/05/07 11:47:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.54 1993/05/11 13:42:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1672,7 +1672,10 @@
 	     (write-string "Code Object" stream)
 	     (when dinfo
 	       (write-char #\space stream)
-	       (output-object (c::compiled-debug-info-name dinfo) stream)))))))
+	       (if (stringp dinfo)
+		   (prin1 dinfo stream)
+		   (output-object (c::compiled-debug-info-name dinfo)
+				  stream))))))))
 
 (defun output-lra (lra stream)
   (print-unreadable-object (lra stream :identity t)
