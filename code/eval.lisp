@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.8 1991/02/08 13:32:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.9 1991/04/23 12:49:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.8 1991/02/08 13:32:17 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.9 1991/04/23 12:49:01 ram Exp $
 ;;;    
 (in-package "LISP")
 (export '(eval constantp quote proclaim
@@ -94,6 +94,7 @@
 (defun eval (original-exp)
   "Evaluates its single arg in a null lexical environment, returns the
   result or results."
+  (declare (optimize (safety 1)))
   (let ((exp (macroexpand original-exp)))
     (typecase exp
       (symbol (symbol-value exp))
