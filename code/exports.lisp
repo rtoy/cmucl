@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.61 1990/12/01 22:24:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.62 1990/12/03 20:00:02 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -425,12 +425,13 @@
 (use-package "KERNEL")
 (use-package "EXT")
 (use-package "C")
+(use-package "BIGNUM")
 
 (export '(*assembly-unit-length* *primitive-objects* array-data-slot
 	  array-dimensions-offset array-displaced-p-slot
 	  array-displacement-slot array-elements-slot
 	  array-fill-pointer-slot atomic-flag base-character-type
-	  bignum-digits-offset bignum-type binding-size binding-symbol-slot
+	  binding-size binding-symbol-slot
 	  binding-value-slot byte-bits catch-block-current-code-slot
 	  catch-block-current-cont-slot catch-block-current-uwp-slot
 	  catch-block-entry-pc-slot catch-block-previous-catch-slot
@@ -715,6 +716,14 @@
 	  bignum-logical-not bignum-load-byte bignum-deposit-byte
 	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
 	  bignum-logcount bignum-index bignum-type bignum-element-type))
+
+(export '(bignum-type bignum-element-type bignum-index %allocate-bignum
+	  %bignum-length %bignum-set-length %bignum-ref %bignum-set
+	  %digit-0-or-plusp %add-with-carry %subtract-with-borrow
+	  %multiply-and-add %multiply %lognot %logand %logior %logxor
+	  %fixnum-to-digit %floor %fixnum-digit-with-correct-sign %ashl
+	  %ashr %digit-logical-shift-right))
+
 
 
 (in-package "DEBUG")
