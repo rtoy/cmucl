@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.27 2002/08/27 22:18:31 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.28 2002/11/05 22:45:48 cracauer Exp $
  *
  */
 
@@ -48,18 +48,25 @@
  * and only a few rare messages are printed at level 1.
  */
 unsigned gencgc_verbose = 0;
+unsigned counters_verbose = 0;
 
 /*
  * To enable the use of page protection to help avoid the scavenging
  * of pages that don't have pointers to younger generations.
  */
+#ifndef AT_ITA
 #ifdef __NetBSD__
+
 /* NetBSD on x86 has no way to retrieve the faulting address in the
  * SIGSEGV handler, so for the moment we can't use page protection. */
 boolean  enable_page_protection = FALSE;
-#else
+#else /* Netbsd */
 boolean  enable_page_protection = TRUE;
-#endif
+#endif /* Netbsd */
+
+#else /* we are ITA */
+boolean  enable_page_protection = FALSE;
+#endif /* ITA */
 
 /*
  * Hunt for pointers to old-space, when GCing generations >= verify_gen.
@@ -130,6 +137,12 @@ boolean enable_pointer_filter = TRUE;
  * The total bytes allocated. Seen by (dynamic-usage)
  */
 unsigned long bytes_allocated = 0;
+
+/*
+ * The total amount of bytes ever allocated.  Not decreased by GC.
+ */
+
+volatile unsigned long long bytes_allocated_sum = 0;
 
 /*
  * GC trigger; a value of 0xffffffff represents disabled.
@@ -6387,6 +6400,8 @@ char *alloc(int nbytes)
   gc_assert(((unsigned) SymbolValue(CURRENT_REGION_FREE_POINTER) & 0x7) == 0
 	    && (nbytes & 0x7) == 0);
 
+  bytes_allocated_sum += nbytes;
+
   if (SymbolValue(PSEUDO_ATOMIC_ATOMIC)) {
     /* Already within a pseudo atomic. */
     void *new_free_pointer;
@@ -6469,7 +6484,6 @@ char *alloc(int nbytes)
 	do_pending_interrupt();
 	goto retry2;
       }
-
       return (void *) new_obj;
     }
 
@@ -6499,7 +6513,6 @@ char *alloc(int nbytes)
       do_pending_interrupt();
       goto retry2;
     }
-
     return result;
   }
 }
@@ -6534,4 +6547,94 @@ lispobj * component_ptr_from_pc(lispobj *pc)
     return ptr;
 
   return NULL;
+}
+
+/*
+ * Get lower and upper(middle) 28 bits of total allocation
+ */
+int get_bytes_consed_lower(void)
+{
+  return (int)bytes_allocated_sum & 0xFFFFFFF;
+}
+
+int get_bytes_consed_upper(void)
+{
+  return ((int)bytes_allocated_sum / 0x10000000) & 0xFFFFFFF;
+}
+
+#define current_region_free_pointer SymbolValue(CURRENT_REGION_FREE_POINTER)
+#define current_region_end_addr     SymbolValue(CURRENT_REGION_END_ADDR)
+
+int get_bytes_allocated_lower(void)
+{
+  int size = bytes_allocated;
+  static int previous = -1;
+
+  if (current_region_end_addr != boxed_region.end_addr) {
+    fprintf(stderr, "NOT BOXED: %d %d %d\n"
+	    ,current_region_end_addr, boxed_region.end_addr
+	    ,unboxed_region.end_addr);
+  }
+
+  if (current_region_end_addr == boxed_region.end_addr) {
+    size += current_region_free_pointer - (int)boxed_region.start_addr;
+  } else {
+    size += current_region_free_pointer - (int)unboxed_region.start_addr;
+  }
+
+  if (counters_verbose)
+    fprintf(stderr, ">%10d%10d%10d%10d%10d (max%d @0x%X)\n", size
+	    ,previous != -1? size - previous: -1
+	    ,current_region_free_pointer - (int)boxed_region.start_addr
+	    ,(int)boxed_region.free_pointer - (int)boxed_region.start_addr
+	    ,(int)unboxed_region.free_pointer - (int)unboxed_region.start_addr
+	    ,boxed_region.end_addr - (int)boxed_region.start_addr
+	    ,boxed_region.start_addr
+	    );
+
+  previous = size;
+
+  return (int)size & 0xFFFFFFF;
+}
+
+int get_bytes_allocated_upper(void)
+{
+  int size = bytes_allocated;
+
+  if (current_region_end_addr == boxed_region.end_addr) {
+    size += current_region_free_pointer - (int)boxed_region.start_addr;
+  } else {
+    size += current_region_free_pointer - (int)unboxed_region.start_addr;
+  }
+  return ((int)size / 0x10000000) & 0xFFFFFFF;
+}
+
+void print_bytes_allocated_sum(void)
+{
+#if 0
+  int size;
+  /*
+	      gc_alloc_update_page_tables(0, &);
+	      gc_alloc_update_page_tables(1, &unboxed_region);
+  */
+
+  size = bytes_allocated;
+
+  if (current_region_end_addr == boxed_region.end_addr) {
+    size += current_region_free_pointer - boxed_region.start_addr;
+    size += unboxed_region.free_pointer - unboxed_region.start_addr;
+  } else {
+    size += current_region_free_pointer - unboxed_region.start_addr;
+    size += boxed_region.free_pointer - boxed_region.start_addr;
+  }
+  fprintf(stdout, "manually counted: %10d %10d %10d\n"
+	  , size, size - bytes_allocated, size - bytes_allocated_sum);
+
+  /*
+  fprintf(stdout, "%llu -> %d / %d\n", bytes_allocated_sum
+	  ,get_bytes_consed_upper(), get_bytes_consed_lower());
+  fprintf(stdout, "0x%llX -> 0x%x / 0x%x\n", bytes_allocated_sum
+	  ,get_bytes_consed_upper(), get_bytes_consed_lower());
+  */
+#endif
 }

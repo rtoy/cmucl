@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.27 2002/08/27 22:18:24 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.28 2002/11/05 22:45:40 cracauer Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,9 @@
 (export '(*before-gc-hooks* *after-gc-hooks* gc gc-on gc-off
 	  *bytes-consed-between-gcs* *gc-verbose* *gc-inhibit-hook*
 	  *gc-notify-before* *gc-notify-after* get-bytes-consed
-	  *gc-run-time* bytes-consed-between-gcs))
+	  *gc-run-time* bytes-consed-between-gcs
+	  get-bytes-consed-integer get-bytes-consed-single-float
+	  get-bytes-consed-dfixnum get-bytes-consed-new))
 
 (in-package "LISP")
 (export '(room))
@@ -53,8 +55,15 @@
        (- (system:sap-int (c::dynamic-space-free-pointer))
 	  (current-dynamic-space-start))))
 
-#+(or cgc gencgc)
-(c-var-frob dynamic-usage "bytes_allocated")
+;; #+(or cgc gencgc)
+;; (c-var-frob dynamic-usage "bytes_allocated")
+
+(alien:def-alien-routine get_bytes_allocated_lower c-call:int)
+(alien:def-alien-routine get_bytes_allocated_upper c-call:int)
+
+(defun dynamic-usage ()
+  (dfixnum:dfixnum-pair-integer
+   (get_bytes_allocated_upper) (get_bytes_allocated_lower)))
 
 (defun static-space-usage ()
   (- (* lisp::*static-space-free-pointer* vm:word-bytes)
@@ -138,27 +147,67 @@
 ;;; Internal State
 ;;; 
 (defvar *last-bytes-in-use* nil)
-(defvar *total-bytes-consed* 0)
+(defvar *total-bytes-consed* (dfixnum:make-dfixnum))
 
-(declaim (type (or index null) *last-bytes-in-use*))
-(declaim (type integer *total-bytes-consed*))
+(declaim (type (or fixnum null) *last-bytes-in-use*))
+(declaim (type dfixnum:dfixnum *total-bytes-consed*))
 
 ;;; GET-BYTES-CONSED -- Exported
 ;;; 
+#+(or cgc gencgc)
+(defun get-bytes-consed-dfixnum ()
+  ;(declare (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
+  (cond ((null *last-bytes-in-use*)
+	 (pushnew
+	  #'(lambda ()
+	      (print "resetting GC counters")
+	      (force-output)
+	      (setf *last-bytes-in-use* nil)
+	      (setf *total-bytes-consed* (dfixnum:make-dfixnum)))
+	  ext:*before-save-initializations*)
+	 (setf *last-bytes-in-use* (dynamic-usage))
+	 (dfixnum:dfixnum-set-from-number *total-bytes-consed* 0))
+	(t
+	 (let* ((bytes (dynamic-usage))
+		(incbytes (- bytes *last-bytes-in-use*)))
+	   (if (< incbytes dfixnum::dfmax)
+	       (dfixnum:dfixnum-inc-hf *total-bytes-consed* incbytes)
+	     (dfixnum:dfixnum-inc-df
+	      *total-bytes-consed*
+	      ;; Kinda fixme - we cons, but it doesn't matter if we consed
+	      ;; more than 250 Megabyte *within* this measuring period anyway.
+	      (let ((df (dfixnum:make-dfixnum)))
+		(dfixnum:dfixnum-set-from-number df incbytes)
+		df)))
+	   (setq *last-bytes-in-use* bytes))))
+  *total-bytes-consed*)
+
+#+(or cgc gencgc)
+(defun get-bytes-consed ()
+  "Returns the number of bytes consed since the first time this function
+  was called.  The first time it is called, it returns zero."
+  (dfixnum:dfixnum-integer (get-bytes-consed-dfixnum)))
+
+#-(or cgc gencgc)
 (defun get-bytes-consed ()
   "Returns the number of bytes consed since the first time this function
   was called.  The first time it is called, it returns zero."
   (declare (optimize (speed 3) (safety 0)(inhibit-warnings 3)))
   (cond ((null *last-bytes-in-use*)
-	 (setq *last-bytes-in-use* (dynamic-usage))
-	 (setq *total-bytes-consed* 0))
-	(t
-	 (let ((bytes (dynamic-usage)))
-	   (incf *total-bytes-consed*
-		 (the index (- bytes *last-bytes-in-use*)))
-	   (setq *last-bytes-in-use* bytes))))
+         (setq *last-bytes-in-use* (dynamic-usage))
+         (setq *total-bytes-consed* 0))
+        (t
+         (let ((bytes (dynamic-usage)))
+           (incf *total-bytes-consed*
+                 (the index (- bytes *last-bytes-in-use*)))
+           (setq *last-bytes-in-use* bytes))))
   *total-bytes-consed*)
 
+#-(or cgc gencgc)
+(defun get-bytes-consed-dfixnum ()
+  ;; A plug until a direct implementation is available.
+  (dfixnum:dfixnum-make-from-number (get-bytes-consed)))
+    
 
 ;;;; Variables and Constants.
 
@@ -389,12 +438,21 @@
 	    #-gencgc (funcall *internal-gc*)
 	    #+gencgc (if (eq *internal-gc* #'collect-garbage)
 			 (funcall *internal-gc* gen)
-			 (funcall *internal-gc*))
+                         (funcall *internal-gc*))
 	    (let* ((post-gc-dyn-usage (dynamic-usage))
 		   (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
 	      (when *last-bytes-in-use*
-		(incf *total-bytes-consed*
-		      (- pre-gc-dyn-usage *last-bytes-in-use*))
+		#+nil(when verbose-p
+		  (format
+		   t "~&Adjusting *last-bytes-in-use* from ~:D to ~:D, gen ~d, pre ~:D ~%"
+		   *last-bytes-in-use*
+		   post-gc-dyn-usage
+		   gen
+		   pre-gc-dyn-usage)
+		  (force-output))
+		(dfixnum:dfixnum-inc-hf
+		 *total-bytes-consed*
+		 (- pre-gc-dyn-usage *last-bytes-in-use*))
 		(setq *last-bytes-in-use* post-gc-dyn-usage))
 	      (setf *need-to-collect-garbage* nil)
 	      (setf *gc-trigger*

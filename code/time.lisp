@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.19 2000/06/07 07:11:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.20 2002/11/05 22:45:41 cracauer Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,7 +274,7 @@
 
 ;;; TIME-GET-SYS-INFO  --  Internal
 ;;;
-;;;    Return all the files that we want time to report.
+;;;    Return all the values that we want time to report.
 ;;;
 (defun time-get-sys-info ()
   (multiple-value-bind (user sys faults)
@@ -323,10 +323,10 @@
     (setq real-time-overhead (- new-real-time old-real-time))
     (setq cons-overhead (- new-bytes-consed old-bytes-consed))
     ;; Now get the initial times.
+    (setq old-real-time (get-internal-real-time))
     (multiple-value-setq
         (old-run-utime old-run-stime old-page-faults old-bytes-consed)
       (time-get-sys-info))
-    (setq old-real-time (get-internal-real-time))
     (let ((start-gc-run-time *gc-run-time*))
     (multiple-value-prog1
         ;; Execute the form and return its values.
@@ -343,7 +343,7 @@
 		 ~S second~:P of system run time~%  ~
 		 ~@[[Run times include ~S second~:P GC run time]~%  ~]~
 		 ~S page fault~:P and~%  ~
-		 ~S bytes consed.~%"
+		 ~:D bytes consed.~%"
 		(max (/ (- new-real-time old-real-time)
 			(float internal-time-units-per-second))
 		     0.0)
@@ -353,4 +353,5 @@
 		  (/ (float gc-run-time)
 		     (float internal-time-units-per-second)))
 		(max (- new-page-faults old-page-faults) 0)
-		(max (- new-bytes-consed old-bytes-consed) 0)))))))
+		(max (- new-bytes-consed old-bytes-consed cons-overhead)
+		     0)))))))

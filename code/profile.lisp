@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.23 2002/11/01 17:43:29 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.24 2002/11/05 22:45:41 cracauer Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,10 +30,14 @@
 ;;; will result in use of an erroneously small timing overhead factor.  In CMU
 ;;; CL, this cache is invalidated when a core is saved.
 ;;;
-(in-package "PROFILE")
 
-(export '(*timed-functions* profile profile-all unprofile report-time
-	  reset-time))
+(defpackage "PROFILE"
+  (:export *timed-functions* profile profile-all unprofile reset-time 
+	   report-time report-time-custom *default-report-time-printfunction*
+	   with-spacereport print-spacereports reset-spacereports
+	   delete-spacereports *insert-spacereports*))
+
+(in-package "PROFILE")
 
 
 ;;;; Implementation dependent interfaces:
@@ -94,9 +98,14 @@
 ;;; The Total-Consing macro is called to find the total number of bytes consed
 ;;; since the beginning of time.
 
+(declaim (inline total-consing))
 #+cmu
-(defmacro total-consing ()
-  '(ext:get-bytes-consed))
+(defun total-consing () (ext:get-bytes-consed-dfixnum))
+
+#-cmu
+(eval-when (compile eval)
+  (error "No consing will be reported unless a Total-Consing function is ~
+           defined."))
 
 (eval-when (compile load eval)
 ;; Some macros to implement a very simple "bignum" package consisting
@@ -224,11 +233,12 @@ this, the functions are listed.  If NIL, then always list the functions.")
 ;;; allow for about 2^58 bytes of total consing.  (Assumes positive
 ;;; fixnums are 29 bits long).
 (defvar *enclosed-time* 0)
-(defvar *enclosed-consing* 0)
-(defvar *enclosed-consing-hi* 0)
+(defvar *enclosed-consing-h* 0)
+(defvar *enclosed-consing-l* 0)
 (defvar *enclosed-profilings* 0)
 (declaim (type time-type *enclosed-time*))
-(declaim (type consing-type *enclosed-consing* *enclosed-consing-hi*))
+(declaim (type dfixnum:dfparttype *enclosed-consing-h*))
+(declaim (type dfixnum:dfparttype *enclosed-consing-l*))
 (declaim (fixnum *enclosed-profilings*))
 
 
@@ -254,16 +264,6 @@ this, the functions are listed.  If NIL, then always list the functions.")
 
 (eval-when (compile load eval)
 
-;;; MAKE-PROFILE-ENCAPSULATION  --  Internal
-;;;
-;;;    Return a lambda expression for a function that (when called with the
-;;; function name) will set up that function for profiling.
-;;;
-;;; A function is profiled by replacing its definition with a closure created
-;;; by the following function.  The closure records the starting time, calls
-;;; the original function, and records finishing time.  Other closures are used
-;;; to perform various operations on the encapsulated function.
-;;;
 (defun make-profile-encapsulation (min-args optionals-p)
   (let ((required-args ()))
     (dotimes (i min-args)
@@ -271,12 +271,16 @@ this, the functions are listed.  If NIL, then always list the functions.")
     `(lambda (name callers-p)
        (let* ((time 0)
 	      (count 0)
-	      (consed 0)
-	      (consed-hi 0)
+	      (consed-h 0)
+	      (consed-l 0)
+	      (consed-w/c-h 0)
+	      (consed-w/c-l 0)
 	      (profile 0)
 	      (callers ())
 	      (old-definition (fdefinition name)))
-	 (declare (type time-type time) (type consing-type consed consed-hi)
+	 (declare (type time-type time)
+		  (type dfixnum:dfparttype consed-h consed-l)
+		  (type dfixnum:dfparttype consed-w/c-h consed-w/c-l)
 		  (fixnum count))
 	 (pushnew name *timed-functions*)
 
@@ -310,19 +314,25 @@ this, the functions are listed.  If NIL, then always list the functions.")
 			     (return))))))
 			       
 		   (let ((time-inc 0)
-			 (cons-inc 0)
-			 (cons-inc-hi 0)
+			 (cons-inc-h 0)
+			 (cons-inc-l 0)
 			 (profile-inc 0))
 		     (declare (type time-type time-inc)
-			      (type consing-type cons-inc cons-inc-hi)
+			      (type dfixnum:dfparttype cons-inc-h cons-inc-l)
 			      (fixnum profile-inc))
 		     (multiple-value-prog1
 			 (let ((start-time (quickly-get-time))
-			       (start-consed (total-consing))
+			       (start-consed-h 0)
+			       (start-consed-l 0)
+			       (end-consed-h 0)
+			       (end-consed-l 0)
 			       (*enclosed-time* 0)
-			       (*enclosed-consing* 0)
-			       (*enclosed-consing-hi* 0)
+			       (*enclosed-consing-h* 0)
+			       (*enclosed-consing-l* 0)
 			       (*enclosed-profilings* 0))
+			   (dfixnum:dfixnum-set-pair start-consed-h
+						     start-consed-l
+						     (total-consing))
 			   (multiple-value-prog1
 			       ,(if optionals-p
 				    #+cmu
@@ -342,32 +352,39 @@ this, the functions are listed.  If NIL, then always list the functions.")
 				   #+BSD
 				   (max (- (quickly-get-time) start-time) 0))
 			     ;; How much did we cons so far?
-			     (multiple-value-setq (cons-inc-hi cons-inc)
-			       (let ((diff (- (total-consing) start-consed)))
-				 (values (ash diff (- +fixnum-bits+))
-					 (ldb +fixnum-byte+ diff))))
+			     (dfixnum:dfixnum-set-pair end-consed-h
+						       end-consed-l
+						       (total-consing))
+			     (dfixnum:dfixnum-copy-pair cons-inc-h cons-inc-l
+							end-consed-h
+							end-consed-l)
+			     (dfixnum:dfixnum-dec-pair cons-inc-h cons-inc-l
+						       start-consed-h
+						       start-consed-l)
+			     ;; (incf consed (- cons-inc *enclosed-consing*))
+			     (dfixnum:dfixnum-inc-pair consed-h consed-l
+						       cons-inc-h cons-inc-l)
+			     (dfixnum:dfixnum-inc-pair consed-w/c-h
+						       consed-w/c-l
+						       cons-inc-h cons-inc-l)
 
 			     (setq profile-inc *enclosed-profilings*)
 			     (incf time
 				   (the time-type
-					#-BSD
-					(- time-inc *enclosed-time*)
-					#+BSD
-					(max (- time-inc *enclosed-time*) 0)))
-			     ;; consed = consed + (- cons-inc *enclosed-consing*)
-			     (multiple-value-bind (dhi dlo)
-				 (dfix-sub (cons-inc-hi cons-inc)
-					   (*enclosed-consing-hi* *enclosed-consing*))
-
-			       (dfix-incf (consed-hi consed) (dhi dlo)))
-
+				     #-BSD
+				     (- time-inc *enclosed-time*)
+				     #+BSD
+				     (max (- time-inc *enclosed-time*) 0)))
+			     (dfixnum:dfixnum-dec-pair consed-h consed-l
+						       *enclosed-consing-h*
+						       *enclosed-consing-l*)
 			     (incf profile profile-inc)))
 		       (incf *enclosed-time* time-inc)
 		       ;; *enclosed-consing* = *enclosed-consing + cons-inc
-		       (dfix-incf (*enclosed-consing-hi* *enclosed-consing*)
-				  (cons-inc-hi cons-inc))
-		       (incf *enclosed-profilings*
-			     (the fixnum (1+ profile-inc)))))))
+		       (dfixnum:dfixnum-inc-pair *enclosed-consing-h*
+						 *enclosed-consing-l*
+						 cons-inc-h
+						 cons-inc-l)))))
 	 
 	 (setf (gethash name *profile-info*)
 	       (make-profile-info
@@ -376,19 +393,25 @@ this, the functions are listed.  If NIL, then always list the functions.")
 		:new-definition (fdefinition name)
 		:read-time
 		#'(lambda ()
-		    (let ((total-cons (+ consed (ash consed-hi +fixnum-bits+))))
-		      (values count time total-cons profile callers)))
+		    (values count time
+			    (dfixnum:dfixnum-pair-integer consed-h consed-l)
+			    (dfixnum:dfixnum-pair-integer consed-w/c-h
+							  consed-w/c-l)
+			    profile callers))
 		:reset-time
 		#'(lambda ()
 		    (setq count 0)
 		    (setq time 0)
-		    (setq consed 0)
-		    (setq consed-hi 0)
+		    (setq consed-h 0)
+		    (setq consed-l 0)
+		    (setq consed-w/c-h 0)
+		    (setq consed-w/c-l 0)
 		    (setq profile 0)
 		    (setq callers ())
 		    t)))))))
 
 ); EVAL-WHEN (COMPILE LOAD EVAL)
+
 
 
 ;;; Precompute some encapsulation functions:
@@ -499,22 +522,6 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	(warn "Preserving current definition of redefined function ~S."
 	      name))))
 
-
-(defmacro report-time (&rest names)
-  "Reports the time spent in the named functions.  Names defaults to the list of
-  all currently profiled functions."
-  `(%report-times ,(if names `',names '*timed-functions*)))
-
-
-(defstruct (time-info
-	    (:constructor make-time-info (name calls time consing callers)))
-  name
-  calls
-  time
-  consing
-  callers)
-
-
 ;;; COMPENSATE-TIME  --  Internal
 ;;;
 ;;;    Return our best guess for the run time in a function, subtracting out
@@ -578,14 +585,84 @@ this, the functions are listed.  If NIL, then always list the functions.")
 		(max 7 (ceiling (safe-log10 total-calls)))
 		(+ 5 (max 5 (ceiling (safe-log10 max-time/call)))))))))
 
-(defun %report-times (names)
+(defstruct (time-info
+	    (:constructor make-time-info
+			  (name calls time consing consing-w/c callers)))
+  name
+  calls
+  time
+  consing
+  consing-w/c
+  callers)
+
+(defstruct (time-totals)
+  (time 0.0)
+  (consed 0)
+  (calls 0))
+
+(defun report-times-time (time action)
+  (case action
+    (:head
+     (format *trace-output*
+	     "~&  Consed    |   Calls   |    Secs   | Sec/Call  | Bytes/C.  | Name:~@
+	       -----------------------------------------------------------------------~%")
+     (return-from report-times-time))
+
+    (:tail
+     (format *trace-output*
+	     "-------------------------------------------------------------------~@
+	      ~11:D |~10:D |           |           |           | Total~%"
+	     (time-totals-consed time) (time-totals-calls time)))
+    (:sort (sort time #'>= :key #'time-info-time))
+    (:one-function
+     (format *trace-output*
+	     "~11:D |~10:D |~10,3F |~10,5F |~10:D | ~S~%"
+	     (floor (time-info-consing time))
+	     (time-info-calls time)
+	     (time-info-time time)
+	     (/ (time-info-time time) (float (time-info-calls time)))
+	     (round
+	       (/ (time-info-consing time) (float (time-info-calls time))))
+	     (time-info-name time)))
+    (t
+     (error "Unknown action for profiler report: ~s" action))))
+
+(defun report-times-space (time action)
+  (case action
+    (:head
+     (format *trace-output*
+	     "~& Consed w/c |  Consed    |   Calls   | Sec/Call  | Bytes/C.  | Name:~@
+	       -----------------------------------------------------------------------~%")
+     (return-from report-times-space))
+    
+    (:tail
+     (format *trace-output*
+	     "-------------------------------------------------------------------~@
+	      :-)         |~11:D |~10:D |           |           | Total~%"
+	     (time-totals-consed time) (time-totals-calls time)))
+    (:sort (sort time #'>= :key #'time-info-consing))
+    (:one-function
+     (format *trace-output*
+	     "~11:D |~11:D |~10:D |~10,5F |~10:D | ~S~%"
+	     (floor (time-info-consing-w/c time))
+	     (floor (time-info-consing time))
+	     (time-info-calls time)
+	     (/ (time-info-time time) (float (time-info-calls time)))
+	     (round
+	      (/ (time-info-consing time) (float (time-info-calls time))))
+	     (time-info-name time)))
+    (t
+     (error "Unknown action for profiler report"))))
+
+(defparameter *default-report-time-printfunction* #'report-times-time)
+
+(defun %report-times (names
+		      &key (printfunction *default-report-time-printfunction*))
   (declare (optimize (speed 0)))
   (unless (boundp '*call-overhead*)
     (compute-time-overhead))
   (let ((info ())
-	(ext:*gc-verbose* nil)
-	separator)
-    (setf *no-calls* nil)
+	(no-call ()))
     (dolist (name names)
       (let ((pinfo (profile-info-or-lose name)))
 	(unless (eq (fdefinition name)
@@ -594,51 +671,31 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	         PROFILE it again to record calls to the new definition."
 		name))
 	(multiple-value-bind
-	      (calls time consing profile callers)
+	    (calls time consing consing-w/c profile callers)
 	    (funcall (profile-info-read-time pinfo))
 	  (if (zerop calls)
-	      (push name *no-calls*)
+	      (push name no-call)
 	      (push (make-time-info name calls
 				    (compensate-time calls time profile)
 				    consing
+				    consing-w/c
 				    (sort (copy-seq callers)
 					  #'>= :key #'cdr))
 		    info)))))
     
-    (setq info (sort info #'>= :key #'time-info-time))
+    (setq info (funcall printfunction info :sort))
 
-    (multiple-value-bind (total-time total-consed total-calls
-				     time-width cons-width calls-width
-				     time/call-width)
-	(compute-totals-and-widths info)
+    (funcall printfunction nil :head)
 
-      ;; Create the separator string of the appropriate length.  The
-      ;; 11 is for the column spacing and the 10 is for a reasonable
-      ;; length for the name of the function.
-      (setf separator (make-string (+ 11 10 time-width cons-width calls-width
-			      time/call-width)
-			   :initial-element #\-))
-      (format *trace-output*
-	      "~&~V@A | ~V@A | ~V@A | ~V@A | Name:~@
-	       ~A~%"
-	      time-width "Seconds"
-	      cons-width "Consed"
-	      calls-width "Calls"
-	      time/call-width "Sec/Call"
-	      separator)
-
+    (let ((totals (make-time-totals)))
       (dolist (time info)
-	(format *trace-output*
-		"~V,3F | ~V:D | ~V:D | ~V,5F | ~S~%"
-		time-width
-		(time-info-time time)
-		cons-width
-		(time-info-consing time)
-		calls-width
-		(time-info-calls time)
-		time/call-width
-		(/ (time-info-time time) (float (time-info-calls time)))
-		(time-info-name time))
+	(incf (time-totals-time totals) (time-info-time time))
+	(incf (time-totals-calls totals) (time-info-calls time))
+	(incf (time-totals-consed totals) (time-info-consing time))
+
+	(funcall printfunction time :one-function)
+
+	#+nil
 	(let ((callers (time-info-callers time)))
 	  (when callers
 	    (dolist (x (subseq callers 0 (min (length callers) 5)))
@@ -646,32 +703,23 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	      (print-caller-info (car x) *trace-output*)
 	      (terpri *trace-output*))
 	    (terpri *trace-output*))))
+      (funcall printfunction totals :tail))
+    
+    #+nil
+    (when no-call
       (format *trace-output*
-	      "~A~@
-	      ~V,3F | ~V:D | ~V:D | ~VA | Total~%"
-	      separator
-	      time-width total-time
-	      cons-width total-consed
-	      calls-width total-calls
-	      time/call-width " ")
-
-      (format *trace-output*
-	      "~%Estimated total profiling overhead: ~4,2F seconds~%"
-	      (* *total-profile-overhead* (float total-calls))))
-
-    (when *no-calls*
-      (let ((num-no-calls (length *no-calls*)))
-        (if (and *no-calls-limit*
-		 (numberp *no-calls-limit*)
-		 (> num-no-calls *no-calls-limit*))
-            (format *trace-output*
-                    "~%~@(~r~) profiled functions were not called. ~
-                      ~%See the variable profile::*no-calls* for a list."
-                    num-no-calls)
-            (format *trace-output*
-                    "~%The following profiled functions were not called:~
-                ~%~{~<~%~:; ~A~>~}~%"
-                    *no-calls*))))
+	      "~%These functions were not called:~%~{~<~%~:; ~S~>~}~%"
+	      (sort no-call #'string<
+		    :key #'(lambda (n)
+			     (cond ((symbolp n)
+				    (symbol-name n))
+				   ((and (listp n)
+					 (eq (car n) 'setf)
+					 (consp (cdr n))
+					 (symbolp (cadr n)))
+				    (symbol-name (cadr n)))
+				   (t
+				    (princ-to-string n)))))))
     (values)))
 
 
@@ -684,6 +732,26 @@ this, the functions are listed.  If NIL, then always list the functions.")
   (dolist (name names)
     (funcall (profile-info-reset-time (profile-info-or-lose name))))
   (values))
+
+
+(defmacro report-time (&rest names)
+  "Reports the time spent in the named functions.  Names defaults to the list
+  of all currently profiled functions."
+  `(%report-times ,(if names `',names '*timed-functions*)))
+
+(defun report-time-custom (&key names printfunction)
+  "Reports the time spent in the named functions.  Names defaults to the list
+  of all currently profiled functions.  Uses printfunction."
+  (%report-times (or names *timed-functions*)
+		 :printfunction
+		 (or (typecase printfunction
+		       (null *default-report-time-printfunction*)
+		       (function printfunction)
+		       (symbol
+		        (case printfunction
+			  (:space #'report-times-space)
+			  (:time #'report-times-time))))
+		     (error "Cannot handle printfunction ~s" printfunction))))
 
 
 ;;;; Overhead computation.
@@ -739,3 +807,157 @@ this, the functions are listed.  If NIL, then always list the functions.")
 (pushnew #'(lambda ()
 	     (makunbound '*call-overhead*))
 	 ext:*before-save-initializations*)
+
+
+;;;
+;;; (with-spacereport <tag> <body> ...) and friends
+;;;
+
+;;; TODO:
+;;; - if counting place haven't been allocated at compile time, try to do it
+;;;   at load time
+;;; - Introduce a mechanism that detects whether *all* calls were the same
+;;;   amount of bytes (single variable).
+;;; - record the source file and place this report appears in
+;;; - detect whether this is a nested spacereport and if so, record
+;;;   the outer reports
+
+;; This struct is used for whatever counting the checkpoints do
+;; AND
+;; stores information we find at compile time
+(defstruct spacereport-info
+  (n 0 :type fixnum)
+  (consed-h 0 :type dfixnum:dfparttype)
+  (consed-l 0 :type dfixnum:dfparttype)
+  (codesize -1 :type fixnum))
+
+;; In the usual case, the hashtable with entries will be allocated at
+;; compile or load time
+(eval-when (load eval)
+  (defvar *spacereports* (make-hash-table)))
+
+;;
+;; Helper functions
+;;
+(defun format-quotient (p1 p2 width komma)
+  (let (format)
+    (cond ((= 0 p2)
+	   (make-string width :initial-element #\ ))
+	  ((and (integerp p1)
+		(integerp p2)
+		(zerop (rem p1 p2)))
+	   (setf format (format nil "~~~d:D!~a"
+				(- width komma 1)
+				(make-string komma :initial-element #\ )))
+	   (format nil format (/ p1 p2)))
+	  (t
+	   (setf format (format nil "~~~d,~df" width komma))
+	   (format nil format (/ (float p1) (float p2)))))))
+
+(defun deep-list-length (list)
+  (let ((length 0))
+    (dolist (e list)
+      (when (listp e)
+	(incf length (deep-list-length e)))
+      (incf length))
+    length))      
+
+;; bunch for tests for above
+#+nil
+(defun test-format-quotient ()
+  (print (format-quotient 10 5 10 2))
+  (print (format-quotient 10 3 10 2))
+  (print (format-quotient 10 5 10 0))
+  (print (format-quotient 10 3 10 0))
+  (print (format-quotient 10 0 10 0)))
+
+(defvar *insert-spacereports* t)
+
+;; Main wrapper macro for user - exported
+(defmacro with-spacereport (name-or-args &body body)
+  (if (not *insert-spacereports*)
+      `(progn ,@body)
+      (let ((name
+	     (typecase name-or-args
+	       (symbol name-or-args)
+	       (cons (first name-or-args))
+	       (t (error "Spacereport args neither symbol nor cons") nil)))
+	    (options (if (consp name-or-args)
+			 (rest name-or-args)
+			 nil)))
+	(when (gethash name *spacereports*)
+	  (unless (find :mok options)
+	    (warn "spacereport for ~a was requested before, resetting it"
+		  name)))
+	(setf (gethash name *spacereports*) (make-spacereport-info))
+	(setf (spacereport-info-codesize (gethash name *spacereports*))
+	      (deep-list-length body))
+
+	`(let* ((counterplace nil)
+		(place (gethash ,name *spacereports*))
+		(start-h 0)
+		(start-l 0))
+	  (declare (type dfixnum:dfparttype start-h start-l))
+	  (declare (type (or dfixnum:dfixnum null) counterplace))
+	  (declare (type (or spacereport-info null) place))
+
+	  ;; Make sure counter is there
+	  (unless place
+	    ;; Ups, it isn't, so create it...
+	    (setf place (make-spacereport-info))
+	    (setf (gethash ,name *spacereports*) place)
+	    (print
+	     "with-spaceprofile had to create place, leaked bytes to outer
+              spacereports in nested calls"))
+
+	  ;; Remember bytes already consed at start
+	  (setf counterplace (total-consing))
+	  (dfixnum:dfixnum-set-pair start-h start-l counterplace)
+
+	  (prog1
+	      (progn ,@body)
+
+	    (incf (spacereport-info-n place))
+	    ;; Add bytes newly consed.
+	    ;; first update counterplace.
+	    (total-consing)
+	    (dfixnum:dfixnum-inc-pair (spacereport-info-consed-h place)
+				      (spacereport-info-consed-l place)
+				      (dfixnum::dfixnum-h counterplace)
+				      (dfixnum::dfixnum-l counterplace))
+	    (dfixnum:dfixnum-dec-pair (spacereport-info-consed-h place)
+				      (spacereport-info-consed-l place)
+				      start-h
+				      start-l))))))
+
+(defun print-spacereports (&optional (stream *trace-output*))
+  (maphash #'(lambda (key value)
+	       (format
+		stream
+		"~&~10:D bytes ~9:D calls ~a b/call: ~a (sz ~d)~%"
+		(dfixnum:dfixnum-pair-integer
+		 (spacereport-info-consed-h value)
+		 (spacereport-info-consed-l value))
+		(spacereport-info-n value)
+		(format-quotient (dfixnum:dfixnum-pair-integer
+				  (spacereport-info-consed-h value)
+				  (spacereport-info-consed-l value))
+				 (spacereport-info-n value)
+				 10 2)
+		key
+		(spacereport-info-codesize value)))
+	   *spacereports*))
+
+(defun reset-spacereports ()
+  (maphash #'(lambda (key value)
+	       (declare (ignore key))
+	       (setf (spacereport-info-consed-h value) 0)
+	       (setf (spacereport-info-consed-l value) 0)
+	       (setf (spacereport-info-n value) 0))
+	   *spacereports*))
+
+(defun delete-spacereports ()
+  (maphash #'(lambda (key value)
+	       (declare (ignore value))
+	       (remhash key *spacereports*))
+	   *spacereports*))
