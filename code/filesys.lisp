@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.74 2003/06/10 18:14:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.75 2003/06/11 16:40:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 
 (in-package "EXTENSIONS")
 (export '(print-directory complete-file ambiguous-files default-directory
-	  purge-files file-writable unix-namestring))
+	  purge-backup-files file-writable unix-namestring))
 (in-package "LISP")
 
 
@@ -848,11 +848,11 @@
 				       (unix:get-unix-error-msg err))))))
   t)
 
-;;; Purge-Files  --  Public
+;;; Purge-Backup-Files  --  Public
 ;;;
 ;;;    Purge old file versions
 ;;;
-(defun purge-files (pathname &optional (keep 0))
+(defun purge-backup-files (pathname &optional (keep 0))
   "Delete old versions of files matching the given Pathname,
 optionally keeping some of the most recent old versions."
   (declare (type (or pathname string stream) pathname)
@@ -955,7 +955,8 @@ optionally keeping some of the most recent old versions."
 	(pathname (merge-pathnames pathname
 				   (make-pathname :name :wild
 						  :type :wild
-						  :version :wild)))
+						  :version :wild)
+				   :wild))
       (enumerate-matches (name pathname nil :follow-links follow-links)
 	(when (or all
 		  (let ((slash (position #\/ name :from-end t)))
