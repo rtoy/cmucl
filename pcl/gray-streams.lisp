@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.3 2000/06/06 09:56:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.4 2001/03/27 20:26:28 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,3 +412,10 @@
 
 (defmethod stream-clear-input ((stream character-input-stream))
   (clear-input (character-input-stream-lisp-stream stream)))
+
+;; Announce ourselves to the world
+(pushnew :gray-streams *features*)
+
+(setf (getf ext:*herald-items* :gray-streams)
+      '("    Gray Streams Protocol Support"))
+
