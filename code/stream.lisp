@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.50 2002/06/10 22:41:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.51 2002/08/06 17:32:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1895,28 +1895,40 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 
 	  ((/= vm:byte-bits 8)
 	   ;; We must resort to the READ-BYTE based operation
-	   ;; also in this case.
+	   ;; also in this case. XXX Unreachable code note.
 	   (read-into-vector s stream start end))
 
 	  ;; Otherwise we can do something more interesting.
 	  (t
-	   (flet ((read-n-x8-bytes (stream data offset-start offset-end byte-size)
-		    (let* ((x8-mult (truncate byte-size 8))
-			   (numbytes (* (- offset-end offset-start) x8-mult))
-			   (bytes-read (system:read-n-bytes stream
-							    data
-							    offset-start
-							    numbytes
-							    nil))
-			   )
-		      ;; A check should probably be made here in order to
-		      ;; be sure that we actually read the right amount
-		      ;; of bytes. (I.e. (truncate bytes-read x8-mult)
-		      ;; should return a 0 second value.
-		      (if (< bytes-read numbytes)
-			  (+ offset-start (truncate bytes-read x8-mult))
-			  offset-end)))
-		  )
+	   (labels
+	       ((get-n-bytes (stream data offset numbytes)
+		  ;; Handle case of read-n-bytes reading short.
+		  (let ((need numbytes))
+		    (loop
+		      (let ((n (read-n-bytes stream data offset need nil)))
+			(decf need n)
+			(cond ((or (zerop need) ; Complete
+				   (zerop n))   ; EOF
+			       (return (- numbytes need)))
+			      (t (incf offset n)))))))
+		(read-n-x8-bytes (stream data offset-start offset-end byte-size)
+		  (let* ((x8-mult (truncate byte-size 8))
+			 (numbytes (* (- offset-end offset-start) x8-mult))
+			 (bytes-read (get-n-bytes
+				      stream
+				      data
+				      offset-start
+				      numbytes))
+			 )
+		    ;; A check should probably be made here in order to
+		    ;; be sure that we actually read the right amount
+		    ;; of bytes. (I.e. (truncate bytes-read x8-mult)
+		    ;; should return a 0 second value.
+		    (if (< bytes-read numbytes)
+			(+ offset-start (truncate bytes-read x8-mult))
+			offset-end)))
+		)
+	   
 	     ;; According to the definition of OPEN and READ-N-BYTES,
 	     ;; these are the only cases when we can use the multi-byte read
 	     ;; operation on a binary stream.
