@@ -54,7 +54,7 @@
 	       (move dest src))
 	      (x-char
 	       (inst sll dest src vm:type-bits)
-	       (inst ori dest src vm:base-character-type))
+	       (inst ori dest dest vm:base-character-type))
 	      (t
 	       (inst srl dest src vm:type-bits)))
 
