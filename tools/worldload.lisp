@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.45 1992/03/29 21:55:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.46 1992/05/22 19:12:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,26 +133,12 @@
 ;;; CLX.
 ;;;
 #-no-clx
-(load "clx:defsystem")
-#-no-clx
-(xlib:load-clx (pathname "clx:"))
-#-no-clx
-(load "code:clx-ext")
-#-no-clx
-(load "code:inspect")
+(load "clx:clx-library")
 
 ;;; Hemlock.
 ;;;
 #-no-hemlock
-(load "tools:hemload.lisp")
-#-no-hemlock
-(load "hem:rompsite") ;Contains site-init stuff called at load time.
-#-no-hemlock
-(hi::build-hemlock)
-#-no-hemlock
-(set '*hemlock-version*
-     (concatenate 'string *hemlock-version* " "
-		  "(" *lisp-implementation-version* ")"))
+(load "lisp:hemlock/hemlock-library")
 
 #-(and no-clx no-hemlock)
 (purify :root-structures `(ed #-no-hemlock ,hi::*global-command-table*))
