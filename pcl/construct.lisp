@@ -123,14 +123,19 @@
               class ~S is defined."
 	     class-name))
     `(progn
-       ;; In order to avoid undefined function warnings, we want to tell
-       ;; the compile time environment that a function with this name and
-       ;; this argument list has been defined.  The portable way to do this
-       ;; is with defun.
-       (proclaim '(notinline ,name))
+       ;; In order to avoid undefined function warnings, we want to
+       ;; tell the compile time environment that a function with this
+       ;; name and this argument list has been defined.  The portable
+       ;; way to do this is with defun.
+       #-cmu (proclaim '(notinline ,name))
+       #-cmu
        (defun ,name ,lambda-list
 	 (declare (ignore ,@(extract-parameters lambda-list)))
 	 (error "Constructor ~S not loaded." ',name))
+       ;; But the derived result type for the above is wrong under CMUCL.
+       #+cmu
+       (proclaim '(ftype ,(ftype-declaration-from-lambda-list lambda-list name)
+		         ,name))
 
        ,(make-top-level-form `(defconstructor ,name)
 			     '(load eval)
