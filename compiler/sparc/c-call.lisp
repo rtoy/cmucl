@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.21 2003/07/02 21:48:23 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.22 2004/10/23 15:25:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -316,20 +316,26 @@
 (export '(make-callback-trampoline callback-accessor-form))
 
 (defun callback-accessor-form (type sp offset)
-  (typecase type
+  (typecase (alien::parse-alien-type type)
     (alien::double$
-     ;; Due to sparc calling conventions, a double doesn't have to
-     ;; be aligned on a double word boundary.  We have to get the
-     ;; two words separately and create the double from them.
+     ;; Due to sparc calling conventions, a double arg doesn't have to
+     ;; be aligned on a double word boundary.  We have to get the two
+     ;; words separately and create the double from them.  Doubles are
+     ;; stored in big-endian order, naturally.
      `(kernel:make-double-float
        (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* c-call:int)))
-       (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset vm:word-bytes)) (* c-call:unsigned-int)))))
+       (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset vm:word-bytes))
+			       (* c-call:unsigned-int)))))
     (alien::integer-64$
      ;; Same as for double, above
-     `(+ (ash (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* c-call:int))) vm:word-bits)
-	 (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset vm:word-bytes))
-				 (* c-call:unsigned-int)))))
+     `(let ((hi (alien:deref (sap-alien (sys:sap+ ,sp ,offset)
+					(* c-call:int))))
+	    (lo (alien:deref (sap-alien (sys:sap+ ,sp
+						  (+ ,offset vm:word-bytes))
+					(* c-call:unsigned-int)))))
+	(+ (ash hi vm:word-bits) lo)))
     (t
+     ;; All other objects can be accessed directly.
      `(deref (sap-alien (sys:sap+ ,sp ,offset) (* ,type))))))
 
 (defun make-callback-trampoline (index return-type)
