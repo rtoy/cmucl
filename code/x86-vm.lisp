@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.18 2002/01/28 20:17:09 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.19 2002/03/13 08:01:58 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -482,7 +482,9 @@
 	value
 	(multiple-value-bind (value found)
 	    (gethash
-	     (concatenate 'string #+linux "PVE_stub_" #+bsd "_" name)
+	     (concatenate 'string #+(or linux (and freebsd elf)) "PVE_stub_"
+			  #+(and bsd (not elf)) "_"
+			  name)
 	     lisp::*foreign-symbols* 0)
 	  (if found
 	      value

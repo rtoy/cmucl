@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.6 2000/10/24 13:32:30 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.7 2002/03/13 08:02:04 moore Exp $
  *
  */
 
@@ -41,6 +41,12 @@ vm_size_t os_vm_page_size;
 #include "gencgc.h"
 #endif
 
+#if __FreeBSD_version > 400000
+/* The lisp runtime is dynamically linked, but we need a definition of
+   errno for genesis. */
+#undef errno
+int errno;
+#endif
 
 void os_init(void)
 {

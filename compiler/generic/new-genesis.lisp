@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.43 2002/01/28 20:17:09 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.44 2002/03/13 08:02:00 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1810,14 +1810,22 @@
 			  #.c:x86-fasl-file-implementation)
 		      (c:backend-featurep :linux)))
 	(bsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			#.c:x86-fasl-file-implementation)
-		    (c:backend-featurep :bsd))))
-    
+			    #.c:x86-fasl-file-implementation)
+			(c:backend-featurep :bsd)))
+	(bsd-elf-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			    #.c:x86-fasl-file-implementation)
+			(c:backend-featurep :bsd)
+			(c:backend-featurep :elf)))
+	(freebsd4-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			    #.c:x86-fasl-file-implementation)
+			 (c:backend-featurep :freebsd4))))
     (cond
-     ((and bsd-p (gethash (concatenate 'string "_" name)
-			  *cold-foreign-symbol-table* nil)))
-     ((and linux-p (gethash (concatenate 'string "PVE_stub_" name)
-			    *cold-foreign-symbol-table* nil)))
+     ((and bsd-p (not bsd-elf-p)
+	   (gethash (concatenate 'string "_" name)
+		    *cold-foreign-symbol-table* nil)))
+     ((and (or linux-p freebsd4-p)
+	   (gethash (concatenate 'string "PVE_stub_" name)
+		    *cold-foreign-symbol-table* nil)))
      ;; Non-linux case
      (#-irix
       (gethash name *cold-foreign-symbol-table* nil)

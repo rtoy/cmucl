@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.37 2002/02/13 22:30:49 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.38 2002/03/13 08:01:55 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,7 +89,7 @@
 ;;; The following definitions are taken from
 ;;; /usr/include/sys/elf_common.h and /usr/include/sys/elf32.h.
 ;;;
-#+(or NetBSD (and FreeBSD elf))
+#+(or NetBSD (and FreeBSD elf) (not FreeBSD4))
 (progn
 (alien:def-alien-type elf-address      (alien:unsigned 32))
 (alien:def-alien-type elf-half-word    (alien:unsigned 16))
@@ -597,7 +597,7 @@ to skip undefined symbols which don't have an address."
 	   (ignore symbol))
   0)
 
-#+(or linux solaris irix)
+#+(or linux solaris irix FreeBSD4)
 (progn
 
 (defconstant rtld-lazy 1
@@ -622,7 +622,7 @@ to skip undefined symbols which don't have an address."
 
 (defvar *dso-linker*
   #+solaris "/usr/ccs/bin/ld"
-  #+(or linux irix) "/usr/bin/ld")
+  #+(or linux irix FreeBSD4) "/usr/bin/ld")
 
 (alien:def-alien-routine dlopen system-area-pointer
   (file c-call:c-string) (mode c-call:int))
@@ -695,11 +695,11 @@ to skip undefined symbols which don't have an address."
     (let ((proc (ext:run-program
 		 *dso-linker*
 		 (list*
-		        #+(or solaris linux) "-G" #+irix "-shared"
+		        #+(or solaris linux FreeBSD4) "-G" #+irix "-shared"
 			"-o"
 			output-file
 			;; Cause all specified libs to be loaded in full
-			#+linux "--whole-archive"
+			#+(or linux FreeBSD4) "--whole-archive"
 			#+solaris "-z" #+solaris "allextract"
 			(append (mapcar
 				 #'(lambda (name)
@@ -715,7 +715,7 @@ to skip undefined symbols which don't have an address."
 				     files))
 				;; Return to default ld behaviour for libs
 				(list
-				 #+linux "--no-whole-archive"
+				 #+(or linux FreeBSD4) "--no-whole-archive"
 				 #+solaris "-z" #+solaris "defaultextract")
 				libraries))
 		 :env env

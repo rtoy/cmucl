@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.14 2002/01/28 20:17:12 pmai Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.15 2002/03/13 08:02:05 moore Exp $
  *
  */
 
@@ -48,8 +48,8 @@
 #define READ_ONLY_SPACE_START   (0x10000000)
 #define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
 
-#define STATIC_SPACE_START	(0x28000000)
-#define STATIC_SPACE_SIZE	(0x0ffff000) /* 256MB - 1 page */
+#define STATIC_SPACE_START	(0x28f00000)
+#define STATIC_SPACE_SIZE	(0x0f0ff000) /* 241MB - 1 page */
 
 #define BINDING_STACK_START	(0x38000000)
 #define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
