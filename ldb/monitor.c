@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.12 1990/11/12 02:36:58 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.13 1990/11/25 08:43:40 wlott Exp $ */
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -461,9 +461,15 @@ static void sub_monitor()
         fflush(stdout);
         line = egets();
         if (line == NULL) {
-            putchar('\n');
-            continue;
-        }
+	    if (isatty(0)) {
+		putchar('\n');
+	        continue;
+	    }
+	    else {
+		fprintf(stderr, "\nEOF on something other than a tty.\n");
+		exit(0);
+	    }
+	}
         ptr = line;
         if ((token = parse_token(&ptr)) == NULL)
             continue;
