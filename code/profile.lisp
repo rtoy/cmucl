@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.22 2002/10/30 18:05:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.23 2002/11/01 17:43:29 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,48 @@
 ;;; since the beginning of time.
 
 #+cmu
-(defmacro total-consing () '(the consing-type (ext:get-bytes-consed)))
+(defmacro total-consing ()
+  '(ext:get-bytes-consed))
+
+(eval-when (compile load eval)
+;; Some macros to implement a very simple "bignum" package consisting
+;; of 2 fixnums.  This is intended to extend the range of the consing
+;; for profiling without adding lots of extra consing to the profiling
+;; routines.
+(defconstant +fixnum-bits+
+  #.(integer-length most-positive-fixnum)
+  "The number of bits in a fixnum")
+(defconstant +fixnum-byte+
+  (byte +fixnum-bits+ 0)
+  "A byte for extracting out a fixnum-sized byte from an least significant part of an integer")
+
+(defmacro dfix-add ((a-hi a-lo) (b-hi b-lo))
+  ;; Add the 2 fixnums and return the sum as two values
+  (let ((hi (gensym))
+	(lo (gensym)))
+    `(let ((,hi (+ ,a-hi ,b-hi))
+	   (,lo (+ ,a-lo ,b-lo)))
+       (if (<= ,lo most-positive-fixnum)
+	   (values ,hi ,lo)
+	   (values (+ ,hi 1)
+		   (ldb +fixnum-byte+
+			,lo))))))
+(defmacro dfix-sub ((a-hi a-lo) (b-hi b-lo))
+  ;; Subtract 2 fixnums and return the difference as two values
+  (let ((hi (gensym))
+	(lo (gensym)))
+    `(let ((,hi (- ,a-hi ,b-hi))
+	   (,lo (- ,a-lo ,b-lo)))
+       (if (>= ,lo)
+	   (values ,hi ,lo)
+	   (values (- ,hi 1)
+		   (+ ,lo #.(1+ most-positive-fixnum)))))))
+  
+(defmacro dfix-incf ((res-hi res-lo) (a-hi a-lo))
+  ;; Like incf, except for pairs of fixnum
+  `(multiple-value-setq (,res-hi ,res-lo)
+     (dfix-add (,res-hi ,res-lo) (,a-hi ,a-lo))))
+)
 
 #-cmu
 (progn
@@ -108,7 +149,7 @@
 
 ;;; The type of the result of TOTAL-CONSING.
 #+cmu
-(deftype consing-type () '(unsigned-byte 29))
+(deftype consing-type () '(and fixnum unsigned-byte))
 #-cmu
 (deftype consing-type () 'unsigned-byte)
 
@@ -178,11 +219,16 @@ this, the functions are listed.  If NIL, then always list the functions.")
 ;;; for each nested call is added into the appropriate variable.  When the
 ;;; outer function returns, these amounts are subtracted from the total.
 ;;;
+;;; *enclosed-consing-hi* and *enclosed-consing* represent the total
+;;; consing as a pair of fixnum-sized integers to reduce consing and
+;;; allow for about 2^58 bytes of total consing.  (Assumes positive
+;;; fixnums are 29 bits long).
 (defvar *enclosed-time* 0)
 (defvar *enclosed-consing* 0)
+(defvar *enclosed-consing-hi* 0)
 (defvar *enclosed-profilings* 0)
 (declaim (type time-type *enclosed-time*))
-(declaim (type consing-type *enclosed-consing*))
+(declaim (type consing-type *enclosed-consing* *enclosed-consing-hi*))
 (declaim (fixnum *enclosed-profilings*))
 
 
@@ -226,10 +272,11 @@ this, the functions are listed.  If NIL, then always list the functions.")
        (let* ((time 0)
 	      (count 0)
 	      (consed 0)
+	      (consed-hi 0)
 	      (profile 0)
 	      (callers ())
 	      (old-definition (fdefinition name)))
-	 (declare (type time-type time) (type consing-type consed)
+	 (declare (type time-type time) (type consing-type consed consed-hi)
 		  (fixnum count))
 	 (pushnew name *timed-functions*)
 
@@ -262,15 +309,19 @@ this, the functions are listed.  If NIL, then always list the functions.")
 			     (setq callers current)
 			     (return))))))
 			       
-		   (let ((time-inc 0) (cons-inc 0) (profile-inc 0))
+		   (let ((time-inc 0)
+			 (cons-inc 0)
+			 (cons-inc-hi 0)
+			 (profile-inc 0))
 		     (declare (type time-type time-inc)
-			      (type consing-type cons-inc)
+			      (type consing-type cons-inc cons-inc-hi)
 			      (fixnum profile-inc))
 		     (multiple-value-prog1
 			 (let ((start-time (quickly-get-time))
 			       (start-consed (total-consing))
 			       (*enclosed-time* 0)
 			       (*enclosed-consing* 0)
+			       (*enclosed-consing-hi* 0)
 			       (*enclosed-profilings* 0))
 			   (multiple-value-prog1
 			       ,(if optionals-p
@@ -290,7 +341,12 @@ this, the functions are listed.  If NIL, then always list the functions.")
 				   (- (quickly-get-time) start-time)
 				   #+BSD
 				   (max (- (quickly-get-time) start-time) 0))
-			     (setq cons-inc (- (total-consing) start-consed))
+			     ;; How much did we cons so far?
+			     (multiple-value-setq (cons-inc-hi cons-inc)
+			       (let ((diff (- (total-consing) start-consed)))
+				 (values (ash diff (- +fixnum-bits+))
+					 (ldb +fixnum-byte+ diff))))
+
 			     (setq profile-inc *enclosed-profilings*)
 			     (incf time
 				   (the time-type
@@ -298,12 +354,18 @@ this, the functions are listed.  If NIL, then always list the functions.")
 					(- time-inc *enclosed-time*)
 					#+BSD
 					(max (- time-inc *enclosed-time*) 0)))
-			     (incf consed
-				   (the consing-type
-					(- cons-inc *enclosed-consing*)))
+			     ;; consed = consed + (- cons-inc *enclosed-consing*)
+			     (multiple-value-bind (dhi dlo)
+				 (dfix-sub (cons-inc-hi cons-inc)
+					   (*enclosed-consing-hi* *enclosed-consing*))
+
+			       (dfix-incf (consed-hi consed) (dhi dlo)))
+
 			     (incf profile profile-inc)))
 		       (incf *enclosed-time* time-inc)
-		       (incf *enclosed-consing* cons-inc)
+		       ;; *enclosed-consing* = *enclosed-consing + cons-inc
+		       (dfix-incf (*enclosed-consing-hi* *enclosed-consing*)
+				  (cons-inc-hi cons-inc))
 		       (incf *enclosed-profilings*
 			     (the fixnum (1+ profile-inc)))))))
 	 
@@ -314,12 +376,14 @@ this, the functions are listed.  If NIL, then always list the functions.")
 		:new-definition (fdefinition name)
 		:read-time
 		#'(lambda ()
-		    (values count time consed profile callers))
+		    (let ((total-cons (+ consed (ash consed-hi +fixnum-bits+))))
+		      (values count time total-cons profile callers)))
 		:reset-time
 		#'(lambda ()
 		    (setq count 0)
 		    (setq time 0)
 		    (setq consed 0)
+		    (setq consed-hi 0)
 		    (setq profile 0)
 		    (setq callers ())
 		    t)))))))
