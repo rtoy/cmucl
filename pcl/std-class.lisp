@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.26 2000/08/03 16:58:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.27 2001/04/10 22:37:23 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -550,8 +550,7 @@
 	     (defstruct-form
 	       `(progn
 		  ,defstruct
-		  ,@readers-init ,@writers-init
-		  (declare-structure ',name nil nil))))
+		  ,@readers-init ,@writers-init)))
 	(unless (structure-type-p name) (eval defstruct-form))
 	(mapc #'(lambda (dslotd reader-name writer-name)
 		  (let* ((reader (gdefinition reader-name))

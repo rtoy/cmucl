@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.24 2001/03/13 15:49:46 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.25 2001/04/10 22:37:21 pw Exp $")
 
 (in-package :pcl)
 
@@ -1087,7 +1087,6 @@ work during bootstrapping.
   (let ((method-spec (or (getf initargs ':method-spec)
 			 (make-method-spec name quals specls))))
     (setf (getf initargs ':method-spec) method-spec)
-    (record-definition 'method method-spec)
     (load-defmethod-internal class name quals specls ll initargs pv-table-symbol)))
 
 (defun load-defmethod-internal

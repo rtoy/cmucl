@@ -26,51 +26,23 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.11 1999/05/30 23:14:03 pw Exp $")
-;;;
-;;; This file contains portable versions of low-level functions and macros
-;;; which are ripe for implementation specific customization.  None of the
-;;; code in this file *has* to be customized for a particular Common Lisp
-;;; implementation. Moreover, in some implementations it may not make any
-;;; sense to customize some of this code.
-;;;
-;;; But, experience suggests that MOST Common Lisp implementors will want
-;;; to customize some of the code in this file to make PCL run better in
-;;; their implementation.  The code in this file has been separated and
-;;; heavily commented to make that easier.
-;;;
-;;; Implementation-specific version of this file already exist for:
-;;; 
-;;;    Symbolics Genera family     genera-low.lisp
-;;;    Lucid Lisp                  lucid-low.lisp
-;;;    Xerox 1100 family           xerox-low.lisp
-;;;    ExCL (Franz)                excl-low.lisp
-;;;    Kyoto Common Lisp           kcl-low.lisp
-;;;    Vaxlisp                     vaxl-low.lisp
-;;;    CMU Lisp                    cmu-low.lisp
-;;;    H.P. Common Lisp            hp-low.lisp
-;;;    Golden Common Lisp          gold-low.lisp
-;;;    Ti Explorer                 ti-low.lisp
-;;;    
-;;;
-;;; These implementation-specific files are loaded after this file.  Because
-;;; none of the macros defined by this file are used in functions defined by
-;;; this file the implementation-specific files can just contain the parts of
-;;; this file they want to change.  They don't have to copy this whole file
-;;; and then change the parts they want.
-;;;
-;;; If you make changes or improvements to these files, or if you need some
-;;; low-level part of PCL re-modularized to make it more portable to your
-;;; system please send mail to CommonLoops.pa@Xerox.com.
-;;;
-;;; Thanks.
-;;; 
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.12 2001/04/10 22:37:23 pw Exp $")
 
 (in-package :pcl)
 
 (eval-when (compile load eval)
-(defvar *optimize-speed* '(optimize (speed 3) (safety 0)))
-)
+(defvar *optimize-speed*
+  '(optimize (speed 3) (safety 0) (ext:inhibit-warnings 3) #+small (debug 0.5))
+  "This variable is used in various places in PCL as an optimization
+declaration."))
+
+;;; Various macros that include necessary declarations for maximum
+;;; performance.
+
+(defmacro dotimes ((var count &optional (result nil)) &body body)
+  `(lisp:dotimes (,var (the fixnum ,count) ,result)
+     (declare (fixnum ,var))
+     ,@body))
 
 (defmacro %svref (vector index)
   `(locally (declare #.*optimize-speed*
@@ -84,7 +56,6 @@
 		     (inline svref))
      (setf (svref (the simple-vector ,vector) (the fixnum ,index))
 	   ,new-value)))
-
 
 ;;;
 ;;; without-interrupts
@@ -104,99 +75,42 @@
 ;;;
 ;;; OK?
 ;;;
+;;; For CMU CL we just use our without-interrupts.  We don't have the
+;;; INTERRUPTS-ON/OFF local macros spec'ed, but they aren't used.
+;;;
 (defmacro without-interrupts (&body body)
-  `(macrolet ((interrupts-on () ())
-	      (interrupts-off () ()))
-     (progn ,.body)))
+  `(sys:without-interrupts ,@body))
 
 
 ;;;
-;;;  Very Low-Level representation of instances with meta-class standard-class.
+;;; FUNCTION-ARGLIST
 ;;;
-
-(defmacro %instance-ref (slots index)
-  `(%svref ,slots ,index))
-
-(defmacro instance-ref (slots index)
-  `(svref ,slots ,index))
-
-(defmacro std-instance-wrapper (x) `(%std-instance-wrapper ,x))
-(defmacro std-instance-slots   (x) `(%std-instance-slots ,x))
-
-(defmacro get-wrapper (inst)
-  `(cond ((std-instance-p ,inst) (std-instance-wrapper ,inst))
-	 ((fsc-instance-p ,inst) (fsc-instance-wrapper ,inst))
-	 (t (error "What kind of instance is this?"))))
-
-(defmacro get-instance-wrapper-or-nil (inst)
-  `(cond ((std-instance-p ,inst) (std-instance-wrapper ,inst))
-	 ((fsc-instance-p ,inst) (fsc-instance-wrapper ,inst))))
-
-(defmacro get-slots (inst)
-  `(cond ((std-instance-p ,inst) (std-instance-slots ,inst))
-	 ((fsc-instance-p ,inst) (fsc-instance-slots ,inst))
-	 (t (error "What kind of instance is this?"))))
-
-(defmacro get-slots-or-nil (inst)
-  `(cond ((std-instance-p ,inst) (std-instance-slots ,inst))
-	 ((fsc-instance-p ,inst) (fsc-instance-slots ,inst))))
-
-(defun print-std-instance (instance stream depth) ;A temporary definition used
-  (declare (ignore depth))		          ;for debugging the bootstrap
-  (printing-random-thing (instance stream)        ;code of PCL (See high.lisp).
-    (let ((class (class-of instance)))
-      (if (or (eq class (find-class 'standard-class nil))
-	      (eq class (find-class 'funcallable-standard-class nil))
-	      (eq class (find-class 'built-in-class nil)))
-	  (format stream "~a ~a" (early-class-name class)
-		  (early-class-name instance))
-	  (format stream "~a" (early-class-name class))))))
-
-;;;
-;;; This is the value that we stick into a slot to tell us that it is unbound.
-;;; It may seem gross, but for performance reasons, we make this an interned
-;;; symbol.  That means that the fast check to see if a slot is unbound is to
-;;; say (EQ <val> '..SLOT-UNBOUND..).  That is considerably faster than looking
-;;; at the value of a special variable.  Be careful, there are places in the
-;;; code which actually use ..slot-unbound.. rather than this variable.  So
-;;; much for modularity
-;;; 
-(defconstant *slot-unbound* '..slot-unbound..)
-
-(defmacro %allocate-static-slot-storage--class (no-of-slots)
-  `(make-array ,no-of-slots :initial-element *slot-unbound*))
-
-(defmacro std-instance-class (instance)
-  `(wrapper-class* (std-instance-wrapper ,instance)))
-
-
-  ;;   
-;;;;;; FUNCTION-ARGLIST
-  ;;
 ;;; Given something which is functionp, function-arglist should return the
 ;;; argument list for it.  PCL does not count on having this available, but
-;;; MAKE-SPECIALIZABLE works much better if it is available.  Versions of
-;;; function-arglist for each specific port of pcl should be put in the
-;;; appropriate xxx-low file. This is what it should look like:
-;(defun function-arglist (function)
-;  (<system-dependent-arglist-function> function))
+;;; MAKE-SPECIALIZABLE works much better if it is available.
 
-(defun function-pretty-arglist (function)
-  (declare (ignore function))
-  ())
-
-(defsetf function-pretty-arglist set-function-pretty-arglist)
-
-(defun set-function-pretty-arglist (function new-value)
-  (declare (ignore function))
-  new-value)
+(defun function-arglist (fcn)
+  "Returns the argument list of a compiled function, if possible."
+  (cond ((symbolp fcn)
+         (when (fboundp fcn)
+           (function-arglist (symbol-function fcn))))
+        ((eval:interpreted-function-p fcn)
+         (eval:interpreted-function-arglist fcn))
+        ((functionp fcn)
+         (let ((lambda-expr (function-lambda-expression fcn)))
+           (if lambda-expr
+               (cadr lambda-expr)
+               (let* ((function (kernel:%closure-function fcn))
+		      (arglist-string (kernel:%function-arglist function)))
+		 (when arglist-string
+		       (values (read-from-string arglist-string)))))))))
 
 ;;;
 ;;; set-function-name
 ;;; When given a function should give this function the name <new-name>.
 ;;; Note that <new-name> is sometimes a list.  Some lisps get the upset
 ;;; in the tummy when they start thinking about functions which have
-;;; lists as names.  To deal with that there is set-function-name-intern
+;;; lists as names.  To deal with that there is intern-function-name
 ;;; which takes a list spec for a function name and turns it into a symbol
 ;;; if need be.
 ;;;
@@ -207,16 +121,31 @@
 ;;;
 ;;; In all cases, set-function-name must return the new (or same) function.
 ;;; 
-(defun set-function-name (function new-name)
-  (declare (notinline set-function-name-1 intern-function-name))
-  (set-function-name-1 function
-		       (intern-function-name new-name)
-		       new-name))
+(defun set-function-name (fcn new-name)
+  "Set the name of a compiled function object and return the function."
+  (declare (special *boot-state* *the-class-standard-generic-function*))
+  (cond ((symbolp fcn)
+         (set-function-name (symbol-function fcn) new-name))
+        ((funcallable-instance-p fcn)
+	 (if (if (eq *boot-state* 'complete)
+		 (typep fcn 'generic-function)
+		 (eq (class-of fcn) *the-class-standard-generic-function*))
+	     (setf (kernel:%funcallable-instance-info fcn 1) new-name)
+	     (typecase fcn
+	       (kernel:byte-closure
+		(set-function-name (kernel:byte-closure-function fcn)
+				   new-name))
+	       (kernel:byte-function
+		(setf (kernel:byte-function-name fcn) new-name))
+	       (eval:interpreted-function
+		(setf (eval:interpreted-function-name fcn) new-name))))
+         fcn)
+        (t fcn)))
 
-(defun set-function-name-1 (function new-name uninterned-name)
-  (declare (ignore new-name uninterned-name))
-  function)
-
+;;;
+;;; Note: While we don't need intern-function-name for
+;;; set-function-name, this is used in boot.lisp.
+;;;
 (defun intern-function-name (name)
   (cond ((symbolp name) name)
 	((listp name)
@@ -231,174 +160,222 @@
 ;;;
 ;;; COMPILE-LAMBDA
 ;;;
-;;; This is like the Common Lisp function COMPILE.  In fact, that is what
-;;; it ends up calling.  The difference is that it deals with things like
-;;; watching out for recursive calls to the compiler or not calling the
-;;; compiler in certain cases or allowing the compiler not to be present.
+;;; This is called by PCL to compile generated code (i.e. lambda
+;;; forms).
 ;;;
-;;; This starts out with several variables and support functions which 
-;;; should be conditionalized for any new port of PCL.  Note that these
-;;; default to reasonable values, many new ports won't need to look at
-;;; these values at all.
-;;;
-;;; *COMPILER-PRESENT-P*        NIL means the compiler is not loaded
-;;;
-;;; *COMPILER-SPEED*            one of :FAST :MEDIUM or :SLOW
-;;;
-;;; *COMPILER-REENTRANT-P*      T   ==> OK to call compiler recursively
-;;;                             NIL ==> not OK
-;;;
-;;; function IN-THE-COMPILER-P  returns T if in the compiler, NIL otherwise
-;;;                             This is not called if *compiler-reentrant-p*
-;;;                             is T, so it only needs to be implemented for
-;;;                             ports which have non-reentrant compilers.
-;;;
-;;;
-(defvar *compiler-present-p* t)
+(defvar *compile-lambda-break-p* nil
+  "PCL debugging aid that breaks into the debugger each time
+`compile-lambda' is invoked.")
 
-(defvar *compiler-speed* :slow)
+(defvar *compile-lambda-silent-p* t
+  "If true (the default), then `compile-lambda' will try to silence
+the compiler as completely as possible.  Currently this means that
+`*compile-print*' will be bound to nil during compilation.")
 
-(defvar *compiler-reentrant-p* t)
-
-(defun in-the-compiler-p ()
-  )
-
-(defvar *compile-lambda-break-p* nil)
-
-(defun compile-lambda (lambda &optional (desirability :fast))
+(defun compile-lambda (lambda-form)
   (when *compile-lambda-break-p* (break))
-  (cond ((null *compiler-present-p*)
-	 (compile-lambda-uncompiled lambda))
-	((and (null *compiler-reentrant-p*)
-	      (in-the-compiler-p))
-	 (compile-lambda-deferred lambda))
-	((eq desirability :fast)
-	 (compile nil lambda))
-	((and (eq desirability :medium)
-	      (member *compiler-speed* '(:fast :medium)))
-	 (compile nil lambda))
-	((and (eq desirability :slow)
-	      (eq *compiler-speed* ':fast))
-	 (compile nil lambda))
-	(t
-	 (compile-lambda-uncompiled lambda))))
+  (let ((*compile-print* (if *compile-lambda-silent-p* nil *compile-print*)))
+    (compile nil lambda-form)))
 
-(defun compile-lambda-uncompiled (uncompiled)
-  #'(lambda (&rest args) (apply (coerce uncompiled 'function) args)))
-
-(defun compile-lambda-deferred (uncompiled)
-  (let ((function (coerce uncompiled 'function))
-	(compiled nil))
-    (declare (type (or function null) compiled))
-    #'(lambda (&rest args)
-	(if compiled
-	    (apply compiled args)
-	    (if (in-the-compiler-p)
-		(apply function args)
-		(progn (setq compiled (compile nil uncompiled))
-		       (apply compiled args)))))))
+;;;
+;;; This macro will precompile various PCL-generated code fragments,
+;;; so that those won't have to be compiled lazily at run-time.  For
+;;; correct usage the invokation of `precompile-random-code-segments'
+;;; needs to be put in a file, which is compiled via `compile-file',
+;;; and then loaded.
+;;;
 
 (defmacro precompile-random-code-segments (&optional system)
   `(progn
-     (eval-when (compile)
+     (eval-when (:compile-toplevel)
        (update-dispatch-dfuns)
        (compile-iis-functions nil))
      (precompile-function-generators ,system)
      (precompile-dfun-constructors ,system)
      (precompile-iis-functions ,system)
-     (eval-when (load)
+     (eval-when (:load-toplevel)
        (compile-iis-functions t))))
 
 
+;;;; STD-INSTANCE
 
-(defun record-definition (type spec &rest args)
-  (declare (ignore type spec args))
-  ())
+;;; Under CMU17 conditional, STD-INSTANCE-P is only used to discriminate
+;;; between functions (including FINs) and normal instances, so we can return
+;;; true on structures also.  A few uses of (or std-instance-p fsc-instance-p)
+;;; are changed to pcl-instance-p.
+;;;
+(defmacro std-instance-p (x)
+  `(kernel:%instancep ,x))
 
-(defun doctor-dfun-for-the-debugger (gf dfun) (declare (ignore gf)) dfun)
+;;; PCL-INSTANCE-P is implemented via a compiler transform so that the
+;;; test can be optimised away when the result is known, such as is
+;;; typically the case during slot access within methods, see
+;;; get-slots-or-nil below.
 
-;; From braid.lisp
+(in-package "C")
 
-(defmacro built-in-or-structure-wrapper (x)
-  (once-only (x)
-    (if (structure-functions-exist-p) ; otherwise structurep is too slow for this
-	`(if (structurep ,x)
-	     (wrapper-for-structure ,x)
-	     (if (symbolp ,x)
-		 (if ,x *the-wrapper-of-symbol* *the-wrapper-of-null*)
-		 (built-in-wrapper-of ,x)))
-	`(or (and (symbolp ,x)
-		  (if ,x *the-wrapper-of-symbol* *the-wrapper-of-null*))
-	     (built-in-or-structure-wrapper1 ,x)))))
+(defknown pcl::pcl-instance-p (t) boolean
+  (movable foldable flushable explicit-check))
 
-;Low level functions for structures
+(deftransform pcl::pcl-instance-p ((object))
+  (let* ((otype (continuation-type object))
+	 (std-obj (specifier-type 'pcl::std-object)))
+    (cond
+      ;; Flush tests whose result is known at compile time.
+      ((csubtypep otype std-obj) 't)
+      ((not (types-intersect otype std-obj)) 'nil)
+      (t
+       `(typep (kernel:layout-of object) 'pcl::wrapper)))))
 
-;Functions on arbitrary objects
+(in-package "PCL")
 
-(defvar *structure-table* (make-hash-table :test 'eq))
-
-(defun declare-structure (name included-name slot-description-list)
-  (setf (gethash name *structure-table*)
-	(cons included-name slot-description-list)))
-
-(unless (fboundp 'structure-functions-exist-p)
-  (setf (symbol-function 'structure-functions-exist-p) 
-	#'(lambda () nil)))
-
-(defun default-structurep (x)
-  (structure-type-p (type-of x)))
-
-(defun default-structure-instance-p (x)
-  (let ((type (type-of x)))
-    (and (not (eq type 'std-instance))
-	 (structure-type-p type))))
-
-(defun default-structure-type (x)
-  (type-of x))
-
-(unless (fboundp 'structurep)
-  (setf (symbol-function 'structurep) #'default-structurep))
-
-; excludes std-instance
-(unless (fboundp 'structure-instance-p)
-  (setf (symbol-function 'structure-instance-p) #'default-structure-instance-p))
-
-; returns a symbol
-(unless (fboundp 'structure-type)
-  (setf (symbol-function 'structure-type) #'default-structure-type))
+;;; Definition for interpreted code.
+(defun pcl-instance-p (x)
+  (typep (kernel:layout-of x) 'wrapper))
 
 
-;Functions on symbols naming structures
+;;; We define this as STANDARD-INSTANCE, since we're going to clobber the
+;;; layout with some standard-instance layout as soon as we make it, and we
+;;; want the accesor to still be type-correct.
+;;;
+(defstruct (standard-instance
+	    (:predicate nil)
+	    (:constructor %%allocate-instance--class ())
+	    (:alternate-metaclass kernel:instance lisp:standard-class
+				  kernel:make-standard-class))
+  (slots nil))
 
-; Excludes structures types created with the :type option
-(defun structure-type-p (symbol)
-  (not (null (gethash symbol *structure-table*))))
+;;; Both of these operations "work" on structures, which allows the above
+;;; weakening of std-instance-p.
+;;;
+(defmacro std-instance-slots (x) `(kernel:%instance-ref ,x 1))
+(defmacro std-instance-wrapper (x) `(kernel:%instance-layout ,x))
 
-(defun structure-type-included-type-name (symbol)
-  (car (gethash symbol *structure-table*)))
+(defmacro built-in-or-structure-wrapper (x) `(kernel:layout-of ,x))
 
-; direct slots only
-; The results of this function are used only by the functions below.
-(defun structure-type-slot-description-list (symbol)
-  (cdr (gethash symbol *structure-table*)))
+(defmacro get-wrapper (inst)
+  (ext:once-only ((wrapper `(wrapper-of ,inst)))
+    `(progn
+       (assert (typep ,wrapper 'wrapper) () "What kind of instance is this?")
+       ,wrapper)))
+
+(defmacro get-instance-wrapper-or-nil (inst)
+  (ext:once-only ((wrapper `(wrapper-of ,inst)))
+    `(if (typep ,wrapper 'wrapper)
+	 ,wrapper
+	 nil)))
+
+(defmacro get-slots (inst)
+  `(cond ((std-instance-p ,inst) (std-instance-slots ,inst))
+	 ((fsc-instance-p ,inst) (fsc-instance-slots ,inst))
+	 (t (error "What kind of instance is this?"))))
+
+(defmacro get-slots-or-nil (inst)
+  (ext:once-only ((n-inst inst))
+    `(when (pcl-instance-p ,n-inst)
+       (if (std-instance-p ,n-inst)
+	   (std-instance-slots ,n-inst)
+	   (fsc-instance-slots ,n-inst)))))
+
+(defun print-std-instance (instance stream depth) ;A temporary definition used
+  (declare (ignore depth))		          ;for debugging the bootstrap
+  (printing-random-thing (instance stream)        ;code of PCL (See high.lisp).
+    (let ((class (class-of instance)))
+      (if (or (eq class (find-class 'standard-class nil))
+	      (eq class (find-class 'funcallable-standard-class nil))
+	      (eq class (find-class 'built-in-class nil)))
+	  (format stream "~a ~a" (early-class-name class)
+		  (early-class-name instance))
+	  (format stream "~a" (early-class-name class))))))
+
+;;; Slot access itself
+
+(defmacro %instance-ref (slots index)
+  `(%svref ,slots ,index))
+
+(defmacro instance-ref (slots index)
+  `(svref ,slots ,index))
+
+;;;
+;;; This is the value that we stick into a slot to tell us that it is unbound.
+;;; It may seem gross, but for performance reasons, we make this an interned
+;;; symbol.  That means that the fast check to see if a slot is unbound is to
+;;; say (EQ <val> '..SLOT-UNBOUND..).  That is considerably faster than looking
+;;; at the value of a special variable.  Be careful, there are places in the
+;;; code which actually use ..slot-unbound.. rather than this variable.  So
+;;; much for modularity.
+;;;
+;;; Actually at the current point in time it seems that all code now
+;;; uses *slot-unbound* instead of ..slot-unbound.. itself.
+;;; 
+(defconstant *slot-unbound* '..slot-unbound..)
+
+
+;;;; Structure-instance stuff:
+
+(defun structure-instance-p (x)
+  (typep x 'lisp:structure-object))
+
+(defun structurep (x)
+  (typep x 'lisp:structure-object))
+
+(defun structure-type (x)
+  (lisp:class-name (kernel:layout-class (kernel:%instance-layout x))))
 
 
-;Functions on slot-descriptions (returned by the function above)
+(defun structure-type-p (type)
+  (and (symbolp type)
+       (let ((class  (lisp:find-class type nil)))
+	 (and class
+	      (typep (kernel:layout-info (kernel:class-layout class))
+		     'kernel:defstruct-description)))))
 
-;returns a symbol
-(defun structure-slotd-name (structure-slot-description)
-  (first structure-slot-description))
+(defun get-structure-dd (type)
+  (kernel:layout-info (kernel:class-layout (lisp:find-class type))))
 
-;returns a symbol
-(defun structure-slotd-accessor-symbol (structure-slot-description)
-  (second structure-slot-description))
+(defun structure-type-included-type-name (type)
+  (let ((include (kernel::dd-include (get-structure-dd type))))
+    (if (consp include)
+	(car include)
+	include)))
 
-;returns a symbol or a list or nil
-(defun structure-slotd-writer-function (structure-slot-description)
-  (third structure-slot-description))
+(defun structure-type-slot-description-list (type)
+  (nthcdr (length (let ((include (structure-type-included-type-name type)))
+		    (and include (kernel:dd-slots (get-structure-dd include)))))
+	  (kernel:dd-slots (get-structure-dd type))))
 
-(defun structure-slotd-type (structure-slot-description)
-  (fourth structure-slot-description))
+(defun structure-slotd-name (slotd)
+  (kernel:dsd-name slotd))
 
-(defun structure-slotd-init-form (structure-slot-description)
-  (fifth structure-slot-description))
+(defun structure-slotd-accessor-symbol (slotd)
+  (kernel:dsd-accessor slotd))
+
+(defun structure-slotd-reader-function (slotd)
+  (fdefinition (kernel:dsd-accessor slotd)))
+
+(defun structure-slotd-writer-function (slotd)
+  (unless (kernel:dsd-read-only slotd)
+    (fdefinition `(setf ,(kernel:dsd-accessor slotd)))))
+
+(defun structure-slotd-type (slotd)
+  (kernel:dsd-type slotd))
+
+(defun structure-slotd-init-form (slotd)
+  (kernel::dsd-default slotd))
+
+
+;;;
+;;; Extractor for source context information, which is used by the
+;;; compiler to indicate progress and context information for error
+;;; reporting.
+;;;
+
+(in-package "C")
+
+(def-source-context pcl:defmethod (name &rest stuff)
+  (let ((arg-pos (position-if #'listp stuff)))
+    (if arg-pos
+	`(pcl:defmethod ,name ,@(subseq stuff 0 arg-pos)
+	   ,(nth-value 2 (pcl::parse-specialized-lambda-list
+			  (elt stuff arg-pos))))
+	`(pcl:defmethod ,name "<illegal syntax>"))))

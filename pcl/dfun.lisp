@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.10 1999/05/30 23:13:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.11 2001/04/10 22:37:22 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -1542,14 +1542,9 @@ And so, we are saved.
 		      (generic-function-name generic-function)))
 	 (ocache (gf-dfun-cache generic-function)))
     (set-dfun generic-function dfun cache info)
-    (let* ((dfun (if early-p
-		     (or dfun (make-initial-dfun generic-function))
-		     (compute-discriminating-function generic-function)))
-	   (info (gf-dfun-info generic-function)))
-      (unless (eq 'default-method-only (type-of info))
-	(setq dfun (doctor-dfun-for-the-debugger 
-		    generic-function
-		    dfun)))
+    (let ((dfun (if early-p
+		    (or dfun (make-initial-dfun generic-function))
+		    (compute-discriminating-function generic-function))))
       (set-funcallable-instance-function generic-function dfun)
       (set-function-name generic-function gf-name)
       (when (and ocache (not (eq ocache cache))) (free-cache ocache))
