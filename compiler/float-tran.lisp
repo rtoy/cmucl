@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.66 1998/03/27 06:52:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.67 1998/03/30 02:44:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,6 @@
 
 (deftransform float ((n &optional f) (* &optional single-float) *
 		     :when :both)
-		     
   '(%single-float n))
 
 (deftransform float ((n f) (* double-float) * :when :both)
@@ -527,24 +526,22 @@
   '(%hypot (realpart x) (imagpart x)))
 
 (deftransform abs ((x) ((complex single-float)) single-float)
-  '(coerce (%hypot (coerce (the single-float (realpart x)) 'double-float)
-		  (coerce (the single-float (imagpart x)) 'double-float))
+  '(coerce (%hypot (coerce (realpart x) 'double-float)
+		   (coerce (imagpart x) 'double-float))
 	  'single-float))
 
 (deftransform phase ((x) ((complex double-float)) double-float :when :both)
   '(%atan2 (imagpart x) (realpart x)))
 
 (deftransform phase ((x) ((complex single-float)) single-float)
-  '(coerce (%atan2 (coerce (the single-float (imagpart x)) 'double-float)
-		  (coerce (the single-float (realpart x)) 'double-float))
+  '(coerce (%atan2 (coerce (imagpart x) 'double-float)
+		   (coerce (realpart x) 'double-float))
 	  'single-float))
 
 (deftransform phase ((x) ((float)) float :when :both)
   '(if (minusp (float-sign x))
-      (float pi x)
-      (float 0 x)))
-
-
+       (float pi x)
+       (float 0 x)))
 
 #+(or propagate-float-type propagate-fun-type)
 (progn
@@ -668,16 +665,16 @@
 
   ;; These functions are only defined for part of the real line.  The
   ;; condition selects the desired part of the line.  
-  (frob asin (specifier-type '(real -1l0 1l0)) (- (/ pi 2)) (/ pi 2))
+  (frob asin (specifier-type '(real -1d0 1d0)) (- (/ pi 2)) (/ pi 2))
   ;; Acos is monotonic decreasing, so we need to swap the function
   ;; values at the lower and upper bounds of the input domain.
-  (frob acos (specifier-type '(real -1l0 1l0)) 0 pi :increasingp nil)
-  (frob acosh (specifier-type '(real 1l0)) nil nil)
-  (frob atanh (specifier-type '(real -1l0 1l0))	-1 1)
+  (frob acos (specifier-type '(real -1d0 1d0)) 0 pi :increasingp nil)
+  (frob acosh (specifier-type '(real 1d0)) nil nil)
+  (frob atanh (specifier-type '(real -1d0 1d0))	-1 1)
   (frob sqrt (specifier-type
 	      #-negative-zero-is-not-zero '(or (member 0f0 0d0)
-					       (real (0l0)))
-	      #+negative-zero-is-not-zero '(real 0l0))
+					       (real (0d0)))
+	      #+negative-zero-is-not-zero '(real 0d0))
 	0 nil))
  
 ;;; Compute bounds for (expt x y).  This should be easy since (expt x
@@ -900,7 +897,7 @@
 	 ;; A real raised to a non-integral power can be a float or a
 	 ;; complex number.
 	 (cond ((or (csubtypep x (specifier-type '(rational 0)))
-		    (csubtypep x (specifier-type '(float (0l0)))))
+		    (csubtypep x (specifier-type '(float (0d0)))))
 		;; But a positive real to any power is well-defined.
 		(merged-interval-expt x y))
 	       (t
@@ -919,7 +916,7 @@
   (elfun-derive-type-simple
    x #'log
    (specifier-type
-    #-negative-zero-is-not-zero '(or (member 0f0 0d0) (real (0l0)))
+    #-negative-zero-is-not-zero '(or (member 0f0 0d0) (real (0d0)))
     #+negative-zero-is-not-zero '(real 0d0))
    nil nil))
 
@@ -1274,7 +1271,7 @@
    #'(lambda (arg)
        ;; Derive the bounds if the arg is in [0, pi]
        (trig-derive-type-aux arg
-			     (specifier-type `(float 0l0 ,pi))
+			     (specifier-type `(float 0d0 ,pi))
 			     #'cos
 			     -1 1
 			     nil))
