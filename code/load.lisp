@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.77 2001/04/10 22:32:32 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.78 2001/04/11 17:37:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -499,7 +499,7 @@
    keyword affects nested loads.  The variables EXT:*LOAD-SOURCE-TYPES* and
    EXT:*LOAD-OBJECT-TYPES* determine the file types that we use for defaulting
    when none is specified."
-  (declare (type (member :default :source :binary) contents))
+  (declare (type (member :default :source :binary) external-format))
   (collect ((vars)
 	    (vals))
     (macrolet ((frob (wot)
