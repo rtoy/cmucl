@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.25 1991/07/11 16:27:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.26 1991/11/05 14:14:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -443,17 +443,22 @@
   consing when N is a trivial constant integer."
   (if (integerp n)
       (let ((dummy-list nil)
-	    (wendy (gensym)))
-	;; We build DUMMY-LIST, a list of variables to bind to useless
-	;; values, then we explicitly IGNORE those bindings and return 
-	;; WENDY, the only thing we're really interested in right now.
-	(dotimes (i n)
-	  (push (gensym) dummy-list))
-	`(multiple-value-bind (,@dummy-list ,wendy)
-			      ,form
-	   (declare (ignore ,@dummy-list))
-	   ,wendy))
-      `(nth ,n (multiple-value-list ,form))))
+            (wendy (gensym)))
+        ;; We build DUMMY-LIST, a list of variables to bind to useless
+        ;; values, then we explicitly IGNORE those bindings and return
+        ;; WENDY, the only thing we're really interested in right now.
+        (dotimes (i n)
+          (push (gensym) dummy-list))
+        `(multiple-value-bind (,@dummy-list ,wendy)
+                              ,form
+           (declare (ignore ,@dummy-list))
+           ,wendy))
+      `(once-only (,n)
+         (case (the fixnum ,n)
+           (0 (nth-value 0 ,form))
+           (1 (nth-value 1 ,form))
+           (2 (nth-value 2 ,form))
+           (T (nth (the fixnum ,n) (multiple-value-list ,form)))))))
 
 
 ;;;; SETF and friends.
