@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.8 1990/09/08 11:00:52 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.9 1990/09/21 05:59:35 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -148,62 +148,74 @@ static maybe_now_maybe_later(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
-	if ((!foreign_function_call_active) &&
-	    (context->sc_regs[FLAGS] & (1<<flag_Atomic))) {
-		pending_signal = signal;
-		pending_code = code;
-		pending_mask = context->sc_mask;
-		context->sc_mask |= BLOCKABLE;
-		context->sc_regs[FLAGS] |= (1<<flag_Interrupted);
-	} else
-		handle_now(signal, code, context);
+    if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
+        pending_signal = signal;
+        pending_code = code;
+        pending_mask = context->sc_mask;
+        context->sc_mask |= BLOCKABLE;
+        SetSymbolValue(INTERRUPT_PENDING, T);
+    } else if ((!foreign_function_call_active) &&
+               (context->sc_regs[FLAGS] & (1<<flag_Atomic))) {
+        pending_signal = signal;
+        pending_code = code;
+        pending_mask = context->sc_mask;
+        context->sc_mask |= BLOCKABLE;
+        context->sc_regs[FLAGS] |= (1<<flag_Interrupted);
+    } else
+        handle_now(signal, code, context);
 }
 
 static trap_handler(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
-	if (code == trap_PendingInterrupt) {
-		signal = pending_signal;
-		code = pending_code;
-		context->sc_mask = pending_mask;
-		pending_signal = 0;
-		pending_code = 0;
-		pending_mask = 0;
-	}
-	handle_now(signal, code, context);
+    if (code == trap_PendingInterrupt) {
+        signal = pending_signal;
+        code = pending_code;
+        context->sc_mask = pending_mask;
+        pending_signal = 0;
+        pending_code = 0;
+        pending_mask = 0;
+        SetSymbolValue(INTERRUPT_PENDING, NIL);
+    }
+    handle_now(signal, code, context);
 }
 
-void install_handler(signal, handler)
+unsigned long install_handler(signal, handler)
 int signal;
 union interrupt_handler handler;
 {
-	struct sigvec sv;
+    struct sigvec sv;
+    int oldmask;
+    union interrupt_handler oldhandler;
 
-	if (sigmask(signal)&BLOCKABLE)
-		sv.sv_handler = maybe_now_maybe_later;
-	else if (signal == SIGTRAP)
-		sv.sv_handler = trap_handler;
-	else
-		sv.sv_handler = handle_now;
-	sv.sv_mask = BLOCKABLE;
-	sv.sv_flags = 0;
+    if (signal == SIGTRAP)
+        sv.sv_handler = trap_handler;
+    else if (handler.c == SIG_DFL || handler.c == SIG_IGN)
+        sv.sv_handler = handler.c;
+    else if (sigmask(signal)&BLOCKABLE)
+        sv.sv_handler = maybe_now_maybe_later;
+    else
+        sv.sv_handler = handle_now;
+    sv.sv_mask = BLOCKABLE;
+    sv.sv_flags = 0;
 
-	interrupt_handlers[signal] = handler;
+    oldmask = sigblock(sigmask(signal));
 
-	sigvec(signal, &sv, NULL);
-}
+    oldhandler = interrupt_handlers[signal];
+    interrupt_handlers[signal] = handler;
+    sigvec(signal, &sv, NULL);
 
-void unistall_handler(signal)
-int signal;
-{
+    sigsetmask(oldmask);
 
+    return (unsigned long)oldhandler.lisp;
 }
 
 interrupt_init()
 {
-	int i;
+    int i;
 
-	for (i = 0; i < NSIG; i++)
-		interrupt_handlers[i].lisp = (lispobj) fixnum(0);
+    for (i = 0; i < NSIG; i++)
+        interrupt_handlers[i].c = SIG_DFL;
 }
+
