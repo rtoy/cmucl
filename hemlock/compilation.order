@@ -240,5 +240,8 @@ completion
 ; "Process" mode, primarily implements Unix shells in Hemlock buffers.
 shell
 
+; stuff for talking to slave Lisps to do debugging.
+debug
+
 ; File that sets up all the default key bindings; implementation dependant.
 Bindings
