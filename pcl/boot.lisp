@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.45 2002/11/28 16:23:32 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.46 2002/12/18 00:16:32 pmai Exp $")
 
 (in-package :pcl)
 
@@ -561,56 +561,45 @@ work during bootstrapping.
 					(symbol-package constant-value))))
 			  (list :constant-value constant-value)
 			  ()))
-	       (applyp (dolist (p lambda-list nil)
-			 (cond ((memq p '(&optional &rest &key))
-				(return t))
-			       ((eq p '&aux)
-				(return nil))))))
-	    (multiple-value-bind (walked-lambda call-next-method-p closurep
-						next-method-p-p)
-		(walk-method-lambda method-lambda required-parameters env 
-				    slots calls)
-	      (multiple-value-bind (walked-lambda-body walked-declarations
-						       walked-documentation)
-		  (system:parse-body (cddr walked-lambda) env)
-		(declare (ignore walked-documentation))
-		(when (or next-method-p-p call-next-method-p)
-		  (setq plist (list* :needs-next-methods-p t plist)))
-		(when (some #'cdr slots)
-		  (multiple-value-bind (slot-name-lists call-list)
-		      (slot-name-lists-from-slots slots calls)
-		    (let ((pv-table-symbol (make-symbol "pv-table")))
-		      (setq plist 
-			    `(,@(when slot-name-lists 
-				  `(:slot-name-lists ,slot-name-lists))
-			      ,@(when call-list
-				  `(:call-list ,call-list))
-			      :pv-table-symbol ,pv-table-symbol
-			      ,@plist))
-		      (setq walked-lambda-body
-			    `((pv-binding (,required-parameters ,slot-name-lists
-					   ,pv-table-symbol)
-			       ,@walked-lambda-body))))))
-		(when (and (memq '&key lambda-list)
-			   (not (memq '&allow-other-keys lambda-list)))
-		  (let ((aux (memq '&aux lambda-list)))
-		    (setq lambda-list (nconc (ldiff lambda-list aux)
-					     (list '&allow-other-keys)
-					     aux))))
-		(values `(lambda (.method-args. .next-methods.)
-			   (simple-lexical-method-functions
-			       (,lambda-list .method-args. .next-methods.
-				:call-next-method-p ,call-next-method-p 
-				:method-name-declaration ,name-decl
-				:next-method-p-p ,next-method-p-p
-				:closurep ,closurep
-				:applyp ,applyp)
-			     ,@walked-declarations
-			     ,@walked-lambda-body))
-			`(,@(when plist 
-			      `(:plist ,plist))
-			  ,@(when documentation 
-			      `(:documentation ,documentation)))))))))))
+	       (walked-lambda (walk-method-lambda method-lambda
+						  required-parameters env 
+						  slots calls)))
+	  (multiple-value-bind (walked-lambda-body walked-declarations
+						   walked-documentation)
+	      (system:parse-body (cddr walked-lambda) env)
+	    (declare (ignore walked-documentation))
+	    (when (some #'cdr slots)
+	      (multiple-value-bind (slot-name-lists call-list)
+		  (slot-name-lists-from-slots slots calls)
+		(let ((pv-table-symbol (make-symbol "pv-table")))
+		  (setq plist 
+			`(,@(when slot-name-lists 
+			      `(:slot-name-lists ,slot-name-lists))
+			  ,@(when call-list
+			      `(:call-list ,call-list))
+			  :pv-table-symbol ,pv-table-symbol
+			  ,@plist))
+		  (setq walked-lambda-body
+			`((pv-binding (,required-parameters
+				       ,slot-name-lists
+				       ,pv-table-symbol)
+			    ,@walked-lambda-body))))))
+	    (when (and (memq '&key lambda-list)
+		       (not (memq '&allow-other-keys lambda-list)))
+	      (let ((aux (memq '&aux lambda-list)))
+		(setq lambda-list (nconc (ldiff lambda-list aux)
+					 (list '&allow-other-keys)
+					 aux))))
+	    (values `(lambda (.method-args. .next-methods.)
+		       (simple-lexical-method-functions
+			   (,lambda-list .method-args. .next-methods.
+			    :method-name-declaration ,name-decl)
+			 ,@walked-declarations
+			 ,@walked-lambda-body))
+		    `(,@(when plist 
+			  `(:plist ,plist))
+		      ,@(when documentation 
+			  `(:documentation ,documentation))))))))))
 		 
 (unless (fboundp 'make-method-lambda)
   (setf (gdefinition 'make-method-lambda)
@@ -861,12 +850,13 @@ work during bootstrapping.
 					,',(not (null rest-arg))
 					,@',args 
 					,@',(when rest-arg `(,rest-arg)))))
-			    `(if ,cnm-args
-				 (bind-args ((,@',args ,@',(when rest-arg
-							     `(&rest ,rest-arg)))
+                            `(if ,cnm-args
+				 (bind-args ((,@',args
+					      ,@',(when rest-arg
+						    `(&rest ,rest-arg)))
 					     ,cnm-args)
-					    ,call)
-				 ,call)))
+				   ,call)
+			         ,call)))
                      ,(if (and (null ',rest-arg)
                                (consp cnm-args)
                                (eq (car cnm-args) 'list))
@@ -881,35 +871,13 @@ work during bootstrapping.
      ,@body))
 
 (defmacro bind-lexical-method-functions 
-    ((&key call-next-method-p next-method-p-p closurep applyp
-           method-name-declaration)
-     &body body)
-  (cond ((and (null call-next-method-p) (null next-method-p-p)
-	      (null closurep)
-	      (null applyp))
-	 `(let () ,@body))
-	 ((and (null closurep)
-	       (null applyp))
-	 ;; OK to use MACROLET, and all args are mandatory 
-	 ;; (else APPLYP would be true).
-	 `(call-next-method-bind
-	    (macrolet ((call-next-method (&rest cnm-args)
-			 `(call-next-method-body
-			    ,',method-name-declaration
-			    ,(when cnm-args `(list ,@cnm-args))))
-		       (next-method-p ()
-			 `(next-method-p-body)))
-	       ,@body)))
-	(t
-	 `(call-next-method-bind
-	    (flet (,@(and call-next-method-p
-		       `((call-next-method (&rest cnm-args)
-			  (call-next-method-body ,method-name-declaration
-						 cnm-args))))
-		   ,@(and next-method-p-p
-		       '((next-method-p ()
-			   (next-method-p-body)))))
-	      ,@body)))))
+    ((&key method-name-declaration) &body body)
+  `(call-next-method-bind
+     (flet ((call-next-method (&rest cnm-args)
+	      (call-next-method-body ,method-name-declaration cnm-args))
+	    (next-method-p () (next-method-p-body)))
+       (declare (ignorable #'call-next-method #'next-method-p))
+       ,@body)))
 
 (defmacro bind-args ((lambda-list args) &body body)
   (let ((args-tail '.args-tail.)
@@ -983,69 +951,44 @@ work during bootstrapping.
 	  return tail))
 
 (defun walk-method-lambda (method-lambda required-parameters env slots calls)
-  (let ((call-next-method-p nil)   ;flag indicating that call-next-method
-				   ;should be in the method definition
-	(closurep nil)		   ;flag indicating that #'call-next-method
-				   ;was seen in the body of a method
-	(next-method-p-p nil))     ;flag indicating that next-method-p
-				   ;should be in the method definition
-    (flet ((walk-function (form context env)
-	     (cond ((not (eq context :eval)) form)
-		   ((not (listp form)) form)
-		   ((eq (car form) 'call-next-method)
-		    (setq call-next-method-p t)
-		    form)
-		   ((eq (car form) 'next-method-p)
-		    (setq next-method-p-p t)
-		    form)
-		   ((and (eq (car form) 'function)
-			 (cond ((eq (cadr form) 'call-next-method)
-				(setq call-next-method-p t)
-				(setq closurep t)
-				form)
-			       ((eq (cadr form) 'next-method-p)
-				(setq next-method-p-p t)
-				(setq closurep t)
-				form)
-			       (t nil))))
-		   ((and (or (eq (car form) 'slot-value)
-			     (eq (car form) 'set-slot-value)
-			     (eq (car form) 'slot-boundp))
-			 (constantp (caddr form)))
-		    (let ((parameter
-			   (can-optimize-access form
-						required-parameters env)))
-		      (ecase (car form)
-			(slot-value
-			 (optimize-slot-value     slots parameter form))
-			(set-slot-value
-			 (optimize-set-slot-value slots parameter form))
-			(slot-boundp
-			 (optimize-slot-boundp    slots parameter form)))))
-		   ((and (eq (car form) 'apply)
-			 (consp (cadr form))
-			 (eq (car (cadr form)) 'function)
-			 (generic-function-name-p (cadr (cadr form))))
-		    (optimize-generic-function-call 
-		     form required-parameters env slots calls))
-		   ((and (or (symbolp (car form))
-			     (and (consp (car form))
-				  (eq (caar form) 'setf)))
-			 (generic-function-name-p (car form)))
-		    (optimize-generic-function-call 
-		     form required-parameters env slots calls))
-		   ((and (eq (car form) 'asv-funcall)
-			 *optimize-asv-funcall-p*)
-		    (case (fourth form)
-		      (reader (push (third form) *asv-readers*))
-		      (writer (push (third form) *asv-writers*))
-		      (boundp (push (third form) *asv-boundps*)))
-		    `(,(second form) ,@(cddddr form)))
-		   (t form))))
+  (flet ((walk-function (form context env)
+	   (cond ((not (eq context :eval)) form)
+		 ((not (listp form)) form)
+		 ((and (or (eq (car form) 'slot-value)
+			   (eq (car form) 'set-slot-value)
+			   (eq (car form) 'slot-boundp))
+		       (constantp (caddr form)))
+		  (let ((parameter
+			 (can-optimize-access form required-parameters env)))
+		    (ecase (car form)
+		      (slot-value
+		       (optimize-slot-value     slots parameter form))
+		      (set-slot-value
+		       (optimize-set-slot-value slots parameter form))
+		      (slot-boundp
+		       (optimize-slot-boundp    slots parameter form)))))
+		 ((and (eq (car form) 'apply)
+		       (consp (cadr form))
+		       (eq (car (cadr form)) 'function)
+		       (generic-function-name-p (cadr (cadr form))))
+		  (optimize-generic-function-call 
+		   form required-parameters env slots calls))
+		 ((and (or (symbolp (car form))
+			   (and (consp (car form))
+				(eq (caar form) 'setf)))
+		       (generic-function-name-p (car form)))
+		  (optimize-generic-function-call 
+		   form required-parameters env slots calls))
+		 ((and (eq (car form) 'asv-funcall)
+		       *optimize-asv-funcall-p*)
+		  (case (fourth form)
+		    (reader (push (third form) *asv-readers*))
+		    (writer (push (third form) *asv-writers*))
+		    (boundp (push (third form) *asv-boundps*)))
+		  `(,(second form) ,@(cddddr form)))
+		 (t form))))
 	  
-      (let ((walked-lambda (walk-form method-lambda env #'walk-function)))
-	(values walked-lambda
-		call-next-method-p closurep next-method-p-p)))))
+    (walk-form method-lambda env #'walk-function)))
 
 (defun generic-function-name-p (name)
   (and (or (symbolp name)
@@ -1103,9 +1046,6 @@ work during bootstrapping.
 
 (defun method-function-method (method-function)
   (method-function-get method-function :method))
-
-(defun method-function-needs-next-methods-p (method-function)
-  (method-function-get method-function :needs-next-methods-p t))
 
 
 

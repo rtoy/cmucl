@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.23 2002/11/28 16:23:34 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.24 2002/12/18 00:16:33 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -901,7 +901,7 @@
     simple-bit-vector simple-string simple-vector single-float standard-char
     stream string symbol t unsigned-byte vector))
 
-(defun split-declarations (body args calls-next-method-p)
+(defun split-declarations (body args)
   (let ((inner-decls nil) (outer-decls nil) decl)
     (loop (when (null body) (return nil))
 	  (setq decl (car body))
@@ -936,12 +936,12 @@
 			(setq dname (append dname (list (pop form)))))
 		      (dolist (var form)
 			(if (member var args)
-			    ;; quietly remove ignore declarations on args when
-			    ;; a next-method is involved to prevent compiler
-			    ;; warns about ignored args being read
-			    (unless (and  calls-next-method-p
-					  (eq (car dname) 'ignore))
-				(push var outers))
+			    ;; quietly remove ignore declarations on args
+			    ;; to prevent compiler warns about ignored args
+			    ;; being read, caused by references in the
+			    ;; definitions of call-next-method
+			    (unless (eq (car dname) 'ignore)
+			      (push var outers))
 			    (push var inners)))
 		      (when outers
 			(push `(declare (,@dname ,@outers)) outer-decls))
@@ -981,10 +981,11 @@
 (defun make-method-initargs-form-internal1 
     (initargs body req-args lmf-params restp)
   (multiple-value-bind (outer-decls inner-decls body)
-      (split-declarations
-       body req-args (getf (cdr lmf-params) :call-next-method-p))
+      (split-declarations body req-args)
     (let* ((rest-arg (when restp '.rest-arg.))
-	   (args+rest-arg (if restp (append req-args (list rest-arg)) req-args)))
+	   (args+rest-arg (if restp
+			      (append req-args (list rest-arg))
+			      req-args)))
       `(list* :fast-function
 	(lambda (.pv-cell. .next-method-call. ,@args+rest-arg)
 	  ,@outer-decls

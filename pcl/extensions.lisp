@@ -18,7 +18,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.7 2002/10/19 14:32:43 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.8 2002/12/18 00:16:32 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -49,7 +49,6 @@
           with-optimized-slots
           with-standard-instance-slots
 
-          method-needs-next-methods-p
           map-all-classes
           finalize-all-classes
 
