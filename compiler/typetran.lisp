@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14.1.4 1993/02/10 12:50:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14.1.5 1993/02/22 15:05:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,7 +234,7 @@
     (cond ((unknown-type-p type)
 	   (when (policy nil (> speed brevity))
 	     (compiler-note "Can't open-code test of unknown type ~S."
-			    (specifier-type type)))
+			    (type-specifier type)))
 	   `(%typep ,object ',spec))
 	  (t
 	   (ecase (first spec)
