@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.5 2004/07/30 02:58:32 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.6 2004/07/30 16:25:47 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -149,28 +149,40 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-(defmacro define-var-binop (translate untagged-penalty op)
+(defmacro define-var-binop (translate untagged-penalty op
+			    &optional arg-swap restore-fixnum-mask)
   `(progn
      (define-vop (,(symbolicate "FAST-" translate "/FIXNUM=>FIXNUM")
 		  fast-fixnum-binop)
        (:translate ,translate)
+       ,@(when restore-fixnum-mask
+	       `((:temporary (:sc non-descriptor-reg) temp)))
        (:generator 2
-	 (inst ,op r x y))) 
+	 ,(if arg-swap
+	      `(inst ,op ,(if restore-fixnum-mask 'temp 'r) y x)
+	      `(inst ,op ,(if restore-fixnum-mask 'temp 'r) x y))
+	 ,@(when restore-fixnum-mask
+		 ``(inst clrrwi r temp (1- lowtag-bits)))))
      (define-vop (,(symbolicate "FAST-" translate "/SIGNED=>SIGNED")
 		  fast-signed-binop)
        (:translate ,translate)
        (:generator ,(1+ untagged-penalty)
-	 (inst ,op r x y))) 
+	 ,(if arg-swap
+	      `(inst ,op r y x)
+	      `(inst ,op r x y))))
      (define-vop (,(symbolicate "FAST-" translate "/UNSIGNED=>UNSIGNED")
 		  fast-unsigned-binop)
        (:translate ,translate)
        (:generator ,(1+ untagged-penalty)
-	 (inst ,op r x y)))))
+	 ,(if arg-swap
+	      `(inst ,op r y x)
+	      `(inst ,op r x y))))))
 
 
-(defmacro define-const-binop (translate untagged-penalty op)
+
+(defmacro define-const-binop (translate untagged-penalty op
+			      &optional arg-swap restore-fixnum-mask)
   `(progn
-     
      (define-vop (,(symbolicate 'fast- translate '-c/fixnum=>fixnum)
 		  fast-fixnum-binop-c)
        (:translate ,translate)
@@ -211,11 +223,15 @@
 (define-var-binop + 4 add)
 (define-var-binop - 4 sub)
 (define-var-binop logand 2 and)
+(define-var-binop logandc1 2 andc t)
 (define-var-binop logandc2 2 andc)
 (define-var-binop logior 2 or)
-(define-var-binop logorc2 2 orc)
+(define-var-binop logorc1 2 orc t t)
+(define-var-binop logorc2 2 orc nil t)
 (define-var-binop logxor 2 xor)
-(define-var-binop logeqv 2 eqv)
+(define-var-binop logeqv 2 eqv nil t)
+(define-var-binop lognand 2 nand nil t)
+(define-var-binop lognor 2 nor nil t)
 
 (define-const-binop + 4 addi)
 (define-const-binop - 4 subi)
@@ -990,9 +1006,10 @@
 (define-modular-backend - t)
 (define-modular-backend logxor)
 (define-modular-backend logeqv)
-;;(define-modular-backend logandc1)
+(define-modular-backend lognand)
+(define-modular-backend logandc1)
 (define-modular-backend logandc2)
-;;(define-modular-backend logorc1)
+(define-modular-backend logorc1)
 (define-modular-backend logorc2)
 ;;(define-modular-backend * t)
 

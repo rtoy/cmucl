@@ -1,10 +1,10 @@
 ;;; Bootstrap for modular arithmetic.  (Taken from 18e/boot22.lisp)
 ;;; (Primarily for ppc.)
 
-#-modular-arith
+#+ppc
 (pushnew :modular-arith *features*)
 
 (in-package "KERNEL")
-#-modular-arith
+#-+ppc
 (defvar *modular-funs*
   (make-hash-table :test 'eq))
