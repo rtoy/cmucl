@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.4 2004/09/08 02:10:54 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.4.2.1 2005/04/05 03:41:08 rtoy Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -29,11 +29,13 @@
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
 			  (:temp pa-flag non-descriptor-reg nl3-offset)
-			  (:temp vector descriptor-reg a3-offset))
+			  (:temp vector descriptor-reg a3-offset)
+			  (:temp temp non-descriptor-reg nl2-offset))
   (pseudo-atomic (pa-flag)
     (inst addi ndescr words (* (1+ vm:vector-data-offset) vm:word-bytes))
     (inst clrrwi ndescr ndescr lowtag-bits)
-    (allocation vector ndescr other-pointer-type)
+    (allocation vector ndescr other-pointer-type
+		:temp-tn temp :flag-tn pa-flag)
     (inst srwi ndescr type vm:word-shift)
     (storew ndescr vector 0 vm:other-pointer-type)
     (storew length vector vm:vector-length-slot vm:other-pointer-type))

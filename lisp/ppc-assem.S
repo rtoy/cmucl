@@ -213,9 +213,14 @@ x:
 	load(reg_OCFP,_current_control_frame_pointer)
 
 	/* No longer atomic, and check for interrupt */
+#if 1
 	andi. reg_NL3, reg_ALLOC, 1
 	subi reg_ALLOC,reg_ALLOC,4
 	twnei reg_NL3, 0
+#else
+	add reg_ALLOC,reg_ALLOC,reg_NL3
+	twlti reg_ALLOC,0
+#endif	
 	/* Pass in the arguments */
 
 	mr reg_CFP,reg_NL1
@@ -270,9 +275,14 @@ lra:
 	store(reg_NL1,reg_NL2,_foreign_function_call_active)
 
 	/* Check for interrupt */
+#if 1	
 	andi. reg_NL3, reg_ALLOC, 1
 	subi reg_ALLOC, reg_ALLOC, 4
 	twnei reg_NL3,0
+#else
+	add reg_ALLOC,reg_ALLOC,reg_NL3
+	twlti reg_ALLOC,0
+#endif	
 	/* Back to C */
 	C_FULL_EPILOG
 	blr
@@ -322,9 +332,14 @@ lra:
 	store(reg_CSP,reg_CFUNC,_foreign_function_call_active)
 	/* load(reg_POLL,saver2) */
 	/* Disable pseudo-atomic; check pending interrupt */
+#if 1
 	andi. reg_NL3, reg_ALLOC, 1
 	subi reg_ALLOC, reg_ALLOC, 4
 	twnei reg_NL3, 0
+#else		
+	add reg_ALLOC,reg_ALLOC,reg_NL3
+	twlti reg_ALLOC,0
+#endif	
 	mr reg_NL3,reg_NARGS
 
 	/* PowerOpen (i.e. OS X) requires the callee address in r12
@@ -381,9 +396,14 @@ lra:
 	la reg_LIP,-type_OtherPointer(reg_LIP)
 
 	/* No longer atomic */
+#if 1
 	andi. reg_NL3, reg_ALLOC, 1
 	subi reg_ALLOC, reg_ALLOC, 4
 	twnei reg_NL3, 0
+#else		
+	add reg_ALLOC,reg_ALLOC,reg_NL3
+	twlti reg_ALLOC,0
+#endif	
 	mtlr reg_LIP
 	
 	/* Reset the lisp stack. */
@@ -403,14 +423,21 @@ lra:
 	 * The next 4 bytes are the encoding for a PPC jump instruction.
 	 * The jump should go to the twllei instruction below.
 	 */
+#if 0
 	.byte 18<<2
 _undefined_tramp:	
 	.byte 0,0,24
-	.long _undefined_tramp
+	.long _undefined_tramp+1
+#else	
+	.long _xundefined_tramp + 1
+#endif	
 	.long NIL
 	.long NIL
 	.long NIL
 	.long NIL
+#if 1	
+_undefined_tramp:	
+#endif	
 	twllei reg_ZERO,trap_Cerror
         /* Number of argument bytes */
 	.byte 4
@@ -442,14 +469,21 @@ _undefined_tramp:
 	GFUNCDEF(xclosure_tramp)
 	.globl _closure_tramp
 	.byte 0,0,0,type_FunctionHeader
+#if 0	
 	.byte 18<<2
 _closure_tramp:
 	.byte 0,0,24
-	.long _closure_tramp
+	.long _closure_tramp+1
+#else
+	.long _xclosure_tramp+1
+#endif	
 	.long NIL 
 	.long NIL
 	.long NIL
 	.long NIL
+#if 1	
+_closure_tramp:
+#endif	
 #ifdef PPC_FUN_HACK_MAYBE
 	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_CNAME)
 #else
@@ -488,6 +522,10 @@ _closure_tramp:
 	blr
 	SET_SIZE(ppc_flush_cache_line)
 
+	GFUNCDEF(do_pending_interrupt)
+	.long 0
+	SET_SIZE(do_pending_interrupt)
+	
 #ifdef LINKAGE_TABLE
 /*
  * Call into C code to resolve a linkage entry.

@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63 2005/02/06 06:11:00 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.1 2005/04/05 03:41:10 rtoy Exp $
  *
  */
 
@@ -100,25 +100,62 @@
 #define set_current_region_end(value) \
   SetSymbolValue(CURRENT_REGION_END_ADDR, (value))
 
+#elif defined(DARWIN)
+#ifndef pseudo_atomic_InterruptedValue
+#define pseudo_atomic_InterruptedValue 1
+#endif
+#ifndef pseudo_atomic_Value
+#define pseudo_atomic_Value 4
+#endif
+
+#define set_alloc_pointer(value) 
+#define get_alloc_pointer() \
+  ((unsigned long) current_dynamic_space_free_pointer & ~lowtag_Mask)
+#define get_binding_stack_pointer() \
+  (current_binding_stack_pointer)
+#define get_pseudo_atomic_atomic() \
+  ((unsigned long)current_dynamic_space_free_pointer & pseudo_atomic_Value)
+#define set_pseudo_atomic_atomic() \
+  (current_dynamic_space_free_pointer \
+   = (lispobj*) ((unsigned long)current_dynamic_space_free_pointer | pseudo_atomic_Value))
+#define clr_pseudo_atomic_atomic() \
+  (current_dynamic_space_free_pointer \
+   = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~pseudo_atomic_Value))
+#define get_pseudo_atomic_interrupted() \
+  ((unsigned long) current_dynamic_space_free_pointer & pseudo_atomic_InterruptedValue)
+#define clr_pseudo_atomic_interrupted() \
+  (current_dynamic_space_free_pointer \
+   = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~pseudo_atomic_InterruptedValue))
+
+#define set_current_region_free(value) \
+  current_dynamic_space_free_pointer = (lispobj*)((value) | ((long)current_dynamic_space_free_pointer & lowtag_Mask))
+
+#define get_current_region_free() \
+  ((long)current_dynamic_space_free_pointer & (~(lowtag_Mask)))
+
+#define set_current_region_end(value) \
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (value))
+
 #else
 #error gencgc is not supported on this platform
 #endif
 
 /* Define for activating assertions.  */
 
-#if 0
+#if 1
 #define GC_ASSERTIONS 1
 #endif
 
 /* Check for references to stack-allocated objects.  */
 
-#ifdef GC_ASSERTIONS
+#if defined(GC_ASSERTIONS)
 
 static void *invalid_stack_start, *invalid_stack_end;
 
 static inline void
 check_escaped_stack_object (lispobj *where, lispobj obj)
 {
+#ifndef DARWIN
   void *p;
   if (Pointerp (obj)
       && (p = (void *) PTR (obj),
@@ -166,6 +203,7 @@ check_escaped_stack_object (lispobj *where, lispobj obj)
 		 "Reference to stack-allocated object 0x%08lx at %p in %s\n",
 		 (unsigned long) obj, where, space ? space : "Unknown space");
     }
+#endif
 }
 
 #endif /* GC_ASSERTIONS */
@@ -212,18 +250,18 @@ int verify_gens = NUM_GENERATIONS;
  * makes GC very, very slow, so don't enable this unless you really
  * need it!)
  */
-boolean pre_verify_gen_0 = FALSE;
+boolean pre_verify_gen_0 = TRUE;
 
 /*
  * Enable checking for bad pointers after gc_free_heap called from purify.
  */
-boolean verify_after_free_heap = FALSE;
+boolean verify_after_free_heap = TRUE;
 
 /*
  * Enable the printing of a note when code objects are found in the
  * dynamic space during a heap verify.
  */
-boolean verify_dynamic_code_check = FALSE;
+boolean verify_dynamic_code_check = TRUE;
 
 /*
  * Enable the checking of code objects for fixup errors after they are
@@ -245,15 +283,15 @@ boolean gencgc_unmap_zero = TRUE;
 /*
  * Enable checking that newly allocated regions are zero filled.
  */
-boolean gencgc_zero_check = FALSE;
+boolean gencgc_zero_check = TRUE;
 
-boolean gencgc_enable_verify_zero_fill = FALSE;
+boolean gencgc_enable_verify_zero_fill = TRUE;
 
 /*
  * Enable checking that free pages are zero filled during gc_free_heap
  * called after purify.
  */
-boolean gencgc_zero_check_during_free_heap = FALSE;
+boolean gencgc_zero_check_during_free_heap = TRUE;
 
 /*
  * The minimum size for a large object.
@@ -566,14 +604,18 @@ void print_generation_stats(int  verbose)
    */
 #define FPU_STATE_SIZE (((32 + 32 + 1) + 1)/2)
   long long fpu_state[FPU_STATE_SIZE];
+#elif defined(DARWIN)
+#define FPU_STATE_SIZE 32
+  long long fpu_state[FPU_STATE_SIZE];
 #endif
 
   /*
    * This code uses the FP instructions which may be setup for Lisp so
    * they need to the saved and reset for C.
    */
+#ifndef DARWIN
   fpu_save(fpu_state);
-  
+#endif  
   /* Number of generations to print out. */
   if (verbose)
     gens = NUM_GENERATIONS + 1;
@@ -626,7 +668,9 @@ void print_generation_stats(int  verbose)
   }
   fprintf(stderr, "   Total bytes alloc=%ld\n", bytes_allocated);
 
+#ifndef DARWIN
   fpu_restore(fpu_state);
+#endif  
 }
 
 /* Get statistics that are kept "on the fly" out of the generation
@@ -1358,7 +1402,7 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
     handle_heap_overflow("*A1 gc_alloc_large failed, nbytes=%d.\n", nbytes);
   }
 
-#if 0  
+#if 0
   if (large)
     fprintf(stderr, "gc_alloc_large gen %d: %d of %d bytes: from pages %d to %d: addr=%x\n",
 	    gc_alloc_generation, nbytes, bytes_found,
@@ -1474,6 +1518,11 @@ static void *gc_alloc(int nbytes)
   /* Check if there is room in the current alloc region. */
   new_free_pointer = boxed_region.free_pointer + nbytes;
 
+#if 0
+  fprintf(stderr, " boxed free pointer = %08x\n", boxed_region.free_pointer);
+  fprintf(stderr, " boxed end pointer  = %08x\n", boxed_region.end_addr);
+  fprintf(stderr, " new free pointer   = %p\n", new_free_pointer);
+#endif
   if (new_free_pointer <= boxed_region.end_addr) {
     /* If so then allocate from the current alloc region. */
     char *new_obj = boxed_region.free_pointer;
@@ -1510,7 +1559,12 @@ static void *gc_alloc(int nbytes)
 
   /* Check if there is room in the current region. */
   new_free_pointer = boxed_region.free_pointer + nbytes;
-
+#if 0
+  fprintf(stderr, " gc_alloc_new_region done\n");
+  fprintf(stderr, "  boxed free pointer = %08x\n", boxed_region.free_pointer);
+  fprintf(stderr, "  boxed end pointer  = %08x\n", boxed_region.end_addr);
+  fprintf(stderr, "  new free pointer   = %p\n", new_free_pointer);
+#endif
   if (new_free_pointer <= boxed_region.end_addr) {
     /* If so then allocate from the current region. */
     void *new_obj = boxed_region.free_pointer;
@@ -2286,7 +2340,7 @@ void scavenge_interrupt_contexts(void)
  * Aargh!  Why is SPARC so different here?  What is the advantage of
  * making it different from all the other ports?
  */
-#ifdef sparc
+#if defined(sparc)
 #define RAW_ADDR_OFFSET 0
 #else
 #define RAW_ADDR_OFFSET (6 * sizeof(lispobj) - type_FunctionPointer)
@@ -2702,7 +2756,7 @@ static struct code * trans_code(struct code *code)
   unsigned long displacement;
   lispobj fheaderl, *prev_pointer;
 
-#if 0
+#if 1
   fprintf(stderr, "\nTransporting code object located at 0x%08x.\n",
 	  (unsigned long) code);
 #endif
@@ -2733,7 +2787,7 @@ static struct code * trans_code(struct code *code)
 
   displacement = l_new_code - l_code;
 
-#if 0
+#if 1
   fprintf(stderr, "Old code object at 0x%08x, new code object at 0x%08x.\n",
 	  (unsigned long) code, (unsigned long) new_code);
   fprintf(stderr, "Code object is %d words long.\n", nwords);
@@ -2759,7 +2813,7 @@ static struct code * trans_code(struct code *code)
     gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
 
     /*
-     * Calcuate the new function pointer and the new function header.
+     * Calculate the new function pointer and the new function header.
      */
     nfheaderl = fheaderl + displacement;
     nfheaderp = (struct function *) PTR(nfheaderl);
@@ -3244,7 +3298,7 @@ static int size_boxed(lispobj *where)
 }
 
 /* Not needed on sparc because the raw_addr has a function lowtag */
-#ifndef sparc
+#if !(defined(sparc))
 static int scav_fdefn(lispobj *where, lispobj object)
 {
   struct fdefn *fdefn;
@@ -3261,7 +3315,10 @@ static int scav_fdefn(lispobj *where, lispobj object)
     return sizeof(struct fdefn) / sizeof(lispobj);
   }
   else
-    return 1;
+    {
+      /*return sizeof(struct fdefn) / sizeof(lispobj);*/
+      return 1;
+    }
 }
 #endif
 
@@ -3688,7 +3745,7 @@ scav_hash_vector (lispobj *where, lispobj object)
    * true.  It appears that it just happens not to be true when we're
    * scavenging the hash vector.  I don't know why.
    */
-#if 0 && defined(sparc)
+#if defined(DARWIN) || (0 && defined(sparc))
   if (where != (lispobj *) PTR (hash_table->table))
     {
       fprintf(stderr, "Hash table invariant failed during scavenging!\n");
@@ -3698,7 +3755,7 @@ scav_hash_vector (lispobj *where, lispobj object)
     }
 #endif  
 
-#ifndef sparc
+#if !defined(sparc)
   gc_assert (where == (lispobj *) PTR (hash_table->table));
 #endif
   gc_assert (TypeOf (hash_table->instance_header) == type_InstanceHeader);
@@ -4329,7 +4386,7 @@ static void gc_init_tables(void)
          * Note: on the sparc we don't have to do anything special for
          * fdefns, cause the raw-addr has a function lowtag.
          */
-#ifndef sparc
+#if !defined(sparc)
         scavtab[type_Fdefn] = scav_fdefn;
 #else
         scavtab[type_Fdefn] = scav_boxed;
@@ -5489,7 +5546,7 @@ static void scavenge_newspace_generation(int generation)
   /* Grab new_areas_index */
   current_new_areas_index = new_areas_index;
 
-#if 0
+#if 1
   fprintf(stderr, "First scan finished; current_new_areas_index=%d\n",
 	  current_new_areas_index);
 #endif
@@ -5549,7 +5606,7 @@ static void scavenge_newspace_generation(int generation)
 	int size = (*previous_new_areas)[i].size / sizeof(lispobj);
 	gc_assert((*previous_new_areas)[i].size % 4 == 0);
 
-#if 0	
+#if 1
 	fprintf(stderr, "*S page %d offset %d size %d\n",page,offset,size*sizeof(lispobj));
 #endif
 	scavenge(page_address(page)+offset, size);
@@ -5563,7 +5620,7 @@ static void scavenge_newspace_generation(int generation)
     /* Grab new_areas_index */
     current_new_areas_index = new_areas_index;
 
-#if 0
+#if 1
     fprintf(stderr, "Re-scan finished; current_new_areas_index=%d\n",
 	    current_new_areas_index);
 #endif
@@ -5721,8 +5778,11 @@ static void print_ptr(lispobj *addr)
 	  *(addr + 1), *(addr + 2), *(addr + 3), *(addr + 4));
 }
 
-#ifdef sparc
+#if defined(sparc)
 extern char  closure_tramp;
+#elif defined(DARWIN)
+extern char closure_tramp;
+extern char undefined_tramp;
 #else
 extern int  undefined_tramp;
 #endif
@@ -5786,17 +5846,18 @@ static void verify_space(lispobj*start, size_t words)
 #endif
       } else {
 	/* Verify that it points to another valid space */
-	if (!to_readonly_space && !to_static_space &&
-#if defined(sparc)
-            thing != (int) &closure_tramp
-#else
-            thing != (int) &undefined_tramp
+	if (!to_readonly_space && !to_static_space
+#if defined(sparc) || defined(DARWIN)
+            && thing != (int) &closure_tramp
+#endif
+#if defined(DARWIN) || defined(i386) || defined(__x86_64)
+            && thing != (int) &undefined_tramp
 #endif
             )
           {
             fprintf(stderr, "*** Ptr %lx @ %lx sees Junk (undefined_tramp = %lx)\n",
                     (unsigned long) thing, (unsigned long) start,
-#if defined(sparc)
+#if defined(sparc) || defined(DARWIN)
                     (unsigned long) &closure_tramp
 #else
                     (unsigned long) &undefined_tramp
@@ -6800,11 +6861,21 @@ alloc (int nbytes)
       char *new_free_pointer
   	= (void *) (get_current_region_free() + nbytes);
 	  
+#if 0
+      fprintf(stderr, "alloc: size = %x (%d)\n", nbytes, nbytes);
+      fprintf(stderr, " current-region = %08x\n", get_current_region_free());
+      fprintf(stderr, " new_free_pointer = %p\n", new_free_pointer);
+      fprintf(stderr, " boxed_region end = %p\n", boxed_region.end_addr);
+#endif
       if (new_free_pointer <= boxed_region.end_addr)
 	{
 	  /* Allocate from the current region. */
 	  new_obj = (void *) get_current_region_free();
 	  set_current_region_free((lispobj) new_free_pointer);
+#if 0
+	  fprintf(stderr, " region:  new obj = %p\n", new_obj);
+	  fprintf(stderr, " region:  free    = %p\n", new_free_pointer);
+#endif
 	  return new_obj;
 	}
       else if (bytes_allocated <= auto_gc_trigger)
@@ -6813,13 +6884,26 @@ alloc (int nbytes)
 	  boxed_region.free_pointer = (void *) get_current_region_free();
           boxed_region.end_addr = (void *) SymbolValue(CURRENT_REGION_END_ADDR);
           
+#if 0
+	  fprintf(stderr, " trig: free pointer = %lx\n", boxed_region.free_pointer);
+	  fprintf(stderr, " trig: end addr     = %lx\n", boxed_region.end_addr);
+#endif
 	  new_obj = gc_alloc (nbytes);
 	  set_current_region_free((lispobj) boxed_region.free_pointer);
 	  set_current_region_end((lispobj) boxed_region.end_addr);
+#if 0
+	  fprintf(stderr, " trig: new free pointer = %lx\n", boxed_region.free_pointer);
+	  fprintf(stderr, " trig: end addr     = %lx\n", boxed_region.end_addr);
+	  fprintf(stderr, " trig: new obj      = %p\n", new_obj);
+#endif
 	  return new_obj;
 	}
       else
 	{
+#if 1
+	  fprintf(stderr, " bytes_allocated = %08x\n", bytes_allocated);
+	  fprintf(stderr, " auto_gc_trigger = %08x\n", auto_gc_trigger);
+#endif
 	  /* Run GC and try again.  */
 	  auto_gc_trigger *= 2;
 	  clr_pseudo_atomic_atomic ();

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.1 2005/02/12 16:14:12 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.2 2005/04/05 03:41:09 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -173,9 +173,13 @@
 ;; applied.  The amount of space to be allocated is SIZE bytes (which
 ;; must be a multiple of the lisp object size).
 ;;
-(defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
-  (declare (ignore stack-p temp-tn))
+(defmacro allocation (result-tn size lowtag &key stack-p temp-tn flag-tn)
+  (declare (ignore stack-p)
+	   #-gencgc
+	   (ignore temp-tn flag-tn))
   (let ((alloc-size (gensym)))
+    #-gencgc
+    (progn
     `(let ((,alloc-size ,size))
        (if (logbitp (1- lowtag-bits) ,lowtag)
 	   (progn
@@ -185,7 +189,40 @@
 	     (inst ori ,result-tn ,result-tn ,lowtag)))
        (if (numberp ,alloc-size)
 	   (inst addi alloc-tn alloc-tn ,alloc-size)
-	   (inst add alloc-tn alloc-tn ,alloc-size)))))
+	   (inst add alloc-tn alloc-tn ,alloc-size))))
+    #+gencgc
+    `(progn
+      ;; Make temp-tn be the size
+      (cond ((numberp ,size)
+	     (inst lr ,temp-tn ,size))
+	    (t
+	     (move ,temp-tn ,size)))
+      
+      ;; Get the end of the current allocation region.
+      (load-symbol-value ,flag-tn *current-region-end-addr*)
+      ;; The object starts exactly where alloc-tn is, minus an tag
+      ;; bits, etc.
+
+      ;; CAUTION: The C code depends on the exact order of
+      ;; instructions here.  In particular, one instructions before
+      ;; the TW instruction must be an ADD or ADDI instruction, so it
+      ;; can figure out the size of the desired allocation.
+      (without-scheduling ()
+        ;; Now make result-tn point at the end of the object, to
+        ;; figure out if we overflowed the current region.
+	(inst add alloc-tn alloc-tn ,temp-tn)
+	(inst clrrwi ,result-tn alloc-tn lowtag-bits)
+	;; result-tn points to the new end of the region.  Did we go past
+	;; the actual end of the region?  If so, we need a full alloc.
+	;; The C code depends on this exact form of instruction.  If
+	;; either changes, you have to change the other appropriately!
+	(inst tw :lge ,result-tn ,flag-tn))
+
+      ;; At this point, result-tn points at the end of the object.
+      ;; Adjust to point to the beginning.
+      (inst sub ,result-tn ,result-tn ,temp-tn)
+      ;; Mak
+      (inst ori ,result-tn ,result-tn ,lowtag))))
   
 (defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size
 					    &key (lowtag other-pointer-type))
@@ -199,7 +236,8 @@
 	      (type-code type-code) (size size))
     `(pseudo-atomic (,flag-tn)
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
-		   :temp-tn temp-tn)
+		   :temp-tn ,temp-tn
+		   :flag-tn ,flag-tn)
        (when ,type-code
 	 (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
 	 (storew ,temp-tn ,result-tn 0 other-pointer-type))

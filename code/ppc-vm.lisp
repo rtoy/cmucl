@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.5 2005/02/06 19:43:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.5.2.1 2005/04/05 03:41:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -345,3 +345,5 @@
 		      word-bytes)))
   nil)
 
+;;; Enable/Disable scavenging of the read-only space.
+(defvar *scavenge-read-only-space* nil)

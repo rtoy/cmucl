@@ -1,3 +1,4 @@
+# -*- Mode: makefile -*-
 PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
@@ -11,9 +12,14 @@ DEPEND = $(CC) -MM
 ifdef FEATURE_LINKAGE_TABLE
 LINKAGE = -DLINKAGE_TABLE
 endif
+# Enable support for generational GC
+ifdef FEATURE_GENCGC
+GENCGC = -DGENCGC
+GC_SRC = gencgc.c
+endif
 
-CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE)
-ASFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE)
+CFLAGS = -g -O -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
+ASFLAGS = -g -O -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S
@@ -27,7 +33,6 @@ OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c
 
 OS_LINK_FLAGS = -g -dynamic -Wl,-sectcreate,CMUCLRO,core,/dev/null -Wl,-segaddr,CMUCLRO,0x01000000 -Wl,-seg1addr,0x1a000000
 OS_LIBS = -lSystem -lc -lm
-GC_SRC = gc.c
 all: adjustlisp
 adjustlisp: lisp darwin-lispadjuster
 	./darwin-lispadjuster lisp

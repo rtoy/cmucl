@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.9 2005/02/06 19:43:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.9.2.1 2005/04/05 03:41:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,8 @@
 	     (let* ((cons-cells (if star (1- num) num))
 		    (alloc (* (pad-data-block cons-size) cons-cells)))
 	       (pseudo-atomic (pa-flag)
-		 (allocation res alloc list-pointer-type :temp-tn alloc-temp)
+		 (allocation res alloc list-pointer-type :temp-tn alloc-temp
+			     :flag-tn pa-flag)
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (storew (maybe-load (tn-ref-tn things)) ptr
@@ -113,7 +114,7 @@
       ;; pseudo-atomic, because oring in other-pointer-type just adds
       ;; it right back.
       (inst add size boxed unboxed)
-      (allocation result size other-pointer-type :temp-tn ndescr)
+      (allocation result size other-pointer-type :temp-tn ndescr :flag-tn pa-flag)
       (inst slwi ndescr boxed (- type-bits word-shift))
       (inst ori ndescr ndescr code-header-type)
       (storew ndescr result 0 other-pointer-type)
@@ -155,7 +156,8 @@
     (let ((size (+ length closure-info-offset)))
       (pseudo-atomic (pa-flag)
      
-	(allocation result (pad-data-block size) function-pointer-type :temp-tn temp)
+	(allocation result (pad-data-block size) function-pointer-type
+		    :temp-tn temp :flag-tn pa-flag)
 	(inst lr temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
     #+PPC-FUN-HACK
@@ -196,7 +198,7 @@
   (:generator 4
     ;; Could this be replaced with with-fixed-allocation?
     (pseudo-atomic (pa-flag)
-      (allocation result (pad-data-block words) lowtag :temp-tn temp)
+      (allocation result (pad-data-block words) lowtag :temp-tn temp :flag-tn pa-flag)
       (when type
 	(inst lr temp (logior (ash (1- words) type-bits) type))
 	(storew temp result 0 lowtag)))))
@@ -209,6 +211,7 @@
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (any-reg)) bytes)
   (:temporary (:scs (non-descriptor-reg)) header)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
   (:generator 6
     (inst addi bytes extra (* (1+ words) word-bytes))
@@ -216,5 +219,5 @@
     (inst addi header header (+ (ash -2 type-bits) type))
     (inst clrrwi bytes bytes lowtag-bits)
     (pseudo-atomic (pa-flag)
-      (allocation result bytes lowtag :temp-tn temp)
+      (allocation result bytes lowtag :temp-tn temp :flag-tn pa-flag)
       (storew header result 0 lowtag))))

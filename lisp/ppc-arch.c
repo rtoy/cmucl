@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.2.2.1 2005/02/12 16:14:15 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.2.2.2 2005/04/05 03:41:10 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -130,6 +130,234 @@ arch_do_displaced_inst(os_context_t *scp, unsigned long orig_inst)
   skipped_break_addr = pc;
 }
 
+#ifdef GENCGC
+/*
+ * Return non-zero if the current instruction is an allocation trap
+ */
+static int
+allocation_trap_p(os_context_t *context)
+{
+  int result;
+  unsigned int *pc;
+  unsigned inst;
+  unsigned opcode;
+  unsigned src;
+  unsigned dst;
+
+  result = 0;
+
+  /*
+   * First, the instruction has to be a TWLGE temp, NL3, which as the
+   * format.
+   * | 6| 5| 5 | 5 | 10|1|  width
+   * |31|5 |dst|src|  4|0|  field
+   */
+  pc = (unsigned int*) SC_PC(context);
+  inst = *pc;
+
+#if 0
+  fprintf(stderr, "allocation_trap_p at %p:  inst = 0x%08x\n",
+	  pc, inst);
+#endif  
+
+  opcode = inst >> 26;
+  src = (inst >> 11) & 0x1f;
+  dst = (inst >> 16) & 0x1f;
+  if ((opcode == 31) && (src == reg_NL3) && (5 == ((inst >> 21) & 0x1f))
+      && (4 == ((inst >> 1) & 0x3ff)))
+    {
+      /*
+       * We got the instruction.  Now, look back to make sure it was
+       * proceeded by what we expected.  2 instructions back should be
+       * an ADD or ADDI instruction.
+       */
+      unsigned int add_inst;
+      add_inst = pc[-2];
+#if 0
+      fprintf(stderr, "   add inst at %p:  inst = 0x%08x\n",
+	      pc-2, add_inst);
+#endif  
+      opcode = add_inst >> 26;
+      if ((opcode == 31) && (266 == ((add_inst >> 1) & 0x1ff)))
+	{
+	  return 1;
+	}
+      else if ((opcode == 14))
+	{
+	  return 1;
+	}
+      else
+	{
+	  fprintf(stderr, "Whoa! Got allocation trap not preceeded by an ADD or ADDI instruction: 0x%08x\n",
+		  add_inst);
+	}
+    }
+  return 0;
+}
+
+/*
+ * Use this function to enable the minimum number of signals we need
+ * when our trap handler needs to call Lisp code that might cons.  For
+ * consing to work with gencgc, we need to be able to trap the SIGILL
+ * signal to perform allocation.
+ */
+void
+enable_some_signals()
+{
+  sigset_t sigs;
+  
+#if 0
+  fprintf(stderr, "Enabling some signals\n");
+#endif
+#if 0
+  sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+#else
+  sigemptyset(&sigs);
+  sigaddset(&sigs, SIGILL);
+  sigaddset(&sigs, SIGBUS);
+  sigprocmask(SIG_UNBLOCK, &sigs, NULL);
+#endif
+#if 0
+  fprintf(stderr, "Some signals enabled\n");
+#endif
+}
+
+void 
+handle_allocation_trap(os_context_t *context)
+{
+  unsigned int* pc;
+  unsigned int inst;
+  unsigned int or_inst;
+  unsigned int target;
+  unsigned int opcode;
+  int size;
+  int immed;
+  boolean were_in_lisp;
+  char* memory;
+  sigset_t block;
+
+  target = 0;
+  size = 0;
+
+#if 0
+  fprintf(stderr, "In handle_allocation_trap\n");
+#endif
+  /*
+   * I don't think it's possible for us NOT to be in lisp when we get
+   * here.  Remove this later?
+   */
+  were_in_lisp = !foreign_function_call_active;
+  
+  if (were_in_lisp)
+    {
+      fake_foreign_function_call(context);
+    }
+  else
+    {
+      fprintf(stderr, "**** Whoa! allocation trap and we weren't in lisp!\n");
+    }
+
+  /*
+   * Look at current instruction: TWNE temp, NL3. We're here because
+   * temp > NL3 and temp is the end of the allocation, and NL3 is
+   * current-region-end-addr.
+   *
+   * We need to adjust temp and alloc-tn.
+   */
+
+  pc = (unsigned int*) SC_PC(context);
+  inst = pc[0];
+  target = (inst >> 16) & 0x1f;
+
+#if 0
+  fprintf(stderr, "handle_allocation_trap at %p:\n", pc);
+  fprintf(stderr, "  trap inst = 0x%08x\n", inst);
+  fprintf(stderr, "  target reg = %s\n", lisp_register_names[target]);
+#endif
+  /*
+   * Go back and look at the add/addi instruction.  The second src arg
+   * is the size of the allocation.  Get it and call alloc to allocate
+   * new space.
+   */
+  inst = pc[-2];
+  opcode = inst >> 26;
+#if 0
+  fprintf(stderr, "  add inst  = 0x%08x, opcode = %d\n", inst, opcode);
+#endif
+  if (opcode == 14)
+    {
+      /*
+       * ADDI temp-tn, alloc-tn, size 
+       *
+       * Extract the size
+       */
+      size = (inst & 0xffff);
+    }
+  else if (opcode == 31)
+    {
+      /*
+       * ADD temp-tn, alloc-tn, size-tn
+       *
+       * Extract the size
+       */
+      int reg;
+      reg = (inst >> 11) & 0x1f;
+#if 0
+      fprintf(stderr, "  add, reg = %s\n", lisp_register_names[reg]);
+#endif
+      size = SC_REG(context, reg);
+    }
+
+#if 0
+  fprintf(stderr, "Alloc %d to %s\n", size, lisp_register_names[target]);
+#endif
+
+  /*
+   * Well, maybe not.  sigill_handler probably shouldn't be unblocking
+   * all signals.  So, let's enable just the signals we need.  Since
+   * alloc might call GC, we need to have SIGILL enabled so we can do
+   * allocation.  Do we need more?
+   */
+  enable_some_signals();
+
+#if 0
+  fprintf(stderr, "Ready to alloc\n");
+  fprintf(stderr, "free_pointer = 0x%08x\n", current_dynamic_space_free_pointer);
+#endif
+  /*
+   * alloc-tn was incremented by size.  Need to decrement it by size to restore it's original value.
+   */
+  current_dynamic_space_free_pointer = (lispobj*) ((long)current_dynamic_space_free_pointer - size);
+#if 0
+  fprintf(stderr, "free_pointer = 0x%08x new\n", current_dynamic_space_free_pointer);
+#endif
+  
+  memory = (char *) alloc(size);
+
+#if 0
+  fprintf(stderr, "alloc returned %p\n", memory);
+  fprintf(stderr, "free_pointer = 0x%08x\n", current_dynamic_space_free_pointer);
+#endif
+
+  /* 
+   * The allocation macro wants the result to point to the end of the
+   * object!
+   */
+  memory += size;
+#if 0
+  fprintf(stderr, "object end at %p\n", memory);
+#endif
+  SC_REG(context, target) = (unsigned long) memory;
+  SC_REG(context, reg_ALLOC) = (unsigned long) current_dynamic_space_free_pointer;
+
+  if (were_in_lisp)
+    {
+      undo_fake_foreign_function_call(context);
+    }
+  
+
+}
+#endif
 static void 
 sigill_handler(HANDLER_ARGS)
 {
@@ -155,6 +383,18 @@ sigill_handler(HANDLER_ARGS)
 #endif
     return;
   }
+
+  /* Is this an allocation trap? */
+#ifdef GENCGC
+  if (allocation_trap_p(context))
+    {
+      handle_allocation_trap(context);
+      arch_skip_instruction(context);
+#ifdef DARWIN
+      sigreturn(context);
+#endif      
+    }
+#endif
 
   if ((opcode >> 16) == ((3 << 10) | (6 << 5))) {
     /* twllei reg_ZERO,N will always trap if reg_ZERO = 0 */

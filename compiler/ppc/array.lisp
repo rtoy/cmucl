@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.5 2004/08/08 11:15:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.5.2.1 2005/04/05 03:41:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
     (pseudo-atomic (pa-flag)
       (inst addi ndescr rank (* (1+ array-dimensions-offset) vm:word-bytes))
       (inst clrrwi ndescr ndescr lowtag-bits)
-      (allocation header ndescr other-pointer-type :temp-tn gc-temp)
+      (allocation header ndescr other-pointer-type :temp-tn gc-temp :flag-tn pa-flag)
       (inst addi ndescr rank (fixnumize (1- vm:array-dimensions-offset)))
       (inst slwi ndescr ndescr vm:type-bits)
       (inst or ndescr ndescr type)

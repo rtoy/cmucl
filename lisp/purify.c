@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.29 2004/08/04 18:37:25 cwang Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.29.2.1 2005/04/05 03:41:10 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -31,7 +31,7 @@
 #include "gencgc.h"
 #endif
 
-#undef PRINTNOISE
+#define PRINTNOISE
 
 #if (defined(i386) || defined(__x86_64))
 static lispobj *current_dynamic_space_free_pointer;
@@ -633,8 +633,22 @@ static lispobj ptrans_fdefn(lispobj thing, lispobj header)
     oldfn = fdefn->function;
     pscav(&fdefn->function, 1, FALSE);
     if ((char *)oldfn + RAW_ADDR_OFFSET == fdefn->raw_addr)
+      {
         fdefn->raw_addr = (char *)fdefn->function + RAW_ADDR_OFFSET;
-
+      }
+    else
+      {
+#if 0
+	if (oldfn == NIL)
+	  {
+	    extern int undefined_tramp;
+	    fprintf(stderr, "oldfn = %p, fdefn = %p, fdefn->raw_addr = %p\n", (char*) oldfn, (char*)(fdefn->raw_addr));
+#if 0
+	    fdefn->raw_addr = (char*) &undefined_tramp;
+#endif
+	  }
+#endif
+      }
     return result;
 }
 
@@ -1116,7 +1130,13 @@ static int pscav_fdefn(struct fdefn *fdefn)
     pscav(&fdefn->name, 1, TRUE);
     pscav(&fdefn->function, 1, FALSE);
     if (fix_func)
+      {
         fdefn->raw_addr = (char *)(fdefn->function + RAW_ADDR_OFFSET);
+      }
+    else
+      {
+	/*fprintf(stderr, "pscav_fdefn fdefn %p, function = %p, raw_addr = %p\n", fdefn, fdefn->function, fdefn->raw_addr);*/
+      }
     return sizeof(struct fdefn) / sizeof(lispobj);
 }
 
@@ -1643,7 +1663,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj) read_only_free);
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj) static_free);
 
-#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !(defined(sparc) && defined(GENCGC))
+#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !((defined(sparc) || defined(DARWIN)) && defined(GENCGC))
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)

@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.2 2005/02/06 19:43:15 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.2.2.1 2005/04/05 03:41:10 rtoy Exp $
  *
  */
 
@@ -29,6 +29,11 @@
 #include "interrupt.h"
 #include "lispregs.h"
 #include "internals.h"
+#ifdef GENCGC
+#include "gencgc.h"
+#endif
+
+#define SIGSEGV_VERBOSE 1
 
 #include <sys/types.h>
 #include <signal.h>
@@ -121,7 +126,7 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
   else
     flags |= MAP_VARIABLE;
 
-  DPRINTF(0, (stderr, "os_validate %x %d => ", addr, len));
+  DPRINTF(1, (stderr, "os_validate %x %d => ", addr, len));
 
   addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
 
@@ -131,14 +136,14 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
       return NULL;
     }
 
-  DPRINTF(0, (stderr, "%x\n", addr));
+  DPRINTF(1, (stderr, "%x\n", addr));
 
   return addr;
 }
 
 void os_invalidate(os_vm_address_t addr, os_vm_size_t len)
 {
-  DPRINTF(0, (stderr, "os_invalidate %x %d\n", addr, len));
+  DPRINTF(1, (stderr, "os_invalidate %x %d\n", addr, len));
 
   if (munmap(addr, len) == -1)
     perror("munmap");
@@ -190,7 +195,9 @@ boolean valid_addr(os_vm_address_t addr)
   if (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
       || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
       || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size  )
+#ifndef GENCGC
       || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size  )
+#endif
       || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
       || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ))
     return TRUE;
@@ -227,7 +234,7 @@ static void sigsegv_handler(HANDLER_ARGS)
 
   SAVE_CONTEXT();
 
-  DPRINTF(0, (stderr, "sigsegv:\n"));
+  DPRINTF(1, (stderr, "sigsegv:\n"));
   if (!interrupt_maybe_gc(signal,code,context))
     interrupt_handle_now(signal, code, context);
 
@@ -237,11 +244,18 @@ static void sigsegv_handler(HANDLER_ARGS)
 
 static void sigbus_handler(HANDLER_ARGS)
 {
+  caddr_t  fault_addr = code->si_addr;
+  unsigned int inst;
+
   SAVE_CONTEXT();
 
-  DPRINTF(0, (stderr, "sigbus:\n"));
+  DPRINTF(1, (stderr, "sigbus:\n"));
+  fprintf(stderr, "fault_addr = %x\n", fault_addr);
   if (!interrupt_maybe_gc(signal,code,context))
-    interrupt_handle_now(signal, code, context);
+    {
+      fprintf(stderr, "sigbus: interrupt handle now\n");
+      interrupt_handle_now(signal, code, context);
+    }
 
   /* Work around G5 bug; fix courtesy gbyers via chandler */
   sigreturn(context);

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.9 2005/02/06 19:43:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.9.2.1 2005/04/05 03:41:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,6 +242,11 @@
     #+linkage-table
     lisp::*linkage-table-data*
 
+    #+gencgc
+    *current-region-end-addr*
+    #+gencgc
+    *scavenge-read-only-space*
+    
     ;; Spare symbols.  Rename these when you need to add some static
     ;; symbols and don't want to do a cross-compile.
     spare-9

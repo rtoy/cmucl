@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.6 2004/08/09 01:36:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.6.2.1 2005/04/05 03:41:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1199,7 +1199,7 @@ default-value-8
       (assemble ()
 	;; Allocate a cons (2 words) for each item.
 	(inst slwi temp count 1)
-        (allocation result temp list-pointer-type :temp-tn dst)
+        (allocation result temp list-pointer-type :temp-tn dst :flag-tn pa-flag)
 	(move dst result)
 	(inst b enter)
 
