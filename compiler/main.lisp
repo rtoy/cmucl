@@ -897,10 +897,12 @@
 	  (case (car form)
 	    ((make-package in-package shadow shadowing-import export
 			   unexport use-package unuse-package import)
+	     (typecase object
+	       (fasl-file
+		(compile-top-level-lambdas () t object)))
 	     (eval form)
 	     (etypecase object
 	       (fasl-file
-		(compile-top-level-lambdas () t object)
 		(fasl-dump-cold-load-form form object))
 	       ((or null core-object)
 		(convert-and-maybe-compile form path object))))
