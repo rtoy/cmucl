@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.37 1992/03/02 04:17:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.38 1992/03/09 20:18:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,33 +34,25 @@
        ((:and :external (:match "LIST"))
 	(declare (optimize (safety 1))))))
 
-(let ((*features*
-       (cons (intern (c:backend-name c:*backend*)
-		     (find-package "KEYWORD"))
-	     (remove-if #'(lambda (x)
-			    (member x '(:pmax :sparc :rt)))
-			*features*))))
-
-
 ;;; these guys need to be first.
 (comf "target:code/struct") ; For structures.
 
 ;;; Assembly files.
-(when (string= (c:backend-name c:*backend*) "PMAX")
+(when (c:backend-featurep :pmax)
   (comf "target:assembly/mips/assem-rtns" :assem t)
   (comf "target:assembly/mips/array" :assem t)
   (comf "target:assembly/mips/bit-bash" :assem t)
   (comf "target:assembly/mips/arith" :assem t)
   (comf "target:assembly/mips/alloc" :assem t))
 
-(when (string= (c:backend-name c:*backend*) "SPARC")
+(when (c:backend-featurep :sparc)
   (comf "target:assembly/sparc/assem-rtns" :assem t)
   (comf "target:assembly/sparc/array" :assem t)
   (comf "target:assembly/sparc/bit-bash" :assem t)
   (comf "target:assembly/sparc/arith" :assem t)
   (comf "target:assembly/sparc/alloc" :assem t))
 
-(when (string= (c:backend-name c:*backend*) "RT")
+(when (c:backend-featurep :rt)
   (comf "target:assembly/rt/assem-rtns" :assem t)
   (comf "target:assembly/rt/array" :assem t)
   (comf "target:assembly/rt/arith" :assem t)
@@ -101,11 +93,11 @@
 #+mach (comf "target:code/mach-os")
 #+sunos (comf "target:code/sunos-os")
 
-(when (string= (c:backend-name c:*backend*) "PMAX")
+(when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))
-(when (string= (c:backend-name c:*backend*) "SPARC")
+(when (c:backend-featurep :sparc)
   (comf "target:code/sparc-vm"))
-(when (string= (c:backend-name c:*backend*) "RT")
+(when (c:backend-featurep :rt)
   (comf "target:code/rt-vm"))
 
 (comf "target:code/symbol")
@@ -140,7 +132,6 @@
 (comf "target:code/backq")
 
 (comf "target:code/serve-event")
-(pushnew :serve-event *features*)
 (comf "target:code/fd-stream")
 (with-compilation-unit ; Until this code is shaken down more...
   (:optimize '(optimize (safety 2) (debug 2)))
