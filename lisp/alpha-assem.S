@@ -1,6 +1,12 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.7 1998/03/10 20:39:49 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.8 1999/02/20 15:54:43 pw Exp $ */
+#ifndef	__linux__
 #include <machine/regdef.h>
 #include <machine/pal.h>
+#else
+#include <asm/reg.h>
+#include <asm/pal.h>
+#include <alpha/regdef.h>
+#endif
 
 #include "internals.h"
 #include "lispregs.h"
@@ -54,7 +60,9 @@ call_into_lisp:
 	ldl	reg_OCFP,current_control_frame_pointer
 	mov	a1,reg_CFP
 
+#ifndef __linux__	
 	.set	noat
+#endif	
 	ldil	reg_L2,0
 	/* End of pseudo-atomic. */
 

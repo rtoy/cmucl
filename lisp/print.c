@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.10 1998/12/20 04:19:32 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.11 1999/02/20 15:54:45 pw Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -412,8 +412,13 @@ static void print_otherptr(lispobj obj)
         int count, type, index;
         char *cptr, buffer[16];
 
+#ifndef alpha
 	ptr = (unsigned long *) PTR(obj);
 	if (ptr == (unsigned long *) NULL) {
+#else
+	ptr = (u32 *) PTR(obj);
+	if (ptr == (u32 *) NULL) {
+#endif
 		printf(" (NULL Pointer)");
 		return;
 	}

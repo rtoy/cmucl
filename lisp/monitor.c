@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.9 1998/12/20 04:19:33 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.10 1999/02/20 15:54:44 pw Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -413,7 +413,7 @@ static void catchers_cmd(char **ptr)
 		   catch->entry_pc);
 #endif
             brief_print((lispobj)catch->tag);
-            catch = catch->previous_catch;
+            catch = (struct catch_block *) catch->previous_catch;
         }
     }
 }

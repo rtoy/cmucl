@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.3 1999/02/15 12:05:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.4 1999/02/20 15:54:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -257,12 +257,11 @@
 (def-alien-type daddr-t int)
 (def-alien-type caddr-t (* char))
 (def-alien-type swblk-t long)
-(def-alien-type size-t unsigned-int)
+(def-alien-type size-t #-alpha unsigned-int #+alpha long)
 (def-alien-type time-t long)
 (def-alien-type clock-t long)
 (def-alien-type uid-t unsigned-int)
-(def-alien-type ssize-t int)
-(def-alien-type fd-mask unsigned-long)
+(def-alien-type ssize-t #-alpha int #+alpha long)
 (def-alien-type key-t int)
 (def-alien-type int8-t char)
 (def-alien-type u-int8-t unsigned-char)
@@ -272,27 +271,30 @@
 (def-alien-type u-int32-t unsigned-int)
 (def-alien-type int64-t #+nil long-long #-nil (array long 2))
 (def-alien-type u-int64-t #+nil unsigned-long-long #-nil (array unsigned-long 2))
-(def-alien-type register-t int)
+(def-alien-type register-t #-alpha int #+alpha long)
 
 
-(def-alien-type dev-t uquad-t)
+(def-alien-type dev-t #-alpha uquad-t #+alpha unsigned-long)
 (def-alien-type uid-t unsigned-int)
 (def-alien-type gid-t unsigned-int)
-(def-alien-type ino-t unsigned-long)
+(def-alien-type ino-t #-alpha unsigned-long #+alpha unsigned-int)
 (def-alien-type mode-t unsigned-int)
 (def-alien-type nlink-t unsigned-int)
 (def-alien-type off-t long)
 (def-alien-type loff-t quad-t)
 (def-alien-type pid-t int)
-(def-alien-type ssize-t int)
+(def-alien-type ssize-t #-alpha int #+alpha long)
 
 (def-alien-type fsid-t (array int 2))
 
-(defconstant fd-setsize 1024)
+(def-alien-type fd-mask #-alpha unsigned-long #+alpha unsigned-int)
 
+(defconstant fd-setsize 1024)
+(defconstant nfdbits 32)
+  
 (def-alien-type nil
   (struct fd-set
-	  (fds-bits (array fd-mask #.(/ fd-setsize 32)))))
+	  (fds-bits (array fd-mask #.(/ fd-setsize nfdbits)))))
 
 (def-alien-type key-t int)
 
@@ -465,36 +467,72 @@
 (defconstant o_wronly  1 "Write-only flag.")
 (defconstant o_rdwr    2 "Read-write flag.")
 (defconstant o_accmode 3 "Access mode mask.")
-(defconstant o_creat   #o100 "Create if nonexistant flag. (not fcntl)") 
-(defconstant o_excl    #o200 "Error if already exists. (not fcntl)")
-(defconstant o_noctty  #o400 "Don't assign controlling tty. (not fcntl)")
-(defconstant o_trunc   #o1000 "Truncate flag. (not fcntl)")
-(defconstant o_append  #o2000 "Append flag.")
-(defconstant o_ndelay  #o4000 "Non-blocking I/O")
-(defconstant o_nonblock #o4000 "Non-blocking I/O")
-(defconstant o_ndelay  o_nonblock)
-(defconstant o_sync    #o10000 "Synchronous writes (on ext2)")
-(defconstant o_fsync    o_sync)
-(defconstant o_async   #o20000 "Asynchronous I/O")
+
+#-alpha
+(progn
+  (defconstant o_creat   #o100 "Create if nonexistant flag. (not fcntl)") 
+  (defconstant o_excl    #o200 "Error if already exists. (not fcntl)")
+  (defconstant o_noctty  #o400 "Don't assign controlling tty. (not fcntl)")
+  (defconstant o_trunc   #o1000 "Truncate flag. (not fcntl)")
+  (defconstant o_append  #o2000 "Append flag.")
+  (defconstant o_ndelay  #o4000 "Non-blocking I/O")
+  (defconstant o_nonblock #o4000 "Non-blocking I/O")
+  (defconstant o_ndelay  o_nonblock)
+  (defconstant o_sync    #o10000 "Synchronous writes (on ext2)")
+  (defconstant o_fsync    o_sync)
+  (defconstant o_async   #o20000 "Asynchronous I/O"))
+#+alpha
+(progn
+  (defconstant o_creat   #o1000 "Create if nonexistant flag. (not fcntl)") 
+  (defconstant o_trunc   #o2000 "Truncate flag. (not fcntl)")
+  (defconstant o_excl    #o4000 "Error if already exists. (not fcntl)")
+  (defconstant o_noctty  #o10000 "Don't assign controlling tty. (not fcntl)")
+  (defconstant o_nonblock #o4 "Non-blocking I/O")
+  (defconstant o_append  #o10 "Append flag.")
+  (defconstant o_ndelay  o_nonblock)
+  (defconstant o_sync    #o40000 "Synchronous writes (on ext2)")
+  (defconstant o_fsync    o_sync)
+  (defconstant o_async   #o20000 "Asynchronous I/O"))
 
 (defconstant f-dupfd    0  "Duplicate a file descriptor")
 (defconstant f-getfd    1  "Get file desc. flags")
 (defconstant f-setfd    2  "Set file desc. flags")
 (defconstant f-getfl    3  "Get file flags")
 (defconstant f-setfl    4  "Set file flags")
-(defconstant f-getlk    5   "Get lock")
-(defconstant f-setlk    6   "Set lock")
-(defconstant f-setlkw   7   "Set lock, wait for release")
-(defconstant f-setown   8  "Set owner (for sockets)")
-(defconstant f-getown   9  "Get owner (for sockets)")
+
+#-alpha
+(progn
+  (defconstant f-getlk    5   "Get lock")
+  (defconstant f-setlk    6   "Set lock")
+  (defconstant f-setlkw   7   "Set lock, wait for release")
+  (defconstant f-setown   8  "Set owner (for sockets)")
+  (defconstant f-getown   9  "Get owner (for sockets)"))
+#+alpha
+(progn
+  (defconstant f-getlk    7   "Get lock")
+  (defconstant f-setlk    8   "Set lock")
+  (defconstant f-setlkw   9   "Set lock, wait for release")
+  (defconstant f-setown   5  "Set owner (for sockets)")
+  (defconstant f-getown   6  "Get owner (for sockets)"))
+
+
 
 (defconstant F-CLOEXEC 1 "for f-getfl and f-setfl")
 
-(defconstant F-RDLCK 0 "for fcntl and lockf")
-(defconstant F-WDLCK 1 "for fcntl and lockf")
-(defconstant F-UNLCK 2 "for fcntl and lockf")
-(defconstant F-EXLCK 4 "old bsd flock (depricated)")
-(defconstant F-SHLCK 8 "old bsd flock (depricated)")
+#-alpha
+(progn
+  (defconstant F-RDLCK 0 "for fcntl and lockf")
+  (defconstant F-WDLCK 1 "for fcntl and lockf")
+  (defconstant F-UNLCK 2 "for fcntl and lockf")
+  (defconstant F-EXLCK 4 "old bsd flock (depricated)")
+  (defconstant F-SHLCK 8 "old bsd flock (depricated)"))
+#+alpha
+(progn
+  (defconstant F-RDLCK 1 "for fcntl and lockf")
+  (defconstant F-WDLCK 2 "for fcntl and lockf")
+  (defconstant F-UNLCK 8 "for fcntl and lockf")
+  (defconstant F-EXLCK 16 "old bsd flock (depricated)")
+  (defconstant F-SHLCK 32 "old bsd flock (depricated)"))
 
 (defconstant F-LOCK-SH 1 "Shared lock for bsd flock")
 (defconstant F-LOCK-EX 2 "Exclusive lock for bsd flock")
@@ -1370,25 +1408,30 @@ length LEN and type TYPE."
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
-    (st-pad1 unsigned-short)
+    #-alpha (st-pad1 unsigned-short)
     (st-ino ino-t)
     (st-mode mode-t)
     (st-nlink  nlink-t)
     (st-uid  uid-t)
     (st-gid  gid-t)
     (st-rdev dev-t)
-    (st-pad2  unsigned-short)
+    #-alpha (st-pad2  unsigned-short)
+    #+alpha (st-pad2  unsigned-int)
     (st-size off-t)
-    (st-blksize unsigned-long)
-    (st-blocks unsigned-long)
+    #-alpha (st-blksize unsigned-long)
+    #-alpha (st-blocks unsigned-long)
     (st-atime time-t)
-    (unused-1 unsigned-long)
+    #-alpha (unused-1 unsigned-long)
     (st-mtime time-t)
-    (unused-2 unsigned-long)
+    #-alpha (unused-2 unsigned-long)
     (st-ctime time-t)
-    (unused-3 unsigned-long)
-    (unused-4 unsigned-long)
-    (unused-5 unsigned-long)))
+    #+alpha (st-blksize unsigned-int)
+    #+alpha (st-blocks int)
+    #+alpha (st-flags unsigned-int)
+    #+alpha (st-gen unsigned-int)
+    #-alpha (unused-3 unsigned-long)
+    #-alpha (unused-4 unsigned-long)
+    #-alpha (unused-5 unsigned-long)))
 
 ;; Encoding of the file mode.
 
@@ -1424,7 +1467,7 @@ length LEN and type TYPE."
 	    (f-bsize int)
 	    (f-blocks int)
 	    (f-bfree int)
-	    (f-babail int)
+	    (f-bavail int)
 	    (f-files int)
 	    (f-ffree int)
 	    (f-fsid fsid-t)
@@ -1621,8 +1664,8 @@ length LEN and type TYPE."
 ;; microsecond but also has a range of years.  
 (def-alien-type nil
   (struct timeval
-	  (tv-sec time-t)		; seconds
-	  (tv-usec time-t)))		; and microseconds
+	  (tv-sec #-alpha time-t #+alpha int)		; seconds
+	  (tv-usec #-alpha time-t #+alpha int)))	; and microseconds
 
 ;;; unistd.h
 
@@ -2505,19 +2548,19 @@ in at a time in poll.")
   `(if (fixnump ,num)
        (progn
 	 (setf (deref (slot ,fdset 'fds-bits) 0) ,num)
-	 ,@(loop for index upfrom 1 below (/ fd-setsize 32)
+	 ,@(loop for index upfrom 1 below (/ fd-setsize nfdbits)
 	     collect `(setf (deref (slot ,fdset 'fds-bits) ,index) 0)))
        (progn
-	 ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+	 ,@(loop for index upfrom 0 below (/ fd-setsize nfdbits)
 	     collect `(setf (deref (slot ,fdset 'fds-bits) ,index)
-			    (ldb (byte 32 ,(* index 32)) ,num))))))
+			    (ldb (byte nfdbits ,(* index nfdbits)) ,num))))))
 
 (defmacro fd-set-to-num (nfds fdset)
-  `(if (<= ,nfds 32)
+  `(if (<= ,nfds nfdbits)
        (deref (slot ,fdset 'fds-bits) 0)
-       (+ ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+       (+ ,@(loop for index upfrom 0 below (/ fd-setsize nfdbits)
 	      collect `(ash (deref (slot ,fdset 'fds-bits) ,index)
-			    ,(* index 32))))))
+			    ,(* index nfdbits))))))
 
 (defun unix-select (nfds rdfds wrfds xpfds to-secs &optional (to-usecs 0))
   "Unix-select examines the sets of descriptors passed as arguments
@@ -2555,9 +2598,9 @@ in at a time in poll.")
 
 (defmacro extract-stat-results (buf)
   `(values T
-           #+nil
+           #+alpha
 	   (slot ,buf 'st-dev)
-           #-nil
+           #-alpha
            (+ (deref (slot ,buf 'st-dev) 0)
 	      (* (+ +max-u-long+  1)
 	         (deref (slot ,buf 'st-dev) 1)))   ;;; let's hope this works..
@@ -2566,9 +2609,9 @@ in at a time in poll.")
 	   (slot ,buf 'st-nlink)
 	   (slot ,buf 'st-uid)
 	   (slot ,buf 'st-gid)
-           #+nil
+           #+alpha
 	   (slot ,buf 'st-rdev)
-           #-nil
+           #-alpha
            (+ (deref (slot ,buf 'st-rdev) 0)
 	      (* (+ +max-u-long+  1)
 	         (deref (slot ,buf 'st-rdev) 1)))   ;;; let's hope this works..
@@ -3403,7 +3446,7 @@ in at a time in poll.")
 (defmacro fd-set (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
-    `(multiple-value-bind (,word ,bit) (floor ,offset 32)
+    `(multiple-value-bind (,word ,bit) (floor ,offset nfdbits)
        (setf (deref (slot ,fd-set 'fds-bits) ,word)
 	     (logior (truly-the (unsigned-byte 32) (ash 1 ,bit))
 		     (deref (slot ,fd-set 'fds-bits) ,word))))))
@@ -3412,7 +3455,7 @@ in at a time in poll.")
 (defmacro fd-clr (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
-    `(multiple-value-bind (,word ,bit) (floor ,offset 32)
+    `(multiple-value-bind (,word ,bit) (floor ,offset nfdbits)
        (setf (deref (slot ,fd-set 'fds-bits) ,word)
 	     (logand (deref (slot ,fd-set 'fds-bits) ,word)
 		     (32bit-logical-not
@@ -3422,13 +3465,13 @@ in at a time in poll.")
 (defmacro fd-isset (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
-    `(multiple-value-bind (,word ,bit) (floor ,offset 32)
+    `(multiple-value-bind (,word ,bit) (floor ,offset nfdbits)
        (logbitp ,bit (deref (slot ,fd-set 'fds-bits) ,word)))))
 
 ;; not checked for linux...
 (defmacro fd-zero (fd-set)
   `(progn
-     ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+     ,@(loop for index upfrom 0 below (/ fd-setsize nfdbits)
 	 collect `(setf (deref (slot ,fd-set 'fds-bits) ,index) 0))))
 
 

@@ -1,6 +1,6 @@
 /*
  * Linux-os.c. 
- * Form FreeBSD-os.c
+ * From FreeBSD-os.c
  * From osf1-os.c,v 1.1 94/03/27 15:30:51 hallgren Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
@@ -14,7 +14,7 @@
  * Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.5 1999/02/02 10:58:24 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.6 1999/02/20 15:54:42 pw Exp $
  *
  */
 
@@ -38,8 +38,11 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <netdb.h>
 
-#include "x86-validate.h"
+#include "validate.h"
 size_t os_vm_page_size;
 
 #define DPRINTF(t,a) {if(t)fprintf a;}
@@ -97,9 +100,12 @@ os_init(void)
 #else
   os_vm_page_size=getpagesize();
 #endif
+#ifdef i386
   setfpucw(0x1372|4|8|16|32); /*no interrupts */
+#endif
 }
 
+#ifndef __alpha__
 int
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 sc_reg(struct sigcontext *c, int offset)
@@ -120,6 +126,7 @@ sc_reg(struct sigcontext_struct *c, int offset)
     }
   return 0;
 }
+#endif
 
 void
 os_save_context(void)
@@ -154,7 +161,8 @@ os_vm_address_t
 os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
   int flags = MAP_PRIVATE|MAP_ANONYMOUS;
-  int oa=addr,olen=len;
+  os_vm_address_t oa = addr;
+  os_vm_size_t olen = len;
 
   if(addr) flags|=MAP_FIXED;
   else flags|=MAP_VARIABLE;
@@ -252,7 +260,7 @@ void sigsegv_handler(HANDLER_ARGS)
   GET_CONTEXT
 
   int  fault_addr = ((struct sigcontext_struct *)(&contextstruct))->cr2;
-  int  page_index = find_page_index(fault_addr);
+  int  page_index = find_page_index((void *)fault_addr);
 
   /*signal(sig,sigsegv_handler);  /* Re-install; necessary? */
 
@@ -276,20 +284,49 @@ void sigsegv_handler(HANDLER_ARGS)
 static void
 sigsegv_handler(HANDLER_ARGS)
 {
-  GET_CONTEXT
+  os_vm_address_t addr;
 
-  DPRINTF(1,(stderr,"sigsegv\n"));
+#ifdef i386
+  GET_CONTEXT
+#endif
+
+  DPRINTF(0,(stderr,"sigsegv\n"));
+#ifdef i386
   interrupt_handle_now(signal,contextstruct);
+#else
+#define CONTROL_STACK_TOP (((char*)CONTROL_STACK_START)+CONTROL_STACK_SIZE)
+
+  addr = arch_get_bad_addr(signal,code,context);
+
+  if(addr != NULL && context->sc_regs[reg_ALLOC] & (1<<63)) {
+    context->sc_regs[reg_ALLOC] -= (1<<63);
+    interrupt_handle_pending(context);
+  } else if (addr > CONTROL_STACK_TOP && addr < BINDING_STACK_START) {
+    fprintf(stderr, "Possible stack overflow at 0x%08lX!\n", addr);
+    /* try to fix control frame pointer */
+    while ( ! (CONTROL_STACK_START <= *current_control_frame_pointer &&
+	       *current_control_frame_pointer <= CONTROL_STACK_TOP))
+      ((char*)current_control_frame_pointer) -= sizeof(lispobj);
+    ldb_monitor();
+  } else if (!interrupt_maybe_gc(signal, code, context))
+    interrupt_handle_now(signal, code, context);
+#endif
 }
 #endif
 
 static void
 sigbus_handler(HANDLER_ARGS)
 {
+#ifdef i386
   GET_CONTEXT
+#endif
 
   DPRINTF(1,(stderr,"sigbus:\n")); /* there is no sigbus in linux??? */
+#ifdef i386
   interrupt_handle_now(signal,contextstruct);
+#else
+  interrupt_handle_now(signal,code,context);
+#endif  
 }
 
 void 

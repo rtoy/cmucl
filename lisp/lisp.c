@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.14 1997/11/21 12:23:44 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.15 1999/02/20 15:54:44 pw Exp $
  *
  */
 
@@ -42,7 +42,7 @@
 
 static void sigint_handler(HANDLER_ARGS)
 {
-#ifdef __linux__
+#if ( defined( __linux__ ) && defined( i386 ) )
   GET_CONTEXT
 #endif
 

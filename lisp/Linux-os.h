@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.7 1999/02/02 10:58:24 dtc Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.8 1999/02/20 15:54:42 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -32,8 +32,12 @@ typedef int os_vm_prot_t;        /* like hpux */
 #define OS_VM_PROT_READ PROT_READ    /* like hpux */
 #define OS_VM_PROT_WRITE PROT_WRITE  /* like hpux */
 #define OS_VM_PROT_EXECUTE PROT_EXEC /* like hpux */
-     
+
+#ifndef __alpha__     
 #define OS_VM_DEFAULT_PAGESIZE	4096 /* like hpux */ 
+#else
+#define OS_VM_DEFAULT_PAGESIZE	8192 /* like hpux */ 
+#endif
 
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 int sc_reg(struct sigcontext *,int);
@@ -52,6 +56,12 @@ typedef struct sigcontext_struct sigcontext;
 
 #define POSIX_SIGS
 
+/* Alpha uses OSF/1 signals which are the defaults in os.h,
+   so there is no need to define the following for Alpha 
+   Linux 
+*/
+#ifndef __alpha__ 
+
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define HANDLER_ARGS int signal, struct sigcontext contextstruct
 #define GET_CONTEXT int code=0; struct sigcontext *context=&contextstruct;
@@ -60,7 +70,13 @@ typedef struct sigcontext_struct sigcontext;
 #define GET_CONTEXT int code=0; struct sigcontext_struct *context=&contextstruct;
 #endif
 
+#endif /* __alpha__ */
+
+#ifdef i386
 #define setfpucw(cw)	asm("fldcw %0" : : "m" (cw));
+#endif
+
+#if 0
 
 #define sigvec          sigaction
 #define sv_mask         sa_mask
@@ -90,3 +106,17 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_ebp ebp
 #define sc_esi esi
 #define sc_edi edi
+
+#endif /* 0 */
+
+#ifdef alpha
+#define uc_sigmask	sc_mask
+#else
+#define uc_sigmask 	oldmask
+#define sc_pc		eip
+#define sc_mask		oldmask 
+#define sc_efl		eflags
+#define sc_sp		esp
+#endif
+#define sa_sigaction	sa_handler
+#define SA_SIGINFO	0
