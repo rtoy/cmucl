@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.25 1990/07/10 18:28:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.26 1990/07/20 14:23:28 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -508,8 +508,8 @@ default-value-5
 	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
       (inst nop)
-      (note-this-location vop :known-return)
       (emit-return-pc label)
+      (note-this-location vop :known-return)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save)))))
 
