@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.40 1991/05/06 14:58:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.41 1991/06/07 15:17:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1480,6 +1480,7 @@
 	     (*source-info* (make-lisp-source-info form))
 	     (*top-level-lambdas* ())
 	     (*converting-for-interpreter* nil)
+	     (*block-compile* nil)
 	     (*compiler-error-bailout*
 	      #'(lambda ()
 		  (compiler-mumble
