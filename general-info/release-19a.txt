@@ -223,6 +223,15 @@ New in this release:
        into simple-strings even though there were data available.
      - READ-SEQUENCE was returning the wrong value when reading into
        simple-strings and when the :START value was not zero.
+     - CMUCL was computing the wrong value for some special functions
+       when the argument was on the branch cut for the function.
+     - MULTIPLE-VALUE-BIND accepts &REST and friends in the var list.
+     - When constructing logical pathnames, all components will be
+       automatically upcased.  Needed for print/read consistency, and
+       fixes an issue with ASDF and logical pathnames.
+     - Handle things like [abc] in namestrings better to match
+       Unix-style usage.
+     - ATANH was incorrectly computing the value of 1+i*y.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
