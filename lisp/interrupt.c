@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.10 1997/11/19 02:41:54 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.11 1997/11/21 12:20:34 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -164,9 +164,15 @@ void
 interrupt_internal_error(HANDLER_ARGS,
 			      boolean continuable)
 {
+  lispobj context_sap;
 #ifdef __linux__
   GET_CONTEXT
 #endif
+
+    /* Allocate the SAP object while the interrupts are still
+       disabled. */
+    if (internal_errors_enabled)
+      context_sap = alloc_sap(context),
 
 #ifdef POSIX_SIGS
     sigprocmask(SIG_SETMASK,&context->uc_sigmask, 0);
@@ -175,7 +181,7 @@ interrupt_internal_error(HANDLER_ARGS,
 #endif
     fake_foreign_function_call(context);
     if (internal_errors_enabled)
-	funcall2(SymbolFunction(INTERNAL_ERROR), alloc_sap(context),
+	funcall2(SymbolFunction(INTERNAL_ERROR), context_sap,
 		 continuable ? T : NIL);
     else
 	internal_error(context);
@@ -256,32 +262,44 @@ interrupt_handle_now(HANDLER_ARGS)
     if (were_in_lisp)
         fake_foreign_function_call(context);
     
-    /* Allow signals again. */
-#ifdef POSIX_SIGS
-    sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
-#else
-    sigsetmask(context->sc_mask);
-#endif
-
     if (handler.c==SIG_DFL)
 	/* This can happen if someone tries to ignore or default on of the */
 	/* signals we need for runtime support, and the runtime support */
 	/* decides to pass on it.  */
 	lose("interrupt_handle_now: No handler for signal %d?\n", signal);
-    else if (LowtagOf(handler.lisp) == type_FunctionPointer)
-#if 1
-	funcall3(handler.lisp, make_fixnum(signal), make_fixnum(CODE(code)),
-	         alloc_sap(context));
+    else if (LowtagOf(handler.lisp) == type_FunctionPointer) {
+        /* Allocate the SAP object while the interrupts are still
+           disabled. */
+        lispobj context_sap = alloc_sap(context);
+
+        /* Allow signals again. */
+#ifdef POSIX_SIGS
+        sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
 #else
-	funcall3(handler.lisp, make_fixnum(signal), alloc_sap(code),
-	         alloc_sap(context));
+        sigsetmask(context->sc_mask);
 #endif
-    else
+      
+#if 1
+        funcall3(handler.lisp, make_fixnum(signal), make_fixnum(CODE(code)),
+		 context_sap);
+#else
+        funcall3(handler.lisp, make_fixnum(signal), alloc_sap(code),
+		 alloc_sap(context));
+#endif
+    } else {
+        /* Allow signals again. */
+#ifdef POSIX_SIGS
+        sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+#else
+        sigsetmask(context->sc_mask);
+#endif
+      
 #ifdef __linux__
         (*handler.c)(signal, contextstruct);
 #else
         (*handler.c)(signal, code, context);
 #endif
+    }
     
     if (were_in_lisp)
         undo_fake_foreign_function_call(context);
