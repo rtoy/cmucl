@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.13 1991/02/26 22:05:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.14 1991/03/20 03:00:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,8 @@
 (in-package 'c)
 
 (export '(component-header-length sb-allocated-size current-nfp-tn
-	  callee-nfp-tn callee-return-pc-tn *code-segment* *elsewhere*))
+	  callee-nfp-tn callee-return-pc-tn *code-segment* *elsewhere*
+	  trace-table-entry pack-trace-table))
 
 ;;;; Utilities used during code generation.
 
@@ -75,6 +76,7 @@
 
 ;;;; Generate-code and support routines.
 
+(defvar *trace-table-info*)
 (defvar *code-segment* nil)
 (defvar *elsewhere* nil)
 
@@ -92,7 +94,8 @@
 ;;; Generate-Code  --  Interface
 ;;;
 (defun generate-code (component)
-  (let ((prev-env nil))
+  (let ((prev-env nil)
+	(*trace-table-info* nil))
     (do-ir2-blocks (block component)
       (let ((1block (ir2-block-block block)))
 	(when (and (eq (block-info 1block) block)
@@ -113,23 +116,70 @@
 	  (if gen 
 	      (funcall gen vop)
 	      (format t "Missing generator for ~S.~%"
-		      (template-name (vop-info vop))))))))
-  (assemble (*code-segment* nil)
-    (insert-segment *elsewhere*))
-  (expand-pseudo-instructions *code-segment*)
-  (when (and (policy (lambda-bind
-		      (block-home-lambda
-		       (block-next (component-head component))))
-		     (or (>= speed cspeed) (>= space cspeed)))
-	     *assembly-optimize*)
-    (optimize-segment *code-segment*))
-  (finalize-segment *code-segment*))
-
+		      (template-name (vop-info vop)))))))
+    (assemble (*code-segment* nil)
+      (insert-segment *elsewhere*))
+    (expand-pseudo-instructions *code-segment*)
+    (when (and (policy (lambda-bind
+			(block-home-lambda
+			 (block-next (component-head component))))
+		       (or (>= speed cspeed) (>= space cspeed)))
+	       *assembly-optimize*)
+      (optimize-segment *code-segment*))
+    (let ((length (finalize-segment *code-segment*)))
+      (values length (nreverse *trace-table-info*)))))
 
 (defun emit-label-elsewhere (label)
   (assemble (*elsewhere* nil)
     (emit-label label)))
 
-
 (defun label-elsewhere-p (label)
   (<= (label-position *elsewhere*) (label-position label)))
+
+(defun trace-table-entry (state)
+  (let ((label (gen-label)))
+    (emit-label label)
+    (push (cons label state) *trace-table-info*))
+  (undefined-value))
+
+;;; COMPUTE-TRACE-TABLE -- interface.
+;;;
+;;; Convert the list of (label . state) entries into an ivector.
+;;; 
+(eval-when (compile load eval)
+  (defconstant bits-per-state 3)
+  (defconstant bits-per-entry 16)
+  (defconstant bits-per-offset (- bits-per-entry bits-per-state))
+  (defconstant max-offset (ash 1 bits-per-offset)))
+;;;
+(defun pack-trace-table (table)
+  (declare (list table))
+  (let ((last-posn 0)
+	(last-state 0)
+	(result (make-array (length table)
+			    :element-type '(unsigned-byte #.bits-per-entry)))
+	(index 0))
+    (dolist (entry table)
+      (let* ((posn (label-position (car entry)))
+	     (state (cdr entry)))
+	(flet ((push-entry (offset state)
+		 (when (>= index (length result))
+		   (setf result
+			 (replace (make-array
+				   (truncate (* (length result) 5) 4)
+				   :element-type
+				   '(unsigned-byte #.bits-per-entry))
+				  result)))
+		 (setf (aref result index)
+		       (logior (ash offset bits-per-state)
+			       state))
+		 (incf index)))
+	  (do ((offset (- posn last-posn) (- offset max-offset)))
+	      ((< offset max-offset)
+	       (push-entry offset state))
+	    (push-entry 0 last-state)))
+	(setf last-posn posn)
+	(setf last-state state)))
+    (if (eql (length result) index)
+	result
+	(subseq result 0 index))))
