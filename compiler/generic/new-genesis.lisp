@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.71 2004/08/04 20:29:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.72 2004/08/20 22:54:06 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -287,6 +287,7 @@
 
 ;;;; Stuff to read and write the core memory.
 
+;; TODO: make this work for 64-bit
 (defun maybe-byte-swap (word)
   (if (eq (c:backend-byte-order c:*native-backend*)
 	  (c:backend-byte-order c:*backend*))
@@ -326,15 +327,8 @@
 	   (setf (sap-ref-32 sap (ash index vm:word-shift))
 		 (maybe-byte-swap (logior (ash high descriptor-low-bits) low))))
 	  (64
-	   (assert (eq (c:backend-byte-order c:*backend*) :little-endian))
-	   ;; lower 32 bits
-	   (setf (sap-ref-32 sap (ash index vm:word-shift))
-		 (maybe-byte-swap (logand
-				   (logior (ash high descriptor-low-bits) low)
-				   (1- (ash 1 32)))))
-	   ;; higher 32 bits
-	   (setf (sap-ref-32 sap (+ 4 (ash index vm:word-shift)))
-		 (maybe-byte-swap (ash high (- descriptor-low-bits 32)))))))))
+	   (setf (sap-ref-64 sap (ash index vm:word-shift))
+		 (maybe-byte-swap (logior (ash high descriptor-low-bits) low))))))))
 
 (defun write-memory (address value)
   "Write VALUE (a descriptor) at ADDRESS (also a descriptor)."
@@ -344,15 +338,11 @@
 (defun read-indexed (address index)
   "Return the value (as a descriptor) INDEX words from ADDRESS (a descriptor)."
   (let* ((sap (descriptor-sap address))
-	 (value (maybe-byte-swap (sap-ref-32 sap (ash index vm:word-shift)))))
-    (ecase vm:word-bits
-      (32 (make-random-descriptor value))
-      (64
-       (assert (eq (c:backend-byte-order c:*backend*) :little-endian))
-       ;; assume little endian
-       (let ((most-significant (sap-ref-32 sap (+ 4 (ash index vm:word-shift)))))
-	 (make-random-descriptor (logior (ash most-significant 32) value)))))))
-	     
+	 (value (maybe-byte-swap
+		 (ecase vm:word-bits
+		   (32 (sap-ref-32 sap (ash index vm:word-shift)))
+		   (64 (sap-ref-64 sap (ash index vm:word-shift)))))))
+    (make-random-descriptor value)))
 
 (defun read-memory (address)
   "Return the value at ADDRESS (a descriptor)."
