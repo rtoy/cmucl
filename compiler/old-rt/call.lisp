@@ -24,8 +24,9 @@
 (defun standard-argument-location (n)
   (declare (type unsigned-byte n))
   (if (< n register-arg-count)
-      (make-wired-tn register-arg-scn (elt register-arg-offsets n))
-      (make-wired-tn stack-arg-scn n)))
+      (make-wired-tn *any-primitive-type*
+		     register-arg-scn (elt register-arg-offsets n))
+      (make-wired-tn *any-primitive-type* stack-arg-scn n)))
 
 
 ;;; Make-Return-PC-Passing-Location  --  Interface
@@ -37,8 +38,8 @@
 ;;;
 (defun make-return-pc-passing-location (standard)
   (if standard
-      (make-wired-tn register-arg-scn return-pc-offset)  
-      (make-restricted-tn register-arg-scn)))
+      (make-wired-tn *any-primitive-type* register-arg-scn return-pc-offset)  
+      (make-restricted-tn *any-primitive-type* register-arg-scn)))
 
 
 ;;; Make-Old-Fp-Passing-Location  --  Interface
@@ -50,7 +51,7 @@
 ;;;
 (defun make-old-fp-passing-location (standard)
   (if standard
-      (make-wired-tn register-arg-scn old-fp-offset)
+      (make-wired-tn *any-primitive-type* register-arg-scn old-fp-offset)
       (make-normal-tn *any-primitive-type*)))
 
 
@@ -62,12 +63,12 @@
 ;;;
 (defun make-old-fp-save-location (env)
   (environment-live-tn
-   (make-wired-tn stack-arg-scn old-fp-save-offset)
+   (make-wired-tn *any-primitive-type* stack-arg-scn old-fp-save-offset)
    env))
 ;;;
 (defun make-return-pc-save-location (env)
   (environment-live-tn
-   (make-wired-tn stack-arg-scn return-pc-save-offset)
+   (make-wired-tn *any-primitive-type* stack-arg-scn return-pc-save-offset)
    env))
 
 
@@ -78,7 +79,7 @@
 ;;; are using non-standard conventions.
 ;;;
 (defun make-argument-count-location ()
-  (make-wired-tn register-arg-scn argument-count-offset))
+  (make-wired-tn *any-primitive-type* register-arg-scn argument-count-offset))
 
 
 ;;; MAKE-NFP-TN  --  Interface
@@ -87,7 +88,8 @@
 ;;; once per component, and is component-live.
 ;;;
 (defun make-nfp-tn ()
-  (component-live-tn (make-restricted-tn register-arg-scn)))
+  (component-live-tn
+   (make-restricted-tn *any-primitive-type* register-arg-scn)))
 
 
 ;;; Select-Component-Format  --  Interface
