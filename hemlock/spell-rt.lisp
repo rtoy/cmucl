@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-rt.lisp,v 1.1.1.3 1991/02/08 16:37:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-rt.lisp,v 1.1.1.4 1992/02/14 23:51:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,23 +76,23 @@
 
 (defun open-dictionary (f)
   (let* ((filename (ext:unix-namestring f))
-	 (kind (mach:unix-file-kind filename)))
+	 (kind (unix:unix-file-kind filename)))
     (unless kind (error "Cannot find dictionary -- ~S." filename))
     (multiple-value-bind (fd err)
-			 (mach:unix-open filename mach:o_rdonly 0)
+			 (unix:unix-open filename unix:o_rdonly 0)
       (unless fd
 	(error "Opening ~S failed: ~A." filename err))
-      (multiple-value-bind (winp dev-or-err) (mach:unix-fstat fd)
+      (multiple-value-bind (winp dev-or-err) (unix:unix-fstat fd)
 	(unless winp (error "Opening ~S failed: ~A." filename dev-or-err))
 	fd))))
 
 (defun close-dictionary (fd)
-  (mach:unix-close fd))
+  (unix:unix-close fd))
 
 (defun read-dictionary-structure (fd bytes)
   (let* ((structure (allocate-bytes bytes)))
     (multiple-value-bind (read-bytes err)
-			 (mach:unix-read fd structure bytes)
+			 (unix:unix-read fd structure bytes)
       (when (or (null read-bytes) (not (= bytes read-bytes)))
 	(deallocate-bytes (system-address structure) bytes)
 	(error "Reading dictionary structure failed: ~A." err))

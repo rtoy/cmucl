@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.16 1991/12/18 11:46:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.17 1992/02/14 23:51:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,7 +318,7 @@
 (defun tty-beep (&optional device stream)
   (declare (ignore device stream))
   (when (variable-value 'ed::bell-style)
-    (mach:unix-write 1 *editor-bell* 0 1)))
+    (unix:unix-write 1 *editor-bell* 0 1)))
 
 (proclaim '(special *current-window*))
 
@@ -894,13 +894,13 @@
 ;;;
 (defun get-editor-tty-input (fd)
   (let* ((buf *editor-buffer*)
-	 (len (mach:unix-read fd buf 256))
+	 (len (unix:unix-read fd buf 256))
 	 (i 0))
     (declare (simple-string buf)
 	     (type (or null fixnum) len)
 	     (fixnum i))
     (unless len
-      (error "Problem with tty input: ~S" (mach:get-unix-error-msg)))
+      (error "Problem with tty input: ~S" (unix:get-unix-error-msg)))
     (loop
       (when (>= i len) (return t))
       (q-event *real-editor-input*
@@ -909,9 +909,9 @@
 
 (defun editor-tty-listen (stream)
   (with-stack-alien (nc (signed-byte 32) 32)
-    (and (mach::Unix-ioctl (tty-editor-input-fd stream)
-			   mach::FIONREAD
-			   (alien-sap (alien-value nc)))
+    (and (unix:unix-ioctl (tty-editor-input-fd stream)
+			  unix::FIONREAD
+			  (alien-sap (alien-value nc)))
 	 (> (alien-access (alien-value nc)) 0))))
 
 
@@ -923,155 +923,133 @@
 
 (defun setup-input ()
   (let ((fd *editor-file-descriptor*))
-    (when (mach:unix-isatty 0)
-      (mach:with-trap-arg-block mach:sgtty sg
+    (when (unix:unix-isatty 0)
+      (alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCGETP (alien-sap (alien-value sg)))
-	  (if (null val)
-	      (error "Could not get tty information, unix error ~S."
-		     (mach:get-unix-error-msg err)))
-	  (let ((flags (alien-access (mach::sgtty-flags (alien-value sg)))))
-	    (setq old-flags flags)
-	    (setf (alien-access (mach::sgtty-flags (alien-value sg)))
-		  (logand (logior flags mach::tty-cbreak)
-			  (lognot mach::tty-echo)
-			  (lognot mach::tty-crmod)))
-	    (multiple-value-bind
-		(val err)
-		(mach:unix-ioctl fd mach:TIOCSETP
-				 (alien-sap (alien-value sg)))
-	      (if (null val)
-		  (error "Could not set tty information, unix error ~S."
-			 (mach:get-unix-error-msg err)))))))
-      (mach:with-trap-arg-block mach:tchars tc
+	    (unix:unix-ioctl fd unix:TIOCGETP (alien-sap sg))
+	  (unless val
+	    (error "Could not get tty information, unix error ~S."
+		   (unix:get-unix-error-msg err))))
+	(let ((flags (alien:slot sg 'unix:sg-flags)))
+	  (setq old-flags flags)
+	  (setf (alien:slot sg 'unix:sg-flags)
+		(logand (logior flags unix:tty-cbreak)
+			(lognot unix:tty-echo)
+			(lognot unix:tty-crmod)))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-ioctl fd unix:TIOCSETP (alien-sap sg))
+	    (if (null val)
+		(error "Could not set tty information, unix error ~S."
+		       (unix:get-unix-error-msg err))))))
+      (alien:with-alien ((tc (alien:struct unix:tchars)))
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCGETC
-			     (alien-sap (alien-value tc)))
-	  (if (null val)
-	      (error "Could not get tty tchars information, unix error ~S."
-		     (mach:get-unix-error-msg err)))
-	  (setq old-tchars
-		(vector (alien-access (mach::tchars-intrc (alien-value tc)))
-			(alien-access (mach::tchars-quitc (alien-value tc)))
-			(alien-access (mach::tchars-startc (alien-value tc)))
-			(alien-access (mach::tchars-stopc (alien-value tc)))
-			(alien-access (mach::tchars-eofc (alien-value tc)))
-			(alien-access (mach::tchars-brkc (alien-value tc))))))
-	(setf (alien-access (mach::tchars-intrc (alien-value tc)))
+	    (unix:unix-ioctl fd unix:TIOCGETC (alien-sap tc))
+	  (unless val
+	    (error "Could not get tty tchars information, unix error ~S."
+		   (unix:get-unix-error-msg err))))
+	(setq old-tchars
+	      (vector (alien:slot tc 't-intrc)
+		      (alien:slot tc 't-quitc)
+		      (alien:slot tc 't-startc)
+		      (alien:slot tc 't-stopc)
+		      (alien:slot tc 't-eofc)
+		      (alien:slot tc 't-brkc)))
+	(setf (alien:slot tc 't-intrc)
 	      (if *editor-windowed-input* -1 28))
-	(setf (alien-access (mach::tchars-quitc (alien-value tc))) -1)
-	(setf (alien-access (mach::tchars-startc (alien-value tc))) -1)
-	(setf (alien-access (mach::tchars-stopc (alien-value tc))) -1)
-	(setf (alien-access (mach::tchars-eofc (alien-value tc))) -1)
-	(setf (alien-access (mach::tchars-brkc (alien-value tc))) -1)
+	(setf (alien:slot tc 't-quitc) -1)
+	(setf (alien:slot tc 't-startc) -1)
+	(setf (alien:slot tc 't-stopc) -1)
+	(setf (alien:slot tc 't-eofc) -1)
+	(setf (alien:slot tc 't-brkc) -1)
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCSETC
-			     (alien-sap (alien-value tc)))
-	  (if (null val) (error "Failed to set tchars, unix error ~S."
-				(mach:get-unix-error-msg err)))))
-      (mach:with-trap-arg-block mach:ltchars tc
+	    (unix:unix-ioctl fd unix:TIOCSETC (alien-sap tc))
+	  (unless val
+	    (error "Failed to set tchars, unix error ~S."
+		   (unix:get-unix-error-msg err)))))
+      (alien:with-alien ((tc (alien:struct unix:ltchars)))
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCGLTC
-			     (alien-sap (alien-value tc)))
-	  (if (null val)
-	      (error "Could not get tty ltchars information, unix error ~S."
-		     (mach:get-unix-error-msg err)))
-	  (setq old-ltchars
-		(vector (alien-access (mach::ltchars-suspc (alien-value tc)))
-			(alien-access (mach::ltchars-dsuspc (alien-value tc)))
-			(alien-access (mach::ltchars-rprntc (alien-value tc)))
-			(alien-access (mach::ltchars-flushc (alien-value tc)))
-			(alien-access (mach::ltchars-werasc (alien-value tc)))
-			(alien-access (mach::ltchars-lnextc (alien-value tc))))))
-	(setf (alien-access (mach::ltchars-suspc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-dsuspc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-rprntc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-flushc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-werasc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-lnextc (alien-value tc))) -1)
+	    (unix:unix-ioctl fd unix:TIOCGLTC (alien-sap tc))
+	  (unless val
+	    (error "Could not get tty ltchars information, unix error ~S."
+		   (unix:get-unix-error-msg err))))
+	(setq old-ltchars
+	      (vector (alien:slot tc 'unix:t-suspc)
+		      (alien:slot tc 'unix:t-dsuspc)
+		      (alien:slot tc 'unix:t-rprntc)
+		      (alien:slot tc 'unix:t-flushc)
+		      (alien:slot tc 'unix:t-werasc)
+		      (alien:slot tc 'unix:t-lnextc)))
+	(setf (alien:slot tc 'unix:t-suspc) -1)
+	(setf (alien:slot tc 'unix:t-dsuspc) -1)
+	(setf (alien:slot tc 'unix:t-rprntc) -1)
+	(setf (alien:slot tc 'unix:t-flushc) -1)
+	(setf (alien:slot tc 'unix:t-werasc) -1)
+	(setf (alien:slot tc 'unix:t-lnextc) -1)
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCSLTC
-			     (alien-sap (alien-value tc)))
-	  (if (null val) (error "Failed to set ltchars, unix error ~S."
-				(mach:get-unix-error-msg err))))))))
-
+	    (unix:unix-ioctl fd unix:TIOCSLTC (alien-sap tc))
+	  (unless val
+	    (error "Failed to set ltchars, unix error ~S."
+		   (unx:get-unix-error-msg err))))))))
 	
 (defun reset-input ()
-  (when (mach:unix-isatty 0)
-    (if (boundp 'old-flags)
-	(let ((fd *editor-file-descriptor*))
-	  (mach:with-trap-arg-block mach:sgtty sg
+  (when (unix:unix-isatty 0)
+    (let ((fd *editor-file-descriptor*))
+      (when (boundp 'old-flags)
+	(alien:with-alien ((sg (alien:struct unix:sgttyb)))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-ioctl fd unix:TIOCGETP (alien-sap sg))
+	    (unless val
+	      (error "Could not get tty information, unix error ~S."
+		     (unix:get-unix-error-msg err)))
+	    (setf (alien:slot sg 'unix:sg-flags) old-flags)
 	    (multiple-value-bind
 		(val err)
-		(mach:unix-ioctl fd mach:TIOCGETP
-				 (alien-sap (alien-value sg)))
-	      (if (null val)
-		  (error "Could not get tty information, unix error ~S."
-			 (mach:get-unix-error-msg err)))
-	      (setf (alien-access (mach::sgtty-flags (alien-value sg)))
-		    old-flags)
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl fd mach:TIOCSETP
-				   (alien-sap (alien-value sg)))
-		(if (null val)
-		    (error "Could not set tty information, unix error ~S."
-			   (mach:get-unix-error-msg err))))))
-	  (cond ((and (boundp 'old-tchars)
-		      (simple-vector-p old-tchars)
-		      (eq (length old-tchars) 6))
-		 (mach:with-trap-arg-block mach:tchars tc
-		   (setf (alien-access (mach::tchars-intrc (alien-value tc)))
-			 (svref old-tchars 0))
-		   (setf (alien-access (mach::tchars-quitc (alien-value tc)))
-			 (svref old-tchars 1))
-		   (setf (alien-access (mach::tchars-startc (alien-value tc)))
-			 (svref old-tchars 2))
-		   (setf (alien-access (mach::tchars-stopc (alien-value tc)))
-			 (svref old-tchars 3))
-		   (setf (alien-access (mach::tchars-eofc (alien-value tc)))
-			 (svref old-tchars 4))
-		   (setf (alien-access (mach::tchars-brkc (alien-value tc)))
-			 (svref old-tchars 5))
-		   (multiple-value-bind
-		       (val err)
-		       (mach:unix-ioctl fd mach:TIOCSETC
-					(alien-sap (alien-value tc)))
-		     (if (null val)
-			 (error "Failed to set tchars, unix error ~S."
-				(mach:get-unix-error-msg err)))))))
-	  (cond ((and (boundp 'old-ltchars)
-		      (simple-vector-p old-ltchars)
-		      (eq (length old-ltchars) 6))
-		 (mach:with-trap-arg-block mach:ltchars tc
-		   (setf (alien-access (mach::ltchars-suspc (alien-value tc)))
-			 (svref old-ltchars 0))
-		   (setf (alien-access (mach::ltchars-dsuspc (alien-value tc)))
-			 (svref old-ltchars 1))
-		   (setf (alien-access (mach::ltchars-rprntc (alien-value tc)))
-			 (svref old-ltchars 2))
-		   (setf (alien-access (mach::ltchars-flushc (alien-value tc)))
-			 (svref old-ltchars 3))
-		   (setf (alien-access (mach::ltchars-werasc (alien-value tc)))
-			 (svref old-ltchars 4))
-		   (setf (alien-access (mach::ltchars-lnextc (alien-value tc)))
-			 (svref old-ltchars 5))
-		   (multiple-value-bind
-		       (val err)
-		       (mach:unix-ioctl fd mach:TIOCSLTC
-					(alien-sap (alien-value tc)))
-		     (if (null val)
-			 (error "Failed to set ltchars, unix error ~S."
-				(mach:get-unix-error-msg err)))))))))))
-
+		(unix:unix-ioctl fd unix:TIOCSETP (alien-sap sg))
+	      (unless val
+		(error "Could not set tty information, unix error ~S."
+		       (unix:get-unix-error-msg err)))))))
+      (when (and (boundp 'old-tchars)
+		 (simple-vector-p old-tchars)
+		 (eq (length old-tchars) 6))
+	(alien:with-alien ((tc (alien:struct unix:tchars)))
+	  (setf (alien:slot tc 'unix:t-intrc) (svref old-tchars 0))
+	  (setf (alien:slot tc 'unix:t-quitc) (svref old-tchars 1))
+	  (setf (alien:slot tc 'unix:t-startc) (svref old-tchars 2))
+	  (setf (alien:slot tc 'unix:t-stopc) (svref old-tchars 3))
+	  (setf (alien:slot tc 'unix:t-eofc) (svref old-tchars 4))
+	  (setf (alien:slot tc 'unix:t-brkc) (svref old-tchars 5))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-ioctl fd unix:TIOCSETC (alien-sap tc))
+	    (unless val
+	      (error "Failed to set tchars, unix error ~S."
+		     (unix:get-unix-error-msg err))))))
+      (when (and (boundp 'old-ltchars)
+		 (simple-vector-p old-ltchars)
+		 (eq (length old-ltchars) 6))
+	(alien:with-alien ((tc (alien:struct unix:ltchars)))
+	  (setf (alien:slot tc 'unix:t-suspc) (svref old-ltchars 0))
+	  (setf (alien:slot tc 'unix:t-dsuspc) (svref old-ltchars 1))
+	  (setf (alien:slot tc 'unix:t-rprntc) (svref old-ltchars 2))
+	  (setf (alien:slot tc 'unix:t-flushc) (svref old-ltchars 3))
+	  (setf (alien:slot tc 'unix:t-werasc) (svref old-ltchars 4))
+	  (setf (alien:slot tc 'unix:t-lnextc) (svref old-ltchars 5))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-ioctl fd unix:TIOCSLTC (alien-sap tc))
+	    (unless val
+	      (error "Failed to set ltchars, unix error ~S."
+		     (unix:get-unix-error-msg err)))))))))
 
 (defun pause-hemlock ()
   "Pause hemlock and pop out to the Unix Shell."
   (system:without-hemlock
-   (mach:unix-kill (mach:unix-getpid) mach:sigstop))
+   (unix:unix-kill (unix:unix-getpid) :sigstop))
   T)

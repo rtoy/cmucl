@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dired.lisp,v 1.1.1.3 1991/02/08 16:33:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dired.lisp,v 1.1.1.4 1992/02/14 23:50:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,7 +113,7 @@
   (cond
    ((not directoryp)
     (let* ((ses-name1 (ext:unix-namestring spec1 t))
-	   (exists1p (mach:unix-file-kind ses-name1))
+	   (exists1p (unix:unix-file-kind ses-name1))
 	   (ses-name2 (ext:unix-namestring spec2 nil))
 	   (pname1 (pathname ses-name1))
 	   (pname2 (pathname ses-name2))
@@ -300,7 +300,7 @@
   (cond
    ((not directoryp)
     (let* ((ses-name1 (ext:unix-namestring spec1 t))
-	   (exists1p (mach:unix-file-kind ses-name1))
+	   (exists1p (unix:unix-file-kind ses-name1))
 	   (ses-name2 (ext:unix-namestring spec2 nil))
 	   (pname1 (pathname ses-name1))
 	   (pname2 (pathname ses-name2))
@@ -554,7 +554,7 @@
 (defun make-directory (name)
   "Creates directory name.  If name exists, then an error is signaled."
   (let ((ses-name (ext:unix-namestring name nil)))
-    (when (mach:unix-file-kind ses-name)
+    (when (unix:unix-file-kind ses-name)
       (funcall *error-function* "Name already exists -- ~S" ses-name))
     (enter-directory ses-name))
   t)
@@ -565,23 +565,23 @@
 
 (defun open-file (ses-name)
   (multiple-value-bind (fd err)
-		       (mach:unix-open ses-name mach:o_rdonly 0)
+		       (unix:unix-open ses-name unix:o_rdonly 0)
     (unless fd
       (funcall *error-function* "Opening ~S failed: ~A." ses-name err))
     fd))
 
 (defun close-file (fd)
-  (mach:unix-close fd))
+  (unix:unix-close fd))
 
 (defun read-file (fd ses-name)
   (multiple-value-bind (winp dev-or-err ino mode nlink uid gid rdev size)
-		       (mach:unix-fstat fd)
+		       (unix:unix-fstat fd)
     (declare (ignore ino nlink uid gid rdev))
     (unless winp (funcall *error-function*
 			  "Opening ~S failed: ~A."  ses-name dev-or-err))
     (let ((storage (system:allocate-system-memory size)))
       (multiple-value-bind (read-bytes err)
-			   (mach:unix-read fd storage size)
+			   (unix:unix-read fd storage size)
 	(when (or (null read-bytes) (not (= size read-bytes)))
 	  (system:deallocate-system-memory storage size)
 	  (funcall *error-function*
@@ -589,39 +589,39 @@
       (values storage size mode))))
 
 (defun write-file (ses-name data byte-count mode)
-  (multiple-value-bind (fd err) (mach:unix-creat ses-name #o644)
+  (multiple-value-bind (fd err) (unix:unix-creat ses-name #o644)
     (unless fd
       (funcall *error-function* "Couldn't create file ~S: ~A"
-	       ses-name (mach:get-unix-error-msg err)))
-    (multiple-value-bind (winp err) (mach:unix-write fd data 0 byte-count)
+	       ses-name (unix:get-unix-error-msg err)))
+    (multiple-value-bind (winp err) (unix:unix-write fd data 0 byte-count)
       (unless winp
 	(funcall *error-function* "Writing file ~S failed: ~A"
 	       ses-name
-	       (mach:get-unix-error-msg err))))
-    (mach:unix-fchmod fd (logand mode #o777))
-    (mach:unix-close fd)))
+	       (unix:get-unix-error-msg err))))
+    (unix:unix-fchmod fd (logand mode #o777))
+    (unix:unix-close fd)))
 
 (defvar *utimes-buffer* (make-list 4 :initial-element 0))
 
 (defun set-write-date (ses-name secs)
   (multiple-value-bind (winp dev-or-err ino mode nlink uid gid rdev size atime)
-		       (mach:unix-stat ses-name)
+		       (unix:unix-stat ses-name)
     (declare (ignore ino mode nlink uid gid rdev size))
     (unless winp (funcall *error-function*
 			  "Couldn't stat file ~S failed: ~A."  ses-name
 			  dev-or-err))
     (setf (car *utimes-buffer*) atime)
     (setf (caddr *utimes-buffer*) secs))
-  (multiple-value-bind (winp err) (mach:unix-utimes ses-name *utimes-buffer*)
+  (multiple-value-bind (winp err) (unix:unix-utimes ses-name *utimes-buffer*)
     (unless winp
       (funcall *error-function* "Couldn't set write date of file ~S: ~A"
 	       ses-name
-	       (mach:get-unix-error-msg err)))))
+	       (unix:get-unix-error-msg err)))))
 
 (defun get-write-date (ses-name)
   (multiple-value-bind (winp dev-or-err ino mode nlink uid gid rdev size
 			atime mtime)
- 		       (mach:unix-stat ses-name)
+ 		       (unix:unix-stat ses-name)
     (declare (ignore ino mode nlink uid gid rdev size atime))
     (unless winp (funcall *error-function* "Couldn't stat file ~S failed: ~A."
 			  ses-name dev-or-err))
@@ -634,13 +634,13 @@
 ;;; have this problem.
 ;;;
 (defun sub-rename-file (ses-name1 ses-name2)
-  (multiple-value-bind (res err) (mach:unix-rename ses-name1 ses-name2)
+  (multiple-value-bind (res err) (unix:unix-rename ses-name1 ses-name2)
     (unless res
       (funcall *error-function* "Failed to rename ~A to ~A: ~A."
-	       ses-name1 ses-name2 (mach:get-unix-error-msg err)))))
+	       ses-name1 ses-name2 (unix:get-unix-error-msg err)))))
 
 (defun directory-existsp (ses-name)
-  (eq (mach:unix-file-kind ses-name) :directory))
+  (eq (unix:unix-file-kind ses-name) :directory))
 
 (defun enter-directory (ses-name)
   (declare (simple-string ses-name))
@@ -649,21 +649,21 @@
 		      length-1)
 		   (subseq ses-name 0 (1- (length ses-name)))
 		   ses-name)))
-    (multiple-value-bind (winp err) (mach:unix-mkdir name #o755)
+    (multiple-value-bind (winp err) (unix:unix-mkdir name #o755)
       (unless winp
 	(funcall *error-function* "Couldn't make directory ~S: ~A"
 		 name
-		 (mach:get-unix-error-msg err))))))
+		 (unix:get-unix-error-msg err))))))
 
 (defun delete-directory (ses-name)
   (declare (simple-string ses-name))
   (multiple-value-bind (winp err)
-		       (mach:unix-rmdir (subseq ses-name 0
+		       (unix:unix-rmdir (subseq ses-name 0
 						(1- (length ses-name))))
     (unless winp
       (funcall *error-function* "Couldn't delete directory ~S: ~A"
 	       ses-name
-	       (mach:get-unix-error-msg err)))))
+	       (unix:get-unix-error-msg err)))))
 
 
 
