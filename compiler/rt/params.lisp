@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.1 1991/02/18 15:08:05 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.2 1991/04/01 13:49:23 chiles Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -21,8 +21,23 @@
 (in-package "RT")
 (use-package "C")
 
-(export '(word-bits byte-bits word-shift word-bytes
-	  halt-trap pending-interrupt-trap error-trap cerror-trap))
+(export '(word-bits byte-bits word-shift word-bytes float-sign-shift
+
+	  single-float-bias single-float-exponent-byte
+	  single-float-significand-byte single-float-normal-exponent-min
+	  single-float-normal-exponent-max single-float-hidden-bit
+	  single-float-trapping-nan-bit single-float-digits
+
+	  double-float-bias double-float-exponent-byte
+	  double-float-significand-byte double-float-normal-exponent-min
+	  double-float-normal-exponent-max double-float-hidden-bit
+	  double-float-trapping-nan-bit double-float-digits
+
+	  float-underflow-trap-bit float-overflow-trap-bit
+	  float-imprecise-trap-bit float-invalid-trap-bit
+	  float-divide-by-zero-trap-bit
+
+))
 
 
 
@@ -97,6 +112,10 @@
 
 ;;;; Description of the target address space.
 
+(export '(target-read-only-space-start
+	  target-static-space-start
+	  target-dynamic-space-start))
+
 ;;; Where to put the different spaces.
 ;;; 
 (defparameter target-read-only-space-start #x00100000)
@@ -107,15 +126,22 @@
 
 ;;;; Other non-type constants.
 
+(export '(halt-trap pending-interrupt-trap error-trap cerror-trap
+	  breakpoint-trap))
+
 (defenum (:suffix -trap :start 8)
   halt
   pending-interrupt
   error
-  cerror)
+  cerror
+  breakpoint)
 
 
 
 ;;;; Static symbols.
+
+(export '(static-symbols exported-static-symbols))
+
 
 ;;; These symbols are loaded into static space directly after NIL so
 ;;; that the system can compute their address by adding a constant
@@ -136,6 +162,7 @@
     lisp::%initial-function
     lisp::maybe-gc
     kernel::internal-error
+    di::handle-breakpoint
 
     ;; Free Pointers
     lisp::*read-only-space-free-pointer*
@@ -158,8 +185,8 @@
 
     ;; Static functions.
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
-    two-arg-<= two-arg->= two-arg-/= %negate two-arg-and two-arg-ior two-arg-xor
-    length two-arg-gcd two-arg-lcm
+    %negate two-arg-and two-arg-ior two-arg-xor
+    length two-arg-gcd two-arg-lcm truncate
     ))
 
 (defparameter exported-static-symbols
