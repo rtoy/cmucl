@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.16 1993/03/13 14:52:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.17 1993/03/13 17:30:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -579,6 +579,7 @@
 ;;;
 (declaim (inline layout-of))
 (defun layout-of (x)
+  (declare (optimize (speed 3) (safety 0)))
   (cond ((%instancep x) (%instance-layout x))
 	((funcallable-instance-p x) (%funcallable-instance-layout x))
 	((null x) '#.(class-layout (find-class 'null)))
