@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.5 1991/02/08 16:38:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.6 1991/03/14 16:32:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -535,10 +535,11 @@
 ;;; done to the screen, we save the changed bit on, so the line will be
 ;;; queued to be written after redisplay is re-entered.
 ;;; 
-;;; If the line is changed or new, then queue it to be written.  Note
-;;; before that we checked the flags for equality with the new bits, and
-;;; it is possible that updating the window image will yield lines that
-;;; are both new and changed.
+;;; If the line is changed or new, then queue it to be written.  Since we can
+;;; abort out of the actual dislpay at any time (due to pending input), we
+;;; don't clear the flags or delta here.  A dis-line may be groveled many times
+;;; by this function before it actually makes it to the screen, so we may have
+;;; odd combinations of bits such as both new and changed.
 ;;; 
 ;;; Otherwise, get the next display line, loop, and see if it's
 ;;; interesting.
@@ -553,62 +554,55 @@
     (declare (fixnum flags ins outs writes prev-delta cum-deletes net-delta
 		     cum-inserts))
     (loop
-     (cond
-      ((= flags new-bit)
-       (queue (car dl) *tty-line-writes* writes)
-       (next-dis-line))
-      ((not (zerop (the fixnum (logand flags moved-bit))))
-       (let* ((start-dl (car dl))
-	      (start-pos (dis-line-position start-dl))
-	      (curr-delta (dis-line-delta start-dl))
-	      (delta-delta (- prev-delta curr-delta))
-	      (car-dl start-dl))
-	 (declare (fixnum start-pos curr-delta delta-delta))
-	 (cond ((plusp delta-delta)
-		(queue (the fixnum (- start-pos cum-inserts))
-		       *tty-line-deletions* outs)
-		(queue delta-delta *tty-line-deletions* outs)
-		(incf cum-deletes delta-delta)
-		(decf net-delta delta-delta))
-	       ((minusp delta-delta)
-		(let ((eff-pos (the fixnum (+ start-pos delta-delta)))
-		      (num (the fixnum (- delta-delta))))
-		  (queue eff-pos *tty-line-insertions* ins)
-		  (queue num *tty-line-insertions* ins)
-		  (incf net-delta num)
-		  (incf cum-inserts num)))
-	       (t (error "Internal error -- unexpected zero transition delta ~
-			 in redisplay.")))
-	 (loop
-	  (cond ((and (zerop (the fixnum (logand flags changed-bit)))
-		      (zerop (the fixnum (logand flags new-bit))))
-		 (setf (dis-line-flags car-dl) unaltered-bits))
-		(t (queue car-dl *tty-line-writes* writes)
-		   ;; keep just the changed-bit on.
-		   (setf (dis-line-flags car-dl) changed-bit)))
-	  (setf (dis-line-delta car-dl) 0)
-	  (next-dis-line)
-	  (setf car-dl (car dl))
-	  (when (/= (the fixnum (dis-line-delta car-dl)) curr-delta)
-	    (setf prev-delta curr-delta)
-	    (return)))))
-      ((not (and (zerop (logand (the fixnum flags) changed-bit))
-		 (zerop (logand (the fixnum flags) new-bit))))
-       (queue (car dl) *tty-line-writes* writes)
-       (next-dis-line))
-      (t (next-dis-line)))
-     (when (eq prev last-changed)
-       (unless (zerop net-delta)
-	 (cond ((plusp net-delta)
-		(queue (the fixnum (- modeline-pos cum-deletes net-delta))
-		       *tty-line-deletions* outs)
-		(queue net-delta *tty-line-deletions* outs))
-	       (t (queue (the fixnum (+ modeline-pos net-delta))
-			 *tty-line-insertions* ins)
-		  (queue (the fixnum (- net-delta))
-			 *tty-line-insertions* ins))))
-       (return (values ins outs writes))))))
+      (cond
+       ((logtest flags new-bit)
+	(queue (car dl) *tty-line-writes* writes)
+	(next-dis-line))
+       ((logtest flags moved-bit)
+	(let* ((start-dl (car dl))
+	       (start-pos (dis-line-position start-dl))
+	       (curr-delta (dis-line-delta start-dl))
+	       (delta-delta (- prev-delta curr-delta))
+	       (car-dl start-dl))
+	  (declare (fixnum start-pos curr-delta delta-delta))
+	  (cond ((plusp delta-delta)
+		 (queue (the fixnum (- start-pos cum-inserts))
+			*tty-line-deletions* outs)
+		 (queue delta-delta *tty-line-deletions* outs)
+		 (incf cum-deletes delta-delta)
+		 (decf net-delta delta-delta))
+		((minusp delta-delta)
+		 (let ((eff-pos (the fixnum (+ start-pos delta-delta)))
+		       (num (the fixnum (- delta-delta))))
+		   (queue eff-pos *tty-line-insertions* ins)
+		   (queue num *tty-line-insertions* ins)
+		   (incf net-delta num)
+		   (incf cum-inserts num))))
+	  (loop
+	    (when (logtest flags (logior changed-bit new-bit))
+	      (queue car-dl *tty-line-writes* writes))
+	    (next-dis-line)
+	    (setf car-dl (car dl))
+	    (when (/= (the fixnum (dis-line-delta car-dl)) curr-delta)
+	      (setf prev-delta curr-delta)
+	      (return)))))
+       ((logtest flags (logior changed-bit new-bit))
+	(queue (car dl) *tty-line-writes* writes)
+	(next-dis-line))
+       (t
+	(next-dis-line)))
 
+      (when (eq prev last-changed)
+	(unless (zerop net-delta)
+	  (cond ((plusp net-delta)
+		 (queue (the fixnum (- modeline-pos cum-deletes net-delta))
+			*tty-line-deletions* outs)
+		 (queue net-delta *tty-line-deletions* outs))
+		(t (queue (the fixnum (+ modeline-pos net-delta))
+			  *tty-line-insertions* ins)
+		   (queue (the fixnum (- net-delta))
+			  *tty-line-insertions* ins))))
+	(return (values ins outs writes))))))
 
 
 ;;;; Smart window redisplay -- operation methods.
