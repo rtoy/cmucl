@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.37 2005/01/07 21:47:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.38 2005/02/25 17:14:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,6 +116,10 @@
   ;;		(type (simple-array (signed-byte 8) nil) r) (type (integer * 22050378) p1))
   ;;     (setf (aref r) (lognand (the (integer 19464371) p1) 2257))
   ;;     (values))
+  ;;   (defun tst-492 ()
+  ;;     (let ((r (make-array nil :element-type '(signed-byte 8))))
+  ;;       (fn-492 r 19469591)
+  ;;       (aref r)))
   ;;
   ;; causes the compiler to delete (values) as unreachable and in so
   ;; doing, deletes the return, so we just run off the end.  I (rtoy)
@@ -124,8 +128,16 @@
   ;;
   ;; I think doing this also causes some loss, because we return the
   ;; element-type of the array, even though the result of the aset is
-  ;; the new value.
-  (array-type-specialized-element-type (continuation-type array)))
+  ;; the new value.  Well, almost.  The element type is returned only
+  ;; if the array continuation is really an array type.  Otherwise, we
+  ;; do return the type of the new value.
+  ;;
+  ;; FIXME: This needs something better, but I (rtoy) am not smart
+  ;; enough to know what to do about it.
+  (let ((atype (continuation-type array)))
+    (if (array-type-p atype)
+	(array-type-specialized-element-type atype)
+	(continuation-type (car (last stuff))))))
 
 ;;; DATA-VECTOR-REF  --  derive-type optimizer.
 ;;;
