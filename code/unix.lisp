@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.14 1992/02/19 21:54:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.15 1992/02/21 22:00:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1520,7 +1520,7 @@
 	  ;; Blast the pointer to the string into place
 	  (setf (sap-ref-sap vec-sap i) string-sap)
 	  (setf string-sap (sap+ string-sap (round-bytes-to-words (1+ n))))
-	  (incf i)))
+	  (incf i 4)))
       ;; Blast in last null pointer
       (setf (sap-ref-sap vec-sap i) (int-sap 0))
       (values vec-sap total-bytes))))

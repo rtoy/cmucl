@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.15 1992/02/20 21:06:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.16 1992/02/21 21:59:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -548,17 +548,20 @@
 
 (def-alien-type-method (integer :extract-gen) (type sap offset)
   (declare (type alien-integer-type type))
-  (or (if (alien-integer-type-signed type)
+  (let ((ref-fun
+	 (if (alien-integer-type-signed type)
 	  (case (alien-integer-type-bits type)
-	    (8 `(signed-sap-ref-8 ,sap (/ ,offset 8)))
-	    (16 `(signed-sap-ref-16 ,sap (/ ,offset 16)))
-	    (32 `(signed-sap-ref-32 ,sap (/ ,offset 32))))
+	    (8 'signed-sap-ref-8)
+	    (16 'signed-sap-ref-16)
+	    (32 'signed-sap-ref-32))
 	  (case (alien-integer-type-bits type)
-	    (8 `(sap-ref-8 ,sap (/ ,offset 8)))
-	    (16 `(sap-ref-16 ,sap (/ ,offset 16)))
-	    (32 `(sap-ref-32 ,sap (/ ,offset 32)))))
-      (error "Cannot extract ~D bit integers."
-	     (alien-integer-type-bits type))))
+	    (8 'sap-ref-8)
+	    (16 'sap-ref-16)
+	    (32 'sap-ref-32)))))
+    (if ref-fun
+	`(,ref-fun ,sap (/ ,offset vm:byte-bits))
+	(error "Cannot extract ~D bit integers."
+	       (alien-integer-type-bits type)))))
 
 
 
@@ -743,7 +746,7 @@
 
 (def-alien-type-method (single-float :extract-gen) (type sap offset)
   (declare (ignore type))
-  `(sap-ref-single ,sap (/ ,offset vm:word-bits)))
+  `(sap-ref-single ,sap (/ ,offset vm:byte-bits)))
 
 
 (def-alien-type-class (double-float :include float))
@@ -753,7 +756,7 @@
 
 (def-alien-type-method (double-float :extract-gen) (type sap offset)
   (declare (ignore type))
-  `(sap-ref-double ,sap (/ ,offset vm:word-bits)))
+  `(sap-ref-double ,sap (/ ,offset vm:byte-bits)))
 
 
 
@@ -786,7 +789,7 @@
 
 (def-alien-type-method (sap :extract-gen) (type sap offset)
   (declare (ignore type))
-  `(sap-ref-sap ,sap (/ ,offset vm:word-bits)))
+  `(sap-ref-sap ,sap (/ ,offset vm:byte-bits)))
 
 
 ;;;; the ALIEN-VALUE type.

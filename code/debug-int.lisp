@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.36 1992/02/14 23:44:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.37 1992/02/21 21:59:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -906,7 +906,8 @@
 		  (bogus-debug-function
 		   (let ((fp (frame-pointer real)))
 		     (compute-calling-frame
-		      (system:sap-ref-sap fp vm::ocfp-save-offset)
+		      (system:sap-ref-sap fp (* vm::ocfp-save-offset
+						vm:word-bytes))
 		      (kernel:stack-ref fp vm::lra-save-offset)
 		      frame))))))
 	down)))
@@ -2402,7 +2403,8 @@
 				(system:int-sap
 				 (vm:sigcontext-register escaped
 							 vm::nfp-offset))
-				(system:sap-ref-sap fp vm::nfp-save-offset))))
+				(system:sap-ref-sap fp (* vm::nfp-save-offset
+							  vm:word-bytes)))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number
@@ -2435,24 +2437,30 @@
        (escaped-float-value double-float))
       (#.vm:single-stack-sc-number
        (with-nfp (nfp)
-	 (system:sap-ref-single nfp (vm::sc-offset-offset sc-offset))))
+	 (system:sap-ref-single nfp (* (vm::sc-offset-offset sc-offset)
+				       vm:word-bytes))))
       (#.vm:double-stack-sc-number
        (with-nfp (nfp)
-	 (system:sap-ref-double nfp (c::sc-offset-offset sc-offset))))
+	 (system:sap-ref-double nfp (* (c::sc-offset-offset sc-offset)
+				       vm:word-bytes))))
       (#.vm:control-stack-sc-number
        (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
        (with-nfp (nfp)
-	 (code-char (system:sap-ref-32 nfp (c::sc-offset-offset sc-offset)))))
+	 (code-char (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+					      vm:word-bytes)))))
       (#.vm:unsigned-stack-sc-number
        (with-nfp (nfp)
-	 (system:sap-ref-32 nfp (c::sc-offset-offset sc-offset))))
+	 (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+				   vm:word-bytes))))
       (#.vm:signed-stack-sc-number
        (with-nfp (nfp)
-	 (system:signed-sap-ref-32 nfp (c::sc-offset-offset sc-offset))))
+	 (system:signed-sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+					  vm:word-bytes))))
       (#.vm:sap-stack-sc-number
        (with-nfp (nfp)
-	 (system:sap-ref-sap nfp (c::sc-offset-offset sc-offset)))))))
+	 (system:sap-ref-sap nfp (* (c::sc-offset-offset sc-offset)
+				    vm:word-bytes)))))))
 
 
 ;;; %SET-DEBUG-VARIABLE-VALUE -- Internal.
@@ -2525,7 +2533,9 @@
 				(system:int-sap
 				 (vm:sigcontext-register escaped
 							 vm::nfp-offset))
-				(system:sap-ref-sap fp vm::nfp-save-offset))))
+				(system:sap-ref-sap fp
+						    (* vm::nfp-save-offset
+						       vm:word-bytes)))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number
@@ -2552,29 +2562,35 @@
        (set-escaped-float-value double-float value))
       (#.vm:single-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-single nfp (c::sc-offset-offset sc-offset))
+	 (setf (system:sap-ref-single nfp (* (c::sc-offset-offset sc-offset)
+					     vm:word-bytes))
 	       (the single-float value))))
       (#.vm:double-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-double nfp (c::sc-offset-offset sc-offset))
+	 (setf (system:sap-ref-double nfp (* (c::sc-offset-offset sc-offset)
+					     vm:word-bytes))
 	       (the double-float value))))
       (#.vm:control-stack-sc-number
        (setf (kernel:stack-ref fp (c::sc-offset-offset sc-offset)) value))
       (#.vm:base-char-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-32 nfp (c::sc-offset-offset sc-offset))
+	 (setf (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+					 vm:word-bytes))
 	       (char-code (the character value)))))
       (#.vm:unsigned-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-32 nfp (c::sc-offset-offset sc-offset))
+	 (setf (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+					 vm:word-bytes))
 	       (the (unsigned-byte 32) value))))
       (#.vm:signed-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:signed-sap-ref-32 nfp (c::sc-offset-offset sc-offset))
+	 (setf (system:signed-sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+						vm:word-bytes))
 	       (the (signed-byte 32) value))))
       (#.vm:sap-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-sap nfp (c::sc-offset-offset sc-offset))
+	 (setf (system:sap-ref-sap nfp (* (c::sc-offset-offset sc-offset)
+					  vm:word-bytes))
 	       (the system:system-area-pointer value)))))))
 
 (defsetf debug-variable-value %set-debug-variable-value)

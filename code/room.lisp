@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.14 1992/02/09 18:29:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.15 1992/02/21 22:00:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -425,7 +425,8 @@
 				 (%primitive code-instructions obj))))
 	     (incf code-words words)
 	     (dotimes (i words)
-	       (when (zerop (sap-ref-32 sap i)) (incf no-ops))))))
+	       (when (zerop (sap-ref-32 sap (* i vm:word-bytes)))
+		 (incf no-ops))))))
      space)
     
     (format t

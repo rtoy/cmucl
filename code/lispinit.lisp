@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.29 1992/02/18 02:03:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.30 1992/02/21 21:59:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,8 +23,7 @@
 
 
 (in-package "SYSTEM" :nicknames '("SYS"))
-(export '(add-port-death-handler remove-port-death-handler sap-int
-	  int-sap sap-ref-8 sap-ref-16 sap-ref-32 without-gcing
+(export '(without-gcing
 	  *in-the-compiler* compiler-version *pornography-of-death*
 	  *port-receive-rights-handlers* *port-ownership-rights-handlers*
 	  without-interrupts with-reply-port map-port add-port-object
@@ -629,7 +628,7 @@
 ;;;; SCRUB-CONTROL-STACK
 
 
-(defconstant words-per-scrub-unit 512)
+(defconstant bytes-per-scrub-unit 2048)
 
 (defun scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
@@ -642,30 +641,27 @@
 		  (type (unsigned-byte 16) offset)
 		  (type (unsigned-byte 20) count)
 		  (values (unsigned-byte 20)))
-	 (cond ((= offset words-per-scrub-unit)
-		(look (sap+ ptr (* words-per-scrub-unit vm:word-bytes))
-		      0
-		      count))
+	 (cond ((= offset bytes-per-scrub-unit)
+		(look (sap+ ptr bytes-per-scrub-unit) 0 count))
 	       (t
 		(setf (sap-ref-32 ptr offset) 0)
-		(scrub ptr (1+ offset) count))))
+		(scrub ptr (+ offset vm:word-bytes) count))))
        (look (ptr offset count)
 	 (declare (type system-area-pointer ptr)
 		  (type (unsigned-byte 16) offset)
 		  (type (unsigned-byte 20) count)
 		  (values (unsigned-byte 20)))
-	 (cond ((= offset words-per-scrub-unit)
+	 (cond ((= offset bytes-per-scrub-unit)
 		count)
 	       ((zerop (sap-ref-32 ptr offset))
-		(look ptr (1+ offset) count))
+		(look ptr (+ offset vm:word-bytes) count))
 	       (t
-		(scrub ptr offset (1+ count))))))
+		(scrub ptr offset (+ count vm:word-bytes))))))
     (let* ((csp (sap-int (c::control-stack-pointer-sap)))
-	   (initial-offset
-	    (logand csp (1- (* words-per-scrub-unit vm:word-bytes)))))
+	   (initial-offset (logand csp (1- bytes-per-scrub-unit))))
       (declare (type (unsigned-byte 32) csp))
       (scrub (int-sap (- csp initial-offset))
-	     (floor initial-offset vm:word-bytes)
+	     (* (floor initial-offset vm:word-bytes) vm:word-bytes)
 	     0))))
 
 

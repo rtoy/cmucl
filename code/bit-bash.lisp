@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.12 1991/05/08 09:31:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.13 1992/02/21 21:59:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,6 +127,24 @@
   (let ((address (sap-int sap)))
     (values (int-sap (32bit-logical-andc2 address 3))
 	    (+ (* (logand address 3) byte-bits) offset))))
+
+(declaim (inline word-sap-ref (setf word-sap-ref)))
+;;;
+(defun word-sap-ref (sap offset)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (values (unsigned-byte 32))
+	   (optimize (speed 3) (safety 0)))
+  (sap-ref-32 sap (the index (ash offset 2))))
+;;;
+(defun (setf word-sap-ref) (value sap offset)
+  (declare (type (unsigned-byte 32) value)
+	   (type system-area-pointer sap)
+	   (type index offset)
+	   (values (unsigned-byte 32))
+	   (optimize (speed 3) (safety 0)))
+  (setf (sap-ref-32 sap (the index (ash offset 2))) value))
+  
 
 
 ;;;; DO-CONSTANT-BIT-BASH
@@ -453,7 +471,7 @@
    (multiple-value-bind (dst dst-offset)
 			(fix-sap-and-offset dst dst-offset)
      (do-constant-bit-bash dst dst-offset length value
-			   #'sap-ref-32 #'%set-sap-ref-32))))
+			   #'word-sap-ref #'(setf word-sap-ref)))))
 
 (defun bit-bash-copy (src src-offset dst dst-offset length)
   (declare (type offset src-offset dst-offset length))
@@ -472,7 +490,8 @@
      (multiple-value-bind (dst dst-offset)
 			  (fix-sap-and-offset dst dst-offset)
        (do-unary-bit-bash src src-offset dst dst-offset length
-			  #'sap-ref-32 #'%set-sap-ref-32 #'sap-ref-32)))))
+			  #'word-sap-ref #'(setf word-sap-ref)
+			  #'word-sap-ref)))))
 
 (defun copy-to-system-area (src src-offset dst dst-offset length)
   (declare (type offset src-offset dst-offset length))
@@ -481,7 +500,7 @@
    (multiple-value-bind (dst dst-offset)
 			(fix-sap-and-offset dst dst-offset)
      (do-unary-bit-bash src src-offset dst dst-offset length
-			#'sap-ref-32 #'%set-sap-ref-32 #'%raw-bits))))
+			#'word-sap-ref #'(setf word-sap-ref) #'%raw-bits))))
 
 (defun copy-from-system-area (src src-offset dst dst-offset length)
   (declare (type offset src-offset dst-offset length))
@@ -490,5 +509,5 @@
    (multiple-value-bind (src src-offset)
 			(fix-sap-and-offset src src-offset)
      (do-unary-bit-bash src src-offset dst dst-offset length
-			#'%raw-bits #'%set-raw-bits #'sap-ref-32))))
+			#'%raw-bits #'%set-raw-bits #'word-sap-ref))))
   

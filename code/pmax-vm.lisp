@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.8 1992/02/14 23:45:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.9 1992/02/21 22:00:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.8 1992/02/14 23:45:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.9 1992/02/21 22:00:03 wlott Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
@@ -68,25 +68,23 @@
 ;;; FIXUP-CODE-OBJECT -- Interface
 ;;;
 (defun fixup-code-object (code offset fixup kind)
-  (multiple-value-bind (word-offset rem) (truncate offset word-bytes)
-    (unless (zerop rem)
-      (error "Unaligned instruction?  offset=#x~X." offset))
-    (system:without-gcing
-     (let ((sap (truly-the system-area-pointer
-			   (%primitive c::code-instructions code))))
-       (ecase kind
-	 (:jump
-	  (assert (zerop (ash fixup -26)))
-	  (setf (ldb (byte 26 0)
-		     (system:sap-ref-32 sap word-offset))
-		(ash fixup -2)))
-	 (:lui
-	  (setf (sap-ref-16 sap (* word-offset 2))
-		(+ (ash fixup -16)
-		   (if (logbitp 15 fixup) 1 0))))
-	 (:addi
-	  (setf (sap-ref-16 sap (* word-offset 2))
-		(ldb (byte 16 0) fixup))))))))
+  (unless (zerop (rem offset word-bytes))
+    (error "Unaligned instruction?  offset=#x~X." offset))
+  (system:without-gcing
+   (let ((sap (truly-the system-area-pointer
+			 (%primitive c::code-instructions code))))
+     (ecase kind
+       (:jump
+	(assert (zerop (ash fixup -26)))
+	(setf (ldb (byte 26 0) (system:sap-ref-32 sap offset))
+	      (ash fixup -2)))
+       (:lui
+	(setf (sap-ref-16 sap offset)
+	      (+ (ash fixup -16)
+		 (if (logbitp 15 fixup) 1 0))))
+       (:addi
+	(setf (sap-ref-16 sap offset)
+	      (ldb (byte 16 0) fixup)))))))
 
 
 ;;;; Internal-error-arguments.
@@ -154,8 +152,8 @@
   (with-alien ((scp (* sigcontext) scp))
     (let ((sap (alien-sap (slot scp 'sc-fpregs))))
       (ecase format
-	(single-float (system:sap-ref-single sap index))
-	(double-float (system:sap-ref-double sap index))))))
+	(single-float (system:sap-ref-single sap (* index vm:word-bytes)))
+	(double-float (system:sap-ref-double sap (* index vm:word-bytes)))))))
 ;;;
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (type (alien (* sigcontext)) scp))
@@ -163,9 +161,9 @@
     (let ((sap (alien-sap (slot scp 'sc-fpregs))))
       (ecase format
 	(single-float
-	 (setf (sap-ref-single sap index) new-value))
+	 (setf (sap-ref-single sap (* index vm:word-bytes)) new-value))
 	(double-float
-	 (setf (sap-ref-double sap index) new-value))))))
+	 (setf (sap-ref-double sap (* index vm:word-bytes)) new-value))))))
 ;;;
 (defsetf sigcontext-float-register %set-sigcontext-float-register)
 

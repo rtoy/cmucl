@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.5 1991/12/08 07:10:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.6 1992/02/21 22:01:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2501,7 +2501,7 @@ symbol object that we know about.")
       (unless (zerop offs)
 	(write-string ", " stream))
       (format stream "#x~8,'0x"
-	      (system:sap-ref-32 sap (to-words (+ offs start-offs)))))))
+	      (system:sap-ref-32 sap (+ offs start-offs))))))
 
 ;;; ----------------------------------------------------------------
 

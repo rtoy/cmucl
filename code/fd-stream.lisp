@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.19 1992/02/14 23:44:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.20 1992/02/21 21:59:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -288,16 +288,14 @@
 		      2
 		      (:none (signed-byte 16) (unsigned-byte 16))
 		      (:full (signed-byte 16) (unsigned-byte 16)))
-  (setf (sap-ref-16 (fd-stream-obuf-sap stream)
-		    (truncate (fd-stream-obuf-tail stream) 2))
+  (setf (sap-ref-16 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	byte))
 
 (def-output-routines ("OUTPUT-LONG-~A-BUFFERED"
 		      4
 		      (:none (signed-byte 32) (unsigned-byte 32))
 		      (:full (signed-byte 32) (unsigned-byte 32)))
-  (setf (sap-ref-32 (fd-stream-obuf-sap stream)
-		    (truncate (fd-stream-obuf-tail stream) 4))
+  (setf (sap-ref-32 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	byte))
 
 ;;; OUTPUT-RAW-BYTES -- public
@@ -573,7 +571,7 @@
 ;;;
 (def-input-routine input-unsigned-16bit-byte
 		   ((unsigned-byte 16) 2 sap head)
-  (sap-ref-16 sap (truncate head 2)))
+  (sap-ref-16 sap head))
 
 ;;; INPUT-SIGNED-16BIT-BYTE -- internal
 ;;;
@@ -581,7 +579,7 @@
 ;;;
 (def-input-routine input-signed-16bit-byte
 		   ((signed-byte 16) 2 sap head)
-  (signed-sap-ref-16 sap (truncate head 2)))
+  (signed-sap-ref-16 sap head))
 
 ;;; INPUT-UNSIGNED-32BIT-BYTE -- internal
 ;;;
@@ -589,7 +587,7 @@
 ;;;
 (def-input-routine input-unsigned-32bit-byte
 		   ((unsigned-byte 32) 4 sap head)
-  (sap-ref-32 sap (truncate head 4)))
+  (sap-ref-32 sap head))
 
 ;;; INPUT-SIGNED-32BIT-BYTE -- internal
 ;;;
@@ -597,7 +595,7 @@
 ;;;
 (def-input-routine input-signed-32bit-byte
 		   ((signed-byte 32) 4 sap head)
-  (signed-sap-ref-32 sap (truncate head 2)))
+  (signed-sap-ref-32 sap head))
 
 ;;; PICK-INPUT-ROUTINE -- internal
 ;;;

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.6 1992/02/15 12:56:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.7 1992/02/21 22:00:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,8 +22,10 @@
 	  deallocate-system-memory))
 
 (in-package "KERNEL")
-(export '(%set-sap-ref-sap %set-sap-ref-32 %set-sap-ref-16
-	  %set-sap-ref-8 %set-sap-ref-single %set-sap-ref-double))
+(export '(%set-sap-ref-sap %set-sap-ref-single %set-sap-ref-double
+	  %set-sap-ref-8 %signed-set-sap-ref-8
+	  %set-sap-ref-16 %set-signed-sap-ref-16
+	  %set-sap-ref-32 %set-signed-sap-ref-32))
 (in-package "SYSTEM")
 
 (use-package "KERNEL")
@@ -87,49 +89,49 @@
   (sap-ref-8 sap offset))
 
 (defun sap-ref-16 (sap offset)
-  "Returns the 16-bit word at OFFSET half-words from SAP."
+  "Returns the 16-bit word at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (sap-ref-16 sap offset))
 
 (defun sap-ref-32 (sap offset)
-  "Returns the 32-bit dualword at OFFSET words from SAP."
+  "Returns the 32-bit dualword at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (sap-ref-32 sap offset))
 
 (defun sap-ref-sap (sap offset)
-  "Returns the 32-bit system-area-pointer at OFFSET words from SAP."
+  "Returns the 32-bit system-area-pointer at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (sap-ref-sap sap offset))
 
 (defun sap-ref-single (sap offset)
-  "Returns the 32-bit single-float at OFFSET words from SAP."
+  "Returns the 32-bit single-float at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (sap-ref-single sap offset))
 
 (defun sap-ref-double (sap offset)
-  "Returns the 64-bit double-float at OFFSET words from SAP."
+  "Returns the 64-bit double-float at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (sap-ref-double sap offset))
 
 (defun signed-sap-ref-8 (sap offset)
-  "Returns the signed 8-bit byte at Offset bytes from SAP."
+  "Returns the signed 8-bit byte at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (signed-sap-ref-8 sap offset))
 
 (defun signed-sap-ref-16 (sap offset)
-  "Returns the signed 16-bit word at Offset words from SAP."
+  "Returns the signed 16-bit word at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (signed-sap-ref-16 sap offset))
 
 (defun signed-sap-ref-32 (sap offset)
-  "Returns the signed 32-bit dualword at Offset words from SAP."
+  "Returns the signed 32-bit dualword at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (signed-sap-ref-32 sap offset))
@@ -137,22 +139,38 @@
 (defun %set-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
 	   (type index offset)
-	   (type (or (signed-byte 8) (unsigned-byte 8)) new-value))
+	   (type (unsigned-byte 8) new-value))
   (setf (sap-ref-8 sap offset) new-value))
 
 (defun %set-sap-ref-16 (sap offset new-value)
   (declare (type system-area-pointer sap)
 	   (type index offset)
-	   (type (or (signed-byte 16) (unsigned-byte 16)) new-value))
+	   (type (unsigned-byte 16) new-value))
   (setf (sap-ref-16 sap offset) new-value))
 
 (defun %set-sap-ref-32 (sap offset new-value)
   (declare (type system-area-pointer sap)
 	   (type index offset)
-	   (type (or (signed-byte 32) (unsigned-byte 32)) new-value))
-  (if (minusp new-value)
-      (truly-the (signed-byte 32) (setf (sap-ref-32 sap offset) new-value))
-      (truly-the (unsigned-byte 32) (setf (sap-ref-32 sap offset) new-value))))
+	   (type (unsigned-byte 32) new-value))
+  (setf (sap-ref-32 sap offset) new-value))
+
+(defun %set-signed-sap-ref-8 (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type (signed-byte 8) new-value))
+  (setf (signed-sap-ref-8 sap offset) new-value))
+
+(defun %set-signed-sap-ref-16 (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type (signed-byte 16) new-value))
+  (setf (signed-sap-ref-16 sap offset) new-value))
+
+(defun %set-signed-sap-ref-32 (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type (signed-byte 32) new-value))
+  (setf (signed-sap-ref-32 sap offset) new-value))
 
 (defun %set-sap-ref-sap (sap offset new-value)
   (declare (type system-area-pointer sap new-value)

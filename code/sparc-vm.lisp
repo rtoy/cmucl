@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.8 1991/02/08 13:35:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.9 1992/02/21 22:00:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.8 1991/02/08 13:35:51 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.9 1992/02/21 22:00:08 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
@@ -44,21 +44,21 @@
 ;;; FIXUP-CODE-OBJECT -- Interface
 ;;;
 (defun fixup-code-object (code offset fixup kind)
-  (multiple-value-bind (word-offset rem) (truncate offset word-bytes)
-    (unless (zerop rem)
-      (error "Unaligned instruction?  offset=#x~X." offset))
-    (system:without-gcing
-     (let ((sap (truly-the system-area-pointer
-			   (%primitive c::code-instructions code))))
-       (ecase kind
-	 (:call
-	  (error "Can't deal with CALL fixups, yet."))
-	 (:sethi
-	  (setf (ldb (byte 22 0) (sap-ref-32 sap word-offset))
-		(ldb (byte 22 10) fixup)))
-	 (:add
-	  (setf (ldb (byte 10 0) (sap-ref-32 sap word-offset))
-		(ldb (byte 10 0) fixup))))))))
+  (declare (type index offset))
+  (unless (zerop (rem offset vm:word-bytes))
+    (error "Unaligned instruction?  offset=#x~X." offset))
+  (system:without-gcing
+   (let ((sap (truly-the system-area-pointer
+			 (%primitive c::code-instructions code))))
+     (ecase kind
+       (:call
+	(error "Can't deal with CALL fixups, yet."))
+       (:sethi
+	(setf (ldb (byte 22 0) (sap-ref-32 sap offset))
+	      (ldb (byte 22 10) fixup)))
+       (:add
+	(setf (ldb (byte 10 0) (sap-ref-32 sap offset))
+	      (ldb (byte 10 0) fixup)))))))
 
 
 

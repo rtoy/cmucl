@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.1 1992/01/25 05:32:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.2 1992/02/21 22:01:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,32 +37,44 @@
 (defknown sap-int (system-area-pointer) (unsigned-byte 32) (movable flushable))
 (defknown int-sap ((unsigned-byte 32)) system-area-pointer (movable))
 
+
 (defknown sap-ref-8 (system-area-pointer index) (unsigned-byte 8)
   (flushable))
+(defknown %set-sap-ref-8 (system-area-pointer index (unsigned-byte 8))
+  (unsigned-byte 8)
+  ())
+
 (defknown sap-ref-16 (system-area-pointer index) (unsigned-byte 16)
   (flushable))
+(defknown %set-sap-ref-16 (system-area-pointer index (unsigned-byte 16))
+  (unsigned-byte 16)
+  ())
+
 (defknown sap-ref-32 (system-area-pointer index) (unsigned-byte 32)
   (flushable))
+(defknown %set-sap-ref-32 (system-area-pointer index (unsigned-byte 32))
+  (unsigned-byte 32)
+  ())
+
 
 (defknown signed-sap-ref-8 (system-area-pointer index) (signed-byte 8)
   (flushable))
+(defknown %set-signed-sap-ref-8 (system-area-pointer index (signed-byte 8))
+  (signed-byte 8)
+  ())
+
 (defknown signed-sap-ref-16 (system-area-pointer index) (signed-byte 16)
   (flushable))
+(defknown %set-signed-sap-ref-16 (system-area-pointer index (signed-byte 16))
+  (signed-byte 16)
+  ())
+
 (defknown signed-sap-ref-32 (system-area-pointer index) (signed-byte 32)
   (flushable))
+(defknown %set-signed-sap-ref-32 (system-area-pointer index (signed-byte 32))
+  (signed-byte 32)
+  ())
 
-(defknown %set-sap-ref-8
-	  (system-area-pointer index (or (unsigned-byte 8) (signed-byte 8)))
-  (or (unsigned-byte 8) (signed-byte 8)) ()
-  :derive-type #'result-type-last-arg)
-(defknown %set-sap-ref-16
-	  (system-area-pointer index (or (unsigned-byte 16) (signed-byte 16)))
-  (or (unsigned-byte 16) (signed-byte 16)) ()
-  :derive-type #'result-type-last-arg)
-(defknown %set-sap-ref-32
-	  (system-area-pointer index (or (unsigned-byte 32) (signed-byte 32)))
-  (or (unsigned-byte 32) (signed-byte 32)) ()
-  :derive-type #'result-type-last-arg)
 
 (defknown sap-ref-sap (system-area-pointer index) system-area-pointer
   (flushable))
@@ -85,20 +97,10 @@
 
 ;;;; Transforms for converting sap relation operators.
 
-(deftransform sap< ((x y))
-  '(< (sap-int x) (sap-int y)))
-
-(deftransform sap<= ((x y))
-  '(<= (sap-int x) (sap-int y)))
-
-(deftransform sap= ((x y))
-  '(= (sap-int x) (sap-int y)))
-
-(deftransform sap>= ((x y))
-  '(>= (sap-int x) (sap-int y)))
-
-(deftransform sap> ((x y))
-  '(> (sap-int x) (sap-int y)))
+(loop
+  for (sap-fun int-fun) in '((sap< <) (sap<= <=) (sap= =) (sap>= >=) (sap> >))
+  do (deftransform sap-fun ((x y) '* '* :eval-name t)
+       `(,int-fun (sap-int x) (sap-int y))))
 
 
 ;;;; Transforms for optimizing sap+
@@ -112,92 +114,16 @@
 	 '(lambda (sap offset1 offset2)
 	    (sap+ sap (+ offset1 offset2))))))
 
-(deftransform sap-ref-8 ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap offset1 offset2)
-     (sap-ref-8 sap (+ offset1 offset2))))
-
-(deftransform signed-sap-ref-8 ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap offset1 offset2)
-     (signed-sap-ref-8 sap (+ offset1 offset2))))
-
-(deftransform sap-ref-16 ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset half-word-offset)
-     (sap-ref-16 sap (+ (/ byte-offset 2) half-word-offset))))
-
-(deftransform signed-sap-ref-16 ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset half-word-offset)
-     (signed-sap-ref-16 sap (+ (/ byte-offset 2) half-word-offset))))
-
-(deftransform sap-ref-32 ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset)
-     (sap-ref-32 sap (+ (/ byte-offset 4) word-offset))))
-
-(deftransform signed-sap-ref-32 ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset)
-     (signed-sap-ref-32 sap (+ (/ byte-offset 4) word-offset))))
-
-(deftransform sap-ref-sap ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset)
-     (sap-ref-sap sap (+ (/ byte-offset 4) word-offset))))
-
-(deftransform sap-ref-single ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset)
-     (sap-ref-single sap (+ (/ byte-offset 4) word-offset))))
-
-(deftransform sap-ref-double ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset)
-     (sap-ref-double sap (+ (/ byte-offset 4) word-offset))))
-
-(deftransform sap-ref-sap ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset)
-     (sap-ref-sap sap (+ (/ byte-offset 4) word-offset))))
-
-(deftransform sap-ref-single ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset)
-     (sap-ref-single sap (+ (/ byte-offset 4) word-offset))))
-
-(deftransform sap-ref-double ((sap offset))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset)
-     (sap-ref-double sap (+ (/ byte-offset 4) word-offset))))
-
-(deftransform %set-sap-ref-8 ((sap offset value))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap offset1 offset2 value)
-     (%set-sap-ref-8 sap (+ offset1 offset2) value)))
-
-(deftransform %set-sap-ref-16 ((sap offset value))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset half-word-offset value)
-     (%set-sap-ref-16 sap (+ (/ byte-offset 2) half-word-offset) value)))
-
-(deftransform %set-sap-ref-32 ((sap offset value))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset value)
-     (%set-sap-ref-32 sap (+ (/ byte-offset 4) word-offset) value)))
-
-(deftransform %set-sap-ref-sap ((sap offset value))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset value)
-     (%set-sap-ref-sap sap (+ (/ byte-offset 4) word-offset) value)))
-
-(deftransform %set-sap-ref-single ((sap offset value))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset value)
-     (%set-sap-ref-single sap (+ (/ byte-offset 4) word-offset) value)))
-
-(deftransform %set-sap-ref-double ((sap offset value))
-  (extract-function-args sap 'sap+ 2)
-  '(lambda (sap byte-offset word-offset value)
-     (%set-sap-ref-double sap (+ (/ byte-offset 4) word-offset) value)))
+(dolist (fun '(sap-ref-8 %set-sap-ref-8
+	       signed-sap-ref-8 %set-signed-sap-ref-8
+	       sap-ref-16 %set-sap-ref-16
+	       signed-sap-ref-16 %set-signed-sap-ref-16
+	       sap-ref-32 %set-sap-ref-32
+	       signed-sap-ref-32 %set-signed-sap-ref-32
+	       sap-ref-sap %set-sap-ref-sap
+	       sap-ref-single %set-sap-ref-single
+	       sap-ref-double %set-sap-ref-double))
+  (deftransform fun ((sap offset) '* '* :eval-name t)
+    (extract-function-args sap 'sap+ 2)
+    `(lambda (sap offset1 offset2)
+       (,fun sap (+ offset1 offset2)))))

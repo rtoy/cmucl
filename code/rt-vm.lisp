@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.4 1992/01/02 22:49:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.5 1992/02/21 22:00:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,18 +47,18 @@
    (let ((sap (sap+ (kernel:code-instructions code) offset)))
      (ecase kind
        (:cal
-	(setf (sap-ref-16 sap 1)
+	(setf (sap-ref-16 sap 2)
 	      (ldb (byte 16 0) fixup)))
        (:cau
 	(let ((high (ldb (byte 16 16) fixup)))
-	  (setf (sap-ref-16 sap 1)
+	  (setf (sap-ref-16 sap 2)
 		(if (logbitp 15 fixup) (1+ high) high))))
        (:ba
 	(unless (zerop (ash fixup -24))
 	  (warn "#x~8,'0X out of range for branch-absolute." fixup))
 	(setf (sap-ref-8 sap 1)
 	      (ldb (byte 8 16) fixup))
-	(setf (sap-ref-16 sap 1)
+	(setf (sap-ref-16 sap 2)
 	      (ldb (byte 16 0) fixup)))))))
 
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.26 1991/11/05 14:14:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.27 1992/02/21 21:59:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -910,11 +910,11 @@
 (defsetf search-list %set-search-list)
 
 (defsetf sap-ref-8 %set-sap-ref-8)
-(defsetf signed-sap-ref-8 %set-sap-ref-8)
+(defsetf signed-sap-ref-8 %set-signed-sap-ref-8)
 (defsetf sap-ref-16 %set-sap-ref-16)
-(defsetf signed-sap-ref-16 %set-sap-ref-16)
+(defsetf signed-sap-ref-16 %set-signed-sap-ref-16)
 (defsetf sap-ref-32 %set-sap-ref-32)
-(defsetf signed-sap-ref-32 %set-sap-ref-32)
+(defsetf signed-sap-ref-32 %set-signed-sap-ref-32)
 (defsetf sap-ref-sap %set-sap-ref-sap)
 (defsetf sap-ref-single %set-sap-ref-single)
 (defsetf sap-ref-double %set-sap-ref-double)
