@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.56 2004/10/04 20:27:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.57 2005/01/25 14:50:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,20 +60,23 @@
       (when (and (consp dims) (= (length dims) 1))
 	(give-up))
       (let* ((el-type (array-type-specialized-element-type array-type))
+	     (declared-type (array-type-element-type array-type))
 	     (total-size (if (or (atom dims) (member '* dims))
 			     '*
 			     (reduce #'* dims)))
 	     (vector-type `(simple-array ,(type-specifier el-type)
 					 (,total-size))))
 	(if (atom dims)
-	    `(data-vector-ref (truly-the ,vector-type
-					 (if (array-header-p array)
-					     (%array-data-vector array)
-					     array))
-			      index)
-	    `(data-vector-ref (truly-the ,vector-type
-					 (%array-data-vector array))
-			      index))))))
+	    `(the ,(type-specifier declared-type)
+	       (data-vector-ref (truly-the ,vector-type
+					   (if (array-header-p array)
+					       (%array-data-vector array)
+					       array))
+				index))
+	    `(the ,(type-specifier declared-type)
+	       (data-vector-ref (truly-the ,vector-type
+					   (%array-data-vector array))
+				index)))))))
 
 (deftransform data-vector-ref ((array index) (array t) *
 			       :node node  :policy (> speed space))
@@ -85,6 +88,7 @@
     (delay-transform node :optimize)
     (let* ((dims (array-type-dimensions array-type))
 	   (el-type (array-type-specialized-element-type array-type))
+	   (declared-type (array-type-element-type array-type))
 	   (total-size (if (or (atom dims) (member '* dims))
 			   '*
 			   (reduce #'* dims)))
@@ -93,12 +97,14 @@
       (if (and (consp dims) (> (length dims) 1))
 	  `(multiple-value-bind (vector index)
 	       (%with-array-data array index nil)
-	     (data-vector-ref (truly-the ,vector-type vector) index))
+	     (the ,(type-specifier declared-type)
+	       (data-vector-ref (truly-the ,vector-type vector) index)))
 	  `(multiple-value-bind (vector index)
 	       (if (array-header-p array)
 		   (%with-array-data array index nil)
 		   (values array index))
-	     (data-vector-ref (truly-the ,vector-type vector) index))))))
+	     (the ,(type-specifier declared-type)
+	       (data-vector-ref (truly-the ,vector-type vector) index)))))))
 
 (deftransform data-vector-set ((array index new-value)
 			       (simple-array t t))
@@ -109,6 +115,7 @@
       (when (and (consp dims) (= (length dims) 1))
 	(give-up))
       (let* ((el-type (array-type-element-type array-type))
+	     (declared-type (array-type-element-type array-type))
 	     (total-size (if (or (atom dims) (member '* dims))
 			     '*
 			     (reduce #'* dims)))
@@ -120,11 +127,11 @@
 					     (%array-data-vector array)
 					     array))
 			      index
-			      new-value)
+			      (the ,(type-specifier declared-type) new-value))
 	    `(data-vector-set (truly-the ,vector-type
 					 (%array-data-vector array))
 			      index
-			      new-value))))))
+			      (the ,(type-specifier declared-type) new-value)))))))
 
 (deftransform data-vector-set ((array index new-value) (array t t) *
 			       :node node  :policy (> speed space))
@@ -136,6 +143,7 @@
     (delay-transform node :optimize)
     (let* ((dims (array-type-dimensions array-type))
 	   (el-type (array-type-element-type array-type))
+	   (declared-type (array-type-element-type array-type))
 	   (total-size (if (or (atom dims) (member '* dims))
 			   '*
 			   (reduce #'* dims)))
@@ -146,14 +154,14 @@
 	       (%with-array-data array index nil)
 	     (data-vector-set (truly-the ,vector-type vector)
 			      index
-			      new-value))
+			      (the ,(type-specifier declared-type) new-value)))
 	  `(multiple-value-bind (vector index)
 	       (if (array-header-p array)
 		   (%with-array-data array index nil)
 		   (values array index))
 	     (data-vector-set (truly-the ,vector-type vector)
 			      index
-			      new-value))))))
+			      (the ,(type-specifier declared-type) new-value)))))))
 
 
 ;;; Transforms for getting at arrays of unsigned-byte n when n < 8.
