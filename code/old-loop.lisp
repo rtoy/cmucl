@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.8 1991/05/24 19:37:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.9 1994/08/23 18:07:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.8 1991/05/24 19:37:33 wlott Exp $
 ;;;
 ;;; Loop facility, written by William Lott.
 ;;; 
@@ -675,10 +673,16 @@
 
 
 (defun maybe-parse-unconditional ()
-  (when (loop-keyword-p (car *remaining-stuff*) "DO" "DOING")
-    (pop *remaining-stuff*)
-    (setf *body-forms* (nconc *body-forms* (parse-expr-list)))
-    t))
+  (cond ((loop-keyword-p (car *remaining-stuff*) "DO" "DOING")
+	 (pop *remaining-stuff*)
+	 (setf *body-forms* (nconc *body-forms* (parse-expr-list)))
+	 t)
+	((loop-keyword-p (car *remaining-stuff*) "RETURN")
+	 (pop *remaining-stuff*)
+	 (setf *body-forms*
+	       (nconc *body-forms* `((return ,(pop *remaining-stuff*)))))
+	 t)))
+
 
 (defun maybe-parse-conditional ()
   (let ((clause (pop *remaining-stuff*)))
