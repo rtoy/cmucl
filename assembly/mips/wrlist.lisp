@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.4 1991/08/03 01:26:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.5 1991/08/03 02:32:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,7 +173,8 @@
      (:temp l2 any-reg l2-offset)
      (:temp l3 any-reg l3-offset)
      (:temp nfp any-reg nfp-offset)
-     (:temp ocfp any-reg ocfp-offset))
+     (:temp ocfp any-reg ocfp-offset)
+     (:temp lra any-reg lra-offset))
 
   ;; The write into memory and the write into the write-list have to be atomic.
   (start-pseudo-atomic)
@@ -199,7 +200,7 @@
 
   ;; Save all lisp regs on the stack, so the garbage collector can find them.
   (save-regs-on-stack (symbol function a2 a3 a4 a5 cname lexenv
-		       l0 l1 l2 l3 nfp ocfp null-tn)
+		       l0 l1 l2 l3 nfp ocfp code-tn lra null-tn)
 
     ;; Convert the return address into an offset.  We don't have to save l0
     ;; across the call-out because it is one of the saved regs.
