@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.16 1990/05/07 14:14:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.17 1990/05/09 06:36:45 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -24,62 +24,90 @@
 
 ;;; Move a tagged number to an untagged representation.
 ;;;
-(define-vop (move-to-signed)
+(define-vop (move-to-signed/unsigned)
   (:args (x :scs (any-reg descriptor-reg)))
-  (:results (y :scs (signed-reg)))
+  (:results (y :scs (signed-reg unsigned-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
-  (:generator 1
+  (:generator 4
     (sc-case x
       (any-reg
        (inst sra y x 2))
       (descriptor-reg
        (let ((done (gen-label)))
-	 (inst xor temp x 3)
+	 (inst and temp x 3)
 	 (inst beq temp done)
-	 (inst sra y x 2)
+	 (sc-case y
+	   (signed-reg
+	    (inst sra y x 2))
+	   (unsigned-reg
+	    (inst srl y x 2)))
 
-	 ;; ### Do I need to assure that it will fit?
 	 (loadw y x vm:bignum-digits-offset vm:other-pointer-type)
 
 	 (emit-label done))))))
 
 ;;;
-(define-move-vop move-to-signed :move
-  (any-reg descriptor-reg) (signed-reg))
-
-(define-vop (move-to-unsigned)
-  (:args (x :scs (any-reg descriptor-reg)))
-  (:results (y :scs (unsigned-reg)))
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:generator 1
-    (sc-case x
-      (any-reg 
-       (inst srl y x 2))
-      (descriptor-reg
-       (let ((done (gen-label)))
-	 (inst xor temp x 3)
-	 (inst beq temp done)
-	 (inst srl y x 2)
-
-	 ;; ### Do I need to assure that it will fit?
-	 (loadw y x vm:bignum-digits-offset vm:other-pointer-type)
-
-	 (emit-label done))))))
-;;;
-(define-move-vop move-to-unsigned :move
-  (any-reg descriptor-reg) (unsigned-reg))
-
+(define-move-vop move-to-signed/unsigned :move
+  (any-reg descriptor-reg) (signed-reg unsigned-reg))
 
 
 ;;; Move an untagged number to a tagged representation.
 ;;;
 (define-vop (move-from-signed/unsigned)
-  (:args (x :scs (signed-reg unsigned-reg) :target y))
+  (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
-  (:generator 1
-    ;; ### Need to check for overflow.  (When we do, we will need two
-    ;; vops, one for signed, and one for unsigned.
-    (inst sll y x 2)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+  (:generator 20
+    (sc-case y
+      (any-reg
+       ;; The results must be a fixnum, so we can just do the shift.
+       (inst sll y arg 2))
+      (descriptor-reg
+       ;; The results might be a bignum, so we have to make sure.
+       (move x arg)
+       (sc-case arg
+	 (signed-reg
+	  (let ((fixnum (gen-label))
+		(done (gen-label)))
+	    (inst sra temp x 29)
+	    (inst beq temp fixnum)
+	    (inst nor temp zero-tn)
+	    (inst beq temp done)
+	    (inst sll y x 2)
+
+	    (pseudo-atomic (temp)
+	      (inst addu y alloc-tn vm:other-pointer-type)
+	      (inst addu alloc-tn
+		    (vm:pad-data-block (1+ vm:bignum-digits-offset)))
+	      (inst li temp (logior (ash 1 vm:type-bits) vm:bignum-type))
+	      (storew temp y 0 vm:other-pointer-type)
+	      (storew x y vm:bignum-digits-offset vm:other-pointer-type))
+	    (inst b done)
+	    (inst nop)
+
+	    (emit-label fixnum)
+	    (inst sll y x 2)
+	    (emit-label done)))
+	 (unsigned-reg
+	  (let ((done (gen-label))
+		(one-word (gen-label)))
+	    (inst sra temp x 29)
+	    (inst beq temp done)
+	    (inst sll y x 2)
+
+	    (pseudo-atomic (temp)
+	      (inst addu y alloc-tn vm:other-pointer-type)
+	      (inst addu alloc-tn
+		    (vm:pad-data-block (1+ vm:bignum-digits-offset)))
+	      (inst bgez x one-word)
+	      (inst li temp (logior (ash 1 vm:type-bits) vm:bignum-type))
+	      (inst addu alloc-tn (vm:pad-data-block 1))
+	      (inst li temp (logior (ash 2 vm:type-bits) vm:bignum-type))
+	      (emit-label one-word)
+	      (storew temp y 0 vm:other-pointer-type)
+	      (storew x y vm:bignum-digits-offset vm:other-pointer-type))
+	    (emit-label done))))))))
+      
 ;;;
 (define-move-vop move-from-signed/unsigned :move
   (signed-reg unsigned-reg) (any-reg descriptor-reg))
@@ -121,7 +149,7 @@
   (descriptor-reg any-reg signed-reg unsigned-reg) (signed-reg unsigned-reg))
 
 
-;;; Use standard MOVE-ARGUMENT + coercion to move an untagged sap to a
+;;; Use standard MOVE-ARGUMENT + coercion to move an untagged number to a
 ;;; descriptor passing location.
 ;;;
 (define-move-vop move-argument :move-argument
@@ -289,7 +317,7 @@
   (:generator 1
     (inst addu r x
 	  (sc-case y
-	    (unsigned-reg y)
+	    (any-reg y)
 	    (zero zero-tn)
 	    ((immediate negative-immediate)
 	     (fixnum (tn-value y)))))))
@@ -300,7 +328,7 @@
   (:generator 1
     (inst subu r x
 	  (sc-case y
-	    (unsigned-reg y)
+	    (any-reg y)
 	    (zero zero-tn)
 	    ((immediate negative-immediate)
 	     (fixnum (tn-value y)))))))
@@ -360,7 +388,55 @@
        ;; Someone should have optimized this away.
        (move result number)))))
 
+(define-vop (signed-byte-32-len)
+  (:translate integer-length)
+  (:note "inline (signed-byte 32) integer-length")
+  (:policy :fast-safe)
+  (:args (arg :scs (signed-reg) :target shift))
+  (:arg-types signed-num)
+  (:results (res :scs (any-reg)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
+  (:generator 30
+    (let ((loop (gen-label))
+	  (test (gen-label)))
+      (move shift arg)
+      (inst bgez shift test)
+      (move res zero-tn)
+      (inst b test)
+      (inst nor shift shift)
 
+      (emit-label loop)
+      (inst add res (fixnum 1))
+      
+      (emit-label test)
+      (inst bne shift loop)
+      (inst srl shift 1))))
+
+(define-vop (unsigned-byte-32-count)
+  (:translate logcount)
+  (:note "inline (unsigned-byte 32) logcount")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg) :target shift))
+  (:arg-types unsigned-num)
+  (:results (res :scs (any-reg)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift temp)
+  (:generator 30
+    (let ((loop (gen-label))
+	  (done (gen-label)))
+      (move shift arg)
+      (inst beq shift done)
+      (move res zero-tn)
+      (inst and temp shift 1)
+
+      (emit-label loop)
+      (inst sll temp 2)
+      (inst add res temp)
+      (inst srl shift 1)
+      (inst bne shift loop)
+      (inst and temp shift 1)
+
+      (emit-label done))))
+      
 
 ;;; Multiply and Divide.
 
@@ -395,7 +471,7 @@
 	 (y :target r :scs (signed-reg)))
   (:results (q :scs (signed-reg))
 	    (r :scs (signed-reg)))
-  (:result-types signed-num signed-num)
+  (:result-types * *)
   (:generator 11
     (let ((zero (generate-error-code di:division-by-zero-error x y)))
       (inst beq y zero-tn zero))
@@ -408,6 +484,7 @@
   (:args (x :target r :scs (signed-reg))
 	 (y :target r :scs (signed-reg)))
   (:results (r :scs (signed-reg)))
+  (:result-types *)
   (:generator 10
     (let ((zero (generate-error-code di:division-by-zero-error x y)))
       (inst beq y zero-tn zero))
@@ -648,19 +725,23 @@
   (:translate bignum::%digit-0-or-plusp)
   (:policy :fast-safe)
   (:args (digit :scs (unsigned-reg)))
-  (:results (result :scs (unsigned-reg)))
-  (:generator 1
-    (inst srl result digit 31)))
+  (:results (result :scs (descriptor-reg)))
+  (:generator 3
+    (let ((done (gen-label)))
+      (inst bltz digit done)
+      (move result null-tn)
+      (load-symbol result 't)
+      (emit-label done))))
 
 (define-vop (add-w/carry)
   (:translate bignum::%add-with-carry)
   (:policy :fast-safe)
   (:args (a :scs (unsigned-reg))
 	 (b :scs (unsigned-reg))
-	 (c :scs (unsigned-reg)))
+	 (c :scs (any-reg)))
   (:temporary (:scs (unsigned-reg) :to (:result 0) :target result) res)
   (:results (result :scs (unsigned-reg))
-	    (carry :scs (unsigned-reg)))
+	    (carry :scs (unsigned-reg) :from :eval))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
     (let ((carry-in (gen-label))
@@ -685,10 +766,10 @@
   (:policy :fast-safe)
   (:args (a :scs (unsigned-reg))
 	 (b :scs (unsigned-reg))
-	 (c :scs (unsigned-reg)))
+	 (c :scs (any-reg)))
   (:temporary (:scs (unsigned-reg) :to (:result 0) :target result) res)
   (:results (result :scs (unsigned-reg))
-	    (borrow :scs (unsigned-reg)))
+	    (borrow :scs (unsigned-reg) :from :eval))
   (:temporary (temp :scs (non-descriptor-reg)))
   (:generator 4
     (let ((borrow-in (gen-label))
@@ -697,11 +778,11 @@
       (inst bne c borrow-in)
       (inst subu res a b)
 
+      (inst subu res 1)
       (inst b done)
       (inst sltu borrow a b)
 
       (emit-label borrow-in)
-      (inst subu res 1)
       (inst sltu borrow b a)
       (inst xor borrow 1)
 
@@ -713,8 +794,8 @@
   (:policy :fast-safe)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg)))
-  (:results (lo :scs (unsigned-reg))
-	    (hi :scs (unsigned-reg)))
+  (:results (hi :scs (unsigned-reg))
+	    (lo :scs (unsigned-reg)))
   (:generator 3
     (inst multu x y)
     (inst mflo lo)
@@ -728,32 +809,13 @@
   (:generator 1
     (inst nor r x zero-tn)))
 
-(define-vop (bignum-logand)
-  (:translate bignum::%logand)
+(define-vop (fixnum-to-digit)
+  (:translate bignum::%fixnum-to-digit)
   (:policy :fast-safe)
-  (:args (x :scs (unsigned-reg))
-	 (y :scs (unsigned-reg)))
-  (:results (r :scs (unsigned-reg)))
+  (:args (fixnum :scs (any-reg)))
+  (:results (digit :scs (unsigned-reg)))
   (:generator 1
-    (inst and r x y)))
-
-(define-vop (bignum-logior)
-  (:translate bignum::%logior)
-  (:policy :fast-safe)
-  (:args (x :scs (unsigned-reg))
-	 (y :scs (unsigned-reg)))
-  (:results (r :scs (unsigned-reg)))
-  (:generator 1
-    (inst or r x y)))
-
-(define-vop (bignum-logxor)
-  (:translate bignum::%logxor)
-  (:policy :fast-safe)
-  (:args (x :scs (unsigned-reg))
-	 (y :scs (unsigned-reg)))
-  (:results (r :scs (unsigned-reg)))
-  (:generator 1
-    (inst xor r x y)))
+    (inst sra digit fixnum 2)))
 
 (define-vop (bignum-floor)
   (:translate bignum::%floor)
@@ -779,6 +841,24 @@
        (inst sll res digit 2))
       (signed-reg
        (move res digit)))))
+
+(define-vop (digit-ashr)
+  (:translate bignum::%ashr)
+  (:policy :fast-safe)
+  (:args (digit :scs (unsigned-reg))
+	 (count :scs (unsigned-reg)))
+  (:results (result :scs (unsigned-reg)))
+  (:generator 1
+    (inst sra result digit count)))
+
+(define-vop (digit-ashl)
+  (:translate bignum::%ashl)
+  (:policy :fast-safe)
+  (:args (digit :scs (unsigned-reg))
+	 (count :scs (unsigned-reg)))
+  (:results (result :scs (unsigned-reg)))
+  (:generator 1
+    (inst sll result digit count)))
 
 
 
