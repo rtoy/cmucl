@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.20 1990/06/02 16:03:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.21 1990/06/03 19:09:26 ch Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -165,6 +165,20 @@
   (:policy :fast-safe)
   (:generator 1
     (move int alloc-tn)))
+
+(define-vop (binding-stack-pointer-sap)
+  (:results (int :scs (sap-reg)))
+  (:translate binding-stack-pointer-sap)
+  (:policy :fast-safe)
+  (:generator 1
+    (move int bsp-tn)))
+
+(define-vop (control-stack-pointer-sap)
+  (:results (int :scs (sap-reg)))
+  (:translate control-stack-pointer-sap)
+  (:policy :fast-safe)
+  (:generator 1
+    (move int csp-tn)))
 
 
 ;;;; Code object frobbing.

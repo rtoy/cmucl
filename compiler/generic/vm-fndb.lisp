@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.10 1990/06/03 18:57:12 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.11 1990/06/03 19:08:39 ch Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -69,9 +69,10 @@
   (unsafe))
 
 
-(defknown dynamic-space-free-pointer ()
+(defknown (dynamic-space-free-pointer binding-stack-pointer-sap
+				      control-stack-pointer-sap)  ()
   (system-area-pointer)
-  (foldable flushable movable))
+  (flushable))
 
 
 ;;;; 32bit logical operations
