@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.9 1992/02/13 15:57:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.10 1992/02/13 23:13:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -882,7 +882,11 @@
 	   (type (unsigned-byte 32) offset len))
   (int-syscall ("write" int (* char) int)
 	       fd
-	       (with-alien ((ptr (* char) buf))
+	       (with-alien ((ptr (* char) (etypecase buf
+					    ((simple-array * (*))
+					     (vector-sap buf))
+					    (system-area-pointer
+					     buf))))
 		 (addr (deref ptr offset)))
 	       len))
 
