@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.3 1994/10/25 00:19:13 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.4 1997/02/19 05:41:22 dtc Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -623,6 +623,26 @@ os_vm_size_t length;
 	if (kr != KERN_SUCCESS)
 		mach_error("Could not flush the instruction cache", kr);
 #endif
+#ifdef SOLARIS /* also SunOS ?? */
+	static int flushit = -1;
+	/*
+	 * On some systems, iflush needs to be emulated in the kernel
+	 * On those systems, it isn't necessary
+	 * Call getenv() only once.
+	 */
+	if (flushit == -1)
+		flushit = getenv("CMUCL_NO_SPARC_IFLUSH") == 0;
+
+	if (flushit) {
+		static int traceit = -1;
+		if (traceit == -1)
+			traceit = getenv("CMUCL_TRACE_SPARC_IFLUSH") != 0;
+
+		if (traceit)
+			fprintf(stderr,";;;iflush %p - %x\n", address,length);
+		flush_icache(address,length);
+	}
+#endif
 }
 
 void os_protect(addr, len, prot)
@@ -843,6 +863,7 @@ char *	dlerror(void) { return "no dynamic linking"; }
 
 /* For now we put in some porting functions */
 
+#ifndef SOLARIS25
 int
 getdtablesize(void)
 {
@@ -926,6 +947,7 @@ killpg(int pgrp, int sig)
     }
     return kill(-pgrp, sig);
 }
+#endif
 
 int
 sigblock(int mask)
@@ -940,6 +962,7 @@ sigblock(int mask)
     return old.__sigbits[0];
 }
 
+#ifndef SOLARIS25
 int
 wait3(int *status, int options, struct rusage *rp)
 {
@@ -947,6 +970,7 @@ wait3(int *status, int options, struct rusage *rp)
 	memset(rp, 0, sizeof(struct rusage));
     return waitpid(-1, status, options);
 }
+#endif
 
 int
 sigsetmask(int mask)
@@ -960,5 +984,13 @@ sigsetmask(int mask)
 
     return old.__sigbits[0];
 
+}
+
+/* This is a hack to get tzname defined in the executable. Putting
+   tzname in undefineds.h doesn't do it on Solaris systems. */
+char*
+hack_to_get_tzname()
+{
+    return tzname[0];
 }
 #endif /* SOLARIS */
