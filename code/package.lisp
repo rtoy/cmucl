@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.58 2001/07/08 17:37:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.59 2002/08/23 17:08:53 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,6 @@
 
 ;;; INTERNAL conditions
 (define-condition simple-package-error (simple-condition package-error)())
-(define-condition simple-program-error (simple-condition program-error)())
 
 (defstruct (package
 	    (:constructor internal-make-package)
@@ -711,16 +710,13 @@
 				  (,',init-macro ,(car ',ordered-types)))))))
 	 (when ,packages
 	   ,(when (null symbol-types)
-	      (error 'program-error
-		     :format-control
-		     "Must supply at least one of :internal, :external, or ~
-		      :inherited."))
+	      (simple-program-error "Must supply at least one of :internal, ~
+	                             :external, or :inherited."))
 	   ,(dolist (symbol symbol-types)
 	      (unless (member symbol '(:internal :external :inherited))
-		(error 'program-error
-		       :format-control
-		       "~S is not one of :internal, :external, or :inherited."
-		       :format-argument symbol)))
+		(simple-program-error "~S is not one of :internal, :external, ~
+		                       or :inherited."
+			              symbol)))
 	   (,init-macro ,(car ordered-types))
 	   (flet ((,real-symbol-p (number)
 		    (> number 1)))
@@ -821,24 +817,20 @@
 	(doc nil))
     (dolist (option options)
       (unless (consp option)
-	(error 'program-error
-	       :format-control "Bogus DEFPACKAGE option: ~S"
-	       :format-arguments (list option)))
+	(simple-program-error "Bogus DEFPACKAGE option: ~S" option))
       (case (car option)
 	(:nicknames
 	 (setf nicknames (stringify-names (cdr option) "package")))
 	(:size
 	 (cond (size
-		(error 'program-error
-		       :format-control "Can't specify :SIZE twice."))
+		(simple-program-error "Can't specify :SIZE twice."))
 	       ((and (consp (cdr option))
 		     (typep (second option) 'unsigned-byte))
 		(setf size (second option)))
 	       (t
-		(error
-		 'program-error
-		 :format-control "Bogus :SIZE, must be a positive integer: ~S"
-		 :format-arguments (list (second option))))))
+		(simple-program-error
+		 "Bogus :SIZE, must be a positive integer: ~S"
+		 (second option)))))
 	(:shadow
 	 (let ((new (stringify-names (cdr option) "symbol")))
 	   (setf shadows (append shadows new))))
@@ -871,13 +863,10 @@
 	   (setf exports (append exports new))))
 	(:documentation
 	 (when doc
-	   (error 'program-error
-		  :format-control "Can't specify :DOCUMENTATION twice."))
+	   (simple-program-error "Can't specify :DOCUMENTATION twice."))
 	 (setf doc (coerce (second option) 'simple-string)))
 	(t
-	 (error 'program-error
-		:format-control "Bogus DEFPACKAGE option: ~S"
-		:format-arguments (list option)))))
+	 (simple-program-error "Bogus DEFPACKAGE option: ~S" option))))
     (check-disjoint `(:intern ,@interns) `(:export  ,@exports))
     (check-disjoint `(:intern ,@interns)
 		    `(:import-from
@@ -891,17 +880,19 @@
 		    ',imports ',interns ',exports ',doc))))
 
 (defun check-disjoint (&rest args)
-  ;; An arg is (:key . set)
-  (do ((list args (cdr list)))
-      ((endp list))
-    (loop
-      with x = (car list)
-      for y in (rest list)
-      for z = (remove-duplicates (intersection (cdr x)(cdr y) :test #'string=))
-      when z do (error 'program-error
-		       :format-control "Parameters ~S and ~S must be disjoint ~
-					but have common elements ~%   ~S"
-		       :format-arguments (list (car x)(car y) z)))))
+  ;; Check wether all given arguments specify disjoint sets of symbols.
+  ;; Each argument is of the form (:key . set).
+  (loop for (current-arg . rest-args) on args
+        do
+	(loop with (key1 . set1) = current-arg
+	      for (key2 . set2) in rest-args
+	      for common = (delete-duplicates
+	                    (intersection set1 set2 :test #'string=))
+	      unless (null common)
+	      do
+	      (simple-program-error "Parameters ~S and ~S must be disjoint ~
+	                             but have common elements ~%   ~S"
+				    key1 key2 common))))
 
 (defun %defpackage (name nicknames size shadows shadowing-imports
 			 use imports interns exports doc-string)
@@ -1629,13 +1620,66 @@
 ;;; Apropos and Apropos-List.
 
 (defun briefly-describe-symbol (symbol)
-  (fresh-line)
-  (prin1 symbol)
-  (when (boundp symbol)
-    (write-string ", value: ")
-    (prin1 (symbol-value symbol)))
-  (if (fboundp symbol)
-      (write-string " (defined)")))
+  (let ((prefix-length nil))
+    (flet ((print-symbol (&optional kind)
+             (fresh-line)
+	     (if prefix-length
+	         (dotimes (i prefix-length)
+		   (write-char #\Space))
+		 (let ((symbol-string (prin1-to-string symbol)))
+		   (write-string symbol-string)
+		   (setq prefix-length (length symbol-string))))
+	     (when kind
+	       (write-string " [")
+	       (write-string kind)
+	       (write-string "] "))))
+
+      ;; Variable namespace
+      (multiple-value-bind (kind recorded-p) (info variable kind symbol)
+        (when (or (boundp symbol) recorded-p)
+	  (print-symbol (ecase kind
+                          (:special  "special variable")
+                          (:constant "constant")
+                          (:global   "undefined variable")
+                          (:macro    "symbol macro")
+                          (:alien    "alien variable")))
+          (when (boundp symbol)
+	    (write-string "value: ")
+	    (let ((*print-length*
+	             (or ext:*describe-print-length* *print-length*))
+	          (*print-level*
+		     (or ext:*describe-print-level* *print-level*)))
+              (prin1 (symbol-value symbol))))))
+
+      ;; Function namespace
+      (when (fboundp symbol)
+        (cond
+          ((macro-function symbol)
+           (print-symbol "macro")
+           (let ((arglist (kernel:%function-arglist (macro-function symbol))))
+             (when (stringp arglist) (write-string arglist))))
+          ((special-operator-p symbol)
+           (print-symbol "special operator")
+           (let ((arglist (kernel:%function-arglist (symbol-function symbol))))
+             (when (stringp arglist) (write-string arglist))))
+          (t
+           (print-symbol "function")
+           ;; could do better than this with (kernel:type-specifier
+           ;; (info function type symbol)) when it's a byte-compiled function
+           (let ((arglist (kernel:%function-arglist (symbol-function symbol))))
+             (when (stringp arglist) (write-string arglist))))))
+
+      ;; Class and Type Namespace(s)
+      (cond
+        ((find-class symbol nil)
+         (print-symbol "class"))
+        ((info type kind symbol)
+         (print-symbol "type")))
+
+      ;; Make sure we at least print the symbol itself if we don't know
+      ;; anything else about it:
+      (when (null prefix-length)
+        (print-symbol)))))
 
 (defun apropos-search (symbol string)
   (declare (simple-string string))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.66 2002/07/10 16:15:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.67 2002/08/23 17:08:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -247,6 +247,30 @@
 	  (return-from warn nil)))
       (format *error-output* "~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
   nil)
+
+;;; Utility functions
+
+(defun simple-program-error (datum &rest arguments)
+  "Invokes the signal facility on a condition formed from datum and arguments.
+   If the condition is not handled, the debugger is invoked.  This function
+   is just like error, except that the condition type defaults to the type
+   simple-program-error, instead of program-error."
+  (kernel:infinite-error-protect
+    (let ((condition (coerce-to-condition datum arguments
+					  'simple-program-error
+					  'simple-program-error))
+	  (debug:*stack-top-hint* debug:*stack-top-hint*))
+      (unless (and (condition-function-name condition) debug:*stack-top-hint*)
+	(multiple-value-bind
+	    (name frame)
+	    (kernel:find-caller-name)
+	  (unless (condition-function-name condition)
+	    (setf (condition-function-name condition) name))
+	  (unless debug:*stack-top-hint*
+	    (setf debug:*stack-top-hint* frame))))
+      (let ((debug:*stack-top-hint* nil))
+	(signal condition))
+      (invoke-debugger condition))))
 
 (in-package "LISP")
 
