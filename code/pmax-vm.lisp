@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.13 1993/05/27 01:36:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.14 1993/08/27 17:15:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.13 1993/05/27 01:36:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.14 1993/08/27 17:15:20 wlott Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
@@ -29,7 +29,6 @@
 
 ;;;; The sigcontext structure.
 
-#-gengc
 (def-alien-type sigcontext
   (struct nil
     (sc-onstack unsigned-long)
@@ -46,20 +45,6 @@
     (sc-badvaddr system-area-pointer)
     (sc-badpaddr system-area-pointer)))
 
-#+gengc
-(def-alien-type sigcontext
-  (struct nil
-    (sc-regs (array unsigned-long 32))
-    (sc-mdlo unsigned-long)
-    (sc-mdhi unsigned-long)
-    (sc-pc system-area-pointer)
-    (sc-cause unsigned-long)
-    (sc-badvaddr system-area-pointer)
-    (sc-ownedfp unsigned-long)
-    (sc-fpregs (array unsigned-long 32))
-    (sc-fpc-csr unsigned-long)
-    (sc-fpc-eir unsigned-long)
-    (sc-were-in-lisp boolean)))
 
 
 ;;;; Add machine specific features to *features*
