@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.96 1993/08/18 16:52:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.97 1993/08/20 00:18:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -319,9 +319,6 @@
 						  *compiler-trace-output*
 						  *backend*))
 
-	    (when *count-vop-usages*
-	      (count-vops component))
-	    
 	    (etypecase *compile-object*
 	      (fasl-file
 	       (maybe-mumble "FASL")
