@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.35 1990/11/06 14:02:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.36 1990/11/10 18:44:11 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -89,17 +89,25 @@
   (:result-types positive-fixnum)
   (:generator 6
     (let ((other-ptr (gen-label))
+	  (lowtag-only (gen-label))
 	  (function-ptr (gen-label))
 	  (done (gen-label)))
+      ;; Pick off objects with headers.
       (simple-test-simple-type object ndescr other-ptr
 			       nil vm:other-pointer-type)
       (simple-test-simple-type object ndescr function-ptr
 			       nil vm:function-pointer-type)
-      (inst and result object (logand vm:other-immediate-0-type
-				      vm:other-immediate-1-type))
+
+      ;; Pick off fixnums.
+      (inst and result object 3)
       (inst beq result done)
+
+      ;; Pick off structure and list pointers.
+      (inst and result object 1)
+      (inst bne result lowtag-only)
       (inst nop)
 
+      ;; Must be an other immediate.
       (inst b done)
       (inst and result object vm:type-mask)
 
@@ -107,6 +115,10 @@
       (load-type result object (- vm:function-pointer-type))
       (inst b done)
       (inst nop)
+
+      (emit-label lowtag-only)
+      (inst b done)
+      (inst and result object lowtag-mask)
 
       (emit-label other-ptr)
       (load-type result object (- vm:other-pointer-type))
@@ -168,7 +180,7 @@
     (move struct vec)))
 
 
-(define-vop (lisp::make-fixnum)
+(define-vop (c::make-fixnum)
   (:args (ptr :scs (any-reg descriptor-reg)))
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
@@ -178,7 +190,7 @@
     (inst sll res ptr 3)
     (inst srl res res 1)))
 
-(define-vop (lisp::make-other-immediate-type)
+(define-vop (c::make-other-immediate-type)
   (:args (val :scs (any-reg descriptor-reg))
 	 (type :scs (any-reg descriptor-reg immediate unsigned-immediate)
 	       :target temp))
