@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.13 1991/09/29 16:10:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.14 1991/11/09 22:03:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -326,7 +326,9 @@
 ;;;     We iterate over the lambdas in each initial component, trying to put
 ;;; each function in its own component, but joining it to an existing component
 ;;; if we find that there are references between them.  Any code that is left
-;;; in an initial component must be unreachable, so we can delete it.
+;;; in an initial component must be unreachable, so we can delete it.  Stray
+;;; links to the initial component tail (due NIL function terminated blocks)
+;;; are moved to the appropriate newc component tail.
 ;;;
 ;;;    When we are done, we assign DFNs and call FIND-TOP-LEVEL-COMPONENTS to
 ;;; pull out top-level code.
@@ -347,6 +349,12 @@
 		(setq new (make-empty-component)))))
 	  (when (eq (component-kind component) :initial)
 	    (assert (null (component-lambdas component)))
+	    (let ((tail (component-tail component)))
+	      (dolist (pred (block-pred tail))
+		(let ((pred-component (block-component pred)))
+		  (unless (eq pred-component component)
+		    (unlink-blocks pred tail)
+		    (link-blocks pred (component-tail pred-component))))))
 	    (delete-component component)))))
 
     (dolist (com (components))
