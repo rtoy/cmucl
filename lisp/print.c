@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.17 2005/02/07 22:10:07 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.18 2005/02/07 22:18:35 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -381,7 +381,7 @@ static void print_slots(char **slots, int count, lispobj *ptr)
             print_obj("???: ", *ptr++);
 }
 
-static char *symbol_slots[] = {"value: ", "unused: ",
+static char *symbol_slots[] = {"value: ", "hash: ",
     "plist: ", "name: ", "package: ", NULL};
 static char *ratio_slots[] = {"numer: ", "denom: ", NULL};
 static char *complex_slots[] = {"real: ", "imag: ", NULL};
