@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9 1997/01/18 14:30:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9.2.1 1997/08/30 18:24:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,8 @@
 (in-package "VM")
 (export '(current-float-trap floating-point-modes sigfpe-handler))
 (in-package "EXTENSIONS")
-(export '(set-floating-point-modes get-floating-point-modes))
+(export '(set-floating-point-modes get-floating-point-modes
+	  with-float-traps-masked))
 (in-package "VM")
 
 (eval-when (compile load eval)
@@ -194,4 +195,19 @@
 	  (t
 	   (error "SIGFPE with no exceptions currently enabled?")))))
 
-
+;;; WITH-FLOAT-TRAPS-MASKED  --  Public
+;;;
+(defmacro with-float-traps-masked (traps &body body)
+  (let ((trap-mask (dpb (lognot (float-trap-mask traps))
+			float-traps-byte #xffffffff))
+	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
+			     float-exceptions-byte #xffffffff)))
+    `(let ((orig-modes (floating-point-modes)))
+      (unwind-protect
+	   (progn
+	     (setf (floating-point-modes) (logand orig-modes ,trap-mask))
+	     ,@body)
+	(setf (floating-point-modes)
+	      (logand (logior (floating-point-modes)
+			      (mask-field float-traps-byte orig-modes))
+		      ,exception-mask))))))
