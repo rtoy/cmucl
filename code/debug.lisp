@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.18 1991/05/29 11:42:01 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.19 1991/07/14 02:48:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -838,8 +838,9 @@
 
 ;;; GET-TOP-LEVEL-FORM  --  Internal
 ;;;
-	       (dotimes (i local-tlf-offset)
-		 (read f))))
+;;;    Given a code location, return the associated form-number translations
+;;; and the actual top-level form.  We check our cache --- if there is a miss,
+;;; we dispatch on the kind of the debug source.
 ;;;
 (defun get-top-level-form (location)
   (let ((d-source (di:code-location-debug-source location)))
