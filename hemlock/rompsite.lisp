@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.11 1991/06/22 00:08:05 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.12 1991/09/04 14:04:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,7 +102,7 @@
   (defhvar "Cursor Bitmap File"
     "File to read to setup cursors for Hemlock windows.  The mask is found by
      merging this name with \".mask\"."
-    :value "/usr/misc/.cmucl/lib/hemlock11.cursor")
+    :value "library:hemlock11.cursor")
   (defhvar "Enter Window Hook"
     "When the mouse enters an editor window, this hook is invoked.  These
      functions take the Hemlock Window as an argument."
@@ -252,8 +252,7 @@
 		    ed::*active-region-highlight-font*))
 
 #+clx
-(defparameter lisp-fonts-pathnames
-  '("/usr/misc/.cmucl/lib/fonts/"))
+(defparameter lisp-fonts-pathnames '("library:fonts/"))
 
 (proclaim '(special *editor-input* *real-editor-input*))
 
@@ -560,7 +559,7 @@
 
 ;;;; Current terminal character translation.
 
-(defconstant termcap-file "/etc/termcap")
+(defvar termcap-file "/etc/termcap")
 
 
 
