@@ -441,7 +441,7 @@
 (defclass kernel:funcallable-instance (function) ()
   (:metaclass built-in-class))
 
-(defclass stream (t) ()
+(defclass stream (kernel:instance) ()
   (:metaclass built-in-class))
 
 (defclass slot-object (t) ()
