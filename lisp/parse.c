@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.6 2004/07/07 22:22:59 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.7 2004/07/12 23:44:07 pmai Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -317,7 +317,7 @@ char **ptr;
 	if (isalpha(token[1])) {
 		int free;
 		int regnum;
-		struct sigcontext *context;
+		os_context_t *context;
 
 		free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
 

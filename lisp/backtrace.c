@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.11 2004/07/08 04:10:09 rtoy Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.12 2004/07/12 23:44:07 pmai Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -97,7 +97,7 @@ info_from_lisp_state(struct call_info *info)
 }
 
 static void
-info_from_sigcontext(struct call_info *info, struct sigcontext *csp)
+info_from_sigcontext(struct call_info *info, os_context_t *csp)
 {
     unsigned long pc;
 
@@ -131,7 +131,7 @@ previous_info(struct call_info *info)
 {
     struct call_frame *this_frame;
     int free;
-    struct sigcontext *csp;
+    os_context_t *csp;
 
     if (!cs_valid_pointer_p(info->frame)) {
         printf("Bogus callee value (0x%08lx).\n", (unsigned long)info->frame);

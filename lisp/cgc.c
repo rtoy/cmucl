@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.10 2002/11/14 21:13:23 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.11 2004/07/12 23:44:07 pmai Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -1418,7 +1418,7 @@ scavenge_space( lispobj*where, int words, char*name )
 
 static int boxed_registers[] = BOXED_REGISTERS;
 static void
-preserve_interrupt_context(struct sigcontext *context)
+preserve_interrupt_context(os_context_t *context)
 {
   int i;
   /* Check each boxed register for a valid pointer and promote
@@ -1436,7 +1436,7 @@ preserve_interrupt_context(struct sigcontext *context)
 static void preserve_interrupt_contexts(void)
 {
   int i, index;
-  struct sigcontext *context;
+  os_context_t *context;
 
   index = fixnum_value(SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX));
   dprintf(noise,("Number of active contexts: %d\n", index));

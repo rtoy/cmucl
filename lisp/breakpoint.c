@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.13 2004/07/07 15:03:11 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.14 2004/07/12 23:44:07 pmai Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -62,7 +62,7 @@ void breakpoint_do_displaced_inst(os_context_t *scp,
 }
 
 #ifndef i386
-static lispobj find_code(struct sigcontext *scp)
+static lispobj find_code(os_context_t *scp)
 {
 #ifdef reg_CODE
     lispobj code = SC_REG(scp, reg_CODE), header;

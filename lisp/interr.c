@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.6 2004/07/08 18:00:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.7 2004/07/12 23:44:07 pmai Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -51,7 +51,7 @@ void lose(char *fmt, ...)
 
 static char *errors[] = ERRORS;
 
-void internal_error(struct sigcontext *context)
+void internal_error(os_context_t *context)
 {
     unsigned char *ptr = arch_internal_error_arguments(context);
     int len, scoffset, sc, offset, ch;

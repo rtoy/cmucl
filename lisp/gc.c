@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.21 2003/07/19 14:10:16 emarsden Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.22 2004/07/12 23:44:07 pmai Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -436,7 +436,7 @@ static void scavenge_newspace(void)
 
 static int boxed_registers[] = BOXED_REGISTERS;
 
-static void scavenge_interrupt_context(struct sigcontext *context)
+static void scavenge_interrupt_context(os_context_t *context)
 {
 	int i;
 #ifdef reg_LIP
@@ -510,7 +510,7 @@ static void scavenge_interrupt_context(struct sigcontext *context)
 void scavenge_interrupt_contexts(void)
 {
 	int i, index;
-	struct sigcontext *context;
+	os_context_t *context;
 
 	index = fixnum_value(SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX));
 #if defined(DEBUG_PRINT_CONTEXT_INDEX)

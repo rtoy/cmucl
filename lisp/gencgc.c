@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.58 2004/07/08 03:31:15 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.59 2004/07/12 23:44:07 pmai Exp $
  *
  */
 
@@ -2170,7 +2170,7 @@ scavenge (void *start_obj, long nwords)
 
 static int boxed_registers[] = BOXED_REGISTERS;
 
-static void scavenge_interrupt_context(struct sigcontext *context)
+static void scavenge_interrupt_context(os_context_t *context)
 {
   int i;
 #ifdef reg_LIP
@@ -2264,7 +2264,7 @@ static void scavenge_interrupt_context(struct sigcontext *context)
 void scavenge_interrupt_contexts(void)
 {
   int i, index;
-  struct sigcontext *context;
+  os_context_t *context;
 
 #ifdef PRINTNOISE
   printf("Scavenging interrupt contexts ...\n");
