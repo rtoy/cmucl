@@ -359,6 +359,8 @@ Added a doc string to EXT:SAVE-ALL-BUFFERS.
 
 Added a doc string to HI:DIRECTORYP.
 
+
+Release 14c to beta....
 
 
 5/24/91 to 6/4/91
