@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.2 1997/09/29 04:44:44 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.3 1997/09/29 05:08:28 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -901,35 +901,46 @@
   (name nil)
   (process nil :type (or null process)))
 
-;;; Compare the lock's process slot to test-process and when equal set
-;;; to new-process, returning the old slot value.
-(declaim (inline seize-lock))
 #-pentium
-(defun seize-lock (lock test-process new-process)
+(defun seize-lock (lock)
   (declare (type lock lock))
   (sys:without-interrupts
-   (let ((process (lock-process lock)))
-     (when (eq process test-process)
-       (setf (lock-process lock) new-process))
-     process)))
+   (unless (lock-process lock)
+     (setf (lock-process lock) *current-process*))))
 
-;;; Fast inline version for Pentium.
-#+pentium
-(defun seize-lock (lock test-process new-process)
-  (declare (type lock lock))
-  (kernel:%instance-set-conditional lock 2 test-process new-process))
-
+#-pentium
 (defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
 			  &body body)
-  (let ((have-lock (gensym)))
-    `(let ((,have-lock (eq (lock-process ,lock) *current-process*)))
+  (let ((orig-process (gensym)))
+    `(let ((,orig-process (lock-process ,lock)))
       (unwind-protect
 	   (progn
-	     (unless (or ,have-lock
-			 (null (seize-lock ,lock nil *current-process*)))
+	     (unless (or (eq ,orig-process *current-process*)
+			 (seize-lock ,lock))
 	       (process-wait ,whostate
 		     #'(lambda ()
-			 (null (seize-lock ,lock nil *current-process*)))))
+			 (unless (lock-process ,lock)
+			   (setf (lock-process ,lock) *current-process*)))))
 	     ,@body)
-	(unless ,have-lock
+	(unless (or (eq ,orig-process *current-process*)
+		    (not (eq (lock-process ,lock) *current-process*)))
 	  (setf (lock-process ,lock) nil))))))
+
+;;; Fast locking for the Pentium.
+#+pentium
+(defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
+			  &body body)
+  (let ((orig-process (gensym)))
+    `(let ((,orig-process (lock-process ,lock)))
+      (unwind-protect
+	   (progn
+	     (unless (or (eq ,orig-process *current-process*)
+			 (null (kernel:%instance-set-conditional
+				,lock 2 nil *current-process*)))
+	       (process-wait ,whostate
+			     #'(lambda ()
+				 (null (kernel:%instance-set-conditional
+					,lock 2 nil *current-process*)))))
+	     ,@body)
+	(unless (eq ,orig-process *current-process*)
+	  (kernel:%instance-set-conditional ,lock 2 *current-process* nil))))))
