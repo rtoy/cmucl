@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-init.lisp,v 1.1 1993/02/04 12:11:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-init.lisp,v 1.2 1993/07/17 00:50:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
   (destructuring-bind (name &key (translation nil trans-p) &allow-other-keys)
 		      x
     (when trans-p
-      (let ((class (info type class name))
+      (let ((class (class-cell-class (find-class-cell name)))
 	    (type (specifier-type translation)))
 	(setf (built-in-class-translation class) type)
 	(setf (info type builtin name) type)))))
