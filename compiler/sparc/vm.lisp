@@ -2,12 +2,14 @@
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
-;;; Carnegie Mellon University, and has been placed in the public
-;;; domain.  If you want to use this code or any part of CMU Common
-;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
-;;; **********************************************************************
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.4 1991/11/09 02:38:23 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.5 1992/02/25 07:13:47 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; This file contains the VM definition for the SPARC.
 ;;;
@@ -22,9 +24,8 @@
 
 (defmacro defreg (name offset)
   (let ((offset-sym (symbolicate name "-OFFSET")))
-    `(progn
-       (eval-when (compile eval load)
-	 (defconstant ,offset-sym ,offset))
+    `(eval-when (compile eval load)
+       (defconstant ,offset-sym ,offset)
        (setf (svref *register-names* ,offset-sym) ,(symbol-name name)))))
 
 (defmacro defregset (name &rest regs)
@@ -34,7 +35,13 @@
 
 ); eval-when (compile eval)
 
+
+(eval-when (compile load eval)
+
 (defvar *register-names* (make-array 32 :initial-element nil))
+
+); eval-when (compile load eval)
+
 
 ;; Globals.  These are difficult to extract from a sigcontext.
 (defreg zero 0)
