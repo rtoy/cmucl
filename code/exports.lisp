@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.2 1990/04/01 20:18:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.3 1990/04/01 23:50:00 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -361,54 +361,10 @@
 
 (in-package "SYSTEM")
 
-(export '(%+-fixnum-type %--fixnum-type %alien-indirect
-	  %alloc-ref-space-shift %alloc-ref-type-shift %array-data-slot
-	  %array-dim-base %array-displaced-subtype %array-displacement-slot
-	  %array-fill-pointer-slot %array-first-dim-slot
-	  %array-header-overhead %array-length-slot %array-normal-subtype
-	  %array-type %assembler-code-type %bignum-type %bind-aligned-sap
-	  %binding-stack-type %bit-vector-type %catch-all-type
-	  %catch-func-slot %catch-pc-slot %catch-prev-active-slot
-	  %catch-prev-binding-slot %catch-previous-slot
-	  %character-code-byte %character-code-control-mask
-	  %character-code-mask %character-control-byte
-	  %character-control-mask %character-font-byte %character-font-mask
-	  %character-int-mask %complex-type %cons-length
-	  %control-stack-type %double-float-exponent-length
-	  %double-float-mantissa-length %double-float-type %dynamic-0-space
-	  %dynamic-1-space %dynamic-space %first-pointer-type
-	  %fixnum-alloctable-address %fixnum-length %frame-arg-start-slot
-	  %frame-func-slot %frame-header-escape-byte
-	  %frame-header-values-byte %frame-pc-slot %frame-prev-active-slot
-	  %frame-prev-binding-slot %function-anonymous-expr-subtype
-	  %function-arg-info-slot %function-arg-names-slot
-	  %function-closure-subtype %function-code-slot
-	  %function-constants-offset %function-defined-from-slot
-	  %function-expr-subtype %function-fexpr-subtype
-	  %function-funcallable-instance-subtype %function-keyword-arg-byte
-	  %function-keyword-arg-slot %function-locals-byte
-	  %function-locals-slot %function-macro-subtype
-	  %function-max-args-byte %function-max-args-slot
-	  %function-min-args-byte %function-min-args-slot
-	  %function-name-slot %function-rest-arg-byte
-	  %function-rest-arg-slot %function-top-level-form-subtype
-	  %function-type %g-vector-structure-name-slot
-	  %g-vector-structure-subtype %gc-forward-type %general-vector-type
-	  %i-vector-code-subtype %instance-type %integer-vector-type
-	  %last-pointer-type %lisp-data-byte %lisp-type-byte
-	  %lisp-type-shift %list-type %long-float-exponent-length
-	  %long-float-mantissa-length %long-float-type %primitive
-	  %ratio-type %read-only-space %set-alien-access %set-sap-ref-16
-	  %set-sap-ref-32 %set-sap-ref-8 %short-+-float-type
-	  %short---float-type %short-float-exponent-length
-	  %short-float-mantissa-length %sp-byte-blt %sp-find-character
-	  %sp-find-character-with-attribute %sp-make-fixnum
-	  %sp-reverse-find-character-with-attribute %space-shift
-	  %stack-increment %standard-char-p %static-alien-area
-	  %static-space %string-char-p %string-type %symbol-length
-	  %symbol-type %trap-type %type-space-mask %values-marker-num-byte
-	  %values-marker-type *alien-eval-when* *beep-function*
-	  *gr-messages* *in-the-compiler*
+(export '(%alien-indirect %assembler-code-type %bind-aligned-sap
+	  %set-alien-access %set-sap-ref-16 %set-sap-ref-32 %set-sap-ref-8
+	  %standard-char-p %static-alien-area %string-char-p
+	  *alien-eval-when* *beep-function* *gr-messages* *in-the-compiler*
 	  *maximum-interpreter-error-checking* *nameserverport*
 	  *pornography-of-death* *port-ownership-rights-handlers*
 	  *port-receive-rights-handlers* *stderr* *stdin* *stdout*
@@ -452,8 +408,10 @@
 
 (use-package "KERNEL")
 
-(export '(*assembly-unit-length* *primitive-objects* array-data-slot
-	  array-dimensions-offset array-displaced-p-slot
+(export '(%array-fill-pointer %array-available-elements %array-data-vector
+	  %array-displacement %array-displaced-p %array-dimension
+	  %check-bound *assembly-unit-length* *primitive-objects*
+	  array-data-slot array-dimensions-offset array-displaced-p-slot
 	  array-displacement-slot array-elements-slot
 	  array-fill-pointer-slot atomic-flag base-character-type
 	  bignum-digits-offset bignum-type binding-size binding-symbol-slot
@@ -467,14 +425,14 @@
 	  code-header-type complex-array-type complex-bit-vector-type
 	  complex-imag-slot complex-real-slot complex-size
 	  complex-string-type complex-type complex-vector-type
-	  cons-car-slot cons-cdr-slot cons-size
+	  cons-car-slot cons-cdr-slot cons-size data-vector-ref
 	  define-for-each-primitive-object double-float-size
 	  double-float-type double-float-value-slot error-trap
 	  even-fixnum-type exported-static-symbols fixnum
 	  function-header-arglist-slot function-header-code-offset
 	  function-header-name-slot function-header-next-slot
 	  function-header-self-slot function-header-type
-	  function-header-type-slot function-pointer-type halt-trap
+	  function-header-type-slot function-pointer-type genesis halt-trap
 	  interrupted-flag list-pointer-type lowtag-bits lowtag-limit
 	  lowtag-mask most-positive-cost odd-fixnum-type
 	  offset-static-symbol other-immediate-0-type
