@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.82 2000/07/06 04:38:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.83 2001/04/12 19:45:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,9 +118,9 @@
 #+new-random
 (deftransform random ((num &optional state)
 		      ((integer 1
-				#+(and propagate-float-type x86) #xffffffff
-				#+(and propagate-float-type (not x86)) #x7fffffff
-				#-propagate-float-type #.most-positive-fixnum)
+				#+x86 #xffffffff
+				#-x86 #x7fffffff
+				)
 		       &optional *))
   #+x86 "use inline (unsigned-byte 32) operations"
   #-x86 "use inline (signed-byte 32) operations"
@@ -282,9 +282,6 @@
 ;;; Optimizers for scale-float.  If the float has bounds, new bounds
 ;;; are computed for the result, if possible.
 
-#+propagate-float-type
-(progn
-
 (defun scale-float-derive-type-aux (f ex same-arg)
   (declare (ignore same-arg))
   (flet ((scale-bound (x n)
@@ -347,7 +344,6 @@
 	     (one-arg-derive-type num #',aux-name #',fun))))))
   (frob %single-float single-float)
   (frob %double-float double-float))
-) ; end progn  
 
 
 ;;;; Float contagion:
@@ -394,36 +390,6 @@
   (frob <)
   (frob >)
   (frob =))
-
-
-;;;; Irrational derive-type methods:
-
-;;; Derive the result to be float for argument types in the appropriate domain.
-;;;
-#-propagate-fun-type
-(dolist (stuff '((asin (real -1.0 1.0))
-		 (acos (real -1.0 1.0))
-		 (acosh (real 1.0))
-		 (atanh (real -1.0 1.0))
-		 (sqrt (real 0.0))))
-  (destructuring-bind (name type) stuff
-    (let ((type (specifier-type type)))
-      (setf (function-info-derive-type (function-info-or-lose name))
-	    #'(lambda (call)
-		(declare (type combination call))
-		(when (csubtypep (continuation-type
-				  (first (combination-args call)))
-				 type)
-		  (specifier-type 'float)))))))
-
-#-propagate-fun-type
-(defoptimizer (log derive-type) ((x &optional y))
-  (when (and (csubtypep (continuation-type x)
-			(specifier-type '(real 0.0)))
-	     (or (null y)
-		 (csubtypep (continuation-type y)
-			    (specifier-type '(real 0.0)))))
-    (specifier-type 'float)))
 
 
 ;;;; Irrational transforms:
@@ -580,9 +546,6 @@
        (float pi x)
        (float 0 x)))
 
-#+(or propagate-float-type propagate-fun-type)
-(progn
-
 ;;; The number is of type REAL.
 (declaim (inline numeric-type-real-p))
 (defun numeric-type-real-p (type)
@@ -597,10 +560,6 @@
 	(list (coerce (car bound) type))
 	(coerce bound type))))
 
-)  ; end progn
-
-#+propagate-fun-type
-(progn
 
 ;;;; Optimizers for elementary functions
 ;;;;
@@ -1118,7 +1077,6 @@
 (defoptimizer (phase derive-type) ((num))
   (one-arg-derive-type num #'phase-derive-type-aux #'phase))
 
-) ;end progn for propagate-fun-type
 
 (deftransform realpart ((x) ((complex rational)) *)
   '(kernel:%realpart x))
@@ -1321,8 +1279,6 @@
 ;;; reduction correctly but still provides useful results when the
 ;;; inputs are union types.
 
-#+propagate-fun-type
-(progn
 (defun trig-derive-type-aux (arg domain fcn
 				 &optional def-lo def-hi (increasingp t))
   (etypecase arg
@@ -1404,4 +1360,3 @@
 	 (specifier-type `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
-) ; end progn

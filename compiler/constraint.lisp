@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.22 2001/03/04 20:12:13 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.23 2001/04/12 19:45:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -409,7 +409,6 @@
 		      (let ((greater (if not-p (not greater) greater)))
 			(setq res
 			      (constrain-integer-type res y greater not-p)))))
-		   #+constrain-float-type
 		   ((and (float-type-p res) (float-type-p y))
 		    (let ((greater (eq kind '>)))
 		      (let ((greater (if not-p (not greater) greater)))
