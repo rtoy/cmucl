@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.11 1992/02/15 13:04:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.12 1992/05/28 01:06:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,19 +19,19 @@
 (unless (fboundp 'genesis) (load "target:compiler/generic/genesis"))
 
 (defparameter lisp-files
-  `(,@(when (string= (c:backend-name c:*backend*) "PMAX")
+  `(,@(when (c:backend-featurep :pmax)
 	'("target:assembly/mips/assem-rtns.assem"
 	  "target:assembly/mips/array.assem"
 	  "target:assembly/mips/bit-bash.assem"
 	  "target:assembly/mips/arith.assem"
 	  "target:assembly/mips/alloc.assem"))
-    ,@(when (string= (c:backend-name c:*backend*) "SPARC")
+    ,@(when (c:backend-featurep :sparc)
 	'("target:assembly/sparc/assem-rtns.assem"
 	  "target:assembly/sparc/array.assem"
 	  "target:assembly/sparc/bit-bash.assem"
 	  "target:assembly/sparc/arith.assem"
 	  "target:assembly/sparc/alloc.assem"))
-    ,@(when (string= (c:backend-name c:*backend*) "RT")
+    ,@(when (c:backend-featurep :rt)
 	'("target:assembly/rt/assem-rtns.assem"
 	  "target:assembly/rt/array.assem"
 	  "target:assembly/rt/arith.assem"
@@ -82,9 +82,11 @@
     "target:code/c-call"
     "target:code/sap"
     "target:code/unix"
-    #+mach "target:code/mach"
-    #+mach "target:code/mach-os"
-    #+sunos "target:code/sunos-os"
+    ,@(when (c:backend-featurep :mach)
+	'("target:code/mach"
+	  "target:code/mach-os"))
+    ,@(when (c:backend-featurep :sunos)
+	'("target:code/sunos-os"))
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"
@@ -96,11 +98,11 @@
     "target:code/backq"
     "target:code/sharpm"
     "target:code/load"
-    ,@(when (string= (c:backend-name c:*backend*) "PMAX")
+    ,@(when (c:backend-featurep :pmax)
 	'("target:code/pmax-vm"))
-    ,@(when (string= (c:backend-name c:*backend*) "SPARC")
+    ,@(when (c:backend-featurep :sparc)
 	'("target:code/sparc-vm"))
-    ,@(when (string= (c:backend-name c:*backend*) "RT")
+    ,@(when (c:backend-featurep :rt)
 	'("target:code/rt-vm"))
 
     "target:code/signal"
@@ -111,12 +113,14 @@
     ))
 
 (setf *genesis-core-name*
-      #-(and sparc mach) "target:ldb/kernel.core"
-      #+(and sparc mach) "/usr/tmp/kernel.core")
+      (if (c:backend-featurep '(and :sparc :mach))
+	  "/usr/tmp/kernel.core"
+	  "target:ldb/kernel.core"))
 (setf *genesis-c-header-name* "target:ldb/lisp.h")
 (setf *genesis-map-name* "target:ldb/lisp.map")
 (setf *genesis-symbol-table* "target:ldb/ldb.map")
 
-#+sunos (setf *target-page-size* 8192)
+(when (c:backend-featurep :sunos)
+  (setf *target-page-size* 8192))
 
 (genesis lisp-files)
