@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.59 1993/08/19 13:15:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.60 1993/08/19 15:35:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 (in-package "USER")
 
 (defvar *byte-compile* #+small t #-small :maybe)
+
+(load "target:assembly/assem-file")
 
 (with-compiler-log-file
     ("target:compile-lisp.log"
