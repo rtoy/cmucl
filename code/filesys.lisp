@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.38 1993/08/11 16:33:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.39 1994/02/04 15:05:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -629,14 +629,17 @@
 
 ;;;; UNIX-NAMESTRING -- public
 ;;; 
-(defun unix-namestring (pathname &optional (for-input t))
+(defun unix-namestring (pathname &optional (for-input t) executable-only)
   "Convert PATHNAME into a string that can be used with UNIX system calls.
    Search-lists and wild-cards are expanded."
   (enumerate-search-list
       (pathname pathname)
     (collect ((names))
       (enumerate-matches (name pathname nil :verify-existance for-input)
-	(names name))
+	(when (or (not executable-only)
+		  (and (eq (unix:unix-file-kind name) :file)
+		       (unix:unix-access name unix:x_ok)))
+	  (names name)))
       (let ((names (names)))
 	(when names
 	  (when (cdr names)
