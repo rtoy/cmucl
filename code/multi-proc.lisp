@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.16 1998/01/02 23:31:14 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.17 1998/01/03 03:18:57 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -719,7 +719,8 @@
   (initial-function nil :type (or null function))
   (initial-args nil :type list)
   (wait-function nil :type (or null function))
-  (wait-timeout nil :type (or null fixnum))
+  ;; The real time after which the wait will timeout.
+  (wait-timeout nil :type (or null double-float))
   (wait-return-value nil :type t)
   (interrupts '() :type list)
   (stack-group nil :type (or null stack-group))
@@ -980,16 +981,21 @@
   (process-wait-return-value *current-process*))
 
 (defun process-wait-with-timeout (whostate timeout predicate)
-  (declare (type (unsigned-byte 29) timeout))
+  (declare (type (or fixnum float) timeout))
   "Causes the process to wait until predicate returns True, or the
   number of seconds specified by timeout has elapsed."
   (assert (not *inhibit-scheduling*))
   (assert (not (process-wait-function *current-process*)))
-  (let ((timeout (+ (get-internal-real-time)
-		    (* timeout internal-time-units-per-second))))
-    (declare (fixnum timeout))
-    (setf (process-%whostate *current-process*) whostate)
-    (setf (process-wait-timeout *current-process*) timeout)
+  (setf (process-%whostate *current-process*) whostate)
+  (let ((timeout (etypecase timeout
+		   (fixnum
+		    (coerce timeout 'double-float))
+		   (single-float
+		    (coerce timeout 'double-float))
+		   (double-float
+		    (coerce timeout 'double-float)))))
+    (declare (double-float timeout))
+    (setf (process-wait-timeout *current-process*) (+ timeout (get-real-time)))
     (setf (process-wait-function *current-process*) predicate)
     (process-yield)
     (process-wait-return-value *current-process*)))
@@ -1132,9 +1138,7 @@
 			 (t
 			  ;; Timeout?
 			  (let ((timeout (process-wait-timeout next)))
-			    (when (and timeout
-				       (> (the fixnum (get-internal-real-time))
-					  timeout))
+			    (when (and timeout (> (get-real-time) timeout))
 			      ;; Flush the wait.
 			      (setf (process-wait-return-value next) nil)
 			      (setf (process-wait-timeout next) nil)
@@ -1197,9 +1201,7 @@
 			   (return)))
 		       ;; Timeout?
 		       (let ((timeout (process-wait-timeout next)))
-			 (when (and timeout
-				    (> (the fixnum (get-internal-real-time))
-				       timeout))
+			 (when (and timeout (> (get-real-time) timeout))
 			   ;; Flush the wait.
 			   (setf (process-wait-return-value next) nil)
 			   (setf (process-wait-timeout next) nil)
