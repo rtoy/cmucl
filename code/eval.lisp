@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.16 1992/04/04 01:09:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.17 1992/04/20 19:07:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -321,7 +321,7 @@
    fact, a macro.  Env is the lexical environment to expand in, which defaults
    to the null environment."
   (cond ((and (consp form) (symbolp (car form)))
-	 (let ((def (macro-function (car form))))
+	 (let ((def (macro-function (car form) env)))
 	   (if def
 	       (values (invoke-macroexpand-hook def form env) t)
 	       (values form nil))))
