@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.27 1997/02/15 21:39:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.28 1997/04/12 18:12:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,22 +178,20 @@
 (deftransform integer-decode-float ((x) (double-float) * :when :both)
   '(integer-decode-double-float x))
 
-#-x86
 (deftransform scale-float ((f ex) (single-float *) * :when :both)
-  '(scale-single-float f ex))
+  (if (and (backend-featurep :x86)
+	   (csubtypep (continuation-type ex)
+		      (specifier-type '(signed-byte 32)))
+	   (not (byte-compiling)))
+      '(coerce (%scalbn (coerce f 'double-float) ex) 'single-float)
+      '(scale-single-float f ex)))
 
-#-x86
 (deftransform scale-float ((f ex) (double-float *) * :when :both)
-  '(scale-double-float f ex))
-
-#+x86
-(deftransform scale-float ((f ex) (single-float (signed-byte 32)) *)
-  '(coerce (%scalbn (coerce f 'double-float) ex) 'single-float))
-
-#+x86
-(deftransform scale-float ((f ex) (double-float (signed-byte 32)) *
-			   :when :both)
-  '(%scalbn f ex))
+  (if (and (backend-featurep :x86)
+	   (csubtypep (continuation-type ex)
+		      (specifier-type '(signed-byte 32))))
+      '(%scalbn f ex)
+      '(scale-double-float f ex)))
 
 ;;; toy@rtp.ericsson.se:
 ;;;
