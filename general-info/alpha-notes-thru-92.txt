@@ -1,3 +1,23 @@
+7/31/92 to 8/4/92
+
+[SPARC only]
+
+Fixes to bit-bash and compiler to get bit-bash to stop consing.
+
+July 92 beta PCL.  Mostly MOP and ANSI enhancements, and some tweaks to
+structure-class support.
+
+Fixed debugger VPRINT command to actually be verbose again.
+
+Flushed old-assembler stuff, and import new-assem stuff directly into the C
+package.  Various tweaks for the byte compiler and instruction scheduler.
+
+If we discover a FUNCALL to an inline function, convert it (unless it is a SETF
+function.)
+
+Gag bound-but-not-referenced warnings when brevity = 3.
+
+
 7/24/92 to 7/31/92
 
 [SunOS SPARC only]
