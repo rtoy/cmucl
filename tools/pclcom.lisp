@@ -16,7 +16,9 @@
 (import 'kernel:funcallable-instance-p (find-package "PCL"))
 
 (with-compilation-unit
-    (:optimize '(optimize (debug-info #+small 1 #-small 2)
+    (:optimize '(optimize (debug-info #+small .5 #-small 2)
 			  (speed 2)
-			  (inhibit-warnings 2)))
+			  (inhibit-warnings 2))
+     :context-declarations
+     '((:external (declare (optimize-interface (safety 2) (debug-info 1))))))
  (pcl::compile-pcl))
