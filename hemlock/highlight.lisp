@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/highlight.lisp,v 1.2 1991/02/08 16:35:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/highlight.lisp,v 1.3 1991/09/23 09:27:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -106,19 +106,14 @@
 (defun highlight-active-region (window)
   (unless (eq window *echo-area-window*)
     (when (value highlight-active-region)
-      (let ((tty-p (typep (hi::device-hunk-device
-			   (hi::window-hunk (current-window)))
-			  'hi::tty-device)))
-	(cond ((region-active-p)
-	       (cond (tty-p)
-		     ((not *active-region-font-marks*)
-		      (set-active-region-font-marks))
-		     ((check-active-region-font-marks))
-		     (t (kill-active-region-font-marks)
-			(set-active-region-font-marks))))
-	      (tty-p)
-	      (*active-region-font-marks*
-	       (kill-active-region-font-marks)))))))
+      (cond ((region-active-p)
+	     (cond ((not *active-region-font-marks*)
+		    (set-active-region-font-marks))
+		   ((check-active-region-font-marks))
+		   (t (kill-active-region-font-marks)
+		      (set-active-region-font-marks))))
+	    (*active-region-font-marks*
+	     (kill-active-region-font-marks))))))
 ;;;
 (add-hook redisplay-hook 'highlight-active-region)
 
