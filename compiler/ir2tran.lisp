@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.36 1991/11/27 19:24:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.37 1991/12/11 17:12:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -720,7 +720,6 @@
 ;;; EMIT-PSETQ-MOVES  --  Internal
 ;;;
 ;;;    Emit any necessary moves into assignment temps for a local call to Fun.
-;;; OLD-FP is the TN currently holding the value we want to pass as OLD-FP.
 ;;; We return two lists of TNs: TNs holding the actual argument values, and
 ;;; (possibly EQ) TNs that are the actual destination of the arguments.  When
 ;;; necessary, we allocate temporaries for arguments to preserve paralell
@@ -728,9 +727,13 @@
 ;;; implicit environment arguments, i.e. they exactly correspond to the
 ;;; arguments passed.
 ;;;
+;;; OLD-FP is the TN currently holding the value we want to pass as OLD-FP.  If
+;;; null, then the call is to the same environment (an :ASSIGNMENT), so we
+;;; only move the arguments, and leave the environment alone.
+;;;
 (defun emit-psetq-moves (node block fun old-fp)
   (declare (type combination node) (type ir2-block block) (type clambda fun)
-	   (type tn old-fp))
+	   (type (or tn null) old-fp))
   (let* ((called-env (environment-info (lambda-environment fun)))
 	 (this-1env (node-environment node))
 	 (actuals (mapcar #'(lambda (x)
@@ -756,13 +759,14 @@
 	     (t
 	      (temps actual)))
 	    (locs loc))))
-    
-      (dolist (thing (ir2-environment-environment called-env))
-	(temps (find-in-environment (car thing) this-1env))
-	(locs (cdr thing)))
 
-      (temps old-fp)
-      (locs (ir2-environment-old-fp called-env))
+      (when old-fp
+	(dolist (thing (ir2-environment-environment called-env))
+	  (temps (find-in-environment (car thing) this-1env))
+	  (locs (cdr thing)))
+	
+	(temps old-fp)
+	(locs (ir2-environment-old-fp called-env)))
 
       (values (temps) (locs)))))
 
@@ -791,6 +795,24 @@
 		(environment-info
 		 (lambda-environment fun)))))
   
+  (undefined-value))
+
+
+;;; IR2-CONVERT-ASSIGNMENT  --  Internal
+;;;
+;;;    Convert an :ASSIGNMENT call.  This is just like a tail local call,
+;;; except that the caller and callee environment are the same, so we don't
+;;; need to mess with the environment locations, return PC, etc.
+;;;
+(defun ir2-convert-assignment (node block fun)
+  (declare (type combination node) (type ir2-block block) (type clambda fun))
+    (multiple-value-bind
+	(temps locs)
+	(emit-psetq-moves node block fun nil)
+      
+      (mapc #'(lambda (temp loc)
+		(emit-move node block temp loc))
+	    temps locs))
   (undefined-value))
 
 
@@ -878,16 +900,18 @@
 ;;;
 (defun ir2-convert-local-call (node block)
   (declare (type combination node) (type ir2-block block))
-  (let ((fun (ref-leaf (continuation-use (basic-combination-fun node)))))
-    (cond ((eq (functional-kind fun) :let)
+  (let* ((fun (ref-leaf (continuation-use (basic-combination-fun node))))
+	 (kind (functional-kind fun)))
+    (cond ((eq kind :let)
 	   (ir2-convert-let node block fun))
+	  ((eq kind :assignment)
+	   (ir2-convert-assignment node block fun))
 	  ((node-tail-p node)
 	   (ir2-convert-tail-local-call node block fun))
 	  (t
-	   (let* ((start (block-label (node-block (lambda-bind fun))))
-		  (tails (lambda-tail-set fun))
-		  (returns (when tails (tail-set-info tails)))
-		  (cont (node-cont node)))
+	   (let ((start (block-label (node-block (lambda-bind fun))))
+		 (returns (tail-set-info (lambda-tail-set fun)))
+		 (cont (node-cont node)))
 	     (ecase (if returns
 			(return-info-kind returns)
 			:unknown)
@@ -1288,7 +1312,8 @@
   (assert (basic-combination-args node))
   (let* ((start-cont (continuation-info (first (basic-combination-args node))))
 	 (start (first (ir2-continuation-locs start-cont)))
-	 (tails (node-tail-p node))
+	 (tails (and (node-tail-p node)
+		     (lambda-tail-set (node-home-lambda node))))
 	 (cont (node-cont node))
 	 (2cont (continuation-info cont)))
     (multiple-value-bind
