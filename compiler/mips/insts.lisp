@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.32 1991/07/31 07:06:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.33 1991/11/09 02:07:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.32 1991/07/31 07:06:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.33 1991/11/09 02:07:56 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -356,7 +356,7 @@
 	(target :argument jump-fixup)))
 
 (define-instruction (jal :pinned t
-			 :attributes (delayed-branch))
+			 :attributes (delayed-branch assembly-call))
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :constant 0)
