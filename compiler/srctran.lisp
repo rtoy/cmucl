@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.14 1990/09/25 10:22:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.15 1990/09/27 18:27:50 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -1043,6 +1043,8 @@
 ;;;    constant then we put it second.  If X is a subtype of Y, we put it
 ;;;    second.  These rules make it easier for the back end to match these
 ;;;    interesting cases.
+;;; -- If Y is a fixnum, then we quietly pass because the back end can handle
+;;;    that case, otherwise give an efficency note.
 ;;;
 (deftransform eql ((x y))
   (let ((x-type (continuation-type x))
@@ -1064,6 +1066,8 @@
 		    (and (csubtypep x-type y-type)
 			 (not (csubtypep y-type x-type)))))
 	   '(eql y x))
+	  ((csubtypep y-type (specifier-type 'fixnum))
+	   (give-up))
 	  (t
 	   (give-up "Not enough type information to open-code.")))))
 
