@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.5 1990/03/18 15:17:00 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.6 1990/03/18 19:23:56 ch Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -205,7 +205,9 @@ lispobj obj;
     int space = FALSE;
     int length = 0;
 
-    if (obj == NIL)
+    if (!valid_addr(obj))
+	    printf("(invalid address)");
+    else if (obj == NIL)
         printf("NIL");
     else {
         putchar('(');
@@ -237,7 +239,7 @@ static void print_list(obj)
 lispobj obj;
 {
     if (!valid_addr(obj))
-        printf(" (invalid address)");
+	    printf("(invalid address)");
     else if (obj == NIL)
         printf(" (NIL)");
     else {
@@ -261,12 +263,21 @@ lispobj obj;
 static void brief_otherptr(obj)
 lispobj obj;
 {
-    lispobj *ptr = (lispobj *)PTR(obj), header = *ptr;
-    int type = TypeOf(header);
+    lispobj *ptr, header;
+    int type;
     struct symbol *symbol;
     struct vector *vector;
     char *charptr;
 
+    ptr = (lispobj *) PTR(obj);
+
+    if (!valid_addr(obj)) {
+	    printf("(invalid address)");
+	    return;
+    }
+
+    header = *ptr;
+    type = TypeOf(header);
     switch (type) {
         case type_SymbolHeader:
             symbol = (struct symbol *)ptr;
@@ -319,14 +330,25 @@ static void print_otherptr(obj)
 lispobj obj;
 {
     if (!valid_addr(obj))
-        printf(" (invalid address)");
+	    printf("(invalid address)");
     else {
-        unsigned long *ptr = (unsigned long *)PTR(obj);
-        unsigned long header = *ptr++;
-        unsigned long length = (*ptr) >> 2;
-        int count = header>>8, type = TypeOf(header), index;
+        unsigned long *ptr; 
+        unsigned long header;
+        unsigned long length;
+        int count, type, index;
         boolean raw;
         char *cptr, buffer[16];
+
+	ptr = (unsigned long *) PTR(obj);
+	if (ptr == (unsigned long *) NULL) {
+		printf(" (NULL Pointer)");
+		return;
+	}
+
+	header = *ptr++;
+	length = (*ptr) >> 2;
+	count = header>>8;
+	type = TypeOf(header);
 
         print_obj("header: ", header);
         if (LowtagOf(header) != type_OtherImmediate0 && LowtagOf(header) != type_OtherImmediate1) {
@@ -442,6 +464,7 @@ lispobj obj;
     char buffer[256];
     boolean verbose = cur_depth < brief_depth;
 
+    
     if (!continue_p(verbose))
         return;
 
@@ -462,7 +485,7 @@ lispobj obj;
         }
         else
             newline(NULL);
-        printf("%s0x%x: ", prefix, obj);
+        printf("%s0x%08x: ", prefix, obj);
         if (cur_depth < brief_depth) {
             fputs(lowtag_Names[type], stdout);
             (*verbose_fns[type])(obj);
