@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.26 1992/05/14 23:17:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.27 1992/11/11 02:33:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -662,7 +662,7 @@
 
 ;;;; The ENUM type.
 
-(def-alien-type-class (enum :include integer)
+(def-alien-type-class (enum :include (integer (:bits 32)))
   name		; name of this enum (if any)
   from		; alist from keywords to integers.
   to		; alist or vector from integers to keywords.
@@ -721,10 +721,10 @@
 	   (min-bits (if signed
 			 (1+ (max (integer-length min)
 				  (integer-length max)))
-			 (integer-length max)))
-	   (bits (max 8 (ash 1 (integer-length (1- min-bits))))))
-      (when (> bits 32)
+			 (integer-length max))))
+      (when (> min-bits 32)
 	(error "Can't represent enums needing more than 32 bits."))
+      (setf from-alist (sort from-alist #'< :key #'cdr))
       (cond
        ;;
        ;; If range is at least 20% dense, use vector mapping.  Crossover
@@ -737,11 +737,11 @@
 	(let ((to (make-array (1+ (- max min)))))
 	  (dolist (el from-alist)
 	    (setf (svref to (- (cdr el) min)) (car el)))
-	  (make-alien-enum-type :name name :bits bits :signed signed
+	  (make-alien-enum-type :name name :signed signed
 				:from from-alist :to to :kind
 				:vector :offset (- min))))
        (t
-	(make-alien-enum-type :name name :bits bits :signed signed
+	(make-alien-enum-type :name name :signed signed
 			      :from from-alist
 			      :to (mapcar #'(lambda (x) (cons (cdr x) (car x)))
 					  from-alist)
