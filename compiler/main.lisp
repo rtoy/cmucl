@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.53 1992/02/21 18:41:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.54 1992/02/25 07:16:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1366,7 +1366,10 @@
 	   (*last-message-count* 0)
 	   (*info-environment*
 	    (or (backend-info-environment *backend*)
-		*info-environment*)))
+		*info-environment*))
+	   (*features*
+	    (or (backend-features *backend*)
+		*features*)))
       (with-compilation-unit ()
 	(loop
 	  (multiple-value-bind (form tlf eof-p)
@@ -1679,6 +1682,9 @@
 	     (*info-environment*
 	      (or (backend-info-environment *backend*)
 		  *info-environment*))
+	     (*features*
+	      (or (backend-features *backend*)
+		  *features*))
 	     (start-errors *compiler-error-count*)
 	     (start-warnings *compiler-warning-count*)
 	     (start-notes *compiler-note-count*)
