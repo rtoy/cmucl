@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.45 1990/07/19 18:40:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.46 1990/07/23 18:52:40 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -83,6 +83,9 @@
 (in-package "BIGNUM")
 (in-package "DEBUG")
 (in-package "DEBUG-INTERNALS" :nicknames '("DI"))
+(in-package "MACH")
+(in-package "USER")
+(in-pacakge "XP")
 
 
 (in-package "LISP")
@@ -328,7 +331,8 @@
 	  %double-float decode-single-float decode-double-float
 	  integer-decode-single-float integer-decode-double-float
 	  scale-single-float scale-double-float single-float-exponent
-	  double-float-exponent float-format-digits get-closure-length))
+	  double-float-exponent float-format-digits get-closure-length
+	  set-header-data signal-init))
 
 
 (in-package "EXTENSIONS")
@@ -690,3 +694,11 @@
 
 	  debug-error unhandled-condition invalid-control-stack-pointer
 	  unknown-code-location unknown-debug-variable invalid-value))
+
+
+(in-package "MACH")
+
+(use-package "SYSTEM")
+(use-package "KERNEL")
+(use-package "EXT")
+
