@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.38 1992/04/19 13:14:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.39 1992/05/18 17:55:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.38 1992/04/19 13:14:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.39 1992/05/18 17:55:49 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -429,7 +429,8 @@
 ;;;    We dump a trap object as a placeholder for the code vector, which is
 ;;; actually filled in by the loader.
 ;;;
-(defun dump-code-object (component code-segment code-length trace-table file)
+(defun dump-code-object (component code-segment code-length
+				   trace-table fixups file)
   (declare (type component component) (type fasl-file file)
 	   (list trace-table) (type index code-length))
   (let* ((2comp (component-info component))
@@ -487,37 +488,56 @@
 	       (dump-unsigned-32 total-length file))))
 
       (flush-fasl-file-buffer file)
-      (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment)))
-	(dump-i-vector trace-table file t)
-	(let ((handle (dump-pop file)))
-	  (dump-fixups handle fixups file)
-	  (dolist (patch (patches))
-	    (push (cons handle (cdr patch))
-		  (gethash (car patch) (fasl-file-patch-table file))))
-	  handle)))))
+      (if (backend-featurep :new-assembler)
+	  (let* ((stream (fasl-file-stream file))
+		 (posn (file-position stream)))
+	    (new-assem:segment-map-output
+	     code-segment
+	     #'(lambda (sap amount)
+		 (system:output-raw-bytes stream sap 0 amount)))
+	    (unless (= (- (file-position stream) posn) code-length)
+	      (error "Tried to output ~D bytes, but only ~D made it."
+		     code-length (- (file-position stream) posn))))
+	  (setf fixups
+		(assem:emit-code-vector (fasl-file-stream file) code-segment)))
+      (dump-i-vector trace-table file t)
+      (let ((handle (dump-pop file)))
+	(dump-fixups handle fixups file)
+	(dolist (patch (patches))
+	  (push (cons handle (cdr patch))
+		(gethash (car patch) (fasl-file-patch-table file))))
+	handle))))
 
 
-(defun dump-assembler-routines (code-segment length routines file)
+(defun dump-assembler-routines (code-segment length fixups routines file)
   (dump-fop 'lisp::fop-assembler-code file)
   (dump-unsigned-32 length file)
   (flush-fasl-file-buffer file)
-  (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment)))
-    (dolist (routine routines)
-      (dump-fop 'lisp::fop-normal-load file)
-      (let ((*cold-load-dump* t))
-	(dump-object (car routine) file))
-      (dump-fop 'lisp::fop-maybe-cold-load file)
-      (dump-fop 'lisp::fop-assembler-routine file)
-      (dump-unsigned-32 (label-position (cdr routine)) file))
-    (let ((handle (dump-pop file)))
-      (dump-fixups handle fixups file)
-      handle)))
+  (if (backend-featurep :new-assembler)
+      (let ((stream (fasl-file-stream file)))
+	(new-assem:segment-map-output
+	 code-segment
+	 #'(lambda (sap amount)
+	     (system:output-raw-bytes stream sap 0 amount))))
+      (setf fixups
+	    (assem:emit-code-vector (fasl-file-stream file) code-segment)))
+  (dolist (routine routines)
+    (dump-fop 'lisp::fop-normal-load file)
+    (let ((*cold-load-dump* t))
+      (dump-object (car routine) file))
+    (dump-fop 'lisp::fop-maybe-cold-load file)
+    (dump-fop 'lisp::fop-assembler-routine file)
+    (dump-unsigned-32 (label-position (cdr routine)) file))
+  (let ((handle (dump-pop file)))
+    (dump-fixups handle fixups file)
+    handle))
 
 ;;; Dump-Fixups  --  Internal
 ;;;
-;;;    Dump all the fixups.  Currently there are only miscop fixups, and we
-;;; always access them by name rather than number.  There is no reason for
-;;; using miscop numbers other than a minor load-time efficiency win.
+;;; Dump all the fixups.  Currently there are three flavors of fixup:
+;;;  - assembly routines: named by a symbol
+;;;  - foreign (C) symbols: named by a string
+;;;  - code object references: don't need a name.
 ;;;
 (defun dump-fixups (code-handle fixups file)
   (declare (type index code-handle) (list fixups)
@@ -549,7 +569,9 @@
 	     (assert (< len 256))
 	     (dump-byte len file)
 	     (dotimes (i len)
-	       (dump-byte (char-code (schar name i)) file)))))
+	       (dump-byte (char-code (schar name i)) file))))
+	  (:code-object
+	   (dump-fop 'lisp::fop-code-object-fixup file)))
 	(dump-unsigned-32 offset file)))
     (dump-fop 'lisp::fop-pop-for-effect file))
   (undefined-value))
@@ -599,7 +621,8 @@
 ;;;    Dump the code, constants, etc. for component.  We pass in the assembler
 ;;; fixups, code vector and node info.
 ;;;
-(defun fasl-dump-component (component code-segment length trace-table file)
+(defun fasl-dump-component (component code-segment length trace-table
+				      fixups file)
   (declare (type component component) (list trace-table) (type fasl-file file))
 
   (dump-fop 'lisp::fop-verify-empty-stack file)
@@ -607,7 +630,7 @@
   (dump-unsigned-32 (fasl-file-table-free file) file)
 
   (let ((code-handle (dump-code-object component code-segment
-				       length trace-table file))
+				       length trace-table fixups file))
 	(2comp (component-info component)))
     (dump-fop 'lisp::fop-verify-empty-stack file)
 

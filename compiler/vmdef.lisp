@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.40 1991/12/15 12:10:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.41 1992/05/18 17:55:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,9 +289,13 @@
 	     (setf (svref (sc-move-functions to-sc) num) ',name)
 	     (setf (svref (sc-load-costs to-sc) num) ',cost)))))
 
-     (defun ,name ,lambda-list
-       (assemble (*code-segment* ,(first lambda-list))
-	 ,@body))))
+     ,(if (target-featurep :new-assembler)
+	  `(defun ,name ,lambda-list
+	     (new-assem:assemble (*code-segment* ,(first lambda-list))
+	       ,@body))
+	  `(defun ,name ,lambda-list
+	     (assem:assemble (*code-segment* ,(first lambda-list))
+	       ,@body)))))
 
 
 (defconstant sc-vop-slots '((:move . sc-move-vops)
@@ -1200,8 +1204,11 @@
 		  ,@(binds))
 	     (declare (ignore ,@(vop-parse-ignores parse)))
 	     ,@(loads)
-	     (assemble (*code-segment* ,n-vop)
-	       ,@(vop-parse-body parse))
+	     ,(if (target-featurep :new-assembler)
+		  `(new-assem:assemble (*code-segment* ,n-vop)
+		     ,@(vop-parse-body parse))
+		  `(assem:assemble (*code-segment* ,n-vop)
+		     ,@(vop-parse-body parse)))
 	     ,@(saves))))))
 
 

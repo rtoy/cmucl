@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.61 1992/05/16 23:51:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.62 1992/05/18 17:55:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,73 +233,83 @@
       ;; this won't delete anything.
       (dfo-as-needed component))
 
-    (maybe-mumble "IR2Tran ")
-    (init-assembler)
-    (entry-analyze component)
-    (ir2-convert component)
-
-    (when (policy nil (>= speed cspeed))
-      (maybe-mumble "Copy ")
-      (copy-propagate component))
-
-    (select-representations component)
-
-    (when *check-consistency*
-      (maybe-mumble "Check2 ")
-      (check-ir2-consistency component))
-
-    (delete-unreferenced-tns component)
-    
-    (maybe-mumble "Life ")
-    (lifetime-analyze component)
-
-    (when *compile-progress*
-      (compiler-mumble "") ; Sync before doing random output.
-      (pre-pack-tn-stats component *compiler-error-output*))
-
-    (when *check-consistency*
-      (maybe-mumble "CheckL ")
-      (check-life-consistency component))
-
-    (maybe-mumble "Pack ")
-    (pack component)
-
-    (when *check-consistency*
-      (maybe-mumble "CheckP ")
-      (check-pack-consistency component))
-
-    (when *compiler-trace-output*
-      (describe-component component *compiler-trace-output*))
-    
-    (maybe-mumble "Code ")
-    (multiple-value-bind
-	(length trace-table)
-	(generate-code component)
-      
-      (when *compiler-trace-output*
-	(format *compiler-trace-output*
-		"~|~%Assembly code for ~S~2%"
-		component)
-	(dump-segment *code-segment* :stream *compiler-trace-output*))
-
-      (when *count-vop-usages*
-	(count-vops component))
-
-      (when *collect-dynamic-statistics*
-	(setup-dynamic-count-info component))
-
-      (etypecase *compile-object*
-	(fasl-file
-	 (maybe-mumble "FASL")
-	 (fasl-dump-component component *code-segment*
-			      length trace-table *compile-object*))
-	(core-object
-	 (maybe-mumble "Core")
-	 (make-core-component component *code-segment*
-			      length trace-table *compile-object*))
-	(null))
-
-      (nuke-segment *code-segment*)))
+    (unwind-protect
+	(progn
+	  (maybe-mumble "IR2Tran ")
+	  (init-assembler)
+	  (entry-analyze component)
+	  (ir2-convert component)
+	  
+	  (when (policy nil (>= speed cspeed))
+	    (maybe-mumble "Copy ")
+	    (copy-propagate component))
+	  
+	  (select-representations component)
+	  
+	  (when *check-consistency*
+	    (maybe-mumble "Check2 ")
+	    (check-ir2-consistency component))
+	  
+	  (delete-unreferenced-tns component)
+	  
+	  (maybe-mumble "Life ")
+	  (lifetime-analyze component)
+	  
+	  (when *compile-progress*
+	    (compiler-mumble "") ; Sync before doing random output.
+	    (pre-pack-tn-stats component *compiler-error-output*))
+	  
+	  (when *check-consistency*
+	    (maybe-mumble "CheckL ")
+	    (check-life-consistency component))
+	  
+	  (maybe-mumble "Pack ")
+	  (pack component)
+	  
+	  (when *check-consistency*
+	    (maybe-mumble "CheckP ")
+	    (check-pack-consistency component))
+	  
+	  (when *compiler-trace-output*
+	    (describe-component component *compiler-trace-output*))
+	  
+	  (maybe-mumble "Code ")
+	  (multiple-value-bind
+	      (length trace-table fixups)
+	      (generate-code component)
+	    
+	    (when (and *compiler-trace-output*
+		       (not (backend-featurep :new-assembler)))
+	      (format *compiler-trace-output*
+		      "~|~%Assembly code for ~S~2%"
+		      component)
+	      (assem:dump-segment *code-segment* :stream *compiler-trace-output*))
+	    
+	    (when *count-vop-usages*
+	      (count-vops component))
+	    
+	    (when *collect-dynamic-statistics*
+	      (setup-dynamic-count-info component))
+	    
+	    (etypecase *compile-object*
+	      (fasl-file
+	       (maybe-mumble "FASL")
+	       (fasl-dump-component component *code-segment*
+				    length trace-table fixups
+				    *compile-object*))
+	      (core-object
+	       (maybe-mumble "Core")
+	       (make-core-component component *code-segment*
+				    length trace-table *compile-object*))
+	      (null))))
+	    
+      (cond ((backend-featurep :new-assembler)
+	     (when *code-segment*
+	       (new-assem:release-segment *code-segment*))
+	     (when *elsewhere*
+	       (new-assem:release-segment *elsewhere*)))
+	    (t
+	     (assem:nuke-segment *code-segment*)))))
 
   (when *compile-print*
     (compiler-mumble "~&"))

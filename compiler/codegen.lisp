@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.15 1991/08/25 18:14:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.16 1992/05/18 17:55:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,8 +22,10 @@
 
 (export '(component-header-length sb-allocated-size current-nfp-tn
 	  callee-nfp-tn callee-return-pc-tn *code-segment* *elsewhere*
-	  trace-table-entry pack-trace-table))
+	  trace-table-entry pack-trace-table note-fixup
+	  fixup fixup-p make-fixup fixup-name fixup-flavor fixup-offset))
 
+
 ;;;; Utilities used during code generation.
 
 ;;; Component-Header-Length   --  Interface
@@ -73,19 +75,52 @@
   designated by 2env."
   (ir2-environment-return-pc-pass 2env))
 
+
 
-;;;; Generate-code and support routines.
+;;;; Fixups
+
+;;; FIXUP -- A fixup of some kind.
+;;;
+(defstruct (fixup
+	    (:constructor make-fixup (name flavor &optional offset)))
+  ;; The name and flavor of the fixup.  The assembler makes no assumptions
+  ;; about the contents of these fields; their semantics are imposed by the
+  ;; dumper.
+  name
+  flavor
+  ;; An optional offset from whatever external label this fixup refers to.
+  offset)
+
+(defun %print-fixup (fixup stream depth)
+  (declare (ignore depth))
+  (format stream "#<~S fixup ~S~@[ offset=~S~]>"
+	  (fixup-flavor fixup)
+	  (fixup-name fixup)
+	  (fixup-offset fixup)))
+
+(defvar *fixups*)
+
+;;; NOTE-FIXUP -- interface.
+;;;
+;;; This function is called by the (new-assembler) instruction emitters that
+;;; find themselves trying to deal with a fixup.
+;;; 
+(defun note-fixup (segment kind fixup)
+  (new-assem:emit-back-patch
+   segment 0
+   #'(lambda (segment posn)
+       (declare (ignore segment))
+       (push (list kind fixup posn) *fixups*)))
+  (undefined-value))
+
+
+
+;;;; Specials used during code generation.
 
 (defvar *trace-table-info*)
 (defvar *code-segment* nil)
 (defvar *elsewhere* nil)
-
-;;; Init-Assembler  --  Interface
-;;; 
-(defun init-assembler ()
-  (setf *code-segment* (make-segment))
-  (setf *elsewhere* (make-segment))
-  (undefined-value))
+(defvar *elsewhere-label* nil)
 
 (defvar *assembly-optimize* t
   "Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
@@ -94,17 +129,105 @@
 (defvar *assembly-check* nil
   "Set to T to enable lifetime consistency checking of the assembly code.")
 
+
+;;;; Noise to emit an instruction trace.
+
+(defvar *prev-segment*)
+(defvar *prev-vop*)
+
+(defun trace-instruction (segment vop inst args)
+  (let ((*standard-output* *compiler-trace-output*))
+    (unless (eq *prev-segment* segment)
+      (format t "In the ~A segment:~%" (new-assem:segment-name segment))
+      (setf *prev-segment* segment))
+    (unless (eq *prev-vop* vop)
+      (when vop
+	(format t "~%VOP ")
+	(if (vop-p vop)
+	    (print-vop vop)
+	    (format *compiler-trace-output* "~S~%" vop)))
+      (terpri)
+      (setf *prev-vop* vop))
+    (case inst
+      (:label
+       (format t "~A:~%" args))
+      (:align
+       (format t "~0,8T.align~0,8T~A~%" args))
+      (t
+       (format t "~0,8T~A~@[~0,8T~{~A~^, ~}~]~%" inst args))))
+  (undefined-value))
+
+
+
+;;;; Hooks used to dispatch between the two different assemblers.
+
+(defun make-segment (&optional name)
+  (if (backend-featurep :new-assembler)
+      (new-assem:make-segment
+       :name name
+       :run-scheduler
+       (and *assembly-optimize*
+	    (policy (lambda-bind
+		     (block-home-lambda
+		      (block-next (component-head *compile-component*))))
+		    (or (>= speed cspeed) (>= space cspeed))))
+       :inst-hook (if *compiler-trace-output* #'trace-instruction))
+      (assem:make-segment)))
+
+(deftype label ()
+  '(or new-assem:label assem:label))
+
+(defun gen-label ()
+  (if (backend-featurep :new-assembler)
+      (new-assem:gen-label)
+      (assem:gen-label)))
+
+(defun emit-label (label)
+  (if (backend-featurep :new-assembler)
+      (new-assem:emit-label label)
+      (assem:emit-label label)))
+
+(defun label-position (label)
+  (if (backend-featurep :new-assembler)
+      (new-assem:label-position label)
+      (assem:label-position label)))
+
+
+;;;; Generate-code and support routines.
+
+;;; Init-Assembler  --  Interface
+;;; 
+(defun init-assembler ()
+  (setf *code-segment* (make-segment "Regular"))
+  (setf *elsewhere* (make-segment "Elsewhere"))
+  (undefined-value))
+
 ;;; Generate-Code  --  Interface
 ;;;
 (defun generate-code (component)
+  (when (and *compiler-trace-output* (backend-featurep :new-assembler))
+    (format *compiler-trace-output*
+	    "~|~%Assembly code for ~S~2%"
+	    component))
   (let ((prev-env nil)
-	(*trace-table-info* nil))
+	(*trace-table-info* nil)
+	(*prev-segment* nil)
+	(*prev-vop* nil)
+	(*fixups* nil))
+    (when (backend-featurep :new-assembler)
+      (let ((label (new-assem:gen-label)))
+	(setf *elsewhere-label* label)
+	(new-assem:assemble (*elsewhere*)
+	  (new-assem:emit-label label))))
     (do-ir2-blocks (block component)
       (let ((1block (ir2-block-block block)))
 	(when (and (eq (block-info 1block) block)
 		   (block-start 1block))
-	  (assemble (*code-segment* nil)
-	    (emit-label (block-label 1block)))
+	  (if (backend-featurep :new-assembler)
+	      (new-assem:assemble (*code-segment*)
+		(new-assem:emit-label (block-label 1block)))
+	      (assem:assemble (*code-segment* nil)
+		(assem:emit-label (block-label 1block))))
 	  (let ((env (block-environment 1block)))
 	    (unless (eq env prev-env)
 	      (let ((lab (gen-label)))
@@ -121,27 +244,39 @@
 	      (format t "Missing generator for ~S.~%"
 		      (template-name (vop-info vop)))))))
     
-    (assemble (*code-segment* nil)
-      (insert-segment *elsewhere*))
-    (expand-pseudo-instructions *code-segment*)
-    (when *assembly-check*
-      (segment-check-registers *code-segment* *elsewhere*))
-    
-    (when (and (policy (lambda-bind
-			(block-home-lambda
-			 (block-next (component-head component))))
-		       (or (>= speed cspeed) (>= space cspeed)))
-	       *assembly-optimize*)
-      (optimize-segment *code-segment*))
-    (let ((length (finalize-segment *code-segment*)))
-      (values length (nreverse *trace-table-info*)))))
+    (cond ((backend-featurep :new-assembler)
+	   (new-assem:append-segment *code-segment* *elsewhere*)
+	   (setf *elsewhere* nil)
+	   (values (new-assem:finalize-segment *code-segment*)
+		   (nreverse *trace-table-info*)
+		   *fixups*))
+	  (t
+	   (assem:assemble (*code-segment* nil)
+	     (assem:insert-segment *elsewhere*))
+	   (assem:expand-pseudo-instructions *code-segment*)
+	   (when *assembly-check*
+	     (assem:segment-check-registers *code-segment* *elsewhere*))
+	   (when (and (policy (lambda-bind
+			       (block-home-lambda
+				(block-next (component-head component))))
+			      (or (>= speed cspeed) (>= space cspeed)))
+		      *assembly-optimize*)
+	     (assem:optimize-segment *code-segment*))
+	   (let ((length (assem:finalize-segment *code-segment*)))
+	     (values length (nreverse *trace-table-info*)))))))
 
 (defun emit-label-elsewhere (label)
-  (assemble (*elsewhere* nil)
-    (emit-label label)))
+  (if (backend-featurep :new-assembler)
+      (new-assem:assemble (*elsewhere*)
+	(new-assem:emit-label label))
+      (assem:assemble (*elsewhere* nil)
+	(assem:emit-label label))))
 
 (defun label-elsewhere-p (label)
-  (<= (label-position *elsewhere*) (label-position label)))
+  (<= (label-position (if (backend-featurep :new-assembler)
+			  *elsewhere-label*
+			  *elsewhere*))
+      (label-position label)))
 
 (defun trace-table-entry (state)
   (let ((label (gen-label)))
@@ -161,6 +296,7 @@
 ;;;
 (defun pack-trace-table (table)
   (declare (list table))
+  #+nil
   (let ((last-posn 0)
 	(last-state 0)
 	(result (make-array (length table)
@@ -189,4 +325,7 @@
 	(setf last-state state)))
     (if (eql (length result) index)
 	result
-	(subseq result 0 index))))
+	(subseq result 0 index)))
+  ;; ### Hack 'cause this stuff doesn't work.
+  (declare (ignore table))
+  (make-array 0 :element-type '(unsigned-byte #.bits-per-entry)))
