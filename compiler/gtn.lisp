@@ -22,21 +22,20 @@
 
 ;;; GTN-Analyze  --  Interface
 ;;;
-;;;    We make two passes over the component's environments.  First we assign
-;;; TNs for local variables, then we assign argument passing locations and
-;;; return conventions.
+;;;    We make a pass over the component's environments, assigning argument
+;;; passing locations and return conventions and TNs for local variables.
 ;;;
 (defun gtn-analyze (component)
   (setf (component-info component) (make-ir2-component))
   (let ((funs (component-lambdas component)))
     (dolist (fun funs)
-      (assign-lambda-var-tns fun nil)
-      (dolist (let (lambda-lets fun))
-	(assign-lambda-var-tns let t)))
-    (dolist (fun funs)
       (assign-ir2-environment fun)
       (assign-return-locations fun)
-      (assign-ir2-nlx-info fun)))
+      (assign-ir2-nlx-info fun)
+      (assign-lambda-var-tns fun nil)
+      (dolist (let (lambda-lets fun))
+	(assign-lambda-var-tns let t))))
+
   (undefined-value))
 
 
@@ -59,7 +58,7 @@
 	     (res (if (or let-p
 			  (policy (lambda-bind fun) (= speed 3)))
 		      (make-normal-tn type)
-		      (make-environment-tn type))))
+		      (make-environment-tn type (lambda-environment fun)))))
 	(setf (tn-leaf res) var)
 	(setf (leaf-info var) res))))
   (undefined-value))
@@ -87,12 +86,12 @@
 		      (if (minusp i)
 			  (make-argument-count-location)
 			  (standard-argument-location i))
-		      (make-normal-tn #|(tn-primitive-type (leaf-info var))||#
+		      (make-normal-tn #|(primitive-type (leaf-type var))||#
 				      *any-primitive-type*))))))
       
       (dolist (thing (environment-closure env))
 	(let ((ptype (etypecase thing
-		       (lambda-var (tn-primitive-type (leaf-info thing)))
+		       (lambda-var (primitive-type (leaf-type thing)))
 		       (nlx-info *any-primitive-type*))))
 	  (unless xep-p 
 	    (args (make-normal-tn ptype)))
