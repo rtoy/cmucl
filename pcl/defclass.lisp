@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.22 2002/08/27 18:46:49 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.23 2002/09/09 14:54:37 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -54,21 +54,10 @@
 		       (capitalize-words (car name) ()) (cdr name))
 	       (format nil "~S" name))))
     (definition-name)
-    (if (member 'compile times)
+    (if (or (member 'compile times)
+	    (member :compile-toplevel times))
         `(eval-when ,times ,form)
         form)))
-
-(defun make-progn (&rest forms)
-  (let ((progn-form nil))
-    (labels ((collect-forms (forms)
-	       (unless (null forms)
-		 (collect-forms (cdr forms))
-		 (if (and (listp (car forms))
-			  (eq (caar forms) 'progn))
-		     (collect-forms (cdar forms))
-		     (push (car forms) progn-form)))))
-      (collect-forms forms)
-      (cons 'progn progn-form))))
 
 
 
@@ -133,7 +122,7 @@
       (if (not (listp option))
           (simple-program-error "~S is not a legal defclass option."
 				option)
-          (when (eq (car option) ':metaclass)
+          (when (eq (car option) :metaclass)
             (unless (legal-class-name-p (cadr option))
               (simple-program-error
 	       "The value of the :metaclass option (~S) is not a~%~
