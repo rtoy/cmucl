@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.22 1992/05/15 21:51:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.23 1992/05/16 01:08:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -686,10 +686,10 @@
     (unless (eq use :default)
       (let ((old-use-list (package-use-list package))
 	    (new-use-list (mapcar #'package-or-lose use)))
-	(dolist (other-package (set-difference new-use-list old-use-list))
-	  (use-package other-package package))
-	(dolist (other-package (set-difference old-use-list new-use-list))
-	  (unuse-package other-package package))))
+	(use-package (set-difference new-use-list old-use-list) package)
+	(let ((laterize (set-difference old-use-list new-use-list)))
+	  (unuse-package other-package package)
+	  (warn "~A used to use the following packages:~%  ~S" laterize))))
     ;; Import and Intern.
     (dolist (sym-name interns)
       (intern sym-name package))
@@ -807,8 +807,7 @@
 	 (warn "Old-style IN-PACKAGE.")
 	 `(old-in-package ,package ,@noise))
 	(t
-	 `(eval-when (compile load eval)
-	    (%in-package ',(stringify-name package "package"))))))
+	 `(%in-package ',(stringify-name package "package")))))
 ;;;
 (defun %in-package (name)
   (setf *package* (package-or-lose name)))
