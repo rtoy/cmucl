@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.47 1992/08/04 14:10:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.48 1992/08/16 19:35:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.47 1992/08/04 14:10:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.48 1992/08/16 19:35:26 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -127,21 +127,21 @@
        (:args (x :target r :scs (any-reg))
 	      (y :target r :scs (any-reg)))
        (:translate ,translate)
-       (:generator ,cost
+       (:generator ,(1+ cost)
 	 (inst ,op r x y)))
      (define-vop (,(symbolicate "FAST-" translate "/SIGNED=>SIGNED")
 		  fast-signed-binop)
        (:args (x :target r :scs (signed-reg))
 	      (y :target r :scs (signed-reg)))
        (:translate ,translate)
-       (:generator ,untagged-cost
+       (:generator ,(1+ untagged-cost)
 	 (inst ,op r x y)))
      (define-vop (,(symbolicate "FAST-" translate "/UNSIGNED=>UNSIGNED")
 		  fast-unsigned-binop)
        (:args (x :target r :scs (unsigned-reg))
 	      (y :target r :scs (unsigned-reg)))
        (:translate ,translate)
-       (:generator ,untagged-cost
+       (:generator ,(1+ untagged-cost)
 	 (inst ,op r x y)))
      (define-vop (,(symbolicate "FAST-" translate "-C/FIXNUM=>FIXNUM")
 		  fast-fixnum-c-binop)
@@ -162,14 +162,14 @@
        (:generator ,untagged-cost
 	 (inst ,op r x y)))))
 
-(define-binop + 2 6 addu (signed-byte 14) (signed-byte 16))
-(define-binop - 2 6 subu
+(define-binop + 1 5 addu (signed-byte 14) (signed-byte 16))
+(define-binop - 1 5 subu
   (integer #.(- (1- (ash 1 14))) #.(ash 1 14))
   (integer #.(- (1- (ash 1 16))) #.(ash 1 16)))
-(define-binop logior 1 2 or (unsigned-byte 14) (unsigned-byte 16))
-(define-binop lognor 1 2 nor (unsigned-byte 14) (unsigned-byte 16))
-(define-binop logand 1 2 and (unsigned-byte 14) (unsigned-byte 16))
-(define-binop logxor 1 2 xor (unsigned-byte 14) (unsigned-byte 16))
+(define-binop logior 1 3 or (unsigned-byte 14) (unsigned-byte 16))
+(define-binop lognor 1 3 nor (unsigned-byte 14) (unsigned-byte 16))
+(define-binop logand 1 3 and (unsigned-byte 14) (unsigned-byte 16))
+(define-binop logxor 1 3 xor (unsigned-byte 14) (unsigned-byte 16))
 
 ;;; Special case fixnum + and - that trap on overflow.  Useful when we don't
 ;;; know that the result is going to be a fixnum.
@@ -389,9 +389,6 @@
     (inst div x y)
     (inst mflo q)
     (inst mfhi r)))
-
-
-
 
 
 
