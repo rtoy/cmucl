@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.3 1991/04/23 01:23:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.4 1991/05/15 09:59:18 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -157,7 +157,7 @@
   ;; fixnum lowtag.  Without this, the result if off by a factor of 16, but we
   ;; want it off by a factor of 4 (the fixnum lowtag).
   (move temp x)
-  (inst sr temp 2)
+  (inst sar temp 2)
   ;; Setup system register for multiply.
   (inst mtmqscr temp)
 
