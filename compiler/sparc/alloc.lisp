@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.6 1992/12/13 15:23:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.7 1992/12/16 18:21:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,6 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :type list :to (:result 0) :target result)
 	      res)
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:info num)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
@@ -172,14 +171,13 @@
   (:info name words type lowtag)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
-  (:temporary (:scs (any-reg)) temp1 temp2)
+  (:temporary (:scs (any-reg)) bytes header)
   (:generator 6
-    (pseudo-atomic (pa-flag)
+    (inst add bytes extra (* (1+ words) word-bytes))
+    (inst sll header bytes (- type-bits 2))
+    (inst add header header (+ (ash -2 type-bits) type))
+    (inst and bytes (lognot lowtag-mask))
+    (pseudo-atomic ()
       (inst or result alloc-tn lowtag)
-      (inst add temp1 extra (fixnum (1- words)))
-      (inst sll temp2 temp2 (- type-bits 2))
-      (inst or temp2 temp2 type)
-      (storew temp2 result 0 lowtag)
-      (inst li temp2 (lognot lowtag-mask))
-      (inst and temp1 temp1 temp2)
-      (inst add alloc-tn alloc-tn temp1))))
+      (storew header result 0 lowtag)
+      (inst add alloc-tn alloc-tn bytes))))
