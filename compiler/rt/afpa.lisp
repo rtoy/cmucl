@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/afpa.lisp,v 1.2 1991/08/25 19:04:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/afpa.lisp,v 1.3 1992/02/01 13:55:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,6 @@
 ;;;
 (in-package "RT")
 
-
 ;;;; Status register formats.
 
 (defconstant afpa-rounding-mode-byte (byte 2 (- 31 24)))
@@ -34,6 +33,32 @@
 (defconstant afpa-compare-eql #b01)
 (defconstant afpa-compare-lss #b10)
 (defconstant afpa-compare-unordered #b11)
+
+;;; ### Note: the following status register constants are totally bogus (are
+;;; actually for the mc68881, and exist only to make some code compile without
+;;; errors.
+;;;
+;;; Encoding of float exceptions in the FLOATING-POINT-MODES result.  This is
+;;; also the encoding used in the mc68881 accrued exceptions.
+;;;
+(defconstant float-inexact-trap-bit (ash 1 0))
+(defconstant float-divide-by-zero-trap-bit (ash 1 1))
+(defconstant float-underflow-trap-bit (ash 1 2))
+(defconstant float-overflow-trap-bit (ash 1 3))
+(defconstant float-invalid-trap-bit (ash 1 4))
+
+(defconstant float-round-to-nearest 0)
+(defconstant float-round-to-zero 1)
+(defconstant float-round-to-negative 2)
+(defconstant float-round-to-positive 3)
+
+;;; Positions of bits in the FLOATING-POINT-MODES result.
+;;;
+(defconstant float-rounding-mode (byte 2 0))
+(defconstant float-sticky-bits (byte 5 2))
+(defconstant float-traps-byte (byte 5 7))
+(defconstant float-exceptions-byte (byte 5 12))
+(defconstant float-fast-bit 0)
 
 
 ;;;; Move functions:
