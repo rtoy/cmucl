@@ -7,7 +7,9 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;;    This file contains the RT VM definition of character operations.
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.4 1990/03/22 23:53:02 ch Exp $
+;;; 
+;;; This file contains the RT VM definition of character operations.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;; Converted for the MIPS R2000 by Christopher Hoover.
@@ -71,7 +73,7 @@
   (:translate char-code)
   (:policy :fast-safe)
   (:generator 0
-    (move res ch)))
+    (inst sll res ch 2)))
 
 (define-vop (code-char)
   (:args (code :scs (any-reg descriptor-reg) :target res))
@@ -80,7 +82,7 @@
   (:translate code-char)
   (:policy :fast-safe)
   (:generator 0
-    (move res code)))
+    (inst srl res code 2)))
 
 ;;; Comparison of base-characters -- works for boxed and unboxed
 ;;; characters since we don't have bits, etc.
