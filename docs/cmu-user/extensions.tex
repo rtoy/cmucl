@@ -1130,7 +1130,7 @@ size of each saved Lisp image, typically at least 20 megabytes.
     \args{\var{file}
       \keys{\kwd{purify} \kwd{root-structures} \kwd{init-function}}
       \morekeys{\kwd{load-init-file} \kwd{print-herald} \kwd{site-init}}
-      \yetmorekeys{\kwd{process-command-line}}}}
+      \yetmorekeys{\kwd{process-command-line} \kwd{batch-mode}}}}
   
   The \code{save-lisp} function saves the state of the currently
   running Lisp core image in \var{file}.  The keyword arguments have
@@ -1173,6 +1173,11 @@ size of each saved Lisp image, typically at least 20 megabytes.
   \item[\kwd{process-command-line}] If non-NIL (the default),
     processes the command line switches and performs the appropriate
     actions.
+
+  \item[\kwd{batch-mode}] If NIL (the default), then the presence of
+    the -batch command-line switch will invoke batch-mode processing
+    upon resuming the saved core.  If non-NIL, the produced core will
+    always be in batch-mode, regardless of any command-line switches.
   \end{Lentry}
 \end{defun}
 
