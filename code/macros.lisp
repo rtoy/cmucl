@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.34 1992/08/13 13:31:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.35 1992/09/01 17:41:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1436,15 +1436,20 @@
 
 ;;; We repeatedly bind the var instead of setting it so that we never give the
 ;;; var a random value such as NIL (which might conflict with a declaration).
-;;; ### Might not be legal...
+;;; If there is a result form, we introduce a gratitous binding of the variable
+;;; to NIL w/o the declarations, then evaluate the result form in that
+;;; environment.  We spuriously reference the gratuitous variable, since we
+;;; don't want to use IGNORABLE on what might be a special var.
 ;;;
 (defmacro dolist ((var list &optional (result nil)) &body body)
   (let ((n-list (gensym)))
     `(do ((,n-list ,list (cdr ,n-list)))
 	 ((endp ,n-list)
-	  (let ((,var nil))
-	    (declare (ignorable ,var))
-	    ,result))
+	  ,@(if result
+		`((let ((,var nil))
+		    ,var
+		    ,result))
+		'(nil)))
        (let ((,var (car ,n-list)))
 	 ,@body))))
 
