@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.39 1991/12/12 14:59:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.40 1991/12/19 22:11:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1441,6 +1441,12 @@
   (undefined-value))
 
 
+;;; Cleanup-point doesn't to anything except prevent the body from being
+;;; entirely deleted.
+;;;
+(defoptimizer (%cleanup-point ir2-convert) (() node block) node block)
+
+  
 ;;; This function invalidates a lexical exit on exiting from the dynamic
 ;;; extent.  This is done by storing 0 into the indirect value cell that holds
 ;;; the closed unwind block.
