@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.56 2003/05/15 21:40:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.57 2003/05/19 16:13:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2074,7 +2074,7 @@
 ;;;
 ;;; Examples: 
 
-#|
+#||
 ;;; Example 1:
 
 (defcallback foo (int (arg1 int) (arg2 int))
@@ -2110,7 +2110,7 @@
 	 (callback my<))
   (print a))
 
-|#
+||#
 
 (defstruct (callback 
 	     (:constructor make-callback (trampoline lisp-fn return-type)))
@@ -2118,7 +2118,7 @@
 and a lisp function.  We store the return-type, so we can detect
 incompatible redefinitions."
   (trampoline (required-argument) :type system-area-pointer)
-  (lisp-fn (required-argument) :type (function (fixnum) (values)))
+  (lisp-fn (required-argument) :type (function (fixnum fixnum) (values)))
   (return-type (required-argument) :type alien::alien-type))
 
 (declaim (type (vector callback) *callbacks*))
