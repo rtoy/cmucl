@@ -438,8 +438,14 @@
 
   (setf (block-end-cleanup block1) (block-end-cleanup block2))
 
-  (setf (block-reoptimize block1)
-	(or (block-reoptimize block1) (block-reoptimize block2)))
+  (when (block-reoptimize block2)
+    (setf (block-reoptimize block1) t))
+  (when (block-flush-p block2)
+    (setf (block-flush-p block1) t))
+  (when (block-type-check block2)
+    (setf (block-type-check block1) t))
+  (assert (not (block-delete-p block2)))
+
   (setf (block-type-asserted block1) t)
   (setf (block-test-modified block1) t)
   
@@ -1018,7 +1024,7 @@
 	       dest
 	       (not (typep dest '(or creturn exit mv-combination)))
 	       (eq (lambda-home (block-lambda (node-block ref)))
-		   (lambda-var-home var)))
+		   (lambda-home (lambda-var-home var))))
       (assert-continuation-type arg (continuation-asserted-type cont))
       (change-ref-leaf ref (find-constant nil))
       (substitute-continuation arg cont)
