@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.9 2003/08/22 13:20:03 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.10 2003/10/06 17:33:50 toy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -46,10 +46,6 @@
 
 /* For type_ListPointer and NIL */
 #include "internals.h"
-
-/* block size must be larger than the system page size */
-#define SPARSE_BLOCK_SIZE (1<<15)
-#define SPARSE_SIZE_MASK (SPARSE_BLOCK_SIZE-1)
 
 #define PROT_DEFAULT OS_VM_PROT_ALL
 
