@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.1 1990/02/06 11:43:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.2 1990/02/06 17:48:25 ch Exp $
 ;;;
 ;;; Various commands for dealing with RCS under hemlock.
 ;;; 
@@ -59,8 +59,15 @@
 		(string/= (line-string buffer-line) file-line))
 	(return t)))))
 
+(defun turn-auto-save-off (buffer)
+  (setf (buffer-minor-mode buffer "Save") nil)
+  ;;
+  ;; William's personal hack
+  (when (getstring "Ckp" *mode-names*)
+    (setf (buffer-minor-mode buffer "Ckp") nil)))
+
 (defun rcs-lock-file (pathname)
-  (message "Locking ~A" (namestring pathname))
+  (message "Locking ~A ..." (namestring pathname))
   (in-directory pathname
     (let ((file (file-namestring pathname)))
       (do-command "rcs" `("-l" ,file))
@@ -72,7 +79,7 @@
 	  (mach:unix-chmod file (logior mode mach:writeown)))))))
 
 (defun rcs-unlock-file (pathname)
-  (message "Unlocking ~A" (namestring pathname))
+  (message "Unlocking ~A ..." (namestring pathname))
   (in-directory pathname
     (do-command "rcs" `("-u" ,(file-namestring pathname)))))
 
@@ -94,13 +101,11 @@
 					       (unless allow-delete
 						 (return-from in-recursive-edit
 							      t)))))))
-		(setf (buffer-minor-mode buffer "Save") nil)
-		(when (getstring "Ckp" *mode-names*)
-		  (setf (buffer-minor-mode buffer "Ckp") nil))
+		(turn-auto-save-off buffer)
 		(change-to-buffer buffer)
 		(do-recursive-edit)
 	  
-		(message "Checking in ~A" (namestring pathname))
+		(message "Checking in ~A ..." (namestring pathname))
 		(in-directory pathname
 		  (do-command "rcsci" `(,@(if keep-lock '("-l"))
 					"-U"
@@ -114,7 +119,7 @@
       (delete-buffer buffer))))
 
 (defun rcs-check-out-file (pathname lock)
-  (message "Checking out ~A" (namestring pathname))
+  (message "Checking out ~A ..." (namestring pathname))
   (in-directory pathname
     (let ((backup (lisp::pick-backup-name (namestring pathname))))
       (rename-file pathname backup)
@@ -147,7 +152,7 @@
 			:output (namestring name)))
 	  (when (buffer-different-from-file buffer name)
 	    (message
-	     "RCS file is different, be sure to merge your changes in."))
+	     "RCS file is different: be sure to merge in your changes."))
 	  (setf (buffer-writable buffer) t)
 	  (message "Buffer is now writable."))
       (when (probe-file name)
@@ -158,7 +163,8 @@
   "Prompt for a file, and attempt to lock it."
   (declare (ignore p))
   (rcs-lock-file (prompt-for-file :prompt "File to lock: "
-				  :default (buffer-pathname (current-buffer))
+				  :default (buffer-default-pathname
+					    (current-buffer))
 				  :must-exist nil)))
 
 (defcommand "RCS Unlock Buffer File" (p)
@@ -174,7 +180,8 @@
   "Prompt for a file, and attempt to unlock it."
   (declare (ignore p))
   (rcs-unlock-file (prompt-for-file :prompt "File to unlock: "
-				    :default (buffer-pathname (current-buffer))
+				    :default (buffer-default-pathname
+					      (current-buffer))
 				    :must-exist nil)))
 
 (defcommand "RCS Check In Buffer File" (p)
@@ -196,7 +203,8 @@
   release the lock."
   (rcs-check-in-file (prompt-for-file :prompt "File to lock: "
 				      :default
-				         (buffer-pathname (current-buffer))
+				         (buffer-default-pathname
+					  (current-buffer))
 				      :must-exist nil)
 		     p))
 
@@ -225,7 +233,8 @@
   "Prompt for a file and attempt to check it out.  With an argument, lock the
   file."
   (let ((pathname (prompt-for-file :prompt "File to check out: "
-				   :default (buffer-pathname (current-buffer))
+				   :default (buffer-default-pathname
+					     (current-buffer))
 				   :must-exist nil)))
     (rcs-check-out-file pathname p)
     (find-file-command nil pathname)))
@@ -238,9 +247,7 @@
   (let ((buffer (getstring (value rcs-log-entry-buffer) *buffer-names*)))
     (unless buffer
       (setf buffer (make-buffer (value rcs-log-entry-buffer)))
-      (setf (buffer-minor-mode buffer "Save") nil)
-      (when (getstring "Ckp" *mode-names*)
-	(setf (buffer-minor-mode buffer "Ckp") nil)))
+      (turn-auto-save-off buffer))
     buffer))
 
 (defcommand "RCS Buffer File Log Entry" (p)
@@ -250,7 +257,7 @@
   (let ((buffer (get-log-buffer))
 	(pathname (current-buffer-pathname)))
     (delete-region (buffer-region buffer))
-    (message "Extracing log info.")
+    (message "Extracting log info ...")
     (with-mark ((mark (buffer-start-mark buffer) :left-inserting))
       (in-directory pathname
 	(do-command "rlog" (list (file-namestring pathname))
@@ -260,15 +267,16 @@
     (setf (buffer-modified buffer) nil)))
 
 (defcommand "RCS File Log Entry" (p)
-  "Prompt for a file and get it's RCS log entry in a buffer."
-  "Prompt for a file and get it's RCS log entry in a buffer."
+  "Prompt for a file and get its RCS log entry in a buffer."
+  "Prompt for a file and get its RCS log entry in a buffer."
   (declare (ignore p))
   (let ((file (prompt-for-file :prompt "File to get log of: "
-			       :default (buffer-pathname (current-buffer))
+			       :default (buffer-default-pathname
+					 (current-buffer))
 			       :must-exist nil))
 	(buffer (get-log-buffer)))
     (delete-region (buffer-region buffer))
-    (message "Extracing log info.")
+    (message "Extracing log info ...")
     (with-mark ((mark (buffer-start-mark buffer) :left-inserting))
       (in-directory file
 	(do-command "rlog" (list (file-namestring file))
