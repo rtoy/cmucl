@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.74 1990/10/02 05:39:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.75 1990/10/13 04:55:13 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -253,8 +253,8 @@
 (defstruct (primitive-object
 	    )
   (name nil :type symbol)
-  (header nil :type (or (member t nil) fixnum))
-  (lowtag nil :type (or null fixnum))
+  (header nil :type symbol)
+  (lowtag nil :type symbol)
   (options nil :type list)
   (slots nil :type list)
   (size 0 :type fixnum)
@@ -554,6 +554,9 @@
     two-arg-<= two-arg->= two-arg-/= %negate
     two-arg-and two-arg-ior two-arg-xor
     length two-arg-gcd two-arg-lcm
+
+    ;; Auto GC interface.
+    lisp::maybe-gc
     ))
 
 (defparameter exported-static-symbols
@@ -580,9 +583,10 @@
     lisp::*free-interrupt-context-index*
     mach::*interrupts-enabled*
     mach::*interrupt-pending*
+
+    ;; Auto GC interface.
+    lisp::maybe-gc
     ))
-
-
 
 
 (defun static-symbol-p (symbol)
