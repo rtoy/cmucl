@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.36 2003/08/25 20:51:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.37 2003/09/02 15:00:58 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1297,14 +1297,12 @@
 		       (eq (global-var-kind leaf)
 			   :global-function)))
 	  (let* ((name (global-var-name leaf))
-		 (found (gethash name *two-arg-functions*)))
-	    (output-push-fdefinition
-	     segment
-	     (if (and found
-		      (= (length (basic-combination-args (continuation-dest cont)))
-			 2))
-		 found
-		 name))))
+		 (dest (continuation-dest cont))
+		 (two-arg
+		  (when (and (not (mv-combination-p dest))
+			     (= 2 (length (basic-combination-args dest))))
+		    (gethash name *two-arg-functions*))))
+	    (output-push-fdefinition segment (or two-arg name))))
 	 ((eql values 0)
 	  ;; Real easy!
 	  nil)
