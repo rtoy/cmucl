@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <signal.h>
 
+#include <sys/wait.h>
+
 #define PORT 8000
 
 #define MAX(x,y) ((x<y)?y:x)
@@ -142,6 +144,7 @@ main(int argc, char **argv)
   fd_set rfds;
   int nfound,nfds,i;
   int port = PORT;
+  union wait status;
 
   /* This is so resources can be passed to the servers on the command line */
   global_argc = argc;
@@ -220,5 +223,7 @@ main(int argc, char **argv)
       printf("Accepting client on Inet socket.\n");
       establish_client(inet_socket);
     }
+    /* Prevent zombie children under Mach */
+    wait3(&status,WNOHANG,NULL);
   }
 }
