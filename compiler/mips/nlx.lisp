@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.16 1992/05/21 23:21:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.17 1992/05/21 23:23:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.16 1992/05/21 23:21:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.17 1992/05/21 23:23:29 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -279,6 +279,7 @@
   (:save-p :force-to-stack)
   (:results (block) (start) (count))
   (:ignore block start count)
+  (:vop-var vop)
   (:generator 0
-    (emit-return-pc label)))
-
+    (emit-return-pc label)
+    (note-this-location vop :non-local-entry)))
