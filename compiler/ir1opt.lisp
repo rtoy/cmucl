@@ -708,7 +708,8 @@
        (let ((fun (function-info-optimizer kind)))
 	 (unless (and fun (funcall fun node))
 	   (dolist (x (function-info-transforms kind))
-	     (ir1-transform node (car x) (cdr x))))))))
+	     (unless (ir1-transform node (car x) (cdr x))
+	       (return))))))))
 
   (undefined-value))
 
@@ -789,10 +790,13 @@
 ;;;    Attempt to transform Node using Function, subject to the call type
 ;;; constraint Type.  If we are inhibited from doing the transform for some
 ;;; reason and Flame is true, then we make a note of the message in 
-;;; *failed-optimizations* for IR1 finalize to pick up.
+;;; *failed-optimizations* for IR1 finalize to pick up.  We return true if
+;;; the transform failed, and thus further transformation should be
+;;; attempted.  We return false if either the transform suceeded or was
+;;; aborted.
 ;;;
-(proclaim '(function ir1-transform (node type function) void))
 (defun ir1-transform (node type fun)
+  (declare (type combination node) (type ctype type) (type function fun))
   (let ((constrained (function-type-p type))
 	(flame (policy node (> speed brevity)))
 	(*compiler-error-context* node))
@@ -805,21 +809,24 @@
 		 (remhash node *failed-optimizations*)
 		 (values :none nil))
 	     (ecase severity
-	       (:none)
+	       (:none nil)
 	       (:aborted
 		(setf (combination-kind node) :full)
 		(setf (ref-inlinep (continuation-use (combination-fun node)))
 		      :notinline)
 		(when args
-		  (apply #'compiler-warning args)))
+		  (apply #'compiler-warning args))
+		nil)
 	       (:failure 
 		(when (and flame args)
-		  (setf (gethash node *failed-optimizations*) args))))))
+		  (setf (gethash node *failed-optimizations*) args))
+		t))))
 	  ((and flame
 		(valid-function-use node type
 				    :argument-test #'types-intersect
 				    :result-test #'values-types-intersect))
-	   (setf (gethash node *failed-optimizations*) type)))))
+	   (setf (gethash node *failed-optimizations*) type)
+	   t))))
 
 
 ;;; GIVE-UP, ABORT-TRANSFORM  --  Interface
