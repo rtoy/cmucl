@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.31 1993/08/19 12:45:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.32 1993/08/19 17:14:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -507,153 +507,16 @@
 		*handler-clusters*)))
      ,@forms))
 
-(defvar *break-on-signals* nil
-  "When (typep condition *break-on-signals*) is true, then calls to SIGNAL will
-   enter the debugger prior to signalling that condition.")
-
-(declaim (optimize (speed 2))) ; Turn off byte compiler.
-
-(defun signal (datum &rest arguments)
-  "Invokes the signal facility on a condition formed from datum and arguments.
-   If the condition is not handled, nil is returned.  If
-   (TYPEP condition *BREAK-ON-SIGNALS*) is true, the debugger is invoked before
-   any signalling is done."
-  (let ((condition (coerce-to-condition datum arguments
-					'simple-condition 'signal))
-        (*handler-clusters* *handler-clusters*))
-    (when (typep condition *break-on-signals*)
-      (let ((*break-on-signals* nil))
-	(break "~A~%Break entered because of *break-on-signals* (now NIL.)"
-	       condition)))
-    (loop
-      (unless *handler-clusters* (return))
-      (let ((cluster (pop *handler-clusters*)))
-	(dolist (handler cluster)
-	  (when (typep condition (car handler))
-	    (funcall (cdr handler) condition)))))
-    nil))
-
-;;; COERCE-TO-CONDITION is used in SIGNAL, ERROR, CERROR, WARN, and
-;;; INVOKE-DEBUGGER for parsing the hairy argument conventions into a single
-;;; argument that's directly usable by all the other routines.
-;;;
-(defun coerce-to-condition (datum arguments default-type function-name)
-  (cond ((typep datum 'condition)
-	 (if arguments
-	     (cerror "Ignore the additional arguments."
-		     'simple-type-error
-		     :datum arguments
-		     :expected-type 'null
-		     :format-control "You may not supply additional arguments ~
-				     when giving ~S to ~S."
-		     :format-arguments (list datum function-name)))
-	 datum)
-        ((symbolp datum) ;Roughly, (subtypep datum 'condition).
-         (apply #'make-condition datum arguments))
-        ((or (stringp datum) (functionp datum))
-	 (make-condition default-type
-                         :format-control datum
-                         :format-arguments arguments))
-        (t
-         (error 'simple-type-error
-		:datum datum
-		:expected-type '(or symbol string)
-		:format-control "Bad argument to ~S: ~S"
-		:format-arguments (list function-name datum)))))
-
-
 
-;;;; ERROR, CERROR, BREAK, WARN.
+;;;; Condition definitions.
 
 (define-condition serious-condition (condition) ())
 
 (define-condition error (serious-condition)
   ((function-name nil)))
 
-(defun error (datum &rest arguments)
-  "Invokes the signal facility on a condition formed from datum and arguments.
-   If the condition is not handled, the debugger is invoked."
-  (kernel:infinite-error-protect
-    (let ((condition (coerce-to-condition datum arguments
-					  'simple-error 'error))
-	  (debug:*stack-top-hint* debug:*stack-top-hint*))
-      (unless (and (error-function-name condition) debug:*stack-top-hint*)
-	(multiple-value-bind
-	    (name frame)
-	    (kernel:find-caller-name)
-	  (unless (error-function-name condition)
-	    (setf (error-function-name condition) name))
-	  (unless debug:*stack-top-hint*
-	    (setf debug:*stack-top-hint* frame))))
-      (let ((debug:*stack-top-hint* nil))
-	(signal condition))
-      (invoke-debugger condition))))
-
-;;; CERROR must take care to not use arguments when datum is already a
-;;; condition object.
-;;;
-(defun cerror (continue-string datum &rest arguments)
-  (kernel:infinite-error-protect
-    (with-simple-restart
-	(continue "~A" (apply #'format nil continue-string arguments))
-      (let ((condition (if (typep datum 'condition)
-			   datum
-			   (coerce-to-condition datum arguments
-						'simple-error 'error)))
-	    (debug:*stack-top-hint* debug:*stack-top-hint*))
-	(unless (and (error-function-name condition) debug:*stack-top-hint*)
-	  (multiple-value-bind
-	      (name frame)
-	      (kernel:find-caller-name)
-	    (unless (error-function-name condition)
-	      (setf (error-function-name condition) name))
-	    (unless debug:*stack-top-hint*
-	      (setf debug:*stack-top-hint* frame))))
-	(with-condition-restarts condition (list (find-restart 'continue))
-	  (let ((debug:*stack-top-hint* nil))
-	    (signal condition))
-	  (invoke-debugger condition)))))
-  nil)
-
-(defun break (&optional (datum "Break") &rest arguments)
-  "Prints a message and invokes the debugger without allowing any possibility
-   of condition handling occurring."
-  (kernel:infinite-error-protect
-    (with-simple-restart (continue "Return from BREAK.")
-      (let ((debug:*stack-top-hint*
-	     (or debug:*stack-top-hint*
-		 (nth-value 1 (kernel:find-caller-name)))))
-	(invoke-debugger
-	 (coerce-to-condition datum arguments 'simple-condition 'break)))))
-  nil)
-
 (define-condition warning (condition) ())
 (define-condition style-warning (warning) ())
-
-(defun warn (datum &rest arguments)
-  "Warns about a situation by signalling a condition formed by datum and
-   arguments.  While the condition is being signaled, a muffle-warning restart
-   exists that causes WARN to immediately return nil."
-  (kernel:infinite-error-protect
-    (let ((condition (coerce-to-condition datum arguments
-					  'simple-warning 'warn)))
-      (check-type condition warning "a warning condition")
-      (restart-case (signal condition)
-	(muffle-warning ()
-	  :report "Skip warning."
-	  (return-from warn nil)))
-      (format *error-output* "~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
-  nil)
-
-(declaim (optimize (speed 0))); Turn byte compiler back on.
-
-
-;;;; Condition definitions.
-
-;;; Serious-condition and error are defined on the previous page, so ERROR and
-;;; CERROR can SETF a slot in the error condition object.
-;;;
-
 
 (defun simple-condition-printer (condition stream)
   (apply #'format stream (simple-condition-format-control condition)
