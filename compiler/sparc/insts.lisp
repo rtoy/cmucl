@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.40 2003/05/14 14:28:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.41 2003/08/05 16:32:43 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -229,7 +229,7 @@ about function addresses and register values.")
        (case op3
 	 (#b000000
 	  (when (= reg rs1)
-	    (handle-add-inst rs1 immed-val rd dstate)))
+	    (handle-add-inst rs1 immed-val rd dstate immed-p)))
 	 (#b111000
 	  (when (= reg rs1)
 	    (handle-jmpl-inst rs1 immed-val rd dstate)))
@@ -250,7 +250,7 @@ about function addresses and register values.")
 	(when sethi
 	  (setf *note-sethi-inst* (delete sethi *note-sethi-inst*)))))))
 
-(defun handle-add-inst (rs1 immed-val rd dstate)
+(defun handle-add-inst (rs1 immed-val rd dstate immed-p)
   (let* ((sethi (assoc rs1 *note-sethi-inst*)))
     (cond
       (sethi
@@ -267,7 +267,7 @@ about function addresses and register values.")
 				     (get-reg-name rd) addr)
 			     dstate)))
        (setf *note-sethi-inst* (delete sethi *note-sethi-inst*)))
-      ((= rs1 null-offset)
+      ((and (= rs1 null-offset) immed-p)
        ;; We have an ADD %NULL, <n>, RD instruction.  This is a
        ;; reference to a static symbol.
        (disassem:maybe-note-nil-indexed-object immed-val
@@ -275,7 +275,9 @@ about function addresses and register values.")
       ((= rs1 alloc-offset)
        ;; ADD %ALLOC, n.  This must be some allocation or
        ;; pseudo-atomic stuff
-       (cond ((and (= immed-val 4) (= rd alloc-offset)
+       (cond ((and immed-p
+		   (= immed-val 4)
+		   (= rd alloc-offset)
 		   (not *pseudo-atomic-set*))
 	      ;; "ADD 4, %ALLOC" sets the flag
 	      (disassem:note "Set pseudo-atomic flag" dstate)
@@ -283,16 +285,21 @@ about function addresses and register values.")
 	     ((= rd alloc-offset)
 	      ;; "ADD n, %ALLOC" is either allocating space or
 	      ;; resetting the flag.
-	      (if (= immed-val -4)
-		  (progn
-		    (disassem:note
-		     (format nil "Reset pseudo-atomic")
-		     dstate)
-		    (setf *pseudo-atomic-set* nil))
-		  (disassem:note
-		   (format nil "Allocating ~D bytes" immed-val)
-		   dstate))
-	      )))
+	      (cond (immed-p
+		     (cond ((= immed-val -4)
+			    (disassem:note
+			     (format nil "Reset pseudo-atomic")
+			     dstate)
+			    (setf *pseudo-atomic-set* nil))
+			   (t
+			    (disassem:note
+			     (format nil "Allocating ~D bytes" immed-val)
+			     dstate))))
+		    (t
+		     ;; Some other allocation
+		     (disassem:note
+			     (format nil "Allocating bytes")
+			     dstate))))))
       ((and (= rs1 zero-offset) *pseudo-atomic-set*)
        ;; "ADD %ZERO, num, RD" inside a pseudo-atomic is very
        ;; likely loading up a header word.  Make a note to that
