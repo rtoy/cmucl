@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.29 1992/03/10 18:30:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.30 1992/04/14 18:49:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -348,8 +348,7 @@
 ;;; CONDITIONS::ERROR-ERROR calls this in emergencies to get into a debug
 ;;; prompt as quickly as possible with as little risk as possible for stepping
 ;;; on whatever is causing recursive errors.
-				      (throw 'debug-loop-catcher nil))
-				    (invoke-debugger condition))))
+;;;
 (defun internal-debug ()
   (let ((*in-the-debugger* t)
 	(*read-suppress* nil))
