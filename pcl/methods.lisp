@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.36 2003/06/04 08:47:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.37 2003/06/05 07:46:32 gerd Exp $")
 
 (in-package :pcl)
 
@@ -463,7 +463,7 @@
 	(update-ctors 'add-method :generic-function gf :method method)
 	(update-dfun gf))
       (update-accessor-pvs 'add-method gf method old)
-      method)))
+      gf)))
   
 (defun real-remove-method (gf method)
   (when (eq gf (method-generic-function method))
