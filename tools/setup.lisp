@@ -3,13 +3,16 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.36 2003/06/18 09:23:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.37 2003/06/18 11:07:40 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Set up package environment and search lists for compiler.  Also some
 ;;; compilation utilities.
 ;;;
+
+(when (boundp 'conditions::*make-condition-accessor-methods*)
+  (setq conditions::*make-condition-accessor-methods* nil))
 
 ;;; Ensure pre-ANSI defstruct processing occurs during system builds.
 (in-package "KERNEL")
