@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.6 1991/10/24 16:01:34 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.7 1992/01/14 16:00:10 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -52,6 +52,7 @@
 			    :load-if (not (location= x y))))
 		  (:results (y :scs (,sc)
 			       :load-if (not (location= x y))))
+		  (:node "float move")
 		  (:generator 0
 		    (unless (location= y x)
 		      (inst fmovs y x)
@@ -65,6 +66,7 @@
 (define-vop (move-from-float)
   (:args (x :to :save))
   (:results (y))
+  (:note "float to pointer coercion")
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:variant-vars double-p size type data)
   (:generator 13
@@ -90,6 +92,7 @@
 		(define-vop (,name)
 		  (:args (x :scs (descriptor-reg)))
 		  (:results (y :scs (,sc)))
+		  (:note "pointer to float coercion")
 		  (:generator 2
 		    (inst ,(if double-p 'lddf 'ldf) y x
 			  (- (* ,value vm:word-bytes) vm:other-pointer-type))))
@@ -105,6 +108,7 @@
 			 (nfp :scs (any-reg)
 			      :load-if (not (sc-is y ,sc))))
 		  (:results (y))
+		  (:note "float argument move")
 		  (:generator ,(if double-p 2 1)
 		    (sc-case y
 		      (,sc
