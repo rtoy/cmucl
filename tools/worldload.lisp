@@ -20,6 +20,7 @@
 (setf (ext:search-list "assem:") '("lisp:assembly/"))
 (setf (ext:search-list "hem:") '("lisp:hemlock/"))
 (setf (ext:search-list "clx:") '("lisp:clx/"))
+(setf (ext:search-list "pcl:") '("lisp:pcl/"))
 
 ;;; This must be here, because it's where assert-user-package is defined.
 (load "code:save")
@@ -136,13 +137,14 @@ Don't install any dir translations, 'cause we want the real things.
 (ed::add-definition-dir-translation "/usr2/lisp/"
 				    "/afs/cs/project/clisp/systems/")
 
+|#
+
 
 ;;; PCL.
 ;;;
-(load "pcl:defsys")
-(pcl::load-pcl)
+#-no-pcl (load "pcl:defsys")
+#-no-pcl (pcl::load-pcl)
 
-|#
 
 ;;; Load these after PCL.
 ;;;
@@ -154,15 +156,11 @@ Don't install any dir translations, 'cause we want the real things.
 ;;;
 (clrhash lisp::*search-list-table*)
 
-
-;;; And we want to be in the USER package when the command line switches
-;;; run.
-;;; 
-(in-package "USER")
-
 ;;; Okay, build the thing!
 ;;;
 (progn
+  ;; We want to be in the USER package when the command line switches run.
+  (in-package "USER")
   (setq - nil)
   (setq + nil)
   (setq * nil)
