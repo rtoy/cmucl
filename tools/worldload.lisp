@@ -66,7 +66,8 @@
 ;;; Load the symbol table information for the Lisp start up code.
 ;;; Used by CLX for the C routine to connect to the X11 server.
 ;;;
-(load-foreign nil)
+(load-foreign nil '("-lc") "/usr/cs/bin/ld"
+	      (namestring (truename "build:boot/lisp")))
 
 ;;; This has to occur after the call to LOAD-FOREIGN.
 ;;;
@@ -94,13 +95,14 @@
 (load "code:wire")
 (load "code:remote")
 
-#|
+#+hemlock(progn
 ;;; Hemlock.
 ;;;
 (load "hem:rompsite") ;Contains site-init stuff called at load time.
 (load "hem:load-hem.lisp")
 (hi::build-hemlock)
 
+#|
 ;;; Setup definition editing defaults to look in the stable AFS directory.
 ;;; The first translation says what we want most clearly, but we require
 ;;; the others due to symbol links.
@@ -125,8 +127,11 @@
 				    "/afs/cs/project/clisp/systems/")
 (ed::add-definition-dir-translation "/usr2/lisp/"
 				    "/afs/cs/project/clisp/systems/")
+|#
 
+); #+hemlock progn
 
+#|
 ;;; PCL.
 ;;;
 (load "pcl:defsys")
@@ -166,5 +171,4 @@
 				lisp::%top-level
 				extensions:save-lisp
 				,lisp::fop-codes
-				compile-file)
-	     :init-function #'lisp::world-load-init-function))
+				compile-file)))
