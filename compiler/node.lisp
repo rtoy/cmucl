@@ -410,7 +410,7 @@
 
 (defprinter cleanup
   kind
-  (start :prin1 (continuation-next start))
+  (start :prin1 (continuation-use start))
   (nlx-info :test nlx-info))
 
 
