@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.5 1998/07/19 01:42:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.6 1998/07/19 01:46:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,7 @@
 (defun result-type-or-lose (type &optional nil-ok)
   (let ((type (specifier-type type)))
     (cond
-      ((eq type *empty-type)
+      ((eq type *empty-type*)
        (if nil-ok
 	   nil
 	   (error 'simple-type-error
