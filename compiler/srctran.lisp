@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.129 2003/09/01 20:47:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.130 2003/09/02 13:51:13 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1094,10 +1094,12 @@
 	 (member (first members))
 	 (member-type (type-of member)))
     (assert (not (rest members)))
-    (specifier-type `(,(if (subtypep member-type 'integer)
-			   'integer
-			   member-type)
-		      ,member ,member))))
+    (cond ((subtypep member-type 'integer)
+	   (specifier-type `(integer ,member ,member)))
+	  ((subtypep member-type 'complex)
+	   (specifier-type member-type))
+	  (t
+	   (specifier-type `(,member-type ,member ,member))))))
 
 ;;; ONE-ARG-DERIVE-TYPE
 ;;;
