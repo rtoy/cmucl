@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.52 1997/11/18 16:55:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.53 1997/11/21 12:16:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -420,7 +420,10 @@
     (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
     (set-floating-point-modes :traps
 			      '(:overflow #-x86 :underflow :invalid
-					  :divide-by-zero)))))
+					  :divide-by-zero))
+    ;; Clear pseudo atomic in case it this core wasn't compiled with
+    ;; support.
+    #+x86 (setf lisp::*pseudo-atomic-atomic* 0))))
 
 
 
