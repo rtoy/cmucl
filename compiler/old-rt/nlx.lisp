@@ -20,7 +20,9 @@
 ;;;    Make an environment-live stack TN for saving the SP for NLX entry.
 ;;;
 (defun make-nlx-sp-tn (env)
-  (environment-live-tn (make-representation-tn stack-arg-scn) env))
+  (environment-live-tn
+   (make-representation-tn *any-primitive-type* stack-arg-scn)
+   env))
   
 
 ;;; Save and restore dynamic environment.
