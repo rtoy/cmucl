@@ -100,6 +100,7 @@
 (define-vop (code-char)
   (:args (code :scs (any-reg descriptor-reg) :target res))
   (:results (res :scs (string-char-reg)))
+  (:result-types string-char)
   (:translate code-char)
   (:policy :fast-safe)
   (:generator 0
