@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.5 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.6 1999/03/29 14:16:05 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -322,7 +322,7 @@ to aborting due to a throw."
 ;;; it, call NEW-CONNECTION to do the connecting.
 ;;;
 (defun create-request-server (port &optional on-connect)
-  "Create a request server on the given port.  Whenevery anyone connects to it
+  "Create a request server on the given port.  Whenever anyone connects to it,
    call the given function with the newly created wire and the address of the
    connector.  If the function returns NIL, the connection is destroyed;
    otherwise, it is accepted.  This returns a manifestation of the server that
