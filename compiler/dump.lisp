@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.29 1991/01/20 15:04:13 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.30 1991/01/25 21:43:41 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -648,7 +648,7 @@
     (let ((res-handle (dump-pop file)))
       (dolist (info-handle (fasl-file-debug-info file))
 	(dump-push res-handle file)
-	(dump-fop 'lisp::fop-svset file)
+	(dump-fop 'lisp::fop-structset file)
 	(dump-unsigned-32 info-handle file)
 	(dump-unsigned-32 2 file))))
 
@@ -772,7 +772,8 @@
       (ecase (circularity-type info)
 	(:rplaca (dump-fop 'lisp::fop-rplaca file))
 	(:rplacd (dump-fop 'lisp::fop-rplacd file))
-	((:svset :struct-set) (dump-fop 'lisp::fop-svset file)))
+	(:svset (dump-fop 'lisp::fop-svset file))
+	(:struct-set (dump-fop 'lisp::fop-structset file)))
       (dump-unsigned-32 (gethash (circularity-object info) table) file)
       (dump-unsigned-32 (circularity-index info) file))))
 
