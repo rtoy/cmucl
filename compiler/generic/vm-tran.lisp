@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.29 1993/02/26 08:42:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.30 1993/05/25 21:30:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,3 +318,14 @@
 	  (logxor (ash lo (- sxmash-rotate-bits))
 		  (ash hi (- sxmash-rotate-bits))
 		  lo hi))))
+
+
+
+;;;; Float EQL transforms.
+
+(deftransform eql ((x y) (single-float single-float))
+  '(= (single-float-bits x) (single-float-bits y)))
+
+(deftransform eql ((x y) (double-float double-float))
+  '(and (= (double-float-low-bits x) (double-float-low-bits y))
+	(= (double-float-high-bits x) (double-float-high-bits y))))
