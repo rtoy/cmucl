@@ -38,11 +38,10 @@ As of 12/11/92, the latest SunOS Sparc release is:
     17b-extra-sun4c_41.tar.Z (3.6 meg)
 
 The first file holds binaries and documentation for the basic Lisp system,
-while the second `-extra' file contains the Hemlock editor, the graphical
-inspector and the CLX interface to X11.  The basic configuration takes 16
-megabytes of disk space; adding the extras takes another 8 megabytes.  For
-installation directions, see the section "site initialization" in the README
-file at the root of the tree.
+while the second `-extra' file contains the Hemlock editor, the Motif toolkit,
+the graphical debugger and the CLX interface to X11.  The basic configuration
+takes 16 megabytes of disk space; adding the extras takes another 8 megabytes.
+For installation directions, see the section "site initialization".
 
 If poor network connections make it difficult to transfer a 10 meg file, the
 release is also available split into 2 megabyte chunks, suffixed `.0', `.1',
