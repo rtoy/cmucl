@@ -794,7 +794,7 @@
 		      (compute-calling-frame
 		       (int-sap (* (get-context-value
 				    real
-				    vm::old-fp-save-offset
+				    vm::ocfp-save-offset
 				    (c::compiled-debug-function-old-fp c-d-f))
 				   vm:word-bytes))
 		       (get-context-value
@@ -806,7 +806,7 @@
 		  (bogus-debug-function
 		   (let ((fp (frame-pointer real)))
 		     (compute-calling-frame (sap-ref-sap fp
-							 vm::old-fp-save-offset)
+							 vm::ocfp-save-offset)
 					    (stack-ref fp vm::lra-save-offset)
 					    frame))))))
 	down)))
@@ -850,7 +850,7 @@
 		       t))
       (when (= (sap-int frame-pointer)
 	       (alien-access
-		(mach:int-array-ref regs vm::fp-offset)))
+		(mach:int-array-ref regs vm::cfp-offset)))
 	(system:without-gcing
 	 (let ((code (code-object-from-bits
 		      (alien-access
