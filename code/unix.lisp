@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.52 1997/08/24 16:54:11 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.53 1997/08/25 19:18:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -806,13 +806,7 @@
 ;;; And now for something completely different ...
 (emit-unix-errors)
 
-#-irix
 (def-alien-variable ("errno" unix-errno) int)
-
-#+irix
-(setf (alien::heap-alien-info-sap-form
-       (info variable alien::alien-info 'unix-errno))
-        (int-sap (alien-funcall (extern-alien "__oserror" (function int)))))
 
 ;;; GET-UNIX-ERROR-MSG -- public.
 ;;; 
@@ -1560,7 +1554,7 @@
  (defconstant ioc_in #x80000000)
  (defconstant ioc_inout (logior ioc_in ioc_out)))
 
-#-(or linux svr4)
+#-(or linux (and svr4 (not irix)))
 (defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
   (let* ((ptype (ecase parm-type
 		  (:void ioc_void)
@@ -1577,7 +1571,7 @@
     `(eval-when (eval load compile)
        (defconstant ,name ,code))))
 
-#+(or linux svr4)
+#+(or linux (and svr4 (not irix)))
 (defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
   (declare (ignore dev arg parm-type))
   `(eval-when (eval load compile)
