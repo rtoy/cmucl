@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.19 1990/06/24 19:35:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.20 1990/07/07 00:51:37 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -122,6 +122,18 @@
 	   (type index offset))
   (sap-ref-sap sap offset))
 
+(defun sap-ref-single (sap offset)
+  "Returns the 32-bit single-float at OFFSET words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (sap-ref-single sap offset))
+
+(defun sap-ref-double (sap offset)
+  "Returns the 64-bit double-float at OFFSET words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (sap-ref-double sap offset))
+
 (defun signed-sap-ref-8 (sap offset)
   "Returns the signed 8-bit byte at Offset bytes from SAP."
   (declare (type system-area-pointer sap)
@@ -162,9 +174,20 @@
 
 (defun %set-sap-ref-sap (sap offset new-value)
   (declare (type system-area-pointer sap new-value)
-	   (type index offset)
-	   (type system-area-pointer new-value))
+	   (type index offset))
   (setf (sap-ref-sap sap offset) new-value))
+
+(defun %set-sap-ref-single (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type single-float new-value))
+  (setf (sap-ref-single sap offset) new-value))
+
+(defun %set-sap-ref-double (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type double-float new-value))
+  (setf (sap-ref-double sap offset) new-value))
 
 ); #+New-Compiler
 
@@ -1064,57 +1087,27 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	`(naturalize-boolean ,sap ,offset ,size ',form)
 	`(deport-boolean ,sap ,offset ,size ,value ',form))))
 
-
-;;; Alien-Access expert for short-floats
+;;; Alien-Access expert for single-floats
 ;;;
-#+nil ; ### no short floats in the new object format.
-(define-alien-access (short-float) (type kind value)
+(define-alien-access (single-float) (type kind value)
   (with-alien (sap)
 	      (offset)
 	      (size :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
-	`(%primitive int-sap
-	  (logior (ash (%primitive unsigned-32bit-system-ref ,sap ,offset)
-		       (- clc::short-float-shift-16))
-		  (ash clc::short-float-4bit-type
-		       (- 32 clc::short-float-shift-16))))
-	(let ((var (gensym)))
-	  `(let ((,var (float ,value 1.0s0)))
-	     (setq ,var (ash (%primitive sap-int ,var) clc::short-float-shift-16))
-	     (%primitive signed-32bit-system-set ,sap ,offset ,var))))))
+	`(sap-ref-single ,sap ,offset)
+	`(setf (sap-ref-single ,sap ,offset) ,value))))
 
-
-;;; Alien-Access expert for long-floats
+;;; Alien-Access expert for double-floats
 ;;;
-#+nil ; ### These will need work.
-(define-alien-access (long-float) (type kind value)
+(define-alien-access (double-float) (type kind value)
   (with-alien (sap)
 	      (offset)
 	      (size :unit 64 :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
-	(let ((var (gensym)))
-	  `(let ((,var (%primitive float-long 0)))
-	     (%primitive 16bit-system-set ,var 2
-			 (%primitive 16bit-system-ref ,sap ,offset))
-	     (%primitive 16bit-system-set ,var 3
-			 (%primitive 16bit-system-ref ,sap (1+ ,offset)))
-	     (%primitive 16bit-system-set ,var 4
-			 (%primitive 16bit-system-ref ,sap (+ ,offset 2)))
-	     (%primitive 16bit-system-set ,var 5
-			 (%primitive 16bit-system-ref ,sap (+ ,offset 3)))
-	     ,var))
-	(let ((var (gensym)))
-	  `(let ((,var (float ,value 1.0L0)))
-	     (%primitive 16bit-system-set ,sap ,offset
-			 (%primitive 16bit-system-ref ,var 2))
-	     (%primitive 16bit-system-set ,sap (1+ ,offset)
-			 (%primitive 16bit-system-ref ,var 3))
-	     (%primitive 16bit-system-set ,sap (+ ,offset 2)
-			 (%primitive 16bit-system-ref ,var 4))
-	     (%primitive 16bit-system-set ,sap (+ ,offset 3)
-			 (%primitive 16bit-system-ref ,var 5)))))))
+	`(sap-ref-double ,sap ,offset)
+	`(setf (sap-ref-double ,sap ,offset) ,value))))
 
 ;;; Alien-access expert for procedure objects.  These should be used
 ;;; with caution.
