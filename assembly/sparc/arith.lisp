@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.9 1992/03/11 21:37:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.10 1992/04/28 04:23:47 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -166,12 +166,10 @@
   (inst or lo temp)
   (inst sra hi 2)
   ;; Allocate a BIGNUM for the result.
-  (pseudo-atomic (temp)
+  (pseudo-atomic (:extra (pad-data-block (1+ bignum-digits-offset)))
     (let ((one-word (gen-label)))
-      (inst add res alloc-tn other-pointer-type)
-      ;; Assume we need one word.
-      (inst add alloc-tn (pad-data-block (1+ bignum-digits-offset)))
-      ;; Is that correct?
+      (inst or res alloc-tn other-pointer-type)
+      ;; We start out assuming that we need one word.  Is that correct?
       (inst sra temp lo 31)
       (inst xorcc temp hi)
       (inst b :eq one-word)
