@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.54 1992/02/25 07:16:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.55 1992/03/23 14:47:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -541,8 +541,8 @@
   ;; Parallel vectors containing the forms read out of the file and the file
   ;; positions that reading of each form started at (i.e. the end of the
   ;; previous form.)
-  (forms (make-array 10 :fill-pointer 0 :adjustable t) (vector t))
-  (positions (make-array 10 :fill-pointer 0 :adjustable t) (vector t)))
+  (forms (make-array 10 :fill-pointer 0 :adjustable t) :type (vector t))
+  (positions (make-array 10 :fill-pointer 0 :adjustable t) :type (vector t)))
 
 
 ;;; The Source-Info structure provides a handle on all the source information
