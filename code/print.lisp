@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.33 1992/01/26 07:36:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.34 1992/02/04 21:10:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -555,8 +555,11 @@
 
 ;;;; Symbols.
 
-(defvar *previous-case* ()
-  "What the previous case selection the printer was set to.")
+;;; Values of *PRINT-CASE* and (READTABLE-CASE *READTABLE*) the last time the
+;;; printer was called.
+;;;
+(defvar *previous-case* nil)
+(defvar *previous-readtable-case* nil)
 
 ;;; This variable contains the current definition of one of three symbol
 ;;; printers.  SETUP-PRINTER-STATE sets this variable.
@@ -571,16 +574,46 @@
 ;;; stream is also reset.
 ;;;
 (defun setup-printer-state ()
-  (unless (eq *print-case* *previous-case*)
+  (unless (and (eq *print-case* *previous-case*)
+	       (eq (readtable-case *readtable*) *previous-readtable-case*))
     (setq *previous-case* *print-case*)
+    (setq *previous-readtable-case* (readtable-case *readtable*))
+    (unless (member *print-case* '(:upcase :downcase :capitalize))
+      (setq *print-case* :upcase)
+      (error "Invalid *PRINT-CASE* value: ~S" *previous-case*))
+    (unless (member *previous-readtable-case*
+		    '(:upcase :downcase :invert :preserve))
+      (setf (readtable-case *readtable*) :upcase)
+      (error "Invalid READTABLE-CASE value: ~S" *previous-readtable-case*))
+
     (setq *internal-symbol-output-function*
-	  (case *print-case*
-	    (:upcase #'output-uppercase-symbol)
-	    (:downcase #'output-lowercase-symbol)
-	    (:capitalize #'output-capitalize-symbol)
-	    (T (let ((bad-case *print-case*))
-		 (setq *print-case* :upcase)
-		 (Error "Invalid *print-case* value: ~s" bad-case)))))))
+	  (case *previous-readtable-case*
+	    (:upcase
+	     (case *print-case*
+	       (:upcase #'output-preserve-symbol)
+	       (:downcase #'output-lowercase-symbol)
+	       (:capitalize #'output-capitalize-symbol)))
+	    (:downcase
+	     (case *print-case*
+	       (:upcase #'output-uppercase-symbol)
+	       (:downcase #'output-preserve-symbol)
+	       (:capitalize #'output-capitalize-symbol)))
+	    (:preserve #'output-preserve-symbol)
+	    (:invert #'output-invert-symbol)))))
+
+;;; OUTPUT-QUOTED-SYMBOL-NAME  --  Internal
+;;;
+;;;    Out Pname (a symbol-name or package-name) surrounded with |'s, and with
+;;; any embedded |'s or \'s escaped.
+;;;
+(defun output-quoted-symbol-name (pname stream)
+  (write-char #\| stream)
+  (dotimes (index (length pname))
+    (let ((char (schar pname index)))
+      (when (or (char= char #\\) (char= char #\|))
+	(write-char #\\ stream))
+      (write-char char stream)))
+  (write-char #\| stream))
 
 (defun output-symbol (object stream)
   (if (or *print-escape* *print-readably*)
@@ -612,25 +645,22 @@
 	    ;; qualified.  This can happen if the symbol has been inherited
 	    ;; from a package other than its home package.
 	    (unless (and accessible (eq symbol object))
-	      (funcall *internal-symbol-output-function*
-		       (package-name package)
-		       stream)
+	      (let ((pkg-name (package-name package)))
+		(if (symbol-quotep pkg-name)
+		    (output-quoted-symbol-name pkg-name stream)
+		    (funcall *internal-symbol-output-function* pkg-name
+			     stream)))
 	      (multiple-value-bind (symbol externalp)
 				   (find-external-symbol name package)
 		(declare (ignore symbol))
 		(if externalp
 		    (write-char #\: stream)
 		    (write-string "::" stream)))))))
-	(funcall *internal-symbol-output-function* name stream))
-      (case *print-case*
-	(:upcase
-	 (write-string (symbol-name object) stream))
-	(:downcase
-	 (write-string (string-downcase (symbol-name object)) stream))
-	(:capitalize
-	 (write-string (string-capitalize (symbol-name object))
-		       stream)))))
-
+	(if (symbol-quotep name)
+	    (output-quoted-symbol-name name stream)
+	    (funcall *internal-symbol-output-function* name stream)))
+      (funcall *internal-symbol-output-function* (symbol-name object) stream)))
+	    
 
 ;;;; Escaping symbols:
 
@@ -638,29 +668,38 @@
 ;;; printed with escape characters.  This isn't a whole lot easier than
 ;;; reading symbols in the first place.
 ;;;
-;;; For each character, the value of the corresponding element is a fixnum
-;;; with bits set corresponding to attributes that the character has.  This
-;;; is also used by the character printer.
+;;; For each character, the value of the corresponding element is a fixnum with
+;;; bits set corresponding to attributes that the character has.  At characters
+;;; have at least one bit set, so we can search for any character with a
+;;; positive test.
 ;;;
 (defvar character-attributes
-  (make-array char-code-limit :element-type '(unsigned-byte 8)
+  (make-array char-code-limit :element-type '(unsigned-byte 16)
 	      :initial-element 0))
+;;;
+(declaim (type (simple-array (unsigned-byte 16) (#.char-code-limit))
+	       character-attributes))
 
 (eval-when (compile load eval)
 
 ;;; Constants which are a bit-mask for each interesting character attribute.
 ;;;
-(defconstant number-attribute	#b10)		; A numeric digit.
-(defconstant letter-attribute	#b100)		; A upper-case letter.
-(defconstant sign-attribute	#b1000)		; +-
-(defconstant extension-attribute #b10000)	; ^_
-(defconstant dot-attribute 	#b100000)	; .
-(defconstant slash-attribute	#b1000000)	; /
-(defconstant other-attribute	#b1)            ; Anything else legal.
-(defconstant funny-attribute	#b10000000)	; Anything illegal.
+(defconstant other-attribute		(ash 1 0)) ; Anything else legal.
+(defconstant number-attribute		(ash 1 1)) ; A numeric digit.
+(defconstant uppercase-attribute 	(ash 1 2)) ; An uppercase letter.
+(defconstant lowercase-attribute 	(ash 1 3)) ; A lowercase letter.
+(defconstant sign-attribute		(ash 1 4)) ; +-
+(defconstant extension-attribute 	(ash 1 5)) ; ^_
+(defconstant dot-attribute 		(ash 1 6)) ; .
+(defconstant slash-attribute		(ash 1 7)) ; /
+(defconstant funny-attribute		(ash 1 8)) ; Anything illegal.
 
+;;; LETTER-ATTRIBUTE is a local of SYMBOL-QUOTEP.  It matches letters that
+;;; don't need to be escaped (according to READTABLE-CASE.)
+;;;
 (defconstant attribute-names
-  '((number . number-attribute) (letter . letter-attribute)
+  `((number . number-attribute) (lowercase . lowercase-attribute)
+    (uppercase . uppercase-attribute) (letter . letter-attribute)
     (sign . sign-attribute) (extension . extension-attribute)
     (dot . dot-attribute) (slash . slash-attribute)
     (other . other-attribute) (funny . funny-attribute)))
@@ -683,7 +722,8 @@
        (end (char-code #\Z)))
       ((> code end))
     (declare (fixnum code end))
-    (set-bit (code-char code) letter-attribute))
+    (set-bit (code-char code) uppercase-attribute)
+    (set-bit (char-downcase (code-char code)) lowercase-attribute))
 
   (set-bit #\- sign-attribute)
   (set-bit #\+ sign-attribute)
@@ -701,7 +741,11 @@
 ;;; base in which that character is a digit.
 ;;;
 (defvar digit-bases
-  (make-array char-code-limit :element-type '(mod 37) :initial-element 36))
+  (make-array char-code-limit :element-type '(unsigned-byte 8)
+	      :initial-element 36))
+;;;
+(declaim (type (simple-array (unsigned-byte 8) (#.char-code-limit))
+	       digit-bases))
 
 (dotimes (i 36)
   (let ((char (digit-char i 36)))
@@ -741,6 +785,11 @@
 	   (attributes character-attributes)
 	   (bases digit-bases)
 	   (base *print-base*)
+	   (letter-attribute
+	    (case (readtable-case *readtable*)
+	      (:upcase uppercase-attribute)
+	      (:downcase lowercase-attribute)
+	      (t (logior lowercase-attribute uppercase-attribute))))
 	   (index 0)
 	   (bits 0)
 	   (code 0)
@@ -752,9 +801,15 @@
       (return (not (test sign)))
 
      OTHER ; Not potential number, see if funny chars...
-      (return (not (null (%sp-find-character-with-attribute
-			  name (1- index) len
-			  attributes funny-attribute))))
+      (let ((mask (logxor (logior lowercase-attribute uppercase-attribute
+				  funny-attribute)
+			  letter-attribute)))
+	(do ((i (1- index) (1+ i)))
+	    ((= i len) (return-from symbol-quotep nil))
+	  (unless (zerop (logand (aref attributes (char-code (schar name i)))
+				 mask))
+	    (return-from symbol-quotep t))))
+
      START
       (when (digitp)
 	(if (test letter)
@@ -846,79 +901,109 @@
       (go DIGIT))))
 
 
-;;;; Printname hackery
-
-;;; This function takes the pname of a symbol and adds slashes and/or 
-;;; vertical bars to it to make it readable again.
-;;; Special quoting characters are currently vertical bar and slash who's 
-;;; role in life are to specially quote symbols.  Funny symbol characters
-;;; are those who need special slashification when they are to be printed
-;;; so they can be read in again.  These currently include such characters 
-;;; as hash signs, colons of various sorts, etc.
-;;; Now there are three different version: UPPERCASE, lowercase and Captialize.
-;;; Check out the manual under the entry for *print-case* for details.
-
-(eval-when (compile eval)
-(defmacro symbol-quote-char-p (char)
-  `(or (char= ,char #\\) (char= ,char #\|)))
-); eval-when (compile eval)
-
-(defun output-uppercase-symbol (pname stream)
-  (declare (simple-string pname))
-  (cond ((symbol-quotep pname)
-	 (write-char #\| stream)
-	 (dotimes (index (length pname))
-	   (let ((char (schar pname index)))
-	     ;;If it needs slashing, do it.
-	     (if (symbol-quote-char-p char)
-		 (write-char #\\ stream))
-	     (write-char char stream)))
-	 (write-char #\| stream))
-	(t
-	 (write-string pname stream))))
-
-;;; See documentation for output-symbol-uppercase (above).
+;;;; *INTERNAL-SYMBOL-OUTPUT-FUNCTION*
 ;;;
+;;; Case hackery.  These functions are stored in
+;;; *INTERNAL-SYMBOL-OUTPUT-FUNCTION* according to the values of *PRINT-CASE*
+;;; and READTABLE-CASE.
+;;;
+
+;; Called when:
+;; READTABLE-CASE	*PRINT-CASE*
+;; :UPCASE		:UPCASE
+;; :DOWNCASE		:DOWNCASE
+;; :PRESERVE		any
+(defun output-preserve-symbol (pname stream)
+  (declare (simple-string pname))
+  (write-string pname stream))
+
+;; Called when:
+;; READTABLE-CASE	*PRINT-CASE*
+;; :UPCASE		:DOWNCASE
 (defun output-lowercase-symbol (pname stream)
   (declare (simple-string pname))
-  (cond ((symbol-quotep pname)
-	 (write-char #\| stream)
-	 (dotimes (index (length pname))
-	   (let ((char (schar pname index)))
-	     ;;If it needs slashing, do it.
-	     (if (symbol-quote-char-p char)
-		 (write-char #\\ stream))
-	     (write-char char stream)))
-	 (write-char #\| stream))
-	(t
-	 (dotimes (index (length pname))
-	   (let ((char (schar pname index)))
-	     (write-char (char-downcase char) stream))))))
+  (dotimes (index (length pname))
+    (let ((char (schar pname index)))
+      (write-char (char-downcase char) stream))))
 
+;; Called when:
+;; READTABLE-CASE	*PRINT-CASE*
+;; :DOWNCASE		:UPCASE
+(defun output-uppercase-symbol (pname stream)
+  (declare (simple-string pname))
+  (dotimes (index (length pname))
+    (let ((char (schar pname index)))
+      (write-char (char-upcase char) stream))))
 
+;; Called when:
+;; READTABLE-CASE	*PRINT-CASE*
+;; :UPCASE		:CAPITALIZE
+;; :DOWNCASE		:CAPITALIZE
+;;
 (defun output-capitalize-symbol (pname stream)
   (declare (simple-string pname))
-  (cond
-   ((symbol-quotep pname)
-    (write-char #\| stream)
-    (dotimes (index (length pname))
-      (let ((char (schar pname index)))
-	;;If it needs slashing, do it.
-	(if (symbol-quote-char-p char)
-	    (write-char #\\ stream))
-	(write-char char stream)))
-    (write-char #\| stream))
-   (t
-    (do ((index 0 (1+ index))
-	 (pname-length (length (the string pname)))
-	 (prev-not-alpha t))
-	((= index pname-length))
-      (declare (fixnum index pname-length))
-      (let ((char (char pname index)))
-	(write-char (if prev-not-alpha char (char-downcase char)) stream)
-	(setq prev-not-alpha (not (alpha-char-p char))))))))
+  (let ((prev-not-alpha t)
+	(up (eq (readtable-case *readtable*) :upcase)))
+    (dotimes (i (length pname))
+      (let ((char (char pname i)))
+	(write-char (if up
+			(if (or prev-not-alpha (lower-case-p char))
+			    char
+			    (char-downcase char))
+			(if prev-not-alpha
+			    (char-upcase char)
+			    char))
+		    stream)
+	(setq prev-not-alpha (not (alpha-char-p char)))))))
+
+;; Called when:
+;; READTABLE-CASE	*PRINT-CASE*
+;; :INVERT		any
+(defun output-invert-symbol (pname stream)
+  (declare (simple-string pname))
+  (let ((all-upper t)
+	(all-lower t))
+    (dotimes (i (length pname))
+      (let ((ch (schar pname i)))
+	(when (both-case-p ch)
+	  (if (upper-case-p ch)
+	      (setq all-lower nil)
+	      (setq all-upper nil)))))
+    (cond (all-upper (output-lowercase-symbol pname stream))
+	  (all-lower (output-uppercase-symbol pname stream))
+	  (t
+	   (write-string pname stream)))))
 
 
+#|
+(defun test1 ()
+  (let ((*readtable* (copy-readtable nil)))
+    (format t "READTABLE-CASE  Input   Symbol-name~@
+	       ----------------------------------~%")
+    (dolist (readtable-case '(:upcase :downcase :preserve :invert))
+      (setf (readtable-case *readtable*) readtable-case)
+      (dolist (input '("ZEBRA" "Zebra" "zebra"))
+	(format t "~&:~A~16T~A~24T~A"
+		(string-upcase readtable-case)
+		input
+		(symbol-name (read-from-string input)))))))
+
+(defun test2 ()
+  (let ((*readtable* (copy-readtable nil)))
+    (format t "READTABLE-CASE  *PRINT-CASE*  Symbol-name  Output  Princ~@
+	       --------------------------------------------------------~%")
+    (dolist (readtable-case '(:upcase :downcase :preserve :invert))
+      (setf (readtable-case *readtable*) readtable-case)
+      (dolist (*print-case* '(:upcase :downcase :capitalize))
+	(dolist (symbol '(|ZEBRA| |Zebra| |zebra|))
+	  (format t "~&:~A~15T:~A~29T~A~42T~A~50T~A"
+		  (string-upcase readtable-case)
+		  (string-upcase *print-case*)
+		  (symbol-name symbol)
+		  (prin1-to-string symbol)
+		  (princ-to-string symbol)))))))
+
+|#
 
 ;;;; Recursive objects.
 
