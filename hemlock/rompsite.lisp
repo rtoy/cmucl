@@ -1080,5 +1080,6 @@
 
 (defun pause-hemlock ()
   "Pause hemlock and pop out to the Unix Shell."
-  (mach:unix-kill (mach:unix-getpid) mach:sigtstp)
+  (system:without-hemlock
+   (mach:unix-kill (mach:unix-getpid) mach:sigstop))
   T)
