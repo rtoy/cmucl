@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.36 1991/04/09 19:36:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.37 1991/06/25 19:41:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1468,7 +1468,7 @@
 	    ((minusp i))
 	  (declare (fixnum i))
 	  (let ((tn (svref ltns i)))
-	    (unless (or (null tn) (tn-offset tn) (eq tn :more))
+	    (unless (or (null tn) (eq tn :more) (tn-offset tn))
 	      (pack-tn tn nil))))))
     ;;
     ;; Pack any leftover normal TNs.  This is to deal with :MORE TNs, which
