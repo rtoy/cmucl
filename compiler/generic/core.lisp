@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.15 1992/07/11 02:11:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.16 1992/07/22 23:35:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -197,21 +197,29 @@
 
 ;;; MAKE-CORE-BYTE-COMPONENT -- Interface.
 ;;;
-(defun make-core-byte-component (byte-output constants xeps object)
-  (declare (type byte-output byte-output)
+(defun make-core-byte-component (segment constants xeps object)
+  (declare (type new-assem:segment segment)
 	   (type vector constants)
 	   (type list xeps)
 	   (type core-object object))
   (without-gcing
     (let* ((num-constants (length constants))
-	   (length (byte-output-length byte-output))
+	   (length (byte-output-length segment))
 	   (code-obj (%primitive allocate-code-object
 				 (the index (1+ num-constants))
-				 length)))
-      (declare (type index length))
+				 length))
+	   (fill-ptr (code-instructions code-obj)))
+      (declare (type index length)
+	       (type system-area-pointer fill-ptr))
 
-      (output-byte-output byte-output
-			  (make-code-instruction-stream code-obj))
+      (new-assem:segment-map-output
+       segment
+       #'(lambda (sap amount)
+	   (declare (type system-area-pointer sap)
+		    (type index amount))
+	   (system-area-copy sap 0 fill-ptr 0
+			     (* amount vm:byte-bits))
+	   (setf fill-ptr (sap+ fill-ptr amount))))
 
       (dolist (noise xeps)
 	(let ((xep (cdr noise)))
