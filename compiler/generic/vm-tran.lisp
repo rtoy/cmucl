@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.20 1990/10/04 23:26:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.21 1990/11/25 20:59:40 ram Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -21,6 +21,9 @@
 ;;;
 (def-source-transform short-float-p (x) `(single-float-p ,x))
 (def-source-transform long-float-p (x) `(double-float-p ,x))
+
+(def-source-transform funcallable-instance-p (x)
+  `(eql (get-type ,x) vm:funcallable-instance-header-type))
 
 (def-source-transform compiled-function-p (x)
   `(functionp ,x))
