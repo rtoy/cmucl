@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.10 1990/06/16 15:35:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.11 1990/06/26 03:49:44 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -119,16 +119,15 @@
   (:info entry-label)
   (:results (block :scs (any-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
-  (:temporary (:scs (descriptor-reg) :target block) result)
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 22
-    (inst addu result fp-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addu block fp-tn (* (tn-offset tn) vm:word-bytes))
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
-    (storew temp result vm:unwind-block-current-uwp-slot)
-    (storew fp-tn result vm:unwind-block-current-cont-slot)
-    (storew code-tn result vm:unwind-block-current-code-slot)
-    (inst compute-lra-from-code temp code-tn entry-label)
-    (storew temp result vm:catch-block-entry-pc-slot)
-    (move block result)))
+    (storew temp block vm:unwind-block-current-uwp-slot)
+    (storew fp-tn block vm:unwind-block-current-cont-slot)
+    (storew code-tn block vm:unwind-block-current-code-slot)
+    (inst compute-lra-from-code temp code-tn entry-label ndescr)
+    (storew temp block vm:catch-block-entry-pc-slot)))
 
 
 ;;; Like Make-Unwind-Block, except that we also store in the specified tag, and
@@ -140,14 +139,15 @@
   (:info entry-label)
   (:results (block :scs (any-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
-  (:temporary (:scs (descriptor-reg) :target block) result)
+  (:temporary (:scs (descriptor-reg) :target block :to (:result 0)) result)
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 44
     (inst addu result fp-tn (* (tn-offset tn) vm:word-bytes))
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp result vm:catch-block-current-uwp-slot)
     (storew fp-tn result vm:catch-block-current-cont-slot)
     (storew code-tn result vm:catch-block-current-code-slot)
-    (inst compute-lra-from-code temp code-tn entry-label)
+    (inst compute-lra-from-code temp code-tn entry-label ndescr)
     (storew temp result vm:catch-block-entry-pc-slot)
 
     (storew tag result vm:catch-block-tag-slot)

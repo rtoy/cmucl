@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.3 1990/05/19 09:44:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.4 1990/06/26 03:50:23 wlott Exp $
 ;;;
 ;;; This file contains temporary printing utilities and similar noise.
 ;;;
@@ -23,7 +23,7 @@
   (:temporary (:sc any-reg :offset 2) v0)
   (:temporary (:sc any-reg :offset lra-offset) lra)
   (:temporary (:sc any-reg :offset code-offset) code)
-  (:temporary (:scs (any-reg) :type fixnum) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
@@ -33,10 +33,12 @@
 	(store-stack-tn nfp-save cur-nfp))
       (inst addu nsp-tn nsp-tn -16)
       (storew object nsp-tn 0)
+      (inst compute-lra-from-code lra code lra-label temp)
       (inst li v0 (make-fixup "debug_print" :foreign))
       (inst li temp (make-fixup "call_into_c" :foreign))
       (inst j temp)
-      (inst compute-lra-from-code lra code lra-label)
+      (inst nop)
+
       (align vm:lowtag-bits)
       (emit-label lra-label)
       (inst lra-header-word)
