@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 ;(ext:file-comment
-;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.2 1997/04/13 21:07:29 pw Exp $")
+;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.3 1997/09/24 15:49:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,3 +386,7 @@
 (defvar *fp-constant-0d0* 0d0)
 (defvar *fp-constant-1s0* 1s0)
 (defvar *fp-constant-1d0* 1d0)
+
+;;; The current alien stack pointer; saved/restored for non-local
+;;; exits.
+(defvar *alien-stack*)
