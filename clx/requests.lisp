@@ -17,7 +17,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/requests.lisp,v 1.6 2002/08/19 16:22:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/requests.lisp,v 1.7 2003/02/03 14:19:58 emarsden Exp $")
 
 (in-package :xlib)
 
@@ -766,7 +766,7 @@
   (with-buffer-request-and-reply (display *x-getinputfocus* 16 :sizes (8 32))
        ()
     (values
-      (or-get 8 (member :none :pointer-root) window)
+      (or-get 8 window (member :none :pointer-root))
       (member8-get 1 :none :pointer-root :parent))))
 
 (defun query-keymap (display &optional bit-vector)
