@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.22 1992/03/04 18:52:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.23 1992/03/07 08:34:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,6 +27,47 @@
 
 (in-package "ALIEN-INTERNALS")
 (in-package "ALIEN")
+
+(import '(alien alien-value alien-value-type parse-alien-type
+	  unparse-alien-type alien-type-= alien-subtype-p alien-typep
+
+	  def-alien-type-class def-alien-type-translator def-alien-type-method
+	  invoke-alien-type-method
+
+	  alien-type alien-type-p alien-type-bits alien-type-alignment
+	  alien-integer-type alien-integer-type-p alien-integer-type-signed
+	  alien-boolean-type alien-boolean-type-p
+	  alien-enum-type alien-enum-type-p
+	  alien-pointer-type alien-pointer-type-p alien-pointer-type-to
+	  make-alien-pointer-type
+	  alien-array-type alien-array-type-p alien-array-type-element-type
+	  alien-array-type-dimensions	  
+	  alien-record-type alien-record-type-p alien-record-type-fields
+	  alien-record-field alien-record-field-p alien-record-field-name
+	  alien-record-field-type alien-record-field-offset
+	  alien-function-type alien-function-type-p
+	  alien-function-type-result-type alien-function-type-arg-types
+	  alien-values-type alien-values-type-p alien-values-type-values
+
+	  %set-slot %slot-addr %set-deref %deref-addr
+
+	  %heap-alien %set-heap-alien %heap-alien-addr
+	  heap-alien-info heap-alien-info-p heap-alien-info-type
+	  heap-alien-info-sap-form
+
+	  local-alien %set-local-alien %local-alien-addr
+	  local-alien-info local-alien-info-p local-alien-info-type
+	  local-alien-info-force-to-memory-p
+	  %local-alien-forced-to-memory-p
+	  make-local-alien dispose-local-alien note-local-alien-type
+
+	  %cast %sap-alien align-offset
+
+	  extract-alien-value deposit-alien-value naturalize deport
+	  compute-lisp-rep-type compute-alien-rep-type
+	  compute-extract-lambda compute-deposit-lambda
+	  compute-naturalize-lambda compute-deport-lambda)
+	"ALIEN-INTERNALS")
 
 (export '(alien alien-value alien-value-type parse-alien-type
 	  unparse-alien-type alien-type-= alien-subtype-p alien-typep
