@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.73 2003/06/10 16:52:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.74 2003/06/10 18:14:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,7 +179,10 @@
       ((explicit-version (namestr start end)
 	 (cond ((or (< (- end start) 5)
 		    (char/= (schar namestr (1- end)) #\~))
-		(values :newest end))
+		;; No explicit version given, so return NIL to
+		;; indicate we don't want file versions, unless
+		;; requested in other ways.
+		(values nil end))
 	       ((and (char= (schar namestr (- end 2)) #\*)
 		     (char= (schar namestr (- end 3)) #\~)
 		     (char= (schar namestr (- end 4)) #\.))
@@ -1263,8 +1266,11 @@ optionally keeping some of the most recent old versions."
 (defsetf default-directory %set-default-directory)
 
 (defun filesys-init ()
+  ;; Use :unspecific so we don't create file versions whenever merging
+  ;; happens.  If the user wants that, let him change
+  ;; *default-pathname-defaults* appropriately.
   (setf *default-pathname-defaults*
-	(%make-pathname *unix-host* nil nil nil nil :newest))
+	(%make-pathname *unix-host* nil nil nil nil :unspecific))
   (setf (search-list "default:") (default-directory))
   nil)
 

@@ -133,6 +133,15 @@ New in this release:
      - the signature of *COMPILER-NOTIFICATION-FUNCTION* has changed;
        it now has an extra argument that describes the nature of the
        error or warning. 
+     - File versioning occurs when the version component is :newest,
+       and Emacs style file versions are created:  foo.bar.~N~, where
+       the larger N is newer.  foo.bar is the newest version.
+     - Converting namestrings to pathnames now get a version component
+       of NIL instead of :NEWEST.
+     - *default-pathname-defaults* has a version component of
+       :unspecific instead of :newest so versioning is disabled by
+       default to preserve current behavior.  Set the version to
+       :newest to create versions.
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
