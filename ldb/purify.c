@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.14 1991/05/24 18:36:03 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.15 1991/12/20 18:47:02 ram Exp $ */
 
 #include <stdio.h>
 
@@ -413,10 +413,12 @@ static lispobj ptrans_otherptr(thing, header, constant)
       case type_ComplexVector:
       case type_ComplexArray:
       case type_ClosureHeader:
+        return ptrans_boxed(thing, header, constant);
+
       case type_FuncallableInstanceHeader:
       case type_ValueCellHeader:
       case type_WeakPointer:
-        return ptrans_boxed(thing, header, constant);
+        return ptrans_boxed(thing, header, FALSE);
 
       case type_SymbolHeader:
         return ptrans_symbol(thing, header);
