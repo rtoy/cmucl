@@ -1,4 +1,4 @@
-;;; -*- Log: code.log; Package: Lisp -*-
+;;; -*- Package: CL -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,80 +7,118 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.12 1992/04/23 14:11:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.13 1992/05/07 08:48:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Hashing and hash table functions for Spice Lisp.
-;;; Written by Skef Wholey.
+;;; Originally written by Skef Wholey.
+;;; Everything except SXHASH rewritten by William Lott.
 ;;;
-(in-package 'lisp)
+(in-package :common-lisp)
+
 (export '(hash-table hash-table-p make-hash-table
 	  gethash remhash maphash clrhash
-	  hash-table-count sxhash
-	  with-hash-table-iterator))
+	  hash-table-count with-hash-table-iterator
+	  hash-table-rehash-size hash-table-rehash-threshold
+	  hash-table-size hash-table-test
+	  sxhash))
 
-;;; Vector subtype codes.
+
+;;;; The hash-table structure.
 
-(defconstant valid-hashing 2)
-(defconstant must-rehash 3)
-
-
-;;; What a hash-table is:
-
-(defstruct (hash-table (:constructor make-hash-table-structure)
-		       (:conc-name hash-table-)
-		       (:print-function %print-hash-table)
-		       (:make-load-form-fun make-hash-table-load-form))
+(defstruct (hash-table
+	    (:constructor %make-hash-table)
+	    (:print-function %print-hash-table)
+	    (:make-load-form-fun make-hash-table-load-form))
   "Structure used to implement hash tables."
-  (kind 'eq)
-  (size 65 :type fixnum)
-  (rehash-size 101)				; might be a float
-  (rehash-threshold 57 :type fixnum)
-  (number-entries 0 :type fixnum)
+  ;;
+  ;; The type of hash table this is.  Only used for printing and as part of
+  ;; the exported interface.
+  (test (required-argument) :type symbol :read-only t)
+  ;;
+  ;; The function used to compare two keys.  Returns T if they are the same
+  ;; and NIL if not.
+  (test-fun (required-argument) :type function :read-only t)
+  ;;
+  ;; The function used to compute the hashing of a key.  Returns two values:
+  ;; the index hashing and T if that might change with the next GC.
+  (hash-fun (required-argument) :type function :read-only t)
+  ;;
+  ;; How much to grow the hash table by when it fills up.  If an index, then
+  ;; add that amount.  If a floating point number, then multiple it by that.
+  (rehash-size (required-argument) :type (or index (float (1.0))) :read-only t)
+  ;;
+  ;; How full the hash table has to get before we rehash.
+  (rehash-threshold (required-argument) :type (real 0 1) :read-only t)
+  ;;
+  ;; (* rehash-threshold (length table)), saved here so we don't have to keep
+  ;; recomputing it.
+  (rehash-trigger (required-argument) :type index)
+  ;;
+  ;; The current number of entries in the table.
+  (number-entries 0 :type index)
+  ;;
+  ;; Vector of ht-buckets.
   (table (required-argument) :type simple-vector))
-
-;;; A hash-table-table is a vector of association lists.  When an
-;;; entry is made in a hash table, a pair of (key . value) is consed onto
-;;; the element in the vector arrived at by hashing.
-
-;;; How to print one:
-
-(defun %print-hash-table (structure stream depth)
+;;;
+(defun %print-hash-table (ht stream depth)
   (declare (ignore depth))
-  (format stream "#<~A Hash Table {~X}>"
-	  (symbol-name (hash-table-kind structure))
-	  (system:%primitive make-fixnum structure)))
+  (print-unreadable-object (ht stream :identity t)
+    (format stream "~A hash table, ~D entries"
+	    (symbol-name (hash-table-test ht))
+	    (hash-table-number-entries ht))))
+
+(defconstant max-hash most-positive-fixnum)
+
+(deftype hash ()
+  `(integer 0 ,max-hash))
+
+
+(defstruct hash-table-bucket
+  ;;
+  ;; The hashing associated with key, kept around so we don't have to recompute
+  ;; it each time.  When NIL, then just use %primitive make-fixnum.  We don't
+  ;; cache the results of make-fixnum, because it can change with a GC.
+  (hash nil :type (or hash null))
+  ;;
+  ;; The key and value, originally supplied by the user.
+  (key nil :type t)
+  (value nil :type t)
+  ;;
+  ;; The next bucket, or NIL if there are no more.
+  (next nil :type (or hash-table-bucket null)))
 
 
 
-;;; Hashing functions for the three kinds of hash tables:
+;;;; Utility functions.
 
-(eval-when (compile)
+(declaim (inline pointer-hash))
+(defun pointer-hash (key)
+  (declare (values hash))
+  (truly-the hash (%primitive make-fixnum key)))
 
-(defmacro eq-hash (object)
-  "Gives us a hashing of an object such that (eq a b) implies
-   (= (eq-hash a) (eq-hash b))"
-  `(truly-the (unsigned-byte 24) (%primitive make-fixnum ,object)))
+(declaim (inline eq-hash))
+(defun eq-hash (key)
+  (declare (values hash (member t nil)))
+  (values (pointer-hash key)
+	  (oddp (get-lisp-obj-address key))))
 
-(defmacro eql-hash (object)
-  "Gives us a hashing of an object such that (eql a b) implies
-   (= (eql-hash a) (eql-hash b))"
-  `(if (numberp ,object)
-       (logand (truncate ,object) most-positive-fixnum)
-       (truly-the fixnum (%primitive make-fixnum ,object))))
+(declaim (inline eql-hash))
+(defun eql-hash (key)
+  (declare (values hash (member t nil)))
+  (if (numberp key)
+      (equal-hash key)
+      (eq-hash key)))
 
-(defmacro equal-hash (object)
-  "Gives us a hashing of an object such that (equal a b) implies
-   (= (equal-hash a) (equal-hash b))"
-  `(sxhash ,object))
+(declaim (inline equal-hash))
+(defun equal-hash (key)
+  (declare (values hash (member t nil)))
+  (values (sxhash key) nil))
 
-)
-
-;;; Rehashing functions:
 
 (defun almost-primify (num)
-  (declare (fixnum num))
+  (declare (type index num))
   "Almost-Primify returns an almost prime number greater than or equal
    to NUM."
   (if (= (rem num 2) 0)
@@ -91,287 +129,289 @@
       (setq num (+ 4 num)))
   num)
 
-(eval-when (compile)
 
-(defmacro grow-size (table)
-  "Returns a fixnum for the next size of a growing hash-table."
-  `(let ((rehash-size (hash-table-rehash-size ,table)))
-     (if (floatp rehash-size)
-	 (ceiling (* rehash-size (hash-table-size ,table)))
-	 (+ rehash-size (hash-table-size ,table)))))
-
-(defmacro grow-rehash-threshold (table new-length)
-  "Returns the next rehash threshold for the table."
-  table
-  `,new-length
-;  `(ceiling (* (hash-table-rehash-threshold ,table)
-;	       (/ ,new-length (hash-table-size ,table))))
-  )
-
-(defmacro hash-set (vector key value length hashing-function)
-  "Used for rehashing.  Enters the value for the key into the vector
-   by hashing.  Never grows the vector.  Assumes the key is not yet
-   entered."
-  `(let ((index (rem (the fixnum (funcall ,hashing-function ,key))
-		     (the fixnum ,length))))
-     (declare (fixnum index))
-     (setf (aref (the simple-vector ,vector) index)
-	   (cons (cons ,key ,value)
-		 (aref (the simple-vector ,vector) index)))))
-
-)
-
-(defun rehash (structure hash-vector new-length)
-  (declare (simple-vector hash-vector))
-  (declare (fixnum new-length))
-  "Rehashes a hash table and replaces the TABLE entry in the structure if
-   someone hasn't done so already.  New vector is of NEW-LENGTH."
-  (do ((new-vector (make-array new-length :initial-element nil))
-       (i 0 (1+ i))
-       (size (hash-table-size structure))
-       (hashing-function (case (hash-table-kind structure)
-			   (eq #'(lambda (x) (eq-hash x)))
-			   (eql #'(lambda (x) (eql-hash x)))
-			   (equal #'(lambda (x) (equal-hash x))))))
-      ((= i size)
-       (cond ((eq hash-vector (hash-table-table structure))
-	      (cond ((> new-length size)
-		     (setf (hash-table-table structure) new-vector)
-		     (setf (hash-table-rehash-threshold structure)
-			   (grow-rehash-threshold structure new-length))
-		     (setf (hash-table-size structure) new-length))
-		    (t
-		     (setf (hash-table-table structure) new-vector)))
-	      (if (not (eq (hash-table-kind structure) 'equal))
-		  (%primitive set-vector-subtype new-vector
-			      valid-hashing)))))
-    (declare (fixnum i size))
-    (do ((bucket (aref hash-vector i) (cdr bucket)))
-	((null bucket))
-      (hash-set new-vector (caar bucket) (cdar bucket) new-length
-		hashing-function))
-    (setf (aref hash-vector i) nil)))
 
-;;; Macros for Gethash, %Puthash, and Remhash:
+;;;; Construction and simple accessors.
 
-(eval-when (compile)
-
-;;; Hashop dispatches on the kind of hash table we've got, rehashes if
-;;; necessary, and binds Vector to the hash vector, Index to the index
-;;; into that vector that the Key points to, and Size to the size of the
-;;; hash vector.  Since Equal hash tables only need to be maybe rehashed
-;;; sometimes, one can tell it if it's one of those times with the
-;;; Equal-Needs-To-Rehash-P argument.
-
-(defmacro hashop (equal-needs-to-rehash-p eq-body eql-body equal-body)
-  `(let* ((vector (hash-table-table hash-table))
-	  (size (length vector)))
-     (declare (simple-vector vector) (fixnum size)
-	      (inline assoc))
-     (case (hash-table-kind hash-table)
-       (equal
-	,@(if equal-needs-to-rehash-p `((equal-rehash-if-needed)))
-	(let ((index (rem (the fixnum (equal-hash key)) size)))
-	  (declare (fixnum index))
-	  ,equal-body))
-       (eq
-	(without-gcing
-	  (eq-rehash-if-needed)
-	  (let ((index (rem (the fixnum (eq-hash key)) size)))
-	    (declare (fixnum index))
-	    ,eq-body)))
-       (eql
-	(without-gcing
-	  (eq-rehash-if-needed)
-	  (let ((index (rem (the fixnum (eql-hash key)) size)))
-	    (declare (fixnum index))
-	    ,eql-body))))))
-
-(defmacro eq-rehash-if-needed ()
-  `(let ((subtype (truly-the (unsigned-byte 24)
-			     (%primitive get-vector-subtype vector))))
-     (declare (type (unsigned-byte 24) subtype))
-     (cond ((/= subtype valid-hashing)
-	    (rehash hash-table vector size)
-	    (setq vector (hash-table-table hash-table)))
-	   ((> (hash-table-number-entries hash-table)
-	       (hash-table-rehash-threshold hash-table))
-	    (rehash hash-table vector (grow-size hash-table))
-	    (setq vector (hash-table-table hash-table))
-	    (setq size (length vector))))))
-
-(defmacro equal-rehash-if-needed ()
-  `(cond ((> (hash-table-number-entries hash-table)
-	     (hash-table-rehash-threshold hash-table))
-	  (rehash hash-table vector (grow-size hash-table))
-	  (setq vector (hash-table-table hash-table))
-	  (setq size (length vector)))))
-
-(defmacro rehash-if-needed ()
-  `(let ((subtype (truly-the (unsigned-byte 24)
-			     (%primitive get-vector-subtype vector)))
-	 (size (length vector)))
-     (declare (type (unsigned-byte 24) subtype)
-	      (fixnum size))
-     (cond ((and (not (eq (hash-table-kind hash-table) 'equal))
-		 (/= subtype valid-hashing))
-	    (rehash hash-table vector size)
-	    (setq vector (hash-table-table hash-table))
-	    (setq size (length vector)))
-	   ((> (hash-table-number-entries hash-table)
-	       (hash-table-rehash-threshold hash-table))
-	    (rehash hash-table vector (grow-size hash-table))
-	    (setq vector (hash-table-table hash-table))
-	    (setq size (length vector))))))
-
-)
-
-;;; Making hash tables:
-
-(defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 101)
-			     (rehash-threshold size))
-  "Creates and returns a hash table.  See manual for details."
+;;; MAKE-HASH-TABLE -- public.
+;;; 
+(defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 1.5)
+			     (rehash-threshold 1))
+  "Creates and returns a new hash table.  The keywords are as follows:
+     :TEST -- Indicates what kind of test to use.  Only EQ, EQL, and EQUAL
+       are currently supported.
+     :SIZE -- A hint as to how many elements will be put in this hash
+       table.
+     :REHASH-SIZE -- Indicates how to expand the table when it fills up.
+       If an integer, add space for that many elements.  If a floating
+       point number (which must be greater than 1.0), multiple the size
+       by that amount.
+     :REHASH-THRESHOLD -- Indicates how dense the table can become before
+       forcing a rehash.  Can be any real number between 0 and 1 (inclusive)."
   (declare (type (or function (member eq eql equal)) test)
-	   (type index size rehash-size)
-	   (type (or (float 0.0 1.0) index) rehash-threshold))
-  (let* ((test (cond ((or (eq test #'eq) (eq test 'eq)) 'eq)
-		     ((or (eq test #'eql) (eq test 'eql)) 'eql)
-		     ((or (eq test #'equal) (eq test 'equal)) 'equal)
-		     (t
-		      (error "~S is an illegal :Test for hash tables." test))))
-	 (size (if (<= size 37) 37 (almost-primify size)))
-	 (rehash-threshold
-	  (cond ((and (fixnump rehash-threshold)
-		      (<= 0 rehash-threshold size))
-		 rehash-threshold)
-		((and (floatp rehash-threshold)
-		      (<= 0.0 rehash-threshold 1.0))
-		 (ceiling (* rehash-threshold size)))
-		(t
-		 (error "Invalid rehash-threshold: ~S.~%Must be either a float ~
-			 between 0.0 and 1.0 ~%or an integer between 0 and ~D."
-			rehash-threshold
-			size))))
-	 (table (make-array size :initial-element nil)))
-    (make-hash-table-structure :size size
-			       :rehash-size rehash-size
-			       :rehash-threshold rehash-threshold
-			       :table
-			       (if (eq test 'equal)
-				   table
-				   (%primitive set-vector-subtype
-					       table
-					       valid-hashing))
-			       :kind test)))
-
-;;; Manipulating hash tables:
-
-(defun gethash (key hash-table &optional default)
-  "Finds the entry in Hash-Table whose key is Key and returns the associated
-   value and T as multiple values, or returns Default and Nil if there is no
-   such entry."
-  (macrolet ((lookup (test)
-	       `(let ((cons (assoc key (aref vector index) :test #',test)))
-		  (declare (list cons))
-		  (if cons
-		      (values (cdr cons) t)
-		      (values default nil)))))
-    (hashop nil
-      (lookup eq)
-      (lookup eql)
-      (lookup equal))))
-
-(defun %puthash (key hash-table value)
-  "Create an entry in HASH-TABLE associating KEY with VALUE; if there already
-   is an entry for KEY, replace it.  Returns VALUE."
-  (macrolet ((store (test)
-	       `(let ((cons (assoc key (aref vector index) :test #',test)))
-		  (declare (list cons))
-		  (cond (cons (setf (cdr cons) value))
-			(t
-			 (push (cons key value) (aref vector index))
-			 (incf (hash-table-number-entries hash-table))
-			 value)))))
-    (hashop t
-      (store eq)
-      (store eql)
-      (store equal))))
-
-(defun remhash (key hash-table)
-  "Remove any entry for KEY in HASH-TABLE.  Returns T if such an entry
-   existed; () otherwise."
-  (hashop nil
-   (let ((bucket (aref vector index)))		; EQ case
-     (cond ((and bucket (eq (caar bucket) key))
-	    (pop (aref vector index))
-	    (decf (hash-table-number-entries hash-table))
-	    t)
-	   (t
-	    (do ((last bucket bucket)
-		 (bucket (cdr bucket) (cdr bucket)))
-		((null bucket) ())
-	      (when (eq (caar bucket) key)
-		(rplacd last (cdr bucket))
-		(decf (hash-table-number-entries hash-table))
-		(return t))))))
-   (let ((bucket (aref vector index)))		; EQL case
-     (cond ((and bucket (eql (caar bucket) key))
-	    (pop (aref vector index))
-	    (decf (hash-table-number-entries hash-table))
-	    t)
-	   (t
-	    (do ((last bucket bucket)
-		 (bucket (cdr bucket) (cdr bucket)))
-		((null bucket) ())
-	      (when (eql (caar bucket) key)
-		(rplacd last (cdr bucket))
-		(decf (hash-table-number-entries hash-table))
-		(return t))))))
-   (let ((bucket (aref vector index)))		; EQUAL case
-     (cond ((and bucket (equal (caar bucket) key))
-	    (pop (aref vector index))
-	    (decf (hash-table-number-entries hash-table))
-	    t)
-	   (t
-	    (do ((last bucket bucket)
-		 (bucket (cdr bucket) (cdr bucket)))
-		((null bucket) ())
-	      (when (equal (caar bucket) key)
-		(rplacd last (cdr bucket))
-		(decf (hash-table-number-entries hash-table))
-		(return t))))))))
-
-(defun maphash (map-function hash-table)
-  "For each entry in HASH-TABLE, calls MAP-FUNCTION on the key and value
-  of the entry; returns NIL."
-  (let ((vector (hash-table-table hash-table)))
-    (declare (simple-vector vector))
-    (rehash-if-needed)
-    (do ((i 0 (1+ i))
-	 (size (hash-table-size hash-table)))
-	((= i size))
-      (declare (fixnum i size))
-      (do ((bucket (aref vector i) (cdr bucket)))
-	  ((null bucket))
-	
-	(funcall map-function (caar bucket) (cdar bucket))))))
-
-(defun clrhash (hash-table)
-  "Removes all entries of HASH-TABLE and returns the hash table itself."
-  (let ((vector (hash-table-table hash-table)))
-    (declare (simple-vector vector))
-    (setf (hash-table-number-entries hash-table) 0)
-    (do ((i 0 (1+ i))
-	 (size (hash-table-size hash-table)))
-	((= i size) hash-table)
-      (declare (fixnum i size))
-      (setf (aref vector i) nil))))
+	   (type index size)
+	   (type (or index (float (1.0))) rehash-size)
+	   (type (real 0 1) rehash-threshold))
+  (multiple-value-bind
+      (test test-fun hash-fun)
+      (cond ((or (eq test #'eq) (eq test 'eq))
+	     (values 'eq #'eq #'eq-hash))
+	    ((or (eq test #'eql) (eq test 'eql))
+	     (values 'eql #'eql #'eql-hash))
+	    ((or (eq test #'equal) (eq test 'equal))
+	     (values 'equal #'equal #'equal-hash))
+	    (t
+	     (error "Unknown :TEST for MAKE-HASH-TABLE: ~S" test)))
+    (let* ((size (ceiling size rehash-threshold))
+	   (length (if (<= size 37) 37 (almost-primify size)))
+	   (vector (make-array length :initial-element nil)))
+      (make-hash-table-structure
+       :test test
+       :test-fun test-fun
+       :hash-fun hash-fun
+       :rehash-size rehash-size
+       :rehash-threshold rehash-threshold
+       :rehash-trigger (* size rehash-threshold)
+       :table vector))))
 
 (defun hash-table-count (hash-table)
-  "Returns the number of entries in the given Hash-Table."
+  "Returns the number of entries in the given HASH-TABLE."
+  (declare (type hash-table hash-table)
+	   (values index))
   (hash-table-number-entries hash-table))
+
+(setf (documentation 'hash-table-rehash-size 'function)
+      "Return the rehash-size HASH-TABLE was created with.")
+
+(setf (documentation 'hash-table-rehash-threshold 'function)
+      "Return the rehash-threshold HASH-TABLE was created with.")
+
+(defun hash-table-size (hash-table)
+  "Return a size that can be used with MAKE-HASH-TABLE to create a hash
+   table that can hold however many entries HASH-TABLE can hold without
+   having to be grown."
+  (hash-table-rehash-trigger hash-table))
+
+(setf (documentation 'hash-table-test 'function)
+      "Return the test HASH-TABLE was created with.")
+
 
-;;; Primitive Hash Function
+;;;; Accessing functions.
+
+;;; REHASH -- internal.
+;;;
+;;; Make a new vector for TABLE.  If GROW is NIL, use the same size as before,
+;;; otherwise extend the table based on the rehash-size.
+;;;
+(defun rehash (table grow)
+  (declare (type hash-table table))
+  (let* ((old-vector (hash-table-table table))
+	 (old-length (length old-vector))
+	 (new-length
+	  (if grow
+	      (let ((rehash-size (hash-table-rehash-size table)))
+		(etypecase rehash-size
+		  (fixnum
+		   (+ rehash-size old-length))
+		  (float
+		   (ceiling (* rehash-size old-length)))))
+	      old-length))
+	 (new-vector (make-array new-length :initial-element nil)))
+    (dotimes (i old-length)
+      (do ((bucket (svref old-vector i) next)
+	   (next nil))
+	  ((null bucket))
+	(setf next (hash-table-bucket-next bucket))
+	(let* ((old-hashing (hash-table-bucket-hash bucket))
+	       (hashing (cond
+			 (old-hashing old-hashing)
+			 (t
+			  (set-header-data new-vector
+					   vm:vector-valid-hashing-subtype)
+			  (pointer-hash (hash-table-bucket-key bucket)))))
+	       (index (rem hashing new-length)))
+	  (setf (hash-table-bucket-next bucket) (svref new-vector index))
+	  (setf (svref new-vector index) bucket)))
+      ;; We clobber the old vector contents so that if it is living in
+      ;; static space it won't keep ahold of pointers into dynamic space.
+      (setf (svref old-vector i) nil))
+    (setf (hash-table-table table) new-vector)
+    (unless (= new-length old-length)
+      (setf (hash-table-rehash-trigger table)
+	    (let ((threshold (hash-table-rehash-threshold table)))
+	      ;; Optimize the threshold=1 case so we don't have to use
+	      ;; generic arithmetic in the most common case.
+	      (if (eql threshold 1)
+		  new-length
+		  (truncate (* threshold new-length)))))))
+  (undefined-value))
+
+;;; GETHASH -- Public.
+;;; 
+(defun gethash (key hash-table &optional default)
+  "Finds the entry in HASH-TABLE whose key is KEY and returns the associated
+   value and T as multiple values, or returns DEFAULT and NIL if there is no
+   such entry.  Entries can be added using SETF."
+  (declare (type hash-table hash-table)
+	   (values t (member t nil)))
+  (without-gcing
+   (when (= (get-header-data (hash-table-table hash-table))
+	    vm:vector-must-rehash-subtype)
+     (rehash hash-table nil))
+   (let* ((vector (hash-table-table hash-table))
+	  (length (length vector))
+	  (hashing (funcall (hash-table-hash-fun hash-table) key))
+	  (index (rem hashing length))
+	  (test-fun (hash-table-test-fun hash-table)))
+     (do ((bucket (svref vector index) (hash-table-bucket-next bucket)))
+	 ((null bucket) (values default nil))
+       (let ((bucket-hashing (hash-table-bucket-hash bucket)))
+	 (when (if bucket-hashing
+		   (and (= bucket-hashing hashing)
+			(funcall test-fun key (hash-table-bucket-key bucket)))
+		   (eq key (hash-table-bucket-key bucket)))
+	   (return (values (hash-table-bucket-value bucket) t))))))))
+
+;;; %PUTHASH -- public setf method.
+;;; 
+(defun %puthash (key hash-table value)
+  (declare (type hash-table hash-table))
+  (without-gcing
+   (let ((entries (1+ (hash-table-number-entries hash-table))))
+     (setf (hash-table-number-entries hash-table) entries)
+     (cond ((> entries (hash-table-rehash-trigger hash-table))
+	    (rehash hash-table t))
+	   ((= (get-header-data (hash-table-table hash-table))
+	       vm:vector-must-rehash-subtype)
+	    (rehash hash-table nil))))
+   (multiple-value-bind
+       (hashing eq-based)
+       (funcall (hash-table-hash-fun hash-table) key)
+     (let* ((vector (hash-table-table hash-table))
+	    (length (length vector))
+	    (index (rem hashing length))
+	    (first-bucket (svref vector index))
+	    (test-fun (hash-table-test-fun hash-table)))
+       (do ((bucket first-bucket (hash-table-bucket-next bucket)))
+	   ((null bucket)
+	    (setf (svref vector index)
+		  (make-hash-table-bucket
+		   :hash (unless eq-based hashing)
+		   :key key
+		   :value value
+		   :next first-bucket)))
+	 (let ((bucket-hashing (hash-table-bucket-hash bucket)))
+	   (when (if bucket-hashing
+		     (and (= bucket-hashing hashing)
+			  (funcall test-fun
+				   key (hash-table-bucket-key bucket)))
+		     (eq key (hash-table-bucket-key bucket)))
+	     (setf (hash-table-bucket-value bucket) value)
+	     (decf (hash-table-number-entries hash-table))
+	     (return)))))))
+  value)
+
+;;; REMHASH -- public.
+;;; 
+(defun remhash (key hash-table)
+  "Remove the entry in HASH-TABLE associated with KEY.  Returns T if there
+   was such an entry, and NIL if not."
+  (declare (type hash-table hash-table)
+	   (values (member t nil)))
+  (without-gcing
+   (when (= (get-header-data (hash-table-table hash-table))
+	    vm:vector-must-rehash-subtype)
+     (rehash hash-table nil))
+   (let* ((vector (hash-table-table hash-table))
+	  (length (length vector))
+	  (hashing (funcall (hash-table-hash-fun hash-table) key))
+	  (index (rem hashing length))
+	  (test-fun (hash-table-test-fun hash-table)))
+     (do ((prev nil bucket)
+	  (bucket (svref vector index) (hash-table-bucket-next bucket)))
+	 ((null bucket) nil)
+       (let ((bucket-hashing (hash-table-bucket-hash bucket)))
+	 (when (if bucket-hashing
+		   (and (= bucket-hashing hashing)
+			(funcall test-fun key (hash-table-bucket-key bucket)))
+		   (eq key (hash-table-bucket-key bucket)))
+	   (if prev
+	       (setf (hash-table-bucket-next prev)
+		     (hash-table-bucket-next bucket))
+	       (setf (svref vector index)
+		     (hash-table-bucket-next bucket)))
+	   (return t)))))))
+
+;;; CLRHASH -- public.
+;;; 
+(defun clrhash (hash-table)
+  "This removes all the entries from HASH-TABLE and returns the hash table
+   itself."
+  (let ((vector (hash-table-table hash-table)))
+    (dotimes (i (length vector))
+      (setf (aref vector i) nil))
+    (setf (hash-table-number-entries hash-table) 0)
+    (set-header-data vector vm:vector-normal-subtype))
+  hash-table)
+
+
+
+;;;; MAPHASH and WITH-HASH-TABLE-ITERATOR
+
+(declaim (maybe-inline maphash))
+(defun maphash (map-function hash-table)
+  "For each entry in HASH-TABLE, calls MAP-FUNCTION on the key and value
+   of the entry; returns NIL."
+  (declare (type (or function symbol) map-function)
+	   (type hash-table hash-table))
+  (let ((fun (etypecase map-function
+	       (function
+		map-function)
+	       (symbol
+		(symbol-function map-function))))
+	(vector (hash-table-table hash-table)))
+    (dotimes (i (length vector))
+      (do ((bucket (svref vector i) (hash-table-bucket-next bucket)))
+	  ((null bucket))
+	(funcall fun
+		 (hash-table-bucket-key bucket)
+		 (hash-table-bucket-value bucket))))))
+
+
+(defmacro with-hash-table-iterator ((function hash-table) &body body)
+  "WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)
+   provides a method of manually looping over the elements of a hash-table.
+   function is bound to a generator-macro that, withing the scope of the
+   invocation, returns three values.  First, whether there are any more objects
+   in the hash-table, second, the key, and third, the value."
+  (let ((n-function (gensym "WITH-HASH-TABLE-ITERRATOR-")))
+    `(let ((,n-function
+	    (let* ((table ,hash-table)
+		   (vector (hash-table-table table))
+		   (length (length vector))
+		   (index 0)
+		   (bucket (svref vector 0)))
+	      (labels
+		  ((,function ()
+		     (cond
+		      (bucket
+		       (multiple-value-prog1
+			   (values t
+				   (hash-table-bucket-key bucket)
+				   (hash-table-bucket-value bucket))
+			 (setf bucket (hash-table-bucket-next bucket))))
+		      ((= (incf index) length)
+		       (values nil))
+		      (t
+		       (setf bucket (svref vector index))
+		       (,function)))))
+		#',function))))
+       (macrolet ((,function () (funcall ,n-function)))
+	 ,@body))))
+
+
+
+;;;; SXHASH and support functions
 
 ;;; The maximum length and depth to which we hash lists.
 (defconstant sxhash-max-len 7)
@@ -470,56 +510,19 @@
 
 
 
-;;;; WITH-HASH-TABLE-ITERATOR
-
-(defmacro with-hash-table-iterator ((function hash-table) &body body)
-  "WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)
-   provides a method of manually looping over the elements of a hash-table.
-   function is bound to a generator-macro that, withing the scope of the
-   invocation, returns three values.  First, whether there are any more objects
-   in the hash-table, second, the key, and third, the value."
-  (let ((counter (gensym))
-	(pointer (gensym))
-	(table (gensym))
-	(size (gensym))
-	(the-table (gensym)))
-    `(let* ((,the-table ,hash-table)
-	    (,table (hash-table-table ,the-table))
-	    (,size (hash-table-size ,the-table))
-	    (,counter 0)
-	    (,pointer nil))
-       (macrolet ((,function ()
-		     `(loop
-			(when (= ,',counter ,',size) (return))
-			(let ((bucket (or ,',pointer
-					  (aref ,',table ,',counter))))
-			  (when bucket
-			    (cond ((cdr bucket)
-				   (setf ,',pointer (cdr bucket)))
-				  (t
-				   (setf ,',pointer nil)
-				   (incf ,',counter)))
-			    (return (values t (caar bucket) (cdar bucket)))))
-			(incf ,',counter))))
-	 ,@body))))
-
-
-
 ;;;; Dumping one as a constant.
 
 (defun make-hash-table-load-form (table)
   (values
    `(make-hash-table
-     :test ',(hash-table-kind table) :size ',(hash-table-size table)
+     :test ',(hash-table-test table) :size ',(hash-table-size table)
      :hash-table-rehash-size ',(hash-table-rehash-size table)
      :hash-table-rehash-threshold ',(hash-table-rehash-threshold table))
    (let ((sets nil))
-     (with-hash-table-iterator (next table)
-       (loop
-	 (multiple-value-bind (more key value) (next)
-	   (if more
-	       (setf sets (list* `(gethash ',key ,table) `',value sets))
-	       (return)))))
+     (declare (inline maphash))
+     (maphash #'(lambda (key value)
+		  (setf sets (list* `(gethash ',key ,table) `',value sets)))
+	      table)
      (if sets
 	 `(setf ,@sets)
 	 nil))))
