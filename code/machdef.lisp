@@ -92,8 +92,7 @@
 
 (defmacro sigmask (signal)
   "Returns a mask given a signal." 
-  `(ash 1 (1- ,signal)))
-
+  `(ash 1 (1- ,(unix-signal-number signal))))
 
 (defmacro with-trap-arg-block (arg-var alien-var &body forms)
   `(progn (unless *free-trap-arg-blocks* (alloc-trap-arg-block))
