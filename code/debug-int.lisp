@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.94 1999/08/03 13:36:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.95 1999/08/28 15:56:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1044,9 +1044,11 @@
 		   (let ((fp (frame-pointer real)))
 		     (when (cstack-pointer-valid-p fp)
 		       #+x86
-		        (multiple-value-bind (ra ofp) (x86-call-context fp)
-			  (compute-calling-frame ofp ra frame))
-			#-x86
+		       (multiple-value-bind (ra ofp)
+			   (x86-call-context fp)
+			 (when (and ra ofp)
+			   (compute-calling-frame ofp ra frame)))
+		       #-x86
 		       (compute-calling-frame
 			#-alpha
 			(system:sap-ref-sap fp (* vm::ocfp-save-offset
