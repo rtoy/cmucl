@@ -422,6 +422,8 @@
 (def-c-type long (signed-byte 32))
 (def-c-type unsigned-long (unsigned-byte 32))
 
+(def-c-pointer *char char)
+
 
 
 (defstruct (routine-info
@@ -433,6 +435,9 @@
   ;; String name of the routine and symbol name of the interface function.
   (name "" :type string)
   (function-name nil :type symbol)
+  ;;
+  ;; List of all the doc strings.
+  docs
   ;;
   ;; The number of words of arguments.
   (arg-size 0 :type unsigned-byte)
@@ -499,8 +504,8 @@
       (setf (arg-info-allocation arg) :stack)
       (setf (arg-info-offset arg) offset)
       (let ((size (if (eq (arg-info-mode arg) :in)
-		      (c-sizeof 'system-area-pointer)
-		      (c-type-size (arg-info-type arg)))))
+		      (c-type-size (arg-info-type arg))
+		      (c-sizeof 'system-area-pointer))))
 	(setf offset (align-offset (+ offset size)
 				   (find-alignment size)))))
     (setf (routine-info-arg-size info) offset))
@@ -686,22 +691,27 @@
 	  (t
 	   (error "Malformed routine name specification: ~S." name)))
 
-    (let ((arg-info ()))
+    (let ((docs ())
+	  (arg-info ()))
       (dolist (spec specs)
-	(unless (and (listp spec) (>= (length spec) 2))
-	  (error "Bad argument spec: ~S." spec))
-	(let ((arg-name (first spec))
-	      (arg-type (get-c-type (second spec)))
-	      (mode (or (third spec) :in))
-	      (options (cdddr spec)))
-	  (when (oddp (length options))
-	    (error "Odd number of options in ~S." spec))
-	  (unless (symbolp arg-name)
-	    (error "Arg name is not a symbol: ~S." arg-name))
-	  (push (make-arg-info :name arg-name :type arg-type
-			       :mode mode :options options)
-		arg-info)))
+	(cond ((stringp spec)
+	       (push spec docs))
+	      ((and (listp spec) (>= (length spec) 2))
+	       (let ((arg-name (first spec))
+		     (arg-type (get-c-type (second spec)))
+		     (mode (or (third spec) :in))
+		     (options (cdddr spec)))
+		 (when (oddp (length options))
+		   (error "Odd number of options in ~S." spec))
+		 (unless (symbolp arg-name)
+		   (error "Arg name is not a symbol: ~S." arg-name))
+		 (push (make-arg-info :name arg-name :type arg-type
+				      :mode mode :options options)
+		       arg-info)))
+	      (t
+	       (error "Bad argument spec: ~S." spec))))
 
+      (setf (routine-info-docs info) (nreverse docs))
       (setf (routine-info-args info) (nreverse arg-info)))
 
     (unless (eq return-type 'void)
@@ -724,8 +734,11 @@
 		(funcall (routine-info-return-coerce-generator info)
 			 call-form)))
 	`(progn
-	   ,@top-level-forms
+	   (compiler-let ((*alien-eval-when* '(compile eval)))
+	     ,@top-level-forms)
 	   (defun ,(routine-info-function-name info) ,lisp-args
+	     ,@(or (routine-info-docs info)
+		   (list (make-doc-string info)))
 	     (declare (optimize (speed 3) (safety 0)))
 	     (with-stack-alien (stack ,(routine-info-stack-record info)
 				      ,(routine-info-arg-size info))
@@ -741,280 +754,6 @@
 			 `((values ,call-form
 				   ,@result-get-forms)))))))))))
 
-#|
-
-    (let ((*output-forms* ()))
-      (allocate-arguments info)
-      (multiple-value-bind (arg-names stores value-names values binds)
-			   (access-arguments info)
-	`(progn
-	   (compiler-let ((*alien-eval-when* '(compile eval)))
-	     ,@(nreverse *output-forms*))
-	   (defun ,(routine-info-function-name info) ,arg-names
-	     ,(make-doc-string info value-names)
-	     (alien-bind (,@(when (routine-info-arg-alien info)
-			      `((args ,(routine-info-arg-alien info))))
-			    ,@(when (routine-info-result-alien info)
-				`((results ,(routine-info-result-alien info)))))
-			 ,@stores
-		(let ((return-value
-		       (%primitive call-foreign
-				   ,(routine-info-code info)
-				   ,(if (routine-info-arg-alien info)
-					'(alien-sap (alien-value args)) 0)
-				   ,(truncate (+ (routine-info-arg-size info)
-						 31) 32))))
-		  return-value
-		  (let* ,binds
-		    (values
-		     ,@(when (routine-info-return-type info)
-			 `(,(coerce-from-integer (routine-info-return-type info)
-						 'return-value)))
-		     ,@values))))))))))
-
-
-;;; Allocate-Argument, Allocate-Result  --  Internal
-;;;
-;;;    Allocate storage for an argument of the specified Type for the routine
-;;; specified by Info.  Name is the name of the argument.  Stuff is pushed onto
-;;; *Output-Forms* as needed.  Allocate-Result is the same except that it
-;;; allocates stuff in the result Alien.
-;;;
-(proclaim '(ftype (function (routine-info c-type symbol) symbol)
-		  allocate-argument allocate-result))
-(defun allocate-argument (info type name)
-  (multiple-value-bind (operator size)
-		       (allocate-field (routine-info-arg-alien info)
-				       (routine-info-arg-size info)
-				       type name)
-    (setf (routine-info-arg-size info) size)
-    operator))
-;;;
-(defun allocate-result (info type name)
-  (multiple-value-bind (operator size)
-		       (allocate-field (routine-info-result-alien info)
-				       (routine-info-result-size info)
-				       type name)
-    (setf (routine-info-result-size info) size)
-    operator))
-
-;;; Allocate-Field  --  Internal
-;;;
-;;;    Pad Size up to the next 32 bit boundry, then create an operator that
-;;; accesses a field of the specified type.  We return the operator name and
-;;; the new amount of stuff allocated.
-;;;
-(proclaim '(function allocate-field (symbol unsigned-byte c-type symbol)
-		     (values symbol unsigned-byte)))
-(defun allocate-field (alien size type name)
-  (let ((base (align-offset size 32))
-	(opname (symbolicate alien "-" name))
-	(ctsize (c-type-size type)))
-    (unless ctsize
-      (error "Cannot pass variable size argument: ~S." type))
-    (if (< ctsize 32)
-	(incf base (- 32 ctsize)))
-    (push `(defoperator (,opname ,(c-type-description type))
-			((alien ,alien))
-	     `(alien-index (alien-value ,alien) ,,base
-			   ,,ctsize))
-	  *output-forms*)
-    (values opname (+ ctsize base))))
-
-
-;;; Allocate-Arguments  --  Internal
-;;;
-;;;    Allocate operators and Aliens for the arguments and results.
-;;;
-(proclaim '(function allocate-arguments (routine-info) void))
-(defun allocate-arguments (info)
-  (let ((name (routine-info-function-name info)))
-    (setf (routine-info-arg-alien info) (symbolicate name "-args"))
-    (setf (routine-info-result-alien info) (symbolicate name "-results")))
-
-  (dolist (arg (routine-info-args info))
-    (let ((type (arg-info-type arg))
-	  (name (arg-info-name arg)))
-      (setf (arg-info-operator arg)
-	    (allocate-argument info type name))
-      (ecase (arg-info-mode arg)
-	(:in)
-	((:copy :in-out :out)
-	 (unless (pointer-type-p type)
-	   (error "~S argument ~S, has non-pointer type."
-		  (arg-info-mode arg) name))
-	 (setf (arg-info-result-operator arg)
-	       (allocate-result info (pointer-type-to type) name))
-	 (push `(setf (alien-access (,(arg-info-operator arg)
-				     ,(routine-info-arg-alien info))
-				    'system-area-pointer)
-		      (alien-sap (,(arg-info-result-operator arg)
-				  ,(routine-info-result-alien info))))
-	       *output-forms*)))))
-
-  (macrolet ((foo (s n)
-	       `(cond ((zerop (,s info))
-		       (setf (,n info) nil))
-		      (t
-		       (setq *output-forms*
-			     (nconc *output-forms*
-				    `((defalien ,(,n info) ,(,n info) ,(,s info)))))))))
-    (foo routine-info-arg-size routine-info-arg-alien)
-    (foo routine-info-result-size routine-info-result-alien)))
-
-
-;;; Access-Arguments  --  Internal
-;;;
-;;;    Return stuff to access the argument in a call to the routine specified
-;;; by Info.  Values:
-;;;
-;;; 1] A list of the input argument names.
-;;; 2] A list of input arg storing forms.
-;;; 3] A list of the names of the result values.
-;;; 4] A list of result value forms.
-;;; 5] A list of let* bindings to make around the value forms.
-;;;
-(proclaim '(function access-arguments (routine-info)
-		     (values list list list list)))
-(defun access-arguments (info)
-  (let ((arg-names ())
-	(stores ())
-	(value-names ())
-	(values ())
-	(binds ()))
-    (dolist (arg (routine-info-args info))
-      (let ((mode (arg-info-mode arg)))
-	(when (eq mode :in)
-	  (multiple-value-bind (form names)
-			       (access-one-value
-				(arg-info-type arg)
-				:write
-				`(,(arg-info-operator arg) (alien-value args))
-				(arg-info-name arg))
-	    (setq arg-names (nconc arg-names names))
-	    (setq stores (nconc stores (list form)))))
-
-	(when (member mode '(:copy :in-out))
-	  (multiple-value-bind (form names)
-			       (access-one-value
-				(pointer-type-to (arg-info-type arg))
-				:write
-				`(,(arg-info-result-operator arg) (alien-value results))
-				(arg-info-name arg))
-	    (setq arg-names (nconc arg-names names))
-	    (setq stores (nconc stores (list form)))))
-
-	(when (member mode '(:out :in-out))
-	  (multiple-value-bind (forms names b)
-			       (access-one-value
-				(pointer-type-to (arg-info-type arg))
-				:read
-				`(,(arg-info-result-operator arg) (alien-value results))
-				(arg-info-name arg))
-	    (setq value-names (nconc value-names names))
-	    (setq values (nconc values forms))
-	    (setq binds (nconc binds b))))))
-
-    (values arg-names stores value-names values binds)))
-
-
-;;; Access-One-Value  --  Internal
-;;;
-;;;    Read or write an alien value that is described by a c-type.
-;;; Type	- The C-Type of the field to be accessed.
-;;; Kind	- :read or :write
-;;; Alien	- The Alien expression for the place to access.
-;;; Name	- The name of the field to access.  If :Write, this variable is
-;;;		  bound to the value to store.
-;;;
-;;; Returns values:
-;;;  1] If :read, a list of forms which are to be the values for the arg
-;;;     If :write, a form which does the store.
-;;;  2] A list of the names of the values produced or arguments used.  In
-;;;     the :read case, this is really just documentation.
-;;;  3] If :read, a list of let* binding forms to make around the code.
-;;;
-(proclaim '(function access-one-value (c-type (member :read :write) t symbol)
-		     (values list list list)))
-(defun access-one-value (type kind alien name)
-  (typecase type
-    (primitive-type
-     (values (if (eq kind :read)
-		 `((alien-access ,alien))
-		 `(setf (alien-access ,alien) ,name))
-	     `(,name)))
-    (pointer-type
-     (values (if (eq kind :read)
-		 `((alien-access ,alien 'alien))
-		 `(setf (alien-access ,alien 'system-area-pointer) ,name))
-	     `(,name)))
-    (t
-     (values (if (eq kind :read)
-		 `((copy-alien ,alien))
-		 `(alien-assign ,alien ,name))
-	     `(,name)))))
-
-
-;;; Coerce-From-Integer  --  Internal
-;;;
-;;;    Return a form that converts a 32bit signed integer into the kind of
-;;; object specified by Type.
-;;;
-(proclaim '(function coerce-from-integer (c-type t) t))
-(defun coerce-from-integer (type value)
-  (typecase type
-    (primitive-type
-     (let ((desc (c-type-description type)))
-       (if (atom desc)
-	   (case desc
-	     (port value)
-	     (boolean `(not (zerop ,value)))
-	     (string-char `(code-char ,value))
-	     (system-area-pointer `(int-sap ,value))
-	     (short-float `(int-sap
-			    (logior (ash ,value (- clc::short-float-shift-16))
-				    (ash clc::short-float-4bit-type
-					 (- 32 clc::short-float-shift-16)))))
-	     (t
-	      (error "Don't know how to hack ~S return type." desc)))
-	   (case (first desc)
-	     (signed-byte value)
-	     (unsigned-byte
-	      (if (> (second desc) 31)
-		  `(ldb (byte 32 0) ,value)
-		  value))
-	     (enumeration
-	      (let ((info (get (cadr desc) 'enumeration-info)))
-		(when (null info)
-		  (error "~S is not a defined enumeration." desc))
-		(ecase (enumeration-info-kind info)
-		  (:vector
-		   `(svref ,(enumeration-info-to info)
-			   (+ ,(enumeration-info-offset info) ,value)))
-		  (`(cdr (assoc ,value) ,(enumeration-info-to info))))))
-	     (t
-	      (error "Don't know how to hack ~S return type." desc))))))
-    (pointer-type
-     (let ((to (pointer-type-to type)))
-       (unless (c-type-size to)
-	 (error "Cannot return pointer to unknown size object."))
-       (let ((tds (c-type-description to)))
-	 (if (or (eq tds 'null-terminated-string)
-		 (and (listp tds) (eq (car (the list tds))
-				      'null-terminated-string)))
-	     `(if (eq ,value 0) NIL
-		  (let ((av (lisp::make-alien-value (int-sap ,value) 0
-						    ,(c-type-size to)
-						    ',tds)))
-		    (alien-bind ((s av ,tds))
-		      (alien-access (alien-value s)))))
-	     `(if (eq ,value 0) NIL
-		  (lisp::make-alien-value (int-sap ,value) 0 ,(c-type-size to)
-					  ',tds))))))
-    (t
-     (error "Don't know how to hack ~S return type." type))))
-
-|#
 
 
 ;;; Make-Doc-String  --  Internal
@@ -1022,10 +761,15 @@
 ;;;    Make a doc string for the interface routine described by Info.  Values
 ;;; is a list of the names of the by-reference return values.
 ;;;
-(proclaim '(function make-doc-string (routine-info list) string))
-(defun make-doc-string (info values)
+(proclaim '(function make-doc-string (routine-info) string))
+(defun make-doc-string (info)
   (let ((*print-pretty* t)
-	(*print-case* :downcase))
+	(*print-case* :downcase)
+	(values (mapcar #'arg-info-name
+			(remove-if-not #'(lambda (mode)
+					   (member mode '(:out :in-out)))
+				       (routine-info-args info)
+				       :key #'arg-info-mode))))
     (format nil "Interface to foreign routine ~S~:[; returns no values.~;~
 	    ~:*, return values:~%  ~A~]"
 	    (routine-info-name info)
@@ -1041,16 +785,38 @@
 
 (defmacro def-c-variable (name type)
   "Defines a foreign variable so that it is available from Lisp.
-  Name should be a string with the name of the foreign variable and
-  type is the foreign type of the variable."
-  (let* ((symbol (intern (string-upcase name)))
-	 (c-info (get-c-type type))
-	 (c-type (if (primitive-type-p c-info)
-		     (c-type-description c-info)
-		     type))
-	 (c-size (c-type-size c-info)))
-    `(defalien ,symbol ,c-type ,c-size
-       (%primitive c::foreign-symbol-address ',name))))
+  Name should either be a string with the name of the foreign variable or
+  a list of the string and the symbol to use as the alien variable. 
+  Type is the foreign type of the variable."
+  (multiple-value-bind
+      (symbol name)
+      (cond ((stringp name)
+	     (values (intern (string-upcase name))
+		     name))
+	    ((and (consp name) (= (length name) 2)
+		  (stringp (car name)) (symbolp (cadr name)))
+	     (values (cadr name) (car name)))
+	    (t
+	     (error "Bogus name for def-c-variable: ~S.~%~
+	     Should be either a string or a list of a string and symbol."
+		    name)))
+    (let* ((c-info (get-c-type type))
+	   (c-type (if (primitive-type-p c-info)
+		       (c-type-description c-info)
+		       type))
+	   (c-size (c-type-size c-info)))
+      `(progn
+	 (defparameter ,symbol
+	   (make-alien ',type ,size
+		       (%primitive c::foreign-symbol-address ,name)))
+	 (eval-when ,*alien-eval-when*
+	   (setf (info variable alien-value ',name)
+		 (lisp::make-ct-a-val
+		  :type ',type
+		  :size ,size
+		  :offset 0
+		  :sap '(%primitive c::foreign-symbol-addres ,name)
+		  :alien ',name)))))))
 
 #|
 ;;; Def-C-Procedure defines data structures etc. so that C can be passed
