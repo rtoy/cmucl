@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.27 1993/07/17 00:52:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.28 1993/07/20 15:35:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -282,7 +282,11 @@
 ;;;    We use an indirection to allow forward referencing of class definitions
 ;;; with load-time resolution.
 ;;;
-(defstruct (class-cell (:constructor make-class-cell (name &optional class)))
+(defstruct (class-cell
+	    (:constructor make-class-cell (name &optional class))
+	    (:make-load-form-fun
+	     (lambda (cell)
+	       `(find-class-cell ',(class-cell-name cell)))))
   ;;
   ;; Name of class we expect to find.
   (name nil :type symbol :read-only t)
