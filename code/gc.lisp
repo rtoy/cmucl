@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.13 1992/03/26 05:55:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.14 1992/03/29 21:37:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 (export '(*before-gc-hooks* *after-gc-hooks* gc gc-on gc-off
 	  *bytes-consed-between-gcs* *gc-verbose* *gc-inhibit-hook*
 	  *gc-notify-before* *gc-notify-after* get-bytes-consed
-	  *gc-run-time*))
+	  *gc-run-time* bytes-consed-between-gcs))
 
 (in-package "LISP")
 (export '(room))
@@ -167,7 +167,7 @@
 (defvar *bytes-consed-between-gcs* default-bytes-consed-between-gcs
   "This number specifies the minimum number of bytes of dynamic space
    that must be consed before the next gc will occur.")
-
+;;;
 (declaim (type index *bytes-consed-between-gcs*))
 
 ;;; Public
@@ -419,6 +419,26 @@
 
 
 ;;;; Auxiliary Functions.
+
+(defun bytes-consed-between-gcs ()
+  "Return the amount of memory that will be allocated before the next garbage
+   collection is initiated.  This can be set with SETF."
+  *bytes-consed-between-gcs*)
+;;;
+(defun %set-bytes-consed-between-gcs (val)
+  (declare (type index val))
+  (let ((old *bytes-consed-between-gcs*))
+    (setf *bytes-consed-between-gcs* val)
+    (when *gc-trigger*
+      (setf *gc-trigger* (+ *gc-trigger* (- val old)))
+      (cond ((<= (dynamic-usage) *gc-trigger*)
+	     (clear-auto-gc-trigger)
+	     (set-auto-gc-trigger *gc-trigger*))
+	    (t
+	     (sub-gc)))))
+  val)
+;;;
+(defsetf bytes-consed-between-gcs %set-bytes-consed-between-gcs)
 
 
 (defun gc-on ()
