@@ -25,31 +25,31 @@
 ;;; *string-table* are bound to.  Address is in the system area.
 ;;;
 (defmacro make-sap (address)
-  `(lisp::fixnum-to-sap ,address))
+  `(system:int-sap ,address))
 
 (defmacro system-address (sap)
-  `(lisp::sap-to-fixnum ,sap))
+  `(system:sap-int ,sap))
 
 
 (defmacro allocate-bytes (count)
-  `(make-sap (lisp::do-validate 0 ,count -1)))
+  `(system:allocate-system-memory ,count))
 
 (defmacro deallocate-bytes (address byte-count)
-  `(mach::vm_deallocate lisp::*task-self* ,address ,byte-count))
+  `(system:deallocate-system-memory (int-sap ,address) ,byte-count))
 
 
 (defmacro sapref (sap offset)
-  `(%primitive 16bit-system-ref ,sap ,offset))
+  `(system:sap-ref-16 ,sap ,offset))
 
 (defsetf sapref (sap offset) (value)
-  `(%primitive 16bit-system-set ,sap ,offset ,value))
+  `(setf (system:sap-ref-16 ,sap ,offset) ,value))
 
 
 (defmacro sap-replace (dst-string src-string src-start dst-start dst-end)
   `(%primitive byte-blt ,src-string ,src-start ,dst-string ,dst-start ,dst-end))
 
 (defmacro string-sapref (sap index)
-  `(%primitive 8bit-system-ref ,sap ,index))
+  `(system:sap-ref-8 ,sap ,index))
 
 
 
@@ -60,7 +60,10 @@
 ;;; doing a SUBSEQ of entry.
 ;;;
 (defmacro string-hash (string length)
-  `(%primitive sxhash-simple-substring ,string ,length))
+  `(ext:truly-the lisp::index
+		  (%primitive sxhash-simple-substring
+			      ,string
+			      (the fixnum ,length))))
 
 ) ;eval-when
 
