@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.33 2004/06/18 17:44:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.34 2004/10/19 20:12:45 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,12 +142,16 @@
 
 ;;; ROUND-TO-DUALWORD  --  Internal
 ;;;
-;;;    Round Size (in bytes) up to the next dualword (eight byte) boundry.
+;;;    Round Size (in bytes) up to the next dualword (eight/16 byte) boundry.
 ;;;
 (declaim (inline round-to-dualword))
 (defun round-to-dualword (size)
   (declare (type memory-size size))
-  (logandc2 (the memory-size (+ size lowtag-mask)) lowtag-mask))
+  #-amd64
+  (logandc2 (the memory-size (+ size lowtag-mask)) lowtag-mask)
+  ;; when we use 4-bit lowtag for amd64 we can get rid of this
+  #+amd64
+  (logandc2 (the memory-size (+ size 15)) 15))
 
 
 ;;; VECTOR-TOTAL-SIZE  --  Internal
