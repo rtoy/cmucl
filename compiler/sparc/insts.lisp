@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.30 2001/05/11 21:18:26 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.31 2001/05/14 14:00:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -324,9 +324,8 @@ about function addresses and register values.")
 	   (setf *note-sethi-inst* (delete sethi *note-sethi-inst*))))))))
 
 (defun handle-andcc-inst (rs1 immed-val rd dstate)
-  (declare (ignore rs1))
   ;; ANDCC %ALLOC, 3, %ZERO instruction
-  (when (and (= rd 0) (= immed-val 3))
+  (when (and (= rs1 alloc-offset) (= rd zero-offset) (= immed-val 3))
     (disassem:note "pseudo-atomic interrupted?" dstate)))
 	 
 (eval-when (compile load eval)
