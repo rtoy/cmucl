@@ -261,3 +261,14 @@
 	    (when load
 	      (load name :verbose t)))))))))
 
+
+
+;;;; BACKEND-FEATUREP and TARGET-FEATUREP
+
+(defun target-featurep (feature)
+  (let ((*features* (c:backend-features c:*target-backend*)))
+    (lisp::featurep feature)))
+
+(defun backend-featurep (feature)
+  (let ((*features* (c:backend-features c:*backend*)))
+    (lisp::featurep feature)))
