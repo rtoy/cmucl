@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.26 1992/02/19 20:06:17 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.27 1992/12/06 15:52:19 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -203,7 +203,7 @@
   (when (and lock *translate-file-names-before-locking*)
     (multiple-value-bind (unmatched-dir new-dirs file-name)
 			 (maybe-translate-definition-file pathname)
-      (when unmatched-dir
+      (when new-dirs
 	(let ((new-name (translate-definition-file unmatched-dir
 						   (car new-dirs)
 						   file-name)))
