@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.22 2003/05/17 16:20:36 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.23 2003/05/17 19:02:37 gerd Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -303,11 +303,22 @@
       (error "~@<Can't use anonymous or undefined class as constant: ~S~:@>"
 	     class))
     `(find-class ',name)))
-  
+
+(defgeneric make-load-form-saving-slots (object &key slot-names environment))
+
 (defun make-load-form-saving-slots (object &key slot-names environment)
   (declare (ignore environment))
-  (when slot-names
-    (warn "~@<~s ~s option not implemented, dumping all slots: ~S~@:>"
-	  :slot-names 'make-load-form object))
-  :just-dump-it-normally)
+  (let ((class (class-of object)))
+    (collect ((inits))
+      (dolist (slot (class-slots class))
+	(let ((slot-name (slot-definition-name slot)))
+	  (when (or (memq slot-name slot-names)
+		    (and (null slot-names)
+			 (eq :instance (slot-definition-allocation slot))))
+	    (if (slot-boundp-using-class class object slot)
+		(let ((value (slot-value-using-class class object slot)))
+		  (inits `(setf (slot-value ,object ',slot-name) ',value)))
+		(inits `(slot-makunbound ,object ',slot-name))))))
+      (values `(allocate-instance (find-class ',(class-name class)))
+	      `(progn .,(inits))))))
 

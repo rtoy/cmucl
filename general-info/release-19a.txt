@@ -77,6 +77,10 @@ New in this release:
      - VALUES types no longer accepting &KEY or &ALLOW-OTHER-KEYS.
      - THE conforming to ANSI.
      - SLOT-EXISTS-P can be used with conditions.
+     - REMOVE-METHOD always returning the generic function passed to it.
+     - Standard methods for STANDARD-OBJECT and STRUCTURE-OBJECT
+       defined on MAKE-LOAD-FORM.
+     - Compliant MAKE-LOAD-FORM-SAVING-SLOTS.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
