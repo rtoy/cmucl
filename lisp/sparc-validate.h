@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.13 2003/09/16 17:12:52 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.14 2003/09/22 13:29:49 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -71,6 +71,7 @@
 
 #define CONTROL_STACK_START 	(0x38000000)
 #define CONTROL_STACK_SIZE  	(0x07ff8000) /* 128 MB - 32 KB, 128 MB max */
+#define CONTROL_STACK_END       (CONTROL_STACK_START + CONTROL_STACK_SIZE)
 
 #define DYNAMIC_0_SPACE_START	(0x40000000)
 /* This isn't used with GENCGC */
