@@ -134,6 +134,7 @@ New in this release:
        NOT-AUTO-COMPILE have been moved from PCL to EXT.
      - Support for inlineing methods in effective methods; see the 
        CMU User Manual.
+     - CALL-NEXT-METHOD always being called with original arguments.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

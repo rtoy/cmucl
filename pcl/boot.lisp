@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.63 2003/05/30 09:14:34 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.64 2003/06/02 09:32:44 gerd Exp $")
 
 (in-package :pcl)
 
@@ -745,13 +745,17 @@ work during bootstrapping.
     (let ((method (find-method (gdefinition name) qualifiers specializers)))
       (apply #'no-next-method (method-generic-function method) method args))))
 
-(defmacro bind-simple-lexical-method-macros
-    ((method-args next-methods) &body body)
+(defmacro bind-simple-lexical-method-macros ((method-args next-methods)
+					     &body body)
   `(macrolet ((call-next-method-bind (&body body)
 		`(let ((.next-method. (car ,',next-methods))
 		       (,',next-methods (cdr ,',next-methods)))
 		   (declare (ignorable .next-method. ,',next-methods))
 		   ,@body))
+	      (with-rebound-original-arguments (call-next-method-p
+						&body body)
+		(declare (ignore call-next-method-p))
+		`(let () ,@body))
 	      (call-next-method-body (method-name-declaration cnm-args)
 		`(if .next-method.
 		     (funcall (if (std-instance-p .next-method.)
@@ -918,58 +922,71 @@ work during bootstrapping.
     (function
      (apply emf args))))
 
-(defmacro bind-fast-lexical-method-macros
-    ((args rest-arg next-method-call) &body body)
-  `(macrolet ((call-next-method-bind (&body body)
-		`(let () ,@body))
-	     (call-next-method-body (method-name-declaration cnm-args)
-		`(if ,',next-method-call
-		     ,(if (and (null ',rest-arg)
-			       (consp cnm-args)
-			       (eq (car cnm-args) 'list))
-			  `(invoke-effective-method-function
-			    ,',next-method-call nil
-			    ,@(cdr cnm-args))
-			  (let ((call `(invoke-effective-method-function
-					,',next-method-call 
-					,',(not (null rest-arg))
-					,@',args 
-					,@',(when rest-arg `(,rest-arg)))))
-			    `(if ,cnm-args
-				 (bind-args ((,@',args ,@',(when rest-arg
-							     `(&rest ,rest-arg)))
-					     ,cnm-args)
-					    ,call)
-				 ,call)))
-		     ,(if (and (null ',rest-arg)
-			       (consp cnm-args)
-			       (eq (car cnm-args) 'list))
-			  `(call-no-next-method ',method-name-declaration
-						,@(cdr cnm-args))
-			  `(call-no-next-method ',method-name-declaration
-						,@',args
-						,@',(when rest-arg
-						      `(,rest-arg))))))
-	      (next-method-p-body ()
-	        `(not (null ,',next-method-call))))
-     ,@body))
+(defmacro bind-fast-lexical-method-macros ((args rest-arg next-method-call)
+					   &body body)
+  (let* ((all-params (append args (when rest-arg `(,rest-arg))))
+	 (bindings (mapcar (lambda (x) `(,x ,x)) all-params)))
+    `(macrolet ((call-next-method-bind (&body body)
+		  `(let () ,@body))
+		;;
+		;; Rebind method parameters around BODY if CNM-P is true.
+		;; CNM-P true means there is a CALL-NEXT-METHOD in BODY.
+		;;
+		;; The problem with rebinding parameters is that this
+		;; can use parameters that are declared to be ignored
+		;; in the method body, leading to spurious warnings.
+		;; For now, we deal with this by translating IGNORE to
+		;; IGNORABLE.
+		(with-rebound-original-arguments (cnm-p &body body)
+		  (if cnm-p
+		      `(let ,',bindings
+			 (declare (ignorable ,@',all-params))
+			 ,@body)
+		      `(let () ,@body)))
+		(call-next-method-body (method-name-declaration cnm-args)
+		  `(if ,',next-method-call
+		       ,(if (and (null ',rest-arg)
+				 (consp cnm-args)
+				 (eq (car cnm-args) 'list))
+			    `(invoke-effective-method-function
+			      ,',next-method-call nil
+			      ,@(cdr cnm-args))
+			    (let ((call `(invoke-effective-method-function
+					  ,',next-method-call 
+					  ,',(not (null rest-arg))
+					  ,@',args 
+					  ,@',(when rest-arg `(,rest-arg)))))
+			      `(if ,cnm-args
+				   (bind-args ((,@',args ,@',(when rest-arg
+							       `(&rest ,rest-arg)))
+					       ,cnm-args)
+					      ,call)
+				   ,call)))
+		       ,(if (and (null ',rest-arg)
+				 (consp cnm-args)
+				 (eq (car cnm-args) 'list))
+			    `(call-no-next-method ',method-name-declaration
+						  ,@(cdr cnm-args))
+			    `(call-no-next-method ',method-name-declaration
+						  ,@',args
+						  ,@',(when rest-arg
+							`(,rest-arg))))))
+		(next-method-p-body ()
+		  `(not (null ,',next-method-call))))
+       ,@body)))
 
 (defmacro bind-lexical-method-functions 
     ((&key call-next-method-p next-method-p-p closurep applyp
 	   method-name-declaration)
      &body body)
-  (if (and (null call-next-method-p) (null next-method-p-p)
-	   (null closurep) (null applyp))
-      `(let () ,@body)
-      `(call-next-method-bind
-	(flet (,@(and call-next-method-p
-		      `((call-next-method (&rest cnm-args)
-			  (call-next-method-body ,method-name-declaration
-						 cnm-args))))
-	       ,@(and next-method-p-p
-		      '((next-method-p ()
-			 (next-method-p-body)))))
-	      ,@body))))
+  `(call-next-method-bind
+    (flet ((call-next-method (&rest cnm-args)
+	     (call-next-method-body ,method-name-declaration cnm-args))
+	   (next-method-p ()
+	     (next-method-p-body)))
+      (declare (ignorable #'call-next-method #'next-method-p))
+      (with-rebound-original-arguments (call-next-method-p)
+	,@body))))
 
 (defun too-many-args ()
   (simple-program-error "Too many arguments."))

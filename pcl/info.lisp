@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.7 2003/05/27 11:49:57 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.8 2003/06/02 09:32:44 gerd Exp $")
 
 (in-package "PCL")
 
@@ -506,12 +506,11 @@
 			 (let ((inners nil) (outers nil))
 			   (dolist (var form)
 			     (if (member var args)
-				 ;; quietly remove ignore declarations
-				 ;; on args when a next-method is
-				 ;; involved to prevent compiler warns
-				 ;; about ignored args being read
-				 (unless (and calls-next-method-p
-					      (eq (car dname) 'ignore))
+				 ;; Quietly remove ignore declarations
+				 ;; on args to prevent compiler warns
+				 ;; about ignored args being read in
+				 ;; CALL-NEXT-METHOD.
+				 (unless (eq (car dname) 'ignore)
 				   (push var outers))
 				 (push var inners)))
 			   (when outers
