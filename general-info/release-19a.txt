@@ -71,7 +71,13 @@ New in this release:
      - Lisp binary will also look at the PATH envvar to find out it's
        own location which is used to find other needed files.
      - Byte-compiled code being executed ca. 1/3 faster.
- 
+     - Heap overflow checking for x86 and solaris with gencgc.  When
+       the heap is close to overflowing, a heap-overflow condition is
+       signaled.  If an overflow happens again while debugging the
+       condition, the user is returned to top-level without warning.
+       Use lisp::*reserved-heap-pages* to set the number of pages to
+       reserve.
+
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
        ANSI test suite have been fixed.
