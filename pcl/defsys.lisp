@@ -408,8 +408,7 @@ and load your system with:
     (let ((*system-directory* (funcall (car system)))
 	  (modules (cadr system))
 	  (transformations ()))
-      (labels (#+nil ;; This isn't used?
-	       (load-source (name pathname)
+      (labels ((load-source (name pathname)
 		 (format t "~&Loading source of ~A..." name)
 		 (or print-only (load pathname)))
 	       (load-binary (name pathname)
@@ -560,6 +559,7 @@ and load your system with:
   (flet ((bad-time ()
 	   (when errorp
 	     (error "LOAD-TRUENAME called but a file isn't being loaded."))))
+    #+CMU (pathname "pcl:")
     #+Lispm  (or sys:fdefine-file-pathname (bad-time))
     #+excl   excl::*source-pathname*
     #+Xerox  (pathname (or (il:fullname *standard-input*) (bad-time)))
@@ -572,7 +572,12 @@ and load your system with:
     #+LUCID (or lucid::*source-pathname* (bad-time))
     #-(or Lispm excl Xerox (and dec vax common) LUCID) nil))
 
-(defvar *pcl-directory* (pathname "pcl:"))
+#-Symbolics
+(defvar *pcl-directory*
+ 	(or (load-truename t)
+ 	    (error "Because load-truename is not implemented in this port~%~
+                     of PCL, you must manually edit the definition of the~%~
+                     variable *pcl-directory* in the file defsys.lisp.")))
 
 #+Genera
 (defvar *pcl-directory*
