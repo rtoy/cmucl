@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.7 1991/02/08 13:32:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.8 1991/02/25 23:52:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -849,22 +849,24 @@
 ;;; Skip arguments  (relative goto)  ~*
 
 (defun format-skip-arguments (colon atsign parms)
-  (with-format-parameters parms ((count 1))
-    (cond (atsign
+  (cond (atsign
+	 (with-format-parameters parms ((count 0))
 	   (when (or (minusp count)
 		     (> count (length *format-original-arguments*)))
 	     (format-error "Illegal to go to non-existant argument"))
 	   (setq *format-arguments*
-		 (nthcdr count *format-original-arguments*)))
-	  (colon
+		 (nthcdr count *format-original-arguments*))))
+	(colon
+	 (with-format-parameters parms ((count 1))
 	   (let ((cdrs (- (length (the list *format-original-arguments*))
 			  (length (the list *format-arguments*))
 			  count)))
 	     (if (minusp cdrs)
 		 (format-error  "Skip to nonexistant argument")
 		 (setq *format-arguments*
-		       (nthcdr cdrs *format-original-arguments*)))))
-	  (t
+		       (nthcdr cdrs *format-original-arguments*))))))
+	(t
+	 (with-format-parameters parms ((count 1))
 	   (if (> count (length *format-arguments*))
 	       (format-error "Skip to nonexistant argument")
 	       (setq *format-arguments* (nthcdr count *format-arguments*)))))))
@@ -917,12 +919,12 @@
 (defun format-princ (colon atsign parms)
   (let ((arg (pop-format-arg)))
     (if (null parms)
-	(if (or arg (not colon)) (princ arg) (write-string "()"))
+	(if arg (princ arg) (write-string (if colon "()" "NIL")))
 	(with-format-parameters parms
 	   ((mincol 0) (colinc 1) (minpad 0) (padchar #\space))
-	   (format-write-field (if (or arg (not colon))
+	   (format-write-field (if arg
 				   (princ-to-string arg)
-				   "()")
+				   (if colon "()" "NIL"))
 			       mincol colinc minpad padchar atsign)))))
 
 
@@ -932,12 +934,12 @@
 (defun format-prin1 (colon atsign parms)
   (let ((arg (pop-format-arg)))
     (if (null parms)
-	(if (or arg (not colon)) (prin1 arg) (write-string "()"))
+	(if arg (prin1 arg) (write-string (if colon "()" "NIL")))
 	(with-format-parameters parms
 	   ((mincol 0) (colinc 1) (minpad 0) (padchar #\space))
-	   (format-write-field (if (or arg (not colon))
+	   (format-write-field (if arg
 				   (prin1-to-string arg)
-				   "()")
+				   (if colon "()" "NIL"))
 			       mincol colinc minpad padchar atsign)))))
 
 
