@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.65 1997/12/17 19:09:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.66 1997/12/17 19:24:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2449,15 +2449,16 @@
 (defun not-more-contagious (x y)
   (declare (type continuation x y))
   (flet ((simple-numeric-type (num)
-	   ;; Return non-NIL if NUM is integer, rational, or a float
-	   ;; of some type (but not FLOAT)
-	   (case (numeric-type-class num)
-	     ((integer rational)
-	      t)
-	     (float
-	      (numeric-type-format num))
-	     (t
-	      nil))))
+	   (and (numeric-type-p num)
+		;; Return non-NIL if NUM is integer, rational, or a float
+		;; of some type (but not FLOAT)
+		(case (numeric-type-class num)
+		  ((integer rational)
+		   t)
+		  (float
+		   (numeric-type-format num))
+		  (t
+		   nil)))))
     (let ((x (continuation-type x))
 	  (y (continuation-type y)))
       (if (and (simple-numeric-type x)
