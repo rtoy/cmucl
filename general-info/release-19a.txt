@@ -96,6 +96,9 @@ New in this release:
        signaled in safe code when the set of methods applicable to
        CALL-NEXT-METHOD's arguments is different from the set of
        methods applicable to the original method arguments.
+     - FIND-METHOD signaling an error when called with specializers
+       not corresponding to the number of required arguments of the
+       supplied generic function.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
