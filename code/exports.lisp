@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.2 1997/09/04 13:13:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.3 1997/09/07 23:35:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -644,7 +644,8 @@
 	   "DOUBLE-FLOAT-TYPE" "DOUBLE-FLOAT-VALUE-SLOT"
 	   "DOUBLE-REG-SC-NUMBER" "DOUBLE-STACK-SC-NUMBER" "ERROR-TRAP"
 	   "EVEN-FIXNUM-TYPE" "EXPORTED-STATIC-SYMBOLS" "FIND-HOLES" "FIXNUM"
-	   "FIXUP-CODE-OBJECT" "FLOAT-DIVIDE-BY-ZERO-TRAP-BIT"
+	   "FIXUP-CODE-OBJECT" "FLOAT-DENORMAL-TRAP-BIT"
+	   "FLOAT-DIVIDE-BY-ZERO-TRAP-BIT"
 	   "FLOAT-IMPRECISE-TRAP-BIT" "FLOAT-INVALID-TRAP-BIT"
 	   "FLOAT-OVERFLOW-TRAP-BIT" "FLOAT-SIGN-SHIFT"
 	   "FLOAT-UNDERFLOW-TRAP-BIT" "FLOATING-POINT-MODES"
