@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.88 1993/06/24 14:04:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.89 1993/07/03 14:55:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1146,7 +1146,8 @@
 			 cont res 'values))))
     (dynamic-extent
      (when (policy nil (> speed brevity))
-       (compiler-note "DYNAMIC-EXTENT declaration not implemented.")))
+       (compiler-note "DYNAMIC-EXTENT declaration not implemented."))
+     res)
     (t
      (let ((what (first spec)))
        (cond ((member what type-specifier-symbols)
