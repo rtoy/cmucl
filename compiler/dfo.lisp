@@ -126,7 +126,7 @@
 ;;;
 (defun walk-home-call-graph (block component)
   (declare (type cblock block) (type component component))
-  (let* ((home (lambda-home (block-lambda block)))
+  (let* ((home (block-home-lambda block))
 	 (bind-block (node-block (lambda-bind home)))
 	 (home-component (block-component bind-block)))
     (cond ((eq (component-kind home-component) :initial)
@@ -185,7 +185,7 @@
 (defun find-reference-functions (fun)
   (collect ((res))
     (dolist (ref (leaf-refs fun))
-      (let ((home (lambda-home (block-lambda (node-block ref)))))
+      (let ((home (lambda-home (lexenv-lambda (node-lexenv ref)))))
 	(if (and (eq (functional-kind home) :top-level)
 		 (eq (functional-kind fun) :external))
 	    (setf (ref-inlinep ref) :notinline)
@@ -336,6 +336,9 @@
 	  (block-component (node-block (lambda-bind result-lambda))))
 	 (result-return (lambda-return result-lambda)))
 
+    ;;
+    ;; Make sure the result's return node starts a block so that we can splice
+    ;; code in before it.
     (let ((prev (node-prev (continuation-use (return-result result-return)))))
       (when (continuation-use prev)
 	(node-ends-block (continuation-use prev)))
@@ -346,6 +349,8 @@
 
     (let ((result-return-block (node-block result-return)))
       (dolist (lambda (rest lambdas))
+	;;
+	;; Delete the lambda, and compile lets and entries.
 	(setf (functional-kind lambda) :deleted)
 	(dolist (let (lambda-lets lambda))
 	  (setf (lambda-home let) result-lambda)
@@ -363,15 +368,20 @@
 	       (result (return-result return))
 	       (component (block-component bind-block)))
 
+	  ;;
+	  ;; Move blocks into the new component, and move any nodes directly in
+	  ;; the old lambda into the new one (lets implicitly moved by changing
+	  ;; their home.) 
 	  (do-blocks (block component)
-	    (setf (block-component block) result-component)
-	    (macrolet ((frob (slot)
-			 `(when (eq (,slot block) lambda)
-			    (setf (,slot block) result-lambda))))
-	      (frob block-lambda)
-	      (frob block-start-cleanup)
-	      (frob block-end-cleanup)))
+	    (do-nodes (node cont block)
+	      (let ((lexenv (node-lexenv node)))
+		(when (eq (lexenv-lambda lexenv) lambda)
+		  (setf (lexenv-lambda lexenv) result-lambda))))
+	    (setf (block-component block) result-component))
 
+	  ;;
+	  ;; Splice the blocks into the new DFO, and unlink them from the old
+	  ;; component head and tail.
 	  (let* ((head (component-head component))
 		 (first (block-next head))
 		 (tail (component-tail component))
@@ -390,6 +400,9 @@
 	    (assert (and (null (rest lambdas))
 			 (eq (first lambdas) lambda))))
 
+	  ;;
+	  ;; Switch the end of the code from the return block to the start of
+	  ;; the next chunk.
 	  (dolist (pred (block-pred result-return-block))
 	    (unlink-blocks pred result-return-block)
 	    (link-blocks pred bind-block))
