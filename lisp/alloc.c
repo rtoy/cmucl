@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.8 2004/07/08 17:49:04 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.8.2.1 2005/02/12 16:09:46 rtoy Exp $ */
 
 #include <string.h>
 
@@ -123,11 +123,11 @@ lispobj alloc_string(char *str)
 lispobj alloc_sap(void *ptr)
 {
 #ifndef alpha
-    struct sap *sap = (struct sap *)alloc_unboxed(type_Sap, 1);
+    struct sap *sap_ptr = (struct sap *)alloc_unboxed(type_Sap, 1);
 #else
-    struct sap *sap = (struct sap *)alloc_unboxed(type_Sap, 3);
+    struct sap *sap_ptr = (struct sap *)alloc_unboxed(type_Sap, 3);
 #endif
-    sap->pointer = ptr;
+    sap_ptr->pointer = ptr;
 
-    return (lispobj) sap | type_OtherPointer;
+    return (lispobj) sap_ptr | type_OtherPointer;
 }
