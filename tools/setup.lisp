@@ -128,59 +128,6 @@
   (values))
 
 
-;;;; NEW-BACKEND
-
-(defun new-backend (name features misfeatures)
-  ;; If VM names a different package, rename that package so that VM doesn't
-  ;; name it.  
-  (let ((pkg (find-package "VM")))
-    (when pkg
-      (let ((pkg-name (package-name pkg)))
-	(unless (string= pkg-name name)
-	  (rename-package pkg pkg-name
-			  (remove "VM" (package-nicknames pkg)
-				  :test #'string=))
-	  (unuse-package pkg "C")))))
-  ;; Make sure VM names our package, creating it if necessary.
-  (let* ((pkg (or (find-package name)
-		  (make-package name :nicknames '("VM"))))
-	 (nicknames (package-nicknames pkg)))
-    (unless (member "VM" nicknames :test #'string=)
-      (rename-package pkg name (cons "VM" nicknames)))
-    ;; And make sure we are using the necessary packages.
-    (use-package "C" pkg)
-    (use-package "ASSEM" pkg)
-    (use-package "EXT" pkg)
-    (use-package "KERNEL" pkg)
-    (use-package "SYSTEM" pkg)
-    (use-package "ALIEN" pkg)
-    (use-package "C-CALL" pkg))
-  ;; Make sure the native info env and features list are stored in
-  ;; *native-backend*
-  (unless (c:backend-info-environment c:*native-backend*)
-    (setf (c:backend-info-environment c:*native-backend*) *info-environment*))
-  (unless (c:backend-features c:*native-backend*)
-    (setf (c:backend-features c:*native-backend*) *features*))
-  ;; Cons up a backend structure, filling in the info-env and features slots.
-  (let ((backend (c::make-backend
-		  :name name
-		  :info-environment
-		  (cons (c::make-info-environment
-			 :name
-			 (concatenate 'string name " backend"))
-			(remove-if #'(lambda (name)
-				       (let ((len (length name)))
-					 (and (> len 8)
-					      (string= name " backend"
-						       :start1 (- len 8)))))
-				   *info-environment*
-				   :key #'c::info-env-name))
-		  :features
-		  (append features (set-difference *features* misfeatures)))))
-    (setf c:*target-backend* backend)))
-
-
-
 ;;;; Compile utility:
 
 ;;; Switches:
