@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.7 1991/03/15 22:17:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.8 1991/03/15 22:48:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,7 @@
     ;;
     ;; Clear any extra lines at the end of the window.
     (let ((pos (dis-line-position (car (window-last-line window)))))
-      (when (< pos (window-old-lines window))
+      (when (< pos (1- (window-height window)))
 	(tty-smart-clear-to-eow hunk (1+ pos)))
       (setf (window-old-lines window) pos))
     ;;
@@ -428,7 +428,7 @@
     ;;
     ;; Clear any extra lines at the end of the window.
     (let ((pos (dis-line-position (car (window-last-line window)))))
-      (when (< pos (window-old-lines window))
+      (when (< pos (1- (window-height window)))
 	(tty-smart-clear-to-eow hunk (1+ pos)))
       (setf (window-old-lines window) pos))
     ;;
