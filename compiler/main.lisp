@@ -245,25 +245,8 @@
 ;;;
 (defun clear-ir2-info (component)
   (declare (type component component))
+  (nuke-ir2-component component)
   (setf (component-info component) nil)
-
-  (do-blocks (block component)
-    (setf (block-info block) nil)
-    (do-nodes (node cont block)
-      (setf (continuation-info cont) nil)
-      (when (basic-combination-p node)
-	(setf (basic-combination-info node) nil))))
-
-  (dolist (fun (component-lambdas component))
-    (let ((tails (lambda-tail-set fun)))
-      (when tails
-	(setf (tail-set-info tails) nil)))
-    (let ((env (lambda-environment fun)))
-      (setf (environment-info env) nil)
-      (dolist (nlx (environment-nlx-info env))
-	(setf (nlx-info-info nlx) nil)))
-    (dolist (var (lambda-vars fun))
-      (setf (leaf-info var) nil)))
 
   (maphash #'(lambda (k v)
 	       (declare (ignore k))
@@ -279,6 +262,9 @@
   (undefined-value))
 
 
+;;; CLEAR-STUFF  --  Internal
+;;;
+;;;    Clear all the global variables used by the compiler.
 ;;;
 (defun clear-stuff ()
   ;;
@@ -790,7 +776,7 @@
 ;;; The maximum number of top-level lambdas we put in a single top-level
 ;;; component.
 ;;;
-(defparameter top-level-lambda-max 20)
+(defparameter top-level-lambda-max 10)
 
 
 ;;; COMPILE-TOP-LEVEL-LAMBDAS  --  Internal
@@ -813,6 +799,7 @@
 	(setq *pending-top-level-lambdas* ())
 	(compile-component component object)
 	(clear-ir2-info component)
+	(macerate-ir1-component component)
 	(etypecase object
 	  (fasl-file
 	   (fasl-dump-top-level-lambda-call tll object))
@@ -839,7 +826,8 @@
   (maybe-mumble "Find components")
   (multiple-value-bind (components top-components)
 		       (find-initial-dfo lambdas)
-    (let ((*all-components* (append components top-components)))
+    (let ((*all-components* (append components top-components))
+	  (top-level-closure nil))
       (when *check-consistency*
 	(maybe-mumble "[Check]~%")
 	(check-ir1-consistency *all-components*))
@@ -849,13 +837,21 @@
       
       (dolist (component components)
 	(compile-component component object)
-	(clear-ir2-info component))
+	(clear-ir2-info component)
+	(if (replace-top-level-xeps component)
+	    (setq top-level-closure t)
+	    (unless *check-consistency*
+	      (macerate-ir1-component component))))
       
       (when *check-consistency*
 	(maybe-mumble "[Check]~%")
 	(check-ir1-consistency *all-components*))
       
-      (compile-top-level-lambdas lambdas nil object)))
+      (compile-top-level-lambdas lambdas top-level-closure object)
+
+      (when *check-consistency*
+	(dolist (component components)
+	  (macerate-ir1-component component)))))
     
   (ir1-finalize)
   (undefined-value))
