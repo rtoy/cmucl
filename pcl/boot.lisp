@@ -256,26 +256,31 @@ work during bootstrapping.
       (expand-defmethod-internal name qualifiers lambda-list body env)
     (make-top-level-form `(defmethod ,name ,@qualifiers ,specializers)
 			 *defmethod-times*
-      `(load-defmethod
-	 ',(if proto-method
-	       (class-name (class-of proto-method))
-	       'standard-method)
-	 ',name
-	 ',qualifiers
-	 (list ,@(mapcar #'(lambda (specializer)
-			     (if (and (consp specializer)
-				      (eq (car specializer) 'eql))
-				 ``(eql ,,(cadr specializer))
-				 `',specializer))
-			 specializers))
-	 ',(specialized-lambda-list-lambda-list lambda-list)
-	 ',doc
-	 ',(getf plist :isl-cache-symbol)	;Paper over a bug in KCL by
-						;passing the cache-symbol
-						;here in addition to in the
-						;plist.
-	 ',plist
-	 ,fn-form))))
+      `(progn
+	 #+cmu
+	 (declaim (ftype ,(c::generic-function-type-from-lambda-list
+			   name lambda-list)
+			 ,name))
+	 (load-defmethod
+	  ',(if proto-method
+		(class-name (class-of proto-method))
+		'standard-method)
+	  ',name
+	  ',qualifiers
+	  (list ,@(mapcar #'(lambda (specializer)
+			      (if (and (consp specializer)
+				       (eq (car specializer) 'eql))
+				  ``(eql ,,(cadr specializer))
+				  `',specializer))
+			  specializers))
+	  ',(specialized-lambda-list-lambda-list lambda-list)
+	  ',doc
+	  ',(getf plist :isl-cache-symbol)	;Paper over a bug in KCL by
+	  ;passing the cache-symbol
+	  ;here in addition to in the
+	  ;plist.
+	  ',plist
+	  ,fn-form)))))
 
 #+Genera
 (defun expand-defmethod (proto-method name qualifiers lambda-list body env)
@@ -611,13 +616,13 @@ work during bootstrapping.
 (defun method-function-plist (method-function)
   (gethash method-function *method-function-plist*))
 
-(defun SETF\ PCL\ METHOD-FUNCTION-PLIST (val method-function)
+(defun (setf method-function-plist) (val method-function)
   (setf (gethash method-function *method-function-plist*) val))
 
 (defun method-function-get (method-function key)
   (getf (method-function-plist method-function) key))
 
-(defun SETF\ PCL\ METHOD-FUNCTION-GET (val method-function key)
+(defun (setf method-function-get) (val method-function key)
   (setf (getf  (method-function-plist method-function) key) val))
 
 
