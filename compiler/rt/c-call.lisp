@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.2 1991/04/20 17:03:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.3 1991/04/21 19:52:56 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -49,7 +49,7 @@
 	  (tns (c-call-wired-tn ptype stack-sc nargs))
 	  (incf nargs)))
       (values (tns)
-	      (logandc2 (1+ nargs) 1)))))
+	      (* nargs word-bytes)))))
 
 (def-vm-support-routine make-call-out-result-tn (type)
   (let ((offset nl0-offset))
