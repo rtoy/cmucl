@@ -80,6 +80,9 @@ New in this release:
      - C functions are displayed in backtraces now for x86/linux and
        sparc.  Previously, it just said "Foreign function call land".
        (From Helmut Eller.)
+     - Source location recording is done better and handles macros
+       including things defined by defclass, defvar, and defgeneric.
+       From Helmut Eller.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
@@ -237,6 +240,10 @@ New in this release:
        for all platforms now.
      - A continuable error is signaled when defining a logical
        pathname host that has the same name as a search-list host. 
+     - A better sxhash function for string is implemented on sparc.
+       This is based on the one-at-a-time hash from
+       http://burtleburtle.net/bob/hash/doobs.html. 
+     
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
        AMOP non-compliances, and adds various new optimizations (also
@@ -305,11 +312,14 @@ New in this release:
      - Pierre Mai's build-tools have been incorporated.  The scripts
        are in the src/tools directory.  These are slightly modified
        versions of his scripts.  Should make building CMUCL easier.
+
   * Deprecated features:
      - EXT:ENCAPSULATE and associated functions; use fwrappers instead.
      - The sparc port with the Cheney stop-and-copy garbage collector
        will no longer be supported after this release.  The supported
        GC will be gencgc.
+     - The sparc port will only be supported on Ultrasparc machines
+       (Sparc V9).
 
 This release is not binary compatible with code compiled using CMUCL
 18e; you will need to recompile FASL files. 
