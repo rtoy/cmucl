@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.39 2002/10/19 14:56:01 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.40 2002/10/19 15:18:47 pmai Exp $")
 
 (in-package :pcl)
 
@@ -229,18 +229,23 @@ work during bootstrapping.
 (defun expand-defgeneric (function-specifier lambda-list options)
   (let ((initargs ())
 	(methods ()))
-    (flet ((duplicate-option (name)
-	     (simple-program-error "The option ~S appears more than once."
-				   name)))
-      ;;
-      ;; INITARG takes this screwy new argument to get around a bad
-      ;; interaction between lexical macros and setf in the Lucid
-      ;; compiler.
-      ;; 
-      (macrolet ((initarg (key &optional new)
-		   (if new
-		       `(setf (getf initargs ,key) ,new)
-		       `(getf initargs ,key))))
+    (labels ((duplicate-option (name)
+	       (simple-program-error "The option ~S appears more than once."
+				     name))
+	     (check-declaration (declaration-specifiers)
+	       (loop for specifier in declaration-specifiers
+		     when (and (consp specifier)
+			       (member (car specifier)
+				       '(special ftype function inline
+					 notinline declaration)
+				       :test #'eq)) do
+		       (simple-program-error
+			"Declaration specifier ~S is not allowed"
+			specifier)))
+	     (initarg (key &optional (new nil new-supplied-p))
+	       (if new-supplied-p
+		   (setf (getf initargs key) new)
+		   (getf initargs key))))
 	(dolist (option options)
 	  (case (car option)
 	    (:argument-precedence-order
@@ -248,6 +253,7 @@ work during bootstrapping.
 		  (duplicate-option :argument-precedence-order)
 		  (initarg :argument-precedence-order `',(cdr option))))
 	    (declare
+	      (check-declaration (cdr option))
 	      (initarg :declarations
 		       (append (cdr option) (initarg :declarations))))
 	    (:documentation
