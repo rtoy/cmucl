@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.25 1992/07/22 23:31:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.26 1992/08/04 08:31:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 ;;;
 (in-package "C")
 
-(export '(*backend* *target-backend* *native-backend* def-vm-support-routine
+(export '(*backend* *target-backend* *native-backend* backend
 	  backend-name backend-version backend-fasl-file-type
 	  backend-fasl-file-implementation backend-fasl-file-version
 	  backend-register-save-penalty backend-byte-order
@@ -29,8 +29,8 @@
 	  backend-assembler-params backend-page-size
 	  
 	  ;; The various backends need to call these support routines
-	  make-stack-pointer-tn primitive-type primitive-type-of
-	  emit-nop tn-location))
+	  def-vm-support-routine make-stack-pointer-tn primitive-type
+	  primitive-type-of emit-nop location-number))
 
 
 ;;;; VM support routine stuff.
@@ -94,7 +94,7 @@
 
   ;; For use with scheduler.
   emit-nop
-  tn-location)
+  location-number)
 
 (defprinter vm-support-routines)
 
