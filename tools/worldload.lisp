@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.60 1993/07/22 00:08:57 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.61 1993/07/22 21:25:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,27 +161,7 @@
 ;;; CLM.
 ;;;
 #-no-clm
-(progn
-  (load "lisp:motif/lisp/initial")
-  (load "lisp:motif/lisp/internals")
-  (load "lisp:motif/lisp/transport")
-  (load "lisp:motif/lisp/events")
-  (load "lisp:motif/lisp/conversion")
-
-  (load "lisp:motif/lisp/interface-glue")
-  (load "lisp:motif/lisp/xt-types")
-  (load "lisp:motif/lisp/string-base")
-  (load "lisp:motif/lisp/prototypes")
-  ;(load "lisp:motif/lisp/interface-build")
-  (load "lisp:motif/lisp/callbacks")
-  (load "lisp:motif/lisp/widgets")
-  (load "lisp:motif/lisp/main")
-  (load "lisp:interface/initial")
-  (load "lisp:interface/interface")
-  (load "lisp:interface/inspect"))
-
-#-no-clm (let ((interface:*interface-style* :tty))
-	   (load "lisp:interface/debug"))
+(load "lisp:interface/clm-library")
 
 ;;; Don't include the search lists used for loading in the resultant core.
 ;;;
