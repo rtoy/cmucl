@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.58 2004/05/06 13:19:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.59 2004/05/24 23:28:21 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -624,9 +624,26 @@
   (list (if (alien-integer-type-signed type) 'signed-byte 'unsigned-byte)
 	(alien-integer-type-bits type)))
 
+#-amd64
 (def-alien-type-method (integer :naturalize-gen) (type alien)
   (declare (ignore type))
   alien)
+
+;; signed numbers <= 32 bits need to be sign extended.
+;; I really should use the movsxd instruction, but I don't
+;; know how.
+#+amd64
+(defun sign-extend-32-bit (num)
+  (if (> num #x7fffffff)
+      (- num #x100000000)
+      num))
+
+#+amd64
+(def-alien-type-method (integer :naturalize-gen) (type alien)
+  (if (and (alien-integer-type-signed type)
+	   (< (alien-integer-type-bits type) 64))
+      `(sign-extend-32-bit ,alien)
+      alien))
 
 (def-alien-type-method (integer :deport-gen) (type value)
   (declare (ignore type))
