@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.14 1993/05/12 21:03:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.15 1993/05/17 10:17:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,16 +136,7 @@
 (defvar *eval-stack-top* 0
   "This is the next free element of the interpreter's evaluation stack.")
 
-(declaim (inline current-stack-pointer))
-(defun current-stack-pointer ()
-  (declare (values stack-pointer))
-  *eval-stack-top*)
-
-(declaim (inline (setf current-stack-pointer)))
-(defun (setf current-stack-pointer) (new-value)
-  (declare (type stack-pointer new-value)
-	   (values stack-pointer))
-  (setf *eval-stack-top* new-value))
+(defmacro current-stack-pointer () '*eval-stack-top*)
 
 (declaim (inline eval-stack-ref))
 (defun eval-stack-ref (offset)
@@ -295,12 +286,23 @@
 
 ;;;; System constants
 
-;;; We don't just use *system-constants* directly because we want to be
-;;; able to change it in the compiler without breaking the running
-;;; byte interpreter.
+;;; A table mapping system constant indices to run-time values.  We don't
+;;; reference the compiler variable at load time, since the interpreter is
+;;; loaded first.
 ;;;
-(defconstant system-constants #.*system-constants*)
-
+(defparameter system-constants
+  (let ((res (make-array 256)))
+    (dolist (x '#.(collect ((res))
+		    (do-hash (key value *system-constant-codes*)
+		      (res (cons key value)))
+		    (res)))
+      (let ((key (car x))
+	    (value (cdr x)))
+	(setf (svref res value)
+	      (if (and (consp key) (eq (car key) '%fdefinition-marker%))
+		  (lisp::fdefinition-object (cdr key) t)
+		  key))))
+    res))
 
 
 ;;;; Byte compiled function constructors/extractors.
@@ -338,44 +340,46 @@
 
 (defmacro expand-into-inlines ()
   (declare (optimize (inhibit-warnings 3)))
-  (labels ((build-dispatch (bit base)
-	     (if (minusp bit)
-		 (let ((info (nth base *inline-functions*)))
-		   (if info
-		       (let* ((spec (type-specifier
-				     (inline-function-info-type info)))
-			      (arg-types (second spec))
-			      (result-type (third spec))
-			      (args (mapcar #'(lambda (x)
-						(declare (ignore x))
-						(gensym))
-					    arg-types))
-			      (func
-			       `(the ,result-type
-				     (,(inline-function-info-function info)
-				      ,@args))))
-			 `(multiple-value-pop-eval-stack ,args
-			    (declare ,@(mapcar #'(lambda (type var)
-						   `(type ,type ,var))
-					       arg-types args))
-			    ,(if (and (consp result-type)
-				      (eq (car result-type) 'values))
-				 (let ((results
-					(mapcar #'(lambda (x)
-						    (declare (ignore x))
-						    (gensym))
-						(cdr result-type))))
-				   `(multiple-value-bind
-					,results ,func
-				      ,@(mapcar #'(lambda (res)
-						    `(push-eval-stack ,res))
-						results)))
-				 `(push-eval-stack ,func))))
-		       `(error "Unknown inline function, id=~D" ,base)))
-		 `(if (zerop (logand byte ,(ash 1 bit)))
-		      ,(build-dispatch (1- bit) base)
-		      ,(build-dispatch (1- bit) (+ base (ash 1 bit)))))))
-    (build-dispatch 4 0)))
+  (iterate build-dispatch
+	   ((bit 4)
+	    (base 0))
+    (if (minusp bit)
+	(let ((info (svref *inline-functions* base)))
+	  (if info
+	      (let* ((spec (type-specifier
+			    (inline-function-info-type info)))
+		     (arg-types (second spec))
+		     (result-type (third spec))
+		     (args (mapcar #'(lambda (x)
+				       (declare (ignore x))
+				       (gensym))
+				   arg-types))
+		     (func
+		      `(the ,result-type
+			    (,(inline-function-info-interpreter-function info)
+			     ,@args))))
+		`(multiple-value-pop-eval-stack ,args
+		   (declare ,@(mapcar #'(lambda (type var)
+					  `(type ,type ,var))
+				      arg-types args))
+		   ,(if (and (consp result-type)
+			     (eq (car result-type) 'values))
+			(let ((results
+			       (mapcar #'(lambda (x)
+					   (declare (ignore x))
+					   (gensym))
+				       (cdr result-type))))
+			  `(multiple-value-bind
+			       ,results ,func
+			     ,@(mapcar #'(lambda (res)
+					   `(push-eval-stack ,res))
+				       results)))
+			`(push-eval-stack ,func))))
+	      `(error "Unknown inline function, id=~D" ,base)))
+	`(if (zerop (logand byte ,(ash 1 bit)))
+	     ,(build-dispatch (1- bit) base)
+	     ,(build-dispatch (1- bit) (+ base (ash 1 bit)))))))
+
 
 (declaim (inline value-cell-setf))
 (defun value-cell-setf (value cell)
@@ -385,6 +389,36 @@
 (declaim (inline setf-symbol-value))
 (defun setf-symbol-value (value symbol)
   (setf (symbol-value symbol) value))
+
+
+(eval-when (compile)
+
+(defmacro %byte-symbol-value (x)
+  `(let ((x ,x))
+     (unless (boundp x)
+       (with-debugger-info (component pc fp)
+	 (error "Unbound variable: ~S" x)))
+     (symbol-value x)))
+
+(defmacro %byte-car (x)
+  `(let ((x ,x))
+     (unless (listp x)
+       (with-debugger-info (component pc fp)
+	 (error 'simple-type-error :item x :expected-type 'list
+		:format-string "Non-list argument to CAR: ~S"
+		:format-arguments (list x))))
+     (car x)))
+
+(defmacro %byte-cdr (x)
+  `(let ((x ,x))
+     (unless (listp x)
+       (with-debugger-info (component pc fp)
+	 (error 'simple-type-error :item x :expected-type 'list
+		:format-string "Non-list argument to CDR: ~S"
+		:format-arguments (list x))))
+     (cdr x)))
+
+); eval-when (compile)
 
 (declaim (inline %byte-special-bind))
 (defun %byte-special-bind (value symbol)
@@ -396,6 +430,7 @@
   (system:%primitive unbind)
   (values))
 
+;;; obsolete...
 (declaim (inline cons-unique-tag))
 (defun cons-unique-tag ()
   (list '#:%unique-tag%))
@@ -412,6 +447,9 @@
 (defun two-arg-char-equal (x y) (char-equal x y))
 (defun two-arg-char-lessp (x y) (char-lessp x y))
 (defun two-arg-char-greaterp (x y) (char-greaterp x y))
+(defun two-arg-string= (x y) (string= x y))
+(defun two-arg-string< (x y) (string= x y))
+(defun two-arg-string> (x y) (string= x y))
 
 
 ;;;; XOPs
