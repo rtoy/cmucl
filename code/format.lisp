@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.23 1992/02/12 16:10:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.24 1992/05/15 17:51:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,11 +62,11 @@
 (defvar *default-format-error-offset* nil)
 
 (define-condition format-error (error)
-  ((complaint (required-argument))
-   (arguments nil)
-   (control-string *default-format-error-control-string*)
-   (offset *default-format-error-offset*)
-   (print-banner t))
+  ((complaint)
+   (arguments :init-form nil)
+   (control-string :init-form *default-format-error-control-string*)
+   (offset :init-form *default-format-error-offset*)
+   (print-banner :init-form t))
   (:report %print-format-error))
 
 

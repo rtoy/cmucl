@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.8 1992/02/18 16:56:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.9 1992/05/15 17:51:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,8 +115,8 @@
 		     (wire-eof-wire condition)))))
 
 (define-condition wire-io-error (wire-error)
-  ((when "using")
-   (msg "Failed."))
+  ((when :init-form "using")
+   (msg :init-form "Failed."))
   (:report (lambda (condition stream)
 	     (format stream "Error ~A ~A: ~A."
 		     (wire-io-error-when condition)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.14 1992/04/17 16:00:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.15 1992/05/15 17:51:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,7 @@
 
 (define-condition reader-error (stream-error)
   (format-control
-   (format-arguments ()))
+   (format-arguments :init-form ()))
   (:report
    (lambda (condition stream)
      (let ((error-stream (stream-error-stream condition)))
@@ -592,7 +592,7 @@
 		 (file-position stream))
 	   (values))
 	  (t
-	   (%reader-error stream "Unmatched close parenthesis.")))))
+	   (%reader-error stream "Unmatched close parenthesis."))))
 
 ;;; INTERNAL-READ-EXTENDED-TOKEN  --  Internal
 ;;;

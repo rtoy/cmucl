@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.9 1992/03/10 15:06:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.10 1992/05/15 17:51:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -210,10 +210,10 @@
 	  (namestring-parse-error-offset condition)))
 
 (define-condition namestring-parse-error (error)
-  ((complaint (required-argument))
-   (arguments nil)
-   (namestring (required-argument))
-   (offset (required-argument)))
+  ((complaint :init-form (required-argument))
+   (arguments :init-form nil)
+   (namestring :init-form (required-argument))
+   (offset :init-form (required-argument)))
   (:report %print-namestring-parse-error))
 
 (defun %parse-namestring (namestr start end host junk-allowed)
