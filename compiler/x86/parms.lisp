@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.25 2003/09/26 15:37:11 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.26 2003/10/24 04:29:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -197,6 +197,8 @@
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
 	  single-step-breakpoint-trap
+	  dynamic-space-overflow-error-trap
+	  dynamic-space-overflow-warning-trap
           object-not-list-trap object-not-instance-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
@@ -208,7 +210,10 @@
   cerror
   breakpoint
   function-end-breakpoint
-  single-step-breakpoint)
+  single-step-breakpoint
+  dynamic-space-overflow-warning
+  dynamic-space-overflow-error
+  )
 
 (defenum (:prefix object-not- :suffix -trap :start 16)
   list
@@ -256,6 +261,8 @@
       kernel::internal-error
       #+stack-checking kernel::yellow-zone-hit
       #+stack-checking kernel::red-zone-hit
+      #+heap-overflow-check kernel::dynamic-space-overflow-warning-hit
+      #+heap-overflow-check kernel::dynamic-space-overflow-error-hit
       di::handle-breakpoint
       lisp::fdefinition-object
 
@@ -311,6 +318,7 @@
       
       ;; Spare symbols.  Rename these when you need to add some static
       ;; symbols and don't want to do a cross-compile.
+      spare-9
       spare-8
       spare-7
       spare-6
