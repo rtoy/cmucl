@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.32 1990/05/31 00:17:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.33 1990/06/04 05:25:13 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -436,7 +436,7 @@
 (eval-when (compile load eval)
   (defun emit-error-break (kind code values)
     `((inst break ,kind)
-      (inst byte ,code)
+      (inst byte (error-number-or-lose ',code))
       ,@(mapcar #'(lambda (tn)
 		    `(let ((tn ,tn))
 		       (assert (eq (sb-name (sc-sb (tn-sc tn))) 'registers))
