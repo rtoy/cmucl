@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.12 1990/10/10 16:31:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.13 1990/10/16 19:54:05 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -179,119 +179,124 @@
 ;;; function when it can't figure out anything more intelligent to do.
 ;;; 
 (defun %typep (object specifier)
-  (declare (type (or list symbol ctype) specifier))
-  (let ((type (if (ctype-p specifier)
-		  specifier
-		  (specifier-type specifier))))
-    (etypecase type
-      (named-type
-       (ecase (named-type-name type)
-	 ((* t)
-	  t)
-	 ((nil)
-	  nil)
-	 (character (characterp object))
-	 (base-character (base-char-p object))
-	 (standard-char (and (characterp object) (standard-char-p object)))
-	 (extended-character
-	  (and (characterp object) (not (base-char-p object))))
-	 (function (functionp object))
-	 (cons (consp object))
-	 (symbol (symbolp object))
-	 (keyword
-	  (and (symbolp object)
-	       (eq (symbol-package object)
-		   (symbol-package :foo))))
-	 (system-area-pointer (system-area-pointer-p object))
-	 (weak-pointer (weak-pointer-p object))
-	 (structure (structurep object))))
-      (numeric-type
-       (and (numberp object)
-	    (let ((num (if (complexp object) (realpart object) object)))
-	      (ecase (numeric-type-class type)
-		(integer (integerp num))
-		(rational (rationalp num))
-		(float
-		 (ecase (numeric-type-format type)
-		   (short-float (typep object 'short-float))
-		   (single-float (typep object 'single-float))
-		   (double-float (typep object 'double-float))
-		   (long-float (typep object 'long-float))
-		   ((nil) (floatp num))))
-		((nil) t)))
-	    (flet ((bound-test (val)
-		     (let ((low (numeric-type-low type))
-			   (high (numeric-type-high type)))
-		       (and (cond ((null low) t)
-				  ((listp low) (> val (car low)))
-				  (t (>= val low)))
-			    (cond ((null high) t)
-				  ((listp high) (< val (car high)))
-				  (t (<= val high)))))))
-	      (ecase (numeric-type-complexp type)
-		((nil) t)
-		(:complex
-		 (and (complexp object)
-		      (let ((re (realpart object))
-			    (im (imagpart object)))
-			(and (bound-test (min re im))
-			     (bound-test (max re im))))))
-		(:real
-		 (and (not (complexp object))
-		      (bound-test object)))))))
-      (array-type
-       (and (arrayp object)
-	    (ecase (array-type-complexp type)
-	      ((t) (not (typep object 'simple-array)))
-	      ((nil) (typep object 'simple-array))
-	      (* t))
-	    (or (eq (array-type-dimensions type) '*)
-		(do ((want (array-type-dimensions type) (cdr want))
-		     (got (array-dimensions object) (cdr got)))
-		    ((and (null want) (null got)) t)
-		  (unless (and want got
-			       (or (eq (car want) '*)
-				   (= (car want) (car got))))
-		    (return nil))))
-	    (or (eq (array-type-element-type type) *wild-type*)
-		(type= (array-type-specialized-element-type type)
-		       (specifier-type (array-element-type object))))))
-      (member-type
-       (if (member object (member-type-members type)) t))
-      (structure-type
-       (structure-typep object (structure-type-name type)))
-      (union-type
-       (dolist (type (union-type-types type))
-	 (when (%typep object type)
-	   (return t))))
-      (unknown-type
-       (let ((orig-spec (unknown-type-specifier type)))
-	 (if (eq type specifier)
-	     ;; The type was unknown at compile time.  Therefore, we should
-	     ;; try again at runtime, 'cause it might be known now.
-	     (%typep object orig-spec)
-	     (error "Unknown type specifier: ~S" orig-spec))))
-      (hairy-type
-       ;; Now the tricky stuff.
-       (let* ((hairy-spec (hairy-type-specifier type))
-	      (symbol (if (consp hairy-spec) (car hairy-spec) hairy-spec)))
-	 (ecase symbol
-	   (and
-	    (or (atom hairy-spec)
-		(dolist (spec (cdr hairy-spec))
-		  (unless (%typep object spec)
-		    (return nil)))))
-	   (not
-	    (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
-	      (error "Invalid type specifier: ~S" hairy-spec))
-	    (not (%typep object (cadr hairy-spec))))
-	   (satisfies
-	    (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
-	      (error "Invalid type specifier: ~S" hairy-spec))
-	    (if (funcall (cadr hairy-spec) object) t)))))
-      (function-type
-       (error "Function types are not a legal argument to TYPEP:~%  ~S"
-	      specifier)))))
+  (%%typep object
+	   (if (ctype-p specifier)
+	       specifier
+	       (specifier-type specifier))))
+;;;
+(defun %%typep (object type)
+  (declare (type ctype type))
+  (etypecase type
+    (named-type
+     (ecase (named-type-name type)
+       ((* t)
+	t)
+       ((nil)
+	nil)
+       (character (characterp object))
+       (base-character (base-char-p object))
+       (standard-char (and (characterp object) (standard-char-p object)))
+       (extended-character
+	(and (characterp object) (not (base-char-p object))))
+       (function (functionp object))
+       (cons (consp object))
+       (symbol (symbolp object))
+       (keyword
+	(and (symbolp object)
+	     (eq (symbol-package object)
+		 (symbol-package :foo))))
+       (system-area-pointer (system-area-pointer-p object))
+       (weak-pointer (weak-pointer-p object))
+       (structure (structurep object))))
+    (numeric-type
+     (and (numberp object)
+	  (let ((num (if (complexp object) (realpart object) object)))
+	    (ecase (numeric-type-class type)
+	      (integer (integerp num))
+	      (rational (rationalp num))
+	      (float
+	       (ecase (numeric-type-format type)
+		 (short-float (typep object 'short-float))
+		 (single-float (typep object 'single-float))
+		 (double-float (typep object 'double-float))
+		 (long-float (typep object 'long-float))
+		 ((nil) (floatp num))))
+	      ((nil) t)))
+	  (flet ((bound-test (val)
+			     (let ((low (numeric-type-low type))
+				   (high (numeric-type-high type)))
+			       (and (cond ((null low) t)
+					  ((listp low) (> val (car low)))
+					  (t (>= val low)))
+				    (cond ((null high) t)
+					  ((listp high) (< val (car high)))
+					  (t (<= val high)))))))
+	    (ecase (numeric-type-complexp type)
+	      ((nil) t)
+	      (:complex
+	       (and (complexp object)
+		    (let ((re (realpart object))
+			  (im (imagpart object)))
+		      (and (bound-test (min re im))
+			   (bound-test (max re im))))))
+	      (:real
+	       (and (not (complexp object))
+		    (bound-test object)))))))
+    (array-type
+     (and (arrayp object)
+	  (ecase (array-type-complexp type)
+	    ((t) (not (typep object 'simple-array)))
+	    ((nil) (typep object 'simple-array))
+	    (* t))
+	  (or (eq (array-type-dimensions type) '*)
+	      (do ((want (array-type-dimensions type) (cdr want))
+		   (got (array-dimensions object) (cdr got)))
+		  ((and (null want) (null got)) t)
+		(unless (and want got
+			     (or (eq (car want) '*)
+				 (= (car want) (car got))))
+		  (return nil))))
+	  (or (eq (array-type-element-type type) *wild-type*)
+	      (type= (array-type-specialized-element-type type)
+		     (specifier-type (array-element-type object))))))
+    (member-type
+     (if (member object (member-type-members type)) t))
+    (structure-type
+     (structure-typep object (structure-type-name type)))
+    (union-type
+     (dolist (type (union-type-types type))
+       (when (%%typep object type)
+	 (return t))))
+    (unknown-type
+     ;; Type may be unknown to the compiler (and SPECIFIER-TYPE), yet be
+     ;; a defined structure in the core.
+     (let ((orig-spec (unknown-type-specifier type)))
+       (if (and (symbolp orig-spec)
+		(info type defined-structure-info orig-spec))
+	   (structure-typep object orig-spec)
+	   (error "Unknown type specifier: ~S" orig-spec))))
+    (hairy-type
+     ;; Now the tricky stuff.
+     (let* ((hairy-spec (hairy-type-specifier type))
+	    (symbol (if (consp hairy-spec) (car hairy-spec) hairy-spec)))
+       (ecase symbol
+	 (and
+	  (or (atom hairy-spec)
+	      (dolist (spec (cdr hairy-spec))
+		(unless (%%typep object spec)
+		  (return nil)))))
+	 (not
+	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
+	    (error "Invalid type specifier: ~S" hairy-spec))
+	  (not (%%typep object (cadr hairy-spec))))
+	 (satisfies
+	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
+	    (error "Invalid type specifier: ~S" hairy-spec))
+	  (if (funcall (cadr hairy-spec) object) t)))))
+    (function-type
+     (error "Function types are not a legal argument to TYPEP:~%  ~S"
+	    (type-specifier type)))))
+
 
 
 ;;; Structure-Typep  --  Internal
