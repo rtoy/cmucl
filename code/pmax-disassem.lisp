@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.7 1990/02/18 05:26:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.8 1990/02/18 06:23:22 ch Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -124,6 +124,13 @@
     (cond ((and (zerop rs) (or (string= name "ADDI") (string= name "ADDIU")))
 	   (format stream "~16,8TLOADI~8,8T~A, #x~X~%"
 		   (register-name rt) immed))
+	  ;; I'm not proud of this ...
+	  ((and (= rs c::null-offset) (string= name "ADDI")
+		(eq register-name-style :lisp))
+	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~48,8T; ~S~%"
+		   name (register-name rt) (register-name rs) immed
+		   (nth (1- (floor immed vm:symbol-size))
+			vm:initial-symbols)))
 	  (t
 	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~%"
 		   name (register-name rt) (register-name rs) immed)))))
@@ -185,7 +192,7 @@
     (cond ((zerop rd)
 	   ;; Hack for NOP
 	   (format stream "~16,8TNOP~%"))
-	  ((and (zerop rt) (or (string= name "OR") (string= name "ANDU")))
+	  ((and (zerop rt) (or (string= name "OR") (string= name "ADDU")))
 	   ;; Hack for MOVE
 	   (format stream "~16,8TMOVE~8,8T~A, ~A~%"
 		   (register-name rd) (register-name rs)))
