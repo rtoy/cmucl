@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.87 2003/05/20 18:39:36 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.88 2003/05/28 08:50:41 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -669,7 +669,7 @@
 		     (islot (make-defstruct-slot-description
 			     :name nil :index 0 :type t)))
   (multiple-value-bind (name default default-p type type-p read-only ro-p)
-      (cond ((listp spec)
+      (cond ((consp spec)
 	     (destructuring-bind (name &optional (default nil default-p)
 				       &key (type nil type-p)
 				       (read-only nil ro-p))

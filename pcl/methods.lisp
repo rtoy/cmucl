@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.34 2003/05/25 17:01:51 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.35 2003/05/28 08:50:39 gerd Exp $")
 
 (in-package :pcl)
 
@@ -227,10 +227,11 @@
 (defmethod legal-slot-name-p ((object standard-method) x)
   (cond ((not (symbolp x))
 	 "is not a symbol and so cannot be bound")
+	;;
+	;; Structure slots names can be any symbol.
+	(*allow-funny-slot-names*)
 	((keywordp x)
-	 (if *allow-keyword-slot-names*
-	     t
-	     "is a keyword and so cannot be bound"))
+	 "is a keyword and so cannot be bound")
 	((memq x '(t nil))
 	 "cannot be bound")
 	((constantp x)
@@ -259,7 +260,8 @@
   (unless slot-definition
     (let ((legalp (legal-slot-name-p method slot-name)))
       (unless (eq legalp t)
-	(error "The value of the ~s initarg ~A." :slot-name legalp)))))
+	(error "The value of the ~s initarg, ~s, ~A."
+	       :slot-name slot-name legalp)))))
 
 (defmethod shared-initialize :after ((method standard-method) slot-names
 				     &rest initargs
