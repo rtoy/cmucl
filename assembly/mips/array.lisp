@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.5 1990/04/13 20:29:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.6 1990/04/19 23:56:50 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -160,8 +160,9 @@
   test
 
   (inst addiu length length (fixnum -4))
-  (inst bgez length loop)
   (inst lw data lip 0)
+  (inst bgez length loop)
+  (nop)
 
   (inst addiu length length (fixnum 3))
   (inst beq length zero-tn one-more)
@@ -249,8 +250,9 @@
   test
 
   (inst addiu length length (fixnum -4))
-  (inst bgez length loop)
   (inst lw data lip 0)
+  (inst bgez length loop)
+  (nop)
 
   (inst addiu length length (fixnum 3))
   (inst beq length zero-tn one-more)
