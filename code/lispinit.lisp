@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.15 1990/10/23 02:04:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.16 1990/11/28 17:11:04 wlott Exp $
 ;;;
 ;;; Initialization stuff for CMU Common Lisp, plus some other random functions
 ;;; that we don't have any better place for.
@@ -31,7 +31,6 @@
 	  remove-xwindow-object server-event coerce-to-key-event
 	  coerce-to-motion-event coerce-to-expose-event
 	  coerece-to-exposecopy-event coerce-to-focuschange-event server
-	  *nameserverport* *usertypescript* *userwindow* *typescriptport*
 	  *task-self* *task-data* *task-notify* with-interrupts
 	  with-enabled-interrupts enable-interrupt ignore-interrupt
 	  default-interrupt))
@@ -81,14 +80,11 @@
 
 ;;;; Global ports:
  
-(defvar *task-self* 1
+(defvar *task-self* nil
   "Port that refers to the current task.")
 
-(defvar *task-data* 2
+(defvar *task-data* nil
   "Port used to receive data for the current task.")
-
-(defvar *nameserverport* ()
-  "Port to the name server.")
 
 
 
@@ -480,6 +476,8 @@
        (%primitive print ,(symbol-name name))
        (,name))))
 
+(def-c-variable "internal_errors_enabled" boolean)
+
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
   (setf *already-maybe-gcing* t)
@@ -513,7 +511,6 @@
   (print-and-call os-init)
   (print-and-call filesys-init)
   (print-and-call conditions::error-init)
-  (print-and-call kernel::signal-init)
 
   (print-and-call reader-init)
   (print-and-call backq-init)
@@ -524,12 +521,10 @@
 
   (print-and-call stream-init)
   (print-and-call loader-init)
-  #+nil
-  (print-and-call random-init)
   (print-and-call format-init)
   (print-and-call package-init)
-  #+nil
-  (print-and-call pprint-init)
+  (print-and-call kernel::signal-init)
+  (setf (alien-access (alien-value internal_errors_enabled)) t)
 
   (%primitive print "Done initializing.")
 
@@ -558,8 +553,9 @@
   (without-interrupts
    (setf *already-maybe-gcing* t)
    (os-init)
-   (kernel::signal-init)
    (stream-reinit)
+   (kernel::signal-init)
+   (setf (alien-access (alien-value internal_errors_enabled)) t)
    (setf *already-maybe-gcing* nil))
   #+nil
   (mach:port_enable (mach:mach-task_self) *task-notify*)
