@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.3 2004/06/22 22:05:50 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.4 2004/07/06 20:24:43 cwang Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -815,6 +815,99 @@ GNAME(alloc_overflow_rdi):
 	ret
 	.size	 GNAME(alloc_overflow_rdi),.-GNAME(alloc_overflow_rdi)
 
+/* This routine handles an overflow with r8=crfp+size. So the
+   size=r8-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_r8)
+	.type	GNAME(alloc_overflow_r8),@function
+GNAME(alloc_overflow_r8):
+	pushq	%rax		# Save rax
+	pushq	%rcx		# Save rcx
+	pushq	%rdx		# Save rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	/* Calculate the size for the allocation. */
+	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r8
+	movq	%r8, %rdi	# Pass arg 1
+	call	GNAME(alloc)
+	movq	%rax,%r8	# setup the destination.
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rdx.
+	popq	%rcx	# Restore rcx.
+	popq	%rax	# Restore rax.
+	addl	$13,(%rsp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_r8),.-GNAME(alloc_overflow_r8)
+
+/* This routine handles an overflow with r9=crfp+size. So the
+   size=r9-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_r9)
+	.type	GNAME(alloc_overflow_r9),@function
+GNAME(alloc_overflow_r9):
+	pushq	%rax		# Save rax
+	pushq	%rcx		# Save rcx
+	pushq	%rdx		# Save rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r10
+	pushq	%r11
+	/* Calculate the size for the allocation. */
+	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r9
+	movq	%r9, %rdi	# Pass arg 1
+	call	GNAME(alloc)
+	movq	%rax,%r9	# setup the destination.
+	popq	%r11
+	popq	%r10
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rdx.
+	popq	%rcx	# Restore rcx.
+	popq	%rax	# Restore rax.
+	addl	$13,(%rsp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_r9),.-GNAME(alloc_overflow_r9)
+
+/* This routine handles an overflow with r10=crfp+size. So the
+   size=r10-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_r10)
+	.type	GNAME(alloc_overflow_r10),@function
+GNAME(alloc_overflow_r10):
+	pushq	%rax		# Save rax
+	pushq	%rcx		# Save rcx
+	pushq	%rdx		# Save rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r11
+	/* Calculate the size for the allocation. */
+	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r10
+	movq	%r10, %rdi	# Pass arg 1
+	call	GNAME(alloc)
+	movq	%rax,%r10	# setup the destination.
+	popq	%r11
+	popq	%r9
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rdx.
+	popq	%rcx	# Restore rcx.
+	popq	%rax	# Restore rax.
+	addl	$13,(%rsp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_r10),.-GNAME(alloc_overflow_r10)
+	
 #endif
 
 #ifdef LINKAGE_TABLE
