@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.38 2003/09/16 11:13:46 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.39 2003/09/29 16:29:03 toy Exp $
  *
  */
 
@@ -107,8 +107,11 @@ check_escaped_stack_object (lispobj *where, lispobj obj)
       else if (where >= (lispobj *) STATIC_SPACE_START
 	       && where < (lispobj *) (STATIC_SPACE_START + STATIC_SPACE_SIZE))
 	space = "static space";
-      else
+      else if (where >= (lispobj *) READ_ONLY_SPACE_START
+               && where < (lispobj *) (READ_ONLY_SPACE_START + READ_ONLY_SPACE_SIZE))
 	space = "read-only space";
+      else
+        space = NULL;
 
       /* GC itself uses some stack, so we can't tell exactly where the
 	 invalid stack area starts.  Usually, it should be an error if a
@@ -120,10 +123,22 @@ check_escaped_stack_object (lispobj *where, lispobj obj)
       if (p >= invalid_stack_start && p < invalid_stack_end)
 	lose ("Escaped stack-allocated object 0x%08lx at %p in %s\n",
 	      (unsigned long) obj, where, space);
+#ifndef i386
+      else if ((where >= (lispobj *) CONTROL_STACK_START
+                && where < (lispobj *) (CONTROL_STACK_END))
+               || (space == NULL))
+        {
+          /* Do nothing if it the reference is from the control stack,
+             because that will happen, and that's ok.  Or if it's from
+             an unknown space (typically from scavenging an interrupt
+             context. */
+        }
+#endif
+
       else
 	fprintf (stderr,
 		 "Reference to stack-allocated object 0x%08lx at %p in %s\n",
-		 (unsigned long) obj, where, space);
+		 (unsigned long) obj, where, space ? space : "Unknown space");
     }
 }
 
