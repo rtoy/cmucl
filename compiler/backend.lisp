@@ -167,6 +167,7 @@
   (instruction-formats (make-hash-table :test #'eq) :type hash-table)
   (instruction-flavors (make-hash-table :test #'equal) :type hash-table)
   (special-arg-types (make-hash-table :test #'eq) :type hash-table)
+  (assembler-resources nil :type list)
 
   ;; The backend specific features list, if any.
   (features nil :type list)
