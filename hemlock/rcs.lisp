@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.7 1990/03/02 23:29:08 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.8 1990/03/03 00:01:15 ch Exp $
 ;;;
 ;;; Various commands for dealing with RCS under hemlock.
 ;;; 
@@ -133,18 +133,42 @@
 		(do-recursive-edit)
 	  
 		(message "Checking in ~A ..." (namestring pathname))
-		(in-directory pathname
-		  (do-command "rcsci" `(,@(if keep-lock '("-l"))
-					"-u"
-					,(file-namestring pathname))
-			      :input (make-hemlock-region-stream
-				      (buffer-region log-buffer))))
+		(let ((log-stream (make-hemlock-region-stream
+				   (buffer-region log-buffer))))
+		  (sub-check-in-file pathname keep-lock log-stream))
 		(invoke-hook rcs-check-in-file-hook buffer pathname)
 		nil)
 	  (editor-error "Someone deleted the RCS Log Entry buffer."))
       (change-to-buffer old-buffer)
       (setf allow-delete t)
       (delete-buffer-if-possible buffer))))
+
+(defun sub-check-in-file (pathname keep-lock log-stream)
+  (let* ((filename (file-namestring pathname))
+	 (rcs-filename (concatenate 'simple-string
+				    "./RCS/" filename ",v")))
+    (in-directory pathname
+      (do-command "rcsci" `(,@(if keep-lock '("-l"))
+			      "-u"
+			      ,(file-namestring pathname))
+		  :input log-stream)
+      ;; 
+      ;; Set the times on the user's file to be equivalent to that of
+      ;; the rcs file.
+      (multiple-value-bind
+	  (dev ino mode nlink uid gid rdev size atime mtime)
+	  (mach:unix-stat rcs-filename)
+	(declare (ignore mode nlink uid gid rdev size))
+	(cond (dev
+	       (multiple-value-bind
+		   (wonp errno)
+		   (mach:unix-utimes rcs-filename (list atime mtime))
+		 (unless wonp
+		   (editor-error "MACH:UNIX-UTIMES failed: ~A"
+				 (mach:get-unix-error-msg errno)))))
+	      (t
+	       (editor-error "MACH:UNIX-STAT failed: ~A"
+			     (mach:get-unix-error-msg ino))))))))
 
 
 ;;;; Check Out
