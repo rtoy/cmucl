@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defmethod.lisp,v 1.2 2003/03/22 16:15:15 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defmethod.lisp,v 1.3 2003/04/06 09:34:39 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -74,3 +74,30 @@
 (define-defmethod-test-1 defmethod.20 dm2 nil (x))
 (define-defmethod-test-1 defmethod.21 dm2 nil (x &optional y z))
 (define-defmethod-test-1 defmethod.22 dm2 nil (x &key y))
+
+;;;
+;;; A forward-referenced class used as specializer signaled an
+;;; error at some point.
+;;;
+(deftest defmethod-forwared-referenced.0
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dm.3 () ())
+	  (defclass dm.4 (dm.forward) ())
+	  (defmethod dm.5 ((x dm.3)) x)
+	  (defmethod dm.5 ((x dm.4)) x)
+	  t)
+      (values r (null c)))
+  t t)
+      
+(deftest defmethod-forwared-referenced.1
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dm.3 () ())
+	  (defclass dm.4 (dm.forward) ())
+	  (defmethod dm.5 ((x dm.3)) x)
+	  (defmethod dm.5 ((x dm.4)) x)
+	  (dm.5 (make-instance 'dm.3))
+	  t)
+      (values r (null c)))
+  t t)
