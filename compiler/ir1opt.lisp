@@ -134,7 +134,7 @@
 ;;;    Return the derived type for Cont's first value.  This is guaranteed not
 ;;; to be a Values or Function type.
 ;;;
-(proclaim '(function continuation-type (continuation) type))
+(proclaim '(function continuation-type (continuation) ctype))
 (defun continuation-type (cont)
   (single-value-type (continuation-derived-type cont)))
 
