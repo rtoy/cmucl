@@ -461,7 +461,22 @@
 
 
 
-;;;; Device screen hunks.
+;;;; Device screen hunks and window-group.
+
+;;; Window groups are used to keep track of the old width and height of a group
+;;; so that when a configure-notify event is sent, we can determine if the size
+;;; of the window actually changed or not.
+;;;
+(defstruct (window-group (:print-function %print-window-group)
+			 (:constructor
+			  make-window-group (xparent width height)))
+  xparent
+  width
+  height)
+
+(defun %print-window-group (object stream depth)
+  (declare (ignore object depth))
+  (format stream "#<Hemlock Window Group>"))
 
 ;;; Device-hunks are used to claim a piece of the screen and for ordering
 ;;; pieces of the screen.  Window motion primitives and splitting/merging
@@ -502,7 +517,7 @@
   char-height	      	      ; Height of text body in characters.
   char-width		      ; Width in characters.
   xwindow		      ; X window for this hunk.
-  gcontext		      ; X gcontext for xwindow.
+  gcontext                    ; X gcontext for xwindow.
   start			      ; Head of dis-line list (no dummy).
   end			      ; Exclusive end, i.e. nil if nil-terminated.
   modeline-dis-line	      ; Dis-line for modeline, or NIL if none.
@@ -512,7 +527,8 @@
   font-family		      ; Font-family used in this window.
   input-handler		      ; Gets hunk, char, x, y when char read.
   changed-handler	      ; Gets hunk when size changed.
-  (thumb-bar-p nil))	      ; True if we draw a thumb bar in the top border.
+  (thumb-bar-p nil)	      ; True if we draw a thumb bar in the top border.
+  window-group)		      ; The window-group to which this hunk belongs.
 
 
 ;;; Terminal hunks.

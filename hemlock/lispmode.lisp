@@ -1191,6 +1191,32 @@ according to the FORWARDP flag."
 	  (ninsert-region point r)
 	  (move-mark point form-start))))))
 
+(defcommand "Extract Form" (p)
+  "Replace the current containing list with the next form.  The entire affected
+   area is pushed onto the kill ring.  If an argument is supplied, that many
+   upward levels of list nesting is replaced by the next form."
+  "Replace the current containing list with the next form.  The entire affected
+   area is pushed onto the kill ring.  If an argument is supplied, that many
+   upward levels of list nesting is replaced by the next form."
+  (let ((point (current-point)))
+    (pre-command-parse-check point)
+    (with-mark ((form-start point :right-inserting)
+		(form-end point))
+      (unless (form-offset form-end 1) (editor-error))
+      (form-offset (move-mark form-start form-end) -1)
+      (with-mark ((containing-start form-start :left-inserting)
+		  (containing-end form-end :left-inserting))
+	(dotimes (i (or p 1))
+	  (unless (and (forward-up-list containing-end)
+		       (backward-up-list containing-start))
+	    (editor-error)))
+	(let ((r (copy-region (region form-start form-end))))
+	  (ring-push (delete-and-save-region
+		      (region containing-start containing-end))
+		     *kill-ring*)
+	  (ninsert-region point r)
+	  (move-mark point form-start))))))
+
 (defcommand "Extract List" (p)
   "Extract the current list.
   The current list replaces the surrounding list.  The entire affected

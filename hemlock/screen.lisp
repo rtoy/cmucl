@@ -51,26 +51,26 @@
 			  x y
 			  (width (value ed::default-window-width))
 			  (height (value ed::default-window-height)))
-  "Make a window that displays text starting at the mark Start.
+  "Make a window that displays text starting at the mark Start.  The default
+   action is to split the current window to make room for the new window.
 
    Modelinep specifies whether the window should display buffer modelines.
 
    Device is the Hemlock device to make the window on.  If it is nil, then
    the window is made on the same device as CURRENT-WINDOW.
 
-   Window is an X window to be used for the Hemlock window.  If not specified,
-   we make one by calling the function in *create-window-hook*.  This hook maps
-   the window to the screen.
+   Window is an X window to be used with the Hemlock window.  The supplied
+   window becomes the parent window for a new group of windows that behave
+   in a stack orientation as windows do on the terminal.
 
    Font-Family is the font-family used for displaying text in the window.
 
-   If Ask-User is non-nil, the user is prompted for missing X, Y, Width, and
-   Height arguments.  X and Y are supplied as pixels, but Width and Height are
-   supplied in characters.  Otherwise, the current window's height is halved,
-   and the new window fills the created space.  If halving the current window
-   results in too small of a window, then a new one is made the same size as
-   the current, offsetting its vertical placement on the screen some pixels."
-  
+   If Ask-User is non-nil, Hemlock prompts the user for missing X, Y, Width,
+   and Height arguments to make a new group of windows that behave in a stack
+   orientation as windows do on the terminal.  This occurs by invoking
+   hi::*create-window-hook*.  X and Y are supplied as pixels, but Width and
+   Height are supplied in characters."
+
   (let* ((device (or device (device-hunk-device (window-hunk (current-window)))))
 	 (window (funcall (device-make-window device)
 			  device start modelinep window font-family
@@ -80,14 +80,26 @@
     window))
 
 (defun delete-window (window)
-  "Make Window go away, removing it from the screen.  Uses *delete-window-hook*
-   to get rid of bitmap window system windows."
-  (when (eq window *current-window*)
-    (error "Cannot kill the current window."))
+  "Make Window go away, removing it from the screen.  This uses
+   hi::*delete-window-hook* to get rid of parent windows on a bitmap device
+   when you delete the last Hemlock window in a group."
+  (when (<= (length *window-list*) 2)
+    (error "Cannot kill the only window."))
   (invoke-hook ed::delete-window-hook window)
   (setq *window-list* (delq window *window-list*))
   (funcall (device-delete-window (device-hunk-device (window-hunk window)))
-	   window))
+	   window)
+  ;;
+  ;; Since the programmer's interface fails to allow users to determine if
+  ;; they're commands delete the current window, this primitive needs to
+  ;; make sure Hemlock doesn't get screwed.  This inadequacy comes from the
+  ;; bitmap window groups and the vague descriptions of PREVIOUS-WINDOW and
+  ;; NEXT-WINDOW.
+  (when (eq window *current-window*)
+    (let ((window (find-if-not #'(lambda (w) (eq w *echo-area-window*))
+			       *window-list*)))
+      (setf (current-buffer) (window-buffer window)
+	    (current-window) window))))
 
 (defun next-window (window)
   "Return the next window after Window, wrapping around if Window is the

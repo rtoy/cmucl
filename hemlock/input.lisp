@@ -406,8 +406,11 @@
 	(update-modeline-field buffer window :more-prompt)
 	(random-typeout-redisplay window))
       (buffer-start (buffer-point buffer))
-      (unless (make-window start :window (make-xwindow-like-hwindow window))
-	(editor-error "Could not create random typeout window.")))))
+      (let* ((xwindow (make-xwindow-like-hwindow window))
+	     (window (make-window start :window xwindow)))
+	(unless window
+	  (xlib:destroy-window xwindow)
+	  (editor-error "Could not create random typeout window."))))))
 
 (defun end-random-typeout (stream)
   (let ((*more-prompt-action* :flush)

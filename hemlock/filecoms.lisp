@@ -1010,10 +1010,10 @@
   "Delete the current window, going to the previous window."
   "Delete the window we are in, going to the previous window."
   (declare (ignore p))
+  (when (= (length *window-list*) 2)
+    (editor-error "Cannot delete only window."))
   (let ((window (current-window)))
-    (previous-window-command ())
-    (when (eq (current-window) window)
-      (editor-error "Cannot delete current window."))
+    (previous-window-command nil)  
     (delete-window window)))
 
 (defcommand "Line to Top of Window" (p)
@@ -1027,8 +1027,7 @@
   "Deletes the next window on display."
   "Deletes then next window on display."
   (declare (ignore p))
-  (if (eq (next-window (current-window))
-	  (current-window))
+  (if (<= (length *window-list*) 2)
       (editor-error "Cannot delete only window")
       (delete-window (next-window (current-window)))))
 

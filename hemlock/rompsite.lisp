@@ -211,12 +211,23 @@
   (apply #'xlib:make-event-mask
 	 (append input/boundary-xevents-selection-keys
 		 '(:exposure :structure-notify))))
+(defconstant group-interesting-xevents
+  '(:structure-notify))
+(defconstant group-interesting-xevents-mask
+  (apply #'xlib:make-event-mask group-interesting-xevents))
 
 #+clx
+(defconstant child-interesting-xevents
+  '(:key-press :button-press :button-release :structure-notify :exposure
+    :enter-window :leave-window))
+(defconstant child-interesting-xevents-mask
+  (apply #'xlib:make-event-mask child-interesting-xevents))
+
+(defconstant random-typeout-xevents
+  '(:key-press :button-press :button-release :enter-window :leave-window
+    :exposure))
 (defconstant random-typeout-xevents-mask
-  (apply #'xlib:make-event-mask
-	 (append input/boundary-xevents-selection-keys
-		 '(:exposure))))
+  (apply #'xlib:make-event-mask random-typeout-xevents))
 
 
 #+clx
@@ -226,6 +237,8 @@
 #+clx
 (defparameter lisp-fonts-pathnames
   '("/usr/misc/.cmucl/lib/fonts/"))
+
+(proclaim '(special *editor-input* *real-editor-input*))
 
 (proclaim '(special *editor-input* *real-editor-input*))
 
@@ -497,13 +510,16 @@
 ;;; 
 #+clx
 (defun default-hemlock-window-mngt (display on)
-  (let ((win (bitmap-hunk-xwindow (window-hunk *current-window*)))
-	(ewin (bitmap-hunk-xwindow (window-hunk *echo-area-window*))))
-    (cond (on (setf (xlib:window-priority ewin) :above)
+  (let ((xparent (window-group-xparent
+		  (bitmap-hunk-window-group (window-hunk *current-window*))))
+	(echo-xparent (window-group-xparent
+		       (bitmap-hunk-window-group
+			(window-hunk *echo-area-window*)))))
+    (cond (on (setf (xlib:window-priority echo-xparent) :above)
 	      (clear-editor-input *editor-input*)
-	      (setf (xlib:window-priority win) :above))
-	  (t (setf (xlib:window-priority ewin) :below)
-	     (setf (xlib:window-priority win) :below))))
+	      (setf (xlib:window-priority xparent) :above))
+	  (t (setf (xlib:window-priority echo-xparent) :below)
+	     (setf (xlib:window-priority xparent) :below))))
   (xlib:display-force-output display))
 
 (defvar *hemlock-window-mngt* nil;#'default-hemlock-window-mngt

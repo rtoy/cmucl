@@ -337,6 +337,22 @@
 		    :device :absolute
 		    :directory (subseq dirs 0 (1- (length dirs)))))))
 
+(defcommand "Dired Up Directory" (p)
+  "Invokes \"Dired\" on the directory up one level from the current Dired
+   buffer."
+  "Invokes \"Dired\" on the directory up one level from the current Dired
+   buffer."
+  (declare (ignore p))
+  (unless (hemlock-bound-p 'dired-information)
+    (editor-error "Not in Dired buffer."))
+  (let ((dirs (pathname-directory
+	       (dired-info-pathname (value dired-information)))))
+    (declare (simple-vector dirs))
+    (dired-command nil
+		   (make-pathname
+		    :device :absolute
+		    :directory (subseq dirs 0 (1- (length dirs)))))))
+
 
 
 ;;;; Dired misc. commands -- update, help, line motion.
