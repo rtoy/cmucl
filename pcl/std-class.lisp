@@ -1022,8 +1022,7 @@
 	      (wrapper-class-slots owrapper))
 	(without-interrupts
 	  (setf (slot-value class 'wrapper) nwrapper)
-	  (invalidate-wrapper owrapper ':flush nwrapper))
-	(update-constructors class)))))		;??? ***
+	  (invalidate-wrapper owrapper ':flush nwrapper))))))
 
 (defun flush-cache-trap (owrapper nwrapper instance)
   (declare (ignore owrapper))
