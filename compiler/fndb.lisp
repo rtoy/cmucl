@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.56 1993/07/21 12:40:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.57 1993/08/06 13:07:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -648,6 +648,9 @@
 (defknown (assoc-if-not assoc-if rassoc-if rassoc-if-not)
 	  (callable list &key (:key callable)) list (foldable flushable call))
 
+(defknown (memq assq) (t list) list (foldable flushable unsafe))
+(defknown delq (t list) list (flushable unsafe))
+  
 
 ;;;; In the "Hash Tables" chapter:
 
