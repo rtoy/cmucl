@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.61 1992/12/13 15:23:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.62 1992/12/16 13:58:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,12 +35,16 @@
 (define-vop (set-slot)
   (:args (object :scs (descriptor-reg))
 	 (value :scs (descriptor-reg any-reg)))
-  (:info name offset lowtag)
+  (:info name offset lowtag #+gengc remember)
   (:ignore name)
   (:results)
   (:generator 1
+    #+gengc
+    (if remember
+	(storew-and-remember-slot value object offset lowtag)
+	(storew value object offset lowtag))
+    #-gengc
     (storew value object offset lowtag)))
-
 
 
 ;;;; Symbol hacking VOPs:
@@ -102,6 +106,9 @@
 
 ;;;; Fdefinition (fdefn) objects.
 
+(define-vop (fdefn-function cell-ref)
+  (:variant fdefn-function-slot-slot other-pointer-type))
+
 (define-vop (safe-fdefn-function)
   (:args (object :scs (descriptor-reg) :target obj-temp))
   (:results (value :scs (descriptor-reg any-reg)))
@@ -134,8 +141,10 @@
 	       function-pointer-type))
       (inst li lip (make-fixup "closure_tramp" :foreign))
       (emit-label normal-fn)
-      (storew function fdefn fdefn-function-slot other-pointer-type)
       (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
+      (#+gengc storew-and-remember-object #-gengc storew
+	       function fdefn fdefn-function-slot
+	       other-pointer-type)
       (move result function))))
 
 (define-vop (fdefn-makunbound)
@@ -167,7 +176,8 @@
     (inst addu bsp-tn bsp-tn (* 2 word-bytes))
     (storew temp bsp-tn (- binding-value-slot binding-size))
     (storew symbol bsp-tn (- binding-symbol-slot binding-size))
-    (storew val symbol symbol-value-slot other-pointer-type)))
+    (#+gengc storew-and-remember-slot #-gengc storew
+	     val symbol symbol-value-slot other-pointer-type)))
 
 
 (define-vop (unbind)
@@ -175,7 +185,8 @@
   (:generator 0
     (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
     (loadw value bsp-tn (- binding-value-slot binding-size))
-    (storew value symbol symbol-value-slot other-pointer-type)
+    (#+gengc storew-and-remember-slot #-gengc
+	     value symbol symbol-value-slot other-pointer-type)
     (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
     (inst addu bsp-tn bsp-tn (* -2 word-bytes))))
 
@@ -195,7 +206,8 @@
       (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
       (inst beq symbol zero-tn skip)
       (loadw value bsp-tn (- binding-value-slot binding-size))
-      (storew value symbol symbol-value-slot other-pointer-type)
+      (#+gengc storew-and-remember-slot #-gengc
+	       value symbol symbol-value-slot other-pointer-type)
       (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
 
       (emit-label skip)
