@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.47 1992/12/13 15:52:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.48 1992/12/17 09:11:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1659,7 +1659,7 @@
 
 (defun output-code-component (component stream)
   (print-unreadable-object (component stream :identity t)
-    (let ((dinfo (code-header-ref component vm:code-debug-info-slot)))
+    (let ((dinfo (%code-debug-info component)))
       (cond ((eq dinfo :bogus-lra)
 	     (write-string "Bogus Code Object" stream))
 	    (t
