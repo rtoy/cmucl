@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.23 1993/02/07 18:48:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.24 1993/03/01 14:50:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -467,7 +467,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
@@ -507,7 +507,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
@@ -551,7 +551,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
@@ -1242,6 +1242,8 @@ default-value-8
     c::%argument-count-error nargs)
   (frob type-check-error object-not-type-error c::%type-check-error
     object type)
+  (frob layout-invalid-error layout-invalid-error c::%layout-invalid-error
+    object layout)
   (frob odd-keyword-arguments-error odd-keyword-arguments-error
     c::%odd-keyword-arguments-error)
   (frob unknown-keyword-argument-error unknown-keyword-argument-error
