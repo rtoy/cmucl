@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.1 1990/11/30 17:04:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.2 1990/12/02 23:48:50 wlott Exp $
 ;;;
 ;;; This file contains the VM definition of function call for the SPARC.
 ;;;
@@ -696,7 +696,7 @@ default-value-8
 	 '((:temporary (:scs (descriptor-reg) :from :eval) move-temp)))
 
      ,@(unless (eq return :tail)
-	 '((:temporary (:scs (non-descriptor-reg) :from :eval) temp)
+	 '((:temporary (:scs (non-descriptor-reg)) temp)
 	   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
 
      (:generator ,(+ (if named 5 0)
