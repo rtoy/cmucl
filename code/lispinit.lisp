@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.47 1995/07/26 14:56:20 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.48 1996/05/07 20:19:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -354,11 +354,12 @@
   (terpri)
   (princ "[You are in the LISP package.]")
   (terpri)
-  (catch '%end-of-the-world
-    (loop
-     (%top-level)
-     (write-line "You're certainly a clever child.")))
-  (unix:unix-exit 0))
+  (let ((wot 
+	 (catch '%end-of-the-world
+	   (loop
+	     (%top-level)
+	     (write-line "You're certainly a clever child.")))))
+    (unix:unix-exit wot)))
 
 #+gengc
 (defun do-load-time-value-fixup (object offset index)
@@ -410,7 +411,7 @@
   non-Nil."
   (if recklessly-p
       (unix:unix-exit 0)
-      (throw '%end-of-the-world nil)))
+      (throw '%end-of-the-world 0)))
 
 
 (defun sleep (n)
@@ -544,7 +545,7 @@
 		       (setf number-of-eofs 0))
 		      ((eql (incf number-of-eofs) 1)
 		       (if *batch-mode*
-			   (quit 0)
+			   (quit)
 			   (let ((stream (make-synonym-stream '*terminal-io*)))
 			     (setf *standard-input* stream)
 			     (setf *standard-output* stream)
@@ -562,10 +563,10 @@
   (handler-case
       (progn
 	(%top-level)
-	(quit 0))
+	(quit))
     (error (cond)
-	   (format t "Error in batch processing")
-	   (quit 1))))
+      (format *error-output* "Error in batch processing:~%~A" cond)
+      (throw '%end-of-the-world 1))))
 
 
 ;;; %Halt  --  Interface
