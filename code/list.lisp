@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.22 1998/05/09 22:16:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.23 2000/11/15 11:36:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -359,34 +359,36 @@
   "Returns a new list the same as List without the last N conses.
    List must not be circular."
   (declare (list list) (type index n))
-  (let ((length (do ((list list (cdr list))
-		     (i 0 (1+ i)))
-		    ((atom list) (1- i)))))
-    (declare (type index length))
-    (unless (< length n)
-      (do* ((top (cdr list) (cdr top))
-	    (result (list (car list)))
-	    (splice result)
-	    (count length (1- count)))
-	   ((= count n) result)
-	(declare (type index count))
-	(setq splice (cdr (rplacd splice (list (car top)))))))))
+  (unless (null list)
+    (let ((length (do ((list list (cdr list))
+		       (i 0 (1+ i)))
+		      ((atom list) (1- i)))))
+      (declare (type index length))
+      (unless (< length n)
+	(do* ((top (cdr list) (cdr top))
+	      (result (list (car list)))
+	      (splice result)
+	      (count length (1- count)))
+	     ((= count n) result)
+	  (declare (type index count))
+	  (setq splice (cdr (rplacd splice (list (car top))))))))))
 
 (defun nbutlast (list &optional (n 1))
   "Modifies List to remove the last N conses. List must not be circular."
   (declare (list list) (type index n))
-  (let ((length (do ((list list (cdr list))
-		     (i 0 (1+ i)))
-		    ((atom list) (1- i)))))
-    (declare (type index length))
-    (unless (< length n)
-      (do ((1st (cdr list) (cdr 1st))
-	   (2nd list 1st)
-	   (count length (1- count)))
-	  ((= count n)
-	   (rplacd 2nd ())
-	   list)
-	(declare (type index count))))))
+  (unless (null list)
+    (let ((length (do ((list list (cdr list))
+		       (i 0 (1+ i)))
+		      ((atom list) (1- i)))))
+      (declare (type index length))
+      (unless (< length n)
+	(do ((1st (cdr list) (cdr 1st))
+	     (2nd list 1st)
+	     (count length (1- count)))
+	    ((= count n)
+	     (rplacd 2nd ())
+	     list)
+	  (declare (type index count)))))))
 
 (defun ldiff (list object)
   "Returns a new list, whose elements are those of List that appear before
