@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.18 1993/07/31 09:08:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.19 1993/08/03 13:26:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,6 +153,8 @@
 	    (:constructor %make-logical-pathname
 			  (host device directory name type version))
 	    (:make-load-form-fun :just-dump-it-normally)))
+
+(declaim (freeze-type logical-pathname logical-host))
 
 ;;; %PRINT-LOGICAL-PATHNAME -- Internal
 ;;;
