@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.28 1993/11/17 15:50:55 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.29 1995/03/24 13:06:58 ram Rel $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -173,6 +173,7 @@
 	  ;; 
 	  ;; Set the times on the user's file to be equivalent to that of
 	  ;; the rcs file.
+	  #-(or hpux svr4)
 	  (multiple-value-bind
 	      (dev ino mode nlink uid gid rdev size atime mtime)
 	      (unix:unix-stat rcs-filename)
