@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.7 1991/09/18 06:22:55 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.8 1992/02/25 07:03:45 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the SPARC.
@@ -215,9 +217,8 @@
 (defknown fmakunbound/symbol (symbol) symbol (unsafe))
 ;;;
 (deftransform fmakunbound ((symbol) (symbol))
-  '(progn
-     (fmakunbound/symbol symbol)
-     t))
+  '(when symbol
+     (fmakunbound/symbol symbol)))
 ;;;
 (define-vop (fmakunbound/symbol)
   (:translate fmakunbound/symbol)
