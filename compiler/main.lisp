@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.41 1991/06/07 15:17:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.42 1991/06/15 17:34:16 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1278,56 +1278,55 @@
   (undefined-value))
 
 
-;;; COMPILE-FILE  --  Public
+;;; COMPILE-FILE  --  Public.
 ;;;
-;;;    Open some files and call SUB-COMPILE-FILE.  If the compile is unwound
-;;; out of, then abort the writing of the output file, so we don't overwrite it
-;;; with known garbage.
+;;; Open some files and call SUB-COMPILE-FILE.  If something unwinds out of the
+;;; compile, then abort the writing of the output file, so we don't overwrite
+;;; it with known garbage.
 ;;;
-(defun #-new-compiler ncompile-file #+new-compiler compile-file
-  (source &key
-	  (output-file t)
-	  (error-file t)
-	  (trace-file nil) 
-	  (error-output t)
-	  (load nil)
-	  ((:verbose *compile-verbose*) *compile-verbose*)
-	  ((:print *compile-print*) *compile-print*)
-	  ((:progress *compile-progress*) *compile-progress*)
-	  ((:block-compile *block-compile*) *block-compile-default*)
-	  ((:entry-points *entry-points*) nil))
+(defun compile-file (source &key
+			    (output-file t)
+			    (error-file nil)
+			    (trace-file nil) 
+			    (error-output t)
+			    (load nil)
+			    ((:verbose *compile-verbose*) *compile-verbose*)
+			    ((:print *compile-print*) *compile-print*)
+			    ((:progress *compile-progress*) *compile-progress*)
+			    ((:block-compile *block-compile*)
+			     *block-compile-default*)
+			    ((:entry-points *entry-points*) nil))
   "Compiles Source, producing a corresponding .FASL file.  Source may be a list
-  of files, in which case the files are compiled as a unit, producing a single
-  .FASL file.  The output file names are defaulted from the first (or only)
-  input file name.  Other options available via keywords:
-  :Output-File
-        The name of the fasl to output, NIL for none, T for the default.
-  :Error-File
-        The name of the error listing file, NIL for none, T for the .ERR
-        default.
-  :Trace-File
-        If specified, internal data structures are dumped to this file.  T for
-        the .TRACE default.
-  :Error-Output
-        If a stream, then error output is sent there as well as to the listing
-        file.  NIL suppresses this additional error output.  The default is T,
-        which means use *ERROR-OUTPUT*.
-  :Block-Compile {NIL | :SPECIFIED | T}
-        Determines whether multiple functions are compiled together as
-	a unit, resolving function references at compile time.  NIL means that
-	global function names are never resolved at compilation time.
-	:SPECIFIED means that names are resolved at compile-time when
-	convenient (as in a self-recursive call), but the compiler doesn't
-        combine top-level DEFUNs.  With :SPECIFIED, an explicit START-BLOCK
-        declaration will enable block compilation.  A value of T indicates that
-        all forms in the file(s) should be compiled as a unit.  The default is
-        the value of *BLOCK-COMPILE-DEFAULT*, which is initially :SPECIFIED.
-  :Entry-Points
-        This specifies a list of function names for functions in the file(s)
-        that must be given global definitions.  This only applies to block
-        compilation, and is useful mainly when :BLOCK-COMPILE T is specified on
-        a file that lacks START-BLOCK declarations.  If the value is NIL (the
-        default) then all functions will be globally defined."
+   of files, in which case the files are compiled as a unit, producing a single
+   .FASL file.  The output file names are defaulted from the first (or only)
+   input file name.  Other options available via keywords:
+   :Output-File
+      The name of the fasl to output, NIL for none, T for the default.
+   :Error-File
+      The name of the error listing file, NIL for none, T for the .err default.
+   :Trace-File
+      If specified, internal data structures are dumped to this file.  T for
+      the .trace default.
+   :Error-Output
+      If a stream, then error output is sent there as well as to the listing
+      file.  NIL suppresses this additional error output.  The default is T,
+      which means use *ERROR-OUTPUT*.
+   :Block-Compile {NIL | :SPECIFIED | T}
+      Determines whether multiple functions are compiled together as a unit,
+      resolving function references at compile time.  NIL means that global
+      function names are never resolved at compilation time.  :SPECIFIED means
+      that names are resolved at compile-time when convenient (as in a
+      self-recursive call), but the compiler doesn't combine top-level DEFUNs.
+      With :SPECIFIED, an explicit START-BLOCK declaration will enable block
+      compilation.  A value of T indicates that all forms in the file(s) should
+      be compiled as a unit.  The default is the value of
+      *BLOCK-COMPILE-DEFAULT*, which is initially :SPECIFIED.
+   :Entry-Points
+      This specifies a list of function names for functions in the file(s) that
+      must be given global definitions.  This only applies to block
+      compilation, and is useful mainly when :BLOCK-COMPILE T is specified on a
+      file that lacks START-BLOCK declarations.  If the value is NIL (the
+      default) then all functions will be globally defined."
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
 	 (output-file-name nil)
