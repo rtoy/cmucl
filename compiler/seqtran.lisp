@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.29 2004/12/09 21:49:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.30 2004/12/14 21:51:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -580,4 +580,24 @@
       (if spec
 	  (specifier-type spec)
 	  (specifier-type 'null)))))
-    
+
+(defun output-spec-sequence (output-spec)
+  ;; Check that the given output-spec is a subtype of sequence.  If
+  ;; so, the result is the output-spec.  Give a warning if it's not a
+  ;; sequence specifier.
+  (when (constant-continuation-p output-spec)
+    ;; Only handle constant continuations.
+    (let ((spec (continuation-value output-spec)))
+      (if (subtypep spec 'sequence)
+	  (specifier-type spec)
+	  (compiler-warning "Specified output type ~S is not a sequence type" spec)))))
+
+(defoptimizer (concatenate derive-type) ((output-spec  seq &rest more-seq))
+  ;; The result type of CONCATENATE is OUTPUT-SPEC, but check to see
+  ;; if it makes sense.
+  (output-spec-sequence output-spec))
+
+(defoptimizer (make-sequence derive-type) ((output-spec  seq &rest more-seq))
+  ;; The result type of MAKE-SEQUENCE is OUTPUT-SPEC, but check to see
+  ;; if it makes sense.
+  (output-spec-sequence output-spec))
