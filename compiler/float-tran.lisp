@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.76 1998/09/29 13:16:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.77 1998/10/01 16:01:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -575,6 +575,16 @@
 ;;;; function, based on the domain of the input.
 ;;;;
 
+;;; Generate a specifier for a complex type specialized to the same
+;;; type as the argument.
+(defun complex-float-type (arg)
+  (declare (type numeric-type arg))
+  (let* ((format (case (numeric-type-class arg)
+		   ((integer rational) 'single-float)
+		   (t (numeric-type-format arg))))
+	 (float-type (or format 'float)))
+    (specifier-type `(complex ,float-type))))
+
 ;;; Compute a specifier like '(or float (complex float)), except float
 ;;; should be the right kind of float.  Allow bounds for the float
 ;;; part too.
@@ -698,7 +708,8 @@
 		       (list result-type
 			     (specifier-type `(complex ,bound-type))))))
 		(t
-		 (float-or-complex-float-type arg)))))
+		 ;; No intersection so the result must be purely complex.
+		 (complex-float-type arg)))))
 	   (t
 	    (float-or-complex-float-type arg default-low default-high))))))
 

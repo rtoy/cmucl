@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.86 1998/09/20 15:16:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.87 1998/10/01 16:01:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -388,6 +388,35 @@
     ('both
      (and (interval-low x) (interval-high x)))))
 
+;;; Signed zero comparison functions.  Use these functions if we need
+;;; to distinguish between signed zeroes.
+
+(defun signed-zero-< (x y)
+  (declare (real x y))
+  (or (< x y)
+      (and (= x y)
+	   (< (float-sign (float x))
+	      (float-sign (float y))))))
+(defun signed-zero-> (x y)
+  (declare (real x y))
+  (or (> x y)
+      (and (= x y)
+	   (> (float-sign (float x))
+	      (float-sign (float y))))))
+
+(defun signed-zero-= (x y)
+  (declare (real x y))
+  (and (= x y)
+       (= (float-sign (float x))
+	  (float-sign (float y)))))
+
+(defun signed-zero-<= (x y)
+  (declare (real x y))
+  (or (< x y)
+      (and (= x y)
+	   (<= (float-sign (float x))
+	       (float-sign (float y))))))
+
 ;;; INTERVAL-CONTAINS-P
 ;;;
 ;;; See if the interval X contains the number P, taking into account
@@ -402,25 +431,26 @@
 	(hi (interval-high x)))
     (cond ((and lo hi)
 	   ;; The interval is bounded
-	   (if (<= (bound-value lo) p (bound-value hi))
+	   (if (and (signed-zero-<= (bound-value lo) p)
+		    (signed-zero-<= p (bound-value hi)))
 	       ;; P is definitely in the closure of the interval.
 	       ;; We just need to check the end points now.
-	       (cond ((= p (bound-value lo))
+	       (cond ((signed-zero-= p (bound-value lo))
 		      (numberp lo))
-		     ((= p (bound-value hi))
+		     ((signed-zero-= p (bound-value hi))
 		      (numberp hi))
 		     (t t))
 	       nil))
 	  (hi
 	   ;; Interval with upper bound
-	   (if (< p (bound-value hi))
+	   (if (signed-zero-< p (bound-value hi))
 	       t
-	       (and (numberp hi) (= p hi))))
+	       (and (numberp hi) (signed-zero-= p hi))))
 	  (lo
 	   ;; Interval with lower bound
-	   (if (> p (bound-value lo))
+	   (if (signed-zero-> p (bound-value lo))
 	       t
-	       (and (numberp lo) (= p lo))))
+	       (and (numberp lo) (signed-zero-= p lo))))
 	  (t
 	   ;; Interval with no bounds
 	   t))))
