@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.59 2004/07/12 23:44:07 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.60 2004/07/20 22:38:26 cwang Exp $
  *
  */
 
@@ -4585,7 +4585,7 @@ lispobj *search_dynamic_space(lispobj *pointer)
   return search_space(start, pointer + 2 - start, pointer);
 }
 
-#ifdef i386
+#if defined(i386) || defined(__x86_64)
 static int valid_dynamic_space_pointer(lispobj *pointer)
 {
   lispobj *start_addr;
@@ -4773,7 +4773,7 @@ static int valid_dynamic_space_pointer(lispobj *pointer)
  * this is missed, just may delay the moving of objects to unboxed
  * pages, and the freeing of pages.
  */
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 static void maybe_adjust_large_object(lispobj *where)
 {
   int first_page;
@@ -4940,7 +4940,7 @@ static void maybe_adjust_large_object(lispobj *where)
  * Only needed on x86 because GC is conservative there.  Not needed on
  * sparc because GC is precise, not conservative.
  */
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 static void preserve_pointer(void *addr)
 {
   int addr_page_index = find_page_index(addr);
@@ -6119,7 +6119,7 @@ scavenge_interrupt_handlers(void)
     }
 }
 
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
 static void
 scavenge_control_stack()
 {
