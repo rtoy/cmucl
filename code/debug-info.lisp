@@ -98,6 +98,7 @@
 	      (res `(make-string ,len)))
     `(progn
        (%primitive byte-blt ,vec ,index ,res 0 ,len)
+       (incf ,index ,len)
        ,res)))
 
 
