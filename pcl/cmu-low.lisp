@@ -88,6 +88,8 @@
 	((funcallable-instance-p fcn)
 	 (setf (funcallable-instance-name fcn) new-name)
 	 fcn)
+	((eval:interpreted-function-p fcn)
+	 (setf (eval:interpreted-function-name fcn) new-name))
 	(t
 	 (let ((header (kernel:%closure-function fcn)))
 	   (system:%primitive c::set-function-name header new-name))
