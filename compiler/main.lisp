@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.109 1997/02/05 15:41:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.110 1997/02/15 15:32:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1549,23 +1549,27 @@
 ;;; exist.
 ;;;
 (defun verify-source-files (stuff)
-  (flet ((try-with-type (path type error-p)
-	   (let ((new (merge-pathnames path (make-pathname :type type
-							   :defaults path))))
-	     (if (probe-file new)
-		 new
-		 (and error-p (truename new))))))
-    (unless stuff
-      (error "Can't compile with no source files."))
-    (mapcar #'(lambda (x)
-		(let ((x (pathname x)))
-		  (cond ((logical-pathname-p x)
-			 (try-with-type x "LISP" t))
-			((probe-file x) x)
-			((try-with-type x "lisp"  nil))
-			((try-with-type x "dylan" nil))
-			((try-with-type x "lisp"  t)))))
-	    (if (listp stuff) stuff (list stuff)))))
+  (let* ((stuff (if (listp stuff) stuff (list stuff)))
+	 (default-host (make-pathname
+			:host (pathname-host (pathname (first stuff))))))
+    (flet ((try-with-type (path type error-p)
+	     (let ((new (merge-pathnames 
+			 path (make-pathname :type type 
+					     :defaults default-host))))
+	       (if (probe-file new)
+		   new
+		   (and error-p (truename new))))))
+      (unless stuff
+	(error "Can't compile with no source files."))
+      (mapcar #'(lambda (x)
+		  (let ((x (pathname x)))
+		    (cond ((logical-pathname-p x)
+			   (try-with-type x "LISP" t))
+			  ((probe-file x) x)
+			  ((try-with-type x "lisp"  nil))
+			  ((try-with-type x "dylan" nil))
+			  ((try-with-type x "lisp"  t)))))
+	      stuff))))
 
 ;;; COMPILE-FROM-STREAM  --  Public
 ;;;
