@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.53 1997/08/30 18:21:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.54 1997/09/05 02:46:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -346,9 +346,9 @@
 ;;; INTERVAL-SPLIT
 ;;;
 ;;; Given a point P contained in the interval X, split X into two
-;;; interval at the point P.  If JOIN-LOWER it T, then the left
-;;; interval contains P.  Otherwise, the right interval contains P.
-;;; You can specify both to be T.
+;;; interval at the point P.  If CLOSE-LOWER is T, then the left
+;;; interval contains P.  If CLOSE-UPPER is T, the right interval
+;;; contains P. You can specify both to be T or NIL.
 
 (defun interval-split (p x &optional close-lower close-upper)
   (declare (type number p)
@@ -357,6 +357,11 @@
 		       :high (if close-lower p (list p)))
 	(make-interval :low (if close-upper (list p) p)
 		       :high (copy-interval-limit (interval-high x)))))
+
+;;; INTERVAL-CLOSURE
+;;;
+;;; Return the closure of the interval.  That is, convert open bounds
+;;; to closed bounds.
 
 (defun interval-closure (x)
   (declare (type interval x))
@@ -536,7 +541,9 @@
 	(make-interval :low (select-bound x-lo y-lo #'< #'>)
 		       :high (select-bound x-hi y-hi #'> #'<))))))
 
-;;; Basic arithmetic operations on intervals
+;;; Basic arithmetic operations on intervals.  We probably should do
+;;; true interval arithmetic here, but it's complicated because we
+;;; have float and integer types and bounds can be open or closed.
 
 ;;; INTERVAL-NEG
 ;;;
@@ -783,7 +790,8 @@
 
 (defun derive-real-numeric-or-union-type (x y fun)
   (labels ((combine (lx ly)
-	     ;; Creates a new list containing all possible pairs from LX and LY.
+	     ;; Creates a new list containing all possible pairs from
+	     ;; LX and LY.
 	     (let ((result '()))
 	       (dolist (ix lx)
 		 (dolist (iy ly)
@@ -861,14 +869,16 @@
 			;; B.
 			nil)
 		       (t
-			;; Both A and B have numeric lower bounds.  Make the right decision
+			;; Both A and B have numeric lower bounds.
+			;; Make the right decision
 			(let ((av (bound-value a-lo))
 			      (bv (bound-value b-lo)))
 			  (cond ((< av bv)
 				 ;; Obviously
 				 t)
 				((= av bv)
-				 ;; Bounds are equal.  A is lower unless A is open and B is closed.
+				 ;; Bounds are equal.  A is lower
+				 ;; unless A is open and B is closed.
 				 (or (numberp a-lo) (consp b-lo)))
 				(t
 				 nil)))))))))
@@ -883,11 +893,19 @@
 	   (eq (numeric-type-complexp y) :real))
       (multiple-value-bind (low high type format)
 	  (funcall fun x y)
-	(make-numeric-type :class type
-			   :complexp :real
-			   :format format
-			   :low low
-			   :high high))
+	(flet ((valid-bound-p (bnd)
+		 (or (eq bnd '*)
+		     (eq bnd nil)
+		     (numberp bnd)
+		     (and (consp bnd)
+			  (numberp (first bnd))))))
+	  (assert (and (valid-bound-p low)
+		       (valid-bound-p high)))
+	  (make-numeric-type :class type
+			     :complexp :real
+			     :format format
+			     :low low
+			     :high high)))
       (numeric-contagion x y)))
 ) ; end progn
 
@@ -947,54 +965,64 @@
 #+propagate-float-type
 (progn
 (defoptimizer (+ derive-type) ((x y))
-  (derive-real-type
-   x y
-   #'(lambda (x y)
-       (declare (type numeric-type x y))
-       (let ((result (interval-add (numeric-type->interval x)
-				   (numeric-type->interval y)))
-	     (result-type (numeric-contagion x y)))
-	 ;; If the result type is a float, we need to be sure to
-	 ;; coerce the bounds into the correct type.
-	 (when (eq (numeric-type-class result-type) 'float)
-	   (setf result (interval-func
-			 #'(lambda (x)
-			     (coerce x (or (numeric-type-format result-type)
-					   'float)))
-			 result)))
-	 (values (interval-low result)
-		 (interval-high result)
-		 (if (and (eq (numeric-type-class x) 'integer)
-			  (eq (numeric-type-class y) 'integer))
-		     ;; The sum of integers is always an integer
-		     'integer
-		     (numeric-type-class result-type))
-		 (numeric-type-format result-type))))))
+  (let ((same-arg (same-leaf-ref-p x y)))
+    (derive-real-type
+     x y
+     #'(lambda (x y)
+	 (declare (type numeric-type x y))
+	 (let ((result
+		(if same-arg
+		    (let ((x-int (numeric-type->interval x)))
+		      (interval-add x-int x-int))
+		    (interval-add (numeric-type->interval x)
+				  (numeric-type->interval y))))
+	       (result-type (numeric-contagion x y)))
+	   ;; If the result type is a float, we need to be sure to
+	   ;; coerce the bounds into the correct type.
+	   (when (eq (numeric-type-class result-type) 'float)
+	     (setf result (interval-func
+			   #'(lambda (x)
+			       (coerce x (or (numeric-type-format result-type)
+					     'float)))
+			   result)))
+	   (values (interval-low result)
+		   (interval-high result)
+		   (if (and (eq (numeric-type-class x) 'integer)
+			    (eq (numeric-type-class y) 'integer))
+		       ;; The sum of integers is always an integer
+		       'integer
+		       (numeric-type-class result-type))
+		   (numeric-type-format result-type)))))))
 
 (defoptimizer (- derive-type) ((x y))
-  (derive-real-type
-   x y
-   #'(lambda (x y)
-       (declare (type numeric-type x y))
-       (let ((result (interval-sub (numeric-type->interval x)
-				   (numeric-type->interval y)))
-	     (result-type (numeric-contagion x y)))
-	 ;; If the result type is a float, we need to be sure to
-	 ;; coerce the bounds into the correct type.
-	 (when (eq (numeric-type-class result-type) 'float)
-	   (setf result (interval-func
-			 #'(lambda (x)
-			     (coerce x (or (numeric-type-format result-type)
-					   'float)))
-			 result)))
-	 (values (interval-low result)
-		 (interval-high result)
-		 (if (and (eq (numeric-type-class x) 'integer)
-			  (eq (numeric-type-class y) 'integer))
-		     ;; The difference of integers is always an integer
-		     'integer
-		     (numeric-type-class result-type))
-		 (numeric-type-format result-type))))))
+  (let ((same-arg (same-leaf-ref-p x y)))
+    (derive-real-type
+     x y
+     #'(lambda (x y)
+	 (declare (type numeric-type x y))
+	 (let ((result 
+		;; (- x x) is always 0.
+		(if same-arg
+		    (make-interval :low 0 :high 0)
+		    (interval-sub (numeric-type->interval x)
+				  (numeric-type->interval y))))
+	       (result-type (numeric-contagion x y)))
+	   ;; If the result type is a float, we need to be sure to
+	   ;; coerce the bounds into the correct type.
+	   (when (eq (numeric-type-class result-type) 'float)
+	     (setf result (interval-func
+			   #'(lambda (x)
+			       (coerce x (or (numeric-type-format result-type)
+					     'float)))
+			   result)))
+	   (values (interval-low result)
+		   (interval-high result)
+		   (if (and (eq (numeric-type-class x) 'integer)
+			    (eq (numeric-type-class y) 'integer))
+		       ;; The difference of integers is always an integer
+		       'integer
+		       (numeric-type-class result-type))
+		   (numeric-type-format result-type)))))))
 
 (defoptimizer (* derive-type) ((x y))
   (let ((same-arg (same-leaf-ref-p x y)))
@@ -1002,6 +1030,8 @@
      x y
      #'(lambda (x y)
 	 (let ((result
+		;; (* x x) is always positive, so take care to do it
+		;; right.
 		(if same-arg
 		    (interval-sqr (numeric-type->interval x))
 		    (interval-mul (numeric-type->interval x)
@@ -1027,25 +1057,34 @@
 
 
 (defoptimizer (/ derive-type) ((x y))
-  (derive-real-type
-   x y
-   #'(lambda (x y)
-       (declare (type numeric-type x y))
-       (let ((result (interval-div (numeric-type->interval x)
-				   (numeric-type->interval y)))
-	     (result-type (numeric-contagion x y)))
-	 ;; If the result type is a float, we need to be sure to
-	 ;; coerce the bounds into the correct type.
-	 (when (eq (numeric-type-class result-type) 'float)
-	   (setf result (interval-func
-			 #'(lambda (x)
-			     (coerce x (or (numeric-type-format result-type)
-					   'float)))
-			 result)))
-	 (values (interval-low result)
-		 (interval-high result)
-		 (numeric-type-class result-type)
-		 (numeric-type-format result-type))))))
+  (let ((same-arg (same-leaf-ref-p x y)))
+    (derive-real-type
+     x y
+     #'(lambda (x y)
+	 (declare (type numeric-type x y))
+	 (let ((result
+		;; (/ x x) is always 1, except if x can contain 0.  In
+		;; that case, we shouldn't optimize the division away
+		;; because we want 0/0 to signal an error.
+		(if (and same-arg
+			 (not (interval-contains-p 0
+						   (interval-closure (numeric-type->interval y)))))
+		    (make-interval :low 1 :high 1)
+		    (interval-div (numeric-type->interval x)
+				  (numeric-type->interval y))))
+	       (result-type (numeric-contagion x y)))
+	   ;; If the result type is a float, we need to be sure to
+	   ;; coerce the bounds into the correct type.
+	   (when (eq (numeric-type-class result-type) 'float)
+	     (setf result (interval-func
+			   #'(lambda (x)
+			       (coerce x (or (numeric-type-format result-type)
+					     'float)))
+			   result)))
+	   (values (interval-low result)
+		   (interval-high result)
+		   (numeric-type-class result-type)
+		   (numeric-type-format result-type)))))))
 
 ) ;end progn
 
@@ -1136,28 +1175,44 @@
 				       nil)))
 	(numeric-contagion type type))))
 
+(defun abs-derive-type-aux (type &optional (result '()))
+  (cond ((null type)
+	 result)
+	((atom type)
+	 (cons (cond
+		 ((eq (numeric-type-complexp type) :complex)
+		  ;; The absolute value of a complex number is always
+		  ;; a non-negative float.
+		  (make-numeric-type :class 'float
+				     :format (elfun-float-format
+					      (numeric-type-format type))
+				     :complexp :real
+				     :low 0
+				     :high nil))
+		 ((eq (numeric-type-complexp type) :real)
+		  ;; The absolute value of a real number is a
+		  ;; non-negative real of the same type.
+		  (let ((abs-bnd (interval-abs (numeric-type->interval type))))
+		    (make-numeric-type :class (numeric-type-class type)
+				       :format (numeric-type-format type)
+				       :complexp :real
+				       :low (interval-low abs-bnd)
+				       :high (interval-high abs-bnd)))))
+	       result))
+    ((listp type)
+     (abs-derive-type-aux (rest type)
+			  (append (abs-derive-type-aux (first type))
+				  result)))))
+
 #+propagate-float-type
 (defoptimizer (abs derive-type) ((num))
   (let ((type (continuation-type num)))
-    (when (numeric-type-p type)
-      (cond ((eq (numeric-type-complexp type) :complex)
-	     ;; The absolute value of a complex number is always a
-	     ;; non-negative float.
-	     (make-numeric-type :class 'float
-				:format (elfun-float-format (numeric-type-format type))
-				:complexp :real
-				:low 0
-				:high nil))
-	    ((eq (numeric-type-complexp type) :real)
-	     ;; The absolute value of a real number is a non-negative
-	     ;; real of the same type.
-	     (let ((abs-bnd (interval-abs (numeric-type->interval type))))
-	       (make-numeric-type :class (numeric-type-class type)
-				  :format (numeric-type-format type)
-				  :complexp :real
-				  :low (interval-low abs-bnd)
-				  :high (interval-high abs-bnd))))))))
-
+    (cond ((numeric-type-p type)
+	   (first (abs-derive-type-aux type)))
+	  ((union-type-p type)
+	   (make-union-type
+	    (derive-merged-union-types
+	     (abs-derive-type-aux (union-type-types type))))))))
 
 #-propagate-float-type
 (defoptimizer (truncate derive-type) ((number divisor))
@@ -1181,6 +1236,16 @@
 
 #+propagate-float-type
 (progn
+
+;;; Check to see that the type is either a real numeric-type or is a
+;;; union of real numeric-types.
+(defun numeric-real-union-type-p (type)
+  (cond ((csubtypep type (specifier-type 'real))
+	 t)
+	((union-type-p type)
+	 (every #'(lambda (x)
+		    (csubtypep x (specifier-type 'real)))
+		(union-type-types type)))))
 
 (defun rem-result-type (number-type divisor-type)
   ;; Figure out what the remainder type is.  The remainder is an
@@ -1212,88 +1277,221 @@
 	 ;; type.
 	 (or (numeric-type-format divisor-type) 'float))
 	(t
-	 ;; Some unhandled combination.  Can this happen?
+	 ;; Some unhandled combination.  This usually means both args
+	 ;; are REAL so the result is a REAL.
 	 'real)))
 
-(defoptimizer (truncate derive-type) ((number divisor))
-  (let* ((number-type (continuation-type number))
-	 (divisor-type (continuation-type divisor))
-	 (real-type (specifier-type 'real)))
-    (if (not (and (numeric-type-p number-type)
-		  (numeric-type-p divisor-type)
-		  (csubtypep number-type real-type)
-		  (csubtypep divisor-type real-type)))
-	;; There's nothing to do if the args are not real numbers
-	*universal-type*
-	(let* ((rem-type (rem-result-type number-type divisor-type))
-	       (number-interval (numeric-type->interval number-type))
-	       (divisor-interval (numeric-type->interval divisor-type))
-	       (rem (truncate-rem-bound number-interval divisor-interval)))
-	  ;;(declare (type (member '(integer rational float)) rem-type))
-	  ;; We have real numbers now.
-	  (cond ((eq rem-type 'integer)
-		 ;; Since the remainder type is INTEGER, both args are
-		 ;; INTEGERs.  
-		 (values-specifier-type
-		  `(values
-		    ,(integer-truncate-derive-type (interval-low number-interval)
-						   (interval-high number-interval)
-						   (interval-low divisor-interval)
-						   (interval-high divisor-interval))
-		    (,rem-type ,(or (interval-low rem) '*)
-		     ,(or (interval-high rem) '*)))))
-		(t
-		 (let ((quot (truncate-quotient-bound
-			      (interval-div number-interval divisor-interval))))
-		   (when (member rem-type '(float single-float double-float))
-		     (setf rem (interval-func #'(lambda (x)
-						  (coerce x rem-type))
-					      rem)))
-		   (values-specifier-type
-		    `(values
-		      (integer ,(or (interval-low quot) '*)
-		       ,(or (interval-high quot) '*))
-		      (,rem-type ,(or (interval-low rem) '*)
-		       ,(or (interval-high rem) '*)))))))))))
+(defun truncate-derive-type-quot (number-type divisor-type)
+  (let* ((rem-type (rem-result-type number-type divisor-type))
+	 (number-interval (numeric-type->interval number-type))
+	 (divisor-interval (numeric-type->interval divisor-type)))
+    ;;(declare (type (member '(integer rational float)) rem-type))
+    ;; We have real numbers now.
+    (cond ((eq rem-type 'integer)
+	   ;; Since the remainder type is INTEGER, both args are
+	   ;; INTEGERs.
+	   (let* ((res (integer-truncate-derive-type
+			(interval-low number-interval)
+			(interval-high number-interval)
+			(interval-low divisor-interval)
+			(interval-high divisor-interval)))
+		  type lo hi)
+	     (when (listp res)
+	       (setf type (first res))
+	       (setf lo (second res))
+	       (setf hi (third res))
+	       (setf lo (if (or (equal lo ''*) (eq lo '*))
+			    nil lo))
+	       (setf hi (if (or (equal lo ''*) (eq hi '*))
+			    nil hi)))
+	     (values lo hi type nil)))
+	  (t
+	   (let ((quot (truncate-quotient-bound
+			(interval-div number-interval
+				      divisor-interval))))
+	     (values (interval-low quot)
+		     (interval-high quot)
+		     'integer nil))))))
 
+(defun truncate-derive-type-rem (number-type divisor-type)
+  (let* ((rem-type (rem-result-type number-type divisor-type))
+	 (number-interval (numeric-type->interval number-type))
+	 (divisor-interval (numeric-type->interval divisor-type))
+	 (rem (truncate-rem-bound number-interval divisor-interval)))
+    ;;(declare (type (member '(integer rational float)) rem-type))
+    ;; We have real numbers now.
+    (cond ((eq rem-type 'integer)
+	   ;; Since the remainder type is INTEGER, both args are
+	   ;; INTEGERs.
+	   (values (interval-low rem)
+		   (interval-high rem)
+		   rem-type nil))
+	  (t
+	   (multiple-value-bind (class format)
+	       (ecase rem-type
+		 (integer
+		  (values 'integer nil))
+		 (rational
+		  (values 'rational nil))
+		 ((or single-float double-float)
+		  (values 'float rem-type))
+		 (float
+		  (values 'float nil))
+		 (real
+		  (values nil nil)))
+	     (when (member rem-type '(float single-float double-float))
+	       (setf rem (interval-func #'(lambda (x)
+					    (coerce x rem-type))
+					rem)))
+	     (values (interval-low rem)
+		     (interval-high rem)
+		     class format))))))
+
+(defoptimizer (truncate derive-type) ((number divisor))
+  (if (and (numeric-real-union-type-p (continuation-type number))
+	   (numeric-real-union-type-p (continuation-type divisor)))
+      (make-values-type
+       :required
+       `(,(derive-real-type number divisor
+			    #'truncate-derive-type-quot)
+	 ,(derive-real-type number divisor
+			    #'truncate-derive-type-rem)))
+      *universal-type*))
+
+(defun ftruncate-derive-type-quot (number-type divisor-type)
+  ;; The bounds are the same as for truncate.  However, the first
+  ;; result is a float of some type.  We need to determine what that
+  ;; type is.  Basically it's the more contagious of the two types.
+  (multiple-value-bind (lo hi class format)
+      (truncate-derive-type-quot number-type divisor-type)
+    (declare (ignore class format))
+    (let ((res-type (numeric-contagion number-type divisor-type)))
+      (values lo hi (numeric-type-class res-type)
+	      (numeric-type-format res-type)))))
+
+(defoptimizer (ftruncate derive-type) ((number divisor))
+  (if (and (numeric-real-union-type-p (continuation-type number))
+	   (numeric-real-union-type-p (continuation-type divisor)))
+      (make-values-type
+       :required
+       `(,(derive-real-type number divisor
+			    #'ftruncate-derive-type-quot)
+	 ,(derive-real-type number divisor
+			    #'truncate-derive-type-rem)))
+      *universal-type*))
+  
+;;; Optimizer for %unary-truncate.  We only want the first result of
+;;; truncate (the quotient part of truncate).
 (defoptimizer (%unary-truncate derive-type) ((number))
-  (let ((number-type (continuation-type number)))
-    (if (and (numeric-type-p number-type)
-	     (csubtypep number-type (specifier-type 'real)))
-	(let ((quot (truncate-quotient-bound (numeric-type->interval number-type))))
-	  (specifier-type `(integer ,(or (interval-low quot) '*)
-			            ,(or (interval-high quot) '*))))
+  (let ((type (continuation-type number)))
+    (if (numeric-real-union-type-p type)
+	(derive-real-numeric-or-union-type type
+					   (specifier-type '(integer 1 1))
+					   #'truncate-derive-type-quot)
 	*universal-type*)))
 
-(macrolet ((frob-opt (name q-name r-name)
-	     `(defoptimizer (,name derive-type) ((number divisor))
-	       (let* ((number-type (continuation-type number))
-		      (divisor-type (continuation-type divisor))
-		      (real-type (specifier-type 'real)))
-		 (if (and (numeric-type-p number-type)
-			  (csubtypep number-type real-type)
-			  (numeric-type-p divisor-type)
-			  (csubtypep divisor-type real-type))
-		     (let* ((number-interval (numeric-type->interval number-type))
-			    (divisor-interval (numeric-type->interval divisor-type))
-			    (quot (,q-name (interval-div number-interval divisor-interval)))
-			    (rem (,r-name divisor-interval))
-			    (result-type (rem-result-type number-type divisor-type)))
-		       (when (member result-type '(float single-float double-float))
-			 ;; Make sure the limits on the interval have the right type.
-			 (setf rem (interval-func #'(lambda (x)
-						      (coerce x result-type))
-						  rem)))
-		       (values-specifier-type
-			`(values
-			  (integer ,(or (interval-low quot) '*)
-			   ,(or (interval-high quot) '*))
-			  (,result-type ,(or (interval-low rem) '*)
-			   ,(or (interval-high rem) '*)))))
-		     *universal-type*)))))
+
+
+
+;;; Define optimizers for floor and ceiling
+(macrolet
+    ((frob-opt (name q-name r-name)
+       (let ((q-aux (intern (concatenate 'string (symbol-name q-name) "-AUX")))
+	     (r-aux (intern (concatenate 'string (symbol-name r-name) "-AUX"))))
+	 `(progn
+	   ;; Compute type of quotient (first) result
+	   (defun ,q-aux (number-type divisor-type)
+	     (let* ((number-interval
+		     (numeric-type->interval number-type))
+		    (divisor-interval
+		     (numeric-type->interval divisor-type))
+		    (quot (,q-name (interval-div number-interval
+						 divisor-interval))))
+	       (values (interval-low quot)
+		       (interval-high quot)
+		       'integer nil)))
+	   ;; Compute type of remainder
+	   (defun ,r-aux (number-type divisor-type)
+	     (let* ((divisor-interval
+		     (numeric-type->interval divisor-type))
+		    (rem (,r-name divisor-interval))
+		    (result-type (rem-result-type number-type
+						  divisor-type)))
+	       (multiple-value-bind (class format)
+		   (ecase result-type
+		     (integer
+		      (values 'integer nil))
+		     (rational
+		      (values 'rational nil))
+		     ((or single-float double-float)
+		      (values 'float result-type))
+		     (float
+		      (values 'float nil))
+		     (real
+		      (values nil nil)))
+		 (when (member result-type
+			       '(float single-float double-float))
+		   ;; Make sure the limits on the interval have
+		   ;; the right type.
+		   (setf rem (interval-func #'(lambda (x)
+						(coerce x result-type))
+					    rem)))
+		 (values (interval-low rem)
+			 (interval-high rem)
+			 class format))))
+	   ;; The optimizer itself
+	   (defoptimizer (,name derive-type) ((number divisor))
+	     (if (and (numeric-real-union-type-p (continuation-type number))
+		      (numeric-real-union-type-p (continuation-type divisor)))
+		 (make-values-type
+		  :required
+		  `(,(derive-real-type number divisor
+				       #',q-aux)
+		    ,(derive-real-type number divisor
+				       #',r-aux)))
+		 *universal-type*))))))
   
   (frob-opt floor floor-quotient-bound floor-rem-bound)
   (frob-opt ceiling ceiling-quotient-bound ceiling-rem-bound))
+
+;;; Define optimizers for ffloor and fceiling
+(macrolet
+    ((frob-opt (name q-name r-name)
+       (let ((q-aux (intern (concatenate 'string
+					 "F"
+					 (symbol-name q-name)
+					 "-AUX")))
+	     (r-aux (intern (concatenate 'string
+					 (symbol-name r-name)
+					 "-AUX"))))
+	 `(progn
+	   ;; Compute type of quotient (first) result
+	   (defun ,q-aux (number-type divisor-type)
+	     (let* ((number-interval
+		     (numeric-type->interval number-type))
+		    (divisor-interval
+		     (numeric-type->interval divisor-type))
+		    (quot (,q-name (interval-div number-interval
+						 divisor-interval)))
+		    (res-type (numeric-contagion number-type divisor-type)))
+	       (values (interval-low quot)
+		       (interval-high quot)
+		       (numeric-type-class res-type)
+		       (numeric-type-format res-type))))
+
+	   (defoptimizer (,name derive-type) ((number divisor))
+	     (if (and (numeric-real-union-type-p (continuation-type number))
+		      (numeric-real-union-type-p (continuation-type divisor)))
+		 (make-values-type
+		  :required
+		  `(,(derive-real-type number divisor
+				       #',q-aux)
+		    ,(derive-real-type number divisor
+				       #',r-aux)))
+		 *universal-type*))))))
+  
+  (frob-opt ffloor floor-quotient-bound floor-rem-bound)
+  (frob-opt fceiling ceiling-quotient-bound ceiling-rem-bound))
 
 ;;; Functions to compute the bounds on the quotient and remainder for
 ;;; the FLOOR function.
@@ -1561,7 +1759,8 @@
 ;;; Derive useful information about the range.  Returns three values:
 ;;; - '+ if its positive, '- negative, or nil if it overlaps 0.
 ;;; - The abs of the minimal value (i.e. closest to 0) in the range.
-;;; - The abs of the maximal value if there is one, or nil if it is unbounded.
+;;; - The abs of the maximal value if there is one, or nil if it is
+;;;   unbounded.
 ;;;
 (defun numeric-range-info (low high)
   (cond ((and low (not (minusp low)))
@@ -1635,7 +1834,8 @@
 	    (t
 	     ;; The number we are dividing is unbounded, so we can't tell
 	     ;; anything about the result.
-	     'integer)))))
+	     `integer)))))
+
 
 #-propagate-float-type
 (defun integer-rem-derive-type
