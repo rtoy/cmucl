@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.4 1990/05/12 16:41:58 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.5 1990/08/30 16:38:11 wlott Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -226,15 +226,6 @@ char *name;
 lispobj *result;
 {
     int count;
-
-    /* Search read only space */
-    *result = (lispobj) read_only_space;
-    count = ((lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER) -
-	      read_only_space);
-    if (search_for_symbol(name, result, &count)) {
-	*result |= type_OtherPointer;
-        return TRUE;
-    }
 
     /* Search static space */
     *result = (lispobj) static_space;
