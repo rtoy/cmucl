@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.20 1992/05/07 08:52:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.21 1992/12/13 16:04:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,7 +301,7 @@
 ;;; guts.
 ;;;
 (defun describe-function-compiled (x kind name)
-  (let ((args (%function-header-arglist x)))
+  (let ((args (%function-arglist x)))
     (format t "~&~@(~@[~A ~]arguments:~%~)" kind)
     (cond ((not args)
 	   (format t "  There is no argument information available."))
@@ -312,10 +312,10 @@
 	   (indenting-further *standard-output* 2
 	     (write-string args)))))
 
-  (let ((name (or name (%function-header-name x))))
+  (let ((name (or name (%function-name x))))
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
-      (describe-function-name name (%function-header-type x))))
+      (describe-function-name name (%function-type x))))
     
   (print-compiled-from x))
 

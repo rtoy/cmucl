@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.13 1992/03/09 09:10:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.14 1992/12/13 16:04:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,7 +143,7 @@
 (defun print-encapsulation-info (obj str n)
   (declare (ignore n))
   (format str "#<Encapsulation-Info  Definition: ~S  Type: ~S>"
-	  (%function-header-name (encapsulation-info-definition obj))
+	  (%function-name (encapsulation-info-definition obj))
 	  (encapsulation-info-type obj)))
 
 

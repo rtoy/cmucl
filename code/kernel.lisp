@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.8 1992/04/21 04:23:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.9 1992/12/13 16:04:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.8 1992/04/21 04:23:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.9 1992/12/13 16:04:30 wlott Exp $
 ;;;    
 (in-package "KERNEL")
 
@@ -68,17 +68,17 @@
 (defun (setf function-subtype) (type function)
   (setf (function-subtype function) type))
 
-(defun %function-header-arglist (func)
+(defun %function-arglist (func)
   "Extracts the arglist from the function header FUNC."
-  (%function-header-arglist func))
+  (%function-arglist func))
 
-(defun %function-header-name (func)
+(defun %function-name (func)
   "Extracts the name from the function header FUNC."
-  (%function-header-name func))
+  (%function-name func))
 
-(defun %function-header-type (func)
+(defun %function-type (func)
   "Extracts the type from the function header FUNC."
-  (%function-header-type func))
+  (%function-type func))
 
 (defun %closure-function (closure)
   "Extracts the function from CLOSURE."

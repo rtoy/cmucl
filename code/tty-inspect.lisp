@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.10 1991/05/22 15:44:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.11 1992/12/13 16:04:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,7 +185,7 @@
 		     (kernel:%closure-function object)
 		     object)))
     (list (format nil "Function ~s.~@[~%Argument List: ~a~]." object
-		  (kernel:%function-header-arglist object)
+		  (kernel:%function-arglist object)
 		  ;; Defined from stuff used to be here.  Someone took it out.
 		  )
 	  t)))
