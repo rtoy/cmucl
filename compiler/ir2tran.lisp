@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.14 1990/05/12 20:35:59 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.15 1990/06/06 14:36:52 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -248,84 +248,138 @@
   (undefined-value))
 
 
-;;;; Utilities for receiving single values:
+;;;; Utilities for receiving fixed values:
 
 ;;; Continuation-TN  --  Internal
 ;;;
 ;;;    Return a TN that can be referenced to get the value of Cont.  Cont must
 ;;; be LTN-Annotated either as a delayed leaf ref or as a fixed, single-value
-;;; continuation.
+;;; continuation.  If a type check is called for, do it.
+;;;
+;;;    The primitive-type of the result will always be the same as the
+;;; ir2-continuation-primitive-type, ensuring that VOPs are always called with
+;;; TNs that satisfy the operand primitive-type restriction.  We may have to
+;;; make a temporary of the desired type and move the actual continuation TN
+;;; into it.  This happens when we delete a type check in unsafe code or when
+;;; we locally know something about the type of an argument variable.
 ;;;
 (defun continuation-tn (node block cont)
   (declare (type node node) (type ir2-block block) (type continuation cont))
-  (let ((2cont (continuation-info cont)))
-    (ecase (ir2-continuation-kind 2cont)
-      (:delayed
-       (let* ((ref (continuation-use cont))
-	      (tn (leaf-tn (ref-leaf ref) (node-environment ref)))
-	      (ptype (ir2-continuation-primitive-type 2cont)))
-	 (assert tn)
-	 (if (eq (continuation-type-check cont) t)
-	     (let ((temp (make-normal-tn ptype)))
-	       (emit-type-check node block tn temp
-				(continuation-asserted-type cont))
-	       temp)
-	     tn)))
-      (:fixed
-       (assert (= (length (ir2-continuation-locs 2cont)) 1))
-       (first (ir2-continuation-locs 2cont))))))
+  (let* ((2cont (continuation-info cont))
+	 (cont-tn 
+	  (ecase (ir2-continuation-kind 2cont)
+	    (:delayed
+	     (let ((ref (continuation-use cont)))
+	       (leaf-tn (ref-leaf ref) (node-environment ref))))
+	    (:fixed
+	     (assert (= (length (ir2-continuation-locs 2cont)) 1))
+	     (first (ir2-continuation-locs 2cont)))))
+	 (ptype (ir2-continuation-primitive-type 2cont)))
+    
+    (cond ((eq (continuation-type-check cont) t)
+	   (let ((temp (make-normal-tn ptype)))
+	     (emit-type-check node block cont-tn temp
+			      (single-value-type
+			       (continuation-asserted-type cont)))
+	     temp))
+	  ((eq (tn-primitive-type cont-tn) ptype) cont-tn)
+	  (t
+	   (let ((temp (make-normal-tn ptype)))
+	     (emit-move node block cont-tn temp)
+	     temp)))))
+
+
+;;; CONTINUATION-TNS  --  Internal
+;;;
+;;;    Similar to CONTINUATION-TN, but hacks multiple values.  We return
+;;; continuations holding the values of Cont with Ptypes as their primitive
+;;; types.  Cont must be annotated for the same number of fixed values are
+;;; there are Ptypes.
+;;;
+;;;    If the continuation has a type check, check the values into temps and
+;;; return the temps.  When we have more values than assertions, we move the
+;;; extra values with no check.
+;;; 
+(defun continuation-tns (node block cont ptypes)
+  (declare (type node node) (type ir2-block block)
+	   (type continuation cont) (list ptypes))
+  (let* ((locs (ir2-continuation-locs (continuation-info cont)))
+	 (nlocs (length locs)))
+    (assert (= nlocs (length ptypes)))
+    (if (eq (continuation-type-check cont) t)
+	(multiple-value-bind (check types)
+			     (continuation-check-types cont)
+	  (assert (eq check :simple))
+	  (let ((ntypes (length types)))
+	    (mapcar #'(lambda (from to-type assertion)
+			(let ((temp (make-normal-tn to-type)))
+			  (if assertion
+			      (emit-type-check node block from temp assertion)
+			      (emit-move node block from temp)
+			      temp)))
+		    locs ptypes
+		    (if (< ntypes nlocs)
+			(append types (make-list (- nlocs ntypes)
+						 :initial-element nil))
+			types))))
+	(mapcar #'(lambda (from to-type)
+		    (if (eq (tn-primitive-type from) to-type)
+			from
+			(let ((temp (make-normal-tn to-type)))
+			  (emit-move node block from temp)
+			  temp)))
+		locs ptypes))))
 
 
 ;;;; Utilities for delivering values to continuations:
 
 ;;; Continuation-Result-TNs  --  Internal
 ;;;
-;;;    Return a list of TNs that can be used as result TNs to evaluate an
-;;; expression with fixed result types specified by RTypes into the
-;;; continuation Cont.  This is used together with Move-Continuation-Result to
-;;; deliver a fixed values of to a continuation.
+;;;    Return a list of TNs with the specifier Types that can be used as result
+;;; TNs to evaluate an expression into the continuation Cont.  This is used
+;;; together with Move-Continuation-Result to deliver fixed values to a
+;;; continuation.
 ;;;
-;;;    If the continuation isn't annotated (meaning the values are discarded),
-;;; or wants a type check, then we make temporaries for each supplied value.
-;;; This provides a place to compute the result until we figure out what (if
-;;; anything) to do with it.
+;;;    If the continuation isn't annotated (meaning the values are discarded)
+;;; or is unknown-values, the then we make temporaries for each supplied value,
+;;; providing a place to compute the result in until we decide what to do with
+;;; it (if anything.)
 ;;;
 ;;;    If the continuation is fixed-values, and wants the same number of values
 ;;; as the user wants to deliver, then we just return the
 ;;; IR2-Continuation-Locs.  Otherwise we make a new list padded as necessary by
-;;; discarded TNs.
+;;; discarded TNs.  We always return a TN of the specified type, using the
+;;; continuation locs only when they are of the correct type.
 ;;;
-;;;    If the continuation is unknown-values, then we make a boxed TN to
-;;; compute each desired result in.
-;;;
-;;;    Currently, we totally ignore the types, always allocating TNs of type T
-;;; when we can't use a continuation's TN.  This affects unused values and
-;;; values needing to be checked.  But representation selection cleverly
-;;; replaces dummy result TNs with ones in a good representation, so the first
-;;; isn't a problem.  It seems important to allow non-standard representations
-;;; in type checking for numeric subranges, but these checks are hairy, so the
-;;; right thing happens.
-;;;
-(defun continuation-result-tns (cont rtypes)
-  (declare (type continuation cont) (list rtypes))
+(defun continuation-result-tns (cont types)
+  (declare (type continuation cont) (type list types))
   (let ((2cont (continuation-info cont)))
-    (if (or (not 2cont) (eq (continuation-type-check cont) t))
-	(make-n-tns (length rtypes) *any-primitive-type*)
+    (if (not 2cont)
+	(mapcar #'make-normal-tn types)
 	(ecase (ir2-continuation-kind 2cont)
 	  (:fixed
-	   (let ((locs (ir2-continuation-locs 2cont)))
-	     (if (= (length locs) (length rtypes))
+	   (let* ((locs (ir2-continuation-locs 2cont))
+		  (nlocs (length locs))
+		  (ntypes (length types)))
+	     (if (and (= nlocs ntypes)
+		      (do ((loc locs (cdr loc))
+			   (type types (cdr type)))
+			  ((null loc) t)
+			(unless (eq (tn-primitive-type (car loc)) (car type))
+			  (return nil))))
 		 locs
-		 (collect ((res))
-		   (do ((loc locs (cdr loc))
-			(rtype rtypes (cdr rtype)))
-		       ((null rtype))
-		     (if loc
-			 (res (car loc))
-			 (res (make-normal-tn *any-primitive-type*))))
-		   (res)))))
+		 (mapcar #'(lambda (loc type)
+			     (if (eq (tn-primitive-type loc) type)
+				 loc
+				 (make-normal-tn type)))
+			 (if (< nlocs ntypes)
+			     (append locs
+				     (mapcar #'make-normal-tn
+					     (subseq types nlocs)))
+			     locs)
+			 types))))
 	  (:unknown
-	   (make-n-tns (length rtypes) *any-primitive-type*))))))
+	   (mapcar #'make-normal-tn types))))))
 
 
 ;;; Make-Standard-Value-Tns  --  Internal
@@ -362,49 +416,6 @@
 	())))
 
 
-;;; Move-Results-Checked  --  Internal
-;;;
-;;;    Move the values in the list of TNs Src to the list of TNs Dest, checking
-;;; that the types of the values match the Asserted-Type in Cont.  What we do
-;;; is look at the number of values supplied, desired and asserted, padding out
-;;; shorter lists appropriately.
-;;;
-;;;    Missing supplied values are defaulted to NIL.  Undesired supplied values
-;;; are just checked against the asserted type.  If more values are computed
-;;; than the type assertion expects, then we don't check these values.  We
-;;; ignore assertions on values neither supplied nor received.  So if there is
-;;; an assertion for an unsupplied value, it will be checked against NIL.  This
-;;; will cause a wrong-type error (if any) rather than a wrong number of values
-;;; error.  This is consistent with our general policy of not checking values
-;;; count.
-;;;
-(defun move-results-checked (node block src dest cont)
-  (declare (type node node) (type ir2-block block)
-	   (list src dest) (type ctype type))
-  (multiple-value-bind (check types)
-		       (continuation-check-types cont)
-    (assert (eq check :simple))
-    (let* ((count (length types))
-	   (nsrc (length src))
-	   (ndest (length dest))
-	   (nmax (max ndest nsrc)))
-      (mapc #'(lambda (from to assertion)
-		(if assertion
-		    (emit-type-check node block from to assertion)
-		    (emit-move node block from to)))
-	    (if (> ndest nsrc)
-		(append src (make-list (- ndest nsrc)
-				       :initial-element (emit-constant nil)))
-		src)
-	    (if (< ndest nsrc)
-		(append dest (nthcdr ndest src))
-		dest)
-	    (if (< count nmax)
-		(append types (make-list (- nmax count) :initial-element nil))
-		types))))
-  (undefined-value))
-
-
 ;;; Move-Results-Coerced  --  Internal
 ;;;
 ;;;    Just move each Src TN into the corresponding Dest TN, defaulting any
@@ -428,38 +439,30 @@
 
 ;;; Move-Continuation-Result  --  Internal
 ;;;
-;;;    If necessary, emit type-checking/coercion code needed to deliver the
+;;;    If necessary, emit coercion code needed to deliver the
 ;;; Results to the specified continuation.  Node and block provide context for
 ;;; emitting code.  Although usually obtained from Standard-Result-TNs or
 ;;; Continuation-Result-TNs, Results my be a list of any type or number of TNs.
 ;;;
 ;;;    If the continuation is fixed values, then move the results into the
-;;; continuation locations, doing type checks and defaulting unsupplied values.
-;;;
-;;;    If the continuation is unknown values, then do the moves/checks into the
-;;; standard value locations, and use Push-Values to put the values on the
-;;; stack.
+;;; continuation locations.  If the continuation is unknown values, then do the
+;;; moves into the standard value locations, and use Push-Values to put the
+;;; values on the stack.
 ;;;
 (defun move-continuation-result (node block results cont)
   (declare (type node node) (type ir2-block block)
 	   (list results) (type continuation cont))
-  (let* ((2cont (continuation-info cont))
-	 (check (eq (continuation-type-check cont) t)))
+  (let* ((2cont (continuation-info cont)))
     (when 2cont
       (ecase (ir2-continuation-kind 2cont)
 	(:fixed
 	 (let ((locs (ir2-continuation-locs 2cont)))
-	   (cond ((eq locs results))
-		 (check
-		  (move-results-checked node block results locs cont))
-		 (t
-		  (move-results-coerced node block results locs)))))
+	   (unless (eq locs results)
+	     (move-results-coerced node block results locs))))
 	(:unknown
 	 (let* ((nvals (length results))
 		(locs (make-standard-value-tns nvals)))
-	   (if check
-	       (move-results-checked node block results locs cont)
-	       (move-results-coerced node block results locs))
+	   (move-results-coerced node block results locs)
 	   (vop* push-values node block
 		 ((reference-tn-list locs nil))
 		 ((reference-tn-list (ir2-continuation-locs 2cont) t))
@@ -538,6 +541,73 @@
 			     test-ref () node t)))
 
 
+;;; FIND-TEMPLATE-RESULT-TYPES  --  Internal
+;;;
+;;;    Return a list of primitive-types that we can pass to
+;;; CONTINUATION-RESULT-TNS describing the result types we want for a template
+;;; call.  We duplicate here the determination of output type that was done in
+;;; initially selecting the template, so we know that the types we find are
+;;; allowed by the template output type restrictions.
+;;;
+(defun find-template-result-types (call cont template rtypes)
+  (declare (type combination call) (type continuation cont)
+	   (type template template) (list rtypes))
+  (let* ((dtype (node-derived-type call))
+	 (type (if (and (or (eq (template-policy template) :safe)
+			    (policy call (= safety 0)))
+			(continuation-type-check cont))
+		   (values-type-intersection
+		    dtype
+		    (continuation-asserted-type cont))
+		   dtype))
+	 (types (mapcar #'primitive-type
+			(if (values-type-p type)
+			    (append (values-type-required type)
+				    (values-type-optional type))
+			    (list type)))))
+    (let ((nvals (length rtypes))
+	  (ntypes (length types)))
+      (cond ((< ntypes nvals)
+	     (append types (make-list (- nvals ntypes)
+				      :initial-element *any-primitive-type*)))
+	    ((> ntypes nvals)
+	     (subseq types 0 nvals))
+	    (t
+	     types)))))
+
+
+;;; MAKE-TEMPLATE-RESULT-TNS  --  Internal
+;;;
+;;;    Return a list of TNs usable in a Call to Template delivering values to
+;;; Cont.  As an efficiency hack, we pick off the common case where the
+;;; contiuation is fixed values and has locations that satisfy the result
+;;; restrictions.  This can fail when there is a type check or a values count
+;;; mismatch.
+;;;
+(defun make-template-result-tns (call cont template rtypes)
+  (declare (type combination call) (type continuation cont)
+	   (type template template) (list rtypes))
+  (let ((2cont (continuation-info cont)))
+    (if (and 2cont (eq (ir2-continuation-kind 2cont) :fixed))
+	(let ((locs (ir2-continuation-locs 2cont)))
+	  (if (and (= (length rtypes) (length locs))
+		   (do ((loc locs (cdr loc))
+			(rtype rtypes (cdr rtype)))
+		       ((null loc) t)
+		     (unless (operand-restriction-ok
+			      (car rtype)
+			      (tn-primitive-type (car loc))
+			      :t-ok nil)
+		       (return nil))))
+	      locs
+	      (continuation-result-tns
+	       cont
+	       (find-template-result-types call cont template rtypes))))
+	(continuation-result-tns
+	 cont
+	 (find-template-result-types call cont template rtypes)))))
+
+
 ;;; IR2-Convert-Template  --  Internal
 ;;;
 ;;;    Get the operands into TNs, make TN-Refs for them, and then call the
@@ -555,7 +625,7 @@
       (if (eq rtypes :conditional)
 	  (ir2-convert-conditional call block template args info-args
 				   (continuation-dest cont) nil)
-	  (let* ((results (continuation-result-tns cont rtypes))
+	  (let* ((results (make-template-result-tns call cont template rtypes))
 		 (r-refs (reference-tn-list results t)))
 	    (assert (= (length info-args)
 		       (template-info-arg-count template)))
@@ -577,7 +647,7 @@
 	 (info (continuation-value info))
 	 (cont (node-cont call))
 	 (rtypes (template-result-types template))
-	 (results (continuation-result-tns cont rtypes))
+	 (results (make-template-result-tns call cont template rtypes))
 	 (r-refs (reference-tn-list results t)))
     (multiple-value-bind
 	(args info-args)
@@ -770,7 +840,10 @@
 ;;;
 ;;;    Given a function continuation Fun, return as values a TN holding the
 ;;; thing that we call and true if the thing is a symbol (false if it is a
-;;; function).
+;;; function).  There are three interesting non-symbol cases:
+;;; -- Known to be a function, no check needed: return the continuation loc.
+;;; -- Known to be a function or a symbol, may need to be coerced.
+;;; -- Not known what it is.
 ;;;
 (defun function-continuation-tn (node block cont)
   (declare (type continuation cont))
@@ -782,19 +855,35 @@
 		   nil)))
     (if name
 	(values (emit-constant name) t)
-	(let ((locs (ir2-continuation-locs 2cont))
-	      (type (ir2-continuation-primitive-type 2cont)))
+	(let* ((locs (ir2-continuation-locs 2cont))
+	       (loc (first locs))
+	       (check (continuation-type-check cont))
+	       (function-ptype (primitive-type-or-lose 'function)))
 	  (assert (and (eq (ir2-continuation-kind 2cont) :fixed)
 		       (= (length locs) 1)))
-	  (if (eq (primitive-type-name type) 'function)
-	      (values (first locs) nil)
-	      (let ((temp (make-normal-tn *any-primitive-type*)))
-		(when (policy node (> speed brevity))
-		  (let ((*compiler-error-context* node))
-		    (compiler-note "Called function might be a symbol, so ~
-		                    must coerce at run-time.")))
-		(vop coerce-to-function node block (first locs) temp)
-		(values temp nil)))))))
+	  (cond ((eq (tn-primitive-type loc) function-ptype)
+		 (assert (not (eq check t)))
+		 (values loc nil))
+		(t
+		 (let ((temp (make-normal-tn function-ptype)))
+		   (cond ((eq (ir2-continuation-primitive-type 2cont)
+			      function-ptype)
+			  (assert (eq check t))
+			  (emit-type-check node block loc temp
+					   (specifier-type 'function)))
+			 (t
+			  (when (policy node (> speed brevity))
+			    (let ((*compiler-error-context* node))
+			      (compiler-note
+			       "Called function might be a ~
+			       symbol, so must coerce at run-time.")))
+
+			  (if (eq check t)
+			      (vop coerce-to-function node block loc temp)
+			      (vop fast-safe-coerce-to-function node block
+				   loc temp))))
+
+		   (values temp nil))))))))
 
 
 ;;; MOVE-TAIL-FULL-CALL-ARGS  --  Internal
@@ -1025,16 +1114,16 @@
 ;;;
 ;;;    Do stuff to return from a function with the specified values and
 ;;; convention.  If the return convention is :Fixed and we aren't returning
-;;; from an XEP, then we move the return values to the passing locs and do a
-;;; Known-Return.  Otherwise, we use the unknown-values convention.  If there
-;;; is a fixed number of return values, then use Return, otherwise use
-;;; Return-Multiple.
+;;; from an XEP, then we do a known return (letting representation selection
+;;; insert the correct move-arg VOPs.)  Otherwise, we use the unknown-values
+;;; convention.  If there is a fixed number of return values, then use Return,
+;;; otherwise use Return-Multiple.
 ;;;
 (defun ir2-convert-return (node block)
   (declare (type creturn node) (type ir2-block block))
-  (let* ((cont (continuation-info (return-result node)))
-	 (cont-kind (ir2-continuation-kind cont))
-	 (cont-locs (ir2-continuation-locs cont))
+  (let* ((cont (return-result node))
+	 (2cont (continuation-info cont))
+	 (cont-kind (ir2-continuation-kind 2cont))
 	 (fun (return-lambda node))
 	 (env (environment-info (lambda-environment fun)))
 	 (old-fp (ir2-environment-old-fp env))
@@ -1043,12 +1132,16 @@
     (cond
      ((and (eq (return-info-kind returns) :fixed)
 	   (not (external-entry-point-p fun)))
-      (vop* known-return node block
-	    (old-fp return-pc (reference-tn-list cont-locs nil))
-	    (nil)
-	    (return-info-locations returns)))
+      (let ((locs (continuation-tns node block cont
+				    (return-info-types returns))))
+	(vop* known-return node block
+	      (old-fp return-pc (reference-tn-list locs nil))
+	      (nil)
+	      (return-info-locations returns))))
      ((eq cont-kind :fixed)
-      (let* ((nvals (length cont-locs))
+      (let* ((types (mapcar #'tn-primitive-type (ir2-continuation-locs 2cont)))
+	     (cont-locs (continuation-tns node block cont types))
+	     (nvals (length cont-locs))
 	     (locs (make-standard-value-tns nvals)))
 	(mapc #'(lambda (val loc)
 		  (emit-move node block val loc))
@@ -1061,7 +1154,8 @@
      (t
       (assert (eq cont-kind :unknown))
       (vop* return-multiple node block
-	    (old-fp return-pc (reference-tn-list cont-locs nil))
+	    (old-fp return-pc
+		    (reference-tn-list (ir2-continuation-locs 2cont) nil))
 	    (nil)))))
 
   (undefined-value))
@@ -1078,16 +1172,21 @@
 ;;;
 (defun ir2-convert-mv-bind (node block)
   (declare (type mv-combination node) (type ir2-block block))
-  (let ((cont (continuation-info (first (basic-combination-args node))))
-	(fun (ref-leaf (continuation-use (basic-combination-fun node)))))
+  (let* ((cont (continuation-info (first (basic-combination-args node))))
+	 (fun (ref-leaf (continuation-use (basic-combination-fun node))))
+	 (vars (lambda-vars fun)))
     (assert (eq (functional-kind fun) :mv-let))
-  (mapc #'(lambda (src var)
-	    (when (leaf-refs var)
-	      (let ((dest (leaf-info var)))
-		(if (lambda-var-indirect var)
-		    (vop make-value-cell node block src dest)
-		    (emit-move node block src dest)))))
-	(ir2-continuation-locs cont) (lambda-vars fun)))
+    (mapc #'(lambda (src var)
+	      (when (leaf-refs var)
+		(let ((dest (leaf-info var)))
+		  (if (lambda-var-indirect var)
+		      (vop make-value-cell node block src dest)
+		      (emit-move node block src dest)))))
+	  (continuation-tns node block cont
+			    (mapcar #'(lambda (x)
+					(primitive-type (leaf-type x)))
+				    vars))
+	  vars))
   (undefined-value))
 
 
@@ -1282,7 +1381,7 @@
   (let* ((2info (nlx-info-info info))
 	 (kind (cleanup-kind (nlx-info-cleanup info)))
 	 (block-tn (environment-live-tn
-		    (make-representation-tn (sc-number-or-lose 'catch-block))
+		    (make-normal-tn (primitive-type-or-lose 'catch-block))
 		    (node-environment node)))
 	 (res (make-normal-tn *any-primitive-type*))
 	 (target-tn
