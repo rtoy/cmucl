@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.9 1990/04/27 19:22:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.10 1990/05/11 17:50:10 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -122,7 +122,7 @@
   (:translate sap+)
   (:args (ptr :scs (sap-reg))
 	 (offset :scs (signed-reg immediate)))
-  (:arg-types system-area-pointer fixnum)
+  (:arg-types system-area-pointer signed-num)
   (:results (res :scs (sap-reg)))
   (:policy :fast-safe)
   (:generator 1
@@ -138,7 +138,6 @@
 	 (ptr2 :scs (sap-reg)))
   (:arg-types system-area-pointer system-area-pointer)
   (:policy :fast-safe)
-  (:arg-types system-area-pointer system-area-pointer)
   (:results (res :scs (signed-reg)))
   (:generator 1
     (inst subu res ptr1 ptr2)))
@@ -153,7 +152,7 @@
   (:args (object :scs (sap-reg) :target sap)
 	 (offset :scs (descriptor-reg any-reg negative-immediate zero
 				      immediate unsigned-immediate)))
-  (:arg-types system-area-pointer fixnum)
+  (:arg-types system-area-pointer positive-fixnum)
   (:results (result :scs (signed-reg unsigned-reg)))
   (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -199,6 +198,7 @@
 	 (offset :scs (descriptor-reg any-reg negative-immediate
 				      zero immediate))
 	 (value :scs (signed-reg unsigned-reg) :target result))
+  (:arg-types system-area-pointer positive-fixnum *)
   (:results (result :scs (signed-reg unsigned-reg)))
   (:temporary (:scs (sap-reg) :from (:argument 0))
 	      sap)
@@ -246,7 +246,7 @@
 	 (offset :scs (descriptor-reg any-reg negative-immediate
 				      zero immediate))
 	 (value :scs (sap-reg) :target result))
-  (:arg-types system-area-pointer fixnum system-area-pointer)
+  (:arg-types system-area-pointer positive-fixnum system-area-pointer)
   (:results (result :scs (sap-reg)))
   (:variant :long))
 
@@ -262,7 +262,6 @@
 
 (define-vop (32bit-system-set sap-set)
   (:translate (setf sap-ref-32))
-  (:arg-types system-area-pointer fixnum *)
   (:variant :long))
 
 
@@ -276,7 +275,6 @@
 
 (define-vop (16bit-system-set sap-set)
   (:translate (setf sap-ref-16))
-  (:arg-types system-area-pointer fixnum fixnum)
   (:variant :short))
 
 
@@ -290,7 +288,6 @@
 
 (define-vop (8bit-system-set sap-set)
   (:translate (setf sap-ref-8))
-  (:arg-types system-area-pointer fixnum fixnum)
   (:variant :byte))
 
 
