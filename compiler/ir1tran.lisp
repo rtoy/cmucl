@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.99 1993/08/20 22:56:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.100 1993/08/21 00:35:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2429,7 +2429,7 @@
       `(%funcall ,function ,@args)
       (values nil t)))
 
-(deftransform %coerce-to-function ((thing))
+(deftransform %coerce-to-function ((thing) * * :when :both)
   (give-up "Might be a symbol, so must call FDEFINITION at runtime."))
 
 
