@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.11 1992/03/10 09:01:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.12 1992/03/10 09:22:49 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -262,7 +262,7 @@
 ;;; (the machines address units).  Translate and signed-translate are the Lisp
 ;;; function calls for which these VOP's are in-line expansions.
 ;;;
-(defmacro define-system-set (name size translate data-scs data-type)
+(defmacro define-system-set (name size translate data-sc data-type)
   (let ((set-form 
 	 (ecase size
 	   (:byte '(inst stc data base offset))
@@ -274,11 +274,11 @@
 	 (:policy :fast-safe)
 	 (:translate ,translate)
 	 (:args (base :scs (sap-reg))
-		(data :scs (,@data-scs) :target result :to (:result 0)))
+		(data :scs (,data-sc) :target result :to (:result 0)))
 	 (:arg-types system-area-pointer
 		     (:constant (unsigned-byte 15))
 		     ,data-type)
-	 (:results (result :scs (,@data-scs)))
+	 (:results (result :scs (,data-sc)))
 	 (:result-types ,data-type)
 	 (:info offset)
 	 (:generator 5
@@ -290,11 +290,11 @@
 	 (:translate ,translate)
 	 (:args (object :scs (sap-reg) :to (:eval 0))
 		(offset :scs (unsigned-reg) :target base)
-		(data :scs (,@data-scs) :target result
+		(data :scs (,data-sc) :target result
 		      :to (:eval 1)))
 	 (:arg-types system-area-pointer positive-fixnum ,data-type)
 	 (:temporary (:scs (sap-reg) :from (:argument 1) :to (:eval 2)) base)
-	 (:results (result :scs (,@data-scs)))
+	 (:results (result :scs (,data-sc)))
 	 (:result-types ,data-type)
 	 (:generator 7
 	   (move base offset)
@@ -306,10 +306,10 @@
 ) ;EVAL-WHEN
 
 (define-system-set 8bit-system-set :byte %set-sap-ref-8
-  (unsigned-reg) positive-fixnum)
+  unsigned-reg positive-fixnum)
 
 (define-system-set 16bit-system-set :halfword %set-sap-ref-16
-  (unsigned-reg) positive-fixnum)
+  unsigned-reg positive-fixnum)
 
 (define-system-set 32bit-system-set :word %set-sap-ref-32
   unsigned-reg unsigned-num)
