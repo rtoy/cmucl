@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.10 1993/03/13 17:09:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.11 1993/03/13 20:22:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,6 +59,8 @@
 (def-primitive-type function (descriptor-reg))
 (def-primitive-type list (descriptor-reg))
 (def-primitive-type instance (descriptor-reg))
+
+(def-primitive-type funcallable-instance (descriptor-reg))
 
 ;;; Primitive other-pointer number types.
 ;;; 
@@ -244,8 +246,8 @@
 	 ((nil) (values *any-primitive-type* nil))))
       (built-in-class
        (case (class-name type)
-	 ((complex function funcallable-instance instance
-		   system-area-pointer weak-pointer)
+	 ((complex function instance funcallable-instance system-area-pointer
+		   weak-pointer)
 	  (values (primitive-type-or-lose (class-name type) *backend*) t))
 	 (base-char
 	  (exactly base-char))
