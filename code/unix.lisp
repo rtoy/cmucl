@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.6 2000/08/24 17:15:04 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.7 2000/08/25 10:00:13 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1108,7 +1108,7 @@
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) cmd)
 	   (type (unsigned-byte 32) arg))
-  (int-syscall ("fcntl" int int int) fd cmd arg))
+  (int-syscall ("fcntl" int unsigned-int unsigned-int) fd cmd arg))
 
 ;;; Unix-link creates a hard link from name2 to name1.
 
