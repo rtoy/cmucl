@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.53 1998/12/19 15:52:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.54 1999/01/09 11:12:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -915,9 +915,16 @@
   ((pathname :reader file-error-pathname :initarg :pathname)))
 
 ;;; INTERNAL
-(define-condition simple-file-error    (simple-condition file-error)())
 (define-condition simple-program-error (simple-condition program-error)())
 (define-condition simple-control-error (simple-condition control-error)())
+
+(define-condition simple-file-error (simple-condition file-error) ()
+  (:report
+   (lambda (condition stream)
+     (format stream "~&~@<File-error in function ~S:  ~3i~:_~?~:>"
+	     (condition-function-name condition)
+	     (simple-condition-format-control condition)
+	     (simple-condition-format-arguments condition)))))
 
 (define-condition package-error (error)
   ((package :reader package-error-package :initarg :package)))
