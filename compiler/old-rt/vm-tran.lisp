@@ -69,7 +69,7 @@
 (defknown %syscall (&rest t) *)
 
 (defoptimizer (%syscall ir2-convert) ((&rest args) node block)
-  (let* ((refs (move-full-call-args node block))
+  (let* ((refs (move-tail-full-call-args node block))
 	 (cont (node-cont node))
 	 (res (continuation-result-tns
 	       cont
