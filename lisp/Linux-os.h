@@ -21,8 +21,6 @@
 #include <errno.h>
 #include <linux/version.h>
 #define MAP_VARIABLE 0
-#define PRINTNOISE
-/* #define DEBUG_SCAVENGE_VERBOSE */
 
 #define linuxversion(a, b, c) (((a)<<16)+((b)<<8)+(c))
 
@@ -88,10 +86,3 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_ebp ebp
 #define sc_esi esi
 #define sc_edi edi
-
-/*
- * On second thought, a separate stack would probably
- * confuse the hell out of the Lisp debugger!
- */
-#undef  USE_SIG_STACK
-
