@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/mc68881.lisp,v 1.8 1991/07/23 12:11:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/mc68881.lisp,v 1.9 1991/10/03 14:31:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,7 +173,7 @@
     vm:double-float-value-slot))
 
 (define-vop (move-to-mc68881-argument)
-  (:args (x :scs (mc68881-single-reg mc68881-double-reg))
+  (:args (x :scs (mc68881-single-reg mc68881-double-reg) :target y)
 	 (nfp :scs (word-pointer-reg)
 	      :load-if (not (sc-is y mc68881-single-reg mc68881-double-reg))))
   (:results (y))
