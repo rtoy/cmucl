@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.26 1993/07/20 10:59:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.27 1993/07/21 12:52:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 (use-package "EXTENSIONS")
 
 (in-package "KERNEL")
-(export '(layout-invalid))
+(export '(layout-invalid simple-style-warning))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -625,6 +625,7 @@
 
 (define-condition warning (condition) ())
 (define-condition style-warning (warning) ())
+(define-condition simple-style-warning (style-warning) ())
 
 (defun warn (datum &rest arguments)
   "Warns about a situation by signalling a condition formed by datum and
@@ -653,17 +654,26 @@
   (apply #'format stream (simple-condition-format-control condition)
 	 		 (simple-condition-format-arguments condition)))
 
-;;; The simple-condition type has a conc-name, so SIMPLE-CONDITION-FORMAT-CONTROL
-;;; and SIMPLE-CONDITION-FORMAT-ARGUMENTS could be written to handle the
-;;; simple-condition, simple-warning, simple-type-error, and simple-error types.
-;;; This seems to create some kind of bogus multiple inheritance that the user
-;;; sees.
+;;; The simple-condition is reall called internal-simple-condition, so
+;;; SIMPLE-CONDITION-FORMAT-CONTROL and SIMPLE-CONDITION-FORMAT-ARGUMENTS could
+;;; be written to handle the simple-condition, simple-warning,
+;;; simple-style-warning, simple-type-error, and simple-error types.  We stash
+;;; the plist of INTERNAL-SIMPLE-CONDITION into SIMPLE-CONDITION so that as far
+;;; as the condition system is concerned, that is also a valid name.  This
+;;; seems to create some kind of bogus multiple inheritance that the user sees.
 ;;;
-(define-condition simple-condition (condition)
-  (format-control
-   (format-arguments '()))
-  (:conc-name internal-simple-condition-)
+(define-condition internal-simple-condition (condition)
+  ((format-control :acessor internal-simple-condition-format-control)
+   (format-arguments :init-form '()
+		     :accessor internal-simple-condition-format-arguments))
   (:report simple-condition-printer))
+
+(setf (symbol-plist 'simple-condition)
+      (symbol-plist 'internal-simple-condition))
+
+(deftype simple-condition ()
+  '(or internal-simple-condition simple-warning simple-type-error
+       simple-error simple-style-warning))
 
 ;;; The simple-warning type has a conc-name, so SIMPLE-CONDITION-FORMAT-CONTROL
 ;;; and SIMPLE-CONDITION-FORMAT-ARGUMENTS could be written to handle the
@@ -675,6 +685,12 @@
   (format-control
    (format-arguments '()))
   (:conc-name internal-simple-warning-)
+  (:report simple-condition-printer))
+;;;
+(define-condition simple-style-warning (style-warning)
+  (format-control
+   (format-arguments '()))
+  (:conc-name internal-simple-style-warning-)
   (:report simple-condition-printer))
 
 
@@ -751,6 +767,8 @@
   (etypecase condition
     (simple-condition  (internal-simple-condition-format-control  condition))
     (simple-warning    (internal-simple-warning-format-control    condition))
+    (simple-style-warning
+     (internal-simple-style-warning-format-control condition))
     (simple-type-error (internal-simple-type-error-format-control condition))
     (simple-error      (internal-simple-error-format-control      condition))))
 ;;;
@@ -758,6 +776,8 @@
   (etypecase condition
     (simple-condition  (internal-simple-condition-format-arguments  condition))
     (simple-warning    (internal-simple-warning-format-arguments    condition))
+    (simple-style-warning
+     (internal-simple-style-warning-format-arguments condition))
     (simple-type-error (internal-simple-type-error-format-arguments condition))
     (simple-error      (internal-simple-error-format-arguments      condition))))
 
