@@ -81,7 +81,8 @@
 	(when (lambda-var-p leaf)
 	  (let ((num (gethash leaf var-locs)))
 	    (when num
-	      (setf (sbit res num) 1))))))))
+	      (setf (sbit res num) 1))))))
+    res))
 
 
 ;;; The PC for the location most recently dumped.
@@ -122,8 +123,9 @@
 ;;;    Extract context info from a Location-Info structure and use it to dump a
 ;;; compiled code-location.
 ;;;
-(defun dump-location-from-info (loc tlf-num)
-  (declare (type location-info loc) (type (or index null) tlf-num))
+(defun dump-location-from-info (loc tlf-num var-locs)
+  (declare (type location-info loc) (type (or index null) tlf-num)
+	   (type hash-table var-locs))
   (let ((vop (location-info-vop loc)))
     (dump-1-location (vop-node vop)
 		     (vop-block vop)
@@ -186,7 +188,7 @@
 	  (dolist (loc (ir2-block-locations 2block))
 	    (if (label-elsewhere-p (location-info-label loc))
 		(elsewhere loc)
-		(dump-location-from-info loc tlf-num)))))
+		(dump-location-from-info loc tlf-num var-locs)))))
       
       (vector-push-extend compiler-debug-block-elsewhere-p *byte-buffer*)
       (dolist (loc (elsewhere))
@@ -353,7 +355,7 @@
 ;;; from the Var-Locs hashtable.)
 ;;;
 (defun debug-location-for (var var-locs)
-  (declare (type lambda-var var) (type hashtable var-locs))
+  (declare (type lambda-var var) (type hash-table var-locs))
   (let ((res (gethash var var-locs)))
     (assert res () "No location for ~S?" var)
     res))
