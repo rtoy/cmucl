@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.18 2005/02/07 22:18:35 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.19 2005/02/07 22:32:49 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -411,7 +411,11 @@ static char *fn_slots[] = {"self: ", "next: ", "name: ", "arglist: ", "type: ", 
 
 static char *closure_slots[] = {"fn: ", NULL};
 static char *funcallable_instance_slots[] = {"fn: ", "lexenv: ", "layout: ", NULL};
-static char *weak_pointer_slots[] = {"value: ", NULL};
+static char *weak_pointer_slots[] = {"value: ", "broken: ",
+#ifdef GENCGC
+                                     "mark-bit: ",
+#endif
+                                     NULL};
 static char *fdefn_slots[] = {"name: ", "function: ", "raw_addr: ", NULL};
 static char *value_cell_slots[] = {"value: ", NULL};
 #ifdef type_ScavengerHook
@@ -628,7 +632,7 @@ static void print_otherptr(lispobj obj)
                 break;
 
             case type_WeakPointer:
-		print_slots(weak_pointer_slots, 1, ptr);
+		print_slots(weak_pointer_slots, 3, ptr);
                 break;
 
             case type_BaseChar:
