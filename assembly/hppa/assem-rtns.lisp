@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/assem-rtns.lisp,v 1.2 1992/06/24 15:28:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/assem-rtns.lisp,v 1.3 1992/07/08 01:40:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,7 +143,7 @@
   LOOP
   ;; Copy one arg.
   (inst ldwm 4 src temp)
-  (inst addib :< (fixnum -1) count loop)
+  (inst addib :> (fixnum -1) count loop)
   (inst stwm temp 4 dst)
 	
   DONE
