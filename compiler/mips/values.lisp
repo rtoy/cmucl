@@ -51,12 +51,12 @@
       (let ((tn (tn-ref-tn val)))
 	(sc-case tn
 	  (descriptor-reg
-	   (st tn start-temp i))
-	  (stack
+	   (storew tn start-temp i))
+	  (control-stack
 	   (load-stack-tn temp tn)
-	   (st temp start-temp i)))))
+	   (storew temp start-temp i)))))
     (move start start-temp)
-    (inst ori count zero-tn nvals)))
+    (move count nvals)))
 
 
 ;;; Push a list of values on the stack, returning Start and Count as used in
