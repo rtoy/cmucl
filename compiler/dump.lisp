@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.26 1990/11/20 15:51:27 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.27 1990/12/02 11:49:16 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -773,13 +773,13 @@
   (etypecase x
     (single-float
      (dump-fop 'lisp::fop-single-float file)
-     (quick-dump-number (vm:single-float-bits x) 4 file))
+     (quick-dump-number (single-float-bits x) 4 file))
     (double-float
      (dump-fop 'lisp::fop-double-float file)
      (let ((x x))
        (declare (double-float x))
-       (quick-dump-number (vm:double-float-low-bits x) 4 file)
-       (quick-dump-number (vm:double-float-high-bits x) 4 file)))))
+       (quick-dump-number (double-float-low-bits x) 4 file)
+       (quick-dump-number (double-float-high-bits x) 4 file)))))
 
 
 ;;;; Symbol Dumping:
