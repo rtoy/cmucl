@@ -90,8 +90,6 @@
   (get-property window :WM_NAME :type :STRING :result-type 'string :transform #'card8->char))
 
 (defsetf wm-name (window) (name)
-  (declare (type window window))
-  (declare (values string))
   `(set-string-property ,window :WM_NAME ,name))
 
 (defun set-string-property (window property string)
