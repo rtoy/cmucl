@@ -151,7 +151,7 @@
       ((null 2block)
        (error "What?  No ir2 blocks have a non-nil number?"))
     (when (ir2-block-number 2block)
-      (return (ir2-block-number 2block)))))
+      (return (1+ (ir2-block-number 2block))))))
 
 
 ;;; Init-SB-Vectors  --  Internal
