@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.4 1991/06/05 14:50:25 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.5 1991/06/05 16:24:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
 
 ;;;; Definition of *hemlock-version*.
 
-(defvar *hemlock-version* "1.1(?)")
+(defvar *hemlock-version* "3.5")
 
 
 
