@@ -279,9 +279,7 @@
 				  form
 				  (if (symbolp (cdr pat)) (cdr pat) form))
 		       ,@(nreverse
-			   (destructure-internal
-			     (if (consp pat) (car pat) pat)
-			     gensym)))
+			   (destructure-internal (car pat) gensym)))
 		    setqs)
 	      (when (symbolp (cdr pat))
 		(push (cdr pat) *destructure-vars*)
