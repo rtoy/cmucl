@@ -37,10 +37,6 @@
 (deftype local-tn-vector () `(simple-vector ,local-tn-limit))
 (deftype local-tn-bit-vector () `(simple-bit-vector ,local-tn-limit))
 
-;;; Maximum number of SCs allowed.
-;;;
-(defconstant sc-number-limit 32)
-
 ;;; Type of an SC number.
 (deftype sc-number () `(integer 0 (,sc-number-limit)))
 
