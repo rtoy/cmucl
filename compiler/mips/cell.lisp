@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.44 1990/09/24 00:32:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.45 1990/10/08 13:18:30 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -156,16 +156,18 @@
     (loadw value object vm:symbol-function-slot vm:other-pointer-type)
     (test-simple-type value temp target not-p vm:function-pointer-type)))
 
+#+nil(progn
 (defknown fboundp/setf (t) boolean (flushable))
 ;;;
 (deftransform fboundp ((x) (cons))
-  '(foundp/setf (cadr x)))
+  '(fboundp/setf (cadr x)))
 ;;;
 (define-vop (fboundp/setf boundp-frob)
   (:translate fboundp/setf)
   (:generator 10
     (loadw value object vm:symbol-setf-function-slot vm:other-pointer-type)
     (test-simple-type value temp target not-p vm:function-pointer-type)))
+)
 
 (define-vop (fast-symbol-value cell-ref)
   (:variant vm:symbol-value-slot vm:other-pointer-type)
