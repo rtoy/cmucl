@@ -408,8 +408,18 @@
   ;;
   ;; A list of all the IR2-Blocks in this environment, threaded by
   ;; IR2-Block-Environment-Next.  This is filled in by control analysis.
-  (blocks nil :type (or ir2-block null)))
-
+  (blocks nil :type (or ir2-block null))
+  ;;
+  ;; A label that marks the start of elsewhere code for this function.  Null
+  ;; until this label is assigned by codegen.  Used for maintaining the debug
+  ;; source map.
+  (elsewhere-start nil :type (or label null))
+  ;;
+  ;; A label that marks the first location in this function at which the
+  ;; environment is properly initialized, i.e. arguments moved from their
+  ;; passing locations, etc.  This is the start of the function as far as the
+  ;; debugger is concerned.
+  (environment-start nil :type (or label null)))
 
 (defprinter ir2-environment
   arg-locs
