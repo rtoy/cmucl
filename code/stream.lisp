@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.72 2004/04/07 17:15:00 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.73 2004/04/09 18:03:01 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -977,10 +977,10 @@ streams."
       ;; stream-external-format returns :default.
       (:file-length
        (if (null streams) 0
-           (file-length (last streams))))
+           (file-length (first (last streams)))))
       (:file-position
        (if (null streams) 0
-           (file-position (last streams))))
+           (file-position (first (last streams)))))
       (:element-type
        #+nil ; old, arguably more logical, version
        (let (res)
