@@ -40,3 +40,9 @@
   (declare (ignore depth))
   (print-object instance stream))
 
+(defmethod print-object ((ctor ctor) stream)
+  (print-unreadable-object (ctor stream :type t :identity t)
+    (format stream "~s ~s ~s"
+	    (ctor-class-name ctor)
+	    (ctor-initargs ctor)
+	    (ctor-state ctor))))
