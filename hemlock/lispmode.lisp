@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.5 1997/06/05 13:19:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.6 1997/06/08 12:57:31 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -963,7 +963,7 @@
 ;;; 
 (defindent "with-slots" 1)
 (defindent "with-slots*" 2) ; obsolete
-(defindent "with-accessors 2)
+(defindent "with-accessors" 2)
 (defindent "with-accessors*" 2) ; obsolete
 (defindent "defclass" 2)
 (defindent "print-unreadable-object" 1)
