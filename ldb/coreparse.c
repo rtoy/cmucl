@@ -1,31 +1,14 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.4 1990/03/29 02:58:03 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.5 1990/07/01 04:39:57 wlott Exp $ */
 #include <stdio.h>
 #include <mach.h>
 #include <sys/types.h>
 #include <sys/file.h>
 #include "lisp.h"
 #include "globals.h"
+#include "core.h"
+#include "ldb.h"
 
 extern int version;
-
-#define CORE_PAGESIZE (4*1024)
-#define CORE_MAGIC (('C' << 24) | ('O' << 16) | ('R' << 8) | 'E')
-#define CORE_END 3840
-#define CORE_NDIRECTORY 3861
-#define CORE_VALIDATE 3845
-#define CORE_VERSION 3860
-
-#define DYNAMIC_SPACE_ID (1)
-#define STATIC_SPACE_ID (2)
-#define READ_ONLY_SPACE_ID (3)
-
-struct ndir_entry {
-	long identifier;
-	long nwords;
-	long data_page;
-	long address;
-	long page_count;
-};
 
 static void process_directory(fd, ptr, count)
 int fd, count;
@@ -56,10 +39,11 @@ long *ptr;
 
 		switch (id) {
 		case DYNAMIC_SPACE_ID:
-			if (current_dynamic_space != (lispobj *) addr)
-				printf("Strange ... dynamic space lossage.\n");
-			current_dynamic_space_free_pointer = free_pointer;
-			break;
+                    if (addr != (vm_address_t)dynamic_0_space && addr != (vm_address_t)dynamic_1_space)
+                        printf("Strange ... dynamic space lossage.\n");
+                    current_dynamic_space = (lispobj *)addr;
+                    current_dynamic_space_free_pointer = free_pointer;
+                    break;
 		case STATIC_SPACE_ID:
 			static_space = (lispobj *) addr;
 			break;
@@ -74,11 +58,12 @@ long *ptr;
 	}
 }
 
-void load_core_file(file)
+boolean load_core_file(file)
 char *file;
 {
     int fd = open(file, O_RDONLY), count;
     long header[CORE_PAGESIZE / sizeof(long)], val, len, *ptr;
+    boolean restore_state = FALSE;
 
     if (fd < 0) {
 	    fprintf(stderr, "Could not open file \"%s\".\n", file);
@@ -128,6 +113,11 @@ char *file;
 				  (len-2) / (sizeof(struct ndir_entry) / sizeof(long)));
                 break;
 
+            case CORE_MACHINE_STATE:
+                restore_state = TRUE;
+                load(fd, (struct machine_state *)ptr);
+                break;
+
             default:
                 printf("Unknown core file entry: %d; skipping.\n", val);
                 break;
@@ -135,4 +125,6 @@ char *file;
 
         ptr += len - 2;
     }
+
+    return restore_state;
 }
