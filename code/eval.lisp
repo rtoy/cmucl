@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.14 1992/02/25 03:41:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.15 1992/03/26 16:40:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,9 +110,13 @@
   (let ((exp (macroexpand original-exp)))
     (typecase exp
       (symbol
-       (if (eq (info variable kind exp) :constant)
-	   (values (info variable constant-value exp))
-	   (symbol-value exp)))
+       (ecase (info variable kind exp)
+	 (:constant
+	  (values (info variable constant-value exp)))
+	 ((:special :global)
+	  (symbol-value exp))
+	 (:alien
+	  (eval:internal-eval original-exp))))
       (list
        (let ((name (first exp))
 	     (args (1- (length exp))))
