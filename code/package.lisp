@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.35 1994/02/04 15:24:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.36 1994/02/12 00:41:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -738,7 +738,9 @@
 	(let ((laterize (set-difference old-use-list new-use-list)))
 	  (when laterize
 	    (unuse-package laterize package)
-	    (warn "~A used to use the following packages:~%  ~S" laterize)))))
+	    (warn "~A used to use the following packages:~%  ~S"
+		  name
+		  laterize)))))
     ;; Import and Intern.
     (dolist (sym-name interns)
       (intern sym-name package))
