@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.19 1999/11/11 16:12:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.20 2000/04/21 20:30:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1851,6 +1851,30 @@
    (emit-byte-displacement-backpatch segment target)))
 
 
+;;; Conditional move.
+
+(disassem:define-instruction-format (cond-move 24
+				     :default-printer
+				        '('cmov cond :tab reg ", " reg/mem))
+  (prefix  :field (byte 8 0)	:value #b00001111)
+  (op      :field (byte 4 12)	:value #b0100)
+  (cond    :field (byte 4 8)	:type 'condition-code)
+  (reg/mem :fields (list (byte 2 22) (byte 3 16))
+	   			:type 'reg/mem)
+  (reg     :field (byte 3 19)	:type 'reg))
+
+(define-instruction cmov (segment cond dst src)
+  (:printer cond-move ())
+  (:emitter
+   (assert (register-p dst))
+   (let ((size (matching-operand-size dst src)))
+     (assert (or (eq size :word) (eq size :dword)))
+     (maybe-emit-operand-size-prefix segment size))
+   (emit-byte segment #b00001111)
+   (emit-byte segment (dpb (conditional-opcode cond) (byte 4 0) #b01000000))
+   (emit-ea segment src (reg-tn-encoding dst))))
+
+
 ;;;; Conditional byte set.
 
 (disassem:define-instruction-format (cond-set 24
@@ -2669,6 +2693,23 @@
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11100100)))
+
+;;; Compare and move ST(i) to ST0.
+;;;
+;;; Intel syntal: FCMOVcc ST, ST(i)
+;;;
+(define-instruction fcmov (segment cond src)
+  #+nil (:printer floating-point ((op '(#b01? #b???))))
+  (:emitter
+   (assert (fp-reg-tn-p src))
+   (emit-byte segment (ecase cond
+			((:b :e :be :u) #b11011010)
+			((:nb :ne :nbe :nu) #b11011011)))
+   (emit-fp-op segment src (ecase cond
+			     ((:b :nb) #b000)
+			     ((:e :ne) #b000)
+			     ((:be :nbe) #b000)
+			     ((:u nu) #b000)))))
 
 ;;;
 ;;; 80387 Specials
