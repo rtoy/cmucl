@@ -45,7 +45,7 @@
       (comf "target:clx/manager" :load t)
       (comf "target:clx/image" :load t)
       (comf "target:clx/resource" :load t))
-  (comf "target:code/clx-ext")
+  (comf "target:code/clx-ext" :byte-compile t)
   (comf "target:hemlock/charmacs" :load t)
   (comf "target:hemlock/key-event" :load t)
   (comf "target:hemlock/keysym-defs" :load t)
