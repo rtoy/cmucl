@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.34 1992/12/16 13:32:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.35 1993/05/08 00:45:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -442,11 +442,8 @@
 
 ;;; LTN-Analyze-Local-Call  --  Internal
 ;;;
-;;;    Annotate the arguments as ordinary single-value continuations.  If the
-;;; call is a tail call, make sure that is linked directly to the bind node.
-;;; Usually it will be, but calls from XEPs and calls that might have needed a
-;;; cleanup after them won't have been swung over yet, since we weren't sure
-;;; they would really be TR until now.
+;;;    Annotate the arguments as ordinary single-value continuations. And check
+;;; the successor.
 ;;;
 (defun ltn-analyze-local-call (call policy)
   (declare (type combination call)
@@ -458,14 +455,27 @@
       (annotate-ordinary-continuation arg policy)))
 
   (when (node-tail-p call)
-    (let ((caller (node-home-lambda call))
-	  (callee (combination-lambda call)))
-      (assert (eq (lambda-tail-set caller)
-		  (lambda-tail-set (lambda-home callee))))
-      (node-ends-block call)
-      (let ((block (node-block call)))
-	(unlink-blocks block (first (block-succ block)))
-	(link-blocks block (node-block (lambda-bind callee))))))
+    (set-tail-local-call-successor call))
+  (undefined-value))
+
+
+;;; SET-TAIL-LOCAL-CALL-SUCCESSOR  --  Interface
+;;;
+;;; Make sure that a tail local call is linked directly to the bind
+;;; node.  Usually it will be, but calls from XEPs and calls that might have
+;;; needed a cleanup after them won't have been swung over yet, since we
+;;; weren't sure they would really be TR until now.  Also called by byte
+;;; compiler.
+;;;
+(defun set-tail-local-call-successor (call)
+  (let ((caller (node-home-lambda call))
+	(callee (combination-lambda call)))
+    (assert (eq (lambda-tail-set caller)
+		(lambda-tail-set (lambda-home callee))))
+    (node-ends-block call)
+    (let ((block (node-block call)))
+      (unlink-blocks block (first (block-succ block)))
+      (link-blocks block (node-block (lambda-bind callee)))))
   (undefined-value))
 
 
