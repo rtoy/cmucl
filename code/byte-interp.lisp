@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.2 1992/08/02 19:38:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.3 1992/09/07 16:10:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,6 +75,7 @@
     value))
 
 (defmacro multiple-value-pop-eval-stack ((&rest vars) &body body)
+  (declare (optimize (inhibit-warnings 3)))
   (let ((num-vars (length vars))
 	(index -1)
 	(new-sp-var (gensym "NEW-SP-"))
@@ -129,13 +130,6 @@
   (logior (ash (component-ref component pc) 16)
 	  (ash (component-ref component (1+ pc)) 8)
 	  (component-ref component (+ pc 2))))
-
-(declaim (inline component-ref-32))
-(defun component-ref-32 (component pc)
-  (logior (ash (component-ref component pc) 24)
-	  (ash (component-ref component (1+ pc)) 16)
-	  (ash (component-ref component (+ pc 2)) 8)
-	  (component-ref component (+ pc 3))))
 
 
 ;;;; Debugging support.
@@ -249,6 +243,7 @@
 ;;;; Inlines.
 
 (defmacro expand-into-inlines ()
+  (declare (optimize (inhibit-warnings 3)))
   (labels ((build-dispatch (bit base)
 	     (if (minusp bit)
 		 (let ((info (nth base *inline-functions*)))
@@ -345,6 +340,7 @@
 
 ;;; *BYTE-XOPS* -- Simple vector of the XOP functions.
 ;;; 
+(declaim (type (simple-vector 256) *byte-xops*))
 (defvar *byte-xops*
   (make-array 256 :initial-element #'undefined-xop))
 
@@ -417,15 +413,16 @@
   (labels ((grovel (remaining-blocks block-count-ptr)
 	     (declare (type index remaining-blocks)
 		      (type stack-pointer block-count-ptr))
+	     (declare (values index stack-pointer))
 	     (let ((block-count (eval-stack-ref block-count-ptr)))
+	       (declare (type index block-count))
 	       (if (= remaining-blocks 1)
 		   (values block-count block-count-ptr)
 		   (let ((src (- block-count-ptr block-count)))
+		     (declare (type index src))
 		     (multiple-value-bind
 			 (values-above dst)
 			 (grovel (1- remaining-blocks) (1- src))
-		       (declare (type index values-above)
-				(type stack-pointer dst))
 		       (stack-copy dst src block-count)
 		       (values (+ values-above block-count)
 			       (+ dst block-count))))))))
@@ -469,6 +466,7 @@
 	   (ignore pc)
 	   (type stack-pointer fp))
   (let ((num-results (pop-eval-stack)))
+    (declare (type index num-results))
     (case num-results
       (0
        (let ((tag (pop-eval-stack)))
@@ -513,6 +511,7 @@
 			  (catch (pop-eval-stack)
 			    (return (byte-interpret component (+ pc 3) fp))))))
 		    (let ((num-results 0))
+		      (declare (type index num-results))
 		      (dolist (result results)
 			(push-eval-stack result)
 			(incf num-results))
@@ -544,6 +543,7 @@
 	   (type stack-pointer fp))
   (let ((tag (pop-eval-stack))
 	(num-results (pop-eval-stack)))
+    (declare (type index num-results))
     (case num-results
       (0
        (with-debugger-info (component old-pc fp)
@@ -774,10 +774,11 @@
 	   (type pc pc)
 	   (type stack-pointer fp)
 	   (type (unsigned-byte 8) byte))
-  (when *byte-trace*
-    (format *trace-output* "pc=~D, fp=~D, sp=~D, byte=#b~8,'0B, frame=~S~%"
-	    pc fp (current-stack-pointer) byte
-	    (subseq eval::*eval-stack* fp (current-stack-pointer))))
+  (locally (declare (optimize (inhibit-warnings 3)))
+    (when *byte-trace*
+      (format *trace-output* "pc=~D, fp=~D, sp=~D, byte=#b~8,'0B, frame=~S~%"
+	      pc fp (current-stack-pointer) byte
+	      (subseq eval::*eval-stack* fp (current-stack-pointer)))))
   (if (zerop (logand byte #x80))
       ;; Some stack operation.  No matter what, we need the operand,
       ;; so compute it.
@@ -809,6 +810,7 @@
 		    (setf (eval-stack-ref (+ fp operand)) (pop-eval-stack))
 		    (if (zerop operand)
 			(let ((operand (pop-eval-stack)))
+			  (declare (type index operand))
 			  (decf (current-stack-pointer) operand))
 			(decf (current-stack-pointer) operand)))))
 	(byte-interpret component new-pc fp))
@@ -886,7 +888,7 @@
 				(values (component-ref component (+ pc 1))
 					(+ pc 2))
 				(values operand (1+ pc))))
-			(funcall (svref *byte-xops* sub-code)
+			(funcall (the function (svref *byte-xops* sub-code))
 				 component pc new-pc fp))))
 	      ;; Random inline function.
 	      (progn
@@ -904,6 +906,9 @@
 			    old-fp))
 
 (defun do-tail-local-call (component pc fp num-args)
+  (declare (type code-component component) (type pc pc)
+	   (type stack-pointer fp)
+	   (type index num-args))
   (let ((old-fp (eval-stack-ref (- fp 1)))
 	(old-sp (eval-stack-ref (- fp 2)))
 	(old-pc (eval-stack-ref (- fp 3)))
@@ -947,6 +952,7 @@
 ;;; and restore the SP to the specifier value.
 ;;;
 (defun byte-apply (function num-args restore-sp)
+  (declare (function function) (type index num-args))
   (let ((start (- (current-stack-pointer) num-args)))
     (declare (type stack-pointer start))
     (macrolet ((frob ()
@@ -1084,6 +1090,7 @@
 (defun invoke-xep (old-component ret-pc old-sp old-fp num-args xep
 				 &optional closure-vars)
   (declare (type (or null code-component) old-component)
+	   (type index num-args)
 	   (type return-pc ret-pc)
 	   (type stack-pointer old-sp old-fp)
 	   (type byte-xep xep)
@@ -1110,7 +1117,10 @@
 				    (result nil
 					    (cons (eval-stack-ref index)
 						  result)))
-				   ((< index more-args-start) result)))))
+				   ((< index more-args-start) result)
+				 (declare (type index index))))))
+	       (declare (type index more-args-supplied)
+			(type stack-pointer more-args-start))
 	       (cond
 		((not (byte-xep-keywords-p xep))
 		 (assert restp)
@@ -1125,6 +1135,8 @@
 			(temp (max sp new-sp))
 			(temp-sp (+ temp more-args-supplied))
 			(keywords (byte-xep-keywords xep)))
+		   (declare (type index temp)
+			    (type stack-pointer new-sp temp-sp))
 		   (setf (current-stack-pointer) temp-sp)
 		   (stack-copy temp more-args-start more-args-supplied)
 		   (when restp
@@ -1141,6 +1153,7 @@
 			 (allow (eq (byte-xep-keywords-p xep) :allow-others))
 			 (bogus-key nil)
 			 (bogus-key-p nil))
+		     (declare (type stack-pointer index))
 		     (loop
 		       (decf index 2)
 		       (when (< index more-args-start)
@@ -1150,6 +1163,7 @@
 			 (if (eq key :allow-other-keys)
 			     (setf allow value)
 			     (let ((target more-args-start))
+			       (declare (type stack-pointer target))
 			       (dolist (keyword keywords
 						(setf bogus-key key
 						      bogus-key-p t))
@@ -1174,6 +1188,7 @@
 			      closure-vars)))
 
 (defun do-return (fp num-results)
+  (declare (type stack-pointer fp) (type index num-results))
   (let ((old-component (eval-stack-ref (- fp 4))))
     (typecase old-component
       (code-component
@@ -1201,9 +1216,11 @@
        (error "function-end breakpoints not supported.")))))
 
 (defun do-local-return (old-component fp num-results)
+  (declare (type stack-pointer fp) (type index num-results))
   (let ((old-fp (eval-stack-ref (- fp 1)))
 	(old-sp (eval-stack-ref (- fp 2)))
 	(old-pc (eval-stack-ref (- fp 3))))
+    (declare (type (signed-byte 25) old-pc))
     (if (plusp old-pc)
 	;; Wants single value.
 	(let ((result (if (zerop num-results)
@@ -1227,6 +1244,7 @@
 ;;;; Random testing noise.
 
 (defun dump-byte-fun (fun)
+  (declare (optimize (inhibit-warnings 3)))
   (let* ((xep (system:find-if-in-closure #'byte-xep-p fun))
 	 (component (byte-xep-component xep))
 	 (bytes (* (code-header-ref component vm:code-code-size-slot)
@@ -1236,6 +1254,7 @@
 
 
 (defun disassem-byte-fun (fun)
+  (declare (optimize (inhibit-warnings 3)))
   (let* ((xep (system:find-if-in-closure #'byte-xep-p fun))
 	 (component (byte-xep-component xep))
 	 (bytes (* (code-header-ref component vm:code-code-size-slot)
