@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.15 1990/02/23 18:44:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.16 1990/02/24 16:55:09 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -225,6 +225,7 @@
     lisp::lisp-command-line-list
     lisp::*initial-symbols*
     lisp::*lisp-initialization-functions*
+    lisp::%initial-function
 
     ;; Values needed for interfacing C and LISP.
     lisp::*foreign-function-call-active*
