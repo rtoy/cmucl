@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.2 1992/09/08 20:26:29 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.3 1993/07/27 15:08:44 hallgren Exp $ */
 
 #if !defined(_INCLUDE_INTERRUPT_H_)
 #define _INCLUDE_INTERRUPT_H_
@@ -32,13 +32,22 @@ extern unsigned long install_handler(int signal,
 
 extern union interrupt_handler interrupt_handlers[NSIG];
 
+#ifdef hpux
+#define BLOCKABLE (sigmask(SIGHUP) | sigmask(SIGINT) | \
+		   sigmask(SIGQUIT) | sigmask(SIGPIPE) | \
+		   sigmask(SIGALRM) | sigmask(SIGURG) | \
+		   sigmask(SIGTSTP) | sigmask(SIGCHLD) | \
+		   sigmask(SIGIO) | sigmask(SIGVTALRM) | \
+		   sigmask(SIGPROF) | sigmask(SIGWINCH) | \
+		   sigmask(SIGUSR1) | sigmask(SIGUSR2))
+#else
 #define BLOCKABLE (sigmask(SIGHUP) | sigmask(SIGINT) | \
 		   sigmask(SIGQUIT) | sigmask(SIGPIPE) | \
 		   sigmask(SIGALRM) | sigmask(SIGURG) | \
 		   sigmask(SIGTSTP) | sigmask(SIGCHLD) | \
 		   sigmask(SIGIO) | sigmask(SIGXCPU) | \
-		   sigmask(SIGXFSZ) | sigmask(SIGVTALRM) | \
+                   sigmask(SIGXFSZ) | sigmask(SIGVTALRM) | \
 		   sigmask(SIGPROF) | sigmask(SIGWINCH) | \
 		   sigmask(SIGUSR1) | sigmask(SIGUSR2))
-
+#endif
 #endif
