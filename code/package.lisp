@@ -208,7 +208,9 @@
   (let* ((vec (package-hashtable-table table))
 	 (hash (package-hashtable-hash table))
 	 (len (length vec))
-	 (sxhash (%primitive sxhash-simple-string (symbol-name symbol)))
+	 (sxhash (truly-the index
+			    (%primitive sxhash-simple-string
+					(symbol-name symbol))))
 	 (h2 (the fixnum (1+ (the fixnum (rem sxhash
 					      (the fixnum (- len 2))))))))
     (declare (simple-vector vec)
@@ -287,7 +289,8 @@
 (defun nuke-symbol (table string)
   (declare (simple-string string))
   (let* ((length (length string))
-	 (hash (%primitive sxhash-simple-string string))
+	 (hash (truly-the index
+			  (%primitive sxhash-simple-string string)))
 	 (ehash (entry-hash length hash)))
     (declare (fixnum length hash))
     (with-symbol (index symbol table string length hash ehash)
@@ -583,7 +586,8 @@
 (defun find-symbol* (string length package)
   (declare (simple-string string)
 	   (fixnum length))
-  (let* ((hash (%primitive sxhash-simple-substring string length))
+  (let* ((hash (truly-the index
+			  (%primitive sxhash-simple-substring string length)))
 	 (ehash (entry-hash length hash)))
     (declare (fixnum hash ehash))
     (with-symbol (found symbol (package-internal-symbols package)
@@ -613,7 +617,7 @@
 (defun find-external-symbol (string package)
   (declare (simple-string string))
   (let* ((length (length string))
-	 (hash (%primitive sxhash-simple-string string))
+	 (hash (truly-the index (%primitive sxhash-simple-string string)))
 	 (ehash (entry-hash length hash)))
     (declare (fixnum length hash))
     (with-symbol (found symbol (package-external-symbols package)

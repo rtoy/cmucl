@@ -44,7 +44,7 @@
   (declare (ignore depth))
   (format stream "#<~A Hash Table {~X}>"
 	  (symbol-name (hash-table-kind structure))
-	  (system:%primitive lisp::make-fixnum structure)))
+	  (system:%primitive make-fixnum structure)))
 
 
 
@@ -55,14 +55,14 @@
 (defmacro eq-hash (object)
   "Gives us a hashing of an object such that (eq a b) implies
    (= (eq-hash a) (eq-hash b))"
-  `(%primitive make-fixnum ,object))
+  `(truly-the (unsigned-byte 24) (%primitive make-fixnum ,object)))
 
 (defmacro eql-hash (object)
   "Gives us a hashing of an object such that (eql a b) implies
    (= (eql-hash a) (eql-hash b))"
   `(if (numberp ,object)
        (logand (truncate ,object) most-positive-fixnum)
-       (%primitive make-fixnum ,object)))
+       (truly-the fixnum (%primitive make-fixnum ,object))))
 
 (defmacro equal-hash (object)
   "Gives us a hashing of an object such that (equal a b) implies
@@ -182,8 +182,9 @@
 	    ,eql-body))))))
 
 (defmacro eq-rehash-if-needed ()
-  `(let ((subtype (%primitive get-vector-subtype vector)))
-     (declare (fixnum subtype))
+  `(let ((subtype (truly-the (unsigned-byte 24)
+			     (%primitive get-vector-subtype vector))))
+     (declare (type (unsigned-byte 24) subtype))
      (cond ((/= subtype valid-hashing)
 	    (rehash hash-table vector size)
 	    (setq vector (hash-table-table hash-table)))
@@ -201,9 +202,11 @@
 	  (setq size (length vector)))))
 
 (defmacro rehash-if-needed ()
-  `(let ((subtype (%primitive get-vector-subtype vector))
+  `(let ((subtype (truly-the (unsigned-byte 24)
+			     (%primitive get-vector-subtype vector)))
 	 (size (length vector)))
-     (declare (fixnum subtype size))
+     (declare (type (unsigned-byte 24) subtype)
+	      (fixnum size))
      (cond ((and (not (eq (hash-table-kind hash-table) 'equal))
 		 (/= subtype valid-hashing))
 	    (rehash hash-table vector size)
@@ -377,7 +380,7 @@
 		     (the fixnum ,place))))))
 
 (defmacro sxhash-simple-string (sequence)
-  `(%primitive sxhash-simple-string ,sequence))
+  `(truly-the index (%primitive sxhash-simple-string ,sequence)))
 
 (defmacro sxhash-string (sequence)
   (let ((data (gensym))
@@ -387,7 +390,7 @@
 		       (,start)
 		       (,end))
        (if (zerop ,start)
-	   (%primitive sxhash-simple-substring ,data ,end)
+	   (truly-the index (%primitive sxhash-simple-substring ,data ,end))
 	   (sxhash-simple-string (coerce (the string ,sequence)
 					 'simple-string))))))
 
