@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.26 1997/01/18 14:31:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.27 1998/03/21 08:07:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -328,52 +328,68 @@
        ,@body)))
 
 (defun note-read-dependency (segment inst read)
-  (let ((index (c:location-number read)))
-    #+debug (format *trace-output* "~&~S reads ~S[~D]~%" inst read index)
-    (when index
-      (let ((writers (svref (segment-writers segment) index)))
-	(when writers
-	  ;; The inst that wrote the value we want to read must have completed.
-	  (let ((writer (car writers)))
-	    (sset-adjoin writer (inst-read-dependencies inst))
-	    (sset-adjoin inst (inst-read-dependents writer))
-	    (sset-delete writer (segment-emittable-insts-sset segment))
-	    ;; And it must have been completed *after* all other writes to that
-	    ;; location.  Actually, that isn't quite true.  Each of the earlier
-	    ;; writes could be done either before this last write, or after the
-	    ;; read, but we have no way of representing that.
-	    (dolist (other-writer (cdr writers))
-	      (sset-adjoin other-writer (inst-write-dependencies writer))
-	      (sset-adjoin writer (inst-write-dependents other-writer))
-	      (sset-delete other-writer
-			   (segment-emittable-insts-sset segment))))
-	  ;; And we don't need to remember about earlier writes any more.
-	  ;; Shortening the writers list means that we won't bother generating
-	  ;; as many explicit arcs in the graph.
-	  (setf (cdr writers) nil)))
-      (push inst (svref (segment-readers segment) index))))
+  (multiple-value-bind (loc-num size)
+      (c:location-number read)
+    #+debug (format *trace-output* "~&~S reads ~S[~D for ~D]~%"
+	    inst read loc-num size)
+    (when loc-num
+      ;; Iterate over all the locations for this TN.
+      (do ((index loc-num (1+ index))
+	   (end-loc (+ loc-num (or size 1))))
+	  ((>= index end-loc))
+	(declare (type (mod 2048) index end-loc))
+	(let ((writers (svref (segment-writers segment) index)))
+	  (when writers
+	    ;; The inst that wrote the value we want to read must have
+	    ;; completed.
+	    (let ((writer (car writers)))
+	      (sset-adjoin writer (inst-read-dependencies inst))
+	      (sset-adjoin inst (inst-read-dependents writer))
+	      (sset-delete writer (segment-emittable-insts-sset segment))
+	      ;; And it must have been completed *after* all other
+	      ;; writes to that location.  Actually, that isn't quite
+	      ;; true.  Each of the earlier writes could be done
+	      ;; either before this last write, or after the read, but
+	      ;; we have no way of representing that.
+	      (dolist (other-writer (cdr writers))
+		(sset-adjoin other-writer (inst-write-dependencies writer))
+		(sset-adjoin writer (inst-write-dependents other-writer))
+		(sset-delete other-writer
+			     (segment-emittable-insts-sset segment))))
+	    ;; And we don't need to remember about earlier writes any
+	    ;; more.  Shortening the writers list means that we won't
+	    ;; bother generating as many explicit arcs in the graph.
+	    (setf (cdr writers) nil)))
+	(push inst (svref (segment-readers segment) index)))))
   (ext:undefined-value))
 
 (defun note-write-dependency (segment inst write &key partially)
-  (let ((index (c:location-number write)))
-    #+debug (format *trace-output* "~&~S writes ~S[~D]~%" inst write index)
-    (when index
-      ;; All previous reads of this location must have completed.
-      (dolist (prev-inst (svref (segment-readers segment) index))
-	(unless (eq prev-inst inst)
-	  (sset-adjoin prev-inst (inst-write-dependencies inst))
-	  (sset-adjoin inst (inst-write-dependents prev-inst))
-	  (sset-delete prev-inst (segment-emittable-insts-sset segment))))
-      (when partially
-	;; All previous writes to the location must have completed.
-	(dolist (prev-inst (svref (segment-writers segment) index))
-	  (sset-adjoin prev-inst (inst-write-dependencies inst))
-	  (sset-adjoin inst (inst-write-dependents prev-inst))
-	  (sset-delete prev-inst (segment-emittable-insts-sset segment)))
-	;; And we can forget about remembering them, because depending on us
-	;; is as good as depending on them.
-	(setf (svref (segment-writers segment) index) nil))
-      (push inst (svref (segment-writers segment) index))))
+  (multiple-value-bind (loc-num size)
+      (c:location-number write)
+    #+debug (format *trace-output* "~&~S writes ~S[~D for ~D]~%"
+	    inst write loc-num size)
+    (when loc-num
+      ;; Iterate over all the locations for this TN.
+      (do ((index loc-num (1+ index))
+	   (end-loc (+ loc-num (or size 1))))
+	  ((>= index end-loc))
+	(declare (type (mod 2048) index end-loc))
+	;; All previous reads of this location must have completed.
+	(dolist (prev-inst (svref (segment-readers segment) index))
+	  (unless (eq prev-inst inst)
+	    (sset-adjoin prev-inst (inst-write-dependencies inst))
+	    (sset-adjoin inst (inst-write-dependents prev-inst))
+	    (sset-delete prev-inst (segment-emittable-insts-sset segment))))
+	(when partially
+	  ;; All previous writes to the location must have completed.
+	  (dolist (prev-inst (svref (segment-writers segment) index))
+	    (sset-adjoin prev-inst (inst-write-dependencies inst))
+	    (sset-adjoin inst (inst-write-dependents prev-inst))
+	    (sset-delete prev-inst (segment-emittable-insts-sset segment)))
+	  ;; And we can forget about remembering them, because
+	  ;; depending on us is as good as depending on them.
+	  (setf (svref (segment-writers segment) index) nil))
+	(push inst (svref (segment-writers segment) index)))))
   (ext:undefined-value))
 
 ;;; QUEUE-INST -- internal.
