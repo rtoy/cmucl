@@ -1,9 +1,9 @@
-;;; -*- Package: User -*-
+;;; -*- Package: CL-USER -*-
 ;;;
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.55 2003/06/18 09:23:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.56 2003/09/08 16:07:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,6 +50,8 @@
 	(declare (optimize (speed 0))))
        (:external (declare (optimize-interface (safety 2) (debug 1))))))
 
+
+(setf lisp::*enable-package-locked-errors* nil)
 
 (comf "target:compiler/macros"
       :byte-compile #+bootstrap t #-bootstrap *byte-compile*)

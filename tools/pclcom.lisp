@@ -3,11 +3,12 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.31 2003/06/18 10:50:14 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.32 2003/09/08 16:07:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 (in-package "CL-USER")
+(setf lisp::*enable-package-locked-errors* nil)
 
 (when (find-package "PCL")
   ;; Load the lisp:documentation functions.

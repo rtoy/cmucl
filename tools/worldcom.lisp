@@ -1,4 +1,4 @@
-;;; -*- Package: USER -*-
+;;; -*- Package: CL-USER -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.89 2003/06/18 11:07:40 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.90 2003/09/08 16:07:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,8 @@
 	(declare (optimize (safety 2))))
        ((:and :external (:match "LIST"))
 	(declare (optimize (safety 1))))))
-(let ((*byte-compile-top-level* nil))
+(let ((*byte-compile-top-level* nil)
+      (lisp::*enable-package-locked-errors* nil))
 
 ;;; these guys need to be first.
 (comf "target:code/struct") ; For structures.

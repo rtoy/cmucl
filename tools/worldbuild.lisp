@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.49 2003/05/23 13:34:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.50 2003/09/08 16:07:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; are part of the kernel CMU Common Lisp system.
 
 (in-package "LISP")
+
+(setf *enable-package-locked-errors* nil)
 
 (unless (fboundp 'genesis)
   (load "target:compiler/generic/new-genesis"))
