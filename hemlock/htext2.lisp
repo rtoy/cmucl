@@ -400,7 +400,6 @@
 
 
 (defun %print-after-mark (mark stream)
-  (declare (ignore d))
   (if (mark-line mark)
       (let* ((line (mark-line mark))
 	     (chars (line-chars line))
