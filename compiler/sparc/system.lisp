@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.10 1993/04/01 15:07:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.11 1993/04/01 15:13:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,9 +52,9 @@
     (inst b :eq done)
     ;; Okay, it is an immediate.  If fixnum, we want zero.  Otherwise,
     ;; we want the low 8 bits.
-    (inst andcc result object #b11)
+    (inst andcc zero-tn object #b11)
     (inst b :eq done)
-    (inst nop)
+    (inst li result 0)
     ;; It wasn't a fixnum, so get the low 8 bits.
     (inst b done)
     (inst and result object type-mask)
