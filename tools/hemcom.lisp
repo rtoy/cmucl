@@ -42,7 +42,7 @@
      :optimize-interface
      '(optimize-interface (debug-info 1))
      :context-declarations
-     '((:external
+     '(((:or :external (:match "$%SET-"))
 	(declare (optimize (safety 2))))))
 
 (comf "target:code/globals")
@@ -83,8 +83,8 @@
 (comf "target:hemlock/display")
 #+clx (comf "target:hemlock/bit-display")
 (comf "target:hemlock/tty-disp-rt")
-(with-compilation-unit (:optimize (safety 2) (debug-info 3))
-  (comf "hem:tty-display")) ; Buggy...
+(with-compilation-unit (:optimize '(optimize (safety 2) (debug-info 3)))
+  (comf "target:hemlock/tty-display")) ; Buggy...
 ;(comf "target:hemlock/tty-stream")
 (comf "target:hemlock/pop-up-stream")
 (comf "target:hemlock/screen")
