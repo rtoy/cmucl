@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.25 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.26 1996/05/07 13:14:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -821,11 +821,10 @@
        (%parse-namestring (coerce thing 'simple-string)
 			  host defaults start end junk-allowed))
       (pathname
-       (let* ((host (if host host (%pathname-host defaults)))
-	      (hosts-name (funcall (host-unparse-host host) host)))
-	 (unless (eq hosts-name (%pathname-host thing))
+       (let ((host (if host host (%pathname-host defaults))))
+	 (unless (eq host (%pathname-host thing))
 	   (error "Hosts do not match: ~S and ~S."
-		  hosts-name (%pathname-host thing))))
+		  host (%pathname-host thing))))
        (values thing start))
       (stream
        (let ((name (file-name thing)))
