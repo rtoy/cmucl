@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.13 1990/11/18 07:37:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.14 1990/11/19 05:08:41 wlott Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -181,11 +181,12 @@
   "Bind the variables in LAMBDA-LIST to the contents of ARG-LIST."
   (let* ((arg-list-name (gensym "ARG-LIST-")))
     (multiple-value-bind
-	(body)
+	(body local-decls)
 	(parse-defmacro lambda-list arg-list-name body
 			'destructuring-bind 'destructuring-bind
 			:annonymousp t :doc-string-allowed nil)
       `(let ((,arg-list-name ,arg-list))
+	 ,@local-decls
 	 ,body))))
 
 
@@ -488,28 +489,18 @@
   (get-setf-method form environment))
 
 (defun defsetter (fn rest env)
-  (let* ((arglist (car rest))
-	 (new-var (car (cadr rest)))
-	 (%arg-count 0)
-	 (%min-args 0)
-	 (%restp nil)
-	 (%let-list nil)
-	 (%keyword-tests nil))
-    (declare (special %arg-count %min-args %restp %let-list %keyword-tests))
-    (multiple-value-bind (body local-decs doc)
-			 (parse-body (cddr rest) env)
-      ;; Analyze the defmacro argument list.
-      (analyze1 arglist '(cdr %access-arglist) fn '%access-arglist)
-      ;; Now build the body of the transform.
+  (let ((arglist (car rest))
+	(arglist-var (gensym "ARGS-"))
+	(new-var (car (cadr rest))))
+    (multiple-value-bind
+	(body local-decs doc)
+	(parse-defmacro arglist arglist-var (cddr rest) fn 'defsetf
+			:environment env)
       (values 
-       `(lambda (%access-arglist ,new-var)
-	  ,@(when (null arglist)
-	      '((declare (ignore %access-arglist))))
-	  (let* ,(nreverse %let-list)
-	    ,@ local-decs
-	    ,@ %keyword-tests
-	    ,@ body))
-       doc))))
+       `(lambda (,arglist-var ,new-var)
+	  ,@local-decs
+	  ,@body))
+       doc)))
 
 ) ; End of Eval-When.
 
