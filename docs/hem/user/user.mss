@@ -1805,7 +1805,12 @@ This command makes the @hid[Scribe Warnings] buffer current if it exists.
 @enddefcom
 
 
-@section[Unix Filtering]
+@section[Miscellaneous]
+
+@defcom[com "Manual Page"]
+This command displays a Unix manual page in a buffer which is in @hid[View]
+mode.  When given an argument, this puts the manual page in a pop-up display.
+@enddefcom
 
 @defcom[com "Unix Filter Region"]
 This command prompts for a UNIX program and then passes the current region to
