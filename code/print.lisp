@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.21 1991/07/18 13:51:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.22 1991/09/13 06:21:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.21 1991/07/18 13:51:31 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.22 1991/09/13 06:21:43 wlott Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -1340,11 +1340,15 @@
        (let ((type (get-type object)))
 	 (case type
 	   (#.vm:code-header-type
-	    (write-string "Code Object" stream)
 	    (let ((dinfo (code-header-ref object vm:code-debug-info-slot)))
-	      (when dinfo
-		(write-char #\space stream)
-		(output-object (c::compiled-debug-info-name dinfo) stream))))
+	      (cond ((eq dinfo :bogus-lra)
+		     (write-string "Bogus Code Object" stream))
+		    (t
+		     (write-string "Code Object" stream)
+		     (when dinfo)
+		     (write-char #\space stream)
+		     (output-object (c::compiled-debug-info-name dinfo)
+				    stream)))))
 	   ((#.vm:function-header-type #.vm:closure-function-header-type)
 	    (output-function-object object stream))
 	   (#.vm:return-pc-header-type
