@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48 1997/06/04 14:45:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.1 1997/06/15 21:31:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -251,7 +251,7 @@
 (defconstant +NCC+
   #+hpux 16
   #+irix 23
-  #+(or lunux solaris) 19
+  #+(or linux solaris) 19
   "Size of control character vector.")
 
 (def-alien-type nil
