@@ -1,6 +1,6 @@
 ;;; -*- Mode: LISP; Package: User -*-
 
-#+unsafe (proclaim '(optimize (speed 3) (safety 0)))
+#+declare-unsafe (proclaim '(optimize (speed 3) (safety 0)))
 (proclaim
  '(special *matrix* *feature-count* *pcount* *vars* *cur-vars*
 	   *curcond* *subnum* *last-node* *last-branch* *first-node*
