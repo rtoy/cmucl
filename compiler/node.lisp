@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.40 2003/04/13 11:58:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.41 2003/08/05 14:04:52 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -674,6 +674,9 @@
   ;; True if there was ever a Ref or Set node for this leaf.  This may be true
   ;; when Refs and Sets are null, since code can be deleted.
   (ever-used nil :type boolean)
+  ;;
+  ;; True if declared dynamic-extent.
+  (dynamic-extent nil :type boolean)
   ;;
   ;; Some kind of info used by the back end.
   (info nil))

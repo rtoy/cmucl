@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.33 2003/01/21 16:51:09 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.34 2003/08/05 14:04:52 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -285,8 +285,8 @@
 (defun %more-arg (args index)
   (nth index args))
 
-(defun %listify-rest-args (ptr count)
-  (declare (ignore count))
+(defun %listify-rest-args (ptr count #+x86 dynamic-extent)
+  (declare (ignore count #+x86 dynamic-extent))
   ptr)
 
 (defun %more-arg-values (args start count)

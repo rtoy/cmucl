@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.157 2003/06/11 12:58:08 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.158 2003/08/05 14:04:52 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -273,25 +273,32 @@
 	    (where-from (info variable where-from name)))
 	(when (and (eq where-from :assumed) (eq kind :global))
 	  (note-undefined-reference name :variable))
+	;;
+	;; Paper over the fact that unknown types aren't removed
+	;; from the info database when a types gets defined.
+	(when (unknown-type-p type)
+	  (setq type (specifier-type (type-specifier type)))
+	  (setf (info variable type name) type))
 
 	(setf (gethash name *free-variables*)
-	      (cond ((eq kind :alien)
-		     (info variable alien-info name))
-		    ((eq kind :macro)
-		     (let ((expansion (info variable macro-expansion name))
-			   (type (type-specifier (info variable type name))))
-		       `(MACRO . (the ,type ,expansion))))
-		    (t
-		     (multiple-value-bind
-			   (val valp)
-			 (info variable constant-value name)
-		       (if (and (eq kind :constant) valp)
-			   (make-constant :value val  :name name
-					  :type (ctype-of val)
-					  :where-from where-from)
-			   (make-global-var :kind kind :name name :type type
-					    :where-from where-from)))))))))
-
+	      (case kind
+		(:alien
+		 (info variable alien-info name))
+		(:macro
+		 (let ((expansion (info variable macro-expansion name)))
+		   `(MACRO . (the ,(type-specifier type) ,expansion))))
+		(:constant
+		 (multiple-value-bind (val valp)
+		     (info variable constant-value name)
+		   (if valp
+		       (make-constant :value val :name name
+				      :type (ctype-of val)
+				      :where-from where-from)
+		       (make-global-var :kind kind :name name :type type
+					:where-from where-from))))
+		(t
+		 (make-global-var :kind kind :name name :type type
+				  :where-from where-from)))))))
 
 
 ;;; MAYBE-EMIT-MAKE-LOAD-FORMS  --  internal
@@ -1134,10 +1141,33 @@
 	(setf (lambda-var-ignorep var) t)))))
   (undefined-value))
 
+(defun process-dynamic-extent-declaration (spec vars fvars)
+  (declare (list spec vars fvars))
+  (dolist (name (cdr spec))
+    (let ((var (find-in-bindings-or-fbindings name vars fvars)))
+      (cond ((null var)
+	     (if (or (lexenv-find name variables) (lexenv-find-function name))
+		 (compiler-note
+		  "Ignoring free dynamic-extent declaration for ~S." name)
+		 (compiler-warning
+		  "Dynamic-extent declaration for unknown variable ~S." name)))
+	    (t
+	     (when (or (not (lambda-var-p var))
+		       (let ((arg-info (lambda-var-arg-info var)))
+			 (or (null arg-info)
+			     (not (eq :rest (arg-info-kind arg-info))))))
+	       (compiler-note
+		"~@<Ignoring the dynamic-extent declaration of ~s.  ~
+                  Dynamic-extent is currently only implemented for ~
+                  rest args.~@:>" name))
+	     (setf (leaf-dynamic-extent var) t)))))
+  (values))
 
 (defvar *suppress-values-declaration* nil
   "If true, processing of the VALUES declaration is inhibited.")
 
+(defvar *suppress-dynamic-extent-declaration* nil
+  "If true, processing of dynamic-extent declarations is inhibited.")
 
 ;;; PROCESS-1-DECLARATION  --  Internal
 ;;;
@@ -1191,8 +1221,8 @@
 						    `(values ,@types)))
 			 cont res 'values))))
     (dynamic-extent
-     (when (policy nil (> speed brevity))
-       (compiler-note "DYNAMIC-EXTENT declaration not implemented."))
+     (unless *suppress-dynamic-extent-declaration*
+       (process-dynamic-extent-declaration spec vars fvars))
      res)
     (t
      (let ((what (first spec)))
@@ -1709,7 +1739,9 @@
       (arg-vars context-temp count-temp)
 
       (when rest
-	(arg-vals `(%listify-rest-args ,n-context ,n-count)))
+	(arg-vals `(%listify-rest-args ,n-context ,n-count
+				       #+x86
+				       ,(leaf-dynamic-extent rest))))
       (when morep
 	(arg-vals n-context)
 	(arg-vals n-count))

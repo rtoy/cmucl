@@ -168,6 +168,11 @@ New in this release:
        default to preserve current behavior.  Set the version to
        :newest to create versions.
      - LDB backtrace on x86.
+     - On x86, the &REST arg list of a non-local function is allocated
+       on the stack if declared DYNAMIC-EXTENT, and speed is greater
+       than safety.  Be warned that all bets are off if a
+       stack-allocated object or parts of it escape; CMUCL might
+       crash or format your hard disk.
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.18 2003/08/03 11:27:45 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.19 2003/08/05 14:04:51 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1355,7 +1355,8 @@
   (:policy :safe)
   (:args (context :scs (descriptor-reg) :target src)
 	 (count :scs (any-reg) :target ecx))
-  (:arg-types * tagged-num)
+  (:info dynamic-extent)
+  (:arg-types * tagged-num (:constant t))
   (:temporary (:sc unsigned-reg :offset esi-offset :from (:argument 0)) src)
   (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:temporary (:sc unsigned-reg :offset eax-offset) eax)
@@ -1372,31 +1373,33 @@
       (inst mov result nil-value)
       (inst jecxz done)
       (inst lea dst (make-ea :dword :index ecx :scale 2))
-      (pseudo-atomic
-       (allocation dst dst node)
-       (inst lea dst (make-ea :byte :base dst :disp list-pointer-type))
-       ;; Convert the count into a raw value, so we can use the LOOP inst.
-       (inst shr ecx 2)
-       ;; Set decrement mode (successive args at lower addresses)
-       (inst std)
-       ;; Set up the result.
-       (move result dst)
-       ;; Jump into the middle of the loop, 'cause that's were we want
-       ;; to start.
-       (inst jmp enter)
-       (emit-label loop)
-       ;; Compute a pointer to the next cons.
-       (inst add dst (* cons-size word-bytes))
-       ;; Store a pointer to this cons in the CDR of the previous cons.
-       (storew dst dst -1 list-pointer-type)
-       (emit-label enter)
-       ;; Grab one value and stash it in the car of this cons.
-       (inst lods eax)
-       (storew eax dst 0 list-pointer-type)
-       ;; Go back for more.
-       (inst loop loop)
-       ;; NIL out the last cons.
-       (storew nil-value dst 1 vm:list-pointer-type))
+      (let ((*enable-pseudo-atomic* (unless dynamic-extent
+				      *enable-pseudo-atomic*)))
+	(pseudo-atomic
+	 (allocation dst dst node dynamic-extent)
+	 (inst lea dst (make-ea :byte :base dst :disp list-pointer-type))
+	 ;; Convert the count into a raw value, so we can use the LOOP inst.
+	 (inst shr ecx 2)
+	 ;; Set decrement mode (successive args at lower addresses)
+	 (inst std)
+	 ;; Set up the result.
+	 (move result dst)
+	 ;; Jump into the middle of the loop, 'cause that's were we want
+	 ;; to start.
+	 (inst jmp enter)
+	 (emit-label loop)
+	 ;; Compute a pointer to the next cons.
+	 (inst add dst (* cons-size word-bytes))
+	 ;; Store a pointer to this cons in the CDR of the previous cons.
+	 (storew dst dst -1 list-pointer-type)
+	 (emit-label enter)
+	 ;; Grab one value and stash it in the car of this cons.
+	 (inst lods eax)
+	 (storew eax dst 0 list-pointer-type)
+	 ;; Go back for more.
+	 (inst loop loop)
+	 ;; NIL out the last cons.
+	 (storew nil-value dst 1 vm:list-pointer-type)))
       (emit-label done))))
 
 ;;; Return the location and size of the more arg glob created by Copy-More-Arg.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.53 2003/04/19 12:31:31 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.54 2003/08/05 14:04:52 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -636,6 +636,9 @@
 		   (when (arg-info-supplied-p info)
 		     (call-args t)))
 		  (:rest
+		   ;;
+		   ;; We could do something here if the variable is
+		   ;; declared dynamic-extent.
 		   (call-args `(list ,@(more-temps)))
 		   (return))
 		  (:keyword

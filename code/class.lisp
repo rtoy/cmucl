@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.56 2003/06/06 16:23:45 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.57 2003/08/05 14:04:53 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1171,6 +1171,7 @@
 	  ((not *type-system-initialized*)
 	   (setf (layout-class old) class)
 	   old)
+	  #-bootstrap-dynamic-extent
 	  ((redefine-layout-warning old "current" res "compile time")
 	   (restart-case
 	       (error "Loading a reference to class ~S when the compile~
