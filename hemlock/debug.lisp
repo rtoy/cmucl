@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.7 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.7.2.1 2000/10/30 16:32:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,15 +208,37 @@
 	;;
 	;; Read our form, get form-number translations, get the source-path,
 	;; and make it usable.
-	(let ((path (nreverse
-		     (butlast
-		      (cdr
-		       (svref (di:form-number-translations
-			       (with-input-from-region
-				   (s (region point (buffer-end-mark buffer)))
-				 (read s))
-			       tlf-offset)
-			      form-number))))))
+	;;
+	;; NOTE: Here READ is used in the editor lisp to look at a form
+	;; that the compiler has digested in the slave lisp. The editor
+	;; does not have the same environment at the slave so bad things
+	;; can happen if READ hits a #. reader macro (like unknown package
+	;; or undefined function errors) which can break the editor. This
+	;; code basically inhibits the read-time eval. This doesn't always
+	;; work right as the compiler may be seeing a different form structure
+	;; and the compiler's version of PATH may not match the editor's.
+	;; The main trouble seen in testing is that the 'form-number'
+	;; supplied by the compiler was one more than what the vector
+	;; returned by form-number-translations contained. For lack of a
+	;; better solution, I (pw) just limit the form-number to legal range.
+	;; This has worked ok on test code but may be off for some 
+	;; forms. At least the editor won't break.
+
+	(let* ((vector (di:form-number-translations
+			(with-input-from-region
+			    (s (region point (buffer-end-mark buffer)))
+			  (let ((*readtable* (copy-readtable)))
+			    (set-dispatch-macro-character
+			     #\# #\. (lambda(stream char arg)
+				       (declare (ignore char arg))
+				       (read stream)))
+			    (read s)))
+			tlf-offset))
+	       ;; Don't signal error on index overrun.It may be due
+	       ;; to read-time eval getting form editing blind to
+	       ;; editor
+	       (index (min form-number (1- (length vector))))
+	       (path (nreverse (butlast (cdr (svref vector index))))))
 	  ;;
 	  ;; Walk down to the form.  Change to buffer in case we get an error
 	  ;; while finding the form.
