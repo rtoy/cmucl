@@ -243,9 +243,9 @@
   "Define-Move-Function (Name Cost) lambda-list ({(From-SC*) (To-SC*)}*) form*
   Define the function Name and note it as the function used for moving operands
   from the From-SCs to the To-SCs.  Cost is the cost of this move operation.
-  The function is called with three arguments: the node (for source context),
-  and the source and destination TNs.  An ASSEMBLE form is wrapped around the
-  body.  All uses of DEFINE-MOVE-FUNCTION should be compiled before any uses of
+  The function is called with three arguments: the VOP (for context), and the
+  source and destination TNs.  An ASSEMBLE form is wrapped around the body.
+  All uses of DEFINE-MOVE-FUNCTION should be compiled before any uses of
   DEFINE-VOP."
   (when (or (oddp (length scs)) (null scs))
     (error "Malformed SCs spec: ~S." scs))
@@ -259,7 +259,7 @@
 	     (setf (svref (sc-load-costs to-sc) num) ',cost)))))
 
      (defun ,name ,lambda-list
-       (assemble ,(first lambda-list) ,@body))))
+       (assemble (vop-node ,(first lambda-list)) ,@body))))
 
 
 (defconstant sc-vop-slots '((:move . sc-move-vops)
@@ -1020,21 +1020,21 @@
 	(load-tn (operand-parse-load-tn op)))
     (if funs
 	(let* ((tn `(tn-ref-tn ,(operand-parse-temp op)))
-	       (n-node (or (vop-parse-node-var parse)
-			   (setf (vop-parse-node-var parse) (gensym))))
+	       (n-vop (or (vop-parse-vop-var parse)
+			  (setf (vop-parse-vop-var parse) (gensym))))
 	       (form (if (rest funs)
 			 `(sc-case ,tn
 			    ,@(mapcar #'(lambda (x)
 					  `(,(mapcar #'sc-name (car x))
 					    ,(if load-p
-						 `(,(cdr x) ,n-node ,tn
+						 `(,(cdr x) ,n-vop ,tn
 						   ,load-tn)
-						 `(,(cdr x) ,n-node ,load-tn
+						 `(,(cdr x) ,n-vop ,load-tn
 						   ,tn))))
 				      funs))
 			 (if load-p
-			     `(,(cdr (first funs)) ,n-node ,tn ,load-tn)
-			     `(,(cdr (first funs)) ,n-node ,load-tn ,tn)))))
+			     `(,(cdr (first funs)) ,n-vop ,tn ,load-tn)
+			     `(,(cdr (first funs)) ,n-vop ,load-tn ,tn)))))
 	  (if (eq (operand-parse-load op) t)
 	      `(when ,load-tn ,form)
 	      `(when (eq ,load-tn ,(operand-parse-name op))
