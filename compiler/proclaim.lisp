@@ -115,9 +115,9 @@
 ;;;    This function is the guts of proclaim, since it does the global
 ;;; environment updating.
 ;;;
-;;; ### At least for now, ignore type proclamations when compiled under the new
-;;; compiler.  This allows us to delay putting the type system into the cold
-;;; load.
+;;; ### At least for now, blow off type declarations when the compiler hasn't
+;;; been loaded yet.  This allows us to delay putting the type system into the
+;;; cold load.
 ;;;
 (defun %proclaim (form)
   (unless (consp form)
@@ -133,28 +133,29 @@
 	 (clear-info variable constant-value name)
 	 (setf (info variable kind name) :special)))
       (type
-       #-new-compiler
-       (let ((type (specifier-type (first args))))
-	 (dolist (name (rest args))
-	 (unless (symbolp name)
-	   (error "Variable name is not a symbol: ~S." name))
-	   (setf (info variable type name) type)
-	   (setf (info variable where-from name) :declared))))
+       (when (fboundp 'specifier-type)
+	 (let ((type (specifier-type (first args))))
+	   (dolist (name (rest args))
+	     (unless (symbolp name)
+	       (error "Variable name is not a symbol: ~S." name))
+	     (setf (info variable type name) type)
+	     (setf (info variable where-from name) :declared)))))
       (ftype
-       #-new-compiler
-       (let ((type (specifier-type (first args))))
-	 (unless (function-type-p type)
-	   (error "Declared functional type is not a function type: ~S."
-		  (first args)))
-	 (dolist (name (rest args))
-	   (define-function-name name)
-	   (setf (info function type name) type)
-	   (setf (info function where-from name) :declared))))
+       (when (fboundp 'specifier-type)
+	 (let ((type (specifier-type (first args))))
+	   (unless (csubtypep type (specifier-type 'function))
+	     (error "Declared functional type is not a function type: ~S."
+		    (first args)))
+	   (dolist (name (rest args))
+	     (define-function-name name)
+	     (setf (info function type name) type)
+	     (setf (info function where-from name) :declared)))))
       (function
-       #-new-compiler
-       (%proclaim `(ftype (function . ,(rest args)) ,(first args))))
+       (when (fboundp 'specifier-type)
+	 (%proclaim `(ftype (function . ,(rest args)) ,(first args)))))
       (optimize
-       (setq *default-cookie* (process-optimize-declaration form *default-cookie*)))
+       (setq *default-cookie*
+	     (process-optimize-declaration form *default-cookie*)))
       ((inline notinline maybe-inline)
        (dolist (name args)
 	 (define-function-name name)
@@ -206,12 +207,14 @@
   ;;; ### Should declare arg/result types. 
   (let ((copier (dd-copier info)))
     (when copier
-      (define-function-name copier)))
+      (define-function-name copier)
+      (setf (info function where-from copier) :defined)))
 
   ;;; ### Should make a known type predicate.
   (let ((predicate (dd-predicate info)))
     (when predicate
-      (define-function-name predicate)))
+      (define-function-name predicate)
+      (setf (info function where-from predicate) :defined)))
 
   (dolist (slot (dd-slots info))
     (let ((fun (dsd-accessor slot)))
@@ -235,14 +238,14 @@
 ;;; %NOTE-TYPE-DEFINED  --  Interface
 ;;;
 ;;;    Note that the type Name has been (re)defined, updating the undefined
-;;; warnings and SPECIFIER-TYPE cache.
+;;; warnings and VALUES-SPECIFIER-TYPE cache.
 ;;; 
 (defun %note-type-defined (name)
   (declare (symbol name))
   (when (boundp '*undefined-warnings*)
     (note-name-defined name :type))
-  (when (boundp '*specifier-type-cache-vector*)
-    (specifier-type-cache-clear))
+  (when (boundp '*values-specifier-type-cache-vector*)
+    (values-specifier-type-cache-clear))
   (undefined-value))
 
 
