@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.66 2004/01/19 20:04:09 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.67 2004/01/20 17:32:20 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -489,6 +489,9 @@
 	     ,skipped-char-form))
 	  ((null ,peek-type)
 	   ,unread-form
+	   ,(if eof-detected-form
+		(when (eql char-var eof-value)
+		  eof-detected-form))
 	   ,char-var)
 	  (t
 	   (error "Impossible case reached in PEEK-CHAR")))))
@@ -518,7 +521,9 @@
 	  (generalized-peeking-mechanism
 	   peek-type eof-value char
 	   (read-char stream eof-errorp eof-value)
-	   (unread-char char stream))
+	   (unread-char char stream)
+	   nil
+	   (eof-or-lose stream (or eof-errorp recursive-p) eof-value))
 	  ;; fundamental-stream
 	  (generalized-peeking-mechanism
 	   peek-type :eof char
@@ -763,7 +768,7 @@
 (defun write-line (string &optional (stream *standard-output*)
 			  &key (start 0) (end (length string)))
   "Outputs the String to the given Stream, followed by a newline character."
-  (write-line* string stream start end))
+  (write-line* string stream start (or end (length string))))
 
 (defun write-line* (string &optional (stream *standard-output*)
 			   (start 0) (end (length string)))
@@ -2029,8 +2034,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	       (simple-array		; We also know that it is a 'vector'.
 		(read-into-simple-array seq stream start end))
 	       (vector
-		(read-into-vector seq stream start end)))
-	     )))
+		(read-into-vector seq stream start end))))))
     ;; fundamental-stream
     (stream-read-sequence stream seq start end)))
 
@@ -2079,9 +2083,10 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
   ;; The declaration for I may be too restrictive in the case of
   ;; lists.  But then again, it is still a huge number.
   (do ((lis l (rest lis))
-       (i start (1+ i))
-       )
-      ((or (endp lis) (>= i end)) i)
+       (i start (1+ i)))
+      ((or (endp lis)
+	   (>= i end))
+       i)
     (declare (type list lis))
     (declare (type index i))
     (let* ((eof-marker (load-time-value (list 'eof-marker)))
@@ -2110,11 +2115,11 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
     (loop while (plusp numbytes) do
 	  (let ((bytes-read (system:read-n-bytes stream s start numbytes nil)))
 	    (when (zerop bytes-read)
-	      (return-from read-into-simple-string total-bytes))
+	      (return-from read-into-simple-string start))
 	    (incf total-bytes bytes-read)
 	    (incf start bytes-read)
 	    (decf numbytes bytes-read)))
-    total-bytes))
+    start))
 
 
 (defun read-into-string (s stream start end)
@@ -2127,9 +2132,10 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	   :expected-type (stream-element-type stream)
 	   :format-control "Trying to read characters from a binary stream."))
   (do ((i start (1+ i))
-       (s-len (length s))
-       )
-      ((or (>= i s-len) (>= i end)) i)
+       (s-len (length s)))
+      ((or (>= i s-len)
+	   (>= i end))
+       i)
     (declare (type index i s-len))
     (let* ((eof-marker (load-time-value (list 'eof-marker)))
 	   (el (read-char stream nil eof-marker)))
@@ -2157,7 +2163,6 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
     (unsigned-byte 32)
     (signed-byte 8)
     (signed-byte 16)
-
     (signed-byte 32)
     ))
 
@@ -2177,7 +2182,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 		     (simple-array (signed-byte 32) (*))
 		     (simple-array (unsigned-byte *) (*))
 		     (simple-array (signed-byte *) (*))
-		     )
+		     simple-bit-vector)
 		 s))
 
   (declare (type stream stream))
@@ -2264,15 +2269,12 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 		  (read-n-x8-bytes stream data offset-start offset-end 32))
 
 		 ;; Otherwise we resort to the READ-BYTE based operation.
+		 (simple-bit-vector
+		  (read-into-vector s stream start end))
 		 ((simple-array (unsigned-byte *) (*))
 		  (read-into-vector s stream start end))
-
 		 ((simple-array (signed-byte *) (*))
-		  (read-into-vector s stream start end))
-		 ))			; with-array-data
-	     )				; flet
-	   ))
-    ))
+		  (read-into-vector s stream start end)))))))))
 
 
 ;;; READ-INTO-VECTOR --
@@ -2284,12 +2286,11 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
   (let* ((stream-et (stream-element-type stream))
 	 (read-function (if (subtypep stream-et 'character)
 			    #'read-char
-			    #'read-byte))
-	 )
+			    #'read-byte)))
     (do ((i start (1+ i))
-	 (a-len (length v))
-	 )
-	((or (>= i a-len) (>= i end)) i)
+	 (a-len (length v)))
+	((or (>= i a-len) (>= i end))
+	 i)
       (declare (type index i a-len))
       (let* ((eof-marker (load-time-value (list 'eof-marker)))
 	     (el (funcall read-function stream nil eof-marker)))
