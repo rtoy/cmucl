@@ -1,88 +1,216 @@
-#!/bin/csh -fx
+#!/bin/csh -f
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.4 1992/02/05 19:01:20 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.5 1992/02/06 01:28:33 ram Exp $
 
-if ($#argv) then
-	set subdir = $argv[1]
-else
-	set subdir = alpha
-endif
+set features = ()
+set misfeatures = ()
+set target = "@sys"
+set subdir = alpha
+set core = ""
+set clean = 0
+set update = 1
+set bootstrap = "target:bootstrap"
 
-set dest = /afs/cs/project/clisp/build/@sys/$subdir
+set systems = ""
+set nosystems = ""
+
+while ($#argv > 0)
+	if ("$argv[1]" !~ -*) then
+		set features = ($features $argv[1])
+	else
+		switch ($argv[1])
+
+# Select what system to compile, and how:
+			case "-target":
+				set target = $argv[2]
+				shift
+				breaksw
+			case "-release":
+				set subdir = $argv[2]
+				shift
+				breaksw
+			case "-lisp":
+				set lispdir = $argv[2]
+				shift
+				breaksw
+			case "-core":
+				set core = " -core $argv[2]"
+				shift
+				breaksw
+			case "-bootstrap":
+				set bootstrap = $argv[2]
+				shift
+				breaksw
+			case "-misfeature":
+			        set misfeatures = ($misfeatures $argv[2])
+				shift
+				breaksw
+
+# Source tree management:
+			case "-clean":
+				set clean = 1
+				breaksw
+			case "-noupdate":
+			        set update = 0
+				breaksw
+
+# Select what to compile:
+			case "-compile":
+			        set systems = $argv[2]
+				shift
+				breaksw
+			case "-nocompile":
+			        set nosystems = $argv[2]
+				shift
+				breaksw
+			default:
+				echo "Bogus switch: $argv[1]"
+				cat <<END_HELP
+Try these:
+  -target	[@sys]	
+	The machine to compile for: pmax_mach, sun4c_41 ...
+
+  -release	[alpha]
+	Which source tree to compile: alpha, exp/foo...
+
+  -lisp		[/afs/cs/misc/cmucl/@sys/<release>]
+	The directory to run Lisp out of.
+
+  -core		[<lisp>/lib/lisp.core]
+	The core file to run.
+
+  -bootstrap	[target:bootstrap]
+	File to load into lisp before compiling.
+
+  -misfeature <feature>
+	Remove <feature> from the features when compiling.  May be used more
+	than once.
+
+  -clean <no arg>
+	Delete all *.*f, *.assem, *.log and *.log.OLD in the destination.
+
+  -noupdate <no arg>
+	If specified, inhibits rcsupdate of the source tree.
+
+  -compile	[All systems]
+	A comma-separated list of system names, e.g. "code,compiler".  Order is
+	not significant.  All systems are compiled by default.
+  
+  -nocompile	[No systems]
+	A comma-separated list of systems *not* to compile.  Only meaningful
+	when -compile is not specified.
+
+END_HELP
+
+				exit
+		endsw
+	endif
+	shift
+end
+
+if (! $?lispdir) set lispdir = /afs/cs/misc/cmucl/@sys/$subdir
+setenv CMUCLLIB "$lispdir/lib"
+set lisp = "$lispdir/bin/lisp$core"
+
+set dest = /afs/cs/project/clisp/build/$target/$subdir
 set src = /afs/cs/project/clisp/src/$subdir
 
+echo "Source directory: $src"
+echo "Target directory: $dest"
+if ($systems == "") then
+    if ($nosystems == "") then
+        echo "Will compile all systems ..."
+    else
+        echo "Will compile all systems except for: $nosystems ..."
+    endif
+else
+    echo "Will compile these systems: $systems ..."
+endif
+
+if (-e $src/FEATURES) then
+        set tmp = (`cat $src/FEATURES`)
+        echo "Features from FEATURES file:" $tmp
+	set features = ($features $tmp)
+endif
+
+if $update then
+    echo "Updating source directory $src ..."
+    (cd $src; rcsupdate -q)
+endif
+
+if $clean then
+    echo "Cleaning up binaries and logs in $dest ..."
+    (cd  $dest;\
+     find . \( -name '*.*f' -o -name '*.assem' \) -print -exec rm {} \; ;\
+     rm *.log *.log.OLD)
+else
+    if ({(echo $dest/*.log>/dev/null)}) then
+	echo "Preserving log files in $dest as .OLD ..."
+	foreach foo ( $dest/*.log )
+	    set old = "${foo}.OLD"
+	    if (-e $old) then
+	        echo "" >>$old
+		date >>$old
+		echo "_________________________________________">>$old
+		cat $foo >>$old
+		rm $foo
+	    else
+		mv $foo $old
+	    endif
+        end
+    endif
+endif
+
 if ($?LISP) then
+	echo "LISP environment variable override: $LISP"
 	set lisp = "$LISP"
 else
 	set lisp = lisp
 endif
 
-if (-e $src/FEATURES) then
-	set features = (`cat $src/FEATURES`)
-else
-	set features = ()
-endif
-
-$lisp -noinit << EOF
-(setf *features* (list* $features *features*))
-(setf (search-list "target:") '("$dest/" "$src/"))
-(load "target:bootstrap" :if-does-not-exist nil)
-(load "target:tools/setup")
-(comf "target:tools/setup")
-(comf "target:tools/rcs")
-(quit)
+echo "Compiling setup and bootstrap ..."
+$lisp -noinit -eval '(eval (read))' << EOF
+(progn
+  (setf *features*
+	(set-difference (list* '($features) *features*) '($misfeatures)))
+  (setf (search-list "target:") '("$dest/" "$src/"))
+  (setq *compile-verbose* nil *compile-print* nil) 
+  (load "target:tools/setup")
+  (comf "target:tools/setup")
+  (when (probe-file "${bootstrap}.lisp") (comf "$bootstrap"))
+  (quit))
 EOF
 
-$lisp -noinit << EOF
-(setf *features* (list* $features *features*))
-(setf (search-list "target:") '("$dest/" "$src/"))
-(load "target:bootstrap" :if-does-not-exist nil)
-(load "target:tools/setup")
-(setf *interactive* nil *gc-verbose* nil)
-(load "target:tools/worldcom")
-(quit)
-EOF
+set sysinfo = ("code worldcom"\
+	       "compiler comcom"\
+	       "clx clxcom"\
+	       "hemlock hemcom"\
+	       "pcl pclcom"\
+	       "genesis worldbuild")
 
-$lisp -noinit << EOF
-(setf *features* (list* $features *features*))
-(setf (search-list "target:") '("$dest/" "$src/"))
-(setf (search-list "clx:") '("target:clx/"))
-(load "target:bootstrap" :if-does-not-exist nil)
-(load "target:tools/setup")
-(setf *interactive* nil *gc-verbose* nil)
-(load "target:tools/clxcom")
-(quit)
+while ($#sysinfo > 0)
+    set system_vec = ($sysinfo[1]:x)
+    set this_system = $system_vec[1]
+    set this_comfile = $system_vec[2]
+    shift sysinfo
+    if ($systems =~ *${this_system}* || \
+        ($systems == "" && $nosystems !~ *${this_system}*)) then
+	echo "Compiling $this_system ..."
+	$lisp -noinit -eval '(eval (read))' << EOF
+(progn
+  (setf *features*
+	(set-difference (list* '($features) *features*) '($misfeatures)))
+  (setf (search-list "target:") '("$dest/" "$src/"))
+  (setq *compile-verbose* nil *compile-print* nil) 
+  (load "$bootstrap" :if-does-not-exist nil)
+  (load "target:tools/setup")
+  (setf *interactive* nil *gc-verbose* nil)
+  (load "target:tools/$this_comfile")
+  (quit))
 EOF
-
-$lisp -noinit << EOF
-(setf *features* (list* $features *features*))
-(setf (search-list "target:") '("$dest/" "$src/"))
-(load "target:bootstrap" :if-does-not-exist nil)
-(load "target:tools/setup")
-(setf *interactive* nil *gc-verbose* nil)
-(load "target:tools/hemcom")
-(quit)
-EOF
-
-$lisp -noinit << EOF
-(setf *features* (list* $features *features*))
-(setf (search-list "target:") '("$dest/" "$src/"))
-(load "target:bootstrap" :if-does-not-exist nil)
-(load "target:tools/setup")
-(setf *interactive* nil *gc-verbose* nil)
-(load "target:tools/comcom")
-(quit)
-EOF
-
-$lisp -noinit << EOF
-(setf *features* (list* $features *features*))
-(setf (search-list "target:") '("$dest/" "$src/"))
-(load "target:bootstrap" :if-does-not-exist nil)
-(setf *gc-verbose* nil)
-(load "target:tools/pclcom")
-(quit)
-EOF
+   endif
+end
 
 echo "Done..."
