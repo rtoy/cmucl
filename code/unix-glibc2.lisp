@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.24 2003/03/08 17:51:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.25 2003/04/13 12:31:52 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -401,8 +401,10 @@
 
 (export '(open-dir read-dir close-dir))
 
-(defstruct (directory
-	    (:print-function %print-directory))
+(defstruct (%directory
+	     (:constructor make-directory)
+	     (:conc-name directory-)
+	     (:print-function %print-directory))
   name
   (dir-struct (required-argument) :type system-area-pointer))
 
