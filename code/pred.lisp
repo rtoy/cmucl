@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.19 1991/11/09 02:47:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.20 1991/12/20 02:29:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.19 1991/11/09 02:47:23 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -84,15 +82,15 @@
       system-area-pointer-p
       weak-pointer-p
       vectorp
-      c::unsigned-byte-32-p
-      c::signed-byte-32-p
-      c::simple-array-unsigned-byte-2-p
-      c::simple-array-unsigned-byte-4-p
-      c::simple-array-unsigned-byte-8-p
-      c::simple-array-unsigned-byte-16-p
-      c::simple-array-unsigned-byte-32-p
-      c::simple-array-single-float-p
-      c::simple-array-double-float-p
+      unsigned-byte-32-p
+      signed-byte-32-p
+      simple-array-unsigned-byte-2-p
+      simple-array-unsigned-byte-4-p
+      simple-array-unsigned-byte-8-p
+      simple-array-unsigned-byte-16-p
+      simple-array-unsigned-byte-32-p
+      simple-array-single-float-p
+      simple-array-double-float-p
       )))
 
 (macrolet
@@ -150,7 +148,7 @@
 	     (symbol-package :foo))
 	 'keyword
 	 'symbol))
-    (structure (c::structure-ref object 0))
+    (structure (structure-ref object 0))
     (array (type-specifier (ctype-of object)))
     (system-area-pointer 'system-area-pointer)
     (weak-pointer 'weak-pointer)
@@ -331,7 +329,7 @@
   (let ((info (info type defined-structure-info type)))
     (if info
 	(and (structurep object)
-	     (let ((obj-name (c::structure-ref object 0)))
+	     (let ((obj-name (structure-ref object 0)))
 	       (or (eq obj-name type)
 		   (if (member obj-name (c::dd-included-by info)
 			       :test #'eq)
@@ -366,26 +364,7 @@
 	((stringp x)
 	 (and (stringp y) (string= x y)))
 	((pathnamep x)
-	 (and (pathnamep y)
-	      (do* ((i 1 (1+ i))
-		    (len (c::structure-length x)))
-		   ((>= i len) t)
-		(declare (fixnum i len))
-		(let ((x-el (c::structure-ref x i))
-		      (y-el (c::structure-ref y i)))
-		  (if (and (simple-vector-p x-el)
-			   (simple-vector-p y-el))
-		      (let ((lx (length x-el))
-			    (ly (length y-el)))
-			(declare (fixnum lx ly))
-			(if (/= lx ly) (return nil))
-			(do ((i 0 (1+ i)))
-			    ((>= i lx))
-			  (declare (fixnum i))
-			  (if (not (equal (svref x-el i) (svref y-el i)))
-			      (return-from equal nil))))
-		      (unless (equal x-el y-el)
-			(return nil)))))))
+	 (and (pathnamep y) (pathname= x y)))
 	((bit-vector-p x)
 	 (and (bit-vector-p y)
 	      (= (the fixnum (length x))
@@ -414,13 +393,15 @@
 	 (and (consp y)
 	      (equalp (car x) (car y))
 	      (equalp (cdr x) (cdr y))))
+	((pathnamep x)
+	 (and (pathnamep y) (pathname= x y)))
 	((structurep x)
-	 (let ((length (c::structure-length x)))
+	 (let ((length (structure-length x)))
 	   (and (structurep y)
-		(= length (c::structure-length y))
+		(= length (structure-length y))
 		(dotimes (i length t)
-		  (let ((x-el (c::structure-ref x i))
-			(y-el (c::structure-ref y i)))
+		  (let ((x-el (structure-ref x i))
+			(y-el (structure-ref y i)))
 		    (unless (or (eq x-el y-el)
 				(equalp x-el y-el))
 		      (return nil)))))))
