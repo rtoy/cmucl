@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.15 2003/07/01 16:32:41 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.16 2003/09/03 10:17:22 gerd Exp $")
 
 (in-package "PCL")
 
@@ -762,18 +762,19 @@
 	 ;; from INITARGS with which the ctor can be invoked.  MATCH-P
 	 ;; true means the ctor can be used.
 	 (call-args (ctor)
-	   (loop with match-p = t
-		 for (key supplied-value) on initargs by #'cddr
-		 as value = (getf (ctor-initargs ctor) key 'not-found)
-		 while match-p
-		 when (or (eq 'not-found value)
-			  (and (constantp value)
-			       (not (eql supplied-value value)))) do
-		   (setq match-p nil)
-		 unless (constantp value)
-		   collect supplied-value into args
-		 finally
-		   (return (values args match-p)))))
+	   (collect ((args))
+	     (let ((ctail (ctor-initargs ctor))
+		   (itail initargs))
+	       (loop
+		  (when (or (null ctail) (null itail))
+		    (return (values (args) (and (null ctail) (null itail)))))
+		  (unless (eq (pop ctail) (pop itail))
+		    (return nil))
+		  (let ((ival (pop itail)) (cval (pop ctail)))
+		    (if (constantp cval)
+			(unless (eql cval ival)
+			  (return nil))
+			(args ival))))))))
     ;;
     ;; Loop over all ctors of CLASS looking for a ctor that can be
     ;; used to construct an instance with the given initargs.  If one
