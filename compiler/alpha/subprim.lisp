@@ -1,0 +1,64 @@
+;;; -*- Package: ALPHA; Log: C.Log -*-
+;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/subprim.lisp,v 1.1 1994/04/06 16:54:56 hallgren Exp $")
+;;;
+;;; **********************************************************************
+;;;
+;;;    Linkage information for standard static functions, and random vops.
+;;;
+;;; Written by William Lott.
+;;; Converted by Sean Hallgren.
+;;; 
+(in-package "ALPHA")
+
+
+
+;;;; Length
+
+(define-vop (length/list)
+  (:translate length)
+  (:args (object :scs (descriptor-reg) :target ptr))
+  (:arg-types list)
+  (:temporary (:scs (descriptor-reg) :from (:argument 0)) ptr)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (any-reg) :type fixnum :to (:result 0) :target result)
+	      count)
+  (:results (result :scs (any-reg descriptor-reg)))
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 50
+    (move object ptr)
+    (move zero-tn count)
+    
+    LOOP
+    
+    (inst cmpeq ptr null-tn temp)
+    (inst bne temp done)
+    
+    (inst and ptr lowtag-mask temp)
+    (inst xor temp list-pointer-type temp)
+    (inst bne temp not-list)
+    
+    (loadw ptr ptr cons-cdr-slot list-pointer-type)
+    (inst addq count (fixnum 1) count)
+    (inst br zero-tn loop)
+    
+    NOT-LIST
+    (cerror-call vop done object-not-list-error ptr)
+    
+    DONE
+    (move count result)))
+       
+
+(define-static-function length (object) :translate length)
+
+
+
