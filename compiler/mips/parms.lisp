@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.46 1990/05/09 06:40:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.47 1990/05/10 04:50:06 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -519,7 +519,8 @@
 (defun fixnum (num)
   "Make a fixnum out of NUM.  (i.e. shift by two bits if it will fit.)"
   (if (<= #x-20000000 num #x1fffffff)
-      (ash num 2)
+      #+new-compiler (ash num 2)
+      #-new-compiler (* num 4)
       (error "~D is too big for a fixnum." num)))
 
 
