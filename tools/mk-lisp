@@ -2,7 +2,29 @@
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.11 1992/02/24 19:01:06 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.12 1992/03/21 19:12:43 wlott Exp $
+
+if ($#argv) then
+    if ($argv[1] == "-now") then
+	set later = 0
+	shift
+    else
+	set later = 1
+    endif
+else
+    set later = 1
+endif
+
+if ($later) then
+    foreach minutes (5 1 0)
+	foreach name (`who | sed -e 's/\([^ ]*\)  *\([^ ]*\) .*/\1:\2/'`)
+	    echo Building core in $minutes minutes | \
+		write `echo $name | sed -e 's/:/ /'`
+	end
+	@ seconds = $minutes * 60
+	sleep $seconds
+    end
+endif
 
 if ($#argv) then
 	set subdir = $argv[1]
