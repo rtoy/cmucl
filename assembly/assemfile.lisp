@@ -1,13 +1,15 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: C -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.32 1992/06/22 13:59:07 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.33 1992/08/03 12:50:33 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -45,7 +47,7 @@
     (unwind-protect
 	(progn
 	  (pushnew :assembler *features*)
-	  (when (and (target-featurep :new-assembler) trace-file)
+	  (when trace-file
 	    (setf *compiler-trace-output*
 		  (open (if (eq trace-file t)
 			    (make-pathname :defaults name
@@ -57,37 +59,19 @@
 	  (load (merge-pathnames name (make-pathname :type "lisp")))
 	  (fasl-dump-cold-load-form `(in-package ,(package-name *package*))
 				    *lap-output-file*)
-	  (let ((length
-		 (cond ((target-featurep :new-assembler)
-			(new-assem:append-segment *code-segment* *elsewhere*)
-			(setf *elsewhere* nil)
-			(new-assem:finalize-segment *code-segment*))
-		       (t
-			(assem:assemble (*code-segment* nil)
-			  (assem:insert-segment *elsewhere*))
-			(assem:expand-pseudo-instructions *code-segment*)
-			(assem:finalize-segment *code-segment*)))))
+	  (new-assem:append-segment *code-segment* *elsewhere*)
+	  (setf *elsewhere* nil)
+	  (let ((length (new-assem:finalize-segment *code-segment*)))
 	    (dump-assembler-routines *code-segment*
 				     length
 				     *fixups*
 				     *assembler-routines*
 				     *lap-output-file*))
-	  (when (and trace-file (not (target-featurep :new-assembler)))
-	    (with-open-file (file (if (eq trace-file t)
-				      (make-pathname :defaults name
-						     :type "trace")
-				      trace-file)
-				  :direction :output
-				  :if-exists :supersede)
-	      (format file "Assembly listing for ~A:~3%" (namestring name))
-	      (assem:dump-segment *code-segment* :stream file)
-	      (fresh-line file)))
 	  (setq won t))
       (deletef :assembler *features*)
-      (when (target-featurep :new-assembler)
-	(new-assem:release-segment *code-segment*)
-	(when *elsewhere*
-	  (new-assem:release-segment *elsewhere*)))
+      (new-assem:release-segment *code-segment*)
+      (when *elsewhere*
+	(new-assem:release-segment *elsewhere*))
       (when *compiler-trace-output*
 	(close *compiler-trace-output*))
       (close-fasl-file *lap-output-file* (not won)))
@@ -127,57 +111,28 @@
 
 
 (defun emit-assemble (name options regs code)
-  (if (backend-featurep :new-assembler)
-      (collect ((decls))
-	(loop
-	  (if (and (consp code) (consp (car code)) (eq (caar code) 'declare))
-	      (decls (pop code))
-	      (return)))
-	`(let (,@(mapcar
-		  #'(lambda (reg)
-		      `(,(reg-spec-name reg)
-			(make-random-tn
-			 :kind :normal
-			 :sc (sc-or-lose ',(reg-spec-sc reg))
-			 :offset ,(reg-spec-offset reg))))
-		  regs))
-	   ,@(decls)
-	   (new-assem:assemble (*code-segment* ',name)
-	     ,name
-	     (push (cons ',name ,name) *assembler-routines*)
-	     ,@code
-	     ,@(generate-return-sequence
-		(or (cadr (assoc :return-style options)) :raw)))
-	   (when *compile-print*
-	     (format *error-output* "~S assembled~%" ',name))))
-      (let* ((labels nil)
-	     (insts (mapcar #'(lambda (inst)
-				(cond ((symbolp inst)
-				       (push inst labels)
-				       `(emit-label ,inst))
-				      (t
-				       inst)))
-			    code))
-	     (return-style (or (cadr (assoc :return-style options)) :raw)))
-	`(let ((,name (gen-label))
-	       ,@(mapcar #'(lambda (label)
-			     `(,label (gen-label)))
-			 labels))
-	   (push (cons ',name ,name) *assembler-routines*)
-	   (assem:assemble (*code-segment* ',name)
-	     (emit-label ,name)
-	     (let (,@(mapcar
-		      #'(lambda (reg)
-			  `(,(reg-spec-name reg)
-			    (make-random-tn
-			     :kind :normal
-			     :sc (sc-or-lose ',(reg-spec-sc reg))
-			     :offset ,(reg-spec-offset reg))))
-		      regs))
-	       ,@insts
-	       ,@(generate-return-sequence return-style)))
-	   (when *compile-print*
-	     (format *error-output* "~S assembled~%" ',name))))))
+  (collect ((decls))
+    (loop
+      (if (and (consp code) (consp (car code)) (eq (caar code) 'declare))
+	  (decls (pop code))
+	  (return)))
+    `(let (,@(mapcar
+	      #'(lambda (reg)
+		  `(,(reg-spec-name reg)
+		    (make-random-tn
+		     :kind :normal
+		     :sc (sc-or-lose ',(reg-spec-sc reg))
+		     :offset ,(reg-spec-offset reg))))
+	      regs))
+       ,@(decls)
+       (new-assem:assemble (*code-segment* ',name)
+	 ,name
+	 (push (cons ',name ,name) *assembler-routines*)
+	 ,@code
+	 ,@(generate-return-sequence
+	    (or (cadr (assoc :return-style options)) :raw)))
+       (when *compile-print*
+	 (format *error-output* "~S assembled~%" ',name)))))
 
 (defun arg-or-res-spec (reg)
   `(,(reg-spec-name reg)
