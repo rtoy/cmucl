@@ -19,7 +19,7 @@ char *arch_init(void)
     return NULL;
 }
 
-os_vm_address_t arch_get_bad_addr(struct sigcontext *scp)
+os_vm_address_t arch_get_bad_addr(int sig, int code, struct sigcontext *scp)
 {
     /* Finding the bad address on the mips is easy. */
     return (os_vm_address_t)scp->sc_badvaddr;
