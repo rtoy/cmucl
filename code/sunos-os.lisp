@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.2 1991/09/04 13:30:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.3 1992/02/29 00:45:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,11 +60,11 @@
   (let (run-utime run-stime page-faults)
     (multiple-value-bind (err? utime stime maxrss ixrss idrss
                                isrss minflt majflt)
-        (mach:unix-getrusage mach:rusage_self)
+        (unix:unix-getrusage unix:rusage_self)
       (declare (ignore maxrss ixrss idrss isrss minflt))
       (cond ((null err?)
              (error "Unix system call getrusage failed: ~A."
-                    (mach:get-unix-error-msg utime)))
+                    (unix:get-unix-error-msg utime)))
             (T (values utime stime majflt))))))
 
 
@@ -74,7 +74,7 @@
 ;;;
 (defun get-page-size ()
   (multiple-value-bind (val err)
-		       (mach:unix-getpagesize)
+		       (unix:unix-getpagesize)
     (unless val
-      (error "Getpagesize failed: ~A" (mach:get-unix-error-msg err)))
+      (error "Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
     val))
