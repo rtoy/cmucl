@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.2 1994/03/27 16:18:16 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.3 1994/03/27 16:41:13 hallgren Exp $ */
 #include <machine/regdef.h>
 #include <machine/pal.h>
 
@@ -161,6 +161,7 @@ call_into_c:
 	stl	reg_ZERO,0(reg_ALLOC)
 
 	/* Into C land we go. */
+	mov	reg_CFUNC, reg_L1    /* ### This line is a mystery */
 	jsr	ra, (reg_CFUNC)
 	ldgp	$29,0(ra)
 
@@ -217,7 +218,7 @@ start_of_tramps:
         .text
         .globl  undefined_tramp
         .ent    undefined_tramp_offset
-undefined_tramp = /* ### undefined_tramp_offset-call_into_lisp_LRA*/ 0x13c+call_into_lisp_LRA_page
+undefined_tramp = /* ### undefined_tramp_offset-call_into_lisp_LRA*/ 0x140+call_into_lisp_LRA_page
 undefined_tramp_offset:
         call_pal PAL_gentrap
 	.long    10
@@ -236,7 +237,7 @@ undefined_tramp_offset:
         .text
         .globl  closure_tramp
         .ent    closure_tramp_offset
-closure_tramp = /* ### */ 0x14c + call_into_lisp_LRA_page
+closure_tramp = /* ### */ 0x150 + call_into_lisp_LRA_page
 closure_tramp_offset:
         ldl     reg_LEXENV, FDEFN_FUNCTION_OFFSET(reg_FDEFN)
         ldl     reg_L0, CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
