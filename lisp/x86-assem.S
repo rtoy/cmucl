@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.1 1997/01/21 00:28:13 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.2 1997/02/18 05:01:11 dtc Exp $
  *
  * Author:	Paul F. Werkowski <pw@snoopy.mv.com>
  *
@@ -23,18 +23,11 @@
 #define GNAME(var) _##var
 #endif
 
-/* Get the right type of alignment.  Linux as wants alignment in bytes? */
-/* not but .align 3 doesn't work ! in kernel it says: align 4 =16 bytes*/
-/* error is:
-tmp/cca01184.s: Assembler messages:
-/tmp/cca01184.s:553: Error: Alignment not a power of 2
-/tmp/cca01184.s:616: Error: Rest of line ignored. First ignored character is `,'.
-*/
-
-#ifdef	__linux__	
-#define align_4byte   2
-#define       align_8byte     4       
-#define       align_16byte    4      
+/* Get the right type of alignment.  Linux wants alignment in bytes. */
+#ifdef	__linux__
+#define align_4byte   4
+#define       align_8byte     8
+#define       align_16byte    16
 #else
 #define	align_4byte	2
 #define	align_8byte	3
