@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.12 1999/06/19 16:01:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.13 1999/06/22 14:53:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -646,27 +646,22 @@
   Note: the lifetimes of MULTIPLICAND and RESULT-HIGH overlap."
   (declare (type tn multiplier result-high result-low)
 	   (type (or tn (signed-byte 13)) multiplicand))
-  (cond #+nil
-	((backend-featurep :sparc-v9)
-	 ;; Take advantage of V9's 64-bit multiplier.  It seems that
-	 ;; emit-multiply is only used to do an unsigned multiply, so
-	 ;; the code only does an unsigned multiply.
+  ;; It seems that emit-multiply is only used to do an unsigned
+  ;; multiply, so the code only does an unsigned multiply.
+  (cond ((backend-featurep :sparc-v9)
+	 ;; Take advantage of V9's 64-bit multiplier.
 	 ;;
-	 ;; Clear out the high bits of the multiplier and
-	 ;; multiplicand.  Multiply the two numbers and put the result
-	 ;; in result-high.  Copy the low 32-bits to result-low.  Then
+	 ;; Multiply the two numbers and put the result in
+	 ;; result-high.  Copy the low 32-bits to result-low.  Then
 	 ;; shift result-high so the high 32-bits end up in the low
 	 ;; 32-bits.
-	 (inst srl multiplier multiplier 0)
-	 (unless (numberp multiplicand)
-	   (inst srl multiplicand multiplicand 0))
 	 (inst mulx result-high multiplier multiplicand)
 	 (inst move result-low result-high)
 	 (inst srax result-high 32))
 	((backend-featurep :sparc-v8)
-	 ;; V8 has a multiply instruction.  Same restrictions as
-	 ;; :sparc-v9.  This should also work for the V9, but umul and
-	 ;; the Y register is deprecated on the V9.
+	 ;; V8 has a multiply instruction.  This should also work for
+	 ;; the V9, but umul and the Y register is deprecated on the
+	 ;; V9.
 	 (inst umul result-low multiplier multiplicand)
 	 (inst rdy result-high))
 	(t
@@ -762,6 +757,7 @@
   (:results (quo :scs (unsigned-reg) :from (:argument 1))
 	    (rem :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num unsigned-num)
+  (:guard (not (backend-featurep :sparc-v9)))
   (:generator 300
     (move rem div-high)
     (move quo div-low)
@@ -775,6 +771,28 @@
 	(unless (= i 32)
 	  (inst addx rem rem))))
     (inst not quo)))
+
+(define-vop (bignum-floor)
+  (:translate bignum::%floor)
+  (:policy :fast-safe)
+  (:args (div-high :scs (unsigned-reg))
+	 (div-low :scs (unsigned-reg))
+	 (divisor :scs (unsigned-reg) :to (:result 1)))
+  (:arg-types unsigned-num unsigned-num unsigned-num)
+  (:temporary (:sc unsigned-reg :from (:argument 0)) dividend)
+  (:results (quo :scs (unsigned-reg))
+	    (rem :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 5
+    ;; Set dividend to be div-high and div-low	      
+    (inst sllx dividend div-high 32)
+    (inst add dividend div-low)
+    ;; Compute quotient
+    (inst udivx quo dividend divisor)
+    ;; Compute the remainder
+    (inst mulx rem quo divisor)
+    (inst sub rem dividend rem)))
 
 (define-vop (signify-digit)
   (:translate bignum::%fixnum-digit-with-correct-sign)
