@@ -7,16 +7,18 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.4 1991/03/17 14:28:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.5 1991/04/09 14:20:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.4 1991/03/17 14:28:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.5 1991/04/09 14:20:10 ram Exp $
 ;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
 (in-package "VM")
 (use-package "SYSTEM")
+(export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
+		       structure-usage find-holes))
 (in-package "LISP")
 (import '(
 	  dynamic-0-space-start dynamic-1-space-start read-only-space-start
@@ -24,7 +26,6 @@
 	  *static-space-free-pointer* *read-only-space-free-pointer*)
 	"VM")
 (in-package "VM")
-(import '(di::make-lisp-obj))
 
 
 ;;;; Type format database.
@@ -475,7 +476,7 @@
 	 (when (eql type structure-header-type)
 	   (incf total-objects)
 	   (incf total-bytes size)
-	   (let* ((name (svref obj 0))
+	   (let* ((name (structure-ref obj 0))
 		  (found (gethash name totals)))
 	     (cond (found
 		    (incf (the fixnum (car found)))
