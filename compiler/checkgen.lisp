@@ -106,10 +106,11 @@
 	       (found-super nil))
 	   (dolist (x *type-predicates*)
 	     (let ((stype (car x)))
-	       (when (csubtypep type stype)
-		 (setq found-super t)
+	       (when (and (csubtypep type stype)
+			  (not (union-type-p stype))) ;Not #!% COMMON type.
 		 (let ((stype-cost (type-test-cost stype)))
 		   (when (< stype-cost min-cost)
+		     (setq found-super t)
 		     (setq min-type stype  min-cost stype-cost))))))
 	   (if found-super
 	       min-type
