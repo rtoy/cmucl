@@ -123,7 +123,7 @@
 	  (di:do-debug-function-variables (v debug-fun)
 	    (unless any-p
 	      (setf any-p t)
-	      (push (create-label-gadget frame-view "localsLabel"
+	      (push (create-label frame-view "localsLabel"
 					 :font-list *header-font*
 					 :label-string "Local variables:")
 		    widgets))
@@ -142,20 +142,20 @@
 	  (cond
 	   ((not any-p)
 	    (push
-	     (create-label-gadget frame-view "noLocals"
+	     (create-label frame-view "noLocals"
 				  :font-list *italic-font*
 				  :label-string
 				  "   No local variables in function.")
 	     widgets))
 	   ((not any-valid-p)
 	    (push
-	     (create-label-gadget frame-view "noValidLocals"
+	     (create-label frame-view "noValidLocals"
 				  :font-list *italic-font*
 				  :label-string
 				  "   All variables have invalid values.")
 	     widgets))))
 
-	(push (create-label-gadget frame-view "noVariableInfo"
+	(push (create-label frame-view "noVariableInfo"
 				   :font-list *italic-font*
 				   :label-string
 				   "   No variable information available.")
@@ -164,7 +164,7 @@
 
 (defun debug-display-frame-prompt (frame frame-view)
   (let* ((form (create-form frame-view "promptForm"))
-	 (label (create-label-gadget form "framePrompt"
+	 (label (create-label form "framePrompt"
 				     :label-string "Frame Eval:"
 				     :font-list *header-font*))
 	 (entry (create-text form "frameEval"
@@ -196,7 +196,7 @@
 	 (frame-shell (create-interface-pane-shell title frame))
 	 (frame-view (create-row-column frame-shell "debugFrameView"))
 	 (menu-bar (create-menu-bar frame-view "frameMenu"))
-	 (fcall (create-label-gadget frame-view "frameCall"
+	 (fcall (create-label frame-view "frameCall"
 				     :label-string
 				     (format nil "Frame Call: ~a"
 					     (grab-output-as-string
@@ -206,7 +206,7 @@
 				 :callback 'frame-view-callback
 				 :client-data
 				 (di:debug-function-function debug-fun)))
-	 (slabel (create-label-gadget frame-view "sourceLabel"
+	 (slabel (create-label frame-view "sourceLabel"
 				      :font-list *header-font*
 				      :label-string "Source form:"))
 	 (swindow (create-scrolled-window frame-view "frameSourceWindow"
@@ -219,10 +219,10 @@
 		   (di:debug-condition (cond)
 		     (declare (ignore cond))
 		     "Source form not available.")))
-	 (srcview (create-label-gadget swindow "sourceForm"
-				       :alignment :alignment-beginning
-				       :user-data 0
-				       :label-string source))
+	 (srcview (create-label swindow "sourceForm"
+				:alignment :alignment-beginning
+				:user-data 0
+				:label-string source))
 	 (cascade1
 	  (create-interface-menu menu-bar "Frame"
 	   `(("Edit Source" edit-source-callback)
@@ -281,18 +281,18 @@
 		   menu-bar "Debug"
 		   `(("Close All Frames" close-all-callback)
 		     ("Quit Debugger" quit-debugger-callback ,condition))))
- 	 (errlabel (create-label-gadget form "errorLabel"
+ 	 (errlabel (create-label form "errorLabel"
 					:top-attachment :attach-widget
 					:top-widget menu-bar
 					:left-attachment :attach-form
 					:font-list *header-font*
 					:label-string "Error Message:"))
-	 (errmsg (create-label-gadget form "errorMessage"
+	 (errmsg (create-label form "errorMessage"
 				      :top-attachment :attach-widget
 				      :top-widget errlabel
 				      :left-attachment :attach-form
 				      :right-attachment :attach-form))
-	 (rlabel (create-label-gadget form "restartLabel"
+	 (rlabel (create-label form "restartLabel"
 				      :top-attachment :attach-widget
 				      :top-widget errmsg
 				      :left-attachment :attach-form
@@ -304,7 +304,7 @@
 				      :left-attachment :attach-form
 				      :right-attachment :attach-form
 				      :left-offset 10))
-	 (btlabel (create-label-gadget form "backtraceLabel"
+	 (btlabel (create-label form "backtraceLabel"
 				       :label-string "Stack Backtrace:"
 				       :font-list *header-font*
 				       :top-attachment :attach-widget
@@ -420,27 +420,3 @@
 	(progn
 	  (write-line "Invoking debugger...")
 	  (invoke-motif-debugger condition)))))
-
-#|
-(defun invoke-debugger (condition)
-  "The CMU Common Lisp debugger.  Type h for help."
-  (when *debugger-hook*
-    (let ((hook *debugger-hook*)
-	  (*debugger-hook* nil))
-      (funcall hook condition hook)))
-  (unix:unix-sigsetmask 0)
-  (let* ((*debug-condition* condition)
-	 (*debug-restarts* (compute-restarts))
-	 (*standard-input* *debug-io*)          ;in case of setq
-	 (*standard-output* *debug-io*)         ;''  ''  ''  ''
-	 (*error-output* *debug-io*)
-	 ;; Rebind some printer control variables.
-	 (kernel:*current-level* 0)
-	 (*print-readably* nil)
-	 (*read-eval* t))
-    (format *error-output* "~2&~A~2&" *debug-condition*)
-    (unless (typep condition 'step-condition)
-      (show-restarts *debug-restarts* *error-output*))
-    (internal-debug)))
-
-|#
