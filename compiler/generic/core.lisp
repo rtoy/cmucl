@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.19 1992/10/09 14:16:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.20 1992/12/13 15:41:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,15 +68,12 @@
     (unless (zerop (logand offset vm:lowtag-mask))
       (error "Unaligned function object, offset = #x~X." offset))
     (let ((res (%primitive compute-function code-obj offset)))
-      (%primitive set-function-self res res)
-      (%primitive set-function-next res
-		  (%primitive code-entry-points code-obj))
-      (%primitive set-code-entry-points code-obj res)
-      (%primitive set-function-name res (entry-info-name entry))
-      (%primitive set-function-arglist res
-		  (entry-info-arguments entry))
-      (%primitive set-function-type res
-		  (entry-info-type entry))
+      (setf (%function-self res) res)
+      (setf (%function-next res) (%code-entry-points code-obj))
+      (setf (%code-entry-points code-obj) res)
+      (setf (%function-name res) (entry-info-name entry))
+      (setf (%function-arglist res) (entry-info-arguments entry))
+      (setf (%function-type res) (entry-info-type entry))
 
       (note-function entry res object))))
 
@@ -294,8 +291,7 @@
 			   &aux
 			   (current (code-instructions code-object))
 			   (end (sap+ current
-				      (* (%primitive code-code-size
-						     code-object)
+				      (* (%code-code-size code-object)
 					 vm:word-bytes))))))
   code-object
   current
