@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.59 2002/08/23 17:08:53 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.60 2002/11/14 16:54:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1091,7 +1091,10 @@
 	 (name (string name))
 	 (found (find-package name)))
     (unless (or (not found) (eq found package))
-      (error "A package named ~S already exists." name))
+      (error 'simple-package-error
+             :package name
+             :format-control "A package named ~S already exists."
+             :format-arguments (list name)))
     (remhash (package-%name package) *package-names*)
     (dolist (n (package-%nicknames package))
       (remhash n *package-names*))

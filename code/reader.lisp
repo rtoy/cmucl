@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.32 2002/07/25 14:49:25 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.33 2002/11/14 16:54:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1364,13 +1364,9 @@
    flag is set to T, the char will be non-terminating.  Make-dispatch-
    macro-character returns T."
   (set-macro-character char #'read-dispatch-char non-terminating-p rt)
-  (let* ((dalist (dispatch-tables rt))
-	 (dtable (cdr (find char dalist :test #'char= :key #'car))))
-    (cond (dtable
-	   (error "Dispatch character already exists"))
-	  (t
-	   (setf (dispatch-tables rt)
-		 (push (cons char (make-char-dispatch-table)) dalist))))))
+  (let ((dalist (dispatch-tables rt)))
+    (setf (dispatch-tables rt)
+          (push (cons char (make-char-dispatch-table)) dalist))))
 
 (defun set-dispatch-macro-character
        (disp-char sub-char function &optional (rt *readtable*))
@@ -1380,7 +1376,7 @@
   ;;get the dispatch char for macro (error if not there), diddle
   ;;entry for sub-char.
   (when (digit-char-p sub-char)
-    (error "Sub-Char must not be a decimal digit: ~S" sub-char))
+    (simple-program-error "Sub-Char must not be a decimal digit: ~S" sub-char))
   (let* ((sub-char (char-upcase sub-char))
 	 (dpair (find disp-char (dispatch-tables rt)
 		      :test #'char= :key #'car)))
@@ -1388,7 +1384,7 @@
 	(setf (elt (the simple-vector (cdr dpair))
 		   (char-code sub-char))
 	      (coerce function 'function))
-	(error "~S is not a dispatch character." disp-char))))
+	(simple-program-error "~S is not a dispatch character." disp-char))))
 
 (defun get-dispatch-macro-character
        (disp-char sub-char &optional (rt *readtable*))
@@ -1402,7 +1398,7 @@
       (if dpair
 	  (elt (the simple-vector (cdr dpair))
 	       (char-code sub-char))
-	  (error "~S is not a dispatch char." disp-char)))))
+	  (simple-program-error "~S is not a dispatch character." disp-char)))))
 
 (defun read-dispatch-char (stream char)
   ;;read some digits

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.50 2002/11/13 17:45:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.51 2002/11/14 16:54:32 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1185,7 +1185,7 @@
        (cond ((endp free-objs)
 	      (do-hash (obj info obj-info)
 		(unless (zerop (first info))
-		  (error "Topological sort failed due to constrain on ~S."
+		  (error "Topological sort failed due to constraint on ~S."
 			 obj)))
 	      (return (nreverse result)))
 	     ((endp (rest free-objs))

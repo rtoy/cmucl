@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.36 2002/08/20 14:06:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.37 2002/11/14 16:54:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -395,7 +395,7 @@
 		(sap-int (eval (alien::heap-alien-info-sap-form info)))
 		(alien-internals:unparse-alien-type
 		 (alien::heap-alien-info-type info)))
-	(format t "~@<It's current value is ~3I~:_~S.~:>"
+	(format t "~@<Its current value is ~3I~:_~S.~:>"
 		(eval x))))
      ((eq kind :macro)
       (let ((expansion (info variable macro-expansion x)))

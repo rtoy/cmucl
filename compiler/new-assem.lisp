@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.31 2002/10/07 14:31:06 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.32 2002/11/14 16:54:38 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,7 @@
 
 ;;; ASSEMBLY-UNIT-BITS -- Number of bits in the minimum assembly unit,
 ;;; (also refered to as a ``byte'').  Hopefully, different instruction
-;;; sets won't require chainging this.
+;;; sets won't require changing this.
 ;;; 
 (defconstant assembly-unit-bits 8)
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.34 2002/07/29 13:56:22 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.35 2002/11/14 16:54:32 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -299,7 +299,7 @@
 ;;; This macro binds three magic variables.  When the debugger notices that
 ;;; these three variables are bound, it makes a byte-code frame out of the
 ;;; supplied information instead of a compiled frame.  We set each var in
-;;; addition to binding it so the compiler doens't optimize away the binding.
+;;; addition to binding it so the compiler doesn't optimize away the binding.
 ;;;
 (defmacro with-debugger-info ((component pc fp) &body body)
   `(let ((%byte-interp-component ,component)

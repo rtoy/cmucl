@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.46 2001/03/13 16:52:17 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.47 2002/11/14 16:54:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,7 +125,7 @@
 ;;;
 (defun special-form-function (&rest stuff)
   (declare (ignore stuff))
-  (error "Can't funcall the SYMBOL-FUNCTION of special forms."))
+  (simple-program-error "Can't funcall the SYMBOL-FUNCTION of special forms."))
 
 ;;; CONVERT-CONDITION-INTO-COMPILER-ERROR  --  Internal
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.127 2002/08/25 18:56:55 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.128 2002/11/14 16:54:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1593,7 +1593,7 @@
         Some object to be placed in the DEBUG-SOURCE-INFO.
   :Byte-Compile {T, NIL, :MAYBE}
         If true, then may compile to interpreted byte code."
-  (declare (type (member :lisp #+nil :dylan) language))
+  (declare (type (member :lisp) language))
   (let ((info (make-stream-source-info stream language))
 	(*backend* *native-backend*))
     (unwind-protect
@@ -1950,9 +1950,12 @@
 
   ;; Check INPUT-FILE
   (when (and (streamp input-file) (not (typep input-file 'file-stream)))
-    (error "The INPUT-FILE parameter is a ~S, which is an invalid value ~@
+    (error 'simple-type-error
+           :datum input-file
+           :expected-type 'file-stream
+           :format-control "The INPUT-FILE parameter is a ~S, which is an invalid value ~@
             to COMPILE-FILE-PATHNAME."
-	   (type-of input-file)))
+	   :format-arguments (list (type-of input-file))))
 
 
   (when (eq output-file t)
@@ -1961,9 +1964,12 @@
   ;; Same checks on OUTPUT-FILE.
   
   (when (and (streamp output-file) (not (typep output-file 'file-stream)))
-    (error "The OUTPUT-FILE parameter is a ~S, which is an invalid value ~@
+    (error 'simple-type-error
+           :datum output-file
+           :expected-type 'file-stream
+           :format-control "The OUTPUT-FILE parameter is a ~S, which is an invalid value ~@
             to COMPILE-FILE-PATHNAME."
-	   (type-of output-file)))
+	   :format-arguments (list (type-of output-file))))
 
   ;; Maybe these are too much.  CLHS says "might".
   (when (wild-pathname-p input-file)

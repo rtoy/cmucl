@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.33 2002/09/17 13:59:25 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.34 2002/11/14 16:54:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,12 +145,6 @@
   #+linux 10 "User defined signal 1")
 (def-unix-signal :SIGUSR2 #-(or hpux svr4 linux) 31 #+(or hpux svr4) 17
   #+linux 12 "User defined signal 2")
-;;; 
-;;; These are Mach Specific
-#+mach
-(def-unix-signal :SIGEMSG 30 "Mach Emergency message")
-#+mach
-(def-unix-signal :SIGMSG 31 "Mach message")
 
 ;;; SVR4 (or Solaris?) specific signals
 #+svr4
