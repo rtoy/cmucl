@@ -77,7 +77,8 @@
 
 ;;; Must be initialized in %INITIAL-FUNCTION before the DEFVAR runs...
 (proclaim '(special *gc-inhibit* *already-maybe-gcing*
-		    *need-to-collect-garbage* *gc-verbose*))
+		    *need-to-collect-garbage* *gc-verbose*
+		    *before-gc-hooks* *after-gc-hooks*))
 
 ;;;; Global ports:
  
@@ -760,6 +761,9 @@
   (setf *gc-inhibit* t)
   (setf *need-to-collect-garbage* nil)
   (setq *gc-verbose* t)
+  (setq *before-gc-hooks* ())
+  (setq *after-gc-hooks* ())
+  (setq %sp-interrupts-inhibited nil)
   (%primitive print "In initial-function, and running.")
 
   ;; Many top-level forms call INFO, (SETF INFO).
@@ -937,6 +941,16 @@
       (ext::invoke-switch-demons *command-line-switches*
 				 *command-switch-demons*))
     (funcall init-function)))
+
+
+;;; WORLD-LOAD-INIT-FUNCTION  --  Interface
+;;;
+;;;    The init function we pass to SAVE-LISP in worldload.  We turn on GC and
+;;; thow to top level.
+;;;
+(defun world-load-init-function ()
+  (gc-on)
+  (abort))
 
 
 ;;; Quit gets us out, one way or another.
