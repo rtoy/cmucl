@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.13 1994/11/02 03:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.14 1997/04/02 18:19:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,7 +145,18 @@
   positive-fixnum unsigned-reg)
 (def-data-vector-frobs simple-array-unsigned-byte-32 word-index
   unsigned-num unsigned-reg)
-
+#+signed-array
+(def-data-vector-frobs simple-array-signed-byte-8 signed-byte-index
+  tagged-num signed-reg)
+#+signed-array
+(def-data-vector-frobs simple-array-signed-byte-16 signed-halfword-index
+  tagged-num signed-reg)
+#+signed-array
+(def-data-vector-frobs simple-array-signed-byte-30 word-index
+  tagged-num any-reg)
+#+signed-array
+(def-data-vector-frobs simple-array-signed-byte-32 word-index
+  signed-num signed-reg)
 
 ;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
 ;;; and 4-bit vectors.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.14 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.15 1997/04/02 18:19:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -146,6 +146,34 @@
   object-not-simple-array-unsigned-byte-32-error
   vm:simple-array-unsigned-byte-32-type)
 
+#+signed-array
+(def-type-vops simple-array-signed-byte-8-p
+  check-simple-array-signed-byte-8
+  simple-array-signed-byte-8
+  object-not-simple-array-signed-byte-8-error
+  simple-array-signed-byte-8-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-16-p
+  check-simple-array-signed-byte-16
+  simple-array-signed-byte-16
+  object-not-simple-array-signed-byte-16-error
+  simple-array-signed-byte-16-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-30-p
+  check-simple-array-signed-byte-30
+  simple-array-signed-byte-30
+  object-not-simple-array-signed-byte-30-error
+  simple-array-signed-byte-30-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-32-p
+  check-simple-array-signed-byte-32
+  simple-array-signed-byte-32
+  object-not-simple-array-signed-byte-32-error
+  simple-array-signed-byte-32-type)
+
 (def-type-vops simple-array-single-float-p check-simple-array-single-float
   simple-array-single-float object-not-simple-array-single-float-error
   vm:simple-array-single-float-type)
@@ -198,7 +226,12 @@
   vm:simple-string-type vm:simple-bit-vector-type vm:simple-vector-type
   vm:simple-array-unsigned-byte-2-type vm:simple-array-unsigned-byte-4-type
   vm:simple-array-unsigned-byte-8-type vm:simple-array-unsigned-byte-16-type
-  vm:simple-array-unsigned-byte-32-type vm:simple-array-single-float-type
+  vm:simple-array-unsigned-byte-32-type
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
+  vm:simple-array-single-float-type
   vm:simple-array-double-float-type vm:complex-string-type
   vm:complex-bit-vector-type vm:complex-vector-type)
 
@@ -207,6 +240,10 @@
   vm:simple-vector-type vm:simple-array-unsigned-byte-2-type
   vm:simple-array-unsigned-byte-4-type vm:simple-array-unsigned-byte-8-type
   vm:simple-array-unsigned-byte-16-type vm:simple-array-unsigned-byte-32-type
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
   vm:simple-array-single-float-type vm:simple-array-double-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
@@ -214,6 +251,10 @@
   vm:simple-vector-type vm:simple-array-unsigned-byte-2-type
   vm:simple-array-unsigned-byte-4-type vm:simple-array-unsigned-byte-8-type
   vm:simple-array-unsigned-byte-16-type vm:simple-array-unsigned-byte-32-type
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
   vm:simple-array-single-float-type vm:simple-array-double-float-type
   vm:complex-string-type vm:complex-bit-vector-type vm:complex-vector-type
   vm:complex-array-type)
