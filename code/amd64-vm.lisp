@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/amd64-vm.lisp,v 1.1 2004/05/24 23:30:37 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/amd64-vm.lisp,v 1.2 2004/10/19 20:26:36 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,8 +28,6 @@
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
 	  extern-alien-name sanctify-for-execution))
-
-;; the sigcontext structure needs to be changed
 
 
 ;;;; The sigcontext structure.
@@ -163,36 +161,34 @@
 #+linux
 (def-alien-type sigcontext
     (struct nil
-	(gs  unsigned-short)
-	(__gsh   unsigned-short)
-	(fs      unsigned-short)
-	(__fsh   unsigned-short)
-	(sc-es   unsigned-short)
-	(__esh   unsigned-short)
-	(sc-ds   unsigned-short)
-	(__dsh   unsigned-short)
-	(sc-edi  unsigned-long)
-	(sc-esi  unsigned-long)
-	(ebp     unsigned-long)
-	(sc-sp   unsigned-long)
-	(sc-ebx  unsigned-long)
-	(sc-edx  unsigned-long)
-	(sc-ecx  unsigned-long)
-	(sc-eax  unsigned-long)
-	(trapno  unsigned-long)
-	(err     unsigned-long)
-	(sc-pc   unsigned-long)
-	(sc-cs   unsigned-short)
-	(__csh   unsigned-short)
-	(sc-efl  unsigned-long)
-	(esp_at_signal   unsigned-long)
-	(sc-ss   unsigned-short)
-	(__ssh   unsigned-short)
-;       (fpstate   unsigned-long) ;; fpstate struct pointer
-	(fpstate (* (struct fpstate)))
-	(sc-mask unsigned-long)
-	(cr2     unsigned-long)))
-
+	    (sc-r8 unsigned-long)
+	    (sc-r9 unsigned-long)
+	    (sc-r10 unsigned-long)
+	    (sc-r11 unsigned-long)
+	    (sc-r12 unsigned-long)
+	    (sc-r13 unsigned-long)
+	    (sc-r14 unsigned-long)
+	    (sc-r15 unsigned-long)
+	    (sc-rdi unsigned-long)
+	    (sc-rsi unsigned-long)
+	    (rbp unsigned-long)
+	    (sc-rbx unsigned-long)
+	    (sc-rdx unsigned-long)
+	    (sc-rax unsigned-long)
+	    (sc-rcx unsigned-long)
+	    (sc-sp unsigned-long)
+	    (sc-pc unsigned-long)
+	    (sc-efl unsigned-long)
+	    (sc-cs unsigned-short)
+	    (gs unsigned-short)
+	    (fs unsigned-short)
+	    (__pad0 unsigned-short)
+	    (err unsigned-long)
+	    (trapno unsigned-long)
+	    (sc-mask unsigned-long)
+	    (cr2 unsigned-long)
+	    (fpstate (* (struct fpstate)))
+	    (__reserved1 (array unsigned-long 8))))
 
 
 ;;;; MACHINE-TYPE and MACHINE-VERSION
