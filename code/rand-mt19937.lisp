@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.8 1999/01/20 12:01:38 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.9 1999/08/14 15:40:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,8 +36,10 @@
 ;;;  2:     Index k.
 ;;;  3-626: State.
 
-;;; Generate and initialise a new random-state array. Index is
-;;; initialised to 1 and the states to 32bit integers excluding zero.
+;;; Generate and initialise a new random-state array. The states are
+;;; initialised to 32bit integers excluding zero, and the index is
+;;; initialised to mt19937-n forcing an update when the first number
+;;; is generated.
 ;;;
 ;;; Seed - A 32bit number, not zero.
 ;;;
@@ -49,7 +51,7 @@
   (let ((state (or state (make-array 627 :element-type '(unsigned-byte 32)))))
     (declare (type (simple-array (unsigned-byte 32) (627)) state))
     (setf (aref state 1) #x9908b0df)
-    (setf (aref state 2) 1)
+    (setf (aref state 2) mt19937-n)
     (setf (aref state 3) seed)
     (do ((k 1 (1+ k)))
 	((>= k 624))
