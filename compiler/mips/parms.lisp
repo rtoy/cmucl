@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.6 1990/02/18 05:29:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.7 1990/02/18 20:24:38 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -209,8 +209,9 @@
     (unless posn
       (error "~S isn't one of the initial symbols." symbol))
     (macrolet ((round-to-dual-word (x) `(logandc2 (1+ ,x) 1)))
-      (+ (* posn (round-to-dual-word symbol-size) word-bytes)
-	 (round-to-dual-word (1- symbol-size))
+      (+ (ash (+ (* posn (round-to-dual-word symbol-size))
+		 (round-to-dual-word (1- symbol-size)))
+	      word-shift)
 	 other-pointer-type
 	 (- list-pointer-type)))))
 
