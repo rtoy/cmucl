@@ -828,13 +828,13 @@
 ;;;
 ;;;    Start and finish the the printing of a defprinter function.
 ;;;
-(proclaim '(ftype (function (symbol stream fixnum t) void)
-		  start-defprinter finish-defprinter))
 (defun start-defprinter (name stream indent object)
+  (declare (symbol name) (stream stream) (index indent))
   (declare (ignore indent))
   (format stream "#<~S ~X" name (system:%primitive make-fixnum object)))
 ;;;
 (defun finish-defprinter (name stream indent)
+  (declare (symbol name) (stream stream) (index indent))
   (declare (ignore name))
   (if *defprint-pretty*
       (format stream ">~%~VT" indent)
