@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.4 1991/02/14 22:50:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.5 1991/10/01 14:42:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,16 +53,16 @@
 	  ("BELL" . ,(code-char 7))
 	  ("BACKSPACE" . ,(code-char 8)) ("BS" . ,(code-char 8))
 	  ("TAB" . ,(code-char 9))
-	  ("LINEFEED" . ,(code-char 10)) ("LF" . ,(code-char 10))
 	  ("NEWLINE" . ,(code-char 10)) ("NL" . ,(code-char 10))  
+	  ("LINEFEED" . ,(code-char 10)) ("LF" . ,(code-char 10))
 	  ("VT" . ,(code-char 11))
 	  ("PAGE" . ,(code-char 12)) ("FORM" . ,(code-char 12))
 	  ("FORMFEED" . ,(code-char 12)) ("FF" . ,(code-char 12))
 	  ("RETURN" . ,(code-char 13)) ("CR" . ,(code-char 13))
-	  ("ALTMODE" . ,(code-char 27)) ("ALT" . ,(code-char 27))
 	  ("ESCAPE" . ,(code-char 27)) ("ESC" . ,(code-char 27))
+	  ("ALTMODE" . ,(code-char 27)) ("ALT" . ,(code-char 27))
 	  ("SPACE" . ,(code-char 32)) ("SP" . ,(code-char 32))
-	  ("RUBOUT" . ,(code-char 127)) ("DELETE" . ,(code-char 127)))
+	  ("DELETE" . ,(code-char 127)) ("RUBOUT" . ,(code-char 127)))
   "This is the alist of (character-name . character) for characters
   with long names.  The first name in this list for a given character
   is used on typeout and is the preferred form for input.")
