@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.52 1993/05/11 22:18:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.53 1993/05/11 23:08:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -986,13 +986,14 @@
   (let ((implementation (read-arg 1))
 	(version (read-arg 1)))
     (flet ((check-version (imp vers)
-	     (when (and (eql imp implementation)
-			(not (eql version vers)))
-	       (error "~A was compiled for fasl-file version ~A, ~
-		       but this is version ~A"
-		      *Fasl-file* version vers)))
+	     (when (eql imp implementation)
+	       (unless (eql version vers)
+		 (error "~A was compiled for fasl-file version ~A, ~
+			 but this is version ~A"
+			*fasl-file* version vers))
+	       t))
 	   (imp-name (imp)
-	     (or (nth imp c:fasl-file-implementations)
+	     (or (nth imp '#.c:fasl-file-implementations)
 		 "unknown machine")))
     (unless (or (check-version #.(c:backend-fasl-file-implementation
 				  c:*backend*)
