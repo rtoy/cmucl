@@ -55,7 +55,7 @@
 ;;; jmorrill@bbn.com
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/clos-bench.lisp,v 1.2 2003/03/22 16:15:18 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/clos-bench.lisp,v 1.3 2003/05/22 15:50:06 gerd Rel $")
  
 #+cmu
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -307,7 +307,7 @@
    (a9 :initform 0 :accessor a9 :initarg :a9)))
 
 #+gerds-pcl
-(declaim (pcl:slots (inline inline-point inline-large-class)))
+(declaim (ext:slots (inline inline-point inline-large-class)))
 
 (defclass inline-point ()
   ((x :initform 0 :accessor x :initarg :x)
@@ -371,7 +371,7 @@
 
 (defmethod x-offset/reader/inline ((thing inline-point))
   #+gerds-pcl
-  (declare (pcl:slots (slot-boundp inline-point)
+  (declare (ext:slots (slot-boundp inline-point)
 		      (inline inline-point)))
   (x thing))
 
@@ -386,7 +386,7 @@
 
 (defmethod set-x-offset/writer/inline ((thing inline-point) new-x)
   #+gerds-pcl
-  (declare (pcl:slots (inline inline-point)))
+  (declare (ext:slots (inline inline-point)))
   (setf (x thing) new-x))
 
 (defclass box (point)
@@ -405,13 +405,13 @@
 
 (defmethod x-offset-inline ((thing inline-point))
   #+gerds-pcl
-  (declare (pcl:slots (slot-boundp inline-point)
+  (declare (ext:slots (slot-boundp inline-point)
 		      (inline inline-point)))
   (with-slots (x y) thing x))
 
 (defmethod large-class/with-slots/inline ((thing inline-large-class))
   #+gerds-pcl
-  (declare (pcl:slots (slot-boundp inline-large-class)
+  (declare (ext:slots (slot-boundp inline-large-class)
 		      (inline inline-large-class)))
   (dotimes (i 1000)
     (with-slots (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9) thing
