@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echo.lisp,v 1.4 1991/10/23 11:00:02 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echo.lisp,v 1.5 1991/10/23 11:09:19 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,6 +172,11 @@
 (defhvar "Raise Echo Area When Modified"
   "When set, Hemlock raises the echo area window when output appears there."
   :value nil)
+
+;;; RAISE-ECHO-AREA-WHEN-MODIFIED -- Internal.
+;;;
+;;; INIT-BITMAP-SCREEN-MANAGER in bit-screen.lisp adds this hook when
+;;; initializing the bitmap screen manager.
 ;;;
 (defun raise-echo-area-when-modified (buffer modified)
   (when (and (value ed::raise-echo-area-when-modified)
@@ -183,8 +188,6 @@
       (setf (xlib:window-priority win) :above)
       (xlib:display-force-output
        (bitmap-device-display (device-hunk-device hunk))))))
-;;;
-(add-hook buffer-modified-hook 'raise-echo-area-when-modified)
 
 
 
