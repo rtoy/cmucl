@@ -16,7 +16,7 @@
 (in-package "C")
 
 (in-package "EXTENSIONS")
-(export '(inhibit-warnings))
+(export '(inhibit-warnings freeze-type))
 (in-package "LISP")
 (export '(declaim proclaim))
 (in-package "C")
@@ -299,6 +299,11 @@
 	     (define-function-name name)
 	     (setf (info function type name) type)
 	     (setf (info function where-from name) :declared)))))
+      (freeze-type
+       (dolist (type args)
+	 (specifier-type type); Give undefined type warnings...
+	 (when (eq (info type kind type) :structure)
+	   (freeze-structure-type type))))
       (function
        (when *type-system-initialized*
 	 (%proclaim `(ftype (function . ,(rest args)) ,(first args)))))
@@ -385,6 +390,19 @@
   (undefined-value))
 
 
+;;; FREEZE-STRUCTURE-TYPE  --  Internal
+;;;
+;;;    Freeze the named structure type and all its inferiors.
+;;;
+(defun freeze-structure-type (name)
+  (let ((def (info type structure-info name)))
+    (when def
+      (setf (info type frozen name) t)
+      (dolist (incl (dd-included-by def))
+	(setf (info type frozen incl) t))))
+  (undefined-value))
+
+
 ;;; CHECK-FOR-STRUCTURE-REDEFINITION  --  Internal
 ;;;
 ;;;    Called when we process a DEFSTRUCT for a type that is already defined
@@ -410,6 +428,25 @@
 	    name (dd-included-by old))
 	   (undefine-structure old))))
   (undefined-value))
+
+
+;;; ADD-NEW-SUBTYPE  --  Internal
+;;;
+;;;    Add a new subtype NAME to the structure type INC.  INFO is INC's current
+;;; info.
+;;;
+(defun add-new-subtype (name inc info)
+  (let ((new (copy-defstruct-description info)))
+    (setf (info type structure-info inc) new)
+    (push name (dd-included-by new))
+    (when (info type frozen inc)
+      (compiler-warning "Adding new subtype ~S to frozen type ~S.~@
+      			 Unfreezing this type and its inferiors.~@
+			 Previously compiled type tests must be recompiled."
+			name inc)
+      (setf (info type frozen inc) nil)
+      (dolist (subtype (dd-included-by info))
+	(setf (info type frozen subtype) nil)))))
 
 	   
 ;;; %%Compiler-Defstruct  --  Interface
@@ -443,9 +480,7 @@
 	  (error "Structure type ~S is included by ~S but not defined."
 		 inc name))
 	(unless (member name (dd-included-by info))
-	  (let ((new (copy-defstruct-description info)))
-	    (setf (info type structure-info inc) new)
-	    (push name (dd-included-by new))))))
+	  (add-new-subtype name inc info))))
 
     (setf (info type kind name) :structure)
     (setf (info type structure-info name) info)
