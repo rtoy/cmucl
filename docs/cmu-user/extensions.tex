@@ -1819,3 +1819,39 @@ Hemlock has a command \F{Library Entry} that displays a list of the current
 library entries in an editor buffer.  There are mode specific commands that
 display catalog descriptions and load entries.  This is a simple and convenient
 way to browse the library.
+
+
+\section{Generalized Function Names}
+
+\begin{defmac}{ext:}{define-function-name-syntax}{name (var) \ampbody\ body}
+  Define lists starting with the symbol \code{name} as a new extended
+  function name syntax.
+  
+  \code{body} is executed with \code{var} bound to an actual function
+  name of that form, and should return two values:
+
+  \begin{itemize}
+  \item A generalized boolean that is true if \code{var} is a valid
+    function name.
+  \item A symbol that can be used as a \code{block} name in functions
+    whose name is \code{var}.  (For some sorts of function names it
+    might make sense to return \code{nil} for the block name, or just
+    return one value.)
+  \end{itemize}
+  
+  Users should not define function names starting with a symbol that
+  \cmucl{} might be using internally.  It is therefore advisable to
+  only define new function names starting with a symbol from a
+  user-defined package.
+\end{defmac}
+
+\begin{defun}{ext:}{valid-function-name-p}{name}
+  Returns two values:
+
+  \begin{itemize}
+  \item True if \code{name} is a valid function name.
+  \item A symbol that can be used as a \code{block} name in
+    functions whose name is \code{name}.  This can be \code{nil}
+    for some function names.
+  \end{itemize}
+\end{defun}
