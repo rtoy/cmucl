@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.17 1999/12/22 19:26:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.18 2000/01/16 20:12:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -204,13 +204,13 @@
 
 ;;; Shifting
 
-(define-vop (fast-ash)
+(define-vop (fast-ash/unsigned=>unsigned)
   (:note "inline ASH")
-  (:args (number :scs (signed-reg unsigned-reg) :to :save)
+  (:args (number :scs (unsigned-reg) :to :save)
 	 (amount :scs (signed-reg immediate)))
-  (:arg-types (:or signed-num unsigned-num) signed-num)
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:arg-types unsigned-num signed-num)
+  (:results (result :scs unsigned-reg))
+  (:result-types unsigned-num)
   (:translate ash)
   (:policy :fast-safe)
   (:temporary (:sc non-descriptor-reg) ndesc)
@@ -224,13 +224,9 @@
 	 (inst neg ndesc amount)
 	 (inst cmp ndesc 31)
 	 (inst b :le done)
-	 (sc-case number
-	   (signed-reg (inst sra result number ndesc))
-	   (unsigned-reg (inst srl result number ndesc)))
+	 (inst srl result number ndesc)
 	 (inst b done)
-	 (sc-case number
-	   (signed-reg (inst sra result number 31))
-	   (unsigned-reg (inst srl result number 31)))
+	 (inst srl result number 31)
 
 	 (emit-label positive)
 	 ;; The result-type assures us that this shift will not overflow.
@@ -242,11 +238,44 @@
        (let ((amount (tn-value amount)))
 	 (if (minusp amount)
 	     (let ((amount (min 31 (- amount))))
-	       (sc-case number
-		 (unsigned-reg
-		  (inst srl result number amount))
-		 (signed-reg
-		  (inst sra result number amount))))
+	       (inst srl result number amount))
+	     (inst sll result number amount)))))))
+
+(define-vop (fast-ash/signed=>signed)
+  (:note "inline ASH")
+  (:args (number :scs signed-reg :to :save)
+	 (amount :scs (signed-reg immediate)))
+  (:arg-types signed-num signed-num)
+  (:results (result :scs signed-reg))
+  (:result-types signed-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:generator 3
+    (sc-case amount
+      (signed-reg
+       (let ((positive (gen-label))
+	     (done (gen-label)))
+	 (inst cmp amount)
+	 (inst b :ge positive)
+	 (inst neg ndesc amount)
+	 (inst cmp ndesc 31)
+	 (inst b :le done)
+	 (inst sra result number ndesc)
+	 (inst b done)
+	 (inst sra result number 31)
+
+	 (emit-label positive)
+	 ;; The result-type assures us that this shift will not overflow.
+	 (inst sll result number amount)
+
+	 (emit-label done)))
+
+      (immediate
+       (let ((amount (tn-value amount)))
+	 (if (minusp amount)
+	     (let ((amount (min 31 (- amount))))
+	       (inst sra result number amount))
 	     (inst sll result number amount)))))))
 
 
