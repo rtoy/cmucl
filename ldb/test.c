@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.3 1990/03/19 14:21:02 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.4 1990/05/24 17:46:28 wlott Exp $ */
 /* Extra random routines for testing stuff. */
 
 #include <signal.h>
@@ -81,6 +81,7 @@ test_init()
     install_handler(SIGINT, signal_handler);
     install_handler(SIGQUIT, throw_to_top);
     install_handler(SIGTRAP, signal_handler);
+    install_handler(SIGFPE, signal_handler);
 }
 
 
@@ -90,9 +91,10 @@ cacheflush()
 }
 
 
-lispobj print_three_nums(num1, num2, num3)
-long num1, num2, num3;
+lispobj debug_print(string)
+lispobj string;
 {
-    printf("%d\t%d\t%d\n", num1>>2, num2>>2, num3>>2);
+    printf("%s\n", ((struct vector *)PTR(string))->data);
+
     return NIL;
 }
