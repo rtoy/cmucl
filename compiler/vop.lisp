@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.31 1991/12/15 08:28:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.32 1992/03/23 14:46:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -181,8 +181,8 @@
   ;;
   ;; The first and last VOP in this block.  If there are none, both slots are
   ;; null.
-  (start-vop nil (or vop null))
-  (last-vop nil (or vop null))
+  (start-vop nil :type (or vop null))
+  (last-vop nil :type (or vop null))
   ;;
   ;; Number of local TNs actually allocated.
   (local-tn-count 0 :type local-tn-count)
