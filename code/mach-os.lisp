@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.1 1991/08/30 17:39:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.2 1991/09/04 13:30:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; Scott Fahlman, Dan Aronson, and Steve Handerson did stuff here, too.
 ;;;
 (in-package "SYSTEM")
+(use-package "EXTENSIONS")
 (export '(get-system-info get-page-size))
 
 (pushnew :mach *features*)

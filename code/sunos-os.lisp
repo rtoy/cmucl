@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.1 1991/08/30 17:38:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.2 1991/09/04 13:30:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; Axmark.
 ;;;
 (in-package "SYSTEM")
+(use-package "EXTENSIONS")
 (export '(get-system-info get-page-size))
 
 (pushnew :sunos *features*)
