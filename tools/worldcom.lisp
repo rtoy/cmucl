@@ -160,7 +160,8 @@
 
 ;;; Later so that miscellaneous structures are defined (not crucial, but nice.)
 (comf "target:code/describe")
-;(comf "target:code/inspect")
+#+clx
+(comf "target:code/inspect")
 (comf "target:code/tty-inspect")
 
 (comf "target:code/format-time")
