@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.5 1992/03/02 02:50:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.6 1992/03/10 13:01:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,7 @@
       (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)
       (int-arg state 'unsigned-byte-32 'unsigned-reg 'unsigned-stack)))
 
-(def-alien-type-method (alien::sap :arg-tn) (type state)
+(def-alien-type-method (system-area-pointer :arg-tn) (type state)
   (declare (ignore type))
   (int-arg state 'system-area-pointer 'sap-reg 'sap-stack))
 
@@ -53,7 +53,7 @@
       (my-make-wired-tn 'signed-byte-32 'signed-reg nl0-offset)
       (my-make-wired-tn 'unsigned-byte-32 'unsigned-reg nl0-offset)))
   
-(def-alien-type-method (alien::sap :result-tn) (type)
+(def-alien-type-method (system-area-pointer :result-tn) (type)
   (declare (ignore type))
   (my-make-wired-tn 'system-area-pointer 'sap-reg nl0-offset))
 
@@ -86,12 +86,12 @@
 	 (arg-types (alien-function-type-arg-types type))
 	 (result-type (alien-function-type-result-type type)))
     (assert (= (length arg-types) (length args)))
-    (if (some #'alien::alien-double-float-type-p arg-types)
+    (if (some #'alien-double-float-type-p arg-types)
 	(collect ((new-args) (lambda-vars) (new-arg-types))
 	  (dolist (type arg-types)
 	    (let ((arg (gensym)))
 	      (lambda-vars arg)
-	      (cond ((alien::alien-double-float-type-p type)
+	      (cond ((alien-double-float-type-p type)
 		     (new-args `(double-float-high-bits ,arg))
 		     (new-args `(double-float-low-bits ,arg))
 		     (new-arg-types (parse-alien-type '(signed 32)))
@@ -102,7 +102,7 @@
 	  `(lambda (function type ,@(lambda-vars))
 	     (declare (ignore type))
 	     (%alien-funcall function
-			     ',(alien::make-alien-function-type
+			     ',(make-alien-function-type
 				:arg-types (new-arg-types)
 				:result-type result-type)
 			     ,@(new-args))))
