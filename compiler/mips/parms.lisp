@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.22 1990/02/26 21:54:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.23 1990/03/05 21:09:18 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -230,9 +230,10 @@
     ;; Random stuff needed for initialization.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
-    lisp::*static-symbols*
+    lisp::*initial-symbols*
     lisp::*lisp-initialization-functions*
     lisp::%initial-function
+    lisp::*the-undefined-function*
 
     ;; Values needed for interfacing C and LISP.
     lisp::*foreign-function-call-active*
@@ -270,6 +271,7 @@
     (unless (and (zerop rem) (<= 0 n (1- (length static-symbols))))
       (error "Byte offset, ~D, is not correct." offset))
     (elt static-symbols n)))
+
 
 
 ;;;; Handy routine for making fixnums:
