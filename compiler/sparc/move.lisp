@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.13 2003/10/20 23:59:32 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.14 2004/01/15 16:14:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.13 2003/10/20 23:59:32 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.14 2004/01/15 16:14:37 toy Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -198,7 +198,7 @@
       
       (emit-label done))))
 
-;; Same as above, but we the number is sign-extended to a full 64-bit
+;; Same as above, but the number is sign-extended to a full 64-bit
 ;; length.  Not really needed, I suppose.
 #+(and sparc-v9 sparc-v8plus)
 (define-vop (move-to-word/integer)
@@ -248,23 +248,24 @@
   (:note "signed word to integer coercion")
   (:generator 20
     (move x arg)
-    (let ((fixnum (gen-label))
-	  (done (gen-label)))
-      (inst sran temp x positive-fixnum-bits)
+    (let ((done (gen-label)))
+      ;; Need to figure out if we have a fixnum or not, so look at the
+      ;; top 3 bits of the 32-bit int.  If these 3 bits are 0 or 7,
+      ;; then we have a fixnum.  Otherwise we need to allocate a
+      ;; bignum.
+      ;;
+      ;; A simple way to tell if those 3 bits are 0 or 7 was given by
+      ;; Frode Vatvedt Fjeld: (zerop (logand #b110 (1+ temp)))
+      (inst srln temp x positive-fixnum-bits)
+      (inst add temp 1)
+      (inst and temp #b110)
       (inst cmp temp)
-      (inst b :eq fixnum)
-      (inst orncc temp zero-tn temp)
       (inst b :eq done)
       (inst slln y x fixnum-tag-bits)
       
       (with-fixed-allocation
 	(y temp bignum-type (1+ bignum-digits-offset))
 	(storew x y bignum-digits-offset other-pointer-type))
-      (inst b done)
-      (inst nop)
-      
-      (emit-label fixnum)
-      (inst slln y x fixnum-tag-bits)
       (emit-label done))))
 ;;;
 (define-move-vop move-from-signed :move
@@ -277,6 +278,7 @@
 ;;; Check for fixnum, and possibly allocate one or two word bignum result.  Use
 ;;; a worst-case cost to make sure people know they may be number consing.
 ;;;
+#-sparc-v9
 (define-vop (move-from-unsigned)
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
@@ -300,6 +302,33 @@
 	(inst li temp (logior (ash 1 type-bits) bignum-type))
 	(inst li temp (logior (ash 2 type-bits) bignum-type))
 	(emit-label one-word)
+	;; Set the header word, then the actual digit.  The extra
+	;; digit, if any, is automatically set to zero, so we don't
+	;; have to.
+	(storew temp y 0 other-pointer-type)
+	(storew x y bignum-digits-offset other-pointer-type))
+      (emit-label done))))
+
+#+sparc-v9
+(define-vop (move-from-unsigned)
+  (:args (arg :scs (signed-reg unsigned-reg) :target x))
+  (:results (y :scs (any-reg descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+  (:note "unsigned word to integer coercion")
+  (:generator 20
+    (move x arg)
+    (let ((done (gen-label)))
+      (inst sran temp x positive-fixnum-bits)
+      (inst cmp temp)
+      (inst b :eq done)
+      (inst slln y x fixnum-tag-bits)
+
+      ;; We always allocate 2 words even if we don't need it.  (The
+      ;; copying GC will take care of freeing the unused extra word.)
+      (with-fixed-allocation (y temp nil (+ 2 bignum-digits-offset))
+	(inst cmp x)
+	(inst li temp (logior (ash 2 type-bits) bignum-type))
+	(inst cmove :ge temp (logior (ash 1 type-bits) bignum-type))
 	;; Set the header word, then the actual digit.  The extra
 	;; digit, if any, is automatically set to zero, so we don't
 	;; have to.
