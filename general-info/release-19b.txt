@@ -56,6 +56,7 @@ New in this release:
       - Linkage table support for PPC and Darwin.
       - A socket reset signals a SOCKET-ERROR condition instead of a
         general ERROR condition.
+      - :LINKAGE-TABLE feature is now supported on PPC.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -108,6 +109,7 @@ New in this release:
         of NILs.)
       - Pathname components of type :UNSPECIFIC are not printed in
         namestrings anymore.
+      - Dumping of symbols in fasls work according to ANSI now.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -166,6 +168,11 @@ New in this release:
       - The default heap size was causing CMUCL to fail on Solaris
         10.  Change the default so this doesn't happen.  (The real
         cause is unknown.)
+      - In some cases, the compiler was spending large amounts of time
+        deriving union of a bunch of disjoint integer intervals.  If
+        the union is long enough, we give up and just return the
+        smallest new interval that contains all of the disjoint
+        intervals.  (This needs a better fix.)
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
@@ -177,6 +184,17 @@ New in this release:
       - MAKE-PATHNAME will accept a :HOST arg of NIL, and will use NIL
         as the host slot instead of filling in the host slot from the
         defaults.
+      - CMUCL/sparc should now run on Solaris 10.  This port no longer
+        uses the reserved register %g7 anymore.  The heap size is now
+        rounded to a multiple of 8 MB.  Without this, CMUCL eventually
+        gets a GC error on Solaris 10 when using gencgc.  There appear
+        to be no problems with Cheney GC on Solaris 10.
+      - Bivalent streams are supported, if
+        LISP::*FD-STREAM-ENABLE-CHARACTER-AND-BINARY-INPUT* is
+        non-NIL.  Thus, streams with element-type (unsigned-byte 8)
+        can be used for character input.  READ-VECTOR and WRITE-VECTOR
+        also implemented.  This is somewhat experimental right now,
+        and may change slightly in a future version.
 
   * Improvements to the PCL implementation of CLOS:
       - AMOP-style custom slot allocation supported.
