@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.2 1992/02/24 06:09:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.3 1992/02/25 22:55:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,25 +17,26 @@
 (in-package "C")
 
 (load "vm:vm-macs")
-#-rt (load "vm:parms")
-#+rt (load "vm:params")
+(if (string= (c:backend-name c:*target-backend*) "RT")
+    (load "vm:params")
+    (load "vm:parms"))
 (load "vm:objdef")
-(load "vm:vm-typetran")
 (load "assem:support")
 (load "vm:macros")
 (load "vm:utils")
-(load "vm:core")
 
 (load "vm:vm")
 (load "vm:insts")
-#-rt (load "vm:primtype")
+(unless (string= (c:backend-name c:*target-backend*) "RT")
+  (load "vm:primtype"))
 (load "vm:move")
 (load "vm:sap")
 (load "vm:system")
 (load "vm:char")
-#-rt (load "vm:float")
-#+(and rt afpa) (load "vm:afpa")
-#+(and rt (not afpa)) (load "vm:mc68881")
+(if (string= (c:backend-name c:*target-backend*) "RT")
+    #+afpa (load "vm:afpa")
+    #-afpa (load "vm:mc68881")
+    (load "vm:float"))
 
 (load "vm:memory")
 (load "vm:static-fn")
@@ -55,7 +56,9 @@
 (load "vm:vm-tran")
 
 (load "assem:assem-rtns")
-#-rt (load "assem:bit-bash")
+
+(unless (string= (c:backend-name c:*target-backend*) "RT")
+  (load "assem:bit-bash"))
 (load "assem:array")
 (load "assem:arith")
 (load "assem:alloc")
@@ -64,8 +67,3 @@
 (load "vm:vm-tran")
 
 (check-move-function-consistency)
-
-#+small
-;;;
-;;; If we want a small core, blow away the meta-compile time VOP info.
-(setf (backend-parsed-vops *backend*) (make-hash-table :test #'eq))
