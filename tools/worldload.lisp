@@ -16,8 +16,14 @@
 ;;;
 (setf (ext:search-list "code:") '("lisp:code/"))
 (setf (ext:search-list "c:") '("lisp:compiler/"))
-(setf (ext:search-list "vm:") '("c:mips/" "c:generic/"))
-(setf (ext:search-list "assem:") '("lisp:assembly/mips/" "lisp:assembly/"))
+(setf (ext:search-list "vm:")
+      '(#+pmax "c:mips/"
+        #+sparc "c:sparc/"
+	"c:generic/"))
+(setf (ext:search-list "assem:")
+      '(#+pmax "lisp:assembly/mips/"
+	#+sparc "lisp:assembly/sparc/"
+	"lisp:assembly/"))
 (setf (ext:search-list "hem:") '("lisp:hemlock/"))
 (setf (ext:search-list "clx:") '("lisp:clx/"))
 (setf (ext:search-list "pcl:") '("lisp:pcl/"))
