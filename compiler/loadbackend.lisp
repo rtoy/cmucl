@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.5 1992/03/07 13:30:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.6 1992/03/21 19:44:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,7 @@
     (load "vm:params")
     (load "vm:parms"))
 (load "vm:objdef")
+(load "vm:interr")
 (load "assem:support")
 (load "vm:macros")
 (when (target-featurep :gengc)
