@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.22 1991/05/08 16:30:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.23 1991/05/08 23:54:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -584,6 +584,14 @@
 	       ',doc))))
 	(t (error "Ill-formed DEFSETF for ~S." access-fn))))
 
+;;; SETF  --  Public
+;;;
+;;;    Except for atoms, we always call GET-SETF-METHOD, since it has some
+;;; non-trivial semantics.  But when there is a setf inverse, and G-S-M uses
+;;; it, then we return a call to the inverse, rather than returning a hairy let
+;;; form.  This is probably important mainly as a convenince in allowing the
+;;; use of setf inverses without the full interpreter.
+;;;
 (defmacro setf (&rest args &environment env)
   "Takes pairs of arguments like SETQ.  The first is a place and the second
   is the value that is supposed to go into that place.  Returns the last
@@ -592,22 +600,19 @@
   (let ((nargs (length args)))
     (cond
      ((= nargs 2)
-      (if (atom (car args))
-	  `(setq ,(car args) ,(cadr args))
-	  (multiple-value-bind (dummies vals newval setter getter)
-			       (get-setf-method (car args) env)
-	    (declare (ignore getter))
-	    (do* ((d dummies (cdr d))
-		  (v vals (cdr v))
-		  (let-list nil))
-		 ((null d)
-		  (setq let-list
-			(nreverse (cons (list (car newval)
-					      (cadr args))
-					let-list)))
-		  `(let* ,let-list ,setter))
-	      (setq let-list
-		    (cons (list (car d) (car v)) let-list))))))
+      (let ((place (first args))
+	    (value-form (second args)))
+	(if (atom place)
+	    `(setq ,place ,value-form)
+	    (multiple-value-bind (dummies vals newval setter getter)
+				 (get-setf-method place env)
+	      (declare (ignore getter))
+	      (let ((inverse (info setf inverse (car place))))
+		(if (and inverse (eq inverse (car setter)))
+		    `(,inverse ,@(cdr place) ,value-form)
+		    `(let* (,@(mapcar #'list dummies vals)
+			    (,(first newval) ,value-form))
+		       ,setter)))))))
      ((oddp nargs) 
       (error "Odd number of args to SETF."))
      (t
