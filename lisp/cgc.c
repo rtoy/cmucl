@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.3 1997/02/27 21:06:26 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.4 1997/04/13 21:04:51 pw Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -782,6 +782,18 @@ static void init_osc()
   SETSCT(type_SimpleArrayUnsignedByte8	,SC_VECTOR,3);
   SETSCT(type_SimpleArrayUnsignedByte16	,SC_VECTOR,4);
   SETSCT(type_SimpleArrayUnsignedByte32	,SC_VECTOR,5);
+#if defined type_SimpleArraySignedByte8
+  SETSCT(type_SimpleArraySignedByte8	,SC_VECTOR,3);
+#endif
+#if defined type_SimpleArraySignedByte16
+  SETSCT(type_SimpleArraySignedByte16	,SC_VECTOR,4);
+#endif
+#if defined type_SimpleArraySignedByte30
+  SETSCT(type_SimpleArraySignedByte30	,SC_VECTOR,5);
+#endif
+#if defined type_SimpleArraySignedByte32
+  SETSCT(type_SimpleArraySignedByte32	,SC_VECTOR,5);
+#endif
   SETSCT(type_SimpleArraySingleFloat	,SC_VECTOR,5);
   SETSCT(type_SimpleArrayDoubleFloat	,SC_VECTOR,6);
   SETSCT(type_ComplexString		,SC_ISBOXED,0);
