@@ -30,9 +30,9 @@
   (setf (component-info component) (make-ir2-component))
   (let ((funs (component-lambdas component)))
     (dolist (fun funs)
-      (assign-lambda-var-tns fun)
+      (assign-lambda-var-tns fun nil)
       (dolist (let (lambda-lets fun))
-	(assign-lambda-var-tns let)))
+	(assign-lambda-var-tns let t)))
     (dolist (fun funs)
       (assign-ir2-environment fun)
       (assign-return-locations fun)
@@ -44,15 +44,22 @@
 ;;;
 ;;;    We have to allocate the home TNs for variables before we can call
 ;;; Assign-IR2-Environment so that we can close over TNs that haven't had their
-;;; home environment assigned yet.
+;;; home environment assigned yet.  Let-P indicates whether this variable is
+;;; for a let or a "real argument".  In the latter case, we allocate the TNs
+;;; environment-live unless SPEED is 3 so that the values are always available
+;;; in the debugger.
 ;;;
-(defun assign-lambda-var-tns (fun)
+(defun assign-lambda-var-tns (fun let-p)
   (declare (type clambda fun))
   (dolist (var (lambda-vars fun))
     (when (leaf-refs var)
-      (let ((res (make-normal-tn (if (lambda-var-indirect var)
-				     *any-primitive-type*
-				     (primitive-type (leaf-type var))))))
+      (let* ((type (if (lambda-var-indirect var)
+		       *any-primitive-type*
+		       (primitive-type (leaf-type var))))
+	     (res (if (or let-p
+			  (policy (lambda-bind fun) (= speed 3)))
+		      (make-normal-tn type)
+		      (make-environment-tn type))))
 	(setf (tn-leaf res) var)
 	(setf (leaf-info var) res))))
   (undefined-value))
