@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.8 1993/07/26 20:03:52 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.9 1993/09/01 10:02:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1162,7 +1162,7 @@ default-value-8
 	(storew null-tn dst -1 list-pointer-type)
 	;; Clear out dst, because it points past the last cons.
 	(move null-tn dst)))
-    DONE)))
+    DONE))
 
 ;;; Return the location and size of the more arg glob created by Copy-More-Arg.
 ;;; Supplied is the total number of arguments supplied (originally passed in
