@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.11 1990/08/14 16:00:20 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.12 1990/09/18 20:29:09 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -541,7 +541,7 @@
 	   (truncate-float (dispatch-type number))))
       ((double-float (or single-float double-float))
        (truncate-float double-float))
-      (((foreach fixnum bignum ratio) (or single-float double-float))
+      (((foreach fixnum bignum ratio) (foreach single-float double-float))
        (truncate-float (dispatch-type divisor))))))
 
 
