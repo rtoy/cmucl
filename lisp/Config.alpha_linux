@@ -1,0 +1,16 @@
+P1=/projects/cmucl/src/cvs-latest/src/lisp
+CPPFLAGS = -I. -I/usr/include -I$(P1) -I-
+CC = gcc 
+LD = ld
+CPP = cpp
+CFLAGS = -g -Wstrict-prototypes -O2 -fno-strength-reduce -Dlinux -Dalpha
+ASFLAGS = -g -O2 -Dlinux -Dalpha
+NM = $(P1)/linux-nm
+UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
+ASSEM_SRC = alpha-assem.S
+ARCH_SRC = alpha-arch.c
+OS_SRC = Linux-os.c os-common.c undefineds.c
+OS_LINK_FLAGS= -Xlinker -Bstatic
+OS_LIBS= -ldl
+GC_SRC = gc.c
+VPATH=$(P1)
