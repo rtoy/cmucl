@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.4 1991/04/23 21:39:07 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.5 1991/04/27 22:14:41 wlott Exp $
 ;;;
 ;;; IBM RT VM definitions of various system hacking operations.
 ;;;
@@ -187,24 +187,20 @@
     (move res temp)))
 
 (define-vop (make-other-immediate-type)
-  (:args (val :scs (any-reg descriptor-reg) :target vtemp)
+  (:args (val :scs (any-reg descriptor-reg))
 	 (type :scs (any-reg descriptor-reg immediate)))
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) vtemp)
-  (:results (res :scs (any-reg descriptor-reg)))
+  (:results (res :scs (any-reg descriptor-reg) :from :load))
   (:temporary (:type random  :scs (non-descriptor-reg)) temp)
   (:generator 2
+    (move res val)
+    (inst sl res (- type-bits 2))
     (sc-case type
       (immediate
-       (move vtemp val)
-       (inst sl vtemp type-bits)
-       (inst oil res temp (tn-value type)))
+       (inst oil res (tn-value type)))
       (t
        ;; Type is a fixnum, so lose those lowtag bits.
        (move temp type)
        (inst sr temp 2)
-       ;; Val is a fixnum, so we can shift it left two less bits.
-       (move res val)
-       (inst sl res (- type-bits 2))
        (inst o res temp)))))
 
 
