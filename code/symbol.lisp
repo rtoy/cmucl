@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.15 1993/08/06 03:59:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.16 1993/08/06 13:56:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -205,9 +205,9 @@
 (defvar *gensym-counter* 0
   "Counter for generating unique GENSYM symbols.")
 
-(defun gensym (&optional string)
+(defun gensym (&optional thing)
   "Creates a new uninterned symbol whose name is a prefix string (defaults
-  to \"G\"), followed by a decimal number.  String, when supplied, will
+  to \"G\"), followed by a decimal number.  Thing, when supplied, will
   alter the prefix if it is a string, or the decimal number if it is a
   number, of this symbol.  The number, defaultly *gensym-counter*, is
   incremented by each call to GENSYM."
