@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.36 1993/08/03 14:32:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.37 1993/08/17 22:38:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -285,8 +285,9 @@
 ;;; DEBUG-SOURCE-FOR-INFO  --  Interface
 ;;;
 ;;;    Return a list of DEBUG-SOURCE structures containing information derived
-;;; from Info.  We always dump the Start-Positions, since it is too hard
-;;; figure out whether we need them or not.
+;;; from Info.  Unless :BYTE-COMPILE T was specified, we always dump the
+;;; Start-Positions, since it is too hard figure out whether we need them or
+;;; not.
 ;;;
 (defun debug-source-for-info (info)
   (declare (type source-info info))
@@ -299,8 +300,9 @@
 			  :compiled (source-info-start-time info)
 			  :source-root (file-info-source-root x)
 			  :start-positions
-			  (coerce-to-smallest-eltype
-			   (file-info-positions x))))
+			  (unless (eq *byte-compile* 't)
+			    (coerce-to-smallest-eltype
+			     (file-info-positions x)))))
 		    (name (file-info-name x)))
 		(etypecase name
 		  ((member :stream :lisp)
