@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.37 1993/08/20 00:15:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.38 1993/08/30 21:58:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,7 @@
 ;;;
 ;;; Used to communicate to debug-loop that we are at a step breakpoint.
 ;;;
-(define-condition step-condition (simple-condition))
+(define-condition step-condition (simple-condition) ())
 
 
 ;;;; Variables, parameters, and constants.
