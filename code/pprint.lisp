@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.11 1992/11/06 04:10:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.12 1992/11/11 07:40:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1141,9 +1141,10 @@
 	  (first t))
       (loop
 	(pprint-exit-if-list-exhausted)
+	(unless first
+	  (write-char #\space stream))
 	(let ((arg (pprint-pop)))
 	  (unless first
-	    (write-char #\space stream)
 	    (case arg
 	      (&optional
 	       (setf state :optional)
