@@ -56,20 +56,23 @@ static void output_space(id, addr, end)
 int id;
 lispobj *addr, *end;
 {
-    int words, data;
+    int words, bytes, data;
     static char *names[] = {NULL, "Dynamic", "Static", "Read-Only"};
 
     putw(id, save_file);
     words = end - addr;
     putw(words, save_file);
 
-    printf("Writing %d words from the %s space at 0x%08x.\n", words, names[id], addr);
+    bytes = words * sizeof(lispobj);
 
-    data = write_bytes((char *)addr, words*sizeof(lispobj));
+    printf("Writing %d bytes from the %s space at 0x%08x.\n",
+           bytes, names[id], addr);
+
+    data = write_bytes((char *)addr, bytes);
 
     putw(data, save_file);
     putw((vm_address_t)addr / CORE_PAGESIZE, save_file);
-    putw((words*sizeof(lispobj) + CORE_PAGESIZE - 1) / CORE_PAGESIZE, save_file);
+    putw((bytes + CORE_PAGESIZE - 1) / CORE_PAGESIZE, save_file);
 }
 
 static long write_stack(name, start, end)
