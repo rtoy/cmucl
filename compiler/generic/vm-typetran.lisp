@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.9 1991/11/09 02:39:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.10 1992/03/07 17:15:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.9 1991/11/09 02:39:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.10 1992/03/07 17:15:05 wlott Exp $
 ;;;
 ;;; This file contains the implimentation specific type transformation magic.
 ;;; Basically, the various non-standard predicates that can be used in typep
@@ -58,6 +58,7 @@
 (define-type-predicate scavenger-hook-p scavenger-hook)
 (define-type-predicate code-component-p code-component)
 (define-type-predicate lra-p lra)
+(define-type-predicate fdefn-p fdefn)
 
 ;;; Unlike the un-%'ed versions, these are true type predicates, accepting any
 ;;; type object.
