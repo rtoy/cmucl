@@ -1,4 +1,4 @@
-;;; -*- Mode:Lisp -*-
+;;; -*- Mode: Lisp; Package: User -*-
 ;;; ***************************************************************************
 ;;; Common Lisp implementation of Cascade-Correlation learning algorithm.
 ;;; This version for export.  Non-portable user-interface stuff excised.
@@ -51,9 +51,12 @@
 ;;; Added some additional type declarations for maximum speed under certain
 ;;; Common Lisp compilers.
 ;;; ***************************************************************************
+;;;
+(in-package "USER")
 
 ;;; This proclamation buys a certain amount of overall speed at the expense
 ;;; of runtime checking.  Comment it out when debugging new, bug-infested code.
+;;;
 #+declare-unsafe
 (proclaim '(optimize (speed 3) (space 0) (safety 0)))
 
