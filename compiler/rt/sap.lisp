@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.3 1991/04/20 16:59:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.4 1991/04/28 23:14:49 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -190,7 +190,7 @@
 		  (inst lh result base offset))))
 	   (2 ;Want 32 bits.  Incoming offset is in 32-bit quantities.
 	      ;Offset here is in bytes.
-	    '((loadw result base offset)))))
+	    '((inst l result base offset)))))
 	(name-c (symbolicate name "-C")))
     `(progn
        (define-vop (,name-c)
