@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.25 1992/12/13 07:19:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26 1992/12/17 11:31:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -997,8 +997,7 @@
       (let ((def (fdefinition name)))
 	(if (eval:interpreted-function-p def)
 	    (eval:interpreted-function-type def)
-	    (specifier-type (%primitive function-type
-					(%primitive closure-function def)))))
+	    (specifier-type (%function-type (%closure-function def)))))
       (specifier-type 'function)))
 
 ;;; The Assumed-Type for this function, if we have to infer the type due to not
