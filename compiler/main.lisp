@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.123 2001/05/17 22:08:48 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.124 2002/03/07 00:04:41 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1655,6 +1655,7 @@
 			    (trace-file nil) 
 			    (error-output t)
 			    (load nil)
+			    (external-format :default)
 			    ((:verbose *compile-verbose*) *compile-verbose*)
 			    ((:print *compile-print*) *compile-print*)
 			    ((:progress *compile-progress*) *compile-progress*)
@@ -1701,6 +1702,7 @@
       slower.  If :MAYBE, then only byte-compile when SPEED is 0 and
       DEBUG <= 1.  The default is the value of EXT:*BYTE-COMPILE-DEFAULT*,
       which is initially :MAYBE."
+  (declare (ignore external-format))
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
 	 (output-file-pathname nil)
