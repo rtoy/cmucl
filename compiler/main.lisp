@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.91 1993/07/31 02:10:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.92 1993/07/31 14:34:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1695,7 +1695,8 @@
 			  (backend-byte-fasl-file-type *backend*)
 			  (backend-fasl-file-type *backend*))))
 	      (setq fasl-file (open-fasl-file output-file-name
-					      (namestring (first source)))))
+					      (namestring (first source))
+					      (eq *byte-compile* t))))
 	    
 	    (when trace-file
 	      (setq *compiler-trace-output*
