@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.59 1998/01/05 05:54:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.60 1998/01/24 14:49:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -615,14 +615,39 @@
 	    (let ((lo (numeric-type-low arg))
 		  (hi (numeric-type-high arg)))
 	      (if (csubtypep arg cspec)
-		  (let ((f-type (or (numeric-type-format arg) 'single-float)))
-		    (make-numeric-type
-		     :class 'float
-		     :format f-type
-		     :low (or (bound-func fcn lo)
-			      (and default-lo (coerce default-lo f-type)))
-		     :high (or (bound-func fcn hi)
-			       (and default-hi (coerce default-hi f-type)))))
+		  (let ((res-lo (bound-func fcn lo))
+			(res-hi (bound-func fcn hi)))
+		    (if (csubtypep arg (specifier-type 'rational))
+			;; For a rational argument the default result
+			;; type is a single-float.
+			(let ((f-type (or (numeric-type-format arg)
+					  'single-float)))
+			  (make-numeric-type
+			   :class 'float
+			   :format f-type
+			   :low (or res-lo
+				    (and default-lo
+					 (coerce default-lo f-type)))
+			   :high (or res-hi
+				     (and default-hi
+					  (coerce default-hi f-type)))))
+			;; However for a real argument the default
+			;; result type is a float.
+			(make-numeric-type
+			 :class 'float
+			 :format (numeric-type-format arg)
+			 :low (or res-lo
+				  (when default-lo
+				    (if (numeric-type-format arg)
+					(coerce default-lo
+						(numeric-type-format arg))
+					default-lo)))
+			 :high (or res-hi
+				   (when default-hi
+				     (if (numeric-type-format arg)
+					 (coerce default-hi
+						 (numeric-type-format arg))
+					 default-hi))))))
 		  (float-or-complex-type arg))))
 	   (t
 	    (float-or-complex-type arg default-lo default-hi))))))
@@ -1265,7 +1290,7 @@
   (one-arg-derive-type num
      #'(lambda (arg)
 	 (c::specifier-type
-	  `(complex ,(or (numeric-type-format arg) 'single-float))))
+	  `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
 ) ; end progn
