@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.46 1991/05/16 16:39:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.47 1991/05/23 17:51:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -496,7 +496,10 @@
 	(setf (gethash name *free-functions*) dummy)
 	(let ((fun (ir1-convert-global-lambda expansion)))
 	  (setf (leaf-name fun) name)
-	  (substitute-leaf fun dummy)
+	  (substitute-leaf-if 
+	   #'(lambda (x)
+	       (not (eq (ref-inlinep x) :notinline)))
+	   fun dummy)
 	  (setf (gethash name *free-functions*)
 		(if (eq inlinep :inline)
 		    var
@@ -876,12 +879,15 @@
        (compiler-error "No type specified in FTYPE declaration: ~S." spec))
      (process-ftype-declaration (second spec) res (cddr spec) fvars))
     (function
-     (unless (cdr spec)
-       (compiler-error
-	"No function name specified in FUNCTION declaration: ~S." spec))
-     (process-ftype-declaration `(function ,@(cddr spec)) res
-				(list (second spec))
-				fvars))
+     ;;
+     ;; Handle old style FUNCTION declaration, which is an abbreviation for
+     ;; FTYPE.  Args are name, arglist, result type.
+     (cond ((and (<= 3 (length spec) 4) (listp (third spec)))
+	    (process-ftype-declaration `(function ,@(cddr spec)) res
+				       (list (second spec))
+				       fvars))
+	   (t
+	    (process-type-declaration spec res vars))))
     ((inline notinline maybe-inline)
      (process-inline-declaration spec res fvars))
     ((ignore ignorable)
@@ -2539,7 +2545,7 @@
 	    ;;
 	    ;; No non-global state to be updated.
 	    ((inline notinline maybe-inline optimize optimize-interface
-		     declaration freeze-type))
+		     declaration freeze-type constant-function))
 	    ;;
 	    ;; Totally ignore these operations at non-top-level.
 	    ((start-block end-block)
