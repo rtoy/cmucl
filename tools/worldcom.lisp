@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.92 2004/06/01 23:40:09 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.93 2004/07/25 18:29:10 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -241,7 +241,9 @@
 (comf "target:code/filesys")
 #-no-runtime (comf "target:code/filesys" :byte-compile t)
 (comf "target:code/load")
-(comf "target:code/foreign-linkage")
+
+(when (c:backend-featurep :linkage-table)
+  (comf "target:code/foreign-linkage"))
 (comf "target:code/module" :byte-compile *byte-compile*)
 
 (comf "target:code/eval")

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.51 2004/06/01 23:37:45 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.52 2004/07/25 18:29:10 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -151,7 +151,8 @@
     "target:code/package"
     "target:code/reader"
     "target:code/load"
-    "target:code/foreign-linkage"
+    ,@(when (c:backend-featurep :linkage-table)
+        '("target:code/foreign-linkage"))
     ,@(when (c:backend-featurep :pmax)
 	'("target:code/pmax-vm"))
     ,@(when (c:backend-featurep :sparc)
