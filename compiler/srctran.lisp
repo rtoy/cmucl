@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.74 1998/01/07 22:54:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.75 1998/01/07 23:30:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -682,9 +682,8 @@
 	     (interval-neg (interval-div (interval-neg top) bot)))
 	    ((and (eq top-range '+) (eq bot-range '+))
 	     ;; The easy case
-	     (make-interval :low (bound-div (interval-low top) (interval-high bot))
-			    :high (bound-div (interval-high top) (interval-low bot))))
-	    
+	     (make-interval :low (bound-div (interval-low top) (interval-high bot) t)
+			    :high (bound-div (interval-high top) (interval-low bot) nil)))
 	    (t
 	     (error "This shouldn't happen!"))))))
 
