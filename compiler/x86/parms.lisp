@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.2 1997/02/08 21:23:36 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.3 1997/02/12 23:03:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -256,15 +256,16 @@
       *fp-constant-0s0*
       *fp-constant-0d0*
 
+      *alien-stack*
+
       ;; Some unused static variables - very handy for hacking.
-      lisp::*unused-static-8*
-      lisp::*unused-static-7*
-      lisp::*unused-static-6*
-      lisp::*unused-static-5*
-      lisp::*unused-static-4*
-      lisp::*unused-static-3*
-      lisp::*unused-static-2*
-      lisp::*unused-static-1*
+      *unused-static-7*
+      *unused-static-6*
+      *unused-static-5*
+      *unused-static-4*
+      *unused-static-3*
+      *unused-static-2*
+      *unused-static-1*
 
       lisp::*static-blue-bag*		; Must be last or change C code
       ))

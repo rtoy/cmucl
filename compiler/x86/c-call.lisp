@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.1 1997/01/18 14:31:22 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.2 1997/02/12 23:03:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,16 +17,17 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Debugging and Enhancements by Douglas Crosher 1996.
+;;;
 
 (in-package :x86)
 (use-package :alien)
 (use-package :alien-internals)
 
-;; The move-argument vop is going to store args on the stack for call-out.
-;; These tn's will be used for that. move-arg is normally used for
-;; things going down the stack but C wants to have args indexed in
-;; the positive direction.
-
+;; The move-argument vop is going to store args on the stack for
+;; call-out. These tn's will be used for that. move-arg is normally
+;; used for things going down the stack but C wants to have args
+;; indexed in the positive direction.
 
 (defun my-make-wired-tn (prim-type-name sc-name offset)
   (make-wired-tn (primitive-type-or-lose prim-type-name *backend*)
@@ -166,7 +167,6 @@
 					    (extern-alien-name
 					     "foreign_function_call_active")
 					    :foreign))  1)
-	   
 	   ;; Setup the NPX for C
 	   (inst fnstcw cw-temp) ; save exception masks
 	   (inst fninit)
@@ -212,3 +212,29 @@
       (let ( (delta (logandc2 (+ amount 3) 3)) )
 	(inst add esp-tn delta)))))
 
+(define-vop (alloc-alien-stack-space)
+  (:info amount)
+  (:results (result :scs (sap-reg any-reg)))
+  (:generator 0
+    (assert (not (location= result esp-tn)))
+    (unless (zerop amount)
+      (let ( (delta (logandc2 (+ amount 3) 3)) )
+	(inst sub (make-ea :dword
+			   :disp (+ nil-value
+				    (static-symbol-offset '*alien-stack*)
+				    (ash symbol-value-slot word-shift)
+				    (- other-pointer-type)))
+	      delta)))
+    (load-symbol-value result *alien-stack*)))
+
+(define-vop (dealloc-alien-stack-space)
+  (:info amount)
+  (:generator 0
+    (unless (zerop amount)
+      (let ( (delta (logandc2 (+ amount 3) 3)) )
+	(inst add (make-ea :dword
+			   :disp (+ nil-value
+				    (static-symbol-offset '*alien-stack*)
+				    (ash symbol-value-slot word-shift)
+				    (- other-pointer-type)))
+	      delta)))))

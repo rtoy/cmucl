@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.112 1997/02/11 19:00:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.113 1997/02/12 23:03:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1028,6 +1028,7 @@
 	   "*COMPILING-FOR-INTERPRETER*" "*CONVERTING-FOR-INTERPRETER*"
 	   "*COUNT-VOP-USAGES*" "*ELSEWHERE*" "*NATIVE-BACKEND*"
 	   "*SUPPRESS-VALUES-DECLARATION*" "*TARGET-BACKEND*"
+	   "ALLOC-ALIEN-STACK-SPACE"
 	   "ALLOC-NUMBER-STACK-SPACE" "ALLOCATE-CODE-OBJECT" "ALLOCATE-FRAME"
  	   "ALLOCATE-DYNAMIC-CODE-OBJECT"
 	   "ALLOCATE-FULL-CALL-FRAME" "ANY" "ARGUMENT-COUNT-ERROR"
@@ -1050,6 +1051,7 @@
 	   "COMPONENT-INFO" "COMPONENT-LIVE-TN" "COMPUTE-FUNCTION"
 	   "COMPUTE-OLD-NFP" "COPY-MORE-ARG" "COUNT-ME"
 	   "CURRENT-BINDING-POINTER" "CURRENT-NFP-TN" "CURRENT-STACK-POINTER"
+	   "DEALLOC-ALIEN-STACK-SPACE"
 	   "DEALLOC-NUMBER-STACK-SPACE" "DEF-BOOLEAN-ATTRIBUTE"
 	   "DEF-IR1-TRANSLATOR" "DEF-PRIMITIVE-TRANSLATOR"
 	   "DEF-PRIMITIVE-TYPE" "DEF-PRIMITIVE-TYPE-ALIAS"
