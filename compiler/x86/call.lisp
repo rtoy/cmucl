@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.7 1997/11/19 03:00:35 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.8 1997/11/22 18:26:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1173,9 +1173,12 @@
     (if (zerop nvals)
 	(inst xor ecx ecx) ; smaller
       (inst mov ecx (fixnum nvals)))
-    ;; restore the frame pointer and clear as much of the stack as possible.
+    ;; restore the frame pointer.
     (move ebp-tn old-fp)
-    (inst lea esp-tn (make-ea :dword :base ebx :disp (- (* nvals word-bytes))))
+    ;; clear as much of the stack as possible, but not past the return
+    ;; address.
+    (inst lea esp-tn (make-ea :dword :base ebx
+			      :disp (- (* (max nvals 2) word-bytes))))
     ;; pre-default any argument register that need it.
     (when (< nvals register-arg-count)
       (let* ((arg-tns (nthcdr nvals (list a0 a1 a2)))
@@ -1186,11 +1189,18 @@
     ;; And away we go.  Except that return-pc is still on the
     ;; stack and we've changed the stack pointer.  So we have to
     ;; tell it to index off of EBX instead of EBP.
-    (inst jmp
-	  (make-ea :dword :base ebx
-		   :disp
-		   (- (* (1+ (tn-offset return-pc)) word-bytes))))
-
+    (cond ((zerop nvals)
+	   ;; Return popping the return address and the OCFP.
+	   (inst ret word-bytes))
+	  ((= nvals 1)
+	   ;; Return popping the return, leaving 1 slot. Can this
+	   ;; happen, or is a single value return handled elsewhere?
+	   (inst ret))
+	  (t
+	   (inst jmp (make-ea :dword :base ebx
+			      :disp (- (* (1+ (tn-offset return-pc))
+					  word-bytes))))))
+    
     (trace-table-entry trace-table-normal)))
 
 ;;; Do unknown-values return of an arbitrary number of values (passed on the
