@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.4 1991/08/01 10:52:30 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.5 1991/08/01 11:35:44 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -231,25 +231,25 @@
    If given an argument, this will put the man page in a Pop-up display."
   "Read the Unix manual pages in a View buffer.
    If given an argument, this will put the man page in a Pop-up display."
-  (let ((topic (prompt-for-string :prompt "Read what man page: ")))
+  (let ((topic (prompt-for-string :prompt "Man topic: ")))
     (if p
 	(with-pop-up-display (stream)
 	  (execute-man topic stream))
 	(let* ((buf-name (format nil "Man Page ~a" topic))
-	       (new-buffer (make-buffer buf-name
-					:modes '("Fundamental" "View")))
-	       (buffer (or new-buffer
-			   (getstring buf-name *buffer-names*)))
+	       (new-buffer (make-buffer buf-name :modes '("Fundamental" "View")))
+	       (buffer (or new-buffer (getstring buf-name *buffer-names*)))
 	       (point (buffer-point buffer)))
+	  (change-to-buffer buffer)
 	  (when new-buffer
-	    (setf (variable-value 'view-return-function :buffer buffer)
-		  #'(lambda ()))
+	    (setf (value view-return-function) #'(lambda ()))
 	    (with-writable-buffer (buffer)
-	      (ext:run-program
-	       "/bin/sh"
-	       (list "-c"
-		     (format nil "man ~a|cat -s|sed -e 's/_//g' -e 's/o//g'"
-			     topic))
-	       :output (make-hemlock-output-stream point :full))))
-	  (buffer-start point buffer)
-	  (change-to-buffer buffer)))))
+	      (with-output-to-mark (s point :full)
+		(execute-man topic s))))
+	  (buffer-start point buffer)))))
+
+(defun execute-man (topic stream)
+  (ext:run-program
+   "/bin/sh"
+   (list "-c"
+	 (format nil "man ~a|cat -s|sed -e 's/_//g' -e 's/o//g'" topic))
+   :output stream))
