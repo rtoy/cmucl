@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.62 1998/02/19 04:28:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.63 1998/02/20 18:40:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -575,9 +575,10 @@
 ;;; Coerce a numeric type bound to the given type while handling
 ;;; exclusive bounds.
 (defun coerce-numeric-bound (bound type)
-  (if (consp bound)
-      (consp (coerce (car bound) type))
-      (coerce bound type)))
+  (when bound
+    (if (consp bound)
+	(consp (coerce (car bound) type))
+	(coerce bound type))))
 
 ;;; Compute a specifier like '(or float (complex float)), except float
 ;;; should be the right kind of float.  Allow bounds for the float
@@ -588,8 +589,8 @@
 		   ((integer rational) 'single-float)
 		   (t (numeric-type-format arg))))
 	 (float-type (or format 'float))
-	 (lo (and lo (coerce-numeric-bound lo float-type)))
-	 (hi (and hi (coerce-numeric-bound hi float-type))))
+	 (lo (coerce-numeric-bound lo float-type))
+	 (hi (coerce-numeric-bound hi float-type)))
     (specifier-type `(or (,float-type ,(or lo '*) ,(or hi '*))
 		         (complex ,float-type)))))
 
@@ -637,10 +638,8 @@
 		  (make-numeric-type
 		   :class 'float
 		   :format format
-		   :low (and res-lo
-			     (coerce-numeric-bound res-lo bound-type))
-		   :high (and res-hi
-			      (coerce-numeric-bound res-hi bound-type))))
+		   :low (coerce-numeric-bound res-lo bound-type)
+		   :high (coerce-numeric-bound res-hi bound-type)))
 		(float-or-complex-type arg)))
 	   (t
 	    (float-or-complex-type arg default-lo default-hi))))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.81 1998/02/19 04:42:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.82 1998/02/20 18:40:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1022,6 +1022,20 @@
 			  res (make-member-type :members (list type)))))
 	     res)))))
 
+;;; Convert-Member-Type
+;;;
+;;; Convert a member type with a single member to a numeric type.
+;;;
+(defun convert-member-type (arg)
+  (let* ((members (member-type-members arg))
+	 (member (first members))
+	 (member-type (type-of member)))
+    (assert (not (rest members)))
+    (specifier-type `(,(if (subtypep member-type 'integer)
+			   'integer
+			   member-type)
+		      ,member ,member))))
+
 ;;; ONE-ARG-DERIVE-TYPE
 ;;;
 ;;; This is used in defoptimizers for computing the resulting type of
@@ -1033,22 +1047,36 @@
 ;;; (containing just one element).  It should return the resulting
 ;;; type, which can be a list of types.
 ;;;
-;;; For the case of member types, we call FCN on the element of the
-;;; member type to get the resulting member type result.
+;;; For the case of member types, if a member-fcn is given it is
+;;; called to compute the result otherwise the member type is first
+;;; converted to a numeric type and the derive-fcn is call.
 ;;;
-(defun one-arg-derive-type (arg derive-fcn fcn &optional (convert-type t))
-  #+negative-zero-is-not-zero
-  (declare (ignore convert-type))
+(defun one-arg-derive-type (arg derive-fcn member-fcn
+				&optional (convert-type t))
+  (declare (type function derive-fcn)
+	   (type (or null function) member-fcn)
+	   #+negative-zero-is-not-zero (ignore convert-type))
   (let ((arg-list (prepare-arg-for-derive-type (continuation-type arg))))
     (when arg-list
       (flet ((deriver (x)
 	       (typecase x
 		 (member-type
-		  (with-float-traps-masked
-		      (:underflow :overflow :divide-by-zero)
-		    (make-member-type
-		     :members (list (funcall
-				     fcn (first (member-type-members x)))))))
+		  (if member-fcn
+		      (with-float-traps-masked
+			  (:underflow :overflow :divide-by-zero)
+			(make-member-type
+			 :members (list
+				   (funcall member-fcn
+					    (first (member-type-members x))))))
+		      ;; Otherwise convert to a numeric type.
+		      (let ((result-type-list
+			     (funcall derive-fcn (convert-member-type x))))
+			#-negative-zero-is-not-zero
+			(if convert-type
+			    (convert-back-numeric-type-list result-type-list)
+			    result-type-list)
+			#+negative-zero-is-not-zero
+			result-type-list)))
 		 (numeric-type
 		  #-negative-zero-is-not-zero
 		  (if convert-type
@@ -1059,8 +1087,8 @@
 		  (funcall derive-fcn x))
 		 (t
 		  *universal-type*))))
-	;; Run down the list of args and derive the type of each one
-	;; and save all of the results in a list.
+	;; Run down the list of args and derive the type of each one,
+	;; saving all of the results in a list.
 	(let ((results nil))
 	  (dolist (arg arg-list)
 	    (let ((result (deriver arg)))
@@ -1084,74 +1112,66 @@
 				 &optional (convert-type t))
   #+negative-zero-is-not-zero
   (declare (ignore convert-type))
-  (labels ((convert-member-type (arg)
-	     (let* ((val (first (member-type-members arg)))
-		    (val-type (type-of val)))
-	       (specifier-type `(,(if (subtypep val-type 'integer)
-				      'integer
-				      val-type)
-				 ,val ,val))))
-	   ;;
-	   #-negative-zero-is-not-zero
-	   (deriver (x y same-arg)
-	     (cond ((and (member-type-p x) (member-type-p y))
-		    (let* ((x (first (member-type-members x)))
-			   (y (first (member-type-members y)))
-			   (result (with-float-traps-masked
-				       (:underflow :overflow :divide-by-zero
-					:invalid)
-				     (funcall fcn x y))))
-		      (cond ((null result))
-			    ((and (floatp result) (float-nan-p result))
-			     (make-numeric-type
-			      :class 'float
-			      :format (type-of result)
-			      :complexp :real))
-			    (t
-			     (make-member-type :members (list result))))))
-		   ((and (member-type-p x) (numeric-type-p y))
-		    (let* ((x (convert-member-type x))
-			   (y (if convert-type (convert-numeric-type y) y))
-			   (result (funcall derive-fcn x y same-arg)))
-		      (if convert-type
-			  (convert-back-numeric-type-list result)
-			  result)))
-		   ((and (numeric-type-p x) (member-type-p y))
-		    (let* ((x (if convert-type (convert-numeric-type x) x))
-			   (y (convert-member-type y))
-			   (result (funcall derive-fcn x y same-arg)))
-		      (if convert-type
-			  (convert-back-numeric-type-list result)
-			  result)))
-		   ((and (numeric-type-p x) (numeric-type-p y))
-		    (let* ((x (if convert-type (convert-numeric-type x) x))
-			   (y (if convert-type (convert-numeric-type y) y))
-			   (result (funcall derive-fcn x y same-arg)))
-		      (if convert-type
-			  (convert-back-numeric-type-list result)
-			  result)))
-		   (t
-		    *universal-type*)))
-	   #+negative-zero-is-not-zero
-	   (deriver (x y same-arg)
-	     (cond ((and (member-type-p x) (member-type-p y))
-		    (let* ((x (first (member-type-members x)))
-			   (y (first (member-type-members y)))
-			   (result (with-float-traps-masked
-				       (:underflow :overflow :divide-by-zero)
-				     (funcall fcn x y))))
-		      (if result
-			  (make-member-type :members (list result)))))
-		   ((and (member-type-p x) (numeric-type-p y))
-		    (let ((x (convert-member-type x)))
-		      (funcall derive-fcn x y same-arg)))
-		   ((and (numeric-type-p x) (member-type-p y))
-		    (let ((y (convert-member-type y)))
-		      (funcall derive-fcn x y same-arg)))
-		   ((and (numeric-type-p x) (numeric-type-p y))
-		    (funcall derive-fcn x y same-arg))
-		   (t
-		    *universal-type*))))
+  (flet (#-negative-zero-is-not-zero
+	 (deriver (x y same-arg)
+	   (cond ((and (member-type-p x) (member-type-p y))
+		  (let* ((x (first (member-type-members x)))
+			 (y (first (member-type-members y)))
+			 (result (with-float-traps-masked
+				     (:underflow :overflow :divide-by-zero
+				      :invalid)
+				   (funcall fcn x y))))
+		    (cond ((null result))
+			  ((and (floatp result) (float-nan-p result))
+			   (make-numeric-type
+			    :class 'float
+			    :format (type-of result)
+			    :complexp :real))
+			  (t
+			   (make-member-type :members (list result))))))
+		 ((and (member-type-p x) (numeric-type-p y))
+		  (let* ((x (convert-member-type x))
+			 (y (if convert-type (convert-numeric-type y) y))
+			 (result (funcall derive-fcn x y same-arg)))
+		    (if convert-type
+			(convert-back-numeric-type-list result)
+			result)))
+		 ((and (numeric-type-p x) (member-type-p y))
+		  (let* ((x (if convert-type (convert-numeric-type x) x))
+			 (y (convert-member-type y))
+			 (result (funcall derive-fcn x y same-arg)))
+		    (if convert-type
+			(convert-back-numeric-type-list result)
+			result)))
+		 ((and (numeric-type-p x) (numeric-type-p y))
+		  (let* ((x (if convert-type (convert-numeric-type x) x))
+			 (y (if convert-type (convert-numeric-type y) y))
+			 (result (funcall derive-fcn x y same-arg)))
+		    (if convert-type
+			(convert-back-numeric-type-list result)
+			result)))
+		 (t
+		  *universal-type*)))
+	 #+negative-zero-is-not-zero
+	 (deriver (x y same-arg)
+	   (cond ((and (member-type-p x) (member-type-p y))
+		  (let* ((x (first (member-type-members x)))
+			 (y (first (member-type-members y)))
+			 (result (with-float-traps-masked
+				     (:underflow :overflow :divide-by-zero)
+				   (funcall fcn x y))))
+		    (if result
+			(make-member-type :members (list result)))))
+		 ((and (member-type-p x) (numeric-type-p y))
+		  (let ((x (convert-member-type x)))
+		    (funcall derive-fcn x y same-arg)))
+		 ((and (numeric-type-p x) (member-type-p y))
+		  (let ((y (convert-member-type y)))
+		    (funcall derive-fcn x y same-arg)))
+		 ((and (numeric-type-p x) (numeric-type-p y))
+		  (funcall derive-fcn x y same-arg))
+		 (t
+		  *universal-type*))))
     (let ((same-arg (same-leaf-ref-p arg1 arg2))
 	  (a1 (prepare-arg-for-derive-type (continuation-type arg1)))
 	  (a2 (prepare-arg-for-derive-type (continuation-type arg2))))
@@ -1500,12 +1520,18 @@
 	(t
 	 ;; The absolute value of a real number is a non-negative real
 	 ;; of the same type.
-	 (let ((abs-bnd (interval-abs (numeric-type->interval type))))
-	   (make-numeric-type :class (numeric-type-class type)
-			      :format (numeric-type-format type)
-			      :complexp :real
-			      :low (interval-low abs-bnd)
-			      :high (interval-high abs-bnd))))))
+	 (let* ((abs-bnd (interval-abs (numeric-type->interval type)))
+		(class (numeric-type-class type))
+		(format (numeric-type-format type))
+		(bound-type (or format class 'real)))
+	   (make-numeric-type
+	    :class class
+	    :format format
+	    :complexp :real
+	    :low (coerce-numeric-bound (interval-low abs-bnd) bound-type)
+	    :high (coerce-numeric-bound
+		   (interval-high abs-bnd) bound-type))))))
+
 #+propagate-float-type
 (defoptimizer (abs derive-type) ((num))
   (one-arg-derive-type num #'abs-derive-type-aux #'abs))
@@ -2170,6 +2196,7 @@
 		     0
 		     '*))))
 
+#-propagate-float-type
 (defoptimizer (random derive-type) ((bound &optional state))
   (let ((type (continuation-type bound)))
     (when (numeric-type-p type)
@@ -2184,6 +2211,25 @@
 		     ((eq class 'integer) (max (1- high) 0))
 		     ((or (consp high) (zerop high)) high)
 		     (t `(,high))))))))
+
+
+#+propagate-float-type
+(defun random-derive-type-aux (type)
+  (let ((class (numeric-type-class type))
+	(high (numeric-type-high type))
+	(format (numeric-type-format type)))
+    (make-numeric-type
+	 :class class
+	 :format format
+	 :low (coerce 0 (or format class 'real))
+	 :high (cond ((not high) nil)
+		     ((eq class 'integer) (max (1- high) 0))
+		     ((or (consp high) (zerop high)) high)
+		     (t `(,high))))))
+
+#+propagate-float-type
+(defoptimizer (random derive-type) ((bound &optional state))
+  (one-arg-derive-type bound #'random-derive-type-aux nil))
 
 
 ;;;; Logical derive-type methods:
