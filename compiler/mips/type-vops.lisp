@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.10 1990/04/24 02:56:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.11 1990/05/06 05:27:31 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -108,8 +108,6 @@
       (inst and temp value #x3)
       (inst bne temp zero-tn err-lab)
       (move result value t))))
-
-(primitive-type-vop check-fixnum (:check) fixnum)
 
 (define-vop (fixnump simple-type-predicate)
   (:ignore type-code)
@@ -217,6 +215,153 @@
   ;; ### May want to make this more tense.
   (frob integerp check-integer di:object-not-integer-error
     vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type))
+
+
+;;;; Other integer ranges.
+
+;;; A (signed-byte 32) can be represented with either fixnum or a bignum with
+;;; exactly one digit.
+
+(define-vop (signed-byte-32-p hairy-type-predicate)
+  (:translate signed-byte-32-p)
+  (:generator 45
+    (let ((not-target (gen-label)))
+      (multiple-value-bind
+	  (yep nope)
+	  (if not-p
+	      (values not-target target)
+	      (values target not-target))
+	(inst and temp obj #x3)
+	(inst beq temp zero-tn yep)
+	(test-simple-type obj temp nope t vm:bignum-type)
+	(loadw temp obj 0 vm:other-pointer-type)
+	(inst srl temp temp (1+ vm:type-bits))
+	(if not-p
+	    (inst bne temp zero-tn target)
+	    (inst beq temp zero-tn target))
+	(inst nop)
+	(emit-label not-target)))))
+
+(define-vop (check-signed-byte-32 check-hairy-type)
+  (:generator 45
+    (let ((nope (generate-error-code di:object-not-signed-byte-32-error obj))
+	  (yep (gen-label)))
+      (inst and temp obj #x3)
+      (inst beq temp zero-tn yep)
+      (test-simple-type obj temp nope t vm:bignum-type)
+      (loadw temp obj 0 vm:other-pointer-type)
+      (inst srl temp temp (1+ vm:type-bits))
+      (inst bne temp zero-tn nope)
+      (inst nop)
+      (emit-label yep)
+      (move res obj))))
+
+
+;;; An (unsigned-byte 32) can be represented with either a positive fixnum, a
+;;; bignum with exactly one positive digit, or a bignum with exactly two digits
+;;; and the second digit all zeros.
+
+(define-vop (unsigned-byte-32-p hairy-type-predicate)
+  (:translate unsigned-byte-32-p)
+  (:generator 45
+    (let ((not-target (gen-label))
+	  (single-word (gen-label))
+	  (fixnum (gen-label)))
+      (multiple-value-bind
+	  (yep nope)
+	  (if not-p
+	      (values not-target target)
+	      (values target not-target))
+	;; Is it a fixnum?
+	(inst and temp obj #x3)
+	(inst beq temp zero-tn fixnum)
+	;; If not, is it a bignum?
+	(test-simple-type obj temp nope t vm:bignum-type)
+	;; Get the number of digits.
+	(loadw temp obj 0 vm:other-pointer-type)
+	(inst srl temp temp vm:type-bits)
+	;; Is it one?
+	(inst addu temp -1)
+	(inst beq temp single-word)
+	;; If it's other than two, we can't be an (unsigned-byte 32)
+	(inst addu temp -1)
+	(inst bne temp nope)
+	;; Get the second digit.
+	(loadw temp obj (1+ vm:bignum-digits-offset) vm:other-pointer-type)
+	;; All zeros, its an (unsigned-byte 32).
+	(inst beq temp yep)
+	(inst nop)
+	;; Otherwise, it isn't.
+	(inst b nope)
+	(inst nop)
+	
+	(emit-label single-word)
+	;; Get the single digit.
+	(loadw temp obj vm:bignum-digits-offset vm:other-pointer-type)
+	;; positive implies (unsigned-byte 32).
+	(inst bgez temp yep)
+	(inst nop)
+	;; Otherwise, nope.
+	(inst b nope)
+	(inst nop)
+
+	(emit-label fixnum)
+	;; positive fixnums are (unsigned-byte 32).
+	(if not-p
+	    (inst bltz obj target)
+	    (inst bgez obj target))
+	(inst nop)
+
+	(emit-label not-target)))))	  
+
+(define-vop (check-unsigned-byte-32 check-hairy-type)
+  (:generator 45
+    (let ((nope (generate-error-code di:object-not-unsigned-byte-32-error obj))
+	  (yep (gen-label))
+	  (fixnum (gen-label))
+	  (single-word (gen-label)))
+      ;; Is it a fixnum?
+      (inst and temp obj #x3)
+      (inst beq temp zero-tn fixnum)
+      ;; If not, is it a bignum?
+      (test-simple-type obj temp nope t vm:bignum-type)
+      ;; Get the number of digits.
+      (loadw temp obj 0 vm:other-pointer-type)
+      (inst srl temp temp vm:type-bits)
+      ;; Is it one?
+      (inst addu temp -1)
+      (inst beq temp single-word)
+      ;; If it's other than two, we can't be an (unsigned-byte 32)
+      (inst addu temp -1)
+      (inst bne temp nope)
+      ;; Get the second digit.
+      (loadw temp obj (1+ vm:bignum-digits-offset) vm:other-pointer-type)
+      ;; All zeros, its an (unsigned-byte 32).
+      (inst beq temp yep)
+      (inst nop)
+      ;; Otherwise, it isn't.
+      (inst b nope)
+      (inst nop)
+      
+      (emit-label single-word)
+      ;; Get the single digit.
+      (loadw temp obj vm:bignum-digits-offset vm:other-pointer-type)
+      ;; positive implies (unsigned-byte 32).
+      (inst bgez temp yep)
+      (inst nop)
+      ;; Otherwise, nope.
+      (inst b nope)
+      (inst nop)
+      
+      (emit-label fixnum)
+      ;; positive fixnums are (unsigned-byte 32).
+      (inst bltz obj nope)
+      (inst nop)
+      
+      (emit-label yep)
+      (move res obj))))
+
+
 
 
 ;;;; List/symbol types:
