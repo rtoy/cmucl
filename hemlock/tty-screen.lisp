@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.5 1991/07/26 21:56:28 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.6 1991/09/26 09:16:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,11 +71,6 @@
       "This is how long commands that deal with \"brackets\" shows the cursor at
       the matching \"bracket\" for this number of seconds."
       :value 0.5
-      :mode "Lisp")
-    (defhvar "Highlight Open Parens"
-      "When non-nil, causes open parens to be displayed in a different font when
-      the cursor is directly to the right of the corresponding close paren."
-      :value nil
       :mode "Lisp")))
 
 
