@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/afpa.lisp,v 1.3 1992/02/01 13:55:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/afpa.lisp,v 1.4 1992/03/09 20:37:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -444,44 +444,6 @@
   (:policy :fast-safe)
   (:generator 5
     (inst afpa-get-float-odd lo-bits float temp)))
-
-
-;;;; SAP accessors/setters
-
-#|
-(define-vop (sap-ref-afpa-single sap-ref)
-  (:translate sap-ref-single)
-  (:results (result :scs (afpa-single-reg)))
-  (:result-types afpa-single-float)
-  (:variant :afpa-single nil))
-
-(define-vop (sap-set-afpa-single sap-set)
-  (:translate %set-sap-ref-single)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (any-reg signed-reg zero immediate))
-	 (value :scs (afpa-single-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum afpa-single-float)
-  (:results (result :scs (afpa-single-reg)))
-  (:result-types afpa-single-float)
-  (:variant :afpa-single))
-
-(define-vop (sap-ref-afpa-double sap-ref)
-  (:translate sap-ref-double)
-  (:results (result :scs (afpa-double-reg)))
-  (:result-types afpa-double-float)
-  (:variant :afpa-double nil))
-
-(define-vop (sap-set-afpa-double sap-set)
-  (:translate %set-sap-ref-double)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (signed-reg any-reg zero immediate))
-	 (value :scs (afpa-double-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum afpa-double-float)
-  (:results (result :scs (afpa-double-reg)))
-  (:result-types afpa-double-float)
-  (:variant :afpa-double))
-
-|#
 
 
 ;;;; Float mode hackery:

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/mc68881.lisp,v 1.10 1992/01/22 18:10:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/mc68881.lisp,v 1.11 1992/03/09 20:37:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -522,44 +522,6 @@
   (:result-types unsigned-num)
   (:variant 1)
   (:translate double-float-low-bits))
-
-
-;;;; SAP accessors/setters
-
-#|
-(define-vop (sap-ref-mc68881-single sap-ref)
-  (:translate sap-ref-single)
-  (:results (result :scs (mc68881-single-reg)))
-  (:result-types mc68881-single-float)
-  (:variant :mc68881-single nil))
-
-(define-vop (sap-set-mc68881-single sap-set)
-  (:translate %set-sap-ref-single)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (any-reg signed-reg zero immediate))
-	 (value :scs (mc68881-single-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum mc68881-single-float)
-  (:results (result :scs (mc68881-single-reg)))
-  (:result-types mc68881-single-float)
-  (:variant :mc68881-single))
-
-(define-vop (sap-ref-mc68881-double sap-ref)
-  (:translate sap-ref-double)
-  (:results (result :scs (mc68881-double-reg)))
-  (:result-types mc68881-double-float)
-  (:variant :mc68881-double nil))
-
-(define-vop (sap-set-mc68881-double sap-set)
-  (:translate %set-sap-ref-double)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (signed-reg any-reg zero immediate))
-	 (value :scs (mc68881-double-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum mc68881-double-float)
-  (:results (result :scs (mc68881-double-reg)))
-  (:result-types mc68881-double-float)
-  (:variant :mc68881-double))
-
-|#
 
 
 ;;;; Float mode hackery:
