@@ -22,16 +22,18 @@
 		   char unsigned-char short unsigned-short
 		   int unsigned-int long unsigned-long
 		   void def-c-routine def-c-variable
-		   def-c-procedure reset-foreign-pointers))
+		   def-c-procedure))
 
 #-new-compiler
 (eval-when (compile)
   (setq lisp::*bootstrap-defmacro* t))
 
+#+nil
 (defvar foreign-routines-defined NIL
   "List of symbol/routine name pairs used to reset code pointers
   for foreign routines.")
 
+#+nil
 (defvar foreign-variables-defined NIL
   "List of symbol/variable name pairs used to reset pointers to
   foreign variables.")
@@ -158,7 +160,8 @@
 (proclaim '(function get-c-type (t) c-type))
 (defun get-c-type (spec)
   (cond ((gethash spec *c-type-names*))
-	((memq spec '(c-procedure short-float long-float))
+	((member spec
+		 '(c-procedure short-float long-float null-terminated-string))
 	 (let ((size (if (eq spec 'long-float) 64 32)))
 	   (make-primitive-type
 	    :description spec
@@ -234,6 +237,7 @@
   "Return the size in bits of the C-Type described by Spec."
   (c-type-size (get-c-type spec)))
 
+#-new-compiler
 (pushnew 'clc::fold-transform (get 'c-sizeof 'clc::clc-transforms))
 
 
@@ -430,29 +434,35 @@
   (name "" :type string)
   (function-name nil :type symbol)
   ;;
-  ;; Symbol name of the variable holding the code pointer for the routine.
-  (code nil :type symbol)
-  ;;
   ;; The number of words of arguments.
   (arg-size 0 :type unsigned-byte)
   ;;
-  ;; The global Alien var that we build the arguments in.  This is also the
-  ;; type of the Alien.
-  (arg-alien nil :type symbol)
+  ;; The name of the record that describes all the stuff on the stack.
+  (stack-record nil :type symbol)
   ;;
-  ;; The number of words of stack allocated for reference args.
-  (result-size 0 :type unsigned-byte)
+  ;; The name of the alien :copy args are allocated in.
+  (copy-args-buffer nil :type (or null symbol))
   ;;
-  ;;  Similar to Arg-Alien, but we receive results in it.
-  (result-alien nil :type symbol)
-  ;;
-  ;; List of Arg-Info structures.
+  ;; List of Arg-Info structures describing the args.
   (args nil :type list)
   ;;
   ;; The specified return-type for the function value.  Null if Void was
   ;; specified.
-  (return-type nil :type (or c-type null)))
-
+  (return-type nil :type (or c-type null))
+  ;;
+  ;; The SC the return value is passed in.
+  return-sc
+  ;;
+  ;; The vop we should use to coerce the return value.
+  return-move-vop
+  ;;
+  ;; The type for the return value, after the move vop and before any lisp
+  ;; level coerce code.
+  return-lisp-type
+  ;;
+  ;; Generate the lisp-level code to coerce the return value (if any)
+  return-coerce-generator
+  )
 
 (defstruct arg-info
   ;;
@@ -466,18 +476,165 @@
   mode
   options
   ;;
-  ;; Names of the operators that access this arg in the Args and Results
-  ;; Aliens.
-  (operator nil :type symbol)
-  (result-operator nil :type symbol)
+  ;; Where we pass this arg.  Either a storage class or :stack
+  allocation
+  ;;
+  ;; Either the offset in the storage class or stack.
+  offset
+  ;;
+  ;; Either the vop necessary to do the move, or the stack operator.
+  accessor
+  ;;
+  ;; Either operator to get at the arg, or NIL if it's :in.
+  buffer
+  ;;
+  ;; Either the name for :in, or some form for others.
+  passing-form
   )
 
 
-;;;
-;;;    A list of top-level forms that are emitted before the Defun.  This is
-;;; built in reverse order.
-;;;
-(defvar *output-forms*)
+(defun anotate-foreign-call (info)
+  (let ((offset 0))
+    (dolist (arg (routine-info-args info))
+      (setf (arg-info-allocation arg) :stack)
+      (setf (arg-info-offset arg) offset)
+      (let ((size (if (eq (arg-info-mode arg) :in)
+		      (c-sizeof 'system-area-pointer)
+		      (c-type-size (arg-info-type arg)))))
+	(setf offset (align-offset (+ offset size)
+				   (find-alignment size)))))
+    (setf (routine-info-arg-size info) offset))
+  (multiple-value-bind
+      (sc move-vop lisp-type)
+      (let ((type (routine-info-return-type info)))
+	(etypecase type
+	  (null)
+	  (primitive-type
+	   (let* ((descr (c-type-description type))
+		  (name (if (atom descr) descr (car descr)))
+		  (arg (if (consp descr) (cadr descr))))
+	     (ecase name
+	       (signed-byte 
+		(values 'c::signed-reg 'c::move descr))
+	       (unsigned-byte
+		(values 'c::unsigned-reg 'c::move descr))
+	       (null-terminated-string
+		(setf (routine-info-return-coerce-generator info)
+		      #'(lambda (form)
+			  `(import-string ,form)))
+		(values 'c::sap-reg 'c::move 'system-area-pointer))
+	       (boolean
+		(setf (routine-info-return-coerce-generator info)
+		      #'(lambda (form)
+			  `(not (zerop ,form))))
+		(values 'c::signed-reg 'c::move 'fixnum))
+	       ((system-area-pointer alien)
+		(when (eq name 'alien)
+		  (unless (> (length descr) 2)
+		    (error "Alien return types must include the size: ~S"
+			   descr))
+		  (setf (routine-info-return-coerce-generator info)
+			#'(lambda (form)
+			    `(make-alien ',arg ',(caddr descr) ,form))))
+		(values 'c::sap-reg 'c::move 'system-area-pointer))
+	       ((enumeration simple-string port short-float long-float)
+		(error "Can't return ~S yet." descr)))))
+	  (record-type
+	   (error "Can't return ~S yet." (c-type-description type)))
+	  ((or array-type pointer-type)
+	   (unless (c-type-size type)
+	     (error "Can't return arrays of unknown size: ~S"
+		    (c-type-description type)))
+	   (setf (routine-info-return-coerce-generator info)
+		 #'(lambda (form)
+		     `(make-alien ',(c-type-description type)
+				  ',(c-type-size type)
+				  ,form)))
+	   (values 'c::sap-ref 'c::move 'system-area-pointer))))
+    (setf (routine-info-return-sc info) sc)
+    (setf (routine-info-return-move-vop info) move-vop)
+    (setf (routine-info-return-lisp-type info) lisp-type))
+  (undefined-value))
+
+(defun pick-names (info)
+  (setf (routine-info-stack-record info)
+	(symbolicate (routine-info-function-name info) "-STACK-FRAME"))
+  (dolist (arg (routine-info-args info))
+    (unless (eq (arg-info-mode arg) :in)
+      (setf (arg-info-buffer arg)
+	    (symbolicate (routine-info-function-name info)
+			 "-"
+			 (arg-info-name arg)
+			 "-BUFFER")))
+    (when (eq (arg-info-allocation arg) :stack)
+      (setf (arg-info-accessor arg)
+	    (symbolicate (routine-info-function-name info)
+			 "-"
+			 (arg-info-name arg)
+			 (if (eq (arg-info-mode arg) :in)
+			     "-DATA"
+			     "-POINTER"))))))
+
+(defun compute-c-call-forms (info)
+  (let ((lisp-args nil)
+	(top-level-forms nil)
+	(arg-set-forms nil)
+	(result-get-forms nil))
+    (dolist (arg (routine-info-args info))
+      (cond ((arg-info-buffer arg)
+	     (unless (pointer-type-p (arg-info-type arg))
+	       (error "~S argument ~S must be a pointer type."
+		      (arg-info-mode arg)
+		      (arg-info-name arg)))
+	     (let* ((type (pointer-type-to (arg-info-type arg)))
+		    (size (c-type-size type))
+		    (offset (align-offset (routine-info-arg-size info)
+					  (find-alignment size))))
+	       (setf (routine-info-arg-size info)
+		     (+ offset size))
+	       (push `(defoperator (,(arg-info-buffer arg)
+				    ,(c-type-description (arg-info-type arg)))
+				   ((foo ,(routine-info-stack-record info)))
+			`(alien-index (alien-value ,foo) ,,offset ,,size))
+		     top-level-forms)
+	       (setf (arg-info-passing-form arg)
+		     `(alien-sap (,(arg-info-buffer arg)
+				  (alien-value stack))))))
+	    (t
+	     (setf (arg-info-passing-form arg) (arg-info-name arg))))
+
+      (unless (eq (arg-info-mode arg) :out)
+	(push (arg-info-name arg) lisp-args)
+	(when (arg-info-buffer arg)
+	  (push `(setf (alien-access (,(arg-info-buffer arg)
+				      (alien-value stack)))
+		       ,(arg-info-name arg))
+		arg-set-forms)))
+
+      (when (eq (arg-info-allocation arg) :stack)
+	(let* ((type (arg-info-type arg))
+	       (descr (c-type-description type))
+	       (size (c-type-size type)))
+	  (push `(defoperator (,(arg-info-accessor arg) ,descr)
+			      ((foo ,(routine-info-stack-record info)))
+		   `(alien-index (alien-value ,foo)
+				 ,,(arg-info-offset arg)
+				 ,,size))
+		top-level-forms))
+	(push `(setf (alien-access (,(arg-info-accessor arg)
+				    (alien-value stack)))
+		     ,(arg-info-passing-form arg))
+	      arg-set-forms))
+
+      (when (member (arg-info-mode arg) '(:out :in-out))
+	(push `(alien-access (,(arg-info-buffer arg) stack))
+	      result-get-forms)))
+	     
+    (values (nreverse top-level-forms)
+	    (nreverse lisp-args)
+	    (nreverse arg-set-forms)
+	    (nreverse result-get-forms))))
+	    
 
 (defmacro def-c-routine (name (return-type &key) &rest specs)
   "Def-C-Routine Name (Return-Type Option*)
@@ -508,8 +665,8 @@
         the interface function.
 
   :Copy
-        Similar to :In, except that the argument values are stored in a
-        preallocated object, and a pointer to the object is passed instead of
+        Similar to :In, except that the argument values are stored in on
+        the stack, and a pointer to the object is passed instead of
         the values themselves.
 
   :In-Out
@@ -550,8 +707,43 @@
     (unless (eq return-type 'void)
       (setf (routine-info-return-type info) (get-c-type return-type)))
 
+    (anotate-foreign-call info)
+    (pick-names info)
+
+    (multiple-value-bind
+	(top-level-forms lisp-args arg-set-forms result-get-forms)
+	(compute-c-call-forms info)
+      (let ((call-form `(call-foreign-function
+			 ,(routine-info-name info)
+			 ',info
+			 ,@(mapcar #'arg-info-passing-form
+				   (remove :stack (routine-info-args info)
+					   :key #'arg-info-allocation)))))
+	(when (routine-info-return-coerce-generator info)
+	  (setf call-form
+		(funcall (routine-info-return-coerce-generator info)
+			 call-form)))
+	`(progn
+	   ,@top-level-forms
+	   (defun ,(routine-info-function-name info) ,lisp-args
+	     (declare (optimize (speed 3) (safety 0)))
+	     (with-stack-alien (stack ,(routine-info-stack-record info)
+				      ,(routine-info-arg-size info))
+	       ,@arg-set-forms
+	       ,@(if (null (routine-info-return-type info))
+		     (if (null result-get-forms)
+			 `(,call-form
+			   (undefined-value))
+			 `(,call-form
+			   (values ,@result-get-forms)))
+		     (if (null result-get-forms)
+			 `(,call-form)
+			 `((values ,call-form
+				   ,@result-get-forms)))))))))))
+
+#|
+
     (let ((*output-forms* ()))
-      (link-routine-entry info)
       (allocate-arguments info)
       (multiple-value-bind (arg-names stores value-names values binds)
 			   (access-arguments info)
@@ -822,6 +1014,8 @@
     (t
      (error "Don't know how to hack ~S return type." type))))
 
+|#
+
 
 ;;; Make-Doc-String  --  Internal
 ;;;
@@ -839,24 +1033,8 @@
 		(cons 'return-value values)
 		values))))
 
-;;; Link-Routine-Entry  --  Internal
-;;;
-;;;    Emit stuff needed to look up a foreign routine and stash the code
-;;; pointer in a variable.
-;;;
-(proclaim '(function link-routine-entry (routine-info) void))
-(defun link-routine-entry (info)
-  (let ((name (symbolicate (routine-info-function-name info) "-code"))
-	(item (gensym)))
-    (push `(defparameter ,name (get-code-pointer ,(routine-info-name info)))
-	  *output-forms*)
-    (push `(let ((,item (cons ',name ',(routine-info-name info))))
-	     (when (not (member ,item foreign-routines-defined :test #'equal))
-	       (push ,item foreign-routines-defined)))
-	  *output-forms*)
-    (setf (routine-info-code info) name)))
 
-
+
 ;;; Def-C-Variable defines a global C-Variable, so that it is available to
 ;;; Lisp.  It accepts the name of the variable (as a string) and the type
 ;;; of the variable.
@@ -870,13 +1048,9 @@
 	 (c-type (if (primitive-type-p c-info)
 		     (c-type-description c-info)
 		     type))
-	 (c-size (c-type-size c-info))
-	 (item (gensym)))
-    `(let ((,item (cons ',symbol ',name)))
-       (when (not (member ,item foreign-variables-defined :test #'equal))
-	 (push ,item foreign-variables-defined))
-       (defalien ,symbol ,c-type ,c-size
-	 (lisp::sap-int (get-data-pointer ,name))))))
+	 (c-size (c-type-size c-info)))
+    `(defalien ,symbol ,c-type ,c-size
+       (%primitive c::foreign-symbol-address ',name))))
 
 #|
 ;;; Def-C-Procedure defines data structures etc. so that C can be passed
