@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.24 1993/02/26 08:42:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.25 1993/03/12 15:18:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,10 @@
 	  forwarding-pointer-type scavenger-hook-type))
 
 (in-package "KERNEL")
-(export '(%set-funcallable-instance-function %make-funcallable-instance))
+(export '(%set-funcallable-instance-function %make-funcallable-instance
+	  #+gengc funcallable-instance-entry-point
+	  #-gengc funcallable-instance-function
+	  funcallable-instance-lexenv funcallable-instance-layout))
 
 (export '(%numerator %denominator %realpart %imagpart
 	  %code-code-size %code-entry-points %code-debug-info
@@ -316,6 +319,12 @@
   #-gengc (function :init :arg
 		    :set-trans %set-funcallable-instance-function)
   #+gengc (entry-point :c-type "char *")
+  (lexenv :init :arg
+	  :ref-known (flushable) :ref-trans funcallable-instance-lexenv
+	  :set-known (unsafe) :set-trans (setf funcallable-instance-lexenv))
+  (layout :init :arg
+	  :ref-known (flushable) :ref-trans funcallable-instance-layout
+	  :set-known (unsafe) :set-trans (setf funcallable-instance-layout))
   (info :rest-p t))
 
 (define-primitive-object (value-cell :lowtag other-pointer-type
@@ -386,13 +395,9 @@
   size)
 
 #+gengc
-(define-primitive-object (sigcontext-chain)
-  (scp :c-type "struct sigcontext *")
-  (next :c-type "struct sigcontext_chain *"))
-
-#+gengc
 (define-primitive-object (mutator)
-  (thread :c-type "struct thread *")
+  ;; Holds the lisp thread structure, if any.
+  (thread)
   ;; Signal control magic.
   (foreign-fn-call-active :c-type "boolean")
   (interrupts-enabled :c-type "boolean")
@@ -400,7 +405,6 @@
   (pending-signal :c-type "int")
   (pending-code :c-type "int")
   (pending-mask :c-type "unsigned long")
-  (sigcontext-chain :c-type "struct sigcontext_chain *")
   ;; Stacks.
   (control-stack-base :c-type "lispobj *")
   (control-stack-pointer :c-type "lispobj *")
