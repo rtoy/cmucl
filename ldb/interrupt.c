@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.17 1990/11/28 17:14:26 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.18 1990/12/01 22:48:11 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -169,6 +169,8 @@ struct sigcontext *context;
     } else if ((!foreign_function_call_active)
 #ifdef mips
                && (context->sc_regs[FLAGS] & (1<<flag_Atomic))
+#else
+	       && (SymbolValue(PSEUDO_ATOMIC_ATOMIC))
 #endif               
                ) {
         pending_signal = signal;
@@ -177,6 +179,8 @@ struct sigcontext *context;
         context->sc_mask |= BLOCKABLE;
 #ifdef mips
         context->sc_regs[FLAGS] |= (1<<flag_Interrupted);
+#else
+	SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, T);
 #endif
     } else
         handle_now(signal, code, context);
