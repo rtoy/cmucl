@@ -7,13 +7,10 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.2 1990/10/03 09:57:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.3 1990/11/05 18:27:45 wlott Exp $
 ;;;    
 (in-package "KERNEL")
 
-
-(defconstant native-byte-order '#.target-byte-order
-  "Either :BIG-ENDIAN (IBM-PC/RT) or :LITTLE-ENDIAN (PMAX).")
 
 (defun get-header-data (x)
   "Return the 24 bits of data in the header of object X, which must be an
