@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.21 1992/11/04 17:51:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.21.1.1 1993/02/10 22:42:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -511,8 +511,11 @@
     (list (sxhash-list s-expr depth))
     (fixnum
      (ldb sxhash-bits-byte s-expr))
-    (structure
-     (internal-sxhash (type-of s-expr) depth))
+    (instance
+     (if (typep s-expr 'structure-object)
+	 (internal-sxhash (class-name (layout-class (%instance-layout s-expr)))
+			  depth)
+	 42))
     ;; Other-pointer types.
     (simple-string (sxhash-simple-string s-expr))
     (symbol (sxhash-simple-string (symbol-name s-expr)))
