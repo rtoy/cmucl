@@ -193,7 +193,10 @@
 (defun ir1-convert-macro (start cont fun form)
   (declare (type continuation start cont))
   (ir1-convert start cont
-	       (handler-case (funcall fun form *lexical-environment*)
+	       (handler-case (funcall fun form
+				      #+new-compiler *lexical-environment*
+				      #-new-compiler
+				      (lexenv-functions *lexical-environment*))
 		 (error (condition)
 		   (compiler-error "(during macroexpansion)~%~A"
 				   condition)))))
