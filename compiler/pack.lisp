@@ -523,7 +523,9 @@
   (declare (type tn tn) (type (or vop null) before) (type vop context))
   (let ((writes (tn-writes tn))
 	(save (tn-save-tn tn)))
-    (assert save)
+    (when (eq (tn-kind save) :specified-save)
+      (setf (tn-kind save) :save))
+    (assert (eq (tn-kind save) :save))
     (cond
      ((eq (tn-kind save) :save-once))
      ((and writes (null (tn-ref-next writes)))
@@ -534,6 +536,7 @@
      (t
       (emit-operand-load (vop-node context) (vop-block context)
 			 tn save before)))))
+
 
 ;;; RESTORE-TN  --  Internal
 ;;;
@@ -1150,18 +1153,30 @@
 ;;; don't attempt to pack in SCs that must be saved.  If Restricted, then we
 ;;; can only pack in TN-SC, not in any Alternate-SCs.
 ;;;
-;;;    If we can't pack in the initial SC, and the TN has a :SPECIFIED-SAVE TN,
-;;; then instead of using the latnerate SCs, pack the save TN (if necessary)
-;;; and then pack this TN in the same location.
+;;;    If we are attempting to pack in the SC of the save TN for a TN with a
+;;; :SPECIFIED-SAVE TN, then we pack in that location, instead of allocating a
+;;; new stack location.
 ;;;
 (defun pack-tn (tn restricted)
   (declare (type tn tn))
   (let* ((original (original-tn tn))
 	 (fsc (tn-sc tn))
-	 (alternates (unless restricted (sc-alternate-scs fsc))))
+	 (alternates (unless restricted (sc-alternate-scs fsc)))
+	 (save (tn-save-tn tn))
+	 (specified-save-sc
+	  (when (and save
+		     (eq (tn-kind save) :specified-save))
+	    (tn-sc save))))
+
     (do ((sc fsc (pop alternates)))
 	((null sc)
 	 (failed-to-pack-error tn restricted))
+      (when (eq sc specified-save-sc)
+	(unless (tn-offset save)
+	  (pack-tn save nil))
+	(setf (tn-offset tn) (tn-offset save))
+	(setf (tn-sc tn) (tn-sc save))
+	(return))
       (when (or restricted
 		(not (and (minusp (tn-cost tn)) (sc-save-p sc))))
 	(let ((loc (or (find-ok-target-offset original sc)
@@ -1174,15 +1189,7 @@
 	    (add-location-conflicts original sc loc)
 	    (setf (tn-sc tn) sc)
 	    (setf (tn-offset tn) loc)
-	    (return))
-	  (let ((save (tn-save-tn tn)))
-	    (when (and save
-		       (eq (tn-kind save) :specified-save))
-	      (unless (tn-offset save)
-		(pack-tn save nil))
-	      (setf (tn-offset tn) (tn-offset save))
-	      (setf (tn-sc tn) (tn-sc save))
-	      (return)))))))
+	    (return))))))
 	    
   (undefined-value))
 
