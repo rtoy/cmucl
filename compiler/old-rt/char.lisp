@@ -54,6 +54,13 @@
   (string-char-reg) (string-char-reg))
 
 
+;;; Use standard MOVE-ARGUMENT + coercion to move an untagged string-char to a
+;;; descriptor passing location.
+;;;
+(define-move-vop move-argument :move-argument
+  (string-char-reg) (any-reg descriptor-reg))
+
+
 ;;; Move a tagged string char to an untagged representation.
 ;;;
 (define-vop (move-to-string-char)
