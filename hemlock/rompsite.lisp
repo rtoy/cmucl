@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.19 1992/02/15 13:09:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.20 1992/02/15 13:13:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -926,7 +926,7 @@
       (alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	(multiple-value-bind
 	    (val err)
-	    (unix:unix-ioctl fd unix:TIOCGETP (alien-sap sg))
+	    (unix:unix-ioctl fd unix:TIOCGETP (alien:alien-sap sg))
 	  (unless val
 	    (error "Could not get tty information, unix error ~S."
 		   (unix:get-unix-error-msg err))))
@@ -938,14 +938,14 @@
 			(lognot unix:tty-crmod)))
 	  (multiple-value-bind
 	      (val err)
-	      (unix:unix-ioctl fd unix:TIOCSETP (alien-sap sg))
+	      (unix:unix-ioctl fd unix:TIOCSETP (alien:alien-sap sg))
 	    (if (null val)
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err))))))
       (alien:with-alien ((tc (alien:struct unix:tchars)))
 	(multiple-value-bind
 	    (val err)
-	    (unix:unix-ioctl fd unix:TIOCGETC (alien-sap tc))
+	    (unix:unix-ioctl fd unix:TIOCGETC (alien:alien-sap tc))
 	  (unless val
 	    (error "Could not get tty tchars information, unix error ~S."
 		   (unix:get-unix-error-msg err))))
@@ -965,14 +965,14 @@
 	(setf (alien:slot tc 't-brkc) -1)
 	(multiple-value-bind
 	    (val err)
-	    (unix:unix-ioctl fd unix:TIOCSETC (alien-sap tc))
+	    (unix:unix-ioctl fd unix:TIOCSETC (alien:alien-sap tc))
 	  (unless val
 	    (error "Failed to set tchars, unix error ~S."
 		   (unix:get-unix-error-msg err)))))
       (alien:with-alien ((tc (alien:struct unix:ltchars)))
 	(multiple-value-bind
 	    (val err)
-	    (unix:unix-ioctl fd unix:TIOCGLTC (alien-sap tc))
+	    (unix:unix-ioctl fd unix:TIOCGLTC (alien:alien-sap tc))
 	  (unless val
 	    (error "Could not get tty ltchars information, unix error ~S."
 		   (unix:get-unix-error-msg err))))
@@ -991,7 +991,7 @@
 	(setf (alien:slot tc 'unix:t-lnextc) -1)
 	(multiple-value-bind
 	    (val err)
-	    (unix:unix-ioctl fd unix:TIOCSLTC (alien-sap tc))
+	    (unix:unix-ioctl fd unix:TIOCSLTC (alien:alien-sap tc))
 	  (unless val
 	    (error "Failed to set ltchars, unix error ~S."
 		   (unix:get-unix-error-msg err))))))))
@@ -1003,14 +1003,14 @@
 	(alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	  (multiple-value-bind
 	      (val err)
-	      (unix:unix-ioctl fd unix:TIOCGETP (alien-sap sg))
+	      (unix:unix-ioctl fd unix:TIOCGETP (alien:alien-sap sg))
 	    (unless val
 	      (error "Could not get tty information, unix error ~S."
 		     (unix:get-unix-error-msg err)))
 	    (setf (alien:slot sg 'unix:sg-flags) old-flags)
 	    (multiple-value-bind
 		(val err)
-		(unix:unix-ioctl fd unix:TIOCSETP (alien-sap sg))
+		(unix:unix-ioctl fd unix:TIOCSETP (alien:alien-sap sg))
 	      (unless val
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err)))))))
@@ -1026,7 +1026,7 @@
 	  (setf (alien:slot tc 'unix:t-brkc) (svref old-tchars 5))
 	  (multiple-value-bind
 	      (val err)
-	      (unix:unix-ioctl fd unix:TIOCSETC (alien-sap tc))
+	      (unix:unix-ioctl fd unix:TIOCSETC (alien:alien-sap tc))
 	    (unless val
 	      (error "Failed to set tchars, unix error ~S."
 		     (unix:get-unix-error-msg err))))))
@@ -1042,7 +1042,7 @@
 	  (setf (alien:slot tc 'unix:t-lnextc) (svref old-ltchars 5))
 	  (multiple-value-bind
 	      (val err)
-	      (unix:unix-ioctl fd unix:TIOCSLTC (alien-sap tc))
+	      (unix:unix-ioctl fd unix:TIOCSLTC (alien:alien-sap tc))
 	    (unless val
 	      (error "Failed to set ltchars, unix error ~S."
 		     (unix:get-unix-error-msg err)))))))))
