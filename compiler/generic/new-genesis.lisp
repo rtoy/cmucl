@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.66 2004/05/15 18:30:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.67 2004/05/24 23:04:10 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,11 +71,11 @@
 (defstruct (descriptor
 	    (:constructor make-descriptor (high low &optional space offset))
 	    (:print-function %print-descriptor))
-  space			      ; The space is descriptor is allocated in.
+  space			      ; The space this descriptor is allocated in.
   offset		      ; The offset (in words) from the start of
 			      ;  that space.
-  high			      ; The high half of the descriptor.
-  low			      ; The low half of the descriptor.
+  high			      ; The high part of the descriptor.
+  low			      ; The low part of the descriptor.
   )
 
 (defun %print-descriptor (des stream depth)
@@ -86,9 +86,11 @@
 		  (logior (ash (descriptor-high des)
 			       (1+ (- descriptor-low-bits vm:lowtag-bits)))
 			  (ash (descriptor-low des) (- 1 vm:lowtag-bits)))))
-	     (if (> unsigned #x1FFFFFFF)
+	     (if (> unsigned (1- (ash 1 (- vm:word-bits 3))))
+		 ;; negative fixnum
 		 (format stream "#<fixnum: ~D>"
-			 (- unsigned #x40000000))
+			 (- unsigned (ash 1 (- vm:word-bits 2))))
+		 ;; positive fixnum
 		 (format stream "#<fixnum: ~D>" unsigned))))
 	  ((or (= lowtag vm:other-immediate-0-type)
 	       (= lowtag vm:other-immediate-1-type))
@@ -98,12 +100,20 @@
 			   (ash (descriptor-low des)
 				(- vm:type-bits)))
 		   (logand (descriptor-low des) vm:type-mask)))
+	  ((and (= lowtag vm:list-pointer-type)
+		(= (descriptor-bits des) (descriptor-bits *nil-descriptor*)))
+	   (format stream "NIL"))
 	  (t
-	   (format stream "#<pointer: #x~X, lowtag #b~3,'0B, ~A space>"
+	   (format stream
+		   (ecase lowtag
+		     (#.vm:function-pointer-type "#<function-pointer")
+		     (#.vm:list-pointer-type "#<list-pointer")
+		     (#.vm:other-pointer-type "#<other-pointer")
+		     (#.vm:instance-pointer-type "#<instance-pointer")))
+	   (format stream ": #x~X, ~A space>"
 		   (logior (ash (descriptor-high des)
 				descriptor-low-bits)
 			   (logandc2 (descriptor-low des) vm:lowtag-mask))
-		   lowtag
 		   (let ((space (descriptor-space des)))
 		     (if space
 			 (space-name space)
@@ -134,7 +144,7 @@
   "Return a descriptor for a block of LENGTH bytes out of SPACE.  The free
   pointer is boosted as necessary.  If any additional memory is needed, we
   vm_allocate it.  The descriptor returned is a pointer of type LOWTAG."
-  (let* ((bytes (round-up length (ash 1 vm:lowtag-bits)))
+  (let* ((bytes (round-up length #+amd64 16 #-amd64 (ash 1 vm:lowtag-bits)))
 	 (offset (space-free-pointer space))
 	 (new-free-ptr (+ offset (ash bytes (- vm:word-shift)))))
     (when (> new-free-ptr (space-words-allocated space))
@@ -278,26 +288,26 @@
 ;;;; Stuff to read and write the core memory.
 
 (defun maybe-byte-swap (word)
-  (declare (type (unsigned-byte 32) word))
-  (assert (= vm:word-bits 32))
-  (assert (= vm:byte-bits 8))
   (if (eq (c:backend-byte-order c:*native-backend*)
 	  (c:backend-byte-order c:*backend*))
       word
-      (logior (ash (ldb (byte 8 0) word) 24)
-	      (ash (ldb (byte 8 8) word) 16)
-	      (ash (ldb (byte 8 16) word) 8)
-	      (ldb (byte 8 24) word))))
+      (locally (declare (type (unsigned-byte 32) word))
+	(assert (= vm:word-bits 32))
+	(assert (= vm:byte-bits 8))
+	(logior (ash (ldb (byte 8 0) word) 24)
+		(ash (ldb (byte 8 8) word) 16)
+		(ash (ldb (byte 8 16) word) 8)
+		(ldb (byte 8 24) word)))))
 
 (defun maybe-byte-swap-short (short)
-  (declare (type (unsigned-byte 16) short))
-  (assert (= vm:word-bits 32))
-  (assert (= vm:byte-bits 8))
   (if (eq (c:backend-byte-order c:*native-backend*)
 	  (c:backend-byte-order c:*backend*))
       short
-      (logior (ash (ldb (byte 8 0) short) 8)
-	      (ldb (byte 8 8) short))))
+      (locally (declare (type (unsigned-byte 16) short))
+	(assert (= vm:word-bits 32))
+	(assert (= vm:byte-bits 8))
+	(logior (ash (ldb (byte 8 0) short) 8)
+		(ldb (byte 8 8) short)))))
   
 
 (defun write-indexed (address index value)
@@ -311,8 +321,20 @@
       (let ((sap (descriptor-sap address))
 	    (high (descriptor-high value))
 	    (low (descriptor-low value)))
-	(setf (sap-ref-32 sap (ash index vm:word-shift))
-	      (maybe-byte-swap (logior (ash high 16) low))))))
+	(ecase vm:word-bits
+	  (32
+	   (setf (sap-ref-32 sap (ash index vm:word-shift))
+		 (maybe-byte-swap (logior (ash high descriptor-low-bits) low))))
+	  (64
+	   (assert (eq (c:backend-byte-order c:*backend*) :little-endian))
+	   ;; lower 32 bits
+	   (setf (sap-ref-32 sap (ash index vm:word-shift))
+		 (maybe-byte-swap (logand
+				   (logior (ash high descriptor-low-bits) low)
+				   (1- (ash 1 32)))))
+	   ;; higher 32 bits
+	   (setf (sap-ref-32 sap (+ 4 (ash index vm:word-shift)))
+		 (maybe-byte-swap (ash high (- descriptor-low-bits 32)))))))))
 
 (defun write-memory (address value)
   "Write VALUE (a descriptor) at ADDRESS (also a descriptor)."
@@ -323,7 +345,14 @@
   "Return the value (as a descriptor) INDEX words from ADDRESS (a descriptor)."
   (let* ((sap (descriptor-sap address))
 	 (value (maybe-byte-swap (sap-ref-32 sap (ash index vm:word-shift)))))
-    (make-random-descriptor value)))
+    (ecase vm:word-bits
+      (32 (make-random-descriptor value))
+      (64
+       (assert (eq (c:backend-byte-order c:*backend*) :little-endian))
+       ;; assume little endian
+       (let ((most-significant (sap-ref-32 sap (+ 4 (ash index vm:word-shift)))))
+	 (make-random-descriptor (logior (ash most-significant 32) value)))))))
+	     
 
 (defun read-memory (address)
   "Return the value at ADDRESS (a descriptor)."
@@ -386,7 +415,10 @@
 	 (des (allocate-vector-object space vm:byte-bits (1+ len)
 				      vm:simple-string-type)))
     (write-indexed des vm:vector-length-slot (make-fixnum-descriptor len))
-    (copy-to-system-area string (* vm:vector-data-offset vm:word-bits)
+    (copy-to-system-area string (* vm:vector-data-offset 32) ; this should be the
+			 ;; word size of the old vm which may be different from the new vm
+			 ;; I'm assuming that the old vm is 32 bits!!!
+			 ;; TODO: add word-bits slot to the backend structure
 			 (descriptor-sap des)
 			 (* vm:vector-data-offset vm:word-bits)
 			 (* (1+ len) vm:byte-bits))
@@ -537,7 +569,7 @@
 ;;; COLD-VECTOR  --  Internal
 ;;;
 ;;;    Make a simple-vector that holds the specified Objects and return its
-;;; decriptor.
+;;; descriptor.
 ;;;
 (defun cold-vector (&rest objects)
   (let* ((size (length objects))
@@ -562,9 +594,10 @@
 		 vm:word-bits (1- vm:symbol-size) vm:symbol-header-type)))
     (write-indexed symbol vm:symbol-value-slot unbound-marker)
     (when (or (c:backend-featurep :x86)
+	      (c:backend-featurep :amd64)
 	      (c:backend-featurep :sparc))
-      (let ((offset #+(or x86 sparc) vm:symbol-hash-slot
-		    #-(or x86 sparc) vm:symbol-unused-slot)
+      (let ((offset #+(or x86 amd64 sparc) vm:symbol-hash-slot
+		    #-(or x86 amd64 sparc) vm:symbol-unused-slot)
 	    (value (sxhash name)))
 	
       (write-indexed symbol offset (make-fixnum-descriptor value))))
@@ -653,14 +686,15 @@
 ;;; anything else, we intern those here.  We also set the values of T and Nil.
 ;;;
 (defun initialize-symbols ()
-  "Initilizes the cold load symbol-hacking data structures."
+  "Initializes the cold load symbol-hacking data structures."
   (do-all-symbols (sym)
     (remprop sym 'cold-info))
   (setq *cold-packages* nil)
   (let ((*cold-symbol-allocation-space* *static*))
     ;; Special case NIL.
     (let ((des (allocate-unboxed-object *static* vm:word-bits
-					vm:symbol-size 0)))
+					#+amd64 (1+ vm:symbol-size) #-amd64 vm:symbol-size
+					0)))
       (setf *nil-descriptor*
 	    (make-descriptor (descriptor-high des)
 			     (+ (descriptor-low des) (* 2 vm:word-bytes)
@@ -857,7 +891,7 @@
   (let ((hash (extract-fdefn-name name)))
     (or (gethash hash *fdefn-objects*)
 	(let ((fdefn (allocate-boxed-object (or *fdefn-space* *dynamic*)
-					    (1- vm:fdefn-size)
+					    vm:fdefn-size
 					    vm:other-pointer-type)))
 	  (setf (gethash hash *fdefn-objects*) fdefn)
 	  (write-memory fdefn (make-other-immediate-descriptor
@@ -1731,8 +1765,11 @@
 							   (- vm:word-shift))
 						      vm:function-header-type))
     (write-indexed fn vm:function-self-slot
-		   (if (= (c:backend-fasl-file-implementation c:*backend*)
-			  #.c:x86-fasl-file-implementation)
+		   (if (or (= (c:backend-fasl-file-implementation c:*backend*)
+			      #.c:x86-fasl-file-implementation)
+			   (= (c:backend-fasl-file-implementation c:*backend*)
+			      #.c:amd64-fasl-file-implementation))
+		       ;; point to raw code instead of the code function object itself
 		       (make-random-descriptor
 			(+ (descriptor-bits fn)
 			   (- (ash vm:function-code-offset
@@ -1930,7 +1967,7 @@
   (clrhash *cold-foreign-hash*)
   ;; This has gotta be the first entry.  This has to match what
   ;; os_foreign_linkage_init does!
-  #+x86
+  #+(or x86 amd64)
   (cold-register-foreign-linkage "resolve_linkage_tramp" :code)
   #+sparc
   (progn
@@ -1971,7 +2008,7 @@
 (defvar *load-time-code-fixups* nil)
 
 (defun note-load-time-code-fixup (code-object offset value kind)
-  (assert (c:backend-featurep :x86))
+  (assert (or (c:backend-featurep :x86) (c:backend-featurep :amd64)))
   (when (= (space-identifier (descriptor-space code-object)) dynamic-space-id)
     (push (list code-object offset value kind) *load-time-code-fixups*)))
 
@@ -2059,7 +2096,8 @@
 			inst))))
 	  (setf (sap-ref-16 sap 2)
 		(maybe-byte-swap-short (ldb (byte 16 0) value))))))
-      (#.c:x86-fasl-file-implementation
+      ((#.c:x86-fasl-file-implementation
+	#.c:amd64-fasl-file-implementation) ;; I don't know if this right
        (let* ((disp (logior (sap-ref-8 sap 0)
 			    (ash (sap-ref-8 sap 1) 8)
 			    (ash (sap-ref-8 sap 2) 16)
@@ -2068,6 +2106,7 @@
 					vm:lowtag-mask)))
 	 (ecase kind
 	   (:absolute
+	    ;; fix this for 64 bit addresses
 	    (let ((new-value (+ value disp)))
 	      (setf (sap-ref-8 sap 0) (ldb (byte 8 0) new-value))
 	      (setf (sap-ref-8 sap 1) (ldb (byte 8 8) new-value))
@@ -2220,14 +2259,24 @@
 	       (test-tail (tail prefix priority)
 		 (when (tail-comp name tail)
 		   (record prefix
-			   (subseq name 0
-				   (- (length name)
-				      (length tail)))
+			   (let* ((len (- (length name)
+					  (length tail)))
+				  (result (make-string len)))
+			     ;; (subseq name 0 len) but subseq is broken somehow.
+			     (do ((i 0 (1+ i)))
+				 ((= i len) result)
+			       (setf (aref result i) (aref name i))))
 			   priority)))
 	       (test-head (head prefix priority)
 		 (when (head-comp name head)
 		   (record prefix
-			   (subseq name (length head))
+			   ;; (subseq name (length head)) but subseq is broken
+			   (let* ((head-len (length head))
+				  (len (- (length name) head-len))
+				  (result (make-string len)))
+			     (do ((i 0 (1+ i)))
+				 ((= i len) result)
+			       (setf (aref result i) (aref name (+ i head-len)))))
 			   priority))))
 	    (test-tail "-TYPE" "type_" 0)
 	    (test-tail "-FLAG" "flag_" 1)
@@ -2444,7 +2493,7 @@
 		(cold-load file))
 	      (maybe-gc))
 	    (resolve-assembler-fixups)
-	    (when (c:backend-featurep :x86)
+	    (when (or (c:backend-featurep :x86) (c:backend-featurep :amd64))
 	      (output-load-time-code-fixups))
 	    (linkage-info-to-core)
 	    (finish-symbols)
