@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.21 1993/11/08 01:41:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.22 1993/12/17 15:03:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -251,6 +251,14 @@
 				  (first (combination-args call)))
 				 type)
 		  (specifier-type 'float)))))))
+
+(defoptimizer (log derive-type) ((x &optional y))
+  (when (and (csubtypep (continuation-type x)
+			(specifier-type '(real (0.0))))
+	     (or (null y)
+		 (csubtypep (continuation-type y)
+			    (specifier-type '(real (0.0))))))
+    (specifier-type 'float)))
 
 
 ;;;; Irrational transforms:
