@@ -11,12 +11,12 @@
 %% distribution, and must be obtained from a repository. At this time
 %% I was able to fetch from
 %% ftp.cdrom.com:pub/tex/ctan/macros/latex/contrib/supported/
-%%			camel/index.ins
-%%			camel/index.dtx
-%%			calc/calc.ins
-%%			calc/calc.dtx
-%%			changebar/changebar.ins
-%%			changebar/changebar.dtx
+%%                      camel/index.ins
+%%                      camel/index.dtx
+%%                      calc/calc.ins
+%%                      calc/calc.dtx
+%%                      changebar/changebar.ins
+%%                      changebar/changebar.dtx
 %% One runs latex on the .ins file to produce .tex and/or .sty
 %% files that must be put in a path searched by latex.
 %%
@@ -1134,6 +1134,11 @@ cmucl(1).  Currently Lisp accepts the following switches:
   file should not be loaded during the normal start up sequence.
   Also, this switch suppresses the loading of a hemlock init file when
   Hemlock is started up with the \code{-edit} switch.
+  
+\item[\code{-nositeinit}] accepts no arguments and specifies that the
+  site-init file, which can contain site specific initialization code,
+  should not be loaded during the normal start up sequence, even if it
+  exists.
   
 \item[\code{-load}] accepts an argument which should be the name of a
   file to load into Lisp before entering Lisp's read-eval-print loop.

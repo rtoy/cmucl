@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.6 1997/07/21 12:22:37 pw Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.7 2001/12/08 18:42:40 pmai Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -63,6 +63,9 @@ is started.
 Suppresses loading of the init file, and also prevents \-edit from loading the
 .I Hemlock
 init file.
+.TP
+.BR \-nositeinit
+Suppresses loading of the site-init site specific initialization file.
 .TP
 .BR \-load " filename"
 Loads the specified file into Lisp before entering Lisp's read-eval-print loop.
