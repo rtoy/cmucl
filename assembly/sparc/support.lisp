@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.6 1992/07/31 21:47:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.7 1992/07/31 21:55:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 	    (when cur-nfp
 	      (store-stack-tn ,nfp-save cur-nfp))
 	    (inst compute-lra-from-code ,lra code-tn lra-label ,temp)
-	    (note-this-location ,vop :call-site)
+	    (note-next-instruction ,vop :call-site)
 	    (inst ji ,temp (make-fixup ',name :assembly-routine))
 	    (inst nop)
 	    (emit-return-pc lra-label)
