@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.46 2002/12/18 00:16:32 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.47 2003/02/10 13:46:19 gerd Exp $")
 
 (in-package :pcl)
 
@@ -991,12 +991,7 @@ work during bootstrapping.
     (walk-form method-lambda env #'walk-function)))
 
 (defun generic-function-name-p (name)
-  (and (or (symbolp name)
-	   (and (consp name)
-		(eq (car name) 'setf)
-		(consp (cdr name))
-		(symbolp (cadr name))
-		(null (cddr name))))
+  (and (ext:valid-function-name-p name)
        (fboundp name)
        (if (eq *boot-state* 'complete)
 	   (standard-generic-function-p (gdefinition name))
