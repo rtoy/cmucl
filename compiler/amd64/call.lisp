@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/call.lisp,v 1.2 2004/07/06 20:11:24 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/call.lisp,v 1.3 2004/07/08 17:32:30 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -297,7 +297,7 @@
     (let ((regs-defaulted (gen-label)))
       (note-this-location vop :unknown-return)
       (inst jmp-short regs-defaulted)
-      ;; Default the unsuppled registers.
+      ;; Default the unsupplied registers.
       (let* ((2nd-tn-ref (tn-ref-across values))
 	     (2nd-tn (tn-ref-tn 2nd-tn-ref)))
 	(inst mov 2nd-tn nil-value)
@@ -480,6 +480,7 @@
   (let ((variable-values (gen-label))
 	(done (gen-label)))
     (inst jmp-short variable-values)
+    (inst nop) ; pad one more byte to make it 3
     
     (inst mov start rsp-tn)
     (inst push (first register-arg-tns))
@@ -488,7 +489,7 @@
 
     (emit-label variable-values)
     ;; dtc: this writes the registers onto the stack even if they are
-    ;; not needed, only the number specified in ecx are used and have
+    ;; not needed, only the number specified in rcx are used and have
     ;; stack allocated to them. No harm is done.
     (loop
       for arg in register-arg-tns
