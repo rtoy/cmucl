@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.14 1993/05/17 08:36:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.15 1993/08/19 17:14:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -319,49 +319,6 @@
 (defun defmacro-error (problem kind name)
   (error "Illegal or ill-formed ~A argument in ~A~@[ ~S~]."
 	 problem kind name))
-
-
-
-;;;; Routines used at runtime by the resultant body.
-
-;;; VERIFY-KEYWORDS -- internal
-;;;
-;;; Determine if key-list is a valid list of keyword/value pairs.  Do not
-;;; signal the error directly, 'cause we don't know how it should be signaled.
-;;; 
-(defun verify-keywords (key-list valid-keys allow-other-keys)
-  (do ((already-processed nil)
-       (unknown-keyword nil)
-       (remaining key-list (cddr remaining)))
-      ((null remaining)
-       (if (and unknown-keyword
-		(not allow-other-keys)
-		(not (lookup-keyword :allow-other-keys key-list)))
-	   (values :unknown-keyword (list unknown-keyword valid-keys))
-	   (values nil nil)))
-    (cond ((not (and (consp remaining) (listp (cdr remaining))))
-	   (return (values :dotted-list key-list)))
-	  ((null (cdr remaining))
-	   (return (values :odd-length key-list)))
-	  ((member (car remaining) already-processed)
-	   (return (values :duplicate (car remaining))))
-	  ((or (eq (car remaining) :allow-other-keys)
-	       (member (car remaining) valid-keys))
-	   (push (car remaining) already-processed))
-	  (t
-	   (setf unknown-keyword (car remaining))))))
-
-(defun lookup-keyword (keyword key-list)
-  (do ((remaining key-list (cddr remaining)))
-      ((endp remaining))
-    (when (eq keyword (car remaining))
-      (return (cadr remaining)))))
-
-(defun keyword-supplied-p (keyword key-list)
-  (do ((remaining key-list (cddr remaining)))
-      ((endp remaining))
-    (when (eq keyword (car remaining))
-      (return t))))
 
 
 
