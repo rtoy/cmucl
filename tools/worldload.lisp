@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.91 2001/03/15 18:01:40 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.92 2001/07/08 16:35:13 pw Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,8 +221,14 @@
   (setq ext:*ansi-defstruct-options-p* t)
   ;;
   ;; Save the lisp.  If RUNTIME, there is nothing new to purify, so don't.
-  (save-lisp "lisp.core"
-	     :root-structures
-	     #-(or runtime no-hemlock) `(ed ,hi::*global-command-table*)
-	     #+(or runtime no-hemlock) ()
-	     :purify #+runtime nil #-runtime t))
+  (let ((root-structures
+         #-(or runtime no-hemlock) `(ed ,hi::*global-command-table*)
+         #+(or runtime no-hemlock) ())
+        (purify (featurep :runtime)))
+    ;; the following features are only used to control the build
+    ;; process, so we remove them from the generated image
+    (dolist (f '(:runtime :no-compiler :no-pcl :no-clx :no-clm :no-hemlock))
+      (setf *features* (remove f *features*)))
+    (save-lisp "lisp.core"
+               :root-structures root-structures
+               :purify purify)))
