@@ -42,13 +42,13 @@
 (in-package "KERNEL")
 (defun ctype-p (thing)
   (and (structurep thing)
-       (member (structure-ref thing 0)
+       (member (c::structure-ref thing 0)
 	       '(ctype hairy-type named-type numeric-type array-type
 		       member-type structure-type union-type args-type
 		       values-type function-type))))
 
 (defun values-type-p (thing)
-  (and (structurep thing) (eq (structure-ref thing 0) 'values-type)))
+  (and (structurep thing) (eq (c::structure-ref thing 0) 'values-type)))
 
 ;;; Define this so that we can copy type-class structures before the defstruct
 ;;; for type-class runs.
