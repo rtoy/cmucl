@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.63 2002/08/22 22:23:29 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.64 2002/08/23 18:31:04 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,7 +67,7 @@
 			      &body forms)
   (let ((temp (member '&rest names)))
     (unless (= (length temp) 2)
-      (error "&rest keyword is ~:[missing~;misplaced~]." temp))
+      (simple-program-error "&rest keyword is ~:[missing~;misplaced~]." temp))
     (let ((key-vars (ldiff names temp))
           (key-var (or keywords-var (gensym)))
           (rest-var (cadr temp)))
@@ -721,7 +721,8 @@
 	    (do ((options (rest spec) (cddr options)))
 		((null options))
 	      (unless (and (consp options) (consp (cdr options)))
-		(error "Malformed condition slot spec:~%  ~S." spec))
+		(simple-program-error "Malformed condition slot spec:~%  ~S."
+                                      spec))
 	      (let ((arg (second options)))
 		(case (first options)
 		  (:reader (readers arg))
@@ -731,7 +732,8 @@
 		   (writers `(setf ,arg)))
 		  (:initform
 		   (when initform-p
-		     (error "More than one :INITFORM in:~%  ~S" spec))
+		     (simple-program-error "More than one :INITFORM in:~%  ~S"
+                                           spec))
 		   (setq initform-p t)
 		   (setq initform arg))
 		  (:initarg (initargs arg))
@@ -739,7 +741,8 @@
 		   (setq allocation arg))
 		  (:type)
 		  (t
-		   (error "Unknown slot option:~%  ~S" (first options))))))
+		   (simple-program-error "Unknown slot option:~%  ~S"
+                                         (first options))))))
 
 	    (all-readers (readers))
 	    (all-writers (writers))
@@ -756,7 +759,7 @@
       
       (dolist (option options)
 	(unless (consp option)
-	  (error "Bad option:~%  ~S" option))
+	  (simple-program-error "Bad option:~%  ~S" option))
 	(case (first option)
 	  (:documentation (setq documentation (second option)))
 	  (:report
@@ -779,7 +782,7 @@
 				`#'(lambda () ,val))
 			    default-initargs)))))
 	  (t
-	   (error "Unknown option: ~S" (first option)))))
+	   (simple-program-error "Unknown option: ~S" (first option)))))
 
       `(progn
 	 (eval-when (compile load eval)
@@ -806,7 +809,7 @@
    argument.  The bindings are searched first to last in the event of a
    signalled condition."
   (unless (every #'(lambda (x) (and (listp x) (= (length x) 2))) bindings)
-    (error "Ill-formed handler bindings."))
+    (simple-program-error "Ill-formed handler bindings."))
   `(let ((*handler-clusters*
 	  (cons (list ,@(mapcar #'(lambda (x) `(cons ',(car x) ,(cadr x)))
 				bindings))

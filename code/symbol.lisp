@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.30 2002/07/22 17:05:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.31 2002/08/23 18:31:05 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,12 +46,12 @@
   set to the specified new value."
   (declare (type symbol variable))
   (cond ((null variable)
-	 (error "Nihil ex nihil, can't set NIL."))
+	 (simple-program-error "Nihil ex nihil, can't set NIL."))
 	((eq variable t)
-	 (error "Veritas aeterna, can't set T."))
+	 (simple-program-error "Veritas aeterna, can't set T."))
 	((and (boundp '*keyword-package*)
 	      (keywordp variable))
-	 (error "Can't set keywords."))
+	 (simple-program-error "Can't set keywords."))
 	(t
 	 (%set-symbol-value variable new-value))))
 
@@ -110,8 +110,8 @@
   (do ((pl (symbol-plist symbol) (cddr pl)))
       ((atom pl) default)
     (cond ((atom (cdr pl))
-	   (error "~S has an odd number of items in its property list."
-		   symbol))
+	   (simple-program-error
+	    "~S has an odd number of items in its property list." symbol))
 	  ((eq (car pl) indicator)
 	   (return (cadr pl))))))
 
@@ -124,8 +124,8 @@
 	     (list* indicator value (symbol-plist symbol)))
        value)
     (cond ((endp (cdr pl))
-	   (error "~S has an odd number of items in its property list."
-		  symbol))
+	   (simple-program-error
+	    "~S has an odd number of items in its property list." symbol))
 	  ((eq (car pl) indicator)
 	   (rplaca (cdr pl) value)
 	   (return value)))))
@@ -142,8 +142,8 @@
        (prev nil pl))
       ((atom pl) nil)
     (cond ((atom (cdr pl))
-	   (error "~S has an odd number of items in its property list."
-		  symbol))
+	   (simple-program-error
+	    "~S has an odd number of items in its property list." symbol))
 	  ((eq (car pl) indicator)
 	   (cond (prev (rplacd (cdr prev) (cddr pl)))
 		 (t
@@ -157,8 +157,7 @@
   (do ((plist place (cddr plist)))
       ((null plist) default)
     (cond ((atom (cdr plist))
-	   (error "~S is a malformed property list."
-		  place))
+	   (simple-program-error "~S is a malformed property list." place))
 	  ((eq (car plist) indicator)
 	   (return (cadr plist))))))
 
@@ -179,8 +178,7 @@
   (do ((plist place (cddr plist)))
       ((null plist) (values nil nil nil))
     (cond ((atom (cdr plist))
-	   (error "~S is a malformed proprty list."
-		  place))
+	   (simple-program-error "~S is a malformed property list." place))
 	  ((memq (car plist) indicator-list)
 	   (return (values (car plist) (cadr plist) plist))))))
 

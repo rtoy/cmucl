@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.41 2002/08/12 21:13:54 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.42 2002/08/23 18:31:05 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -340,7 +340,8 @@
   (multiple-value-bind (required optional restp rest keyp keys allowp aux)
 		       (parse-lambda-list lambda-list)
     (when aux
-      (error "&Aux in a FUNCTION or VALUES type: ~S." lambda-list))
+      (simple-program-error "&Aux in a FUNCTION or VALUES type: ~S."
+                            lambda-list))
     (setf (args-type-required result) (mapcar #'specifier-type required))
     (setf (args-type-optional result) (mapcar #'specifier-type optional))
     (setf (args-type-rest result) (if restp (specifier-type rest) nil))
@@ -348,10 +349,12 @@
     (collect ((key-info))
       (dolist (key keys)
 	(when (or (atom key) (/= (length key) 2))
-	  (error "Keyword type description is not a two-list: ~S." key))
+	  (simple-program-error
+	   "Keyword type description is not a two-list: ~S." key))
 	(let ((kwd (first key)))
 	  (when (find kwd (key-info) :key #'key-info-name)
-	    (error "Repeated keyword ~S in lambda list: ~S." kwd lambda-list))
+	    (simple-program-error "Repeated keyword ~S in lambda list: ~S."
+                                  kwd lambda-list))
 	  (key-info (make-key-info :name kwd
 				   :type (specifier-type (second key))))))
       (setf (args-type-keywords result) (key-info)))
@@ -885,7 +888,8 @@
 		   (return-from values-specifier-type
 				(make-unknown-type :specifier spec)))
 		  (t
-		   (error "Bad thing to be a type specifier: ~S." spec)))))))))
+		   (simple-program-error "Bad thing to be a type specifier: ~S."
+                                         spec)))))))))
 
 
 ;;; SPECIFIER-TYPE  --  Interface
@@ -896,7 +900,7 @@
 (defun specifier-type (x)
   (let ((res (values-specifier-type x)))
     (when (values-type-p res)
-      (error "VALUES type illegal in this context:~%  ~S" x))
+      (simple-program-error "VALUES type illegal in this context:~%  ~S" x))
     res))
 
 
@@ -1419,7 +1423,8 @@
      (make-numeric-type :complexp :complex))
     (t
      (flet ((complex-type-error (type)
-	      (error "Component type for Complex is not real: ~S." spec)))
+	      (simple-program-error
+	       "Component type for Complex is not real: ~S." spec)))
        (let* ((type (specifier-type spec))
 	      (res (copy-numeric-type
 		    (cond ((numeric-type-p type)
@@ -1463,7 +1468,8 @@
 	      (and (consp ,x) (typep (car ,x) ',type) (null (cdr ,x))))
 	  ,x)
 	 (t
-	  (error "Bound is not *, a ~A or a list of a ~A: ~S" ',type ',type ,x))))
+	  (simple-program-error "Bound is not *, a ~A or a list of a ~A: ~S"
+	                        ',type ',type ,x))))
 
 (def-type-translator integer (&optional low high)
   (let* ((l (check-bound low integer))
@@ -1471,7 +1477,8 @@
 	 (h (check-bound high integer))
 	 (hb (if (consp h) (1- (car h)) h)))
     (when (and hb lb (< hb lb))
-      (error "Lower bound ~S is greater than upper bound ~S." l h))
+      (simple-program-error
+       "Lower bound ~S is greater than upper bound ~S." l h))
     (make-numeric-type :class 'integer  :complexp :real
 		       :enumerable (not (null (and l h)))
 		       :low lb
@@ -1479,7 +1486,7 @@
 
 (deftype mod (n)
   (unless (and (integerp n) (> n 0))
-    (error "Bad N specified for MOD type specifier: ~S." n))
+    (simple-program-error "Bad N specified for MOD type specifier: ~S." n))
   `(integer 0 ,(1- n)))
 
 (deftype signed-byte (&optional s)
@@ -1488,14 +1495,16 @@
 	 (let ((bound (ash 1 (1- s))))
 	   `(integer ,(- bound) ,(1- bound))))
 	(t
-	 (error "Bad size specified for SIGNED-BYTE type specifier: ~S." s))))
+	 (simple-program-error 
+	  "Bad size specified for SIGNED-BYTE type specifier: ~S." s))))
 
 (deftype unsigned-byte (&optional s)
   (cond ((eq s '*) '(integer 0))
 	((and (integerp s) (> s 0))
 	 `(integer 0 ,(1- (ash 1 s))))
 	(t
-	 (error "Bad size specified for UNSIGNED-BYTE type specifier: ~S." s))))
+	 (simple-program-error 
+	  "Bad size specified for UNSIGNED-BYTE type specifier: ~S." s))))
 
 
 (defmacro def-bounded-type (type class format)
@@ -1503,7 +1512,8 @@
      (let ((lb (check-bound low ,type))
 	   (hb (check-bound high ,type)))
        (unless (numeric-bound-test* lb hb <= <)
-	 (error "Lower bound ~S is not less than upper bound ~S." low high))
+	 (simple-program-error
+	  "Lower bound ~S is not less than upper bound ~S." low high))
        (make-numeric-type :class ',class :format ',format :low lb :high hb))))
 
 (def-bounded-type rational rational nil)
@@ -1894,22 +1904,23 @@
     ((member *) dims)
     (integer
      (when (minusp dims)
-       (error "Arrays can't have a negative number of dimensions: ~D." dims))
+       (simple-program-error
+        "Arrays can't have a negative number of dimensions: ~D." dims))
      (when (>= dims array-rank-limit)
-       (error "Array type has too many dimensions: ~S." dims))
+       (simple-program-error "Array type has too many dimensions: ~S." dims))
      (make-list dims :initial-element '*))
     (list
      (when (>= (length dims) array-rank-limit)
-       (error "Array type has too many dimensions: ~S." dims))
+       (simple-program-error "Array type has too many dimensions: ~S." dims))
      (dolist (dim dims)
        (unless (eq dim '*)
 	 (unless (and (integerp dim)
 		      (>= dim 0) (< dim array-dimension-limit))
-	   (error "Bad dimension in array type: ~S." dim))))
+	   (simple-program-error "Bad dimension in array type: ~S." dim))))
      dims)
     (t
-     (error "Array dimensions is not a list, integer or *:~%  ~S"
-	    dims))))
+     (simple-program-error
+      "Array dimensions is not a list, integer or *:~%  ~S" dims))))
 	       
 (def-type-translator array (&optional element-type dimensions)
   (specialize-array-type

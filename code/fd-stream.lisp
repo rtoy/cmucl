@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.60 2002/08/02 14:43:08 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.61 2002/08/23 18:31:05 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1045,9 +1045,9 @@
        (declare (ignore ino nlink uid gid rdev
 			atime mtime ctime blksize blocks))
        (unless okay
-	 (error "Error fstating ~S: ~A"
-		stream
-		(unix:get-unix-error-msg dev)))
+	 (error 'simple-file-error
+                :format-control "Error fstating ~S: ~A"
+		:format-arguments (list stream (unix:get-unix-error-msg dev))))
        (if (zerop mode)
 	   nil
 	   (truncate size (fd-stream-element-size stream)))))
@@ -1371,16 +1371,18 @@
 			 (okay
 			  (when (and output (= (logand orig-mode #o170000)
 					       #o40000))
-			    (error "Cannot open ~S for output: Is a directory."
-				   namestring))
+			    (error 'simple-file-error
+                                   :format-control "Cannot open ~S for output: Is a directory."
+				   :format-arguments (list namestring)))
 			  (setf mode (logand orig-mode #o777))
 			  t)
 			 ((eql err/dev unix:enoent)
 			  nil)
 			 (t
-			  (error "Cannot find ~S: ~A"
-				 namestring
-				 (unix:get-unix-error-msg err/dev))))))))
+			  (error 'simple-file-error
+                                 :format-control "Cannot find ~S: ~A"
+				 :format-arguments
+                                 (list namestring (unix:get-unix-error-msg err/dev)))))))))
 	    (unless (and exists
 			 (do-old-rename namestring original))
 	      (setf original nil)

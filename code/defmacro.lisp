@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.21 2002/07/30 13:30:41 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.22 2002/08/23 18:31:04 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,7 +93,8 @@
 		   ((atom list) nil)
 		 (when (eq (car list) '&whole) (return t)))
 	       (not (eq (car lambda-list) '&whole)))
-      (error "&Whole must appear first in ~S lambda-list." error-kind))
+      (simple-program-error "&Whole must appear first in ~S lambda-list."
+                            error-kind))
     (do ((rest-of-args lambda-list (cdr rest-of-args)))
 	((atom rest-of-args)
 	 (cond ((null rest-of-args) nil)
@@ -126,10 +127,11 @@
 		      (defmacro-error "&WHOLE" error-kind name))))
 	      ((eq var '&environment)
 	       (cond (env-illegal
-		      (error "&Environment not valid with ~S." error-kind))
+		      (simple-program-error "&environment not valid with ~S."
+                                            error-kind))
 		     ((not top-level)
-		      (error "&Environment only valid at top level of ~
-		      lambda-list.")))
+		      (simple-program-error
+		       "&environment only valid at top level of lambda-list.")))
 	       (cond ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
 		      (setf rest-of-args (cdr rest-of-args))
 		      (push-let-binding (car rest-of-args) env-arg-name nil)
@@ -244,7 +246,7 @@
 		 (:auxs
 		  (push-let-binding var nil nil))))
 	      (t
-	       (error "Non-symbol in lambda-list - ~S." var)))))
+	       (simple-program-error "Non-symbol in lambda-list - ~S." var)))))
     ;; Generate code to check the number of arguments, unless dotted
     ;; in which case length will not work.
     (unless restp
@@ -336,15 +338,16 @@
 	((symbolp value-var)
 	 (push-let-binding value-var path nil supplied-var init-form))
 	(t
-	 (error "Illegal optional variable name: ~S" value-var))))
+	 (simple-program-error "Illegal optional variable name: ~S"
+	                       value-var))))
 
 (defun make-keyword (symbol)
   "Takes a non-keyword symbol, symbol, and returns the corresponding keyword."
   (intern (symbol-name symbol) *keyword-package*))
 
 (defun defmacro-error (problem kind name)
-  (error "Illegal or ill-formed ~A argument in ~A~@[ ~S~]."
-	 problem kind name))
+  (simple-program-error "Illegal or ill-formed ~A argument in ~A~@[ ~S~]."
+                        problem kind name))
 
 
 

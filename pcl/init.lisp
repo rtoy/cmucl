@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.11 1999/05/30 23:14:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.12 2002/08/23 18:31:06 pmai Exp $")
 ;;;
 ;;; This file defines the initialization and related protocols.
 ;;; 
@@ -49,8 +49,8 @@
   (let* ((info (initialize-info class initargs))
 	 (valid-p (initialize-info-valid-p info)))
     (when (and (consp valid-p) (eq (car valid-p) :invalid))
-      (error "Invalid initialization argument ~S for class ~S"
-	     (cdr valid-p) (class-name class))))
+      (simple-program-error "Invalid initialization argument ~S for class ~S"
+		            (cdr valid-p) (class-name class))))
   (let ((instance (apply #'allocate-instance class initargs)))
     (apply #'initialize-instance instance initargs)
     instance))
@@ -98,8 +98,8 @@
 	 (info (initialize-info class initargs))
 	 (valid-p (initialize-info-ri-valid-p info)))
     (when (and (consp valid-p) (eq (car valid-p) :invalid))
-      (error "Invalid initialization argument ~S for class ~S"
-	     (cdr valid-p) (class-name class))))
+      (simple-program-error "Invalid initialization argument ~S for class ~S"
+		            (cdr valid-p) (class-name class))))
   (apply #'shared-initialize instance nil initargs)
   instance)
 
@@ -239,9 +239,9 @@
     (doplist (key val) initargs
        (unless (memq key legal)
 	 (if error-p
-	     (error "Invalid initialization argument ~S for class ~S"
-		    key
-		    (class-name class))
+	     (simple-program-error
+	      "Invalid initialization argument ~S for class ~S"
+	      key (class-name class))
 	     (return-from check-initargs-2-plist nil)))))
   t)
 
@@ -252,9 +252,9 @@
     (dolist (key initkeys)
       (unless (memq key legal)
 	(if error-p
-	    (error "Invalid initialization argument ~S for class ~S"
-		   key
-		   (class-name class))
+	    (simple-program-error
+	     "Invalid initialization argument ~S for class ~S"
+	     key (class-name class))
 	    (return-from check-initargs-2-list nil)))))
   t)
 
