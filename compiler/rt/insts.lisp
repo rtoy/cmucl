@@ -298,6 +298,10 @@
      (i :argument (unsigned-byte 16)))
   (d (op :constant #xD8)
      (r2 :argument register)
+     (r3 :argument (integer 0 0))
+     (i :argument (unsigned-byte 16)))
+  (d (op :constant #xD8)
+     (r2 :argument register)
      (r3 :constant 0)
      (i :argument (unsigned-byte 16)))
   (d (op :constant #xD8)
@@ -767,7 +771,7 @@
 		  (inst ,cal dst src label))
 		 (t
 		  (inst ,cal dst src label)
-		  (inst ,cau dst src label))))))))
+		  (inst ,cau dst dst label))))))))
 
 
 ;; code = fn - header - label-offset + other-pointer-tag
@@ -913,11 +917,11 @@
   (assert (if fpm
 	      (and (mc68881-fp-reg-p fpm)
 		   (not (or optype data))
-		   (eql class :freg-to-freg)
-		   (tn-p data)
+		   (eql class :freg-to-freg))
+	      (and (tn-p data)
 		   (eq (sb-name (sc-sb (tn-sc data))) 'registers)
-		   optype)
-	      (not (eql class :freg-to-freg))))
+ 		   optype
+		   (not (eql class :freg-to-freg)))))
   (assert (if fpn
 	      (mc68881-fp-reg-p fpn)
 	      creg))
@@ -946,7 +950,7 @@
 	 (low (logand opcode #xFFFF))
 	 (high (+ (logand (ash opcode -16) #xFFFF)
 		  (if (eql (logand low #x8000) 0) 0 1))))
-    (inst cau temp high)
+    (inst cau temp 0 high)
     low))
 
 
@@ -956,7 +960,7 @@
    (fpm :argument mc68881-fp-reg)
    (r2 :constant null-offset)
    (r3 :argument address-register)
-   (i :argument (signed-byte 16))))
+   (i :argument (unsigned-byte 16))))
 
 ;;; This pseudo-instruction emits a floating-point binop on the 68881.  FPN is
 ;;; the destination float register (and second arg) FPM is the source float
@@ -976,7 +980,7 @@
    (fpm :argument mc68881-fp-reg)
    (r2 :constant null-offset)
    (r3 :argument address-register)
-   (i :argument (signed-byte 16))))
+   (i :argument (unsigned-byte 16))))
 
 (define-pseudo-instruction mc68881-unop 64 (fpn fpm op temp)
   (inst mc68881-unop-inst fpn fpm temp
@@ -990,7 +994,7 @@
    (fpm :argument mc68881-fp-reg)
    (r2 :constant null-offset)
    (r3 :argument address-register)
-   (i :argument (signed-byte 16))))
+   (i :argument (unsigned-byte 16))))
 
 (define-pseudo-instruction mc68881-compare 64 (fpn fpm op temp)
   (inst mc68881-compare-inst fpn fpm temp
@@ -1022,7 +1026,7 @@
    (fpm :constant 0)
    (r2 :argument register)
    (r3 :argument address-register)
-   (i :argument (signed-byte 16))))
+   (i :argument (unsigned-byte 16))))
 
 (define-pseudo-instruction mc68881-load 64 (fpn data optype temp)
   (inst mc68881-load-inst fpn data temp
@@ -1035,7 +1039,7 @@
    (fpm :constant 0)
    (r2 :argument register)
    (r3 :argument address-register)
-   (i :argument (signed-byte 16))))
+   (i :argument (unsigned-byte 16))))
 
 (define-pseudo-instruction mc68881-store 64 (fpn data optype temp)
   (inst mc68881-store-inst fpn data temp
@@ -1050,7 +1054,7 @@
    (fpm :constant 0)
    (r2 :argument register)
    (r3 :argument address-register)
-   (i :argument (signed-byte 16))))
+   (i :argument (unsigned-byte 16))))
 
 (define-pseudo-instruction mc68881-load-status 64 (creg data temp)
   (inst mc68881-load-status-inst data temp
@@ -1064,7 +1068,7 @@
    (fpm :constant 0)
    (r2 :argument register)
    (r3 :argument address-register)
-   (i :argument (signed-byte 16))))
+   (i :argument (unsigned-byte 16))))
 
 (define-pseudo-instruction mc68881-store-status 64 (creg data temp)
   (inst mc68881-store-status-inst data temp
