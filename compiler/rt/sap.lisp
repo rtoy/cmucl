@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.2 1991/04/13 13:44:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.3 1991/04/20 16:59:34 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -44,8 +44,8 @@
   (:temporary (:sc word-pointer-reg) alloc)
   (:results (y :scs (descriptor-reg)))
   (:generator 1
-    (with-fixed-allocation (y header alloc vm:other-pointer-type vm:sap-size)
-      (storew sap y vm:sap-pointer-slot vm:other-pointer-type))))
+    (with-fixed-allocation (y header alloc sap-type sap-size)
+      (storew sap y sap-pointer-slot other-pointer-type))))
 ;;;
 (define-move-vop move-from-sap :move
   (sap-reg) (descriptor-reg))
@@ -222,7 +222,7 @@
 	 (:ignore bogus1 bogus2)
 	 (:variant-vars signed)
 	 (:variant nil)
-	 (:generator 5
+	 (:generator 7
 	   (move base offset)
 	   ;;
 	   ;; We shift right because the offset has fixnum lowtag.  Effectively
@@ -294,8 +294,8 @@
 	 (:args (base :scs (sap-reg))
 		(data :scs (,@data-scs) :target result :to (:result 0)))
 	 (:arg-types system-area-pointer
-		     ,data-type
-		     (:constant (signed-byte ,(- 16 shift))))
+		     (:constant (signed-byte ,(- 16 shift)))
+		     ,data-type)
 	 (:results (result :scs (,@data-scs)))
 	 (:result-types ,data-type)
 	 (:info offset)
@@ -315,12 +315,16 @@
 	 (:temporary (:scs (sap-reg) :from (:eval 0) :to (:eval 2)) base)
 	 (:temporary (:scs (non-descriptor-reg)
 			   :from (:argument 1) :to (:eval 0)) temp)
+	 ;; Add some bullshit temporaries because of human understanding about
+	 ;; a peculiarity in compiler register allocation, so this will trick
+	 ;; the compiler into giving us enough non-descriptor-regs.
+	 ;; Bill did not write this!
 	 (:temporary (:scs (non-descriptor-reg) :from (:eval 1) :to (:eval 2))
-		     bogus)
-	 (:ignore bogus)
+		     bogus1 bogus2)
+	 (:ignore bogus1 bogus2)
 	 (:results (result :scs (,@data-scs)))
 	 (:result-types ,data-type)
-	 (:generator 5
+	 (:generator 7
 	   (move temp offset)
 	   ;;
 	   ;; We shift right because the offset has fixnum lowtag.  Effectively
