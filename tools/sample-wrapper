@@ -5,6 +5,7 @@ CMUCLLIB=/<<your-cmucl-path>>/lib
 export CMUCLLIB
 
 #
+# This might be necessary for SunOS.  Not needed for Solaris.
 # If /tmp is a "tmpfs" filesystem (mounted on "swap") then uncomment the
 # following two lines, and fill in an alternate path:
 #CMUCL_EMPTYFILE=/<<your-temp-path>>/empty
