@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.8 1991/04/22 15:25:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.9 1991/04/24 23:39:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,28 +19,36 @@
 (eval-when (compile)
   (setq lisp::*bootstrap-defmacro* t))
 
-;;; WITH-ARRAY-DATA follows an arbitrarily long chain of displaced arrays
-;;; binding data-var to the data vector, offset-var to the cumulative
-;;; displacement offset, start-var to the actual start index in the data
-;;; vector, and end-var to the actual end of the data vector.  Put all the
-;;; bindings in the LET, so declarations can be made on the variables (for
-;;; example, declaring data-var to be a simple-string.
+;;; WITH-ARRAY-DATA  --  Interface
+;;;
+;;;    Checks to see if the array is simple and the start and end are in
+;;; bounds.  If so, it proceeds with those values.  Otherwise, it calls
+;;; %WITH-ARRAY-DATA.  Note that there is a derive-type method for
+;;; %WITH-ARRAY-DATA.
+;;;
 (defmacro with-array-data (((data-var array &key (offset-var (gensym)))
 			    (start-var &optional (svalue 0))
 			    (end-var &optional (evalue nil)))
 			   &rest forms)
-  "Bind data-var to the data-vector eventually reached by following displacement
-   links from array, offset-var to a cumulative offset, start-var to the first
-   index in the data vector, and end-var to the total length of the array plus
-   the cumulative offset.  Offset-var, start-var, and end-var are declared to be
-   fixnums."
-  `(multiple-value-bind (,data-var ,offset-var)
-			(find-data-vector ,array)
-     (let* ((,data-var ,data-var)
-	    (,offset-var ,offset-var)
-	    (,start-var (+ ,svalue ,offset-var))
-	    (,end-var (+ ,offset-var (or ,evalue (array-total-size ,array)))))
-       (declare (fixnum ,offset-var ,start-var ,end-var))
+  "Given any Array, binds Data-Var to the array's data vector and Start-Var and
+  End-Var to the start and end of the designated portion of the data vector.
+  Svalue and Evalue are any start and end specified to the original operation,
+  and are factored into the bindings of Start-Var and End-Var.  Offset-Var is
+  the cumulative offset of all displacements encountered, and does not
+  include Svalue."
+  (once-only ((n-array array)
+	      (n-svalue `(the index ,svalue))
+	      (n-evalue `(the (or index null) ,evalue)))
+    `(multiple-value-bind
+	 (,data-var ,start-var ,end-var ,offset-var)
+	 (if (typep ,n-array '(simple-array * (*)))
+	     ,(once-only ((n-len `(length ,n-array))
+			  (n-end `(or ,n-evalue ,n-len)))
+		`(if (<= ,n-svalue ,n-end ,n-len)
+		     (values ,n-array ,n-svalue ,n-end 0)
+		     (%with-array-data ,n-array ,n-svalue ,n-evalue)))
+	     (%with-array-data ,n-array ,n-svalue ,n-evalue))
+       (declare (ignorable ,offset-var))
        ,@forms)))
 
 
