@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.16 1991/11/16 13:14:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.17 1991/12/11 11:54:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -216,12 +216,16 @@
 ;;; Fun is already in Component, then we just return that component.
 ;;;
 ;;;    If the function is in an initial component, then we move its head and
-;;; tail to Component and add it to Component's lambdas.  We then do a
-;;; Find-DFO-Aux starting at the head of Fun.  If this flow-graph walk
-;;; encounters another component (which can only happen due to a non-local
-;;; exit), then we move code into that component instead.  We then recurse on
-;;; all functions called from Fun, moving code into whichever component the
-;;; preceding call returned.
+;;; tail to Component and add it to Component's lambdas.  It is harmless to
+;;; move the tail (even though the return might be unreachable) because if the
+;;; return is unreachable it (and its successor link) will be deleted in the
+;;; post-deletion pass.
+;;;
+;;;    We then do a Find-DFO-Aux starting at the head of Fun.  If this
+;;; flow-graph walk encounters another component (which can only happen due to
+;;; a non-local exit), then we move code into that component instead.  We then
+;;; recurse on all functions called from Fun, moving code into whichever
+;;; component the preceding call returned.
 ;;;
 ;;;    If Fun is in the initial component, but the Block-Flag is set in the
 ;;; bind block, then we just return Component, since we must have already
