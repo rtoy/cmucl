@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-corr.lisp,v 1.1.1.6 1991/09/04 14:08:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-corr.lisp,v 1.1.1.7 1993/08/25 02:13:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -719,7 +719,8 @@
 	     (setf ,contents-var (dictionary-ref ,location-var))
 	     (if (zerop ,contents-var) (return ,zero-contents-form))
 	     ,@(if for-insertion-p
-		   `((if (= ,contents-var -1) (return ,zero-contents-form))))
+		   `((if (= ,contents-var spell-deleted-entry)
+			 (return ,zero-contents-form))))
 	     (if (= ,location-var ,loc) (return nil))
 	     ,@(if body-form `(,body-form))))))
 
