@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.57 2003/05/19 16:13:58 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.58 2004/05/06 13:19:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1129,67 +1129,55 @@
 			    (list (alien-record-field-bits field)))))
 		(alien-record-type-fields type)))))
 
-;;; Test the record fields. The depth is limiting in case of cyclic
-;;; pointers.
-(defun record-fields-match (fields1 fields2 depth)
-  (declare (type list fields1 fields2)
-	   (type (mod 64) depth))
-  (labels ((record-type-= (type1 type2 depth)
-	     (and (eq (alien-record-type-name type1)
-		      (alien-record-type-name type2))
-		  (eq (alien-record-type-kind type1)
-		      (alien-record-type-kind type2))
-		  (= (length (alien-record-type-fields type1))
-		     (length (alien-record-type-fields type2)))
-		  (record-fields-match (alien-record-type-fields type1)
-				       (alien-record-type-fields type2)
-				       (1+ depth))))
-	   (pointer-type-= (type1 type2 depth)
-	     (let ((to1 (alien-pointer-type-to type1))
-		   (to2 (alien-pointer-type-to type2)))
-	       (if to1
-		   (if to2
-		       (type-= to1 to2 (1+ depth))
-		       nil)
-		   (null to2))))
-	   (type-= (type1 type2 depth)
-	     (cond ((and (alien-pointer-type-p type1)
-			 (alien-pointer-type-p type2))
-		    (or (> depth 10)
-			(pointer-type-= type1 type2 depth)))
-		   ((and (alien-record-type-p type1)
-			 (alien-record-type-p type2))
-		    (record-type-= type1 type2 depth))
-		   (t
-		    (alien-type-= type1 type2)))))
-    (do ((fields1-rem fields1 (rest fields1-rem))
-	 (fields2-rem fields2 (rest fields2-rem)))
-	((or (eq fields1-rem fields2-rem)
-	     (endp fields1-rem) (endp fields2-rem))
-	 (eq fields1-rem fields2-rem))
-      (let ((field1 (first fields1-rem))
-	    (field2 (first fields2-rem)))
-	(declare (type alien-record-field field1 field2))
-	(unless (and (eq (alien-record-field-name field1)
-			 (alien-record-field-name field2))
-		     (eql (alien-record-field-bits field1)
-			  (alien-record-field-bits field2))
-		     (eql (alien-record-field-offset field1)
-			  (alien-record-field-offset field2))
-		     (let ((field1 (alien-record-field-type field1))
-			   (field2 (alien-record-field-type field2)))
-		       (type-= field1 field2 (1+ depth))))
-	  (return nil))))))
+
+;;; Test the record fields. Keep a hashtable table of already compared
+;;; types to detect cycles.
+
+(defun record-fields-match-p (field1 field2)
+  (and (eq (alien-record-field-name field1)
+	   (alien-record-field-name field2))
+       (eql (alien-record-field-bits field1)
+	    (alien-record-field-bits field2))
+       (eql (alien-record-field-offset field1)
+	    (alien-record-field-offset field2))
+       (alien-type-= (alien-record-field-type field1)
+		     (alien-record-field-type field2))))
+
+(defvar *match-history* nil
+  "A hashtable used to detect cycles while comparing record types.")
+
+(defun in-match-history-or (type1 type2 alternative)
+  "Test if TYPE1 and TYPE2 are in the *MATCH-HISTORY*.
+If so return true; otherwise call ALTERNATIVE."
+  (cond (*match-history*
+	 (let ((list (gethash type1 *match-history*)))
+	   (cond ((memq type2 list)
+		  t)
+		 (t 
+		  (setf (gethash type1 *match-history*) (cons type2 list))
+		  (funcall alternative)))))
+	(t
+	 (let ((*match-history* (make-hash-table :test #'eq)))
+	   (setf (gethash type1 *match-history*) (list type2))
+	   (funcall alternative)))))
 
 (def-alien-type-method (record :type=) (type1 type2)
-  (and (eq (alien-record-type-name type1)
+  (and (eq (alien-record-type-name type1) 
 	   (alien-record-type-name type2))
-       (eq (alien-record-type-kind type1)
+       (eq (alien-record-type-kind type1) 
 	   (alien-record-type-kind type2))
+       (eql (alien-type-bits type1) 
+	    (alien-type-bits type2))
+       (eql (alien-type-alignment type1) 
+	    (alien-type-alignment type2))
        (= (length (alien-record-type-fields type1))
 	  (length (alien-record-type-fields type2)))
-       (record-fields-match (alien-record-type-fields type1)
-			    (alien-record-type-fields type2) 0)))
+       (in-match-history-or 
+	type1 type2
+	(lambda ()
+	  (every #'record-fields-match-p 
+		 (alien-record-type-fields type1)
+		 (alien-record-type-fields type2))))))
 
 
 ;;;; The FUNCTION and VALUES types.
