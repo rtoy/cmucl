@@ -155,7 +155,7 @@
 	(n-env (gensym)))
     (multiple-value-bind
 	(body decls doc)
-	(lisp::parse-defmacro lambda-list n-form body name 'special-form
+	(lisp::parse-defmacro lambda-list n-form body name "special form"
 			      :doc-string-allowed t
 			      :environment n-env
 			      :error-fun 'special-form-arg-count-error)
@@ -199,8 +199,7 @@
 	(n-env (gensym)))
     (multiple-value-bind
 	(body decls)
-	(lisp::parse-defmacro lambda-list n-form body name
-			      'def-source-transform
+	(lisp::parse-defmacro lambda-list n-form body name "form"
 			      :environment n-env
 			      :error-fun `(lambda (&rest stuff)
 					    (declare (ignore stuff))
@@ -216,7 +215,7 @@
 
 ;;; PRIMITIVE-ARG-COUNT-ERROR
 ;;;
-(defun primitive-count-error (name kind continue string &rest args)
+(defun primitive-arg-count-error (name kind continue string &rest args)
   (declare (ignore continue))
   (compiler-error "While expanding ~A ~S:~%  ~?" kind name string args))
 
@@ -229,8 +228,7 @@
 	(n-env (gensym)))
     (multiple-value-bind
 	(body decls)
-	(lisp::parse-defmacro lambda-list n-form body name
-			      'def-primitive-translator
+	(lisp::parse-defmacro lambda-list n-form body name "%primitive"
 			      :environment n-env
 			      :error-fun 'primitive-arg-count-error)
       `(progn
