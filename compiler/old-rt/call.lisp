@@ -296,14 +296,14 @@ default-value-5
 ;;; the old SP and 1.
 ;;;
 ;;;    When there is a variable number of values, we move all of the argument
-;;; registers onto the stack, and return Args and Nargs.
+;;; registers onto the stack, and return Old-Fp and Nargs.
 ;;;
-;;;    Args and Nargs are TNs wired to the named locations.  We must
+;;;    Old-Fp and Nargs are TNs wired to the named locations.  We must
 ;;; explicitly allocate these TNs, since their lifetimes overlap with the
 ;;; results Start and Count (also, it's nice to be able to target them).
 ;;;
-(defun receive-unknown-values (node args nargs start count)
-  (declare (type node node) (type tn args nargs start count))
+(defun receive-unknown-values (node old-fp nargs start count)
+  (declare (type node node) (type tn old-fp nargs start count))
   (assemble node
     (let ((variable-values (gen-label))
 	  (done (gen-label)))
@@ -322,9 +322,9 @@ default-value-5
 	  (do ((arg register-argument-tns (rest arg))
 	       (i 0 (1+ i)))
 	      ((null arg))
-	    (storew (first arg) args i))
-	  (unless (location= start args)
-	    (inst lr start args))
+	    (storew (first arg) old-fp i))
+	  (unless (location= start old-fp)
+	    (inst lr start old-fp))
 	  (unless (location= count nargs)
 	    (inst lr count nargs))
 	  (inst bnb :pz done)))))
@@ -548,24 +548,24 @@ default-value-5
 
      (:temporary (:sc descriptor-reg
 		  :offset old-fp-offset
-		  :from (:argument ,(if (eq return :tail) 1 0))
+		  :from (:argument ,(if (eq return :tail) 2 1))
 		  :to :eval)
 		 old-fp-pass)
 
      (:temporary (:sc descriptor-reg
 		  :offset return-pc-offset
-		  :from (:argument ,(if (eq return :tail) 2 0))
+		  :from (:argument ,(if (eq return :tail) 3 1))
 		  :to :eval)
 		 return-pc-pass)
 
      ,@(when named 
 	 '((:temporary (:sc descriptor-reg
 			:offset call-name-offset
-			:from (:argument 0)
+			:from (:argument 1)
 			:to :eval)
 		       name-pass)
 	   (:temporary (:scs (descriptor-reg)
-			     :from (:argument 0)
+			     :from (:argument 1)
 			     :to :eval)
 		       function)))
 
