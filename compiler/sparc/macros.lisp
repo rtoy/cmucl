@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.30 2004/01/09 05:07:39 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.31 2004/04/16 04:47:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.30 2004/01/09 05:07:39 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.31 2004/04/16 04:47:58 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -207,9 +207,7 @@
 ;; double-word aligned address (essentially a fixnum).
 (defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
   ;; We assume we're in a pseudo-atomic so the pseudo-atomic bit is
-  ;; set.  If the lowtag also has a 1 bit in the same position, we're all
-  ;; set.  Otherwise, we need to zap out the lowtag from alloc-tn, and
-  ;; then or in the lowtag.
+  ;; set.
   `(cond (,stack-p
 	  ;; Stack allocation
 	  ;;
@@ -221,10 +219,19 @@
 
 	  ;; Make sure the temp-tn is a non-descriptor register!
 	  (assert (and ,temp-tn (sc-is ,temp-tn non-descriptor-reg)))
+
+	  ;; temp-tn is csp-tn rounded up to a multiple of 8 (lispobj size)
 	  (inst add ,temp-tn csp-tn vm:lowtag-mask)
 	  (inst andn ,temp-tn vm:lowtag-mask)
+	  ;; Set the result to temp-tn, with appropriate lowtag
 	  (inst or ,result-tn ,temp-tn ,lowtag)
-	  (inst add csp-tn ,temp-tn ,size))
+
+	  ;; Allocate the desired space on the stack.
+	  ;;
+	  ;; FIXME: Can't allocate on stack if SIZE is too large.
+	  ;; Need to rearrange this code.
+	  (inst add csp-tn ,temp-tn ,size)
+	  )
 	 #-gencgc
 	 (t
 	  ;; Normal allocation to the heap.
@@ -236,43 +243,6 @@
 		(inst andn ,result-tn alloc-tn lowtag-mask)
 		(inst or ,result-tn ,lowtag)
 		(inst add alloc-tn ,size))))
-	 #+nil
-	 (t
-	  (let ((done (gen-label))
-		(full-alloc (gen-label)))
-	    ;; See if we can do an inline allocation.  The updated
-	    ;; free pointer should not point past the end of the
-	    ;; current region.  If it does, a full alloc needs to be
-	    ;; done.
-	    (load-symbol-value ,result-tn *current-region-free-pointer*)
-	    (load-symbol-value ,temp-tn *current-region-end-addr*)
-	    (inst add ,result-tn ,size)
-	      
-	    ;; result-tn points to the new end of region.  Did we go
-	    ;; past the actual end of the region?  If so, we need a
-	    ;; full alloc.
-	    (inst cmp ,result-tn ,temp-tn)
-	    (inst b :gt full-alloc #+sparc-v9 :pn)
-	    (load-symbol ,temp-tn '*current-region-free-pointer*)
-	    ;; Inline allocation worked, so update the free pointer
-	    ;; and go.
-	    (inst b done)
-	    (inst swap ,result-tn ,temp-tn (- (ash symbol-value-slot word-shift) other-pointer-type))
-
-	    (emit-label full-alloc)
-	    ;; Full alloc via trap to the C allocator.  Tell the
-	    ;; allocator what the result-tn and size are, using the
-	    ;; OR instruction.  Then trap to the allocator.
-	    (without-scheduling ()
-	      ;; The OR instruction MUST come just before the TRAP
-	      ;; instruction, because the C code depends on this to
-	      ;; figure out what to do.
-	      (inst or zero-tn ,result-tn ,size)
-	      (inst t :t allocation-trap))
-	      
-	    (emit-label done)
-	    ;; Set lowtag appropriately
-	    (inst or ,result-tn ,lowtag)))
 	 #+gencgc
 	 (t
 	  ;; See if we can do an inline allocation.  The updated
@@ -280,7 +250,18 @@
 	  ;; current region.  If it does, a full alloc needs to be
 	  ;; done.
 	  (load-symbol-value ,result-tn *current-region-end-addr*)
-	  (inst add alloc-tn ,size)	; Point to end
+
+	  ;; Sometimes the size is an known constant, but won't fit in
+	  ;; the immeidiate field of an instruction.  Hence we have to
+	  ;; do this to get it.
+	  (cond ((and (tn-p ,temp-tn)
+		      (numberp ,size)
+		      (not (typep ,size '(signed-byte 13))))
+		 (inst li ,temp-tn ,size)
+		 (inst add alloc-tn ,temp-tn))
+		(t
+		 (inst add alloc-tn ,size)))
+
 	  (inst andn ,temp-tn alloc-tn lowtag-mask) ; Zap PA bits
 	      
 	  ;; temp-tn points to the new end of region.  Did we go
@@ -294,12 +275,21 @@
 	    ;; trap handler MUST subtract SIZE from alloc-tn before
 	    ;; calling the alloc routine.  This allows for
 	    ;; (slightly) faster code for inline allocation.
-	    (inst sub ,result-tn ,temp-tn ,size) ; Set result-tn to old alloc-tn, minus PA
+
+	    ;; As above, SIZE might not fit in the immediate field of
+	    ;; an instruction.  Need to do this complicated thing.
+			      
+            (cond ((and (tn-p ,temp-tn)
+			    (numberp ,size)
+			    (not (typep ,size '(signed-byte 13))))
+		       (inst li ,result-tn ,size)
+		       (inst sub ,result-tn ,temp-tn ,result-tn))
+		      (t
+		       (inst sub ,result-tn ,temp-tn ,size)))
 	    (inst t :gt allocation-trap))
 	  ;; Set lowtag appropriately
 	  (inst or ,result-tn ,lowtag))
 	 ))
-
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size
 					    &key (lowtag other-pointer-type)
