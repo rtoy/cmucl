@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.66 1990/07/13 16:38:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.67 1990/08/15 02:51:40 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -192,9 +192,13 @@
   
   code-header
   function-header
+  closure-header
+  funcallable-instance-header
+  unused-function-header-1
+  unused-function-header-2
+  unused-function-header-3
   closure-function-header
   return-pc-header
-  closure-header
   value-cell-header
   symbol-header
   base-character
