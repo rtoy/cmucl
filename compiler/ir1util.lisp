@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.102 2004/04/06 20:44:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.103 2004/04/08 14:00:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -457,6 +457,7 @@
 	(form-numbers (encode-form-numbers
 		       (source-path-tlf-number *current-path*)
 		       (source-path-form-number *current-path*))))
+    (when file-info
       (etypecase (file-info-name file-info)
 	((member :stream)
 	 `(quote ,(make-stream-source-location :form-numbers form-numbers
@@ -464,7 +465,7 @@
 	(pathname
 	 `(quote ,(make-file-source-location 
 		   :form-numbers form-numbers
-		   :pathname (namestring-for-debug-source file-info)))))))
+		   :pathname (namestring-for-debug-source file-info))))))))
 
 
 ;;; MAKE-LEXENV  --  Interface
