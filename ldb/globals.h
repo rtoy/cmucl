@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.h,v 1.1 1990/03/28 22:47:35 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.h,v 1.2 1990/05/24 17:46:07 wlott Exp $ */
 
 #if !defined(_INCLUDE_GLOBALS_H_)
 #define _INCLUDED_GLOBALS_H_
@@ -12,6 +12,7 @@ extern int foreign_function_call_active;
 extern unsigned long saved_global_pointer;
 
 extern lispobj *current_control_stack_pointer;
+extern lispobj *current_control_frame_pointer;
 extern lispobj *current_binding_stack_pointer;
 extern unsigned long current_flags_register;
 
@@ -33,6 +34,7 @@ extern lispobj *current_dynamic_space_free_pointer;
 
 .extern current_dynamic_space_free_pointer 4
 .extern current_control_stack_pointer 4
+.extern current_control_frame_pointer 4
 .extern current_binding_stack_pointer 4
 .extern current_flags_register 4
 

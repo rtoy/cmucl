@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.1 1990/03/28 22:47:26 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.2 1990/05/24 17:46:05 wlott Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
@@ -10,6 +10,7 @@ int foreign_function_call_active;
 unsigned long saved_global_pointer;
 
 lispobj *current_control_stack_pointer;
+lispobj *current_control_frame_pointer;
 lispobj *current_binding_stack_pointer;
 unsigned long current_flags_register;
 
@@ -36,6 +37,7 @@ globals_init()
 
 	/* Initialize the current lisp state. */
 	current_control_stack_pointer = control_stack;
+	current_control_frame_pointer = (lispobj *)0;
 	current_binding_stack_pointer = binding_stack;
 	current_flags_register = 1<<flag_Atomic;
 }

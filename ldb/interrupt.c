@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.3 1990/03/29 21:19:34 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.4 1990/05/24 17:46:09 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -24,7 +24,7 @@ struct sigcontext *context;
 {
 	int were_in_lisp;
 	union interrupt_handler handler;
-	lispobj args[6];	/* Six is the minimum */
+	lispobj *args;
 	lispobj callname, function;
 
 	handler = interrupt_handlers[signal];
@@ -36,11 +36,19 @@ struct sigcontext *context;
 		/* Get current LISP state from context */
 		current_dynamic_space_free_pointer =
 			(lispobj *) context->sc_regs[ALLOC];
-		current_control_stack_pointer =
-			(lispobj *) context->sc_regs[CSP];
 		current_binding_stack_pointer =
 			(lispobj *) context->sc_regs[BSP];
 		current_flags_register = context->sc_regs[FLAGS]|(1<<flag_Atomic);
+
+                /* Build a fake stack frame */
+                current_control_frame_pointer =
+                        (lispobj *) context->sc_regs[CSP];
+                current_control_stack_pointer = 
+                        current_control_frame_pointer + 8;
+                current_control_frame_pointer[0] =
+                        context->sc_regs[CONT];
+                current_control_frame_pointer[1] = 
+                        context->sc_regs[CODE];
 
 		/* Restore the GP */
 		set_global_pointer(saved_global_pointer);
@@ -68,6 +76,8 @@ struct sigcontext *context;
 	    LowtagOf(handler.lisp) == type_OddFixnum)
 		(*handler.c)(signal, code, context);
 	else {
+                args = current_control_stack_pointer;
+                current_control_stack_pointer += 3;
 		args[0] = fixnum(signal);
 		args[1] = fixnum(code);
 		args[2] = alloc_sap(context);
@@ -152,18 +162,71 @@ struct sigcontext *context;
 	handle_now(signal, code, context);
 }
 
+#define FIXNUM_VALUE(lispobj) (((int)lispobj)>>2)
+
+static boolean handle_integer_overflow(context)
+struct sigcontext *context;
+{
+    unsigned long bad_inst;
+    unsigned int op, rs, rt, rd, funct, dest;
+    int immed;
+    long result;
+
+    if (context->sc_cause & CAUSE_BD)
+        bad_inst = *(unsigned long *)(context->sc_pc + 4);
+    else
+        bad_inst = *(unsigned long *)(context->sc_pc);
+
+    op = (bad_inst >> 26) & 0x3f;
+    rs = (bad_inst >> 21) & 0x1f;
+    rt = (bad_inst >> 15) & 0x1f;
+    rd = (bad_inst >> 10) & 0x1f;
+    funct = bad_inst & 0x3f;
+    immed = (((int)(bad_inst & 0xffff)) << 16) >> 16;
+
+    switch (op) {
+        case 0x0: /* SPECIAL */
+            switch (funct) {
+                case 0x20: /* ADD */
+                    result = FIXNUM_VALUE(context->sc_regs[rs]) + FIXNUM_VALUE(context->sc_regs[rt]);
+                    dest = rd;
+                    break;
+
+                case 0x22: /* SUB */
+                    result = FIXNUM_VALUE(context->sc_regs[rs]) - FIXNUM_VALUE(context->sc_regs[rt]);
+                    dest = rd;
+                    break;
+
+                default:
+                    return FALSE;
+            }
+            
+        case 0x8: /* ADDI */
+            result = FIXNUM_VALUE(context->sc_regs[rs]) + (immed>>2);
+            dest = rt;
+            break;
+
+        default:
+            return FALSE;
+    }
+
+    context->sc_regs[dest] = alloc_number(result);
+
+    /* Skip the offending instruction */
+    if (context->sc_cause & CAUSE_BD)
+        emulate_branch(context, *(unsigned long *)context->sc_pc);
+    else
+        context->sc_pc += 4;
+
+    return TRUE;
+}
+
 static fpe_handler(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
-	switch (signal) {
-        case EXC_OV:
-		/* integer overflow.  Make a bignum. */
-		/* For now, drop through. */
-
-        default:
-		handle_now(signal, code, context);
-	}
+    if ((context->sc_cause & CAUSE_EXCMASK) != EXC_OV || !handle_integer_overflow(context))
+        handle_now(signal, code, context);
 }
 
 void install_handler(signal, handler)

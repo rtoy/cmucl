@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.3 1990/04/27 01:55:15 wlott Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.4 1990/05/24 17:46:03 wlott Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -22,6 +22,7 @@ struct call_frame {
 
 struct call_info {
     struct call_frame *frame;
+    int interrupted;
     struct code *code;
     lispobj lra;
     int pc; /* Note: this is the trace file offset, not the actual pc. */
@@ -33,53 +34,30 @@ static struct code *
 code_pointer(object)
 lispobj object;
 {
-	lispobj *headerp, header;
-	int type, len;
+    lispobj *headerp, header;
+    int type, len;
 
-	headerp = (lispobj *) PTR(object);
-	header = *headerp;
-	type = TypeOf(header);
+    headerp = (lispobj *) PTR(object);
+    header = *headerp;
+    type = TypeOf(header);
 
-	switch (type) {
-	case type_CodeHeader:
-		break;
-	case type_ReturnPcHeader:
-	case type_FunctionHeader:
-	case type_ClosureFunctionHeader:
-		len = HEADER_LENGTH(header);
-        	if (len == 0)
-                	headerp = NULL;
-		else
-			headerp -= len;
-		break;
-	default:
-        	headerp = NULL;
-	}
+    switch (type) {
+        case type_CodeHeader:
+            break;
+        case type_ReturnPcHeader:
+        case type_FunctionHeader:
+        case type_ClosureFunctionHeader:
+            len = HEADER_LENGTH(header);
+            if (len == 0)
+                headerp = NULL;
+            else
+                headerp -= len;
+            break;
+        default:
+            headerp = NULL;
+    }
 
-	return (struct code *) headerp;
-}
-
-static
-struct call_frame *
-current_cont()
-{
-        int free;
-
-	free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
-	
-        if (free == 0)
-            return NULL;
-        else {
-            struct sigcontext *csp;
-            struct call_frame *cont;
-
-            csp = lisp_interrupt_contexts[free-1];
-            cont = (struct call_frame *)csp->sc_regs[CONT];
-            if ((lispobj *)cont == current_control_stack_pointer)
-                /* We were attempting to call an undefined function. */
-                ;
-            return cont;
-        }
+    return (struct code *) headerp;
 }
 
 static
@@ -91,14 +69,27 @@ struct call_frame *pointer;
 }
 
 static void
+info_from_lisp_state(info)
+struct call_info *info;
+{
+    info->frame = (struct call_frame *)current_control_frame_pointer;
+    info->interrupted = 0;
+    info->code = NULL;
+    info->lra = 0;
+    info->pc = 0;
+
+    previous_info(info);
+}
+
+static void
 info_from_sigcontext(info, csp)
 struct call_info *info;
 struct sigcontext *csp;
 {
     unsigned long pc;
 
-    if (csp->sc_regs[CONT] == csp->sc_regs[CSP]) {
-        /* We were attempting to call an undefined function. */
+    if (LowtagOf(csp->sc_regs[CODE]) == type_FunctionPointer) {
+        /* We tried to call a function, but crapped out before $CODE could be fixed up.  Probably an undefined function. */
         info->frame = (struct call_frame *)csp->sc_regs[OLDCONT];
         info->lra = (lispobj)csp->sc_regs[LRA];
         info->code = code_pointer(info->lra);
@@ -111,7 +102,7 @@ struct sigcontext *csp;
         pc = csp->sc_pc;
     }
     if (info->code != NULL)
-        info->pc = (pc - (unsigned long) info->code) / sizeof(lispobj) - HEADER_LENGTH(info->code->header);
+        info->pc = pc - (unsigned long) info->code - HEADER_LENGTH(info->code->header);
     else
         info->pc = 0;
 }
@@ -120,22 +111,40 @@ static int
 previous_info(info)
 struct call_info *info;
 {
+    struct call_frame *this_frame;
+    int free;
+    struct sigcontext *csp;
+
     if (!cs_valid_pointer_p(info->frame)) {
         printf("Bogus callee value (0x%08x).\n", (unsigned long)info->frame);
         return 0;
     }
 
-    info->lra = info->frame->saved_lra;
-    info->frame = info->frame->old_cont;
+    this_frame = info->frame;
+    info->lra = this_frame->saved_lra;
+    info->frame = this_frame->old_cont;
 
-    if (info->frame == NULL)
+    if (info->frame == NULL || info->frame == this_frame)
         return 0;
 
     info->code = code_pointer(info->lra);
-    if (info->code != NULL)
+
+    if (info->code == (struct code *)PTR(info->lra)) {
+        /* We were interrupted.  Find the correct sigcontext. */
+        free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
+        while (free-- > 0) {
+            csp = lisp_interrupt_contexts[free];
+            if ((struct call_frame *)(csp->sc_regs[CONT]) == info->frame)
+                info_from_sigcontext(info, csp);
+        }
+        info->interrupted = 1;
+    }
+    else if (info->code != NULL)
         info->pc = ((unsigned long)PTR(info->lra) - (unsigned long) info->code) / sizeof(lispobj) - HEADER_LENGTH(info->code->header);
     else
         info->pc = 0;
+
+        
 
     return 1;
 }
@@ -145,24 +154,17 @@ backtrace(nframes)
 int nframes;
 {
     struct call_info info;
-    int free;
-
-    free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
 	
-    if (free == 0) {
-        printf("Nothing to backtrace.\n");
-        return;
-    }
-
-    info_from_sigcontext(&info, lisp_interrupt_contexts[free-1]);
+    info_from_lisp_state(&info);
 
     do {
-        printf("<Frame 0x%08x, CODE: 0x%08x, ",
-               (unsigned long) info.frame,
-               (unsigned long) info.code);
-
+        printf("<Frame 0x%08x%s, ", (unsigned long) info.frame,
+                info.interrupted ? " [interrupted]" : "");
+        
         if (info.code != (struct code *) 0) {
             lispobj function;
+
+            printf("CODE: 0x%08x, ", (unsigned long) info.code | type_OtherPointer);
 
             function = info.code->entry_points;
             while (function != NIL) {
@@ -197,13 +199,18 @@ int nframes;
                 function = header->next;
             }
         }
+        else
+            printf("CODE: ???, ");
 
         if (info.lra != 0)
             printf("LRA: 0x%08x, ", (unsigned long)info.lra);
         else
             printf("<no LRA>, ");
 
-        printf("PC: %d>\n", info.pc);
+        if (info.pc)
+            printf("PC: 0x%x>\n", info.pc);
+        else
+            printf("PC: ???>\n");
 
     } while (--nframes > 0 && previous_info(&info));
 }

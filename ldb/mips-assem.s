@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.4 1990/04/02 23:50:26 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.5 1990/05/24 17:44:00 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -84,6 +84,7 @@ call_into_lisp:
 	lw	ALLOC, current_dynamic_space_free_pointer
 	lw	BSP, current_binding_stack_pointer
 	lw	CSP, current_control_stack_pointer
+	lw	OLDCONT, current_control_frame_pointer
 
 	/* Check for interrupt */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))
@@ -100,21 +101,17 @@ call_into_lisp:
 	/* Pass in args */
 	move	CNAME, $4
 	move	LEXENV, $5
-	move	ARGS, $6
+	move	CONT, $6
 	sll	NARGS, $7, 2
-	lw	A0, 0(ARGS)
-	lw	A1, 4(ARGS)
-	lw	A2, 8(ARGS)
-	lw	A3, 12(ARGS)
-	lw	A4, 16(ARGS)
-	lw	A5, 20(ARGS)
+	lw	A0, 0(CONT)
+	lw	A1, 4(CONT)
+	lw	A2, 8(CONT)
+	lw	A3, 12(CONT)
+	lw	A4, 16(CONT)
+	lw	A5, 20(CONT)
 
 	/* Calculate LRA */
 	la	LRA, lra + type_OtherPointer
-
-	/* Establish context pointers */
-	move	OLDCONT, $0 /* C doesn't have a context ptr */
-	move	CONT, CSP
 
 	/* Indirect closure */
 	lw	CODE, 4-1(LEXENV)
@@ -130,7 +127,7 @@ lra:
 	.word	type_ReturnPcHeader
 
 	/* Multiple value return spot, clear stack */
-	move	CSP, ARGS
+	move	CSP, OLDCONT
 	nop
 
 	/* Pass one return value back to C land. */
@@ -143,6 +140,7 @@ lra:
 	sw	ALLOC, current_dynamic_space_free_pointer
 	sw	BSP, current_binding_stack_pointer
 	sw	CSP, current_control_stack_pointer
+	sw	CONT, current_control_frame_pointer
 	sw	FLAGS, current_flags_register
 
 	/* Back in foreign function call */
@@ -189,16 +187,24 @@ lra:
 	.globl	call_into_c
 	.ent	call_into_c
 call_into_c:
-	.set	noreorder
+	/* Set up a stack frame. */
+	move	OLDCONT, CONT
+	move	CONT, CSP
+	addu	CSP, CONT, 32
+	sw	OLDCONT, 0(CONT)
+	sw	LRA, 4(CONT)
+
 	/* Note: the C stack is already set up. */
-	
+
 	/* Set the pseudo-atomic flag. */
+	.set	noreorder
 	or	FLAGS, (1<<flag_Atomic)
 
 	/* Save lisp state. */
 	sw	ALLOC, current_dynamic_space_free_pointer
 	sw	BSP, current_binding_stack_pointer
 	sw	CSP, current_control_stack_pointer
+	sw	CONT, current_control_frame_pointer
 	sw	FLAGS, current_flags_register
 
 	/* Mark us as in C land. */
@@ -252,7 +258,6 @@ call_into_c:
 	/* Restore other lisp state. */
 	lw	ALLOC, current_dynamic_space_free_pointer
 	lw	BSP, current_binding_stack_pointer
-	lw	CSP, current_control_stack_pointer
 
 	/* Check for interrupt */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))
@@ -265,6 +270,11 @@ call_into_c:
 1:
 
 	.set	reorder
+
+	/* Reset the lisp stack. */
+	/* Note: OLDCONT and CONT are in saved regs. */
+	move	CSP, CONT
+	move	CONT, OLDCONT
 
 	/* Return to LISP. */
 	addu	a0, LRA, 4-type_OtherPointer

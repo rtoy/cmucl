@@ -120,6 +120,7 @@ char **ptr;
     printf("DYNAMIC\t=\t0x%08x\n", current_dynamic_space);
     printf("ALLOC\t=\t0x%08x\n", current_dynamic_space_free_pointer);
     printf("CSP\t=\t0x%08x\n", current_control_stack_pointer);
+    printf("FP\t=\t0x%08x\n", current_control_frame_pointer);
     printf("BSP\t=\t0x%08x\n", current_binding_stack_pointer);
     printf("FLAGS\t=\t0x%08x\n", current_flags_register);
 }
@@ -188,11 +189,10 @@ char **ptr;
 {
     extern lispobj call_into_lisp();
 
-    static lispobj args[16];
     int start_level = level;
 
     lispobj call_name = parse_lispobj(ptr);
-    lispobj function, result, arg, *argptr;
+    lispobj function, result, arg, *args;
     int numargs;
 
     if (LowtagOf(call_name) == type_OtherPointer) {
@@ -218,13 +218,12 @@ char **ptr;
         function = call_name;
 
     numargs = 0;
-    argptr = args;
+    args = current_control_stack_pointer;
     while (more_p(ptr)) {
-        *argptr++ = parse_lispobj(ptr);
+        current_control_stack_pointer++;
+        current_control_stack_pointer[-1] = parse_lispobj(ptr);
         numargs++;
     }
-    while (argptr < args + 6)
-        *argptr++ = NIL;
 
     result = call_into_lisp(call_name, function, args, numargs);
 
@@ -421,8 +420,8 @@ char **ptr;
 	backtrace(n);
 }
 
-static void sub_monitor(csp, bsp)
-lispobj *csp, *bsp;
+static void sub_monitor(csp, fp, bsp)
+lispobj *csp, *fp, *bsp;
 {
     extern char *egets();
     struct cmd *cmd, *found;
@@ -434,6 +433,10 @@ lispobj *csp, *bsp;
         if ((new = current_control_stack_pointer) != csp) {
             printf("CSP changed from 0x%x to 0x%x; Restoring.\n", csp, new);
             current_control_stack_pointer = csp;
+        }
+        if ((new = current_control_frame_pointer) != fp) {
+            printf("FP changed from 0x%x to 0x%x; Restoring.\n", fp, new);
+            current_control_frame_pointer = csp;
         }
         if ((new = current_binding_stack_pointer) != bsp) {
             printf("BSP changed from 0x%x to 0x%x; Restoring.\n", bsp, new);
@@ -479,9 +482,10 @@ lispobj *csp, *bsp;
 void monitor()
 {
     jmp_buf oldbuf;
-    lispobj *csp, *bsp;
+    lispobj *csp, *fp, *bsp;
 
     csp = current_control_stack_pointer;
+    fp = current_control_frame_pointer;
     bsp = current_binding_stack_pointer;
 
     bcopy(curbuf, oldbuf, sizeof(oldbuf));
@@ -496,7 +500,7 @@ void monitor()
 
     setjmp(curbuf);
 
-    sub_monitor(csp, bsp);
+    sub_monitor(csp, fp, bsp);
 
     done = FALSE;
 
