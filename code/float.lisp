@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.26 2002/03/05 21:34:15 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.27 2002/05/08 15:38:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1063,6 +1063,8 @@ rounding modes & do ieee round-to-integer.
 		 (- rounded)
 		 rounded)))))))
 
+(declaim (maybe-inline %unary-ftruncate/single-float
+		       %unary-ftruncate/double-float))
 ;; %UNARY-FTRUNCATE/SINGLE-FLOAT
 ;;
 ;; Basically the same as ftruncate, but specialized to handle only
