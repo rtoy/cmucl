@@ -84,7 +84,9 @@ _call_into_lisp:
         load(_current_control_frame_pointer, reg_OCFP)
 
         /* No longer atomic, and check for interrupt. */
-	tsubcctv	reg_ALLOC, 4, reg_ALLOC
+	sub	reg_ALLOC, 4, reg_ALLOC
+	andcc	reg_ALLOC, 3, reg_ZERO
+	tne	16
 
         /* Pass in the args. */
         sll     %i2, 2, reg_NARGS
@@ -131,7 +133,9 @@ lra:
         store(reg_NL1,_foreign_function_call_active)
 
         /* Were we interrupted? */
-	tsubcctv	reg_ALLOC, 4, reg_ALLOC
+	sub	reg_ALLOC, 4, reg_ALLOC
+	andcc	reg_ALLOC, 3, reg_ZERO
+	tne	16
 
         /* Back to C we go. */
 	ld	[%sp+FRAMESIZE-4], %i7
@@ -172,7 +176,9 @@ _call_into_c:
         store(reg_CSP,_foreign_function_call_active)
 
         /* Were we interrupted? */
-	tsubcctv	reg_ALLOC, 4, reg_ALLOC
+	sub	reg_ALLOC, 4, reg_ALLOC
+	andcc	reg_ALLOC, 3, reg_ZERO
+	tne	16
 
         /* Into C we go. */
         call    reg_CFUNC
@@ -202,7 +208,9 @@ _call_into_c:
 	sub	reg_LIP, type_OtherPointer, reg_LIP
 
         /* No longer atomic. */
-	tsubcctv	reg_ALLOC, 4, reg_ALLOC
+	sub	reg_ALLOC, 4, reg_ALLOC
+	andcc	reg_ALLOC, 3, reg_ZERO
+	tne	16
 
         /* Reset the lisp stack. */
         /* Note: OCFP is in one of the locals, it gets preserved across C. */
