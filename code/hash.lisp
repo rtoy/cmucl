@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.23 1993/05/17 21:22:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.24 1993/05/22 21:17:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -570,7 +570,9 @@
 	       (if eq-based
 		   (make-hash-table-bucket
 		    :hash nil
-		    :key (make-weak-pointer key)
+		    :key (if (hash-table-weak-p hash-table)
+			     (make-weak-pointer key)
+			     key)
 		    :value value
 		    :next first-bucket)
 		   (make-hash-table-bucket
@@ -582,7 +584,9 @@
 	       (if eq-based
 		   (let ((bucket (make-hash-table-eq-bucket
 				  :hash hashing
-				  :key (make-weak-pointer key)
+				  :key (if (hash-table-weak-p hash-table)
+					   (make-weak-pointer key)
+					   key)
 				  :value value
 				  :next first-bucket
 				  :linked t)))
