@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.41 1992/03/11 21:23:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.42 1992/05/03 21:45:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 (export '(%caller-frame-and-pc))
 (in-package "C")
 
-(export '(safe-fdefn-function))
+(export '(safe-fdefn-function return-single))
 
 
 
@@ -1204,10 +1204,12 @@
 		  (emit-move node block val loc))
 	      cont-locs
 	      locs)
-	(vop* return node block
-	      (old-fp return-pc (reference-tn-list locs nil))
-	      (nil)
-	      nvals)))
+	(if (= nvals 1)
+	    (vop return-single node block old-fp return-pc (car locs))
+	    (vop* return node block
+		  (old-fp return-pc (reference-tn-list locs nil))
+		  (nil)
+		  nvals))))
      (t
       (assert (eq cont-kind :unknown))
       (vop* return-multiple node block
