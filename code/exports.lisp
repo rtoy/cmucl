@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.72 1992/02/15 16:03:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.73 1992/02/16 15:15:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.72 1992/02/15 16:03:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.73 1992/02/16 15:15:37 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -112,9 +112,9 @@
 (if (find-package "PROFILE")
     (rename-package "PROFILE" "PROFILE" 'nil)
     (make-package "PROFILE" :nicknames 'nil :use nil))
-(if (find-package "USER")
-    (rename-package "USER" "USER" 'nil)
-    (make-package "USER" :nicknames 'nil :use nil))
+(if (find-package "COMMON-LISP-USER")
+    (rename-package "COMMON-LISP-USER" "COMMON-LISP-USER" '("CL-USER" "USER"))
+    (make-package "COMMON-LISP-USER" :nicknames '("CL-USER" "USER") :use nil))
 (if (find-package "KERNEL")
     (rename-package "KERNEL" "KERNEL" 'nil)
     (make-package "KERNEL" :nicknames 'nil :use nil))
@@ -154,7 +154,7 @@
 (use-package '("SYSTEM" "EXTENSIONS" "LISP") "ALIEN")
 (use-package '("LISP") "ALIEN-INTERNALS")
 (use-package '("LISP") "PROFILE")
-(use-package '("PCL" "EXTENSIONS" "LISP") "USER")
+(use-package '("PCL" "EXTENSIONS" "LISP") "COMMON-LISP-USER")
 (use-package '("ALIEN-INTERNALS" "LISP" "EXTENSIONS" "SYSTEM" "BIGNUM")
              "KERNEL")
 (intern "TYPE-ERROR" "LISP")
@@ -948,7 +948,7 @@
              "GET-FLOATING-POINT-MODES" "GET-STREAM-COMMAND" "GRINDEF"
              "HOST-ENTRY" "HOST-ENTRY-ADDR" "HOST-ENTRY-ADDR-LIST"
              "HOST-ENTRY-ALIASES" "HOST-ENTRY-NAME" "HTONL" "HTONS"
-             "IGNORE-ERRORS" "INADDR-ANY" "INDENTING-FURTHER" "INFO"
+             "INADDR-ANY" "INDENTING-FURTHER" "INFO"
              "INHIBIT-WARNINGS" "INTERACTIVE-EVAL" "IPPROTO-TCP" "IPPROTO-UDP"
              "ITERATE" "KEY-EVENT" "KEY-EVENT-BIT-P" "KEY-EVENT-BITS"
              "KEY-EVENT-BITS-MODIFIERS" "KEY-EVENT-CHAR" "KEY-EVENT-KEYSYM"
@@ -1456,7 +1456,6 @@
 (defpackage "PROFILE"
             (:export "*TIMED-FUNCTIONS*" "PROFILE" "REPORT-TIME" "RESET-TIME"
              "UNPROFILE"))
-(defpackage "USER" (:export "DUMP-HASH-TABLE"))
 (dolist
     (name
      '("ARRAY-RANK" "ARRAY-TOTAL-SIZE" "CHAR-INT" "FLOAT-DIGITS" "FLOAT-RADIX"
