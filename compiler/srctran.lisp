@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.82 1998/02/20 18:40:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.83 1998/02/24 09:57:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3152,23 +3152,24 @@
   "open code"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y)))
-    (if (and (numeric-type-p x-type) (numeric-type-p y-type))
-	(let ((x-class (numeric-type-class x-type))
-	      (y-class (numeric-type-class y-type)))
-	  (cond ((and (eq x-class 'float) (eq y-class 'float))
-		 ;; They are both floats.  Leave as = so that -0.0 is
-		 ;; handled correctly.
-		 (give-up))
-		((and (member x-class '(rational integer))
-		      (member y-class '(rational integer))
-		      (let ((x-complexp (numeric-type-complexp x-type)))
-			(and x-complexp
-			     (eq x-complexp (numeric-type-complexp y-type)))))
-		 ;; They are both rationals and complexp is the same.  Convert
-		 ;; to EQL.
-		 '(eql x y))
-		(t
-		 (give-up "Operands might not be the same type."))))
+    (if (and (csubtypep x-type (specifier-type 'number))
+	     (csubtypep y-type (specifier-type 'number)))
+	(cond ((or (and (csubtypep x-type (specifier-type 'float))
+			(csubtypep y-type (specifier-type 'float)))
+		   (and (csubtypep x-type (specifier-type '(complex float)))
+			(csubtypep y-type (specifier-type '(complex float)))))
+	       ;; They are both floats.  Leave as = so that -0.0 is
+	       ;; handled correctly.
+	       (give-up))
+	      ((or (and (csubtypep x-type (specifier-type 'rational))
+			(csubtypep y-type (specifier-type 'rational)))
+		   (and (csubtypep x-type (specifier-type '(complex rational)))
+			(csubtypep y-type (specifier-type '(complex rational)))))
+	       ;; They are both rationals and complexp is the same.  Convert
+	       ;; to EQL.
+	       '(eql x y))
+	      (t
+	       (give-up "Operands might not be the same type.")))
 	(give-up "Operands might not be the same type."))))
 
 
