@@ -54,6 +54,7 @@
 
 ;;; This proclamation buys a certain amount of overall speed at the expense
 ;;; of runtime checking.  Comment it out when debugging new, bug-infested code.
+#+declare-unsafe
 (proclaim '(optimize (speed 3) (space 0) (safety 0)))
 
 ;;; Style note: Because some of these runs take a long time, this code is
