@@ -826,7 +826,8 @@
     
     (let ((next-lab (block-label (ir2-block-block (ir2-block-next 2block)))))
       (add-to-emit-order new-2block 2block)
-      (unless (eq (vop-info-name (ir2-block-last-vop 2block)) 'branch)
+      (unless (eq (vop-info-name (vop-info (ir2-block-last-vop 2block)))
+		  'branch)
 	(vop branch node 2block next-lab)))
     (undefined-value)))
 
