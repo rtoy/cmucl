@@ -232,7 +232,7 @@ x:
 
 	/* Function is an indirect closure */
 	lwz reg_CODE,CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
-#ifdef PPC_FUN-HACK
+#ifdef PPC_FUN_HACK
 	mtctr reg_CODE
 #else
 	addi reg_LIP,reg_CODE,6*4-type_FunctionPointer
@@ -397,6 +397,7 @@ lra:
 	.globl _undefined_tramp
 	.byte 0,0,0,type_FunctionHeader
 
+#ifdef PPC_FUN_HACK	
 	/*
 	 * The next 4 bytes are the encoding for a PPC jump instruction.
 	 * The jump should go to the twllei instruction below.
@@ -404,11 +405,15 @@ lra:
 	.byte 18<<2
 _undefined_tramp:	
 	.byte 0,0,24
+#endif
 	.long _undefined_tramp
 	.long NIL
 	.long NIL
 	.long NIL
 	.long NIL
+#ifndef PPC_FUN_HACK
+_undefined_tramp:	
+#endif		
 	twllei reg_ZERO,trap_Cerror
         /* Number of argument bytes */
 	.byte 4
@@ -440,14 +445,19 @@ _undefined_tramp:
 	GFUNCDEF(xclosure_tramp)
 	.globl _closure_tramp
 	.byte 0,0,0,type_FunctionHeader
+#ifdef PPC_FUN_HACK	
 	.byte 18<<2
 _closure_tramp:
 	.byte 0,0,24
+#endif	
 	.long _closure_tramp
 	.long NIL 
 	.long NIL
 	.long NIL
 	.long NIL
+#ifndef PPC_FUN_HACK
+_closure_tramp:
+#endif		
 #ifdef PPC_FUN_HACK_MAYBE
 	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_CNAME)
 #else
