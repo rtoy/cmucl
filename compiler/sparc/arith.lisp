@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.14 1999/11/11 16:25:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.15 1999/11/19 14:59:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -324,6 +324,28 @@
   (:guard (backend-featurep :sparc-v8))
   (:generator 3
     (inst umul r x y)))
+
+;; The smul and umul instructions are deprecated on the Sparc V9.  Use
+;; mulx instead.
+(define-vop (fast-*/fixnum=>fixnum fast-fixnum-binop)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:translate *)
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 4
+    (inst sra temp y 2)
+    (inst mulx r x temp)))
+
+(define-vop (fast-*/signed=>signed fast-signed-binop)
+  (:translate *)
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 3
+    (inst mulx r x y)))
+
+(define-vop (fast-*/unsigned=>unsigned fast-unsigned-binop)
+  (:translate *)
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 3
+    (inst mulx r x y)))
 
 
 ;;;; Binary conditional VOPs:
