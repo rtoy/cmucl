@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.11 1991/09/18 06:36:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.12 1991/10/05 19:33:33 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -27,7 +27,7 @@
 (eval-when (compile eval load)
 
 (setf (backend-name *target-backend*) "SPARC")
-(setf (backend-version *target-backend*) "SPARCstation/Mach 0.0")
+(setf (backend-version *target-backend*) "SPARCstation/Sun 4")
 (setf (backend-fasl-file-type *target-backend*) "sparcf")
 (setf (backend-fasl-file-implementation *target-backend*)
       sparc-fasl-file-implementation)
