@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/alloc.lisp,v 1.1 1997/01/21 00:30:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/alloc.lisp,v 1.2 1997/02/10 16:59:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,6 +56,12 @@
   (inst ret)
 
   BIGNUM
+  ;;; Note: On the mips port space for a two word bignum is always
+  ;;; allocated and the header size is set to either one or two words
+  ;;; as appropriate. On the mips port this is faster, and smaller
+  ;;; inline, but produces more garbage. The inline x86 version uses
+  ;;; the same approach, but here we save garbage and allocate the
+  ;;; smallest possible bignum.
   (inst jmp :ns one-word-bignum)
   (inst mov ebx eax)
 
