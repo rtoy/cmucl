@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.15 1992/10/17 13:49:17 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.16 1992/10/27 12:02:54 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,7 +70,7 @@
 	  dstate-cur-addr dstate-next-addr
 
 	  ;; random types
-	  params instruction
+	  dchunk params instruction
 
 	  ;; 
 	  read-suffix read-signed-suffix
@@ -3614,17 +3614,19 @@ symbol object that we know about.")
 	  dstate)
     t))
 
-(defun maybe-note-assembler-routine (address dstate)
+(defun maybe-note-assembler-routine (address note-address-p dstate)
   "If ADDRESS is the address of a primitive assembler routine, store a note
   describing which one, to be printed as an end-of-line comment after the
   current instruction is disassembled.  Returns non-NIL iff a note was
-  recorded."
+  recorded.  If NOTE-ADDRESS-P is non-NIL, a note of the address is also made."
   (declare (type address address)
 	   (type disassem-state dstate))
   (let ((name (find-assembler-routine address)))
     (unless (null name)
       (note #'(lambda (stream)
-		(format stream "#x~8,'0x: Primitive ~s" address name))
+		(if NOTE-ADDRESS-P
+		    (format stream "#x~8,'0x: ~s" address name)
+		    (prin1 name stream)))
 	    dstate))
     name))
 
