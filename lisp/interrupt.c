@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.9 1997/03/16 15:59:41 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.10 1997/11/19 02:41:54 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -349,13 +349,9 @@ static boolean gc_trigger_hit(HANDLER_ARGS)
 }
 #endif
 
-
+#ifndef i386
 boolean interrupt_maybe_gc(HANDLER_ARGS)
 {
-#ifdef __linux__
-  GET_CONTEXT
-#endif
-
     if (!foreign_function_call_active
 #ifndef INTERNAL_GC_TRIGGER
 		  && gc_trigger_hit(signal, code, context)
@@ -388,6 +384,26 @@ boolean interrupt_maybe_gc(HANDLER_ARGS)
     }else
 	return FALSE;
 }
+#endif
+
+#ifdef i386
+void set_maybe_gc_pending(void)
+{
+  maybe_gc_pending = TRUE;
+  if (pending_signal == 0) {
+    /* Block all blockable signals */
+#ifdef POSIX_SIGS
+    sigset_t block;
+    sigemptyset(&block);
+    FILLBLOCKSET(&block);
+    sigprocmask(SIG_BLOCK, &block, &pending_mask);
+#else
+    pending_mask = sigblock(BLOCKABLE);
+#endif
+  }
+  SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(1));
+}
+#endif
 
 /****************************************************************\
 * Noise to install handlers.                                     *

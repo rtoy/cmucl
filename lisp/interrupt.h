@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.4 1994/10/24 20:06:00 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.5 1997/11/19 02:41:55 dtc Exp $ */
 
 #if !defined(_INCLUDE_INTERRUPT_H_)
 #define _INCLUDE_INTERRUPT_H_
@@ -13,6 +13,10 @@ union interrupt_handler {
 	lispobj lisp;
 	void (*c)(HANDLER_ARGS);
 };
+
+#ifdef i386
+extern void set_maybe_gc_pending(void);
+#endif
 
 extern void interrupt_init(void);
 extern void fake_foreign_function_call(struct sigcontext *context);
