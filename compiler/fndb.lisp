@@ -7,15 +7,17 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.10 1990/08/24 18:35:19 wlott Exp $
+;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
 ;;; optimizers.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
-(in-package 'lisp)
+(in-package "LISP")
 (import '(
 	  %aset
 	  %bitset
@@ -29,6 +31,7 @@
 	  %set-documentation
 	  %set-fdefinition
 	  %set-fill-pointer
+	  %set-row-major-aref
 	  %setelt
 	  %setnth
 	  %sp-set-definition
@@ -39,6 +42,7 @@
 	  %typep
 	  %array-typep
 	  array-header-p
+	  base-char-p
 	  double-float-p
 	  long-float-p
 	  short-float-p
@@ -385,21 +389,13 @@
 
 (defknown character (t) character (movable foldable flushable))
 (defknown char-code (character) char-code (movable foldable flushable))
-(defknown char-bits (character) char-bits (movable foldable flushable))
-(defknown char-font (character) char-font (movable foldable flushable))
-(defknown code-char (char-code &optional char-bits char-font)
-  character (movable foldable flushable))
-(defknown make-char (character  &optional char-bits char-font)
-  character (movable foldable flushable))
+(defknown code-char (char-code) base-character (movable foldable flushable))
 (defknown (char-upcase char-downcase) (character) character (movable foldable flushable))
 (defknown digit-char (integer &optional integer char-bits)
   (or character null) (movable foldable flushable))
-(defknown char-int (character) char-int (movable foldable flushable))
-(defknown int-char (char-int) character (movable foldable flushable))
+(defknown char-int (character) char-code (movable foldable flushable))
 (defknown char-name (character) (or simple-string null) (movable foldable flushable))
 (defknown name-char (stringable) (or character null) (movable foldable flushable))
-(defknown char-bit (character bit-names) boolean (movable foldable flushable))
-(defknown set-char-bit (character bit-names t) character (movable foldable flushable))
 
 
 ;;;; In the "Sequences" chapter:
@@ -681,6 +677,7 @@
 (defknown vector (&rest t) simple-vector (flushable unsafe))
 
 (defknown aref (array &rest index) t (foldable flushable))
+(defknown row-major-aref (array index) t (foldable flushable))
 
 (defknown array-element-type (array) type-specifier (foldable flushable))
 (defknown array-rank (array) array-rank (foldable flushable))
@@ -725,8 +722,8 @@
 
 ;;;; In the "Strings" chapter:
 
-(defknown char (string index) string-char (foldable flushable))
-(defknown schar (simple-string index) string-char (foldable flushable))
+(defknown char (string index) character (foldable flushable))
+(defknown schar (simple-string index) character (foldable flushable))
 
 (defknown (string= string-equal)
   (stringlike stringlike &key (start1 index) (end1 sequence-end)
@@ -742,7 +739,7 @@
   (or index null)
   (foldable flushable))
 
-(defknown make-string (index &key (initial-element string-char))
+(defknown make-string (index &key (initial-element character))
   simple-string (flushable))
 
 (defknown (string-trim string-left-trim string-right-trim)
@@ -943,8 +940,8 @@
 (defknown file-length (stream) (or unsigned-byte null) (flushable))
 
 (defknown load
-  (filename &key (verbose t) (print t)
-	    (if-does-not-exist (member :error :create nil)))
+  ((or filename stream)
+   &key (verbose t) (print t) (if-does-not-exist (member :error :create nil)))
   t)
 
 (defknown directory (pathnamelike &key) list (flushable))
@@ -1044,7 +1041,11 @@
 (defknown (%dpb %deposit-field) (integer bit-index bit-index integer) integer
   (movable foldable flushable))
 (defknown %negate (number) number (movable foldable flushable))
+(defknown %check-bound (array index fixnum) index (movable foldable flushable))
+(defknown data-vector-ref (array index) t (foldable flushable))
+(defknown data-vector-set (array index t) t (unsafe))
 (defknown kernel:%caller-frame-and-pc () (values t t) (flushable))
+
 
 ;;; Structure slot accessors or setters are magically "known" to be these
 ;;; functions, although the var remains the Slot-Accessor describing the actual
@@ -1057,6 +1058,7 @@
 ;;;; Setf inverses:
 
 (defknown %aset (array &rest t) t (unsafe))
+(defknown %set-row-major-aref (array index t) t (unsafe))
 (defknown %rplaca (cons t) t (unsafe))
 (defknown %rplacd (cons t) t (unsafe))
 (defknown %put (symbol t t) t (unsafe))
@@ -1064,8 +1066,8 @@
 (defknown %svset (simple-vector index t) t (unsafe))
 (defknown %bitset (bit-vector index bit) bit (unsafe))
 (defknown %sbitset (simple-bit-vector index bit) bit (unsafe))
-(defknown %charset (string index string-char) string-char (unsafe))
-(defknown %scharset (simple-string index string-char) string-char (unsafe))
+(defknown %charset (string index character) character (unsafe))
+(defknown %scharset (simple-string index character) character (unsafe))
 (defknown %sp-set-definition (symbol function) function (unsafe))
 (defknown %sp-set-plist (symbol t) t (unsafe))
 (defknown %set-documentation
@@ -1082,8 +1084,8 @@
 ;;; into non-standard unary predicates.
 
 (defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
-		   long-float-p %string-char-p %standard-char-p structurep
-		   array-header-p)
+	   long-float-p base-char-p %string-char-p %standard-char-p structurep
+	   array-header-p)
   (t) boolean (movable foldable flushable))
 
 

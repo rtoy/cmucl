@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.19 1990/08/16 16:16:50 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.20 1990/08/24 18:35:51 wlott Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -202,7 +202,7 @@
 		 (closure (environment-closure (lambda-environment leaf))))
 	     (vop make-closure node block (emit-constant (length closure))
 		  entry res)
-	     (let ((n (1- system:%function-closure-variables-offset)))
+	     (let ((n -1))
 	       (dolist (what closure)
 		 (vop closure-init node block
 		      res (find-in-environment what this-env)
@@ -1072,21 +1072,22 @@
 ;;; 
 (defun init-xep-environment (node block fun)
   (declare (type bind node) (type ir2-block block) (type clambda fun))
-  (vop xep-allocate-frame node block (entry-info-offset (leaf-info fun)))
-  (let ((ef (functional-entry-function fun)))
-    (when (and (optional-dispatch-p ef)
-	       (optional-dispatch-more-entry ef))
-      (vop copy-more-arg node block (optional-dispatch-max-args ef))))
-  
-  (let ((env (environment-info (node-environment node))))
+  (let ((start-label (entry-info-offset (leaf-info fun)))
+	(env (environment-info (node-environment node))))
+    (vop xep-allocate-frame node block start-label)
+    (let ((ef (functional-entry-function fun)))
+      (when (and (optional-dispatch-p ef)
+		 (optional-dispatch-more-entry ef))
+	(vop copy-more-arg node block (optional-dispatch-max-args ef))))
+    
     (if (ir2-environment-environment env)
 	(let ((closure (make-normal-tn *any-primitive-type*)))
-	  (vop setup-closure-environment node block closure)
-	  (let ((n (1- system:%function-closure-variables-offset)))
+	  (vop setup-closure-environment node block start-label closure)
+	  (let ((n -1))
 	    (dolist (loc (ir2-environment-environment env))
 	      (vop closure-ref node block closure (incf n) (cdr loc)))))
-	(vop setup-environment node block))
-
+	(vop setup-environment node block start-label))
+    
     (unless (eq (functional-kind fun) :top-level)
       (let ((vars (lambda-vars fun))
 	    (n 0))
@@ -1104,7 +1105,7 @@
     
     (emit-move node block (make-old-fp-passing-location t)
 	       (ir2-environment-old-fp env)))
-
+  
   (undefined-value))
 
 
@@ -1328,7 +1329,7 @@
 	 (emit-constant name))))
 ;;;
 (defoptimizer (%special-unbind ir2-convert) ((var) node block)
-  (vop unbind node block (emit-constant 1)))
+  (vop unbind node block))
 
 
 ;;; PROGV IR1 convert  --  Internal
@@ -1412,9 +1413,8 @@
 ;;;
 ;;;    Emit code to set up a non-local-exit.  Info is the NLX-Info for the
 ;;; exit, and Tag is the continuation for the catch tag (if any.)  We get at
-;;; the entry PC by making a :Label load-time constant TN.  This is a
-;;; non-immediate constant TN that is initialized to the offset of the
-;;; specified label.
+;;; the target PC by passing in the label to the vop.  The vop is responsible
+;;; for building a return-PC object.
 ;;;
 (defun emit-nlx-start (node block info tag)
   (declare (type node node) (type ir2-block block) (type nlx-info info)
@@ -1424,11 +1424,8 @@
 	 (block-tn (environment-live-tn
 		    (make-normal-tn (primitive-type-or-lose 'catch-block))
 		    (node-environment node)))
-	 (res (make-normal-tn *any-primitive-type*))
-	 (target-tn
-	  (make-load-time-constant-tn
-	   :label
-	   (block-label (nlx-info-target info)))))
+	 (res (make-stack-pointer-tn))
+	 (target-label (ir2-nlx-info-target 2info)))
 
     (vop* save-dynamic-state node block
 	  (nil)
@@ -1438,9 +1435,9 @@
     (ecase kind
       (:catch
        (vop make-catch-block node block block-tn
-	    (continuation-tn node block tag) target-tn res))
-      ((:unwind-protect :block :tagbody)
-       (vop make-unwind-block node block block-tn target-tn res)))
+	    (continuation-tn node block tag) target-label res))
+      ((:unwind-protect :entry)
+       (vop make-unwind-block node block block-tn target-label res)))
 
     (ecase kind
       ((:block :tagbody)
@@ -1508,23 +1505,26 @@
 	 (2info (nlx-info-info info))
 	 (top-loc (ir2-nlx-info-save-sp 2info))
 	 (start-loc (make-old-fp-passing-location t))
-	 (count-loc (make-argument-count-location)))
+	 (count-loc (make-argument-count-location))
+	 (target (ir2-nlx-info-target 2info)))
 
     (ecase (cleanup-kind (nlx-info-cleanup info))
       ((:catch :block :tagbody)
        (if (and 2cont (eq (ir2-continuation-kind 2cont) :unknown))
 	   (vop* nlx-entry-multiple node block
 		 (top-loc start-loc count-loc nil)
-		 ((reference-tn-list (ir2-continuation-locs 2cont) t)))
+		 ((reference-tn-list (ir2-continuation-locs 2cont) t))
+		 target)
 	   (let ((locs (standard-result-tns cont)))
 	     (vop* nlx-entry node block
 		   (top-loc start-loc count-loc nil)
 		   ((reference-tn-list locs t))
+		   target
 		   (length locs))
 	     (move-continuation-result node block locs cont))))
       (:unwind-protect
        (let ((block-loc (standard-argument-location 0)))
-	 (vop uwp-entry node block block-loc start-loc count-loc)
+	 (vop uwp-entry node block target block-loc start-loc count-loc)
 	 (move-continuation-result
 	  node block
 	  (list block-loc start-loc count-loc)
@@ -1569,7 +1569,7 @@
 	 (first res))
     (move-continuation-result node block res cont)))
 
-(defoptimizer (%slot-setter ir2-convert) ((str value) node block)
+(defoptimizer (%slot-setter ir2-convert) ((value str) node block)
   (let ((val (continuation-tn node block value)))
     (vop structure-set node block
 	 (continuation-tn node block str)

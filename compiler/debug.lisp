@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.13 1990/08/24 18:35:02 wlott Exp $
+;;; 
 ;;;    Utilities for debugging the compiler.  Currently contains only stuff for
 ;;; checking the consistency of the IR1.
 ;;; 
@@ -1065,15 +1067,22 @@
 (defun print-tn (tn &optional (stream *standard-output*))
   (declare (type tn tn))
   (let ((leaf (tn-leaf tn)))
-    (cond (leaf
+    (cond #-new-compiler
+	  (leaf
 	   (xp::princ (with-output-to-string (stream)
 			(print-leaf leaf stream))
 		      stream)
 	   (xp::format stream "!~D" (tn-id tn)))
+	  #+new-compiler
+	  (leaf
+	   (print-leaf leaf stream)
+	   (format stream "!~D" (tn-id tn)))
 	  (t
-	   (xp::format stream "t~D" (tn-id tn))))
+	   (#-new-compiler xp::format #+new-compiler format
+			   stream "t~D" (tn-id tn))))
     (when (and (tn-sc tn) (tn-offset tn))
-      (xp::format stream "[~A]" (location-print-name tn)))))
+      (#-new-compiler xp::format #+new-compiler format
+		      stream "[~A]" (location-print-name tn)))))
 
 
 ;;; Print-Operands  --  Internal
@@ -1083,7 +1092,8 @@
 ;;;
 (defun print-operands (refs)
   (declare (type (or tn-ref null) refs))
-  (xp:within-logical-block (nil nil)
+  (#-new-compiler xp:within-logical-block #-new-compiler (nil nil)
+		  #+new-compiler progn
     (do ((ref refs (tn-ref-across ref)))
 	((null ref))
       (let ((tn (tn-ref-tn ref))
@@ -1092,9 +1102,11 @@
 	       (print-tn tn))
 	      (t
 	       (print-tn tn)
-	       (xp::princ (if (tn-ref-write-p ref) #\< #\>))
+	       (#-new-compiler xp::princ #+new-compiler princ
+			       (if (tn-ref-write-p ref) #\< #\>))
 	       (print-tn ltn)))
-	(xp::princ #\space)
+	(#-new-compiler xp::princ #+new-compiler princ #\space)
+	#-new-compiler
 	(xp:conditional-newline :fill)))))
 
 
@@ -1103,6 +1115,7 @@
 ;;; Print the vop on a single line.
 ;;;
 (defun print-vop (vop)
+  #-new-compiler
   (xp:within-logical-block (nil nil)
     (xp::princ (vop-info-name (vop-info vop)))
     (xp::princ #\space)
@@ -1118,7 +1131,21 @@
     (when (vop-results vop)
       (xp::princ "=> ")
       (print-operands (vop-results vop))))
-  (xp::terpri))
+  #-new-compiler
+  (xp::terpri)
+  #+new-compiler
+  (progn
+    (princ (vop-info-name (vop-info vop)))
+    (princ #\space)
+    (print-operands (vop-args vop))
+    (when (vop-codegen-info vop)
+      (let ((*print-level* 1)
+	    (*print-length* 3))
+	(format t "{~{~S~^ ~}} " (vop-codegen-info vop))))
+    (when (vop-results vop)
+      (princ "=> ")
+      (print-operands (vop-results vop)))
+    (terpri)))
 
 ;;; Print-IR2-Block  --  Internal
 ;;;

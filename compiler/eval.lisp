@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.13 1990/08/24 18:35:11 wlott Exp $
+;;; 
 ;;; This file contains the interpreter.  We first convert to the compiler's
 ;;; IR1 and interpret that.
 ;;;
@@ -254,7 +256,7 @@
     (declare (ignore ig1 ig2))
     res))
 ;;;
-(defun (setf interpreted-function-name) (x val)
+(defun (setf interpreted-function-name) (val x)
   (let* ((eval-fun (get-eval-function x))
 	 (def (eval-function-definition eval-fun)))
     (when def
@@ -266,7 +268,7 @@
 (defun interpreted-function-arglist (x)
   (eval-function-arglist (get-eval-function x)))
 ;;;
-(defun (setf interpreted-function-arglist) (x val)
+(defun (setf interpreted-function-arglist) (val x)
   (setf (eval-function-arglist (get-eval-function x)) val))
 
 
@@ -464,7 +466,7 @@
 	  ;; binding mechanism to unbind one variable.
 	  (eval-stack-pop)
 	  (maybe-trace-funny-fun node ,name)
-	  (system:%primitive unbind 1))
+	  (system:%primitive unbind))
 	 (c::%catch
 	  (let* ((tag (eval-stack-pop))
 		 (nlx-info (eval-stack-pop))

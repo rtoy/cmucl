@@ -282,7 +282,7 @@
 	     (setf (svref (sc-load-costs to-sc) num) ',cost)))))
 
      (defun ,name ,lambda-list
-       (assemble (vop-node ,(first lambda-list))
+       (assemble (*code-segment* ,(first lambda-list))
 	 ,@body))))
 
 
@@ -1209,7 +1209,7 @@
 		  ,@(binds))
 	     (declare (ignore ,@(vop-parse-ignores parse)))
 	     ,@(loads)
-	     (assemble (vop-node ,n-vop)
+	     (assemble (*code-segment* ,n-vop)
 	       ,@(vop-parse-body parse))
 	     ,@(saves))))))
 

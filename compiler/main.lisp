@@ -165,7 +165,9 @@
   (loop-analyze component)
   |#
 
-  (let ((*compile-component* component))
+  (let ((*compile-component* component)
+	(*code-segment* nil)
+	(*elsewhere* nil))
     (maybe-mumble "Env ")
     (environment-analyze component)
     (maybe-mumble "GTN ")
@@ -216,22 +218,26 @@
       (describe-component component *compiler-trace-output*))
     
     (maybe-mumble "Code ")
-    (generate-code component))
+    (let ((length (generate-code component)))
+      
+      (when *compiler-trace-output*
+	(format *compiler-trace-output*
+		"~|~%Assembly code for ~S~2%"
+		component)
+	(dump-segment *code-segment* *compiler-trace-output*))
 
-  (etypecase object
-    (fasl-file
-     (maybe-mumble "FASL")
-     (fasl-dump-component component *code-vector* *next-location*
-			  *assembler-nodes* (1+ *current-assembler-node*)
-			  *result-fixups* object))
-    (core-object
-     (maybe-mumble "Core"
-     (make-core-component component *code-vector* *next-location*
-			  *assembler-nodes* (1+ *current-assembler-node*)
-			  *result-fixups* object)))
-    (null))
+      (etypecase object
+	(fasl-file
+	 (maybe-mumble "FASL")
+	 (fasl-dump-component component *code-segment* length object))
+	(core-object
+	 (maybe-mumble "Core")
+	 (make-core-component component *code-segment* length object))
+	(null))
 
-  (compiler-mumble "~%")
+      (nuke-segment *code-segment*)))
+
+  (compiler-mumble "~&")
   (undefined-value))
 
 
@@ -716,7 +722,9 @@
     (cond (*block-compile* (push tll *top-level-lambdas*))
 	  (t
 	   (compile-top-level (list tll) object)
-	   (clear-stuff)))))
+	   (clear-stuff))))
+  #+new-compiler
+  (lisp::maybe-gc))
 
 
 ;;; PROCESS-PROGN  --  Internal
@@ -1116,7 +1124,8 @@
 		       (pathname file))))
 	    
 	    (when output-file
-	      (setq output-file-name (frob output-file "nfasl"))
+	      (setq output-file-name
+		    (frob output-file vm:target-fasl-file-type))
 	      (setq fasl-file (open-fasl-file output-file-name
 					      (namestring (first source)))))
 	    

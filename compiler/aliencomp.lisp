@@ -22,9 +22,11 @@
 	  ct-a-val-p ct-a-val make-ct-a-val ct-a-val-alien
 	  check<= check= %alien-indirect %aligned-sap
 	  naturalize-integer deport-integer naturalize-boolean deport-boolean
-	  sap-ref-8 sap-ref-16 sap-ref-32
+	  sap-ref-8 sap-ref-16 sap-ref-32 sap-ref-sap
 	  signed-sap-ref-8 signed-sap-ref-16 signed-sap-ref-32
-	  %set-alien-access
+	  %set-sap-ref-8 %set-sap-ref-16 %set-sap-ref-32 %set-sap-ref-sap
+	  sap+ %set-alien-access %set-sap-ref-single %set-sap-ref-double
+	  %set-sap-ref-descriptor
 	  
 	  *alien-eval-when* make-alien alien-type alien-size alien-address
 	  copy-alien dispose-alien defalien alien-value
@@ -164,7 +166,7 @@
 	       (eql (continuation-value size) 32))
     (give-up "Size may not be 32:~% ~S" (continuation-value exp)))
 
-  '(%primitive sap-system-ref sap (ash offset -4)))
+  '(sap-ref-sap sap (ash offset -5)))
 
 
 ;;; Grovel-Alien-Var  --  Internal
@@ -202,7 +204,8 @@
 (defun grovel-alien-operator (type exp info)
   (unless (or (not type)
 	      (equal (lisp::alien-info-result-type info) type))
-    (compiler-error "Does not result in a ~S alien value:~% ~S" type exp))
+    (compiler-error "Results in a ~S alien value, not a ~S:~% ~S"
+		    (lisp::alien-info-result-type info) type exp))
   
   (unless (= (lisp::alien-info-num-args info) (length (cdr exp)))
     (compiler-error "Alien operator not called with ~D args:~% ~S"
@@ -288,21 +291,26 @@
 
 ;;;; Miscellaneous internal frobs:
 
-(defknown sap+ (t t) t (movable flushable))
+(defknown sap+ (system-area-pointer integer) system-area-pointer
+  (movable flushable))
 (deftransform sap+ ((sap offset))
   (unless (and (constant-continuation-p offset)
 	       (eql (continuation-value offset) 0))
     (give-up))
   'sap)
 
-(defknown sap-int (t) unsigned-byte (movable flushable))
-(defknown int-sap (unsigned-byte) t (movable flushable))
+(defknown sap- (system-area-pointer system-area-pointer) (signed-byte 32)
+  (movable flushable))
 
-(defknown %aligned-sap (t t t) t (movable flushable))
+(defknown sap-int (system-area-pointer) (unsigned-byte 32) (movable flushable))
+(defknown int-sap ((unsigned-byte 32)) system-area-pointer (movable))
+
+(defknown %aligned-sap (system-area-pointer unsigned-byte t) system-area-pointer
+  (movable flushable))
 (deftransform %aligned-sap ((sap offset form))
   (unless (> (find-alignment offset) 3)
     (give-up))
-  '(sap+ sap offset))
+  '(sap+ sap (ash offset -3)))
 
 (defknown (check<= check=) (index index) void (movable))
 
@@ -327,12 +335,47 @@
 
 (defknown record-size (symbol) index (movable foldable flushable))
 
-(defknown sap-ref-8 (t index) (unsigned-byte 8) (flushable))
-(defknown sap-ref-16 (t index) (unsigned-byte 16) (flushable))
-(defknown sap-ref-32 (t index) (unsigned-byte 32) (flushable))
-(defknown (setf sap-ref-8) (t index (unsigned-byte 8)) (unsigned-byte 8) ())
-(defknown (setf sap-ref-16) (t index (unsigned-byte 16)) (unsigned-byte 16) ())
-(defknown (setf sap-ref-32) (t index (unsigned-byte 32)) (unsigned-byte 32) ())
+(defknown sap-ref-8 (system-area-pointer index) (unsigned-byte 8)
+  (flushable))
+(defknown sap-ref-16 (system-area-pointer index) (unsigned-byte 16)
+  (flushable))
+(defknown sap-ref-32 (system-area-pointer index) (unsigned-byte 32)
+  (flushable))
+
+(defknown signed-sap-ref-8 (system-area-pointer index) (signed-byte 8)
+  (flushable))
+(defknown signed-sap-ref-16 (system-area-pointer index) (signed-byte 16)
+  (flushable))
+(defknown signed-sap-ref-32 (system-area-pointer index) (signed-byte 32)
+  (flushable))
+
+(defknown %set-sap-ref-8
+	  (system-area-pointer index (or (unsigned-byte 8) (signed-byte 8)))
+  (or (unsigned-byte 8) (signed-byte 8)) ())
+(defknown %set-sap-ref-16
+	  (system-area-pointer index (or (unsigned-byte 16) (signed-byte 16)))
+  (or (unsigned-byte 16) (signed-byte 16)) ())
+(defknown %set-sap-ref-32
+	  (system-area-pointer index (or (unsigned-byte 32) (signed-byte 32)))
+  (or (unsigned-byte 32) (signed-byte 32)) ())
+
+(defknown sap-ref-sap (system-area-pointer index) system-area-pointer
+  (flushable))
+(defknown %set-sap-ref-sap (system-area-pointer index system-area-pointer)
+  system-area-pointer
+  ())
+
+(defknown sap-ref-single (system-area-pointer index) single-float
+  (flushable))
+(defknown sap-ref-double (system-area-pointer index) double-float
+  (flushable))
+
+(defknown %set-sap-ref-single
+	  (system-area-pointer index single-float) single-float
+  ())
+(defknown %set-sap-ref-double
+	  (system-area-pointer index double-float) double-float
+  ())
 
 
 ;;;; Alien variable special forms:
@@ -388,27 +431,209 @@
 ;;; With-Stack-Alien-Transform  --  Internal
 ;;;
 ;;;
-(def-ir1-translator with-stack-alien (((var stack) &body forms) start cont)
-  (let ((info (info alien-stack info stack)))
-    (unless info
-      (compiler-error "~S is not the name of a declared alien stack." stack))
+(def-ir1-translator with-stack-alien (((var type &optional size)
+				       &body forms) start cont)
+  (unless size
+    (let ((info (info alien-stack info type)))
+      (unless info
+	(compiler-error "~S is not the name of a declared alien stack." type))
+      (setf type (lisp::stack-info-type info))
+      (setf size (lisp::stack-info-size info))))
+  (let* ((sap-var (gensym))
+	 (*venv* (acons var
+			(make-ct-a-val :type type
+				       :size size
+				       :sap sap-var
+				       :offset 0)
+			*venv*)))
+    (ir1-convert start cont
+      `(let ((,sap-var
+	      (truly-the system-area-pointer
+			 (%primitive alloc-number-stack-space
+				     (ceiling ,size vm:byte-bits)))))
+	 (declare (ignorable ,sap-var))
+	 (multiple-value-prog1
+	     (progn ,@forms)
+	   (%primitive dealloc-number-stack-space
+		       (ceiling ,size vm:byte-bits)))))))
 
-    (let* ((n-current (lisp::stack-info-current info))
-	   (n-sap (gensym))
-	   (n-alien (gensym))
-	   (a-val (make-ct-a-val :type (lisp::stack-info-type info)
-				 :size (lisp::stack-info-size info)
-				 :sap n-sap
-				 :offset 0
-				 :alien n-alien))
-	   (*lexical-environment*
-	    (make-lexenv :variables (list (cons var a-val)))))
-      (ir1-convert start cont
-		   `(let* ((,n-alien (or (car ,n-current)
-					 (,(lisp::stack-info-grow info))))
-			   (,n-sap (lisp::alien-value-sap ,n-alien))
-			   (,n-current (cdr ,n-current)))
-		      ,@forms)))))
+
+;;;; CALL-FOREIGN-FUNCTION stuff.
+
+(defknown ext::call-foreign-function (simple-base-string t t &rest t) t)
+
+(defun alien-type-type (type)
+  (let ((name (if (listp type) (car type) type)))
+    (case name
+      ((unsigned-byte signed-byte system-area-pointer
+		      double-float single-float)
+       (specifier-type type))
+      (port
+       (specifier-type '(unsigned-byte 32)))
+      (t
+       (error "Alien type ~S has no corresponding Lisp type." type)))))
+
+(defoptimizer (ext::call-foreign-function derive-type)
+	      ((name return-type arg-types &rest args))
+  (assert (constant-continuation-p return-type))
+  (assert (constant-continuation-p arg-types))
+  (let ((return-type (continuation-value return-type))
+	(arg-types (continuation-value arg-types)))
+    (unless (= (length arg-types) (length args))
+      (error "Different number of argument types (~D) from arguments (~D)."
+	     (length arg-types)
+	     (length args)))
+    (dolist (type arg-types)
+      (let ((arg (pop args)))
+	(assert-continuation-type arg (alien-type-type type))))
+    (if return-type
+	(alien-type-type return-type)
+	*universal-type*)))
+
+(defun make-call-out-nsp-tn ()
+  (make-wired-tn (primitive-type-or-lose 'positive-fixnum)
+		 (sc-number-or-lose 'any-reg)
+		 nsp-offset))
+
+(defun make-call-out-argument-tns (arg-types)
+  (let ((stack-frame-size 0)
+	(did-int-arg nil)
+	(float-args 0))
+    (collect ((tns))
+      (dolist (type arg-types)
+	(let ((name (if (consp type) (car type) type)))
+	  (ecase name
+	    ((unsigned-byte port)
+	     (if (< stack-frame-size 4)
+		 (tns (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
+				     (sc-number-or-lose 'unsigned-reg)
+				     (+ stack-frame-size 4)))
+		 (tns (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
+				     (sc-number-or-lose 'unsigned-stack)
+				     stack-frame-size)))
+	     (incf stack-frame-size)
+	     (setf did-int-arg t))
+	    (signed-byte
+	     (if (< stack-frame-size 4)
+		 (tns (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
+				     (sc-number-or-lose 'signed-reg)
+				     (+ stack-frame-size 4)))
+		 (tns (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
+				     (sc-number-or-lose 'signed-stack)
+				     stack-frame-size)))
+	     (incf stack-frame-size)
+	     (setf did-int-arg t))
+	    (system-area-pointer
+	     (if (< stack-frame-size 4)
+		 (tns (make-wired-tn (primitive-type-or-lose
+				      'system-area-pointer)
+				     (sc-number-or-lose 'sap-reg)
+				     (+ stack-frame-size 4)))
+		 (tns (make-wired-tn (primitive-type-or-lose
+				      'system-area-pointer)
+				     (sc-number-or-lose 'sap-stack)
+				     stack-frame-size)))
+	     (incf stack-frame-size)
+	     (setf did-int-arg t))
+	    (double-float
+	     ;; Round to a dual-word.
+	     (setf stack-frame-size (logandc2 (1+ stack-frame-size) 1))
+	     (cond ((>= stack-frame-size 4)
+		    (tns (make-wired-tn (primitive-type-or-lose 'double-float)
+					(sc-number-or-lose 'double-stack)
+					stack-frame-size)))
+		   ((and (not did-int-arg) (< float-args 2))
+		    (tns (make-wired-tn (primitive-type-or-lose 'double-float)
+					(sc-number-or-lose 'double-reg)
+					(+ (* float-args 2) 12))))
+		   (t
+		    (error "Can't put floats in int regs yet.")))
+	     (incf stack-frame-size 2)
+	     (incf float-args))
+	    (single-float
+	     (cond ((>= stack-frame-size 4)
+		    (tns (make-wired-tn (primitive-type-or-lose 'single-float)
+					(sc-number-or-lose 'single-stack)
+					stack-frame-size)))
+		   ((and (not did-int-arg) (< float-args 2))
+		    (tns (make-wired-tn (primitive-type-or-lose 'single-float)
+				   (sc-number-or-lose 'single-reg)
+				   (+ (* float-args 2) 12))))
+		   (t
+		    (error "Can't put floats in int regs yet.")))
+	     (incf stack-frame-size)
+	     (incf float-args)))))
+      (values (tns)
+	      (logandc2 (1+ stack-frame-size) 1)))))
+
+(defun make-call-out-result-tn (type)
+  (let ((name (if (consp type) (car type) type)))
+    (ecase name
+      ((unsigned-byte port)
+       (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
+		      (sc-number-or-lose 'unsigned-reg)
+		      2))
+      (signed-byte
+       (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
+		      (sc-number-or-lose 'signed-reg)
+		      2))
+      (system-area-pointer
+       (make-wired-tn (primitive-type-or-lose 'system-area-pointer)
+		      (sc-number-or-lose 'sap-reg)
+		      2))
+      (double-float
+       (make-wired-tn (primitive-type-or-lose 'double-float)
+		      (sc-number-or-lose 'double-reg)
+		      0))
+      (single-float
+       (make-wired-tn (primitive-type-or-lose 'single-float)
+		      (sc-number-or-lose 'single-reg)
+		      0)))))
+
+(defoptimizer (ext::call-foreign-function ltn-annotate)
+	      ((name return-type arg-types &rest args) node policy)
+  (setf (basic-combination-info node) :funny)
+  (setf (node-tail-p node) nil)
+  (dolist (arg args)
+    (annotate-ordinary-continuation arg policy)))
+
+(defoptimizer (ext::call-foreign-function ir2-convert)
+	      ((name return-type arg-types &rest args) call block)
+  (assert (constant-continuation-p name))
+  (assert (constant-continuation-p return-type))
+  (assert (constant-continuation-p arg-types))
+  (let* ((name (continuation-value name))
+	 (return-type (continuation-value return-type))
+	 (arg-types (continuation-value arg-types))
+	 (cont (node-cont call)))
+    (multiple-value-bind (arg-tns stack-frame-size)
+			 (make-call-out-argument-tns arg-types)
+      (unless (zerop stack-frame-size)
+	(let ((nsp (make-call-out-nsp-tn))
+	      (args args))
+	  (vop alloc-number-stack-space call block stack-frame-size nsp)
+	  (dolist (tn arg-tns)
+	    (let* ((arg (pop args))
+		   (sc (tn-sc tn))
+		   (scn (sc-number sc))
+		   (temp-tn (make-representation-tn (tn-primitive-type tn)
+						    scn)))
+	      (assert arg)
+	      (emit-move call block (continuation-tn call block arg) temp-tn)
+	      (emit-move-arg-template call block
+				      (svref (sc-move-arg-vops sc) scn)
+				      temp-tn nsp tn)))
+	  (assert (null args))))
+
+      (let ((results (when return-type
+		       (list (make-call-out-result-tn return-type)))))
+	(vop* call-out call block
+	      ((reference-tn-list arg-tns nil))
+	      ((reference-tn-list results t))
+	      name)
+	(unless (zerop stack-frame-size)
+	  (vop dealloc-number-stack-space call block stack-frame-size))
+	(move-continuation-result call block results cont)))))
 
 
 ;;;; Transforms for basic Alien accessors.
@@ -427,10 +652,12 @@
     `(let* ,(reverse binds)
        ,(ignore-unreferenced-vars binds)
        ,@(nreverse stuff)
-       (+ (sap-int ,(ct-a-val-sap res)) (/ ,(ct-a-val-offset res) 16)))))
+       (+ (sap-int ,(ct-a-val-sap res))
+	  (/ ,(ct-a-val-offset res) vm:byte-bits)))))
 
 
 ;;; Alien-SAP soruce transform  --  Internal
+;;;
 ;;;
 (def-source-transform alien-sap (alien &whole source)
   (multiple-value-bind (binds stuff res)
@@ -477,7 +704,8 @@
 		      ,(ct-a-val-size res) ',(ct-a-val-type res)
 		      ,lisp-type ',form))))
 
-(defknown %alien-access (t unsigned-byte unsigned-byte t t t) t
+(defknown %alien-access
+	  (system-area-pointer unsigned-byte unsigned-byte t t t) t
   (movable flushable))
 
 ;;; %Alien-Access transform  --  Internal
@@ -517,7 +745,8 @@
 			   ,(if nv-p new-value lisp-type)
 			   ',form))))
 
-(defknown %%set-alien-access (t unsigned-byte unsigned-byte t t t t) t)
+(defknown %%set-alien-access
+	  (system-area-pointer unsigned-byte unsigned-byte t t t t) t)
 
 ;;; %%Set-Alien-Access transform  --  Internal
 ;;;
@@ -639,14 +868,14 @@
 (defun sign-extend (form size &optional (signed t))
   (if signed
       `(let ((res ,form))
-	 (declare (fixnum res))
 	 (if (zerop (logand res ,(ash 1 (1- size))))
 	     res
 	     (logior res ,(ash -1 size))))
       form))
 
 
-(defknown naturalize-integer (t t unsigned-byte unsigned-byte t) integer
+(defknown naturalize-integer
+	  (t system-area-pointer unsigned-byte unsigned-byte t) integer
   (flushable))
 
 ;;; Naturalize-Integer Transform  --  Internal
@@ -670,56 +899,76 @@
   
   (let ((align (find-alignment offset))
 	(size (continuation-value size))
-	(signed (continuation-value signed)))
+	(signed (continuation-value signed))
+	(bits (find-bit-offset offset)))
     (cond
-     ((or (and (> size 15) (< align 4))
-	  (and (> size 16) (< align 5)))
-      (give-up "Could not show ~D bit access to be word-aligned:~%~S"
+     ((and (= size 32) (> align 4))
+      (if signed
+	  '(signed-sap-ref-32 sap (ash offset -5))
+	  '(sap-ref-32 sap (ash offset -5))))
+     ((and (= size 16) (> align 3))
+      (if signed
+	  '(signed-sap-ref-16 sap (ash offset -4))
+	  '(sap-ref-16 sap (ash offset -4))))
+     ((and (= size 8) (> align 2))
+      (if signed
+	  '(signed-sap-ref-8 sap (ash offset -3))
+	  '(sap-ref-8 sap (ash offset -3))))
+     ((not bits)
+      (give-up "Can't determine offset within word, so cannot open-code:~%~S"
+	       (continuation-value form)))
+     ((<= (+ bits size) 32)
+      (sign-extend `(ldb (byte ,size ,bits)
+			 (sap-ref-32 sap (ash offset -5)))
+		   size signed))
+     ((> size 32)
+      (give-up "Accesses of ~D bits unsupported:~%~S"
 	       size (continuation-value form)))
-     ((= size 32)
-      (if signed
-	  '(%primitive signed-32bit-system-ref sap (ash offset -4))
-	  '(%primitive unsigned-32bit-system-ref sap (ash offset -4))))
-     ((= size 16)
-      (if signed
-	  '(%primitive signed-16bit-system-ref sap (ash offset -4))
-	  '(%primitive 16bit-system-ref sap (ash offset -4))))
-     ((> size 15)
-      (compiler-warning "Access of ~D bit bytes is not supported:~%~S"
-			size (continuation-value form))
-      (give-up))
-     ((and (> align 2) (= size 8))
-      (sign-extend '(%primitive 8bit-system-ref sap (ash offset -3))
-		   8 signed))
      (t
-      (let ((bits (find-bit-offset offset)))
-	(unless bits
-	  (give-up "Can't determine offset within word, so cannot ~
-	  open-code:~%~S"
-		   (continuation-value form)))
-	
-	(if (>= (+ bits size) 16)
-	    (let* ((hi-bits (- 16 bits))
-		   (lo-bits (- size hi-bits)))
-	      ;;
-	      ;; If the integer spans a 16bit boundry, then the high bits in
-	      ;; the integer are the low bits in the first word, and the low
-	      ;; bits in the integer are the high bits in the next word.
-	      (sign-extend
-	       `(let ((offset (ash offset -4)))
-		  (logior (ash (ldb (byte ,hi-bits 0)
-				    (sap-ref-16 sap offset))
-			       ,lo-bits)
-			  (ash (sap-ref-16 sap (1+ offset))
-			       ,(- (- 16 lo-bits)))))
-	       size signed))
-	    (sign-extend `(ldb (byte ,size ,bits)
-			       (sap-ref-16 sap (ash offset -4)))
-			 size signed)))))))
+      ;; If the integer spans a boundry, how we combine the two partial results
+      ;; depends on the target byte order.
+      ;;
+      ;; little-endian:
+      ;;   0   1   2   3   4   5   6   7
+      ;; 7      07      07      07      0
+      ;; [  ][  ][  ][  ][  ][  ][  ][  ]
+      ;; 210                          543
+      ;;  We get the low bits from the high part of the first word and
+      ;; the high bits from the low part of the second word.
+      ;; 
+      ;; big-endian: 
+      ;;   0   1   2   3   4   5   6   7
+      ;; 7      07      07      07      0
+      ;; [  ][  ][  ][  ][  ][  ][  ][  ]
+      ;;              543210
+      ;;  We get the low bits from the high part of the second word
+      ;; and the high bits from the low part of the first.
+      ;;
+      ;; Therefore, the only difference is which byte to use for what.
+      ;; What bits to use from each byte is constant.
+      ;; 
+      ;; We sign extend the high bits instead of the entire value because
+      ;; it has a higher probability of being a fixnum.
+      ;; 
+      (let* ((high-bits (- 32 bits))
+	     (low-bits (- size high-bits)))
+	(multiple-value-bind (low-byte high-byte)
+			     (ecase vm:target-byte-order
+			       (:little-endian
+				(values 'offset '(1+ offset)))
+			       (:big-endian
+				(values '(1+ offset) 'offset)))
+	  `(let ((offset (ash offset -5)))
+	     (logior (ash ,(sign-extend `(ldb (byte ,high-bits 0)
+					      (sap-ref-32 sap ,high-byte))
+					size signed)
+			  ,low-bits)
+		     (ash (sap-ref-32 sap ,low-byte)
+			  ,(- (- 32 low-bits)))))))))))
 
 
-
-(defknown deport-integer (t t unsigned-byte unsigned-byte integer t) void
+(defknown deport-integer
+	  (t system-area-pointer unsigned-byte unsigned-byte integer t) void
   ())
 
 ;;; Deport-Integer transform  --  Internal
@@ -732,56 +981,51 @@
 	     (continuation-value form)))
 
   (let ((align (find-alignment offset))
-	(size (continuation-value size)))
+	(size (continuation-value size))
+	(bits (find-bit-offset offset)))
     (cond
-     ((or (and (> size 15) (< align 4))
-	  (and (> size 16) (< align 5)))
-      (give-up "Could not show ~D bit access to be word-aligned:~%~S"
+     ((and (= size 32) (> align 4))
+      '(setf (sap-ref-32 sap (ash offset -5)) value))
+     ((and (= size 16) (> align 3))
+      '(setf (sap-ref-16 sap (ash offset -4)) value))
+     ((and (= size 8) (> align 2))
+      '(setf (sap-ref-8 sap (ash offset -3)) value))
+     ((not bits)
+      (give-up "Can't determine offset within word, so cannot open-code:~%~S"
+	       (continuation-value form)))
+     ((<= (+ bits size) 32)
+      `(setf (ldb (byte ,size ,bits) (sap-ref-32 sap (ash offset -5)))
+	     value))
+     ((> size 32)
+      (give-up "Accesses of ~D bits unsupported:~%~S"
 	       size (continuation-value form)))
-     ((= size 32)
-      '(%primitive signed-32bit-system-set sap (ash offset -4) value))
-     ((= size 16)
-      '(%primitive 16bit-system-set sap (ash offset -4) value))
-     ((> size 15)
-      (compiler-warning "Access of ~D bit bytes is not supported:~%~S"
-			size (continuation-value form))
-      (give-up))
-     ((and (> align 2) (= size 8))
-      '(%primitive 8bit-system-set sap (ash offset -3) value))
      (t
-      (let ((bits (find-bit-offset offset)))
-	(unless bits
-	  (give-up "Can't determine offset within word, so cannot ~
-	            open-code:~%~S"
-		   (continuation-value form)))
-	
-	(if (>= (+ bits size) 16)
-	    (let* ((hi-bits (- 16 bits))
-		   (lo-bits (- size hi-bits)))
-	      ;;
-	      ;; If the integer spans a 16bit boundry, then the high bits in
-	      ;; the integer are the low bits in the first word, and the low
-	      ;; bits in the integer are the high bits in the next word.
-	      `(let ((offset (ash offset -4)))
-		 (%primitive 16bit-system-set sap offset
-			     (dpb (ash value ,(- lo-bits))
-				  (byte ,hi-bits 0)
-				  (sap-ref-16 sap offset)))
-		 (%primitive 16bit-system-set sap (1+ offset)
-			     (dpb value
-				  (byte ,lo-bits ,(- 16 lo-bits))
-				  (sap-ref-16 (1+ offset))))))
-	    `(let ((offset (ash offset -4)))
-	       (setf (sap-ref-16 sap offset)
-		     (dpb value
-			  (byte ,size ,bits)
-			  (sap-ref-16 sap offset))))))))))
+      ;;
+      ;; If the integer spans a 32 bit boundry, what we do depends on
+      ;; the byte order.  See the comments in naturalize-integer.
+      ;; 
+      (let* ((high-bits (- 32 bits))
+	     (low-bits (- size high-bits)))
+	(multiple-value-bind (low-byte high-byte)
+			     (ecase vm:target-byte-order
+			       (:little-endian
+				(values 'offset '(1+ offset)))
+			       (:big-endian
+				(values '(1+ offset) 'offset)))
+	  `(let ((offset (ash offset -5)))
+	     (setf (ldb (byte ,high-bits 0)
+			(sap-ref-32 sap ,high-byte))
+		   (ash value ,(- low-bits)))
+	     (setf (ldb (byte ,low-bits ,(- 32 low-bits))
+			(sap-ref-32 sap ,low-byte))
+		   value))))))))
 
 
 ;;;; Boolean stuff:
 
-(defknown naturalize-boolean (t index index t) boolean (flushable))
-(defknown deport-boolean (t index index t t) void ())
+(defknown naturalize-boolean (system-area-pointer index index t) boolean
+  (flushable))
+(defknown deport-boolean (system-area-pointer index index t t) void ())
 
 ;;; Naturalize and Deport Boolean transforms  --  Internal
 ;;; 
@@ -822,10 +1066,7 @@
 	       (continuation-value form)))
     (if (= size 1)
 	`(let ((offset (ash offset -3)))
-	   (setf (sap-ref-8 sap offset)
-		 (let ((old (sap-ref-8 sap offset)))
-		   (if value
-		       (logior old ,(ash 1 (- 7 off)))
-		       (logand old ,(lognot (ash 1 (- 7 off))))))))
+	   (setf (ldb (byte 1 ,off) (sap-ref-8 sap offset))
+		 (if value 1 0)))
 	`(deport-integer nil sap offset ,size (if value 1 0)
 			 ',(continuation-value form)))))

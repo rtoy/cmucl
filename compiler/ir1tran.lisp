@@ -1468,7 +1468,7 @@
      :name name
      :type (specifier-type
 	    (if (listp name)
-		`(function (,type ,slot-type) ,slot-type)
+		`(function (,slot-type ,type) ,slot-type)
 		`(function (,type) ,slot-type)))
      :for info
      :slot slot)))
@@ -2416,7 +2416,7 @@
 	(unless (dsd-read-only slot)
 	  (process-1-ftype-proclamation
 	   `(setf ,fun)
-	   (specifier-type `(function (,name ,type) ,type))))))
+	   (specifier-type `(function (,type ,name) ,type))))))
 
     (collect ((forms))
       (when copier

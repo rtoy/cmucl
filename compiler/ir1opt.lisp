@@ -825,6 +825,8 @@
 				    :argument-test #'types-intersect
 				    :result-test #'values-types-intersect))
 	   (setf (gethash node *failed-optimizations*) type)
+	   t)
+	  (t
 	   t))))
 
 

@@ -18,6 +18,15 @@
 
 ;;;; Utilities used during code generation.
 
+;;; Component-Header-Length   --  Interface
+;;; 
+(defun component-header-length (&optional (component *compile-component*))
+  "Returns the number of bytes used by the code object header."
+  (let* ((2comp (component-info component))
+	 (constants (ir2-component-constants 2comp))
+	 (num-consts (length constants)))
+    (ash (logandc2 (1+ num-consts) 1) vm:word-shift)))
+
 ;;; SB-Allocated-Size  --  Interface
 ;;;
 (defun sb-allocated-size (name)
@@ -58,6 +67,18 @@
   (ir2-environment-return-pc-pass 2env))
 
 
+;;;; Generate-code and support routines.
+
+(defvar *code-segment* nil)
+(defvar *elsewhere* nil)
+
+;;; Init-Assembler  --  Interface
+;;; 
+(defun init-assembler ()
+  (setf *code-segment* (make-segment))
+  (setf *elsewhere* (make-segment))
+  (undefined-value))
+
 ;;; Generate-Code  --  Interface
 ;;;
 (defun generate-code (component)
@@ -66,7 +87,8 @@
       (let ((1block (ir2-block-block block)))
 	(when (and (eq (block-info 1block) block)
 		   (block-start 1block))
-	  (emit-label (block-label 1block))
+	  (assemble (*code-segment* nil)
+	    (emit-label (block-label 1block)))
 	  (let ((env (block-environment 1block)))
 	    (unless (eq env prev-env)
 	      (let ((lab (gen-label)))
@@ -82,5 +104,15 @@
 	      (funcall gen vop)
 	      (format t "Missing generator for ~S.~%"
 		      (template-name (vop-info vop))))))))
+  (assemble (*code-segment* nil)
+    (insert-segment *elsewhere*))
+  (finalize-segment *code-segment*))
 
-  (finish-assembly))
+
+(defun emit-label-elsewhere (label)
+  (assemble (*elsewhere* nil)
+    (emit-label label)))
+
+
+(defun label-elsewhere-p (label)
+  (<= (label-position *elsewhere*) (label-position label)))

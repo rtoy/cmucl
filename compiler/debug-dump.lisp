@@ -110,7 +110,7 @@
 	0)
    *byte-buffer*)
   
-  (let ((loc (label-location label)))
+  (let ((loc (label-position label)))
     (write-var-integer (- loc *previous-location*) *byte-buffer*)
     (setq *previous-location* loc))
 
@@ -498,9 +498,8 @@
 ;;; at some particular time (after assembly) so that source map information is
 ;;; available.
 ;;; 
-(defun debug-info-for-component (component assem-nodes count)
-  (declare (type component component) (simple-vector assem-nodes)
-	   (type index count))
+(defun debug-info-for-component (component)
+  (declare (type component component))
   (let ((level (cookie-debug *default-cookie*))
 	(res (make-compiled-debug-info :name (component-name component)
 				       :package (package-name *package*))))
@@ -525,11 +524,11 @@
 				    (ir2-environment-return-pc 2env))
 			:old-fp (tn-sc-offset
 				 (ir2-environment-old-fp 2env))
-			:start-pc (label-location
+			:start-pc (label-position
 				   (ir2-environment-environment-start 2env))
 
 			:elsewhere-pc
-			(label-location
+			(label-position
 			 (ir2-environment-elsewhere-start 2env)))))
 	    
 	    (when (>= level 1)
@@ -556,7 +555,7 @@
 			 (setf (compiled-debug-function-returns dfun)
 			       (compute-debug-returns fun)))))))
 
-	    (dfuns (cons (label-location
+	    (dfuns (cons (label-position
 			  (block-label
 			   (node-block
 			    (lambda-bind fun))))
