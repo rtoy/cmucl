@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.57 1993/02/03 17:53:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.58 1993/03/14 19:32:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -570,7 +570,7 @@
 	(let ((return (lambda-return fun)))
 	  (when return
 	    (when (node-reoptimize return)
-	      (setf (node-reoptimize node) nil)
+	      (setf (node-reoptimize return) nil)
 	      (find-result-type return))
 	    (res (return-result-type return)))))
       
