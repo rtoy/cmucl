@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.6 1992/03/21 19:44:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.7 1992/06/08 21:09:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,9 +60,6 @@
 
 (load "assem:assem-rtns")
 
-(unless (or (target-featurep :rt)
-	    (target-featurep :gengc))
-  (load "assem:bit-bash"))
 (load "assem:array")
 (load "assem:arith")
 (unless (target-featurep :gengc)
