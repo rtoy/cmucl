@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.65 1992/07/11 02:11:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.66 1992/07/22 22:48:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,6 +44,9 @@
 
 (defvar *byte-compile* :maybe
   "Whether or not to use the byte-compiler.  Can be T, NIL, or :MAYBE")
+(defvar *byte-compiling* nil
+  "Bound by COMPILE-COMPONENT to T when byte-compiling, and NIL when
+   native compiling.")
 
 (defvar compiler-version "1.0")
 (pushnew :python *features*)
@@ -329,9 +332,18 @@
 ;;; COMPILE-COMPONENT -- internal.
 ;;;
 (defun compile-component (component)
-  (let ((*compile-component* component))
+  (let* ((*compile-component* component)
+	 (*byte-compiling*
+	  (ecase *byte-compile*
+	    ((t) t)
+	    ((nil) nil)
+	    (:maybe
+	     ;; ### Need some heuristic
+	     nil))))
     (when *compile-print*
-      (compiler-mumble "~&Compiling ~A: " (component-name component)))
+      (compiler-mumble "~&~:[~;Byte ~]Compiling ~A: "
+		       *byte-compiling*
+		       (component-name component)))
 
     (ir1-phases component)
 
@@ -346,10 +358,7 @@
     (environment-analyze component)
     (dfo-as-needed component)
 
-    (if (ecase *byte-compile*
-	  ((t) t)
-	  ((nil) nil)
-	  (:maybe nil))
+    (if *byte-compiling*
 	(byte-compile-component component)
 	(native-compile-component component)))
 
