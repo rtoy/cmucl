@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.3 1990/02/09 19:10:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.4 1990/02/09 21:08:09 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under hemlock.
 ;;; 
@@ -108,6 +108,7 @@
 		(message "Checking in ~A ..." (namestring pathname))
 		(in-directory pathname
 		  (do-command "rcsci" `(,@(if keep-lock '("-l"))
+					"-u"
 					,(file-namestring pathname))
 			      :input (make-hemlock-region-stream
 				      (buffer-region buffer))))
