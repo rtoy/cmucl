@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.13 1991/06/13 10:35:54 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.14 1992/03/08 18:44:06 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -297,7 +297,6 @@ start_of_tramps:
         .ent    undefined_tramp
 undefined_tramp:
         break   10
-        .byte    255
         .byte    4
         .byte    23
         .byte    254
@@ -313,7 +312,7 @@ undefined_tramp:
         .globl  closure_tramp
         .ent    closure_tramp
 closure_tramp:
-        lw      LEXENV, SYMBOL_FUNCTION_OFFSET(CNAME)
+        lw      LEXENV, FDEFN_FUNCTION_OFFSET(CNAME)
         lw      L0, CLOSURE_FUNCTION_OFFSET(LEXENV)
         add     LIP, L0, FUNCTION_HEADER_CODE_OFFSET
         j       LIP
