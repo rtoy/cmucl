@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.11 1990/10/04 19:19:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.12 1990/10/11 18:05:21 ram Exp $
 ;;;
 ;;; CMU Common Lisp Debugger.  This is a very basic command-line oriented
 ;;; debugger.
@@ -32,10 +32,12 @@
 ;;; Used to communicate to debug-loop that we are at a step breakpoint.
 ;;;
 (define-condition step-condition (simple-condition))
-  "*Print-level* is bound to this value when debug prints a function call.")
+
+
 ;;;; Variables, parameters, and constants.
 
-  "*Print-length* is bound to this value when debug prints a function call.")
+(defparameter *debug-print-level* 3
+  "*PRINT-LEVEL* is bound to this value when debug prints a function call.  If
   null, use *PRINT-LEVEL*")
 
 (defparameter *debug-print-length* 5
@@ -73,7 +75,6 @@
 
 ;;; A list of breakpoint-info structures of the made and active step
 ;;; breakpoints.
-  PUSH     rebinds things in another command level.  Good for hide/show.
   ABORT    returns to the previous abort restart case.
 ;;;
 (defvar *step-breakpoints* nil)  
@@ -111,8 +112,8 @@
 	(dolist (code-location next-code-locations)
 	  (let ((bp-info (location-in-list code-location *breakpoints*)))
 	      (di:deactivate-breakpoint (breakpoint-info-breakpoint bp-info))))
-  (let ((*print-length* *debug-print-length*)
-	(*print-level* *debug-print-level*))
+	  (let ((bp (di:make-breakpoint #'main-hook-function code-location
+					:kind :code-location)))
 	    (di:activate-breakpoint bp)
 	    (push (create-breakpoint-info code-location bp 0)
 		  *step-breakpoints*))))
@@ -167,8 +168,10 @@
 						keyword deleted)
   `(etypecase ,element
 (defun print-frame-call (frame &optional
-			       (*print-length* *debug-print-length*)
-			       (*print-level* *debug-print-level*)
+			       (*print-length* (or *debug-print-length*
+						   *print-length*))
+			       (*print-level* (or *debug-print-level*
+						  *print-level*))
 			       (verbosity 1))
   (ecase verbosity
     (0 (print frame))
@@ -564,9 +567,6 @@
 	    (setf *current-frame*
 		  (do ((prev *current-frame* lead)
 
-(def-debug-command "PUSH"
-  (invoke-debugger *debug-condition*))
-
 (def-debug-command "ABORT"
   ;; There's always at least one abort restart due to the top-level one.
   (invoke-restart *debug-abort*))
@@ -623,27 +623,34 @@
 (def-debug-command "L"
 		 (setf end len)
 		 (return))
-	(let ((*print-level* *debug-print-level*)
-	      (*print-length* *debug-print-length*)
+		((or (zerop (decf count)) (= end len))
+		 (return))))
 	(write-string debug-help-string *standard-output*
 		      :start start :end end))
+      (when (= end len) (return))
       (format t "~%[RETURN FOR MORE, Q TO QUIT HELP TEXT]: ")
       (force-output)
-	  (di:do-debug-function-variables (v d-fun)
+      (let ((res (read-line)))
+	(when (or (string= res "q") (string= res "Q"))
+	  (return))))))
 
-	    (cond ((eq (di:debug-variable-validity v location) :valid)
-		   (setf any-valid-p t)
-		   (format t "~A~:[#~D~;~*~]  =  ~S~%"
-			   (di:debug-variable-name v)
-			   (zerop (di:debug-variable-id v))
-			   (di:debug-variable-id v)
-			   (di:debug-variable-value v *current-frame*)))
-		  (t #|(format t "~A has an invalid value currently.~%"
-			       (di:debug-variable-name v))|#)))
-	  (cond ((not any-p)
-		 (write-line "No local variables in function."))
-		((not any-valid-p)
-		 (write-line "All variables currently have invalid values."))))
+(def-debug-command-alias "?" "HELP")
+
+(def-debug-command "ERROR" ()
+  (format t "~A~%" *debug-condition*)
+  (show-restarts *debug-restarts*))
+
+(def-debug-command "BACKTRACE" ()
+  (backtrace (read-if-available most-positive-fixnum)))
+
+(def-debug-command "PRINT" ()
+  (print-frame-call *current-frame*))
+
+(def-debug-command-alias "P" "PRINT")
+
+	    (format t "All variables ~@[starting with ~A~ ]currently ~
+  (print-frame-call *current-frame* :print-level nil :print-length nil
+		    :verbosity (read-if-available 2)))
 
 (def-debug-command-alias "PP" "VPRINT")
 (def-debug-command "SOURCE"
@@ -662,14 +669,14 @@
 		      (zerop (di:debug-variable-id v))
 		      (di:debug-variable-id v)
 		      (di:debug-variable-value v *current-frame*))))
-      (:lisp
-       (print-frame-source
-	name ;the top-level form
-	0 ;top-level form offset is always zero when we have it in hand.
-	location context verbose))
-      (:stream
-       (format t "~%Source extracted from some stream.  Sorry.")))))
+
+	  (cond
+	   ((not any-p)
+	    (format t "No local variables ~@[starting with ~A ~]~
+	               in function."
+		    prefix))
 	   ((not any-valid-p)
+
 	    (format t "All variables ~@[starting with ~A ~]currently ~
 	               have invalid values."
 		    prefix))))
@@ -702,8 +709,9 @@
 (pushnew #'(lambda ()
 	 (let* ((tlf-offset (di:code-location-top-level-form-offset
 			     location))
-		(char-offset (aref (di:debug-source-start-positions
-				    d-source)
+		(char-offset (aref (or (di:debug-source-start-positions
+					d-source)
+;;; We also cache the last top-level form that we printed a source for so that
 				   tlf-offset)))
 ;;;
 (defvar *cached-top-level-form-offset* nil)
@@ -725,8 +733,12 @@
 	(values *cached-form-number-translations* *cached-top-level-form*)
   (let ((translations (di:form-number-translations
 		       tlf tlf-offset))
-	(*print-level* (if verbose nil *debug-print-level*))
-	(*print-length* (if verbose nil *debug-print-length*)))
+	(*print-level* (if verbose
+	       (res
+		(ecase (di:debug-source-from d-source)
+		  (:file (get-file-top-level-form location))
+		  ((:lisp :stream)
+		   (svref (di:debug-source-name d-source) offset)))))
 	  (setq *cached-top-level-form-offset* offset)
 	  (values (setq *cached-form-number-translations*
 	    (svref translations
@@ -738,8 +750,9 @@
 	   (setup-function-start ()
 	     (let ((code-loc (di:debug-function-start-location place)))
 (def-debug-command "FLUSH"
-  (setf *flush-debug-errors* (not *flush-debug-errors*)))
-
+					    :kind :function-start))
+	       (setf break (di:preprocess-for-eval break code-loc))
+      (write-line "Errors now not flushed.")))
 	(when old-bp-info
 	  (di:deactivate-breakpoint (breakpoint-info-breakpoint old-bp-info))
 	  (setf *breakpoints* (remove old-bp-info *breakpoints*))
