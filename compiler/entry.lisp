@@ -90,8 +90,7 @@
 	       (new (make-functional :kind :top-level-xep
 				     :info (leaf-info lambda)
 				     :name (leaf-name ef)
-				     :fenv nil :venv nil
-				     :benv nil :tenv nil))
+				     :lexenv (make-null-environment)))
 	       (closure (environment-closure
 			 (lambda-environment (main-entry ef)))))
 	  (dolist (ref (leaf-refs lambda))
