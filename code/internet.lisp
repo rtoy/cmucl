@@ -47,7 +47,7 @@
 
 
 (defmacro maybe-byte-swap (var bytes)
-  (ecase vm:target-byte-order
+  (ecase (c:backend-byte-order c:*backend*)
     (:big-endian
      var)
     (:little-endian
