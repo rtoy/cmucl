@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.62 1997/11/21 12:26:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.63 1998/01/08 05:09:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,13 +318,19 @@
 	     (first (ir2-continuation-locs 2cont)))))
 	 (ptype (ir2-continuation-primitive-type 2cont)))
     
-    (cond ((eq (continuation-type-check cont) t)
-	   (multiple-value-bind (check types)
-				(continuation-check-types cont)
-	     (assert (eq check :simple))
-	     (let ((temp (make-normal-tn ptype)))
-	       (emit-type-check node block cont-tn temp (first types))
-	       temp)))
+    (cond ((and (eq (continuation-type-check cont) t)
+		(multiple-value-bind (check types)
+		    (continuation-check-types cont)
+		  (assert (eq check :simple))
+		  ;; If the proven type is a subtype of the possibly
+		  ;; weakened type check then it's always True and is
+		  ;; flushed.
+		  (unless (values-subtypep (continuation-proven-type cont)
+					   (first types))
+		    (let ((temp (make-normal-tn ptype)))
+		      (emit-type-check node block cont-tn temp
+				       (first types))
+		      temp)))))
 	  ((eq (tn-primitive-type cont-tn) ptype) cont-tn)
 	  (t
 	   (let ((temp (make-normal-tn ptype)))
