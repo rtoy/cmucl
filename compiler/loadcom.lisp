@@ -6,6 +6,7 @@
 
 (setf *load-verbose* t)
 
+(load "vm:vm-macs")
 (load "c:backend")
 (load "vm:parms")
 (load "vm:objdef")
@@ -50,6 +51,7 @@
 (load "c:codegen")
 (load "c:main")
 (load "c:assembler")
+(load "c:assem-opt")
 (load "assem:assemfile")
 (load "assem:support")
 #+pmax (load "code:pmax-disassem")
