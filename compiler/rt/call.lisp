@@ -466,8 +466,8 @@ default-value-5
 ;;; Nvals is the number of values received.
 ;;;
 (define-vop (call-local)
-  (:args (fp :scs (word-pointer-reg))
-	 (nfp :scs (word-pointer-reg))
+  (:args (fp :scs (word-pointer-reg control-stack))
+	 (nfp :scs (word-pointer-reg control-stack))
 	 (args :more t))
   (:results (values :more t))
   (:save-p t)
@@ -482,10 +482,10 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn cur-nfp nfp-save))
-      (move cfp-tn fp)
+      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label)
       (inst b target)
@@ -501,8 +501,8 @@ default-value-5
 ;;; glob and the number of values received.
 ;;;
 (define-vop (multiple-call-local unknown-values-receiver)
-  (:args (fp :scs (word-pointer-reg))
-	 (nfp :scs (word-pointer-reg))
+  (:args (fp :scs (word-pointer-reg control-stack))
+	 (nfp :scs (word-pointer-reg control-stack))
 	 (args :more t))
   (:save-p t)
   (:move-args :local-call)
@@ -515,10 +515,10 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn cur-nfp nfp-save))
-      (move cfp-tn fp)
+      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label)
       (inst b target)
@@ -536,8 +536,8 @@ default-value-5
 ;;; just like argument passing in local call.
 ;;;
 (define-vop (known-call-local)
-  (:args (fp :scs (word-pointer-reg))
-	 (nfp :scs (word-pointer-reg))
+  (:args (fp :scs (word-pointer-reg control-stack))
+	 (nfp :scs (word-pointer-reg control-stack))
 	 (args :more t))
   (:results (res :more t))
   (:move-args :local-call)
@@ -551,10 +551,10 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn cur-nfp nfp-save))
-      (move cfp-tn fp)
+      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label)
       (inst b target)
@@ -568,8 +568,8 @@ default-value-5
 ;;; restore FP and CSP and jump to the Return-PC.
 ;;;
 (define-vop (known-return)
-  (:args (old-fp :scs (word-pointer-reg))
-	 (return-pc :scs (descriptor-reg))
+  (:args (old-fp :scs (word-pointer-reg control-stack))
+	 (return-pc :scs (descriptor-reg control-stack))
 	 (vals :more t))
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:move-args :known-return)
@@ -654,7 +654,8 @@ default-value-5
       
       ,@(when (eq return :tail)
 	  '((old-fp :scs (word-pointer-reg) :target old-fp-pass)
-	    (return-pc :scs (descriptor-reg) :target return-pc-pass)))
+	    (return-pc :scs (descriptor-reg control-stack)
+		       :target return-pc-pass)))
       
       ,@(unless variable '((args :more t))))
 
@@ -757,7 +758,7 @@ default-value-5
 
 	 ,@(if (eq return :tail)
 	       '((move old-fp-pass old-fp)
-		 (move return-pc-pass return-pc)
+		 (maybe-load-stack-tn return-pc-pass return-pc)
 		 (when cur-nfp
 		   (inst cal nsp-tn cur-nfp
 			 (component-non-descriptor-stack-usage)))
