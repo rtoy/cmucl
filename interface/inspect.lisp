@@ -134,22 +134,23 @@
 ;;; allow us to discriminate.
 ;;;
 (defmethod inspector-pane-title (object)
-  (typecase object
-    (standard-object
-     (format nil "Instance ~a of Class ~a"
-	     object (pcl::class-name (pcl::class-of object))))
-    (function (format nil "~a" object))
-    (structure-object
-     (let ((default (format nil "~a" object)))
-       (declare (simple-string default))
-       (if (and (> (length default) 2)
-		(char= (schar default 0) #\#)
-		(char= (schar default 1) #\S))
-	   (format nil "#<~a Structure>" (type-of object))
-	   default)))
-    (t
-     (format nil "~a ~a" (string-capitalize (type-of object))
-	     (print-for-widget-display "~s" object)))))
+  (let ((*print-level* (or debug:*debug-print-level* *print-level*))
+	(*print-length* (or debug:*debug-print-length* *print-length*)))
+    (typecase object
+      (standard-object
+       (format nil "Instance ~a of Class ~a" object (type-of object)))
+      (function (format nil "~a" object))
+      (structure-object
+       (let ((default (format nil "~a" object)))
+	 (declare (simple-string default))
+	 (if (and (> (length default) 2)
+		  (char= (schar default 0) #\#)
+		  (char= (schar default 1) #\S))
+	     (format nil "#<~a Structure>" (type-of object))
+	     default)))
+      (t
+       (format nil "~a ~a" (string-capitalize (type-of object))
+	       (print-for-widget-display "~s" object))))))
 
 (defmethod inspector-pane-title ((sym symbol))
   (format nil "Symbol ~s" sym))
@@ -491,14 +492,14 @@
 				    :font-list *header-font*))
 	(widgets))
     (dolist (slotd slot-list)
-      (pcl:with-slots ((slot pcl::name) (allocation pcl::allocation))
+      (with-slots ((slot pcl::name) (allocation pcl::allocation))
 		      slotd
 	(let* ((slot-label (if allocp
 			       (format nil "~a: " slot)
 			       (format nil "~a [~a]: " slot allocation)))
-	       (slot-bound (pcl:slot-boundp object slot))
+	       (slot-bound (slot-boundp object slot))
 	       (slot-value (if slot-bound
-			       (pcl:slot-value object slot)
+			       (slot-value object slot)
 			       "Unbound")))
 	  (push
 	   (create-value-box view slot-label slot-value
@@ -519,8 +520,8 @@
 	   instance-slots class-slots other-slots)
 
       (dolist (slotd slotds)
-	(pcl:with-slots ((slot pcl::name) (allocation pcl::allocation))
-			slotd
+	(with-slots ((slot pcl::name) (allocation pcl::allocation))
+		    slotd
 	  (case allocation
 	    (:instance (push slotd instance-slots))
 	    (:class (push slotd class-slots))
