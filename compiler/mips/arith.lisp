@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.44 1991/04/09 17:37:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.45 1992/03/27 19:35:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.44 1991/04/09 17:37:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.45 1992/03/27 19:35:24 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -281,28 +281,40 @@
   (:translate logcount)
   (:note "inline (unsigned-byte 32) logcount")
   (:policy :fast-safe)
-  (:args (arg :scs (unsigned-reg) :target shift))
+  (:args (arg :scs (unsigned-reg) :target num))
   (:arg-types unsigned-num)
-  (:results (res :scs (any-reg)))
+  (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift temp)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0) :to (:result 0)
+		    :target res) num)
+  (:temporary (:scs (non-descriptor-reg)) mask temp)
   (:generator 30
-    (let ((loop (gen-label))
-	  (done (gen-label)))
-      (move shift arg)
-      (inst beq shift done)
-      (move res zero-tn)
-      (inst and temp shift 1)
+    (inst li mask #x55555555)
+    (inst srl temp arg 1)
+    (inst and num arg mask)
+    (inst and temp mask)
+    (inst addu num temp)
+    (inst li mask #x33333333)
+    (inst srl temp num 2)
+    (inst and num mask)
+    (inst and temp mask)
+    (inst addu num temp)
+    (inst li mask #x0f0f0f0f)
+    (inst srl temp num 4)
+    (inst and num mask)
+    (inst and temp mask)
+    (inst addu num temp)
+    (inst li mask #x00ff00ff)
+    (inst srl temp num 8)
+    (inst and num mask)
+    (inst and temp mask)
+    (inst addu num temp)
+    (inst li mask #x0000ffff)
+    (inst srl temp num 16)
+    (inst and num mask)
+    (inst and temp mask)
+    (inst addu res num temp)))
 
-      (emit-label loop)
-      (inst sll temp 2)
-      (inst add res temp)
-      (inst srl shift 1)
-      (inst bne shift loop)
-      (inst and temp shift 1)
-
-      (emit-label done))))
-      
 
 ;;; Multiply and Divide.
 
