@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.8 1992/02/14 23:44:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.9 1992/02/21 17:57:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,15 +56,19 @@
 
 (def-alien-type-method (c-string :lisp-rep) (type)
   (declare (ignore type))
-  'simple-base-string)
+  '(or simple-base-string null))
 
 (def-alien-type-method (c-string :naturalize-gen) (type alien)
   (declare (ignore type))
-  `(%naturalize-c-string ,alien))
+  `(if (zerop (sap-int ,alien))
+       nil
+       (%naturalize-c-string ,alien)))
 
 (def-alien-type-method (c-string :deport-gen) (type value)
   (declare (ignore type))
-  `(vector-sap ,value))
+  `(etypecase ,value
+     (null (int-sap 0))
+     (simple-base-string (vector-sap ,value))))
 
 (defun %naturalize-c-string (sap)
   (declare (type system-area-pointer sap))
