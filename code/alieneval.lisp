@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.20 1990/07/07 00:51:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.21 1990/08/15 17:45:03 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -372,13 +372,39 @@
 ;;; Allocate random memory from the system area.
 ;;; 
 (defun allocate-system-memory (bytes)
+  (declare (type index bytes))
   (gr-call* mach:vm_allocate *task-self* (int-sap 0) bytes t))
+
+;;; REALLOCATE-SYSTEM-MEMORY -- public
+;;;
+;;; Either allocate more memory at the end of this block, or allocate a new
+;;; block and move the old memory into it.
+;;; 
+(defun reallocate-system-memory (old old-size new-size)
+  (declare (type system-area-pointer old)
+	   (type index old-size new-size))
+  ;; ### Got to work the page size into this somehow.  The vm_allocate
+  ;; will fail much more often than it otherwise would 'cause if the old
+  ;; block stops in the middle of a page, we can't extend it.
+  (if (eql (mach:vm_allocate *task-self*
+			     (sap+ old old-size)
+			     (- new-size old-size)
+			     nil)
+	   mach:kern-success)
+      old
+      (let ((new (allocate-system-memory new-size)))
+	(declare (type system-area-pointer new))
+	(system-area-copy old 0 new 0 (* old-size vm:byte-bits))
+	(deallocate-system-memory old old-size)
+	new)))
 
 ;;; DEALLOCATE-SYSTEM-MEMORY -- public
 ;;;
 ;;; Deallocate that memory.
 ;;; 
 (defun deallocate-system-memory (addr bytes)
+  (declare (type system-area-pointer addr)
+	   (type index bytes))
   (gr-call* mach:vm_deallocate *task-self* addr bytes))
 
 
