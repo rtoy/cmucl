@@ -84,6 +84,38 @@
 ;;;; Checking strategy determination:
 
 
+;;; MAYBE-WEAKEN-CHECK  --  Internal
+;;;
+;;;    Return the type we should test for when we really want to check for
+;;; Type.   If speed, space or compilation speed is more important than safety,
+;;; then we return a weaker type if it is easier to check.  First we try the
+;;; defined type weakenings, then look for any predicate that is cheaper.
+;;;
+;;;    If the supertype is equal in cost to the type, we prefer the supertype.
+;;; This produces a closer approximation of the right thing in the presence of
+;;; poor cost info.
+;;;
+(defun maybe-weaken-check (type cont)
+  (declare (type ctype type) (type continuation cont))
+  (cond ((policy (continuation-dest cont)
+		 (<= speed safety) (<= space safety) (<= cspeed safety))
+	 type)
+	(t
+	 (let ((min-cost (type-test-cost type))
+	       (min-type type)
+	       (found-super nil))
+	   (dolist (x *type-predicates*)
+	     (let ((stype (car x)))
+	       (when (csubtypep type stype)
+		 (setq found-super t)
+		 (let ((stype-cost (type-test-cost stype)))
+		   (when (< stype-cost min-cost)
+		     (setq min-type stype  min-cost stype-cost))))))
+	   (if found-super
+	       min-type
+	       *universal-type*)))))
+
+
 ;;; MAYBE-NEGATE-CHECK  --  Internal
 ;;;
 ;;;    Cont is a continuation we are doing a type check on and Types is a list
@@ -101,14 +133,17 @@
     (if (eq count :unknown)
 	(if (every #'type-check-template types)
 	    (values :simple types)
-	    (values :hairy (mapcar #'(lambda (x) (list nil x x)) types)))
+	    (values :hairy
+		    (mapcar #'(lambda (x)
+				(list nil (maybe-weaken-check x cont) x))
+			    types)))
 	(let ((res (mapcar #'(lambda (p c)
 			       (let ((diff (type-difference p c)))
 				 (if (and diff
 					  (< (type-test-cost diff)
 					     (type-test-cost c)))
-				     (list t diff c)
-				     (list nil c c))))
+				     (list t (maybe-weaken-check diff cont) c)
+				     (list nil (maybe-weaken-check c cont) c))))
 			   ptypes types)))
 	  (if (and (not (find-if #'first res))
 		   (every #'type-check-template types))
@@ -167,7 +202,7 @@
 ;;; to choose to implement the continuation's DEST, we use a heuristic.  We
 ;;; always return T unless:
 ;;;  -- Nobody uses the value, or
-;;;  -- Speed or space is more important that safety, or
+;;;  -- Safety is totally unimportant, or
 ;;;  -- the continuation is an argument to an unknown function, or
 ;;;  -- the continuation is an argument to a known function that has no
 ;;;     IR2-Convert method or :fast-safe templates that are compatible with the
@@ -185,7 +220,7 @@
   (let ((dest (continuation-dest cont)))
     (cond ((eq (continuation-type-check cont) :error))
 	  ((or (not dest)
-	       (policy dest (or (> speed safety) (> space safety))))
+	       (policy dest (zerop safety)))
 	   nil)
 	  ((basic-combination-p dest)
 	   (let ((kind (basic-combination-kind dest)))
@@ -355,9 +390,13 @@
 		  (setf (basic-combination-kind dest) :full)))
 	      (when (policy node (>= safety brevity))
 		(let ((*compiler-error-context* node))
-		  (compiler-warning "Result is a ~S, not a ~S."
-				    (type-specifier dtype)
-				    (type-specifier atype))))))
+		  (if (and (ref-p node) (constant-p (ref-leaf node)))
+		      (compiler-warning "This is not a ~S:~%  ~S"
+					(type-specifier atype)
+					(constant-value (ref-leaf node)))
+		      (compiler-warning "Result is a ~S, not a ~S."
+					(type-specifier dtype)
+					(type-specifier atype)))))))
 	  
 	  (let ((check-p (probable-type-check-p cont)))
 	    (multiple-value-bind (check types)
