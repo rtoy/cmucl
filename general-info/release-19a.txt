@@ -168,6 +168,7 @@ New in this release:
        COMPACT-INFO-LOOKUP for hash values equal to MOST-POSITIVE-FIXNUM.
      - FFLOOR and FCEILING return types sometimes being inferred as
        being the nil type.
+     - PARSE-TIME accepting GMT offsets with a leading plus sign.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword

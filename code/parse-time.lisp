@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.10 2003/08/16 11:45:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.11 2003/08/29 19:22:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -461,13 +461,13 @@
 		    (setf numeric-value (- numeric-value)))
 		  (push numeric-value parts-list)
 		  (setf string-index scan-index))))
-	    ((and (char= next-char #\-)
+	    ((and (member next-char '(#\+ #\-) :test #'char=)
 		  (or (not prev-char)
 		      (member prev-char whitespace-chars :test #'char=)))
-	     ;; If we see a minus sign before a number, but not after one,
-	     ;; it is not a date divider, but a negative offset from GMT, so
-	     ;; set next-negative to t and continue.
-	     (setf next-negative t)
+	     ;; If we see a minus or plus sign before a number, but
+	     ;; not after one, it is not a date divider, but a offset
+	     ;; from GMT, so set next-negative to t if minus and continue.
+	     (setq next-negative (char= next-char #\-))
 	     (incf string-index))	     
 	    ((member next-char time-dividers :test #'char=)
  	     ;; Time-divider - add it to the parts-list with symbol.
