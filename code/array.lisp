@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.24 1997/11/01 22:58:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.25 1997/12/18 07:18:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,7 +171,8 @@
 	(multiple-value-bind (type bits)
 			     (%vector-type-code element-type)
 	  (declare (type (unsigned-byte 8) type)
-		   (type (integer 1 64) bits))
+		   (type (integer 1 #-complex-float 64
+				    #+complex-float 128) bits))
 	  (let* ((length (car dimensions))
 		 (array (allocate-vector
 			 type
