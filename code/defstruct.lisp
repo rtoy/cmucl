@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.70 1999/12/03 16:24:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.71 2001/01/06 05:21:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -999,7 +999,7 @@
       (data)
       (t
        `(truly-the (simple-array (unsigned-byte 32) (*))
-		   (%instance-ref object ,(dd-raw-index defstruct))))))))
+		   (%instance-ref ,object ,(dd-raw-index defstruct))))))))
 
 
 ;;; dsd-inherited-p  --  Internal
