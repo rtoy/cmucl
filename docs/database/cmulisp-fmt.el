@@ -97,6 +97,10 @@
   (latexinfo-parse-noarg)
   )
 
+(put 'hfill 'latexinfo-format 'latexinfo-format-hfill)
+(defun latexinfo-format-hfill ()
+  (latexinfo-parse-noarg))
+
 (put 'hide 'latexinfo-format 'latexinfo-parse-required-argument)
 (put 'ux 'latexinfo-format 'latexinfo-parse-required-argument)
 
