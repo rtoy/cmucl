@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.58 1991/11/09 22:12:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.59 1991/11/13 19:30:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -422,7 +422,7 @@
 	(recognize-known-call node)
 	(assert-call-type node type)
 	(unless *converting-for-interpreter*
-	  (maybe-terminate-block node))
+	  (maybe-terminate-block node t))
 	(setf (continuation-%derived-type fun-cont) type)
 	(setf (continuation-reoptimize fun-cont) nil)
 	(setf (continuation-%type-check fun-cont) nil)
