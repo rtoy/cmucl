@@ -1,8 +1,8 @@
-#!/bin/csh -fx
+#!/bin/csh -f
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.9 1991/11/26 22:13:21 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.10 1992/02/18 19:09:18 ram Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -12,8 +12,14 @@ else
 	set features = ()
 endif
 
-set dest = /afs/cs/project/clisp/build/@sys/$subdir
-set src = /afs/cs/project/clisp/src/$subdir
+if $?CMUCL_ROOT then
+	set root = $CMUCL_ROOT
+else
+	set root = /afs/cs/projcet/clisp
+endif
+
+set dest = $root/build/@sys/$subdir
+set src = $root/src/$subdir
 
 if (-e $dest/ldb/kernel.core) then
 	set core = $dest/ldb/kernel.core
@@ -50,7 +56,8 @@ setenv ACK2 $FOO
 setenv RAZ2 $FOO
 setenv GORP2 $FOO
 
-echo Building lisp.core dated $version from the \`\`$subdir\'\' subdir.
+echo Building lisp.core version $version from the \`\`$subdir\'\' subdir.
+echo "Features: $features"
 
 $dest/ldb/ldb -core $core << EOF
 (setf *features* (list* $features *features*))
