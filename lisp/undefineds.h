@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.4 1994/07/05 16:11:04 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.5 1994/10/25 00:26:53 ram Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -24,33 +24,37 @@ exit,
 fchmod,
 fchown,
 fcntl,
-#ifndef hpux
+#if !defined(hpux) && !defined(SVR4)
 flock,
 #endif
 fork,
 fstat,
 fsync,
 ftruncate,
-#ifndef hpux
+#if !defined(hpux) && !defined(SVR4)
 getdtablesize,
 #endif
 getegid,
 geteuid,
 getgid,
 getgroups,
+#ifndef SVR4
 gethostid,
+#endif
 gethostname,
 getitimer,
-#ifndef hpux
+#if !defined(hpux) && !defined(SVR4)
 getpagesize,
 #endif
 getpeername,
 getpgrp,
 getpid,
 getppid,
+#ifndef SVR4
 getpriority,
+#endif
 getrlimit,
-#ifndef hpux
+#if !defined(hpux) && !defined(SVR4)
 getrusage,
 #endif
 getsockname,
@@ -59,7 +63,9 @@ gettimeofday,
 getuid,
 ioctl,
 kill,
+#ifndef SVR4
 killpg,
+#endif
 link,
 listen,
 lseek,
@@ -71,13 +77,15 @@ open,
 pipe,
 profil,
 ptrace,
-#if !defined(SUNOS) && !defined(parisc) && !defined(osf1) && !defined(irix)
+#ifdef mach
 quota,
 #endif
 read,
 readlink,
 readv,
+#ifndef SVR4
 reboot,
+#endif
 recv,
 recvfrom,
 recvmsg,
@@ -89,17 +97,21 @@ send,
 sendmsg,
 sendto,
 setgroups,
-#ifndef SUNOS
+#if !defined(SUNOS) && !defined(SOLARIS)
 sethostid,
 #endif
+#ifndef SVR4
 sethostname,
+#endif
 setitimer,
 setpgrp,
+#ifndef SVR4
 setpriority,
-#if !defined(SUNOS) && !defined(parisc) && !defined(osf1) && !defined(irix)
+#endif
+#ifdef mach
 setquota,
 #endif
-#ifndef hpux
+#if !defined(hpux) && !defined(SVR4)
 setregid,
 setreuid,
 #endif
@@ -107,24 +119,28 @@ setrlimit,
 setsockopt,
 settimeofday,
 shutdown,
+#ifndef SVR4
 sigblock,
+#endif
 sigpause,
-#if !defined(ibmrt) && !defined(hpux) && !defined(irix)
+#if !defined(ibmrt) && !defined(hpux) && !defined(SVR4)
 sigreturn,
 #endif
+#ifndef SVR4
 sigsetmask,
 sigstack,
 sigvec,
+#endif
 socket,
 socketpair,
 stat,
-#ifndef irix
+#ifndef SVR4
 swapon,
 #endif
 symlink,
 sync,
 syscall,
-#ifdef hpux
+#if defined(hpux) || defined(SVR4)
 closedir,
 opendir,
 readdir,
@@ -135,7 +151,7 @@ tcsetattr,
 #endif
 truncate,
 umask,
-#if !defined(SUNOS) && !defined(parisc)
+#if !defined(SUNOS) && !defined(parisc) && !defined(SOLARIS)
 umount,
 #endif
 unlink,
@@ -149,7 +165,9 @@ vfork,
 vhangup,
 #endif
 wait,
+#ifndef SVR4
 wait3,
+#endif
 write,
 writev,
 
@@ -190,7 +208,21 @@ gethostbyname,
 gethostbyaddr,
 
 /* Other random things. */
+#ifdef SVR4
+setpgid,
+getpgid,
+timezone,
+altzone,
+daylight,
+tzname,
+dlopen,
+dlsym,
+dlclose,
+dlerror,
+#endif
+#ifndef SVR4
 getwd,
+#endif
 ttyname
 
 #ifdef irix
