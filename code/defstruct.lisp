@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.83 2003/03/27 19:23:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.84 2003/03/30 18:43:59 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1380,6 +1380,12 @@
 	    (setf (%instance-ref structure (dsd-index dsd)) new-value)))))
 
 
+;;;
+;;; Used for updating CLOS structure classes.  Hooks are called
+;;; with one argument, the kernel::class.
+;;;
+(defvar *defstruct-hooks* nil)
+
 ;;; %Defstruct  --  Internal
 ;;;
 ;;;    Do miscellaneous (LOAD EVAL) time actions for the structure described by
@@ -1407,7 +1413,7 @@
 	   (setq layout (%class-layout class))))
 
     (setf (find-class (dd-name info)) class)
-
+    
     (unless (eq (dd-type info) 'funcallable-structure)
       (dolist (slot (dd-slots info))
 	(unless (or (dsd-inherited-p info slot)
@@ -1439,7 +1445,11 @@
 			   :expected-type class
 			   :format-control "Structure for copier is not a ~S:~% ~S"
 			   :format-arguments (list class structure)))
-		  (copy-structure structure))))))
+		  (copy-structure structure))))
+
+      (when (boundp '*defstruct-hooks*)
+	(dolist (fn *defstruct-hooks*)
+	  (funcall fn class)))))
 
   (when (dd-doc info)
     (setf (documentation (dd-name info) 'type) (dd-doc info)))

@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.24 2003/03/22 16:15:14 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.25 2003/03/30 18:43:59 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,6 +40,12 @@
     (when sym
       (setq lisp::*setf-fdefinition-hook*
 	    (delete (symbol-function sym) lisp::*setf-fdefinition-hook*))))
+
+  (when (boundp 'kernel::*defstruct-hooks*)
+    (let ((sym (find-symbol "REINITIALIZE-STRUCTURE-CLASS" "PCL")))
+      (when sym
+	(setq kernel::*defstruct-hooks*
+	      (delete (symbol-function sym) kernel::*defstruct-hooks*)))))
 
   ;; Undefine all PCL classes, and clear CLASS-PCL-CLASS slots.
   (let ((wot (kernel::find-symbol "*FIND-CLASS*" "PCL")))

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.32 2003/03/30 13:42:06 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.33 2003/03/30 18:43:59 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -504,18 +504,18 @@
 ;;; case we construct either a STRUCTURE-CLASS or a CONDITION-CLASS
 ;;; for the corresponding KERNEL::CLASS.
 ;;; 
-(defun ensure-non-standard-class (name)
+(defun ensure-non-standard-class (name &optional existing-class)
   (flet ((ensure (metaclass &optional (slots nil slotsp))
 	   (let* ((class (kernel::find-class name))
 		  (kernel-supers (kernel:%class-direct-superclasses class))
 		  (supers (mapcar #'kernel:%class-name kernel-supers)))
 	     (if slotsp
 		 (ensure-class-using-class
-		  nil name :metaclass metaclass :name name
+		  existing-class name :metaclass metaclass :name name
 		  :direct-superclasses supers
 		  :direct-slots slots)
 		 (ensure-class-using-class
-		  nil name :metaclass metaclass :name name
+		  existing-class name :metaclass metaclass :name name
 		  :direct-superclasses supers))))
 	 (slot-initargs-from-structure-slotd (slotd)
 	   (let ((accessor (structure-slotd-accessor-symbol slotd)))
@@ -537,6 +537,15 @@
 	   (ensure 'condition-class))
 	  (t
 	   (error "~@<~S is not the name of a class.~@:>" name)))))
+
+(defun reinitialize-structure-class (kernel-class)
+  (let ((class (kernel:%class-pcl-class kernel-class)))
+    (when class 
+      (ensure-non-standard-class (class-name class) class))))
+
+(when (boundp 'kernel::*defstruct-hooks*)
+  (pushnew 'reinitialize-structure-class
+	   kernel::*defstruct-hooks*))
 
 
 (defun method-function-returning-nil (args next-methods)
