@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.89 1998/11/02 13:44:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.90 1998/11/13 04:49:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2981,18 +2981,29 @@
       "fold identity operations"
       result)))
 
-;;; These are restricted to rationals, because (- 0 0.0) is 0.0, not -0.0, and
-;;; (* 0 -4.0) is -0.0.
+;;; Restricted to rationals, because (- 0 0.0) is 0.0, not -0.0.
 ;;;
 (deftransform - ((x y) ((constant-argument (member 0)) rational) *
 		 :when :both)
   "convert (- 0 x) to negate"
   '(%negate y))
+
+;;; Restricted to rationals, because (* 0 -4.0) is -0.0.
 ;;;
 (deftransform * ((x y) (rational (constant-argument (member 0))) *
 		 :when :both)
   "convert (* x 0) to 0."
   0)
+
+;;; Fold (+ x 0).
+;;;
+;;; Restricted to rationals, because (+ -0.0 0) is 0.0, not -0.0.
+;;;
+(deftransform + ((x y) (rational (constant-argument (member 0))) *
+		 :when :both)
+  "fold zero arg"
+  'x)
+
 
 ;;; Not-More-Contagious  --  Interface
 ;;;
@@ -3040,31 +3051,6 @@
 		 Nil)
 		(t
 		 (error "Unexpected types: ~s ~s~%" type1 type2)))))))
-
-;;; Fold (+ x 0).
-;;;
-;;;    If y is not constant, not zerop, or is contagious, or a positive
-;;; float +0.0 then give up because (+ -0.0 0.0) is 0.0 not -0.0.
-;;;
-#+nil
-(deftransform + ((x y) (t (constant-argument t)) * :when :both)
-  "fold zero arg"
-  (let ((val (continuation-value y)))
-    (unless (and (zerop val)
-		 (not (and (floatp val) (plusp (float-sign val))))
-		 (not-more-contagious y x))
-      (give-up)))
-  'x)
-
-;;; Fold (+ x 0).
-;;;
-;;; Restricted to rationals, because (+ -0.0 0) is 0.0, not -0.0.
-;;;
-(deftransform + ((x y) (rational (constant-argument (member 0))) *
-		 :when :both)
-  "fold zero arg"
-  'x)
-
 
 ;;; Fold (- x 0).
 ;;;
