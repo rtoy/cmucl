@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.8 1990/03/29 21:22:03 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.9 1990/04/05 00:47:42 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -263,13 +263,13 @@ lispobj obj;
 static void brief_struct(obj)
 lispobj obj;
 {
-	print("Structure mumble mumble.\n");
+	printf("structure");
 }
 
 static void print_struct(obj)
 lispobj obj;
 {
-	print("Structure mumble mumble.\n");
+	printf("Structure mumble mumble.");
 }
 
 static void brief_otherptr(obj)
@@ -445,6 +445,7 @@ lispobj obj;
                 break;
 
             case type_ReturnPcHeader:
+                print_obj("code: ", obj - (count * 4));
                 break;
 
             case type_ClosureHeader:
