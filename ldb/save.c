@@ -221,7 +221,9 @@ char *name;
             }
         }
 
+#ifdef PRINTNOISE
         printf("Mapping %d bytes onto the %s stack at 0x%08x.\n", len, name, start);
+#endif
         os_map(fd, (1+data_page)*CORE_PAGESIZE, start, len);
     }
 
@@ -280,8 +282,9 @@ struct sigcontext *old_context;
     /* We have to move the number stack into place. */
     nsp = trunc_page((vm_address_t)context.sc_regs[NSP]);
     len = (vm_address_t)number_stack_start - nsp;
+#ifdef PRINTNOISE
     printf("Moving the number stack from 0x%08x to 0x%08x.\n", number_stack, nsp);
-
+#endif
     bcopy(number_stack, nsp, len);
 
     vm_deallocate(task_self(), number_stack, round_page(len));

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/validate.c,v 1.3 1990/06/04 01:32:12 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/validate.c,v 1.4 1990/10/22 12:28:28 wlott Exp $
  *
  * Memory Validation
  */
@@ -12,8 +12,10 @@
 
 validate()
 {
+#ifdef PRINTNOISE
 	printf("Validating memory ...");
 	fflush(stdout);
+#endif
 
 	/* Read-Only Space */
 	read_only_space = (lispobj *) READ_ONLY_SPACE_START;
@@ -46,5 +48,7 @@ validate()
 	os_validate((os_vm_address_t) binding_stack,
 		    (os_vm_size_t) BINDING_STACK_SIZE);
 
+#ifdef PRINTNOISE
 	printf(" done.\n");
+#endif
 }

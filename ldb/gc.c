@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.15 1990/10/13 04:49:50 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.16 1990/10/22 12:28:20 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -132,22 +132,24 @@ struct timeval *x, *y;
 
 collect_garbage()
 {
+#ifdef PRINTNOISE
 	struct timeval start_tv, stop_tv;
 	struct rusage start_rusage, stop_rusage;
 	double real_time, system_time, user_time;
 	double percent_retained, gc_rate;
+	unsigned long size_retained, size_discarded;
+#endif
 	lispobj *current_static_space_free_pointer;
 	unsigned long static_space_size;
 	unsigned long control_stack_size, binding_stack_size;
-	unsigned long size_retained, size_discarded;
 	int oldmask;
 	
 #ifdef PRINTNOISE
 	printf("[Collecting garbage ... \n");
-#endif
 
 	getrusage(RUSAGE_SELF, &start_rusage);
 	gettimeofday(&start_tv, (struct timezone *) 0);
+#endif
 
 	oldmask = sigblock(BLOCKABLE);
 
@@ -269,21 +271,18 @@ collect_garbage()
 
 #ifdef PRINTNOISE
 	printf("done.]\n");
-#endif
 	
 	percent_retained = (((float) size_retained) /
 			     ((float) size_discarded)) * 100.0;
 
-#ifdef PRINTNOISE
 	printf("Total of %d bytes out of %d bytes retained (%3.2f%%).\n",
 	       size_retained, size_discarded, percent_retained);
-#endif
 
 	real_time = tv_diff(&stop_tv, &start_tv);
 	user_time = tv_diff(&stop_rusage.ru_utime, &start_rusage.ru_utime);
 	system_time = tv_diff(&stop_rusage.ru_stime, &start_rusage.ru_stime);
 
-#ifdef PRINTNOISE
+#ifdef 0
 	printf("Statistics:\n");
 	printf("%10.2f sec of real time\n", real_time);
 	printf("%10.2f sec of user time,\n", user_time);
@@ -293,7 +292,6 @@ collect_garbage()
                real_time, user_time, system_time);
 #endif        
 
-#ifdef PRINTNOISE
 	gc_rate = ((float) size_retained / (float) (1<<20)) / real_time;
 
 	printf("%10.2f M bytes/sec collected.\n", gc_rate);

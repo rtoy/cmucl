@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.5 1990/07/01 04:39:57 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.6 1990/10/22 12:26:54 wlott Exp $ */
 #include <stdio.h>
 #include <mach.h>
 #include <sys/types.h>
@@ -29,7 +29,9 @@ long *ptr;
 		len = CORE_PAGESIZE * entry->page_count;
 
 		if (len != 0) {
+#ifdef PRINTNOISE
 			printf("Mapping %d bytes at 0x%x.\n", len, addr);
+#endif
 			os_map(fd, offset, addr, len);
 		}
 
