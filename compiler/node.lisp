@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.21 1991/12/14 18:14:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.22 1991/12/15 08:20:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,6 +104,7 @@
 
 (defstruct (continuation
 	    (:print-function %print-continuation)
+	    (:make-load-form-fun :ignore-it)
 	    (:constructor really-make-continuation (&optional dest)))
   ;;
   ;; An indication of the way that this continuation is currently used:
