@@ -1,6 +1,6 @@
 (in-package "PCL")
 (unless (find-package "SLOT-ACCESSOR-NAME")
-  (make-package "SLOT-ACCESSOR-NAME"))
+  (make-package "SLOT-ACCESSOR-NAME" :use nil))
 (rename-package "PCL" "PCL" '("OLD-PCL"))
 (rename-package "SLOT-ACCESSOR-NAME" "SLOT-ACCESSOR-NAME"
 		'("OLD-SLOT-ACCESSOR-NAME"))
