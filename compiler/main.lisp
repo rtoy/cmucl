@@ -293,6 +293,10 @@
     (entry-analyze component)
     (ir2-convert component)
 
+    (when (policy nil (>= speed cspeed))
+      (maybe-mumble "Copy ")
+      (copy-propagate component))
+
     (select-representations component)
 
     (when *check-consistency*
