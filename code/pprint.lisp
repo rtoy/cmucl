@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.6 1991/12/13 06:06:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.7 1992/01/16 19:11:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1481,12 +1481,15 @@
 	(*building-initial-table* t))
     ;; Printers for regular types.
     (set-pprint-dispatch 'array #'pprint-array)
-    (set-pprint-dispatch '(cons symbol) #'pprint-function-call -1)
+    (set-pprint-dispatch '(cons (and symbol (satisfies fboundp)))
+			 #'pprint-function-call -1)
     (set-pprint-dispatch 'cons #'pprint-fill -2)
     ;; Cons cells with interesting things for the car.
     (dolist (magic-form magic-forms)
       (set-pprint-dispatch `(cons (eql ,(first magic-form)))
-			   (symbol-function (second magic-form)))))
+			   (symbol-function (second magic-form))))
+    ;; Other pretty-print init forms.
+    (lisp::backq-pp-init))
 
   (setf *print-pprint-dispatch* (copy-pprint-dispatch nil))
   (setf *pretty-printer* #'output-pretty-object)
