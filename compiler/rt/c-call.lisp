@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.1 1991/02/18 15:07:39 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.2 1991/04/20 17:03:50 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -52,14 +52,23 @@
 	      (logandc2 (1+ nargs) 1)))))
 
 (def-vm-support-routine make-call-out-result-tn (type)
-  (let ((name (if (consp type) (car type) type)))
-    (ecase name
-      ((unsigned-byte port)
-       (c-call-wired-tn 'unsigned-byte-32 'unsigned-reg nl0-offset))
-      (signed-byte
-       (c-call-wired-tn 'signed-byte-32 'signed-reg nl0-offset))
-      (system-area-pointer
-       (c-call-wired-tn 'system-area-pointer 'sap-reg nl0-offset)))))
+  (let ((offset nl0-offset))
+    (labels
+	((frob (type)
+	   (let ((name (if (consp type) (car type) type)))
+	     (prog1
+		 (ecase name
+		   ((unsigned-byte port)
+		    (c-call-wired-tn 'unsigned-byte-32 'unsigned-reg offset))
+		   (signed-byte
+		    (c-call-wired-tn 'signed-byte-32 'signed-reg offset))
+		   (system-area-pointer
+		    (c-call-wired-tn 'system-area-pointer 'sap-reg offset))
+		   (values
+		    (when (consp type)
+		      (mapcar #'frob (cdr type)))))
+	       (incf offset)))))
+      (frob type))))
 
 (deftransform ext::call-foreign-function
 	      ((name return-type arg-types &rest args)
@@ -106,7 +115,8 @@
 	(arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
     (case return-type
       (double-float
-       `(lambda (name return-type arg-types ,@args)
+       `(lambda (name return-type arg-types ,@arg-names)
+	  (declare (ignore name return-type arg-types))
 	  (multiple-value-bind
 	      (hi lo)
 	      (ext::call-foreign-function ,name
@@ -115,7 +125,7 @@
 					  ,@arg-names)
 	    (make-double-float hi lo))))
       (single-float
-       `(lambda (name return-type arg-types ,@args)
+       `(lambda (name return-type arg-types ,@arg-names)
 	  (make-single-float
 	   (ext::call-foreign-function ,name 'signed-byte ',arg-types
 				       ,@arg-names))))
@@ -138,7 +148,7 @@
   (:temporary (:sc any-reg :offset nl0-offset :to (:result 0)) nl0)
   (:temporary (:sc any-reg :offset lra-offset) lra)
   (:temporary (:sc any-reg :offset code-offset) code)
-  (:temporary (:scs (sap-reg)) temp)
+  (:temporary (:scs (sap-reg) :to (:result 0)) temp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
