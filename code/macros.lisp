@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.37 1993/03/01 20:11:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.38 1993/05/06 09:56:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -510,11 +510,11 @@
 ;;; The inverse for a generalized-variable reference function is stored in
 ;;; one of two ways:
 ;;;
-;;; A SETF-INVERSE property corresponds to the short form of DEFSETF.  It is
+;;; A SETF inverse property corresponds to the short form of DEFSETF.  It is
 ;;; the name of a function takes the same args as the reference form, plus a
 ;;; new-value arg at the end.
 ;;;
-;;; A SETF-METHOD-EXPANDER property is created by the long form of DEFSETF or
+;;; A SETF method expander is created by the long form of DEFSETF or
 ;;; by DEFINE-SETF-METHOD.  It is a function that is called on the reference
 ;;; form and that produces five values: a list of temporary variables, a list
 ;;; of value forms, a list of the single store-value form, a storing function,
@@ -530,7 +530,7 @@
 	       (expansion expanded)
 	       (macroexpand-1 form environment)
 	     (if expanded
-		 (get-setf-method-multiple-value expansion)
+		 (get-setf-method-multiple-value expansion environment)
 		 (let ((new-var (gensym)))
 		   (values nil nil (list new-var)
 			   `(setq ,form ,new-var) form)))))
@@ -542,22 +542,27 @@
 		    (when (and (eq (car x) name)
 			       (not (c::defined-function-p (cdr x))))
 		      (return t)))))
-	   (get-setf-method-inverse form `(funcall #'(setf ,(car form))) t))
+	   (expand-or-get-setf-inverse form environment))
 	  ((setq temp (info setf inverse (car form)))
 	   (get-setf-method-inverse form `(,temp) nil))
 	  ((setq temp (info setf expander (car form)))
 	   (funcall temp form environment))
-	  ;;
-	  ;; If a macro, expand one level and try again.  If not, go for the
-	  ;; SETF function.
 	  (t
-	   (multiple-value-bind (res win)
-				(macroexpand-1 form environment)
-	     (if win
-		 (get-setf-method res environment)
-		 (get-setf-method-inverse form
-					  `(funcall #'(setf ,(car form)))
-					  t)))))))
+	   (expand-or-get-setf-inverse form environment)))))
+
+
+;;;
+;;; If a macro, expand one level and try again.  If not, go for the
+;;; SETF function.
+(defun expand-or-get-setf-inverse (form environment)
+  (multiple-value-bind
+      (expansion expanded)
+      (macroexpand-1 form environment)
+    (if expanded
+	(get-setf-method-multiple-value expansion environment)
+	(get-setf-method-inverse form `(funcall #'(setf ,(car form)))
+				 t))))
+
 
 (defun get-setf-method-inverse (form inverse setf-function)
   (let ((new-var (gensym))
