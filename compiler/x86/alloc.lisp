@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.9 2003/08/03 11:27:46 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.10 2003/08/06 19:01:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -155,20 +155,22 @@
 
 (define-vop (make-closure)
   (:args (function :to :save :scs (descriptor-reg)))
-  (:info length)
+  (:info length dynamic-extent)
   (:temporary (:sc any-reg) temp)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
   (:generator 10
-   (pseudo-atomic
-    (let ((size (+ length closure-info-offset)))
-      (allocation result (pad-data-block size) node)
-      (inst lea result
-	    (make-ea :byte :base result :disp function-pointer-type))
-      (storew (logior (ash (1- size) type-bits) closure-header-type)
-	      result 0 function-pointer-type))
-    (loadw temp function closure-function-slot function-pointer-type)
-    (storew temp result closure-function-slot function-pointer-type))))
+   (let ((*enable-pseudo-atomic* (unless dynamic-extent
+				   *enable-pseudo-atomic*)))
+     (pseudo-atomic
+      (let ((size (+ length closure-info-offset)))
+	(allocation result (pad-data-block size) node dynamic-extent)
+	(inst lea result
+	      (make-ea :byte :base result :disp function-pointer-type))
+	(storew (logior (ash (1- size) type-bits) closure-header-type)
+		result 0 function-pointer-type))
+      (loadw temp function closure-function-slot function-pointer-type)
+      (storew temp result closure-function-slot function-pointer-type)))))
 
 ;;; The compiler likes to be able to directly make value cells.
 ;;; 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.90 2003/06/20 10:34:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.91 2003/08/06 19:01:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1583,6 +1583,13 @@
 ;;; Class to have the specified New-Layout.  We signal an error with some
 ;;; proceed options and return the layout that should be used.
 ;;;
+#+bootstrap-dynamic-extent
+(defun %redefine-defstruct (class old-layout new-layout)
+  (declare (type class class) (type layout old-layout new-layout))
+  (register-layout new-layout :invalidate nil
+		   :destruct-layout old-layout))
+
+#-bootstrap-dynamic-extent
 (defun %redefine-defstruct (class old-layout new-layout)
   (declare (type class class) (type layout old-layout new-layout))
   (let ((name (class-proper-name class)))

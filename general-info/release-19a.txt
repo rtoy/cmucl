@@ -179,11 +179,12 @@ New in this release:
        default to preserve current behavior.  Set the version to
        :NEWEST to create versions.
      - LDB backtrace on x86.
-     - On x86 and sparc, the &REST arg list of a non-local function is
-       allocated on the stack if declared DYNAMIC-EXTENT, and speed is
-       >= safety.  Be warned that all bets are off if a
-       stack-allocated object or parts of it escape; CMUCL might crash
-       or format your hard disk.
+     - DYNAMIC-EXTENT support on x86 and sparc for &REST arg lists and
+       closures.  Stack-allocation can be controlled with the new
+       variable EXT:*TRUST-DYNAMIC-EXTENT-DECLARATIONS*, which see.
+       Default is to stack-allocate if speed >= safety.  Be warned
+       that all bets are off if a stack-allocated object or parts of
+       it escape; CMUCL might crash or format your hard disk.
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/

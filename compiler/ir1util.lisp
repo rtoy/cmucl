@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.92 2003/06/02 16:29:23 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.93 2003/08/06 19:01:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -410,7 +410,7 @@
 ;;; 
 (defun make-lexenv (&key (default *lexical-environment*)
 			 functions variables blocks tags type-restrictions
-			 options
+			 options dynamic-extent
 			 (lambda (lexenv-lambda default))
 			 (cleanup (lexenv-cleanup default))
 			 (cookie (lexenv-cookie default))
@@ -427,7 +427,8 @@
      (frob tags lexenv-tags)
      (frob type-restrictions lexenv-type-restrictions)
      lambda cleanup cookie interface-cookie
-     (frob options lexenv-options))))
+     (frob options lexenv-options)
+     (frob dynamic-extent lexenv-dynamic-extent))))
 
 
 ;;; MAKE-INTERFACE-COOKIE  --  Interface

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.41 2003/08/05 14:04:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.42 2003/08/06 19:01:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,8 @@
 	    (:constructor internal-make-lexenv
 			  (functions variables blocks tags type-restrictions
 				     lambda cleanup cookie
-				     interface-cookie options)))
+				     interface-cookie options
+				     dynamic-extent)))
   ;;
   ;; Alist (name . what), where What is either a Functional (a local function),
   ;; a DEFINED-FUNCTION, representing an INLINE/NOTINLINE declaration, or
@@ -82,7 +83,11 @@
   ;;
   ;; AList of random options that are associated with the lexical
   ;; environment.  They can be established with COMPILER-OPTION-BIND.
-  (options nil :type list))
+  (options nil :type list)
+  ;;
+  ;; List of things declared dynamic-extent for which there is no
+  ;; binding in the form containing the declaration.
+  (dynamic-extent nil :type list))
 
 
 ;;; A Cont-Ref represents a reference to a continuation.

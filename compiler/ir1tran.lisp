@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.159 2003/08/05 15:50:29 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.160 2003/08/06 19:01:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1141,28 +1141,40 @@
 	(setf (lambda-var-ignorep var) t)))))
   (undefined-value))
 
-(defun process-dynamic-extent-declaration (spec vars fvars)
-  (declare (list spec vars fvars))
-  (dolist (name (cdr spec))
-    (let ((var (find-in-bindings-or-fbindings name vars fvars)))
-      (cond ((null var)
-	     (if (or (lexenv-find name variables) (lexenv-find-function name))
-		 (compiler-note
-		  "Ignoring free dynamic-extent declaration for ~S." name)
-		 (compiler-warning
-		  "Dynamic-extent declaration for unknown variable ~S." name)))
+(defun process-dynamic-extent-declaration (spec vars fvars lexenv)
+  (declare (list spec vars fvars) (type lexenv lexenv))
+  (collect ((dynamic-extent))
+    (dolist (name (cdr spec))
+      (cond ((symbolp name)
+	     (let* ((bound-var (find-in-bindings vars name))
+		    (var (or bound-var
+			     (lexenv-find name variables)
+			     (find-free-variable name))))
+	       (if (leaf-p var)
+		   (if bound-var
+		       (setf (leaf-dynamic-extent var) t)
+		       (dynamic-extent var)))))
+	    ((and (consp name)
+		  (eq (car name) 'function)
+		  (null (cddr name))
+		  (valid-function-name-p (cadr name)))
+	     (let* ((fn-name (cadr name))
+		    (fn (find fn-name fvars
+			      :key #'leaf-name
+			      :test #'function-name-eqv-p)))
+	       (if fn
+		   (setf (leaf-dynamic-extent fn) t)
+		   (dynamic-extent (find-lexically-apparent-function
+				    fn-name
+				    "in a dynamic-extent declaration")))))
 	    (t
-	     (when (or (not (lambda-var-p var))
-		       (let ((arg-info (lambda-var-arg-info var)))
-			 (or (null arg-info)
-			     (not (eq :rest (arg-info-kind arg-info))))))
-	       (compiler-note
-		"~@<Ignoring the dynamic-extent declaration of ~s.  ~
-                  Dynamic-extent is currently only implemented for ~
-                  rest args.~@:>" name))
-	     (setf (leaf-dynamic-extent var) t)))))
-  (values))
-
+	     (compiler-warning
+	      "~@<Invalid name ~s in a dynamic-extent declaration.~@:>"
+	      name))))
+    (if (dynamic-extent)
+	(make-lexenv :default lexenv :dynamic-extent (dynamic-extent))
+	lexenv)))
+  
 (defvar *suppress-values-declaration* nil
   "If true, processing of the VALUES declaration is inhibited.")
 
@@ -1221,9 +1233,9 @@
 						    `(values ,@types)))
 			 cont res 'values))))
     (dynamic-extent
-     (unless *suppress-dynamic-extent-declaration*
-       (process-dynamic-extent-declaration spec vars fvars))
-     res)
+     (if *suppress-dynamic-extent-declaration*
+	 res
+	 (process-dynamic-extent-declaration spec vars fvars res)))
     (t
      (let ((what (first spec)))
        (cond ((member what type-specifier-symbols)
@@ -2884,7 +2896,7 @@
   Value forms.  The variables are bound in parallel after all of the Values are
   evaluated."
   (multiple-value-bind (vars values)
-		       (extract-let-variables bindings 'let)
+      (extract-let-variables bindings 'let)
     (let* ((*lexical-environment* (process-declarations decls vars nil cont))
 	   (fun-cont (make-continuation))
 	   (fun (ir1-convert-lambda-body body vars)))
