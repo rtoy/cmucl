@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.60 1993/09/01 14:15:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.61 1993/09/04 23:24:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -424,6 +424,7 @@
 (defun dump-segment (segment code-length file)
   (declare (type new-assem:segment segment)
 	   (type fasl-file file))
+  (flush-fasl-file-buffer file)
   (let* ((stream (fasl-file-stream file))
 	 (posn (file-position stream)))
     (new-assem:segment-map-output
@@ -433,6 +434,10 @@
     (unless (= (- (file-position stream) posn) code-length)
       (error "Tried to output ~D bytes, but only ~D made it."
 	     code-length (- (file-position stream) posn))))
+  (when (backend-featurep :gengc)
+    (unless (zerop (logand code-length 3))
+      (dotimes (i (- 4 (logand code-length 3)))
+	(dump-byte 0 file))))
   (undefined-value))
 
 ;;; Dump-Code-Object  --  Internal
@@ -527,7 +532,6 @@
 	       (dump-unsigned-32 num-consts file)
 	       (dump-unsigned-32 total-length file))))
 
-      (flush-fasl-file-buffer file)
       (dump-segment code-segment code-length file)
       (dump-i-vector trace-table file t)
       (dump-fixups fixups file)
@@ -759,9 +763,7 @@
 	       (dump-unsigned-32 num-consts file)
 	       (dump-unsigned-32 length file))))
 
-      (flush-fasl-file-buffer file)
       (dump-segment segment length file)
-      
       (let ((code-handle (dump-pop file))
 	    (patch-table (fasl-file-patch-table file)))
 	(dolist (patch (entry-patches))
