@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.23 1993/05/18 18:15:31 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.24 1993/05/18 18:25:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,6 +386,16 @@
 ;;; 
 (defun queue-inst (segment inst)
   #+debug (format *trace-output* "~&Queuing ~S~%" inst)
+  #+debug
+  (format *trace-output* "  reads ~S~%  writes ~S~%"
+	  (ext:collect ((reads))
+	    (do-elements (read (inst-read-dependencies inst))
+	      (reads read))
+	    (reads))
+	  (ext:collect ((writes))
+	    (do-elements (write (inst-write-dependencies inst))
+	      (writes write))
+	    (writes)))
   (assert (segment-run-scheduler segment))
   (let ((countdown (segment-branch-countdown segment)))
     (when countdown
@@ -403,16 +413,6 @@
       (setf (segment-branch-countdown segment) countdown)
       (when (zerop countdown)
 	(schedule-pending-instructions segment))))
-  #+debug
-  (format *trace-output* "  reads ~S~%  writes ~S~%"
-	  (ext:collect ((reads))
-	    (do-elements (read (inst-read-dependencies inst))
-	      (reads read))
-	    (reads))
-	  (ext:collect ((writes))
-	    (do-elements (write (inst-write-dependencies inst))
-	      (writes write))
-	    (writes)))
   (ext:undefined-value))
 
 ;;; SCHEDULE-PENDING-INSTRUCTIONS -- internal.
@@ -431,6 +431,9 @@
 	     (null (segment-queued-branches segment)))
     (return-from schedule-pending-instructions
 		 (ext:undefined-value)))
+  ;;
+  #+debug
+  (format *trace-output* "~&Scheduling pending instructions...~%")
   ;;
   ;; Note that any values live at the end of the block have to be computed
   ;; last.
@@ -507,21 +510,55 @@
       (dolist (branch (segment-queued-branches segment))
 	(let ((inst (cdr branch)))
 	  (dotimes (i (- (car branch) insts-from-end))
-	    #+debug
-	    (format *trace-output* "Filling branch delay slot...~%")
+	    ;; Each time through this loop we need to emit another instruction.
+	    ;; First, we check to see if there is any instruction that must
+	    ;; be emitted before (i.e. must come after) the branch inst.  If
+	    ;; so, emit it.  Otherwise, just pick one of the emittable insts.
+	    ;; If there is nothing to do, the emit a nop.
+	    ;; ### Note: despite the fact that this is a loop, it really won't
+	    ;; work for repetitions other then zero and one.  For example, if
+	    ;; the branch has two dependents and one of them dpends on the
+	    ;; other, then the stuff that grabs a dependent could easily
+	    ;; grab the wrong one.  But I don't feel like fixing this because
+	    ;; it doesn't matter for any of the architectures we are using
+	    ;; or plan on using.
 	    (flet ((maybe-schedule-dependent (dependents)
 		     (do-elements (inst dependents)
+		       ;; If do-elements enters the body, then there is a
+		       ;; dependent.  Emit it.
 		       (note-resolved-dependencies segment inst)
+		       ;; Remove it from the emittable insts.
 		       (setf (segment-emittable-insts-queue segment)
 			     (delete inst
 				     (segment-emittable-insts-queue segment)
 				     :test #'eq))
+		       ;; And if it was delayed, removed it from the delayed
+		       ;; list.  This can happen if there is a load in a
+		       ;; branch delay slot.
+		       (block scan-delayed
+			 (do ((delayed (segment-delayed segment)
+				       (cdr delayed)))
+			     ((null delayed))
+			   (do ((prev nil cons)
+				(cons (car delayed) (cdr cons)))
+			       ((null cons))
+			     (when (eq (car cons) inst)
+			       (if prev
+				   (setf (cdr prev) (cdr cons))
+				   (setf (car delayed) (cdr cons)))
+			       (return-from scan-delayed nil)))))
+		       ;; And return it.
 		       (return inst))))
-	      (push (or (maybe-schedule-dependent (inst-read-dependents inst))
-			(maybe-schedule-dependent (inst-write-dependents inst))
-			(schedule-one-inst segment t)
-			:nop)
-		    results))
+	      (let ((fill (or (maybe-schedule-dependent
+			       (inst-read-dependents inst))
+			      (maybe-schedule-dependent
+			       (inst-write-dependents inst))
+ 			      (schedule-one-inst segment t)
+			      :nop)))
+		#+debug
+		(format *trace-output* "Filling branch delay slot with ~S~%"
+			fill)
+		(push fill results)))
 	    (advance-one-inst segment)
 	    (incf insts-from-end))
 	  (note-resolved-dependencies segment inst)
