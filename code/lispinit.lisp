@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.40 1993/08/19 17:23:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.41 1993/08/19 21:13:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -276,6 +276,7 @@
   #-gengc (setf unix::*interrupts-enabled* t)
   #-gengc (setf unix::*interrupt-pending* nil)
   (setf *type-system-initialized* nil)
+  (setf *break-on-signals* nil)
 
   ;; Many top-level forms call INFO, (SETF INFO).
   (print-and-call c::globaldb-init)
