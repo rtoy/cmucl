@@ -68,7 +68,7 @@
 
 ;;; Note this list is setup in dlisp3.lisp when all the necessary
 ;;; macros have been loaded.
-(defvar checking-or-caching-function-list)
+(defvar checking-or-caching-function-list nil)
 
 (defmacro emit-checking-or-caching-function-precompiled ()
   `(cdr (assoc (list cached-emf-p return-value-p metatypes applyp)
