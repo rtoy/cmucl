@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.21 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.22 2003/05/07 16:59:48 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -107,7 +107,7 @@
 	  (reader (add-slot-missing-method gf slot-name 'slot-value))
 	  (boundp (add-slot-missing-method gf slot-name 'slot-boundp))
 	  (writer (add-slot-missing-method gf slot-name 'setf)))))
-      t)))
+      t))
 
 (defmacro accessor-slot-value (object slot-name)
   (assert (constantp slot-name))
