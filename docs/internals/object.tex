@@ -734,3 +734,29 @@ A system area pointer data-block has the following format:
 scheme.  We don't currently restrict system pointers to one area of memory, but
 if they do point onto the heap, it is up to the user to prevent being screwed
 by GC or whatever.
+
+\section{Weak Pointers}
+\label{sec:weak-pointers}
+
+A weak-pointer data-block has the following format:
+\begin{verbatim}
+-------------------------------------------------------
+|  4 (data-block words) |  Weak pointer Type (8 bits) |
+-------------------------------------------------------
+|                 weak-pointer-value                  |
+-------------------------------------------------------
+|                 weak-pointer-broken                 |
+-------------------------------------------------------
+|                 mark-bit (T or NIL)                 |
+-------------------------------------------------------
+|                   next                              |
+-------------------------------------------------------
+\end{verbatim}
+
+The mark-bit is used when gencgc is available.  It's used to note if
+this weak pointer has been visited before so that scavenging
+weak-pointers isn't an $O(n^2)$ process.
+
+The last slot is an internal slot used by the C runtime to chain all
+the weak pointers together for GC.
+
