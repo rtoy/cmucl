@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/float.lisp,v 1.1 2004/05/24 22:34:59 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/float.lisp,v 1.2 2004/07/14 20:57:31 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -404,7 +404,7 @@
 (define-vop (move-from-single)
   (:args (x :scs (single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:note "float to pointer coercion")
   (:generator 13
@@ -417,7 +417,7 @@
 (define-vop (move-from-double)
   (:args (x :scs (double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:note "float to pointer coercion")
   (:generator 13
@@ -509,7 +509,7 @@
 (define-vop (move-from-complex-single)
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:note "complex float to pointer coercion")
   (:generator 13
@@ -527,7 +527,7 @@
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:note "complex float to pointer coercion")
   (:generator 13

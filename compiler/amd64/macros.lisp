@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.3 2004/07/06 20:18:42 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.4 2004/07/14 20:58:45 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,6 +168,8 @@
     (inst mov dst-tn size)))
 
 (defun inline-allocation (alloc-tn size temp-tn)
+  ;; Since linkage table will trash r11, the easiest solution is to make sure temp-tn is r11
+  (assert (= (tn-offset temp-tn) #.r11-offset))
   (let ((ok (gen-label)))
     ;;
     ;; Load the size first so that the size can be in the same
@@ -194,7 +196,7 @@
 			 (#.r8-offset "alloc_overflow_r8")
 			 (#.r9-offset "alloc_overflow_r9")
 			 (#.r10-offset "alloc_overflow_r10")
-			 (#.r11-offset "alloc_overflow_r11")
+			 ;; no r11
 			 (#.r12-offset "alloc_overflow_r12")
 			 (#.r13-offset "alloc_overflow_r13")
 			 (#.r14-offset "alloc_overflow_r14")

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/alloc.lisp,v 1.3 2004/07/06 20:09:05 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/alloc.lisp,v 1.4 2004/07/14 20:56:24 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,8 @@
 
 (define-vop (list-or-list*)
   (:args (things :more t))
-  (:temporary (:sc unsigned-reg) ptr temp)
+  (:temporary (:sc unsigned-reg) ptr)
+  (:temporary (:sc unsigned-reg :offset r11-offset) temp)
   (:temporary (:sc unsigned-reg :to (:result 0) :target result) res)
   (:info num dynamic-extent)
   (:results (result :scs (descriptor-reg)))
@@ -139,7 +140,7 @@
   (:results (result :scs (descriptor-reg) :from :eval))
   (:temporary (:sc unsigned-reg :from (:argument 0)) boxed)
   (:temporary (:sc unsigned-reg :from (:argument 1)) unboxed)
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:generator 100
     (move boxed boxed-arg)
@@ -170,7 +171,7 @@
   (:translate make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
   (:results (result :scs (descriptor-reg) :from :argument))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:generator 37
     (with-fixed-allocation (result fdefn-type fdefn-size temp node)
@@ -184,7 +185,7 @@
 (define-vop (make-closure)
   (:args (function :to :save :scs (descriptor-reg)))
   (:info length dynamic-extent)
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
   (:generator 10
@@ -205,7 +206,7 @@
 (define-vop (make-value-cell)
   (:args (value :scs (descriptor-reg any-reg) :to :result))
   (:results (result :scs (descriptor-reg) :from :eval))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:generator 10
     (with-fixed-allocation
@@ -227,7 +228,7 @@
   (:info name words type lowtag dynamic-extent)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:generator 50
     (let ((*enable-pseudo-atomic* (unless dynamic-extent
@@ -246,7 +247,7 @@
   (:results (result :scs (descriptor-reg) :from (:eval 1)))
   (:temporary (:sc any-reg :from :eval :to (:eval 1)) bytes)
   (:temporary (:sc any-reg :from :eval :to :result) header)
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:node-var node)
   (:generator 50
     (inst lea bytes

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/sap.lisp,v 1.2 2004/06/10 01:45:39 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/sap.lisp,v 1.3 2004/07/14 21:00:17 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,7 @@
 (define-vop (move-from-sap)
   (:args (sap :scs (sap-reg) :to :result))
   (:results (res :scs (descriptor-reg) :from :argument))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:note "SAP to pointer coercion") 
   (:node-var node)
   (:generator 20

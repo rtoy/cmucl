@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/call.lisp,v 1.3 2004/07/08 17:32:30 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/call.lisp,v 1.4 2004/07/14 20:56:24 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1369,6 +1369,7 @@
   (:temporary (:sc unsigned-reg :offset rsi-offset :from (:argument 0)) src)
   (:temporary (:sc unsigned-reg :offset rcx-offset :from (:argument 1)) rcx)
   (:temporary (:sc unsigned-reg :offset rax-offset) rax)
+  (:temporary (:sc unsigned-reg :offset r11-offset) r11)
   (:temporary (:sc unsigned-reg) dst)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
@@ -1385,7 +1386,7 @@
       (let ((*enable-pseudo-atomic* (unless dynamic-extent
 				      *enable-pseudo-atomic*)))
 	(pseudo-atomic
-	 (allocation dst dst rax node dynamic-extent)
+	 (allocation dst dst r11 node dynamic-extent)
 	 (inst lea dst (make-ea :byte :base dst :disp list-pointer-type))
 	 ;; Convert the count into a raw value, so we can use the LOOP inst.
 	 (inst shr rcx 2)

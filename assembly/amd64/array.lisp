@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/array.lisp,v 1.1 2004/05/21 22:46:43 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/array.lisp,v 1.2 2004/07/14 20:51:49 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 			 ((:arg type unsigned-reg rax-offset)
 			  (:arg length any-reg rbx-offset)
 			  (:arg words any-reg rcx-offset)
-			  (:temp temp any-reg rdi-offset)
+			  (:temp temp any-reg r11-offset)
 			  (:res result descriptor-reg rdx-offset))
   ;; compute the number of bytes
   ;; words is a fixnum

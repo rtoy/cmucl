@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/move.lisp,v 1.3 2004/07/06 20:19:58 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/move.lisp,v 1.4 2004/07/14 20:59:48 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,28 +289,11 @@
 
 ;;; Result may be a bignum, so we have to check.  Use a worst-case cost to make
 ;;; sure people know they may be number consing.
-;;;
-#+nil
-(define-vop (move-from-signed)
-  (:args (x :scs (signed-reg unsigned-reg) :target rax))
-  (:temporary (:sc unsigned-reg :offset rax-offset :from (:argument 0)) rax)
-  (:temporary (:sc unsigned-reg :offset rbx-offset :to (:result 0) :target y)
-	      rbx)
-  (:temporary (:sc unsigned-reg :offset rcx-offset
-		   :from (:argument 0) :to (:result 0)) rcx)
-  (:ignore rcx)
-  (:results (y :scs (any-reg descriptor-reg)))
-  (:note "signed word to integer coercion")
-  (:generator 20
-    (move rax x)
-    (inst call (make-fixup 'move-from-signed :assembly-routine))
-    (move y rbx)))
-;;;
 ;;; Faster inline version,
 (define-vop (move-from-signed)
   (:args (x :scs (signed-reg unsigned-reg) :to :result))
   (:results (y :scs (any-reg descriptor-reg) :from :argument))
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:note "signed word to integer coercion")
   (:node-var node)
   (:generator 20
@@ -337,27 +320,11 @@
 
 ;;; Check for fixnum, and possibly allocate one or two word bignum result.  Use
 ;;; a worst-case cost to make sure people know they may be number consing.
-;;;
-#+nil
-(define-vop (move-from-unsigned)
-  (:args (x :scs (signed-reg unsigned-reg) :target rax))
-  (:temporary (:sc unsigned-reg :offset rax-offset :from (:argument 0)) rax)
-  (:temporary (:sc unsigned-reg :offset rbx-offset :to (:result 0) :target y)
-	      rbx)
-  (:temporary (:sc unsigned-reg :offset rcx-offset
-		   :from (:argument 0) :to (:result 0)) rcx)
-  (:ignore rcx)
-  (:results (y :scs (any-reg descriptor-reg)))
-  (:note "unsigned word to integer coercion")
-  (:generator 20
-    (move rax x)
-    (inst call (make-fixup 'move-from-unsigned :assembly-routine))
-    (move y rbx)))
-;;;
 ;;; Faster inline version.
 (define-vop (move-from-unsigned)
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
   (:temporary (:sc unsigned-reg) alloc)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:results (y :scs (any-reg descriptor-reg)))
   (:node-var node)
   (:note "unsigned word to integer coercion")
@@ -391,11 +358,7 @@
 			     bignum-type))
 	 (emit-label l1)
 	 (pseudo-atomic
-	  ;; We don't have enough registers. So I'm using y here
-	  ;; We can fix it when we use r8-r15
-	  (inst push y)
-	  (allocation alloc (pad-data-block (+ bignum-digits-offset 2)) y node)
-	  (inst pop y)
+	  (allocation alloc (pad-data-block (+ bignum-digits-offset 2)) temp node)
 	  (storew y alloc)
 	  (inst lea y (make-ea :byte :base alloc :disp other-pointer-type))
 	  (storew x y bignum-digits-offset other-pointer-type))

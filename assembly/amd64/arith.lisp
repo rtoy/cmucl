@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/arith.lisp,v 1.1 2004/05/21 22:46:43 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/amd64/arith.lisp,v 1.2 2004/07/14 20:51:49 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,8 @@
 
 			     (:temp rax unsigned-reg rax-offset)
 			     (:temp rbx unsigned-reg rbx-offset)
-			     (:temp rcx unsigned-reg rcx-offset))
+			     (:temp rcx unsigned-reg rcx-offset)
+			     (:temp r11 unsigned-reg r11-offset))
 
     (inst test x 3)			; fixnum?
     (inst jmp :nz DO-STATIC-FUN)	; no - do generic
@@ -72,7 +73,7 @@
 
   (move rcx res)
 
-  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) rax)
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) r11)
     (storew rcx res bignum-digits-offset other-pointer-type))
   
   OKAY)
@@ -93,7 +94,7 @@
   
   (move rcx res)
   
-  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) rax)
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) r11)
     (storew rcx res bignum-digits-offset other-pointer-type))
   OKAY)
 
@@ -114,14 +115,14 @@
   (inst cmp x rcx)
   (inst jmp :e SINGLE-WORD-BIGNUM)
 
-  (with-fixed-allocation (res bignum-type (+ bignum-digits-offset 2) rbx)
+  (with-fixed-allocation (res bignum-type (+ bignum-digits-offset 2) r11)
     (storew rax res bignum-digits-offset other-pointer-type)
     (storew rcx res (1+ bignum-digits-offset) other-pointer-type))
   (inst jmp DONE)
 
   SINGLE-WORD-BIGNUM
   
-  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) rbx)
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) r11)
     (storew rax res bignum-digits-offset other-pointer-type))
   (inst jmp DONE)
 
@@ -139,7 +140,8 @@
 			  (:res res (descriptor-reg any-reg) rdx-offset)
 
 			  (:temp rax unsigned-reg rax-offset)
-			  (:temp rcx unsigned-reg rcx-offset))
+			  (:temp rcx unsigned-reg rcx-offset)
+			  (:temp r11 unsigned-reg r11-offset))
   (inst test x 3)
   (inst jmp :z FIXNUM)
 
@@ -159,7 +161,7 @@
   (inst shr res 2)			; sign bit is data - remove type bits
   (move rcx res)
 
-  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) rax)
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset) r11)
     (storew rcx res bignum-digits-offset other-pointer-type))
   
   OKAY)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/array.lisp,v 1.1 2004/05/24 22:34:59 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/array.lisp,v 1.2 2004/07/14 20:56:24 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
   (:arg-types positive-fixnum positive-fixnum)
   (:temporary (:sc any-reg :to :eval) bytes)
   (:temporary (:sc any-reg :to :result) header)
-  (:temporary (:sc any-reg) temp)
+  (:temporary (:sc any-reg :offset r11-offset) temp)
   (:results (result :scs (descriptor-reg) :from :eval))
   (:node-var node)
   (:generator 13
