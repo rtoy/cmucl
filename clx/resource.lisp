@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/resource.lisp,v 1.9 1998/12/19 15:21:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/resource.lisp,v 1.10 1999/03/16 23:37:48 pw Exp $")
 
 (in-package :xlib)
 
@@ -29,7 +29,6 @@
 (defstruct (resource-database (:copier nil) (:predicate nil)
 			      (:print-function print-resource-database)
 			      (:constructor make-resource-database-internal)
-			      #+explorer (:callable-constructors nil)
 			      )
   (name nil :type stringable :read-only t)
   (value nil)
@@ -111,7 +110,7 @@
 	  (kintern (symbol-name (the symbol stringable)))))
     (string
       (if *uppercase-resource-symbols*
-	  (setq stringable (#-allegro string-upcase #+allegro correct-case
+	  (setq stringable (string-upcase
 			    (the string stringable))))
       (kintern (the string stringable)))))
 
@@ -409,20 +408,14 @@
   ;; FUNCTION is called with arguments (name-list value . args)
   (declare (type resource-database database)
 	   (type (function (list t &rest t) t) function)
-	   #+clx-ansi-common-lisp
 	   (dynamic-extent function)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg function)
 	   (dynamic-extent args))
   (declare (clx-values nil))
   (labels ((map-resource-internal (database function args name)
 	     (declare (type resource-database database)
 		      (type (function (list t &rest t) t) function)
 		      (type list name)
-		      #+clx-ansi-common-lisp
-		      (dynamic-extent function)
-		      #+(and lispm (not clx-ansi-common-lisp))
-		      (sys:downward-funarg function))		      
+		      (dynamic-extent function))		      
 	     (let ((tight (resource-database-tight database))
 		   (loose (resource-database-loose database)))
 	       (declare (type list tight loose))

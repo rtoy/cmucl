@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.7 1998/12/19 15:21:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.8 1999/03/16 23:37:40 pw Exp $")
 
 (in-package :xlib)
 
@@ -254,7 +254,6 @@
 		   ,@body)))
      ,(if (and (null inline) (macroexpand '(use-closures) env))
 	  `(flet ((.with-event-queue-body. () ,@body))
-	     #+clx-ansi-common-lisp
 	     (declare (dynamic-extent #'.with-event-queue-body.))
 	     (with-event-queue-function
 	       ,display ,timeout #'.with-event-queue-body.))
@@ -270,10 +269,7 @@
   (declare (type display display)
 	   (type (or null number) timeout)
 	   (type function function)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent function)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg function))
+	   (dynamic-extent function))
   (with-event-queue (display :timeout timeout :inline t)
     (funcall function)))
 

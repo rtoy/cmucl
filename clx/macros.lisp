@@ -17,7 +17,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/macros.lisp,v 1.5 1998/12/19 15:21:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/macros.lisp,v 1.6 1999/03/16 23:37:44 pw Exp $")
 
 ;;; CLX basicly implements a very low overhead remote procedure call
 ;;; to the server.  This file contains macros which generate the code
@@ -225,14 +225,12 @@
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card8 ,index (position ,thing
-				  #+lispm ',keywords ;; Lispm's prefer lists
-				  #-lispm (the simple-vector ',(apply #'vector keywords))
+				  (the simple-vector ',(apply #'vector keywords))
 				  :test #'eq)))
   ((index thing &rest keywords)
    (let ((value (gensym)))
      `(let ((,value (position ,thing
-			      #+lispm ',keywords
-			      #-lispm (the simple-vector ',(apply #'vector keywords))
+			      (the simple-vector ',(apply #'vector keywords))
 			      :test #'eq)))
 	(and ,value (write-card8 ,index ,value))))))
 
@@ -245,14 +243,12 @@
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card16 ,index (position ,thing
-				   #+lispm ',keywords ;; Lispm's prefer lists
-				   #-lispm (the simple-vector ',(apply #'vector keywords))
+				   (the simple-vector ',(apply #'vector keywords))
 				   :test #'eq)))
   ((index thing &rest keywords)
    (let ((value (gensym)))
      `(let ((,value (position ,thing
-			      #+lispm ',keywords
-			      #-lispm (the simple-vector ',(apply #'vector keywords))
+			      (the simple-vector ',(apply #'vector keywords))
 			      :test #'eq)))
 	(and ,value (write-card16 ,index ,value))))))
 
@@ -265,15 +261,13 @@
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card29 ,index (position ,thing
-				   #+lispm ',keywords ;; Lispm's prefer lists
-				   #-lispm (the simple-vector ',(apply #'vector keywords))
+				   (the simple-vector ',(apply #'vector keywords))
 				   :test #'eq)))
   ((index thing &rest keywords)
    (if (cdr keywords) ;; IF more than one
        (let ((value (gensym)))
 	 `(let ((,value (position ,thing
-				  #+lispm ',keywords
-				  #-lispm (the simple-vector ',(apply #'vector keywords))
+				  (the simple-vector ',(apply #'vector keywords))
 				  :test #'eq)))
 	    (and ,value (write-card29 ,index ,value))))
        `(and (eq ,thing ,(car keywords)) (write-card29 ,index 0)))))
@@ -537,10 +531,7 @@
 
 (defun mask-get (index type-values body-function)
   (declare (type function body-function)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent body-function)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg body-function))
+	   (dynamic-extent body-function))
   ;; This is a function, because it must return more than one form (called by get-put-items)
   ;; Functions that use this must have a binding for %MASK
   (let* ((bit 0)
@@ -571,10 +562,7 @@
 
 (defun mask-put (index type-values body-function)
   (declare (type function body-function)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent body-function)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg body-function))
+	   (dynamic-extent body-function))
   ;; The MASK type writes a 32 bit mask with 1 bits for each non-nil value in TYPE-VALUES
   ;; A 32 bit value follows for each non-nil value.
   `((let ((%mask 0)
@@ -635,10 +623,7 @@
 
 (defun get-put-items (index type-args putp &optional body-function)
   (declare (type (or null function) body-function)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent body-function)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg body-function))
+	   (dynamic-extent body-function))
   ;; Given a lists of the form (type item item ... item)
   ;; Calls body-function with four arguments, a function name,
   ;; index, item name, and optional arguments.
@@ -708,7 +693,6 @@
 		(declare (type display .display.))
 		(with-buffer-request-internal (.display. ,opcode ,@options)
 		  ,@type-args)))
-	 #+clx-ansi-common-lisp
 	 (declare (dynamic-extent #'.request-body.))
 	 (,(if (eq (car (macroexpand '(with-buffer (buffer)) env)) 'progn)
 	       'with-buffer-request-function-nolock
@@ -748,7 +732,6 @@
 			   (type reply-buffer .reply-buffer.))
 		  (progn .display. .reply-buffer. nil)
 		  ,reply-body))
-	   #+clx-ansi-common-lisp
 	   (declare (dynamic-extent #'.request-body. #'.reply-body.))
 	   (with-buffer-request-and-reply-function
 	     ,buffer ,multiple-reply #'.request-body. #'.reply-body.))

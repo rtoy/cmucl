@@ -20,272 +20,19 @@
 ;;; implied warranty.
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/defsystem.lisp,v 1.5 1998/12/19 15:21:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/defsystem.lisp,v 1.6 1999/03/16 23:37:38 pw Exp $")
 
 ;;; #+ features used in this file
-;;;   clx-ansi-common-lisp
-;;;   lispm
-;;;   genera
-;;;   minima
-;;;   lucid
-;;;   lcl3.0
-;;;   apollo
-;;;   kcl
-;;;   ibcl
-;;;   excl
 ;;;   CMU
-
-#+(or Genera Minima)
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (common-lisp:pushnew :clx-ansi-common-lisp common-lisp:*features*))
-
-#+(and Genera clx-ansi-common-lisp)
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (setf *readtable* si:*ansi-common-lisp-readtable*))
-
-#-(or clx-ansi-common-lisp cmu)
-(lisp:in-package :user)
 
 #+cmu
 (lisp:in-package "XLIB")
 #+cmu
 (export 'load-clx)
 
-#+clx-ansi-common-lisp
 (common-lisp:in-package :common-lisp-user)
 
 
-;;;; Lisp Machines
-
-#+(and lispm (not genera))
-(global:defsystem CLX
-  (:pathname-default "clx:clx;")
-  (:patchable "clx:patch;" clx-ti)
-  (:initial-status :experimental)
-
-  (:module package "package")
-  (:module depdefs "depdefs")
-  (:module clx "clx")
-  (:module dependent "dependent")
-  (:module macros "macros")
-  (:module bufmac "bufmac")
-  (:module buffer "buffer")
-  (:module display "display")
-  (:module gcontext "gcontext")
-  (:module requests "requests")
-  (:module input "input")
-  (:module fonts "fonts")
-  (:module graphics "graphics")
-  (:module text "text")
-  (:module attributes "attributes")
-  (:module translate "translate")
-  (:module keysyms "keysyms")
-  (:module manager "manager")
-  (:module image "image")
-  (:module resource "resource")
-  (:module doc "doc")
-
-  (:compile-load package)
-  (:compile-load depdefs
-   (:fasload package))
-  (:compile-load clx
-   (:fasload package depdefs))
-  (:compile-load dependent
-   (:fasload package depdefs clx))
-  ;; Macros only needed for compilation
-  (:skip :compile-load macros
-   (:fasload package depdefs clx dependent))
-  ;; Bufmac only needed for compilation
-  (:skip :compile-load bufmac
-   (:fasload package depdefs clx dependent macros))
-  (:compile-load buffer
-   (:fasload package depdefs clx dependent macros bufmac))
-  (:compile-load display
-   (:fasload package depdefs clx dependent macros bufmac buffer))
-  (:compile-load gcontext
-   (:fasload package depdefs clx dependent macros bufmac buffer display))
-  (:compile-load input
-   (:fasload package depdefs clx dependent macros bufmac buffer display))
-  (:compile-load requests
-   (:fasload package depdefs clx dependent macros bufmac buffer display input))
-  (:compile-load fonts
-   (:fasload package depdefs clx dependent macros bufmac buffer display))
-  (:compile-load graphics
-   (:fasload package depdefs clx dependent macros fonts bufmac buffer display
-	     fonts))
-  (:compile-load text
-   (:fasload package depdefs clx dependent macros fonts bufmac buffer display
-	     gcontext fonts))
-  (:compile-load-init attributes
-   (dependent)
-   (:fasload package depdefs clx dependent macros bufmac buffer display))
-  (:compile-load translate
-   (:fasload package depdefs clx dependent macros bufmac buffer display))
-  (:compile-load keysyms
-   (:fasload package depdefs clx dependent macros bufmac buffer display
-	     translate))
-  (:compile-load manager
-   (:fasload package depdefs clx dependent macros bufmac buffer display))
-  (:compile-load image
-   (:fasload package depdefs clx dependent macros bufmac buffer display))
-  (:compile-load resource
-   (:fasload package depdefs clx dependent macros bufmac buffer display))
-  (:auxiliary doc)
-  )
-
-
-;;; Symbolics Lisp Machines
-#+Genera
-(scl:defsystem CLX
-    (:default-pathname "SYS:X11;CLX;"
-     :pretty-name "CLX"
-     :maintaining-sites (:scrc)
-     :distribute-sources t
-     :distribute-binaries t
-     :source-category :basic)
-  (:module doc ("doc")
-	   (:type :lisp-example))
-  (:serial
-    "package" "depdefs" "generalock" "clx" "dependent" "macros" "bufmac"
-    "buffer" "display" "gcontext" "input" "requests" "fonts" "graphics"
-    "text" "attributes" "translate" "keysyms" "manager" "image" "resource"))
-
-#+Minima
-(zl:::scl:defsystem Minima-CLX
-    (:default-pathname "SYS:X11;CLX;"
-     :pretty-name "Minima CLX"
-     :maintain-journals nil
-     :maintaining-sites (:scrc)
-     :distribute-sources t
-     :distribute-binaries t
-     :source-category :basic
-     :default-module-type :minima-lisp)
-  (:module doc ("doc")
-	   (:type :lisp-example))
-  (:serial
-    "package" "depdefs" "clx" "dependent" "macros" "bufmac"
-    "buffer" "display" "gcontext" "input" "requests" "fonts" "graphics"
-    "text" "attributes" "translate" "keysyms" "manager" "image" "resource"))
-
-
-;;; Franz
-
-;;
-;; The following is a suggestion.  If you comment out this form be
-;; prepared for possible deadlock, since no interrupts will be recognized
-;; while reading from the X socket if the scheduler is not running.
-;;
-#+excl
-(setq compiler::generate-interrupt-checks-switch
-      (compile nil
-	       '(lambda (safety size speed &optional debug)
-		  (declare (ignore size debug))
-		  (or (< speed 3) (> safety 0)))))
-
-
-;;; Allegro
-
-#+allegro
-(excl:defsystem :clx 
-  ()
-  |package|
-  (|excldep|
-    :load-before-compile (|package|)
-    :recompile-on (|package|))
-  (|depdefs|
-    :load-before-compile (|package| |excldep|)
-    :recompile-on (|excldep|))
-  (|clx|
-    :load-before-compile (|package| |excldep| |depdefs|)
-    :recompile-on (|package| |excldep| |depdefs|))
-  (|dependent|
-    :load-before-compile (|package| |excldep| |depdefs| |clx|)
-    :recompile-on (|clx|))
-  (|exclcmac|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|)
-    :recompile-on (|dependent|))
-  (|macros|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac|)
-    :recompile-on (|exclcmac|))
-  (|bufmac|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros|)
-    :recompile-on (|macros|))
-  (|buffer|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac|)
-    :recompile-on (|bufmac|))
-  (|display|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer|)
-    :recompile-on (|buffer|))
-  (|gcontext|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|)
-    :recompile-on (|display|))
-  (|input|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|)
-    :recompile-on (|display|))
-  (|requests|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|
-			  |input|)
-    :recompile-on (|display|))
-  (|fonts|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|)
-    :recompile-on (|display|))
-  (|graphics|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|
-			  |fonts|)
-    :recompile-on (|fonts|))
-  (|text|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|
-			  |gcontext| |fonts|)
-    :recompile-on (|gcontext| |fonts|)
-    :load-after (|translate|))
-  ;; The above line gets around a compiler macro expansion bug.
-  
-  (|attributes|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|)
-    :recompile-on (|display|))
-  (|translate|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|
-			  |text|)
-    :recompile-on (|display|))
-  (|keysyms|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|
-			  |translate|)
-    :recompile-on (|translate|))
-  (|manager|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|)
-    :recompile-on (|display|))
-  (|image|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|)
-    :recompile-on (|display|))
-  
-  ;; Don't know if l-b-c list is correct.  XX
-  (|resource|
-    :load-before-compile (|package| |excldep| |depdefs| |clx| |dependent|
-			  |exclcmac| |macros| |bufmac| |buffer| |display|)
-    :recompile-on (|display|))
-  )
-
-#+allegro
-(excl:defsystem :clx-debug
-    (:default-pathname "debug/"
-     :needed-systems (:clx)
-     :load-before-compile (:clx))
-  |describe| |keytrans| |trace| |util|)
 
 
 ;;;; Compile CLX
@@ -319,22 +66,8 @@
 ;;;   lucid2.0/hp9000s300
 ;;;     must uudecode the file make-sequence-patch.uu
 
-#+(or lucid kcl ibcl cmu)
+#+(or cmu)
 (defun clx-foreign-files (binary-path)
-
-  #+(and lucid (not lcl3.0) (or mc68000 mc68020))
-  (load (merge-pathnames "make-sequence-patch" binary-path))
-
-  #+(and lucid apollo)
-  (lucid::load-foreign-file
-    (namestring (merge-pathnames "socket" binary-path))
-    :preserve-pathname t)
-
-  #+(and lucid (not apollo))
-  (lucid::load-foreign-files
-    (list (namestring (merge-pathnames "socket.o" binary-path)))
-    '("-lc"))
-
   #+cmu
   (declare (ignore binary-path))
   #+cmu
@@ -342,21 +75,8 @@
 			   c-call:int
     (host c-call:c-string)
     (port c-call:int))
-
-  #+(or kcl ibcl)
-  (progn
-    (let ((pathname (merge-pathnames "sockcl.o" binary-path))
-	  (options
-	    (concatenate
-	      'string
-	      (namestring (merge-pathnames "socket.o" binary-path))
-	      " -lc")))
-      (format t "~&Faslinking ~A with ~A.~%" pathname options)
-      (si:faslink (namestring pathname) options)
-      (format t "~&Finished faslinking ~A.~%" pathname)))
   )
 
-#-(or lispm allegro Minima)
 (defun compile-clx (&optional
 		    (source-pathname-defaults "")
 		    (binary-pathname-defaults "")
@@ -377,7 +97,6 @@
 			:version   (pathname-version   source-path)))
 	 (binary-path (merge-pathnames binary-pathname-defaults
 				       path))
-	 #+clx-ansi-common-lisp (*compile-verbose* t)
 	 (*load-verbose* t))
 				       
     ;; Make sure source-path and binary-path file types are distinct so
@@ -391,76 +110,28 @@
 
     (format t "~&;;; Default paths: ~s ~s~%" source-path binary-path)
 
-    ;; In lucid make sure we're using the compiler in production mode.
-    #+lcl3.0
-    (progn
-      (unless (member :pqc *features*)
-	(cerror
-	  "Go ahead anyway."
-	  "Lucid's production mode compiler must be loaded to compile CLX."))
-      (proclaim '(optimize (speed 3)
-			   (safety 1)
-			   (space 0)
-			   (compilation-speed 0))))
-
     (labels ((compile-lisp (filename)
 	       (let ((source (merge-pathnames filename source-path))
 		     (binary (merge-pathnames filename binary-path)))
 		 ;; If the source and binary pathnames are the same,
 		 ;; then don't supply an output file just to be sure
 		 ;; compile-file defaults correctly.
-		 #+(or kcl ibcl) (load source)
 		 (if (equal source binary)
 		     (compile-file source)
 		     (compile-file source :output-file binary))
 		 binary))
 	     (compile-and-load (filename)
-	       (load (compile-lisp filename)))
-	     #+(or lucid kcl ibcl)
-	     (compile-c (filename)
-	       (let* ((c-filename (concatenate 'string filename ".c"))
-		      (o-filename (concatenate 'string filename ".o"))
-		      (src (merge-pathnames c-filename source-path))
-		      (obj  (merge-pathnames o-filename binary-path))
-		      (args (list "-c" (namestring src)
-				  "-o" (namestring obj)
-				  #+mips "-G 0"
-				  #+(or hp sysv) "-DSYSV"
-				  #+(and mips (not dec)) "-I/usr/include/bsd"
-				  #-(and mips (not dec)) "-DUNIXCONN"
-				  #+(and lucid pa) "-DHPUX -DHPUX7.0"
-				  )))
-		 (format t ";;; cc~{ ~A~}~%" args)
-		 (unless
-		   (zerop 
-		     #+lucid
-		     (multiple-value-bind (iostream estream exitstatus pid)
-			 ;; in 2.0, run-program is exported from system:
-			 ;; in 3.0, run-program is exported from lcl:
-			 ;; system inheirits lcl
-			 (system::run-program "cc" :arguments args)
-		       (declare (ignore iostream estream pid))
-		       exitstatus)
-		     #+(or kcl ibcl)
-		     (system (format nil "cc~{ ~A~}" args)))
-		   (error "Compile of ~A failed." src)))))
+	       (load (compile-lisp filename))))
 
       ;; Now compile and load all the files.
       ;; Defer compiler warnings until everything's compiled, if possible.
-      (#+(or clx-ansi-common-lisp CMU) with-compilation-unit
-       #+lcl3.0 lucid::with-deferred-warnings
-       #-(or lcl3.0 clx-ansi-common-lisp CMU) progn
+      (with-compilation-unit
        ()
        
        (compile-and-load "package")
-       #+(or lucid kcl ibcl) (when compile-c (compile-c "socket"))
-       #+(or kcl ibcl) (compile-lisp "sockcl")
-       #+(or lucid kcl ibcl) (clx-foreign-files binary-path)
-       #+excl (compile-and-load "excldep")
        (compile-and-load "depdefs")
        (compile-and-load "clx")
        (compile-and-load "dependent")
-       #+excl (compile-and-load "exclcmac")	; these are just macros
        (compile-and-load "macros")		; these are just macros
        (compile-and-load "bufmac")		; these are just macros
        (compile-and-load "buffer")
@@ -499,7 +170,6 @@
 ;;;		(LOAD <clx-defsystem-file>)
 ;;;		(LOAD-CLX <binary-specific-clx-directory>)
 
-#-(or lispm allegro Minima)
 (defun load-clx (&optional (binary-pathname-defaults "")
 		 &key (macrosp nil))
 
@@ -520,13 +190,11 @@
 	       (load binary))))
 
       (load-binary "package")
-      #+(or lucid kcl ibcl cmu) (clx-foreign-files binary-path)
-      #+excl (load-binary "excldep")
+      #+(or cmu) (clx-foreign-files binary-path)
       (load-binary "depdefs")
       (load-binary "clx")
       (load-binary "dependent")
       (when macrosp
-	#+excl (load-binary "exclcmac")
 	(load-binary "macros")
 	(load-binary "bufmac"))
       (load-binary "buffer")

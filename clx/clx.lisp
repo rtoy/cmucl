@@ -17,7 +17,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.10 1998/12/19 15:21:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.11 1999/03/16 23:37:37 pw Exp $")
 
 ;; Primary Interface Author:
 ;;	Robert W. Scheifler
@@ -161,20 +161,6 @@
 (deftype int8 () '(signed-byte 8))
 
 (deftype card4 () '(unsigned-byte 4))
-
-#-clx-ansi-common-lisp
-(deftype real (&optional (min '*) (max '*))
-  (labels ((convert (limit floatp)
-	     (typecase limit
-	       (number (if floatp (float limit 0s0) (rational limit)))
-	       (list (map 'list #'convert limit))
-	       (otherwise limit))))
-    `(or (float ,(convert min t) ,(convert max t))
-	 (rational ,(convert min nil) ,(convert max nil)))))
-
-#-clx-ansi-common-lisp
-(deftype base-char ()
-  'string-char)
 
 ; Note that we are explicitly using a different rgb representation than what
 ; is actually transmitted in the protocol.
@@ -351,8 +337,7 @@
 (defun print-display-name (display stream)
   (declare (type (or null display) display))
   (cond (display
-	 #-allegro (princ (display-host display) stream)
-	 #+allegro (write-string (string (display-host display)) stream)
+	 (princ (display-host display) stream)
 	 (write-string ":" stream)
 	 (princ (display-display display) stream))
 	(t
@@ -540,7 +525,7 @@
   (server-state (allocate-gcontext-state) :type gcontext-state)
   (local-state (allocate-gcontext-state) :type gcontext-state)
   (plist nil :type list)			; Extension hook
-  (next nil #-explorer :type #-explorer (or null gcontext))
+  (next nil :type (or null gcontext))
   )
 
 (defun print-gcontext (gcontext stream depth)

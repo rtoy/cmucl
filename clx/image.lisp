@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/image.lisp,v 1.8 1998/12/19 15:21:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/image.lisp,v 1.9 1999/03/16 23:37:42 pw Exp $")
 
 (in-package :xlib)
 
@@ -2433,8 +2433,7 @@
 		 (kintern
 		   (substitute
 		     #\- #\_
-		     (#-excl string-upcase
-		      #+excl correct-case
+		     (string-upcase
 		      (subseq line start end))
 		     :test #'char=))))
 	  (when (null name)
