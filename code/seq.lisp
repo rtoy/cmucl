@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.49 2004/09/27 21:17:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.50 2004/10/22 18:17:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,8 +65,8 @@
 ;;;    Given an arbitrary type specifier, return a sane sequence type specifier
 ;;; that we can directly match.
 ;;;
-(defun result-type-or-lose (type &optional nil-ok)
-  (let ((type (specifier-type type)))
+(defun result-type-or-lose (seq-type &optional nil-ok)
+  (let ((type (specifier-type seq-type)))
     (cond
       ((eq type *empty-type*)
        (if nil-ok
@@ -77,6 +77,12 @@
 		  :format-control
 		  "NIL output type invalid for this sequence function."
 		  :format-arguments ())))
+      ((or (union-type-p type) (member-type-p type))
+       (error 'simple-type-error
+	      :datum type
+	      :exptected-type 'sequence
+	      :format-control "~S is too hairy for sequence functions."
+	      :format-arguments (list seq-type)))
       ((dolist (seq-type '(list string simple-vector bit-vector))
 	 (when (csubtypep type (specifier-type seq-type))
 	   (return seq-type))))
@@ -88,7 +94,7 @@
 	      :expected-type 'sequence
 	      :format-control
 	      "~S is a bad type specifier for sequence functions."
-	      :format-arguments (list type))))))
+	      :format-arguments (list seq-type))))))
 
 (define-condition index-too-large-error (type-error)
   ()
