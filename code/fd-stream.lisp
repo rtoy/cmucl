@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.6 2000/08/25 09:54:20 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.7 2000/10/16 17:32:44 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1470,12 +1470,13 @@
 	(make-fd-stream 1 :name "Standard Output" :output t :buffering :line))
   (setf *stderr*
 	(make-fd-stream 2 :name "Standard Error" :output t :buffering :line))
-  (let ((tty (unix:unix-open "/dev/tty" unix:o_rdwr #o666)))
-    (if tty
-	(setf *tty*
+  (let ((tty (and (not *batch-mode*)
+		  (unix:unix-open "/dev/tty" unix:o_rdwr #o666))))
+    (setf *tty*
+	  (if tty
 	      (make-fd-stream tty :name "the Terminal" :input t :output t
-			      :buffering :line :auto-close t))
-	(setf *tty* (make-two-way-stream *stdin* *stdout*))))
+			      :buffering :line :auto-close t)
+	      (make-two-way-stream *stdin* *stdout*))))
   nil)
 
 
