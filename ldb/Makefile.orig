@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.22 1991/06/06 11:58:13 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.23 1991/09/13 22:45:09 wlott Exp $ */
 INCLS = -I.
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -32,6 +32,7 @@ OS_SRC=mach-os.c
 OS_LINK_FLAGS=
 OS_OBJS=
 OS_LIBS=-lmach
+CPP=/usr/cs/lib/cpp
 #else
 #ifdef sun
 OS_SRC=sunos-os.c
@@ -39,6 +40,7 @@ OS_LINK_FLAGS=-Bstatic
 OS_OBJS=fake-mach.o
 OS_LIBS=
 #endif
+CPP=/lib/cpp
 #endif
 
 all: ldb.map
@@ -62,7 +64,7 @@ version:
 	echo 0 > version
 
 undefineds: undefineds.src
-	/lib/cpp undefineds.src | \
+	${CPP} undefineds.src | \
 	sed -e '/^#/d' -e '/^[ 	]*$$/d' -e 's/.*/-u ${UNDEFSYMPATTERN}/' | \
 	sort -u > ,undefineds
 	mv ,undefineds undefineds
@@ -100,7 +102,7 @@ assem.o: assem.s lisp.h lispregs.h globals.h
 #ifdef ibmrt
 
 assem.o: assem.s
-	/lib/cpp assem.s | as -o assem.o
+	${CPP} assem.s | as -o assem.o
 
 #endif
 
