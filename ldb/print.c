@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.10 1990/05/10 17:48:34 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.11 1990/05/13 22:49:09 ch Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -59,7 +59,8 @@ char *subtype_Names[] = {
     "symbol header",
     "character",
     "SAP",
-    "unbound marker"
+    "unbound marker",
+    "weak pointer"
 };
 
 static void indent(in)
@@ -337,6 +338,7 @@ static char *complex_slots[] = {"real: ", "imag: ", NULL};
 static char *code_slots[] = {"words: ", "entry: ", "debug: ", NULL};
 static char *fn_slots[] = {"self: ", "next: ", "name: ", "arglist: ", "type: ", NULL};
 static char *closure_slots[] = {"fn: ", NULL};
+static char *weak_pointer_slots[] = {"value: ", NULL};
 
 static void print_otherptr(obj)
 lispobj obj;
@@ -455,6 +457,10 @@ lispobj obj;
             case type_Sap:
                 NEWLINE;
                 printf("0x%08x", *ptr);
+                break;
+
+            case type_WeakPointer:
+		print_slots(weak_pointer_slots, 1, ptr);
                 break;
 
             case type_BaseCharacter:
