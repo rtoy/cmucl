@@ -14,11 +14,12 @@
 ;;; **********************************************************************
 (in-package "EXTENSIONS")
 
-(export '(letf* letf dovector deletef indenting-further
+(export '(letf* letf dovector deletef indenting-further file-comment
 		read-char-no-edit listen-skip-whitespace concat-pnames
 		iterate once-only collect do-anonymous undefined-value))
 
 (import 'lisp::whitespace-char-p)
+
 
 
 ;;; Undefined-Value  --  Public
@@ -28,6 +29,19 @@
 (proclaim '(inline undefined-value))
 (defun undefined-value ()
   '%undefined%)
+
+
+;;; FILE-COMMENT  --  Public
+;;;
+(defmacro file-comment (string)
+  "FILE-COMMENT String
+  When COMPILE-FILE sees this form at top-level, it places the constant string
+  in the run-time source location information.  DESCRIBE will print the file
+  comment for the file that a function was defined in.  The string is also
+  textually present in the FASL, so the RCS \"ident\" command can find it,
+  etc."
+  (declare (ignore string))
+  '(undefined-value))
 
 
 (defun skip-whitespace (&optional (stream *standard-input*))
