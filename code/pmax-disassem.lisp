@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.5 1990/02/11 19:24:50 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.6 1990/02/14 14:36:39 wlott Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -8,6 +8,8 @@
 ;;; 
 
 (in-package "MIPS" :use '("LISP"))
+
+(export '(register-name disassemble-code-vector))
 
 
 ;;;; Instruction Layout
