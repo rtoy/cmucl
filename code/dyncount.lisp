@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.3 1992/05/27 00:33:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.4 1992/12/31 13:36:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,20 +29,6 @@ VOP classification.
     be a very bad idea.")))
 
 ;;;; Hash utilities:
-
-(defmacro do-hash ((key-var value-var table &optional result)
-		   &body (body decls))
-  "DO-HASH (Key-Var Value-Var Table [Result]) Declaration* Form*
-   Iterate over the entries in a hash-table."
-  (let ((gen (gensym))
-	(n-more (gensym)))
-    `(with-hash-table-iterator (,gen ,table)
-       (loop
-	 (multiple-value-bind (,n-more ,key-var ,value-var)
-			      (,gen)
-	   ,@decls
-	   (unless ,n-more (return ,result))
-	   ,@body)))))
 
 (defun make-hash-table-like (table)
   "Make a hash-table with the same test as table."
