@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.25 2004/05/19 23:52:56 cwang Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.26 2004/06/28 22:48:32 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -50,13 +50,13 @@ static lispobj *current_dynamic_space_free_pointer;
 
 
 #define assert_static_space_bounds(ptr) do { \
-   if (!(STATIC_SPACE_START <= ptr && ptr < STATIC_SPACE_START + STATIC_SPACE_SIZE)) \
+   if (!((lispobj*)STATIC_SPACE_START <= ptr && ptr < (lispobj*)(STATIC_SPACE_START + STATIC_SPACE_SIZE))) \
       lose ("static-space overflow!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__); \
 } while (0)
 
 #define assert_readonly_space_bounds(ptr) do { \
-   if (!(READ_ONLY_SPACE_START <= ptr && ptr < READ_ONLY_SPACE_START + READ_ONLY_SPACE_SIZE)) \
+   if (!((lispobj*)READ_ONLY_SPACE_START <= ptr && ptr < (lispobj*)(READ_ONLY_SPACE_START + READ_ONLY_SPACE_SIZE))) \
       lose ("readonly-space overflow!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__); \
 } while (0)
