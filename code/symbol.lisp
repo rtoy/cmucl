@@ -29,10 +29,7 @@
 (defun makunbound (variable)
   "VARIABLE must evaluate to a symbol.  This symbol is made unbound,
   removing any value it may currently have."
-  (set variable
-       (%primitive make-other-immediate-type
-		   0
-		   vm:unbound-marker-type)))
+  (makunbound variable))
 
 (defun symbol-value (variable)
   "VARIABLE must evaluate to a symbol.  This symbol's current special
@@ -85,17 +82,19 @@
 (defun %put (symbol indicator value)
   "The VALUE is added as a property of SYMBOL under the specified INDICATOR.
   Returns VALUE."
-  (do ((pl (symbol-plist symbol) (cddr pl)))
-      ((endp pl)
+  (%primitive put symbol indicator value)
+#|  (do ((pl (symbol-plist symbol) (cddr pl)))
+      ((atom pl)
        (setf (symbol-plist symbol)
 	     (list* indicator value (symbol-plist symbol)))
        value)
-    (cond ((endp (cdr pl))
+    (cond ((atom (cdr pl))
 	   (error "~S has an odd number of items in its property list."
 		  symbol))
 	  ((eq (car pl) indicator)
 	   (rplaca (cdr pl) value)
-	   (return value)))))
+	   (return value))))|#
+  )
 
 (defun remprop (symbol indicator)
   "Look on property list of SYMBOL for property with specified
@@ -125,6 +124,9 @@
 		  place))
 	  ((eq (car plist) indicator)
 	   (return (cadr plist))))))
+
+(defun %putf (x y z)
+  (%primitive putf x y z))
 
 
 (defun get-properties (place indicator-list)
