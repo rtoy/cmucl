@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.4 1992/05/23 02:00:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.5 1992/05/30 12:56:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,14 @@
 ;;; Put your site name here...
 (setq *short-site-name* "Unknown")
 (setq *long-site-name* "Site name not initialized")
+
+;;; We would appreciate it if each site establishes a local maintainer who can
+;;; filter bug reports from novice users to make sure that they really have
+;;; found a bug.  Fill in the maintainer's address here..
+(setf (getf *herald-items* :bugs)
+      '("Send bug reports and questions to your local CMU CL maintainer, or to
+cmucl-bugs@cs.cmu.edu.
+Loaded subsystems:"))
 
 ;;; The following Hemlock initializations will error if run in a core without
 ;;; hemlock.
