@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.9 1991/02/08 13:34:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.10 1991/02/11 13:24:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -580,7 +580,6 @@
        (:EXPORT {symbol-name}*)
    All keywords except :SIZE can be used multiple times."
   (let ((body nil)
-	(n-package (gensym))
 	(package-name
 	 (etypecase package
 	   ;; Make sure we have a good package name to use.
@@ -588,7 +587,7 @@
 	   (symbol (symbol-name package)))))
     (multiple-value-bind
 	(nicknames uses shadows imports shadowed-imports exports interns size)
-	(parse-defpackage-keywords arguments n-package)
+	(parse-defpackage-keywords arguments package-name)
       ;; We set up the body of the form to return first things first
       ;; for readability, even though (since we're using PUSH) we
       ;; then have to NREVERSE at the end.  The order of operations
@@ -597,38 +596,39 @@
       ;;          3. :import-from and :return
       ;;          4. :export
       (when shadows
-	(push `(shadow (list ,@shadows) ,n-package)
+	(push `(shadow (list ,@shadows) ,package-name)
 	      body))
       (when shadowed-imports
-	(push `(shadowing-import (list ,@shadowed-imports) ,n-package)
+	(push `(shadowing-import (list ,@shadowed-imports) ,package-name)
 	      body))
       (when uses
-	(push `(use-package (list ,@uses) ,n-package)
+	(push `(use-package (list ,@uses) ,package-name)
 	      body))
       (when imports
-	(push `(import (list ,@imports) ,n-package)
+	(push `(import (list ,@imports) ,package-name)
 	      body))
       (when interns
 	(dolist (symbol interns)
-	  (push `(intern ,symbol ,n-package)
+	  (push `(intern ,symbol ,package-name)
 		body)))
       (when exports
-	(push `(export (list ,@exports) ,n-package)
+	(push `(export (list ,@exports) ,package-name)
 	      body))
       ;;
       ;; We do :nicknames and :sizeat the top (where it's convenient).
       ;; :Size is not implemented very well.  We assume, for absolutely
       ;; no good reason, that approximates 1/5 of the symbols in a
       ;; package will be external.
-      `(let ((,n-package
-	      (or (find-package ,package-name)
-		  (make-package
-		   ,package-name
-		   ,@(if nicknames `(:nicknames (list ,@nicknames)))
-		   ,@(if size `(:internal-symbols ,(round size 5/4)
-				:external-symbols ,(round size 5)))))))
+      `(progn
+	 (eval-when (compile load eval)
+	   (unless (find-package ,package-name)
+	     (make-package
+	      ,package-name
+	      ,@(if nicknames `(:nicknames (list ,@nicknames)))
+	      ,@(if size `(:internal-symbols ,(round size 5/4)
+			   :external-symbols ,(round size 5))))))
 	 ,@(nreverse body)
-	 ,n-package))))
+	 (find-package ,package-name)))))
 
 
 (defun parse-defpackage-keywords (rest-list n-package)
