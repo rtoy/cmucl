@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.37 1990/11/03 03:25:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.38 1990/11/16 04:44:12 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -765,30 +765,30 @@
 (define-vop (bignum-floor)
   (:translate bignum::%floor)
   (:policy :fast-safe)
-  (:args (a :scs (unsigned-reg) :target rem)
-	 (b :scs (unsigned-reg) :target rem-low)
-	 (c :scs (unsigned-reg) :to (:eval 1)))
+  (:args (num-high :scs (unsigned-reg) :target rem)
+	 (num-low :scs (unsigned-reg) :target rem-low)
+	 (denom :scs (unsigned-reg) :to (:eval 1)))
   (:arg-types unsigned-num unsigned-num unsigned-num)
   (:temporary (:scs (unsigned-reg) :from (:argument 1)) rem-low)
   (:temporary (:scs (unsigned-reg) :from (:eval 0)) temp)
   (:results (quo :scs (unsigned-reg) :from (:eval 0))
-	    (rem :scs (unsigned-reg) :from (:eval 0)))
+	    (rem :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num unsigned-num)
   (:generator 325 ; number of inst assuming targeting works.
-    (move rem a)
-    (move rem-low b)
+    (move rem num-high)
+    (move rem-low num-low)
     (flet ((maybe-subtract (&optional (guess temp))
 	     (inst subu temp guess 1)
-	     (inst and temp c)
+	     (inst and temp denom)
 	     (inst subu rem temp)))
-      (inst sltu quo rem c)
+      (inst sltu quo rem denom)
       (maybe-subtract quo)
       (dotimes (i 32)
 	(inst sll rem 1)
 	(inst srl temp rem-low 31)
 	(inst or rem temp)
 	(inst sll rem-low 1)
-	(inst sltu temp rem c)
+	(inst sltu temp rem denom)
 	(inst sll quo 1)
 	(inst or quo temp)
 	(maybe-subtract)))
