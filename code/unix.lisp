@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.96 2004/07/25 19:32:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.97 2004/08/13 11:33:46 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1431,7 +1431,7 @@
                  fd offset whence)))
     (if (minusp result)
         (progn
-          (values nil unix-errno))
+          (values nil (unix-errno)))
         (values result 0))))
 
 ;;; Unix-mkdir accepts a name and a mode and attempts to create the
