@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.30 1991/12/22 01:27:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.31 1992/02/13 20:39:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -390,13 +390,13 @@
 	   nil))))
 
 
-;;; DO-COERCE-EFFICENCY-NOTE  --  Internal
+;;; DO-COERCE-EFFICIENCY-NOTE  --  Internal
 ;;;
-;;;    If policy indicates, give an efficency note for doing the a coercion
+;;;    If policy indicates, give an efficiency note for doing the a coercion
 ;;; Vop, where Op is the operand we are coercing for and Dest-TN is the
 ;;; distinct destination in a move.
 ;;;
-(defun do-coerce-efficency-note (vop op dest-tn)
+(defun do-coerce-efficiency-note (vop op dest-tn)
   (declare (type vop-info vop) (type tn-ref op) (type (or tn null) dest-tn))
   (let* ((note (or (template-note vop) (template-name vop)))
 	 (cost (template-cost vop))
@@ -502,8 +502,8 @@
 		   (sc-allowed-by-primitive-type i-sc ptype))
 	  (let ((res (find-move-vop op-tn write-p i-sc ptype #'sc-move-vops)))
 	    (when res
-	      (when (>= (vop-info-cost res) *efficency-note-cost-threshold*)
-		(do-coerce-efficency-note res op dest-tn))
+	      (when (>= (vop-info-cost res) *efficiency-note-cost-threshold*)
+		(do-coerce-efficiency-note res op dest-tn))
 	      (let ((temp (make-representation-tn ptype i)))
 		(change-tn-ref-tn op temp)
 		(cond
@@ -521,7 +521,7 @@
 ;;;    Scan some operands and call EMIT-COERCE-VOP on any for which we can't
 ;;; load the operand.  The coerce VOP is inserted Before the specified VOP.
 ;;; Dest-TN is the destination TN if we are doing a move or move-arg, and is
-;;; NIL otherwise.  This is only used for efficency notes.
+;;; NIL otherwise.  This is only used for efficiency notes.
 ;;;
 (proclaim '(inline coerce-some-operands))
 (defun coerce-some-operands (ops dest-tn load-scs before)
@@ -646,8 +646,9 @@
 		 (delete-vop vop))
 		((eq res info))
 		(res
-		 (when (>= (vop-info-cost res) *efficency-note-cost-threshold*)
-		   (do-coerce-efficency-note res args y))
+		 (when (>= (vop-info-cost res)
+			   *efficiency-note-cost-threshold*)
+		   (do-coerce-efficiency-note res args y))
 		 (emit-move-template node block res x y vop)
 		 (delete-vop vop))
 		(t
