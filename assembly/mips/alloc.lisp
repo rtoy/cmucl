@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.4 1993/05/07 07:35:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.5 1993/05/21 18:13:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,8 +98,8 @@
   (let ((stack-space-needed (* (logandc2 (1+ (length regs)) 1) word-bytes))
 	(sc-var (gensym "DESCRIPTOR-REG-SC-")))
     `(let ((,sc-var (sc-or-lose 'descriptor-reg)))
-       (inst subu csp-tn ,stack-space-needed)
-       ,(iterate repeat ((remaining regs) (offset 0))
+       (inst addu csp-tn ,stack-space-needed)
+       ,(iterate repeat ((remaining regs) (offset (- word-bytes)))
 	  (if remaining
 	      (let* ((reg (car remaining))
 		     (tn-var (gensym (concatenate 'string (symbol-name reg)
@@ -109,10 +109,10 @@
 			(make-random-tn :kind :normal :sc ,sc-var
 					:offset ,reg-offset)))
 		   (inst sw ,tn-var csp-tn ,offset)
-		   ,(repeat (cdr remaining) (+ offset word-bytes))
+		   ,(repeat (cdr remaining) (- offset word-bytes))
 		   (inst lw ,tn-var csp-tn ,offset)))
 	      `(progn ,@body)))
-       (inst addu csp-tn ,stack-space-needed))))
+       (inst subu csp-tn ,stack-space-needed))))
 
 (define-assembly-routine
     (large-alloc
