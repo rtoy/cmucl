@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.3 1990/12/11 22:16:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.4 1990/12/15 20:26:00 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -526,7 +526,6 @@
   (:results (result :scs (unsigned-reg))
 	    (borrow :scs (unsigned-reg)))
   (:result-types unsigned-num positive-fixnum)
-  (:temporary (temp :scs (non-descriptor-reg)))
   (:generator 4
     (inst subcc zero-tn c 1)
     (inst subxcc result a b)
