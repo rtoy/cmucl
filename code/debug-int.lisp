@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.60 1993/07/22 00:02:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.61 1993/07/24 01:45:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2386,15 +2386,18 @@
 		   (code-location-debug-function code-location)))
 	    (sources (c::compiled-debug-info-source info))
 	    (len (length sources)))
-	 (declare (list sources))
-	 (if (= len 1)
-	     (car sources)
-	     (do ((prev sources src)
-		  (src (cdr sources) (cdr src))
-		  (offset (code-location-top-level-form-offset code-location)))
-		 ((null src) (car prev))
-	       (when (< offset (c::debug-source-source-root (car src)))
-		 (return (car prev)))))))
+       (declare (list sources))
+       (when (zerop len)
+	 (debug-signal 'no-debug-blocks :debug-function
+		       (code-location-debug-function code-location)))
+       (if (= len 1)
+	   (car sources)
+	   (do ((prev sources src)
+		(src (cdr sources) (cdr src))
+		(offset (code-location-top-level-form-offset code-location)))
+	       ((null src) (car prev))
+	     (when (< offset (c::debug-source-source-root (car src)))
+	       (return (car prev)))))))
     (interpreted-code-location
      (first
       (let ((c::*lexical-environment* (c::make-null-environment)))
