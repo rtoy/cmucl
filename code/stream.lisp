@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.45 2001/03/04 20:12:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.46 2001/04/07 13:45:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -895,6 +895,7 @@
 	    (:include lisp-stream
 		      (in #'concatenated-in)
 		      (bin #'concatenated-bin)
+		      (n-bin #'concatenated-n-bin)
 		      (misc #'concatenated-misc))
 	    (:print-function %print-concatenated-stream)
 	    (:constructor make-concatenated-stream (&rest streams)))
@@ -923,6 +924,22 @@
 		  (setf (concatenated-stream-streams stream) (cdr current))))))
   (in-fun concatenated-in read-char)
   (in-fun concatenated-bin read-byte))
+
+(defun concatenated-n-bin (stream buffer start numbytes eof-errorp)
+  (do ((current (concatenated-stream-streams stream) (cdr current))
+       (current-start start)
+       (remaining-bytes numbytes))
+      ((null current)
+       (if eof-errorp
+	(error 'end-of-file :stream stream)
+	(- numbytes remaining-bytes)))
+    (let* ((stream (car current))
+           (bytes-read (read-n-bytes stream buffer current-start
+	                             remaining-bytes nil)))
+      (incf current-start bytes-read)
+      (decf remaining-bytes bytes-read)
+      (when (zerop remaining-bytes) (return numbytes)))
+    (setf (concatenated-stream-streams stream) (cdr current))))
 
 (defun concatenated-misc (stream operation &optional arg1 arg2)
   (let ((left (concatenated-stream-streams stream)))
