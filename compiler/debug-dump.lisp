@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.30 1992/07/14 03:41:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.31 1992/08/03 19:03:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; 
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package :c)
 
 (defvar *byte-buffer*)
 (declaim (type (vector (unsigned-byte 8)) *byte-buffer*))
@@ -39,11 +39,10 @@
   (kind nil :type location-kind)
   ;;
   ;; The label pointing to the interesting code location.
-  (label nil :type (or label index))
+  (label nil :type (or label index null))
   ;;
   ;; The VOP that emitted this location (for node, save-set, ir2-block, etc.)
   (vop nil :type vop))
-
 
 ;;; NOTE-DEBUG-LOCATION  --  Interface
 ;;;
@@ -52,12 +51,13 @@
 ;;; thus want debug info.
 ;;;
 (defun note-debug-location (vop label kind)
-  (declare (type vop vop) (type (or label index) label)
+  (declare (type vop vop) (type (or label null) label)
 	   (type location-kind kind))
-  (setf (ir2-block-locations (vop-block vop))
-	(nconc (ir2-block-locations (vop-block vop))
-	       (list (make-location-info kind label vop))))
-  (undefined-value))
+  (let ((location (make-location-info kind label vop)))
+    (setf (ir2-block-locations (vop-block vop))
+	  (nconc (ir2-block-locations (vop-block vop))
+		 (list location)))
+    location))
 
 
 ;;; IR2-BLOCK-ENVIRONMENT  --  Interface
