@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.33 1990/04/24 19:09:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.34 1990/05/25 20:03:52 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -315,4 +315,12 @@
 
 (define-vop (structure-index-set word-index-set)
   (:variant vm:vector-data-offset vm:other-pointer-type))
+
+
+
+
+;;;; Extra random indexers.
+
+(define-vop (code-constant-set word-index-set)
+  (:variant vm:code-constants-offset vm:other-pointer-type))
 
