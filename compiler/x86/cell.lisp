@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.10 1999/12/04 16:03:55 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.11 1999/12/08 14:19:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -338,20 +338,18 @@
   (:args (object :scs (descriptor-reg) :to :eval)
 	 (slot :scs (any-reg) :to :result)
 	 (old-value :scs (descriptor-reg any-reg) :target eax)
-	 (new-value :scs (descriptor-reg any-reg) :target temp))
+	 (new-value :scs (descriptor-reg any-reg)))
   (:arg-types instance positive-fixnum * *)
   (:temporary (:sc descriptor-reg :offset eax-offset
 		   :from (:argument 2) :to :result :target result)  eax)
-  (:temporary (:sc descriptor-reg :from (:argument 3) :to :result) temp)
   (:results (result :scs (descriptor-reg any-reg)))
   (:policy :fast-safe)
   (:generator 5
     (move eax old-value)
-    (move temp new-value)
     (inst cmpxchg (make-ea :dword :base object :index slot :scale 1
 			   :disp (- (* instance-slots-offset word-bytes)
 				    instance-pointer-type))
-	  temp)
+	  new-value)
     (move result eax)))
 
 (defknown %instance-xadd (instance index fixnum) fixnum ())

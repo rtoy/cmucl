@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.13 1999/12/04 16:05:21 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.14 1999/12/08 14:19:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -433,19 +433,17 @@
        (:args (object :scs (descriptor-reg) :to :result)
 	      (index :scs (any-reg) :to :result)
 	      (old-value :scs ,scs :target eax)
-	      (new-value :scs ,scs :target temp))
+	      (new-value :scs ,scs))
        (:arg-types ,type tagged-num ,el-type ,el-type)
        (:temporary (:sc ,(first scs) :offset eax-offset
 		    :from (:argument 2) :to :result :target result) eax)
-       (:temporary (:sc ,(first scs) :from (:argument 3) :to :result) temp)
        (:results (result :scs ,scs))
        (:result-types ,el-type)
        (:generator 5
 	 (move eax old-value)
-	 (move temp new-value)
 	 (inst cmpxchg (make-ea :dword :base object :index index :scale 1
 				:disp (- (* ,offset word-bytes) ,lowtag))
-	       temp)
+	       new-value)
 	 (move result eax)))
      (define-vop (,(symbolicate name "-C"))
        ,@(when translate
@@ -453,19 +451,17 @@
        (:policy :fast-safe)
        (:args (object :scs (descriptor-reg) :to :result)
 	      (old-value :scs ,scs :target eax)
-	      (new-value :scs ,scs :target temp))
+	      (new-value :scs ,scs))
        (:info index)
        (:arg-types ,type (:constant (signed-byte 30)) ,el-type ,el-type)
        (:temporary (:sc ,(first scs) :offset eax-offset
 		    :from (:argument 1) :to :result :target result)  eax)
-       (:temporary (:sc ,(first scs) :from (:argument 2) :to :result) temp)
        (:results (result :scs ,scs))
        (:result-types ,el-type)
        (:generator 4
 	 (move eax old-value)
-	 (move temp new-value)
 	 (inst cmpxchg (make-ea :dword :base object
 				:disp (- (* (+ ,offset index) word-bytes)
 					 ,lowtag))
-	       temp)
+	       new-value)
 	 (move result eax)))))

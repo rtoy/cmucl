@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.6 1999/03/08 00:53:34 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.7 1999/12/08 14:19:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,18 +87,16 @@
 (define-vop (cell-set-conditional)
   (:args (object :scs (descriptor-reg) :to :eval)
 	 (old-value :scs (descriptor-reg any-reg) :target eax)
-	 (new-value :scs (descriptor-reg any-reg) :target temp))
+	 (new-value :scs (descriptor-reg any-reg)))
   (:temporary (:sc descriptor-reg :offset eax-offset
 		   :from (:argument 1) :to :result :target result)  eax)
-  (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
   (:variant-vars offset lowtag)
   (:results (result :scs (descriptor-reg any-reg)))
   (:generator 4
     (move eax old-value)
-    (move temp new-value)
     (inst cmpxchg (make-ea :dword :base object
 			   :disp (- (* offset word-bytes) lowtag))
-	  temp)
+	  new-value)
     (move result eax)))
 
 ;;; X86 special
@@ -157,19 +155,17 @@
 (define-vop (slot-set-conditional)
   (:args (object :scs (descriptor-reg) :to :eval)
 	 (old-value :scs (descriptor-reg any-reg) :target eax)
-	 (new-value :scs (descriptor-reg any-reg) :target temp))
+	 (new-value :scs (descriptor-reg any-reg)))
   (:temporary (:sc descriptor-reg :offset eax-offset
 		   :from (:argument 1) :to :result :target result)  eax)
-  (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
   (:variant-vars base lowtag)
   (:results (result :scs (descriptor-reg any-reg)))
   (:info offset)
   (:generator 4
     (move eax old-value)
-    (move temp new-value)
     (inst cmpxchg (make-ea :dword :base object
 			   :disp (- (* (+ base offset) word-bytes) lowtag))
-	  temp)
+	  new-value)
     (move result eax)))
 
 ;;; X86 special
