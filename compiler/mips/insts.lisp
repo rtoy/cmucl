@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.46 1993/05/07 13:18:46 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.47 1993/05/18 23:36:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -200,11 +200,12 @@
   (rt :field (byte 5 16) :type 'reg)
   (immediate :field (byte 16 0) :sign-extend t))
 
-(defparameter jump-printer
-  #'(lambda (value stream dstate)
-      (let ((addr (ash value 2)))
-	(disassem:maybe-note-assembler-routine addr t dstate)
-	(write addr :base 16 :radix t :stream stream))))
+(eval-when (compile eval load)
+  (defparameter jump-printer
+    #'(lambda (value stream dstate)
+	(let ((addr (ash value 2)))
+	  (disassem:maybe-note-assembler-routine addr t dstate)
+	  (write addr :base 16 :radix t :stream stream)))))
 
 (disassem:define-instruction-format
     (jump 32 :default-printer '(:name :tab target))
@@ -623,6 +624,16 @@
   (:emitter
    (emit-relative-branch segment #b000100 0 0 target)))
 
+(define-instruction bal (segment target)
+  (:declare (type label target))
+  (:printer immediate ((op bcond-op) (rs 0) (rt #b01001)
+		       (immediate nil :type 'relative-label))
+	    '(:name :tab immediate))
+  (:attributes branch)
+  (:delay 1)
+  (:emitter
+   (emit-relative-branch segment bcond-op 0 #b01001 target)))
+
 
 (define-instruction beq (segment r1 r2-or-target &optional target)
   (:declare (type tn r1)
@@ -722,11 +733,12 @@
    (emit-relative-branch segment bcond-op reg #b01001 target)))
 
 (defconstant j-printer
- '(:name :tab (:choose rs target)))
+  '(:name :tab (:choose rs target)))
 
 (define-instruction j (segment target)
   (:declare (type (or tn fixup) target))
-  (:printer register ((op special-op) (rt 0) (rd 0) (funct #b001000)) j-printer)
+  (:printer register ((op special-op) (rt 0) (rd 0) (funct #b001000))
+	    j-printer)
   (:printer jump ((op #b000010)) j-printer)
   (:attributes branch)
   (:dependencies (reads target))
@@ -1072,6 +1084,7 @@
   (:emitter
    (emit-header-data segment function-header-type)))
 
+#-gengc
 (define-instruction lra-header-word (segment)
   :pinned
   (:cost 0)
@@ -1115,6 +1128,8 @@
 			     (component-header-length))))))
 
 ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
+;;      = lra - (header + label-offset)
+#-gengc
 (define-instruction compute-code-from-lra (segment dst src label temp)
   (:declare (type tn dst src temp) (type label label))
   (:attributes variable-length)
@@ -1127,7 +1142,21 @@
 			  (- (+ (label-position label posn delta-if-after)
 				(component-header-length)))))))
 
+;; code = ra - header - label-offset + other-pointer-tag
+;;      = ra + other-pointer-tag - (header + label-offset)
+#+gengc
+(define-instruction compute-code-from-ra (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:vop-var vop)
+  (:emitter
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (- other-pointer-type
+			     (+ (label-position label posn delta-if-after)
+				(component-header-length)))))))
+
 ;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
+#-gengc
 (define-instruction compute-lra-from-code (segment dst src label temp)
   (:declare (type tn dst src temp) (type label label))
   (:attributes variable-length)
@@ -1139,6 +1168,19 @@
 		      #'(lambda (label posn delta-if-after)
 			  (+ (label-position label posn delta-if-after)
 			     (component-header-length))))))
+
+;; ra = code - other-pointer-tag + header + label-offset
+;;    = code + header + label-offset - other-pointer-tag
+#+gengc
+(define-instruction compute-ra-from-code (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:vop-var vop)
+  (:emitter
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (- (+ (label-position label posn delta-if-after)
+				(component-header-length))
+			     other-pointer-type)))))
 
 
 ;;;; Loads and Stores
@@ -1305,3 +1347,40 @@
   (:delay 0)
   (:emitter
    (emit-fp-load/store-inst segment #b111001 reg 1 base index)))
+
+#+gengc 
+(defun sw-and-maybe-remember (segment vop reg base index slot-p)
+  (assemble (segment vop)
+    (sc-case reg
+      ((any-reg null zero)
+       (inst sw reg base index))
+      (descriptor-reg
+       (cond (slot-p
+	      (inst addu lip-tn base index)
+	      (inst sw lip-tn ssb-tn 0)
+	      (inst sw reg lip-tn 0))
+	     (t
+	      (inst sw base ssb-tn 0)
+	      (inst sw reg base index)))
+       (inst addu ssb-tn 4)))))
+
+#+gengc
+(define-instruction sw-and-remember-slot (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:dependencies (reads base) (reads reg) (writes :memory) (writes lip-tn))
+  (:attributes variable-length)
+  (:vop-var vop)
+  (:emitter
+   (sw-and-maybe-remember segment vop reg base index t)))
+
+#+gengc
+(define-instruction sw-and-remember-object
+		    (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:dependencies (reads base) (reads reg) (writes :memory) (writes lip-tn))
+  (:attributes variable-length)
+  (:vop-var vop)
+  (:emitter
+   (sw-and-maybe-remember segment vop reg base index t)))
