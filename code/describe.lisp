@@ -199,9 +199,13 @@
       (describe (cadr plist)))))
 
 (defun describe-structure (x)
-  (format t "~&~S is a structure of type ~A." x (c::structure-ref x 0))
-  (dolist (slot (cddr (inspect::describe-parts x)))
-    (format t "~%~A: ~S." (car slot) (cdr slot))))
+  (cond ((and (fboundp 'pcl::std-instance-p)
+	      (pcl::std-instance-p x))
+	 (pcl::describe-object x *standard-output*))
+	(t
+	 (format t "~&~S is a structure of type ~A." x (c::structure-ref x 0))
+	 (dolist (slot (cddr (inspect::describe-parts x)))
+	   (format t "~%~A: ~S." (car slot) (cdr slot))))))
 
 (defun describe-array (x)
   (let ((rank (array-rank x)))
@@ -235,6 +239,8 @@
      (describe-function-lex-closure x macro-p))
     ((#.vm:function-header-type #.vm:closure-function-header-type)
      (describe-function-compiled x macro-p))
+    (#.vm:funcallable-instance-header-type
+     (pcl::describe-object x *standard-output*))
     (t
      (format t "~&It is an unknown type of function."))))
 
@@ -249,11 +255,11 @@
 	    (*print-length* nil))
 	(multiple-value-bind
 	    (type where)
-	    (if (stringp name)
-		(values (%function-header-type x)
-			:defined)
+	    (if (or (symbolp name) (and (listp name) (eq (car name) 'setf)))
 		(values (type-specifier (info function type name))
-			(info function where-from name)))
+			(info function where-from name))
+		(values (%function-header-type x)
+			:defined))
 	  (when (consp type)
 	    (format t "~&Its ~(~A~) argument types are:~%  ~S"
 		    where (second type))
