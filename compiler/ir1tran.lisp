@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.130 2002/08/12 16:08:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.131 2002/11/21 20:02:26 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1248,16 +1248,13 @@
 ;;; Make-Keyword  --  Internal
 ;;;
 ;;;    Make the keyword for a keyword arg, checking that the keyword isn't
-;;; already used by one of the Vars.  We also check that the keyword isn't the
-;;; magical :allow-other-keys.
+;;; already used by one of the Vars.
 ;;;
 (defun make-keyword (symbol vars keywordify)
   (declare (symbol symbol) (list vars) (values symbol))
   (let ((key (if (and keywordify (not (keywordp symbol)))
 		 (intern (symbol-name symbol) "KEYWORD")
 		 symbol)))
-    (when (eq key :allow-other-keys)
-      (compiler-error "You can't have a keyword arg called :allow-other-keys."))
     (dolist (var vars)
       (let ((info (lambda-var-arg-info var)))
 	(when (and info

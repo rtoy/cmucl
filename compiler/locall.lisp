@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.51 2002/08/21 17:55:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.52 2002/11/21 20:02:26 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -548,7 +548,9 @@
 	 (args (combination-args call))
 	 (more (nthcdr max args))
 	 (flame (policy call (or (> speed brevity) (> space brevity))))
-	 (loser nil))
+	 (loser nil)
+	 (allowp nil)
+	 (allow-found nil))
     (collect ((temps)
 	      (more-temps)
 	      (ignores)
@@ -594,17 +596,29 @@
 	    (let ((name (continuation-value cont))
 		  (dummy (first temp))
 		  (val (second temp)))
+	      ;; FIXME:  check whether KEY was supplied earlier
+	      (when (and (eq name :allow-other-keys) (not allow-found))
+		(let ((val (second key)))
+		  (cond ((constant-continuation-p val)
+			 (setq allow-found t
+			       allowp (continuation-value val)))
+			(t
+			 (when flame
+			   (compiler-note "non-constant :ALLOW-OTHER-KEYS value"))
+			 (setf (basic-combination-kind call) :error)
+			 (return-from convert-more-call)))))
 	      (dolist (var (key-vars)
 			   (progn
 			     (ignores dummy val)
-			     (setq loser name)))
+			     (unless (eq name :allow-other-keys)
+			       (setq loser name))))
 		(let ((info (lambda-var-arg-info var)))
 		  (when (eq (arg-info-keyword info) name)
 		    (ignores dummy)
 		    (supplied (cons var val))
 		    (return)))))))
 	
-	(when (and loser (not (optional-dispatch-allowp fun)))
+	(when (and loser (not (optional-dispatch-allowp fun)) (not allowp))
 	  (compiler-warning "Function called with unknown argument keyword ~S."
 			    loser)
 	  (setf (basic-combination-kind call) :error)
