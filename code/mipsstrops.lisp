@@ -90,31 +90,48 @@ be simple strings."
 	(if (char/= (schar string1 index1) (schar string2 index2))
 	    (return index1)))))))
 
+(defmacro maybe-sap-maybe-string ((var) &body body)
+  `(etypecase ,var
+     (system-area-pointer
+      (macrolet ((byte-ref (index)
+		   `(sap-ref-8 ,',var ,index))
+		 (char-ref (index)
+		   `(code-char (byte-ref ,index))))
+	,@body))
+     (simple-string
+      (macrolet ((char-ref (index)
+		   `(schar ,',var ,index))
+		 (byte-ref (index)
+		   `(char-code (char-ref ,index))))
+	,@body))))
+
 (defun %sp-find-character-with-attribute (string start end table mask)
   (declare (type (simple-array (unsigned-byte 8) (256)) table)
-	   (simple-string string)
+	   (type (or simple-string system-area-pointer) string)
 	   (fixnum start end mask))
   "%SP-Find-Character-With-Attribute  String, Start, End, Table, Mask
   The codes of the characters of String from Start to End are used as indices
   into the Table, which is a U-Vector of 8-bit bytes. When the number picked
   up from the table bitwise ANDed with Mask is non-zero, the current
   index into the String is returned. The corresponds to SCANC on the Vax."
-  (do ((index start (1+ index)))
-      ((>= index end) nil)
-    (declare (fixnum index))
-    (unless (zerop (logand (aref table (char-code (schar string index))) mask))
-      (return index))))
+  (maybe-sap-maybe-string (string)
+    (do ((index start (1+ index)))
+	((>= index end) nil)
+      (declare (fixnum index))
+      (unless (zerop (logand (aref table (byte-ref index)) mask))
+	(return index)))))
 
 (defun %sp-reverse-find-character-with-attribute (string start end table mask)
   "Like %SP-Find-Character-With-Attribute, only sdrawkcaB."
-  (declare (simple-string string)
+  (declare (type (or simple-string system-area-pointer) string)
 	   (fixnum start end mask)
 	   (type (array (unsigned-byte 8) (256)) table))
-  (do ((index (1- end) (1- index)))
-      ((< index start) nil)
-    (declare (fixnum index))
-    (unless (zerop (logand (aref table (char-code (schar string index))) mask))
-      (return index))))
+  (maybe-sap-maybe-string (string)
+    (do ((index (1- end) (1- index)))
+	((< index start) nil)
+      (declare (fixnum index))
+      (unless (zerop (logand (aref table (byte-ref index)) mask))
+	(return index)))))
 
 (defun %sp-find-character (string start end character)
   "%SP-Find-Character  String, Start, End, Character
@@ -122,52 +139,59 @@ be simple strings."
   found, the corresponding index into String is returned, otherwise NIL is
   returned."
   (declare (fixnum start end)
-	   (simple-string string)
+	   (type (or simple-string system-area-pointer) string)
 	   (base-character character))
-  (do ((index start (1+ index)))
-      ((>= index end) nil)
-    (declare (fixnum index))
-    (when (char= (schar string index) character)
-      (return index))))
+  (maybe-sap-maybe-string (string)
+    (do ((index start (1+ index)))
+	((>= index end) nil)
+      (declare (fixnum index))
+      (when (char= (char-ref index) character)
+	(return index)))))
 
 (defun %sp-reverse-find-character (string start end character)
-  (declare (simple-string string))
-  (declare (fixnum start end))
+  (declare (type (or simple-string system-area-pointer) string)
+	   (fixnum start end)
+	   (base-character character))
   "%SP-Reverse-Find-Character  String, Start, End, Character
   Searches String for Character from End to Start.  If the character is
   found, the corresponding index into String is returned, otherwise NIL is
   returned."
-  (do ((index (1- end) (1- index))
-       (terminus (1- start)))
-      ((= index terminus) nil)
-    (declare (fixnum terminus index))
-    (if (char= (char string index) character)
-	(return index))))
+  (maybe-sap-maybe-string (string)
+    (do ((index (1- end) (1- index))
+	 (terminus (1- start)))
+	((= index terminus) nil)
+      (declare (fixnum terminus index))
+      (if (char= (char-ref index) character)
+	  (return index)))))
 
 (defun %sp-skip-character (string start end character)
-  (declare (simple-string string))
-  (declare (fixnum start end))
+  (declare (type (or simple-string system-area-pointer) string)
+	   (fixnum start end)
+	   (base-character character))
   "%SP-Skip-Character  String, Start, End, Character
   Returns the index of the first character between Start and End which
   is not Char=  to Character, or NIL if there is no such character."
-  (do ((index start (1+ index)))
-      ((= index end) nil)
-    (declare (fixnum index))
-    (if (char/= (char string index) character)
-	(return index))))
+  (maybe-sap-maybe-string (string)
+    (do ((index start (1+ index)))
+	((= index end) nil)
+      (declare (fixnum index))
+      (if (char/= (char-ref index) character)
+	  (return index)))))
 
 (defun %sp-reverse-skip-character (string start end character)
-  (declare (simple-string string))
-  (declare (fixnum start end))
+  (declare (type (or simple-string system-area-pointer) string)
+	   (fixnum start end)
+	   (base-character character))
   "%SP-Skip-Character  String, Start, End, Character
   Returns the index of the last character between Start and End which
   is not Char=  to Character, or NIL if there is no such character."
-  (do ((index (1- end) (1- index))
-       (terminus (1- start)))
-      ((= index terminus) nil)
-    (declare (fixnum terminus index))
-    (if (char/= (char string index) character)
-	(return index))))
+  (maybe-sap-maybe-string (string)
+    (do ((index (1- end) (1- index))
+	 (terminus (1- start)))
+	((= index terminus) nil)
+      (declare (fixnum terminus index))
+      (if (char/= (char-ref index) character)
+	  (return index)))))
 
 (defun %sp-string-search (string1 start1 end1 string2 start2 end2)
   "%SP-String-Search  String1, Start1, End1, String2, Start2, End2
