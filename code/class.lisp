@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.17 1993/03/13 17:30:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.18 1993/03/14 12:12:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,12 +201,12 @@
 ;;; Non-structure "typed" defstructs are a special case, and don't have a
 ;;; corresponding class.
 ;;;
-(defstruct (basic-structure-class (:include class)))
-
-(defstruct (structure-class (:include basic-structure-class))
+(defstruct (basic-structure-class (:include class))
   ;;
   ;; Structure print function, or NIL if none.
-  (print-function nil :type (or function symbol null))
+  (print-function nil :type (or function symbol null)))
+
+(defstruct (structure-class (:include basic-structure-class))
   ;;
   ;; MAKE-LOAD-FORM method, or NIL if none. :J-D-I-N dumps the slots.
   ;; :IGNORE-IT is used for magic structures which the compiler inserts in IR1,
