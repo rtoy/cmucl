@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.3 1990/12/06 17:35:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.4 1990/12/17 17:59:06 wlott Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -275,8 +275,8 @@
   (frob %double-float/single-float %double-float fstod
     single-reg single-float double-reg double-float))
 
-(macrolet ((frob (name from-sc from-type inst)
-	     `(define-vop (,name)
+(macrolet ((frob (trans from-sc from-type inst)
+	     `(define-vop (,(symbolicate trans "/" from-type))
 		(:args (x :scs (,from-sc) :target temp))
 		(:temporary (:from (:argument 0) :sc single-reg) temp)
 		(:temporary (:scs (signed-stack)) stack-temp)
@@ -284,7 +284,7 @@
 			     :load-if (not (sc-is y signed-stack))))
 		(:arg-types ,from-type)
 		(:result-types signed-num)
-		(:translate %unary-truncate)
+		(:translate ,trans)
 		(:policy :fast-safe)
 		(:note "inline float truncate")
 		(:vop-var vop)
@@ -301,8 +301,10 @@
 			   (* (tn-offset stack-temp) vm:word-bytes))
 		     (inst ld y (current-nfp-tn vop)
 			   (* (tn-offset stack-temp) vm:word-bytes))))))))
-  (frob %unary-truncate/single-float single-reg single-float fstoi)
-  (frob %unary-truncate/double-float double-reg double-float fdtoi))
+  (frob %unary-truncate single-reg single-float fstoi)
+  (frob %unary-truncate double-reg double-float fdtoi)
+  (frob %unary-round single-reg single-float fstoir)
+  (frob %unary-round double-reg double-float fdtoir))
 
 
 (define-vop (make-single-float)
