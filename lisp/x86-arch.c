@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.20 2003/10/24 04:29:14 toy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.21 2004/05/18 21:45:30 cwang Exp $ 
  *
  */
 
@@ -35,7 +35,7 @@ char * arch_init(void)
 /*
  * Assuming we get here via an INT3 xxx instruction, the PC now
  * points to the interrupt code (lisp value) so we just move past
- * it. Skip the code, then if the code if an error-trap or
+ * it. Skip the code, then if the code is an error-trap or
  * Cerror-trap then skip the data bytes that follow.
  */
 
