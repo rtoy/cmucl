@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.150 2004/07/20 13:29:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.151 2004/07/21 04:01:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2328,8 +2328,8 @@
   ;; Note that the body of the loop doesn't do anything unless ~a&c&m
   ;; is non-zero or if ~c&a&m is non-zero.  So rather than start m at
   ;; #x80000000, we can start at the most significant bit where ~a&c
-  ;; or ~c&a is non-zero, i.e., where MSB of a^c.
-  (let ((m (ash 1 (1- (integer-length a c)))))
+  ;; or ~c&a is non-zero, i.e., where MSB of a^c is 1.
+  (let ((m (ash 1 (1- (integer-length (logxor a c))))))
     (loop while (not (zerop m))
        do
        (cond ((/= (logandc2 (logand c m) a) 0)
