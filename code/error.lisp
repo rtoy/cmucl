@@ -13,7 +13,7 @@
 ;;;
 
 (in-package "CONDITIONS")
-
+(use-package "EXTENSIONS")
 #-new-compiler
 (eval-when (compile)
   (setq lisp::*bootstrap-defmacro* t))
