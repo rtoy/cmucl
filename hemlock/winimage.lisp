@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/winimage.lisp,v 1.2 1991/02/08 16:39:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/winimage.lisp,v 1.3 1994/10/07 20:48:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 (setf (dis-line-line (car the-sentinel))
       (make-line :number most-positive-fixnum :chars ""))
 (setf (dis-line-position (car the-sentinel)) most-positive-fixnum)
-(setf (dis-line-old-chars (car the-sentinel)) :unique-thing))
+(setf (dis-line-old-chars (car the-sentinel)) :unique-thing)
 
 
 (defconstant unaltered-bits #b000
