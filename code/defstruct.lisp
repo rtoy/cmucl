@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.89 2003/06/18 09:23:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.90 2003/06/20 10:34:37 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1293,7 +1293,7 @@
 ;;; the type's layout.
 ;;;
 (declaim (inline typep-to-layout))
-(defun typep-to-layout (obj layout)
+(defun typep-to-layout (obj layout &optional no-error)
   (declare (type layout layout) (optimize (speed 3) (safety 0)))
   (when (layout-invalid layout)
     (error "Obsolete structure accessor function called."))
@@ -1302,8 +1302,11 @@
 	     (obj-layout (%instance-layout obj)))
 	 (cond ((eq obj-layout layout) t)
 	       ((layout-invalid obj-layout)
-		(error 'layout-invalid :expected-type (layout-class obj-layout)
-		       :datum obj))
+		(if no-error
+		    nil
+		    (error 'layout-invalid
+			   :expected-type (layout-class obj-layout)
+			   :datum obj)))
 	       (t
 		(and (> (layout-inheritance-depth obj-layout) depth)
 		     (eq (svref (layout-inherits obj-layout) depth)
@@ -1437,7 +1440,7 @@
 	(setf (symbol-function (dd-predicate info))
 	      #'(lambda (object)
 		  (declare (optimize (speed 3) (safety 0)))
-		  (typep-to-layout object layout))))
+		  (typep-to-layout object layout t))))
 
       (when (dd-copier info)
 	(setf (symbol-function (dd-copier info))
