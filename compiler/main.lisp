@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.49 1991/12/14 18:12:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.50 1991/12/22 02:00:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1592,9 +1592,9 @@
 
       (when fasl-file
 	(close-fasl-file fasl-file (not compile-won))
+	(setq output-file-name (pathname (fasl-file-stream fasl-file)))
 	(when (and compile-won *compile-verbose*)
-	  (compiler-mumble "~2&~A written.~%"
-			   (namestring (truename output-file-name)))))
+	  (compiler-mumble "~2&~A written.~%" (namestring output-file-name))))
 
       (when *compile-verbose*
 	(finish-error-output source-info compile-won))
@@ -1617,7 +1617,10 @@
 	(error "Can't :LOAD with no output file."))
       (load output-file-name :verbose *compile-verbose*))
 
-    (values (if output-file (truename output-file-name) nil)
+    (values (if output-file
+		;; Hack around filesystem race condition...
+		(or (probe-file output-file-name) output-file-name)
+		nil)
 	    (not (null error-severity))
 	    (if (member error-severity '(:warning :error)) t nil))))
 
