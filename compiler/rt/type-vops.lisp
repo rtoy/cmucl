@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/type-vops.lisp,v 1.4 1991/11/09 02:37:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/type-vops.lisp,v 1.5 1992/05/26 13:55:12 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the IBM RT.
@@ -80,7 +80,7 @@
 ); eval-when (compile eval)
 
 
-(def-type-vops fixnump check-fixnum nil object-not-fixnum-error
+(def-type-vops fixnump check-fixnum fixnum object-not-fixnum-error
   vm:even-fixnum-type vm:odd-fixnum-type)
 
 (def-type-vops functionp check-function function
