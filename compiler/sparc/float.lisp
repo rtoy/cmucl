@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.34 2002/03/08 18:38:21 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.35 2002/10/07 17:44:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2553,13 +2553,13 @@
 (def-source-transform min (&rest args)
   (case (length args)
     ((0 2) (values nil t))
-    (1 `(values ,(first args)))
+    (1 `(values (the real ,(first args))))
     (t (c::associate-arguments 'min (first args) (rest args)))))
 
 (def-source-transform max (&rest args)
   (case (length args)
     ((0 2) (values nil t))
-    (1 `(values ,(first args)))
+    (1 `(values (the real ,(first args))))
     (t (c::associate-arguments 'max (first args) (rest args)))))
 
 ;; Derive the types of max and min

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.112 2002/09/06 18:22:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.113 2002/10/07 17:44:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3223,7 +3223,7 @@
 ;;; Expand Max and Min into the obvious comparisons.
 (def-source-transform max (arg &rest more-args)
   (if (null more-args)
-      `(values ,arg)
+      `(values (the real ,arg))
       (once-only ((arg1 arg)
 		  (arg2 `(max ,@more-args)))
 	`(if (> ,arg1 ,arg2)
@@ -3231,7 +3231,7 @@
 ;;;
 (def-source-transform min (arg &rest more-args)
   (if (null more-args)
-      `(values ,arg)
+      `(values (the real ,arg))
       (once-only ((arg1 arg)
 		  (arg2 `(min ,@more-args)))
 	`(if (< ,arg1 ,arg2)

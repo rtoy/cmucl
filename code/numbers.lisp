@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.44 2002/08/12 21:12:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.45 2002/10/07 17:44:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -875,7 +875,7 @@
 (defun max (number &rest more-numbers)
   "Returns the greatest of its arguments."
   (do ((nlist more-numbers (cdr nlist))
-       (result number))
+       (result (the real number)))
       ((null nlist) (return result))
      (declare (list nlist))
      (if (> (car nlist) result) (setq result (car nlist)))))
@@ -883,7 +883,7 @@
 (defun min (number &rest more-numbers)
   "Returns the least of its arguments."
   (do ((nlist more-numbers (cdr nlist))
-       (result number))
+       (result (the real number)))
       ((null nlist) (return result))
      (declare (list nlist))
      (if (< (car nlist) result) (setq result (car nlist)))))
