@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.38 1990/08/12 00:45:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.39 1990/08/23 18:51:37 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -146,6 +146,21 @@
        (sc-case stack
 	 ((control-stack)
 	  (storew reg fp-tn offset))))))
+
+
+;;; MAYBE-LOAD-STACK-TN  --  Interface
+;;;
+(defmacro maybe-load-stack-tn (reg reg-or-stack)
+  "Move the TN Reg-Or-Stack into Reg if it isn't already there."
+  (once-only ((n-reg reg)
+	      (n-stack reg-or-stack))
+    `(sc-case ,n-reg
+       ((any-reg descriptor-reg)
+	(sc-case ,n-stack
+	  ((any-reg descriptor-reg)
+	   (move ,n-reg ,n-stack))
+	  ((control-stack)
+	   (loadw ,n-reg fp-tn (tn-offset ,n-stack))))))))
 
 
 ;;;; Storage allocation:
