@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.12 1992/02/14 17:46:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.13 1992/04/02 03:50:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -286,8 +286,8 @@
       (set-cat-entry to-char att to-readtable)
       (set-cmt-entry to-char
 		     (get-cmt-entry from-char from-readtable)
-		     to-readtable)
-      NIL)))
+		     to-readtable)))
+  t)
 
 (defun set-macro-character (char function &optional
 				 (non-terminatingp nil) (rt *readtable*))
