@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/life.lisp,v 1.20 1991/08/29 18:38:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/life.lisp,v 1.21 1992/08/14 15:20:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -307,7 +307,9 @@
 ;;; more operand and as any other operand to the same VOP.
 ;;;
 ;;;     We don't have to worry about getting the correct conflict kind, since
-;;; Init-Global-Conflict-Kind will fix things up.
+;;; Init-Global-Conflict-Kind will fix things up.  Similarly,
+;;; FIND-LOCAL-REFERENCES will set the local conflict bit corresponding to this
+;;; call.
 ;;;
 ;;;     We also set the Local and Local-Number slots in each TN.  It is
 ;;; possible that there are no operands in any given call to this function, but
@@ -407,7 +409,8 @@
 					 (vop-info-arg-types info))
 	      (coalesce-more-ltn-numbers new (vop-results lose)
 					 (vop-info-result-types info))
-	      (assert (not (find-local-references new)))
+	      (let ((lose (find-local-references new)))
+		(assert (not lose)))
 	      (init-global-conflict-kind new))))))))
 		     
   (undefined-value))
@@ -772,18 +775,22 @@
 ;;; referenced by a big more arg.  We have to treat these TNs specially, since
 ;;; when we set or clear the bit in the live TNs, the represents a change in
 ;;; the liveness of all the more TNs.  If we iterated as normal, the next more
-;;; ref would be thought to be not live when it was, etc.  We return true if
-;;; there where more TNs.
+;;; ref would be thought to be not live when it was, etc.  We update Ref to be
+;;; the last :more ref we scanned, so that the main loop will step to the next
+;;; non-more ref.
 ;;;
 (defmacro frob-more-tns (action)
   `(when (eq (svref ltns num) :more)
-     (do ((mref (tn-ref-next-ref ref) (tn-ref-next-ref mref)))
-	 ((null mref))
-       (let ((mtn (tn-ref-tn mref)))
-	 (unless (eql (tn-local-number mtn) num)
-	   (return))
-	 ,action))
-     t))
+     (let ((prev ref))
+       (do ((mref (tn-ref-next-ref ref) (tn-ref-next-ref mref)))
+	   ((null mref))
+	 (let ((mtn (tn-ref-tn mref)))
+	   (unless (eql (tn-local-number mtn) num)
+	     (return))
+	   ,action)
+	 (setq prev mref))
+       (setq ref prev))))
+
 
 ;;; SCAN-VOP-REFS  --  Internal
 ;;;
@@ -801,16 +808,15 @@
 	 (when (tn-ref-write-p ref)
 	   (setf (sbit live-bits num) 0)
 	   (deletef-in tn-next* live-list tn)
-	   (when (frob-more-tns (deletef-in tn-next* live-list mtn))
-	     (return))))
+	   (frob-more-tns (deletef-in tn-next* live-list mtn))))
 	(t
 	 (assert (not (tn-ref-write-p ref)))
 	 (note-conflicts live-bits live-list tn num)
 	 (frob-more-tns (note-conflicts live-bits live-list mtn num))
 	 (setf (sbit live-bits num) 1)
 	 (push-in tn-next* tn live-list)
-	 (when (frob-more-tns (push-in tn-next* mtn live-list))
-	   (return)))))))
+	 (frob-more-tns (push-in tn-next* mtn live-list)))))))
+
 
 ;;; ENSURE-RESULTS-LIVE  --  Internal
 ;;;
