@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.3 1990/02/23 23:54:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.4 1990/02/26 23:43:43 wlott Exp $
 ;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -87,7 +87,7 @@
       (inst addiu csp-tn csp-tn vm:word-bytes)
       (storew temp csp-tn -1)
       (test-simple-type list ndescr loop nil vm:list-pointer-type)
-      (error-call 34 list)
+      (error-call di:bogus-argument-to-values-list-error list)
 
       (emit-label done)
       (inst sub count csp-tn start))))
