@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.10 1998/01/29 07:15:43 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.11 1999/03/04 11:54:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
 ;;;
 (in-package :x86)
 
@@ -438,3 +438,49 @@
 	       value)
 	 (move result value)))))
 
+(defmacro define-full-conditional-setter (name type offset lowtag scs el-type
+					  &optional translate)
+  `(progn
+     (define-vop (,name)
+       ,@(when translate
+	   `((:translate ,translate)))
+       (:policy :fast-safe)
+       (:args (object :scs (descriptor-reg) :to :result)
+	      (index :scs (any-reg) :to :result)
+	      (old-value :scs ,scs :target eax)
+	      (new-value :scs ,scs :target temp))
+       (:arg-types ,type tagged-num ,el-type ,el-type)
+       (:temporary (:sc ,(first scs) :offset eax-offset
+		    :from (:argument 2) :to :result :target result) eax)
+       (:temporary (:sc ,(first scs) :from (:argument 3) :to :result) temp)
+       (:results (result :scs ,scs))
+       (:result-types ,el-type)
+       (:generator 5
+	 (move eax old-value)
+	 (move temp new-value)
+	 (inst cmpxchg (make-ea :dword :base object :index index :scale 1
+				:disp (- (* ,offset word-bytes) ,lowtag))
+	       temp)
+	 (move result eax)))
+     (define-vop (,(symbolicate name "-C"))
+       ,@(when translate
+	   `((:translate ,translate)))
+       (:policy :fast-safe)
+       (:args (object :scs (descriptor-reg) :to :result)
+	      (old-value :scs ,scs :target eax)
+	      (new-value :scs ,scs :target temp))
+       (:info index)
+       (:arg-types ,type (:constant (signed-byte 30)) ,el-type ,el-type)
+       (:temporary (:sc ,(first scs) :offset eax-offset
+		    :from (:argument 1) :to :result :target result)  eax)
+       (:temporary (:sc ,(first scs) :from (:argument 2) :to :result) temp)
+       (:results (result :scs ,scs))
+       (:result-types ,el-type)
+       (:generator 4
+	 (move eax old-value)
+	 (move temp new-value)
+	 (inst cmpxchg (make-ea :dword :base object
+				:disp (- (* (+ ,offset index) word-bytes)
+					 ,lowtag))
+	       temp)
+	 (move result eax)))))

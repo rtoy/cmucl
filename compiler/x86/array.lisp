@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.15 1998/07/24 17:22:39 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.16 1999/03/04 11:54:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
 ;;;
 (in-package :x86)
 
@@ -1559,6 +1559,18 @@
   unsigned-num %raw-bits)
 (define-full-setter set-raw-bits * 0 other-pointer-type (unsigned-reg)
   unsigned-num %set-raw-bits)
+
+
+;;;; Conditional setters.
+
+(export 'kernel::data-vector-set-conditional "KERNEL")
+(defknown data-vector-set-conditional (array index t t) t
+  (unsafe c::explicit-check))
+
+(define-full-conditional-setter data-vector-set-condition/simple-vector
+  simple-vector vector-data-offset other-pointer-type
+  (descriptor-reg any-reg) *
+  data-vector-set-conditional)
 
 
 ;;;; Misc. Array VOPs.
