@@ -7,18 +7,39 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.9 1992/02/21 22:00:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.10 1992/02/27 07:59:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.9 1992/02/21 22:00:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.10 1992/02/27 07:59:11 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
 (in-package "SPARC")
 (use-package "SYSTEM")
 
-(export '(fixup-code-object internal-error-arguments))
+(export '(fixup-code-object internal-error-arguments
+	  sigcontext-register sigcontext-float-register
+	  sigcontext-floating-point-modes extern-alien-name))
+
+
+;;;; The sigcontext structure.
+
+(def-alien-type sigcontext
+  (struct nil
+    (sc-onstack unsigned-long)
+    (sc-mask unsigned-long)
+    (sc-sp system-area-pointer)
+    (sc-pc system-area-pointer)
+    (sc-npc system-area-pointer)
+    (sc-psr unsigned-long)
+    (sc-g1 unsigned-long)
+    (sc-o0 unsigned-long)
+    (sc-regs (array unsigned-long 32))
+    (sc-fpregs (array unsigned-long 32))
+    (sc-y unsigned-long)
+    (sc-fsr unsigned-long)))
+
 
 
 ;;;; Add machine specific features to *features*
@@ -69,71 +90,67 @@
 ;;; Given the sigcontext, extract the internal error arguments from the
 ;;; instruction stream.
 ;;; 
-(defun internal-error-arguments (sc)
-  (alien-bind ((sc sc mach:sigcontext t))
-    (let* ((pc (alien-access (mach:sigcontext-pc (alien-value sc))))
-	   (bad-inst (sap-ref-32 pc 0))
-	   (op (ldb (byte 2 30) bad-inst))
-	   (op2 (ldb (byte 3 22) bad-inst))
-	   (op3 (ldb (byte 6 19) bad-inst)))
-      (cond ((and (= op #b00) (= op2 #b000))
-	     (args-for-unimp-inst sc))
-	    ((and (= op #b10) (= (ldb (byte 4 2) op3) #b1000))
-	     (args-for-tagged-add-inst sc bad-inst))
-	    ((and (= op #b10) (= op3 #b111010))
-	     (args-for-tcc-inst bad-inst))
-	    (t
-	     (values (error-number-or-lose 'unknown-error)
-		     nil))))))
+(defun internal-error-arguments (scp)
+  (declare (type (alien (* sigcontext)) scp))
+  (let* ((pc (with-alien ((scp (* sigcontext) scp))
+	       (slot scp 'sc-pc)))
+	 (bad-inst (sap-ref-32 pc 0))
+	 (op (ldb (byte 2 30) bad-inst))
+	 (op2 (ldb (byte 3 22) bad-inst))
+	 (op3 (ldb (byte 6 19) bad-inst)))
+    (declare (type system-area-pointer pc))
+    (cond ((and (= op #b00) (= op2 #b000))
+	   (args-for-unimp-inst scp))
+	  ((and (= op #b10) (= (ldb (byte 4 2) op3) #b1000))
+	   (args-for-tagged-add-inst scp bad-inst))
+	  ((and (= op #b10) (= op3 #b111010))
+	   (args-for-tcc-inst bad-inst))
+	  (t
+	   (values (error-number-or-lose 'unknown-error)
+		   nil)))))
 
-(defun args-for-unimp-inst (sc)
-  (alien-bind ((sc sc mach:sigcontext t))
-    (let* ((pc (alien-access (mach:sigcontext-pc (alien-value sc))))
-	   (length (sap-ref-8 pc 4))
-	   (vector (make-array length :element-type '(unsigned-byte 8))))
-      (declare (type system-area-pointer pc)
-	       (type (unsigned-byte 8) length)
-	       (type (simple-array (unsigned-byte 8) (*)) vector))
-      (copy-from-system-area pc (* sparc:byte-bits 5)
-			     vector (* sparc:word-bits
-				       sparc:vector-data-offset)
-			     (* length sparc:byte-bits))
-      (let* ((index 0)
-	     (error-number (c::read-var-integer vector index)))
-	(collect ((sc-offsets))
-		 (loop
-		   (when (>= index length)
-		     (return))
-		   (sc-offsets (c::read-var-integer vector index)))
-		 (values error-number (sc-offsets)))))))
+(defun args-for-unimp-inst (scp)
+  (declare (type (alien (* sigcontext)) scp))
+  (let* ((pc (with-alien ((scp (* sigcontext) scp))
+	       (slot scp 'sc-pc)))
+	 (length (sap-ref-8 pc 4))
+	 (vector (make-array length :element-type '(unsigned-byte 8))))
+    (declare (type system-area-pointer pc)
+	     (type (unsigned-byte 8) length)
+	     (type (simple-array (unsigned-byte 8) (*)) vector))
+    (copy-from-system-area pc (* sparc:byte-bits 5)
+			   vector (* sparc:word-bits
+				     sparc:vector-data-offset)
+			   (* length sparc:byte-bits))
+    (let* ((index 0)
+	   (error-number (c::read-var-integer vector index)))
+      (collect ((sc-offsets))
+	       (loop
+		 (when (>= index length)
+		   (return))
+		 (sc-offsets (c::read-var-integer vector index)))
+	       (values error-number (sc-offsets))))))
 
-(defun args-for-tagged-add-inst (sc bad-inst)
-  (alien-bind ((sc sc mach:sigcontext t)
-	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
-    (let* ((rs1 (ldb (byte 5 14) bad-inst))
-	   (op1 (di::make-lisp-obj
-		 (alien-access
-		  (mach:int-array-ref (alien-value regs)
-				      rs1)))))
-      (if (fixnump op1)
-	  (if (zerop (ldb (byte 1 13) bad-inst))
-	      (let* ((rs2 (ldb (byte 5 0) bad-inst))
-		     (op2 (di::make-lisp-obj
-			   (alien-access
-			    (mach:int-array-ref (alien-value regs)
-						rs2)))))
-		(if (fixnump op2)
-		    (values (error-number-or-lose 'unknown-error)
-			    nil)
-		    (values (error-number-or-lose 'object-not-fixnum-error)
-			    (list (c::make-sc-offset
-				   sparc:descriptor-reg-sc-number
-				   rs2)))))
-	      (values (error-number-or-lose 'unknown-error)
-		      nil))
-	  (values (error-number-or-lose 'object-not-fixnum-error)
-		  (list (c::make-sc-offset sparc:descriptor-reg-sc-number
-					   rs1)))))))
+(defun args-for-tagged-add-inst (scp bad-inst)
+  (declare (type (alien (* sigcontext)) scp))
+  (let* ((rs1 (ldb (byte 5 14) bad-inst))
+	 (op1 (di::make-lisp-obj (sigcontext-register scp rs1))))
+    (if (fixnump op1)
+	(if (zerop (ldb (byte 1 13) bad-inst))
+	    (let* ((rs2 (ldb (byte 5 0) bad-inst))
+		   (op2 (di::make-lisp-obj (sigcontext-register scp rs2))))
+	      (if (fixnump op2)
+		  (values (error-number-or-lose 'unknown-error)
+			  nil)
+		  (values (error-number-or-lose 'object-not-fixnum-error)
+			  (list (c::make-sc-offset
+				 sparc:descriptor-reg-sc-number
+				 rs2)))))
+	    (values (error-number-or-lose 'unknown-error)
+		    nil))
+	(values (error-number-or-lose 'object-not-fixnum-error)
+		(list (c::make-sc-offset sparc:descriptor-reg-sc-number
+					 rs1))))))
 
 (defun args-for-tcc-inst (bad-inst)
   (let* ((trap-number (ldb (byte 8 0) bad-inst))
@@ -148,15 +165,71 @@
 	    (list (c::make-sc-offset sparc:descriptor-reg-sc-number reg)))))
 
 
+;;;; Sigcontext access functions.
+
+;;; SIGCONTEXT-REGISTER -- Internal.
+;;;
+;;; An escape register saves the value of a register for a frame that someone
+;;; interrupts.  
+;;;
+(defun sigcontext-register (scp index)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (deref (slot scp 'sc-regs) index)))
+
+(defun %set-sigcontext-register (scp index new)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (setf (deref (slot scp 'sc-regs) index) new)
+    new))
+
+(defsetf sigcontext-register %set-sigcontext-register)
+
+
+;;; SIGCONTEXT-FLOAT-REGISTER  --  Internal
+;;;
+;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
+;;; Format is the type of float to return.
+;;;
+(defun sigcontext-float-register (scp index format)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (let ((sap (alien-sap (slot scp 'sc-fpregs))))
+      (ecase format
+	(single-float (system:sap-ref-single sap (* index vm:word-bytes)))
+	(double-float (system:sap-ref-double sap (* index vm:word-bytes)))))))
+;;;
+(defun %set-sigcontext-float-register (scp index format new-value)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (let ((sap (alien-sap (slot scp 'sc-fpregs))))
+      (ecase format
+	(single-float
+	 (setf (sap-ref-single sap (* index vm:word-bytes)) new-value))
+	(double-float
+	 (setf (sap-ref-double sap (* index vm:word-bytes)) new-value))))))
+;;;
+(defsetf sigcontext-float-register %set-sigcontext-float-register)
+
+
 ;;; SIGCONTEXT-FLOATING-POINT-MODES  --  Interface
 ;;;
 ;;;    Given a sigcontext pointer, return the floating point modes word in the
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 (defun sigcontext-floating-point-modes (scp)
-  (alien-bind ((sc (make-alien 'mach:sigcontext
-					     #.(ext:c-sizeof 'mach:sigcontext)
-					     scp)
-			  mach:sigcontext
-			  t))
-    (alien-access (mach:sigcontext-fsr (alien-value sc)))))
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (slot scp 'sc-fsr)))
+
+
+
+;;; EXTERN-ALIEN-NAME -- interface.
+;;;
+;;; The loader uses this to convert alien names to the form they occure in
+;;; the symbol table (for example, prepending an underscore).  On the SPARC,
+;;; we prepend an underscore.
+;;; 
+(defun extern-alien-name (name)
+  (declare (type simple-base-string name))
+  (concatenate 'string "_" name))
