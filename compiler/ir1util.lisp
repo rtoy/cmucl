@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.85 2002/08/25 19:03:57 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.86 2002/08/26 19:57:07 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -651,7 +651,7 @@
 ;;;; Deleting stuff:
 
 (declaim (start-block delete-ref delete-functional flush-dest
-		      delete-continuation delete-block))
+		      delete-continuation delete-block delete-lambda))
 
 ;;; Delete-Lambda-Var  --  Internal
 ;;;
