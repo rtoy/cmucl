@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.9 1991/07/23 12:18:03 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.10 1991/09/28 17:41:44 ram Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -134,8 +134,8 @@
 ;;; Where to put the different spaces.
 ;;; 
 (defparameter target-read-only-space-start #x00100000)
-(defparameter target-static-space-start    #x04000000)
-(defparameter target-dynamic-space-start   #x06000000)
+(defparameter target-static-space-start    #x05000000)
+(defparameter target-dynamic-space-start   #x07000000)
 
 
 
