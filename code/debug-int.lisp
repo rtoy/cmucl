@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.118 2004/11/19 19:07:24 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.119 2004/11/20 00:47:28 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1102,7 +1102,7 @@
 	  (#.vm::ocfp-save-offset
 	   (kernel:stack-ref pointer stack-slot))
 	  (#.vm::lra-save-offset
-	   (sap-ref-sap pointer (- (* (1+ stack-slot) 4))))))))
+	   (sap-ref-sap pointer (- (* (1+ stack-slot) vm:word-bytes))))))))
 
 ;;;
 #-(or x86 amd64)
@@ -1127,7 +1127,8 @@
 	  (#.vm::ocfp-save-offset
 	   (setf (kernel:stack-ref pointer stack-slot) value))
 	  (#.vm::lra-save-offset
-	   (setf (sap-ref-sap pointer (- (* (1+ stack-slot) 4))) value))))))
+	   (setf (sap-ref-sap pointer (- (* (1+ stack-slot) vm:word-bytes)))
+		 value))))))
 
 
 (defvar *debugging-interpreter* nil
