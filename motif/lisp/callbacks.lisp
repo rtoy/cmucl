@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/callbacks.lisp,v 1.4 1999/02/05 21:10:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/callbacks.lisp,v 1.5 2003/04/11 12:09:10 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,7 +123,9 @@
   (declare (type widget widget)
 	   (type keyword property protocol)
 	   (type (or symbol function) fn))
-  (let* ((table (motif-connection-protocol-table *motif-connection*))
+  (let* ((property (xti:symbol-atom property))
+         (protocol (xti:symbol-atom protocol))
+         (table (motif-connection-protocol-table *motif-connection*))
 	 (key (list (widget-id widget) property protocol))
 	 (data (cons fn args)))
 
@@ -138,7 +140,9 @@
   (declare (type widget widget)
 	   (type keyword property protocol)
 	   (type (or symbol function) fn))
-  (let* ((table (motif-connection-protocol-table *motif-connection*))
+  (let* ((property (xti:symbol-atom property))
+         (protocol (xti:symbol-atom protocol))
+         (table (motif-connection-protocol-table *motif-connection*))
 	 (key (list (widget-id widget) property protocol))
 	 (data (cons fn args))
 	 (new-list (delete data (gethash key table) :test #'equal)))

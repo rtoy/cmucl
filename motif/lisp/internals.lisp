@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/internals.lisp,v 1.7 1998/12/20 04:22:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/internals.lisp,v 1.8 2003/04/11 12:09:10 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,7 +213,7 @@
 
 ;;; Converts a symbol into an atom.
 (defun symbol-atom (symbol)
-  (substitute #\_ #\- (symbol-name symbol)))
+  (intern (substitute #\_ #\- (symbol-name symbol)) :KEYWORD))
 
 (defun widget-add-child (parent child)
   (declare (type widget parent child))
