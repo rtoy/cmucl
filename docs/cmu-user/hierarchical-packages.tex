@@ -65,10 +65,10 @@ dots. A single dot means the current package, two dots mean the parent
 of the current package, and so on.
 
 Table~\ref{tbl:hierarchical-packages} presents a number of examples,
-assuming that packages named \verb|mypack|, \verb|mypack.foo|,
-\verb|mypack.foo.bar|, \verb|mypack.foo.baz|, \verb|mypack.bar|,
-\verb|mypack.bar.baz|, \verb|foo|, and \verb|foo.bar|, have all been
-created.
+assuming that packages named \verb|foo|, \verb|foo.bar|,
+\verb|mypack|, \verb|mypack.foo|, \verb|mypack.foo.bar|,
+\verb|mypack.foo.baz|, \verb|mypack.bar|, and \verb|mypack.bar.baz|,
+have all been created.
 
 \begin{table}[h]
 \begin{center}
@@ -181,10 +181,10 @@ relative package names is restricted. Consider for example a module
 \verb|my.foo.baz| packages. In the code for each of the these packages
 there are relative package references, \verb|..bar| and \verb|..baz|.
 
-Implementations that have the new \code{cl:find-package} would have on
-their \code{*features*} list the symbol \verb|:relative-package-names|
-(this is the case of \cmucl{} releases as of 18d). Then, in the
-\textit{foo} module, there would be definitions of the
+Implementations that have the new \code{cl:find-package} would carry
+the keyword \verb|:relative-package-names| on their \code{*features*}
+list (this is the case of \cmucl{} releases starting from 18d). Then,
+in the \textit{foo} module, there would be definitions of the
 \verb|my.foo.bar| and \verb|my.foo.baz| packages like so:
 
 \begin{verbatim}

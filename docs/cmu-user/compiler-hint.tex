@@ -481,12 +481,13 @@ inference, \pxlref{function-type-inference}.
 \cindex{values declaration}
 
 \cmucl{} supports the \code{values} declaration as an extension to
-\clisp.  The syntax is {\code{(values \var{type1}
-    \var{type2}$\ldots$\var{typen})}}.  This declaration is
-semantically equivalent to a \code{the} form wrapped around the body
-of the special form in which the \code{values} declaration appears.
-The advantage of \code{values} over \findexed{the} is purely
-syntactic\dash{}it doesn't introduce more indentation.  For example:
+\clisp.  The syntax of the declaration is 
+{\code{(values \var{type1} \var{type2}$\ldots$\var{typen})}}.  This
+declaration is semantically equivalent to a \code{the} form wrapped
+around the body of the special form in which the \code{values}
+declaration appears. The advantage of \code{values} over
+\findexed{the} is purely syntactic\dash{}it doesn't introduce more
+indentation.  For example:
 
 \begin{example}
 (defun foo (x)
@@ -2077,9 +2078,9 @@ There are three possible values of the \kwd{block-compile} argument:
   argument.
   
 \item[\kwd{specified}] Start compiling in form-at-a-time mode, but
-  exploit \code{start-block} declarations and compile self-recursive
-  calls as local calls.  Normally \kwd{specified} is the default for
-  this argument (see \varref{block-compile-default}.)
+  exploit any \code{start-block} declarations and compile
+  self-recursive calls as local calls.  Normally \kwd{specified} is
+  the default for this argument (see \varref{block-compile-default}.)
 \end{Lentry}
 
 The \kwd{entry-points} argument can be used in conjunction with
