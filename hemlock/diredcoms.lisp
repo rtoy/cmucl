@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/diredcoms.lisp,v 1.5 1997/01/18 14:31:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/diredcoms.lisp,v 1.6 1997/02/25 22:36:03 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -751,7 +751,8 @@
 	((= i length) (values (nreverse marked-files) (nreverse marked-dirs)))
       (let* ((thing (svref files i))
 	     (pathname (dired-file-pathname thing)))
-	(when (dired-file-deleted-p thing)
+	(when (and (dired-file-deleted-p thing) ; file marked for delete
+		   (probe-file pathname)) 	; file still exists 
 	  (if (directoryp pathname)
 	      (push (cons pathname (file-write-date pathname)) marked-dirs)
 	      (push (cons pathname (file-write-date pathname))
