@@ -53,7 +53,7 @@
 
 ;;;; The Policy macro:
 
-(proclaim '(special *current-cookie* *default-cookie*))
+(proclaim '(special *lexical-environment*))
 
 (eval-when (#-new-compiler compile load eval)
 (defconstant policy-parameter-slots
@@ -93,24 +93,18 @@
   and *current-cookie*.  This option is only well defined during IR1
   conversion."
   (let* ((form `(and ,@conditions))
-	 (n-current (gensym))
-	 (n-default (gensym))
+	 (n-cookie (gensym))
 	 (binds (mapcar
 		 #'(lambda (name)
 		     (let ((slot (cdr (assoc name policy-parameter-slots))))
-		       `(,name (or (,slot ,n-current) (,slot ,n-default)))))
+		       `(,name (,slot ,n-cookie))))
 		 (find-used-parameters form))))
-    (if node
-	(let ((n-node (gensym)))
-	  `(let* ((,n-node ,node)
-		  (,n-default (node-default-cookie ,n-node))
-		  (,n-current (node-cookie ,n-node))
-		  ,@binds)
-	     ,form))
-	`(let* ((,n-default *default-cookie*)
-		(,n-current *current-cookie*)
-		,@binds)
-	   ,form))))
+    `(let* ((,n-cookie (lexenv-cookie
+			,(if node
+			     `(node-lexenv ,node)
+			     '*lexical-environment*)))
+	    ,@binds)
+       ,form)))
 
 
 ;;;; Source-hacking defining forms:
@@ -159,7 +153,7 @@
       `(progn
 	 (proclaim '(function ,fn-name (continuation continuation t) void))
 	 (defun ,fn-name (,start-var ,cont-var ,n-form)
-	   (let ((,n-env *fenv*))
+	   (let ((,n-env *lexical-environment*))
 	     ,@decls
 	     (macrolet ((error (&rest args)
 			       `(compiler-error ,@args)))
@@ -199,7 +193,7 @@
 					       :environment n-env)
       `(progn
 	 (defun ,fn-name (,n-form)
-	   (let ((,n-env *fenv*))
+	   (let ((,n-env *lexical-environment*))
 	     ,@decls
 	     (macrolet ((error (&rest stuff)
 			       (declare (ignore stuff))
@@ -222,7 +216,7 @@
 			  :environment n-env)
       `(progn
 	 (defun ,fn-name (,n-form)
-	   (let ((,n-env *fenv*))
+	   (let ((,n-env *lexical-environment*))
 	     ,@decls
 	     (macrolet ((error (&rest args)
 			       `(compiler-error ,@args)))
@@ -757,34 +751,12 @@
 (defmacro with-ir1-environment (node &rest forms)
   "With-IR1-Environment Node Form*
   Bind the IR1 context variables so that IR1 conversion can be done after the
-  main conversion pass has finished.
-
-  Care must be taken to ensure that blocks have the correct cleanup.  New
-  blocks will initially be created with the End-Cleanup of Node's block.  This
-  is not an issue if newly created blocks are inside a new function -- it is
-  only a problem if IR1 convert or Make-Block is called directly, and not if
-  IR1-Convert-Lambda is called."
-  (let ((n-node (gensym))
-	(n-block (gensym))
-	(n-cont (gensym))
-	(n-component (gensym)))
+  main conversion pass has finished."
+  (let ((n-node (gensym)))
     `(let* ((,n-node ,node)
-	    (,n-cont (node-prev ,n-node))
-	    (,n-block (continuation-block ,n-cont))
-	    (,n-component (block-component ,n-block))
-	    (*current-cleanup* (block-end-cleanup ,n-block))
-	    (*current-cookie* (node-cookie ,n-node))
-	    (*default-cookie* (node-default-cookie ,n-node))
-	    (*current-lambda* (block-lambda ,n-block))
-	    (*current-component* ,n-component)
-	    (*current-path* (node-source-path ,n-node))
-	    (*current-form* nil)
-	    (*fenv* ())
-	    (*inlines* ())
-	    (*type-restrictions* ())
-	    (*venv* ())
-	    (*benv* ())
-	    (*tenv* ()))
+	    (*current-component* (block-component (node-block ,n-node)))
+	    (*lexical-environment* (node-lexenv ,n-node))
+	    (*current-path* (node-source-path ,n-node)))
        ,@forms)))
 
 
@@ -799,6 +771,21 @@
 	 (*constants* (make-hash-table :test #'equal))
 	 (*source-paths* (make-hash-table :test #'eq)))
      ,@forms))
+
+
+;;; LEXENV-FIND  --  Interface
+;;;
+(defmacro lexenv-find (name slot &key test)
+  "LEXENV-FIND Name Slot {Key Value}*
+  Look up Name in the lexical environment namespace designated by Slot,
+  returning the <value, T>, or <NIL, NIL> if no entry.  The :TEST keyword
+  may be used to determine the name equality predicate."
+  (once-only ((n-res `(assoc ,name (,(symbolicate "LEXENV-" slot)
+				    *lexical-environment*)
+			     ,@(when test `(:test ,test)))))
+    `(if ,n-res
+	 (values (cdr ,n-res) t)
+	 (values nil nil))))
 
 
 ;;;; The Defprinter macro:
@@ -907,7 +894,7 @@
 
 (deftype attributes () 'fixnum)
 
-(eval-when (#-new-compiler compile load eval)
+(eval-when (compile load eval)
 ;;; Compute-Attribute-Mask  --  Internal
 ;;;
 ;;;    Given a list of attribute names and an alist that translates them to
@@ -936,11 +923,14 @@
 
     NAME-attributep attributes attribute-name*
       Return true if one of the named attributes is present, false otherwise.
+      When set with SETF, updates the place Attributes setting or clearing the
+      specified attributes.
 
     NAME-attributes attribute-name*
       Return a set of the named attributes."
 
-  (let ((const-name (symbolicate name "-ATTRIBUTE-TRANSLATIONS")))
+  (let ((const-name (symbolicate name "-ATTRIBUTE-TRANSLATIONS"))
+	(test-name (symbolicate name "-ATTRIBUTEP")))
     (collect ((alist))
       (do ((mask 1 (ash mask 1))
 	   (names attribute-names (cdr names)))
@@ -948,20 +938,40 @@
 	(alist (cons (car names) mask)))
 	 
       `(progn
-	(eval-when (compile load eval)
-	  (defconstant ,const-name ',(alist)))
+	 (eval-when (compile load eval)
+	   (defconstant ,const-name ',(alist)))
+	 
+	 (defmacro ,test-name (attributes &rest attribute-names)
+	   "Automagically generated boolean attribute test function.  See
+	    Def-Boolean-Attribute."
+	   `(logtest ,(compute-attribute-mask attribute-names ,const-name)
+		     (the attributes ,attributes)))
 
-	(defmacro ,(symbolicate name "-ATTRIBUTEP")
-		  (attributes &rest attribute-names)
-	  "Automagically generated boolean attribute test function.  See
-	  Def-Boolean-Attribute."
-	  `(logtest ,(compute-attribute-mask attribute-names ,const-name)
-		    (the attributes ,attributes)))
-
-	(defmacro ,(symbolicate name "-ATTRIBUTES") (&rest attribute-names)
-	  "Automagically generated boolean attribute creation function.  See
-	  Def-Boolean-Attribute."
-	  (compute-attribute-mask attribute-names ,const-name))))))
+	 (define-setf-method ,test-name (place &rest attributes
+					       &environment env)
+	   
+	   "Automagically generated boolean attribute setter.  See
+	    Def-Boolean-Attribute."
+	   (multiple-value-bind (temps values stores set get)
+				(lisp::foo-get-setf-method place env)
+	     (let ((newval (gensym))
+		   (n-place (gensym))
+		   (mask (compute-attribute-mask attributes ,const-name)))
+	       (values `(,@temps ,n-place)
+		       `(,@values ,get)
+		       `(,newval)
+		       `(let ((,(first stores)
+			       (if ,newval
+				   (logior ,n-place ,mask)
+				   (logand ,n-place ,(lognot mask)))))
+			  ,set
+			  ,newval)
+		       `(,',test-name ,n-place ,@attributes)))))
+	 
+	 (defmacro ,(symbolicate name "-ATTRIBUTES") (&rest attribute-names)
+	   "Automagically generated boolean attribute creation function.  See
+	    Def-Boolean-Attribute."
+	   (compute-attribute-mask attribute-names ,const-name))))))
 
 
 ;;; Attributes-Union, Attributes-Intersection, Attributes=  --  Interface
