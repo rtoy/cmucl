@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.121 2001/03/01 21:45:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.122 2001/03/03 16:50:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2219,7 +2219,8 @@
 ;;; processing code.  We play with the dynamic environment and eval stuff, then
 ;;; call Fun with a list of forms to be processed at load time.
 ;;;
-(defun do-eval-when-stuff (situations body fun toplevel-p)
+
+(defun do-eval-when-stuff (situations body fun &optional toplevel-p)
   (when (or (not (listp situations))
 	    (set-difference situations
 			    '(compile load eval
@@ -2227,7 +2228,7 @@
     (compiler-error "Bad Eval-When situation list: ~S." situations))
 
   (if toplevel-p
-      ;; Can only get here from compile-file.
+      ;; Can only get here from compile-file
       (progn
 	(when (intersection '(compile :compile-toplevel) situations)
 	  (eval `(progn ,@body)))
@@ -2246,9 +2247,9 @@
   "EVAL-WHEN (Situation*) Form*
   Evaluate the Forms in the specified Situations, any of :COMPILE-TOPLEVEL,
   :LOAD-TOPLEVEL, :EXECUTE."
-  (do-eval-when-stuff
-   situations body #'(lambda (forms) (ir1-convert-progn-body start cont forms))
-   nil))
+  (do-eval-when-stuff situations body
+		      #'(lambda (forms)
+			  (ir1-convert-progn-body start cont forms))))
 
 
 ;;; DO-MACROLET-STUFF  --  Interface
@@ -2619,8 +2620,9 @@
 	       (make-new-inlinep var
 				 (cdr (assoc kind inlinep-translations)))))))))
 
+(defknown %declaim (list) void)
 
-(def-ir1-translator proclaim ((what) start cont :kind :function)
+(def-ir1-translator %declaim ((what) start cont :kind :function)
   (if (constantp what)
       (let ((form (eval what)))
 	(unless (consp form)
@@ -2679,11 +2681,11 @@
 				      form)))))
 	  
 	  (unless ignore
-	    (%proclaim form))
+	    (proclaim form))
 	  (if ignore
 	      (ir1-convert start cont nil)
-	      (ir1-convert start cont `(%proclaim ,what)))))
-      (ir1-convert start cont `(%proclaim ,what))))
+	      (ir1-convert start cont `(proclaim ,what)))))
+      (ir1-convert start cont `(proclaim ,what))))
 
 
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal

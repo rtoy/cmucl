@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.65 2000/10/06 15:19:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.66 2001/03/03 16:50:08 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -365,7 +365,7 @@
   value, the old value is not clobbered.  The third argument is an optional
   documentation string for the variable."
   `(progn
-    (proclaim '(special ,var))
+    (declaim (special ,var))
      ,@(when valp
 	 `((unless (boundp ',var)
 	     (setq ,var ,val))))
@@ -379,7 +379,7 @@
   variable special and sets its value to VAL.  The third argument is
   an optional documentation string for the parameter."
   `(progn
-    (proclaim '(special ,var))
+    (declaim (special ,var))
     (setq ,var ,val)
     ,@(when docp
 	`((setf (documentation ',var 'variable) ',doc)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.33 2001/01/18 03:12:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.34 2001/03/03 16:50:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -307,22 +307,29 @@
 
 ;;; DECLAIM  --  Public
 ;;;
-;;;    For now, just PROCLAIM without any EVAL-WHEN.
-;;;
+
 (defmacro declaim (&rest specs)
   "DECLAIM Declaration*
   Do a declaration for the global environment."
-  `(progn ,@(mapcar #'(lambda (x)
-			`(proclaim ',x))
-		    specs)))
-  
+  `(progn
+     (eval-when (:load-toplevel :execute)
+       ,@(mapcar #'(lambda (x)
+		     `(proclaim ',x))
+		 specs))
+     (eval-when (:compile-toplevel)
+       ,@(mapcar #'(lambda (x)
+		     `(%declaim ',x))
+		 specs))))
 
-;;; %Proclaim  --  Interface
+(defun %declaim (x)
+  (proclaim x))
+
+;;; %declaim  --  Interface
 ;;;
 ;;;    This function is the guts of proclaim, since it does the global
 ;;; environment updating.
 ;;;
-(defun %proclaim (form)
+(defun proclaim (form)
   (unless (consp form)
     (error "Malformed PROCLAIM spec: ~S." form))
   
@@ -374,8 +381,8 @@
        ;; FTYPE.
        (when *type-system-initialized*
 	 (if (and (<= 2 (length args) 3) (listp (second args)))
-	     (%proclaim `(ftype (function . ,(rest args)) ,(first args)))
-	     (%proclaim `(type function . ,args)))))
+	     (proclaim `(ftype (function . ,(rest args)) ,(first args)))
+	     (proclaim `(type function . ,args)))))
       (optimize
        (setq *default-cookie*
 	     (process-optimize-declaration form *default-cookie*)))
@@ -405,15 +412,14 @@
       ((start-block end-block)) ; ignore.
       (t
        (cond ((member kind type-specifier-symbols)
-	      (%proclaim `(type . ,form)))
+	      (proclaim `(type . ,form)))
 	     ((or (info type kind kind)
 		  (and (consp kind) (info type translator (car kind))))
-	      (%proclaim `(type . ,form)))
+	      (proclaim `(type . ,form)))
 	     ((not (info declaration recognized kind))
 	      (warn "Unrecognized proclamation: ~S." form))))))
   (undefined-value))
-;;;
-(setf (symbol-function 'proclaim) #'%proclaim)
+
 
 ;;; %NOTE-TYPE-DEFINED  --  Interface
 ;;;
