@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.6 1991/03/20 02:58:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.7 1991/04/23 01:25:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.6 1991/03/20 02:58:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.7 1991/04/23 01:25:20 wlott Exp $
 ;;;    
 (in-package "KERNEL")
 
@@ -120,3 +120,14 @@
   (code-header-set code-obj index new))
 
 (defsetf code-header-ref code-header-set)
+
+
+(defun %raw-bits (object offset)
+  (declare (type index offset))
+  (kernel:%raw-bits object offset))
+
+(defun %set-raw-bits (object offset value)
+  (declare (type index offset) (type (unsigned-byte #.vm:word-bits) value))
+  (setf (kernel:%raw-bits object offset) value))
+
+(defsetf %raw-bits %set-raw-bits)
