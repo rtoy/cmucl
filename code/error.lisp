@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.42 1993/11/23 14:10:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.43 1994/08/21 13:39:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -728,8 +728,9 @@
 		  (t
 		   (error "Unknown slot option:~%  ~S" (first options))))))
 
-	    (unless (initargs)
-	      (warn "Probable error: no initargs for condition slot:~%  ~S"
+	    (unless (or (initargs) initform-p)
+	      (warn "Probable error: no initargs or initform for condition ~
+		     slot:~%  ~S"
 		    slot-name))
 	    (unless (readers)
 	      (warn "Probable error: no readers for condition slot:~%  ~S"
