@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.9 1991/05/22 17:47:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.10 1991/05/23 15:01:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -370,14 +370,16 @@
 (defun wait-for-event (&optional timeout)
   "Wait for an something to show up on one of the file descriptors or a message
   interupt to fire. Timeout is in seconds."
-  (multiple-value-bind (timeout-sec timeout-usec)
-		       (typecase timeout
-			 (integer (values timeout 0))
-			 (null (values nil 0))
-			 (t
-			  (multiple-value-bind (q r)
-					       (truncate timeout)
-			    (values q (* r 1000000)))))
+  (multiple-value-bind
+      (timeout-sec timeout-usec)
+      (typecase timeout
+	(integer (values timeout 0))
+	(null (values nil 0))
+	(t
+	 (multiple-value-bind (q r)
+			      (truncate (coerce timeout 'single-float))
+	   (declare (type index q) (single-float r))
+	   (values q (truncate (* r 1f6))))))
     (declare (type index timeout-usec)
 	     (type (or index null) timeout-sec))
     (multiple-value-bind (count read-mask write-mask except-mask)
