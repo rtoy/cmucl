@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.33 2002/07/10 16:15:58 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.34 2003/02/24 10:07:00 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,7 +387,7 @@
 	   (list subscripts))
   (let ((rank (array-rank array)))
     (unless (= rank (length subscripts))
-      (error "Wrong number of subscripts, ~D, for array of rank ~D"
+      (simple-program-error "Wrong number of subscripts, ~D, for array of rank ~D"
 	     (length subscripts) rank))
     (if (array-header-p array)
 	(do ((subs (nreverse subscripts) (cdr subs))
@@ -401,7 +401,7 @@
 	    (declare (fixnum index dim))
 	    (unless (< -1 index dim)
 	      (if invalid-index-error-p
-		  (error "Invalid index ~D~[~;~:; on axis ~:*~D~] in ~S"
+		  (simple-program-error "Invalid index ~D~[~;~:; on axis ~:*~D~] in ~S"
 			 index axis array)
 		  (return-from %array-row-major-index nil)))
 	    (incf result (* chunk-size index))
@@ -409,7 +409,7 @@
 	(let ((index (first subscripts)))
 	  (unless (< -1 index (length (the (simple-array * (*)) array)))
 	    (if invalid-index-error-p
-		(error "Invalid index ~D in ~S" index array)
+		(simple-program-error "Invalid index ~D in ~S" index array)
 		(return-from %array-row-major-index nil)))
 	  index))))
 
@@ -561,10 +561,10 @@
   (declare (array array) (type index axis-number))
   (cond ((not (array-header-p array))
 	 (unless (= axis-number 0)
-	   (error "Vector axis is not zero: ~S" axis-number))
+	   (simple-program-error "Vector axis is not zero: ~S" axis-number))
 	 (length (the (simple-array * (*)) array)))
 	((>= axis-number (%array-rank array))
-	 (error "~D is too big; ~S only has ~D dimension~:P"
+	 (simple-program-error "~D is too big; ~S only has ~D dimension~:P"
 		axis-number array (%array-rank array)))
 	(t
 	 (%array-dimension array axis-number))))
@@ -624,8 +624,9 @@
   (declare (vector vector) (fixnum new))
   (if (and (array-header-p vector) (%array-fill-pointer-p vector))
       (if (> new (%array-available-elements vector))
-	(error "New fill pointer, ~S, is larger than the length of the vector."
-	       new)
+	(simple-program-error
+         "New fill pointer, ~S, is larger than the length of the vector."
+         new)
 	(setf (%array-fill-pointer vector) new))
       (error 'simple-type-error
 	     :datum vector
@@ -671,7 +672,7 @@
   (let ((fill-pointer (fill-pointer array)))
     (declare (fixnum fill-pointer))
     (if (zerop fill-pointer)
-	(error "Nothing left to pop.")
+	(simple-program-error "Nothing left to pop.")
 	(aref array
 	      (setf (%array-fill-pointer array)
 		    (1- fill-pointer))))))
@@ -688,18 +689,18 @@
   (let ((dimensions (if (listp dimensions) dimensions (list dimensions))))
     (cond ((/= (the fixnum (length (the list dimensions)))
 	       (the fixnum (array-rank array)))
-	   (error "Number of dimensions not equal to rank of array."))
+	   (simple-program-error "Number of dimensions not equal to rank of array."))
 	  ((not (subtypep element-type (array-element-type array)))
-	   (error "New element type, ~S, is incompatible with old."
+	   (simple-program-error "New element type, ~S, is incompatible with old."
 		  element-type)))
     (let ((array-rank (length (the list dimensions))))
       (declare (fixnum array-rank))
       (when (and fill-pointer (> array-rank 1))
-	(error "Multidimensional arrays can't have fill pointers."))
+	(simple-program-error "Multidimensional arrays can't have fill pointers."))
       (cond (initial-contents
 	     ;; Array former contents replaced by initial-contents.
 	     (if (or initial-element-p displaced-to)
-		 (error "Initial contents may not be specified with ~
+		 (simple-program-error "Initial contents may not be specified with ~
 		 the :initial-element or :displaced-to option."))
 	     (let* ((array-size (apply #'* dimensions))
 		    (array-data (data-vector-from-inits
@@ -720,10 +721,10 @@
 	    (displaced-to
 	     ;; No initial-contents supplied is already established.
 	     (when initial-element
-	       (error "The :initial-element option may not be specified ~
+	       (simple-program-error "The :initial-element option may not be specified ~
 	       with :displaced-to."))
 	     (unless (subtypep element-type (array-element-type displaced-to))
-	       (error "One can't displace an array of type ~S into another of ~
+	       (simple-program-error "One can't displace an array of type ~S into another of ~
 	               type ~S."
 		      element-type (array-element-type displaced-to)))
 	     (let ((displacement (or displaced-index-offset 0))
@@ -731,7 +732,7 @@
 	       (declare (fixnum displacement array-size))
 	       (if (< (the fixnum (array-total-size displaced-to))
 		      (the fixnum (+ displacement array-size)))
-		   (error "The :displaced-to array is too small."))
+		   (simple-program-error "The :displaced-to array is too small."))
 	       (if (adjustable-array-p array)
 		   ;; None of the original contents appear in adjusted array.
 		   (set-array-header array displaced-to array-size
@@ -802,27 +803,30 @@
   (cond ((not fill-pointer)
 	 (when (array-has-fill-pointer-p old-array)
 	   (when (> (%array-fill-pointer old-array) new-array-size)
-	     (error "Cannot adjust-array an array (~S) to a size (~S) that is ~
+	     (simple-program-error
+                    "Cannot adjust-array an array (~S) to a size (~S) that is ~
 	            smaller than it's fill pointer (~S)."
 		    old-array new-array-size (fill-pointer old-array)))
 	   (%array-fill-pointer old-array)))
 	((not (array-has-fill-pointer-p old-array))
-	 (error "Cannot supply a non-NIL value (~S) for :fill-pointer ~
-		        in adjust-array unless the array (~S) was originally ~
- 			created with a fill pointer."
-		       fill-pointer
-		       old-array))
+	 (simple-program-error
+          "Cannot supply a non-NIL value (~S) for :fill-pointer ~
+	   in adjust-array unless the array (~S) was originally ~
+ 	   created with a fill pointer."
+          fill-pointer
+          old-array))
 	((numberp fill-pointer)
 	 (when (> fill-pointer new-array-size)
-	   (error "Cannot supply a value for :fill-pointer (~S) that is larger ~
-	          than the new length of the vector (~S)."
-		  fill-pointer new-array-size))
+	   (simple-program-error
+            "Cannot supply a value for :fill-pointer (~S) that is larger ~
+	     than the new length of the vector (~S)."
+            fill-pointer new-array-size))
 	 fill-pointer)
 	((eq fill-pointer t)
 	 new-array-size)
 	(t
-	 (error "Bogus value for :fill-pointer in adjust-array: ~S"
-		fill-pointer))))
+	 (simple-program-error "Bogus value for :fill-pointer in adjust-array: ~S"
+                               fill-pointer))))
 
 (defun shrink-vector (vector new-size)
   "Destructively alters the Vector, changing its length to New-Size, which
@@ -902,7 +906,7 @@
 	  (make-array length :initial-element t)))
   (when initial-element-p
     (unless (typep initial-element element-type)
-      (error "~S cannot be used to initialize an array of type ~S."
+      (simple-program-error "~S cannot be used to initialize an array of type ~S."
 	     initial-element element-type))
     (fill (the simple-vector *zap-array-data-temp*) initial-element
 	  :end length))
@@ -997,7 +1001,7 @@
     (t
      (unless (bit-array-same-dimensions-p bit-array-1
 					  result-bit-array)
-       (error "~S and ~S do not have the same dimensions."
+       (simple-program-error "~S and ~S do not have the same dimensions."
 	      bit-array-1 result-bit-array))
      result-bit-array)))
 
@@ -1013,7 +1017,7 @@
      (declare (type (array bit) bit-array-1 bit-array-2)
 	      (type (or (array bit) (member t nil)) result-bit-array))
      (unless (bit-array-same-dimensions-p bit-array-1 bit-array-2)
-       (error "~S and ~S do not have the same dimensions."
+       (simple-program-error "~S and ~S do not have the same dimensions."
 	      bit-array-1 bit-array-2))
      (let ((result-bit-array (pick-result-array result-bit-array bit-array-1)))
        (if (and (simple-bit-vector-p bit-array-1)
