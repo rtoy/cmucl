@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.3 1992/06/22 15:46:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.4 1992/06/23 21:56:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,13 +50,13 @@
 
   LOOP
   (inst extru x 31 1 zero-tn :ev)
-  (inst add res y res)
+  (inst add y res res)
   (inst extru x 30 1 zero-tn :ev)
-  (inst sh1add res y res)
+  (inst sh1add y res res)
   (inst extru x 29 1 zero-tn :ev)
-  (inst sh2add res y res)
+  (inst sh2add y res res)
   (inst extru x 28 1 zero-tn :ev)
-  (inst sh3add res y res)
+  (inst sh3add y res res)
 
   (inst srl x 4 x)
   (inst comb :<> x zero-tn loop)
@@ -91,6 +91,13 @@
   (dotimes (i 31)
     (inst ds rem divisor rem)
     (inst addc quo quo quo))
+  ;; If the remainder is negative, we need to add the absolute value of the
+  ;; divisor.
+  (inst comb :>= rem zero-tn remainder-positive)
+  (inst comclr divisor zero-tn zero-tn :<)
+  (inst add rem divisor rem :tr)
+  (inst sub rem divisor rem)
+  REMAINDER-POSITIVE
   ;; Now we have to fix the signs of quo and rem.
   (inst xor divisor dividend zero-tn :>=)
   (inst sub zero-tn quo quo)
