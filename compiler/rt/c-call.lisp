@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.5 1992/03/10 08:59:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.6 1992/03/10 09:39:59 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -175,7 +175,6 @@
   (:results (results :more t))
   (:ignore args results)
   (:save-p t)
-  (:info function)
   (:temporary (:sc any-reg :offset nl0-offset
 		   :from (:argument 0) :to (:result 0)) nl0)
   (:temporary (:sc any-reg :offset lra-offset) lra)
