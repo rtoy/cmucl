@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.48 1993/07/13 16:58:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.49 1993/07/22 00:42:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1349,9 +1349,11 @@
 (defun %compiler-only-defstruct (info inherits)
   (multiple-value-bind
       (class layout old-layout)
-      (let ((clayout (info type compiler-layout (dd-name info))))
+      (multiple-value-bind
+	  (clayout clayout-p)
+	  (info type compiler-layout (dd-name info))
 	(ensure-structure-class info inherits
-				(if clayout "previously compiled" "current")
+				(if clayout-p "previously compiled" "current")
 				"compiled"
 				clayout))
     (cond
