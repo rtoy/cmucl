@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.91 2003/04/11 14:24:21 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.92 2003/06/02 16:29:23 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -277,7 +277,7 @@
 
 ;;; NODE-HOME-LAMBDA  --  Interface
 ;;;
-;;;    Return the home (i.e. enclosing non-let) lambda for Node.  Since the
+;;;    Return the home (i.e. enclosing non-let) lambda for NODE.  Since the
 ;;; LEXENV-LAMBDA may be deleted, we must chain up the LAMBDA-CALL-LEXENV
 ;;; thread until we find a lambda that isn't deleted, and then return its home.
 ;;;
@@ -348,7 +348,7 @@
 
 ;;; SOURCE-PATH-ORIGINAL-SOURCE  --  Interface
 ;;;
-;;;    Return the (reversed) list for the path in the orignal source (with the
+;;;    Return the (reversed) list for the PATH in the original source (with the
 ;;; TLF number last.)
 ;;; 
 (defun source-path-original-source (path)
@@ -358,7 +358,7 @@
 
 ;;; SOURCE-PATH-FORM-NUMBER  --  Interface
 ;;;
-;;;    Return the Form Number of Path's orignal source inside the Top Level
+;;;    Return the Form Number of PATH's orignal source inside the Top Level
 ;;; Form that contains it.  This is determined by the order that we walk the
 ;;; subforms of the top level source form.
 ;;;
@@ -1722,7 +1722,7 @@
 ;;; FIND-ERROR-CONTEXT  --  Interface
 ;;;
 ;;;    Return a COMPILER-ERROR-CONTEXT structure describing the current error
-;;; context, or NIL if we can't figure anything out.  Args is a list of things
+;;; context, or NIL if we can't figure anything out.  ARGS is a list of things
 ;;; that are going to be printed out in the error message, and can thus be
 ;;; blown off when they appear in the source context.
 ;;;
@@ -1760,6 +1760,10 @@
 		   :original-source (stringify-form form)
 		   :context src-context
 		   :file-name (file-info-name file)
+                   ;; emarsden2003-05-28 this returns the
+                   ;; file-position of the containing top-level form,
+                   ;; not of the error form; it's a pity to be
+                   ;; discarding so much information
 		   :file-position
 		   (multiple-value-bind (ignore pos)
 					(find-source-root tlf *source-info*)
@@ -1803,18 +1807,19 @@
 (declaim (type index *last-message-count*))
 
 (defvar *compiler-notification-function* nil
-  "This is the function called by the compiler to specially note a warning,
-   comment, or error.  The function must take four arguments, the severity
-   a string for context, the file namestring, and the file position.  The
-   severity is one of :note, :warning, or :error.  Except for the severity, all
-   of these can be NIL if unavailable or inapplicable.")
+  "This is the function called by the compiler to specially note a
+warning, comment, or error. The function must take five arguments: the
+severity, a string describing the nature of the notification, a string
+for context, the file namestring, and the file position. The severity
+is one of :note, :warning, or :error. Except for the severity, all of
+these can be NIL if unavailable or inapplicable.")
 
 
 ;;; COMPILER-NOTIFICATION  --  Internal
 ;;;
-;;;    Call any defined notification function.
+;;;    Call any user-specified notification function.
 ;;;
-(defun compiler-notification (severity context)
+(defun compiler-notification (severity context &optional message)
   (declare (type (member :note :warning :error) severity)
 	   (type (or compiler-error-context null) context))
   (when *compiler-notification-function*
@@ -1822,12 +1827,14 @@
 	(let ((*print-level* 2)
 	      (*print-pretty* nil)
 	      (name (compiler-error-context-file-name context)))
-	  (funcall *compiler-notification-function* severity 
+	  (funcall *compiler-notification-function*
+                   severity
+                   message
 		   (format nil "~{~{~S~^ ~}~^ => ~}"
 			   (compiler-error-context-context context))
 		   (when (pathnamep name) (namestring name))
 		   (compiler-error-context-file-position context)))
-	(funcall *compiler-notification-function* severity nil nil nil)))
+	(funcall *compiler-notification-function* severity message nil nil nil)))
   (undefined-value))
 
 
@@ -1859,8 +1866,8 @@
 ;;;    We suppress printing of messages identical to the previous, but record
 ;;; the number of times that the message is repeated.
 ;;;
-(defun print-error-message (what condition)
-  (declare (type (member :error :warning :note) what)
+(defun print-error-message (severity condition)
+  (declare (type (member :error :warning :note) severity)
 	   (type condition condition))
   (let ((*print-level* (or *error-print-level* *print-level*))
 	(*print-length* (or *error-print-length* *print-length*))
@@ -1883,8 +1890,9 @@
 		 (enclosing (compiler-error-context-enclosing-source context))
 		 (source (compiler-error-context-source context))
 		 (last *last-error-context*))
-	     (compiler-notification what context)
-	    
+	     (compiler-notification severity context
+                                    (apply #'format nil format-string format-args))
+
 	     (unless (and last
 			  (equal file (compiler-error-context-file-name last)))
 	       (when (pathnamep file)
@@ -1929,7 +1937,7 @@
 		   (write-string src stream))))))
 	  (t
 	   (pprint-logical-block (stream nil :per-line-prefix "; ")
-	     (compiler-notification what nil))
+	     (compiler-notification severity nil nil))
 	   (note-message-repeats)
 	   (setq *last-format-string* nil)
 	   (format stream "~2&")))
@@ -1944,7 +1952,7 @@
 	  (format stream "~&")
 	  (let ((*print-lines* nil))
 	    (pprint-logical-block (stream nil :per-line-prefix "; ")
-	      (format stream "~:(~A~): ~?~&" what format-string format-args)))))))
+	      (format stream "~:(~A~): ~?~&" severity format-string format-args)))))))
   
   (incf *last-message-count*)
   (undefined-value))

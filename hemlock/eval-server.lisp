@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.7 1998/05/04 01:27:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.8 2003/06/02 16:29:24 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -908,15 +908,12 @@
 ;;; about the position and kind of error.  The actual error text is written out
 ;;; using typescript operations.
 ;;;
-;;; Start and End are the compiler's best guess at the file position where the
-;;; error occurred.  Function is some string describing where the error was.
-;;;
-(defun compiler-note-in-editor (severity function name pos)
-  (declare (ignore name))
+(defun compiler-note-in-editor (severity message context namestring file-position)
+  (declare (ignore message namestring))
   (when *compiler-wire*
     (force-output *compiler-error-stream*)
     (wire:remote *compiler-wire*
-      (compiler-error *compiler-note* pos pos function severity)))
+      (compiler-error *compiler-note* file-position file-position context severity)))
     (wire:wire-force-output *compiler-wire*))
 
 

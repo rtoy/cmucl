@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.33 2002/11/14 16:54:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.34 2003/06/02 16:29:23 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,6 +53,12 @@
   (:report
    (lambda (condition stream)
      (let ((error-stream (stream-error-stream condition)))
+       (when c:*compiler-notification-function*
+         (funcall c:*compiler-notification-function* :error
+                  (format nil (reader-error-format-control condition)
+                          (reader-error-format-arguments condition))
+                  nil error-stream
+                  (file-position error-stream)))
        (format stream "Reader error ~@[at ~D ~]on ~S:~%~?"
 	       (file-position error-stream) error-stream
 	       (reader-error-format-control condition)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.154 2003/05/21 16:34:34 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.155 2003/06/02 16:29:23 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,16 +74,16 @@
 (defvar *coalesce-constants*)
 (declaim (type (member t nil) *coalesce-constants*))
 
-;;; *source-paths* is a hashtable from source code forms to the path taken
+;;; *SOURCE-PATHS* is a hashtable from source code forms to the path taken
 ;;; through the source to reach the form.  This provides a way to keep track of
 ;;; the location of original source forms, even when macroexpansions and other
 ;;; arbitary permutations of the code happen.  This table is initialized by
-;;; calling Find-Source-Paths on the original source.
+;;; calling FIND-SOURCE-PATHS on the original source.
 ;;;
 (declaim (hash-table *source-paths*))
 (defvar *source-paths*)
 
-;;; *Current-Component* is the Component structure which we link blocks into as
+;;; *CURRENT-COMPONENT* is the Component structure which we link blocks into as
 ;;; we generate them.  This just serves to glue the emitted blocks together
 ;;; until local call analysis and flow graph canonicalization figure out what
 ;;; is really going on.  We need to keep track of all the blocks generated so
@@ -92,19 +92,19 @@
 (declaim (type (or component null) *current-component*))
 (defvar *current-component*)
 
-;;; *Current-Path* is the source path of the form we are currently translating.
+;;; *CURRENT-PATH* is the source path of the form we are currently translating.
 ;;; See NODE-SOURCE-PATH in the NODE structure.
 ;;;
 (declaim (list *current-path*))
 (defvar *current-path* nil)
 
-;;; *Converting-For-Interpreter* is true when we are creating IR1 to be
-;;; interpreted rather than compiled.  This inhibits source tranformations and
+;;; *CONVERTING-FOR-INTERPRETER* is true when we are creating IR1 to be
+;;; interpreted rather than compiled.  This inhibits source transformations and
 ;;; stuff.
 ;;;
 (defvar *converting-for-interpreter* nil)
 
-;;; *Compile-Time-Define-Macros* is true when we want DEFMACRO definitions to
+;;; *COMPILE-TIME-DEFINE-MACROS* is true when we want DEFMACRO definitions to
 ;;; be installed in the compilation environment as interpreted functions.  We
 ;;; set this to false when compiling some parts of the system.
 ;;;
@@ -195,10 +195,10 @@
 
 ;;; Find-Free-Function  --  Internal
 ;;;
-;;;    If Name is already entered in *free-functions*, then return the value.
+;;;    If NAME is already entered in *free-functions*, then return the value.
 ;;; Otherwise, make a new Global-Var using information from the global
-;;; environment and enter it in *free-functions*.  If Name names a macro or
-;;; special form, then we error out using the supplied context which indicates
+;;; environment and enter it in *free-functions*.  If NAME names a macro or
+;;; special form, then we error out using the supplied CONTEXT which indicates
 ;;; what we were trying to do that demanded a function.
 ;;;
 (defun find-free-function (name context)
@@ -240,7 +240,7 @@
 ;;; Find-Lexically-Apparent-Function  --  Internal
 ;;;
 ;;;    Return the Leaf structure for the lexically apparent function definition
-;;; of Name.
+;;; of NAME.
 ;;;
 (defun find-lexically-apparent-function (name context)
   (declare (string context) (values leaf))
@@ -712,7 +712,7 @@
 		  (careful-expand-macro (info function macro-function fun)
 					form)))
     ((nil :function)
-     (ir1-convert-srctran start cont (find-free-function fun "Eh?")
+     (ir1-convert-srctran start cont (find-free-function fun "")
 			  form))))
 
 
@@ -964,7 +964,7 @@
 
 ;;; Process-Ftype-Declaration  --  Internal
 ;;;
-;;;    Somewhat similar to Process-Type-Declaration, but handles declarations
+;;;    Somewhat similar to PROCESS-TYPE-DECLARATION, but handles declarations
 ;;; for function variables.  In addition to allowing declarations for functions
 ;;; being bound, we must also deal with declarations that constrain the type of
 ;;; lexically apparent functions.
@@ -3457,6 +3457,7 @@
   (setf (info variable kind name) :constant)
   (setf (info variable where-from name) :defined)
   (setf (info variable constant-value name) value)
+  (setf (info variable documentation name) doc)
   (remhash name *free-variables*))
 
 ;;;; Defining global functions:
@@ -3553,7 +3554,7 @@
 ;;;
 (defun get-defined-function (name)
   (let* ((name (define-function-name name))
-	 (found (find-free-function name "Eh?")))
+	 (found (find-free-function name "")))
     (note-name-defined name :function)
     (cond ((not (defined-function-p found))
 	   ;;

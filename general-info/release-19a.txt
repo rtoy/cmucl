@@ -104,6 +104,10 @@ New in this release:
 
   * Other changes:
      - Removed obsolete alias from MAKE-VECTOR to MAKE-ARRAY
+     - the signature of *COMPILER-NOTIFICATION-FUNCTION* has changed;
+       it now has an extra argument that describes the nature of the
+       error or warning. 
+
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
