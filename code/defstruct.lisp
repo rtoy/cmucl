@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.3 1993/02/10 23:39:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.4 1993/02/11 19:08:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -576,12 +576,13 @@
     (let ((infos ()))
       (do ((info defstruct
 		 (typed-structure-info-or-lose (first (dd-include info)))))
-	  ((not (dd-include info)))
+	  ((not (dd-include info))
+	   (push info infos))
 	(push info infos))
       
       (let ((i 0))
 	(dolist (info infos)
-	  (incf i (dd-offset info))
+	  (incf i (or (dd-offset info) 0))
 	  (when (dd-named info)
 	    (res (cons (dd-name info) i)))
 	  (setq i (dd-length info)))))
@@ -603,19 +604,20 @@
 ;;; 2] We really want to use LIST to make list structures, instead of
 ;;;    MAKE-LIST/(SETF ELT).
 ;;; 3] STRUCTURE structures can have raw slots that must also be allocated and
-;;;    indirectly referenced.  We just call the setter function and let the
-;;;    compiler figure out the references.
+;;;    indirectly referenced.  We use SLOT-ACCESSOR-FORM to compute how to set
+;;;    the slots, which deals with raw slots.
 ;;;
 (defun create-vector-constructor
        (defstruct cons-name arglist vars types values) 
-  (let ((temp (gensym)))
+  (let ((temp (gensym))
+	(etype (dd-element-type defstruct)))
     `(defun ,cons-name ,arglist
-       (declare ,@(mapcar #'(lambda (var type) `(type ,type ,var))
+       (declare ,@(mapcar #'(lambda (var type) `(type (and ,type ,etype) ,var))
 			  vars types))
        (let ((,temp (make-array ,(dd-length defstruct)
 				:element-type ',(dd-element-type defstruct))))
 	 ,@(mapcar #'(lambda (x)
-		       `(setf (%instance-ref ,temp ,(cdr x))  ',(car x)))
+		       `(setf (aref ,temp ,(cdr x))  ',(car x)))
 		   (find-name-indices defstruct))
 	 ,@(mapcar #'(lambda (dsd value)
 		       `(setf (aref ,temp ,(dsd-index dsd)) ,value))
@@ -637,26 +639,30 @@
 ;;;
 (defun create-structure-constructor
        (defstruct cons-name arglist vars types values)
-  (let ((temp (gensym)))
+  (let* ((temp (gensym))
+	 (raw-index (dd-raw-index defstruct))
+	 (n-raw-data (when raw-index (gensym))))
     `(defun ,cons-name ,arglist
        (declare ,@(mapcar #'(lambda (var type) `(type ,type ,var))
 			  vars types))
        (let ((,temp (truly-the ,(dd-name defstruct)
-			       (%make-instance ,(dd-length defstruct)))))
+			       (%make-instance ,(dd-length defstruct))))
+	     ,@(when n-raw-data
+		 `(,n-raw-data
+		   (make-array ,(dd-raw-length defstruct)
+			       :element-type '(unsigned-byte 32)))))
 	 (setf (%instance-layout ,temp)
 	       (truly-the layout
 			  (load-time-value
 			   (class-layout
 			    (find-class ',(dd-name defstruct))))))
-	 ,@(when (dd-raw-index defstruct)
-	     `((setf (%instance-ref ,temp ,(dd-raw-index defstruct))
-		     (make-array ,(dd-raw-length defstruct)
-				 :element-type '(unsigned-byte 32)))))
+	 ,@(when n-raw-data
+	     `((setf (%instance-ref ,temp ,raw-index) ,n-raw-data)))
 	 ,@(mapcar #'(lambda (dsd value)
-		       `(setf (,(concat-pnames (dd-conc-name defstruct)
-					       (dsd-name dsd))
-			       ,temp)
-			      ,value))
+		       (multiple-value-bind
+			   (accessor index data)
+			   (slot-accessor-form defstruct dsd temp n-raw-data)
+			 `(setf (,accessor ,data ,index) ,value)))
 		   (dd-slots defstruct)
 		   values)
 	 ,temp))))
@@ -808,45 +814,65 @@
 
 ;;;; Slot accessors for raw slots:
 
+;;; SLOT-ACCESSOR-FORM  --  Internal
+;;;
+;;;     Return info about how to read/write a slot in the value stored in
+;;; Object.  This is also used by constructors (we can't use the accessor
+;;; function, since some slots are read-only.)  If supplied, Data is a variable
+;;; holding the raw-data vector.
+;;; 
+;;; Values:
+;;; 1] Accessor function name (setfable)
+;;; 2] Index to pass to accessor.
+;;; 3] Object form to pass to accessor.
+;;;
+(defun slot-accessor-form (defstruct slot &optional (object 'object) data)
+  (let ((rtype (dsd-raw-type slot)))
+    (values
+     (ecase rtype
+       (single-float '%raw-ref-single)
+       (double-float '%raw-ref-double)
+       (unsigned-byte 'aref)
+       (t '%instance-ref))
+     (if (eq rtype 'double-float)
+	 (ash (dsd-index slot) -1)
+	 (dsd-index slot))
+     (cond
+      ((eq rtype 't) object)
+      (data)
+      (t
+       `(truly-the (simple-array (unsigned-byte 32) (*))
+		   (%instance-ref object ,(dd-raw-index defstruct))))))))
+
+
 ;;; DEFINE-RAW-ACCESSORS  --  Internal
 ;;;
 ;;;    Define readers and writers for raw slots as inline functions.  We use
 ;;; the special RAW-REF operations to store floats in the raw data vector.
 ;;;
 (defun define-raw-accessors (defstruct)
-  (collect ((res))
-    (dolist (slot (dd-slots defstruct))
-      (let ((rtype (dsd-raw-type slot))
-	    (aname (dsd-accessor slot)))
-	(when (and aname (not (eq rtype 't)))
-	  (let ((accessor
-		 (ecase rtype
-		   (single-float '%raw-ref-single)
-		   (double-float '%raw-ref-double)
-		   (unsigned-byte 'aref)))
-		 (offset
-		  (if (eq rtype 'double-float)
-		      (ash (dsd-index slot) -1)
-		      (dsd-index slot)))
-		 (data `(truly-the (simple-array (unsigned-byte 32) (*))
-				   (%instance-ref object
-						  ,(dd-raw-index defstruct))))
-		(name (dd-name defstruct))
-		(stype (dsd-type slot)))
-	    (res `(declaim (inline ,aname)))
-	    (res `(declaim (ftype (function (,name) ,stype) ,aname)))
-	    (res
-	     `(defun ,aname (object)
-		(truly-the ,stype (,accessor ,data ,offset))))
-	    (unless (dsd-read-only slot)
-	      (res `(declaim (inline (setf ,aname))))
-	      (res `(declaim (ftype (function (,stype ,name) ,stype)
-				    (setf ,aname))))
+  (let ((name (dd-name defstruct)))
+    (collect ((res))
+      (dolist (slot (dd-slots defstruct))
+	(let ((stype (dsd-type slot))
+	      (aname (dsd-accessor slot)))
+	  (multiple-value-bind (accessor offset data)
+			       (slot-accessor-form defstruct slot)
+	    (when (and aname (not (eq accessor '%instance-ref)))
+	      (res `(declaim (inline ,aname)))
+	      (res `(declaim (ftype (function (,name) ,stype) ,aname)))
 	      (res
-	       `(defun (setf ,aname) (new-value object)
-		  (setf (,accessor ,data ,offset) new-value)
-		  new-value)))))))
-    (res)))
+	       `(defun ,aname (object)
+		  (truly-the ,stype (,accessor ,data ,offset))))
+	      (unless (dsd-read-only slot)
+		(res `(declaim (inline (setf ,aname))))
+		(res `(declaim (ftype (function (,stype ,name) ,stype)
+				      (setf ,aname))))
+		(res
+		 `(defun (setf ,aname) (new-value object)
+		    (setf (,accessor ,data ,offset) new-value)
+		    new-value)))))))
+    (res))))
 	  
 
 ;;;; Typed (non-class) structures:
@@ -874,7 +900,8 @@
       (dolist (slot (dd-slots defstruct))
 	(let ((name (dsd-accessor slot))
 	      (index (dsd-index slot))
-	      (slot-type (dsd-type slot)))
+	      (slot-type `(and ,(dsd-type slot)
+			       ,(dd-element-type defstruct))))
 	  (stuff `(proclaim '(inline ,name (setf ,name))))
 	  (stuff `(defun ,name (structure)
 		    (declare (type ,ltype structure))
@@ -1369,7 +1396,7 @@
 
 #-ns-boot
 (defun make-structure-load-form (structure)
-  (declare (type structure structure))
+  (declare (type structure-object structure))
   (let* ((class (layout-class (%instance-layout structure)))
 	 (fun (structure-class-make-load-form-fun class)))
     (etypecase fun
