@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.94 1993/08/03 12:58:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.95 1993/08/05 17:11:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -934,7 +934,6 @@
 	    (cond ((eq *block-compile* t) (push tll *top-level-lambdas*))
 		  (t
 		   (compile-top-level (list tll) nil)))))
-      (system:scrub-control-stack)
       (setf (bytes-consed-between-gcs) orig))))
 
 ;;; PROCESS-PROGN  --  Internal
