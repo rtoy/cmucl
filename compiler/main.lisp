@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.57 1992/04/14 03:01:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.58 1992/04/21 04:13:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,7 +222,7 @@
     (ltn-analyze component)
     (dfo-as-needed component)
     (maybe-mumble "Control ")
-    (control-analyze component)
+    (control-analyze component #'make-ir2-block)
 
     (when (ir2-component-values-receivers (component-info component))
       (maybe-mumble "Stack ")
@@ -507,20 +507,22 @@
   (format t "~|~%;;;; Component: ~S~2%" (component-name component))
   (print-blocks component)
   
-  (format t "~%~|~%;;;; IR2 component: ~S~2%" (component-name component))
+  (typecase (component-info component)
+    (ir2-component
+     (format t "~%~|~%;;;; IR2 component: ~S~2%" (component-name component))
   
-  (format t "Entries:~%")
-  (dolist (entry (ir2-component-entries (component-info component)))
-    (format t "~4TL~D: ~S~:[~; [Closure]~]~%"
-	    (label-id (entry-info-offset entry))
-	    (entry-info-name entry)
-	    (entry-info-closure-p entry)))
+     (format t "Entries:~%")
+     (dolist (entry (ir2-component-entries (component-info component)))
+       (format t "~4TL~D: ~S~:[~; [Closure]~]~%"
+	       (label-id (entry-info-offset entry))
+	       (entry-info-name entry)
+	       (entry-info-closure-p entry)))
   
-  (terpri)
-  (pre-pack-tn-stats component *standard-output*)
-  (terpri)
-  (print-ir2-blocks component)
-  (terpri)
+     (terpri)
+     (pre-pack-tn-stats component *standard-output*)
+     (terpri)
+     (print-ir2-blocks component)
+     (terpri)))
   
   (undefined-value))
 
