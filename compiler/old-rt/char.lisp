@@ -13,53 +13,71 @@
 ;;;
 (in-package 'c)
 
+
+;;;; Moves and coercions:
+
+;;; Move untagged string-char values.
+;;;
 (define-vop (string-char-move)
   (:args (x :target y
 	    :scs (string-char-reg)
-	    :load nil))
+	    :load-if (not (location= x y))))
   (:results (y :scs (string-char-reg)
-	       :load nil))
-  (:temporary (:scs (string-char-reg) :type string-char
-	       :from :argument  :to :result)
-	      temp)
+	       :load-if (not (location= x y))))
   (:effects)
   (:affected)
   (:generator 0
-    (sc-case x ((string-char-reg string-char-stack immediate-string-char
-				 descriptor-reg any-reg stack)))
-    (sc-case y ((string-char-reg string-char-stack
-				 descriptor-reg any-reg stack)))
+    (unless (location= x y)
+      (inst lr y x))))
+;;;
+(define-move-vop string-char-move :move (string-char-reg) (string-char-reg))
 
-    (let* ((x-char (sc-is x string-char-reg string-char-stack
-			  immediate-string-char))
-	   (y-char (sc-is y string-char-reg string-char-stack))
-	   (same-rep (if x-char y-char (not y-char)))
-	   (src (if (sc-is x stack string-char-stack immediate-string-char)
-		    temp x))
-	   (dest (if (sc-is y stack string-char-stack) temp y)))
 
-      (unless (and same-rep (location= x y))
+;;; Move untagged string-char arguments/return-values.
+;;;
+(define-vop (move-string-char-argument)
+  (:args (x :target y
+	    :scs (string-char-reg))
+	 (fp :scs (descriptor-reg)
+	     :load-if (not (sc-is y string-char-reg))))
+  (:results (y))
+  (:generator 0
+    (sc-case y
+      (string-char-reg
+       (unless (location= x y)
+	 (inst lr y x)))
+      (string-char-stack
+       (storew x fp (tn-offset y))))))
+;;;
+(define-move-vop move-string-char-argument :move-argument
+  (string-char-reg) (string-char-reg))
 
-	(unless (eq x src)
-	  (sc-case x
-	    ((string-char-stack stack)
-	     (load-stack-tn src x))
-	    (immediate-string-char
-	     (loadi src (char-code (tn-value x))))))
 
-	(if same-rep
-	    (unless (location= src dest)
-	      (inst lr dest src))
-	    (if x-char
-		(inst oiu dest src (ash system:%string-char-type
-					clc::type-shift-16))
-		(inst nilz dest src system:%character-code-mask)))
+;;; Move a tagged string char to an untagged representation.
+;;;
+(define-vop (move-to-string-char)
+  (:args (x :scs (any-reg descriptor-reg)))
+  (:results (y :scs (string-char-reg)))
+  (:generator 1
+    (inst nilz y x system:%character-code-mask)))
+;;;
+(define-move-vop move-to-string-char :move
+  (any-reg descriptor-reg) (string-char-reg))
 
-	(unless (eq y dest)
-	  (store-stack-tn y dest)))))) 
 
-(primitive-type-vop string-char-move (:coerce-to-t :coerce-from-t :move)
-  string-char)
+;;; Move an untagged string char to a tagged representation.
+;;;
+(define-vop (move-from-string-char)
+  (:args (x :scs (string-char-reg)))
+  (:results (y :scs (any-reg descriptor-reg)))
+  (:generator 1
+    (inst oiu y x (ash system:%string-char-type clc::type-shift-16))))
+;;;
+(define-move-vop move-from-string-char :move
+  (string-char-reg) (any-reg descriptor-reg))
+
+
+;;;; Other operations:
 
 (define-vop (char-code)
   (:args (ch :scs (string-char-reg) :target res))
@@ -74,7 +92,6 @@
 (define-vop (code-char)
   (:args (code :scs (any-reg descriptor-reg) :target res))
   (:results (res :scs (string-char-reg)))
-  (:result-types string-char)
   (:translate code-char)
   (:policy :fast-safe)
   (:generator 0
