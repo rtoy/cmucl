@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.14.1.1 1993/01/28 13:59:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.14.1.2 1993/02/04 12:11:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -543,7 +543,7 @@
       `(progn
 	 (defvar ,var-name)
 	 (,init-form
-	  (unless (boundp ,var-name)
+	  (unless (boundp ',var-name)
 	    (setq ,var-name (make-array ,total-size))))
 	 (proclaim '(type (simple-vector ,total-size) ,var-name))
 	 (proclaim '(inline ,@(inlines)))
