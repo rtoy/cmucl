@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.19 1991/11/13 07:54:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.20 1991/12/22 03:58:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,3 +301,5 @@
 (defun %progv (vars vals fun)
   (progv vars vals
     (funcall fun)))
+
+(defun %cleanup-point ())
