@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.53 1993/01/15 22:49:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.54 1993/02/04 15:51:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -872,8 +872,7 @@ default-value-8
 		   (do-next-filler)
 		   #-gengc
 		   (inst addu entry-point function
-			 (- (ash function-header-code-offset
-				 word-shift)
+			 (- (ash function-code-offset word-shift)
 			    function-pointer-type))
 		   #+gengc
 		   (inst lw entry-point lexenv
