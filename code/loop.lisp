@@ -47,6 +47,10 @@
 
 ;; $aclHeader: loop.cl,v 1.5 91/12/04 01:13:48 cox acl4_1 $
 
+#+cmu
+(ext:file-comment
+ "$Header $")
+
 ;;;; LOOP Iteration Macro
 
 #+allegro
