@@ -260,6 +260,7 @@
   "Returns the function associated with the specified char
    which is a macro character.  The optional readtable argument
    defaults to the current readtable."
+  (when (null rt) (setf rt *readtable*))
   ;;check macro syntax, return associated function if it's there.
   ;;returns a value for all constituents.
   (cond ((constituentp char)
@@ -1175,6 +1176,7 @@
 					       &optional (rt *readtable*))
   "Returns the macro character function for sub-char under disp-char
    or nil if there is no associated function."
+  (when (null rt) (setf rt *readtable*))
   (let ((dpair (find disp-char (dispatch-tables rt)
 		     :test #'char= :key #'car)))
     (if dpair
