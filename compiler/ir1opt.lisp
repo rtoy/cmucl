@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.62 1993/08/19 23:12:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.63 1993/08/31 22:52:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1388,15 +1388,15 @@
 	  (setf (continuation-reoptimize arg) nil)))
       
       (dolist (ref (leaf-refs fun))
-	(unless (eq ref this-ref)
-	  (setq union
-		(mapcar #'(lambda (this-arg old)
-			    (when old
-			      (setf (continuation-reoptimize this-arg) nil)
-			      (type-union (continuation-type this-arg) old)))
-			(basic-combination-args
-			 (continuation-dest (node-cont ref)))
-			union))))
+	(let ((dest (continuation-dest (node-cont ref))))
+	  (unless (or (eq ref this-ref) (not dest))
+	    (setq union
+		  (mapcar #'(lambda (this-arg old)
+			      (when old
+				(setf (continuation-reoptimize this-arg) nil)
+				(type-union (continuation-type this-arg) old)))
+			  (basic-combination-args dest)
+			  union)))))
       
       (mapc #'(lambda (var type)
 		(when type
