@@ -35,6 +35,7 @@
 (load "c:type-init" :verbose t)
 (load "c:sset" :verbose t)
 (load "c:node" :verbose t)
+(load "c:alloc" :verbose t)
 (load "c:ctype" :verbose t)
 (load "c:knownfun" :verbose t)
 (load "c:fndb" :verbose t)

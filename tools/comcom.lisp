@@ -33,6 +33,8 @@
 (comf "c:ctype")
 #-new-compiler
 (comf "c:knownfun" :always-once *new-compile*)
+(comf "c:vop" :always-once *new-compile*)
+(comf "c:alloc")
 (comf "c:fndb")
 (comf "c:main")
 
@@ -53,7 +55,6 @@
 (comf "c:constraint")
 (comf "c:envanal")
 (comf "c:rt/parms")
-(comf "c:vop" :always-once *new-compile*)
 
 (comf "c:vmdef" :load t :bootstrap-macros :both)
 
