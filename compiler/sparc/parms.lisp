@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.29 2000/10/27 19:33:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.30 2000/12/05 03:07:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,3 +261,7 @@
 ;;; The number of bits per element in the assemblers code vector.
 ;;;
 (defparameter *assembly-unit-length* 8)
+
+
+;;;; Pseudo-atomic trap number
+(defconstant pseudo-atomic-trap 16)
