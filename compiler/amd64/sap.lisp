@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/sap.lisp,v 1.1 2004/05/24 22:35:00 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/sap.lisp,v 1.2 2004/06/10 01:45:39 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,57 +125,6 @@
   (:generator 1
     (move sap int)))
 
-(define-vop (fixnum-sap)
-  (:args (int :scs (any-reg)))
-  (:arg-types tagged-num)
-  (:results (sap :scs (sap-reg)))
-  (:result-types system-area-pointer)
-  (:translate fixnum-sap)
-  (:policy :fast-safe)
-  (:generator 1
-    (move sap int)))
-
-#+nil
-(define-vop (fixnum-sap)
-    (:args (x :scs (any-reg descriptor-reg) :target sap
-	      :load-if (not (location= x sap))))
-  (:arg-types tagged-num)
-  (:results (sap :scs (sap-reg)
-		 :load-if (not (location= x sap))))
-  (:result-types system-area-pointer)
-  (:note "fixnum as sap")
-  (:generator 1
-    (move sap x)))
-
-#+nil
-(define-move-vop fixnum-sap :move
-  (any-reg descriptor-reg) (sap-reg))
-
-#+nil
-(define-vop (fixnum-sap)
-  (:args (arg :scs (any-reg descriptor-reg) :target sap
-	    ; :load-if (not (location= arg sap))
-	    ))
-  (:arg-types tagged-num)
-  (:results (sap :scs (sap-reg)
-		 ; :load-if (not (location= arg sap))
-		 ))
-  (:result-types system-area-pointer)
-  (:translate fixnum-sap)
-  (:policy :fast-safe)
-  (:generator 1
-    (move sap arg)))
-
-#+nil
-(define-vop (fixnum-sap)
-  (:args (int :scs (any-reg descriptor-reg) :target sap))
-  (:arg-types fixnum)
-  (:results (sap :scs (sap-reg)))
-  (:result-types system-area-pointer)
-  (:translate fixnum-sap)
-  (:policy :fast-safe)
-  (:generator 1
-    (move sap fixnum)))
 
 
 ;;;; POINTER+ and POINTER-
