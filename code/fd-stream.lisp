@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.25 1993/06/08 11:20:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.26 1993/06/24 13:48:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -510,22 +510,20 @@
   (let ((stream-var (gensym))
 	(element-var (gensym)))
     `(let ((,stream-var ,stream))
-       (if (fd-stream-unread ,stream)
-	 (prog1
-	     (fd-stream-unread ,stream)
-	   (setf (fd-stream-unread ,stream) nil)
-	   (setf (fd-stream-listen ,stream) nil))
-	 (let ((,element-var
-		(catch 'eof-input-catcher
-		  (input-at-least ,stream-var ,bytes)
-		  ,@read-forms)))
-	   (cond (,element-var
-		  (incf (fd-stream-ibuf-head ,stream-var) ,bytes)
-		  ,element-var)
-		 (,eof-error
-		  (error "EOF while reading ~S" stream))
-		 (t
-		  ,eof-value)))))))
+       (if (fd-stream-unread ,stream-var)
+	   (prog1
+	       (fd-stream-unread ,stream-var)
+	     (setf (fd-stream-unread ,stream-var) nil)
+	     (setf (fd-stream-listen ,stream-var) nil))
+	   (let ((,element-var
+		  (catch 'eof-input-catcher
+		    (input-at-least ,stream-var ,bytes)
+		    ,@read-forms)))
+	     (cond (,element-var
+		    (incf (fd-stream-ibuf-head ,stream-var) ,bytes)
+		    ,element-var)
+		   (t
+		    (eof-or-lose ,stream-var ,eof-error ,eof-value))))))))
 
 ;;; DEF-INPUT-ROUTINE -- internal
 ;;;
@@ -662,16 +660,9 @@ non-server method is also significantly more efficient for large reads.
 		(decf bytes copy))
 	      (when (zerop bytes)
 		(return requested))))))
-    (cond (result)
-	  ((not eof-error-p)
-	   (- requested (/ bytes elsize)))
-	  (t
-	   (error "Hit eof on ~S after reading ~D ~D~2:*-bit byte~P~*, ~
-		   but ~D~2:* ~D-bit byte~P~:* ~[were~;was~:;were~] requested."
-		  stream
-		  (- requested (/ bytes elsize))
-		  (* elsize 8)
-		  requested)))))
+    (or result
+	(eof-or-lose stream eof-error-p 
+		     (- requested (/ bytes elsize))))))
 |#
 
 
@@ -741,10 +732,8 @@ non-server method is also significantly more efficient for large reads.
 		  (error "Error reading ~S: ~A" stream
 			 (unix:get-unix-error-msg err)))
 		(when (< count now-needed)
-		  (if eof-error-p
-		      (when (zerop count)
-			(error "Unexpected eof on ~S." stream))
-		      (return (- requested now-needed))))
+		  (return (eof-or-lose stream eof-error-p
+				       (- requested now-needed))))
 		(decf now-needed count)
 		(when (zerop now-needed) (return requested))
 		(incf offset count)))))
@@ -759,10 +748,8 @@ non-server method is also significantly more efficient for large reads.
 		       (unix:get-unix-error-msg err)))
 	      (incf (fd-stream-ibuf-tail stream) count)
 	      (when (< count now-needed)
-		(if eof-error-p
-		    (when (zerop count)
-		      (error "Unexpected eof on ~S." stream))
-		    (return (- requested now-needed))))
+		(return (eof-or-lose stream eof-error-p
+				     (- requested now-needed))))
 	      (let* ((copy (min now-needed count))
 		     (copy-bits (* copy vm:byte-bits))
 		     (buffer-start-bits
