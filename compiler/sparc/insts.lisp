@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.41 2003/08/05 16:32:43 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.42 2003/08/27 21:09:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -735,7 +735,7 @@ about function addresses and register values.")
 
 (defun cond-move-condition (condition-reg)
   (or (position condition-reg cond-move-condition-registers)
-      (error "Unknown conditional move condition register:  ~S~%")))
+      (error "Unknown conditional move condition register:  ~S~%" condition-reg)))
 
 (defconstant cond-move-printer
   `(:name cond :tab
@@ -792,7 +792,7 @@ about function addresses and register values.")
 
 (defun register-condition (rcond)
   (or (position rcond cond-move-integer-conditions)
-      (error "Unknown register condition:  ~S~%")))
+      (error "Unknown register condition:  ~S~%" rcond)))
 
 (disassem:define-instruction-format
     (format-4-cond-move-integer 32 :default-printer cond-move-integer-printer)
