@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.73 1997/11/04 15:02:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.74 1997/11/07 12:45:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3043,16 +3043,22 @@
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
 		 (let ((,var (vm:sigcontext-register
-			      escaped
-			      (c::sc-offset-offset sc-offset))))
+			      escaped (c::sc-offset-offset sc-offset))))
 		   ,@forms)
 		 :invalid-value-for-unescaped-register-storage))
 	     (escaped-float-value (format)
 	       `(if escaped
 		 (vm:sigcontext-float-register
-		  escaped
-		  (c::sc-offset-offset sc-offset)
-		  ',format)
+		  escaped (c::sc-offset-offset sc-offset) ',format)
+		 :invalid-value-for-unescaped-register-storage))
+	     #+complex-float
+	     (escaped-complex-float-value (format)
+	       `(if escaped
+		 (complex
+		  (vm:sigcontext-float-register
+		   escaped (c::sc-offset-offset sc-offset) ',format)
+		  (vm:sigcontext-float-register
+		   escaped (1+ (c::sc-offset-offset sc-offset)) ',format))
 		 :invalid-value-for-unescaped-register-storage))
 	     ;; The debug variable locations are not always valid, and
 	     ;; on the x86 locations can contain raw values.  To
@@ -3072,9 +3078,8 @@
 		      (< vm:target-read-only-space-start ,val #x11000000)))
 		 (kernel:make-lisp-obj ,val)
 		 :invalid-object)))
-    (case (c::sc-offset-scn sc-offset)
-      ((#.vm:any-reg-sc-number
-	#.vm:descriptor-reg-sc-number)
+    (ecase (c::sc-offset-scn sc-offset)
+      ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
        (system:without-gcing
 	(with-escaped-value (val)
 	  (make-valid-lisp-obj val))))
@@ -3106,6 +3111,26 @@
       (#.vm:double-stack-sc-number
        (system:sap-ref-double fp (- (* (+ (c::sc-offset-offset sc-offset) 2)
 				       vm:word-bytes))))
+      #+complex-float
+      (#.vm:complex-single-reg-sc-number
+       (escaped-complex-float-value single-float))
+      #+complex-float
+      (#.vm:complex-double-reg-sc-number
+       (escaped-complex-float-value double-float))
+      #+complex-float
+      (#.vm:complex-single-stack-sc-number
+       (complex
+	(system:sap-ref-single fp (- (* (1+ (c::sc-offset-offset sc-offset))
+					vm:word-bytes)))
+	(system:sap-ref-single fp (- (* (+ (c::sc-offset-offset sc-offset) 2)
+					vm:word-bytes)))))
+      #+complex-float
+      (#.vm:complex-double-stack-sc-number
+       (complex
+	(system:sap-ref-double fp (- (* (+ (c::sc-offset-offset sc-offset) 2)
+					vm:word-bytes)))
+	(system:sap-ref-double fp (- (* (+ (c::sc-offset-offset sc-offset) 4)
+					vm:word-bytes)))))
       (#.vm:control-stack-sc-number
        (make-valid-lisp-obj
 	(system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
@@ -3278,9 +3303,7 @@
 	    (not (null escaped))
 	    value)
     (ecase (c::sc-offset-scn sc-offset)
-      ((#.vm:any-reg-sc-number
-	#.vm:descriptor-reg-sc-number
-	#+rt #.vm:word-pointer-reg-sc-number)
+      ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
        (system:without-gcing
 	(set-escaped-value
 	  (kernel:get-lisp-obj-address value))))
@@ -3303,15 +3326,29 @@
 	#+nil ;;  don't have escaped floats -- still in npx?
        (set-escaped-float-value double-float value))
       (#.vm:single-stack-sc-number
-       (setf (system:sap-ref-single fp
-				    (- (* (1+ (c::sc-offset-offset sc-offset))
-					  vm:word-bytes)))
+       (setf (system:sap-ref-single
+	      fp (- (* (1+ (c::sc-offset-offset sc-offset)) vm:word-bytes)))
 	     (the single-float value)))
       (#.vm:double-stack-sc-number
-       (setf (system:sap-ref-double fp
-				    (- (* (+ (c::sc-offset-offset sc-offset) 2)
-					  vm:word-bytes)))
+       (setf (system:sap-ref-double
+	      fp (- (* (+ (c::sc-offset-offset sc-offset) 2) vm:word-bytes)))
 	     (the double-float value)))
+      #+complex-float
+      (#.vm:complex-single-stack-sc-number
+       (setf (system:sap-ref-single
+	      fp (- (* (1+ (c::sc-offset-offset sc-offset)) vm:word-bytes)))
+	     (realpart (the (complex single-float) value)))
+       (setf (system:sap-ref-single
+	      fp (- (* (+ (c::sc-offset-offset sc-offset) 2) vm:word-bytes)))
+	     (imagpart (the (complex single-float) value))))
+      #+complex-float
+      (#.vm:complex-double-stack-sc-number
+       (setf (system:sap-ref-double
+	      fp (- (* (+ (c::sc-offset-offset sc-offset) 2) vm:word-bytes)))
+	     (realpart (the (complex double-float) value)))
+       (setf (system:sap-ref-double
+	      fp (- (* (+ (c::sc-offset-offset sc-offset) 4) vm:word-bytes)))
+	     (imagpart (the (complex double-float) value))))
       (#.vm:control-stack-sc-number
        (setf (kernel:stack-ref fp (c::sc-offset-offset sc-offset)) value))
       (#.vm:base-char-stack-sc-number
