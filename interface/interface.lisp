@@ -289,26 +289,41 @@
 	      (eq status :signaled))
       (setf *system-motif-server* nil))))
 
+(defvar *server-startup-timeout* 30)
+
 (defun verify-system-server-exists ()
   (when (and (not xt:*default-server-host*)
 	     (or (not *system-motif-server*)
 		 (and *system-motif-server*
 		      (not (ext:process-alive-p *system-motif-server*)))))
-    (let ((process (ext:run-program (merge-pathnames *clm-binary-name*
-						     *clm-binary-directory*)
-				    '("-nofork" "-local")
-				    :wait nil
-				    :status-hook #'system-server-status-hook)))
+    (let ((process (ext:run-program
+		    (merge-pathnames *clm-binary-name*
+				     *clm-binary-directory*)
+		    '("-nofork" "-local")
+		    :output *error-output*
+		    :error :output
+		    :wait nil
+		    :status-hook #'system-server-status-hook)))
       (unless (and process (ext:process-alive-p process))
-	(xti:toolkit-error "Could not start Motif server process."))
+	(xti:toolkit-error "Could not start Motif server process.~@
+			    Status = ~S, exit code = ~D."
+			   (ext:process-status process)
+			   (ext:process-exit-code process)))
       ;;
       ;; Wait until the server has started up
-      (loop
-	(when (probe-file (format nil "/tmp/.motif_socket-p~a"
-				  (ext:process-pid process)))
-	  (return))
-	(sleep 2))
-      (setf *system-motif-server* process))))
+      (let ((sock-name (format nil "/tmp/.motif_socket-p~D"
+			       (ext:process-pid process)))
+	    (end-time (+ (get-internal-real-time)
+			 (* internal-time-units-per-second
+			    *server-startup-timeout*))))
+	(loop
+	  (when (probe-file sock-name)
+	    (return))
+	  (system:serve-event 1)
+	  (when (> (get-internal-real-time) end-time)
+	    (xti:toolkit-error
+	     "Timed out waiting for Motif server to start up.")))
+	(setf *system-motif-server* process)))))
 
 
 
