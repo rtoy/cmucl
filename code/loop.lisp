@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.21 2003/05/05 12:09:50 emarsden Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.22 2003/05/28 09:22:41 gerd Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1987,7 +1987,7 @@ collected result will be returned as the value of the LOOP."
 
 (defun loop-for-arithmetic (var val data-type kwd)
   (loop-sequencer
-    var (loop-check-data-type data-type *loop-real-data-type*) t
+    var (loop-check-data-type data-type 'number) t
     nil nil nil nil nil nil
     (loop-collect-prepositional-phrases
       '((:from :upfrom :downfrom) (:to :upto :downto :above :below) (:by))
