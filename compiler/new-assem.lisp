@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.22 1993/03/12 15:35:35 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.23 1993/05/18 18:15:31 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1716,7 +1716,7 @@
 		      (block-number (c:block-number
 				     (c:ir2-block-block
 				      (c:vop-block ,vop-name)))))
-		 (incf (aref costs (1- block-number)) ,cost)))
+		 (incf (aref costs block-number) ,cost)))
 	    emitter)
       (when (assem-params-scheduler-p
 	     (c:backend-assembler-params c:*target-backend*))
