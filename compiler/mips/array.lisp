@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.44 1993/08/25 23:26:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.45 1994/06/29 21:54:17 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -396,13 +396,23 @@
   (:generator 20
     (inst addu lip object index)
     (inst addu lip index)
-    (inst lwc1 value lip
-	  (- (* vector-data-offset word-bytes)
-	     other-pointer-type))
-    (inst lwc1-odd value lip
-	  (+ (- (* vector-data-offset word-bytes)
-		other-pointer-type)
-	     word-bytes))
+    (ecase (backend-byte-order *backend*)
+      (:big-endian
+       (inst lwc1 value lip
+	     (+ (- (* vector-data-offset word-bytes)
+		   other-pointer-type)
+		word-bytes))
+       (inst lwc1-odd value lip
+	     (- (* vector-data-offset word-bytes)
+		other-pointer-type)))
+      (:little-endian
+       (inst lwc1 value lip
+	     (- (* vector-data-offset word-bytes)
+		other-pointer-type))
+       (inst lwc1-odd value lip
+	     (+ (- (* vector-data-offset word-bytes)
+		   other-pointer-type)
+		word-bytes))))
     (inst nop)))
 
 (define-vop (data-vector-set/simple-array-double-float)
@@ -419,13 +429,23 @@
   (:generator 20
     (inst addu lip object index)
     (inst addu lip index)
-    (inst swc1 value lip
-	  (- (* vector-data-offset word-bytes)
-	     other-pointer-type))
-    (inst swc1-odd value lip
-	  (+ (- (* vector-data-offset word-bytes)
-		other-pointer-type)
-	     word-bytes))
+    (ecase (backend-byte-order *backend*)
+      (:big-endian
+       (inst swc1 value lip
+	     (+ (- (* vector-data-offset word-bytes)
+		   other-pointer-type)
+		word-bytes))
+       (inst swc1-odd value lip
+	     (- (* vector-data-offset word-bytes)
+		other-pointer-type)))
+      (:little-endian
+       (inst swc1 value lip
+	     (- (* vector-data-offset word-bytes)
+		other-pointer-type))
+       (inst swc1-odd value lip
+	     (+ (- (* vector-data-offset word-bytes)
+		   other-pointer-type)
+		word-bytes))))
     (unless (location= result value)
       (inst fmove :double result value))))
 

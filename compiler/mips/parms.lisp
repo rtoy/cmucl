@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.109 1993/05/20 11:46:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.110 1994/06/29 21:54:39 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,16 +28,21 @@
 
 (eval-when (compile eval load)
 
-(setf (backend-name *target-backend*) "PMAX")
+(setf (backend-name *target-backend*) #+pmax "PMAX" #+sgi "SGI")
+#+pmax
 (setf (backend-version *target-backend*)
       #-gengc "DECstation 3100/Mach 1.0"
       #+gengc "DECstation 3100/Mach 1.0 (gengc)")
-(setf (backend-fasl-file-type *target-backend*) "pmaxf")
+#+sgi
+(setf (backend-version *target-backend*) "SGI")
+
+(setf (backend-fasl-file-type *target-backend*) #+pmax "pmaxf" #+sgi "sgif")
 (setf (backend-fasl-file-implementation *target-backend*)
-      pmax-fasl-file-implementation)
+      #+pmax pmax-fasl-file-implementation #+sgi sgi-fasl-file-implementation)
 (setf (backend-fasl-file-version *target-backend*) #-gengc 6 #+gengc 7)
 (setf (backend-register-save-penalty *target-backend*) 3)
-(setf (backend-byte-order *target-backend*) :little-endian)
+(setf (backend-byte-order *target-backend*) #+pmax :little-endian
+      #+sgi :big-endian)
 (setf (backend-page-size *target-backend*) 4096)
 
 ); eval-when

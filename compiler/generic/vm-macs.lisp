@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.13 1994/04/06 17:09:11 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.14 1994/06/29 21:53:34 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -239,13 +239,14 @@
 	  hppa-fasl-file-implementation
 	  big-endian-fasl-file-implementation
 	  little-endian-fasl-file-implementation
-	  alpha-fasl-file-implementation))
+	  alpha-fasl-file-implementation
+	  sgi-fasl-file-implementation))
 
 ;;; Constants for the different implementations.  These are all defined in
 ;;; one place to make sure they are all unique.
 
 (defparameter fasl-file-implementations
-  '(nil "Pmax" "Sparc" "RT" "RT/AFPA" "x86" "HPPA" "Alpha" 
+  '(nil "Pmax" "Sparc" "RT" "RT/AFPA" "x86" "HPPA" "Alpha" "SGI"
 	"Big-endian byte-code" "Little-endian byte-code"))
 (defconstant pmax-fasl-file-implementation 1)
 (defconstant sparc-fasl-file-implementation 2)
@@ -256,6 +257,7 @@
 (defconstant big-endian-fasl-file-implementation 7)
 (defconstant little-endian-fasl-file-implementation 8)
 (defconstant alpha-fasl-file-implementation 9)
+(defconstant sgi-fasl-file-implementation 10)
 
 ;;; The maximum number of SCs in any implementation.
 (defconstant sc-number-limit 32)

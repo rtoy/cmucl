@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.13 1994/05/22 18:05:49 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.14 1994/06/29 21:53:00 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1672,7 +1672,7 @@
 (defun do-cold-fixup (code-object offset value kind)
   (let ((sap (sap+ (descriptor-sap code-object) offset)))
     (ecase (c:backend-fasl-file-implementation c:*backend*)
-      ((#.c:pmax-fasl-file-implementation #.c:sgi-fasl-file-implementation)
+      (#.c:pmax-fasl-file-implementation
        (ecase kind
 	 (:jump
 	  (assert (zerop (ash value -28)))
@@ -1790,7 +1790,20 @@
 	    (setf (sap-ref-8 sap 1) (ldb (byte 8 24) value))))
 	 (:lda
 	  (setf (sap-ref-8 sap 0) (ldb (byte 8 0) value))
-	  (setf (sap-ref-8 sap 1) (ldb (byte 8 8) value)))))))
+	  (setf (sap-ref-8 sap 1) (ldb (byte 8 8) value)))))
+      (#.c:sgi-fasl-file-implementation
+       (ecase kind
+	 (:jump
+	  (assert (zerop (ash value -28)))
+	  (setf (ldb (byte 26 0) (sap-ref-32 sap 0))
+		(ash value -2)))
+	 (:lui
+	  (setf (sap-ref-16 sap 2)
+		(+ (ash value -16)
+		   (if (logbitp 15 value) 1 0))))
+	 (:addi
+	  (setf (sap-ref-16 sap 2)
+		(ldb (byte 16 0) value)))))))
   (undefined-value))
 
 (defun linkage-info-to-core ()

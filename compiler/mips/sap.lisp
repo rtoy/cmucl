@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.27 1993/01/13 15:58:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.28 1994/06/29 21:54:46 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,8 +184,13 @@
 		 (:single
 		  '((inst lwc1 result sap 0)))
 		 (:double
-		  '((inst lwc1 result sap 0)
-		    (inst lwc1-odd result sap word-bytes))))
+		  (ecase (backend-byte-order *backend*)
+		    (:big-endian
+		     '((inst lwc1 result sap word-bytes)
+		       (inst lwc1-odd result sap 0)))
+		    (:little-endian
+		     '((inst lwc1 result sap 0)
+		       (inst lwc1-odd result sap word-bytes))))))
 	   (inst nop)))
        (define-vop (,ref-name-c)
 	 (:translate ,ref-name)
@@ -215,8 +220,13 @@
 	       (:single
 		'((inst lwc1 result object offset)))
 	       (:double
-		'((inst lwc1 result object offset)
-		  (inst lwc1-odd result object (+ offset word-bytes)))))
+		(ecase (backend-byte-order *backend*)
+		  (:big-endian
+		   '((inst lwc1 result object (+ offset word-bytes))
+		     (inst lwc1-odd result object offset)))
+		  (:little-endian
+		   '((inst lwc1 result object offset)
+		     (inst lwc1-odd result object (+ offset word-bytes)))))))
 	   (inst nop)))
        (define-vop (,set-name)
 	 (:translate ,set-name)
@@ -245,10 +255,17 @@
 		  (unless (location= result value)
 		    (inst fmove :single result value))))
 	       (:double
-		'((inst swc1 value sap 0)
-		  (inst swc1-odd value sap word-bytes)
-		  (unless (location= result value)
-		    (inst fmove :double result value)))))))
+		(ecase (backend-byte-order *backend*)
+		  (:big-endian
+		   '((inst swc1 value sap word-bytes)
+		     (inst swc1-odd value sap 0)
+		     (unless (location= result value)
+		       (inst fmove :double result value))))
+		  (:little-endian
+		   '((inst swc1 value sap 0)
+		     (inst swc1-odd value sap word-bytes)
+		     (unless (location= result value)
+		       (inst fmove :double result value)))))))))
        (define-vop (,set-name-c)
 	 (:translate ,set-name)
 	 (:policy :fast-safe)
@@ -280,10 +297,17 @@
 		  (unless (location= result value)
 		    (inst fmove :single result value))))
 	       (:double
-		'((inst swc1 value object offset)
-		  (inst swc1-odd value object (+ offset word-bytes))
-		  (unless (location= result value)
-		    (inst fmove :double result value))))))))))
+		(ecase (backend-byte-order *backend*)
+		  (:big-endian
+		   '((inst swc1 value object (+ offset word-bytes))
+		     (inst swc1-odd value object (+ offset word-bytes))
+		     (unless (location= result value)
+		       (inst fmove :double result value))))
+		  (:little-endian
+		   '((inst swc1 value object offset)
+		     (inst swc1-odd value object (+ offset word-bytes))
+		     (unless (location= result value)
+		       (inst fmove :double result value))))))))))))
 
 ); eval-when (compile eval)
 
