@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.50 1990/09/24 16:59:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.51 1990/10/02 05:43:20 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -541,7 +541,7 @@
 	  single-float-bits double-float-low-bits double-float-high-bits
 	  single-float-digits double-float-digits
 	  register-save-penalty symbol-raw-function-addr-slot
-	  symbol-setf-function-slot))
+	  symbol-setf-function-slot structure-header-type))
 
 
 (in-package "C")
