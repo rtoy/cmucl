@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.4 1990/03/05 12:13:49 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.5 1990/03/10 16:58:03 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -1182,7 +1182,7 @@
 ;;; 
 (defun init-xep-environment (node block fun)
   (declare (type bind node) (type ir2-block block) (type clambda fun))
-  (vop allocate-frame node block)
+  (vop allocate-frame node block (entry-info-offset (leaf-info fun)))
   (let ((ef (functional-entry-function fun)))
     (when (and (optional-dispatch-p ef)
 	       (optional-dispatch-more-entry ef))
@@ -1244,7 +1244,11 @@
     
     (when (ir2-environment-return-pc env)
       (move-from-frame node block (ir2-environment-return-pc-pass env)
-		       (ir2-environment-return-pc env) argp)))
+		       (ir2-environment-return-pc env) argp))
+
+    (let ((lab (gen-label)))
+      (setf (ir2-environment-environment-start env) lab)
+      (vop note-environment-start node block lab)))
   
   (undefined-value))
 
