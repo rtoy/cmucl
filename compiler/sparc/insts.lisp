@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.47 2003/10/18 14:05:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.48 2003/10/27 18:29:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1114,7 +1114,24 @@ about function addresses and register values.")
 (define-f3-inst ld #b11 #b000000 :load-store :load
 		#+sparc-v9 :print-name #+sparc-v9 'lduw)
 
-(define-f3-inst ldsw #b11 #b001000 :load-store :load) ; v9
+;; The code sometimes uses ldsw and lduw.  LDSW is a real instruction
+;; for V9 that sign-extends a 32-bit load.  LDUW is the same as LD.
+;; For non-V9, we define macros to replace these with the equivalent
+;; instruction (LD) since sign-extending and zero-extending a 32-bit
+;; value in a 32-bit register is the same.
+#+sparc-v9
+(progn
+  (define-f3-inst ldsw #b11 #b001000 :load-store :load) ; v9
+  (define-instruction-macro lduw (&rest args)
+    `(inst ld ,@args)))
+
+#-sparc-v9
+(progn
+  (define-instruction-macro ldsw (&rest args)
+    `(inst ld ,@args))
+  (define-instruction-macro lduw (&rest args)
+    `(inst ld ,@args)))
+
 
 ;; ldd is deprecated on the Sparc V9.
 (define-f3-inst ldd #b11 #b000011 :load-store :load)
