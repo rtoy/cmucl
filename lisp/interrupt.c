@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.19 1999/02/22 11:49:18 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.20 1999/09/16 15:26:01 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -500,7 +500,15 @@ void interrupt_install_low_level_handler
     sa.sa_sigaction = handler;
     sigemptyset(&sa.sa_mask);
     FILLBLOCKSET(&sa.sa_mask);
+#if defined(__linux__)
+    /*
+     * Don't want the SIGINFO flag on linux as it causes the creation
+     * of real-time interrupt frames.
+     */
+    sa.sa_flags = SA_RESTART;
+#else
     sa.sa_flags = SA_RESTART | SA_SIGINFO;
+#endif
 
     sigaction(signal, &sa, NULL);
 #else
@@ -563,7 +571,15 @@ unsigned long install_handler(int signal,
 
 	sigemptyset(&sa.sa_mask);
 	FILLBLOCKSET(&sa.sa_mask);
+#if defined(__linux__)
+	/*
+	 * Don't want the SIGINFO flag on linux as it causes the
+	 * creation of real-time interrupt frames.
+	 */
+	sa.sa_flags = SA_RESTART;
+#else
 	sa.sa_flags = SA_SIGINFO | SA_RESTART;
+#endif
 
 	sigaction(signal, &sa, NULL);
     }
