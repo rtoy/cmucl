@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.5 1990/05/13 15:30:39 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.6 1990/05/13 22:36:23 ch Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -27,6 +27,8 @@ lispobj *new_space_free_pointer;
 static int (*scavtab[256])();
 static lispobj (*transother[256])();
 static int (*sizetab[256])();
+
+static struct weak_pointer *weak_pointers;
 
 
 /* Predicates */
@@ -167,8 +169,11 @@ collect_garbage()
 	new_space_free_pointer = new_space;
 
 
-	/* Scavenge the roots */
+	/* Initialize the weak pointer list. */
+	weak_pointers = (struct weak_pointer *) NULL;
 
+
+	/* Scavenge the roots. */
 	printf("Scavenging interrupt contexts ...\n");
 	scavenge_interrupt_contexts();
 
@@ -199,6 +204,9 @@ collect_garbage()
 #if defined(DEBUG_PRINT_GARBAGE)
 	print_garbage(from_space, from_space_free_pointer);
 #endif
+
+	printf("Scanning weak pointers ...\n");
+	scan_weak_pointers();
 
 	/* Flip spaces */
 	os_invalidate(current_dynamic_space, DYNAMIC_SPACE_SIZE);
@@ -802,11 +810,11 @@ lispobj object;
 	
 	cons = (struct cons *) PTR(object);
 
-	/* ### Don't use copy_object here */
+	/* ### Don't use copy_object here. */
 	new_list_pointer = copy_object(object, 2);
 	new_cons = (struct cons *) PTR(new_list_pointer);
 
-	/* Set forwarding pointer */
+	/* Set forwarding pointer. */
 	cons->car = new_list_pointer;
 	
 	/* Try to linearize the list in the cdr direction to help reduce */
@@ -1445,6 +1453,100 @@ lispobj *where;
 }
 
 
+/* Weak Pointers */
+
+#define WEAK_POINTER_NWORDS \
+	CEILING((sizeof(struct weak_pointer) / sizeof(lispobj)), 2)
+
+static
+scav_weak_pointer(where, object)
+lispobj *where, object;
+{
+	/* Do not let GC scavenge the value slot of the weak pointer */
+	/* (that is why it is a weak pointer).  Note:  we could use */
+	/* the scav_unboxed method here. */
+
+	return WEAK_POINTER_NWORDS;
+}
+
+static lispobj
+trans_weak_pointer(object)
+lispobj object;
+{
+	int nwords;
+	lispobj copy;
+	struct weak_pointer *wp;
+
+	gc_assert(Pointerp(object));
+
+#if defined(DEBUG_WEAK)
+	printf("Transporting weak pointer from 0x%08x\n", object);
+#endif
+
+	/* Need to remember where all the weak pointers are that have */
+	/* been transported so they can be fixed up in a post-GC pass. */
+
+	copy = copy_object(object, WEAK_POINTER_NWORDS);
+	wp = (struct weak_pointer *) PTR(copy);
+	
+
+	/* Push the weak pointer onto the list of weak pointers. */
+	wp->next = weak_pointers;
+	weak_pointers = wp;
+
+	return copy;
+}
+
+static
+size_weak_pointer(where)
+lispobj *where;
+{
+	return WEAK_POINTER_NWORDS;
+}
+
+scan_weak_pointers()
+{
+	struct weak_pointer *wp;
+
+	for (wp = weak_pointers; wp != (struct weak_pointer *) NULL;
+	     wp = wp->next) {
+		lispobj value;
+		lispobj first, *first_pointer;
+
+		value = wp->value;
+
+#if defined(DEBUG_WEAK)
+		printf("Weak pointer at 0x%08x\n", (unsigned long) wp);
+		printf("Value: 0x%08x\n", (unsigned long) value);
+#endif		
+
+		/* ### May want to make it an error to make a weak */
+		/* pointer to a non-pointer since it doesn't make any */
+		/* sense to do it.  But for now, if it happens, don't */
+		/* lose big -- just go on. */
+		if (!(Pointerp(value) && from_space_p(value)))
+			continue;
+
+		/* Now, we need to check if the object has been */
+		/* forwarded.  If it has been, the weak pointer is */
+		/* still good and needs to be updated.  Otherwise, the */
+		/* weak pointer needs to be nil'ed out. */
+		first_pointer = (lispobj *) PTR(value);
+		first = *first_pointer;
+		
+#if defined(DEBUG_WEAK)
+		printf("First: 0x%08x\n", (unsigned long) first);
+#endif		
+
+		if (Pointerp(first) && new_space_p(first))
+			wp->value = first;
+		else
+			wp->value = NIL;
+	}
+}
+
+
+
 /* Initialization */
 
 static
@@ -1525,6 +1627,7 @@ gc_init()
 	scavtab[type_BaseCharacter] = scav_immediate;
 	scavtab[type_Sap] = scav_unboxed;
 	scavtab[type_UnboundMarker] = scav_immediate;
+	scavtab[type_WeakPointer] = scav_weak_pointer;
 
 
 	/* Transport Other Table */
@@ -1561,6 +1664,7 @@ gc_init()
 	transother[type_BaseCharacter] = trans_immediate;
 	transother[type_Sap] = trans_unboxed;
 	transother[type_UnboundMarker] = trans_immediate;
+	transother[type_WeakPointer] = trans_weak_pointer;
 
 	/* Size table */
 
@@ -1611,4 +1715,5 @@ gc_init()
 	sizetab[type_BaseCharacter] = size_immediate;
 	sizetab[type_Sap] = size_unboxed;
 	sizetab[type_UnboundMarker] = size_immediate;
+	sizetab[type_WeakPointer] = size_weak_pointer;
 }
