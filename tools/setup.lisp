@@ -267,7 +267,9 @@
 	 (obj (if output-file
 		  (pathname output-file)
 		  (make-pathname :defaults src
-				 :type (if *new-compile* "nfasl" "fasl"))))
+				 :type (if *new-compile*
+					   vm:target-fasl-file-type
+					   "fasl"))))
 	 (compiler #+new-compiler #'compile-file
 		   #-new-compiler (if *new-compile*
 				      #'c::ncompile-file
