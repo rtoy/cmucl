@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.1 1990/02/24 19:37:08 wlott Exp $ */
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.2 1990/02/28 18:19:49 wlott Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o os.o vars.o assem.o parse.o interrupt.o test.o
@@ -32,7 +32,7 @@ depends:
 	rm -f Makefile.BAK
 	ln Makefile Makefile.BAK
 	sed -n '1,/^#@/p' Makefile > Makefile.NEW
-	cc -M *.c | egrep -v ' /usr/' >> Makefile.NEW
+	cc -M *.[cs] | egrep -v ' /usr/' >> Makefile.NEW
 	mv Makefile.NEW Makefile
 	rm Makefile.BAK
 
@@ -41,6 +41,9 @@ alloc.o: alloc.c
 alloc.o: lisp.h
 alloc.o: ldb.h
 alloc.o: alloc.h
+assem.o: assem.s
+assem.o: lisp.h
+assem.o: lispregs.h
 coreparse.o: coreparse.c
 egets.o: egets.c
 interrupt.o: interrupt.c
@@ -69,6 +72,9 @@ print.o: ldb.h
 print.o: print.h
 print.o: lisp.h
 print.o: vars.h
+search.o: search.c
+search.o: lisp.h
+search.o: ldb.h
 test.o: test.c
 test.o: lisp.h
 test.o: ldb.h
