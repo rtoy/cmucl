@@ -177,6 +177,7 @@ New in this release:
        similar cases.
      - GCD sometimes returning a negative value.
      - LCM sometimes returning a negative value, or signaling division-by-zero.
+     - FLOAT in sometimes returning a float of the wrong type.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
