@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.5 1997/08/22 20:49:32 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.6 1997/12/31 18:57:53 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -378,6 +378,8 @@ void message_read_resource_names(message_t message,ResourceList *list,
   list->length = length;
   if( length>0 ) {
     list->args = (ArgList)XtMalloc(length*sizeof(Arg));
+    register_garbage(list->args, GarbageData);
+
     /* Allocate region to store data into */
     data = (long *)XtMalloc( sizeof(long)*length );
     bzero(data,sizeof(long)*length);
