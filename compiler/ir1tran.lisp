@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.81 1992/09/29 16:46:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.82 1992/12/08 17:59:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3402,29 +3402,36 @@
 ;;; converting a DEFUN.  This is used both by the %DEFUN translator and for
 ;;; global inline expansion.
 ;;;
+;;; Unless a :INLINE function, we temporarily clobber the inline expansion.
+;;; This prevents recursive inline expansion of opportunistic pseudo-inlines.
+;;;
 (defun ir1-convert-lambda-for-defun
        (lambda var expansion converter parent-form)
   (declare (cons lambda) (function converter) (type defined-function var))
-  (let* ((name (leaf-name var))
-	 (fun (funcall converter lambda name parent-form))
-	 (function-info (info function info name)))
-    (setf (functional-inlinep fun) (defined-function-inlinep var))
-    (assert-new-definition var fun)
-    ;;
-    ;; If definitely not an interpreter stub, then substitute for any
-    ;; old references.
-    (unless (or (eq (defined-function-inlinep var) :notinline)
-		(not *block-compile*)
-		(and function-info
-		     (or (function-info-transforms function-info)
-			 (function-info-templates function-info)
-			 (function-info-ir2-convert function-info))))
-      (substitute-leaf fun var)
+  (let ((var-expansion (defined-function-inline-expansion var)))
+    (unless (eq (defined-function-inlinep var) :inline)
+      (setf (defined-function-inline-expansion var) nil))
+    (let* ((name (leaf-name var))
+	   (fun (funcall converter lambda name parent-form))
+	   (function-info (info function info name)))
+      (setf (functional-inlinep fun) (defined-function-inlinep var))
+      (assert-new-definition var fun)
+      (setf (defined-function-inline-expansion var) var-expansion)
       ;;
-      ;; If in a simple environment, then we can allow backward references
-      ;; to this function from following top-level forms.
-      (when expansion (setf (defined-function-functional var) fun)))
-    fun))
+      ;; If definitely not an interpreter stub, then substitute for any
+      ;; old references.
+      (unless (or (eq (defined-function-inlinep var) :notinline)
+		  (not *block-compile*)
+		  (and function-info
+		       (or (function-info-transforms function-info)
+			   (function-info-templates function-info)
+			   (function-info-ir2-convert function-info))))
+	(substitute-leaf fun var)
+	;;
+	;; If in a simple environment, then we can allow backward references
+	;; to this function from following top-level forms.
+	(when expansion (setf (defined-function-functional var) fun)))
+      fun)))
 	
 
 ;;; %DEFUN IR1 convert  --  Internal
