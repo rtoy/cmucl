@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.44 1991/02/20 15:14:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.45 1991/11/05 15:57:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.44 1991/02/20 15:14:45 ram Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -243,7 +241,8 @@
 	    (simple-test-tag ,n-temp ,n-temp ,n-target ,n-not-p
 			     ,n-type-code type-mask)))))
 
-(defmacro test-simple-type (register temp target not-p type-code)
+(defmacro test-simple-type (register temp target not-p type-code
+				     &key (lowtag 'vm:other-pointer-type))
   "Emit conditional code that test whether Register holds an object with
   the tag specificed if Tag-Type.  If the Tag-Type is a type for a heap
   object than the register is dereferencd and the heap object is
@@ -264,8 +263,8 @@
 	    (let* ((out-label (gen-label))
 		   (not-other-label (if ,n-not-p ,n-target out-label)))
 	      (simple-test-tag ,n-register ,n-temp not-other-label t
-			       vm:other-pointer-type vm:lowtag-mask)
-	      (load-type ,n-temp ,n-register (- vm:other-pointer-type))
+			       ,lowtag vm:lowtag-mask)
+	      (load-type ,n-temp ,n-register (- ,lowtag))
 	      (inst nop)
 	      (simple-test-tag ,n-temp ,n-temp ,n-target ,n-not-p
 			       ,n-type-code 0)
