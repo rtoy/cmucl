@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.66 1993/08/06 13:12:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.67 1993/08/15 19:20:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -507,18 +507,27 @@
 (defun change-block-successor (block old new)
   (declare (type cblock new old block) (inline member))
   (unlink-blocks block old)
-  (setf (component-reanalyze (block-component block)) t)
-  (unless (member new (block-succ block) :test #'eq)
-    (link-blocks block new))
-  
-  (let ((last (block-last block)))
-    (when (if-p last)
-      (setf (block-test-modified block) t)
-      (macrolet ((frob (slot)
-		   `(when (eq (,slot last) old)
-		      (setf (,slot last) new))))
-	(frob if-consequent)
-	(frob if-alternative))))
+  (let ((last (block-last block))
+	(comp (block-component block)))
+    (setf (component-reanalyze comp) t)
+    (typecase last
+      (cif
+       (setf (block-test-modified block) t)
+       (let* ((succ-left (block-succ block))
+	      (new (if (and (eq new (component-tail comp))
+			    succ-left)
+		       (first succ-left)
+		       new)))
+	 (unless (member new succ-left :test #'eq)
+	   (link-blocks block new))
+	 (macrolet ((frob (slot)
+		      `(when (eq (,slot last) old)
+			 (setf (,slot last) new))))
+	   (frob if-consequent)
+	   (frob if-alternative))))
+      (t
+       (unless (member new (block-succ block) :test #'eq)
+	 (link-blocks block new)))))
   
   (undefined-value))
 
