@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.12 1997/11/18 16:56:01 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.13 1997/11/18 17:08:42 dtc Exp $
  *
  */
 
@@ -25,6 +25,9 @@
 #include "gc.h"
 #include "monitor.h"
 #include "validate.h"
+#if defined GENCGC
+#include "gencgc.h"
+#endif
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
@@ -171,6 +174,10 @@ void main(int argc, char *argv[], char *envp[])
 
     initial_function = load_core_file(core);
 
+
+#if defined GENCGC
+    gencgc_pickup_dynamic();
+#else
 #if defined WANT_CGC && defined X86_CGC_ACTIVE_P
     {
       extern int use_cgc_p;
@@ -178,6 +185,7 @@ void main(int argc, char *argv[], char *envp[])
       if(x != type_UnboundMarker && x != NIL)
 	use_cgc_p = 1;		/* enable allocator */
     }
+#endif
 #endif
 
 #ifdef BINDING_STACK_POINTER
