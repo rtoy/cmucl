@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.18 1991/01/30 15:50:26 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.19 1991/01/31 17:31:23 ram Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -427,7 +427,7 @@
 	  (push (gensym) dummy-list))
 	`(multiple-value-bind (,@dummy-list ,wendy)
 			      ,form
-	   (declare (ingore ,@dummy-list))
+	   (declare (ignore ,@dummy-list))
 	   ,wendy))
       `(nth ,n (multiple-value-list ,form))))
 
