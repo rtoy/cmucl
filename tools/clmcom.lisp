@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.8 1993/08/24 13:39:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.9 1993/08/24 15:51:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,7 @@
     ("target:compile-motif.log"
      :optimize '(optimize (speed 3) (ext:inhibit-warnings 3)
 			  #+small (safety 0)
-			  #+small (debug-info .5)))
+			  #+small (debug .5)))
   
   (dolist (f tk-internals-files)
     (comf f :load t)))
