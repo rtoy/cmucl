@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.74 1992/09/07 15:48:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.75 1992/09/15 15:43:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -799,7 +799,7 @@
 
 ;;;; PROCESS-DECLARATIONS:
 
-(declaim (start-block process-declarations))
+(declaim (start-block process-declarations make-new-inlinep))
 
 ;;; Find-In-Bindings  --  Internal
 ;;;
@@ -1143,7 +1143,7 @@
 ;;;; Lambda hackery:  
 
 (declaim (start-block ir1-convert-lambda ir1-convert-lambda-body
-		      ir1-convert-aux-bindings))
+		      ir1-convert-aux-bindings varify-lambda-arg))
 
 ;;; Varify-Lambda-Arg  --  Internal
 ;;;
