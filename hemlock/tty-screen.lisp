@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.3 1991/03/14 16:26:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.4 1991/05/22 15:53:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,6 +46,8 @@
       (setf (device-hunk-window echo-hunk) echo)
       (setup-window-image *parse-starting-mark* echo echo-height width)
       (setup-modeline-image *echo-area-buffer* echo)
+      (setf (device-hunk-previous echo-hunk) echo-hunk
+	    (device-hunk-next echo-hunk) echo-hunk)
       (prepare-window-for-redisplay echo))
     ;;
     ;; Make the main window.
