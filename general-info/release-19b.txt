@@ -44,7 +44,9 @@ New in this release:
       - Added some more pprinters for various forms.
       - Callbacks supported on Mac OS X.
       - Loop analysis code added to the compiler.  It's incorporated
-        into the build, but not used in any way yet.
+        into the build and can be enabled by setting *loop-analyze* to
+        T, but the compiler doesn't use the loop information for
+        anything yet.
       - Errors from socket functions signal a SOCKET-ERROR instead of
         ERROR. 
       - Efficiency notes are no longer printed if inhibit-warnings >=
@@ -94,6 +96,11 @@ New in this release:
         FOR, WITH, and AS clauses, as required by ANSI CL.
       - Format bugs in ~{ and ~@[X~], as noted by ansi-tests, have
         been fixed.
+      - Evaluation order of REMF, INCF, and DECF.
+      - When *read-suppress* is T, READ, READ-PRESERVING-WHITESPACE,
+        READ-DELIMITED-LIST, and READ-FROM-STRING now return NIL, as
+        specified by ANSI CL.  (Previously, CMUCL would return a list
+        of NILs.)
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -141,6 +148,7 @@ New in this release:
       - A directory with a component of :WILD was not correctly
         handled.
       - CREATE-INET-LISTENER was missing a call to htonl.
+      - (coerce #c(1 2) '(complex float)) works now.
  
   * Other changes:
       - Infinite loops in map and friends caused by specifying
@@ -149,7 +157,10 @@ New in this release:
         compliant either.
       - Compiler is a little smarter in deriving the result type of
         MAP.
-     
+      - MAKE-PATHNAME will accept a :HOST arg of NIL, and will use NIL
+        as the host slot instead of filling in the host slot from the
+        defaults.
+
   * Improvements to the PCL implementation of CLOS:
 
   * Improvements to Hemlock, the Emacs-like editor:
