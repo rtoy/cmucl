@@ -282,7 +282,13 @@
 %% boxes.
 \setlength{\emergencystretch}{5pt}
 
-% These are for latex2html, which isn't really supported anymore.
-%\begin{htmlonly}
-%\input{latex2html}
-%\end{htmlonly}
+%% requires the sectsty package
+\allsectionsfont{\bfseries\sffamily}
+\chapterfont{\fontfamily{pag}\selectfont}
+
+%% section numbers in the left margin
+\makeatletter
+\def\@seccntformat#1{\protect\makebox[0pt][r]{\csname
+    the#1\endcsname\quad}}
+\makeatother
+
