@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.6 1991/09/25 15:13:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.7 1991/09/27 10:24:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,7 +272,7 @@
 		  (setf (system:alien-access
 			 (mach::sgtty-flags
 			  (system:alien-value stuff)))
-			#o6300) ; XTABS|EVENP|ODDP
+			#o300) ; EVENP|ODDP
 		  (mach:unix-ioctl slave-fd mach:TIOCSETP sap)
 		  (mach:unix-ioctl master-fd mach:TIOCGETP sap)
 		  (setf (system:alien-access
