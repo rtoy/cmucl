@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.39 2002/12/22 14:09:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.40 2003/01/03 20:17:49 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -669,9 +669,24 @@
 ;;; reinitialized.  The class may or may not be finalized.
 ;;; 
 (defun update-class (class finalizep)  
+  ;; Comment from Gerd Moellmann:
+  ;;
+  ;; Note that we can't simply delay the finalization when CLASS has
+  ;; no forward referenced superclasses because that causes bootstrap
+  ;; problems.
+  (when (and (not finalizep)
+	     (not (class-finalized-p class))
+	     (not (class-has-a-forward-referenced-superclass-p class)))
+    (finalize-inheritance class)
+    (return-from update-class))
   (when (or finalizep (class-finalized-p class)
 	    (not (class-has-a-forward-referenced-superclass-p class)))
     (update-cpl class (compute-class-precedence-list class))
+    ;; This invocation of UPDATE-SLOTS, in practice, finalizes the
+    ;; class.  The hoops above are to ensure that FINALIZE-INHERITANCE
+    ;; is called at finalization, so that MOP programmers can hook
+    ;; into the system as described in "Class Finalization Protocol"
+    ;; (section 5.5.2 of AMOP).
     (update-slots class (compute-slots class))
     (update-gfs-of-class class)
     (update-inits class (compute-default-initargs class))
