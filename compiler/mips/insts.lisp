@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.37 1992/02/24 00:43:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.38 1992/03/06 10:36:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.37 1992/02/24 00:43:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.38 1992/03/06 10:36:03 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -222,17 +222,17 @@
 (define-format (jump 32
 		:disassem-printer '(:name :tab target))
   (op (byte 6 26))
-  (target (byte 26 0)))
+  (target (byte 26 0) :default-type (unsigned-byte 26)))
 
 (defconstant reg-printer
   '(:name :tab rd (:unless (:same-as rd) ", " rs) ", " rt))
 
 (define-format (register 32 :disassem-printer reg-printer)
   (op (byte 6 26))
-  (rs (byte 5 21) :read t)
-  (rt (byte 5 16) :read t)
-  (rd (byte 5 11) :write t)
-  (shamt (byte 5 6) :default 0)
+  (rs (byte 5 21) :read t :default-type register)
+  (rt (byte 5 16) :read t :default-type register)
+  (rd (byte 5 11) :write t :default-type register)
+  (shamt (byte 5 6) :default 0 :default-type (unsigned-byte 5))
   (funct (byte 6 0)))
 
 
@@ -250,7 +250,7 @@
 		:disassem-printer '(:name :tab offset))
   (op (byte 6 26))
   (funct (byte 10 16))
-  (offset (byte 16 0)))
+  (offset (byte 16 0) :default-type (signed-byte 16)))
 
 (defconstant float-fmt-printer
   '((:unless :constant funct)
@@ -268,20 +268,20 @@
 		:disassem-printer float-printer)
   (op (byte 6 26) :default #b010001)
   (filler (byte 1 25) :default #b1)
-  (format (byte 4 21))
-  (ft (byte 5 16) :read t)
-  (fs (byte 5 11) :read t)
-  (fd (byte 5 6) :write t)
+  (format (byte 4 21) :default-type float-format)
+  (ft (byte 5 16) :read t :default-type fp-reg)
+  (fs (byte 5 11) :read t :default-type fp-reg)
+  (fd (byte 5 6) :write t :default-type fp-reg)
   (funct (byte 6 0)))
 
 (define-format (float-aux 32 :use (float-status) :clobber (float-status)
 			  :disassem-printer float-printer)
   (op (byte 6 26) :default #b010001)
   (filler-1 (byte 1 25) :default #b1)
-  (format (byte 4 21))
-  (ft (byte 5 16) :read t :default 0)
-  (fs (byte 5 11) :read t)
-  (fd (byte 5 6) :write t)
+  (format (byte 4 21) :default-type float-format)
+  (ft (byte 5 16) :read t :default 0 :default-type fp-reg)
+  (fs (byte 5 11) :read t :default-type fp-reg)
+  (fd (byte 5 6) :write t :default-type fp-reg)
   (funct (byte 2 4))
   (sub-funct (byte 4 0)))
 
@@ -854,8 +854,12 @@
 
 ;;;; Floating point instructions.
 
+;; rs is used as a sub-op code
+(defconstant sub-op-printer '(:name :tab rd ", " rt))
+
 (macrolet ((frob (name kind)
-	     `(define-instruction (,name :attributes (delayed-load))
+	     `(define-instruction (,name :attributes (delayed-load)
+					 :disassem-printer sub-op-printer)
 		(register (op :constant #b010001)
 			  (rs :constant #b00100)
 			  (rd :argument ,kind)
@@ -865,7 +869,8 @@
   (frob mtc1-odd odd-fp-reg))
 
 (macrolet ((frob (name kind)
-	     `(define-instruction (,name :attributes (delayed-load))
+	     `(define-instruction (,name :attributes (delayed-load)
+					 :disassem-printer sub-op-printer)
 		(register (op :constant #b010001)
 			  (rs :constant #b00000)
 			  (rt :argument register :read nil :write t)
@@ -874,15 +879,19 @@
   (frob mfc1 fp-reg)
   (frob mfc1-odd odd-fp-reg))
 
-(define-instruction (cfc1 :use (float-status) :attributes (delayed-load))
+(define-instruction (cfc1 :use (float-status)
+			  :attributes (delayed-load)
+			  :disassem-printer sub-op-printer)
   (register (op :constant #b010001)
 	    (rs :constant #b00010)
 	    (rt :argument register :read nil :write t)
 	    (rd :argument control-register :write nil)
 	    (funct :constant 0)))
 
-(define-instruction (ctc1 :use (float-status) :clobber (float-status)
-			  :attributes (delayed-load))
+(define-instruction (ctc1 :use (float-status)
+			  :clobber (float-status)
+			  :attributes (delayed-load)
+			  :disassem-printer sub-op-printer)
   (register (op :constant #b010001)
 	    (rs :constant #b00110)
 	    (rt :argument register)
