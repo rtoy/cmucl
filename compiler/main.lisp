@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.34 1991/03/12 16:44:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.35 1991/03/20 03:01:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -231,7 +231,9 @@
       (describe-component component *compiler-trace-output*))
     
     (maybe-mumble "Code ")
-    (let ((length (generate-code component)))
+    (multiple-value-bind
+	(length trace-table)
+	(generate-code component)
       
       (when *compiler-trace-output*
 	(format *compiler-trace-output*
@@ -248,10 +250,12 @@
       (etypecase object
 	(fasl-file
 	 (maybe-mumble "FASL")
-	 (fasl-dump-component component *code-segment* length object))
+	 (fasl-dump-component component *code-segment*
+			      length trace-table object))
 	(core-object
 	 (maybe-mumble "Core")
-	 (make-core-component component *code-segment* length object))
+	 (make-core-component component *code-segment*
+			      length trace-table object))
 	(null))
 
       (nuke-segment *code-segment*)))
