@@ -17,7 +17,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/requests.lisp,v 1.5 1998/12/19 15:21:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/requests.lisp,v 1.6 2002/08/19 16:22:20 toy Exp $")
 
 (in-package :xlib)
 
@@ -523,7 +523,7 @@
     ((or null card32) time)))
 
 (defun grab-button (window button event-mask
-		    &key (modifiers 0)
+		    &key (modifiers :any)
 			 owner-p sync-pointer-p sync-keyboard-p confine-to cursor)
   (declare (type window window)
 	   (type (or (member :any) card8) button)
@@ -543,7 +543,7 @@
     (pad8 1)
     (card16 (encode-modifier-mask modifiers))))
 
-(defun ungrab-button (window button &key (modifiers 0))
+(defun ungrab-button (window button &key (modifiers :any))
   (declare (type window window)
 	   (type (or (member :any) card8) button)
 	   (type modifier-mask modifiers))

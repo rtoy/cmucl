@@ -17,7 +17,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.12 2001/12/11 00:48:06 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.13 2002/08/19 16:22:20 toy Exp $")
 
 ;; Primary Interface Author:
 ;;	Robert W. Scheifler
@@ -884,8 +884,8 @@
 (defun encode-modifier-mask (modifier-mask)
   (declare (type modifier-mask modifier-mask))
   (declare (clx-values mask16))
-  (or (encode-mask *state-mask-vector* modifier-mask 'modifier-key)
-      (and (eq modifier-mask :any) #x8000)
+  (or (and (eq modifier-mask :any) #x8000)
+      (encode-mask *state-mask-vector* modifier-mask 'modifier-key)
       (x-type-error modifier-mask 'modifier-mask)))
 
 (defun encode-state-mask (state-mask)
