@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.13 1991/05/21 18:37:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.14 1991/05/21 22:22:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,31 +67,39 @@
   (file nil)		      ; The file this stream is for
   (original nil)	      ; The original file (for :if-exists :rename)
   (delete-original nil)	      ; for :if-exists :rename-and-delete
-  (element-size 1)	      ; Number of bytes per element.
+  ;;
+  ;;; Number of bytes per element.
+  (element-size 1 :type index)
   (element-type 'base-character) ; The type of element being transfered.
   (fd -1 :type fixnum)	      ; The file descriptor
-  (buffering :full)	      ; One of :none, :line, or :full
-  (char-pos nil)	      ; Character position if known.
-  (listen nil)		      ; T if we don't need to listen.  :EOF if we hit
-			      ; EOF.
+  ;;
+  ;; Controls when the output buffer is flushed.
+  (buffering :full :type (member :full :line :none))
+  ;;
+  ;; Character position if known.
+  (char-pos nil :type (or index null))
+  ;;
+  ;; T if input is waiting on FD.  :EOF if we hit EOF.
+  (listen nil :type (member nil t :eof))
+  ;;
   ;; The input buffer.
   (unread nil)
-  (ibuf-sap nil)
-  (ibuf-length nil)
-  (ibuf-head 0 :type fixnum)
-  (ibuf-tail 0 :type fixnum)
+  (ibuf-sap nil :type (or system-area-pointer null))
+  (ibuf-length nil :type (or index null))
+  (ibuf-head 0 :type index)
+  (ibuf-tail 0 :type index)
 
   ;; The output buffer.
-  (obuf-sap nil)
-  (obuf-length nil)
-  (obuf-tail 0 :type fixnum)
+  (obuf-sap nil :type (or system-area-pointer null))
+  (obuf-length nil :type (or index null))
+  (obuf-tail 0 :type index)
 
   ;; Output flushed, but not written due to non-blocking io.
   (output-later nil)
   (handler nil))
 
 (defun %print-fd-stream (fd-stream stream depth)
-  (declare (ignore depth))
+  (declare (ignore depth) (stream stream))
   (format stream "#<Stream for ~A>"
 	  (fd-stream-name fd-stream)))
 
@@ -117,26 +125,26 @@
 	 (end (caddr stuff))
 	 (reuse-sap (cadddr stuff))
 	 (length (- end start)))
+    (declare (type index start end length))
     (multiple-value-bind
 	(count errno)
 	(mach:unix-write (fd-stream-fd stream)
 			 base
 			 start
 			 length)
-      (cond ((eql count length) ; Hot damn, it workded.
+      (cond ((not count)
+	     (if (= errno mach:ewouldblock)
+		 (error "Write would have blocked, but SERVER told us to go.")
+		 (error "While writing ~S: ~A"
+			stream (mach:get-unix-error-msg errno))))
+	    ((eql count length) ; Hot damn, it workded.
 	     (when reuse-sap
 	       (push base *available-buffers*)))
 	    ((not (null count)) ; Sorta worked.
 	     (push (list base
 			 (+ start count)
 			 end)
-		   (fd-stream-output-later stream)))
-	    ((= errno mach:ewouldblock)
-	     (error "Write would have blocked, but SERVER told us to go."))
-	    (t
-	     (error "While writing ~S: ~A"
-		    stream
-		    (mach:get-unix-error-msg errno))))))
+		   (fd-stream-output-later stream))))))
   (unless (fd-stream-output-later stream)
     (system:remove-fd-handler (fd-stream-handler stream))
     (setf (fd-stream-handler stream) nil)))
@@ -161,7 +169,7 @@
   (when reuse-sap
     (let ((new-buffer (next-available-buffer)))
       (setf (fd-stream-obuf-sap stream) new-buffer)
-      (setf (fd-stream-obuf-length stream) bytes-per-buffer))))
+      (setf (fd-stream-obuf-length stream) bytes-per-buffer)))) 
 
 ;;; DO-OUTPUT -- internal
 ;;;
@@ -170,24 +178,26 @@
 ;;; queue it.
 ;;;
 (defun do-output (stream base start end reuse-sap)
+  (declare (type fd-stream stream)
+	   (type (or system-area-pointer (simple-array * (*))) base)
+	   (type index start end))
   (if (not (null (fd-stream-output-later stream))) ; something buffered.
-    (progn
-      (output-later stream base start end reuse-sap)
-      ;; ### check to see if any of this noise can be output
-      )
-    (let ((length (- end start)))
-      (multiple-value-bind
-	  (count errno)
-	  (mach:unix-write (fd-stream-fd stream) base start length)
-	(cond ((eql count length)) ; Hot damn, it worked.
-	      ((not (null count))
-	       (output-later stream base (+ start count) end reuse-sap))
-	      ((= errno mach:ewouldblock)
-	       (output-later stream base start end reuse-sap))
-	      (t
-	       (error "While writing ~S: ~A"
-		      stream
-		      (mach:get-unix-error-msg errno))))))))
+      (progn
+	(output-later stream base start end reuse-sap)
+	;; ### check to see if any of this noise can be output
+	)
+      (let ((length (- end start)))
+	(multiple-value-bind
+	    (count errno)
+	    (mach:unix-write (fd-stream-fd stream) base start length)
+	  (cond ((not count)
+		 (if (= errno mach:ewouldblock)
+		     (output-later stream base start end reuse-sap)
+		     (error "While writing ~S: ~A"
+			    stream (mach:get-unix-error-msg errno))))
+		((not (eql count length))
+		 (output-later stream base (+ start count) end reuse-sap)))))))
+
 
 ;;; FLUSH-OUTPUT-BUFFER -- internal
 ;;;
@@ -292,8 +302,8 @@
   "Output THING to stream.  THING can be any kind of vector or a sap.  If THING
   is a SAP, END must be supplied (as length won't work)."
   (let ((start (or start 0))
-	(end (or end (length thing))))
-    (declare (fixnum start end))
+	(end (or end (length (the (simple-array * (*)) thing)))))
+    (declare (type index start end))
     (let* ((len (fd-stream-obuf-length stream))
 	   (tail (fd-stream-obuf-tail stream))
 	   (space (- len tail))
@@ -350,7 +360,7 @@
 ;;; 
 (defun fd-sout (stream thing start end)
   (let ((start (or start 0))
-	(end (or end (length thing))))
+	(end (or end (length (the vector thing)))))
     (declare (fixnum start end))
     (if (stringp thing)
 	(let ((last-newline (and (find #\newline (the simple-string thing)
@@ -412,8 +422,9 @@
 	(buflen (fd-stream-ibuf-length stream))
 	(head (fd-stream-ibuf-head stream))
 	(tail (fd-stream-ibuf-tail stream)))
+    (declare (type index head tail))
     (unless (zerop head)
-      (cond ((eq head tail)
+      (cond ((eql head tail)
 	     (setf head 0)
 	     (setf tail 0)
 	     (setf (fd-stream-ibuf-head stream) 0)
@@ -591,6 +602,7 @@
 ;;;   Returns a string constructed from the sap, start, and end.
 ;;;
 (defun string-from-sap (sap start end)
+  (declare (type index start end))
   (let* ((length (- end start))
 	 (string (make-string length)))
     (copy-from-system-area sap (* start vm:byte-bits)
@@ -698,7 +710,7 @@ non-server method is also significantly more efficient for large reads.
 ;;;    The N-Bin method for FD-STREAMs.  This doesn't using SERVER; it blocks
 ;;; in UNIX-READ.  This allows the method to be used to implementing reading
 ;;; for CLX.  It is generally used where there is a definite amount of reading
-;;; to be done, so it blocking isn't too problematical.
+;;; to be done, so blocking isn't too problematical.
 ;;;
 ;;;    We copy buffered data into the buffer.  If there is enough, just return.
 ;;; Otherwise, we see if the amount of additional data needed will fit in the
@@ -761,7 +773,7 @@ non-server method is also significantly more efficient for large reads.
 		(when (zerop count)
 		  (if eof-error-p
 		      (error "Unexpected eof on ~S." stream)
-		      (return (- requested (/ now-needed elsize)))))
+		      (return (- requested (truncate now-needed elsize)))))
 		(decf now-needed count)
 		(when (zerop now-needed) (return requested))
 		(incf offset count)))))
@@ -778,7 +790,7 @@ non-server method is also significantly more efficient for large reads.
 	      (when (zerop count)
 		(if eof-error-p
 		    (error "Unexpected eof on ~S." stream)
-		    (return (- requested (/ now-needed elsize)))))
+		    (return (- requested (truncate now-needed elsize)))))
 	      (let* ((copy (min now-needed count))
 		     (copy-bits (* copy vm:byte-bits))
 		     (buffer-start-bits
@@ -839,12 +851,12 @@ non-server method is also significantly more efficient for large reads.
 	(setf (fd-stream-ibuf-length stream) bytes-per-buffer)
 	(setf (fd-stream-ibuf-tail stream) 0)
 	(if (subtypep type 'character)
-	  (setf (fd-stream-in stream) routine
-		(fd-stream-bin stream) #'ill-bin
-		(fd-stream-n-bin stream) #'ill-bin)
-	  (setf (fd-stream-in stream) #'ill-in
-		(fd-stream-bin stream) routine
-		(fd-stream-n-bin stream) #'fd-stream-read-n-bytes))
+	    (setf (fd-stream-in stream) routine
+		  (fd-stream-bin stream) #'ill-bin
+		  (fd-stream-n-bin stream) #'ill-bin)
+	    (setf (fd-stream-in stream) #'ill-in
+		  (fd-stream-bin stream) routine
+		  (fd-stream-n-bin stream) #'fd-stream-read-n-bytes))
 	(setf input-size size)
 	(setf input-type type)))
 
@@ -1005,7 +1017,7 @@ non-server method is also significantly more efficient for large reads.
 		(mach:get-unix-error-msg dev)))
        (if (zerop mode)
 	 nil
-	 (/ size (fd-stream-element-size stream)))))
+	 (truncate size (fd-stream-element-size stream)))))
     (:file-position
      (fd-stream-file-position stream arg1))
     (:file-name
@@ -1014,6 +1026,8 @@ non-server method is also significantly more efficient for large reads.
 ;;; FD-STREAM-FILE-POSITION -- internal.
 ;;;
 (defun fd-stream-file-position (stream &optional newpos)
+  (declare (type fd-stream stream)
+	   (type (or index (member nil :start :end)) newpos))
   (if (null newpos)
       (system:without-interrupts
 	;; First, find the position of the UNIX file descriptor in the
@@ -1021,14 +1035,16 @@ non-server method is also significantly more efficient for large reads.
 	(multiple-value-bind
 	    (posn errno)
 	    (mach:unix-lseek (fd-stream-fd stream) 0 mach:l_incr)
-	  (cond ((numberp posn)
+	  (declare (type (or index null) posn))
+	  (cond ((fixnump posn)
 		 ;; Adjust for buffered output:
 		 ;;  If there is any output buffered, the *real* file position
 		 ;; will be larger than reported by lseek because lseek
 		 ;; obviously cannot take into account output we have not
 		 ;; sent yet.
 		 (dolist (later (fd-stream-output-later stream))
-		   (incf posn (- (caddr later) (cadr later))))
+		   (incf posn (- (the index (caddr later))
+				 (the index (cadr later)))))
 		 (incf posn (fd-stream-obuf-tail stream))
 		 ;; Adjust for unread input:
 		 ;;  If there is any input read from UNIX but not supplied to
@@ -1040,7 +1056,7 @@ non-server method is also significantly more efficient for large reads.
 		 (when (fd-stream-unread stream)
 		   (decf posn))
 		 ;; Divide bytes by element size.
-		 (/ posn (fd-stream-element-size stream)))
+		 (truncate posn (fd-stream-element-size stream)))
 		((eq errno mach:espipe)
 		 nil)
 		(t
@@ -1068,7 +1084,7 @@ non-server method is also significantly more efficient for large reads.
 	       (setf offset 0 origin mach:l_set))
 	      ((eq newpos :end)
 	       (setf offset 0 origin mach:l_xtnd))
-	      ((numberp newpos)
+	      ((typep newpos 'index)
 	       (setf offset (* newpos (fd-stream-element-size stream))
 		     origin mach:l_set))
 	      (t
@@ -1076,7 +1092,7 @@ non-server method is also significantly more efficient for large reads.
 	(multiple-value-bind
 	    (posn errno)
 	    (mach:unix-lseek (fd-stream-fd stream) offset origin)
-	  (cond ((numberp posn)
+	  (cond ((typep posn 'fixnum)
 		 t)
 		((eq errno mach:espipe)
 		 nil)
@@ -1136,9 +1152,11 @@ non-server method is also significantly more efficient for large reads.
    namestring.")
 ;;;
 (defun pick-backup-name (name)
-  (etypecase *backup-extension*
-    (string (concatenate 'simple-string name *backup-extension*))
-    (function (funcall *backup-extension* name))))
+  (declare (type simple-string name))
+  (let ((ext *backup-extension*))
+    (etypecase ext
+      (simple-string (concatenate 'simple-string name ext))
+      (function (funcall ext name)))))
 
 ;;; ASSURE-ONE-OF -- internal
 ;;;
@@ -1153,12 +1171,34 @@ non-server method is also significantly more efficient for large reads.
 	      item
 	      what
 	      list)
-      (format *query-io* "Enter new value for ~S: " what)
+      (format (the stream *query-io*) "Enter new value for ~S: " what)
       (force-output *query-io*)
       (setf item (read *query-io*))
       (when (member item list)
 	(return))))
   item)
+
+;;; DO-OLD-RENAME  --  Internal
+;;;
+;;;    Rename Namestring to Original.  First, check if we have write access,
+;;; since we don't want to trash unwritable files even if we technically can.
+;;; We return true if we suceed in renaming.
+;;;
+(defun do-old-rename (namestring original)
+  (unless (mach:unix-access namestring mach:w_ok)
+    (cerror "Try to rename it anyway." "File ~S is not writable." namestring))
+  (multiple-value-bind
+      (okay err)
+      (mach:unix-rename namestring original)
+    (cond (okay t)
+	  (t
+	   (cerror "Use :SUPERSEDE instead."
+		   "Could not rename ~S to ~S: ~A."
+		   namestring
+		   original
+		   (mach:get-unix-error-msg err))
+	   nil))))
+
 
 ;;; OPEN -- public
 ;;;
@@ -1192,6 +1232,7 @@ non-server method is also significantly more efficient for large reads.
 	(:output (values nil t mach:o_wronly))
 	(:io (values t t mach:o_rdwr))
 	(:probe (values t nil mach:o_rdonly)))
+    (declare (type index mask))
     (let* ((pathname (pathname filename))
 	   (namestring (unix-namestring pathname input)))
       ;; Process if-exists argument if we are doing any output.
@@ -1238,7 +1279,7 @@ non-server method is also significantly more efficient for large reads.
        
       (let ((original (if (member if-exists
 				  '(:rename :rename-and-delete))
-			(pick-backup-name namestring)))
+			  (pick-backup-name namestring)))
 	    (delete-original (eq if-exists :rename-and-delete))
 	    (mode #o666))
 	(when original
@@ -1249,7 +1290,7 @@ non-server method is also significantly more efficient for large reads.
 		 (multiple-value-bind
 		     (okay err/dev inode orig-mode)
 		     (mach:unix-stat namestring)
-		   (declare (ignore inode))
+		   (declare (ignore inode) (type (or index null) orig-mode))
 		   (cond (okay
 			  (when (and output (= (logand orig-mode #o170000)
 					       #o40000))
@@ -1263,18 +1304,8 @@ non-server method is also significantly more efficient for large reads.
 			  (error "Cannot find ~S: ~A"
 				 namestring
 				 (mach:get-unix-error-msg err/dev)))))))
-	    (when (or (not exists)
-		      ;; Do the rename.
-		      (multiple-value-bind
-			  (okay err)
-			  (mach:unix-rename namestring original)
-			(unless okay
-			  (cerror "Use :SUPERSEDE instead."
-				  "Could not rename ~S to ~S: ~A."
-				  namestring
-				  original
-				  (mach:get-unix-error-msg err))
-			  t)))
+	    (unless (and exists
+			 (do-old-rename namestring original))
 	      (setf original nil)
 	      (setf delete-original nil)
 	      ;; In order to use SUPERSEDE instead, we have
