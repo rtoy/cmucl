@@ -103,7 +103,6 @@ struct sigcontext *context;
     ms.csp = current_control_stack_pointer;
     ms.fp = current_control_frame_pointer;
     ms.bsp = current_binding_stack_pointer;
-    ms.flags = current_flags_register;
     ms.number_stack_start = number_stack_start;
     ms.sigcontext_page = write_bytes((char *)context, sizeof(struct sigcontext));
     ms.control_stack_page = write_stack("Control",
@@ -237,7 +236,6 @@ struct machine_state *ms;
     current_control_stack_pointer = ms->csp;
     current_control_frame_pointer = ms->fp;
     current_binding_stack_pointer = ms->bsp;
-    current_flags_register = ms->flags;
 
     if (ms->number_stack_start > number_stack_start) {
         fprintf(stderr, "Your environment is too large.  Use ``unsetenv''\n");
