@@ -228,19 +228,13 @@ sanctify_for_execution
 	.enter
 	/* arg0=start addr, arg1=length in bytes */
 	add	arg0,arg1,arg1
-	ldo	32(arg1),arg1
+	ldo	-1(arg1),arg1
 	depi	0,31,5,arg0
 	depi	0,31,5,arg1
 	ldsid	(arg0),t1
 	mtsp	t1,sr1
 	ldi	32,t1			; bytes per cache line
 sanctify_loop
-	fdc	0(sr1,arg0)
-	fic,m	t1(sr1,arg0)
-	fdc	0(sr1,arg0)
-	fic,m	t1(sr1,arg0)
-	fdc	0(sr1,arg0)
-	fic,m	t1(sr1,arg0)
 	fdc	0(sr1,arg0)
 	comb,<	arg0,arg1,sanctify_loop
 	fic,m	t1(sr1,arg0)
