@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.13 1992/02/18 02:18:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.14 1992/02/19 21:54:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -779,6 +779,11 @@
   "Unix-select examines the sets of descriptors passed as arguments
    to see if they are ready for reading and writing.  See the UNIX
    Programmers Manual for more information."
+  (declare (type (integer 0 #.FD-SETSIZE) nfds)
+	   (type unsigned-byte rdfds wrfds xpfds)
+	   (type (or (unsigned-byte 32) null) to-secs)
+	   (type (unsigned-byte 32) to-usecs)
+	   (optimize (speed 3) (safety 0)))
   (with-alien ((tv (struct timeval))
 	       (rdf (struct fd-set))
 	       (wrf (struct fd-set))
@@ -786,36 +791,56 @@
     (when to-secs
       (setf (slot tv 'tv-sec) to-secs)
       (setf (slot tv 'tv-usec) to-usecs))
-    (fd-zero rdf) (fd-zero wrf) (fd-zero xpf)
-    (dotimes (index (ceiling nfds 32))
+    (cond
+     ((< nfds 32)
       (macrolet ((frob (lisp-var alien-var)
-		   `(setf (deref (slot ,alien-var 'fds-bits) index)
-			  (ldb (byte 32 0) ,lisp-var)
-			  ,lisp-var (ash -32 ,lisp-var))))
+		   `(unless (zerop ,lisp-var)
+		      (setf (deref (slot ,alien-var 'fds-bits) 0) ,lisp-var))))
 	(frob rdfds rdf)
 	(frob wrfds wrf)
-	(frob xpfds xpf)))
-    (macrolet ((frob (lispvar alienvar)
-		 `(if (zerop ,lispvar)
-		      (int-sap 0)
-		      (addr ,alienvar))))
-      (syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
-		(* (struct fd-set)) (* (struct timeval)))
-	       (let ((rdfds 0) (wrfds 0) (xpfds 0))
-		 (do ((index (1- (ceiling nfds 32)) (1- index)))
-		     ((minusp index))
-		   (macrolet ((frob (lisp-var alien-var)
-				`(setf ,lisp-var
-				       (logior (ash ,lisp-var 32)
-					       (deref (slot ,alien-var
-							    'fds-bits)
-						      index)))))
-		     (frob rdfds rdf)
-		     (frob wrfds wrf)
-		     (frob xpfds xpf)))
-		 (values result rdfds wrfds xpfds))
+	(frob xpfds xpf))
+      (macrolet ((frob (lispvar alienvar)
+		   `(if (zerop ,lispvar)
+			(int-sap 0)
+			(alien-sap (addr ,alienvar)))))
+	(syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
+		  (* (struct fd-set)) (* (struct timeval)))
+		 (values result
+			 (deref (slot rdf 'fds-bits) 0)
+			 (deref (slot wrf 'fds-bits) 0)
+			 (deref (slot xpf 'fds-bits) 0))
+		 nfds (frob rdfds rdf) (frob wrfds wrf) (frob xpfds xpf)
+		 (if to-secs (alien-sap (addr tv)) (int-sap 0)))))
+     (t
+      (dotimes (index (ceiling nfds 32))
+	(macrolet ((frob (lisp-var alien-var)
+		     `(setf (deref (slot ,alien-var 'fds-bits) index)
+			    (ldb (byte 32 0) ,lisp-var)
+			    ,lisp-var (ash -32 ,lisp-var))))
+	  (frob rdfds rdf)
+	  (frob wrfds wrf)
+	  (frob xpfds xpf)))
+      (macrolet ((frob (lispvar alienvar)
+		   `(if (zerop ,lispvar)
+			(int-sap 0)
+		        (alien-sap (addr ,alienvar)))))
+	(syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
+		  (* (struct fd-set)) (* (struct timeval)))
+		 (let ((rdfds 0) (wrfds 0) (xpfds 0))
+		   (do ((index (1- (ceiling nfds 32)) (1- index)))
+		       ((minusp index))
+		     (macrolet ((frob (lisp-var alien-var)
+				  `(setf ,lisp-var
+					 (logior (ash ,lisp-var 32)
+						 (deref (slot ,alien-var
+							      'fds-bits)
+							index)))))
+		       (frob rdfds rdf)
+		       (frob wrfds wrf)
+		       (frob xpfds xpf)))
+		   (values result rdfds wrfds xpfds))
 	       nfds (frob rdfds rdf) (frob wrfds wrf) (frob xpfds xpf)
-	       (if to-secs (addr tv) (int-sap 0))))))
+	       (if to-secs (alien-sap (addr tv)) (int-sap 0))))))))
 
 ;;; Unix-sync writes all information in core memory which has been modified
 ;;; to permanent storage (i.e. disk).
@@ -1049,6 +1074,7 @@
 		     (slot usage 'ru-nivcsw))
 	     who (addr usage))))
 
+(declaim (inline unix-gettimeofday))
 (defun unix-gettimeofday ()
   "If it works, unix-gettimeofday returns 5 values: T, the seconds and
    microseconds of the current time of day, the timezone (in minutes west
