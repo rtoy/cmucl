@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.21 1990/09/06 17:40:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.22 1990/09/07 15:20:58 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -841,7 +841,9 @@
 ;;; IR2-Convert-Local-Call  --  Internal
 ;;;
 ;;;    Dispatch to the appropriate function, depending on whether we have a
-;;; let, tail or normal call.
+;;; let, tail or normal call.  If the function doesn't return, call it using
+;;; the unknown-value convention.  We could compile it as a tail call, but that
+;;; might seem confusing in the debugger.
 ;;;
 (defun ir2-convert-local-call (node block)
   (declare (type combination node) (type ir2-block block))
@@ -852,9 +854,12 @@
 	   (ir2-convert-tail-local-call node block fun))
 	  (t
 	   (let* ((start (block-label (node-block (lambda-bind fun))))
-		  (returns (tail-set-info (lambda-tail-set fun)))
+		  (tails (lambda-tail-set fun))
+		  (returns (when tails (tail-set-info tails)))
 		  (cont (node-cont node)))
-	     (ecase (return-info-kind returns)
+	     (ecase (if returns
+			(return-info-kind returns)
+			:unknown)
 	       (:unknown
 		(ir2-convert-local-unknown-call node block fun cont start))
 	       (:fixed
