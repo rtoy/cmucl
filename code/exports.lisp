@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.47 1990/07/23 19:04:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.48 1990/08/15 17:51:22 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -448,7 +448,8 @@
 	  system-area-pointer-p unproclaim unstructured vector-sap
 	  wait-until-fd-usable with-enabled-interrupts with-fd-handler
 	  with-interrupts with-reply-port with-stack-alien without-gcing
-	  without-hemlock without-interrupts words))
+	  without-hemlock without-interrupts words
+	  reallocate-system-memory))
 
 
 (in-package "USER")
@@ -563,6 +564,7 @@
 	  %primitive
 	  %put
 	  %raw-bits
+	  %set-raw-bits
 	  %rplaca
 	  %rplacd
 	  %sbitset
