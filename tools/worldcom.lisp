@@ -108,12 +108,20 @@
     (load "nicode:netnamemsgdefs.lisp")
     (comf "nicode:netnameuser")))
 
-(comf "ncode:defstruct")
-(comf "ncode:defmacro")
-(comf "ncode:macros")
-(comf "ncode:defrecord")
-(comf "ncode:constants")
-
-(comf "c:globaldb")
+;;; Compile basic macros that we assume are already in the compilation
+;;; environment.  We inhibit compile-time definition to prevent these functions
+;;; from becoming interpreted.  In some cases, this is necessary for
+;;; compilation to work at all, since the expander functions are lazily
+;;; converted: we could go into an infinite recursion trying to convert the
+;;; definition of a macro which uses itself.
+;;;
+(let ((c:compile-time-define-macros* nil))
+  (comf "ncode:defstruct")
+  (comf "ncode:defmacro")
+  (comf "ncode:macros")
+  (comf "ncode:defrecord")
+  (comf "ncode:constants")
+  
+  (comf "c:globaldb"))
 
 ); with-compiler-log-file
