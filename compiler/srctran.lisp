@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.126 2003/08/17 16:31:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.127 2003/08/25 19:37:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1743,12 +1743,17 @@
 		     (numeric-type->interval divisor-type))
 		    (quot (,q-name (interval-div number-interval
 						 divisor-interval)))
-		    (res-type (numeric-contagion number-type divisor-type)))
-	       (make-numeric-type
-		:class (numeric-type-class res-type)
-		:format (numeric-type-format res-type)
-		:low  (interval-low quot)
-		:high (interval-high quot))))
+		    (res-type (numeric-contagion number-type divisor-type))
+		    (res-format (numeric-type-format res-type)))
+	       (flet ((floatify (x)
+			(if (numberp x)
+			    (coerce x (or res-format 'float))
+			    x)))
+		 (make-numeric-type
+		  :class 'float
+		  :format res-format
+		  :low (floatify (interval-low quot))
+		  :high (floatify (interval-high quot))))))
 	   
 	   (defoptimizer (,name derive-type) ((number divisor))
 	     (flet ((derive-q (n d same-arg)
