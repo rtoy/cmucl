@@ -146,7 +146,8 @@
   (declare (type simple-bit-vector bits))
   (let ((len (length bits))
 	(start (fill-pointer vec)))
-    (cond ((eq target-byte-order native-byte-order)
+    (cond ((eq (backend-byte-order *backend*)
+	       (backend-byte-order *native-backend*))
 	   (let ((bytes (ash len -3)))
 	     (dotimes (i bytes)
 	       (vector-push-extend 0 vec))
@@ -166,7 +167,7 @@
 			       (setq shift ,initial  byte 0)))
 			   (unless (= shift ,initial)
 			     (vector-push-extend byte vec)))))
-	     (ecase target-byte-order
+	     (ecase (backend-byte-order *backend*)
 	       (:little-endian
 		(frob 0 incf (= shift 8)))
 	       (:big-endian
