@@ -1,5 +1,14 @@
 Details of changes since R5:
 
+Changes in CLX 5.02:
+
+Replace LCL:ENVIRONMENT-VALUE with LCL:ENVIRONMENT-VARIABLE.
+
+Fix a declaration in the DEFINE-ERROR macro.
+
+Quote type argument to TYPE-CHECK consistently.
+
+
 Changes in CLX 5.01:
 
 Support for MIT-MAGIC-COOKIE-1 authorization has been added.
