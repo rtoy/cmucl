@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.192 2002/08/23 17:10:29 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.193 2002/08/26 20:45:03 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,36 +42,36 @@
     (make-package "EVAL" :nicknames 'nil :use nil))
 #+pmax
 (if (find-package "PMAX")
-    (rename-package "PMAX" "PMAX" '("VM" "OLD-PMAX"))
-    (make-package "PMAX" :nicknames '("VM" "OLD-PMAX") :use nil))
+    (rename-package "PMAX" "PMAX" '("VM"))
+    (make-package "PMAX" :nicknames '("VM") :use nil))
 #+sparc
 (if (find-package "SPARC")
-    (rename-package "SPARC" "SPARC" '("VM" "OLD-SPARC"))
-    (make-package "SPARC" :nicknames '("VM" "OLD-SPARC") :use nil))
+    (rename-package "SPARC" "SPARC" '("VM"))
+    (make-package "SPARC" :nicknames '("VM") :use nil))
 #+ibmrt
 (if (find-package "RT")
-    (rename-package "RT" "RT" '("VM" "OLD-RT"))
-    (make-package "RT" :nicknames '("VM" "OLD-RT") :use nil))
+    (rename-package "RT" "RT" '("VM"))
+    (make-package "RT" :nicknames '("VM") :use nil))
 #+x86
 (if (find-package "X86")
-    (rename-package "X86" "X86" '("VM" "OLD-X86"))
-    (make-package "X86" :nicknames '("VM" "OLD-X86") :use nil))
+    (rename-package "X86" "X86" '("VM"))
+    (make-package "X86" :nicknames '("VM") :use nil))
 #+hppa
 (if (find-package "HPPA")
-    (rename-package "HPPA" "HPPA" '("VM" "OLD-HPPA"))
-    (make-package "HPPA" :nicknames '("VM" "OLD-HPPA") :use nil))
+    (rename-package "HPPA" "HPPA" '("VM"))
+    (make-package "HPPA" :nicknames '("VM") :use nil))
 #+alpha
 (if (find-package "ALPHA")
-    (rename-package "ALPHA" "ALPHA" '("VM" "OLD-ALPHA"))
-    (make-package "ALPHA" :nicknames '("VM" "OLD-ALPHA") :use nil))
+    (rename-package "ALPHA" "ALPHA" '("VM"))
+    (make-package "ALPHA" :nicknames '("VM") :use nil))
 #+sgi
 (if (find-package "SGI")
-    (rename-package "SGI" "SGI" '("VM" "OLD-SGI"))
-    (make-package "SGI" :nicknames '("VM" "OLD-SGI") :use nil))
+    (rename-package "SGI" "SGI" '("VM"))
+    (make-package "SGI" :nicknames '("VM") :use nil))
 #+ppc
 (if (find-package "PPC")
-    (rename-package "PPC" "PPC" '("VM" "OLD-PPC"))
-    (make-package "PPC" :nicknames '("VM" "OLD-PPC")))
+    (rename-package "PPC" "PPC" '("VM"))
+    (make-package "PPC" :nicknames '("VM")))
 (if (find-package "CONDITIONS")
     (rename-package "CONDITIONS" "CONDITIONS" 'nil)
     (make-package "CONDITIONS" :nicknames 'nil :use nil))
@@ -617,12 +617,15 @@
      '("%SP-SET-DEFINITION" "%SP-SET-PLIST" "ARRAY-HEADER-P" "BASE-CHAR-P"
        "DOUBLE-FLOAT-P" "LONG-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
   (intern name "KERNEL"))
-(defpackage #+pmax "PMAX" #+sparc "SPARC" #+ibmrt "RT"
-            #+x86 "X86" #+hppa "HPPA" #+alpha "ALPHA" #+sgi "SGI" #+ppc "PPC"
-            (:nicknames "VM" #+(or pmax sgi) "MIPS"
-			#+pmax "OLD-MIPS" #+ibmrt "OLD-RT"
-			#+x86 "OLD-X86" #+hppa "HPPA" #+alpha "OLD-ALPHA"
-			#+sgi "OLD-SGI" #+ppc "OLD-PPC")
+(defpackage #+pmax "PMAX"
+	    #+sparc "SPARC"
+	    #+ibmrt "RT"
+            #+x86 "X86"
+	    #+hppa "HPPA"
+	    #+alpha "ALPHA"
+	    #+sgi "SGI"
+	    #+ppc "PPC"
+            (:nicknames "VM" #+(or pmax sgi) "MIPS")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
              "%SET-FDEFINITION" "%SET-FILL-POINTER"
@@ -1098,7 +1101,7 @@
   (intern name "LISP"))
 
 (defpackage "C"
-  (:nicknames "OLD-C")
+  (:nicknames "COMPILER")
   (:import-from "LISP" "%ARRAY-TYPEP" "%ASET"
 		"%BITSET" "%CHARSET" "%PUT" "%RPLACA" "%RPLACD" "%SBITSET"
 		"%SCHARSET" "%SET-FDEFINITION"

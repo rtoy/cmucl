@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.51 1999/01/09 11:05:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.52 2002/08/26 20:45:03 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,9 @@
   #-bootstrap (eq c:*backend* c:*native-backend*))
 
 (defvar *byte-compile* #+small t #-small :maybe)
+
+(unless (find-package "OLD-C")
+  (rename-package "C" "C" '("OLD-C")))
 
 ;;; Import so that these types which appear in the globldb are the same...
 #+bootstrap
