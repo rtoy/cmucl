@@ -29,10 +29,10 @@
 ;;; be done BEFORE exports is loaded to prevent package conflicts
 #+x86
 (macrolet ((zap (str)
-	     (let ((sym (find-symbol str :lisp)))
-	       (when sym
-		 (unintern sym (symbol-package sym))
-		 (import sym :x86)))))
+	     `(let ((sym (find-symbol ,str :lisp)))
+		(when sym
+		  (unintern sym (symbol-package sym))
+		  (import sym :x86)))))
   ;;; Moved all these to the x86 package.
   (zap "*ALLOCATION-POINTER*")
   (zap "*BINDING-STACK-POINTER*")
@@ -42,11 +42,11 @@
 
 #+x86
 (macrolet ((zap (str)
-	     (let ((sym (find-symbol str :x86)))
-	       (when sym
-		 (unintern sym (symbol-package sym))
-		 (import sym :c)
-		 (export sym :c)))))
+	     `(let ((sym (find-symbol ,str :x86)))
+		(when sym
+		  (unintern sym (symbol-package sym))
+		  (import sym :c)
+		  (export sym :c)))))
   (zap "ALLOCATE-DYNAMIC-CODE-OBJECT")
   (zap "ALLOC-ALIEN-STACK-SPACE")
   (zap "DEALLOC-ALIEN-STACK-SPACE"))
