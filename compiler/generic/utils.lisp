@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.9 2004/05/24 23:18:37 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.10 2004/06/16 23:09:40 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,10 @@
 
 (defun fixnumize (num)
   "Make a fixnum out of NUM.  (i.e. shift by two bits if it will fit.)"
-  (if (<= most-negative-fixnum num most-positive-fixnum)
+  ;; the bounds must be hardcoded for cross-compilation
+  (if (<= #-amd64 #x-20000000 #+amd64 #x-2000000000000000
+	  num
+	  #-amd64 #x1fffffff #+amd64 #x1fffffffffffffff)
       (ash num (1- vm:lowtag-bits))
       (error "~D is too big for a fixnum." num)))
 
