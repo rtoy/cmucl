@@ -4,15 +4,18 @@
 #include <setjmp.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <signal.h>
 #include "ldb.h"
 #include "lisp.h"
 #include "globals.h"
 #include "vars.h"
 #include "parse.h"
+#include "interrupt.h"
+#include "lispregs.h"
 
 static void call_cmd(), dump_cmd(), print_cmd(), quit(), help();
 static void flush_cmd(), search_cmd(), regs_cmd(), exit_cmd(), throw_cmd();
-static void timed_call_cmd(), gc_cmd();
+static void timed_call_cmd(), gc_cmd(), print_context_cmd();
 
 static struct cmd {
     char *cmd, *help;
@@ -21,19 +24,20 @@ static struct cmd {
     {"help", "Display this info", help},
     {"?", NULL, help},
     {"call", "call FUNCTION with ARG1, ARG2, ...", call_cmd},
-    {"dump", "dump memory starting at ADDRESS for COUNT words", dump_cmd},
+    {"context", "print interrupt context number I.", print_context_cmd},
+    {"dump", "dump memory starting at ADDRESS for COUNT words.", dump_cmd},
     {"d", NULL, dump_cmd},
     {"exit", "Exit this instance of the monitor.", exit_cmd},
     {"flush", "flush all temp variables.", flush_cmd},
-    {"gc", "collect garbage", gc_cmd},
-    {"print", "print object at ADDRESS", print_cmd},
+    {"gc", "collect garbage (caveat collector).", gc_cmd},
+    {"print", "print object at ADDRESS.", print_cmd},
     {"p", NULL, print_cmd},
-    {"quit", "quit", quit},
+    {"quit", "quit.", quit},
     {"regs", "display current lisp regs.", regs_cmd},
     {"search", "search for TYPE starting at ADDRESS for a max of COUNT words.", search_cmd},
     {"s", NULL, search_cmd},
     {"throw", "Throw to the top level monitor.", throw_cmd},
-    {"time", "call FUNCTION with ARG1, ARG2, ... and time it", timed_call_cmd},
+    {"time", "call FUNCTION with ARG1, ARG2, ... and time it.", timed_call_cmd},
     {NULL, NULL, NULL}
 };
 
@@ -355,6 +359,48 @@ static void exit_cmd()
 static void gc_cmd()
 {
 	collect_garbage();
+}
+
+static void print_context(context)
+struct sigcontext *context;
+{
+	int i;
+
+	for (i = 0; i < 32; i++) {
+		printf("%s:\t", lisp_register_names[i]);
+		brief_print((lispobj) context->sc_regs[i]);
+	}
+	printf("PC:\t\t0x%08x\n", context->sc_pc);
+}
+
+static void print_context_cmd(ptr)
+char **ptr;
+{
+	int index;
+	int free;
+
+	free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
+	
+        if (more_p(ptr)) {
+		index = parse_number(ptr);
+
+		if ((index >= 0) && (index < free)) {
+			printf("There are %d interrupt contexts.\n", free);
+			printf("Printing context %d\n", index);
+			print_context(lisp_interrupt_contexts[index]);
+		} else {
+			printf("There aren't that many/few contexts.\n");
+			printf("There are %d interrupt contexts.\n", free);
+		}
+	} else {
+		if (free == 0)
+			printf("There are no interrupt contexts!\n");
+		else {
+			printf("There are %d interrupt contexts.\n", free);
+			printf("Printing context %d\n", free - 1);
+			print_context(lisp_interrupt_contexts[free - 1]);
+		}
+	}
 }
 
 static void sub_monitor(csp, bsp)
