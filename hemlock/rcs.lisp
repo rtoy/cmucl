@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.16 1990/05/30 16:27:22 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.17 1991/11/07 21:22:38 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -44,8 +44,8 @@
 	 (:exited
 	  (unless (zerop (ext:process-exit-code process))
 	    (editor-error "~A aborted with an error; ~
-	    use the ``RCS Last Command Output'' command for more ~
-	    information" ',command)))
+			   use the ``RCS Last Command Output'' command for ~
+			   more information" ',command)))
 	 (:signaled
 	  (editor-error "~A killed with signal ~A~@[ (core dumped)]."
 			',command
@@ -147,14 +147,17 @@
       (setf allow-delete t)
       (delete-buffer-if-possible log-buffer))))
 
+(defvar *keep-around-unlocked-files* t)
+
 (defun sub-check-in-file (pathname keep-lock log-stream)
   (let* ((filename (file-namestring pathname))
 	 (rcs-filename (concatenate 'simple-string
 				    "./RCS/" filename ",v")))
     (in-directory pathname
       (do-command "rcsci" `(,@(if keep-lock '("-l"))
-			      "-u"
-			      ,filename)
+			    ,@(if (or keep-lock *keep-around-unlocked-files*)
+				  "-u")
+			    ,filename)
 		  :input log-stream)
       ;; 
       ;; Set the times on the user's file to be equivalent to that of
@@ -181,76 +184,55 @@
   "RCS Check Out File Hook"
   :value nil)
 
+(defvar *translate-file-names-before-locking* nil)
+
 (defun maybe-rcs-check-out-file (buffer pathname lock always-overwrite-p)
-  (sub-maybe-rcs-check-out-files buffer (list pathname)
-				 lock always-overwrite-p))
-
-(defun maybe-rcs-check-out-files (pathnames lock always-overwrite-p)
-  (sub-maybe-rcs-check-out-files nil pathnames lock always-overwrite-p))
-
-(defun sub-maybe-rcs-check-out-files (buffer pathnames lock always-overwrite-p)
-  (let ((check-out-count 0))
-    (macrolet ((frob ()
-		 `(progn
-		    (rcs-check-out-file buffer pathname lock)
-		    (incf check-out-count))))
-      (dolist (pathname pathnames)
-	(cond
-	 ((and (not always-overwrite-p)
-	       (probe-file pathname) (ext:file-writable pathname))
-	  ;; File exists and is writable so check and see if the user really
-	  ;; wants to check it out.
-	  (command-case (:prompt
-			 (format nil "The file ~A is writable.  Overwrite? "
-				 (file-namestring pathname))
-			 :help
-			 "Type one of the following single-character commands:")
-	    ((:yes :confirm)
-	     "Overwrite the file."
-	     (frob))
-	    (:no
-	     "Skip checking out this file.")
-	    ((#\r #\R)
-	     "Rename the file before checking it out."
-	     (let ((new-pathname (prompt-for-file
-				  :prompt "New Filename: "
-				  :default (buffer-default-pathname
-					      (current-buffer))
-				  :must-exist nil)))
-	       (rename-file pathname new-pathname)
-	       (frob)))
-	    (:do-all
-	     "Overwrite this file and all remaining files."
-	     (setf always-overwrite-p t)
-	     (frob))
-	    (:do-once
-	     "Overwrite this file and then exit."
-	     (frob)
-	     (return))))
-	 (t
-	  (frob)))))
-    check-out-count))
+  (when (and lock *translate-file-names-before-locking*)
+    (multiple-value-bind (unmatched-dir new-dirs file-name)
+			 (maybe-translate-definition-file pathname)
+      (let ((new-name (translate-definition-file unmatched-dir
+						 (car new-dirs)
+						 file-name)))
+	(when (probe-file (directory-namestring new-name))
+	  (setf pathname new-name)))))
+  (cond
+   ((and (not always-overwrite-p)
+	 (probe-file pathname) (ext:file-writable pathname))
+    ;; File exists and is writable so check and see if the user really
+    ;; wants to check it out.
+    (command-case (:prompt
+		   (format nil "The file ~A is writable.  Overwrite? "
+			   (file-namestring pathname))
+		   :help
+		   "Type one of the following single-character commands:")
+      ((:yes :confirm)
+       "Overwrite the file."
+       (rcs-check-out-file buffer pathname lock))
+      (:no
+       "Don't check it out after all.")
+      ((#\r #\R)
+       "Rename the file before checking it out."
+       (let ((new-pathname (prompt-for-file
+			    :prompt "New Filename: "
+			    :default (buffer-default-pathname
+				      (current-buffer))
+			    :must-exist nil)))
+	 (rename-file pathname new-pathname)
+	 (rcs-check-out-file buffer pathname lock)))))
+   (t
+    (rcs-check-out-file buffer pathname lock)))
+  pathname)
 
 (defun rcs-check-out-file (buffer pathname lock)
   (message "Checking out ~A~:[~; with a lock~] ..." (namestring pathname) lock)
   (in-directory pathname
-    (let ((backup
-	   (if (probe-file pathname)
-	       (lisp::pick-backup-name (namestring pathname))
-	       nil)))
-      (when backup (rename-file pathname backup))
-      (do-command "rcsco" `(,@(if lock '("-l")) ,(file-namestring pathname)))
+    (let* ((file (file-namestring pathname))
+	   (backup (if (probe-file file)
+		       (lisp::pick-backup-name file))))
+      (when backup (rename-file file backup))
+      (do-command "rcsco" `(,@(if lock '("-l")) ,file))
       (invoke-hook rcs-check-out-file-hook buffer pathname)
       (when backup (delete-file backup)))))
-
-(defun pick-temp-file (defaults)
-  (let ((index 0))
-    (loop
-      (let ((name (merge-pathnames (format nil ",rcstmp-~D" index) defaults)))
-	(cond ((probe-file name)
-	       (incf index))
-	      (t
-	       (return name)))))))
 
 
 ;;;; Last Command Output
@@ -266,7 +248,16 @@
     (write-line *last-rcs-command-output-string* s)))
 
 
-;;;; Checking In / Checking Out and Locking / Unlocking 
+;;;; Commands for Checking In / Checking Out and Locking / Unlocking 
+
+(defun pick-temp-file (defaults)
+  (let ((index 0))
+    (loop
+      (let ((name (merge-pathnames (format nil ",rcstmp-~D" index) defaults)))
+	(cond ((probe-file name)
+	       (incf index))
+	      (t
+	       (return name)))))))
 
 (defcommand "RCS Lock Buffer File" (p)
   "Attempt to lock the file in the current buffer."
@@ -351,8 +342,8 @@
     (when (buffer-modified buffer)
       (when (not (prompt-for-y-or-n :prompt "Buffer is modified, overwrite? "))
 	(editor-error "Aborted.")))
-    (maybe-rcs-check-out-file buffer pathname p nil)
     (setf (buffer-modified buffer) nil)
+    (setf pathname (maybe-rcs-check-out-file buffer pathname p nil))
     (when p
       (setf (buffer-writable buffer) t)
       (message "Buffer is now writable."))
@@ -369,7 +360,7 @@
 				   :default (buffer-default-pathname
 					     (current-buffer))
 				   :must-exist nil)))
-    (maybe-rcs-check-out-file nil pathname p nil)
+    (setf pathname (maybe-rcs-check-out-file nil pathname p nil))
     (find-file-command nil pathname)))
 
 
@@ -425,83 +416,6 @@
     (change-to-buffer buffer)
     (buffer-start (current-point))
     (setf (buffer-modified buffer) nil)))
-
-
-;;;; Directory Support
-
-(defun list-out-of-date-files (dir)
-  (let ((rcsdir (make-pathname :host (pathname-host dir)
-			       :device (pathname-device dir)
-			       :directory (concatenate 'simple-vector
-						       (pathname-directory dir)
-						       (vector "RCS"))))
-	(out-of-date-files nil))
-    (unless (directoryp rcsdir)
-      (editor-error "Could not find the RCS directory."))
-    (dolist (rcsfile (directory rcsdir))
-      (let ((rcsname (file-namestring rcsfile)))
-	(when (string= rcsname ",v" :start1 (- (length rcsname) 2))
-	  (let* ((name (subseq rcsname 0 (- (length rcsname) 2)))
-		 (file (merge-pathnames (parse-namestring name) dir)))
-	    (unless (and (probe-file file)
-			 (>= (file-write-date file) (file-write-date rcsfile)))
-	      (push file out-of-date-files))))))
-    out-of-date-files))
-
-(defun rcs-prompt-for-directory (prompt)
-  (let* ((default (buffer-default-pathname (current-buffer)))
-	 (dir (prompt-for-file :prompt prompt
-			       :default (make-pathname
-					 :host (pathname-host default)
-					 :device (pathname-device default)
-					 :directory (pathname-directory default)
-					 :defaults nil)
-			       :must-exist nil)))
-    (unless (directoryp dir)
-      (let ((with-slash (parse-namestring (concatenate 'simple-string
-						       (namestring dir)
-						       "/"))))
-	(unless (directoryp with-slash)
-	  (editor-error "~S is not a directory" (namestring dir)))
-	(setf dir with-slash)))
-    dir))
-
-(defcommand "RCS Update Directory" (p)
-  "Prompt for a directory and check out all files that are older than
-  their corresponding RCS files.  With an argument, never ask about
-  overwriting writable files."
-  "Prompt for a directory and check out all files that are older than
-  the corresponding RCS file.  With an argument, never ask about
-  overwriting writable files."
-  (let* ((directory (rcs-prompt-for-directory "Directory to update: "))
-	 (out-of-date-files (list-out-of-date-files directory))
-	 (n-out-of-date (length out-of-date-files)))
-    (cond ((zerop n-out-of-date)
-	   (message "All RCS files in ~A are up to date."
-		    (namestring directory)))
-	  (t
-	   (let ((n-checked-out
-		  (maybe-rcs-check-out-files out-of-date-files nil p)))
-	     (message "Number of files out of date: ~D; ~
-	     number of files checked out: ~D"
-		      n-out-of-date n-checked-out)))))))
-
-(defcommand "RCS List Out Of Date Files" (p)
-  "Prompt for a directory and list all of the files that are older than
-  their corresponding RCS files."
-  "Prompt for a directory and list all of the files that are older than
-  their corresponding RCS files."
-  (declare (ignore p))
-  (let* ((directory (rcs-prompt-for-directory "Directory: "))
-	 (out-of-date-files (list-out-of-date-files directory)))
-    (cond ((null out-of-date-files)
-	   (message "All RCS files in ~A are up to date."
-		    (namestring directory)))
-	  (t
-	   (with-pop-up-display (s :buffer-name "*RCS Out of Date Files*")
-	     (format s "Directory: ~A~%~%" (namestring directory))
-	     (dolist (file out-of-date-files)
-	       (format s "~A~%" (file-namestring file))))))))
 
 
 ;;;; Status and Modeline Frobs.
