@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.19 1990/12/19 00:23:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.20 1991/01/03 13:14:47 ram Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -639,23 +639,6 @@
 	    (and (typep object ',ltype)
 		 (eq (elt (the ,ltype object) ,(dd-offset defstruct))
 		     ',name))))))))
-
-
-;;; Structure-Predicate  --  Internal
-;;;
-;;;    The typep transform in typetran calls this function when it encounters
-;;; an unknown symbol type specifier.  If the referred-to type is in fact a
-;;; structure type that has a predicate, then we open-code the normal case of
-;;; an exact match, and otherwise call the predicate.
-;;;
-(defun structure-predicate (object type)
-  (let ((def (info type structure-info type)))
-    (if (and def (eq (dd-type def) 'structure) (dd-predicate def))
-	`(and (structurep ,object)
-	      (if (eq (structure-ref ,object 0) ',type)
-		  t
-		  (,(dd-predicate def) ,object)))
-	`(lisp::structure-typep ,object ',type))))
 
 
 ;;; Random sorts of stuff.
