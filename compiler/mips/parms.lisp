@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.107 1993/02/26 08:49:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.108 1993/05/07 07:34:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 (setf (backend-fasl-file-type *target-backend*) "pmaxf")
 (setf (backend-fasl-file-implementation *target-backend*)
       pmax-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 6)
+(setf (backend-fasl-file-version *target-backend*) #-gengc 6 #+gengc 7)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :little-endian)
 (setf (backend-page-size *target-backend*) 4096)
@@ -226,15 +226,17 @@
     ;; Random stuff needed for initialization.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
-    lisp::*initial-fdefn-objects*
 
     ;; Functions that the C code needs to call
-    lisp::%initial-function
     kernel::internal-error
+    mach::handle-exception
     di::handle-breakpoint
     di::handle-function-end-breakpoint
     lisp::fdefinition-object
     apply
+
+    ;; Holds a pointer to the sigcontext chain.
+    kernel::*saved-state-chain*
     ))
 
 (defparameter static-functions
