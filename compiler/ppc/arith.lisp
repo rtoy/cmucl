@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.4 2004/07/25 18:15:52 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.5 2004/07/30 02:58:32 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -933,3 +933,135 @@
 (define-static-function two-arg-and (x y) :translate logand)
 (define-static-function two-arg-ior (x y) :translate logior)
 (define-static-function two-arg-xor (x y) :translate logxor)
+
+
+#+modular-arith
+(progn
+(c::define-modular-fun lognot-mod32 (x) lognot 32)
+
+(define-vop (lognot-mod32/unsigned=>unsigned)
+  (:translate lognot-mod32)
+  (:args (x :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:policy :fast-safe)
+  (:generator 1
+    (inst not res x)))
+
+;; Handle (ldb (byte 32 0) (- x)).  The (- x) gets converted to
+;; (%negate x), so we build modular functions for %negate.
+
+(c::define-modular-fun %negate-mod32 (x) kernel:%negate 32)
+
+(define-vop (%negate-mod32/unsigned=>unsigned fast-safe-arith-op)
+  (:translate %negate-mod32)
+  (:args (x :scs (unsigned-reg) :target res))
+  (:arg-types unsigned-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:generator 1
+    (inst neg res x)))
+
+(define-vop (%negate-mod32/signed=>unsigned fast-safe-arith-op)
+  (:translate %negate-mod32)
+  (:args (x :scs (signed-reg)))
+  (:arg-types signed-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:generator 1
+    (inst neg res x)))
+
+(defmacro define-modular-backend (fun &optional constantp derived)
+  (let ((mfun-name (symbolicate fun '-mod32))
+	(modvop (symbolicate 'fast- fun '-mod32/unsigned=>unsigned))
+	(modcvop (symbolicate 'fast- fun '-mod32-c/unsigned=>unsigned))
+	(vop (symbolicate 'fast- (or derived fun) '/unsigned=>unsigned))
+	(cvop (symbolicate 'fast- (or derived fun) '-c/unsigned=>unsigned)))
+    `(progn
+       (c::define-modular-fun ,mfun-name (x y) ,fun 32)
+       (define-vop (,modvop ,vop)
+	 (:translate ,mfun-name))
+       ,@(when constantp
+	       `((define-vop (,modcvop ,cvop)
+		   (:translate ,mfun-name)))))))
+
+(define-modular-backend + t)
+(define-modular-backend - t)
+(define-modular-backend logxor)
+(define-modular-backend logeqv)
+;;(define-modular-backend logandc1)
+(define-modular-backend logandc2)
+;;(define-modular-backend logorc1)
+(define-modular-backend logorc2)
+;;(define-modular-backend * t)
+
+(def-source-transform lognand (x y)
+  `(lognot (logand ,x ,y)))
+(def-source-transform lognor (x y)
+  `(lognot (logior ,x ,y)))
+
+(defknown vm::ash-left-mod32 (integer (integer 0))
+  (unsigned-byte 32)
+  (foldable flushable movable))
+
+(define-vop (fast-ash-left-mod32-c/unsigned=>unsigned
+	     digit-ashl)
+  (:translate ash-left-mod32))
+
+)
+
+(in-package :c)
+
+#+modular-arith
+(define-modular-fun-optimizer ash ((integer count) :width width)
+  ;; The count needs to be (mod 32) because the Sparc shift
+  ;; instruction takes the count modulo 32.  (NOTE: Should we make
+  ;; this work on Ultrasparcs?  We could then use the sllx instruction
+  ;; which takes the count mod 64.  Then a left shift of 32 or more
+  ;; will produce 0 in the lower 32 bits of the register, which is
+  ;; what we want.)
+  (when (and (<= width 32)
+	     (csubtypep (continuation-type count) (specifier-type '(unsigned-byte 5))))
+    (cut-to-width integer width)
+    'vm::ash-left-mod32))
+
+;;; If both arguments and the result are (unsigned-byte 32), try to come up
+;;; with a ``better'' multiplication using multiplier recoding.  There are two
+;;; different ways the multiplier can be recoded.  The more obvious is to shift
+;;; X by the correct amount for each bit set in Y and to sum the results.  But
+;;; if there is a string of bits that are all set, you can add X shifted by
+;;; one more then the bit position of the first set bit and subtract X shifted
+;;; by the bit position of the last set bit.  We can't use this second method
+;;; when the high order bit is bit 31 because shifting by 32 doesn't work
+;;; too well.
+;;;
+
+
+(defun *-transformer (y)
+  (let ((y (continuation-value y)))
+    (multiple-value-bind (result adds shifts)
+	(strength-reduce-constant-multiply 'x y)
+      (cond
+        ((c::backend-featurep '(or :sparc-v9 :sparc-v8))
+	 ;; This is an approximate break-even point.  It's pretty
+	 ;; rough.
+	 (when (> (+ adds shifts) 9)
+	   (give-up)))
+	(t
+	 (give-up)))
+      (or result 0))))  
+
+#+(and modular-arith (not ppc))
+(deftransform * ((x y)
+		 ((unsigned-byte 32) (constant-argument (unsigned-byte 32)))
+		 (unsigned-byte 32))
+  "recode as shifts and adds"
+  (*-transformer y))
+
+#+(and modular-arith (not ppc))
+(deftransform vm::*-mod32 ((x y)
+		 ((unsigned-byte 32) (constant-argument (unsigned-byte 32)))
+		 (unsigned-byte 32))
+  "recode as shifts and adds"
+  (*-transformer y))
