@@ -114,6 +114,9 @@
       (setf *local-motif-server* nil))))
 
 (defun verify-local-server-exists ()
+  (unless (probe-file (merge-pathnames *clm-binary-name*
+				       *clm-binary-directory*))
+    (toolkit-error "Unable to locate the Motif server."))
   (when (or (not *local-motif-server*)
 	    (and *local-motif-server*
 		 (not (ext:process-alive-p *local-motif-server*))))
