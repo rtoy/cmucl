@@ -1,4 +1,4 @@
-;;; -*- Package: VM; Log: C.Log -*-
+;;; -*- Package: VM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.20 1992/12/05 21:49:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.21 1992/12/13 14:47:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.20 1992/12/05 21:49:08 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -53,6 +51,11 @@
 
 (in-package "KERNEL")
 (export '(%set-funcallable-instance-function %make-funcallable-instance))
+
+(export '(%numerator %denominator %realpart %imagpart
+	  %code-code-size %code-entry-points %code-debug-info
+	  %function-self %function-next %function-name %function-arglist
+	  %function-type))
 
 (in-package "VM")
 
@@ -136,7 +139,7 @@
   byte-code-closure
   dylan-function-header
   closure-function-header
-  return-pc-header
+  #-gengc return-pc-header #+gengc forwarding-pointer
   value-cell-header
   symbol-header
   base-char
@@ -146,6 +149,7 @@
   structure-header
   fdefn)
 
+
 ;;; The different vector subtypes.
 ;;; 
 (defenum (:prefix vector- :suffix -subtype)
@@ -154,126 +158,13 @@
   valid-hashing
   must-rehash)
 
-
-
-
-;;;; Primitive data objects definition noise.
-
-(eval-when (compile load eval)
-
-(defstruct (prim-object-slot
-	    (:conc-name slot-)
-	    (:constructor %make-slot
-			  (name docs rest-p length options))
-	    (:make-load-form-fun :just-dump-it-normally))
-  (name nil :type symbol)
-  (docs nil :type (or null simple-string))
-  (rest-p nil :type (member t nil))
-  (offset 0 :type fixnum)
-  (length 1 :type fixnum)
-  (options nil :type list))
-
-(defun make-slot (name &rest options
-		       &key docs rest-p (length (if rest-p 0 1))
-		       &allow-other-keys)
-  (let ((options (copy-list options)))
-    (remf options :docs)
-    (remf options :rest-p)
-    (remf options :length)
-    (%make-slot name docs rest-p length options)))
-
-(defstruct (primitive-object
-	    (:make-load-form-fun :just-dump-it-normally))
-  (name nil :type symbol)
-  (header nil :type symbol)
-  (lowtag nil :type symbol)
-  (options nil :type list)
-  (slots nil :type list)
-  (size 0 :type fixnum)
-  (variable-length nil :type (member t nil)))
-
-
-(defvar *primitive-objects* nil)
-
-); eval-when (compile load eval)
-
-
-(defmacro define-primitive-object ((name &rest options
-					 &key header lowtag
-					 &allow-other-keys)
-				   &rest slots)
-  (setf options (copy-list options))
-  (remf options :header)
-  (remf options :lowtag)
-  (let ((prim-obj
-	 (make-primitive-object :name name
-				:header header
-				:lowtag lowtag
-				:options options
-				:slots (mapcar #'(lambda (slot)
-						   (if (atom slot)
-						       (make-slot slot)
-						       (apply #'make-slot
-							      slot)))
-					       slots))))
-    (collect ((forms) (exports))
-      (let ((offset (if (primitive-object-header prim-obj) 1 0))
-	    (variable-length nil))
-	(dolist (slot (primitive-object-slots prim-obj))
-	  (when variable-length
-	    (error "~S is anything after a :rest-p t slot." slot))
-	  (let* ((rest-p (slot-rest-p slot))
-		 (offset-sym
-		  (intern (concatenate 'simple-string
-				       (string name)
-				       "-"
-				       (string (slot-name slot))
-				       (if rest-p "-OFFSET" "-SLOT")))))
-	    (forms `(defconstant ,offset-sym ,offset
-		      ,@(when (slot-docs slot) (list (slot-docs slot)))))
-	    (setf (slot-offset slot) offset)
-	    (exports offset-sym)
-	    (incf offset (slot-length slot))
-	    (when rest-p (setf variable-length t))))
-	(setf (primitive-object-variable-length prim-obj) variable-length)
-	(unless variable-length
-	  (let ((size (intern (concatenate 'simple-string
-					   (string name)
-					   "-SIZE"))))
-	    (forms `(defconstant ,size ,offset
-		      ,(format nil
-			       "Number of slots used by each ~S~
-			       ~@[~* including the header~]."
-			       name header)))
-	    (exports size)))
-	(setf (primitive-object-size prim-obj) offset))
-      `(eval-when (compile load eval)
-	 (setf *primitive-objects*
-	       (cons ',prim-obj
-		     (delete ',name *primitive-objects*
-			     :key #'primitive-object-name)))
-	 (export ',(exports))
-	 ,@(forms)))))
-
-(defmacro define-for-each-primitive-object ((var) &body body)
-  (let ((name (gensym)))
-    `(macrolet ((,name (,var) ,@body))
-       ,@(mapcar #'(lambda (x)
-		     `(,name ,x))
-		 *primitive-objects*))))
-
 
 ;;;; The primitive objects themselves.
 
-
 (define-primitive-object (cons :lowtag list-pointer-type
 			       :alloc-trans cons)
-  (car :ref-vop car :ref-trans car
-       :setf-vop c::set-car :set-trans c::%rplaca
-       :init :arg)
-  (cdr :ref-vop cdr :ref-trans cdr
-       :setf-vop set-cdr :set-trans c::%rplacd
-       :init :arg))
+  (car :ref-trans car :set-trans c::%rplaca :init :arg)
+  (cdr :ref-trans cdr :set-trans c::%rplacd :init :arg))
 
 (define-primitive-object (structure :lowtag structure-pointer-type
 				    :header structure-header-type
@@ -287,10 +178,13 @@
 
 (define-primitive-object (ratio :lowtag other-pointer-type
 				:header ratio-type
-				:alloc-vop c::make-ratio
 				:alloc-trans %make-ratio)
-  (numerator :ref-vop numerator :init :arg)
-  (denominator :ref-vop denominator :init :arg))
+  (numerator :ref-known (flushable movable)
+	     :ref-trans %numerator
+	     :init :arg)
+  (denominator :ref-known (flushable movable)
+	       :ref-trans %denominator
+	       :init :arg))
 
 (define-primitive-object (single-float :lowtag other-pointer-type
 				       :header single-float-type)
@@ -303,10 +197,9 @@
 
 (define-primitive-object (complex :lowtag other-pointer-type
 				  :header complex-type
-				  :alloc-vop c::make-complex
 				  :alloc-trans %make-complex)
-  (real :ref-vop realpart :init :arg)
-  (imag :ref-vop imagpart :init :arg))
+  (real :ref-known (flushable movable) :ref-trans %realpart :init :arg)
+  (imag :ref-known (flushable movable) :ref-trans %imagpart :init :arg))
 
 (define-primitive-object (array :lowtag other-pointer-type
 				:header t)
@@ -349,13 +242,18 @@
   (data :rest-p t :c-type "unsigned long"))
 
 (define-primitive-object (code :lowtag other-pointer-type :header t)
-  (code-size :ref-vop c::code-code-size)
-  (entry-points :ref-vop c::code-entry-points
-		:set-vop c::set-code-entry-points)
+  (code-size :ref-known (flushable movable)
+	     :ref-trans %code-code-size)
+  (entry-points :type (or function null)
+		:ref-known (flushable)
+		:ref-trans %code-entry-points
+		:set-known (unsafe)
+		:set-trans (setf %code-entry-points))
   (debug-info :type t
-	      :ref-trans di::code-debug-info
 	      :ref-known (flushable)
-	      :set-vop c::set-code-debug-info)
+	      :ref-trans %code-debug-info
+	      :set-known (unsafe)
+	      :set-trans (setf %code-debug-info))
   (trace-table-offset)
   (constants :rest-p t))
 
@@ -365,55 +263,53 @@
   (function :ref-trans fdefn-function)
   (raw-addr :c-type "char *"))
 
-(define-primitive-object (function-header :lowtag function-pointer-type
-					  :header function-header-type)
-  (self :ref-vop c::function-self :set-vop c::set-function-self)
-  (next :ref-vop c::function-next :set-vop c::set-function-next)
-  (name :ref-vop c::function-name
+(define-primitive-object (function :lowtag function-pointer-type
+				   :header function-header-type)
+  #-gengc (self :ref-trans %function-self :set-trans (setf %function-self))
+  #+gengc (entry-point :c-type "char *")
+  (next :type (or function null)
 	:ref-known (flushable)
-	:ref-trans %function-header-name
-	:set-vop c::set-function-name)
-  (arglist :ref-vop c::function-arglist
-	   :ref-known (flushable)
-	   :ref-trans lisp::%function-header-arglist
-	   :set-vop c::set-function-arglist)
-  (type :ref-vop c::function-type
-	:ref-known (flushable)
-	:ref-trans lisp::%function-header-type
-	:set-vop c::set-function-type)
+	:ref-trans %function-next
+	:set-known (unsafe)
+	:set-trans (setf %function-next))
+  (name :ref-known (flushable)
+	:ref-trans %function-name
+	:set-known (unsafe)
+	:set-trans (setf %function-name))
+  (arglist :ref-known (flushable)
+	   :ref-trans %function-arglist
+	   :set-known (unsafe)
+	   :set-trans (setf %function-arglist))
+  (type :ref-known (flushable)
+	:ref-trans %function-type
+	:set-known (unsafe)
+	:set-trans (setf %function-type))
   (code :rest-p t :c-type "unsigned char"))
 
+#-gengc
 (define-primitive-object (return-pc :lowtag other-pointer-type :header t)
   (return-point :c-type "unsigned char" :rest-p t))
 
 (define-primitive-object (closure :lowtag function-pointer-type
-				  :header closure-header-type
-				  :alloc-vop c::make-closure)
-  (function :init :arg
-	    :ref-vop c::closure-function
-	    :ref-known (flushable)
-	    :ref-trans %closure-function)
-  (info :rest-p t :set-vop c::closure-init :ref-vop c::closure-ref))
+				  :header closure-header-type)
+  #-gengc (function :init :arg :ref-trans %closure-function)
+  #+gengc (entry-point :c-type "char *")
+  (info :rest-p t))
 
 (define-primitive-object (funcallable-instance
 			  :lowtag function-pointer-type
 			  :header funcallable-instance-header-type
-			  :alloc-vop make-funcallable-instance
 			  :alloc-trans %make-funcallable-instance)
-  (function :init :arg
-	    :set-vop set-funcallable-instance-function
-	    :set-trans %set-funcallable-instance-function
-	    :set-known (unsafe))
+  #-gengc (function :init :arg
+		    :set-trans %set-funcallable-instance-function)
+  #+gengc (entry-point :c-type "char *")
   (info :rest-p t))
 
 (define-primitive-object (value-cell :lowtag other-pointer-type
 				     :header value-cell-header-type
-				     :alloc-vop make-value-cell
 				     :alloc-trans make-value-cell)
-  (value :set-vop value-cell-set
-	 :set-trans value-cell-set
+  (value :set-trans value-cell-set
 	 :set-known (unsafe)
-	 :ref-vop value-cell-ref
 	 :ref-trans value-cell-ref
 	 :ref-known (flushable)
 	 :init :arg))
@@ -422,16 +318,13 @@
 				 :header symbol-header-type
 				 :alloc-trans make-symbol)
   (value :set-trans %set-symbol-value
-	 :setf-vop set
 	 :init :unbound)
   unused
   (plist :ref-trans symbol-plist
-	 :setf-vop %set-symbol-plist
 	 :set-trans %set-symbol-plist
 	 :init :null)
   (name :ref-trans symbol-name :init :arg)
   (package :ref-trans symbol-package
-	   :setf-vop %set-symbol-package
 	   :set-trans %set-symbol-package
 	   :init :null))
 
@@ -454,7 +347,7 @@
 	  :set-known (unsafe)
 	  :init :arg)
   (next :c-type "struct weak_pointer *"))
-  
+
 
 ;;; Other non-heap data blocks.
 
@@ -477,3 +370,42 @@
   (previous-catch :c-type "struct catch_block *")
   size)
 
+#+gengc
+(define-primitive-object (sigcontext-chain)
+  (scp :c-type "struct sigcontext *")
+  (next :c-type "struct sigcontext_chain *"))
+
+#+gengc
+(define-primitive-object (mutator)
+  (thread :c-type "struct thread *")
+  ;; Signal control magic.
+  (foreign-fn-call-active :c-type "boolean")
+  (interrupts-enabled :c-type "boolean")
+  (interrupt-pending :c-type "boolean")
+  (pending-signal :c-type "int")
+  (pending-code :c-type "int")
+  (pending-mask :c-type "unsigned long")
+  (sigcontext-chain :c-type "struct sigcontext_chain *")
+  ;; Stacks.
+  (control-stack-base :c-type "lispobj *")
+  (control-stack-pointer :c-type "lispobj *")
+  (control-stack-end :c-type "lispobj *")
+  (control-frame-pointer :c-type "lispobj *")
+  (current-unwind-protect :c-type "struct unwind_block *")
+  (current-catch-block :c-type "struct catch_block *")
+  (binding-stack-base :c-type "struct binding *")
+  (binding-stack-pointer :c-type "struct binding *")
+  (binding-stack-end :c-type "struct binding *")
+  (number-stack-base :c-type "char *")
+  (number-stack-pointer :c-type "char *")
+  (number-stack-end :c-type "char *")
+  (eval-stack)
+  (eval-stack-top)
+  ;; Allocation stuff.
+  (nursery-start :c-type "lispobj *")
+  (nursery-fill-pointer :c-type "lispobj *")
+  (nursery-end :c-type "lispobj *")
+  (storebuf-start :c-type "lispobj **")
+  (storebuf-fill-pointer :c-type "lispobj **")
+  (storebuf-end :c-type "lispobj **")
+  (words-consed :c-type "unsigned long"))
