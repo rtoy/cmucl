@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.36 1990/07/05 22:21:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.37 1990/07/16 13:17:37 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -167,39 +167,31 @@
 
 ;;;; Three Way Comparison
 
-(defmacro three-way-comparison (x y condition flavor not-p target temp)
-  (once-only ((n-x x)
-	      (n-y y)
-	      (n-condition condition)
-	      (n-flavor flavor)
-	      (n-not-p not-p)
-	      (n-target target)
-	      (n-temp temp))
-    `(progn
-       (ecase ,n-condition
-	 (:eq
-	  (if ,n-not-p
-	      (inst bne ,n-x ,n-y ,n-target)
-	      (inst beq ,n-x ,n-y ,n-target)))
-	 (:lt
-	  (ecase ,n-flavor
-	    (:unsigned
-	     (inst sltu ,n-temp ,n-x ,n-y))
-	    (:signed
-	     (inst slt ,n-temp ,n-x ,n-y)))
-	  (if ,n-not-p
-	      (inst beq ,n-temp zero-tn ,n-target)
-	      (inst bne ,n-temp zero-tn ,n-target)))
-	 (:gt
-	  (ecase ,n-flavor
-	    (:unsigned
-	     (inst sltu ,n-temp ,n-y ,n-x))
-	    (:signed
-	     (inst slt ,n-temp ,n-y ,n-x)))
-	  (if ,n-not-p
-	      (inst bne ,n-temp zero-tn ,n-target)
-	      (inst beq ,n-temp zero-tn ,n-target))))
-       (inst nop))))
+(defun three-way-comparison (x y condition flavor not-p target temp)
+  (ecase condition
+    (:eq
+     (if not-p
+	 (inst bne x y target)
+	 (inst beq x y target)))
+    (:lt
+     (ecase flavor
+       (:unsigned
+	(inst sltu temp x y))
+       (:signed
+	(inst slt temp x y)))
+     (if not-p
+	 (inst beq temp zero-tn target)
+	 (inst bne temp zero-tn target)))
+    (:gt
+     (ecase flavor
+       (:unsigned
+	(inst sltu temp y x))
+       (:signed
+	(inst slt temp y x)))
+     (if not-p
+	 (inst beq temp zero-tn target)
+	 (inst bne temp zero-tn target))))
+  (inst nop))
 
 
 ;;;; Simple Type Checking Macros
