@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/text.lisp,v 1.1.1.2 1991/02/08 16:38:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/text.lisp,v 1.1.1.3 1991/10/03 15:16:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -306,16 +306,18 @@
      (do ()
 	 ((not (sentence-closing-char-attribute-p (next-character ,mark))))
        (mark-after ,mark))
-     (cond ((char= (next-character ,mark) #\newline)
-	    ,(if (eq direction :forward) mark `(mark-after ,mark)))
-	   ((and (char= (next-character ,mark) #\space)
-		 (or (char= (next-character (mark-after ,mark)) #\space)
-		     (char= (next-character ,mark) #\newline)))
-	    ,(if (eq direction :forward)
-		 `(mark-before ,mark)
-		 `(mark-after ,mark)))
-	   (t (move-to-position ,mark start)
-	      nil))))
+     (let ((next (next-character ,mark)))
+       (cond ((or (not next)
+		  (char= next #\newline))
+	      ,(if (eq direction :forward) mark `(mark-after ,mark)))
+	     ((and (char= next #\space)
+		   (member (next-character (mark-after ,mark))
+			   '(nil #\space #\newline)))
+	      ,(if (eq direction :forward)
+		   `(mark-before ,mark)
+		   `(mark-after ,mark)))
+	     (t (move-to-position ,mark start)
+		nil)))))
 ); (eval-when (compile eval)
 
 
