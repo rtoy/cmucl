@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.18 2003/03/26 17:15:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.19 2003/04/25 17:43:50 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -327,16 +327,6 @@
 	      (declare (ignore class slotd))
 	      (check-obsolete-instance instance)
 	      (not (eq (cdr index) +slot-unbound+))))))
-
-(defun get-accessor-from-svuc-method-function (class slotd sdfun name)
-  (macrolet ((emf-funcall (emf &rest args)
-	       `(invoke-effective-method-function ,emf nil ,@args)))
-    (set-function-name
-     (case name
-       (reader (lambda (instance) (emf-funcall sdfun class instance slotd)))
-       (writer (lambda (nv instance) (emf-funcall sdfun nv class instance slotd)))
-       (boundp (lambda (instance) (emf-funcall sdfun class instance slotd))))
-     `(,name ,(class-name class) ,(slot-definition-name slotd)))))
 
 (defun make-internal-reader-method-function (class-name slot-name)
   (list* :method-spec `(internal-reader-method ,class-name ,slot-name)

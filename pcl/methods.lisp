@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.26 2003/03/26 17:15:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.27 2003/04/25 17:43:50 gerd Exp $")
 
 (in-package :pcl)
 
@@ -742,7 +742,48 @@
 			   *standard-method-combination*))
 	      type)))))
 
-(defun get-accessor-method-function (gf type class slotd)  
+;;;
+;;; Called from COMPUTE-DISCRIMINATING-FUNCTION for
+;;; SLOT-VALUE-USING-CLASS, (SETF SLOT-VALUE-USING-CLASS) and
+;;; SLOT-BOUNDP-USING-CLASS.  GF is one of these functions, TYPE is
+;;; one of the symbols READER, WRITER, or BOUNDP.
+;;;
+;;; Note that these gfs have unusual, fixed dispatch functions calling
+;;; effective methods stored in effective slot definitions, which are
+;;; set in COMPUTE-SLOT-ACCESSOR-INFO.
+;;;
+;;; FIXME: It looks to me like *NEW-CLASS* could be deleted, but
+;;; I'm not 100% sure.
+;;; 
+(defun update-slot-value-gf-info (gf type)
+  (unless *new-class*
+    (update-std-or-str-methods gf type))
+  (when (and (standard-svuc-method type)
+	     (structure-svuc-method type))
+    (flet ((update-class (class)
+	     (when (class-finalized-p class)
+	       (dolist (slotd (class-slots class))
+		 (compute-slot-accessor-info slotd type gf)))))
+      (if *new-class*
+	  (update-class *new-class*)
+	  (map-all-classes #'update-class 'slot-object)))))
+
+;;;
+;;; Return two values.  First value is a function to be stored in
+;;; effective slot definition SLOTD for reading it with
+;;; SLOT-VALUE-USING-CLASS, setting it with (SETF
+;;; SLOT-VALUE-USING-CLASS) or testing it with
+;;; SLOT-BOUNDP-USING-CLASS.  GF is one of these generic functions,
+;;; TYPE is one of the symbols READER, WRITER, BOUNDP.  CLASS is
+;;; SLOTD's class.
+;;;
+;;; Second value is true if the function returned is one of the
+;;; optimized standard functions for the purpose, which are used
+;;; when only standard methods are applicable.
+;;;
+;;; FIXME: Change all these wacky function names to something sane.
+;;; 
+(defun get-accessor-method-function (gf type class slotd)
   (let* ((std-method (standard-svuc-method type))
 	 (str-method (structure-svuc-method type))
 	 (types1 `((eql ,class) (class-eq ,class) (eql ,slotd)))
@@ -752,41 +793,63 @@
     (values
      (if std-p
 	 (get-optimized-std-accessor-method-function class slotd type)
-	 (get-accessor-from-svuc-method-function
-	  class slotd
-	  (get-secondary-dispatch-function 
-	   gf methods types
-	   `((,(car (or (member std-method methods)
-			(member str-method methods)
-			(internal-error "In get-accessor-method-function.")))
-	      ,(get-optimized-std-slot-value-using-class-method-function
-		class slotd type)))
-	   (unless (and (eq type 'writer)
-			(dolist (method methods t)
-			  (unless (eq (car (method-specializers method))
-				      *the-class-t*)
-			    (return nil))))
-	     (let ((wrappers (list (wrapper-of class)
-				   (class-wrapper class)
-				   (wrapper-of slotd))))
-	       (if (eq type 'writer)
-		   (cons (class-wrapper *the-class-t*) wrappers)
-		   wrappers))))
-	  type))
+	 (let* ((optimized-std-fn
+		 (get-optimized-std-slot-value-using-class-method-function
+		  class slotd type))
+		(method-alist
+		 `((,(car (or (member std-method methods)
+			      (member str-method methods)
+			      (internal-error "In get-accessor-method-function.")))
+		     ,optimized-std-fn)))
+		(wrappers
+		 ;;
+		 ;; This used to be wrapped in 
+		 ;; 
+		 ;; (unless (and (eq type 'writer)
+		 ;;	      (every (lambda (x)
+		 ;;		      (eq (car (method-specializers x))
+		 ;;			  *the-class-t*))
+		 ;;		    methods))
+		 ;;
+		 ;; but that looks wrong because WRAPPERS nil signals
+		 ;; to GET-SECONDARY-DISPATCH-FUNCTION that we are NOT
+		 ;; generating code for an emf, which is wrong because
+		 ;; we are.
+		 ;;
+		 ;; See the message from Kevin Rosenberg <kevin@rosenberg.net>
+		 ;; to cmucl-imp from Tue, 22 Apr 2003 13:28:23 -0600
+		 ;; and the following thread for a test case where this
+		 ;; causes problems.
+		 ;;
+		 ;; gerd, 2003-04-25
+		 (let ((wrappers (list (wrapper-of class)
+				       (class-wrapper class)
+				       (wrapper-of slotd))))
+		   (if (eq type 'writer)
+		       (cons (class-wrapper *the-class-t*) wrappers)
+		       wrappers)))
+		(sdfun (get-secondary-dispatch-function 
+			gf methods types method-alist wrappers)))
+	   (get-accessor-from-svuc-method-function class slotd sdfun type)))
      std-p)))
 
-;used by optimize-slot-value-by-class-p (vector.lisp)
-(defun update-slot-value-gf-info (gf type)
-  (unless *new-class*
-    (update-std-or-str-methods gf type))
-  (when (and (standard-svuc-method type) (structure-svuc-method type))
-    (flet ((update-class (class)
-	     (when (class-finalized-p class)
-	       (dolist (slotd (class-slots class))
-		 (compute-slot-accessor-info slotd type gf)))))
-      (if *new-class*
-	  (update-class *new-class*)
-	  (map-all-classes #'update-class 'slot-object)))))
+(defun get-accessor-from-svuc-method-function (class slotd sdfun name)
+  (macrolet ((emf-funcall (emf &rest args)
+	       `(invoke-effective-method-function ,emf nil ,@args)))
+    (let ((function
+	   (ecase name
+	     (reader
+	      (lambda (instance)
+		(emf-funcall sdfun class instance slotd)))
+	     (writer
+	      (lambda (nv instance)
+		(emf-funcall sdfun nv class instance slotd)))
+	     (boundp
+	      (lambda (instance)
+		(emf-funcall sdfun class instance slotd))))))
+      (set-function-name function `(,name ,(class-name class)
+					  ,(slot-definition-name slotd)))
+      function)))
 
 (defvar *standard-slot-value-using-class-method* nil)
 (defvar *standard-setf-slot-value-using-class-method* nil)
@@ -1433,21 +1496,12 @@
 
 (defmethod update-gf-dfun ((class std-class) gf)
   (let ((*new-class* class)
-	#|| (name (generic-function-name gf)) ||#
 	(arg-info (gf-arg-info gf)))
-    (cond #||
-	  ((eq name 'slot-value-using-class)
-	   (update-slot-value-gf-info gf 'reader))
-	  ((equal name '(setf slot-value-using-class))
-	   (update-slot-value-gf-info gf 'writer))
-	  ((eq name 'slot-boundp-using-class)
-	   (update-slot-value-gf-info gf 'boundp))
-	  ||#
-	  ((gf-precompute-dfun-and-emf-p arg-info)
-	   (multiple-value-bind (dfun cache info)
-	       (make-final-dfun-internal gf)
-	     (set-dfun gf dfun cache info) ; otherwise cache might get freed twice
-	     (update-dfun gf dfun cache info))))))
+    (when (gf-precompute-dfun-and-emf-p arg-info)
+      (multiple-value-bind (dfun cache info)
+	  (make-final-dfun-internal gf)
+	(set-dfun gf dfun cache info)
+	(update-dfun gf dfun cache info)))))
 
 ;;;
 ;;;
