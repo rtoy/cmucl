@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.27 1991/05/05 02:20:38 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.28 1991/05/24 17:36:47 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -291,7 +291,7 @@ collect_garbage()
 	user_time = tv_diff(&stop_rusage.ru_utime, &start_rusage.ru_utime);
 	system_time = tv_diff(&stop_rusage.ru_stime, &start_rusage.ru_stime);
 
-#ifdef 0
+#if 0
 	printf("Statistics:\n");
 	printf("%10.2f sec of real time\n", real_time);
 	printf("%10.2f sec of user time,\n", user_time);
@@ -1896,19 +1896,50 @@ gc_init()
 void set_auto_gc_trigger(dynamic_usage)
      unsigned long dynamic_usage;
 {
-    vm_address_t addr;
-    vm_size_t length;
+    os_vm_address_t addr=(os_vm_address_t)current_dynamic_space + dynamic_usage;
+    os_vm_size_t length=
+	DYNAMIC_SPACE_SIZE + (os_vm_address_t)current_dynamic_space - addr;
 
-    addr = round_page((vm_address_t)current_dynamic_space + dynamic_usage);
-    length = DYNAMIC_SPACE_SIZE + (vm_address_t)current_dynamic_space - addr;
+    if(addr<(os_vm_address_t)current_dynamic_space_free_pointer){
+	fprintf(stderr,
+		"set_auto_gc_trigger: tried to set gc trigger too low! (%d < %d)\n",
+		dynamic_usage,
+		current_dynamic_space_free_pointer-current_dynamic_space);
+	return;
+    }else if(length<0){
+	fprintf(stderr,
+		"set_auto_gc_trigger: tried to set gc trigger too high! (%d)\n",
+		dynamic_usage);
+	return;
+    }
 
+    addr=os_round_up_to_page(addr);
+    length=os_trunc_size_to_page(length);
+
+#ifndef MACH
+    os_invalidate(addr,length);
+#else
     os_protect(addr, length, 0);
+#endif
+
     current_auto_gc_trigger = (lispobj *)addr;
 }
 
 void clear_auto_gc_trigger()
 {
-    os_protect((vm_address_t)current_dynamic_space, DYNAMIC_SPACE_SIZE,
-               OS_VM_PROT_READ | OS_VM_PROT_WRITE | OS_VM_PROT_EXECUTE);
-    current_auto_gc_trigger = NULL;
+    if(current_auto_gc_trigger!=NULL){
+#ifndef MACH /* don't want to force whole space into swapping mode... */
+	os_vm_address_t addr=(os_vm_address_t)current_auto_gc_trigger;
+	os_vm_size_t length=
+	    DYNAMIC_SPACE_SIZE + (os_vm_address_t)current_dynamic_space - addr;
+
+	os_validate(addr,length);
+#else
+	os_protect((os_vm_address_t)current_dynamic_space,
+		   DYNAMIC_SPACE_SIZE,
+		   OS_VM_PROT_ALL);
+#endif
+
+	current_auto_gc_trigger = NULL;
+    }
 }

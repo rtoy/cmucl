@@ -1,12 +1,13 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.7 1991/02/16 00:59:39 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.8 1991/05/24 17:33:10 wlott Exp $ */
 #include <stdio.h>
-#include <mach.h>
 #include <sys/types.h>
 #include <sys/file.h>
+
+#include "ldb.h"
+#include "os.h"
 #include "lisp.h"
 #include "globals.h"
 #include "core.h"
-#include "ldb.h"
 
 extern int version;
 
@@ -16,7 +17,7 @@ long *ptr;
 {
 	long id, offset, len;
 	lispobj *free_pointer;
-	vm_address_t addr;
+	os_vm_address_t addr;
 	struct ndir_entry *entry;
 
 	entry = (struct ndir_entry *) ptr;
@@ -24,15 +25,21 @@ long *ptr;
 	while (count-- > 0) {
 		id = entry->identifier;
 		offset = CORE_PAGESIZE * (1 + entry->data_page);
-		addr = (vm_address_t) CORE_PAGESIZE * entry->address;
+		addr = (os_vm_address_t) (CORE_PAGESIZE * entry->address);
 		free_pointer = (lispobj *) addr + entry->nwords;
 		len = CORE_PAGESIZE * entry->page_count;
 
 		if (len != 0) {
+		    os_vm_address_t real_addr;
 #ifdef PRINTNOISE
-			printf("Mapping %d bytes at 0x%x.\n", len, addr);
+		    printf("Mapping %d bytes at 0x%x.\n", len, addr);
 #endif
-			os_map(fd, offset, addr, len);
+		    real_addr=os_map(fd, offset, addr, len);
+		    if(real_addr!=addr)
+			fprintf(stderr,
+		  "process_directory: file mapped in wrong place! (0x%08x != 0x%08x)\n",
+				real_addr,
+				addr);
 		}
 
 #if 0
@@ -41,7 +48,7 @@ long *ptr;
 
 		switch (id) {
 		case DYNAMIC_SPACE_ID:
-                    if (addr != (vm_address_t)dynamic_0_space && addr != (vm_address_t)dynamic_1_space)
+                    if (addr != (os_vm_address_t)dynamic_0_space && addr != (os_vm_address_t)dynamic_1_space)
                         printf("Strange ... dynamic space lossage.\n");
                     current_dynamic_space = (lispobj *)addr;
 #ifdef ibmrt
