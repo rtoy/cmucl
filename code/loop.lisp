@@ -1117,7 +1117,15 @@ collected result will be returned as the value of the LOOP."
 		;; type specifier is unambiguously, and without need of translation,
 		;; a common lisp type specifier or pattern (matching the variable) thereof.
 		(loop-pop-source)
-		(loop-pop-source))
+		#-cmu
+		(loop-pop-source)
+		#+cmu
+		(let* ((spec (loop-pop-source))
+		       (init (loop-typed-init spec)))
+		  (if (typep init spec)
+		      spec
+		      `(or (member ,init) spec))))
+		      
 	       ((symbolp z)
 		;;This is the (sort of) "old" syntax, even though we didn't used to support all of
 		;; these type symbols.
