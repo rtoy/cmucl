@@ -487,7 +487,7 @@
 	       name " Mode."))
       (setq mode (make-mode-object
 		  :variables (make-string-table)
-		  :bindings (make-key-table)
+		  :bindings (make-hash-table)
 		  :hook-name (getstring hook-str *global-variable-names*)))
       (setf (getstring name *mode-names*) mode)))
 
@@ -547,7 +547,7 @@
 			 :%region region
 			 :modes (list (mode-object-name object))
 			 :mode-objects (list object)
-			 :bindings (make-key-table)
+			 :bindings (make-hash-table)
 			 :point (copy-mark (region-end region))
 			 :display-start (copy-mark (region-start region))
 			 :delete-hook delete-hook

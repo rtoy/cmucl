@@ -193,6 +193,7 @@
   (let* ((dl first-changed)
 	 flags ;(dis-line-flags (car dl))) flags bound for NEXT-DIS-LINE.
 	 prev)
+    (declare (ignore flags))
     ;;
     ;; Skip old, unchanged, unmoved lines.
     ;; (loop
@@ -218,7 +219,8 @@
   (let* ((dl-chars (dis-line-chars dl))
 	 (dl-len (dis-line-length dl)))
     (declare (fixnum dl-len) (simple-string dl-chars))
-    (when (listen *editor-input*) (throw 'redisplay-catcher :editor-input))
+    (when (listen-editor-input *editor-input*)
+      (throw 'redisplay-catcher :editor-input))
     (select-hunk hunk)
     (let* ((screen-image-line (si-line (tty-device-screen-image device)
 				       (+ *hunk-top-line* dl-pos)))
@@ -226,7 +228,7 @@
 	   (si-line-length (si-line-length screen-image-line))
 	   (findex (string/= dl-chars si-line-chars
 			     :end1 dl-len :end2 si-line-length)))
-      (declare (type (or fixnum null) findex) (simple-string si-line-chars))
+      (declare (fixnum findex) (simple-string si-line-chars))
       ;;
       ;; When the dis-line and screen chars are not string=.
       (when findex
@@ -711,7 +713,8 @@
   (let* ((dl-chars (dis-line-chars dl))
 	 (dl-len (dis-line-length dl)))
     (declare (fixnum dl-len) (simple-string dl-chars))
-    (when (listen *editor-input*) (throw 'redisplay-catcher :editor-input))
+    (when (listen-editor-input *editor-input*)
+      (throw 'redisplay-catcher :editor-input))
     (select-hunk hunk)
     (let* ((screen-image-line (si-line (tty-device-screen-image device)
 				       (+ *hunk-top-line* dl-pos)))
@@ -719,7 +722,7 @@
 	   (si-line-length (si-line-length screen-image-line))
 	   (findex (string/= dl-chars si-line-chars
 			      :end1 dl-len :end2 si-line-length)))
-      (declare (type (or fixnum null) findex) (simple-string si-line-chars))
+      (declare (fixnum findex) (simple-string si-line-chars))
       ;;
       ;; When the dis-line and screen chars are not string=.
       (when findex
@@ -928,7 +931,7 @@
 	(device (device-hunk-device hunk)))
     (if upos
 	(let ((previous start)
-	      (after-pos 0))
+	      after-pos)
 	  (declare (fixnum previous after-pos))
 	  (loop (device-write-string string previous upos)
 		(setf after-pos (do ((i (1+ upos) (1+ i)))
@@ -1027,7 +1030,7 @@
 	 (char-end-string (tty-device-insert-char-end-string device))
 	 (ces-len (if char-end-string (length char-end-string)))
 	 (end-string (tty-device-insert-end-string device)))
-    (declare (type (or simple-string null) char-init-string char-end-string))
+    (declare (simple-string char-init-string char-end-string))
     (when init-string (device-write-string init-string))
     (if char-init-string
 	(do ((i start (1+ i)))
@@ -1058,7 +1061,7 @@
     (when end-string (incf cost (length (the simple-string end-string))))
     (< cost insert-char-num)))
 
-(defun delete-char (hunk x y &optional (n 1))
+(defun delete-char (hunk x y &optional n)
   (declare (fixnum x y n))
   (update-cursor hunk x y)
   (let* ((device (device-hunk-device hunk))
@@ -1071,14 +1074,13 @@
     (when end-string (device-write-string end-string))))
 
 (defun worth-using-delete-mode (device delete-char-num clear-char-num)
-  (declare (fixnum delete-char-num clear-char-num))
+  (declare (fixnum num))
   (let ((init-string (tty-device-delete-init-string device))
 	(end-string (tty-device-delete-end-string device))
 	(delete-char-string (tty-device-delete-char-string device))
 	(clear-to-eol-string (tty-device-clear-to-eol-string device))
 	(cost 0))
-    (declare (type (or simple-string null) init-string end-string
-		   delete-char-string)
+    (declare (simple-string init-string end-string delete-char-string)
 	     (fixnum cost))
     (when init-string (incf cost (the fixnum (length init-string))))
     (when end-string (incf cost (the fixnum (length end-string))))

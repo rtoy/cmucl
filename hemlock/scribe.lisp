@@ -8,7 +8,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-(in-package 'hemlock)
+
+(in-package "HEMLOCK")
 
 
 
@@ -56,11 +57,11 @@
 
 (defattribute "Scribe Syntax" 
   "For Scribe Syntax, Possible types are:
-  :ESCAPE           ; basically #\@.
-  :OPEN-PAREN       ; Characters that open a Scribe paren:  #\[, #\{, #\(, #\<.
-  :CLOSE-PAREN      ; Characters that close a Scribe paren:  #\], #\}, #\), #\>.
-  :SPACE            ; Delimits end of a Scribe command.
-  :NEWLINE          ; Delimits end of a Scribe command."
+   :ESCAPE           ; basically #\@.
+   :OPEN-PAREN       ; Characters that open a Scribe paren:  #\[, #\{, #\(, #\<.
+   :CLOSE-PAREN      ; Characters that close a Scribe paren:  #\], #\}, #\), #\>.
+   :SPACE            ; Delimits end of a Scribe command.
+   :NEWLINE          ; Delimits end of a Scribe command."
   'symbol nil)
 
 (setf (character-attribute :SCRIBE-SYNTAX #\)) :CLOSE-PAREN) 
@@ -142,7 +143,8 @@
   "Inserts a the bracket it is bound to and then shows the matching bracket."
   "Inserts a the bracket it is bound to and then shows the matching bracket."
   (declare (ignore p))
-  (scribe-insert-paren (current-point) *last-character-typed*))
+  (scribe-insert-paren (current-point)
+		       (ext:key-event-char *last-key-event-typed*)))
 
 
 (defhvar "Scribe Command Table"
@@ -158,7 +160,7 @@
 
 (defcommand "Add Scribe Directive" (p &optional
 				      (command-name nil command-name-p)
-				      type key (mode "Scribe"))
+				      type key-event mode)
   "Adds a new scribe function to put into \"Scribe Command Table\"."
   "Adds a new scribe function to put into \"Scribe Command Table\"."
   (declare (ignore p))
@@ -175,9 +177,16 @@
 			      :help "Enter Command or Environment."
 			      :prompt "Command or Environment: "))
       (declare (ignore ignore))
-      (let ((key (or key
-		     (prompt-for-character :prompt "Dispatch Character: "))))
-	(setf (gethash key (variable-value 'scribe-command-table :mode mode))
+      (let ((key-event (or key-event
+			   (prompt-for-key-event :prompt
+						 "Dispatch Character: "))))
+	(setf (gethash key-event
+		       (cond (mode
+			      (variable-value 'scribe-command-table :mode mode))
+			     ((hemlock-bound-p 'scribe-command-table)
+			      (value scribe-command-table))
+			     (t (editor-error
+				 "Could not find \"Scribe Command Table\"."))))
 	      (cons type command-name))))))
 
 (defcommand "Insert Scribe Directive" (p)
@@ -190,14 +199,19 @@
    Character\"."
   "Wrap some text with some stuff."
   (declare (ignore p))
-  (command-case (:bind key :prompt "Dispatch Character: ")
-    (:help "help" 
-	   (directive-help)
-	   (reprompt))
-    (t (let ((table-entry (gethash key (value scribe-command-table))))
-	 (if (eq (car table-entry) :command)
-	     (insert-scribe-directive (current-point) (cdr table-entry))
-	     (enclose-with-environment (current-point) (cdr table-entry)))))))
+  (loop
+    (let ((key-event (prompt-for-key-event :prompt "Dispatch Character: ")))
+      (if (logical-key-event-p key-event :help)
+	  (directive-help)
+	  (let ((table-entry (gethash key-event (value scribe-command-table))))
+	    (ecase (car table-entry)
+	      (:command
+	       (insert-scribe-directive (current-point) (cdr table-entry))
+	       (return))
+	      (:environment
+	       (enclose-with-environment (current-point) (cdr table-entry))
+	       (return))
+	      ((nil) (editor-error "Unknown dispatch character."))))))))
 
 
 
@@ -211,9 +225,9 @@
 		 (if (eql (car v) :command)
 		     (push (cons k (cdr v)) commands)
 		     (push (cons k (cdr v)) environments)))
-	     (variable-value 'Scribe-Command-Table :mode "Scribe"))
-    (setq commands (sort commands #'string< :key #'cdr))
-    (setq environments (sort environments #'string< :key #'cdr))
+	     (value scribe-command-table))
+    (setf commands (sort commands #'string< :key #'cdr))
+    (setf environments (sort environments #'string< :key #'cdr))
     (with-pop-up-display (s :height (1+ (max (length commands)
 					     (length environments))))
       (format s "~2TCommands~47TEnvironments~%")
@@ -228,15 +242,59 @@
 	       (env-name (rest environment)))
 	  (write-string "  " s)
 	  (when cmd-char
-	    (print-pretty-character cmd-char s)
+	    (ext:print-pretty-key-event cmd-char s)
 	    (format s "~7T")
 	    (write-string (or cmd-name "<prompts for command name>") s))
 	  (when env-char
 	    (format s "~47T")
-	    (print-pretty-character env-char s)
+	    (ext:print-pretty-key-event env-char s)
 	    (format s "~51T")
 	    (write-string (or env-name "<prompts for command name>") s))
 	  (terpri s))))))
+
+;;;
+;;; Inserting and extending :command directives.
+;;;
+
+(defhvar "Insert Scribe Directive Function"
+  "\"Insert Scribe Directive\" calls this function when the directive type
+   is :command.  The function takes four arguments: a mark pointing to the word
+   start, the formatting command string, the open-paren character to use, and a
+   mark pointing to the word end."
+  :value 'scribe-insert-scribe-directive-fun
+  :mode "Scribe")
+
+(defun scribe-insert-scribe-directive-fun (word-start command-string
+					   open-paren-char word-end)
+  (insert-character word-start (value escape-character))
+  (insert-string word-start command-string)
+  (insert-character word-start open-paren-char)
+  (insert-character word-end (value close-paren-character)))
+
+(defhvar "Extend Scribe Directive Function"
+  "\"Insert Scribe Directive\" calls this function when the directive type is
+   :command to extend the the commands effect.  This function takes a string
+   and three marks: the first on pointing before the open-paren character for
+   the directive.  The string is the command-string to selected by the user
+   which this function uses to determine if it is actually extending a command
+   or inserting a new one.  The function must move the first mark before any
+   command text for the directive and the second mark to the end of any command
+   text.  It moves the third mark to the previous word's start where the
+   command region should be.  If this returns non-nil \"Insert Scribe
+   Directive\" moves the command region previous one word, and otherwise it
+   inserts the directive."
+  :value 'scribe-extend-scribe-directive-fun
+  :mode "Scribe")
+
+(defun scribe-extend-scribe-directive-fun (command-string
+					   command-end command-start word-start)
+  (word-offset (move-mark command-start command-end) -1)
+  (when (string= (the simple-string (region-to-string
+				     (region command-start command-end)))
+		 command-string)
+    (mark-before command-start)
+    (mark-after command-end)
+    (word-offset (move-mark word-start command-start) -1)))
 
 ;;; INSERT-SCRIBE-DIRECTIVE first looks for the current or previous word at
 ;;; mark.  Word-p says if we found one.  If mark is immediately before a word,
@@ -266,30 +324,34 @@
 			       :trim t :prompt "Environment: "
 			       :help "Name of environment to enclose with."))))
       (declare (simple-string command-string))
-      (when word-p
+      (cond
+       (word-p
 	(word-offset (move-mark word-end word-start) 1)
-	(when (test-char (next-character word-end) :scribe-syntax
-			 :close-paren)
-	  (with-mark ((command-start word-start)
-		      (command-end word-end))
-	    (balance-paren (mark-after command-end))
-	    (word-offset (move-mark command-start command-end) -1)
-	    (when (string= (the simple-string
-				(region-to-string (region command-start
-							  command-end)))
-			   command-string)
-	      (mark-before command-start)
-	      (mark-after command-end)
-	      (setf open-paren-char
-		    (opposing-bracket (next-character word-end)))
-	      (delete-region (region command-start command-end))
-	      (delete-characters word-end)
-	      (word-offset (move-mark word-start command-start) -1)))))
-      (insert-character word-start (value escape-character))
-      (insert-string word-start command-string)
-      (insert-character word-start open-paren-char)
-      (insert-character word-end (value close-paren-character))
-      (unless word-p (mark-before mark)))))
+	(if (test-char (next-character word-end) :scribe-syntax
+		       :close-paren)
+	    (with-mark ((command-start word-start :left-inserting)
+			(command-end word-end :left-inserting))
+	      ;; Move command-end from word-end to open-paren of command.
+	      (balance-paren (mark-after command-end))
+	      (if (funcall (value extend-scribe-directive-function)
+			   command-string command-end command-start word-start)
+		  (let ((region (delete-and-save-region
+				 (region command-start command-end))))
+		    (word-offset (move-mark word-start command-start) -1)
+		    (ninsert-region word-start region))
+		  (funcall (value insert-scribe-directive-function)
+			   word-start command-string open-paren-char
+			   word-end)))
+	    (funcall (value insert-scribe-directive-function)
+		     word-start command-string open-paren-char word-end)))
+	(t
+	 (funcall (value insert-scribe-directive-function)
+		  word-start command-string open-paren-char word-end)
+	 (mark-before mark))))))
+
+;;;
+;;; Inserting :environment directives.
+;;;
 
 (defun enclose-with-environment (mark &optional environment)
   (if (region-active-p)
@@ -324,8 +386,8 @@
 			 (prompt-for-string
 			  :trim t :prompt "Environment: "
 			  :help "Name of environment to enclose with."))))
-    (insert-environment top-mark "Begin" environment)
-    (insert-environment bottom-mark "End" environment)))
+    (insert-environment top-mark "begin" environment)
+    (insert-environment bottom-mark "end" environment)))
 
 (defun insert-environment (mark command environment)
   (let ((esc-char (value escape-character))
@@ -338,37 +400,37 @@
       (insert-character mark close-paren)))
 
 
-(Add-Scribe-Directive-Command nil nil :Environment #\Control-\l)
-(Add-Scribe-Directive-Command nil nil :Command #\Control-\w)
-(Add-Scribe-Directive-Command nil "Begin" :Command #\b)
-(Add-Scribe-Directive-Command nil "End" :Command #\e)
-(Add-Scribe-Directive-Command nil "Center" :Environment #\c)
-(Add-Scribe-Directive-Command nil "Description" :Environment #\d)
-(Add-Scribe-Directive-Command nil "Display" :Environment #\Control-\d)
-(Add-Scribe-Directive-Command nil "Enumerate" :Environment #\n)
-(Add-Scribe-Directive-Command nil "Example" :Environment #\x)
-(Add-Scribe-Directive-Command nil "FileExample" :Environment #\y)
-(Add-Scribe-Directive-Command nil "FlushLeft" :Environment #\l)
-(Add-Scribe-Directive-Command nil "FlushRight" :Environment #\r)
-(Add-Scribe-Directive-Command nil "Format" :Environment #\f)
-(Add-Scribe-Directive-Command nil "Group" :Environment #\g)
-(Add-Scribe-Directive-Command nil "Itemize" :Environment #\Control-\i)
-(Add-Scribe-Directive-Command nil "Multiple" :Environment #\m)
-(Add-Scribe-Directive-Command nil "ProgramExample" :Environment #\p)
-(Add-Scribe-Directive-Command nil "Quotation" :Environment #\q)
-(Add-Scribe-Directive-Command nil "Text" :Environment #\t)
-(Add-Scribe-Directive-Command nil "i" :Command #\i)
-(Add-Scribe-Directive-Command nil "b" :Command #\Control-\b)
-(Add-Scribe-Directive-Command nil "-" :Command #\-)
-(Add-Scribe-Directive-Command nil "+" :Command #\+)
-(Add-Scribe-Directive-Command nil "u" :Command #\Control-\j)
-(Add-Scribe-Directive-Command nil "p" :Command #\Control-\p)
-(Add-Scribe-Directive-Command nil "r" :Command #\Control-\r)
-(Add-Scribe-Directive-Command nil "t" :Command #\Control-\t) 
-(Add-Scribe-Directive-Command nil "g" :Command #\Control-\a)  
-(Add-Scribe-Directive-Command nil "un" :Command #\Control-\n)
-(Add-Scribe-Directive-Command nil "ux" :Command #\Control-\x) 
-(Add-Scribe-Directive-Command nil "c" :Command #\Control-\k) 
+(add-scribe-directive-command nil nil :Environment #k"Control-l" "Scribe")
+(add-scribe-directive-command nil nil :Command #k"Control-w" "Scribe")
+(add-scribe-directive-command nil "Begin" :Command #k"b" "Scribe")
+(add-scribe-directive-command nil "End" :Command #k"e" "Scribe")
+(add-scribe-directive-command nil "Center" :Environment #k"c" "Scribe")
+(add-scribe-directive-command nil "Description" :Environment #k"d" "Scribe")
+(add-scribe-directive-command nil "Display" :Environment #k"Control-d" "Scribe")
+(add-scribe-directive-command nil "Enumerate" :Environment #k"n" "Scribe")
+(add-scribe-directive-command nil "Example" :Environment #k"x" "Scribe")
+(add-scribe-directive-command nil "FileExample" :Environment #k"y" "Scribe")
+(add-scribe-directive-command nil "FlushLeft" :Environment #k"l" "Scribe")
+(add-scribe-directive-command nil "FlushRight" :Environment #k"r" "Scribe")
+(add-scribe-directive-command nil "Format" :Environment #k"f" "Scribe")
+(add-scribe-directive-command nil "Group" :Environment #k"g" "Scribe")
+(add-scribe-directive-command nil "Itemize" :Environment #k"Control-i" "Scribe")
+(add-scribe-directive-command nil "Multiple" :Environment #k"m" "Scribe")
+(add-scribe-directive-command nil "ProgramExample" :Environment #k"p" "Scribe")
+(add-scribe-directive-command nil "Quotation" :Environment #k"q" "Scribe")
+(add-scribe-directive-command nil "Text" :Environment #k"t" "Scribe")
+(add-scribe-directive-command nil "i" :Command #k"i" "Scribe")
+(add-scribe-directive-command nil "b" :Command #k"Control-b" "Scribe")
+(add-scribe-directive-command nil "-" :Command #k"\-" "Scribe")
+(add-scribe-directive-command nil "+" :Command #k"+" "Scribe")
+(add-scribe-directive-command nil "u" :Command #k"Control-j" "Scribe")
+(add-scribe-directive-command nil "p" :Command #k"Control-p" "Scribe")
+(add-scribe-directive-command nil "r" :Command #k"Control-r" "Scribe")
+(add-scribe-directive-command nil "t" :Command #k"Control-t" "Scribe")
+(add-scribe-directive-command nil "g" :Command #k"Control-a" "Scribe")
+(add-scribe-directive-command nil "un" :Command #k"Control-n" "Scribe")
+(add-scribe-directive-command nil "ux" :Command #k"Control-x" "Scribe")
+(add-scribe-directive-command nil "c" :Command #k"Control-k" "Scribe")
 
 
 

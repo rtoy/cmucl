@@ -13,7 +13,8 @@
 ;;; implementation dependant, but it uses some hooks in the stream
 ;;; system and other stuff.
 ;;;
-(in-package 'hemlock)
+
+(in-package "HEMLOCK")
 
 ;;; We have "Keyboard Macro Transforms" that help in making a keyboard
 ;;; macro.  What they do is turn the sequence of commands into equivalent
@@ -63,7 +64,7 @@
 
 (defun trash-character ()
   "Throw away a character on *editor-input*."
-  (read-char *editor-input*))
+  (get-key-event *editor-input*))
 
 ;;; Save-Kbdmac-Input  --  Internal
 ;;;
@@ -93,11 +94,11 @@
     (:invoke
      (let ((fun (command-function command))
 	   (arg (prefix-argument))
-	   (lastc *last-character-typed*))
+	   (lastc *last-key-event-typed*))
        (save-kbdmac-input
 	 (let ((*invoke-hook* *old-invoke-hook*))
 	   (funcall fun arg))
-	 (kbdmac-emit `(set *last-character-typed* ,lastc))
+	 (kbdmac-emit `(set *last-key-event-typed* ,lastc))
 	 (kbdmac-emit `(,fun ,arg)))))))
 
 ;;;; Self insert transform:
@@ -106,14 +107,17 @@
 ;;; insert it all at once.
 ;;;
 
-(defvar *kbdmac-text* (make-array 100 :element-type 'string-char
-				  :fill-pointer 0
-				  :adjustable t))
+(defvar *kbdmac-text* (make-array 100 :fill-pointer 0 :adjustable t))
 
 (defun insert-string-at-point (string)
   (insert-string (buffer-point (current-buffer)) string))
 (defun insert-character-at-point (character)
   (insert-character (buffer-point (current-buffer)) character))
+
+(defun key-vector-to-string (key-vector)
+  (let ((string (make-array (length key-vector) :element-type 'string-char)))
+    (dotimes (i (length key-vector) string)
+      (setf (aref string i) (key-event-char (aref key-vector i))))))
 
 (defun self-insert-kbdmac-transform (command key)
   (case key
@@ -123,12 +127,13 @@
      (let ((p (or (prefix-argument) 1)))
        (funcall (command-function command) p)
        (dotimes (i p)
-	 (vector-push-extend *last-character-typed* *kbdmac-text*))))
+	 (vector-push-extend *last-key-event-typed* *kbdmac-text*))))
     (:finish
-     (if (> (length (the string *kbdmac-text*)) 1)
+     (if (> (length *kbdmac-text*) 1)
 	 (kbdmac-emit `(insert-string-at-point
-			,(copy-seq (the string *kbdmac-text*))))
-	 (kbdmac-emit `(insert-character-at-point ,(char *kbdmac-text* 0)))))))
+			,(key-vector-to-string *kbdmac-text*)))
+	 (kbdmac-emit `(insert-character-at-point
+			,(key-event-char (aref *kbdmac-text* 0))))))))
 ;;;
 (define-kbdmac-transform "Self Insert" #'self-insert-kbdmac-transform)
 (define-kbdmac-transform "Lisp Insert )" #'self-insert-kbdmac-transform)
@@ -344,7 +349,7 @@
 		      (define-keyboard-macro))
 	(bind-key name key kind where)
 	(message "~A bound to ~A."
-		 (with-output-to-string (s) (sub-print-key key s))
+		 (with-output-to-string (s) (print-pretty-key key s))
 		 name)))))
 
 ;;; GET-KEYBOARD-MACRO-KEY gets a key from the user and confirms clobbering it
@@ -364,7 +369,7 @@
 	       (if (prompt-for-y-or-n
 		    :prompt `("~A is bound to ~A.  Rebind it? "
 			      ,(with-output-to-string (s)
-				 (sub-print-key key s))
+				 (print-pretty-key key s))
 			      ,(command-name cmd))
 		    :default nil)
 		   (values key kind where)
@@ -374,7 +379,7 @@
 		    :prompt `("~A is a prefix for more than one command.  ~
 			       Clobber it? "
 			      ,(with-output-to-string (s)
-				 (sub-print-key key s)))
+				 (print-pretty-key key s)))
 		    :default nil)
 		   (values key kind where)
 		   nil)))))))
@@ -440,7 +445,7 @@
       (command-case (:prompt "Keyboard Macro Query: "
 		     :help "Type one of these characters to say what to do:"
 		     :change-window nil
-		     :bind ch)
+		     :bind key-event)
 	(:exit
 	 "Exit this keyboard macro immediately."
 	 (throw 'exit-kbdmac nil))
@@ -460,5 +465,5 @@
 	 (do-recursive-edit)
 	 (reprompt))
 	(t
-	 (unread-char ch *editor-input*)
+	 (unget-key-event key-event *editor-input*)
 	 (throw 'exit-kbdmac nil))))))

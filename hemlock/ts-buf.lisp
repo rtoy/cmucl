@@ -246,13 +246,23 @@
   :value "Cause the slave to throw to the top level? "
   :mode "Typescript")
 
+;;; TYPESCRIPT-DATA-OR-LOSE -- internal
+;;;
+;;; Return the typescript-data for the current buffer, or die trying.
+;;; 
+(defun typescript-data-or-lose ()
+  (if (hemlock-bound-p 'typescript-data)
+      (let ((ts (value typescript-data)))
+	(if ts
+	    ts
+	    (editor-error "Can't find the typescript data?")))
+      (editor-error "Not in a typescript buffer.")))
+
 (defcommand "Confirm Typescript Input" (p)
   "Send the current input to the slave typescript."
   "Send the current input to the slave typescript."
   (declare (ignore p))
-  (let ((ts (value typescript-data)))
-    (unless ts
-      (editor-error "This buffer has no typescript data!"))
+  (let ((ts (typescript-data-or-lose)))
     (let ((input (get-interactive-input)))
       (when input
 	(let ((string (region-to-string input)))
@@ -284,7 +294,7 @@
   (send-oob-to-slave "T"))
 
 (defun send-oob-to-slave (string)
-  (let* ((ts (value typescript-data))
+  (let* ((ts (typescript-data-or-lose))
 	 (wire (ts-data-wire ts))
 	 (socket (wire:wire-fd wire)))
     (unless socket

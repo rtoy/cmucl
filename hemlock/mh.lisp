@@ -2558,14 +2558,16 @@
 	    (let ((result ()))
 	      (declare (list result))
 	      (loop
-		(let ((char (read-char *editor-input*)))
-		  (ring-pop hi::*character-history*)
- 		  (cond ((char= char #\return)
-			 (return (prog1 (coerce (nreverse result) 'simple-string)
+		(let ((key-event (get-key-event *editor-input*)))
+		  (ring-pop hi::*key-event-history*)
+		  (cond ((eq key-event #k"return")
+			 (return (prog1 (coerce (nreverse result)
+						'simple-string)
 				   (fill result nil))))
-			((or (char= char #\control-u) (char= char #\control-\u))
+			((or (eq key-event #k"control-u")
+			     (eq key-event #k"control-U"))
 			 (setf result nil))
-			(t (push char result)))))))
+			(t (push (ext:key-event-char key-event) result)))))))
 	(setf (current-window) start-window)))))
 
 

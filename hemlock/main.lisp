@@ -17,8 +17,7 @@
 
 (export '(*global-variable-names* *mode-names* *buffer-names*
 	  *character-attribute-names* *command-names* *buffer-list*
-	  *window-list* *editor-input* *last-character-typed*
-	  *character-history* after-editor-initializations))
+	  *window-list* *last-key-event-typed* after-editor-initializations))
 
 
 (in-package "EXTENSIONS")

@@ -219,7 +219,7 @@
    argument insert the character that many times."
   "Implements \"Completion Self Insert\". Calling this function is not
    meaningful."
-  (let ((char (text-character *last-character-typed*)))
+  (let ((char (ext:key-event-char *last-key-event-typed*)))
     (unless char (editor-error "Can't insert that character."))
     (cond ((completion-char-p char)
 	   ;; If start of word not already in *completion-prefix*, put it 
@@ -328,13 +328,20 @@
 	  (let* ((first (position-if #'alpha-char-p string))
 		 (next (if first (position-if #'alpha-char-p string
 					      :start (1+ first)))))
+	    ;; Often completions start with asterisks when hacking on Lisp
+	    ;; code, so we look for alphabetic characters.
 	    (insert-string point
-			   (cond ((and first (lower-case-p (char string first)))
-				  completion)
-				 ((and next (lower-case-p (char string next)))
-				  (word-capitalize completion))
-				 (t
-				  (string-upcase completion))))))))))
+			   ;; Leave the cascading IF's alone.
+			   ;; Writing this as a COND, using LOWER-CASE-P as
+			   ;; the test is not equivalent to this code since
+			   ;; numbers (and such) are nil for LOWER-CASE-P and
+			   ;; UPPER-CASE-P.
+			   (if (and first (upper-case-p (schar string first)))
+			       (if (and next
+					(upper-case-p (schar string next)))
+				   (string-upcase completion)    
+				   (word-capitalize completion))
+			       completion))))))))
 
 
 ;;; WORD-CAPITALIZE is like STRING-CAPITALIZE except that it treats apostrophes

@@ -372,60 +372,73 @@
 
 ;;;; COMMAND-CASE
 
-;;; Command-Case  --  Public
+;;; COMMAND-CASE  --  Public
 ;;;
 ;;;    Grovel the awful thing and spit out the corresponding Cond.  See Echo
-;;; for the definition of command-case-help and logical char stuff.
+;;; for the definition of COMMAND-CASE-HELP and logical char stuff.
 ;;;
 (eval-when (compile load eval)
-(defun command-case-tag (tag char)
+(defun command-case-tag (tag key-event char)
   (cond ((and (characterp tag) (standard-char-p tag))
-	 `(char= ,char ,(char-upcase tag)))
+	 `(char= ,char ,tag))
 	((and (symbolp tag) (keywordp tag))
-	 `(logical-char= ,char ,tag))
+	 `(logical-key-event-p ,key-event ,tag))
 	(t
-	 (error "Tag in Command-Case is not a standard character or keyword:~S"
+	 (error "Tag in COMMAND-CASE is not a standard character or keyword: ~S"
 		tag))))
 ); eval-when (compile load eval)
 ;;;  
-(defmacro command-case ((&key (change-window t) character
+(defmacro command-case ((&key (change-window t)
 			      (prompt "Command character: ")
 			      (help "Choose one of the following characters:")
 			      (bind (gensym)))
 			&body forms)
+  "This is analogous to the Common Lisp CASE macro.  Commands such as \"Query
+   Replace\" use this to get a key-event, translate it to a character, and
+   then to dispatch on the character to the specified case.  The syntax is
+   as follows:
+      (COMMAND-CASE ( {key value}* )
+        {( {( {tag}* )  |  tag}  help  {form}* )}*
+        )
+   Each tag is either a character or a logical key-event.  The user's typed
+   key-event is compared using either EXT:LOGICAL-KEY-EVENT-P or CHAR= of
+   EXT:KEY-EVENT-CHAR.
+
+   The legal keys of the key/value pairs are :help, :prompt, :change-window,
+   and :bind.  See the manual for details."
   (do* ((forms forms (cdr forms))
 	(form (car forms) (car forms))
 	(cases ())
 	(bname (gensym))
-	(upper (gensym))
 	(again (gensym))
 	(n-prompt (gensym))
 	(n-change (gensym))
+	(bind-char (gensym))
 	(docs ())
 	(t-case `(t (beep) (reprompt))))
        ((atom forms)
 	`(macrolet ((reprompt ()
 		      `(progn
-			(setq ,',bind (prompt-for-character*
-				       ,',n-prompt ,',n-change))
-			(go ,',AGAIN))))
+			 (setf ,',bind
+			       (prompt-for-key-event* ,',n-prompt ,',n-change))
+			 (setf ,',bind-char (ext:key-event-char ,',bind))
+			 (go ,',AGAIN))))
 	   (block ,bname
 	     (let* ((,n-prompt ,prompt)
 		    (,n-change ,change-window)
-		    (,bind ,(or character
-				`(prompt-for-character* ,n-prompt ,n-change))))
+		    (,bind (prompt-for-key-event* ,n-prompt ,n-change))
+		    (,bind-char (ext:key-event-char ,bind)))
 	       (tagbody
 		,AGAIN
-		 (let ((,upper (char-upcase ,bind)))
-		   (return-from
-		    ,bname
-		    (cond
-		     ,@(nreverse cases)
-		     ((logical-char= ,upper :abort) (editor-error))
-		     ((logical-char= ,upper :help)
-		      (command-case-help ,help ',(nreverse docs))
-		      (reprompt))
-		     ,t-case))))))))
+		(return-from
+		 ,bname
+		 (cond ,@(nreverse cases)
+		       ((logical-key-event-p ,bind :abort)
+			(editor-error))
+		       ((logical-key-event-p ,bind :help)
+			(command-case-help ,help ',(nreverse docs))
+			(reprompt))
+		       ,t-case)))))))
     
     (cond ((atom form)
 	   (error "Malformed Command-Case clause: ~S" form))
@@ -438,16 +451,19 @@
 	   (let ((tag (car form))
 		 (rest (cddr form)))
 	     (cond ((atom tag)
-		    (push (cons (command-case-tag tag upper) rest) cases)
+		    (push (cons (command-case-tag tag bind bind-char) rest)
+			  cases)
 		    (setq tag (list tag)))
 		   (t
 		    (do ((tag tag (cdr tag))
-			 (res () (cons (command-case-tag (car tag) upper) res)))
+			 (res ()
+			      (cons (command-case-tag (car tag) bind bind-char)
+				    res)))
 			((null tag)
 			 (push `((or ,@res) . ,rest) cases)))))
 	     (push (cons tag (second form)) docs))))))
 
-
+    
 
 ;;;; Some random macros used everywhere.
 
@@ -617,18 +633,18 @@
 			      :format-string
 			      "Error in error handler; Hemlock broken.")))))
     (clear-echo-area)
-    (clear-input *editor-input*)
+    (clear-editor-input *editor-input*)
     (beep)
     (if internalp (write-string "Internal error: " *echo-area-stream*))
     (princ condition *echo-area-stream*)
     (let* ((*editor-input* *real-editor-input*)
-	   (ch (read-char *editor-input*)))
-      (if (char= ch #\?)
+	   (key-event (get-key-event *editor-input*)))
+      (if (eq key-event #k"?")
 	  (loop 
 	    (command-case (:prompt "Debug: "
 			   :help
 			   "Type one of the Hemlock debug command characters:")
-	      ((#\D #\d) "Enter a break loop."
+	      (#\d "Enter a break loop."
 	       (let ((device (device-hunk-device
 			      (window-hunk (current-window)))))
 		 (funcall (device-exit device) device)
@@ -637,15 +653,15 @@
 			 (continue "Return to Hemlock's debug loop.")
 		       (invoke-debugger condition))
 		   (funcall (device-init device) device))))
-	      (#\B "Do a stack backtrace."
+	      (#\b "Do a stack backtrace."
 		 (with-pop-up-display (*debug-io* :height 100)
 		 (debug:backtrace)))
-	      (#\E "Show the error."
+	      (#\e "Show the error."
 	       (with-pop-up-display (*standard-output*)
 		 (princ condition)))
-	      ((#\Q :exit) "Throw back to Hemlock top-level."
+	      ((#\q :exit) "Throw back to Hemlock top-level."
 	       (throw 'editor-top-level-catcher nil))
-	      ((#\r #\R) "Try to restart from this error."
+	      (#\r "Try to restart from this error."
 	       (let ((cases (compute-restarts)))
 		 (declare (list cases))
 		 (with-pop-up-display (s :height (1+ (length cases)))
@@ -653,7 +669,7 @@
 		 (invoke-restart-interactively
 		  (nth (prompt-for-integer :prompt "Restart number: ")
 		       cases))))))
-	  (unread-char ch *editor-input*))
+	  (unget-key-event key-event *editor-input*))
       (throw 'editor-top-level-catcher nil))))
 
 (defmacro handle-lisp-errors (&body body)

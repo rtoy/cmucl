@@ -174,54 +174,57 @@
 ;;;
 (defun %i-search (string point trailer direction failure)
   (do* ((curr-point (copy-mark point :temporary))
-	(curr-trailer (copy-mark trailer :temporary))
-	(next-char (read-char *editor-input* nil)
-		   (read-char *editor-input* nil)))
+	(curr-trailer (copy-mark trailer :temporary)))
        (nil)
-    (case (%i-search-char-eval next-char string point trailer direction failure)
-      (:cancel
-       (%i-search-echo-refresh string direction failure)
-       (unless (zerop (length string))
-	 (i-search-pattern string direction)))
-      (:return-cancel
-       (unless (zerop (length string)) (return :cancel))
-       (beep))
-      (:control-g
-       (when failure (return :control-g))
-       (%i-search-echo-refresh string direction nil)
-       (unless (zerop (length string))
-	 (i-search-pattern string direction))))
-    (move-mark point curr-point)
-    (move-mark trailer curr-trailer)))
+    (let ((next-key-event (get-key-event *editor-input* t)))
+      (case (%i-search-char-eval next-key-event string point trailer
+				 direction failure)
+	(:cancel
+	 (%i-search-echo-refresh string direction failure)
+	 (unless (zerop (length string))
+	   (i-search-pattern string direction)))
+	(:return-cancel
+	 (unless (zerop (length string)) (return :cancel))
+	 (beep))
+	(:control-g
+	 (when failure (return :control-g))
+	 (%i-search-echo-refresh string direction nil)
+	 (unless (zerop (length string))
+	   (i-search-pattern string direction))))
+      (move-mark point curr-point)
+      (move-mark trailer curr-trailer))))
 
 ;;;      %I-SEARCH-CHAR-EVAL evaluates the last character typed and takes
 ;;; necessary actions.
 ;;;
-(defun %i-search-char-eval (char string point trailer direction failure)
+(defun %i-search-char-eval (key-event string point trailer direction failure)
   (declare (simple-string string))
-  (cond ((standard-char-p char)
-	 (%i-search-printed-char char string point trailer direction failure))
-	((or (logical-char= char :forward-search)
-	     (logical-char= char :backward-search))
-	 (%i-search-control-s-or-r char string point trailer direction failure))
-	((logical-char= char :cancel) :return-cancel)
-	((logical-char= char :abort)
+  (cond ((let ((character (key-event-char key-event)))
+	   (and character (standard-char-p character)))
+	 (%i-search-printed-char key-event string point trailer
+				 direction failure))
+	((or (logical-key-event-p key-event :forward-search)
+	     (logical-key-event-p key-event :backward-search))
+	 (%i-search-control-s-or-r key-event string point trailer
+				   direction failure))
+	((logical-key-event-p key-event :cancel) :return-cancel)
+	((logical-key-event-p key-event :abort)
 	 (unless failure
 	   (clear-echo-area)
 	   (message "Search aborted.")
 	   (throw 'exit-i-search :control-g))
 	 :control-g)
-	((logical-char= char :quote)
-	 (%i-search-printed-char (read-char *editor-input* nil)
+	((logical-key-event-p key-event :quote)
+	 (%i-search-printed-char (get-key-event *editor-input* t)
 				 string point trailer direction failure))
-	((and (zerop (length string)) (logical-char= char :exit))
+	((and (zerop (length string)) (logical-key-event-p key-event :exit))
 	 (if (eq direction :forward)
 	     (forward-search-command nil)
 	     (reverse-search-command nil))
 	 (throw 'exit-i-search nil))
 	(t
-	 (unless (logical-char= char :exit)
-	   (unread-char char *editor-input*))
+	 (unless (logical-key-event-p key-event :exit)
+	   (unget-key-event key-event *editor-input*))
 	 (unless (zerop (length string))
 	   (setf *last-search-string* string))
 	 (throw 'exit-i-search nil))))
@@ -231,9 +234,10 @@
 ;;; has just been changed, there cannot be a failure before trying a new
 ;;; direction.
 ;;;
-(defun %i-search-control-s-or-r (char string point trailer direction failure)
+(defun %i-search-control-s-or-r (key-event string point trailer
+					   direction failure)
   (let ((forward-direction-p (eq direction :forward))
-	(forward-character-p (logical-char= char :forward-search)))
+	(forward-character-p (logical-key-event-p key-event :forward-search)))
     (cond ((zerop (length string))
 	   (%i-search-empty-string point trailer direction forward-direction-p
 				   forward-character-p))
@@ -273,10 +277,10 @@
 ;;; the end of the buffer or to include the next character at the beginning
 ;;; of the search.
 ;;;
-(defun %i-search-printed-char (char string point trailer
-			       direction failure)
-  (let ((tchar (text-character char)))
-    (unless tchar (editor-error "Not a text character -- ~S" char))
+(defun %i-search-printed-char (key-event string point trailer direction failure)
+  (let ((tchar (ext:key-event-char key-event)))
+    (unless tchar (editor-error "Not a text character -- ~S" (key-event-char
+							      key-event)))
     (when (interactive)
       (insert-character (buffer-point *echo-area-buffer*) tchar)
       (force-output *echo-area-stream*))
@@ -475,7 +479,7 @@
 		   (:prompt
 		    "Query replace: "
 		    :help "Type one of the following single-character commands:"
-		    :change-window nil :bind ch)
+		    :change-window nil :bind key-event)
 		 (:yes "Replace this occurrence."
 		       (replace-that-case replacement cap upper point length
 					  dumb))
@@ -494,7 +498,7 @@
 		  (get-search-pattern target :forward))
 		 (:exit "Exit immediately."
 			(return nil))
-		 (t (unread-char ch *editor-input*)
+		 (t (unget-key-event key-event *editor-input*)
 		    (return nil))))))
        (length (the list *query-replace-undo-data*))))))
 

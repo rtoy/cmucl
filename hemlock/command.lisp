@@ -49,7 +49,7 @@
   "Insert the last character typed.
   With prefix argument insert the character that many times."
   "Implements ``Self Insert'', calling this function is not meaningful."
-  (let ((char (text-character *last-character-typed*)))
+  (let ((char (ext:key-event-char *last-key-event-typed*)))
     (unless char (editor-error "Can't insert that character."))
     (if (and p (> p 1))
 	(insert-string
@@ -60,8 +60,8 @@
 (defcommand "Quoted Insert" (p)
   "Read a character from the terminal and insert it.
   With prefix argument, insert the character that many times."
-  "Reads a character from *editor-input* and inserts it at the point."
-  (let ((char (text-character (read-char *editor-input* nil)))
+  "Reads a key-event from *editor-input* and inserts it at the point."
+  (let ((char (ext:key-event-char (get-key-event *editor-input* t)))
 	(point (current-point)))
     (unless char (editor-error "Can't insert that character."))
     (if (and p (> p 1))
@@ -399,16 +399,17 @@
   (declare (ignore p))
   (clear-echo-area)
   (write-string "C-U " *echo-area-stream*)
-  (let ((char (read-char *editor-input*)))
+  (let* ((key-event (get-key-event *editor-input*))
+	 (char (ext:key-event-char key-event)))
     (multiple-value-call #'universal-argument-loop
       (case (char-code char)
 	(#.(char-code #\-)
 	 (write-char #\- *echo-area-stream*)
-	 (values (read-char *editor-input*) -1))
+	 (values (get-key-event *editor-input*) -1))
 	(#.(char-code #\+) ;Just in case.
 	 (write-char #\+ *echo-area-stream*)
-	 (values (read-char *editor-input*) 1))
-	(t (values char 1))))))
+	 (values (get-key-event *editor-input*) 1))
+	(t (values key-event 1))))))
 
 (defcommand "Negative Argument" (p)
   "This command is equivalent to invoking \"Universal Argument\" and typing
@@ -418,7 +419,7 @@
   (when p (editor-error "Must type minus sign first."))
   (clear-echo-area)
   (write-string "C-U -" *echo-area-stream*)
-  (universal-argument-loop (read-char *editor-input*) -1))
+  (universal-argument-loop (get-key-event *editor-input*) -1))
 
 (defcommand "Argument Digit" (p)
   "This command is equivalent to invoking \"Universal Argument\" and typing
@@ -428,9 +429,9 @@
   (declare (ignore p))
   (clear-echo-area)
   (write-string "C-U " *echo-area-stream*)
-  (universal-argument-loop *last-character-typed* 1))
+  (universal-argument-loop *last-key-event-typed* 1))
 
-(defun universal-argument-loop (char sign &optional (multiplier 1))
+(defun universal-argument-loop (key-event sign &optional (multiplier 1))
   (flet ((prefix (sign multiplier read-some-digit-p result)
 	   ;; read-some-digit-p and (zerop result) are not
 	   ;; equivalent if the user invokes this and types 0.
@@ -438,26 +439,29 @@
 	      (if read-some-digit-p
 		  result
 		  (value universal-argument-default)))))
-    (let* ((display-char (make-char char))
-	   (digit (digit-char-p display-char))
+    (let* ((stripped-key-event (if key-event (ext:make-key-event key-event)))
+	   (char (ext:key-event-char stripped-key-event))
+	   (digit (if char (digit-char-p char)))
 	   (result 0)
 	   (read-some-digit-p nil))
       (loop
 	(cond (digit
 	       (setf read-some-digit-p t)
-	       (write-char display-char *echo-area-stream*)
-	       (setq result (+ digit (* 10 result)))
-	       (setf char (read-char *editor-input*))
-	       (setf display-char (make-char char))
-	       (setf digit (digit-char-p display-char)))
-	      ((or (char= char #\c-u) (char= char #\c-\u))
+	       (write-char char *echo-area-stream*)
+	       (setf result (+ digit (* 10 result)))
+	       (setf key-event (get-key-event *editor-input*))
+	       (setf stripped-key-event (if key-event
+					    (ext:make-key-event key-event)))
+	       (setf char (ext:key-event-char stripped-key-event))
+	       (setf digit (if char (digit-char-p char))))
+	      ((or (eq key-event #k"C-u") (eq key-event #k"C-U"))
 	       (write-string " C-U " *echo-area-stream*)
 	       (universal-argument-loop
-		(read-char *editor-input*) 1
+		(get-key-event *editor-input*) 1
 		(prefix sign multiplier read-some-digit-p result))
 	       (return))
 	      (t
-	       (unread-char char *editor-input*)
+	       (unget-key-event key-event *editor-input*)
 	       (setf (prefix-argument)
 		     (prefix sign multiplier read-some-digit-p result))
 	       (return))))))

@@ -207,9 +207,7 @@
 	 (length (length chars))
 	 (last (region-end (hemlock-region-stream-region stream)))
 	 (last-line (mark-line last))
-	 (buffer (lisp::stream-in-buffer stream))
-	 (start 0)
-	 (len 0))
+	 (buffer (lisp::stream-in-buffer stream)) start len)
     (declare (fixnum length charpos last-charpos start len)
 	     (simple-string chars))
     (cond 
@@ -248,6 +246,7 @@
     (schar buffer start)))
 
 (defun region-misc (stream operation &optional arg1 arg2)
+  (declare (ignore arg1 arg2))
   (case operation
     (:listen (mark< (hemlock-region-stream-mark stream)
 		    (region-end (hemlock-region-stream-region stream))))
@@ -262,52 +261,33 @@
 
 ;;;; Stuff to support keyboard macros.
 
-;;; Note that the buffers in these streams must be general vectors, because
-;;; the characters may have bits.
-
 (defstruct (kbdmac-stream
-	    (:include stream
-		      (:in #'kbdmac-in)
-		      (:listen #'kbdmac-listen)
-		      (:misc #'kbdmac-misc))
+	    (:include editor-input
+		      (:get #'kbdmac-get)
+		      (:unget #'kbdmac-unget)
+		      (:listen #'kbdmac-listen))
 	    (:constructor make-kbdmac-stream ()))
-  ;;
-  ;; The simple-vector that holds the characters.
-  buffer
-  ;;
-  ;; Index of the next character.
-  index)
+  buffer    ; The simple-vector that holds the characters.
+  index)    ; Index of the next character.
 
-;;; Kbdmac-In  --  Internal
-;;;
-;;;    This is the input method for a kbdmac stream.  It just grabs a character
-;;; and returns it, bumping the index.
-;;;
-(defun kbdmac-in (stream eof-errorp eof-value)
-  (declare (ignore eof-errorp eof-value))
+(defun kbdmac-get (stream ignore-abort-attempts-p)
+  (declare (ignore ignore-abort-attempts-p))
   (let ((index (kbdmac-stream-index stream)))
-    (prog1 (setq *last-character-typed*
-		 (svref (kbdmac-stream-buffer stream) index))
-	   (setf (kbdmac-stream-index stream) (1+ index)))))
+    (setf (kbdmac-stream-index stream) (1+ index))
+    (setq *last-key-event-typed*
+	  (svref (kbdmac-stream-buffer stream) index))))
 
-;;; Kbdmac-Misc --  Internal
-;;;
-;;;    This is the misc method for kbdmac streams.  Since any character
-;;; that might have been read is included in the simulated input, listen
-;;; will always return T.
-;;;
-(defun kbdmac-misc (stream operation &optional arg1 arg2)
-  (declare (ignore arg1 arg2))
-  (case operation
-    (:unread
-     (if (plusp (kbdmac-stream-index stream))
-	 (decf (kbdmac-stream-index stream))
-	 (error "Nothing to unread.")))
-    (:listen t)
-    (:element-type 'string-char))
+(defun kbdmac-unget (ignore stream)
+  (declare (ignore ignore))
+  (if (plusp (kbdmac-stream-index stream))
+      (decf (kbdmac-stream-index stream))
+      (error "Nothing to unread.")))
+
+(defun kbdmac-listen (stream)
+  (declare (ignore stream))
   t)
 
-;;; Modify-Kbdmac-Stream  --  Internal
+;;; MODIFY-KBDMAC-STREAM  --  Internal
 ;;;
 ;;;    Bash the kbdmac-stream Stream so that it will return the Input.
 ;;;

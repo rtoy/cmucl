@@ -374,39 +374,37 @@
 	(setf (cdr ele) nil)))
     (return termcap)))
 
-;;; GET-TERMCAP-STRING-CHAR parses/lexes a character out of the termcap
-;;; file, converting it first into the appropriate Common Lisp character.
-;;; The Common Lisp character is then converted by CL-TERMCAP-CHAR into
-;;; another Common Lisp character but one that will eventually have the
-;;; right bits on (or be the necessary fixnum) for sending to terminals.
-;;; If this function needs to look ahead to determine any characters, it
-;;; unreads the character.
-;;; 
+;;; GET-TERMCAP-STRING-CHAR -- Internal.
+;;;
+;;; This parses/lexes an ASCII character out of the termcap file and converts
+;;; it into the appropriate Common Lisp character.  This is a Common Lisp
+;;; character with the same CHAR-CODE code as the ASCII code, so writing the
+;;; character to the tty will have the desired effect.  If this function needs
+;;; to look ahead to determine any characters, it unreads the character.
+;;;
 (defun get-termcap-string-char (stream char)
-  (cl-termcap-char
-   (case char
-     (#\\
-      (case (getchar)
-	(#\E #\alt)
-	(#\n #\newline)
-	(#\r #\return)
-	(#\t #\tab)
-	(#\b #\backspace)
-	(#\f #\formfeed)
-	(#\^ #\^)
-	(#\\ #\\)
-	((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
-	 (let ((result 0)
-	       (digit (digit-char-p char)))
-	   (loop (setf result (+ digit (* 8 result)))
-		 (unless (setf digit (digit-char-p (getchar)))
-		   (ungetchar char)
-		   (return (translate-tty-char (ldb (byte 7 0) result)))))))
-	(t (error "Bad termcap format -- unknown backslash character."))))
-     (#\^
-      (set-char-bit (char-upcase (getchar)) :control t))
-     (t char))))
-
+  (case char
+    (#\\
+     (case (getchar)
+       (#\E (code-char 27))
+       (#\n (code-char 10))
+       (#\r (code-char 13))
+       (#\t (code-char 9))
+       (#\b (code-char 8))
+       (#\f (code-char 12))
+       (#\^ #\^)
+       (#\\ #\\)
+       ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
+	(let ((result 0)
+	      (digit (digit-char-p char)))
+	  (loop (setf result (+ digit (* 8 result)))
+	    (unless (setf digit (digit-char-p (getchar)))
+	      (ungetchar char)
+	      (return (code-char (ldb (byte 7 0) result)))))))
+       (t (error "Bad termcap format -- unknown backslash character."))))
+    (#\^
+     (code-char (- (char-code (char-upcase (getchar))) 64)))
+    (t char)))
 
 
 ;;;; Initialization file string.

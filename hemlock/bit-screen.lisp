@@ -509,7 +509,7 @@
   (declare (ignore event-key event-window root child same-screen-p root-x
 		   root-y time send-event-p))
   (hunk-process-input hunk
-		      (ext:translate-character
+		      (ext:translate-key-event
 		       (bitmap-device-display (device-hunk-device hunk))
 		       key-code modifiers)
 		      x y))
@@ -521,7 +521,7 @@
   (declare (ignore event-window root child same-screen-p root-x root-y
 		   time send-event-p))
   (hunk-process-input hunk
-		      (ext:translate-mouse-character key-code modifiers
+		      (ext:translate-mouse-key-event key-code modifiers
 						     event-key)
 		      x y))
 ;;;

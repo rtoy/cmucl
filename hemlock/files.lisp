@@ -137,6 +137,8 @@
 	  (error "Could not set access code: ~S"
 		 (mach:get-unix-error-msg code)))))))
 
+(proclaim '(special vm_page_size))
+
 (ext:def-c-variable "vm_page_size" int)
 
 (defvar *vm-page-size* (system:alien-access vm_page_size)

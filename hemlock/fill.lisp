@@ -118,6 +118,7 @@
 (defcommand "Auto Fill Linefeed" (p)
   "Does an immediate CRLF inserting Fill Prefix if it exists."
   "Does an immediate CRLF inserting Fill Prefix if it exists."
+  (declare (ignore p))
   (let ((point (current-point)))
     (check-fill-prefix (value fill-prefix) (value fill-column) point)
     (%auto-fill-space point nil)
@@ -125,7 +126,7 @@
     ;; transparent key bindings are per binding instead of
     ;; per mode.
     (multiple-value-bind (command t-bindings)
-			 (get-command #\linefeed :current)
+			 (get-command #k"Linefeed" :current)
       (declare (ignore command)) ;command is this one, so don't invoke it
       (dolist (c t-bindings) (funcall *invoke-hook* c p)))
     (indent-new-line-command nil)))
@@ -137,6 +138,7 @@
    followed by a newline."
   "Does an Auto Fill Space with a prefix argument of 0
    followed by a newline."
+  (declare (ignore p))
   (let ((point (current-point)))
     (check-fill-prefix (value fill-prefix) (value fill-column) point)
     (%auto-fill-space point nil)
@@ -144,7 +146,7 @@
     ;; transparent key bindings are per binding instead of
     ;; per mode.
     (multiple-value-bind (command t-bindings)
-			 (get-command #\return :current)
+			 (get-command #k"Return" :current)
       (declare (ignore command)) ;command is this one, so don't invoke it
       (dolist (c t-bindings) (funcall *invoke-hook* c p)))
     (new-line-command nil)))
@@ -186,6 +188,7 @@
 (defcommand "Fill Region" (p)
   "Fill text from point to mark."
   "Fill text from point to mark."
+  (declare (ignore p))
   (let* ((region (current-region))
 	 (prefix (value fill-prefix))
 	 (column (if p (abs p) (value fill-column))))

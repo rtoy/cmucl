@@ -33,7 +33,7 @@
   "Replace the next character with the last character typed,
    but insert at end of line.  With prefix argument, do it that many times."
   "Implements ``Self Overwrite'', calling this function is not meaningful."
-  (let ((char (text-character *last-character-typed*))
+  (let ((char (ext:key-event-char *last-key-event-typed*))
 	(point (current-point)))
     (unless char (editor-error "Can't insert that character."))
     (do ((n (or p 1) (1- n)))

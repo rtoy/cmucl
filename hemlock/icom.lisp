@@ -62,4 +62,4 @@
      1
      :left-inserting)))
 
-(bind-key "Start Italic Comment" #\; :mode "Italic")
+(bind-key "Start Italic Comment" #k";" :mode "Italic")

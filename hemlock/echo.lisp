@@ -12,7 +12,7 @@
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;; Modified by Bill Chiles.
 ;;;
-(in-package 'hemlock-internals)
+(in-package "HEMLOCK-INTERNALS")
 (export '(*echo-area-buffer* *echo-area-stream* *echo-area-window*
 	  *parse-starting-mark* *parse-input-region*
 	  *parse-verification-function* *parse-string-tables*
@@ -21,10 +21,10 @@
 	  prompt-for-buffer prompt-for-file prompt-for-integer
 	  prompt-for-keyword prompt-for-expression prompt-for-string
 	  prompt-for-variable prompt-for-yes-or-no prompt-for-y-or-n
-	  prompt-for-character prompt-for-key *logical-character-names*
-	  logical-char= logical-character-documentation
-	  logical-character-name logical-character-characters
-	  define-logical-character *parse-type* current-variable-tables))
+	  prompt-for-key-event prompt-for-key *logical-key-event-names*
+	  logical-key-event-p logical-key-event-documentation
+	  logical-key-event-name logical-key-event-key-events
+	  define-logical-key-event *parse-type* current-variable-tables))
 
 
 (defmode "Echo Area" :major-p t)
@@ -463,43 +463,45 @@
   "Prompts for Y or N."
   (let ((old-window (current-window)))
     (unwind-protect
-      (progn
-       (setf (current-window) *echo-area-window*)
-       (display-prompt-nicely prompt (or default-string
-					 (if defaultp (if default "Y" "N"))))
-       (do ((char (read-char *editor-input*) (read-char *editor-input*)))
-	   (())
-	 (cond ((or (char= char #\y) (char= char #\Y))
-		(return t))
-	       ((or (char= char #\n) (char= char #\N))
-		(return nil))
-	       ((logical-char= char :confirm)
-		(if defaultp
-		    (return default)
-		    (beep)))
-	       ((logical-char= char :help)
-		(ed::help-on-parse-command ()))
-	       (t
-		(unless must-exist (return char))
-		(beep)))))
+	(progn
+	  (setf (current-window) *echo-area-window*)
+	  (display-prompt-nicely prompt (or default-string
+					    (if defaultp (if default "Y" "N"))))
+	  (loop
+	    (let ((key-event (get-key-event *editor-input*)))
+	      (cond ((or (eq key-event #k"y")
+			 (eq key-event #k"Y"))
+		     (return t))
+		    ((or (eq key-event #k"n")
+			 (eq key-event #k"N"))
+		     (return nil))
+		    ((logical-key-event-p key-event :confirm)
+		     (if defaultp
+			 (return default)
+			 (beep)))
+		    ((logical-key-event-p key-event :help)
+		     (ed::help-on-parse-command ()))
+		    (t
+		     (unless must-exist (return key-event))
+		     (beep))))))
       (setf (current-window) old-window))))
 
 
 
-;;;; Character and key prompting.
+;;;; Key-event and key prompting.
 
-(defun prompt-for-character (&key (prompt "Character: ") (change-window t))
-  "Prompts for a character."
-  (prompt-for-character* prompt change-window))
+(defun prompt-for-key-event (&key (prompt "Key-event: ") (change-window t))
+  "Prompts for a key-event."
+  (prompt-for-key-event* prompt change-window))
 
-(defun prompt-for-character* (prompt change-window)
+(defun prompt-for-key-event* (prompt change-window)
   (let ((old-window (current-window)))
     (unwind-protect
-      (progn
-       (when change-window
-	 (setf (current-window) *echo-area-window*))
-       (display-prompt-nicely prompt)
-       (read-char *editor-input* nil))
+	(progn
+	  (when change-window
+	    (setf (current-window) *echo-area-window*))
+	  (display-prompt-nicely prompt)
+	  (get-key-event *editor-input* t))
       (when change-window (setf (current-window) old-window)))))
 
 (defvar *prompt-key* (make-array 10 :adjustable t :fill-pointer 0))
@@ -514,175 +516,177 @@
 			  (format nil "~:C~{ ~:C~}" (car l) (cdr l)))))))
 
     (unwind-protect
-      (progn
-       (setf (current-window) *echo-area-window*)
-       (display-prompt-nicely prompt string)
-       (setf (fill-pointer *prompt-key*) 0)
-       (prog ((key *prompt-key*) char)
-	 (declare (vector key))
-	TOP
-	 (setq char (read-char *editor-input*))
-	 (cond ((logical-char= char :quote)
-		(setq char (read-char *editor-input* nil)))
-	       ((logical-char= char :confirm)
-		(cond ((and default (zerop (length key)))
-		       (let ((res (get-command default :current)))
-			 (unless (commandp res) (go FLAME))
-			 (return (values default res))))
-		      ((and (not must-exist) (plusp (length key)))
-		       (return (copy-seq key)))
-		      (t 
-		       (go FLAME))))
-	       ((logical-char= char :help)
-		(ed::help-on-parse-command ())
+	(progn
+	  (setf (current-window) *echo-area-window*)
+	  (display-prompt-nicely prompt string)
+	  (setf (fill-pointer *prompt-key*) 0)
+	  (prog ((key *prompt-key*) key-event)
+		(declare (vector key))
+		TOP
+		(setf key-event (get-key-event *editor-input*))
+		(cond ((logical-key-event-p key-event :quote)
+		       (setf key-event (get-key-event *editor-input* t)))
+		      ((logical-key-event-p key-event :confirm)
+		       (cond ((and default (zerop (length key)))
+			      (let ((res (get-command default :current)))
+				(unless (commandp res) (go FLAME))
+				(return (values default res))))
+			     ((and (not must-exist) (plusp (length key)))
+			      (return (copy-seq key)))
+			     (t 
+			      (go FLAME))))
+		      ((logical-key-event-p key-event :help)
+		       (ed::help-on-parse-command ())
+		       (go TOP)))
+		(vector-push-extend key-event key)	 
+		(when must-exist
+		  (let ((res (get-command key :current)))
+		    (cond ((commandp res)
+			   (ext:print-pretty-key-event key-event
+						       *echo-area-stream*
+						       t)
+			   (write-char #\space *echo-area-stream*)
+			   (return (values (copy-seq key) res)))
+			  ((not (eq res :prefix))
+			   (vector-pop key)
+			   (go FLAME)))))
+		(print-pretty-key key-event *echo-area-stream* t)
+		(write-char #\space *echo-area-stream*)
+		(go TOP)
+		FLAME
+		(beep)
 		(go TOP)))
-	 (vector-push-extend char key)	 
-	 (when must-exist
-	   (let ((res (get-command key :current)))
-	     (cond ((commandp res) 
-		    (format *echo-area-stream* "~:C " char)
-		    (return (values (copy-seq key) res)))
-		   ((not (eq res :prefix))
-		    (vector-pop key)
-		    (go FLAME)))))
-	 (format *echo-area-stream* "~:C " char)
-	 (go TOP)
-	FLAME
-	 (beep)
-	 (go TOP)))
       (force-output *echo-area-stream*)
       (setf (current-window) old-window))))
 
 
 
-;;;; Logical character stuff.
+;;;; Logical key-event stuff.
 
-(defvar *logical-character-names* (make-string-table)
-  "This variable holds a string-table from logical-character names to the
-  corresponding keywords.")
+(defvar *logical-key-event-names* (make-string-table)
+  "This variable holds a string-table from logical-key-event names to the
+   corresponding keywords.")
 
-(defvar *real-to-logical-characters* (make-hash-table :test #'eql)
-  "A hashtable from real characters to their corresponding logical
-  character keywords.")
+(defvar *real-to-logical-key-events* (make-hash-table :test #'eql)
+  "A hashtable from real key-events to their corresponding logical
+   key-event keywords.")
 
-(defvar *logical-character-descriptors* (make-hash-table :test #'eq)
-  "A hashtable from logical-characters to logical-character-descriptors.")
+(defvar *logical-key-event-descriptors* (make-hash-table :test #'eq)
+  "A hashtable from logical-key-events to logical-key-event-descriptors.")
 
-(defstruct (logical-character-descriptor
-	    (:constructor make-logical-character-descriptor ()))
+(defstruct (logical-key-event-descriptor
+	    (:constructor make-logical-key-event-descriptor ()))
   name
-  characters
+  key-events
   documentation)
 
-;;; Logical-Char=  --  Public
+;;; LOGICAL-KEY-EVENT-P  --  Public
 ;;;
-;;;    Just look up the character in the hashtable.
-;;;
-(defun logical-char= (character keyword)
-  "Return true if Character has been defined to have Keyword as its
-  logical character.  The relation between logical and real characters
-  is defined by using Setf on Logical-Char=.  If it is set to
-  true then calling Logical-Char= with the same Character and
-  Keyword, will result in truth.  Setting to false produces the opposite
-  result.  See Define-Logical-Character and Command-Case."
-  (not (null (memq keyword (gethash (char-upcase character)
-				    *real-to-logical-characters*)))))
+(defun logical-key-event-p (key-event keyword)
+  "Return true if key-event has been defined to have Keyword as its
+   logical key-event.  The relation between logical and real key-events
+   is defined by using SETF on LOGICAL-KEY-EVENT-P.  If it is set to
+   true then calling LOGICAL-KEY-EVENT-P with the same key-event and
+   Keyword, will result in truth.  Setting to false produces the opposite
+   result.  See DEFINE-LOGICAL-KEY-EVENT and COMMAND-CASE."
+  (not (null (memq keyword (gethash key-event *real-to-logical-key-events*)))))
 
-;;; Get-Logical-Char-Desc  --  Internal
+;;; GET-LOGICAL-KEY-EVENT-DESC  --  Internal
 ;;;
-;;;    Return the descriptor for the logical character Kwd, or signal
+;;;    Return the descriptor for the logical key-event keyword, or signal
 ;;; an error if it isn't defined.
 ;;;
-(defun get-logical-char-desc (kwd)
-  (let ((res (gethash kwd *logical-character-descriptors*)))
+(defun get-logical-key-event-desc (keyword)
+  (let ((res (gethash keyword *logical-key-event-descriptors*)))
     (unless res
-      (error "~S is not a defined logical-character keyword." kwd))
+      (error "~S is not a defined logical-key-event keyword." keyword))
     res))
 
-;;; %Set-Logical-Char=  --  Internal
+;;; %SET-LOGICAL-KEY-EVENT-P  --  Internal
 ;;;
-;;;    Add or remove a logical character link by adding to or deleting from
+;;;    Add or remove a logical key-event link by adding to or deleting from
 ;;; the list in the from-char hashtable and the descriptor.
 ;;;
-(defun %set-logical-char= (character keyword new-value)
-  (let* ((character (char-upcase character))
-	 (entry (get-logical-char-desc keyword)))
+(defun %set-logical-key-event-p (key-event keyword new-value)
+  (let ((entry (get-logical-key-event-desc keyword)))
     (cond
      (new-value
-      (pushnew keyword (gethash character *real-to-logical-characters*))
-      (pushnew character (logical-character-descriptor-characters entry)))
+      (pushnew keyword (gethash key-event *real-to-logical-key-events*))
+      (pushnew key-event (logical-key-event-descriptor-key-events entry)))
      (t
-      (setf (gethash character *real-to-logical-characters*)
-	    (delete keyword (gethash character *real-to-logical-characters*)))
-      (setf (logical-character-descriptor-characters entry)
-	    (delete keyword (logical-character-descriptor-characters entry))))))
+      (setf (gethash key-event *real-to-logical-key-events*)
+	    (delete keyword (gethash key-event *real-to-logical-key-events*)))
+      (setf (logical-key-event-descriptor-key-events entry)
+	    (delete keyword (logical-key-event-descriptor-key-events entry))))))
   new-value)
 
-;;; Logical-Character-Documentation, Name, Characters  --  Public
+;;; LOGICAL-KEY-EVENT-DOCUMENTATION, NAME, KEY-EVENTS  --  Public
 ;;;
 ;;;    Grab the right field out of the descriptor and return it.
 ;;;
-(defun logical-character-documentation (keyword)
-  "Return the documentation for the logical character Keyword."
-  (logical-character-descriptor-documentation (get-logical-char-desc keyword)))
+(defun logical-key-event-documentation (keyword)
+  "Return the documentation for the logical key-event Keyword."
+  (logical-key-event-descriptor-documentation
+   (get-logical-key-event-desc keyword)))
 ;;;
-(defun logical-character-name (keyword)
-  "Return the string name for the logical character Keyword."
-  (logical-character-descriptor-name (get-logical-char-desc keyword)))
+(defun logical-key-event-name (keyword)
+  "Return the string name for the logical key-event Keyword."
+  (logical-key-event-descriptor-name (get-logical-key-event-desc keyword)))
 ;;;
-(defun logical-character-characters (keyword)
-  "Return the list of characters for which Keyword is the logical character."
-  (logical-character-descriptor-characters (get-logical-char-desc keyword)))
+(defun logical-key-event-key-events (keyword)
+  "Return the list of key-events for which Keyword is the logical key-event."
+  (logical-key-event-descriptor-key-events
+   (get-logical-key-event-desc keyword)))
 
-;;; Define-Logical-Character  --  Public
+;;; DEFINE-LOGICAL-KEY-EVENT  --  Public
 ;;;
 ;;;    Make the entries in the two hashtables and the string-table.
 ;;;
-(defun define-logical-character (name documentation)
-  "Define a logical character having the specified Name and Documentation.
-  See Logical-Char= and Command-Case."
+(defun define-logical-key-event (name documentation)
+  "Define a logical key-event having the specified Name and Documentation.
+  See LOGICAL-KEY-EVENT-P and COMMAND-CASE."
   (check-type name string)
   (check-type documentation (or string function))
   (let* ((keyword (string-to-keyword name))
-	 (entry (or (gethash keyword *logical-character-descriptors*)
-		    (setf (gethash keyword *logical-character-descriptors*)
-			  (make-logical-character-descriptor)))))
-    (setf (logical-character-descriptor-name entry) name)
-    (setf (logical-character-descriptor-documentation entry) documentation)
-    (setf (getstring name *logical-character-names*) keyword)))
+	 (entry (or (gethash keyword *logical-key-event-descriptors*)
+		    (setf (gethash keyword *logical-key-event-descriptors*)
+			  (make-logical-key-event-descriptor)))))
+    (setf (logical-key-event-descriptor-name entry) name)
+    (setf (logical-key-event-descriptor-documentation entry) documentation)
+    (setf (getstring name *logical-key-event-names*) keyword)))
 
 
 
-;;;; Some standard logical-characters:
+;;;; Some standard logical-key-events:
 
-(define-logical-character "Forward Search"
-  "This character is used to indicate that a forward search should be made.")
-(define-logical-character "Backward Search"
-  "This character is used to indicate that a backward search should be made.")
-(define-logical-character "Recursive Edit"
-  "This character indicates that a recursive edit should be entered.")
-(define-logical-character "Cancel"
-  "This character is used  to cancel a previous character of input.")
-(define-logical-character "Abort"
-  "This character is used to abort the command in progress.")
-(define-logical-character "Exit"
-  "This character is used to exit normally the command in progress.")
-(define-logical-character "Yes"
-  "This character is used to indicate a positive response.")
-(define-logical-character "No"
-  "This character is used to indicate a negative response.")
-(define-logical-character "Do All"
-  "This character means do it as many times as you can.")
-(define-logical-character "Do Once"
-  "This character means, do it this time, then exit.")
-(define-logical-character "Help"
-  "This character is used to ask for help.")
-(define-logical-character "Confirm"
-  "This character is used to confirm some choice.")
-(define-logical-character "Quote"
-  "This character is used to quote the next character of input.")
-(define-logical-character "Keep"
-  "This character means exit but keep something around.")
+(define-logical-key-event "Forward Search"
+  "This key-event is used to indicate that a forward search should be made.")
+(define-logical-key-event "Backward Search"
+  "This key-event is used to indicate that a backward search should be made.")
+(define-logical-key-event "Recursive Edit"
+  "This key-event indicates that a recursive edit should be entered.")
+(define-logical-key-event "Cancel"
+  "This key-event is used  to cancel a previous key-event of input.")
+(define-logical-key-event "Abort"
+  "This key-event is used to abort the command in progress.")
+(define-logical-key-event "Exit"
+  "This key-event is used to exit normally the command in progress.")
+(define-logical-key-event "Yes"
+  "This key-event is used to indicate a positive response.")
+(define-logical-key-event "No"
+  "This key-event is used to indicate a negative response.")
+(define-logical-key-event "Do All"
+  "This key-event means do it as many times as you can.")
+(define-logical-key-event "Do Once"
+  "This key-event means, do it this time, then exit.")
+(define-logical-key-event "Help"
+  "This key-event is used to ask for help.")
+(define-logical-key-event "Confirm"
+  "This key-event is used to confirm some choice.")
+(define-logical-key-event "Quote"
+  "This key-event is used to quote the next key-event of input.")
+(define-logical-key-event "Keep"
+  "This key-event means exit but keep something around.")
 
 
 
@@ -697,16 +701,18 @@
        (get-output-stream-string s))
     (let ((char (car chars)))
       (if (characterp char)
-	  (print-pretty-character char s)
-	  (do ((chars (logical-character-characters char) (cdr chars)))
-	      ((null chars))
-	    (print-pretty-character (car chars) s)
-	    (unless (null (cdr chars))
+	  (write-char char s)
+	  (do ((key-events
+		(logical-key-event-key-events char)
+		(cdr key-events)))
+	      ((null key-events))
+	    (ext:print-pretty-key (car key-events) s)
+	    (unless (null (cdr key-events))
 	      (write-string ", " s))))
       (unless (null (cdr chars))
 	(write-string ", " s)))))
 
-;;; Command-Case-Help  --  Internal
+;;; COMMAND-CASE-HELP  --  Internal
 ;;;
 ;;;    Print out a help message derived from the options in a
 ;;; random-typeout window.
@@ -721,11 +727,8 @@
 	  ((null o))
 	(let ((string (chars-to-string (caar o))))
 	  (declare (simple-string string))
-	  (cond ((= (length string) 1)
-		 (write-char (char string 0) s)
-		 (write-string "  - " s)
-		 (write-line (cdar o) s))
-		(t
-		 (write-line string s)
-		 (write-string "   - " s)
-		 (write-line (cdar o) s))))))))
+	  (if (= (length string) 1)
+	      (write-char (char string 0) s)
+	      (write-line string s))
+	  (write-string "  - " s)
+	  (write-line (cdar o) s))))))

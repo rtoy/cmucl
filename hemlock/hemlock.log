@@ -1,3 +1,318 @@
+.../systems-work/hemlock/keysym-defs.lisp, 04-Jul-90 12:14:09, Edit by Chiles.
+  Added a few key-event to character translations at the end of the file to
+  make quoting characters work better when running under X.
+
+/usr2/mbb/lisp/work/diredcoms.lisp, 02-Jul-90 10:12:28, Edit by Mbb.
+  Fixed a bug in "Dired" where it was incorrectly assuming that the current
+  buffer was a DIRED buffer.
+
+.../systems-work/hemlock/searchcoms.lisp, 27-Jun-90 18:27:38, Edit by Chiles.
+.../systems-work/hemlock/kbdmac.lisp, 27-Jun-90 18:19:09, Edit by Chiles.
+  Fixed "Keyboard Macro Query" to realize the :bind arg to COMMAND-CASE is a
+  key-event, not a charcter.
+
+.../systems-work/hemlock/macros.lisp, 27-Jun-90 18:04:12, Edit by Chiles.
+  Fixed COMMAND-CASE to bind key-events, not characters.  It also doesn't make
+  N calls to mapping functions everytime someone was to map one way or the
+  other.  It also no longer makes erroneous assumptions about characters and
+  key-events having a one-to-one mapping.
+
+.../systems-work/hemlock/key-event.lisp, 27-Jun-90 17:34:57, Edit by Chiles.
+  Fixed bugs in character/key-event mapping that allowed bogus typed objects to
+  fall through as if they mapped to meaningful values.
+
+.../systems-work/hemlock/interp.lisp, 26-Jun-90 09:54:52, Edit by Chiles.
+  Fixed some documentation.
+
+  Fixed a bug in KEY-TRANSLATION.  Someone changed a type-spec from '(or
+  simple-vector null) to '(simple-vector null).
+
+  Fixed a bug in TRANSLATE-KEY.  It returned the wrong thing and by accident
+  didn't go into an infinite loop if there were any key translations to
+  multiple key-event keys.
+
+
+.../systems-work/hemlock/echo.lisp, 25-Jun-90 11:44:05, Edit by Chiles.
+  Fixed default prompt of PROMPT-FOR-KEY-EVENT to be "Key-event: ", not
+  "Character: ".
+
+.../systems-work/hemlock/interp.lisp, 24-Jun-90 12:28:02, Edit by Chiles.
+  Removed silly KEYIFY definition, and I put Blaine's name on the file since he
+  modified half of the contents to get the new key tables stuff to work.
+
+.../systems-work/hemlock/input.lisp, 21-Jun-90 19:52:01, Edit by Chiles.
+  Added doc strings to public routines.  Documented some code.  Moved some
+  silly things around.
+
+.../systems-work/hemlock/srccom.lisp, 21-Jun-90 18:53:46, Edit by Chiles.
+.../systems-work/hemlock/spellcoms.lisp, 21-Jun-90 18:52:56, Edit by Chiles.
+.../systems-work/hemlock/macros.lisp, 21-Jun-90 18:51:19, Edit by Chiles.
+.../systems-work/hemlock/filecoms.lisp, 21-Jun-90 18:49:14, Edit by Chiles.
+.../systems-work/hemlock/doccoms.lisp, 21-Jun-90 18:45:55, Edit by Chiles.
+  Made COMMAND-CASE specify lowercase letters.
+
+.../systems-work/hemlock/key-event.lisp, 20-Jun-90 23:11:18, Edit by Chiles.
+  Fixed a bug in TRANSLATE-KEY-EVENT.
+
+.../systems-work/hemlock/bindings.lisp, 20-Jun-90 23:03:22, Edit by Chiles.
+  Bound #k"H-t" to "Illegal" in the echo area.  This is normally bound to a
+  command that makes the current window display the most recently used
+  random-typeout buffer.
+
+.../systems-work/hemlock/macros.lisp, 20-Jun-90 20:45:07, Edit by Chiles.
+  Fixed an extra paren bug that prevented successful compilation.  That's what
+  I get for Blaine's failure to use "Extract Form".
+
+.../systems-work/hemlock/lispmode.lisp, 20-Jun-90 20:47:57, Edit by Chiles.
+  Added "Extract Form", a more useful and intuitive and consistent command to
+  use instead of "Extract List" which is archaic, confusing, erroneously bound
+  by default, and bound to old Lisp ideals that lists are something to focus
+  on.
+
+.../hemlock/ts-buf.lisp, 20-Jun-90 17:40:51, Edit by Wlott.
+  Made typescript commands more robust in light of the possibility of being
+  executed while in a buffer other than the slave buffer.
+
+.../systems-work/hemlock/key-event.lisp, 20-Jun-90 17:00:33, Edit by Chiles.
+  Totally rewrote mouse translation code.  Fixed multiple bugs MAKE-KEY-EVENT.
+
+.../systems-work/hemlock/macros.lisp, 20-Jun-90 13:55:48, Edit by Chiles.
+  Removed :character argument to COMMAND-CASE.  Stopped case-folding and
+  eliminated variables used for that.
+
+.../systems-work/hemlock/fill.lisp, 16-Jun-90 14:07:48, Edit by Chiles.
+  Fixed "Auto Fill Linefeed" and "Auto Fill Return" to use #k syntax instead of
+  characters for keys.
+
+.../systems-work/hemlock/key-event.lisp, 16-Jun-90 13:59:23, Edit by Chiles.
+  Added missing exports.
+
+  Fixed a couple bugs with DEFINE-KEY-EVENT-MODIFIER.  It was using EQL to
+  compare strings.  Stuck an UNWIND-PROTECT in there to keep things consistent.
+  Added restart for already defined modifiers allowing the user to go on
+  blowing it off; this helps reloading the file.
+
+
+.../systems-work/hemlock/echo.lisp, 16-Jun-90 11:11:17, Edit by Chiles.
+  Fixed two GET-KEY-EVENT calls to ignore abort attempts in PROMPT-FOR-KEY
+  and PROMPT-FOR-KEY-EVENT.
+
+.../systems-work/hemlock/keysym-defs.lisp, 15-Jun-90 18:17:38, Edit by Chiles.
+  This file used to be called keytrandefs.lisp.
+
+.../systems-work/hemlock/key-event.lisp, 15-Jun-90 18:34:10, Edit by Chiles.
+  This file used to be called keytran.lisp.  It now implements key-events in
+  the "EXTENSIONS" package.
+
+.../systems-work/hemlock/bit-screen.lisp, 14-Jun-90 14:28:58, Edit by Chiles.
+  Replaced calls to EXT:TRANSLATE-CHARACTER and EXT:TRANSLATE-MOUSE-CHARACTER
+  with EXT:TRANSLATE-KEY-EVENT and EXT:TRANSLATE-MOUSE-KEY-EVENT.
+
+.../systems-work/hemlock/shell.lisp, 15-Jun-90 16:27:42, Edit by Chiles.
+  Picked up Blaine's new shell hacks and documented them.  Added "Current
+  Shell" and "Ask about Old Shells" variables.  Changed "Shell" to be more like
+  "Select Slave" and wrote "Shell Command Line in Buffer".
+
+/usr2/mbb/lisp/work/doccoms.lisp, 14-Jun-90 21:19:46, Edit by Mbb.
+  Made a quoted list of #k mouse-keys be a call to LIST on the mouse-keys
+  instead so they would get evaluated.
+
+/usr2/mbb/lisp/work/input.lisp, 12-Jun-90 21:00:12, Edit by Mbb.
+  input.lisp is a new file.  It contains code to implement input to
+  hemlock.  Similar code previously resided in rompsite.lisp
+
+/usr2/mbb/lisp/work/icom.lisp, 12-Jun-90 16:15:00, Edit by Mbb.
+/usr2/mbb/lisp/work/gosmacs.lisp, 12-Jun-90 16:15:00, Edit by Mbb.
+  Changed BIND-KEY calls to use #k format instead of characters.
+
+.../systems-work/hemlock/filecoms.lisp, 13-Jun-90 15:17:06, Edit by Chiles.
+  Wrote "Go to One Window" which makes a default initial window and deletes all
+  other windows.  This is useful with losing window managers like twm, and it
+  is useful in case you ever resize or move the main Hemlock window which
+  happens by accident to some people.
+
+/usr2/mbb/lisp/work/keytran.lisp, 13-Jun-90 14:01:58, Edit by Mbb.
+  Changed all the BIND-KEY forms in this file to use #k format.
+
+/usr2/mbb/lisp/work/files.lisp, 12-Jun-90 10:26:58, Edit by Mbb.
+  Inserted the form (proclaim '(special vm_page_size)) so the compiler
+  wouldn't whine about vm_page_size not being declared or bound. 
+
+/usr2/mbb/lisp/work/buffer.lisp, 11-Jun-90 11:58:39, Edit by Mbb.
+  Modified DEFMODE -- The default mode-bindings slot is now a hash-table
+  whereas it used to be a key-table.  Did the same for buffer-bindings in
+  MAKE-BUFFER.
+
+/usr2/mbb/lisp/work/keytrandefs.lisp, 11-Jun-90 13:17:59, Edit by Mbb.
+  Made all calls to "EXTENSIONS" use an ext: prefix.
+
+/usr2/mbb/lisp/work/scribe.lisp, 08-Jun-90 17:33:31, Edit by Mbb.
+/usr2/mbb/lisp/work/register.lisp, 08-Jun-90 17:29:23, Edit by Mbb.
+/usr2/mbb/lisp/work/interp.lisp, 08-Jun-90 17:27:44, Edit by Mbb.
+  Changed all calls to PRINT-PRETTY-CHARACTER to calls to
+  PRINT-PRETTY-KEY-EVENT. 
+
+/usr2/mbb/lisp/work/kbdmac.lisp, 08-Jun-90 17:25:50, Edit by Mbb.
+  Made all calls to SUB-PRINT-KEY be calls to PRINT-PRETTY-KEY.
+
+/usr2/mbb/lisp/work/doccoms.lisp, 08-Jun-90 17:15:46, Edit by Mbb.
+  Removed SUB-PRINT-KEY in favor of PRINT-PRETTY-KEY.
+
+/usr2/mbb/lisp/work/searchcoms.lisp, 08-Jun-90 14:38:55, Edit by Mbb.
+/usr2/mbb/lisp/work/overwrite.lisp, 08-Jun-90 14:38:38, Edit by Mbb.
+/usr2/mbb/lisp/work/morecoms.lisp, 08-Jun-90 14:37:43, Edit by Mbb.
+/usr2/mbb/lisp/work/completion.lisp, 08-Jun-90 14:37:10, Edit by Mbb.
+/usr2/mbb/lisp/work/command.lisp, 08-Jun-90 14:36:12, Edit by Mbb.
+  Changed all calls to TEXT-CHARACTER to calls to KEY-EVENT-CHAR.
+
+/usr2/mbb/lisp/work/rompsite.lisp, 08-Jun-90 12:15:17, Edit by Mbb.
+/usr2/mbb/lisp/work/termcap.lisp, 08-Jun-90 12:15:17, Edit by Mbb.
+  Commented out CL-TERMCAP-CHAR as it is no longer needed.  
+  GET-TERMCAP-STRING-CHAR does the conversion to a character now.
+
+/usr2/mbb/lisp/work/doccoms.lisp, 08-Jun-90 11:08:09, Edit by Mbb.
+  Removed from GET-MOUSE-COMMANDS a call to MAKE-CHAR in favor of
+  MAKE-KEY-EVENT and also fixed a list to use the new #k"foo" format.
+
+/usr2/mbb/lisp/work/bindings.lisp, 08-Jun-90 10:44:49, Edit by Mbb.
+  Chnaged all bindings to #k"foo" format.
+
+/usr2/mbb/lisp/work/charmacs.lisp, 07-Jun-90 14:44:36, Edit by Mbb.
+  Removed the declaration of the constant all-bit-names, as bit names are
+  no longer supported in Common Lisp.
+
+/usr2/mbb/lisp/work/charmacs.lisp, 07-Jun-90 14:41:23, Edit by Mbb.
+  Changed ALPHA-CHAR-LOOP and DO-ALPHA-CHARS to ALPHA-KEY-EVENTS-LOOP and
+  DO-ALPHA-KEY-EVENTS respectively.
+
+/usr2/mbb/lisp/work/tty-display.lisp, 06-Jun-90 10:38:07, Edit by Mbb.
+/usr2/mbb/lisp/work/searchcoms.lisp, 06-Jun-90 10:36:39, Edit by Mbb.
+/usr2/mbb/lisp/work/searchcoms.lisp, 06-Jun-90 10:21:58, Edit by Mbb.
+/usr2/mbb/lisp/work/rompsite.lisp, 06-Jun-90 10:09:11, Edit by Mbb.
+/usr2/mbb/lisp/work/morecoms.lisp, 06-Jun-90 10:16:52, Edit by Mbb.
+/usr2/mbb/lisp/work/mh.lisp, 06-Jun-90 10:14:12, Edit by Mbb.
+/usr2/mbb/lisp/work/doccoms.lisp, 06-Jun-90 10:04:45, Edit by Mbb.
+/usr2/mbb/lisp/work/macros.lisp, 05-Jun-90 15:11:03, Edit by Mbb.
+/usr2/mbb/lisp/work/kbdmac.lisp, 05-Jun-90 15:08:37, Edit by Mbb.
+/usr2/mbb/lisp/work/interp.lisp, 05-Jun-90 11:02:59, Edit by Mbb.
+/usr2/mbb/lisp/work/echo.lisp, 05-Jun-90 10:58:55, Edit by Mbb.
+/usr2/mbb/lisp/work/doccoms.lisp, 05-Jun-90 15:05:40, Edit by Mbb.
+/usr2/mbb/lisp/work/command.lisp, 05-Jun-90 15:02:21, Edit by Mbb.
+  Fixed all references to *editor-input*.
+
+/usr2/mbb/lisp/work/main.lisp, 06-Jun-90 10:07:41, Edit by Mbb.
+  *editor-input* used to be exported from this file, event though it is
+  also exported in input.lisp.  Removed export from main.lisp.
+
+/usr2/mbb/lisp/work/rompsite.lisp, 05-Jun-90 14:31:55, Edit by Mbb.
+  Changed reference to *character-history* in SITE-INIT to
+  *key-event-history*.
+
+/usr2/mbb/lisp/work/mh.lisp, 05-Jun-90 14:30:28, Edit by Mbb.
+  Changed a reference to *character-history* to *key-event-history*.
+
+/usr2/mbb/lisp/work/main.lisp, 05-Jun-90 14:27:23, Edit by Mbb.
+  Removed export of *character-history* from this file in favor of putting
+  it in input.lisp and changing the name to *key-event-history*.
+
+/usr2/mbb/lisp/work/doccoms.lisp, 05-Jun-90 14:19:41, Edit by Mbb.
+  Made "What Lossage" command reference *key-event-history* instead of
+  *character-history*.
+
+/usr2/mbb/lisp/work/streams.lisp, 05-Jun-90 14:10:43, Edit by Mbb.
+  Made KBDMAC-GET use *last-key-event-typed* instead of
+  *last-character-typed*.  Also changed stream definition of kbdmac-stream
+  to coincide with the new editor-input like streams.
+
+/usr2/mbb/lisp/work/spellcoms.lisp, 05-Jun-90 14:08:57, Edit by Mbb.
+  Made SUB-CORRECT-LAST-MISSPELLED-WORD work with *last-key-event-typed*.
+
+/usr2/mbb/lisp/work/scribe.lisp, 05-Jun-90 14:07:23, Edit by Mbb.
+  Fixed "Scribe Insert bracket" to work with *last-key-event-typed*.
+
+/usr2/mbb/lisp/work/rompsite.lisp, 05-Jun-90 13:59:46, Edit by Mbb.
+  Removed all Input queue management and Random Typeout input routines and
+  put them in a input.lisp, a new hemlock file.
+
+/usr2/mbb/lisp/work/rompsite.lisp, 05-Jun-90 13:45:23, Edit by Mbb.
+  Changed DEFVAR of *last-character-typed* to *last-key-event-typed*.  Also
+  fixed setting of *last-character-typed* in DQ-EVENT.  For some reason,
+  *last-character-typed* was exported from both main.lisp and
+  rompsite.lisp.  This remains under the new name.
+
+/usr2/mbb/lisp/work/overwrite.lisp, 05-Jun-90 13:43:23, Edit by Mbb.
+  Made "Self Overwrite" use *last-key-event-typed* instead of
+  *last-character-typed*.
+
+/usr2/mbb/lisp/work/morecoms.lisp, 05-Jun-90 13:41:58, Edit by Mbb.
+  Made "Self Insert Caps Lock" deal with *last-key-event-typed* instead of
+  *last-character-typed*.
+
+/usr2/mbb/lisp/work/main.lisp, 05-Jun-90 13:40:48, Edit by Mbb.
+  Changed export of *last-character-typed* to *last-key-event-typed*.
+
+/usr2/mbb/lisp/work/kbdmac.lisp, 05-Jun-90 13:37:38, Edit by Mbb.
+  Made DEFAULT-KBDMAC-TRANSFORM and SELF-INSERT-KBDMAC-TRANSFORM use
+  *last-key-event-typed* instead of *last-character-typed*.
+
+/usr2/mbb/lisp/work/echocoms.lisp, 05-Jun-90 13:34:52, Edit by Mbb.
+  Made "Complete Field" work with *last-key-event-typed*.
+/usr2/mbb/lisp/work/completion.lisp, 05-Jun-90 13:28:07, Edit by Mbb.
+  Made "Completion Self Insert" deal with *last-key-event-typed* instead of
+  *last-character-typed*.
+
+/usr2/mbb/lisp/work/command.lisp, 05-Jun-90 13:24:55, Edit by Mbb.
+  Changed UNIVERSAL-ARGUMENT-LOOP to deal with *last-key-event-typed*
+  instead of *last-character-typed*.  Also made "Self Insert" do the same.
+
+/usr2/mbb/lisp/work/spellcoms.lisp, 05-Jun-90 12:58:02, Edit by Mbb.
+  Changed calls to PROMPT-FOR-CHARACTER to calls to PROMPT-FOR-KEY-EVENT.
+  Since what we wanted was the number of the correction choice, simply wrap
+  a call to KEY-EVENT-CHAR around the PROMPT-FOR-KEY-EVENT.
+
+/usr2/mbb/lisp/work/scribe.lisp, 05-Jun-90 11:59:46, Edit by Mbb.
+  Made ADD-SCRIBE-DIRECTIVE and INSERT-SCRIBE-DIRECTIVE use PROMPT-FOR-KEY
+  instead of PROMPT-FOR-CHARACTER.  They used to HASH on the result of
+  PROMPT-FOR-CHARACTER, so key-events will work just as well.
+
+/usr2/mbb/lisp/work/scribe.lisp, 05-Jun-90 11:59:46, Edit by Mbb.
+  Changed all top-level ADD-SCRIBE-DIRECTIVE-COMMAND calls to use #k syntax
+  when binding dispatches.
+
+/usr2/mbb/lisp/work/struct.lisp, 05-Jun-90 11:08:20, Edit by Mbb.
+  Changed DEFSETF for %SET-LOGICAL-CHAR= to %SET-LOGICAL-KEY-EVENT-P in
+  order to maintain consistency.
+
+/usr2/mbb/lisp/work/macros.lisp, 05-Jun-90 09:23:41, Edit by Mbb.
+  Fixed COMMAND-CASE to bind key-events instead of characters.
+
+/usr2/mbb/lisp/work/register.lisp, 05-Jun-90 09:31:41, Edit by Mbb.
+  Made PROMPT-FOR-REGISTER return a key-event instead of a character.  The
+  rest of the code code just hashes on what PROMPT-FOR-REGISTER returns, so
+  since key-events are unique, nothing else had to be changed.
+
+/usr2/mbb/lisp/work/keytrandefs.lisp, 04-Jun-90 13:16:13, Edit by Mbb.
+  Completely changed this file to conform to new key syntax.
+
+/usr2/mbb/lisp/work/charmacs.lisp, 04-Jun-90 13:10:55, Edit by Mbb.
+  Removed all pushes into lisp::char-name-alist.
+
+.../systems-work/hemlock/completion.lisp, 29-May-90 13:54:48, Edit by Chiles.
+  Changed test in DO-COMPLETION to explicitly test for uppercase characters.
+  Testing for lowercase characters caused ID's to be uppercased when they began
+  with non-alphabetic characters (such as digit-chars).
+
+.../systems-work/hemlock/bindings.lisp, 21-May-90 10:22:28, Edit by Chiles.
+.../systems-work/hemlock/morecoms.lisp, 21-May-90 10:19:13, Edit by Chiles.
+  Added "CAPS-LOCK" mode, "Caps Lock Mode" and "Caps Lock Self Insert".
+
+  Added bindings for lowercase letters.
+
+
+.../systems-work/hemlock/bindings.lisp, 21-May-90 10:14:10, Edit by Chiles.
+.../systems-work/hemlock/diredcoms.lisp, 21-May-90 10:03:16, Edit by Chiles.
+  Wrote "Dired Up Directory" and added binding to #\^ in "Dired" mode.
+
 .../systems-work/hemlock/diredcoms.lisp, 08-May-90 15:38:28, Edit by Chiles.
   Fixed :help string in file prompt for "Delete File".
 

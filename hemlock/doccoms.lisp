@@ -27,27 +27,27 @@
   (declare (ignore p))
   (command-case (:prompt "Doc (Help for Help): "
 		 :help "Type a Help option to say what kind of help you want:")
-    (#\A "List all commands, variables and attributes Apropos a keyword."
+    (#\a "List all commands, variables and attributes Apropos a keyword."
      (apropos-command nil))
-    (#\D "Describe a command, given its name."
+    (#\d "Describe a command, given its name."
      (describe-command-command nil))
-    (#\G "Generic describe, any Hemlock thing (e.g., variables, keys, attributes)."
+    (#\g "Generic describe, any Hemlock thing (e.g., variables, keys, attributes)."
      (generic-describe-command nil))
-    (#\V "Describe variable and show its values."
+    (#\v "Describe variable and show its values."
      (describe-and-show-variable-command nil))
-    (#\C "Describe the command bound to a Character."
+    (#\c "Describe the command bound to a Character."
      (describe-key-command nil))
-    (#\L "List the last 60 characters typed."
+    (#\l "List the last 60 characters typed."
      (what-lossage-command nil))
-    (#\M "Describe a mode."
+    (#\m "Describe a mode."
      (describe-mode-command nil))
-    (#\P "Describe commands with mouse/pointer bindings."
+    (#\p "Describe commands with mouse/pointer bindings."
      (describe-pointer-command nil))
-    (#\W "Find out Where a command is bound."
+    (#\w "Find out Where a command is bound."
      (where-is-command nil))
-    (#\T "Describe a Lisp object."
+    (#\t "Describe a Lisp object."
      (editor-describe-command nil))
-    ((#\Q :no) "Quits, You don't really want help.")))
+    ((#\q :no) "Quits, You don't really want help.")))
 
 (defcommand "Where Is" (p)
   "Find what key a command is bound to.
@@ -172,8 +172,10 @@
   "Prompt for a sequence of characters.  When the first character is typed that
    terminates a key binding in the current context, describe the command bound
    to it.  When the first character is typed that no longer allows a correct
-   key to be entered, tell the user that this sequence is not bound to anything."
-  "Print out the command documentation for a key which is prompted for."
+   key to be entered, tell the user that this sequence is not bound to
+   anything."
+  "Print out the command documentation for a key
+  which is prompted for."
   (declare (ignore p))
   (let ((old-window (current-window)))
     (unwind-protect
@@ -182,20 +184,21 @@
 	  (hi::display-prompt-nicely "Describe key: " nil)
 	  (setf (fill-pointer hi::*prompt-key*) 0)
 	  (loop
-	    (let ((char (read-char hi::*editor-input*)))
-	      (vector-push-extend char hi::*prompt-key*)
+	    (let ((key-event (get-key-event hi::*editor-input*)))
+	      (vector-push-extend key-event hi::*prompt-key*)
 	      (let ((res (get-command hi::*prompt-key* :current)))
-		(format hi::*echo-area-stream* "~:C " char)
+		(ext:print-pretty-key-event key-event *echo-area-stream*)
+		(write-char #\space *echo-area-stream*)
 		(cond ((commandp res)
 		       (with-pop-up-display (s)
-			 (sub-print-key (copy-seq hi::*prompt-key*) s)
+			 (print-pretty-key (copy-seq hi::*prompt-key*) s)
 			 (format s " is bound to ~S.~%" (command-name res))
 			 (format s "Documentation for this command:~%   ~A"
 				 (command-documentation res)))
 		       (return))
 		      ((not (eq res :prefix))
 		       (with-pop-up-display (s :height 1)
-			 (sub-print-key (copy-seq hi::*prompt-key*) s)
+			 (print-pretty-key (copy-seq hi::*prompt-key*) s)
 			 (write-string " is not bound to anything." s))
 		       (return)))))))
       (setf (current-window) old-window))))
@@ -227,9 +230,9 @@
         (let ((key (car b)))
           (declare (simple-vector key))
 	  (when (dotimes (i (length key) nil)
-		  (when (member (make-char (svref key i))
-				'(#\leftdown #\leftup #\middledown #\middleup
-					     #\rightdown #\rightup))
+		  (when (member (ext:make-key-event (svref key i))
+				(list #k"Leftdown" #k"Leftup" #k"Middledown"
+				      #k"Middleup" #k"Rightdown" #k"Rightup"))
 		    (push cmd result)
 		    (return t)))
 	    (return)))))))
@@ -365,7 +368,7 @@
 		    
 (defun key-to-string (key)
   (with-output-to-string (s)
-    (sub-print-key key s)))
+    (print-pretty-key key s)))
 
 
 
@@ -376,11 +379,11 @@
   "Display the last 60 characters typed."
   (declare (ignore p))
   (with-pop-up-display (s :height 7)
-    (let ((num (ring-length *character-history*)))
+    (let ((num (ring-length *key-event-history*)))
       (format s "The last ~D characters typed:~%" num)
       (do ((i (1- num) (1- i)))
 	  ((minusp i))
-	(print-pretty-character (ring-ref *character-history* i) s)
+	(ext:print-pretty-key-event (ring-ref *key-event-history* i) s)
 	(write-char #\space s)))))
 
 (defun print-command-bindings (bindings stream)
@@ -418,17 +421,6 @@
 (defun print-some-keys (keys stream)
   (do ((key keys (cdr key)))
       ((null (cdr key))
-       (sub-print-key (car key) stream))
-    (sub-print-key (car key) stream)
+       (print-pretty-key (car key) stream))
+    (print-pretty-key (car key) stream)
     (write-string ", " stream)))
-
-;;; SUB-PRINT-KEY writes key on stream as a serious pretty printed characters
-;;; separated by spaces.
-;;;
-(defun sub-print-key (key stream)
-  (declare (simple-vector key))
-  (let ((last (1- (length key))))
-    (dotimes (i last)
-      (print-pretty-character (svref key i) stream)
-      (write-char #\space stream))
-    (print-pretty-character (svref key last) stream)))

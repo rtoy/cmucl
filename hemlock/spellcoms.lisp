@@ -210,16 +210,17 @@
 	 (delete-mark (ring-pop missed))
 	 (return-from sub-correct-last-misspelled-word t))
        (move-mark point (region-end region))
-       (command-case (:prompt "Action: "  :change-window nil
+       (command-case (:prompt "Action: "
+		      :change-window nil
  :help "Type a single character command to do something to the misspelled word.")
-	 (#\C "Try to find a correction for this word."
+	 (#\c "Try to find a correction for this word."
 	  (unless (get-word-correction (region-start region) word folded)
 	    (reprompt)))
-	 (#\I "Insert this word in the dictionary."
+	 (#\i "Insert this word in the dictionary."
 	  (spell:spell-add-entry folded)
 	  (push folded (spell-info-insertions info))
 	  (message "~A inserted in the dictionary." word))
-	 (#\R "Prompt for a word to replace this word with."
+	 (#\r "Prompt for a word to replace this word with."
 	  (let ((s (prompt-for-string :prompt "Replace with: "
 				      :default word
  :help "Type a string to replace occurrences of this word with.")))
@@ -231,10 +232,10 @@
 	 (:recursive-edit
 	  "Go into a recursive edit and leave when it exits."
 	  (do-recursive-edit))
-	 ((:exit #\Q) "Exit and forget about this word.")
+	 ((:exit #\q) "Exit and forget about this word.")
 	 ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
 	  "Choose this numbered word as the correct spelling."
-	  (let ((num (digit-char-p *last-character-typed*))
+	  (let ((num (digit-char-p (ext:key-event-char *last-key-event-typed*)))
 		(close-words (spell:spell-collect-close-words folded)))
 	    (cond ((> num (length close-words))
 		   (editor-error "Choice out of range."))
@@ -322,8 +323,9 @@
 	      ((null words))
 	    (format s "~36R=~A " i (car words)))
 	  (finish-output s)
-	  (let* ((char (prompt-for-character :prompt "Correction choice: "))
-		 (num (digit-char-p char 36)))
+	  (let* ((key-event (prompt-for-key-event
+			     :prompt "Correction choice: "))
+		 (num (digit-char-p (ext:key-event-char key-event) 36)))
 	    (cond ((not num) (return-from get-word-correction nil))
 		  ((> num (length close-words))
 		   (editor-error "Choice out of range."))
@@ -522,40 +524,41 @@
        (:prompt "Action: "
         :help "Type a single letter command, or help character for help."
         :change-window nil)
-     (#\I "Insert unknown word into dictionary for future lookup."
-      (spell:spell-add-entry word)
-      (push word (spell-info-insertions info))
-      (format t "~S added to dictionary.~2%" word))
-     (#\C "Correct the unknown word with possible correct spellings."
-      (unless close-words
-	(write-line "There are no possible corrections.")
-	(reprompt))
-      (let ((num (if (= close-words-len 1) 0
-		     (digit-char-p (prompt-for-character
-				    :prompt "Correction choice: ")
-				   36))))
-	(unless num (reprompt))
-	(when (> num close-words-len)
-	  (beep)
-	  (write-line "Response out of range.")
-	  (reprompt))
-	(let ((choice (nth num close-words)))
-	  (setf (gethash word *spelling-corrections*) choice)
-	  (spell-replace-word mark unfolded-word choice)))
-      (terpri))
-     (#\A "Accept the word as correct (that is, ignore it)."
-      (character-offset mark wordlen))
-     (#\R "Replace the unknown word with a supplied replacement."
-      (let ((s (prompt-for-string
-		:prompt "Replacement Word: "
-		:default unfolded-word
-		:help "String to replace the unknown word with.")))
-	(setf (gethash word *spelling-corrections*) s)
-	(spell-replace-word mark unfolded-word s))
-      (terpri))
-     (:recursive-edit
-      "Go into a recursive edit and resume correction where the point is left."
-      (do-recursive-edit)))))
+      (#\i "Insert unknown word into dictionary for future lookup."
+	 (spell:spell-add-entry word)
+	 (push word (spell-info-insertions info))
+	 (format t "~S added to dictionary.~2%" word))
+      (#\c "Correct the unknown word with possible correct spellings."
+	 (unless close-words
+	   (write-line "There are no possible corrections.")
+	   (reprompt))
+	 (let ((num (if (= close-words-len 1) 0
+			(digit-char-p (ext:key-event-char
+				       (prompt-for-key-event
+					:prompt "Correction choice: "))
+				      36))))
+	   (unless num (reprompt))
+	   (when (> num close-words-len)
+	     (beep)
+	     (write-line "Response out of range.")
+	     (reprompt))
+	   (let ((choice (nth num close-words)))
+	     (setf (gethash word *spelling-corrections*) choice)
+	     (spell-replace-word mark unfolded-word choice)))
+	 (terpri))
+      (#\a "Accept the word as correct (that is, ignore it)."
+	 (character-offset mark wordlen))
+      (#\r "Replace the unknown word with a supplied replacement."
+	 (let ((s (prompt-for-string
+		   :prompt "Replacement Word: "
+		   :default unfolded-word
+		   :help "String to replace the unknown word with.")))
+	   (setf (gethash word *spelling-corrections*) s)
+	   (spell-replace-word mark unfolded-word s))
+	 (terpri))
+      (:recursive-edit
+       "Go into a recursive edit and resume correction where the point is left."
+       (do-recursive-edit)))))
 
 ;;; Spell-Replace-Word  --  Internal
 ;;;

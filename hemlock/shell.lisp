@@ -69,41 +69,104 @@
 ;;;; Some Global Variables.
 
 (defhvar "Current Shell"
-  "The shell that  \"Select Shell\" will zap you to.")
+  "The shell to which \"Select Shell\" goes."
+  :value nil)
 
+(defhvar "Ask about Old Shells"
+  "When set (the default), Hemlock prompts for an existing shell buffer in
+   preference to making a new one when there is no \"Current Shell\"."
+  :value t)
+  
 (defhvar "Kill Process Confirm"
-  "When non-nil, ask the user whether he really wants to blow away the shell. ~
-   Otherwise, just blow it away."
-  :value T)
+  "When set, Hemlock prompts for confirmation before killing a buffer's process."
+  :value t)
 
 (defhvar "Shell Utility"
-  "The shell command uses this as the default command line."
+  "The \"Shell\" command uses this as the default command line."
   :value "/bin/csh")
 
 (defhvar "Shell Utility Switches"
-  "This is list of strings that are the default command line arguments to the
-   utility in \"Shell Utility\"."
-  :value nil)
+  "This is a string containing the default command line arguments to the
+   utility in \"Shell Utility\".  This is a string since the utility is
+   typically \"/bin/csh\", and this string can contain I/O redirection and
+   other shell directives."
+  :value "")
 
 
 
-;;;; The Shell and New Shell Commands.
+;;;; The Shell, New Shell, and Set Current Shell Commands.
+
+(defvar *shell-names* (make-string-table)
+  "A string-table of the string-name of all process buffers and corresponding
+   buffer structures.")
+
+(defcommand "Set Current Shell" (p)
+  "Sets the value of \"Current Shell\", which the \"Shell\" command uses."
+  "Sets the value of \"Current Shell\", which the \"Shell\" command uses."
+  (declare (ignore p))
+  (set-current-shell))
+
+;;; SET-CURRENT-SHELL -- Internal.
+;;;
+;;; This prompts for a known shell buffer to which it sets "Current Shell".
+;;; It signals an error if there are none.
+;;;
+(defun set-current-shell ()
+  (let ((old-buffer (value current-shell))
+	(first-old-shell (do-strings (var val *shell-names* nil)
+			   (declare (ignore var val))
+			   (return var))))
+    (when (and (not old-buffer) (not first-old-shell))
+      (editor-error "Nothing to set current shell to."))
+    (let ((default-shell (if old-buffer
+			     (buffer-name old-buffer)
+			     first-old-shell)))
+      (multiple-value-bind
+	  (new-buffer-name new-buffer) 
+	  (prompt-for-keyword (list *shell-names*)
+			      :must-exist t
+			      :default default-shell
+			      :default-string default-shell
+			      :prompt "Existing Shell: "
+			      :help "Enter the name of an existing shell.")
+	(declare (ignore new-buffer-name))
+	(setf (value current-shell) new-buffer)))))
 
 (defcommand "Shell" (p)
-  "If a shell buffer exists, pop to it.  Otherwise creates a new one and pop to
-   it.  With an argument, prompt for a command and buffer to execute it in."
-  "If a shell buffer exists, pop to it.  Otherwise creates a new one and pop to
-   it.  With an argument, prompt for a command and buffer to execute it in."
-  (let ((shell (value current-shell)))
-    (if shell (change-to-buffer shell) (make-new-shell p))))
+  "This spawns a shell in a buffer.  If there already is a \"Current Shell\",
+   this goes to that buffer.  If there is no \"Current Shell\", there are
+   shell buffers, and \"Ask about Old Shells\" is set, this prompts for one
+   of them, setting \"Current Shell\" to that shell.  Supplying an argument
+   forces the creation of a new shell buffer."
+  "This spawns a shell in a buffer.  If there already is a \"Current Shell\",
+   this goes to that buffer.  If there is no \"Current Shell\", there are
+   shell buffers, and \"Ask about Old Shells\" is set, this prompts for one
+   of them, setting \"Current Shell\" to that shell.  Supplying an argument
+   forces the creation of a new shell buffer."
+  (let ((shell (value current-shell))
+	(no-shells-p (do-strings (var val *shell-names* t)
+		       (declare (ignore var val))
+		       (return nil))))
+    (cond (p (make-new-shell nil no-shells-p))
+	  (shell (change-to-buffer shell))
+	  ((and (value ask-about-old-shells) (not no-shells-p))
+	   (set-current-shell)
+	   (change-to-buffer (value current-shell)))
+	  (t (make-new-shell nil)))))
 
-(defcommand "New Shell" (p)
-  "Creates a new shell and puts you in it."
-  "Creates a new shell and puts you in it."
-  (make-new-shell p))
+(defcommand "Shell Command Line in Buffer" (p)
+  "Prompts the user for a process and a buffer in which to run the process."
+  "Prompts the user for a process and a buffer in which to run the process."
+  (declare (ignore p))
+  (make-new-shell t))
 
-(defun make-new-shell (prompt-for-command-p
-		       &optional (command-line (get-command-line) clp))
+;;; MAKE-NEW-SHELL -- Internal.
+;;;
+;;; This makes new shells for us dealing with prompting for various things and
+;;; setting "Current Shell" according to user documentation.
+;;;
+(defun make-new-shell (prompt-for-command-p &optional (set-current-shell-p t)
+		       (command-line (get-command-line) clp))
   (let* ((command (or (and clp command-line)
 		      (if prompt-for-command-p
 			  (prompt-for-string
@@ -127,6 +190,7 @@
 		  (list #'(lambda (buffer)
 			    (when (eq (value current-shell) buffer)
 			      (setf (value current-shell) nil))
+			    (delete-string (buffer-name buffer) *shell-names*)
 			    (kill-process (variable-value 'process
 							  :buffer buffer)))))))
     (unless buffer
@@ -145,8 +209,9 @@
 						(declare (ignore process))
 						(update-process-buffer buffer))
 			       :input t :output t))
+    (setf (getstring buffer-name *shell-names*) buffer)
     (update-process-buffer buffer)
-    (unless (value current-shell)
+    (when (and (not (value current-shell)) set-current-shell-p)
       (setf (value current-shell) buffer))
     (change-to-buffer buffer)))
 
@@ -218,7 +283,8 @@
   (let ((process (variable-value 'process :buffer buffer)))
     (unless (ext:process-alive-p process)
       (ext:process-close process)
-      (setf (value current-shell) nil))))
+      (when (eq (value current-shell) buffer)
+	(setf (value current-shell) nil)))))
 
 
 ;;;; Supporting Commands.
@@ -319,6 +385,7 @@
 (defcommand "Stop Buffer Subprocess" (p)
   "Stop the subprocess currently executing in this shell."
   "Stop the subprocess currently executing in this shell."
+  (declare (ignore p))
   (unless (hemlock-bound-p 'process :buffer (current-buffer))
     (editor-error "Not in a process buffer."))  
   (deliver-signal-to-subprocess (if p :SIGSTOP :SIGTSTP) (value process)))

@@ -153,12 +153,12 @@
 		      (region temp-b
 			      (line-start temp-a
 					  (line-next (mark-line temp-b))))))
-		(#\B "Insert both versions with **** MERGE LOSSAGE **** around them."
+		(#\b "Insert both versions with **** MERGE LOSSAGE **** around them."
 		     (insert-string temp-a "
 		     **** MERGE LOSSAGE ****")
 		     (insert-string dest-point "
 		     **** END OF MERGE LOSSAGE ****"))
-		(#\A "Align window at start of difference display."
+		(#\a "Align window at start of difference display."
 		     (line-start
 		      (move-mark
 		       (window-display-start

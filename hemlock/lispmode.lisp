@@ -1016,6 +1016,7 @@ according to the FORWARDP flag."
   of special arguments for the form.  Examples: 2 for Do, 1 for Dolist.
   If a prefix argument is supplied, then delete the indentation information."
   "Do a defindent, man!"
+  (declare (ignore p))
   (with-mark ((m (current-point)))
     (pre-command-parse-check m)
     (unless (backward-up-list m) (editor-error))
@@ -1164,6 +1165,32 @@ according to the FORWARDP flag."
   Kills forward with a negative argument."
   "Kill the previous Form."
   (forward-kill-form-command (- (or p 1))))
+
+(defcommand "Extract Form" (p)
+  "Replace the current containing list with the next form.  The entire affected
+   area is pushed onto the kill ring.  If an argument is supplied, that many
+   upward levels of list nesting is replaced by the next form."
+  "Replace the current containing list with the next form.  The entire affected
+   area is pushed onto the kill ring.  If an argument is supplied, that many
+   upward levels of list nesting is replaced by the next form."
+  (let ((point (current-point)))
+    (pre-command-parse-check point)
+    (with-mark ((form-start point :right-inserting)
+		(form-end point))
+      (unless (form-offset form-end 1) (editor-error))
+      (form-offset (move-mark form-start form-end) -1)
+      (with-mark ((containing-start form-start :left-inserting)
+		  (containing-end form-end :left-inserting))
+	(dotimes (i (or p 1))
+	  (unless (and (forward-up-list containing-end)
+		       (backward-up-list containing-start))
+	    (editor-error)))
+	(let ((r (copy-region (region form-start form-end))))
+	  (ring-push (delete-and-save-region
+		      (region containing-start containing-end))
+		     *kill-ring*)
+	  (ninsert-region point r)
+	  (move-mark point form-start))))))
 
 (defcommand "Extract List" (p)
   "Extract the current list.

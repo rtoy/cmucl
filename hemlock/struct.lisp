@@ -57,7 +57,8 @@
   font)
 
 (defmacro fast-font-mark-p (s)
-  `(typep ,s 'font-mark))
+  `(eq (svref ,s 0) 'font-mark))
+
 
 
 ;;;; Regions, buffers, modeline fields.
@@ -589,7 +590,7 @@
   "Set the Last-Command-Type for use by the next command.")
 (defsetf prefix-argument %set-prefix-argument
   "Set the prefix argument for the next command.")
-(defsetf logical-char= %set-logical-char=
+(defsetf logical-key-event-p %set-logical-key-event-p
   "Change what Logical-Char= returns for the specified arguments.")
 (defsetf window-font %set-window-font
   "Change the font-object associated with a font-number in a window.")

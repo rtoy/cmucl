@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;;    Written by Rob MacLachlan
+;;; Written by Rob MacLachlan and Blaine Burks.
 ;;;
 ;;; This file contains the routines which define hemlock commands and
 ;;; the command interpreter.
@@ -32,64 +32,37 @@
 ;;;; Key Tables:
 ;;;
 ;;;    A key table provides a way to translate a sequence of characters to some
-;;; lisp object.  It is currently represented by a tree of vectors, with
-;;; alternating levels being indexed by the bits and code.  We wrap a Key-Table
-;;; structure around the table so that we can discriminate bewteen a key table
-;;; and a value.
-;;; 
-
-(defstruct (key-table
-	    (:print-function
-	     (lambda (x stream y)
-	       (declare (ignore x y))
-	       (write-string "#<Key-Table>" stream))))
-  (table (make-array command-char-bits-limit :initial-element nil)
-	 :type simple-vector)) 
+;;; lisp object.  It is currently represented by a tree of hash-tables, where
+;;; each level is a hashing from a key to either another hash-table or a value.
 
 
-;;; GET-TABLE-ENTRY  --  Internal
-;;;
-;;;   Return the value found by walking down a tree of command tables as
-;;; specified by a key.  If no such entry return NIL.
+;;; GET-TABLE-ENTRY returns the value at the end of a series of hashings.  For
+;;; our purposes it is presently used to look up commands and key-translations.
 ;;;
 (defun get-table-entry (table key)
-  (let ((current table))
-    (dotimes (i (length key) current)
-      (unless (key-table-p current) (return nil))
-      (let* ((char (aref key i))
-	     (bits-vec (key-table-table current))
-	     (code-vec (svref bits-vec (key-char-bits char))))
-	(unless code-vec (return nil))
-	(setq current (svref code-vec (key-char-code char)))))))
+  (let ((foo nil))
+    (dotimes (i (length key) foo)
+      (let ((key-event (aref key i)))
+	(setf foo (gethash key-event table))
+	(unless (hash-table-p foo) (return foo))
+	(setf table foo)))))
 
-
-;;; SET-TABLE-ENTRY  --  Internal
-;;;
-;;;    Set the entry for Key in Table to Val, creating new key tables as
-;;; needed.
+;;; SET-TABLE-ENTRY sets the entry for key in table to val, creating new
+;;; tables as needed.  If val is nil, then use REMHASH to remove this element
+;;; from the hash-table.
 ;;;
 (defun set-table-entry (table key val)
-  (do ((keylast (1- (length key)))
-       (index 0 (1+ index))
-       (current table))
-      (())
-    (let* ((char (aref key index))
-	   (bits (key-char-bits char))
-	   (code (key-char-code char))
-	   (bits-vec (key-table-table current))
-	   (code-vec (or (svref bits-vec bits)
-			 (setf (svref bits-vec bits)
-			       (make-array command-char-code-limit
-					   :initial-element nil))))
-	   (next (svref code-vec code)))
-      (cond ((= index keylast)
-	     (setf (svref code-vec code) val)
-	     (return val))
-	    ((key-table-p next)
-	     (setq current next))
-	    (t
-	     (setq current (make-key-table))
-	     (setf (svref code-vec code) current))))))
+  (dotimes (i (1- (length key)))
+    (let* ((key-event (aref key i))
+	   (foo (gethash key-event table)))
+      (if (hash-table-p foo)
+	  (setf table foo)
+	  (let ((new-table (make-hash-table)))
+	    (setf (gethash key-event table) new-table)
+	    (setf table new-table)))))
+  (if (null val)
+      (remhash (aref key (1- (length key))) table)
+      (setf (gethash (aref key (1- (length key))) table) val)))
 
 
 ;;;; Key Translation:
@@ -98,7 +71,7 @@
 ;;; integer, then it is prefix bits to be OR'ed with the next character.  If it
 ;;; is a key, then we translate to that key.
 
-(defvar *key-translations* (make-key-table))
+(defvar *key-translations* (make-hash-table))
 (defvar *translate-key-temp* (make-array 10 :fill-pointer 0 :adjustable t))
 
 
@@ -110,7 +83,8 @@
 ;;; key ends in the prefix of a translation, we just return that part
 ;;; untranslated and return the second value true.
 ;;;
-(defun translate-key (key &optional (result (make-array 4 :fill-pointer 0
+(defun translate-key (key &optional (result (make-array (length key)
+							:fill-pointer 0
 							:adjustable t)))
   (let ((key-len (length key))
 	(temp *translate-key-temp*)
@@ -121,83 +95,75 @@
     (setf (fill-pointer result) 0)
     (loop
       (when (= try-pos key-len) (return))
-      (let ((ch (aref key try-pos)))
-	(vector-push-extend (make-char ch (logior (char-bits ch) prefix))
-			    temp)
-	(setq prefix 0))
+      (let ((key-event (aref key try-pos)))
+	(vector-push-extend
+	 (ext:make-key-event key-event (logior (ext:key-event-bits key-event)
+					       prefix))
+	 temp)
+	(setf prefix 0))
       (let ((entry (get-table-entry *key-translations* temp)))
-	(unless (key-table-p entry)
-	  (etypecase entry
-	    (null
-	     (vector-push-extend (aref temp 0) result)
-	     (incf start))
-	    (simple-vector
-	     (dotimes (i (length entry))
-	       (vector-push-extend (aref entry i) result))
-	     (setq start (1+ try-pos)))
-	    (integer
-	     (setq start (1+ try-pos))
-	     (when (= start key-len) (return))
-	     (setq prefix (logior entry prefix))))
-	  (setq try-pos start)
-	  (setf (fill-pointer temp) 0))))
-
+	(cond ((hash-table-p entry)
+	       (incf try-pos))
+	      (t
+	       (etypecase entry
+		 (null
+		  (vector-push-extend (aref temp 0) result)
+		  (incf start))
+		 (simple-vector
+		  (dotimes (i (length entry))
+		    (vector-push-extend (aref entry i) result))
+		  (setf start (1+ try-pos)))
+		 (integer
+		  (setf start (1+ try-pos))
+		  (when (= start key-len) (return))
+		  (setf prefix (logior entry prefix))))
+	       (setq try-pos start)
+	       (setf (fill-pointer temp) 0)))))
     (dotimes (i (length temp))
       (vector-push-extend (aref temp i) result))
     (values result (not (zerop (length temp))))))
 
 
-;;; KEY-TRANSLATION  --  Public
-;;;
-;;;    Set the value, dealing with translating to and from symbolic bit names. 
+;;; KEY-TRANSLATION -- Public.
 ;;;
 (defun key-translation (key)
   "Return the key translation for Key, or NIL if there is none.  If Key is a
-  prefix of a translation, then :Prefix is returned.  Whenever Key appears as a
-  subsequence of a key argument to the binding manipulation functions, that
-  portion will be replaced with the translation.  A key translation may also be
-  a list (:Bits {Bit-Name}*).  In this case, the named bits will be set in the
-  next character in the key being translated."
+   prefix of a translation, then :Prefix is returned.  Whenever Key appears as a
+   subsequence of a key argument to the binding manipulation functions, that
+   portion will be replaced with the translation.  A key translation may also be
+   a list (:Bits {Bit-Name}*).  In this case, the named bits will be set in the
+   next character in the key being translated."
   (let ((entry (get-table-entry *key-translations* (crunch-key key))))
     (etypecase entry
-      (key-table :prefix)
+      (hash-table :prefix)
       ((or simple-vector null) entry)
       (integer
-       (let ((ch (make-char #\? entry))
-	     (res ()))
-	 (dolist (bit all-bit-names)
-	   (when (char-bit ch bit)
-	     (push bit res)))
-	 (cons :bits res))))))
+       (cons :bits (ext:key-event-bits-modifiers entry))))))
 
+;;; %SET-KEY-TRANSLATION  --  Internal
+;;;
+(defun %set-key-translation (key new-value)
+  (let ((entry (cond ((and (consp new-value) (eq (car new-value) :bits))
+		      (apply #'ext:make-key-event-bits (cdr new-value)))
+		     (new-value (crunch-key new-value))
+		     (t new-value))))
+    (set-table-entry *key-translations* (crunch-key key) entry)
+    new-value))
+;;;
 (defsetf key-translation %set-key-translation
   "Set the key translation for a key.  If set to null, deletes any
   translation.")
 
-;;; %SET-KEY-TRANSLATION  --  Internal
-;;;
-;;;    Setf inverse for Key-Translation.
-;;;
-(defun %set-key-translation (key new-value)
-  (let ((entry (cond ((and (consp new-value) (eq (first new-value) :bits))
-		      (let ((res #\?))
-			(dolist (bit (rest new-value) (char-bits res))
-			  (setf (char-bit res bit) t))))
-		     ((null new-value) new-value)
-		     (t
-		      (crunch-key new-value)))))
-    (set-table-entry *key-translations* (crunch-key key) entry)
-    new-value))
 
 
 ;;;; Interface Utility Functions:
 
-(defvar *global-command-table* (make-key-table)
+(defvar *global-command-table* (make-hash-table)
   "The command table for global key bindings.")
 
 ;;; GET-RIGHT-TABLE  --  Internal
 ;;;
-;;;    Return a key-table depending on "kind" and checking for errors.
+;;;    Return a hash-table depending on "kind" and checking for errors.
 ;;;
 (defun get-right-table (kind where)
   (case kind
@@ -216,37 +182,36 @@
      (t (error "~S is not a valid binding type." kind))))
 
 
-;;; CRUNCH-KEY  --  Internal
+;;; CRUNCH-KEY  --  Internal.
 ;;;
-;;;    Take a key in one of the various specifications and turn it
-;;; into the standard one: a simple-vector of characters.
+;;; Take a key in one of the various specifications and turn it into the
+;;; standard one: a simple-vector of characters.
 ;;;
 (defun crunch-key (key)
   (typecase key
-    (character (vector key))
-    ((or list vector)
+    (ext:key-event (vector key))
+    ((or list vector) ;List thrown in gratuitously.
      (when (zerop (length key))
-       (error "Zero length key is illegal."))
-     (unless (every #'characterp key)
-       (error "Key ~S has a non-character element." key))
+       (error "A zero length key is illegal."))
+     (unless (every #'ext:key-event-p key)
+       (error "A Key ~S must contain only key-events." key))
      (coerce key 'simple-vector))
     (t
-     (error "Key ~S is not a character or sequence." key))))
+     (error "Key ~S is not a key-event or sequence of key-events." key))))
+
 
 
 ;;;; Exported Primitives:
 
 (proclaim '(special *command-names*))
 
-;;; BIND-KEY  --  Public
-;;;
-;;;    Put the command specified in the correct key table.
+;;; BIND-KEY  --  Public.
 ;;;
 (defun bind-key (name key &optional (kind :global) where)
   "Bind a Hemlock command to some key somewhere.  Name is the string name
-   of a Hemlock command, Key is either a character or a vector of characters.
-   Kind is one of :Global, :Mode or :Buffer, Where is the mode name or buffer
-   concerned.  Kind defaults to :Global."
+   of a Hemlock command, Key is either a key-event or a vector of key-events.
+   Kind is one of :Global, :Mode or :Buffer, and where is the mode name or
+   buffer concerned.  Kind defaults to :Global."
   (let ((cmd (getstring name *command-names*))
 	(table (get-right-table kind where))
 	(key (copy-seq (translate-key (crunch-key key)))))
@@ -264,10 +229,9 @@
 ;;;    Stick NIL in the key table specified.
 ;;;
 (defun delete-key-binding (key &optional (kind :global) where)
-  "Remove a Hemlock key binding somewhere.  Name is the string name of
-  a Hemlock command, Key is either a character or a vector of
-  characters.  Kind is one of :Global, :Mode or :Buffer, Where is the
-  mode name or buffer concerned.  Kind defaults to :Global."
+  "Remove a Hemlock key binding somewhere.  Key is either a key-event or a
+   vector of key-events.  Kind is one of :Global, :Mode or :Buffer, andl where
+   is the mode name or buffer concerned.  Kind defaults to :Global."
   (set-table-entry (get-right-table kind where)
 		   (translate-key (crunch-key key))
 		   nil))
@@ -295,17 +259,14 @@
 		(return (values res (nreverse t-bindings)))))))))))
 
 
-;;; GET-COMMAND  --  Public
-;;;
-;;;    Look up the key binding, checking for :Prefix.
+;;; GET-COMMAND -- Public.
 ;;;
 (defun get-command (key &optional (kind :global) where)
   "Return the command object for the command bound to key somewhere.
-  If key is not bound return NIL, if Key is a prefix of a key-binding
-  then reutrn :Prefix.  Name is the string name of a Hemlock command,
-  Key is either a character or a vector of characters.  Kind is one of
-  :Global, :Mode or :Buffer, Where is the mode name or buffer
-  concerned.  Kind defaults to :Global."
+   If key is not bound, return nil.  Key is either a key-event or a vector of
+   key-events.  If key is a prefix of a key-binding, then return :prefix.
+   Kind is one of :global, :mode or :buffer, and where is the mode name or
+   buffer concerned.  Kind defaults to :Global."
   (multiple-value-bind (key prefix-p)
 		       (translate-key (crunch-key key))
     (let ((entry (if (eq kind :current)
@@ -314,45 +275,32 @@
       (etypecase entry
 	(null (if prefix-p :prefix nil))
 	(command entry)
-	(key-table :prefix)))))
+	(hash-table :prefix)))))
 
+(defvar *map-bindings-key* (make-array 5 :adjustable t :fill-pointer 0))
 
-;;; MAP-BINDINGS  --  Public
+;;; MAP-BINDINGS -- Public.
 ;;;
-;;;    map over a key table.
-;;;
-(defun map-bindings (fun kind &optional where)
-  "Map Fun over the bindings in some place.  The function is passed the
-  Key and the command to which it is bound."
-  (sub-map-bindings fun (key-table-table (get-right-table kind where)) '#()))
-;;;
-(defun sub-map-bindings (fun tab key)
-  (declare (simple-vector tab key))
-  (let ((key (concatenate 'simple-vector key '#(#\space)))
-	(index (length key)))
-    (dotimes (bits command-char-bits-limit)
-      (let ((vec (svref tab bits)))
-	(when vec
-	  (dotimes (code command-char-code-limit)
-	    (setf (svref key index) (code-char code bits))
-	    (let ((val (svref vec code)))
-	      (cond ((null val))
-		    ((commandp val)
-		     (funcall fun key val))
-		    (t
-		     (sub-map-bindings fun (key-table-table val)
-				       key))))))))))
+(defun map-bindings (function kind &optional where)
+  "Map function over the bindings in some place.  The function is passed the
+   key and the command to which it is bound."
+  (labels ((mapping-fun (hash-key hash-value)
+	     (vector-push-extend hash-key *map-bindings-key*)
+	     (etypecase hash-value
+	       (command (funcall function *map-bindings-key* hash-value))
+	       (hash-table (maphash #'mapping-fun hash-value)))
+	     (decf (fill-pointer *map-bindings-key*))))
+    (setf (fill-pointer *map-bindings-key*) 0)
+    (maphash #'mapping-fun (get-right-table kind where))))
 
-
-;;; MAKE-COMMAND  --  Public
+;;; MAKE-COMMAND -- Public.
 ;;;
-;;;    If the command is already defined then alter the command object, 
-;;; otherwise make a new command object and enter it into the 
-;;; *command-names*.
+;;; If the command is already defined, then alter the command object;
+;;; otherwise, make a new command object and enter it into the *command-names*.
 ;;;
 (defun make-command (name documentation function)
   "Create a new Hemlock command with Name and Documentation which is
-  implemented by calling the function-value of the symbol Function"
+   implemented by calling the function-value of the symbol Function"
   (let ((entry (getstring name *command-names*)))
     (cond
      (entry
@@ -364,9 +312,7 @@
 	    (internal-make-command name documentation function))))))
 
 
-;;; COMMAND-NAME, %SET-COMMAND-NAME  --  Public
-;;;
-;;;    Filter the slot, updating *command-names* if it is set. 
+;;; COMMAND-NAME, %SET-COMMAND-NAME -- Public.
 ;;;
 (defun command-name (command)
   "Returns the string which is the name of Command."
@@ -381,33 +327,21 @@
   (setf (command-%name command) new-name))
 
 
-;;; COMMAND-BINDINGS  --  Public
+;;; COMMAND-BINDINGS -- Public.
 ;;;
-;;;    Check that all the supposed bindings really exists.  Bindings which
+;;; Check that all the supposed bindings really exists.  Bindings which
 ;;; were once made may have been overwritten.  It is easier to filter
 ;;; out bogus bindings here than to catch all the cases that can make a
 ;;; binding go away.
 ;;;
-(defun binding= (b1 b2)
-  (and (eq (second b1) (second b2))
-       (equal (third b1) (third b2))
-       (let* ((k1 (first b2))
-	      (l1 (length k1))
-	      (k2 (first b1)))
-	 (declare (simple-vector k1 k2))
-	 (if (= l1 (length k2))
-	     (dotimes (i l1 t)
-	       (when (char/= (svref k1 i) (svref k2 i))
-		 (return nil)))))))
-;;;
 (defun command-bindings (command)
   "Return a list of lists of the form (key kind where) describing
-  all the places there Command is bound."
+   all the places where Command is bound."
   (check-type command command)
-  (let (res)
-    (declare (list res))
+  (let (result)
+    (declare (list result))
     (dolist (place (command-%bindings command))
-      (let ((tab (case (cadr place)
+      (let ((table (case (cadr place)
 		   (:global *global-command-table*)
 		   (:mode
 		    (let ((m (getstring (caddr place) *mode-names*)))
@@ -415,10 +349,11 @@
 		   (t
 		    (when (memq (caddr place) *buffer-list*)
 		      (buffer-bindings (caddr place)))))))
-	(when (and tab (eq (get-table-entry tab (car place)) command)
-		   (not (find place res :test #'binding=)))
-	  (push place res))))
-    res))
+	(when (and table
+		   (eq (get-table-entry table (car place)) command)
+		   (not (member place result :test #'equalp)))
+	  (push place result))))
+    result))
 
 
 (defvar *last-command-type* ()
@@ -451,8 +386,7 @@
 ;;;
 ;;;
 (defun prefix-argument ()
-  "Return the current value of the prefix argument.  This can be set
-  with Setf."
+  "Return the current value of prefix argument.  This can be set with SETF."
   *prefix-argument*)
 
 ;;; %SET-PREFIX-ARGUMENT  --  Internal
@@ -506,40 +440,38 @@
 	  (unless (or (zerop (length cmd))
 		      (not (value ed::key-echo-delay)))
 	    (editor-sleep (value ed::key-echo-delay))
-	    (unless (listen *editor-input*)
+	    (unless (listen-editor-input *editor-input*)
 	      (clear-echo-area)
 	      (dotimes (i (length cmd))
-		(print-pretty-character (aref cmd i) *echo-area-stream*)
+		(ext:print-pretty-key (aref cmd i) *echo-area-stream*)
 		(write-char #\space *echo-area-stream*)))))
-	(vector-push-extend (read-char *editor-input*) cmd)
-	
+	(vector-push-extend (get-key-event *editor-input*) cmd)
 	(multiple-value-bind (trans-result prefix-p)
 			     (translate-key cmd trans)
 	  (multiple-value-bind (res t-bindings)
 			       (get-current-binding trans-result)
-	    (cond
-	     ((commandp res)
-	      (let ((punt t))
-		(catch 'command-loop-catcher
-		  (dolist (c t-bindings)
-		    (funcall *invoke-hook* c *prefix-argument*))
-		  (funcall *invoke-hook* res *prefix-argument*)
-		  (setf punt nil))
-		(when punt (invoke-hook ed::command-abort-hook)))
-	      (if *command-type-set*
-		  (setq *command-type-set* nil)
-		  (setq *last-command-type* nil))
-	      (if *prefix-argument-supplied*
-		  (setq *prefix-argument-supplied* nil)
-		  (setq *prefix-argument* nil))
-	      (setf (fill-pointer cmd) 0))
-	     ((null res)
-	      (unless prefix-p
-		(beep)
-		(setq *prefix-argument* nil)
-		(setf (fill-pointer cmd) 0)))
-	     ((not (key-table-p res))
-	      (error "Bad thing in key table: ~S" res)))))))))
+	    (etypecase res
+	      (command 
+	       (let ((punt t))
+		 (catch 'command-loop-catcher
+		   (dolist (c t-bindings)
+		     (funcall *invoke-hook* c *prefix-argument*))
+		   (funcall *invoke-hook* res *prefix-argument*)
+		   (setf punt nil))
+		 (when punt (invoke-hook ed::command-abort-hook)))
+	       (if *command-type-set*
+		   (setq *command-type-set* nil)
+		   (setq *last-command-type* nil))
+	       (if *prefix-argument-supplied*
+		   (setq *prefix-argument-supplied* nil)
+		   (setq *prefix-argument* nil))
+	       (setf (fill-pointer cmd) 0))
+	      (null
+	       (unless prefix-p
+		 (beep)
+		 (setq *prefix-argument* nil)
+		 (setf (fill-pointer cmd) 0)))
+	      (hash-table))))))))
 
 
 ;;; EXIT-HEMLOCK  --  Public
