@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.13 2001/04/11 20:05:08 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.14 2001/04/17 17:30:14 pw Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -34,10 +34,12 @@
 
 (in-package :pcl)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defvar *optimize-speed*
   '(optimize (speed 3) (safety 0) (ext:inhibit-warnings 3) #+small (debug 0.5))
   "This variable is used in various places in PCL as an optimization
 declaration.")
+)
 
 ;;; Various macros that include necessary declarations for maximum
 ;;; performance.
