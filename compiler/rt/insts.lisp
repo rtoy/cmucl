@@ -920,11 +920,11 @@
 		   (eql class :freg-to-freg))
 	      (and (tn-p data)
 		   (eq (sb-name (sc-sb (tn-sc data))) 'registers)
- 		   optype
+ 		   (or optype creg)
 		   (not (eql class :freg-to-freg)))))
   (assert (if fpn
 	      (mc68881-fp-reg-p fpn)
-	      creg))
+	      (and creg (member class '(:mem-to-scr :scr-to-mem)))))
 		   
   (let* ((opcode
 	  (logior #xFC000000
@@ -932,21 +932,26 @@
 		      (error "Unknown instruction class ~S." class))
 		  (ash (cdr (assoc class mc68881-instruction-classes))
 		       15)
-		  (ash (if fpm
-			   (tn-offset fpm)
-			   (or (cdr (assoc optype mc68881-operand-types))
-			       (error "Unknown operation type ~S." optype)))
+		  (ash (ecase class
+			 (:freg-to-freg (tn-offset fpm))
+			 ((:mem-to-freg :freg-to-mem)
+			  (or (cdr (assoc optype mc68881-operand-types))
+			      (error "Unknown operation type ~S." optype)))
+			 ((:mem-to-scr :scr-to-mem)
+			  (or (cdr (assoc creg mc68881-control-regs))
+			      (error "Unknown control register ~S." creg))))
 		       12)
 		  (ash (if fpn
 			   (tn-offset fpn)
-			   (or (cdr (assoc creg mc68881-control-regs))
-			       (error "Unknown control register ~S." creg)))
+			   0)
 		       9)
 		  (ash (or (cdr (assoc op mc68881-opcodes))
 			   (error "Unknown opcode ~S." op))
 		       2)
-		  (or (cdr (assoc optype mc68881-operand-lengths))
-		      (error "Unknown operation type ~S." optype))))
+		  (if creg
+		      1
+		      (or (cdr (assoc optype mc68881-operand-lengths))
+			  (error "Unknown operation type ~S." optype)))))
 	 (low (logand opcode #xFFFF))
 	 (high (+ (logand (ash opcode -16) #xFFFF)
 		  (if (eql (logand low #x8000) 0) 0 1))))
@@ -1058,7 +1063,7 @@
 
 (define-pseudo-instruction mc68881-load-status 64 (creg data temp)
   (inst mc68881-load-status-inst data temp
-	(do-68881-inst :move temp :creg creg :data data :optype :integer
+	(do-68881-inst :move temp :creg creg :data data
 		       :class :mem-to-scr)))
 
 (define-instruction (mc68881-store-status-inst :clobber (memory)
@@ -1072,5 +1077,5 @@
 
 (define-pseudo-instruction mc68881-store-status 64 (creg data temp)
   (inst mc68881-store-status-inst data temp
-	(do-68881-inst :move temp :creg creg :data data :optype :integer
+	(do-68881-inst :move temp :creg creg :data data
 		       :class :scr-to-mem)))
