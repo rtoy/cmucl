@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.114 2004/10/13 13:50:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.115 2004/10/13 15:47:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1204,6 +1204,34 @@
   (declare (ignore ra))
   "Foreign function call land")
 
+(defun assembly-routines-p (component)
+  "Return t if COMPONENT contains code from assembly routines."
+  (let ((start (sap-int (kernel:code-instructions component))))
+    (maphash (lambda (_ addr)
+	       (declare (ignore _))
+	       (when (= addr start)
+		 (return-from assembly-routines-p t)))
+	     lisp::*assembler-routines*)))
+
+(defun find-assembly-routine-name (component pc)
+  "Return the name of the assembly routine at offset PC in COMPONENT.
+The result is a symbol or nil if the routine cannot be found."
+  (let* ((start (sap-int (kernel:code-instructions component)))
+	 (end (+ start (* (kernel::%code-code-size component) 
+			  vm:word-bytes)))
+	 (routines `((#:end . ,end))))
+    ;; collect the assembly routines in the component
+    (maphash (lambda (name addr)
+	       (when (<= start addr end)
+		 (push (cons name addr) routines)))
+	     lisp::*assembler-routines*)
+    ;; sort them and return the name for the routine at PC
+    (let ((routines (sort routines #'< :key #'cdr))
+	  (addr (+ start pc)))
+      (loop for ((r1 . addr1) (r2 . addr2)) on routines
+	    while r2
+	    when (<= addr1 addr addr2) return r1))))
+
 ;;; COMPUTE-CALLING-FRAME -- Internal.
 ;;;
 ;;; This returns a frame for the one existing in time immediately prior to the
@@ -1259,7 +1287,12 @@
 			  (make-bogus-debug-function
 			   "Bogus stack frame"))
 			 (t
-			  (debug-function-from-pc code pc-offset)))))
+			  (handler-case
+			      (debug-function-from-pc code pc-offset)
+			    (no-debug-info ()
+			      (make-bogus-debug-function
+			       (format nil "no debug info: ~A:~A"
+				       code pc-offset))))))))
 	    (make-compiled-frame caller up-frame d-fun
 				 (code-location-from-pc d-fun pc-offset
 							escaped)
@@ -1310,7 +1343,12 @@
 			    (make-bogus-debug-function
 			     "Bogus stack frame"))
 			   (t
-			    (debug-function-from-pc code pc-offset)))))
+			    (handler-case
+				(debug-function-from-pc code pc-offset)
+			      (no-debug-info ()
+				(make-bogus-debug-function
+				 (format nil "no debug info: ~A:~A"
+					 code pc-offset))))))))
 	  (make-compiled-frame caller up-frame d-fun
 			       (code-location-from-pc d-fun pc-offset
 						      escaped)
@@ -1665,7 +1703,11 @@
   (let ((info (kernel:%code-debug-info component)))
     (cond
      ((not info)
-      (debug-signal 'no-debug-info))
+      (cond ((assembly-routines-p component)
+	     (make-bogus-debug-function 
+	      (format nil "assembly routine: ~S" 
+		      (find-assembly-routine-name component pc))))
+	    (t (debug-signal 'no-debug-info))))
      ((eq info :bogus-lra)
       (make-bogus-debug-function "Function End Breakpoint"))
      (t
