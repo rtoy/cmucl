@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.15 1992/02/14 23:47:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.16 1992/02/16 19:40:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,10 @@
 (deftransform %set-slot ((object slot value)
 			 ((alien (* t)) symbol t))
   '(%set-slot (deref object) slot value))
+
+(deftransform %slot-addr ((object slot)
+			  ((alien (* t)) symbol))
+  '(%slot-addr (deref object) slot))
 
 
 ;;;; SLOT support
