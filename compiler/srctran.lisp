@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.149 2004/07/19 17:54:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.150 2004/07/20 13:29:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2242,7 +2242,10 @@
 ;;; compute the bounds on x|y.
 
 (defun min-and (a b c d)
-  (let ((m #x80000000))
+  ;; Note that the body of the loop doesn't really do anything unless
+  ;; ~a&~c&m is non-zero.  So, rather than start m at #x80000000, we
+  ;; can start at the most significant bit where ~a&~c is non-zero.
+  (let ((m (ash 1 (1- (integer-length (logandc2 (lognot a) c))))))
     (loop while (not (zerop m))
        do
        (when (/= (logand m (lognot a) (lognot c)) 0)
@@ -2258,7 +2261,11 @@
     (logand a c)))
 
 (defun max-and (a b c d)
-  (let ((m #x80000000))
+  ;; Note that the body of the loop doesn't really do anything unless
+  ;; b&~d&m is non-zero or ~b&d&m is non-zero.  So, rather than start
+  ;; m at #x80000000, we can start at the most significant bit where
+  ;; b&~d or ~b&d is non-zero.  That is, b^d is non-zero
+  (let ((m (ash 1 (1- (integer-length (logxor b d))))))
     (loop while (not (zerop m))
        do
        (cond ((/= (logand b (lognot d) m) 0)
@@ -2275,7 +2282,11 @@
   (logand b d))
 
 (defun min-or (a b c d)
-  (let ((m #x80000000))
+  ;; Note that the body of the loop doesn't do anything unless ~a&c&m
+  ;; is non-zero or if ~c&a&m is non-zero.  So rather than start m at
+  ;; #x80000000, we can start at the most significant bit where ~a&c
+  ;; or ~c&a is non-zero, i.e., where MSB of a^c.
+  (let ((m (ash 1 (1- (integer-length (logxor a c))))))
     (loop while (not (zerop m))
        do
        (cond ((/= (logandc2 (logand c m) a) 0)
@@ -2294,7 +2305,9 @@
   (logior a c))
 
 (defun max-or (a b c d)
-  (let ((m #x80000000))
+  ;; Note that the body of the loop doesn't do anything unless b&d&m
+  ;; is non-zero.  That is, when the MSB of b&d is non-zero.
+  (let ((m (ash 1 (1- (integer-length (logand b d))))))
     (loop while (not (zerop m))
        do
        (when (/= (logand m b d) 0)
@@ -2312,7 +2325,11 @@
     (logior b d)))
   
 (defun min-xor (a b c d)
-  (let ((m #x80000000))
+  ;; Note that the body of the loop doesn't do anything unless ~a&c&m
+  ;; is non-zero or if ~c&a&m is non-zero.  So rather than start m at
+  ;; #x80000000, we can start at the most significant bit where ~a&c
+  ;; or ~c&a is non-zero, i.e., where MSB of a^c.
+  (let ((m (ash 1 (1- (integer-length a c)))))
     (loop while (not (zerop m))
        do
        (cond ((/= (logandc2 (logand c m) a) 0)
@@ -2329,7 +2346,10 @@
   (logxor a c))
 
 (defun max-xor (a b c d)
-  (let ((m #x80000000))
+  ;; Note that the body of the loop doesn't do anything unless b&d&m
+  ;; is non-zero.  So rather than start m at #x80000000, we can start
+  ;; at the most significant bit where b&d is non-zero.
+  (let ((m (ash 1 (1- (integer-length (logand b d))))))
     (loop while (not (zerop m))
        do
        (when (/= (logand m b d) 0)
