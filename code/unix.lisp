@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.43 1997/01/18 14:30:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.44 1997/02/20 01:29:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,7 @@
 	  unix-errno get-unix-error-msg
 
 	  unix-pathname unix-file-mode unix-fd unix-pid unix-uid unix-gid
-
+	  unix-setitimer unix-getitimer
 	  unix-access r_ok w_ok x_ok f_ok unix-chdir unix-chmod setuidexec
 	  setgidexec savetext readown writeown execown readgrp writegrp
 	  execgrp readoth writeoth execoth unix-fchmod unix-chown unix-fchown
@@ -2248,3 +2248,69 @@
   (buffer c-string)
   (length int)
   (flags int))
+
+
+;;;
+;;; Support for the Interval Timer (experimental)
+;;;
+
+
+(defconstant ITIMER-REAL 0)
+(defconstant ITIMER-VIRTUAL 1)
+(defconstant ITIMER-PROF 2)
+
+(defun unix-getitimer(which)
+  "Unix-getitimer returns the INTERVAL and VALUE slots of one of
+   three system timers (:real :virtual or :profile). On success,
+   unix-getitimer returns 5 values,
+   T, it-interval-secs, it-interval-usec, it-value-secs, it-value-usec."
+  (declare (type (member :real :virtual :profile) which)
+	   (values t
+		   (unsigned-byte 29)(mod 1000000)
+		   (unsigned-byte 29)(mod 1000000)))
+  (let ((which (ecase which
+		 (:real ITIMER-REAL)
+		 (:virtual ITIMER-VIRTUAL)
+		 (:profile ITIMER-PROF))))
+    (with-alien ((itv (struct itimerval)))
+      (syscall* ("getitimer" int (* (struct itimerval)))
+		(values T
+			(slot (slot itv 'it-interval) 'tv-sec)
+			(slot (slot itv 'it-interval) 'tv-usec)
+			(slot (slot itv 'it-value) 'tv-sec)
+			(slot (slot itv 'it-value) 'tv-usec))
+		which (alien-sap (addr itv))))))
+
+(defun unix-setitimer(which int-secs int-usec val-secs val-usec)
+  " Unix-setitimer sets the INTERVAL and VALUE slots of one of
+   three system timers (:real :virtual or :profile). A SIGALRM signal
+   will be delivered VALUE <seconds+microseconds> from now. INTERVAL,
+   when non-zero, is <seconds+microseconds> to be loaded each time
+   the timer expires. Setting INTERVAL and VALUE to zero disables
+   the timer. See the Unix man page for more details. On success,
+   unix-setitimer returns the old contents of the INTERVAL and VALUE
+   slots as in unix-getitimer."
+  (declare (type (member :real :virtual :profile) which)
+	   (type (unsigned-byte 29) int-secs val-secs)
+	   (type (integer 0 (1000000)) int-usec val-usec)
+	   (values t
+		   (unsigned-byte 29)(mod 1000000)
+		   (unsigned-byte 29)(mod 1000000)))
+  (let ((which (ecase which
+		 (:real ITIMER-REAL)
+		 (:virtual ITIMER-VIRTUAL)
+		 (:profile ITIMER-PROF))))
+    (with-alien ((itvn (struct itimerval))
+		 (itvo (struct itimerval)))
+      (setf (slot (slot itvn 'it-interval) 'tv-sec ) int-secs
+	    (slot (slot itvn 'it-interval) 'tv-usec) int-usec
+	    (slot (slot itvn 'it-value   ) 'tv-sec ) val-secs
+	    (slot (slot itvn 'it-value   ) 'tv-usec) val-usec)
+      (syscall* ("setitimer" int (* (struct timeval))(* (struct timeval)))
+		(values T
+			(slot (slot itvo 'it-interval) 'tv-sec)
+			(slot (slot itvo 'it-interval) 'tv-usec)
+			(slot (slot itvo 'it-value) 'tv-sec)
+			(slot (slot itvo 'it-value) 'tv-usec))
+		which (alien-sap (addr itvn))(alien-sap (addr itvo))))))
+

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.113 1997/02/12 23:03:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.114 1997/02/20 01:29:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,7 +177,8 @@
              "F-GETFD" "F-GETFL" "F-GETOWN" "F-SETFD" "F-SETFL" "F-SETOWN"
              "FAPPEND" "FASYNC" "FCREAT" "FEXCL" "FIONREAD" "FNDELAY" "FTRUNC"
              "F_OK" "GET-UNIX-ERROR-MSG" "GID-T" "INO-T" "IT-INTERVAL"
-             "IT-VALUE" "ITIMERVAL" "KBDCGET" "KBDCRESET" "KBDCRST" "KBDCSET"
+             "IT-VALUE" "ITIMERVAL" "UNIX-SETITIMER" "UNIX-GETITIMER"
+	     "KBDCGET" "KBDCRESET" "KBDCRST" "KBDCSET"
              "KBDCSSTD" "KBDGCLICK" "KBDSCLICK" "KBDSGET" "L_INCR" "L_SET"
              "L_XTND" "OFF-T" "O_APPEND" "O_CREAT" "O_EXCL" "O_RDONLY" "O_RDWR"
              "O_TRUNC" "O_WRONLY" "READGRP" "READOTH" "READOWN" "RLIM-CUR"
