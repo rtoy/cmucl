@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.20 1997/01/18 14:31:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.21 2002/07/30 13:30:41 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,6 +104,23 @@
 	(cond ((eq var '&whole)
 	       (cond ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
 		      (setf rest-of-args (cdr rest-of-args))
+		      ;; For compiler macros, we have to do something
+		      ;; special in case the form has a car eq to
+		      ;; funcall, as specified in the CLHS.  In this
+		      ;; case, we skip over the funcall and pretend
+		      ;; that the rest of the form is the actual form.
+		      ;;
+		      ;; This is a gross hack because we look at
+		      ;; error-kind to figure out if we're defining a
+		      ;; compiler macro or not.
+		      (when (eq error-kind 'define-compiler-macro)
+			(push-let-binding arg-list-name arg-list-name
+			  t
+			  `(progn
+			    (not (and (listp ,arg-list-name)
+				  (eq 'funcall (car ,arg-list-name)))))
+			  `(progn
+			    (setf ,arg-list-name (cdr ,arg-list-name)))))
 		      (push-let-binding (car rest-of-args) arg-list-name nil))
 		     (t
 		      (defmacro-error "&WHOLE" error-kind name))))
