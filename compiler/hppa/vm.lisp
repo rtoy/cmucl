@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/vm.lisp,v 1.4 1998/03/04 15:11:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/vm.lisp,v 1.5 1998/03/10 18:17:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -154,7 +154,7 @@
   #+complex-float
   (complex-single-stack non-descriptor-stack :element-size 2)
   #+complex-float
-  (complex-double-stack non-descriptor-stack :element-size 2)
+  (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
 
   ;; **** Things that can go in the integer registers.
