@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.15 2001/03/13 15:49:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.16 2003/02/25 15:18:34 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,7 +292,7 @@
 		    (delete-region (buffer-region buffer))
 		    (with-output-to-mark
 			(*standard-output* (buffer-point buffer))
-		      (eval `(grindef ,x))	; hackish, I know...
+		      (eval `(pprint (function-lambda-expression function)))
 		      (terpri)
 		      (ed::change-to-buffer buffer)
 		      (buffer-start (buffer-point buffer)))))

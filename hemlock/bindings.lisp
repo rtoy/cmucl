@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bindings.lisp,v 1.5 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bindings.lisp,v 1.6 2003/02/25 15:18:33 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -538,6 +538,7 @@
 		   #k"`" #k"\\" #k"?" #k"return" #k"newline" #k"tab" #k"space"))
   (bind-key "Abbrev Expand Only" key :mode "Abbrev"))
 
+(bind-key "Dabbrev Expand" #k"meta-/")
 
 
 ;;;; Scribe Mode.

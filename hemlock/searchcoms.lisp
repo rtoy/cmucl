@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/searchcoms.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/searchcoms.lisp,v 1.5 2003/02/25 15:18:34 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -218,6 +218,9 @@
 	((logical-key-event-p key-event :quote)
 	 (%i-search-printed-char (get-key-event *editor-input* t)
 				 string point trailer direction failure))
+	((equalp key-event #k"C-w")
+	 (%i-search-copy-word key-event
+			      string point trailer direction failure))
 	((and (zerop (length string)) (logical-key-event-p key-event :exit))
 	 (if (eq direction :forward)
 	     (forward-search-command nil)
@@ -294,6 +297,36 @@
 	    (t
 	     (%i-search-find-pattern new-string point trailer direction))))))
 
+;;;       %I-SEARCH-COPY-WORD handles the "take the next word of the current
+;;; match" case, like C-w in GNU Emacs. By Luke Gorrie. 
+
+(defun %i-search-copy-word (key-event string point trailer direction failure)
+  ;; begin by finding the region starting at the end of the current
+  ;; search and ending after the next word.
+  (let ((start-mark (copy-mark point :temporary)))
+    ;; when going backwards, the point is at the beginning of the search string,
+    ;; so we have to move start-mark to the end
+    (when (eq direction :backward)
+      (character-offset start-mark (length string)))
+    (let* ((end-mark (copy-mark start-mark :temporary))
+	   (word-region (region start-mark end-mark)))
+      ;; advance end-mark to the end of the word
+      (and (find-attribute end-mark :word-delimiter #'zerop)
+	   (find-attribute (mark-after end-mark) :word-delimiter)
+	   ;; the region is correct, now we can extract the text and
+	   ;; update the search string
+	   (let* ((new-fragment (region-to-string word-region))
+		  (new-string (concatenate 'simple-string string new-fragment)))
+	     ;; update the status message
+	     (when (interactive)
+	       (insert-string (buffer-point *echo-area-buffer*) new-fragment)
+	       (force-output *echo-area-stream*))
+	     (i-search-pattern new-string direction)
+	     (cond (failure (%i-search new-string point trailer direction failure))
+		   (t
+		    (when (eq direction :backward)
+		      (move-mark trailer end-mark))
+		    (%i-search-find-pattern new-string point trailer direction))))))))
 
 ;;;      %I-SEARCH-FIND-PATTERN takes a pattern for a string and direction
 ;;; and finds it, updating necessary pointers for the next call to %I-SEARCH.

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.15 2001/12/11 00:58:51 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.16 2003/02/25 15:18:34 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; "Site dependent" stuff for the editor while on the IBM RT PC machine.
+;;; "Site dependent" stuff for the Hemlock editor
 ;;;
 
 ;;; If we were compiled with CLX support, we require it at runtime
