@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.31 1993/02/12 19:05:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.32 1993/08/18 21:47:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1164,7 +1164,7 @@
 		     (alien-function-type-result-type type2))
        (= (length (alien-function-type-arg-types type1))
 	  (length (alien-function-type-arg-types type2)))
-       (every #'alien-type-p
+       (every #'alien-type-=
 	      (alien-function-type-arg-types type1)
 	      (alien-function-type-arg-types type2))))
 
