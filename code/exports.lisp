@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.109 1997/02/05 16:15:46 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.110 1997/02/11 00:14:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -568,6 +568,7 @@
              "*INTERPRETED-FUNCTION-CACHE-MINIMUM-SIZE*"
              "*INTERPRETED-FUNCTION-CACHE-THRESHOLD*"
              "FLUSH-INTERPRETED-FUNCTION-CACHE" "INTERNAL-EVAL"
+	     "INTERPRETED-FUNCTION"
              "INTERPRETED-FUNCTION-ARGLIST" "INTERPRETED-FUNCTION-CLOSURE"
              "INTERPRETED-FUNCTION-LAMBDA-EXPRESSION"
              "INTERPRETED-FUNCTION-NAME" "INTERPRETED-FUNCTION-P"
@@ -949,7 +950,7 @@
 			  "*BYTE-COMPILE-TOP-LEVEL*"
 			  "*BYTE-COMPILE-DEFAULT*"
 			  "PURIFY" "MAP-APROPOS"
-			  *batch-mode*))
+ 			  "*BATCH-MODE*"))
 (defpackage "LOOP")
 (dolist
     (name
@@ -1028,6 +1029,7 @@
 	   "*COUNT-VOP-USAGES*" "*ELSEWHERE*" "*NATIVE-BACKEND*"
 	   "*SUPPRESS-VALUES-DECLARATION*" "*TARGET-BACKEND*"
 	   "ALLOC-NUMBER-STACK-SPACE" "ALLOCATE-CODE-OBJECT" "ALLOCATE-FRAME"
+ 	   "ALLOCATE-DYNAMIC-CODE-OBJECT"
 	   "ALLOCATE-FULL-CALL-FRAME" "ANY" "ARGUMENT-COUNT-ERROR"
 	   "ATTRIBUTES" "ATTRIBUTES-INTERSECTION" "ATTRIBUTES-UNION"
 	   "ATTRIBUTES=" "BACKEND-ANY-PRIMITIVE-TYPE"
