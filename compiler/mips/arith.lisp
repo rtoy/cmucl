@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.35 1990/10/02 18:08:29 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.36 1990/11/01 17:14:52 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -766,31 +766,33 @@
   (:translate bignum::%floor)
   (:policy :fast-safe)
   (:args (a :scs (unsigned-reg) :target rem)
-	 (b :scs (unsigned-reg))
-	 (c :scs (unsigned-reg)))
+	 (b :scs (unsigned-reg) :target rem-low)
+	 (c :scs (unsigned-reg) :to (:eval 1)))
   (:arg-types unsigned-num unsigned-num unsigned-num)
-  (:temporary (:scs (unsigned-reg)) temp result)
-  (:results (quo :scs (unsigned-reg))
-	    (rem :scs (unsigned-reg)))
+  (:temporary (:scs (unsigned-reg) :from (:argument 1)) rem-low)
+  (:temporary (:scs (unsigned-reg) :from (:eval 0)) temp)
+  (:results (quo :scs (unsigned-reg) :from (:eval 0))
+	    (rem :scs (unsigned-reg) :from (:eval 0)))
   (:result-types unsigned-num unsigned-num)
-  (:generator 230
+  (:generator 325 ; number of inst assuming targeting works.
+    (move rem a)
+    (move rem-low b)
     (flet ((maybe-subtract (&optional (guess temp))
 	     (inst subu temp guess 1)
 	     (inst and temp c)
-	     (inst subu a temp)))
-      (inst sltu result a c)
-      (maybe-subtract result)
+	     (inst subu rem temp)))
+      (inst sltu quo rem c)
+      (maybe-subtract quo)
       (dotimes (i 32)
-	(inst sll a 1)
-	(inst srl temp b 31)
-	(inst or a temp)
-	(inst sll b 1)
-	(inst sltu temp a c)
-	(inst sll result 1)
-	(inst or result temp)
+	(inst sll rem 1)
+	(inst srl temp rem-low 31)
+	(inst or rem temp)
+	(inst sll rem-low 1)
+	(inst sltu temp rem c)
+	(inst sll quo 1)
+	(inst or quo temp)
 	(maybe-subtract)))
-    (move rem a)
-    (inst nor quo result zero-tn)))
+    (inst nor quo zero-tn)))
 
 (define-vop (signify-digit)
   (:translate bignum::%fixnum-digit-with-correct-sign)
