@@ -1114,10 +1114,10 @@
 ;;;
 ;;;    Print the VOPs in the specified IR2 block.
 ;;;
-(defun print-ir2-block (block first-p)
+(defun print-ir2-block (block)
   (declare (type ir2-block block))
   (cond
-   (first-p
+   ((eq (block-info (ir2-block-block block)) block)
     (format t "~%IR2 block start c~D~%"
 	    (cont-num (block-start (ir2-block-block block))))
     (let ((label (ir2-block-%label block)))
@@ -1149,10 +1149,10 @@
 (defun print-vops (block)
   (setq block (block-or-lose block))
   (let ((2block (block-info block)))
-    (print-ir2-block 2block t)
+    (print-ir2-block 2block)
     (do ((b (ir2-block-next 2block) (ir2-block-next b)))
 	((not (eq (ir2-block-block b) block)))
-      (print-ir2-block b nil)))
+      (print-ir2-block b)))
   (values))
 
 
@@ -1161,10 +1161,8 @@
 ;;;    Scan the IR2 blocks in emission order.
 ;;;
 (defun print-ir2-blocks (thing)
-  (let ((last-block nil))
-    (do-ir2-blocks (block (block-component (block-or-lose thing)))
-      (print-ir2-block block (not (eq block last-block)))
-      (setq last-block block)))
+  (do-ir2-blocks (block (block-component (block-or-lose thing)))
+    (print-ir2-block block))
   (values))
 
 
