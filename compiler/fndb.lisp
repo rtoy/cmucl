@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68.2.4 1997/09/01 16:16:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68.2.5 1997/09/03 20:29:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,6 @@
 	  %rplacd
 	  %sbitset
 	  %scharset
-	  %set-documentation
 	  %set-fdefinition
 	  %set-fill-pointer
 	  %set-row-major-aref
@@ -1165,7 +1164,7 @@
 (defknown %set-symbol-value (symbol t) t (unsafe))
 (defknown fset (symbol function) function (unsafe))
 (defknown %set-symbol-plist (symbol t) t (unsafe))
-(defknown %set-documentation ((or symbol cons) symbol (or string null))
+(defknown (setf documentation) ((or string null) t symbol)
   (or string null)
   ())
 (defknown %setnth (index list t) t (unsafe))
