@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.15 1990/03/07 18:48:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.16 1990/03/12 23:40:10 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -215,7 +215,7 @@
 (def-primitive-type simple-array-single-float (descriptor-reg control-stack))
 (def-primitive-type simple-array-double-float (descriptor-reg control-stack))
 
-(def-primitive-type sap (sap-reg sap-stack))
+(def-primitive-type system-area-pointer (sap-reg sap-stack))
 
 (def-primitive-type random (non-descriptor-reg) :type nil)
 (def-primitive-type interior (interior-reg) :type nil)
@@ -316,7 +316,7 @@
 	     nil))
     (named-type
      (case (named-type-name type)
-       ((t bignum ratio complex function)
+       ((t bignum ratio complex function system-area-pointer)
 	(values (primitive-type-or-lose (named-type-name type)) t))
        (string-char
 	(values (primitive-type-or-lose 'base-character) t))
