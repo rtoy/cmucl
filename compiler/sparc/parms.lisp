@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.28 2000/10/16 17:30:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.29 2000/10/27 19:33:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,11 +165,11 @@
 	  target-static-space-start
 	  target-dynamic-space-start))
 
-;;; Where to put the different spaces.
+;;; Where to put the different spaces.  Must match the C code!
 ;;; 
-(defparameter target-read-only-space-start #x01000000)
-(defparameter target-static-space-start    #x05000000)
-(defparameter target-dynamic-space-start   #x07000000)
+(defparameter target-read-only-space-start #x10000000)
+(defparameter target-static-space-start    #x28000000)
+(defparameter target-dynamic-space-start   #x40000000)
 
 
 
