@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.8 2004/07/10 15:46:08 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.9 2004/07/11 04:34:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,8 +80,19 @@
     (let ((ptr 0)
           (bytes (sm buffpos stream)))
       (declare (type fixnum ptr bytes))
+      (when (and (> (sm mode stream) 0)
+		 (> (sm buffer-ptr stream) 0))
+        ;; The data read in from the file could have been changed if
+        ;; the stream is opened in read-write mode -- write back
+        ;; everything in the buffer at the correct position just in
+        ;; case.
+        (setf (device-file-position stream)
+              (- (device-file-position stream) (sm buffer-ptr stream))))
       (loop
-        (when (>= ptr bytes) (setf (sm buffpos stream) 0) (setf (sm mode stream) 0) (return 0))
+	(when (>= ptr bytes)
+	  (setf (sm buffpos stream) 0)
+	  (setf (sm mode stream) 0)
+	  (return 0))
         (let ((bytes-written (device-write stream nil ptr nil blocking)))
           (declare (fixnum bytes-written))
           (when (minusp bytes-written)
