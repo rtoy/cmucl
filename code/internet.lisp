@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.20 1998/01/11 17:36:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.21 1998/01/11 20:33:44 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,6 +105,7 @@
 
 ;;;; Host entry operations.
 
+;;; Note the IP addresses are stored in host order.
 (defstruct host-entry
   name
   aliases
@@ -185,6 +186,8 @@ struct in_addr {
   (type int))
 
 (defun lookup-host-entry (host)
+  "Return a host-entry for the given host. The host may be an address
+  string or an IP address in host order."
   (if (typep host 'host-entry)
       host
       (with-alien
@@ -193,7 +196,7 @@ struct in_addr {
 		      (string
 		       (gethostbyname host))
 		      ((unsigned-byte 32)
-		       (gethostbyaddr host 4 af-inet)))))
+		       (gethostbyaddr (htonl host) 4 af-inet)))))
 	(unless (zerop (sap-int (alien-sap hostent)))
 	  (make-host-entry
 	   :name (slot hostent 'name)
@@ -219,7 +222,7 @@ struct in_addr {
 		      (results))
 		     (t
 		      (results 
-		       (deref (deref (slot hostent 'addr-list) index)))
+		       (ntohl (deref (deref (slot hostent 'addr-list) index))))
 		      (repeat (1+ index)))))))))))
 
 (defun create-unix-socket (&optional (kind :stream))
@@ -258,15 +261,14 @@ struct in_addr {
       socket)))
 
 (defun connect-to-inet-socket (host port &optional (kind :stream))
+  "The host may be an address string or an IP address in host order."
   (let ((socket (create-inet-socket kind))
 	(hostent (or (lookup-host-entry host)
 		     (error "Unknown host: ~S." host))))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
-      (setf (slot sockaddr 'addr) 
-         #-linux (host-entry-addr hostent)
-         #+linux (htonl (host-entry-addr hostent)))
+      (setf (slot sockaddr 'addr) (htonl (host-entry-addr hostent)))
       (when (minusp (unix:unix-connect socket
 				       (alien-sap sockaddr)
 				       (alien-size inet-sockaddr :bytes)))
@@ -304,8 +306,7 @@ struct in_addr {
 				       (alien-size inet-sockaddr :bytes))))
       (when (minusp connected)
 	(error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
-      (values connected #-linux (slot sockaddr 'addr)
-		        #+linux (ntohl (slot sockaddr 'addr))))))
+      (values connected (ntohl (slot sockaddr 'addr))))))
 
 (defun close-socket (socket)
   (multiple-value-bind (ok err)
