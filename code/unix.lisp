@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.38 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.39 1994/11/06 18:00:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -806,7 +806,7 @@
    FEXCL           Error if already created.
    "
   (declare (type unix-fd fd)
-	   (type (uneigned-byte 16) cmd)
+	   (type (unsigned-byte 16) cmd)
 	   (type (unsigned-byte 16) arg))
   (int-syscall ("fcntl" int int int) fd cmd arg))
 
