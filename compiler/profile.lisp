@@ -1,8 +1,7 @@
 ;;; -*- Package: C -*-
 (in-package 'c)
 
-(load "rm:timing.fasl")
-(use-package 'timing)
+(use-package "PROFILE")
 
 (profile ir1-top-level
 	 find-initial-dfo
@@ -12,10 +11,13 @@
 	 join-successor-if-possible
 	 ir1-optimize-block
 	 flush-dead-code
-	 check-types
+	 generate-type-checks
+	 constraint-propagate
 	 environment-analyze
 	 gtn-analyze
+	 control-analyze
 	 ltn-analyze
+	 stack-analyze
 	 ir2-convert
 	 lifetime-pre-pass
 	 lifetime-flow-analysis
