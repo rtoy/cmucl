@@ -72,13 +72,10 @@
     (functional
      (let* ((where (info function where-from name))
 ;	    (type (info function type name))
-	    (dtype (definition-type leaf))
+	    (dtype (leaf-type leaf))
 	    (node (lambda-bind (main-entry leaf)))
 	    (*compiler-error-context* node))
-       (setq *unknown-functions*
-	     (delete name *unknown-functions*
-		     :test #'equal
-		     :key #'unknown-function-name))
+       (note-name-defined name :function)
 
        (ecase where
 	 (:assumed
