@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.16 2002/08/24 01:59:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.17 2002/11/15 15:08:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,7 +144,12 @@
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
 	  unix-socket unix-connect unix-bind unix-listen unix-accept
 	  unix-recv unix-send unix-getpeername unix-getsockname
-	  unix-getsockopt unix-setsockopt))
+	  unix-getsockopt unix-setsockopt
+
+          unix-getpwnam unix-getpwuid unix-getgrnam unix-getgrgid
+          user-info user-info-name user-info-password user-info-uid
+          user-info-gid user-info-gecos user-info-dir user-info-shell
+          group-info group-info-name group-info-gid group-info-members))
 
 (pushnew :unix *features*)
 (pushnew :glibc2 *features*)
@@ -189,6 +194,42 @@
 (deftype unix-uid () '(unsigned-byte 32))
 (deftype unix-gid () '(unsigned-byte 32))
 
+
+;;;; User and group database structures: <pwd.h> and <grp.h>
+
+(defstruct user-info
+  (name "" :type string)
+  (password "" :type string)
+  (uid 0 :type unix-uid)
+  (gid 0 :type unix-gid)
+  (gecos "" :type string)
+  (dir "" :type string)
+  (shell "" :type string))
+
+(defstruct group-info
+  (name "" :type string)
+  (password "" :type string)
+  (gid 0 :type unix-gid)
+  (members nil :type list))             ; list of logins as strings
+
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))))       ; user's login shell
+
+(def-alien-type nil
+  (struct group
+      (gr-name (* char))                ; name of the group
+      (gr-passwd (* char))              ; encrypted group password
+      (gr-gid gid-t)                    ; numerical group ID
+      (gr-mem (* (* char)))))           ; vector of pointers to member names
+
+
 ;;;; System calls.
 (def-alien-variable ("errno" unix-errno) int)
 
@@ -216,7 +257,7 @@
 	   (values nil unix-errno))
 	 ,success-form)))
 
-;;; Like syscall, but if it fails, signal an error instead of returing error
+;;; Like syscall, but if it fails, signal an error instead of returning error
 ;;; codes.  Should only be used for syscalls that will never really get an
 ;;; error.
 ;;;
@@ -564,13 +605,6 @@
 
 ;;;  POSIX Standard: 9.2.1 Group Database Access	<grp.h>
 
-(def-alien-type nil
-    (struct group
-	    (gr-name c-string)   ;; group name
-	    (gr-passwd c-string) ;; password
-	    (gr-gid    gid-t)    ;; group ID
-	    (gr-mem    (* c-string))))
-
 #+nil
 (defun unix-setgrend ()
   "Rewind the group-file stream."
@@ -591,35 +625,6 @@
     (if (zerop (sap-int result))
 	nil
       result)))
-
-#+nil
-(defun unix-getgrgid (id)
-  "Search for an entry with a matching group ID."
-  (declare (type gid-t id))
-  
-  (let ((result (alien-funcall (extern-alien "getgrgid"
-					     (function (* (struct group))
-						       gid-t))
-			       id)))
-    (declare (type system-area-pointer result))
-    (if (zerop (sap-int result))
-	nil
-      result)))
-
-#+nil
-(defun unix-getgrnam (name)
-  "Search for an entry with a matching group ID."
-  (declare (type simple-string name))
-  
-  (let ((result (alien-funcall (extern-alien "getgrnam"
-					     (function (* (struct group))
-						       c-string))
-			       name)))
-    (declare (type system-area-pointer result))
-    (if (zerop (sap-int result))
-	nil
-      result)))
-
 
 ;;; ioctl-types.h
 
@@ -1182,18 +1187,8 @@ length LEN and type TYPE."
 			  (* (struct winsize)))
 	       amaster name termp winp))
 
-;;; pwd.h
-;; POSIX Standard: 9.2.2 User Database Access <pwd.h>
 
-(def-alien-type nil
-    (struct passwd
-	    (pw-name c-string)   ; Username
-	    (pw-passwd c-string) ; Password
-	    (pw-uid uid-t)       ; User ID
-	    (pw-gid gid-t)       ; Group ID
-	    (pw-gecos c-string)  ; Real name
-	    (pw-dir c-string)    ; Home directory
-	    (pw-shell c-string))); Shell program
+;; POSIX Standard: 9.2.2 User Database Access <pwd.h>
 
 #+nil
 (defun unix-setpwent ()
@@ -3532,7 +3527,130 @@ in at a time in poll.")
 
 
 
+
+;;;; User and group database access, POSIX Standard 9.2.2
+
+(defun unix-getpwnam (login)
+  "Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
+  (declare (type simple-string login))
+  (with-alien ((buf (array c-call:char 1024))
+	       (user-info (struct passwd))
+               (result (* (struct passwd))))
+    (let ((returned
+	   (alien-funcall
+	    (extern-alien "getpwnam_r"
+			  (function c-call:int
+                                    c-call:c-string
+                                    (* (struct passwd))
+				    (* c-call:char)
+                                    c-call:unsigned-int
+                                    (* (* (struct passwd)))))
+	    login
+	    (addr user-info)
+	    (cast buf (* c-call:char))
+	    1024
+            (addr result))))
+      (when (zerop returned)
+        (make-user-info
+         :name (string (cast (slot result 'pw-name) c-call:c-string))
+         :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+         :uid (slot result 'pw-uid)
+         :gid (slot result 'pw-gid)
+         :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+         :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+         :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
+
+(defun unix-getpwuid (uid)
+  "Return a USER-INFO structure for the user identified by UID, or NIL if not found."
+  (declare (type unix-uid uid))
+  (with-alien ((buf (array c-call:char 1024))
+	       (user-info (struct passwd))
+               (result (* (struct passwd))))
+    (let ((returned
+	   (alien-funcall
+	    (extern-alien "getpwuid_r"
+			  (function c-call:int
+                                    c-call:unsigned-int
+                                    (* (struct passwd))
+                                    (* c-call:char)
+                                    c-call:unsigned-int
+                                    (* (* (struct passwd)))))
+	    uid
+	    (addr user-info)
+	    (cast buf (* c-call:char))
+	    1024
+            (addr result))))
+      (when (zerop returned)
+        (make-user-info
+         :name (string (cast (slot result 'pw-name) c-call:c-string))
+         :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+         :uid (slot result 'pw-uid)
+         :gid (slot result 'pw-gid)
+         :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+         :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+         :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
+
+(defun unix-getgrnam (name)
+  "Return a GROUP-INFO structure for the group identified by NAME, or NIL if not found."
+  (declare (type simple-string name))
+  (with-alien ((buf (array c-call:char 2048))
+	       (group-info (struct group))
+               (result (* (struct group))))
+    (let ((returned
+	   (alien-funcall
+	    (extern-alien "getgrnam_r"
+			  (function c-call:int
+                                    c-call:c-string
+                                    (* (struct group))
+                                    (* c-call:char)
+                                    c-call:unsigned-int
+                                    (* (* (struct group)))))
+	    name
+	    (addr group-info)
+	    (cast buf (* c-call:char))
+	    2048
+            (addr result))))
+      (when (zerop returned)
+        (make-group-info
+         :name (string (cast (slot result 'gr-name) c-call:c-string))
+         :password (string (cast (slot result 'gr-passwd) c-call:c-string))
+         :gid (slot result 'gr-gid)
+         :members (loop :with members = (slot result 'gr-mem)
+                        :for i :from 0
+                        :for member = (deref members i)
+                        :until (zerop (sap-int (alien-sap member)))
+                        :collect (string (cast member c-call:c-string))))))))
+
+(defun unix-getgrgid (gid)
+  "Return a GROUP-INFO structure for the group identified by GID, or NIL if not found."
+  (declare (type unix-gid gid))
+  (with-alien ((buf (array c-call:char 2048))
+	       (group-info (struct group))
+               (result (* (struct group))))
+    (let ((returned
+	   (alien-funcall
+	    (extern-alien "getgrgid_r"
+			  (function c-call:int
+                                    c-call:unsigned-int
+                                    (* (struct group))
+                                    (* c-call:char)
+                                    c-call:unsigned-int
+                                    (* (* (struct group)))))
+	    gid
+	    (addr group-info)
+	    (cast buf (* c-call:char))
+	    2048
+            (addr result))))
+      (when (zerop returned)
+        (make-group-info
+         :name (string (cast (slot result 'gr-name) c-call:c-string))
+         :password (string (cast (slot result 'gr-passwd) c-call:c-string))
+         :gid (slot result 'gr-gid)
+         :members (loop :with members = (slot result 'gr-mem)
+                        :for i :from 0
+                        :for member = (deref members i)
+                        :until (zerop (sap-int (alien-sap member)))
+                        :collect (string (cast member c-call:c-string))))))))
 
 
-
-
+;; EOF

@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.70 2002/11/08 15:26:51 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.71 2002/11/15 15:08:11 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -765,7 +765,7 @@
 
 ;;; Probe-File  --  Public
 ;;;
-;;; If PATHNAME exists, return it's truename, otherwise NIL.
+;;; If PATHNAME exists, return its truename, otherwise NIL.
 ;;;
 (defun probe-file (pathname)
   "Return a pathname which is the truename of the file if it exists, NIL
@@ -885,13 +885,16 @@
 	(multiple-value-bind (winp dev ino mode nlink uid)
 			     (unix:unix-stat name)
 	  (declare (ignore dev ino mode nlink))
-	  (if winp (lookup-login-name uid))))))
+	  (when winp
+            (let ((user-info (unix:unix-getpwuid uid)))
+              (when user-info
+                (unix:user-info-name user-info))))))))
 
 
 ;;;; DIRECTORY.
 
 ;;; DIRECTORY  --  public.
-;;; 
+;;;
 (defun directory (pathname &key (all t) (check-for-subdirs t)
 			   (truenamep t) (follow-links t))
   "Returns a list of pathnames, one for each file that matches the given
@@ -989,7 +992,8 @@
 		   (declare (ignore sec min hour date month))
 		   (format t "~2D ~8A ~8D ~12A ~A~@[/~]~%"
 			   nlink
-			   (or (lookup-login-name uid) uid)
+                           (let ((user-info (unix:unix-getpwuid uid)))
+                             (if user-info (unix:user-info-name user-info) uid))
 			   size
 			   (decode-universal-time-for-files mtime year)
 			   tail
@@ -1063,81 +1067,6 @@
 	(terpri)))
     (when return-list
       result)))
-
-
-
-;;;; Translating uid's and gid's.
-
-(defvar *uid-hash-table* (make-hash-table)
-  "Hash table for keeping track of uid's and login names.")
-
-;;; LOOKUP-LOGIN-NAME translates a user id into a login name.  Previous
-;;; lookups are cached in a hash table since groveling the passwd(s) files
-;;; is somewhat expensive.  The table may hold nil for id's that cannot
-;;; be looked up since this means the files are searched in their entirety
-;;; each time this id is translated.
-;;; 
-(defun lookup-login-name (uid)
-  (multiple-value-bind (login-name foundp) (gethash uid *uid-hash-table*)
-    (if foundp
-	login-name
-	(setf (gethash uid *uid-hash-table*)
-	      (get-group-or-user-name :user uid)))))
-
-(defvar *gid-hash-table* (make-hash-table)
-  "Hash table for keeping track of gid's and group names.")
-
-;;; LOOKUP-GROUP-NAME translates a group id into a group name.  Previous
-;;; lookups are cached in a hash table since groveling the group(s) files
-;;; is somewhat expensive.  The table may hold nil for id's that cannot
-;;; be looked up since this means the files are searched in their entirety
-;;; each time this id is translated.
-;;; 
-(defun lookup-group-name (gid)
-  (multiple-value-bind (group-name foundp) (gethash gid *gid-hash-table*)
-    (if foundp
-	group-name
-	(setf (gethash gid *gid-hash-table*)
-	      (get-group-or-user-name :group gid)))))
-
-
-;;; GET-GROUP-OR-USER-NAME first tries "/etc/passwd" ("/etc/group") since it is
-;;; a much smaller file, contains all the local id's, and most uses probably
-;;; involve id's on machines one would login into.  Then if necessary, we look
-;;; in "/etc/passwds" ("/etc/groups") which is really long and has to be
-;;; fetched over the net.
-;;;
-(defun get-group-or-user-name (group-or-user id)
-  "Returns the simple-string user or group name of the user whose uid or gid
-   is id, or NIL if no such user or group exists.  Group-or-user is either
-   :group or :user."
-  (let ((id-string (let ((*print-base* 10)) (prin1-to-string id))))
-    (declare (simple-string id-string))
-    (multiple-value-bind (file1 file2)
-			 (ecase group-or-user
-			   (:group (values "/etc/group" "/etc/groups"))
-			   (:user (values "/etc/passwd" "/etc/passwd")))
-      (or (get-group-or-user-name-aux id-string file1)
-	  (get-group-or-user-name-aux id-string file2)))))
-
-(defun get-group-or-user-name-aux (id-string passwd-file)
-  (with-open-file (stream passwd-file)
-    (loop
-      (let ((entry (read-line stream nil)))
-	(unless entry (return nil))
-	(let ((name-end (position #\: (the simple-string entry)
-				  :test #'char=)))
-	  (when name-end
-	    (let ((id-start (position #\: (the simple-string entry)
-				      :start (1+ name-end) :test #'char=)))
-	      (when id-start
-		(incf id-start)
-		(let ((id-end (position #\: (the simple-string entry)
-					:start id-start :test #'char=)))
-		  (when (and id-end
-			     (string= id-string entry
-				      :start2 id-start :end2 id-end))
-		    (return (subseq entry 0 name-end))))))))))))
 
 
 ;;;; File completion.

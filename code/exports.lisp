@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.194 2002/08/27 22:18:24 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.195 2002/11/15 15:08:11 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,7 +301,11 @@
 	     "ESRMNT" "ESTALE" "ESTRPIPE" "ETIME" "ETIMEDOUT" "ETOOMANYREFS"
 	     #+linux "EUCLEAN" "EUNATCH" "EUSERS" "EWOULDBLOCK" "EXFULL"
 	     "UTSNAME"
-	     #+linux "SIGSTKFLT"))
+	     #+linux "SIGSTKFLT"
+             "UNIX-GETPWNAM" "UNIX-GETPWUID" "UNIX-GETGRNAM" "UNIX-GETGRGID"
+             "USER-INFO" "USER-INFO-NAME" "USER-INFO-PASSWORD" "USER-INFO-UID"
+             "USER-INFO-GID" "USER-INFO-GECOS" "USER-INFO-DIR" "USER-INFO-SHELL"
+             "GROUP-INFO" "GROUP-INFO-NAME" "GROUP-INFO-GID" "GROUP-INFO-MEMBERS"))
   
 (defpackage "FORMAT")
 (defpackage "COMMON-LISP"

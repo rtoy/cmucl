@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.77 2002/10/27 22:59:06 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.78 2002/11/15 15:08:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,7 +163,12 @@
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
 	  unix-socket unix-connect unix-bind unix-listen unix-accept
 	  unix-recv unix-send unix-getpeername unix-getsockname
-	  unix-getsockopt unix-setsockopt))
+	  unix-getsockopt unix-setsockopt
+
+          unix-getpwnam unix-getpwuid unix-getgrnam unix-getgrgid
+          user-info user-info-name user-info-password user-info-uid
+          user-info-gid user-info-gecos user-info-dir user-info-shell
+          group-info group-info-name group-info-gid group-info-members))
 
 (pushnew :unix *features*)
 
@@ -632,9 +637,6 @@
 ;;; VICE
 (def-unix-error EVICEERR 70 "Remote file system error ")
 (def-unix-error EVICEOP 71 "syscall was handled by Vice")
-;;;
-;;; Mach Emulation
-(def-unix-error ERESTART 72 "Mach Emulation Error (?)")
 )
 #+svr4
 (progn
@@ -837,19 +839,69 @@
 (deftype unix-pathname () 'simple-string)
 (deftype unix-fd () `(integer 0 ,most-positive-fixnum))
 
-#+mach
-(progn
-  (deftype unix-file-mode () '(unsigned-byte 16))
-  (deftype unix-pid () '(unsigned-byte 16))
-  (deftype unix-uid () '(unsigned-byte 16))
-  (deftype unix-gid () '(unsigned-byte 16)))
+(deftype unix-file-mode () '(unsigned-byte 32))
+(deftype unix-pid () '(unsigned-byte 32))
+(deftype unix-uid () '(unsigned-byte 32))
+(deftype unix-gid () '(unsigned-byte 32))
 
-#-mach
-(progn
-  (deftype unix-file-mode () '(unsigned-byte 32))
-  (deftype unix-pid () '(unsigned-byte 32))
-  (deftype unix-uid () '(unsigned-byte 32))
-  (deftype unix-gid () '(unsigned-byte 32)))
+
+
+;;;; User and group database structures
+
+(defstruct user-info
+  (name "" :type string)
+  (password "" :type string)
+  (uid 0 :type unix-uid)
+  (gid 0 :type unix-gid)
+  #+solaris (age "" :type string)
+  #+solaris (comment "" :type string)
+  #+freebsd (change -1 :type fixnum)
+  (gecos "" :type string)
+  (dir "" :type string)
+  (shell "" :type string))
+
+(defstruct group-info
+  (name "" :type string)
+  (password "" :type string)
+  (gid 0 :type unix-gid)
+  (members nil :type list))             ; list of logins as strings
+
+;; see <pwd.h>
+#+solaris
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+	    (pw-age (* char))           ; password age (not used)
+	    (pw-comment (* char))       ; not used
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))))       ; user's login shell
+
+#+freebsd
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+            (pw-change int)             ; password change time
+            (pw-class (* char))         ; user access class
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))         ; user's login shell
+            (pw-expire int)             ; account expiration
+            (pw-fields int)))           ; internal
+
+;; see <grp.h>
+(def-alien-type nil
+  (struct group
+      (gr-name (* char))                ; name of the group
+      (gr-passwd (* char))              ; encrypted group password
+      (gr-gid gid-t)                    ; numerical group ID
+      (gr-mem (* (* char)))))           ; vector of pointers to member names
 
 
 ;;;; System calls.
@@ -2601,7 +2653,7 @@
 (defconstant ITIMER-VIRTUAL 1)
 (defconstant ITIMER-PROF 2)
 
-(defun unix-getitimer(which)
+(defun unix-getitimer (which)
   "Unix-getitimer returns the INTERVAL and VALUE slots of one of
    three system timers (:real :virtual or :profile). On success,
    unix-getitimer returns 5 values,
@@ -2623,7 +2675,7 @@
 			(slot (slot itv 'it-value) 'tv-usec))
 		which (alien-sap (addr itv))))))
 
-(defun unix-setitimer(which int-secs int-usec val-secs val-usec)
+(defun unix-setitimer (which int-secs int-usec val-secs val-usec)
   " Unix-setitimer sets the INTERVAL and VALUE slots of one of
    three system timers (:real :virtual or :profile). A SIGALRM signal
    will be delivered VALUE <seconds+microseconds> from now. INTERVAL,
@@ -2656,3 +2708,208 @@
 			(slot (slot itvo 'it-value) 'tv-usec))
 		which (alien-sap (addr itvn))(alien-sap (addr itvo))))))
 
+
+;;;; User and group database access, POSIX Standard 9.2.2
+
+#+solaris
+(defun unix-getpwnam (login)
+  "Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
+  (declare (type simple-string login))
+  (with-alien ((buf (array c-call:char 1024))
+	       (user-info (struct passwd)))
+    (let ((result
+	   (alien-funcall
+	    (extern-alien "getpwnam_r"
+			  (function (* (struct passwd))
+				    c-call:c-string
+				    (* (struct passwd))
+				    (* c-call:char)
+				    c-call:unsigned-int))
+	    login
+	    (addr user-info)
+	    (cast buf (* c-call:char))
+	    1024)))
+      (when (not (zerop (sap-int (alien-sap result))))
+	(make-user-info
+	 :name (string (cast (slot result 'pw-name) c-call:c-string))
+	 :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+	 :uid (slot result 'pw-uid)
+	 :gid (slot result 'pw-gid)
+	 :age (string (cast (slot result 'pw-age) c-call:c-string))
+	 :comment (string (cast (slot result 'pw-comment) c-call:c-string))
+	 :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
+
+#+FreeBSD
+(defun unix-getpwnam (login)
+  "Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
+  (declare (type simple-string login))
+  (let ((result
+         (alien-funcall
+          (extern-alien "getpwnam"
+                        (function (* (struct passwd))
+                                  c-call:c-string))
+          login)))
+    (when (not (zerop (sap-int (alien-sap result))))
+      (make-user-info
+       :name (string (cast (slot result 'pw-name) c-call:c-string))
+       :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+       :uid (slot result 'pw-uid)
+       :gid (slot result 'pw-gid)
+       :change (slot result 'pw-change)
+       :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+       :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+       :shell (string (cast (slot result 'pw-shell) c-call:c-string))))))
+
+#+solaris
+(defun unix-getpwuid (uid)
+  "Return a USER-INFO structure for the user identified by UID, or NIL if not found."
+  (declare (type unix-uid uid))
+  (with-alien ((buf (array c-call:char 1024))
+	       (user-info (struct passwd)))
+    (let ((result
+	   (alien-funcall
+	    (extern-alien "getpwuid_r"
+			  (function (* (struct passwd))
+				    c-call:unsigned-int
+				    (* (struct passwd))
+				    (* c-call:char)
+				    c-call:unsigned-int))
+	    uid
+	    (addr user-info)
+	    (cast buf (* c-call:char))
+	    1024)))
+      (when (not (zerop (sap-int (alien-sap result))))
+	(make-user-info
+	 :name (string (cast (slot result 'pw-name) c-call:c-string))
+	 :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+	 :uid (slot result 'pw-uid)
+	 :gid (slot result 'pw-gid)
+	 :age (string (cast (slot result 'pw-age) c-call:c-string))
+	 :comment (string (cast (slot result 'pw-comment) c-call:c-string))
+	 :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
+
+#+FreeBSD
+(defun unix-getpwuid (uid)
+  "Return a USER-INFO structure for the user identified by UID, or NIL if not found."
+  (declare (type unix-uid uid))
+  (let ((result
+         (alien-funcall
+          (extern-alien "getpwuid"
+			  (function (* (struct passwd))
+				    c-call:unsigned-int))
+          uid)))
+    (when (not (zerop (sap-int (alien-sap result))))
+      (make-user-info
+       :name (string (cast (slot result 'pw-name) c-call:c-string))
+       :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+       :uid (slot result 'pw-uid)
+       :gid (slot result 'pw-gid)
+       :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+       :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+       :shell (string (cast (slot result 'pw-shell) c-call:c-string))))))
+
+#+solaris
+(defun unix-getgrnam (name)
+  "Return a GROUP-INFO structure for the group identified by NAME, or NIL if not found."
+  (declare (type simple-string name))
+  (with-alien ((buf (array c-call:char 2048))
+	       (group-info (struct group)))
+    (let ((result
+	   (alien-funcall
+	    (extern-alien "getgrnam_r"
+			  (function (* (struct group))
+                                    c-call:c-string
+                                    (* (struct group))
+                                    (* c-call:char)
+                                    c-call:unsigned-int))
+	    name
+	    (addr group-info)
+	    (cast buf (* c-call:char))
+	    2048)))
+      (unless (zerop (sap-int (alien-sap result)))
+	(make-group-info
+	 :name (string (cast (slot result 'gr-name) c-call:c-string))
+	 :password (string (cast (slot result 'gr-passwd) c-call:c-string))
+	 :gid (slot result 'gr-gid)
+         :members (loop :with members = (slot result 'gr-mem)
+                        :for i :from 0
+                        :for member = (deref members i)
+                        :until (zerop (sap-int (alien-sap member)))
+                        :collect (string (cast member c-call:c-string))))))))
+
+#+FreeBSD
+(defun unix-getgrnam (name)
+  "Return a GROUP-INFO structure for the group identified by NAME, or NIL if not found."
+  (declare (type simple-string name))
+  (let ((result
+         (alien-funcall
+          (extern-alien "getgrnam"
+                        (function (* (struct group))
+                                  c-call:c-string))
+          name)))
+    (unless (zerop (sap-int (alien-sap result)))
+      (make-group-info
+       :name (string (cast (slot result 'gr-name) c-call:c-string))
+       :password (string (cast (slot result 'gr-passwd) c-call:c-string))
+       :gid (slot result 'gr-gid)
+       :members (loop :with members = (slot result 'gr-mem)
+                      :for i :from 0
+                      :for member = (deref members i)
+                      :until (zerop (sap-int (alien-sap member)))
+                      :collect (string (cast member c-call:c-string)))))))
+
+#+solaris
+(defun unix-getgrgid (gid)
+  "Return a GROUP-INFO structure for the group identified by GID, or NIL if not found."
+  (declare (type unix-gid gid))
+  (with-alien ((buf (array c-call:char 2048))
+	       (group-info (struct group)))
+    (let ((result
+	   (alien-funcall
+	    (extern-alien "getgrgid_r"
+			  (function (* (struct group))
+                                    c-call:unsigned-int
+                                    (* (struct group))
+                                    (* c-call:char)
+                                    c-call:unsigned-int))
+	    gid
+	    (addr group-info)
+	    (cast buf (* c-call:char))
+	    2048)))
+      (unless (zerop (sap-int (alien-sap result)))
+	(make-group-info
+	 :name (string (cast (slot result 'gr-name) c-call:c-string))
+	 :password (string (cast (slot result 'gr-passwd) c-call:c-string))
+	 :gid (slot result 'gr-gid)
+         :members (loop :with members = (slot result 'gr-mem)
+                        :for i :from 0
+                        :for member = (deref members i)
+                        :until (zerop (sap-int (alien-sap member)))
+                        :collect (string (cast member c-call:c-string))))))))
+
+#+FreeBSD
+(defun unix-getgrgid (gid)
+  "Return a GROUP-INFO structure for the group identified by GID, or NIL if not found."
+  (declare (type unix-gid gid))
+  (let ((result
+         (alien-funcall
+          (extern-alien "getgrgid"
+                        (function (* (struct group))
+                                  c-call:unsigned-int))
+          gid)))
+    (unless (zerop (sap-int (alien-sap result)))
+      (make-group-info
+       :name (string (cast (slot result 'gr-name) c-call:c-string))
+       :password (string (cast (slot result 'gr-passwd) c-call:c-string))
+       :gid (slot result 'gr-gid)
+       :members (loop :with members = (slot result 'gr-mem)
+                      :for i :from 0
+                      :for member = (deref members i)
+                      :until (zerop (sap-int (alien-sap member)))
+                      :collect (string (cast member c-call:c-string)))))))
+
+;; EOF
