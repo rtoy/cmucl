@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.38 1999/02/02 10:54:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.39 1999/02/11 12:17:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -631,7 +631,8 @@
 
 (defun write-byte (integer stream)
   "Outputs the Integer to the binary Stream."
-  (with-out-stream stream (lisp-stream-bout integer) (stream-write-byte))
+  (with-out-stream stream (lisp-stream-bout integer)
+		   (stream-write-byte integer))
   integer)
 
 
