@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.5 1992/02/21 22:00:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.6 1992/03/10 10:21:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,8 +15,30 @@
 ;;;
 (in-package "RT")
 (use-package "SYSTEM")
+(use-package "ALIEN")
+(use-package "C-CALL")
+(use-package "UNIX")
 
-(export '(fixup-code-object internal-error-arguments))
+(export '(fixup-code-object internal-error-arguments
+	  sigcontext-register sigcontext-float-register
+	  sigcontext-floating-point-modes extern-alien-name))
+
+
+;;;; The sigcontext structure.
+
+(def-alien-type sigcontext
+  (struct nil
+    (sc-onstack unsigned-long)
+    (sc-mask unsigned-long)
+    (sc-floatsave system-area-pointer)
+    (sc-sp system-area-pointer)
+    (sc-fp system-area-pointer)
+    (sc-ap system-area-pointer)
+    (sc-pc system-area-pointer) ; IBM calls it the iar.
+    (sc-icscs unsigned-long)
+    (sc-saveiar system-area-pointer)
+    (sc-regs (array unsigned-long 16))))
+
 
 
 ;;;; Add machine specific features to *features*
@@ -70,9 +92,9 @@
 ;;; Given the sigcontext, extract the internal error arguments from the
 ;;; instruction stream.
 ;;; 
-(defun internal-error-arguments (sc)
-  (alien-bind ((sc sc mach:sigcontext t))
-    (let ((pc (alien-access (mach:sigcontext-iar (alien-value sc)))))
+(defun internal-error-arguments (scp)
+  (with-alien ((scp (* sigcontext) scp))
+    (let ((pc (slot scp 'sc-pc)))
       (declare (type system-area-pointer pc))
       (let* ((length (sap-ref-8 pc 4))
 	     (vector (make-array length :element-type '(unsigned-byte 8))))
@@ -93,17 +115,69 @@
 
 
 
+;;;; Sigcontext accessing stuff.
+
+;;; SIGCONTEXT-REGISTER -- Internal.
+;;;
+;;; An escape register saves the value of a register for a frame that someone
+;;; interrupts.  
+;;;
+(defun sigcontext-register (scp index)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (deref (slot scp 'sc-regs) index)))
+
+(defun %set-sigcontext-register (scp index new)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (setf (deref (slot scp 'sc-regs) index) new)
+    new))
+
+(defsetf sigcontext-register %set-sigcontext-register)
+
+
+;;; SIGCONTEXT-FLOAT-REGISTER  --  Internal
+;;;
+;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
+;;; Format is the type of float to return.
+;;;
+(defun sigcontext-float-register (scp index format)
+  (declare (type (alien (* sigcontext)) scp)
+	   (ignore scp index))
+  ;; ### Some day we should figure out how to do this right.
+  (ecase format
+    (single-float 0.0s0)
+    (double-float 0.0d0)))
+;;;
+(defun %set-sigcontext-float-register (scp index format new-value)
+  (declare (type (alien (* sigcontext)) scp)
+	   (ignore scp index format))
+  ;; ### Some day we should figure out how to do this right.
+  new-value)
+;;;
+(defsetf sigcontext-float-register %set-sigcontext-float-register)
+
+
 ;;; SIGCONTEXT-FLOATING-POINT-MODES  --  Interface
 ;;;
 ;;;    Given a sigcontext pointer, return the floating point modes word in the
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 (defun sigcontext-floating-point-modes (scp)
-  0
-  #+nil
-  (alien-bind ((sc (make-alien 'mach:sigcontext
-					     #.(ext:c-sizeof 'mach:sigcontext)
-					     scp)
-			  mach:sigcontext
-			  t))
-    (alien-access (mach:sigcontext-fsr (alien-value sc)))))
+  (declare (ignore scp))
+  ;; ### Some day we should figure out how to do this right.
+  0)
+
+
+
+
+;;; EXTERN-ALIEN-NAME -- interface.
+;;;
+;;; The loader uses this to convert alien names to the form they occure in
+;;; the symbol table (for example, prepending an underscore).  On the RT,
+;;; we prepend an underscore.
+;;; 
+(defun extern-alien-name (name)
+  (declare (type simple-base-string name))
+  (concatenate 'string "_" name))
+
