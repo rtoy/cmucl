@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.19 1992/05/06 08:52:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.20 1992/05/07 08:52:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,10 +175,10 @@
 	 (format t "~&It is a composite number."))))
 
 (defun describe-hash-table (x)
-  (format t "~&~S is an ~a hash table." x (hash-table-kind x))
-  (format t "~&Its size is ~d buckets." (hash-table-size x))
-  (format t "~&Its rehash-size is ~d." (hash-table-rehash-size x))
-  (format t "~&Its rehash-threshold is ~d."
+  (format t "~&~S is an ~A hash table." x (hash-table-test x))
+  (format t "~&Its size is ~D buckets." (length (hash-table-table x)))
+  (format t "~&Its rehash-size is ~S." (hash-table-rehash-size x))
+  (format t "~&Its rehash-threshold is ~S."
 	  (hash-table-rehash-threshold x))
   (format t "~&It currently holds ~d entries."
 	  (hash-table-number-entries x)))
