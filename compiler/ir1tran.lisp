@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.165 2003/10/02 19:23:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.166 2003/11/04 15:01:16 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -797,6 +797,20 @@
        (when (lambda-var-p var)
 	 (when (lambda-var-ignorep var)
 	   (compiler-note "Reading an ignored variable: ~S." name))
+	 ;;
+	 ;; FIXME: There's a quirk somewhere when recording this
+	 ;; dependency, which I don't have to time to debug right now.
+	 ;; Redefining a function like this:
+	 ;;
+	 ;; (defun foo ())
+	 ;;
+	 ;; (let ((foo #'foo))
+	 ;;   (defun foo () (funcall foo)))
+	 ;;
+	 ;; leads to infinite recursion because the funcall uses
+	 ;; FOO's fdefn object instead of the local variable's value.
+	 ;; -- Gerd, 2003-11-04
+	 #+nil
 	 (note-dfo-dependency start var))
        (reference-leaf start cont var))
       (cons
