@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.76 2002/08/27 22:18:26 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.77 2002/10/12 16:43:56 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1355,7 +1355,8 @@
 ;;; 
 (defun dump-vector (x file)
   (let ((simple-version (if (array-header-p x)
-			    (coerce x 'simple-array)
+			    (coerce x
+			            `(simple-array ,(array-element-type x) (*)))
 			    x)))
     (typecase simple-version
       (simple-base-string
