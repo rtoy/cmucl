@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.11 2001/04/25 21:44:51 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.12 2001/09/23 19:02:12 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -171,6 +171,7 @@
   (let ((type (method-combination-type combin))
 	(operator (short-combination-operator combin))
 	(ioa (short-combination-identity-with-one-argument combin))
+	(order (car (method-combination-options combin)))
 	(around ())
 	(primary ()))
     (dolist (m applicable-methods)
@@ -194,8 +195,9 @@
 		 (push m primary))
 		(t
 		 (lose m "has an illegal qualifier"))))))
-    (setq around (nreverse around)
-	  primary (nreverse primary))
+    (setq around (nreverse around))
+    (unless (eq order :most-specific-last)
+      (setq primary (nreverse primary)))
     (let ((main-method
 	    (if (and (null (cdr primary))
 		     (not (null ioa)))
