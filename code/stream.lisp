@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.67 2004/01/20 17:32:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.68 2004/03/26 18:22:54 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2014,11 +2014,11 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 
       ;; Just catch some errors earlier than it would be necessary.
       (cond ((not (open-stream-p stream))
-	     (error 'stream-error
+	     (error 'simple-stream-error
 		    :stream stream
 		    :format-control "The stream is not open."))
 	    ((not (input-stream-p stream))
-	     (error 'stream-error
+	     (error 'simple-stream-error
 		    :stream stream
 		    :format-control "The stream is not open for input."))
 	    ((and seq (>= start end) 0))
@@ -2334,11 +2334,11 @@ SEQ:	a proper SEQUENCE
 
       ;; Just catch some errors earlier than it would be necessary.
       (cond ((not (open-stream-p stream))
-	     (error 'stream-error
+	     (error 'simple-stream-error
 		    :stream stream
 		    :format-control "The stream is not open."))
 	    ((not (output-stream-p stream))
-	     (error 'stream-error
+	     (error 'simple-stream-error
 		    :stream stream
 		    :format-control "The stream is not open for output."))
 	    ((and seq (>= start end)) seq)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.74 2003/11/05 16:47:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.75 2004/03/26 18:22:54 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -217,8 +217,10 @@
 	  (cond ((not count)
 		 (if (= errno unix:ewouldblock)
 		     (output-later stream base start end reuse-sap)
-		     (error "While writing ~S: ~A"
-			    stream (unix:get-unix-error-msg errno))))
+		     (error 'simple-stream-error
+                            :stream stream
+                            :format-control "while writing: ~A"
+			    :format-arguments (list (unix:get-unix-error-msg errno)))))
 		((not (eql count length))
 		 (output-later stream base (the index (+ start count))
 			       end reuse-sap)))))))

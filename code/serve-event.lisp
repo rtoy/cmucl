@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.25 2000/07/06 05:41:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.26 2004/03/26 18:22:54 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -200,8 +200,8 @@
 ;;;   Search *descriptor-handlers* for any reference to fd, and nuke 'em.
 ;;; 
 (defun invalidate-descriptor (fd)
-  "Remove any handers refering to fd. This should only be used when attempting
-  to recover from a detected inconsistancy."
+  "Remove any handers refering to FD. This should only be used when attempting
+  to recover from a detected inconsistency."
   (setf *descriptor-handlers*
 	(delete fd *descriptor-handlers*
 		:key #'handler-descriptor)))
@@ -427,15 +427,14 @@
 		 (:output (unix:fd-isset desc write-fds)))
 	   (unwind-protect
 	       (progn
-		 ;; Doesn't work -- ACK
-		 ;(setf (handler-active handler) t)
+		 (setf (handler-active handler) t)
 		 (funcall (handler-function handler) desc))
 	     (setf (handler-active handler) nil))
 	   (ecase (handler-direction handler)
 	     (:input (unix:fd-clr desc read-fds))
 	     (:output (unix:fd-clr desc write-fds)))
-	   (setf result t)))
-       result)))
+	   (setf result t))))
+    result))
 
 ); eval-when (compile eval)
 
