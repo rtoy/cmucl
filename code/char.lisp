@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.6 1991/11/09 02:47:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.7 1993/02/17 17:27:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,10 +36,11 @@
 
 ;;; Compile some trivial character operations via inline expansion:
 ;;;
-(proclaim '(inline standard-char-p graphic-char-p alpha-char-p
-		   upper-case-p lower-case-p both-case-p alphanumericp
-		   char-int))
+(declaim (inline standard-char-p graphic-char-p alpha-char-p
+		 upper-case-p lower-case-p both-case-p alphanumericp
+		 char-int))
 
+(declaim (maybe-inline digit-char-p digit-weight))
 
 (defconstant char-code-limit 256
   "The upper exclusive bound on values produced by CHAR-CODE.")
@@ -186,14 +187,12 @@
   "If char is a digit in the specified radix, returns the fixnum for
   which that digit stands, else returns NIL.  Radix defaults to 10
   (decimal)."
-  (declare (character char))
+  (declare (character char) (type (integer 2 36) radix))
   (let ((m (- (char-code char) 48)))
+    (declare (fixnum m))
     (cond ((<= radix 10.)
 	   ;; Special-case decimal and smaller radices.
 	   (if (and (>= m 0) (< m radix))  m  nil))
-	  ;; Cannot handle radix past Z.
-	  ((> radix 36)
-	   (error "~S too large to be an input radix."  radix))
 	  ;; Digits 0 - 9 are used as is, since radix is larger.
 	  ((and (>= m 0) (< m 10)) m)
 	  ;; Check for upper case A - Z.
@@ -371,5 +370,7 @@
   represents a digit of the given weight in the specified radix.  Returns
   NIL if no such character exists.  The character will have the specified
   font attributes."
-  (and (>= weight 0) (< weight radix) (< weight 36)
+  (declare (type (integer 2 36) radix) (type unsigned-byte weight))
+  (and (typep weight 'fixnum)
+       (>= weight 0) (< weight radix) (< weight 36)
        (code-char (if (< weight 10) (+ 48 weight) (+ 55 weight)))))
