@@ -31,13 +31,32 @@
 (defun current-nfp-tn (vop)
   "Return the TN that is used to hold the number stack frame-pointer in VOP's
   function.  Returns NIL if no number stack frame was allocated."
-  (unless (zerop (sb-allocated-size 'number-stack))
+  (unless (zerop (sb-allocated-size 'non-descriptor-stack))
     (let ((block (ir2-block-block (vop-block vop))))
     (when (ir2-environment-number-stack-p
 	   (environment-info
 	    (lambda-environment
 	     (block-lambda block))))
       (ir2-component-nfp (component-info (block-component block)))))))
+
+
+;;; CALLEE-NFP-TN  --  Interface
+;;;
+(defun callee-nfp-tn (2env)
+  "Return the TN that is used to hold the number stack frame-pointer in the
+  function designated by 2env.  Returns NIL if no number stack frame was
+  allocated."
+  (unless (zerop (sb-allocated-size 'non-descriptor-stack))
+    (when (ir2-environment-number-stack-p 2env)
+      (ir2-component-nfp (component-info *compile-component*)))))
+
+
+;;; CALLEE-RETURN-PC-TN  --  Interface
+;;;
+(defun callee-return-pc-tn (2env)
+  "Return the TN used for passing the return PC in a local call to the function
+  designated by 2env."
+  (ir2-environment-return-pc-pass 2env))
 
 
 ;;; Generate-Code  --  Interface
