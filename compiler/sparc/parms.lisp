@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.31 2001/05/17 20:42:41 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.32 2001/05/18 18:05:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,7 +91,7 @@
 (defconstant word-bytes (/ word-bits byte-bits)
   "Number of bytes in a word.")
 
-(defconstant fixnum-tag-bits 2
+(defconstant fixnum-tag-bits (1- lowtag-bits)
   "Number of tag bits used for a fixnum")
 
 (defconstant fixnum-tag-mask (1- (ash 1 fixnum-tag-bits))
