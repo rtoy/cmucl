@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.237 2004/10/16 23:49:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.238 2004/11/11 15:48:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1074,7 +1074,8 @@
 	   "PSEUDO-ATOMIC-TRAP"
 	   "GET-FP-OPERANDS"
 	   "PSEUDO-ATOMIC-VALUE"
-	   "PSEUDO-ATOMIC-INTERRUPTED-VALUE")
+	   "PSEUDO-ATOMIC-INTERRUPTED-VALUE"
+	   "COMPATIBLE-FUNCTION-TYPES-P")
   #+ppc
   (:export "SIGCONTEXT-LR")
   #+heap-overflow-check
