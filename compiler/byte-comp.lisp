@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.12 1993/05/17 10:14:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.13 1993/05/17 21:32:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1667,7 +1667,9 @@
     (let ((entry (lambda-entry-function lambda)))
       (etypecase entry
 	(optional-dispatch
-	 (let ((rest-arg-p nil))
+	 (let ((rest-arg-p nil)
+	       (num-more 0))
+	   (declare (type index num-more))
 	   (collect ((keywords))
 	     (dolist (var (nthcdr (optional-dispatch-max-args entry)
 				  (optional-dispatch-arglist entry)))
@@ -1676,11 +1678,14 @@
 		 (ecase (arg-info-kind arg-info)
 		   (:rest
 		    (assert (not rest-arg-p))
+		    (incf num-more)
 		    (setf rest-arg-p t))
 		   (:keyword
-		    (keywords (list (arg-info-keyword arg-info)
-				    (arg-info-default arg-info)
-				    (if (arg-info-supplied-p arg-info) t)))))))
+		    (let ((s-p (arg-info-supplied-p arg-info)))
+		      (incf num-more (if s-p 2 1))
+		      (keywords (list (arg-info-keyword arg-info)
+				      (arg-info-default arg-info)
+				      (if s-p t nil))))))))
 	     (make-hairy-byte-function
 	      :name (leaf-name entry)
 	      :min-args (optional-dispatch-min-args entry)
@@ -1689,6 +1694,7 @@
 	      (mapcar #'entry-point-for (optional-dispatch-entry-points entry))
 	      :more-args-entry-point
 	      (entry-point-for (optional-dispatch-main-entry entry))
+	      :num-more-args num-more
 	      :rest-arg-p rest-arg-p
 	      :keywords-p
 	      (if (optional-dispatch-keyp entry)
