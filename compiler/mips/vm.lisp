@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.51 1998/03/04 15:08:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.52 1998/03/11 17:18:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -235,9 +235,9 @@
 
   #+complex-float
   (complex-single-reg float-registers
-   :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
-   :element-size 2
-   :reserve-locations (26 28 30)
+   :locations (0 4 8 12 16 20 24 28)
+   :element-size 4
+   :reserve-locations (24 28)
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-single-stack))
