@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.5 1990/03/05 21:10:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.6 1990/04/03 03:01:51 wlott Exp $
 ;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -58,7 +58,7 @@
 	   (load-stack-tn temp tn)
 	   (storew temp start-temp i)))))
     (move start start-temp)
-    (loadi count nvals)))
+    (loadi count (fixnum nvals))))
 
 
 ;;; Push a list of values on the stack, returning Start and Count as used in
