@@ -111,7 +111,7 @@
 
 ;;; TRANSLATE-KEY-EVENT -- Public.
 ;;;
-#+nil
+#+clx
 (defun translate-key-event (display scan-code bits)
   "Translates the X scan-code and X bits to a key-event.  First this maps
    scan-code to an X keysym using XLIB:KEYCODE->KEYSYM looking at bits and
@@ -317,7 +317,7 @@
 ;;; modifier identifier.
 ;;;
 (defvar *id-namestring*
-  (make-array 30 :adjustable t :fill-pointer 0 :element-type 'string-char))
+  (make-array 30 :adjustable t :fill-pointer 0 :element-type 'base-character))
 
 ;;; PARSE-KEY-FUN -- Internal.
 ;;;
@@ -472,7 +472,7 @@
 
 ;;; DEFINE-CLX-MODIFIER -- Public.
 ;;;
-(defun <define-clx-modifier (clx-mask modifier-name)
+(defun define-clx-modifier (clx-mask modifier-name)
   "This establishes a mapping from clx-mask to a define key-event modifier-name.
    TRANSLATE-KEY-EVENT and TRANSLATE-MOUSE-KEY-EVENT can only return key-events
    with bits defined by this routine."
@@ -540,13 +540,14 @@
   (let* ((high-byte (ash keysym -8))
 	 (low-byte-vector (svref *keysym-high-bytes* high-byte)))
     (unless low-byte-vector
-      (let ((new-vector (make-array 256)))
+      (let ((new-vector (make-array 256 :initial-element nil)))
 	(setf (svref *keysym-high-bytes* high-byte) new-vector)
 	(setf low-byte-vector new-vector)))
     (let* ((low-byte (ldb (byte 8 0) keysym))
 	   (bit-vector (svref low-byte-vector low-byte)))
       (unless bit-vector
-	(let ((new-vector (make-array modifier-bits-limit)))
+	(let ((new-vector (make-array modifier-bits-limit
+				      :initial-element nil)))
 	  (setf (svref low-byte-vector low-byte) new-vector)
 	  (setf bit-vector new-vector)))
       (let ((key-event (svref bit-vector bits)))
@@ -728,7 +729,8 @@
   (setf *all-modifier-names* ())
   (setf *keysym-high-bytes* (make-array 256 :initial-element nil))
   (setf *key-event-characters* (make-hash-table))
-  (setf *character-key-events* (make-array char-code-limit :initial-element nil))
+  (setf *character-key-events*
+	(make-array char-code-limit :initial-element nil))
   
   (define-key-event-modifier "Hyper" "H")
   (define-key-event-modifier "Super" "S")
@@ -736,10 +738,8 @@
   (define-key-event-modifier "Control" "C")
   (define-key-event-modifier "Shift" "Shift")
   (define-key-event-modifier "Lock" "Lock")
-#|  
-  (define-clx-modifier (xlib:make-state-mask :shift) "Shift")
-  (define-clx-modifier (xlib:make-state-mask :mod-1) "Meta")
-  (define-clx-modifier (xlib:make-state-mask :control) "Control")
-  (define-clx-modifier (xlib:make-state-mask :lock) "Lock")
-|#
-)
+
+  #+clx (define-clx-modifier (xlib:make-state-mask :shift) "Shift")
+  #+clx (define-clx-modifier (xlib:make-state-mask :mod-1) "Meta")
+  #+clx (define-clx-modifier (xlib:make-state-mask :control) "Control")
+  #+clx (define-clx-modifier (xlib:make-state-mask :lock) "Lock"))

@@ -510,7 +510,7 @@
 	     :default (value abbrev-pathname-defaults)
 	     :must-exist nil)))
   (with-open-file (file (value abbrev-pathname-defaults) :direction :input
-			:element-type 'string-char :if-does-not-exist :error)
+			:element-type 'base-character :if-does-not-exist :error)
     (read-abbrevs file)))
 
 
@@ -584,7 +584,7 @@
 	   :help "Name of the file to write current abbrevs to."
 	   :must-exist nil)))
   (with-open-file (file filename :direction :output
-			:element-type 'string-char :if-exists :supersede
+			:element-type 'base-character :if-exists :supersede
 			:if-does-not-exist :create)
     (multiple-value-bind (x mode-tables) (count-abbrevs)
       (declare (ignore x))
@@ -626,7 +626,8 @@
 
 
 (defun write-incremental (mode filename)
-  (with-open-file (file filename :direction :output :element-type 'string-char
+  (with-open-file (file filename :direction :output
+			:element-type 'base-character
 			:if-exists mode :if-does-not-exist :create)
     (dolist (def *new-abbrevs*)
       (let ((abb (car def))

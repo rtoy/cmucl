@@ -38,7 +38,7 @@
 	thing)
        ((symbolp thing)
 	(symbol-name thing))
-       ((and (characterp thing) (string-char-p thing))
+       ((characterp thing)
 	(string thing))
        (t
 	(message

@@ -145,7 +145,7 @@
 	   (entry-count 0))
        (declare (fixnum descriptor-ptr string-ptr entry-count))
        (loop (multiple-value-bind (line eofp) (read-line s nil nil)
-	       (declare (simple-string line))
+	       (declare (type (or null simple-string) line))
 	       (unless line (return (values entry-count string-ptr)))
 	       (incf entry-count)
 	       (when (> entry-count max-entry-count-estimate)
@@ -237,6 +237,6 @@
 	  (write-byte (aref dictionary i) s))
 	(dotimes (i descriptors-size)
 	  (write-byte (aref descriptors i) s))))
-    (with-open-file (s f :direction :output :element-type 'string-char
+    (with-open-file (s f :direction :output :element-type 'base-character
 		         :if-exists :append)
       (write-string string-table s :end string-table-length))))
