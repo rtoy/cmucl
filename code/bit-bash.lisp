@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.22 2004/06/01 23:07:30 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.23 2004/07/14 20:52:38 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,7 +351,7 @@
 			    (32bit-logical-and value mask)
 			    (32bit-logical-andc2 orig mask))))))))))
        (t
-	;; They arn't aligned.
+	;; They aren't aligned.
 	(multiple-value-bind (words final-bits)
 			     (floor (+ dst-bit-offset length) unit-bits)
 	  (declare (type word-offset words) (type bit-offset final-bits))
