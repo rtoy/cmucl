@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.40 2003/07/09 13:50:41 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.41 2003/09/05 15:35:32 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1654,6 +1654,16 @@
 
 ;;;; Complex float arithmetic
 
+;;; These vops are intended to optimize some complex float arithmetic
+;;; by removing lots of redundant moves that the compiler currently
+;;; inserts.  It seems the moves are generated because of the way
+;;; unboxed complex floats are represented as pairs of registers.  The
+;;; compiler doesn't think we can use the parts directly and therefore
+;;; copies the parts to another register before operating on them.
+;;;
+;;; If we had a peephole optimizer, we could make it remove the
+;;; redundant moves instead.
+
 #+complex-fp-vops
 (progn
 
@@ -1780,8 +1790,13 @@
   (frob single fadds (inst fmovs) 1)
   (frob double faddd (move-double-reg) 2))
 
-;; Subtract a complex from a float
-
+;; Subtract a complex from a float.
+;;
+;; This doesn't work right because (- 0 #c(0d0 0d0)) should be #c(0d0
+;; 0d0) but we get #c(0d0 -0d0) because of the negation of the
+;; imaginary part.  For this to work, we need to get compute 0 -
+;; imaginary part, but there's no floating-point zero we can use.
+#+ni
 (macrolet
     ((frob (size fop fneg cost)
        (let ((vop-name (symbolicate size "-FLOAT---COMPLEX-" size "-FLOAT"))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.92 2003/09/05 14:42:08 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.93 2003/09/05 15:35:32 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1263,9 +1263,9 @@
 	       (deftransform - ((w z) ((complex ,type) real) *)
 		 '(complex (- (realpart w) z) (imagpart w)))
 	       (deftransform - ((z w) (real (complex ,type)) *)
-		 ;; The 0d0 for the imaginary part is needed so we get
+		 ;; The 0 for the imaginary part is needed so we get
 		 ;; the correct signed zero.
-		 '(complex (- z (realpart w)) (- 0d0 (imagpart w))))
+		 '(complex (- z (realpart w)) (- 0 (imagpart w))))
 	       ;; Multiply and divide two complex numbers
 	       (deftransform * ((x y) ((complex ,type) (complex ,type)) *)
 		 '(let* ((rx (realpart x))
@@ -1341,6 +1341,10 @@
 	   '(and (= (realpart w) z) (zerop (imagpart w))))
 	 (deftransform = ((w z) (real (complex ,type)) *)
 	   '(and (= (realpart z) w) (zerop (imagpart z))))
+	 (deftransform - ((z w) (real (complex ,type)) *)
+	   ;; The 0 for the imaginary part is needed so we get
+	   ;; the correct signed zero.
+	   '(complex (- z (realpart w)) (- 0 (imagpart w))))
 	 )))
 
   (frob single-float)
