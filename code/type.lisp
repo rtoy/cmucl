@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.7 1993/03/01 20:09:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.8 1993/03/13 17:07:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2102,7 +2102,7 @@
     ((or numeric-type named-type member-type array-type built-in-class)
      (values (%typep obj type) t))
     (class
-     (if (if (csubtypep type (specifier-type 'generic-function))
+     (if (if (csubtypep type (specifier-type 'funcallable-instance))
 	     (funcallable-instance-p obj)
 	     (%instancep obj))
 	 (if (eq (class-layout type)
