@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.23 1993/02/23 11:56:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.24 1993/05/13 11:35:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,15 +72,18 @@
 ;;; We just do COMPUTE-CLOSURE on all the lambdas.  This will pre-allocate
 ;;; environments for all the functions with closed-over top-level variables.
 ;;; The post-pass will use the existing structure, rather than allocating a new
-;;; one.
+;;; one.  We return true if we discover any possible closure vars.
 ;;;
 (defun pre-environment-analyze-top-level (component)
   (declare (type component component))
-  (dolist (lambda (component-lambdas component))
-    (compute-closure lambda)
-    (dolist (let (lambda-lets lambda))
-      (compute-closure let)))
-  (undefined-value))
+  (let ((found-it nil))
+    (dolist (lambda (component-lambdas component))
+      (when (compute-closure lambda)
+	(setq found-it t))
+      (dolist (let (lambda-lets lambda))
+	(when (compute-closure let)
+	  (setq found-it t))))
+    found-it))
 
 
 ;;; GET-LAMBDA-ENVIRONMENT  --  Internal
@@ -141,11 +144,13 @@
 ;;; environment and close over them.  If a closed over variable is set, then we
 ;;; set the Indirect flag so that we will know the closed over value is really
 ;;; a pointer to the value cell.  We also warn about unreferenced variables
-;;; here, just because it's a convenient place to do it.
+;;; here, just because it's a convenient place to do it.  We return true if we
+;;; close over anything.
 ;;;
 (defun compute-closure (fun)
   (declare (type clambda fun))
-  (let ((env (get-lambda-environment fun)))
+  (let ((env (get-lambda-environment fun))
+	(did-something nil))
     (note-unreferenced-vars fun)
     (dolist (var (lambda-vars fun))
       (dolist (ref (leaf-refs var))
@@ -153,14 +158,15 @@
 	  (unless (eq ref-env env)
 	    (when (lambda-var-sets var)
 	      (setf (lambda-var-indirect var) t))
+	    (setq did-something t)
 	    (close-over var ref-env env))))
       (dolist (set (basic-var-sets var))
 	(let ((set-env (get-node-environment set)))
 	  (unless (eq set-env env)
+	    (setq did-something t)
 	    (setf (lambda-var-indirect var) t)
-	    (close-over var set-env env))))))
-  
-  (undefined-value))
+	    (close-over var set-env env)))))
+    did-something))
 
 
 ;;; Close-Over  --  Internal
