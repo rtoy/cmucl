@@ -1534,22 +1534,23 @@
 				    (not (member arg
 						 lambda-list-keywords))))))
         ((consp arg)
-         (prog1 (if destructuringp
-                    (walk-arglist arg context env destructuringp)
-                    (recons arglist
-                            (relist* arg
-                                     (car arg)
-                                     (walk-form-internal (cadr arg) :eval env)
-                                     (cddr arg))
-                            (walk-arglist (cdr arglist) context env nil)))
-                (if (symbolp (car arg))
-                    (note-lexical-binding (car arg) env)
-                    (note-lexical-binding (cadar arg) env))
-                (or (null (cddr arg))
-                    (not (symbolp (caddr arg)))
-                    (note-lexical-binding (caddr arg) env))))
-          (t
-	   (error "Can't understand something in the arglist ~S" arglist))))
+         (prog1
+	     (recons arglist
+		     (if destructuringp
+			 (walk-arglist arg context env destructuringp)
+			 (relist* arg
+				  (car arg)
+				  (walk-form-internal (cadr arg) :eval env)
+				  (cddr arg)))
+		     (walk-arglist (cdr arglist) context env nil))
+	   (if (symbolp (car arg))
+	       (note-lexical-binding (car arg) env)
+	       (note-lexical-binding (cadar arg) env))
+	   (or (null (cddr arg))
+	       (not (symbolp (caddr arg)))
+	       (note-lexical-binding (caddr arg) env))))
+	(t
+	 (error "Can't understand something in the arglist ~S" arglist))))
 
 (defun walk-let (form context env)
   (walk-let/let* form context env nil))
