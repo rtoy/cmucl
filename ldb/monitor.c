@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.1 1990/02/24 19:37:24 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.2 1990/02/28 18:23:28 wlott Exp $ */
 #include <stdio.h>
 #include <setjmp.h>
 
@@ -156,7 +156,7 @@ char **ptr;
 
         if (((long)obj & 0xff) == val) {
             printf("found 0x%x at 0x%x:\n", val, addr);
-            if (LowtagOf(obj) == type_OtherImmediate)
+            if (LowtagOf(obj) == type_OtherImmediate0 ||    LowtagOf(obj) == type_OtherImmediate1)
                 print((long)addr | type_OtherPointer);
             else
                 print(addr);
@@ -199,7 +199,7 @@ char **ptr;
         *argptr++ = parse_lispobj(ptr);
         numargs++;
     }
-    while (argptr <= args + 6)
+    while (argptr < args + 6)
         *argptr++ = NIL;
 
     result = call_into_lisp(call_name, function, args, numargs);
