@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.20 1993/08/23 01:37:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.21 1993/08/24 23:34:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -336,13 +336,21 @@
 			    total-consumes nlx-entries nlx-entry-p)))
   (label (new-assem:gen-label) :type new-assem:label)
   ;;
-  ;; A list of the continuations that this block pushes onto the stack.
+  ;; A list of the CONTINUATIONs describing values that this block pushes onto
+  ;; the stack.  Note: PRODUCES and CONSUMES can contain the keyword :NLX-ENTRY
+  ;; marking the place on the stack where a non-local-exit frame is added or
+  ;; removed.  Since breaking up a NLX restores the stack, we don't have to
+  ;; about (and in fact must not) discard values underneath a :NLX-ENTRY marker
+  ;; evern though they appear to be dead (since they might not be.)
   (produces nil :type list)
   ;;
-  ;; An SSET of the produces for faster set manipulations.
+  ;; An SSET of the produces for faster set manipulations.  The elements are
+  ;; the BYTE-CONTINUATION-INFO objects.  :NLX-ENTRY markers are not
+  ;; represented.
   (produces-sset (make-sset) :type sset)
   ;;
-  ;; A list of the continuations that this block pops from the stack.
+  ;; A list of the continuations that this block pops from the stack.  See
+  ;; PRODUCES.
   (consumes nil :type list)
   ;;
   ;; The transitive closure of what this block and all its successors
@@ -354,10 +362,12 @@
   ;; block several times.
   (already-queued nil :type (member t nil))
   ;;
-  ;; The continuations on the stack (in order) when this block starts.
+  ;; The continuations and :NLX-ENTRY markers on the stack (in order) when this
+  ;; block starts.
   (start-stack :unknown :type (or (member :unknown) list))
   ;;
-  ;; The continuations on the stack (in order) when this block ends.
+  ;; The continuations and :NLX-ENTRY markers on the stack (in order) when this
+  ;; block ends.
   (end-stack nil :type list)
   ;;
   ;; List of ((nlx-info*) produces consumes) for each ENTRY in this block that
@@ -628,6 +638,16 @@
 
 (defvar *byte-continuation-counter*)
 
+;;; COMPUTE-PRODUCES-AND-CONSUMES  --  Internal
+;;;
+;;;    Scan the nodes in Block and compute the information that we will need to
+;;; do flow analysis and our stack simulation walk.  We simulate the stack
+;;; within the block, reducing it to ordered lists representing the values we
+;;; remove from the top of the stack and place on the stack (not considering
+;;; values that are produced and consumed within the block.)  A NLX entry point
+;;; is considered to push a :NLX-ENTRY marker (can be though of as the run-time
+;;; catch frame.)
+;;;
 (defun compute-produces-and-consumes (block)
   (let ((stack nil)
 	(consumes nil)
@@ -641,7 +661,7 @@
 			   (not (member (byte-continuation-info-results info)
 					'(0 :eq-test)))))))
 	     (consume (cont)
-	       (cond ((not (interesting cont)))
+	       (cond ((not (or (eq cont :nlx-entry) (interesting cont))))
 		     (stack
 		      (assert (eq (car stack) cont))
 		      (pop stack))
@@ -649,11 +669,12 @@
 		      (adjoin-cont cont total-consumes)
 		      (push cont consumes))))
 	     (adjoin-cont (cont sset)
-	       (let ((info (continuation-info cont)))
-		 (unless (byte-continuation-info-number info)
-		   (setf (byte-continuation-info-number info)
-			 (incf *byte-continuation-counter*)))
-		 (sset-adjoin info sset))))
+	       (unless (eq cont :nlx-entry)
+		 (let ((info (continuation-info cont)))
+		   (unless (byte-continuation-info-number info)
+		     (setf (byte-continuation-info-number info)
+			   (incf *byte-continuation-counter*)))
+		   (sset-adjoin info sset)))))
       (do-nodes (node cont block)
 	(etypecase node
 	  (bind)
@@ -665,16 +686,24 @@
 	     (when arg
 	       (consume arg)))
 	   (consume (basic-combination-fun node))
-	   (when (eq (continuation-function-name
-		      (basic-combination-fun node))
-		     '%nlx-entry)
-	     (let ((nlx-info (continuation-value
-			      (first (basic-combination-args node)))))
-	       (when (eq (cleanup-kind (nlx-info-cleanup nlx-info)) :block)
-		 (let ((cont (nlx-info-continuation nlx-info)))
-		   (when (interesting cont)
-		     (push cont stack)))))
-	     (setf nlx-entry-p t)))
+	   (case (continuation-function-name (basic-combination-fun node))
+	     (%nlx-entry
+	      (let ((nlx-info (continuation-value
+			       (first (basic-combination-args node)))))
+		(ecase (cleanup-kind (nlx-info-cleanup nlx-info))
+		  ((:catch :unwind-protect)
+		   (consume :nlx-entry))
+		  ;;
+		  ;; If for a lexical exit, we will see a breakup later, so
+		  ;; don't consume :NLX-ENTRY now.
+		  (:tagbody)
+		  (:block
+		   (let ((cont (nlx-info-continuation nlx-info)))
+		     (when (interesting cont)
+		       (push cont stack))))))
+	      (setf nlx-entry-p t))
+	     ((%catch-breakup %unwind-protect-breakup %lexical-exit-breakup)
+	      (consume :nlx-entry))))
 	  (cif
 	   (consume (if-test node)))
 	  (creturn
@@ -683,6 +712,7 @@
 	   (let* ((cup (entry-cleanup node))
 		  (nlx-info (cleanup-nlx-info cup)))
 	     (when nlx-info
+	       (push :nlx-entry stack)
 	       (push (list nlx-info stack (reverse consumes))
 		     nlx-entries))))
 	  (exit
@@ -714,26 +744,44 @@
 		  (byte-block-info-nlx-entry-p (block-info succ)))
 	(walk-block succ block stack)))))
 
+;;; CONSUME-STUFF  --  Internal
+;;;
+;;;    Take a stack and a consumes list, and remove the appropriate stuff.
+;;; When we consume a :NLX-ENTRY, we just remove the top marker, and leave any
+;;; values on top intact.  This represents the desired effect of
+;;; %CATCH-BREAKUP, etc., which don't affect any values on the stack.
+;;;
+(defun consume-stuff (stack stuff)
+  (let ((new-stack stack))
+    (dolist (cont stuff)
+      (cond ((eq cont :nlx-entry)
+	     (assert (find :nlx-entry new-stack))
+	     (setq new-stack (remove :nlx-entry new-stack :count 1)))
+	    (t
+	     (assert (eq (car new-stack) cont))
+	     (pop new-stack))))
+    new-stack))
+
+;;; WALK-NLX-ENTRY  --  Internal
+;;;
 ;;; NLX-infos is the list of nlx-info structures for this ENTRY note.  Consume
 ;;; and Produce are the values from outside this block that were consumed and
 ;;; produced by this block before the ENTRY node.  Stack is the globally
 ;;; simulated stack at the start of this block.
 ;;;
-;;; If we hit the NLX ep for a unwind-protect, then we are unwinding, and don't
-;;; want to mess with the stack, so just say there's nothing on it.
-;;;
 (defun walk-nlx-entry (nlx-infos stack produce consume)
-  (dolist (cont consume)
-    (assert (eq (car stack) cont))
-    (pop stack))
-  (dolist (nlx-info nlx-infos)
-    (walk-block (nlx-info-target nlx-info) nil 
-		(ecase (cleanup-kind (nlx-info-cleanup nlx-info))
-		  ((:block :tagbody :catch)
-		   (append produce stack))
-		  (:unwind-protect ()))))
+  (let ((stack (consume-stuff stack consume)))
+    (dolist (nlx-info nlx-infos)
+      (walk-block (nlx-info-target nlx-info) nil (append produce stack))))
   (undefined-value))
 
+
+;;; WALK-BLOCK  --  Internal
+;;;
+;;;    Simulate the stack across block boundaries, discarding any values that
+;;; are dead.  A :NLX-ENTRY marker prevents values live at a NLX entry point
+;;; from being discarded prematurely.
+;;;
 (defun walk-block (block pred stack)
   ;; Pop everything off of stack that isn't live.
   (let* ((info (block-info block))
@@ -747,12 +795,14 @@
 	  (loop
 	    (unless stack
 	      (return))
-	    (let* ((cont (car stack))
-		   (info (continuation-info cont)))
-	      (when (sset-member info live)
+	    (let ((cont (car stack)))
+	      (when (or (eq cont :nlx-entry)
+			(sset-member (continuation-info cont) live))
 		(return))
 	      (pop stack)
-	      (let ((results (byte-continuation-info-results info)))
+	      (let ((results
+		     (byte-continuation-info-results
+		      (continuation-info cont))))
 		(case results
 		  (:unknown
 		   (flush-fixed)
@@ -769,6 +819,7 @@
 				    (continuation-next (block-start block))
 				    `(progn ,@(pops)))))
 	  (annotate-block cleanup-block))))
+
     (cond ((eq (byte-block-info-start-stack info) :unknown)
 	   ;; Record what the stack looked like at the start of this block.
 	   (setf (byte-block-info-start-stack info) stack)
@@ -776,9 +827,7 @@
 	   (dolist (stuff (byte-block-info-nlx-entries info))
 	     (walk-nlx-entry (first stuff) stack (second stuff) (third stuff)))
 	   ;; Remove whatever we consume.
-	   (dolist (cont (byte-block-info-consumes info))
-	     (assert (eq (car stack) cont))
-	     (pop stack))
+	   (setq stack (consume-stuff stack (byte-block-info-consumes info)))
 	   ;; Add whatever we produce.
 	   (setf stack (append (byte-block-info-produces info) stack))
 	   (setf (byte-block-info-end-stack info) stack)
@@ -790,6 +839,16 @@
 	   (assert (equal (byte-block-info-start-stack info) stack)))))
   (undefined-value))
 
+;;; BYTE-STACK-ANALYZE  --  Internal
+;;;
+;;;    Do lifetime flow analysis on values pushed on the stack, then call do
+;;; the stack simulation walk to discard dead values.  In addition to
+;;; considering the obvious inputs from a block's successors, we must also
+;;; consider %NLX-ENTRY targets to be successors in order to ensure that any
+;;; values only used in the NLX entry stay alive until we reach the mess-up
+;;; node.  After then, we can keep the values from being discarded by placing a
+;;; marker on the simulated stack.
+;;;
 (defun byte-stack-analyze (component)
   (let ((head nil))
     (let ((*byte-continuation-counter* 0))
@@ -810,6 +869,15 @@
 			     (setf head new))
 			 (setf tail new))))))
 	       (maybe-enqueue-predecessors (block)
+		 (when (byte-block-info-nlx-entry-p (block-info block))
+		   (maybe-enqueue
+		    (node-block
+		     (cleanup-mess-up
+		      (nlx-info-cleanup
+		       (find block
+			     (environment-nlx-info (block-environment block))
+			     :key #'nlx-info-target))))))
+
 		 (dolist (pred (block-pred block))
 		   (unless (eq pred (component-head (block-component block)))
 		     (maybe-enqueue pred)))))
@@ -830,8 +898,18 @@
 			 (byte-block-info-total-consumes succ-info)
 			 produces-sset)
 		    (setf did-anything t)))))
+	    (dolist (nlx-list (byte-block-info-nlx-entries info))
+	      (dolist (nlx-info (first nlx-list))
+		(when (sset-union-of-difference
+		       total-consumes
+		       (byte-block-info-total-consumes
+			(block-info
+			 (nlx-info-target nlx-info)))
+		       produces-sset)
+		  (setf did-anything t))))
 	    (when did-anything
 	      (maybe-enqueue-predecessors block)))))))
+
   (walk-successors (component-head component) nil)
   (undefined-value))
 
@@ -1715,7 +1793,6 @@
   (assert (and (zerop num-args) (zerop results)))
   (let ((nlx-info (continuation-value nlx-info)))
     (when (ecase (cleanup-kind (nlx-info-cleanup nlx-info))
-	    (:catch t)
 	    (:block
 	     ;; We only want to do this for the fall-though case.
 	     (not (eq (car (block-pred (node-block node)))
