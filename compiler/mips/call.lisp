@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.52.1.4 1993/02/08 23:18:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.52.1.5 1993/02/22 14:11:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -498,7 +498,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
       #-gengc
       (inst compute-lra-from-code
@@ -540,7 +540,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
       #-gengc
       (inst compute-lra-from-code
@@ -586,7 +586,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (move callee-nfp nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
       #-gengc
       (inst compute-lra-from-code
