@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.19 1991/09/24 16:09:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.20 1992/09/07 15:37:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,7 +190,8 @@
 ;;; cache translations.
 ;;;
 (defun make-interpreted-function (lambda)
-  (let ((eval-fun (make-eval-function :lambda lambda)))
+  (let ((eval-fun (make-eval-function :lambda lambda
+				      :arglist (second lambda))))
     #'(lambda (&rest args)
 	(let ((fun (eval-function-definition eval-fun))
 	      (args (cons (length args) args)))
@@ -671,7 +672,7 @@
 		  (do-combination :local ,lambda ,type))))))
     `(let ((,kind (c::basic-combination-kind node))
 	   (,fun (c::basic-combination-fun node)))
-       (cond ((eq ,kind :full)
+       (cond ((member ,kind '(:full :error))
 	      (do-combination :full nil ,type))
 	     ((eq ,kind :local)
 	      (let* ((,lambda (c::ref-leaf (c::continuation-use ,fun)))
