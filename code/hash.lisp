@@ -120,7 +120,7 @@
   (declare (fixnum new-length))
   "Rehashes a hash table and replaces the TABLE entry in the structure if
    someone hasn't done so already.  New vector is of NEW-LENGTH."
-  (do ((new-vector (make-array new-length))
+  (do ((new-vector (make-array new-length :initial-element nil))
        (i 0 (1+ i))
        (size (hash-table-size structure))
        (hashing-function (case (hash-table-kind structure)
@@ -241,9 +241,10 @@
 			     :rehash-threshold rehash-threshold
 			     :table
 			     (if (eq test 'equal)
-				 (make-array size)
+				 (make-array size :initial-element nil)
 				 (%primitive set-vector-subtype
-					     (make-array size)
+					     (make-array size
+							 :initial-element nil)
 					     valid-hashing))
 			     :kind test)))
 
