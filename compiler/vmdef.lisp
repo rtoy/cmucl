@@ -1743,7 +1743,7 @@
 						   (primitive-type-type
 						    type)))
 					      (rest x))))
-			  (:constant `(constant ,(third x)))))))
+			  (:constant `(constant-argument ,(third x)))))))
 	     `(,@(mapcar #'frob types)
 	       ,@(when more-types
 		   `(&rest ,(frob more-types)))))))
