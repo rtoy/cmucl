@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.4 1990/11/03 00:23:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.5 1990/11/09 23:37:20 wlott Exp $
 ;;;
 ;;; Ugly pathname functions for Spice Lisp.
 ;;;    these functions are part of the standard Spice Lisp environment.
@@ -31,11 +31,12 @@
 
 (in-package "EXTENSIONS")
 (export '(print-directory complete-file ambiguous-files default-directory
-			  file-writable))
+			  file-writable unix-namestring))
 (in-package "LISP")
 
 
-;;; Pathname structure
+
+;;; Pathname structure
 
 
 ;;; *Default-Pathname-defaults* has all values unspecified except for the
@@ -415,7 +416,9 @@
      (declare (simple-string ,var))
      ,@body))
 
-(defun unix-namestring (pathname for-input)
+;;; UNIX-NAMESTRING -- public
+;;; 
+(defun unix-namestring (pathname &optional (for-input t))
   "Convert PATHNAME into a string that can be used with UNIX system calls."
   (let* ((pathname (if (pathnamep pathname) pathname (pathname pathname)))
 	 (device (%pathname-device pathname)))
