@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/slot-missing.lisp,v 1.2 2003/03/22 16:15:14 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/slot-missing.lisp,v 1.3 2003/06/17 11:08:00 gerd Rel $")
 
 (in-package "PCL-TEST")
 
@@ -88,13 +88,19 @@
   (setq *sm-result* (list slot-name operation new-value)))
 
 (define-sm-test slot-missing.3 (instance sm1)
-  (slot-value instance 'a)
+  (progn
+    (slot-value instance 'a)
+    *sm-result*)
   (a slot-value nil) nil)
 
 (define-sm-test slot-missing.4 (instance sm1)
-  (setf (slot-value instance 'a) 1)
+  (progn
+    (setf (slot-value instance 'a) 1)
+    *sm-result*)
   (a setf 1) nil)
 
 (define-sm-test slot-missing.5 (instance sm1)
-  (slot-boundp instance 'a)
+  (progn
+    (slot-boundp instance 'a)
+    *sm-result*)
   (a slot-boundp nil) nil)
