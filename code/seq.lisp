@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23 1997/02/22 12:49:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.24 1997/08/06 13:42:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1333,8 +1333,8 @@
 			     ())
 			  (declare (fixnum i))
 			  (if (if test-not
-				  (not (funcall test-not (apply-key key (car l)) it))
-				  (funcall test (apply-key key (car l)) it))
+				  (not (funcall test-not it (apply-key key (car l))))
+				  (funcall test it (apply-key key (car l))))
 			      (return t))))))
 	  (setq splice (cdr (rplacd splice (list (car current))))))
       (setq current (cdr current)))
@@ -1380,8 +1380,12 @@
 
 (defun remove-duplicates (sequence &key (test #'eql) test-not (start 0) from-end
 				   end key)
-  "The elements of Sequence are examined, and if any two match, one is
-   discarded.  The resulting sequence is returned."
+  "The elements of Sequence are compared pairwise, and if any two match,
+   the one occuring earlier is discarded, unless FROM-END is true, in
+   which case the one later in the sequence is discarded.  The resulting
+   sequence is returned.
+
+   The :TEST-NOT argument is depreciated."
   (declare (fixnum start))
   (seq-dispatch sequence
 		(if sequence
@@ -1451,7 +1455,9 @@
 			    end key)
   "The elements of Sequence are examined, and if any two match, one is
    discarded.  The resulting sequence, which may be formed by destroying the
-   given sequence, is returned."
+   given sequence, is returned.
+
+   The :TEST-NOT argument is depreciated."
   (seq-dispatch sequence
     (if sequence
 	(list-delete-duplicates* sequence test test-not key from-end start end))
