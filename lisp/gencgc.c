@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.20 2000/08/27 14:45:41 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.21 2000/09/05 08:51:51 dtc Exp $
  *
  */
 
@@ -5789,6 +5789,7 @@ static void	garbage_collect_generation(int generation, int raise)
    * Scavenge the Lisp functions of the interrupt handlers, taking
    * care to avoid SIG_DFL, SIG_IGN.
    */
+
   for (i = 0; i < NSIG; i++) {
     union interrupt_handler handler = interrupt_handlers[i];
     if ((handler.c != SIG_IGN) && (handler.c != SIG_DFL))
@@ -5805,6 +5806,7 @@ static void	garbage_collect_generation(int generation, int raise)
    * only be updated with hooks already scavenged so this only needs
    * doing here.
    */
+
   scavenge((lispobj *) &scavenger_hooks, 1);
 
   if (SymbolValue(SCAVENGE_READ_ONLY_SPACE) != NIL) {
@@ -6236,7 +6238,6 @@ void gc_init(void)
   current_region_free_pointer = boxed_region.free_pointer;
   current_region_end_addr = boxed_region.end_addr;
 }
-
 
 /*
  * Pickup the dynamic space from after a core load.
