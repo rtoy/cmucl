@@ -248,13 +248,34 @@
 	  (declare (type component res))))))))
 
 
+		      (not (find :external funs :key #'functional-kind))
+		      (not (find-if #'(lambda (x)
+					(let ((entries (lambda-entries x)))
+					  (and entries
+					       (find-if #'entry-exits
+							entries))))
+				    funs)))
+
+
+;;; HAS-XEP-OR-NLX  --  Internal
+;;;
+;;;    Return true if Fun is either an XEP or has EXITS to some of its ENTRIES.
+;;;
+(defun has-xep-or-nlx (fun)
+  (declare (type clambda fun))
+  (or (eq (functional-kind fun) :external)
+      (let ((entries (lambda-entries fun)))
+	(and entries
+	     (find-if #'entry-exits entries)))))
+
+
 ;;; FIND-TOP-LEVEL-COMPONENTS  --  Internal
 ;;;
 ;;;    Compute the result of FIND-INITIAL-DFO given the list of all resulting
-;;; components.  We find components that contain a :Top-Level lambda.  If there
-;;; is no normal XEP, then we mark the component as :Top-Level.  If there is a
-;;; :Top-Level lambda, and also a normal XEP, then we treat the component as
-;;; normal, but also return such components in a list as the third value.
+;;; components.  Components that have no normal XEPs or potential non-local
+;;; exits are marked as :TOP-LEVEL.  If there is a :Top-Level lambda, and also
+;;; a normal XEP, then we treat the component as normal, but also return such
+;;; components in a list as the third value.
 ;;;
 (defun find-top-level-components (components)
   (declare (list components))
@@ -265,8 +286,7 @@
       (unless (eq (block-next (component-head com)) (component-tail com))
 	(let* ((funs (component-lambdas com))
 	       (has-top (find :top-level funs :key #'functional-kind)))
-	  (cond ((and has-top
-		      (not (find :external funs :key #'functional-kind)))
+	  (cond ((and has-top (not (find-if #'has-xep-or-nlx funs)))
 		 (setf (component-kind com) :top-level)
 		 (setf (component-name com) "Top-Level Form")
 		 (top com))
