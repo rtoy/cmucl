@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.33 1990/11/03 03:25:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.34 1990/11/06 00:56:51 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -262,34 +262,7 @@
     (inst break vm:pending-interrupt-trap)))
 
 
-(define-vop (halt)
+(define-vop (lisp::halt)
   (:generator 1
     (inst break vm:halt-trap)))
 
-
-;;; This guy makes sure that there aren't any random garbage pointers lying
-;;; around in registers by clearing all of the boxed registers.  Our allocating
-;;; all of the boxed registers as temporaries will prevent any TNs from being
-;;; packed in those registers at the time this VOP is invoked.
-;;;
-#+nil
-(define-vop (clear-registers)
-  (:temporary (:sc any-reg :offset 1) a0)
-  (:temporary (:sc any-reg :offset 3) a1)
-  (:temporary (:sc any-reg :offset 5) a2)
-  (:temporary (:sc any-reg :offset 4) t0)
-  (:temporary (:sc any-reg :offset 7) l0)
-  (:temporary (:sc any-reg :offset 8) l1)
-  (:temporary (:sc any-reg :offset 9) l2)
-  (:temporary (:sc any-reg :offset 10) l3)
-  (:temporary (:sc any-reg :offset 11) l4)
-  (:generator 10
-    (inst lis a0 0)
-    (inst lis a1 0)
-    (inst lis a2 0)
-    (inst lis t0 0)
-    (inst lis l0 0)
-    (inst lis l1 0)
-    (inst lis l2 0)
-    (inst lis l3 0)
-    (inst lis l4 0)))
