@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.45 2001/02/11 14:22:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.46 2002/09/03 16:29:45 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,16 +64,6 @@
 ;;;; Type based constants:
 
 (eval-when (compile eval load)
-
-(defconstant lowtag-bits 3
-  "Number of bits at the low end of a pointer used for type information.")
-
-(defconstant lowtag-mask (1- (ash 1 lowtag-bits))
-  "Mask to extract the low tag bits from a pointer.")
-  
-(defconstant lowtag-limit (ash 1 lowtag-bits)
-  "Exclusive upper bound on the value of the low tag bits from a
-  pointer.")
 
 (defconstant type-bits 8
   "Number of bits used in the header word of a data block for typeing.")

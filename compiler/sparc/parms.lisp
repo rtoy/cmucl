@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.34 2002/03/31 14:48:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.35 2002/09/03 16:29:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,6 +91,19 @@
 (defconstant word-bytes (/ word-bits byte-bits)
   "Number of bytes in a word.")
 
+(defconstant lowtag-bits 3
+  "Number of bits at the low end of a pointer used for type information.")
+
+(defconstant lowtag-mask (1- (ash 1 lowtag-bits))
+  "Mask to extract the low tag bits from a pointer.")
+  
+(defconstant lowtag-limit (ash 1 lowtag-bits)
+  "Exclusive upper bound on the value of the low tag bits from a
+  pointer.")
+
+(defconstant lowtag-bits 3
+  "Number of bits at the low end of a pointer used for type information.")
+
 (defconstant fixnum-tag-bits (1- lowtag-bits)
   "Number of tag bits used for a fixnum")
 
@@ -174,13 +187,17 @@
 
 (export '(target-read-only-space-start
 	  target-static-space-start
-	  target-dynamic-space-start))
+	  target-dynamic-space-start
+	  target-foreign-linkage-space-start
+	  target-foreign-linkage-entry-size))
 
 ;;; Where to put the different spaces.  Must match the C code!
 ;;; 
 (defparameter target-read-only-space-start #x10000000)
 (defparameter target-static-space-start    #x28000000)
 (defparameter target-dynamic-space-start   #x40000000)
+(defparameter target-foreign-linkage-space-start #x0fc00000)
+(defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
 
 
