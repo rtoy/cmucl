@@ -7,12 +7,10 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.17 1991/04/09 14:40:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.18 1991/04/22 23:05:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.17 1991/04/09 14:40:43 ram Exp $
-;;; 
 ;;; This file contains the interpreter.  We first convert to the compiler's
 ;;; IR1 and interpret that.
 ;;;
@@ -1029,12 +1027,13 @@
       (c::constant
        (c::constant-value leaf))
       (c::global-var
-       (if (eq (c::global-var-kind leaf) :global-function)
-	   (let ((name (c::global-var-name leaf)))
-	     (if (symbolp name)
-		 (symbol-function name)
-		 (fdefinition name)))
-	   (symbol-value (c::global-var-name leaf))))
+       (locally (declare (optimize (safety 1)))
+	 (if (eq (c::global-var-kind leaf) :global-function)
+	     (let ((name (c::global-var-name leaf)))
+	       (if (symbolp name)
+		   (symbol-function name)
+		   (fdefinition name)))
+	     (symbol-value (c::global-var-name leaf)))))
       (c::lambda-var
        (leaf-value-lambda-var node leaf frame-ptr closure))
       (c::functional
