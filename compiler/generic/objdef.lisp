@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.27 1993/03/12 21:23:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.28 1993/03/13 10:56:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,7 @@
 	  forwarding-pointer-type scavenger-hook-type))
 
 (in-package "KERNEL")
-(export '(%set-funcallable-instance-function %make-funcallable-instance
+(export '(%make-funcallable-instance
 	  #+gengc funcallable-instance-entry-point
 	  #-gengc %funcallable-instance-function
 	  %funcallable-instance-lexenv %funcallable-instance-layout))
