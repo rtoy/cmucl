@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.43 1991/04/23 18:01:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.44 1991/05/10 15:48:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1214,7 +1214,11 @@
 	   (context-temp (make-lambda-var :name n-context))
 	   (n-count (gensym))
 	   (count-temp (make-lambda-var :name n-count
-					:type (specifier-type 'fixnum))))
+					:type (specifier-type 'fixnum)))
+	   (*lexical-environment*
+	    (make-lexenv :cookie
+			 (make-interface-cookie *lexical-environment*))))
+	    
       (arg-vars context-temp count-temp)
 
       (when rest
@@ -1278,14 +1282,11 @@
 	      (body `(when (and ,n-losep (not ,n-allowp))
 		       (%unknown-keyword-argument-error ,n-losep)))))))
       
-      (let* ((*lexical-environment*
-	      (make-lexenv :cookie
-			   (make-interface-cookie *lexical-environment*)))
-	     (ep (ir1-convert-lambda-body
+      (let ((ep (ir1-convert-lambda-body
 		 `((let ,(temps)
 		     ,@(body)
 		     (%funcall ,(optional-dispatch-main-entry res)
-			      . ,(arg-vals))))
+			       . ,(arg-vals))))
 		 (arg-vars))))
 	(setf (optional-dispatch-more-entry res) ep))))
 
