@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.19 1997/04/01 19:23:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.20 1997/08/24 03:46:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -580,3 +580,23 @@
 (deftransform bit-not ((bit-array-1 result-bit-array)
 		       (bit-vector (constant-argument t)))
   '(bit-not bit-array-1 bit-array-1))
+
+
+;;; ARRAY-HEADER-P  --  transform.
+;;;
+;;; Pick off some constant cases.
+;;;
+(deftransform array-header-p ((array) (array))
+  (let ((type (continuation-type array)))
+    (declare (optimize (safety 3)))
+    (unless (array-type-p type)
+      (give-up))
+    (let ((dims (array-type-dimensions type)))
+      (cond ((csubtypep type (specifier-type '(simple-array * (*))))
+	     ;; No array header.
+	     nil)
+	    ((and (listp dims) (> (length dims) 1))
+	     ;; Multi-dimensional array, will have a header.
+	     t)
+	    (t
+	     (give-up))))))
