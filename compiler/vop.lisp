@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.30 1991/12/14 09:06:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.31 1991/12/15 08:28:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -837,7 +837,9 @@
 ;;; The SB structure represents the global information associated with a
 ;;; storage base.
 ;;;
-(defstruct (sb (:print-function %print-sb))
+(defstruct (sb
+	    (:print-function %print-sb)
+	    (:make-load-form-fun :just-dump-it-normally))
   ;;
   ;; Name, for printing and reference.
   (name nil :type symbol)
