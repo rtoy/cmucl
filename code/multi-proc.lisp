@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.21 1998/01/12 16:56:55 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.22 1998/01/13 19:20:10 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1441,105 +1441,119 @@
 	      (process-idle-time process)))))
 
 
+;;; Top-Level
+;;;
+(defun top-level ()
+  "Top-level READ-EVAL-PRINT loop for processes."
+  (let ((magic-eof-cookie (cons :eof nil)))
+    (loop
+      (with-simple-restart (abort "Return to Top-Level.")
+	(catch 'top-level-catcher
+	  (unix:unix-sigsetmask 0)
+	  (let ((lisp::*in-top-level-catcher* t))
+	    (loop
+	      (sys:scrub-control-stack)
+	      (fresh-line)
+	      (princ (if (functionp ext:*prompt*)
+			 (funcall ext:*prompt*)
+		       ext:*prompt*))
+	      (force-output)
+	      (let ((form (read *standard-input* nil magic-eof-cookie)))
+		(cond ((not (eq form magic-eof-cookie))
+		       (let ((results
+			      (multiple-value-list
+				  (ext:interactive-eval form))))
+			 (dolist (result results)
+			   (fresh-line)
+			   (prin1 result))))
+		      (t
+		       (throw '%end-of-the-process nil)))))))))))
+
 ;;; Start-Lisp-Connection-Listener
 ;;;
 ;;; Create a process to listen for connections on a TCP port and start
 ;;; a new top-level process for each connection.
 ;;;
 (defun start-lisp-connection-listener (&optional (port 1025))
+  (declare (type (unsigned-byte 16) port))
   "Create a Lisp connection listener on the given port."
-  (labels (;; The session top level read eval. loop.
-	   (start-top-level (fd)
-	     (let ((stream (sys:make-fd-stream fd :input t :output t)))
-	       (unwind-protect
-		    (let* ((*terminal-io* stream)
-			   (*standard-input* (make-synonym-stream
-					      '*terminal-io*))
-			   (*standard-output* *standard-input*)
-			   (*error-output* *standard-input*)
-			   (*debug-io* *standard-input*)
-			   (*query-io* *standard-input*)
-			   (*trace-output* *standard-input*)
-			   (magic-eof-cookie (cons :eof nil)))
-		      
-		      (ext:print-herald)
-		      
-		      (with-simple-restart (close "Close connection.")
-			(loop
-			 (with-simple-restart (abort "Return to Top-Level.")
-			   (catch 'top-level-catcher
-			     (unix:unix-sigsetmask 0)
-			     (let ((lisp::*in-top-level-catcher* t))
-			       (loop
-				(sys:scrub-control-stack)
-				(fresh-line)
-				(princ (if (functionp ext:*prompt*)
-					   (funcall ext:*prompt*)
-					   ext:*prompt*))
-				(force-output)
-				(let ((form (read *standard-input*
-						  nil magic-eof-cookie)))
-				  (cond ((not (eq form magic-eof-cookie))
-					 (let ((results
-						(multiple-value-list
-						    (ext:interactive-eval
-						     form))))
-					   (dolist (result results)
-					     (fresh-line)
-					     (prin1 result))))
-					(t
-					 (throw '%end-of-the-process nil)))))))))))
-		 (handler-case 
-		  (close stream)
-		  (error ())))))
-	   ;; Turn internet address into string format
-	   (ip-address-string (address)
-	     (format nil "~D.~D.~D.~D"
-		     (ldb (byte 8 24) address)
-		     (ldb (byte 8 16) address)
-		     (ldb (byte 8 8)  address)
-		     (ldb (byte 8 0)  address)))
-	   ;; The body of the connection listener.
-	   (listener ()
-	     (declare (optimize (speed 3)))
-	     (let ((fd nil))
-	       (unwind-protect
-		    (progn
-		      ;; Try to start the listener - sleep until available.
-		      (do ((retry-wait 10 (* 2 retry-wait)))
-			  (fd)
-			(declare (fixnum retry-wait))
-			(handler-case
-			 (setf fd (ext:create-inet-listener port))
-			 (error ()
-			    (format *error-output*
-				    "~&Warning: unable to create listner on ~
-				     port ~d; retry in ~d seconds.~%"
-				    port retry-wait)
-			    (sleep retry-wait))))
-		      (loop
-		       ;; Wait until input ready.
-		       (process-wait-until-fd-usable fd :input)
-		       (multiple-value-bind (new-fd remote-host)
-			   (ext:accept-tcp-connection fd)
-			 (let ((host-entry (ext:lookup-host-entry
-					    remote-host)))
-			   (make-process
-			    #'(lambda ()
-				(start-top-level new-fd))
-			    :name (format nil "Lisp session from ~A"
-					  (if host-entry
-					      (ext:host-entry-name host-entry)
+  (let ((listener-password nil))
+    (labels (;; The session top level read eval. loop.
+	     (start-top-level (fd)
+	       (let ((stream (sys:make-fd-stream fd :input t :output t)))
+		 (unwind-protect
+		     (let* ((*terminal-io* stream)
+			    (*standard-input*
+			     (make-synonym-stream '*terminal-io*))
+			    (*standard-output* *standard-input*)
+			    (*error-output* *standard-input*)
+			    (*debug-io* *standard-input*)
+			    (*query-io* *standard-input*)
+			    (*trace-output* *standard-input*))
+		       ;;
+		       (format t "Enter password: ")
+		       (finish-output)
+		       (unless (eql (read) listener-password)
+			 (return-from start-top-level))
+		       (ext:print-herald)
+		       ;;
+		       (top-level))
+		   (handler-case 
+		       (close stream)
+		     (error ())))))
+	     ;;
+	     ;; Turn internet address into string format
+	     (ip-address-string (address)
+	       (format nil "~D.~D.~D.~D"
+		       (ldb (byte 8 24) address)
+		       (ldb (byte 8 16) address)
+		       (ldb (byte 8 8)  address)
+		       (ldb (byte 8 0)  address)))
+	     ;;
+	     ;; The body of the connection listener.
+	     (listener ()
+	       (declare (optimize (speed 3)))
+	       (let ((fd nil))
+		 (unwind-protect
+		     (progn
+		       ;; Start the listener.
+		       (do ()
+			   (fd)
+			 (handler-case
+			     (setf fd (ext:create-inet-listener port))
+			   (error () (incf port))))
+
+		       (setf (process-name *current-process*)
+			 (format nil "Lisp connection listener on port ~d"
+				 port))
+
+		       (setf listener-password (random (expt 2 24)))
+		       (format t "~&;;; Started lisp connection listener on ~
+ 				  port ~d with password ~d~%"
+			       port listener-password)
+
+		       (loop
+			 ;; Wait until input ready.
+			 (process-wait-until-fd-usable fd :input)
+			 (multiple-value-bind (new-fd remote-host)
+			     (ext:accept-tcp-connection fd)
+			   (let ((host-entry (ext:lookup-host-entry
+					      remote-host)))
+			     (make-process
+			      #'(lambda ()
+				  (start-top-level new-fd))
+			      :name (format nil "Lisp session from ~A"
+					    (if host-entry
+						(ext:host-entry-name
+						 host-entry)
 					      (ip-address-string
 					       remote-host))))))))
-		 ;; Close the listener stream.
-		 (when fd
-		   (unix:unix-close fd))))))
-    
-    ;; Make the listening thread.
-    (make-process
-     #'listener
-     :name (format nil "Lisp Connection Listener on port ~d" port))))
+		   ;; Close the listener stream.
+		   (when fd
+		     (unix:unix-close fd))))))
+
+      ;; Make the listening thread.
+      (make-process #'listener))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Simple Locking.
