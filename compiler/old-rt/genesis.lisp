@@ -148,7 +148,7 @@
 (defun print-a-space (space stream depth)
   depth
   (write-string "#<SPACE, address = " stream)
-  (prin1 (sap-to-fixnum (space-address space)) stream)
+  (prin1 (sap-int (space-address space)) stream)
   (write-char #\> stream))
 
 ;;; The type codes:
@@ -274,8 +274,8 @@
 				(ash space-size 3)
 				space-size))
 	(setf (svref memory space)
-	      (make-space :address (fixnum-to-sap hunk)
-			  :real-address (fixnum-to-sap addr)
+	      (make-space :address (int-sap hunk)
+			  :real-address (int-sap addr)
 			  :free-pointer (cons (if (eq space code-space)
 						  clc::romp-code-base
 						  (space-to-highbits space))
@@ -514,7 +514,7 @@
     (short-float
      (let ((fthing (%primitive make-fixnum thing)))
        (handle-on (logior (ash short-float-4bit-ltype 12)
-			  (%sp-logldb 12 16 fthing)
+			  (%primitive logldb 12 16 fthing)
 			  (if (< thing 0) #x800 0))
 		  (logand fthing #xFFFF))))
     (long-float
@@ -1227,10 +1227,6 @@
 	(index (clone-arg)))
     (write-indexed code index value)))
 
-
-(not-cold-fop fop-miscop-fixup)
-(not-cold-fop fop-link-address-fixup)
-
 
 ;;; Loading numbers...
 
@@ -1373,8 +1369,8 @@
 	  (incf nonempty-spaces)
 	  (incf data-pages (1+ (ash free (1+ offset-to-page-shift)))))))
     (multiple-value-bind (hunk addr) (get-valid-hunk byte-length)
-      (setq hunk (fixnum-to-sap hunk))
-      (setq addr (fixnum-to-sap addr))
+      (setq hunk (int-sap hunk))
+      (setq addr (int-sap addr))
       ;; Write the CORE file password.
       (%primitive 16bit-system-set hunk 0 (byte-swap-16 #x+434F))
       (%primitive 16bit-system-set hunk 1 (byte-swap-16 #x+5245))
