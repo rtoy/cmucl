@@ -1,13 +1,15 @@
 ;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.18 1990/11/18 16:56:21 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.19 1992/07/28 20:42:50 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -28,17 +30,20 @@
 			  (:res result descriptor-reg a0-offset)
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
+			  (:temp pa-flag non-descriptor-reg nl4-offset)
 			  (:temp vector descriptor-reg a3-offset))
-  (pseudo-atomic (ndescr)
-    (inst or vector alloc-tn vm:other-pointer-type)
-    (inst addu alloc-tn alloc-tn (+ (1- (ash 1 vm:lowtag-bits))
-				    (* vm:vector-data-offset vm:word-bytes)))
-    (inst addu alloc-tn alloc-tn words)
-    (inst li ndescr (lognot vm:lowtag-mask))
-    (inst and alloc-tn alloc-tn ndescr)
-    (inst srl ndescr type vm:word-shift)
-    (storew ndescr vector 0 vm:other-pointer-type)
-    (storew length vector vm:vector-length-slot vm:other-pointer-type))
+  (pseudo-atomic (pa-flag)
+    (inst or vector alloc-tn other-pointer-type)
+    ;; This is kinda sleezy, changing words like this.  But we can because
+    ;; the vop thinks it is temporary.
+    (inst addu words (+ (1- (ash 1 lowtag-bits))
+			(* vector-data-offset word-bytes)))
+    (inst li ndescr (lognot lowtag-mask))
+    (inst and words ndescr)
+    (inst addu alloc-tn words)
+    (inst srl ndescr type word-shift)
+    (storew ndescr vector 0 other-pointer-type)
+    (storew length vector vector-length-slot other-pointer-type))
   (move result vector))
 
 
@@ -62,9 +67,9 @@
   ;; Save the return address.
   (inst subu retaddr lip-tn code-tn)
 
-  (loadw length string vm:vector-length-slot vm:other-pointer-type)
+  (loadw length string vector-length-slot other-pointer-type)
   (inst addu lip string
-	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
+	(- (* vector-data-offset word-bytes) other-pointer-type))
   (inst b test)
   (move accum zero-tn)
 
@@ -164,7 +169,7 @@
   (inst subu retaddr lip-tn code-tn)
 
   (inst addu lip string
-	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
+	(- (* vector-data-offset word-bytes) other-pointer-type))
   (inst b test)
   (move accum zero-tn)
 

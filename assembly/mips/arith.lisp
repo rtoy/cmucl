@@ -1,13 +1,15 @@
 ;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.10 1992/03/08 18:35:13 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.11 1992/07/28 20:42:28 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -95,6 +97,7 @@
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lo non-descriptor-reg nl1-offset)
 			  (:temp hi non-descriptor-reg nl2-offset)
+			  (:temp pa-flag non-descriptor-reg nl4-offset)
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
@@ -124,24 +127,20 @@
   (inst or lo temp)
   (inst sra hi 2)
   ;; Allocate a BIGNUM for the result.
-  (pseudo-atomic (temp)
+  (pseudo-atomic (pa-flag :extra (pad-data-block (+ 2 bignum-digits-offset)))
     (let ((one-word (gen-label)))
-      (inst addu res alloc-tn vm:other-pointer-type)
-      ;; Assume we need one word.
-      (inst addu alloc-tn (vm:pad-data-block (1+ vm:bignum-digits-offset)))
-      ;; Is that correct?
+      (inst or res alloc-tn other-pointer-type)
+      ;; Do we need one word or two?
       (inst sra temp lo 31)
       (inst xor temp hi)
       (inst beq temp one-word)
-      (inst li temp (logior (ash 1 vm:type-bits) vm:bignum-type))
-      ;; Nope, we need two, so allocate the addition space.
-      (inst addu alloc-tn (- (vm:pad-data-block (+ 2 vm:bignum-digits-offset))
-			     (vm:pad-data-block (1+ vm:bignum-digits-offset))))
-      (inst li temp (logior (ash 2 vm:type-bits) vm:bignum-type))
-      (storew hi res (1+ vm:bignum-digits-offset) vm:other-pointer-type)
+      (inst li temp (logior (ash 1 type-bits) bignum-type))
+      ;; Nope, we need two.
+      (inst li temp (logior (ash 2 type-bits) bignum-type))
+      (storew hi res (1+ bignum-digits-offset) other-pointer-type)
       (emit-label one-word)
-      (storew temp res 0 vm:other-pointer-type)
-      (storew lo res vm:bignum-digits-offset vm:other-pointer-type)))
+      (storew temp res 0 other-pointer-type)
+      (storew lo res bignum-digits-offset other-pointer-type)))
   ;; Out of here
   (lisp-return lra lip :offset 2)
 
