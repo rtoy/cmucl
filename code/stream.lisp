@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.73 2004/04/09 18:03:01 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.74 2004/04/14 17:06:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1156,6 +1156,8 @@ streams."
 	     in-type `(and ,in-type ,out-type))))
       (:close
        (set-closed-flame stream))
+      (:file-length
+       (error 'type-error :datum stream :expected-type 'file-stream))
       (t
        (or (if in-lisp-stream-p
 	       (funcall (lisp-stream-misc in) in operation arg1 arg2)
@@ -1249,6 +1251,8 @@ streams."
        (when current (clear-input current)))
       (:unread
        (when current (unread-char arg1 current)))
+      (:file-length
+       (error 'type-error :datum stream :expected-type 'file-stream))
       (t
        (if (lisp-stream-p current)
            (funcall (lisp-stream-misc current) current operation arg1 arg2)
@@ -1338,6 +1342,8 @@ output to Output-stream"
 	      (infn)
 	      (unread-char char in)
 	      (outfn char))))))
+      (:file-length
+       (error 'type-error :datum stream :expected-type 'file-stream))
       (t
        (or (if (lisp-stream-p in)
 	       (funcall (lisp-stream-misc in) in operation arg1 arg2)
@@ -1437,10 +1443,7 @@ output to Output-stream"
 	 (setf (string-input-stream-current stream) arg1)
 	 (string-input-stream-current stream)))
     (:file-length
-     ;; emarsden2004-04-06 this is not ANSI-conforming: if the stream
-     ;; argument to FILE-LENGTH is not a stream associated with a file,
-     ;; we should signal a type-error 
-     (length (string-input-stream-string stream)))
+     (error 'type-error :datum stream :expected-type 'file-stream))
     (:unread (decf (string-input-stream-current stream)))
     (:listen (or (/= (the fixnum (string-input-stream-current stream))
 		     (the fixnum (string-input-stream-end stream)))
@@ -1519,6 +1522,8 @@ output to Output-stream"
     (:file-position
      (if (null arg1)
 	 (string-output-stream-index stream)))
+    (:file-length
+     (error 'type-error :datum stream :expected-type 'file-stream))
     (:charpos
      (do ((index (1- (the fixnum (string-output-stream-index stream)))
 		 (1- index))
