@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.9 1999/02/22 11:26:42 dtc Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.10 1999/09/16 15:26:32 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -101,12 +101,8 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_esi esi
 #define sc_edi edi
 
-#define SA_SIGINFO	0
-
 #endif /* i386 */
 
 #ifdef alpha
 #define uc_sigmask	sc_mask
 #endif /* alpha */
-
-#define sa_sigaction	sa_handler
