@@ -43,12 +43,14 @@
 
 (eval-when (compile load eval)
 
+;;; Hashtable from SC and SB names the corresponding structures.  The META
+;;; versions are only used at meta-compile and load times, so the defining
+;;; macros can change these at meta-compile time without breaking the compiler.
 ;;;
-;;; Hashtable from SC and SB names the corresponding structures.  These tables
-;;; are only used at meta-compile and load times, so the defining macros can
-;;; change these at meta-compile time without breaking the compiler.
 (defvar *sc-names* (make-hash-table :test #'eq))
 (defvar *sb-names* (make-hash-table :test #'eq))
+(defvar *meta-sc-names* (make-hash-table :test #'eq))
+(defvar *meta-sb-names* (make-hash-table :test #'eq))
 (proclaim '(hash-table *sc-names* *sb-names*))
 
 ;;;
@@ -60,8 +62,7 @@
 ;;; SC-Or-Lose, SB-Or-Lose, SC-Number-Or-Lose  --  Internal
 ;;;
 ;;;    Return the SC structure, SB structure or SC number corresponding to a
-;;; name, or die trying.  These should not be used after load time, since
-;;; compiling the compiler changes the definitions.
+;;; name, or die trying.
 ;;;
 (defun sc-or-lose (x)
   (the sc
@@ -75,6 +76,26 @@
 ;;;
 (defun sc-number-or-lose (x)
   (the sc-number (sc-number (sc-or-lose x))))
+
+
+;;; META-SC-OR-LOSE, META-SB-OR-LOSE, META-SC-NUMBER-OR-LOSE  --  Internal
+;;;
+;;;    Like the non-meta versions, but go for the meta-compile-time info.
+;;; These should not be used after load time, since compiling the compiler
+;;; changes the definitions.
+;;;
+(defun meta-sc-or-lose (x)
+  (the sc
+       (or (gethash x *meta-sc-names*)
+	   (error "~S is not a defined storage class." x))))
+;;;
+(defun meta-sb-or-lose (x)
+  (the sb
+       (or (gethash x *meta-sb-names*)
+	   (error "~S is not a defined storage base." x))))
+;;;
+(defun meta-sc-number-or-lose (x)
+  (the sc-number (sc-number (meta-sc-or-lose x))))
 
 ); Eval-When (Compile Load Eval)
 
@@ -109,7 +130,7 @@
 		 (make-finite-sb :name name :kind kind :size size))))
     `(progn
        (eval-when (compile load eval)
-	 (setf (gethash ',name *sb-names*) ',res))
+	 (setf (gethash ',name *meta-sb-names*) ',res))
        ,(if (eq kind :non-packed)
 	    `(setf (gethash ',name *sb-names*) (copy-sb ',res))
 	    `(let ((res (copy-finite-sb ',res)))
@@ -120,9 +141,9 @@
 	       (setf (finite-sb-live-tns res)
 		     (make-array ',size :initial-element nil))
 	       (setf (gethash ',name *sb-names*) res)))
-       (setq *sb-list*
-	     (cons (gethash ',name *sb-names*)
-		   (remove ',name *sb-list* :key #'sb-name)))
+
+       (setq *sb-list* (cons (sb-or-lose ',name)
+			     (remove ',name *sb-list* :key #'sb-name)))
        ',name)))
 
 
@@ -168,7 +189,7 @@
   (check-type alternate-scs list)
   (check-type constant-scs list)
 
-  (let ((sb (sb-or-lose sb-name)))
+  (let ((sb (meta-sb-or-lose sb-name)))
     (if (eq (sb-kind sb) :finite)
 	(let ((size (sb-size sb))
 	      (element-size (eval element-size)))
@@ -188,23 +209,23 @@
   (let ((nstack-p
 	 (if (or (eq sb-name 'non-descriptor-stack)
 		 (find 'non-descriptor-stack
-		       (mapcar #'sc-or-lose alternate-scs)
+		       (mapcar #'meta-sc-or-lose alternate-scs)
 		       :key #'(lambda (x)
 				(sb-name (sc-sb x)))))
 	     t nil)))
     `(progn
        (eval-when (compile load eval)
 	 (let ((res (make-sc :name ',name :number ',number
-			     :sb (sb-or-lose ',sb-name)
+			     :sb (meta-sc-or-lose ',sb-name)
 			     :element-size ,element-size
 			     :locations ',locations
 			     :save-p ',save-p
 			     :number-stack-p ,nstack-p
-			     :alternate-scs (mapcar #'sc-or-lose
+			     :alternate-scs (mapcar #'meta-sc-or-lose
 						    ',alternate-scs)
-			     :constant-scs (mapcar #'sc-or-lose
+			     :constant-scs (mapcar #'meta-sc-or-lose
 						   ',constant-scs))))
-	   (setf (gethash ',name *sc-names*) res)
+	   (setf (gethash ',name *meta-sc-names*) res)
 	   (setf (svref *meta-sc-numbers* ',number) res)
 	   (setf (svref (sc-load-costs res) ',number) 0)))
        
@@ -213,7 +234,8 @@
 	   (warn "Redefining SC number ~D from ~S to ~S." ',number
 		 (sc-name old) ',name)))
        
-       (setf (svref *sc-numbers* ',number) (sc-or-lose ',name))
+       (setf (svref *sc-numbers* ',number) (meta-sc-or-lose ',name))
+       (setf (svref *sc-names* ',name) (meta-sc-or-lose ',name))
        ',name)))
 
 
@@ -231,9 +253,9 @@
 	  (tos (cdr ,scs) (cddr tos)))
 	 ((null froms))
        (dolist (from (car froms))
-	 (let ((,from-sc-var (sc-or-lose from)))
+	 (let ((,from-sc-var (meta-sc-or-lose from)))
 	   (dolist (to (car tos))
-	     (let ((,to-sc-var (sc-or-lose to)))
+	     (let ((,to-sc-var (meta-sc-or-lose to)))
 	       ,@body)))))))
 
 
@@ -362,7 +384,7 @@
   (check-type name symbol)
   (check-type scs list)
   (once-only ((n-old `(gethash ',name *primitive-type-names*))
-	      (n-scs `(mapcar #'sc-number-or-lose ',scs))
+	      (n-scs `(mapcar #'meta-sc-number-or-lose ',scs))
 	      (n-type `(specifier-type ',type)))
     `(progn
        (cond (,n-old
@@ -828,8 +850,8 @@
 	(offset (operand-parse-offset temp)))
     (assert sc)
     (if offset
-	`(make-wired-tn ,(sc-number-or-lose sc) ,offset)
-	`(make-restricted-tn ,(sc-number-or-lose sc)))))
+	`(make-wired-tn ,(meta-sc-number-or-lose sc) ,offset)
+	`(make-restricted-tn ,(meta-sc-number-or-lose sc)))))
 
   
 ;;; Allocate-Temporaries  --  Internal
@@ -970,7 +992,7 @@
 (defun find-load-functions (op load-p)
   (collect ((funs))
     (dolist (sc-name (operand-parse-scs op))
-      (let* ((sc (sc-or-lose sc-name))
+      (let* ((sc (meta-sc-or-lose sc-name))
 	     (scn (sc-number sc))
 	     (load-scs (append (when load-p
 				 (sc-constant-scs sc))
@@ -1366,7 +1388,7 @@
 	(costs (make-array sc-number-limit :initial-element nil))
 	(load-scs (make-array sc-number-limit :initial-element nil)))
     (dolist (sc-name scs)
-      (let* ((load-sc (sc-or-lose sc-name))
+      (let* ((load-sc (meta-sc-or-lose sc-name))
 	     (load-scn (sc-number load-sc)))
 	(setf (svref costs load-scn) 0)
 	(setf (svref load-scs load-scn) load-scn)
@@ -2142,7 +2164,7 @@
 	      (clauses `(t nil ,@(rest case)))
 	      (return))
 	    (clauses `((or ,@(mapcar #'(lambda (x)
-					 `(eql ,(sc-number-or-lose x)
+					 `(eql ,(meta-sc-number-or-lose x)
 					       ,n-sc))
 				     (if (atom head) (list head) head)))
 		       nil ,@(rest case))))))
@@ -2159,7 +2181,7 @@
   Returns true if TNs SC is any of the named SCs, false otherwise."
   (once-only ((n-sc `(sc-number (tn-sc ,tn))))
     `(or ,@(mapcar #'(lambda (x)
-		       `(eql ,n-sc ,(sc-number-or-lose x)))
+		       `(eql ,n-sc ,(meta-sc-number-or-lose x)))
 		   scs))))
 
 
