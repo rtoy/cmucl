@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.23 2003/03/24 11:36:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.24 2004/12/06 17:03:56 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,8 +34,8 @@
 	      (note (transform-note (car failure))))
 	  (cond
 	   ((consp what)
-	    (compiler-note "Unable to ~A because:~%~6T~?"
-			   note (first what) (rest what)))
+	    (efficiency-note "Unable to ~A because:~%~6T~?"
+			     note (first what) (rest what)))
 	   ((valid-function-use node what
 				:argument-test #'types-intersect
 				:result-test #'values-types-intersect)
@@ -47,9 +47,9 @@
 				    :warning-function #'frob
 				    :error-function #'frob))
 	      
-	      (compiler-note "Unable to ~A due to type uncertainty:~@
+	      (efficiency-note "Unable to ~A due to type uncertainty:~@
 	                      ~{~6T~?~^~&~}"
-			     note (messages))))))))))
+			       note (messages))))))))))
 
 
 ;;; FINALIZE-XEP-DEFINITION  --  Internal

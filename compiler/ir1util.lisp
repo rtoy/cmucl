@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.107 2004/10/26 13:31:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.108 2004/12/06 17:03:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2177,6 +2177,15 @@ these can be NIL if unavailable or inapplicable.")
   (unless (if *compiler-error-context*
 	      (policy *compiler-error-context* (= brevity 3))
 	      (policy nil (= brevity 3)))
+    (warn 'simple-style-warning :format-control format-string
+	  :format-arguments format-args))
+  (values))
+
+(defun efficiency-note (format-string &rest format-args)
+  (declare (string format-string))
+  (unless (if *compiler-error-context*
+	      (policy *compiler-error-context* (>= brevity 2.5))
+	      (policy nil (>= brevity 2.5)))
     (warn 'simple-style-warning :format-control format-string
 	  :format-arguments format-args))
   (values))
