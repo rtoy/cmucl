@@ -16,6 +16,11 @@
 (in-package "DEBUG")
 (use-package '("TOOLKIT" "INTERFACE"))
 
+;;; We need to record three things globally:
+;;;    - The structure decribing the current debugger display
+;;;    - The frame displays which are currently active (ie. visible)
+;;;    - The husks of old debugger displays for reuse
+;;;
 (defvar *current-debug-display* nil)
 (defvar *debug-active-frames* nil)
 (defvar *old-display-frames* nil)
@@ -42,7 +47,7 @@
 
 
 
-;;;; Callback functions
+;;;; Callback functions used by debugger
 
 (defun quit-debugger-callback (widget call-data)
   (declare (ignore widget call-data))
@@ -59,15 +64,20 @@
     ;; Should wrap this in a busy cursor
     (debug-display-frame frame)))
 
-(defun ping-callback (widget call-data test)
-  (declare (ignore widget call-data))
-  (destroy-widget (car (xt::widget-children test))))
-
 (defun close-all-callback (widget call-data)
   (declare (ignore widget call-data))
   (dolist (info *debug-active-frames*)
     (destroy-widget (cdr info)))
   (setf *debug-active-frames* nil))
+
+;;; This is to provide a means for recording the stack backtrace.  In
+;;; particular, this is important for sending bug reports.
+;;;
+(defun dump-backtrace-callback (widget call-data)
+  (declare (ignore widget call-data))
+  (let ((*current-frame* (di:top-frame)))
+    (format t "~%Stack Backtrace:~%")
+    (backtrace)))
 
 (defun frame-view-callback (widget call-data thing)
   (declare (ignore widget call-data))
@@ -81,9 +91,13 @@
 		:test #'(lambda (a b) (eql a (car b)))))
   (destroy-interface-pane frame))
 
-(defun edit-source-callback (widget call-data)
+(defun edit-source-callback (widget call-data frame)
   (declare (ignore widget call-data))
-  (funcall (debug-command-p :edit-source)))
+  (handler-case
+      (let ((*current-frame* frame))
+	(funcall (debug-command-p :edit-source)))
+    (error (cond)
+	   (interface-error (format nil "~A" cond)))))
 
 (defun frame-eval-callback (widget call-data frame output)
   (declare (ignore call-data))
@@ -128,6 +142,11 @@
 
 
 
+;;; DEBUG-DISPLAY-FRAME-LOCALS -- Internal
+;;;
+;;; This sets up the display of the available local variables for the given
+;;; stack frame.
+;;;
 (defun debug-display-frame-locals (frame debug-fun location frame-view)
   (let (widgets)
     (if (di:debug-variable-info-available debug-fun)
@@ -175,6 +194,11 @@
 	      widgets))
     (apply #'manage-children widgets)))
 
+;;; DEBUG-DISPLAY-FRAME-PROMPT -- Internal
+;;;
+;;; Every frame window has a Frame Eval area.  This function creates the
+;;; Eval area and attaches the necessary callbacks.
+;;;
 (defun debug-display-frame-prompt (frame frame-view)
   (let* ((form (create-form frame-view "promptForm"))
 	 (label (create-label form "framePrompt"
@@ -201,6 +225,15 @@
     (add-callback entry :activate-callback 'frame-eval-callback
 		  frame output)))
 
+;;; DEBUG-DISPLAY-FRAME -- Internal
+;;;
+;;; Function to generate the graphical display for the given frame.  Each
+;;; frame window is composed of the following parts:
+;;;    - The function called
+;;;    - The source form
+;;;    - Local variables
+;;;    - Frame Eval window
+;;;
 (defun debug-display-frame (frame)
   (let* ((debug-fun (di:frame-debug-function frame))
 	 (location (di:frame-code-location frame))
@@ -238,7 +271,7 @@
 				:label-string source))
 	 (cascade1
 	  (create-interface-menu menu-bar "Frame"
-	   `(("Edit Source" edit-source-callback)
+	   `(("Edit Source" edit-source-callback ,frame)
 	     ("Expand Source Form" source-verbosity-callback ,frame ,srcview 1)
 	     ("Shrink Source Form" source-verbosity-callback ,frame ,srcview -1)
 	     ("Close Frame" close-frame-callback ,frame))))
@@ -259,9 +292,19 @@
 
 ;;;; Functions to display the debugger control panel
 
+;;; DEBUG-DISPLAY-ERROR -- Internal
+;;;
+;;; Fills in the given widget with the error message for the given
+;;; condition.
+;;;
 (defun debug-display-error (errmsg condition)
   (set-values errmsg :label-string (format nil "~A" condition)))
 
+;;; DEBUG-DISPLAY-RESTARTS -- Internal
+;;;
+;;; Fills in a RowColumn box with buttons corresponding to the currently
+;;; active restarts.
+;;;
 (defun debug-display-restarts (restart-view)
   (let ((widgets (reverse (xti:widget-children restart-view)))
 	(used-ones))
@@ -283,6 +326,11 @@
     (when widgets
       (apply #'unmanage-children widgets))))
 
+;;; DEBUG-DISPLAY-STACK -- Internal
+;;;
+;;; Fills in a RowColumn box with buttons corresponding to the stack frames
+;;; found on the stack.
+;;;
 (defun debug-display-stack (backtrace)
   (let ((widgets (reverse (xti:widget-children backtrace)))
 	(used-ones)
@@ -309,6 +357,13 @@
     (when widgets
       (apply #'unmanage-children widgets))))
 
+;;; REALLY-CREATE-DEBUGGER -- Internal
+;;;
+;;; This creates all the widgets used by the main debugger window.  It
+;;; calls various sub-functions such as DEBUG-DISPLAY-STACK to fill in the
+;;; various display sections.  It should only be called if there are no old
+;;; debugger panes available for recycling.
+;;;
 (defun really-create-debugger (condition)
   (let* ((debug-pane (create-interface-pane-shell "Debugger" condition))
 	 (frame (create-frame debug-pane "debugFrame"))
@@ -319,6 +374,7 @@
 	 (cascade (create-cached-menu
 		   menu-bar "Debug"
 		   '(("Close All Frames" close-all-callback)
+		     ("Dump Backtrace" dump-backtrace-callback)
 		     ("Quit Debugger" quit-debugger-callback))))
  	 (errlabel (create-label form "errorLabel"
 					:top-attachment :attach-widget
@@ -391,6 +447,13 @@
     (popup-interface-pane debug-pane)
     debug-pane))
 
+;;; REUSE-DEBUGGER -- Internal
+;;;
+;;; Takes an old debugger pane and a new condition.  It renovates the old
+;;; display to reflect the current debugging state.  This should be used
+;;; whenever possible since it is quite a bit faster than creating a new
+;;; debugger pane from scratch.
+;;;
 (defun reuse-debugger (condition info)
   (let ((debug-pane (dd-info-debug-pane info))
 	(errmsg (dd-info-errmsg info))
@@ -414,11 +477,23 @@
     (popup-interface-pane debug-pane)
     debug-pane))
 
+;;; CREATE-DEBUGGER -- Internal
+;;;
+;;; Creates a graphical debugger display for the given condition.  It will
+;;; attempt to reuse any available old panes.  However, if none are
+;;; available, it will create a new display frame.
+;;;
 (defun create-debugger (condition)
   (if *old-display-frames*
       (reuse-debugger condition (pop *old-display-frames*))
       (really-create-debugger condition)))
 
+;;; CLOSE-MOTIF-DEBUGGER -- Internal
+;;;
+;;; This function should always be called before leaving the context of the
+;;; debugger.  It closes down the frame windows and marks the main debug
+;;; display pane as ready for recycling.
+;;;
 (defun close-motif-debugger (condition)
   (declare (ignore condition))
   (push *current-debug-display* *old-display-frames*)
@@ -434,8 +509,14 @@
 
   (format t "Leaving debugger.~%"))
 
+;;; INVOKE-MOTIF-DEBUGGER -- Internal
+;;;
+;;; This function essentially mimics the functions which manage the TTY
+;;; debugger, but uses a graphical debugging display instead.
+;;;
 (defun invoke-motif-debugger (condition)
-  (let* ((frame (di:top-frame))
+  (let* ((*in-the-debugger* t)
+	 (frame (di:top-frame))
 	 (previous-display *current-debug-display*)
 	 (*current-debug-display* nil)
 	 (*debug-active-frames* nil))
@@ -468,6 +549,12 @@
 
 
 
+;;; INVOKE-DEBUGGER -- Public
+;;;
+;;; Invokes the Lisp debugger.  It executes some common debugger setup code
+;;; and then decides whether to invoke the TTY debugger or the Motif
+;;; debugger.
+;;;
 (defun invoke-debugger (condition)
   "The CMU Common Lisp debugger.  Type h for help."
   (when *debugger-hook*
