@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/insts.lisp,v 1.2 2004/07/06 20:17:57 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/insts.lisp,v 1.3 2004/07/08 17:33:15 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1499,9 +1499,10 @@
 		(r/m-with-immed-to-reg dst dst src1)
 		(let ((size (matching-operand-size dst src1)))
 		  (maybe-emit-operand-size-prefix segment size)
+		  (maybe-emit-ea-rex-prefix segment size src1 dst)
 		  (emit-byte segment #b00001111)
 		  (emit-byte segment #b10101111)
-		  (emit-ea segment src1 (reg-tn-encoding dst)))))
+		  (emit-ea segment src1 (reg-lower-3-bits dst)))))
 	   (t
 	    (let ((size (operand-size dst)))
 	      (maybe-emit-operand-size-prefix segment size)
@@ -1573,7 +1574,7 @@
 ;;; 
 (define-instruction cdo (segment)
   (:emitter
-   (maybe-emit-operand-size-prefix segment :qword)
+   (maybe-emit-rex-prefix segment :qword nil nil nil)
    (emit-byte segment #b10011001)))
 
 (define-instruction xadd (segment dst src)
