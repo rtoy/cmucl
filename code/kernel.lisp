@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.5 1991/02/08 13:33:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.6 1991/03/20 02:58:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.5 1991/02/08 13:33:42 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.6 1991/03/20 02:58:37 wlott Exp $
 ;;;    
 (in-package "KERNEL")
 
@@ -105,3 +105,18 @@
 (defun make-array-header (type rank)
   "Allocate an array header with type code TYPE and rank RANK."
   (make-array-header type rank))
+
+
+(defun code-instructions (code-obj)
+  "Return a SAP pointing to the instructions part of CODE-OBJ."
+  (code-instructions code-obj))
+
+(defun code-header-ref (code-obj index)
+  "Extract the INDEXth element from the header of CODE-OBJ.  Can be set with
+  setf."
+  (code-header-ref code-obj index))
+
+(defun code-header-set (code-obj index new)
+  (code-header-set code-obj index new))
+
+(defsetf code-header-ref code-header-set)
