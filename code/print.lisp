@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.78 2001/01/01 09:30:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.79 2001/01/01 11:41:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1027,9 +1027,12 @@
 (defun output-vector (vector stream)
   (declare (vector vector))
   (cond ((stringp vector)
-	 (if (or *print-escape* *print-readably*)
-	     (quote-string vector stream)
-	     (write-string vector stream)))
+	 (cond ((or *print-escape* *print-readably*)
+		(write-char #\" stream)
+		(quote-string vector stream)
+		(write-char #\" stream))
+	       (t
+		(write-string vector stream))))
 	((not (or *print-array* *print-readably*))
 	 (output-terse-array vector stream))
 	((bit-vector-p vector)
@@ -1060,14 +1063,12 @@
 	       ;; Probably should look at readtable, but just do this for now.
 	       `(or (char= ,char #\\)
 		    (char= ,char #\"))))
-    (write-char #\" stream)
     (with-array-data ((data string) (start) (end (length string)))
       (do ((index start (1+ index)))
 	  ((>= index end))
 	(let ((char (schar data index)))
 	  (when (frob char) (write-char #\\ stream))
-	  (write-char char stream))))
-    (write-char #\" stream)))
+	  (write-char char stream))))))
 
 (defun output-array (array stream)
   "Outputs the printed representation of any array in either the #< or #A
@@ -1667,7 +1668,7 @@
       (let ((name (char-name char)))
 	(write-string "#\\" stream)
 	(if name
-	    (write-string name stream)
+	    (quote-string name stream)
 	    (write-char char stream)))
       (write-char char stream)))
 
