@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.59 2002/11/14 13:24:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.60 2003/03/21 21:36:34 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -642,7 +642,7 @@ a host-structure or string."
 		     (with-pathname (defaults defaults) defaults)))
 	 (default-host (if defaults
 			   (%pathname-host defaults)
-			   (pathname-host *default-pathname-defaults*)))
+			   (%pathname-host *default-pathname-defaults*)))
 	 ;; toy@rtp.ericsson.se: CLHS says make-pathname can take a
 	 ;; string (as a logical-host) for the host part.  We map that
 	 ;; string into the corresponding logical host structure.
@@ -687,7 +687,7 @@ a host-structure or string."
     (flet ((check-component-validity (name name-or-type)
 	     (when (stringp name)
 	       (let ((unix-directory-separator #\/))
-		 (when (eq host (pathname-host *default-pathname-defaults*))
+		 (when (eq host (%pathname-host *default-pathname-defaults*))
 		   (when (find unix-directory-separator name)
 		     (warn "Silly argument for a unix ~A: ~S"
 			   name-or-type name)))))))
@@ -721,10 +721,9 @@ a host-structure or string."
   "Accessor for the pathname's host."
   (declare (type path-designator pathname)
 	   (type (member :local :common) case)
-	   (values host)
+	   (values (or string null))
 	   (ignore case))
-  (with-pathname (pathname pathname)
-    (%pathname-host pathname)))
+  (host-namestring pathname))
 
 ;;; PATHNAME-DEVICE -- Interface
 ;;;
@@ -827,7 +826,7 @@ a host-structure or string."
 	     (host (if (and host (stringp host))
 		       (find-logical-host host)
 		       host))
-	     (default-host (pathname-host defaults))
+	     (default-host (%pathname-host defaults))
 	     (parse-host (or host
 			     (extract-logical-host-prefix namestr start end)
 			     default-host)))
@@ -1441,7 +1440,7 @@ a host-structure or string."
    The expansion for a search-list can be set with SETF." 
   (with-pathname (pathname pathname)
     (let ((search-list (extract-search-list pathname t))
-	  (host (pathname-host pathname))) 
+	  (host (%pathname-host pathname))) 
       (if (search-list-defined search-list)
 	  (mapcar #'(lambda (directory)
 		      (make-pathname :host host
@@ -1867,7 +1866,7 @@ a host-structure or string."
                 ;; DEF-DIR is :absolute, as handled above. so return
                 ;; the original directory.
                 path-dir))))
-    (make-pathname :host (pathname-host pathname)
+    (make-pathname :host (%pathname-host pathname)
                   :directory enough-dir
                   :name (pathname-name pathname)
                   :type (pathname-type pathname)
