@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.23 1993/06/24 12:56:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.24 1994/02/09 16:49:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.23 1993/06/24 12:56:22 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.24 1994/02/09 16:49:40 wlott Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -1173,22 +1173,28 @@
 	(t
 	 (number-dispatch ((u integer) (v integer))
 	   ((fixnum fixnum)
-	    (do ((k 0 (1+ k))
-		 (u (abs u) (ash u -1))
-		 (v (abs v) (ash v -1)))
-		((oddp (logior u v))
-		 (do ((temp (if (oddp u) (- v) (ash u -1))
-			    (ash temp -1)))
-		     (nil)
-		   (declare (fixnum temp))
-		   (when (oddp temp)
-		     (if (plusp temp)
-			 (setq u temp)
-			 (setq v (- temp)))
-		     (setq temp (- u v))
-		     (when (zerop temp)
-		       (return (the fixnum (ash u k)))))))
-	      (declare (fixnum k u v))))
+	    (locally
+	      (declare (optimize (speed 3) (safety 0)))
+	      (do ((k 0 (1+ k))
+		   (u (abs u) (ash u -1))
+		   (v (abs v) (ash v -1)))
+		  ((oddp (logior u v))
+		   (do ((temp (if (oddp u) (- v) (ash u -1))
+			      (ash temp -1)))
+		       (nil)
+		     (declare (fixnum temp))
+		     (when (oddp temp)
+		       (if (plusp temp)
+			   (setq u temp)
+			   (setq v (- temp)))
+		       (setq temp (- u v))
+		       (when (zerop temp)
+			 (let ((res (ash u k)))
+			   (declare (type (signed-byte 31) res)
+				    (optimize (inhibit-warnings 3)))
+			   (return res))))))
+		(declare (type (mod 30) k)
+			 (type (signed-byte 31) u v)))))
 	   ((bignum bignum)
 	    (bignum-gcd u v))
 	   ((bignum fixnum)
