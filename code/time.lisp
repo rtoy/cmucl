@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.9 1992/02/14 23:45:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.10 1992/02/19 21:53:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,15 +53,17 @@
   finding elapsed time.  See Internal-Time-Units-Per-Second."
   (locally (declare (optimize (speed 3) (safety 0)))
     (multiple-value-bind (ignore seconds useconds) (unix:unix-gettimeofday)
-      (declare (ignore ignore))
+      (declare (ignore ignore) (type (unsigned-byte 32) seconds useconds))
       (let ((base *internal-real-time-base-seconds*)
 	    (uint (truncate useconds
 			    micro-seconds-per-internal-time-unit)))
 	(declare (type (unsigned-byte 32) uint))
 	(cond (base
-	       (+ (* (the (unsigned-byte 32) (- seconds base))
-		     internal-time-units-per-second)
-		  uint))
+	       (truly-the (unsigned-byte 32)
+		    (+ (the (unsigned-byte 32)
+			    (* (the (unsigned-byte 32) (- seconds base))
+			       internal-time-units-per-second))
+		       uint)))
 	      (t
 	       (setq *internal-real-time-base-seconds* seconds)
 	       uint))))))
