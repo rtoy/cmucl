@@ -203,6 +203,7 @@ static void sigemt_handler(signal, code, scp)
 	else
 	    result = op1 + op2;
 	SC_REG(scp, reg_ALLOC) = result & ~7;
+	arch_skip_instruction(scp);
 	interrupt_handle_pending(scp);
 	return;
     }
