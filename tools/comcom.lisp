@@ -79,7 +79,7 @@
 (comf "target:compiler/generic/utils")
 (comf "target:assembly/assemfile" :load *load-stuff*)
 
-#+small (declaim (optimize (safety 1) (debug-info 1)))
+#+small (declaim (optimize (safety 0) (debug-info 1)))
 (when (string= (old-c:backend-name old-c:*backend*) "PMAX")
   (comf "target:compiler/mips/mips-insts")
   (comf "target:compiler/mips/mips-macs" :load *load-stuff*)
