@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.17 1991/02/08 13:34:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.18 1991/02/25 18:54:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.17 1991/02/08 13:34:19 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.18 1991/02/25 18:54:17 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -148,12 +148,14 @@
 	      (tag (gensym)))
 	  (error-tags tag)
 	  (errors tag)
-	  (errors `(error 'simple-type-error :datum ,var
-			  :expected-type ',type
-			  :format-string
-			  "Argument ~A is not a ~S: ~S."
-			  :format-arguments
-			  (list ',var ',type ,var)))))
+	  (errors `(return-from
+		    ,block
+		    (error 'simple-type-error :datum ,var
+			   :expected-type ',type
+			   :format-string
+			   "Argument ~A is not a ~S: ~S."
+			   :format-arguments
+			   (list ',var ',type ,var))))))
       
       `(block ,block
 	 (tagbody
