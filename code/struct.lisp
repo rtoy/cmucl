@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.10 1991/03/04 16:51:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.11 1991/05/21 21:25:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,15 +60,17 @@
 (defconstant in-buffer-length 100 "The size of a stream in-buffer.")
 
 (defstruct (stream (:predicate streamp) (:print-function %print-stream))
-  (in-buffer nil)				; Buffered input
-  (in-index in-buffer-length :type fixnum)	; Index into in-buffer
-  (in #'ill-in)					; Read-Char function
-  (bin #'ill-bin)				; Byte input function
-  (n-bin #'ill-bin)				; N-Byte input function
-  (out #'ill-out)				; Write-Char function
-  (bout #'ill-bout)				; Byte output function
-  (sout #'ill-out)				; String output function
-  (misc #'do-nothing))				; Less used methods
+  ;;
+  ;; Buffered input.
+  (in-buffer nil :type (or (simple-array * (*)) null))
+  (in-index in-buffer-length :type index)	; Index into in-buffer
+  (in #'ill-in :type function)			; Read-Char function
+  (bin #'ill-bin :type function)		; Byte input function
+  (n-bin #'ill-bin :type function)		; N-Byte input function
+  (out #'ill-out :type function)		; Write-Char function
+  (bout #'ill-bout :type function)		; Byte output function
+  (sout #'ill-out :type function)		; String output function
+  (misc #'do-nothing :type function))		; Less used methods
 
 
 ;;;; Alien structures:
