@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.3 2000/05/23 16:36:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.4 2000/06/19 16:09:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,7 +207,7 @@
 	)
       (let ((length (- end start)))
 	(multiple-value-bind
-	    (count errno)
+	      (count errno)
 	    (unix:unix-write (fd-stream-fd stream) base start length)
 	  (cond ((not count)
 		 (if (= errno unix:ewouldblock)
@@ -399,7 +399,7 @@
 (defun fd-sout (stream thing start end)
   (let ((start (or start 0))
 	(end (or end (length (the vector thing)))))
-    (declare (fixnum start end))
+    (declare (type index start end))
     (if (stringp thing)
 	(let ((last-newline (and (find #\newline (the simple-string thing)
 				       :start start :end end)
@@ -1033,9 +1033,9 @@
 	 (error "Error fstating ~S: ~A"
 		stream
 		(unix:get-unix-error-msg dev)))
-       (if (zerop (the index mode))
+       (if (zerop mode)
 	   nil
-	   (truncate (the index size) (fd-stream-element-size stream)))))
+	   (truncate size (fd-stream-element-size stream)))))
     (:file-position
      (fd-stream-file-position stream arg1))))
 
@@ -1044,16 +1044,15 @@
 ;;;
 (defun fd-stream-file-position (stream &optional newpos)
   (declare (type fd-stream stream)
-	   (type (or index (member nil :start :end)) newpos))
+	   (type (or (integer 0) (member nil :start :end)) newpos))
   (if (null newpos)
       (system:without-interrupts
-	;; First, find the position of the UNIX file descriptor in the
-	;; file.
+	;; First, find the position of the UNIX file descriptor in the file.
 	(multiple-value-bind
-	    (posn errno)
+	      (posn errno)
 	    (unix:unix-lseek (fd-stream-fd stream) 0 unix:l_incr)
-	  (declare (type (or index null) posn))
-	  (cond ((fixnump posn)
+	  (declare (type (or (integer 0) null) posn))
+	  (cond (posn
 		 ;; Adjust for buffered output:
 		 ;;  If there is any output buffered, the *real* file position
 		 ;; will be larger than reported by lseek because lseek
@@ -1081,8 +1080,9 @@
 		   (error "Error lseek'ing ~S: ~A"
 			  stream
 			  (unix:get-unix-error-msg errno)))))))
-      (let ((offset 0) origin)
-	(declare (type index offset))
+      (let ((offset 0)
+	    origin)
+	(declare (type (integer 0) offset))
 	;; Make sure we don't have any output pending, because if we move the
 	;; file pointer before writing this stuff, it will be written in the
 	;; wrong location.
@@ -1095,14 +1095,16 @@
 	(setf (fd-stream-unread stream) nil)
 	(setf (fd-stream-ibuf-head stream) 0)
 	(setf (fd-stream-ibuf-tail stream) 0)
-	;; Trash cashed value for listen, so that we check next time.
+	;; Trash cached value for listen, so that we check next time.
 	(setf (fd-stream-listen stream) nil)
 	;; Now move it.
 	(cond ((eq newpos :start)
-	       (setf offset 0 origin unix:l_set))
+	       (setf offset 0
+		     origin unix:l_set))
 	      ((eq newpos :end)
-	       (setf offset 0 origin unix:l_xtnd))
-	      ((typep newpos 'index)
+	       (setf offset 0
+		     origin unix:l_xtnd))
+	      ((typep newpos '(integer 0))
 	       (setf offset (* newpos (fd-stream-element-size stream))
 		     origin unix:l_set))
 	      (t
@@ -1110,7 +1112,7 @@
 	(multiple-value-bind
 	    (posn errno)
 	    (unix:unix-lseek (fd-stream-fd stream) offset origin)
-	  (cond ((typep posn 'fixnum)
+	  (cond (posn
 		 t)
 		((eq errno unix:espipe)
 		 nil)
