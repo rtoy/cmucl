@@ -19,18 +19,18 @@
 
 ;;;; Special TOOLKIT-ERROR
 
-(define-condition toolkit-error (error)
-  ((format-string)
-   (format-arguments))
+(define-condition toolkit-error (error) ())
+
+(define-condition simple-toolkit-error (toolkit-error simple-condition)
   (:documentation "An error has occurred in the X Toolkit code.")
   (:report (lambda (condition stream)
 	     (declare (stream stream))
 	     (format stream "A Toolkit error has occurred.~%~?"
-		     (toolkit-error-format-string condition)
-		     (toolkit-error-format-arguments condition)))))
+		     (simple-condition-format-control condition)
+		     (simple-condition-format-arguments condition)))))
 
 (define-condition toolkit-eof-error (toolkit-error)
-  ((string))
+  ((string :reader toolkit-eof-error-string :initarg :string))
   (:report (lambda (condition stream)
 	     (write-line (toolkit-eof-error-string condition) stream))))
 
@@ -42,13 +42,12 @@
 ;;; a graphical debugger which must stop attempting graphical interaction
 ;;; when a toolkit error occurs.
 ;;;
-(declaim (inline toolkit-error toolkit-cerror))
 (defun toolkit-error (string &rest args)
-  (error 'toolkit-error :format-string string :format-arguments args))
+  (error 'simple-toolkit-error :format-control string :format-arguments args))
 
 (defun toolkit-cerror (continue-string string &rest args)
-  (cerror continue-string 'toolkit-error
-	  :format-string string :format-arguments args))
+  (cerror continue-string 'simple-toolkit-error
+	  :format-control string :format-arguments args))
 
 
 
