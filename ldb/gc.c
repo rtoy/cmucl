@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.13 1990/09/26 15:11:32 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.14 1990/10/02 23:04:18 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1714,6 +1714,7 @@ gc_init()
 	scavtab[type_Sap] = scav_unboxed;
 	scavtab[type_UnboundMarker] = scav_immediate;
 	scavtab[type_WeakPointer] = scav_weak_pointer;
+        scavtab[type_StructureHeader] = scav_boxed;
 
 
 	/* Transport Other Table */
@@ -1751,6 +1752,7 @@ gc_init()
 	transother[type_Sap] = trans_unboxed;
 	transother[type_UnboundMarker] = trans_immediate;
 	transother[type_WeakPointer] = trans_weak_pointer;
+        transother[type_StructureHeader] = trans_vector;
 
 	/* Size table */
 
@@ -1802,4 +1804,5 @@ gc_init()
 	sizetab[type_Sap] = size_unboxed;
 	sizetab[type_UnboundMarker] = size_immediate;
 	sizetab[type_WeakPointer] = size_weak_pointer;
+        sizetab[type_StructureHeader] = size_vector;
 }

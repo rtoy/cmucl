@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.12 1990/09/21 06:04:12 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.13 1990/10/02 23:04:52 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -64,7 +64,8 @@ char *subtype_Names[] = {
     "character",
     "SAP",
     "unbound marker",
-    "weak pointer"
+    "weak pointer",
+    "structure header"
 };
 
 static void indent(in)
@@ -417,6 +418,7 @@ lispobj obj;
                 break;
 
             case type_SimpleVector:
+            case type_StructureHeader:
                 NEWLINE;
                 printf("length = %d", length);
                 ptr++;
@@ -472,6 +474,11 @@ lispobj obj;
             case type_UnboundMarker:
                 NEWLINE;
                 printf("pointer to an immediate?");
+                break;
+
+            default:
+                NEWLINE;
+                printf("Unknown header object?");
                 break;
         }
     }

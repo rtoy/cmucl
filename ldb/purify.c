@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.6 1990/09/27 06:33:57 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.7 1990/10/02 23:04:59 wlott Exp $ */
 
 
 #include <mach.h>
@@ -414,6 +414,7 @@ static lispobj ptrans_otherptr(thing, header, constant)
         return ptrans_vector(thing, 1, 0, FALSE, constant);
 
       case type_SimpleVector:
+      case type_StructureHeader:
         return ptrans_vector(thing, 32, 0, TRUE, constant);
 
       case type_SimpleArrayUnsignedByte2:
