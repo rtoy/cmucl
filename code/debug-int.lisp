@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.86 1998/01/25 03:36:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.87 1998/01/25 06:02:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3294,29 +3294,27 @@
        (set-escaped-float-value double-float value))
       #+complex-float
       (#.vm:single-reg-sc-number
-       (cond (escaped
-	      (setf (vm:sigcontext-float-register
-		     escaped (c:sc-offset-offset sc-offset) 'single-float)
-		    (realpart value))
-	      (setf (vm:sigcontext-float-register
-		     escaped (1+ (c:sc-offset-offset sc-offset))
-		     'single-float)
-		    (imagpart value)))
-	     (t
-	      value)))
+       (when escaped
+	 (setf (vm:sigcontext-float-register
+		escaped (c:sc-offset-offset sc-offset) 'single-float)
+	       (realpart value))
+	 (setf (vm:sigcontext-float-register
+		escaped (1+ (c:sc-offset-offset sc-offset))
+		'single-float)
+	       (imagpart value)))
+       value)
       #+complex-float
       (#.vm:double-reg-sc-number
-       (cond (escaped
-	      (setf (vm:sigcontext-float-register
-		     escaped (c:sc-offset-offset sc-offset) 'double-float)
-		    (realpart value))
-	      (setf (vm:sigcontext-float-register
-		     escaped
-		     (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
-		     'double-float)
-		    (imagpart value)))
-	     (t
-	      value)))
+       (when escaped
+	 (setf (vm:sigcontext-float-register
+		escaped (c:sc-offset-offset sc-offset) 'double-float)
+	       (realpart value))
+	 (setf (vm:sigcontext-float-register
+		escaped
+		(+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
+		'double-float)
+	       (imagpart value)))
+       value)
       (#.vm:single-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-single nfp (* (c:sc-offset-offset sc-offset)
@@ -4227,10 +4225,9 @@
 	       cookie))))
 
 (defun get-function-end-breakpoint-values (scp)
-  (let (#-x86
-	(ocfp (system:int-sap (vm:sigcontext-register scp vm::ocfp-offset)))
-	#+x86
-	(ocfp (system:int-sap (vm:sigcontext-register scp vm::ebx-offset)))
+  (let ((ocfp (system:int-sap (vm:sigcontext-register scp
+						      #-x86 vm::ocfp-offset
+						      #+x86 vm::ebx-offset)))
 	(nargs (kernel:make-lisp-obj
 		(vm:sigcontext-register scp vm::nargs-offset)))
  	(reg-arg-offsets '#.vm::register-arg-offsets)
