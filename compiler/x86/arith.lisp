@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.17 2004/04/07 02:47:54 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.18 2004/07/16 00:49:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1496,6 +1496,33 @@
     (move r x)
     (inst not r)))
 
+;; Handle (ldb (byte 32 0) (- x)).  The (- x) gets converted to
+;; (%negate x), so we build modular functions for %negate.
+
+(c::define-modular-fun %negate-mod32 (x) kernel:%negate 32)
+
+(define-vop (%negate-mod32/unsigned=>unsigned)
+  (:translate %negate-mod32)
+  (:args (x :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:policy :fast-safe)
+  (:generator 2
+    (move res x)	      
+    (inst neg res)))
+
+(define-vop (%negate-mod32/signed=>unsigned)
+  (:translate %negate-mod32)
+  (:args (x :scs (signed-reg)))
+  (:arg-types signed-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:policy :fast-safe)
+  (:generator 2
+    (move res x)
+    (inst neg res)))
+
 (c::define-modular-fun logxor-mod32 (x y) logxor 32)
 (define-vop (fast-logxor-mod32/unsigned=>unsigned
              fast-logxor/unsigned=>unsigned)
@@ -1546,6 +1573,7 @@
 (define-vop (fast-ash-left-mod32-c/unsigned=>unsigned
              fast-ash-c/unsigned=>unsigned)
   (:translate ash-left-mod32))
+
 )
 
 (in-package :C)
