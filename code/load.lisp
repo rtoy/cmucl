@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.60 1997/02/05 16:15:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.61 1997/02/11 00:28:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1056,12 +1056,6 @@
 ;;; A little analysis of the header information is used to determine
 ;;; if a code object is byte compiled, or native code.
 ;;;
-#+x86
-(eval-when (compile)
-  (let ((ht (c::backend-template-names c:*backend*)))
-    (unless (gethash 'c::allocate-dynamic-code-object ht)
-      (setf (gethash 'c::allocate-dynamic-code-object ht)
-	    (gethash 'vm::allocate-dynamic-code-object ht)))))
 
 (defvar *load-byte-compiled-code-to-dynamic-space* t)
 (defvar *load-x86-tlf-to-dynamic-space* nil)  ; potentially dangerous.
