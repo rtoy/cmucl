@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.6 1992/02/25 00:14:32 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.7 1992/02/27 06:02:56 wlott Exp $
 
 set features = ()
 set misfeatures = ()
@@ -208,8 +208,8 @@ while ($#sysinfo > 0)
 	(set-difference (list* '($features) *features*) '($misfeatures)))
   (setf (search-list "target:") '("$dest/" "$src/"))
   (setq *compile-verbose* nil *compile-print* nil) 
-  (load "$bootstrap" :if-does-not-exist nil)
   (load "target:tools/setup")
+  (load "$bootstrap" :if-does-not-exist nil)
   (setf *interactive* nil *gc-verbose* nil)
   (load "target:tools/$this_comfile")
   (quit))
