@@ -79,7 +79,6 @@
 (comf "code:time")
 (comf "code:foreign")
 (comf "c:proclaim")
-(comf "c:knownfun")
 
 ;;; Later so that miscellaneous structures are defined (not crucial, but nice.)
 (comf "code:describe")
