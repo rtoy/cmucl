@@ -21,7 +21,6 @@
 (export '(spell-add-entry spell-read-dictionary spell-remove-entry
 	  spell-root-flags))
 
-
 
 ;;;; Converting Flags to Masks
 
@@ -85,7 +84,7 @@
   "Add entries to dictionary from lines in the file filename."
   (with-open-file (s filename :direction :input)
     (loop (multiple-value-bind (entry eofp) (read-line s nil nil)
-	    (declare (simple-string entry))
+	    (declare (type (or simple-string null) entry))
 	    (unless entry (return))
 	    (spell-add-entry entry)
 	    (if eofp (return))))))

@@ -243,7 +243,6 @@
    delimiters (such as \",',),],>,|) which are followed by either two
    spaces or a newline."
   "Moves forward one sentence or the specified number."
-  (declare (ignore p))
   (unless (sentence-offset (current-point) (or p 1))
     (editor-error)))
 
@@ -255,7 +254,6 @@
    delimiters (such as \",',),],>,|) which are followed by either two
    spaces or a newline."
   "Moves backward one sentence or the specified number."
-  (declare (ignore p))
    (unless (sentence-offset (current-point) (- (or p 1)))
     (editor-error)))
 

@@ -131,7 +131,8 @@
 	 (start-pos ,start 0)
 	 (index 0))
 	(())
-     (declare (simple-string chars) (fixnum index start-pos len))
+     (declare (simple-string chars) (fixnum start-pos len)
+	      (type (or fixnum null) index))
      (setq index (,search-fun chars start-pos len ,@other-args))
      (when index
        (setq ,start index  ,line l)
@@ -151,7 +152,8 @@
 	 (start-pos (1- ,start) (1- (length chars)))
 	 (index 0))
 	(())
-     (declare (simple-string chars) (fixnum index start-pos))
+     (declare (simple-string chars) (fixnum start-pos)
+	      (type (or fixnum null) index))
      (setq index (,search-fun chars start-pos ,@other-args))
      (when index
        (setq ,start index  ,line l)
@@ -331,6 +333,7 @@
 ;;;    Just thows away the extra arg and calls string=.
 ;;;
 (defmacro case-sensitive-test-fun (string1 string2 ignore &rest keys)
+  (declare (ignore ignore))
   `(string= ,string1 ,string2 ,@keys))
 
 ;;; case-insensitive-test-fun  --  Internal

@@ -620,7 +620,6 @@
    directory at point."
   "Insert a listing of the first non-blank line after each page mark at
    the beginning of the buffer."
-  (declare (ignore p))
   (let ((point (current-point)))
     (unless p
       (push-buffer-mark (copy-mark point))

@@ -305,7 +305,6 @@
 	 (ring (value interactive-history))
 	 (length (ring-length ring))
 	 (p (or p 1)))
-    (declare (simple-string current))
     (when (or (mark< point mark) (zerop length)) (editor-error))
     (cond
      ((eq (last-command-type) :interactive-history)
@@ -429,9 +428,9 @@
   (in-lisp
    (with-input-from-region (stream region)
      (with-pop-up-display (*error-output* :height 19)
-       (compile-from-stream stream
-			    :defined-from-pathname
-			    (buffer-pathname (current-buffer)))))))
+       (c::compile-from-stream stream
+			       :defined-from-pathname
+			       (buffer-pathname (current-buffer)))))))
 
 
 (defcommand "Editor Evaluate Defun" (p)

@@ -212,7 +212,6 @@
   "Pop the *echo-area-history* ring buffer."
   (let ((length (ring-length *echo-area-history*))
 	(p (or p 1)))
-    (declare (simple-string current))
     (when (zerop length) (editor-error))
     (cond
      ((eq (last-command-type) :echo-history)

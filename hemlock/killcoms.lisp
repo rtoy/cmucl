@@ -92,7 +92,6 @@
 (add-hook set-buffer-hook 'set-buffer-deactivate-region)
 
 (defun set-window-deactivate-region (window)
-  (declare (ignore window))
   (unless (or (eq window *echo-area-window*)
 	      (eq (current-window) *echo-area-window*))
     (deactivate-region)))

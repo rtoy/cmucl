@@ -326,7 +326,6 @@
   If called with a prefix argument, deletes all global abbrevs."
   "Deletes the global word abbreviation named Abbrev.  If P is true,
   deletes all global abbrevs."
-  (declare (ignore p))
   (if p
       (setq *global-abbrev-table* (make-hash-table :test #'equal))
       (let ((down 

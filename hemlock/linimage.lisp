@@ -243,7 +243,7 @@
 ;;; those with funny representations.
 ;;;
 (defun compute-normal-line-image (line start dis-line xpos width)
-  (declare (fixnum start xpos width))
+  (declare (fixnum start width) (type (or fixnum null) xpos))
   (do* ((index start)
 	(line-chars (line-%chars line))
 	(end (strlen line-chars))
@@ -251,7 +251,8 @@
 	(losing 0)
 	underhang string)
        (())
-    (declare (fixnum index end losing)
+    (declare (fixnum index end)
+	     (type (or fixnum null) losing)
 	     (simple-string line-chars dest))
     (cond
      (underhang
@@ -286,7 +287,7 @@
 ;;; chars have not been consed yet.
 
 (defun compute-buffered-line-image (line start dis-line xpos width)
-  (declare (fixnum start xpos width))
+  (declare (fixnum start width) (type (or fixnum null) xpos))
   (do* ((index start)
 	(line-chars (line-%chars line))
 	(end (line-buffered-p line))
@@ -294,8 +295,9 @@
 	(losing 0)
 	underhang string)
        (())
-    (declare (fixnum index end losing)
-	     (simple-string line-chars dest))
+    (declare (fixnum index end)
+	     (type (or fixnum null) losing)
+	     (simple-string dest))
     (cond
      (underhang
       (update-and-punt dis-line width string underhang index))
@@ -328,13 +330,14 @@
 ;;;    Like compute-normal-line-image, only works on the cached line.
 ;;;
 (defun compute-cached-line-image (index dis-line xpos width)
-  (declare (fixnum start xpos width))
+  (declare (fixnum index width) (type (or fixnum null) xpos))
   (prog ((gap (- right-open-pos left-open-pos))
 	 (dest (dis-line-chars dis-line))
 	 (done-p (= right-open-pos line-cache-length))
 	 (losing 0)
 	 string underhang)
-    (declare (fixnum index gap losing) (simple-string dest))
+    (declare (fixnum gap) (simple-string dest)
+	     (type (or fixnum null) losing))
    LEFT-LOOP
     (cond
      (underhang
@@ -494,7 +497,7 @@
     (let ((len (strlen string))
 	  (chars (dis-line-chars dis-line))
 	  (xpos 0))
-      (declare (fixnum xpos len) (simple-string chars))
+      (declare (type (or fixnum null) xpos) (simple-string chars))
       (display-some-chars string underhang len chars xpos width nil)
       (cond
        ((null xpos)

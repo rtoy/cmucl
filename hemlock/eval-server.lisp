@@ -721,7 +721,7 @@
 ;;; package) and returns the results as a list.
 ;;;
 (defun server-eval-form (package form)
-  (declare (simple-string package form))
+  (declare (type (or string null) package) (simple-string form))
   (handler-bind
       ((error #'(lambda (condition)
 		  (wire:remote wire:*current-wire*
@@ -821,6 +821,7 @@
   `(let ((*compiler-note* ,note)
 	 (*compiler-error-stream* ,error)
 	 (*compiler-wire* wire:*current-wire*)
+	 #-new-compiler
 	 (clc:*compiler-notification-function* #'compiler-note-in-editor))
      (do-operation (*compiler-note* ,package ,terminal-io)
 		   (unwind-protect
@@ -844,6 +845,7 @@
 ;;; off the wire into a non-existing package.  We expect packages to exist in
 ;;; the developing Lisp environment that are missing in the editor's Lisp.
 ;;;
+#-new-compiler
 (defun compiler-note-in-editor (severity function)
   (when *compiler-wire*
     (force-output *compiler-error-stream*)
@@ -862,6 +864,7 @@
 ;;; compilation form.
 ;;;
 (defun compiler-error-handler (condition)
+  #-new-compiler
   (when *compiler-wire*
     (multiple-value-bind (start end)
 			 (clc:current-form-position)
@@ -883,9 +886,9 @@
     (do-compiler-operation (note package terminal-io error-output)
       (with-input-from-string (input-stream text)
 	(terpri error-output)
-	(compile-from-stream input-stream
-			     :error-stream error-output
-			     :defined-from-pathname defined-from)))))
+	(c::compile-from-stream input-stream
+				:error-stream error-output
+				:defined-from-pathname defined-from)))))
 
 ;;; SERVER-COMPILE-FILE -- Public.
 ;;;
@@ -902,9 +905,9 @@
 	(compile-file (frob input)
 		      :output-file (frob output)
 		      :error-file (frob error)
-		      :lap-file (frob lap)
+		      :trace-file (frob lap)
 		      :load load
-		      :errors-to-terminal error-stream)))))
+		      :error-output error-stream)))))
 
 
 ;;;; Other random eval server stuff.

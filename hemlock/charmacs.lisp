@@ -47,7 +47,7 @@
   "Mask we AND with characters given to syntax table functions to blow away
   bits we don't want.")
 (defmacro syntax-char-code (char)
-  `(logand syntax-char-code-mask (lisp::%sp-make-fixnum ,char)))
+  `(logand syntax-char-code-mask (char-code ,char)))
 
 ;;;; Stuff for the command interpreter (interp)
 ;;;
@@ -61,10 +61,9 @@
 (defconstant command-char-bits-limit 16
   "The maximum value of character bits supported for key bindings.")
 (defmacro key-char-bits (char)
-  `(ash (logand #x+F00 (lisp::%sp-make-fixnum ,char)) -8))
+  `(logand (char-bits ,char) #xF))
 (defmacro key-char-code (char)
   `(char-code ,char))
-;;; `(logand #x+7f (lisp::%sp-make-fixnum ,char))) can't use with X scan-codes.
 
 
 ;;;; Stuff used by the searching primitives (search)
@@ -72,7 +71,7 @@
 (defconstant search-char-code-limit 128
   "The exclusive upper bound on significant char-codes for searching.")
 (defmacro search-char-code (ch)
-  `(logand (lisp::%sp-make-fixnum ,ch) #x+7F))
+  `(logand (char-code ,ch) #x+7F))
 ;;;
 ;;;    search-hash-code must be a function with the following properties:
 ;;; given any character it returns a number between 0 and 
@@ -81,12 +80,12 @@
 ;;;    In ASCII this is can be done by ANDing out the 5'th bit.
 ;;;
 (defmacro search-hash-code (ch)
-  `(logand (lisp::%sp-make-fixnum ,ch) #x+5F))
+  `(logand (char-code ,ch) #x+5F))
 
 ;;; Doesn't do anything special, but it should fast and not waste any time
 ;;; checking type and whatnot.
 (defmacro search-char-upcase (ch)
-  `(lisp::fast-char-upcase ,ch))
+  `(char-upcase (the string-char ,ch)))
 
 
 ;;; Specal RT and Sun keys:

@@ -118,7 +118,6 @@
 (defcommand "Auto Fill Linefeed" (p)
   "Does an immediate CRLF inserting Fill Prefix if it exists."
   "Does an immediate CRLF inserting Fill Prefix if it exists."
-  (declare (ignore p))
   (let ((point (current-point)))
     (check-fill-prefix (value fill-prefix) (value fill-column) point)
     (%auto-fill-space point nil)
@@ -138,7 +137,6 @@
    followed by a newline."
   "Does an Auto Fill Space with a prefix argument of 0
    followed by a newline."
-  (declare (ignore p))
   (let ((point (current-point)))
     (check-fill-prefix (value fill-prefix) (value fill-column) point)
     (%auto-fill-space point nil)
@@ -188,7 +186,6 @@
 (defcommand "Fill Region" (p)
   "Fill text from point to mark."
   "Fill text from point to mark."
-  (declare (ignore p))
   (let* ((region (current-region))
 	 (prefix (value fill-prefix))
 	 (column (if p (abs p) (value fill-column))))
