@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.18 1990/06/25 14:58:58 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.19 1990/06/25 21:12:06 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -655,15 +655,42 @@
 
 
 (defmacro define-compute-instruction (name calculation)
-  `(progn
-     (defun ,name (label)
-       ,calculation)
-     (define-instruction (,name)
-       (immediate (op :constant #b001001)
-		  (rt :argument register)
-		  (rs :argument register)
-		  (immediate :argument label
-			     :function ,name)))))
+  (let ((addui (symbolicate name "-ADDUI"))
+	(lui (symbolicate name "-LUI"))
+	(ori (symbolicate name "-ORI")))
+    `(progn
+       (defun ,name (label)
+	 (let ((result ,calculation))
+	   (assert (typep result '(signed-byte 16)))
+	   result))
+       (define-instruction (,addui)
+	 (immediate (op :constant #b001001)
+		    (rt :argument register)
+		    (rs :argument register)
+		    (immediate :argument label
+			       :function ,name)))
+       (define-instruction (,lui)
+	 (immediate (op :constant #b001111)
+		    (rs :constant 0)
+		    (rt :argument register)
+		    (immediate :argument label
+			       :function (lambda (label)
+					   (ash ,calculation -16)))))
+       (define-instruction (,ori)
+	 (immediate (op :constant #b001101)
+		    (rt :argument register)
+		    (rs :same-as rt)
+		    (immediate :argument label
+			       :function (lambda (label)
+					   (logand ,calculation #xffff)))))
+       (define-pseudo-instruction ,name 96 (dst src label temp)
+	 (cond ((typep ,calculation '(signed-byte 16))
+		(inst ,addui dst src label))
+	       (t
+		(inst ,lui temp label)
+		(inst ,ori temp label)
+		(inst addu dst src temp)))))))
+
 
 ;; code = fn - fn-tag - header - label-offset + other-pointer-tag
 (define-compute-instruction compute-code-from-fn
