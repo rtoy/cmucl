@@ -1,12 +1,19 @@
 	    Release notes for CMU Common Lisp 15e, 25 February 92
 
-Mainly a bug-fix release.  This will probably be the last version 15 release,
-and is thus the most stable system you're going to see for a while.  We're
-reluctant to call this a "default" release because there still isn't any good
-stack overflow detection, however that probably won't be fixed until the C
-code rewrite associated with generational GC comes out (version 17 or later.)
 
-We are also distributing the CMU CL user manual in Gnu Info format (in
+15e is mainly a bug-fix release; it will probably be the last version 15
+release, and is thus the most stable system you're going to see for a while.
+We're reluctant to call it a "default" release because some things are stably
+broken:
+ -- There still isn't any good stack overflow detection.  Probably stack
+    overflow detection won't appear until the C code rewrite associated with
+    generational GC comes out (version 17 or later.)
+ -- The Alien/foreign function call mechanism is fairly broken.  It doesn't
+    work at all in interpreted code, and DEF-C-ROUTINE doesn't work properly
+    for many argument type signatures.  We've redesigned and reimplemented
+    our foreign interface for version 16.
+
+We are now distributing the CMU CL user manual in Gnu Info format (in
 doc/cmu-user.info.)  You can either have your EMACS maintainer install this in
 the info root, or you can use the info "g(<cmucl root dir>/doc/cmu-user.info)"
 command.  Many thanks to Mike Clarkson (the LaTeXinfo maintainer) who
