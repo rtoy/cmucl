@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.65 1997/11/01 22:58:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.66 1997/11/07 19:24:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -905,6 +905,19 @@
     (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2))
     result))
 
+#+complex-float
+(define-fop (fop-complex-single-float-vector 86)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex single-float))))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2))
+    result))
+
+#+complex-float
+(define-fop (fop-complex-double-float-vector 87)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex double-float))))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2 2))
+    result))
 
 ;;; FOP-INT-VECTOR  --  Internal
 ;;;

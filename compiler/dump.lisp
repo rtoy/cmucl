@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.65 1997/11/01 22:58:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.66 1997/11/07 19:24:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1312,6 +1312,14 @@
       ((simple-array double-float (*))
        (dump-double-float-vector simple-version file)
        (eq-save-object x file))
+      #+complex-float
+      ((simple-array (complex single-float) (*))
+       (dump-complex-single-float-vector simple-version file)
+       (eq-save-object x file))
+      #+complex-float
+      ((simple-array (complex double-float) (*))
+       (dump-complex-double-float-vector simple-version file)
+       (eq-save-object x file))
       (t
        (dump-i-vector simple-version file)
        (eq-save-object x file)))))
@@ -1432,6 +1440,26 @@
     (dump-fop 'lisp::fop-double-float-vector file)
     (dump-unsigned-32 length file)
     (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2)
+				   (* vm:word-bytes 2) file)))
+
+;;; DUMP-COMPLEX-SINGLE-FLOAT-VECTOR  --  internal.
+;;; 
+#+complex-float
+(defun dump-complex-single-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-complex-single-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2)
+				   vm:word-bytes file)))
+
+;;; DUMP-COMPLEX-DOUBLE-FLOAT-VECTOR  --  internal.
+;;; 
+#+complex-float
+(defun dump-complex-double-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-complex-double-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2 2)
 				   (* vm:word-bytes 2) file)))
 
 ;;; DUMP-DATA-BITS-MAYBE-BYTE-SWAPPING  --  internal.
