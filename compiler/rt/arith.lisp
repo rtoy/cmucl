@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: RT; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.1 1991/02/18 15:07:33 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.2 1991/04/01 13:47:07 chiles Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -498,18 +498,14 @@
   (:generator 1
     (inst not r x)))
 
-(define-vop (32bit-logical-nor 32bit-logical)
-  (:translate 32bit-logical-nor)
-  (:generator 2
-    (move r x)
-    (inst o r y)
-    (inst not r)))
-
 (define-vop (32bit-logical-and 32bit-logical)
   (:translate 32bit-logical-and)
   (:generator 1
     (move r x)
     (inst n r y)))
+
+(deftransform 32bit-logical-nand ((x y) (* *))
+  '(32bit-logical-not (32bit-logical-and x y)))
 
 (define-vop (32bit-logical-or 32bit-logical)
   (:translate 32bit-logical-or)
@@ -517,11 +513,51 @@
     (move r x)
     (inst o r y)))
 
+(deftransform 32bit-logical-nor ((x y) (* *))
+  '(32bit-logical-not (32bit-logical-or x y)))
+
 (define-vop (32bit-logical-xor 32bit-logical)
   (:translate 32bit-logical-xor)
   (:generator 1
     (move r x)
     (inst x r y)))
+
+(deftransform 32bit-logical-eqv ((x y) (* *))
+  '(32bit-logical-not (32bit-logical-xor x y)))
+
+(deftransform 32bit-logical-andc1 ((x y) (* *))
+  '(32bit-logical-and (32bit-logical-not x) y))
+
+(deftransform 32bit-logical-andc2 ((x y) (* *))
+  '(32bit-logical-and x (32bit-logical-not y)))
+
+(deftransform 32bit-logical-orc1 ((x y) (* *))
+  '(32bit-logical-or (32bit-logical-not x) y))
+
+(deftransform 32bit-logical-orc2 ((x y) (* *))
+  '(32bit-logical-or x (32bit-logical-not y)))
+
+(define-vop (shift-towards-someplace)
+  (:policy :fast-safe)
+  (:args (num :scs (unsigned-reg))
+	 (amount :scs (signed-reg)))
+  (:arg-types unsigned-num fixnum)
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:policy :fast-safe))
+
+(define-vop (shift-towards-start shift-towards-someplace)
+  (:translate shift-towards-start)
+  (:generator 1
+    (move r num)
+    (inst sl r amount)))
+
+(define-vop (shift-towards-end shift-towards-someplace)
+  (:translate shift-towards-end)
+  (:generator 1
+    (move r num)
+    (inst sr r amount)))
+
 
 
 
@@ -830,17 +866,11 @@
 (define-static-function two-arg-gcd (x y) :translate gcd)
 (define-static-function two-arg-lcm (x y) :translate lcm)
 
-(define-static-function two-arg-+ (x y) :translate +)
-(define-static-function two-arg-- (x y) :translate -)
-(define-static-function two-arg-* (x y) :translate *)
 (define-static-function two-arg-/ (x y) :translate /)
 
 (define-static-function two-arg-< (x y) :translate <)
-(define-static-function two-arg-<= (x y) :translate <=)
 (define-static-function two-arg-> (x y) :translate >)
-(define-static-function two-arg->= (x y) :translate >=)
 (define-static-function two-arg-= (x y) :translate =)
-(define-static-function two-arg-/= (x y) :translate /=)
 
 (define-static-function %negate (x) :translate %negate)
 
