@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.62 1993/08/30 21:19:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.63 1993/11/07 23:42:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1847,7 +1847,10 @@
 			      args (incf i) vars))
 		       res))
 		(c::more-arg
-		 (error "I thought I'd never see a more-arg?"))
+		 ;; Just ignore the fact that the next two args are the
+		 ;; more arg context and count, and act like they are
+		 ;; regular arguments.
+		 nil)
 		(t
 		 ;; Keyword arg.
 		 (push (list :keyword
