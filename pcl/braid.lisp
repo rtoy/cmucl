@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.46 2003/06/18 09:23:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.47 2003/08/16 14:02:37 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -199,7 +199,8 @@
 	      (dolist (slot slots)
 		(unless (eq (getf slot :allocation :instance) :instance)
 		  (error "~@<Slot allocation ~S is not supported ~
-                          in bootstrap.~@:>")))
+                          in bootstrap.~@:>"
+			 (getf slot :allocation))))
 	      
 	      (when (typep wrapper 'wrapper)
 		(setf (wrapper-instance-slots-layout wrapper)
