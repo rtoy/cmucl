@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.36 1993/07/22 00:15:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.37 1993/08/20 00:15:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -954,7 +954,6 @@ See the CMU Common Lisp User's Manual for more information.
   (let ((fun-name (intern (concatenate 'simple-string name "-DEBUG-COMMAND"))))
     `(progn
        (when (assoc ,name *debug-commands* :test #'string=)
-	 (warn "Redefining ~S debugger command." ,name)
 	 (setf *debug-commands*
 	       (remove ,name *debug-commands* :key #'car :test #'string=)))
        (defun ,fun-name ,args
