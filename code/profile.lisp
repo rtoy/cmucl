@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.20 2001/12/06 19:15:41 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.21 2002/05/01 17:43:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,6 +141,11 @@
 
 (defvar *timed-functions* ()
   "List of functions that are currently being timed.")
+(defvar *no-calls* nil
+  "A list of profiled functions which weren't called.")
+(defvar *no-calls-limit* 20
+  "If the number of profiled functions that were not called is less than
+this, the functions are listed.  If NIL, then always list the functions.")
 
 ;;; We associate a PROFILE-INFO structure with each profiled function name.
 ;;; This holds the functions that we call to manipulate the closure which
@@ -473,8 +478,8 @@
   (declare (optimize (speed 0)))
   (unless (boundp '*call-overhead*)
     (compute-time-overhead))
-  (let ((info ())
-	(no-call ()))
+  (let ((info ()))
+    (setf *no-calls* nil)
     (dolist (name names)
       (let ((pinfo (profile-info-or-lose name)))
 	(unless (eq (fdefinition name)
@@ -486,7 +491,7 @@
 	    (calls time consing profile callers)
 	    (funcall (profile-info-read-time pinfo))
 	  (if (zerop calls)
-	      (push name no-call)
+	      (push name *no-calls*)
 	      (push (make-time-info name calls
 				    (compensate-time calls time profile)
 				    consing
@@ -530,20 +535,19 @@
 	      "~%Estimated total profiling overhead: ~4,2F seconds~%"
 	      (* *total-profile-overhead* (float total-calls))))
 
-    (when no-call
-      (format *trace-output*
-	      "~%These functions were not called:~%~{~<~%~:; ~S~>~}~%"
-	      (sort no-call #'string<
-		    :key #'(lambda (n)
-			     (cond ((symbolp n)
-				    (symbol-name n))
-				   ((and (listp n)
-					 (eq (car n) 'setf)
-					 (consp (cdr n))
-					 (symbolp (cadr n)))
-				    (symbol-name (cadr n)))
-				   (t
-				    (princ-to-string n)))))))
+    (when *no-calls*
+      (let ((num-no-calls (length *no-calls*)))
+        (if (and *no-calls-limit*
+		 (numberp *no-calls-limit*)
+		 (> num-no-calls *no-calls-limit*))
+            (format *trace-output*
+                    "~%~@(~r~) profiled functions were not called. ~
+                      ~%See the variable profile::*no-calls* for a list."
+                    num-no-calls)
+            (format *trace-output*
+                    "~%The following profiled functions were not called:~
+                ~%~{~<~%~:; ~A~>~}~%"
+                    *no-calls*))))
     (values)))
 
 
