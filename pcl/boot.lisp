@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.52 2003/05/04 17:50:32 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.53 2003/05/04 17:52:06 gerd Exp $")
 
 (in-package :pcl)
 
@@ -937,7 +937,7 @@ work during bootstrapping.
 		     (when (eq var '&key) (setq key-seen t))
 		     (setq state var))
 		   (ecase state
-		     (&required (binds `(,var (pop .args.))))
+		     (required (binds `(,var (pop .args.))))
 		     (&optional
 		      (etypecase var
 			(symbol
