@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.12 1992/02/16 23:39:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.13 1992/02/18 02:18:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -551,8 +551,8 @@
 
 (defun unix-dup (fd)
   "Unix-dup duplicates an existing file descriptor (given as the
-   argument) and returns T and the value for the duplicate if
-   successful."
+   argument) and return it.  If FD is not a valid file descriptor, NIL
+   and an error number are returned."
   (declare (type unix-fd fd))
   (int-syscall ("dup" int) fd))
 
