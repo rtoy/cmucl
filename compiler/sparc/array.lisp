@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.1 1990/11/30 17:04:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.2 1990/12/04 20:58:08 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
@@ -176,6 +176,7 @@
 			     vm:other-pointer-type))
 	   (inst ld result object temp)
 	   (inst and temp index ,(1- elements-per-word))
+	   (inst xor temp ,(1- elements-per-word))
 	   ,@(unless (= bits 1)
 	       `((inst sll temp ,(1- (integer-length bits)))))
 	   (inst srl result temp)
@@ -200,8 +201,9 @@
 		      (inst li temp offset)
 		      (inst ld result object temp))))
 	     (unless (zerop extra)
-	       (inst srl result (* extra ,bits)))
-	     (unless (= extra ,(1- elements-per-word))
+	       (inst srl result
+		     (logxor (* extra ,bits) ,(1- elements-per-word))))
+	     (unless (zerop extra)
 	       (inst and result ,(1- (ash 1 bits)))))))
        (define-vop (,(symbolicate 'data-vector-set/ type))
 	 (:note "inline array store")
@@ -222,6 +224,7 @@
 			       vm:other-pointer-type))
 	   (inst ld old object offset)
 	   (inst and shift index ,(1- elements-per-word))
+	   (inst xor shift ,(1- elements-per-word))
 	   ,@(unless (= bits 1)
 	       `((inst sll shift ,(1- (integer-length bits)))))
 	   (unless (and (sc-is value immediate)
@@ -267,27 +270,32 @@
 		      (inst ld old object offset-reg)))
 	       (unless (and (sc-is value immediate)
 			    (= (tn-value value) ,(1- (ash 1 bits))))
-		 (cond ((= extra ,(1- elements-per-word))
+		 (cond ((zerop extra)
 			(inst sll old ,bits)
 			(inst srl old ,bits))
 		       (t
 			(inst li temp
 			      (lognot (ash ,(1- (ash 1 bits))
-					   (* extra ,bits))))
+					   (* (logxor extra
+						      ,(1- elements-per-word))
+					      ,bits))))
 			(inst and old temp))))
 	       (sc-case value
 		 (zero)
 		 (immediate
 		  (let ((value (ash (logand (tn-value value)
 					    ,(1- (ash 1 bits)))
-				    (* extra ,bits))))
+				    (* (logxor extra
+					       ,(1- elements-per-word))
+				       ,bits))))
 		    (cond ((typep value '(signed-byte 13))
 			   (inst or old value))
 			  (t
 			   (inst li temp value)
 			   (inst or old temp)))))
 		 (unsigned-reg
-		  (inst sll temp value (* extra ,bits))
+		  (inst sll temp value
+			(* (logxor extra ,(1- elements-per-word)) ,bits))
 		  (inst or old temp)))
 	       (if (typep offset '(signed-byte 13))
 		   (inst st old object offset)
