@@ -34,6 +34,7 @@
 ;(comf "code:clx-ext")
 (comf "code:commandline")
 (comf "code:eval")
+(comf "code:debug-int")
 (comf "code:debug")
 (comf "code:trace")
 (comf "code:extensions")
