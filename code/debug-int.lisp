@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.21 1991/03/12 17:18:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.22 1991/03/12 17:45:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -717,6 +717,7 @@
 (defun lra-code-header (lra) (lra-code-header lra))
 (defun make-lisp-obj (value) (make-lisp-obj value))
 (defun get-lisp-obj-address (thing) (get-lisp-obj-address thing))
+(defun function-word-offset (fun) (function-word-offset fun))
 ;;;
 (defsetf stack-ref %set-stack-ref)
 
@@ -1206,7 +1207,7 @@
       (let ((code (function-code-header fun)))
 	(debug-function-from-pc
 	 code
-	 (* (- (get-header-data fun) (get-header-data code))
+	 (* (- (function-word-offset fun) (get-header-data code))
 	    vm:word-bytes)))))
 
 
