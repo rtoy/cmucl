@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.30 1993/05/25 21:30:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.31 1993/08/19 12:44:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -129,38 +129,47 @@
   '(let* ((length (- (or end (length string))
 		     start))
 	  (result (make-string length)))
+     (declare (optimize (safety 0)))
      (bit-bash-copy string
-		    (+ (* start vm:byte-bits) vector-data-bit-offset)
+		    (the index
+			 (+ (the index (* start vm:byte-bits))
+			    vector-data-bit-offset))
 		    result
 		    vector-data-bit-offset
-		    (* length vm:byte-bits))
+		    (the index (* length vm:byte-bits)))
      result))
 
 
 (deftransform copy-seq ((seq) (simple-string))
   '(let* ((length (length seq))
 	  (res (make-string length)))
+     (declare (optimize (safety 0))
      (bit-bash-copy seq
 		    vector-data-bit-offset
 		    res
 		    vector-data-bit-offset
-		    (* length vm:byte-bits))
+		    (the index (* length vm:byte-bits)))
      res))
 
 
 (deftransform replace ((string1 string2 &key (start1 0) (start2 0)
 				end1 end2)
 		       (simple-string simple-string &rest t))
-  '(progn
+  '(locally (declare (optimize (safety 0)))
      (bit-bash-copy string2
-		    (+ (* start2 vm:byte-bits) vector-data-bit-offset)
+		    (the index
+			 (+ (the index (* start2 vm:byte-bits))
+			    vector-data-bit-offset))
 		    string1
-		    (+ (* start1 vm:byte-bits) vector-data-bit-offset)
-		    (* (min (- (or end1 (length string1))
-			       start1)
-			    (- (or end2 (length string2))
-			       start2))
-		       vm:byte-bits))
+		    (the index
+			 (+ (the index (* start1 vm:byte-bits))
+			    vector-data-bit-offset))
+		    (the index
+			 (* (min (the index (- (or end1 (length string1))
+					       start1))
+				 (the index (- (or end2 (length string2))
+					       start2)))
+			    vm:byte-bits)))
      string1))
 
 
@@ -176,7 +185,7 @@
       (let ((n-seq (gensym))
 	    (n-length (gensym)))
 	(args n-seq)
-	(lets `(,n-length (* (length ,n-seq) vm:byte-bits)))
+	(lets `(,n-length (the index (* (length ,n-seq) vm:byte-bits))))
 	(all-lengths n-length)
 	(forms `(bit-bash-copy ,n-seq vector-data-bit-offset
 			       res start
@@ -185,7 +194,8 @@
     `(lambda (rtype ,@(args))
        (declare (ignore rtype))
        (let* (,@(lets)
-	      (res (make-string (truncate (+ ,@(all-lengths)) vm:byte-bits)))
+	      (res (make-string (truncate (the index (+ ,@(all-lengths)))
+					  vm:byte-bits)))
 	      (start vector-data-bit-offset))
 	 (declare (type index start ,@(all-lengths)))
 	 ,@(forms)
