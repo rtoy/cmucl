@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.2 2001/02/17 20:02:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.3 2003/07/20 13:53:11 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -180,3 +180,16 @@
 	       (inst addi nsp-tn nsp-tn delta))
 	      (t
 	       (inst lwz nsp-tn nsp-tn 0)))))))
+
+
+;; bogus stubs for now
+
+(export '(make-callback-trampoline callback-accessor-form))
+
+(defun callback-accessor-form (type sp offset)
+  (error "Callbacks not implemented on Alpha"))
+
+(defun make-callback-trampoline (index return-type)
+  "Cons up a piece of code which calls call-callback with INDEX and a
+pointer to the arguments."
+  (error "Callbacks not implemented on Alpha"))

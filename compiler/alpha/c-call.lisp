@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/c-call.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/c-call.lisp,v 1.3 2003/07/20 13:53:11 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,3 +176,16 @@
 	      (t
 	       (inst li delta temp)
 	       (inst addq nsp-tn temp nsp-tn)))))))
+
+
+;; bogus stubs for now
+
+(export '(make-callback-trampoline callback-accessor-form))
+
+(defun callback-accessor-form (type sp offset)
+  (error "Callbacks not implemented on Alpha"))
+
+(defun make-callback-trampoline (index return-type)
+  "Cons up a piece of code which calls call-callback with INDEX and a
+pointer to the arguments."
+  (error "Callbacks not implemented on Alpha"))
