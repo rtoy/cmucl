@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.44 1998/02/08 16:20:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.45 1998/02/20 07:44:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,7 +126,7 @@
 
 (defun guess-alignment (bits)
   (cond ((null bits) nil)
-	((> bits 32) 64)
+	#-x86 ((> bits 32) 64)
 	((> bits 16) 32)
 	((> bits 8) 16)
 	((> bits 1) 8)
