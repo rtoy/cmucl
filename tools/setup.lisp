@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.29 1999/01/09 11:05:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.30 2001/02/11 14:22:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -220,6 +220,7 @@
 	  ((c:target-featurep :x86) "x86/")
 	  ((c:target-featurep :alpha) "alpha/")
 	  ((c:target-featurep :sgi) "mips/")
+	  ((c:target-featurep :ppc) "ppc/")
 	  (t
 	   (error "What machine is this?")))
     (make-pathname :directory (pathname-directory f)))))

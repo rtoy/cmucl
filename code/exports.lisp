@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.177 2001/01/22 10:49:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.178 2001/02/11 14:21:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,6 +68,10 @@
 (if (find-package "SGI")
     (rename-package "SGI" "SGI" '("VM" "OLD-SGI"))
     (make-package "SGI" :nicknames '("VM" "OLD-SGI") :use nil))
+#+ppc
+(if (find-package "PPC")
+    (rename-package "PPC" "PPC" '("VM" "OLD-PPC"))
+    (make-package "PPC" :nicknames '("VM" "OLD-PPC")))
 (if (find-package "CONDITIONS")
     (rename-package "CONDITIONS" "CONDITIONS" 'nil)
     (make-package "CONDITIONS" :nicknames 'nil :use nil))
@@ -618,11 +622,11 @@
        "DOUBLE-FLOAT-P" "LONG-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
   (intern name "KERNEL"))
 (defpackage #+pmax "PMAX" #+sparc "SPARC" #+ibmrt "RT"
-            #+x86 "X86" #+hppa "HPPA" #+alpha "ALPHA" #+sgi "SGI"
+            #+x86 "X86" #+hppa "HPPA" #+alpha "ALPHA" #+sgi "SGI" #+ppc "PPC"
             (:nicknames "VM" #+(or pmax sgi) "MIPS"
 			#+pmax "OLD-MIPS" #+sparc "OLD-SPARC" #+ibmrt "OLD-RT"
 			#+x86 "OLD-X86" #+hppa "HPPA" #+alpha "OLD-ALPHA"
-			#+sgi "OLD-SGI")
+			#+sgi "OLD-SGI" #+ppc "OLD-PPC")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
              "%SET-FDEFINITION" "%SET-FILL-POINTER"

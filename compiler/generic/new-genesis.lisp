@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.40 2000/10/23 20:20:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.41 2001/02/11 14:22:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -862,7 +862,8 @@
     (write-indexed fdefn vm:fdefn-raw-addr-slot
 		   (ecase type
 		     (#.vm:function-header-type
-		      (if (c:backend-featurep :sparc)
+		      (if (or (c:backend-featurep :sparc)
+			      (c:backend-featurep :ppc))
 			  defn
 			  (make-random-descriptor
 			   (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
@@ -1850,7 +1851,8 @@
 		    #.c:rt-afpa-fasl-file-implementation
 		    #.c:hppa-fasl-file-implementation
 		    #.c:alpha-fasl-file-implementation
-		    #.c:sgi-fasl-file-implementation)
+		    #.c:sgi-fasl-file-implementation
+		    #.c:ppc-fasl-file-implementation)
 		   "")
 		  (#.c:sparc-fasl-file-implementation
 		   (if (c:backend-featurep :svr4)
@@ -2077,7 +2079,20 @@
 	 (:addi
 	  (setf (sap-ref-16 sap 2)
 		(maybe-byte-swap-short
-		 (ldb (byte 16 0) value))))))))
+		 (ldb (byte 16 0) value))))))
+      (#.c:ppc-fasl-file-implementation
+       (ecase kind
+	 (:ba
+ 	  (setf (sap-ref-32 sap 0)
+ 		(dpb (ash value -2) (byte 24 2) (sap-ref-32 sap 0))))
+ 	 (:ha
+ 	  (let* ((h (ldb (byte 16 16) value))
+ 		 (l (ldb (byte 16 0) value)))
+ 	    (setf (sap-ref-16 sap 2)
+ 		  (if (logbitp 15 l) (ldb (byte 16 0) (1+ h)) h))))
+ 	 (:l
+  	  (setf (sap-ref-16 sap 2)
+  		(ldb (byte 16 0) value)))))))
   (undefined-value))
 
 (defun linkage-info-to-core ()

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.79 2000/08/12 07:32:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.80 2001/02/11 14:22:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,6 +91,13 @@
   (comf "target:assembly/mips/array" :assem t)
   (comf "target:assembly/mips/arith" :assem t)
   (comf "target:assembly/mips/alloc" :assem t))
+
+(when (c:backend-featurep :ppc)
+  (comf "target:assembly/ppc/assem-rtns" :assem t)
+  (comf "target:assembly/ppc/array" :assem t)
+  (comf "target:assembly/ppc/arith" :assem t)
+  (comf "target:assembly/ppc/alloc" :assem t))
+
 
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
@@ -176,6 +183,8 @@
   (comf "target:code/alpha-vm"))
 (when (c:backend-featurep :sgi)
   (comf "target:code/sgi-vm"))
+(when (c:backend-featurep :ppc)
+  (comf "target:code/ppc-vm"))
 
 (comf "target:code/symbol")
 (comf "target:code/bignum")
