@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.9 1992/02/21 22:00:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.10 1992/02/22 00:04:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.9 1992/02/21 22:00:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.10 1992/02/22 00:04:21 wlott Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
@@ -23,7 +23,7 @@
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-register sigcontext-float-register
-	  sigcontext-floating-point-modes))
+	  sigcontext-floating-point-modes extern-alien-name))
 
 
 ;;;; The sigcontext structure.
@@ -177,3 +177,15 @@
   (declare (type (alien (* sigcontext)) scp))
    (with-alien ((scp (* sigcontext) scp))
     (slot scp 'sc-fpc-csr)))
+
+
+
+;;; EXTERN-ALIEN-NAME -- interface.
+;;;
+;;; The loader uses this to convert alien names to the form they occure in
+;;; the symbol table (for example, prepending an underscore).  On the MIPS,
+;;; we don't do anything.
+;;; 
+(defun extern-alien-name (name)
+  (declare (type simple-base-string name))
+  name)
