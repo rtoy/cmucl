@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.73 2003/04/29 16:27:18 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.74 2003/04/30 07:10:09 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,7 +412,10 @@
   (allocation nil :type (member :instance :class nil))
   ;;
   ;; If :class allocation, a cons whose car holds the value.
-  (cell nil :type (or cons null)))
+  (cell nil :type (or cons null))
+  ;;
+  ;; Slot documentation.
+  (documentation nil :type (or null string)))
 
 (eval-when (compile load eval)
   (setf (condition-class-cpl (kernel::find-class 'condition))
@@ -735,7 +738,7 @@
      (slot-name {slot-option value}*)
 
    where slot-option is one of :READER, :WRITER, :ACCESSOR, :ALLOCATION,
-   :INITARG, :INITFORM, and :TYPE.
+   :INITARG, :INITFORM, :DOCUMENTATION, and :TYPE.
 
    Each overall option is of the form
 
@@ -768,6 +771,7 @@
 	(let* ((spec (if (consp spec) spec (list spec)))
 	       (slot-name (first spec))
 	       (allocation :instance)
+	       (documentation nil)
 	       (initform-p nil)
 	       initform)
 	  (collect ((initargs)
@@ -794,6 +798,14 @@
 		  (:initarg (initargs arg))
 		  (:allocation
 		   (setq allocation arg))
+		  (:documentation
+		   (when documentation
+		     (simple-program-error
+		      "More than one slot :DOCUMENTATION in~%  ~s" spec))
+		   (unless (stringp arg)
+		     (simple-program-error
+		      "Slot :DOCUMENTATION is not a string in~%  ~s" spec))
+		   (setq documentation arg))
 		  (:type)
 		  (t
 		   (simple-program-error "Unknown slot option:~%  ~S"
@@ -808,6 +820,7 @@
 		     :readers ',(readers)
 		     :writers ',(writers)
 		     :initform-p ',initform-p
+		     :documentation ',documentation
 		     :initform
 		     ,(if (constantp initform)
 			  `',(eval initform)

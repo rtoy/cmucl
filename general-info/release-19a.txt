@@ -52,12 +52,15 @@ New in this release:
      - Accessing arrays in compiled code with out-of-bounds indices
        now signals a TYPE-ERROR.
      - DECLARE no longer being a special operator.
+     - DEFINE-CONDITION accepts slot option :DOCUMENTATION.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
        wrt to duplicate elements.
      - Forms like (MULTIPLE-VALUE-BIND 'LIST) no longer trapping
        an internal compiler error when compiled.
+     - PARSE-INTEGER signaling PARSE-ERROR.
+     - Compiler eliminating some type checks in safe code.
 
   * Other changes:
 
