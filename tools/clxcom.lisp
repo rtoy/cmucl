@@ -33,8 +33,10 @@
     (comf "target:clx/depdefs" :load t)
     (comf "target:clx/clx" :load t)
     (comf "target:clx/dependent" :load t)
-    (comf "target:clx/macros" :load t)	; these are just macros
-    (comf "target:clx/bufmac" :load t)		; these are just macros
+    (comf "target:clx/macros")	; these are just macros
+    (load "target:clx/macros")
+    (comf "target:clx/bufmac")	; these are just macros
+    (load "target:clx/bufmac")
     (comf "target:clx/buffer" :load t)
     (comf "target:clx/display" :load t)
     (comf "target:clx/gcontext" :load t)
