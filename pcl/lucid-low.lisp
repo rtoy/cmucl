@@ -106,7 +106,7 @@
 
 
 
-#+lcl3.0
+#+lcl4.0
 (progn
 
 (defvar *saved-compilation-speed* 3)
@@ -307,53 +307,51 @@
 (in-package 'pcl)
 
 (pushnew :structure-wrapper *features*)
-
-(defun structure-functions-exist-p ()
-  t)
-
-(defun structure-instance-p (x)
-  (and (structurep x)
-       (not (eq 'std-instance (structure-type x)))))
+(pushnew :structure-functions *features*)
 
 (defvar *structure-type* nil)
 (defvar *structure-length* nil)
 
-(defun structure-type-p (type)
+(defun known-structure-type-p (type)
+  (declare (special lucid::*defstructs*))
   (let ((s-data (gethash type lucid::*defstructs*)))
     (or (and s-data 
 	     (eq 'structure (structure-ref s-data 1 'defstruct))) ; type - Fix this
 	(and type (eq *structure-type* type)))))
 
 (defun structure-type-included-type-name (type)
+  (declare (special lucid::*defstructs*))
   (let ((s-data (gethash type lucid::*defstructs*)))
     (and s-data (structure-ref s-data 6 'defstruct)))) ; include - Fix this
 
 (defun structure-type-slot-description-list (type)
+  (declare (special lucid::*defstructs*))
   (let ((s-data (gethash type lucid::*defstructs*)))
     (if s-data
-	(nthcdr (let ((include (structure-ref s-data 6 'defstruct)))
-		  (if include
-		      (let ((inc-s-data (gethash include lucid::*defstructs*)))
-			(if inc-s-data
-			    (length (structure-ref inc-s-data 7 'defstruct))
-			    0))
-		      0))
-		(map 'list
-		     #'(lambda (slotd)
-			 (let* ((ds 'lucid::defstruct-slot)
-				(slot-name (system:structure-ref slotd 0 ds))
-				(position (system:structure-ref slotd 1 ds))
-				(accessor (system:structure-ref slotd 2 ds))
-				(read-only-p (system:structure-ref slotd 5 ds)))
-			   (list slot-name accessor
-				 #'(lambda (x)
-				     (system:structure-ref x position type))
-				 (unless read-only-p
-				   #'(lambda (v x)
-				       (setf (system:structure-ref x position type)
-					     v))))))
-		     (structure-ref s-data 7 'defstruct))) ; slots  - Fix this
-	(let ((result (make-list *structure-length*)))
+	(nthcdr (the index
+                     (let ((include (structure-ref s-data 6 'defstruct)))
+		       (if include
+		           (let ((inc-s-data (gethash include lucid::*defstructs*)))
+		     	     (if inc-s-data
+			         (length (structure-ref inc-s-data 7 'defstruct))
+			         0))
+		           0)))
+		(map
+                 'list
+		 #'(lambda (slotd)
+		     (let* ((slot-name (system:structure-ref slotd 0 'lucid::defstruct-slot))
+			    (position (system:structure-ref slotd 1 'lucid::defstruct-slot))
+			    (accessor (system:structure-ref slotd 2 'lucid::defstruct-slot))
+			    (read-only-p (system:structure-ref slotd 5 'lucid::defstruct-slot)))
+		       (list slot-name accessor
+			     #'(lambda (x)
+			         (system:structure-ref x position type))
+			     (unless read-only-p
+			       #'(lambda (v x)
+			           (setf (system:structure-ref x position type)
+				         v))))))
+		 (structure-ref s-data 7 'defstruct))) ; slots  - Fix this
+	(let ((result (make-list (the index *structure-length*))))
 	  (dotimes (i *structure-length* result)
 	    (let* ((name (format nil "SLOT~D" i))
 		   (slot-name (intern name (or (symbol-package type) *package*)))

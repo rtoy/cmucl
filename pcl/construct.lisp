@@ -424,9 +424,9 @@
            (compute-applicable-methods #'make-instance (list class)))
 	 (supplied-initarg-names
 	   (constructor-supplied-initarg-names constructor))
-         (default
-	   (compute-applicable-methods #'default-initargs
-				       (list class supplied-initarg-names))) ;?
+;         (default
+;	   (compute-applicable-methods #'default-initargs
+;				       (list class supplied-initarg-names))) ;?
          (allocate
            (compute-applicable-methods #'allocate-instance (list class)))
          (initialize
@@ -441,7 +441,7 @@
 		 (error "No FALLBACK generator?")))
 	     (funcall generator class wrapper defaults initialize shared)))
       (if (or (cdr make)
-	      (cdr default)
+;	      (cdr default)
 	      (cdr allocate)
 	      (check-initargs class
 			      supplied-initarg-names
@@ -465,8 +465,10 @@
 ;;; 
 
 (defun map-constructors (fn)
+  (declare (type real-function fn))
   (let ((nclasses 0)
 	(nconstructors 0))
+    (declare (type index nclasses nconstructors))
     (labels ((recurse (class)
 	       (incf nclasses)
 	       (dolist (constructor (class-constructors class))
@@ -573,11 +575,12 @@
 ;;;    t              there is at least one non-constant initform
 ;;; 
 (defun compute-constant-vector (class)
-  ;;(declare (values constants flag))
+  (declare (values constants flag))
   (let* ((wrapper (class-wrapper class))
 	 (layout (wrapper-instance-slots-layout wrapper))
 	 (flag :unsupplied)
 	 (constants ()))
+    (declare (list layout))
     (dolist (slotd (class-slots class))
       (let ((name (slot-definition-name slotd))
 	    (initform (slot-definition-initform slotd))
@@ -624,6 +627,7 @@
 			     (or (cdr (assq (slot-definition-name slotd) positions))
 				 ':class)))
 		   (class-slots class))))
+    (declare (list layout positions slot-initargs))
     ;; Go through each of the initargs, and figure out what position
     ;; it fills by replacing the entries in slot-initargs it fills.
     (dolist (initarg initarg-names)
@@ -749,6 +753,7 @@
 	   (supplied-initarg-positions ())
 	   (constant-initargs ())
 	   (used-positions ()))
+      (declare (list layout))
 					       
       ;;
       ;; Go through each of the supplied initargs for three reasons.
@@ -899,6 +904,7 @@
 	   (initfns-and-positions ())
 	   (supplied-initarg-positions ())
 	   (used-positions ()))
+      (declare (list layout))
       ;;
       ;; Go through each of the supplied initargs for three reasons.
       ;;
@@ -1031,6 +1037,7 @@
 						(mapcar #'car defaults))))
 	   (supplied-initarg-positions ())
 	   (used-positions ()))
+      (declare (list layout))
       ;;
       ;; Go through each of the supplied initargs for three reasons.
       ;;

@@ -42,14 +42,17 @@
 		      &optional (test-converter     #'default-test-converter)
 		                (code-converter     #'default-code-converter)
 				(constant-converter #'default-constant-converter))
-  (function-apply (get-function-generator lambda test-converter code-converter)
+  (apply-function (get-function-generator lambda test-converter code-converter)
 		  (compute-constants      lambda constant-converter)))
 
+(declaim (ftype (function (T &optional T T T) (values function T))
+                get-function1))
 (defun get-function1 (lambda
 		      &optional (test-converter     #'default-test-converter)
 		                (code-converter     #'default-code-converter)
 				(constant-converter #'default-constant-converter))
-  (values (the function (get-function-generator lambda test-converter code-converter))
+  (values (the function
+               (get-function-generator lambda test-converter code-converter))
 	  (compute-constants      lambda constant-converter)))
 
 (defun default-constantp (form)
@@ -61,10 +64,11 @@
       '.constant.
       form))
 
+(declaim (ftype (function (T) (values T list)) default-code-converter))
 (defun default-code-converter  (form)
   (if (default-constantp form)
       (let ((gensym (gensym))) (values gensym (list gensym)))
-      form))
+      (values form nil)))
 
 (defun default-constant-converter (form)
   (if (default-constantp form)
@@ -109,6 +113,10 @@
 	(fgen-generator fgen)
 	(get-new-function-generator lambda test code-converter))))
 
+(declaim (ftype (function (T T) (values T list))
+                get-new-function-generator-internal
+                compute-code))
+
 (defun get-new-function-generator (lambda test code-converter)
   (multiple-value-bind (gensyms generator-lambda)
       (get-new-function-generator-internal lambda code-converter)
@@ -124,17 +132,19 @@
 
 
 (defun compute-test (lambda test-converter)
-  (walk-form lambda
-	     nil
-	     #'(lambda (f c e)
-		 (declare (ignore e))
-		 (if (neq c :eval)
-		     f
-		     (let ((converted (funcall test-converter f)))
-		       (values converted (neq converted f)))))))
+  (let ((walk-form-expand-macros-p t))
+    (walk-form lambda
+	       nil
+	       #'(lambda (f c e)
+		   (declare (ignore e))
+		   (if (neq c :eval)
+		       f
+		       (let ((converted (funcall test-converter f)))
+			 (values converted (neq converted f))))))))
 
 (defun compute-code (lambda code-converter)
-  (let ((gensyms ()))
+  (let ((walk-form-expand-macros-p t)
+	(gensyms ()))
     (values (walk-form lambda
 		       nil
 		       #'(lambda (f c e)
@@ -148,21 +158,22 @@
 	      gensyms)))
 
 (defun compute-constants (lambda constant-converter)
-  (macrolet ((appending ()
-	       `(let ((result ()))
- 		  (values #'(lambda (value) (setq result (append result value)))
- 			  #'(lambda ()result)))))
-    (gathering1 (appending)
-      (walk-form lambda
-		 nil
-		 #'(lambda (f c e)
-		     (declare (ignore e))
-		     (if (neq c :eval)
-			 f
-			 (let ((consts (funcall constant-converter f)))
-			   (if consts
-			       (progn (gather1 consts) (values f t))
-			       f))))))))
+  (let ((walk-form-expand-macros-p t)) ; doesn't matter here.
+    (macrolet ((appending ()
+		 `(let ((result ()))
+		   (values #'(lambda (value) (setq result (append result value)))
+		    #'(lambda ()result)))))
+      (gathering1 (appending)
+		  (walk-form lambda
+			     nil
+			     #'(lambda (f c e)
+				 (declare (ignore e))
+				 (if (neq c :eval)
+				     f
+				     (let ((consts (funcall constant-converter f)))
+				       (if consts
+					   (progn (gather1 consts) (values f t))
+					   f)))))))))
 
 
 ;;;
@@ -175,6 +186,7 @@
 		(dolist (fgen *fgens*)
 		  (when (or (null (fgen-system fgen))
 			    (eq (fgen-system fgen) system))
+		    (when system (setf (svref fgen 4) system))
 		    (gather1
 		     `(load-function-generator
 		       ',(fgen-test fgen)

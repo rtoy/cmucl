@@ -73,7 +73,29 @@
 ;;; sizes, the space that would be wasted by reserving line 0 to hold the
 ;;; lock count is more significant.
 ;;;
-
+
+(declaim (ftype (function () index)
+		get-wrapper-cache-number))
+(declaim (ftype (function (T T T) (values index index index index))
+                compute-cache-parameters))
+(declaim (ftype (function (T T T) index)
+		compute-primary-cache-location
+		compute-primary-cache-location-from-location))
+(declaim (ftype (function (T) index)
+		cache-count))
+(declaim (ftype (function (T T T T) boolean)
+		fill-cache-p
+		fill-cache-from-cache-p))
+(declaim (ftype (function (T T &optional T) (values T boolean))
+		find-free-cache-line))
+(declaim (ftype (function (index) index)
+		compute-line-size
+		default-limit-fn
+		power-of-two-ceiling))
+(declaim (ftype (function (T) boolean)
+		free-cache-vector))
+
+
 ;;;
 ;;; Caches
 ;;;
@@ -100,26 +122,29 @@
   `(array-dimension (the simple-vector ,cache-vector) 0))
 
 (defun allocate-cache-vector (size)
+  (declare (type index size))
   (make-array size :adjustable nil))
 
 (defmacro cache-vector-lock-count (cache-vector)
   `(cache-vector-ref ,cache-vector 0))
 
 (defun flush-cache-vector-internal (cache-vector)
-  (without-interrupts  
+  (without-interrupts-simple
     (fill (the simple-vector cache-vector) nil)
     (setf (cache-vector-lock-count cache-vector) 0))
   cache-vector)
 
 (defmacro modify-cache (cache-vector &body body)
-  `(without-interrupts
+  `(without-interrupts-simple
      (multiple-value-prog1
        (progn ,@body)
        (let ((old-count (cache-vector-lock-count ,cache-vector)))
-	 (declare (fixnum old-count))
+	 (declare (type index old-count))
 	 (setf (cache-vector-lock-count ,cache-vector)
-	       (if (= old-count most-positive-fixnum)
-		   1 (the fixnum (1+ old-count))))))))
+               (the index
+	            (if (= old-count most-positive-fixnum)
+		        1
+                        (the index (1+ old-count)))))))))
 
 (deftype field-type ()
   '(integer 0    ;#.(position 'number wrapper-layout)
@@ -127,9 +152,9 @@
 
 (eval-when (compile load eval)
 (defun power-of-two-ceiling (x)
-  (declare (fixnum x))
+  (declare (type index x))
   ;;(expt 2 (ceiling (log x 2)))
-  (the fixnum (ash 1 (integer-length (1- x)))))
+  (the index (ash 1 (integer-length (1- x)))))
 
 (defconstant *nkeys-limit* 256)
 )
@@ -139,14 +164,14 @@
 	     (:constructor make-cache ())
 	     (:copier copy-cache-internal))
   (nkeys 1 :type (integer 1 #.*nkeys-limit*))
-  (valuep nil :type (member nil t))
-  (nlines 0 :type fixnum)
+  (valuep nil :type boolean)
+  (nlines 0 :type index)
   (field 0 :type field-type)
-  (limit-fn #'default-limit-fn :type function)
-  (mask 0 :type fixnum)
-  (size 0 :type fixnum)
+  (limit-fn #'default-limit-fn :type real-function)
+  (mask 0 :type index)
+  (size 0 :type index)
   (line-size 1 :type (integer 1 #.(power-of-two-ceiling (1+ *nkeys-limit*))))
-  (max-location 0 :type fixnum)
+  (max-location 0 :type index)
   (vector #() :type simple-vector)
   (overflow nil :type list))
 
@@ -172,18 +197,18 @@
 (defvar *free-cache-vectors* (make-hash-table :size 16 :test 'eql))
 
 ;;;
-;;; Return a cache that has had flush-cache-vector-internal called on it.  This
+;;; Return a cache that has had flush-cache-internal called on it.  This
 ;;; returns a cache of exactly the size requested, it won't ever return a
 ;;; larger cache.
 ;;; 
 (defun get-cache-vector (size)
   (let ((entry (gethash size *free-cache-vectors*)))
-    (without-interrupts
+    (without-interrupts-simple
       (cond ((null entry)
 	     (setf (gethash size *free-cache-vectors*) (cons 0 nil))
 	     (get-cache-vector size))
 	    ((null (cdr entry))
-	     (incf (car entry))
+             (setf (car entry) (the fixnum (1+ (the fixnum (car entry)))))
 	     (flush-cache-vector-internal (allocate-cache-vector size)))
 	    (t
 	     (let ((cache (cdr entry)))
@@ -192,7 +217,7 @@
 
 (defun free-cache-vector (cache-vector)
   (let ((entry (gethash (cache-vector-size cache-vector) *free-cache-vectors*)))
-    (without-interrupts
+    (without-interrupts-simple
       (if (null entry)
 	  (error "Attempt to free a cache-vector not allocated by GET-CACHE-VECTOR.")
 	  (let ((thread (cdr entry)))
@@ -218,6 +243,7 @@
 	     (allocated (car entry))
 	     (head (cdr entry))
 	     (free 0))
+        (declare (type index allocated free))
 	(loop (when (null head) (return t))
 	      (setq head (cache-vector-ref head 0))
 	      (incf free))
@@ -257,16 +283,16 @@
 (defconstant wrapper-cache-number-mask
 	     (1- (expt 2 wrapper-cache-number-length)))
 
-
 (defvar *get-wrapper-cache-number* (make-random-state))
 
 (defun get-wrapper-cache-number ()
   (let ((n 0))
-    (declare (fixnum n))
+    (declare (type index n))
     (loop
       (setq n
-	    (logand wrapper-cache-number-mask
-		    (random most-positive-fixnum *get-wrapper-cache-number*)))
+	    (logand (the index wrapper-cache-number-mask)
+		    (the index (random most-positive-fixnum
+                                       *get-wrapper-cache-number*))))
       (unless (zerop n) (return n)))))
 
 
@@ -300,8 +326,18 @@
 ;;; cache numbers on machines where the addressing modes make that a good
 ;;; idea.
 ;;; 
+;;; For May 92, the wrapper field UNRESERVED-FIELD, accessable by macro
+;;; WRAPPER-UNRESERVED-FIELD, has been created to allow a programmer to
+;;; store his own items in the wrapper if so desired.  (Since there is
+;;; only one wrapper per class, this could be added at minimal cost).
+;;; It would be nice for this kind of low level hook to be part of the
+;;; MOP.  -- TL.
+
+(defconstant *temporary-static-slot-storage-copy* (make-array 1))
+
 #-structure-wrapper
 (progn
+
 (eval-when (compile load eval)
 (defconstant wrapper-layout
 	     '(number
@@ -312,24 +348,34 @@
 	       number
 	       number
 	       number
+               wrapper-identifier
 	       state
 	       instance-slots-layout
 	       class-slots
-	       class))
+	       class
+               allocate-static-slot-storage-copy
+               unreserved-field))
+
+(defconstant wrapper-length (length wrapper-layout))
+
+(deftype wrapper () `(simple-vector 15)) ; #.(length wrapper-layout)
 )
 
 (eval-when (compile load eval)
 
+(declaim (ftype (function (T) index) wrapper-field))
 (defun wrapper-field (type)
   (posq type wrapper-layout))
 
+(declaim (ftype (function (index) (or index null)) next-wrapper-field))
 (defun next-wrapper-field (field-number)
+  (declare (type index field-number))
   (position (nth field-number wrapper-layout)
 	    wrapper-layout
 	    :start (1+ field-number)))
 
 (defmacro first-wrapper-cache-number-index ()
-  `(wrapper-field 'number))
+  `(the field-type (wrapper-field 'number)))
 
 (defmacro next-wrapper-cache-number-index (field-number)
   `(next-wrapper-field ,field-number))
@@ -342,37 +388,65 @@
 (defmacro cache-number-vector-ref (cnv n)
   `(svref ,cnv ,n))
 
+(defconstant *wrapper-identifier-symbol* (gensym "WRAPPER-IDENTIFIER"))
 
 (defmacro wrapper-ref (wrapper n)
-  `(svref ,wrapper ,n))
+  `(svref (the wrapper ,wrapper) (the index ,n)))
 
 (defun emit-wrapper-ref (wrapper-operand field-operand)
   (operand :iref wrapper-operand field-operand))
 
-	      
+
+(defmacro wrapper-p (x)
+  (once-only (x)
+    `(locally (declare #.*optimize-speed*)
+       (and (simple-vector-p ,x)
+            (= (the index (length (the simple-vector ,x)))
+               wrapper-length)
+            (eq (wrapper-ref ,x ,(wrapper-field 'wrapper-identifier))
+                *wrapper-identifier-symbol*)))))
+
 (defmacro wrapper-state (wrapper)
   `(wrapper-ref ,wrapper ,(wrapper-field 'state)))
 
 (defmacro wrapper-instance-slots-layout (wrapper)
-  `(wrapper-ref ,wrapper ,(wrapper-field 'instance-slots-layout)))
+  `(the list
+        (wrapper-ref ,wrapper ,(wrapper-field 'instance-slots-layout))))
 
 (defmacro wrapper-class-slots (wrapper)
-  `(wrapper-ref ,wrapper ,(wrapper-field 'class-slots)))
+  `(the list
+        (wrapper-ref ,wrapper ,(wrapper-field 'class-slots))))
 
 (defmacro wrapper-class (wrapper)
   `(wrapper-ref ,wrapper ,(wrapper-field 'class)))
 
+(defmacro wrapper-allocate-static-slot-storage-copy (wrapper)
+  `(the simple-vector
+        (wrapper-ref ,wrapper ,(wrapper-field 'allocate-static-slot-storage-copy))))
+
+(defmacro wrapper-unreserved-field (wrapper)
+  "Field unreserved by PCL.  May be used by user programs."
+  `(wrapper-ref ,wrapper ,(wrapper-field 'unreserved-field)))
+
+
 (defmacro make-wrapper-internal ()
-  `(let ((wrapper (make-array ,(length wrapper-layout) :adjustable nil)))
+  `(let ((wrapper (make-array ,(length (the list wrapper-layout)) :adjustable nil)))
+     (declare (type wrapper wrapper))
      ,@(gathering1 (collecting)
 	 (iterate ((i (interval :from 0))
 		   (desc (list-elements wrapper-layout)))
 	   (ecase desc
+             (wrapper-identifier
+              (gather1 `(setf (wrapper-ref wrapper ,i)
+                              *wrapper-identifier-symbol*)))
 	     (number
 	      (gather1 `(setf (wrapper-ref wrapper ,i)
-			      (get-wrapper-cache-number))))
-	     ((state instance-slots-layout class-slots class)))))
-     (setf (wrapper-state wrapper) 't)     
+			      (the index (get-wrapper-cache-number)))))
+             (allocate-static-slot-storage-copy
+              (gather1 `(setf (wrapper-ref wrapper ,i)
+                              *temporary-static-slot-storage-copy*)))
+	     ((state instance-slots-layout class-slots class unreserved-field)))))
+     (setf (wrapper-state wrapper) 't)
      wrapper))
 
 (defun make-wrapper (class)
@@ -380,7 +454,8 @@
     (setf (wrapper-class wrapper) class)
     wrapper))
 
-)
+) ;#-structure-wrapper
+
 
 ; In CMUCL we want to do type checking as early as possible; structures help this.
 #+structure-wrapper
@@ -400,8 +475,7 @@
 (progn
 
 (defun make-wrapper-cache-number-vector ()
-  (let ((cnv (make-array #.wrapper-cache-number-vector-length
-			 :element-type 'fixnum)))
+  (let ((cnv (make-array wrapper-cache-number-vector-length)))
     (dotimes (i #.wrapper-cache-number-vector-length)
       (setf (svref cnv i) (get-wrapper-cache-number)))
     cnv))
@@ -414,7 +488,13 @@
   (state t :type (or (member t) cons)) ; a cons whose car is one of: flush or obsolete
   (instance-slots-layout nil :type list)
   (class-slots nil :type list)
-  (class *the-class-t* :type class))
+  (class *the-class-t* :type class)
+  (allocate-static-slot-storage-copy *temporary-static-slot-storage-copy*
+                                     :type simple-vector)
+  (unreserved-field nil))
+
+#+akcl
+(si::freeze-defstruct 'cache)
 
 (defun print-wrapper (wrapper stream depth)
   (declare (ignore depth))
@@ -425,8 +505,8 @@
   0)
 
 (defmacro next-wrapper-cache-number-index (field-number)
-  `(and (< ,field-number #.(1- wrapper-cache-number-vector-length))
-        (1+ ,field-number)))
+  `(and (< (the index ,field-number) #.(1- wrapper-cache-number-vector-length))
+        (1+ (the index ,field-number))))
 
 (defmacro cache-number-vector-ref (cnv n)
   `(svref ,cnv ,n))
@@ -437,11 +517,65 @@
 (defun emit-cache-number-vector-ref (cnv-operand field-operand)
   (operand :iref cnv-operand field-operand))
 
-)
+) ;#+structure-wrapper
 
 (defmacro wrapper-cache-number-vector-ref (wrapper n)
   `(svref (wrapper-cache-number-vector ,wrapper) ,n))
 
+
+;;;
+;;;
+;;;
+
+(defvar *built-in-or-structure-wrapper-table*
+  (make-hash-table :test 'eq))
+
+(defvar wft-type1 nil)
+(defvar wft-wrapper1 nil)
+(defvar wft-type2 nil)
+(defvar wft-wrapper2 nil)
+
+(defun wrapper-for-structure (x)
+  (let ((type (structure-type x)))
+    (when (symbolp type)
+      (cond ((eq type wft-type1)
+             (return-from wrapper-for-structure wft-wrapper1))
+            ((eq type wft-type2)
+             (return-from wrapper-for-structure wft-wrapper2))
+            (t (setq wft-type2 wft-type1  wft-wrapper2 wft-wrapper1))))
+    (let* ((cell (find-class-cell type))
+           (class (or (find-class-cell-class cell)
+                      (let* (#+lucid
+                             (*structure-type* type)
+                             #+lucid
+                             (*structure-length* (structure-length x type)))
+                        (find-class-from-cell type cell))))
+           (wrapper (if class (class-wrapper class) *the-wrapper-of-t*)))
+     (when (symbolp type)
+        (setq wft-type1 type  wft-wrapper1 wrapper))
+      wrapper)))
+
+(defmacro built-in-or-structure-wrapper (x)
+  (once-only (x)
+    `(if (structurep ,x)
+         (wrapper-for-structure ,x)
+         (if (symbolp ,x)
+	     (if ,x *the-wrapper-of-symbol* *the-wrapper-of-null*)
+	     (built-in-wrapper-of ,x)))))
+
+(defun built-in-or-structure-wrapper-fun (x)
+  (built-in-or-structure-wrapper x))
+
+(defmacro fast-wrapper-of (x)
+  (once-only (x)
+    `(or (and (std-instance-p ,x)
+	      (std-instance-wrapper ,x))
+         (and (fsc-instance-p ,x)
+	      (fsc-instance-wrapper ,x))
+         #+pcl-user-instances
+         (and (get-user-instance-p ,x)
+	      (get-user-instance-wrapper ,x))
+         (built-in-or-structure-wrapper ,x))))
 
 ;;;
 ;;; The wrapper cache machinery provides general mechanism for trapping on
@@ -490,51 +624,42 @@
        (setf (gethash owrapper *previous-nwrappers*) ()
 	     (gethash nwrapper *previous-nwrappers*) new-previous)))))
 
-(defun check-wrapper-validity (instance)
-  (let* ((owrapper (wrapper-of instance))
-	 (state (wrapper-state owrapper)))
-    (if (eq state  't)
-	owrapper
-	(let ((nwrapper
-		(ecase (car state)
-		  (flush
-		    (flush-cache-trap owrapper (cadr state) instance))
-		  (obsolete
-		    (obsolete-instance-trap owrapper (cadr state) instance)))))
-	  ;;
-	  ;; This little bit of error checking is superfluous.  It only
-	  ;; checks to see whether the person who implemented the trap
-	  ;; handling screwed up.  Since that person is hacking internal
-	  ;; PCL code, and is not a user, this should be needless.  Also,
-	  ;; since this directly slows down instance update and generic
-	  ;; function cache refilling, feel free to take it out sometime
-	  ;; soon.
-	  ;; 
-	  (cond ((neq nwrapper (wrapper-of instance))
-		 (error "Wrapper returned from trap not wrapper of instance."))
-		((invalid-wrapper-p nwrapper)
-		 (error "Wrapper returned from trap invalid.")))
-	  nwrapper))))
+(defun wrapper-state-trap (wrapper object)
+  (let ((state (wrapper-state wrapper)))
+    (ecase (car state)
+      (flush
+        (flush-cache-trap wrapper (cadr state) object))
+      (obsolete
+        (obsolete-instance-trap wrapper (cadr state) object)))))
 
-(defmacro check-wrapper-validity1 (object)
-  (let ((owrapper (gensym)))
-    `(let ((,owrapper (cond ((std-instance-p ,object)
-			     (std-instance-wrapper ,object))
-			    ((fsc-instance-p ,object)
-			     (fsc-instance-wrapper ,object))
-			    (t (wrapper-of ,object)))))
-       (if (eq 't (wrapper-state ,owrapper))
-	   ,owrapper
-	   (check-wrapper-validity ,object)))))
+(defmacro fast-check-wrapper-validity (object
+                                       &optional (wrapper-fn 'fast-wrapper-of))
+  (let ((owrapper (gensym "OWRAPPER")))
+    (once-only (object)
+      `(let ((,owrapper (,wrapper-fn ,object)))
+         (if (eq 't (wrapper-state ,owrapper))
+	     ,owrapper
+	     (wrapper-state-trap ,owrapper ,object))))))
+
+(defun check-wrapper-validity (instance)
+  (fast-check-wrapper-validity instance wrapper-of))
+
+
 
 
 (defvar *free-caches* nil)
 
 (defun get-cache (nkeys valuep limit-fn nlines)
-  (let ((cache (or (without-interrupts (pop *free-caches*)) (make-cache))))
+  (declare (type index         nkeys)
+           (type boolean       valuep)
+           (type real-function limit-fn)
+           (type index         nlines))
+  (let ((cache (or (without-interrupts-simple (pop *free-caches*))
+                   (make-cache))))
     (declare (type cache cache))
     (multiple-value-bind (cache-mask actual-size line-size nlines)
 	(compute-cache-parameters nkeys valuep nlines)
+      (declare (type index cache-mask actual-size line-size nlines))
       (setf (cache-nkeys cache) nkeys
 	    (cache-valuep cache) valuep
 	    (cache-nlines cache) nlines
@@ -543,25 +668,31 @@
 	    (cache-mask cache) cache-mask
 	    (cache-size cache) actual-size
 	    (cache-line-size cache) line-size
-	    (cache-max-location cache) (let ((line (1- nlines)))
-					 (if (= nkeys 1)
-					     (* line line-size)
-					     (1+ (* line line-size))))
+	    (cache-max-location cache)
+              (the index (let ((line (1- nlines)))
+                            (declare (type index line))
+			    (if (= nkeys 1)
+			        (the index (* line line-size))
+			        (the index (1+ (the index (* line line-size)))))))
 	    (cache-vector cache) (get-cache-vector actual-size)
 	    (cache-overflow cache) nil)
       cache)))
 
 (defun get-cache-from-cache (old-cache new-nlines 
 			     &optional (new-field (first-wrapper-cache-number-index)))
+  (declare (type index new-nlines) (type field-type new-field))
   (let ((nkeys (cache-nkeys old-cache))
 	(valuep (cache-valuep old-cache))
-	(cache (or (without-interrupts (pop *free-caches*)) (make-cache))))
-    (declare (type cache cache))
+	(cache (or (without-interrupts-simple (pop *free-caches*))
+                   (make-cache))))
+    (declare (type cache cache) (type index nkeys)
+             (type boolean valuep))
     (multiple-value-bind (cache-mask actual-size line-size nlines)
 	(if (= new-nlines (cache-nlines old-cache))
 	    (values (cache-mask old-cache) (cache-size old-cache) 
 		    (cache-line-size old-cache) (cache-nlines old-cache))
 	    (compute-cache-parameters nkeys valuep new-nlines))
+      (declare (type index cache-mask actual-size line-size nlines))
       (setf (cache-nkeys cache) nkeys
 	    (cache-valuep cache) valuep
 	    (cache-nlines cache) nlines
@@ -570,10 +701,12 @@
 	    (cache-mask cache) cache-mask
 	    (cache-size cache) actual-size
 	    (cache-line-size cache) line-size
-	    (cache-max-location cache) (let ((line (1- nlines)))
-					 (if (= nkeys 1)
-					     (* line line-size)
-					     (1+ (* line line-size))))
+	    (cache-max-location cache)
+              (the index (let ((line (1- nlines)))
+                            (declare (type index line))
+			    (if (= nkeys 1)
+			        (the index (* line line-size))
+			        (the index (1+ (the index (* line line-size)))))))
 	    (cache-vector cache) (get-cache-vector actual-size)
 	    (cache-overflow cache) nil)
       cache)))
@@ -583,7 +716,8 @@
 	 (size (cache-size old-cache))
 	 (old-vector (cache-vector old-cache))
 	 (new-vector (get-cache-vector size)))
-    (declare (simple-vector old-vector new-vector))
+    (declare (type simple-vector old-vector new-vector)
+             (type index         size))
     (dotimes (i size)
       (setf (svref new-vector i) (svref old-vector i)))
     (setf (cache-vector new-cache) new-vector)
@@ -596,38 +730,38 @@
   nil)
 
 (defun compute-line-size (x)
+  (declare (type index x))
   (power-of-two-ceiling x))
 
 (defun compute-cache-parameters (nkeys valuep nlines-or-cache-vector)
-  ;;(declare (values cache-mask actual-size line-size nlines))
-  (declare (fixnum nkeys))
+  (declare (values cache-mask actual-size line-size nlines))
+  (declare (type index nkeys))
   (if (= nkeys 1)
       (let* ((line-size (if valuep 2 1))
 	     (cache-size (if (typep nlines-or-cache-vector 'fixnum)
-			     (the fixnum 
+			     (the index
 				  (* line-size
-				     (the fixnum 
-					  (power-of-two-ceiling 
-					    nlines-or-cache-vector))))
+				     (power-of-two-ceiling 
+					(the index nlines-or-cache-vector))))
 			     (cache-vector-size nlines-or-cache-vector))))
-	(declare (fixnum line-size cache-size))
-	(values (logxor (the fixnum (1- cache-size)) (the fixnum (1- line-size)))
+	(declare (type index line-size cache-size))
+	(values (logxor (the index (1- cache-size)) (the index (1- line-size)))
 		cache-size
 		line-size
-		(the fixnum (floor cache-size line-size))))
+		(the index (floor cache-size line-size))))
       (let* ((line-size (power-of-two-ceiling (if valuep (1+ nkeys) nkeys)))
 	     (cache-size (if (typep nlines-or-cache-vector 'fixnum)
-			     (the fixnum
+			     (the index
 				  (* line-size
-				     (the fixnum
+				     (the index
 					  (power-of-two-ceiling 
 					    nlines-or-cache-vector))))
 			     (1- (cache-vector-size nlines-or-cache-vector)))))
-	(declare (fixnum line-size cache-size))
-	(values (logxor (the fixnum (1- cache-size)) (the fixnum (1- line-size)))
-		(the fixnum (1+ cache-size))
+	(declare (type index line-size cache-size))
+	(values (logxor (the index (1- cache-size)) (the index (1- line-size)))
+		(the index (1+ cache-size))
 		line-size
-		(the fixnum (floor cache-size line-size))))))
+		(the index (floor cache-size line-size))))))
 
 
 
@@ -651,20 +785,21 @@
 ;;; compute the primary location of an entry.  
 ;;;
 (defun compute-primary-cache-location (field mask wrappers)
-  (declare (type field-type field) (fixnum mask))
+  (declare (type field-type field) (type index mask))
   (if (not (listp wrappers))
-      (logand mask (the fixnum (wrapper-cache-number-vector-ref wrappers field)))
+      (the index
+          (logand mask (the index (wrapper-cache-number-vector-ref wrappers field))))
       (let ((location 0) (i 0))
-	(declare (fixnum location i))
+	(declare (type index location i))
 	(dolist (wrapper wrappers)
 	  ;;
 	  ;; First add the cache number of this wrapper to location.
 	  ;; 
 	  (let ((wrapper-cache-number (wrapper-cache-number-vector-ref wrapper field)))
-	    (declare (fixnum wrapper-cache-number))
+	    (declare (type index wrapper-cache-number))
 	    (if (zerop wrapper-cache-number)
 		(return-from compute-primary-cache-location 0)
-		(setq location (the fixnum (+ location wrapper-cache-number)))))
+		(setq location (the index (+ location wrapper-cache-number)))))
 	  ;;
 	  ;; Then, if we are working with lots of wrappers, deal with
 	  ;; the wrapper-cache-number-mask stuff.
@@ -672,9 +807,9 @@
 	  (when (and (not (zerop i))
 		     (zerop (mod i wrapper-cache-number-adds-ok)))
 	    (setq location
-		  (logand location wrapper-cache-number-mask)))
-	  (incf i))
-	(the fixnum (1+ (logand mask location))))))
+		  (the index (logand location wrapper-cache-number-mask))))
+	  (setf i (the index (1+ i))))
+	(the index (1+ (the index (logand mask location)))))))
 
 ;;;
 ;;; COMPUTE-PRIMARY-CACHE-LOCATION-FROM-LOCATION
@@ -689,23 +824,23 @@
 ;;; the cache line in question.
 ;;;
 (defun compute-primary-cache-location-from-location (field cache location)
-  (declare (type field-type field) (fixnum location))
+  (declare (type field-type field) (type index location))
   (let ((result 0)
 	(cache-vector (cache-vector cache))
 	(mask (cache-mask cache))
 	(nkeys (cache-nkeys cache)))
-    (declare (fixnum result mask nkeys) (simple-vector cache-vector))
+    (declare (type index result mask nkeys) (simple-vector cache-vector))
     (dotimes (i nkeys)
       (let* ((wrapper (cache-vector-ref cache-vector (+ i location)))
 	     (wcn (wrapper-cache-number-vector-ref wrapper field)))
-	(declare (fixnum wcn))
-	(setq result (+ result wcn)))
+	(declare (type index wcn))
+	(setq result (the index (+ result wcn))))
       (when (and (not (zerop i))
 		 (zerop (mod i wrapper-cache-number-adds-ok)))
-	(setq result (logand result wrapper-cache-number-mask))))    
+	(setq result (the index (logand result wrapper-cache-number-mask)))))
     (if (= nkeys 1)
 	(logand mask result)
-	(the fixnum (1+ (logand mask result))))))
+	(the index (1+ (the index (logand mask result)))))))
 
 (defun emit-1-wrapper-compute-primary-cache-location (wrapper primary wrapper-cache-no)
   (with-lap-registers ((mask index) 
@@ -743,7 +878,8 @@
 			     wrapper-cache-no)
 		     (opcode :izerop wrapper-cache-no miss-label)
 		     (opcode :move (operand :i+ primary wrapper-cache-no) primary)
-		     (when (zerop (mod i wrapper-cache-number-adds-ok))
+		     (when (zerop (the index (mod (the index i)
+                                                  wrapper-cache-number-adds-ok)))
 		       (opcode :move (operand :ilogand primary mask) primary))))))))))
       (flatten-lap
        (opcode :move (operand :constant 0) primary)
@@ -806,12 +942,25 @@
       (ecase metatype
 	(standard-instance
 	  (let ((get-std-inst-wrapper (make-symbol "get-std-inst-wrapper"))
-		(get-fsc-inst-wrapper (make-symbol "get-fsc-inst-wrapper")))
+		(get-fsc-inst-wrapper (make-symbol "get-fsc-inst-wrapper"))
+                #+pcl-user-instances
+		(get-user-inst-wrapper (make-symbol "get-user-inst-wrapper")))
 	    (flatten-lap
 	      (opcode :move (operand :arg argument) arg)
 	      (opcode :std-instance-p arg get-std-inst-wrapper)	   ;is it a std wrapper?
 	      (opcode :fsc-instance-p arg get-fsc-inst-wrapper)	   ;is it a fsc wrapper?
+              #+pcl-user-instances
+	      (opcode :user-instance-p arg get-user-inst-wrapper)  ;is it a user wrapper?
 	      (opcode :go miss-label)
+              #+pcl-user-instances
+	      (opcode :label get-user-inst-wrapper)
+              #+pcl-user-instances
+	      (opcode :move (operand :user-wrapper arg) dest)	   ;get user wrapper
+              #+pcl-user-instances
+	      (and slot
+		   (opcode :move (operand :user-slots arg) slot))
+              #+pcl-user-instances
+	      (opcode :go exit-emit-fetch-wrapper)
 	      (opcode :label get-fsc-inst-wrapper)
 	      (opcode :move (operand :fsc-wrapper arg) dest)	   ;get fsc wrapper
 	      (and slot
@@ -825,12 +974,22 @@
 	(class
 	  (when slot (error "Can't do a slot reg for this metatype."))
 	  (let ((get-std-inst-wrapper (make-symbol "get-std-inst-wrapper"))
-		(get-fsc-inst-wrapper (make-symbol "get-fsc-inst-wrapper")))
+		(get-fsc-inst-wrapper (make-symbol "get-fsc-inst-wrapper"))
+                #+pcl-user-instances
+		(get-user-inst-wrapper (make-symbol "get-user-inst-wrapper")))
 	    (flatten-lap
 	      (opcode :move (operand :arg argument) arg)
 	      (opcode :std-instance-p arg get-std-inst-wrapper)
 	      (opcode :fsc-instance-p arg get-fsc-inst-wrapper)
+              #+pcl-user-instances
+	      (opcode :user-instance-p arg get-user-inst-wrapper)
 	      (opcode :move (operand :built-in-or-structure-wrapper arg) dest)
+	      (opcode :go exit-emit-fetch-wrapper)
+              #+pcl-user-instances
+	      (opcode :label get-user-inst-wrapper)
+              #+pcl-user-instances
+	      (opcode :move (operand :user-wrapper arg) dest)
+              #+pcl-user-instances
 	      (opcode :go exit-emit-fetch-wrapper)
 	      (opcode :label get-fsc-inst-wrapper)
 	      (opcode :move (operand :fsc-wrapper arg) dest)
@@ -858,12 +1017,14 @@
 (defvar *dfun-arg-symbols* '(.ARG0. .ARG1. .ARG2. .ARG3.))
 
 (defun dfun-arg-symbol (arg-number)
+  (declare (type index arg-number))
   (or (nth arg-number (the list *dfun-arg-symbols*))
       (intern (format nil ".ARG~A." arg-number) *the-pcl-package*)))
 
 (defvar *slot-vector-symbols* '(.SLOTS0. .SLOTS1. .SLOTS2. .SLOTS3.))
 
 (defun slot-vector-symbol (arg-number)
+  (declare (type index arg-number))
   (or (nth arg-number (the list *slot-vector-symbols*))
       (intern (format nil ".SLOTS~A." arg-number) *the-pcl-package*)))
 
@@ -894,8 +1055,8 @@
 	      (progn s)
 	      (gather1 (dfun-arg-symbol i))))))
     (if applyp
-	`(function-apply   ,fn-variable ,@required .dfun-rest-arg.)
-	`(function-funcall ,fn-variable ,@required))))
+	`(method-function-apply   ,fn-variable ,@required .dfun-rest-arg.)
+	`(method-function-funcall ,fn-variable ,@required))))
 
 
 ;;;
@@ -932,12 +1093,12 @@
     ;; this is true is for line number 0 of an nkeys=1 cache.  
     ;;
     (line-reserved-p (line)
-      (declare (fixnum line))
+      (declare (type index line))
       (and (= (nkeys) 1)
            (= line 0)))
     ;;
     (location-reserved-p (location)
-      (declare (fixnum location))
+      (declare (type index location))
       (and (= (nkeys) 1)
            (= location 0)))
     ;;
@@ -947,21 +1108,21 @@
     ;; by line size.  
     ;; 	  
     (line-location (line)
-      (declare (fixnum line))
+      (declare (type index line))
       (when (line-reserved-p line)
         (error "line is reserved"))
       (if (= (nkeys) 1)
-	  (the fixnum (* line (line-size)))
-	  (the fixnum (1+ (the fixnum (* line (line-size)))))))
+	  (the index (* line (line-size)))
+	  (the index (1+ (the index (* line (line-size)))))))
     ;;
     ;; Given a cache location, return the line.  This is the inverse
     ;; of LINE-LOCATION.
     ;; 	  
     (location-line (location)
-      (declare (fixnum location))
+      (declare (type index location))
       (if (= (nkeys) 1)
 	  (floor location (line-size))
-	  (floor (the fixnum (1- location)) (line-size))))
+	  (floor (the index (1- location)) (line-size))))
     ;;
     ;; Given a line number, return the wrappers stored at that line.
     ;; As usual, if nkeys=1, this returns a single value.  Only when
@@ -969,12 +1130,12 @@
     ;; line is reserved.
     ;;
     (line-wrappers (line)
-      (declare (fixnum line))
+      (declare (type index line))
       (when (line-reserved-p line) (error "Line is reserved."))
       (location-wrappers (line-location line)))
     ;;
     (location-wrappers (location) ; avoid multiplies caused by line-location
-      (declare (fixnum location))
+      (declare (type index location))
       (if (= (nkeys) 1)
 	  (cache-vector-ref (vector) location)
 	  (let ((list (make-list (nkeys)))
@@ -987,12 +1148,12 @@
     ;; wrappers are the same as wrappers.
     ;;
     (line-matches-wrappers-p (line wrappers)
-      (declare (fixnum line))
+      (declare (type index line))
       (and (not (line-reserved-p line))
            (location-matches-wrappers-p (line-location line) wrappers)))
     ;;
     (location-matches-wrappers-p (loc wrappers) ; must not be reserved
-      (declare (fixnum loc))
+      (declare (type index loc))
       (let ((cache-vector (vector)))
 	(declare (simple-vector cache-vector))
 	(if (= (nkeys) 1)
@@ -1006,12 +1167,12 @@
     ;; an error is signalled if the line is reserved.
     ;; 
     (line-value (line)
-      (declare (fixnum line))
+      (declare (type index line))
       (when (line-reserved-p line) (error "Line is reserved."))
       (location-value (line-location line)))
     ;;
     (location-value (loc)
-      (declare (fixnum loc))
+      (declare (type index loc))
       (and (valuep)
            (cache-vector-ref (vector) (+ loc (nkeys)))))
     ;;
@@ -1028,12 +1189,12 @@
     ;; An error is signalled if the line is reserved.
     ;;
     (line-valid-p (line wrappers)
-      (declare (fixnum line))
+      (declare (type index line))
       (when (line-reserved-p line) (error "Line is reserved."))
       (location-valid-p (line-location line) wrappers))
     ;;
     (location-valid-p (loc wrappers)
-      (declare (fixnum loc))
+      (declare (type index loc))
       (let ((cache-vector (vector))
 	    (wrappers-mismatch-p (null wrappers)))
 	(declare (simple-vector cache-vector))
@@ -1050,9 +1211,9 @@
     ;; How many unreserved lines separate line-1 and line-2.
     ;;
     (line-separation (line-1 line-2)
-     (declare (fixnum line-1 line-2))
+     (declare (type index line-1 line-2))
      (let ((diff (the fixnum (- line-2 line-1))))
-       (declare (fixnum diff))
+       (declare (type fixnum diff))
        (when (minusp diff)
 	 (setq diff (+ diff (nlines)))
 	 (when (line-reserved-p 0)
@@ -1063,18 +1224,18 @@
     ;; return a reserved line.
     ;; 
     (next-line (line)
-     (declare (fixnum line))
-     (if (= line (the fixnum (1- (nlines))))
+     (declare (type index line))
+     (if (= line (the index (1- (nlines))))
 	 (if (line-reserved-p 0) 1 0)
-	 (the fixnum (1+ line))))
+	 (the index (1+ line))))
     ;;
     (next-location (loc)
-      (declare (fixnum loc))
+      (declare (type index loc))
       (if (= loc (max-location))
 	  (if (= (nkeys) 1)
 	      (line-size)
 	      1)
-	  (the fixnum (+ loc (line-size)))))
+	  (the index (+ loc (line-size)))))
     ;;
     ;; Given a line which has a valid entry in it, this will return
     ;; the primary cache line of the wrappers in that line.  We just
@@ -1082,11 +1243,11 @@
     ;; easier packaging up of the call to it.
     ;; 
     (line-primary (field line)
-      (declare (fixnum field line))
+      (declare (type index field line))
       (location-line (line-primary-location field line)))
     ;;
     (line-primary-location (field line)
-     (declare (fixnum field line))
+     (declare (type index field line))
      (compute-primary-cache-location-from-location
        field (cache) (line-location line)))
     ))
@@ -1103,7 +1264,7 @@
 			*local-cache-functions*)
        ,@body)))
 
-)
+) ;eval-when
 
 ;;;
 ;;; Here is where we actually fill, recache and expand caches.
@@ -1124,25 +1285,46 @@
 ;;;
 (defvar *cache-expand-threshold* 1.25)
 
+(defun cache-count (cache)
+  (with-local-cache-functions (cache)
+    (let ((count 0)(location (if (= (nkeys) 1) (line-size) 1)))
+      (declare (type index count))
+      (dotimes (i (nlines) count)
+	(unless (or (location-reserved-p location)
+		    (not (location-valid-p location nil)))
+	  (setq count (the index (1+ count))))
+	(setq location (next-location location))))))
+
+#|
+(defun entry-in-cache-p (cache wrappers value)
+  (declare (ignore value))
+  (with-local-cache-functions (cache)
+    (dotimes (i (nlines))
+      (unless (line-reserved-p i)
+	(when (equal (line-wrappers i) wrappers)
+	  (return t))))))
+|#
+
 (defun fill-cache (cache wrappers value &optional free-cache-p)
-  ;;(declare (values cache))
+  (declare (values cache))
   (unless wrappers ; fill-cache won't return if wrappers is nil, might as well check.
     (error "fill-cache: wrappers arg is NIL!"))
   (or (fill-cache-p nil cache wrappers value)
-      (and (< (ceiling (* (cache-count cache) 1.25))
-	      (if (= (cache-nkeys cache) 1)
-		  (1- (cache-nlines cache))
-		  (cache-nlines cache)))
+      (and (< (the index (ceiling (* (cache-count cache) 1.25)))
+	      (the index
+                   (if (= (cache-nkeys cache) 1)
+		       (1- (cache-nlines cache))
+		       (cache-nlines cache))))
 	   (adjust-cache cache wrappers value free-cache-p))
       (expand-cache cache wrappers value free-cache-p)))
 
 (defun probe-cache (cache wrappers &optional default)
-  ;;(declare (values value))
+  (declare (values value))
   (unless wrappers (error "probe-cache: wrappers arg is NIL!"))
   (with-local-cache-functions (cache)
     (let* ((location (compute-primary-cache-location (field) (mask) wrappers))
-	   (limit (funcall (limit-fn) (nlines))))
-      (declare (fixnum location limit))
+	   (limit (funcall-function (limit-fn) (nlines))))
+      (declare (type index location limit))
       (when (location-reserved-p location)
 	(setq location (next-location location)))
       (dotimes (i limit default)
@@ -1151,6 +1333,7 @@
 	(setq location (next-location location))))))
 
 (defun map-cache (function cache &optional set-p)
+  (declare (type real-function function))
   (with-local-cache-functions (cache)
     (let ((set-p (and set-p (valuep))))
       (dotimes (i (nlines) cache)
@@ -1160,32 +1343,16 @@
 	      (setf (cache-vector-ref (vector) (+ (line-location i) (nkeys)))
 		    value))))))))
 
-(defun cache-count (cache)
-  (with-local-cache-functions (cache)
-    (let ((count 0)(location (if (= (nkeys) 1) (line-size) 1)))
-      (declare (fixnum count))
-      (dotimes (i (nlines) count)
-	(unless (or (location-reserved-p location)
-		    (not (location-valid-p location nil)))
-	  (setq count (the fixnum (1+ count))))
-	(setq location (next-location location))))))
-
-(defun entry-in-cache-p (cache wrappers value)
-  (declare (ignore value))
-  (with-local-cache-functions (cache)
-    (dotimes (i (nlines))
-      (unless (line-reserved-p i)
-	(when (equal (line-wrappers i) wrappers)
-	  (return t))))))
 
 ;;;
 ;;; returns T or NIL
 ;;;
+
 (defun fill-cache-p (forcep cache wrappers value)
   (with-local-cache-functions (cache)
     (let* ((location (compute-primary-cache-location (field) (mask) wrappers))
 	   (primary (location-line location)))
-      (declare (fixnum location primary))
+      (declare (type index location primary))
       (multiple-value-bind (free emptyp)
 	  (find-free-cache-line primary cache wrappers)
 	(when (or forcep emptyp)
@@ -1194,32 +1361,32 @@
 		  (cache-overflow cache)))
 	  ;;(fill-line free wrappers value)
 	  (let ((line free))
-	    (declare (fixnum line))
+	    (declare (type index line))
 	    (when (line-reserved-p line)
 	      (error "Attempt to fill a reserved line."))
 	    (let ((loc (line-location line))
 		  (cache-vector (vector)))
-	      (declare (fixnum loc) (simple-vector cache-vector))
+	      (declare (type index loc) (simple-vector cache-vector))
 	      (cond ((= (nkeys) 1)
 		     (setf (cache-vector-ref cache-vector loc) wrappers)
 		     (when (valuep)
 		       (setf (cache-vector-ref cache-vector (1+ loc)) value)))
 		    (t
 		     (let ((i 0))
-		       (declare (fixnum i))
+		       (declare (type index i))
 		       (dolist (w wrappers)
 			 (setf (cache-vector-ref cache-vector (+ loc i)) w)
-			 (setq i (the fixnum (1+ i)))))
+			 (setq i (the index (1+ i)))))
 		     (when (valuep)
 		       (setf (cache-vector-ref cache-vector (+ loc (nkeys)))
 			     value))))))
 	  cache)))))
 
 (defun fill-cache-from-cache-p (forcep cache from-cache from-line)
-  (declare (fixnum from-line))
+  (declare (type index from-line))
   (with-local-cache-functions (from-cache)
     (let ((primary (line-primary (field) from-line)))
-      (declare (fixnum primary))
+      (declare (type index primary))
       (multiple-value-bind (free emptyp)
 	  (find-free-cache-line primary cache)
 	(when (or forcep emptyp)
@@ -1230,12 +1397,12 @@
 	  (let ((from-cache-vector (vector))
 		(to-cache-vector (cache-vector cache))
 		(to-line free))
-	    (declare (fixnum to-line))
+	    (declare (type index to-line))
 	    (if (line-reserved-p to-line)
 		(error "transfering something into a reserved cache line.")
 		(let ((from-loc (line-location from-line))
 		      (to-loc (line-location to-line)))
-		  (declare (fixnum from-loc to-loc))
+		  (declare (type index from-loc to-loc))
 		  (modify-cache to-cache-vector
 				(dotimes (i (line-size))
 				  (setf (cache-vector-ref to-cache-vector
@@ -1245,7 +1412,7 @@
 	  cache)))))
 
 ;;;
-;;; Returns NIL or (values <field> <cache-vector>)
+;;; Returns NIL or (values <field> <cache>)
 ;;; 
 ;;; This is only called when it isn't possible to put the entry in the cache
 ;;; the easy way.  That is, this function assumes that FILL-CACHE-P has been
@@ -1260,7 +1427,7 @@
     (let ((ncache (get-cache-from-cache cache (nlines) (field))))
       (do ((nfield (cache-field ncache) (next-wrapper-cache-number-index nfield)))
 	  ((null nfield) (free-cache ncache) nil)
-	(setf (cache-field ncache) nfield)
+	(setf (cache-field ncache) (the index nfield))
 	(labels ((try-one-fill-from-line (line)
 		   (fill-cache-from-cache-p nil ncache cache line))
 		 (try-one-fill (wrappers value)
@@ -1282,9 +1449,9 @@
 ;;; returns: (values <cache>)
 ;;;
 (defun expand-cache (cache wrappers value free-old-cache-p)
-  ;;(declare (values cache))
+  (declare (values cache))
   (with-local-cache-functions (cache)
-    (let ((ncache (get-cache-from-cache cache (* (nlines) 2))))
+    (let ((ncache (get-cache-from-cache cache (the index (* (nlines) 2)))))
       (labels ((do-one-fill-from-line (line)
 		 (unless (fill-cache-from-cache-p nil ncache cache line)
 		   (do-one-fill (line-wrappers line) (line-value line))))
@@ -1305,7 +1472,7 @@
 	(when free-old-cache-p (free-cache cache))
 	ncache))))
 
-
+
 ;;;
 ;;; This is the heart of the cache filling mechanism.  It implements the decisions
 ;;; about where entries are placed.
@@ -1316,26 +1483,27 @@
 ;;;   <empty?>           is <line> in fact empty?
 ;;;
 (defun find-free-cache-line (primary cache &optional wrappers)
-  ;;(declare (values line empty?))
-  (declare (fixnum primary))
+  (declare (values line empty?))
+  (declare (type index primary))
   (with-local-cache-functions (cache)
     (when (line-reserved-p primary) (setq primary (next-line primary)))
-    (let ((limit (funcall (limit-fn) (nlines)))
+    (let ((limit (funcall-function (limit-fn) (nlines)))
 	  (field (field))
 	  (wrappedp nil)
 	  (lines nil)
 	  (p primary) (s primary)
 	  (successp nil))
-      (declare (fixnum p s limit) (type field-type field))
+      (declare (type index p s limit) (type field-type field)
+               (type boolean wrappedp successp))
       (block find-free
 	(loop
 	 ;; Try to find a free line starting at <s>.  <p> is the
 	 ;; primary line of the entry we are finding a free
 	 ;; line for, it is used to compute the seperations.
 	 (do* ((line s (next-line line))
-	       (nsep (line-separation p s) (1+ nsep)))
+	       (nsep (line-separation p s) (the index (1+ nsep))))
 	      (())
-	   (declare (fixnum line nsep))
+	   (declare (type index line nsep))
 	   (when (null (line-valid-p line wrappers)) ;If this line is empty or
 	     (push line lines)		;invalid, just use it.
 	     (return-from find-free (setq successp t)))
@@ -1345,29 +1513,29 @@
 	       (push line lines)
 	       (return-from find-free (setq successp nil)))
 	     (when (cond ((= nsep limit) t)
-			 ((= nsep osep) (zerop (random 2)))
+			 ((= nsep osep) (zerop (the index (random 2))))
 			 ((> nsep osep) t)
 			 (t nil))
 	       ;; See if we can displace what is in this line so that we
 	       ;; can use the line.
-	       (when (= line (the fixnum (1- (nlines)))) (setq wrappedp t))
+	       (when (= line (the index (1- (nlines)))) (setq wrappedp t))
 	       (setq p (line-primary field line))
 	       (setq s (next-line line))
 	       (push line lines)
 	       (return nil)))
-	   (when (= line (the fixnum (1- (nlines)))) (setq wrappedp t)))))
+	   (when (= line (the index (1- (nlines)))) (setq wrappedp t)))))
       ;; Do all the displacing.
       (loop 
        (when (null (cdr lines)) (return nil))
        (let ((dline (pop lines))
 	     (line (car lines)))
-	 (declare (fixnum dline line))
+	 (declare (type index dline line))
 	 (when successp
 	   ;;Copy from line to dline (dline is known to be free).
 	   (let ((from-loc (line-location line))
 		 (to-loc (line-location dline))
 		 (cache-vector (vector)))
-	     (declare (fixnum from-loc to-loc) (simple-vector cache-vector))
+	     (declare (type index from-loc to-loc) (simple-vector cache-vector))
 	     (modify-cache cache-vector
 			   (dotimes (i (line-size))
 			     (setf (cache-vector-ref cache-vector (+ to-loc i))
@@ -1377,12 +1545,16 @@
       (values (car lines) successp))))
 
 (defun default-limit-fn (nlines)
+  (declare (type index nlines))
   (case nlines
     ((1 2 4) 1)
     ((8 16)  4)
     (otherwise 6)))
 
+(declaim (type cache *empty-cache*))
 (defvar *empty-cache* (make-cache)) ; for defstruct slot initial value forms
+
+
 
 ;;;
 ;;; pre-allocate generic function caches.  The hope is that this will put

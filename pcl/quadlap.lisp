@@ -1,6 +1,6 @@
 ;;				-[Thu Mar  1 10:54:27 1990 by jkf]-
 ;; pcl to quad translation
-;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/quadlap.lisp,v 1.3 1992/06/01 18:38:55 ram Exp $
+;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/quadlap.lisp,v 1.4 1992/08/01 15:29:51 ram Exp $
 ;;
 ;; copyright (c) 1990 Franz Inc.
 ;;
@@ -30,7 +30,7 @@
   `(list nil ,constants ,lap nil nil ,cframe-size ,locals nil nil nil))
 
 
-(defstruct preg 
+(defstruct (preg)
   ;; pseudo reg descritpor
   treg		; associated treg
   index 	; :index if this is an index type reg
@@ -424,9 +424,12 @@
 				   (comp::mdparam 'md-function-const0-adj))
 				op2))
 	       ((:built-in-wrapper :structure-wrapper :built-in-or-structure-wrapper)
-		(qe call :arg 'pcl::built-in-or-structure-wrapper
+		(qe call :arg 'pcl::built-in-or-structure-wrapper-fun
 		    :u (list (get-treg-of (cadr op1)))
 		    :d (list (get-treg-of op2))))
+               #+pcl-user-instances
+               ((:user-wrapper :user-slots)
+                (warn "Trying to use pcl-user-instances in Sun4 Allegro."))
 	       (:other-wrapper
 		(warn "do other-wrapper"))
 	       ((:i+ :i- :ilogand :ilogxor)

@@ -69,19 +69,23 @@
 
 
 (defun make-caxr (n form)
+  (declare (type fixnum n))
   (if (< n 4)
       `(,(nth n '(car cadr caddr cadddr)) ,form)
-      (make-caxr (- n 4) `(cddddr ,form))))
+      (make-caxr (the fixnum (- n 4)) `(cddddr ,form))))
 
 (defun make-cdxr (n form)
+  (declare (type fixnum n))
   (cond ((zerop n) form)
 	((< n 5) `(,(nth n '(identity cdr cddr cdddr cddddr)) ,form))
-	(t (make-cdxr (- n 4) `(cddddr ,form)))))
+	(t (make-cdxr (the fixnum (- n 4)) `(cddddr ,form)))))
 )
+
 
 (defun true (&rest ignore) (declare (ignore ignore)) t)
 (defun false (&rest ignore) (declare (ignore ignore)) nil)
 (defun zero (&rest ignore) (declare (ignore ignore)) 0)
+(defvar *keyword-package* (find-package 'keyword))
 
 (defun make-plist (keys vals)
   (if (null vals)
@@ -97,34 +101,168 @@
 ;;; lifted it from there but I am honest.  Not only that but this one is
 ;;; written in Common Lisp.  I feel a lot like bootstrapping, or maybe more
 ;;; like rebuilding Rome.
+;;;
+;;; Modified 5/8/92 to work right on THE forms and to not  wrap an
+;;; extra lambda if none of the variables are complex -- TL.
+
+(defun un-the (form)
+  "Returns the actual form within a form that may start with THE."
+  (if (and (listp form) (eq (car form) 'the))
+      (un-the (third form))
+      form))
+
+(defun simple-eval-access-p (form)
+  "Returns whether evaluation of the form is 'simple', i.e. does not
+   require computation to calculate.  This is true of constants, variables,
+   and functions."
+  (or (constantp form)                ;; Form is a constant?
+      (symbolp   form)                ;; Form is a variable?
+      (and (listp form)
+           (eq (car form) 'function)) ;; Form is a function?
+      (and (listp form)               ;; If form starts with THE, the real form
+           (eq (car form) 'the)       ;;   third element.
+           (simple-eval-access-p (third form)))))
+
 (defmacro once-only (vars &body body)
   (let ((gensym-var (gensym))
-        (run-time-vars (gensym))
-        (run-time-vals (gensym))
+        (run-time-vars (gensym "RUN-TIME-VARS"))
+        (run-time-vals (gensym "RUN-TIME-VALS"))
         (expand-time-val-forms ()))
     (dolist (var vars)
-      (push `(if (or (symbolp ,var)
-                     (numberp ,var)
-                     (and (listp ,var)
-			  (member (car ,var) '(quote function))))
+      (push `(if (simple-eval-access-p ,var)
                  ,var
-                 (let ((,gensym-var (gensym)))
+                 (let ((,gensym-var (gensym ,(symbol-name var))))
                    (push ,gensym-var ,run-time-vars)
                    (push ,var ,run-time-vals)
                    ,gensym-var))
-            expand-time-val-forms))    
+            expand-time-val-forms))
     `(let* (,run-time-vars
             ,run-time-vals
             (wrapped-body
 	      (let ,(mapcar #'list vars (reverse expand-time-val-forms))
 		,@body)))
-       `(let ,(mapcar #'list (reverse ,run-time-vars)
-			     (reverse ,run-time-vals))
-	  ,wrapped-body))))
+       (if ,run-time-vars
+           `(let ,(mapcar #'list (reverse ,run-time-vars)
+                                 (reverse ,run-time-vals))
+             ,wrapped-body)
+         wrapped-body))))
+
+#-(or cmu)  ; And probably others, but this is the only I know.
+(unless (fboundp 'declaim)
+  (defmacro declaim (&rest decl-specs)
+    (let ((proclamations NIL))
+      (declare (list proclamations))
+      (dolist (decl-spec decl-specs)
+        #-(or cmu kcl)
+        (when (eq (car decl-spec) 'ftype)
+          (dolist (function-name (cddr decl-spec))
+            (setf (get function-name 'ftype-declaimed-p) T)))
+        (push `(proclaim ',decl-spec) proclamations))
+      (if (cdr proclamations)
+          `(progn ,@proclamations)
+          (car proclamations)))))
+
+#-(or cmu kcl)
+(defun function-ftype-declaimed-p (name)
+  "Returns whether the function given by name already has its ftype declaimed."
+  (get name 'ftype-declaimed-p))
+
+
+(deftype index () `(integer 0 ,most-positive-fixnum))
+
+(defmacro pop-key-value (key
+                         settable-lambda-list
+                         &optional
+                         default-value)
+  ;;   If key is on the settable-lambda-list, then it and its value is
+  ;; destructively removed from the list, and its value is returned.
+  ;;   Else, default-value is returned and the settable-lambda-list
+  ;; stays the same.
+  (once-only (key)
+    `(let ((list-ptr ,settable-lambda-list))
+        (if (eq (car list-ptr) ,key)
+            (progn
+              (setf ,settable-lambda-list (cddr list-ptr))
+              (cadr list-ptr))
+          (progn
+            (setf list-ptr (cdr list-ptr))
+            (let ((next-cdr (cdr list-ptr)))
+              (loop (when (null next-cdr)
+                      (return ,default-value))
+                    (when (eq (car next-cdr) ,key)
+                      (setf (cdr list-ptr) (cddr next-cdr))
+                      (return (cadr next-cdr)))
+                    (setf next-cdr
+                          (cdr (setf list-ptr (cdr next-cdr)))))))))))
+
+(defmacro copy-simple-vector (orig)
+  "Fast way to copy a simple-vector."
+  #-kcl
+  (once-only (orig)
+    `(let* ((i   0)
+            (n   (length (the simple-vector ,orig)))
+            (new (make-array n)))
+       (declare (type index i n) (type simple-vector new))
+       (tagbody
+         begin-loop
+           (if (>= i n) (go end-loop))
+           (setf (svref new i) (svref (the simple-vector ,orig) i))
+           (setf i (the index (1+ i)))
+           (go begin-loop)
+        end-loop)
+       new))
+  #+kcl
+  `(copy-seq (the simple-vector ,orig)))
+
+(defun lambda-list-legal-p (lambda-list
+                            &optional
+                            (options-allowed-p T)
+                            (keywords-allowed lambda-list-keywords))
+  (when (listp lambda-list)
+    (dolist (element lambda-list T)
+      (unless (or (symbolp element)
+                  (memq element keywords-allowed)
+                  (and options-allowed-p (listp element)))
+        (return NIL)))))
+
+
+(defun lambda-list-required-args (lambda-list)
+  (let ((collection NIL))
+    (dolist (element lambda-list)
+      (if (memq element lambda-list-keywords)
+          (return)
+        (push element collection)))
+    (nreverse collection)))
+
+(defun npermutation-p (list1 list2)
+  "Returns whether list1 is a permutation of list2"
+  (if (null list1)
+      (null list2)
+    (unless (null list2)
+      (when (memq (car list1) list2)
+         (npermutation-p (cdr list1)
+                         (delete (car list1) list2 :count 1))))))
+
+(defun permutation-p (list1 list2)
+  "Returns whether list1 is a permutation of list2"
+  (npermutation-p list1 (copy-list list2)))
+
+(defun count-non-nils (list)
+  "Returns the count of non nil elements in the list."
+  (if list
+      (let ((non-nil-count 0)
+            (list-ptr list))
+        (declare (type fixnum non-nil-count))
+        (loop (when (car list-ptr)
+                (setf non-nil-count (the fixnum (1+ non-nil-count))))
+              (unless (setf list-ptr (cdr list-ptr))
+                (return non-nil-count))))
+      0))
 
 (eval-when (compile load eval)
+(proclaim '(ftype (function (T &optional T) (values T T T)) extract-declarations))
 (defun extract-declarations (body &optional environment)
-  ;;(declare (values documentation declarations body))
+  (declare (values documentation declarations body))
   (let (documentation declarations form)
     (when (and (stringp (car body))
 	       (cdr body))
@@ -152,11 +290,9 @@
 	    body)))
 )
 
-#+Lucid
-(eval-when (compile load eval)
-  (eval `(defstruct ,(intern "FASLESCAPE" (find-package 'lucid)))))
-
-(defvar *keyword-package* (find-package 'keyword))
+;#+Lucid
+;(eval-when (compile load eval)
+;  (eval `(defstruct (,(intern "FASLESCAPE" (find-package 'lucid))))))
 
 (defun make-keyword (symbol)
   (intern (symbol-name symbol) *keyword-package*))
@@ -211,7 +347,7 @@
 
 (eval-when (compile load eval)
 (defun destructure (pattern form)
-  ;;(declare (values setqs binds))
+  (declare (values setqs binds))
   (let ((*destructure-vars* ())
 	(setqs ()))
     (declare (special *destructure-vars*))
@@ -232,6 +368,7 @@
 	(pending-pops 0)
 	(var nil)
 	(setqs ()))
+    (declare (type fixnum pending-pops))
     (labels
         ((make-pop (var form pop-into)
 	   (prog1 
@@ -348,6 +485,7 @@
 	  (char nil char)
 	  (i 0 (+ i 1)))
 	 ((= i length) string)
+      (declare (type fixnum i length))
       (setq char (elt string i))
       (cond ((both-case-p char)
 	     (if flag
@@ -360,26 +498,39 @@
 	     (unless dashes-p (setf (elt string i) #\space)))
 	    (t (setq flag nil))))))
 
-#-(or lucid kcl)
-(eval-when (compile load eval)
-;(warn "****** Things will go faster if you fix define-compiler-macro")
+#-(or lucid kcl excl cmu)
+(eval-when (compile)
+(warn "****** Things would go faster if you fix define-compiler-macro for
+your lisp")
 )
 
+#+(or lucid kcl excl cmu)
 (defmacro define-compiler-macro (name arglist &body body)
-  #+(or lucid kcl)
-  `(#+lucid lcl:def-compiler-macro #+kcl si::define-compiler-macro
+  `(#+lucid lcl:def-compiler-macro
+    #+kcl   si::define-compiler-macro
+    #+excl  excl::defcmacro
+    #+cmu   c:def-source-transform
         ,name ,arglist
-     ,@body)
-  #-(or kcl lucid)
-  nil)
+     ,@body))
 
+#-(or lucid kcl excl cmu)
+(defmacro define-compiler-macro (name arglist &body body)
+  (declare (ignore name arglist body))
+  NIL)
 
-;;;
-;;; FIND-CLASS
-;;;
-;;; This is documented in the CLOS specification.
-;;;
-(defvar *find-class* (make-hash-table :test #'eq))
+(defmacro safe-subtypep (type1 type2)
+  #+(or cmu kcl excl)
+  `(subtypep ,type1 ,type2)
+  #+lucid
+  (once-only (type1 type2)
+    `(if (and (lcl:type-specifier-p ,type1)
+              (lcl:type-specifier-p ,type2))
+         (subtypep ,type1 ,type2)
+         (values nil nil)))
+  #-(or cmu kcl excl lucid)
+  (declare (ignore type1 type2))
+  #-(or cmu kcl excl lucid)
+  `(values nil nil))
 
 (defun make-constant-function (value)
   #'(lambda (object)
@@ -390,80 +541,18 @@
   (declare (ignore x))
   nil)
 
+(defun documented-function-returning-nil (args next-methods)
+  (declare (ignore args next-methods))
+  nil)
+
 (defun function-returning-t (x)
   (declare (ignore x))
   t)
 
-(defmacro find-class-cell-class (cell)
-  `(car ,cell))
+(defun documented-function-returning-t (args next-methods)
+  (declare (ignore args next-methods))
+  t)
 
-(defmacro find-class-cell-predicate (cell)
-  `(cdr ,cell))
-
-(defmacro make-find-class-cell (class-name)
-  (declare (ignore class-name))
-  '(cons nil #'function-returning-nil))
-
-(defun find-class-cell (symbol &optional dont-create-p)
-  (or (gethash symbol *find-class*)
-      (unless dont-create-p
-	(unless (legal-class-name-p symbol)
-	  (error "~S is not a legal class name." symbol))
-	(setf (gethash symbol *find-class*) (make-find-class-cell symbol)))))
-
-(defvar *create-classes-from-internal-structure-definitions-p* t)
-
-(defun find-class-from-cell (symbol cell &optional (errorp t))
-  (or (find-class-cell-class cell)
-      (and *create-classes-from-internal-structure-definitions-p*
-           (structure-type-p symbol)
-           (find-structure-class symbol))
-      (cond ((null errorp) nil)
-	    ((legal-class-name-p symbol)
-	     (error "No class named: ~S." symbol))
-	    (t
-	     (error "~S is not a legal class name." symbol)))))
-
-(defun find-class-predicate-from-cell (symbol cell &optional (errorp t))
-  (unless (find-class-cell-class cell)
-    (find-class-from-cell symbol cell errorp))
-  (find-class-cell-predicate cell))
-
-(defun legal-class-name-p (x)
-  (and (symbolp x)
-       (not (keywordp x))))
-
-(defun find-class (symbol &optional (errorp t) environment)
-  (declare (ignore environment))
-  (find-class-from-cell symbol (find-class-cell symbol errorp) errorp))
-
-(defun find-class-predicate (symbol &optional (errorp t) environment)
-  (declare (ignore environment))
-  (find-class-predicate-from-cell symbol (find-class-cell symbol errorp) errorp))
-
-#-setf
-(defsetf find-class (symbol &optional (errorp t) environment) (new-value)
-  (declare (ignore errorp environment))
-  `(SETF\ PCL\ FIND-CLASS ,new-value ,symbol))
-
-(defun #-setf SETF\ PCL\ FIND-CLASS #+setf (setf find-class) (new-value symbol)
-  (if (legal-class-name-p symbol)
-      (setf (find-class-cell-class (find-class-cell symbol)) new-value)
-      (error "~S is not a legal class name." symbol)))
-
-#-setf
-(defsetf find-class-predicate (symbol &optional (errorp t) environment) (new-value)
-  (declare (ignore errorp environment))
-  `(SETF\ PCL\ FIND-CLASS-PREDICATE ,new-value ,symbol))
-
-(defun #-setf SETF\ PCL\ FIND-CLASS-PREDICATE #+setf (setf find-class-predicate)
-          (new-value symbol)
-  (if (legal-class-name-p symbol)
-      (setf (find-class-cell-predicate (find-class-cell symbol)) new-value)
-      (error "~S is not a legal class name." symbol)))
-
-(defun find-wrapper (symbol)
-  (class-wrapper (find-class symbol)))
 
 #|| ; Anything that used this should use eval instead.
 (defun reduce-constant (old)
@@ -487,12 +576,13 @@
   `(let* ((limit ,size)
 	  (result (make-array limit))
 	  (index 0))
+     (declare (type fixnum index))
      (values #'(lambda (value)
 		 (if (= index limit)
 		     (error "vectorizing more elements than promised.")
 		     (progn
 		       (setf (svref result index) value)
-		       (incf index)
+		       (setf index (the fixnum (1+ index)))
 		       value)))
 	     #'(lambda () result))))
 
@@ -517,13 +607,62 @@
 		     tail)
 	         (setq tail (funcall ,by tail))))))
 
+
+;;;
+;;; Functions and types for dealing with functions.
+;;;
+
+(defun really-function-p (x)
+  "Returns whether  X is really a function (as per X3J13)"
+  #+cmu   (functionp x)
+  #+lucid (procedurep x)
+  #-(or cmu lucid)
+  (and (functionp x) (not (or (symbolp x) (consp x)))))
+
+(defun really-compiled-function-p (function)
+  "Returns whether FUNCTION is really a compiled function and not an
+   interpreted function masquerading as a compiled function."
+  #-cmu
+  (compiled-function-p function)
+  #+cmu
+  (the boolean
+       (and (compiled-function-p function)
+            (not (eval:interpreted-function-p function)))))
+
+(deftype real-function ()
+         #+cmu            'function
+         #+lucid          'system:procedure
+         #-(or cmu lucid) `(satisfies really-function-p))
+
+(defmacro funcall-function (form &rest args)
+  #+cmu            `(funcall (the function ,form) ,@args)
+  #+lucid          `(funcall (the system:procedure ,form) ,@args)
+  #-(or cmu lucid) `(funcall ,form ,@args))
+
+(defmacro apply-function (form &rest args)
+  #+cmu            `(apply (the function ,form) ,@args)
+  #+lucid          `(apply (the system:procedure ,form) ,@args)
+  #-(or cmu lucid) `(apply ,form ,@args))
+
 (defmacro function-funcall (form &rest args)
-  #-cmu `(funcall ,form ,@args)
-  #+cmu `(funcall (the function ,form) ,@args))
+  `(funcall-function ,form ,@args))
 
 (defmacro function-apply (form &rest args)
-  #-cmu `(apply ,form ,@args)
-  #+cmu `(apply (the function ,form) ,@args))
+  `(apply-function ,form ,@args))
+
+(defmacro funcall-compiled (form &rest args)
+  `(funcall (the compiled-function ,form) ,@args))
+
+(defmacro apply-compiled (form &rest args)
+  `(apply (the compiled-function ,form) ,@args))
+
+(defmacro force-compile (fn-name)
+  "If the function named by FN-NAME isn't compiled, then compile it."
+  (once-only (fn-name)
+    `(unless (really-compiled-function-p (symbol-function ,fn-name))
+       (compile ,fn-name))))
+
+
 
 
 ;;;
@@ -590,7 +729,9 @@
   (declare (ignore function-name))
   #+setf nil
   #-setf
-  (unless (setfboundp function-name)
+  (unless (and (setfboundp function-name)
+	       (get function-name 'standard-setf))
+    (setf (get function-name 'standard-setf) t)
     (let* ((setf-function-name (get-setf-function-name function-name)))
     
       #+Genera
@@ -655,6 +796,8 @@
       )))
 
 (defun setfboundp (symbol)
+  #-(or Genera Lucid KCL Xerox :coral cmu)
+  (declare (ignore symbol))
   #+Genera (not (null (get-properties (symbol-plist symbol)
 				      'lt::(derived-setf-function trivial-setf-method
 					    setf-equivalence setf-method))))
@@ -701,6 +844,7 @@
 (defsetf slot-value set-slot-value)
 
 (defvar *redefined-functions* nil)
+(defvar *redefined-macros* nil)
 
 (defmacro original-definition (name)
   `(get ,name ':definition-before-pcl))
@@ -713,35 +857,45 @@
   (setf (symbol-function name)
 	(symbol-function new)))
 
-(defun reset-pcl-package () ; Try to do this safely
-  (let* ((vars '(*pcl-directory* *default-pathname-extensions* *pathname-extensions*))
+(defun redefine-macro (name new)
+  (pushnew name *redefined-macros*)
+  (unless (original-definition name)
+    (setf (original-definition name)
+	  (macro-function name)))
+  (setf (macro-function name)
+	(macro-function new)))
+
+(defun pcl::reset-pcl-package ()		; Try to do this safely
+  (let* ((vars '(pcl::*pcl-directory* 
+		 pcl::*default-pathname-extensions* 
+		 pcl::*pathname-extensions*
+		 pcl::*redefined-functions*))
 	 (names (mapcar #'symbol-name vars))
 	 (values (mapcar #'symbol-value vars)))
-    (when (boundp '*redefined-functions*)
-      (dolist (sym *redefined-functions*)
-	(setf (symbol-function sym) (original-definition sym)))
-      #||;; maybe even this isn't good enough
-      #+genera (scl:pkg-kill "PCL")
-      #+lucid (lcl:delete-package "PCL")
-      #-(or genera lucid) (rename-package "PCL" (symbol-name (gensym)))
-      (make-package "PCL" :use '("LISP"))
-      ||#
-      (let ((pkg (find-package "PCL")))
-	(do-symbols (sym pkg)
-	  (when (eq pkg (symbol-package sym))
-	    (unless (constantp sym)
-	      (makunbound sym))
-	    (fmakunbound sym)
-	    (setf (symbol-plist sym) nil))))
-      (let ((pkg (find-package "SLOT-ACCESSOR-NAME")))
+    (let ((pkg (find-package "PCL")))
+      (do-symbols (sym pkg)
+	(when (eq pkg (symbol-package sym))
+	  (if (constantp sym)
+	      (unintern sym pkg)
+	      (progn
+		(makunbound sym)
+		(unless (eq sym 'pcl::reset-pcl-package)
+		  (fmakunbound sym))
+		#+cmu (fmakunbound `(setf ,sym))
+		(setf (symbol-plist sym) nil))))))
+    (let ((pkg (find-package "SLOT-ACCESSOR-NAME")))
+      (when pkg
 	(do-symbols (sym pkg)
 	  (makunbound sym)
 	  (fmakunbound sym)
-	  (setf (symbol-plist sym) nil)))
-      (let ((pcl (find-package "PCL")))
-	(mapcar #'(lambda (name value)
-		    (let ((var (intern name pcl)))
-		      (proclaim `(special ,var))
-		      (set var value)))
-		names values)))
-      nil))
+	  (setf (symbol-plist sym) nil))))
+    (let ((pcl (find-package "PCL")))
+      (mapcar #'(lambda (name value)
+		  (let ((var (intern name pcl)))
+		    (proclaim `(special ,var))
+		    (set var value)))
+	      names values))      
+    (dolist (sym pcl::*redefined-functions*)
+      (setf (symbol-function sym) (get sym ':definition-before-pcl)))
+    nil))
+

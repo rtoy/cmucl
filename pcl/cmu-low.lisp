@@ -29,9 +29,16 @@
 
 (in-package 'pcl)
 
+(defun function-ftype-declaimed-p (name)
+  "Returns whether the function given by name already has its ftype declaimed."
+  (multiple-value-bind (ftype-info recorded-p)
+      (extensions:info function type name)
+    (declare (ignore ftype-info))
+    recorded-p))
+
 (defmacro dotimes ((var count &optional (result nil)) &body body)
-  `(lisp:dotimes (,var (the fixnum ,count) ,result)
-     (declare (fixnum ,var))
+  `(lisp:dotimes (,var (the index ,count) ,result)
+     (declare (type index ,var))
      ,@body))
 
 ;;; Just use our without-interrupts.  We don't have the INTERRUPTS-ON/OFF local
@@ -105,28 +112,27 @@
 
 ;;From compiler/ir1util
 (def-source-context pcl::defmethod (name &rest stuff)
+  (declare (type list stuff))
   (let ((arg-pos (position-if #'listp stuff)))
+    (declare (type (or null index) arg-pos))
     (if arg-pos
 	`(pcl::defmethod ,name ,@(subseq stuff 0 arg-pos)
 	   ,(nth-value 2 (pcl::parse-specialized-lambda-list
 			  (elt stuff arg-pos))))
 	`(pcl::defmethod ,name "<illegal syntax>"))))
 
+
 (in-package 'pcl)
 
 (pushnew :structure-wrapper *features*)
+(pushnew :structure-functions *features*)
 
-(defun structure-functions-exist-p ()
-  t)
+(import 'ext:structurep)
 
-(defun structure-instance-p (x)
-  (and (structurep x)
-       (not (eq (kernel:structure-ref x 0) 'std-instance))))
+(defmacro structure-type (x)
+  `(kernel:structure-ref ,x 0))
 
-(defun structure-type (x)
-  (kernel:structure-ref x 0))
-
-(defun structure-type-p (type)
+(defun known-structure-type-p (type)
   (not (null (ext:info c::type c::defined-structure-info type))))
 
 (defun structure-type-included-type-name (type)
@@ -136,8 +142,9 @@
 	include)))
 
 (defun structure-type-slot-description-list (type)
-  (nthcdr (length (let ((include (structure-type-included-type-name type)))
-		    (and include (structure-type-slot-description-list include))))
+  (nthcdr (length (the list
+                       (let ((include (structure-type-included-type-name type)))
+		         (and include (structure-type-slot-description-list include)))))
 	  (c::dd-slots (ext:info c::type c::defined-structure-info type))))
 
 (defun structure-slotd-name (slotd)

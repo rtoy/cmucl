@@ -27,22 +27,35 @@
 
 (in-package 'pcl)
 
+(defun null-wrappers-method-function (&rest args)
+  ;; Function returned when get-method-function passed no wrappers for
+  ;; caching.  I'm not exactly sure why get-method-function gets called
+  ;; with null wrappers when a generic function is first created, but
+  ;; they do.  However, the method-function returned never seemed to
+  ;; get called, so to save a bunch of unneed closure-generation
+  ;; and other muckity-muck, this function is just returned instead.
+  (error "Internal PCL error:  Calling method-function created by
+          get-method-function with wrappers NIL.  Called with args: ~S"
+         args))
+
 (defun get-method-function (method &optional method-alist wrappers)
-  (or (cadr (assoc method method-alist))
+  (or (cadr (assq method method-alist))
       (if wrappers
 	  (method-function-for-caching method wrappers)
-	  (method-function method))))
+	  (or (method-optimized-function method)
+              #'null-wrappers-method-function))))
 
 (defun make-effective-method-function (generic-function form &optional 
 				       method-alist wrappers)
-  (funcall (make-effective-method-function1 generic-function form)
-	   method-alist wrappers))
+  (funcall-function (make-effective-method-function1 generic-function form)
+	            method-alist wrappers))
 
 (defun make-effective-method-function1 (generic-function form)
   (if (and (listp form)
 	   (eq (car form) 'call-method)
 	   (method-p (cadr form))
-	   (every #'method-p (caddr form)))
+	   (or (every #'method-p (caddr form))
+	       (not (method-needs-next-methods-p (cadr form)))))
       (make-effective-method-function-simple generic-function form)
       ;;
       ;; We have some sort of `real' effective method.  Go off and get a
@@ -64,13 +77,14 @@
   ;; or aren't to prevent the leaky next methods bug.
   ;; 
   (let ((method (cadr form)))
-    (if (not (method-function-needs-next-methods-p (method-function method)))
+    (if (not (method-needs-next-methods-p method))
 	#'(lambda (method-alist wrappers)
 	    (get-method-function method method-alist wrappers))
 	(let* ((arg-info (gf-arg-info generic-function))
 	       (metatypes (arg-info-metatypes arg-info))
 	       (applyp (arg-info-applyp arg-info))
 	       (next-methods (caddr form)))
+	  (declare (type boolean applyp))
 	  (multiple-value-bind (cfunction constants)
 	      (get-function1
 	       `(lambda ,(make-dfun-lambda-list metatypes applyp)
@@ -92,7 +106,7 @@
 	    #'(lambda (method-alist wrappers)
 		(flet ((fix-meth (meth)
 			 (get-method-function meth method-alist wrappers)))
-		  (function-apply cfunction
+		  (apply-function cfunction
 				  (mapcar #'(lambda (constant)
 					      (cond ((atom constant)
 						     constant)
@@ -103,6 +117,7 @@
 						    (t constant)))
 					  constants)))))))))
 
+(declaim (type list *global-effective-method-gensyms*))
 (defvar *global-effective-method-gensyms* ())
 (defvar *rebound-effective-method-gensyms*)
 
@@ -118,13 +133,12 @@
 (let ((*rebound-effective-method-gensyms* ()))
   (dotimes (i 10) (get-effective-method-gensym)))
 
-#+lcl3.0 (dont-use-production-compiler)
-
 (defun make-effective-method-function-internal (generic-function effective-method)
   (let* ((*rebound-effective-method-gensyms* *global-effective-method-gensyms*)
 	 (arg-info (gf-arg-info generic-function))
 	 (metatypes (arg-info-metatypes arg-info))
 	 (applyp (arg-info-applyp arg-info)))
+    (declare (type boolean applyp))
     (labels ((test-converter (form)
 	       (if (and (consp form) (eq (car form) 'call-method))
 		   (if (caddr form)
@@ -175,8 +189,8 @@
 	    (flet ((fix-meth (meth)
 		     (if (method-p meth)
 			 (get-method-function meth method-alist wrappers)
-			 (funcall meth method-alist wrappers))))
-	      (function-apply cfunction
+			 (funcall-function meth method-alist wrappers))))
+	      (apply-function cfunction
 			      (mapcar #'(lambda (constant)
 					  (cond ((atom constant)
 						 constant)
@@ -186,8 +200,6 @@
 						 (mapcar #'fix-meth (cdr constant)))
 						(t constant)))
 				      constants))))))))
-
-#+lcl3.0 (use-previous-compiler)
 
 
 
@@ -248,6 +260,7 @@
 (defclass method-combination (metaobject) ()
   (:predicate-name method-combination-p))
 
+
 (mapc
  #'proclaim-incompatible-superclasses
  '(;; superclass metaobject
@@ -256,11 +269,9 @@
    ))
 
 (defclass standard-method-combination
-	  (definition-source-mixin method-combination)
+	  (documentation-mixin definition-source-mixin method-combination)
      ((type          :reader method-combination-type
 	             :initarg :type)
-      (documentation :reader method-combination-documentation
-		     :initarg :documentation)
       (options       :reader method-combination-options
 	             :initarg :options)))
 
@@ -300,9 +311,9 @@
 	(around ()))
     (dolist (m applicable-methods)
       (let ((qualifiers (method-qualifiers m)))
-	(cond ((member ':before qualifiers)  (push m before))
-	      ((member ':after  qualifiers)  (push m after))
-	      ((member ':around  qualifiers) (push m around))
+	(cond ((memq ':before qualifiers)  (push m before))
+	      ((memq ':after  qualifiers)  (push m after))
+	      ((memq ':around  qualifiers) (push m around))
 	      (t
 	       (push m primary)))))
     (setq before  (reverse before)

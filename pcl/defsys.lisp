@@ -50,6 +50,11 @@
 ;;;    loaded into the same world it was compiled in.
 ;;;
 
+#+pcl
+(when (boundp 'pcl::*boot-state*)
+  (warn "Lisp heap already had PCL package.  Renaming it to OLD-PCL.")
+  (rename-package "PCL" "OLD-PCL"))
+
 (in-package "PCL" :use (list (or (find-package :walker)
 				 (make-package :walker :use '(:lisp)))
 			     (or (find-package :iterate)
@@ -70,13 +75,18 @@
 ;;; 
 (defvar *the-pcl-package* (find-package :pcl))
 
-(defvar *pcl-system-date* "March 92 PCL (2a)")
+(defvar *pcl-system-date* "July 92 PCL (beta)")
 
-
+#+cmu
+(when (boundp 'ext::*herald-items*)
+  (setf (getf ext::*herald-items* :pcl)
+        `("    CLOS based on PCL version:  " ,*pcl-system-date*)))
+
 ;;;
 ;;; Various hacks to get people's *features* into better shape.
 ;;; 
 (eval-when (compile load eval)
+  
   #+(and Symbolics Lispm)
   (multiple-value-bind (major minor) (sct:get-release-version)
     (etypecase minor
@@ -146,7 +156,7 @@
   )
 
 
-
+
 ;;; Yet Another Sort Of General System Facility and friends.
 ;;;
 ;;; The entry points are defsystem and operate-on-system.  defsystem is used
@@ -279,7 +289,7 @@ and load your system with:
 	 #+(and Lucid PRISM)                 ("lisp"  . "abin")
 	 #+(and Lucid PA)                    ("lisp"  . "hbin")
 	 #+(and excl SPARC)                  ("cl"    . "sparc")
-	 #+(and excl m68k)                   ("cl"    . "m68k")
+	 #+(and excl m68k (not next))        ("cl"    . "m68k")
 	 #+excl                              ("cl"    . "fasl")
          #+cmu ("lisp" . #.(c:backend-fasl-file-type c:*backend*))
 	 #+HP-HPLabs                         ("l"     . "b")
@@ -410,7 +420,7 @@ and load your system with:
       (> (file-write-date (make-source-pathname (module-name module)))
          (file-write-date (make-binary-pathname (module-name module))))))
 
-(defun operation-transformations (name mode arg)
+(defun operation-transformations (name mode &optional arg)
   (let ((system (get-system name)))
     (unless system (error "Can't find system with name ~S." name))
     (let ((*system-directory* (funcall (car system)))
@@ -474,7 +484,14 @@ and load your system with:
 	   #'(lambda (m transforms)
 	       (declare (ignore transforms))
 	       (y-or-n-p "Load ~A?" (module-name m)))
-	   #'make-load-without-dependencies-transformation))))))
+	   #'make-load-without-dependencies-transformation))
+	(:compile-load
+	  ;; Compile any files that have changed and any other files
+	  ;; that require recompilation when another file has been
+	  ;; recompiled.  But if nothing requires compilation,
+          ;; then load the whole system.
+	  (make-compile-load-transformations
+	    modules))))))
 
 (defun true (&rest ignore)
   (declare (ignore ignore))
@@ -545,6 +562,18 @@ and load your system with:
 
     pathname))
 
+(defun make-compile-load-transformations (modules)
+  (let ((transforms (list nil)))
+    (dolist (m modules)
+      (when (compile-filter m transforms)
+        (make-compile-transformation m transforms)))
+    (if (cdr transforms)
+        (reverse (cdr transforms))
+        (make-transformations
+	    modules
+	    #'true
+	    #'make-load-transformation))))
+
 (defun system-source-files (name)
   (let ((system (get-system name)))
     (unless system (error "Can't find system with name ~S." name))
@@ -562,7 +591,7 @@ and load your system with:
       (mapcar #'(lambda (module)
 		  (make-binary-pathname (module-name module)))
 	      modules))))
-
+
 ;;; ***                SITE SPECIFIC PCL DIRECTORY                        ***
 ;;;
 ;;; *pcl-directory* is a variable which specifies the directory pcl is stored
@@ -584,6 +613,10 @@ and load your system with:
 ;;; ***                                                                   ***
 
 (defun load-truename (&optional (errorp nil))
+  #-(or Lispm excl Xerox (and dec vax common) LUCID akcl)
+  (declare (ignore errorp))
+  #-(or Lispm excl Xerox (and dec vax common) LUCID akcl) nil
+  #+(or Lispm excl Xerox (and dec vax common) LUCID akcl)
   (flet ((bad-time ()
 	   (when errorp
 	     (error "LOAD-TRUENAME called but a file isn't being loaded."))))
@@ -597,8 +630,8 @@ and load your system with:
     ;; 3.0 it's in the LUCID-COMMON-LISP package.
     ;;
     #+LUCID (or lucid::*source-pathname* (bad-time))
-    #+akcl   si:*load-pathname*
-    #-(or Lispm excl Xerox (and dec vax common) LUCID akcl) nil))
+    #+akcl   si:*load-pathname*))
+
 
 #-(or cmu Symbolics)
 (defvar *pcl-directory*
@@ -687,6 +720,7 @@ and load your system with:
    (slots       t                                   t (vector boot defs low cache fin))
    (init        t                                   t (vector boot defs low cache fin))
    (std-class   t                                   t (vector boot defs low cache fin slots))
+   (structure-class t                               t (vector boot defs low cache fin slots))
    (cpl         t                                   t (vector boot defs low cache fin slots))
    (braid       t                                   t (boot defs low fin cache))
    (fsc         t                                   t (defclass boot defs low fin cache))
@@ -699,6 +733,7 @@ and load your system with:
    (construct   t                                   t (defclass boot defs low))
    (env         t                                   t (defclass boot defs low fin))
    (compat      t                                   t ())
+   (extensions  t                                   t ())
    (precom1     (dlap)                              t (defs low cache fin dfun))
    (precom2     (dlap)                              t (defs low cache fin dfun))
    ))
@@ -753,8 +788,8 @@ and load your system with:
 	  (lisp-implementation-version)
 	  *features*))
 
-
-
+
+
 ;;;;
 ;;;
 ;;; This stuff is not intended for external use.

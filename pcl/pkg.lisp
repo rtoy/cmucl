@@ -29,6 +29,7 @@
 
 (export '(define-walker-template
 	  walk-form
+	  walk-form-expand-macros-p
 	  nested-walk-form
 	  variable-lexical-p
 	  variable-special-p
@@ -72,9 +73,12 @@
 
 #+Lucid 
 (import '(#-LCL3.0 system:arglist #+LCL3.0 lcl:arglist
-	  system:structurep system:structure-type system:structure-length)
+	  system:structurep system:structure-type system:structure-length
+          #-*lisp-hardware lucid::boolean
+          #+*lisp-hardware *lisp:boolean)
 	*the-pcl-package*)
-  
+
+
 #+lucid
 (#-LCL3.0 progn #+LCL3.0 lcl:handler-bind 
     #+LCL3.0 ((lcl:warning #'(lambda (condition)
@@ -150,8 +154,16 @@
 #+cmu (shadow 'lisp:dotimes)
 
 #+cmu
-(import '(kernel:funcallable-instance-p ext:structurep)
+(import '(kernel:funcallable-instance-p ext:structurep c::boolean)
 	*the-pcl-package*)
+
+#+CMU
+(eval-when (compile)
+  (setq c:*suppress-values-declaration* T))
+
+#-(or cmu lucid)
+(deftype boolean () '(member t nil))
+
 
 
 (shadow 'documentation)
@@ -175,6 +187,7 @@
 		    defgeneric
 		    define-method-combination
 		    defmethod
+		    describe-object
 		    ensure-generic-function
 		    find-class
 		    find-method
@@ -226,62 +239,127 @@
 (mapc 'export (list *exports*) (list *the-pcl-package*))
 
 
+(eval-when (compile load eval)  
+  
+(defvar *class-exports*
+        '(standard-instance
+          funcallable-standard-instance
+          generic-function
+          standard-generic-function
+          method
+          standard-method
+          standard-accessor-method
+          standard-reader-method
+          standard-writer-method
+          method-combination
+          slot-definition
+          direct-slot-definition
+          effective-slot-definition
+          standard-slot-definition
+          standard-direct-slot-definition
+          standard-effective-slot-definition
+          specializer
+          eql-specializer
+          built-in-class
+          forward-referenced-class
+          standard-class
+          funcallable-standard-class))
 
-;(defvar *chapter-3-exports* '(
-;			  get-setf-function
-;			  get-setf-function-name
-;
-;			  class-prototype
-;			  class
-;			  object
-;
-;;			  essential-class
-;			   
-;			  class-name
-;			  class-precedence-list
-;			  class-local-supers
-;			  class-local-slots
-;			  class-direct-subclasses
-;			  class-direct-methods
-;			  class-slots
-;
-;			   
-;			  method-arglist
-;			  method-argument-specifiers			
-;			  method-function
-;			   
-;			  method-equal
-;			   
-;			  slotd-name
-;			  slot-missing
-;			   
-;;			  define-meta-class
-;;			  %allocate-instance
-;;			  %instance-ref
-;;			  %instancep
-;;			  %instance-meta-class
-;
-;			  allocate-instance
-;			  optimize-slot-value
-;			  optimize-setf-of-slot-value
-;			  add-named-class
-;			  class-for-redefinition
-;			  add-class
-;			  supers-changed
-;			  slots-changed
-;			  validate-superclass
-;			  make-slotd
-;			  compute-class-precedence-list
-;			  walk-method-body
-;			  walk-method-body-form
-;			  add-named-method
-;			  remove-named-method
-;
-;
-;			  ))
+(defvar *chapter-6-exports*
+        '(add-dependent
+          add-direct-method
+          add-direct-subclass
+          add-method
+          allocate-instance
+          class-default-initargs
+          class-direct-default-initargs
+          class-direct-slots
+          class-direct-subclasses
+          class-direct-superclasses
+          class-finalized-p
+          class-precedence-list
+          class-prototype
+          class-slots
+          compute-applicable-methods
+          compute-applicable-methods-using-classes
+          compute-class-precedence-list
+          compute-discriminating-function
+          compute-effective-method
+          compute-effective-slot-definition
+          compute-slots
+          direct-slot-definition-class
+          effective-slot-definition-class
+          ensure-class
+          ensure-class-using-class
+          ensure-generic-function
+          ensure-generic-function-using-class
+          eql-specializer-instance
+          extract-lambda-list
+          extract-specializer-names
+          finalize-inheritance
+          find-method-combination
+          funcallable-standard-instance-access
+          generic-function-argument-precedence-order
+          generic-function-declarations
+          generic-function-lambda-list
+          generic-function-method-class
+          generic-function-method-combination
+          generic-function-methods
+          generic-function-name
+          intern-eql-specializer
+          make-instance
+          make-method-lambda
+          map-dependents
+          method-function
+          method-generic-function
+          method-lambda-list
+          method-specializers
+          method-qualifiers
+          accessor-method-slot-definition
+          reader-method-class
+          remove-dependent
+          remove-direct-method
+          remove-direct-subclass
+          remove-method
+          set-funcallable-instance-function
+          slot-boundp-using-class
+          slot-definition-allocation
+          slot-definition-initargs
+          slot-definition-initform
+          slot-definition-initfunction
+          slot-definition-location
+          slot-definition-name
+          slot-definition-readers
+          slot-definition-writers
+          slot-definition-type
+          slot-exists-p-using-class
+          slot-makunbound-using-class
+          slot-value-using-class
+          specializer-direct-generic-function
+          specializer-direct-methods
+          standard-instance-access
+          update-dependent
+          validate-superclass
+          writer-method-class
+          ))
+
+);eval-when 
+
+#-(or KCL IBCL)
+(export *class-exports* *the-pcl-package*)
+
+#+(or KCL IBCL)
+(mapc 'export (list *class-exports*) (list *the-pcl-package*))
+
+#-(or KCL IBCL)
+(export *chapter-6-exports* *the-pcl-package*)
+
+#+(or KCL IBCL)
+(mapc 'export (list *chapter-6-exports*) (list *the-pcl-package*))
 
 (defvar *slot-accessor-name-package*
   (or (find-package :slot-accessor-name)
       (make-package :slot-accessor-name 
 		    :use '()
 		    :nicknames '(:s-a-n))))
+

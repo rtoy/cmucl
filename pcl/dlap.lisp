@@ -38,6 +38,8 @@
 
 
 (defun emit-reader/writer (reader/writer 1-or-2-class class-slot-p)
+  (declare (type index   1-or-2-class)
+           (type boolean class-slot-p))
   (let ((instance nil)
 	(arglist  ())
 	(closure-variables ())
@@ -69,7 +71,19 @@
 		     (opcode :move (operand :arg instance) inst)   ;get the instance
 		     (opcode :std-instance-p inst 'std-instance)   ;if not either std-inst
 		     (opcode :fsc-instance-p inst 'fsc-instance)   ;or fsc-instance then
+                     #+pcl-user-instances
+		     (opcode :user-instance-p inst 'user-instance) ;if not either std-inst
 		     (opcode :go 'trap)				   ;we lose
+
+                     #+pcl-user-instances
+		     (opcode :label 'user-instance)
+                     #+pcl-user-instances
+		     (opcode :move (operand :user-wrapper inst) wrapper)
+                     #+pcl-user-instances
+		     (and slots
+			  (opcode :move (operand :user-slots inst) slots))
+                     #+pcl-user-instances
+		     (opcode :go 'have-wrapper)
 
 		     (opcode :label 'fsc-instance)
 		     (opcode :move (operand :fsc-wrapper inst) wrapper)
@@ -115,6 +129,7 @@
 
 
 (defun emit-one-index-readers (class-slot-p)
+  (declare (type boolean class-slot-p))
   (let ((arglist (list (dfun-arg-symbol 0))))
     (generating-lap '(field cache-vector mask size index miss-fn)
 		    arglist
@@ -135,6 +150,7 @@
 		    (and (null class-slot-p) (list slots)))))))
 
 (defun emit-one-index-writers (class-slot-p)
+  (declare (type boolean class-slot-p))
   (let ((arglist (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))))
     (generating-lap '(field cache-vector mask size index miss-fn)
 		    arglist
@@ -414,7 +430,12 @@
       hit)))
 
 (defun emit-greater-than-1-dlap (wrappers wrapper-moves hit miss miss-label value)
-  (let ((cache-line-size (compute-line-size (+ (length wrappers) (if value 1 0)))))
+  (declare (list wrappers))
+  (let ((cache-line-size (compute-line-size
+                           (if value
+                               (the index (1+ (the index (length wrappers))))
+                             (length wrappers)))))
+    (declare (type index cache-line-size))
     (with-lap-registers ((location index)
 			 (primary index)
 			 (cache-vector vector)

@@ -328,7 +328,9 @@ arg-types."
 (defun pcl-object-p (x)
   "Is the datum a PCL object?"
   (or (std-instance-p x)
-      (fsc-instance-p x)))
+      (fsc-instance-p x)
+      #+pcl-user-instances
+      (user-instance-p x)))
 
 (defun \\internal-inspect-object (x type where)
   (inspect-object x type where))
@@ -1330,8 +1332,8 @@ window"
 		  (found-method nil)
 		  ((eq (il:stkname current-pos) 'apply)
 		   (dolist (method methods)
-		     (when (eq (method-function method)
-			       (il:stkarg 1 current-pos))
+		     (when (memq (il:stkarg 1 current-pos)
+				 (method-cached-functions method))
 		       (setq method-pos current-pos)
 		       (setq found-method method)
 		       (return))))))))
@@ -1359,10 +1361,10 @@ window"
 	  (setq gf (generic-function-from-frame current-pos))
 	  (when gf
 	    (dolist (method (generic-function-methods gf))
-	      (when (function-matches-frame-p (method-function method)
-					      stack-pos)
-		(return-from interesting-frame-p
-		  (values t stack-pos stack-pos method))))
+	      (dolist (function (method-cached-functions method))
+	         (when (function-matches-frame-p function stack-pos)
+		   (return-from interesting-frame-p
+		                (values t stack-pos stack-pos method)))))
 	    (return))))
       ;; If we haven't already returned, use the default method.
       (xcl::interesting-frame-p stack-pos interp-flag))))

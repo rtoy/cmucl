@@ -5,19 +5,26 @@
 (defvar *defmethod-list* nil)
 (defvar *defmacro-list* nil)
 (defvar *defgeneric-list* nil)
+(defvar *proclaim-list* nil)
 
 (defun list-functions (&optional print-p)
   (let ((eof '(eof))
 	(*package* *package*))
     (setq *defun-list* nil
 	  *defmethod-list* nil
-	  *defmacro-list* nil)
+	  *defmacro-list* nil
+          *proclaim-list* nil)
     (labels ((process-form (form)
 	       (when (consp form)
 		 (case (car form)
 		   ((in-package export import shadow shadowing-import) (eval form))
 		   #+lcl3.0 (lcl:handler-bind (eval form))
 		   (let (when print-p (print form)))
+                   (declaim
+                     (if (eq (caadr form) 'ftype)
+                         (setf *proclaim-list*
+                               (append (cdr form) *proclaim-list*))
+                         (when print-p (print form))))
 		   (defun (push (list (cadr form) (caddr form))
 				*defun-list*))
 		   (defmethod (push (list (cadr form) (caddr form)) 
@@ -50,7 +57,8 @@
 	(*package* *the-pcl-package*)
 	(*print-pretty* nil)
 	(s-a-n (find-package "SLOT-ACCESSOR-NAME"))
-	(lisp-sans (mapcar #'slot-reader-symbol '(function type))))
+	(lisp-sans (list (slot-reader-symbol 'function)
+                         (slot-reader-symbol 'type))))
     (map-all-generic-functions 
      #'(lambda (gf)
 	 (when (or all-p

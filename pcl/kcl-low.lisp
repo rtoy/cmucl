@@ -30,6 +30,7 @@
           %compiled-function-name
           %set-compiled-function-name))
 (in-package 'pcl)
+(import 'si:structurep)
 
 (shadow 'lisp:dotimes)
 
@@ -143,6 +144,11 @@
 
 )
 
+(defun function-ftype-declaimed-p (name)
+  "Returns whether the function given by name already has its ftype declaimed."
+  (get name 'compiler::proclaimed-function))
+
+
 ;;;
 ;;; turbo-closure patch.  See the file kcl-mods.text for details.
 ;;;
@@ -200,7 +206,7 @@ int n; object cc;
     (%cclosure-env-nthcdr (fixnum t) t nil nil "(#1)->cc.cc_turbo[#0]")
     
     (logxor (fixnum fixnum) fixnum nil nil "((#0) ^ (#1))")))
-  
+
 (defun make-function-inline (inline)
   (setf (get (car inline) 'compiler::inline-always)
         (list (if (fboundp 'compiler::flags)
@@ -245,7 +251,7 @@ int n; object cc;
   (declare (ignore ignore))
   (cond ((compiled-function-p fn)
 	 (si::turbo-closure fn)
-	 (when (symbolp new-name) (proclaim-defgeneric new-name nil))
+	 (when (symbolp new-name) (proclaim-closure new-name))
          (setf (si:%compiled-function-name fn) new-name))
         ((and (listp fn)
               (eq (car fn) 'lambda-block))
@@ -255,6 +261,13 @@ int n; object cc;
          (setf (car fn) 'lambda-block
                (cdr fn) (cons new-name (cdr fn)))))
   fn)
+
+
+(defun proclaim-closure (spec)
+  (when (consp spec)
+    (setq spec (get-setf-function-name (cadr spec))))
+  (unless (function-ftype-declaimed-p spec)
+    #+kcl (setf (get spec 'compiler::proclaimed-closure) t)))
 
 
 #+akcl (clines "#define AKCL206") 
@@ -291,24 +304,12 @@ object set_cclosure (result_cc,value_cc,available_size)
 (defentry %set-cclosure (object object int) (object set_cclosure))
 
 
-(defun structure-functions-exist-p ()
-  t)
+(pushnew :structure-functions *features*)
 
-(si:define-compiler-macro structure-instance-p (x)
-  (once-only (x)
-    `(and (si:structurep ,x)
-          (not (eq (si:%structure-name ,x) 'std-instance)))))
+(defmacro structure-type (x)
+  `(si:%structure-name (the structure ,x)))
 
-(defun structure-type (x)
-  (and (si:structurep x)
-       (si:%structure-name x)))
-
-(si:define-compiler-macro structure-type (x)
-  (once-only (x)
-    `(and (si:structurep ,x)
-          (si:%structure-name ,x))))
-
-(defun structure-type-p (type)
+(defun known-structure-type-p (type)
   (or (not (null (gethash type *structure-table*)))
       (let (#+akcl(s-data nil))
         (and (symbolp type)
@@ -319,7 +320,9 @@ object set_cclosure (result_cc,value_cc,available_size)
 
 (defun structure-type-included-type-name (type)
   (or (car (gethash type *structure-table*))
-      #+akcl (si::s-data-included (get type 'si::s-data))
+      #+akcl (let ((includes (si::s-data-includes (get type 'si::s-data))))
+	       (when includes
+		 (si::s-data-name includes)))
       #-akcl (get type 'si::structure-include)))
 
 (defun structure-type-internal-slotds (type)
@@ -409,4 +412,4 @@ object set_cclosure (result_cc,value_cc,available_size)
     (format st "~%")
     ))
 
-	
+

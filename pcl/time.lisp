@@ -9,12 +9,18 @@
 (defvar gf #'shared-initialize)
 (defvar c (find-class 'standard-class))
 
+(eval-when (compile)
+ (defvar *saved-defclass-times* *defclass-times*)
+ (setf *defclass-times* '(eval load compile)))
+
 (defclass str ()
   ((slot :initform nil :reader str-slot))
   (:metaclass structure-class))
 
-(defvar str (make-instance 'str))
+(eval-when (compile)
+ (setf *defclass-times* *saved-defclass-times*))
 
+(defvar str (make-instance 'str))
 
 (push (cons "Time unoptimized slot-value.  This is case (1) from notes.text. (standard)"
 	    '(time-slot-value m 'plist 10000))
@@ -82,7 +88,7 @@
 	    '(time-default-initargs (find-class 'plist-mixin) 1000))
       *tests*)
 (defun time-default-initargs (class n)
-  (time (dotimes (i n) (default-initargs class nil))))
+  (time (dotimes (i n) (default-initargs class nil (class-default-initargs class)))))
 
 
 (push (cons "Time make-instance."
@@ -90,6 +96,25 @@
       *tests*)
 (defun time-make-instance (class n)
   (time (dotimes (i n) (make-instance class))))
+
+
+(defmethod meth-standard-1-slot-value ((object standard-method))
+  (slot-value object 'function))
+
+(defmethod meth-structure-1-slot-value ((object str))
+  (slot-value object 'slot))
+
+(push (cons "Time optimized slot-value inside of a defmethod (standard)"
+	    '(time-meth-standard-1-slot-value m 10000))
+      *tests*)
+(defun time-meth-standard-1-slot-value (object n)
+  (time (dotimes (i n) (meth-standard-1-slot-value object))))
+
+(push (cons "Time optimized slot-value inside of a defmethod (structure)"
+	    '(time-meth-structure-1-slot-value str 10000))
+      *tests*)
+(defun time-meth-structure-1-slot-value (object n)
+  (time (dotimes (i n) (meth-structure-1-slot-value object))))
 
 
 (defun expand-all-macros (form)
@@ -102,11 +127,16 @@
 			      (values (macroexpand form env))
 			      form))))
 
-(push (cons "Macroexpand meth-structure-slot-value"
-	    '(pprint (expand-defmethod-internal 'meth-structure-slot-value
-		      nil '((object str))
-		      '(#'(lambda () (slot-value object 'slot)))
-		      nil)))
+(push (cons "Macroexpand method-structure-slot-value"
+	    '(pprint (multiple-value-bind (function optimized-function)
+		        (expand-defmethod-internal
+                         (prototype-of-generic-function 'meth-structure-slot-value)
+                         (method-prototype-for-gf 'meth-structure-slot-value)
+                         'method-structure-slot-value
+		         nil '((object str))
+		         '(#'(lambda () (slot-value object 'slot)))
+		         nil)
+                       optimized-function)))
       *tests*)
 #-kcl
 (push (cons "Show code for slot-value inside a defmethod for a structure-class. Case (3)."
@@ -119,10 +149,15 @@
 #|| ; interesting, but long.  (produces 100 lines of output)
 (push (cons "Macroexpand meth-standard-slot-value"
 	    '(pprint (expand-all-macros
-		     (expand-defmethod-internal 'meth-standard-slot-value
-		      nil '((object standard-method))
-		      '(#'(lambda () (slot-value object 'function)))
-		      nil))))
+                       (multiple-value-bind (function optimized-function)
+		        (expand-defmethod-internal
+                         (prototype-of-generic-function 'meth-standard-slot-value)
+                         (method-prototype-for-gf 'meth-standard-slot-value)
+                         'meth-standard-slot-value
+		         nil '((object standard-method))
+		         '(#'(lambda () (slot-value object 'function)))
+		         nil)
+                       optimized-function))))
       *tests*)
 (push (cons "Show code for slot-value inside a defmethod for a standard-class. Case (4)."
 	    '(disassemble (meth-standard-slot-value m)))

@@ -986,11 +986,11 @@
       entry)))
 
 
-(defvar *VARIABLE-DECLARATIONS* '(special))
+(defvar *VARIABLE-DECLARATIONS* (list 'special))
 
 (defun VARIABLE-DECLARATION (declaration var env)
   (if (not (member declaration *variable-declarations*))
-      (error "~S is not a recognized variable declaration." declaration)
+      (error "~S is not a reckognized variable declaration." declaration)
       (let ((id (or (variable-lexical-p var env) var)))
 	(dolist (decl (env-declarations env))
 	  (when (and (eq (car decl) declaration)
@@ -1156,7 +1156,6 @@
 (define-walker-template SYMBOL-MACROLET      walk-symbol-macrolet)
 (define-walker-template TAGBODY              walk-tagbody)
 (define-walker-template THE                  (NIL QUOTE EVAL))
-#+cmu(define-walker-template EXT:TRULY-THE   (NIL QUOTE EVAL))
 (define-walker-template THROW                (NIL EVAL EVAL))
 (define-walker-template UNWIND-PROTECT       (NIL RETURN REPEAT (EVAL)))
 
@@ -1296,6 +1295,8 @@
 ;;;     3. Otherwise, assume it is a function call. "
 ;;;     
 
+(defvar walk-form-expand-macros-p nil)
+
 (defun walk-form-internal (form context env)
   ;; First apply the walk-function to perform whatever translation
   ;; the user wants to this form.  If the second value returned
@@ -1314,7 +1315,7 @@
 		(let ((newnewform (walk-form-internal (cddr symmac)
 						      context env)))
 		  (if (eq newnewform (cddr symmac))
-		      newform
+		      (if walk-form-expand-macros-p newnewform newform)
 		      newnewform))
 		newform)))
 	 (t
@@ -1334,7 +1335,7 @@
 		    (let ((newnewnewform (walk-form-internal newnewform context
 							     env)))
 		      (if (eq newnewnewform newnewform)
-			  newform
+			  (if walk-form-expand-macros-p newnewform newform)
 			  newnewnewform)))
 		   ((and (symbolp fn)
 			 (not (fboundp fn))
@@ -1362,7 +1363,7 @@
         ((LAMBDA CALL)
 	 (cond ((or (symbolp form)
 		    (and (listp form)
-			 (= (length form) 2)
+			 (= (length (the list form)) 2)
 			 (eq (car form) 'setf)))
 		form)
 	       #+Lispm
@@ -1377,9 +1378,10 @@
 				       ;; call to length.
 				       (if (null (cddr template))
 					   ()
-					   (nthcdr (- (length form)
+					   (nthcdr (- (length (the list form))
 						      (length
-							(cddr template)))
+							(the list
+                                                             (cddr template))))
 						   form))
                                        context
 				       env))
@@ -1524,7 +1526,7 @@
 					 &aux arg)
   (cond ((null arglist) ())
         ((symbolp (setq arg (car arglist)))
-         (or (member arg lambda-list-keywords)
+         (or (member arg lambda-list-keywords :test #'eq)
              (note-lexical-binding arg env))
          (recons arglist
                  arg
@@ -1533,24 +1535,26 @@
 			       env
                                (and destructuringp
 				    (not (member arg
-						 lambda-list-keywords))))))
+						 lambda-list-keywords
+                                                 :test #'eq))))))
         ((consp arg)
-         (prog1 (if destructuringp
-                    (walk-arglist arg context env destructuringp)
-                    (recons arglist
-                            (relist* arg
-                                     (car arg)
-                                     (walk-form-internal (cadr arg) :eval env)
-                                     (cddr arg))
-                            (walk-arglist (cdr arglist) context env nil)))
-                (if (symbolp (car arg))
-                    (note-lexical-binding (car arg) env)
-                    (note-lexical-binding (cadar arg) env))
-                (or (null (cddr arg))
-                    (not (symbolp (caddr arg)))
-                    (note-lexical-binding (caddr arg) env))))
-          (t
-	   (error "Can't understand something in the arglist ~S" arglist))))
+         (prog1
+	     (recons arglist
+		     (if destructuringp
+			 (walk-arglist arg context env destructuringp)
+			 (relist* arg
+				  (car arg)
+				  (walk-form-internal (cadr arg) :eval env)
+				  (cddr arg)))
+		     (walk-arglist (cdr arglist) context env nil))
+	   (if (symbolp (car arg))
+	       (note-lexical-binding (car arg) env)
+	       (note-lexical-binding (cadar arg) env))
+	   (or (null (cddr arg))
+	       (not (symbolp (caddr arg)))
+	       (note-lexical-binding (caddr arg) env))))
+	(t
+	 (error "Can't understand something in the arglist ~S" arglist))))
 
 (defun walk-let (form context env)
   (walk-let/let* form context env nil))
@@ -1652,11 +1656,18 @@
     (if (some #'(lambda (var)
 		  (variable-symbol-macro-p var env))
 	      vars)
-	(let* ((temps (mapcar #'(lambda (var) (declare (ignore var)) (gensym)) vars))
-	       (sets (mapcar #'(lambda (var temp) `(setq ,var ,temp)) vars temps))
-	       (expanded `(multiple-value-bind ,temps 
-			       ,(caddr form)
-			     ,@sets))
+	(let* ((expanded
+                 (let ((sets NIL)
+                       (temps NIL)
+                       (temp NIL))
+                   (dolist (var vars)
+                     (setf temp (gensym))
+                     (push `(setq ,var ,temp) sets)
+                     (push temp temps))
+                  `(multiple-value-bind
+                      ,(nreverse temps)
+                      ,(caddr form)
+                     ,@(nreverse sets))))
 	       (walked (walk-form-internal expanded context env)))
 	  (if (eq walked expanded)
 	      form
@@ -1756,11 +1767,13 @@
 
 (defun walk-setq (form context env)
   (if (cdddr form)
-      (let* ((expanded (let ((rforms nil)
-			     (tail (cdr form)))
-			 (loop (when (null tail) (return (nreverse rforms)))
-			       (let ((var (pop tail)) (val (pop tail)))
-				 (push `(setq ,var ,val) rforms)))))
+      (let* ((expanded
+               (let ((collect NIL)
+                     (ptr (cdr form)))
+                 (loop (push `(setq ,(car ptr) ,(cadr ptr)) collect)
+                       (setf ptr (cddr ptr))
+                       (unless ptr
+                         (return (nreverse collect))))))
 	     (walked (walk-repeat-eval expanded env)))
 	(if (eq expanded walked)
 	    form
@@ -1891,7 +1904,7 @@
                        Even if this is what~%~
                        you intended, you should fix your source code."
 		      form
-		      (length (cdr form)))
+		      (length (the list (cdr form))))
 		(cons 'progn (cdddr form)))
 	      (cadddr form))))
     (relist form

@@ -95,7 +95,7 @@
   (cpd-class  nil)
   (cpd-supers ())
   (cpd-after  ())
-  (cpd-count  0))
+  (cpd-count  0 :type fixnum))
 
 (defun compute-std-cpl (class supers)
   (cond ((null supers)				;First two branches of COND
@@ -112,12 +112,13 @@
 
 (defvar *compute-std-cpl-class->entry-table-size* 60)
 
+(declaim (ftype (function (T T) (values list index)) compute-std-cpl-phase-1))
 (defun compute-std-cpl-phase-1 (class supers)
   (let ((nclasses 0)
 	(all-cpds ())
 	(table (make-hash-table :size *compute-std-cpl-class->entry-table-size*
 				:test #'eq)))
-    (declare (fixnum nclasses))
+    (declare (type index nclasses))
     (labels ((get-cpd (c)
 	       (or (gethash c table)
 		   (setf (gethash c table) (make-cpd))))
@@ -149,6 +150,7 @@
 	  (push (car t2) (cpd-after (car t1))))))))
 
 (defun compute-std-cpl-phase-3 (class all-cpds nclasses)
+  (declare (type index nclasses))
   (let ((candidates ())
 	(next-cpd nil)
 	(rcpl ()))
@@ -195,7 +197,7 @@
       (decf nclasses)
       (push (cpd-class next-cpd) rcpl)
       (dolist (after (cpd-after next-cpd))
-	(when (zerop (decf (cpd-count after)))
+	(when (zerop (the fixnum (decf (cpd-count after))))
 	  (push after candidates))))))
 
 ;;;

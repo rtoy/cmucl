@@ -49,14 +49,15 @@
 
 (defun make-lap-closure-generator 
     (closure-variables arguments iregs vregs fvregs tregs lap-code)
-  (funcall *make-lap-closure-generator*
-	   closure-variables arguments iregs 
-	   vregs fvregs tregs lap-code))
+  (funcall-function *make-lap-closure-generator*
+	            closure-variables arguments iregs 
+	            vregs fvregs tregs lap-code))
 
 (defmacro precompile-lap-closure-generator 
     (cvars args i-regs v-regs fv-regs t-regs lap)
-  (funcall *precompile-lap-closure-generator* cvars args i-regs 
-	   v-regs fv-regs t-regs lap))
+  (funcall-function *precompile-lap-closure-generator*
+                    cvars args i-regs 
+	            v-regs fv-regs t-regs lap))
 
 (defmacro lap-in-lisp (cvars args iregs vregs fvregs tregs lap)
   (declare (ignore cvars args))
@@ -131,7 +132,7 @@
 		   (cadr *generating-lap*) (cons entry allocated))
 	     (cdr entry))
 	    (t
-	     (let ((new `(,type . (:reg ,(incf (caddr *generating-lap*))))))
+	     (let ((new `(,type . (:reg ,(incf (the fixnum (caddr *generating-lap*)))))))
 	       (setf (cadr *generating-lap*) (cons new allocated))
 	       (cdr new)))))))
 
@@ -201,13 +202,13 @@
 (defun opcode (name &rest args)
   (let ((emitter (gethash name *lap-emitters*)))
     (if emitter
-	(apply emitter args)
+	(apply-function (symbol-function emitter) args)
 	(error "No opcode named ~S." name))))
 
 (defun operand (name &rest args)
   (let ((emitter (gethash name *lap-emitters*)))
     (if emitter
-	(apply emitter args)
+	(apply-function (symbol-function emitter) args)
 	(error "No operand named ~S." name))))
 
 (defmacro defopcode (name types)
@@ -273,7 +274,7 @@
   (flet ((check (x)
 	   (ecase x
 	     (:symbol           (symbolp arg))
-	     (:register-number  (and (integerp arg) (>= arg 0)))
+	     (:register-number  (and (integerp arg) (>= (the fixnum arg) 0)))
 	     (:t                t)
 	     (:reg              (and (consp arg) (eq (car arg) :reg)))
 	     (:fixnum           (typep arg 'fixnum)))))
@@ -305,6 +306,8 @@
 (defopcode :fsc-instance-p       (:reg :label))
 (defopcode :built-in-instance-p  (:reg :label))
 (defopcode :structure-instance-p (:reg :label))
+#+pcl-user-instances
+(defopcode :user-instance-p      (:reg :label))
 
 (defopcode :jmp      ((or :reg :constant)))
 
@@ -332,9 +335,13 @@
 (defoperand :structure-wrapper (:reg))
 (defoperand :other-wrapper     (:reg))
 (defoperand :built-in-or-structure-wrapper (:reg))
+#+pcl-user-instances
+(defoperand :user-wrapper      (:reg))
 
 (defoperand :std-slots (:reg))
 (defoperand :fsc-slots (:reg))
+#+pcl-user-instances
+(defoperand :user-slots (:reg))
 
 (defoperand :wrapper-cache-number-vector (:reg))
 

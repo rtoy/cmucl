@@ -106,13 +106,15 @@ And so, we are saved.
 	      (cons (car generator-entry) (caar args-entry))
 	      (caddr args-entry)))))
 
+
+(declaim (ftype (function (T &rest T) real-function) get-dfun-constructor))
 (defun get-dfun-constructor (generator &rest args)
   (let* ((generator-entry (assq generator *dfun-constructors*))
 	 (args-entry (assoc args (cdr generator-entry) :test #'equal)))
     (if (null *enable-dfun-constructor-caching*)
-	(apply (symbol-function generator) args)
+	(apply-function (symbol-function generator) args)
 	(or (cadr args-entry)
-	    (let ((new (apply (symbol-function generator) args)))
+	    (let ((new (apply-function (symbol-function generator) args)))
 	      (if generator-entry
 		  (push (list (copy-list args) new nil) (cdr generator-entry))
 		  (push (list generator (list (copy-list args) new nil)) *dfun-constructors*))
@@ -127,6 +129,7 @@ And so, we are saved.
 	  (push (list generator (list args constructor system)) *dfun-constructors*)))))
 
 (defmacro precompile-dfun-constructors (&optional system)
+  #+excl (declare (ignore system))
   #+excl ()
   #-excl
   (let ((*precompiling-lap* t))
@@ -136,9 +139,11 @@ And so, we are saved.
 	     (dolist (args-entry (cdr generator-entry))
 	       (when (or (null (caddr args-entry))
 			 (eq (caddr args-entry) system))
+		 (when system (setf (caddr args-entry) system))
 		 (multiple-value-bind (closure-variables arguments 
 							 iregs vregs fvregs tregs lap)
-		     (apply (symbol-function (car generator-entry)) (car args-entry))
+		     (apply-function (symbol-function (car generator-entry))
+                                     (car args-entry))
 		   (gather1
 		     (make-top-level-form `(precompile-dfun-constructor 
 					    ,(car generator-entry))
@@ -200,6 +205,14 @@ And so, we are saved.
   (declare (ignore depth) (stream stream))
   (printing-random-thing (dfun-info stream)
     (format stream "~A" (type-of dfun-info))))
+
+(defstruct (no-methods
+	     (:constructor no-methods-dfun-info ())
+	     (:include dfun-info)))
+
+(defstruct (initial-dispatch
+	     (:constructor initial-dispatch-dfun-info ())
+	     (:include dfun-info)))
 
 (defstruct (dispatch
 	     (:constructor dispatch-dfun-info ())
@@ -276,7 +289,7 @@ And so, we are saved.
 
 (defmacro dfun-update (generic-function function &rest args)
   `(multiple-value-bind (dfun cache info)
-       (funcall ,function ,generic-function ,@args)
+       (funcall-function ,function ,generic-function ,@args)
      (update-dfun ,generic-function dfun cache info)))
 
 (defun accessor-miss-function (gf dfun-info)
@@ -289,10 +302,47 @@ And so, we are saved.
      #'(lambda (new arg)
 	 (declare (pcl-fast-call))
 	 (accessor-miss gf new arg dfun-info)))))
-
+
+
+(declaim (ftype (function (T T T T) (values function null T))
+		make-one-class-accessor-dfun))
+(declaim (ftype (function (T T T T T) (values function null T))
+		make-two-class-accessor-dfun))
+(declaim (ftype (function (T T T &optional T) (values function cache T))
+		make-one-index-accessor-dfun))
+(declaim (ftype (function (T T T T) (values function cache T))
+		make-final-one-index-accessor-dfun))
+(declaim (ftype (function (T T &optional T) (values function cache T))
+		make-n-n-accessor-dfun))
+(declaim (ftype (function (T T T) (values function cache T))
+		make-final-n-n-accessor-dfun))
+(declaim (ftype (function (T T &optional T) (values function (or cache null) T))
+		make-checking-dfun))
+(declaim (ftype (function (T T T T) (values function (or cache null) T))
+		make-final-checking-dfun))
+(declaim (ftype (function (T &optional T) (values function (or cache null) T))
+		make-caching-dfun))
+(declaim (ftype (function (T T T) (values function (or cache null) T))
+		make-final-caching-dfun))
+(declaim (ftype (function (T &optional T) (values function cache T))
+		make-constant-value-dfun))
+(declaim (ftype (function (T T T) (values function cache T))
+		make-final-constant-value-dfun))
+(declaim (ftype (function (T) (values function null T))
+		make-dispatch-dfun
+		make-final-dispatch-dfun))
+(declaim (ftype (function (T &optional T) (values function (or cache null) T))
+		make-final-dfun-internal))
+
+(declaim (ftype (function (T) boolean)
+		use-caching-dfun-p
+		use-dispatch-dfun-p))
+
 ;;;
 ;;; ONE-CLASS-ACCESSOR
 ;;;
+(declaim (ftype (function (T T T T) (values function null T))
+		make-one-class-accessor-dfun))
 (defun make-one-class-accessor-dfun (gf type wrapper index)
   (let ((emit (if (eq type 'reader) 'emit-one-class-reader 'emit-one-class-writer))
 	(dfun-info (one-class-dfun-info type index wrapper)))
@@ -306,6 +356,8 @@ And so, we are saved.
 ;;;
 ;;; TWO-CLASS-ACCESSOR
 ;;;
+(declaim (ftype (function (T T T T T) (values function null T))
+		make-two-class-accessor-dfun))
 (defun make-two-class-accessor-dfun (gf type w0 w1 index)
   (let ((emit (if (eq type 'reader) 'emit-two-class-reader 'emit-two-class-writer))
 	(dfun-info (two-class-dfun-info type index w0 w1)))
@@ -319,6 +371,8 @@ And so, we are saved.
 ;;;
 ;;; std accessors same index dfun
 ;;;
+(declaim (ftype (function (T T T &optional T) (values function cache T))
+		make-one-index-accessor-dfun))
 (defun make-one-index-accessor-dfun (gf type index &optional cache)
   (let* ((emit (if (eq type 'reader) 'emit-one-index-readers 'emit-one-index-writers))
 	 (cache (or cache (get-cache 1 nil #'one-index-limit-fn 4)))
@@ -333,6 +387,8 @@ And so, we are saved.
      cache
      dfun-info)))
 
+(declaim (ftype (function (T T T T) (values function cache T))
+		make-final-one-index-accessor-dfun))
 (defun make-final-one-index-accessor-dfun (gf type index table)
   (let ((cache (fill-dfun-cache table nil 1 #'one-index-limit-fn)))
     (make-one-index-accessor-dfun gf type index cache)))				
@@ -341,6 +397,8 @@ And so, we are saved.
   (default-limit-fn nlines))
 
 
+(declaim (ftype (function (T T &optional T) (values function cache T))
+		make-n-n-accessor-dfun))
 (defun make-n-n-accessor-dfun (gf type &optional cache)
   (let* ((emit (if (eq type 'reader) 'emit-n-n-readers 'emit-n-n-writers))
 	 (cache (or cache (get-cache 1 t #'n-n-accessors-limit-fn 2)))
@@ -354,6 +412,8 @@ And so, we are saved.
      cache
      dfun-info)))
 
+(declaim (ftype (function (T T T) (values function cache T))
+		make-final-n-n-accessor-dfun))
 (defun make-final-n-n-accessor-dfun (gf type table)
   (let ((cache (fill-dfun-cache table t 1 #'n-n-accessors-limit-fn)))
     (make-n-n-accessor-dfun gf type cache)))
@@ -362,8 +422,11 @@ And so, we are saved.
   (default-limit-fn nlines))
 
 (defun fill-dfun-cache (table valuep nkeys limit-fn &optional cache)
-  (let ((cache (or cache (get-cache nkeys valuep limit-fn
-				    (+ (hash-table-count table) 3)))))
+  (let ((cache
+          (or cache
+              (get-cache
+                 nkeys valuep limit-fn
+		 (the index (+ (the index (hash-table-count table)) 3))))))
     (maphash #'(lambda (classes value)
 		 (setq cache (fill-cache cache
 					 (class-wrapper classes)
@@ -376,10 +439,12 @@ And so, we are saved.
 ;;;
 ;;;
 ;;;
+
+
 (defun make-checking-dfun (generic-function function &optional cache)
   (unless cache
     (when (some #'(lambda (method)
-		    (method-function-closure-generator (method-function method)))
+		    (method-closure-generator method))
 		(generic-function-methods generic-function))
       (return-from make-checking-dfun (make-caching-dfun generic-function)))
     (when (use-dispatch-dfun-p generic-function)
@@ -388,6 +453,7 @@ And so, we are saved.
 	 (metatypes (arg-info-metatypes arg-info))
 	 (applyp (arg-info-applyp arg-info))
 	 (nkeys (arg-info-nkeys arg-info)))
+    (declare (type boolean applyp) (type index nkeys))
     (if (every #'(lambda (mt) (eq mt 't)) metatypes)
 	(values function nil (default-method-only-dfun-info))
 	(let* ((cache (or cache (get-cache nkeys nil #'checking-limit-fn 2)))
@@ -432,6 +498,7 @@ And so, we are saved.
 	 (nkeys (arg-info-nkeys arg-info))
 	 (cache (or cache (get-cache nkeys t #'caching-limit-fn 2)))
 	 (dfun-info (caching-dfun-info cache)))
+    (declare (type boolean applyp) (type index nkeys))
     (values
      (funcall (get-dfun-constructor 'emit-caching metatypes applyp)
 	      (cache-field cache) (cache-vector cache) 
@@ -454,6 +521,7 @@ And so, we are saved.
 (defun use-constant-value-dfun-p (gf)
   (let ((methods (generic-function-methods gf))
 	(default '(unknown)))
+    (declare (type list methods))
     (and (null (arg-info-applyp (gf-arg-info gf)))
 	 (compute-applicable-methods-emf-std-p gf)
 	 (< 1 (length methods))
@@ -462,9 +530,9 @@ And so, we are saved.
 			  (method-specializers method)))
 	       methods)
 	 (notany #'(lambda (method)
-		     (or (some #'eql-specializer-p (method-specializers method))
-			 (eq (getf (method-function-plist (method-function method))
-				   :constant-value default)
+		     (or (some #'eql-specializer-p
+			       (method-specializers method))
+			 (eq (plist-value method :constant-value default)
 			     default)))
 		methods))))
 
@@ -491,7 +559,7 @@ And so, we are saved.
     (make-constant-value-dfun generic-function cache)))
 
 (defun make-final-ordinary-dfun-internal (generic-function valuep limit-fn
-							   classes-list new-class)
+					  classes-list new-class)
   (let* ((arg-info (gf-arg-info generic-function))
 	 (nkeys (arg-info-nkeys arg-info))
 	 (new-class (and new-class
@@ -503,6 +571,7 @@ And so, we are saved.
 	 (cache (if new-class
 		    (copy-cache (gf-dfun-cache generic-function))
 		    (get-cache nkeys (not (null valuep)) limit-fn 4))))
+      (declare (type index nkeys))
       (make-emf-cache generic-function valuep cache classes-list new-class)))
 
 (defun use-caching-dfun-p (gf)
@@ -514,6 +583,7 @@ And so, we are saved.
 	   (arg-info (gf-arg-info gf))
 	   (mt (arg-info-metatypes arg-info))
 	   (nreq (length mt)))
+      (declare (type list methods mt) (type index nreq))
       ;;Is there a position at which every specializer is eql or non-standard?
       (dotimes (i nreq nil)
 	(when (not (eq 't (nth i mt)))
@@ -521,10 +591,7 @@ And so, we are saved.
 	    (dolist (method methods)
 	      (let ((specl (nth i (method-specializers method))))
 		(when (and (not (eql-specializer-p specl))
-			   (let ((sclass (specializer-class specl)))
-			     (or (null (class-finalized-p sclass))
-				 (member *the-class-standard-object*
-					 (class-precedence-list sclass)))))
+                           (class-standard-p (specializer-class specl)))
 		  (setq some-std-class-specl-p t))))
 	    (unless some-std-class-specl-p
 	      (return-from use-dispatch-dfun-p t))))))))
@@ -539,11 +606,11 @@ And so, we are saved.
   (if *lazy-dispatch-dfun-compute-p*
       (values (let ((*lazy-dfun-compute-p* t))
 		(make-initial-dfun gf))
-	      nil nil)
+	      nil (initial-dispatch-dfun-info))
       (make-dispatch-dfun gf)))
 
 (defun before-precompile-random-code-segments ()
-  (dolist (gf (gfs-of-type 'dispatch))
+  (dolist (gf (gfs-of-type '(dispatch initial-dispatch)))
     (dfun-update gf #'make-dispatch-dfun)))
 
 (defvar *dfun-miss-gfs-on-stack* ())
@@ -557,10 +624,11 @@ And so, we are saved.
        (cache-miss-values ,gf ,args ',(cond (type 'accessor)
 					    (caching-p 'caching)
 					    (t 'checking)))
+     (declare (type boolean ,invalidp))
      (when (and ,applicable (not (memq ,gf *dfun-miss-gfs-on-stack*)))
        (let ((*dfun-miss-gfs-on-stack* (cons ,gf *dfun-miss-gfs-on-stack*)))
 	 ,@body))
-     (apply ,nfunction ,args)))
+     (method-function-apply ,nfunction ,args)))
 
 ;;;
 ;;; The dynamically adaptive method lookup algorithm is implemented is
@@ -606,8 +674,11 @@ And so, we are saved.
   (let ((methods (generic-function-methods gf)) type
 	(new-class *new-class*) (*new-class* nil))
     (cond ((null methods)
-	   #'(lambda (&rest args)
-	       (apply #'no-applicable-method gf args)))
+	   (values
+	    #'(lambda (&rest args)
+		(apply #'no-applicable-method gf args))
+	    nil
+	    (no-methods-dfun-info)))
 	  ((setq type (cond ((every #'standard-reader-method-p methods)
 			     'reader)
 			    ((every #'standard-writer-method-p methods)
@@ -615,11 +686,13 @@ And so, we are saved.
 	   (with-eq-hash-table (table)
 	     (multiple-value-bind (table all-index first second size no-class-slots-p)
 		 (make-accessor-table gf type table)
+               (declare (type boolean no-class-slots-p))
 	       (if table
-		   (cond ((= size 1)
+		   (cond ((= (the index size) 1)
 			  (let ((w (class-wrapper first)))
 			    (make-one-class-accessor-dfun gf type w all-index)))
-			 ((and (= size 2) (or (integerp all-index) (consp all-index)))
+			 ((and (= (the index size) 2)
+                               (or (integerp all-index) (consp all-index)))
 			  (let ((w0 (class-wrapper first))
 				(w1 (class-wrapper second)))
 			    (make-two-class-accessor-dfun gf type w0 w1 all-index)))
@@ -660,7 +733,7 @@ And so, we are saved.
       ;; information from the lexical variables bound above.
       ;; 
       (flet ((two-class (index w0 w1)
-	       (when (zerop (random 2)) (psetf w0 w1 w1 w0))
+	       (when (zerop (the index (random 2))) (psetf w0 w1 w1 w0))
 	       (dfun-update gf #'make-two-class-accessor-dfun ntype w0 w1 index))
 	     (one-index (index &optional cache)
 	       (dfun-update gf #'make-one-index-accessor-dfun ntype index cache))
@@ -674,13 +747,15 @@ And so, we are saved.
 	     (do-fill (update-fn)
 	       (let ((ncache (fill-cache cache wrappers nindex)))
 		 (unless (eq ncache cache)
-		   (funcall update-fn ncache)))))
+		   (funcall-function update-fn ncache)))))
 	(cond ((null ntype)
 	       (caching))
 	      ((or invalidp
 		   (null nindex)))
 	      ((not (or (std-instance-p object)
-			(fsc-instance-p object)))
+			(fsc-instance-p object)
+                        #+pcl-user-instances
+                        (user-instance-p object)))
 	       (caching))
 	      ((or (neq ntype otype) (listp wrappers))
 	       (caching))
@@ -742,7 +817,7 @@ And so, we are saved.
     (dfun-miss (generic-function args wrappers invalidp function nil nil t)
       (cond (invalidp)
 	    (t
-	     (let* ((value (getf (method-function-plist function) :constant-value))
+	     (let* ((value (method-constant-value (method-function-method function)))
 		    (ncache (fill-cache ocache wrappers value)))
 	       (unless (eq ncache ocache)
 		 (dfun-update generic-function
@@ -771,7 +846,8 @@ And so, we are saved.
 	 (cache (gf-dfun-cache gf)))
     (when cache
       (let ((size (cache-size cache)))
-	(when (>= size *minimum-cache-size-to-list*)
+        (declare (type index size))
+	(when (>= size (the index *minimum-cache-size-to-list*))
 	  (let ((a (assoc size dfun-list)))
 	    (unless a
 	      (push (setq a (list size)) dfun-list))
@@ -793,13 +869,13 @@ And so, we are saved.
 	 (a (assq sym dfun-count)))
     (unless a
       (push (setq a (list sym 0 nil)) dfun-count))
-    (incf (cadr a))
+    (setf (cadr a) (the index (1+ (the index (cadr a)))))
     (when cache
       (let* ((size (cache-size cache))
 	     (b (assoc size (third a))))
 	(unless b 
 	  (push (setq b (cons size 0)) (third a)))
-	(incf (cdr b))))))
+        (setf (cdr b) (the index (1+ (the index (cdr b)))))))))
 
 (defun count-all-dfuns ()
   (setq dfun-count (mapcar #'(lambda (type) (list type 0 nil))
@@ -819,8 +895,9 @@ And so, we are saved.
   (values))
 
 (defun gfs-of-type (type)
+  (unless (consp type) (setq type (list type)))
   (let ((gf-list nil))
     (map-all-generic-functions #'(lambda (gf)
-				   (when (eq type (type-of (gf-dfun-info gf)))
+				   (when (memq (type-of (gf-dfun-info gf)) type)
 				     (push gf gf-list))))
     gf-list))

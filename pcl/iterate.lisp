@@ -307,6 +307,7 @@ NIL => never; :USER => those resulting from user code; T => always, even if it's
                         let-body)
                  update-forms)
            (dolist (v vars)
+	       #-excl
                (declare (ignore v))
                                                ; Pop off the vars we have now
                                                ; bound from the list of vars
@@ -367,12 +368,13 @@ NIL => never; :USER => those resulting from user code; T => always, even if it's
                          (eq (car binding-type)
                              'lambda)
                          (not (find-if #'(lambda (x)
-                                                (member x lambda-list-keywords)
+                                                (member x lambda-list-keywords
+                                                        :test #'eq)
                                                 )
                                      (setq let-bindings (second binding-type)))
                               )
-                         (eql (length (second expansion))
-                              (length let-bindings))
+                         (eql (length (the list (second expansion)))
+                              (length (the list let-bindings)))
                          (null (cddr expansion)))
                                                ; A simple LAMBDA form can be
                                                ; treated as LET
@@ -479,13 +481,13 @@ NIL => never; :USER => those resulting from user code; T => always, even if it's
                                                  :abort))
                                          ((and (setq renaming (assoc form 
                                                                    renamed-vars
-                                                                     ))
+                                                                   :test #'eq))
                                                (variable-same-p form env 
                                                       iterate-env))
                                                ; Reference to one of the vars
                                                ; we're renaming
                                           (cdr renaming))
-                                         ((and (member form bound-vars)
+                                         ((and (member form bound-vars :test #'eq)
                                                (variable-same-p form env 
                                                       iterate-env))
                                                ; FORM is a var that is bound
@@ -590,7 +592,7 @@ NIL => never; :USER => those resulting from user code; T => always, even if it's
                  (consp (setq body (cdr form)))
                  (listp (setq args (car body)))
                  (or (null nargs)
-                     (eql (length args)
+                     (eql (length (the list args))
                           nargs))
                  form)))
 
@@ -663,7 +665,7 @@ NIL => never; :USER => those resulting from user code; T => always, even if it's
                        (declare (ignore context))
                        (let (pair)
                             (cond ((and (symbolp form)
-                                        (setq pair (assoc form alist))
+                                        (setq pair (assoc form alist :test #'eq))
                                         (variable-same-p form subenv env))
                                    (cdr pair))
                                   (t form))))))
@@ -1068,11 +1070,11 @@ NIL => never; :USER => those resulting from user code; T => always, even if it's
                                                ; non-variable or one that has
                                                ; been rebound
                                         form)
-                                       ((setq pair (assoc form alist))
+                                       ((setq pair (assoc form alist :test #'eq))
                                                ; One to rename
                                         (cdr pair))
                                        (t      ; var is free
-                                          (pushnew form closed)
+                                          (pushnew form closed :test #'eq)
                                           form)))))
                   closed)))
 

@@ -43,6 +43,10 @@
 		  '(setq excl::*without-interrupts* 0)))
        ,.body)))
 
+(defmacro without-interrupts-simple (&body body)
+  `(let ((excl::*without-interrupts* 0))
+     ,.body))
+
 (eval-when (compile load eval)
   (unless (fboundp 'excl::sy_hash)
     (setf (symbol-function 'excl::sy_hash)
@@ -62,6 +66,12 @@
 		 (t
 		  (pop ,list-var)
 		  (go start))))))
+
+(defmacro structurep (x)
+  `(excl::structurep ,x))
+
+(defmacro structure-type (x)
+  `(svref ,x 0))
 
 (defun std-instance-p (x)
   (and (excl::structurep x)

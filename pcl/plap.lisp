@@ -117,7 +117,7 @@
 			`(,(lap-reg reg)
 			  ,(lap-reg-initial-value-form reg)))
 		    (append i-regs v-regs fv-regs t-regs))
-	   (declare (type fixnum ,@(mapcar #'lap-reg *lap-i-regs*))
+	   (declare (type index ,@(mapcar #'lap-reg *lap-i-regs*))
 		    (type simple-vector ,@(mapcar #'lap-reg *lap-v-regs*))
 		    (type #+structure-wrapper cache-number-vector
 		          #-structure-wrapper (simple-array fixnum)
@@ -127,15 +127,13 @@
 
 (defvar *empty-vector* '#())
 (defvar *empty-fixnum-vector*
-  (make-array 8
-	      :element-type 'fixnum
-	      :initial-element 0))
+  (make-array 8 :initial-element 0))
  
 (defun lap-reg-initial-value-form (reg)
-  (cond ((member reg *lap-i-regs*) 0)
-        ((member reg *lap-v-regs*) '*empty-vector*)
-        ((member reg *lap-fv-regs*) '*empty-fixnum-vector*)
-        ((member reg *lap-t-regs*) nil)
+  (cond ((memq reg *lap-i-regs*) 0)
+        ((memq reg *lap-v-regs*) '*empty-vector*)
+        ((memq reg *lap-fv-regs*) '*empty-fixnum-vector*)
+        ((memq reg *lap-t-regs*) nil)
         (t
          (error "What kind of register is ~S?" reg))))
 
@@ -157,6 +155,9 @@
 
     (:std-instance-p (from label)
      `(when ,(lap-operands 'RUNTIME\ STD-INSTANCE-P from) (go ,label)))
+    #+pcl-user-instances
+    (:user-instance-p (from label)
+     `(when ,(lap-operands 'RUNTIME\ USER-INSTANCE-P from) (go ,label)))
     (:fsc-instance-p (from label)
      `(when ,(lap-operands 'RUNTIME\ FSC-INSTANCE-P from) (go ,label)))
     (:built-in-instance-p (from label)
@@ -194,17 +195,23 @@
     (:constant (c) `',c)
     ((:std-wrapper :fsc-wrapper :built-in-wrapper :structure-wrapper
       :built-in-or-structure-wrapper :std-slots :fsc-slots
-      :wrapper-cache-number-vector)
+      :wrapper-cache-number-vector
+      #+pcl-user-instances :user-wrapper
+      #+pcl-user-instances :user-slots)
      (x)
      (lap-operands (ecase (car operand)
 		     (:std-wrapper       'RUNTIME\ STD-WRAPPER)
 		     (:fsc-wrapper       'RUNTIME\ FSC-WRAPPER)
+                     #+pcl-user-instances
+		     (:user-wrapper      'RUNTIME\ USER-WRAPPER)
 		     (:built-in-wrapper  'RUNTIME\ BUILT-IN-WRAPPER)
 		     (:structure-wrapper 'RUNTIME\ STRUCTURE-WRAPPER)
 		     (:built-in-or-structure-wrapper
 		                         'RUNTIME\ BUILT-IN-OR-STRUCTURE-WRAPPER)
 		     (:std-slots         'RUNTIME\ STD-SLOTS)
 		     (:fsc-slots         'RUNTIME\ FSC-SLOTS)
+                     #+pcl-user-instances
+		     (:user-slots        'RUNTIME\ USER-SLOTS)
 		     (:wrapper-cache-number-vector 
 		      'RUNTIME\ WRAPPER-CACHE-NUMBER-VECTOR))
 		   x))
@@ -241,18 +248,20 @@
 (proclaim '(declaration pcl-fast-call))
 
 (defmacro RUNTIME\ FUNCALL (fn &rest args)
-  #+CMU `(funcall (the function ,fn) ,.args)
-  #-CMU `(funcall ,fn ,.args))
+  `(method-function-funcall ,fn ,.args))
 
 (defmacro RUNTIME\ APPLY (fn &rest args)
-  #+CMU `(apply (the function ,fn) ,.args)
-  #-CMU `(apply ,fn ,.args))
+  `(method-function-apply ,fn ,.args))
 
 (defmacro RUNTIME\ STD-WRAPPER (x)
   `(std-instance-wrapper ,x))
 
 (defmacro RUNTIME\ FSC-WRAPPER (x)
   `(fsc-instance-wrapper ,x))
+
+#+pcl-user-instances
+(defmacro RUNTIME\ USER-WRAPPER (x)
+  `(get-user-instance-wrapper ,x))
 
 (defmacro RUNTIME\ BUILT-IN-WRAPPER (x)
   `(built-in-wrapper-of ,x))
@@ -272,6 +281,10 @@
 (defmacro RUNTIME\ FSC-SLOTS (x)
   `(fsc-instance-slots ,x))
 
+#+pcl-user-instances
+(defmacro RUNTIME\ USER-SLOTS (x)
+  `(get-user-instance-slots ,x))
+
 (defmacro RUNTIME\ WRAPPER-CACHE-NUMBER-VECTOR (x)
   `(wrapper-cache-number-vector ,x))
 
@@ -281,11 +294,15 @@
 (defmacro RUNTIME\ FSC-INSTANCE-P (x)
   `(fsc-instance-p ,x))
 
+#+pcl-user-instances
+(defmacro RUNTIME\ USER-INSTANCE-P (x)
+  `(get-user-instance-p ,x))
+
 (defmacro RUNTIME\ IZEROP (x)
-  `(zerop (the fixnum ,x)))
+  `(zerop (the index ,x)))
 
 (defmacro RUNTIME\ FIX= (x y)
-  `(= (the fixnum ,x) (the fixnum ,y)))
+  `(= (the index ,x) (the index ,y)))
 
 ;;;
 ;;; These are the implementations of the index operands.  The portable
@@ -296,29 +313,29 @@
 ;;; Some compilers are so stupid...
 ;;;
 (defmacro RUNTIME\ IREF (vector index)
-  `(svref (the simple-vector ,vector) (the fixnum ,index)))
+  `(svref (the simple-vector ,vector) (the index ,index)))
 
 (defmacro RUNTIME\ ISET (vector index value)
-  `(setf (svref (the simple-vector ,vector) (the fixnum ,index)) ,value))
+  `(setf (svref (the simple-vector ,vector) (the index ,index)) ,value))
 
-(defmacro RUNTIME\ SVREF (vector fixnum)
-  `(svref (the simple-vector ,vector) (the fixnum ,fixnum)))
+(defmacro RUNTIME\ SVREF (vector index)
+  `(svref (the simple-vector ,vector) (the index ,index)))
 
 (defmacro RUNTIME\ I+ (index1 index2)
-  `(the fixnum (+ (the fixnum ,index1) (the fixnum ,index2))))
+  `(the index (+ (the index ,index1) (the index ,index2))))
 
 (defmacro RUNTIME\ I- (index1 index2)  
-  `(the fixnum (- (the fixnum ,index1) (the fixnum ,index2))))
+  `(the index (- (the index ,index1) (the index ,index2))))
 
 (defmacro RUNTIME\ I1+ (index)
-  `(the fixnum (1+ (the fixnum ,index))))
+  `(the index (1+ (the index ,index))))
 
 (defmacro RUNTIME\ ILOGAND (index1 index2)
-  #-Lucid `(the fixnum (logand (the fixnum ,index1) (the fixnum ,index2)))
+  #-Lucid `(the index (logand (the index ,index1) (the index ,index2)))
   #+Lucid `(%logand ,index1 ,index2))
 
 (defmacro RUNTIME\ ILOGXOR (index1 index2)
-  `(the fixnum (logxor (the fixnum ,index1) (the fixnum ,index2))))
+  `(the index (logxor (the index ,index1) (the index ,index2))))
 
 ;;;
 ;;; In the portable implementation, indexes are just fixnums.
@@ -330,11 +347,15 @@
 (defun index->index-value (index) index)
 
 (defun make-index-mask (cache-size line-size)
+  (declare (type index cache-size line-size))
   (let ((cache-size-in-bits (floor (log cache-size 2)))
 	(line-size-in-bits (floor (log line-size 2)))
 	(mask 0))
-    (dotimes (i cache-size-in-bits) (setq mask (dpb 1 (byte 1 i) mask)))
-    (dotimes (i line-size-in-bits)  (setq mask (dpb 0 (byte 1 i) mask)))
+    (declare (type index cache-size-in-bits line-size-in-bits mask))
+    (dotimes (i cache-size-in-bits)
+      (setq mask (the index (dpb 1 (byte 1 i) mask))))
+    (dotimes (i line-size-in-bits)
+      (setq mask (the index (dpb 0 (byte 1 i) mask))))
     mask))
 
 
