@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.2 1991/04/04 13:51:42 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.3 1991/04/11 14:49:44 wlott Exp $
 ;;;
 ;;; Stuff to handle allocating simple objects.
 ;;;
@@ -90,4 +90,5 @@
 		      `((inst cal alloc alloc (pad-data-block ,size)))))
 	     ,@(when need-unbound-marker
 		 `((inst li temp unbound-marker-type)))
-	     ,@(init-forms)))))))
+	     ,@(init-forms)
+	     (store-symbol-value alloc *allocation-pointer*)))))))
