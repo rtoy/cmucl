@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.14 1990/06/17 22:27:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.15 1990/06/22 17:31:33 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -61,6 +61,16 @@
   (simple-string index index simple-string index index)
   (or index null)
   (foldable flushable))
+
+(defknown %sxhash-simple-string (simple-string) index
+  (foldable flushable))
+
+(defknown %sxhash-simple-substring (simple-string index) index
+  (foldable flushable))
+
+
+(defknown vector-sap ((simple-unboxed-array (*))) system-area-pointer
+  (flushable))
 
 
 (defknown %raw-bits (t fixnum) (unsigned-byte 32)
