@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.135 1998/01/04 22:41:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.136 1998/01/11 17:36:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -210,8 +210,9 @@
              "UNIX-FCNTL" "UNIX-FD" "UNIX-FILE-MODE" "UNIX-FORK" "UNIX-FSTAT"
              "UNIX-FSYNC" "UNIX-FTRUNCATE" "UNIX-GETDTABLESIZE" "UNIX-GETEGID"
              "UNIX-GETGID" "UNIX-GETHOSTID" "UNIX-GETHOSTNAME"
-             "UNIX-GETPAGESIZE" "UNIX-GETPGRP" "UNIX-GETPID" "UNIX-GETPPID"
-             "UNIX-GETRUSAGE" "UNIX-GETTIMEOFDAY" "UNIX-GETUID" "UNIX-GID"
+             "UNIX-GETPAGESIZE"  "UNIX-GETPEERNAME" "UNIX-GETPGRP"
+	     "UNIX-GETPID" "UNIX-GETPPID" "UNIX-GETRUSAGE"
+	     "UNIX-GETSOCKNAME" "UNIX-GETTIMEOFDAY" "UNIX-GETUID" "UNIX-GID"
              "UNIX-IOCTL" "UNIX-ISATTY" "UNIX-LINK" "UNIX-LISTEN" "UNIX-LSEEK"
              "UNIX-LSTAT" "UNIX-MKDIR" "UNIX-OPEN" "UNIX-PATHNAME" "UNIX-PID"
              "UNIX-PIPE" "UNIX-READ" "UNIX-READLINK" "UNIX-RECV" "UNIX-RENAME"
@@ -912,7 +913,9 @@
              "FORMAT-DECODED-TIME" "FORMAT-UNIVERSAL-TIME" "FREEZE-TYPE" "GC"
              "GC-OFF" "GC-ON" "GET-BYTES-CONSED" "GET-CODE-POINTER"
              "GET-COMMAND-LINE-SWITCH" "GET-DATA-POINTER"
-             "GET-FLOATING-POINT-MODES" "GET-STREAM-COMMAND" "GRINDEF"
+             "GET-FLOATING-POINT-MODES" "GET-PEER-HOST-AND-PORT"
+	     "GET-SOCKET-HOST-AND-PORT"
+	     "GET-STREAM-COMMAND" "GRINDEF"
              "HOST-ENTRY" "HOST-ENTRY-ADDR" "HOST-ENTRY-ADDR-LIST"
              "HOST-ENTRY-ALIASES" "HOST-ENTRY-NAME" "HTONL" "HTONS"
              "INADDR-ANY" "INDENTING-FURTHER" "INFO"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.19 1997/12/01 16:52:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.20 1998/01/11 17:36:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -314,6 +314,28 @@ struct in_addr {
       (error "Error closing socket: ~A" (unix:get-unix-error-msg err))))
   (undefined-value))
 
+(defun get-peer-host-and-port (fd)
+  "Return the peer host address and port in host order."
+  (with-alien ((sockaddr inet-sockaddr)
+	       (length (alien:array unsigned 1)))
+    (setf (deref length 0) (alien-size inet-sockaddr :bytes))
+    (when (minusp (unix:unix-getpeername fd (alien-sap sockaddr)
+					 (alien-sap length)))
+      (error "Error ~s getting peer host and port on FD ~d."
+	     (unix:get-unix-error-msg unix:unix-errno) fd))
+    (values (ext:ntohl (slot sockaddr 'addr))
+	    (ext:ntohs (slot sockaddr 'port)))))
+
+(defun get-socket-host-and-port (fd)
+  (with-alien ((sockaddr inet-sockaddr)
+	       (length (alien:array unsigned 1)))
+    (setf (deref length 0) (alien-size inet-sockaddr :bytes))
+    (when (minusp (unix:unix-getsockname fd (alien-sap sockaddr)
+					 (alien-sap length)))
+      (error "Error ~s getting socket host and port on FD ~d."
+	     (unix:get-unix-error-msg unix:unix-errno) fd))
+    (values (ext:ntohl (slot sockaddr 'addr))
+	    (ext:ntohs (slot sockaddr 'port)))))
 
 
 ;;;; Out of Band Data.
