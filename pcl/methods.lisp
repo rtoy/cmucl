@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.29 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.30 2003/05/11 11:30:34 gerd Exp $")
 
 (in-package :pcl)
 
@@ -851,6 +851,9 @@
 (defvar *structure-slot-value-using-class-method* nil)
 (defvar *structure-setf-slot-value-using-class-method* nil)
 (defvar *structure-slot-boundp-using-class-method* nil)
+(defvar *condition-slot-value-using-class-method* nil)
+(defvar *condition-setf-slot-value-using-class-method* nil)
+(defvar *condition-slot-boundp-using-class-method* nil)
 
 (defun standard-svuc-method (type)
   (case type
@@ -876,6 +879,18 @@
     (writer (setq *structure-setf-slot-value-using-class-method* method))
     (boundp (setq *structure-slot-boundp-using-class-method* method))))
 
+(defun condition-svuc-method (type)
+  (case type
+    (reader *condition-slot-value-using-class-method*)
+    (writer *condition-setf-slot-value-using-class-method*)
+    (boundp *condition-slot-boundp-using-class-method*)))
+
+(defun set-condition-svuc-method (type method)
+  (case type
+    (reader (setq *condition-slot-value-using-class-method* method))
+    (writer (setq *condition-setf-slot-value-using-class-method* method))
+    (boundp (setq *condition-boundp-using-class-method* method))))
+
 (defun update-std-or-str-methods (gf type)
   (dolist (method (generic-function-methods gf))
     (let ((specls (method-specializers method)))
@@ -889,6 +904,13 @@
 		    (eq (class-name (caddr specls)) 
 			'standard-effective-slot-definition))
 	       (set-standard-svuc-method type method))
+	      ((and (eq (class-name (car specls))
+			'condition-class)
+		    (eq (class-name (cadr specls)) 
+			'condition)
+		    (eq (class-name (caddr specls)) 
+			'condition-effective-slot-definition))
+	       (set-condition-svuc-method type method))
 	      ((and (eq (class-name (car specls))
 			'structure-class)
 		    (eq (class-name (cadr specls))

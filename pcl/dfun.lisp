@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.26 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.27 2003/05/11 11:30:34 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1356,7 +1356,7 @@ And so, we are saved.
 					  (slot-accessor-std-p slotd type)))
 			   (return-from make-accessor-table nil))
 			 (push (cons specl slotd) (gethash class table)))))
-		   (gethash slot-name *name->class->slotd-table*))))
+		   (slot-name->class-table slot-name))))
       (maphash (lambda (class specl+slotd-list)
 		 (dolist (sclass (precedence class)
 			  (internal-error "This can't happen."))

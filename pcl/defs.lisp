@@ -95,6 +95,7 @@
 		  *the-class-built-in-class*
 		  *the-class-slot-class*
 		  *the-class-std-class*
+		  *the-class-condition-class*
 		  *the-class-structure-class*
 		  *the-class-standard-class*
 		  *the-class-funcallable-standard-class*
@@ -285,6 +286,11 @@
 (pushnew 'variable-rebinding *variable-declarations*)
 
 (defvar *name->class->slotd-table* (make-hash-table))
+
+(defun slot-name->class-table (slot-name)
+  (or (gethash slot-name *name->class->slotd-table*)
+      (setf (gethash slot-name *name->class->slotd-table*)
+	    (make-hash-table :test 'eq :size 5))))
 
 (defvar *standard-method-combination*)
 
@@ -535,6 +541,9 @@
     :initform nil
     :initarg :from-defclass-p)))
      
+(defclass condition (slot-object kernel:instance) ()
+  (:metaclass condition-class))
+
 (defclass condition-class (slot-class) ())
 
 (defclass specializer-with-object (specializer) ())
@@ -808,6 +817,7 @@ was inherited."
     (standard-class standard-class-p)
     (funcallable-standard-class funcallable-standard-class-p)
     (structure-class structure-class-p)
+    (condition-class condition-class-p)
     (forward-referenced-class forward-referenced-class-p)
     (method method-p)
     (standard-method standard-method-p)

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.22 2003/05/10 20:27:23 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.23 2003/05/11 11:30:34 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -267,13 +267,37 @@
 	    (slotd structure-effective-slot-definition))
   (error "Structure slots cannot be unbound."))
 
+
+(defmethod slot-value-using-class
+    ((class condition-class)
+     (object condition)
+     (slotd condition-effective-slot-definition))
+  (let ((fn (slot-definition-reader-function slotd)))
+    (declare (type function fn))
+    (funcall fn object)))
+
+(defmethod (setf slot-value-using-class)
+    (new-value
+     (class condition-class)
+     (object condition)
+     (slotd condition-effective-slot-definition))
+  (let ((fn (slot-definition-writer-function slotd)))
+    (declare (type function fn))
+    (funcall fn new-value object)))
+
+(defmethod slot-boundp-using-class
+    ((class condition-class)
+     (object condition)
+     (slotd condition-effective-slot-definition))
+  (let ((fn (slot-definition-boundp-function slotd)))
+    (declare (type function fn))
+    (funcall fn object)))
 
 (defmethod slot-makunbound-using-class ((class condition-class) object slot)
   (declare (ignore object slot))
   (error "Condition slots cannot be unbound."))
 
 
-
 (defmethod slot-missing
 	   ((class t) instance slot-name operation &optional new-value)
   (error
@@ -313,5 +337,4 @@
 	(funcall constructor)
 	(error "~@<Can't allocate an instance of class ~S.~@:>"
 	       (class-name class)))))
-
 

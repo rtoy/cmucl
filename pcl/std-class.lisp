@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.64 2003/05/10 20:27:23 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.65 2003/05/11 11:30:34 gerd Exp $")
 
 (in-package :pcl)
 
@@ -76,10 +76,7 @@
 (defmethod initialize-internal-slot-functions ((slotd effective-slot-definition))
   (let* ((name (slot-value slotd 'name))
 	 (class (slot-value slotd 'class)))
-    (let ((table (or (gethash name *name->class->slotd-table*)
-		     (setf (gethash name *name->class->slotd-table*)
-			   (make-hash-table :test 'eq :size 5)))))
-      (setf (gethash class table) slotd))
+    (setf (gethash class (slot-name->class-table name)) slotd)
     (dolist (type '(reader writer boundp))
       (let* ((gf-name (ecase type
 			      (reader 'slot-value-using-class)
@@ -1602,7 +1599,12 @@
       (add-direct-subclasses class direct-superclasses)
       (setq predicate-name (make-class-predicate-name (class-name class)))
       (make-class-predicate class predicate-name)
-      (setf (slot-value class 'slots) (compute-slots class)))))
+      (setf (slot-value class 'slots) (compute-slots class))))
+  ;;
+  ;; We don't ADD-SLOT-ACCESSORS here because we don't want to
+  ;; override condition accessors with generic functions.  We do this
+  ;; differently.
+  (update-pv-table-cache-info class))
 				     
 (defmethod direct-slot-definition-class
     ((class condition-class) &rest initargs)
@@ -1645,3 +1647,7 @@
 		    (class-direct-slots superclass)))
 	  (reverse (slot-value class 'class-precedence-list))))
 
+(defmethod compute-slots :around ((class condition-class))
+  (let ((eslotds (call-next-method)))
+    (mapc #'initialize-internal-slot-functions eslotds)
+    eslotds))

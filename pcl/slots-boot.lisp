@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.22 2003/05/07 16:59:48 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.23 2003/05/11 11:30:34 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -99,9 +99,7 @@
 	;; Initialize this here, In case the LOAD-TIME-VALUE is
 	;; executed before INITIALIZE-INTERNAL-SLOT-FUNCTIONS had a
 	;; chance to run.
-	(unless (gethash slot-name *name->class->slotd-table*)
-	  (setf (gethash slot-name *name->class->slotd-table*)
-		(make-hash-table :test 'eq)))
+	(slot-name->class-table slot-name)
 	(setf (plist-value gf 'slot-missing-method) t)
 	(ecase type
 	  (reader (add-slot-missing-method gf slot-name 'slot-value))
@@ -150,23 +148,30 @@
   (lambda (object) (declare (ignore object)) t))
 
 (defun get-optimized-std-accessor-method-function (class slotd name)
-  (if (structure-class-p class)
-      (ecase name
-	(reader (slot-definition-internal-reader-function slotd))
-	(writer (slot-definition-internal-writer-function slotd))
-	(boundp (make-structure-slot-boundp-function slotd)))
-      (let* ((fsc-p (cond ((standard-class-p class) nil)
-			  ((funcallable-standard-class-p class) t)
-			  (t (error "~@<~S is not a standard-class.~@:>" class))))
-	     (slot-name (slot-definition-name slotd))
-	     (index (slot-definition-location slotd))
-	     (function (ecase name
-			 (reader #'make-optimized-std-reader-method-function)
-			 (writer #'make-optimized-std-writer-method-function)
-			 (boundp #'make-optimized-std-boundp-method-function)))
-	     (value (funcall function fsc-p slot-name index)))
-	(declare (type function function))
-	(values value index))))
+  (cond ((structure-class-p class)
+	 (ecase name
+	   (reader (slot-definition-internal-reader-function slotd))
+	   (writer (slot-definition-internal-writer-function slotd))
+	   (boundp (make-structure-slot-boundp-function slotd))))
+	((condition-class-p class)
+	 (ecase name
+	   (reader (slot-definition-reader-function slotd))
+	   (writer (slot-definition-writer-function slotd))
+	   (boundp (slot-definition-boundp-function slotd))))
+	(t
+	 (let* ((fsc-p (cond ((standard-class-p class) nil)
+			     ((funcallable-standard-class-p class) t)
+			     (t (error "~@<~S is not a standard-class.~@:>"
+				       class))))
+		(slot-name (slot-definition-name slotd))
+		(index (slot-definition-location slotd))
+		(function (ecase name
+			    (reader #'make-optimized-std-reader-method-function)
+			    (writer #'make-optimized-std-writer-method-function)
+			    (boundp #'make-optimized-std-boundp-method-function)))
+		(value (funcall function fsc-p slot-name index)))
+	   (declare (type function function))
+	   (values value index)))))
 
 (defun make-optimized-std-reader-method-function (fsc-p slot-name index)
   (declare #.*optimize-speed*)
@@ -245,28 +250,49 @@
     t))
 
 (defun get-optimized-std-slot-value-using-class-method-function (class slotd name)
-  (if (structure-class-p class)
-      (ecase name
-	(reader (make-optimized-structure-slot-value-using-class-method-function
-		 (slot-definition-internal-reader-function slotd)))
-	(writer (make-optimized-structure-setf-slot-value-using-class-method-function
-		 (slot-definition-internal-writer-function slotd)))
-	(boundp (make-optimized-structure-slot-boundp-using-class-method-function)))
-      (let* ((fsc-p (cond ((standard-class-p class) nil)
-			  ((funcallable-standard-class-p class) t)
-			  (t (error "~@<~S is not a standard-class.~@:>" class))))
-	     (slot-name (slot-definition-name slotd))
-	     (index (slot-definition-location slotd))
-	     (function 
-	      (ecase name
-		(reader 
-		 #'make-optimized-std-slot-value-using-class-method-function)
-		(writer 
-		 #'make-optimized-std-setf-slot-value-using-class-method-function)
-		(boundp 
-		 #'make-optimized-std-slot-boundp-using-class-method-function))))
-	(declare (type function function))
-	(values (funcall function fsc-p slot-name index) index))))
+  (cond ((structure-class-p class)
+	 (ecase name
+	   (reader
+	    (make-optimized-structure-slot-value-using-class-method-function
+	     (slot-definition-internal-reader-function slotd)))
+	   (writer
+	    (make-optimized-structure-setf-slot-value-using-class-method-function
+	     (slot-definition-internal-writer-function slotd)))
+	   (boundp
+	    (make-optimized-structure-slot-boundp-using-class-method-function))))
+	((condition-class-p class)
+	 (ecase name
+	   (reader
+	    (let ((function (slot-definition-reader-function slotd)))
+	      (lambda (class object slotd)
+		(declare (ignore class slotd))
+		(funcall function object))))
+	   (writer
+	    (let ((function (slot-definition-writer-function slotd)))
+	      (lambda (nv class object slotd)
+		(declare (ignore class slotd))
+		(funcall function nv object))))
+	   (boundp
+	    (let ((function (slot-definition-boundp-function slotd)))
+	      (lambda (class object slotd)
+		(declare (ignore class slotd))
+		(funcall function object))))))
+	(t
+	 (let* ((fsc-p (cond ((standard-class-p class) nil)
+			     ((funcallable-standard-class-p class) t)
+			     (t (error "~@<~S is not a standard-class.~@:>" class))))
+		(slot-name (slot-definition-name slotd))
+		(index (slot-definition-location slotd))
+		(function 
+		 (ecase name
+		   (reader 
+		    #'make-optimized-std-slot-value-using-class-method-function)
+		   (writer 
+		    #'make-optimized-std-setf-slot-value-using-class-method-function)
+		   (boundp 
+		    #'make-optimized-std-slot-boundp-using-class-method-function))))
+	   (declare (type function function))
+	   (values (funcall function fsc-p slot-name index) index)))))
 
 (defun make-optimized-std-slot-value-using-class-method-function
     (fsc-p slot-name index)

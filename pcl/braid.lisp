@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.36 2003/05/10 19:09:02 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.37 2003/05/11 11:30:35 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -124,13 +124,14 @@
 	 slot-class-wrapper slot-class
 	 built-in-class-wrapper built-in-class
 	 structure-class-wrapper structure-class
+	 condition-class-wrapper condition-class
 	 standard-direct-slot-definition-wrapper standard-direct-slot-definition
 	 standard-effective-slot-definition-wrapper standard-effective-slot-definition
 	 class-eq-specializer-wrapper class-eq-specializer
 	 standard-generic-function-wrapper standard-generic-function)
     (initial-classes-and-wrappers 
      standard-class funcallable-standard-class
-     slot-class built-in-class structure-class
+     slot-class built-in-class structure-class condition-class
      standard-direct-slot-definition standard-effective-slot-definition 
      class-eq-specializer standard-generic-function)
     ;;
@@ -146,7 +147,8 @@
 			(standard-class standard-class-wrapper)
 			(funcallable-standard-class funcallable-standard-class-wrapper)
 			(built-in-class built-in-class-wrapper)
-			(structure-class structure-class-wrapper)))
+			(structure-class structure-class-wrapper)
+			(condition-class condition-class-wrapper)))
              (class (or (find-class name nil)
 			(allocate-standard-instance wrapper))))
 	(when (or (eq meta 'standard-class)
@@ -182,6 +184,8 @@
 				   built-in-class-wrapper)
 				  ((eq class structure-class)
 				   structure-class-wrapper)
+				  ((eq class condition-class)
+				   condition-class-wrapper)
 				  ((eq class class-eq-specializer)
 				   class-eq-specializer-wrapper)
 				  ((eq class standard-generic-function)
@@ -237,6 +241,11 @@
 		 (bootstrap-initialize-class 
 		  meta
 		  class name class-eq-specializer-wrapper source
+		  direct-supers direct-subclasses cpl wrapper))
+		(condition-class
+		 (bootstrap-initialize-class
+		  meta
+		  class name class-eq-specializer-wrapper source
 		  direct-supers direct-subclasses cpl wrapper))))))))
 
     (let* ((smc-class (find-class 'standard-method-combination))
@@ -290,7 +299,7 @@
 		,@(and default-initargs
 		       `(default-initargs ,default-initargs))))
     (when (memq metaclass-name '(standard-class funcallable-standard-class
-				 structure-class slot-class))
+				 structure-class slot-class condition-class))
       (set-slot 'direct-slots direct-slots)
       (set-slot 'slots slots)
       (set-slot 'initialize-info nil))
@@ -310,26 +319,28 @@
 	       (setf (bootstrap-get-slot metaclass-name super 'direct-subclasses)
 		     (cons class subclasses))))))
     ;;
-    (if (eq metaclass-name 'structure-class)
-	(let ((constructor-sym '|STRUCTURE-OBJECT class constructor|))
-	  (set-slot 'predicate-name (or (cadr (assoc name *early-class-predicates*))
-					(make-class-predicate-name name)))
-	  (set-slot 'defstruct-form 
-		    `(defstruct (structure-object (:constructor ,constructor-sym))))
-	  (set-slot 'defstruct-constructor constructor-sym)
-	  (set-slot 'from-defclass-p t)    
-	  (set-slot 'plist nil)
-	  (set-slot 'prototype (funcall constructor-sym)))
-	(set-slot 'prototype (if proto-p proto (allocate-standard-instance wrapper))))
+    (case metaclass-name
+      (structure-class
+       (let ((constructor-sym '|STRUCTURE-OBJECT class constructor|))
+	 (set-slot 'predicate-name (or (cadr (assoc name *early-class-predicates*))
+				       (make-class-predicate-name name)))
+	 (set-slot 'defstruct-form 
+		   `(defstruct (structure-object (:constructor ,constructor-sym))))
+	 (set-slot 'defstruct-constructor constructor-sym)
+	 (set-slot 'from-defclass-p t)    
+	 (set-slot 'plist nil)
+	 (set-slot 'prototype (funcall constructor-sym))))
+      (condition-class
+       (set-slot 'prototype (make-condition name)))
+      (t
+       (set-slot 'prototype
+		 (if proto-p proto (allocate-standard-instance wrapper)))))
     class))
 
 (defun bootstrap-make-slot-definitions (name class slots wrapper effective-p)
-  (let ((index -1))
-    (mapcar (lambda (slot)
-	      (incf index)
-	      (bootstrap-make-slot-definition
-	       name class slot wrapper effective-p index))
-	    slots)))
+  (loop for index from 0 and slot in slots collect
+	(bootstrap-make-slot-definition name class slot wrapper
+					effective-p index)))
 
 (defun bootstrap-make-slot-definition (name class slot wrapper effective-p index)  
   (let* ((slotd-class-name (if effective-p
@@ -359,10 +370,7 @@
 	  (set-val 'boundp-function (make-optimized-std-boundp-method-function 
 				     fsc-p slot-name index)))
 	(set-val 'accessor-flags 7)
-	(let ((table (or (gethash slot-name *name->class->slotd-table*)
-			 (setf (gethash slot-name *name->class->slotd-table*)
-			       (make-hash-table :test 'eq :size 5)))))
-	  (setf (gethash class table) slotd)))
+	(setf (gethash class (slot-name->class-table slot-name)) slotd))
       (when (and (eq name 'standard-class)
 		 (eq slot-name 'slots) effective-p)
 	(setq *the-eslotd-standard-class-slots* slotd))

@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.25 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.26 2003/05/11 11:30:34 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -87,9 +87,7 @@
 ;          (standard-writer-method)
 
 (defgeneric structure-class-p (object))
-;          (t)
-;          (structure-class)
-
+(defgeneric condition-class-p (object))
 
 ;;; readers
 (defgeneric accessor-method-slot-definition (standard-accessor-method))
