@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.13 1992/08/12 18:56:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.14 1993/05/17 08:36:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -229,15 +229,19 @@
 					      arg-list-name)))
 		       ,@(unless restp
 			   (list maximum)))
-	     (,error-fun 'defmacro-ll-arg-count-error
-			 :kind ',error-kind
-			 ,@(when name `(:name ',name))
-			 :argument ,(if top-level
-					`(cdr ,arg-list-name)
-					arg-list-name)
-			 :lambda-list ',lambda-list
-			 :minimum ,minimum
-			 ,@(unless restp `(:maximum ,maximum))))
+	     ,(let ((arg (if top-level
+			     `(cdr ,arg-list-name)
+			     arg-list-name)))
+		(if (eq error-fun 'error)
+		    `(do-arg-count-error ',error-kind ',name ,arg ',lambda-list
+					 ,minimum ,(unless restp maximum))
+		    `(,error-fun 'defmacro-ll-arg-count-error
+				 :kind ',error-kind
+				 ,@(when name `(:name ',name))
+				 :argument ,arg
+				 :lambda-list ',lambda-list
+				 :minimum ,minimum
+				 ,@(unless restp `(:maximum ,maximum))))))
 	  *arg-tests*)
     (if keys
 	(let ((problem (gensym "KEY-PROBLEM-"))
@@ -254,6 +258,20 @@
 		      :info ,info)))
 		*arg-tests*)))
     (values env-arg-used minimum (if (null restp) maximum nil))))
+
+;;; We save space in macro definitions by callig this function.
+;;;
+(defun do-arg-count-error (error-kind name arg lambda-list minimum maximum)
+  (multiple-value-bind
+      (fname debug:*stack-top-hint*)
+      (kernel:find-caller-name)
+    (error 'defmacro-ll-arg-count-error
+	   :kind error-kind
+	   :function-name fname
+	   :name name
+	   :argument arg
+	   :lambda-list lambda-list
+	   :minimum minimum :maximum maximum)))
 
 (defun push-sub-list-binding (variable path object name error-kind error-fun)
   (let ((var (gensym "TEMP-")))
