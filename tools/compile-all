@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.9 1992/03/04 09:55:21 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.10 1992/06/04 18:20:32 ram Exp $
 
 set features = ()
 set misfeatures = ()
@@ -11,6 +11,7 @@ set subdir = alpha
 set core = ""
 set clean = 0
 set update = 1
+set interactive = "nil"
 set bootstrap = "target:bootstrap"
 
 set systems = ""
@@ -46,6 +47,9 @@ while ($#argv > 0)
 			case "-misfeature":
 			        set misfeatures = ($misfeatures $argv[2])
 				shift
+				breaksw
+			case "-interactive":
+				set interactive = "t"
 				breaksw
 
 # Source tree management:
@@ -83,6 +87,9 @@ Try these:
 
   -bootstrap	[target:bootstrap]
 	File to load into lisp before compiling.
+
+  -interactive <no arg>
+	Print compiler output to terminal instead of log files.
 
   -misfeature <feature>
 	Remove <feature> from the features when compiling.  May be used more
@@ -200,6 +207,7 @@ $lisp -noinit -eval '(eval (read))' << EOF
   (setf (search-list "target:") '("$dest/" $src))
   (setq *compile-verbose* nil *compile-print* nil) 
   (load "target:tools/setup" :if-source-newer :load-source)
+  (setf *interactive* $interactive *gc-verbose* nil)
   (comf "target:tools/setup" :load t)
   (when (probe-file "${bootstrap}.lisp") (comf "$bootstrap"))
   (quit))
@@ -225,10 +233,10 @@ while ($#sysinfo > 0)
   (setf *features*
 	(set-difference (list* $features *features*) '($misfeatures)))
   (setf (search-list "target:") '("$dest/" $src))
-  (setq *compile-verbose* nil *compile-print* nil) 
+  (setq *compile-verbose* nil *compile-print* nil)
   (load "target:tools/setup")
   (load "$bootstrap" :if-does-not-exist nil)
-  (setf *interactive* nil *gc-verbose* nil)
+  (setf *interactive* $interactive *gc-verbose* nil)
   (load "target:tools/$this_comfile")
   (quit))
 EOF
