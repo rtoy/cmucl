@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.17 1990/06/09 00:49:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.18 1990/06/10 20:22:33 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -127,7 +127,8 @@
     (let ((nfp (current-nfp-tn vop)))
       (when nfp
 	(inst addu val nfp
-	      (* (sb-allocated-size 'non-descriptor-stack) vm:word-bytes))))))
+	      (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
+		 vm:word-bytes))))))
 
 
 (define-vop (xep-allocate-frame)
@@ -145,25 +146,24 @@
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (let ((nfp-tn (current-nfp-tn vop)))
       (when nfp-tn
-	(move nfp-tn nsp-tn)
 	(inst addu nsp-tn nsp-tn
 	      (- (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
-		    vm:word-bytes)))))))
+		    vm:word-bytes)))
+	(move nfp-tn nsp-tn)))))
 
 (define-vop (allocate-frame)
   (:results (res :scs (any-reg descriptor-reg))
 	    (nfp :scs (any-reg)))
   (:info callee)
-  (:ignore nfp)
   (:generator 2
     (move res csp-tn)
     (inst addu csp-tn csp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (when (ir2-environment-number-stack-p callee)
-      (move nfp nsp-tn)
-	(inst addu nsp-tn nsp-tn
-	      (- (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
-		    vm:word-bytes))))))
+      (inst addu nsp-tn nsp-tn
+	    (- (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
+		  vm:word-bytes)))
+      (move nfp nsp-tn))))
 
 ;;; Allocate a partial frame for passing stack arguments in a full call.  Nargs
 ;;; is the number of arguments passed.  If no stack arguments are passed, then
@@ -500,7 +500,9 @@ default-value-5
     (move csp-tn fp-tn)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
-	(move nsp-tn cur-nfp)))
+	(inst addu nsp-tn cur-nfp
+	      (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
+		 vm:word-bytes))))
     (inst addu lip return-pc (- vm:word-bytes vm:other-pointer-type))
     (inst j lip)
     (move fp-tn old-fp)))
@@ -664,7 +666,11 @@ default-value-5
 	       '((move old-fp-pass old-fp)
 		 (move return-pc-pass return-pc)
 		 (when cur-nfp
-		   (move nsp-tn cur-nfp))
+		   (inst addu nsp-tn cur-nfp
+			 (* (logandc2 (1+ (sb-allocated-size
+					   'non-descriptor-stack))
+				      1)
+			    vm:word-bytes)))
 		 (inst j lip)
 		 (move code-tn function))
 	       `((move old-fp-pass fp-tn)
@@ -769,7 +775,10 @@ default-value-5
 	;; Clear the number stack if anything is there.
 	(let ((cur-nfp (current-nfp-tn vop)))
 	  (when cur-nfp
-	    (move nsp-tn cur-nfp)))
+	    (inst addu nsp-tn cur-nfp
+		  (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack))
+			       1)
+		     vm:word-bytes))))
 
 	;; We are done.  Do the jump.
 	(loadw function lexenv vm:closure-function-slot
@@ -815,7 +824,11 @@ default-value-5
 	     ;; Clear the stacks.
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
-		 (move nsp-tn cur-nfp)))
+		 (inst addu nsp-tn cur-nfp
+		       (* (logandc2 (1+ (sb-allocated-size
+					 'non-descriptor-stack))
+				    1)
+			  vm:word-bytes))))
 	     (move csp-tn fp-tn)
 	     ;; Reset the frame pointer.
 	     (move fp-tn old-fp)
@@ -828,7 +841,11 @@ default-value-5
 	     ;; Clear the number stack.
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
-		 (move nsp-tn cur-nfp)))
+		 (inst addu nsp-tn cur-nfp
+		       (* (logandc2 (1+ (sb-allocated-size
+					 'non-descriptor-stack))
+				    1)
+			  vm:word-bytes))))
 	     (move val-ptr fp-tn)
 	     ;; Reset the frame pointer.
 	     (move fp-tn old-fp)
@@ -893,7 +910,10 @@ default-value-5
 	  ;; Clear the number stack.
 	  (let ((cur-nfp (current-nfp-tn vop)))
 	    (when cur-nfp
-	      (move nsp-tn cur-nfp)))
+	      (inst addu nsp-tn cur-nfp
+		    (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack))
+				 1)
+		       vm:word-bytes))))
 
 	  ;; Single case?
 	  (inst li count (fixnum 1))
