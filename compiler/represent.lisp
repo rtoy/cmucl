@@ -235,9 +235,10 @@
   
   (do ((ref refs (tn-ref-next ref)))
       ((null ref))
-    (let* ((lambda (block-lambda
-		    (ir2-block-block
-		     (vop-block (tn-ref-vop ref)))))
+    (let* ((lambda (lambda-home
+		    (block-lambda
+		     (ir2-block-block
+		      (vop-block (tn-ref-vop ref))))))
 	   (tails (lambda-tail-set lambda)))
       (flet ((frob (fun)
 	       (setf (ir2-environment-number-stack-p
@@ -368,6 +369,7 @@
 			      (first (primitive-type-scs
 				      *any-primitive-type*))))
 		       (emit-context-template node block nfp-tn vop)
+		       (assert (not (sc-number-stack-p (tn-sc nfp-tn))))
 		       nfp-tn)))
 	       (new (emit-move-arg-template node block res val-tn this-fp
 					    pass-tn vop)))
@@ -408,21 +410,39 @@
 	(coerce-vop-operands vop))))))
 
 
+;;; NOTE-IF-NUMBER-STACK  --  Internal
+;;;
+;;;    If TN is in a number stack SC, make all the right annotations.  Note
+;;; that this should be called after TN has been referenced, since it must
+;;; iterate over the referencing environments.
+;;;
+(proclaim '(inline note-if-number-stack))
+(defun note-if-number-stack (tn 2comp)
+  (declare (type tn tn) (type ir2-component 2comp))
+  (when (sc-number-stack-p (tn-sc tn))
+    (unless (ir2-component-nfp 2comp)
+      (setf (ir2-component-nfp 2comp) (make-nfp-tn)))
+    (note-number-stack-tn (tn-reads tn))
+    (note-number-stack-tn (tn-writes tn)))
+  (undefined-value))
+
+
 ;;; SELECT-REPRESENTATIONS  --  Interface
 ;;;
 ;;;    Entry to representation selection.  First we select the representation
-;;; for all normal TNs, setting the TN-SC.  If we select a representation that
-;;; allows the number stack, then we note this so that the number-FP can be
-;;; allocated.  Next we allocate old-NFP passing TNs for functions that may
-;;; return values on the number stack.  Finally, we scan the IR2 looking for
-;;; places that we need to insert coercions and representation-specific moves.
-;;;
-;;;    We ignore TNs that already have a SC (representation is predetermined.)
+;;; for all normal TNs, setting the TN-SC.  We then scan all the IR2,
+;;; emitting any necessary coerce and move-arg VOPs.  Finally, we scan all
+;;; TNs looking for ones that might be placed on the number stack, noting
+;;; this so that the number-FP can be allocated.  This must be done last,
+;;; since references in new environments may be introduced by MOVE-ARG
+;;; insertion.
 ;;;
 (defun select-representations (component)
   (let ((costs (make-array sc-number-limit))
 	(2comp (component-info component)))
-    (do ((tn (ir2-component-normal-tns 2comp) (tn-next tn)))
+	        
+    (do ((tn (ir2-component-normal-tns 2comp)
+	     (tn-next tn)))
 	((null tn))
       (unless (tn-sc tn)
 	(let* ((scs (primitive-type-scs (tn-primitive-type tn)))
@@ -430,14 +450,17 @@
 		       (select-tn-representation tn scs costs)
 		       (svref *sc-numbers* (first scs)))))
 	  (assert sc)
-	  (setf (tn-sc tn) sc)
-	  (when (sc-number-stack-p sc)
-	    (unless (ir2-component-nfp 2comp)
-	      (setf (ir2-component-nfp 2comp) (make-nfp-tn)))
-	    (note-number-stack-tn (tn-reads tn))
-	    (note-number-stack-tn (tn-writes tn)))))))
+	  (setf (tn-sc tn) sc))))
 
-  (do-ir2-blocks (block component)
-    (emit-moves-and-coercions block))
+    (do-ir2-blocks (block component)
+      (emit-moves-and-coercions block))
+    
+    (macrolet ((frob (slot)
+		 `(do ((tn (,slot 2comp) (tn-next tn)))
+		      ((null tn))
+		    (note-if-number-stack tn 2comp))))
+      (frob ir2-component-normal-tns)
+      (frob ir2-component-wired-tns)
+      (frob ir2-component-restricted-tns)))
 
   (undefined-value))
