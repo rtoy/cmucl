@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.3 1991/04/12 22:48:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.4 1991/04/20 16:57:20 wlott Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -88,16 +88,18 @@
 (defconstant single-float-bias 126)
 (defconstant single-float-exponent-byte (byte 8 23))
 (defconstant single-float-significand-byte (byte 23 0))
-(defconstant single-float-normal-exponent-min 0)
-(defconstant single-float-normal-exponent-max 255)
+(defconstant single-float-normal-exponent-min 1)
+(defconstant single-float-normal-exponent-max 254)
 (defconstant single-float-hidden-bit (ash 1 23))
+(defconstant single-float-trapping-nan-bit (ash 1 22))
 
 (defconstant double-float-bias 1022)
 (defconstant double-float-exponent-byte (byte 11 20))
 (defconstant double-float-significand-byte (byte 20 0))
-(defconstant double-float-normal-exponent-min 0)
-(defconstant double-float-normal-exponent-max #x7FF)
+(defconstant double-float-normal-exponent-min 1)
+(defconstant double-float-normal-exponent-max #x7FE)
 (defconstant double-float-hidden-bit (ash 1 20))
+(defconstant double-float-trapping-nan-bit (ash 1 19))
 
 (defconstant single-float-digits
   (+ (byte-size single-float-significand-byte) 1))
