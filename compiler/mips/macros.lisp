@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.52 2003/03/02 18:55:56 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.53 2003/07/11 13:29:13 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -477,6 +477,8 @@
 	 (:generator 5
 	   (inst ,(ecase size (:byte 'sb) (:short 'sh))
 		 value object
-		 (- (* ,offset word-bytes) (* index ,scale) ,lowtag))
+		 (- (+ (* ,offset word-bytes)
+		       (* index ,scale))
+		    ,lowtag))
 	   (move result value))))))
 
