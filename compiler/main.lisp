@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.64 1992/06/12 04:38:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.65 1992/07/11 02:11:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -305,7 +305,8 @@
 	      (core-object
 	       (maybe-mumble "Core")
 	       (make-core-component component *code-segment*
-				    length trace-table *compile-object*))
+				    length trace-table fixups
+				    *compile-object*))
 	      (null))))
 	    
       (cond ((backend-featurep :new-assembler)

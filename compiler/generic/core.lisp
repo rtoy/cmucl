@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.14 1992/05/22 15:32:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.15 1992/07/11 02:11:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,12 +131,11 @@
 ;;;    Dump a component to core.  We pass in the assembler fixups, code vector
 ;;; and node info.
 ;;;
-(defun make-core-component (component segment length trace-table object)
+(defun make-core-component (component segment length trace-table fixups object)
   (declare (type component component)
 	   (type index length)
-	   (list trace-table)
+	   (list trace-table fixups)
 	   (type core-object object))
-  (assert (not (backend-featurep :new-assembler)))
   (without-gcing
     (let* ((2comp (component-info component))
 	   (constants (ir2-component-constants 2comp))
@@ -146,8 +145,22 @@
 	   (total-length (+ length (ceiling trace-table-bits vm:byte-bits)))
 	   (box-num (- (length constants) vm:code-trace-table-offset-slot))
 	   (code-obj (%primitive allocate-code-object box-num total-length))
-	   (inst-stream (make-code-instruction-stream code-obj))
-	   (fixups (assem:emit-code-vector inst-stream segment)))
+	   (trace-table-sap
+	    (cond ((backend-featurep :new-assembler)
+		   (let ((fill-ptr (code-instructions code-obj)))
+		     (new-assem:segment-map-output
+		      segment
+		      #'(lambda (sap amount)
+			  (declare (type system-area-pointer sap)
+				   (type index amount))
+			  (system-area-copy sap 0 fill-ptr 0
+					    (* amount vm:byte-bits))
+			  (setf fill-ptr (sap+ fill-ptr amount))))
+		     fill-ptr))
+		  (t
+		   (let ((inst-stream (make-code-instruction-stream code-obj)))
+		     (setf fixups (assem:emit-code-vector inst-stream segment))
+		     (code-instruction-stream-current inst-stream))))))
       (declare (type index box-num total-length))
 
       (do-core-fixups code-obj fixups)
@@ -161,8 +174,7 @@
       
       (setf (code-header-ref code-obj vm:code-trace-table-offset-slot) length)
       (copy-to-system-area trace-table (* vm:vector-data-offset vm:word-bits)
-			   (code-instruction-stream-current inst-stream) 0
-			   trace-table-bits)
+			   trace-table-sap 0 trace-table-bits)
 
       (do ((index vm:code-constants-offset (1+ index)))
 	  ((>= index (length constants)))
