@@ -98,14 +98,15 @@
 (comf "ncode:mmlispdefs")
 (comf "nicode:machdefs")
 (comf "nicode:netnamedefs")
-#-new-compiler ; Leave these out for now...
-(load "nicode:machmsgdefs.lisp")
-#-new-compiler
-(comf "nicode:machuser")
-#-new-compiler
-(load "nicode:netnamemsgdefs.lisp")
-#-new-compiler
-(comf "nicode:netnameuser")
+
+(let ((system:*alien-eval-when* '(compile)))
+  (unless (probe-file "nicode:machuser.nfasl")
+    (load "nicode:machmsgdefs.lisp")
+    (comf "nicode:machuser"))
+  
+  (unless (probe-file "nicode:netnameuser.nfasl")
+    (load "nicode:netnamemsgdefs.lisp")
+    (comf "nicode:netnameuser")))
 
 (comf "ncode:defstruct")
 (comf "ncode:defmacro")
