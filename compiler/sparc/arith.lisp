@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.34 2003/08/22 16:14:37 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.35 2003/10/13 16:10:22 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -345,8 +345,8 @@
       (inst cmp y zero-tn)
       (inst b :eq zero :pn)
       ;; Sign extend the numbers, just in case.
-        (inst sra x 0)
-      (inst sra y 0)
+        (inst signx x)
+      (inst signx y)
       (inst sdivx q x y)
       ;; Compute remainder
       (inst mulx r q y)
@@ -1594,11 +1594,11 @@
 	(inst ,op ,r ,x ,y))
        (signed-reg
 	;; Sign-extend Y
-	(inst sra ,y64 ,y 0)
+	(inst signx ,y64 ,y)
 	(inst ,op ,r ,x ,y64))
        (unsigned-reg
 	;; Zero-extend Y
-	(inst srl ,y64 ,y 0)
+	(inst clruw ,y64 ,y)
 	(inst ,op ,r ,x ,y64))
        (immediate
 	(inst ,op ,r ,x ,y)))
@@ -1611,11 +1611,11 @@
       (inst ,op ,r ,x))
      (signed-reg
       ;; Sign-extend X
-      (inst sra ,x64 ,x 0)
+      (inst signx ,x64 ,x)
       (inst ,op ,r ,x64))
      (unsigned-reg
       ;; Zero-extend X
-      (inst srl ,x64 ,x 0)
+      (inst clruw ,x64 ,x)
       (inst ,op ,r ,x64))))
   
 ;; Try all possible combinations of signed64-reg, signed-reg, and
@@ -1632,11 +1632,11 @@
       (sc-case-64 ,r ,x ,y ,y64 ,op))
      (signed-reg
       ;; Sign-extend X
-      (inst sra ,x64 ,x 0)
+      (inst signx ,x64 ,x)
       (sc-case-64 ,r ,x64 ,y ,y64 ,op))
      (unsigned-reg
       ;; Zero-extend X
-      (inst srl ,x64 ,x 0)
+      (inst clruw ,x64 ,x)
       (sc-case-64 ,r ,x64 ,y ,y64 ,op))))
 
 ;; Operations that result in 64-bit results.
@@ -1702,9 +1702,9 @@
   (:generator 2
     (sc-case y
       ((signed64-reg unsigned64-reg)
-       (inst srl r x 0)			; Zero-extend, just in case
+       (inst clruw r x)			; Zero-extend, just in case
        (inst and r y)
-       (inst srl r 0)			; Zero-extend, just in case
+       (inst clruw r)			; Zero-extend, just in case
        )
       (signed-reg
        (inst and r x y)
@@ -1722,9 +1722,9 @@
   (:generator 2
     (sc-case x
       ((signed64-reg unsigned64-reg)
-       (inst srl r y 0)			; Zero-extend, just in case
+       (inst clruw r y)			; Zero-extend, just in case
        (inst and r x y)
-       (inst srl r 0)			; Zero-extend, just in case
+       (inst clruw r)			; Zero-extend, just in case
        )
       (signed-reg
        (inst and r x y)
@@ -1752,7 +1752,7 @@
   (:translate %negate)
   (:generator 1
     ;; Zero-extend	      
-    (inst srl res x 0)
+    (inst clruw res x)
     (inst neg res)))
 
 (define-vop (fast-negate/signed=>signed64 fast-safe-arith-op)
@@ -1763,7 +1763,7 @@
   (:translate %negate)
   (:generator 1
     ;; Sign-extend	      
-    (inst sra res x 0)
+    (inst signx res x)
     (inst neg res)))
 
 ;; Signed 64x64->64 bit multiply
@@ -1846,9 +1846,9 @@
       (signed64-reg
        (move num64 number))
       (signed-reg
-       (inst sra num64 number 0))
+       (inst signx num64 number))
       (unsigned-reg
-       (inst srl num64 number 0)))
+       (inst clruw num64 number)))
     (sc-case amount
       (signed64-reg
        (let ((done (gen-label)))
@@ -1911,7 +1911,7 @@
       (unsigned64-reg
        (move num64 number))
       (unsigned-reg
-       (inst srl num64 number 0)))
+       (inst clruw num64 number)))
     (sc-case amount
       (signed64-reg
        (let ((done (gen-label)))
@@ -2002,16 +2002,16 @@
   (:generator 6
     (sc-case x
       (signed-reg
-       (inst sra x64 x 0))
+       (inst signx x64 x))
       (unsigned-reg
-       (inst srl x64 x 0))
+       (inst clruw x64 x))
       (t
        (move x64 x)))
     (sc-case y
       (signed-reg
-       (inst sra y64 y 0))
+       (inst signx y64 y))
       (unsigned-reg
-       (inst srl y64 y 0))
+       (inst clruw y64 y))
       ((signed64-reg unsigned64-reg zero)
        (move y64 y)))
 
@@ -2026,16 +2026,16 @@
   (:generator 6
     (sc-case x
       (signed-reg
-       (inst sra x64 x 0))
+       (inst signx x64 x))
       (unsigned-reg
-       (inst srl x64 x 0))
+       (inst clruw x64 x))
       (t
        (move x64 x)))
     (sc-case y
       (signed-reg
-       (inst sra y64 y 0))
+       (inst signx y64 y))
       (unsigned-reg
-       (inst srl y64 y 0))
+       (inst clruw y64 y))
       ((signed64-reg unsigned64-reg zero)
        (move y64 y)))
 
@@ -2050,16 +2050,16 @@
   (:generator 6
     (sc-case x
       (signed-reg
-       (inst sra x64 x 0))
+       (inst signx x64 x))
       (unsigned-reg
-       (inst srl x64 x 0))
+       (inst clruw x64 x))
       (t
        (move x64 x)))
     (sc-case y
       (signed-reg
-       (inst sra y64 y 0))
+       (inst signx y64 y))
       (unsigned-reg
-       (inst srl y64 y 0))
+       (inst clruw y64 y))
       ((signed64-reg unsigned64-reg zero)
        (move y64 y)))
 
@@ -2074,9 +2074,9 @@
   (:generator 6
     (sc-case x
       (signed-reg
-       (inst sra x64 x 0))
+       (inst signx x64 x))
       (unsigned-reg
-       (inst srl x64 x 0))
+       (inst clruw x64 x))
       (t
        (move x64 x)))
     (inst cmp x64 y)
@@ -2090,12 +2090,12 @@
   (:generator 6
     (sc-case x
       (unsigned-reg
-       (inst srl x64 x 0))
+       (inst clruw x64 x))
       (t
        (move x64 x)))
     (sc-case y
       (unsigned-reg
-       (inst srl y64 y 0))
+       (inst clruw y64 y))
       ((signed64-reg unsigned64-reg zero)
        (move y64 y)))
 
@@ -2110,12 +2110,12 @@
   (:generator 6
     (sc-case x
       (unsigned-reg
-       (inst srl x64 x 0))
+       (inst clruw x64 x))
       (t
        (move x64 x)))
     (sc-case y
       (unsigned-reg
-       (inst srl y64 y 0))
+       (inst clruw y64 y))
       ((signed64-reg unsigned64-reg zero)
        (move y64 y)))
 
@@ -2130,12 +2130,12 @@
   (:generator 6
     (sc-case x
       (unsigned-reg
-       (inst srl x64 x 0))
+       (inst clruw x64 x))
       (t
        (move x64 x)))
     (sc-case y
       (unsigned-reg
-       (inst srl y64 y 0))
+       (inst clruw y64 y))
       ((signed64-reg unsigned64-reg zero)
        (move y64 y)))
 
@@ -2150,7 +2150,7 @@
   (:generator 6
     (sc-case x
       (unsigned-reg
-       (inst srl x64 x 0))
+       (inst clruw x64 x))
       (t
        (move x64 x)))
     (inst cmp x64 y)
