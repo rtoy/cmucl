@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.47 1992/07/22 23:22:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.48 1992/07/31 17:19:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -766,10 +766,11 @@
     (when name
       (let ((info (info function info name)))
 	(cond
-	 ((and info convert-again
+	 ((and convert-again
 	       (or (info function source-transform name)
 		   (info function inline-expansion name)
-		   (and (ir1-attributep (function-info-attributes info)
+		   (and info
+			(ir1-attributep (function-info-attributes info)
 					predicate)
 			(let ((dest (continuation-dest (node-cont call))))
 			  (and dest (not (if-p dest)))))))
