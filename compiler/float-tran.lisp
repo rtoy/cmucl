@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.9 1990/12/12 00:08:45 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.10 1991/01/02 19:13:58 ram Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -240,7 +240,7 @@
 		       (declare (ignore x))
 		       type)
 		   args)))
-    (let ((rtype (when assert-result '(float :policy (zerop safety)))))
+    (let ((rtype (when assert-result '(float))))
       `(progn
 	 (deftransform ,name (,args ,(frob 'single-float) ,@rtype)
 	   '(coerce (,prim ,@(mapcar #'(lambda (arg)
@@ -254,7 +254,7 @@
 (def-irrat-transforms expt %pow (x y) t)
 (def-irrat-transforms log %log (x) t)
 
-(deftransform log ((x y) (float float) float :policy (zerop safety))
+(deftransform log ((x y) (float float) float)
   '(/ (log x) (log y)))
 
 (def-irrat-transforms sqrt %sqrt (x) t)
