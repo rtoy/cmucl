@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.28 1993/08/21 00:25:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.29 1993/09/21 09:14:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,6 +142,7 @@
 (defun describe-instance (x &optional (kind :structure))
   (cond ((let ((so-class (find-class 'standard-object nil)))
 	   (and so-class (typep x so-class)))
+	 (fresh-line *standard-output*)
 	 (pcl::describe-object x *standard-output*))
 	(t
 	 (format t "~&~S is a ~(~A~) of type ~A." x kind (type-of x))
