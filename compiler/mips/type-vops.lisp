@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.14 1990/06/03 19:01:00 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.15 1990/06/04 05:23:48 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -61,75 +61,75 @@
   ;; more expensive.
   ;; 
   (frob functionp check-function function
-    vm:function-pointer-type di:object-not-function-error)
+    vm:function-pointer-type object-not-function-error)
 
   (frob listp check-list list
-    vm:list-pointer-type di:object-not-list-error)
+    vm:list-pointer-type object-not-list-error)
 
   #+nil ;; ### Only after we have real structures.
   (frob structurep check-structure structure
-    vm:structure-pointer-type di:object-not-structure)
+    vm:structure-pointer-type object-not-structure)
 
   (frob bignump check-bigunm bignum
-    vm:bignum-type di:object-not-bignum-error)
+    vm:bignum-type object-not-bignum-error)
 
   (frob ratiop check-ratio ratio
-    vm:ratio-type di:object-not-ratio-error)
+    vm:ratio-type object-not-ratio-error)
 
   (frob complexp check-complex complex
-    vm:complex-type di:object-not-complex-error)
+    vm:complex-type object-not-complex-error)
 
   (frob single-float-p check-single-float single-float
-    vm:single-float-type di:object-not-single-float-error)
+    vm:single-float-type object-not-single-float-error)
 
   (frob double-float-p check-double-float double-float
-    vm:double-float-type di:object-not-double-float-error)
+    vm:double-float-type object-not-double-float-error)
 
   (frob simple-string-p check-simple-string simple-string
-    vm:simple-string-type di:object-not-simple-string-error)
+    vm:simple-string-type object-not-simple-string-error)
 
   (frob simple-bit-vector-p check-simple-bit-vector simple-bit-vector
-    vm:simple-bit-vector-type di:object-not-simple-bit-vector-error)
+    vm:simple-bit-vector-type object-not-simple-bit-vector-error)
 
   (frob simple-vector-p check-simple-vector simple-vector
-    vm:simple-vector-type di:object-not-simple-vector-error)
+    vm:simple-vector-type object-not-simple-vector-error)
 
   (frob simple-array-unsigned-byte-2-p check-simple-array-unsigned-byte-2
     simple-array-unsigned-byte-2 vm:simple-array-unsigned-byte-2-type
-    di:object-not-simple-array-unsigned-byte-2-error)
+    object-not-simple-array-unsigned-byte-2-error)
 
   (frob simple-array-unsigned-byte-4-p check-simple-array-unsigned-byte-4
     simple-array-unsigned-byte-4 vm:simple-array-unsigned-byte-4-type
-    di:object-not-simple-array-unsigned-byte-4-error)
+    object-not-simple-array-unsigned-byte-4-error)
 
   (frob simple-array-unsigned-byte-8-p check-simple-array-unsigned-byte-8
     simple-array-unsigned-byte-8 vm:simple-array-unsigned-byte-8-type
-    di:object-not-simple-array-unsigned-byte-8-error)
+    object-not-simple-array-unsigned-byte-8-error)
 
   (frob simple-array-unsigned-byte-16-p check-simple-array-unsigned-byte-16
     simple-array-unsigned-byte-16 vm:simple-array-unsigned-byte-16-type
-    di:object-not-simple-array-unsigned-byte-16-error)
+    object-not-simple-array-unsigned-byte-16-error)
 
   (frob simple-array-unsigned-byte-32-p check-simple-array-unsigned-byte-32
     simple-array-unsigned-byte-32 vm:simple-array-unsigned-byte-32-type
-    di:object-not-simple-array-unsigned-byte-32-error)
+    object-not-simple-array-unsigned-byte-32-error)
 
   (frob simple-array-single-float-p check-simple-array-single-float
     simple-array-single-float vm:simple-array-single-float-type
-    di:object-not-simple-array-single-float-error)
+    object-not-simple-array-single-float-error)
 
   (frob simple-array-double-float-p check-simple-array-double-float
     simple-array-double-float vm:simple-array-double-float-type
-    di:object-not-simple-array-double-float-error)
+    object-not-simple-array-double-float-error)
 
   (frob base-char-p check-base-character base-character
-    vm:base-character-type di:object-not-base-character-error)
+    vm:base-character-type object-not-base-character-error)
 
   (frob system-area-pointer-p check-system-area-pointer system-area-pointer
-    vm:sap-type di:object-not-sap-error)
+    vm:sap-type object-not-sap-error)
 
   (frob weak-pointer-p check-weak-pointer weak-pointer
-    vm:weak-pointer-type di:object-not-weak-pointer-error))
+    vm:weak-pointer-type object-not-weak-pointer-error))
 
 
 ;;; Slightly tenser versions for FIXNUM's
@@ -137,7 +137,7 @@
 (define-vop (check-fixnum check-simple-type)
   (:ignore type-code error-code)
   (:generator 3
-    (let ((err-lab (generate-error-code di:object-not-fixnum-error value)))
+    (let ((err-lab (generate-error-code object-not-fixnum-error value)))
       (inst and temp value #x3)
       (inst bne temp zero-tn err-lab)
       (move result value t))))
@@ -198,16 +198,16 @@
     vm:simple-array-type vm:complex-string-type vm:complex-bit-vector-type
     vm:complex-vector-type vm:complex-array-type)
   
-  (frob nil check-function-or-symbol di:object-not-function-or-symbol-error
+  (frob nil check-function-or-symbol object-not-function-or-symbol-error
     vm:function-pointer-type vm:symbol-header-type)
 
-  (frob stringp check-string di:object-not-string-error
+  (frob stringp check-string object-not-string-error
     vm:simple-string-type vm:complex-string-type)
 
-  (frob bit-vector-p check-bit-vector di:object-not-bit-vector-error
+  (frob bit-vector-p check-bit-vector object-not-bit-vector-error
     vm:simple-bit-vector-type vm:complex-bit-vector-type)
 
-  (frob vectorp check-vector di:object-not-vector-error
+  (frob vectorp check-vector object-not-vector-error
     vm:simple-string-type vm:simple-bit-vector-type vm:simple-vector-type
     vm:simple-array-unsigned-byte-2-type vm:simple-array-unsigned-byte-4-type
     vm:simple-array-unsigned-byte-8-type vm:simple-array-unsigned-byte-16-type
@@ -215,14 +215,14 @@
     vm:simple-array-double-float-type vm:complex-string-type
     vm:complex-bit-vector-type vm:complex-vector-type)
 
-  (frob simple-array-p check-simple-array di:object-not-simple-array-error
+  (frob simple-array-p check-simple-array object-not-simple-array-error
     vm:simple-array-type vm:simple-string-type vm:simple-bit-vector-type
     vm:simple-vector-type vm:simple-array-unsigned-byte-2-type
     vm:simple-array-unsigned-byte-4-type vm:simple-array-unsigned-byte-8-type
     vm:simple-array-unsigned-byte-16-type vm:simple-array-unsigned-byte-32-type
     vm:simple-array-single-float-type vm:simple-array-double-float-type)
 
-  (frob arrayp check-array di:object-not-array-error
+  (frob arrayp check-array object-not-array-error
     vm:simple-array-type vm:simple-string-type vm:simple-bit-vector-type
     vm:simple-vector-type vm:simple-array-unsigned-byte-2-type
     vm:simple-array-unsigned-byte-4-type vm:simple-array-unsigned-byte-8-type
@@ -231,22 +231,22 @@
     vm:complex-string-type vm:complex-bit-vector-type vm:complex-vector-type
     vm:complex-array-type)
     
-  (frob numberp check-number di:object-not-number-error
+  (frob numberp check-number object-not-number-error
     vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type vm:ratio-type
     vm:single-float-type vm:double-float-type vm:complex-type)
 
-  (frob rationalp check-rational di:object-not-rational-error
+  (frob rationalp check-rational object-not-rational-error
     vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type)
 
-  (frob floatp check-float di:object-not-float-error
+  (frob floatp check-float object-not-float-error
     vm:single-float-type vm:double-float-type)
 
-  (frob realp check-real di:object-not-real-error
+  (frob realp check-real object-not-real-error
     vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type
     vm:single-float-type vm:double-float-type)
   
   ;; ### May want to make this more tense.
-  (frob integerp check-integer di:object-not-integer-error
+  (frob integerp check-integer object-not-integer-error
     vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type))
 
 
@@ -277,7 +277,7 @@
 
 (define-vop (check-signed-byte-32 check-hairy-type)
   (:generator 45
-    (let ((nope (generate-error-code di:object-not-signed-byte-32-error obj))
+    (let ((nope (generate-error-code object-not-signed-byte-32-error obj))
 	  (yep (gen-label)))
       (inst and temp obj #x3)
       (inst beq temp zero-tn yep)
@@ -349,7 +349,7 @@
 
 (define-vop (check-unsigned-byte-32 check-hairy-type)
   (:generator 45
-    (let ((nope (generate-error-code di:object-not-unsigned-byte-32-error obj))
+    (let ((nope (generate-error-code object-not-unsigned-byte-32-error obj))
 	  (yep (gen-label))
 	  (fixnum (gen-label))
 	  (single-word (gen-label)))
@@ -427,7 +427,7 @@
 		      ,@body
 		      (move res obj)))))))
 
-  (frob symbolp check-symbol di:object-not-symbol-error
+  (frob symbolp check-symbol object-not-symbol-error
     (let* ((drop-thru (gen-label))
 	   (is-symbol-label (if not-p drop-thru target)))
       (inst beq obj null-tn is-symbol-label)
@@ -435,7 +435,7 @@
       (test-simple-type obj temp target not-p vm:symbol-header-type)
       (emit-label drop-thru)))
 
-  (frob consp check-cons di:object-not-cons-error
+  (frob consp check-cons object-not-cons-error
     (let* ((drop-thru (gen-label))
 	   (is-not-cons-label (if not-p target drop-thru)))
       (inst beq obj null-tn is-not-cons-label)
@@ -473,7 +473,7 @@
 	(loadw result object vm:symbol-function-slot vm:other-pointer-type)
 	(test-simple-type result nd-temp done-label nil
 			  vm:function-pointer-type)
-	(error-call di:undefined-symbol-error saved-object)
+	(error-call undefined-symbol-error saved-object)
 	
 	(emit-label not-coercable-label)
-	(error-call di:object-not-coercable-to-function-error object)))))
+	(error-call object-not-coercable-to-function-error object)))))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.21 1990/06/03 19:09:26 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.22 1990/06/04 05:23:44 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -58,11 +58,11 @@
       (three-way-comparison x y condition :signed not-p target temp))))
 
 (define-vop (check<= check-op)
-  (:variant :gt t di:not-<=-error)
+  (:variant :gt t not-<=-error)
   (:translate check<=))
 
 (define-vop (check= check-op)
-  (:variant :eq nil di:not-=-error)
+  (:variant :eq nil not-=-error)
   (:translate check=))
 
 
