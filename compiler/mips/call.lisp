@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.48 1992/05/21 22:34:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.49 1992/07/28 20:37:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.48 1992/05/21 22:34:26 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -60,7 +58,7 @@
 ;;;
 (def-vm-support-routine make-old-fp-passing-location (standard)
   (if standard
-      (make-wired-tn *fixnum-primitive-type* immediate-arg-scn old-fp-offset)
+      (make-wired-tn *fixnum-primitive-type* immediate-arg-scn ocfp-offset)
       (make-normal-tn *fixnum-primitive-type*)))
 
 ;;; Make-Old-FP-Save-Location, Make-Return-PC-Save-Location  --  Interface
@@ -74,7 +72,7 @@
    (environment-debug-live-tn (make-normal-tn *fixnum-primitive-type*) env)
    (make-wired-tn *fixnum-primitive-type*
 		  control-stack-arg-scn
-		  old-fp-save-offset)))
+		  ocfp-save-offset)))
 ;;;
 (def-vm-support-routine make-return-pc-save-location (env)
   (specify-save-tn
@@ -154,7 +152,7 @@
 (define-vop (current-fp)
   (:results (val :scs (any-reg)))
   (:generator 1
-    (move val fp-tn)))
+    (move val cfp-tn)))
 
 ;;; Used for computing the caller's NFP for use in known-values return.  Only
 ;;; works assuming there is no variable size stuff on the nstack.
@@ -188,7 +186,7 @@
       (emit-label entry-point)
       (inst compute-code-from-fn code-tn lip-tn entry-point temp))
     ;; Build our stack frames.
-    (inst addu csp-tn fp-tn
+    (inst addu csp-tn cfp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (let ((nfp (current-nfp-tn vop)))
       (when nfp
@@ -260,25 +258,25 @@
 	move a1 null-tn			; Default register values
 	...
 	loadi nargs 1			; Force defaulting of stack values
-	move old-fp csp			; Set up args for SP resetting
+	move ocfp csp			; Set up args for SP resetting
 
 regs-defaulted
 	subu temp nargs register-arg-count
 
 	bltz temp default-value-7	; jump to default code
         addu temp temp -1
-	loadw move-temp old-fp-tn 6	; Move value to correct location.
+	loadw move-temp ocfp-tn 6	; Move value to correct location.
 	store-stack-tn val4-tn move-temp
 
 	bltz temp default-value-8
         addu temp temp -1
-	loadw move-temp old-fp-tn 7
+	loadw move-temp ocfp-tn 7
 	store-stack-tn val5-tn move-temp
 
 	...
 
 defaulting-done
-	move sp old-fp			; Reset SP.
+	move sp ocfp			; Reset SP.
 <end of code>
 
 <elsewhere>
@@ -303,23 +301,23 @@ default-value-8
 	;; the multiple-value entry point for a single desired value, but
 	;; the code location has to be here, or the debugger backtrace
 	;; gets confused.
-	(note-this-location vop :single-value-return)
-	(move csp-tn old-fp-tn)
-	(inst nop)
-	(inst entry-point)
+	(without-scheduling ()
+	  (note-this-location vop :single-value-return)
+	  (move csp-tn ocfp-tn)
+	  (inst nop))
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label))
 	    (default-stack-vals (gen-label)))
-	;; Note that this is an unknown-values return point.
-	(note-this-location vop :unknown-return)
-	;; Branch off to the MV case.
-	(inst b regs-defaulted)
-	;; If there are no stack results, clear the stack now.
-	(if (> nvals register-arg-count)
-	    (inst addu temp nargs-tn (fixnum (- register-arg-count)))
-	    (move csp-tn old-fp-tn))
-	(inst entry-point)
+	(without-scheduling ()
+	  ;; Note that this is an unknown-values return point.
+	  (note-this-location vop :unknown-return)
+	  ;; Branch off to the MV case.
+	  (inst b regs-defaulted)
+	  ;; If there are no stack results, clear the stack now.
+	  (if (> nvals register-arg-count)
+	      (inst addu temp nargs-tn (fixnum (- register-arg-count)))
+	      (move csp-tn ocfp-tn)))
 	
 	;; Do the single value calse.
 	(do ((i 1 (1+ i))
@@ -328,7 +326,7 @@ default-value-8
 	  (move (tn-ref-tn val) null-tn))
 	(when (> nvals register-arg-count)
 	  (inst b default-stack-vals)
-	  (move old-fp-tn csp-tn))
+	  (move ocfp-tn csp-tn))
 	
 	(emit-label regs-defaulted)
 	
@@ -348,12 +346,12 @@ default-value-8
 		(defaults (cons default-lab tn))
 		
 		(inst bltz temp default-lab)
-		(inst lw move-temp old-fp-tn (* i vm:word-bytes))
+		(inst lw move-temp ocfp-tn (* i vm:word-bytes))
 		(inst addu temp temp (fixnum -1))
 		(store-stack-tn tn move-temp)))
 	    
 	    (emit-label defaulting-done)
-	    (move csp-tn old-fp-tn)
+	    (move csp-tn ocfp-tn)
 	    
 	    (let ((defaults (defaults)))
 	      (assert defaults)
@@ -398,9 +396,9 @@ default-value-8
   (declare (type tn args nargs start count temp))
   (let ((variable-values (gen-label))
 	(done (gen-label)))
-    (inst b variable-values)
-    (inst nop)
-    (inst entry-point)
+    (without-scheduling ()
+      (inst b variable-values)
+      (inst nop))
     
     (inst compute-code-from-lra code-tn code-tn lra-label temp)
     (inst addu csp-tn csp-tn 4)
@@ -433,7 +431,7 @@ default-value-8
   (:results
    (start :scs (any-reg))
    (count :scs (any-reg)))
-  (:temporary (:sc descriptor-reg :offset old-fp-offset
+  (:temporary (:sc descriptor-reg :offset ocfp-offset
 		   :from :eval :to (:result 0))
 	      values-start)
   (:temporary (:sc any-reg :offset nargs-offset
@@ -475,7 +473,7 @@ default-value-8
   (:temporary (:scs (descriptor-reg) :from :eval) move-temp)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
-  (:temporary (:sc any-reg :offset old-fp-offset :from :eval) ocfp)
+  (:temporary (:sc any-reg :offset ocfp-offset :from :eval) ocfp)
   (:ignore arg-locs args ocfp)
   (:generator 5
     (trace-table-entry trace-table-call-site)
@@ -486,7 +484,7 @@ default-value-8
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (maybe-load-stack-tn fp-tn fp)
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (note-this-location vop :call-site)
@@ -526,7 +524,7 @@ default-value-8
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (maybe-load-stack-tn fp-tn fp)
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (note-this-location vop :call-site)
@@ -570,7 +568,7 @@ default-value-8
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (maybe-load-stack-tn fp-tn fp)
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (note-this-location vop :call-site)
@@ -591,28 +589,28 @@ default-value-8
 ;;; MAYBE-LOAD-STACK-TN.
 ;;;
 (define-vop (known-return)
-  (:args (old-fp :target old-fp-temp)
+  (:args (ocfp :target ocfp-temp)
 	 (return-pc :target return-pc-temp)
 	 (vals :more t))
-  (:temporary (:sc any-reg :from (:argument 0)) old-fp-temp)
+  (:temporary (:sc any-reg :from (:argument 0)) ocfp-temp)
   (:temporary (:sc descriptor-reg :from (:argument 1)) return-pc-temp)
-  (:temporary (:scs (interior-reg) :type interior) lip)
+  (:temporary (:scs (interior-reg)) lip)
   (:move-args :known-return)
   (:info val-locs)
   (:ignore val-locs vals)
   (:vop-var vop)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
-    (maybe-load-stack-tn old-fp-temp old-fp)
+    (maybe-load-stack-tn ocfp-temp ocfp)
     (maybe-load-stack-tn return-pc-temp return-pc)
-    (move csp-tn fp-tn)
+    (move csp-tn cfp-tn)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(inst addu nsp-tn cur-nfp
 	      (bytes-needed-for-non-descriptor-stack-frame))))
     (inst addu lip return-pc-temp (- vm:word-bytes vm:other-pointer-type))
     (inst j lip)
-    (move fp-tn old-fp-temp)
+    (move cfp-tn ocfp-temp)
     (trace-table-entry trace-table-normal)))
 
 
@@ -646,7 +644,7 @@ default-value-8
 ;;;    result values are specified by the Start and Count as in the
 ;;;    unknown-values continuation representation.
 ;;; -- If :Tail, then do a tail-recursive call.  No values are returned.
-;;;    The Old-Fp and Return-PC are passed as the second and third arguments.
+;;;    The Ocfp and Return-PC are passed as the second and third arguments.
 ;;;
 ;;; In non-tail calls, the pointer to the stack arguments is passed as the last
 ;;; fixed argument.  If Variable is false, then the passing locations are
@@ -672,7 +670,7 @@ default-value-8
 	   '(arg-fun :target lexenv))
       
       ,@(when (eq return :tail)
-	  '((old-fp :target old-fp-pass)
+	  '((ocfp :target ocfp-pass)
 	    (return-pc :target return-pc-pass)))
       
       ,@(unless variable '((args :more t :scs (descriptor-reg)))))
@@ -695,11 +693,11 @@ default-value-8
       ,@(unless variable '(args)))
 
      (:temporary (:sc descriptor-reg
-		  :offset old-fp-offset
+		  :offset ocfp-offset
 		  :from (:argument 1)
 		  ,@(unless (eq return :fixed)
 		      '(:to :eval)))
-		 old-fp-pass)
+		 ocfp-pass)
 
      (:temporary (:sc descriptor-reg
 		  :offset lra-offset
@@ -708,7 +706,7 @@ default-value-8
 		 return-pc-pass)
 
      ,@(if named
-	 `((:temporary (:sc descriptor-reg :offset cname-offset
+	 `((:temporary (:sc descriptor-reg :offset fdefn-offset
 			:from (:argument ,(if (eq return :tail) 0 1))
 			:to :eval)
 		       name-pass))
@@ -737,7 +735,7 @@ default-value-8
 	 '((:temporary (:scs (non-descriptor-reg) :from :eval) temp)
 	   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
 
-     (:temporary (:scs (interior-reg) :type interior) lip)
+     (:temporary (:scs (interior-reg)) lip)
 
      (:generator ,(+ (if named 5 0)
 		     (if variable 19 1)
@@ -752,8 +750,8 @@ default-value-8
 	       (remove nil
 		       (list :load-nargs
 			     ,@(if (eq return :tail)
-				   '((unless (location= old-fp old-fp-pass)
-				       :load-old-fp)
+				   '((unless (location= ocfp ocfp-pass)
+				       :load-ocfp)
 				     (unless (location= return-pc
 							return-pc-pass)
 				       :load-return-pc)
@@ -779,20 +777,20 @@ default-value-8
 					   register-arg-names)))
 			     '((inst li nargs-pass (fixnum nargs)))))
 		      ,@(if (eq return :tail)
-			    '((:load-old-fp
-			       (sc-case old-fp
+			    '((:load-ocfp
+			       (sc-case ocfp
 				 (any-reg
-				  (inst move old-fp-pass old-fp))
+				  (inst move ocfp-pass ocfp))
 				 (control-stack
-				  (inst lw old-fp-pass fp-tn
-					(ash (tn-offset old-fp)
+				  (inst lw ocfp-pass cfp-tn
+					(ash (tn-offset ocfp)
 					     vm:word-shift)))))
 			      (:load-return-pc
 			       (sc-case return-pc
 				 (descriptor-reg
 				  (inst move return-pc-pass return-pc))
 				 (control-stack
-				  (inst lw return-pc-pass fp-tn
+				  (inst lw return-pc-pass cfp-tn
 					(ash (tn-offset return-pc)
 					     vm:word-shift)))))
 			      (:frob-nfp
@@ -804,13 +802,13 @@ default-value-8
 			      (:frob-nfp
 			       (store-stack-tn nfp-save cur-nfp))
 			      (:save-fp
-			       (inst move old-fp-pass fp-tn))
+			       (inst move ocfp-pass cfp-tn))
 			      (:load-fp
 			       ,(if variable
-				    '(move fp-tn new-fp)
+				    '(move cfp-tn new-fp)
 				    '(if (> nargs register-arg-count)
-					 (move fp-tn new-fp)
-					 (move fp-tn csp-tn))))))
+					 (move cfp-tn new-fp)
+					 (move cfp-tn csp-tn))))))
 		      ((nil)
 		       (inst nop))))))
 
@@ -818,7 +816,7 @@ default-value-8
 		 `((sc-case name
 		     (descriptor-reg (move name-pass name))
 		     (control-stack
-		      (inst lw name-pass fp-tn
+		      (inst lw name-pass cfp-tn
 			    (ash (tn-offset name) vm:word-shift))
 		      (do-next-filler))
 		     (constant
@@ -833,7 +831,7 @@ default-value-8
 		 `((sc-case arg-fun
 		     (descriptor-reg (move lexenv arg-fun))
 		     (control-stack
-		      (inst lw lexenv fp-tn
+		      (inst lw lexenv cfp-tn
 			    (ash (tn-offset arg-fun) vm:word-shift))
 		      (do-next-filler))
 		     (constant
@@ -894,12 +892,12 @@ default-value-8
   (:args
    (args-arg :scs (any-reg) :target args)
    (function-arg :scs (descriptor-reg) :target lexenv)
-   (old-fp-arg :scs (any-reg) :target old-fp)
+   (ocfp-arg :scs (any-reg) :target ocfp)
    (lra-arg :scs (descriptor-reg) :target lra))
 
   (:temporary (:sc any-reg :offset nl0-offset :from (:argument 0)) args)
   (:temporary (:sc any-reg :offset lexenv-offset :from (:argument 1)) lexenv)
-  (:temporary (:sc any-reg :offset old-fp-offset :from (:argument 2)) old-fp)
+  (:temporary (:sc any-reg :offset ocfp-offset :from (:argument 2)) ocfp)
   (:temporary (:sc any-reg :offset lra-offset :from (:argument 3)) lra)
 
   (:vop-var vop)
@@ -909,7 +907,7 @@ default-value-8
     ;; Move these into the passing locations if they are not already there.
     (move args args-arg)
     (move lexenv function-arg)
-    (move old-fp old-fp-arg)
+    (move ocfp ocfp-arg)
     (move lra lra-arg)
 
     ;; Clear the number stack if anything is there.
@@ -928,7 +926,7 @@ default-value-8
 ;;; Return a single value using the unknown-values convention.
 ;;; 
 (define-vop (return-single)
-  (:args (old-fp :scs (any-reg))
+  (:args (ocfp :scs (any-reg))
 	 (return-pc :scs (descriptor-reg))
 	 (value))
   (:ignore value)
@@ -943,7 +941,7 @@ default-value-8
 	      (bytes-needed-for-non-descriptor-stack-frame))))
     ;; Clear the control stack, and restore the frame pointer.
     (move csp-tn cfp-tn)
-    (move cfp-tn old-fp)
+    (move cfp-tn ocfp)
     ;; Out of here.
     (lisp-return return-pc lip :offset 2)
     (trace-table-entry trace-table-normal)))
@@ -964,7 +962,7 @@ default-value-8
 ;;;
 (define-vop (return)
   (:args
-   (old-fp :scs (any-reg))
+   (ocfp :scs (any-reg))
    (return-pc :scs (descriptor-reg) :to (:eval 1))
    (values :more t))
   (:ignore values)
@@ -976,8 +974,8 @@ default-value-8
   (:temporary (:sc descriptor-reg :offset a4-offset :from (:eval 0)) a4)
   (:temporary (:sc descriptor-reg :offset a5-offset :from (:eval 0)) a5)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
-  (:temporary (:sc any-reg :offset old-fp-offset) val-ptr)
-  (:temporary (:scs (interior-reg) :type interior) lip)
+  (:temporary (:sc any-reg :offset ocfp-offset) val-ptr)
+  (:temporary (:scs (interior-reg)) lip)
   (:vop-var vop)
   (:generator 6
     ;; Clear the number stack.
@@ -988,17 +986,17 @@ default-value-8
 	      (bytes-needed-for-non-descriptor-stack-frame))))
     (cond ((= nvals 1)
 	   ;; Clear the control stack, and restore the frame pointer.
-	   (move csp-tn fp-tn)
-	   (move fp-tn old-fp)
+	   (move csp-tn cfp-tn)
+	   (move cfp-tn ocfp)
 	   ;; Out of here.
 	   (lisp-return return-pc lip :offset 2))
 	  (t
 	   ;; Establish the values pointer and values count.
-	   (move val-ptr fp-tn)
+	   (move val-ptr cfp-tn)
 	   (inst li nargs (fixnum nvals))
 	   ;; restore the frame pointer and clear as much of the control
 	   ;; stack as possible.
-	   (move fp-tn old-fp)
+	   (move cfp-tn ocfp)
 	   (inst addu csp-tn val-ptr (* nvals word-bytes))
 	   ;; pre-default any argument register that need it.
 	   (when (< nvals register-arg-count)
@@ -1015,17 +1013,17 @@ default-value-8
 ;;;
 (define-vop (return-multiple)
   (:args
-   (old-fp-arg :scs (any-reg) :to (:eval 1))
+   (ocfp-arg :scs (any-reg) :to (:eval 1))
    (lra-arg :scs (descriptor-reg) :to (:eval 1))
    (vals-arg :scs (any-reg) :target vals)
    (nvals-arg :scs (any-reg) :target nvals))
 
-  (:temporary (:sc any-reg :offset nl1-offset :from (:argument 0)) old-fp)
+  (:temporary (:sc any-reg :offset nl1-offset :from (:argument 0)) ocfp)
   (:temporary (:sc descriptor-reg :offset lra-offset :from (:argument 1)) lra)
   (:temporary (:sc any-reg :offset nl0-offset :from (:argument 2)) vals)
   (:temporary (:sc any-reg :offset nargs-offset :from (:argument 3)) nvals)
   (:temporary (:sc descriptor-reg :offset a0-offset) a0)
-  (:temporary (:scs (interior-reg) :type interior) lip)
+  (:temporary (:scs (interior-reg)) lip)
 
   (:vop-var vop)
 
@@ -1044,13 +1042,13 @@ default-value-8
       (inst lw a0 vals-arg)
 
       ;; Return with one value.
-      (move csp-tn fp-tn)
-      (move fp-tn old-fp-arg)
+      (move csp-tn cfp-tn)
+      (move cfp-tn ocfp-arg)
       (lisp-return lra-arg lip :offset 2)
 		
       ;; Nope, not the single case.
       (emit-label not-single)
-      (move old-fp old-fp-arg)
+      (move ocfp ocfp-arg)
       (move lra lra-arg)
       (move vals vals-arg)
       (move nvals nvals-arg)
@@ -1121,7 +1119,7 @@ default-value-8
       ;; Initialize dst to be end of stack.
       (move dst csp-tn)
       ;; Initialize src to be end of args.
-      (inst addu src fp-tn nargs-tn)
+      (inst addu src cfp-tn nargs-tn)
 
       (emit-label loop)
       ;; *--dst = *--src, --count
@@ -1152,9 +1150,7 @@ default-value-8
 ;;; More args are stored consequtively on the stack, starting immediately at
 ;;; the context pointer.  The context pointer is not typed, so the lowtag is 0.
 ;;;
-(define-vop (more-arg word-index-ref)
-  (:variant 0 0)
-  (:translate %more-arg))
+(define-full-reffer more-arg * 0 0 (descriptor-reg any-reg) * %more-arg)
 
 
 ;;; Turn more arg (context, count) into a list.
@@ -1165,8 +1161,8 @@ default-value-8
   (:arg-types * tagged-num)
   (:temporary (:scs (any-reg) :from (:argument 0)) context)
   (:temporary (:scs (any-reg) :from (:argument 1)) count)
-  (:temporary (:scs (descriptor-reg) :from :eval) temp)
-  (:temporary (:scs (non-descriptor-reg) :from :eval) ndescr dst)
+  (:temporary (:scs (descriptor-reg) :from :eval) temp dst)
+  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
   (:translate %listify-rest-args)
   (:policy :safe)
@@ -1181,13 +1177,13 @@ default-value-8
       (move result null-tn)
 
       ;; We need to do this atomically.
-      (pseudo-atomic (ndescr)
+      (pseudo-atomic (pa-flag)
 	;; Allocate a cons (2 words) for each item.
-	(inst addu result alloc-tn vm:list-pointer-type)
+	(inst or result alloc-tn vm:list-pointer-type)
 	(move dst result)
-	(inst addu alloc-tn alloc-tn count)
+	(inst sll temp count 1)
 	(inst b enter)
-	(inst addu alloc-tn alloc-tn count)
+	(inst addu alloc-tn alloc-tn temp)
 
 	;; Store the current cons in the cdr of the previous cons.
 	(emit-label loop)

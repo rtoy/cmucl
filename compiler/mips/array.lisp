@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.34 1992/07/08 20:55:30 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.35 1992/07/28 20:37:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.34 1992/07/08 20:55:30 hallgren Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -29,56 +27,54 @@
 	 (rank :scs (any-reg)))
   (:arg-types positive-fixnum positive-fixnum)
   (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
-  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:temporary (:scs (any-reg)) temp1)
+  (:temporary (:scs (non-descriptor-reg)) temp2)
+  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
-  (:generator 25
-    (pseudo-atomic (ndescr)
-      (inst addu header alloc-tn vm:other-pointer-type)
-      (inst addu alloc-tn
-	    (+ (* vm:array-dimensions-offset vm:word-bytes)
-	       vm:lowtag-mask))
-      (inst addu alloc-tn rank)
-      (inst li ndescr (lognot vm:lowtag-mask))
-      (inst and alloc-tn ndescr)
-      (inst addu ndescr rank (fixnum (1- vm:array-dimensions-offset)))
-      (inst sll ndescr ndescr vm:type-bits)
-      (inst or ndescr ndescr type)
-      (inst srl ndescr ndescr 2)
-      (storew ndescr header 0 vm:other-pointer-type))
+  (:generator 13
+    (pseudo-atomic (pa-flag)
+      (inst or header alloc-tn other-pointer-type)
+      (inst addu temp1 rank (+ (* array-dimensions-offset word-bytes)
+			       lowtag-mask))
+      (inst li temp2 (lognot lowtag-mask))
+      (inst and temp1 temp2)
+      (inst addu alloc-tn temp1)
+      (inst addu temp2 rank (fixnum (1- array-dimensions-offset)))
+      (inst sll temp2 type-bits)
+      (inst or temp2 temp2 type)
+      (inst srl temp2 2)
+      (storew temp2 header 0 other-pointer-type))
     (move result header)))
 
 
 ;;;; Additional accessors and setters for the array header.
 
-(defknown lisp::%array-dimension (t fixnum) fixnum
+(defknown lisp::%array-dimension (t index) index
   (flushable))
-(defknown lisp::%set-array-dimension (t fixnum fixnum) fixnum
+(defknown lisp::%set-array-dimension (t index index) index
   ())
 
-(define-vop (%array-dimension word-index-ref)
-  (:translate lisp::%array-dimension)
-  (:policy :fast-safe)
-  (:variant vm:array-dimensions-offset vm:other-pointer-type))
+(define-full-reffer %array-dimension *
+  array-dimensions-offset other-pointer-type
+  (any-reg) positive-fixnum lisp::%array-dimension)
 
-(define-vop (%set-array-dimension word-index-set)
-  (:translate lisp::%set-array-dimension)
-  (:policy :fast-safe)
-  (:variant vm:array-dimensions-offset vm:other-pointer-type))
+(define-full-setter %set-array-dimension *
+  array-dimensions-offset other-pointer-type
+  (any-reg) positive-fixnum lisp::%set-array-dimension)
 
 
-
-(defknown lisp::%array-rank (t) fixnum (flushable))
+(defknown lisp::%array-rank (t) index (flushable))
 
 (define-vop (array-rank-vop)
   (:translate lisp::%array-rank)
   (:policy :fast-safe)
   (:args (x :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 6
-    (loadw temp x 0 vm:other-pointer-type)
-    (inst sra temp vm:type-bits)
-    (inst subu temp (1- vm:array-dimensions-offset))
+    (loadw temp x 0 other-pointer-type)
+    (inst sra temp type-bits)
+    (inst subu temp (1- array-dimensions-offset))
     (inst sll res temp 2)))
 
 
@@ -93,7 +89,7 @@
 	 (bound :scs (any-reg descriptor-reg))
 	 (index :scs (any-reg descriptor-reg) :target result))
   (:results (result :scs (any-reg descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 5
@@ -112,47 +108,43 @@
 ;;; elements are represented in integer registers and are built out of
 ;;; 8, 16, or 32 bit elements.
 
-(defmacro def-data-vector-frobs (type variant element-type &rest scs)
+(eval-when (compile eval)
+
+(defmacro def-full-data-vector-frobs (type element-type &rest scs)
   `(progn
-     (define-vop (,(intern (concatenate 'simple-string
-					"DATA-VECTOR-REF/"
-					(string type)))
-		  ,(intern (concatenate 'simple-string
-					(string variant)
-					"-REF")))
-       (:note "inline array access")
-       (:variant vm:vector-data-offset vm:other-pointer-type)
-       (:translate data-vector-ref)
-       (:arg-types ,type positive-fixnum)
-       (:results (value :scs ,scs))
-       (:result-types ,element-type))
-     (define-vop (,(intern (concatenate 'simple-string
-					"DATA-VECTOR-SET/"
-					(string type)))
-		  ,(intern (concatenate 'simple-string
-					(string variant)
-					"-SET")))
-       (:note "inline array store")
-       (:variant vm:vector-data-offset vm:other-pointer-type)
-       (:translate data-vector-set)
-       (:arg-types ,type positive-fixnum ,element-type)
-       (:args (object :scs (descriptor-reg))
-	      (index :scs (any-reg zero immediate unsigned-immediate))
-	      (value :scs ,scs))
-       (:results (result :scs ,scs))
-       (:result-types ,element-type))))
+     (define-full-reffer ,(symbolicate "DATA-VECTOR-REF/" type) ,type
+       vector-data-offset other-pointer-type ,scs ,element-type
+       data-vector-ref)
+     (define-full-setter ,(symbolicate "DATA-VECTOR-SET/" type) ,type
+       vector-data-offset other-pointer-type ,scs ,element-type
+       data-vector-set)))
 
-(def-data-vector-frobs simple-string byte-index
-  base-char base-char-reg)
-(def-data-vector-frobs simple-vector word-index
-  * descriptor-reg any-reg)
+(defmacro def-partial-data-vector-frobs
+	  (type element-type size signed &rest scs)
+  `(progn
+     (define-partial-reffer ,(symbolicate "DATA-VECTOR-REF/" type) ,type
+       ,size ,signed vector-data-offset other-pointer-type ,scs
+       ,element-type data-vector-ref)
+     (define-partial-setter ,(symbolicate "DATA-VECTOR-SET/" type) ,type
+       ,size vector-data-offset other-pointer-type ,scs
+       ,element-type data-vector-set)))
 
-(def-data-vector-frobs simple-array-unsigned-byte-8 byte-index
-  positive-fixnum unsigned-reg)
-(def-data-vector-frobs simple-array-unsigned-byte-16 halfword-index
-  positive-fixnum unsigned-reg)
-(def-data-vector-frobs simple-array-unsigned-byte-32 word-index
-  unsigned-num unsigned-reg)
+); eval-when (compile eval)
+
+(def-full-data-vector-frobs simple-vector * descriptor-reg any-reg)
+
+(def-partial-data-vector-frobs simple-string base-char :byte :leave-alone
+  base-char-reg)
+
+(def-partial-data-vector-frobs simple-array-unsigned-byte-8 positive-fixnum
+  :byte nil unsigned-reg signed-reg)
+
+(def-partial-data-vector-frobs simple-array-unsigned-byte-16 positive-fixnum
+  :short nil unsigned-reg signed-reg)
+
+(def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
+  unsigned-reg)
+
 
 
 ;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
@@ -160,7 +152,7 @@
 ;;; 
 
 (defmacro def-small-data-vector-frobs (type bits)
-  (let* ((elements-per-word (floor vm:word-bits bits))
+  (let* ((elements-per-word (floor word-bits bits))
 	 (bit-shift (1- (integer-length elements-per-word))))
     `(progn
        (define-vop (,(symbolicate 'data-vector-ref/ type))
@@ -179,8 +171,8 @@
 	   (inst sll temp 2)
 	   (inst addu lip object temp)
 	   (inst lw result lip
-		 (- (* vm:vector-data-offset vm:word-bytes)
-		    vm:other-pointer-type))
+		 (- (* vector-data-offset word-bytes)
+		    other-pointer-type))
 	   (inst and temp index ,(1- elements-per-word))
 	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
 	       `((inst xor temp ,(1- elements-per-word))))
@@ -197,9 +189,9 @@
 		     (:constant
 		      (integer 0
 			       ,(1- (* (1+ (- (floor (+ #x7fff
-							vm:other-pointer-type)
-						     vm:word-bytes)
-					      vm:vector-data-offset))
+							other-pointer-type)
+						     word-bytes)
+					      vector-data-offset))
 				       elements-per-word)))))
 	 (:info index)
 	 (:results (result :scs (unsigned-reg)))
@@ -208,8 +200,8 @@
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
 	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
 		 `((setf extra (logxor extra (1- ,elements-per-word)))))
-	     (loadw result object (+ word vm:vector-data-offset) 
-		    vm:other-pointer-type)
+	     (loadw result object (+ word vector-data-offset) 
+		    other-pointer-type)
 	     (unless (zerop extra)
 	       (inst srl result (* extra ,bits)))
 	     (unless (= extra ,(1- elements-per-word))
@@ -232,8 +224,8 @@
 	   (inst sll temp 2)
 	   (inst addu lip object temp)
 	   (inst lw old lip
-		 (- (* vm:vector-data-offset vm:word-bytes)
-		    vm:other-pointer-type))
+		 (- (* vector-data-offset word-bytes)
+		    other-pointer-type))
 	   (inst and shift index ,(1- elements-per-word))
 	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
 	       `((inst xor shift ,(1- elements-per-word))))
@@ -254,8 +246,8 @@
 	     (inst sll temp shift)
 	     (inst or old temp))
 	   (inst sw old lip
-		 (- (* vm:vector-data-offset vm:word-bytes)
-		    vm:other-pointer-type))
+		 (- (* vector-data-offset word-bytes)
+		    other-pointer-type))
 	   (sc-case value
 	     (immediate
 	      (inst li result (tn-value value)))
@@ -272,9 +264,9 @@
 		     (:constant
 		      (integer 0
 			       ,(1- (* (1+ (- (floor (+ #x7fff
-							vm:other-pointer-type)
-						     vm:word-bytes)
-					      vm:vector-data-offset))
+							other-pointer-type)
+						     word-bytes)
+					      vector-data-offset))
 				       elements-per-word))))
 		     positive-fixnum)
 	 (:info index)
@@ -286,8 +278,8 @@
 	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
 		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (inst lw old object
-		   (- (* (+ word vm:vector-data-offset) vm:word-bytes)
-		      vm:other-pointer-type))
+		   (- (* (+ word vector-data-offset) word-bytes)
+		      other-pointer-type))
 	     (unless (and (sc-is value immediate)
 			  (= (tn-value value) ,(1- (ash 1 bits))))
 	       (cond ((= extra ,(1- elements-per-word))
@@ -311,8 +303,8 @@
 		(inst sll temp value (* extra ,bits))
 		(inst or old temp)))
 	     (inst sw old object
-		   (- (* (+ word vm:vector-data-offset) vm:word-bytes)
-		      vm:other-pointer-type))
+		   (- (* (+ word vector-data-offset) word-bytes)
+		      other-pointer-type))
 	     (sc-case value
 	       (immediate
 		(inst li result (tn-value value)))
@@ -342,8 +334,8 @@
   (:generator 20
     (inst addu lip object index)
     (inst lwc1 value lip
-	  (- (* vm:vector-data-offset vm:word-bytes)
-	     vm:other-pointer-type))
+	  (- (* vector-data-offset word-bytes)
+	     other-pointer-type))
     (inst nop)))
 
 (define-vop (data-vector-set/simple-array-single-float)
@@ -360,8 +352,8 @@
   (:generator 20
     (inst addu lip object index)
     (inst swc1 value lip
-	  (- (* vm:vector-data-offset vm:word-bytes)
-	     vm:other-pointer-type))
+	  (- (* vector-data-offset word-bytes)
+	     other-pointer-type))
     (unless (location= result value)
       (inst fmove :single result value))))
 
@@ -379,12 +371,12 @@
     (inst addu lip object index)
     (inst addu lip index)
     (inst lwc1 value lip
-	  (- (* vm:vector-data-offset vm:word-bytes)
-	     vm:other-pointer-type))
+	  (- (* vector-data-offset word-bytes)
+	     other-pointer-type))
     (inst lwc1-odd value lip
-	  (+ (- (* vm:vector-data-offset vm:word-bytes)
-		vm:other-pointer-type)
-	     vm:word-bytes))
+	  (+ (- (* vector-data-offset word-bytes)
+		other-pointer-type)
+	     word-bytes))
     (inst nop)))
 
 (define-vop (data-vector-set/simple-array-double-float)
@@ -402,12 +394,12 @@
     (inst addu lip object index)
     (inst addu lip index)
     (inst swc1 value lip
-	  (- (* vm:vector-data-offset vm:word-bytes)
-	     vm:other-pointer-type))
+	  (- (* vector-data-offset word-bytes)
+	     other-pointer-type))
     (inst swc1-odd value lip
-	  (+ (- (* vm:vector-data-offset vm:word-bytes)
-		vm:other-pointer-type)
-	     vm:word-bytes))
+	  (+ (- (* vector-data-offset word-bytes)
+		other-pointer-type)
+	     word-bytes))
     (unless (location= result value)
       (inst fmove :double result value))))
 
@@ -417,37 +409,14 @@
 ;;; what type of vector it is.
 ;;; 
 
-(define-vop (raw-bits word-index-ref)
-  (:note "raw-bits VOP")
-  (:translate %raw-bits)
-  (:results (value :scs (unsigned-reg)))
-  (:result-types unsigned-num)
-  (:variant 0 vm:other-pointer-type))
-
-(define-vop (set-raw-bits word-index-set)
-  (:note "setf raw-bits VOP")
-  (:translate %set-raw-bits)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg zero immediate unsigned-immediate))
-	 (value :scs (unsigned-reg)))
-  (:arg-types * positive-fixnum unsigned-num)
-  (:results (result :scs (unsigned-reg)))
-  (:result-types unsigned-num)
-  (:variant 0 vm:other-pointer-type))
-
+(define-full-reffer raw-bits * 0 other-pointer-type (unsigned-reg) unsigned-num
+  %raw-bits)
+(define-full-setter set-raw-bits * 0 other-pointer-type (unsigned-reg)
+  unsigned-num %set-raw-bits)
 
 
 
 ;;;; Misc. Array VOPs.
-
-
-#+nil
-(define-vop (vector-word-length)
-  (:args (vec :scs (descriptor-reg)))
-  (:results (res :scs (any-reg descriptor-reg)))
-  (:generator 6
-    (loadw res vec clc::g-vector-header-words)
-    (inst niuo res res clc::g-vector-words-mask-16)))
 
 (define-vop (get-vector-subtype get-header-data))
 (define-vop (set-vector-subtype set-header-data))

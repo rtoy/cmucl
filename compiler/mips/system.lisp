@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.45 1992/04/21 04:22:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.46 1992/07/28 20:37:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.45 1992/04/21 04:22:20 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -28,7 +26,7 @@
   (:args (x :scs (sap-reg))
 	 (y :scs (sap-reg)))
   (:arg-types system-area-pointer system-area-pointer)
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
@@ -58,7 +56,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-    (inst and result object vm:lowtag-mask)))
+    (inst and result object lowtag-mask)))
 
 (define-vop (get-type)
   (:translate get-type)
@@ -68,43 +66,40 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (let ((other-ptr (gen-label))
-	  (lowtag-only (gen-label))
-	  (function-ptr (gen-label))
-	  (done (gen-label)))
-      ;; Pick off objects with headers.
-      (simple-test-simple-type object ndescr other-ptr
-			       nil vm:other-pointer-type)
-      (simple-test-simple-type object ndescr function-ptr
-			       nil vm:function-pointer-type)
+    ;; Pick off objects with headers.
+    (inst and ndescr object lowtag-mask)
+    (inst xor ndescr other-pointer-type)
+    (inst beq ndescr other-ptr)
+    (inst xor ndescr (logxor other-pointer-type function-pointer-type))
+    (inst beq ndescr function-ptr)
 
-      ;; Pick off fixnums.
-      (inst and result object 3)
-      (inst beq result done)
+    ;; Pick off fixnums.
+    (inst and result object 3)
+    (inst beq result done)
 
-      ;; Pick off structure and list pointers.
-      (inst and result object 1)
-      (inst bne result lowtag-only)
-      (inst nop)
+    ;; Pick off structure and list pointers.
+    (inst and result object 1)
+    (inst bne result lowtag-only)
+    (inst nop)
 
       ;; Must be an other immediate.
-      (inst b done)
-      (inst and result object vm:type-mask)
+    (inst b done)
+    (inst and result object type-mask)
 
-      (emit-label function-ptr)
-      (load-type result object (- vm:function-pointer-type))
-      (inst b done)
-      (inst nop)
+    FUNCTION-PTR
+    (load-type result object (- function-pointer-type))
+    (inst b done)
+    (inst nop)
 
-      (emit-label lowtag-only)
-      (inst b done)
-      (inst and result object lowtag-mask)
+    LOWTAG-ONLY
+    (inst b done)
+    (inst and result object lowtag-mask)
 
-      (emit-label other-ptr)
-      (load-type result object (- vm:other-pointer-type))
-      (inst nop)
+    OTHER-PTR
+    (load-type result object (- other-pointer-type))
+    (inst nop)
       
-      (emit-label done))))
+    DONE))
 
 (define-vop (function-subtype)
   (:translate function-subtype)
@@ -113,7 +108,7 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (load-type result function (- vm:function-pointer-type))
+    (load-type result function (- function-pointer-type))
     (inst nop)))
 
 (define-vop (set-function-subtype)
@@ -136,8 +131,8 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (loadw res x 0 vm:other-pointer-type)
-    (inst srl res res vm:type-bits)))
+    (loadw res x 0 other-pointer-type)
+    (inst srl res res type-bits)))
 
 (define-vop (get-closure-length)
   (:translate get-closure-length)
@@ -146,8 +141,8 @@
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (loadw res x 0 vm:function-pointer-type)
-    (inst srl res res vm:type-bits)))
+    (loadw res x 0 function-pointer-type)
+    (inst srl res res type-bits)))
 
 (define-vop (set-header-data)
   (:translate set-header-data)
@@ -156,18 +151,18 @@
 	 (data :scs (any-reg immediate zero)))
   (:arg-types * positive-fixnum)
   (:results (res :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
+  (:temporary (:scs (non-descriptor-reg)) t1 t2)
   (:generator 6
-    (loadw t1 x 0 vm:other-pointer-type)
-    (inst and t1 vm:type-mask)
+    (loadw t1 x 0 other-pointer-type)
+    (inst and t1 type-mask)
     (sc-case data
       (any-reg
-       (inst sll t2 data (- vm:type-bits 2))
+       (inst sll t2 data (- type-bits 2))
        (inst or t1 t2))
       (immediate
-       (inst or t1 (ash (tn-value data) vm:type-bits)))
+       (inst or t1 (ash (tn-value data) type-bits)))
       (zero))
-    (storew t1 x 0 vm:other-pointer-type)
+    (storew t1 x 0 other-pointer-type)
     (move res x)))
 
 (define-vop (c::make-fixnum)
@@ -182,18 +177,18 @@
 
 (define-vop (c::make-other-immediate-type)
   (:args (val :scs (any-reg descriptor-reg))
-	 (type :scs (any-reg descriptor-reg immediate unsigned-immediate)
+	 (type :scs (any-reg descriptor-reg immediate)
 	       :target temp))
   (:results (res :scs (any-reg descriptor-reg)))
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
     (sc-case type
-      ((immediate unsigned-immediate)
-       (inst sll temp val vm:type-bits)
+      ((immediate)
+       (inst sll temp val type-bits)
        (inst or res temp (tn-value type)))
       (t
        (inst sra temp type 2)
-       (inst sll res val (- vm:type-bits 2))
+       (inst sll res val (- type-bits 2))
        (inst or res res temp)))))
 
 
@@ -234,10 +229,10 @@
   (:results (sap :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 10
-    (loadw ndescr code 0 vm:other-pointer-type)
-    (inst srl ndescr vm:type-bits)
-    (inst sll ndescr vm:word-shift)
-    (inst subu ndescr vm:other-pointer-type)
+    (loadw ndescr code 0 other-pointer-type)
+    (inst srl ndescr type-bits)
+    (inst sll ndescr word-shift)
+    (inst subu ndescr other-pointer-type)
     (inst addu sap code ndescr)))
 
 (define-vop (compute-function)
@@ -247,11 +242,11 @@
   (:results (func :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 10
-    (loadw ndescr code 0 vm:other-pointer-type)
-    (inst srl ndescr vm:type-bits)
-    (inst sll ndescr vm:word-shift)
+    (loadw ndescr code 0 other-pointer-type)
+    (inst srl ndescr type-bits)
+    (inst sll ndescr word-shift)
     (inst addu ndescr offset)
-    (inst addu ndescr (- vm:function-pointer-type vm:other-pointer-type))
+    (inst addu ndescr (- function-pointer-type other-pointer-type))
     (inst addu func code ndescr)))
 
 
@@ -263,12 +258,12 @@
   (:policy :fast-safe)
   (:translate unix::do-pending-interrupt)
   (:generator 1
-    (inst break vm:pending-interrupt-trap)))
+    (inst break pending-interrupt-trap)))
 
 
 (define-vop (halt)
   (:generator 1
-    (inst break vm:halt-trap)))
+    (inst break halt-trap)))
 
 
 ;;;; Dynamic vop count collection support

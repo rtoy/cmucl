@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.58 1992/04/12 20:53:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.59 1992/07/28 20:37:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.58 1992/04/12 20:53:51 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -89,7 +87,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp))
 
 ;;; With Symbol-Value, we check that the value isn't the trap object.  So
@@ -112,7 +110,7 @@
   (:info target not-p)
   (:policy :fast-safe)
   (:temporary (:scs (descriptor-reg)) value)
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp))
+  (:temporary (:scs (non-descriptor-reg)) temp))
 
 (define-vop (boundp boundp-frob)
   (:translate boundp)
@@ -240,13 +238,13 @@
 
 ;;;; Closure indexing.
 
-(define-vop (closure-index-ref word-index-ref)
-  (:variant closure-info-offset function-pointer-type)
-  (:translate %closure-index-ref))
+(define-full-reffer closure-index-ref *
+  closure-info-offset function-pointer-type
+  (descriptor-reg any-reg) * %closure-index-ref)
 
-(define-vop (set-funcallable-instance-info word-index-set)
-  (:variant funcallable-instance-info-offset function-pointer-type)
-  (:translate %set-funcallable-instance-info))
+(define-full-reffer set-funcallable-instance-info *
+  funcallable-instance-info-offset function-pointer-type
+  (descriptor-reg any-reg) * %set-funcallable-instance-info)
 
 
 
@@ -256,12 +254,11 @@
   (:policy :fast-safe)
   (:translate structure-length)
   (:args (struct :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 4
-    (loadw temp struct 0 structure-pointer-type)
-    (inst srl res temp type-bits)))
+    (loadw res struct 0 structure-pointer-type)
+    (inst srl res type-bits)))
 
 (define-vop (structure-ref slot-ref)
   (:variant structure-slots-offset structure-pointer-type)
@@ -275,28 +272,18 @@
   (:variant structure-slots-offset structure-pointer-type)
   (:arg-types structure (:constant index) *))
 
-(define-vop (structure-index-ref word-index-ref)
-  (:policy :fast-safe) 
-  (:translate structure-ref)
-  (:variant structure-slots-offset structure-pointer-type)
-  (:arg-types structure positive-fixnum))
+(define-full-reffer structure-index-ref * structure-slots-offset
+  structure-pointer-type (descriptor-reg any-reg) * structure-ref)
 
-(define-vop (structure-index-set word-index-set)
-  (:policy :fast-safe) 
-  (:translate structure-set)
-  (:variant structure-slots-offset structure-pointer-type)
-  (:arg-types structure positive-fixnum *))
+(define-full-setter structure-index-set * structure-slots-offset
+  structure-pointer-type (descriptor-reg any-reg) * structure-set)
 
 
 
 ;;;; Code object frobbing.
 
-(define-vop (code-header-ref word-index-ref)
-  (:translate code-header-ref)
-  (:policy :fast-safe)
-  (:variant 0 other-pointer-type))
+(define-full-reffer code-header-ref * 0 other-pointer-type
+  (descriptor-reg any-reg) * code-header-ref)
 
-(define-vop (code-header-set word-index-set)
-  (:translate code-header-set)
-  (:policy :fast-safe)
-  (:variant 0 other-pointer-type))
+(define-full-setter code-header-set * 0 other-pointer-type
+  (descriptor-reg any-reg) * code-header-set)

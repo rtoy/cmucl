@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.12 1991/02/20 15:15:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.13 1992/07/28 20:38:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.12 1991/02/20 15:15:29 ram Exp $
 ;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -50,7 +48,7 @@
 	      start-temp)
   (:generator 20
     (move start-temp csp-tn)
-    (inst addu csp-tn csp-tn (* nvals vm:word-bytes))
+    (inst addu csp-tn csp-tn (* nvals word-bytes))
     (do ((val vals (tn-ref-across val))
 	 (i 0 (1+ i)))
 	((null val))
@@ -76,25 +74,25 @@
 	    (count :scs (any-reg)))
   (:temporary (:scs (descriptor-reg) :type list :from (:argument 0)) list)
   (:temporary (:scs (descriptor-reg)) temp)
-  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 0
-    (let ((loop (gen-label))
-	  (done (gen-label)))
-
-      (move list arg)
-      (move start csp-tn)
-
-      (emit-label loop)
-      (inst beq list null-tn done)
-      (loadw temp list vm:cons-car-slot vm:list-pointer-type)
-      (loadw list list vm:cons-cdr-slot vm:list-pointer-type)
-      (inst addu csp-tn csp-tn vm:word-bytes)
-      (storew temp csp-tn -1)
-      (test-simple-type list ndescr loop nil vm:list-pointer-type)
-      (error-call vop bogus-argument-to-values-list-error list)
-
-      (emit-label done)
-      (inst subu count csp-tn start))))
+    (move list arg)
+    (move start csp-tn)
+    
+    LOOP
+    (inst beq list null-tn done)
+    (loadw temp list cons-car-slot list-pointer-type)
+    (loadw list list cons-cdr-slot list-pointer-type)
+    (inst addu csp-tn csp-tn word-bytes)
+    (storew temp csp-tn -1)
+    (inst and ndescr list lowtag-mask)
+    (inst xor ndescr list-pointer-type)
+    (inst beq ndescr zero-tn loop)
+    (inst nop)
+    (error-call vop bogus-argument-to-values-list-error list)
+    
+    DONE
+    (inst subu count csp-tn start)))
 

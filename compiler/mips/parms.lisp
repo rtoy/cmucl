@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.104 1992/07/08 23:46:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.105 1992/07/28 20:37:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,13 +23,6 @@
 (in-package "MIPS")
 (use-package "C")
 
-(export '(word-bits byte-bits word-shift word-bytes))
-
-(export '(float-underflow-trap-bit float-overflow-trap-bit
-	  float-imprecise-trap-bit float-invalid-trap-bit
-	  float-divide-by-zero-trap-bit single-float-trapping-nan-bit
-	  double-float-trapping-nan-bit))
-
 
 ;;;; Compiler constants.
 
@@ -40,7 +33,7 @@
 (setf (backend-fasl-file-type *target-backend*) "pmaxf")
 (setf (backend-fasl-file-implementation *target-backend*)
       pmax-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 4)
+(setf (backend-fasl-file-version *target-backend*) 5)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :little-endian)
 (setf (backend-page-size *target-backend*) 4096)
@@ -51,6 +44,23 @@
 
 
 ;;;; Machine Architecture parameters:
+
+(export '(word-bits byte-bits word-shift word-bytes float-sign-shift
+
+	  single-float-bias single-float-exponent-byte
+	  single-float-significand-byte single-float-normal-exponent-min
+	  single-float-normal-exponent-max single-float-hidden-bit
+	  single-float-trapping-nan-bit single-float-digits
+
+	  double-float-bias double-float-exponent-byte
+	  double-float-significand-byte double-float-normal-exponent-min
+	  double-float-normal-exponent-max double-float-hidden-bit
+	  double-float-trapping-nan-bit double-float-digits
+
+	  float-underflow-trap-bit float-overflow-trap-bit
+	  float-imprecise-trap-bit float-invalid-trap-bit
+	  float-divide-by-zero-trap-bit))
+
 
 (eval-when (compile load eval)
 
@@ -114,6 +124,10 @@
 
 ;;;; Description of the target address space.
 
+(export '(target-read-only-space-start
+	  target-static-space-start
+	  target-dynamic-space-start))
+
 ;;; Where to put the different spaces.
 ;;; 
 (defparameter target-read-only-space-start #x01000000)
@@ -176,6 +190,7 @@
     lisp::maybe-gc
     kernel::internal-error
     di::handle-breakpoint
+    di::handle-function-end-breakpoint
     lisp::fdefinition-object
 
     ;; Free Pointers

@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.17 1992/05/21 02:12:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.18 1992/07/28 20:37:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.17 1992/05/21 02:12:53 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -30,9 +28,9 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
-  (:temporary (:scs (interior-reg) :type interior) lip)
+  (:temporary (:scs (interior-reg)) lip)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
-  (:temporary (:sc any-reg :offset ocfp-offset) old-fp)
+  (:temporary (:sc any-reg :offset ocfp-offset) ocfp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save))
 
 
@@ -94,7 +92,7 @@
 	     (inst lw lip null-tn (static-function-offset symbol))
 	     (when cur-nfp
 	       (store-stack-tn nfp-save cur-nfp))
-	     (inst move old-fp cfp-tn)
+	     (inst move ocfp cfp-tn)
 	     (inst compute-lra-from-code lra code-tn lra-label temp)
 	     (note-this-location vop :call-site)
 	     (inst j lip)

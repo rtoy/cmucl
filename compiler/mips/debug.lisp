@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.12 1992/05/18 19:54:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.13 1992/07/28 20:37:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.12 1992/05/18 19:54:03 ram Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -34,48 +32,62 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 1
-    (move res fp-tn)))
+    (move res cfp-tn)))
 
 (define-vop (read-control-stack)
   (:translate stack-ref)
   (:policy :fast-safe)
   (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (any-reg negative-immediate zero immediate)))
+	 (offset :scs (any-reg)))
   (:arg-types system-area-pointer positive-fixnum)
-  (:temporary (:scs (sap-reg) :from (:argument 1)) sap)
+  (:temporary (:scs (sap-reg) :from :eval) sap)
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 5
-    (sc-case offset
-      ((zero)
-       (inst lw result object 0))
-      ((negative-immediate immediate)
-       (inst lw result object (* (tn-value offset) vm:word-bytes)))
-      ((any-reg)
-       (inst addu sap object offset)
-       (inst lw result sap 0)))
+    (inst add sap object offset)
+    (inst lw result sap 0)
+    (inst nop)))
+
+(define-vop (read-control-stack-c)
+  (:translate stack-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (sap-reg)))
+  (:info offset)
+  (:arg-types system-area-pointer (:constant (signed-byte 14)))
+  (:results (result :scs (descriptor-reg)))
+  (:result-types *)
+  (:generator 4
+    (inst lw result object (* offset word-bytes))
     (inst nop)))
 
 (define-vop (write-control-stack)
   (:translate %set-stack-ref)
   (:policy :fast-safe)
   (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (any-reg negative-immediate zero immediate))
+	 (offset :scs (any-reg))
 	 (value :scs (descriptor-reg) :target result))
   (:arg-types system-area-pointer positive-fixnum *)
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:temporary (:scs (sap-reg) :from (:argument 1)) sap)
-  (:generator 5
-    (sc-case offset
-      ((zero)
-       (inst sw value object 0))
-      ((negative-immediate immediate)
-       (inst sw value object (* (tn-value offset) vm:word-bytes)))
-      ((any-reg)
-       (inst addu sap object offset)
-       (inst sw value sap 0)))
+  (:generator 2
+    (inst add sap object offset)
+    (inst sw sap value 0)
     (move result value)))
+
+(define-vop (write-control-stack-c)
+  (:translate %set-stack-ref)
+  (:policy :fast-safe)
+  (:args (sap :scs (sap-reg))
+	 (value :scs (descriptor-reg) :target result))
+  (:info offset)
+  (:arg-types system-area-pointer (:constant (signed-byte 14)) *)
+  (:results (result :scs (descriptor-reg)))
+  (:result-types *)
+  (:generator 1
+    (inst sw value sap (* offset word-bytes))
+    (move result value)))
+
 
 (define-vop (code-from-mumble)
   (:policy :fast-safe)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.15 1992/07/08 20:56:37 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.16 1992/07/28 20:37:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,28 +22,28 @@
 
 (define-move-function (load-single 1) (vop x y)
   ((single-stack) (single-reg))
-  (inst lwc1 y (current-nfp-tn vop) (* (tn-offset x) vm:word-bytes))
+  (inst lwc1 y (current-nfp-tn vop) (* (tn-offset x) word-bytes))
   (inst nop))
 
 (define-move-function (store-single 1) (vop x y)
   ((single-reg) (single-stack))
-  (inst swc1 x (current-nfp-tn vop) (* (tn-offset y) vm:word-bytes)))
+  (inst swc1 x (current-nfp-tn vop) (* (tn-offset y) word-bytes)))
 
 
 (define-move-function (load-double 2) (vop x y)
   ((double-stack) (double-reg))
   (let ((nfp (current-nfp-tn vop))
-	(offset (* (tn-offset x) vm:word-bytes)))
+	(offset (* (tn-offset x) word-bytes)))
     (inst lwc1 y nfp offset)
-    (inst lwc1-odd y nfp (+ offset vm:word-bytes)))
+    (inst lwc1-odd y nfp (+ offset word-bytes)))
   (inst nop))
 
 (define-move-function (store-double 2) (vop x y)
   ((double-reg) (double-stack))
   (let ((nfp (current-nfp-tn vop))
-	(offset (* (tn-offset y) vm:word-bytes)))
+	(offset (* (tn-offset y) word-bytes)))
     (inst swc1 x nfp offset)
-    (inst swc1-odd x nfp (+ offset vm:word-bytes))))
+    (inst swc1-odd x nfp (+ offset word-bytes))))
 
 
 
@@ -70,14 +70,15 @@
   (:args (x :to :save))
   (:results (y))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:variant-vars double-p size type data)
   (:note "float to pointer coercion")
   (:generator 13
-    (with-fixed-allocation (y ndescr type size)
-      (inst swc1 x y (- (* data vm:word-bytes) vm:other-pointer-type))
+    (with-fixed-allocation (y pa-flag ndescr type size)
+      (inst swc1 x y (- (* data word-bytes) other-pointer-type))
       (when double-p
-	(inst swc1-odd x y (- (* (1+ data) vm:word-bytes)
-			      vm:other-pointer-type))))))
+	(inst swc1-odd x y (- (* (1+ data) word-bytes)
+			      other-pointer-type))))))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
@@ -87,9 +88,9 @@
 		  (:variant ,@args))
 		(define-move-vop ,name :move (,sc) (descriptor-reg)))))
   (frob move-from-single single-reg
-    nil vm:single-float-size vm:single-float-type vm:single-float-value-slot)
+    nil single-float-size single-float-type single-float-value-slot)
   (frob move-from-double double-reg
-    t vm:double-float-size vm:double-float-type vm:double-float-value-slot))
+    t double-float-size double-float-type double-float-value-slot))
 
 (macrolet ((frob (name sc double-p value)
 	     `(progn
@@ -98,15 +99,15 @@
 		  (:results (y :scs (,sc)))
 		  (:note "pointer to float coercion")
 		  (:generator 2
-		    (inst lwc1 y x (- (* ,value vm:word-bytes)
-				      vm:other-pointer-type))
+		    (inst lwc1 y x (- (* ,value word-bytes)
+				      other-pointer-type))
 		    ,@(when double-p
-			`((inst lwc1-odd y x (- (* (1+ ,value) vm:word-bytes)
-						vm:other-pointer-type))))
+			`((inst lwc1-odd y x (- (* (1+ ,value) word-bytes)
+						other-pointer-type))))
 		    (inst nop)))
 		(define-move-vop ,name :move (descriptor-reg) (,sc)))))
-  (frob move-to-single single-reg nil vm:single-float-value-slot)
-  (frob move-to-double double-reg t vm:double-float-value-slot))
+  (frob move-to-single single-reg nil single-float-value-slot)
+  (frob move-to-double double-reg t double-float-value-slot))
 
 
 (macrolet ((frob (name sc stack-sc format double-p)
@@ -123,11 +124,11 @@
 		       (unless (location= x y)
 			 (inst fmove ,format y x)))
 		      (,stack-sc
-		       (let ((offset (* (tn-offset y) vm:word-bytes)))
+		       (let ((offset (* (tn-offset y) word-bytes)))
 			 (inst swc1 x nfp offset)
 			 ,@(when double-p
 			     '((inst swc1-odd x nfp
-				     (+ offset vm:word-bytes)))))))))
+				     (+ offset word-bytes)))))))))
 		(define-move-vop ,name :move-argument
 		  (,sc descriptor-reg) (,sc)))))
   (frob move-single-float-argument single-reg single-stack :single nil)
@@ -306,6 +307,8 @@
 		(:results (y :scs (signed-reg)))
 		(:temporary (:from (:argument 0) :sc ,from-sc) temp)
 		(:temporary (:sc non-descriptor-reg) status-save new-status)
+		(:temporary (:sc non-descriptor-reg :offset nl4-offset)
+			    pa-flag)
 		(:arg-types ,from-type)
 		(:result-types signed-num)
 		(:translate %unary-truncate)
@@ -314,7 +317,7 @@
 		(:vop-var vop)
 		(:save-p :compute-only)
 		(:generator 16
-		  (pseudo-atomic (status-save)
+		  (pseudo-atomic (pa-flag)
 		    (inst cfc1 status-save 31)
 		    (inst li new-status (lognot 3))
 		    (inst and new-status status-save)

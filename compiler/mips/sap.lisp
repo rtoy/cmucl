@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.25 1992/07/08 20:56:59 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.26 1992/07/28 20:37:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,7 @@
   (:results (y :scs (sap-reg)))
   (:note "system area pointer indirection")
   (:generator 1
-    (loadw y x vm:sap-pointer-slot vm:other-pointer-type)))
+    (loadw y x sap-pointer-slot other-pointer-type)))
 
 ;;;
 (define-move-vop move-to-sap :move
@@ -40,16 +40,13 @@
   (:args (x :scs (sap-reg) :target sap))
   (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (y :scs (descriptor-reg)))
   (:note "system area pointer allocation")
   (:generator 20
     (move sap x)
-    (pseudo-atomic (ndescr)
-      (inst addu y alloc-tn vm:other-pointer-type)
-      (inst addu alloc-tn alloc-tn (vm:pad-data-block vm:sap-size))
-      (inst li ndescr (logior (ash (1- vm:sap-size) vm:type-bits) vm:sap-type))
-      (storew ndescr y 0 vm:other-pointer-type)
-      (storew sap y vm:sap-pointer-slot vm:other-pointer-type))))
+    (with-fixed-allocation (y pa-flag ndescr sap-type sap-size)
+      (storew sap y sap-pointer-slot other-pointer-type))))
 ;;;
 (define-move-vop move-from-sap :move
   (sap-reg) (descriptor-reg))
@@ -188,7 +185,7 @@
 		  '((inst lwc1 result sap 0)))
 		 (:double
 		  '((inst lwc1 result sap 0)
-		    (inst lwc1-odd result sap vm:word-bytes))))
+		    (inst lwc1-odd result sap word-bytes))))
 	   (inst nop)))
        (define-vop (,ref-name-c)
 	 (:translate ,ref-name)
@@ -219,7 +216,7 @@
 		'((inst lwc1 result object offset)))
 	       (:double
 		'((inst lwc1 result object offset)
-		  (inst lwc1-odd result object (+ offset vm:word-bytes)))))
+		  (inst lwc1-odd result object (+ offset word-bytes)))))
 	   (inst nop)))
        (define-vop (,set-name)
 	 (:translate ,set-name)
@@ -249,7 +246,7 @@
 		    (inst fmove :single result value))))
 	       (:double
 		'((inst swc1 value sap 0)
-		  (inst swc1-odd value sap vm:word-bytes)
+		  (inst swc1-odd value sap word-bytes)
 		  (unless (location= result value)
 		    (inst fmove :double result value)))))))
        (define-vop (,set-name-c)
@@ -284,7 +281,7 @@
 		    (inst fmove :single result value))))
 	       (:double
 		'((inst swc1 value object offset)
-		  (inst swc1-odd value object (+ offset vm:word-bytes))
+		  (inst swc1-odd value object (+ offset word-bytes))
 		  (unless (location= result value)
 		    (inst fmove :double result value))))))))))
 
@@ -320,5 +317,5 @@
   (:result-types system-area-pointer)
   (:generator 2
     (inst addu sap vector
-	  (- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))))
+	  (- (* vector-data-offset word-bytes) other-pointer-type))))
 

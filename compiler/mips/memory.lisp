@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.12 1991/02/20 15:14:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.13 1992/07/28 20:37:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.12 1991/02/20 15:14:39 ram Exp $
 ;;;
 ;;;    This file contains the MIPS definitions of some general purpose memory
 ;;; reference VOPs inherited by basic memory reference operations.
@@ -108,63 +106,4 @@
   (:info offset)
   (:generator 4
     (storew value object (+ base offset) lowtag)))
-
-
-
-;;;; Indexed references:
-
-;;; Define-Indexer  --  Internal
-;;;
-;;;    Define some VOPs for indexed memory reference.  Unless the index is
-;;; constant, we must compute an intermediate result in a boxed temporary,
-;;; since the RT doesn't have any indexed addressing modes.  This means that GC
-;;; has to adjust the "raw" pointer in Index-Temp by observing that Index-Temp
-;;; points within Object-Temp.  After we are done, we clear Index-Temp so that
-;;; we don't raw pointers lying around.
-;;;
-(defmacro define-indexer (name write-p op shift)
-  `(define-vop (,name)
-     (:args (object :scs (descriptor-reg))
-	    (index :scs (any-reg zero immediate negative-immediate))
-	    ,@(when write-p
-		'((value :scs (any-reg descriptor-reg) :target result))))
-     (:arg-types * tagged-num ,@(when write-p '(*)))
-     (:temporary (:scs (interior-reg) :type interior) lip)
-     ,@(unless (zerop shift)
-	 `((:temporary (:scs (non-descriptor-reg) :type random) temp)))
-     (:results (,(if write-p 'result 'value)
-		:scs (any-reg descriptor-reg)))
-     (:result-types *)
-     (:variant-vars offset lowtag)
-     (:policy :fast-safe)
-     (:generator 5
-       (sc-case index
-	 ((immediate zero negative-immediate)
-	  (inst ,op value object
-		(- (+ (if (sc-is index zero)
-			  0
-			  (ash (tn-value index) (- word-shift ,shift)))
-		      (ash offset word-shift))
-		   lowtag))
-	  ,(if write-p
-	       '(move result value)
-	       '(inst nop)))
-	 (t
-	  ,@(if (zerop shift)
-		`((inst addu lip object index))
-		`((inst srl temp index ,shift)
-		  (inst addu lip temp object)))
-	  (inst ,op value lip (- (ash offset word-shift) lowtag))
-	  ,(if write-p
-	       '(move result value)
-	       '(inst nop)))))))
-
-(define-indexer word-index-ref nil lw 0)
-(define-indexer word-index-set t sw 0)
-(define-indexer halfword-index-ref nil lhu 1)
-(define-indexer signed-halfword-index-ref nil lh 1)
-(define-indexer halfword-index-set t sh 1)
-(define-indexer byte-index-ref nil lbu 2)
-(define-indexer signed-byte-index-ref nil lb 2)
-(define-indexer byte-index-set t sb 2)
 

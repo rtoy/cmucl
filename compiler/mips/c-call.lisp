@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.11 1992/03/27 23:25:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.12 1992/07/28 20:37:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.11 1992/03/27 23:25:38 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -156,30 +154,22 @@
     (inst li res (make-fixup foreign-symbol :foreign))))
 
 (define-vop (call-out)
-  (:args (function :scs (sap-reg) :target v0)
+  (:args (function :scs (sap-reg) :target cfunc)
 	 (args :more t))
   (:results (results :more t))
   (:ignore args results)
   (:save-p t)
-  (:temporary (:sc any-reg :offset 2 :from (:argument 0) :to (:result 0)) v0)
-  (:temporary (:sc any-reg :offset lra-offset) lra)
-  (:temporary (:sc any-reg :offset code-offset) code)
-  (:temporary (:sc non-descriptor-reg :to (:result 0)) ndescr)
+  (:temporary (:sc any-reg :offset cfunc-offset
+		   :from (:argument 0) :to (:result 0)) cfunc)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
-    (let ((lra-label (gen-label))
-	  (cur-nfp (current-nfp-tn vop)))
+    (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (move v0 function)
-      (inst compute-lra-from-code lra code lra-label ndescr)
-      (inst j (make-fixup "call_into_c" :foreign))
+      (move cfunc function)
+      (inst jal (make-fixup "call_into_c" :foreign))
       (inst nop)
-
-      (align vm:lowtag-bits)
-      (emit-label lra-label)
-      (inst lra-header-word)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save)))))
 

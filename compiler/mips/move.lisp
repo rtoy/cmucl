@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.29 1991/11/09 02:37:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.30 1992/07/28 20:37:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.29 1991/11/09 02:37:43 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -23,8 +21,7 @@
 
 
 (define-move-function (load-immediate 1) (vop x y)
-  ((null unsigned-immediate immediate zero negative-immediate
-	 random-immediate immediate-base-char)
+  ((null zero immediate)
    (any-reg descriptor-reg))
   (let ((val (tn-value x)))
     (etypecase val
@@ -39,20 +36,20 @@
 			  base-char-type))))))
 
 (define-move-function (load-number 1) (vop x y)
-  ((unsigned-immediate immediate zero negative-immediate random-immediate)
+  ((zero immediate)
    (signed-reg unsigned-reg))
   (inst li y (tn-value x)))
 
 (define-move-function (load-base-char 1) (vop x y)
-  ((immediate-base-char) (base-char-reg))
+  ((immediate) (base-char-reg))
   (inst li y (char-code (tn-value x))))
 
 (define-move-function (load-system-area-pointer 1) (vop x y)
-  ((immediate-sap) (sap-reg))
+  ((immediate) (sap-reg))
   (inst li y (sap-int (tn-value x))))
 
 (define-move-function (load-constant 5) (vop x y)
-  ((constant) (descriptor-reg))
+  ((constant) (descriptor-reg any-reg))
   (loadw y code-tn (tn-offset x) other-pointer-type))
 
 (define-move-function (load-stack 5) (vop x y)
@@ -186,7 +183,7 @@
       (inst beq temp done)
       (inst sra y x 2)
 
-      (loadw y x vm:bignum-digits-offset vm:other-pointer-type)
+      (loadw y x bignum-digits-offset other-pointer-type)
       (emit-label done))))
 ;;;
 (define-move-vop move-to-word/integer :move
@@ -214,6 +211,7 @@
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:note "signed word to integer coercion")
   (:generator 18
     (move x arg)
@@ -225,13 +223,9 @@
       (inst beq temp done)
       (inst sll y x 2)
       
-      (pseudo-atomic (temp)
-	(inst addu y alloc-tn vm:other-pointer-type)
-	(inst addu alloc-tn
-	      (vm:pad-data-block (1+ vm:bignum-digits-offset)))
-	(inst li temp (logior (ash 1 vm:type-bits) vm:bignum-type))
-	(storew temp y 0 vm:other-pointer-type)
-	(storew x y vm:bignum-digits-offset vm:other-pointer-type))
+      (with-fixed-allocation
+	  (y pa-flag temp bignum-type (1+ bignum-digits-offset))
+	(storew x y bignum-digits-offset other-pointer-type))
       (inst b done)
       (inst nop)
       
@@ -250,27 +244,24 @@
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:note "unsigned word to integer coercion")
   (:generator 20
     (move x arg)
-    (let ((done (gen-label))
-	  (one-word (gen-label)))
-      (inst sra temp x 29)
-      (inst beq temp done)
-      (inst sll y x 2)
+    (inst sra temp x 29)
+    (inst beq temp done)
+    (inst sll y x 2)
       
-      (pseudo-atomic (temp)
-	(inst addu y alloc-tn vm:other-pointer-type)
-	(inst addu alloc-tn
-	      (vm:pad-data-block (1+ vm:bignum-digits-offset)))
-	(inst bgez x one-word)
-	(inst li temp (logior (ash 1 vm:type-bits) vm:bignum-type))
-	(inst addu alloc-tn (vm:pad-data-block 1))
-	(inst li temp (logior (ash 2 vm:type-bits) vm:bignum-type))
-	(emit-label one-word)
-	(storew temp y 0 vm:other-pointer-type)
-	(storew x y vm:bignum-digits-offset vm:other-pointer-type))
-      (emit-label done))))
+    (pseudo-atomic
+	(pa-flag :extra (pad-data-block (+ bignum-digits-offset 2)))
+      (inst or y alloc-tn other-pointer-type)
+      (inst sltu temp x zero-tn)
+      (inst sll temp type-bits)
+      (inst addu temp (logior (ash 1 type-bits) bignum-type))
+      (storew temp y 0 other-pointer-type)
+      (storew x y bignum-digits-offset other-pointer-type))
+    DONE))
+  
 ;;;
 (define-move-vop move-from-unsigned :move
   (unsigned-reg) (descriptor-reg))

@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.17 1992/05/21 23:23:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.18 1992/07/28 20:37:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.17 1992/05/21 23:23:29 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -101,10 +99,10 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 22
-    (inst addu block fp-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addu block cfp-tn (* (tn-offset tn) vm:word-bytes))
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp block vm:unwind-block-current-uwp-slot)
-    (storew fp-tn block vm:unwind-block-current-cont-slot)
+    (storew cfp-tn block vm:unwind-block-current-cont-slot)
     (storew code-tn block vm:unwind-block-current-code-slot)
     (inst compute-lra-from-code temp code-tn entry-label ndescr)
     (storew temp block vm:catch-block-entry-pc-slot)))
@@ -122,10 +120,10 @@
   (:temporary (:scs (descriptor-reg) :target block :to (:result 0)) result)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 44
-    (inst addu result fp-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addu result cfp-tn (* (tn-offset tn) vm:word-bytes))
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp result vm:catch-block-current-uwp-slot)
-    (storew fp-tn result vm:catch-block-current-cont-slot)
+    (storew cfp-tn result vm:catch-block-current-cont-slot)
     (storew code-tn result vm:catch-block-current-code-slot)
     (inst compute-lra-from-code temp code-tn entry-label ndescr)
     (storew temp result vm:catch-block-entry-pc-slot)
@@ -145,7 +143,7 @@
   (:args (tn))
   (:temporary (:scs (descriptor-reg)) new-uwp)
   (:generator 7
-    (inst addu new-uwp fp-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addu new-uwp cfp-tn (* (tn-offset tn) vm:word-bytes))
     (store-symbol-value new-uwp lisp::*current-unwind-protect-block*)))
 
 
