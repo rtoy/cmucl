@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.23 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.24 1997/06/04 22:12:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
 (setf (backend-fasl-file-type *target-backend*) "sparcf")
 (setf (backend-fasl-file-implementation *target-backend*)
       sparc-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 5)
+(setf (backend-fasl-file-version *target-backend*) 6)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :big-endian)
 (setf (backend-page-size *target-backend*)
