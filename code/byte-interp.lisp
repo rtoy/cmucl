@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.28 1993/08/31 07:42:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.29 1993/11/02 16:07:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,6 +24,11 @@
 			byte-function-type
 			*eval-stack* *eval-stack-top*))
 (in-package "C")
+
+;;; We need at least this level of debug-info in order for the local
+;;; declaration in with-debugger-info to take effect.
+;;;
+(declaim (optimize (debug 2)))
 
 
 ;;;; Types.
