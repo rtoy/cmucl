@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.17 1997/11/30 22:53:51 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.18 1998/01/05 22:35:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1230,34 +1230,52 @@
 (define-vop (=0/single-float float-test)
   (:translate =)
   (:args (x :scs (single-reg)))
+  #-negative-zero-is-not-zero
   (:arg-types single-float (:constant (single-float 0f0 0f0)))
+  #+negative-zero-is-not-zero
+  (:arg-types single-float (:constant (single-float -0f0 0f0)))
   (:variant #x40))
 (define-vop (=0/double-float float-test)
   (:translate =)
   (:args (x :scs (double-reg)))
+  #-negative-zero-is-not-zero
   (:arg-types double-float (:constant (double-float 0d0 0d0)))
+  #+negative-zero-is-not-zero
+  (:arg-types double-float (:constant (double-float -0d0 0d0)))
   (:variant #x40))
 
 (define-vop (<0/single-float float-test)
   (:translate <)
   (:args (x :scs (single-reg)))
+  #-negative-zero-is-not-zero
   (:arg-types single-float (:constant (single-float 0f0 0f0)))
+  #+negative-zero-is-not-zero
+  (:arg-types single-float (:constant (single-float -0f0 0f0)))
   (:variant #x01))
 (define-vop (<0/double-float float-test)
   (:translate <)
   (:args (x :scs (double-reg)))
+  #-negative-zero-is-not-zero
   (:arg-types double-float (:constant (double-float 0d0 0d0)))
+  #+negative-zero-is-not-zero
+  (:arg-types double-float (:constant (double-float -0d0 0d0)))
   (:variant #x01))
 
 (define-vop (>0/single-float float-test)
   (:translate >)
   (:args (x :scs (single-reg)))
+  #-negative-zero-is-not-zero
   (:arg-types single-float (:constant (single-float 0f0 0f0)))
+  #+negative-zero-is-not-zero
+  (:arg-types single-float (:constant (single-float -0f0 0f0)))
   (:variant #x00))
 (define-vop (>0/double-float float-test)
   (:translate >)
   (:args (x :scs (double-reg)))
+  #-negative-zero-is-not-zero
   (:arg-types double-float (:constant (double-float 0d0 0d0)))
+  #+negative-zero-is-not-zero
+  (:arg-types double-float (:constant (double-float -0d0 0d0)))
   (:variant #x00))
 
 

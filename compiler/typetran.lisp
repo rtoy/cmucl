@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.31 1997/11/15 04:38:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.32 1998/01/05 22:35:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,6 +175,7 @@
 ;;; specified by Type.  Base is the name of the base type, for declaration.  We
 ;;; make safety locally 0 to inhibit any checking of this assertion.
 ;;;
+#-negative-zero-is-not-zero
 (defun transform-numeric-bound-test (n-object type base)
   (declare (type numeric-type type))
   (let ((low (numeric-type-low type))
@@ -190,6 +191,25 @@
 		    `((< (the ,base ,n-object) ,(car high)))
 		    `((<= (the ,base ,n-object) ,high))))))))
 
+#+negative-zero-is-not-zero
+(defun transform-numeric-bound-test (n-object type base)
+  (declare (type numeric-type type))
+  (let ((low (numeric-type-low type))
+	(high (numeric-type-high type)))
+    `(locally
+       (declare (optimize (safety 0)))
+       (and ,@(when low
+		(if (consp low)
+		    `((kernel::numeric-bound-test-zero
+		       > (the ,base ,n-object) ,(car low)))
+		    `((kernel::numeric-bound-test-zero
+		       >= (the ,base ,n-object) ,low))))
+	    ,@(when high
+		(if (consp high)
+		    `((kernel::numeric-bound-test-zero
+		       < (the ,base ,n-object) ,(car high)))
+		    `((kernel::numeric-bound-test-zero
+		       <= (the ,base ,n-object) ,high))))))))
 
 ;;; Source-Transform-Numeric-Typep  --  Internal
 ;;;

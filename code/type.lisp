@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.23 1997/12/18 16:49:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.24 1998/01/05 22:34:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1118,6 +1118,7 @@
 ;;;    This is for comparing bounds of the same kind, e.g. upper and upper.
 ;;; Use Numeric-Bound-Test* for different kinds of bounds.
 ;;;
+#-negative-zero-is-not-zero
 (defmacro numeric-bound-test (x y closed open)
   `(cond ((not ,y) t)
 	 ((not ,x) nil)
@@ -1130,6 +1131,24 @@
 	      (,open ,x (car ,y))
 	      (,closed ,x ,y)))))
 
+#+negative-zero-is-not-zero
+(defmacro numeric-bound-test-zero (op x y)
+  `(if (and (zerop ,x) (zerop ,y) (floatp ,x) (floatp ,y))
+       (,op (float-sign ,x) (float-sign ,y))
+       (,op ,x ,y)))
+
+#+negative-zero-is-not-zero
+(defmacro numeric-bound-test (x y closed open)
+  `(cond ((not ,y) t)
+	 ((not ,x) nil)
+	 ((consp ,x)
+	  (if (consp ,y)
+	      (numeric-bound-test-zero ,closed (car ,x) (car ,y))
+	      (numeric-bound-test-zero ,closed (car ,x) ,y)))
+	 (t
+	  (if (consp ,y)
+	      (numeric-bound-test-zero ,open ,x (car ,y))
+	      (numeric-bound-test-zero ,closed ,x ,y)))))
 
 ;;; Numeric-Bound-Test*  --  Internal
 ;;;
@@ -1140,6 +1159,7 @@
 ;;; -- an open inner bound is "greater" and also squeezes the interval, causing
 ;;;    us to use the Open test for those cases as well.
 ;;;
+#-negative-zero-is-not-zero
 (defmacro numeric-bound-test* (x y closed open)
   `(cond ((not ,y) t)
 	 ((not ,x) t)
@@ -1151,6 +1171,19 @@
 	  (if (consp ,y)
 	      (,open ,x (car ,y))
 	      (,closed ,x ,y)))))
+
+#+negative-zero-is-not-zero
+(defmacro numeric-bound-test* (x y closed open)
+  `(cond ((not ,y) t)
+	 ((not ,x) t)
+	 ((consp ,x)
+	  (if (consp ,y)
+	      (numeric-bound-test-zero ,open (car ,x) (car ,y))
+	      (numeric-bound-test-zero ,open (car ,x) ,y)))
+	 (t
+	  (if (consp ,y)
+	      (numeric-bound-test-zero ,open ,x (car ,y))
+	      (numeric-bound-test-zero ,closed ,x ,y)))))
 
 
 ;;; Numeric-Bound-Max  --  Internal
