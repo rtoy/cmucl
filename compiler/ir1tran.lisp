@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.44 1991/05/10 15:48:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.45 1991/05/16 00:27:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -973,7 +973,12 @@
 ;;; are no bindings, just convert the body, otherwise do one binding and
 ;;; recurse on the rest.
 ;;;
-(defun ir1-convert-aux-bindings (start cont body aux-vars aux-vals)
+;;;    If Interface is true, then we convert bindings with the interface
+;;; policy.  For real &aux bindings, and implicit aux bindings introduced by
+;;; keyword bindings, this is always true.  It is only false when LET* directly
+;;; calls this function.
+;;;
+(defun ir1-convert-aux-bindings (start cont body aux-vars aux-vals interface)
   (declare (type continuation start cont) (list body aux-vars aux-vals))
   (if (null aux-vars)
       (ir1-convert-progn-body start cont body)
@@ -981,7 +986,13 @@
 	    (fun (ir1-convert-lambda-body body (list (first aux-vars))
 					  (rest aux-vars) (rest aux-vals))))
 	(reference-leaf start fun-cont fun nil)
-	(ir1-convert-combination-args fun-cont cont (list (first aux-vals)))))
+	(let ((*lexical-environment*
+	       (if interface
+		   (make-lexenv
+		    :cookie (make-interface-cookie *lexical-environment*))
+		   *lexical-environment*)))
+	  (ir1-convert-combination-args fun-cont cont
+					(list (first aux-vals))))))
   (undefined-value))
 
 
@@ -1002,7 +1013,7 @@
 	   (list body aux-vars aux-vals svars))
   (cond
    ((null svars)
-    (ir1-convert-aux-bindings start cont body aux-vars aux-vals))
+    (ir1-convert-aux-bindings start cont body aux-vars aux-vals t))
    (t
     (continuation-starts-block cont)
     (let ((cleanup (make-cleanup :kind :special-bind))
@@ -2632,7 +2643,7 @@
   (multiple-value-bind (vars values)
 		       (extract-let-variables bindings 'let*)
     (let ((*lexical-environment* (process-declarations decls vars nil cont)))
-      (ir1-convert-aux-bindings start cont body vars values))))
+      (ir1-convert-aux-bindings start cont body vars values nil))))
 
 
 ;;;; Flet and Labels:
