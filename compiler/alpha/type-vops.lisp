@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/type-vops.lisp,v 1.4 1998/07/24 17:22:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/type-vops.lisp,v 1.5 1999/11/11 16:08:09 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,9 +386,6 @@
 
 (def-type-vops funcallable-instance-p nil nil nil
   funcallable-instance-header-type)
-
-(def-type-vops dylan::dylan-function-p nil nil nil
-  dylan-function-header-type)
 
 (def-type-vops array-header-p nil nil nil
   simple-array-type complex-string-type complex-bit-vector-type
