@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.16 1999/12/08 15:53:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.17 1999/12/22 19:26:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -330,20 +330,20 @@
 (define-vop (fast-v9-*/fixnum=>fixnum fast-fixnum-binop)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:translate *)
-  (:guard (backend-featurep :sparc-v9))
+  (:guard (backend-featurep :sparc-64))
   (:generator 4
     (inst sra temp y 2)
     (inst mulx r x temp)))
 
 (define-vop (fast-v9-*/signed=>signed fast-signed-binop)
   (:translate *)
-  (:guard (backend-featurep :sparc-v9))
+  (:guard (backend-featurep :sparc-64))
   (:generator 3
     (inst mulx r x y)))
 
 (define-vop (fast-v9-*/unsigned=>unsigned fast-unsigned-binop)
   (:translate *)
-  (:guard (backend-featurep :sparc-v9))
+  (:guard (backend-featurep :sparc-64))
   (:generator 3
     (inst mulx r x y)))
 
@@ -656,7 +656,7 @@
 	   (type (or tn (signed-byte 13)) multiplicand))
   ;; It seems that emit-multiply is only used to do an unsigned
   ;; multiply, so the code only does an unsigned multiply.
-  (cond ((backend-featurep :sparc-v9)
+  (cond ((backend-featurep :sparc-64)
 	 ;; Take advantage of V9's 64-bit multiplier.
 	 ;;
 	 ;; Multiply the two numbers and put the result in
@@ -765,7 +765,7 @@
   (:results (quo :scs (unsigned-reg) :from (:argument 1))
 	    (rem :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num unsigned-num)
-  (:guard (not (backend-featurep :sparc-v9)))
+  (:guard (not (backend-featurep :sparc-64)))
   (:generator 300
     (move rem div-high)
     (move quo div-low)
@@ -791,7 +791,7 @@
   (:results (quo :scs (unsigned-reg))
 	    (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
-  (:guard (backend-featurep :sparc-v9))
+  (:guard (backend-featurep :sparc-64))
   (:generator 5
     ;; Set dividend to be div-high and div-low	      
     (inst sllx dividend div-high 32)
