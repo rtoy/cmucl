@@ -9893,6 +9893,20 @@ structures.
   A stream connected to \file{/dev/tty}.
 \end{defvar}
 
+\begin{defvar}{extensions:}{environment-list}
+  The environment variables inherited by the current process, as a
+  keyword-indexed alist. For example, to access the DISPLAY
+  environment variable, you could use
+
+\begin{lisp}
+   (cdr (assoc :display ext:*environment-list*))
+\end{lisp}
+
+  Note that the case of the variable name is lost in the conversion
+  to a keyword.
+\end{defvar}
+
+
 %%\node Lisp Equivalents for C Routines, Type Translations, Useful Variables, UNIX Interface
 \section{Lisp Equivalents for C Routines}
 
@@ -10054,6 +10068,16 @@ To find out how to use a particular system call, try using
 The Unix system calls indicate an error by returning \false{} as the
 first value and the Unix error number as the second value.  If the call
 succeeds, then the first value will always be non-\nil, often \code{t}.
+
+For example, to use the \code{chdir} syscall: 
+
+\begin{lisp}
+(multiple-value-bind (success errno)
+    (unix:unix-chdir "/tmp")
+  (unless success
+     (error "Can't change working directory: ~a"
+            (unix:get-unix-error-msg errno))))
+\end{lisp}
 
 \begin{defun}{Unix:}{get-unix-error-msg}{\args{\var{error}}}
 
