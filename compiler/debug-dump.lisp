@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.22 1991/04/04 14:38:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.23 1991/04/08 12:44:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -761,12 +761,12 @@
 	  (clrhash var-locs)
 	  (dfuns (cons (label-position
 			(block-label (node-block (lambda-bind fun))))
-		       (compute-1-debug-function fun var-locs)))))
-
-      (let ((sorted (sort (dfuns) #'< :key #'car)))
-	(setf (compiled-debug-info-function-map res)
-	      (if (every #'debug-function-minimal-p sorted)
-		  (compute-minimal-debug-functions sorted)
-		  (compute-debug-function-map sorted)))))
+		       (compute-1-debug-function fun var-locs))))
+	
+	(let ((sorted (sort (dfuns) #'< :key #'car)))
+	  (setf (compiled-debug-info-function-map res)
+		(if (every #'debug-function-minimal-p sorted)
+		    (compute-minimal-debug-functions sorted)
+		    (compute-debug-function-map sorted))))))
 
     res))
