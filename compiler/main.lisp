@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.35 1991/03/20 03:01:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.36 1991/04/04 14:13:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,11 @@
 ;;;
 (in-package "C")
 (in-package "EXTENSIONS")
-(export '(compile-from-stream))
+(export '(*compile-progress* compile-from-stream *block-compile-default*
+			     start-block end-block))
+(in-package "LISP")
+(export '(*compile-verbose* *compile-print* *compile-file-pathname*
+			    *compile-file-truename*))
 (in-package "C")
 
 (proclaim '(special *constants* *free-variables* *compile-component*
@@ -35,23 +39,45 @@
 		    *last-source-form* *last-format-string* *last-format-args*
 		    *last-message-count* *lexical-environment*))
 
+(defvar *block-compile-default* :specified
+  "The default value for the :Block-Compile argument to COMPILE-FILE.")
+
 (defvar compiler-version "1.0")
 
 (defvar *check-consistency* nil)
 (defvar *all-components*)
 
-;;; The value of the :Block-Compile argument that Compile-File was called with.
+;;; The current block compilation state.  These are initialized to the 
+;;; :Block-Compile and :Entry-Points arguments that COMPILE-FILE was called
+;;; with.  Subsequent START-BLOCK or END-BLOCK declarations alter the values.
 ;;;
 (defvar *block-compile*)
+(declaim (type (member nil t :specified) *block-compile*))
+(defvar *entry-points*)
+(declaim (list *entry-points*))
 
 ;;; When block compiling, used by PROCESS-FORM to accumulate top-level lambdas
 ;;; resulting from compiling subforms.  (In reverse order.)
 ;;;
 (defvar *top-level-lambdas*)
+(declaim (list *top-level-lambdas*))
 
-;;; Used to control compiler verbosity.
-;;;
-(defvar *compile-verbose* nil)
+(defvar *compile-verbose* t
+  "The default for the :VERBOSE argument to COMPILE-FILE.")
+(defvar *compile-print* t
+  "The default for the :PRINT argument to COMPILE-FILE.")
+(defvar *compile-progress* nil
+  "The default for the :PROGRESS argument to COMPILE-FILE.")
+
+(defvar *compile-file-pathname* nil
+  "The defaulted pathname of the file currently being compiler, or NIL if not
+  compiling.")
+(defvar *compile-file-truename* nil
+  "The TRUENAME of the file currently being compiler, or NIL if not
+  compiling.")
+
+(declaim (type (or pathname null) *compile-file-pathname*
+	       *compile-file-truename*))
 
 ;;; The values of *Package* and *Default-Cookie* when compilation started.
 ;;;
@@ -67,10 +93,10 @@
 
 ;;; Maybe-Mumble  --  Internal
 ;;;
-;;;    Mumble conditional on *Compile-Verbose*.
+;;;    Mumble conditional on *compile-progress*.
 ;;;
 (defun maybe-mumble (&rest foo)
-  (when *compile-verbose*
+  (when *compile-progress*
     (apply #'compiler-mumble foo)))
 
 (deftype object () '(or fasl-file core-object null))
@@ -163,7 +189,8 @@
 ;;; Compile-Component  --  Internal
 ;;;
 (defun compile-component (component object)
-  (compiler-mumble "Compiling ~A: " (component-name component))
+  (when *compile-print*
+    (compiler-mumble "Compiling ~A: " (component-name component)))
   
   (ir1-phases component)
   
@@ -214,7 +241,7 @@
     (maybe-mumble "Life ")
     (lifetime-analyze component)
 
-    (when *compile-verbose*
+    (when *compile-progress*
       (compiler-mumble "") ; Sync before doing random output.
       (pre-pack-tn-stats component *compiler-error-output*))
 
@@ -260,7 +287,8 @@
 
       (nuke-segment *code-segment*)))
 
-  (compiler-mumble "~&")
+  (when *compile-print*
+    (compiler-mumble "~&"))
   (undefined-value))
 
 
@@ -302,13 +330,17 @@
 ;;;
 (defun clear-ir1-info (component)
   (declare (type component component))
-  (flet ((blast (x)
-	   (maphash #'(lambda (k v)
-			(declare (ignore k))
-			(setf (leaf-refs v) nil)
-			(when (basic-var-p v)
-			  (setf (basic-var-sets v) nil)))
-		    x)))
+  (labels ((blast (x)
+	     (maphash #'(lambda (k v)
+			  (declare (ignore k))
+			  (setf (leaf-refs v)
+				(delete-if #'here-p (leaf-refs v)))
+			  (when (basic-var-p v)
+			    (setf (basic-var-sets v)
+				  (delete-if #'here-p (basic-var-sets v)))))
+		      x))
+	   (here-p (x)
+	     (eq (block-component (node-block x)) component)))
     (blast *free-variables*)
     (blast *free-functions*)
     (blast *constants*))
@@ -399,6 +431,7 @@
 	     (cdr summary) kind summary))))))
   
   (unless (or *converting-for-interpreter*
+	      (not *compile-verbose*)
 	      (and (not abort-p) (zerop abort-count)
 		   (zerop *compiler-error-count*)
 		   (zerop *compiler-warning-count*)
@@ -463,6 +496,11 @@
   ;; form, :LISP, if from a stream, :STREAM.
   (name (required-argument) :type (or pathname (member :lisp :stream)))
   ;;
+  ;; The defaulted, but not necessarily absolute file name (i.e. prior to
+  ;; TRUENAME call.)  Null if not a file.  This is only used to set
+  ;; *COMPILE-FILE-PATHNAME* 
+  (untruename nil :type (or pathname null))
+  ;;
   ;; The file's write date (if relevant.)
   (write-date nil :type (or unsigned-byte null))
   ;;
@@ -511,7 +549,8 @@
   (declare (list files))
   (let ((file-info
 	 (mapcar #'(lambda (x)
-		     (make-file-info :name x
+		     (make-file-info :name (truename x)
+				     :untruename x
 				     :write-date (file-write-date x)))
 		 files)))
 
@@ -645,10 +684,11 @@
 	(t
 	 (setq *package* *initial-package*)
 	 (setq *default-cookie* (copy-cookie *initial-cookie*))
-	 (setf (source-info-stream info)
-	       (open (file-info-name (first (source-info-current-file info)))
-		     :direction :input)))))
-
+	 (let* ((finfo (first (source-info-current-file info)))
+		(name (file-info-name finfo)))
+	   (setq *compile-file-truename* name)
+	   (setq *compile-file-pathname* (file-info-untruename finfo))
+	   (setf (source-info-stream info) (open name :direction :input))))))
 
 ;;; CLOSE-SOURCE-INFO  --  Internal
 ;;;
@@ -739,7 +779,7 @@
 ;;; CONVERT-AND-MAYBE-COMPILE  --  Internal
 ;;;
 ;;;    Called by top-level form processing when we are ready to actually
-;;; compile something.  If *BLOCK-COMPILE* is true, then we still convert the
+;;; compile something.  If *BLOCK-COMPILE* is T, then we still convert the
 ;;; form, but delay compilation, pushing the result on *TOP-LEVEL-LAMBDAS*
 ;;; instead.
 ;;;
@@ -752,10 +792,9 @@
   (let* ((*lexical-environment*
 	  (make-lexenv :cookie *default-cookie*))
 	 (tll (ir1-top-level form path nil)))
-    (cond (*block-compile* (push tll *top-level-lambdas*))
+    (cond ((eq *block-compile* t) (push tll *top-level-lambdas*))
 	  (t
-	   (compile-top-level (list tll) object)
-	   (clear-stuff))))
+	   (compile-top-level (list tll) object))))
   #+new-compiler
   (lisp::maybe-gc))
 
@@ -783,6 +822,85 @@
        (compiler-error "(during macroexpansion)~%~A" condition))))
 
 
+;;; PROCESS-LOCALLY  --  Internal
+;;;
+;;;    Process a top-level use of LOCALLY.  We parse declarations and then
+;;; recursively process the body.
+;;;
+;;;    Binding *DEFAULT-COOKIE* is pretty much of a hack, since it causes
+;;; LOCALLY to "capture" enclosed proclamations.  It is necessary because
+;;; CONVERT-AND-MAYBE-COMPILE uses the value of *DEFAULT-COOKIE* as the policy.
+;;; The need for this hack is due to the quirk that there is no way to
+;;; represent in a cookie that an optimize quality came from the default.
+;;;
+(defun process-locally (form path object)
+  (declare (list path) (type object object))
+  (multiple-value-bind
+      (body decls)
+      (system:parse-body (cdr form) *lexical-environment* nil)
+    (let* ((*lexical-environment*
+	    (process-declarations decls nil nil (make-continuation)))
+	   (*default-cookie* (lexenv-cookie *lexical-environment*)))
+      (process-progn body path object))))
+
+
+;;; PROCESS-FILE-COMMENT  --  Internal
+;;;
+;;;    Stash file comment in the file-info structure.
+;;;
+(defun process-file-comment (form)
+  (unless (and (= (length form) 2) (stringp (second form)))
+    (compiler-error "Bad FILE-COMMENT form: ~S." form))
+  (let ((file (first (source-info-current-file *source-info*))))
+    (cond ((file-info-comment file)
+	   (compiler-warning "Ignoring extra file comment:~%  ~S." form))
+	  (t
+	   (let ((comment (coerce (second form) 'simple-string)))
+	     (setf (file-info-comment file) comment)
+	     (when *compile-verbose*
+	       (compiler-mumble "~&Comment: ~A~2&" comment)))))))
+
+
+;;; PROCESS-PACKAGE-FROBBER  --  Internal
+;;;
+;;;    Force any pending top-level forms to be compiled and dumped so that they
+;;; will be evaluated in the correct package environment.  Then eval the
+;;; package form and dump it.  At least for now, always dump package frobbing
+;;; as interpreted cold load forms.  This might want to be on a switch someday.
+;;;
+(defun process-package-frobber (form path object)
+  (typecase object
+    (fasl-file
+     (compile-top-level-lambdas () t object)))
+  (eval form)
+  (etypecase object
+    (fasl-file
+     (fasl-dump-cold-load-form form object))
+    ((or null core-object)
+     (convert-and-maybe-compile form path object))))
+
+
+;;; PROCESS-PROCLAIM  --  Internal
+;;;
+;;;    If a special block compilation delimiter, then start or end the block as
+;;; appropriate.  Otherwise, just convert-and-maybe-compile the form.
+;;;
+(defun process-proclaim (form path object)
+  (if (and (eql (length form) 2) (constantp (cadr form)))
+      (let ((spec (eval (cadr form))))
+	(if (consp spec)
+	    (case (first spec)
+	      (start-block
+	       (finish-block-compilation object)
+	       (setq *block-compile* t)
+	       (setq *entry-points* (rest spec)))
+	      (end-block (finish-block-compilation object))
+	      (t
+	       (convert-and-maybe-compile form path object)))
+	    (convert-and-maybe-compile form path object)))
+      (convert-and-maybe-compile form path object)))
+
+
 (proclaim '(special *compiler-error-bailout*))
 
 ;;; PROCESS-FORM  --  Internal
@@ -792,9 +910,6 @@
 ;;; -- If this is a magic top-level form, then do stuff.
 ;;; -- If it is a macro expand it.
 ;;; -- Otherwise, just compile it.
-;;;
-;;; ### At least for now, always dump package frobbing as interpreted cold load
-;;; forms.  This might want to be on a switch someday.
 ;;;
 (defun process-form (form path object)
   (declare (list path) (type object object))
@@ -812,15 +927,7 @@
 	  (case (car form)
 	    ((make-package in-package shadow shadowing-import export
 			   unexport use-package unuse-package import)
-	     (typecase object
-	       (fasl-file
-		(compile-top-level-lambdas () t object)))
-	     (eval form)
-	     (etypecase object
-	       (fasl-file
-		(fasl-dump-cold-load-form form object))
-	       ((or null core-object)
-		(convert-and-maybe-compile form path object))))
+	     (process-package-frobber form path object))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
 	       (compiler-error "EVAL-WHEN form is too short: ~S." form))
@@ -835,18 +942,10 @@
 	      (cadr form)
 	      #'(lambda ()
 		  (process-progn (cddr form) path object))))
+	    (locally (process-locally form path object))
 	    (progn (process-progn (cdr form) path object))
-	    (file-comment
-	     (unless (and (= (length form) 2) (stringp (second form)))
-	       (compiler-error "Bad FILE-COMMENT form: ~S." form))
-	     (let ((file (first (source-info-current-file *source-info*))))
-	       (cond ((file-info-comment file)
-		      (compiler-warning "Ignoring extra file comment:~%  ~S."
-					form))
-		     (t
-		      (let ((comment (coerce (second form) 'simple-string)))
-			(setf (file-info-comment file) comment)
-			(compiler-mumble "~&Comment: ~A~2&" comment))))))
+	    (file-comment (process-file-comment form))
+	    (proclaim (process-proclaim form path object))
 	    (t
 	     (let ((exp (preprocessor-macroexpand form)))
 	       (if (eq exp form)
@@ -941,15 +1040,22 @@
 ;;; Compile-Top-Level  --  Internal
 ;;;
 ;;;    Compile Lambdas (a list of the lambdas for top-level forms) into the
-;;; Object file.
+;;; Object file.  We loop doing local call analysis until it converges, since a
+;;; single pass might miss something due to components being joined by let
+;;; conversion.
 ;;;
 (defun compile-top-level (lambdas object)
   (declare (list lambdas) (type object object))
   (maybe-mumble "Local call analyze")
-  (dolist (lambda lambdas)
-    (let* ((component (block-component (node-block (lambda-bind lambda))))
-	   (*all-components* (list component)))
-      (local-call-analyze component)))
+  (loop
+    (let ((did-something nil))
+      (dolist (lambda lambdas)
+	(let* ((component (block-component (node-block (lambda-bind lambda))))
+	       (*all-components* (list component)))
+	  (when (component-new-functions component)
+	    (setq did-something t)
+	    (local-call-analyze component))))
+      (unless did-something (return))))
   (maybe-mumble ".~%")
   
   (maybe-mumble "Find components")
@@ -967,10 +1073,8 @@
       (dolist (component components)
 	(compile-component component object)
 	(clear-ir2-info component)
-	(if (replace-top-level-xeps component)
-	    (setq top-level-closure t)
-	    (unless *check-consistency*
-	      (clear-ir1-info component))))
+	(when (replace-top-level-xeps component)
+	    (setq top-level-closure t)))
       
       (when *check-consistency*
 	(maybe-mumble "[Check]~%")
@@ -978,20 +1082,31 @@
       
       (compile-top-level-lambdas lambdas top-level-closure object)
 
-      (when *check-consistency*
-	(dolist (component components)
-	  (clear-ir1-info component)))))
-
+      (dolist (component components)
+	(clear-ir1-info component))
+      (clear-stuff)))
   (undefined-value))
+
+
+;;; FINISH-BLOCK-COMPILATION  --  Internal
+;;;
+;;;    Actually compile any stuff that has been queued up for block
+;;; compilation.
+;;;
+(defun finish-block-compilation (object)
+  (declare (type object object))
+  (when *top-level-lambdas*
+    (compile-top-level (nreverse *top-level-lambdas*) object)
+    (setq *top-level-lambdas* ()))
+  (setq *block-compile* :specified)
+  (setq *entry-points* nil))
 
 
 ;;; Sub-Compile-File  --  Internal
 ;;;
-;;;    Read all forms from Info and compile them, with output to Object.  If
-;;; *Block-Compile* is true, we combine all the forms and compile as a unit,
-;;; otherwise we compile each one separately.  We return :ERROR, :WARNING,
-;;; :NOTE or NIL to indicate the most severe kind of compiler diagnostic
-;;; emitted.
+;;;    Read all forms from Info and compile them, with output to Object.  We
+;;; return :ERROR, :WARNING, :NOTE or NIL to indicate the most severe kind of
+;;; compiler diagnostic emitted.
 ;;;
 (defun sub-compile-file (info object &optional d-s-info)
   (declare (type source-info info) (type object object))
@@ -1007,6 +1122,8 @@
 	   (*lexical-environment* (make-null-environment))
 	   (*converting-for-interpreter* nil)
 	   (*source-info* info)
+	   (*compile-file-pathname* nil)
+	   (*compile-file-truename* nil)
 	   (*top-level-lambdas* ())
 	   (*pending-top-level-lambdas* ())
 	   (*compiler-error-bailout*
@@ -1032,13 +1149,9 @@
 	    (clrhash *source-paths*)
 	    (find-source-paths form tlf)
 	    (process-form form `(original-source-start 0 ,tlf) object)))
-	
-	(when *block-compile*
-	  (compile-top-level (nreverse *top-level-lambdas*) object)
-	  (clear-stuff))
 
+	(finish-block-compilation object)
 	(compile-top-level-lambdas () t object)
-	
 	(etypecase object
 	  (fasl-file (fasl-dump-source-info info object))
 	  (core-object (fix-core-source-info info object d-s-info))
@@ -1052,16 +1165,20 @@
 
 ;;; Verify-Source-Files  --  Internal
 ;;;
-;;;    Return a list of pathnames that are the truenames of all the named
-;;; files.
+;;;    Return a list of pathnames for the named files.  All the files must
+;;; exist.
 ;;;
 (defun verify-source-files (stuff)
   (unless stuff
     (error "Can't compile with no source files."))
   (mapcar #'(lambda (x)
-	      (or (probe-file x)
-		  (truename
-		   (merge-pathnames x (make-pathname :type "lisp")))))
+	      (let ((x (pathname x)))
+		(if (probe-file x)
+		    x
+		    (let ((x (merge-pathnames x (make-pathname :type "lisp"))))
+		      (if (probe-file x)
+			  x
+			  (truename x))))))
 	  (if (listp stuff) stuff (list stuff))))
 
 
@@ -1071,13 +1188,13 @@
 ;;;    Just call SUB-COMPILE-FILE on the on a stream source info for the
 ;;; stream, sending output to core.
 ;;;
-(defun compile-from-stream (stream
-			    &key
-			    ((:error-stream *compiler-error-output*)
-			     *error-output*)
-			    ((:trace-stream *compiler-trace-output*) nil)
-			    ((:block-compile *block-compile*) nil)
-			    source-info)
+(defun compile-from-stream
+       (stream &key
+	       ((:error-stream *compiler-error-output*) *error-output*)
+	       ((:trace-stream *compiler-trace-output*) nil)
+	       ((:block-compile *block-compile*) *block-compile-default*)
+	       ((:entry-points *entry-points*) nil)
+	       source-info)
   "Similar to COMPILE-FILE, but compiles text from Stream into the current lisp
   environment.  Stream is closed when compilation is complete.  These keywords
   are supported:
@@ -1153,7 +1270,8 @@
 	  (trace-file nil) 
 	  (error-output t)
 	  (load nil)
-	  ((:block-compile *block-compile*) nil))
+	  ((:block-compile *block-compile*) *block-compile-default*)
+	  ((:entry-points *entry-points*) nil))
   "Compiles Source, producing a corresponding .FASL file.  Source may be a list
   of files, in which case the files are compiled as a unit, producing a single
   .FASL file.  The output file names are defaulted from the first (or only)
@@ -1170,9 +1288,22 @@
         If a stream, then error output is sent there as well as to the listing
         file.  NIL suppresses this additional error output.  The default is T,
         which means use *ERROR-OUTPUT*.
-  :Block-Compile
-        If true, then function names will be resolved at compile time."
-  
+  :Block-Compile {NIL | :SPECIFIED | T}
+        Determines whether multiple functions are compiled together as
+	a unit, resolving function references at compile time.  NIL means that
+	global function names are never resolved at compilation time.
+	:SPECIFIED means that names are resolved at compile-time when
+	convenient (as in a self-recursive call), but the compiler doesn't
+        combine top-level DEFUNs.  With :SPECIFIED, an explicit START-BLOCK
+        declaration will enable block compilation.  A value of T indicates that
+        all forms in the file(s) should be compiled as a unit.  The default is
+        the value of *BLOCK-COMPILE-DEFAULT*, which is initially :SPECIFIED.
+  :Entry-Points
+        This specifies a list of function names for functions in the file(s)
+        that must be given global definitions.  This only applies to block
+        compilation, and is useful mainly when :BLOCK-COMPILE T is specified on
+        a file that lacks START-BLOCK declarations.  If the value is NIL (the
+        default) then all functions will be globally defined."
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
 	 (output-file-name nil)
@@ -1219,7 +1350,8 @@
 					 error-output)
 				     error-file-stream))))
 
-	  (start-error-output source-info)
+	  (when *compile-verbose*
+	    (start-error-output source-info))
 	  (setq error-severity
 		(sub-compile-file source-info fasl-file))
 	  (setq compile-won t))
@@ -1231,11 +1363,12 @@
 
       (when fasl-file
 	(close-fasl-file fasl-file (not compile-won))
-	(when compile-won
+	(when (and compile-won *compile-verbose*)
 	  (compiler-mumble "~2&~A written.~%"
 			   (namestring (truename output-file-name)))))
 
-      (finish-error-output source-info compile-won)
+      (when *compile-verbose*
+	(finish-error-output source-info compile-won))
 
       (when error-file-stream
 	(let ((name (pathname error-file-stream)))
@@ -1253,7 +1386,7 @@
     (when load
       (unless output-file
 	(error "Can't :LOAD with no output file."))
-      (load output-file-name :verbose t))
+      (load output-file-name :verbose *compile-verbose*))
 
     (values (if output-file (truename output-file-name) nil)
 	    (not (null error-severity))
