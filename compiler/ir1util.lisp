@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.59 1992/09/19 16:03:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.60 1992/09/22 00:05:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1470,7 +1470,7 @@
   (ref-leaf (continuation-use (basic-combination-fun call))))
 
 
-(defvar *inline-expansion-limit* 20
+(defvar *inline-expansion-limit* 50
   "An upper limit on the number of inline function calls that will be expanded
    in any given code object (single function or block compilation.)")
 
@@ -1488,7 +1488,8 @@
 	  ((= expanded *inline-expansion-limit*)
 	   (let ((*compiler-error-context* node))
 	     (compiler-warning "*Inline-Expansion-Limit* (~D) exceeded, ~
-				probably trying to inline a recursive function."
+				probably trying to~%  ~
+				inline a recursive function."
 			       *inline-expansion-limit*))
 	   nil)
 	  (t t))))
