@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.30 1991/10/22 18:38:06 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.31 1991/11/07 00:08:17 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -279,7 +279,6 @@ struct sigcontext *context;
 \****************************************************************/
 
 #ifndef ibmrt
-
 static boolean gc_trigger_hit(context)
      struct sigcontext *context;
 {
@@ -293,15 +292,23 @@ static boolean gc_trigger_hit(context)
 		badaddr < current_dynamic_space + DYNAMIC_SPACE_SIZE);
     }
 }
+#endif
+
 
 boolean interrupt_maybe_gc(context)
 struct sigcontext *context;
 {
-    if (!foreign_function_call_active && gc_trigger_hit(context)) {
+    if (!foreign_function_call_active
+#ifndef ibmrt
+		  && gc_trigger_hit(context)
+#endif
+	) {
 #ifdef mips
 	set_global_pointer(saved_global_pointer);
 #endif
+#ifndef ibmrt
 	clear_auto_gc_trigger();
+#endif
 
 	if (
 #ifdef mips
@@ -331,8 +338,6 @@ struct sigcontext *context;
     }else
 	return FALSE;
 }
-
-#endif
 
 /****************************************************************\
 * Noise to install handlers.                                     *
