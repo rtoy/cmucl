@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.38 1991/05/31 14:18:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.39 1991/07/11 16:29:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1898,12 +1898,7 @@
   that is stored in Place.  Item must appear exactly once in the list."
   (multiple-value-bind
       (temps vals stores store access)
-      #-new-compiler
-      (if clc::*in-the-compiler*
-	  (get-setf-method place env)
-	  (lisp::foo-get-setf-method place env))
-      #+new-compiler
-      (lisp::foo-get-setf-method place env)
+      (get-setf-method place env)
     (let ((n-item (gensym))
 	  (n-place (gensym))
 	  (n-current (gensym))
@@ -1930,12 +1925,7 @@
   Place."
   (multiple-value-bind
       (temps vals stores store access)
-      #-new-compiler
-      (if clc::*in-the-compiler*
-	  (get-setf-method place env)
-	  (lisp::foo-get-setf-method place env))
-      #+new-compiler
-      (lisp::foo-get-setf-method place env)
+      (get-setf-method place env)
     `(let (,@(mapcar #'list temps vals)
 	   (,(first stores) ,item))
        (setf (,next ,(first stores)) ,access)
