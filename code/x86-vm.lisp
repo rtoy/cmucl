@@ -6,20 +6,20 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;(ext:file-comment
-;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.6 1997/11/05 14:59:47 dtc Exp $")
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.7 1997/11/08 15:54:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the X86 specific runtime stuff.
 ;;;
 
-(in-package :vm)
+(in-package "X86")
 (use-package "SYSTEM")
 (use-package "ALIEN")
 (use-package "C-CALL")
 (use-package "UNIX")
-(use-package :kernel)
+(use-package "KERNEL")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
@@ -130,27 +130,66 @@
 ;;; This gets called by LOAD to resolve newly positioned objects
 ;;; with things (like code instructions) that have to refer to them.
 
+;;; Add a fixup offset to the vector of fixup offsets for the given
+;;; code object.
+;;;
+;;; Counter to measure the storage overhead.
+(defvar *num-fixups* 0)
+;;;
+(defun add-fixup (code offset)
+  ;; Although this could check for and ignore fixups for code objects
+  ;; in the read-only and static spaces, this should only be the case
+  ;; when *enable-dynamic-space-code* is True.
+  (when lisp::*enable-dynamic-space-code*
+    (incf *num-fixups*)
+    (let ((fixups (code-header-ref code code-constants-offset)))
+      (cond ((typep fixups '(simple-array (unsigned-byte 32) (*)))
+	     (let ((new-fixups
+		    (adjust-array fixups (1+ (length fixups))
+				  :element-type '(unsigned-byte 32))))
+	       (setf (aref new-fixups (length fixups)) offset)
+	       (setf (code-header-ref code code-constants-offset)
+		     new-fixups)))
+	    (t
+	     (unless (or (eq (get-type fixups) x86:unbound-marker-type)
+			 (zerop fixups))
+	       (format t "** Init. code FU = ~s~%" fixups))
+	     (setf (code-header-ref code code-constants-offset)
+		   (make-array 1 :element-type '(unsigned-byte 32)
+			       :initial-element offset)))))))
+
+
 (defun fixup-code-object (code offset fixup kind)
   (declare (type index offset))
   (system:without-gcing
-   (let ((sap (truly-the system-area-pointer (c::code-instructions code))))
+   (let* ((sap (truly-the system-area-pointer (c::code-instructions code)))
+	  (obj-start-addr (logand (kernel::get-lisp-obj-address code)
+				  #xfffffff8))
+	  #+nil (const-start-addr (+ obj-start-addr (* 5 4)))
+	  (code-start-addr (c::sap-int (kernel::code-instructions code)))
+	  (ncode-words (kernel::code-header-ref code 1))
+	  (code-end-addr (+ code-start-addr (* ncode-words 4))))
      (unless (member kind '(:absolute :relative))
        (error "Unknown code-object-fixup kind ~s." kind))
      (ecase kind
        (:absolute
 	;; word at sap + offset contains a value to be replaced by
 	;; adding that value to fixup.
-	(setf (sap-ref-32 sap offset)
-	      (+ fixup (sap-ref-32 sap offset))))
+	(setf (sap-ref-32 sap offset) (+ fixup (sap-ref-32 sap offset)))
+	;; Record absolute fixups that point within the code object.
+	(when (> code-end-addr (sap-ref-32 sap offset) obj-start-addr)
+	  (add-fixup code offset)))
        (:relative
-	;; fixup is actual address wanted. replace word with value
-	;; to add to that loc to get there.
-	;; (format t "x86-fixup ~a ~x ~x ~a~&" code offset fixup kind)
+	;; Fixup is the actual address wanted.
+	;;
+	;; Record relative fixups that point outside the code object.
+	(when (or (< fixup obj-start-addr) (> fixup code-end-addr))
+	  (add-fixup code offset))
+	;; Replace word with value to add to that loc to get there.
 	(let* ((loc-sap (+ (sap-int sap) offset))
 	       (rel-val (- fixup loc-sap 4)))
 	  (declare (type (unsigned-byte 32) loc-sap)
 		   (type (signed-byte 32) rel-val))
-	  ;;(format t "sap ~x ~x ~x~&" (sap-int sap) loc-sap rel-val)
 	  (setf (sap-ref-32 sap offset)  rel-val)) ))))
   nil)
 
@@ -387,6 +426,9 @@
 (defvar *fp-constant-1s0* 1s0)
 (defvar *fp-constant-1d0* 1d0)
 
+;;; Enable/Disable scavenging of the read-only space.
+(defvar *scavenge-read-only-space*)
+
 ;;; The current alien stack pointer; saved/restored for non-local
 ;;; exits.
 (defvar *alien-stack*)
@@ -401,14 +443,6 @@
 
 #+complex-float
 (progn
-(defun make-complex-single-float (x y)
-  (declare (type single-float x y))
-  (truly-the (complex single-float) (complex x y)))
-
-(defun make-complex-double-float (x y)
-  (declare (type double-float x y))
-  (truly-the (complex double-float) (complex x y)))
-
 (defun complex-single-float-real (x)
   (declare (type (complex single-float) x))
   (the single-float (complex-single-float-real x)))
