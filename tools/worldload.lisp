@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.31 1991/07/16 12:01:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.32 1991/07/16 17:38:47 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,7 +132,7 @@
 (hi::build-hemlock)
 #-no-hemlock
 (set '*hemlock-version*
-     (concatenate 'string *hemlock-version*
+     (concatenate 'string *hemlock-version* " "
 		  "(" *lisp-implementation-version* ")"))
 
 #|
