@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.9 1990/03/28 23:21:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.10 1990/04/24 02:56:47 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -31,10 +31,9 @@
   (:results
    (result :scs (any-reg descriptor-reg)))
   (:variant-vars type-code error-code)
-  (:node-var node)
   (:temporary (:type random :scs (non-descriptor-reg)) temp)
   (:generator 4
-    (let ((err-lab (generate-error-code node error-code value)))
+    (let ((err-lab (generate-error-code error-code value)))
       (test-simple-type value temp err-lab t type-code)
       (move result value))))
 
@@ -105,9 +104,8 @@
 (define-vop (check-fixnum check-simple-type)
   (:ignore type-code error-code)
   (:generator 3
-    (let ((err-lab (generate-error-code node di:object-not-fixnum-error
-					value)))
-      (inst andi temp value #x3)
+    (let ((err-lab (generate-error-code di:object-not-fixnum-error value)))
+      (inst and temp value #x3)
       (inst bne temp zero-tn err-lab)
       (move result value t))))
 
@@ -117,11 +115,11 @@
   (:ignore type-code)
   (:translate ext:fixnump)
   (:generator 3
-    (inst andi temp value #x3)
+    (inst and temp value #x3)
     (if not-p
 	(inst bne temp zero-tn target)
 	(inst beq temp zero-tn target))
-    (nop)))
+    (inst nop)))
 
 
 ;;;; Hairy type tests:
@@ -144,8 +142,7 @@
 	:target res))
   (:results
    (res :scs (any-reg descriptor-reg)))
-  (:temporary (:type random :scs (non-descriptor-reg)) temp)
-  (:node-var node))
+  (:temporary (:type random :scs (non-descriptor-reg)) temp))
 
 (macrolet ((frob (pred-name check-name error-code &rest types)
 	     (let ((cost (* (+ (length types)
@@ -161,8 +158,8 @@
 		  ,@(when check-name
 		      `((define-vop (,check-name check-hairy-type)
 			  (:generator ,cost
-			    (let ((err-lab (generate-error-code
-					    node ,error-code obj)))
+			    (let ((err-lab (generate-error-code ,error-code
+								obj)))
 			      (test-hairy-type obj temp err-lab t ,@types))
 			    (move res obj)))))))))
 
@@ -247,7 +244,7 @@
 		    ,@body))
 		(define-vop (,check-name check-list-symbol)
 		  (:generator 8
-		    (let ((target (generate-error-code node ,error-code obj))
+		    (let ((target (generate-error-code ,error-code obj))
 			  (not-p t))
 		      ,@body
 		      (move res obj)))))))
@@ -256,7 +253,7 @@
     (let* ((drop-thru (gen-label))
 	   (is-symbol-label (if not-p drop-thru target)))
       (inst beq obj null-tn is-symbol-label)
-      (nop)
+      (inst nop)
       (test-simple-type obj temp target not-p vm:symbol-header-type)
       (emit-label drop-thru)))
 
@@ -264,7 +261,7 @@
     (let* ((drop-thru (gen-label))
 	   (is-not-cons-label (if not-p target drop-thru)))
       (inst beq obj null-tn is-not-cons-label)
-      (nop)
+      (inst nop)
       (test-simple-type obj temp target not-p vm:list-pointer-type)
       (emit-label drop-thru))))
 
@@ -279,7 +276,6 @@
   (:args (object :scs (descriptor-reg)
 		:target result))
   (:results (result :scs (descriptor-reg)))
-  (:node-var node)
   (:temporary (:type random  :scs (non-descriptor-reg)) nd-temp)
   (:temporary (:scs (descriptor-reg)) saved-object)
   (:generator 0
@@ -291,16 +287,15 @@
       (move result object)
       (emit-label done-label)
 
-      (unassemble
-	(assemble-elsewhere node
-	  (emit-label not-function-label)
-	  (test-simple-type object nd-temp not-coercable-label t
-			    vm:symbol-header-type)
-	  (move saved-object object)
-	  (loadw result object vm:symbol-function-slot vm:other-pointer-type)
-	  (test-simple-type result nd-temp done-label nil
-			    vm:function-pointer-type)
-	  (error-call di:undefined-symbol-error saved-object)
-
-	  (emit-label not-coercable-label)
-	  (error-call di:object-not-coercable-to-function-error object))))))
+      (assemble (*elsewhere*)
+	(emit-label not-function-label)
+	(test-simple-type object nd-temp not-coercable-label t
+			  vm:symbol-header-type)
+	(move saved-object object)
+	(loadw result object vm:symbol-function-slot vm:other-pointer-type)
+	(test-simple-type result nd-temp done-label nil
+			  vm:function-pointer-type)
+	(error-call di:undefined-symbol-error saved-object)
+	
+	(emit-label not-coercable-label)
+	(error-call di:object-not-coercable-to-function-error object)))))

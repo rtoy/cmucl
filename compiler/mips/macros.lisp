@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.29 1990/04/23 16:45:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.30 1990/04/24 02:56:19 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -29,11 +29,6 @@
 
 ;;; Instruction-like macros.
 
-
-(defmacro nop ()
-  "Emit a nop."
-  '(inst sll zero-tn zero-tn 0))
-
 (defmacro move (dst src &optional (always-emit-code-p nil))
   "Move SRC into DST (unless they are location= and ALWAYS-EMIT-CODE-P
   is nil)."
@@ -44,38 +39,18 @@
 	`(unless (location= ,n-dst ,n-src)
 	   (inst addu ,n-dst ,n-src zero-tn)))))
 
-(defmacro b (label)
-  "Unconditional branch"
-  `(inst beq zero-tn zero-tn ,label))
-
-
 (defmacro def-mem-op (op inst shift load)
   `(defmacro ,op (object base &optional (offset 0) (lowtag 0))
      `(progn
 	(inst ,',inst ,object ,base (- (ash ,offset ,,shift) ,lowtag))
-	,,@(when load '('(nop))))))
+	,,@(when load '('(inst nop))))))
 ;;; 
 (def-mem-op loadw lw word-shift t)
 (def-mem-op storew sw word-shift nil)
 
 
-(defmacro loadi (reg const)
-  (once-only ((n-reg reg)
-	      (n-const const))
-    `(cond ((<= #x-8000 ,n-const #x7fff)
-	    (inst addi ,n-reg zero-tn ,n-const))
-	   ((<= #x8000 ,n-const #xffff)
-	    (inst ori ,n-reg zero-tn ,n-const))
-	   ((<= #x-80000000 ,n-const #xffffffff)
-	    (inst lui ,n-reg (ldb (byte 16 16) ,n-const))
-	    (let ((low (ldb (byte 16 0) ,n-const)))
-	      (unless (zerop low)
-		(inst ori ,n-reg ,n-reg low))))
-	   (t
-	    (error "Constant ~D cannot be loaded." ,n-const)))))
-
 (defmacro load-symbol (reg symbol)
-  `(inst addi ,reg null-tn (vm:static-symbol-offset ,symbol)))
+  `(inst add ,reg null-tn (vm:static-symbol-offset ,symbol)))
 
 (macrolet
     ((frob (slot)
@@ -97,7 +72,7 @@
 		       (+ (vm:static-symbol-offset ',symbol)
 			  (ash ,',offset vm:word-shift)
 			  (- vm:other-pointer-type)))
-		 (nop)))
+		 (inst nop)))
 	    (defmacro ,storer (reg symbol)
 	      `(inst sw ,reg null-tn
 		     (+ (vm:static-symbol-offset ',symbol)
@@ -125,17 +100,17 @@
 (defmacro lisp-jump (function lip)
   "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
-     (inst addiu ,lip ,function (- (ash vm:function-header-code-offset
+     (inst addu ,lip ,function (- (ash vm:function-header-code-offset
 					vm:word-shift)
 				   vm:function-pointer-type))
-     (inst jr ,lip)
+     (inst j ,lip)
      (move code-tn ,function)))
 
 (defmacro lisp-return (return-pc lip)
   "Return to RETURN-PC.  LIP is an interior-reg temporary."
   `(progn
-     (inst addiu ,lip ,return-pc (- vm:word-bytes vm:other-pointer-type))
-     (inst jr ,lip)
+     (inst addu ,lip ,return-pc (- vm:word-bytes vm:other-pointer-type))
+     (inst j ,lip)
      (move code-tn ,return-pc)))
 
 (defmacro emit-return-pc (label)
@@ -204,7 +179,7 @@
 	  (if ,n-not-p
 	      (inst beq ,n-temp zero-tn ,n-target)
 	      (inst bne ,n-temp zero-tn ,n-target))))
-       (nop))))
+       (inst nop))))
 
 
 ;;;; Simple Type Checking Macros
@@ -212,12 +187,12 @@
 (defmacro simple-test-tag (register temp target not-p tag-type tag-mask)
   `(progn
      (unless (zerop ,tag-mask)
-       (inst andi ,temp ,register ,tag-mask))
-     (inst xori ,temp ,temp ,tag-type)
+       (inst and ,temp ,register ,tag-mask))
+     (inst xor ,temp ,temp ,tag-type)
      (if ,not-p
 	 (inst bne ,temp zero-tn ,target)
 	 (inst beq ,temp zero-tn ,target))
-     (nop)))
+     (inst nop)))
 
 (defmacro simple-test-simple-type (register temp target not-p type-code)
   "Emit conditional code that test whether Register holds an object with
@@ -260,7 +235,7 @@
 	      (simple-test-tag ,n-register ,n-temp not-other-label t
 			       vm:other-pointer-type vm:lowtag-mask)
 	      (load-type ,n-temp ,n-register (- vm:other-pointer-type))
-	      (nop)
+	      (inst nop)
 	      (simple-test-tag ,n-temp ,n-temp ,n-target ,n-not-p
 			       ,n-type-code 0)
 	      (emit-label out-label))))))
@@ -297,7 +272,7 @@
       (macrolet ((frob (value)
 		   `(let ((diff (+ (- ,value) last-type-code)))
 		      (unless (zerop diff)
-			(emit `(inst addi ,temp ,temp ,diff))
+			(emit `(inst add ,temp ,temp ,diff))
 			(setf last-type-code ,value)))))
 	(do* ((types tag-types (cdr types))
 	      (type (car types) (car types))
@@ -330,9 +305,9 @@
 	 ,in-label			; squelch possible warning
 	 ,out-label
 	 (unless (zerop ,tag-mask)
-	   (inst andi ,temp ,register ,tag-mask))
+	   (inst and ,temp ,register ,tag-mask))
 	 ,@(emit)
-	 (nop)
+	 (inst nop)
 	 (emit-label drop-through)))))
 
 (defmacro test-hairy-type (register temp target not-p &rest types)
@@ -381,7 +356,7 @@
 	       `((simple-test-tag ,n-register ,n-temp not-other-label t
 				  vm:other-pointer-type vm:lowtag-mask)
 		 (load-type ,n-temp ,n-register (- vm:other-pointer-type))
-		 (nop)
+		 (inst nop)
 		 (hairy-test-tag ,n-register ,n-temp ,n-target ,n-not-p
 				 ,header-word-types 0)))
 	   (emit-label out-label))))))
@@ -473,52 +448,48 @@
 	(emit-error-break vm:error-trap error-code values)))
 
 
-
 (defmacro cerror-call (label error-code &rest values)
   "Cause a continuable error.  If the error is continued, execution resumes at
   LABEL."
   `(progn
-     (b ,label)
+     (inst b ,label)
      ,@(emit-error-break vm:cerror-trap error-code values)))
 
-(defmacro generate-error-code (node error-code &rest values)
-  "Generate-Error-Code Node Error-code Value*
-  Emit code for an error with the specified Error-Code and context Values.
-  Node is used for source context."
-  `(unassemble
-     (assemble-elsewhere ,node
-       (let ((start-lab (gen-label)))
-	 (emit-label start-lab)
-	 (error-call ,error-code ,@values)
-	 start-lab))))
+(defmacro generate-error-code (error-code &rest values)
+  "Generate-Error-Code Error-code Value*
+  Emit code for an error with the specified Error-Code and context Values."
+  `(assemble (*elsewhere*)
+     (let ((start-lab (gen-label)))
+       (emit-label start-lab)
+       (error-call ,error-code ,@values)
+       start-lab)))
 
-(defmacro generate-cerror-code (node error-code &rest values)
-  "Generate-CError-Code Node Error-code Value*
+(defmacro generate-cerror-code (error-code &rest values)
+  "Generate-CError-Code Error-code Value*
   Emit code for a continuable error with the specified Error-Code and
-  context Values.  Node is used for source context.  If the error is continued,
-  execution resumes after the GENERATE-CERROR-CODE form."
+  context Values.  If the error is continued, execution resumes after
+  the GENERATE-CERROR-CODE form."
   (let ((continue (gensym "CONTINUE-LABEL-"))
 	(error (gensym "ERROR-LABEL-")))
     `(let ((,continue (gen-label)))
        (emit-label ,continue)
-       (unassemble
-	(assemble-elsewhere ,node
-	  (let ((,error (gen-label)))
-	    (emit-label ,error)
-	    (cerror-call ,continue ,error-code ,@values)
-	    ,error))))))
+       (assemble (*elsewhere*)
+	 (let ((,error (gen-label)))
+	   (emit-label ,error)
+	   (cerror-call ,continue ,error-code ,@values)
+	   ,error)))))
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
 (defmacro pseudo-atomic ((ndescr-temp) &rest forms)
   (let ((label (gensym "LABEL-")))
     `(let ((,label (gen-label)))
-       (inst andi flags-tn flags-tn (lognot (ash 1 interrupted-flag)))
-       (inst ori flags-tn flags-tn (ash 1 atomic-flag))
+       (inst and flags-tn flags-tn (logxor (ash 1 interrupted-flag) #Xffff))
+       (inst or flags-tn flags-tn (ash 1 atomic-flag))
        ,@forms
-       (inst andi flags-tn flags-tn (lognot (ash 1 atomic-flag)))
-       (inst andi ,ndescr-temp flags-tn (ash 1 interrupted-flag))
+       (inst and flags-tn flags-tn (logxor (ash 1 atomic-flag) #Xffff))
+       (inst and ,ndescr-temp flags-tn (ash 1 interrupted-flag))
        (inst beq ,ndescr-temp zero-tn ,label)
-       (nop)
+       (inst nop)
        (inst break vm:pending-interrupt-trap)
        (emit-label ,label))))

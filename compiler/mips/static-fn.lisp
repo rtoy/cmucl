@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.5 1990/04/23 16:45:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.6 1990/04/24 02:56:34 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -22,7 +22,6 @@
   (:save-p t)
   (:policy :fast-safe)
   (:variant-vars symbol)
-  (:node-var node)
   (:temporary (:scs (any-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
@@ -87,7 +86,7 @@
 	 (:generator ,(+ 50 num-args num-results)
 	   (let ((lra-label (gen-label)))
 	     ,@(moves (temp-names) (arg-names))
-	     (loadi nargs (fixnum ,num-args))
+	     (inst li nargs (fixnum ,num-args))
 	     (load-symbol cname symbol)
 	     (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
 	     (move old-fp fp-tn)
@@ -97,25 +96,21 @@
 		    vm:function-pointer-type)
 	     (lisp-jump function lip)
 	     (emit-return-pc lra-label)
-	     (unassemble
-	      ,(collect ((bindings) (links))
-		 (do ((temp (temp-names) (cdr temp))
-		      (name 'values (gensym))
-		      (prev nil name)
-		      (i 0 (1+ i)))
-		     ((= i num-results))
-		   (bindings `(,name
-			       (make-tn-ref ,(car temp) nil)))
-		   (when prev
-		     (links `(setf (tn-ref-across ,prev) ,name))))
-		 `(let ,(bindings)
-		    ,@(links)
-		    (default-unknown-values node
-					    ,(if (zerop num-results)
-						 nil
-						 'values)
-					    ,num-results
-					    move-temp temp lra-label))))
+	     ,(collect ((bindings) (links))
+		(do ((temp (temp-names) (cdr temp))
+		     (name 'values (gensym))
+		     (prev nil name)
+		     (i 0 (1+ i)))
+		    ((= i num-results))
+		  (bindings `(,name
+			      (make-tn-ref ,(car temp) nil)))
+		  (when prev
+		    (links `(setf (tn-ref-across ,prev) ,name))))
+		`(let ,(bindings)
+		   ,@(links)
+		   (default-unknown-values
+		       ,(if (zerop num-results) nil 'values)
+		       ,num-results move-temp temp lra-label))))
 	     ,@(moves (result-names) (temp-names))))))))
 
 
@@ -135,6 +130,7 @@
 		,(static-function-template-name (length args)
 						(length results)))
      (:variant ',name)
+     (:note ,(format nil "static-function ~@(~S~)" name))
      ,@(when translate
 	 `((:translate ,translate)))
      ,@(when policy

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.5 1990/04/23 16:44:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.6 1990/04/24 02:56:01 wlott Exp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;
@@ -39,7 +39,7 @@
   (:results (y :scs (any-reg descriptor-reg)))
   (:generator 1
     (inst sll y x vm:type-bits)
-    (inst ori y y vm:base-character-type)))
+    (inst or y y vm:base-character-type)))
 ;;;
 (define-move-vop move-from-base-character :move
   (base-character-reg) (any-reg descriptor-reg))

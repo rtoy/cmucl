@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.8 1990/03/21 23:32:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.9 1990/04/24 02:56:44 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -78,20 +78,20 @@
 	  (shift (gen-label)))
       (simple-test-simple-type object ndescr other-ptr
 			       nil vm:other-pointer-type)
-      (inst andi ndescr object (logand (logeqv vm:other-immediate-0-type
-					       vm:other-immediate-1-type)
-				       vm:lowtag-mask))
-      (inst xori ndescr ndescr (logand vm:other-immediate-0-type
-				       vm:other-immediate-1-type))
+      (inst and ndescr object (logand (logeqv vm:other-immediate-0-type
+					      vm:other-immediate-1-type)
+				      vm:lowtag-mask))
+      (inst xor ndescr ndescr (logand vm:other-immediate-0-type
+				      vm:other-immediate-1-type))
       (inst bne ndescr zero-tn shift)
-      (inst andi ndescr object vm:lowtag-mask)
-
-      (b shift)
-      (inst andi ndescr object vm:type-mask)
-
+      (inst and ndescr object vm:lowtag-mask)
+      
+      (inst b shift)
+      (inst and ndescr object vm:type-mask)
+      
       (emit-label other-ptr)
       (load-type ndescr object)
-
+      
       (emit-label shift)
       (inst sll result ndescr 2))))
 
@@ -112,7 +112,7 @@
     (sc-case type
       ((immediate unsigned-immediate)
        (inst sll temp val vm:type-bits)
-       (inst ori res temp (tn-value type)))
+       (inst or res temp (tn-value type)))
       (t
        (inst sra temp type 2)
        (inst sll res val (- vm:type-bits 2))

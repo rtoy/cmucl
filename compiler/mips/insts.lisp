@@ -1,30 +1,35 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the CMU Common Lisp project at
+;;; This code was written as part of the Spice Lisp project at
 ;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of CMU Common Lisp, please
-;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
+;;; If you want to use this code or any part of Spice Lisp, please contact
+;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.11 1990/03/05 21:06:44 wlott Exp $
-;;; 
-;;; Assembler instruction definitions for the MIPS R2000.
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.12 1990/04/24 02:56:14 wlott Exp $
 ;;;
-;;; Written by Christopher Hoover
+;;; Description of the MIPS architecture.
+;;;
+;;; Written by William Lott
 ;;;
 
-(in-package "C")
+(in-package "MIPS")
+(use-package "ASSEM")
 
-;;; Clear out any old definitions.
-;;; 
-(clrhash *instructions*)
-(clrhash *instruction-formats*)
+(import '(c::tn-p c::tn-sc c::tn-offset c::sc-sb c::sb-name c::zero-tn
+		  c::registers c::float-registers
+		  c::component-header-length))
 
 
-;;;; Formats
+;;;; Resources.
 
-(eval-when (compile load eval)
+(define-random-resources high low)
+(define-register-file ireg 32)
+(define-register-file fpreg 32)
+
+
+;;;; Formats.
 
 (defconstant special-op #b000000)
 (defconstant bcond-op #b0000001)
@@ -33,460 +38,467 @@
 (defconstant cop2-op #b010010)
 (defconstant cop3-op #b010011)
 
-) ; eval-when
 
-;;;
-;;; Load Store Format
-;;; 
-(def-instruction-format (load-store 4) (rt base &optional (offset 0))
-  (op :unsigned 6 :instruction-constant)
-  (base :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (offset :signed 16 :immediate))
+(define-format (immediate 32)
+  (op (byte 6 26))
+  (rs (byte 5 21) :use ireg)
+  (rt (byte 5 16) :clobber ireg)
+  (immediate (byte 16 0)))
 
-;;;
-;;; Signed Immediate Format
-;;; 
-(def-instruction-format (signed-immed 4) (rt rs immed)
-  (op :unsigned 6 :instruction-constant)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (immed :signed 16 :immediate))
+(define-format (jump 32)
+  (op (byte 6 26))
+  (target (byte 26 0)))
 
-;;;
-;;; Unsigned Immediate Format
-;;; 
-(def-instruction-format (unsigned-immed 4) (rt rs immed)
-  (op :unsigned 6 :instruction-constant)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (immed :unsigned 16 :immediate))
+(define-format (register 32)
+  (op (byte 6 26))
+  (rs (byte 5 21) :use ireg)
+  (rt (byte 5 16) :use ireg)
+  (rd (byte 5 11) :clobber ireg)
+  (shamt (byte 5 6) :default 0)
+  (funct (byte 6 0)))
 
-;;;
-;;; LUI Special Format
-;;;
-(def-instruction-format (lui-special 4) (rt immed)
-  (op :unsigned 6 :instruction-constant)
-  (rt :unsigned 5 :constant 0)
-  (rt :unsigned 5 :register)
-  (immed :unsigned 16 :immediate))
 
-;;;
-;;; Jump (J) Format
-;;;
-(def-instruction-format (jump 4) (target)
-  (op :unsigned 6 :instruction-constant)
-  (target :unsigned 26 :branch #'(lambda (x) (ash x -2)))) ; This isn't right
 
-;;;
-;;; JR Special Format
-;;; 
-(def-instruction-format (jr-special 4) (rs)
-  (special :unsigned 6 :constant special-op)
-  (rs :unsigned 5 :register)
-  (zero :unsigned 15 :constant 0)
-  (op :unsigned 6 :instruction-constant))
+(define-format (break 32)
+  (op (byte 6 26) :default special-op)
+  (code (byte 10 16))
+  (subcode (byte 10 6) :default 0)
+  (funct (byte 6 0) :default #b001101))
 
-;;;
-;;; JALR Special Format
-;;;
-(def-instruction-format (jalr-special 4) (rd rs)
-  (special :unsigned 6 :constant special-op)
-  (rs :unsigned 5 :register)
-  (zero-1 :unsigned 5 :constant 0)
-  (rd :unsigned 5 :register)
-  (zero-2 :unsigned 5 :constant 0)
-  (op :unsigned 6 :instruction-constant))
-
-;;; 
-;;; Branch Format
-;;;
-(def-instruction-format (branch 4) (rs offset)
-  (op :unsigned 6 :instruction-constant)
-  (rs :unsigned 5 :register)
-  (zero :unsigned 5 :constant 0)
-  (offset :signed 16 :branch #'(lambda (x) (ash (- x 4) -2))))
-
-;;;
-;;; Branch-2 Format
-;;;
-(def-instruction-format (branch-2 4) (rs rt offset)
-  (op :unsigned 6 :instruction-constant)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (offset :signed 16 :branch #'(lambda (x) (ash (- x 4) -2))))
-
-;;;
-;;; Branch-Z Format
-;;;
-(def-instruction-format (branch-z 4) (rs offset)
-  (bcond :unsigned 6 :constant bcond-op)
-  (rs :unsigned 5 :register)
-  (op :unsigned 5 :instruction-constant)
-  (offset :signed 16 :branch #'(lambda (x) (ash (- x 4) -2))))
-
-;;;
-;;; R3 Format
-;;; 
-(def-instruction-format (r3 4) (rd rs rt)
-  (special :unsigned 6 :constant special-op)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (rd :unsigned 5 :register)
-  (zero :unsgined 5 :constant 0)
-  (op :unsigned 6 :instruction-constant))
-
-;;;
-;;; MF Format
-;;;
-(def-instruction-format (mf 4) (rd)
-  (special :unsigned 6 :constant special-op)
-  (zero-1 :unsigned 10 :constant 0)
-  (rd :unsigned 5 :register)
-  (zero-2 :unsigned 5 :constant 0)
-  (op :unsigned 6 :instruction-constant))
-
-;;; 
-;;; MT Format
-;;;
-(def-instruction-format (mt 4) (rs)
-  (special :unsigned 6 :constant special-op)
-  (rs :unsigned 5 :register)
-  (zero :unsigned 15 :constant 0)
-  (op :unsigned 6 :instruction-constant))
-
-;;;
-;;; Mult Format
-;;;
-(def-instruction-format (mult 4) (rs rt)
-  (special :unsigned 6 :constant special-op)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (zero :unsigned 10 :constant 0)
-  (op :unsigned 6 :instruction-constant))
-
-;;;
-;;; Shift Format
-;;;
-(def-instruction-format (shift 4) (rd rt shamt)
-  (special :unsigned 6 :constant special-op)
-  (zero :unsgined 5 :constant 0)
-  (rt :unsigned 5 :register)
-  (rd :unsigned 5 :register)
-  (shamt :unsigned 5 :immediate)
-  (op :unsigned 6 :instruction-constant))
-
-;;;
-;;; Shift-Var Format
-;;;
-(def-instruction-format (shift-var 4) (rd rt rs)
-  (special :unsigned 6 :constant special-op)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (rd :unsigned 5 :register)
-  (zero :unsigned 5 :constant 0)
-  (op :unsigned 6 :instruction-constant))
-
-;;;
-;;; BREAK-Special Format
-;;;
-(def-instruction-format (break-special 4) (code)
-  (special :unsigned 6 :constant special-op)
-  (code :unsigned 10 :immediate) ; The MIPS assembler only uses half the bits.
-  (unused :unsigned 10 :constant 0)
-  (op :unsigned 6 :instruction-constant))
-
-;;;
-;;; SYSCALL-Special Format
-;;;
-(def-instruction-format (syscall-special 4) ()
-  (special :unsigned 6 :constant special-op)
-  (zero :unsigned 20 :constant 0)
-  (op :unsigned 6 :instruction-constant))
 
 
-;;;; Instructions
+;;;; Special argument types and fixups.
 
-(def-instruction j-inst jump :op #b00010)
-(def-instruction jal-inst jump :op #b00011)
-(def-instruction jr jr-special :op #b001000)
-(def-instruction jalr jalr-special :op #b001001)
-(def-instruction beq-inst branch-2 :op #b000100)
-(def-instruction bne-inst branch-2 :op #b000101)
-(def-instruction blez-inst branch :op #b000110)
-(def-instruction bgtz-inst branch :op #b000111)
+(defun register-p (object)
+  (and (tn-p object)
+       (eq (sb-name (sc-sb (tn-sc object))) 'registers)))
 
-(def-instruction addi signed-immed :op #b001000)
-(def-instruction addiu signed-immed :op #b001001)
-(def-instruction slti signed-immed :op #b001010)
-(def-instruction sltiu signed-immed :op #b001011)
-(def-instruction andi unsigned-immed :op #b001100)
-(def-instruction ori unsigned-immed :op #b001101)
-(def-instruction xori unsigned-immed :op #b001110)
-(def-instruction lui lui-special :op #b001111)
+(define-argument-type register
+  :type (satisfies register-p)
+  :function tn-offset)
 
-(def-instruction lb load-store :op #b100000)
-(def-instruction lh load-store :op #b100001)
-(def-instruction lwl load-store :op #b100010)
-(def-instruction lw load-store :op #b100011)
-(def-instruction lbu load-store :op #b100100)
-(def-instruction lhu load-store :op #b100101)
-(def-instruction lwr load-store :op #b100110)
+(defun fp-reg-p (object)
+  (and (tn-p object)
+       (eq (sb-name (sc-sb (tn-sc object)))
+	   'float-registers)))
 
-(def-instruction sb load-store :op #b101000)
-(def-instruction sh load-store :op #b101001)
-(def-instruction swl load-store :op #b101010)
-(def-instruction sw load-store :op #b101011)
-(def-instruction swr load-store :op #b101110)
+(define-argument-type fp-reg
+  :type (satisfies fp-reg-p)
+  :function tn-offset)
 
-(def-instruction sll shift :op #b000000)
-(def-instruction srl shift :op #b000010)
-(def-instruction sra shift :op #b000011)
-(def-instruction sllv shift-var :op #b000100)
-(def-instruction srlv shift-var :op #b000110)
-(def-instruction srav shift-var :op #b000111)
 
-(def-instruction syscall syscall-special :op #b001100)
-(def-instruction break break-special :op #b001101)
 
-(def-instruction mfhi mf :op #b010000)
-(def-instruction mthi mt :op #b010001)
-(def-instruction mflo mf :op #b010010)
-(def-instruction mtlo mt :op #b010011)
+(defun label-offset (label)
+  (1- (ash (- (label-position label) *current-position*) -2)))
 
-(def-instruction mult mult :op #b011000)
-(def-instruction multu mult :op #b011001)
-(def-instruction div mult :op #b011010)
-(def-instruction divu mult :op #b011011)
+(define-argument-type relative-label
+  :type label
+  :function label-offset)
 
-(def-instruction add r3 :op #b100000)
-(def-instruction addu r3 :op #b100001)
-(def-instruction sub r3 :op #b100010)
-(def-instruction subu r3 :op #b100011)
-(def-instruction and r3 :op #b100100)
-(def-instruction or r3 :op #b100101)
-(def-instruction xor r3 :op #b100110)
-(def-instruction nor r3 :op #b100111)
 
-(def-instruction slt r3 :op #b101010)
-(def-instruction sltu r3 :op #b101011)
+(define-fixup-type :jump)
+(define-fixup-type :lui)
+(define-fixup-type :addi)
 
-(def-instruction bltz-inst branch-z :op #b00000)
-(def-instruction bltzal-inst branch-z :op #b10000)
-
-(def-instruction bgez-inst branch-z :op #b00001)
-(def-instruction bgezal-inst branch-z :op #b10001)
 
 
-;;;; Branches
-
-(defmacro most-positive-twos-complement-number (n-bits)
-  `(1- (ash 1 (1- ,n-bits))))
-
-(defmacro most-negative-twos-complement-number (n-bits)
-  `(- (ash 1 (1- ,n-bits))))
+;;;; Instructions.
 
 
-;;;
-;;; ### These two aren't right
-;;; 
-(def-branch j (label) label
-  (0 (ash 1 28) (j-inst label)))
-;;; 
-(def-branch jal (label) label
-  (0 (ash 1 28) (jal-inst label)))
+(defmacro define-math-inst (name r3 imm &optional imm-type function fixup)
+  `(define-instruction (,name)
+     ,@(when imm
+	 `((immediate (op :constant ,imm)
+		      (rt :argument register)
+		      (rs :same-as rt)
+		      (immediate :argument (,(case imm-type
+					       (:signed 'signed-byte)
+					       (:unsigned 'unsigned-byte))
+					    16)
+				 ,@(when function
+				     `(:function ,function))))
+	   (immediate (op :constant ,imm)
+		      (rt :argument register)
+		      (rs :argument register)
+		      (immediate :argument (,(case imm-type
+					       (:signed 'signed-byte)
+					       (:unsigned 'unsigned-byte))
+					    16)
+				 ,@(when function
+				     `(:function ,function))))))
+     ,@(when (and imm fixup)
+	 `((immediate (op :constant ,imm)
+		      (rt :argument register)
+		      (rs :same-as rt)
+		      (immediate :argument addi-fixup))
+	   (immediate (op :constant ,imm)
+		      (rt :argument register)
+		      (rs :argument register)
+		      (immediate :argument addi-fixup))))
+     ,@(when r3
+	 `((register (op :constant special-op)
+		     (rd :argument register)
+		     (rs :argument register)
+		     (rt :argument register)
+		     (funct :constant ,r3))
+	   (register (op :constant special-op)
+		     (rd :argument register)
+		     (rs :same-as rd)
+		     (rt :argument register)
+		     (funct :constant ,r3))))))
+
+(define-math-inst add #b100000 #b001000 :signed)
+(define-math-inst addu #b100001 #b001001 :signed nil t)
+(define-math-inst sub #b100010 #b001000 :signed -)
+(define-math-inst subu #b100011 #b001001 :signed -)
+(define-math-inst and #b100100 #b001100 :unsigned)
+(define-math-inst or #b100101 #b001101 :unsigned)
+(define-math-inst xor #b100110 #b001110 :unsigned)
+(define-math-inst nor #b100111 #b001111 :unsigned)
+
+(define-math-inst slt #b101010 #b001010 :signed)
+(define-math-inst sltu #b101011 #b001011 :signed)
+
+(define-instruction (beq)
+  (immediate (op :constant #b000100)
+	     (rs :argument register)
+	     (rt :constant 0)
+	     (immediate :argument relative-label))
+  (immediate (op :constant #b000100)
+	     (rs :argument register)
+	     (rt :argument register)
+	     (immediate :argument relative-label)))
+
+(define-instruction (bne)
+  (immediate (op :constant #b000101)
+	     (rs :argument register)
+	     (rt :constant 0)
+	     (immediate :argument relative-label))
+  (immediate (op :constant #b000101)
+	     (rs :argument register)
+	     (rt :argument register)
+	     (immediate :argument relative-label)))
+
+(define-instruction (blez)
+  (immediate (op :constant #b000110)
+	     (rs :argument register)
+	     (rt :constant 0)
+	     (immediate :argument relative-label)))
+
+(define-instruction (bgtz)
+  (immediate (op :constant #b000111)
+	     (rs :argument register)
+	     (rt :constant 0)
+	     (immediate :argument relative-label)))
+
+(define-instruction (bltz)
+  (immediate (op :constant bcond-op)
+	     (rs :argument register)
+	     (rt :constant #b00000)
+	     (immediate :argument relative-label)))
+
+(define-instruction (bgez)
+  (immediate (op :constant bcond-op)
+	     (rs :argument register)
+	     (rt :constant #b00001)
+	     (immediate :argument relative-label)))
+
+(define-instruction (bltzal)
+  (immediate (op :constant bcond-op)
+	     (rs :argument register)
+	     (rt :constant #b01000)
+	     (immediate :argument relative-label)))
+
+(define-instruction (bgezal)
+  (immediate (op :constant bcond-op)
+	     (rs :argument register)
+	     (rt :constant #b01001)
+	     (immediate :argument relative-label)))
+
+(define-instruction (break)
+  (break (code :argument (unsigned-byte 10)))
+  (break (code :argument (unsigned-byte 10))
+	 (subcode :argument (unsigned-byte 10))))
+
+(define-instruction (div :clobber (low high))
+  (register (op :constant special-op)
+	    (rs :argument register)
+	    (rt :argument register)
+	    (rd :constant 0)
+	    (funct :constant #b011010)))
+
+(define-instruction (divu :clobber (low high))
+  (register (op :constant special-op)
+	    (rs :argument register)
+	    (rt :argument register)
+	    (rd :constant 0)
+	    (funct :constant #b011011)))
+
+(define-instruction (j)
+  (register (op :constant special-op)
+	    (rs :argument register)
+	    (rt :constant 0)
+	    (rd :constant 0)
+	    (funct :constant #b001000))
+  (jump (op :constant #b000010)
+	(target :argument jump-fixup)))
+
+(define-instruction (jal)
+  (register (op :constant special-op)
+	    (rs :argument register)
+	    (rt :constant 0)
+	    (rd :constant 31)
+	    (funct :constant #b001001))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rs :argument register)
+	    (rt :constant 0)
+	    (funct :constant #b001001))
+  (jump (op :constant #b000011)
+	(target :argument jump-fixup)))
 
 
-(def-branch beq (rs rt label) label
-  ((most-negative-twos-complement-number 18)
-   (most-positive-twos-complement-number 18)
-   (beq-inst rs rt label)))
+(defmacro define-load/store-instruction (name op)
+  `(define-instruction (,name)
+     (immediate (op :constant ,op)
+		(rs :argument register)
+		(rt :argument register)
+		(immediate :argument (signed-byte 16)))
+     (immediate (op :constant ,op)
+		(rs :argument register)
+		(rt :argument register)
+		(immediate :argument addi-fixup))
+     (immediate (op :constant ,op)
+		(rs :argument register)
+		(rt :argument register)
+		(immediate :constant 0))))
 
-(def-branch bne (rs rt label) label
-  ((most-negative-twos-complement-number 18)
-   (most-positive-twos-complement-number 18)
-   (bne-inst rs rt label)))
+(define-load/store-instruction lb #b100000)
+(define-load/store-instruction lh #b100001)
+(define-load/store-instruction lwl #b100010)
+(define-load/store-instruction lw #b100011)
+(define-load/store-instruction lbu #b100100)
+(define-load/store-instruction lhu #b100101)
+(define-load/store-instruction lwr #b100110)
+(define-load/store-instruction sb #b101000)
+(define-load/store-instruction sh #b101001)
+(define-load/store-instruction swl #b101010)
+(define-load/store-instruction sw #b101011)
+(define-load/store-instruction swr #b101110)
 
-(def-branch blez (rs label) label
-  ((most-negative-twos-complement-number 18)
-   (most-positive-twos-complement-number 18)
-   (blez-inst rs label)))
+(define-instruction (lui)
+  (immediate (op :constant #b001111)
+	     (rs :constant 0)
+	     (rt :argument register)
+	     (immediate :argument (or (unsigned-byte 16) (signed-byte 16))))
+  (immediate (op :constant #b001111)
+	     (rs :constant 0)
+	     (rt :argument register)
+	     (immediate :argument lui-fixup)))
 
-(def-branch bgtz (rs label) label
-  ((most-negative-twos-complement-number 18)
-   (most-positive-twos-complement-number 18)
-   (bgtz-inst rs label)))
 
-(def-branch bltz (rs label) label
-  ((most-negative-twos-complement-number 18)
-   (most-positive-twos-complement-number 18)
-   (bltz-inst rs label)))
+(define-instruction (mfhi :use high)
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rs :constant 0)
+	    (rt :constant 0)
+	    (funct :constant #b010000)))
 
-(def-branch bltzal (rs label) label
-  ((most-negative-twos-complement-number 18)
-   (most-positive-twos-complement-number 18)
-   (bltzal-inst rs label)))
+(define-instruction (mthi :clobber high)
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rs :constant 0)
+	    (rt :constant 0)
+	    (funct :constant #b010001)))
 
-(def-branch bgez (rs label) label
-  ((most-negative-twos-complement-number 18)
-   (most-positive-twos-complement-number 18)
-   (bgez-inst rs label)))
+(define-instruction (mflo :use low)
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rs :constant 0)
+	    (rt :constant 0)
+	    (funct :constant #b010010)))
 
-(def-branch bgezal (rs label) label
-  ((most-negative-twos-complement-number 18)
-   (most-positive-twos-complement-number 18)
-   (bgezal-inst rs label)))
+(define-instruction (mtlo :clobber low)
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rs :constant 0)
+	    (rt :constant 0)
+	    (funct :constant #b010011)))
+
+
+(define-instruction (mult :clobber (low high))
+  (register (op :constant special-op)
+	    (rs :argument register)
+	    (rt :argument register)
+	    (rd :constant 0)
+	    (funct :constant #b011000)))
+
+(define-instruction (multu :clobber (low high))
+  (register (op :constant special-op)
+	    (rs :argument register)
+	    (rt :argument register)
+	    (rd :constant 0)
+	    (funct :constant #b011001)))
+
+(define-instruction (sll)
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :argument register)
+	    (rs :constant 0)
+	    (shamt :argument (unsigned-byte 5))
+	    (funct :constant #b000000))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :same-as rd)
+	    (rs :constant 0)
+	    (shamt :argument (unsigned-byte 5))
+	    (funct :constant #b000000))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :argument register)
+	    (rs :argument register)
+	    (funct :constant #b000100))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :same-as rd)
+	    (rs :argument register)
+	    (funct :constant #b000100)))
+
+(define-instruction (sra)
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :argument register)
+	    (rs :constant 0)
+	    (shamt :argument (unsigned-byte 5))
+	    (funct :constant #b000011))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :same-as rd)
+	    (rs :constant 0)
+	    (shamt :argument (unsigned-byte 5))
+	    (funct :constant #b000011))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :argument register)
+	    (rs :argument register)
+	    (funct :constant #b000111))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :same-as rd)
+	    (rs :argument register)
+	    (funct :constant #b000111)))
+
+(define-instruction (srl)
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :argument register)
+	    (rs :constant 0)
+	    (shamt :argument (unsigned-byte 5))
+	    (funct :constant #b000010))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :same-as rd)
+	    (rs :constant 0)
+	    (shamt :argument (unsigned-byte 5))
+	    (funct :constant #b000010))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :argument register)
+	    (rs :argument register)
+	    (funct :constant #b000110))
+  (register (op :constant special-op)
+	    (rd :argument register)
+	    (rt :same-as rd)
+	    (rs :argument register)
+	    (funct :constant #b000110)))
+
+(define-instruction (syscall)
+  (register (op :constant special-op)
+	    (rd :constant 0)
+	    (rt :constant 0)
+	    (rs :constant 0)
+	    (funct :constant #b001100)))
+
 
 
-;;;; Pseduo Instructions to Support Component Dumping
+;;;; Pseudo-instructions
 
-(defun component-header-length (&optional (component *compile-component*))
-  (let* ((2comp (component-info component))
-	 (constants (ir2-component-constants 2comp))
-	 (num-consts (length constants)))
-    (ash (logandc2 (1+ num-consts) 1) word-shift)))
+(define-pseudo-instruction li 64 (reg value)
+  (etypecase value
+    ((unsigned-byte 16)
+     (inst or reg zero-tn value))
+    ((signed-byte 16)
+     (inst addu reg zero-tn value))
+    ((or (signed-byte 32) (unsigned-byte 32))
+     (inst lui reg (ldb (byte 16 16) value))
+     (let ((low (ldb (byte 16 0) value)))
+       (unless (zerop low)
+	 (inst or reg low))))
+    (fixup
+     (inst lui reg value)
+     (inst addu reg value))))
 
+(define-instruction (b)
+  (immediate (op :constant #b000100)
+	     (rs :constant 0)
+	     (rt :constant 0)
+	     (immediate :argument relative-label)))
 
-;;; COMPUTE-CODE-FROM-FN
-;;;
-;;; code = fn - fn-tag - header - label-offset + other-pointer-tag
-;;; 
-(def-instruction-format (compute-code-from-fn-format 4) (rt rs label)
-  (op :unsigned 6 :instruction-constant)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (label :signed 16
-	 :label #'(lambda (label-offset instr-offset)
-		    (declare (ignore instr-offset))
-		    (- other-pointer-type function-pointer-type label-offset
-		       (component-header-length)))))
+(define-instruction (nop)
+  (register (op :constant 0)
+	    (rd :constant 0)
+	    (rt :constant 0)
+	    (rs :constant 0)
+	    (funct :constant 0)))
 
-(def-instruction compute-code-from-fn compute-code-from-fn-format
-  :op #b001001)
+(define-format (word-format 32)
+  (data (byte 32 0)))
+(define-instruction (word)
+  (word-format (data :argument (or (unsigned-byte 32) (signed-byte 32)))))
 
+(define-format (short-format 16)
+  (data (byte 16 0)))
+(define-instruction (short)
+  (word-format (data :argument (or (unsigned-byte 16) (signed-byte 16)))))
 
-;;; COMPUTE-CODE-FROM-LRA
-;;;
-;;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
-;;; 
-(def-instruction-format (compute-code-from-lra-format 4) (rt rs label)
-  (op :unsigned 6 :instruction-constant)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (label :signed 16
-	 :label #'(lambda (label-offset instr-offset)
-		    (declare (ignore instr-offset))
-		    (- (+ label-offset (component-header-length))))))
-
-(def-instruction compute-code-from-lra compute-code-from-lra-format
-  :op #b001001)
-
-
-;;; COMPUTE-LRA-FROM-CODE
-;;;
-;;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
-;;; 
-(def-instruction-format (compute-lra-from-code-format 4) (rt rs label)
-  (op :unsigned 6 :instruction-constant)
-  (rs :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (label :signed 16
-	 :label #'(lambda (label-offset instr-offset)
-		    (declare (ignore instr-offset))
-		    (+ label-offset (component-header-length)))))
-
-(def-instruction compute-lra-from-code compute-lra-from-code-format
-  :op #b001001)
+(define-format (byte-format 8)
+  (data (byte 8 0)))
+(define-instruction (byte)
+  (word-format (data :argument (or (unsigned-byte 8) (signed-byte 8)))))
 
 
-;;;
-;;; LRA-HEADER-WORD, FUNCTION-HEADER-WORD
-;;; 
+
+;;;; Function and LRA Headers emitters and calculation stuff.
 
-(def-instruction-format (header-word-format 4) ()
-  (data :unsigned 24 :calculation #'(lambda (posn)
-				      (ash (+ posn (component-header-length))
-					   (- vm:word-shift))))
-  (type :unsigned 8 :instruction-constant))
+(defun header-data (ignore)
+  (declare (ignore ignore))
+  (ash (+ *current-position* (component-header-length)) (- vm:word-shift)))
 
-(def-instruction lra-header-word header-word-format
-  :type vm:return-pc-header-type)
+(define-format (header-object 32)
+  (type (byte 8 0))
+  (data (byte 24 8) :default 0 :function header-data))
 
-(def-instruction function-header-word header-word-format
-  :type vm:function-header-type)
+(define-instruction (function-header-word)
+  (header-object (type :constant #x5e)))
 
-
-
-;;; LOAD-FOREIGN-ADDRESS and LOAD-FOREIGN-VALUE
-;;; 
-;;; This ``instruction'' emits a LUI followed by either an ADDIU, LW, or SW
-;;;
-(def-instruction-format (load-foreign-format 8) (rt symbol)
-  ;; We need to switch the order of the two instructions because the MIPS
-  ;; is little-endian.
-  (op2 :unsigned 6 :instruction-constant)
-  (rt :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (filler :unsigned 16 :constant 0)
-  (op1 :unsigned 6 :constant #b001111)
-  (rt :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (symbol :unsigned 16 :fixup :foreign))
-
-(def-instruction load-foreign-address load-foreign-format
-  :op2 #b001001)
-
-(def-instruction load-foreign-value load-foreign-format
-  :op2 #b100011)
-
-(def-instruction store-foreign-value load-foreign-format
-  :op2 #b101011)
+(define-instruction (lra-header-word)
+  (header-object (type :constant #x66)))
 
 
+(define-pseudo-instruction compute-code-from-fn 64 (code fn label)
+  ;; code = fn - fn-tag - header - label-offset + other-pointer-tag
+  (let ((offset (- vm:other-pointer-type
+		   vm:function-pointer-type
+		   (label-position label)
+		   (component-header-length))))
+    (inst addu code fn offset)))
 
-;;; LOAD-ASSEMBLY-ADDRESS and LOAD-ASSEMBLY-VALUE
-;;; 
-;;; This ``instruction'' emits a LUI followed by either an ADDIU, LW, or SW.
-;;; The difference is that we use :assembly fixups.
-;;;
-(def-instruction-format (load-assembly-format 8) (rt symbol)
-  ;; We need to switch the order of the two instructions because the MIPS
-  ;; is little-endian.
-  (op2 :unsigned 6 :instruction-constant)
-  (rt :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (filler :unsigned 16 :constant 0)
-  (op1 :unsigned 6 :constant #b001111)
-  (rt :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (symbol :unsigned 16 :fixup :assembly))
+(define-pseudo-instruction compute-code-from-lra 64 (code lra label)
+  ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
+  (let ((offset (- (+ (label-position label) (component-header-length)))))
+    (inst addu code lra offset)))
 
-(def-instruction load-assembly-address load-assembly-format
-  :op2 #b001001)
-
-(def-instruction load-assembly-value load-assembly-format
-  :op2 #b100011)
-
-(def-instruction store-assembly-value load-assembly-format
-  :op2 #b101011)
-
-
-
-;;; BYTE, SHORT, and WORD instructions.
-;;;
-;;; These instructions emit a byte, short, or word in the instruction
-;;; stream.  If you use them, be sure to use (align 2) afterwords to
-;;; assure that additional code gets properly aligned.
-
-(def-instruction-format (byte-format 1) (value)
-  (value :unsigned 8 :immediate))
-(def-instruction byte byte-format)
-
-(def-instruction-format (short-format 2) (value)
-  (value :unsigned 16 :immediate))
-(def-instruction short short-format)
-
-(def-instruction-format (word-format 4) (value)
-  (value :unsigned 32 :immediate))
-(def-instruction word word-format)
-
+(define-pseudo-instruction compute-lra-from-code 64 (lra code label)
+  ;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
+  (let ((offset (+ (label-position label) (component-header-length))))
+    inst addu lra code offset))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.4 1990/04/23 16:39:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.5 1990/04/24 02:55:54 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -125,7 +125,7 @@
   (:generator 1
     (let ((nfp (current-nfp-tn vop)))
       (when nfp
-	(inst addiu val nfp
+	(inst addu val nfp
 	      (* (sb-allocated-size 'non-descriptor-stack) vm:word-bytes))))))
 
 
@@ -140,12 +140,12 @@
     (inst function-header-word)
     (dotimes (i (1- vm:function-header-code-offset))
       (inst word 0))
-    (inst addiu csp-tn fp-tn
+    (inst addu csp-tn fp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (let ((nfp-tn (current-nfp-tn vop)))
       (when nfp-tn
 	(move nfp-tn nsp-tn)
-	(inst addiu nsp-tn nsp-tn
+	(inst addu nsp-tn nsp-tn
 	      (- (* (sb-allocated-size 'non-descriptor-stack)
 		    vm:word-bytes)))))))
 
@@ -156,11 +156,11 @@
   (:ignore nfp)
   (:generator 2
     (move res csp-tn)
-    (inst addiu csp-tn csp-tn
+    (inst addu csp-tn csp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (when (ir2-environment-number-stack-p callee)
       (move nfp nsp-tn)
-      (inst addiu nsp-tn nsp-tn
+      (inst addu nsp-tn nsp-tn
 	    (- (* (sb-allocated-size 'non-descriptor-stack)
 		  vm:word-bytes))))))
 
@@ -174,7 +174,7 @@
   (:generator 2
     (when (> nargs register-arg-count)
       (move res csp-tn)
-      (inst addiu csp-tn csp-tn (* nargs vm:word-bytes)))))
+      (inst addu csp-tn csp-tn (* nargs vm:word-bytes)))))
 
 
 
@@ -184,8 +184,7 @@
 ;;;    Emit code needed at the return-point from an unknown-values call for a
 ;;; fixed number of values.  Values is the head of the TN-Ref list for the
 ;;; locations that the values are to be received into.  Nvals is the number of
-;;; values that are to be received (should equal the length of Values).  Node
-;;; is the node to use for source context in emitted code.
+;;; values that are to be received (should equal the length of Values).
 ;;;
 ;;;    Move-Temp and Nil-Temp are Descriptor-Reg TNs used as temporaries.
 ;;;
@@ -219,12 +218,12 @@ regs-defaulted
 	sub temp nargs register-arg-count
 
 	bltz temp default-value-4	; jump to default code
-        addiu temp temp -1
+        addu temp temp -1
 	loadw move-temp args-tn 3	; Move value to correct location.
 	store-stack-tn val4-tn move-temp
 
 	bltz temp default-value-5
-        addiu temp temp -1
+        addu temp temp -1
 	loadw move-temp args-tn 4
 	store-stack-tn val5-tn move-temp
 
@@ -247,62 +246,60 @@ default-value-5
         nop
 |#
 ;;;
-(defun default-unknown-values (node values nvals move-temp temp lra-label)
-  (declare (type node node) (type (or tn-ref null) values)
+(defun default-unknown-values (values nvals move-temp temp lra-label)
+  (declare (type (or tn-ref null) values)
 	   (type unsigned-byte nvals) (type tn move-temp temp))
-  (assemble node
-    (if (<= nvals 1)
-	(progn
-	  (move csp-tn old-fp-tn)
-	  (nop)
-	  (inst compute-code-from-lra code-tn code-tn lra-label))
-	(let ((regs-defaulted (gen-label))
-	      (defaulting-done (gen-label)))
-	  ;; Branch off to the MV case.
-	  (b regs-defaulted)
-	  (inst compute-code-from-lra code-tn code-tn lra-label)
-
-	  ;; Do the single value calse.
-	  (inst compute-code-from-lra code-tn code-tn lra-label)
-	  (do ((i 1 (1+ i))
-	       (val (tn-ref-across values) (tn-ref-across val)))
-	      ((= i (min nvals register-arg-count)))
-	    (move (tn-ref-tn val) null-tn))
-	  (when (> nvals register-arg-count)
-	    (loadi nargs-tn (fixnum 1))
-	    (move old-fp-tn csp-tn))
-
-	  (emit-label regs-defaulted)
-
-	  (when (> nvals register-arg-count)
-	    (inst addiu temp nargs-tn (fixnum (- register-arg-count)))
-	    (collect ((defaults))
-	      (do ((i register-arg-count (1+ i))
-		   (val (do ((i 0 (1+ i))
-			     (val values (tn-ref-across val)))
-			    ((= i register-arg-count) val))
-			(tn-ref-across val)))
-		  ((null val))
-		
-		(let ((default-lab (gen-label))
-		      (tn (tn-ref-tn val)))
-		  (defaults (cons default-lab tn))
-		  
-		  (inst bltz temp default-lab)
-		  (inst addiu temp temp (fixnum -1))
-		  (loadw move-temp args-tn i)
-		  (store-stack-tn tn move-temp)))
-
-	      (emit-label defaulting-done)
-	      (move csp-tn args-tn)
-
-	      (unassemble
-	       (assemble-elsewhere node
-		 (dolist (def (defaults))
-		   (emit-label (car def))
-		   (store-stack-tn (cdr def) null-tn))
-		 (b defaulting-done)
-		 (nop))))))))
+  (if (<= nvals 1)
+      (progn
+	(move csp-tn old-fp-tn)
+	(inst nop)
+	(inst compute-code-from-lra code-tn code-tn lra-label))
+      (let ((regs-defaulted (gen-label))
+	    (defaulting-done (gen-label)))
+	;; Branch off to the MV case.
+	(inst b regs-defaulted)
+	(inst compute-code-from-lra code-tn code-tn lra-label)
+	
+	;; Do the single value calse.
+	(inst compute-code-from-lra code-tn code-tn lra-label)
+	(do ((i 1 (1+ i))
+	     (val (tn-ref-across values) (tn-ref-across val)))
+	    ((= i (min nvals register-arg-count)))
+	  (move (tn-ref-tn val) null-tn))
+	(when (> nvals register-arg-count)
+	  (inst li nargs-tn (fixnum 1))
+	  (move old-fp-tn csp-tn))
+	
+	(emit-label regs-defaulted)
+	
+	(when (> nvals register-arg-count)
+	  (inst addu temp nargs-tn (fixnum (- register-arg-count)))
+	  (collect ((defaults))
+		   (do ((i register-arg-count (1+ i))
+			(val (do ((i 0 (1+ i))
+				  (val values (tn-ref-across val)))
+				 ((= i register-arg-count) val))
+			     (tn-ref-across val)))
+		       ((null val))
+		     
+		     (let ((default-lab (gen-label))
+			   (tn (tn-ref-tn val)))
+		       (defaults (cons default-lab tn))
+		       
+		       (inst bltz temp default-lab)
+		       (inst addu temp temp (fixnum -1))
+		       (loadw move-temp args-tn i)
+		       (store-stack-tn tn move-temp)))
+		   
+		   (emit-label defaulting-done)
+		   (move csp-tn args-tn)
+		   
+		   (assemble (*elsewhere*)
+		     (dolist (def (defaults))
+		       (emit-label (car def))
+		       (store-stack-tn (cdr def) null-tn))
+		     (inst b defaulting-done)
+		     (inst nop))))))
   (undefined-value))
 
 
@@ -327,33 +324,31 @@ default-value-5
 ;;; explicitly allocate these TNs, since their lifetimes overlap with the
 ;;; results Start and Count (also, it's nice to be able to target them).
 ;;;
-(defun receive-unknown-values (node args nargs start count lra-label)
-  (declare (type node node) (type tn args nargs start count))
-  (assemble node
-    (let ((variable-values (gen-label))
-	  (done (gen-label)))
-      (b variable-values)
-      (inst compute-code-from-lra code-tn code-tn lra-label)
-
-      (inst compute-code-from-lra code-tn code-tn lra-label)
-      (inst addiu csp-tn csp-tn 4)
-      (storew (first register-arg-tns) csp-tn -1)
-      (inst addiu start csp-tn -4)
-      (loadi count (fixnum 1))
-
-      (emit-label done)
-
-      (unassemble
-	(assemble-elsewhere node
-	  (emit-label variable-values)
-	  (do ((arg register-arg-tns (rest arg))
-	       (i 0 (1+ i)))
-	      ((null arg))
-	    (storew (first arg) args i))
-	  (move start args)
-	  (move count nargs)
-	  (b done)
-	  (nop)))))
+(defun receive-unknown-values (args nargs start count lra-label)
+  (declare (type tn args nargs start count))
+  (let ((variable-values (gen-label))
+	(done (gen-label)))
+    (inst b variable-values)
+    (inst compute-code-from-lra code-tn code-tn lra-label)
+    
+    (inst compute-code-from-lra code-tn code-tn lra-label)
+    (inst addu csp-tn csp-tn 4)
+    (storew (first register-arg-tns) csp-tn -1)
+    (inst addu start csp-tn -4)
+    (inst li count (fixnum 1))
+    
+    (emit-label done)
+    
+    (assemble (*elsewhere*)
+      (emit-label variable-values)
+      (do ((arg register-arg-tns (rest arg))
+	   (i 0 (1+ i)))
+	  ((null arg))
+	(storew (first arg) args i))
+      (move start args)
+      (move count nargs)
+      (inst b done)
+      (inst nop)))
   (undefined-value))
 
 
@@ -364,7 +359,6 @@ default-value-5
   (:results
    (start :scs (descriptor-reg))
    (count :scs (descriptor-reg)))
-  (:node-var node)
   (:temporary (:sc descriptor-reg :offset args-offset
 		   :from :eval :to (:result 0))
 	      values-start)
@@ -399,7 +393,6 @@ default-value-5
   (:move-args :local-call)
   (:info arg-locs callee target nvals)
   (:ignore arg-locs args nfp)
-  (:node-var node)
   (:vop-var vop)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:scs (any-reg) :type fixnum) temp)
@@ -414,12 +407,11 @@ default-value-5
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (b target)
-      (nop)
+      (inst b target)
+      (inst nop)
       (emit-return-pc label)
       (note-this-location vop :unknown-return)
-      (unassemble
-	(default-unknown-values node values nvals move-temp temp label))
+      (default-unknown-values values nvals move-temp temp label)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save)))))
 
@@ -448,13 +440,11 @@ default-value-5
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (b target)
-      (nop)
+      (inst b target)
+      (inst nop)
       (emit-return-pc label)
       (note-this-location vop :unknown-return)
-      (unassemble
-	(receive-unknown-values node values-start nvals
-				start count label))
+      (receive-unknown-values values-start nvals start count label)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save)))))
 
@@ -485,8 +475,8 @@ default-value-5
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (b target)
-      (nop)
+      (inst b target)
+      (inst nop)
       (note-this-location vop :known-return)
       (emit-return-pc label)
       (when cur-nfp
@@ -510,8 +500,9 @@ default-value-5
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(move nsp-tn cur-nfp)))
-    (move fp-tn old-fp)
-    (lisp-return return-pc lip)))
+    (inst addu lip return-pc (- vm:word-bytes vm:other-pointer-type))
+    (inst j lip)
+    (move fp-tn old-fp)))
 
 
 ;;;; Full call:
@@ -580,7 +571,6 @@ default-value-5
    
      ,@(unless (eq return :tail)
 	 `((:save-p t)
-	   (:node-var node)
 	   (:vop-var vop)
 	   ,@(unless variable
 	       '((:move-args :full-call)))))
@@ -655,7 +645,7 @@ default-value-5
 		   (mapcar #'(lambda (name)
 			       `(loadw ,name new-fp ,(incf index)))
 			   register-arg-names)))
-	     `((loadi nargs-pass (fixnum nargs))))
+	     `((inst li nargs-pass (fixnum nargs))))
        
        (let (,@(unless (eq return :tail)
 		 '((lra-label (gen-label))
@@ -665,14 +655,14 @@ default-value-5
 
 	 (loadw function lexenv vm:closure-function-slot
 		vm:function-pointer-type)
-	 (inst addiu lip function (- (ash vm:function-header-code-offset
+	 (inst addu lip function (- (ash vm:function-header-code-offset
 					 vm:word-shift)
 				    vm:function-pointer-type))
 
 	 ,@(if (eq return :tail)
 	       '((move old-fp-pass old-fp)
 		 (move return-pc-pass return-pc)
-		 (inst jr lip)
+		 (inst j lip)
 		 (move code-tn function))
 	       `((move old-fp-pass fp-tn)
 		 ,(if variable
@@ -682,23 +672,20 @@ default-value-5
 			   (move fp-tn csp-tn)))
 		 (when cur-nfp
 		   (store-stack-tn nfp-save cur-nfp))
-		 (inst jr lip)
+		 (inst j lip)
 		 (move code-tn function)
 		 (emit-return-pc lra-label)))
 
 	 ,@(ecase return
 	     (:fixed
 	      '((note-this-location vop :unknown-return)
-		(unassemble
-		 (default-unknown-values node values nvals
-					 move-temp temp lra-label))
+		(default-unknown-values values nvals move-temp temp lra-label)
 		(when cur-nfp
 		  (load-stack-tn cur-nfp nfp-save))))
 	     (:unknown
 	      '((note-this-location vop :unknown-return)
-		(unassemble
-		 (receive-unknown-values node values-start nvals
-					 start count lra-label))
+		(receive-unknown-values values-start nvals start count
+					lra-label)
 		(when cur-nfp
 		  (load-stack-tn cur-nfp nfp-save))))
 	     (:tail))))))
@@ -760,22 +747,22 @@ default-value-5
 		    register-arg-names))
 	
 	;; Calc SRC, DST, and COUNT
-	(inst addiu src args (* vm:word-bytes register-arg-count))
-	(inst addiu dst fp-tn (* vm:word-bytes register-arg-count))
-	(b test)
-	(inst addiu count nargs (fixnum (- register-arg-count)))
+	(inst addu src args (* vm:word-bytes register-arg-count))
+	(inst addu dst fp-tn (* vm:word-bytes register-arg-count))
+	(inst b test)
+	(inst addu count nargs (fixnum (- register-arg-count)))
 	
 	(emit-label loop)
 	;; Copy one arg.
 	(loadw temp src)
-	(inst addiu src src vm:word-bytes)
+	(inst addu src src vm:word-bytes)
 	(storew temp dst)
-	(inst addiu dst dst vm:word-bytes)
+	(inst addu dst dst vm:word-bytes)
 	
 	;; Are we done?
 	(emit-label test)
 	(inst bgtz count loop)
-	(inst addiu count count (fixnum -1))
+	(inst addu count count (fixnum -1))
 	
 	;; We are done.  Do the jump.
 	(loadw function lexenv vm:closure-function-slot
@@ -823,13 +810,13 @@ default-value-5
 	       (when cur-nfp
 		 (move nsp-tn cur-nfp)))
 	     (move fp-tn old-fp)
-	     (inst addiu lip return-pc (- (* 3 word-bytes) other-pointer-type))
-	     (inst jr lip)
+	     (inst addu lip return-pc (- (* 3 word-bytes) other-pointer-type))
+	     (inst j lip)
 	     (move code-tn return-pc))
 	    (t
-	     (loadi nargs (fixnum nvals))
+	     (inst li nargs (fixnum nvals))
 	     (move val-ptr fp-tn)
-	     (inst addiu csp-tn val-ptr (* nvals word-bytes))
+	     (inst addu csp-tn val-ptr (* nvals word-bytes))
 	     (move fp-tn old-fp)
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
@@ -896,9 +883,9 @@ default-value-5
 	      (move nsp-tn cur-nfp)))
 
 	  ;; Single case?
-	  (loadi count (fixnum 1))
+	  (inst li count (fixnum 1))
 	  (inst bne count nvals not-single)
-	  (nop)
+	  (inst nop)
 	  
 	  ;; Return with one value.
 	  (loadw ,(first register-arg-names) start)
@@ -906,8 +893,8 @@ default-value-5
 	  (move fp-tn old-fp)
 	  ;; Note: we can't use the lisp-return macro, 'cause we want to
 	  ;; skip two instructions.
-	  (inst addiu lip return-pc (- (* 3 word-bytes) other-pointer-type))
-	  (inst jr lip)
+	  (inst addu lip return-pc (- (* 3 word-bytes) other-pointer-type))
+	  (inst j lip)
 	  (move code-tn return-pc)
 
 	  ;; Nope, not the single case.
@@ -920,23 +907,23 @@ default-value-5
 	  ,@(mapcar #'(lambda (name label)
 			`(progn
 			   (inst blez count ,label)
-			   (inst addiu count count (fixnum -1))
+			   (inst addu count count (fixnum -1))
 			   (loadw ,name src)
-			   (inst addiu src src vm:word-bytes)))
+			   (inst addu src src vm:word-bytes)))
 		    register-arg-names
 		    label-names)
 	  
 	  ;; Copy the remaining args to the top of the stack.
-	  (inst addiu dst fp-tn (* vm:word-bytes register-arg-count))
+	  (inst addu dst fp-tn (* vm:word-bytes register-arg-count))
 	  
 	  (emit-label loop)
 	  (inst blez count done)
-	  (inst addiu count count (fixnum -1))
+	  (inst addu count count (fixnum -1))
 	  (loadw temp src)
-	  (inst addiu src src vm:word-bytes)
+	  (inst addu src src vm:word-bytes)
 	  (storew temp dst)
-	  (b loop)
-	  (inst addiu dst dst vm:word-bytes)
+	  (inst b loop)
+	  (inst addu dst dst vm:word-bytes)
 	  
 	  ;; Default some number of registers.
 	  ,@(mapcar #'(lambda (name label)
@@ -963,11 +950,10 @@ default-value-5
 ;;; Fetch the constant pool from the function entry structure.
 ;;;
 (define-vop (setup-environment)
-  (:node-var node)
+  (:info label)
   (:generator 5
     ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn
-	  code-tn code-tn (block-label (node-block node)))))
+    (inst compute-code-from-fn code-tn code-tn label)))
 
 ;;; Return the current Env as our result, then indirect throught the closure
 ;;; and the closure-entry to find the constant pool
@@ -977,11 +963,10 @@ default-value-5
 	       :to (:result 0))
 	      lexenv)
   (:results (closure :scs (descriptor-reg)))
-  (:node-var node)
+  (:info label)
   (:generator 6
     ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn
-	  code-tn code-tn (block-label (node-block node)))
+    (inst compute-code-from-fn code-tn code-tn label)
     ;; Get result.
     (move closure lexenv)))
 
@@ -1007,12 +992,12 @@ default-value-5
       (cond ((zerop fixed)
 	     (inst addu csp-tn csp-tn nargs-tn))
 	    (t
-	     (inst addiu count nargs-tn (fixnum (- fixed)))
+	     (inst addu count nargs-tn (fixnum (- fixed)))
 	     (inst addu csp-tn csp-tn count)))
       (when (< fixed register-arg-count)
 	;; We must stop when we run out of stack args, not when we run out of
 	;; more args.
-	(inst addiu count nargs-tn (fixnum (- register-arg-count))))
+	(inst addu count nargs-tn (fixnum (- register-arg-count))))
       ;; Everything of interest in registers.
       (inst blez count do-regs)
       ;; Initialize dst to be end of stack.
@@ -1022,22 +1007,22 @@ default-value-5
 
       (emit-label loop)
       ;; *--dst = *--src, --count
-      (inst addiu src src (- vm:word-bytes))
-      (inst addiu count count (fixnum -1))
+      (inst addu src src (- vm:word-bytes))
+      (inst addu count count (fixnum -1))
       (loadw temp src)
-      (inst addiu dst dst (- vm:word-bytes))
+      (inst addu dst dst (- vm:word-bytes))
       (inst bgtz count loop)
       (storew temp dst)
 
       (emit-label do-regs)
       (when (< fixed register-arg-count)
 	;; Now we have to deposit any more args that showed up in registers.
-	(inst addiu count nargs-tn (fixnum (- fixed)))
+	(inst addu count nargs-tn (fixnum (- fixed)))
 	(do ((i fixed (1+ i)))
 	    ((>= i register-arg-count))
 	  ;; Don't deposit any more than there are.
 	  (inst beq count zero-tn done)
-	  (inst addiu count count (fixnum -1))
+	  (inst addu count count (fixnum -1))
 	  ;; Store it relative to the pointer saved at the start.
 	  (storew (nth i register-arg-tns) result (- i fixed))))
       (emit-label done))))
@@ -1076,10 +1061,10 @@ default-value-5
       ;; We need to do this atomically.
       (pseudo-atomic (ndescr)
 	;; Allocate a cons (2 words) for each item.
-	(inst addiu result alloc-tn vm:list-pointer-type)
+	(inst addu result alloc-tn vm:list-pointer-type)
 	(move dst result)
 	(inst addu alloc-tn alloc-tn count)
-	(b enter)
+	(inst b enter)
 	(inst addu alloc-tn alloc-tn count)
 
 	;; Store the current cons in the cdr of the previous cons.
@@ -1089,13 +1074,13 @@ default-value-5
 	;; Grab one value and stash it in the car of this cons.
 	(emit-label enter)
 	(loadw temp context)
-	(inst addiu context context vm:word-bytes)
+	(inst addu context context vm:word-bytes)
 	(storew temp dst 0 vm:list-pointer-type)
 
 	;; Dec count, and if != zero, go back for more.
-	(inst addiu count count (fixnum -1))
+	(inst addu count count (fixnum -1))
 	(inst bne count zero-tn loop)
-	(inst addiu dst dst (* 2 vm:word-bytes))
+	(inst addu dst dst (* 2 vm:word-bytes))
 
 	;; NIL out the last cons.
 	(storew null-tn dst -1 vm:list-pointer-type))
@@ -1121,7 +1106,7 @@ default-value-5
    (context :scs (descriptor-reg))
    (count :scs (any-reg descriptor-reg)))
   (:generator 5
-    (inst addiu count supplied (fixnum (- fixed)))
+    (inst addu count supplied (fixnum (- fixed)))
     (inst subu context csp-tn count)))
 
 
@@ -1132,18 +1117,16 @@ default-value-5
    (nargs :scs (any-reg descriptor-reg)))
   (:temporary (:scs (any-reg) :type fixnum) temp)
   (:info count)
-  (:node-var node)
   (:generator 3
-    (let ((err-lab (generate-error-code node
-					di:invalid-argument-count-error
+    (let ((err-lab (generate-error-code di:invalid-argument-count-error
 					nargs)))
       (cond ((zerop count)
 	     (inst bne nargs zero-tn err-lab)
-	     (nop))
+	     (inst nop))
 	    (t
-	     (loadi temp (fixnum count))
+	     (inst li temp (fixnum count))
 	     (inst bne nargs temp err-lab)
-	     (nop))))))
+	     (inst nop))))))
 
 ;;; Signal an argument count error.
 ;;;

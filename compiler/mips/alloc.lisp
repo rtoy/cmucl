@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.3 1990/02/28 18:23:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.4 1990/04/24 02:55:22 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -47,14 +47,14 @@
 		     (storew reg ,list ,slot vm:list-pointer-type))))
 	     (let ((cons-cells (if star (1- num) num)))
 	       (pseudo-atomic (ndescr)
-		 (inst addiu res alloc-tn vm:list-pointer-type)
-		 (inst addiu alloc-tn alloc-tn
+		 (inst addu res alloc-tn vm:list-pointer-type)
+		 (inst addu alloc-tn alloc-tn
 		       (* (vm:pad-data-block vm:cons-size) cons-cells))
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (store-car (tn-ref-tn things) ptr)
 		   (setf things (tn-ref-across things))
-		   (inst addiu ptr ptr (vm:pad-data-block vm:cons-size))
+		   (inst addu ptr ptr (vm:pad-data-block vm:cons-size))
 		   (storew ptr ptr
 			   (- vm:cons-cdr-slot vm:cons-size)
 			   vm:list-pointer-type))

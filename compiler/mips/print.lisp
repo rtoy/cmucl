@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.1 1990/03/18 23:45:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.2 1990/04/24 02:56:30 wlott Exp $
 ;;;
 ;;; This file contains temporary printing utilities and similar noise.
 ;;;
@@ -26,14 +26,14 @@
   (:temporary (:scs (any-reg) :type fixnum) temp)
   (:generator 0
     (let ((lra-label (gen-label)))
-      (inst addiu nsp-tn nsp-tn -16)
+      (inst addu nsp-tn nsp-tn -16)
       (storew object nsp-tn 0)
-      (inst load-foreign-address v0 "print")
-      (inst load-foreign-address temp "call_into_c")
-      (inst jr temp)
+      (inst li v0 (make-fixup "print" :foreign))
+      (inst li temp (make-fixup "call_into_c" :foreign))
+      (inst j temp)
       (inst compute-lra-from-code lra code lra-label)
       (align vm:lowtag-bits)
       (emit-label lra-label)
       (inst lra-header-word)
-      (inst addiu nsp-tn nsp-tn 16)
+      (inst addu nsp-tn nsp-tn 16)
       (move result v0))))

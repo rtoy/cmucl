@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.12 1990/04/23 16:45:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.13 1990/04/24 02:56:22 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -25,23 +25,23 @@
   (let ((val (tn-value x)))
     (etypecase val
       (integer
-       (loadi y (fixnum val)))
+       (inst li y (fixnum val)))
       (null
        (move y null-tn))
       (symbol
        (load-symbol y val))
       (character
-       (loadi y (logior (ash (char-code val) type-bits)
-			base-character-type))))))
+       (inst li y (logior (ash (char-code val) type-bits)
+			  base-character-type))))))
 
 (define-move-function (load-number 1) (vop x y)
   ((null unsigned-immediate immediate zero negative-immediate random-immediate)
    (signed-reg unsigned-reg))
-  (loadi y (tn-value x)))
+  (inst li y (tn-value x)))
 
 (define-move-function (load-base-character 1) (vop x y)
   ((immediate-base-character) (base-character-reg))
-  (loadi y (char-code (tn-value x))))
+  (inst li y (char-code (tn-value x))))
 
 (define-move-function (load-constant 5) (vop x y)
   ((constant) (any-reg descriptor-reg))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.7 1990/04/23 16:45:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.8 1990/04/24 02:56:24 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -81,7 +81,7 @@
       (move nsp-tn nsp)
       
       (inst beq special bsp-tn done)
-      (nop)
+      (inst nop)
 
       (emit-label loop)
       (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
@@ -90,9 +90,9 @@
       (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
       (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
       (emit-label skip)
-      (inst addiu bsp-tn bsp-tn (* -2 vm:word-bytes))
+      (inst addu bsp-tn bsp-tn (* -2 vm:word-bytes))
       (inst bne bsp-tn special loop)
-      (nop)
+      (inst nop)
 
       (emit-label done))))
 
@@ -120,7 +120,7 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
   (:generator 22
-    (inst addiu result fp-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addu result fp-tn (* (tn-offset tn) vm:word-bytes))
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp result vm:unwind-block-current-uwp-slot)
     (storew fp-tn result vm:unwind-block-current-cont-slot)
@@ -141,7 +141,7 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
   (:generator 44
-    (inst addiu result fp-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addu result fp-tn (* (tn-offset tn) vm:word-bytes))
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp result vm:catch-block-current-uwp-slot)
     (storew fp-tn result vm:catch-block-current-cont-slot)
@@ -164,7 +164,7 @@
   (:args (tn))
   (:temporary (:scs (descriptor-reg)) new-uwp)
   (:generator 7
-    (inst addiu new-uwp fp-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addu new-uwp fp-tn (* (tn-offset tn) vm:word-bytes))
     (store-symbol-value new-uwp lisp::*current-unwind-protect-block*)))
 
 
@@ -198,7 +198,6 @@
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:info label nvals)
   (:save-p :force-to-stack)
-  (:node-var node)
   (:generator 30
     (emit-return-pc label)
     (cond ((zerop nvals))
@@ -218,30 +217,29 @@
 		 (defaults (cons default-lab tn))
 		 
 		 (inst beq count zero-tn default-lab)
-		 (inst addiu count count (fixnum -1))
+		 (inst addu count count (fixnum -1))
 		 (sc-case tn
-		   ((descriptor-reg any-reg)
-		    (loadw tn start i))
-		   (control-stack
-		    (loadw move-temp start i)
-		    (store-stack-tn tn move-temp)))))
-		    
+			  ((descriptor-reg any-reg)
+			   (loadw tn start i))
+			  (control-stack
+			   (loadw move-temp start i)
+			   (store-stack-tn tn move-temp)))))
+	     
 	     (let ((defaulting-done (gen-label)))
 	       
 	       (emit-label defaulting-done)
 	       
-	       (unassemble
-		(assemble-elsewhere node
-		  (dolist (def (defaults))
-		    (emit-label (car def))
-		    (let ((tn (cdr def)))
-		      (sc-case tn
-			((descriptor-reg any-reg)
-			 (move tn null-tn))
-			(control-stack
-			 (store-stack-tn tn null-tn)))))
-		  (b defaulting-done)
-		  (nop)))))))
+	       (assemble (*elsewhere*)
+		 (dolist (def (defaults))
+		   (emit-label (car def))
+		   (let ((tn (cdr def)))
+		     (sc-case tn
+			      ((descriptor-reg any-reg)
+			       (move tn null-tn))
+			      (control-stack
+			       (store-stack-tn tn null-tn)))))
+		 (inst b defaulting-done)
+		 (inst nop))))))
     (move csp-tn sp)))
 
 
@@ -274,11 +272,11 @@
       ;; Copy stuff on stack.
       (emit-label loop)
       (loadw temp src)
-      (inst addiu src src (fixnum 1))
+      (inst addu src src (fixnum 1))
       (storew temp dst)
-      (inst addiu num num (fixnum -1))
+      (inst addu num num (fixnum -1))
       (inst bne num zero-tn loop)
-      (inst addiu dst dst (fixnum 1))
+      (inst addu dst dst (fixnum 1))
 
       (emit-label done)
       (move csp-tn dst))))

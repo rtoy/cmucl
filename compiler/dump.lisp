@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.7 1990/04/02 02:53:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.8 1990/04/24 02:58:30 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -328,11 +328,8 @@
 ;;;    We dump a trap object as a placeholder for the code vector, which is
 ;;; actually filled in by the loader.
 ;;;
-(defun dump-code-object (component code-vector code-length node-vector
-				   nodes-length file)
-  (declare (type component component) (type fasl-file file)
-	   (simple-vector node-vector)
-	   (type unsigned-byte code-length nodes-length))
+(defun dump-code-object (component code-segment code-length file)
+  (declare (type component component) (type fasl-file file))
   (let* ((2comp (component-info component))
 	 (constants (ir2-component-constants 2comp))
 	 (num-consts (length constants)))
@@ -356,16 +353,16 @@
 		   (t
 		    (patches (cons info i))
 		    (dump-fop 'lisp::fop-misc-trap file)))))
+	       #+nil
 	       (:label
-		(dump-object (+ (label-location (cdr entry))
+		(dump-object (+ (label-position (cdr entry))
 				clc::i-vector-header-size)
 			     file))))
 	    (null
 	     (dump-fop 'lisp::fop-misc-trap file)))))
 
       ;; Dump the debug info.
-      (let ((info (debug-info-for-component component node-vector
-					    nodes-length)))
+      (let ((info (debug-info-for-component component)))
 	(dump-object info file)
 	(let ((info-handle (dump-pop file)))
 	  (dump-push info-handle file)
@@ -381,26 +378,26 @@
 	       (quick-dump-number num-consts 4 file)
 	       (quick-dump-number code-length 4 file))))
       
-      (write-string code-vector (fasl-file-stream file) :end code-length)
-      
-      (let ((handle (dump-pop file)))
+      (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment))
+	    (handle (dump-pop file)))
+	(dump-fixups handle fixups file)
 	(dolist (patch (patches))
 	  (push (cons handle (cdr patch))
 		(gethash (car patch) (fasl-file-patch-table file))))
 	handle))))
 
 
-(defun dump-assembler-routines (code-vector length routines file)
+(defun dump-assembler-routines (code-segment length routines file)
   (dump-fop 'lisp::fop-assembler-code file)
   (quick-dump-number length 4 file)
-  (write-string code-vector (fasl-file-stream file) :end length)
-  (dolist (routine routines)
-    (dump-object (car routine) file)
-    (dump-fop 'lisp::fop-assembler-routine file)
-    (quick-dump-number (label-location (cdr routine)) 4 file))
-  (dump-pop file))
-
-
+  (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment)))
+    (dolist (routine routines)
+      (dump-object (car routine) file)
+      (dump-fop 'lisp::fop-assembler-routine file)
+      (quick-dump-number (label-position (cdr routine)) 4 file))
+    (let ((handle (dump-pop file)))
+      (dump-fixups handle fixups file)
+      handle)))
 
 ;;; Dump-Fixups  --  Internal
 ;;;
@@ -413,24 +410,36 @@
 	   (type fasl-file file))
   (when fixups
     (dump-push code-handle file)
-    (dolist (fixup fixups)
-      (let ((offset (second fixup))
-	    (value (third fixup)))
-	(ecase (first fixup)
-	  (:foreign
-	   (assert (stringp value))
-	   (dump-fop 'lisp::fop-foreign-fixup file)
-	   (quick-dump-number offset 4 file)
-	   (let ((len (length value)))
-	     (assert (< len 256))
-	     (dump-byte len file)
-	     (dotimes (i len)
-	       (dump-byte (char-code (schar value i)) file))))
-	  (:assembly
-	   (assert (symbolp value))
-	   (dump-object value file)
-	   (dump-fop 'lisp::fop-assembler-fixup file)
-	   (quick-dump-number offset 4 file)))))
+    (dolist (info fixups)
+      (let* ((kind (first info))
+	     (fixup (second info))
+	     (name (fixup-name fixup))
+	     (flavor (fixup-flavor fixup))
+	     (offset (third info)))
+	(ecase kind
+	  (:addi
+	   ;; ### The lui fixup assumes that an addi follows it.
+	   )
+	  (:lui
+	   (ecase flavor
+	     (:assembly-routine
+	      (assert (symbolp name))
+	      (dump-object name file)
+	      (dump-fop 'lisp::fop-assembler-fixup file)
+	      (quick-dump-number offset 4 file))
+	     (:foreign
+	      (assert (stringp name))
+	      (dump-fop 'lisp::fop-foreign-fixup file)
+	      (quick-dump-number offset 4 file)
+	      (let ((len (length name)))
+		(assert (< len 256))
+		(dump-byte len file)
+		(dotimes (i len)
+		  (dump-byte (char-code (schar name i)) file))))))
+	  #+nil
+	  (:jump
+	   ;; ### Need to impliment this.
+	   ))))
     (dump-fop 'lisp::fop-pop-for-effect file))
   (undefined-value))
 
@@ -454,7 +463,7 @@
     (dump-object (entry-info-arguments entry) file)
     (dump-object (entry-info-type entry) file)
     (dump-fop 'lisp::fop-function-entry file)
-    (quick-dump-number (label-location (entry-info-offset entry))
+    (quick-dump-number (label-position (entry-info-offset entry))
 		       4 file)
     (let ((handle (dump-pop file)))
       (when (and name (symbolp name))
@@ -480,20 +489,15 @@
 ;;;    Dump the code, constants, etc. for component.  We pass in the assembler
 ;;; fixups, code vector and node info.
 ;;;
-(defun fasl-dump-component (component code-vector code-length
-				      node-vector nodes-length
-				      fixups file)
-  (declare (type component component) (type unsigned-byte length)
-	   (list fixups) (type fasl-file file))
+(defun fasl-dump-component (component code-segment length file)
+  (declare (type component component) (type fasl-file file))
 
   (dump-fop 'lisp::fop-verify-empty-stack file)
   (dump-fop 'lisp::fop-verify-table-size file)
   (quick-dump-number (fasl-file-table-free file) 4 file)
 
-  (let ((code-handle (dump-code-object component code-vector code-length
-				       node-vector nodes-length file))
+  (let ((code-handle (dump-code-object component code-segment length file))
 	(2comp (component-info component)))
-    (dump-fixups code-handle fixups file)
     (dump-fop 'lisp::fop-verify-empty-stack file)
 
     (dolist (entry (ir2-component-entries 2comp))

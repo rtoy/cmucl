@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.6 1990/03/29 16:25:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.7 1990/04/24 02:55:49 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -24,7 +24,6 @@
 (defvar *assembler-routines* nil
   "A List of (name . label) for every entry point.")
 
-
 (defun assemble-file (name &key (output-file
 				 (make-pathname :defaults name
 						:type "mips-fasl")))
@@ -34,16 +33,19 @@
 	 (*assembler-routines* nil)
 	 (won nil))
     (unwind-protect
-	(progn
+	(let (*code-segment* *elsewhere*)
 	  (init-assembler)
 	  (load (merge-pathnames name (make-pathname :type "lisp")))
 	  (finish-assembly)
 	  (fasl-dump-cold-load-form `(in-package ,(package-name *package*))
 				    *lap-output-file*)
-	  (let ((handle (dump-assembler-routines *code-vector* *next-location*
-						 *assembler-routines*
-						 *lap-output-file*)))
-	    (dump-fixups handle *result-fixups* *lap-output-file*))
+	  (assemble (*code-segment* nil)
+	    (insert-segment *elsewhere*))
+	  (let ((length (finalize-segment *code-segment*)))
+	    (dump-assembler-routines *code-segment*
+				     length
+				     *assembler-routines*
+				     *lap-output-file*))
 	  (setq won t))
       (close-fasl-file *lap-output-file* (not won)))
     won))
@@ -220,7 +222,7 @@
 			 `(,label (gen-label)))
 		     labels))
        (push (cons ',name ,name) *assembler-routines*)
-       (assemble ',name
+       (assemble (*code-segment* ',name)
 	 (emit-label ,name)
 	 (let (,@(mapcar
 		  #'(lambda (reg)
@@ -231,9 +233,9 @@
 			   :offset ,(reg-spec-offset temp)))))
 		  regs))
 	   ,@insts
-	   (inst addiu lip-tn lra-tn (- vm:word-bytes vm:other-pointer-type))
-	   (inst jr lip-tn)
-	   (nop)))
+	   (inst addu lip-tn lra-tn (- vm:word-bytes vm:other-pointer-type))
+	   (inst j lip-tn)
+	   (inst nop)))
        (format t "~S assembled~%" ',name))))
 
 (defun arg-or-res-spec (reg)
@@ -292,11 +294,10 @@
 			      ,(reg-spec-name arg)))
 		   args)
 	 (let ((,return-pc-label (gen-label)))
-	   (inst compute-lra-from-code ,return-pc code-tn
-		 ,return-pc-label)
-	   (inst load-assembly-address ,ndescr ',name)
-	   (inst jr ,ndescr)
-	   (nop)
+	   (inst compute-lra-from-code ,return-pc code-tn ,return-pc-label)
+	   (inst li ,ndescr (make-fixup ',name :assembly-routine))
+	   (inst j ,ndescr)
+	   (inst nop)
 	   (emit-return-pc ,return-pc-label))
 
 	 ,@(mapcar #'(lambda (res)

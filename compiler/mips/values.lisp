@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.6 1990/04/03 03:01:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.7 1990/04/24 02:56:51 wlott Exp $
 ;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -46,7 +46,7 @@
 	      start-temp)
   (:generator 20
     (move start-temp csp-tn)
-    (inst addi csp-tn csp-tn (* nvals vm:word-bytes))
+    (inst addu csp-tn csp-tn (* nvals vm:word-bytes))
     (do ((val vals (tn-ref-across val))
 	 (i 0 (1+ i)))
 	((null val))
@@ -58,7 +58,7 @@
 	   (load-stack-tn temp tn)
 	   (storew temp start-temp i)))))
     (move start start-temp)
-    (loadi count (fixnum nvals))))
+    (inst li count (fixnum nvals))))
 
 
 ;;; Push a list of values on the stack, returning Start and Count as used in
@@ -84,11 +84,11 @@
       (inst beq list null-tn done)
       (loadw temp list vm:cons-car-slot vm:list-pointer-type)
       (loadw list list vm:cons-cdr-slot vm:list-pointer-type)
-      (inst addiu csp-tn csp-tn vm:word-bytes)
+      (inst addu csp-tn csp-tn vm:word-bytes)
       (storew temp csp-tn -1)
       (test-simple-type list ndescr loop nil vm:list-pointer-type)
       (error-call di:bogus-argument-to-values-list-error list)
 
       (emit-label done)
-      (inst sub count csp-tn start))))
+      (inst subu count csp-tn start))))
 

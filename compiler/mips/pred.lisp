@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.3 1990/03/06 19:39:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.4 1990/04/24 02:56:27 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of predicate VOPs for the MIPS.
 ;;;
@@ -27,8 +27,8 @@
 (define-vop (branch)
   (:info dest)
   (:generator 5
-    (b dest)
-    (nop)))
+    (inst b dest)
+    (inst nop)))
 
 
 ;;;; Conditional VOPs:
@@ -54,6 +54,6 @@
       (if not-p
 	  (inst bne x-prime y-prime target)
 	  (inst beq x-prime y-prime target)))
-    (nop)))
+    (inst nop)))
 
 

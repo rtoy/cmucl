@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.12 1990/04/24 02:55:38 wlott Exp $
+;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
 ;;; Written by Rob MacLachlan
@@ -31,14 +33,14 @@
 (define-vop (fast-negate/fixnum fixnum-unop)
   (:translate %negate)
   (:generator 1
-    (inst sub res zero-tn x)))
+    (inst subu res zero-tn x)))
 
 (define-vop (fast-lognot/fixnum fixnum-unop)
   (:temporary (:scs (any-reg) :type fixnum :to (:result 0))
 	      temp)
   (:translate lognot)
   (:generator 1
-    (loadi temp (fixnum -1))
+    (inst li temp (fixnum -1))
     (inst xor res x temp)))
 
 
@@ -58,61 +60,44 @@
   (:affected)
   (:policy :fast-safe))
 
-(defmacro define-fixnum-binop ((name translate cost result-type)
-			       op
-			       &key unsigned immed-op function)
+(defmacro define-fixnum-binop (name translate cost result-type op
+				    &optional unsigned)
   `(define-vop (,name fast-binop)
      (:args (x :target r
 	       :scs (any-reg descriptor-reg))
 	    (y :target r
-	       :scs (any-reg descriptor-reg
-			     ,@(when immed-op
-				 (list (if unsigned
-					   'unsigned-immediate
-					   'negative-immediate)
-				       'immediate
-				       'zero)))))
+	       :scs (any-reg descriptor-reg immediate zero
+			     ,(if unsigned
+				  'unsigned-immediate
+				  'negative-immediate))))
      (:translate ,translate)
      (:result-types ,result-type)
-     ,@(when (eq result-type t)
-	 '((:note "inline fixnum arithmetic")))
+     (:note ,(if (eq result-type '*) "inline fixnum arithmetic"))
      (:generator ,cost
        (sc-case y
 	 ((any-reg descriptor-reg)
 	  (inst ,op r x y))
 	 (zero
 	  (inst ,op r x zero-tn))
-	 ,@(when immed-op
-	     `(((immediate
-		 ,(if unsigned 'unsigned-immediate 'negative-immediate))
-		(inst ,immed-op r x
-		      (fixnum ,(if function
-				   `(,function (tn-value y))
-				   '(tn-value y)))))))))))
+	 ((immediate
+	   ,(if unsigned 'unsigned-immediate 'negative-immediate))
+	  (inst ,op r x
+		(fixnum (tn-value y))))))))
 
 ;;; Plus and minus.
 
-(define-fixnum-binop (fast-+/fixnum=>fixnum + 1 fixnum)
-		     addu :immed-op addiu))
-(define-fixnum-binop (fast-+/fixnum + 2 t)
-		     add :immed-op addi)
+(define-fixnum-binop fast-+/fixnum=>fixnum + 1 fixnum addu)
+(define-fixnum-binop fast-+/fixnum + 2 * add)
 
-(define-fixnum-binop (fast--/fixnum=>fixnum - 1 fixnum)
-		     subu :immed-op addiu :function -)
-(define-fixnum-binop (fast--/fixnum - 2 t)
-		     sub :immed-op addi :function -)
+(define-fixnum-binop fast--/fixnum=>fixnum - 1 fixnum subu)
+(define-fixnum-binop fast--/fixnum - 2 * sub)
 
 
 ;;; Logical operatons.
 
-(define-fixnum-binop (fast-logior/fixnum logior 1 *)
-		     or :immed-op ori :unsigned t)
-
-(define-fixnum-binop (fast-logand/fixnum logand 1 *)
-		     and :immed-op andi :unsigned t)
-
-(define-fixnum-binop (fast-logxor/fixnum logxor 1 *)
-		     xor :immed-op xori :unsigned t)
+(define-fixnum-binop fast-logior/fixnum logior 1 * or t)
+(define-fixnum-binop fast-logand/fixnum logand 1 * and t)
+(define-fixnum-binop fast-logxor/fixnum logxor 1 * xor t)
 
 
 ;;; Shifting
@@ -131,7 +116,6 @@
 	      num)
   (:temporary (:scs (non-descriptor-reg) :type random :from (:argument 1))
 	      ndesc foo)
-  (:node-var node)
   (:generator 3
     (sc-case amount
       ((any-reg descriptor-reg)
@@ -143,25 +127,24 @@
 	 (inst sra ndesc amount 2)
 
 	 ;; The fixnum result-type assures us that this shift will not overflow.
-	 (inst sllv result num ndesc)
+	 (inst sll result num ndesc)
 	 (emit-label done)
 
-	 (unassemble
-	  (assemble-elsewhere node
-	    (emit-label negative)
-	    (inst nor ndesc ndesc ndesc)
-	    (inst addiu ndesc ndesc 3)
-	    (inst andi foo ndesc #x1f)
-	    (inst beq foo ndesc very-negative)
-
-	    (inst srav ndesc num ndesc)
-	    (b done)
-	    (inst sll result ndesc 2)
-
-	    (emit-label very-negative)
-	    (inst sra ndesc num 31)
-	    (b done)
-	    (inst sll result ndesc 2)))))
+	 (assemble (*elsewhere*)
+	   (emit-label negative)
+	   (inst nor ndesc ndesc ndesc)
+	   (inst addu ndesc ndesc 3)
+	   (inst and foo ndesc #x1f)
+	   (inst beq foo ndesc very-negative)
+	   
+	   (inst sra ndesc num ndesc)
+	   (inst b done)
+	   (inst sll result ndesc 2)
+	   
+	   (emit-label very-negative)
+	   (inst sra ndesc num 31)
+	   (inst b done)
+	   (inst sll result ndesc 2))))
       (immediate
        (inst sll result number (tn-value amount)))
       (negative-immediate
@@ -203,9 +186,8 @@
   (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
   (:results (q :scs (any-reg descriptor-reg))
 	    (r :scs (any-reg descriptor-reg)))
-  (:node-var node)
   (:generator 5
-    (let ((zero (generate-error-code node di:division-by-zero-error x y)))
+    (let ((zero (generate-error-code di:division-by-zero-error x y)))
       (inst beq y zero-tn zero))
     (inst sra t1 x 2)
     (inst sra t2 y 2)
@@ -254,7 +236,7 @@
 	   (inst bgez x target)
 	   (inst bltz x target)))
       ((negative-immediate immediate)
-       (inst slti temp x (fixnum (tn-value y)))
+       (inst slt temp x (fixnum (tn-value y)))
        (if not-p
 	   (inst beq temp zero-tn target)
 	   (inst bne temp zero-tn target)))
@@ -263,7 +245,7 @@
        (if not-p
 	   (inst beq temp zero-tn target)
 	   (inst bne temp zero-tn target))))
-    (nop)))
+    (inst nop)))
 
 (define-vop (fast-if->/fixnum fast-conditional/fixnum)
   (:temporary (:type fixnum :scs (any-reg) :from (:argument 0)) temp)
@@ -275,7 +257,7 @@
 	   (inst blez x target)
 	   (inst bgtz x target)))
       ((negative-immediate immediate)
-       (inst slti temp x (fixnum (1+ (tn-value y))))
+       (inst slt temp x (fixnum (1+ (tn-value y))))
        (if not-p
 	   (inst bne temp zero-tn target)
 	   (inst beq temp zero-tn target)))
@@ -284,7 +266,7 @@
        (if not-p
 	   (inst beq temp zero-tn target)
 	   (inst bne temp zero-tn target))))
-    (nop)))
+    (inst nop)))
 
 (define-vop (fast-if-=/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg descriptor-reg))
@@ -297,7 +279,7 @@
       (if not-p
 	  (inst bne x foo target)
 	  (inst beq x foo target)))
-    (nop)))
+    (inst nop)))
 
 
 

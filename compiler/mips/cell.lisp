@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.30 1990/04/23 16:39:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.31 1990/04/24 02:55:58 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -120,36 +120,36 @@
 		  `((:translate ,alloc-trans)))
 	      (:generator 37
 		(pseudo-atomic (ndescr)
-		  (inst addiu result alloc-tn ,lowtag)
+		  (inst addu result alloc-tn ,lowtag)
 		  ,@(cond ((and header variable-length)
-			   `((inst addiu temp extra-words
+			   `((inst addu temp extra-words
 				   (fixnum (1- ,size)))
 			     (inst addu alloc-tn alloc-tn temp)
 			     (inst sll temp temp
 				   (- vm:type-bits vm:word-bits))
-			     (inst ori temp temp ,header)
+			     (inst or temp temp ,header)
 			     (storew temp result 0 ,lowtag)
-			     (inst addiu alloc-tn alloc-tn
+			     (inst addu alloc-tn alloc-tn
 				   (+ (fixnum 1) vm:lowtag-mask))
-			     (loadi temp (lognot vm:lowtag-mask))
+			     (inst li temp (lognot vm:lowtag-mask))
 			     (inst and alloc-tn alloc-tn temp)))
 			  (variable-length
 			   (error ":REST-P T with no header in ~S?"
 				  (vm:primitive-object-name obj)))
 			  (header
-			   `((inst addiu alloc-tn alloc-tn
+			   `((inst addu alloc-tn alloc-tn
 				   (vm:pad-data-block ,size))
-			     (loadi temp
-				    ,(logior (ash (1- size) vm:type-bits)
-					     (if (integerp header)
-						 header
-						 0)))
+			     (inst li temp
+				   ,(logior (ash (1- size) vm:type-bits)
+					    (if (integerp header)
+						header
+						0)))
 			     (storew temp result 0 ,lowtag)))
 			  (t
-			   `((inst addiu alloc-tn alloc-tn
+			   `((inst addu alloc-tn alloc-tn
 				   (vm:pad-data-block ,size)))))
 		  ,@(when need-unbound-marker
-		      `((loadi temp vm:unbound-marker-type)))
+		      `((inst li temp vm:unbound-marker-type)))
 		  ,@(init-forms)
 		  (move real-result result))))))))
     (when (forms)
@@ -180,9 +180,9 @@
     (move obj-temp object)
     (loadw value obj-temp vm:symbol-value-slot vm:other-pointer-type)
     (let ((err-lab (generate-error-code node di:unbound-symbol-error obj-temp)))
-      (inst xori temp value vm:unbound-marker-type)
+      (inst xor temp value vm:unbound-marker-type)
       (inst beq temp zero-tn err-lab)
-      (nop))))
+      (inst nop))))
 
 ;;; With Symbol-Function, we check that the result is a function, so NIL is
 ;;; always un-fbound.
@@ -210,11 +210,11 @@
   (:translate boundp)
   (:generator 9
     (loadw value object vm:symbol-value-slot vm:other-pointer-type)
-    (inst xori temp value vm:unbound-marker-type)
+    (inst xor temp value vm:unbound-marker-type)
     (if not-p
 	(inst beq temp zero-tn target)
 	(inst bne temp zero-tn target))
-    (nop)))
+    (inst nop)))
 
 
 ;;; SYMBOL isn't a primitive type, so we can't use it for the arg restriction
@@ -259,7 +259,7 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:generator 5
     (loadw temp symbol vm:symbol-value-slot vm:other-pointer-type)
-    (inst addiu bsp-tn bsp-tn (* 2 vm:word-bytes))
+    (inst addu bsp-tn bsp-tn (* 2 vm:word-bytes))
     (storew temp bsp-tn (- vm:binding-value-slot vm:binding-size))
     (storew symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
     (storew val symbol vm:symbol-value-slot vm:other-pointer-type)))
@@ -272,7 +272,7 @@
     (loadw value bsp-tn (- vm:binding-value-slot vm:binding-size))
     (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
     (storew zero-tn bsp-tn (- vm:binding-symbol-slot vm:binding-size))
-    (inst addiu bsp-tn bsp-tn (* -2 vm:word-bytes))))
+    (inst addu bsp-tn bsp-tn (* -2 vm:word-bytes))))
 
 
 (define-vop (unbind-to-here)
@@ -294,7 +294,7 @@
       (storew zero-tn bsp-tn (- vm:binding-symbol-slot vm:binding-size))
 
       (emit-label skip)
-      (inst addiu bsp-tn bsp-tn (* -2 vm:word-bytes))
+      (inst addu bsp-tn bsp-tn (* -2 vm:word-bytes))
       (inst bne where bsp-tn loop)
       (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
 
