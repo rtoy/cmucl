@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.36 2003/05/23 13:34:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.37 2003/06/16 13:07:19 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -377,7 +377,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	  (warn "~s already profiled, unprofiling it first" name)
 	  (unprofile-1-function name))
 	(let ((ctor (ensure-profile-fwrapper nreq optionals-p)))
-	  (fwrap name ctor :type 'profile
+	  (fwrap name (fdefinition ctor) :type 'profile
 		 :user-data (make-profile-info name callers-p))
 	  (push name *timed-functions*)))
       (warn "Ignoring undefined function ~s" name)))
