@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.19 1996/07/12 19:15:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.19.2.1 1997/08/06 11:57:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -822,19 +822,19 @@
   (cond (more-values
 	 (let ((list (list* value val1 val2 more-values)))
 	   #'(lambda ()
-	       (declare (optimize (speed 3) (safety 0)))
+	       (declare (ext:optimize-interface (speed 3) (safety 0)))
 	       (values-list list))))
 	(val2-p
 	 #'(lambda ()
-	     (declare (optimize (speed 3) (safety 0)))
+	     (declare (ext:optimize-interface (speed 3) (safety 0)))
 	     (values value val1 val2)))
 	(val1-p
 	 #'(lambda ()
-	     (declare (optimize (speed 3) (safety 0)))
+	     (declare (ext:optimize-interface (speed 3) (safety 0)))
 	     (values value val1)))
 	(t
 	 #'(lambda ()
-	     (declare (optimize (speed 3) (safety 0)))
+	     (declare (ext:optimize-interface (speed 3) (safety 0)))
 	     value))))
 
 
