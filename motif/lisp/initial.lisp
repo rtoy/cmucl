@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/initial.lisp,v 1.5 1998/03/20 11:33:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/initial.lisp,v 1.6 1998/05/06 11:09:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,7 +165,7 @@
 	   "CREATE-POPUP-MENU" "CREATE-PROMPT-DIALOG"
 	   "CREATE-PULLDOWN-MENU" "CREATE-QUESTION-DIALOG"
 	   "CREATE-SCROLLED-LIST" "CREATE-SCROLLED-TEXT"
-	   "CREATE-SELECTION-DIALOG" "CREATE-WORKIG-DIALOG"
+	   "CREATE-SELECTION-DIALOG" "CREATE-WORKING-DIALOG"
 	   "REALIZE-WIDGET" "UNREALIZE-WIDGET" "MAP-WIDGET" "UNMAP-WIDGET"
 	   "SET-SENSITIVE" "POPUP" "POPDOWN" "MANAGE-CHILD"
 	   "UNMANAGE-CHILD" "PARSE-TRANSLATION-TABLE"
