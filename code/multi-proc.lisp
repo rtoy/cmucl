@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.26 1998/01/25 19:37:13 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.27 1998/01/26 14:59:45 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -791,8 +791,13 @@
 (declaim (type (or null process) *intial-process*))
 (defvar *initial-process* nil)
 
+;;; Without-scheduling  --  Public
+;;;
+;;; Disable scheduling while the body is executed. Scheduling is
+;;; typically inhibited when process state is being modified.
+;;;
 (defvar *inhibit-scheduling* t)
-
+;;;
 (defmacro without-scheduling (&body body)
   "Execute the body the scheduling disabled."
   `(let ((inhibit *inhibit-scheduling*))
@@ -905,7 +910,7 @@
 					       *initial-process*)
 			(setf *current-process* *initial-process*)))
 		  *initial-stack-group* nil))))
-	   (push process *all-processes*)
+	   (atomic-push process *all-processes*)
 	   process))))
 
 
@@ -928,8 +933,8 @@
   the end of the process allowing it to unwind gracefully."
   (declare (type process process))
   (assert (not (eq process *current-process*)))
-  (unless (eq (process-state process) :killed)
-    (without-scheduling
+  (without-scheduling
+   (unless (eq (process-state process) :killed)
      ;; Place a throw to end-of-the-world at the start of process's
      ;; interrupts queue, to be called the next time the process is
      ;; scheduled.
@@ -938,9 +943,9 @@
 	   (process-interrupts process))
      ;; Ensure that the process is active so that it can accept this
      ;; interrupt.
-     (setf (process-state process) :active))
-    ;; Should we wait until it's dead?
-    (process-yield)))
+     (setf (process-state process) :active)))
+  ;; Should we wait until it's dead?
+  (process-yield))
 
 (defun restart-process (process)
   "Restart process by unwinding it to its initial state and calling its
@@ -953,43 +958,44 @@
   (when *quitting-lisp*
     (process-wait "Quitting Lisp" #'(lambda () nil)))
   ;; Create a new stack-group.
-  (setf (process-stack-group process)
-	(make-stack-group
-	 (process-name process)
-	 #'(lambda ()
-	     (unwind-protect 
-		  (catch '%end-of-the-process
-		    ;; Catch throws to the %end-of-the-world.
-		    (setf *quitting-lisp*
-			  (catch 'lisp::%end-of-the-world
-			    (with-simple-restart
-				(destroy "Destroy the process")
-			      (setf *inhibit-scheduling* nil)
-			      (apply (process-initial-function process)
-				     (process-initial-args process)))
-			    ;; Normal exit.
-			    (throw '%end-of-the-process nil))))
-	       (setf *inhibit-scheduling* t)
-	       ;; About to return to the resumer's stack-group, which
-	       ;; in this case is the initial process's stack-group.
-	       (setf (process-state *current-process*) :killed)
-	       (setf *all-processes*
-		     (delete *current-process* *all-processes*))
-	       (setf (process-%whostate *current-process*) nil)
-	       (setf (process-wait-function *current-process*) nil)
-	       (setf (process-wait-timeout *current-process*) nil)
-	       (setf (process-wait-return-value *current-process*) nil)
-	       (setf (process-interrupts *current-process*) nil)
-	       (update-process-timers *current-process* *initial-process*)
-	       (setf *current-process* *initial-process*)))
-	 *initial-stack-group* nil))
-  (setf (process-%whostate process) nil)
-  (setf (process-wait-function process) nil)
-  (setf (process-wait-timeout process) nil)
-  (setf (process-wait-return-value process) nil)
-  (setf (process-interrupts process) nil)
-  (setf (process-state process) :active)
-  (push process *all-processes*)
+  (without-scheduling
+   (setf (process-stack-group process)
+	 (make-stack-group
+	  (process-name process)
+	  #'(lambda ()
+	      (unwind-protect 
+		   (catch '%end-of-the-process
+		     ;; Catch throws to the %end-of-the-world.
+		     (setf *quitting-lisp*
+			   (catch 'lisp::%end-of-the-world
+			     (with-simple-restart
+				 (destroy "Destroy the process")
+			       (setf *inhibit-scheduling* nil)
+			       (apply (process-initial-function process)
+				      (process-initial-args process)))
+			     ;; Normal exit.
+			     (throw '%end-of-the-process nil))))
+		(setf *inhibit-scheduling* t)
+		;; About to return to the resumer's stack-group, which
+		;; in this case is the initial process's stack-group.
+		(setf (process-state *current-process*) :killed)
+		(setf *all-processes*
+		      (delete *current-process* *all-processes*))
+		(setf (process-%whostate *current-process*) nil)
+		(setf (process-wait-function *current-process*) nil)
+		(setf (process-wait-timeout *current-process*) nil)
+		(setf (process-wait-return-value *current-process*) nil)
+		(setf (process-interrupts *current-process*) nil)
+		(update-process-timers *current-process* *initial-process*)
+		(setf *current-process* *initial-process*)))
+	  *initial-stack-group* nil))
+   (setf (process-%whostate process) nil)
+   (setf (process-wait-function process) nil)
+   (setf (process-wait-timeout process) nil)
+   (setf (process-wait-return-value process) nil)
+   (setf (process-interrupts process) nil)
+   (setf (process-state process) :active)
+   (push process *all-processes*))
   process)
 
 
@@ -1004,17 +1010,19 @@
 
 ;;; Disable-Process  --  Public
 ;;;
-(declaim (inline disable-processes))
 (defun disable-process (process)
   "Disable process from being runnable until enabled."
-  (setf (process-state process) :inactive))
+  (without-scheduling
+   (assert (not (eq (process-state process) :killed)))
+   (setf (process-state process) :inactive)))
 
 ;;; Enable-Process  --  Public
 ;;;
-(declaim (inline enable-processes))
 (defun enable-process (process)
   "Allow process to become runnable again after it has been disabled."
-  (setf (process-state process) :active))
+  (without-scheduling
+   (assert (not (eq (process-state process) :killed)))
+   (setf (process-state process) :active)))
 
 ;;; Process-Wait  --  Public.
 ;;;
@@ -1026,6 +1034,10 @@
   The single True predicate value is returned."
   (assert (not *inhibit-scheduling*))
   (assert (not (process-wait-function *current-process*)))
+  ;; Don't need the disable scheduling here because the scheduler
+  ;; doesn't mess with the whostate or timeout until the function is
+  ;; setup, unless the process is interrupted in which case the
+  ;; scheduler restores the state when execution resumers here.
   (setf (process-%whostate *current-process*) whostate)
   (setf (process-wait-timeout *current-process*) nil)
   (setf (process-wait-function *current-process*) predicate)
@@ -1042,6 +1054,10 @@
   returned, or NIL if the timeout was reached."
   (assert (not *inhibit-scheduling*))
   (assert (not (process-wait-function *current-process*)))
+  ;; Don't need the disable scheduling here because the scheduler
+  ;; doesn't mess with the whostate or timeout until the function is
+  ;; setup, unless the process is interrupted in which case the
+  ;; scheduler restores the state when execution resumers here.
   (setf (process-%whostate *current-process*) whostate)
   (let ((timeout (etypecase timeout
 		   (fixnum
@@ -1051,10 +1067,11 @@
 		   (double-float
 		    (coerce timeout 'double-float)))))
     (declare (double-float timeout))
-    (setf (process-wait-timeout *current-process*) (+ timeout (get-real-time)))
-    (setf (process-wait-function *current-process*) predicate)
-    (process-yield)
-    (process-wait-return-value *current-process*)))
+    (setf (process-wait-timeout *current-process*)
+	  (+ timeout (get-real-time)))
+    (setf (process-wait-function *current-process*) predicate))
+  (process-yield)
+  (process-wait-return-value *current-process*))
 
 ;;; The remaining processes in the scheduling queue for this cycle,
 ;;; the remainder of *all-processes*. The *current-process* is the
@@ -1254,13 +1271,17 @@
 	   (declare (type (or null function) interrupt))
 	   (cond (interrupt 
 		  ;; Save and reset any wait reasons so that the
-		  ;; interrupt can wait.
+		  ;; interrupt can wait. The return-value is also
+		  ;; saved and restored in case a process is
+		  ;; interrupted before it is read.
 		  (let ((wait-function (process-wait-function next))
 			(wait-timeout (process-wait-timeout next))
-			(whostate (process-%whostate next)))
+			(whostate (process-%whostate next))
+			(wait-return-value (process-wait-return-value next)))
 		    (setf (process-wait-function next) nil)
 		    (setf (process-wait-timeout next) nil)
 		    (setf (process-%whostate next) nil)
+		    (setf (process-wait-return-value next) nil)
 		    ;; Allow recursive scheduling during the interrupt
 		    ;; processing. Only one interrupt is processed on
 		    ;; each scheduler queue cycle. The process doesn't
@@ -1271,7 +1292,8 @@
 		    ;; Restore any wait reasons.
 		    (setf (process-wait-function next) wait-function)
 		    (setf (process-wait-timeout next) wait-timeout)
-		    (setf (process-%whostate next) whostate)))
+		    (setf (process-%whostate next) whostate)
+		    (setf (process-wait-return-value next) wait-return-value)))
 		 (t
 		  ;; Check the wait function.
 		  (let ((wait-fn (process-wait-function next)))
