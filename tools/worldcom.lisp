@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.46 1992/09/24 17:01:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.47 1992/12/16 10:57:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,6 +161,7 @@
   (comf "target:code/pathname")
   (comf "target:code/filesys"))
 (comf "target:code/load")
+(comf "target:code/module")
 
 (comf "target:code/eval")
 
