@@ -48,6 +48,29 @@
 				      :brevity 1 :debug 2))
 
 
+
+;;; A list of UNDEFINED-WARNING structures representing the calls to unknown
+;;; functions.  This is bound by WITH-COMPILATION-UNIT.
+;;;
+(defvar *undefined-warnings*)
+(proclaim '(list *undefined-warnings*))
+
+;;; NOTE-NAME-DEFINED  --  Interface
+;;;
+;;;    Delete any undefined warnings for Name and Kind.  We do the BOUNDP check
+;;; because this function can be called when not in a compilation unit (as when
+;;; loading top-level forms.)
+;;;
+(defun note-name-defined (name kind)
+  (when (boundp '*undefined-warnings*)
+    (setq *undefined-warnings*
+	  (delete-if #'(lambda (x)
+			 (and (equal (undefined-warning-name x) name)
+			      (eq (undefined-warning-kind x) kind)))
+		     *undefined-warnings*)))
+  (undefined-value))
+
+
 ;;; Parse-Lambda-List  --  Interface
 ;;;
 ;;;    Break a lambda-list into its component parts.  We return eight values:
@@ -297,6 +320,7 @@
 		    (first args)))
 	   (dolist (name (rest args))
 	     (define-function-name name)
+	     (note-name-defined name :function)
 	     (setf (info function type name) type)
 	     (setf (info function where-from name) :declared)))))
       (freeze-type
@@ -377,13 +401,15 @@
 ;;;
 ;;;    Like DEFINE-FUNCTION-NAME, but we also set the kind to :DECLARED and
 ;;; blow away any ASSUMED-TYPE.  Also, if the thing is a slot accessor
-;;; currently, quietly unaccessorize it.
+;;; currently, quietly unaccessorize it.  And if there are any undefined
+;;; warnings, we nuke them.
 ;;;
 (defun define-defstruct-name (name)
   (when name
     (when (info function accessor-for name)
       (setf (info function accessor-for name) nil))
     (define-function-name name)
+    (note-name-defined name :function)
     (setf (info function where-from name) :declared)
     (when (info function assumed-type name)
       (setf (info function assumed-type name) nil)))
@@ -513,8 +539,7 @@
 ;;; 
 (defun %note-type-defined (name)
   (declare (symbol name))
-  (when (boundp '*undefined-warnings*)
-    (note-name-defined name :type))
+  (note-name-defined name :type)
   (when (boundp '*values-specifier-type-cache-vector*)
     (values-specifier-type-cache-clear))
   (undefined-value))
