@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.55 1990/11/16 04:37:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.56 1990/11/18 12:31:13 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -293,6 +293,7 @@
 	  double-float-high-bits double-float-low-bits
 	  single-float-p double-float-p base-char-p simple-array-p
 	  %raw-bits %set-raw-bits %sp-set-definition
+	  make-array-header allocate-vector
 
 	  ))
 
@@ -503,11 +504,10 @@
 	  float-sign-shift single-float-digits double-float-digits
 	  register-save-penalty symbol-raw-function-addr-slot
 	  symbol-setf-function-slot structure-header-type
-	  alloc-g-vector allocate-vector alloc-string sxhash-simple-string
-	  sxhash-simple-substring check-cons check-symbol check-fixnum
-	  check-signed-byte-32 check-unsigned-byte-32
-	  check-function-or-symbol check-function
-	  make-array-header code-constant-set allocate-code-object
+	  sxhash-simple-string sxhash-simple-substring check-cons
+	  check-symbol check-fixnum check-signed-byte-32
+	  check-unsigned-byte-32 check-function-or-symbol check-function
+	  code-constant-set allocate-code-object
 	  code-instructions compute-function
 
 	  get-vector-subtype set-vector-subtype
