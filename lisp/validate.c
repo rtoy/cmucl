@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.12 2003/07/19 14:10:16 emarsden Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.13 2003/07/26 11:24:24 gerd Exp $
  *
  * Memory Validation
  */
@@ -75,7 +75,6 @@ validate(void)
 #endif
 
 #ifdef RED_ZONE_HIT
-    fprintf (stderr, "guard\n");
     os_guard_control_stack (0, 1);
 #endif
 }
