@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.83 2004/09/27 19:06:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.84 2004/10/18 16:57:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -181,12 +181,14 @@
 	 ;; namestring, where * can be #\* or some digits.  This
 	 ;; denotes a version.
 	 (cond ((or (< (- end start) 4)
-		    (char/= (schar namestr (1- end)) #\~))
+		    (and (char/= (schar namestr (1- end)) #\~)
+			 (char/= (schar namestr (1- end)) #\*)))
 		;; No explicit version given, so return NIL to
 		;; indicate we don't want file versions, unless
 		;; requested in other ways.
 		(values nil end))
-	       ((and (char= (schar namestr (- end 2)) #\*)
+	       ((and (not *ignore-wildcards*)
+		     (char= (schar namestr (- end 2)) #\*)
 		     (char= (schar namestr (- end 3)) #\~)
 		     (char= (schar namestr (- end 4)) #\.))
 		;; Found "~*~", so it's a wild version
@@ -214,7 +216,8 @@
 	     (explicit-version namestr start end)
 	   (cond ((not (eq version :newest))
 		  (values version where))
-		 ((and (>= (- end 2) start)
+		 ((and (not *ignore-wildcards*)
+		       (>= (- end 2) start)
 		       (char= (schar namestr (- end 1)) #\*)
 		       (char= (schar namestr (- end 2)) #\.)
 		       (find #\. namestr
@@ -673,7 +676,8 @@
 	  ((or (pattern-p name)
 	       (pattern-p type)
 	       (eq name :wild)
-	       (eq type :wild))
+	       (eq type :wild)
+	       (eq version :wild))
 	   (let ((dir (unix:open-dir directory)))
 	     (when dir
 	       (unwind-protect
