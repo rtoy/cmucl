@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.16 1990/06/25 21:17:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.17 1990/07/02 04:51:11 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -72,6 +72,11 @@
 (defknown vector-sap ((simple-unboxed-array (*))) system-area-pointer
   (flushable))
 
+
+(defknown get-lowtag (t) (unsigned-byte #.vm:lowtag-bits)
+  (flushable movable))
+(defknown get-type (t) (unsigned-byte #.vm:type-bits)
+  (flushable movable))
 
 (defknown get-header-data (t) (unsigned-byte 24)
   (flushable))
