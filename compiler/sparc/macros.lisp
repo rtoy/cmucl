@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.19 2003/08/06 14:45:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.20 2003/08/06 19:00:12 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.19 2003/08/06 14:45:50 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.20 2003/08/06 19:00:12 gerd Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -205,7 +205,7 @@
   ;; set.  If the lowtag also has a 1 bit in the same position, we're all
   ;; set.  Otherwise, we need to zap out the lowtag from alloc-tn, and
   ;; then or in the lowtag.
-  `(cond ((and ,stack-p ,node (policy ,node (>= speed safety)))
+  `(cond ((and ,stack-p ,node (trust-dynamic-extent-declaration-p ,node))
 	  ;; Stack allocation
 	  ;;
 	  ;; The control stack grows up, so round up CSP to a

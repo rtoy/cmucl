@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.220 2003/08/03 11:27:49 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.221 2003/08/06 19:00:13 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1303,7 +1303,9 @@
 	     "&PARSE-BODY"
 
 	     ;; PCL declaration identifiers.
-	     "SLOTS" "AUTO-COMPILE" "NOT-AUTO-COMPILE"))
+	     "SLOTS" "AUTO-COMPILE" "NOT-AUTO-COMPILE"
+
+	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
@@ -1578,7 +1580,8 @@
 	   "LARGE-ALLOC"
 	   "%SET-FUNCTION-SELF"
 	   "IR2-COMPONENT-DYNCOUNT-INFO"
-	   "DYNCOUNT-INFO" "DYNCOUNT-INFO-P")
+	   "DYNCOUNT-INFO" "DYNCOUNT-INFO-P"
+	   "TRUST-DYNAMIC-EXTENT-DECLARATION-P")
   )
 (defpackage "XREF"
   (:export "INIT-XREF-DATABASE"
