@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.3 1992/08/02 19:50:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.4 1992/09/07 15:33:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -417,6 +417,9 @@
       (:local
        (annotate-local-call call))
       (:full
+       (annotate-full-call call))
+      (:error
+       (setf (basic-combination-kind call) :full)
        (annotate-full-call call))
       (t
        (unless (and (function-info-byte-compile kind)
