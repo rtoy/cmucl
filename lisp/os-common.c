@@ -2,6 +2,10 @@
 
 #include "os.h"
 
+/* Except for os_zero, these routines are only called by Lisp code.  These
+   routines may also be replaced by os-dependent versions instead.  See
+   hpux-os.c for some useful restrictions on actual usage. */
+
 void os_zero(addr, length)
 os_vm_address_t addr;
 os_vm_size_t length;
@@ -53,6 +57,9 @@ os_vm_size_t len;
     os_invalidate(addr,len);
 }
 
+/* This function once tried to grow the chunk by asking os_validate if the
+   space was available, but this really only works under Mach. */
+
 os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 			      os_vm_size_t len)
 {
@@ -67,33 +74,18 @@ os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 
 	if(len_diff<0)
 	    os_invalidate(addr+len,-len_diff);
-	else if(len_diff!=0){
-#if 1
-	    os_vm_address_t new= NULL;
-#else
-	    os_vm_address_t new=os_validate(addr+old_len,len_diff);
-#endif
+	else{
+	    if(len_diff!=0){
+	      new=os_allocate(len);
 
-	    if(new==NULL || new!=addr+old_len){
-		if(new!=NULL)
-		    /* allocated alright, but in the wrong place */
-		    os_invalidate(new,len_diff);
-
-		new=os_allocate(len);
-		
-		if(new!=NULL){
-		    bcopy(addr,new,old_len);
-		    os_invalidate(addr,old_len);
+	      if(new!=NULL){
+		bcopy(addr,new,old_len);
+		os_invalidate(addr,old_len);
 		}
 		
-		addr=new;
+	      addr=new;
 	    }
-#if 0
-	    else
-	    fprintf(stderr,"Map grow: [0x%08x] %x -> %x\n", addr, old_len,len);
-#endif
 	}
-	
 	return addr;
     }
 }
