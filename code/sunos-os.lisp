@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.5 1992/03/26 03:35:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.6 1992/05/15 17:52:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,15 +59,15 @@
 ;;;    Return system time, user time and number of page faults.
 ;;;
 (defun get-system-info ()
-  (let (run-utime run-stime page-faults)
-    (multiple-value-bind (err? utime stime maxrss ixrss idrss
-                               isrss minflt majflt)
-        (unix:unix-getrusage unix:rusage_self)
-      (declare (ignore maxrss ixrss idrss isrss minflt))
-      (cond ((null err?)
-             (error "Unix system call getrusage failed: ~A."
-                    (unix:get-unix-error-msg utime)))
-            (T (values utime stime majflt))))))
+  (multiple-value-bind
+      (err? utime stime maxrss ixrss idrss isrss minflt majflt)
+      (unix:unix-getrusage unix:rusage_self)
+    (declare (ignore maxrss ixrss idrss isrss minflt))
+    (cond ((null err?)
+	   (error "Unix system call getrusage failed: ~A."
+		  (unix:get-unix-error-msg utime)))
+	  (T
+	   (values utime stime majflt)))))
 
 
 ;;; GET-PAGE-SIZE  --  Interface
