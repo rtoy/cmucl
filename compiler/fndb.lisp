@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.54 1993/02/26 08:38:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.55 1993/06/23 19:37:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,7 +113,7 @@
 
 (defknown boundp (symbol) boolean (flushable))
 (defknown fboundp ((or symbol cons)) boolean (flushable explicit-check))
-(defknown special-form-p (symbol) t (movable foldable flushable)) ; They never change...
+(defknown special-operator-p (symbol) t (movable foldable flushable)) ; They never change...
 (defknown set (symbol t) t (unsafe)
   :derive-type #'result-type-last-arg)
 (defknown fdefinition ((or symbol cons)) function (unsafe explicit-check))
@@ -153,9 +153,6 @@
 (defknown compiler-macro-function (t &optional lexical-environment)
   (or function null)
   (flushable))
-(defknown (compiler-macroexpand compiler-macroexpand-1)
-	  (t &optional lexical-environment)
-  (values form &optional boolean))
 
 
 ;;;; In the "Declarations" chapter:
