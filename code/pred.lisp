@@ -236,22 +236,6 @@
   (%typep obj type))
 
 
-;;; Type-Expand  --  Internal
-;;;
-;;;    Similar to Macroexpand, but expands deftypes.  We don't bother returning
-;;; a second value.
-;;;
-(defun type-expand (form)
-  (let ((def (cond ((symbolp form)
-		    (get form 'deftype-expander))
-		   ((and (consp form) (symbolp (car form)))
-		    (get (car form) 'deftype-expander))
-		   (t nil))))
-    (if def
-	(type-expand (funcall def (if (consp form) form (list form))))
-	form)))
-
-	       
 ;;; Given that the object is a vector of some sort, and that we've already
 ;;; verified that it matches CAR of TYPE, see if the rest of the type
 ;;; specifier wins.  Mild hack: Eltype Nil means either type not supplied
