@@ -2069,7 +2069,7 @@ D
       (:error  (component-error-pathname component)))))
 (defun component-error-pathname (component)
   (let ((binary (component-pathname component :binary)))
-    (new-file-type binary *compile-error-file-type*)))
+    (namestring (new-file-type binary *compile-error-file-type*))))
 (defsetf component-pathname (component type) (value)
   `(when ,component
      (ecase ,type
@@ -2151,6 +2151,9 @@ D
     #+(and (and allegro-version>= (version>= 4 1))
 	   (not :logical-pathnames-mk))
     (when (and (pathname-host pathname) (logical-pathname-p pathname))
+      (setf pathname (translate-logical-pathname pathname)))
+    #+cmu17
+    (when (logical-pathname-p (make-pathname :host (pathname-host pathname)))
       (setf pathname (translate-logical-pathname pathname)))
 
     (namestring
