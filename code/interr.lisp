@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.1 1990/06/04 05:32:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.2 1990/06/04 08:14:43 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -380,14 +380,13 @@
 #+new-compiler
 (defun internal-error (signal code scp)
   (declare (ignore signal code))
-  (alien-bind ((sc (mach:indirect-*sigcontext
-		    (make-alien 'mach:sigcontext
-				#.(c-sizeof 'mach:sigcontext)
-				scp))
+  (alien-bind ((sc (make-alien 'mach:sigcontext
+			       #.(c-sizeof 'mach:sigcontext)
+			       scp)
 		   mach:sigcontext
 		   t)
-	       (regs (mach:sigcontext-regs sc) mach:int-array t))
-    (let* ((pc (int-sap (mach:sigcontext-pc sc)))
+	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+    (let* ((pc (int-sap (alien-access (mach:sigcontext-pc (alien-value sc)))))
 	   (bad-inst (sap-ref-32 pc 0))
 	   (number (sap-ref-8 pc 4))
 	   (info (svref *internal-errors* number))
