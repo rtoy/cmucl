@@ -1529,7 +1529,7 @@
 	     (handler-bind ((c::parse-unknown-type
 			     #'(lambda (c)
 				 (c::note-undefined-reference
-				  (c::parse-unknown-type-specifier x)
+				  (c::parse-unknown-type-specifier c)
 				  :type))))
 	       (unwind-protect
 		   (multiple-value-prog1
