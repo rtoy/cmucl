@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.12 2001/01/03 08:45:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.13 2001/05/14 13:58:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.12 2001/01/03 08:45:52 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.13 2001/05/14 13:58:19 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -275,7 +275,8 @@
      (when fixnump
        `((inst andcc zero-tn ,reg 3)
 	 ,(if (or lowtags hdrs)
-	      `(inst b :eq ,(if not-p not-target target))
+	      `(inst b :eq ,(if not-p not-target target)
+		     #+sparc-v9 ,(if not-p :pn :pt))
 	      `(inst b ,(if not-p :ne :eq) ,target
 		       #+sparc-v9 ,(if not-p :pn :pt)))))
      (when (or lowtags hdrs)
@@ -292,7 +293,8 @@
 			   (1- lowtag-limit) lowtags)))
      (when hdrs
        `((inst cmp ,temp ,lowtag)
-	 (inst b :ne ,(if not-p target not-target))
+	 (inst b :ne ,(if not-p target not-target)
+	         #+sparc-v9 ,(if not-p :pn :pt))
 	 (inst nop)
 	 (load-type ,temp ,reg (- ,lowtag))
 	 ,@(gen-other-immediate-test temp target not-target not-p hdrs))))))
