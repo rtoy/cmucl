@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.12 1990/05/24 13:30:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.13 1990/06/01 16:24:20 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -99,11 +99,11 @@
   (:info amount)
   (:results (result :scs (sap-reg)))
   (:generator 0
-    (inst addu nsp-tn nsp-tn (- amount))
+    (inst addu nsp-tn nsp-tn (- (logandc2 (+ amount 7) 7)))
     (move result nsp-tn)))
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:policy :fast-safe)
   (:generator 0
-    (inst addu nsp-tn nsp-tn amount)))
+    (inst addu nsp-tn nsp-tn (logandc2 (+ amount 7) 7))))
