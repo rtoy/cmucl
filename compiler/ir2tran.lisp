@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.6 1990/04/16 10:38:52 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.7 1990/04/17 13:26:42 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -129,11 +129,12 @@
   (when (policy node (> speed brevity))
     (let ((*compiler-error-context* node))
       (compiler-note "Compiling a full call to FDEFINITION.")))
-  (let ((arg (standard-argument-location 0))
-	(res (standard-argument-location 0))
-	(fun (emit-constant 'fdefinition)))
-    (emit-move node block name arg)
-    (vop* call-named node block (fun arg nil) (res nil) "<save info>" 1 1)
+  (let* ((arg (standard-argument-location 0))
+	 (res (standard-argument-location 0))
+	 (fun (emit-constant 'fdefinition))
+	 (fp (make-normal-tn *any-primitive-type*)))
+    (vop allocate-full-call-frame node block 1 fp)
+    (vop* call-named node block (fp fun name nil) (res nil) (list arg) 1 1)
     (move-continuation-result node block (list res) (node-cont node)))
   (undefined-value))
 
