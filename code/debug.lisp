@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.28 1992/03/10 15:30:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.29 1992/03/10 18:30:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 
 (export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
 	  *debug-print-level* *debug-print-length* *debug-prompt*
-	  *help-line-scroll-count*
+	  *help-line-scroll-count* *stack-top-hint*
 
 	  *auto-eval-in-frame* var arg
 	  *only-block-start-locations* *print-location-kind*
@@ -51,6 +51,12 @@
   null, use *PRINT-LENGTH*.")
 
 (defvar *in-the-debugger* nil
+  "This is T while in the debugger.")
+
+(defvar *debug-command-level* 0
+  "Pushes and pops/exits inside the debugger change this.")
+
+(defvar *stack-top-hint* nil
   "If this is bound before the debugger is invoked, it is used as the stack
    top by the debugger.")
 (defvar *stack-top* nil)
@@ -326,7 +332,10 @@
       (unless (zerop max-name-len)
 	(incf max-name-len 3))
       (dolist (restart restarts)
-	 (*current-frame* (di:top-frame))
+	(let ((name (restart-name restart)))
+	  (cond ((member name names-used)
+		 (format s "~& ~2D: ~@VT~A~%" count max-name-len restart))
+		(t
 		 (format s "~& ~2D: [~VA] ~A~%"
 			 count (- max-name-len 3) name restart)
 		 (push name names-used))))
@@ -575,7 +584,9 @@
     (dolist (ele args (error "Argument specification out of range -- ~S." n))
       (lambda-list-element-dispatch ele
 	:required ((if (zerop n) (return (values ele t))))
-	 (warn "Redefining ~S debugger command." ,name))
+	:optional ((if (zerop n) (return (values (second ele) t))))
+	:keyword ((cond ((zerop n)
+			 (return (values (second ele) nil)))
 			((zerop (decf n))
 			 (return (values (third ele) t)))))
 	:deleted ((if (zerop n) (return (values ele t))))
