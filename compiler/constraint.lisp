@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.20 1999/01/25 12:25:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.21 2000/07/06 04:40:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,7 +243,7 @@
 	   (when (continuation-type-check cont)
 	     (let ((var (ok-ref-lambda-var node)))
 	       (when var
-		 (let* ((atype (continuation-derived-type cont))
+		 (let* ((atype (continuation-type cont))
 			(con (find-constraint 'typep var atype nil)))
 		   (sset-adjoin con gen))))))
 	  (cset
@@ -456,7 +456,8 @@
 		 (when (continuation-type-check cont)
 		   (sset-adjoin
 		    (find-constraint 'typep var
-				     (continuation-asserted-type cont)
+				     (single-value-type
+				      (continuation-asserted-type cont))
 				     nil)
 		    in)))))))
 	(cset
