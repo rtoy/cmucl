@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.5 1990/11/10 18:37:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.6 1990/12/12 22:51:46 wlott Exp $
 ;;;
 ;;; Functions to implement arrays for CMU Common Lisp.
 ;;; Written by Skef Wholey.
@@ -83,11 +83,18 @@
 
 ;;;; MAKE-ARRAY
 
+(eval-when (compile eval)
+
 (defmacro pick-type (type &rest specs)
   `(cond ,@(mapcar #'(lambda (spec)
-		       `((subtypep ,type ',(car spec))
+		       `(,(if (eq (car spec) t)
+			      t
+			      `(subtypep ,type ',(car spec)))
 			 ,@(cdr spec)))
 		   specs)))
+
+); eval-when
+
 
 (defun %vector-type-code (type)
   (pick-type type
