@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.62.2.6 2002/03/31 14:46:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.62.2.7 2002/04/07 00:19:57 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1112,9 +1112,12 @@
 ;;;; Loading functions:
 
 ;;; must be compatible with the function OPEN-FASL-FILE in compiler/dump.lisp
-(define-fop (fop-code-format 57 :nope)
+;;; The old fop-code-format FOP is legacy support for FASL formats prior to
+;;; #x18d, which used a single octet for the version number.
+(clone-fop (fop-long-code-format 157 :nope)
+	   (fop-code-format 57)
   (let ((implementation (read-arg 1))
-	(version (read-arg 4)))
+	(version (clone-arg)))
     (flet ((check-version (imp vers)
 	     (when (eql imp implementation)
 	       (unless (eql version vers)
@@ -1139,8 +1142,8 @@
               "~A was compiled for a ~A, but this is a ~A"
               *Fasl-file*
               (imp-name implementation)
-              (imp-name #.(c:backend-fasl-file-implementation c:*backend*)))))))
-
+              (imp-name
+	       #.(c:backend-fasl-file-implementation c:*backend*)))))))
 
 ;;; Load-Code loads a code object.  NItems objects are popped off the stack for
 ;;; the boxed storage section, then Size bytes of code are read in.
