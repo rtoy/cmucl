@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.67 2003/06/07 17:56:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.68 2003/06/10 16:52:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1328,9 +1328,7 @@
                ((:new-version :rename :rename-and-delete)
                 (setf mask (logior mask unix:o_creat)))
                (:supersede
-                (setf mask (logior mask unix:o_trunc)))
-               (:append
-                (setf mask (logior mask unix:o_append)))))
+                (setf mask (logior mask unix:o_trunc)))))
             (t
              (setf if-exists nil)))     ; :ignore-this-arg
 
@@ -1404,6 +1402,8 @@
                   (unix:unix-open name mask mode)
                   (values nil unix:enoent))
             (cond ((fixnump fd)
+		   (when (eq if-exists :append)
+		     (unix:unix-lseek fd 0 unix:l_xtnd)) ; SEEK_END
                    (return (values fd name original delete-original)))
                   ((eql errno unix:enoent)
                    (case if-does-not-exist

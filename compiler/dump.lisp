@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.78 2003/03/22 16:15:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.79 2003/06/10 16:52:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -393,7 +393,7 @@
 (defun open-fasl-file (name where &optional byte-p)
   (declare (type pathname name))
   (let* ((stream (open name :direction :output
-		       :if-exists :new-version
+		       :if-exists :rename-and-delete
 		       :element-type '(unsigned-byte 8)))
 	 (res (make-fasl-file :stream stream)))
     (multiple-value-bind

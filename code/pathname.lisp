@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.61 2003/06/07 17:56:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.62 2003/06/10 16:52:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1657,7 +1657,7 @@ a host-structure or string."
 (defun logical-chunkify (namestr start end)
   (collect ((chunks))
     (do ((i start (1+ i))
-	 (prev 0))
+	 (prev start))
 	((= i end)
 	 (when (> end prev)
 	    (chunks (cons (nstring-upcase (subseq namestr prev end)) prev))))

@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.72 2003/02/14 19:47:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.73 2003/06/10 16:52:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 
 (in-package "EXTENSIONS")
 (export '(print-directory complete-file ambiguous-files default-directory
-			  file-writable unix-namestring))
+	  purge-files file-writable unix-namestring))
 (in-package "LISP")
 
 
@@ -40,7 +40,7 @@
 ;;; type := "." [^/.]*
 ;;; version := ".*" | ".~" ([0-9]+ | "*") "~"
 ;;;
-;;; Note: this grammer is ambiguous.  The string foo.bar.~5~ can be parsed
+;;; Note: this grammar is ambiguous.  The string foo.bar.~5~ can be parsed
 ;;; as either just the file specified or as specifying the file, type, and
 ;;; version.  Therefore, we use the following rules when confronted with
 ;;; an ambiguous file.type.version string:
@@ -48,7 +48,7 @@
 ;;; - If the first character is a dot, it's part of the file.  It is not
 ;;; considered a dot in the following rules.
 ;;;
-;;; - If there is only one dot, it seperates the file and the type.
+;;; - If there is only one dot, it separates the file and the type.
 ;;;
 ;;; - If there are multiple dots and the stuff following the last dot
 ;;; is a valid version, then that is the version and the stuff between
@@ -65,13 +65,13 @@
 ;;; [abc] - matches any of a, b, or c.
 ;;; {str1,str2,...,strn} - matches any of str1, str2, ..., or strn.
 ;;;
-;;; Any of these special characters can be preceeded by a backslash to
+;;; Any of these special characters can be preceded by a backslash to
 ;;; cause it to be treated as a regular character.
 ;;;
 
 (defun remove-backslashes (namestr start end)
-  "Remove and occurences of \\ from the string because we've already
-   checked for whatever they may have been backslashed."
+  "Remove any occurrences of \\ from the string because we've already
+   checked for whatever may have been backslashed."
   (declare (type simple-base-string namestr)
 	   (type index start end))
   (let* ((result (make-string (- end start)))
@@ -199,7 +199,7 @@
        (any-version (namestr start end)
 	 ;; process end of string looking for a version candidate.
 	 (multiple-value-bind (version where)
-	   (explicit-version namestr start end)
+	     (explicit-version namestr start end)
 	   (cond ((not (eq version :newest))
 		  (values version where))
 		 ((and (>= (- end 2) start)
@@ -221,12 +221,12 @@
        (any-name (namestr start end)
 	 (declare (ignore namestr))
 	 (values start end)))
-    (multiple-value-bind
-	(version vstart)(any-version namestr start end)
-      (multiple-value-bind
-	  (tstart tend)(any-type namestr start vstart)
-	(multiple-value-bind
-	    (nstart nend)(any-name namestr start (or tstart vstart))
+    (multiple-value-bind (version vstart)
+	(any-version namestr start end)
+      (multiple-value-bind (tstart tend)
+	  (any-type namestr start vstart)
+	(multiple-value-bind (nstart nend)
+	    (any-name namestr start (or tstart vstart))
 	  (values
 	   (maybe-make-pattern namestr nstart nend)
 	   (and tstart (maybe-make-pattern namestr (1+ tstart) tend))
@@ -242,7 +242,7 @@
 		       (char= (schar namestr start) #\/))))
     (when absolute
       (incf start))
-    ;; Next, split the remainder into slash seperated chunks.
+    ;; Next, split the remainder into slash separated chunks.
     (collect ((pieces))
       (loop
 	(let ((slash (position #\/ namestr :start start :end end)))
@@ -279,7 +279,7 @@
 	       nil
 	       (let ((first (car pieces)))
 		 (multiple-value-bind
-		     (search-list new-start)
+		       (search-list new-start)
 		     (maybe-extract-search-list namestr
 						(car first) (cdr first))
 		   (when search-list
@@ -425,7 +425,9 @@
 	   (type-supplied (not (or (null type) (eq type :unspecific))))
 	   (logical-p (logical-pathname-p pathname))
 	   (version (%pathname-version pathname))
-	   (version-supplied (not (or (null version) (member version '(:newest :unspecific))))))
+	   (version-supplied (not (or (null version)
+				      (member version '(:newest
+							:unspecific))))))
       (when name
 	(strings (unparse-unix-piece name)))
       (when type-supplied
@@ -562,7 +564,7 @@
 ;;; %enumerate-directories  --   Internal
 ;;;
 ;;; The directory node and device numbers are maintained for the current path
-;;; during the search for the detection of paths loops upon :wild-inferiors.
+;;; during the search for the detection of path loops upon :wild-inferiors.
 ;;;
 (defun %enumerate-directories (head tail pathname verify-existance
 			       follow-links nodes function)
@@ -775,7 +777,7 @@
 ;;;
 (defun probe-file (pathname)
   "Return a pathname which is the truename of the file if it exists, NIL
-  otherwise. An error of type file-error is signaled if pathname is wild."
+  otherwise. An error of type file-error is signalled if pathname is wild."
   (if (wild-pathname-p pathname)
       (error 'simple-file-error 
 	     :pathname pathname
@@ -843,6 +845,40 @@
 				       (unix:get-unix-error-msg err))))))
   t)
 
+;;; Purge-Files  --  Public
+;;;
+;;;    Purge old file versions
+;;;
+(defun purge-files (pathname &optional (keep 0))
+  "Delete old versions of files matching the given Pathname,
+optionally keeping some of the most recent old versions."
+  (declare (type (or pathname string stream) pathname)
+	   (type (integer 0 *) keep))
+  (let ((hash (make-hash-table :test 'equal)))
+    (enumerate-search-list
+	(path (make-pathname :version :wild :defaults pathname))
+      (clrhash hash)
+      (enumerate-matches (name path nil :follow-links nil)
+	(let ((dot (position #\. name :from-end t))
+	      (len (length name)))
+	  (when (and dot
+		     (> len (+ dot 3))
+		     (char= (char name (1+ dot)) #\~)
+		     (char= (char name (1- len)) #\~)
+		     (eq (unix:unix-file-kind name) :file))
+	    (multiple-value-bind (version next)
+		(parse-integer name :start (+ dot 2) :end (1- len)
+			       :junk-allowed t)
+	      (when (and version (= next (1- len)))
+		(push (cons version name)
+		      (gethash (subseq name 0 dot) hash '())))))))
+      (maphash (lambda (key value)
+		 (declare (ignore key))
+		 (mapc #'unix:unix-unlink
+		       (mapcar #'cdr (nthcdr keep
+					     (sort value #'> :key #'car)))))
+	       hash))))
+
 
 ;;; User-Homedir-Pathname  --  Public
 ;;;
@@ -858,7 +894,7 @@
 ;;;
 (defun file-write-date (file)
   "Return file's creation date, or NIL if it doesn't exist.
- An error of type file-error is signaled if file is a wild pathname"
+ An error of type file-error is signalled if file is a wild pathname"
   (if (wild-pathname-p file)
       (error 'simple-file-error 
 	     :pathname file
@@ -906,10 +942,10 @@
   "Returns a list of pathnames, one for each file that matches the given
    pathname.  Supplying :ALL as nil causes this to ignore Unix dot files.  This
    never includes Unix dot and dot-dot in the result.  If :TRUENAMEP is NIL,
-   then symblolic links in the result are not expanded which is not the
-   default because TRUENAME does follow links, and the result pathnames are
+   then symbolic links in the result are not expanded, which is not the
+   default because TRUENAME does follow links and the result pathnames are
    defined to be the TRUENAME of the pathname (the truename of a link may well
-   be in another directory.) If FOLLOW-LINKS is NIL then symbolic links are
+   be in another directory).  If FOLLOW-LINKS is NIL then symbolic links are
    not followed."
   (let ((results nil))
     (enumerate-search-list
@@ -940,9 +976,9 @@
 ;;; PRINT-DIRECTORY is exported from the EXTENSIONS package.
 ;;; 
 (defun print-directory (pathname &optional stream &key all verbose return-list)
-  "Like Directory, but prints a terse, multi-coloumn directory listing
+  "Like Directory, but prints a terse, multi-column directory listing
    instead of returning a list of pathnames.  When :all is supplied and
-   non-nil, then Unix dot files are included too (as ls -a).  When :vervose
+   non-nil, then Unix dot files are included too (as ls -a).  When :verbose
    is supplied and non-nil, then a long listing of miscellaneous
    information is output one file per line."
   (let ((*standard-output* (out-synonym-of stream))
@@ -955,7 +991,7 @@
   (let ((contents (directory pathname :all all :check-for-subdirs nil
 			     :truenamep nil))
 	(result nil))
-    (format t "Directory of ~A :~%" (namestring pathname))
+    (format t "Directory of ~A:~%" (namestring pathname))
     (dolist (file contents)
       (let* ((namestring (unix-namestring file))
 	     (tail (subseq namestring
@@ -1059,7 +1095,7 @@
 	   (cols (max (truncate width col-width) 1))
 	   (lines (ceiling cnt cols)))
       (declare (fixnum cols lines))
-      (format t "Directory of ~A :~%" (namestring pathname))
+      (format t "Directory of ~A:~%" (namestring pathname))
       (dotimes (i lines)
 	(declare (fixnum i))
 	(dotimes (j cols)

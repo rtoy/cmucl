@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.5 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.6 2003/06/10 16:52:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,7 @@ VOP classification.
 (defun write-hash-table (table file &key
 			       (comment (format nil "Contents of ~S" table))
 			       (reader 'read) (writer 'prin1) (test 'equal))
-  (with-open-file (s file :direction :output :if-exists :new-version)
+  (with-open-file (s file :direction :output :if-exists :rename-and-delete)
     (with-standard-io-syntax
       (let ((*print-readably* nil))
 	(format s "~A~%Version ~A on ~A~%"

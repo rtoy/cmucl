@@ -259,7 +259,7 @@
 	      (open (if (eq output-file t)
 			(make-pathname :defaults input-pathname :type "fasl")
 			output-file)
-		    :if-exists :new-version
+		    :if-exists :rename-and-delete
 		    :direction :output
 		    :element-type '(unsigned-byte 8))))
 	 (error-file-stream
@@ -267,7 +267,7 @@
 	      (open (if (eq error-file t)
 			(make-pathname :defaults input-pathname :type "err")
 			error-file)
-		    :if-exists :new-version
+		    :if-exists :rename-and-delete
 		    :direction :output)))
 	 (*clc-err-stream*
 	  (if error-file
@@ -281,7 +281,7 @@
 						 "s"
 						 "list"))
 			listing-file)
-		    :if-exists :new-version
+		    :if-exists :rename-and-delete
 		    :direction :output)))
 	 (error-count 0)
 	 (warning-count 0)

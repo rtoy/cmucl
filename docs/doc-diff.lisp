@@ -110,7 +110,7 @@
 			  label old kind))
 		(setf (gethash label *defined-labels*) kind))))))))
   (with-open-file (s output-file :direction :output
-		     :if-exists :new-version)
+		     :if-exists :rename-and-delete)
     (map-undocumented-hemlock-things *command-names* :command s
 				     #'document-command *cmds-to-ignore*)
     (terpri s)

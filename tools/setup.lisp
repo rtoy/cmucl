@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.33 2003/05/31 23:58:12 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.34 2003/06/10 16:52:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,7 +118,7 @@
 							  :test #'string=)
 				       #'string<))))))))))
 
-      (with-open-file (s file :direction :output :if-exists :new-version)
+      (with-open-file (s file :direction :output :if-exists :rename-and-delete)
 	(dolist (form (forms))
 	  (write form :stream s :pretty t)
 	  (terpri s)))))
