@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/struct.lisp,v 1.1.1.4 1991/02/08 16:38:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/struct.lisp,v 1.1.1.5 1991/03/14 16:29:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -459,9 +459,11 @@
 			; 0 sends digit-chars.
   (cm-y-pad nil)	; nil, 0, 2, or 3 for places to pad.
 			; 0 sends digit-chars.
-  screen-image)		; vector device-lines long of strings
+  screen-image		; vector device-lines long of strings
 			; device-columns long.
-
+  ;;
+  ;; This terminal's baud rate, or NIL for infinite.
+  (speed nil :type (or (unsigned-byte 16) null)))
 
 
 ;;;; Device screen hunks and window-group.
