@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.4 1992/01/14 16:05:05 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.5 1992/01/15 16:17:50 ram Exp $
 ;;; 
 ;;; This file contains the SPARC VM definition of character operations.
 ;;;
@@ -55,7 +55,7 @@
 	    :load-if (not (location= x y))))
   (:results (y :scs (base-char-reg)
 	       :load-if (not (location= x y))))
-  (:node "character move")
+  (:note "character move")
   (:effects)
   (:affected)
   (:generator 0
@@ -73,7 +73,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y base-char-reg))))
   (:results (y))
-  (:node "character arg move")
+  (:note "character arg move")
   (:generator 0
     (sc-case y
       (base-char-reg
