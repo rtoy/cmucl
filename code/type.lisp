@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.22 1997/09/05 19:12:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.23 1997/12/18 16:49:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1261,10 +1261,10 @@
 	      :complexp complexp1
 	      :low (numeric-bound-max (numeric-type-low type1)
 				      (numeric-type-low type2)
-				      < <= t)
+				      <= < t)
 	      :high (numeric-bound-max (numeric-type-high type1)
 				       (numeric-type-high type2)
-				       > >= t)))))))
+				       >= > t)))))))
 
 
 (cold-load-init
@@ -1469,13 +1469,13 @@
 				     class format t)
 		(round-numeric-bound (numeric-type-low type2)
 				     class format t)
-		>= > nil)
+		> >= nil)
 	  :high (numeric-bound-max
 		 (round-numeric-bound (numeric-type-high type1)
 				      class format nil)
 		 (round-numeric-bound (numeric-type-high type2)
 				      class format nil)
-		 <= < nil))
+		 < <= nil))
 	 t))
       (values *empty-type* t)))
 
