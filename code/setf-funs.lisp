@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.2 1991/05/08 15:57:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.3 1993/02/06 15:01:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,9 +32,6 @@
 			    arglist
 			    (cons res args)))
 	 (setf (,name ,@(rest arglist)) ,(first arglist))))
-     ((ignore-errors (get-setf-method `(apply #',name args)))
-      `(defun (setf ,name) (newval &rest args)
-	 (setf (apply #',name args) newval)))
      (t
       (warn "Hairy setf expander for function ~S." name)
       nil))))
@@ -58,7 +55,7 @@
 ); eval-when (compile eval)
 
 (define-setters ("LISP")
-  ;; Have explicit definitions...
-  aref bit sbit
   ;; Semantically silly...
-  getf apply ldb mask-field logbitp)
+  getf apply ldb mask-field logbitp
+  ;; Have explicit redundant definitions...
+  setf bit sbit)
