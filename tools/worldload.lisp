@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.95 2002/01/28 20:00:30 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.96 2002/05/16 19:52:58 pmai Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,12 +167,12 @@
 #-(or no-clm runtime)
 (maybe-byte-load "target:interface/clm-library")
 
-#+no-compiler (proclaim '(special *target-sl*))
-#-no-compiler (defvar *target-sl*)
+#+(or no-compiler runtime) (proclaim '(special *target-sl*))
+#-(or no-compiler runtime) (defvar *target-sl*)
 (setq *target-sl* (search-list "target:"))
 
-#+no-compiler (proclaim '(special *target-core-name*))
-#-no-compiler (defvar *target-core-name*)
+#+(or no-compiler runtime) (proclaim '(special *target-core-name*))
+#-(or no-compiler runtime) (defvar *target-core-name*)
 (setq *target-core-name* (unix-namestring "target:lisp/lisp.core" nil))
 
 ;;; Don't include the search lists used for loading in the resultant core.
