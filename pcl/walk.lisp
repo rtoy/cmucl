@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.14.2.2 2000/07/06 08:47:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.14.2.3 2000/09/01 16:38:53 pw Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -392,7 +392,7 @@
 
 (define-walker-template BLOCK                (NIL NIL REPEAT (EVAL)))
 (define-walker-template CATCH                (NIL EVAL REPEAT (EVAL)))
-(define-walker-template COMPILER-LET         walk-compiler-let)
+(define-walker-template ext:COMPILER-LET     walk-compiler-let)
 (define-walker-template DECLARE              walk-unexpected-declare)
 (define-walker-template EVAL-WHEN            (NIL QUOTE REPEAT (EVAL)))
 (define-walker-template FLET                 walk-flet)
