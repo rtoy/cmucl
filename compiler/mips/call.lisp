@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.15 1990/06/04 05:23:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.16 1990/06/06 20:56:02 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -89,7 +89,8 @@
 ;;; once per component, and is component-live.
 ;;;
 (defun make-nfp-tn ()
-  (component-live-tn (make-restricted-tn (sc-number-or-lose 'any-reg))))
+  (component-live-tn
+   (make-wired-tn (sc-number-or-lose 'any-reg) args-offset)))
 
 
 ;;; Select-Component-Format  --  Interface
