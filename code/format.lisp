@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.51 2004/08/13 08:22:32 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.52 2004/08/27 03:20:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -155,8 +155,6 @@
 			    :offset posn)
 		     (setf atsignp t)))
 		(t
-		 (when (char= (schar string (1- posn)) #\,)
-		   (push (cons (1- posn) nil) params))
 		 (return))))
 	(incf posn))
       (let ((char (get-char)))
@@ -547,7 +545,11 @@
 				  (offset (car param-and-offset))
 				  (param (cdr param-and-offset)))
 			     (case param
-			       (:arg (next-arg offset))
+			       (:arg
+				;; If the value of ~V is NIL, it's the
+				;; same as if it weren't given at all.
+				;; See CLHS 22.3.
+				(or (next-arg offset) ,default))
 			       (:remaining (length args))
 			       ((nil) ,default)
 			       (t param)))))))
@@ -604,7 +606,7 @@
   (dotimes (i minpad)
     (write-char padchar stream))
   (and mincol minpad colinc
-       (do ((chars (+ (length string) minpad) (+ chars colinc)))
+       (do ((chars (+ (length string) (max 0 minpad)) (+ chars colinc)))
 	   ((>= chars mincol))
 	 (dotimes (i colinc)
 	   (write-char padchar stream))))
@@ -1057,10 +1059,9 @@
 ;;;
 (defun format-fixed-aux (stream number w d k ovf pad atsign)
   (cond
-   ((or (not (or w d))
-	(and (floatp number)
-	     (or (float-infinity-p number)
-		 (float-nan-p number))))
+   ((and (floatp number)
+	 (or (float-infinity-p number)
+	     (float-nan-p number)))
     (prin1 number stream)
     nil)
    (t
@@ -2228,8 +2229,7 @@
 (defun format-justification (stream newline-prefix extra-space line-len strings
 			     pad-left pad-right mincol colinc minpad padchar)
   (setf strings (reverse strings))
-  (when (and (not pad-left) (not pad-right) (null (cdr strings)))
-    (setf pad-left t))
+
   (let* ((num-gaps (+ (1- (length strings))
 		      (if pad-left 1 0)
 		      (if pad-right 1 0)))
@@ -2240,18 +2240,31 @@
 	 (length (if (> chars mincol)
 		     (+ mincol (* (ceiling (- chars mincol) colinc) colinc))
 		     mincol))
-	 (padding (- length chars)))
+	 (padding (+ (- length chars) (* num-gaps minpad))))
     (when (and newline-prefix
 	       (> (+ (or (lisp::charpos stream) 0)
 		     length extra-space)
 		  line-len))
       (write-string newline-prefix stream))
+
+    #||
+    (format t "mincol   = ~A~%" mincol)
+    (format t "minpad   = ~A~%" minpad)
+    (format t "num-gaps = ~A~%" num-gaps)
+    (format t "chars    = ~A~%" chars)
+    (format t "length   = ~A~%" length)
+    (format t "padding  = ~A~%" padding)
+    ||#
+    
     (flet ((do-padding ()
-	     (let ((pad-len (truncate padding num-gaps)))
+	     (let ((pad-len (if (zerop num-gaps)
+				padding
+				(truncate padding num-gaps))))
 	       (decf padding pad-len)
 	       (decf num-gaps)
 	       (dotimes (i pad-len) (write-char padchar stream)))))
-      (when pad-left
+      (when (or pad-left
+		(and (not pad-right) (null (cdr strings))))
 	(do-padding))
       (when strings
 	(write-string (car strings) stream)
