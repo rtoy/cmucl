@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/c-call.lisp,v 1.2 2004/07/06 20:10:22 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/c-call.lisp,v 1.3 2004/07/20 22:39:21 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,6 +261,9 @@
 	   (dotimes (i 8)
 	     (fp-pop))
 
+	   ;; C stack must be 16 byte aligned
+	   (inst mov r11 #xfffffffffffffff0)
+	   (inst and rsp-tn r11)
 	   (inst call rbx)
 	   ;; To give the debugger a clue. XX not really internal-error?
 	   (note-this-location vop :internal-error)
