@@ -923,6 +923,12 @@
 	(do ()
 	    ((null (fd-stream-output-later stream)))
 	  (system:serve-all-events))
+	;; Clear out any pending input to force the next read to go to the
+	;; disk.
+	(setf (fd-stream-unread stream) nil)
+	(setf (fd-stream-ibuf-head stream) 0)
+	(setf (fd-stream-ibuf-tail stream) 0)
+	;; Now move it.
 	(cond ((eq newpos :start)
 	       (setf offset 0 origin mach:l_set))
 	      ((eq newpos :end)
