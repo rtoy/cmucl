@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.9 1993/05/14 10:20:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.10 1993/05/15 14:45:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,8 +301,8 @@
   ;; The continuations on the stack (in order) when this block ends.
   (end-stack nil :type list)
   ;;
-  ;; List of (nlx-infos . extra-stack-cruft) for each entry point in this
-  ;; block.
+  ;; List of ((nlx-info*) produces consumes) for each ENTRY in this block that
+  ;; is a NLX target.
   (nlx-entries nil :type list)
   ;;
   ;; T if this is an %nlx-entry point, and we shouldn't just assume we know
@@ -555,9 +555,19 @@
 	  (creturn
 	   (consume (return-result node)))
 	  (entry
-	   (let ((nlx-info (cleanup-nlx-info (entry-cleanup node))))
+	   ;;
+	   ;; If we hit the NLX ep for a unwind-protect, then we are unwinding,
+	   ;; and don't want to mess with the stack, so just say there's
+	   ;; nothing on it.
+	   (let* ((cup (entry-cleanup node))
+		  (nlx-info (cleanup-nlx-info cup)))
 	     (when nlx-info
-	       (push (list nlx-info stack (reverse consumes)) nlx-entries))))
+	       (push (list nlx-info
+			   (ecase (cleanup-kind cup)
+			     ((:catch :block :tagbody) stack)
+			     (:unwind-protect ()))
+			   (reverse consumes))
+		     nlx-entries))))
 	  (exit
 	   (when (exit-value node)
 	     (consume (exit-value node)))))
@@ -587,6 +597,11 @@
 		  (byte-block-info-nlx-entry-p (block-info succ)))
 	(walk-block succ block stack)))))
 
+;;; NLX-infos is the list of nlx-info structures for this ENTRY note.  Consume
+;;; and Produce are the values from outside this block that were consumed and
+;;; produced by this block before the ENTRY node.  Stack is the globally
+;;; simulated stack at the start of this block.
+;;;
 (defun walk-nlx-entry (nlx-infos stack produce consume)
   (dolist (cont consume)
     (assert (eq (car stack) cont))
