@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.16 1992/03/23 15:13:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.17 1992/06/22 13:51:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -762,7 +762,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 (define-condition file-error (error) (pathname))
 
-(define-condition package-error (error) (pathname))
+(define-condition package-error (error) (package))
 
 (define-condition cell-error (error) (name))
 
