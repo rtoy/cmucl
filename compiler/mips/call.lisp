@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.8 1990/05/11 06:49:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.9 1990/05/11 17:49:20 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -667,13 +667,13 @@ default-value-5
 		 (inst j lip)
 		 (move code-tn function))
 	       `((move old-fp-pass fp-tn)
+		 (when cur-nfp
+		   (store-stack-tn nfp-save cur-nfp))
 		 ,(if variable
 		      '(move fp-tn new-fp)
 		      '(if (> nargs register-arg-count)
 			   (move fp-tn new-fp)
 			   (move fp-tn csp-tn)))
-		 (when cur-nfp
-		   (store-stack-tn nfp-save cur-nfp))
 		 (inst j lip)
 		 (move code-tn function)
 		 (emit-return-pc lra-label)))
@@ -813,7 +813,6 @@ default-value-5
     (:vop-var vop)
     (:generator 6
       (cond ((= nvals 1)
-	     (move csp-tn fp-tn)
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
 		 (move nsp-tn cur-nfp)))
@@ -822,21 +821,22 @@ default-value-5
 		(move fp-tn old-fp))
 	       (control-stack
 		(load-stack-tn fp-tn old-fp)))
+	     (move csp-tn fp-tn)
 	     (inst addu lip return-pc (- (* 3 word-bytes) other-pointer-type))
 	     (inst j lip)
 	     (move code-tn return-pc))
 	    (t
 	     (inst li nargs (fixnum nvals))
+	     (let ((cur-nfp (current-nfp-tn vop)))
+	       (when cur-nfp
+		 (move nsp-tn cur-nfp)))
 	     (move val-ptr fp-tn)
-	     (inst addu csp-tn val-ptr (* nvals word-bytes))
 	     (sc-case old-fp
 	       (any-reg
 		(move fp-tn old-fp))
 	       (control-stack
 		(load-stack-tn fp-tn old-fp)))
-	     (let ((cur-nfp (current-nfp-tn vop)))
-	       (when cur-nfp
-		 (move nsp-tn cur-nfp)))
+	     (inst addu csp-tn val-ptr (* nvals word-bytes))
 	     
 	     ,@(let ((index 0))
 		 (mapcar #'(lambda (name)
