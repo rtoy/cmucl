@@ -1,3 +1,4 @@
+;;; Being hacked to add IEEE support
 ;;; -*- Package: ALPHA; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
@@ -5,7 +6,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/float.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/float.lisp,v 1.3 1997/06/07 19:04:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +14,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;; Conversion by Sean Hallgren
+;;; IEEE variants by Paul Werkowski
 ;;;
 (in-package "ALPHA")
 
@@ -147,32 +149,43 @@
   (:vop-var vop)
   (:save-p :compute-only))
 
+;;; Need to insure that ops that can cause traps do not clobber an
+;;; argument register with invalid results. This so the software
+;;; trap handler can re-execute the instruction and produce correct
+;;; IEEE result. The :from :load hopefully does that.
 (macrolet ((frob (name sc ptype)
 	     `(define-vop (,name float-op)
 		(:args (x :scs (,sc))
 		       (y :scs (,sc)))
-		(:results (r :scs (,sc)))
+		(:results (r :scs (,sc) :from :load))
 		(:arg-types ,ptype ,ptype)
 		(:result-types ,ptype))))
   (frob single-float-op single-reg single-float)
   (frob double-float-op double-reg double-float))
 
+;; This is resumption-safe with underflow traps enabled,
+;; with software handling and (notyet) dynamic rounding mode.
 (macrolet ((frob (op sinst sname scost dinst dname dcost)
 	     `(progn
 		(define-vop (,sname single-float-op)
 		  (:translate ,op)
 		  (:variant-cost ,scost)
 		  (:generator ,scost
-                    (inst ,sinst x y r)))
+                    (inst ,sinst x y r)
+		    (note-this-location vop :internal-error)
+		    (inst trapb)))
 		(define-vop (,dname double-float-op)
 		  (:translate ,op)
 		  (:variant-cost ,dcost)
 		  (:generator ,dcost
-		    (inst ,dinst x y r))))))
-  (frob + adds +/single-float 2 addt +/double-float 2)
-  (frob - subs -/single-float 2 subt -/double-float 2)
-  (frob * muls */single-float 4 mult */double-float 5)
-  (frob / divs //single-float 12 divt //double-float 19))
+		    (inst ,dinst x y r)
+		    (note-this-location vop :internal-error)
+		    (inst trapb))))))
+  ;; Not sure these cost number are right. +*- about same / is 4x
+  (frob + adds_su +/single-float 1 addt_su +/double-float 1)
+  (frob - subs_su -/single-float 1 subt_su -/double-float 1)
+  (frob * muls_su */single-float 1 mult_su */double-float 1)
+  (frob / divs_su //single-float 4 divt_su //double-float 4))
 
 (macrolet ((frob (name inst translate sc type)
 	     `(define-vop (,name)
@@ -213,6 +226,7 @@
 	(if complement
 	    (inst cmptle x y temp)
 	    (inst cmptlt x y temp)))
+    (inst trapb)
     (if (if complement (not not-p) not-p)
 	(inst fbeq temp target)
 	(inst fbne temp target))))
@@ -497,19 +511,23 @@
 (defknown ((setf floating-point-modes)) (float-modes)
   float-modes)
 
+;;; Modes bits are (byte 12 52) of fpcr. Grab and return in low bits.
 (define-vop (floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:translate floating-point-modes)
   (:policy :fast-safe)
   (:vop-var vop)
-  (:temporary (:sc unsigned-stack) temp)
-  (:temporary (:sc single-reg) temp1)
-  (:generator 3
+  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc double-reg) temp1)
+  (:generator 5
     (let ((nfp (current-nfp-tn vop)))
+      (inst excb)
       (inst mf_fpcr temp1 temp1 temp1)
-      (inst sts temp1 (* word-bytes (tn-offset temp)) nfp)
-      (loadw res nfp (tn-offset temp)))))
+      (inst excb)
+      (inst stt temp1 (* word-bytes (tn-offset temp)) nfp)
+      (inst ldl res   (* (1+ (tn-offset temp)) vm:word-bytes) nfp)
+      (inst srl res 49 res))))
 
 (define-vop (set-floating-point-modes)
   (:args (new :scs (unsigned-reg) :target res))
@@ -518,12 +536,16 @@
   (:result-types unsigned-num)
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-stack) temp)
-  (:temporary (:sc single-reg) temp1)
+  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc double-reg) temp1)
   (:vop-var vop)
-  (:generator 3
+  (:generator 8
     (let ((nfp (current-nfp-tn vop)))
-      (storew new nfp (tn-offset temp))
-      (inst lds temp1 (* word-bytes (tn-offset temp)) nfp)
+      (inst sll new  49 res)
+      (inst stl zero-tn  (* (tn-offset temp) vm:word-bytes) nfp)
+      (inst stl res   (* (1+ (tn-offset temp)) vm:word-bytes) nfp)
+      (inst ldt temp1 (* (tn-offset temp) vm:word-bytes) nfp)
+      (inst excb)
       (inst mt_fpcr temp1 temp1 temp1)
+      (inst excb)
       (move res new))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/parms.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/parms.lisp,v 1.3 1997/06/07 19:04:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,23 +96,31 @@
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
 
-(defconstant float-inexact-trap-bit (ash 1 0))
-(defconstant float-underflow-trap-bit (ash 1 1))
-(defconstant float-overflow-trap-bit (ash 1 2))
-(defconstant float-divide-by-zero-trap-bit (ash 1 3))
-(defconstant float-invalid-trap-bit (ash 1 4))
+;; Values in 17f code seem to be same as HPPA. These values are from
+;; DEC Assembly Language Programmers guide. The active bits are
+;; actually in (byte 12 52) of the fpcr. (byte 6 52) contain the
+;; exception flags. Bit 63 is the bitwise logor of all exceptions.
+;; The enable and exception bytes are in a software control word
+;; manipulated via OS functions and the bits in the SCP match those
+;; defs. This mapping follows <machine/fpu.h>
+(defconstant float-inexact-trap-bit        (ash 1 4)) ; rw
+(defconstant float-underflow-trap-bit      (ash 1 3)) ; rw
+(defconstant float-overflow-trap-bit       (ash 1 2)) ; ro
+(defconstant float-divide-by-zero-trap-bit (ash 1 1)) ; ro
+(defconstant float-invalid-trap-bit        (ash 1 0)) ; ro
 
-(defconstant float-round-to-nearest 0)
-(defconstant float-round-to-zero 1)
-(defconstant float-round-to-positive 2)
-(defconstant float-round-to-negative 3)
+(defconstant float-round-to-zero     0)
+(defconstant float-round-to-negative 1)
+(defconstant float-round-to-nearest  2)
+(defconstant float-round-to-positive 3)
 
-(defconstant float-rounding-mode (byte 2 7))
-(defconstant float-sticky-bits (byte 5 27))
-(defconstant float-traps-byte (byte 5 0))
-(defconstant float-exceptions-byte (byte 5 27))
-(defconstant float-condition-bit (ash 1 26))
-(defconstant float-fast-bit 0)			  ; No fast mode on HPPA.
+;; These aren't quite correct yet. Work in progress.
+(defconstant float-rounding-mode   (byte 2 58))	; hardware fpcr
+(defconstant float-exceptions-byte (byte 6 52))	; hardware fpcr
+(defconstant float-sticky-bits     (byte 6 17))	; software (clear only)
+(defconstant float-traps-byte      (byte 6  1))	; software fp control word
+(defconstant float-condition-bit   (ash  1 63))	; summary - not used??
+(defconstant float-fast-bit 0)
 
 ); eval-when
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/insts.lisp,v 1.3 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/insts.lisp,v 1.4 1997/06/07 19:04:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -414,6 +414,35 @@
 (define-fp-operate mult #x16 #x0a2)
 (define-fp-operate subs #x16 #x081)
 (define-fp-operate subt #x16 #x0a1)
+
+;;; IEEE support
+(defconstant +su+   #x500)		; software, underflow enabled
+(defconstant +sui+  #x700)		; software, inexact & underflow enabled
+(defconstant +sv+   #x500)		; software, interger overflow enabled
+(defconstant +svi+  #x700)
+(defconstant +rnd+  #x0c0)		; dynamic rounding mode
+(defconstant +sud+  #x5c0)
+(defconstant +svid+ #x7c0)
+(defconstant +suid+ #x7c0)
+
+(define-fp-operate cvtqs_su #x16 (logior +su+ #x0bc) 2)
+(define-fp-operate cvtqt_su #x16 (logior +su+ #x0be) 2)
+(define-fp-operate cvtts_su #x16 (logior +su+ #x0ac) 2)
+
+(define-fp-operate adds_su #x16 (logior +su+ #x080))
+(define-fp-operate addt_su #x16 (logior +su+ #x0a0))
+(define-fp-operate divs_su #x16 (logior +su+ #x083))
+(define-fp-operate divt_su #x16 (logior +su+ #x0a3))
+(define-fp-operate muls_su #x16 (logior +su+ #x082))
+(define-fp-operate mult_su #x16 (logior +su+ #x0a2))
+(define-fp-operate subs_su #x16 (logior +su+ #x081))
+(define-fp-operate subt_su #x16 (logior +su+ #x0a1))
+
+(define-instruction  excb (segment)
+  (:emitter (emit-lword segment #x63ff0400)))
+  
+(define-instruction trapb (segment)
+  (:emitter (emit-lword segment #x63ff0000)))
 
 (define-instruction gentrap (segment code)
   (:printer call-pal ((palcode #xaa0000)))
