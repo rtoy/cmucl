@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.78 1992/09/22 14:25:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.79 1992/09/23 13:24:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -567,12 +567,11 @@
 
 ;;; MAYBE-REANALYZE-FUNCTION  --  Internal
 ;;;
-;;;    If we are not in a :INITIAL component, then add Fun to the
-;;; COMPONENT-REANALYZE-FUNCTIONS.  Fun is returned.
+;;;    Add Fun to the COMPONENT-REANALYZE-FUNCTIONS.  Fun is returned.
 ;;;
 (defun maybe-reanalyze-function (fun)
   (declare (type functional fun))
-  (unless (eq (component-kind *current-component*) :initial)
+  (when (typep fun '(or optional-dispatch clambda))
     (pushnew fun (component-reanalyze-functions *current-component*)))
   fun)
 
