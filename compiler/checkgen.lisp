@@ -59,7 +59,7 @@
 	    (template-cost check)
 	    (let ((found (cdr (assoc type *type-predicates* :test #'type=))))
 	      (if found
-		  (function-cost found)
+		  (+ (function-cost found) (function-cost 'eq))
 		  nil))))
       (typecase type
 	(union-type
@@ -145,8 +145,11 @@
 ;;; impossible, we do a hairy test with non-negated types.  If true,
 ;;; Force-Hairy forces a hairy type check.
 ;;;
-;;;    When doing a non-negated hairy check, we call MAYBE-WEAKEN-CHECK to
-;;; weaken the test to a convenient supertype (conditional on policy.)
+;;;    When doing a non-negated check, we call MAYBE-WEAKEN-CHECK to weaken the
+;;; test to a convenient supertype (conditional on policy.)  If debug-info is
+;;; not particularly important (debug <= 1) or speed is 3, then we allow
+;;; weakened checks to be simple, resulting in less informative error messages,
+;;; but saving space and possibly time.
 ;;;
 (defun maybe-negate-check (cont types force-hairy)
   (declare (type continuation cont) (list types))
@@ -169,11 +172,18 @@
 				     (list t diff c)
 				     (list nil weak c))))
 			   ptypes types)))
-	  (if (and (not (find-if #'first res))
-		   (every #'type-check-template types)
-		   (not force-hairy))
-	      (values :simple types)
-	      (values :hairy res))))))
+	  (cond ((or force-hairy (find-if #'first res))
+		 (values :hairy res))
+		((every #'type-check-template types)
+		 (values :simple types))
+		((policy (continuation-dest cont)
+			 (or (<= debug 1) (and (= speed 3) (/= debug 3))))
+		 (let ((weakened (mapcar #'second res)))
+		   (if (every #'type-check-template weakened)
+		       (values :simple weakened)
+		       (values :hairy res))))
+		(t
+		 (values :hairy res)))))))
 	    
 
 ;;; CONTINUATION-CHECK-TYPES  --  Interface
