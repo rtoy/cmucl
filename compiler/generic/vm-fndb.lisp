@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.22 1990/08/15 02:54:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.23 1990/08/21 14:58:38 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -227,7 +227,12 @@
 		       name (vm:primitive-object-name obj))))
 	  (when set-known
 	    (if set-trans
-		(forms `(defknown (,set-trans) (,obj-type ,slot-type)
+		(forms `(defknown (,set-trans)
+				  ,(if (and (listp set-trans)
+					    (= (length set-trans) 2)
+					    (eq (car set-trans) 'setf))
+				       (list slot-type obj-type)
+				       (list obj-type slot-type))
 			  ,slot-type ,set-known))
 		(error "Can't spec a :set-known with no :set-trans. ~S in ~S"
 		       name (vm:primitive-object-name obj)))))))
