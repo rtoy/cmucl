@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.1 1997/09/04 08:46:02 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.2 1997/09/08 00:32:00 dtc Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -173,59 +173,21 @@ os_vm_address_t test;
 
 /* ---------------------------------------------------------------- */
 
-static boolean maybe_gc(HANDLER_ARGS)
-{
-    /*
-     * It's necessary to enable recursive SEGVs, since the handler is
-     * used for multiple things (e.g., both gc-trigger & faulting in pages).
-     * We check against recursive gc's though...
-     */
-
-    boolean did_gc;
-    static already_trying=0;
-
-    if(already_trying)
-	return FALSE;
-
-    SAVE_CONTEXT();
-
-#ifdef POSIX_SIGS
-    sigprocmask(SIG_SETMASK, &context->uc_sigmask,0);
-#else
-    sigsetmask(context->sc_mask);
-#endif
-
-    already_trying=TRUE;
-    did_gc=interrupt_maybe_gc(signal, code, context);
-    already_trying=FALSE;
-
-    return did_gc;
-}
-
 /*
- * The primary point of catching segmentation violations is to allow 
- * read only memory to be re-mapped with more permissions when a write
- * is attempted.  this greatly decreases the residency of the program
- * in swap space since read only areas don't take up room
- *
- * Running into the gc trigger page will also end up here...
+ * Running into the gc trigger page will end up here...
  */
 void segv_handler(HANDLER_ARGS)
 {
-    caddr_t addr = code->si_addr;
+  caddr_t addr = code->si_addr;
 
-    SAVE_CONTEXT();
-
-    if(maybe_gc(signal, code, context))
-      /* we just garbage collected */
-      return;
-    else{
-      /* a *real* protection fault */
-      fprintf(stderr,
-	      "segv_handler: Real protection violation: 0x%08x\n",
-	      addr);
-      interrupt_handle_now(signal,code,context);
-    }
+  SAVE_CONTEXT();
+  
+  if(!interrupt_maybe_gc(signal, code, context)) {
+    /* a *real* protection fault */
+    fprintf(stderr, "segv_handler: Real protection violation: 0x%08x\n",
+	    addr);
+    interrupt_handle_now(signal,code,context);
+  }
 }
 
 void os_install_interrupt_handlers()
