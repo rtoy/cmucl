@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.44 1997/02/20 01:29:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.45 1997/05/05 23:13:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -712,7 +712,13 @@
 ;;; And now for something completely different ...
 (emit-unix-errors)
 
+#-irix
 (def-alien-variable ("errno" unix-errno) int)
+
+#+irix
+(setf (alien::heap-alien-info-sap-form
+       (info variable alien::alien-info 'unix-errno))
+        (int-sap (alien-funcall (extern-alien "__oserror" (function int)))))
 
 ;;; GET-UNIX-ERROR-MSG -- public.
 ;;; 

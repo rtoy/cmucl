@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.16 1997/04/19 15:25:48 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.17 1997/05/05 23:13:59 dtc Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -110,7 +110,7 @@ setpgrp,
 #if !defined(SVR4) ||  defined(SOLARIS25)
 setpriority,
 #endif
-#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(__linux__) && !defined(SUNOS) && !defined(osf1)
+#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(__linux__) && !defined(SUNOS) && !defined(osf1) && !defined(irix)
 setquota,
 #endif
 #if !defined(hpux) && !defined(SVR4) ||  defined(SOLARIS25)
@@ -218,7 +218,7 @@ timezone,
 altzone,
 daylight,
 tzname,
-#ifndef __linux__
+#if !defined(__linux__) && !defined (irix)
 dlopen,
 dlsym,
 dlclose,

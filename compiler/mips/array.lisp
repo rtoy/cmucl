@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.46 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.47 1997/05/05 23:13:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,6 +168,22 @@
 
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
+
+#+signed-array
+(def-partial-data-vector-frobs simple-array-signed-byte-8 tagged-num
+  :byte t signed-reg)
+
+#+signed-array
+(def-partial-data-vector-frobs simple-array-signed-byte-16 tagged-num
+  :short t signed-reg)
+
+#+signed-array
+(def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num
+  any-reg)
+
+#+signed-array
+(def-full-data-vector-frobs simple-array-signed-byte-32 signed-num
+  signed-reg)
 
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.21 1997/01/18 14:30:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.22 1997/05/05 23:13:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
  (defconstant foreign-segment-size  #x00400000)
 
 (defvar *previous-linked-object-file* nil)
-#-linux
+#-(or linux irix)
 (defvar *foreign-segment-free-pointer* foreign-segment-start)
 
 (defun pick-temporary-file-name (&optional (base "/tmp/tmp~D~C"))
@@ -304,7 +304,7 @@
 	    (setf (gethash symbol symbol-table) address)))))
     (setf lisp::*foreign-symbols* symbol-table)))
 
-#-(or linux solaris)
+#-(or linux irix solaris)
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
 			   (base-file
