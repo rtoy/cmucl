@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.18 1992/12/17 09:22:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.19 1992/12/17 11:24:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1998,7 +1998,7 @@
 
 (defun fun-self (fun)
   (declare (type compiled-function fun))
-  (ext:truly-the compiled-function (system:%primitive function-self fun)))
+  (kernel:%function-self fun))
 
 (defun fun-code (fun)
   (declare (type compiled-function fun))
@@ -2006,7 +2006,7 @@
 
 (defun fun-next (fun)
   (declare (type compiled-function fun))
-  (ext:truly-the compiled-function (system:%primitive function-next fun)))
+  (kernel:%function-next fun))
 
 (defun fun-address (function)
   (declare (type compiled-function function))
