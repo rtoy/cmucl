@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.22 1992/12/15 20:09:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.23 1992/12/16 21:36:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,13 +173,16 @@
 				 :alloc-trans bignum::%allocate-bignum)
   (digits :rest-p t :c-type "long"))
 
-(define-primitive-object (ratio :lowtag other-pointer-type
+(define-primitive-object (ratio :type ratio
+				:lowtag other-pointer-type
 				:header ratio-type
 				:alloc-trans %make-ratio)
-  (numerator :ref-known (flushable movable)
+  (numerator :type integer
+	     :ref-known (flushable movable)
 	     :ref-trans %numerator
 	     :init :arg)
-  (denominator :ref-known (flushable movable)
+  (denominator :type integer
+	       :ref-known (flushable movable)
 	       :ref-trans %denominator
 	       :init :arg))
 
@@ -192,11 +195,18 @@
   (filler)
   (value :c-type "double" :length 2))
 
-(define-primitive-object (complex :lowtag other-pointer-type
+(define-primitive-object (complex :type complex
+				  :lowtag other-pointer-type
 				  :header complex-type
 				  :alloc-trans %make-complex)
-  (real :ref-known (flushable movable) :ref-trans %realpart :init :arg)
-  (imag :ref-known (flushable movable) :ref-trans %imagpart :init :arg))
+  (real :type real
+	:ref-known (flushable movable)
+	:ref-trans %realpart
+	:init :arg)
+  (imag :type real
+	:ref-known (flushable movable)
+	:ref-trans %imagpart
+	:init :arg))
 
 (define-primitive-object (array :lowtag other-pointer-type
 				:header t)
@@ -232,12 +242,16 @@
 	       :set-known (unsafe))
   (dimensions :rest-p t))
 
-(define-primitive-object (vector :lowtag other-pointer-type :header t)
+(define-primitive-object (vector :type vector
+				 :lowtag other-pointer-type
+				 :header t)
   (length :ref-trans c::vector-length
 	  :type index)
   (data :rest-p t :c-type "unsigned long"))
 
-(define-primitive-object (code :lowtag other-pointer-type :header t)
+(define-primitive-object (code :type code-component
+			       :lowtag other-pointer-type
+			       :header t)
   (code-size :type index
 	     :ref-known (flushable movable)
 	     :ref-trans %code-code-size)
@@ -254,13 +268,15 @@
   (trace-table-offset)
   (constants :rest-p t))
 
-(define-primitive-object (fdefn :lowtag other-pointer-type
+(define-primitive-object (fdefn :type fdefn
+				:lowtag other-pointer-type
 				:header fdefn-type)
   (name :ref-trans fdefn-name)
-  (function :ref-trans fdefn-function)
+  (function :type (or function null) :ref-trans fdefn-function)
   (raw-addr :c-type "char *"))
 
-(define-primitive-object (function :lowtag function-pointer-type
+(define-primitive-object (function :type function
+				   :lowtag function-pointer-type
 				   :header function-header-type)
   #-gengc (self :ref-trans %function-self :set-trans (setf %function-self))
   #+gengc (entry-point :c-type "char *")
@@ -330,7 +346,8 @@
   (pointer :c-type "char *"))
 
 
-(define-primitive-object (weak-pointer :lowtag other-pointer-type
+(define-primitive-object (weak-pointer :type weak-pointer
+				       :lowtag other-pointer-type
 				       :header weak-pointer-type
 				       :alloc-trans c::%make-weak-pointer)
   (value :ref-trans c::%weak-pointer-value
@@ -338,7 +355,8 @@
 	 :set-trans (setf c::%weak-pointer-value)
 	 :set-known (unsafe)
 	 :init :arg)
-  (broken :ref-trans c::%weak-pointer-broken
+  (broken :type (member t nil)
+	  :ref-trans c::%weak-pointer-broken
 	  :ref-known (flushable)
 	  :set-trans (setf c::%weak-pointer-broken)
 	  :set-known (unsafe)
