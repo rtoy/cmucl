@@ -32,9 +32,9 @@
 	  coerce-to-motion-event coerce-to-expose-event
 	  coerece-to-exposecopy-event coerce-to-focuschange-event server
 	  *nameserverport* *usertypescript* *userwindow* *typescriptport*
-	  *task-self* *task-data* *task-notify* *file-input-handlers*
-	  with-interrupts with-enabled-interrupts enable-interrupt
-	  ignore-interrupt default-interrupt))
+	  *task-self* *task-data* *task-notify* with-interrupts
+	  with-enabled-interrupts enable-interrupt ignore-interrupt
+	  default-interrupt))
 
 (in-package "EXTENSIONS")
 (export '(quit *prompt* print-herald save-lisp gc-on gc-off
