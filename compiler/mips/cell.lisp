@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.18 1990/03/06 19:38:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.19 1990/03/06 22:09:29 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -21,7 +21,7 @@
 
 (export '(cons-structure cons-size cons-car-slot cons-cdr-slot
 
-	  bignum-structure bignum-size bignum-digits-offset
+	  bignum-structure bignum-base-size bignum-digits-offset
 
 	  ratio-structure ratio-size ratio-numerator-slot
 	  ratio-denominator-slot
@@ -32,11 +32,12 @@
 
 	  complex-structure complex-size complex-real-slot complex-imag-slot
 
-	  array-structure array-fill-pointer-slot array-elements-slot
-	  array-data-slot array-displacement-slot array-displaced-p-slot
-	  array-dimensions-offset
+	  array-structure array-base-size array-fill-pointer-slot
+	  array-elements-slot array-data-slot array-displacement-slot
+	  array-displaced-p-slot array-dimensions-offset
 
-	  vector-structure vector-length-slot vector-data-offset
+	  vector-structure vector-base-size vector-length-slot
+	  vector-data-offset
 
 	  code-structure code-code-size-slot code-entry-points-slot
 	  code-debug-info-slot code-constants-offset
@@ -48,7 +49,8 @@
 
 	  return-pc-structure return-pc-return-point-offset
 
-	  closure-structure closure-function-slot closure-info-offset
+	  closure-structure closure-base-size closure-function-slot
+	  closure-info-offset
 
 	  value-cell-structure value-cell-size value-cell-value-slot
 
