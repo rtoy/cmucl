@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.5 1992/03/10 13:09:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.6 1992/08/14 01:34:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,9 +178,6 @@
 ;;; Use synonyms for the lisp functions we use, so we can recognize backquoted
 ;;; material when pretty-printing
 
-(declaim (inline backq-list backq-list* backq-append backq-nconc backq-cons
-		 backq-vector))
-
 (defun backq-list (&rest args)
   args)
 (defun backq-list* (&rest args)
@@ -191,8 +188,19 @@
   (apply #'nconc args))
 (defun backq-cons (x y)
   (cons x y))
+
+(macrolet ((frob (b-name name)
+	     `(define-compiler-macro ,b-name (&rest args)
+		`(,',name ,@args))))
+  (frob backq-list list)
+  (frob backq-list* list*)
+  (frob backq-append append)
+  (frob backq-nconc nconc)
+  (frob backq-cons cons))
+
 (defun backq-vector (list)
-  (coerce list 'vector))
+  (declare (list list))
+  (coerce list 'simple-vector))
 
 
 ;;;; Unparsing
