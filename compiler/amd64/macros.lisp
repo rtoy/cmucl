@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.1 2004/05/24 22:35:00 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.2 2004/06/10 01:39:53 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,9 +234,10 @@
 ;;; Allocate SIZE bytes from the stack, storing a pointer to the
 ;;; allocated memory in ALLOC-TN.
 ;;;
-(defun dynamic-extent-allocation (alloc-tn nbytes)
+(defun dynamic-extent-allocation (alloc-tn nbytes temp-tn)
   (inst sub rsp-tn nbytes)
-  (inst and rsp-tn #xfffffffffffffff0) ; alignment
+  (inst mov temp-tn #xfffffffffffffff0)
+  (inst and rsp-tn temp-tn) ; alignment
   (inst mov alloc-tn rsp-tn)
   (values))
 
@@ -247,7 +248,7 @@
    speed vs size decision.  If Dynamic-Extent is true, and otherwise
    appropriate, allocate from the stack."
   (cond (dynamic-extent
-	 (dynamic-extent-allocation alloc-tn size))
+	 (dynamic-extent-allocation alloc-tn size temp-tn))
 	((and *maybe-use-inline-allocation*
 	      (or (null inline)
 		  (policy inline (>= speed space)))
