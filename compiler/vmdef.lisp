@@ -476,7 +476,8 @@
   (variant () :type list)
   (variant-vars () :type list)
   ;;
-  ;; Variable bound to the Vop-Node when in the generator body.
+  ;; Variables bound to the VOP and Vop-Node when in the generator body.
+  (vop-var (gensym) :type symbol)
   (node-var nil :type (or symbol null))
   ;;
   ;; A list of the names of the codegen-info arguments to this VOP.
@@ -952,8 +953,9 @@
 ;;;
 (defun make-generator-function (parse)
   (declare (type vop-parse parse))
-  (let ((n-vop (gensym)) (n-info (gensym)) (n-variant (gensym))
-	(operands (vop-parse-operands parse)))
+  (let ((n-vop (vop-parse-vop-var parse))
+	(operands (vop-parse-operands parse))
+	(n-info (gensym)) (n-variant (gensym)))
     (collect ((binds))
       (dolist (op operands)
 	(ecase (operand-parse-kind op)
@@ -1160,6 +1162,8 @@
 	       (make-list (length vars) :initial-element nil))))
       (:variant-cost
        (setf (vop-parse-cost parse) (vop-spec-arg spec 'unsigned-byte)))
+      (:vop-var
+       (setf (vop-parse-vop-var parse) (vop-spec-arg spec 'symbol)))
       (:node-var
        (setf (vop-parse-node-var parse) (vop-spec-arg spec 'symbol)))
       (:note
@@ -1633,6 +1637,11 @@
       form returns NIL, then emission of this VOP is prohibited even when
       all other restrictions are met.
 
+  :VOP-Var Name
+  :Node-Var Name
+      In the generator, bind the specified variable to the VOP or the Node that
+      generated this VOP.
+
   :Save-P {NIL | T | :Compute-Only | :Force-To-Stack}
       Indicates how a VOP wants live registers saved."
   
@@ -1893,6 +1902,58 @@
 		    (ir2-block-next ,block-var)))
        ((null ,block-var) ,result)
      ,@forms)))
+
+
+;;; DO-LIVE-TNS  --  Interface
+;;;
+(defmacro do-live-tns ((tn-var live block &optional result) &body body)
+  "DO-LIVE-TNS (TN-Var Live Block [Result]) Form*
+  Iterate over all the TNs live at some point, with the live set represented by
+  a local conflicts bit-vector and the IR2-Block containing the location.
+  :More TNs are ignored, but :More TNs never appear in save-sets."
+  (let ((n-conf (gensym))
+	(n-bod (gensym))
+	(i (gensym))
+	(ltns (gensym)))
+      (once-only ((n-live live)
+		  (n-block block))
+	`(block nil
+	   (flet ((,n-bod (,tn-var) ,@body))
+	     ;;
+	     ;; Do environment-live TNs.
+	     (dolist (,tn-var (ir2-environment-live-tns
+			       (environment-info
+				(ir2-block-environment ,n-block))))
+	       (,n-bod ,tn-var))
+	     ;;
+	     ;; Do TNs always-live in this block.
+	     (do ((,n-conf (ir2-block-global-tns ,n-block)
+			   (global-conflicts-next ,n-conf)))
+		 ((null ,n-conf))
+	       (when (eq (global-conflicts-kind ,n-conf) :always-live)
+		 (,n-bod (global-conflicts-tn ,n-conf))))
+	     ;;
+	     ;; Do TNs locally live in the designated live set.
+	     (let ((,ltns (ir2-block-local-tns ,n-block)))
+	       (dotimes (,i (ir2-block-local-tn-count ,n-block) ,result)
+		 (unless (zerop (sbit ,n-live ,i))
+		   (let ((,tn-var (svref ,ltns ,i)))
+		     (unless (eq ,tn-var :more)
+		       (,n-bod ,tn-var)))))))))))
+
+
+;;; DO-ENVIRONMENT-IR2-BLOCKS  --  Interface
+;;;
+(defmacro do-environment-ir2-blocks ((block-var env &optional result)
+				     &body body)
+  "DO-ENVIRONMENT-IR2-BLOCKS (Block-Var Env [Result]) Form*
+  Iterate over all the IR2 blocks in the environment Env, in emit order."
+  (once-only ((n-env env))
+    `(do ((,block-var (block-info (node-block (lambda-bind fun)))
+		      (ir2-block-next ,block-var)))
+	((not (eq (ir2-block-environment ,block-var) ,n-env))
+	 ,result)
+       ,@body)))
 
 
 ;;;; Utilities for defining miscops:
