@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.34 1993/08/04 09:37:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.35 1993/08/04 10:54:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -677,14 +677,11 @@
 ;;;
 (defun rename-file (file new-name)
   "Rename File to have the specified New-Name.  If file is a stream open to a
-  file, then the associated file is renamed.  If the file does not yet exist
-  then the file is created with the New-Name when the stream is closed."
+  file, then the associated file is renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
 	 (new-name (merge-pathnames new-name original))
 	 (new-namestring (unix-namestring new-name nil)))
-    (unless original-namestring
-      (error "~S doesn't exist." file))
     (unless new-namestring
       (error "~S can't be created." new-name))
     (multiple-value-bind (res error)
