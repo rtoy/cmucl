@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.61 2001/03/09 19:47:18 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.62 2001/03/11 22:00:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
 ;;; search-list := [^:/]*:
 ;;; file := [^/]*
 ;;; type := "." [^/.]*
-;;; version := ".~" ([0-9]+ | "*") "~"
+;;; version := ".*" | ".~" ([0-9]+ | "*") "~"
 ;;;
 ;;; Note: this grammer is ambiguous.  The string foo.bar.~5~ can be parsed
 ;;; as either just the file specified or as specifying the file, type, and
@@ -175,36 +175,56 @@
 (defun extract-name-type-and-version (namestr start end)
   (declare (type simple-base-string namestr)
 	   (type index start end))
-  (multiple-value-bind (version vstart)
-      (cond ((or (< (- end start) 5)
-		 (char/= (schar namestr (1- end)) #\~))
-	     (values :newest end))
-	    ((and (char= (schar namestr (- end 2)) #\*)
-		  (char= (schar namestr (- end 3)) #\~)
-		  (char= (schar namestr (- end 4)) #\.))
-	     (values :wild (- end 4)))
-	    (t
-	     (do ((i (- end 2) (1- i)))
-		 ((< i (+ start 2)) (values :newest end))
-	       (let ((char (schar namestr i)))
-		 (when (eql char #\~)
-		   (return (if (char= (schar namestr (1- i)) #\.)
-			       (values (parse-integer namestr :start (1+ i)
-						      :end (1- end))
-				       (1- i))
-			       (values :newest end))))
-		 (unless (char<= #\0 char #\9)
-		   (return (values :newest end)))))))
-    (let ((last-dot (position #\. namestr :start (1+ start) :end vstart
-			      :from-end t)))
-      (cond (last-dot
-	     (values (maybe-make-pattern namestr start last-dot)
-		     (maybe-make-pattern namestr (1+ last-dot) vstart)
-		     version))
-	    (t
-	     (values (maybe-make-pattern namestr start vstart)
-		     nil
-		     version))))))
+  (labels
+      ((explicit-version (namestr start end)
+	 (cond ((or (< (- end start) 5)
+		    (char/= (schar namestr (1- end)) #\~))
+		(values :newest end))
+	       ((and (char= (schar namestr (- end 2)) #\*)
+		     (char= (schar namestr (- end 3)) #\~)
+		     (char= (schar namestr (- end 4)) #\.))
+		(values :wild (- end 4)))
+	       (t
+		(do ((i (- end 2) (1- i)))
+		    ((< i (+ start 2)) (values :newest end))
+		  (let ((char (schar namestr i)))
+		    (when (eql char #\~)
+		      (return (if (char= (schar namestr (1- i)) #\.)
+				  (values (parse-integer namestr :start (1+ i)
+							 :end (1- end))
+					  (1- i))
+				  (values :newest end))))
+		    (unless (char<= #\0 char #\9)
+		      (return (values :newest end))))))))
+       (any-version (namestr start end)
+	 ;; process end of string looking for a version candidate.
+	 (multiple-value-bind (version where)
+	   (explicit-version namestr start end)
+	   (cond ((not (eq version :newest))
+		  (values version where))
+		 ((and (char= (schar namestr (- end 1)) #\*)
+		       (char= (schar namestr (- end 2)) #\.)
+		       (find #\. namestr :start start :end (- end 2)))
+		  (values :wild (- end 2)))
+		 (t (values version where)))))
+       (any-type (namestr start end)
+	 ;; process end of string looking for a type.
+	 (let ((where (position #\. namestr :start start :end end :from-end t)))
+	   (when where
+	     (values where end))))
+       (any-name (namestr start end)
+	 (declare (ignore namestr))
+	 (values start end)))
+    (multiple-value-bind
+	(version vstart)(any-version namestr start end)
+      (multiple-value-bind
+	  (tstart tend)(any-type namestr start vstart)
+	(multiple-value-bind
+	    (nstart nend)(any-name namestr start (or tstart vstart))
+	  (values
+	   (maybe-make-pattern namestr nstart nend)
+	   (and tstart (maybe-make-pattern namestr (1+ tstart) tend))
+	   version))))))
 
 ;;; Take a string and return a list of cons cells that mark the char
 ;;; separated subseq. The first value t if absolute directories location.
