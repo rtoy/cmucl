@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.38 1991/12/13 05:45:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.39 1991/12/16 10:39:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,51 +133,14 @@
      (concatenate 'string *hemlock-version* " "
 		  "(" *lisp-implementation-version* ")"))
 
-#|
-Don't install any dir translations, 'cause we want the real things.
-
-;;; Setup definition editing defaults to look in the stable AFS directory.
-;;; The first translation says what we want most clearly, but we require
-;;; the others due to symbol links.
-;;;
-(ed::add-definition-dir-translation "/afs/cs/project/clisp/systems-work/"
-				    "/afs/cs/project/clisp/systems/")
-(ed::add-definition-dir-translation "/afs/cs/project/clisp-1/systems-work/"
-				    "/afs/cs/project/clisp/systems/")
-(ed::add-definition-dir-translation
- "/afs/cs.cmu.edu/project/clisp-1/systems-work/"
- "/afs/cs/project/clisp/systems/")
-(ed::add-definition-dir-translation
- "/afs/cs.cmu.edu/project/clisp/systems-work/"
- "/afs/cs/project/clisp/systems/")
-
-;;; For some interim time, translate old compilation directories to the new
-;;; working directories.  Do it for symbolic links and actual paths.
-;;;
-(ed::add-definition-dir-translation "/usr/lisp/"
-				    "/afs/cs/project/clisp/systems/")
-(ed::add-definition-dir-translation "/usr1/lisp/"
-				    "/afs/cs/project/clisp/systems/")
-(ed::add-definition-dir-translation "/usr2/lisp/"
-				    "/afs/cs/project/clisp/systems/")
-
-|#
-
-
 ;;; PCL.
 ;;;
 #-no-pcl (load "pcl:pclload")
 
 
-;;; Load these after PCL.
+;;; Don't include the search lists used for loading in the resultant core.
 ;;;
-;(load "code:inspect")
-;(load "code:tty-inspect")
-
-
-;;; There should be no search lists defined in a full core.
-;;;
-(clrhash lisp::*search-list-table*)
+(lisp::clear-all-search-lists)
 
 ;;; Okay, build the thing!
 ;;;
