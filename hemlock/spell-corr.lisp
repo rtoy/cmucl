@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-corr.lisp,v 1.1.1.7 1993/08/25 02:13:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-corr.lisp,v 1.1.1.8 1993/08/25 02:34:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,18 +160,21 @@
 ;;; "M" FLAG:
 ;;;         ... => ...'S  as in DOG => DOG'S
 
+(defpackage "SPELL"
+  (:use "LISP" "EXTENSIONS" "SYSTEM")
+  (:export spell-try-word spell-root-word spell-collect-close-words
+	   maybe-read-spell-dictionary correct-spelling max-entry-length
+	   spell-read-dictionary spell-add-entry spell-root-flags
+	   spell-remove-entry))
 
-
-(in-package "SPELL" :use '("LISP" "EXTENSIONS" "SYSTEM"))
-
-(export '(spell-try-word spell-root-word spell-collect-close-words
-	  maybe-read-spell-dictionary correct-spelling max-entry-length))
-
+(in-package "SPELL")
 
 
 ;;;; Some Constants
 
 (eval-when (compile load eval)
+
+(defconstant spell-deleted-entry #xFFFF)
 
 ;;; The next number (using 6 bits) is 63, and that's pretty silly because
 ;;; "supercalafragalistic" is less than 31 characters long.
