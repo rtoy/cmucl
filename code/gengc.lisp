@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gengc.lisp,v 1.3 1993/06/18 06:14:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gengc.lisp,v 1.4 1993/08/29 04:21:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -124,3 +124,8 @@
 (defun purify (&key root-structures constants)
   (declare (ignore root-structures constants))
   (gc))
+
+
+(defun gc-init ()
+  ;; Nothing to do.
+  (undefined-value))
