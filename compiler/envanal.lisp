@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.15 1991/08/28 02:59:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.16 1991/09/05 13:13:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,7 +77,10 @@
 	 (env (lambda-environment fun)))
     (cond (env
 	   (setf (environment-closure env)
-		 (delete-if-not #'leaf-refs (environment-closure env)))
+		 (delete-if #'(lambda (x)
+				(and (lambda-var-p x)
+				     (null (leaf-refs x))))
+			    (environment-closure env)))
 	   env)
 	  (t
 	   (let ((res (make-environment :function fun)))
