@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.22 1997/08/30 18:29:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.23 1997/09/08 00:17:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -817,7 +817,7 @@ and Y are coerced to single-float."
 	     (setf rho #.ext:double-float-positive-infinity))
 	    ((let ((threshold #.(/ least-positive-double-float
 				   double-float-epsilon))
-		   (traps (ldb vm::float-exceptions-byte
+		   (traps (ldb vm::float-sticky-bits
 			       (vm:floating-point-modes))))
 	       ;; Overflow raised or (underflow raised and rho <
 	       ;; lambda/eps)
