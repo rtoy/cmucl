@@ -1,6 +1,19 @@
 # -*- makefile -*-
+#
+# This Makefile contains rules to build the CMUCL User's Manual in
+# different formats:
+#
+#    cmu-user.pdf: PDF format
+#    cmu-user.ps: Postscript for a4 paper
+#    cmu-user-letter.ps: Postscript for letter paper
+#    cmu-user.html: HTML
+#    cmu-user.info: INFO format
 
-LATEX = latex
+# You will require a recent LaTeX bundle, such as teTeX-1.0 to
+# generate the Postscript and PDF versions. Hevea is required to
+# generate the HTML format. 
+
+LATEX = pslatex
 BIBTEX = bibtex
 PDFLATEX = pdflatex
 
@@ -21,7 +34,7 @@ FILES = *.tex
 	$(BIBTEX) $(basename $<)
 
 .tex.html:
-	hevea cmucl-user.hva $<
+	hevea cmu-user.hva $<
 	hacha -tocbis $@
 	-tidy -m *.html
 
