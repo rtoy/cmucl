@@ -100,7 +100,7 @@
 				(strict-result nil)
 				((:error-function *error-function*))
 				((:warning-function *warning-function*)))
-  (declare (function result-test) (type combination call)
+  (declare (type function result-test) (type combination call)
 	   (type function-type type))
   (let* ((*lossage-detected* nil)
 	 (*slime-detected* nil)
@@ -219,7 +219,7 @@
 ;;; the type specified for that argument.  If we can't tell, then we complain
 ;;; about the slime.
 ;;;
-(proclaim '(function check-fixed-and-rest (list list (or type null)) void))
+(proclaim '(function check-fixed-and-rest (list list (or ctype null)) void))
 (defun check-fixed-and-rest (args types rest)
   (do ((arg args (cdr arg))
        (type types (cdr type))
@@ -271,8 +271,8 @@
 ;;; the result continuation, assuming that IR1 optimize and Type check have
 ;;; made this be a good description of the return type.
 ;;;
-(proclaim '(function lambda-result-type (lambda) type))
 (defun lambda-result-type (lambda)
+  (declare (type clambda lambda))
   (let ((ret (lambda-return lambda)))
     (if ret
 	(continuation-derived-type (return-result ret))
