@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.119 2003/04/30 19:37:56 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.120 2003/05/01 20:51:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3360,9 +3360,8 @@
 (deftransform format ((dest control &rest args) (t simple-string &rest t) *
 		      :policy (<= speed space))
   (when (constant-continuation-p control)
-    (let ((string (continuation-value control)))
-      (check-format-args string args)
-      (give-up))))
+    (check-format-args (continuation-value control) args))
+  (give-up))
 
 ;;;
 (deftransform format ((stream control &rest args) (stream function &rest t) *
