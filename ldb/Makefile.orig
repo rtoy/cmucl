@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.21 1991/06/05 20:35:36 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.22 1991/06/06 11:58:13 wlott Exp $ */
 INCLS = -I.
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -107,8 +107,15 @@ assem.o: assem.s
 
 #ifdef sparc
 
+/* We need this shit because as runs the wrong preprocessor. */
+#ifdef MACH
+ASSEMDEFS=-DMACH
+#else
+ASSEMDEFS=-UMACH
+#endif
+
 assem.o: assem.s lisp.h lispregs.h globals.h
-	as -P -o $@ assem.s
+	as -P ${ASSEMDEFS} -o $@ assem.s
 
 #endif
 
