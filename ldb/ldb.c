@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.2 1990/03/10 20:38:58 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.3 1990/03/28 22:49:54 ch Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -64,9 +64,14 @@ char *argp[];
 
     if (core == NULL)
         core = "test.core";
+
+    gc_init();
+    
+    validate();
+
     load_core_file(core);
 
-    SetSymbolValue(SAVED_GLOBAL_POINTER, current_global_pointer());
+    globals_init();
 
     SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(argp));

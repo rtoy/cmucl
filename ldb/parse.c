@@ -1,11 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.2 1990/03/08 17:28:21 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.3 1990/03/28 22:50:33 ch Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
 #include "lisp.h"
+#include "globals.h"
 #include "vars.h"
 #include "parse.h"
-
 
 static void skip_ws(ptr)
 char **ptr;
@@ -223,24 +223,26 @@ lispobj *result;
     int count;
 
     /* Search read only space */
-    *result = 0x20000000;
-    count = 1024;
+    *result = (lispobj) read_only_space;
+    count = ((lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER) -
+	      read_only_space);
     if (search_for_symbol(name, result, &count)) {
-        *result |= type_OtherPointer;
+	*result |= type_OtherPointer;
         return TRUE;
     }
 
     /* Search static space */
-    *result = 0x30000000;
-    count = 1024;
+    *result = (lispobj) static_space;
+    count = ((lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER) -
+	     static_space);
     if (search_for_symbol(name, result, &count)) {
         *result |= type_OtherPointer;
         return TRUE;
     }
 
     /* Search dynamic space */
-    *result = 0x40000000;
-    count = (SymbolValue(SAVED_ALLOCATION_POINTER) - 0x40000000) / 4;
+    *result = (lispobj) current_dynamic_space;
+    count = current_dynamic_space_free_pointer - current_dynamic_space;
     if (search_for_symbol(name, result, &count)) {
         *result |= type_OtherPointer;
         return TRUE;

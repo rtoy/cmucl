@@ -1,8 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.2 1990/02/28 18:20:35 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.3 1990/03/28 22:49:10 ch Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
 #include "lispregs.h"
+#include "globals.h"
 
 /*
  * Function to save the global pointer.
@@ -26,6 +27,9 @@ set_global_pointer:
 	j	ra
 	.end	set_global_pointer
 
+#if !defined(s8)
+#define s8 $30
+#endif
 
 /*
  * Function to transfer control into lisp.
@@ -71,15 +75,15 @@ call_into_lisp:
 
 	/* The saved FLAGS has the pseudo-atomic bit set. */
 	li	NULLREG, NIL
-	lw	FLAGS, (SAVED_FLAGS_REGISTER - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
+	lw	FLAGS, current_flags_register
 
 	/* No longer in foreign call. */
-	sw	NULLREG, (FOREIGN_FUNCTION_CALL_ACTIVE - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
+	sw	zero, foreign_function_call_active
 
 	/* Load the rest of the LISP state. */
-	lw	ALLOC, (SAVED_ALLOCATION_POINTER - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
-	lw	BSP, (SAVED_BINDING_STACK_POINTER - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
-	lw	CSP, (SAVED_CONTROL_STACK_POINTER - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
+	lw	ALLOC, current_dynamic_space_free_pointer
+	lw	BSP, current_binding_stack_pointer
+	lw	CSP, current_control_stack_pointer
 
 	/* Check for interrupt */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))
@@ -136,14 +140,14 @@ lra:
 	or	FLAGS, (1<<flag_Atomic)
 
 	/* Save LISP registers. */
-	sw	ALLOC, SAVED_ALLOCATION_POINTER + SYMBOL_VALUE_OFFSET
-	sw	BSP, SAVED_BINDING_STACK_POINTER + SYMBOL_VALUE_OFFSET
-	sw	CSP, SAVED_CONTROL_STACK_POINTER + SYMBOL_VALUE_OFFSET
-	sw	FLAGS, SAVED_FLAGS_REGISTER + SYMBOL_VALUE_OFFSET
+	sw	ALLOC, current_dynamic_space_free_pointer
+	sw	BSP, current_binding_stack_pointer
+	sw	CSP, current_control_stack_pointer
+	sw	FLAGS, current_flags_register
 
 	/* Back in foreign function call */
-	addu	t0, NULLREG, T - NIL
-	sw	t0, (FOREIGN_FUNCTION_CALL_ACTIVE - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
+	li	t0, 1
+	sw	t0, foreign_function_call_active
 
 	/* Check for interrupt */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))
@@ -191,18 +195,18 @@ call_into_c:
 	/* Set the pseudo-atomic flag. */
 	or	FLAGS, (1<<flag_Atomic)
 
-	/* Save lisp state in symbols. */
-	sw	ALLOC, (SAVED_ALLOCATION_POINTER - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
-	sw	BSP, (SAVED_BINDING_STACK_POINTER - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
-	sw	CSP, (SAVED_CONTROL_STACK_POINTER - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
-	sw	FLAGS, (SAVED_FLAGS_REGISTER - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
+	/* Save lisp state. */
+	sw	ALLOC, current_dynamic_space_free_pointer
+	sw	BSP, current_binding_stack_pointer
+	sw	CSP, current_control_stack_pointer
+	sw	FLAGS, current_flags_register
 
 	/* Mark us as in C land. */
-	addu	t0, NULLREG, T - NIL
-	sw	t0, (FOREIGN_FUNCTION_CALL_ACTIVE - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
+	li	t0, 1
+	sw	t0, foreign_function_call_active
 
 	/* Restore GP */
-	lw	gp, SAVED_GLOBAL_POINTER + SYMBOL_VALUE_OFFSET
+	lw	gp, current_global_pointer
 
 	/* Were we interrupted? */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))
@@ -240,15 +244,15 @@ call_into_c:
 	.set	noreorder
 
 	/* Restore FLAGS (which set the pseudo-atomic flag) */
-	lw	FLAGS, SAVED_FLAGS_REGISTER + SYMBOL_VALUE_OFFSET
+	lw	FLAGS, current_flags_register
 
 	/* Mark us at in Lisp land. */
-	sw	NULLREG, (FOREIGN_FUNCTION_CALL_ACTIVE - NIL + SYMBOL_VALUE_OFFSET)(NULLREG)
+	sw	zero, foreign_function_call_active
 
 	/* Restore other lisp state. */
-	lw	ALLOC, SAVED_ALLOCATION_POINTER + SYMBOL_VALUE_OFFSET
-	lw	BSP, SAVED_BINDING_STACK_POINTER + SYMBOL_VALUE_OFFSET
-	lw	CSP, SAVED_CONTROL_STACK_POINTER + SYMBOL_VALUE_OFFSET
+	lw	ALLOC, current_dynamic_space_free_pointer
+	lw	BSP, current_binding_stack_pointer
+	lw	CSP, current_control_stack_pointer
 
 	/* Check for interrupt */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))

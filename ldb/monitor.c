@@ -6,12 +6,13 @@
 #include <sys/resource.h>
 #include "ldb.h"
 #include "lisp.h"
+#include "globals.h"
 #include "vars.h"
 #include "parse.h"
 
 static void call_cmd(), dump_cmd(), print_cmd(), quit(), help();
 static void flush_cmd(), search_cmd(), regs_cmd(), exit_cmd(), throw_cmd();
-static void timed_call_cmd();
+static void timed_call_cmd(), gc_cmd();
 
 static struct cmd {
     char *cmd, *help;
@@ -24,6 +25,7 @@ static struct cmd {
     {"d", NULL, dump_cmd},
     {"exit", "Exit this instance of the monitor.", exit_cmd},
     {"flush", "flush all temp variables.", flush_cmd},
+    {"gc", "collect garbage", gc_cmd},
     {"print", "print object at ADDRESS", print_cmd},
     {"p", NULL, print_cmd},
     {"quit", "quit", quit},
@@ -109,10 +111,11 @@ char **ptr;
 static void regs_cmd(ptr)
 char **ptr;
 {
-    printf("ALLOC=0x%x\n", SymbolValue(SAVED_ALLOCATION_POINTER));
-    printf("CSP=0x%x\n", SymbolValue(SAVED_CONTROL_STACK_POINTER));
-    printf("BSP=0x%x\n", SymbolValue(SAVED_BINDING_STACK_POINTER));
-    printf("FLAGS=0x%x\n", SymbolValue(SAVED_FLAGS_REGISTER));
+    printf("DYNAMIC\t=\t0x%08x\n", current_dynamic_space);
+    printf("ALLOC\t=\t0x%08x\n", current_dynamic_space_free_pointer);
+    printf("CSP\t=\t0x%08x\n", current_control_stack_pointer);
+    printf("BSP\t=\t0x%08x\n", current_binding_stack_pointer);
+    printf("FLAGS\t=\t0x%08x\n", current_flags_register);
 }
 
 static void search_cmd(ptr)
@@ -349,23 +352,28 @@ static void exit_cmd()
     done = TRUE;
 }
 
+static void gc_cmd()
+{
+	collect_garbage();
+}
+
 static void sub_monitor(csp, bsp)
-unsigned long csp, bsp;
+lispobj *csp, *bsp;
 {
     extern char *egets();
     struct cmd *cmd, *found;
     char *line, *ptr, *token;
     int ambig;
-    unsigned long new;
+    lispobj *new;
 
     while (!done) {
-        if ((new = SymbolValue(SAVED_CONTROL_STACK_POINTER)) != csp) {
+        if ((new = current_control_stack_pointer) != csp) {
             printf("CSP changed from 0x%x to 0x%x; Restoring.\n", csp, new);
-            SetSymbolValue(SAVED_CONTROL_STACK_POINTER, csp);
+            current_control_stack_pointer = csp;
         }
-        if ((new = SymbolValue(SAVED_BINDING_STACK_POINTER)) != bsp) {
+        if ((new = current_binding_stack_pointer) != bsp) {
             printf("BSP changed from 0x%x to 0x%x; Restoring.\n", bsp, new);
-            SetSymbolValue(SAVED_BINDING_STACK_POINTER, bsp);
+            current_binding_stack_pointer = bsp;
         }
 
         printf("ldb> ");
@@ -407,10 +415,10 @@ unsigned long csp, bsp;
 void monitor()
 {
     jmp_buf oldbuf;
-    unsigned long csp, bsp;
+    lispobj *csp, *bsp;
 
-    csp = SymbolValue(SAVED_CONTROL_STACK_POINTER);
-    bsp = SymbolValue(SAVED_BINDING_STACK_POINTER);
+    csp = current_control_stack_pointer;
+    bsp = current_binding_stack_pointer;
 
     bcopy(curbuf, oldbuf, sizeof(oldbuf));
 

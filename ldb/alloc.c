@@ -1,33 +1,36 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.1 1990/02/24 19:37:10 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.2 1990/03/28 22:48:37 ch Exp $ */
 #include "lisp.h"
 #include "ldb.h"
 #include "alloc.h"
+#include "globals.h"
 
 
 /****************************************************************
 Allocation Routines.
 ****************************************************************/
 
-static char *alloc(bytes)
+static lispobj *alloc(bytes)
 int bytes;
 {
-    char *result;
+    lispobj *result;
 
     /* Round to dual word boundry. */
     bytes = (bytes + lowtag_Mask) & ~lowtag_Mask;
 
-    result = (char *)SymbolValue(SAVED_ALLOCATION_POINTER);
-    SetSymbolValue(SAVED_ALLOCATION_POINTER, (lispobj)(result + bytes));
+    result = current_dynamic_space_free_pointer;
+    current_dynamic_space_free_pointer += (bytes / sizeof(lispobj));
 
     return result;
 }
 
-char *alloc_unboxed(type, words)
+lispobj *alloc_unboxed(type, words)
 int type, words;
 {
-    char *result = alloc((1 + words) * sizeof(long));
+    lispobj *result;
 
-    *((long *)result) = (words << type_Bits) | type;
+    result = alloc((1 + words) * sizeof(lispobj));
+
+    *result = (lispobj) (words << type_Bits) | type;
 
     return result;
 }
@@ -35,7 +38,9 @@ int type, words;
 lispobj alloc_vector(type, length, size)
 int type, length, size;
 {
-    struct vector *result = (struct vector *)alloc((2 + (length*size + 31) / 32) * sizeof(long));
+    struct vector *result;
+
+    result = (struct vector *)alloc((2 + (length*size + 31) / 32) * sizeof(lispobj));
 
     result->header = type;
     result->length = fixnum(length);

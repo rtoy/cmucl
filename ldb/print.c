@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.6 1990/03/18 19:23:56 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.7 1990/03/28 22:51:13 ch Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -131,10 +131,10 @@ lispobj obj;
 static void brief_otherimm(obj)
 lispobj obj;
 {
-    int type = TypeOf(obj);
-    int c;
+    int type, c, idx;
     char buffer[10];
 
+    type = TypeOf(obj);
     switch (type) {
         case type_BaseCharacter:
             c = (obj>>8)&0xff;
@@ -171,7 +171,11 @@ lispobj obj;
             break;
 
         default:
-            printf("%s", subtype_Names[type>>2]);
+	    idx = type >> 2;
+	    if (idx < (sizeof(subtype_Names) / sizeof(char *)))
+		    printf("%s", subtype_Names[idx]);
+	    else
+		    printf("unknown type (0x%0x)", type);
             break;
     }
 }
@@ -179,9 +183,15 @@ lispobj obj;
 static void print_otherimm(obj)
 lispobj obj;
 {
-    int c;
+    int type, c, idx;
 
-    printf(", %s", subtype_Names[TypeOf(obj)>>2]);
+    type = TypeOf(obj);
+    idx = type >> 2;
+
+    if (idx < (sizeof(subtype_Names) / sizeof(char *)))
+	    printf(", %s", subtype_Names[idx]);
+    else
+	    printf(", unknown type (0x%0x)", type);
 
     switch (TypeOf(obj)) {
         case type_BaseCharacter:
@@ -253,11 +263,13 @@ lispobj obj;
 static void brief_struct(obj)
 lispobj obj;
 {
+	print("Structure mumble mumble.\n");
 }
 
 static void print_struct(obj)
 lispobj obj;
 {
+	print("Structure mumble mumble.\n");
 }
 
 static void brief_otherptr(obj)
