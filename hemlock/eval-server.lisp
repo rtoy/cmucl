@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.5 1995/02/16 23:04:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,8 +94,8 @@
 
 (defhvar "Slave Utility"
   "This is the pathname of the utility to fire up slave Lisps.  It defaults
-   to \"lisp\"."
-  :value "lisp")
+   to \"cmucl\"."
+  :value "cmucl")
 
 (defhvar "Slave Utility Switches"
   "These are additional switches to pass to the Slave Utility.
