@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.1 1992/07/28 20:14:26 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.2 1992/09/08 20:17:52 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -416,10 +416,10 @@ static void scavenge_interrupt_context(struct sigcontext *context)
 	unsigned long lip;
 	unsigned long lip_offset;
 	int lip_register_pair;
+#endif
 	unsigned long pc_code_offset;
-#if defined(sparc) || defined(parisc)
+#ifdef SC_NPC
 	unsigned long npc_code_offset;
-#endif defined(sparc) || defined(parisc)
 #endif
 
 	/* Find the LIP's register pair and calculate it's offset */
@@ -443,17 +443,14 @@ static void scavenge_interrupt_context(struct sigcontext *context)
 			}
 		}
 	}
+#endif reg_LIP
 
 	/* Compute the PC's offset from the start of the CODE */
 	/* register. */
 	pc_code_offset = SC_PC(context) - SC_REG(context, reg_CODE);
-#ifdef sparc
-	npc_code_offset = context->sc_npc - context->sc_regs[CODE];
-#endif sparc
-#ifdef parisc
-	npc_code_offset = context->sc_pcoqt - SC_REG(context, reg_CODE);
-#endif parisc
-#endif reg_LIP
+#ifdef SC_NPC
+	npc_code_offset = SC_NPC(context) - SC_REG(context, reg_CODE);
+#endif SC_NPC
 	       
 	/* Scanvenge all boxed registers in the context. */
 	for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
@@ -467,19 +464,15 @@ static void scavenge_interrupt_context(struct sigcontext *context)
 	/* Fix the LIP */
 	SC_REG(context, reg_LIP) =
 		SC_REG(context, lip_register_pair) + lip_offset;
+#endif reg_LIP
 	
 	/* Fix the PC if it was in from space */
 	if (from_space_p(SC_PC(context)))
 		SC_PC(context) = SC_REG(context, reg_CODE) + pc_code_offset;
-#ifdef sparc
-	if (from_space_p(context->sc_npc))
-		context->sc_npc = context->sc_regs[CODE] + npc_code_offset;
-#endif sparc
-#ifdef parisc
-	if (from_space_p(context->sc_pcoqt))
-	    context->sc_pcoqt = SC_REG(context, reg_CODE) + npc_code_offset;
-#endif parisc
-#endif reg_LIP   
+#ifdef SC_NPC
+	if (from_space_p(SC_NPC(context)))
+		SC_NPC(context) = SC_REG(context, reg_CODE) + npc_code_offset;
+#endif SC_NPC
 }
 
 void scavenge_interrupt_contexts(void)
