@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.8 1994/10/24 20:06:27 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.9 1994/10/25 18:10:20 ram Exp $
  *
  */
 
@@ -120,7 +120,7 @@ void main(int argc, char *argv[], char *envp[])
 	default_core = "lisp.core";
 
     if (core == NULL) {
-#ifndef irix
+#ifdef MACH
 	extern char *getenv(char *var);
 #endif
 	static char buf[MAXPATHLEN];
