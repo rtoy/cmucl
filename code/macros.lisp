@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.72 2002/01/27 18:29:23 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.73 2002/07/25 14:50:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -768,27 +768,44 @@
 		   `(progn ,@(setters) nil))))
       (thunk (let*-bindings) (mv-bindings)))))
 
-(defmacro shiftf (&whole form &rest args &environment env)
+(defmacro shiftf (&rest args &environment env)
   "One or more SETF-style place expressions, followed by a single
    value expression.  Evaluates all of the expressions in turn, then
    assigns the value of each expression to the place on its left,
    returning the value of the leftmost."
-  (when (< (length args) 2)
-    (error "~S called with too few arguments: ~S" 'shiftf form))
-  (let ((resultvar (gensym)))
-    (do ((arglist args (cdr arglist))
-         (bindlist nil)
-         (storelist nil)
-         (lastvar resultvar))
-        ((atom (cdr arglist))
-         (push `(,lastvar ,(first arglist)) bindlist)
-         `(LET* ,(nreverse bindlist) ,@(nreverse storelist) ,resultvar))
-      (multiple-value-bind (SM1 SM2 SM3 SM4 SM5)
-          (get-setf-method (first arglist) env)
-        (mapc #'(lambda (var val) (push `(,var ,val) bindlist)) SM1 SM2)
-        (push `(,lastvar ,SM5) bindlist)
-        (push SM4 storelist)
-        (setq lastvar (first SM3))))))
+  (when args
+    (collect ((let*-bindings) (mv-bindings) (setters) (getters))
+      ;; The last arg isn't necessarily a place, so we have to handle
+      ;; that separately.
+      (dolist (arg (butlast args))
+	(multiple-value-bind
+	      (temps subforms store-vars setter getter)
+	    (get-setf-expansion arg env)
+	  (loop
+	      for temp in temps
+	      for subform in subforms
+	      do (let*-bindings `(,temp ,subform)))
+	  (mv-bindings store-vars)
+	  (setters setter)
+	  (getters getter)))
+      ;; Handle the last arg specially here.  Just put something to
+      ;; force the setter so the setter for the previous var gets set,
+      ;; and the getter is just the last arg itself.
+      (setters nil)
+      (getters (car (last args)))
+	
+      (labels ((thunk (mv-bindings getters)
+		 (if mv-bindings
+		     `((multiple-value-bind
+			     ,(car mv-bindings)
+			   ,(car getters)
+			 ,@(thunk (cdr mv-bindings) (cdr getters))))
+		     `(,@(butlast (setters))))))
+	`(let* ,(let*-bindings)
+	  (multiple-value-bind ,(car (mv-bindings))
+	      ,(car (getters))
+	    ,@(thunk (mv-bindings) (cdr (getters)))
+	    (values ,@(car (mv-bindings)))))))))
 
 (defmacro rotatef (&rest args &environment env)
   "Takes any number of SETF-style place expressions.  Evaluates all of the
