@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.33 1991/03/11 17:15:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.34 1991/03/12 16:44:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 		    *last-source-form* *last-format-string* *last-format-args*
 		    *last-message-count* *lexical-environment*))
 
-(defparameter compiler-version "0.0")
+(defvar compiler-version "1.0")
 
 (defvar *check-consistency* nil)
 (defvar *all-components*)
