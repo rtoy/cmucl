@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.69 2002/10/16 14:01:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.70 2002/11/08 15:26:51 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1269,7 +1269,9 @@
 		       (unix:unix-current-directory)
     (if gr
 	(let ((*ignore-wildcards* t))
-	  (pathname (concatenate 'simple-string dir-or-error "/")))
+	  (values
+	   (parse-namestring (concatenate 'simple-string dir-or-error "/")
+			     *unix-host*)))
 	(error dir-or-error))))
 
 ;;; %Set-Default-Directory  --  Internal
