@@ -2682,3 +2682,51 @@ implemented.
 A more extensive description of modular arithmetic can be found in the
 paper ``Efficient Hardware Arithmetic in Common Lisp'' by Alexey
 Dejneka, and Christophe Rhodes, to be published.
+
+\section{Extension to REQUIRE}
+\cindex{require}
+
+The behavior of \code{require} when called with only one argument is
+implementation-defined.  In \cmucl, functions from the list
+\var{*module-provider-functions*} are called in order with the
+stringified module name as the argument.  The first function to return
+non-\var{NIL} is assumed to have loaded the module.
+
+By default the functions \code{module-provide-cmucl-defmodule} and
+\code{module-provide- cmucl-library} are on this list of functions, in
+that order.
+
+\begin{defvar}{ext:}{module-provider-functions}
+  This is a list of functions taking a single argument.
+  \code{require} calls each function in turn with the stringified
+  module name.  The first function to return non-\var{NIL} indicates
+  that the module has been loaded.  The remaining functions, if any,
+  are not called.
+
+  To add new providers, push the new provider function onto the
+  beginning of this list.
+\end{defvar}
+
+\begin{defmac}{ext:}{defmodule}{name \amprest{} files}
+  Defines a module by registering the files that need to be loaded
+  when the module is required.  If \var{name} is a symbol, its print
+  name is used after downcasing it.
+\end{defmac}
+
+\begin{defun}{ext:}{module-provide-cmucl-defmodule}{module-name}
+  This function is the module-provider for modules registered by a
+  \code{ext:defmodule} form.  
+\end{defun}
+
+\begin{defun}{ext:}{module-provide-cmucl-library}{module-name}
+  This function is the module-provider for \cmucl's libraries,
+  including Gray streams, simple streams, CLX, CLM, Hemlock,
+  \emph{etc}.
+  
+  This function causes a file to be loaded whose name is formed by
+  merging the search-list ``modules:'' and the concatenation of
+  module-name with the suffix ``-LIBRARY''.  Note that both the
+  module-name and the suffix are each, separately, converted from
+  :case :common to :case :local.  This merged name will be probed with
+  both a .lisp and .fasl extensions, calling \code{LOAD} if it exists.
+\end{defun}
