@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.53 1993/05/11 21:15:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.54 1993/05/13 19:51:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -710,7 +710,8 @@
 	      (dump-fop 'lisp::fop-fdefinition file))
 	     (:type-predicate
 	      (dump-object 'load-type-predicate file)
-	      (dump-object (type-specifier (cdr entry)) file)
+	      (let ((*unparse-function-type-simplify* t))
+		(dump-object (type-specifier (cdr entry)) file))
 	      (dump-fop 'lisp::fop-funcall file)
 	      (dump-byte 1 file))
 	     (:xep
