@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.17 1990/10/22 12:38:46 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.18 1990/10/23 00:03:13 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -137,8 +137,9 @@ collect_garbage()
 	struct rusage start_rusage, stop_rusage;
 	double real_time, system_time, user_time;
 	double percent_retained, gc_rate;
-	unsigned long size_retained, size_discarded;
+	unsigned long size_discarded;
 #endif
+	unsigned long size_retained;
 	lispobj *current_static_space_free_pointer;
 	unsigned long static_space_size;
 	unsigned long control_stack_size, binding_stack_size;
@@ -243,9 +244,10 @@ collect_garbage()
 	current_dynamic_space = new_space;
 	current_dynamic_space_free_pointer = new_space_free_pointer;
 
+#ifdef PRINTNOISE
 	size_discarded = (from_space_free_pointer - from_space) * sizeof(lispobj);
+#endif
 	size_retained = (new_space_free_pointer - new_space) * sizeof(lispobj);
-
 
 	/* Flush the icache. */
 #ifdef PRINTNOISE
@@ -266,10 +268,10 @@ collect_garbage()
 	(void) sigsetmask(oldmask);
 
 
+#ifdef PRINTNOISE
 	gettimeofday(&stop_tv, (struct timezone *) 0);
 	getrusage(RUSAGE_SELF, &stop_rusage);
 
-#ifdef PRINTNOISE
 	printf("done.]\n");
 	
 	percent_retained = (((float) size_retained) /
