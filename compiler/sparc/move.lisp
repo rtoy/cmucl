@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.12 2003/10/20 01:25:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.13 2003/10/20 23:59:32 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.12 2003/10/20 01:25:01 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.13 2003/10/20 23:59:32 toy Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -476,7 +476,7 @@
   (:arg-types unsigned-num)
   (:generator 1
     ;; Zero-extend the 32-bit number	      
-    (inst clruw y x 0)))
+    (inst clruw y x)))
 
 (define-move-vop move-to-64bit-word/unsigned :move
   (unsigned-reg) (signed64-reg unsigned64-reg))
