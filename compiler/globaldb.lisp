@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.12 1990/08/24 18:29:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.13 1990/10/06 18:24:35 ram Exp $
 ;;;
 ;;;    This file provides a functional interface to global information about
 ;;; named things in the system.  Information is considered to be global if it
@@ -115,9 +115,8 @@
   ;; Type specifier which info of this type must satisfy.
   (type nil :type t)
   ;;
-  ;; Function called when there is no information of this type.  Null at
-  ;; meta-compile time.
-  (default nil :type (or function null)))
+  ;; Function called when there is no information of this type.
+  (default #'(lambda () (error "Type not defined yet.")) :type function))
 
 
 ;;; A hashtable from class names to Class-Info structures.  This data structure
@@ -492,7 +491,7 @@
 ;;;
 (defun info-cache-init ()
   (setq *cached-info-environment* nil)
-  (setq *info-cache-vector* (make-array (* 4 (ash 2 10))))
+  (setq *info-cache-vector* (make-array (* 4 (ash 1 10))))
   (info-cache-clear)
   (undefined-value))
 
