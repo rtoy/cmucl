@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.3 1990/02/27 11:42:12 wlott Exp $
+;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
 ;;;
@@ -1698,6 +1700,8 @@
   (frob list)
   (frob list*))
 
+#+rt-target(progn
+
 (def-primitive-translator syscall (&rest args) `(%syscall ,@args))
 (defknown %syscall (&rest t) *)
 
@@ -1712,6 +1716,8 @@
 	  ((first res) (second res) nil)
 	  (length args))
     (move-continuation-result node block res cont)))  
+
+) ; rt-target progn
 
 
 ;;;; Structure accessors:
