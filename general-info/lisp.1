@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.4 1993/11/17 17:01:11 ram Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.5 1994/11/04 07:07:06 ram Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -90,18 +90,18 @@ is the decimal number of the socket to connect to.
 .TP 10n
 .BR CMUCLLIB
 This variable points to the `lib/' directory holding `lisp.core' and other
-files used by Lisp at run-time.  The default is `/usr/misc/.cmucl/lib'.
+files used by Lisp at run-time.  The default is `/usr/local/lib/cmucl/lib'.
 .TP
 .BR CMUCL_EMPTYFILE
-If `df /tmp' shows `swap' as the filesystem for the `/tmp' directory, then you
-have a "tmpfs" filesystem.  In this case, you must setenv CMUCL_EMPTYFILE to
-point into a pathname on a non-TMPFS filesystem that can be used instead of
-`/tmp/empty'.
+[SunOS only] If `df /tmp' shows `swap' as the filesystem for the `/tmp'
+directory, then you have a "tmpfs" filesystem.  In this case, you must setenv
+CMUCL_EMPTYFILE to point into a pathname on a non-TMPFS filesystem that can be
+used instead of `/tmp/empty'.
 .TP
 .BR XKEYSYMDB
 In order to use Motif (and the graphical debugger) with X servers from
 non-OSF vendors (like Sun) you may need to set the environment variable
-XKEYSYMDB to point to the file `lib/XKeySymDB'.  Otherwise, you will get many
+XKEYSYMDB to point to the file `lib/XKeysymDB'.  Otherwise, you will get many
 error messages every time a new connection is opened to the CMU CL motifd.
 This file is read by the X11R5 Xt in order to augment the keysym database with
 certain OSF vendor keysyms that Motif wants to use.
@@ -129,11 +129,8 @@ Site specific initialization (see README file.)
 .BR lib/hemlock11.*, lib/mh-scan, lib/spell-dictionary.bin
 Hemlock files.
 .TP
-.BR lib/inspect*
-Inspector files.
-.TP
 .BR lib/fonts/ 
-X11 fonts for Hemlock and the inspector.
+X11 fonts for Hemlock.
 .TP
 .BR lib/XKeysymDB
 Database of X Keysym names for Motif.
@@ -171,15 +168,12 @@ Detection of stack overflow is not very graceful.   You get many "map
 failure" errors on stderr.
 .TP 3
 --
-If file descriptors are used up, then Lisp will die.  The garbage collector
-does
-.I not
-close garbage streams.
+If file descriptors are used up, then Lisp will die.
 .TP 3
 \--
 Several proposed ANSI Common Lisp (CLtL II) features are not implemented:
-MAKE-LOAD-FORM and LOAD-TIME-EVAL, any CLOS features not implemented by PCL,
-Pathname enhancements (wildcards and logical pathnames.)
+Any CLOS features not implemented by PCL, and features added since the first
+ANSI draft.
 .TP 3
 \--
 The interpreter's pre-processing freezes in the macro definitions in effect at
