@@ -7,18 +7,17 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.2 1990/02/09 18:37:21 wlott Exp $
 ;;;
-;;;    This file contains stuff that knows about dumping code both to files to
-;;; the running Lisp.
+;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
-(in-package 'c)
+(in-package "C")
 
 (proclaim '(special compiler-version))
 
 (import '(system:%primitive system:%array-data-slot
 			    system:%array-displacement-slot
-			    system:%g-vector-structure-subtype
-			    system:%function-constants-constants-offset))
+			    system:%g-vector-structure-subtype))
 
 
 
@@ -342,17 +341,9 @@
 	 (constants (ir2-component-constants 2comp))
 	 (num-consts (length constants)))
     (collect ((patches))
-      (dump-object (component-name component) file)
-      (dump-fop 'lisp::fop-misc-trap file)
 
-      (let ((info (debug-info-for-component component node-vector
-					    nodes-length)))
-	(dump-object info file)
-	(let ((info-handle (dump-pop file)))
-	  (dump-push info-handle file)
-	  (push info-handle (fasl-file-debug-info file))))
-
-      (do ((i %function-constants-constants-offset (1+ i)))
+      ;; Dump the constants, noting any :entries that have to be fixed up.
+      (do ((i %code-constants-offset (1+ i)))
 	  ((= i num-consts))
 	(let ((entry (aref constants i)))
 	  (etypecase entry
@@ -375,6 +366,14 @@
 			     file))))
 	    (null
 	     (dump-fop 'lisp::fop-misc-trap file)))))
+
+      ;; Dump the debug info.
+      (let ((info (debug-info-for-component component node-vector
+					    nodes-length)))
+	(dump-object info file)
+	(let ((info-handle (dump-pop file)))
+	  (dump-push info-handle file)
+	  (push info-handle (fasl-file-debug-info file))))
 
       (cond ((and (< num-consts #x100) (< code-length #x10000))
 	     (dump-fop 'lisp::fop-small-code file)
