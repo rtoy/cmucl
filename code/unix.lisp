@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.62 1998/10/04 07:38:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.63 1999/03/08 18:03:19 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,6 +157,7 @@
 	  #-hpux unix-utimes #-(or svr4 hpux) unix-setreuid
 	  #-(or svr4 hpux) unix-setregid
 	  unix-getpid unix-getppid
+	  #+(or svr4 freebsd)unix-setpgid
 	  unix-getgid unix-getegid unix-getpgrp unix-setpgrp unix-getuid
 	  unix-getpagesize unix-gethostname unix-gethostid unix-fork
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
@@ -2058,19 +2059,28 @@
 ;;; As usual, if the process-id is 0, it refers to the current
 ;;; process.
 
-(defun unix-getpgrp (pid)
-  "Unix-getpgrp returns the group-id of the process associated
-   with pid."
-  (int-syscall ("getpgrp" int) pid))
+(defun unix-getpgrp ()
+  "Unix-getpgrp returns the group-id of the calling process."
+  (int-syscall ("getpgrp")))
 
 ;;; Unix-setpgrp sets the group-id of the process specified by 
 ;;; "pid" to the value of "pgrp".  The process must either have
 ;;; the same effective user-id or be a super-user process.
 
+;;; setpgrp(int int)[freebsd] is identical to setpgid and is retained
+;;; for backward compatibility. setpgrp(void)[solaris] is being phased
+;;; out in favor of setsid().
+
 (defun unix-setpgrp (pid pgrp)
   "Unix-setpgrp sets the process group on the process pid to
-   pgrp.  NIL and an error number is returned upon failure."
+   pgrp.  NIL and an error number are returned upon failure."
   (void-syscall (#-svr4 "setpgrp" #+svr4 "setpgid" int int) pid pgrp))
+
+(defun unix-setpgid (pid pgrp)
+  "Unix-setpgid sets the process group of the process pid to
+   pgrp. If pgid is equal to pid, the process becomes a process
+   group leader. NIL and an error number are returned upon failure."
+  (void-syscall ("setpgid" int int) pid pgrp))
 
 (def-alien-routine ("getuid" unix-getuid) int
   "Unix-getuid returns the real user-id associated with the

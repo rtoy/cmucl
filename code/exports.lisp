@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.161 1999/03/04 12:32:44 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.162 1999/03/08 18:03:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,7 +219,8 @@
              "UNIX-IOCTL" "UNIX-ISATTY" "UNIX-LINK" "UNIX-LISTEN" "UNIX-LSEEK"
              "UNIX-LSTAT" "UNIX-MKDIR" "UNIX-OPEN" "UNIX-PATHNAME" "UNIX-PID"
              "UNIX-PIPE" "UNIX-READ" "UNIX-READLINK" "UNIX-RECV" "UNIX-RENAME"
-             "UNIX-RMDIR" "UNIX-SELECT" "UNIX-SEND" "UNIX-SETPGRP"
+             "UNIX-RMDIR" "UNIX-SELECT" "UNIX-SEND"
+	     "UNIX-SETPGID" "UNIX-SETPGRP"
              "UNIX-SETREGID" "UNIX-SETREUID" "UNIX-SOCKET" "UNIX-STAT"
              "UNIX-SYMLINK" "UNIX-SYNC"
 	     "UNIX-TIMES" "UNIX-TRUNCATE" "UNIX-TTYNAME"
