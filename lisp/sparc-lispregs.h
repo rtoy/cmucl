@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.1 1992/09/08 20:21:10 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.2 1994/07/07 10:45:42 wlott Exp $ */
 
 #ifdef LANGUAGE_ASSEMBLY
 
@@ -65,7 +65,7 @@
 
 #define BOXED_REGISTERS { \
     reg_A0, reg_A1, reg_A2, reg_A3, reg_A4, reg_A5, reg_FDEFN, reg_LEXENV, \
-    reg_NFP, reg_OCFP, reg_LRA, reg_L0, reg_L1, reg_CODE \
+    reg_NFP, reg_OCFP, reg_LRA, reg_L0, reg_L1, reg_L2, reg_CODE \
 }
 
 #ifndef LANGUAGE_ASSEMBLY
