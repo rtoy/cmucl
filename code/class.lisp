@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.52 2003/03/22 16:15:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.53 2003/03/26 12:35:29 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -209,7 +209,7 @@
 	  (unless (eql depth -1)
 	    (let ((old-layout (svref inherits depth)))
 	      (unless (or (eql old-layout 0) (eq old-layout layout))
-		(error "Layout depth confict: ~S~%  ~
+		(error "Layout depth conflict: ~S~%  ~
 		        (~S collides at ~S with ~S)~%"
 		       layouts layout depth old-layout)))
 	    (setf (svref inherits depth) layout))))
