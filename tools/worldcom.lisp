@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.69 1994/06/06 00:05:45 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.70 1994/10/05 16:03:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,6 +93,7 @@
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
 
+(comf "target:code/globals")
 (comf "target:code/kernel")
 (comf "target:code/lispinit")
 (comf "target:code/fdefinition")
