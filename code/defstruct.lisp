@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.31 1992/03/13 17:58:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.32 1992/03/14 12:05:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,7 +65,10 @@
 ;;; as a string to avoid creating lots of worthless symbols at load time.
 ;;;
 (defun dsd-name (dsd)
-  (intern (string (dsd-%name dsd)) (symbol-package (dsd-accessor dsd))))
+  (intern (string (dsd-%name dsd))
+	  (if (dsd-accessor dsd)
+	      (symbol-package (dsd-accessor dsd))
+	      *package*)))
 
 (defun print-defstruct-slot-description (structure stream depth)
   (declare (ignore depth))
@@ -263,8 +266,7 @@
 	       (string= (dsd-name (find aname (dd-slots existing)
 					:key #'dsd-accessor))
 			name)
-	       (member (dd-name existing)
-		       (cons (dd-name defstruct) (dd-includes defstruct))))
+	       (member (dd-name existing) (dd-includes defstruct)))
 	  (setf (dsd-accessor islot) nil)
 	  (setf (dsd-accessor islot) aname)))
     
@@ -688,7 +690,7 @@
 		 (loop
 		   (pprint-pop)
 		   (let ((slot (pop slots)))
-		     (output-object (dsd-name slot) stream)
+		     (princ (dsd-%name slot) stream)
 		     (write-char #\space stream)
 		     (pprint-newline :miser stream)
 		     (output-object (structure-ref structure (dsd-index slot))
@@ -711,7 +713,7 @@
 		    (write-string "...)" stream)))
 	     (declare (type index index))
 	     (write-char #\space stream)
-	     (output-object (dsd-name (car slots)) stream)
+	     (princ (dsd-%name (car slots)) stream)
 	     (write-char #\space stream)
 	     (output-object (structure-ref structure index) stream))))))
 
