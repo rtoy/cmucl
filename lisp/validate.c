@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.16 2003/10/13 17:04:50 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.17 2004/01/09 04:36:39 toy Exp $
  *
  * Memory Validation
  */
@@ -14,6 +14,11 @@
 #include "globals.h"
 #include "validate.h"
 #include "internals.h"
+
+unsigned long read_only_space_size = READ_ONLY_SPACE_SIZE;
+unsigned long binding_stack_size = BINDING_STACK_SIZE;
+unsigned long static_space_size = STATIC_SPACE_SIZE;
+unsigned long control_stack_size = CONTROL_STACK_SIZE;
 
 static void
 ensure_space(lispobj *start, size_t size)
