@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.8 1992/07/27 16:13:19 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.9 1992/07/27 16:45:11 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 
 (export '(emit-byte emit-skip emit-back-patch emit-chooser emit-postit
 	  define-emitter define-instruction define-instruction-macro
-	  def-assembler-params
+	  def-assembler-params without-scheduling
 
 	  segment make-segment segment-name assemble align inst
 	  label label-p gen-label emit-label label-position
@@ -452,7 +452,9 @@
 	    (push inst results))
 	  (advance-one-inst segment)
 	  (incf insts-from-end))
-	(push (cdr branch) results)
+	(let ((inst (cdr branch)))
+	  (note-resolved-dependencies segment inst)
+	  (push inst results))
 	#+debug
 	(format *trace-output* "Emitting ~S~%" (cdr branch))
 	(advance-one-inst segment)))
@@ -511,31 +513,7 @@
 	   (assert (null (inst-read-dependents inst)))
 	   #+debug
 	   (format *Trace-output* "Emitting ~S~%" inst)
-	   (dolist (dep (inst-write-dependencies inst))
-	     ;; These are the instructions who have to be completed before our
-	     ;; write fires.  Doesn't matter how far before, just before.
-	     (let ((dependents (inst-write-dependents dep)))
-	       (setf dependents (delete inst dependents :test #'eq))
-	       (setf (inst-write-dependents dep) dependents)
-	       (when (and (null dependents)
-			  (null (inst-read-dependents dep)))
-		 (insert-emittable-inst segment dep))))
-	   (dolist (dep (inst-read-dependencies inst))
-	     ;; These are the instructions who write values we read.  If there
-	     ;; is no delay, then just remove us from the dependent list.
-	     ;; Otherwise, record the fact that in n cycles, we should be
-	     ;; removed.
-	     (if (zerop (inst-delay dep))
-		 (let ((dependents (inst-read-dependents dep)))
-		   (setf dependents (delete inst dependents :test #'eq))
-		   (setf (inst-read-dependents dep) dependents)
-		   (when (and (null dependents)
-			      (null (inst-write-dependents dep)))
-		     (insert-emittable-inst segment dep)))
-		 (setf (segment-delayed segment)
-		       (add-to-nth-list (segment-delayed segment)
-					(cons dep inst)
-					(inst-delay dep)))))
+	   (note-resolved-dependencies segment inst)
 	   ;; Are we wanting to flush this instruction?
 	   (if (inst-emitter inst)
 	       ;; Nope, it's still a go.  So return it.
@@ -550,6 +528,42 @@
 	  (t
 	   ;; All done.
 	   nil))))
+
+;;; NOTE-RESOLVED-DEPENDENCIES -- internal.
+;;;
+;;; This function is called whenever an instruction has been scheduled, and we
+;;; want to know what possibilities that opens up.  So look at all the
+;;; instructions that this one depends on, and remove this instruction from
+;;; their dependents list.  If we were the last dependent, then that
+;;; dependency can be emitted now.
+;;;
+(defun note-resolved-dependencies (segment inst)
+  (dolist (dep (inst-write-dependencies inst))
+    ;; These are the instructions who have to be completed before our
+    ;; write fires.  Doesn't matter how far before, just before.
+    (let ((dependents (inst-write-dependents dep)))
+      (setf dependents (delete inst dependents :test #'eq))
+      (setf (inst-write-dependents dep) dependents)
+      (when (and (null dependents)
+		 (null (inst-read-dependents dep)))
+	(insert-emittable-inst segment dep))))
+  (dolist (dep (inst-read-dependencies inst))
+    ;; These are the instructions who write values we read.  If there
+    ;; is no delay, then just remove us from the dependent list.
+    ;; Otherwise, record the fact that in n cycles, we should be
+    ;; removed.
+    (if (zerop (inst-delay dep))
+	(let ((dependents (inst-read-dependents dep)))
+	  (setf dependents (delete inst dependents :test #'eq))
+	  (setf (inst-read-dependents dep) dependents)
+	  (when (and (null dependents)
+		     (null (inst-write-dependents dep)))
+	    (insert-emittable-inst segment dep)))
+	(setf (segment-delayed segment)
+	      (add-to-nth-list (segment-delayed segment)
+			       (cons dep inst)
+			       (inst-delay dep)))))
+  (ext:undefined-value))
 
 ;;; ADVANCE-ONE-INST -- internal.
 ;;;
