@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.14 1992/03/23 04:23:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.15 1992/03/26 03:16:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.14 1992/03/23 04:23:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.15 1992/03/26 03:16:30 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -20,12 +20,18 @@
 
 (in-package "UNIX")
 (use-package "KERNEL")
-
 (export '(unix-signal-name unix-signal-description unix-signal-number
 	  sigmask unix-sigblock unix-sigpause unix-sigsetmask unix-kill
 	  unix-killpg))
 
-(export 'kernel::signal-init (find-package "KERNEL"))
+(in-package "KERNEL")
+(export '(signal-init))
+
+(in-package "SYSTEM")
+(export '(without-interrupts with-interrupts with-enabled-interrupts
+	  enable-interrupt ignore-interrupt default-interrupt))
+
+(in-package "UNIX")
 
 ;;; These should probably be somewhere, but I don't know where.
 ;;; 
@@ -325,4 +331,37 @@
 	     (when *interrupt-pending*
 	       (do-pending-interrupt))
 	     (,name))))))
+
+
+;;;; WITH-ENABLED-INTERRUPTS
+
+(defmacro with-enabled-interrupts (interrupt-list &body body)
+  "With-enabled-interrupts ({(interrupt function [character])}*) {form}*
+  Establish function as a handler for the Unix signal interrupt which
+  should be a number between 1 and 31 inclusive.  For the signals that
+  can be generated from the keyboard, the optional character specifies
+  the character to use to generate the signal."
+  (let ((il (gensym))
+	(fn (gensym))
+	(ch (gensym))
+	(it (gensym)))
+    `(let ((,il NIL))
+       (unwind-protect
+	   (progn
+	     ,@(do* ((item interrupt-list (cdr item))
+		     (intr (caar item) (caar item))
+		     (ifcn (cadar item) (cadar item))
+		     (ichr (caddar item) (caddar item))
+		     (forms NIL))
+		    ((null item) (nreverse forms))
+		 (if (symbolp intr)
+		     (setq intr (symbol-value intr)))
+		 (push `(multiple-value-bind (,fn ,ch)
+					     (enable-interrupt ,intr ,ifcn
+							       ,ichr)
+			  (push `(,,intr ,,fn ,,ch) ,il)) forms))
+	     ,@body)
+	 (dolist (,it (nreverse ,il))
+	   (funcall #'enable-interrupt (car ,it) (cadr ,it) (caddr ,it)))))))
+
 
