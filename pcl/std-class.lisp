@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.63 2003/05/10 19:09:01 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.64 2003/05/10 20:27:23 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1616,6 +1616,26 @@
 
 (defmethod finalize-inheritance ((class condition-class))
   nil)
+
+(defmethod compute-effective-slot-definition
+    ((class condition-class) slot-name dslotds)
+  (let ((slotd (call-next-method)))
+    (setf (slot-definition-reader-function slotd)
+	  (lambda (x)
+	    (handler-case 
+		(conditions::condition-reader-function x slot-name)
+	      (error () (slot-unbound class x slot-name)))))
+    (setf (slot-definition-writer-function slotd)
+	  (lambda (v x)
+	    (conditions::condition-writer-function x v slot-name)))
+    (setf (slot-definition-boundp-function slotd)
+	  (lambda (x)
+	    (multiple-value-bind (v c)
+		(ignore-errors
+		  (conditions::condition-reader-function x slot-name))
+	      (declare (ignore v))
+	      (null c))))
+    slotd))
 
 (defmethod compute-slots ((class condition-class))
   (mapcan (lambda (superclass)

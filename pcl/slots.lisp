@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.21 2003/05/04 13:11:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.22 2003/05/10 20:27:23 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -266,6 +266,12 @@
 	    (object structure-object)
 	    (slotd structure-effective-slot-definition))
   (error "Structure slots cannot be unbound."))
+
+
+(defmethod slot-makunbound-using-class ((class condition-class) object slot)
+  (declare (ignore object slot))
+  (error "Condition slots cannot be unbound."))
+
 
 
 (defmethod slot-missing
