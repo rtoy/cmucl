@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.3 1990/12/17 19:36:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.4 1991/03/19 22:59:26 wlott Exp $
 ;;;
 ;;; Description of the SPARC architecture.
 ;;;
@@ -78,8 +78,8 @@
 ;;;; Special argument types and fixups.
 
 (define-argument-type reg
-  :type '(satisfies (lambda (object)
-		      (and (tn-p object)
+  :type '(and tn
+	      (satisfies (lambda (object)
 			   (or (eq (sc-name (tn-sc object)) 'null)
 			       (eq (sc-name (tn-sc object)) 'zero)
 			       (eq (sb-name (sc-sb (tn-sc object)))
@@ -92,15 +92,15 @@
 
 
 (define-argument-type fp-reg
-  :type '(satisfies (lambda (object)
-		      (and (tn-p object)
+  :type '(and tn
+	      (satisfies (lambda (object)
 			   (eq (sb-name (sc-sb (tn-sc object)))
 			       'float-registers))))
   :function tn-offset)
 
 (define-argument-type odd-fp-reg
-  :type '(satisfies (lambda (object)
-		      (and (tn-p object)
+  :type '(and tn
+	      (satisfies (lambda (object)
 			   (eq (sb-name (sc-sb (tn-sc object)))
 			       'float-registers))))
   :function (lambda (tn) (1+ (tn-offset tn))))
