@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.23 1990/12/12 00:07:24 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.24 1991/01/12 13:49:08 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -1248,10 +1248,8 @@
 ;;; cases are replaced with the arg and zero arg cases with the identity.  If
 ;;; Leaf-Fun is true, then replace two-arg calls with a call to that function. 
 ;;;
-(proclaim '(function source-transform-transitive
-		     (symbol list (or symbol null))
-		     void))
 (defun source-transform-transitive (fun args identity &optional leaf-fun)
+  (declare (symbol fun leaf-fun) (list args))
   (case (length args)
     (0 identity)
     (1 `(values ,(first args)))
