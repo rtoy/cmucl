@@ -50,7 +50,7 @@ descriptor.  These data-blocks require headers for GC as well as for operations
 that need to know how to interpret the raw bits.  When GC is scanning, and it
 sees a header-word, then it can determine how to skip that data-block if
 necessary.  Header-Words are tagged as other-immediates.  See the sections
-"Other-Immediates" and "Data-Blocks and Header-Words" for comments on
+``Other-Immediates" and ``Data-Blocks and Header-Words" for comments on
 distinguishing header-words from other-immediate data.  This distinction is
 necessary since we scan through data-blocks containing only descriptors just as
 we scan through the heap looking for header-words introducing data-blocks.
@@ -278,7 +278,7 @@ libraries that save reimplementation of higher level operating system
 functionality (such as pathname resolution or current directory computation),
 saving on copying strings for C should make C call out more efficient.
 
-The length word in a string header, see section "Data-Blocks and Header-Word
+The length word in a string header, see section ``Data-Blocks and Header-Word
 Format", counts only the characters truly in the Common Lisp string.
 Allocation and GC will have to know to handle the extra C-null byte, and GC
 already has to deal with rounding up various objects to dual-word alignment.
@@ -451,7 +451,7 @@ sign information is in the high end of the last element.
 
 \section{Code Data-Blocks}
 
-A code data-block is the run-time representation of a "component".  A component
+A code data-block is the run-time representation of a ``component".  A component
 is a connected portion of a program's flow graph that is compiled as a single
 unit, and it contains code for many functions.  Some of these functions are
 callable from outside of the component, and these are termed "entry points".
@@ -503,7 +503,7 @@ The following are the three kinds of pointers to code data-blocks:
       Information about functions that is only useful for entry points is kept
       in some descriptors following the function's self-pointer descriptor.
       All of these together with the function's header-word are known as the
-      "function header".  GC must be able to locate the function header.  We
+      ``function header".  GC must be able to locate the function header.  We
       provide for this by chaining together the function headers in a NIL
       terminated list kept in a known slot in the code data-block.
 \end{description}
@@ -724,7 +724,7 @@ A system area pointer data-block has the following format:
 -------------------------------------------------------
 \end{verbatim}
 
-"SAP" means "system area pointer", and much of our code contains this naming
+``SAP" means ``system area pointer", and much of our code contains this naming
 scheme.  We don't currently restrict system pointers to one area of memory, but
 if they do point onto the heap, it is up to the user to prevent being screwed
 by GC or whatever.

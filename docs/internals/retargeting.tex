@@ -54,7 +54,7 @@ immediate SC.
     primitive-type for a given lisp type.  This is really the same as saying
     primitive types are disjoint.  A primitive type serves two somewhat
     unrelated purposes:
-     -- It is an abstraction a Lisp type used to select type specific
+     -- It is an abstraction of a Lisp type used to select type specific
         operations.  Originally kind of an efficiency hack, but it lets a
         template's type signature be used both for selection and operand
         representation determination.
@@ -114,7 +114,7 @@ need to represent the legal SCs for restricted TNs somehow, and also would have 
 come up with some other way for pack to keep track of which SCs we have already
 tried.
 
-A SC would have a list of "alternate" SCs and a boolean SAVE-P value that
+An SC would have a list of "alternate" SCs and a boolean SAVE-P value that
 indicates it needs to be saved across calls in some non-SAVE-P SC.  A TN is
 initially given its "best" SC.  The SC is annotated with VOPs that are used for
 moving between the SC and its alternate SCs (load/save operand, save/restore
@@ -170,7 +170,7 @@ overlapping SC's as legal SC's, since time would be wasted repeatedly
 attempting to pack in the same locations.
 
 There will be some SC's whose locations overlap a great deal, since we get Pack
-to do our representation analysis by having lots of SC's.  A SC is basically a
+to do our representation analysis by having lots of SC's.  An SC is basically a
 way of looking at a storage resource.  Although we could keep a fixnum and an
 unboxed representation of the same number in the same register, they correspond
 to different SC's since they are different representation choices.
@@ -316,7 +316,7 @@ The times within a VOP are the following:
     point at which that result becomes live.
 
 :Save
-    Similar to :Load, but marks the end of time.  This is point at which result
+    Similar to :Load, but marks the end of time.  This is the point at which result
     load-TNs are stored back to the actual location.
 
 In any of the list-style time specifications, the keyword by itself stands for
@@ -328,7 +328,7 @@ the first such time, i.e.
 Note that argument/result read/write times don't actually have to be in the
 order specified, but they must *appear* to happen in that order as far as
 conflict analysis is concerned.  For example, the arguments can be read in any
-order as long no TN is written that has a life beginning at or after
+order as long as no TN is written that has a life beginning at or after
 (:Argument $<$n$>$), where N is the number of an argument whose reading was
 postponed.
 
@@ -348,8 +348,8 @@ temporaries when operands are read/written out of order.
 
 \section{VOP Cost model}
 
-Note that in this model, if a operand has no restrictions, it has no cost.
-This makes make sense, since the purpose of the cost is to indicate the
+Note that in this model, if an operand has no restrictions, it has no cost.
+This makes sense, since the purpose of the cost is to indicate the
 relative value of packing in different SCs.  If the operand isn't required to
 be in a good SC (i.e. a register), then we might as well leave it in memory.
 The SC restriction mechanism can be used even when doing a move into the SC is
@@ -375,11 +375,11 @@ can also use it to give better efficiency notes:
 This is how we give better efficiency notes:
 
 The Template-Note is a short noun-like string without capitalization or
-punctuation that describes what the template "does", i.e. we say
+punctuation that describes what the template ``does", i.e. we say
 "Unable to do ~A, doing ~A instead."
 
 The Cost is moved from the Vop-Info to the Template structure, and is used to
-determine the "goodness" of possibly applicable templates.  [Could flush
+determine the ``goodness" of possibly applicable templates.  [Could flush
 Template/Vop-Info distinction]  The cost is used to choose the best applicable
 template to emit, and also to determine what better templates we might have
 been able to use.
@@ -1033,7 +1033,7 @@ would provide AFPA-Short-Float as the argument type restriction.
 Primitive type changes:
 
 The primitive-type structure is given a new \%Type slot, which is the CType
-structure that is equivalent to this type.  There is also a Guard slot, with,
+structure that is equivalent to this type.  There is also a Guard slot, which,
 if true is a function that control whether this primitive type is allowed (due
 to hardware configuration, etc.)  
 

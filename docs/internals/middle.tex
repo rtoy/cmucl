@@ -26,13 +26,13 @@ needed values in the calling environment.
 
 If the function that closes over values may be called in an environment where
 the closed over values are not available, then we must store the values in a
-"closure" so that they are always accessible.  Closures are called using the
-"full call" convention.  When a closure is called, control is transferred to
-the "external entry point", which fetches the values out of the closure and
+``closure" so that they are always accessible.  Closures are called using the
+``full call" convention.  When a closure is called, control is transferred to
+the ``external entry point", which fetches the values out of the closure and
 then does a local call to the real function, passing the closure values as
 implicit arguments.
 
-In this scheme there is no such thing as a "heap closure variable" in code,
+In this scheme there is no such thing as a ``heap closure variable" in code,
 since the closure values are moved into TNs by the external entry point.  There
 is some potential for pessimization here, since we may end up moving the values
 from the closure into a stack memory location, but the advantages are also
@@ -96,7 +96,7 @@ gratuitously using a non-standard convention when there is no reason to.
 [Want a different name for this so as not to be confused with the different
 local/global TN representations.  The really interesting stuff in this phase is
 operation selection, values representation selection, return strategy, etc.
-Maybe this phase should be conceptually lumped with GTN as "implementation
+Maybe this phase should be conceptually lumped with GTN as ``implementation
 selection", since GTN determines call strategies and locations.]
 
 \#|
@@ -148,7 +148,7 @@ type check on the result.
 
     The semantics of result type restriction is that the result must be proven
     to be of that type *except* for safe generators, which are assumed to
-    verify the assertion.  That way "is-fixnum" case can be a fast-safe
+    verify the assertion.  That way ``is-fixnum" case can be a fast-safe
     generator and the "should-be-fixnum" case is a safe generator.  We could
     choose not to have a safe "should-be-fixnum" generator, and let the
     unrestricted safe generator handle it.  We would then have to do an
@@ -181,7 +181,7 @@ also done at the same time so that multiple passes aren't necessary.
  -- Note usage of unknown-values continuations so that stack analysis can tell
     when stack values must be discarded.
  
-If safety is more important that speed and space, then we consider generating
+If safety is more important than speed and space, then we consider generating
 type checks on the values of nodes whose CONT has the Type-Check flag set.  If
 the destination for the continuation value is safe, then we don't need to do
 a check.  We assume that all full calls are safe, and use the template
@@ -197,7 +197,7 @@ implementations, some optimized for speed, some for space, etc.  Some of these
 VOPS might be open-coded and some not.
 
 We represent the implementation strategy for a call by either marking it as a
-full call or annotating it with a "template" representing the open-coding
+full call or annotating it with a ``template" representing the open-coding
 strategy.  Templates are selected using a two-way dispatch off of operand
 primitive-types and policy.  The general case of LTN is handled by the
 LTN-Annotate function in the function-info, but most functions are handled by a
@@ -425,7 +425,7 @@ convenient, since both should be true.
 
 Constants are turned into special Constant TNs, which are wired down in a SC
 that is determined by their type.  The VM definition provides a function that
-returns constant a TN to represent a Constant Leaf. 
+returns a constant TN to represent a Constant Leaf. 
 
 Each component has a constant pool.  There is a register dedicated to holding
 the constant pool for the current component.  The back end allocates
@@ -577,7 +577,7 @@ transfer could be squeezed out by merging blocks.  How about:
 
 But the problem doesn't happen here (can't happen in general?) since a node
 buried within a block can't use a continuation outside of the block.  In fact,
-no block can have more then one PUSH continuation, and this must always be be
+no block can have more then one PUSH continuation, and this must always be the
 last continuation.  So it is trivially (structurally) true that all pops come
 before any push.
 

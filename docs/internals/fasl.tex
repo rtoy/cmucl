@@ -29,7 +29,7 @@ shall be relatively independent of such considerations as word
 length, number of type bits, and so on.  If two implementations
 interpret the same macrocode (compiled code format), then Fasload
 files should be completely compatible.  If they do not, then files
-not containing compiled code (so-called "Fasdump" data files) should
+not containing compiled code (so-called ``Fasdump" data files) should
 still be compatible.  While this may lead to a format which is not
 maximally efficient for a particular implementation, the sacrifice of
 a small amount of performance is deemed a worthwhile price to pay to
@@ -37,7 +37,7 @@ achieve portability.
 
 The primary assumption about data format compatibility is that all
 implementations can support I/O on finite streams of eight-bit bytes.
-By "finite" we mean that a definite end-of-file point can be detected
+By ``finite" we mean that a definite end-of-file point can be detected
 irrespective of the content of the data stream.  A Fasload file will
 be regarded as such a byte stream.
 

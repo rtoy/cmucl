@@ -78,7 +78,7 @@ X's element type, we could derive a new type for the entire
 expression.
 
 Actually, it seems that baring this detail at the ICR level is
-beneficial, since it admits the possibly of optimizing away the bounds
+beneficial, since it admits the possibility of optimizing away the bounds
 check using type information. If we discover X's dimensions, then
 \verb|#:LEN| becomes a constant that can be substituted. Then
 \verb|%CHECK-IN-BOUNDS| can notice that the bound is constant and
@@ -224,7 +224,6 @@ We want more sophisticated control of compilation safety than is offered in CL,
 so that we can emit only those type checks that are likely to discover
 something (i.e. external interfaces.)
 
-\#|
 
 
 \section{Notes}
@@ -267,7 +266,7 @@ the unsupplied values to NIL.
 When ICR optimizations discover a possible new local call, they explicitly
 invoke local call analysis on the code that needs to be reanalyzed. 
 
-[\#\#\# Let conversion.  What is means to be a let.  Argument type checking done
+[\#\#\# Let conversion.  What it means to be a let.  Argument type checking done
 by caller.  Significance of local call is that all callers are known, so
 special call conventions may be used.]
 A lambda called in only one place is called a "let" call, since a Let would
@@ -392,7 +391,7 @@ locations in place of the temporary variable.
 Doing this is of course, a wild violation of stack discipline, since the ref
 might be inside a loop, etc.  But with the VMR back-end, we only need to
 preserve stack discipline for unknown-value continuations; this ICR
-transformation must be already be inhibited when the DEST of the REF is a
+transformation must be already inhibited when the DEST of the REF is a
 multiple-values receiver (EXIT, RETURN or MV-COMBINATION), since we must
 preserve the single-value semantics of the let-binding in this case.
 
@@ -584,7 +583,7 @@ functions that don't have a derive-type method.
 
 \subsection{ICR transformation}
 
-ICR transformation does "source to source" transformations on known global
+ICR transformation does ``source to source" transformations on known global
 functions, taking advantage of semantic information such as argument types and
 constant arguments.  Transformation is optional, but should be done if speed or
 space is more important than compilation speed.  Transformations which increase
@@ -912,7 +911,7 @@ the environment closes over.
 Each lambda points to the environment where its variables are allocated, and
 the environments point back.  We always allocate the environment at the Bind
 node for the sole non-let lambda in the environment, so there is a close
-relationship between environments and functions.  Each "real function" (i.e.
+relationship between environments and functions.  Each ``real function" (i.e.
 not a LET) has a corresponding environment.
 
 We attempt to share the same environment among as many lambdas as possible so

@@ -154,8 +154,8 @@ makes flow analysis easy.  The full Common Lisp LAMBDA is implemented with a
 simple fixed-arg lambda, which greatly simplifies later code.
       
 The elimination of syntactic information eliminates the need for most of the
-"beta transformation" optimizations in Rabbit.  There are no progns, no
-tagbodys and no returns.  There are no "close parens" which get in the way of
+``beta transformation" optimizations in Rabbit.  There are no progns, no
+tagbodys and no returns.  There are no ``close parens" which get in the way of
 determining which node receives a given value.
 
 In ICR, computation is represented by Nodes.  These are the node types:
@@ -366,7 +366,7 @@ How about an Exit node:
       value)
 \end{verbatim}
 The Exit node uses the continuation that is to receive the thrown Value.
-During optimization, if we discover that the Cont's home-lambda is the same is
+During optimization, if we discover that the Cont's home-lambda is the same as
 the exit node's, then we can delete the Exit node, substituting the Cont for
 all of the Value's uses.
 
@@ -451,7 +451,7 @@ special-cased by the back-end according to their KIND.
 
 \section{Block compilation}
 
-One of the properties of ICR is that supports "block compilation" by allowing
+One of the properties of ICR is that it supports ``block compilation" by allowing
 arbitrarily large amounts of code to be converted at once, with actual
 compilation of the code being done at will.
 
