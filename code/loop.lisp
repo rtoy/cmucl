@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.14 2002/11/22 16:28:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.15 2002/11/22 18:13:08 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1571,20 +1571,21 @@ collected result will be returned as the value of the LOOP."
       (loop-error "~S is an unknown keyword in FOR or AS clause in LOOP." keyword))
     (apply (car tem) var first-arg data-type (cdr tem))))
 
-
 (defun loop-do-repeat ()
+  (loop-disallow-conditional :repeat)
   (let ((form (loop-get-form))
-	(type (loop-check-data-type (loop-optional-type) *loop-real-data-type*)))
-    (when (and (consp form) (eq (car form) 'the) (subtypep (second form) type))
-      (setq type (second form)))
-    (multiple-value-bind (number constantp value)
-	(loop-constant-fold-if-possible form type)
-      (cond ((and constantp (<= value 1)) `(t () () () ,(<= value 0) () () ()))
-	    (t (let ((var (loop-make-variable (loop-gentemp 'loop-repeat-) number type)))
-		 (if constantp
-		     `((not (plusp (setq ,var (1- ,var)))) () () () () () () ())
-		     `((minusp (setq ,var (1- ,var))) () () ()))))))))
-
+	(type 'real))
+    (let ((var (loop-make-variable (loop-gentemp) form type)))
+      (push `(when (minusp (decf ,var)) (go end-loop)) *loop-before-loop*)
+      (push `(when (minusp (decf ,var)) (go end-loop)) *loop-after-body*)
+      ;; FIXME: What should
+      ;;   (loop count t into a
+      ;;         repeat 3
+      ;;         count t into b
+      ;;         finally (return (list a b)))
+      ;; return: (3 3) or (4 3)? PUSHes above are for the former
+      ;; variant, L-P-B below for the latter.
+      #+nil (loop-pseudo-body `(when (minusp (decf ,var)) (go end-loop))))))
 
 (defun loop-when-it-variable ()
   (or *loop-when-it-variable*
@@ -2044,16 +2045,18 @@ collected result will be returned as the value of the LOOP."
 
 
 (defun loop-package-symbols-iteration-path (variable data-type prep-phrases &key symbol-types)
-  (cond ((or (cdr prep-phrases) (not (member (caar prep-phrases) '(:in :of))))
+  (cond ((and prep-phrases (cdr prep-phrases))
 	 (loop-error "Too many prepositions!"))
-	((null prep-phrases) (loop-error "Missing OF or IN in ~S iteration path.")))
+	((and prep-phrases (not (member (caar prep-phrases) '(:in :of))))
+	 (loop-error "Unknow preposition ~S" (caar prep-phrases))))
   (unless (symbolp variable)
     (loop-error "Destructuring is not valid for package symbol iteration."))
   (let ((pkg-var (loop-gentemp 'loop-pkgsym-))
 	(next-fn (loop-gentemp 'loop-pkgsym-next-))
-	(variable (or variable (loop-gentemp))))
+	(variable (or variable (loop-gentemp)))
+	(pkg (or (cadar prep-phrases) '*package*)))
     (push `(with-package-iterator (,next-fn ,pkg-var ,@symbol-types)) *loop-wrappers*)
-    `(((,variable nil ,data-type) (,pkg-var ,(cadar prep-phrases)))
+    `(((,variable nil ,data-type) (,pkg-var ,pkg))
       ()
       ()
       ()
@@ -2098,7 +2101,8 @@ collected result will be returned as the value of the LOOP."
 			 (when (loop-do-if when nil))	; Normal, do when
 			 (if (loop-do-if if nil))	; synonymous
 			 (unless (loop-do-if unless t))	; Negate the test on when
-			 (with (loop-do-with)))
+			 (with (loop-do-with))
+			 (repeat (loop-do-repeat)))
 	     :for-keywords '((= (loop-ansi-for-equals))
 			     (across (loop-for-across))
 			     (in (loop-for-in))
@@ -2110,11 +2114,11 @@ collected result will be returned as the value of the LOOP."
 			     (above (loop-for-arithmetic :above))
 			     (to (loop-for-arithmetic :to))
 			     (upto (loop-for-arithmetic :upto))
+			     (downto (loop-for-arithmetic :downto))
 			     (by (loop-for-arithmetic :by))
 			     (being (loop-for-being)))
 	     :iteration-keywords '((for (loop-do-for))
-				   (as (loop-do-for))
-				   (repeat (loop-do-repeat)))
+				   (as (loop-do-for)))
 	     :type-symbols '(array atom bignum bit bit-vector character compiled-function
 				   complex cons double-float fixnum float
 				   function hash-table integer keyword list long-float
