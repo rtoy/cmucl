@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.4 1998/06/16 06:58:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,9 +61,11 @@
 ;;;
 (defun get-terminal-attributes (&optional (fd 1))
   (alien:with-alien ((winsize (alien:struct unix:winsize))
+                     #-glibc2 
 		     (sgtty (alien:struct unix:sgttyb)))
     (let ((size-win (unix:unix-ioctl fd unix:TIOCGWINSZ
 				     (alien:alien-sap winsize)))
+          #-glibc2
 	  (speed-win (unix:unix-ioctl fd unix:TIOCGETP
 				      (alien:alien-sap sgtty))))
       (flet ((frob (val)
@@ -73,6 +75,9 @@
 	(values
 	 (frob (alien:slot winsize 'unix:ws-row))
 	 (frob (alien:slot winsize 'unix:ws-col))
+         #+glibc2
+         4800
+         #-glibc2
 	 (and speed-win
 	      (setq *terminal-baud-rate*
 		    (svref unix:terminal-speeds

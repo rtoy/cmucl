@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.60 1998/05/01 01:21:38 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.61 1998/06/16 06:58:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1438,6 +1438,8 @@
      4800 #+hpux 7200 9600 19200 38400 57600 115200 230400
      #+hpux 460800))
 
+;;; from /usr/include/bsd/sgtty.h (linux)
+
 (defconstant tty-raw #-linux #o40 #+linux 1)
 (defconstant tty-crmod #-linux #o20 #+linux 4)
 #-(or hpux svr4 freebsd linux) (defconstant tty-echo #o10) ;; 8
@@ -1455,7 +1457,7 @@
                  (setf cur (funcall inc cur 1)))))
       `(progn ,@(mapcar #'defform names))))
 
-  ;; input modes
+  ;; Input modes. Linux: /usr/include/asm/termbits.h
   (def-enum ash 1 tty-ignbrk tty-brkint tty-ignpar tty-parmrk tty-inpck
             tty-istrip tty-inlcr tty-igncr tty-icrnl #-freebsd tty-iuclc
             tty-ixon #-freebsd tty-ixany tty-ixoff #+freebsd tty-ixany

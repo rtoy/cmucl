@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.10 1998/05/07 14:57:25 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.11 1998/06/16 06:58:59 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -23,9 +23,13 @@
 
 #ifdef __linux__
 #include <asm/posix_types.h>
+#include <linux/posix_types.h>
+#include <linux/types.h>
+#if 0
 #define FD_ZERO __FD_ZERO
 #define FD_SET __FD_SET
 #define FD_ISSET __FD_ISSET
+#endif
 #endif
 
 #ifdef SVR4
@@ -34,7 +38,9 @@
 
 #define PORT 8000
 
+#ifndef __linux__
 #define MAX(x,y) ((x<y)?y:x)
+#endif
 
 /* Some things (ie. RT) don't define this in errno.h.  Go figure.  */
 #ifndef SVR4
