@@ -368,7 +368,10 @@
 			     (make-representation-tn
 			      (first (primitive-type-scs
 				      *any-primitive-type*))))
-		       (emit-context-template node block vop nfp-tn)
+		       (emit-context-template
+			node block
+			(template-or-lose 'compute-old-nfp)
+			nfp-tn)
 		       (assert (not (sc-number-stack-p (tn-sc nfp-tn))))
 		       nfp-tn)))
 	       (new (emit-move-arg-template node block res val-tn this-fp
