@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.17 1993/01/13 15:58:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.18 1993/05/25 21:27:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -236,7 +236,7 @@
 		  (:variant :double ,op ,complement)))))
   (frob < :lt nil </single-float </double-float)
   (frob > :ngt t >/single-float >/double-float)
-  (frob eql :seq nil eql/single-float eql/double-float))
+  (frob = :seq nil =/single-float =/double-float))
 
 
 ;;;; Conversion:

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.10 1992/10/20 03:10:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.11 1993/05/25 21:27:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -226,7 +226,7 @@
 		  (:variant :double ,yep ,nope)))))
   (frob < :l :ge </single-float </double-float)
   (frob > :g :le >/single-float >/double-float)
-  (frob eql :eq :ne eql/single-float eql/double-float))
+  (frob = :eq :ne eql/single-float eql/double-float))
 
 
 ;;;; Conversion:
