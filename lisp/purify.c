@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.17 2000/01/19 18:11:13 dtc Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.18 2000/08/27 14:45:42 dtc Exp $ 
 
    */
 #include <stdio.h>
@@ -671,7 +671,6 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
   int nheader_words, ncode_words, nwords;
   void  *constants_start_addr, *constants_end_addr;
   void  *code_start_addr, *code_end_addr;
-  lispobj p;
   lispobj fixups = NIL;
   unsigned  displacement = (unsigned)new_code - (unsigned)old_code;
   struct vector *fixups_vector;
