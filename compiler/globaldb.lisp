@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.24 1992/04/02 15:32:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.25 1992/12/13 07:19:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -315,48 +315,56 @@
 ;;; SETF expansion, since the check can be done much more efficiently when the
 ;;; type is constant.
 ;;;
-(defmacro info (class type name)
+(defmacro info (class type name &optional env-list)
   "Return the information of the specified Type and Class for Name.
-  The second value is true if there is any such information recorded.  If there
-  is no information, the first value is the default and the second value is NIL."
+   The second value is true if there is any such information recorded.  If
+   there is no information, the first value is the default and the second value
+   is NIL."
   ;;
   ;; ### Should be a values type, but interpreter can't hack that now.
   (let* ((class (symbol-name class))
 	 (type (symbol-name type))
 	 (info (type-info-or-lose class type)))
     `(truly-the ,(type-info-type info)
-		(get-info-value ,name ,(type-info-number info)))))
+		(get-info-value ,name ,(type-info-number info)
+				,@(when env-list `(,env-list))))))
 ;;;
-(define-setf-method info (class type name)
+(define-setf-method info (class type name &optional env-list)
   "Set the global information for Name."
   (let* ((n-name (gensym))
+	 (n-env-list (if env-list (gensym)))
 	 (n-value (gensym))
 	 (class-str (symbol-name class))
 	 (type-str (symbol-name type))
 	 (info (type-info-or-lose class-str type-str)))
     (values
-     `(,n-name)
-     `(,name)
+     `(,n-name ,@(when env-list `(,n-env-list)))
+     `(,name ,@(when env-list `(,env-list)))
      `(,n-value)
      `(progn
 	(check-type ,n-value ,(type-info-type info))
-	(set-info-value ,n-name ,(type-info-number info) ,n-value))
-     `(info ,class ,type ,n-name))))
+	(set-info-value ,n-name ,(type-info-number info) ,n-value
+			,@(when env-list
+			    `((get-write-info-env ,n-env-list)))))
+     `(info ,class ,type ,n-name ,@(when env-list `(,n-env-list))))))
 
 
 ;;; DO-INFO  --  Public
 ;;;
 (defmacro do-info ((env &key (name (gensym)) (class (gensym)) (type (gensym))
-			(type-number (gensym)) (value (gensym)))
+			(type-number (gensym)) (value (gensym)) known-volatile)
 		   &body body)
   "DO-INFO (Env &Key Name Class Type Value) Form*
   Iterate over all the values stored in the Info-Env Env.  Name is bound to
   the entry's name, Class and Type are bound to the class and type
   (represented as strings), and Value is bound to the entry's value."
   (once-only ((n-env env))
-    `(if (typep ,n-env 'volatile-info-env)
-	 ,(do-volatile-info name class type type-number value n-env body)
-	 ,(do-compact-info name class type type-number value n-env body))))
+    (if known-volatile
+	(do-volatile-info name class type type-number value n-env body)
+	`(if (typep ,n-env 'volatile-info-env)
+	     ,(do-volatile-info name class type type-number value n-env body)
+	     ,(do-compact-info name class type type-number value
+			       n-env body)))))
 
 
 (eval-when (compile load eval)
@@ -790,8 +798,8 @@
 ;;; VOLATILE-INFO-ENV.
 ;;;
 (proclaim '(inline get-write-info-env))
-(defun get-write-info-env ()
-  (let ((env (car *info-environment*)))
+(defun get-write-info-env (&optional (env-list *info-environment*))
+  (let ((env (car env-list)))
     (unless env
       (error "No info environment?"))
     (unless (typep env 'volatile-info-env)
@@ -816,8 +824,9 @@
 	   (inline assoc))
   (when (eql name 0)
     (error "0 is not a legal INFO name."))
-  (clear-invalid-info-cache)
-  (info-cache-enter name type new-value t)
+  ;; We don't enter the value in the cache because we don't know that this
+  ;; info-environment is part of *cached-info-environment*.
+  (info-cache-enter name type nil :empty)
   (with-info-bucket (table index name env)
     (let ((types (if (symbolp name)
 		     (assoc name (svref table index) :test #'eq)
@@ -836,7 +845,7 @@
 	  (when (>= count (volatile-info-env-threshold env))
 	    (let ((new (make-info-environment :size (* count 2))))
 	      (do-info (env :name entry-name :type-number entry-num
-			    :value entry-val)
+			    :value entry-val :known-volatile t)
 		(set-info-value entry-name entry-num entry-val new))
 	      (fill (volatile-info-env-table env) nil)
 	      (setf (volatile-info-env-table env)
@@ -892,9 +901,10 @@
 
 ;;;; GET-INFO-VALUE:
 
-(eval-when (compile eval)
-
-;;; GET-INFO-VALUE-SEARCH  --  Internal
+;;; GET-INFO-VALUE  --  Internal
+;;;
+;;;    Check if the name and type is in our cache, if so return it.  Otherwise,
+;;; search for the value and encache it.
 ;;;
 ;;;    Return the value from the first environment which has it defined, or
 ;;; return the default if none does.  We have a cache for the last name looked
@@ -903,50 +913,47 @@
 ;;; the lookup routine to eliminate the possiblity of the cache being
 ;;; partially updated if the lookup is interrupted.
 ;;;
-(defmacro get-info-value-search ()
-  '(let ((hash nil))
-     (dolist (env *info-environment*
-		  (multiple-value-bind
-		      (val winp)
-		      (funcall (type-info-default (svref *type-numbers* type))
-			       name)
-		    (values val winp)))
-       (macrolet ((frob (lookup cache slot)
-		    `(progn
-		       (unless (eq name (,slot env))
-			 (unless hash
-			   (setq hash (info-hash name)))
-			 (setf (,slot env) 0)
-			 (,lookup env name hash))
-		       (multiple-value-bind
-			   (value winp)
-			   (,cache env type)
-			 (when winp (return (values value t)))))))
-	 (if (typep env 'volatile-info-env)
-	     (frob volatile-info-lookup volatile-info-cache-hit
-	       volatile-info-env-cache-name)
-	     (frob compact-info-lookup compact-info-cache-hit
-	       compact-info-env-cache-name))))))
-
-); Eval-When (Compile Eval)
-
-
-;;; GET-INFO-VALUE  --  Internal
-;;;
-;;;    Check if the name and type is in our cache, if so return it.  Otherwise,
-;;; search for the value and encache it.
-;;;
-(defun get-info-value (name type)
+(defun get-info-value (name type &optional (env-list nil env-list-p))
   (declare (type type-number type))
-  (clear-invalid-info-cache)
-  (multiple-value-bind (val winp)
-		       (info-cache-lookup name type)
-    (if (eq winp :empty)
-	(multiple-value-bind (val winp)
-			     (get-info-value-search)
-	  (info-cache-enter name type val winp)
-	  (values val winp))
-	(values val winp))))
+  (flet ((lookup-ignoring-global-cache (env-list)
+	   (let ((hash nil))
+	     (dolist (env env-list
+			  (multiple-value-bind
+			      (val winp)
+			      (funcall (type-info-default
+					(svref *type-numbers* type))
+				       name)
+			    (values val winp)))
+	       (macrolet ((frob (lookup cache slot)
+			    `(progn
+			       (unless (eq name (,slot env))
+				 (unless hash
+				   (setq hash (info-hash name)))
+				 (setf (,slot env) 0)
+				 (,lookup env name hash))
+			       (multiple-value-bind
+				   (value winp)
+				   (,cache env type)
+				 (when winp (return (values value t)))))))
+		 (if (typep env 'volatile-info-env)
+		     (frob volatile-info-lookup volatile-info-cache-hit
+		       volatile-info-env-cache-name)
+		     (frob compact-info-lookup compact-info-cache-hit
+		       compact-info-env-cache-name)))))))
+    (cond (env-list-p
+	   (lookup-ignoring-global-cache env-list))
+	  (t
+	   (clear-invalid-info-cache)
+	   (multiple-value-bind
+	       (val winp)
+	       (info-cache-lookup name type)
+	     (if (eq winp :empty)
+		 (multiple-value-bind
+		     (val winp)
+		     (lookup-ignoring-global-cache *info-environment*)
+		   (info-cache-enter name type val winp)
+		   (values val winp))
+		 (values val winp)))))))
 
 
 ;;;; Initialization:
