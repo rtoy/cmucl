@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.10 1992/07/10 17:47:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.10.1.1 1993/01/23 13:43:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,11 +252,10 @@
 	   (if entry (third entry) tree)))
 	((null (gethash tree *sharp-equal-circle-table*))
 	 (setf (gethash tree *sharp-equal-circle-table*) t)
-	 (cond ((structurep tree)
-		(dotimes (i (structure-length tree) tree)
-		  (structure-set tree i
-				 (circle-subst old-new-alist
-					       (structure-ref tree i)))))
+	 (cond ((typep tree 'structure-object)
+		(dotimes (i (%instance-length tree) tree)
+		  (setf (%instance-ref tree i)
+			(circle-subst old-new-alist (%instance-ref tree i)))))
 	       ((arrayp tree)
 		(with-array-data ((data tree) (start) (end))
 		  (declare (fixnum start end))
