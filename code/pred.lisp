@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.16 1991/02/08 13:34:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.17 1991/03/19 18:51:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.16 1991/02/08 13:34:47 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.17 1991/03/19 18:51:08 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -296,7 +296,15 @@
 	 (satisfies
 	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
 	    (error "Invalid type specifier: ~S" hairy-spec))
-	  (if (funcall (cadr hairy-spec) object) t)))))
+	  (let ((fn (cadr hairy-spec)))
+	    (if (funcall (typecase fn
+			   (function fn)
+			   (symbol (symbol-function fn))
+			   (t
+			    (coerce fn 'function)))
+			 object)
+		t
+		nil))))))
     (function-type
      (error "Function types are not a legal argument to TYPEP:~%  ~S"
 	    (type-specifier type)))))
