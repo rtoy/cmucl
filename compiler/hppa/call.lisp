@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.7 1993/03/01 14:59:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.8 1993/07/26 20:03:52 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -349,7 +349,7 @@ default-value-8
 	  (let ((default-lab (gen-label))
 		(tn (tn-ref-tn val)))
 	    (defaults (cons default-lab tn))
-	    (inst bci :> nil (fixnum i) nargs-tn default-lab)
+	    (inst bci :>= nil (fixnum i) nargs-tn default-lab)
 	    (loadw move-temp ocfp-tn i)
 	    (store-stack-tn tn move-temp)))
 	
@@ -478,7 +478,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (maybe-load-stack-tn nfp callee-nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn cfp)
       (inst compute-lra-from-code code-tn label temp
 	    (callee-return-pc-tn callee))
@@ -516,7 +516,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (maybe-load-stack-tn nfp callee-nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn cfp)
       (inst compute-lra-from-code code-tn label temp
 	    (callee-return-pc-tn callee))
@@ -559,7 +559,7 @@ default-value-8
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
-	  (maybe-load-stack-tn nfp callee-nfp)))
+	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn cfp)
       (inst compute-lra-from-code code-tn label temp
 	    (callee-return-pc-tn callee))
