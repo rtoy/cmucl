@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.20 1991/12/16 20:00:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.21 1991/12/18 11:42:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -557,19 +557,21 @@
 		   (loop
 		     (let ((file (mach:read-dir dir)))
 		       (if file
-			   (multiple-value-bind
-			       (file-name file-type file-version)
-			       (let ((*ignore-wildcards* t))
-				 (extract-name-type-and-version
-				  file 0 (length file)))
-			     (when (and (components-match file-name name)
-					(components-match file-type type)
-					(components-match file-version
-							  version))
-			       (funcall function
-					(concatenate 'string
-						     directory
-						     file))))
+			   (unless (or (string= file ".")
+				       (string= file ".."))
+			     (multiple-value-bind
+				 (file-name file-type file-version)
+				 (let ((*ignore-wildcards* t))
+				   (extract-name-type-and-version
+				    file 0 (length file)))
+			       (when (and (components-match file-name name)
+					  (components-match file-type type)
+					  (components-match file-version
+							    version))
+				 (funcall function
+					  (concatenate 'string
+						       directory
+						       file)))))
 			   (return))))
 		 (mach:close-dir dir)))))
 	  (t
@@ -746,7 +748,10 @@
    never includes Unix dot and dot-dot in the result."
   (let ((results nil))
     (enumerate-search-list
-	(pathname pathname)
+	(pathname (merge-pathnames pathname
+				   (make-pathname :name :wild
+						  :type :wild
+						  :version :wild)))
       (enumerate-matches (name pathname)
 	(when (or all
 		  (let ((slash (position #\/ name :from-end t)))
