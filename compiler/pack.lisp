@@ -36,7 +36,7 @@
 ;;;    local to.
 ;;;
 (defun offset-conflicts-in-sb (tn sb offset)
-  (declare (type tn tn) (type finite-sb sb) (type unsigned-byte offset))
+  (declare (type tn tn) (type finite-sb sb) (type index offset))
   (let ((confs (tn-global-conflicts tn))
 	(kind (tn-kind tn)))
     (cond
@@ -72,7 +72,7 @@
 ;;;    Return true if TN has a conflict in SC at the specified offset.
 ;;;
 (defun conflicts-in-sc (tn sc offset)
-  (declare (type tn tn) (type sc sc) (type unsigned-byte offset))
+  (declare (type tn tn) (type sc sc) (type index offset))
   (let ((sb (sc-sb sc)))
     (dotimes (i (sc-element-size sc) nil)
       (when (offset-conflicts-in-sb tn sb (+ offset i))
@@ -97,7 +97,7 @@
 ;;;    always-live and OR'ing in the local conflicts.
 ;;;
 (defun add-location-conflicts (tn sc offset)
-  (declare (type tn tn) (type sc sc) (type unsigned-byte offset))
+  (declare (type tn tn) (type sc sc) (type index offset))
   (let ((confs (tn-global-conflicts tn))
 	(sb (sc-sb sc))
 	(kind (tn-kind tn)))
@@ -154,7 +154,8 @@
 	       (always-live (finite-sb-always-live sb))
 	       (max-locs (length conflicts)))
 	  (unless (zerop max-locs)
-	    (let ((current-size (length (svref conflicts 0))))
+	    (let ((current-size (length (the simple-vector
+					     (svref conflicts 0)))))
 	      (when (> nblocks current-size)
 		(let ((new-size (max nblocks (* current-size 2))))
 		  (dotimes (i (length conflicts))
@@ -191,7 +192,7 @@
 	 (conflicts (finite-sb-conflicts sb))
 	 (block-size (if (zerop (length conflicts))
 			 (ir2-block-count *compile-component*)
-			 (length (svref conflicts 0)))))
+			 (length (the simple-vector (svref conflicts 0))))))
     (assert (eq (sb-kind sb) :unbounded))
 
     (when (> new-size (length conflicts))
@@ -389,6 +390,18 @@
       tn))
 
 
+;;; Note-Spilled-TN  --  Internal
+;;;
+;;;    Do stuff to note that TN is spilled at VOP for the debugger's benefit.
+;;;
+(defun note-spilled-tn (tn vop)
+  (when (and (tn-leaf tn) (vop-save-set vop))
+    (let ((2comp (component-info *compile-component*)))
+      (setf (gethash tn (ir2-component-spilled-tns 2comp)) t)
+      (pushnew tn (gethash vop (ir2-component-spilled-vops 2comp)))))
+  (undefined-value))
+
+
 ;;; Pack-Save-TN  --  Internal
 ;;;
 ;;;    Make a save TN for TN, pack it, and return it.  We copy various conflict
@@ -552,6 +565,23 @@
   (undefined-value))
 
 
+(eval-when (compile eval)
+
+;;; SAVE-NOTE-READ  --  Internal
+;;;
+;;;    Do stuff to note a read of TN, for OPTIMIZED-EMIT-SAVES-BLOCK.
+;;;
+(defmacro save-note-read (tn)
+  `(let* ((tn ,tn)
+	  (num (tn-number tn)))
+     (when (and (sc-save-p (tn-sc tn))
+		(zerop (sbit restores num))
+		(not (eq (tn-kind tn) :component)))
+       (setf (sbit restores num) 1)
+       (push tn restores-list))))
+
+); Eval-When (Compile Eval)
+
 ;;; OPTIMIZED-EMIT-SAVES-BLOCK  --  Internal
 ;;;
 ;;;    Start scanning backward at the end of Block, looking tracking which TNs
@@ -575,6 +605,10 @@
 ;;; that we can quickly iterate and test for membership.  The incoming Saves
 ;;; and Restores args are used for computing theses sets (the initial contents
 ;;; are ignored.)
+;;;
+;;;    When we hit a VOP with :COMPUTE-ONLY Save-P (an internal error
+;;; location), we pretend that all life TNs were read, unless (= speed 3), in
+;;; which case we mark all the TNs that are live but not restored as spilled.
 ;;;
 (defun optimized-emit-saves-block (block saves restores)
   (declare (type ir2-block block) (type simple-bit-vector saves restores))
@@ -624,28 +658,31 @@
 		  (setf (sbit saves num) 0)
 		  (save-if-necessary tn (vop-next vop) vop)
 		  (setq saves-list (delete tn saves-list))))))
-	  
-	  (when (eq (vop-info-save-p info) t)
-	    (dolist (tn restores-list)
-	      (restore-tn tn (vop-next vop) vop)
-	      (let ((num (tn-number tn)))
-		(when (zerop (sbit saves num))
-		  (push tn saves-list)
-		  (setf (sbit saves num) 1))))
-	    (setq restores-list nil)
-	    (clear-bit-vector restores))
+
+	  (case (vop-info-save-p info)
+	    ((t)
+	     (dolist (tn restores-list)
+	       (restore-tn tn (vop-next vop) vop)
+	       (let ((num (tn-number tn)))
+		 (when (zerop (sbit saves num))
+		   (push tn saves-list)
+		   (setf (sbit saves num) 1))))
+	     (setq restores-list nil)
+	     (clear-bit-vector restores))
+	    (:compute-only
+	     (cond ((policy (vop-node vop) (= speed 3))
+		    (do-live-tns (tn (vop-save-set vop) block)
+		      (when (zerop (sbit restores (tn-number tn)))
+			(note-spilled-tn tn vop))))
+		   (t
+		    (do-live-tns (tn (vop-save-set vop) block)
+		      (save-note-read tn))))))
 	  
 	  (if (eq (vop-info-move-args info) :local-call)
 	      (setq skipping t)
 	      (do ((read (vop-args vop) (tn-ref-across read)))
 		  ((null read))
-		(let* ((tn (tn-ref-tn read))
-		       (num (tn-number tn)))
-		  (when (and (sc-save-p (tn-sc tn))
-			     (zerop (sbit restores num))
-			     (not (eq (tn-kind tn) :component)))
-		    (setf (sbit restores num) 1)
-		    (push tn restores-list))))))))))
+		(save-note-read (tn-ref-tn read)))))))))
 	
 
 ;;; OPTIMIZED-EMIT-SAVES  --  Internal
@@ -730,6 +767,7 @@
   (let* ((loc (tn-offset target))
 	 (target-sc (tn-sc target))
 	 (target-sb (sc-sb target-sc)))
+    (declare (type index loc))
     (if (and (eq target-sb (sc-sb sc))
 	     (or (eq (sb-kind target-sb) :unbounded)
 		 (member loc (sc-locations sc)))
@@ -750,6 +788,7 @@
 (macrolet ((frob (slot)
 	     `(let ((count 10)
 		    (current tn))
+		(declare (type index count))
 		(loop
 		  (let ((refs (,slot current)))
 		    (unless (and (plusp count) refs (not (tn-ref-next refs)))
@@ -805,6 +844,7 @@
 	 (start-offset (finite-sb-last-offset sb)))
     (let ((current-start start-offset)
 	  (wrap-p nil))
+      (declare (type index current-start))
       (loop
 	(when (> (+ current-start element-size) size)
 	  (cond ((or wrap-p (> element-size size))
@@ -923,6 +963,7 @@
 ;;; appropriate.
 ;;;
 (defun load-tn-conflicts-in-sb (op sb offset)
+  (declare (type tn-ref op) (type finite-sb sb) (type index offset))
   (assert (eq (sb-kind sb) :finite))
   (or (svref (finite-sb-live-tns sb) offset)
       (let ((vop (tn-ref-vop op)))
@@ -967,7 +1008,7 @@
 	     (loc (tn-offset tn))
 	     (sb (sc-sb (tn-sc tn))))
 	(if (and (eq (sc-sb sc) sb)
-		 (member loc (sc-locations sc))
+		 (member (the index loc) (sc-locations sc))
 		 (not (load-tn-conflicts-in-sb op sb loc)))
 	    loc
 	    nil)))))
@@ -1042,11 +1083,9 @@
 ;;; since normal load TN packing failed.
 ;;;
 ;;; We never spill component TNs, since there are used magically within VOPs.
-;;;
-;;; ### Somewhat dubious to spill environment TNs, but we would get in
-;;; ### trouble if we never did.
-;;;
-;;;     Spilling is done using the same mechanism as register saving.
+;;; Spilling is done using the same mechanism as register saving.  We mark the
+;;; spilled TN for the debugger, so that it doesn't think it is valid when the
+;;; value has been moved elsewhere.
 ;;;
 (defun spill-and-pack-load-tn (sc op)
   (declare (type sc sc) (type tn-ref op))
@@ -1056,6 +1095,7 @@
     
     (dolist (loc (sc-locations sc)
 		 (failed-to-pack-load-tn-error sc op))
+      (declare (type index loc))
       (when (do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
 		((null ref) t)
 	      (let ((op (tn-ref-tn ref)))
@@ -1071,6 +1111,7 @@
 	  (assert victim)
 	  (unless (eq (tn-kind victim) :component)
 	    (save-complex-writer-tn victim vop)
+	    (note-spilled-tn victim vop)
 	    (when (eq (template-result-types (vop-info vop)) :conditional)
 	      (spill-conditional-arg-tn victim vop))
 	    
