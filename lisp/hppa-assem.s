@@ -32,6 +32,7 @@
 
 	.space	$TEXT$
 	.subspa	$CODE$
+	.import $$dyncall,MILLICODE
 
 
 /*
