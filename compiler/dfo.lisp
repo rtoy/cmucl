@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.14 1991/11/09 22:03:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.15 1991/11/13 19:28:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,6 +28,7 @@
 (proclaim '(function find-dfo (component) void))
 (defun find-dfo (component)
   (clear-flags component)
+  (setf (component-reanalyze component) nil)
   (let ((head (component-head component)))
     (do ()
 	((dolist (ep (block-succ head) t)
@@ -43,8 +44,7 @@
 	  (setf (block-delete-p block) t)))
     (do-blocks (block component)
       (unless (block-flag block)
-	(delete-block block))))
-  (setf (component-reanalyze component) nil))
+	(delete-block block)))))
 
 
 ;;; Join-Components  --  Interface
