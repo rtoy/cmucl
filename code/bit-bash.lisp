@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.9 1991/04/13 21:04:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.10 1991/04/23 01:24:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,12 +364,12 @@
 		  (unless (zerop final-bits)
 		    (let ((value
 			   (if (> (+ final-bits src-shift) unit-bits)
-			       (shift-towards-start next src-shift)
 			       (progn
 				 (get-next-src)
 				 (32bit-logical-or
 				  (shift-towards-end next (- src-shift))
-				  (shift-towards-start prev src-shift)))))
+				  (shift-towards-start prev src-shift)))
+			       (shift-towards-start next src-shift)))
 			  (mask (start-mask final-bits))
 			  (orig (funcall dst-ref-fn dst dst-word-offset)))
 		      (declare (type unit mask orig value))
