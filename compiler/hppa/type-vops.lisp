@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/type-vops.lisp,v 1.4 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/type-vops.lisp,v 1.5 1998/03/04 15:11:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -13,6 +13,7 @@
 ;;; for the HPPA
 ;;;
 ;;; Written by William Lott.
+;;; Signed-array and Complex-float support by Douglas Crosher 1998.
 ;;;
 (in-package "HPPA")
 
@@ -26,9 +27,10 @@
   (list unbound-marker-type base-char-type))
 
 (defparameter function-header-types
-  (list funcallable-instance-header-type closure-header-type
+  (list funcallable-instance-header-type dylan-function-header-type
 	byte-code-function-type byte-code-closure-type
-	function-header-type closure-function-header-type))
+	function-header-type closure-function-header-type
+	closure-header-type))
 
 (defun canonicalize-headers (headers)
   (collect ((results))
@@ -234,8 +236,29 @@
 (def-type-vops ratiop check-ratio ratio
   object-not-ratio-error ratio-type)
 
-(def-type-vops complexp check-complex complex
-  object-not-complex-error complex-type)
+(def-type-vops complexp check-complex complex object-not-complex-error
+  complex-type
+  #+complex-float complex-single-float-type
+  #+complex-float complex-double-float-type)
+
+#+complex-float
+(def-type-vops complex-rational-p check-complex-rational nil
+  object-not-complex-rational-error complex-type)
+
+#+complex-float
+(def-type-vops complex-float-p check-complex-float nil
+  object-not-complex-float-error
+  complex-single-float-type complex-double-float-type)
+
+#+complex-float
+(def-type-vops complex-single-float-p check-complex-single-float
+  complex-single-float object-not-complex-single-float-error
+  complex-single-float-type)
+
+#+complex-float
+(def-type-vops complex-double-float-p check-complex-double-float
+  complex-double-float object-not-complex-double-float-error
+  complex-double-float-type)
 
 (def-type-vops single-float-p check-single-float single-float
   object-not-single-float-error single-float-type)
@@ -282,6 +305,34 @@
   object-not-simple-array-unsigned-byte-32-error
   simple-array-unsigned-byte-32-type)
 
+#+signed-array
+(def-type-vops simple-array-signed-byte-8-p
+  check-simple-array-signed-byte-8
+  simple-array-signed-byte-8
+  object-not-simple-array-signed-byte-8-error
+  simple-array-signed-byte-8-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-16-p
+  check-simple-array-signed-byte-16
+  simple-array-signed-byte-16
+  object-not-simple-array-signed-byte-16-error
+  simple-array-signed-byte-16-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-30-p
+  check-simple-array-signed-byte-30
+  simple-array-signed-byte-30
+  object-not-simple-array-signed-byte-30-error
+  simple-array-signed-byte-30-type)
+
+#+signed-array
+(def-type-vops simple-array-signed-byte-32-p
+  check-simple-array-signed-byte-32
+  simple-array-signed-byte-32
+  object-not-simple-array-signed-byte-32-error
+  simple-array-signed-byte-32-type)
+
 (def-type-vops simple-array-single-float-p check-simple-array-single-float
   simple-array-single-float object-not-simple-array-single-float-error
   simple-array-single-float-type)
@@ -289,6 +340,20 @@
 (def-type-vops simple-array-double-float-p check-simple-array-double-float
   simple-array-double-float object-not-simple-array-double-float-error
   simple-array-double-float-type)
+
+#+complex-float
+(def-type-vops simple-array-complex-single-float-p
+  check-simple-array-complex-single-float
+  simple-array-complex-single-float
+  object-not-simple-array-complex-single-float-error
+  simple-array-complex-single-float-type)
+
+#+complex-float
+(def-type-vops simple-array-complex-double-float-p
+  check-simple-array-complex-double-float
+  simple-array-complex-double-float
+  object-not-simple-array-complex-double-float-error
+  simple-array-complex-double-float-type)
 
 (def-type-vops base-char-p check-base-char base-char
   object-not-base-char-error base-char-type)
@@ -332,29 +397,49 @@
   simple-string-type simple-bit-vector-type simple-vector-type
   simple-array-unsigned-byte-2-type simple-array-unsigned-byte-4-type
   simple-array-unsigned-byte-8-type simple-array-unsigned-byte-16-type
-  simple-array-unsigned-byte-32-type simple-array-single-float-type
-  simple-array-double-float-type complex-string-type
-  complex-bit-vector-type complex-vector-type)
+  simple-array-unsigned-byte-32-type
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
+  simple-array-single-float-type simple-array-double-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type
+  complex-string-type complex-bit-vector-type complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
   simple-array-type simple-string-type simple-bit-vector-type
   simple-vector-type simple-array-unsigned-byte-2-type
   simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
   simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
-  simple-array-single-float-type simple-array-double-float-type)
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
+  simple-array-single-float-type simple-array-double-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
   simple-array-type simple-string-type simple-bit-vector-type
   simple-vector-type simple-array-unsigned-byte-2-type
   simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
   simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
+  #+signed-array simple-array-signed-byte-8-type
+  #+signed-array simple-array-signed-byte-16-type
+  #+signed-array simple-array-signed-byte-30-type
+  #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type
   complex-string-type complex-bit-vector-type complex-vector-type
   complex-array-type)
 
 (def-type-vops numberp check-number nil object-not-number-error
   even-fixnum-type odd-fixnum-type bignum-type ratio-type
-  single-float-type double-float-type complex-type)
+  single-float-type double-float-type complex-type
+  #+complex-float complex-single-float-type
+  #+complex-float complex-double-float-type)
 
 (def-type-vops rationalp check-rational nil object-not-rational-error
   even-fixnum-type odd-fixnum-type ratio-type bignum-type)
