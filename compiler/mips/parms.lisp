@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.89 1991/02/20 15:14:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.90 1991/03/12 16:45:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.89 1991/02/20 15:14:56 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.90 1991/03/12 16:45:16 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -38,7 +38,7 @@
 (eval-when (compile eval load)
 
 (setf (backend-name *target-backend*) "PMAX")
-(setf (backend-version *target-backend*) "DECstation 3100/Mach 0.0")
+(setf (backend-version *target-backend*) "DECstation 3100/Mach 1.0")
 (setf (backend-fasl-file-type *target-backend*) "pmaxf")
 (setf (backend-fasl-file-implementation *target-backend*)
       pmax-fasl-file-implementation)
