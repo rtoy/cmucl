@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.23 1993/05/27 03:41:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.24 1993/07/03 23:20:51 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,6 +104,8 @@
 	  "target:code/mach-os"))
     ,@(when (c:backend-featurep :sunos)
 	'("target:code/sunos-os"))
+    ,@(when (c:backend-featurep :hpux)
+        '("target:code/hpux-os"))
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"
