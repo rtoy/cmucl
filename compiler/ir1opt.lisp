@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.63 1993/08/31 22:52:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.64 1994/01/06 18:04:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1372,7 +1372,8 @@
 (defun propagate-local-call-args (call fun)
   (declare (type combination call) (type clambda fun))
 
-  (unless (functional-entry-function fun)
+  (unless (or (functional-entry-function fun)
+	      (lambda-optional-dispatch fun))
     (let* ((vars (lambda-vars fun))
 	   (union (mapcar #'(lambda (arg var)
 			      (when (and arg
