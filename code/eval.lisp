@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.20 1992/12/13 15:47:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.21 1992/12/17 09:08:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,7 +224,7 @@
       (let* ((fun (%function-self fun))
 	     (name (%function-name fun))
 	     (code (di::function-code-header fun))
-	     (info (di::code-debug-info code)))
+	     (info (kernel:%code-debug-info code)))
 	(if info
 	    (let ((source (first (c::compiled-debug-info-source info))))
 	      (cond ((and (eq (c::debug-source-from source) :lisp)
