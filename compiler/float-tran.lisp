@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.75 1998/09/20 15:17:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.76 1998/09/29 13:16:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -556,26 +556,6 @@
   (and (numeric-type-p type)
        (eq (numeric-type-complexp type) :real)))
 
-
-;;; Functions to handle most cases of computing the bounds for a
-;;; function.
-;;;
-;;; NUM is a numeric type representing the argument to the
-;;; function.
-;;;
-;;; COND is an function that returns T when the number satisfies the
-;;; desired condition.  It should take two arguments LO and HI which
-;;; are the lower and upper bounds of the numeric-type.
-;;;
-;;; LIMIT-FUN is a function that returns the lower and upper
-;;; bounds.after applying the desired function. Also, the limit
-;;; function can return the preferred type of float, if
-;;; necessary. This feature is used by the float optimizer to
-;;; determine the desired result type.
-;;;
-;;; DEFAULT-TYPE is the specifier-type of the result if COND should
-;;; return NIL.
-
 ;;; Coerce a numeric type bound to the given type while handling
 ;;; exclusive bounds.
 (defun coerce-numeric-bound (bound type)
@@ -583,6 +563,17 @@
     (if (consp bound)
 	(list (coerce (car bound) type))
 	(coerce bound type))))
+
+)  ; end progn
+
+#+propagate-fun-type
+(progn
+
+;;;; Optimizers for elementary functions
+;;;;
+;;;; These optimizers compute the output range of the elementary
+;;;; function, based on the domain of the input.
+;;;;
 
 ;;; Compute a specifier like '(or float (complex float)), except float
 ;;; should be the right kind of float.  Allow bounds for the float
@@ -598,15 +589,47 @@
     (specifier-type `(or (,float-type ,(or lo '*) ,(or hi '*))
 		         (complex ,float-type)))))
 
-)  ; end progn
-
-#+propagate-fun-type
-(progn
-;;;; Optimizers for elementary functions
-;;;;
-;;;; These optimizers compute the output range of the elementary
-;;;; function, based on the domain of the input.
-;;;;
+;;; Domain-Subtype
+;;;
+;;; Test if the numeric-type ARG is within in domain specified by
+;;; DOMAIN-LOW and DOMAIN-HIGH, consider negative and positive zero to
+;;; be distinct as for the :negative-zero-is-not-zero feature. With
+;;; the :negative-zero-is-not-zero feature this could be handled by
+;;; the numeric subtype code in type.lisp.
+;;;
+(defun domain-subtypep (arg domain-low domain-high)
+  (declare (type numeric-type arg)
+	   (type (or real null) domain-low domain-high))
+  (let* ((arg-lo (numeric-type-low arg))
+	 (arg-lo-val (bound-value arg-lo))
+	 (arg-hi (numeric-type-high arg))
+	 (arg-hi-val (bound-value arg-hi)))
+    ;; Check that the ARG bounds are correctly canonicalised.
+    (when (and arg-lo (floatp arg-lo-val) (zerop arg-lo-val) (consp arg-lo)
+	       (minusp (float-sign arg-lo-val)))
+      (compiler-note "Float zero bound ~s not correctly canonicalised?" arg-lo)
+      (setq arg-lo '(0l0) arg-lo-val 0l0))
+    (when (and arg-hi (zerop arg-hi-val) (floatp arg-hi-val) (consp arg-hi)
+	       (plusp (float-sign arg-hi-val)))
+      (compiler-note "Float zero bound ~s not correctly canonicalised?" arg-hi)
+      (setq arg-hi '(-0l0) arg-hi-val -0l0))
+    ;;
+    (and (or (null domain-low)
+	     (and arg-lo (>= arg-lo-val domain-low)
+		  (not (and (zerop domain-low) (floatp domain-low)
+			    (plusp (float-sign domain-low))
+			    (zerop arg-lo-val) (floatp arg-lo-val)
+			    (if (consp arg-lo)
+				(plusp (float-sign arg-lo-val))
+				(minusp (float-sign arg-lo-val)))))))
+	 (or (null domain-high)
+	     (and arg-hi (<= arg-hi-val domain-high)
+		  (not (and (zerop domain-high) (floatp domain-high)
+			    (minusp (float-sign domain-high))
+			    (zerop arg-hi-val) (floatp arg-hi-val)
+			    (if (consp arg-hi)
+				(minusp (float-sign arg-hi-val))
+				(plusp (float-sign arg-hi-val))))))))))
 
 ;;; Elfun-Derive-Type-Simple
 ;;; 
@@ -618,11 +641,17 @@
 ;;; intersection between ARG and DOMAIN, and then append a complex
 ;;; result, which occurs for the parts of ARG not in the DOMAIN.
 ;;;
-;;; DEFAULT-LO and DEFAULT-HI are the lower and upper bounds if we
+;;; Negative and positive zero are considered distinct within
+;;; DOMAIN-LOW and DOMAIN-HIGH, as for the :negative-zero-is-not-zero
+;;; feature.
+;;;
+;;; DEFAULT-LOW and DEFAULT-HIGH are the lower and upper bounds if we
 ;;; can't compute the bounds using FCN.
 ;;;
-(defun elfun-derive-type-simple (arg fcn domain default-lo default-hi
+(defun elfun-derive-type-simple (arg fcn domain-low domain-high
+				     default-low default-high
 				     &optional (increasingp t))
+  (declare (type (or null real) domain-low domain-high))
   (etypecase arg
     (numeric-type
      (cond ((eq (numeric-type-complexp arg) :complex)
@@ -638,18 +667,16 @@
 	    (multiple-value-bind (intersection difference)
 		(interval-intersection/difference
 		 (numeric-type->interval arg)
-		 (if (numeric-type-p domain)
-		     (numeric-type->interval domain)
-		     (make-interval)))
+		 (make-interval :low domain-low :high domain-high))
 	      (cond
 		(intersection
 		 ;; Process the intersection.
 		 (let* ((low (interval-low intersection))
 			(high (interval-high intersection))
 			(res-lo (or (bound-func fcn (if increasingp low high))
-				    default-lo))
+				    default-low))
 			(res-hi (or (bound-func fcn (if increasingp high low))
-				    default-hi))
+				    default-high))
 			;; Result specifier type.
 			(format (case (numeric-type-class arg)
 				  ((integer rational) 'single-float)
@@ -664,45 +691,48 @@
 		   ;; If the ARG is a subset of the domain, we don't
 		   ;; have to worry about the difference, because that
 		   ;; can't occur.
-		   (if (or (null difference) (csubtypep arg domain))
+		   (if (or (null difference)
+			   ;; Check if the arg is within the domain.
+			   (domain-subtypep arg domain-low domain-high))
 		       result-type
 		       (list result-type
 			     (specifier-type `(complex ,bound-type))))))
 		(t
 		 (float-or-complex-float-type arg)))))
 	   (t
-	    (float-or-complex-float-type arg default-lo default-hi))))))
+	    (float-or-complex-float-type arg default-low default-high))))))
 
 (macrolet
-    ((frob (name domain def-lo-bnd def-hi-bnd &key (increasingp t))
+    ((frob (name domain-low domain-high def-low-bnd def-high-bnd
+		 &key (increasingp t))
        (let ((num (gensym)))
 	 `(defoptimizer (,name derive-type) ((,num))
 	   (one-arg-derive-type
 	    ,num
 	    #'(lambda (arg)
 		(elfun-derive-type-simple arg #',name
-					  ,domain
-					  ,def-lo-bnd ,def-hi-bnd
+					  ,domain-low ,domain-high
+					  ,def-low-bnd ,def-high-bnd
 					  ,increasingp))
 	    #',name)))))
   ;; These functions are easy because they are defined for the whole
   ;; real line.
-  (frob exp (specifier-type 'real) 0 nil)
-  (frob sinh (specifier-type 'real) nil nil)
-  (frob tanh (specifier-type 'real) -1 1)
-  (frob asinh (specifier-type 'real) nil nil)
+  (frob exp nil nil 0 nil)
+  (frob sinh nil nil nil nil)
+  (frob tanh nil nil -1 1)
+  (frob asinh nil nil nil nil)
 
   ;; These functions are only defined for part of the real line.  The
   ;; condition selects the desired part of the line.  
-  (frob asin (specifier-type '(real -1d0 1d0)) (- (/ pi 2)) (/ pi 2))
+  (frob asin -1d0 1d0 (- (/ pi 2)) (/ pi 2))
   ;; Acos is monotonic decreasing, so we need to swap the function
   ;; values at the lower and upper bounds of the input domain.
-  (frob acos (specifier-type '(real -1d0 1d0)) 0 pi :increasingp nil)
-  (frob acosh (specifier-type '(real 1d0)) nil nil)
-  (frob atanh (specifier-type '(real -1d0 1d0))	-1 1)
-  (frob sqrt (specifier-type #-negative-zero-is-not-zero '(real 0d0)
-			     #+negative-zero-is-not-zero '(real -0d0))
-	0 nil))
+  (frob acos -1d0 1d0 0 pi :increasingp nil)
+  (frob acosh 1d0 nil nil nil)
+  (frob atanh -1d0 1d0 -1 1)
+  ;; Kahan says that (sqrt -0.0) is -0.0, so use a specifier that
+  ;; includes -0.0.
+  (frob sqrt -0d0 nil 0 nil))
  
 ;;; Compute bounds for (expt x y).  This should be easy since (expt x
 ;;; y) = (exp (* y (log x))).  However, computations done this way
@@ -940,12 +970,7 @@
 ;;; and thus the result may be complex -infinity + i*pi.
 ;;;
 (defun log-derive-type-aux-1 (x)
-  (elfun-derive-type-simple
-   x #'log
-   (specifier-type
-    #-negative-zero-is-not-zero '(or (member 0f0 0d0) (real (0d0)))
-    #+negative-zero-is-not-zero '(real 0d0))
-   nil nil))
+  (elfun-derive-type-simple x #'log 0d0 nil nil nil))
 
 (defun log-derive-type-aux-2 (x y same-arg)
   (let ((log-x (log-derive-type-aux-1 x))
@@ -968,8 +993,7 @@
 
 
 (defun atan-derive-type-aux-1 (y)
-  (elfun-derive-type-simple
-   y #'atan (specifier-type 'real) (- (/ pi 2)) (/ pi 2)))
+  (elfun-derive-type-simple y #'atan nil nil (- (/ pi 2)) (/ pi 2)))
 
 (defun atan-derive-type-aux-2 (y x same-arg)
   (declare (ignore same-arg))
@@ -1002,7 +1026,7 @@
    (if (numeric-type-real-p x)
        (abs-derive-type-aux x)
        x)
-   #'cosh (specifier-type 'real) 0 nil))
+   #'cosh nil nil 0 nil))
 
 (defoptimizer (cosh derive-type) ((num))
   (one-arg-derive-type num #'cosh-derive-type-aux #'cosh))
