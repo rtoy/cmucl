@@ -1,5 +1,7 @@
 -*- Mode: Text, Fill -*-
 
+$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/random-doc.txt,v 1.2 1990/02/05 22:29:53 ch Exp $
+
 DEFINE-STORAGE-BASE
 
   Define-Storage-Base Name Kind {Key Value}*
