@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.33 2003/05/25 17:28:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.34 2003/05/31 09:23:23 gerd Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -404,15 +404,25 @@
 (defun check-wrapper-validity (instance)
   (let* ((owrapper (wrapper-of instance))
 	 (state (kernel:layout-invalid owrapper)))
-    (if (null state)
-	owrapper
-	(ecase (first state)
-	  (:flush
-	   (flush-cache-trap owrapper (second state) instance))
-	  (:obsolete
-	   (obsolete-instance-trap owrapper (second state) instance))))))
+    (cond ((null state)
+	   owrapper)
+	  ;;
+	  ;; We assume in this case, that the :INVALID is from a
+	  ;; previous call to REGISTER-LAYOUT for a superclass of
+	  ;; INSTANCE's class.  See also the comment above
+	  ;; FORCE-CACHE-FLUSHES.  Paul Dietz has test cases for this.
+	  ((eq state :invalid)
+	   (let ((class (class-of instance)))
+	     (force-cache-flushes class)
+	     (class-wrapper class)))
+	  (t
+	   (ecase (first state)
+	     (:flush
+	      (flush-cache-trap owrapper (second state) instance))
+	     (:obsolete
+	      (obsolete-instance-trap owrapper (second state) instance)))))))
 
-;(declaim (inline check-obsolete-instance))
+(declaim (inline check-obsolete-instance))
 (defun check-obsolete-instance (instance)
   (when (invalid-wrapper-p (kernel:layout-of instance))
     (check-wrapper-validity instance)))
