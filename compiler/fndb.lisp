@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.48 1992/05/07 08:49:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.49 1992/05/16 23:36:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,7 +179,6 @@
 				   ;; ### Extensions...
 				   (internal-symbols index) (external-symbols index))
 	  package)
-(defknown in-package (stringlike &key (nicknames list) (use list)) package)
 (defknown find-package (stringlike) (or package null) (flushable))
 (defknown package-name (packagelike) simple-string (flushable))
 (defknown package-nicknames (packagelike) list (flushable))
