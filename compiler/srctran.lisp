@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.118 2003/04/30 16:48:49 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.119 2003/04/30 19:37:56 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3342,7 +3342,7 @@
 		"Too few args (~d) to FORMAT, need at least ~d"
 		nargs min-args))
 	      ((> nargs max-args)
-	       (compiler-warning
+	       (compiler-note
 		"Too many args (~d) to FORMAT, wants at most ~d"
 		nargs max-args)))))))
 
