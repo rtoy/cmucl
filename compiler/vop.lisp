@@ -293,13 +293,16 @@
   ;;
   ;; A list of all the :COMPONENT TNs (live throughout the component.)  These
   ;; TNs will also appear in the {NORMAL,RESTRICTED,WIRED} TNs as appropriate
-  ;; to their kind.
+  ;; to their location.
   (component-tns () :type list)
   ;;
   ;; If this component has a NFP, then this is it.
   (nfp nil :type (or tn null))
   ;;
-  unused-slot
+  ;; A list of the explicitly specified save TNs (kind :SPECIFIED-SAVE).  These
+  ;; TNs will also appear in the {NORMAL,RESTRICTED,WIRED} TNs as appropriate
+  ;; to their location.
+  (specified-save-tns () :type list)
   ;;
   ;; Values-Receivers is a list of all the blocks whose ir2-block has a
   ;; non-null value for Popped.  This slot is initialized by LTN-Analyze as an
@@ -336,7 +339,10 @@
   ;;
   ;; A list of the Entry-Info structures describing all of the entries into
   ;; this component.  Filled in by entry analysis.
-  (entries nil :type list))
+  (entries nil :type list)
+  ;;
+  ;; Head of the list of :ALIAS TNs in this component, threaded by TN-NEXT.
+  (alias-tns nil :type (or tn null)))
 
 
 ;;; The Entry-Info structure condenses all the information that the dumper
@@ -369,18 +375,12 @@
 ;;;
 (defstruct (ir2-environment
 	    (:print-function %print-ir2-environment))
-  ;;
-  ;; A list of the argument passing TNs.  The explict arguments are first,
-  ;; followed by the implict environment arguments.  In an XEP, there are no
-  ;; arg TNs corresponding to any environment TNs, since the environment is
-  ;; accessed from the closure.
-  (arg-locs nil :type list)
+  unused-slot0
   ;;
   ;; The TNs that hold the passed environment within the function.  This is an
   ;; alist translating from the NLX-Info or lambda-var to the TN that holds
   ;; the corresponding value within this function.  This list is in the same
-  ;; order as the ENVIRONMENT-CLOSURE and environment passing locations in the
-  ;; ARG-LOCS.
+  ;; order as the ENVIRONMENT-CLOSURE.
   (environment nil :type list)
   ;;
   ;; The TNs that hold the Old-Fp and Return-PC within the function.  We
@@ -389,8 +389,12 @@
   (old-fp nil :type (or tn null))
   (return-pc nil :type (or tn null))
   ;;
-  ;; The passing locations for Old-Fp and Return-PC.
-  (old-fp-pass nil :type tn)
+  unused-slot1
+  ;;
+  ;; The passing location for the Return-PC.  The return PC is treated
+  ;; differently from the other arguments, since in some implementations we may
+  ;; use a call instruction that requires the return PC to be passed in a
+  ;; particular place.
   (return-pc-pass nil :type tn)
   ;;
   ;; True if this function has a frame on the number stack.  This is set by
@@ -401,8 +405,8 @@
   ;; A list of all the :Environment TNs live in this environment.
   (live-tns nil :type list)
   ;;
-  ;; A list of all the keep-around TNs live in this environment.
-  (keep-around-tns nil :type list)
+  ;; A list of all the :Debug-Environment TNs live in this environment.
+  (debug-live-tns nil :type list)
   ;;
   ;; A label that marks the start of elsewhere code for this function.  Null
   ;; until this label is assigned by codegen.  Used for maintaining the debug
@@ -416,10 +420,8 @@
   (environment-start nil :type (or label null)))
 
 (defprinter ir2-environment
-  arg-locs
   environment
   old-fp
-  old-fp-pass
   return-pc
   return-pc-pass)
 
@@ -939,14 +941,16 @@
   ;;   :Environment
   ;;        A TN that has hidden references (debugger or NLX), and thus must be
   ;;        allocated for the duration of the environment it is referenced in.
-  ;;        All references must be in the environment that was specified to
-  ;;        Make-Environment-TN.  Conflicts are represented specially.  These
-  ;;        TNs never appear in the IR2-Block-XXX-TNs.  Environment TNs never
-  ;;        have Local or Local-Number.
+  ;;
+  ;;   :DEBUG-ENVIRONMENT
+  ;;        Like :ENVIRONMENT, but is used for TNs that we want to be able to
+  ;;        target to/from and that don't absolutely have to be live
+  ;;        everywhere.  These TNs are live in all blocks in the environment
+  ;;        that don't reference this TN.
   ;;
   ;;   :Component
-  ;;        Implicit conflict info like :Environment, but allocated over the
-  ;;        entire component.  No restriction on referencing environments.
+  ;;        A TN that implicitly conflicts with all other TNs.  No conflict
+  ;;        info is computed.
   ;;
   ;;   :Save
   ;;   :Save-Once
@@ -955,6 +959,11 @@
   ;;        of the SAVE-TN slot and use it for conflicts. Save-Once is like
   ;;        :Save, except that it is only save once at the single writer of the
   ;;        original TN.
+  ;;
+  ;;   :SPECIFIED-SAVE
+  ;;        A TN that was explicitly specified as the save TN for another TN.
+  ;;        When we actually get around to doing the saving, this will be
+  ;;        changed to :SAVE or :SAVE-ONCE.
   ;;
   ;;   :Load
   ;;        A load-TN used to compute an argument or result that is restricted
@@ -968,13 +977,18 @@
   ;;        lifetime analysis isn't done on :Constant TNs, they don't have 
   ;;        Local-Numbers and similar stuff.
   ;;
-  ;;   :Cached-Constant
-  ;;        Represents a constant for which caching in a register would be
-  ;;        desirable.  Lifetime information is computed so that the cached
-  ;;        copies can be allocated.
+  ;;   :ALIAS
+  ;;        A special kind of TN used to represent initialization of local call
+  ;;        arguments in the caller.  It provides another name for the argument
+  ;;        TN so that lifetime analysis doesn't get confused by self-recursive
+  ;;        calls.  Lifetime analysis treats this the same as :NORMAL, but then
+  ;;        at the end merges the conflict info into the original TN and
+  ;;        replaces all uses of the alias with the original TN.  SAVE-TN holds
+  ;;        the aliased TN.
   ;;
-  (kind nil :type (member :normal :environment :save :save-once :load :constant
-			  :component))
+  (kind nil :type (member :normal :environment :debug-environment
+			  :save :save-once :specified-save :load :constant
+			  :component :alias))
   ;;
   ;; The primitive-type for this TN's value.  Null in restricted or wired TNs.
   (primitive-type nil :type (or primitive-type null))
@@ -1030,25 +1044,20 @@
   ;;
   ;; The offset within the SB that this TN is packed into.  This is what
   ;; indicates that the TN is packed.
-  (offset nil :type (or unsigned-byte null)))
-
+  (offset nil :type (or unsigned-byte null))
+  ;;
+  ;; Some kind of info about how important this TN is.
+  (cost 0 :type fixnum)
+  ;;
+  ;; If a :ENVIRONMENT or :DEBUG-ENVIRONMENT TN, this is the environment that
+  ;; the TN is live throughout.
+  (environment nil :type (or environment null)))
 
 (defun %print-tn (s stream d)
   (declare (ignore d))
   (write-string "#<TN " stream)
   (print-tn s stream)
   (write-char #\> stream))
-
-#|
-(defprinter tn
-  (number :test (/= number 0) :prin1 (tn-id structure))
-  kind
-  (primitive-type :test primitive-type
-		  :prin1 (primitive-type-name primitive-type))
-  (leaf :test leaf)
-  (sc :test sc :prin1 (sc-name sc))
-  (offset :test offset))
-|#
 
 ;;; The Global-Conflicts structure represents the conflicts for global TNs.
 ;;; Each global TN has a list of these structures, one for each block that it
