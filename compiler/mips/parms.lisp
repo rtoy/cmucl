@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.11 1990/02/21 19:36:12 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.12 1990/02/22 20:35:17 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -29,19 +29,19 @@
 	  bignum-type ratio-type single-float-type double-float-type
 	  complex-type simple-array-type simple-string-type
 	  simple-bit-vector-type simple-vector-type
-	  simple-array-unsigned-byte-2-type 
+	  simple-array-unsigned-byte-2-type
 	  simple-array-unsigned-byte-4-type
 	  simple-array-unsigned-byte-8-type
 	  simple-array-unsigned-byte-16-type
 	  simple-array-unsigned-byte-32-type simple-array-single-float-type
 	  simple-array-double-float-type complex-string-type
 	  complex-bit-vector-type complex-vector-type complex-array-type
-	  code-header-type function-header-type return-pc-header-type
-	  closure-header-type value-cell-header-type symbol-header-type
-	  character-type SAP-type unbound-marker-type atomic-flag
-	  interrupted-flag fixnum initial-symbols initial-symbol-offset
-	  offset-initial-symbol *assembly-unit-length*
-	  target-fasl-code-format vm-version)) 
+	  code-header-type function-header-type closure-function-header-type
+	  return-pc-header-type closure-header-type value-cell-header-type
+	  symbol-header-type character-type SAP-type unbound-marker-type
+	  atomic-flag interrupted-flag fixnum initial-symbols
+	  initial-symbol-offset offset-initial-symbol
+	  *assembly-unit-length* target-fasl-code-format vm-version))
 	  
 
 (eval-when (compile load eval)
@@ -196,10 +196,22 @@
 
 (defparameter initial-symbols
   '(t
+
+    ;; Random stuff needed for initialization.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
     lisp::*initial-symbols*
-    lisp::*lisp-initialization-functions*))
+    lisp::*lisp-initialization-functions*
+
+    ;; Values needed for interfacing C and LISP.
+    lisp::*saved-global-pointer*
+    lisp::*saved-control-stack-pointer*
+    lisp::*saved-binding-stack-pointer*
+    lisp::*saved-allocation-pointer*
+    lisp::*saved-flags-register*
+
+    ))
+
 
 
 (defun initial-symbol-offset (symbol)
