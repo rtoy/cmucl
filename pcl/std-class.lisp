@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.29 2002/06/05 23:00:12 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.30 2002/06/05 23:17:47 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -514,7 +514,6 @@
 	     (defstruct `(defstruct (,name
 				      ,@(when include
 					  `((:include ,(class-name include))))
-				      (:print-function print-std-instance)
 				      (:predicate nil)
 				      (:conc-name ,conc-name)
 				      (:constructor ,constructor ()))
