@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.5 1994/10/25 00:26:53 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.6 1994/10/27 01:11:32 ram Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -144,8 +144,6 @@ syscall,
 closedir,
 opendir,
 readdir,
-#endif
-#if defined(hpux) || defined(irix)
 tcgetattr,
 tcsetattr,
 #endif
