@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.91 1999/01/25 12:22:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.92 1999/11/11 16:35:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,8 +195,6 @@
 (def-source-transform logorc1 (x y) `(logior (lognot ,x) ,y))
 (def-source-transform logorc2 (x y) `(logior ,x (lognot ,y)))
 (def-source-transform logtest (x y) `(not (zerop (logand ,x ,y))))
-(def-source-transform logbitp (index integer)
-  `(not (zerop (logand (ash 1 ,index) ,integer))))
 (def-source-transform byte (size position) `(cons ,size ,position))
 (def-source-transform byte-size (spec) `(car ,spec))
 (def-source-transform byte-position (spec) `(cdr ,spec))
@@ -219,6 +217,12 @@
 	 (%denominator ,n-num)
 	 1)))
 
+(deftransform logbitp ((index integer)
+		       (integer (or (signed-byte #.vm:word-bits) (unsigned-byte #.vm:word-bits)))
+		       (member nil t))
+  `(if (>= index #.vm:word-bits)
+       (minusp integer)
+       (not (zerop (logand (ash 1 index) integer)))))
 
 ;;;; Interval arithmetic for computing bounds
 ;;;; (toy@rtp.ericsson.se)
