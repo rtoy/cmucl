@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.19 1991/07/29 16:02:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.20 1991/08/22 16:07:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,7 +242,7 @@
 			(not (eq (functional-kind (node-home-lambda ref))
 				 :top-level))))
 	       (ecase (ref-inlinep ref)
-		 ((nil :inline)
+		 ((nil :inline :notinline)
 		  (convert-call-if-possible ref dest))
 		 ((:notinline)))
 	       
