@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.11 1990/05/15 01:17:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.12 1990/05/24 13:30:24 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -54,29 +54,6 @@
        
 
 (define-static-function length (object) :translate length)
-
-
-
-
-;;;; Debugger support
-
-(define-vop (current-sp)
-  (:results (res :scs (sap-reg)))
-  (:generator 1
-    (move res csp-tn)))
-
-(define-vop (read-control-stack sap-ref)
-  (:results (result :scs (descriptor-reg)))
-  (:variant :long nil))
-
-(define-vop (write-control-stack sap-set)
-  (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (descriptor-reg any-reg negative-immediate
-				      zero immediate))
-	 (value :scs (descriptor-reg) :target result))
-  (:arg-types system-area-pointer fixnum *)
-  (:results (result :scs (descriptor-reg)))
-  (:variant :long))
 
 
 
