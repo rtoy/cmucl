@@ -55,7 +55,6 @@
 (load "vm:mips-macs")
 (load "vm:utils")
 (load "c:aliencomp")
-(load "vm:c-call")
 (load "c:debug-dump")
 
 (load "c:dump")
@@ -74,6 +73,7 @@
 (load "vm:cell")
 (load "vm:subprim")
 (load "vm:debug")
+(load "vm:c-call")
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
