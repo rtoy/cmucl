@@ -107,7 +107,7 @@
       (do ((i 1 (1+ i))
 	   (arg args (cdr arg)))
 	  ((null arg))
-	(check-arg (car arg) *wild-type* i)))
+	(check-arg-type (car arg) *wild-type* i)))
      ((< nargs min-args)
       (note-lossage
        "Function called with ~R argument~:P, but wants at least ~R."
