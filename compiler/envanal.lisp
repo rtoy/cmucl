@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.18 1991/11/09 22:07:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.19 1991/12/08 17:23:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -245,6 +245,9 @@
       (assert info)
       (close-over info (node-environment exit) env)
       (when (eq (functional-kind exit-fun) :escape)
+	(mapc #'(lambda (x)
+		  (setf (node-derived-type x) *wild-type*))
+	      (leaf-refs exit-fun))
 	(substitute-leaf (find-constant info) exit-fun)
 	(let ((node (block-last (nlx-info-target info))))
 	  (delete-continuation-use node)
