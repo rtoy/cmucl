@@ -25,8 +25,8 @@ OS_LIBS=
 # of irix-asm-munge.c
 
 irix-asm-munge: irix-asm-munge.c internals.h
-       cc -g -o $@ irix-asm-munge.c -lelf
+	cc -g -o $@ irix-asm-munge.c -lelf
 
 mips-assem.o: mips-assem.S irix-asm-munge
-       as $(ASFLAGS) -o $@ mips-assem.S
-       ./irix-asm-munge $@
+	as $(ASFLAGS) -o $@ mips-assem.S
+	./irix-asm-munge $@
