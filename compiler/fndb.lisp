@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.36 1991/12/19 22:11:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.37 1991/12/20 00:11:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -987,9 +987,12 @@
 ;;; ### Compiler interface non-standard...
 (defknown compile (symbol &optional (or list function null))
   (values (or function symbol) boolean boolean))
+
+(deftype optional-filename () '(or filename (member t nil)))
+
 (defknown compile-file
-  ((or filename list) &key (output-file filename) (error-file filename)
-   (trace-file filename) (error-output t) (load t) (verbose t)
+  ((or optional-filename list) &key (output-file optional-filename) (error-file optional-filename)
+   (trace-file optional-filename) (error-output t) (load t) (verbose t)
    (print t) (progress t) (block-compile t) (entry-points list))
   (values (or pathname null) boolean boolean))
 (defknown disassemble (callable &optional stream) void)
@@ -1002,7 +1005,7 @@
 (defknown inspect (t) (values))
 
 (defknown room (&optional (member t nil :default)) void)
-(defknown ed (&optional filename) t)
+(defknown ed (&optional (or symbol cons filename) &key init display) t)
 (defknown dribble (&optional filename &key (if-exists t)) t)
 
 (defknown apropos (stringlike &optional packagelike t) (values))
