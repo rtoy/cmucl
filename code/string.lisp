@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.7 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.8 1996/07/12 18:55:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,12 +132,15 @@
        (let ((index (%sp-string-compare string1 start1 end1
 					string2 start2 end2)))
 	 (if index
-	     (cond ((= (the fixnum index)
-		       ,(if lessp `(the fixnum end1) `(the fixnum end2)))
-		    (- (the fixnum index) ,offset1))
-		   ((= (the fixnum index)
-		       ,(if lessp `(the fixnum end2) `(the fixnum end1)))
-		    nil)
+	     (cond ((= (the fixnum index) (the fixnum end1))
+		    ,(if lessp
+			 `(- (the fixnum index) ,offset1)
+		       `nil))
+		   ((= (+ (the fixnum index) (- start2 start1))
+		       (the fixnum end2))
+		    ,(if lessp
+			 `nil
+		       `(- (the fixnum index) ,offset1)))
 		   ((,(if lessp 'char< 'char>)
 		     (schar string1 index)
 		     (schar string2 (+ (the fixnum index) (- start2 start1))))
