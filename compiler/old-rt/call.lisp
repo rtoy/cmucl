@@ -480,8 +480,8 @@ default-value-5
 ;;;
 (define-vop (known-return)
   (:args
-   (old-fp)
-   (return-pc)
+   (old-fp :target old-fp-temp)
+   (return-pc :target return-pc-temp)
    (vals :more t))
   (:temporary (:sc descriptor-reg :from (:argument 0)) old-fp-temp)
   (:temporary (:sc descriptor-reg :from (:argument 1)) return-pc-temp)
