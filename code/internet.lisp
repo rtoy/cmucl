@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.33 2002/01/23 19:02:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.34 2002/01/26 13:08:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -267,21 +267,30 @@ struct in_addr {
 	(error "Error creating socket: ~A" (unix:get-unix-error-msg)))
       socket)))
 
-(defun connect-to-inet-socket (host port &optional (kind :stream))
+ (defun connect-to-inet-socket (host port &optional (kind :stream))
   "The host may be an address string or an IP address in host order."
-  (let* ((hostent (or (lookup-host-entry host)
-		      (error "Unknown host: ~S." host)))
+  (let* ((addr (if (stringp host)
+		   (host-entry-addr (or (lookup-host-entry host)
+					(error "Unknown host: ~S." host)))
+		   host))
 	 (socket (create-inet-socket kind)))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
-      (setf (slot sockaddr 'addr) (htonl (host-entry-addr hostent)))
+      (setf (slot sockaddr 'addr) (htonl addr))
       (when (minusp (unix:unix-connect socket
 				       (alien-sap sockaddr)
 				       (alien-size inet-sockaddr :bytes)))
 	(unix:unix-close socket)
 	(error "Error connecting socket to [~A:~A]: ~A"
-	       (host-entry-name hostent)
+	       (if (stringp host)
+		   host
+		   (let ((naddr (htonl addr)))
+		     (format nil "~D.~D.~D.~D"
+			     (ldb (byte 8 0) naddr)
+			     (ldb (byte 8 8) naddr)
+			     (ldb (byte 8 16) naddr)
+			     (ldb (byte 8 24) naddr))))
 	       port
 	       (unix:get-unix-error-msg)))
       socket)))
