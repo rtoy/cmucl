@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.10 2001/09/24 15:34:26 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.11 2002/02/19 15:46:09 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -124,7 +124,7 @@
 ;;;
 (define-vop (make-catch-block)
   (:args (tn)
-	 (tag :scs (descriptor-reg)))
+	 (tag :scs (descriptor-reg any-reg)))
   (:info entry-label)
   (:results (block :scs (any-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
