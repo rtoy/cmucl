@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.7 1991/04/25 01:29:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.8 1991/05/28 17:32:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -214,38 +214,38 @@
 
 (defun copy-readtable (&optional (from-readtable *readtable*) to-readtable)
   "A copy is made of from-readtable and place into to-readtable."
-  (if (null from-readtable) (setq from-readtable std-lisp-readtable))
-  (if (null to-readtable) (setq to-readtable (make-readtable)))
-  ;;physically clobber contents of internal tables.
-  (replace (character-attribute-table to-readtable)
-	   (character-attribute-table from-readtable))
-  (replace (character-macro-table to-readtable)
-	   (character-macro-table from-readtable))
-  (setf (dispatch-tables to-readtable)
-	(mapcar #'(lambda (pair) (cons (car pair)
-				       (copy-seq (cdr pair))))
-		(dispatch-tables from-readtable)))
-  to-readtable)
+  (let ((from-readtable (or from-readtable std-lisp-readtable))
+	(to-readtable (or to-readtable (make-readtable))))
+    ;;physically clobber contents of internal tables.
+    (replace (character-attribute-table to-readtable)
+	     (character-attribute-table from-readtable))
+    (replace (character-macro-table to-readtable)
+	     (character-macro-table from-readtable))
+    (setf (dispatch-tables to-readtable)
+	  (mapcar #'(lambda (pair) (cons (car pair)
+					 (copy-seq (cdr pair))))
+		  (dispatch-tables from-readtable)))
+    to-readtable))
 
 (defun set-syntax-from-char (to-char from-char &optional
 				     (to-readtable *readtable*)
 				     (from-readtable ()))
   "Causes the syntax of to-char to be the same as from-char in the 
-   optional readtable (defaults to the current readtable).  The
-   from-table defaults the standard lisp readtable by being nil."
-  (if (null from-readtable) (setq from-readtable std-lisp-readtable))
-  ;;copy from-char entries to to-char entries, but make sure that if
-  ;;from char is a constituent you don't copy non-movable secondary
-  ;;attributes (constituent types), and that said attributes magically
-  ;;appear if you transform a non-constituent to a constituent.
-  (let ((att (get-cat-entry from-char from-readtable)))
-    (if (constituentp from-char from-readtable)
-	(setq att (get-secondary-attribute to-char)))
-    (set-cat-entry to-char att to-readtable)
-    (set-cmt-entry to-char
-		   (get-cmt-entry from-char from-readtable)
-		   to-readtable)
-    NIL))
+  optional readtable (defaults to the current readtable).  The
+  from-table defaults the standard lisp readtable by being nil."
+  (let ((from-readtable (or from-readtable std-lisp-readtable)))
+    ;;copy from-char entries to to-char entries, but make sure that if
+    ;;from char is a constituent you don't copy non-movable secondary
+    ;;attributes (constituent types), and that said attributes magically
+    ;;appear if you transform a non-constituent to a constituent.
+    (let ((att (get-cat-entry from-char from-readtable)))
+      (if (constituentp from-char from-readtable)
+	  (setq att (get-secondary-attribute to-char)))
+      (set-cat-entry to-char att to-readtable)
+      (set-cmt-entry to-char
+		     (get-cmt-entry from-char from-readtable)
+		     to-readtable)
+      NIL)))
 
 (defun set-macro-character (char function &optional
 				 (non-terminatingp nil) (rt *readtable*))
@@ -260,19 +260,18 @@
   (set-cmt-entry char function rt)
   T)
 
-(defun get-macro-character (char &optional (rt *readtable*))
+(defun get-macro-character (char &optional rt)
   "Returns the function associated with the specified char which is a macro
-   character.  The optional readtable argument defaults to the current
-   readtable."
-  (when (null rt) (setf rt *readtable*))
-  ;; Check macro syntax, return associated function if it's there.
-  ;; Returns a value for all constituents.
-  (cond ((constituentp char)
-	 (values (get-cmt-entry char rt) t))
-	((terminating-macrop char)
-	 (values (get-cmt-entry char rt) nil))
-	(t nil)))
-
+  character.  The optional readtable argument defaults to the current
+  readtable."
+  (let ((rt (or rt *readtable*)))
+    ;; Check macro syntax, return associated function if it's there.
+    ;; Returns a value for all constituents.
+    (cond ((constituentp char)
+	   (values (get-cmt-entry char rt) t))
+	  ((terminating-macrop char)
+	   (values (get-cmt-entry char rt) nil))
+	  (t nil))))
 
 
 ;;;; These definitions support internal programming conventions.
@@ -1150,13 +1149,12 @@
 	      function)
 	(error "~S is not a dispatch char." disp-char))))
 
-(defun get-dispatch-macro-character (disp-char sub-char
-					       &optional (rt *readtable*))
+(defun get-dispatch-macro-character (disp-char sub-char &optional rt)
   "Returns the macro character function for sub-char under disp-char
-   or nil if there is no associated function."
-  (when (null rt) (setf rt *readtable*))
-  (let ((dpair (find disp-char (dispatch-tables rt)
-		     :test #'char= :key #'car)))
+  or nil if there is no associated function."
+  (let* ((rt (or rt *readtable*))
+	 (dpair (find disp-char (dispatch-tables rt)
+		      :test #'char= :key #'car)))
     (if dpair
 	(elt (the simple-vector (cdr dpair))
 	     (char-code sub-char))
