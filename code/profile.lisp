@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.29 2003/02/05 11:08:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.30 2003/02/05 22:58:15 cracauer Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,46 +107,6 @@
 (eval-when (compile eval)
   (error "No consing will be reported unless a Total-Consing function is ~
            defined."))
-
-(eval-when (compile load eval)
-;; Some macros to implement a very simple "bignum" package consisting
-;; of 2 fixnums.  This is intended to extend the range of the consing
-;; for profiling without adding lots of extra consing to the profiling
-;; routines.
-(defconstant +fixnum-bits+
-  #.(integer-length most-positive-fixnum)
-  "The number of bits in a fixnum")
-(defconstant +fixnum-byte+
-  (byte +fixnum-bits+ 0)
-  "A byte for extracting out a fixnum-sized byte from an least significant part of an integer")
-
-(defmacro dfix-add ((a-hi a-lo) (b-hi b-lo))
-  ;; Add the 2 fixnums and return the sum as two values
-  (let ((hi (gensym))
-	(lo (gensym)))
-    `(let ((,hi (+ ,a-hi ,b-hi))
-	   (,lo (+ ,a-lo ,b-lo)))
-       (if (<= ,lo most-positive-fixnum)
-	   (values ,hi ,lo)
-	   (values (+ ,hi 1)
-		   (ldb +fixnum-byte+
-			,lo))))))
-(defmacro dfix-sub ((a-hi a-lo) (b-hi b-lo))
-  ;; Subtract 2 fixnums and return the difference as two values
-  (let ((hi (gensym))
-	(lo (gensym)))
-    `(let ((,hi (- ,a-hi ,b-hi))
-	   (,lo (- ,a-lo ,b-lo)))
-       (if (>= ,lo)
-	   (values ,hi ,lo)
-	   (values (- ,hi 1)
-		   (+ ,lo #.(1+ most-positive-fixnum)))))))
-  
-(defmacro dfix-incf ((res-hi res-lo) (a-hi a-lo))
-  ;; Like incf, except for pairs of fixnum
-  `(multiple-value-setq (,res-hi ,res-lo)
-     (dfix-add (,res-hi ,res-lo) (,a-hi ,a-lo))))
-)
 
 #-cmu
 (progn
