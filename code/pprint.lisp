@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.33 2003/01/06 22:27:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.34 2004/01/16 03:13:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1177,6 +1177,16 @@
 
 (defun pprint-lambda-list (stream lambda-list &rest noise)
   (declare (ignore noise))
+  (when (and (consp lambda-list)
+	     (member (car lambda-list) lisp::*bq-tokens*))
+    ;; if this thing looks like a backquoty thing, then we don't want
+    ;; to destructure it, we want to output it straight away.  [ this
+    ;; is the exception to the normal processing: if we did this
+    ;; generally we would find lambda lists such as (FUNCTION FOO)
+    ;; being printed as #'FOO ]  -- CSR, 2003-12-07
+    (output-object lambda-list stream)
+    (return-from pprint-lambda-list nil))
+
   (pprint-logical-block (stream lambda-list :prefix "(" :suffix ")")
     (let ((state :required)
 	  (first t))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.11 2002/10/14 21:37:57 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.12 2004/01/16 03:13:09 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,10 @@
 (defvar *bq-at-flag* '(|,@|))
 (defvar *bq-dot-flag* '(|,.|))
 (defvar *bq-vector-flag* '(|bqv|))
-
+(defvar *bq-tokens*
+  '(backq-comma backq-comma-at backq-comma-dot backq-list
+    backq-list* backq-append backq-nconc backq-cons backq-vector))
+  
 ;; This is the actual character macro.
 (defun backquote-macro (stream ignore)
   (declare (ignore ignore))
