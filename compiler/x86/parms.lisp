@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.10 1998/03/21 07:54:39 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.11 1998/06/07 17:56:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -288,8 +288,11 @@
       ;; Multi-process support.
       *control-stacks*
 
+      ;; Make the ..slot-unbound.. symbol static to optimise the
+      ;; common slot unbound check.
+      pcl::..slot-unbound..
+
       ;; Spare symbols
-      spare-11
       spare-10
       spare-9
       spare-8
