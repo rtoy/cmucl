@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.26 1997/11/11 18:51:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.27 1997/11/15 11:03:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -394,13 +394,15 @@
 (defconstant rtld-lazy 1)
 (defconstant rtld-now 2)
 (defconstant rtld-global #-irix #o400 #+irix 4)
-;; Dynamically loaded stuff isn't there upon restoring from a save--this is
-;;primarily for irix, which resolves tzname at runtime, resulting in
-;;*global-table* being set in the saved core image, resulting in havoc upon
-;;restart.
+
+(defvar *global-table* nil)
+;;; Dynamically loaded stuff isn't there upon restoring from a
+;;; save--this is primarily for irix, which resolves tzname at
+;;; runtime, resulting in *global-table* being set in the saved core
+;;; image, resulting in havoc upon restart.
 (pushnew #'(lambda () (setq *global-table* nil))
-         ext:*after-save-initializations*)
-(defvar *global-table* NIL)
+	 ext:*after-save-initializations*)
+
 (defvar *dso-linker*
   #+solaris "/usr/ccs/bin/ld"
   #+(or linux irix) "/usr/bin/ld")
@@ -413,12 +415,13 @@
 (alien:def-alien-routine dlclose void (lib system-area-pointer))
 (alien:def-alien-routine dlerror c-call:c-string)
 
-;; Ensure we've opened our own binary so can resolve global variables in the
-;;lisp image that come from libraries. This used to happen only in
-;;alternate-get-global-address, and only if no libraries were dlopened already,
-;;but that didn't work if something was dlopened before any problem global vars
-;;were used. So now we do this in any function that can add to the global-table,
-;;as well as in a-g-g-a.
+;;; Ensure we've opened our own binary so can resolve global variables
+;;; in the lisp image that come from libraries. This used to happen
+;;; only in alternate-get-global-address, and only if no libraries
+;;; were dlopened already, but that didn't work if something was
+;;; dlopened before any problem global vars were used. So now we do
+;;; this in any function that can add to the global-table, as well as
+;;; in alternate-get-global-address.
 (defun ensure-lisp-table-opened ()
   (unless *global-table*
     ;; Prevent recursive call if dlopen isn't defined
