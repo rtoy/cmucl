@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.37 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.38 1997/08/07 00:29:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,7 +71,10 @@
   (external-symbols (required-argument) :type package-hashtable)
   ;;
   ;; List of shadowing symbols.
-  (%shadowing-symbols () :type list))
+  (%shadowing-symbols () :type list)
+  ;;
+  ;; Documentation string for this package
+  (doc-string nil :type (or simple-string null)))
 
 
 (defun %print-package (s stream d)
@@ -604,6 +607,7 @@
      (:IMPORT-FROM <package-name> {symbol-name}*)
      (:INTERN {symbol-name}*)
      (:EXPORT {symbol-name}*)
+     (:DOCUMENTATION doc-string)
    All options except :SIZE can be used multiple times."
   (let ((nicknames nil)
 	(size nil)
@@ -615,7 +619,8 @@
 	(interns nil)
 	(exports nil)
 	(incomming nil)
-	(outgoing nil))
+	(outgoing nil)
+	(doc nil))
     (dolist (option options)
       (unless (consp option)
 	(error "Bogus DEFPACKAGE option: ~S" option))
@@ -668,12 +673,14 @@
 	 (let ((new (stringify-names (cdr option) "symbol")))
 	   (setf outgoing (append-unique new outgoing :export))
 	   (setf exports (append exports new))))
+	(:documentation
+	 (setf doc (coerce (second option) 'simple-string)))
 	(t
 	 (error "Bogus DEFPACKAGE option: ~S" option))))
     `(eval-when (compile load eval)
        (%defpackage ,(stringify-name package "package") ',nicknames ',size
 		    ',shadows ',shadowing-imports ',(if use-p use :default)
-		    ',imports ',interns ',exports))))
+		    ',imports ',interns ',exports ',doc))))
 
 (defun stringify-name (name kind)
   (typecase name
@@ -697,11 +704,12 @@
   old)
 
 (defun %defpackage (name nicknames size shadows shadowing-imports
-			 use imports interns exports)
+			 use imports interns exports doc-string)
   (declare (type simple-base-string name)
 	   (type list nicknames shadows shadowing-imports
 		 imports interns exports)
-	   (type (or list (member :default)) use))
+	   (type (or list (member :default)) use)
+	   (type (or simple-base-string null) doc-string))
   (let ((package (or (find-package name)
 		     (progn
 		       (when (eq use :default)
@@ -757,6 +765,8 @@
 	(when diff
 	  (warn "~A also exports the following symbols:~%  ~S"
 		name diff))))
+    ;; Documentation
+    (setf (package-doc-string package) doc-string)
     package))
 
 (defun find-or-make-symbol (name package)
