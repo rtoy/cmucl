@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.20 2002/12/18 16:29:06 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.21 2002/12/22 14:09:51 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -67,9 +67,10 @@
 ;;;
 ;;;
 ;;;
-(defmethod shared-initialize :after ((slotd structure-slot-definition) slot-names 
-				     &key (allocation :instance))
-  (declare (ignore slot-names))
+(defmethod shared-initialize :after
+    ((slotd structure-slot-definition) slot-names 
+     &key (allocation :instance) allocation-class)
+  (declare (ignore slot-names allocation-class))
   (unless (eq allocation :instance)
     (error "structure slots must have :instance allocation")))
 

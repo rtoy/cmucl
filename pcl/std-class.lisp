@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.38 2002/12/18 16:29:06 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.39 2002/12/22 14:09:52 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -751,24 +751,6 @@
 	and class = (slot-definition-class eslotd)
 	collect (assoc name (class-slot-cells class))))
 
-(defun compute-layout (cpl instance-eslotds)
-  (let* ((names (loop for eslotd in instance-eslotds
-		      when (eq (slot-definition-allocation eslotd) :instance)
-		      collect (slot-definition-name eslotd)))
-	 (order ()))
-    (labels ((rwalk (tail)
-	       (when tail
-		 (rwalk (cdr tail))
-		 (dolist (ss (class-slots (car tail)))
-		   (let ((n (slot-definition-name ss)))
-		     (when (member n names)
-		       (setq order (cons n order)
-			     names (remove n names))))))))
-      (rwalk (if (slot-boundp (car cpl) 'slots)
-		 cpl
-		 (cdr cpl)))
-      (reverse (append names order)))))
-
 (defun update-gfs-of-class (class)
   (when (and (class-finalized-p class)
 	     (let ((cpl (class-precedence-list class)))
@@ -833,37 +815,83 @@
   ;;
   (let ((name-dslotds-alist ()))
     (dolist (c (class-precedence-list class))
-      (let ((dslotds (class-direct-slots c)))
-	(dolist (d dslotds)
-	  (let* ((name (slot-definition-name d))
-		 (entry (assq name name-dslotds-alist)))
-	    (if entry
-		(push d (cdr entry))
-		(push (list name d) name-dslotds-alist))))))
+      (dolist (slot (class-direct-slots c))
+	(let* ((name (slot-definition-name slot))
+	       (entry (assq name name-dslotds-alist)))
+	  (if entry
+	      (push slot (cdr entry))
+	      (push (list name slot) name-dslotds-alist)))))
     (mapcar (lambda (direct)
 	      (compute-effective-slot-definition class
 						 (nreverse (cdr direct))))
 	    name-dslotds-alist)))
 
-(defmethod compute-slots :around ((class std-class))
+(defmethod compute-slots ((class standard-class))
+  (call-next-method))
+
+(defmethod compute-slots :around ((class standard-class))
   (let ((eslotds (call-next-method))
-	(cpl (class-precedence-list class))
-	(instance-slots ())
-	(class-slots    ()))
-    (dolist (eslotd eslotds)
-      (ecase (slot-definition-allocation eslotd)
-	(:instance (push eslotd instance-slots))
-	(:class    (push eslotd class-slots))))
-    (let ((nlayout (compute-layout cpl instance-slots)))
-      (dolist (eslotd instance-slots)
-	(setf (slot-definition-location eslotd) 
-	      (position (slot-definition-name eslotd) nlayout))))
-    (dolist (eslotd class-slots)
-      (setf (slot-definition-location eslotd) 
-	    (assoc (slot-definition-name eslotd)
-		   (class-slot-cells (slot-definition-class eslotd)))))
-    (mapc #'initialize-internal-slot-functions eslotds)
-    eslotds))
+	(location -1))
+    (dolist (eslotd eslotds eslotds)
+      (setf (slot-definition-location eslotd)
+	    (ecase (slot-definition-allocation eslotd)
+	      (:instance
+	       (incf location))
+	      (:class
+	       (let* ((name (slot-definition-name eslotd))
+		      (from-class (slot-definition-allocation-class eslotd))
+		      (cell (assq name (class-slot-cells from-class))))
+		 (assert (consp cell))
+		 cell))))
+      (initialize-internal-slot-functions eslotd))))
+
+(defmethod compute-slots ((class funcallable-standard-class))
+  (call-next-method))
+
+(defmethod compute-slots :around ((class funcallable-standard-class))
+  (labels ((instance-slot-names (slotds)
+	     (let (collect)
+	       (dolist (slotd slotds (nreverse collect))
+		 (when (eq (slot-definition-allocation slotd) :instance)
+		   (push (slot-definition-name slotd) collect)))))
+	   ;; This sorts slots so that slots of classes later in the CPL
+           ;; come before slots of other classes.  This is crucial for
+           ;; funcallable instances because it ensures that the slots of
+           ;; FUNCALLABLE-STANDARD-OBJECT, which includes the slots of
+           ;; KERNEL:FUNCALLABLE-INSTANCE, come first, which in turn
+           ;; makes it possible to treat FUNCALLABLE-STANDARD-OBJECT as
+           ;; a funcallable instance.
+	   (compute-layout (eslotds)
+	     (let ((first ())
+		   (names (instance-slot-names eslotds)))
+	       (dolist (class
+			 (reverse (class-precedence-list class))
+			(nreverse (nconc names first)))
+		 (dolist (ss (class-slots class))
+		   (let ((name (slot-definition-name ss)))
+		     (when (member name names)
+		       (push name first)
+		       (setq names (delete name names)))))))))
+    (let ((all-slotds (call-next-method))
+	  (instance-slots ())
+	  (class-slots ()))
+      (dolist (slotd all-slotds)
+	(ecase (slot-definition-allocation slotd)
+	  (:instance (push slotd instance-slots))
+	  (:class (push slotd class-slots))))
+      (let ((layout (compute-layout instance-slots)))
+	(dolist (slotd instance-slots)
+	  (setf (slot-definition-location slotd)
+		(position (slot-definition-name slotd) layout))
+	  (initialize-internal-slot-functions slotd)))
+      (dolist (slotd class-slots)
+	(let ((name (slot-definition-name slotd))
+	      (from-class (slot-definition-allocation-class slotd)))
+	  (setf (slot-definition-location slotd)
+		(assoc name (class-slot-cells from-class)))
+	  (assert (consp (slot-definition-location slotd)))
+	  (initialize-internal-slot-functions slotd)))
+      all-slotds)))
 
 (defmethod compute-slots ((class structure-class))
   (mapcan (lambda (superclass)
@@ -897,6 +925,7 @@
 	 (initform nil)
 	 (initargs nil)
 	 (allocation nil)
+	 (allocation-class nil)
 	 (type t)
 	 (namep  nil)
 	 (initp  nil)
@@ -914,6 +943,7 @@
 		  initp t)))
 	(unless allocp
 	  (setq allocation (slot-definition-allocation slotd)
+		allocation-class (slot-definition-class slotd)
 		allocp t))
 	(setq initargs (append (slot-definition-initargs slotd) initargs))
 	(let ((slotd-type (slot-definition-type slotd)))
@@ -925,6 +955,7 @@
 	  :initfunction initfunction
 	  :initargs initargs
 	  :allocation allocation
+	  :allocation-class allocation-class
 	  :type type
 	  :class class)))
 
