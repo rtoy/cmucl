@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.1 1993/01/23 14:41:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.2 1993/01/27 12:56:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
 (in-package "EXTENSIONS")
 (export '(info clear-info define-info-class define-info-type
 	       make-info-environment do-info *info-environment*
-	       compact-info-environment undefine-function-name))
+	       compact-info-environment))
 
 (in-package "C")
 
@@ -1040,7 +1040,7 @@
 
 ;;; If a function is a defstruct slot accessor or setter, then this is the
 ;;; defstruct-definition for the structure that it belongs to.
-(define-info-type function accessor-for (or defstruct-description null)
+(define-info-type function accessor-for (or kernel:defstruct-description null)
   nil)
 
 ;;; If a function is "known" to the compiler, then this is FUNCTION-INFO
@@ -1123,7 +1123,7 @@
 (define-info-type type class (or class null) nil)
 
 (define-info-class typed-structure)
-(define-info-type typed-structure info)
+(define-info-type typed-structure info t nil)
 
 (define-info-class declaration)
 (define-info-type declaration recognized boolean)
@@ -1152,26 +1152,3 @@
 (define-info-type random-documentation stuff list ())
 
 ); defun other-info-init
-
-;;;; Random utilities:
-
-;;; UNDEFINE-FUNCTION-NAME  --  Interface
-;;;
-;;;    Make Name no longer be a function name: clear everything back to the
-;;; default.
-;;;
-(defun undefine-function-name (name)
-  (when name
-    (macrolet ((frob (type &optional val)
-		 `(unless (eq (info function ,type name) ,val)
-		    (setf (info function ,type name) ,val))))
-      (frob info)
-      (frob type (specifier-type 'function))
-      (frob where-from :assumed)
-      (frob inlinep)
-      (frob kind)
-      (frob accessor-for)
-      (frob inline-expansion)
-      (frob source-transform)
-      (frob assumed-type)))
-  (undefined-value))
