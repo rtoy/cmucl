@@ -1159,7 +1159,7 @@
   (name nil :type (or symbol list))
   ;;
   ;; The kind of reference to Name.
-  (kind nil :type (member :function :type))
+  (kind nil :type (member :function :type :variable))
   ;;
   ;; The number of times this thing was used.
   (count 0 :type unsigned-byte)
