@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.27 1997/01/18 14:30:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.28 1997/05/15 17:13:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.27 1997/01/18 14:30:37 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.28 1997/05/15 17:13:36 dtc Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -556,8 +556,9 @@
     (number-dispatch ((number real) (divisor real))
       ((fixnum fixnum) (truncate number divisor))
       (((foreach fixnum bignum) ratio)
-       (truncate (* number (denominator divisor))
-		 (numerator divisor)))
+       (let ((q (truncate (* number (denominator divisor))
+			  (numerator divisor))))
+	 (values q (- number (* q divisor)))))
       ((fixnum bignum)
        (values 0 number))
       ((ratio (or float rational))
