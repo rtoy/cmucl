@@ -51,6 +51,6 @@
 
 (proclaim '(ftype (function (&rest t) *)
 		  c::%%defun c::%%defmacro c::%%defconstant c::%defstruct
-		  c::%%compiler-defstruct c::get-info-value c::set-info-value
-		  find-keyword keyword-test assert-error assert-prompt
-		  check-type-error case-body-error))
+		  c::%%compiler-defstruct c::%proclaim c::get-info-value
+		  c::set-info-value find-keyword keyword-test assert-error
+		  assert-prompt check-type-error case-body-error))
