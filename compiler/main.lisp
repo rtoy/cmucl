@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.110.2.2 2000/08/09 12:56:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.110.2.3 2000/08/09 13:23:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -231,7 +231,7 @@
   (let ((*constraint-number* 0)
 	(loop-count 1)
 	(*delayed-transforms* nil))
-    (declare (special *constraint-number*))
+    (declare (special *constraint-number* *delayed-transforms*))
     (loop
      (ir1-optimize-until-done component)
      (when (or (component-new-functions component)
