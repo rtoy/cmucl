@@ -46,7 +46,7 @@
 ;;; is called.
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.4 2003/04/18 08:54:41 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.5 2003/04/22 13:10:13 gerd Exp $")
 
 (in-package "PCL")
 
@@ -483,15 +483,15 @@
 		 (push (list location type val slot-type) class-inits)))
 
 	     (instance-init (location type val slot-type)
-	       (assert (not (instance-slot-initialized-p location)))
-	       (cond (structure-p
-		      (assert (symbolp location))
-		      (push (list location type val slot-type)
-			    structure-inits))
-		     (t
-		      (assert (integerp location))
-		      (setf (aref slot-vector location)
-			    (list type val slot-type)))))
+	       (unless (instance-slot-initialized-p location)
+		 (cond (structure-p
+			(assert (symbolp location))
+			(push (list location type val slot-type)
+			      structure-inits))
+		       (t
+			(assert (integerp location))
+			(setf (aref slot-vector location)
+			      (list type val slot-type))))))
 
 	     (instance-slot-initialized-p (location)
 	       (if structure-p
