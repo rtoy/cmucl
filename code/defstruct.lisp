@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.9 1990/08/24 18:10:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.10 1990/09/06 17:53:14 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -313,7 +313,7 @@
       
       (unless (dsd-read-only slot)
 	(setf (fdefinition `(setf ,(dsd-accessor slot)))
-	      #'(lambda (structure new-value)
+	      #'(lambda (new-value structure)
 		  (declare (optimize (speed 3) (safety 0)))
 		  (unless (typep-to-structure structure info)
 		    (error "Structure for setter ~S is not a ~S:~% ~S"
