@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.39 1992/03/06 10:46:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.40 1992/07/08 20:58:41 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,112 +16,37 @@
 ;;; Written by William Lott
 ;;;
 
+
 (in-package "MIPS")
-(use-package "ASSEM")
+
+(use-package "NEW-ASSEM")
 (use-package "EXT")
+(use-package "C")
 
-(disassem:set-disassem-params
- :instruction-alignment 32
- :storage-class-sets '((register any-reg descriptor-reg base-char-reg
-				 sap-reg signed-reg unsigned-reg
-				 non-descriptor-reg interior-reg)
-		       (float-reg single-reg double-reg)
-		       (control-stack control-stack)
-		       (number-stack signed-stack unsigned-stack
-				     base-char-stack sap-stack
-				     single-stack double-stack))
- )
+(def-assembler-params
+    :scheduler-p nil)
 
 
-;;;; Resources.
+;;;; Functions to convert TN's and random symbolic things into values.
 
-(define-resources high low memory float-status)
-
-
-;;;; Special argument types and fixups.
-
-(defun register-p (object)
-  (and (tn-p object)
-       (let* ((sc (tn-sc object))
-	      (sc-name (sc-name sc))
-	      (sb (sc-sb sc))
-	      (sb-name (sb-name sb)))
-	 (or (eq sc-name 'zero)
-	     (eq sc-name 'null)
-	     (eq sb-name 'registers)))))
-
-(defun tn-register-number (tn)
+(defun reg-tn-encoding (tn)
+  (declare (type tn tn))
   (sc-case tn
     (zero zero-offset)
     (null null-offset)
-    (t (tn-offset tn))))
+    (t
+     (if (eq (sb-name (sc-sb (tn-sc tn))) 'registers)
+	 (tn-offset tn)
+	 (error "~S isn't a register." tn)))))
 
-(defconstant reg-symbols
-  (map 'vector
-       #'(lambda (name)
-	   (cond ((null name) nil)
-		 (t (make-symbol (concatenate 'string "$" name)))))
-       *register-names*))
+(defun fp-reg-tn-encoding (tn)
+  (declare (type tn tn))
+  (unless (eq (sb-name (sc-sb (tn-sc tn))) 'float-registers)
+    (error "~S isn't a floating-point register." tn))
+  (tn-offset tn))
 
-(define-argument-type register
-  :type '(satisfies register-p)
-  :function tn-register-number
-  :disassem-printer #'(lambda (value stream dstate)
-			(declare (stream stream) (fixnum value))
-			(let ((regname (aref reg-symbols value)))
-			  (princ regname stream)
-			  (disassem:maybe-note-associated-storage-ref
-			   value
-			   'register
-			   regname
-			   dstate)))
-  )
-
-(defun fp-reg-p (object)
-  (and (tn-p object)
-       (eq (sb-name (sc-sb (tn-sc object)))
-	   'float-registers)))
-
-(defconstant float-reg-symbols
-  (coerce 
-   (loop for n from 0 to 31 collect (make-symbol (format nil "$F~d" n)))
-   'vector))
-
-(define-argument-type fp-reg
-  :type '(satisfies fp-reg-p)
-  :function tn-offset
-  :disassem-printer #'(lambda (value stream dstate)
-			(declare (stream stream) (fixnum value))
-			(let ((regname (aref float-reg-symbols value)))
-			  (princ regname stream)
-			  (disassem:maybe-note-associated-storage-ref
-			   value
-			   'float-reg
-			   regname
-			   dstate)))
-  )
-
-(define-argument-type odd-fp-reg
-  :type '(satisfies fp-reg-p)
-  :function (lambda (tn)
-	      (1+ (tn-offset tn))))
-
-(define-argument-type control-register
-  :type '(unsigned-byte 5)
-  :function identity
-  :disassem-printer "{CR:#x~X}")
-
-(defun label-offset (label)
-  (1- (ash (- (label-position label) *current-position*) -2)))
-
-(define-argument-type relative-label
-  :type 'label
-  :function label-offset
-  :sign-extend t
-  :disassem-use-label #'(lambda (value dstate)
-			  (declare (type disassem:disassem-state dstate))
-			  (+ (ash (1+ value) 2)
-			     (disassem:dstate-curpos dstate))))
+(deftype float-format ()
+  '(member :s :single :d :double :w :word))
 
 (defun float-format-value (format)
   (ecase format
@@ -129,25 +54,11 @@
     ((:d :double) 1)
     ((:w :word) 4)))
 
-(define-argument-type float-format
-  :type '(member :s :single :d :double :w :word)
-  :function float-format-value
-  :disassem-printer #'(lambda (value stream dstate)
-			(declare (ignore dstate)
-				 (stream stream)
-				 (fixnum value))
-			(princ (case value
-				 (0 's)
-				 (1 'd)
-				 (4 'w)
-				 (t '?))
-			       stream)))
-			
-
 (defconstant compare-kinds
   '(:f :un :eq :ueq :olt :ult :ole :ule :sf :ngle :seq :ngl :lt :nge :le :ngt))
-(defconstant compare-kinds-vec
-  (apply #'vector compare-kinds))
+
+(deftype compare-kind ()
+  `(member ,@compare-kinds))
 
 (defun compare-kind (kind)
   (or (position kind compare-kinds)
@@ -155,16 +66,11 @@
 	     kind
 	     compare-kinds)))
 
-(define-argument-type compare-kind
-  :type `(member ,@compare-kinds)
-  :function compare-kind
-  :disassem-printer compare-kinds-vec)
-
 
 (defconstant float-operations '(+ - * /))
-(defconstant float-operation-names
-  ;; this gets used for output only
-  #(add sub mul div))
+
+(deftype float-operation ()
+  `(member ,@float-operations))
 
 (defun float-operation (op)
   (or (position op float-operations)
@@ -172,810 +78,501 @@
 	     op
 	     float-operations)))
 
-(define-argument-type float-operation
-  :type `(member ,@float-operations)
-  :function float-operation
-  :disassem-printer float-operation-names)
+
+;;;; Primitive emitters.
 
-(define-fixup-type :jump
-  :disassem-printer #'(lambda (value stream dstate)
-			(let ((addr (ash value 2)))
-			  (disassem:maybe-note-assembler-routine addr dstate)
-			  (write addr :base 16 :radix t :stream stream))))
-(define-fixup-type :lui :disassem-printer "#x~4,'0X")
-(define-fixup-type :addi)
+(define-emitter emit-word 32
+  (byte 32 0))
+
+(define-emitter emit-short 16
+  (byte 16 0))
+
+(define-emitter emit-immediate-inst 32
+  (byte 6 26) (byte 5 21) (byte 5 16) (byte 16 0))
+
+(define-emitter emit-jump-inst 32
+  (byte 6 26) (byte 26 0))
+
+(define-emitter emit-register-inst 32
+  (byte 6 26) (byte 5 21) (byte 5 16) (byte 5 11) (byte 5 6) (byte 6 0))
+
+
+(define-emitter emit-break-inst 32
+  (byte 6 26) (byte 10 16) (byte 10 6) (byte 6 0))
+
+(define-emitter emit-float-inst 32
+  (byte 6 26) (byte 1 25) (byte 4 21) (byte 5 16)
+  (byte 5 11) (byte 5 6) (byte 6 0))
 
 
 
-;;;; Formats.
+;;;; Constants used by instruction emitters.
 
 (defconstant special-op #b000000)
-(defconstant bcond-op #b0000001)
+(defconstant bcond-op #b000001)
 (defconstant cop0-op #b010000)
 (defconstant cop1-op #b010001)
 (defconstant cop2-op #b010010)
 (defconstant cop3-op #b010011)
 
-(defconstant immed-printer
-  '(:name :tab rt (:unless (:same-as rt) ", " rs) ", " immediate))
-
-;;; for things that use rt=0 as a nop
-(defconstant immed-zero-printer
-  '(:name :tab rt (:unless (:constant 0) ", " rs) ", " immediate))
-
-
-(define-format (immediate 32
-		:disassem-printer immed-printer)
-  (op (byte 6 26))
-  (rs (byte 5 21) :read t :default-type register)
-  (rt (byte 5 16) :write t :default-type register)
-  (immediate (byte 16 0) :default-type (signed-byte 16)))
-
-(define-format (jump 32
-		:disassem-printer '(:name :tab target))
-  (op (byte 6 26))
-  (target (byte 26 0) :default-type (unsigned-byte 26)))
-
-(defconstant reg-printer
-  '(:name :tab rd (:unless (:same-as rd) ", " rs) ", " rt))
-
-(define-format (register 32 :disassem-printer reg-printer)
-  (op (byte 6 26))
-  (rs (byte 5 21) :read t :default-type register)
-  (rt (byte 5 16) :read t :default-type register)
-  (rd (byte 5 11) :write t :default-type register)
-  (shamt (byte 5 6) :default 0 :default-type (unsigned-byte 5))
-  (funct (byte 6 0)))
-
-
-(define-format (break 32
-		:disassem-printer
-		  '(:name :tab code (:unless (:constant 0) subcode)))
-  (op (byte 6 26) :default special-op)
-  (code (byte 10 16))
-  (subcode (byte 10 6) :default 0)
-  (funct (byte 6 0) :default #b001101))
-
-
-(define-format (coproc-branch 32
-		:use (float-status)
-		:disassem-printer '(:name :tab offset))
-  (op (byte 6 26))
-  (funct (byte 10 16))
-  (offset (byte 16 0) :default-type (signed-byte 16)))
-
-(defconstant float-fmt-printer
-  '((:unless :constant funct)
-    (:choose (:unless :constant sub-funct) nil)
-    "." format))
-
-(defconstant float-printer
-  `(:name ,@float-fmt-printer
-	  :tab
-	  fd
-	  (:unless (:same-as fd) ", " fs)
-	  ", " ft))
-
-(define-format (float 32 :use (float-status) :clobber (float-status)
-		:disassem-printer float-printer)
-  (op (byte 6 26) :default #b010001)
-  (filler (byte 1 25) :default #b1)
-  (format (byte 4 21) :default-type float-format)
-  (ft (byte 5 16) :read t :default-type fp-reg)
-  (fs (byte 5 11) :read t :default-type fp-reg)
-  (fd (byte 5 6) :write t :default-type fp-reg)
-  (funct (byte 6 0)))
-
-(define-format (float-aux 32 :use (float-status) :clobber (float-status)
-			  :disassem-printer float-printer)
-  (op (byte 6 26) :default #b010001)
-  (filler-1 (byte 1 25) :default #b1)
-  (format (byte 4 21) :default-type float-format)
-  (ft (byte 5 16) :read t :default 0 :default-type fp-reg)
-  (fs (byte 5 11) :read t :default-type fp-reg)
-  (fd (byte 5 6) :write t :default-type fp-reg)
-  (funct (byte 2 4))
-  (sub-funct (byte 4 0)))
-
 
 
-;;;; Instructions.
+;;;; Math instructions.
 
+(defun emit-math-inst (segment dst src1 src2 reg-opcode immed-opcode
+			       &optional allow-fixups)
+  (unless src2
+    (setf src2 src1)
+    (setf src1 dst))
+  (etypecase src2
+    (tn
+     (emit-register-inst segment special-op (reg-tn-encoding src1)
+			 (reg-tn-encoding src2) (reg-tn-encoding dst)
+			 0 reg-opcode))
+    (integer
+     (emit-immediate-inst segment immed-opcode (reg-tn-encoding src1)
+			  (reg-tn-encoding dst) src2))
+    (fixup
+     (unless allow-fixups
+       (error "Fixups aren't allowed."))
+     (note-fixup segment :addi src2)
+     (emit-immediate-inst segment immed-opcode (reg-tn-encoding src1)
+			  (reg-tn-encoding dst) 0))))
 
-(defmacro define-math-inst (name r3 imm &optional imm-type function fixup)
-  `(define-instruction (,name)
-     ,@(when imm
-	 `((immediate (op :constant ,imm)
-		      (rt :argument register)
-		      (rs :same-as rt)
-		      (immediate :argument (,(case imm-type
-					       (:signed 'signed-byte)
-					       (:unsigned 'unsigned-byte))
-					    16)
-				 ,@(when function
-				     `(:function ,function))))
-	   (immediate (op :constant ,imm)
-		      (rt :argument register)
-		      (rs :argument register)
-		      (immediate :argument (,(case imm-type
-					       (:signed 'signed-byte)
-					       (:unsigned 'unsigned-byte))
-					    16)
-				 ,@(when function
-				     `(:function ,function))))))
-     ,@(when (and imm fixup)
-	 `((immediate (op :constant ,imm)
-		      (rt :argument register)
-		      (rs :same-as rt)
-		      (immediate :argument addi-fixup))
-	   (immediate (op :constant ,imm)
-		      (rt :argument register)
-		      (rs :argument register)
-		      (immediate :argument addi-fixup))))
-     ,@(when r3
-	 `((register (op :constant special-op)
-		     (rd :argument register)
-		     (rs :argument register)
-		     (rt :argument register)
-		     (funct :constant ,r3))
-	   (register (op :constant special-op)
-		     (rd :argument register)
-		     (rs :same-as rd)
-		     (rt :argument register)
-		     (funct :constant ,r3))))))
+(define-instruction add (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (signed-byte 16) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-math-inst segment dst src1 src2 #b100000 #b001000)))
 
-(define-math-inst add #b100000 #b001000 :signed)
-(define-math-inst addu #b100001 #b001001 :signed nil t)
-(define-math-inst sub #b100010 #b001000 :signed -)
-(define-math-inst subu #b100011 #b001001 :signed -)
-(define-math-inst and #b100100 #b001100 :unsigned)
-(define-math-inst or #b100101 #b001101 :unsigned)
-(define-math-inst xor #b100110 #b001110 :unsigned)
-(define-math-inst nor #b100111 #b001111 :unsigned)
+(define-instruction addu (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (signed-byte 16) fixup null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-math-inst segment dst src1 src2 #b100001 #b001001 t)))
 
-(define-math-inst slt #b101010 #b001010 :signed)
-(define-math-inst sltu #b101011 #b001011 :signed)
+(define-instruction sub (segment dst src1 &optional src2)
+  (:declare
+   (type tn dst)
+   (type (or tn (integer #.(- 1 (ash 1 15)) #.(ash 1 15)) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (unless src2
+     (setf src2 src1)
+     (setf src1 dst))
+   (emit-math-inst segment dst src1
+		   (if (integerp src2) (- src2) src2)
+		   #b100010 #b001000)))
 
-(defstruct lui-note
-  target-reg
-  high-bits
-  following-addr)
+(define-instruction subu (segment dst src1 &optional src2)
+  (:declare
+   (type tn dst)
+   (type
+    (or tn (integer #.(- 1 (ash 1 15)) #.(ash 1 15)) fixup null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (unless src2
+     (setf src2 src1)
+     (setf src1 dst))
+   (emit-math-inst segment dst src1
+		   (if (integerp src2) (- src2) src2)
+		   #b100011 #b001001 t)))
 
-(defun look-at-lui-note (chunk inst stream dstate)
-  (when stream
-    (let ((lui-note (disassem:dstate-get-prop dstate 'lui-note)))
-      (when (and lui-note
-		 (= (disassem:dstate-curpos dstate)
-		    (lui-note-following-addr lui-note))
-		 (= (disassem:arg-value 'rt chunk inst)
-		    (lui-note-target-reg lui-note)))
-	(let ((value
-	       (+ (lui-note-high-bits lui-note)
-		  (disassem:arg-value 'immediate
-				      chunk inst))))
-	(or (disassem:maybe-note-assembler-routine value dstate)
-	    (disassem:note #'(lambda (stream)
-			       (format stream "#x~x (~d)"
-				       value
-				       (disassem:sign-extend value 32)))
-			   dstate))))))) 
+(define-instruction and (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (unsigned-byte 16) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-math-inst segment dst src1 src2 #b100100 #b001100)))
 
-(disassem:specialize (or :disassem-control #'look-at-lui-note)
-  immediate)
-(disassem:specialize (add :disassem-control #'look-at-lui-note)
-  immediate)
+(define-instruction or (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (unsigned-byte 16) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-math-inst segment dst src1 src2 #b100101 #b001101)))
 
-;;; note: this must be after the above, because the disassem-controls
-;;; are exclusive
-(disassem:specialize (add
-		      :disassem-control
-		        #'(lambda (chunk inst stream dstate)
-			    (when stream
-			      (disassem:maybe-note-nil-indexed-object
-			       (disassem:arg-value 'immediate chunk inst)
-			       dstate))))
-  immediate
-  (rs :constant null-offset))
+(define-instruction xor (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (unsigned-byte 16) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-math-inst segment dst src1 src2 #b100110 #b001110)))
 
+(define-instruction nor (segment dst src1 &optional src2)
+  (:declare (type tn dst src1) (type (or tn null) src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-math-inst segment dst src1 src2 #b100111 #b000000)))
 
-(define-instruction (beq :pinned t
-			 :attributes (relative-branch delayed-branch))
-  (immediate (op :constant #b000100)
-	     (rs :argument register)
-	     (rt :constant 0)
-	     (immediate :argument relative-label))
-  (immediate (op :constant #b000100)
-	     (rs :argument register)
-	     (rt :argument register :read t :write nil)
-	     (immediate :argument relative-label)))
+(define-instruction slt (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (signed-byte 16) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-math-inst segment dst src1 src2 #b101010 #b001010)))
 
-(define-instruction (bne :pinned t
-			 :attributes (relative-branch delayed-branch))
-  (immediate (op :constant #b000101)
-	     (rs :argument register)
-	     (rt :constant 0)
-	     (immediate :argument relative-label))
-  (immediate (op :constant #b000101)
-	     (rs :argument register)
-	     (rt :argument register :read t :write nil)
-	     (immediate :argument relative-label)))
+(define-instruction sltu (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (signed-byte 16) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-math-inst segment dst src1 src2 #b101011 #b001011)))
 
-(defconstant cond-branch-printer
-  '(:name :tab rs ", " immediate))
+(define-instruction div (segment src1 src2)
+  (:declare (type tn src1 src2))
+  (:reads (list src1 src2))
+  (:writes :hi-and-lo-regs)
+  (:delay 1)
+  (:emitter
+   (emit-register-inst segment special-op (reg-tn-encoding src1)
+		       (reg-tn-encoding src2) 0 0 #b011010)))
 
-(define-instruction (blez :pinned t
-			  :attributes (relative-branch delayed-branch)
-			  :disassem-printer cond-branch-printer)
-  (immediate (op :constant #b000110)
-	     (rs :argument register)
-	     (rt :constant 0)
-	     (immediate :argument relative-label)))
+(define-instruction divu (segment src1 src2)
+  (:declare (type tn src1 src2))
+  (:reads (list src1 src2))
+  (:writes :hi-and-low-regs)
+  (:delay 1)
+  (:emitter
+   (emit-register-inst segment special-op (reg-tn-encoding src1)
+		       (reg-tn-encoding src2) 0 0 #b011011)))
 
-(define-instruction (bgtz :pinned t
-			  :attributes (relative-branch delayed-branch)
-			  :disassem-printer cond-branch-printer)
-  (immediate (op :constant #b000111)
-	     (rs :argument register)
-	     (rt :constant 0)
-	     (immediate :argument relative-label)))
+(define-instruction mult (segment src1 src2)
+  (:declare (type tn src1 src2))
+  (:reads (list src1 src2))
+  (:writes :hi-and-low-regs)
+  (:delay 1)
+  (:emitter
+   (emit-register-inst segment special-op (reg-tn-encoding src1)
+		       (reg-tn-encoding src2) 0 0 #b011000)))
 
-(define-instruction (bltz :pinned t
-			  :attributes (relative-branch delayed-branch)
-			  :disassem-printer cond-branch-printer)
-  (immediate (op :constant bcond-op)
-	     (rs :argument register)
-	     (rt :constant #b00000)
-	     (immediate :argument relative-label)))
+(define-instruction multu (segment src1 src2)
+  (:declare (type tn src1 src2))
+  (:reads (list src1 src2))
+  (:writes :hi-and-low-regs)
+  (:delay 1)
+  (:emitter
+   (emit-register-inst segment special-op (reg-tn-encoding src1)
+		       (reg-tn-encoding src2) 0 0 #b011001)))
 
-(define-instruction (bgez :pinned t
-			  :attributes (relative-branch delayed-branch)
-			  :disassem-printer cond-branch-printer)
-  (immediate (op :constant bcond-op)
-	     (rs :argument register)
-	     (rt :constant #b00001)
-	     (immediate :argument relative-label)))
+(defun emit-shift-inst (segment opcode dst src1 src2)
+  (unless src2
+    (setf src2 src1)
+    (setf src1 dst))
+  (etypecase src2
+    (tn
+     (emit-register-inst segment special-op (reg-tn-encoding src2)
+			 (reg-tn-encoding src1) (reg-tn-encoding dst)
+			 0 (logior #b000100 opcode)))
+    ((unsigned-byte 5)
+     (emit-register-inst segment special-op 0 (reg-tn-encoding src1)
+			 (reg-tn-encoding dst) src2 opcode))))
 
-(define-instruction (bltzal :pinned t
-			    :attributes (relative-branch delayed-branch)
-			    :disassem-printer cond-branch-printer)
-  (immediate (op :constant bcond-op)
-	     (rs :argument register)
-	     (rt :constant #b01000)
-	     (immediate :argument relative-label)))
+(define-instruction sll (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (unsigned-byte 5) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-shift-inst segment #b00 dst src1 src2)))
 
-(define-instruction (bgezal :pinned t
-			    :attributes (relative-branch delayed-branch)
-			    :disassem-printer cond-branch-printer)
-  (immediate (op :constant bcond-op)
-	     (rs :argument register)
-	     (rt :constant #b01001)
-	     (immediate :argument relative-label)))
+(define-instruction sra (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (unsigned-byte 5) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-shift-inst segment #b11 dst src1 src2)))
 
-(define-instruction (bc1f :pinned t
-			  :attributes (relative-branch delayed-branch))
-  (coproc-branch (op :constant cop1-op)
-		 (funct :constant #x100)
-		 (offset :argument relative-label)))
-
-(define-instruction (bc1t :pinned t
-			  :attributes (relative-branch delayed-branch))
-  (coproc-branch (op :constant cop1-op)
-		 (funct :constant #x101)
-		 (offset :argument relative-label)))
-
-;;; ----------------------------------------------------------------
-
-(defun snarf-error-junk (sap offset &optional length-only)
-  (let* ((length (system:sap-ref-8 sap offset))
-	 (vector (make-array length :element-type '(unsigned-byte 8))))
-    (declare (type system:system-area-pointer sap)
-	     (type (unsigned-byte 8) length)
-	     (type (simple-array (unsigned-byte 8) (*)) vector))
-    (cond (length-only
-	   (values 0 (1+ length) nil nil))
-	  (t
-	   (kernel:copy-from-system-area sap (* mips:byte-bits (1+ offset))
-					 vector (* mips:word-bits
-						   mips:vector-data-offset)
-					 (* length mips:byte-bits))
-	   (collect ((sc-offsets)
-		     (lengths))
-	     (lengths 1)		; the length byte
-	     (let* ((index 0)
-		    (error-number (c::read-var-integer vector index)))
-	       (lengths index)
-	       (loop
-		 (when (>= index length)
-		   (return))
-		 (let ((old-index index))
-		   (sc-offsets (c::read-var-integer vector index))
-		   (lengths (- index old-index))))
-	       (values error-number
-		       (1+ length)
-		       (sc-offsets)
-		       (lengths))))))))
-
-(defmacro break-cases (breaknum &body cases)
-  (let ((bn-temp (gensym)))
-    (collect ((clauses))
-      (dolist (case cases)
-	(clauses `((= ,bn-temp ,(car case)) ,@(cdr case))))
-      `(let ((,bn-temp ,breaknum))
-	 (cond ,@(clauses))))))
-
-(defun break-control (chunk inst stream dstate)
-  (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (break-cases (disassem:arg-value 'code chunk inst)
-      (vm:error-trap
-       (nt "Error trap")
-       (disassem:handle-break-args #'snarf-error-junk stream dstate))
-      (vm:cerror-trap
-       (nt "Cerror trap")
-       (disassem:handle-break-args #'snarf-error-junk stream dstate))
-      (vm:breakpoint-trap
-       (nt "Breakpoint trap"))
-      (vm:pending-interrupt-trap
-       (nt "Pending interrupt trap"))
-      (vm:halt-trap
-       (nt "Halt trap"))
-      (vm:function-end-breakpoint-trap
-       (nt "Function end breakpoint trap"))
-    )))
-
-(define-instruction (break :pinned t :disassem-control #'break-control)
-  (break (code :argument (unsigned-byte 10)))
-  (break (code :argument (unsigned-byte 10))
-	 (subcode :argument (unsigned-byte 10))))
-
-;;; ----------------------------------------------------------------
-
-(defconstant divmul-printer '(:name :tab rs ", " rt))
-
-(define-instruction (div :clobber (low high) :disassem-printer divmul-printer)
-  (register (op :constant special-op)
-	    (rs :argument register)
-	    (rt :argument register)
-	    (rd :constant 0)
-	    (funct :constant #b011010)))
-
-(define-instruction (divu :clobber (low high) :disassem-printer divmul-printer)
-  (register (op :constant special-op)
-	    (rs :argument register)
-	    (rt :argument register)
-	    (rd :constant 0)
-	    (funct :constant #b011011)))
-
-(define-instruction (j :pinned t
-		       :attributes (unconditional-branch delayed-branch)
-		       :disassem-printer '(:name :tab (:choose rs target)))
-  (register (op :constant special-op)
-	    (rs :argument register)
-	    (rt :constant 0)
-	    (rd :constant 0)
-	    (funct :constant #b001000))
-  (jump (op :constant #b000010)
-	(target :argument jump-fixup)))
-
-(define-instruction (jal :pinned t
-			 :attributes (delayed-branch assembly-call)
-			 :disassem-printer
-			 '(:name :tab
-			   ;(:unless (:constant 31) rd ", ")
-			   (:choose rs target)))
-  (register (op :constant special-op)
-	    (rs :argument register)
-	    (rt :constant 0)
-	    (rd :constant 31)
-	    (funct :constant #b001001))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rs :argument register)
-	    (rt :constant 0)
-	    (funct :constant #b001001))
-  (jump (op :constant #b000011)
-	(target :argument jump-fixup)))
-
-(defconstant load-store-printer 
-  '(:name :tab
-	  rt ", "
-	  rs
-	  (:unless (:constant 0) "[" immediate "]")))
-
-(defmacro define-load/store-instruction (name read-p op
-					      &optional (rt-kind 'register))
-  `(define-instruction (,name ,@(if read-p
-				    '(:use (memory) :attributes (delayed-load))
-				    '(:clobber (memory)))
-			      :disassem-printer load-store-printer)
-     (immediate (op :constant ,op)
-		(rt :argument ,rt-kind ,@(unless read-p
-					   '(:read t :write nil)))
-		(rs :argument register)
-		(immediate :argument (signed-byte 16)))
-     (immediate (op :constant ,op)
-		(rt :argument ,rt-kind ,@(unless read-p
-					   '(:read t :write nil)))
-		(rs :argument register)
-		(immediate :argument addi-fixup))
-     (immediate (op :constant ,op)
-		(rt :argument ,rt-kind ,@(unless read-p
-					   '(:read t :write nil)))
-		(rs :argument register)
-		(immediate :constant 0))))
-
-(define-load/store-instruction lb t #b100000)
-(define-load/store-instruction lh t #b100001)
-(define-load/store-instruction lwl t #b100010)
-(define-load/store-instruction lw t #b100011)
-(define-load/store-instruction lbu t #b100100)
-(define-load/store-instruction lhu t #b100101)
-(define-load/store-instruction lwr t #b100110)
-(define-load/store-instruction lwc1 t #o61 fp-reg)
-(define-load/store-instruction lwc1-odd t #o61 odd-fp-reg)
-(define-load/store-instruction sb nil #b101000)
-(define-load/store-instruction sh nil #b101001)
-(define-load/store-instruction swl nil #b101010)
-(define-load/store-instruction sw nil #b101011)
-(define-load/store-instruction swr nil #b101110)
-(define-load/store-instruction swc1 nil #o71 fp-reg)
-(define-load/store-instruction swc1-odd nil #o71 odd-fp-reg)
-
-;;; ----------------------------------------------------------------
-;;; Disassembler annotation
-
-(defun note-niss-ref (chunk inst stream dstate)
-  (when stream
-    (disassem:maybe-note-nil-indexed-symbol-slot-ref
-     (disassem:arg-value 'immediate chunk inst)
-     dstate)))
-
-(defun note-control-stack-var-ref (chunk inst stream dstate)
-  (when stream
-    (disassem:maybe-note-single-storage-ref
-     (disassem:arg-value 'immediate chunk inst)
-     'control-stack
-     dstate))
-  )
-
-(defun note-number-stack-var-ref (chunk inst stream dstate)
-  (when stream
-    (disassem:maybe-note-single-storage-ref
-     (disassem:arg-value 'immediate chunk inst)
-     'number-stack
-     dstate))
-  )
-
-(disassem:specialize (lw
-		      :disassem-control
-		        #'(lambda (chunk inst stream dstate)
-			    (when stream
-			      (disassem:note-code-constant
-			       (disassem:arg-value 'immediate chunk inst)
-			       dstate))))
-  immediate
-  (rs :constant code-offset))
-
-(disassem:specialize (lw :disassem-control #'note-niss-ref)
-  immediate
-  (rs :constant null-offset))
-(disassem:specialize (lw :disassem-control #'note-control-stack-var-ref)
-  immediate
-  (rs :constant cfp-offset))
-(disassem:specialize (lw :disassem-control #'note-number-stack-var-ref)
-  immediate
-  (rs :constant nfp-offset))
-
-(disassem:specialize (sw :disassem-control #'note-niss-ref)
-  immediate
-  (rs :constant null-offset))
-(disassem:specialize (sw :disassem-control #'note-control-stack-var-ref)
-  immediate
-  (rs :constant cfp-offset))
-(disassem:specialize (sw :disassem-control #'note-number-stack-var-ref)
-  immediate
-  (rs :constant nfp-offset))
-
-;;; floating point
-(disassem:specialize (lwc1 :disassem-control #'note-number-stack-var-ref)
-  immediate
-  (rs :constant nfp-offset))
-(disassem:specialize (swc1 :disassem-control #'note-number-stack-var-ref)
-  immediate
-  (rs :constant nfp-offset))
-
-
-(defun lui-note (chunk inst stream dstate)
-  (when stream
-    (let ((lui-note (disassem:dstate-get-prop dstate 'lui-note)))
-      (when (null lui-note)
-	(setf lui-note (make-lui-note)
-	      (disassem:dstate-get-prop dstate 'lui-note) lui-note))
-      (setf (lui-note-target-reg lui-note)
-	    (disassem:arg-value 'rt chunk inst))
-      (setf (lui-note-high-bits lui-note)
-	    (ash (disassem:arg-value 'immediate chunk inst) 10))
-      (setf (lui-note-following-addr lui-note)
-	    (disassem:dstate-nextpos dstate)))))
-
-;;; ----------------------------------------------------------------
-
-(define-instruction (lui :disassem-control #'lui-note)
-  (immediate (op :constant #b001111)
-	     (rs :constant 0)
-	     (rt :argument register)
-	     (immediate :argument (or (unsigned-byte 16) (signed-byte 16))))
-  (immediate (op :constant #b001111)
-	     (rs :constant 0)
-	     (rt :argument register)
-	     (immediate :argument lui-fixup)))
-
-
-(defconstant mvsreg-printer '(:name :tab rd))
-
-(define-instruction (mfhi :use (high) :disassem-printer mvsreg-printer)
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rs :constant 0)
-	    (rt :constant 0)
-	    (funct :constant #b010000)))
-
-(define-instruction (mthi :clobber (high) :disassem-printer mvsreg-printer)
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rs :constant 0)
-	    (rt :constant 0)
-	    (funct :constant #b010001)))
-
-(define-instruction (mflo :use (low) :disassem-printer mvsreg-printer)
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rs :constant 0)
-	    (rt :constant 0)
-	    (funct :constant #b010010)))
-
-(define-instruction (mtlo :clobber (low) :disassem-printer mvsreg-printer)
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rs :constant 0)
-	    (rt :constant 0)
-	    (funct :constant #b010011)))
-
-
-(define-instruction (mult :clobber (low high) :disassem-printer divmul-printer)
-  (register (op :constant special-op)
-	    (rs :argument register)
-	    (rt :argument register)
-	    (rd :constant 0)
-	    (funct :constant #b011000)))
-
-(define-instruction (multu :clobber (low high)
-			   :disassem-printer divmul-printer)
-  (register (op :constant special-op)
-	    (rs :argument register)
-	    (rt :argument register)
-	    (rd :constant 0)
-	    (funct :constant #b011001)))
-
-(defconstant shift-printer
-  '(:name :tab
-	  rd
-	  (:unless (:same-as rd) ", " rt)
-	  ", " (:cond ((rs :constant 0) shamt)
-		      (t rs))))
-
-(define-instruction (sll :disassem-printer shift-printer)
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :argument register)
-	    (rs :constant 0)
-	    (shamt :argument (unsigned-byte 5))
-	    (funct :constant #b000000))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :same-as rd)
-	    (rs :constant 0)
-	    (shamt :argument (unsigned-byte 5))
-	    (funct :constant #b000000))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :argument register)
-	    (rs :argument register)
-	    (funct :constant #b000100))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :same-as rd)
-	    (rs :argument register)
-	    (funct :constant #b000100)))
-
-(define-instruction (sra :disassem-printer shift-printer)
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :argument register)
-	    (rs :constant 0)
-	    (shamt :argument (unsigned-byte 5))
-	    (funct :constant #b000011))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :same-as rd)
-	    (rs :constant 0)
-	    (shamt :argument (unsigned-byte 5))
-	    (funct :constant #b000011))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :argument register)
-	    (rs :argument register)
-	    (funct :constant #b000111))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :same-as rd)
-	    (rs :argument register)
-	    (funct :constant #b000111)))
-
-(define-instruction (srl :disassem-printer shift-printer)
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :argument register)
-	    (rs :constant 0)
-	    (shamt :argument (unsigned-byte 5))
-	    (funct :constant #b000010))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :same-as rd)
-	    (rs :constant 0)
-	    (shamt :argument (unsigned-byte 5))
-	    (funct :constant #b000010))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :argument register)
-	    (rs :argument register)
-	    (funct :constant #b000110))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rt :same-as rd)
-	    (rs :argument register)
-	    (funct :constant #b000110)))
-
-(define-instruction (syscall :pinned t :disassem-printer '(:name))
-  (register (op :constant special-op)
-	    (rd :constant 0)
-	    (rt :constant 0)
-	    (rs :constant 0)
-	    (funct :constant #b001100)))
-
+(define-instruction srl (segment dst src1 &optional src2)
+  (:declare (type tn dst)
+	    (type (or tn (unsigned-byte 5) null) src1 src2))
+  (:reads (if src2 (list src1 src2) (list dst src1)))
+  (:writes dst)
+  (:emitter
+   (emit-shift-inst segment #b10 dst src1 src2)))
 
 
-;;;; Floating point instructions.
+;;;; Floating point math.
 
-;; rs is used as a sub-op code
-(defconstant sub-op-printer '(:name :tab rd ", " rt))
+(define-instruction float-op (segment operation format dst src1 src2)
+  (:declare (type float-operation operation)
+	    (type float-format format)
+	    (type tn dst src1 src2))
+  (:reads (list src1 src2))
+  (:writes dst)
+  (:emitter
+   (emit-float-inst segment cop1-op 1 (float-format-value format)
+		    (fp-reg-tn-encoding src2) (fp-reg-tn-encoding src1)
+		    (fp-reg-tn-encoding dst) (float-operation operation))))
 
-(macrolet ((frob (name kind)
-	     `(define-instruction (,name :attributes (delayed-load)
-					 :disassem-printer sub-op-printer)
-		(register (op :constant #b010001)
-			  (rs :constant #b00100)
-			  (rd :argument ,kind)
-			  (rt :argument register)
-			  (funct :constant 0)))))
-  (frob mtc1 fp-reg)
-  (frob mtc1-odd odd-fp-reg))
+(define-instruction fabs (segment format dst &optional (src dst))
+  (:declare (type float-format format) (type tn dst src))
+  (:reads src)
+  (:writes dst)
+  (:emitter
+   (emit-float-inst segment cop1-op 1 (float-format-value format)
+		    0 (fp-reg-tn-encoding src) (fp-reg-tn-encoding dst)
+		    #b000101)))
 
-(macrolet ((frob (name kind)
-	     `(define-instruction (,name :attributes (delayed-load)
-					 :disassem-printer sub-op-printer)
-		(register (op :constant #b010001)
-			  (rs :constant #b00000)
-			  (rt :argument register :read nil :write t)
-			  (rd :argument ,kind :write nil :read t)
-			  (funct :constant 0)))))
-  (frob mfc1 fp-reg)
-  (frob mfc1-odd odd-fp-reg))
-
-(define-instruction (cfc1 :use (float-status)
-			  :attributes (delayed-load)
-			  :disassem-printer sub-op-printer)
-  (register (op :constant #b010001)
-	    (rs :constant #b00010)
-	    (rt :argument register :read nil :write t)
-	    (rd :argument control-register :write nil)
-	    (funct :constant 0)))
-
-(define-instruction (ctc1 :use (float-status)
-			  :clobber (float-status)
-			  :attributes (delayed-load)
-			  :disassem-printer sub-op-printer)
-  (register (op :constant #b010001)
-	    (rs :constant #b00110)
-	    (rt :argument register)
-	    (rd :argument control-register :write nil)
-	    (funct :constant 0)))
-
-(define-instruction (float-op
-		     :disassem-printer
-		       '('f funct "." format
-			    :tab
-			    fd
-			    (:unless (:same-as fd) ", " fs)
-			    ", " ft))
-  (float (funct :argument float-operation :mask #b11)
-	 (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :argument fp-reg)
-	 (ft :argument fp-reg)))
-
-
-(defconstant float-unop-printer
-  `(:name ,@float-fmt-printer :tab fd (:unless (:same-as fd) ", " fs)))
-
-(define-instruction (fabs :disassem-printer float-unop-printer)
-  (float (format :argument float-format)
-	 (ft :constant 0)
-	 (fd :argument fp-reg)
-	 (fs :argument fp-reg)
-	 (funct :constant #b000101))
-  (float (format :argument float-format)
-	 (ft :constant 0)
-	 (fd :argument fp-reg)
-	 (fs :same-as fd)
-	 (funct :constant #b000101)))
-
-(define-instruction (fneg :disassem-printer float-unop-printer)
-  (float (format :argument float-format)
-	 (ft :constant 0)
-	 (fd :argument fp-reg)
-	 (fs :argument fp-reg)
-	 (funct :constant #b000111))
-  (float (format :argument float-format)
-	 (ft :constant 0)
-	 (fd :argument fp-reg)
-	 (fs :same-as fd)
-	 (funct :constant #b000111)))
-
-(define-instruction (fcvt
-		     :disassem-printer
-		       `(:name "." sub-funct "." format
-			       :tab
-			       fd ", " fs))
-  (float-aux (sub-funct :argument float-format)
-	     (format :argument float-format)
-	     (fd :argument fp-reg)
-	     (fs :argument fp-reg)
-	     (funct :constant #b10)))
-
+(define-instruction fneg (segment format dst &optional (src dst))
+  (:declare (type float-format format) (type tn dst src))
+  (:reads src)
+  (:writes dst)
+  (:emitter
+   (emit-float-inst segment cop1-op 1 (float-format-value format)
+		    0 (fp-reg-tn-encoding src) (fp-reg-tn-encoding dst)
+		    #b000111)))
   
-(define-instruction (fcmp
-		     :disassem-printer
-		       `(:name "-" sub-funct "." format
-			       :tab
-			       fs ", " ft))
-  (float-aux (sub-funct :argument compare-kind)
-	     (format :argument float-format)
-	     (fd :constant 0)
-	     (fs :argument fp-reg)
-	     (ft :argument fp-reg)
-	     (funct :constant #b11)))
+(define-instruction fcvt (segment format1 format2 dst src)
+  (:declare (type float-format format1 format2) (type tn dst src))
+  (:reads src)
+  (:writes dst)
+  (:emitter
+   (emit-float-inst segment cop1-op 1 (float-format-value format2) 0
+		    (fp-reg-tn-encoding src) (fp-reg-tn-encoding dst)
+		    (logior #b100000 (float-format-value format1)))))
+
+(define-instruction fcmp (segment operation format fs ft)
+  (:declare (type compare-kind operation)
+	    (type float-format format)
+	    (type tn fs ft))
+  (:reads (list fs ft))
+  (:writes :float-status)
+  (:emitter
+   (emit-float-inst segment cop1-op 1 (float-format-value format) 
+		    (fp-reg-tn-encoding ft) (fp-reg-tn-encoding fs) 0
+		    (logior #b110000 (compare-kind operation)))))
 
 
-;;;; Pseudo-instructions
+;;;; Branch/Jump instructions.
 
-(define-instruction (move
-		     :disassem-printer
-		     '(:name
-		       :tab
-		       (:choose rd fd) ", "
-		       (:choose rs fs)))
-  (register (op :constant special-op)
-	    (rd :argument register)
-	    (rs :argument register)
-	    (rt :constant 0)
-	    (funct :constant #b100001))
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :argument fp-reg)
-	 (ft :constant 0)
-	 (funct :constant #b000110)))
+(defun emit-relative-branch (segment opcode r1 r2 target)
+  (emit-back-patch segment 4
+		   #'(lambda (segment posn)
+		       (emit-immediate-inst segment
+					    opcode
+					    (if (fixnump r1)
+						r1
+						(reg-tn-encoding r1))
+					    (if (fixnump r2)
+						r2
+						(reg-tn-encoding r2))
+					    (ash (- (label-position target)
+						    (+ posn 4))
+						 -2)))))
 
-(define-pseudo-instruction li 64 (reg value)
+(define-instruction b (segment target)
+  (:declare (type label target))
+  (:attributes branch)
+  (:delay 1)
+  (:emitter
+   (emit-relative-branch segment #b000100 0 0 target)))
+
+
+(define-instruction beq (segment r1 r2-or-target &optional target)
+  (:declare (type tn r1)
+	    (type (or tn fixnum label) r2-or-target)
+	    (type (or label null) target))
+  (:attributes branch)
+  (:delay 1)
+  (:reads (list r1 r2-or-target))
+  (:emitter
+   (unless target
+     (setf target r2-or-target)
+     (setf r2-or-target 0))
+   (emit-relative-branch segment #b000100 r1 r2-or-target target)))
+
+(define-instruction bne (segment r1 r2-or-target &optional target)
+  (:declare (type tn r1)
+	    (type (or tn fixnum label) r2-or-target)
+	    (type (or label null) target))
+  (:attributes branch)
+  (:delay 1)
+  (:reads (list r1 r2-or-target))
+  (:emitter
+   (unless target
+     (setf target r2-or-target)
+     (setf r2-or-target 0))
+   (emit-relative-branch segment #b000101 r1 r2-or-target target)))
+
+(define-instruction blez (segment reg target)
+  (:declare (type label target) (type tn reg))
+  (:attributes branch)
+  (:delay 1)
+  (:reads reg)
+  (:emitter
+   (emit-relative-branch segment #b000110 reg 0 target)))
+
+(define-instruction bgtz (segment reg target)
+  (:declare (type label target) (type tn reg))
+  (:attributes branch)
+  (:delay 1)
+  (:reads reg)
+  (:emitter
+   (emit-relative-branch segment #b000111 reg 0 target)))
+
+(define-instruction bltz (segment reg target)
+  (:declare (type label target) (type tn reg))
+  (:attributes branch)
+  (:delay 1)
+  (:reads reg)
+  (:emitter
+   (emit-relative-branch segment bcond-op reg #b00000 target)))
+
+(define-instruction bgez (segment reg target)
+  (:declare (type label target) (type tn reg))
+  (:attributes branch)
+  (:delay 1)
+  (:reads reg)
+  (:emitter
+   (emit-relative-branch segment bcond-op reg #b00001 target)))
+
+(define-instruction bltzal (segment reg target)
+  (:declare (type label target) (type tn reg))
+  (:attributes branch)
+  (:delay 1)
+  (:reads reg)
+  (:writes :r31)
+  (:emitter
+   (emit-relative-branch segment bcond-op reg #b01000 target)))
+
+(define-instruction bgezal (segment reg target)
+  (:declare (type label target) (type tn reg))
+  (:attributes branch)
+  (:delay 1)
+  (:reads reg)
+  (:writes :r31)
+  (:emitter
+   (emit-relative-branch segment bcond-op reg #b01001 target)))
+
+(define-instruction j (segment target)
+  (:declare (type (or tn fixup) target))
+  (:attributes branch)
+  (:delay 1)
+  (:emitter
+   (etypecase target
+     (tn
+      (emit-register-inst segment special-op (reg-tn-encoding target)
+			  0 0 0 #b001000))
+     (fixup
+      (note-fixup segment :jump target)
+      (emit-jump-inst segment #b000010 0)))))
+
+(define-instruction jal (segment reg-or-target &optional target)
+  (:declare (type (or null tn fixup) target)
+	    (type (or tn fixup (integer -16 31)) reg-or-target))
+  (:attributes branch)
+  (:delay 1)
+  (:writes (if target (reg-tn-location reg-or-target) :r31))
+  (:emitter
+   (unless target
+     (setf target reg-or-target)
+     (setf reg-or-target 31))
+   (etypecase target
+     (tn
+      (emit-register-inst segment special-op (reg-tn-encoding target) 0
+			  reg-or-target 0 #b001001))
+     (fixup
+      (note-fixup segment :jump target)
+      (emit-jump-inst segment #b000011 0)))))
+
+(define-instruction bc1f (segment target)
+  (:declare (type label target))
+  (:reads :float-status)
+  (:attributes branch)
+  (:delay 1)
+  (:emitter
+   (emit-relative-branch segment cop1-op #b01000 #b00000 target)))
+
+(define-instruction bc1t (segment target)
+  (:declare (type label target))
+  (:reads :float-status)
+  (:attributes branch)
+  (:delay 1)
+  (:emitter
+   (emit-relative-branch segment cop1-op #b01000 #b00001 target)))
+
+
+
+;;;; Random movement instructions.
+
+(define-instruction lui (segment reg value)
+  (:declare (type tn reg)
+	    (type (or fixup (signed-byte 16) (unsigned-byte 16)) value))
+  (:reads)
+  (:writes reg)
+  (:emitter
+   (when (fixup-p value)
+     (note-fixup segment :lui value)
+     (setf value 0))
+   (emit-immediate-inst segment #b001111 0 (reg-tn-encoding reg) value)))
+
+(define-instruction mfhi (segment reg)
+  (:declare (type tn reg))
+  (:reads :hi-and-low-regs)
+  (:writes reg)
+  (:emitter
+   (emit-register-inst segment special-op 0 0 (reg-tn-encoding reg) 0
+			#b010000)))
+
+(define-instruction mthi (segment reg)
+  (:declare (type tn reg))
+  (:reads reg)
+  (:writes :hi-and-low-regs)
+  (:delay 1) ;; ### Is there a delay here?
+  (:emitter
+   (emit-register-inst segment special-op 0 0 (reg-tn-encoding reg) 0
+			#b010001)))
+
+(define-instruction mflo (segment reg)
+  (:declare (type tn reg))
+  (:reads :hi-and-low-regs)
+  (:writes reg)
+  (:emitter
+   (emit-register-inst segment special-op 0 0 (reg-tn-encoding reg) 0
+			#b010010)))
+
+(define-instruction mtlo (segment reg)
+  (:declare (type tn reg))
+  (:writes :hi-and-low-regs)
+  (:delay 1) ;; ### Is there a delay here?
+  (:emitter
+   (emit-register-inst segment special-op 0 0 (reg-tn-encoding reg) 0
+			#b010011)))
+
+(define-instruction move (segment dst src)
+  (:declare (type tn dst src))
+  (:reads src)
+  (:writes dst)
+  (:attributes flushable)
+  (:emitter
+   (emit-register-inst segment special-op (reg-tn-encoding src) 0
+		       (reg-tn-encoding dst) 0 #b100001)))
+
+(define-instruction fmove (segment format dst src)
+  (:declare (type float-format format) (type tn dst src))
+  (:reads src)
+  (:writes dst)
+  (:attributes flushable)
+  (:emitter
+   (emit-float-inst segment cop1-op 1 (float-format-value format) 0
+		    (fp-reg-tn-encoding src) (fp-reg-tn-encoding dst)
+		    #b000110)))
+
+(defun %li (reg value)
   (etypecase value
     ((unsigned-byte 16)
      (inst or reg zero-tn value))
@@ -983,119 +580,338 @@
      (inst addu reg zero-tn value))
     ((or (signed-byte 32) (unsigned-byte 32))
      (inst lui reg (ldb (byte 16 16) value))
-     (let ((low (ldb (byte 16 0) value)))
-       (unless (zerop low)
-	 (inst or reg low))))
+     (inst or reg (ldb (byte 16 0) value)))
     (fixup
      (inst lui reg value)
      (inst addu reg value))))
+  
+(define-instruction-macro li (reg value)
+  `(%li ,reg ,value))
 
-(define-instruction (b :pinned t
-		       :attributes (relative-branch unconditional-branch
-						    delayed-branch)
-		       :disassem-printer '(:name :tab immediate))
-  (immediate (op :constant #b000100)
-	     (rs :constant 0)
-	     (rt :constant 0)
-	     (immediate :argument relative-label)))
+(define-instruction mtc1 (segment to from)
+  (:declare (type tn to from))
+  (:reads from)
+  (:writes to)
+  (:delay 1) ;; ### Is this delay correct?
+  (:emitter
+   (emit-register-inst segment cop1-op #b00100 (reg-tn-encoding from)
+		       (fp-reg-tn-encoding to) 0 0)))
 
-(define-instruction (nop :attributes (nop)
-			 :disassem-printer '(:name))
-  (register (op :constant 0)
-	    (rd :constant 0)
-	    (rt :constant 0)
-	    (rs :constant 0)
-	    (funct :constant 0)))
+(define-instruction mtc1-odd (segment to from)
+  (:declare (type tn to from))
+  (:reads from)
+  (:writes to)
+  (:delay 1) ;; ### Is this delay correct?
+  (:emitter
+   (emit-register-inst segment cop1-op #b00100 (reg-tn-encoding from)
+		       (1+ (fp-reg-tn-encoding to)) 0 0)))
 
-(define-format (word-format 32 :pinned t)
-  (data (byte 32 0)))
-(define-instruction (word :cost 0)
-  (word-format (data :argument (or (unsigned-byte 32) (signed-byte 32)))))
+(define-instruction mfc1 (segment to from)
+  (:declare (type tn to from))
+  (:reads from)
+  (:writes to)
+  (:delay 1) ;; ### Is this delay correct?
+  (:emitter
+   (emit-register-inst segment cop1-op #b00000 (reg-tn-encoding to)
+		       (fp-reg-tn-encoding from) 0 0)))
 
-(define-format (short-format 16 :pinned t)
-  (data (byte 16 0)))
-(define-instruction (short :cost 0)
-  (short-format (data :argument (or (unsigned-byte 16) (signed-byte 16)))))
+(define-instruction mfc1-odd (segment to from)
+  (:declare (type tn to from))
+  (:reads from)
+  (:writes to)
+  (:delay 1) ;; ### Is this delay correct?
+  (:emitter
+   (emit-register-inst segment cop1-op #b00000 (1+ (reg-tn-encoding to))
+		       (fp-reg-tn-encoding from) 0 0)))
 
-(define-format (byte-format 8 :pinned t)
-  (data (byte 8 0)))
-(define-instruction (byte :cost 0)
-  (byte-format (data :argument (or (unsigned-byte 8) (signed-byte 8)))))
+(define-instruction cfc1 (segment reg cr)
+  (:declare (type tn reg) (type (unsigned-byte 5) cr))
+  ;; ### reads/writes for this?
+  (:emitter
+   (emit-register-inst segment cop1-op #b00000 (reg-tn-encoding reg)
+		       cr 0 0)))
+
+(define-instruction ctc1 (segment reg cr)
+  (:declare (type tn reg) (type (unsigned-byte 5) cr))
+  ;; ### reads/writes for this?
+  (:emitter
+   (emit-register-inst segment cop1-op #b00110 (reg-tn-encoding reg)
+		       cr 0 0)))
 
 
 
-;;;; Function and LRA Headers emitters and calculation stuff.
+;;;; Random system hackery and other noise
 
-(define-format (entry-point 0 :pinned t))
-(define-instruction (entry-point)
-  (entry-point))
+(define-instruction-macro entry-point ()
+  nil)
 
-(defun header-data (ignore)
-  (declare (ignore ignore))
-  (ash (+ *current-position* (component-header-length)) (- vm:word-shift)))
+(define-emitter emit-break-inst 32
+  (byte 6 26) (byte 10 16) (byte 10 6) (byte 6 0))
 
-(define-format (header-object 32 :pinned t)
-  (type (byte 8 0))
-  (data (byte 24 8) :default 0 :function header-data))
+(define-instruction break (segment code &optional (subcode 0))
+  (:declare (type (unsigned-byte 10) code subcode))
+  :pinned
+  (:emitter
+   (emit-break-inst segment special-op code subcode #b001101)))
 
-(define-instruction (function-header-word)
-  (header-object (type :constant vm:function-header-type)))
+(define-instruction syscall (segment)
+  :pinned
+  (:emitter
+   (emit-register-inst segment special-op 0 0 0 0 #b001100)))
 
-(define-instruction (lra-header-word)
-  (header-object (type :constant vm:return-pc-header-type)))
+(define-instruction nop (segment)
+  (:attributes flushable)
+  (:emitter
+   (emit-word segment 0)))
+
+(define-instruction word (segment word)
+  (:declare (type (or (unsigned-byte 32) (signed-byte 32)) word))
+  :pinned
+  (:emitter
+   (emit-word segment word)))
+
+(define-instruction short (segment short)
+  (:declare (type (or (unsigned-byte 16) (signed-byte 16)) short))
+  :pinned
+  (:emitter
+   (emit-short segment short)))
+
+(define-instruction byte (segment byte)
+  (:declare (type (or (unsigned-byte 8) (signed-byte 8)) byte))
+  :pinned
+  (:emitter
+   (emit-byte segment byte)))
 
 
-(defmacro define-compute-instruction (name calculation)
-  (let ((addui (symbolicate name "-ADDUI"))
-	(lui (symbolicate name "-LUI"))
-	(ori (symbolicate name "-ORI")))
-    `(progn
-       (defun ,name (label)
-	 (let ((result ,calculation))
-	   (assert (typep result '(signed-byte 16)))
-	   result))
-       (define-instruction (,addui)
-	 (immediate (op :constant #b001001)
-		    (rt :argument register)
-		    (rs :argument register)
-		    (immediate :argument label
-			       :function ,name)))
-       (define-instruction (,lui)
-	 (immediate (op :constant #b001111)
-		    (rs :constant 0)
-		    (rt :argument register :read t)
-		    (immediate :argument label
-			       :function (lambda (label)
-					   (ash ,calculation -16)))))
-       (define-instruction (,ori)
-	 (immediate (op :constant #b001101)
-		    (rt :argument register)
-		    (rs :same-as rt)
-		    (immediate :argument label
+(defun emit-header-data (segment type)
+  (emit-back-patch
+   segment 4
+   #'(lambda (segment posn)
+       (emit-word segment
+		  (logior type
+			  (ash (+ posn (component-header-length))
+			       (- type-bits word-shift)))))))
 
-			       :function (lambda (label)
-					   (logand ,calculation #xffff)))))
-       (define-pseudo-instruction ,name 96 (dst src label temp)
-	 (cond ((typep ,calculation '(signed-byte 16))
-		(inst ,addui dst src label))
-	       (t
-		(inst ,lui temp label)
-		(inst ,ori temp label)
-		(inst addu dst src temp)))))))
+(define-instruction function-header-word (segment)
+  :pinned
+  (:emitter
+   (emit-header-data segment function-header-type)))
 
+(define-instruction lra-header-word (segment)
+  :pinned
+  (:emitter
+   (emit-header-data segment return-pc-header-type)))
+
+
+(defun emit-compute-inst (segment vop dst src label temp calc)
+  (emit-chooser
+   ;; We emit either 12 or 4 bytes, so we maintain 8 byte alignments.
+   segment 12 3
+   #'(lambda (segment posn delta-if-after)
+       (let ((delta (funcall calc label posn delta-if-after)))
+	  (when (<= (- (ash 1 16)) delta (1- (ash 1 16)))
+	    (emit-back-patch segment 4
+			     #'(lambda (segment posn)
+				 (assemble (segment vop)
+					   (inst addu dst src
+						 (funcall calc label posn 0)))))
+	    t)))
+   #'(lambda (segment posn)
+       (let ((delta (funcall calc label posn 0)))
+	 (assemble (segment vop)
+		   (inst lui temp (ldb (byte 16 16) delta))
+		   (inst or temp (ldb (byte 16 0) delta))
+		   (inst addu dst src temp))))))
 
 ;; code = fn - header - label-offset + other-pointer-tag
-(define-compute-instruction compute-code-from-fn
-			    (- vm:other-pointer-type
-			       (label-position label)
-			       (component-header-length)))
+(define-instruction compute-code-from-fn (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:reads src)
+  (:writes (list dst temp))
+  (:vop-var vop)
+  (:emitter
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (- other-pointer-type
+			     (label-position label posn delta-if-after)
+			     (component-header-length))))))
 
 ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
-(define-compute-instruction compute-code-from-lra
-			    (- (+ (label-position label)
-				  (component-header-length))))
+(define-instruction compute-code-from-lra (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:reads src)
+  (:writes (list dst temp))
+  (:vop-var vop)
+  (:emitter
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (- (+ (label-position label posn delta-if-after)
+				(component-header-length)))))))
 
 ;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
-(define-compute-instruction compute-lra-from-code
-			    (+ (label-position label)
-			       (component-header-length)))
+(define-instruction compute-lra-from-code (segment dst src label temp)
+  (:declare (type tn dst src temp) (type label label))
+  (:reads src)
+  (:writes (list dst temp))
+  (:vop-var vop)
+  (:emitter
+   (emit-compute-inst segment vop dst src label temp
+		      #'(lambda (label posn delta-if-after)
+			  (+ (label-position label posn delta-if-after)
+			     (component-header-length))))))
+
+
+;;;; Loads and Stores
+
+(defun emit-load/store-inst (segment opcode reg base index)
+  (when (fixup-p index)
+    (note-fixup segment :addi index)
+    (setf index 0))
+  (emit-immediate-inst segment opcode (reg-tn-encoding reg)
+		       (reg-tn-encoding base) index))
+
+(define-instruction lb (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads (list base :memory))
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-load/store-inst segment #b100000 base reg index)))
+
+(define-instruction lh (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads (list base :memory))
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-load/store-inst segment #b100001 base reg index)))
+
+(define-instruction lwl (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads (list base :memory))
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-load/store-inst segment #b100010 base reg index)))
+
+(define-instruction lw (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads (list base :memory))
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-load/store-inst segment #b100011 base reg index)))
+
+(define-instruction lbu (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads (list base :memory))
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-load/store-inst segment #b100100 base reg index)))
+
+(define-instruction lhu (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads (list base :memory))
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-load/store-inst segment #b100101 base reg index)))
+
+(define-instruction lwr (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads (list base :memory))
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-load/store-inst segment #b100110 base reg index)))
+
+(define-instruction sb (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base reg)
+  (:writes :memory)
+  (:emitter
+   (emit-load/store-inst segment #b101000 base reg index)))
+
+(define-instruction sh (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base reg)
+  (:writes :memory)
+  (:emitter
+   (emit-load/store-inst segment #b101001 base reg index)))
+
+(define-instruction swl (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base reg)
+  (:writes :memory)
+  (:emitter
+   (emit-load/store-inst segment #b101010 base reg index)))
+
+(define-instruction sw (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base reg)
+  (:writes :memory)
+  (:emitter
+   (emit-load/store-inst segment #b101011 base reg index)))
+
+(define-instruction swr (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base reg)
+  (:writes :memory)
+  (:emitter
+   (emit-load/store-inst segment #b101110 base reg index)))
+
+
+(defun emit-fp-load/store-inst (segment opcode reg odd base index)
+  (when (fixup-p index)
+    (note-fixup segment :addi index)
+    (setf index 0))
+  (emit-immediate-inst segment opcode (reg-tn-encoding base)
+		       (+ (fp-reg-tn-encoding reg) odd) index))
+
+(define-instruction lwc1 (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base :memory)
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-fp-load/store-inst segment #b110001 reg 0 base index)))
+
+(define-instruction lwc1-odd (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base :memory)
+  (:writes reg)
+  (:delay 1)
+  (:emitter
+   (emit-fp-load/store-inst segment #b110001 reg 1 base index)))
+
+(define-instruction swc1 (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base reg)
+  (:writes :memory)
+  (:emitter
+   (emit-fp-load/store-inst segment #b111001 reg 0 base index)))
+
+(define-instruction swc1-odd (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:reads base reg)
+  (:writes :memory)
+  (:emitter
+   (emit-fp-load/store-inst segment #b111001 reg 1 base index)))
+
