@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.7 1999/12/08 14:19:20 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.8 2000/08/20 14:44:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,7 @@
 		   :from (:argument 1) :to :result :target result)  eax)
   (:variant-vars offset lowtag)
   (:results (result :scs (descriptor-reg any-reg)))
+  (:guard (backend-featurep :i486))
   (:generator 4
     (move eax old-value)
     (inst cmpxchg (make-ea :dword :base object
@@ -161,6 +162,7 @@
   (:variant-vars base lowtag)
   (:results (result :scs (descriptor-reg any-reg)))
   (:info offset)
+  (:guard (backend-featurep :i486))
   (:generator 4
     (move eax old-value)
     (inst cmpxchg (make-ea :dword :base object
