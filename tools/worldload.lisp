@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.70 1993/08/31 13:48:34 hallgren Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.71 1993/09/04 22:52:43 wlott Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,7 +78,7 @@
 (load "code:weak")
 (load "code:final")
 (load "code:sysmacs")
-(load "code:run-program")
+#-gengc (load "code:run-program")
 (load "code:query")
 (load "code:loop")
 (load "code:internet")
@@ -87,11 +87,11 @@
 (load "code:foreign")
 (load "code:setf-funs")
 (load "code:module")
-(load "code:room")
+#-gengc (load "code:room")
 
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
-(load "target:code/debug.*bytef" :if-does-not-exist nil)
-(load "target:code/error.*bytef" :if-does-not-exist nil)
+#-gengc (load "target:code/debug.*bytef" :if-does-not-exist nil)
+#-gengc (load "target:code/error.*bytef" :if-does-not-exist nil)
 
 (defvar *old-ie*)
 
@@ -165,7 +165,8 @@
 #-no-clm
 (load "target:interface/clm-library")
 
-(defvar *target-sl* (search-list "target:"))
+(defvar *target-sl*)
+(setq *target-sl* (search-list "target:"))
 
 ;;; Don't include the search lists used for loading in the resultant core.
 ;;;
@@ -206,8 +207,8 @@
   ;; Enable the garbage collector.  But first fake it into thinking that
   ;; we don't need to garbage collect.  The save-lisp is going to call purify
   ;; so any garbage will be collected then.
-  (setf *need-to-collect-garbage* nil)
-  (gc-on)
+  #-gengc (setf *need-to-collect-garbage* nil)
+  #-gengc (gc-on)
   ;;
   ;; Save the lisp.
   (save-lisp "lisp.core" :root-structures
