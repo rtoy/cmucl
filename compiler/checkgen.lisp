@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.20 1992/07/21 18:41:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.21 1992/08/01 17:34:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -508,7 +508,8 @@
 		  (unless (policy node (= brevity 3))
 		    (do-type-warning use))))))
 
-	  (when (eq type-check t)
+	  (when (and (eq type-check t)
+		     (not *byte-compiling*))
 	    (if (probable-type-check-p cont)
 		(multiple-value-bind (check types)
 				     (continuation-check-types cont)
