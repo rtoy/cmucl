@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.5 1998/05/04 01:27:20 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 	  modify-kbdmac-stream))
 
 (defstruct (hemlock-output-stream
-	    (:include stream
+	    (:include sys:lisp-stream
 		      (:misc #'hemlock-output-misc))
 	    (:print-function %print-hemlock-output-stream)
 	    (:constructor internal-make-hemlock-output-stream ()))
@@ -56,14 +56,14 @@
   (setf (hemlock-output-stream-mark stream) mark)
   (case buffered
     (:none
-     (setf (lisp::stream-out stream) #'hemlock-output-unbuffered-out
-	   (lisp::stream-sout stream) #'hemlock-output-unbuffered-sout))
+     (setf (lisp::lisp-stream-out stream) #'hemlock-output-unbuffered-out
+	   (lisp::lisp-stream-sout stream) #'hemlock-output-unbuffered-sout))
     (:line
-     (setf (lisp::stream-out stream) #'hemlock-output-line-buffered-out
-	   (lisp::stream-sout stream) #'hemlock-output-line-buffered-sout))
+     (setf (lisp::lisp-stream-out stream) #'hemlock-output-line-buffered-out
+	   (lisp::lisp-stream-sout stream) #'hemlock-output-line-buffered-sout))
     (:full
-     (setf (lisp::stream-out stream) #'hemlock-output-buffered-out
-	   (lisp::stream-sout stream) #'hemlock-output-buffered-sout))
+     (setf (lisp::lisp-stream-out stream) #'hemlock-output-buffered-out
+	   (lisp::lisp-stream-sout stream) #'hemlock-output-buffered-sout))
     (t
      (error "~S is a losing value for Buffered." buffered)))
   stream)
@@ -128,7 +128,7 @@
     (:element-type 'base-char)))
 
 (defstruct (hemlock-region-stream
-	    (:include stream
+	    (:include sys:lisp-stream
 		      (:in #'region-in)
 		      (:misc #'region-misc))
 	    (:print-function %print-region-stream)

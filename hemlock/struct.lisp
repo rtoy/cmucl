@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/struct.lisp,v 1.5 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/struct.lisp,v 1.6 1998/05/04 01:27:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -326,7 +326,7 @@
 
 ;;; These streams write to random typeout buffers for WITH-POP-UP-DISPLAY.
 ;;;
-(defstruct (random-typeout-stream (:include stream)
+(defstruct (random-typeout-stream (:include sys:lisp-stream)
 				  (:print-function print-random-typeout-stream)
 				  (:constructor
 				   make-random-typeout-stream (mark)))

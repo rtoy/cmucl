@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.17 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.18 1998/05/04 01:27:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,35 +88,30 @@
        (error 'end-of-file :stream ,stream)
        ,eof-value))
 
-;;; These macros handle the special cases of t and nil for input and
+;;; This macros handle the special cases of t and nil for input and
 ;;; output streams.
 ;;;
-(defmacro in-synonym-of (stream)
-  (let ((svar (gensym)))
-    `(let ((,svar ,stream))
-       (cond ((null ,svar) *standard-input*)
-	     ((eq ,svar t) *terminal-io*)
-	     (t (check-type ,svar stream)
-		,svar)))))
-
-(defmacro out-synonym-of (stream)
+(defmacro stream-synonym-of (stream &optional check-type)
   (let ((svar (gensym)))
     `(let ((,svar ,stream))
        (cond ((null ,svar) *standard-output*)
 	     ((eq ,svar t) *terminal-io*)
-	     (T (check-type ,svar stream)
+	     (T ,@(if check-type `((check-type ,svar ,check-type)))
 		,svar)))))
 
 ;;; With-Mumble-Stream calls the function in the given Slot of the Stream with
-;;; the Args.
+;;; the Args for lisp-streams or the pcl-fn for fundamental-streams.
 ;;;
-(defmacro with-in-stream (stream slot &rest args)
-  `(let ((stream (in-synonym-of ,stream)))
-     (funcall (,slot stream) stream ,@args)))
-
-(defmacro with-out-stream (stream slot &rest args)
-  `(let ((stream (out-synonym-of ,stream)))
-     (funcall (,slot stream) stream ,@args)))
+(defmacro with-stream (stream lisp-dispatch &optional pcl-dispatch)
+  `(let ((stream (stream-synonym-of ,stream)))
+    (etypecase stream
+      (lisp-stream
+       ,(destructuring-bind (slot &rest args) lisp-dispatch
+          `(funcall (,slot stream) stream ,@args)))
+      ,@(when pcl-dispatch
+          `((fundamental-stream
+	     ,(destructuring-bind (pcl-fn &rest args) pcl-dispatch
+	        `(,pcl-fn stream ,@args))))))))
 
 
 ;;;; These are hacks to make the reader win.
@@ -127,20 +122,21 @@
 ;;; macro within the enclosed lexical scope.
 ;;;
 (defmacro prepare-for-fast-read-char (stream &body forms)
-  `(let* ((%frc-stream% (in-synonym-of ,stream))
-	  (%frc-method% (stream-in %frc-stream%))
-	  (%frc-buffer% (stream-in-buffer %frc-stream%))
-	  (%frc-index% (stream-in-index %frc-stream%)))
-     (declare (type index %frc-index%))
+  `(let* ((%frc-stream% (stream-synonym-of ,stream lisp-stream))
+	  (%frc-method% (lisp-stream-in %frc-stream%))
+	  (%frc-buffer% (lisp-stream-in-buffer %frc-stream%))
+	  (%frc-index% (lisp-stream-in-index %frc-stream%)))
+     (declare (type index %frc-index%)
+	      (type lisp-stream %frc-stream%))
      ,@forms))
 
 ;;; Done-With-Fast-Read-Char  --  Internal
 ;;;
 ;;;    This macro must be called after one is done with fast-read-char
-;;; inside it's scope to decache the stream-in-index.
+;;; inside it's scope to decache the lisp-stream-in-index.
 ;;;
 (defmacro done-with-fast-read-char ()
-  `(setf (stream-in-index %frc-stream%) %frc-index%))
+  `(setf (lisp-stream-in-index %frc-stream%) %frc-index%))
 
 ;;; Fast-Read-Char  --  Internal
 ;;;
@@ -153,7 +149,7 @@
      (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))
     ((= %frc-index% in-buffer-length)
      (prog1 (fast-read-char-refill %frc-stream% ,eof-errorp ,eof-value)
-	    (setq %frc-index% (stream-in-index %frc-stream%))))
+	    (setq %frc-index% (lisp-stream-in-index %frc-stream%))))
     (t
      (prog1 (code-char (aref %frc-buffer% %frc-index%))
 	    (incf %frc-index%)))))
@@ -166,11 +162,12 @@
 ;;; method.
 ;;;
 (defmacro prepare-for-fast-read-byte (stream &body forms)
-  `(let* ((%frc-stream% (in-synonym-of ,stream))
-	  (%frc-method% (stream-bin %frc-stream%))
-	  (%frc-buffer% (stream-in-buffer %frc-stream%))
-	  (%frc-index% (stream-in-index %frc-stream%)))
-     (declare (type index %frc-index%))
+  `(let* ((%frc-stream% (stream-synonym-of ,stream lisp-stream))
+	  (%frc-method% (lisp-stream-bin %frc-stream%))
+	  (%frc-buffer% (lisp-stream-in-buffer %frc-stream%))
+	  (%frc-index% (lisp-stream-in-index %frc-stream%)))
+     (declare (type index %frc-index%)
+	      (type lisp-stream %frc-stream%))
      ,@forms))
 
 ;;; Fast-Read-Byte, Done-With-Fast-Read-Byte  --  Internal
@@ -187,7 +184,7 @@
       (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))
      ((= %frc-index% in-buffer-length)
       (prog1 (fast-read-byte-refill %frc-stream% ,eof-errorp ,eof-value)
-	(setq %frc-index% (stream-in-index %frc-stream%))))
+	(setq %frc-index% (lisp-stream-in-index %frc-stream%))))
      (t
       (prog1 (aref %frc-buffer% %frc-index%)
 	(incf %frc-index%))))))

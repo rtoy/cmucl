@@ -182,6 +182,7 @@
                     *the-class-integer* *the-class-float* *the-class-cons*
                     *the-class-complex* *the-class-character*
                     *the-class-bit-vector* *the-class-array*
+		    *the-class-stream*
 
                     *the-class-slot-object*
                     *the-class-standard-object*
@@ -592,7 +593,7 @@
       (let* ((name (car bic))
 	     (class (lisp:find-class name)))
 	(unless (member name '(t kernel:instance kernel:funcallable-instance
-				 function))
+				 function stream))
 	  (res `(,name
 		 ,(mapcar #'lisp:class-name (direct-supers class))
 		 ,(mapcar #'lisp:class-name (direct-subs class))
@@ -621,6 +622,9 @@
     (:metaclass built-in-class))
 
   (defclass kernel:funcallable-instance (function) ()
+    (:metaclass built-in-class))
+
+  (defclass stream (t) ()
     (:metaclass built-in-class)))
 
 (defclass slot-object (#-cmu17 t #+cmu17 kernel:instance) ()

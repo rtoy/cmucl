@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.37 1997/11/11 18:51:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.38 1998/05/04 01:27:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -312,7 +312,7 @@
 
 (defstruct (code-instruction-stream
 	    (:print-function %print-code-inst-stream)
-	    (:include stream
+	    (:include lisp-stream
 		      (lisp::sout #'code-inst-stream-sout)
 		      (lisp::bout #'code-inst-stream-bout)
 		      (lisp::misc #'code-inst-stream-misc))

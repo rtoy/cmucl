@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.6 1997/01/18 14:31:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.7 1998/05/04 01:27:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -781,7 +781,7 @@
 
 (defvar *eval-form-stream*
   (make-two-way-stream
-   (lisp::make-stream
+   (lisp::make-lisp-stream
     :in #'(lambda (&rest junk)
 	    (declare (ignore junk))
 	    (error "You cannot read when handling an eval_form request.")))

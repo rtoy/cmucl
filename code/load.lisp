@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.69 1998/03/21 08:11:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.70 1998/05/04 01:27:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,7 @@
   "Count of the number of recursive loads.")
 (declaim (type index *load-depth*))
 (defvar *fasl-file*)
-(declaim (type stream fasl-file))
+(declaim (type lisp-stream fasl-file))
 
 
 ;;; LOAD-FRESH-LINE -- internal.

@@ -1292,7 +1292,7 @@
 (defmethod class-default-initargs        ((class built-in-class)) ())
 
 (defmethod validate-superclass ((c class) (s built-in-class))
-  (eq s *the-class-t*))
+  (or (eq s *the-class-t*) #+cmu (eq s *the-class-stream*)))
 
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.23 1998/02/24 17:36:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.24 1998/05/04 01:27:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
 (defconstant default-line-length 80)
 
 (defstruct (pretty-stream
-	    (:include stream
+	    (:include sys:lisp-stream
 		      (:out #'pretty-out)
 		      (:sout #'pretty-sout)
 		      (:misc #'pretty-misc))

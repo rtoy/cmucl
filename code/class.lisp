@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.39 1998/03/21 08:11:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.40 1998/05/04 01:27:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -763,7 +763,10 @@
 	  (null :translation (member nil)
 		:inherits (list sequence mutable-sequence mutable-collection
 			   generic-sequence collection symbol)
-		:direct-superclasses (list symbol)))))
+		:direct-superclasses (list symbol))
+
+	  (stream :hierarchical nil :state :read-only
+		  :inherits (instance t)))))
 
 ;;; See also type-init.lisp where we finish setting up the translations for
 ;;; built-in types.
@@ -804,6 +807,24 @@
 	   (find-layout name 0 inherit-layouts inheritance-depth)
 	   :invalidate nil))))))
 
+;;; Define temporary PCL standard-classes; these will be setup
+;;; correctly and the lisp layout replaced by a PCL wrapper after PCL
+;;; is loaded and the class defined.
+(cold-load-init
+  (dolist (x '((fundamental-stream (t instance stream))))
+    (let* ((name (first x))
+	   (inherits (second x))
+	   (class (lisp::make-standard-class :name name))
+	   (class-cell (lisp::find-class-cell name)))
+      (setf (lisp::class-cell-class class-cell) class)
+      (setf (info type class name) class-cell)
+      (setf (info type kind name) :instance)
+      (let ((inherit-layouts
+	     (map 'vector #'(lambda (x)
+			      (lisp::class-layout (lisp:find-class x)))
+		  inherits)))
+	(lisp::register-layout (lisp::find-layout name 0 inherit-layouts -1)
+			       :invalidate nil)))))
 
 ;;; Now that we have set up the class heterarchy, seal the sealed classes.
 ;;; This must be done after the subclasses have been set up.

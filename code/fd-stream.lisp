@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.42 1998/01/04 22:46:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.43 1998/05/04 01:27:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,7 @@
 (defstruct (fd-stream
 	    (:print-function %print-fd-stream)
 	    (:constructor %make-fd-stream)
-	    (:include stream
+	    (:include lisp-stream
 		      (misc #'fd-stream-misc-routine)))
 
   (name nil)		      ; The name of this stream
@@ -858,7 +858,7 @@ non-server method is also significantly more efficient for large reads.
 	(when (eql size 1)
 	  (setf (fd-stream-n-bin stream) #'fd-stream-read-n-bytes)
 	  (when buffer-p
-	    (setf (stream-in-buffer stream)
+	    (setf (lisp-stream-in-buffer stream)
 		  (make-array in-buffer-length
 			      :element-type '(unsigned-byte 8)))))
 	(setf input-size size)

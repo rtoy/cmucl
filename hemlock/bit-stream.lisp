@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-stream.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-stream.lisp,v 1.4 1998/05/04 01:27:18 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 ;;; does not invoke the exposed/changed handler in Bit-Screen.Lisp; also, the
 ;;; hunk's input and changed handler slots are not set.
 ;;;
-(defstruct (bitmap-hunk-output-stream (:include stream
+(defstruct (bitmap-hunk-output-stream (:include sys:lisp-stream
 						(out #'bitmap-hunk-out)
 						(sout #'bitmap-hunk-sout)
 						(misc #'bitmap-hunk-misc))

@@ -626,6 +626,10 @@
 			       (list (lisp:class-name
 				      (first (kernel:class-direct-superclasses
 					      (lisp:find-class symbol))))))
+			      ;; Hack to add the stream class as a
+			      ;; mixin to the lisp-stream class.
+			      ((eq symbol 'sys:lisp-stream)
+			       '(structure-object stream))
 			      ((structure-type-included-type-name symbol)
 			       (list (structure-type-included-type-name symbol))))
 			:direct-slots

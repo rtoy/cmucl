@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.62 1998/04/20 11:32:50 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.63 1998/05/04 01:27:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1304,7 +1304,11 @@
 				#'(lambda (x) (typep x (find-class class))))
 			    (fdefinition constructor)))
     (setf (class-direct-superclasses class)
-	  (list (layout-class (svref inherits (1- (length inherits))))))
+	  (if (eq (dd-name info) 'lisp-stream)
+	      ;; Hack to add stream as a superclass mixin to lisp-streams.
+	      (list (layout-class (svref inherits (1- (length inherits))))
+		    (layout-class (svref inherits (- (length inherits) 2))))
+	      (list (layout-class (svref inherits (1- (length inherits)))))))
     (let ((new-layout (make-layout :class class
 				   :inherits inherits
 				   :inheritance-depth (length inherits)
@@ -1475,8 +1479,11 @@
 	      (compiler-layout-or-lose (first include))
 	      (class-layout (find-class (or (first superclass-opt)
 					    'structure-object))))))
-    (concatenate 'simple-vector (layout-inherits super) (vector super))))
-
+    (if (eq (dd-name info) 'lisp-stream)
+	;; Hack to added the stream class as a mixin for lisp-streams.
+	(concatenate 'simple-vector (layout-inherits super)
+		     (vector super (class-layout (find-class 'stream))))
+	(concatenate 'simple-vector (layout-inherits super) (vector super)))))
 
 ;;; %COMPILER-ONLY-DEFSTRUCT  --  Internal
 ;;;

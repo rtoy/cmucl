@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.10 1997/08/24 16:54:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.11 1998/05/04 01:27:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -459,7 +459,7 @@
 	 stream))
 
 (defvar *illegal-read-stream*
-  (lisp::make-stream :in #'in-hemlock-standard-input-read))
+  (lisp::make-lisp-stream :in #'in-hemlock-standard-input-read))
 
 (defmacro site-wrapper-macro (&body body)
   `(unwind-protect
