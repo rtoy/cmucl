@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.12 1991/10/24 21:05:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.13 1992/03/21 19:41:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,18 +34,11 @@
 ;;; corresponding predicates) are not maintained in this association.  In this
 ;;; case, there need not be any predicate function unless it is required by
 ;;; Common Lisp.
-
-;;; These two variables maintain the translation between types and predicates.
-;;; *Predicate-Types* is a hashtable that translates from type predicate names
-;;; to CType objects.  *Type-Predicates* is an alist (<type> . <predicate>)
-;;; that translates from types to predicates.  We can't use a hashtable, since
-;;; there is no such thing as a Type= hashtable.  Establishing this translation
 ;;;
-(defvar *predicate-types* (make-hash-table :test #'eq))
-(proclaim '(hash-table *predicate-types*))
-(defvar *type-predicates* ())
-(proclaim '(list *type-predicates*))
-
+;;;    The mappings between predicates and type structures is stored in the
+;;; backend structure, so that different backends can support different sets
+;;; of predicates.
+;;;
 
 ;;; Define-Type-Predicate  --  Interface
 ;;;
@@ -54,14 +47,17 @@
   Establish an association between the type predicate Name and the
   corresponding Type.  This causes the type predicate to be recognized for
   purposes of optimization."
-  `(progn
-     (setf (gethash ',name *predicate-types*) (specifier-type ',type))
-     (setq *type-predicates*
-	   (cons (cons (specifier-type ',type) ',name)
-		 (remove ',name *type-predicates* :key #'cdr)))
-     (%deftransform ',name '(function (t) *) #'fold-type-predicate)
-     ',name))
-
+  `(%define-type-predicate ',name ',type))
+;;;
+(defun %define-type-predicate (name specifier)
+  (let ((type (specifier-type specifier)))
+    (setf (gethash name (backend-predicate-types *target-backend*)) type)
+    (setf (backend-type-predicates *target-backend*)
+	  (cons (cons type name)
+		(remove name (backend-type-predicates *target-backend*)
+			:key #'cdr)))
+    (%deftransform name '(function (t) *) #'fold-type-predicate)
+    name))
 
 
 ;;;; IR1 transforms:
@@ -114,35 +110,39 @@
 			 (ref-leaf
 			  (continuation-use
 			   (basic-combination-fun node))))
-			*predicate-types*)))
+			(backend-predicate-types *backend*))))
     (assert ctype)
     (ir1-transform-type-predicate object ctype)))
 
 
 ;;;; Standard type predicates:
 
-(define-type-predicate arrayp array)
-; No atom.  Use (not cons) deftype.
-(define-type-predicate bit-vector-p bit-vector)
-(define-type-predicate characterp character)
-(define-type-predicate compiled-function-p compiled-function)
-(define-type-predicate complexp complex)
-(define-type-predicate consp cons)
-(define-type-predicate floatp float)
-(define-type-predicate functionp function)
-(define-type-predicate integerp integer)
-(define-type-predicate keywordp keyword)
-(define-type-predicate listp list)
-(define-type-predicate null null)
-(define-type-predicate numberp number)
-(define-type-predicate rationalp rational)
-(define-type-predicate simple-bit-vector-p simple-bit-vector)
-(define-type-predicate simple-string-p simple-string)
-(define-type-predicate simple-vector-p simple-vector)
-(define-type-predicate stringp string)
-(define-type-predicate structurep structure)
-(define-type-predicate symbolp symbol)
-(define-type-predicate vectorp vector)
+(defun define-standard-type-predicates ()
+  (define-type-predicate arrayp array)
+  ; No atom.  Use (not cons) deftype.
+  (define-type-predicate bit-vector-p bit-vector)
+  (define-type-predicate characterp character)
+  (define-type-predicate compiled-function-p compiled-function)
+  (define-type-predicate complexp complex)
+  (define-type-predicate consp cons)
+  (define-type-predicate floatp float)
+  (define-type-predicate functionp function)
+  (define-type-predicate integerp integer)
+  (define-type-predicate keywordp keyword)
+  (define-type-predicate listp list)
+  (define-type-predicate null null)
+  (define-type-predicate numberp number)
+  (define-type-predicate rationalp rational)
+  (define-type-predicate simple-bit-vector-p simple-bit-vector)
+  (define-type-predicate simple-string-p simple-string)
+  (define-type-predicate simple-vector-p simple-vector)
+  (define-type-predicate stringp string)
+  (define-type-predicate structurep structure)
+  (define-type-predicate symbolp symbol)
+  (define-type-predicate vectorp vector))
+
+(define-standard-type-predicates)
+
 
 
 ;;;; Transforms for type predicates not implemented primitively:
@@ -284,7 +284,7 @@
   (declare (type ctype type))
   (let ((res nil)
 	(res-type nil))
-    (dolist (x *type-predicates*)
+    (dolist (x (backend-type-predicates *backend*))
       (let ((stype (car x)))
 	(when (and (csubtypep type stype)
 		   (or (not res-type)
@@ -392,7 +392,8 @@
 (def-source-transform typep (object spec)
   (if (and (consp spec) (eq (car spec) 'quote))
       (let* ((type (specifier-type (cadr spec)))
-	     (pred (cdr (assoc type *type-predicates* :test #'type=))))
+	     (pred (cdr (assoc type (backend-type-predicates *backend*)
+			       :test #'type=))))
 	(if pred
 	    `(,pred ,object)
 	    (typecase type

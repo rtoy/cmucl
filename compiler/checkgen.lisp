@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.18 1991/03/18 20:54:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.19 1992/03/21 19:41:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,8 @@
   (or (let ((check (type-check-template type)))
 	(if check
 	    (template-cost check)
-	    (let ((found (cdr (assoc type *type-predicates* :test #'type=))))
+	    (let ((found (cdr (assoc type (backend-type-predicates *backend*)
+				     :test #'type=))))
 	      (if found
 		  (+ (function-cost found) (function-cost 'eq))
 		  nil))))
@@ -108,7 +109,7 @@
 	 (let ((min-cost (type-test-cost type))
 	       (min-type type)
 	       (found-super nil))
-	   (dolist (x *type-predicates*)
+	   (dolist (x (backend-type-predicates *backend*))
 	     (let ((stype (car x)))
 	       (when (and (csubtypep type stype)
 			  (not (union-type-p stype))) ;Not #!% COMMON type.

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.11 1991/12/08 17:24:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.12 1992/03/21 19:41:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -197,7 +197,7 @@
 					  var2 (continuation-type arg1)
 					  nil))))
 	 (t
-	  (let ((ptype (gethash name *predicate-types*)))
+	  (let ((ptype (gethash name (backend-predicate-types *backend*))))
 	    (when ptype
 	      (add-complement-constraints if 'typep
 					  (ok-cont-lambda-var (first args))
