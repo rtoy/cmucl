@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.80 1998/04/14 12:45:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.81 1998/05/09 22:11:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,7 +185,7 @@
 				   ;; ### Extensions...
 				   (:internal-symbols index) (:external-symbols index))
 	  package)
-(defknown find-package (stringable) (or package null) (flushable))
+(defknown find-package (packagelike) (or package null) (flushable))
 (defknown package-name (packagelike) (or simple-string null) (flushable))
 (defknown package-nicknames (packagelike) list (flushable))
 (defknown rename-package (packagelike packagelike &optional list) package)
@@ -625,10 +625,10 @@
 (defknown copy-tree (t) t (flushable))
 (defknown revappend (list t) t (flushable))
 (defknown nconc (&rest list) list ())
-(defknown nreconc (list list) list ())
+(defknown nreconc (list t) list ())
 (defknown butlast (list &optional index) list (flushable))
 (defknown nbutlast (list &optional index) list ())
-(defknown ldiff (list list) list (flushable))
+(defknown ldiff (list t) list (flushable))
 (defknown (rplaca rplacd) (cons t) list (unsafe))
 
 (defknown (nsubst subst) (t t t &key (:key callable) (:test callable)
@@ -649,7 +649,7 @@
 (defknown (member-if member-if-not) (callable list &key (:key callable))
   list (foldable flushable call))
 
-(defknown tailp (list list) boolean (foldable flushable))
+(defknown tailp (t list) boolean (foldable flushable))
 
 (defknown adjoin (t list &key (:key callable) (:test callable)
 		    (:test-not callable))
