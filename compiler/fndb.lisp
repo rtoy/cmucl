@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.118 2003/07/16 15:43:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.119 2003/07/19 15:30:30 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -872,7 +872,7 @@
   t
   (explicit-check))
 (defknown listen (&optional streamlike
-			    (or null (integer 1 10) (member 'character)))
+			    (or null (integer 1 10) (member character)))
   boolean (flushable explicit-check))
 
 (defknown clear-input (&optional stream boolean) null (explicit-check))
