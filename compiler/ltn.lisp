@@ -217,15 +217,6 @@
   (undefined-value))
 
 
-;;; Make-Unknown-Values-Locations  --  Interface
-;;;
-;;;    Return a list of TNs that can be used to represent an unknown-values
-;;; continuation within a function.
-;;;
-(defun make-unknown-values-locations ()
-  (make-n-tns 2 *any-primitive-type*))
-
-
 ;;; Annotate-Unknown-Values-Continuation  --  Internal
 ;;;
 ;;; Annotate a continuation for unknown multiple values:
