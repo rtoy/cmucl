@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.100 1994/06/22 13:25:20 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.101 1994/06/29 21:38:19 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -563,9 +563,9 @@
      '("%SP-SET-DEFINITION" "%SP-SET-PLIST" "ARRAY-HEADER-P" "BASE-CHAR-P"
        "DOUBLE-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
   (intern name "KERNEL"))
-(defpackage #+pmax "MIPS" #+sparc "SPARC" #+ibmrt "RT"
+(defpackage #+pmax "PMAX" #+sparc "SPARC" #+ibmrt "RT"
             #+x86 "X86" #+hppa "HPPA" #+alpha "ALPHA" #+sgi "SGI"
-            (:nicknames "VM"
+            (:nicknames "VM" #+(or pmax sgi) "MIPS"
 			#+pmax "OLD-MIPS" #+sparc "OLD-SPARC" #+ibmrt "OLD-RT"
 			#+x86 "OLD-X86" #+hppa "HPPA" #+alpha "OLD-ALPHA"
 			#+sgi "OLD-SGI")
