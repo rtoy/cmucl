@@ -35,7 +35,7 @@
 (defun sb-allocated-size (name)
   "The size of the Name'd SB in the currently compiled component.  Useful
   mainly for finding the size for allocating stack frames."
-  (finite-sb-current-size (sb-or-lose name)))
+  (finite-sb-current-size (sb-or-lose name *backend*)))
 
 
 ;;; Current-NFP-TN  --  Interface

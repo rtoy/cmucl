@@ -203,7 +203,7 @@
   (let* ((component (component-info *compile-component*))
 	 (immed (immediate-constant-sc (constant-value constant)))
 	 (sc (svref (backend-sc-numbers *backend*)
-		    (or immed (sc-number-or-lose 'constant))))
+		    (or immed (sc-number-or-lose 'constant *backend*))))
 	 (res (make-tn 0 :constant (primitive-type (leaf-type constant)) sc)))
     (unless immed
       (let ((constants (ir2-component-constants component)))
@@ -240,7 +240,7 @@
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn 0 :constant (backend-any-primitive-type *backend*)
 		       (svref (backend-sc-numbers *backend*)
-			      (sc-number-or-lose 'constant))))
+			      (sc-number-or-lose 'constant *backend*))))
 	 (constants (ir2-component-constants component)))
 
     (do ((i 0 (1+ i)))

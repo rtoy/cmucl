@@ -53,7 +53,8 @@
 			  nil
 			  nil))
 	       (when (eq refs ref)
-		 (let ((parse (vop-parse-or-lose (vop-info-name info))))
+		 (let ((parse (vop-parse-or-lose (vop-info-name info)
+						 *backend*)))
 		   (multiple-value-bind
 		       (ccosts cscs)
 		       (compute-loading-costs
@@ -533,7 +534,7 @@
 					    (tn-primitive-type nfp-tn)))))
 		       (emit-context-template
 			node block
-			(template-or-lose 'compute-old-nfp)
+			(template-or-lose 'compute-old-nfp *backend*)
 			nfp-tn vop)
 		       (assert (not (sc-number-stack-p (tn-sc nfp-tn))))
 		       nfp-tn)))

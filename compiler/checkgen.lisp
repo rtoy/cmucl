@@ -34,13 +34,13 @@
 (defun function-cost (name)
   (declare (symbol name))
   (let ((info (info function info name))
-	(call-cost (template-cost (template-or-lose 'call-named))))
+	(call-cost (template-cost (template-or-lose 'call-named *backend*))))
     (if info
 	(let ((templates (function-info-templates info)))
 	  (if templates
 	      (template-cost (first templates))
 	      (case name
-		(null (template-cost (template-or-lose 'if-eq)))
+		(null (template-cost (template-or-lose 'if-eq *backend*)))
 		(t call-cost))))
 	call-cost)))
 

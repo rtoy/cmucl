@@ -751,7 +751,8 @@
     (let ((safe-p (policy-safe-p policy))
 	  (verbose-p (policy call (= brevity 0)))
 	  (max-cost (- (template-cost (or template
-					  (template-or-lose 'call-named)))
+					  (template-or-lose 'call-named
+							    *backend*)))
 		       *efficency-note-cost-threshold*)))
       (dolist (try (function-info-templates (basic-combination-kind call)))
 	(when (> (template-cost try) max-cost) (return))

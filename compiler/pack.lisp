@@ -430,7 +430,7 @@
   (declare (type node node) (type ir2-block block)
 	   (type tn src dest) (type (or vop null) before))
   (emit-load-template node block
-		      (template-or-lose 'move-operand)
+		      (template-or-lose 'move-operand *backend*)
 		      src dest
 		      (list (or (svref (sc-move-functions (tn-sc dest))
 				       (sc-number (tn-sc src)))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.24 1990/11/03 03:14:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.25 1990/11/13 22:49:12 wlott Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -46,7 +46,7 @@
 	(primitive-type-check check-ptype)
 	(let ((name (hairy-type-check-template type)))
 	  (if name
-	      (template-or-lose name)
+	      (template-or-lose name *backend*)
 	      nil)))))
 
 
@@ -539,7 +539,7 @@
 	 (test-ref (reference-tn (continuation-tn node block test) nil))
 	 (nil-ref (reference-tn (emit-constant nil) nil)))
     (setf (tn-ref-across test-ref) nil-ref)
-    (ir2-convert-conditional node block (template-or-lose 'if-eq)
+    (ir2-convert-conditional node block (template-or-lose 'if-eq *backend*)
 			     test-ref () node t)))
 
 
@@ -898,7 +898,7 @@
 	(let* ((locs (ir2-continuation-locs 2cont))
 	       (loc (first locs))
 	       (check (continuation-type-check cont))
-	       (function-ptype (primitive-type-or-lose 'function)))
+	       (function-ptype (primitive-type-or-lose 'function *backend*)))
 	  (assert (and (eq (ir2-continuation-kind 2cont) :fixed)
 		       (= (length locs) 1)))
 	  (cond ((eq (tn-primitive-type loc) function-ptype)
@@ -1433,7 +1433,8 @@
   (let* ((2info (nlx-info-info info))
 	 (kind (cleanup-kind (nlx-info-cleanup info)))
 	 (block-tn (environment-live-tn
-		    (make-normal-tn (primitive-type-or-lose 'catch-block))
+		    (make-normal-tn (primitive-type-or-lose 'catch-block
+							    *backend*))
 		    (node-environment node)))
 	 (res (make-stack-pointer-tn))
 	 (target-label (ir2-nlx-info-target 2info)))
