@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.2 1991/05/05 13:51:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.3 1991/05/09 16:30:06 ram Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of operand loading/saving and the
 ;;; Move VOP.
@@ -161,6 +161,7 @@
 (define-vop (move-to-word/fixnum)
   (:args (x :scs (any-reg descriptor-reg) :target y))
   (:results (y :scs (signed-reg unsigned-reg)))
+  (:arg-types tagged-num)
   (:note "fixnum untagging")
   (:generator 2
     (move y x)
