@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.5 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.6 1997/03/16 15:52:51 pw Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -45,7 +45,7 @@ static void process_directory(int fd, long *ptr, int count)
 		addr);
 	}
 
-#ifdef 0
+#if 0
 	printf("Space ID = %d, free pointer = 0x%08x.\n", id, free_pointer);
 #endif
 
