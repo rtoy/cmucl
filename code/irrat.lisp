@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.33 2002/09/05 16:13:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.34 2002/12/31 14:28:08 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -348,17 +348,49 @@
 	     (* base power)
 	     (exp (* power (log base)))))))))
 
+;; Compute the base 2 log of an integer
+(defun log2 (x)
+  ;; Write x = 2^n*f where 1/2 < f <= 1.  Then log2(x) = n + log2(f).
+  ;;
+  ;; So we grab the top few bits of x and scale that appropriately,
+  ;; take the log of it and add it to n.
+  (let ((n (integer-length x)))
+    (if (< n vm:double-float-digits)
+	(log (coerce x 'double-float) 2d0)
+	(let ((exp (min vm:double-float-digits n))
+	      (f (ldb (byte vm:double-float-digits
+			    (max 0 (- n vm:double-float-digits)))
+		      x)))
+	  (+ n (log (scale-float (float f 1d0) (- exp))
+		    2d0))))))
+  
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
   (if base-p
-      (if (zerop base)
-	  base				; ANSI spec
-	  (/ (log number) (log base)))
+      (cond ((zerop base)
+	     ;; ANSI spec
+	     base)
+	    ((and (integerp number) (integerp base)
+		  (plusp number) (plusp base))
+	     ;; Let's try to do something nice when both the number
+	     ;; and the base are positive integers.  Use the rule that
+	     ;; log_b(x) = log_2(x)/log_2(b)
+	     (coerce (/ (log2 number) (log2 base)) 'single-float))
+	    (t
+	     (/ (log number) (log base))))
       (number-dispatch ((number number))
-	(((foreach fixnum bignum ratio))
+	(((foreach fixnum bignum))
 	 (if (minusp number)
-	     (complex (log (- number)) (coerce pi 'single-float))
-	     (coerce (%log (coerce number 'double-float)) 'single-float)))
+	     (complex (coerce (log (- number)) 'single-float)
+		      (coerce pi 'single-float))
+	     (coerce (/ (log2 number) #.(log (exp 1) 2d0)) 'single-float)))
+	((ratio)
+	 (if (minusp number)
+	     (complex (coerce (log (- number)) 'single-float)
+		      (coerce pi 'single-float))
+	     (coerce (- (log (numerator number))
+			(log (denominator number)))
+		     'single-float)))
 	(((foreach single-float double-float))
 	 ;; Is (log -0) -infinity (libm.a) or -infinity + i*pi (Kahan)?
 	 ;; Since this doesn't seem to be an implementation issue
