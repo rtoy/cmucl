@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.159 1998/12/19 15:52:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.160 1999/01/11 19:05:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1704,4 +1704,4 @@
 	   "PROCESS-WAIT" "PROCESS-WAIT-WITH-TIMEOUT" 
 	   "PROCESS-WHOSTATE" "PROCESS-YIELD" "PROCESSP" "RESTART-PROCESS" 
 	   "SHOW-PROCESSES" "STACK-GROUP-RESUME" "WITHOUT-SCHEDULING"
-	   "WITH-LOCK-HELD"))
+	   "WITH-LOCK-HELD" "WITH-TIMEOUT"))

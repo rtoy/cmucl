@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.31 1998/09/26 18:24:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.32 1999/01/11 19:05:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1527,6 +1527,35 @@
 	 (process-wait-with-timeout "Sleep" n (constantly nil)))))
 
 
+
+;;; With-Timeout-Internal  --  Internal
+;;;
+(defun with-timeout-internal (timeout function timeout-function)
+  (catch 'timer-interrupt
+    (let* ((current-process mp:*current-process*)
+	   (timer-process (mp:make-process
+			   #'(lambda ()
+			       (sleep timeout)
+			       (mp:process-interrupt
+				current-process
+				#'(lambda () (throw 'timer-interrupt nil))))
+			   :name "Timeout timer")))
+      (unwind-protect
+	   (return-from with-timeout-internal (funcall function))
+	(mp:destroy-process timer-process))))
+   (funcall timeout-function))
+
+;;; With-Timeout  --  Public
+;;;
+(defmacro with-timeout ((timeout &body timeout-forms) &body body)
+  "Executes body and returns the values of the last form in body. However, if
+  the execution takes longer than timeout seconds, abort it and evaluate
+  timeout-forms, returning the values of last form."
+  `(flet ((fn () . ,body)
+	  (tf () . ,timeout-forms))
+    (with-timeout-internal ,timeout #'fn #'tf)))
+
+
 ;;; Show-Processes  --  Public
 ;;;
 (defun show-processes (&optional verbose)
@@ -1536,7 +1565,7 @@
   (fresh-line)
   (dolist (process *all-processes*)
     (when (eq process *current-process*)
-      (format t "* "))
+      (format t "-> "))
     (format t "~s ~s ~a~%" process (process-whostate process) 
 	    (process-state process))
     (when verbose
