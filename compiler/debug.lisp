@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.14 1991/02/20 14:57:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.15 1991/08/23 16:30:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.14 1991/02/20 14:57:04 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.15 1991/08/23 16:30:31 ram Exp $
 ;;; 
 ;;;    Utilities for debugging the compiler.  Currently contains only stuff for
 ;;; checking the consistency of the IR1.
@@ -916,6 +916,31 @@
   (check-tn-conflicts component)
   (check-block-conflicts component)
   (check-environment-lifetimes component))
+
+
+;;;; Pack consistency checking:
+
+;;; CHECK-PACK-CONSISTENCY  --  Interface
+;;;
+(defun check-pack-consistency (component)
+  (flet ((check (scs ops)
+	   (do ((scs scs (cdr scs))
+		(op ops (tn-ref-across op)))
+	       ((null scs))
+	     (let ((load-tn (tn-ref-load-tn op)))
+	       (unless (eq (svref (car scs)
+				  (sc-number
+				   (tn-sc
+				    (or load-tn (tn-ref-tn op)))))
+			   t)
+		 (barf "Operand restriction not satisfied: ~S." op))))))
+    (do-ir2-blocks (block component)
+      (do ((vop (ir2-block-last-vop block) (vop-prev vop)))
+	  ((null vop))
+	(let ((info (vop-info vop)))
+	  (check (vop-info-result-load-scs info) (vop-results vop))
+	  (check (vop-info-arg-load-scs info) (vop-args vop))))))
+  (undefined-value))
 
 
 ;;;; Data structure dumping routines:
