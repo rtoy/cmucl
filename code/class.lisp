@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.28 1993/07/20 15:35:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.29 1993/07/21 23:05:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -723,7 +723,7 @@
 (cold-load-init
   (setq built-in-class-codes
 	(let ((res (make-array 256 :initial-element
-			       (class-layout (find-class 'random-class)))))
+			       '#.(class-layout (find-class 'random-class)))))
 	  (dolist (x built-in-classes res)
 	    (destructuring-bind (name &key codes &allow-other-keys)
 				x
