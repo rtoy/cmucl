@@ -46,8 +46,9 @@
 ;;;
 ;;;    Do a graph walk linking blocks into the emit order as we go.  We treat
 ;;; blocks ending in TR nodes specially, since it may be that we want to go
-;;; somewhere other than the return block.  In a TR local call, we drop through
-;;; to the head of the called function, rather than the return node.
+;;; somewhere other than the return block.  If tail-call-p, then we drop
+;;; through to the head of the called function in a TR local calls (instead of
+;;; to the return node.)
 ;;;
 ;;;    If the IR2 blocks haven't already been assigned, then we make them at
 ;;; this point.
@@ -60,21 +61,48 @@
     (add-to-emit-order (or (block-info block)
 			   (setf (block-info block) (make-ir2-block block)))
 		       (ir2-block-prev tail))
-    
+
+    #|But not really...
     (let ((last (block-last block)))
       (when (and (combination-p last) (node-tail-p last)
-		 (eq (basic-combination-kind last) :local))
+		 (eq (basic-combination-kind last) :local)
+		 tail-call-p)
 	(control-analyze-block (node-block
 				(lambda-bind
 				 (ref-leaf
 				  (continuation-use
 				   (basic-combination-fun last)))))
-			       tail)))
+			       tail t)))
+    |#
     
     (dolist (succ (block-succ block))
-      (control-analyze-block succ tail))))
+      (control-analyze-block succ tail)))
+
+  (undefined-value))
 
 
+;;; CONTROL-ANALYZE-1-FUN  --  Internal
+;;;
+;;;    Analyze all of the NLX EPs first to ensure that code reachable only from
+;;; a NLX is emitted contiguously with the code reachable from the Bind.  Code
+;;; reachable from the Bind is inserted *before* the NLX code so that the Bind
+;;; marks the beginning of the code for the function.  The walk from a NLX EP
+;;; will never reach the bind block, so we will always get to insert it at the
+;;; beginning.
+;;;
+(defun control-analyze-1-fun (fun component)
+  (declare (type clambda fun) (type component component))
+  (let* ((tail-block (block-info (component-tail component)))
+	 (prev-block (ir2-block-prev tail-block))
+	 (bind-block (node-block (lambda-bind fun))))
+    (unless (block-flag bind-block)
+      (dolist (nlx (environment-nlx-info (lambda-environment fun)))
+	(control-analyze-block (nlx-info-target nlx) tail-block))
+      (assert (not (block-flag bind-block)))
+      (control-analyze-block bind-block (ir2-block-next prev-block))))
+  (undefined-value))
+
+  
 ;;; Control-Analyze  --  Interface
 ;;;
 ;;;    Do control analysis on Component, finding the emit order.  Our only
@@ -97,14 +125,12 @@
 
     (clear-flags component)
 
-    (dolist (succ (block-succ head))
-      (let ((node (continuation-next (block-start succ))))
-	(when (and (bind-p node)
-		   (external-entry-point-p (bind-lambda node)))
-	  (control-analyze-block succ tail-block))))
-    
-    (dolist (succ (block-succ head))
-      (control-analyze-block succ tail-block))
+    (dolist (fun (component-lambdas component))
+      (when (external-entry-point-p fun)
+	(control-analyze-1-fun fun component)))
+
+    (dolist (fun (component-lambdas component))
+      (control-analyze-1-fun fun component))
 
     (do-blocks (block component)
       (unless (block-flag block)
