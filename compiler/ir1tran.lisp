@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.38 1991/03/12 19:06:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.39 1991/03/12 19:36:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3079,8 +3079,9 @@
 ;;;
 ;;; Convert the definition and install it in the global environment with a
 ;;; LABELS-like effect.  If the lexical environment is not null, then we only
-;;; install the definition during the processing of this DEFUN, ensuring
-;;; that the function cannot be called outside of the correct environment.
+;;; install the definition during the processing of this DEFUN, ensuring that
+;;; the function cannot be called outside of the correct environment.  If the
+;;; function is gloablly NOTINLINE, then that inhibits even local substitution.
 ;;; Also, emit top-level code to install the definition.
 ;;;
 (def-ir1-translator %defun ((name def doc source) start cont
@@ -3112,29 +3113,27 @@
     ;; If not in a null environment, discard any forward references to this
     ;; function.
     (unless null-fenv-p (remhash name *free-functions*))
-    ;;
-    ;; Convert definition.
     (let ((fun (ir1-convert-lambda (cadr def)))
 	  (old (gethash name *free-functions*)))
       (setf (leaf-name fun) name)
-      (setf (gethash name *free-functions*) fun)
       ;;
       ;; If definitely not an interpreter stub, then substitute for any
       ;; old references that aren't :NOTINLINE. 
-      (when (and old
-		 (not (eq (info function inlinep name) :notinline))
-		 (or (not function-info)
-		     (and (null (function-info-transforms function-info))
-			  (null (function-info-templates function-info))
-			  (not (function-info-ir2-convert function-info)))))
-	(substitute-leaf-if 
-	 #'(lambda (x)
-	     (not (eq (ref-inlinep x) :notinline)))
-	 fun old))
-      ;;
-      ;; If not in a null environment, prevent any backward references to
-      ;; this function from other top-level forms.
-      (unless null-fenv-p (remhash name *free-functions*))
+      (unless (or (eq (info function inlinep name) :notinline)
+		  (and function-info
+		       (or (function-info-transforms function-info)
+			   (function-info-templates function-info)
+			   (function-info-ir2-convert function-info))))
+	(setf (gethash name *free-functions*) fun)
+	(when old
+	  (substitute-leaf-if 
+	   #'(lambda (x)
+	       (not (eq (ref-inlinep x) :notinline)))
+	   fun old))
+	;;
+	;; If not in a null environment, prevent any backward references to
+	;; this function from other top-level forms.
+	(unless null-fenv-p (remhash name *free-functions*)))
       ;;
       ;; Check for consistency with previous declaration or definition, and
       ;; assert argument/result types if appropriate.
