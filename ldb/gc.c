@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.25 1991/02/16 01:00:04 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.26 1991/03/23 14:45:15 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -263,14 +263,6 @@ collect_garbage()
 	size_discarded = (from_space_free_pointer - from_space) * sizeof(lispobj);
 #endif
 	size_retained = (new_space_free_pointer - new_space) * sizeof(lispobj);
-
-	/* Flush the icache. */
-#ifdef PRINTNOISE
-	printf("Flushing instruction cache ...\n");
-#endif
-	os_flush_icache((os_vm_address_t) new_space,
-			(os_vm_size_t) size_retained);
-
 
 	/* Zero stack. */
 #ifdef PRINTNOISE
