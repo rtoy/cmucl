@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.5 1993/02/26 09:02:03 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.6 1993/07/27 15:00:59 hallgren Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -671,6 +671,10 @@ trans_code(struct code *code)
 		prev_pointer = &nfheaderp->next;
 	}
 
+#ifdef hpux
+        os_flush_icache((os_vm_address_t) (((int *)new_code) + nheader_words),
+		        ncode_words * sizeof(int));
+#endif
 	return new_code;
 }
 
@@ -1823,7 +1827,7 @@ void set_auto_gc_trigger(os_vm_size_t dynamic_usage)
     addr=os_round_up_to_page(addr);
     length=os_trunc_size_to_page(length);
 
-#ifndef MACH
+#ifdef SUNOS
     os_invalidate(addr,length);
 #else
     os_protect(addr, length, 0);
@@ -1835,7 +1839,7 @@ void set_auto_gc_trigger(os_vm_size_t dynamic_usage)
 void clear_auto_gc_trigger(void)
 {
     if(current_auto_gc_trigger!=NULL){
-#ifndef MACH /* don't want to force whole space into swapping mode... */
+#ifdef SUNOS /* don't want to force whole space into swapping mode... */
 	os_vm_address_t addr=(os_vm_address_t)current_auto_gc_trigger;
 	os_vm_size_t length=
 	    DYNAMIC_SPACE_SIZE + (os_vm_address_t)current_dynamic_space - addr;
