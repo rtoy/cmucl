@@ -7,13 +7,6 @@ choices and extensions.
 
 \section{Data Types}
 
-\subsection{Symbols}
-
-As in \cltl, all symbols and package names are printed in lower case, as
-a user is likely to type them.  Internally, they are normally stored
-upper case only.
-
-
 \subsection{Integers}
 
 The \tindexed{fixnum} type is equivalent to \code{(signed-byte 30)}.
@@ -175,6 +168,46 @@ user code.  In particular, the unary \code{round} function will stop
 doing round-to-nearest on floats, and instead do the selected form of
 rounding.
 
+\subsubsection{Precision Control}
+\label{precision-control}
+
+The floating-point unit for the Intel IA-32 architecture supports a
+precision control mechanism.  The floating-point unit consists of an
+IEEE extended double-float unit and all operations are always done
+using his format, and this includes rounding.  However, by setting the
+precision control mode, the user can control how rounding is done for
+each basic arithmetic operation like addition, subtraction,
+multiplication, and division.  The extra instructions for
+trigonometric, exponential, and logarithmic operations are not
+affected.  We refer the reader to Intel documentation for more
+information. 
+
+The possible modes are:
+\begin{Lentry}
+  
+\item[\kwd{24-bit}] In this mode, all basic arithmetic operations like
+  addition, subtraction, multiplication, and division, are rounded
+  after each operation as if both the operands were IEEE single
+  precision numbers.  
+  
+\item[\kwd{53-bit}] In this mode, rounding is performed as if the
+  operands and results were IEEE double precision numbers.
+  
+\item[\kwd{64-bit}] In this mode, the default, rounding is performed
+  on the full IEEE extended double precision format.
+  
+\end{Lentry}
+
+\paragraph{Warning:}
+
+Although the precision mode can be changed with
+\code{set-floating-point-modes}, use of anything other than
+\kwd{64-bit} or \kwd{53-bit} can cause unexpected results, especially
+if external functions or libraries are called.  A setting of
+\kwd{64-bit} also causes \code{(= 1d0 (+ 1d0 double-float-epsilon))}
+to return \true instead of \false.
+
+
 \subsubsection{Accessing the Floating Point Modes}
 
 These functions can be used to modify or read the floating point modes:
@@ -182,7 +215,7 @@ These functions can be used to modify or read the floating point modes:
 \begin{defun}{extensions:}{set-floating-point-modes}{%
     \keys{\kwd{traps} \kwd{rounding-mode}}
     \morekeys{\kwd{fast-mode} \kwd{accrued-exceptions}}
-    \yetmorekeys{\kwd{current-exceptions}}}
+    \yetmorekeys{\kwd{current-exceptions} \kwd{precision-control}}}
   \defunx[extensions:]{get-floating-point-modes}{}
   
   The keyword arguments to \code{set-floating-point-modes} set various
@@ -213,8 +246,12 @@ These functions can be used to modify or read the floating point modes:
   \item[\kwd{fast-mode}] Set the hardware's ``fast mode'' flag, if
     any.  When set, IEEE conformance or debuggability may be impaired.
     Some machines may not have this feature, in which case the value
-    is always \false.  No currently supported machines have a fast
-    mode.
+    is always \false.  Sparc platforms support a fast mode where
+    denormal numbers are silently truncated to zero.
+  \item[\kwd{precision-control}] On the x86 architecture, you can set
+    the precision of the arithmetic to \kwd{24-bit}, \kwd{53-bit}, or
+    \kwd{64-bit} mode, corresponding to IEEE single precision, double
+    precision, and extended double precision.
   \end{Lentry}
   If a keyword argument is not supplied, then the associated state is
   not changed.
@@ -1668,6 +1705,16 @@ number of bits in the random integer.
 For floating-point numbers, this generator can by significantly faster 
 than the original generator.
 
+\subsection{MT-19987 Generator}
+\cpsubindex{random number generation}{MT-19987 generator}
+On all platforms, this is the preferred generator as indicated by
+\kwd{:rand-mt19987} being in \code{*features*}.  This is a Lisp
+implementation of the MT-19987 generator of Makoto Matsumoto and
+T. Nishimura.  We refer the reader to their paper\footnote{``Mersenne
+  Twister: A 623-Dimensionally Equidistributed Uniform Pseudorandom
+  Number Generator,'' ACM Trans. on Modeling and Computer Simulation,
+  Vol. 8, No. 1, January 1998, pp.3--30} or to
+their website at \href{http://www.math.keio.ac.jp/~matumoto/emt.html}.
 
 \section{Lisp Library}
 \label{lisp-lib}
