@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.38 1991/03/20 03:07:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.39 1991/05/16 16:06:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.38 1991/03/20 03:07:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.39 1991/05/16 16:06:25 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -469,10 +469,10 @@ default-value-8
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (maybe-load-stack-tn fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (maybe-load-stack-tn fp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
@@ -509,10 +509,10 @@ default-value-8
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (maybe-load-stack-tn fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (maybe-load-stack-tn fp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
@@ -552,10 +552,10 @@ default-value-8
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (maybe-load-stack-tn fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (maybe-load-stack-tn fp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
