@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.20 1990/08/24 18:35:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.21 1990/09/06 17:40:53 wlott Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -1436,7 +1436,7 @@
       (:catch
        (vop make-catch-block node block block-tn
 	    (continuation-tn node block tag) target-label res))
-      ((:unwind-protect :entry)
+      ((:unwind-protect :block :tagbody)
        (vop make-unwind-block node block block-tn target-label res)))
 
     (ecase kind
