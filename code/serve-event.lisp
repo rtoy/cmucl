@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.12 1992/01/02 22:47:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.13 1992/01/21 12:56:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -284,7 +284,7 @@
 				  (declare (ignore condx))
 				  (flush-display-events d))))
 	  (unless (funcall (cdr d/h) d)
-	    (disable-clx-even-handling d)
+	    (disable-clx-event-handling d)
 	    (error "Event-listen was true, but handler didn't handle: ~%~S"
 		   d/h)))
 	(return-from serve-event t))))
