@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.9 1993/08/31 11:52:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.10 1993/08/31 21:56:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1440,10 +1440,11 @@
   `(define-cold-fop (,name)
      (let* ((nconst ,nconst)
 	    (size ,size)
+	    (raw-header-size (+ vm:code-trace-table-offset-slot nconst))
 	    (header-size
 	     ;; Note: we round the number of constants up to assure that
 	     ;; the code vector will be properly aligned.
-	     (round-up (+ vm:code-trace-table-offset-slot nconst) 2))
+	     (round-up raw-header-size 2))
 	    (des (allocate-descriptor *dynamic*
 				      (+ (ash header-size vm:word-shift) size)
 				      vm:other-pointer-type)))
@@ -1456,8 +1457,10 @@
 			    (- vm:word-shift))))
        (write-indexed des vm:code-entry-points-slot *nil-descriptor*)
        (write-indexed des vm:code-debug-info-slot (pop-stack))
-       (do ((index (+ nconst (1- vm:code-trace-table-offset-slot))
-		   (1- index)))
+       (when (oddp raw-header-size)
+	 (write-indexed des raw-header-size
+			(make-random-descriptor 0)))
+       (do ((index (1- raw-header-size) (1- index)))
 	   ((< index vm:code-trace-table-offset-slot))
 	 (write-indexed des index (pop-stack)))
        (read-n-bytes *fasl-file*

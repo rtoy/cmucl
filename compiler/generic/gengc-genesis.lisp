@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.13 1993/08/25 23:29:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.14 1993/08/31 21:57:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1583,10 +1583,11 @@
   `(define-cold-fop (,name)
      (let* ((nconst ,nconst)
 	    (inst-words ,size)
+	    (raw-header-size (+ vm:code-debug-info-slot nconst))
 	    (header-size
 	     ;; Note: we round the number of constants up to assure that
 	     ;; the code vector will be properly aligned.
-	     (round-up (+ vm:code-debug-info-slot nconst) 2))
+	     (round-up raw-header-size 2))
 	    (des (allocate-descriptor *dynamic*
 				      (+ header-size inst-words)
 				      vm:other-pointer-type
@@ -1597,7 +1598,9 @@
        (write-descriptor des vm:code-code-size-slot
 			 (make-fixnum-descriptor inst-words))
        (write-descriptor des vm:code-entry-points-slot *nil-descriptor*)
-       (do ((index (1- (+ nconst vm:code-debug-info-slot)) (1- index)))
+       (when (oddp raw-header-size)
+	 (write-bits des raw-header-size 0))
+       (do ((index (1- raw-header-size) (1- index)))
 	   ((< index vm:code-debug-info-slot))
 	 (write-descriptor des index (pop-stack)))
        (read-n-bytes *fasl-file*
