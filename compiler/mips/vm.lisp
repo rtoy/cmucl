@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.39 1990/11/26 16:01:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.40 1990/12/02 12:58:45 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -280,15 +280,6 @@
 (defregtn old-fp any-reg) ; for backwards compatibility
 (defregtn nsp any-reg)
 (defregtn nfp any-reg)
-
-
-
-;;;; Side-Effect Classes
-
-(export '(vop-attributes))
-
-(def-boolean-attribute vop
-  any)
 
 
 
