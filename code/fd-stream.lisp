@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.57 2001/07/08 17:37:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.58 2002/02/04 17:22:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -852,7 +852,10 @@
 		  (fd-stream-bin stream) #'ill-bin)
 	    (setf (fd-stream-in stream) #'ill-in
 		  (fd-stream-bin stream) routine))
-	(when (eql size 1)
+	(when (or (eql size 1)
+		  (eql size 2)
+		  (eql size 4))
+	  ;; Support for n-byte operations on 8-, 16-, and 32-bit streams
 	  (setf (fd-stream-n-bin stream) #'fd-stream-read-n-bytes)
 	  (when buffer-p
 	    (setf (lisp-stream-in-buffer stream)
