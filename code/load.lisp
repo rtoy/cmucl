@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.26 1991/02/28 03:16:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.27 1991/03/20 02:59:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.26 1991/02/28 03:16:49 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.27 1991/03/20 02:59:11 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -784,16 +784,15 @@
 	 (let ((box-num ,nitems)
 	       (code-length ,size))
 	   (declare (fixnum box-num code-length))
-	   (let ((code (%primitive allocate-code-object box-num code-length)))
-	     (%primitive set-code-debug-info code (pop-stack))
-	     (do ((index (1- box-num) (1- index)))
-		 ((minusp index))
-	       (declare (fixnum index))
-	       (%primitive code-constant-set code index (pop-stack)))
+	   (let ((code (%primitive allocate-code-object box-num code-length))
+		 (index (+ vm:code-trace-table-offset-slot box-num)))
+	     (setf (code-header-ref code vm:code-debug-info-slot) (pop-stack))
+	     (dotimes (i box-num)
+	       (declare (fixnum i))
+	       (setf (code-header-ref code (decf index)) (pop-stack)))
 	     (system:without-gcing
-	      (let ((inst (truly-the system-area-pointer
-				     (%primitive code-instructions code))))
-		(read-n-bytes *fasl-file* inst 0 code-length)))
+	      (read-n-bytes *fasl-file* (code-instructions code) 0
+			    code-length))
 	     code)))
        (error
 	"Code Format not set?  Can't load code until after FOP-CODE-FORMAT.")))
