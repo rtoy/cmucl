@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.35 2003/06/14 12:21:39 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.36 2003/06/14 14:37:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1066,8 +1066,10 @@
 	(%reader-error stream "Too many colons in ~S"
 		      (read-buffer-to-string)))
       (setq colons 1)
-      (setq package (read-buffer-to-string))
-
+      (setq package
+	    (if (eql (char-class firstchar) #.package-delimiter)
+		*keyword-package*
+		(read-buffer-to-string)))
       (reset-read-buffer)
       (setq escapes ())
       (setq char (read-char stream nil nil))
@@ -1099,9 +1101,7 @@
       RETURN-SYMBOL
       (casify-read-buffer escapes)
       (let ((found (if package
-		       (if (zerop (length package))
-			   *keyword-package*
-			   (find-package package))
+		       (find-package package)
 		       *package*)))
 	(unless found
 	  (error 'reader-package-error :stream stream

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.68 2003/06/07 17:56:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.69 2003/06/14 14:37:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -352,7 +352,8 @@
 		((= i len) nil)
              (declare (type index len i))
              (when (char/= #\. (schar name i)) (return i)))))
-    (when (char= #\. (schar name 0))
+    (when (and (plusp (length name))
+	       (char= #\. (schar name 0)))
       (let* ((last-dot-position (or (find-non-dot name) (length name)))
              (n-dots last-dot-position)
              (name (subseq name last-dot-position)))
