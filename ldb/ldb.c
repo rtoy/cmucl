@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.6 1990/06/03 22:37:00 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.7 1990/07/01 04:42:29 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -43,6 +43,7 @@ char *envp[];
 {
     char *arg, **argptr;
     char *core = NULL;
+    boolean restore_state;
 
     define_var("nil", NIL, TRUE);
     define_var("t", T, TRUE);
@@ -75,9 +76,9 @@ char *envp[];
     
     validate();
 
-    load_core_file(core);
-
     globals_init();
+
+    restore_state = load_core_file(core);
 
     interrupt_init();
 
@@ -85,8 +86,12 @@ char *envp[];
     SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
 
+    /* Snag a few of the signal */
     test_init();
 
-    while (1)
-        monitor();
+    if (restore_state)
+        restore();
+    else
+        while (1)
+            ldb_monitor();
 }
