@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.19 2001/07/08 16:24:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.20 2002/05/25 02:42:52 pmai Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -566,7 +566,7 @@
 	    (kernel:order-layout-inherits
 	     (map 'simple-vector #'class-wrapper
 		  (reverse (rest (class-precedence-list class))))))
-      (kernel:register-layout layout :invalidate nil)
+      (kernel:register-layout layout)
 
       ;; Subclasses of formerly forward-referenced-class may be unknown
       ;; to lisp:find-class and also anonymous. This functionality moved
@@ -620,10 +620,3 @@ when called with arguments ~S."
           :function generic-function
           :arguments args)
   (apply generic-function args))
-
-;; (defmethod no-applicable-method (generic-function &rest args)
-;;   (cerror "Retry call to ~S"
-;; 	  "No matching method for the generic-function ~S,~@
-;;           when called with arguments ~S."
-;; 	  generic-function args)
-;;   (apply generic-function args))
