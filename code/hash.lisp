@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.10 1991/12/14 08:57:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.11 1991/12/14 13:09:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,25 +234,25 @@
   (declare (type (or function (member eq eql equal)) test)
 	   (type index size rehash-size)
 	   (type (or (float 0.0 1.0) index) rehash-threshold))
-  (let ((test (cond ((or (eq test #'eq) (eq test 'eq)) 'eq)
-		    ((or (eq test #'eql) (eq test 'eql)) 'eql)
-		    ((or (eq test #'equal) (eq test 'equal)) 'equal)
-		    (t
-		     (error "~S is an illegal :Test for hash tables." test))))
-	(size (if (<= size 37) 37 (almost-primify size)))
-	(rehash-threshold
-	 (cond ((and (fixnump rehash-threshold)
-		     (<= 0 rehash-threshold size))
-		rehash-threshold)
-	       ((and (floatp rehash-threshold)
-		     (<= 0.0 rehash-threshold 1.0))
-		(ceiling (* rehash-threshold size)))
-	       (t
-		(error "Invalid rehash-threshold: ~S.~%Must be either a float ~
-			between 0.0 and 1.0 ~%or an integer between 0 and ~D."
-		       rehash-threshold
-		       size))))
-	(table (make-array size :initial-element nil)))
+  (let* ((test (cond ((or (eq test #'eq) (eq test 'eq)) 'eq)
+		     ((or (eq test #'eql) (eq test 'eql)) 'eql)
+		     ((or (eq test #'equal) (eq test 'equal)) 'equal)
+		     (t
+		      (error "~S is an illegal :Test for hash tables." test))))
+	 (size (if (<= size 37) 37 (almost-primify size)))
+	 (rehash-threshold
+	  (cond ((and (fixnump rehash-threshold)
+		      (<= 0 rehash-threshold size))
+		 rehash-threshold)
+		((and (floatp rehash-threshold)
+		      (<= 0.0 rehash-threshold 1.0))
+		 (ceiling (* rehash-threshold size)))
+		(t
+		 (error "Invalid rehash-threshold: ~S.~%Must be either a float ~
+			 between 0.0 and 1.0 ~%or an integer between 0 and ~D."
+			rehash-threshold
+			size))))
+	 (table (make-array size :initial-element nil)))
     (make-hash-table-structure :size size
 			       :rehash-size rehash-size
 			       :rehash-threshold rehash-threshold
