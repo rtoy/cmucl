@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.22 1997/05/05 23:13:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.23 1997/08/05 20:41:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -439,7 +439,7 @@
   ;; the same name twice, the old objects is reused.
   (declare (ignore base-file))
   (let ((output-file (pick-temporary-file-name
-		      (concatenate 'string "/tmp/~D~S" (string (gensym)))))
+		      (concatenate 'string "/tmp/~D~C" (string (gensym)))))
 	(error-output (make-string-output-stream)))
 
     #-linux (format t ";;; Running /usr/ccs/bin/ld...~%")
