@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.3 1991/11/11 22:55:58 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.4 1992/01/14 16:05:05 ram Exp $
 ;;; 
 ;;; This file contains the SPARC VM definition of character operations.
 ;;;
@@ -26,6 +26,7 @@
 (define-vop (move-to-base-char)
   (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (base-char-reg)))
+  (:note "character untagging")
   (:generator 1
     (inst srl y x vm:type-bits)))
 ;;;
@@ -38,6 +39,7 @@
 (define-vop (move-from-base-char)
   (:args (x :scs (base-char-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
+  (:note "character tagging")
   (:generator 1
     (inst sll y x vm:type-bits)
     (inst or y vm:base-char-type)))
@@ -53,6 +55,7 @@
 	    :load-if (not (location= x y))))
   (:results (y :scs (base-char-reg)
 	       :load-if (not (location= x y))))
+  (:node "character move")
   (:effects)
   (:affected)
   (:generator 0
@@ -70,6 +73,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y base-char-reg))))
   (:results (y))
+  (:node "character arg move")
   (:generator 0
     (sc-case y
       (base-char-reg
