@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.8 2003/05/12 16:30:41 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.9 2004/06/20 17:43:28 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -22,7 +22,7 @@
 
 
 (in-package "EXTENSIONS")
-(export '(*require-verbose* defmodule))
+(export '(*require-verbose* *module-provider-functions* defmodule))
 (in-package "LISP")
 
 
@@ -35,6 +35,10 @@
 
 (defvar *require-verbose* t
   "*load-verbose* is bound to this before loading files.")
+
+(defvar *module-provider-functions*
+    '(module-provide-cmucl-defmodule module-provide-cmucl-library)
+  "See function documentation for REQUIRE")
 
 ;;;; Defmodule.
 
@@ -66,26 +70,46 @@
 (defun require (module-name &optional pathname)
   "Loads a module when it has not been already.  Pathname, if supplied,
    is a single pathname or list of pathnames to be loaded if the module
-   needs to be.  If pathname is not supplied, then a list of files are
-   looked for that were registered by a EXT:DEFMODULE form.  If the module
-   has not been defined, then a file will be loaded whose name is formed
-   by merging \"modules:\" and the concatenation of module-name with the
-   suffix \"-LIBRARY\".  Note that both the module-name and the suffix are
-   each, separately, converted from :case :common to :case :local.  This
-   merged name will be probed with both a .lisp and .fasl extensions,
-   calling LOAD if it exists.  While loading any files, *load-verbose* is
-   bound to *require-verbose* which defaults to nil."
- (setf module-name (module-name-string module-name))
- (unless (member module-name *modules* :test #'string=)
-   (let ((files (or (when pathname
-		      (if (consp pathname) pathname (list pathname)))
-		    (module-files module-name)
-		    (list (module-default-pathname module-name))))
-	 (*load-verbose* *require-verbose*))
-     (dolist (file files t)
-       (ext:without-package-locks
-        (load file))))))
+   needs to be.  If pathname is not supplied, then functions from the list
+   *MODULE-PROVIDER-FUNCTIONS* are called in order with the stringified
+   MODULE-NAME as the argument, until one of them returns non-NIL.  By
+   default the functions MODULE-PROVIDE-CMUCL-DEFMODULE and MODULE-PROVIDE-
+   CMUCL-LIBRARY are on this list of functions, in that order.  The first
+   of those looks for a list of files that was registered by a EXT:DEFMODULE
+   form.  If the module has not been defined, then the second function
+   causes a file to be loaded whose name is formed by merging \"modules:\"
+   and the concatenation of module-name with the suffix \"-LIBRARY\".
+   Note that both the module-name and the suffix are each, separately,
+   converted from :case :common to :case :local.  This merged name will be
+   probed with both a .lisp and .fasl extensions, calling LOAD if it exists.
 
+   Note that in all cases covered above, user code is responsible for
+   calling PROVIDE to indicate a successful load of the module.
+
+   While loading any files, *load-verbose* is bound to *require-verbose*
+   which defaults to t."
+  (let ((saved-modules (copy-list *modules*))
+        (module-name (module-name-string module-name)))
+    (unless (member module-name *modules* :test #'string=)
+      (let ((*load-verbose* *require-verbose*))
+        (if pathname
+            (dolist (file (if (consp pathname) pathname (list pathname)) t)
+              (ext:without-package-locks
+                (load file)))
+            (unless (some (lambda (p) (funcall p module-name))
+                          *module-provider-functions*)
+              (error "Don't know how to load ~A" module-name)))))
+    (set-difference *modules* saved-modules)))
+
+;;;; Default module providers
+(defun module-provide-cmucl-defmodule (module-name)
+  (when (module-files module-name)
+    (dolist (file (module-files module-name) t)
+      (load file))))
+
+(defun module-provide-cmucl-library (module-name)
+  (ext:without-package-locks
+    (load (module-default-pathname module-name) :if-does-not-exist nil)))
 
 
 ;;;; Misc.
