@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.77 1992/11/18 23:33:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.78 1992/11/25 10:32:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1392,7 +1392,6 @@
 (defun sub-compile-file (info &optional d-s-info)
   (declare (type source-info info))
   (with-ir1-namespace
-    (clear-stuff)
     (let* ((start-errors *compiler-error-count*)
 	   (start-warnings *compiler-warning-count*)
 	   (start-notes *compiler-note-count*)
@@ -1424,7 +1423,9 @@
 	   (*last-message-count* 0)
 	   (*info-environment*
 	    (or (backend-info-environment *backend*)
-		*info-environment*)))
+		*info-environment*))
+	   (*gensym-counter* 0))
+      (clear-stuff)
       (with-compilation-unit ()
 	(loop
 	  (multiple-value-bind (form tlf eof-p)
@@ -1729,7 +1730,6 @@
   returned."
   (with-compilation-unit ()
     (with-ir1-namespace
-      (clear-stuff)
       (let* ((*backend* *native-backend*)
 	     (*info-environment*
 	      (or (backend-info-environment *backend*)
@@ -1757,7 +1757,9 @@
 	     (*last-format-string* nil)
 	     (*last-format-args* nil)
 	     (*last-message-count* 0)
-	     (*compile-object* (make-core-object)))
+	     (*compile-object* (make-core-object))
+	     (*gensym-counter* 0))
+	(clear-stuff)
 	(find-source-paths form 0)
 	(let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
 	  

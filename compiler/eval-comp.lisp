@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.21 1992/09/16 15:50:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.22 1992/11/25 10:32:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,8 @@
 	   (*compiler-warning-count* 0)
 	   (*compiler-note-count* 0)
 	   (*source-info* (make-lisp-source-info form))
-	   (*converting-for-interpreter* t))
+	   (*converting-for-interpreter* t)
+	   (*gensym-counter* 0))
 
       (clear-stuff nil)
       (find-source-paths form 0)
