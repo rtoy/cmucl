@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.146 2003/04/19 20:52:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.147 2003/04/21 21:00:04 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3261,7 +3261,7 @@
 			    (%coerce-to-function ,fun)))))
     (setf (continuation-dest fun-cont) node)
     (assert-continuation-type
-     fun-cont (values-specifier-type '(values (or function symbol) &rest t)))
+     fun-cont (values-specifier-type '(values function &rest t)))
     (collect ((arg-conts))
       (let ((this-start fun-cont))
 	(dolist (arg args)
