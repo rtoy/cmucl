@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.5 1990/02/03 17:04:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.6 1990/02/17 21:26:01 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -26,89 +26,91 @@
 (define-storage-base immediate-constant :non-packed)
 
 ;;;
-;;; Objects that can be stored in any register (immediate objects)
-(define-storage-class any-reg 0 registers
-  :locations (2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23))
-
-;;;
-;;; Objects that must be seen by GC (pointer objects)
-(define-storage-class descriptor-reg 1 registers
-  :locations (8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23))
-
-;;;
-;;; Objects that must not be seen by GC (unboxed objects)
-(define-storage-class non-descriptor-reg 2 registers
-  :locations (2 3 4 5 6 7))
-
-;;;
-;;; Unboxed string-chars
-(define-storage-class string-char-reg 3 registers
-  :locations (2 3 4 5 6 7))
-
-;;;
-;;; Unboxed SAP's (arbitrary pointers into address space)
-(define-storage-class sap-reg 4 registers
-  :locations (2 3 4 5 6 7))
-
-;;;
-;;; Stack for descriptor objects (scanned by GC)
-(define-storage-class control-stack 5 control-stack)
-
-;;;
-;;; Stack for non-descriptor objects (not scanned by GC)
-(define-storage-class number-stack 6 number-stack)
-
-;;;
-;;; Unboxed string-char stack
-(define-storage-class string-char-stack 7 number-stack)
-
-;;;
-;;; Unboxed SAP stack
-(define-storage-class sap-stack 8 number-stack)
-
-;;;
-;;; Non-immediate contstants in the constant pool
-(define-storage-class constant 9 constant)
-
-
-;;; Immediate numeric constants.
+;;; Handy macro so we don't have to keep changing all the numbers whenever
+;;; we insert a new storage class.
 ;;; 
-;;;   zero = (integer 0 0)
-;;; 
-;;;   negative-immediate = (integer #x-7FFF #-x0001)
-;;;        The funny lower bound guarantees that the negation of an immediate
-;;;        is still an immediate.
-;;; 
-;;;   immediate = (integer 0 #x7FFE)
-;;;	   The funny upper bound guarantees that (1+ immediate) will fit in
-;;;        16 bits.
-;;; 
-;;;   unsigned-immediate = (integer #x7FFF #xFFFE)
-;;;	   The funny upper bound guarantees that (1+ immediate) will fit in
-;;;        16 bits.
-;;;
-(define-storage-class zero 10 immediate-constant)
-(define-storage-class negative-immediate 11 immediate-constant)
-(define-storage-class immediate 12 immediate-constant)
-(define-storage-class unsigned-immediate 13 immediate-constant)
+(defmacro define-storage-classes (&rest classes)
+  `(progn
+     ,@(mapcar (let ((index -1))
+		 #'(lambda (class)
+		     (incf index)
+		     `(define-storage-class ,(car class) ,index ,@(cdr class))))
+	       classes)))
 
-;;; 
-;;; Immediate null/nil.
-(define-storage-class null 14 immediate-constant)
+(define-storage-classes
+  ;; Objects that can be stored in any register (immediate objects)
+  (any-reg registers
+   :locations (2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 28 31))
 
-;;;
-;;; Immediate unboxed string-chars.
-(define-storage-class immediate-string-char 15 immediate-constant)
+  ;; Objects that must be seen by GC (pointer objects)
+  (descriptor-reg registers
+   :locations (8 9 10 11 12 13 14 15 16 17 18 19 28 31))
 
-;;;
-;;; Immediate unboxed SAP's.
-(define-storage-class immediate-sap 16 immediate-constant)
+  ;; Objects that must not be seen by GC (unboxed objects)
+  (non-descriptor-reg registers
+   :locations (2 3 4 5 6 7))
 
-;;; Objects that are easier to create using immediate loads than to fetch
-;;; from the constant pool, but which aren't directly usable as immediate
-;;; operands.  These are only recognized by move VOPs.
-;;;
-(define-storage-class random-immediate 17 immediate-constant)
+  ;; Pointers to the interior of objects.
+  (interior-reg registers
+   :locations (1))
+
+  ;; Unboxed string-chars
+  (string-char-reg registers
+   :locations (2 3 4 5 6 7))
+
+  ;; Unboxed SAP's (arbitrary pointers into address space)
+  (sap-reg registers
+   :locations (2 3 4 5 6 7))
+
+  ;; Stack for descriptor objects (scanned by GC)
+  (control-stack control-stack)
+
+  ;; Stack for non-descriptor objects (not scanned by GC)
+  (number-stack number-stack)
+
+  ;; Unboxed string-char stack
+  (string-char-stack number-stack)
+
+  ;; Unboxed SAP stack
+  (sap-stack number-stack)
+
+  ;; Non-immediate contstants in the constant pool
+  (constant constant)
+
+  ;; Immediate numeric constants.
+  ;; 
+  ;;   zero = (integer 0 0)
+  ;; 
+  ;;   negative-immediate = (integer #x-1FFF #-x0001)
+  ;;        The funny lower bound guarantees that the negation of an immediate
+  ;;        is still an immediate.
+  ;; 
+  ;;   immediate = (integer 0 #x1FFE)
+  ;;	   The funny upper bound guarantees that (1+ immediate) will fit in
+  ;;        16 bits.
+  ;; 
+  ;;   unsigned-immediate = (integer #x1FFF #x3FFE)
+  ;;	   The funny upper bound guarantees that (1+ immediate) will fit in
+  ;;        16 bits.
+  ;;
+  (zero immediate-constant)
+  (negative-immediate immediate-constant)
+  (immediate immediate-constant)
+  (unsigned-immediate immediate-constant)
+
+  ;; Immediate null/nil.
+  (null immediate-constant)
+
+  ;; Immediate unboxed string-chars.
+  (immediate-string-char immediate-constant)
+
+  ;; Immediate unboxed SAP's.
+  (immediate-sap immediate-constant)
+
+  ;; Objects that are easier to create using immediate loads than to fetch
+  ;; from the constant pool, but which aren't directly usable as immediate
+  ;; operands.  These are only recognized by move VOPs.
+  (random-immediate immediate-constant))
 
 
 ;;;; Interfaces for stack sizes.
@@ -319,13 +321,14 @@
 
 (eval-when (compile eval load)
   (defconstant zero-offset 0)
-  (defconstant lip-offset 1)
-  (defconstant bsp-offset 24)
-  (defconstant csp-offset 25)
-  (defconstant null-offset 28)
+  (defconstant null-offset 20)
+  (defconstant bsp-offset 21)
+  (defconstant cont-offset 22)
+  (defconstant csp-offset 23)
+  (defconstant flags-offset 24)
+  (defconstant alloc-offset 25)
   (defconstant nsp-offset 29)
-  (defconstant code-offset 30)
-  (defconstant cont-offset 31))
+  (defconstant code-offset 30))
 
 ;;; 
 ;;; Wired Zero
@@ -334,12 +337,12 @@
 		  :sc (sc-or-lose 'any-reg)
 		  :offset zero-offset))
 
-;;; 
-;;; Lisp Interior Pointer
-(defparameter lip-tn
+;;;
+;;; ``Wired'' NIL
+(defparameter null-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset lip-offset))
+		  :offset null-offset))
 
 ;;; 
 ;;; Binding stack pointer
@@ -347,6 +350,13 @@
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
 		  :offset bsp-offset))
+
+;;;
+;;; Frame Pointer
+(defparameter cont-tn
+  (make-random-tn :kind :normal
+		  :sc (sc-or-lose 'any-reg)
+		  :offset cont-offset))
 
 ;;; 
 ;;; Control stack pointer
@@ -356,12 +366,18 @@
 		  :offset csp-offset))
 
 ;;;
-;;; ``Wired'' NIL
-(defparameter null-tn
+;;; FLAGS magic register
+(defparameter flags-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset null-offset))
+		  :offset flags-offset))
 
+;;; 
+;;; Allocation pointer
+(defparameter alloc-tn
+  (make-random-tn :kind :normal
+		  :sc (sc-or-lose 'any-reg)
+		  :offset alloc-offset))
 ;;; 
 ;;; Number stack pointer
 (defparameter nsp-tn
@@ -375,13 +391,6 @@
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
 		  :offset code-offset))
-
-;;;
-;;; Frame Pointer
-(defparameter cont-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset cont-offset))
 
 
 ;;;; Side-Effect Classes
@@ -404,11 +413,11 @@
      (sc-number-or-lose 'zero))
     (null
      (sc-number-or-lose 'null))
-    ((integer #x-7FFF #x-0001)
+    ((integer #x-1FFF #x-0001)
      (sc-number-or-lose 'negative-immediate))
-    ((integer 0 #x7FFE)
+    ((integer 0 #x1FFE)
      (sc-number-or-lose 'immediate))
-    ((integer #x7FFF #xFFFE)
+    ((integer #x1FFF #x3FFE)
      (sc-number-or-lose 'unsigned-immediate))
     ((or fixnum (member t))
      (sc-number-or-lose 'random-immediate))
@@ -425,10 +434,6 @@
 
 ;;;; Function Call Parameters
 
-;;;
-;;; ### This will need to change as the call VOP's are written.
-;;; 
-
 ;;; The SC numbers for register and stack arguments/return values.
 ;;;
 (defconstant register-arg-scn (sc-number-or-lose 'descriptor-reg))
@@ -436,20 +441,14 @@
 
 (eval-when (compile load eval)
 
-;;;
 ;;; Offset of special registers used during calls
-(defconstant lra-offset 23)
-(defconstant lexenv-offset 13)
-(defconstant argument-pointer-offset 22)
-(defconstant argument-count-offset 7)
-(defconstant old-cont-offset 14)
-(defconstant call-name-offset 15)
-
 ;;;
-;;; Offsets of special stack frame locations
-(defconstant old-cont-save-offset 0)
-(defconstant lra-save-offset 1)
-(defconstant lexenv-save-offset 2)
+(defconstant nargs-offset 7)
+(defconstant cname-offset 14)
+(defconstant lexenv-offset 15)
+(defconstant args-offset 16)
+(defconstant oldcont-offset 17)
+(defconstant lra-offset 18)
 
 ); Eval-When (Compile Load Eval)  
 
@@ -472,21 +471,25 @@
 
 (eval-when (compile load eval)
 
-;;; The offsets within the register-arg SC that we pass values in, first
-;;; value first.
-;;;
-(defconstant register-arg-offsets '(16 17 18 19 20 21))
-
 ;;; The number of arguments/return values passed in registers.
 ;;;
 (defconstant register-arg-count 6)
+
+;;; The offsets within the register-arg SC that we pass values in, first
+;;; value first.
+;;;
+(defconstant register-arg-offsets '(8 9 10 11 12 13))
+
+;;; Names to use for the argument registers.
+;;; 
+(defconstant register-arg-names '(a0 a1 a2 a3 a4 a5))
 
 ); Eval-When (Compile Load Eval)
 
 
 ;;; A list of TN's describing the register arguments.
 ;;;
-(defparameter register-argument-tns
+(defparameter register-arg-tns
   (mapcar #'(lambda (n)
 	      (make-random-tn :kind :normal
 			      :sc (sc-or-lose 'descriptor-reg)
