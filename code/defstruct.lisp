@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.66 1998/12/19 15:56:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.67 1999/09/20 11:12:59 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1619,47 +1619,52 @@
       (let* ((type (%instance-layout structure))
 	     (name (class-name (layout-class type)))
 	     (dd (layout-info type)))
-	(if *print-pretty*
-	    (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
-	      (prin1 name stream)
-	      (let ((slots (dd-slots dd)))
-		(when slots
+	(flet ((slot-accessor (slot)
+		 (let ((aname
+			(intern (concatenate
+				 'simple-string
+				 (symbol-name (kernel::dd-conc-name dd))
+				 (dsd-%name slot)))))
+		   (fdefinition aname))))
+	  (if *print-pretty*
+	      (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
+		(prin1 name stream)
+		(let ((slots (dd-slots dd)))
+		  (when slots
+		    (write-char #\space stream)
+		    (pprint-indent :block 2 stream)
+		    (pprint-newline :linear stream)
+		    (loop
+		      (pprint-pop)
+		      (let ((slot (pop slots)))
+			(write-char #\: stream)
+			(output-symbol-name (dsd-%name slot) stream)
+			(write-char #\space stream)
+			(pprint-newline :miser stream)
+			(output-object
+			 (funcall (slot-accessor slot) structure) stream)
+			(when (null slots)
+			  (return))
+			(write-char #\space stream)
+			(pprint-newline :linear stream))))))
+	      (descend-into (stream)
+		(write-string "#S(" stream)
+		(prin1 name stream)
+		(do ((index 0 (1+ index))
+		     (slots (dd-slots dd) (cdr slots)))
+		    ((or (null slots)
+			 (and (not *print-readably*)(eql *print-length* index)))
+		     (if (null slots)
+			 (write-string ")" stream)
+			 (write-string " ...)" stream)))
+		  (declare (type index index))
 		  (write-char #\space stream)
-		  (pprint-indent :block 2 stream)
-		  (pprint-newline :linear stream)
-		  (loop
-		    (pprint-pop)
-		    (let ((slot (pop slots)))
-		      (write-char #\: stream)
-		      (output-symbol-name (dsd-%name slot) stream)
-		      (write-char #\space stream)
-		      (pprint-newline :miser stream)
-		      (output-object (funcall (fdefinition (dsd-accessor slot))
-					      structure)
-				     stream)
-		      (when (null slots)
-			(return))
-		      (write-char #\space stream)
-		      (pprint-newline :linear stream))))))
-	    (descend-into (stream)
-	      (write-string "#S(" stream)
-	      (prin1 name stream)
-	      (do ((index 0 (1+ index))
-		   (slots (dd-slots dd) (cdr slots)))
-		  ((or (null slots)
-		       (and (not *print-readably*) (eql *print-length* index)))
-		   (if (null slots)
-		       (write-string ")" stream)
-		       (write-string " ...)" stream)))
-		(declare (type index index))
-		(write-char #\space stream)
-		(write-char #\: stream)
-		(let ((slot (first slots)))
-		  (output-symbol-name (dsd-%name slot) stream)
-		  (write-char #\space stream)
-		  (output-object (funcall (fdefinition (dsd-accessor slot))
-					  structure)
-				 stream))))))))
+		  (write-char #\: stream)
+		  (let ((slot (first slots)))
+		    (output-symbol-name (dsd-%name slot) stream)
+		    (write-char #\space stream)
+		    (output-object
+		     (funcall (slot-accessor slot) structure) stream)))))))))
 
 (defun make-structure-load-form (structure)
   (declare (type structure-object structure))
