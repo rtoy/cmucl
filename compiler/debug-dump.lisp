@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.33 1993/05/17 10:07:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.34 1993/08/03 10:57:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,8 +292,7 @@
   (declare (type source-info info))
   (assert (not (source-info-current-file info)))
   (mapcar #'(lambda (x)
-	      (let ((name (file-info-name x))
-		    (res (make-debug-source
+	      (let ((res (make-debug-source
 			  :from :file
 			  :comment (file-info-comment x)
 			  :created (file-info-write-date x)
@@ -301,13 +300,21 @@
 			  :source-root (file-info-source-root x)
 			  :start-positions
 			  (coerce-to-smallest-eltype
-			   (file-info-positions x)))))
-		(cond ((simple-string-p name)
-		       (setf (debug-source-name res) name))
-		      (t
-		       (setf (debug-source-from res) name)
-		       (setf (debug-source-name res)
-			     (coerce (file-info-forms x) 'simple-vector))))
+			   (file-info-positions x))))
+		    (name (file-info-name info)))
+		(etypecase name
+		  ((member :stream)
+		   (setf (debug-source-from res) name)
+		   (setf (debug-source-name res)
+			 (coerce (file-info-forms x) 'simple-vector)))
+		  (pathname
+		   (let* ((untruename (file-info-untruename x))
+			  (dir (pathname-directory untruename)))
+		     (setf (debug-source-name res)
+			   (namestring
+			    (if (and dir (eq (first dir) :absolute))
+				untruename
+				name))))))
 		res))
 	  (source-info-files info)))
 
