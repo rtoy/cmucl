@@ -1413,7 +1413,7 @@ inlines
 ;;; The number of times that the last error message has been emitted, so that
 ;;; we can compress duplicate error messages.
 (defvar *last-message-count* 0)
-
+(proclaim '(type index *last-message-count*))
 
 ;;; Note-Message-Repeats  --  Internal
 ;;;
@@ -1447,9 +1447,6 @@ inlines
 	 (*print-length* *error-print-length*)
 	 (stream *compiler-error-output*)
 	 (context (find-error-context format-args)))
-    
-    (unless stream (return-from print-error-message (undefined-value)))
-    
     (cond
      (context
       (let ((in (compiler-error-context-context context))
@@ -1507,7 +1504,7 @@ inlines
 
 ;;; Keep track of how many times each kind of warning happens.
 ;;;
-(proclaim '(type unsigned-byte *compiler-error-count* *compiler-warning-count*
+(proclaim '(type index *compiler-error-count* *compiler-warning-count*
 		 *compiler-note-count*))
 (defvar *compiler-error-count* 0)
 (defvar *compiler-warning-count* 0)
