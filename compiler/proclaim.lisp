@@ -13,7 +13,14 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
+
+(in-package "EXTENSIONS")
+(export '(inhibit-warnings))
+(in-package "LISP")
+(export '(declaim proclaim))
+(in-package "C")
+
 
 ;;; True if the type system has been properly initialized, and thus is o.k. to
 ;;; use.
@@ -38,7 +45,7 @@
 ;;;
 (proclaim '(type cookie *default-cookie*))
 (defvar *default-cookie* (make-cookie :safety 1 :speed 1 :space 1 :cspeed 1
-				      :brevity 1 :debug 1))
+				      :brevity 1 :debug 2))
 
 
 ;;; Parse-Lambda-List  --  Interface
@@ -169,14 +176,14 @@
     (dolist (quality (cdr spec))
       (let ((quality (if (atom quality) (list quality 3) quality)))
 	(if (and (consp (cdr quality)) (null (cddr quality))
-		 (rationalp (second quality)) (<= 0 (second quality) 3))
-	    (let ((value (second quality)))
+		 (typep (second quality) 'real) (<= 0 (second quality) 3))
+	    (let ((value (rational (second quality))))
 	      (case (first quality)
 		(speed (setf (cookie-speed res) value))
 		(space (setf (cookie-space res) value))
 		(safety (setf (cookie-safety res) value))
 		(compilation-speed (setf (cookie-cspeed res) value))
-		(brevity (setf (cookie-brevity res) value))
+		((inhibit-warnings brevity) (setf (cookie-brevity res) value))
 		(debug-info (setf (cookie-debug res) value))
 		(t
 		 (compiler-warning "Unknown optimization quality ~S in ~S."
@@ -186,15 +193,23 @@
 	     quality spec))))
     res))
 
+
+;;; DECLAIM  --  Public
+;;;
+;;;    For now, just PROCLAIM without any EVAL-WHEN.
+;;;
+(defmacro declaim (&rest specs)
+  "DECLAIM Declaration*
+  Do a declaration for the global environment."
+  `(progn ,@(mapcar #'(lambda (x)
+			`(proclaim ',x))
+		    specs)))
   
+
 ;;; %Proclaim  --  Interface
 ;;;
 ;;;    This function is the guts of proclaim, since it does the global
 ;;; environment updating.
-;;;
-;;; ### At least for now, blow off type declarations when the compiler hasn't
-;;; been loaded yet.  This allows us to delay putting the type system into the
-;;; cold load.
 ;;;
 (defun %proclaim (form)
   (unless (consp form)
