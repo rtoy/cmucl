@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.60 1997/11/01 22:58:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.61 1997/11/15 04:38:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -239,12 +239,12 @@
 #+complex-float
 (def-source-transform realpart (num)
   (once-only ((n-num num))
-    `(cond
-      ((kernel:complex-double-float-p ,n-num)
+    `(typecase ,n-num
+      ((complex double-float)
        (vm::complex-double-float-real ,n-num))
-      ((kernel:complex-single-float-p ,n-num)
+      ((complex single-float)
        (vm::complex-single-float-real ,n-num))
-      ((complexp ,n-num)
+      ((complex rational)
        (kernel:%realpart ,n-num))
       (t
        ,n-num))))
@@ -252,14 +252,14 @@
 #+complex-float
 (def-source-transform imagpart (num)
   (once-only ((n-num num))
-    `(cond
-      ((kernel:complex-double-float-p ,n-num)
+    `(typecase ,n-num
+      ((complex double-float)
        (vm::complex-double-float-imag ,n-num))
-      ((kernel:complex-single-float-p ,n-num)
+      ((complex single-float)
        (vm::complex-single-float-imag ,n-num))
-      ((complexp ,n-num)
+      ((complex rational)
        (kernel:%imagpart ,n-num))
-      ((floatp ,n-num)
+      (float
        (float 0 ,n-num))
       (t
        0))))

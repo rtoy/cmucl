@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.31 1997/11/01 22:58:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.32 1997/11/15 04:38:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -416,6 +416,13 @@
 	 :function-name name
 	 :datum object
 	 :expected-type 'complex))
+
+#+complex-float
+(deferr object-not-complex-rational-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(complex rational)))
 
 #+complex-float
 (deferr object-not-complex-single-float-error (object)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.5 1997/11/07 17:11:28 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.6 1997/11/15 04:39:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -293,7 +293,11 @@
   #+complex-float complex-double-float-type)
 
 #+complex-float
-(def-type-vops complex-float-p check-complex-float-p nil
+(def-type-vops complex-rational-p check-complex-rational nil
+  object-not-complex-rational-error complex-type)
+
+#+complex-float
+(def-type-vops complex-float-p check-complex-float nil
   object-not-complex-float-error
   complex-single-float-type complex-double-float-type)
 
