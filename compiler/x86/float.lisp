@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.1 1997/01/18 14:31:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.2 1997/02/10 15:25:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,12 +16,10 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Re-written and enhanced by Douglas Crosher, 1996, 1997.
 ;;;
-;;; Re-written and enhanced by Douglas Crosher, 1996.
-;;;
+
 (in-package :x86)
-
-
 
 
 (defmacro ea-for-xf-desc(tn slot)
@@ -45,6 +43,29 @@
 
 (defun ea-for-df-stack(tn)
   (ea-for-xf-stack tn :double))
+
+;;; Abstract out the copying of a FP register to the FP stack top, and
+;;; provide two alternatives for its implementation. Note: it's not
+;;; necessary to distinguish between a single or double register move
+;;; here.
+;;;
+;;; Using a Pop then load.
+(defmacro copy-fp-reg-to-fr0 (reg)
+  `(progn 
+     (assert (not (zerop (tn-offset ,reg))))
+     (inst fstp fr0-tn)
+     (inst fld (make-random-tn :kind :normal
+			       :sc (sc-or-lose 'double-reg)
+			       :offset (1- (tn-offset ,reg))))))
+;;;
+;;; Using Fxch then Fst to restore the original reg contents.
+#+nil
+(defmacro copy-fp-reg-to-fr0 (reg)
+  `(progn
+     (assert (not (zerop (tn-offset ,reg))))
+     (inst fxch ,reg)
+     (inst fst  ,reg)))
+
 
 ;;;; Move functions:
 
@@ -56,13 +77,13 @@
 
 (define-move-function (store-single 6) (vop x y)
   ((single-reg) (single-stack))
-  (if (zerop (tn-offset x))
-      (inst fst (ea-for-sf-stack y))
-    (progn
-      (inst fxch x)
-      (inst fst (ea-for-sf-stack y))
-      ;; This may not be necessary as ST0 is likely invalid now.
-      (inst fxch x))))
+  (cond ((zerop (tn-offset x))
+	 (inst fst (ea-for-sf-stack y)))
+	(t
+	 (inst fxch x)
+	 (inst fst (ea-for-sf-stack y))
+	 ;; This may not be necessary as ST0 is likely invalid now.
+	 (inst fxch x))))
 
 (define-move-function (load-double 6) (vop x y)
   ((double-stack) (double-reg))
@@ -71,13 +92,13 @@
 
 (define-move-function (store-double 6) (vop x y)
   ((double-reg) (double-stack))
-  (if (zerop (tn-offset x))
-      (inst fstd (ea-for-df-stack y))
-    (progn
-      (inst fxch x)
-      (inst fstd (ea-for-df-stack y))
-      ;; This may not be necessary as ST0 is likely invalid now.
-      (inst fxch x))))
+  (cond ((zerop (tn-offset x))
+	 (inst fstd (ea-for-df-stack y)))
+	(t
+	 (inst fxch x)
+	 (inst fstd (ea-for-df-stack y))
+	 ;; This may not be necessary as ST0 is likely invalid now.
+	 (inst fxch x))))
 
 ;;; The i387 has instructions to load some useful constants.
 ;;; This doesn't save much time but might cut down on memory
@@ -126,8 +147,7 @@
   (:generator 0
      (unless (location= x y)
         (cond ((zerop (tn-offset y))
-	       (inst fxch x)
-	       (inst fst  x))
+	       (copy-fp-reg-to-fr0 x))
 	      ((zerop (tn-offset x))
 	       (inst fst y))
 	      (t
@@ -149,8 +169,7 @@
   (:generator 0
      (unless (location= x y)
         (cond ((zerop (tn-offset y))
-	       (inst fxch x)
-	       (inst fstd x))
+	       (copy-fp-reg-to-fr0 x))
 	      ((zerop (tn-offset x))
 	       (inst fstd y))
 	      (t
@@ -166,45 +185,39 @@
 ;;;
 (define-vop (move-from-single)
   (:args (x :scs (single-reg) :to :save
-	    :load-if (not (sc-is x fp-single-constant))
-	    ))
+	    :load-if (not (sc-is x fp-single-constant))))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:sc dword-reg) ndescr)
   (:note "float to pointer coercion")
   (:generator 13
      (if (sc-is x fp-single-constant)
 	 (ecase (c::constant-value (c::tn-leaf x))
-		(0s0
-		 (load-symbol-value y *fp-constant-0s0*))
-		(1s0
-		 (load-symbol-value y *fp-constant-1s0*)))
-	 (with-fixed-allocation (y ndescr vm:single-float-type
-				   vm:single-float-size)
-	   (with-tn@fp-top(x)
-	     (inst fst (make-ea :dword :base y
-				:disp (- (* vm:single-float-value-slot
-					    vm:word-bytes)
-					 vm:other-pointer-type))))))))
+		(0s0 (load-symbol-value y *fp-constant-0s0*))
+		(1s0 (load-symbol-value y *fp-constant-1s0*)))
+       (with-fixed-allocation (y ndescr vm:single-float-type
+				 vm:single-float-size)
+	    (with-tn@fp-top(x)
+	      (inst fst (make-ea :dword :base y
+				 :disp (- (* vm:single-float-value-slot
+					     vm:word-bytes)
+					  vm:other-pointer-type))))))))
 (define-move-vop move-from-single :move
   (single-reg) (descriptor-reg))
 
 (define-vop (move-from-double)
   (:args (x :scs (double-reg) :to :save
-	    :load-if (not (sc-is x fp-double-constant))
-	    ))
+	    :load-if (not (sc-is x fp-double-constant))))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:sc dword-reg) ndescr)
   (:note "float to pointer coercion")
   (:generator 13
      (if (sc-is x fp-double-constant)
 	 (ecase (c::constant-value (c::tn-leaf x))
-		(0d0
-		 (load-symbol-value y *fp-constant-0d0*))
-		(1d0
-		 (load-symbol-value y *fp-constant-1d0*)))
-	 (with-fixed-allocation (y ndescr vm:double-float-type
-				   vm:double-float-size)
-           (with-tn@fp-top(x)
+		(0d0 (load-symbol-value y *fp-constant-0d0*))
+		(1d0 (load-symbol-value y *fp-constant-1d0*)))
+       (with-fixed-allocation (y ndescr vm:double-float-type
+				 vm:double-float-size)
+          (with-tn@fp-top(x)
              (inst fstd (make-ea :dword :base y
 				 :disp (- (* vm:double-float-value-slot
 					     vm:word-bytes)
@@ -250,8 +263,7 @@
 		      (,sc
 		       (unless (location= x y)
 	                  (cond ((zerop (tn-offset y))
-				 (inst fxch x)
-				 (inst fstd x))
+				 (copy-fp-reg-to-fr0 x))
 				((zerop (tn-offset x))
 				 (inst fstd y))
 				(t
@@ -325,75 +337,73 @@
 	   (:generator ,scost
 	     ;; Handle a few special cases
 	     (cond
-	       ;; x, y, and r are the same register.
-	       ((and (sc-is x single-reg) (location= x r) (location= y r))
-		(cond ((zerop (tn-offset r))
-		       (inst ,fop fr0))
-		      (t
-		       (inst fxch r)
-		       ;; XX the source register will not be valid
-		       (note-next-instruction vop :internal-error)
-		       (inst ,fop fr0)
-		       (inst fxch r))))
+	      ;; x, y, and r are the same register.
+	      ((and (sc-is x single-reg) (location= x r) (location= y r))
+	       (cond ((zerop (tn-offset r))
+		      (inst ,fop fr0))
+		     (t
+		      (inst fxch r)
+		      (inst ,fop fr0)
+		      ;; XX the source register will not be valid.
+		      (note-next-instruction vop :internal-error)
+		      (inst fxch r))))
 
-	       ;; x and r are the same register.
-	       ((and (sc-is x single-reg) (location= x r))
-		(if (zerop (tn-offset r))
-		    (sc-case y
-	               (single-reg
-			;; ST(0) = ST(0) op ST(y)
-			(inst ,fop y))
-		       ((single-stack descriptor-reg)
-			;; ST(0) = ST(0) op Mem
-			(if (sc-is y single-stack)
-			    (inst ,fop (ea-for-sf-stack y))
-			    (inst ,fop (ea-for-sf-desc y)))))
-		    (progn
+	      ;; x and r are the same register.
+	      ((and (sc-is x single-reg) (location= x r))
+	       (cond ((zerop (tn-offset r))
+		      (sc-case y
+		         (single-reg
+			  ;; ST(0) = ST(0) op ST(y)
+			  (inst ,fop y))
+			 (single-stack
+			  ;; ST(0) = ST(0) op Mem
+			  (inst ,fop (ea-for-sf-stack y)))
+			 (descriptor-reg
+			  (inst ,fop (ea-for-sf-desc y)))))
+		     (t
 		      ;; y to ST0
 		      (sc-case y
-	                (single-reg
-			 (unless (zerop (tn-offset y))
-			   (inst fxch y)
-			   (inst fst y))) ; save in original slot
-		        ((single-stack descriptor-reg)
-		         (inst fstp fr0)
-		        (if (sc-is y single-stack)
-			    (inst fld (ea-for-sf-stack y))
-			    (inst fld (ea-for-sf-desc y)))
-		        ;; ST(i) = ST(i) op ST0
-		        (inst ,fop-sti r)))))
-		(when (policy node (or (= debug 3) (> safety speed)))
-		  (note-next-instruction vop :internal-error)
-		  (inst wait)))
+	                 (single-reg
+			  (unless (zerop (tn-offset y))
+				  (copy-fp-reg-to-fr0 y)))
+			 ((single-stack descriptor-reg)
+			  (inst fstp fr0)
+			  (if (sc-is y single-stack)
+			      (inst fld (ea-for-sf-stack y))
+			    (inst fld (ea-for-sf-desc y)))))
+		      ;; ST(i) = ST(i) op ST0
+		      (inst ,fop-sti r)))
+	       (when (policy node (or (= debug 3) (> safety speed)))
+		     (note-next-instruction vop :internal-error)
+		     (inst wait)))
 	      ;; y and r are the same register.
 	      ((and (sc-is y single-reg) (location= y r))
-	       (if (zerop (tn-offset r))
-		   (sc-case x
-	               (single-reg
-			;; ST(0) = ST(x) op ST(0)
-			(inst ,fopr x))
-		       ((single-stack descriptor-reg)
-			;; ST(0) = Mem op ST(0)
-			(if (sc-is x single-stack)
-			    (inst ,fopr (ea-for-sf-stack x))
+	       (cond ((zerop (tn-offset r))
+		      (sc-case x
+	                 (single-reg
+			  ;; ST(0) = ST(x) op ST(0)
+			  (inst ,fopr x))
+			 (single-stack
+			  ;; ST(0) = Mem op ST(0)
+			  (inst ,fopr (ea-for-sf-stack x)))
+			 (descriptor-reg
 			  (inst ,fopr (ea-for-sf-desc x)))))
-		   (progn
-		     ;; x to ST0
-		     (sc-case x
-		      (single-reg
-		       (unless (zerop (tn-offset x))
-			       (inst fxch x) ; x to top
-			       (inst fst x))) ; save in original slot
-		      ((single-stack descriptor-reg)
-		       (inst fstp fr0)
-		       (if (sc-is x single-stack)
-			   (inst fld (ea-for-sf-stack x))
-			 (inst fld (ea-for-sf-desc x)))))
-		     ;; ST(i) = ST(0) op ST(i)
-		     (inst ,fopr-sti r)))
+		     (t
+		      ;; x to ST0
+		      (sc-case x
+		        (single-reg
+			 (unless (zerop (tn-offset x))
+				 (copy-fp-reg-to-fr0 x)))
+			((single-stack descriptor-reg)
+			 (inst fstp fr0)
+			 (if (sc-is x single-stack)
+			     (inst fld (ea-for-sf-stack x))
+			   (inst fld (ea-for-sf-desc x)))))
+		      ;; ST(i) = ST(0) op ST(i)
+		      (inst ,fopr-sti r)))
 	       (when (policy node (or (= debug 3) (> safety speed)))
-		 (note-next-instruction vop :internal-error)
-		 (inst wait)))
+		     (note-next-instruction vop :internal-error)
+		     (inst wait)))
 	      ;; The default case
 	      (t
 	       ;; Get the result to ST0.
@@ -425,13 +435,13 @@
 		 ;; x to ST0
 		 (sc-case x
 	           (single-reg
-		    (inst fxch x) ; x to top
-		    (inst fst x)) ; save in original slot
-		   ((single-stack descriptor-reg)
+		    (copy-fp-reg-to-fr0 x))
+		   (single-stack
 		    (inst fstp fr0)
-		    (if (sc-is x single-stack)
-			(inst fld (ea-for-sf-stack x))
-		      (inst fld (ea-for-sf-desc x)))))
+		    (inst fld (ea-for-sf-stack x)))
+		   (descriptor-reg
+		    (inst fstp fr0)
+		    (inst fld (ea-for-sf-desc x))))
 		 ;; ST0 = ST0 op y
 		 (sc-case y
 	           (single-reg
@@ -445,10 +455,10 @@
 
 	       ;; Finally save the result
 	       (sc-case r
-                 (single-reg
+	         (single-reg
 		  (cond ((zerop (tn-offset r))
 			 (when (policy node (or (= debug 3) (> safety speed)))
-			   (inst wait)))
+			       (inst wait)))
 			(t
 			 (inst fst r))))
 		 (single-stack
@@ -483,62 +493,59 @@
 		      ;; XX the source register will not be valid.
 		      (note-next-instruction vop :internal-error)
 		      (inst fxch r))))
-
+	      
 	      ;; x and r are the same register.
 	      ((and (sc-is x double-reg) (location= x r))
-	       (if (zerop (tn-offset r))
-		   (sc-case y
-	               (double-reg
-			;; ST(0) = ST(0) op ST(y)
-			(inst ,fopd y))
-		       ((double-stack descriptor-reg)
-			;; ST(0) = ST(0) op Mem
-			(if (sc-is y double-stack)
-			    (inst ,fopd (ea-for-df-stack y))
+	       (cond ((zerop (tn-offset r))
+		      (sc-case y
+	                 (double-reg
+			  ;; ST(0) = ST(0) op ST(y)
+			  (inst ,fopd y))
+			 (double-stack
+			  ;; ST(0) = ST(0) op Mem
+			  (inst ,fopd (ea-for-df-stack y)))
+			 (descriptor-reg
 			  (inst ,fopd (ea-for-df-desc y)))))
-		   (progn
-		     ;; y to ST0
-		     (sc-case y
-	               (double-reg
-			(unless (zerop (tn-offset y))
-				(inst fxch y)
-				(inst fstd y))) ; save in original slot
-		       ((double-stack descriptor-reg)
-			(inst fstp fr0)
-			(if (sc-is y double-stack)
-			    (inst fldd (ea-for-df-stack y))
-			  (inst fldd (ea-for-df-desc y)))))
-		     ;; ST(i) = ST(i) op ST0
-		     (inst ,fop-sti r)))
+		     (t
+		      ;; y to ST0
+		      (sc-case y
+	                 (double-reg
+			  (unless (zerop (tn-offset y))
+				  (copy-fp-reg-to-fr0 y)))
+			 ((double-stack descriptor-reg)
+			  (inst fstp fr0)
+			  (if (sc-is y double-stack)
+			      (inst fldd (ea-for-df-stack y))
+			    (inst fldd (ea-for-df-desc y)))))
+		      ;; ST(i) = ST(i) op ST0
+		      (inst ,fop-sti r)))
 	       (when (policy node (or (= debug 3) (> safety speed)))
-		 (note-next-instruction vop :internal-error)
-		 (inst wait)))
-
+		     (note-next-instruction vop :internal-error)
+		     (inst wait)))
 	      ;; y and r are the same register.
 	      ((and (sc-is y double-reg) (location= y r))
-	       (if (zerop (tn-offset r))
-		   (sc-case x
-	               (double-reg
-			;; ST(0) = ST(x) op ST(0)
-			(inst ,foprd x))
-		       ((double-stack descriptor-reg)
-			;; ST(0) = Mem op ST(0)
-			(if (sc-is x double-stack)
-			    (inst ,foprd (ea-for-df-stack x))
+	       (cond ((zerop (tn-offset r))
+		      (sc-case x
+	                 (double-reg
+			  ;; ST(0) = ST(x) op ST(0)
+			  (inst ,foprd x))
+			 (double-stack
+			  ;; ST(0) = Mem op ST(0)
+			  (inst ,foprd (ea-for-df-stack x)))
+			 (descriptor-reg
 			  (inst ,foprd (ea-for-df-desc x)))))
-		 (progn
-		   ;; x to ST0
-		   (sc-case x
-		      (double-reg
-		       (unless (zerop (tn-offset x))
-			       (inst fxch x) ; x to top
-			       (inst fst x))) ; save in original slot
-		      ((double-stack descriptor-reg)
-		       (inst fstp fr0)
-		       (if (sc-is x double-stack)
-			   (inst fldd (ea-for-df-stack x))
-			 (inst fldd (ea-for-df-desc x)))))
-		   ;; ST(i) = ST(0) op ST(i)
+		     (t
+		      ;; x to ST0
+		      (sc-case x
+		         (double-reg
+			  (unless (zerop (tn-offset x))
+				  (copy-fp-reg-to-fr0 x)))
+			 ((double-stack descriptor-reg)
+			  (inst fstp fr0)
+			  (if (sc-is x double-stack)
+			      (inst fldd (ea-for-df-stack x))
+			    (inst fldd (ea-for-df-desc x)))))
+		      ;; ST(i) = ST(0) op ST(i)
 		      (inst ,fopr-sti r)))
 	       (when (policy node (or (= debug 3) (> safety speed)))
 		     (note-next-instruction vop :internal-error)
@@ -574,13 +581,13 @@
 		 ;; x to ST0
 		 (sc-case x
 	           (double-reg
-		    (inst fxch x) ; x to top
-		    (inst fst x)) ; save in original slot
-		   ((double-stack descriptor-reg)
+		    (copy-fp-reg-to-fr0 x))
+		   (double-stack
 		    (inst fstp fr0)
-		    (if (sc-is x double-stack)
-			(inst fldd (ea-for-df-stack x))
-		      (inst fldd (ea-for-df-desc x)))))
+		    (inst fldd (ea-for-df-stack x)))
+		   (descriptor-reg
+		    (inst fstp fr0)
+		    (inst fldd (ea-for-df-desc x))))
 		 ;; ST0 = ST0 op y
 		 (sc-case y
 		   (double-reg
@@ -591,7 +598,7 @@
 		    (inst ,fopd (ea-for-df-desc y))))))
 
 	       (note-next-instruction vop :internal-error)
-	       
+
 	       ;; Finally save the result
 	       (sc-case r
 	         (double-reg
@@ -602,7 +609,7 @@
 			 (inst fst r))))
 		 (double-stack
 		  (inst fstd (ea-for-df-stack r)))))))))))
-
+    
     (frob + fadd-sti fadd-sti
 	  fadd fadd +/single-float 2
 	  faddd faddd +/double-float 2)
@@ -731,8 +738,7 @@
       (sc-case x
          (single-reg
 	  (unless (zerop (tn-offset x))
-		  (inst fxch x) ; x to top
-		  (inst fst x))) ; save in original slot
+		  (copy-fp-reg-to-fr0 x)))
 	 ((single-stack descriptor-reg)
 	  (inst fstp fr0)
 	  (if (sc-is x single-stack)
@@ -785,8 +791,7 @@
       (sc-case x
          (double-reg
 	  (unless (zerop (tn-offset x))
-		  (inst fxch x) ; x to top
-		  (inst fstd x))) ; save in original slot
+		  (copy-fp-reg-to-fr0 x)))
 	 ((double-stack descriptor-reg)
 	  (inst fstp fr0)
 	  (if (sc-is x double-stack)
@@ -841,8 +846,7 @@
       (sc-case x
          (single-reg
 	  (unless (zerop (tn-offset x))
-		  (inst fxch x) ; x to top
-		  (inst fst x))) ; save in original slot
+		  (copy-fp-reg-to-fr0 x)))
 	 ((single-stack descriptor-reg)
 	  (inst fstp fr0)
 	  (if (sc-is x single-stack)
@@ -895,8 +899,7 @@
       (sc-case x
          (double-reg
 	  (unless (zerop (tn-offset x))
-		  (inst fxch x) ; x to top
-		  (inst fstd x))) ; save in original slot
+		  (copy-fp-reg-to-fr0 x)))
 	 ((double-stack descriptor-reg)
 	  (inst fstp fr0)
 	  (if (sc-is x double-stack)
@@ -1030,8 +1033,7 @@
 		    (inst fst  y))
 		   ((zerop (tn-offset y))
 		    ;; y is in ST0, x is in another reg. not ST0
-		    (inst fxch x)
-		    (inst fst  x)) ; Restore x
+		    (copy-fp-reg-to-fr0 x))
 		   (t
 		    ;; Neither x or y are in ST0, and they are not in
 		    ;; the same reg.
@@ -1730,58 +1732,54 @@
       ;; y in fr1; x not in fr0
       ((and (sc-is y double-reg) (= 1 (tn-offset y)))
        ;; Load x to fr0
-       (inst fstp fr0)
        (sc-case x
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset x)))))
+	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc x)))))
       ;; x in fr0; y not in fr1
       ((and (sc-is x double-reg) (zerop (tn-offset x)))
        (inst fxch fr1)
        ;; Now load y to fr0
-       (inst fstp fr0)
        (sc-case y
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset y)))))
+	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc y))))
        (inst fxch fr1))
       ;; x in fr1; y not in fr1
       ((and (sc-is x double-reg) (= 1 (tn-offset x)))
        ;; Load y to fr0
-       (inst fstp fr0)
        (sc-case y
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset y)))))
+	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc y))))
        (inst fxch fr1))
       ;; y in fr0;
       ((and (sc-is y double-reg) (zerop (tn-offset y)))
        (inst fxch fr1)
        ;; Now load x to fr0
-       (inst fstp fr0)
        (sc-case x
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset x)))))
+	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc x)))))
       ;; Neither x or y are in either fr0 or fr1
       (t
@@ -1913,58 +1911,54 @@
       ;; y in fr1; x not in fr0
       ((and (sc-is y double-reg) (= 1 (tn-offset y)))
        ;; Load x to fr0
-       (inst fstp fr0)
        (sc-case x
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset x)))))
+	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc x)))))
       ;; x in fr0; y not in fr1
       ((and (sc-is x double-reg) (zerop (tn-offset x)))
        (inst fxch fr1)
        ;; Now load y to fr0
-       (inst fstp fr0)
        (sc-case y
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset y)))))
+	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc y))))
        (inst fxch fr1))
       ;; x in fr1; y not in fr1
       ((and (sc-is x double-reg) (= 1 (tn-offset x)))
        ;; Load y to fr0
-       (inst fstp fr0)
        (sc-case y
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset y)))))
+	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc y))))
        (inst fxch fr1))
       ;; y in fr0;
       ((and (sc-is y double-reg) (zerop (tn-offset y)))
        (inst fxch fr1)
        ;; Now load x to fr0
-       (inst fstp fr0)
        (sc-case x
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset x)))))
+	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc x)))))
       ;; Neither x or y are in either fr0 or fr1
       (t
@@ -2166,58 +2160,54 @@
       ;; x in fr1; y not in fr0
       ((and (sc-is x double-reg) (= 1 (tn-offset x)))
        ;; Load y to fr0
-       (inst fstp fr0)
        (sc-case y
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset y)))))
+	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc y)))))
       ;; y in fr0; x not in fr1
       ((and (sc-is y double-reg) (zerop (tn-offset y)))
        (inst fxch fr1)
        ;; Now load x to fr0
-       (inst fstp fr0)
        (sc-case x
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset x)))))
+	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc x))))
        (inst fxch fr1))
       ;; y in fr1; x not in fr1
       ((and (sc-is y double-reg) (= 1 (tn-offset y)))
        ;; Load x to fr0
-       (inst fstp fr0)
        (sc-case x
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset x)))))
+	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc x))))
        (inst fxch fr1))
       ;; x in fr0;
       ((and (sc-is x double-reg) (zerop (tn-offset x)))
        (inst fxch fr1)
        ;; Now load y to fr0
-       (inst fstp fr0)
        (sc-case y
           (double-reg
-	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1- (tn-offset y)))))
+	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
+	   (inst fstp fr0)
 	   (inst fldd (ea-for-df-desc y)))))
       ;; Neither y or x are in either fr0 or fr1
       (t
