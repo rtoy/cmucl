@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.10 1998/02/19 19:34:38 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.11 1999/11/11 15:33:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -924,7 +924,7 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 2
-    (cond ((and (sc-is x any-reg) (zerop y))
+    (cond ((and (sc-is x any-reg descriptor-reg) (zerop y))
 	   (inst test x x))  ; Smaller instruction
 	  (t
 	   (inst cmp x (fixnum y))))
