@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.20 1992/12/13 15:41:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.21 1992/12/17 09:27:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,7 +163,7 @@
 
       (let ((info (debug-info-for-component component)))
 	(push info (core-object-debug-info object))
-	(setf (code-header-ref code-obj vm:code-debug-info-slot) info))
+	(setf (%code-debug-info code-obj) info))
       
       (setf (code-header-ref code-obj vm:code-trace-table-offset-slot) length)
       (copy-to-system-area trace-table (* vm:vector-data-offset vm:word-bits)
