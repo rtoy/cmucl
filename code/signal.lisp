@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.10 1990/11/26 18:25:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.11 1990/11/28 09:50:43 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -204,10 +204,10 @@
 	   (t (the function (di::make-lisp-obj result)))))))
 
 (defun default-interrupt (signal)
-  (enable-interrupt signal :ignore))
+  (enable-interrupt signal :default))
 
 (defun ignore-interrupt (signal)
-  (enable-interrupt signal :default))
+  (enable-interrupt signal :ignore))
 
 
 
