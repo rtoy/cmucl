@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.6 1991/03/23 12:32:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.7 1991/09/18 06:22:55 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the SPARC.
@@ -272,9 +272,10 @@
       (move where arg)
       (inst cmp where bsp-tn)
       (inst b :eq done)
-      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
+      (inst nop)
 
       (emit-label loop)
+      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
       (inst cmp symbol)
       (inst b :eq skip)
       (loadw value bsp-tn (- vm:binding-value-slot vm:binding-size))
@@ -285,7 +286,7 @@
       (inst sub bsp-tn bsp-tn (* 2 vm:word-bytes))
       (inst cmp where bsp-tn)
       (inst b :ne loop)
-      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
+      (inst nop)
 
       (emit-label done))))
 
