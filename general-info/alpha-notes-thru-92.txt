@@ -1,4 +1,44 @@
-1/17/92 to 1/26/91
+1/26/92 to 2/3/92
+
+Fixed filename parsing to correctly handle "/foo".
+
+Changed NCONC to signal an error if a non-null ATOM appears other than as the
+last argument.
+
+Fixed PPRINT to call OUT-SYNONYM-OF on it's stream argument so that it will
+actually work for the ``streams'' T and NIL.
+
+Fixed profile to work again now that argument information may be omitted (due
+to low debug info.)  First of all, don't seg-fault on functions w/o arg info;
+print a warning instead, and assume arbitrary args.  Also, determine the
+precise arg counts for closures and funcallable instances (generic functions.)
+
+Fixed some DIRED bugs resulting from the new pathname changes.
+
+Compiler:
+
+[Sparc:] Fixed integer comparison VOPs to be appropriately prioritized by cost.
+
+In %DEFTRANSFORM, when determining wither to replace a transform or add a new
+one, check that it has the same note as well as the same type.  This provides a
+way to have more than one transform with the same type signature.
+
+Fixed (- x) to expand directly to (%negate x), rather than going by the
+intermediate of (- 0 x), since this is not a correct transformation.  (- 0 0.0)
+is 0.0, not -0.0.  Fixed the (- 0 x) transform to be restricted to rational
+args.
+
+Changed COMMUTATIVE-ARG-SWAP to actually splice in the constant arg, so that
+variable substitution can't swap it back again.
+
+Fixed multiply recoding to include many TRULY-THE's in the expansion so that
+the resulting shift-and-add code would actually open coded.
+
+Added comprehensive handling of arithmetic and logical identities when an arg
+is -1, 0 or +1.
+
+
+1/17/92 to 1/26/92
 
 Fixed the multi-dim array printer to use aref on the data vector instead
 of svref, because despite being simple and being a vector, it's not a
