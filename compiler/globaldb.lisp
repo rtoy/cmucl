@@ -87,7 +87,6 @@
 (deftype type-number () `(unsigned-byte ,type-number-bits))
 ;;;
 ;;; Also initialized in GLOBALDB-INIT...
-(defvar *type-counter* 0)
 (defvar *type-numbers*
   (make-array (ash 1 type-number-bits)  :initial-element nil))
 
@@ -180,6 +179,16 @@
     (setf (gethash class *info-classes*) (make-class-info class))))
 
 
+;;; FIND-UNUSED-TYPE-NUMBER  --  Internal
+;;;
+;;;    Find a type number not already in use by looking for a null entry in
+;;; *TYPE-NUMBERS*.
+;;;
+(defun find-unused-type-number ()
+  (or (position nil *type-numbers*)
+      (error "Out of INFO type numbers!")))
+
+
 ;;; Define-Info-Type  --  Public
 ;;;
 ;;;    The main thing we do is determine the type's number.  We need to do this
@@ -203,7 +212,7 @@
 	 (%define-info-type ',class ',type ',type-spec
 			    ,(if old
 				 (type-info-number old)
-				 (incf *type-counter*))))
+				 (find-unused-type-number))))
        (eval-when (load eval)
 	 (setf (type-info-default (type-info-or-lose ',class ',type))
 	       #'(lambda (name) name ,default)))
@@ -213,13 +222,10 @@
 ;;; %Define-Info-Type  --  Internal
 ;;;
 ;;;    If there is no such type, create it.  In any case, set the type
-;;; specifier for the value.  The class must exist.  We bump *TYPE-COUNTER* to
-;;; after our number so that it won't be reused by any new info type
-;;; definition.
+;;; specifier for the value.  The class must exist.
 ;;;
 (defun %define-info-type (class type type-spec number)
   (declare (simple-string class type) (type type-number number))
-  (setq *type-counter* (max *type-counter* (1+ number)))
   (let* ((class-info (class-info-or-lose class))
 	 (old (find-type-info type class-info))
 	 (res (or old
@@ -864,7 +870,6 @@
 	(list (make-info-environment :name "Initial Global")))
   (unless (boundp '*info-classes*)
     (setq *info-classes* (make-hash-table :test #'equal))
-    (setq *type-counter* 0)
     (setq *type-numbers*
 	  (make-array (ash 1 type-number-bits)  :initial-element nil)))
   (function-info-init)
@@ -1012,10 +1017,18 @@
       nil))
 
 ;;; Expander function for a defined type.
-(define-info-type type expander function nil)
+(define-info-type type expander (or function null) nil)
 
-;;; Defstruct description information for a structure type.
+;;; Print function for a type.
+(define-info-type type printer (or function null) nil)
+
+;;; Defstruct description information for a structure type.  DEFINED is the
+;;; current global definition, and is not shadowed by compilation of
+;;; structure definitions.
+;;;
 (define-info-type type structure-info (or defstruct-description null) nil)
+(define-info-type type defined-structure-info (or defstruct-description null)
+  nil)
 
 (define-info-type type documentation (or string null))
 
