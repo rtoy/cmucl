@@ -91,5 +91,6 @@
 	   "target:hemlock/key-event"
 	   "target:hemlock/keysym-defs"
 	   "target:code/inspect"))
+ :if-output-exists :supersede
  :output (make-pathname :defaults "target:clx/clx-library"
 			:type (c:backend-fasl-file-type c:*target-backend*)))
