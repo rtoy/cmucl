@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.23 1991/02/16 01:00:26 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.24 1991/03/14 22:00:04 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -233,8 +233,6 @@ struct sigcontext *context;
     /* Allow signals again. */
     sigsetmask(context->sc_mask);
 
-    write(1, "Calling handler.\n", 17);
-
     if (LowtagOf(handler.lisp) == type_EvenFixnum ||
         LowtagOf(handler.lisp) == type_OddFixnum)
         (*handler.c)(signal, code, context);
@@ -306,6 +304,13 @@ static sigtrap_handler(signal, code, context)
       case trap_Error:
       case trap_Cerror:
 	internal_error(signal, code, context, code==trap_Cerror);
+	break;
+
+      case trap_Breakpoint:
+	sigsetmask(context->sc_mask);
+	fake_foreign_function_call(context);
+	handle_breakpoint(signal, code, context);
+	undo_fake_foreign_function_call(context);
 	break;
 
       default:
