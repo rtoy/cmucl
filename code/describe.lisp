@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.17 1992/01/30 07:24:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.18 1992/03/26 16:41:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -365,8 +365,17 @@
 	 (wot (ecase kind
 		(:special "special variable")
 		(:constant "constant")
-		(:global "undefined variable"))))
+		(:global "undefined variable")
+		(:alien nil))))
     (cond
+     ((eq kind :alien)
+      (let ((info (info variable alien-info x)))
+	(format t "~&~@<It is an alien at #x~8,'0X of type ~3I~:_~S.~:>~%"
+		(sap-int (eval (alien::heap-alien-info-sap-form info)))
+		(alien-internals:unparse-alien-type
+		 (alien::heap-alien-info-type info)))
+	(format t "~@<It's current value is ~3I~:_~S.~:>"
+		(eval x))))
      ((boundp x)
       (let ((value (symbol-value x)))
 	(format t "~&It is a ~A; its value is ~S." wot value)
