@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.4 2004/07/06 20:24:43 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.5 2004/07/14 21:01:50 cwang Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -907,7 +907,42 @@ GNAME(alloc_overflow_r10):
 	addl	$13,(%rsp) # Adjust the return address to skip the next inst.
 	ret
 	.size	 GNAME(alloc_overflow_r10),.-GNAME(alloc_overflow_r10)
-	
+
+/* r11 is used by linkage table */
+
+/* This routine handles an overflow with r12=crfp+size. So the
+   size=r12-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_r12)
+	.type	GNAME(alloc_overflow_r12),@function
+GNAME(alloc_overflow_r12):
+	pushq	%rax		# Save rax
+	pushq	%rcx		# Save rcx
+	pushq	%rdx		# Save rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	/* Calculate the size for the allocation. */
+	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r12
+	movq	%r12, %rdi	# Pass arg 1
+	call	GNAME(alloc)
+	movq	%rax,%r12	# setup the destination.
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rdx.
+	popq	%rcx	# Restore rcx.
+	popq	%rax	# Restore rax.
+	addl	$13,(%rsp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_r12),.-GNAME(alloc_overflow_r12)
+			
 #endif
 
 #ifdef LINKAGE_TABLE
