@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.41 2003/10/09 19:04:28 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.42 2003/10/13 19:01:36 toy Exp $
  *
  */
 
@@ -55,8 +55,8 @@
  * This value better not have any bits set there either!
  */
 #define set_alloc_pointer(value) \
-  (current_dynamic_space_free_pointer = (value) \
-         | ((unsigned long) current_dynamic_space_free_pointer & lowtagMask))
+  (current_dynamic_space_free_pointer = (lispobj*) ((value) \
+         | ((unsigned long) current_dynamic_space_free_pointer & lowtagMask)))
 #define get_alloc_pointer() \
   (current_dynamic_space_free_pointer)
 #define get_binding_stack_pointer() \
@@ -296,12 +296,12 @@ struct page *page_table;
 /*
  * Heap base, needed for mapping addresses to page structures.
  */
-static void *heap_base = NULL;
+static char *heap_base = NULL;
 
 /*
  * Calculate the start address for the given page number.
  */
-inline void *page_address(int page_num)
+inline char *page_address(int page_num)
 {
   return heap_base + PAGE_SIZE * page_num;
 }
@@ -312,7 +312,7 @@ inline void *page_address(int page_num)
  */
 inline int find_page_index(void *addr)
 {
-  int index = addr-heap_base;
+  int index = (char*)addr - heap_base;
 
   if (index >= 0) {
     index = (unsigned int) index / PAGE_SIZE;
@@ -1392,7 +1392,7 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
  */
 static void *gc_alloc(int nbytes)
 {
-  void *new_free_pointer;
+  char *new_free_pointer;
 
 #if 0
   fprintf(stderr, "gc_alloc %d\n",nbytes);
@@ -1403,7 +1403,7 @@ static void *gc_alloc(int nbytes)
 
   if (new_free_pointer <= boxed_region.end_addr) {
     /* If so then allocate from the current alloc region. */
-    void *new_obj = boxed_region.free_pointer;
+    char *new_obj = boxed_region.free_pointer;
     boxed_region.free_pointer = new_free_pointer;
 
     /* Check if the alloc region is almost empty. */
@@ -1652,7 +1652,7 @@ static struct scavenger_hook *scavenger_hooks = (struct scavenger_hook *) NIL;
 
 static inline boolean from_space_p(lispobj obj)
 {
-  int page_index = (void*) obj - heap_base;
+  int page_index = (char*) obj - heap_base;
   return page_index >= 0
     && (page_index = (unsigned int) page_index / PAGE_SIZE) < dynamic_space_pages
     && PAGE_GENERATION(page_index) == from_space;
@@ -1660,7 +1660,7 @@ static inline boolean from_space_p(lispobj obj)
 
 static inline boolean new_space_p(lispobj obj)
 {
-  int page_index = (void*) obj - heap_base;
+  int page_index = (char*) obj - heap_base;
   return page_index >= 0
     && (page_index = (unsigned int) page_index / PAGE_SIZE) < dynamic_space_pages
     && PAGE_GENERATION(page_index) == new_space;
@@ -2023,8 +2023,12 @@ static lispobj copy_large_unboxed_object(lispobj object, int nwords)
 #define DIRECT_SCAV 0
 
 static void
-scavenge (lispobj *start, long nwords)
+scavenge (void *start_obj, long nwords)
 {
+  lispobj* start;
+
+  start = (lispobj*) start_obj;
+  
   while (nwords > 0)
     {
       lispobj object;
@@ -2136,10 +2140,10 @@ static void scavenge_interrupt_context(struct sigcontext *context)
 		
       index = boxed_registers[i];
       foo = SC_REG(context,index);
-      scavenge((lispobj *) &foo, 1);
+      scavenge(&foo, 1);
       SC_REG(context,index) = foo;
 
-      scavenge((lispobj *) &(SC_REG(context, index)), 1);
+      scavenge(&(SC_REG(context, index)), 1);
     }
 
 #ifdef reg_LIP
@@ -4663,7 +4667,7 @@ lispobj *search_dynamic_space(lispobj *pointer)
   /* Address may be invalid - do some checks. */
   if (page_index == -1 || !PAGE_ALLOCATED(page_index))
     return NULL;
-  start = (lispobj *) ((void *) page_address(page_index)
+  start = (lispobj *) (page_address(page_index)
 		       + page_table[page_index].first_object_offset);
   return search_space(start, pointer + 2 - start, pointer);
 }
@@ -5063,7 +5067,7 @@ static void preserve_pointer(void *addr)
    * after promotion.
    */
   if (PAGE_LARGE_OBJECT(first_page)) {
-    maybe_adjust_large_object(page_address(first_page));
+    maybe_adjust_large_object((lispobj*) page_address(first_page));
     /*
      * If a large object has shrunk then addr may now point to a free
      * adea in which case it's ignored here. Note it gets through the
@@ -5494,7 +5498,7 @@ static void scavenge_newspace_generation_one_scan(int generation)
 
 	      new_areas_ignore_page = last_page;
 
-	      scavenge(page_address(i) + page_table[i].first_object_offset,
+	      scavenge((page_address(i) + page_table[i].first_object_offset),
 		       size);
 
 #if SC_NS_GEN_CK
@@ -6078,7 +6082,7 @@ static void verify_generation(int  generation)
 	    || page_table[last_page + 1].first_object_offset == 0)
 	  break;
 
-      verify_space(page_address(i),
+      verify_space((lispobj*) page_address(i),
 		   (page_table[last_page].bytes_used +
 		    PAGE_SIZE * (last_page - i)) / 4);
       i = last_page;
@@ -6192,7 +6196,7 @@ scavenge_interrupt_handlers()
       union interrupt_handler handler = interrupt_handlers[i];
       if (handler.c != (void (*) (HANDLER_ARGS)) SIG_IGN
           && handler.c != (void (*) (HANDLER_ARGS)) SIG_DFL)
-        scavenge((lispobj *) (interrupt_handlers + i), 1);
+        scavenge((interrupt_handlers + i), 1);
     }
 }
 
@@ -6354,7 +6358,7 @@ garbage_collect_generation (int generation, int raise)
 #ifdef PRINTNOISE
   printf("Scavenging the scavenger hooks ...\n");
 #endif
-  scavenge((lispobj *) &scavenger_hooks, 1);
+  scavenge(&scavenger_hooks, 1);
 #ifdef PRINTNOISE
   printf("Done scavenging the scavenger hooks.\n");
 #endif
@@ -6402,7 +6406,7 @@ garbage_collect_generation (int generation, int raise)
     /* Start with a full scavenge */
     scavenge_newspace_generation_one_scan(new_space);
 
-    scavenge((lispobj *) &scavenger_hooks, 1);
+    scavenge(&scavenger_hooks, 1);
 
     /* Flush the current regions, updating the tables. */
     gc_alloc_update_page_tables(0, &boxed_region);
@@ -6823,7 +6827,7 @@ void	gencgc_pickup_dynamic(void)
 				| PAGE_LARGE_OBJECT_MASK);
     page_table[page].bytes_used = PAGE_SIZE;
     page_table[page].first_object_offset =
-      (void *) DYNAMIC_0_SPACE_START - page_address(page);
+      (char *) DYNAMIC_0_SPACE_START - page_address(page);
     addr += PAGE_SIZE;
     page++;
   }
