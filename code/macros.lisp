@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.102 2004/10/14 13:46:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.103 2004/12/15 16:21:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1011,15 +1011,28 @@
 	  (push (list (car d) (car v)) let-list)))))
 
 
-(define-modify-macro incf (&optional (delta 1)) +
-  "The first argument is some location holding a number.  This number is
-  incremented by the second argument, DELTA, which defaults to 1.")
+;;; we can't use DEFINE-MODIFY-MACRO because of ANSI 5.1.3
+(defmacro incf (place &optional (delta 1) &environment env)
+  "The first argument is some location holding a number. This number is
+  incremented by the second argument, DELTA, which defaults to 1."
+  (multiple-value-bind (dummies vals newval setter getter)
+      (get-setf-method place env)
+    (let ((d (gensym)))
+      `(let* (,@(mapcar #'list dummies vals)
+              (,d ,delta)
+              (,(car newval) (+ ,getter ,d)))
+         ,setter))))
 
-
-(define-modify-macro decf (&optional (delta 1)) -
-  "The first argument is some location holding a number.  This number is
-  decremented by the second argument, DELTA, which defaults to 1.")
-
+(defmacro decf (place &optional (delta 1) &environment env)
+  "The first argument is some location holding a number. This number is
+  decremented by the second argument, DELTA, which defaults to 1."
+  (multiple-value-bind (dummies vals newval setter getter)
+      (get-setf-method place env)
+    (let ((d (gensym)))
+      `(let* (,@(mapcar #'list dummies vals)
+              (,d ,delta)
+              (,(car newval) (- ,getter ,d)))
+         ,setter))))
 
 (defmacro remf (place indicator &environment env)
   "Place may be any place expression acceptable to SETF, and is expected
@@ -1035,8 +1048,9 @@
 	  (local1 (gensym))
 	  (local2 (gensym)))
 	 ((null d)
-	  (push (list (car newval) getter) let-list)
+	  ;; See ANSI 5.1.3 for why we do out-of-order evaluation
 	  (push (list ind-temp indicator) let-list)
+	  (push (list (car newval) getter) let-list)
 	  `(let* ,(nreverse let-list)
 	     (do ((,local1 ,(car newval) (cddr ,local1))
 		  (,local2 nil ,local1))
