@@ -19,7 +19,7 @@
 
 ;;; Maximum number of SCs allowed.
 ;;;
-(defconstant sc-number-limit 32)
+(defconstant sc-number-limit 15)
 
 ;;; The inclusive upper bound on a cost.  We want to write cost frobbing
 ;;; code so that it is portable, but works on fixnums.  This constant should be
@@ -59,5 +59,14 @@
 ;;;
 (defparameter vm-version "IBM RT PC/Mach 0.0")
 
+
+;;; The byte ordering of the target implementation.
+;;;
+(defparameter target-byte-order :big-endian)
+
+;;;
+;;; The native byte ordering (should come from somewhere else once
+;;; bootstrapped.)
+(defconstant native-byte-order :big-endian)
 
 ); Eval-When (Compile Load Eval)
