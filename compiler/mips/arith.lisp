@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.12 1990/04/24 02:55:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.13 1990/04/27 19:16:42 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -17,6 +17,90 @@
 ;;; 
 
 (in-package "C")
+
+
+
+;;;; Moves and coercions:
+
+;;; Move a tagged number to an untagged representation.
+;;;
+(define-vop (move-to-signed)
+  (:args (x :scs (any-reg descriptor-reg)))
+  (:results (y :scs (signed-reg)))
+  (:generator 1
+    ;; ### Need to check for bignums.
+    (inst sra y x 2)))
+;;;
+(define-move-vop move-to-signed :move
+  (any-reg descriptor-reg) (signed-reg))
+
+(define-vop (move-to-unsigned)
+  (:args (x :scs (any-reg descriptor-reg)))
+  (:results (y :scs (unsigned-reg)))
+  (:generator 1
+    ;; ### Need to check for bignums.
+    (inst srl y x 2)))
+;;;
+(define-move-vop move-to-unsigned :move
+  (any-reg descriptor-reg) (unsigned-reg))
+
+
+
+;;; Move an untagged number to a tagged representation.
+;;;
+(define-vop (move-from-signed/unsigned)
+  (:args (x :scs (signed-reg unsigned-reg) :target y))
+  (:results (y :scs (any-reg descriptor-reg)))
+  (:generator 1
+    ;; ### Need to check for overflow.  (When we do, we will need two
+    ;; vops, one for signed, and one for unsigned.
+    (inst sll y x 2)))
+;;;
+(define-move-vop move-from-signed/unsigned :move
+  (signed-reg unsigned-reg) (any-reg descriptor-reg))
+
+
+;;; Move untagged sap values.
+;;;
+(define-vop (signed/unsigned-move)
+  (:args (x :target y
+	    :scs (signed-reg unsigned-reg)
+	    :load-if (not (location= x y))))
+  (:results (y :scs (signed-reg unsigned-reg)
+	       :load-if (not (location= x y))))
+  (:effects)
+  (:affected)
+  (:generator 1
+    (move y x)))
+;;;
+(define-move-vop signed/unsigned-move :move
+  (signed-reg unsigned-reg) (signed-reg unsigned-reg))
+
+
+;;; Move untagged number arguments/return-values.
+;;;
+(define-vop (move-signed/unsigned-argument)
+  (:args (x :target y
+	    :scs (signed-reg unsigned-reg))
+	 (fp :scs (any-reg descriptor-reg)
+	     :load-if (not (sc-is y sap-reg))))
+  (:results (y))
+  (:generator 0
+    (sc-case y
+      ((signed-reg unsigned-reg)
+       (move y x))
+      ((signed-stack unsigned-stack)
+       (storew x fp (tn-offset y))))))
+;;;
+(define-move-vop move-signed/unsigned-argument :move-argument
+  (descriptor-reg any-reg signed-reg unsigned-reg) (signed-reg unsigned-reg))
+
+
+;;; Use standard MOVE-ARGUMENT + coercion to move an untagged sap to a
+;;; descriptor passing location.
+;;;
+(define-move-vop move-argument :move-argument
+  (signed-reg unsigned-reg) (any-reg descriptor-reg))
 
 
 
@@ -183,31 +267,28 @@
 
 (define-vop (fast-truncate/fixnum fast-binop)
   (:translate truncate)
-  (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
-  (:results (q :scs (any-reg descriptor-reg))
-	    (r :scs (any-reg descriptor-reg)))
-  (:generator 5
+  (:args (x :target r :scs (signed-reg))
+	 (y :target r :scs (signed-reg)))
+  (:results (q :scs (signed-reg))
+	    (r :scs (signed-reg)))
+  (:generator 11
     (let ((zero (generate-error-code di:division-by-zero-error x y)))
       (inst beq y zero-tn zero))
-    (inst sra t1 x 2)
-    (inst sra t2 y 2)
-    (inst div t1 t2)
-    (inst mflo t1)
-    (inst sll q t1 2)
-    (inst mfhi t1)
-    (inst sll r t1 2)))
+    (inst div x y)
+    (inst mflo q)
+    (inst mfhi r)))
 
 (define-vop (fast-rem/fixnum fast-binop)
   (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
+  (:args (x :target r :scs (signed-reg))
+	 (y :target r :scs (signed-reg)))
+  (:results (r :scs (signed-reg)))
   (:translate rem)
-  (:generator 4
+  (:generator 10
     (let ((zero (generate-error-code di:division-by-zero-error x y)))
       (inst beq y zero-tn zero))
-    (inst sra t1 x 2)
-    (inst sra t2 y 2)
-    (inst div t1 t2)
-    (inst mfhi t1)
-    (inst sll r t1 2)))
+    (inst div x y)
+    (inst mfhi r)))
 
 
 
@@ -281,6 +362,59 @@
 	  (inst beq x foo target)))
     (inst nop)))
 
+
+
+;;;; 32-bit logical operations
+
+(define-vop (merge-bits)
+  (:translate merge-bits)
+  (:args (shift :scs (signed-reg unsigned-reg))
+	 (prev :scs (unsigned-reg))
+	 (next :scs (unsigned-reg)))
+  (:results (result :scs (unsigned-reg)))
+  (:temporary (:scs (unsigned-reg)) temp)
+  (:policy :fast-safe)
+  (:generator 4
+    (let ((done (gen-label)))
+      (inst beq shift done)
+      (inst srl result next shift)
+      (inst subu temp zero-tn shift)
+      (inst sll temp prev temp)
+      (inst or result result temp)
+      (emit-label done))))
+
+
+(define-vop (32bit-logical)
+  (:args (x :scs (unsigned-reg))
+	 (y :scs (unsigned-reg)))
+  (:results (r :scs (unsigned-reg)))
+  (:policy :fast-safe))
+
+(define-vop (32bit-logical-not 32bit-logical)
+  (:translate 32bit-logical-not)
+  (:args (x :scs (unsigned-reg)))
+  (:generator 1
+    (inst nor r x zero-tn)))
+
+(define-vop (32bit-logical-nor 32bit-logical)
+  (:translate 32bit-logical-nor)
+  (:generator 1
+    (inst nor r x y)))
+
+(define-vop (32bit-logical-and 32bit-logical)
+  (:translate 32bit-logical-and)
+  (:generator 1
+    (inst and r x y)))
+
+(define-vop (32bit-logical-or 32bit-logical)
+  (:translate 32bit-logical-or)
+  (:generator 1
+    (inst or r x y)))
+
+(define-vop (32bit-logical-xor 32bit-logical)
+  (:translate 32bit-logical-xor)
+  (:generator 1
+    (inst xor r x y)))
 
 
 
