@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.15 1993/02/11 14:05:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.16 1993/07/27 15:59:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1311,7 +1311,7 @@
     (pprint-exit-if-list-exhausted)
     (write-char #\space stream)
     (pprint-indent :current 0 stream)
-    (funcall (formatter "~:<~@{~:<~W~^ ~@_~:I~W~@{ ~_~W~}~:>~^~:@_~}~:>")
+    (funcall (formatter "~:<~@{~:<~^~W~^ ~@_~:I~W~@{ ~_~W~}~:>~^~:@_~}~:>")
 	     stream
 	     (pprint-pop))
     (pprint-exit-if-list-exhausted)
