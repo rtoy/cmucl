@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.7 1992/04/14 03:00:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.8 1992/04/21 03:17:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1987,13 +1987,10 @@
 ;;; implementation specific!
 
 (defconstant groked-symbol-slots
-  (sort `((,vm:symbol-value-slot . lisp::symbol-value)
-	  (,vm:symbol-function-slot . lisp::symbol-function)
-	  (,vm:symbol-raw-function-addr-slot . lisp::symbol-raw-function-addr)
-	  (,vm:symbol-setf-function-slot . lisp::symbol-setf-function)
-	  (,vm:symbol-plist-slot . lisp::symbol-plist)
-	  (,vm:symbol-name-slot . lisp::symbol-name)
-	  (,vm:symbol-package-slot . lisp::symbol-package))
+  (sort `((,vm:symbol-value-slot . symbol-value)
+	  (,vm:symbol-plist-slot . symbol-plist)
+	  (,vm:symbol-name-slot . symbol-name)
+	  (,vm:symbol-package-slot . symbol-package))
 	#'<
 	:key #'car)
   "An alist of (SYMBOL-SLOT-OFFSET . ACCESS-FUNCTION-NAME) for slots in a
