@@ -40,6 +40,15 @@
        ,@forms)))
 
 
+(defmacro %displacedp (array-header)
+  `(= (the fixnum (%primitive get-vector-subtype ,array-header))
+      (the fixnum %array-displaced-subtype)))
+
+(defmacro %set-array-displacedp (array-header value)
+  `(%primitive set-vector-subtype ,array-header
+	       (if ,value %array-displaced-subtype %array-normal-subtype)))
+
+
 (defmacro without-gcing (&rest body)
   "Executes the forms in the body without doing a garbage collection."
   `(multiple-value-prog1
