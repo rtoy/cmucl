@@ -48,4 +48,5 @@
     (comf "target:clx/keysyms" :load t)
     (comf "target:clx/manager" :load t)
     (comf "target:clx/image" :load t)
-    (comf "target:clx/resource" :load t)))
+    (comf "target:clx/resource" :load t))
+  (comf "target:code/clx-ext"))
