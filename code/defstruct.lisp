@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.29 1991/12/14 08:56:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.30 1992/03/09 14:55:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,28 +138,30 @@
 	(make-load-form-fun nil)
 	(make-load-form-fun-p nil))
        ((null options)
-	(make-defstruct-description
-	 :name name
-	 :conc-name conc-name
-	 :constructors
-	 (if constructor-opt-p
-	     (nreverse constructors)
-	     (list (concat-pnames 'make- name)))
-	 :boa-constructors boa-constructors
-	 :copier copier
-	 :predicate predicate
-	 :include include
-	 :print-function print-function
-	 :type type
-	 :lisp-type (cond ((eq type 'structure) 'simple-vector)
-			  ((eq type 'vector) 'simple-vector)
-			  ((eq type 'list) 'list)
-			  ((and (listp type) (eq (car type) 'vector))
-			   (cons 'simple-array (cdr type)))
-			  (t (error "~S is a bad :TYPE for Defstruct." type)))
-	 :named (if saw-type saw-named t)
-	 :offset offset
-	 :make-load-form-fun make-load-form-fun))
+	(let ((named (if saw-type saw-named t)))
+	  (make-defstruct-description
+	   :name name
+	   :conc-name conc-name
+	   :constructors
+	   (if constructor-opt-p
+	       (nreverse constructors)
+	       (list (concat-pnames 'make- name)))
+	   :boa-constructors boa-constructors
+	   :copier copier
+	   :predicate predicate
+	   :include include
+	   :print-function print-function
+	   :type type
+	   :length (if named 1 0)
+	   :lisp-type (cond ((eq type 'structure) 'simple-vector)
+			    ((eq type 'vector) 'simple-vector)
+			    ((eq type 'list) 'list)
+			    ((and (listp type) (eq (car type) 'vector))
+			     (cons 'simple-array (cdr type)))
+			    (t (error "~S is a bad :TYPE for Defstruct." type)))
+	   :named named
+	   :offset offset
+	   :make-load-form-fun make-load-form-fun)))
     (if (atom (car options))
 	(case (car options)
 	  (:constructor
@@ -224,6 +226,52 @@
 
 ;;;; Stuff to parse slot descriptions.
 
+;;; PARSE-1-DSD  --  Internal
+;;;
+;;;    Parse a slot description for DEFSTRUCT and add it to the description.
+;;; If supplied, ISLOT is a pre-initialized DSD that we modify to get the new
+;;; slot.  This is supplied when handling included slots.  If the new accessor
+;;; name is EQ to the included name, then set the DSD-ACCESSOR to NIL so that
+;;; we don't clobber the more general accessor.
+;;;
+(defun parse-1-dsd (defstruct spec &optional
+		     (islot (make-defstruct-slot-description
+			     :%name "" :index 0 :type t)))
+  (multiple-value-bind
+      (name default default-p type type-p read-only ro-p)
+      (cond
+       ((listp spec)
+	(destructuring-bind (name &optional (default nil default-p)
+				  &key (type nil type-p) (read-only nil ro-p))
+			    spec
+	  (values name default default-p type type-p read-only ro-p)))
+       (t
+	(when (keywordp spec)
+	  (warn "Keyword slot name indicates possible syntax ~
+		 error in DEFSTRUCT -- ~S."
+		spec))
+	spec))
+    (when (find name (dd-slots defstruct) :test #'string= :key #'dsd-%name)
+      (error "Duplicate slot name ~S." name))
+    (setf (dsd-%name islot) (string name))
+    (setf (dd-slots defstruct) (nconc (dd-slots defstruct) (list islot)))
+    (let ((aname (concat-pnames (dd-conc-name defstruct) name)))
+      (setf (dsd-accessor islot)
+	    (if (eq aname (dsd-accessor islot))
+		nil
+		aname)))
+    
+    (when default-p
+      (setf (dsd-default islot) default))
+    (when type-p
+      (setf (dsd-type islot) type))
+    (when ro-p
+      (setf (dsd-read-only islot) read-only))
+    (setf (dsd-index islot) (dd-length defstruct))
+    (incf (dd-length defstruct)))
+  (undefined-value))
+
+
 ;;; PARSE-SLOT-DESCRIPTIONS parses the slot descriptions (surprise) and does
 ;;; any structure inclusion that needs to be done.
 ;;;
@@ -234,83 +282,30 @@
     (setq slots (cdr slots)))
   ;; Then include stuff.  We add unparsed items to the start of the Slots.
   (when (dd-include defstruct)
-    (let* ((included-name (car (dd-include defstruct)))
-	   (included-thing (info type structure-info included-name))
-	   (modified-slots (cdr (dd-include defstruct))))
-      (unless included-thing
-	(error "Cannot find description of structure ~S to use for inclusion."
-	       included-name))
-      (setf (dd-includes defstruct)
-	    (cons (dd-name included-thing) (dd-includes included-thing)))
-      (setf (dd-offset defstruct) (dd-offset included-thing))
-      (do* ((islots (mapcar #'(lambda (slot)
-				`(,(dsd-name slot) ,(dsd-default slot)
-				  :type ,(dsd-type slot)
-				  :read-only ,(dsd-read-only slot)))
-			    (dd-slots included-thing)))
-	    (islots* islots (cdr islots*)))
-	   ((null islots*)
-	    (setq slots (nconc islots slots)))
-	(let* ((islot (car islots*))
-	       (modifiee (find (car islot) modified-slots
-			       :key #'(lambda (x) (if (atom x) x (car x)))
-			       :test #'string=)))
-	  (when modifiee
-	    (cond ((symbolp modifiee)
-		   ;; If it's just a symbol, nilify the default.
-		   (setf (cadr islot) nil))
-		  ((listp modifiee)
-		   ;; If it's a list, parse new defaults and options.
-		   (setf (cadr islot) (cadr modifiee))
-		   (when (cddr modifiee)
-		     (do ((options (cddr modifiee) (cddr options)))
-			 ((null options))
-		       (case (car options)
-			 (:type
-			  (setf (cadddr islot) (cadr options)))
-			 (:read-only
-			  (setf (cadr (cddddr islot)) (cadr options)))
-			 (t
-			  (error "Bad option in included slot spec: ~S."
-				 (car options)))))))))))))
+    (destructuring-bind (included-name &rest modified-slots)
+			(dd-include defstruct)
+      (let ((included-thing
+	     (or (info type structure-info included-name)
+		 (error "Cannot find description of structure ~S ~
+			 to use for inclusion."
+			included-name))))
+	(setf (dd-includes defstruct)
+	      (cons (dd-name included-thing) (dd-includes included-thing)))
+	(incf (dd-offset defstruct) (dd-offset included-thing))
+	(incf (dd-length defstruct) (dd-offset defstruct))
+	(dolist (islot (dd-slots included-thing))
+	  (let* ((iname (dsd-name islot))
+		 (modified (or (find iname modified-slots
+				     :key #'(lambda (x) (if (atom x) x (car x)))
+				     :test #'string=)
+			       `(,iname))))
+	    (parse-1-dsd defstruct modified
+			 (copy-defstruct-slot-description islot)))))))
+  
   ;; Finally parse the slots into Slot-Description objects.
-  (do ((slots slots (cdr slots))
-       (index (+ (dd-offset defstruct) (if (dd-named defstruct) 1 0))
-	      (1+ index))
-       (descriptions ()))
-      ((null slots)
-       (setf (dd-length defstruct) index)
-       (setf (dd-slots defstruct) (nreverse descriptions)))
-    (let* ((slot (car slots))
-	   (name (if (atom slot) slot (car slot))))
-      (when (keywordp name)
-	(warn "Keyword slot name indicates possible syntax error in DEFSTRUCT ~
-	       -- ~S."
-	      name))
-      (push
-       (if (atom slot)
-	   (make-defstruct-slot-description
-	    :%name (string name)
-	    :index index
-	    :accessor (concat-pnames (dd-conc-name defstruct) name)
-	    :type t)
-	   (do ((options (cddr slot) (cddr options))
-		(default (cadr slot))
-		(type t)
-		(read-only nil))
-	       ((null options)
-		(make-defstruct-slot-description
-		 :%name (string name)
-		 :index index
-		 :accessor (concat-pnames (dd-conc-name defstruct) name)
-		 :default default
-		 :type type
-		 :read-only read-only))
-	     (case (car options)
-	       (:type (setq type (cadr options)))
-	       (:read-only (setq read-only (cadr options))))))
-       descriptions))))
-
+  (dolist (slot slots)
+    (parse-1-dsd defstruct slot))
+  (undefined-value))
 
 
 ;;;; Default structure access and copiers:
@@ -403,28 +398,29 @@
     
   (dolist (slot (dd-slots info))
     (let ((dsd slot))
-      (setf (symbol-function (dsd-accessor slot))
-	    #'(lambda (structure)
-		(declare (optimize (speed 3) (safety 0)))
-		(unless (typep-to-structure structure info)
-		  (error "Structure for accessor ~S is not a ~S:~% ~S"
-			 (dsd-accessor dsd) (dd-name info) structure))
-		(structure-ref structure (dsd-index dsd))))
-      
-      (unless (dsd-read-only slot)
-	(setf (fdefinition `(setf ,(dsd-accessor slot)))
-	      #'(lambda (new-value structure)
+      (when (dsd-accessor slot)
+	(setf (symbol-function (dsd-accessor slot))
+	      #'(lambda (structure)
 		  (declare (optimize (speed 3) (safety 0)))
 		  (unless (typep-to-structure structure info)
-		    (error "Structure for setter ~S is not a ~S:~% ~S"
-			   `(setf ,(dsd-accessor dsd)) (dd-name info)
-			   structure))
-		  (unless (typep new-value (dsd-type dsd))
-		    (error "New-Value for setter ~S is not a ~S:~% ~S."
-			   `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
-			   new-value))
-		  (setf (structure-ref structure (dsd-index dsd))
-			new-value))))))
+		    (error "Structure for accessor ~S is not a ~S:~% ~S"
+			   (dsd-accessor dsd) (dd-name info) structure))
+		  (structure-ref structure (dsd-index dsd))))
+      
+	(unless (dsd-read-only slot)
+	  (setf (fdefinition `(setf ,(dsd-accessor slot)))
+		#'(lambda (new-value structure)
+		    (declare (optimize (speed 3) (safety 0)))
+		    (unless (typep-to-structure structure info)
+		      (error "Structure for setter ~S is not a ~S:~% ~S"
+			     `(setf ,(dsd-accessor dsd)) (dd-name info)
+			     structure))
+		    (unless (typep new-value (dsd-type dsd))
+		      (error "New-Value for setter ~S is not a ~S:~% ~S."
+			     `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
+			     new-value))
+		    (setf (structure-ref structure (dsd-index dsd))
+			  new-value)))))))
 
   (when (dd-predicate info)
     (setf (symbol-function (dd-predicate info))
