@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.27 1992/05/18 18:05:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.28 1992/05/22 15:33:27 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -70,7 +70,7 @@
 				  :direction :output
 				  :if-exists :supersede)
 	      (format file "Assembly listing for ~A:~3%" (namestring name))
-	      (dump-segment *code-segment* file)
+	      (assem:dump-segment *code-segment* file)
 	      (fresh-line file)))
 	  (setq won t))
       (deletef :assembler *features*)
@@ -115,33 +115,51 @@
 
 
 (defun emit-assemble (name options regs code)
-  (let* ((labels nil)
-	 (insts (mapcar #'(lambda (inst)
-			    (cond ((symbolp inst)
-				   (push inst labels)
-				   `(emit-label ,inst))
-				  (t
-				   inst)))
-			code))
-	 (return-style (or (cadr (assoc :return-style options)) :raw)))
-    `(let ((,name (gen-label))
-	   ,@(mapcar #'(lambda (label)
-			 `(,label (gen-label)))
-		     labels))
-       (push (cons ',name ,name) *assembler-routines*)
-       (assemble (*code-segment* ',name)
-	 (emit-label ,name)
-	 (let (,@(mapcar
-		  #'(lambda (reg)
-		      `(,(reg-spec-name reg)
-			(make-random-tn
-			 :kind :normal
-			 :sc (sc-or-lose ',(reg-spec-sc reg))
-			 :offset ,(reg-spec-offset reg))))
-		  regs))
-	   ,@insts
-	   ,@(generate-return-sequence return-style)))
-       (format *error-output* "~S assembled~%" ',name))))
+  (if (backend-featurep :new-assembler)
+      `(let (,@(mapcar
+		#'(lambda (reg)
+		    `(,(reg-spec-name reg)
+		      (make-random-tn
+		       :kind :normal
+		       :sc (sc-or-lose ',(reg-spec-sc reg))
+		       :offset ,(reg-spec-offset reg))))
+		regs))
+	 (new-assem:assemble (*code-segment* ',name)
+	   ,name
+	   (push (cons ',name ,name) *assembler-routines*)
+	   ,@code
+	   ,@(generate-return-sequence
+	      (or (cadr (assoc :return-style options)) :raw)))
+	 (when *compile-print*
+	   (format *error-output* "~S assembled~%" ',name)))
+      (let* ((labels nil)
+	     (insts (mapcar #'(lambda (inst)
+				(cond ((symbolp inst)
+				       (push inst labels)
+				       `(emit-label ,inst))
+				      (t
+				       inst)))
+			    code))
+	     (return-style (or (cadr (assoc :return-style options)) :raw)))
+	`(let ((,name (gen-label))
+	       ,@(mapcar #'(lambda (label)
+			     `(,label (gen-label)))
+			 labels))
+	   (push (cons ',name ,name) *assembler-routines*)
+	   (assem:assemble (*code-segment* ',name)
+	     (emit-label ,name)
+	     (let (,@(mapcar
+		      #'(lambda (reg)
+			  `(,(reg-spec-name reg)
+			    (make-random-tn
+			     :kind :normal
+			     :sc (sc-or-lose ',(reg-spec-sc reg))
+			     :offset ,(reg-spec-offset reg))))
+		      regs))
+	       ,@insts
+	       ,@(generate-return-sequence return-style)))
+	   (when *compile-print*
+	     (format *error-output* "~S assembled~%" ',name))))))
 
 (defun arg-or-res-spec (reg)
   `(,(reg-spec-name reg)
