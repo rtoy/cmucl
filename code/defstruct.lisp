@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.92 2003/08/08 11:32:52 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.93 2004/03/31 11:21:01 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -460,8 +460,8 @@
 	(continue ()
 	  :report "Ignore the lock and continue")
 	(unlock-package ()
-	  :report "Disable package's lock then continue"
-	  (setf (ext:package-lock pkg) nil))
+	  :report "Disable package's definition lock then continue"
+	  (setf (ext:package-definition-lock pkg) nil))
         (unlock-all ()
           :report "Unlock all packages, then continue"
           (lisp::unlock-all-packages))))
