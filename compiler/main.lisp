@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.86 1993/05/13 11:37:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.87 1993/05/15 18:27:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1391,15 +1391,15 @@
 	(dolist (component components)
 	  (compile-component component)
 	  (when (replace-top-level-xeps component)
-	    (setq top-level-closure t))))
-      
-      (when *check-consistency*
-	(maybe-mumble "[Check]~%")
-	(check-ir1-consistency *all-components*))
-      
-      (if load-time-value-p
-	  (compile-load-time-value-lambda lambdas)
-	  (compile-top-level-lambdas lambdas top-level-closure))
+	    (setq top-level-closure t)))
+	
+	(when *check-consistency*
+	  (maybe-mumble "[Check]~%")
+	  (check-ir1-consistency *all-components*))
+	
+	(if load-time-value-p
+	    (compile-load-time-value-lambda lambdas)
+	    (compile-top-level-lambdas lambdas top-level-closure)))
 
       (dolist (component components)
 	(clear-ir1-info component))
