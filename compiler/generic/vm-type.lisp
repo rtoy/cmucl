@@ -82,7 +82,7 @@
 ;;;
 (defparameter specialized-array-element-types
   '(bit (unsigned-byte 2) (unsigned-byte 4) (unsigned-byte 8) (unsigned-byte 16)
-	(unsigned-byte 32) string-char))
+	(unsigned-byte 32) base-character single-float double-float))
 
 ;;; Float-Format-Name  --  Internal
 ;;;
