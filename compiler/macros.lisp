@@ -50,7 +50,7 @@
 
 (proclaim '(special *lexical-environment*))
 
-(eval-when (#-new-compiler compile load eval)
+(eval-when (compile load eval)
 (defconstant policy-parameter-slots
   '((speed . cookie-speed) (space . cookie-space) (safety . cookie-safety)
     (cspeed . cookie-cspeed) (brevity . cookie-brevity)
@@ -104,7 +104,7 @@
 
 ;;;; Source-hacking defining forms:
 
-(eval-when (#-new-compiler compile load eval)
+(eval-when (compile load eval)
 
 ;;; Symbolicate  --  Interface
 ;;;
@@ -248,7 +248,7 @@
 ;;; lambda-list.
 
 
-(eval-when (#-new-compiler compile load eval)
+(eval-when (compile load eval)
 
 ;;; Parse-Deftransform  --  Internal
 ;;;
@@ -984,7 +984,7 @@
 
 ;;;; The Event statistics/trace utility:
 
-(eval-when (#-new-compiler compile load eval)
+(eval-when (compile load eval)
 
 (defstruct event-info
   ;;
