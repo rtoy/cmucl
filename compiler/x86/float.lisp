@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.6.2.2 1997/08/30 16:02:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.6.2.3 1997/09/09 01:15:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,12 +70,12 @@
 ;;;; Move functions:
 
 ;;; x is source, y is destination
-(define-move-function (load-single 6) (vop x y)
+(define-move-function (load-single 2) (vop x y)
   ((single-stack) (single-reg))
   (with-empty-tn@fp-top(y)
      (inst fld (ea-for-sf-stack x))))
 
-(define-move-function (store-single 6) (vop x y)
+(define-move-function (store-single 2) (vop x y)
   ((single-reg) (single-stack))
   (cond ((zerop (tn-offset x))
 	 (inst fst (ea-for-sf-stack y)))
@@ -85,12 +85,12 @@
 	 ;; This may not be necessary as ST0 is likely invalid now.
 	 (inst fxch x))))
 
-(define-move-function (load-double 6) (vop x y)
+(define-move-function (load-double 2) (vop x y)
   ((double-stack) (double-reg))
   (with-empty-tn@fp-top(y)
      (inst fldd (ea-for-df-stack x))))
 
-(define-move-function (store-double 6) (vop x y)
+(define-move-function (store-double 2) (vop x y)
   ((double-reg) (double-stack))
   (cond ((zerop (tn-offset x))
 	 (inst fstd (ea-for-df-stack y)))
@@ -106,7 +106,7 @@
 ;;; Intel claims they are stored in a more precise form on chip.
 ;;; Anyhow, might as well use the feature. It can be turned
 ;;; off by hacking the "immediate-constant-sc" in vm.lisp.
-(define-move-function (load-fp-constant 6) (vop x y)
+(define-move-function (load-fp-constant 2) (vop x y)
   ((fp-single-constant)(single-reg)
    (fp-double-constant)(double-reg))
 
@@ -114,18 +114,8 @@
     (with-empty-tn@fp-top(y)
       (cond ((zerop value)
 	     (inst fldz))
-	    ((or (= value 1s0)(= value 1d0))
+	    ((or (= value 1f0)(= value 1d0))
 	     (inst fld1))
-	    ((= value #.pi)
-	     (inst fldpi))
-	    ((= value #.i387-l2t)
-	     (inst fldl2t))
-	    ((= value #.i387-l2e)
-	     (inst fldl2e))
-	    ((= value #.i387-lg2)
-	     (inst fldlg2))
-	    ((= value #.i387-ln2)
-	     (inst fldln2))
 	    (t (warn "Ignoring bogus i387 Constant ~a" value))))))
 
 
@@ -136,13 +126,9 @@
 ;;;
 (define-vop (single-move)
   (:args (x :scs (single-reg) :target y
-	    :load-if (not (and (sc-is x single-stack)
-			       (sc-is y single-stack)
-			       (location= x y)))))
+	    :load-if (not (location= x y))))
   (:results (y :scs (single-reg)
-	       :load-if (not (and (sc-is x single-stack)
-				  (sc-is y single-stack)
-				  (location= x y)))))
+	       :load-if (not (location= x y))))
   (:note "float move")
   (:generator 0
      (unless (location= x y)
@@ -158,13 +144,9 @@
 
 (define-vop (double-move)
   (:args (x :scs (double-reg) :target y
-	    :load-if (not (and (sc-is x double-stack)
-			       (sc-is y double-stack)
-			       (location= x y)))))
+	    :load-if (not (location= x y))))
   (:results (y :scs (double-reg)
-	       :load-if (not (and (sc-is x double-stack)
-				  (sc-is y double-stack)
-				  (location= x y)))))
+	       :load-if (not (location= x y))))
   (:note "float move")
   (:generator 0
      (unless (location= x y)
@@ -184,46 +166,56 @@
 ;;; object in the process.
 ;;;
 (define-vop (move-from-single)
-  (:args (x :scs (single-reg) :to :save
-	    :load-if (not (sc-is x fp-single-constant))))
+  (:args (x :scs (single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:sc dword-reg) ndescr)
   (:note "float to pointer coercion")
   (:generator 13
-     (if (sc-is x fp-single-constant)
-	 (ecase (c::constant-value (c::tn-leaf x))
-		(0f0 (load-symbol-value y *fp-constant-0s0*))
-		(1f0 (load-symbol-value y *fp-constant-1s0*)))
-       (with-fixed-allocation (y ndescr vm:single-float-type
-				 vm:single-float-size)
-	    (with-tn@fp-top(x)
-	      (inst fst (make-ea :dword :base y
-				 :disp (- (* vm:single-float-value-slot
-					     vm:word-bytes)
-					  vm:other-pointer-type))))))))
+     (with-fixed-allocation (y ndescr vm:single-float-type
+			       vm:single-float-size)
+       (with-tn@fp-top(x)
+	 (inst fst (make-ea :dword :base y
+			    :disp (- (* vm:single-float-value-slot
+					vm:word-bytes)
+				     vm:other-pointer-type)))))))
 (define-move-vop move-from-single :move
   (single-reg) (descriptor-reg))
 
+(define-vop (move-from-fp-single-const)
+  (:args (x :scs (fp-single-constant)))
+  (:results (y :scs (descriptor-reg)))
+  (:generator 2
+     (ecase (c::constant-value (c::tn-leaf x))
+       (0f0 (load-symbol-value y *fp-constant-0s0*))
+       (1f0 (load-symbol-value y *fp-constant-1s0*)))))
+(define-move-vop move-from-fp-single-const :move
+  (fp-single-constant) (descriptor-reg))
+
 (define-vop (move-from-double)
-  (:args (x :scs (double-reg) :to :save
-	    :load-if (not (sc-is x fp-double-constant))))
+  (:args (x :scs (double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:sc dword-reg) ndescr)
   (:note "float to pointer coercion")
   (:generator 13
-     (if (sc-is x fp-double-constant)
-	 (ecase (c::constant-value (c::tn-leaf x))
-		(0d0 (load-symbol-value y *fp-constant-0d0*))
-		(1d0 (load-symbol-value y *fp-constant-1d0*)))
-       (with-fixed-allocation (y ndescr vm:double-float-type
-				 vm:double-float-size)
-          (with-tn@fp-top(x)
-             (inst fstd (make-ea :dword :base y
-				 :disp (- (* vm:double-float-value-slot
-					     vm:word-bytes)
-					  vm:other-pointer-type))))))))
+     (with-fixed-allocation (y ndescr vm:double-float-type
+			       vm:double-float-size)
+       (with-tn@fp-top(x)
+	 (inst fstd (make-ea :dword :base y
+			     :disp (- (* vm:double-float-value-slot
+					 vm:word-bytes)
+				      vm:other-pointer-type)))))))
 (define-move-vop move-from-double :move
   (double-reg) (descriptor-reg))
+
+(define-vop (move-from-fp-double-const)
+  (:args (x :scs (fp-double-constant)))
+  (:results (y :scs (descriptor-reg)))
+  (:generator 2
+     (ecase (c::constant-value (c::tn-leaf x))
+       (0d0 (load-symbol-value y *fp-constant-0d0*))
+       (1d0 (load-symbol-value y *fp-constant-1d0*)))))
+(define-move-vop move-from-fp-double-const :move
+  (fp-double-constant) (descriptor-reg))
 
 ;;;
 ;;; Move from a descriptor to a float register
