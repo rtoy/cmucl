@@ -932,7 +932,8 @@
 (defknown file-write-date (pathnamelike) (or unsigned-byte null) (flushable))
 (defknown file-author (pathnamelike) (or simple-string null) (flushable unsafe))
 
-(defknown file-position (stream &optional unsigned-byte)
+(defknown file-position (stream &optional
+				(or unsigned-byte (member :start :end)))
   (or unsigned-byte (member t nil)))
 (defknown file-length (stream) (or unsigned-byte null) (flushable))
 
