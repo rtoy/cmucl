@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.49 2003/03/04 00:29:35 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.50 2003/03/19 03:28:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,7 +88,7 @@
   (dolist (ele lisp-environment-list)
     (let ((=pos (position #\= (the simple-string ele))))
       (when =pos
-	(push (cons (intern (string-upcase (subseq ele 0 =pos))
+	(push (cons (intern (subseq ele 0 =pos)
 			    *keyword-package*)
 		    (subseq ele (1+ =pos)))
 	      *environment-list*))))
