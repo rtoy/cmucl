@@ -276,6 +276,17 @@
     alien))
 
 
+;;; DO-VALIDATE  --  Internal Interface.
+;;;
+;;; Do a ValidateMemory on our kernel port and flame out if error.
+;;;
+;;; Hemlock and other code files use this, even though it is not exported from
+;;; a more appropriate package.
+;;;
+(defun do-validate (addr bytes mask)
+  (gr-call* mach::vm_allocate *task-self* addr bytes (if (eq mask -1) t NIL)))
+
+
 ;;; Make-Alien  --  Public
 ;;;
 ;;;    Create an Alien value structure, validating memory to hold the data
