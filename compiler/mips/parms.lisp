@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.72 1990/09/21 00:54:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.73 1990/10/01 16:32:13 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -19,6 +19,11 @@
 ;;;
 
 (in-package "VM")
+
+(export '(float-underflow-trap-bit float-overflow-trap-bit
+	  float-imprecise-trap-bit float-invalid-trap-bit
+	  float-divide-by-zero-trap-bit single-float-trapping-nan-bit
+	  double-float-trapping-nan-bit))
 
 ;(eval-when (compile load eval)
 
