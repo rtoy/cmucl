@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.94 1993/09/01 00:55:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.95 1993/09/01 00:58:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;;
 
 (in-package "LISP")
+(unless (find-package "PCL")
+  (make-package "PCL"))
 
 (if (find-package "C-CALL")
     (rename-package "C-CALL" "C-CALL" 'nil)
