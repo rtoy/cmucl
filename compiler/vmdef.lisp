@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.44 1992/08/03 12:36:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.45 1992/08/03 19:06:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2456,6 +2456,8 @@
    Similar to NOTE-THIS-LOCATION, except the use the location of the next
    instruction for the code location, wherever the scheduler decided to put
    it."
-  (new-assem:emit-postit #'(lambda (segment posn)
-			     (declare (ignore segment))
-			     (note-debug-location vop posn kind))))
+  (let ((loc (note-debug-location vop nil kind)))
+    (new-assem:emit-postit #'(lambda (segment posn)
+			       (declare (ignore segment))
+			       (setf (location-info-label loc) posn))))
+  (undefined-value))
