@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.5 2003/09/13 14:21:30 gerd Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.6 2004/05/18 22:37:34 cwang Exp $ */
 
 #include "lisp.h"
 #include "internals.h"
@@ -56,7 +56,7 @@ static lispobj *alloc_unboxed(int type, int words)
 {
     lispobj *result;
 
-    result = alloc(ALIGNED_SIZE((1 + words) * sizeof(lispobj)));
+    result = (lispobj *)alloc(ALIGNED_SIZE((1 + words) * sizeof(lispobj)));
 
     *result = (lispobj) (words << type_Bits) | type;
 
@@ -90,7 +90,11 @@ lispobj alloc_number(long n)
 {
     struct bignum *ptr;
 
+#ifdef __x86_64
+    if (-0x2000000000000000 < n && n < 0x2000000000000000)  /* -2^61 to 2^61 */
+#else
     if (-0x20000000 < n && n < 0x20000000)
+#endif
         return make_fixnum(n);
     else {
         ptr = (struct bignum *)alloc_unboxed(type_Bignum, 1);

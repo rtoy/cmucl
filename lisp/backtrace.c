@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.8 2003/07/28 17:43:11 gerd Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.9 2004/05/18 22:41:23 cwang Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -12,7 +12,7 @@
 #include "interrupt.h"
 #include "lispregs.h"
 
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
 
 /* Sigh ... I know what the call frame looks like and it had
    better not change. */
@@ -252,7 +252,7 @@ backtrace(int nframes)
 #define VM_RETURN_PC_SAVE_OFFSET	1
 
 static int
-stack_pointer_p (unsigned p)
+stack_pointer_p (unsigned long p)
 {
   return (p < CONTROL_STACK_START + CONTROL_STACK_SIZE
 	  && p > (unsigned) &p
@@ -266,7 +266,7 @@ ra_pointer_p (unsigned ra)
 }
 
 static unsigned
-deref (unsigned p, int offset)
+deref (unsigned long p, int offset)
 {
   return *((unsigned *) p + offset);
 }
@@ -429,7 +429,7 @@ array_of_type_p (lispobj obj, int type)
 }
 
 struct compiled_debug_function *
-debug_function_from_pc (struct code* code, unsigned pc)
+debug_function_from_pc (struct code* code, unsigned long pc)
 {
   unsigned code_header_len = sizeof (lispobj) * HeaderValue (code->header);
   unsigned offset = pc - (unsigned) code - code_header_len;
@@ -497,7 +497,8 @@ backtrace (int nframes)
   for (i = 0; i < nframes; ++i)
     {
       lispobj *p;
-      unsigned ra, next_fp;
+      unsigned long ra;
+      unsigned next_fp;
       
       if (!x86_call_context (fp, &ra, &next_fp))
 	break;
