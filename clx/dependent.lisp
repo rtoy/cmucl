@@ -2457,7 +2457,7 @@
 	((:internet nil 0)
 	 (unless (= (ext::host-entry-addr-type hostent) 2)
 	   (no-address-error))
-	 (let ((addr (first (ext::host-entry-addr-list hostent))))
+	 (let ((addr (ext:htonl (first (ext::host-entry-addr-list hostent)))))
 	   (list :internet
 		 (ldb (byte 8 24) addr)
 		 (ldb (byte 8 16) addr)
