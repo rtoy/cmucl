@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.41 1997/12/27 12:33:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.42 1998/01/04 22:46:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -484,23 +484,27 @@
       (case count
 	(1)
 	(0
-	 (unless (system:wait-until-fd-usable
-		  fd :input (fd-stream-timeout stream))
+	 (unless #-mp (system:wait-until-fd-usable
+		       fd :input (fd-stream-timeout stream))
+		 #+mp (mp:process-wait-until-fd-usable
+		       fd :input (fd-stream-timeout stream))
 	   (error 'io-timeout :stream stream :direction :read)))
 	(t
 	 (error "Problem checking to see if ~S is readable: ~A"
 		stream
 		(unix:get-unix-error-msg errno)))))
     (multiple-value-bind
-	(count errno)
+	  (count errno)
 	(unix:unix-read fd
 			(system:int-sap (+ (system:sap-int ibuf-sap) tail))
 			(- buflen tail))
       (cond ((null count)
 	     (if (eql errno unix:ewouldblock)
 		 (progn
-		   (unless (system:wait-until-fd-usable
-			    fd :input (fd-stream-timeout stream))
+		   (unless #-mp (system:wait-until-fd-usable
+				 fd :input (fd-stream-timeout stream))
+			   #+mp (mp:process-wait-until-fd-usable
+				 fd :input (fd-stream-timeout stream))
 		     (error 'io-timeout :stream stream :direction :read))
 		   (do-input stream))
 		 (error "Error reading ~S: ~A"
