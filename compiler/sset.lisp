@@ -23,7 +23,7 @@
 ;;; operations.)
 ;;;
 (defstruct sset-element
-  (number nil :type (or unsigned-byte null)))
+  (number nil :type (or index null)))
 
 
 (defstruct (sset (:constructor make-sset ())
