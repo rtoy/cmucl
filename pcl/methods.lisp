@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.40 2003/07/21 17:36:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.41 2003/07/29 12:13:24 gerd Exp $")
 
 (in-package :pcl)
 
@@ -459,6 +459,25 @@
 	       (setq remove-again-p nil))
 	  (when remove-again-p
 	    (remove-method gf method))))
+      ;;
+      ;; Warn about invalid qualifiers, if we can.
+      (let ((mc (generic-function-method-combination gf)))
+	(cond ((eq mc *standard-method-combination*)
+	       (when (and qualifiers
+			  (or (cdr qualifiers)
+			      (not (memq (car qualifiers)
+					 '(:around :before :after)))))
+		 (warn "~@<Method ~s contains invalid qualifiers for ~
+                        the standard method combination.~@:>"
+		       method)))
+	      ((short-method-combination-p mc)
+	       (let ((mc-name (method-combination-type mc)))
+		 (when (or (/= (length qualifiers) 1)
+			   (and (neq (car qualifiers) :around)
+				(neq (car qualifiers) mc-name)))
+		   (warn "~@<Method ~s contains invalid qualifiers for ~
+                          the method combination ~s.~@:>"
+			 method mc-name))))))
       ;;
       (unless skip-dfun-update-p
 	(update-ctors 'add-method :generic-function gf :method method)
