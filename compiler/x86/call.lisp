@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.12 1997/12/19 20:19:41 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.13 1998/01/24 14:53:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -311,7 +311,7 @@
       (emit-label regs-defaulted)
       (inst mov esp-tn ebx-tn)))
    ((<= nvals 7)
-    ;; Number of byte depends on the relative jump instructions. Best
+    ;; Number of bytes depends on the relative jump instructions. Best
     ;; case is 31+(n-3)*14, worst case is 35+(n-3)*18.  For nvals=6
     ;; that is 73/89 bytes, and for nvals=7 that is 87/107 bytes which
     ;; is likely better than using the blt below.
@@ -321,7 +321,7 @@
       (note-this-location vop :unknown-return)
       ;; Branch off to the MV case.
       (inst jmp-short regs-defaulted)
-      ;; Do the single value calse.
+      ;; Do the single value case.
       ;; Default the register args
       (inst mov eax-tn nil-value)
       (do ((i 1 (1+ i))
