@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.10 1991/03/11 17:14:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.11 1991/03/12 19:07:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,16 +76,47 @@
   (undefined-value))
 
 
+;;; FINALIZE-XEP-DEFINITION  --  Internal
+;;;
+;;; For each named function with an XEP, note the definition of that name, and
+;;; add derived type information to the info environment.  We also delete the
+;;; FUNCTIONAL from *FREE-FUNCTIONS* to eliminate the possibility that new
+;;; references might be converted to it.
+;;;
+(defun finalize-xep-definition (fun)
+  (let* ((leaf (functional-entry-function fun))
+	 (name (leaf-name leaf))
+	 (where (info function where-from name))
+	 (dtype (definition-type leaf))
+	 (*compiler-error-context* (lambda-bind (main-entry leaf)))
+	 (global-p (eq leaf (gethash name *free-functions*))))
+    (setf (leaf-type leaf) dtype)
+    (when name
+      (note-name-defined name :function)
+      (when global-p
+	(remhash name *free-functions*))
+      (ecase where
+	(:assumed
+	 (let ((approx-type (info function assumed-type name)))
+	   (when (and approx-type (function-type-p dtype))
+	     (valid-approximate-type approx-type dtype))
+	   (setf (info function type name) dtype)
+	   (setf (info function assumed-type name) nil))
+	 (setf (info function where-from name) :defined))
+	(:declared); Just keep declared type.
+	(:defined
+	 (setf (info function type name)
+	       (if global-p dtype (specifier-type 'function)))))))
+  (undefined-value))
+      
+
 ;;; IR1-FINALIZE  --  Interface
 ;;;
 ;;;    Do miscellaneous things that we want to do once all optimization has
 ;;; been done:
 ;;;  -- Record the derived result type before the back-end trashes the
 ;;;     flow graph.
-;;;  -- For each named function with an XEP, note the definition of that name,
-;;;     and add derived type information to the info environment.  We also
-;;;     delete the FUNCTIONAL from *FREE-FUNCTIONS* to eliminate the
-;;;     possibility that new references might be converted to it.
+;;;  -- Note definition of any entry points.
 ;;;  -- Note any failed optimizations.
 ;;; 
 (defun ir1-finalize (component)
@@ -95,26 +126,7 @@
   (dolist (fun (component-lambdas component))
     (case (functional-kind fun)
       (:external
-       (let* ((leaf (functional-entry-function fun))
-	      (name (leaf-name leaf))
-	      (where (info function where-from name))
-	      (dtype (definition-type leaf))
-	      (*compiler-error-context* (lambda-bind (main-entry leaf))))
-	 (setf (leaf-type leaf) dtype)
-	 (when (eq leaf (gethash name *free-functions*))
-	   (note-name-defined name :function)
-	   (remhash name *free-functions*)
-	   (ecase where
-	     (:assumed
-	      (let ((approx-type (info function assumed-type name)))
-		(when (and approx-type (function-type-p dtype))
-		  (valid-approximate-type approx-type dtype))
-		(setf (info function type name) dtype)
-		(setf (info function assumed-type name) nil))
-	      (setf (info function where-from name) :defined))
-	     (:declared); Just keep declared type.
-	     (:defined
-	      (setf (info function type name) dtype))))))
+       (finalize-xep-definition fun))
       ((nil)
        (setf (leaf-type fun) (definition-type fun)))))
 
