@@ -1,3 +1,26 @@
+6/15/92 to 6/22/92
+
+Code:
+
+Fixed PACKAGE-ERROR to have a PACKAGE slot instead of a PATHNAME slot. 
+
+Two changes to DEBUG-INTERNALS to support breakpoint debugger commands:
+- Added CODE-LOCATION-KIND.
+- Changed HANDLE-BREAKPOINT-AUX to correctly handle the case in which all
+breakpoints at a location are deactivated and then at least one is
+activated within the hook functions.
+
+
+Compiler:
+
+Changed the defknown for PACKAGE-NAME to include NIL as a possible result,
+because that is what it is supposed to return after the package is fed
+to DELETE-PACKAGE.
+
+More internal changes to for the HP PA-RISC 1.1 port.
+
+
+
 6/12/92 to 6/15/92
 
 Code:
