@@ -207,7 +207,9 @@
 	 (length (length chars))
 	 (last (region-end (hemlock-region-stream-region stream)))
 	 (last-line (mark-line last))
-	 (buffer (lisp::stream-in-buffer stream)) start len)
+	 (buffer (lisp::stream-in-buffer stream))
+	 (start 0)
+	 (len 0))
     (declare (fixnum length charpos last-charpos start len)
 	     (simple-string chars))
     (cond 
@@ -246,7 +248,6 @@
     (schar buffer start)))
 
 (defun region-misc (stream operation &optional arg1 arg2)
-  (declare (ignore arg1 arg2))
   (case operation
     (:listen (mark< (hemlock-region-stream-mark stream)
 		    (region-end (hemlock-region-stream-region stream))))
