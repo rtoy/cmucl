@@ -399,7 +399,7 @@ lra:
 
 	.byte 18<<2
 _undefined_tramp:	
-	.byte 0,0,48
+	.byte 0,0,24
 	.long _undefined_tramp
 	.long NIL
 	.long NIL
