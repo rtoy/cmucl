@@ -18,19 +18,6 @@
 	  old-c::defstruct-slot-description)
 	"C")
 
-(defun vmdir (f)
-  (merge-pathnames
-   (make-pathname :directory nil :defaults f)
-   (merge-pathnames
-    (cond ((c:target-featurep :pmax) "mips/")
-	  ((c:target-featurep :rt) "rt/")
-	  ((c:target-featurep :hppa) "hppa/")
-	  ((c:target-featurep :sparc) "sparc/")
-	  ((c:target-featurep :x86) "x86/")
-	  (t
-	   (error "What machine is this?")))
-    (make-pathname :directory (pathname-directory f)))))
-
 (with-compiler-log-file
     ("target:compile-compiler.log"
      :optimize
@@ -46,7 +33,8 @@
 	     (:match "$SOURCE-TRANSFORM-" "$IR1-CONVERT-"
 		     "$PRIMITIVE-TRANSLATE-" "$PARSE-"))
 	(declare (optimize (safety 1))))
-       (:macro (declare (optimize (speed 0))))
+       ((:or :macro (match "$%PRINT-"))
+	(declare (optimize (speed 0))))
        (:external (declare (optimize-interface (safety 2) (debug 1))))))
 
 (comf "target:compiler/macros" :load *load-stuff* :byte-compile *byte-compile*)
