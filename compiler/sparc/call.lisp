@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.28 2001/01/03 08:45:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.29 2001/09/25 21:28:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,7 +162,7 @@
 
 
 (define-vop (xep-allocate-frame)
-  (:info start-lab copy-more-arg-follows)
+  (:info start-lab copy-more-arg-follows clear-memory-p)
   (:ignore copy-more-arg-follows)
   (:vop-var vop)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -179,6 +179,30 @@
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
     (inst compute-code-from-fn code-tn code-tn start-lab temp)
+    ;; Rob says we should zero out the words that are allocated for
+    ;; the args that are passed in registers and also zero out the
+    ;; words from CSP to CFP+size.
+    (when clear-memory-p
+      
+      ;; Zero out the args that correspond to register args
+      (dotimes (k register-arg-count)
+	(inst st zero-tn cfp-tn (* k vm:word-bytes)))
+	
+      ;; Zero out memory from CSP to CFP+size
+      (let ((zero-out-mem (gen-label))
+	    (loop-test (gen-label)))
+
+	(inst b loop-test)
+	(inst add temp cfp-tn
+	      (* vm:word-bytes (1- (sb-allocated-size 'control-stack))))
+
+	(emit-label zero-out-mem)
+	(inst st zero-tn csp-tn (- vm:word-bytes))
+	(emit-label loop-test)
+	(inst cmp csp-tn temp)
+	(inst b :lt zero-out-mem)
+	(inst add csp-tn vm:word-bytes))
+      )
     ;; Build our stack frames.
     (inst add csp-tn cfp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
@@ -191,10 +215,24 @@
 (define-vop (allocate-frame)
   (:results (res :scs (any-reg))
 	    (nfp :scs (any-reg)))
-  (:info callee)
+  (:info callee clear-memory-p)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
     (trace-table-entry trace-table-function-prologue)
     (move res csp-tn)
+    (when clear-memory-p
+      ;; Rob Maclaclan says we should zero out this memory.
+      (let ((zero-out-loop (gen-label))
+	    (zero-out-test (gen-label)))
+	(inst b zero-out-test)
+	(inst li temp (* vm:word-bytes (sb-allocated-size 'control-stack)))
+      
+	(emit-label zero-out-loop)
+	(emit-label zero-out-test)
+	(inst subcc temp vm:word-bytes)
+	(inst b :gt zero-out-loop)
+	(inst st zero-tn csp-tn temp)
+	))
     (inst add csp-tn csp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (when (ir2-environment-number-stack-p callee)
@@ -701,7 +739,8 @@ default-value-8
 		 function)
      (:temporary (:sc any-reg :offset nargs-offset :to :eval)
 		 nargs-pass)
-
+     (:temporary (:scs (non-descriptor-reg)) temp)
+	   
      ,@(when variable
 	 (mapcar #'(lambda (name offset)
 		     `(:temporary (:sc descriptor-reg
@@ -713,8 +752,7 @@ default-value-8
 	 '((:temporary (:scs (descriptor-reg) :from :eval) move-temp)))
 
      ,@(unless (eq return :tail)
-	 '((:temporary (:scs (non-descriptor-reg)) temp)
-	   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
+	 '((:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
 
      (:generator ,(+ (if named 5 0)
 		     (if variable 19 1)
@@ -761,14 +799,14 @@ default-value-8
 				  (inst move old-fp-pass old-fp))
 				 (control-stack
 				  (loadw old-fp-pass cfp-tn
-					 (tn-offset old-fp)))))
+					 (tn-offset old-fp) 0 temp))))
 			      (:load-return-pc
 			       (sc-case return-pc
 				 (descriptor-reg
 				  (inst move return-pc-pass return-pc))
 				 (control-stack
 				  (loadw return-pc-pass cfp-tn
-					 (tn-offset return-pc)))))
+					 (tn-offset return-pc) 0 temp))))
 			      (:frob-nfp
 			       (inst add nsp-tn cur-nfp
 				     (- (bytes-needed-for-non-descriptor-stack-frame)
@@ -792,11 +830,11 @@ default-value-8
 		 `((sc-case name
 		     (descriptor-reg (move name-pass name))
 		     (control-stack
-		      (loadw name-pass cfp-tn (tn-offset name))
+		      (loadw name-pass cfp-tn (tn-offset name) 0 temp)
 		      (do-next-filler))
 		     (constant
 		      (loadw name-pass code-tn (tn-offset name)
-			     vm:other-pointer-type)
+			     vm:other-pointer-type temp)
 		      (do-next-filler)))
 		   (loadw function name-pass fdefn-raw-addr-slot
 			  other-pointer-type)
@@ -804,7 +842,7 @@ default-value-8
 		 `((sc-case arg-fun
 		     (descriptor-reg (move lexenv arg-fun))
 		     (control-stack
-		      (loadw lexenv cfp-tn (tn-offset arg-fun))
+		      (loadw lexenv cfp-tn (tn-offset arg-fun) 0 temp)
 		      (do-next-filler))
 		     (constant
 		      (loadw lexenv code-tn (tn-offset arg-fun)
