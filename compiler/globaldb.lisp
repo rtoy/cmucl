@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.13 1990/10/06 18:24:35 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.14 1990/10/11 17:35:18 ram Exp $
 ;;;
 ;;;    This file provides a functional interface to global information about
 ;;; named things in the system.  Information is considered to be global if it
@@ -1099,7 +1099,8 @@
 ;;; are implemented as structures.
 ;;;
 (define-info-type type kind (member :primitive :defined :structure nil)
-  (if (member name type-specifier-symbols)
+  (if (or (info type builtin name)
+	  (info type translator name))
       :primitive
       nil))
 
