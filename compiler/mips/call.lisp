@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.30 1990/09/21 00:50:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.31 1990/09/28 06:42:34 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -776,6 +776,8 @@ default-value-5
 		      (inst lw name-pass fp-tn
 			    (ash (tn-offset name) vm:word-shift))
 		      (do-next-filler))
+		     (random-immediate
+		      (load-symbol name-pass (tn-value name)))
 		     (constant
 		      (inst lw name-pass code-tn
 			    (- (ash (tn-offset name) vm:word-shift)
