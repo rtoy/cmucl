@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.54 1993/07/03 23:17:43 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.55 1993/07/23 13:46:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,15 +19,15 @@
 (with-compiler-log-file
     ("target:compile-lisp.log"
      :optimize '(optimize (speed 2) (space 2) (inhibit-warnings 2)
-			  (debug-info #-small 2 #+small .5)
+			  (debug #-small 2 #+small .5)
 			  (safety #-small 1 #+small 0))
      :optimize-interface '(optimize-interface (safety #-small 2 #+small 1)
-					      #+small (debug-info .5))
+					      #+small (debug .5))
      :context-declarations
      '(((:or :external (:and (:match "%") (:match "SET"))
 	     (:member lisp::%put lisp::%rplaca lisp::%rplacd lisp::%puthash))
-	(declare (optimize-interface (safety 2) #+small (debug-info 1))
-		 #+small (optimize (debug-info 1))))
+	(declare (optimize-interface (safety 2) #+small (debug 1))
+		 #+small (optimize (debug 1))))
        ((:or (:and :external :macro)
 	     (:match "$PARSE-"))
 	(declare (optimize (safety 2))))
