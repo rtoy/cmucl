@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.1 1992/06/12 03:59:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.2 1992/06/13 10:11:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,11 +67,35 @@
   (inst add res sign res))
 
 
-#+assembly
+#+assembler
 (define-assembly-routine
     (truncate)
-    ()
-  ...)
+    ((:arg dividend signed-reg nl0-offset)
+     (:arg divisor signed-reg nl1-offset)
+
+     (:res quo signed-reg nl2-offset)
+     (:res rem signed-reg nl3-offset))
+  
+  ;; Move abs(divident) into quo.
+  (inst move dividend quo :>=)
+  (inst sub zero-tn quo quo)
+  ;; Do one divive-step with -divisor to prime V  (use rem as a temp)
+  (inst sub zero-tn divisor rem)
+  (inst ds zero-tn rem zero-tn)
+  ;; Shift the divident/quotient one bit, setting the carry flag.
+  (inst add quo quo quo)
+  ;; The first real divive-step.
+  (inst ds zero-tn divisor rem)
+  (inst addc quo quo quo)
+  ;; And 31 more of them.
+  (dotimes (i 31)
+    (inst ds rem divisor rem)
+    (inst addc quo quo quo))
+  ;; Now we have to fix the signs of quo and rem.
+  (inst xor divisor dividend zero-tn :>=)
+  (inst sub zero-tn quo quo)
+  (inst move dividend zero-tn :>=)
+  (inst sub zero-tn rem rem))
 
 
 
