@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.3 1991/02/08 13:31:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.4 1991/02/14 22:50:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -129,7 +129,6 @@
   (and (typep char 'base-character)
        (let ((n (char-code (the base-character char))))
 	 (or (< 31 n 127)
-	     (= n 13)
 	     (= n 10)))))
 
 (defun %standard-char-p (thing)
