@@ -1200,7 +1200,7 @@
   (let ((*print-level* *error-print-level*)
 	(*print-length* *error-print-length*)
 	(*print-circle* t))
-    (format nil "  ~S~%")))
+    (format nil "  ~S~%" form)))
 
 
 ;;; FIND-ERROR-CONTEXT  --  Interface
