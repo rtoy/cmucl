@@ -11,71 +11,136 @@
 ;;;
 (in-package "C")
 
-(defstruct location)
-
-(defstruct (compiled-location (:include location))
-  ;;
-  ;; This variable's name and package, represented as strings.  This allows the
-  ;; debugger to recover the symbol without requiring the symbol to be created
-  ;; at load time.  Package-Name is NIL for gensyms.
-  (name nil :type simple-string)
-  (package-name nil :type (or simple-string null))
-  ;;
-  ;; The SC and offset, save SC and save offset encoded as bit-fields.  Also
-  ;; some sort of ID that makes the name/package unique.  All locations for the
-  ;; same var have the same ID.  A single variable will have multiple locations
-  ;; (in different functions) when it is closed over.
-  (bits0 0 :type fixnum)
-  (bits1 0 :type fixnum)
-  ;;
-  ;; The variable's type, represented as list-style type descriptor.
-  type)
-
-
-(defmacro compiled-location-offset (str)
-  `(ldb (byte 17 0) (compiled-location-bits0 ,str)))
-
-(defmacro compiled-location-sc (str)
-  `(ldb (byte 5 17) (compiled-location-bits0 ,str)))
-
-(defmacro compiled-location-save-sc (str)
-  `(ldb (byte 5 22) (compiled-location-bits0 ,str)))
-
-(defmacro compiled-location-save-offset (str)
-  `(ldb (byte 17 0) (compiled-location-bits1 ,str)))
-
-(defmacro compiled-location-id (str)
-  `(ldb (byte 10 17) (compiled-location-bits1 ,str)))
-
-
-(defstruct debug-block)
-
-;;; If a block has elsewhere (error) code, then there will be two debug-block
-;;; structures to represent it: one for the normal code and one for the
-;;; elsewhere code.
+
+;;;; SC-Offsets:
 ;;;
-;;; ### Actually, this should probably all be represented in some packed binary
-;;; form in an i-vector in the debug-function.
-;;;
-(defstruct (compiled-debug-block (:include debug-block))
-  ;;
-  ;; The PC that this block starts at.
-  (pc nil :type index)
-  ;;
-  ;; Alternating offsets into the DEBUG-FUNCTION's source map and PC
-  ;; increments, represented in some variable-length encoding.
-  (forms nil :type (simple-array ??? (*)))
-  ;;
-  ;; A bit-vector indicating which vars are live somewhere in this block.  This
-  ;; vector parallels the DEBUG-FUNCTION-VARIABLES, with a 1 for stored in each
-  ;; location that corresponds to a live variable.
-  (live-variables nil :type simple-bit-vector)
-  ;;
-  ;; If NIL, this block has no successor.  If an INDEX, the PC of this
-  ;; block's successor.  If a CONS, then the block's two successors are the CAR
-  ;; and CDR.
-  (successor nil :type (or null index cons)))
+;;;    We represent the place where some value is stored with a SC-OFFSET,
+;;; which is the SC number and offset encoded as an integer.
 
+(defconstant sc-offset-scn-byte (byte 5 0))
+(defconstant sc-offset-offset-byte (byte 22 5))
+(deftype sc-offset () '(unsigned-byte 27))
+
+(defmacro make-sc-offset (scn offset)
+  `(dpb ,scn sc-offset-scn-byte
+	(dpb ,offset sc-offset-offset-byte 0)))
+
+(defmacro sc-offset-scn (sco) `(ldb sc-offset-scn-byte ,sco))
+(defmacro sc-offset-offset (sco) `(ldb sc-offset-offset-byte ,sco))
+
+
+;;;; Variable length integers:
+;;;
+;;;    The debug info representation makes extensive use of integers encoded in
+;;; a byte vector using a variable number of bytes:
+;;;    0..253 => the integer
+;;;    254 => read next two bytes for integer
+;;;    255 => read next four bytes for integer
+
+;;; READ-VAR-INTEGER  --  Interface
+;;;
+;;;    Given a byte vector Vec and an index variable Index, read a variable
+;;; length integer and advance index.
+;;;
+(defmacro read-var-integer (vec index)
+  (once-only ((val `(aref ,vec ,index)))
+    `(cond ((<= ,val 253)
+	    (incf ,index)
+	    ,val)
+	   ((= ,val 254)
+	    (prog1
+		(logior (aref ,vec (+ ,index 1))
+			(ash (aref ,vec (+ ,index 2)) 8))
+	      (incf ,index 3)))
+	   (t
+	    (prog1
+		(logior (aref ,vec (+ ,index 1))
+			(ash (aref ,vec (+ ,index 2)) 8)
+	      		(ash (aref ,vec (+ ,index 3)) 16)
+	      		(ash (aref ,vec (+ ,index 4)) 24))
+	      (incf ,index 5))))))
+
+
+;;; WRITE-VAR-INTEGER  --  Interface
+;;;
+;;;    Takes an adjustable vector Vec with a fill pointer and pushes the
+;;; variable length representation of Int on the end.
+;;;
+(defun write-var-integer (int vec)
+  (declare (type (unsigned-byte 32) int))
+  (cond ((<= int 253)
+	 (vector-push-extend int vec))
+	(t
+	 (let ((32-p (<= int #xFFFF)))
+	   (vector-push-extend (if 32-p 255 254) vec)
+	   (vector-push-extend (ldb (byte 8 0) int) vec)
+	   (vector-push-extend (ldb (byte 8 8) int) vec)
+	   (when 32-p
+	     (vector-push-extend (ldb (byte 8 16) int) vec)
+	     (vector-push-extend (ldb (byte 8 24) int) vec)))))
+  (undefined-value))
+
+
+
+;;;; Packed strings:
+;;;
+;;;    A packed string is a variable length integer length followed by the
+;;; character codes.
+
+
+;;; READ-VAR-STRING  --  Interface
+;;;
+;;;    Read a packed string from Vec starting at Index, leaving advancing
+;;; Index.
+;;;
+(defmacro read-var-string (vec index)
+  (once-only ((len `(read-var-integer ,vec ,index))
+	      (res `(make-string ,len)))
+    `(progn
+       (%primitive byte-blt ,vec ,index ,res 0 ,len)
+       ,res)))
+
+
+;;; WRITE-VAR-STRING  --  Interface
+;;;
+;;;    Write String into Vec (adjustable, fill-pointer) represented as the
+;;; length (in a var-length integer) followed by the codes of the characters.
+;;;
+(defun write-var-string (string vec)
+  (declare (simple-string string))
+  (let ((len (length string)))
+    (write-var-integer len vec)
+    (dotimes (i len)
+      (vector-push-extend (code-char (schar string i)) vec)))
+  (undefined-value))
+
+
+;;;; Compiled debug locations:
+;;;
+;;;    Compiled debug locations are in a packed binary representation in the
+;;; DEBUG-FUNCTION-VARIABLES:
+;;;    single byte of boolean flags:
+;;;        uninterned name
+;;;	   packaged name
+;;;        environment-live
+;;;        has distinct save location
+;;;        has ID (name not unique in this fun)
+;;;    name length in bytes (as var-length integer)
+;;;    ...name bytes...
+;;;    [if packaged, var-length integer that is package name length]
+;;;     ...package name bytes...]
+;;;    [If has ID, ID as var-length integer]
+;;;    SC-Offset of primary location (as var-length integer)
+;;;    [If has save SC, SC-Offset of save location (as var-length integer)]
+
+(defconstant compiled-location-uninterned	#b00000001)
+(defconstant compiled-location-packaged		#b00000010)
+(defconstant compiled-location-environment-live	#b00000100)
+(defconstant compiled-location-save-loc-p	#b00001000)
+(defconstant compiled-location-id-p		#b00010000)
+
+
+;;;; Debug function:
 
 (defstruct debug-function)
 
@@ -88,10 +153,25 @@
   ;; The kind of function (same as FUNCTIONAL-KIND):
   (kind nil :type (member nil :optional :external :top-level :cleanup))
   ;;
-  ;; A vector of the Location structures for the variables that the argument
-  ;; values are stored in within this function.  The Locations are in the order
-  ;; that the arguments are actually passed in, but special marker symbols can
-  ;; be interspersed to indicate the orignal call syntax:
+  ;; A vector of the packed binary representation of variable locations in this
+  ;; function.  These are in alphabetical order by name.  This ordering is used
+  ;; in lifetime info to refer to variables: the first entry is 0, the second
+  ;; entry is 1, etc.  Variable numbers are *not* the byte index at which the
+  ;; representation of the location starts.  The entire vector must be parsed
+  ;; before function, alphabetically sorted by the NAME.  This slot may be NIL
+  ;; to save space.
+  (variables nil :type (or (simple-array (unsigned-byte 8) (*)) null))
+  ;;
+  ;; A vector of the packed binary representation of the COMPILED-DEBUG-BLOCKS
+  ;; in this function, in the order that the blocks were emitted.  The first
+  ;; block is the start of the function.  This slot may be NIL to save space.
+  (blocks nil :type (or (simple-array (unsigned-byte 8) (*)) null))
+  ;;
+  ;; A vector describing the variables that the argument values are stored in
+  ;; within this function.  The locations are represented by the ordinal number
+  ;; of the entry in the VARIABLES.  The locations are in the order that the
+  ;; arguments are actually passed in, but special marker symbols can be
+  ;; interspersed to indicate the orignal call syntax:
   ;;
   ;; DELETED
   ;;    There was an argument to the function in this position, but it was
@@ -114,31 +194,25 @@
   ;; This may be NIL to save space.
   (arguments nil :type (or simple-vector null))
   ;;
-  ;; A vector of the locations of all the variables in this function,
-  ;; alphabetically sorted by the NAME.  This may be NIL to save space.
-  (variables nil :type (or simple-vector null))
+  ;; There are three alternatives for this slot:
+  ;; 
+  ;; A vector
+  ;;    A vector of SC-OFFSETS describing the return locations.  The
+  ;;    vector element type is chosen to hold the largest element.
   ;;
-  ;; A vector of Locations describing the return locations, or :Standard if the
-  ;; function returns using the standard unknown-values convention.  This may
-  ;; be NIL to save space.  These locations only meaningful slots are OFFSET
-  ;; and SC.
-  (returns nil :type (or simple-vector (member :standard nil)))
+  ;; :Standard 
+  ;;    The function returns using the standard unknown-values convention.
   ;;
-  ;; A vector of all the DEBUG-BLOCKs in this function, in the order they were
-  ;; emitted.  The first block is the start of the function.  This may be NIL
-  ;; to save space.
-  (blocks nil :type (or simple-vector null))
+  ;; :Fixed
+  ;;    The function returns using the a fixed-values convention, but we
+  ;;    elected not to store a vector to save space.
+  (returns nil :type (or (simple-array * (*)) (member :standard :fixed)))
   ;;
-  ;; Register where the return PC and return CONT are kept, or NIL if they are
-  ;; kept on the stack in the standard location.
-  (return-pc nil :type (or (unsigned-byte 8) null))
-  (old-cont nil :type (or (unsigned-byte 8) null)))
+  ;; SC-Offsets describing where the return PC and return CONT are kept.
+  (return-pc nil :type sc-offset)
+  (old-cont nil :type sc-offset))
 
 
-;;; ### We may ultimately want a vector of the start positions of each source
-;;; form, since that would make it easier for the debugger to locate the
-;;; source.
-;;;
 (defstruct debug-source
   ;;
   ;; This slot indicates where the definition came from:
@@ -161,8 +235,11 @@
   ;; the total number of forms converted previously in this compilation.)
   (source-root 0 :type index)
   ;;
-  ;; The file-position of the first form read from this source (if applicable).
-  (start-position nil :type (or index null)))
+  ;; The file-positions of each truly top-level form read from this file (if
+  ;; applicable).  The vector element type will be chosen to hold the largest
+  ;; element.
+  (start-positions nil :type (or (simple-array * (*)) null)))
+
 
 (defstruct debug-info)
 
@@ -178,14 +255,14 @@
   ;; *** can backpatch the source info when compilation is complete.
   (source nil :type list)
   ;;
+  ;; The name of the package that DEBUG-FUNCTION-VARIABLES were dumped relative
+  ;; to.  Locations that aren't packaged are in this package.
+  (package nil :type simple-string)
+  ;;
   ;; A simple-vector of alternating Debug-Function structures and fixnum
   ;; PCs.  This is used to map PCs to functions, so that we can figure out
   ;; what function we were running in.  The function is valid between the PC
   ;; before it (inclusive) and the PC after it (exclusive).  The PCs are in
   ;; sorted order, so we can binary-search.  We omit the first and last PC,
-  ;; since their values are 0 and the length of the code vector.  Null only
-  ;; temporarily.
-  (function-map nil :type (or simple-vector null))
-  ;;
-  ;; Representation of the tree of source paths for code in this component.
-  (source-paths nil :type (or (simple-array (unsigned-byte 4) (*)) null)))
+  ;; since their values are 0 and the length of the code vector.
+  (function-map nil :type simple-vector))
