@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.2 1997/02/05 15:34:11 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.3 1997/02/10 15:45:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;; 
 
 (in-package :x86)
@@ -78,12 +79,14 @@
   (:args (x :target r :scs (any-reg)
 	    :load-if (not (and (sc-is x immediate-stack)
 			       (sc-is y any-reg)
+			       (sc-is r immediate-stack)
 			       (location= x r))))
 	 (y :scs (any-reg immediate-stack)))
   (:arg-types tagged-num tagged-num)
   (:results (r :scs (any-reg) :from (:argument 0)
 	       :load-if (not (and (sc-is x immediate-stack)
 				  (sc-is y any-reg)
+				  (sc-is r immediate-stack)
 				  (location= x r)))))
   (:result-types tagged-num)
   (:note "inline fixnum arithmetic"))
@@ -92,12 +95,14 @@
   (:args (x :target r :scs (unsigned-reg)
 	    :load-if (not (and (sc-is x unsigned-stack)
 			       (sc-is y unsigned-reg)
+			       (sc-is r unsigned-stack)
 			       (location= x r))))
 	 (y :scs (unsigned-reg unsigned-stack)))
   (:arg-types unsigned-num unsigned-num)
   (:results (r :scs (unsigned-reg) :from (:argument 0)
 	    :load-if (not (and (sc-is x unsigned-stack)
 			       (sc-is y unsigned-reg)
+			       (sc-is r unsigned-stack)
 			       (location= x r)))))
   (:result-types unsigned-num)
   (:note "inline (unsigned-byte 32) arithmetic"))
@@ -106,12 +111,14 @@
   (:args (x :target r :scs (signed-reg)
 	    :load-if (not (and (sc-is x signed-stack)
 			       (sc-is y signed-reg)
+			       (sc-is r signed-stack)
 			       (location= x r))))
 	 (y :scs (signed-reg signed-stack)))
   (:arg-types signed-num signed-num)
   (:results (r :scs (signed-reg) :from (:argument 0)
 	    :load-if (not (and (sc-is x signed-stack)
 			       (sc-is y signed-reg)
+			       (sc-is r signed-stack)
 			       (location= x r)))))
   (:result-types signed-num)
   (:note "inline (signed-byte 32) arithmetic"))
@@ -200,27 +207,27 @@
 ;;; register load, otherwise it uses add.
 (define-vop (fast-+/fixnum=>fixnum fast-safe-arith-op)
   (:translate +)
-  (:args (x :target r :scs (any-reg)
+  (:args (x :scs (any-reg) :target r
 	    :load-if (not (and (sc-is x immediate-stack)
 			       (sc-is y any-reg)
+			       (sc-is r immediate-stack)
 			       (location= x r))))
 	 (y :scs (any-reg immediate-stack)))
   (:arg-types tagged-num tagged-num)
   (:results (r :scs (any-reg) :from (:argument 0)
 	       :load-if (not (and (sc-is x immediate-stack)
 				  (sc-is y any-reg)
+				  (sc-is r immediate-stack)
 				  (location= x r)))))
   (:result-types tagged-num)
   (:note "inline fixnum arithmetic")
   (:generator 2
-    (if (and (sc-is x any-reg)
-	     (sc-is y any-reg)
-	     (sc-is r any-reg)
-	     (not (location= x r)))
-	(inst lea r (make-ea :dword :base x :index y :scale 1))
-      (progn
-	(move r x)
-	(inst add r y)))))
+    (cond ((and (sc-is x any-reg) (sc-is y any-reg) (sc-is r any-reg)
+		(not (location= x r)))
+	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
+	  (t
+	   (move r x)
+	   (inst add r y)))))
 
 (define-vop (fast-+-c/fixnum=>fixnum fast-safe-arith-op)
   (:translate +)
@@ -232,19 +239,18 @@
   (:result-types tagged-num)
   (:note "inline fixnum arithmetic")
   (:generator 1
-    (if (and (sc-is x any-reg)
-	     (sc-is r any-reg)
-	     (not (location= x r)))
-	(inst lea r (make-ea :dword :base x :disp (fixnum y)))
-      (progn
-	(move r x)
-	(inst add r (fixnum y))))))
+    (cond ((and (sc-is x any-reg) (sc-is r any-reg) (not (location= x r)))
+	   (inst lea r (make-ea :dword :base x :disp (fixnum y))))
+	  (t
+	   (move r x)
+	   (inst add r (fixnum y))))))
 
 (define-vop (fast-+/signed=>signed fast-safe-arith-op)
   (:translate +)
-  (:args (x :target r :scs (signed-reg)
+  (:args (x :scs (signed-reg) :target r
 	    :load-if (not (and (sc-is x signed-stack)
 			       (sc-is y signed-reg)
+			       (sc-is r signed-stack)
 			       (location= x r))))
 	 (y :scs (signed-reg signed-stack)))
   (:arg-types signed-num signed-num)
@@ -255,14 +261,12 @@
   (:result-types signed-num)
   (:note "inline (signed-byte 32) arithmetic")
   (:generator 5
-    (if (and (sc-is x signed-reg)
-	     (sc-is y signed-reg)
-	     (sc-is r signed-reg)
-	     (not (location= x r)))
-	(inst lea r (make-ea :dword :base x :index y :scale 1))
-      (progn
-	(move r x)
-	(inst add r y)))))
+    (cond ((and (sc-is x signed-reg) (sc-is y signed-reg) (sc-is r signed-reg)
+		(not (location= x r)))
+	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
+	  (t
+	   (move r x)
+	   (inst add r y)))))
 
 (define-vop (fast-+-c/signed=>signed fast-safe-arith-op)
   (:translate +)
@@ -274,37 +278,38 @@
   (:result-types signed-num)
   (:note "inline (signed-byte 32) arithmetic")
   (:generator 4
-    (if (and (sc-is x signed-reg)
-	     (sc-is r signed-reg)
-	     (not (location= x r)))
-	(inst lea r (make-ea :dword :base x :disp y))
-      (progn
-	(move r x)
-	(inst add r y)))))
+    (cond ((and (sc-is x signed-reg) (sc-is r signed-reg)
+		(not (location= x r)))
+	   (inst lea r (make-ea :dword :base x :disp y)))
+	  (t
+	   (move r x)
+	   (if (= y 1)
+	       (inst inc r)
+	     (inst add r y))))))
 
 (define-vop (fast-+/unsigned=>unsigned fast-safe-arith-op)
   (:translate +)
-  (:args (x :target r :scs (unsigned-reg)
+  (:args (x :scs (unsigned-reg) :target r
 	    :load-if (not (and (sc-is x unsigned-stack)
 			       (sc-is y unsigned-reg)
+			       (sc-is r unsigned-stack)
 			       (location= x r))))
 	 (y :scs (unsigned-reg unsigned-stack)))
   (:arg-types unsigned-num unsigned-num)
   (:results (r :scs (unsigned-reg) :from (:argument 0)
 	       :load-if (not (and (sc-is x unsigned-stack)
 				  (sc-is y unsigned-reg)
+				  (sc-is r unsigned-stack)
 				  (location= x r)))))
   (:result-types unsigned-num)
   (:note "inline (unsigned-byte 32) arithmetic")
   (:generator 5
-    (if (and (sc-is x unsigned-reg)
-	     (sc-is y unsigned-reg)
-	     (sc-is r unsigned-reg)
-	     (not (location= x r)))
-	(inst lea r (make-ea :dword :base x :index y :scale 1))
-      (progn
-	(move r x)
-	(inst add r y)))))
+    (cond ((and (sc-is x unsigned-reg) (sc-is y unsigned-reg)
+		(sc-is r unsigned-reg) (not (location= x r)))
+	   (inst lea r (make-ea :dword :base x :index y :scale 1)))
+	  (t
+	   (move r x)
+	   (inst add r y)))))
 
 (define-vop (fast-+-c/unsigned=>unsigned fast-safe-arith-op)
   (:translate +)
@@ -316,13 +321,14 @@
   (:result-types unsigned-num)
   (:note "inline (unsigned-byte 32) arithmetic")
   (:generator 4
-    (if (and (sc-is x unsigned-reg)
-	     (sc-is r unsigned-reg)
-	     (not (location= x r)))
-	(inst lea r (make-ea :dword :base x :disp y))
-      (progn
-	(move r x)
-	(inst add r y)))))
+    (cond ((and (sc-is x unsigned-reg) (sc-is r unsigned-reg)
+		(not (location= x r)))
+	   (inst lea r (make-ea :dword :base x :disp y)))
+	  (t
+	   (move r x)
+	   (if (= y 1)
+	       (inst inc r)
+	     (inst add r y))))))
 
 
 ;;;; Multiplication and division.
@@ -330,7 +336,7 @@
 (define-vop (fast-*/fixnum=>fixnum fast-safe-arith-op)
   (:translate *)
   ;; We need different loading characteristics.
-  (:args (x :scs (any-reg immediate-stack) :target r)
+  (:args (x :scs (any-reg) :target r)
 	 (y :scs (any-reg immediate-stack)))
   (:arg-types tagged-num tagged-num)
   (:results (r :scs (any-reg) :from (:argument 0)))
@@ -344,7 +350,7 @@
 (define-vop (fast-*/fixnum=>fixnum-c fast-safe-arith-op)
   (:translate *)
   ;; We need different loading characteristics.
-  (:args (x :target r :scs (any-reg immediate-stack)))
+  (:args (x :scs (any-reg immediate-stack)))
   (:info y)
   (:arg-types tagged-num (:constant (signed-byte 30)))
   (:results (r :scs (any-reg)))
@@ -356,7 +362,7 @@
 (define-vop (fast-*/signed=>signed fast-safe-arith-op)
   (:translate *)
   ;; We need different loading characteristics.
-  (:args (x :scs (signed-reg signed-stack) :target r)
+  (:args (x :scs (signed-reg) :target r)
 	 (y :scs (signed-reg signed-stack)))
   (:arg-types signed-num signed-num)
   (:results (r :scs (signed-reg) :from (:argument 0)))
@@ -369,7 +375,7 @@
 (define-vop (fast-*/signed=>signed-c fast-safe-arith-op)
   (:translate *)
   ;; We need different loading characteristics.
-  (:args (x :target r :scs (signed-reg signed-stack)))
+  (:args (x :scs (signed-reg signed-stack)))
   (:info y)
   (:arg-types signed-num (:constant (signed-byte 32)))
   (:results (r :scs (signed-reg)))
@@ -381,7 +387,7 @@
 
 (define-vop (fast-truncate/signed=>signed fast-safe-arith-op)
   (:translate truncate)
-  (:args (x :scs (signed-reg signed-stack) :target eax)
+  (:args (x :scs (signed-reg) :target eax)
 	 (y :scs (signed-reg signed-stack)))
   (:arg-types signed-num signed-num)
   (:temporary (:sc dword-reg :offset eax-offset :target quo
@@ -390,8 +396,8 @@
   (:temporary (:sc dword-reg :offset edx-offset :target rem
 		   :from (:argument 0) :to (:result 1))
 	      edx)
-  (:results (quo :scs (signed-reg signed-stack))
-	    (rem :scs (signed-reg signed-stack)))
+  (:results (quo :scs (signed-reg))
+	    (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
   (:note "inline (signed-byte 32) arithmetic")
   (:vop-var vop)
@@ -452,14 +458,16 @@
 		 :target result
 		 :load-if
 		 (not (and (sc-is number signed-stack unsigned-stack)
-				    (location= number result))))
+			   (sc-is result signed-stack unsigned-stack)
+			   (location= number result))))
 	 (amount :scs (unsigned-reg) :target ecx))
   (:arg-types (:or signed-num unsigned-num) positive-fixnum)
   (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (signed-reg unsigned-reg)
 		    :from (:argument 0)
 		    :load-if
-		    (not (and (sc-is result signed-stack unsigned-stack)
+		    (not (and (sc-is number signed-stack unsigned-stack)
+			      (sc-is result signed-stack unsigned-stack)
 			      (location= number result)))))
   (:result-types (:or signed-num unsigned-num))
   (:translate ash)
@@ -509,7 +517,7 @@
   (:translate integer-length)
   (:note "inline (signed-byte 32) integer-length")
   (:policy :fast-safe)
-  (:args (arg :scs (signed-reg signed-stack)))
+  (:args (arg :scs (signed-reg) :target res))
   (:arg-types signed-num)
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
@@ -625,21 +633,19 @@
   `(progn
      ,@(mapcar
 	#'(lambda (suffix cost signed)
-	    (unless (and (member suffix '(/fixnum -c/fixnum))
-			 (eq tran 'eql))
-	      `(define-vop (,(intern (format nil "~:@(FAST-IF-~A~A~)"
-					     tran suffix))
-			    ,(intern
-			      (format nil "~:@(FAST-CONDITIONAL~A~)"
-				      suffix)))
-		 (:translate ,tran)
-		 (:generator ,cost
-		   (inst cmp x
-			 ,(if (eq suffix '-c/fixnum) '(fixnum y) 'y))
-		   (inst jmp (if not-p
-				 ,(if signed not-cond not-unsigned)
-				 ,(if signed cond unsigned))
-			 target)))))
+	    `(define-vop (,(intern (format nil "~:@(FAST-IF-~A~A~)"
+					   tran suffix))
+			  ,(intern
+			    (format nil "~:@(FAST-CONDITIONAL~A~)"
+				    suffix)))
+	       (:translate ,tran)
+	       (:generator ,cost
+		 (inst cmp x
+		       ,(if (eq suffix '-c/fixnum) '(fixnum y) 'y))
+		 (inst jmp (if not-p
+			       ,(if signed not-cond not-unsigned)
+			     ,(if signed cond unsigned))
+		       target))))
 	'(/fixnum -c/fixnum /signed -c/signed /unsigned -c/unsigned)
 	'(4 3 6 5 6 5)
 	'(t t t t nil nil))))
@@ -648,7 +654,35 @@
 
 (define-conditional-vop > :g :a :le :be)
 
-(define-conditional-vop eql :e :e :ne :ne)
+(define-vop (fast-if-eql/signed fast-conditional/signed)
+  (:translate eql)
+  (:generator 6
+    (inst cmp x y)
+    (inst jmp (if not-p :ne :e) target)))
+
+(define-vop (fast-if-eql-c/signed fast-conditional-c/signed)
+  (:translate eql)
+  (:generator 5
+    (cond ((and (sc-is x signed-reg) (zerop y))
+	   (inst test x x))  ; Smaller instruction
+	  (t
+	   (inst cmp x y)))
+    (inst jmp (if not-p :ne :e) target)))
+
+(define-vop (fast-if-eql/unsigned fast-conditional/unsigned)
+  (:translate eql)
+  (:generator 6
+    (inst cmp x y)
+    (inst jmp (if not-p :ne :e) target)))
+
+(define-vop (fast-if-eql-c/unsigned fast-conditional-c/unsigned)
+  (:translate eql)
+  (:generator 5
+    (cond ((and (sc-is x unsigned-reg) (zerop y))
+	   (inst test x x))  ; Smaller instruction
+	  (t
+	   (inst cmp x y)))
+    (inst jmp (if not-p :ne :e) target)))
 
 ;;; EQL/FIXNUM is funny because the first arg can be of any type, not just a
 ;;; known fixnum.
@@ -673,7 +707,9 @@
     (inst jmp (if not-p :ne :e) target)))
 ;;;
 (define-vop (generic-eql/fixnum fast-eql/fixnum)
-  (:args (x :scs (any-reg descriptor-reg))
+  (:args (x :scs (any-reg descriptor-reg)
+	    :load-if (not (and (sc-is x descriptor-stack)
+			       (sc-is y any-reg))))
 	 (y :scs (any-reg immediate-stack)))
   (:arg-types * tagged-num)
   (:variant-cost 7))
@@ -684,7 +720,10 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 2
-    (inst cmp x (fixnum y))
+    (cond ((and (sc-is x any-reg) (zerop y))
+	   (inst test x x))  ; Smaller instruction
+	  (t
+	   (inst cmp x (fixnum y))))
     (inst jmp (if not-p :ne :e) target)))
 ;;;
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
@@ -713,14 +752,17 @@
 (define-vop (32bit-logical)
   (:args (x :scs (unsigned-reg) :target r
 	    :load-if (not (and (sc-is x unsigned-stack)
+			       (sc-is r unsigned-stack)
 			       (location= x r))))
 	 (y :scs (unsigned-reg)
 	    :load-if (or (not (sc-is y unsigned-stack))
 			 (and (sc-is x unsigned-stack)
+			      (sc-is y unsigned-stack)
 			      (location= x r)))))
   (:arg-types unsigned-num unsigned-num)
   (:results (r :scs (unsigned-reg)  :from (:argument 0)
 	       :load-if (not (and (sc-is x unsigned-stack)
+				  (sc-is r unsigned-stack)
 				  (location= x r)))))
   (:result-types unsigned-num)
   (:policy :fast-safe))
@@ -729,10 +771,12 @@
   (:translate 32bit-logical-not)
   (:args (x :scs (unsigned-reg) :target r
 	    :load-if (not (and (sc-is x unsigned-stack)
+			       (sc-is r unsigned-stack)
 			       (location= x r)))))
   (:arg-types unsigned-num)
   (:results (r :scs (unsigned-reg)
 	       :load-if (not (and (sc-is x unsigned-stack)
+				  (sc-is r unsigned-stack)
 				  (location= x r)))))
   (:result-types unsigned-num)
   (:policy :fast-safe)
@@ -780,7 +824,6 @@
   `(32bit-logical-and ,x (32bit-logical-not ,y)))
 
 ;;; Only the lower 5 bits of the shift amount are significant.
-
 (define-vop (shift-towards-someplace)
   (:policy :fast-safe)
   (:args (num :scs (unsigned-reg) :target r)
@@ -883,7 +926,7 @@
 (define-vop (bignum-mult-and-add-3-arg)
   (:translate bignum::%multiply-and-add)
   (:policy :fast-safe)
-  (:args (x :scs (unsigned-reg unsigned-stack) :target eax)
+  (:args (x :scs (unsigned-reg) :target eax)
 	 (y :scs (unsigned-reg unsigned-stack))
 	 (carry-in :scs (unsigned-reg unsigned-stack)))
   (:arg-types unsigned-num unsigned-num unsigned-num)
@@ -891,8 +934,8 @@
 		   :to (:result 1) :target lo) eax)
   (:temporary (:sc unsigned-reg :offset edx-offset :from (:argument 1)
 		   :to (:result 0) :target hi) edx)
-  (:results (hi :scs (unsigned-reg unsigned-stack))
-	    (lo :scs (unsigned-reg unsigned-stack)))
+  (:results (hi :scs (unsigned-reg))
+	    (lo :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:generator 20
     (move eax x)
@@ -905,7 +948,7 @@
 (define-vop (bignum-mult-and-add-4-arg)
   (:translate bignum::%multiply-and-add)
   (:policy :fast-safe)
-  (:args (x :scs (unsigned-reg unsigned-stack) :target eax)
+  (:args (x :scs (unsigned-reg) :target eax)
 	 (y :scs (unsigned-reg unsigned-stack))
 	 (prev :scs (unsigned-reg unsigned-stack))
 	 (carry-in :scs (unsigned-reg unsigned-stack)))
@@ -914,8 +957,8 @@
 		   :to (:result 1) :target lo) eax)
   (:temporary (:sc unsigned-reg :offset edx-offset :from (:argument 1)
 		   :to (:result 0) :target hi) edx)
-  (:results (hi :scs (unsigned-reg unsigned-stack))
-	    (lo :scs (unsigned-reg unsigned-stack)))
+  (:results (hi :scs (unsigned-reg))
+	    (lo :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:generator 20
     (move eax x)
@@ -931,15 +974,15 @@
 (define-vop (bignum-mult)
   (:translate bignum::%multiply)
   (:policy :fast-safe)
-  (:args (x :scs (unsigned-reg unsigned-stack) :target eax)
+  (:args (x :scs (unsigned-reg) :target eax)
 	 (y :scs (unsigned-reg unsigned-stack)))
   (:arg-types unsigned-num unsigned-num)
   (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 0)
 		   :to (:result 1) :target lo) eax)
   (:temporary (:sc unsigned-reg :offset edx-offset :from (:argument 1)
 		   :to (:result 0) :target hi) edx)
-  (:results (hi :scs (unsigned-reg unsigned-stack))
-	    (lo :scs (unsigned-reg unsigned-stack)))
+  (:results (hi :scs (unsigned-reg))
+	    (lo :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:generator 20
     (move eax x)
@@ -965,7 +1008,9 @@
   (:args (fixnum :scs (any-reg immediate-stack) :target digit))
   (:arg-types tagged-num)
   (:results (digit :scs (unsigned-reg)
-		   :load-if (not (location= fixnum digit))))
+		   :load-if (not (and (sc-is fixnum immediate-stack)
+				      (sc-is digit unsigned-stack)
+				      (location= fixnum digit)))))
   (:result-types unsigned-num)
   (:generator 1
     (move digit fixnum)
@@ -974,16 +1019,16 @@
 (define-vop (bignum-floor)
   (:translate bignum::%floor)
   (:policy :fast-safe)
-  (:args (div-high :scs (unsigned-reg unsigned-stack) :target edx)
-	 (div-low :scs (unsigned-reg unsigned-stack) :target eax)
+  (:args (div-high :scs (unsigned-reg) :target edx)
+	 (div-low :scs (unsigned-reg) :target eax)
 	 (divisor :scs (unsigned-reg unsigned-stack)))
   (:arg-types unsigned-num unsigned-num unsigned-num)
   (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 1)
 		   :to (:result 0) :target quo) eax)
   (:temporary (:sc unsigned-reg :offset edx-offset :from (:argument 0)
 		   :to (:result 1) :target rem) edx)
-  (:results (quo :scs (unsigned-reg unsigned-stack))
-	    (rem :scs (unsigned-reg unsigned-stack)))
+  (:results (quo :scs (unsigned-reg))
+	    (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
   (:generator 300
     (move edx div-high)
@@ -998,7 +1043,8 @@
   (:args (digit :scs (unsigned-reg unsigned-stack) :target res))
   (:arg-types unsigned-num)
   (:results (res :scs (any-reg signed-reg)
-		 :load-if (not (and (sc-is res immediate-stack signed-stack)
+		 :load-if (not (and (sc-is digit unsigned-stack)
+				    (sc-is res immediate-stack signed-stack)
 				    (location= digit res)))))
   (:result-types signed-num)
   (:generator 1
@@ -1010,7 +1056,7 @@
   (:translate bignum::%ashr)
   (:policy :fast-safe)
   (:args (digit :scs (unsigned-reg unsigned-stack) :target result)
-	 (count :scs (unsigned-reg unsigned-stack) :target ecx))
+	 (count :scs (unsigned-reg) :target ecx))
   (:arg-types unsigned-num positive-fixnum)
   (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (unsigned-reg) :from (:argument 0)
