@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.21 1993/05/18 23:24:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.22 1993/05/19 11:16:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,10 +60,12 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp accum non-descriptor-reg nl0-offset)
 			  (:temp data non-descriptor-reg nl1-offset)
-			  (:temp byte non-descriptor-reg nl2-offset))
+			  (:temp byte non-descriptor-reg nl2-offset)
+			  #-gengc
+			  (:temp retaddr non-descriptor-reg nl3-offset))
 
   ;; These are needed after we jump into sxhash-simple-substring.
-  (progn result lip accum data byte)
+  (progn result lip accum data byte #-gengc retaddr)
 
   (inst j (make-fixup 'sxhash-simple-substring :assembly-routine))
   (loadw length string vector-length-slot other-pointer-type))
@@ -80,7 +82,13 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp accum non-descriptor-reg nl0-offset)
 			  (:temp data non-descriptor-reg nl1-offset)
-			  (:temp byte non-descriptor-reg nl2-offset))
+			  (:temp byte non-descriptor-reg nl2-offset)
+			  #-gengc
+			  (:temp retaddr non-descriptor-reg nl3-offset))
+
+  ;; Save the return address
+  #-gengc (inst subu retaddr lip code-tn)
+
   ;; Get a pointer to the data.
   (inst addu lip string
 	(- (* vector-data-offset word-bytes) other-pointer-type))
@@ -159,4 +167,7 @@
   done
 
   (inst sll result accum 5)
-  (inst srl result result 3))
+  (inst srl result result 3)
+
+  ;; Restore the return address.
+  #-gengc (inst addu lip code-tn retaddr))
