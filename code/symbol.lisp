@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.25 1998/03/26 21:38:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.26 1998/03/30 03:25:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,15 +186,16 @@
 
 (defun copy-symbol (symbol &optional (copy-props nil) &aux new-symbol)
   "Make and return a new uninterned symbol with the same print name
-  as SYMBOL.  If COPY-PROPS is null, the new symbol is neither bound
-   nor fbound and  has has no properties.
-  Else, it has a copy of SYMBOL's function, value and property list."
+  as SYMBOL.  If COPY-PROPS is false, the new symbol is neither bound
+  nor fbound and has no properties, else it has a copy of SYMBOL's
+  function, value and property list."
   (declare (type symbol symbol))
   (setq new-symbol (make-symbol (symbol-name symbol)))
   (when copy-props
-    (setf (symbol-value new-symbol) (symbol-value symbol)
-	  (symbol-plist new-symbol) (copy-list (symbol-plist symbol))
-	  (symbol-function new-symbol)(symbol-function symbol)))
+    (%set-symbol-value new-symbol (%primitive fast-symbol-value symbol))
+    (setf (symbol-plist new-symbol) (copy-list (symbol-plist symbol)))
+    (when (fboundp symbol)
+      (setf (symbol-function new-symbol) (symbol-function symbol))))
   new-symbol)
 
 (proclaim '(special *keyword-package*))
@@ -215,9 +216,9 @@
   "Creates a new uninterned symbol whose name is a prefix string (defaults
    to \"G\"), followed by a decimal number.  Thing, when supplied, will
    alter the prefix if it is a string, or be used for the decimal number
-   if it is a number, of this symbol.
-   The default value of the number is the current value of *gensym-counter*
-   which is incremented each time it is used."
+   if it is a number, of this symbol. The default value of the number is
+   the current value of *gensym-counter* which is incremented each time
+   it is used."
   (let ((old *gensym-counter*))
     (unless (numberp thing)
       (let ((new (etypecase old
