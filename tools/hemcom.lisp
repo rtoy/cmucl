@@ -1,3 +1,11 @@
+;;; -*- Package: USER -*-
+;;;
+;;; **********************************************************************
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemcom.lisp,v 1.9 1999/01/09 11:05:20 dtc Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; This file compiles all of Hemlock.
 ;;;

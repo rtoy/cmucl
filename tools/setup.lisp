@@ -1,5 +1,12 @@
 ;;; -*- Package: USER -*-
 ;;;
+;;; **********************************************************************
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.29 1999/01/09 11:05:20 dtc Exp $")
+;;;
+;;; **********************************************************************
+;;;
 ;;;    Set up package environment and search lists for compiler.  Also some
 ;;; compilation utilities.
 ;;;
