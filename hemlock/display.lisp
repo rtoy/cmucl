@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.3 1991/03/13 23:22:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.4 1991/03/15 13:37:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,17 +50,22 @@
 (defmacro redisplay-loop ((win-var) general-form current-window-form
 			  &optional (afterp t))
   (let ((device (gensym)) (point (gensym)) (hunk (gensym)))
-    `(progn
+    `(catch 'redisplay-catcher
+       (when (listen-editor-input *real-editor-input*)
+	 (throw 'redisplay-catcher nil))
        ,current-window-form
        (dolist (,win-var *window-list*)
-	 (unless (eq ,win-var *current-window*) ,general-form))
+	 (unless (eq ,win-var *current-window*)
+	   (when (listen-editor-input *real-editor-input*)
+	     (throw 'redisplay-catcher nil))
+	   ,general-form))
        (let* ((,hunk (window-hunk *current-window*))
 	      (,device (device-hunk-device ,hunk))
 	      (,point (window-point *current-window*)))
 	 (move-mark ,point (buffer-point (window-buffer *current-window*)))
 	 (multiple-value-bind (x y) (mark-to-cursorpos ,point *current-window*)
-	   (unless x (error "??? Cursor not on the screen ???"))
-	   (funcall (device-put-cursor ,device) ,hunk x y))
+	   (when x
+	     (funcall (device-put-cursor ,device) ,hunk x y)))
 	 (when (device-force-output ,device)
 	   (funcall (device-force-output ,device)))
 	 ,@(if afterp
@@ -88,10 +93,9 @@
 	 (setq *screen-image-trashed* nil)
 	 (redisplay-all))
 	(t
-	 (catch 'redisplay-catcher
-	   (redisplay-loop (w)
-	     (redisplay-window w)
-	     (redisplay-window-recentering *current-window*))))))
+	 (redisplay-loop (w)
+	   (redisplay-window w)
+	   (redisplay-window-recentering *current-window*)))))
 
 
 ;;; REDISPLAY-ALL  --  Public
@@ -137,11 +141,10 @@
 	 (setq *screen-image-trashed* nil)
 	 (redisplay-all))
 	(t
-	 (catch 'redisplay-catcher
-	   (redisplay-loop (w)
-	     (redisplay-window w)
-	     (redisplay-window-recentering *current-window*)
-	     nil)))))
+	 (redisplay-loop (w)
+	   (redisplay-window w)
+	   (redisplay-window-recentering *current-window*)
+	   nil))))
 
 ;;; REDISPLAY-WINDOWS-FROM-MARK is called from the hemlock-output-stream
 ;;; methods to bring the screen up to date.  It only redisplays windows which
