@@ -2,7 +2,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.12 2002/10/11 15:15:03 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.13 2002/10/19 13:27:41 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -656,7 +656,17 @@
 (defgeneric (setf class-slot-value) (nv class slot-name))
 ;          (t std-class t)
 
-(defgeneric compute-effective-method (generic-function combin applicable-methods))
+;;;
+;;; According to AMOP, COMPUTE-EFFECTIVE-METHOD should return two
+;;; values.  Alas, the second value is only vaguely described in AMOP,
+;;; and, when asked on 2002-10-18, Gregor Kiczales said he couldn't
+;;; remember what the second value was supposed to be.  So, PCL's
+;;; COMPUTE-EFFECTIVE-METHOD returns one value as do Allegro and
+;;; Lispworks.
+;;;
+
+(defgeneric compute-effective-method
+    (generic-function combin applicable-methods))
 ;          (generic-function long-method-combination t)
 ;          (generic-function short-method-combination t)
 ;          (generic-function standard-method-combination t)
