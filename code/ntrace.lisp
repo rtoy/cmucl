@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.25 2003/05/23 13:34:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.26 2003/06/12 09:24:03 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,6 +47,7 @@
     "LOOP"
     "PRETTY-PRINT"
     "SYSTEM"
+    "COMPILER"
     "TRACE")
   "List of package names.  Encapsulate functions from these packages
    by default.  This should at least include the packages of functions
