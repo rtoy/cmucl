@@ -8,24 +8,24 @@
 (progn
   (ext:gc-off)
 
-  (load "ncode:fdefinition" :verbose t)
+  (load "code:fdefinition" :verbose t)
   (load "c:globaldb" :verbose t)
   (globaldb-init)
 
   (load "c:patch" :verbose t)
-  (load "ncode:macros" :verbose t)
-  (load "ncode:struct" :verbose t)
+  (load "code:macros" :verbose t)
+  (load "code:struct" :verbose t)
   (load "c:proclaim" :verbose t)
-  (load "ncode:extensions" :verbose t)
-  (load "ncode:defmacro" :verbose t)
-  (load "ncode:sysmacs" :verbose t)
-  (load "ncode:defrecord" :verbose t)
-  (load "ncode:error" :verbose t)
-  (load "ncode:debug-info" :verbose t)
-  (load "ncode:defstruct" :verbose t)
-  (load "ncode:c-call" :verbose t)
-  (load "ncode:salterror" :verbose t)
-  (load "ncode:machdef" :verbose t)
+  (load "code:extensions" :verbose t)
+  (load "code:defmacro" :verbose t)
+  (load "code:sysmacs" :verbose t)
+  (load "code:defrecord" :verbose t)
+  (load "code:error" :verbose t)
+  (load "code:debug-info" :verbose t)
+  (load "code:defstruct" :verbose t)
+  (load "code:c-call" :verbose t)
+  (load "code:salterror" :verbose t)
+  (load "code:machdef" :verbose t)
 
   (load "c:boot-globaldb" :verbose t))
 
@@ -74,7 +74,7 @@
 (load "c:debug-dump" :verbose t)
 
 #-new-compiler
-(load "ncode:alieneval" :verbose t)
+(load "code:alieneval" :verbose t)
 
 #+rt-target(progn
 #-new-compiler
@@ -82,7 +82,7 @@
 			  (format t "~%~A~%Continuing...~%" condition)
 			  (continue))))
   (progn
-    (load "ncode:constants" :verbose t)
+    (load "code:constants" :verbose t)
     (load "assem:rompconst" :verbose t)))
 
 #-new-compiler
