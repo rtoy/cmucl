@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.37 1991/12/16 10:09:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.38 1991/12/20 20:47:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,7 +190,8 @@
     (unless (eq node-type rtype)
       (let ((int (values-type-intersection node-type rtype)))
 	(when (type/= node-type int)
-	  (when (and (eq int *empty-type*)
+	  (when (and *check-consistency*
+		     (eq int *empty-type*)
 		     (not (eq rtype *empty-type*)))
 	    (let ((*compiler-error-context* node))
 	      (compiler-warning
