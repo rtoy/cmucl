@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.33 2003/04/30 15:41:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.34 2003/05/14 13:37:06 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -833,21 +833,22 @@ this, the functions are listed.  If NIL, then always list the functions.")
 			   (float quick-time-units-per-second)
 			   (float timer-overhead-iterations))))))
     (frob *call-overhead*)
-    
-    (unwind-protect
-	(progn
-	  (profile compute-time-overhead-aux)
-	  (frob *total-profile-overhead*)
-	  (decf *total-profile-overhead* *call-overhead*)
-	  (let ((pinfo (profile-info-or-lose 'compute-time-overhead-aux)))
-	    (multiple-value-bind (calls time)
-				 (funcall (profile-info-read-time pinfo))
-	      (declare (ignore calls))
-	      (setq *internal-profile-overhead*
-		    (/ (float time)
-		       (float quick-time-units-per-second)
-		       (float timer-overhead-iterations))))))
-      (unprofile compute-time-overhead-aux))))
+
+    (without-package-locks
+     (unwind-protect
+	  (progn
+	    (profile compute-time-overhead-aux)
+	    (frob *total-profile-overhead*)
+	    (decf *total-profile-overhead* *call-overhead*)
+	    (let ((pinfo (profile-info-or-lose 'compute-time-overhead-aux)))
+	      (multiple-value-bind (calls time)
+		  (funcall (profile-info-read-time pinfo))
+		(declare (ignore calls))
+		(setq *internal-profile-overhead*
+		      (/ (float time)
+			 (float quick-time-units-per-second)
+			 (float timer-overhead-iterations))))))
+       (unprofile compute-time-overhead-aux)))))
 
 #+cmu
 (pushnew #'(lambda ()
