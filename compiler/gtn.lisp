@@ -39,10 +39,11 @@
 ;;;
 ;;;    We have to allocate the home TNs for variables before we can call
 ;;; Assign-IR2-Environment so that we can close over TNs that haven't had their
-;;; home environment assigned yet.  Let-P indicates whether this variable is
-;;; for a let or a "real argument".  In the latter case, we allocate the TNs
-;;; environment-live unless SPEED is 3 so that the values are always available
-;;; in the debugger.
+;;; home environment assigned yet.  Here we evaluate the DEBUG-INFO/SPEED
+;;; tradeoff to determine how variables are allocated.  If SPEED is 3, then all
+;;; variables are subject to lifetime analysis.  Otherwise, only Let-P
+;;; variables are allocated normally, and that can be inhibited by
+;;; DEBUG-INFO = 3.
 ;;;
 (defun assign-lambda-var-tns (fun let-p)
   (declare (type clambda fun))
@@ -52,10 +53,12 @@
 		       *any-primitive-type*
 		       (primitive-type (leaf-type var))))
 	     (temp (make-normal-tn type))
-	     (res (if (or let-p
-			  (policy (lambda-bind fun) (= speed 3)))
+	     (node (lambda-bind fun))
+	     (res (if (or (and let-p (policy node (< debug 3)))
+			  (policy node (= speed 3)))
 		      temp
-		      (environment-live-tn temp (lambda-environment fun)))))
+		      (environment-debug-live-tn temp
+						 (lambda-environment fun)))))
 	(setf (tn-leaf res) var)
 	(setf (leaf-info var) res))))
   (undefined-value))
@@ -63,28 +66,13 @@
 
 ;;; Assign-IR2-Environment  --  Internal
 ;;;
-;;;    Give an IR2-Environment structure to Fun.  We allocate TNs for argument
-;;; passing locations at this point.  XEPs differ in that the argument passing
-;;; locations are wired and there are no implicit environment arguments.
+;;;    Give an IR2-Environment structure to Fun.  We make the TNs which hold
+;;; environment values and the old-FP/return-PC.
 ;;;
 (defun assign-ir2-environment (fun)
   (declare (type clambda fun))
-  (let ((env (lambda-environment fun))
-	(xep-p (external-entry-point-p fun)))
-    (collect ((args)
-	      (env))
-      
-      (do ((vars (lambda-vars fun) (rest vars))
-	   (i -1 (1+ i)))
-	  ((null vars))
-	(let ((var (first vars)))
-	  (when (leaf-refs var)
-	    (args (if xep-p
-		      (if (minusp i)
-			  (make-argument-count-location)
-			  (standard-argument-location i))
-		      (make-normal-tn (primitive-type (leaf-type var))))))))
-      
+  (let ((env (lambda-environment fun)))
+    (collect ((env))
       (dolist (thing (environment-closure env))
 	(let ((ptype (etypecase thing
 		       (lambda-var
@@ -92,15 +80,12 @@
 			    *any-primitive-type*
 			    (primitive-type (leaf-type thing))))
 		       (nlx-info *any-primitive-type*))))
-	  (unless xep-p 
-	    (args (make-normal-tn ptype)))
 	  (env (cons thing (make-normal-tn ptype)))))
 
-      (let ((res 
-	     (make-ir2-environment
-	      :arg-locs (args)  :environment (env)
-	      :old-fp-pass (make-old-fp-passing-location xep-p)
-	      :return-pc-pass (make-return-pc-passing-location xep-p))))
+      (let ((res (make-ir2-environment
+		  :environment (env)
+		  :return-pc-pass (make-return-pc-passing-location
+				   (external-entry-point-p fun)))))
 	(setf (environment-info env) res)
 	(setf (ir2-environment-old-fp res)
 	      (make-old-fp-save-location env))
