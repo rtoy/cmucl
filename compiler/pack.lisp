@@ -44,10 +44,7 @@
     (cond
      ((eq kind :component)
       (let ((loc-live (svref (finite-sb-always-live sb) offset)))
-	(dotimes (i (ir2-block-number
-		     (block-info
-		      (component-tail *compile-component*)))
-		    nil)
+	(dotimes (i (ir2-block-count *compile-component*) nil)
 	  (when (/= (sbit loc-live i) 0)
 	    (return t)))))
      ((eq kind :environment)
@@ -119,10 +116,7 @@
 	     (loc-live (svref (finite-sb-always-live sb) this-offset)))
 	(cond
 	 ((eq kind :component)
-	  (dotimes (num (ir2-block-number
-			 (block-info
-			  (component-tail *compile-component*)))
-			nil)
+	  (dotimes (num (ir2-block-count *compile-component*) nil)
 	    (setf (sbit loc-live num) 1)
 	    (set-bit-vector (svref loc-confs num))))
 	 ((eq kind :environment)
