@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.16 1990/02/27 00:03:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.17 1990/03/05 20:47:44 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -436,30 +436,17 @@
 
 
 (define-vop (unbind)
-  (:args (num-arg :scs (any-reg descriptor-reg) :target num))
-  (:temporary (:scs (any-reg) :type fixnum :from (:argument 0)) num)
   (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
-    (let ((done (gen-label))
-	  (skip (gen-label))
-	  (loop (gen-label)))
-      (move num num-arg)
-      (inst beq num zero-tn done)
-      (nop)
-
-      (emit-label loop)
-
+    (let ((skip (gen-label)))
       (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
       (inst beq symbol zero-tn skip)
       (loadw value bsp-tn (- binding-symbol-slot binding-size))
       (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
       (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
-      (emit-label skip)
-      (inst addiu num num (fixnum -1))
-      (inst bne num zero-tn loop)
-      (inst addiu bsp-tn bsp-tn (* -2 vm:word-bytes))
 
-      (emit-label done))))
+      (emit-label skip)
+      (inst addiu bsp-tn bsp-tn (* -2 vm:word-bytes)))))
       
 
 
