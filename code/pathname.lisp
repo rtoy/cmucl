@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.54 2001/12/10 23:02:43 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.55 2002/02/19 15:51:11 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -573,7 +573,10 @@
 	 (or (%pathname-type pathname)
 	     (maybe-diddle-case (%pathname-type defaults)
 				diddle-case))
-	 (or (%pathname-version pathname)
+	 (or (if (null (%pathname-name pathname))
+		 (or (%pathname-version pathname)
+		     (%pathname-version defaults))
+		 (%pathname-version pathname))
 	     default-version))))))
 
 ;;; IMPORT-DIRECTORY -- Internal
