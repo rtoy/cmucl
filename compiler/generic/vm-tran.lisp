@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.13 1990/06/16 15:35:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.14 1990/06/17 22:27:58 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -19,8 +19,8 @@
 ;;; whichever predicate was defined last when there are multiple predicates for
 ;;; equivalent types.
 ;;;
-(def-source-transform single-float-p (x) `(short-float-p ,x))
-(def-source-transform double-float-p (x) `(long-float-p ,x))
+(def-source-transform short-float-p (x) `(single-float-p ,x))
+(def-source-transform long-float-p (x) `(double-float-p ,x))
 
 (def-source-transform structurep (x)
   (once-only ((n-x x))
