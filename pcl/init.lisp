@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.16 2003/03/26 17:15:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.17 2003/04/23 15:12:14 gerd Exp $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
@@ -185,7 +185,9 @@
 	(if plist-p
 	    (unless (getf initargs :allow-other-keys)
 	      (doplist (key val) initargs
-	        (unless (memq key legal)
+	        (unless (or (memq key legal)
+			    ;; :ALLOW-OTHER-KEYS NIL
+			    (eq key :allow-other-keys))
 		  (push key invalid-keys))))
 	    (unless (memq :allow-other-keys initargs)
 	      (dolist (key initargs)
