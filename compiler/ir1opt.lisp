@@ -340,6 +340,11 @@
 	(creturn
 	 (setf (node-reoptimize node) t)
 	 (ir1-optimize-return node))
+	(mv-combination
+	 (when (and (eq (basic-combination-kind node) :local)
+		    (continuation-reoptimize
+		     (first (basic-combination-args node))))
+	   (ir1-optimize-mv-bind node)))
 	(exit
 	 (let ((value (exit-value node)))
 	   (when value
@@ -944,8 +949,7 @@
 ;;; a PROPAGATE-TO-REFS with this type.
 ;;;
 (defun propagate-from-sets (var type)
-  (collect ((res *empty-type* type-union))
-    (res type)
+  (collect ((res type type-union))
     (dolist (set (basic-var-sets var))
       (res (continuation-type (set-value set)))
       (setf (node-reoptimize set) nil))
@@ -1063,6 +1067,30 @@
 		  (propagate-to-refs var type)))
 	    vars union)))
   
+  (undefined-value))
+
+
+;;; IR1-OPTIMIZE-MV-BIND  --  Internal
+;;;
+;;;    Propagate derived type info from the values continuation to the vars.
+;;;
+(defun ir1-optimize-mv-bind (node)
+  (declare (type mv-combination node))
+  (let ((arg (first (basic-combination-args node)))
+	(vars (lambda-vars (combination-lambda node))))
+    (multiple-value-bind (types nvals)
+			 (values-types (continuation-derived-type arg))
+      (unless (eq nvals :unknown)
+	(mapc #'(lambda (var type)
+		  (if (basic-var-sets var)
+		      (propagate-from-sets var type)
+		      (propagate-to-refs var type)))
+		vars
+		(append types
+			(make-list (max (- (length vars) nvals) 0)
+				   :initial-element *null-type*)))))
+
+    (setf (continuation-reoptimize arg) nil))
   (undefined-value))
 
 
