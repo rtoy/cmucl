@@ -7,66 +7,62 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; Spice Lisp Debugger.
+;;; CMU Common Lisp Debugger.  This is a very basic command-line oriented
+;;; debugger.
 ;;;
-;;; Written by Steve Handerson
-;;; Pages 6 through 9 rewritten by Bill Chiles.
+;;; Written by Bill Chiles.
 ;;;
-;;; **********************************************************************
-;;;
-(in-package "DEBUG" :use '("LISP" "SYSTEM"))
 
+(in-package "DEBUG")
 
-(export '(internal-debug *flush-debug-errors* backtrace debug-function
-	  show-all debug-return local show hide argument pc
-	  function-name hide-defaults *debug-print-level*
-	  *debug-print-length* *debug-hidden-functions*))
-
+(export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
+	  *debug-print-level* *debug-print-length* *debug-prompt*))
 
 
 (in-package "LISP")
 (export '(invoke-debugger *debugger-hook*))
-
 
 (in-package "DEBUG")
 
 ;;;
 ;;; Used to communicate to debug-loop that we are at a step breakpoint.
 ;;;
-
 (define-condition step-condition (simple-condition))
   "*Print-level* is bound to this value when debug prints a function call.")
 ;;;; Variables, parameters, and constants.
 
   "*Print-length* is bound to this value when debug prints a function call.")
   null, use *PRINT-LEVEL*")
-(defvar *inside-debugger-p* nil
-  "This is T while evaluating expressions in the debugger.")
-
 
 (defparameter *debug-print-length* 5
   "*PRINT-LENGTH* is bound to this value when debug prints a function call.  If
   null, use *PRINT-LENGTH*.")
 
 (defvar *in-the-debugger* nil
+  "If this is bound before the debugger is invoked, it is used as the stack
+(defvar *stack-top* nil)
+
+;;;; Breakpoint state:
+
+(defvar *only-block-start-locations* nil
   "When true, the LIST-LOCATIONS command only displays block start locations.
-  "The default contents of *debug-prompt*."
    Otherwise, all locations are displayed.")
 
+(defvar *print-location-kind* nil
   "If true, list the code location type in the LIST-LOCATIONS command.")
 
 ;;; A list of the types of code-locations that should not be stepped to and
 ;;; should not be listed when listing breakpoints.
 ;;;
-  "A lambda of no args that prints the debugger prompt on *debug-io*.")
+(defvar *bad-code-location-types* '(:call-site :internal-error))
+(declaim (type list *bad-code-location-types*))
 
 ;;; Code locations of the possible breakpoints
 ;;;
-Prompt is <stack-level>':'<frame-number>(<command-level>*']').
-Frames look like calls, C signifying a catch frame.
-Expressions get evaluated in the frame's lexical environment,
-  setting * and friends like the top level read-eval-print loop.
-Debug commands do not affect * and friends.
+(defvar *possible-breakpoints*)
+(declaim (type list *possible-breakpoints*))
+
+;;; A list of the made and active breakpoints, each is a breakpoint-info
 ;;;
 (defvar *breakpoints* nil)
 (declaim (type list *breakpoints*))
@@ -79,14 +75,9 @@ Debug commands do not affect * and friends.
 (defvar *step-breakpoints* nil)  
 ;;;
 (defvar *number-of-steps* 1)
-  F  go to numbered frame (prompts if not given).
-  S  search for a specified function (prompts), 
-     an optional number of times (does not prompt).
-  R  searches up the stack, optional times.
 (declaim (type integer *number-of-steps*))
 ;;;
 (defvar *default-breakpoint-debug-function* nil)
-  ?              prints all kinds of groovy things.
   L              lists locals in current function.
   P, PP          displays current function call.  
 
@@ -102,95 +93,152 @@ Functions/macros for your enjoyment:
     (setf kind (di:breakpoint-kind (breakpoint-info-breakpoint place)))
     (format t "Cannot step, in elsewhere code~%"))
    (t
-(proclaim '(inline pointer+ stack-ref valid-env-p cstack-pointer-valid-p))
+    (let* ((code-location (di:frame-code-location frame))
+	   (next-code-locations (next-code-locations code-location)))
+      (cond
+       (next-code-locations
+	(dolist (code-location next-code-locations)
+	  (let ((bp-info (location-in-list code-location *breakpoints*)))
+	      (di:deactivate-breakpoint (breakpoint-info-breakpoint bp-info))))
+  (let ((*print-length* *debug-print-length*)
+	(*print-level* *debug-print-level*))
+	    (di:activate-breakpoint bp)
+	    (push (create-breakpoint-info code-location bp 0)
+		  *step-breakpoints*))))
+       (t
+	(let* ((debug-function (di:frame-debug-function *current-frame*))
+	       (bp (di:make-breakpoint #'main-hook-function debug-function
+      (print-frame-call frame))))
 	  (di:activate-breakpoint bp)
-(defun pointer+ (x y)
-  (%primitive sap+ x (ash y 2)))
+;;;
+;;; This is a convenient way to express what to do for each type of lambda-list
+;;; element.
+;;;
+(defmacro lambda-list-element-dispatch (element &key required optional rest
+						keyword deleted)
+  `(etypecase ,element
+(defun print-frame-call (frame &optional
+			       (*print-length* *debug-print-length*)
+			       (*print-level* *debug-print-level*)
+			       (verbosity 1))
+  (ecase verbosity
+    (0 (print frame))
+    (1 (handler-case
+	   (let* ((d-fun (di:frame-debug-function frame))
+		  (loc (di:frame-code-location frame))
+		  (args (di:debug-function-lambda-list d-fun)))
+	     (terpri)
+	     (write-char #\()
+	     (prin1 (di:debug-function-name d-fun))
+	     (dolist (ele args)
+	       (write-char #\space)
+	       (etypecase ele
+		 (di:debug-variable
+		  (print-frame-call-arg ele loc frame))
+		 (cons
+		  (ecase (car ele)
+		    (:optional
+		     (print-frame-call-arg (second ele) loc frame))
+		    (:rest)
+		    (:keyword
+		     (prin1 (second ele))
+		     (write-char #\space)
+		     (print-frame-call-arg (third ele) loc frame))))))
+	     (write-char #\))
+	     (when (di:debug-function-kind d-fun)
+	       (write-string " [")
+	       (prin1 (di:debug-function-kind d-fun))
+	       (write-char #\])))
+	 (di:lambda-list-unavailable ()
+	  (let ((d-fun (di:frame-debug-function frame)))
+	    (format t "(~S <lambda-list-unavailable>)) ~S)"
+		    (di:debug-function-name d-fun)
+		    (di:debug-function-kind d-fun))))))
+    ((2 3 4 5))))
 	     (t ,other)))))
-(defun stack-ref (s n)
-  (%primitive read-control-stack (pointer+ s n)))
+(defun print-frame-call-arg (var location frame)
+  (cond ((eq var :deleted)
+	 (write-string "<unused-arg>"))
+	((di:debug-variable-validity var location)
+	 (prin1 (di:debug-variable-value var frame)))
+	(t (write-string "<unavailable-arg>"))))
 
-(defun escape-reg (f n)
-  (stack-ref f (+ n %escape-frame-general-register-start-slot)))
 
-(defun valid-env-p (env)
-  (and (functionp env)
-       (eql (%primitive get-vector-subtype env)
-	    %function-constants-subtype)))
+
+;;;; ROBS-BACKTRACE.
 
-(defun cstack-pointer-valid-p (x)
-  (and (%primitive pointer< x (%primitive current-sp))
-       (not (%primitive pointer< x
-			(%primitive make-immediate-type 0
-				    %control-stack-type)))))
-
-(defun check-valid (x)
-  (unless (cstack-pointer-valid-p x)
-    (error "Invalid control stack pointer."))
-  x)
-
-(defun print-code-and-stuff (env pc)
-  (let* ((code (%primitive header-ref env %function-code-slot))
-	 (code-int (%primitive make-fixnum code)))
-    (format t "~A, Code = #x~X, PC = ~D"
-	    (%primitive header-ref env %function-name-slot)
-	    (logior code-int (ash %code-type 27))
-	    (- (%primitive make-fixnum pc) code-int))))
-
-;;; Backtrace prints a history of calls on the stack.
-
-(defun backtrace (&optional (frames most-positive-fixnum)
+(defun robs-backtrace (&optional (frames most-positive-fixnum)
 			    (*standard-output* *debug-io*))
   "Show a listing of the call stack going down from the current frame.  Frames
   is how many frames to show."
-  (do ((callee (%primitive current-fp)
-	       (stack-ref callee c::old-fp-save-offset))
+  (do ((callee (system:%primitive current-fp)
+	       (di::stack-ref callee c::old-fp-save-offset))
        (n 0 (1+ n)))
-      ((or (not (cstack-pointer-valid-p callee))
+      ((or (not (di::cstack-pointer-valid-p callee))
 	   (>= n frames))
        (values))
-    (let* ((caller (stack-ref callee c::old-fp-save-offset))
-	   (pc (stack-ref callee c::return-pc-save-offset)))
-      (unless (cstack-pointer-valid-p caller)
+    (let* ((caller (di::stack-ref callee c::old-fp-save-offset))
+	   (pc (di::stack-ref callee c::return-pc-save-offset)))
+      (unless (di::cstack-pointer-valid-p caller)
 	(return (values)))
-      (let ((env (stack-ref caller c::env-save-offset)))
+      (let ((env (di::stack-ref caller c::env-save-offset)))
 	(cond 
 	 ((eql env 0)
-	  (let ((env (escape-reg caller c::env-offset)))
-	    (cond ((eql (%primitive get-type env) %trap-type)
+	  (let ((env (di::escape-register caller c::env-offset)))
+	    (cond ((eql (system:%primitive get-type env) system:%trap-type)
 		   (format t "~%<undefined> ~S"
-			   (escape-reg caller c::call-name-offset))
+			   (di::escape-register caller c::call-name-offset))
 		   (setq callee
 			 (check-valid
-			  (escape-reg caller c::old-fp-offset))))
-		  ((valid-env-p env)
+			  (di::escape-register caller c::old-fp-offset))))
+		  ((di::env-valid-p env)
 		   (format t "~%<escape frame> ")
 		   (print-code-and-stuff
 		    env
-		    (escape-reg caller c::return-pc-offset))
+		    (di::escape-register caller c::return-pc-offset))
 		   (setq callee
 			 (check-valid
-			  (stack-ref callee c::old-fp-save-offset))))
+			  (di::stack-ref callee c::old-fp-save-offset))))
 		  (t
 		   (error "Escaping frame ENV invalid?")))))
-	 ((valid-env-p env)
+	 ((di::env-valid-p env)
 	  (terpri)
 	  (print-code-and-stuff env pc))
 	 (t
 	  (format t "~%<invalid frame>")))))))
 
+(defun print-code-and-stuff (env pc)
+  (let* ((code (system:%primitive header-ref env system:%function-code-slot))
+	 (code-int (system:%primitive make-fixnum code)))
+    (format t "~A, Code = #x~X, PC = ~D"
+	    (system:%primitive header-ref env system:%function-name-slot)
+	    (logior code-int (ash system:%code-type 27))
+	    (- (system:%primitive make-fixnum pc) code-int))))
+
+(defun check-valid (x)
+  (unless (di::cstack-pointer-valid-p x)
+    (error "Invalid control stack pointer."))
+  x)
+    (make-unprintable-object "unused-arg")
+    (di:debug-variable-value var frame)
     (make-unprintable-object "unavailable-arg")))
 ;;;; DEBUG
 ;;; PRINT-FRAME-CALL -- Interface
 ;;;
 ;;; This prints a representation of the function call causing frame to exist.
 ;;; Verbosity indicates the level of information to output; zero indicates just
-   which causes the standard debugger to execute.")
+;;; printing the debug-function's name, and one indicates displaying call-like,
+;;; one-liner format with argument values.
+;;;
 (defun print-frame-call (frame &key (print-length *print-length*)
+			       (print-level *print-level*)
+			       (verbosity 1)
 			       (number nil))
   (let ((*print-length* (or *debug-print-length* print-length))
 (defvar *debug-abort*)
 	(*print-level* (or *debug-print-level* print-level)))
+    (cond
+     ((zerop verbosity)
       (when number
 	(format t "~&~S: " (di:frame-number frame)))
       (format t "~S" frame))
@@ -207,6 +255,8 @@ Functions/macros for your enjoyment:
 ;;;; Invoke-debugger.
 
 (defvar *debugger-hook* nil
+  "This is either nil or a function of two arguments, a condition and the value
+   of *debugger-hook*.  This function can either handle the condition or return
    which causes the standard debugger to execute.  The system passes the value
    of this variable to the function because it binds *debugger-hook* to nil
    around the invocation.")
@@ -215,12 +265,17 @@ Functions/macros for your enjoyment:
 	((endp p))
       (format s "~&  ~D: ~A~%" i (car p)))))
 	 ;; Rebind some printer control variables.
-;;; INTERNAL-DEBUG calls the debug loop.  This is used in DEBUG and
-;;; CONDITIONS::ERROR-ERROR.
+	 (kernel:*current-level* 0)
 	 (*print-readably* nil)
+	 (*read-eval* t))
+    (format *error-output* "~2&~A~2&" *debug-condition*)
+    (unless (typep condition 'step-condition)
+      (show-restarts *debug-restarts* *error-output*))
+    (internal-debug)))
+
 ;;; SHOW-RESTARTS -- Internal.
-  (let ((*in-the-debugger* T)
-	(*read-suppress* NIL))
+;;;
+(defun show-restarts (restarts &optional (s *error-output*))
   (when restarts
     (format s "~&Restarts:~%")
     (let ((count 0)
@@ -241,13 +296,43 @@ Functions/macros for your enjoyment:
 				      (di:frame-code-location *current-frame*)
 		   (error "Unused rest-arg before n'th argument.")
 (defun debug-command-p (form)
-  (if (symbolp form)
-      (cdr (assoc (symbol-name form) *debug-commands* :test #'string=))))
+  (and (symbolp form)
+       (cdr (assoc (symbol-name form) *debug-commands* :test #'string=))))
 (defun debug-command-p (form &optional other-commands)
+      (let* ((name
+	  (mapc #'match-command other-commands))
+	;;
 	;; Return the right value.
+(def-debug-command "U"
+	      ((= (length res) 1)
+    (if next
+	(print-frame-call (setf *current-frame* next))
+	(princ "Top of stack."))))
+
+(def-debug-command "D"
+;;; Returns a list of debug commands (in the same format as *debug-commands*)
+    (if next
+	(print-frame-call (setf *current-frame* next))
+	(princ "Bottom of stack."))))
 (defun make-restart-commands (&optional (restarts *debug-restarts*))
+(def-debug-command "T"
+  (print-frame-call
+   (setf *current-frame*
+	 (do ((prev *current-frame* lead)
+	      (lead (di:frame-up *current-frame*) (di:frame-up lead)))
+	     ((null lead) prev)))))
+	    (push (cons (format nil "~d" num) restart-fun) commands))))
+(def-debug-command "B"
+  (print-frame-call
+   (setf *current-frame*
+	 (do ((prev *current-frame* lead)
+	      (lead (di:frame-down *current-frame*) (di:frame-down lead)))
+	     ((null lead) prev)))))
+
+
 (def-debug-command "FRAME" (&optional
-;;; 
+			    (n (read-prompting-maybe "Frame number: ")))
+  (let ((current (di:frame-number *current-frame*)))
 (def-debug-command "Q"
 	   (princ "You are here."))
 	  ((> n current)
@@ -259,6 +344,7 @@ Functions/macros for your enjoyment:
   (invoke-debugger *debug-condition*))
 
 (def-debug-command "ABORT"
+  ;; There's always at least one abort restart due to the top-level one.
   (invoke-restart *debug-abort*))
 		       (lead (di:frame-down *current-frame*)
 (def-debug-command "RESTART"
@@ -269,9 +355,10 @@ Functions/macros for your enjoyment:
 	  (t
     (invoke-restart-interactively (nth num *debug-restarts*))))
 ;;;
-
+;;; In and Out commands.
 ;;;
-;;; 
+
+(def-debug-command "QUIT" ()
 (def-debug-command "H"
   (princ debug-help-string))
 	  (princ "No such restart.")))))
@@ -279,15 +366,70 @@ Functions/macros for your enjoyment:
 ;;; Information commands.
 ;;;
  
-;;; BACKTRACE-DEBUG-COMMAND binds *inside-debugger-p*, so BACKTRACE will
-;;; not reparse the stack.  *inside-debugger-p* is only bound to non-nil
-;;; when doing evaluations in the debug loop.
-;;; 
 (def-debug-command "BACKTRACE"
-  (let ((*inside-debugger-p* t))
-    (backtrace (read-if-available most-positive-fixnum))))
+  "This controls how many lines the debugger's help command prints before
    printing a prompting line to continue with output.")
+(def-debug-command "P"
+(def-debug-command "HELP" ()
   (let* ((end -1)
+(def-debug-command "PP"
+  (print-frame-call *current-frame* nil nil))
+	    (count *help-line-scroll-count*))
+(def-debug-command "L"
+  (let ((*print-level* *debug-print-level*)
+	(*print-length* *debug-print-length*)
+	(*standard-output* *debug-io*)
+	(location (di:frame-code-location *current-frame*))
+	(any-p nil))
+    (di:do-debug-function-variables (v (di:frame-debug-function *current-frame*))
+      (setf any-p t)
+      (if (eq (di:debug-variable-validity v location) :valid)
+	  (format t "~A~:[#~D~;~*~]  =  ~S~%"
+		  (di:debug-variable-name v)
+		  (zerop (di:debug-variable-id v))
+		  (di:debug-variable-id v)
+		  (di:debug-variable-value v *current-frame*))
+	  #|(format t "~A has an invalid value currently.~%"
+		  (di:debug-variable-name v))|#))
+    (unless any-p (write-line "No variable information available."))))
+(def-debug-command-alias "PP" "VPRINT")
+(def-debug-command "SOURCE"
+  (let* ((location (di:frame-code-location *current-frame*))
+	      (format t "~A~:[#~D~;~*~]  =  ~S~%"
+		      (di:debug-variable-name v)
+    (cond ((not (eq :file (di:debug-source-from d-source)))
+	   (format t "~%Source did not come from a file."))
+	  ((not (probe-file name))
+	   (format t "~%Source file no longer exists -- ~A."
+		   (namestring name)))
+	  ((<= (di:debug-source-created d-source)
+	       (file-write-date name))
+	   (let* ((tlf-offset (di:code-location-top-level-form-offset
+			       location))
+		  (char-offset (aref (di:debug-source-start-positions
+				      d-source)
+				     tlf-offset))
+		  (context (read-if-available 0)))
+	     (with-open-file (f name)
+	       (file-position f char-offset)
+	       (let* ((tlf (read f))
+		      (translations (di:form-number-translations
+				     tlf tlf-offset))
+		      (*print-level* *debug-print-level*)
+		      (*print-length* *debug-print-length*))
+		 (print (di:source-path-context
+			 tlf
+			 (svref translations
+				(di:code-location-form-number location))
+			 context))))))
+	    (t
+	     (format t "~%File has been modified since compilation -- ~A."
+		     (namestring name))))))
+		  (setf *possible-breakpoints*
+			(possible-breakpoints
+			 *default-breakpoint-debug-function*))))))
+	   (setup-function-start ()
+
 (defvar *flush-debug-errors* t
   "Don't recursively call DEBUG on errors while within the debugger if non-nil.")
 	     (let ((code-loc (di:debug-function-start-location place)))
@@ -300,39 +442,45 @@ Functions/macros for your enjoyment:
 	  (format t "Note: previous breakpoint removed.~%"))
 	(push new-bp-info *breakpoints*))
       (print-breakpoint-info (first *breakpoints*))
-  (if (not (listen-skip-whitespace in))
+  (if (not (ext:listen-skip-whitespace in))
       (princ prompt out))
 
 ;;; list all breakpoints set
 (def-debug-command "LIST-BREAKPOINTS" ()
-  (if (listen-skip-whitespace stream)
+  (setf *breakpoints*
 	(sort *breakpoints* #'< :key #'breakpoint-info-breakpoint-number))
   (dolist (info *breakpoints*)
 
 
 
-;;;; Debug-Loop.
+;;;; DEBUG-LOOP.
 
 (defun debug-loop ()
-  (let ((*debug-command-level* (1+ *debug-command-level*)))
-    (loop
-     (catch 'debug-loop-catcher
-       (handler-bind ((error #'(lambda (condition)
-				 (when *flush-debug-errors*
-				   (clear-input *debug-io*)
-				   (princ condition)
-				   (format t "~&Error flushed ...")
-				   (throw 'debug-loop-catcher nil))
-				 (invoke-debugger condition))))
-	 (funcall *debug-prompt*)
-	 (let* ((exp (read))
-		(cmd-fun (debug-command-p exp))
-		;; Must bind level for restart function created for this abort.
-		(level *debug-command-level*))
-	   (with-simple-restart (abort "Return to debug level ~D." level)
-	     (if cmd-fun
-		 (funcall cmd-fun)
-		 (debug-eval-print exp)))))))))
+  (let ((*debug-command-level* (1+ *debug-command-level*))
+	(*current-frame* (di:top-frame)))
+    (handler-bind ((di:debug-condition #'(lambda (condition)
+					   (princ condition *debug-io*)
+					   (throw 'debug-loop-catcher nil))))
+      (print-frame-call *current-frame*)
+      (loop
+	(catch 'debug-loop-catcher
+	  (handler-bind ((error #'(lambda (condition)
+				    (when *flush-debug-errors*
+				      (clear-input *debug-io*)
+				      (princ condition)
+				      (format t "~&Error flushed ...")
+				      (throw 'debug-loop-catcher nil))
+				    (invoke-debugger condition))))
+	    (funcall *debug-prompt*)
+	    (let* ((exp (read))
+		   (cmd-fun (debug-command-p exp))
+		   ;; Must bind level for restart function created by
+		   ;; WITH-SIMPLE-RESTART.
+		   (level *debug-command-level*))
+	      (with-simple-restart (abort "Return to debug level ~D." level)
+		(if cmd-fun
+		    (funcall cmd-fun)
+		    (debug-eval-print exp))))))))))
 
 (defun debug-eval-print (exp)
   (setq +++ ++ ++ + + - - exp)
