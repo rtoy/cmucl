@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.11 2003/03/23 21:23:41 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.12 2003/05/29 22:03:01 toy Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -105,7 +105,7 @@ extern boolean valid_addr(os_vm_address_t test);
 extern void os_foreign_linkage_init(void);
 extern void *os_dlsym (const char *sym_name, lispobj lib_list);
 
-enum {BOTH_ZONES, YELLOW_ZONE, RED_ZONE};
+enum stack_zone_t {BOTH_ZONES, YELLOW_ZONE, RED_ZONE};
 extern int os_stack_grows_down (void);
 extern void os_guard_control_stack (int zone, int guard);
 extern int os_control_stack_overflow (void *, struct sigcontext *);

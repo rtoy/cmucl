@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.68 2003/03/23 21:23:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.69 2003/05/29 22:03:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -506,7 +506,7 @@
 ;;; Scrub-control-stack.
 ;;;
 #-x86
-(defun scrub-control-stack ()
+(defun %scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."
   (declare (optimize (speed 3) (safety 0))
@@ -545,7 +545,6 @@
 ;;; On the x86 port the stack grows downwards, and to support grow on
 ;;; demand stacks the stack must be decreased as it is scrubbed.
 ;;;
-#+x86
 (defun scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.40 2003/04/30 16:16:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.41 2003/05/29 22:03:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,6 +261,8 @@
     lisp::%initial-function
     lisp::maybe-gc
     kernel::internal-error
+    #+stack-checking kernel::yellow-zone-hit
+    #+stack-checking kernel::red-zone-hit
     di::handle-breakpoint
     lisp::fdefinition-object
 
@@ -286,7 +288,10 @@
     ;;
     lisp::*cmucl-lib*
     lisp::*cmucl-core-path*
-    ;;
+
+    ;; Some spare static symbols.  Useful for adding another static
+    ;; symbol without having to do a cross-compile.  Just rename one
+    ;; of these to the desired name.
     spare-9
     spare-8
     spare-7

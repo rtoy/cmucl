@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.9 2003/03/23 21:23:41 gerd Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.10 2003/05/29 22:03:01 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -14,6 +14,8 @@
 #include "internals.h"
 #include "validate.h"
 #include "lisp.h"
+#include "lispregs.h"
+#include "globals.h"
 
 /* Except for os_zero, these routines are only called by Lisp code.  These
    routines may also be replaced by os-dependent versions instead.  See
@@ -291,7 +293,7 @@ os_stack_grows_down (void)
    +----------+
    |          | yellow zone
    +----------+
-   |          | red zove
+   |          | red zone
    +----------+				CONTROL_STACK_START
 
    Both the yellow zone and the red zone are write-protected.
@@ -317,6 +319,7 @@ os_stack_grows_down (void)
 static void
 guard_zones (char **yellow_start, char **red_start)
 {
+#ifdef x86
   if (os_stack_grows_down ())
     {
       char *end = (char *) CONTROL_STACK_START;
@@ -329,6 +332,17 @@ guard_zones (char **yellow_start, char **red_start)
       *red_start = end - RED_ZONE_SIZE;
       *yellow_start = *red_start - YELLOW_ZONE_SIZE;
     }
+#else
+  /*
+   * On Solaris/sparc, the C stack grows down, but the Lisp control
+   * stack grows up.  The stack zones begin just before the end of the
+   * control stack area.
+   */
+  
+  char *end = (char *) CONTROL_STACK_START + CONTROL_STACK_SIZE;
+  *red_start = end - RED_ZONE_SIZE;
+  *yellow_start = *red_start - YELLOW_ZONE_SIZE;
+#endif
 }
 
 /* Return the guard zone FAULT_ADDR is in or 0 if not in a guard
@@ -383,19 +397,24 @@ os_guard_control_stack (int zone, int guard)
 int
 os_control_stack_overflow (void *fault_addr, struct sigcontext *context)
 {
-  int zone;
+  enum stack_zone_t zone;
 
   zone = control_stack_zone (fault_addr);
-  
+
   if (zone == YELLOW_ZONE || zone == RED_ZONE)
     {
       lispobj error;
 
+#if 0
+      fprintf(stderr, "hit end of control stack in zone %s\n",
+              (zone == YELLOW_ZONE) ? "YELLOW" : (zone == RED_ZONE) ? "RED" : "BOTH");
+#endif
       /* Unprotect the stack, giving us some room on the stack for
 	 error handling in Lisp.  Fake a stack frame for this
 	 interruption.  */
       os_guard_control_stack (zone, 0);
-      fake_foreign_function_call (context);
+
+      build_fake_control_stack_frame (context);
 
       /* The protection violation signal is delivered on a signal
 	 stack different from the normal stack, so that we don't
@@ -414,9 +433,19 @@ os_control_stack_overflow (void *fault_addr, struct sigcontext *context)
       context->sc_eip = (int) ((struct function *) PTR (error))->code;
       context->sc_ecx = 0;
 #else
+#ifdef sparc
+      /* This part should be common to all non-x86 ports */
+      SC_PC(context) = (long) ((struct function *) PTR (error))->code;
+      SC_NPC(context) = SC_PC(context) + 4;
+      SC_REG(context, reg_NARGS) = 0;
+      SC_REG(context, reg_LIP) = (long) ((struct function *) PTR (error))->code;
+      SC_REG(context, reg_CFP) = (long) current_control_frame_pointer;
+      /* This is sparc specific */
+      SC_REG(context, reg_CODE) = ((long) PTR(error)) + type_FunctionPointer;
+#else
 #error os_control_stack_overflow not implemented for this system
 #endif
-      
+#endif
       return 1;
     }
   

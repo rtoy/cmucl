@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.27 2003/03/23 21:23:41 gerd Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.28 2003/05/29 22:03:01 toy Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -56,6 +56,49 @@ static boolean maybe_gc_pending = FALSE;
 * Utility routines used by various signal handlers.              *
 \****************************************************************/
 
+void
+build_fake_control_stack_frame(struct sigcontext *context)
+{
+#ifndef i386
+  lispobj oldcont;
+  
+  /* Build a fake stack frame */
+  current_control_frame_pointer = (lispobj *)SC_REG(context, reg_CSP);
+  if ((lispobj *)SC_REG(context, reg_CFP)==current_control_frame_pointer) {
+    /* There is a small window during call where the callee's frame */
+    /* isn't built yet. */
+    if (LowtagOf(SC_REG(context, reg_CODE)) == type_FunctionPointer) {
+      /* We have called, but not built the new frame, so
+         build it for them. */
+      current_control_frame_pointer[0] = SC_REG(context, reg_OCFP);
+      current_control_frame_pointer[1] = SC_REG(context, reg_LRA);
+      current_control_frame_pointer += 8;
+      /* Build our frame on top of it. */
+      oldcont = (lispobj)SC_REG(context, reg_CFP);
+    }
+    else {
+      /* We haven't yet called, build our frame as if the
+         partial frame wasn't there. */
+      oldcont = (lispobj)SC_REG(context, reg_OCFP);
+    }
+  }
+  /* ### We can't tell if we are still in the caller if it had to
+     reg_ALLOCate the stack frame due to stack arguments. */
+  /* ### Can anything strange happen during return? */
+  else {
+      
+    /* Normal case. */
+    oldcont = (lispobj)SC_REG(context, reg_CFP);
+  }
+    
+  current_control_stack_pointer = current_control_frame_pointer + 8;
+
+  current_control_frame_pointer[0] = oldcont;
+  current_control_frame_pointer[1] = NIL;
+  current_control_frame_pointer[2] = (lispobj)SC_REG(context, reg_CODE);
+#endif
+}
+
 void 
 fake_foreign_function_call(struct sigcontext *context)
 {
@@ -78,7 +121,7 @@ fake_foreign_function_call(struct sigcontext *context)
     current_binding_stack_pointer = (lispobj *)SC_REG(context, reg_BSP);
 #endif
     
-#ifndef i386
+#if !defined(i386) && 0
     /* Build a fake stack frame */
     current_control_frame_pointer = (lispobj *)SC_REG(context, reg_CSP);
     if ((lispobj *)SC_REG(context, reg_CFP)==current_control_frame_pointer) {
@@ -111,7 +154,10 @@ fake_foreign_function_call(struct sigcontext *context)
     current_control_frame_pointer[0] = oldcont;
     current_control_frame_pointer[1] = NIL;
     current_control_frame_pointer[2] = (lispobj)SC_REG(context, reg_CODE);
+#else
+    build_fake_control_stack_frame(context);
 #endif
+
     
     /* Do dynamic binding of the active interrupt context index
        and save the context in the context array. */
@@ -516,7 +562,10 @@ interrupt_install_low_level_handler (int signal, void handler (HANDLER_ARGS))
      because, when we get that signal because of hitting a control
      stack guard zone, it's not a good idea to use more of the
      control stack for handling the signal.  */
-#ifdef RED_ZONE_HIT
+  /* But we only need this on x86 since the Lisp control stack and the
+     C control stack are the same.  For others, they're separate so
+     the C stack can still be used.  */
+#if defined(RED_ZONE_HIT) && defined(x86)
   if (signal == PROTECTION_VIOLATION_SIGNAL)
     {
       stack_t sigstack;

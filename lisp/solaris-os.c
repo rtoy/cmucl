@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.6 2002/11/13 13:10:22 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.7 2003/05/29 22:03:01 toy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -203,8 +203,13 @@ segv_handler(HANDLER_ARGS)
   caddr_t addr = code->si_addr;
 
   SAVE_CONTEXT();
-  
-  if(!interrupt_maybe_gc(signal, code, context)) {
+
+#ifdef RED_ZONE_HIT
+  if (os_control_stack_overflow (addr, context))
+    return;
+#endif
+
+  if (!interrupt_maybe_gc(signal, code, context)) {
     /* a *real* protection fault */
     fprintf(stderr, "segv_handler: Real protection violation: 0x%08x\n",
 	    addr);
