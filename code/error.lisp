@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.69 2003/04/16 19:41:05 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.70 2003/04/17 12:55:57 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -218,6 +218,22 @@
 
 
 (eval-when (compile load eval)
+
+;;;
+;;; Return a list of restarts with names NAMES, taking duplicate
+;;; names into account.
+;;;
+(defun %find-restarts (names)
+  (let ((all (compute-restarts)))
+    (collect ((restarts))
+      (dolist (name names (restarts))
+	(let ((restart (find-if (lambda (x)
+				  (or (eq x name)
+				      (eq (restart-name x) name)))
+				all)))
+	  (restarts restart)
+	  (setq all (delete restart all)))))))
+
 ;;; Wrap the restart-case expression in a with-condition-restarts if
 ;;; appropriate.  Gross, but it's what the book seems to say...
 ;;;
@@ -235,14 +251,11 @@
 					(signal 'simple-condition)
 					(t 'simple-error))
 				    ',name)))
-		`(with-condition-restarts
-		     ,n-cond
-		     (list ,@(mapcar #'(lambda (da)
-					 `(find-restart ',(nth 0 da)))
-				     data))
-		   ,(if (eq name 'cerror)
-			`(cerror ,(second expression) ,n-cond)
-			`(,name ,n-cond))))
+		 `(with-condition-restarts ,n-cond
+		      (%find-restarts ',(mapcar (lambda (x) (nth 0 x)) data))
+		    ,(if (eq name 'cerror)
+			 `(cerror ,(second expression) ,n-cond)
+			 `(,name ,n-cond))))
 	      expression))
 	expression)))
 
