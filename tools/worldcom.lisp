@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.62 1993/08/19 17:22:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.63 1993/08/22 20:02:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,8 @@
 ;;; Assembly files.
 
 (comf "target:assembly/assemfile")
-(load "target:assembly/assemfile")
+(when (eq c:*backend* c:*native-backend*)
+  (load "target:assembly/assemfile"))
 
 (when (c:backend-featurep :pmax)
   (comf "target:assembly/mips/assem-rtns" :assem t)
