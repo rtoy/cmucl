@@ -886,7 +886,7 @@
     keyword list long-float nil null number package pathname random-state ratio
     rational readtable sequence short-float signed-byte simple-array
     simple-bit-vector simple-string simple-vector single-float standard-char
-    stream string-char symbol t unsigned-byte vector))
+    stream symbol t unsigned-byte vector))
 
 (defun split-declarations (body args calls-next-method-p)
   (let ((inner-decls nil) (outer-decls nil) decl)
