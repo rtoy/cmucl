@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.32 1991/11/16 13:16:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.33 1991/11/16 15:41:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1531,11 +1531,13 @@
   (when (typep (continuation-dest (node-cont node))
 	       '(or creturn exit mv-combination))
     (give-up))
-  (let ((dummies (loop repeat (1- (length vals))
+  (if vals
+      (let ((dummies (loop repeat (1- (length vals))
 		       collect (gensym))))
-    `(lambda (val ,@dummies)
-       (declare (ignore ,@dummies))
-       val)))
+	`(lambda (val ,@dummies)
+	   (declare (ignore ,@dummies))
+	   val))
+      'nil))
 
 
 ;;; Flush-Dead-Code  --  Internal
