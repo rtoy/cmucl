@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.23 1997/01/18 14:31:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.24 1997/02/22 19:19:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -365,10 +365,15 @@
     (unless bits
       (abort-transform "Unknown size: ~S" (unparse-alien-type alien-type)))
     (if (local-alien-info-force-to-memory-p info)
-	`(truly-the system-area-pointer
-		    (%primitive alloc-number-stack-space
-				,(ceiling (alien-type-bits alien-type)
-					  vm:byte-bits)))
+	(if (backend-featurep :x86)
+	    `(truly-the system-area-pointer
+			(%primitive alloc-alien-stack-space
+				    ,(ceiling (alien-type-bits alien-type)
+					      vm:byte-bits)))
+	  `(truly-the system-area-pointer
+		      (%primitive alloc-number-stack-space
+				  ,(ceiling (alien-type-bits alien-type)
+					    vm:byte-bits))))
 	(let* ((alien-rep-type-spec (compute-alien-rep-type alien-type))
 	       (alien-rep-type (specifier-type alien-rep-type-spec)))
 	  (cond ((csubtypep (specifier-type 'system-area-pointer)
@@ -441,10 +446,14 @@
   (let* ((info (continuation-value info))
 	 (alien-type (local-alien-info-type info)))
     (if (local-alien-info-force-to-memory-p info)
-	`(%primitive dealloc-number-stack-space
-		     ,(ceiling (alien-type-bits alien-type)
-			       vm:byte-bits))
-	nil)))
+	(if (backend-featurep :x86)
+	    `(%primitive dealloc-alien-stack-space
+			 ,(ceiling (alien-type-bits alien-type)
+				   vm:byte-bits))
+	  `(%primitive dealloc-number-stack-space
+		       ,(ceiling (alien-type-bits alien-type)
+				 vm:byte-bits)))
+      nil)))
 
 
 ;;;; %CAST

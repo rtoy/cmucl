@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.3 1997/02/13 01:20:37 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.4 1997/02/22 19:19:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,29 +50,31 @@
 ;;; use with the Save/Restore-Dynamic-Environment VOPs.
 ;;;
 (def-vm-support-routine make-dynamic-state-tns ()
-  #+nil
-  (make-n-tns 2 *any-primitive-type*)
-  (make-n-tns 3 *any-primitive-type*))
+  (make-n-tns 4 *any-primitive-type*))
 
 (define-vop (save-dynamic-state)
   (:results (catch :scs (descriptor-reg))
 	    (eval :scs (descriptor-reg))
-	    (oldfp :scs (descriptor-reg))) ; pw adds this
+	    (oldfp :scs (descriptor-reg))
+	    (alien-stack :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 13
     (load-symbol-value catch lisp::*current-catch-block*)
     (load-symbol-value eval lisp::*eval-stack-top*)
+    (load-symbol-value alien-stack *alien-stack*)
     (loadw oldfp ebp-tn  (- (1+ old-fp-save-offset)))))
   
 
 (define-vop (restore-dynamic-state)
   (:args (catch :scs (descriptor-reg))
 	 (eval :scs (descriptor-reg))
-	 (oldfp :scs (descriptor-reg)))
+	 (oldfp :scs (descriptor-reg))
+	 (alien-stack :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 10
     (store-symbol-value catch lisp::*current-catch-block*)
     (store-symbol-value eval lisp::*eval-stack-top*)
+    (store-symbol-value alien-stack *alien-stack*)
     (storew oldfp ebp-tn (- (1+ old-fp-save-offset)))))
 
 (define-vop (current-stack-pointer)

@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.2 1997/02/18 05:01:11 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.3 1997/02/22 19:19:47 dtc Exp $
  *
  * Author:	Paul F. Werkowski <pw@snoopy.mv.com>
  *
@@ -199,12 +199,16 @@ fpmask:	.word	0x33f		# 64-bit precision | all execptions masked
 /* The C conventions require that ebx, esi, edi, and ebp be preserved
 	across function calls. */
 	
+/* The *alien-stack* pointer is setup on the first call_into_lisp when
+   the stack changes. */
+	
 	.align	align_16byte,0x90
 GNAME(call_into_lisp):
 	pushl	%ebp		# save old frame pointer
 	movl	%esp,%ebp	# establish new frame
 
-/* Save the NPX state */	
+/* Save the NPX state */
+	fwait			# Catch any pending NPX exceptions.
 	subl	$108,%esp	# Make room for the NPX state.
 	fnsave	(%esp)		# Resets NPX
 	fldcw	(%esp)		# Recover modes
@@ -224,38 +228,26 @@ GNAME(call_into_lisp):
 	
 /* clear descriptor regs */
 	xorl	%eax,%eax	# lexenv
-	movl	%eax,%ebx	# available
-	movl	%eax,%ecx	# arg count
-	movl	%eax,%edx	# first arg
-	movl	%eax,%edi	# second arg
-	movl	%eax,%esi	# third arg
-
-/* establish nil (?) */
-
-/* start pseudo-atomic (?) */
+	xorl	%ebx,%ebx	# available
+	xorl	%ecx,%ecx	# arg count
+	xorl	%edx,%edx	# first arg
+	xorl	%edi,%edi	# second arg
+	xorl	%esi,%esi	# third arg
 
 /* no longer in function call */
 	movl	%eax, GNAME(foreign_function_call_active)
 
 	movl	%esp,%ebx	# remember current stack
-/* load lisp state */
-	/* dyn space free */
-	/* binding stack  */
-	/* control stack (esp) */
-	movl	$CONTROL_STACK_START,%ecx
-	movl	%ecx,%edx
-	addl	$CONTROL_STACK_SIZE,%edx
-	cmpl	%ecx,%esp	# low - sp
-	jbe	LispStackSet	# jump when sp "below or equal" low
-	cmpl	%edx,%esp	# hgh - sp
-	jbe	LispStackOk
-LispStackSet:			# probably called from Monitor
-	movl	%esp,Cstack	# save C stack for use by GC/Purify
-	movl	%edx,%esp	# now at bottom of Lisp stack
-LispStackOk:
+	cmpl	$CONTROL_STACK_START,%esp
+	jbe	ChangeToLispStack
+	cmpl	$CONTROL_STACK_END,%esp
+	jbe	OnLispStack
+ChangeToLispStack:
+	/* Setup the *alien-stack* pointer */
+	movl	%esp,ALIEN_STACK + SYMBOL_VALUE_OFFSET
+	movl	$CONTROL_STACK_END,%esp		# New stack
+OnLispStack:
 	pushl	%ebx		# save entry stack on (maybe) new stack
-	/* control frame (ebp) */
-	/* end pseudo-atomic */
 
 	/* establish lisp args */
 	movl	 8(%ebp),%eax	# lexenv?
@@ -273,7 +265,6 @@ LispStackOk:
 	movl	8(%ebx),%esi	# arg2
 Ldone:	
 	/* registers eax, ecx, edx,edi,esi now live */
-	
 
 	/* alloc new frame */
 	mov	%esp,%ebx	# current sp marks start of new frame
@@ -297,8 +288,9 @@ Ldone:
 Llra:
 	/* Multi-value return - blow off any extra values */
 	mov	%ebx, %esp
-
 	/* Single value return */	
+
+/* Restore the stack, in case there was a stack change. */
 	popl	%esp		# c-sp
 
 /* restore C regs: ebx esi edi */
