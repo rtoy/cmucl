@@ -7,19 +7,19 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.3 1991/02/08 13:35:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.4 1991/04/24 23:37:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Functions to implement strings for Spice Lisp
 ;;; Written by David Dill
-;;; Rewritten and currently maintained by Skef Wholey
+;;; Rewritten by Skef Wholey, Bill Chiles and Rob MacLachlan.
 ;;;
 ;;; Runs in the standard Spice Lisp environment.
 ;;;
 ;;; ****************************************************************
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 (export '(char schar string
 	  string= string-equal string< string> string<= string>= string/=
 	  string-lessp string-greaterp string-not-lessp string-not-greaterp
@@ -58,24 +58,11 @@
 (eval-when (compile)
 
 (defmacro with-one-string (string start end cum-offset &rest forms)
-  (let ((data (gensym))
-	(data-start (gensym))
-	(data-end (gensym))
-	(offset (gensym)))
-    `(progn
-       (if (symbolp ,string)
-	   (setf ,string (symbol-name ,string)))
-       (if (array-header-p ,string)
-	   (with-array-data ((,data ,string :offset-var ,offset)
-			     (,data-start ,start)
-			     (,data-end (or ,end
-					    (length (the vector ,string)))))
-	     (psetq ,string ,data
-		    ,cum-offset ,offset
-		    ,start ,data-start
-		    ,end ,data-end))
-	   (if (not ,end) (setq ,end (length (the simple-string ,string)))))
-      ,@forms)))
+  `(let ((,string (if (stringp ,string) ,string (string ,string))))
+     (with-array-data ((,string ,string :offset-var ,cum-offset)
+		       (,start ,start)
+		       (,end (or ,end (length (the vector ,string)))))
+       ,@forms)))
 
 )
 
@@ -84,18 +71,11 @@
 (eval-when (compile)
 
 (defmacro with-string (string &rest forms)
-  `(let ((start 0)
-	 (end ()))
-     (if (symbolp ,string) (setq ,string (symbol-name ,string)))
-     (if (array-header-p ,string)
-	 (with-array-data ((data ,string)
-			   (data-start start)
-			   (data-end (length (the vector ,string))))
-	   (psetq ,string data
-		  start data-start
-		  end data-end))
-	 (setq end (length (the simple-string ,string))))
-     ,@forms))
+  `(let ((,string (if (stringp ,string) ,string (string ,string))))
+     (with-array-data ((,string ,string)
+		       (start)
+		       (end (length (the vector ,string))))
+       ,@forms)))
 
 )
 
@@ -106,33 +86,15 @@
 
 (defmacro with-two-strings (string1 string2 start1 end1 cum-offset-1
 				    start2 end2 &rest forms)
-  (let ((data (gensym))
-	(data-start (gensym))
-	(data-end (gensym))
-	(offset (gensym)))
-    `(progn
-      (if (symbolp ,string1) (setq ,string1 (symbol-name ,string1)))
-      (if (symbolp ,string2) (setq ,string2 (symbol-name ,string2)))
-      (if (array-header-p ,string1)
-	  (with-array-data ((,data ,string1 :offset-var ,offset)
-			    (,data-start ,start1)
-			    (,data-end (or ,end1
-					   (length (the vector ,string1)))))
-	    (psetq ,string1 ,data
-		   ,cum-offset-1 ,offset
-		   ,start1 ,data-start
-		   ,end1 ,data-end))
-	  (if (not ,end1) (setq ,end1 (length (the simple-string ,string1)))))
-      (if (array-header-p ,string2)
-	  (with-array-data ((,data ,string2)
-			    (,data-start ,start2)
-			    (,data-end (or ,end2
-					   (length (the vector ,string2)))))
-	    (psetq ,string2 ,data
-		   ,start2 ,data-start
-		   ,end2 ,data-end))
-	  (if (not ,end2) (setq ,end2 (length (the simple-string ,string2)))))
-      ,@forms)))
+  `(let ((,string1 (if (stringp ,string1) ,string1 (string ,string1)))
+	 (,string2 (if (stringp ,string2) ,string2 (string ,string2))))
+     (with-array-data ((,string1 ,string1 :offset-var ,cum-offset-1)
+		       (,start1 ,start1)
+		       (,end1 (or ,end1 (length (the vector ,string1)))))
+       (with-array-data ((,string2 ,string2)
+			 (,start2 ,start2)
+			 (,end2 (or ,end2 (length (the vector ,string2)))))
+	 ,@forms))))
 
 )
 
@@ -141,31 +103,33 @@
   "Given a string and a non-negative integer index less than the length of
   the string, returns the character object representing the character at
   that position in the string."
+  (declare (optimize (safety 1)))
   (char string index))
 
 (defun %charset (string index new-el)
+  (declare (optimize (safety 1)))
   (setf (char string index) new-el))
 
 (defun schar (string index)
   "SCHAR returns the character object at an indexed position in a string
    just as CHAR does, except the string must be a simple-string."
+  (declare (optimize (safety 1)))
   (schar string index))
 
 (defun %scharset (string index new-el)
+  (declare (optimize (safety 1)))
   (setf (schar string index) new-el))
 
 (defun string=* (string1 string2 start1 end1 start2 end2)
-  (let ((offset1 0))
-    (with-two-strings string1 string2 start1 end1 offset1 start2 end2
-      (not (%sp-string-compare string1 start1 end1 string2 start2 end2)))))
+  (with-two-strings string1 string2 start1 end1 offset1 start2 end2
+    (not (%sp-string-compare string1 start1 end1 string2 start2 end2))))
 
 
 (defun string/=* (string1 string2 start1 end1 start2 end2)
-  (let ((offset1 0))
-    (with-two-strings string1 string2 start1 end1 offset1 start2 end2
-      (let ((comparison (%sp-string-compare string1 start1 end1
-					    string2 start2 end2)))
-	(if comparison (- (the fixnum comparison) offset1))))))
+  (with-two-strings string1 string2 start1 end1 offset1 start2 end2
+    (let ((comparison (%sp-string-compare string1 start1 end1
+					  string2 start2 end2)))
+      (if comparison (- (the fixnum comparison) offset1)))))
 
 (eval-when (compile eval)
 
@@ -173,24 +137,22 @@
 ;;; Equalp is true if the desired expansion is for string<=* or string>=*.
 (defmacro string<>=*-body (lessp equalp)
   (let ((offset1 (gensym)))
-    `(let ((,offset1 0))
-       (declare (fixnum ,offset1))
-       (with-two-strings string1 string2 start1 end1 ,offset1 start2 end2
-	 (let ((index (%sp-string-compare string1 start1 end1
-					  string2 start2 end2)))
-	   (if index
-	       (cond ((= (the fixnum index)
-			 ,(if lessp `(the fixnum end1) `(the fixnum end2)))
-		      (- (the fixnum index) ,offset1))
-		     ((= (the fixnum index)
-			 ,(if lessp `(the fixnum end2) `(the fixnum end1)))
-		      nil)
-		     ((,(if lessp 'char< 'char>)
-		       (schar string1 index)
-		       (schar string2 (+ (the fixnum index) (- start2 start1))))
-		      (- (the fixnum index) ,offset1))
-		     (t nil))
-	       ,(if equalp `(- (the fixnum end1) ,offset1) 'nil)))))))
+    `(with-two-strings string1 string2 start1 end1 ,offset1 start2 end2
+       (let ((index (%sp-string-compare string1 start1 end1
+					string2 start2 end2)))
+	 (if index
+	     (cond ((= (the fixnum index)
+		       ,(if lessp `(the fixnum end1) `(the fixnum end2)))
+		    (- (the fixnum index) ,offset1))
+		   ((= (the fixnum index)
+		       ,(if lessp `(the fixnum end2) `(the fixnum end1)))
+		    nil)
+		   ((,(if lessp 'char< 'char>)
+		     (schar string1 index)
+		     (schar string2 (+ (the fixnum index) (- start2 start1))))
+		    (- (the fixnum index) ,offset1))
+		   (t nil))
+	     ,(if equalp `(- (the fixnum end1) ,offset1) 'nil))))))
 ) ; eval-when
 
 (defun string<* (string1 string2 start1 end1 start2 end2)
@@ -280,39 +242,36 @@
   start2, end1 and end2, compares characters in string1 to characters in
   string2 (using char-equal)."
   (declare (fixnum start1 start2))
-  (let ((offset1 0))
-    (with-two-strings string1 string2 start1 end1 offset1 start2 end2
-      (let ((slen1 (- (the fixnum end1) start1))
-	    (slen2 (- (the fixnum end2) start2)))
-	(declare (fixnum slen1 slen2))
-	(if (or (minusp slen1) (minusp slen2))
-	    ;;prevent endless looping later.
-	    (error "Improper bounds for string comparison."))
-	(if (= slen1 slen2)
-	    ;;return () immediately if lengths aren't equal.
-	    (string-not-equal-loop 1 t nil)))))) 
+  (with-two-strings string1 string2 start1 end1 offset1 start2 end2
+    (let ((slen1 (- (the fixnum end1) start1))
+	  (slen2 (- (the fixnum end2) start2)))
+      (declare (fixnum slen1 slen2))
+      (if (or (minusp slen1) (minusp slen2))
+	  ;;prevent endless looping later.
+	  (error "Improper bounds for string comparison."))
+      (if (= slen1 slen2)
+	  ;;return () immediately if lengths aren't equal.
+	  (string-not-equal-loop 1 t nil))))) 
 
 (defun string-not-equal (string1 string2 &key (start1 0) end1 (start2 0) end2)
   "Given two strings, if the first string is not lexicographically equal
   to the second string, returns the longest common prefix (using char-equal)
   of the two strings. Otherwise, returns ()."
-  (let ((offset1 0))
-    (declare (fixnum offset1))
-    (with-two-strings string1 string2 start1 end1 offset1 start2 end2
-      (let ((slen1 (- end1 start1))
-	    (slen2 (- end2 start2)))
-	(declare (fixnum slen1 slen2))
-	(if (or (minusp slen1) (minusp slen2))
-	    ;;prevent endless looping later.
-	    (error "Improper bounds for string comparison."))
-	(cond ((or (minusp slen1) (or (minusp slen2)))
-	       (error "Improper substring for comparison."))
-	      ((= slen1 slen2)
-	       (string-not-equal-loop 1 nil (- index1 offset1)))
-	      ((< slen1 slen2)
-	       (string-not-equal-loop 1 (- index1 offset1)))
-	      (t
-	       (string-not-equal-loop 2 (- index1 offset1))))))))
+  (with-two-strings string1 string2 start1 end1 offset1 start2 end2
+    (let ((slen1 (- end1 start1))
+	  (slen2 (- end2 start2)))
+      (declare (fixnum slen1 slen2))
+      (if (or (minusp slen1) (minusp slen2))
+	  ;;prevent endless looping later.
+	  (error "Improper bounds for string comparison."))
+      (cond ((or (minusp slen1) (or (minusp slen2)))
+	     (error "Improper substring for comparison."))
+	    ((= slen1 slen2)
+	     (string-not-equal-loop 1 nil (- index1 offset1)))
+	    ((< slen1 slen2)
+	     (string-not-equal-loop 1 (- index1 offset1)))
+	    (t
+	     (string-not-equal-loop 2 (- index1 offset1)))))))
  
 
 
@@ -337,28 +296,26 @@
 (defmacro string-less-greater-equal (lessp equalp)
   (multiple-value-bind (length-test character-test)
 		       (string-less-greater-equal-tests lessp equalp)
-    `(let ((offset1 0))
-       (declare (fixnum offset1))
-       (with-two-strings string1 string2 start1 end1 offset1 start2 end2
-	 (let ((slen1 (- (the fixnum end1) start1))
-	       (slen2 (- (the fixnum end2) start2)))
-	   (declare (fixnum slen1 slen2))
-	   (if (or (minusp slen1) (minusp slen2))
-	       ;;prevent endless looping later.
-	       (error "Improper bounds for string comparison."))
-	   (do ((index1 start1 (1+ index1))
-		(index2 start2 (1+ index2))
-		(char1)
-		(char2))
-	       ((or (= index1 (the fixnum end1)) (= index2 (the fixnum end2)))
-		(if (,length-test slen1 slen2) (- index1 offset1)))
-	     (declare (fixnum index1 index2))
-	     (setq char1 (schar string1 index1))
-	     (setq char2 (schar string2 index2))
-	     (if (not (char-equal char1 char2))
-		 (if ,character-test
-		     (return (- index1 offset1))
-		     (return ())))))))))
+    `(with-two-strings string1 string2 start1 end1 offset1 start2 end2
+       (let ((slen1 (- (the fixnum end1) start1))
+	     (slen2 (- (the fixnum end2) start2)))
+	 (declare (fixnum slen1 slen2))
+	 (if (or (minusp slen1) (minusp slen2))
+	     ;;prevent endless looping later.
+	     (error "Improper bounds for string comparison."))
+	 (do ((index1 start1 (1+ index1))
+	      (index2 start2 (1+ index2))
+	      (char1)
+	      (char2))
+	     ((or (= index1 (the fixnum end1)) (= index2 (the fixnum end2)))
+	      (if (,length-test slen1 slen2) (- index1 offset1)))
+	   (declare (fixnum index1 index2))
+	   (setq char1 (schar string1 index1))
+	   (setq char2 (schar string2 index2))
+	   (if (not (char-equal char1 char2))
+	       (if ,character-test
+		   (return (- index1 offset1))
+		   (return ()))))))))
 
 ) ; eval-when
 
@@ -421,9 +378,8 @@
   all lower case alphabetic characters converted to uppercase."
   (declare (fixnum start))
   (if (symbolp string) (setq string (symbol-name string)))
-  (let ((slen (length string))
-	(offset 0))
-    (declare (fixnum slen offset))
+  (let ((slen (length string)))
+    (declare (fixnum slen))
     (with-one-string string start end offset
       (let ((offset-slen (+ slen offset))
 	    (newstring (make-string slen)))
@@ -451,9 +407,8 @@
   all upper case alphabetic characters converted to lowercase."
   (declare (fixnum start))
   (if (symbolp string) (setq string (symbol-name string)))
-  (let ((slen (length string))
-	(offset 0))
-    (declare (fixnum slen offset))
+  (let ((slen (length string)))
+    (declare (fixnum slen))
     (with-one-string string start end offset
       (let ((offset-slen (+ slen offset))
 	    (newstring (make-string slen)))
@@ -484,9 +439,8 @@
   non-case-modifiable chars."
   (declare (fixnum start))
   (if (symbolp string) (setq string (symbol-name string)))
-  (let ((slen (length string))
-	(offset 0))
-    (declare (fixnum slen offset))
+  (let ((slen (length string)))
+    (declare (fixnum slen))
     (with-one-string string start end offset
       (let ((offset-slen (+ slen offset))
 	    (newstring (make-string slen)))
@@ -523,8 +477,7 @@
   "Given a string, returns that string with all lower case alphabetic
   characters converted to uppercase."
   (declare (fixnum start))
-  (let ((save-header string)
-	offset)
+  (let ((save-header string))
     (with-one-string string start end offset
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
@@ -536,8 +489,7 @@
   "Given a string, returns that string with all upper case alphabetic
   characters converted to lowercase."
   (declare (fixnum start))
-  (let ((save-header string)
-	offset)
+  (let ((save-header string))
     (with-one-string string start end offset
       (do ((index start (1+ index)))
 	  ((= index (the fixnum end)))
@@ -552,8 +504,7 @@
   to be a string of case-modifiable characters delimited by
   non-case-modifiable chars."
   (declare (fixnum start))
-  (let ((save-header string)
-	offset)
+  (let ((save-header string))
     (with-one-string string start end offset
       (do ((index start (1+ index))
 	   (newword t)
