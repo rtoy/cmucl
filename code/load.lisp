@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.28 1991/03/23 17:38:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.29 1991/04/06 12:10:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.28 1991/03/23 17:38:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.29 1991/04/06 12:10:07 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -31,6 +31,8 @@
   "The default for the :Verbose argument to Load.")
 (defvar *load-print-stuff* ()
   "True if we're gonna mumble about what we're loading.")
+(defvar *load-depth* 0
+  "Count of the number of recursive loads.")
 (defvar *fasl-file* ()
   "The fasl file we're reading from.")
 (defvar *current-code-format*
@@ -42,6 +44,21 @@
   :load-object - load object file (default), :load-source - load the source
   file, :compile - compile the source and then load the object file, or
   :query - ask the user if he wants to load the source or object file.")
+
+;;; LOAD-FRESH-LINE -- internal.
+;;;
+;;; Output the corrent number of semicolons after a fresh-line.
+;;; 
+(defconstant semicolons ";;;;;;;;;;;;;;;;")
+;;;
+(defun load-fresh-line ()
+  (fresh-line)
+  (do ((count *load-depth* (- count (length semicolons))))
+      ((< count (length semicolons))
+       (unless (zerop count)
+	 (write-string semicolons *standard-output* :end count)))
+    (write-string semicolons))
+  (write-char #\space))
 
 
 ;;;; The Fop-Table:
@@ -246,7 +263,8 @@
   (unless (listen stream)
     (error "Attempt to load an empty FASL FILE:~%  ~S" stream))
   (when *load-verbose*
-    (format t "~&; Loading stuff from ~S.~%" stream))
+    (load-fresh-line)
+    (format t "Loading stuff from ~S.~%" stream))
   (let* ((*fasl-file* stream)
 	 (*current-fop-table* (pop *free-fop-tables*))
 	 (*current-fop-table-size* ())
@@ -366,6 +384,7 @@
 	    (- result (ash 1 bits))
 	    result))
     (declare (fixnum index byte bits))))
+
 
 ;;; Sloload:
 
@@ -377,87 +396,107 @@
 
 (defun sloload (stream)
   (when *load-verbose*
-    (format t "~&; Loading stuff from ~S.~%" stream))
+    (load-fresh-line)
+    (format t "Loading stuff from ~S.~%" stream))
   (do ((sexpr (read stream nil load-eof-value)
 	      (read stream nil load-eof-value)))
       ((eq sexpr load-eof-value))
     (if *load-print-stuff*
-	(format t "~&; ~S~%" (eval sexpr))
-	(eval sexpr))))))
+	(let ((results (multiple-value-list (eval sexpr))))
+	  (load-fresh-line)
+	  (format t "~{~S~^, ~}~%" results))
+	(eval sexpr)))
+  t)
 
 ;;; Load:
 
 (defun load (filename &key ((:verbose *load-verbose*) *load-verbose*)
 		      ((:print *load-print-stuff*) *load-print-stuff*)
-		      (if-does-not-exist :error))
+		      (if-does-not-exist :error) contents)
   "Loads the file named by Filename into the Lisp environment.  See manual
    for details."
-  (let ((*package* *package*))
+  (declare (type (or null (member :source :binary)) contents))
+  (let ((*package* *package*)
+	(*load-depth* (1+ *load-depth*)))
     (if (streamp filename)
-	(if (equal (stream-element-type filename) '(unsigned-byte 8))
+	(if (or (eq contents :binary)
+		(and (null contents)
+		     (equal (stream-element-type filename)
+			    '(unsigned-byte 8))))
 	    (fasload filename)
 	    (sloload filename))
-	(let* ((pn (merge-pathnames (pathname filename)
-				    *default-pathname-defaults*))
-	       (tn (probe-file pn)))
-	  (cond
-	   (tn
-	    (if (string-equal (pathname-type tn)
-			      #.(c:backend-fasl-file-type c:*backend*))
-		(with-open-file (file tn
-				      :direction :input
-				      :element-type '(unsigned-byte 8))
-		  (fasload file))
-		(with-open-file (file tn :direction :input)
-		  (sloload file)))
-	    t)
-	   ((pathname-type pn)
-	    (let ((stream (open pn :direction :input
-				:if-does-not-exist if-does-not-exist)))
-	      (when stream
-		(sloload stream)
-		(close stream)
-		t)))
-	   (t
-	    (let* ((srcn (make-pathname :type "lisp" :defaults pn))
-		   (src (probe-file srcn))
-		   (objn (make-pathname :type
-					#.(c:backend-fasl-file-type c:*backend*)
-					:defaults pn))
-		   (obj (probe-file objn)))
-	      (cond
-	       (obj
-		(cond ((and src (> (file-write-date src)
-				   (file-write-date obj)))
-		       (case *load-if-source-newer*
-			 (:load-object
-			  (warn "Loading object file ~A, which is~%  ~
-			         older than the presumed source, ~A."
-				(namestring obj)
-				(namestring src))
-			  (load obj))
-			 (:load-source
-			  (warn "Loading source file ~A, which is~%  ~
-			         newer than the presumed object file, ~A."
-				(namestring src)
-				(namestring obj))
-			  (load src))
-			 (:compile
-			  (compile-file (namestring src))
-			  (load obj))
-			 (:query
-			  (if (y-or-n-p "Load source file ~A which is newer~%  ~
-					 than presumed object file ~A? "
-					(namestring src)
-					(namestring obj))
-			      (load src)
-			      (load obj)))
-			 (T (error "*Load-if-source-newer* contains ~A which is not one of:~%  ~
-			            :load-object, :load-source, :compile, or :query."
-				   *load-if-source-newer*))))
-		      (T (load obj))))
-	       (t
-		(load srcn :if-does-not-exist if-does-not-exist))))))))))
+	(let ((pn (merge-pathnames (pathname filename)
+				   *default-pathname-defaults*)))
+	  (internal-load pn (probe-file pn) if-does-not-exist contents)))))
+
+(defun internal-load (pathname truename if-does-not-exist contents)
+  (cond
+   (truename
+    (case contents
+      (:source
+       (with-open-file (file truename :direction :input)
+	 (sloload file)))
+      (:binary
+       (with-open-file (file truename
+			     :direction :input
+			     :element-type '(unsigned-byte 8))
+	 (fasload file)))
+      (t
+       (let ((first-line (with-open-file (file truename :direction :input)
+			   (read-line file nil))))
+	 (if (and first-line
+		  (>= (length first-line) 9)
+		  (string= first-line "FASL FILE" :end1 9))
+	     (internal-load pathname truename if-does-not-exist :binary)
+	     (internal-load pathname truename if-does-not-exist :source))))))
+   ((pathname-type pathname)
+    (with-open-file (stream pathname :direction :input
+			    :if-does-not-exist if-does-not-exist)
+      (sloload stream)))
+   (t
+    (let* ((srcn (make-pathname :type "lisp" :defaults pathname))
+	   (src (probe-file srcn))
+	   (obj (or (probe-file (make-pathname
+				 :type #.(c:backend-fasl-file-type c:*backend*)
+				 :defaults pathname))
+		    (probe-file (make-pathname :type "fasl"
+					       :defaults pathname)))))
+      (cond
+       (obj
+	(cond
+	 ((and src (> (file-write-date src) (file-write-date obj)))
+	  (case *load-if-source-newer*
+	    (:load-object
+	     (warn "Loading object file ~A, which is~%  ~
+	            older than the presumed source:~% ~A."
+		   (namestring obj)
+		   (namestring src))
+	     (internal-load obj obj if-does-not-exist :binary))
+	    (:load-source
+	     (warn "Loading source file ~A, which is~%  ~
+	            newer than the presumed object file, ~A."
+		   (namestring src)
+		   (namestring obj))
+	     (internal-load obj obj if-does-not-exist :source))
+	    (:compile
+	     (compile-file (namestring src) :output-file obj)
+	     (internal-load obj obj if-does-not-exist :binary))
+	    (:query
+	     (if (y-or-n-p "Load source file ~A which is newer~%  ~
+	                    than presumed object file ~A? "
+			   (namestring src)
+			   (namestring obj))
+		 (internal-load obj obj if-does-not-exist :source)
+		 (internal-load obj obj if-does-not-exist :binary)))
+	    (T
+	     (error
+	      "*Load-if-source-newer* contains ~A which is not one of:~%  ~
+	       :load-object, :load-source, :compile, or :query."
+	      *load-if-source-newer*))))
+	 (t
+	  (internal-load obj obj if-does-not-exist :binary))))
+       (t
+	(internal-load srcn srcn if-does-not-exist :source)))))))
 
 
 ;;;; Actual FOP definitions:
@@ -700,13 +739,17 @@
 (define-fop (fop-eval 53)
   (let ((result (eval (pop-stack))))
     (when *load-print-stuff*
-      (format t "~&; ~S~%" result))
+      (load-fresh-line)
+      (prin1 result)
+      (terpri))
     result))
 
 (define-fop (fop-eval-for-effect 54 nil)
   (let ((result (eval (pop-stack))))
     (when *load-print-stuff*
-      (format t "~&; ~S~%" result))))
+      (load-fresh-line)
+      (prin1 result)
+      (terpri))))
 
 (define-fop (fop-funcall 55)
   (let ((arg (read-arg 1)))
@@ -836,7 +879,8 @@
       (%primitive set-function-arglist fun arglist)
       (%primitive set-function-type fun type)
       (when *load-print-stuff*
-	(format t "~&; ~S defined" fun))
+	(load-fresh-line)
+	(format t "~S defined~%" fun))
       fun)))
 
 
