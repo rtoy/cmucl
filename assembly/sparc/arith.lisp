@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.5 1990/11/30 14:02:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.6 1990/12/02 16:51:28 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -49,7 +49,7 @@
   (inst sra temp x 2)
   (inst sra temp2 y 2)
   (inst add temp2 temp)
-  (with-fixed-allocation (res temp vm:bignum-type 1)
+  (with-fixed-allocation (res temp vm:bignum-type (1+ bignum-digits-offset))
     (storew temp2 res vm:bignum-digits-offset vm:other-pointer-type))
   (lisp-return lra :offset 2)
 
@@ -96,7 +96,7 @@
   (inst sra temp x 2)
   (inst sra temp2 y 2)
   (inst add temp2 temp)
-  (with-fixed-allocation (res temp vm:bignum-type 1)
+  (with-fixed-allocation (res temp vm:bignum-type (1+ bignum-digits-offset))
     (storew temp2 res vm:bignum-digits-offset vm:other-pointer-type))
   (lisp-return lra :offset 2)
 
