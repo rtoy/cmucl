@@ -712,13 +712,19 @@
 ;;; class in the lisp type system.
 ;;;
 (defun update-lisp-class-layout (class layout)
-  (unless (eq (kernel:class-layout (kernel:layout-class layout))
-	      layout)
-    (setf (kernel:layout-inherits layout)
-	  (map 'vector #'class-wrapper
-	       (reverse (rest (class-precedence-list class)))))
+  (let ((lclass (kernel:layout-class layout)))
+    (unless (eq (kernel:class-layout lclass) layout)
+      (setf (kernel:layout-inherits layout)
+	    (map 'vector #'class-wrapper
+		 (reverse (rest (class-precedence-list class)))))
+      (kernel:register-layout layout :invalidate nil)
 
-    (kernel:register-layout layout :invalidate nil)))
+      ;; Subclasses of formerly forward-referenced-class may be unknown
+      ;; to lisp:find-class and also anonymous. This functionality moved
+      ;; here from (setf find-class).
+      (let ((name (class-name class)))
+	(setf (lisp:find-class name) lclass
+	      (lisp:class-name lclass) name)))))
 
 (eval-when (load eval)
   (clrhash *find-class*)

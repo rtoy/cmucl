@@ -501,20 +501,16 @@
 	(setf (find-class-cell-class cell) new-value)
 	(when (or (eq *boot-state* 'complete)
 		  (eq *boot-state* 'braid))
-	  #+cmu17
-	  (let ((lclass (kernel:layout-class (class-wrapper new-value))))
-	    (setf (lisp:class-name lclass) (class-name new-value))
-	    (unless (eq (lisp:find-class symbol nil) lclass)
-	      (setf (lisp:find-class symbol) lclass)))
-
-	  (setf (find-class-cell-predicate cell)
-		(symbol-function (class-predicate-name new-value)))
+	  (when (and new-value (class-wrapper new-value))
+	    (setf (find-class-cell-predicate cell)
+		  (symbol-function (class-predicate-name new-value))))
 	  (when (and new-value (not (forward-referenced-class-p new-value)))
 
 	    (dolist (keys+aok (find-class-cell-make-instance-function-keys cell))
 	      (update-initialize-info-internal
 	       (initialize-info new-value (car keys+aok) nil (cdr keys+aok))
-	       'make-instance-function)))))
+	       'make-instance-function))))
+	new-value)
       (error "~S is not a legal class name." symbol)))
 
 #-setf

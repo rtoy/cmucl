@@ -324,7 +324,11 @@
 		    :definition-source `((defclass ,name)
 					 ,(load-truename))
 		    other)))
-    #+cmu17 (kernel:layout-class (class-wrapper res))
+    ;; Defclass of a class with a forward-referenced superclass does not
+    ;; have a wrapper. RES is the incomplete PCL class. The Lisp class
+    ;; does not yet exist. Maybe should return NIL in that case as RES
+    ;; is not useful to the user?
+    #+cmu17 (and (class-wrapper res)(kernel:layout-class (class-wrapper res)))
     #-cmu17 res))
 
 (setf (gdefinition 'load-defclass) #'real-load-defclass)
