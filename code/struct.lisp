@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.15 1993/02/26 08:26:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.16 1993/04/04 10:00:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,12 @@
 (defconstant in-buffer-length 512 "The size of a stream in-buffer.")
 (deftype in-buffer-type ()
   `(simple-array (unsigned-byte 8) (,in-buffer-length)))
+
+;;; Change the kind of stream to :instance so that the defstruct doesn't flame
+;;; out.
+;;; 
+(eval-when (compile eval)
+  (setf (info type kind 'stream) :instance))
 
 (defstruct (stream (:predicate streamp) (:print-function %print-stream))
   ;;
