@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/command.lisp,v 1.5 1991/05/20 15:54:33 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/command.lisp,v 1.6 1991/05/22 14:45:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -384,7 +384,7 @@
    that receive output from streams coming from other processes."
   "Make the current window track the buffer's point."
   (declare (ignore p))
-  (setf (window-display-recentering window) t))
+  (setf (window-display-recentering (current-window)) t))
 ;;;
 (defun reset-window-display-recentering (window &optional buffer)
   (declare (ignore buffer))
