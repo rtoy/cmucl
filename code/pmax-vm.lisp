@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.10 1992/02/22 00:04:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.11 1992/07/09 16:43:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.10 1992/02/22 00:04:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.11 1992/07/09 16:43:54 wlott Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
@@ -22,8 +22,9 @@
 (use-package "UNIX")
 
 (export '(fixup-code-object internal-error-arguments
-	  sigcontext-register sigcontext-float-register
-	  sigcontext-floating-point-modes extern-alien-name))
+	  sigcontext-program-counter sigcontext-register
+	  sigcontext-float-register sigcontext-floating-point-modes
+	  extern-alien-name))
 
 
 ;;;; The sigcontext structure.
@@ -123,7 +124,14 @@
 
 ;;;; Sigcontext access functions.
 
-;;; SIGCONTEXT-REGISTER -- Internal.
+;;; SIGCONTEXT-PROGRAM-COUNTER -- Interface.
+;;;
+(defun sigcontext-program-counter (scp)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (slot scp 'sc-pc)))
+
+;;; SIGCONTEXT-REGISTER -- Interface.
 ;;;
 ;;; An escape register saves the value of a register for a frame that someone
 ;;; interrupts.  
@@ -142,7 +150,7 @@
 (defsetf sigcontext-register %set-sigcontext-register)
 
 
-;;; SIGCONTEXT-FLOAT-REGISTER  --  Internal
+;;; SIGCONTEXT-FLOAT-REGISTER  --  Interface.
 ;;;
 ;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
 ;;; Format is the type of float to return.
