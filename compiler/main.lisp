@@ -22,7 +22,7 @@
 		    *seen-blocks* *seen-functions* *list-conflicts-table*
 		    *continuation-number* *continuation-numbers*
 		    *number-continuations* *tn-id* *tn-ids* *id-tns*
-		    *label-ids* *label-id* *id-labels* *sb-list*
+		    *label-ids* *label-id* *id-labels*
 		    *undefined-warnings* *compiler-error-count*
 		    *compiler-warning-count* *compiler-note-count*
 		    *compiler-error-output* *compiler-error-bailout*
@@ -428,7 +428,7 @@
     (setq *label-id* 0))
   ;;
   ;; Clear some Pack data structures (for GC purposes only.)
-  (dolist (sb *sb-list*)
+  (dolist (sb (backend-sb-list *backend*))
     (when (finite-sb-p sb)
       (fill (finite-sb-live-tns sb) nil)))
   ;;
@@ -542,7 +542,7 @@
   ;;
   ;; If a file, the truename of the corresponding source file.  If from a Lisp
   ;; form, :LISP, if from a stream, :STREAM.
-  (name nil :type (or pathname (member :lisp :stream)))
+  (name (required-argument) :type (or pathname (member :lisp :stream)))
   ;;
   ;; The file's write date (if relevant.)
   (write-date nil :type (or unsigned-byte null))
@@ -1201,7 +1201,7 @@
 (defun start-error-output (source-info)
   (declare (type source-info source-info))
   (compiler-mumble "~2&Python version ~A, VM version ~A on ~A.~%"
-		   compiler-version vm-version
+		   compiler-version (backend-version *backend*)
 		   (ext:format-universal-time nil (get-universal-time)
 					      :style :government
 					      :print-weekday nil
@@ -1280,7 +1280,8 @@
 	    
 	    (when output-file
 	      (setq output-file-name
-		    (frob output-file vm:target-fasl-file-type))
+		    (frob output-file
+		      (backend-fasl-file-type *backend*)))
 	      (setq fasl-file (open-fasl-file output-file-name
 					      (namestring (first source)))))
 	    

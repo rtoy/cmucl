@@ -26,7 +26,7 @@
 (in-package 'c)
 
 
-(proclaim '(special *compiler-error-bailout* *template-names*))
+(proclaim '(special *compiler-error-bailout*))
 
 
 ;;; The lexical environment we are currently converting in.  See the LEXENV
@@ -2248,7 +2248,7 @@
 	 (translator (gethash name *primitive-translators*)))
     (if translator
 	(ir1-convert start cont (funcall translator (cdr form)))
-	(let* ((template (or (gethash name *template-names*)
+	(let* ((template (or (gethash name (backend-template-names *backend*))
 			     (compiler-error "Undefined primitive name: ~A."
 					     name)))
 	       (required (length (template-arg-types template)))

@@ -90,7 +90,7 @@
   (collect ((res))
     (dotimes (i sc-number-limit)
       (when (eq (svref restr i) t)
-	(res (svref *sc-numbers* i))))
+	(res (svref (backend-sc-numbers *backend*) i))))
     (res)))
 
     
@@ -108,7 +108,7 @@
       (collect ((losers))
 	(dolist (scn (primitive-type-scs ptype))
 	  (unless (svref costs scn)
-	    (losers (svref *sc-numbers* scn))))
+	    (losers (svref (backend-sc-numbers *backend*) scn))))
 
 	(unless (losers)
 	  (error "Representation selection flamed out for no obvious reason.~@
@@ -147,7 +147,7 @@
       (collect ((load-lose)
 		(move-lose))
 	(dotimes (i sc-number-limit)
-	  (let ((i-sc (svref *sc-numbers* i)))
+	  (let ((i-sc (svref (backend-sc-numbers *backend*) i)))
 	    (when (eq (svref load-scs i) t)
 	      (cond ((not (sc-allowed-by-primitive-type i-sc ptype))
 		     (load-lose i-sc))
@@ -200,7 +200,7 @@
 ;;;
 (defun check-move-function-consistency ()
   (dotimes (i sc-number-limit)
-    (let ((sc (svref *sc-numbers* i)))
+    (let ((sc (svref (backend-sc-numbers *backend*) i)))
       (when sc
 	(let ((moves (sc-move-functions sc)))
 	  (dolist (const (sc-constant-scs sc))
@@ -272,7 +272,7 @@
 	  (setq min cost)
 	  (setq min-scn scn))))
     
-    (svref *sc-numbers* min-scn)))
+    (svref (backend-sc-numbers *backend*) min-scn)))
 
 
 ;;; NOTE-NUMBER-STACK-TN  --  Internal
@@ -389,7 +389,7 @@
 	 (node (vop-node vop))
 	 (block (vop-block vop)))
     (dotimes (i sc-number-limit (bad-coerce-error op))
-      (let ((i-sc (svref *sc-numbers* i)))
+      (let ((i-sc (svref (backend-sc-numbers *backend*) i)))
 	(when (and (eq (svref scs i) t)
 		   (sc-allowed-by-primitive-type i-sc ptype))
 	  (let ((res (if write-p
@@ -483,7 +483,7 @@
 		       (assert (eq how :known-return))
 		       (setq nfp-tn (make-number-stack-pointer-tn))
 		       (setf (tn-sc nfp-tn)
-			     (svref *sc-numbers*
+			     (svref (backend-sc-numbers *backend*)
 				    (first (primitive-type-scs
 					    (tn-primitive-type nfp-tn)))))
 		       (emit-context-template
@@ -577,7 +577,7 @@
 	(let* ((scs (primitive-type-scs (tn-primitive-type tn)))
 	       (sc (if (rest scs)
 		       (select-tn-representation tn scs costs)
-		       (svref *sc-numbers* (first scs)))))
+		       (svref (backend-sc-numbers *backend*) (first scs)))))
 	  (assert sc)
 	  (setf (tn-sc tn) sc))))
 

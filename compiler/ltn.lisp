@@ -282,7 +282,7 @@
 		 ((< num-proven num-types)
 		  (append proven
 			  (make-n-tns (- num-types num-proven)
-				      *any-primitive-type*)))
+				      (backend-any-primitive-type *backend*))))
 		 ((> num-proven num-types)
 		  (subseq proven 0 num-types))
 		 (t
@@ -535,7 +535,7 @@
       (ecase (first restr)
 	(:or
 	 (dolist (mem (rest restr) nil)
-	   (when (or (and t-ok (eq mem *any-primitive-type*))
+	   (when (or (and t-ok (eq mem (backend-any-primitive-type *backend*)))
 		     (eq mem type))
 	     (return t))))
 	(:constant

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.23 1990/10/17 19:18:06 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.24 1990/11/03 03:14:41 wlott Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -242,7 +242,7 @@
 	 ((:special :global)
 	  (assert (symbolp (leaf-name leaf)))
 	  (vop set node block (emit-constant (leaf-name leaf)) val
-	       (make-normal-tn *any-primitive-type*))))))
+	       (make-normal-tn (backend-any-primitive-type *backend*)))))))
 
     (when locs
       (emit-move node block val (first locs))
@@ -570,8 +570,10 @@
     (let ((nvals (length rtypes))
 	  (ntypes (length types)))
       (cond ((< ntypes nvals)
-	     (append types (make-list (- nvals ntypes)
-				      :initial-element *any-primitive-type*)))
+	     (append types
+		     (make-list (- nvals ntypes)
+				:initial-element
+				(backend-any-primitive-type *backend*))))
 	    ((> ntypes nvals)
 	     (subseq types 0 nvals))
 	    (t
@@ -717,7 +719,8 @@
 	  (when actual
 	    (cond
 	     ((lambda-var-indirect var)
-	      (let ((temp (make-normal-tn *any-primitive-type*)))
+	      (let ((temp
+		     (make-normal-tn (backend-any-primitive-type *backend*))))
 		(vop make-value-cell node block actual temp)
 		(temps temp)))
 	     ((member actual (locs))
@@ -1088,7 +1091,8 @@
 	(vop copy-more-arg node block (optional-dispatch-max-args ef))))
     
     (if (ir2-environment-environment env)
-	(let ((closure (make-normal-tn *any-primitive-type*)))
+	(let ((closure
+	       (make-normal-tn (backend-any-primitive-type *backend*))))
 	  (vop setup-closure-environment node block start-label closure)
 	  (let ((n -1))
 	    (dolist (loc (ir2-environment-environment env))
@@ -1565,7 +1569,9 @@
 
 (defoptimizer (%slot-accessor ir2-convert) ((str) node block)
   (let* ((cont (node-cont node))
-	 (res (continuation-result-tns cont (list *any-primitive-type*))))
+	 (res (continuation-result-tns cont
+				       (list (backend-any-primitive-type
+					      *backend*)))))
     (vop structure-ref node block
 	 (continuation-tn node block str)
 	 (dsd-index

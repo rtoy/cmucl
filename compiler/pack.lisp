@@ -148,7 +148,7 @@
 ;;;
 (defun init-sb-vectors (component)
   (let ((nblocks (ir2-block-count component)))
-    (dolist (sb *sb-list*)
+    (dolist (sb (backend-sb-list *backend*))
       (unless (eq (sb-kind sb) :non-packed)
 	(let* ((conflicts (finite-sb-conflicts sb))
 	       (always-live (finite-sb-always-live sb))
@@ -243,7 +243,7 @@
 ;;;
 (defun pack-before-gc-hook ()
   (unless *in-pack*
-    (dolist (sb *sb-list*)
+    (dolist (sb (backend-sb-list *backend*))
       (unless (eq (sb-kind sb) :non-packed)
 	(let ((size (sb-size sb)))
 	  (fill nil (finite-sb-always-live sb))
@@ -723,7 +723,7 @@
 	((null vop))
       (when (eq (vop-info-save-p (vop-info vop)) t)
 	(do-live-tns (tn (vop-save-set vop) block)
-	  (decf (tn-cost tn) register-save-penalty)))))
+	  (decf (tn-cost tn) (backend-register-save-penalty *backend*))))))
   
   (do ((tn (ir2-component-normal-tns (component-info component))
 	   (tn-next tn)))
@@ -881,7 +881,7 @@
 ;;; the end of Block.
 ;;;
 (defun init-live-tns (block)
-  (dolist (sb *sb-list*)
+  (dolist (sb (backend-sb-list *backend*))
     (when (eq (sb-kind sb) :finite)
       (fill (finite-sb-live-tns sb) nil)))
 
@@ -1140,7 +1140,7 @@
 	  (unless allowed (no-load-scs-allowed-by-primitive-type-error op))
 	  (return (spill-and-pack-load-tn allowed op)))
 	
-	(let ((sc (svref *sc-numbers* (pop scs))))
+	(let ((sc (svref (backend-sc-numbers *backend*) (pop scs))))
 	  (when (sc-allowed-by-primitive-type sc ptype)
 	    (setq allowed sc)
 	    (let ((loc (or (find-load-tn-target op sc)
