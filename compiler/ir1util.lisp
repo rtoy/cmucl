@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.43 1991/11/09 12:27:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.44 1991/11/13 19:35:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -684,6 +684,7 @@
 	  (unlink-blocks (component-head component) bind-block)
 	  (when return
 	    (unlink-blocks (node-block return) (component-tail component)))
+	  (setf (component-reanalyze component) t)
 	  (setf (component-lambdas component)
 		(delete leaf (component-lambdas component)))))
 
