@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.51 1997/12/16 02:21:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.52 1997/12/16 15:54:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -602,18 +602,19 @@
      (cond ((eq (numeric-type-complexp arg) :complex)
 	    (make-numeric-type :class (numeric-type-class arg)
 			       :format (numeric-type-format arg)
-			       :complexp :complex
-			       :low nil
-			       :high nil))
+			       :complexp :complex))
 	   ((numeric-type-real-p arg)
 	    (let ((lo (numeric-type-low arg))
 		  (hi (numeric-type-high arg)))
 	      (if (funcall cond lo hi)
-		  (make-numeric-type
-		   :class 'float
-		   :format (or (numeric-type-format arg) 'single-float)
-		   :low (or (bound-func fcn lo) default-lo)
-		   :high (or (bound-func fcn hi) default-hi))
+		  (let ((f-type (or (numeric-type-format arg) 'single-float)))
+		    (make-numeric-type
+		     :class 'float
+		     :format f-type
+		     :low (or (bound-func fcn lo)
+			      (coerce default-lo f-type))
+		     :high (or (bound-func fcn hi)
+			       (coerce default-hi f-type))))
 		  (float-or-complex-type arg))))
 	   (t
 	    (float-or-complex-type arg default-lo default-hi))))))
@@ -621,14 +622,13 @@
 (macrolet
     ((frob (name cond def-lo-bnd def-hi-bnd)
        (let ((num (gensym)))
-	 `(progn
-	   (defoptimizer (,name derive-type) ((,num))
-	     (one-arg-derive-type
-	      ,num
-	      #'(lambda (arg)
-		  (elfun-derive-type-simple arg #',name
-					    ,cond
-					    ,def-lo-bnd ,def-hi-bnd))))))))
+	 `(defoptimizer (,name derive-type) ((,num))
+	   (one-arg-derive-type
+	    ,num
+	    #'(lambda (arg)
+		(elfun-derive-type-simple arg #',name
+					  ,cond
+					  ,def-lo-bnd ,def-hi-bnd)))))))
   ;; These functions are easy because they are defined for the whole
   ;; real line.
   (frob exp (constantly t)
@@ -643,13 +643,6 @@
   ;; These functions are only defined for part of the real line.  The
   ;; condition selects the desired part of the line.  The default
   ;; return value of (OR FLOAT (COMPLEX FLOAT)) is ok as the default.
-  (frob sqrt #'(lambda (lo hi)
-		 (declare (ignore hi))
-		 (typecase lo
-		   (cons (>= (car lo) 0))
-		   (rational (>= lo 0))
-		   (float (> lo 0))))
-	0 nil)
   (frob asin #'(lambda (lo hi)
 		 (and lo hi
 		      (>= (bound-value lo) -1)
@@ -665,6 +658,43 @@
 		       (<= (bound-value hi) 1)))
 	-1 1))
 
+
+;;; Note must assume that a type including 0.0 may also include -0.0
+;;; and thus the result may be complex.
+;;;
+(defun sqrt-derive-type-aux (arg)
+  (etypecase arg
+    (numeric-type
+     (cond ((eq (numeric-type-complexp arg) :complex)
+	    (make-numeric-type :class (numeric-type-class arg)
+			       :format (numeric-type-format arg)
+			       :complexp :complex))
+	   ((numeric-type-real-p arg)
+	    (let* ((lo (numeric-type-low arg))
+		   (lo-val (and lo (bound-value lo)))
+		   (hi (numeric-type-high arg)))
+	      (if (typecase lo-val
+		    (rational
+		     (>= lo-val 0))
+		    (float
+		     (if (consp lo)
+			 (>= lo-val 0)
+			 (> lo-val 0))))
+		  (let ((f-type (or (numeric-type-format arg) 'single-float)))
+		    (make-numeric-type
+		     :class 'float
+		     :format f-type
+		     :low (or (and (> lo-val 0) (bound-func #'sqrt lo))
+			      (coerce 0 f-type))
+		     :high (bound-func #'sqrt hi)))
+		  (float-or-complex-type arg))))
+	   (t
+	    (float-or-complex-type arg 0))))))
+;;;
+(defoptimizer (sqrt derive-type) ((num))
+  (one-arg-derive-type num #'sqrt-derive-type-aux))
+
+
 ;;; Acos is monotonic decreasing, so we need to swap the function
 ;;; values at the lower and upper bounds of the input domain.
 ;;;
@@ -674,9 +704,7 @@
      (cond ((eq (numeric-type-complexp arg) :complex)
 	    (make-numeric-type :class (numeric-type-class arg)
 			       :format (numeric-type-format arg)
-			       :complexp :complex
-			       :low nil
-			       :high nil))
+			       :complexp :complex))
 	   ((numeric-type-real-p arg)
 	    (let ((float-type (or (numeric-type-format arg) 'float))
 		  (lo (numeric-type-low arg))
@@ -865,19 +893,37 @@
 
 
 ;;; Note must assume that a type including 0.0 may also include -0.0
-;;; and thus the result may be -infinity + i*pi.
+;;; and thus the result may be complex -infinity + i*pi.
 ;;;
 (defun log-derive-type-aux-1 (arg)
-  (elfun-derive-type-simple
-   arg #'log #'(lambda (lo hi)
-		 (declare (ignore hi))
-		 (typecase lo
-		   (cons (>= (car lo) 0))
-		   (rational (>= lo 0))
-		   (float (> lo 0))))
-   nil nil))
+  (etypecase arg
+    (numeric-type
+     (cond ((eq (numeric-type-complexp arg) :complex)
+	    (make-numeric-type :class (numeric-type-class arg)
+			       :format (numeric-type-format arg)
+			       :complexp :complex))
+	   ((numeric-type-real-p arg)
+	    (let* ((lo (numeric-type-low arg))
+		   (lo-val (and lo (bound-value lo)))
+		   (hi (numeric-type-high arg)))
+	      (if (typecase lo-val
+		    (rational
+		     (>= lo-val 0))
+		    (float
+		     (if (consp lo)
+			 (>= lo-val 0)
+			 (> lo-val 0))))
+		  (let ((f-type (or (numeric-type-format arg) 'single-float)))
+		    (make-numeric-type
+		     :class 'float
+		     :format f-type
+		     :low (and (> lo-val 0) (bound-func #'log lo))
+		     :high (bound-func #'log hi)))
+		  (float-or-complex-type arg))))
+	   (t
+	    (float-or-complex-type arg))))))
 
-(defun log-derive-type-aux (x y same-arg)
+(defun log-derive-type-aux-2 (x y same-arg)
   (let ((log-x (log-derive-type-aux-1 x))
 	(log-y (log-derive-type-aux-1 y))
 	(result '()))
@@ -893,7 +939,7 @@
 
 (defoptimizer (log derive-type) ((x &optional y))
   (if y
-      (two-arg-derive-type x y #'log-derive-type-aux)
+      (two-arg-derive-type x y #'log-derive-type-aux-2)
       (one-arg-derive-type x #'log-derive-type-aux-1)))
 
 
@@ -1167,9 +1213,7 @@
      (cond ((eq (numeric-type-complexp arg) :complex)
 	    (make-numeric-type :class (numeric-type-class arg)
 			       :format (numeric-type-format arg)
-			       :complexp :complex
-			       :low nil
-			       :high nil))
+			       :complexp :complex))
 	   ((numeric-type-real-p arg)
 	    (let ((float-type (or (numeric-type-format arg) 'float)))
 	      (specifier-type `(,float-type
@@ -1191,9 +1235,7 @@
      (cond ((eq (numeric-type-complexp arg) :complex)
 	    (make-numeric-type :class (numeric-type-class arg)
 			       :format (numeric-type-format arg)
-			       :complexp :complex
-			       :low nil
-			       :high nil))
+			       :complexp :complex))
 	   ((numeric-type-real-p arg)
 	    (let ((float-type (or (numeric-type-format arg) 'float)))
 	      (specifier-type float-type)))
