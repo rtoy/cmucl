@@ -34,7 +34,7 @@
     (inst sub res zero-tn x)))
 
 (define-vop (fast-lognot/fixnum fixnum-unop)
-  (:temporary (:scs (any-reg) :type fixnum :to (result 0))
+  (:temporary (:scs (any-reg) :type fixnum :to (:result 0))
 	      temp)
   (:translate lognot)
   (:generator 1
