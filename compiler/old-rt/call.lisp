@@ -62,14 +62,16 @@
 ;;; known location.
 ;;;
 (defun make-old-fp-save-location (env)
-  (environment-live-tn
-   (make-wired-tn *any-primitive-type* stack-arg-scn old-fp-save-offset)
-   env))
+  (specify-save-tn
+   (environment-debug-live-tn (make-normal-tn *any-primitive-type*)
+			      env)
+   (make-wired-tn *any-primitive-type* stack-arg-scn old-fp-save-offset)))
 ;;;
 (defun make-return-pc-save-location (env)
-  (environment-live-tn
-   (make-wired-tn *any-primitive-type* stack-arg-scn return-pc-save-offset)
-   env))
+  (specify-save-tn
+   (environment-debug-live-tn (make-normal-tn *any-primitive-type*)
+			      env)
+   (make-wired-tn *any-primitive-type* stack-arg-scn return-pc-save-offset)))
 
 
 ;;; Make-Argument-Count-Location  --  Interface
