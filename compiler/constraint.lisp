@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.10 1991/02/20 14:56:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.11 1991/12/08 17:24:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,13 +351,15 @@
       
       (let* ((cont (node-cont ref))
 	     (dest (continuation-dest cont)))
-	(if (and (if-p dest)
-		 (csubtypep *null-type* not-res)
-		 (eq (continuation-asserted-type cont) *wild-type*))
-	    (change-ref-leaf ref (find-constant 't))
-	    (derive-node-type ref (or (type-difference res not-res)
-				      res))))))
-  
+	(cond ((and (if-p dest)
+		    (csubtypep *null-type* not-res)
+		    (eq (continuation-asserted-type cont) *wild-type*))
+	       (setf (node-derived-type ref) *wild-type*)
+	       (change-ref-leaf ref (find-constant 't)))
+	      (t
+	       (derive-node-type ref (or (type-difference res not-res)
+					 res)))))))
+
   (undefined-value))
 
 		 
