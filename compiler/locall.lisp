@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.46 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.47 1998/03/01 21:55:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -648,7 +648,7 @@
 ;;;
 ;;;    Converting to a let has differing significance to various parts of the
 ;;; compiler:
-;;; -- The body of a Let is spliced in immediately after the the corresponding
+;;; -- The body of a Let is spliced in immediately after the corresponding
 ;;;    combination node, making the control transfer explicit and allowing lets
 ;;;    to mashed together into a single block.  The value of the let is
 ;;;    delivered directly to the original continuation for the call,

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.66 1997/11/07 19:24:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.67 1998/03/01 21:55:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,7 +113,7 @@
 
 
 ;;; A list of the Circularity structures for all of the circularities detected
-;;; in the the current top-level call to Dump-Object.  Setting this lobotomizes
+;;; in the current top-level call to Dump-Object.  Setting this lobotomizes
 ;;; circularity detection as well, since circular dumping uses the table.
 ;;;
 (defvar *circularities-detected*)

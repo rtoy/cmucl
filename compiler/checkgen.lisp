@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.25 1998/01/06 16:51:51 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.26 1998/03/01 21:55:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,7 +146,7 @@
 ;;;    Cont is a continuation we are doing a type check on and Types is a list
 ;;; of types that we are checking its values against.  If we have proven
 ;;; that Cont generates a fixed number of values, then for each value, we check
-;;; whether it is cheaper to then difference between the the proven type and
+;;; whether it is cheaper to then difference between the proven type and
 ;;; the corresponding type in Types.  If so, we opt for a :HAIRY check with
 ;;; that test negated.  Otherwise, we try to do a simple test, and if that is
 ;;; impossible, we do a hairy test with non-negated types.  If true,

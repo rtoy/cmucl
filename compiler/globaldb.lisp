@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.35 1997/11/04 09:10:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.36 1998/03/01 21:55:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -885,7 +885,7 @@
 ;;; CLEAR-INFO  --  Public
 ;;;
 (defmacro clear-info (class type name)
-  "Clear the information of the the specified Type and Class for Name in the
+  "Clear the information of the specified Type and Class for Name in the
   current environment, allowing any inherited info to become visible.  We
   return true if there was any info."
   (let* ((class (symbol-name class))
@@ -1083,7 +1083,7 @@
 (define-info-type variable where-from (member :declared :assumed :defined)
   :assumed)
 
-;;; The the lisp object which is the value of this constant, if known.
+;;; The lisp object which is the value of this constant, if known.
 (define-info-type variable constant-value t
   (if (boundp name)
       (values (symbol-value name) t)
