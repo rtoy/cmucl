@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.18 1998/01/29 07:22:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.19 2000/06/07 07:11:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,55 +145,45 @@
    nine values: second, minute, hour, date, month, year, day of week (0 =
    Monday), T (daylight savings time) or NIL (standard time), and timezone.
    Completely ignores daylight-savings-time when time-zone is supplied."
-  (multiple-value-bind (weeks secs)
-		       (truncate (+ universal-time seconds-offset)
-				 seconds-in-week)
-    (let* ((weeks (+ weeks weeks-offset))
-	   (second NIL)
-	   (minute NIL)
-	   (hour NIL)
-	   (date NIL)
-	   (month NIL)
-	   (year NIL)
-	   (day NIL)
-	   (daylight NIL)
-	   (timezone (if (null time-zone)
-			 (multiple-value-bind
-			     (ignore minwest dst)
-			     (get-timezone (- universal-time
-					      unix-to-universal-time))
-			   (declare (ignore ignore))
-			   (setf daylight dst)
-			   minwest)
-			 (* time-zone 60))))
-      (declare (fixnum timezone))
-      (multiple-value-bind (t1 seconds) (truncate secs 60)
-	(setq second seconds)
-	(setq t1 (- t1 timezone))
-	(let* ((tday (if (< t1 0)
-			 (1- (truncate (1+ t1) minutes-per-day))
-			 (truncate t1 minutes-per-day))))
-	  (multiple-value-setq (hour minute)
-	    (truncate (- t1 (* tday minutes-per-day)) 60))
-	  (let* ((t2 (1- (* (+ (* weeks 7) tday november-17-1858) 4)))
-		 (tcent (truncate t2 quarter-days-per-century)))
-	    (setq t2 (mod t2 quarter-days-per-century))
-	    (setq t2 (+ (- t2 (mod t2 4)) 3))
-	    (setq year (+ (* tcent 100) (truncate t2 quarter-days-per-year)))
-	    (let ((days-since-mar0 (1+ (truncate (mod t2 quarter-days-per-year)
-						 4))))
-	      (setq day (mod (+ tday weekday-november-17-1858) 7))
-	      (let ((t3 (+ (* days-since-mar0 5) 456)))
-		(cond ((>= t3 1989)
-		       (setq t3 (- t3 1836))
-		       (setq year (1+ year))))
-		(multiple-value-setq (month t3) (truncate t3 153))
-		(setq date (1+ (truncate t3 5))))))))
-      (values second minute hour date month year day
-	      daylight
-	      (if daylight
-		  (1+ (/ timezone 60))
-		  (/ timezone 60))))))
+  (multiple-value-bind (daylight timezone)
+      (if time-zone
+	  (values nil (* time-zone 60 60))
+	  (multiple-value-bind
+		(ignore minwest dst)
+	      (get-timezone (- universal-time unix-to-universal-time))
+	    (declare (ignore ignore))
+	    (values dst (* minwest 60))))
+    (declare (fixnum timezone))
+    (multiple-value-bind (weeks secs)
+	(truncate (+ (- universal-time timezone) seconds-offset)
+		  seconds-in-week)
+      (let ((weeks (+ weeks weeks-offset)))
+	(multiple-value-bind (t1 second)
+	    (truncate secs 60)
+	  (let ((tday (truncate t1 minutes-per-day)))
+	    (multiple-value-bind (hour minute)
+		(truncate (- t1 (* tday minutes-per-day)) 60)
+	      (let* ((t2 (1- (* (+ (* weeks 7) tday november-17-1858) 4)))
+		     (tcent (truncate t2 quarter-days-per-century)))
+		(setq t2 (mod t2 quarter-days-per-century))
+		(setq t2 (+ (- t2 (mod t2 4)) 3))
+		(let* ((year (+ (* tcent 100)
+				(truncate t2 quarter-days-per-year)))
+		       (days-since-mar0
+			(1+ (truncate (mod t2 quarter-days-per-year) 4)))
+		       (day (mod (+ tday weekday-november-17-1858) 7))
+		       (t3 (+ (* days-since-mar0 5) 456)))
+		  (cond ((>= t3 1989)
+			 (setq t3 (- t3 1836))
+			 (setq year (1+ year))))
+		  (multiple-value-bind (month t3)
+		      (truncate t3 153)
+		    (let ((date (1+ (truncate t3 5))))
+		      (values second minute hour date month year day
+			      daylight
+			      (if daylight
+				  (1+ (/ timezone 60 60))
+				  (/ timezone 60 60))))))))))))))
 
 
 (defun pick-obvious-year (year)
