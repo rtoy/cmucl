@@ -7,13 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.14 1991/05/21 22:22:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.15 1991/05/24 17:02:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Streams for UNIX file descriptors.
 ;;;
 ;;; Written by William Lott, July 1989 - January 1990.
+;;; Some tuning by Rob MacLachlan.
 ;;; 
 ;;; **********************************************************************
 
@@ -21,8 +22,7 @@
 (in-package "SYSTEM")
 
 (export '(fd-stream fd-stream-p fd-stream-fd make-fd-stream
-	  beep *beep-function* 
-	  output-raw-bytes
+          io-timeout beep *beep-function* output-raw-bytes
 	  *tty* *stdin* *stdout* *stderr*))
 
 
@@ -96,13 +96,23 @@
 
   ;; Output flushed, but not written due to non-blocking io.
   (output-later nil)
-  (handler nil))
+  (handler nil)
+  ;;
+  ;; Timeout specified for this stream, or NIL if none.
+  (timeout nil :type (or index null)))
 
 (defun %print-fd-stream (fd-stream stream depth)
   (declare (ignore depth) (stream stream))
   (format stream "#<Stream for ~A>"
 	  (fd-stream-name fd-stream)))
 
+
+(define-condition io-timeout (stream-error) (direction)
+  (:report
+   (lambda (condition stream)
+     (format stream "Timeout ~(~A~)ing ~S."
+	     (io-timeout-direction condition)
+	     (stream-error-stream condition)))))
 
 
 ;;;; Output routines and related noise.
@@ -444,7 +454,9 @@
       (case count
 	(1)
 	(0
-	 (system:wait-until-fd-usable fd :input))
+	 (unless (system:wait-until-fd-usable
+		  fd :input (fd-stream-timeout stream))
+	   (error 'io-timeout :stream stream :direction :read)))
 	(t
 	 (error "Problem checking to see if ~S is readable: ~A"
 		stream
@@ -458,7 +470,9 @@
 	     (if #+serve-event (eql errno mach:ewouldblock)
 		 #-serve-event nil
 	       (progn
-		 (system:wait-until-fd-usable fd :input)
+		 (unless (system:wait-until-fd-usable
+			  fd :input (fd-stream-timeout stream))
+		   (error 'io-timeout :stream stream :direction :read))
 		 (do-input stream))
 	       (error "Error reading ~S: ~A"
 		      stream
@@ -1115,19 +1129,25 @@ non-server method is also significantly more efficient for large reads.
 		       (output nil output-p)
 		       (element-type 'base-character)
 		       (buffering :full)
+		       timeout
 		       file
 		       original
 		       delete-original
 		       (name (if file
 				 (format nil "file ~S" file)
 				 (format nil "descriptor ~D" fd))))
-  "Create a stream for the given unix file descriptor.  If input is non-nil,
-   allow input operations.  If output is non-nil, allow output operations. If
-   neither input nor output are specified, default to allowing input.
-   element-type indicates the element type to use (as for open).  Buffering
-   indicates the kind of buffering to use (one of :none, :line, or :full). If
-   file is spesified, it should be the name of the file.  Name is used to
-   identify the stream when printed."
+  (declare (type index fd) (type (or index null) timeout)
+	   (type (member :none :line :full) buffering))
+  "Create a stream for the given unix file descriptor.
+  If input is non-nil, allow input operations.
+  If output is non-nil, allow output operations.
+  If neither input nor output are specified, default to allowing input.
+  Element-type indicates the element type to use (as for open).
+  Buffering indicates the kind of buffering to use.
+  Timeout (if true) is the number of seconds to wait for input.  If NIL (the
+    default), then wait forever.  When we time out, we signal IO-TIMEOUT.
+  File is the name of the file (will be returned by PATHNAME).
+  Name is used to identify the stream when printed."
   (cond ((not (or input-p output-p))
 	 (setf input t))
 	((not (or input output))
@@ -1137,7 +1157,8 @@ non-server method is also significantly more efficient for large reads.
 				 :file file
 				 :original original
 				 :delete-original delete-original
-				 :buffering buffering)))
+				 :buffering buffering
+				 :timeout timeout)))
     (set-routines stream element-type input output)
     stream))
 
