@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.20 1993/05/05 19:48:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.21 1993/05/28 05:22:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -249,43 +249,55 @@
 ;;; Convert the list of (label . state) entries into an ivector.
 ;;; 
 (eval-when (compile load eval)
-  (defconstant bits-per-state 3)
-  (defconstant bits-per-entry 16)
-  (defconstant bits-per-offset (- bits-per-entry bits-per-state))
-  (defconstant max-offset (ash 1 bits-per-offset)))
+  (defconstant tt-bits-per-state 3)
+  (defconstant tt-bits-per-entry 16)
+  (defconstant tt-bits-per-offset (- tt-bits-per-entry tt-bits-per-state))
+  (defconstant tt-max-offset (1- (ash 1 tt-bits-per-offset))))
 ;;;
-(defun pack-trace-table (table)
-  (declare (list table))
-  #+nil
-  (let ((last-posn 0)
-	(last-state 0)
-	(result (make-array (length table)
-			    :element-type '(unsigned-byte #.bits-per-entry)))
-	(index 0))
-    (dolist (entry table)
-      (let* ((posn (label-position (car entry)))
-	     (state (cdr entry)))
+(deftype tt-state ()
+  `(unsigned-byte ,tt-bits-per-state))
+(deftype tt-entry ()
+  `(unsigned-byte ,tt-bits-per-entry))
+(deftype tt-offset ()
+  `(unsigned-byte ,tt-bits-per-offset))
+;;;
+(defun pack-trace-table (entries)
+  (declare (list entries))
+  (if (backend-featurep :gengc)
+      (let ((result (make-array (logandc2 (1+ (length entries)) 1)
+				:element-type 'tt-entry))
+	    (index 0)
+	    (last-posn 0)
+	    (last-state 0))
+	(declare (type index index last-posn)
+		 (type tt-state last-state))
 	(flet ((push-entry (offset state)
+		 (declare (type tt-offset offset)
+			  (type tt-state state))
 		 (when (>= index (length result))
 		   (setf result
 			 (replace (make-array
 				   (truncate (* (length result) 5) 4)
 				   :element-type
-				   '(unsigned-byte #.bits-per-entry))
+				   'tt-entry)
 				  result)))
 		 (setf (aref result index)
-		       (logior (ash offset bits-per-state)
-			       state))
+		       (logior (ash offset tt-bits-per-state) state))
 		 (incf index)))
-	  (do ((offset (- posn last-posn) (- offset max-offset)))
-	      ((< offset max-offset)
-	       (push-entry offset state))
+	  (dolist (entry entries)
+	    (let* ((posn (label-position (car entry)))
+		   (state (cdr entry)))
+	      (declare (type index posn) (type tt-state state))
+	      (assert (<= last-posn posn))
+	      (do ((offset (- posn last-posn) (- offset max-offset)))
+		  ((< offset tt-max-offset)
+		   (push-entry offset state))
+		(push-entry tt-max-offset last-state))
+	      (setf last-posn posn)
+	      (setf last-state state)))
+	  (when (oddp index)
 	    (push-entry 0 last-state)))
-	(setf last-posn posn)
-	(setf last-state state)))
-    (if (eql (length result) index)
-	result
-	(subseq result 0 index)))
-  ;; ### Hack 'cause this stuff doesn't work.
-  (declare (ignore table))
-  (make-array 0 :element-type '(unsigned-byte #.bits-per-entry)))
+	(if (eql (length result) index)
+	    result
+	    (subseq result 0 index)))
+      (make-array 0 :element-type 'tt-entry)))
