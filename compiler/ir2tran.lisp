@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.13 1990/05/07 10:56:40 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.14 1990/05/12 20:35:59 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -163,7 +163,7 @@
        (ir2-convert-closure node block leaf res))
       (global-var
        (let ((name-tn (emit-constant name))
-	     (unsafe (policy node (> speed safety))))
+	     (unsafe (policy node (zerop safety))))
 	 (ecase (global-var-kind leaf)
 	   ((:special :global :constant)
 	    (assert (symbolp name))
