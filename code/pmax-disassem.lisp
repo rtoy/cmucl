@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.4 1990/02/06 02:22:56 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.5 1990/02/11 19:24:50 ch Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -75,12 +75,9 @@
   (unless (<= 0 register-number 31)
     (error "Illegal register number!"))
   (let ((register-names (ecase register-name-style
-			  (:c
-			   *c-register-names*)
-			  (:lisp
-			   *lisp-register-names*)
-			  (:raw
-			   *raw-register-names*))))
+			  (:c *c-register-names*)
+			  (:lisp *lisp-register-names*)
+			  (:raw *raw-register-names*))))
     (svref register-names register-number)))
 
 
@@ -122,15 +119,23 @@
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word))
 	(immed (signed-ldb (byte 16 0) word)))
-    (format stream "~16,8T~A~8,8T~A, ~A, #x~X~%"
-	    name (register-name rt) (register-name rs) immed)))
+    (cond ((and (zerop rs) (or (string= name "ADDI") (string= name "ADDIU")))
+	   (format stream "~16,8TLOADI~8,8T~A, #x~X~%"
+		   (register-name rt) immed))
+	  (t
+	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~%"
+		   name (register-name rt) (register-name rs) immed)))))
 
 (def-mips-instruction-type (:ui-type)
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word))
 	(immed (ldb (byte 16 0) word)))
-    (format stream "~16,8T~A~8,8T~A, ~A, #x~X~%"
-	    name (register-name rt) (register-name rs) immed)))
+    (cond ((and (zerop rs) (or (string= name "ORI") (string= name "XORI")))
+	   (format stream "~16,8TLOADI~8,8T~A, #x~X~%"
+		   (register-name rt) immed))
+	  (t
+	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~%"
+		   name (register-name rt) (register-name rs) immed)))))
 
 (def-mips-instruction-type (:lui-type)
   (let ((rt (ldb (byte 5 16) word))
@@ -161,11 +166,15 @@
 	    (register-name rs) (branch-target offset))))
 
 (def-mips-instruction-type (:branch2-type)
-  (let ((rs (ldb (byte 5 21) word))
-	(rt (ldb (byte 5 16) word))
-	(offset (signed-ldb (byte 16 0) word)))
-    (format stream "~16,8T~A~8,8T~A, ~A, ~D~%" name
-	    (register-name rs) (register-name rt) (branch-target offset))))
+  (let* ((rs (ldb (byte 5 21) word))
+	 (rt (ldb (byte 5 16) word))
+	 (offset (signed-ldb (byte 16 0) word))
+	 (target (branch-target offset)))
+    (cond ((and (zerop rs) (zerop rt) (string= name "BEQ"))
+	   (format stream "~16,8TB~8,8T~D~%" target))
+	  (t
+	   (format stream "~16,8T~A~8,8T~A, ~A, ~D~%" name
+		   (register-name rs) (register-name rt) target)))))
 
 (def-mips-instruction-type (:r3-type)
   (let ((rs (ldb (byte 5 21) word))
@@ -174,7 +183,7 @@
     (cond ((zerop rd)
 	   ;; Hack for NOP
 	   (format stream "~16,8TNOP~%"))
-	  ((and (zerop rt) (string= name "OR"))
+	  ((and (zerop rt) (or (string= name "OR") (string= name "ANDU")))
 	   ;; Hack for MOVE
 	   (format stream "~16,8TMOVE~8,8T~A, ~A~%"
 		   (register-name rd) (register-name rs)))
@@ -413,7 +422,7 @@
 ;;;; Disassemble-Instruction
 
 (defun disassemble-instruction (word &optional (stream t))
-  (let ((instr (mips-instruction word)))
+  (let* ((instr (mips-instruction word)))
     (unless instr
       (format stream "UNKNOWN INSTR (#x~X)~%" word)
       (return-from disassemble-instruction (values nil nil)))
@@ -442,10 +451,10 @@
       (format stream "~6D:" *current-instruction-number*))
     (multiple-value-bind
 	(name type)
-	(disassemble-instruction (+ (ash (aref code-vector i) 24)
-				    (ash (aref code-vector (+ i 1)) 16)
-				    (ash (aref code-vector (+ i 2)) 8)
-				    (aref code-vector (+ i 3)))
+	(disassemble-instruction (logior (aref code-vector i)
+					 (ash (aref code-vector (+ i 1)) 8)
+					 (ash (aref code-vector (+ i 2)) 16)
+					 (ash (aref code-vector (+ i 3)) 24))
 				 stream)
       (declare (ignore name))
       (cond ((member type delay-slot-instruction-types :test #'eq)
