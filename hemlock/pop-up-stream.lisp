@@ -29,7 +29,6 @@
 	     stream 1)))
 
 (defun random-typeout-line-sout (stream string start end)
-  (declare (ignore start end))
   (insert-string (random-typeout-stream-mark stream) string start end)
   (unless (random-typeout-stream-no-prompt stream)
     (let ((count (count #\newline string)))
@@ -160,7 +159,6 @@
   (insert-character (random-typeout-stream-mark stream) char))
 
 (defun random-typeout-full-sout (stream string start end)
-  (declare (ignore start end))
   (insert-string (random-typeout-stream-mark stream) string start end))
 
 (defun random-typeout-full-misc (stream operation &optional arg1 arg2)
