@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.8 1992/02/24 00:50:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.9 1992/02/24 01:46:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,7 @@
 
 (in-package "KERNEL")
 (export '(%set-symbol-value %set-symbol-definition %set-symbol-plist
-			    %set-symbol-package))
+			    %set-symbol-package fset))
 
 (in-package "LISP")
 
