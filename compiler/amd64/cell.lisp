@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/cell.lisp,v 1.1 2004/05/24 22:34:59 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/cell.lisp,v 1.2 2004/06/10 01:39:06 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -139,13 +139,17 @@
   (:translate symbol-hash)
   (:args (symbol :scs (descriptor-reg)))
   (:results (res :scs (any-reg)))
-  (:result-types positive-fixnum)
+  (:result-types tagged-num)
   (:generator 2
     ;; the symbol-hash slot of NIL holds NIL because it is also the cdr
     ;; slot, so we have to strip off the two low bits to make sure it is
     ;; a fixnum.
     (loadw res symbol symbol-hash-slot other-pointer-type)
     (inst and res (lognot #b11))))
+
+(define-vop (%set-symbol-hash cell-set)
+  (:translate %set-symbol-hash)
+  (:variant symbol-hash-slot other-pointer-type))
 
 
 ;;;; Fdefinition (fdefn) objects.
