@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/subprim.lisp,v 1.1 1990/11/30 17:05:04 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/subprim.lisp,v 1.2 1992/10/11 10:54:22 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -24,7 +26,7 @@
   (:args (object :scs (descriptor-reg) :target ptr))
   (:arg-types list)
   (:temporary (:scs (descriptor-reg) :from (:argument 0)) ptr)
-  (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:scs (any-reg) :type fixnum :to (:result 0) :target result)
 	      count)
   (:results (result :scs (any-reg descriptor-reg)))

@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.4 1992/04/14 02:51:46 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.5 1992/10/11 10:54:08 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; Allocation VOPs for the SPARC port.
 ;;;
@@ -25,7 +27,7 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :type list :to (:result 0) :target result)
 	      res)
-  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:info num)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)

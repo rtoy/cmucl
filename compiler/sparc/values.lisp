@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.1 1990/11/30 17:05:10 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.2 1992/10/11 10:54:28 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -64,7 +66,7 @@
 	    (count :scs (any-reg)))
   (:temporary (:scs (descriptor-reg) :type list :from (:argument 0)) list)
   (:temporary (:scs (descriptor-reg)) temp)
-  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 0

@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.9 1992/03/24 04:24:23 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.10 1992/10/11 10:54:20 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
@@ -25,7 +27,7 @@
 	 (rank :scs (any-reg)))
   (:arg-types tagged-num tagged-num)
   (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
-  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:results (result :scs (descriptor-reg)))
   (:generator 0
     (pseudo-atomic ()
@@ -66,7 +68,7 @@
   (:translate lisp::%array-rank)
   (:policy :fast-safe)
   (:args (x :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 6
     (loadw temp x 0 vm:other-pointer-type)

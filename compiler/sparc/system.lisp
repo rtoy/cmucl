@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.8 1992/04/14 02:59:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.9 1992/10/11 10:54:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,7 +112,7 @@
 	 (data :scs (any-reg immediate zero)))
   (:arg-types * positive-fixnum)
   (:results (res :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
+  (:temporary (:scs (non-descriptor-reg)) t1 t2)
   (:generator 6
     (loadw t1 x 0 vm:other-pointer-type)
     (inst and t1 vm:type-mask)
@@ -142,7 +142,7 @@
 	 (type :scs (any-reg descriptor-reg immediate)
 	       :target temp))
   (:results (res :scs (any-reg descriptor-reg)))
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
     (sc-case type
       (immediate

@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.10 1992/03/11 21:29:23 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.11 1992/10/11 10:54:26 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the SPARC.
@@ -25,7 +27,7 @@
 (define-vop (check-type)
   (:args (value :target result :scs (any-reg descriptor-reg)))
   (:results (result :scs (any-reg descriptor-reg)))
-  (:temporary (:type random :scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:vop-var vop)
   (:save-p :compute-only))
 
@@ -34,7 +36,7 @@
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
-  (:temporary (:type random :scs (non-descriptor-reg)) temp))
+  (:temporary (:scs (non-descriptor-reg)) temp))
 
 (eval-when (compile eval)
 
