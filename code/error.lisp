@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.59 2001/01/09 05:21:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.60 2001/04/19 16:40:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1066,7 +1066,11 @@
 					       '(declare (ignore temp)))
 					  (go ,(car annotated-case)))))
 			   annotated-cases)
-			       (return-from ,tag ,form))
+			       (return-from ,tag
+				 #-x86 ,form
+				 #+x86 (multiple-value-prog1 ,form
+					 ;; Need to catch FP errors here!
+					 (kernel::float-wait))))
 		 ,@(mapcan
 		    #'(lambda (annotated-case)
 			(list (car annotated-case)
