@@ -727,7 +727,13 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 (define-condition type-error (error)
   (datum
-   expected-type))
+   expected-type)
+  (:report
+   (lambda (condition stream)
+     (format stream "Type-error in ~S:~%  ~S is not of type ~S"
+	     (type-error-function-name condition)
+	     (type-error-datum condition)
+	     (type-error-expected-type condition)))))
 
 ;;; The simple-type-error type has a conc-name, so
 ;;; SIMPLE-CONDITION-FORMAT-STRING and SIMPLE-CONDITION-FORMAT-ARGUMENTS could
@@ -798,14 +804,20 @@ The previous version is uglier, but it sets up unique run-time tags.
 (define-condition cell-error (error) (name))
 
 (define-condition unbound-variable (cell-error) ()
-  (:report (lambda (condition stream)
-	     (format stream "The variable ~S is unbound."
-		     (cell-error-name condition)))))
+  (:report
+   (lambda (condition stream)
+     (format stream
+	     "Error in ~S: the variable ~S is unbound."
+	     (cell-error-function-name condition)
+	     (cell-error-name condition)))))
   
 (define-condition undefined-function (cell-error) ()
-  (:report (lambda (condition stream)
-	     (format stream "The function ~S is undefined."
-		     (cell-error-name condition)))))
+  (:report
+   (lambda (condition stream)
+     (format stream
+	     "Error in ~S: the function ~S is undefined."
+	     (cell-error-function-name condition)
+	     (cell-error-name condition)))))
 
 (define-condition arithmetic-error (error) (operation operands)
   (:report (lambda (condition stream)
