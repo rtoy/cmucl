@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.10 1998/11/13 04:39:42 dtc Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.11 1999/09/16 15:40:11 dtc Exp $
  *
  */
 
@@ -21,8 +21,7 @@
  *	0x48000000->0xC8000000 2GB  Dynamic Space.
  *	0xE0000000->           256M C stack - Alien stack.
  *
- *  Linux: Note that this map has some problems and requires some further
- *	   development so is not implemented below.
+ *  Linux:
  *	0x00000000->0x08000000 128M Unused.
  *	0x08000000->0x10000000 128M C program and memory allocation.
  *	0x10000000->0x20000000 256M Read-Only Space.
@@ -57,11 +56,11 @@
 
 
 #ifdef __linux__
-#define READ_ONLY_SPACE_START   (0x01000000)
-#define READ_ONLY_SPACE_SIZE    (0x02800000) /* 40MB */
+#define READ_ONLY_SPACE_START   (0x10000000)
+#define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
 
-#define STATIC_SPACE_START	(0x05000000)
-#define STATIC_SPACE_SIZE	(0x02fff000) /* 48MB - 1 page */
+#define STATIC_SPACE_START	(0x28000000)
+#define STATIC_SPACE_SIZE	(0x0ffff000) /* 256MB - 1 page */
 
 #define BINDING_STACK_START	(0x20000000)
 #define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
