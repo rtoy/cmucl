@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.34 2003/07/01 09:38:07 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.35 2004/04/01 17:52:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,6 +85,20 @@
 (defoptimizer (aref derive-type) ((array &rest indices) node)
   (assert-array-rank array (length indices))
   ;; If the node continuation has a single use then assert its type.
+  ;;
+  ;; Let's not do this.  As reported by Lynn Quam on cmucl-imp on
+  ;; 2004-03-30, the compiler generates bogus code for
+  ;;
+  ;; (defun foo (f d)
+  ;;   (declare (type (simple-array single-float (*)) f)
+  ;;            (type (simple-array double-float (*)) d))
+  ;;   (setf (aref f 0) (aref d 0)))
+  ;;
+  ;; and doesn't even warn about the type mismatch.  This might be a
+  ;; symptom of other compiler bugs, but removing this at least gives
+  ;; us back the warning.  I (RLT) do not know what impact removing
+  ;; this has on other user code.
+  #+(or)
   (let ((cont (node-cont node)))
     (when (= (length (find-uses cont)) 1)
       (assert-continuation-type cont (extract-upgraded-element-type array))))
