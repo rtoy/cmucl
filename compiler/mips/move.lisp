@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.24 1990/11/03 03:25:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.25 1990/11/11 00:17:26 ram Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -145,10 +145,13 @@
 ;;; representation.  Similarly, the MOVE-FROM-WORD VOPs converts a raw integer
 ;;; to a tagged bignum or fixnum.
 
-;;; Arg is a fixnum, so just shift it.
+;;; Arg is a fixnum, so just shift it.  We need a type restriction because some
+;;; possible arg SCs (control-stack) overlap with possible bignum arg SCs.
+;;;
 (define-vop (move-to-word/fixnum)
   (:args (x :scs (any-reg)))
   (:results (y :scs (signed-reg unsigned-reg)))
+  (:arg-types tagged-num)
   (:note "fixnum untagging")
   (:generator 1
     (inst sra y x 2)))
@@ -186,10 +189,13 @@
   (descriptor-reg) (signed-reg unsigned-reg))
 
 
-;;; Result is a fixnum, so we can just shift.
+;;; Result is a fixnum, so we can just shift.  We need the result type
+;;; restriction because of the control-stack ambiguity noted above.
+;;;
 (define-vop (move-from-word/fixnum)
   (:args (x :scs (signed-reg unsigned-reg)))
   (:results (y :scs (any-reg descriptor-reg)))
+  (:result-types tagged-num)
   (:note "fixnum tagging")
   (:generator 1
     (inst sll y x 2)))
