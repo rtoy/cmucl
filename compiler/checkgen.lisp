@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.21 1992/08/01 17:34:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.22 1992/09/07 15:34:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 ;;; 
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 
 ;;;; Cost estimation:
@@ -285,7 +285,7 @@
   (declare (type continuation cont))
   (let ((dest (continuation-dest cont)))
     (cond ((eq (continuation-type-check cont) :error)
-	   (if (and (combination-p dest) (eq (combination-kind dest) :full))
+	   (if (and (combination-p dest) (eq (combination-kind dest) :error))
 	       nil
 	       t))
 	  ((or (not dest)
@@ -295,7 +295,7 @@
 	   (let ((kind (basic-combination-kind dest)))
 	     (cond ((eq cont (basic-combination-fun dest)) t)
 		   ((eq kind :local) t)
-		   ((eq kind :full) nil)
+		   ((member kind '(:full :error)) nil)
 		   ((function-info-ir2-convert kind) t)
 		   (t
 		    (dolist (template (function-info-templates kind) nil)
@@ -463,10 +463,11 @@
   (setf (continuation-%type-check cont) :error)
   (let ((dest (continuation-dest cont)))
     (when (and (combination-p dest)
-	       (let ((info (basic-combination-kind dest)))
-		 (and (function-info-p info)
-		      (not (function-info-ir2-convert info)))))
-      (setf (basic-combination-kind dest) :full)))
+	       (let ((kind (basic-combination-kind dest)))
+		 (or (eq kind :full) 
+		     (and (function-info-p kind)
+			  (not (function-info-ir2-convert kind))))))
+      (setf (basic-combination-kind dest) :error)))
   (undefined-value))
 
 
