@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.93 1993/09/01 00:52:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.94 1993/09/01 00:55:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,7 +132,7 @@
 (use-package '("SYSTEM" "EXTENSIONS" "LISP") "ALIEN")
 (use-package '("LISP") "ALIEN-INTERNALS")
 (use-package '("LISP") "PROFILE")
-(use-package '("PCL" "EXTENSIONS" "LISP") "COMMON-LISP-USER")
+(use-package '("EXTENSIONS" "LISP") "COMMON-LISP-USER")
 (use-package '("ALIEN-INTERNALS" "LISP" "EXTENSIONS" "SYSTEM" "BIGNUM")
              "KERNEL")
 (use-package '("LISP") "NEW-ASSEM")
