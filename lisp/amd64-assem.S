@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.5 2004/07/14 21:01:50 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.6 2004/07/14 21:32:32 cwang Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -626,7 +626,8 @@ GNAME(alloc_to_rdi):
 /* Called from lisp when an inline allocation overflows.
    Every register except the result needs to be preserved.
    We depend on C to preserve rbx, r12-r15, and rbp.
-   But where necessary must save rax, rcx, rdx, rdi, rsi, r8-r11. */
+   Linkage table will trash r11.
+   But where necessary must save rax, rcx, rdx, rdi, rsi, r8-r10. */
 
 /* This routine handles an overflow with rax=crfp+size. So the
    size=rax-crfp. */
@@ -641,12 +642,10 @@ GNAME(alloc_overflow_rax):
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%rax
 	movq	%rax, %rdi	# Pass arg 1
 	call	GNAME(alloc)
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -671,13 +670,11 @@ GNAME(alloc_overflow_rcx):
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%rcx
 	movq	%rcx, %rdi	# Pass arg1
 	call	GNAME(alloc)
 	movq	%rax, %rcx	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -702,13 +699,11 @@ GNAME(alloc_overflow_rdx):
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%rdx
 	movq	%rdx, %rdi		# Move the size
 	call	GNAME(alloc)
 	movq	%rax,%rdx	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -735,13 +730,11 @@ GNAME(alloc_overflow_rbx):
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%rbx
 	movq	%rbx, %rdi	# Pass arg 1
 	call	GNAME(alloc)
 	movq	%rax,%rbx	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -767,13 +760,11 @@ GNAME(alloc_overflow_rsi):
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%rsi
 	movq	%rsi, %rdi	# Pass arg 1
 	call	GNAME(alloc)
 	movq	%rax, %rsi	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -798,12 +789,10 @@ GNAME(alloc_overflow_rdi):
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%rdi
 	call	GNAME(alloc)
 	movq	%rax,%rdi	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -828,13 +817,11 @@ GNAME(alloc_overflow_r8):
 	pushq	%rsi
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r8
 	movq	%r8, %rdi	# Pass arg 1
 	call	GNAME(alloc)
 	movq	%rax,%r8	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%rsi
@@ -859,13 +846,11 @@ GNAME(alloc_overflow_r9):
 	pushq	%rsi
 	pushq	%r8
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r9
 	movq	%r9, %rdi	# Pass arg 1
 	call	GNAME(alloc)
 	movq	%rax,%r9	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r8
 	popq	%rsi
@@ -890,13 +875,11 @@ GNAME(alloc_overflow_r10):
 	pushq	%rsi
 	pushq	%r8
 	pushq	%r9
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r10
 	movq	%r10, %rdi	# Pass arg 1
 	call	GNAME(alloc)
 	movq	%rax,%r10	# setup the destination.
-	popq	%r11
 	popq	%r9
 	popq	%r8
 	popq	%rsi
@@ -924,13 +907,11 @@ GNAME(alloc_overflow_r12):
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	/* Calculate the size for the allocation. */
 	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r12
 	movq	%r12, %rdi	# Pass arg 1
 	call	GNAME(alloc)
 	movq	%rax,%r12	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
