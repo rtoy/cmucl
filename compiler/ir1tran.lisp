@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.92 1993/07/30 12:09:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.93 1993/08/06 13:11:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -965,7 +965,7 @@
 	   (setf (lambda-var-specvar var)
 		 (specvar-for-binding name)))
 	  (null
-	   (unless (assoc name (new-venv))
+	   (unless (assoc name (new-venv) :test #'eq)
 	     (new-venv (cons name (specvar-for-binding name))))))))
     (if (new-venv)
 	(make-lexenv :default res  :variables (new-venv))
@@ -1003,7 +1003,7 @@
 ;;; defining, set its INLINEP.  If a global function, add a new FENV entry.
 ;;;
 (defun process-inline-declaration (spec res fvars)
-  (let ((sense (cdr (assoc (first spec) inlinep-translations)))
+  (let ((sense (cdr (assoc (first spec) inlinep-translations :test #'eq)))
 	(new-fenv ()))
     (dolist (name (rest spec))
       (let ((fvar (find name fvars :key #'leaf-name :test #'equal)))
@@ -2124,7 +2124,7 @@
   Transfer control to the named Tag in the lexically enclosing TAGBODY.  This
   is constrained to be used only within the dynamic extent of the TAGBODY."
   (continuation-starts-block cont)
-  (let* ((found (or (lexenv-find tag tags)
+  (let* ((found (or (lexenv-find tag tags :test #'eql)
 		    (compiler-error "Go to nonexistent tag: ~S." tag)))
 	 (entry (first found))
 	 (exit (make-exit :entry entry)))
@@ -2441,7 +2441,7 @@
 	    (def (second spec)))
 	(unless (symbolp name)
 	  (compiler-error "Symbol macro name is not a symbol: ~S." name))
-	(when (assoc name (res))
+	(when (assoc name (res) :test #'eq)
 	  (compiler-warning "Repeated name in SYMBOL-MACROLET: ~S." name))
 	(res `(,name . (MACRO . ,def)))))
 
@@ -3358,7 +3358,7 @@
 	  ((dolist (x variables nil)
 	     (let ((name (car x))
 		   (what (cdr x)))
-	       (when (eq x (assoc name variables))
+	       (when (eq x (assoc name variables :test #'eq))
 		 (typecase what
 		   (cons
 		    (assert (eq (car what) 'macro))
