@@ -135,7 +135,7 @@
 ;;; The initial size of spaces will be one megabyte.  If we need more than this,
 ;;; the following constant will have to be changed.
 
-(defparameter space-size (ash 1 19) "Number of bytes in each space.")
+(defparameter space-size (ash 1 21) "Number of bytes in each space.")
 
 ;;; Each space is represented as a structure containing the address of its
 ;;; data in system space and the number of bytes used so far in it.
@@ -269,8 +269,7 @@
       (declare (list spaces))
       (multiple-value-bind (hunk addr)
 			   (get-valid-hunk
-			    (if (or (= space (dynamic code-ltype))
-				    (= space (dynamic general-vector-ltype)))
+			    (if (= space (dynamic code-ltype))
 				(ash space-size 3)
 				space-size))
 	(setf (svref memory space)
@@ -992,10 +991,23 @@
       (declare (fixnum index))
       (write-indexed result index (pop-stack)))))
 
+
+(define-cold-vop (fop-int-vector :nope)
+  (fop-int-vector)
+  (with-fop-stack t
+    (let ((res (pop-stack)))
+      (i-vector-to-core (if (typep res 'simple-bit-vector)
+			    (dynamic bit-vector-ltype)
+			    (dynamic integer-vector-ltype))
+			(ash 1 (%primitive get-vector-access-code res))
+			(length res)
+			0
+			res))))
+			
+
 (not-cold-fop fop-uniform-vector)
 (not-cold-fop fop-small-uniform-vector)
 (not-cold-fop fop-uniform-int-vector)
-(not-cold-fop fop-int-vector)
 (not-cold-fop fop-array)
 
 
