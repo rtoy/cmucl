@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.24 1991/04/24 11:27:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.25 1991/05/03 02:05:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,19 +221,19 @@
 	(let ((moves (sc-move-functions sc)))
 	  (dolist (const (sc-constant-scs sc))
 	    (unless (svref moves (sc-number const))
-	      (error "No move function defined to load SC ~S from constant ~
-	              SC ~S."
-		     (sc-name sc) (sc-name const))))
-
+	      (warn "No move function defined to load SC ~S from constant ~
+	             SC ~S."
+		    (sc-name sc) (sc-name const))))
+	  
 	  (dolist (alt (sc-alternate-scs sc))
 	    (unless (svref moves (sc-number alt))
-	      (error "No move function defined to load SC ~S from alternate ~
-	              SC ~S."
-		     (sc-name sc) (sc-name alt)))
+	      (warn "No move function defined to load SC ~S from alternate ~
+	             SC ~S."
+		    (sc-name sc) (sc-name alt)))
 	    (unless (svref (sc-move-functions alt) i)
-	      (error "No move function defined to save SC ~S to alternate ~
-	              SC ~S."
-		     (sc-name sc) (sc-name alt)))))))))
+	      (warn "No move function defined to save SC ~S to alternate ~
+	             SC ~S."
+		    (sc-name sc) (sc-name alt)))))))))
 ;;;
 (check-move-function-consistency)
 
