@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.51 1997/11/04 09:10:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.52 1997/11/18 16:55:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,6 +47,8 @@
   (special *gc-inhibit* *already-maybe-gcing*
 	   *need-to-collect-garbage* *gc-verbose*
 	   *before-gc-hooks* *after-gc-hooks*
+	   #+x86 *pseudo-atomic-atomic*
+	   #+x86 *pseudo-atomic-interrupted*
 	   unix::*interrupts-enabled*
 	   unix::*interrupt-pending*
 	   *type-system-initialized*)

@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11 1997/01/21 00:28:13 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.12 1997/11/18 16:56:01 dtc Exp $
  *
  */
 
@@ -184,7 +184,7 @@ void main(int argc, char *argv[], char *envp[])
     SetSymbolValue(BINDING_STACK_POINTER, (lispobj)binding_stack);
 #endif
 #if defined INTERNAL_GC_TRIGGER && !defined i386
-    SetSymbolValue(INTERNAL_GC_TRIGGER, fixnum(-1));
+    SetSymbolValue(INTERNAL_GC_TRIGGER, make_fixnum(-1));
 #endif
 
     interrupt_init();
@@ -197,9 +197,15 @@ void main(int argc, char *argv[], char *envp[])
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
 
 #ifdef PSEUDO_ATOMIC_ATOMIC
+#ifdef i386
     /* Turn on pseudo atomic for when we call into lisp. */
-    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, fixnum(1));
-    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, fixnum(0));
+    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
+    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0));
+#else
+    /* Turn on pseudo atomic for when we call into lisp. */
+    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(1));
+    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0));
+#endif
 #endif
 
     /* Pick off sigint until the lisp system gets far enough along to */

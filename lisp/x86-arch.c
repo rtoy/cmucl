@@ -110,22 +110,15 @@ arch_internal_error_arguments(struct sigcontext *context)
 boolean 
 arch_pseudo_atomic_atomic(struct sigcontext *context)
 {
-#ifdef fixme
-  return (context->sc_regs[reg_ALLOC] & 1);
-#else
-  return 0;
-#endif
+  return SymbolValue(PSEUDO_ATOMIC_ATOMIC);
 }
-
-#define PSEUDO_ATOMIC_INTERRUPTED_BIAS 0x7f000000
 
 void 
 arch_set_pseudo_atomic_interrupted(struct sigcontext *context)
 {
-#ifdef fixme
-  context->sc_regs[reg_ALLOC] |= 2;
-#endif
+  SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(1));
 }
+
 
 /* This stuff seems to get called for TRACE and debug activity */
 unsigned long 

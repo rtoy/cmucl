@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.6 1997/11/05 14:59:58 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.7 1997/11/18 16:55:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,6 +278,31 @@
 	 (cerror-call ,vop ,continue ,error-code ,@values))
        ,error)))
 
+
+
+;;;; PSEUDO-ATOMIC.
+
+;;; PSEUDO-ATOMIC -- Internal Interface.
+;;;
+(defmacro pseudo-atomic (&rest forms)
+  (let ((label (gensym "LABEL-")))
+    `(let ((,label (gen-label)))
+      (store-symbol-value 0 lisp::*pseudo-atomic-interrupted*)
+      ;; Note: we just use cfp as some not-zero value.
+      (store-symbol-value ebp-tn lisp::*pseudo-atomic-atomic*)
+      ,@forms
+      (store-symbol-value 0 lisp::*pseudo-atomic-atomic*)
+      (inst cmp (make-ea :dword
+		 :disp (+ nil-value
+			  (static-symbol-offset
+			   'lisp::*pseudo-atomic-interrupted*)
+			  (ash symbol-value-slot word-shift)
+			  (- other-pointer-type)))
+       0)
+      (inst jmp :eq ,label)
+      (inst int 3)
+      (inst byte pending-interrupt-trap)
+      (emit-label ,label))))
 
 
 ;;;; Indexed references:

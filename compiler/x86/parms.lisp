@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.8 1997/11/04 09:11:13 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.9 1997/11/18 16:55:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,9 +243,11 @@
       *alien-stack*
 
       ;; Interrupt Handling
-      lisp::*free-interrupt-context-index*
+      lisp::*pseudo-atomic-atomic*
+      lisp::*pseudo-atomic-interrupted*
       unix::*interrupts-enabled*
       unix::*interrupt-pending*
+      lisp::*free-interrupt-context-index*
 
       *allocation-pointer*
       *binding-stack-pointer*
@@ -264,8 +266,6 @@
       *control-stacks*
 
       ;; Spare symbols
-      spare-13
-      spare-12
       spare-11
       spare-10
       spare-9
