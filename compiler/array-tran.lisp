@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.32 2003/04/13 11:57:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.33 2003/04/27 11:43:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -542,11 +542,22 @@
 		  (if (byte-compiling)
 		      (values nil t)
 		      `(%aset (the ,',type ,a) ,@i))))))
-  (frob svref %svset simple-vector)
-  (frob schar %scharset simple-string)
-  (frob char %charset string)
   (frob sbit %sbitset (simple-array bit))
   (frob bit %bitset (array bit)))
+
+(macrolet ((frob (reffer setter type)
+	     `(progn
+		(def-source-transform ,reffer (a i)
+		  (if (byte-compiling)
+		      (values nil t)
+		      `(aref (the ,',type ,a) ,i)))
+		(def-source-transform ,setter (a i v)
+		  (if (byte-compiling)
+		      (values nil t)
+		      `(%aset (the ,',type ,a) ,i ,v))))))
+  (frob svref %svset simple-vector)
+  (frob schar %scharset simple-string)
+  (frob char %charset string))
 
 ;;; AREF, %ASET  --  transform.
 ;;; 
