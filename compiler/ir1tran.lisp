@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.124 2001/06/03 14:11:18 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.125 2001/10/15 14:36:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1077,7 +1077,7 @@
 	    (compiler-note "Ignoring free ignore declaration for ~S." name)
 	    (compiler-warning "Ignore declaration for unknown variable ~S."
 			      name)))
-       ((and (consp var) (consp (cdr var)) (eq (cadr var) 'macro))
+       ((and (consp var) (consp (cdr var)) (eq (car var) 'macro))
 	;; Just ignore the ignore decl.
 	)
        ((functional-p var)
