@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.4 1991/03/23 15:01:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.5 1991/05/16 16:07:40 ram Exp $
 ;;;
 ;;; This file contains the VM definition of function call for the SPARC.
 ;;;
@@ -465,10 +465,10 @@ default-value-8
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
@@ -505,10 +505,10 @@ default-value-8
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
@@ -548,10 +548,10 @@ default-value-8
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
