@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.35 2001/03/14 23:23:48 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.36 2002/08/20 14:06:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -432,6 +432,10 @@
   (when (find-class x nil)
     (format t "~&It names a class ~A." (find-class x))
     (describe (find-class x)))
+  ;;
+  ;; Print out information about any types named by the symbol
+  (when (eq (info type kind x) :defined)
+    (format t "~&It names a type specifier."))
   ;;
   ;; Print out properties, possibly ignoring implementation details.
   (do ((plist (symbol-plist X) (cddr plist)))
