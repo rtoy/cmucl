@@ -552,8 +552,8 @@
 (def-clx-class (buffer (:constructor nil) (:copier nil) (:predicate nil))
   ;; Lock for multi-processing systems
   (lock (make-process-lock "CLX Buffer Lock"))
-  #-excl (output-stream nil :type (or null stream))
-  #+excl (output-stream -1 :type fixnum)
+  #-(or excl cmu) (output-stream nil :type (or null stream))
+  #+(or excl cmu) (output-stream nil :type (or null fixnum))
   ;; Buffer size
   (size 0 :type array-index)
   (request-number 0 :type (unsigned-byte 16))
@@ -575,8 +575,8 @@
   ;; Holding buffer for 16-bit text
   (tbuf16 (make-sequence 'buffer-text16 *buffer-text16-size* :initial-element 0))
   ;; Probably EQ to Output-Stream
-  #-excl (input-stream nil :type (or null stream))
-  #+excl (input-stream -1 :type fixnum)
+  #-(or excl cmu) (input-stream nil :type (or null stream))
+  #+(or excl cmu) (input-stream nil :type (or null fixnum))
   ;; T when the host connection has gotten errors
   (dead nil :type (or null (not null)))
   ;; T makes buffer-flush a noop.  Manipulated with with-buffer-flush-inhibited.
