@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.3 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.4 1998/05/22 00:47:30 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -52,7 +52,9 @@ os_vm_address_t arch_get_bad_addr(int sig, int code, struct sigcontext *scp)
 
   badinst = *(unsigned int *)scp->sc_pc;
 
-  if((badinst>>27)!=0x16) return NULL;
+  if(((badinst>>27)!=0x16)      /* STL or STQ */
+     && ((badinst>>27)!=0x13))  /* STS or STT */
+    return NULL;                /* Otherwise forget about address */
 
   return (os_vm_address_t)(scp->sc_regs[(badinst>>16)&0x1f]+(badinst&0xffff));
 }
