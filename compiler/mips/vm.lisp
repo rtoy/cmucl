@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.25 1990/05/07 14:32:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.26 1990/05/09 06:43:00 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -31,7 +31,7 @@
 ;;; we insert a new storage class.
 ;;; 
 (defmacro define-storage-classes (&rest classes)
-  (do ((forms '(progn)
+  (do ((forms (list 'progn)
 	      (let* ((class (car classes))
 		     (sc-name (car class))
 		     (constant-name (intern (concatenate 'simple-string
@@ -107,7 +107,7 @@
   (any-reg
    registers
    :locations (2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 28 31)
-   :constant-scs (constant negative-immediate zero immediate unsigned-immediate
+   :constant-scs (negative-immediate zero immediate unsigned-immediate
 			   immediate-base-character random-immediate)
    :save-p t
    :alternate-scs (control-stack))
@@ -520,7 +520,8 @@
      (if (vm:static-symbol-p value)
 	 (sc-number-or-lose 'random-immediate)
 	 nil))
-    ((or (signed-byte 32) (unsigned-byte 32))
+    (#-new-compiler (signed-byte 30)
+     #+new-compiler fixnum
      (sc-number-or-lose 'random-immediate))
     #+new-compiler
     (system-area-pointer
