@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.136 2003/07/15 10:24:06 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.137 2003/08/11 14:22:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -956,18 +956,13 @@
 ;;;
 (defun convert-and-maybe-compile (form path)
   (declare (list path))
-  (let ((orig (bytes-consed-between-gcs)))
-    (unwind-protect
-	(progn
-	  (setf (bytes-consed-between-gcs) (* orig 4))
-	  (let* ((*lexical-environment*
-		  (make-lexenv :cookie *default-cookie*
-			       :interface-cookie *default-interface-cookie*))
-		 (tll (ir1-top-level form path nil)))
-	    (cond ((eq *block-compile* t) (push tll *top-level-lambdas*))
-		  (t
-		   (compile-top-level (list tll) nil)))))
-      (setf (bytes-consed-between-gcs) orig))))
+  (let* ((*lexical-environment*
+	  (make-lexenv :cookie *default-cookie*
+		       :interface-cookie *default-interface-cookie*))
+	 (tll (ir1-top-level form path nil)))
+    (if (eq *block-compile* t)
+	(push tll *top-level-lambdas*)
+	(compile-top-level (list tll) nil))))
 
 ;;; PROCESS-PROGN  --  Internal
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.13 2000/06/18 15:45:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.14 2003/08/11 14:22:44 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,6 +42,7 @@
 ;;;
 ;;;    Define some structure freelisting operations.
 ;;;
+#-gencgc
 (defmacro defallocators (&rest specs)
   "defallocators {((name lambda-list [real-lambda-list]) thread-slot
                    (deinit-form*)
@@ -92,6 +93,31 @@
 	 ,@(hook-forms))
        (pushnew 'defallocator-deallocation-hook ext:*before-gc-hooks*))))
 
+#+gencgc
+(defmacro defallocators (&rest specs)
+  "defallocators {((name lambda-list [real-lambda-list]) thread-slot
+                   (deinit-form*)
+		   (reinit-form*))}*"
+  (collect ((forms))
+    (dolist (spec specs)
+      (destructuring-bind ((name lambda-list
+				 &optional (real-lambda-list lambda-list))
+			   thread-slot deinit-forms reinit-forms)
+	  spec
+	(declare (ignore thread-slot reinit-forms))
+	(let ((fun-name (symbolicate "MAKE-" name))
+	      (unfun-name (symbolicate "UNMAKE-" name))
+	      (var-name (symbolicate "*" name "-FREE-LIST*"))
+	      (real-fun-name (symbolicate "REALLY-MAKE-" name)))
+	  (forms `(proclaim '(inline ,fun-name ,unfun-name)))
+	  (forms `(defvar ,var-name nil))
+	  (forms `(defun ,fun-name ,lambda-list
+		    (,real-fun-name ,@real-lambda-list)))
+	  (forms `(defun ,unfun-name (structure)
+		    (declare (optimize (safety 0)))
+		    ,@deinit-forms)))))
+    `(progn
+       ,@(forms))))
 
 (defmacro node-deinits ()
   '(progn
