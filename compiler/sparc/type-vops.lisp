@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.3 1990/12/17 19:35:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.4 1991/01/09 02:11:51 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the SPARC.
@@ -84,12 +84,8 @@
     (move result value)))
 (primitive-type-vop check-list (:check) list)
 
-#+nil ;; ### Only after we have real structures.
 (def-type-vops structurep check-structure structure
-  object-not-structure vm:structure-pointer-type)
-
-(def-type-vops structurep check-structure structure
-  object-not-structure-error vm:structure-header-type))
+  object-not-structure-error vm:structure-pointer-type)
 
 (def-type-vops bignump check-bigunm bignum
   object-not-bignum-error vm:bignum-type)
