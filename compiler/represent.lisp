@@ -489,12 +489,13 @@
 ;;; SELECT-REPRESENTATIONS  --  Interface
 ;;;
 ;;;    Entry to representation selection.  First we select the representation
-;;; for all normal TNs, setting the TN-SC.  We then scan all the IR2,
-;;; emitting any necessary coerce and move-arg VOPs.  Finally, we scan all
-;;; TNs looking for ones that might be placed on the number stack, noting
-;;; this so that the number-FP can be allocated.  This must be done last,
-;;; since references in new environments may be introduced by MOVE-ARG
-;;; insertion.
+;;; for all normal TNs, setting the TN-SC.  After selecting the TN
+;;; representations, we set the SC for all :ALIAS TNs to be the representation
+;;; chosen for the original TN.  We then scan all the IR2, emitting any
+;;; necessary coerce and move-arg VOPs.  Finally, we scan all TNs looking for
+;;; ones that might be placed on the number stack, noting this so that the
+;;; number-FP can be allocated.  This must be done last, since references in
+;;; new environments may be introduced by MOVE-ARG insertion.
 ;;;
 (defun select-representations (component)
   (let ((costs (make-array sc-number-limit))
@@ -511,6 +512,11 @@
 		       (svref *sc-numbers* (first scs)))))
 	  (assert sc)
 	  (setf (tn-sc tn) sc))))
+
+    (do ((alias (ir2-component-alias-tns 2comp)
+		(tn-next alias)))
+	((null alias))
+      (setf (tn-sc alias) (tn-sc (tn-save-tn alias))))
 
     (do-ir2-blocks (block component)
       (emit-moves-and-coercions block))
