@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.24 1993/05/13 19:19:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.25 1993/05/19 16:11:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,7 +412,7 @@
 	  (weak-pointer :codes (#.vm:weak-pointer-type))
 	  (scavenger-hook #+gengc :codes #+gengc (#.vm:scavenger-hook-type))
 	  (code-component :codes (#.vm:code-header-type))
-	  (lra :codes (#.vm:return-pc-header-type))
+	  #-gengc (lra :codes (#.vm:return-pc-header-type))
 	  (fdefn :codes (#.vm:fdefn-type))
 	  (random-class) ; Used for unknown type codes.
 	  
