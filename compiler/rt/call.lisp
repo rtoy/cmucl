@@ -744,10 +744,6 @@ default-value-5
 	       `((inst li nargs-pass (fixnum nargs))))
  
 
-	 ,@(unless (eq return :tail)
-	     `((inst compute-lra-from-code
-		     return-pc-pass code-tn lra-label)))
-
 	 ,@(if named
 	       `((move name-pass name)
 		 (loadw lip name-pass vm:symbol-raw-function-addr-slot
@@ -766,7 +762,9 @@ default-value-5
 		   (inst cal nsp-tn cur-nfp
 			 (component-non-descriptor-stack-usage)))
 		 (inst b lip))
-	       `((move old-fp-pass cfp-tn)
+	       `((inst compute-lra-from-code
+		       return-pc-pass code-tn lra-label)
+		 (move old-fp-pass cfp-tn)
 		 (when cur-nfp
 		   (store-stack-tn cur-nfp nfp-save))
 		 ,(if variable
