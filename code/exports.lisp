@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.187 2001/12/13 01:04:21 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.188 2002/01/18 17:43:11 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,7 +300,8 @@
 	     #+linux "EREMOTEIO" "ERESTART" "ESHUTDOWN" "ESOCKTNOSUPPORT"
 	     "ESRMNT" "ESTALE" "ESTRPIPE" "ETIME" "ETIMEDOUT" "ETOOMANYREFS"
 	     #+linux "EUCLEAN" "EUNATCH" "EUSERS" "EWOULDBLOCK" "EXFULL"
-	     "UTSNAME"))
+	     "UTSNAME"
+	     #+linux "SIGSTKFLT"))
   
 (defpackage "FORMAT")
 (defpackage "COMMON-LISP"
@@ -811,7 +812,9 @@
 	   "GEN-INST-FORMAT-DECL-FORM" "GET-CODE-SEGMENTS"
 	   "GET-FUNCTION-SEGMENTS" "GET-INST-SPACE" "HANDLE-BREAK-ARGS"
 	   "INST" "INST-FORMAT" "LABEL-SEGMENTS"
-	   "MAYBE-NOTE-ASSEMBLER-ROUTINE" "MAYBE-NOTE-ASSOCIATED-STORAGE-REF"
+	   "MAYBE-NOTE-ASSEMBLER-ROUTINE"
+	   "MAYBE-NOTE-STATIC-FUNCTION"
+	   "MAYBE-NOTE-ASSOCIATED-STORAGE-REF"
 	   "MAYBE-NOTE-NIL-INDEXED-OBJECT"
 	   "MAYBE-NOTE-NIL-INDEXED-SYMBOL-SLOT-REF"
 	   "MAYBE-NOTE-SINGLE-STORAGE-REF" "NOTE" "NOTE-CODE-CONSTANT"
@@ -1687,7 +1690,17 @@
 	   "SIMPLE-UNDEFINED-FUNCTION"
 	   "BYTE-FUNCTION-TYPE" "SLOT-CLASS-PRINT-FUNCTION"
 	   "REDEFINE-LAYOUT-WARNING" "SLOT-CLASS" "INSURED-FIND-CLASS"
-	   "CONDITION-FUNCTION-NAME"))
+	   "CONDITION-FUNCTION-NAME")
+  #+X86
+  (:export "ATOMIC-PUSH-VECTOR" "RPLACD-CONDITIONAL"
+           "ATOMIC-PUSH-SYMBOL-VALUE"
+           "DATA-VECTOR-SET-CONDITIONAL"
+           "RPLACA-CONDITIONAL"
+           "%INSTANCE-SET-CONDITIONAL"
+           "SET-SYMBOL-VALUE-CONDITIONAL"
+           "ATOMIC-POP-SYMBOL-VALUE"
+           "ATOMIC-PUSHA"
+           "ATOMIC-PUSHD"))
 
 (dolist
     (name
