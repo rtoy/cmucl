@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.214 2003/06/11 12:59:16 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.215 2003/06/11 16:41:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1006,7 +1006,7 @@
              "PROCESS-CORE-DUMPED" "PROCESS-ERROR" "PROCESS-EXIT-CODE"
              "PROCESS-INPUT" "PROCESS-KILL" "PROCESS-OUTPUT" "PROCESS-P"
              "PROCESS-PID" "PROCESS-PLIST" "PROCESS-PTY" "PROCESS-STATUS"
-             "PROCESS-STATUS-HOOK" "PROCESS-WAIT" "PUTF" "PURGE-FILES" "QUIT" "RATIOP"
+             "PROCESS-STATUS-HOOK" "PROCESS-WAIT" "PUTF" "PURGE-BACKUP-FILES" "QUIT" "RATIOP"
              "READ-CHAR-NO-EDIT" "REALP" "REMOVE-ALL-OOB-HANDLERS"
              "REMOVE-OOB-HANDLER" "REQUIRED-ARGUMENT" "RESET-FOREIGN-POINTERS"
              "RUN-PROGRAM" "SAVE" "SAVE-LISP"
