@@ -133,6 +133,7 @@ static void sigemt_handler(signal, code, context)
     /* Extract the parts of the inst. */
     subtract = badinst & (1<<19);
     rs1 = (badinst>>14) & 0x1f;
+    op1 = context->sc_regs[rs1];
 
     /* If the first arg is $ALLOC then it is really a signal-pending note */
     /* for the pseudo-atomic noise. */
@@ -150,7 +151,6 @@ static void sigemt_handler(signal, code, context)
 	return;
     }
 
-    op1 = context->sc_regs[rs1];
     if ((op1 & 3) != 0) {
 	/* The first arg wan't a fixnum. */
 	interrupt_internal_error(signal, code, context, FALSE);
