@@ -18,7 +18,10 @@
 	   backend-name backend-version backend-fasl-file-type
 	   backend-fasl-file-implementation backend-fasl-file-version
 	   backend-register-save-penalty backend-byte-order
-	   backend-any-primitive-type))
+	   backend-any-primitive-type
+
+	   ;; The various backends need to call these support routines
+	   make-stack-pointer-tn primitive-type primitive-type-of))
 
 
 ;;;; VM support routine stuff.
