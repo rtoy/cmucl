@@ -5,7 +5,7 @@
 #+bootstrap
 (copy-packages (cons (c::backend-name c::*target-backend*) '("NEW-ASSEM" "C")))
 
-(defparameter *load-stuff*
+(defvar *load-stuff*
   #+bootstrap t
   #-bootstrap (eq c:*backend* c:*native-backend*))
 
@@ -56,9 +56,6 @@
 (comf "target:compiler/proclaim") ; For COOKIE structure.
 (comf "target:compiler/globals")
 
-(comf "target:compiler/type")
-(comf "target:compiler/generic/vm-type")
-(comf "target:compiler/type-init")
 (comf "target:compiler/sset")
 (comf "target:compiler/node")
 (comf "target:compiler/ctype")
