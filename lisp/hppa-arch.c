@@ -119,6 +119,11 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 	    fake_foreign_function_call(scp);
 	    lose("%%primitive halt called; the party is over.\n");
 
+	  case trap_PendingInterrupt:
+	    arch_skip_instruction(scp);
+	    interrupt_handle_pending(scp);
+	    break;
+
 	  case trap_Error:
 	  case trap_Cerror:
 	    interrupt_internal_error(signal, code, scp, im5==trap_Cerror);
