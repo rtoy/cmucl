@@ -266,6 +266,27 @@
   (undefined-value))
 
 
+;;; CLEAR-IR1-INFO  --  Internal
+;;;
+;;;    Blow away the REFS for all global variables, and recycle the IR1 for
+;;; Component.
+;;;
+(defun clear-ir1-info (component)
+  (declare (type component component))
+  (flet ((blast (x)
+	   (maphash #'(lambda (k v)
+			(declare (ignore k))
+			(setf (leaf-refs v) nil)
+			(when (basic-var-p v)
+			  (setf (basic-var-sets v) nil)))
+		    x)))
+    (blast *free-variables*)
+    (blast *free-functions*)
+    (blast *constants*))
+  (macerate-ir1-component component)
+  (undefined-value))
+
+
 ;;; CLEAR-STUFF  --  Interface
 ;;;
 ;;;    Clear all the global variables used by the compiler.
@@ -834,7 +855,7 @@
 	(setq *pending-top-level-lambdas* ())
 	(compile-component component object)
 	(clear-ir2-info component)
-	(macerate-ir1-component component)
+	(clear-ir1-info component)
 	(etypecase object
 	  (fasl-file
 	   (fasl-dump-top-level-lambda-call tll object))
@@ -876,7 +897,7 @@
 	(if (replace-top-level-xeps component)
 	    (setq top-level-closure t)
 	    (unless *check-consistency*
-	      (macerate-ir1-component component))))
+	      (clear-ir1-info component))))
       
       (when *check-consistency*
 	(maybe-mumble "[Check]~%")
@@ -886,7 +907,7 @@
 
       (when *check-consistency*
 	(dolist (component components)
-	  (macerate-ir1-component component)))))
+	  (clear-ir1-info component)))))
     
   (ir1-finalize)
   (undefined-value))
