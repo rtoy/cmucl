@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.14 1990/10/11 17:35:18 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.15 1990/11/20 18:37:13 ram Exp $
 ;;;
 ;;;    This file provides a functional interface to global information about
 ;;; named things in the system.  Information is considered to be global if it
@@ -988,9 +988,11 @@
 (define-info-type function type ctype
   #+new-compiler
   (if (fboundp name)
-      (specifier-type (%primitive function-type
-				  (%primitive closure-function
-					      (fdefinition name))))
+      (let ((def (fdefinition name)))
+	(if (eval:interpreted-function-p def)
+	    (eval:interpreted-function-type def)
+	    (specifier-type (%primitive function-type
+					(%primitive closure-function def)))))
       (specifier-type 'function))
   #-new-compiler
   (specifier-type 'function))
