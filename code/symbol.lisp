@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.27 1998/05/15 14:54:33 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.28 1998/06/05 02:36:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,7 +232,7 @@
 	  (simple-string (values thing old))
 	  (fixnum (values "G" thing))
 	  (string (values (coerce thing 'simple-string) old)))
-      (declare (simple-string prefix) (fixnum int))
+      (declare (simple-string prefix))
       (make-symbol
        (concatenate 'simple-string prefix
 		    (the simple-string
