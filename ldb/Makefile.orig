@@ -1,10 +1,10 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.7 1990/03/29 21:17:49 ch Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.8 1990/04/04 18:26:15 ch Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	os.o vars.o assem.o parse.o interrupt.o test.o \
 	search.o validate.o gc.o globals.o dynbind.o \
-	regnames.o
+	regnames.o backtrace.o
 
 ldb.map: ldb
 	echo -n 'Map file for ldb version ' > ldb.map

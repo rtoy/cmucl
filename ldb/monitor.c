@@ -16,6 +16,7 @@
 static void call_cmd(), dump_cmd(), print_cmd(), quit(), help();
 static void flush_cmd(), search_cmd(), regs_cmd(), exit_cmd(), throw_cmd();
 static void timed_call_cmd(), gc_cmd(), print_context_cmd();
+static void backtrace_cmd();
 
 static struct cmd {
     char *cmd, *help;
@@ -23,6 +24,7 @@ static struct cmd {
 } Cmds[] = {
     {"help", "Display this info", help},
     {"?", NULL, help},
+    {"backtrace", "backtrace up to N frames", backtrace_cmd},
     {"call", "call FUNCTION with ARG1, ARG2, ...", call_cmd},
     {"context", "print interrupt context number I.", print_context_cmd},
     {"dump", "dump memory starting at ADDRESS for COUNT words.", dump_cmd},
@@ -376,12 +378,13 @@ struct sigcontext *context;
 static void print_context_cmd(ptr)
 char **ptr;
 {
-	int index;
 	int free;
 
 	free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
 	
         if (more_p(ptr)) {
+		int index;
+
 		index = parse_number(ptr);
 
 		if ((index >= 0) && (index < free)) {
@@ -401,6 +404,21 @@ char **ptr;
 			print_context(lisp_interrupt_contexts[free - 1]);
 		}
 	}
+}
+
+static void backtrace_cmd(ptr)
+char **ptr;
+{
+	void backtrace();
+	int n;
+
+        if (more_p(ptr))
+		n = parse_number(ptr);
+	else
+		n = 100;
+	
+	printf("Backtrace:\n");
+	backtrace(n);
 }
 
 static void sub_monitor(csp, bsp)
