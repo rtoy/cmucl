@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.25 2003/01/07 15:31:29 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.26 2003/01/07 17:19:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -498,7 +498,8 @@ this, the functions are listed.  If NIL, then always list the functions.")
 		     (find-package package))))
     (do-symbols (symbol package (values))
       (when (and (eq (symbol-package symbol) package)
-		 (fboundp symbol))
+		 (fboundp symbol)
+		 (not (special-operator-p symbol)))
 	(profile-1-function symbol callers-p)))))
 
 ;;; UNPROFILE  --  Public
