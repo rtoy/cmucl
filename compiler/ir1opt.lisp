@@ -1057,10 +1057,10 @@
 ;;; variable, and also propagate derived-type information for the arg to all
 ;;; the Var's refs.
 ;;;
-;;;    Substitution is inhibited when the Ref's derived type isn't a subtype of
-;;; the argument's asserted type.  This prevents type checking from being
-;;; defeated, and also ensures that the best representation for the variable
-;;; can be used.
+;;;    Substitution is inhibited when the arg leaf's derived type isn't a
+;;; subtype of the argument's asserted type.  This prevents type checking from
+;;; being defeated, and also ensures that the best representation for the
+;;; variable can be used.
 ;;;
 ;;;    Note that we are responsible for clearing the Continuation-Reoptimize
 ;;; flags.
@@ -1079,7 +1079,7 @@
 		    (let ((leaf (ref-leaf use)))
 		      (when (and (constant-reference-p use)
 				 (values-subtypep
-				  (node-derived-type use)
+				  (leaf-type leaf)
 				  (continuation-asserted-type arg)))
 			(propagate-to-refs var (continuation-type arg))
 			(substitute-leaf leaf var)
