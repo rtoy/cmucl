@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.25 1997/09/03 19:36:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.26 1997/09/03 20:27:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
        (typecase x
 	 (symbol (try-cmucl-random-doc x doc-type)))))))
 
-(defun %set-documentation (name doc-type string)
+(defun (setf documentation) (string name doc-type)
   (case doc-type
     (variable (setf (info variable documentation name) string))
     (function (setf (info function documentation name) string))

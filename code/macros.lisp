@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50 1997/06/05 13:02:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.51 1997/09/03 20:27:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -982,7 +982,6 @@
 (defsetf symbol-value set)
 (defsetf symbol-function fset)
 (defsetf symbol-plist %set-symbol-plist)
-(defsetf documentation %set-documentation)
 (defsetf nth %setnth)
 (defsetf fill-pointer %set-fill-pointer)
 (defsetf search-list %set-search-list)
