@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.10 1990/10/13 20:24:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.11 1990/10/23 02:51:20 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -30,8 +30,10 @@
   "The default for the :Verbose argument to Load.")
 (defvar *load-print-stuff* ()
   "True if we're gonna mumble about what we're loading.")
-(defvar *fasl-file* () "The fasl file we're reading from.")
-(defvar *current-code-format* "The code format that we think we are loading.")
+(defvar *fasl-file* ()
+  "The fasl file we're reading from.")
+(defvar *current-code-format*
+  "The code format that we think we are loading.")
 
 (defvar *in-cold-load* nil)	; True if we are in the cold loader.
 
@@ -319,19 +321,19 @@
 (defun load-group (file)
   (when (check-header file)
     (catch 'group-end
-      (let ((*current-code-format* 'uninitialized-code-format))
+      (let ((*current-code-format* nil))
 	(loop
-	 (let ((byte (read-byte file)))
-	   (if (eql byte 3)
-	       (let ((index *fop-stack-pointer*))
-		 (when (zerop index)
-		   (grow-fop-stack)
-		   (setq index *fop-stack-pointer*))
-		 (decf index)
-		 (setq *fop-stack-pointer* index)
-		 (setf (svref *fop-stack* index)
-		       (svref *current-fop-table* (read-byte file))))
-	       (funcall (svref fop-functions byte)))))))))
+	  (let ((byte (read-byte file)))
+	    (if (eql byte 3)
+		(let ((index *fop-stack-pointer*))
+		  (when (zerop index)
+		    (grow-fop-stack)
+		    (setq index *fop-stack-pointer*))
+		  (decf index)
+		  (setq *fop-stack-pointer* index)
+		  (setf (svref *fop-stack* index)
+			(svref *current-fop-table* (read-byte file))))
+		(funcall (svref fop-functions byte)))))))))
 
 ;;; Check-Header returns t if t succesfully read a header from the file,
 ;;; or () if EOF was hit before anything was read.  An error is signaled
@@ -791,42 +793,51 @@
 ;;;; Loading functions:
 
 (define-fop (fop-code-format 57 :nope)
-  (setq *current-code-format* (read-arg 1)))
-
+  (setf *current-code-format*
+	(cons (read-arg 1) (read-arg 1))))
 
 ;;; Load-Code loads a code object.  NItems objects are popped off the stack for
 ;;; the boxed storage section, then Size bytes of code are read in.
 ;;;
 (defmacro load-code (nitems size)
-  `(let ((box-num ,nitems)
-	 (code-length ,size))
-     (declare (fixnum box-num code-length))
-     (let ((code (%primitive c::allocate-code-object box-num code-length)))
-       (%primitive c::set-code-debug-info code (pop-stack))
-       (do ((index (1- box-num) (1- index)))
-	   ((minusp index))
-	 (declare (fixnum index))
-	 (%primitive c::code-constant-set code index (pop-stack)))
-       (system:without-gcing
-	 (let ((inst (truly-the system-area-pointer
-				(%primitive c::code-instructions code))))
-	   (read-n-bytes *fasl-file* inst 0 code-length)))
-       code)))
+  `(if *current-code-format*
+       (let ((implementation (car *current-code-format*))
+	     (version (cdr *current-code-format*)))
+	 (unless (= implementation #.vm:target-fasl-file-implementation)
+	   (error "~A was compiled for a ~A, but this is a ~A"
+		  *Fasl-file*
+		  (or (elt implementation vm:fasl-file-implementations)
+		      "unknown machine")
+		  (or (elt #.vm:target-fasl-file-implementation
+			   vm:fasl-file-implementations)
+		      "unknown machine")))
+	 (unless (= version #.vm:target-fasl-file-version)
+	   (error "~A was compiled for a fasl-file version ~A, ~
+	           but this is a version ~A"
+	    *Fasl-file* version #.vm:target-fasl-file-version))
+	 (let ((box-num ,nitems)
+	       (code-length ,size))
+	   (declare (fixnum box-num code-length))
+	   (let ((code (%primitive c::allocate-code-object
+				   box-num code-length)))
+	     (%primitive c::set-code-debug-info code (pop-stack))
+	     (do ((index (1- box-num) (1- index)))
+		 ((minusp index))
+	       (declare (fixnum index))
+	       (%primitive c::code-constant-set code index (pop-stack)))
+	     (system:without-gcing
+	      (let ((inst (truly-the system-area-pointer
+				     (%primitive c::code-instructions code))))
+		(read-n-bytes *fasl-file* inst 0 code-length)))
+	     code)))
+       (error
+	"Code Format not set?  Can't load code until after FOP-CODE-FORMAT.")))
 
 (define-fop (fop-code 58)
-  (if (eql *current-code-format* %fasl-code-format)
-      (load-code (read-arg 4) (read-arg 4))
-      (error "~A has an incompatible fasl file format.~@
-               You must recompile the source code."
-	     *fasl-file*)))
-
+  (load-code (read-arg 4) (read-arg 4)))
 
 (define-fop (fop-small-code 59)
-  (if (eql *current-code-format* %fasl-code-format)
-      (load-code (read-arg 1) (read-arg 2))
-      (error "~A has an incompatible fasl file format.~@
-               You must recompile the source code."
-	     *fasl-file*)))
+  (load-code (read-arg 1) (read-arg 2)))
 
 
 ;;; Now a NOOP except in cold load... 
@@ -884,22 +895,9 @@
   (makunbound '*initial-foreign-symbols*))
 
 
-(define-fop (fop-old-foreign-fixup 143)
-  (let* ((code-object (pop-stack))
-	 (offset (read-arg 4))
-	 (len (read-arg 1))
-	 (sym (make-string len)))
-    (read-n-bytes *fasl-file* sym 0 len)
-    (multiple-value-bind
-	(value found)
-	(gethash sym *foreign-symbols* 0)
-      (unless found
-	(error "Unknown foreign symbol: ~S" sym))
-      (fixup-code-object code-object offset value))
-    code-object))
-
 (define-fop (fop-foreign-fixup 147)
-  (let* ((code-object (pop-stack))
+  (let* ((kind (pop-stack))
+	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
     (read-n-bytes *fasl-file* sym 0 len)
@@ -908,12 +906,7 @@
 	(gethash sym *foreign-symbols* 0)
       (unless found
 	(error "Unknown foreign symbol: ~S" sym))
-      (let* ((offset (read-arg 4))
-	     (byte (read-arg 1))
-	     (kind (car (or (find byte vm:*fixup-values*
-				  :key #'cdr :test #'eql)
-			    (error "Unknown fixup kind: ~D" byte)))))
-	(fixup-code-object code-object offset value kind)))
+      (fixup-code-object code-object (read-arg 4) value (read-arg 1)))
     code-object))
 
 (define-fop (fop-assembler-code 144)
@@ -922,61 +915,18 @@
 (define-fop (fop-assembler-routine 145)
   (error "Cannot load assembler code."))
 
-(define-fop (fop-old-assembler-fixup 146)
-  (let ((routine (pop-stack))
-	(code-object (pop-stack))
-	(offset (read-arg 4)))
-    (multiple-value-bind
-	(value found)
-	(gethash routine *assembler-routines*)
-      (unless found
-	(error "Undefined assembler routine: ~S" routine))
-      (fixup-code-object code-object offset value)
-      code-object)))
-
 (define-fop (fop-assembler-fixup 148)
-  (let* ((routine (pop-stack))
-	 (code-object (pop-stack))
-	 (offset (read-arg 4))
-	 (byte (read-arg 1))
-	 (kind (car (or (find byte vm:*fixup-values* :key #'cdr :test #'eql)
-			(error "Unknown fixup kind: ~D" byte)))))
+  (let ((routine (pop-stack))
+	(kind (pop-stack))
+	(code-object (pop-stack)))
     (multiple-value-bind
 	(value found)
 	(gethash routine *assembler-routines*)
       (unless found
 	(error "Undefined assembler routine: ~S" routine))
-      (fixup-code-object code-object offset value kind))
+      (fixup-code-object code-object (read-arg 4) value kind))
     code-object))
 
-(defun fixup-code-object (code offset fixup &optional (kind :both))
-  ;; Currently, the only kind of fixup we can have is a lui followed by an
-  ;; addi.
-  (cond ((eq kind :both)
-	 (fixup-code-object code offset fixup :lui)
-	 (fixup-code-object code (+ offset vm:word-bytes) fixup :addi))
-	(t
-	 (multiple-value-bind
-	     (word-offset rem)
-	     (truncate offset vm:word-bytes)
-	   (unless (zerop rem)
-	     (error "Unaligned instruction?  offset=#x~X." offset))
-	   (system:without-gcing
-	    (let ((sap (truly-the system-area-pointer
-				  (%primitive c::code-instructions code))))
-	      (ecase kind
-		(:jump
-		 (assert (zerop (ash fixup -26)))
-		 (setf (ldb (byte 26 0)
-			    (system:sap-ref-32 sap word-offset))
-		       (ash fixup -2)))
-		(:lui
-		 (setf (sap-ref-16 sap (* word-offset 2))
-		       (+ (ash fixup -16)
-			  (if (logbitp 15 fixup) 1 0))))
-		(:addi
-		 (setf (sap-ref-16 sap (* word-offset 2))
-		       (ldb (byte 16 0) fixup))))))))))
 
 
 (proclaim '(notinline read-byte))
