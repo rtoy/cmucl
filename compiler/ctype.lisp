@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.21 1991/06/07 15:04:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.22 1991/10/23 12:47:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -589,7 +589,7 @@
 		 ((eq int *empty-type*)
 		  (note-lossage
 		   "Definition's declared type for variable ~A:~%  ~S~@
-		   conflicts with this type from previous ~A:~%  ~S"
+		   conflicts with this type from ~A:~%  ~S"
 		   (leaf-name var) (type-specifier vtype)
 		   where (type-specifier type))
 		  (return-from try-type-intersections (values nil nil)))
@@ -633,14 +633,14 @@
     (flet ((frob (x y what)
 	     (unless (= x y)
 	       (note-lossage
-		"Definition has ~R ~A arg~P, but previous ~A had ~R."
+		"Definition has ~R ~A arg~P, but ~A has ~R."
 		x what x where y))))
       (frob min (length req) "fixed")
       (frob (- (optional-dispatch-max-args od) min) (length opt) "optional"))
     (flet ((frob (x y what)
 	     (unless (eq x y)
 	       (note-lossage
-		"Definition ~:[doesn't have~;has~] ~A, but previous ~
+		"Definition ~:[doesn't have~;has~] ~A, but ~
 		~A ~:[doesn't~;does~]."
 		x what where y))))
       (frob (optional-dispatch-keyp od) (function-type-keyp type)
@@ -675,7 +675,7 @@
 		     (res (type-union (key-info-type kinfo) def-type)))
 		    (t
 		     (note-lossage
-		      "Defining a ~S keyword not present in previous ~A."
+		      "Defining a ~S keyword not present in ~A."
 		      key where)
 		     (res *universal-type*)))))
 		(:required (res (pop req)))
@@ -700,7 +700,7 @@
 				   (when info
 				     (arg-info-keyword info)))))
 	    (note-lossage
-	     "Definition lacks the ~S keyword present in previous ~A."
+	     "Definition lacks the ~S keyword present in ~A."
 	     (key-info-name key) where))))
 
       (try-type-intersections (vars) (res) where))))
@@ -715,7 +715,7 @@
   (flet ((frob (x what)
 	   (when x
 	     (note-lossage
-	      "Definition has no ~A, but the previous ~A did."
+	      "Definition has no ~A, but the ~A did."
 	      what where))))
     (frob (function-type-optional type) "optional args")
     (frob (function-type-keyp type) "keyword args")
@@ -725,7 +725,7 @@
 	 (req (function-type-required type))
 	 (nreq (length req)))
     (unless (= nvars nreq)
-      (note-lossage "Definition has ~R arg~:P, but the previous ~A had ~R."
+      (note-lossage "Definition has ~R arg~:P, but the ~A has ~R."
 		    nvars where nreq))
     (if *lossage-detected*
 	(values nil nil)
@@ -750,7 +750,7 @@
        (functional type &key (really-assert t)
 		   ((:error-function *error-function*) #'compiler-warning)
 		   warning-function
-		   (where "declaration"))
+		   (where "previous declaration"))
   (declare (type functional functional) (type function *error-function*)
 	   (string where))
   (let ((*lossage-detected* nil))
