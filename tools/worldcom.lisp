@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.42 1992/06/12 05:41:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.43 1992/07/28 22:06:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,6 @@
 (when (c:backend-featurep :pmax)
   (comf "target:assembly/mips/assem-rtns" :assem t)
   (comf "target:assembly/mips/array" :assem t)
-  (comf "target:assembly/mips/bit-bash" :assem t)
   (comf "target:assembly/mips/arith" :assem t)
   (comf "target:assembly/mips/alloc" :assem t))
 
@@ -192,7 +191,7 @@
 (comf "target:code/remote")
 
 (comf "target:code/setf-funs")
-(comf "target:code/exports")
+(comf "target:code/exports" :proceed t)
 
 ;;; Compile basic macros that we assume are already in the compilation
 ;;; environment.  We inhibit compile-time definition to prevent these functions
