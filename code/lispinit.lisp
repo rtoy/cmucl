@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.41 1993/08/19 21:13:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.42 1993/08/26 15:27:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -360,26 +360,28 @@
   (unix:unix-exit 0))
 
 #+gengc
-(defun do-load-time-value-fixup (object offset value)
+(defun do-load-time-value-fixup (object offset index)
   (declare (type index offset))
   (macrolet ((lose (msg)
 	       `(progn
 		  (%primitive print ,msg)
 		  (%halt))))
-    (typecase object
-      (list
-       (case offset
-	 (0 (setf (car object) value))
-	 (1 (setf (cdr object) value))
-	 (t (lose "Bogus offset in cons cell."))))
-      (instance
-       (setf (%instance-ref object (- offset vm:instance-slots-offset)) value))
-      (code-component
-       (setf (code-header-ref object offset) value))
-      (simple-vector
-       (setf (svref object (- offset vm:vector-data-offset)) value))
-      (t
-       (lose "Unknown kind of object for load-time-value fixup.")))))
+    (let ((value (svref *load-time-values* index)))
+      (typecase object
+	(list
+	 (case offset
+	   (0 (setf (car object) value))
+	   (1 (setf (cdr object) value))
+	   (t (lose "Bogus offset in cons cell."))))
+	(instance
+	 (setf (%instance-ref object (- offset vm:instance-slots-offset))
+	       value))
+	(code-component
+	 (setf (code-header-ref object offset) value))
+	(simple-vector
+	 (setf (svref object (- offset vm:vector-data-offset)) value))
+	(t
+	 (lose "Unknown kind of object for load-time-value fixup."))))))
 
 
 ;;;; Initialization functions:
