@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.95 2000/04/02 18:46:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.96 2000/04/06 18:40:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3311,8 +3311,35 @@
 	       `(,inverse y x))
 	      (t
 	       (give-up))))))
-	      
+
+;;; Ir1-transform-<-helper  --  Internal
+;;;
+;;; Derive the result type of the comparision X < Y returning two values: the
+;;; first true if X < Y, and the second true if X >= Y. Union types are
+;;; handled by comparing all types of X with all types of Y.  If all types of
+;;; X are less than all types of Y, then X < Y. Similarly, if all types of X
+;;; are >= all types of Y, then X >= Y.
+;;;
 #+propagate-float-type
+(defun ir1-transform-<-helper (x y)
+  (flet ((maybe-convert (type)
+	   (numeric-type->interval (if (member-type-p type)
+				       (convert-member-type type)
+				       type))))
+    (let ((xi (mapcar #'maybe-convert
+		      (prepare-arg-for-derive-type (continuation-type x))))
+	  (yi (mapcar #'maybe-convert
+		      (prepare-arg-for-derive-type (continuation-type y))))
+	  (definitely-true t)
+	  (definitely-false t))
+      (dolist (x-arg xi)
+	(dolist (y-arg yi)
+	  (setf definitely-true (and definitely-true
+				     (interval-< x-arg y-arg)))
+	  (setf definitely-false (and definitely-false
+				      (interval->= x-arg y-arg)))))
+      (values definitely-true definitely-false))))
+
 ;;; IR1-TRANSFORM-<  --  Internal
 ;;;
 ;;;    See if we can statically determine (< X Y) using type information.  If
@@ -3320,39 +3347,21 @@
 ;;; Y's high, then X >= Y (so return NIL).  If not, at least make sure any
 ;;; constant arg is second.
 ;;;
-;;; Union types are handled by comparing all types of X with all types of Y.
-;;; If all types of X are less than all types of Y, then X < Y. Similarly, if
-;;; all types of X are >= all types of Y, then X >= Y (so return NIL).
-;;;
+#+propagate-float-type
 (defun ir1-transform-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
-      (let ((definitely-true t)
-	    (definitely-false t))
-	(flet ((maybe-convert (type)
-		 (numeric-type->interval (if (member-type-p type)
-					     (convert-member-type type)
-					     type))))
-	  (let ((xi (mapcar #'maybe-convert (prepare-arg-for-derive-type
-					     (continuation-type x))))
-		(yi (mapcar #'maybe-convert (prepare-arg-for-derive-type
-					     (continuation-type y)))))
-	    (dolist (x-arg xi)
-	      (dolist (y-arg yi)
-		(setf definitely-true (and definitely-true
-					   (interval-< x-arg y-arg)))
-		(setf definitely-false (and definitely-false
-					    (interval->= x-arg y-arg)))))))
-
+      (multiple-value-bind (definitely-true definitely-false)
+	  (ir1-transform-<-helper x y)
 	(cond (definitely-true
 		  t)
 	      (definitely-false
 		  nil)
-	      ((and (constant-continuation-p first)
-		    (not (constant-continuation-p second)))
-	       `(,inverse y x))
-	      (t
-	       (give-up))))))
+              ((and (constant-continuation-p first)
+                    (not (constant-continuation-p second)))
+               `(,inverse y x))
+              (t
+               (give-up))))))
 
 (deftransform < ((x y) #-propagate-float-type (integer integer)
 		       #+propagate-float-type (real real)
