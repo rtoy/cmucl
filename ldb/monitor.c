@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.11 1990/10/23 00:07:23 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.12 1990/11/12 02:36:58 wlott Exp $ */
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -17,7 +17,7 @@ static void call_cmd(), dump_cmd(), print_cmd(), quit(), help();
 static void flush_cmd(), search_cmd(), regs_cmd(), exit_cmd();
 static void timed_call_cmd(), gc_cmd(), print_context_cmd();
 static void backtrace_cmd(), purify_cmd(), catchers_cmd(), save_cmd();
-static void grab_sigs_cmd();
+static void grab_sigs_cmd(), restore_cmd();
 
 static struct cmd {
     char *cmd, *help;
@@ -40,6 +40,7 @@ static struct cmd {
     {"p", NULL, print_cmd},
     {"quit", "quit.", quit},
     {"regs", "display current lisp regs.", regs_cmd},
+    {"restore", "restore the saved lisp image.", restore_cmd},
     {"save", "save the current lisp image.", save_cmd},
     {"search", "search for TYPE starting at ADDRESS for a max of COUNT words.", search_cmd},
     {"s", NULL, search_cmd},
@@ -433,6 +434,12 @@ char **ptr;
         save(*ptr);
     else
         save("lisp.core");
+}
+
+static void restore_cmd(ptr)
+     char **ptr;
+{
+    restore();
 }
 
 static void grab_sigs_cmd()
