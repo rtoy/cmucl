@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.8 1992/05/21 22:34:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.9 1992/07/31 21:54:14 wlott Exp $
 ;;;
 ;;; This file contains the machine specific support routines needed by
 ;;; the file assembler.
@@ -31,14 +31,14 @@
 	    (when cur-nfp
 	      (store-stack-tn ,nfp-save cur-nfp))
 	    (inst compute-lra-from-code ,lra code-tn lra-label ,temp)
-	    (note-this-location ,vop :call-site)
+	    (note-next-instruction ,vop :call-site)
 	    (inst j (make-fixup ',name :assembly-routine))
 	    (inst nop)
 	    (emit-return-pc lra-label)
 	    (note-this-location ,vop :single-value-return)
-	    (move csp-tn ocfp-tn)
-	    (inst nop)
-	    (inst entry-point)
+	    (without-scheduling ()
+	      (move csp-tn ocfp-tn)
+	      (inst nop))
 	    (inst compute-code-from-lra code-tn code-tn
 		  lra-label ,temp)
 	    (when cur-nfp
