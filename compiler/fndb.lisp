@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.41 1992/02/13 09:17:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.42 1992/02/13 13:19:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -974,6 +974,7 @@
 (defknown load
   ((or filename stream)
    &key (verbose t) (print t) (if-does-not-exist (member :error :create nil))
+   (if-source-newer (member :load-source :load-object :query :compile))
    (contents (or null (member :source :binary))))
   t)
 
