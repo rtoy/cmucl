@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.8 1997/12/29 03:11:31 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.9 1997/12/29 06:19:00 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -709,7 +709,28 @@
     (pop ,place)))
 
 
-;;; Make-Process
+;;; Update-Process-Timers -- Internal
+;;;
+;;; Update the processes times for the current and new process before
+;;; a process switch.
+;;;
+(defun update-process-timers (current-process new-process)
+  (declare (type process current-process new-process)
+	   (optimize (speed 3) (safety 0)))
+  (let ((real-time (get-real-time)))
+    (incf (process-%real-time current-process)
+	  (- real-time (process-scheduled-real-time current-process)))
+    (setf (process-scheduled-real-time current-process) real-time)
+    (setf (process-scheduled-real-time new-process) real-time))
+  (let ((run-time (get-run-time)))
+    (incf (process-%run-time current-process)
+	  (- run-time (process-scheduled-run-time current-process)))
+    (setf (process-scheduled-run-time current-process) run-time)
+    (setf (process-scheduled-run-time new-process) run-time))
+  (values))
+
+
+;;; Make-Process -- Public
 ;;;
 (defun make-process (function &key (name "Anonymous"))
   (declare (type (or null function) function))
@@ -745,6 +766,8 @@
 			(setf (process-wait-return-value *current-process*)
 			      nil)
 			(setf (process-interrupts *current-process*) nil)
+			(update-process-timers *current-process*
+					       *initial-process*)
 			(setf *current-process* *initial-process*)))
 		  *initial-stack-group*))))
 	   (push process *all-processes*)
@@ -801,6 +824,7 @@
 	       (setf (process-wait-timeout *current-process*) nil)
 	       (setf (process-wait-return-value *current-process*) nil)
 	       (setf (process-interrupts *current-process*) nil)
+	       (update-process-timers *current-process* *initial-process*)
 	       (setf *current-process* *initial-process*)))
 	 *initial-stack-group*))
   (setf (process-%whostate process) nil)
@@ -884,23 +908,6 @@
    (sys:serve-all-events *idle-loop-timeout*)
    (process-yield)))
 
-;;; Update the processes times for the current and new processes at a
-;;; scheduling process switch.
-;;;
-(defun update-process-timers (current-process new-process)
-  (declare (type process current-process new-process)
-	   (optimize (speed 3) (safety 0)))
-  (let ((real-time (get-real-time)))
-    (incf (process-%real-time current-process)
-	  (- real-time (process-scheduled-real-time current-process)))
-    (setf (process-scheduled-real-time current-process) real-time)
-    (setf (process-scheduled-real-time new-process) real-time))
-  (let ((run-time (get-run-time)))
-    (incf (process-%run-time current-process)
-	  (- run-time (process-scheduled-run-time current-process)))
-    (setf (process-scheduled-run-time current-process) run-time)
-    (setf (process-scheduled-run-time new-process) run-time))
-  (values))
 
 ;;; Process-Yield
 ;;;
@@ -933,6 +940,7 @@
 	 ;; If the next process has pending interrupts then return to
 	 ;; it to execute these.
 	 ((process-interrupts next)
+	  (update-process-timers *current-process* next)
 	  (setf *current-process* next)
 	  (stack-group-resume (process-stack-group next)))
 	 (t
