@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.16 2003/10/13 21:56:55 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.17 2003/10/14 13:11:39 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -240,7 +240,7 @@ boolean allocation_trap_p(struct sigcontext *context)
    * instruction.
    */
 
-  pc = SC_PC(context);
+  pc = (unsigned int*) SC_PC(context);
   
   if (trap_inst_p(pc, &trapno) && (trapno == trap_Allocation))
     {
@@ -335,8 +335,8 @@ void handle_allocation_trap(struct sigcontext *context)
   fprintf(stderr, "Alloc %d to %s\n", size, lisp_register_names[rs1]);
 #endif
   
-  memory = alloc(size);
-  SC_REG(context, rs1) = memory;
+  memory = (char *) alloc(size);
+  SC_REG(context, rs1) = (unsigned long) memory;
 
   if (were_in_lisp)
     {
@@ -666,7 +666,7 @@ void* arch_make_jump_entry(void* reloc_addr, void *target_addr)
    * jmpl [temp_reg + %lo(addr)], addr_reg
    */
 
-  inst = (2 << 30) | (LINKAGE_ADDR_REG << 25) | (0x38 << 19)
+  inst = (2U << 30) | (LINKAGE_ADDR_REG << 25) | (0x38 << 19)
     | (LINKAGE_TEMP_REG << 14) | (1 << 13) | lo;
   *inst_ptr++ = inst;
 
@@ -677,7 +677,7 @@ void* arch_make_jump_entry(void* reloc_addr, void *target_addr)
   *inst_ptr++ = inst;
   *inst_ptr++ = inst;
   
-  os_flush_icache(reloc_addr, (char*) inst_ptr - (char*) reloc_addr);
+  os_flush_icache((os_vm_address_t) reloc_addr, (char*) inst_ptr - (char*) reloc_addr);
   return reloc_addr;
 }
 
