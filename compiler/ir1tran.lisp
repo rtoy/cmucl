@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.84 1993/02/26 08:38:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.85 1993/03/12 15:36:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2389,6 +2389,11 @@
       (let ((var (find-lexically-apparent-function
 		  thing "as the argument to FUNCTION")))
 	(reference-leaf start cont var))))
+
+(def-ir1-translator fin-function ((thing) start cont)
+  (let ((res (ir1-convert-lambda thing nil 'function)))
+    (setf (getf (functional-plist res) :fin-function) t)
+    (reference-leaf start cont res)))
 
 
 ;;;; Funcall:
