@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.62 1993/07/20 10:18:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.63 1993/07/21 14:28:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1811,65 +1811,73 @@
 ;;;    We suppress printing of messages identical to the previous, but record
 ;;; the number of times that the message is repeated.
 ;;;
-(defun print-error-message (what format-string format-args)
-  (declare (type (member :error :warning :note) what) (string format-string)
-	   (list format-args))
-  (let* ((*print-level* (or *error-print-level* *print-level*))
-	 (*print-length* (or *error-print-length* *print-length*))
-	 (*print-lines* (or *error-print-lines* *print-lines*))
-	 (stream *compiler-error-output*)
-	 (context (find-error-context format-args)))
-    (cond
-     (context
-      (let ((file (compiler-error-context-file-name context))
-	    (in (compiler-error-context-context context))
-	    (form (compiler-error-context-original-source context))
-	    (enclosing (compiler-error-context-enclosing-source context))
-	    (source (compiler-error-context-source context))
-	    (last *last-error-context*))
-	(compiler-notification what context)
-
-	(unless (and last
-		     (equal file (compiler-error-context-file-name last)))
-	  (when (stringp file)
-	    (note-message-repeats)
-	    (setq last nil)
-	    (format stream "~2&File: ~A~%" file)))
-	
-	(unless (and last
-		     (equal in (compiler-error-context-context last)))
+(defun print-error-message (what condition)
+  (declare (type (member :error :warning :note) what)
+	   (type condition condition))
+  (let ((*print-level* (or *error-print-level* *print-level*))
+	(*print-length* (or *error-print-length* *print-length*))
+	(*print-lines* (or *error-print-lines* *print-lines*)))
+    (multiple-value-bind
+	(format-string format-args)
+	(if (typep condition 'simple-condition)
+	    (values (simple-condition-format-control condition)
+		    (simple-condition-format-arguments condition))
+	    (values (with-output-to-string (s)
+		      (princ condition s))
+		    ()))
+      (let ((stream *compiler-error-output*)
+	    (context (find-error-context format-args)))
+	(cond
+	 (context
+	  (let ((file (compiler-error-context-file-name context))
+		(in (compiler-error-context-context context))
+		(form (compiler-error-context-original-source context))
+		(enclosing (compiler-error-context-enclosing-source context))
+		(source (compiler-error-context-source context))
+		(last *last-error-context*))
+	    (compiler-notification what context)
+	    
+	    (unless (and last
+			 (equal file (compiler-error-context-file-name last)))
+	      (when (stringp file)
+		(note-message-repeats)
+		(setq last nil)
+		(format stream "~2&File: ~A~%" file)))
+	    
+	    (unless (and last
+			 (equal in (compiler-error-context-context last)))
+	      (note-message-repeats)
+	      (setq last nil)
+	      (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" in))
+	    
+	    (unless (and last
+			 (string= form
+				  (compiler-error-context-original-source last)))
+	      (note-message-repeats)
+	      (setq last nil)
+	      (write-string form stream))
+	    
+	    (unless (and last
+			 (equal enclosing
+				(compiler-error-context-enclosing-source last)))
+	      (when enclosing
+		(note-message-repeats)
+		(setq last nil)
+		(format stream "--> ~{~<~%--> ~1:;~A~> ~}~%" enclosing)))
+	    
+	    (unless (and last
+			 (equal source (compiler-error-context-source last)))
+	      (setq *last-format-string* nil)
+	      (when source
+		(note-message-repeats)
+		(dolist (src source)
+		  (write-line "==>" stream)
+		  (write-string src stream))))))
+	 (t
+	  (compiler-notification what nil)
 	  (note-message-repeats)
-	  (setq last nil)
-	  (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" in))
-	
-	(unless (and last
-		     (string= form
-			      (compiler-error-context-original-source last)))
-	  (note-message-repeats)
-	  (setq last nil)
-	  (write-string form stream))
-	
-	(unless (and last
-		     (equal enclosing
-			    (compiler-error-context-enclosing-source last)))
-	  (when enclosing
-	    (note-message-repeats)
-	    (setq last nil)
-	    (format stream "--> ~{~<~%--> ~1:;~A~> ~}~%" enclosing)))
-	
-	(unless (and last
-		     (equal source (compiler-error-context-source last)))
 	  (setq *last-format-string* nil)
-	  (when source
-	    (note-message-repeats)
-	    (dolist (src source)
-	      (write-line "==>" stream)
-	      (write-string src stream))))))
-     (t
-      (compiler-notification what nil)
-      (note-message-repeats)
-      (setq *last-format-string* nil)
-      (format stream "~2&")))
+	  (format stream "~2&")))
 
     (setq *last-error-context* context)
     
@@ -1878,52 +1886,10 @@
       (note-message-repeats nil)
       (setq *last-format-string* format-string)
       (setq *last-format-args* format-args)
-      (format stream "~&~:(~A~): ~?~&" what format-string format-args)))
+      (format stream "~&~:(~A~): ~?~&" what format-string format-args)))))
   
   (incf *last-message-count*)
   (undefined-value))
-
-
-;;; Keep track of how many times each kind of warning happens.
-;;;
-(proclaim '(type index *compiler-error-count* *compiler-warning-count*
-		 *compiler-note-count*))
-(defvar *compiler-error-count* 0)
-(defvar *compiler-warning-count* 0)
-(defvar *compiler-note-count* 0)
-
-
-;;; Compiler-Error, ...  --  Interface
-;;;
-;;;    Increment the count and print the message.  Compiler-Note never prints
-;;; anything when Brevity is 3.  Compiler-Error calls the bailout function
-;;; so that it never returns.  Compiler-Error-Message returns like
-;;; Compiler-Warning, but prints a message like Compiler-Error.
-;;;
-(proclaim '(ftype (function (string &rest t) void)
-		  compiler-error compiler-warning compiler-note))
-;;;
-(defun compiler-error (format-string &rest format-args)
-  (incf *compiler-error-count*)
-  (print-error-message :error format-string format-args)
-  (funcall *compiler-error-bailout*)
-  (error "*Compiler-Error-Bailout* returned?"))
-;;;
-(defun compiler-error-message (format-string &rest format-args)
-  (incf *compiler-error-count*)
-  (print-error-message :error format-string format-args))
-;;;
-(defun compiler-warning (format-string &rest format-args)
-  (incf *compiler-warning-count*)
-  (print-error-message :warning format-string format-args))
-;;;
-(defun compiler-note (format-string &rest format-args)
-  (unless (if *compiler-error-context*
-	      (policy *compiler-error-context* (= brevity 3))
-	      (policy nil (= brevity 3)))
-    (incf *compiler-note-count*)
-    (print-error-message :note format-string format-args)))
-
 
 ;;; Compiler-Mumble  --  Interface
 ;;;
@@ -1958,6 +1924,81 @@
       (let ((*print-level* 2)
 	    (*print-pretty* nil))
 	(format nil "~{~{~S~^ ~}~^ => ~}" context)))))
+
+
+;;;; Condition system interface:
+
+;;; Keep track of how many times each kind of warning happens.
+;;;
+(proclaim '(type index *compiler-error-count* *compiler-warning-count*
+		 *compiler-note-count*))
+(defvar *compiler-error-count* 0)
+(defvar *compiler-warning-count* 0)
+(defvar *compiler-note-count* 0)
+
+;;; We have a seperate compiler-error condition to allow us to discriminiate
+;;; between internal and user errors.  Non-compiler errors put us in the
+;;; debugger.
+;;;
+(define-condition compiler-error (simple-error))
+
+;;; COMPILER-{ERROR,WARNING,STYLE-WARNING}-HANDLER  --  Interface
+;;;
+;;;    Condition handlers established by the compiler.  We increment our
+;;; counter, then re-signal the condition.  We don't print anything unless the
+;;; condition is not handled.
+;;;
+(defun compiler-error-handler (condition)
+  (incf *compiler-error-count*)
+  (signal condition)
+  (print-error-message :error condition)
+  (continue condition))
+;;;
+(defun compiler-warning-handler (condition)
+  (incf *compiler-warning-count*)
+  (signal condition)
+  (print-error-message :warning condition)
+  (muffle-warning condition))
+;;;
+(defun compiler-style-warning-handler (condition)
+  (incf *compiler-note-count*)
+  (signal condition)
+  (print-error-message :note condition)
+  (muffle-warning condition))
+
+
+;;; Compiler-Error, ...  --  Interface
+;;;
+;;;    Signal the appropriate condition.  Compiler-Note signals a
+;;; simple-style-warning, inhibited if brevity is 3.  anything when Brevity is
+;;; 3.  Compiler-Error calls the bailout function so that it never returns.
+;;; Compiler-Error-Message returns like Compiler-Warning, but signals a
+;;; Compiler-Error.
+;;;
+(proclaim '(ftype (function (string &rest t) void)
+		  compiler-error compiler-warning compiler-note))
+;;;
+(defun compiler-error (format-string &rest format-args)
+  (cerror "replace form with call to ERROR."
+	  'compiler-error :format-control format-string
+	  :format-arguments format-args)
+  (funcall *compiler-error-bailout*)
+  (error "*Compiler-Error-Bailout* returned?"))
+;;;
+(defun compiler-error-message (format-string &rest format-args)
+  (cerror "ignore it." 
+	  'compiler-error :format-control format-string
+	  :format-arguments format-args))
+;;;
+(defun compiler-warning (format-string &rest format-args)
+  (apply #'warn format-string format-args))
+;;;
+(defun compiler-note (format-string &rest format-args)
+  (unless (if *compiler-error-context*
+	      (policy *compiler-error-context* (= brevity 3))
+	      (policy nil (= brevity 3)))
+    (warn 'simple-style-warning :format-control format-string
+	  :format-arguments format-args)))
 
 
 ;;;; Undefined warnings:
