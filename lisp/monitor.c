@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.13 2003/01/23 21:05:38 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.14 2004/05/19 23:26:15 cwang Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -140,15 +140,15 @@ static void regs_cmd(char **ptr)
 {
     printf("CSP\t=\t0x%08lX\n", (unsigned long)current_control_stack_pointer);
     printf("FP\t=\t0x%08lX\n", (unsigned long)current_control_frame_pointer);
-#if !defined(ibmrt) && !defined(i386)
+#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64)
     printf("BSP\t=\t0x%08X\n", (unsigned long)current_binding_stack_pointer);
 #endif
-#ifdef i386
+#if defined(i386) || defined(__x86_64)
     printf("BSP\t=\t0x%08X\n", SymbolValue(BINDING_STACK_POINTER));
 #endif
 
     printf("DYNAMIC\t=\t0x%08lX\n", (unsigned long)current_dynamic_space);
-#if defined(ibmrt) || defined(i386)
+#if defined(ibmrt) || defined(i386) || defined(__x86_64)
     printf("ALLOC\t=\t0x%08lX\n", SymbolValue(ALLOCATION_POINTER));
     printf("TRIGGER\t=\t0x%08lX\n", SymbolValue(INTERNAL_GC_TRIGGER));
 #else
@@ -339,7 +339,7 @@ static void print_context(struct sigcontext *context)
 
 	for (i = 0; i < NREGS; i++) {
 		printf("%s:\t", lisp_register_names[i]);
-#ifdef i386
+#if defined(i386) || defined(__x86_64)
 		brief_print((lispobj) SC_REG(context, i*2));
 #else
 		brief_print((lispobj) SC_REG(context, i));
@@ -402,7 +402,7 @@ static void catchers_cmd(char **ptr)
         printf("There are no active catchers!\n");
     else {
         while (catch != NULL) {
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
             printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ",
 		   (unsigned long)catch, (unsigned long)(catch->current_uwp),
 		   (unsigned long)(catch->current_cont),
