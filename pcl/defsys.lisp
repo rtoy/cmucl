@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.34 2003/06/18 09:23:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.35 2004/01/09 04:34:17 toy Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -66,7 +66,7 @@
 ;;; 
 (defvar *the-pcl-package* (find-package :pcl))
 
-(defvar *pcl-system-date* "$Date: 2003/06/18 09:23:09 $")
+(defvar *pcl-system-date* "$Date: 2004/01/09 04:34:17 $")
 
 (setf (getf ext:*herald-items* :pcl)
       `("    CLOS based on Gerd's PCL " ,(subseq *pcl-system-date* 7 26)))
@@ -454,10 +454,11 @@ and load your system with:
   ;;                                          
   (
    (pkg             t            t            ())
-   (walk            (pkg)        (pkg)        ())
+   ;;(walk            (pkg)        (pkg)        ())
    (macros          t            t            ())
    (low             (pkg macros) t            (macros))
-   (info            (pkg walk)   t            (macros))
+   ;;(info            (pkg walk)   t            (macros))
+   (info            (pkg)   t            (macros))
    
    (fin         t                                   t (low))
    (defclass    t                                   t (low info))

@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.4 2003/08/20 16:54:00 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.5 2004/01/09 04:34:17 toy Rel $")
 
 (in-package :fwrappers)
 
@@ -214,7 +214,6 @@
 				    `(%call-next-function))))
 		     ,@body))))))))
 
-  #+pcl
   (defun uses-vars-p (body optionals keys rest env)
     "First value is true if BODY refers to any of the variables in
      OPTIONALS, KEYS or REST, which are what KERNEL:PARSE-LAMBDA-LIST
@@ -242,12 +241,7 @@
 		 form))
 	  (walker:walk-form body env #'walk)
 	  (values used-p rest-used-p)))))
-
-  #-pcl
-  (defun uses-vars-p (&rest args)
-    "Dummy for cases where CMUCL is compiled without PCL."
-    (declare (ignore args))
-    t))
+  )
 
 
 ;;;
