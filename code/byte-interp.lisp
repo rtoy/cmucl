@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.16 1993/05/17 21:51:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.17 1993/05/19 08:37:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -460,6 +460,15 @@
 (defun two-arg-string= (x y) (string= x y))
 (defun two-arg-string< (x y) (string= x y))
 (defun two-arg-string> (x y) (string= x y))
+
+
+;;;; Funny functions:
+
+;;; used by both byte and IR1 interpreters.
+;;;
+(defun %progv (vars vals fun)
+  (progv vars vals
+    (funcall fun)))
 
 
 ;;;; XOPs
