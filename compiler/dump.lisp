@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.51 1993/05/11 13:53:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.52 1993/05/11 17:30:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -738,6 +738,26 @@
 	      (gethash (car patch) patch-table)))
       (values code-handle (xep-patches)))))
 
+
+;;; DUMP-BYTE-FUNCTION  --  Internal
+;;;
+;;;    Dump a BYTE-FUNCTION object.  We dump the layout and
+;;; funcallable-instance info, but rely on the loader setting up the correct
+;;; funcallable-instance-function.
+;;;
+(defun dump-byte-function (xep code-handle file)
+  (let ((nslots (- (get-closure-length xep)
+		   vm:funcallable-instance-info-offset)))
+    (dotimes (i nslots)
+      (if (zerop i)
+	  (dump-push code-handle file)
+	  (dump-object (%funcallable-instance-info xep) file)))
+    (dump-object (%funcallable-instance-layout xep) file)
+    (dump-fop 'lisp::fop-make-byte-compiled-function file)
+    (dump-byte nslots file))
+  (undefined-value))
+
+
 ;;; FASL-DUMP-BYTE-COMPONENT  --  Interface
 ;;;
 ;;; Dump a byte-component.  This is similar to FASL-DUMP-COMPONENT, but
@@ -749,24 +769,15 @@
 	   (type vector constants)
 	   (type list xeps)
 	   (type fasl-file file))
-
-  (dump-fop 'lisp::fop-verify-empty-stack file)
-  (dump-fop 'lisp::fop-verify-table-size file)
-  (dump-unsigned-32 (fasl-file-table-free file) file)
   
   (multiple-value-bind
       (code-handle xep-patches)
       (dump-byte-code-object segment length constants file)
-    (dump-fop 'lisp::fop-verify-empty-stack file)
     (dolist (noise xeps)
       (let* ((lambda (car noise))
 	     (info (lambda-info lambda))
-	     (xep (cdr noise))
-	     (fake-component (list nil)))
-	(setf (byte-function-component xep) fake-component)
-	(setf (gethash fake-component (fasl-file-eq-table file)) code-handle)
-	(let ((*dump-only-valid-structures* nil))
-	  (dump-object xep file))
+	     (xep (cdr noise)))
+	(dump-byte-function xep code-handle file)
 	(let ((patches (remove lambda xep-patches :key #'car :test-not #'eq)))
 	  (cond
 	   (patches
@@ -777,7 +788,6 @@
 	      (dolist (patch patches)
 		(alter-code-object code-handle (cdr patch) xep-handle file))))
 	   (t
-	    (dump-fop 'lisp::fop-make-byte-compiled-function file)
 	    (let* ((entry-handle (dump-pop file))
 		   (patch-table (fasl-file-patch-table file))
 		   (old (gethash info patch-table)))
