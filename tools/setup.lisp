@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.34 2003/06/10 16:52:37 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.35 2003/06/11 13:03:25 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,6 +43,38 @@
             pcl::slot-boundp-using-class
             pcl::slot-definition-name
             pcl::slot-value-using-class
+            ;; Simple-stream functions, that are provided when building PCL
+            stream:device-close
+            stream::%charpos
+            stream::%clear-input
+            stream::%clear-output
+            stream::%file-length
+            stream::%file-name
+            stream::%file-position
+            stream::%file-rename
+            stream::%file-string-length
+            stream::%finish-output
+            stream::%force-output
+            stream::%fresh-line
+            stream::%input-stream-p
+            stream::%interactive-stream-n
+            stream::%interactive-stream-p
+            stream::%interactive-stream-y
+            stream::%line-length
+            stream::%listen
+            stream::%open-stream-p
+            stream::%output-stream-p
+            stream::%peek-char
+            stream::%read-byte
+            stream::%read-char
+            stream::%read-line
+            stream::%read-sequence
+            stream::%stream-external-format
+            stream::%unread-char
+            stream::%write-char
+            stream::%write-byte
+            stream::%write-sequence
+            stream::%write-string
             debug::all-method-functions-in-package
             profile::reinitialize-method-function
             cl::make-instance
