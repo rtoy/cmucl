@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.11 2003/08/03 11:27:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.12 2003/10/20 01:25:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.11 2003/08/03 11:27:46 gerd Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.12 2003/10/20 01:25:01 toy Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -163,7 +163,7 @@
   (:arg-types tagged-num)
   (:note "fixnum untagging")
   (:generator 1
-    (inst sra y x fixnum-tag-bits)))
+    (inst sran y x fixnum-tag-bits)))
 
 ;;;
 (define-move-vop move-to-word/fixnum :move
@@ -192,7 +192,7 @@
     (let ((done (gen-label)))
       (inst andcc temp x fixnum-tag-mask)
       (inst b :eq done)
-      (inst sra y x fixnum-tag-bits)
+      (inst sran y x fixnum-tag-bits)
       
       (loadw y x bignum-digits-offset other-pointer-type)
       
@@ -209,7 +209,7 @@
   (:generator 4
     (let ((done (gen-label)))
       (inst andcc temp x fixnum-tag-mask)
-      (inst sra temp x 0)		; sign-extend x to temp
+      (inst signx temp x)		; sign-extend x to temp
       (inst b :eq done)
       (inst srax y temp fixnum-tag-bits)
       
@@ -232,7 +232,7 @@
   (:result-types tagged-num)
   (:note "fixnum tagging")
   (:generator 1
-    (inst sll y x fixnum-tag-bits)))
+    (inst slln y x fixnum-tag-bits)))
 ;;;
 (define-move-vop move-from-word/fixnum :move
   (signed-reg unsigned-reg) (any-reg descriptor-reg))
@@ -250,12 +250,12 @@
     (move x arg)
     (let ((fixnum (gen-label))
 	  (done (gen-label)))
-      (inst sra temp x positive-fixnum-bits)
+      (inst sran temp x positive-fixnum-bits)
       (inst cmp temp)
       (inst b :eq fixnum)
       (inst orncc temp zero-tn temp)
       (inst b :eq done)
-      (inst sll y x fixnum-tag-bits)
+      (inst slln y x fixnum-tag-bits)
       
       (with-fixed-allocation
 	(y temp bignum-type (1+ bignum-digits-offset))
@@ -264,7 +264,7 @@
       (inst nop)
       
       (emit-label fixnum)
-      (inst sll y x fixnum-tag-bits)
+      (inst slln y x fixnum-tag-bits)
       (emit-label done))))
 ;;;
 (define-move-vop move-from-signed :move
@@ -286,10 +286,10 @@
     (move x arg)
     (let ((done (gen-label))
 	  (one-word (gen-label)))
-      (inst sra temp x positive-fixnum-bits)
+      (inst sran temp x positive-fixnum-bits)
       (inst cmp temp)
       (inst b :eq done)
-      (inst sll y x fixnum-tag-bits)
+      (inst slln y x fixnum-tag-bits)
 
       ;; We always allocate 2 words even if we don't need it.  (The
       ;; copying GC will take care of freeing the unused extra word.)
@@ -361,7 +361,7 @@
 ;; needed?)
 (define-move-function (load-signed64-signed 1) (vop x y)
   ((signed-reg) (signed64-reg unsigned64-reg))
-  (inst sra y x 0))
+  (inst signx y x))
 
 ;; Move a signed64-reg to signed-reg by setting the high 32 bits to be
 ;; the sign.  (Is this needed and will this do the right thing when
@@ -369,7 +369,7 @@
 #+nil
 (define-move-function (load-signed-signed64 1) (vop x y)
   ((signed64-reg) (signed-reg))
-  (inst sra y x 0))
+  (inst signx y x))
 
 ;; Load a 64-bit number from the stack
 (define-move-function (load-number-stack-64 5) (vop x y)
@@ -395,7 +395,7 @@
     ;; Sign-extend the fixnum and then remove the tag.  (Can't just
     ;; remove the tag because we don't know for sure if X has been
     ;; sign-extended to 64-bits.  Let's be safe.)
-    (inst sra y x 0)	      
+    (inst signx y x)	      
     (inst srax y y fixnum-tag-bits)))
 
 (define-move-vop move-to-64bit-word/fixnum :move
@@ -421,16 +421,16 @@
   (:generator 4
     (let ((done (gen-label)))
       (inst andcc temp x fixnum-tag-mask)
-      (inst sra temp x 0)		; sign-extend X to TEMP
+      (inst signx temp x)		; sign-extend X to TEMP
       (inst b :eq done :pt :xcc)
-      (inst sra y temp fixnum-tag-bits)	; Zap the tag bits
+      (inst sran y temp fixnum-tag-bits)	; Zap the tag bits
 
       ;; We have a bignum.  We need to check the length.  If the
       ;; length is 1, just get the one word.  If it's 2, we need to
       ;; get both words.
 
       (loadw temp x 0 other-pointer-type)
-      (inst srl temp 8)
+      (inst srln temp 8)
       (inst cmp temp 1)
       (inst b :eq done)
       ;; Get the low word and sign-extend it
@@ -463,7 +463,7 @@
   (:arg-types signed-num)
   (:generator 0
     ;; Sign-extend the 32-bit number
-    (inst sra y x 0)))
+    (inst signx y x)))
 
 (define-move-vop move-to-64bit-word/signed :move
   (signed-reg) (signed64-reg unsigned64-reg))
@@ -476,7 +476,7 @@
   (:arg-types unsigned-num)
   (:generator 1
     ;; Zero-extend the 32-bit number	      
-    (inst srl y x 0)))
+    (inst clruw y x 0)))
 
 (define-move-vop move-to-64bit-word/unsigned :move
   (unsigned-reg) (signed64-reg unsigned64-reg))
@@ -499,7 +499,7 @@
       (inst orncc temp zero-tn temp)
       ;; If result is all zeroes, we have a negative fixnum.
       (inst b :eq done :pt :xcc)
-      (inst sll y x fixnum-tag-bits)
+      (inst slln y x fixnum-tag-bits)
 
       ;; A 64-bit signed integer takes exactly 2 bignum digits
       (with-fixed-allocation
@@ -515,7 +515,7 @@
       (inst nop)
       
       (emit-label fixnum)
-      (inst sll y x fixnum-tag-bits)
+      (inst slln y x fixnum-tag-bits)
       (emit-label done))))
 
 (define-move-vop move-from-signed64 :move
@@ -536,7 +536,7 @@
       (inst cmp temp)
       ;; If result is all zeroes, we have a positive fixnum.
       (inst b :eq done :pt :xcc)
-      (inst sll y x fixnum-tag-bits)
+      (inst slln y x fixnum-tag-bits)
 
       ;; A unsigned 64-bit signed integer takes exactly 2 or 3 bignum
       ;; digits.  We always allocate 3.  (The copying GC will take
@@ -570,16 +570,16 @@
   (:generator 4
     (let ((done (gen-label)))
       (inst andcc temp x fixnum-tag-mask)
-      (inst sra temp x 0)		; sign-extend X to TEMP
+      (inst signx temp x)		; sign-extend X to TEMP
       (inst b :eq done :pt :xcc)
-      (inst sra y temp fixnum-tag-bits)	; Zap the tag bits
+      (inst sran y temp fixnum-tag-bits)	; Zap the tag bits
 
       ;; We have a bignum.  We need to check the length.  If the
       ;; length is 1, just get the one word.  If it's 2, we need to
       ;; get both words.
 
       (loadw temp x 0 other-pointer-type)
-      (inst srl temp 8)
+      (inst srln temp 8)
       (inst cmp temp 1)
       (inst b :eq done)
       ;; Get the low word and zero-extend it and we're done.
@@ -634,7 +634,7 @@
 	 ((signed64-reg unsigned64-reg)
 	  (move y x))
 	 (signed-reg
-	  (inst sra y x 0))
+	  (inst signx y x))
 	 (immediate
 	  (inst li64 y (tn-value x)))))
       ((signed64-stack unsigned64-stack)

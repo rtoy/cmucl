@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.13 2003/02/25 15:54:55 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.14 2003/10/20 01:25:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,7 +96,7 @@
   (:result-types positive-fixnum)
   (:generator 6
     (loadw res x 0 vm:other-pointer-type)
-    (inst srl res res vm:type-bits)))
+    (inst srln res res vm:type-bits)))
 
 (define-vop (get-closure-length)
   (:translate get-closure-length)
@@ -106,7 +106,7 @@
   (:result-types positive-fixnum)
   (:generator 6
     (loadw res x 0 vm:function-pointer-type)
-    (inst srl res res vm:type-bits)))
+    (inst srln res res vm:type-bits)))
 
 (define-vop (set-header-data)
   (:translate set-header-data)
@@ -121,7 +121,7 @@
     (inst and t1 vm:type-mask)
     (sc-case data
       (any-reg
-       (inst sll t2 data (- vm:type-bits 2))
+       (inst slln t2 data (- vm:type-bits vm:fixnum-tag-bits))
        (inst or t1 t2))
       (immediate
        (inst or t1 (ash (tn-value data) vm:type-bits)))
@@ -137,8 +137,8 @@
     ;;
     ;; Some code (the hash table code) depends on this returning a
     ;; positive number so make sure it does.
-    (inst sll res ptr 3)
-    (inst srl res res 1)))
+    (inst slln res ptr vm:lowtag-bits)
+    (inst srln res res 1)))
 
 (define-vop (make-other-immediate-type)
   (:args (val :scs (any-reg descriptor-reg))
@@ -149,11 +149,11 @@
   (:generator 2
     (sc-case type
       (immediate
-       (inst sll temp val vm:type-bits)
+       (inst slln temp val vm:type-bits)
        (inst or res temp (tn-value type)))
       (t
-       (inst sra temp type 2)
-       (inst sll res val (- vm:type-bits 2))
+       (inst sran temp type vm:fixnum-tag-bits)
+       (inst slln res val (- vm:type-bits vm:fixnum-tag-bits))
        (inst or res res temp)))))
 
 
@@ -195,8 +195,8 @@
   (:result-types system-area-pointer)
   (:generator 10
     (loadw ndescr code 0 vm:other-pointer-type)
-    (inst srl ndescr vm:type-bits)
-    (inst sll ndescr vm:word-shift)
+    (inst srln ndescr vm:type-bits)
+    (inst slln ndescr vm:word-shift)
     (inst sub ndescr vm:other-pointer-type)
     (inst add sap code ndescr)))
 
@@ -208,8 +208,8 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 10
     (loadw ndescr code 0 vm:other-pointer-type)
-    (inst srl ndescr vm:type-bits)
-    (inst sll ndescr vm:word-shift)
+    (inst srln ndescr vm:type-bits)
+    (inst slln ndescr vm:word-shift)
     (inst add ndescr offset)
     (inst add ndescr (- vm:function-pointer-type vm:other-pointer-type))
     (inst add func code ndescr)))
@@ -272,7 +272,7 @@
     (inst rdtick tick)
     ;; Get the hi and low parts of the counter into the results.
     (inst srlx hi tick 32)
-    (inst srl lo tick 0)))
+    (inst clruw lo tick)))
 
 #+sparc-v9
 (defun read-cycle-counter ()

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.11 2003/07/08 13:50:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.12 2003/10/20 01:25:01 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -28,7 +28,7 @@
   (:results (y :scs (base-char-reg)))
   (:note "character untagging")
   (:generator 1
-    (inst srl y x vm:type-bits)))
+    (inst srln y x vm:type-bits)))
 ;;;
 (define-move-vop move-to-base-char :move
   (any-reg descriptor-reg) (base-char-reg))
@@ -41,7 +41,7 @@
   (:results (y :scs (any-reg descriptor-reg)))
   (:note "character tagging")
   (:generator 1
-    (inst sll y x vm:type-bits)
+    (inst slln y x vm:type-bits)
     (inst or y vm:base-char-type)))
 ;;;
 (define-move-vop move-from-base-char :move
@@ -104,7 +104,7 @@
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-    (inst sll res ch fixnum-tag-bits)))
+    (inst slln res ch fixnum-tag-bits)))
 
 (define-vop (code-char)
   (:translate code-char)
@@ -114,7 +114,7 @@
   (:results (res :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 1
-    (inst srl res code fixnum-tag-bits)))
+    (inst srln res code fixnum-tag-bits)))
 
 
 ;;; Comparison of base-chars.

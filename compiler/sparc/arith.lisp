@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.35 2003/10/13 16:10:22 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.36 2003/10/20 01:25:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -401,8 +401,8 @@
       (inst cmp y zero-tn)
       (inst b :eq zero :pn)
       ;; Zap the higher 32 bits, just in case
-        (inst srl x 0)
-      (inst srl y 0)
+        (inst clruw x)
+      (inst clruw y)
       (inst udivx q x y)
       ;; Compute remainder
       (inst mulx r q y)
@@ -431,28 +431,28 @@
 		(inst b :ge done)
 		;; The result-type assures us that this shift will not
 		;; overflow.
-		(inst sll result number amount)
+		(inst slln result number amount)
 		(inst neg ndesc amount)
 		;; ndesc = max(-amount, 31)
 		(inst cmp ndesc 31)
 		(inst cmove :ge ndesc 31)
-		(inst sra result number ndesc)
+		(inst sran result number ndesc)
 		(emit-label done)))
 	     (t
 	      (let ((done (gen-label)))
 		(inst cmp amount)
 		(inst b :ge done)
 		;; The result-type assures us that this shift will not overflow.
-		(inst sll result number amount)
+		(inst slln result number amount)
 
 		;; Handle right shifts here.
 		(inst neg ndesc amount)
 		(inst cmp ndesc 31)
 		(inst b :le done)
-		(inst sra result number ndesc)
+		(inst sran result number ndesc)
 		;; Right shift of greater than 31 bits is the same as a shift
 		;; of 31 bits for signed 32-bit numbers.
-		(inst sra result number 31)
+		(inst sran result number 31)
 
 		(emit-label done)))))
 
@@ -461,9 +461,9 @@
 	   (cond ((< amount -31)
 		  (inst li result -1))
 		 ((< amount 0)
-		  (inst sra result number (- amount)))
+		  (inst sran result number (- amount)))
 		 ((> amount 0)
-		  (inst sll result number amount))
+		  (inst slln result number amount))
 		 (t
 		  ;; amount = 0.  Shouldn't happen because of a
 		  ;; deftransform, but it's easy.
@@ -488,11 +488,11 @@
 		(inst b :ge done)
 		;; The result-type assures us that this shift will not
 		;; overflow.
-		(inst sll result number amount)
+		(inst slln result number amount)
 		(inst neg ndesc amount)
 		;; A right shift of 32 or more results in zero.
 		(inst cmp ndesc 32)
-		(inst srl result number ndesc)
+		(inst srln result number ndesc)
 		(inst cmove :ge result zero-tn)
 		(emit-label done)))
 	     (t
@@ -501,11 +501,11 @@
 		(inst b :ge done)
 		;; The result-type assures us that this shift will not
 		;; overflow.
-		(inst sll result number amount)
+		(inst slln result number amount)
 		(inst neg ndesc amount)
 		(inst cmp ndesc 32)
 		(inst b :lt done)
-		(inst srl result number ndesc)
+		(inst srln result number ndesc)
 		;; Right shift of 32 or more is the same as zero for unsigned
 		;; 32-bit numbers.
 		(move result zero-tn)
@@ -517,9 +517,9 @@
 	 (cond ((< amount -31)
 		(move result zero-tn))
 	       ((< amount 0)
-		(inst srl result number (- amount)))
+		(inst srln result number (- amount)))
 	       ((> amount 0)
-		(inst sll result number amount))
+		(inst slln result number amount))
 	       (t
 		;; amount = 0.  Shouldn't happen because of a
 		;; deftransform, but it's easy.
@@ -544,11 +544,11 @@
 	  ;; shifted in are just fine for the fixnum tag.
 	  (sc-case amount
 	   ((signed-reg unsigned-reg)
-	    (inst sll result number amount))
+	    (inst slln result number amount))
 	   (immediate
 	    (let ((amount (tn-value amount)))
 	      (assert (>= amount 0))
-	      (inst sll result number amount))))))))
+	      (inst slln result number amount))))))))
   (frob fast-ash-left/signed=>signed signed-reg signed-num signed-reg 3)
   (frob fast-ash-left/fixnum=>fixnum any-reg tagged-num any-reg 2)
   (frob fast-ash-left/unsigned=>unsigned unsigned-reg unsigned-num unsigned-reg 3))
@@ -650,9 +650,9 @@
     ;; 2 LSBs to make it a fixnum again.  (Those bits are junk.)
     (sc-case amount
       ((signed-reg unsigned-reg)
-       (inst sra temp number amount))
+       (inst sran temp number amount))
       (immediate
-       (inst sra temp number (tn-value amount))))
+       (inst sran temp number (tn-value amount))))
     (inst andn result temp fixnum-tag-mask)))
     
 
@@ -682,7 +682,7 @@
       (emit-label test)
       (inst cmp shift)
       (inst b :ne loop)
-      (inst srl shift 1))))
+      (inst srln shift 1))))
 
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
@@ -705,7 +705,7 @@
 	  (inst add mask (ldb (byte 10 0) bit-mask))
 
 	  (inst and temp res mask)
-	  (inst srl res shift)
+	  (inst srln res shift)
 	  (inst and res mask)
 	  (inst add res temp)))))
 
@@ -723,7 +723,7 @@
     ;; */signed=>signed.  Why?  A fixnum product using signed=>signed
     ;; has to convert both args to signed-nums.  But using this, we
     ;; don't have to and that saves an instruction.
-    (inst sra temp y fixnum-tag-bits)
+    (inst sran temp y fixnum-tag-bits)
     (inst smul r x temp)))
 
 ;; Multiplication by a constant.
@@ -782,7 +782,7 @@
   (:translate *)
   (:guard (backend-featurep :sparc-64))
   (:generator 4
-    (inst sra temp y fixnum-tag-bits)
+    (inst sran temp y fixnum-tag-bits)
     (inst mulx r x temp)))
 
 (define-vop (fast-v9-*/signed=>signed fast-signed-binop)
@@ -939,9 +939,9 @@
     (let ((done (gen-label)))
       (inst cmp shift)
       (inst b :eq done)
-      (inst srl res next shift)
+      (inst srln res next shift)
       (inst sub temp zero-tn shift)
-      (inst sll temp prev temp)
+      (inst slln temp prev temp)
       (inst or res temp)
       (emit-label done)
       (move result res))))
@@ -1017,13 +1017,13 @@
   (:translate shift-towards-start)
   (:note "shift-towards-start")
   (:generator 1
-    (inst sll r num amount)))
+    (inst slln r num amount)))
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
   (:note "shift-towards-end")
   (:generator 1
-    (inst srl r num amount)))
+    (inst srln r num amount)))
 
 
 
@@ -1144,8 +1144,8 @@
 	 ;;
 	 ;; Make sure the multiplier and multiplicand are really
 	 ;; unsigned 64-bit numbers.
-	 (inst srl multiplier 0)
-	 (inst srl multiplicand 0)
+	 (inst clruw multiplier)
+	 (inst clruw multiplicand)
 	 
 	 ;; Multiply the two numbers and put the result in
 	 ;; result-high.  Copy the low 32-bits to result-low.  Then
@@ -1242,7 +1242,7 @@
   (:results (digit :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
-    (inst sra digit fixnum fixnum-tag-bits)))
+    (inst sran digit fixnum fixnum-tag-bits)))
 
 (define-vop (bignum-floor)
   (:translate bignum::%floor)
@@ -1332,7 +1332,7 @@
   (:generator 1
     (sc-case res
       (any-reg
-       (inst sll res digit fixnum-tag-bits))
+       (inst slln res digit fixnum-tag-bits))
       (signed-reg
        (move res digit)))))
 
@@ -1346,17 +1346,17 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
-    (inst sra result digit count)))
+    (inst sran result digit count)))
 
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
   (:generator 1
-    (inst srl result digit count)))
+    (inst srln result digit count)))
 
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
   (:generator 1
-    (inst sll result digit count)))
+    (inst slln result digit count)))
 
 
 ;;;; Static functions.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/memory.lisp,v 1.4 2002/09/04 14:04:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/memory.lisp,v 1.5 2003/10/20 01:25:01 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,7 +96,7 @@
 	       (inst ,op value object temp)))))
 	 (t
 	  ,@(unless (zerop shift)
-	      `((inst srl temp index ,shift)))
+	      `((inst srln temp index ,shift)))
 	  (inst add temp ,(if (zerop shift) 'index 'temp)
 		(- (ash offset vm:word-shift) lowtag))
 	  (inst ,op value object temp)))

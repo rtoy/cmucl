@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.21 2002/10/24 20:38:58 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.22 2003/10/20 01:25:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -263,7 +263,7 @@
   (:result-types positive-fixnum)
   (:generator 4
     (loadw temp struct 0 instance-pointer-type)
-    (inst srl res temp vm:type-bits)))
+    (inst srln res temp vm:type-bits)))
 
 (define-vop (instance-ref slot-ref)
   (:variant instance-slots-offset instance-pointer-type)

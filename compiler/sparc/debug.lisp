@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/debug.lisp,v 1.4 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/debug.lisp,v 1.5 2003/10/20 01:25:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,10 +75,10 @@
     (let ((bogus (gen-label))
 	  (done (gen-label)))
       (loadw temp thing 0 lowtag)
-      (inst srl temp vm:type-bits)
+      (inst srln temp vm:type-bits)
       (inst cmp temp)
       (inst b :eq bogus)
-      (inst sll temp (1- (integer-length vm:word-bytes)))
+      (inst slln temp (1- (integer-length vm:word-bytes)))
       (unless (= lowtag vm:other-pointer-type)
 	(inst add temp (- lowtag vm:other-pointer-type)))
       (inst sub code thing temp)
@@ -123,4 +123,4 @@
   (:result-types positive-fixnum)
   (:generator 5
     (loadw res fun 0 function-pointer-type)
-    (inst srl res vm:type-bits)))
+    (inst srln res vm:type-bits)))

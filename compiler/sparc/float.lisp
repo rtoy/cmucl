@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.41 2003/09/05 15:35:32 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.42 2003/10/20 01:25:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1400,7 +1400,7 @@
 	;; %fcc's on the sparc V9.  If not, we don't need this, but we
 	;; do need to make sure that the unused bits are written as
 	;; zeroes, according the the V9 architecture manual.
-	(inst sra new 0)
+	(inst signx new)
 	(inst srlx my-fsr 32)
 	(inst sllx my-fsr 32)
 	(inst or my-fsr new)

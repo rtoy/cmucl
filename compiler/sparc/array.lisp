@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.29 2003/08/22 13:20:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.30 2003/10/20 01:25:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,11 +36,11 @@
       (inst andn ndescr 4)
       (allocation header ndescr other-pointer-type :temp-tn gc-temp)
       (inst add ndescr rank (fixnumize (1- vm:array-dimensions-offset)))
-      (inst sll ndescr ndescr vm:type-bits)
+      (inst slln ndescr ndescr vm:type-bits)
       (inst or ndescr ndescr type)
       ;; Remove the extraneous fixnum tag bits because TYPE and RANK
       ;; were fixnums
-      (inst srl ndescr ndescr fixnum-tag-bits)
+      (inst srln ndescr ndescr fixnum-tag-bits)
       (storew ndescr header 0 vm:other-pointer-type))
     (move result header)))
 
@@ -76,7 +76,7 @@
     (loadw temp x 0 vm:other-pointer-type)
     (inst sra temp vm:type-bits)
     (inst sub temp (1- vm:array-dimensions-offset))
-    (inst sll res temp fixnum-tag-bits)))
+    (inst slln res temp fixnum-tag-bits)))
 
 
 
@@ -181,8 +181,8 @@
 	 (:generator 20
 	   ;; temp = floor(index bit-shift), to get address of word
 	   ;; containing our bits.
-	   (inst srl temp index ,bit-shift)
-	   (inst sll temp fixnum-tag-bits)
+	   (inst srln temp index ,bit-shift)
+	   (inst slln temp fixnum-tag-bits)
 	   (inst add temp (- (* vm:vector-data-offset vm:word-bytes)
 			     vm:other-pointer-type))
 	   (inst ld result object temp)
@@ -192,10 +192,10 @@
 	   (inst and temp index ,(1- elements-per-word))
 	   (inst xor temp ,(1- elements-per-word))
 	   ,@(unless (= bits 1)
-	       `((inst sll temp ,(1- (integer-length bits)))))
-	   (inst srl result temp)
+	       `((inst slln temp ,(1- (integer-length bits)))))
+	   (inst srln result temp)
 	   (inst and result ,(1- (ash 1 bits)))
-	   (inst sll value result 2)))
+	   (inst slln value result vm:fixnum-tag-bits)))
        (define-vop (,(symbolicate 'data-vector-ref-c/ type))
 	 (:translate data-vector-ref)
 	 (:policy :fast-safe)
@@ -219,7 +219,7 @@
 		      (inst li temp offset)
 		      (inst ld result object temp))))
 	     (unless (zerop extra)
-	       (inst srl result (* ,bits extra)))
+	       (inst srln result (* ,bits extra)))
 	     ;; Always need the mask unless the bits we wanted were the
 	     ;; most significant bits of the word.
 	     (unless (= extra ,(1- elements-per-word))
@@ -237,19 +237,19 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp old offset)
 	 (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) shift)
 	 (:generator 25
-	   (inst srl offset index ,bit-shift)
-	   (inst sll offset fixnum-tag-bits)
+	   (inst srln offset index ,bit-shift)
+	   (inst slln offset fixnum-tag-bits)
 	   (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			       vm:other-pointer-type))
 	   (inst ld old object offset)
 	   (inst and shift index ,(1- elements-per-word))
 	   (inst xor shift ,(1- elements-per-word))
 	   ,@(unless (= bits 1)
-	       `((inst sll shift ,(1- (integer-length bits)))))
+	       `((inst slln shift ,(1- (integer-length bits)))))
 	   (unless (and (sc-is value immediate)
 			(= (tn-value value) ,(1- (ash 1 bits))))
 	     (inst li temp ,(1- (ash 1 bits)))
-	     (inst sll temp shift)
+	     (inst slln temp shift)
 	     (inst not temp)
 	     (inst and old temp))
 	   (unless (sc-is value zero)
@@ -258,7 +258,7 @@
 		(inst li temp (logand (tn-value value) ,(1- (ash 1 bits)))))
 	       (unsigned-reg
 		(inst and temp value ,(1- (ash 1 bits)))))
-	     (inst sll temp shift)
+	     (inst slln temp shift)
 	     (inst or old temp))
 	   (inst st old object offset)
 	   (sc-case value
@@ -290,8 +290,8 @@
 	       (unless (and (sc-is value immediate)
 			    (= (tn-value value) ,(1- (ash 1 bits))))
 		 (cond ((zerop extra)
-			(inst sll old ,bits)
-			(inst srl old ,bits))
+			(inst slln old ,bits)
+			(inst srln old ,bits))
 		       (t
 			(inst li temp
 			      (lognot (ash ,(1- (ash 1 bits))
@@ -313,7 +313,7 @@
 			   (inst li temp value)
 			   (inst or old temp)))))
 		 (unsigned-reg
-		  (inst sll temp value
+		  (inst slln temp value
 			(* (logxor extra ,(1- elements-per-word)) ,bits))
 		  (inst or old temp)))
 	       (if (typep offset '(signed-byte 13))
@@ -426,7 +426,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 7
-    (inst sll offset index 1)
+    (inst slln offset index 1)
     (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))
     (inst lddf value object offset)))
@@ -463,7 +463,7 @@
   (:result-types double-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 20
-    (inst sll offset index 1)
+    (inst slln offset index 1)
     (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))
     (inst stdf value object offset)
@@ -507,7 +507,7 @@
   (:result-types long-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 7
-    (inst sll offset index 2)
+    (inst slln offset index 2)
     (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))
     (load-long-reg value object offset nil)))
@@ -525,7 +525,7 @@
   (:result-types long-float)
   (:temporary (:scs (non-descriptor-reg)) offset)
   (:generator 20
-    (inst sll offset index 2)
+    (inst slln offset index 2)
     (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))
     (store-long-reg value object offset nil)
@@ -604,7 +604,7 @@
   (:result-types complex-single-float)
   (:generator 5
     (let ((real-tn (complex-single-reg-real-tn value)))
-      (inst sll offset index 1)
+      (inst slln offset index 1)
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type))
       (inst ldf real-tn object offset))
@@ -653,7 +653,7 @@
   (:generator 5
     (let ((value-real (complex-single-reg-real-tn value))
 	  (result-real (complex-single-reg-real-tn result)))
-      (inst sll offset index 1)
+      (inst slln offset index 1)
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type))
       (inst stf value-real object offset)
@@ -712,7 +712,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
     (let ((real-tn (complex-double-reg-real-tn value)))
-      (inst sll offset index 2)
+      (inst slln offset index 2)
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type))
       (inst lddf real-tn object offset))
@@ -760,7 +760,7 @@
   (:generator 20
     (let ((value-real (complex-double-reg-real-tn value))
 	  (result-real (complex-double-reg-real-tn result)))
-      (inst sll offset index 2)
+      (inst slln offset index 2)
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type))
       (inst stdf value-real object offset)
@@ -824,7 +824,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
   (:generator 7
     (let ((real-tn (complex-long-reg-real-tn value)))
-      (inst sll offset index 3)
+      (inst slln offset index 3)
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type))
       (load-long-reg real-tn object offset nil))
@@ -848,7 +848,7 @@
   (:generator 20
     (let ((value-real (complex-long-reg-real-tn value))
 	  (result-real (complex-long-reg-real-tn result)))
-      (inst sll offset index 3)
+      (inst slln offset index 3)
       (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			  vm:other-pointer-type))
       (store-long-reg value-real object offset nil)

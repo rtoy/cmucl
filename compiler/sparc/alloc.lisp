@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.20 2003/10/08 01:15:00 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.21 2003/10/20 01:25:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,14 +118,14 @@
   (:generator 100
     (inst add boxed boxed-arg (fixnumize (1+ code-trace-table-offset-slot)))
     (inst and boxed (lognot lowtag-mask))
-    (inst srl unboxed unboxed-arg word-shift)
+    (inst srln unboxed unboxed-arg word-shift)
     (inst add unboxed lowtag-mask)
     (inst and unboxed (lognot lowtag-mask))
     (pseudo-atomic ()
       ;; Figure out how much space we really need and allocate it.
       (inst add size boxed unboxed)
       (allocation result size other-pointer-type :temp-tn ndescr)
-      (inst sll ndescr boxed (- type-bits word-shift))
+      (inst slln ndescr boxed (- type-bits word-shift))
       (inst or ndescr code-header-type)
       (storew ndescr result 0 other-pointer-type)
       (storew unboxed result code-code-size-slot other-pointer-type)
@@ -206,7 +206,7 @@
   (:temporary (:scs (any-reg)) temp)
   (:generator 6
     (inst add bytes extra (* (1+ words) word-bytes))
-    (inst sll header bytes (- type-bits 2))
+    (inst slln header bytes (- type-bits vm:fixnum-tag-bits)) ; because bytes is already a fixnum
     (inst add header header (+ (ash -2 type-bits) type))
     (inst and bytes (lognot lowtag-mask))
     (pseudo-atomic ()

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.34 2003/08/26 11:50:04 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.35 2003/10/20 01:25:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1190,7 +1190,7 @@ default-value-8
     (pseudo-atomic ()
       (assemble ()
 	;; Allocate a cons (2 words) for each item.
-	(inst sll temp count 1)
+	(inst slln temp count 1)
 	(allocation result temp list-pointer-type
 		    :stack-p dynamic-extent
 		    :temp-tn dst)
