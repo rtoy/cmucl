@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.129 2002/08/09 21:26:48 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.130 2002/08/12 16:08:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -348,8 +348,9 @@
 (defmacro ir1-error-bailout
 	  ((start cont form
 	    &optional
-	    (proxy ``(error "Execution of a form compiled with errors:~% ~S"
-			    ',,form)))
+	    (proxy ``(error 'simple-program-error
+		       :format-control "Execution of a form compiled with errors:~% ~S"
+		       :format-arguments (list ',,form))))
 	   &body body)
   (let ((skip (gensym)))
     `(block ,skip

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.125 2002/08/09 21:21:15 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.126 2002/08/12 16:08:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1082,8 +1082,9 @@
 	   (*compiler-error-bailout*
 	    #'(lambda ()
 		(convert-and-maybe-compile
-		 `(error "Execution of a form compiled with errors:~% ~S"
-			 ',form)
+		 `(error 'simple-program-error
+		    :format-control "Execution of a form compiled with errors:~% ~S"
+		    :format-arguments (list ',form))
 		 path)
 		(throw 'process-form-error-abort nil))))
       (if (atom form)
