@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.37 1997/11/04 14:47:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.38 1997/11/04 16:31:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,7 +102,9 @@
     ,@(when (c:backend-featurep :gengc)
 	'("target:code/gengc"
 	  "target:code/scavhook"))
-   
+    ,@(when (c:backend-featurep :gencgc)
+	'("target:code/scavhook"))
+
     "target:code/rand"
     "target:code/save"
     "target:code/alieneval"
