@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.53 1991/10/02 13:07:38 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.54 1991/10/20 14:36:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2030,7 +2030,7 @@
   (collect ((segments))
     (let ((current (cons nil body)))
       (loop
-	(let ((tag-pos (position-if #'atom current :start 1)))
+	(let ((tag-pos (position-if-not #'listp current :start 1)))
 	  (unless tag-pos
 	    (segments `(,@current nil))
 	    (return))
