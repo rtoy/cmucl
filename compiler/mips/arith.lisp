@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.49 1993/01/13 15:51:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.50 1993/05/07 07:29:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.49 1993/01/13 15:51:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.50 1993/05/07 07:29:24 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -143,31 +143,34 @@
        (:translate ,translate)
        (:generator ,(1+ untagged-cost)
 	 (inst ,op r x y)))
-     (define-vop (,(symbolicate "FAST-" translate "-C/FIXNUM=>FIXNUM")
-		  fast-fixnum-c-binop)
-       (:arg-types tagged-num (:constant ,tagged-type))
-       (:translate ,translate)
-       (:generator ,cost
-	 (inst ,op r x (fixnum y))))
-     (define-vop (,(symbolicate "FAST-" translate "-C/SIGNED=>SIGNED")
-		  fast-signed-c-binop)
-       (:arg-types signed-num (:constant ,untagged-type))
-       (:translate ,translate)
-       (:generator ,untagged-cost
-	 (inst ,op r x y)))
-     (define-vop (,(symbolicate "FAST-" translate "-C/UNSIGNED=>UNSIGNED")
-		  fast-unsigned-c-binop)
-       (:arg-types unsigned-num (:constant ,untagged-type))
-       (:translate ,translate)
-       (:generator ,untagged-cost
-	 (inst ,op r x y)))))
+     ,@(when tagged-type
+	 `((define-vop (,(symbolicate "FAST-" translate "-C/FIXNUM=>FIXNUM")
+			fast-fixnum-c-binop)
+		       (:arg-types tagged-num (:constant ,tagged-type))
+	     (:translate ,translate)
+	     (:generator ,cost
+			 (inst ,op r x (fixnum y))))))
+     ,@(when untagged-type
+	 `((define-vop (,(symbolicate "FAST-" translate "-C/SIGNED=>SIGNED")
+			fast-signed-c-binop)
+		       (:arg-types signed-num (:constant ,untagged-type))
+	     (:translate ,translate)
+	     (:generator ,untagged-cost
+			 (inst ,op r x y)))
+	   (define-vop (,(symbolicate "FAST-" translate
+				      "-C/UNSIGNED=>UNSIGNED")
+			fast-unsigned-c-binop)
+		       (:arg-types unsigned-num (:constant ,untagged-type))
+	     (:translate ,translate)
+	     (:generator ,untagged-cost
+			 (inst ,op r x y)))))))
 
 (define-binop + 1 5 addu (signed-byte 14) (signed-byte 16))
 (define-binop - 1 5 subu
   (integer #.(- (1- (ash 1 14))) #.(ash 1 14))
   (integer #.(- (1- (ash 1 16))) #.(ash 1 16)))
 (define-binop logior 1 3 or (unsigned-byte 14) (unsigned-byte 16))
-(define-binop lognor 1 3 nor (unsigned-byte 14) (unsigned-byte 16))
+(define-binop lognor 1 3 nor nil nil)
 (define-binop logand 1 3 and (unsigned-byte 14) (unsigned-byte 16))
 (define-binop logxor 1 3 xor (unsigned-byte 14) (unsigned-byte 16))
 
