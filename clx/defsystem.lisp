@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-lisp; Base: 10; Lowercase: Yes;  -*-
+;;; -*- Mode: Lisp; Package: Xlib; Log: clx.log -*-
 
 ;;;
 ;;;			 TEXAS INSTRUMENTS INCORPORATED
@@ -26,6 +26,8 @@
 ;;;   kcl
 ;;;   ibcl
 ;;;   excl
+;;;   CMU
+;;;
 
 #-ansi-common-lisp 
 (lisp:in-package :xlib :use '(:lisp))
@@ -362,6 +364,20 @@
 			     *foreign-libraries*))
 
 
+;;; This loads the C foreign function used to make an IPC connection
+;;; to the X11 server.  It also defines the necessary types and things
+;;; to actually make the foreign call.  See the OPEN-X-STREAM function
+;;; in the dependent.lisp file.
+;;;
+#+:CMU
+(defun clx-foreign-files ()
+  (ext:def-c-type c-string (ext::null-terminated-string 256))
+  (ext:def-c-pointer *c-string c-string)
+  (ext:def-c-routine ("connect_to_server" xlib::connect-to-server) (ext:int)
+    (host *c-string)
+    (port ext:int)))
+
+
 ;; socket interface for kcl and ibcl
 ;;   defines the function (open-socket-stream host display)
 ;;
@@ -457,8 +473,9 @@
 	       ;; compile-file defaults correctly.
 	       #+(or kcl ibcl) (load source)
 	       (if (equal source binary)
-		   (compile-file source)
-		   (compile-file source :output-file binary))
+		   (compile-file source #+CMU :error-file #+CMU nil)
+		   (compile-file source :output-file binary
+				 #+CMU :error-file #+CMU nil))
 	       (load binary))))
 
       ;; Now compile and load all the files.
@@ -576,6 +593,9 @@
 
       #+lucid
       (clx-foreign-files binary-path)
+
+      #+CMU
+      (clx-foreign-files)
 
       #+(or kcl ibcl)
       (kcl-socket-init binary-path)
