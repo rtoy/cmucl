@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/interface.lisp,v 1.9 1994/10/31 04:53:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/interface.lisp,v 1.10 1996/05/08 10:43:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -782,4 +782,4 @@
       (unix:unix-exit 0)
       (progn
 	(interface::cleanup-motif)
-	(throw '%end-of-the-world nil))))
+	(throw '%end-of-the-world 0))))
