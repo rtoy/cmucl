@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.7 2004/07/12 23:44:07 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.8 2004/07/25 18:03:18 pmai Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -17,7 +17,7 @@
 #include "arch.h"
 #include "search.h"
 
-#if !defined(MACH) && !defined(SVR4) && !defined(__linux__)
+#if !defined(MACH) && !defined(SVR4) && !defined(__linux__) && !defined(DARWIN)
 
 static int strcasecmp(s1,s2)
 char *s1,*s2;
