@@ -46,7 +46,7 @@
 			  :type (c:backend-fasl-file-type c:*backend*))))
   (when (< (or (file-write-date obj) 0)
 	   (file-write-date "pcl:defsys.lisp"))
-    (compile-file "pcl:defsys")))
+    (compile-file "pcl:defsys" :byte-compile t)))
 
 (load "pcl:defsys" :verbose t)
 
@@ -59,5 +59,6 @@
      :optimize-interface '(optimize-interface #+small (safety 1))
      :context-declarations
      '((:external (declare (optimize-interface (safety 2) (debug 1))))
-       (:macro (declare (optimize (speed 0))))))
+       ((:or :macro (:match "$EARLY-") (:match "$BOOT-"))
+	(declare (optimize (speed 0))))))
  (pcl::compile-pcl))
