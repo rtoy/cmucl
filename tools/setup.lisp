@@ -172,7 +172,6 @@
 (defvar *new-compile* t) ; Use new compiler?
 
 (defvar *log-file* nil)
-(defvar *last-file-position*)
 (defvar *compiled-files* (make-hash-table :test #'equal))
 
 
@@ -184,8 +183,7 @@
 			       :if-exists :append
 			       :if-does-not-exist :create)))
 	 (unwind-protect
-	     (let ((*error-output* *log-file*)
-		   (*last-file-position* (file-position *log-file*)))
+	     (let ((*error-output* *log-file*))
 	       (with-compilation-unit ()
 		 ,@forms))
 	   (close *log-file*)))))
@@ -197,10 +195,6 @@
 		  ((:bootstrap-macros lisp::*bootstrap-defmacro*) nil))
   #+new-compiler
   (declare (ignore always-once))
-  (when (and *log-file*
-	     (> (- (file-position *log-file*) *last-file-position*) 10000))
-    (setq *last-file-position* (file-position *log-file*))
-    (force-output *log-file*))
 
   (let* ((src (pathname (concatenate 'string name ".lisp")))
 	 (obj (if output-file
