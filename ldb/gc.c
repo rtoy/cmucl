@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.33 1992/03/08 18:39:38 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.34 1992/04/15 00:45:48 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -607,7 +607,6 @@ lispobj *from_space, *from_space_free_pointer;
 /* Code and Code-Related Objects */
 
 static lispobj trans_function_header();
-static lispobj trans_closure_function_header();
 static lispobj trans_boxed();
 
 static
@@ -635,20 +634,12 @@ lispobj *where, object;
 			type = TypeOf(first);
 			switch (type) {
 			  case type_FunctionHeader:
+			  case type_ClosureFunctionHeader:
 			    copy = trans_function_header(object);
 			    break;
-			  case type_ClosureFunctionHeader:
-			    copy = trans_closure_function_header(object);
-			    break;
-			  case type_ClosureHeader:
-			  case type_FuncallableInstanceHeader:
+			  default:
 			    copy = trans_boxed(object);
 			    break;
-			  default:
-			    fprintf(stderr, "GC lossage.  Bogus function pointer.\n");
-			    fprintf(stderr, "Pointer: 0x%08x, Header: 0x%08x\n",
-				    (unsigned long) object, (unsigned long) first);
-			    gc_lose();
 			}
 
 			first = *first_pointer = copy;
@@ -873,35 +864,6 @@ lispobj object;
 	return ((lispobj) ncode + offset) | type_FunctionPointer;
 }
 
-
-static
-scav_closure_function_header(where, object)
-lispobj *where, object;
-{
-	fprintf(stderr, "GC lossage.  Should not be scavenging a ");
-	fprintf(stderr, "Closure Function Header.\n");
-	fprintf(stderr, "where = 0x%08x, object = 0x%08x",
-		(unsigned long) where, (unsigned long) object);
-	gc_lose();
-}
-
-static lispobj
-trans_closure_function_header(object)
-lispobj object;
-{
-	struct function_header *fheader;
-	unsigned long offset;
-	struct code *code, *ncode;
-	
-	fheader = (struct function_header *) PTR(object);
-	offset = HeaderValue(fheader->header) * 4;
-
-	/* Transport the whole code object */
-	code = (struct code *) ((unsigned long) fheader - offset);
-	ncode = trans_code(code);
-
-	return ((lispobj) ncode + offset) | type_FunctionPointer;
-}
 
 
 /* Structures */
@@ -1799,10 +1761,12 @@ gc_init()
 	scavtab[type_ComplexArray] = scav_boxed;
 	scavtab[type_CodeHeader] = scav_code_header;
 	scavtab[type_FunctionHeader] = scav_function_header;
-	scavtab[type_ClosureFunctionHeader] = scav_closure_function_header;
+	scavtab[type_ClosureFunctionHeader] = scav_function_header;
 	scavtab[type_ReturnPcHeader] = scav_return_pc_header;
 	scavtab[type_ClosureHeader] = scav_boxed;
 	scavtab[type_FuncallableInstanceHeader] = scav_boxed;
+	scavtab[type_ByteCodeFunction] = scav_boxed;
+	scavtab[type_ByteCodeClosure] = scav_boxed;
 	scavtab[type_ValueCellHeader] = scav_boxed;
         scavtab[type_SymbolHeader] = scav_boxed;
 	scavtab[type_BaseChar] = scav_immediate;
@@ -1842,10 +1806,12 @@ gc_init()
 	transother[type_ComplexArray] = trans_boxed;
 	transother[type_CodeHeader] = trans_code_header;
 	transother[type_FunctionHeader] = trans_function_header;
-	transother[type_ClosureFunctionHeader] = trans_closure_function_header;
+	transother[type_ClosureFunctionHeader] = trans_function_header;
 	transother[type_ReturnPcHeader] = trans_return_pc_header;
 	transother[type_ClosureHeader] = trans_boxed;
 	transother[type_FuncallableInstanceHeader] = trans_boxed;
+	transother[type_ByteCodeFunction] = trans_boxed;
+	transother[type_ByteCodeClosure] = trans_boxed;
 	transother[type_ValueCellHeader] = trans_boxed;
 	transother[type_SymbolHeader] = trans_boxed;
 	transother[type_BaseChar] = trans_immediate;
@@ -1895,7 +1861,7 @@ gc_init()
 #if 0
 	/* Shouldn't see these so just lose if it happens */
 	sizetab[type_FunctionHeader] = size_function_header;
-	sizetab[type_ClosureFunctionHeader] = size_closure_function_header;
+	sizetab[type_ClosureFunctionHeader] = size_function_header;
 	sizetab[type_ReturnPcHeader] = size_return_pc_header;
 #endif
 	sizetab[type_ClosureHeader] = size_boxed;
