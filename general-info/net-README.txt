@@ -5,8 +5,8 @@ responsibility for the consequences of any use of this software.
 
 This is a general beta release, meaning that anyone can FTP it, but we won't be
 very sympathetic about catastrophes resulting from your dependence on CMU CL.
-After the bug reports die down, we will announce a full release, and will then
-try to be sympathetic toward desperate users.
+This release mostly fixes bugs in the previous release, and if all goes well,
+we will announce a later default release of this system
 
 The CMU Common Lisp project's goal is to develop a high quality public domain
 system, so we want your bug reports, bug fixes and enhancements.  However,
@@ -15,7 +15,7 @@ of CMU.  We are looking for university and industrial affiliates to help us
 with porting and maintenance for hardware and software that is not widely used
 at CMU.
 
-See "man cmucl" (man/cmucl.1) for other general information.
+See "man cmucl" (man/man1/cmucl.1) for other general information.
 
 Distribution:
 
@@ -40,12 +40,18 @@ directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
 The latest SunOS Sparc release is:
-    -rw-r--r--  1 wlott     9330285 Nov  1 17:35 15b-sun4c_41.tar.Z
+    -rw-r--r--  1 ram       9257951 Jan 23 17:42 15c-sun4c_41.tar.Z
 
-The resulting tree is 23 megabytes.
+The resulting tree is 23 megabytes.  For installation directions, see the
+section "site initialization" in README file at the root of the tree.
+
+If poor network connections make it difficult to transfer a 10 meg file, the
+release is also available split into five parts, with the suffix ".0" to ".4".
+To extract from multiple files, use:
+    cat file.tar.Z.* | uncompress | tar xf - .
 
 The release area also contains source distributions and other binary
-distributions.  A listing of the current contents of the release are is in
+distributions.  A listing of the current contents of the release area is in
 release/FILES.  Major release announcements will be made to comp.lang.lisp
 until there is enough volume to warrant a comp.lang.lisp.cmu.
 
@@ -64,7 +70,8 @@ Site initialization:
 To run CMU CL, place bin/ in PATH and setenv CMUCLLIB to point to lib/.  The
 file lib/site-init.lisp contains site-specific initialization, such as setting
 of the site name.  Any site-specific initialization should be placed in this
-file; this file can be compiled.
+file; this file can be compiled.  See bin/sample-wrapper for a shell script
+template that sets up environment variables and then runs CMU CL.
 
 TMPFS NOTE:
 
@@ -89,16 +96,8 @@ packages are copyrighted, they may be freely distributed without any licensing
 agreement or fee.
 
 Also in /afs/cs/project/clisp/release:
-
--rw-r--r--  1 ram       3257791 Oct 19 19:50 15b-sun4-source.tar.Z
-	Image of all ".lisp" source files used to build version 15b for SPARC
-	machines.  Probably more interesting to most people than the RCS
-        distribution. 
-
--rw-r--r--  1 ram       7267593 Oct 16 16:42 10-16-91-cmucl-master.tar.Z
-	The project/clisp/rcs subtree: the RCS source (,v) files for all of
-	CMU CL.
-
+-rw-r--r--  1 ram       3619669 Jan 23 17:24 15c-source.tar.Z
+	Image of all ".lisp" source files used to build version 15c.
 
 Totally machine-independent compiler code:
     /afs/cs/project/clisp/src/alpha/compiler/*.lisp
@@ -128,4 +127,5 @@ the compiler description.
 
 See hackers/ram/scribe/internals/architecture.tex (the System Architecture
 chapter in the internals document) for more information on the source tree
-organization.
+organization.  Note however that we have changed our RCS file locations since
+that was written.
