@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.188 2002/01/18 17:43:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.189 2002/01/23 19:01:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -620,7 +620,7 @@
 (defpackage #+pmax "PMAX" #+sparc "SPARC" #+ibmrt "RT"
             #+x86 "X86" #+hppa "HPPA" #+alpha "ALPHA" #+sgi "SGI" #+ppc "PPC"
             (:nicknames "VM" #+(or pmax sgi) "MIPS"
-			#+pmax "OLD-MIPS" #+sparc "OLD-SPARC" #+ibmrt "OLD-RT"
+			#+pmax "OLD-MIPS" #+ibmrt "OLD-RT"
 			#+x86 "OLD-X86" #+hppa "HPPA" #+alpha "OLD-ALPHA"
 			#+sgi "OLD-SGI" #+ppc "OLD-PPC")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
