@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.13 1992/08/05 00:43:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.14 1992/08/13 18:03:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -276,8 +276,8 @@
     (deftransform name ((x) '(double-float) rtype :eval-name t)
       `(,prim x))))
 
-(dolist (stuff '((expt %pow (x y) t)
-		 (atan %atan2 (x y) t)))
+(dolist (stuff '((expt %pow t)
+		 (atan %atan2 t)))
   (destructuring-bind (name prim rtype) stuff
     (deftransform name ((x y) '(single-float) rtype :eval-name t)
       `(coerce (,prim (coerce x 'double-float)
