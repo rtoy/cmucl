@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.19 1999/06/19 15:51:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.20 1999/06/22 14:30:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -311,6 +311,28 @@
   (opf  :field (byte 9 5))
   (rs2  :field (byte 5 0) :type 'fp-ext-reg))
 
+;;; Shift instructions
+(disassem:define-instruction-format
+    (format-3-shift-reg 32 :default-printer f3-printer)
+  (op    :field (byte 2 30))
+  (rd    :field (byte 5 25) :type 'reg)
+  (op3   :field (byte 6 19))
+  (rs1   :field (byte 5 14) :type 'reg)
+  (i     :field (byte 1 13) :value 0)
+  (x     :field (byte 1 12))
+  (asi   :field (byte 7 5) :value 0)
+  (rs2   :field (byte 5 0)))
+
+(disassem:define-instruction-format
+    (format-3-shift-immed 32 :default-printer f3-printer)
+  (op    :field (byte 2 30))
+  (rd    :field (byte 5 25) :type 'reg)
+  (op3   :field (byte 6 19))
+  (rs1   :field (byte 5 14) :type 'reg)
+  (i     :field (byte 1 13) :value 1)
+  (x     :field (byte 1 12))
+  (immed :field (byte 12 0) :sign-extend nil))
+
 
 ;;;; Primitive emitters.
 
@@ -341,6 +363,15 @@
 
 (define-emitter emit-format-3-fpop 32
   (byte 2 30) (byte 5 25) (byte 6 19) (byte 5 14) (byte 9 5) (byte 5 0))
+
+;;; Shift instructions
+
+(define-emitter emit-format-3-shift-reg 32
+  (byte 2 30) (byte 5 25) (byte 6 19) (byte 5 14) (byte 1 13) (byte 1 12) (byte 7 5)
+  (byte 5 0))
+
+(define-emitter emit-format-3-shift-immed 32
+  (byte 2 30) (byte 5 25) (byte 6 19) (byte 5 14) (byte 1 13) (byte 1 12) (byte 12 0))
 
 
 ;;;; Most of the format-3-instructions.
@@ -375,6 +406,24 @@
 			      (fp-reg-tn-encoding dst)
 			      (reg-tn-encoding dst))
 			  op3 (reg-tn-encoding src1) 1 0))))
+
+;;; Shift instructions because an extra bit is used in Sparc V9's to
+;;; indicate whether the shift is a 32-bit or 64-bit shift.
+;;;
+(defun emit-format-3-shift-inst (segment op op3 dst src1 src2 &key extended)
+  (unless src2
+    (setf src2 src1)
+    (setf src1 dst))
+  (etypecase src2
+    (tn
+     (emit-format-3-shift-reg segment op (reg-tn-encoding dst)
+			      op3 (reg-tn-encoding src1) 0 (if extended 1 0)
+			      0 (reg-tn-encoding src2)))
+    (integer
+     (emit-format-3-shift-immed segment op (reg-tn-encoding dst)
+				op3 (reg-tn-encoding src1) 1
+				(if extended 1 0) src2))))
+
 
 (eval-when (compile eval)
 
@@ -456,6 +505,24 @@
 				     :fixup ,fixup
 				     :dest-kind (not (eq ',dest-kind 'reg)))))))
 
+(defmacro define-f3-shift-inst (name op op3 &key extended)
+  `(define-instruction ,name (segment dst src1 &optional src2)
+     (:declare (type tn dst)
+	       (type (or tn (unsigned-byte 6) null) src1 src2))
+     (:printer format-3-shift-reg
+	       ((op ,op) (op3 ,op3) (x, (if extended 1 0)) (rd nil :type 'reg))
+	       :default)
+     (:printer format-3-shift-immed
+	       ((op ,op) (op3 ,op3) (x ,(if extended 1 0)) (rd nil :type 'reg))
+	       :default)
+     (:dependencies
+      (reads src1)
+      (if src2 (reads src2) (reads dst))
+      (writes dst))
+     (:delay 0)
+     (:emitter (emit-format-3-shift-inst segment ,op ,op3 dst src1 src2
+					 :extended ,extended))))
+
 ) ; eval-when (compile eval)
 
 (define-f3-inst ldsb #b11 #b001001 :load-store :load)
@@ -501,9 +568,14 @@
 (define-f3-inst xorcc #b10 #b010011 :writes :psr)
 (define-f3-inst xnor #b10 #b000111)
 (define-f3-inst xnorcc #b10 #b010111 :writes :psr)
-(define-f3-inst sll #b10 #b100101)
-(define-f3-inst srl #b10 #b100110)
-(define-f3-inst sra #b10 #b100111)
+
+(define-f3-shift-inst sll #b10 #b100101)
+(define-f3-shift-inst srl #b10 #b100110)
+(define-f3-shift-inst sra #b10 #b100111)
+(define-f3-shift-inst sllx #b10 #b100101 :extended t)	; v9
+(define-f3-shift-inst srlx #b10 #b100110 :extended t)	; v9
+(define-f3-shift-inst srax #b10 #b100111 :extended t)	; v9
+
 (define-f3-inst save #b10 #b111100 :reads :psr :writes :psr)
 (define-f3-inst restore #b10 #b111101 :reads :psr :writes :psr)
 
@@ -570,7 +642,7 @@
   (:dependencies (reads :y) (writes dst))
   (:delay 0)
   (:emitter (emit-format-3-immed segment #b10 (reg-tn-encoding dst) #b101000
-				 0 1 0)))
+				 0 0 0)))
 
 (defconstant wry-printer
   '('WR :tab rs1 (:unless (:constant 0) ", " (:choose immed rs2)) ", " '%Y))
