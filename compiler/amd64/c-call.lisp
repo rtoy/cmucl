@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/c-call.lisp,v 1.1 2004/05/24 22:34:59 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/c-call.lisp,v 1.2 2004/07/06 20:10:22 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,13 +40,15 @@
 
 (defun int-arg (state prim-type reg-sc stack-sc)
   (let ((reg-args (arg-state-register-args state)))
-    (cond ((< reg-args 4) ; Should be 6 (r8 and r9)
+    (cond ((< reg-args 6)
 	   (setf (arg-state-register-args state) (1+ reg-args))
 	   (my-make-wired-tn prim-type reg-sc (ecase reg-args
 						(0 #.rdi-offset)
 						(1 #.rsi-offset)
 						(2 #.rdx-offset)
-						(3 #.rcx-offset))))
+						(3 #.rcx-offset)
+						(4 #.r8-offset)
+						(5 #.r9-offset))))
 	  (t
 	   (let ((frame-size (arg-state-stack-frame-size state)))
 	     (setf (arg-state-stack-frame-size state) (1+ frame-size))
@@ -220,25 +222,29 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 2
-   (inst mov res (make-fixup (extern-alien-name foreign-symbol)
-			     :foreign-data))))
+   (inst mov-imm res (make-fixup (extern-alien-name foreign-symbol)
+				 :foreign-data))
+   (inst mov res (make-ea :qword :base res))))
 
 (define-vop (call-out)
   (:args (function :scs (sap-reg))
 	 (args :more t))
   (:results (results :more t))
+  ;; c temporary register
   (:temporary (:sc unsigned-reg :offset rax-offset
 		   :from :eval :to :result) rax)
   (:temporary (:sc unsigned-reg :offset rbx-offset
 		   :from :eval :to :result) rbx)
-  (:temporary (:sc unsigned-reg :offset rcx-offset
-		   :from :eval :to :result) rcx)
-  (:temporary (:sc unsigned-reg :offset rdx-offset
-		   :from :eval :to :result) rdx)
+  ;; c temporary register
+  (:temporary (:sc unsigned-reg :offset r10-offset
+		   :from :eval :to :result) r10)
+  ;; c temporary register
+  (:temporary (:sc unsigned-reg :offset r11-offset
+		   :from :eval :to :result) r11)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
-  (:ignore args rcx rdx)
+  (:ignore args r10 r11)
   (:generator 0 
     (cond ((policy node (> space speed))
 	   (move rax function)
