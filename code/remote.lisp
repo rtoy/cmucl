@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.3 1992/02/15 12:50:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.4 1992/12/08 20:05:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -315,8 +315,8 @@ to aborting due to a throw."
 
 (defun %print-request-server (rs stream depth)
   (declare (ignore depth))
-  (format stream "#<Requst server for ~D>" (request-server-socket rs)))
-
+  (print-unreadable-object (rs stream :type t)
+    (format stream "for ~D" (request-server-socket rs))))
 
 ;;; CREATE-REQUEST-SERVER -- Public.
 ;;;
