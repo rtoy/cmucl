@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.53 2003/04/13 21:20:40 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.54 2003/04/15 23:07:10 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -884,15 +884,29 @@
                                             (logand (sxhash x) #xff)))
     ((input-types equal))
   (let ((simplified (simplify-union-types input-types)))
-    (case (length simplified)
-      (0 *empty-type*)
-      (1 (aref simplified 0))
-      (t (make-union-type (loop for type across simplified collect type))))))
+    (cond ((null simplified) *empty-type*)
+	  ((null (cdr simplified)) (car simplified))
+	  (t (make-union-type simplified)))))
+
+;;;
+;;; FIXME: Recode the simplification of union and intersection types,
+;;; so that it doesn't have the somewhat twisted cycle TYPE-UNION ->
+;;; SIMPLIFY-UNION-TYPES -> TYPE-UNION2 -> TYPE-UNION.
+;;;
+(defvar *ctype-arrays*)
+(cold-load-init (setq *ctype-arrays* nil))
+
+(defmacro with-types-array ((var) &body body)
+  `(let ((,var (or (pop *ctype-arrays*)
+		   (make-array 10 :fill-pointer 0 :adjustable t
+			       :element-type 'ctype))))
+     (setf (fill-pointer ,var) 0)
+     (locally ,@body)
+     (prog1 (loop for tp across ,var collect tp)
+       (push ,var *ctype-arrays*))))
 
 (defun simplify-union-types (types)
-  (let ((result (make-array (length types) :fill-pointer 0
-			    :adjustable t :element-type 'ctype
-			    :initial-element *empty-type*)))
+  (with-types-array (result)
     (labels ((accumulate1 (type)
 	       (dotimes (i (length result) (vector-push-extend type result))
 		 (let ((simple (type-union2 type (aref result i))))
@@ -904,8 +918,7 @@
 		   (map nil #'accumulate1 (union-type-types type))
 		   (accumulate1 type))))
       (dolist (type types)
-	(accumulate type))
-      result)))
+	(accumulate type)))))
 
 (defun %type-union2 (type1 type2)
   ;; As in %TYPE-INTERSECTION2, it seems to be a good idea to give
@@ -1019,7 +1032,7 @@
                                                    (logand (sxhash x) #xff)))
     ((input-types equal))
   (let ((simplified (simplify-intersection-types input-types)))
-    (declare (type (vector ctype) simplified))
+    ;(declare (type (vector ctype) simplified))
     ;; We want to have a canonical representation of types (or failing
     ;; that, punt to HAIRY-TYPE). Canonical representation would have
     ;; intersections inside unions but not vice versa, since you can
@@ -1028,26 +1041,23 @@
     ;; to end up with unreasonably huge type expressions. So instead
     ;; we try to generate a simple type by distributing the union; if
     ;; the type can't be made simple, we punt to HAIRY-TYPE.
-    (if (and (> (length simplified) 1)
-	     (some #'union-type-p simplified))
+    (if (and (cdr simplified) (some #'union-type-p simplified))
 	(let* ((first-union (find-if #'union-type-p simplified))
-	       (other-types (coerce (remove first-union simplified) 'list))
+	       (other-types (remove first-union simplified))
 	       (distributed (maybe-distribute-one-union first-union other-types)))
 	  (if distributed
 	      (apply #'type-union distributed)
 	      (make-hairy-type
-	       :specifier `(and ,@(map 'list #'type-specifier simplified)))))
-	(case (length simplified)
-	  (0 *universal-type*)
-	  (1 (aref simplified 0))
+	       :specifier `(and ,@(mapcar #'type-specifier simplified)))))
+	(cond
+	  ((null simplified) *universal-type*)
+	  ((null (cdr simplified)) (car simplified))
 	  (t (make-intersection-type
 	      (some #'type-enumerable simplified)
-	      (loop for type across simplified collect type)))))))
+	      simplified))))))
 
 (defun simplify-intersection-types (types)
-  (let ((result (make-array (length types) :fill-pointer 0
-			    :adjustable t :element-type 'ctype
-			    :initial-element *empty-type*)))
+  (with-types-array (result)
     (labels ((accumulate1 (type)
 	       (dotimes (i (length result) (vector-push-extend type result))
 		 (let ((simple (type-intersection2 type (aref result i))))
@@ -1059,8 +1069,7 @@
 		   (map nil #'accumulate1 (intersection-type-types type))
 		   (accumulate1 type))))
       (dolist (type types)
-	(accumulate type))
-      result)))
+	(accumulate type)))))
 
 (defun maybe-distribute-one-union (union-type types)
   (let* ((intersection (apply #'type-intersection types))
