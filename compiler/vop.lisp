@@ -14,7 +14,9 @@
 ;;;
 (in-package 'c)
 
-(proclaim '(special *sc-numbers*))
+(export '(make-random-tn tn-ref tn-ref-p tn-ref-tn tn-ref-write-p tn-ref-next
+	  tn-ref-vop tn-ref-next-ref tn-ref-across tn-ref-target
+	  tn-ref-load-tn))
 
 (eval-when (compile load eval)
 
