@@ -421,10 +421,7 @@
        (eval-when (compile load eval)
 	 (setf (gethash ',name *meta-primitive-type-names*)
 	       (make-primitive-type :name ',name  :scs ',scns
-				    ;; ### Bootstrap hack: The type system
-				    ;; isn't avaiable during cross compile.
-				    :type (if (fboundp 'specifier-type)
-					      ,get-type))))
+				    :type ,get-type)))
        ,(once-only ((n-old `(gethash ',name *primitive-type-names*))
 		    (n-type get-type))
 	  `(progn
