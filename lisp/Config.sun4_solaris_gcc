@@ -3,7 +3,7 @@
 CPPFLAGS = -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4
 CC = gcc
 CPP = gcc -E
-CFLAGS = -g
+CFLAGS = -g -O3
 # Needed for sys/asm_linkage.h and sparc-assem.S (at least in 2.3)
 # Note that the sys/asm_linkage.h braindamage breaks make depend
 ASFLAGS = -g -traditional-cpp
