@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.17 2004/04/28 04:29:37 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.18 2004/05/13 14:32:08 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -28,8 +28,8 @@
  *	0x20000000->0x28000000  128M Binding stack growing up.
  *	0x28000000->0x38000000  256M Static Space.
  *	0x38000000->0x40000000  128M Control stack growing up.
- *	0x40000000->0xc0000000 2048M Dynamic space 1
- *      0xc0000000->0xffffffff 1024M C stack, dynamic libs, etc.      
+ *	0x40000000->0xf0000000 2816M Dynamic space 1
+ *      0xf0000000->0xffffffff 1024M C stack, dynamic libs, etc.      
  *
  * But look at the definitions below to see how much is really
  * allocated.  The numbers above are the maximums allowed.  We might
@@ -43,7 +43,7 @@
  * further, but Casper H.S. Dik says shared libraries are loaded
  * directly under the stack, so we need to leave some space for the C
  * stack and shared libraries.  He also says the top of stack is
- * 0xffbf000 for Ultrasparcs in Solaris 7+, but it's 0xf0000000 for
+ * 0xffbf0000 for Ultrasparcs in Solaris 7+, but it's 0xf0000000 for
  * sun4m (and 4u in S2.6-) 0xe0000000 for sun4d)
  *
  * Shared libraries can be mapped anywhere there's room.
