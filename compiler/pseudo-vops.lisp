@@ -35,29 +35,3 @@
     (unassemble
       (funcall (symbol-function name) node x y))))
 
-
-;;; Move the specified arg-vals into the argument passing locations for
-;;; callee-2env.  FP and NFP are the callee's FP and NFP allocated by
-;;; ALLOCATE-FRAME.  Representation selection inserts the appropriate
-;;; move-argument VOPs before this VOP, changing the arg-val operands to be
-;;; references to the passing locations.
-;;;
-(define-vop (move-arguments)
-  (:args (args :more t))
-  (:info fp nfp callee-2env)
-  (:ignore args fp nfp callee-2env)
-  (:generator 0))
-
-;;; Similar to move-arguments, but emits the argument moves for a full call
-;;; with NARGS args.  FP is the callee's frame pointer (allocated by
-;;; ALLOCATE-FULL-CALL-FRAME.)
-;;;
-(define-vop (move-full-call-arguments move-arguments)
-  (:info fp nargs))
-
-;;; Used for known return.  Much like MOVE-ARGUMENTS, but the target frame
-;;; pointers are obtained from the current environment.  OLD-CONT is used for
-;;; FP and the old NFP is computed with COMPUTE-OLD-NFP.
-;;;
-(define-vop (move-results move-arguments)
-  (:info locs))
