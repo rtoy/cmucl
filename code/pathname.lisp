@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.5 1991/12/22 01:44:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.6 1992/01/16 18:38:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -331,7 +331,8 @@
       thing))
 
 (defun merge-directories (dir1 dir2 diddle-case)
-  (if (eq (car dir1) :absolute)
+  (if (or (eq (car dir1) :absolute)
+	  (null dir2))
       dir1
       (let ((results nil))
 	(flet ((add (dir)
