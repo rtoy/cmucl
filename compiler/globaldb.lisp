@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.28 1993/03/01 16:16:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.29 1993/03/13 12:55:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,13 +292,13 @@
    ((symbolp x)
     (%sxhash-simple-string (symbol-name x)))
    ((and (listp x)
-	 (eq (car x) 'setf))
-    (let ((next (cdr x)))
-      (when (listp next)
-	(let ((name (car next)))
-	  (when (and (symbolp name) (null (cdr next)))
-	    (logxor (%sxhash-simple-string (symbol-name name))
-		    110680597))))))
+	 (eq (car x) 'setf)
+	 (let ((next (cdr x)))
+	   (when (listp next)
+	     (let ((name (car next)))
+	       (when (and (symbolp name) (null (cdr next)))
+		 (logxor (%sxhash-simple-string (symbol-name name))
+			 110680597)))))))
    (t
     (sxhash x))))
 
