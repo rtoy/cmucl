@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.17 1991/11/07 21:22:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.18 1991/11/07 21:54:24 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -113,6 +113,11 @@
   "RCS Check In File Hook"
   :value nil)
 
+(defhvar "RCS Keep Around After Unlocking"
+  "If non-NIL (the default) keep the working file around after unlocking it.
+   When NIL, the working file and buffer are deleted."
+  :value t)
+
 (defun rcs-check-in-file (buffer pathname keep-lock)
   (let ((old-buffer (current-buffer))
 	(allow-delete nil)
@@ -139,7 +144,7 @@
 			 (namestring pathname) keep-lock)
 		(let ((log-stream (make-hemlock-region-stream
 				   (buffer-region log-buffer))))
-		  (sub-check-in-file pathname keep-lock log-stream))
+		  (sub-check-in-file pathname buffer keep-lock log-stream))
 		(invoke-hook rcs-check-in-file-hook buffer pathname)
 		nil)
 	  (editor-error "Someone deleted the RCS Log Entry buffer."))
@@ -147,35 +152,39 @@
       (setf allow-delete t)
       (delete-buffer-if-possible log-buffer))))
 
-(defvar *keep-around-unlocked-files* t)
-
-(defun sub-check-in-file (pathname keep-lock log-stream)
+(defun sub-check-in-file (pathname buffer keep-lock log-stream)
   (let* ((filename (file-namestring pathname))
 	 (rcs-filename (concatenate 'simple-string
-				    "./RCS/" filename ",v")))
+				    "./RCS/" filename ",v"))
+	 (keep-working-copy (or keep-lock
+				(variable-value
+				 'rcs-keep-around-after-unlocking
+				 :buffer buffer))))
     (in-directory pathname
       (do-command "rcsci" `(,@(if keep-lock '("-l"))
-			    ,@(if (or keep-lock *keep-around-unlocked-files*)
-				  "-u")
+			    ,@(if keep-working-copy "-u")
 			    ,filename)
 		  :input log-stream)
-      ;; 
-      ;; Set the times on the user's file to be equivalent to that of
-      ;; the rcs file.
-      (multiple-value-bind
-	  (dev ino mode nlink uid gid rdev size atime mtime)
-	  (mach:unix-stat rcs-filename)
-	(declare (ignore mode nlink uid gid rdev size))
-	(cond (dev
-	       (multiple-value-bind
-		   (wonp errno)
-		   (mach:unix-utimes filename (list atime 0 mtime 0))
-		 (unless wonp
-		   (editor-error "MACH:UNIX-UTIMES failed: ~A"
-				 (mach:get-unix-error-msg errno)))))
-	      (t
-	       (editor-error "MACH:UNIX-STAT failed: ~A"
-			     (mach:get-unix-error-msg ino))))))))
+      (if keep-working-copy
+	  ;; 
+	  ;; Set the times on the user's file to be equivalent to that of
+	  ;; the rcs file.
+	  (multiple-value-bind
+	      (dev ino mode nlink uid gid rdev size atime mtime)
+	      (mach:unix-stat rcs-filename)
+	    (declare (ignore mode nlink uid gid rdev size))
+	    (cond (dev
+		   (multiple-value-bind
+		       (wonp errno)
+		       (mach:unix-utimes filename (list atime 0 mtime 0))
+		     (unless wonp
+		       (editor-error "MACH:UNIX-UTIMES failed: ~A"
+				     (mach:get-unix-error-msg errno)))))
+		  (t
+		   (editor-error "MACH:UNIX-STAT failed: ~A"
+				 (mach:get-unix-error-msg ino)))))
+	  (delete-buffer-if-possible buffer)))))
+
 
 
 ;;;; Check Out
