@@ -1,4 +1,4 @@
-;;;   -*- Mode: LISP; Syntax: Common-lisp; Base: 10; Lowercase:T -*-
+;;;   -*- Mode: LISP; Package: ANSI-LOOP; Syntax: Common-lisp; Base: 10; Lowercase:T -*-
 ;;;>
 ;;;> Portions of LOOP are Copyright (c) 1986 by the Massachusetts Institute of Technology.
 ;;;> All Rights Reserved.
@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.9 2000/03/10 11:59:37 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.10 2001/10/04 13:21:45 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -985,6 +985,12 @@ collected result will be returned as the value of the LOOP."
 
 
 
+(defun loop-build-destructuring-bindings (crocks forms)
+  (if crocks
+      `((destructuring-bind ,(car crocks) ,(cadr crocks)
+        ,@(loop-build-destructuring-bindings (cddr crocks) forms)))
+      forms))
+
 (defun loop-translate (*loop-source-code* *loop-macro-environment* *loop-universe*)
   (let ((*loop-original-source-code* *loop-source-code*)
 	(*loop-source-context* nil)
@@ -1035,10 +1041,7 @@ collected result will be returned as the value of the LOOP."
 				    (*loop-destructuring-hooks* (first *loop-destructuring-hooks*))
 				    (t 'let))
 			     ,vars
-			     ,@(if crocks
-				   `((destructuring-bind ,@crocks
-					 ,@forms))
-				 forms)))))))
+			     ,@(loop-build-destructuring-bindings crocks forms)))))))
       answer)))
 
 
