@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.15 1992/10/08 22:10:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.16 1993/03/16 13:04:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,8 +157,8 @@
     (values (case trap-number
 	      (#.sparc:object-not-list-trap
 	       #.(error-number-or-lose 'object-not-list-error))
-	      (#.sparc:object-not-structure-trap
-	       #.(error-number-or-lose 'object-not-structure-error))
+	      (#.sparc:object-not-instance-trap
+	       #.(error-number-or-lose 'object-not-instance-error))
 	      (t
 	       #.(error-number-or-lose 'unknown-error)))
 	    (list (c::make-sc-offset sparc:descriptor-reg-sc-number reg)))))
