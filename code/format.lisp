@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.20 1991/12/06 06:01:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.21 1991/12/16 10:04:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -187,13 +187,37 @@
 ;;;
 (defvar *logical-block-popper* nil)
 
-;;; *EXPANDER-NEXT-ARG-MACRO* and *PREVIOUS-NEXT-ARG-MACRO* -- internal.
+;;; *EXPANDER-NEXT-ARG-MACRO* -- internal.
 ;;;
-;;; Used the the expander stuff.  In expand-directive, splice in a macrolet
-;;; of next-arg that invokes this macro.  This is bindable so that ~<...~:>
+;;; Used by the expander stuff.  This is bindable so that ~<...~:>
 ;;; can change it.
 ;;;
 (defvar *expander-next-arg-macro* 'expander-next-arg)
+
+;;; *ONLY-SIMPLE-ARGS* -- internal.
+;;;
+;;; Used by the expander stuff.  Initially starts as T, and gets set to NIL
+;;; if someone needs to do something strange with the arg list (like use
+;;; the rest, or something).
+;;; 
+(defvar *only-simple-args*)
+
+;;; *ORIG-ARGS-AVAILABLE* -- internal.
+;;;
+;;; Used by the expander stuff.  We do an initial pass with this as NIL.
+;;; If someone doesn't like this, they (throw 'need-orig-args nil) and we try
+;;; again with it bound to T.  If this is T, we don't try to do anything
+;;; fancy with args.
+;;; 
+(defvar *orig-args-available* nil)
+
+;;; *SIMPLE-ARGS* -- internal.
+;;;
+;;; Used by the expander stuff.  List of (symbol . offset) for simple args.
+;;; 
+(defvar *simple-args*)
+
+
 
 
 ;;;; FORMAT
@@ -285,10 +309,29 @@
   `#',(%formatter control-string))
 
 (defun %formatter (control-string)
-  `(lambda (stream &rest orig-args)
-     (let ((args orig-args))
-       ,(expand-control-string control-string)
-       args)))
+  (block nil
+    (catch 'need-orig-args
+      (let* ((*simple-args* nil)
+	     (*only-simple-args* t)
+	     (guts (expand-control-string control-string))
+	     (args nil))
+	(dolist (arg *simple-args*)
+	  (push `(,(car arg)
+		  (error
+		   'format-error
+		   :complaint "Required argument missing"
+		   :control-string ,control-string
+		   :offset ,(cdr arg)))
+		args))
+	(return `(lambda (stream &optional ,@args &rest args)
+		   ,guts
+		   args))))
+    (let ((*orig-args-available* t)
+	  (*only-simple-args* nil))
+      `(lambda (stream &rest orig-args)
+	 (let ((args orig-args))
+	   ,(expand-control-string control-string)
+	   args)))))
 
 (defun expand-control-string (string)
   (let* ((string (etypecase string
@@ -332,10 +375,18 @@
 	     more-directives))))
 
 (defun expand-next-arg (&optional offset)
-  `(,*expander-next-arg-macro*
-    ,*default-format-error-control-string*
-    ,(or offset *default-format-error-offset*)))
+  (if (or *orig-args-available* (not *only-simple-args*))
+      `(,*expander-next-arg-macro*
+	,*default-format-error-control-string*
+	,(or offset *default-format-error-offset*))
+      (let ((symbol (gensym "FORMAT-ARG-")))
+	(push (cons symbol (or offset *default-format-error-offset*))
+	      *simple-args*)
+	symbol)))
 
+(defun need-hairy-args ()
+  (when *only-simple-args*
+    ))
 
 
 ;;;; Format directive definition macros and runtime support.
@@ -430,7 +481,9 @@
 				 (case param
 				   (:arg `(or ,(expand-next-arg offset)
 					      ,,default))
-				   (:remaining '(length args))
+				   (:remaining
+				    (setf *only-simple-args* nil)
+				    '(length args))
 				   ((nil) ,default)
 				   (t param))))))))
 		 `(let ,(expander-bindings)
@@ -917,15 +970,24 @@
 
 (def-format-directive #\P (colonp atsignp params end)
   (expand-bind-defaults () params
-    (let ((arg (if colonp
-		   `(if (eq orig-args args)
-			(error 'format-error
-			       :complaint "No previous argument."
-			       :offset ,(1- end))
-			(do ((arg-ptr orig-args (cdr arg-ptr)))
-			    ((eq (cdr arg-ptr) args)
-			     (car arg-ptr))))
-		   (expand-next-arg))))
+    (let ((arg (cond
+		((not colonp)
+		 (expand-next-arg))
+		(*orig-args-available*
+		 `(if (eq orig-args args)
+		      (error 'format-error
+			     :complaint "No previous argument."
+			     :offset ,(1- end))
+		      (do ((arg-ptr orig-args (cdr arg-ptr)))
+			  ((eq (cdr arg-ptr) args)
+			   (car arg-ptr)))))
+		(*only-simple-args*
+		 (unless *simple-args*
+		   (error 'format-error
+			  :complaint "No previous argument."))
+		 (caar *simple-args*))
+		(t
+		 (throw 'need-orig-args nil)))))
       (if atsignp
 	  `(write-string (if (eql ,arg 1) "y" "ies") stream)
 	  `(unless (eql ,arg 1) (write-char #\s stream))))))
@@ -1421,6 +1483,8 @@
 	  (error 'format-error
 		 :complaint "Cannot specify both colon and at-sign.")
 	  (expand-bind-defaults ((posn 0)) params
+	    (unless *orig-args-available*
+	      (throw 'need-orig-args nil))
 	    `(if (<= 0 ,posn (length orig-args))
 		 (setf args (nthcdr ,posn orig-args))
 		 (error 'format-error
@@ -1430,6 +1494,8 @@
 			:offset ,(1- end)))))
       (if colonp
 	  (expand-bind-defaults ((n 1)) params
+	    (unless *orig-args-available*
+	      (throw 'need-orig-args nil))
 	    `(do ((cur-posn 0 (1+ cur-posn))
 		  (arg-ptr orig-args (cdr arg-ptr)))
 		 ((eq arg-ptr args)
@@ -1445,6 +1511,7 @@
 			       :offset ,(1- end)))))))
 	  (if params
 	      (expand-bind-defaults ((n 1)) params
+		(setf *only-simple-args* nil)
 		`(dotimes (i ,n)
 		   ,(expand-next-arg)))
 	      (expand-next-arg)))))
@@ -1498,7 +1565,9 @@
 		      :control-string ,string
 		      :offset ,(1- end)))))
        ,(if atsignp
-	    `(setf args (%format stream ,(expand-next-arg) orig-args args))
+	    (if *orig-args-available*
+		`(setf args (%format stream ,(expand-next-arg) orig-args args))
+		(throw 'need-orig-args nil))
 	    `(%format stream ,(expand-next-arg) ,(expand-next-arg))))))
 
 (def-format-interpreter #\? (colonp atsignp params string end)
@@ -1608,23 +1677,17 @@
 			:complaint
 			"Can only specify one section")
 		 (expand-bind-defaults () params
-		   `(let ((prev-args args)
-			  (arg ,(expand-next-arg)))
-		      (when arg
-			(setf args prev-args)
-			,@(expand-directive-list (car sublists)))))))
+		   (expand-maybe-conditional (car sublists)))))
 	 (if colonp
 	     (if (= (length sublists) 2)
 		 (expand-bind-defaults () params
-		   `(if ,(expand-next-arg)
-			(progn
-			  ,@(expand-directive-list (car sublists)))
-			(progn
-			  ,@(expand-directive-list (cadr sublists)))))
+		   (expand-true-false-conditional (car sublists)
+						  (cadr sublists)))
 		 (error 'format-error
 			:complaint
 			"Must specify exactly two sections."))
 	     (expand-bind-defaults ((index (expand-next-arg))) params
+	       (setf *only-simple-args* nil)
 	       (let ((clauses nil))
 		 (when last-semi-with-colon-p
 		   (push `(t ,@(expand-directive-list (pop sublists)))
@@ -1636,6 +1699,75 @@
 			   clauses)))
 		 `(case ,index ,@clauses)))))
      remaining)))
+
+(defun expand-maybe-conditional (sublist)
+  (flet ((hairy ()
+	   `(let ((prev-args args)
+		  (arg ,(expand-next-arg)))
+	      (when arg
+		(setf args prev-args)
+		,@(expand-directive-list sublist)))))
+    (if *only-simple-args*
+	(multiple-value-bind
+	    (guts new-args)
+	    (let ((*simple-args* *simple-args*))
+	      (values (expand-directive-list sublist)
+		      *simple-args*))
+	  (cond ((eq *simple-args* (cdr new-args))
+		 (setf *simple-args* new-args)
+		 `(when ,(caar new-args)
+		    ,@guts))
+		(t
+		 (setf *only-simple-args* nil)
+		 (hairy))))
+	(hairy))))
+
+(defun expand-true-false-conditional (true false)
+  (let ((arg (expand-next-arg)))
+    (flet ((hairy ()
+	     `(if ,arg
+		  (progn
+		    ,@(expand-directive-list true))
+		  (progn
+		    ,@(expand-directive-list false)))))
+      (if *only-simple-args*
+	  (multiple-value-bind
+	      (true-guts true-args true-simple)
+	      (let ((*simple-args* *simple-args*)
+		    (*only-simple-args* t))
+		(values (expand-directive-list true)
+			*simple-args*
+			*only-simple-args*))
+	    (multiple-value-bind
+		(false-guts false-args false-simple)
+		(let ((*simple-args* *simple-args*)
+		      (*only-simple-args* t))
+		  (values (expand-directive-list false)
+			  *simple-args*
+			  *only-simple-args*))
+	      (if (= (length true-args) (length false-args))
+		  `(if ,arg
+		       (progn
+			 ,@true-guts)
+		       ,(do ((false false-args (cdr false))
+			     (true true-args (cdr true))
+			     (bindings nil (cons `(,(caar false) ,(caar true))
+						 bindings)))
+			    ((eq true *simple-args*)
+			     (setf *simple-args* true-args)
+			     (setf *only-simple-args*
+				   (and true-simple false-simple))
+			     (if bindings
+				 `(let ,bindings
+				    ,@false-guts)
+				 `(progn
+				    ,@false-guts)))))
+		  (progn
+		    (setf *only-simple-args* nil)
+		    (hairy)))))
+	  (hairy)))))
+
+
 
 (def-complex-format-interpreter #\[ (colonp atsignp params directives)
   (multiple-value-bind
@@ -1718,7 +1850,9 @@
   `(when ,(case (length params)
 	    (0 (if colonp
 		   '(null outside-args)
-		   '(null args)))
+		   (progn
+		     (setf *only-simple-args* nil)
+		     '(null args))))
 	    (1 (expand-bind-defaults ((count 0)) params
 		 `(zerop ,count)))
 	    (2 (expand-bind-defaults ((arg1 0) (arg2 0)) params
@@ -1763,21 +1897,25 @@
       (labels
 	  ((compute-insides ()
 	     (if (zerop posn)
-		 `((handler-bind
-		       ((format-error
-			 #'(lambda (condition)
-			     (error 'format-error
-				    :complaint
-			    "~A~%while processing indirect format string:"
-				    :arguments (list condition)
-				    :print-banner nil
-				    :control-string ,string
-				    :offset ,(1- end)))))
-		     (setf args
-			   (%format stream inside-string orig-args args))))
+		 (if *orig-args-available*
+		     `((handler-bind
+			   ((format-error
+			     #'(lambda (condition)
+				 (error 'format-error
+					:complaint
+			"~A~%while processing indirect format string:"
+					:arguments (list condition)
+					:print-banner nil
+					:control-string ,string
+					:offset ,(1- end)))))
+			 (setf args
+			       (%format stream inside-string orig-args args))))
+		     (throw 'need-orig-args nil))
 		 (let ((*up-up-and-out-allowed* colonp))
 		   (expand-directive-list (subseq directives 0 posn)))))
 	   (compute-loop-aux (count)
+	     (when atsignp
+	       (setf *only-simple-args* nil))
 	     `(loop
 		,@(unless closed-with-colon
 		    '((when (null args)
@@ -1786,7 +1924,9 @@
 		    `((when (and ,count (minusp (decf ,count)))
 			(return))))
 		,@(if colonp
-		      (let ((*expander-next-arg-macro* 'expander-next-arg))
+		      (let ((*expander-next-arg-macro* 'expander-next-arg)
+			    (*only-simple-args* nil)
+			    (*orig-args-available* t))
 			`((let* ((orig-args ,(expand-next-arg))
 				 (outside-args args)
 				 (args orig-args))
@@ -1810,11 +1950,13 @@
 	   (compute-bindings ()
 	     (if atsignp
 		 (compute-block)
-		 (let ((*expander-next-arg-macro* 'expander-next-arg))
-		   `(let* ((orig-args ,(expand-next-arg))
-			   (args orig-args))
-		      (declare (ignorable orig-args args))
-		      ,(compute-block))))))
+		 `(let* ((orig-args ,(expand-next-arg))
+			 (args orig-args))
+		    (declare (ignorable orig-args args))
+		    ,(let ((*expander-next-arg-macro* 'expander-next-arg)
+			   (*only-simple-args* nil)
+			   (*orig-args-available* t))
+		       (compute-block))))))
 	(values (if (zerop posn)
 		    `(let ((inside-string ,(expand-next-arg)))
 		       ,(compute-bindings))
@@ -2132,6 +2274,7 @@
 (defun expand-format-logical-block (prefix per-line-p insides suffix atsignp)
   `(let ((arg ,(if atsignp 'args (expand-next-arg))))
      ,@(when atsignp
+	 (setf *only-simple-args* nil)
 	 '((setf args nil)))
      (pprint-logical-block
 	 (stream arg
@@ -2142,7 +2285,9 @@
 		 `((orig-args arg))))
 	 (declare (ignorable args ,@(unless atsignp '(orig-args))))
 	 (block nil
-	   ,@(let ((*expander-next-arg-macro* 'expander-pprint-next-arg))
+	   ,@(let ((*expander-next-arg-macro* 'expander-pprint-next-arg)
+		   (*only-simple-args* nil)
+		   (*orig-args-available* t))
 	       (expand-directive-list insides)))))))
 
 (defun interpret-format-logical-block
