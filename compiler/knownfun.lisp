@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.15 1992/02/19 16:14:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.16 1992/05/30 17:41:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,7 +118,16 @@
   (templates nil :type list)
   ;;
   ;; If non-null, then this function is a unary type predicate for this type.
-  (predicate-type nil :type (or ctype null)))
+  (predicate-type nil :type (or ctype null))
+  ;;
+  ;; If non-null, use this function to annotate the known call for the byte
+  ;; compiler.  If it returns NIL, then change the call to :full.
+  (byte-annotate nil :type (or function null))
+  ;;
+  ;; If non-null, use this function to generate the byte code for this known
+  ;; call.  This function can only give up if there is a byte-annotate function
+  ;; that arranged for the functional to be pushed onto the stack.
+  (byte-compile nil :type (or function null)))
 
 (defprinter function-info
   (transforms :test transforms)
@@ -127,7 +136,9 @@
   (ltn-annotate :test ltn-annotate)
   (ir2-convert :test ir2-convert)
   (templates :test templates)
-  (predicate-type :test predicate-type))
+  (predicate-type :test predicate-type)
+  (byte-annotate :test byte-annotate)
+  (byte-compile :test byte-compile))
 
 
 ;;;; Interfaces to defining macros:
