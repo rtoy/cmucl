@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.23 1990/10/19 14:16:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.24 1990/10/19 15:31:18 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -104,7 +104,7 @@
      ()
      ;; These are really args.
      (:temp args any-reg nl0-offset)
-     (:temp function descriptor-reg lexenv-offset)
+     (:temp lexenv descriptor-reg lexenv-offset)
 
      ;; We need to compute this
      (:temp nargs any-reg nargs-offset)
@@ -156,8 +156,8 @@
 	
   DONE
   ;; We are done.  Do the jump.
-  (loadw function lexenv vm:closure-function-slot vm:function-pointer-type)
-  (lisp-jump function lip))
+  (loadw temp lexenv vm:closure-function-slot vm:function-pointer-type)
+  (lisp-jump temp lip))
 
 
 
@@ -206,8 +206,7 @@
 			  (:arg start any-reg old-fp-offset)
 			  (:arg count any-reg nargs-offset)
 			  (:temp catch any-reg a1-offset)
-			  (:temp tag descriptor-reg a2-offset)
-			  (:temp ndescr non-descriptor-reg nl0-offset))
+			  (:temp tag descriptor-reg a2-offset))
   
   (progn start count) ; We just need them in the registers.
 
