@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.15 1994/10/27 16:58:21 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.16 1994/10/30 21:04:29 ram Exp $
 
 set features = ()
 set misfeatures = ()
@@ -190,9 +190,9 @@ EOF
 
 set sysinfo = ("code worldcom"\
 	       "compiler comcom"\
+	       "pcl pclcom"\
 	       "clx clxcom"\
 	       "hemlock hemcom"\
-	       "pcl pclcom"\
                "clm clmcom"\
 	       "genesis worldbuild")
 
