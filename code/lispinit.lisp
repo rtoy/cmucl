@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.37 1993/08/19 11:38:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.38 1993/08/19 12:46:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,10 +152,7 @@
   (print-and-call filesys-init)
 
   (print-and-call reader-init)
-  (print-and-call backq-init)
-  (print-and-call sharp-init)
-  ;; After the various reader subsystems have done their thing to the standard
-  ;; readtable, copy it to *readtable*.
+  ;; Note: sharpm and backq not yet loaded, so this is not the final RT.
   (setf *readtable* (copy-readtable std-lisp-readtable))
 
   (print-and-call stream-init)
