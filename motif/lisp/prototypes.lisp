@@ -15,8 +15,16 @@
 
 (in-package "TOOLKIT")
 
+;;; This table is accessed at compile time so that we know the request ID as a
+;;; numeric constant, and thus don't have to close over it at load time.  The
+;;; same updates are done in parallel at compile and load time.
+;;;
+(eval-when (compile load eval) 
+  (defparameter *request-table* 
+    (make-array 50 :element-type 'simple-string
+		:adjustable t :fill-pointer 0)))
+
 (declaim (vector *request-table*))
-(eval-when (compile) (setf (fill-pointer *request-table*) 0))
 
 
 
@@ -30,67 +38,73 @@
   (let ((arg-list (mapcar #'car args))
 	(type-list (mapcar #'cadr args))
 	(code (fill-pointer *request-table*)))
-    (vector-push-extend (format nil "R~a" string-name) *request-table*)
-    `(defun ,symbol-name ,arg-list
-       ,doc-string
-       ;; *** This generates lots of warnings at the moment
-       ;; (declare (inline toolkit-write-value))
-       ,(cons 'declare
-	      (mapcar #'(lambda (arg type) (list 'type type arg))
-		      arg-list type-list))
-       (let ((message (prepare-request ,code ,options ,(length args))))
-	 ,(cons 'progn
-		(mapcar #'(lambda (arg)
-			    (let ((name (first arg))
-				  (type (third arg)))
-			      (if type
-				  (list 'toolkit-write-value 'message name type)
-				  (list 'toolkit-write-value 'message name))))
-			args))
-	 (let ((reply (send-request-to-server message ,options)))
-	   ,(if (eq options :confirm)
-		`(multiple-value-prog1
-		     ,(ecase (length return)
-			(0)
-			(1 `(let ((result (toolkit-read-value reply)))
-			      ,@forms
-			      result))
-			(2 `(let* ((first (toolkit-read-value reply))
-				   (second (toolkit-read-value reply)))
-			      ,@forms
-			      (values first second)))
-			(3 `(let* ((first (toolkit-read-value reply))
-				   (second (toolkit-read-value reply))
-				   (third (toolkit-read-value reply)))
-			      ,@forms
-			      (values first second third)))
-			(4 `(let* ((first (toolkit-read-value reply))
-				   (second (toolkit-read-value reply))
-				   (third (toolkit-read-value reply))
-				   (fourth (toolkit-read-value reply)))
-			      ,@forms
-			      (values first second third fourth))))
-		   (destroy-message reply))
-		'(declare (ignore reply))))))))
-) ;; EVAL-WHEN
+    `(progn
+       (eval-when (compile load eval)
+	 (vector-push-extend (format nil "R~a" string-name) *request-table*))
+       (defun ,symbol-name ,arg-list
+	 ,doc-string
+	 ;; *** This generates lots of warnings at the moment
+	 ;; (declare (inline toolkit-write-value))
+	 ,(cons 'declare
+		(mapcar #'(lambda (arg type) (list 'type type arg))
+			arg-list type-list))
+	 (let ((message (prepare-request ,code ,options ,(length args))))
+	   ,(cons 'progn
+		  (mapcar #'(lambda (arg)
+			      (let ((name (first arg))
+				    (type (third arg)))
+				(if type
+				    (list 'toolkit-write-value 'message
+					  name type)
+				    (list 'toolkit-write-value 'message name))))
+			  args))
+	   (let ((reply (send-request-to-server message ,options)))
+	     ,(if (eq options :confirm)
+		  `(multiple-value-prog1
+		       ,(ecase (length return)
+			  (0)
+			  (1 `(let ((result (toolkit-read-value reply)))
+				,@forms
+				result))
+			  (2 `(let* ((first (toolkit-read-value reply))
+				     (second (toolkit-read-value reply)))
+				,@forms
+				(values first second)))
+			  (3 `(let* ((first (toolkit-read-value reply))
+				     (second (toolkit-read-value reply))
+				     (third (toolkit-read-value reply)))
+				,@forms
+				(values first second third)))
+			  (4 `(let* ((first (toolkit-read-value reply))
+				     (second (toolkit-read-value reply))
+				     (third (toolkit-read-value reply))
+				     (fourth (toolkit-read-value reply)))
+				,@forms
+				(values first second third fourth))))
+		     (destroy-message reply))
+		  '(declare (ignore reply)))))))))
 
 ;;; This is for sending commands to the server, not requesting Motif
 ;;; services.  These calls take no arguments and return a value indicating
 ;;; whether they were successful.
-(eval-when (compile eval)
-  (defmacro def-toolkit-command (symbol-name options &body forms)
-    (let ((string-name (symbol-class symbol-name))
-	  (code (fill-pointer *request-table*)))
-      (vector-push-extend string-name *request-table*)
-      `(defun ,symbol-name ()
-	 (let* ((message (prepare-request ,code ,options 0))
-		(reply (send-request-to-server message ,options)))
-	   ,(if (eq options :confirm)
-		`(let ((result (toolkit-read-value reply)))
-		   (destroy-message reply)
-		   ,@forms
-		   result)
-		'(declare (ignore reply))))))))
+
+(defmacro def-toolkit-command (symbol-name options &body forms)
+  (let ((string-name (symbol-class symbol-name))
+	(code (fill-pointer *request-table*)))
+    `(progn
+       (eval-when (compile load eval)
+	 (vector-push-extend string-name *request-table*)
+	 (defun ,symbol-name ()
+	   (let* ((message (prepare-request ,code ,options 0))
+		  (reply (send-request-to-server message ,options)))
+	     ,(if (eq options :confirm)
+		  `(let ((result (toolkit-read-value reply)))
+		     (destroy-message reply)
+		     ,@forms
+		     result)
+		  '(declare (ignore reply)))))))))
+
+); eval-when (compile eval)
 
 
 
