@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bindings.lisp,v 1.4 1994/02/11 21:52:48 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Some bindings:
@@ -156,8 +159,8 @@
 (bind-key "Lowercase Word" #k"meta-l")
 (bind-key "Capitalize Word" #k"meta-c")
 
-(bind-key "Previous Page" #k"control-x ["))
-(bind-key "Next Page" #k"control-x ]"))
+(bind-key "Previous Page" #k"control-x [")
+(bind-key "Next Page" #k"control-x ]")
 (bind-key "Mark Page" #k"control-x control-p")
 (bind-key "Count Lines Page" #k"control-x l")
 
@@ -331,6 +334,7 @@
 (bind-key "Reenter Interactive Input" #k"control-return" :mode "Typescript")
 (bind-key "Typescript Slave Break" #k"hyper-b" :mode "Typescript")
 (bind-key "Typescript Slave to Top Level" #k"hyper-g" :mode "Typescript")
+(bind-key "Typescript Slave Status" #k"hyper-s" :mode "Typescript")
 (bind-key "Select Slave" #k"control-meta-\c")
 (bind-key "Select Background" #k"control-meta-C")
 
@@ -345,6 +349,7 @@
 ;;;; Lisp (some).
 
 (bind-key "Indent Form" #k"control-meta-q")
+(bind-key "Fill Lisp Comment Paragraph" #k"meta-q" :mode "Lisp")
 (bind-key "Defindent" #k"control-meta-#")
 (bind-key "Beginning of Defun" #k"control-meta-[")
 (bind-key "End of Defun" #k"control-meta-]")
@@ -382,6 +387,25 @@
 
 (bind-key "Goto Definition" #k"control-meta-F")
 
+(bind-key "Debug Up" #k"control-meta-hyper-u")
+(bind-key "Debug Down" #k"control-meta-hyper-d")
+(bind-key "Debug Top" #k"control-meta-hyper-t")
+(bind-key "Debug Bottom" #k"control-meta-hyper-b")
+(bind-key "Debug Frame" #k"control-meta-hyper-f")
+(bind-key "Debug Quit" #k"control-meta-hyper-q")
+(bind-key "Debug Go" #k"control-meta-hyper-g")
+(bind-key "Debug Abort" #k"control-meta-hyper-a")
+(bind-key "Debug Restart" #k"control-meta-hyper-r")
+(bind-key "Debug Help" #k"control-meta-hyper-h")
+(bind-key "Debug Error" #k"control-meta-hyper-e")
+(bind-key "Debug Backtrace" #k"control-meta-hyper-B")
+(bind-key "Debug Print" #k"control-meta-hyper-p")
+(bind-key "Debug Verbose Print" #k"control-meta-hyper-P")
+(bind-key "Debug List Locals" #k"control-meta-hyper-l")
+(bind-key "Debug Source" #k"control-meta-hyper-s")
+(bind-key "Debug Edit Source" #k"control-meta-hyper-S")
+(bind-key "Debug Flush Errors" #k"control-meta-hyper-F")
+
 
 
 ;;;; More Miscellaneous bindings.
@@ -391,7 +415,7 @@
 
 (bind-key "Transpose Words" #k"meta-t")
 (bind-key "Transpose Lines" #k"control-x control-t")
-(bind-key "Transpose Regions" #k"control-x t"))
+(bind-key "Transpose Regions" #k"control-x t")
 
 (bind-key "Uppercase Region" #k"control-x control-u")
 (bind-key "Lowercase Region" #k"control-x control-l")
@@ -435,7 +459,7 @@
 
 (bind-key "Fill Paragraph" #k"meta-q")
 (bind-key "Fill Region" #k"meta-g")
-(bind-key "Set Fill Prefix" #k"control-x ."))
+(bind-key "Set Fill Prefix" #k"control-x .")
 (bind-key "Set Fill Column" #k"control-x f")
 (bind-key "Auto Fill Return" #k"return" :mode "Fill")
 (bind-key "Auto Fill Space" #k"space" :mode "Fill")
@@ -539,13 +563,16 @@
 
 ;;;; Mailer commands.
 
+;;; Clear everything user might hit to avoid getting the internal error
+;;; message about modifying read-only buffers.
+;;;
 (do-alpha-key-events (key-event :both)
   (bind-key "Illegal" key-event :mode "Headers")
   (bind-key "Illegal" key-event :mode "Message"))
 
 
 ;;; Global.
-
+;;;
 (bind-key "Incorporate and Read New Mail" #k"control-x i")
 (bind-key "Send Message" #k"control-x m")
 (bind-key "Message Headers" #k"control-x r")
@@ -556,7 +583,6 @@
 ;;; The bindings in these two blocks should be the same, one for "Message" mode
 ;;; and one for "Headers" mode.
 ;;;
-
 (bind-key "Next Message" #k"meta-n" :mode "Message")
 (bind-key "Previous Message" #k"meta-p" :mode "Message")
 (bind-key "Next Undeleted Message" #k"n" :mode "Message")
@@ -572,7 +598,7 @@
 (bind-key "Incorporate and Read New Mail" #k"i" :mode "Message")
 (bind-key "Beginning of Buffer" #k"\<" :mode "Message")
 (bind-key "End of Buffer" #k"\>" :mode "Message")
-
+;;;
 (bind-key "Next Message" #k"meta-n" :mode "Headers")
 (bind-key "Previous Message" #k"meta-p" :mode "Headers")
 (bind-key "Next Undeleted Message" #k"n" :mode "Headers")
@@ -591,7 +617,7 @@
 
 
 ;;; Headers mode.
-
+;;;
 (bind-key "Delete Message and Down Line" #k"d" :mode "Headers")
 (bind-key "Pick Headers" #k"h" :mode "Headers")
 (bind-key "Show Message" #k"space" :mode "Headers")
@@ -602,7 +628,7 @@
 
 
 ;;; Message mode.
-
+;;;
 (bind-key "Delete Message and Show Next" #k"d" :mode "Message")
 (bind-key "Goto Headers Buffer" #k"^" :mode "Message")
 (bind-key "Scroll Message" #k"space" :mode "Message")
@@ -616,7 +642,7 @@
 
 
 ;;; Draft mode.
-
+;;;
 (bind-key "Goto Headers Buffer" #k"hyper-^" :mode "Draft")
 (bind-key "Goto Message Buffer" #k"hyper-m" :mode "Draft")
 (bind-key "Deliver Message" #k"hyper-s" :mode "Draft")
@@ -628,10 +654,101 @@
 
 
 
+;;;; Netnews.
+
+;;; Clear everything user might hit to avoid getting the internal error
+;;; message about modifying read-only buffers.
+;;;
+(do-alpha-key-events (key-event :both)
+  (bind-key "Illegal" key-event :mode "News-Headers")
+  (bind-key "Illegal" key-event :mode "News-Message"))
+
+
+;;; Global Netnews bindings
+;;;
+(bind-key "Netnews Post Message" #k"C-x P")
+
+
+;;; Both News-Headers and News-Message modes.
+;;;
+;;; The bindings in these two blocks should be the same, one for "News-Message"
+;;; mode and one for "News-Headers" mode.
+;;;
+(bind-key "List All Groups" #k"l" :mode "News-Headers")
+(bind-key "Netnews Append to File" #k"a" :mode "News-Headers")
+(bind-key "Netnews Forward Message" #k"f" :mode "News-Headers")
+(bind-key "Netnews Go to Next Group" #k"g" :mode "News-Headers")
+(bind-key "Netnews Next Article" #k"n" :mode "News-Headers")
+(bind-key "Netnews Previous Article" #k"p" :mode "News-Headers")
+(bind-key "Netnews Quit Starting Here" #k"." :mode "News-Headers")
+(bind-key "Netnews Group Punt Messages" #k"G" :mode "News-Headers")
+(bind-key "Netnews Show Whole Header" #k"w" :mode "News-Headers")
+(bind-key "Netnews Reply to Sender in Other Window" #k"r" :mode "News-Headers")
+(bind-key "Netnews Reply to Group in Other Window" #k"R" :mode "News-Headers")
+;;;
+(bind-key "List All Groups" #k"l" :mode "News-Message")
+(bind-key "Netnews Append to File" #k"a" :mode "News-Message")
+(bind-key "Netnews Forward Message" #k"f" :mode "News-Message")
+(bind-key "Netnews Go to Next Group" #k"g" :mode "News-Message")
+(bind-key "Netnews Next Article" #k"n" :mode "News-Message")
+(bind-key "Netnews Previous Article" #k"p" :mode "News-Message")
+(bind-key "Netnews Quit Starting Here" #k"." :mode "News-Message")
+(bind-key "Netnews Group Punt Messages" #k"G" :mode "News-Message")
+(bind-key "Netnews Show Whole Header" #k"w" :mode "News-Message")
+(bind-key "Netnews Reply to Sender in Other Window" #k"r" :mode "News-Message")
+(bind-key "Netnews Reply to Group in Other Window" #k"R" :mode "News-Message")
+
+
+;;; News-Headers.
+;;;
+(bind-key "Netnews Exit" #k"q" :mode "News-Headers")
+(bind-key "Netnews Headers File Message" #k"o" :mode "News-Headers")
+(bind-key "Netnews Headers Scroll Window Down" #k"c-v" :mode "News-Headers")
+(bind-key "Netnews Headers Scroll Window Up" #k"m-v" :mode "News-Headers")
+(bind-key "Netnews Next Line" #k"C-n" :mode "News-Headers")
+(bind-key "Netnews Next Line" #k"Downarrow" :mode "News-Headers")
+(bind-key "Netnews Previous Line" #k"C-p" :mode "News-Headers")
+(bind-key "Netnews Previous Line" #k"Uparrow" :mode "News-Headers")
+(bind-key "Netnews Select Message Buffer" #k"hyper-m" :mode "News-Headers")
+(bind-key "Netnews Show Article" #k"space" :mode "News-Headers")
+
+
+;;; News-Message.
+;;;
+(bind-key "Insert Message Region" #k"Hyper-y" :mode "News-Message")
+(bind-key "Netnews Message File Message" #k"o" :mode "News-Message")
+(bind-key "Netnews Message Keep Buffer" #k"k" :mode "News-Message")
+(bind-key "Netnews Message Quit" #k"q" :mode "News-Message")
+(bind-key "Netnews Message Scroll Down"  #k"space" :mode "News-Message")
+(bind-key "Netnews Goto Draft Buffer" #k"hyper-d" :mode "News-Message")
+(bind-key "Netnews Goto Headers Buffer" #k"^" :mode "News-Message")
+(bind-key "Netnews Goto Headers Buffer" #k"hyper-h" :mode "News-Message")
+(bind-key "Netnews Goto Post Buffer" #k"hyper-p" :mode "News-Message")
+(bind-key "Scroll Window Up" #k"backspace" :mode "News-Message")
+
+
+;;; Post.
+;;;
+(bind-key "Netnews Select Message Buffer" #k"hyper-m" :mode "Post")
+(bind-key "Netnews Deliver Post" #k"hyper-s" :mode "Post")
+(bind-key "Netnews Abort Post" #k"hyper-q" :mode "Post")
+(bind-key "Insert Message Buffer" #k"Hyper-y" :mode "Post")
+
+
+;;; News-Browse.
+
+(bind-key "Netnews Quit Browse" #k"q" :mode "News-Browse")
+(bind-key "Netnews Browse Add Group To File" #k"a" :mode "News-Browse")
+(bind-key "Netnews Browse Read Group" #k"space" :mode "News-Browse")
+(bind-key "Next Line" #k"n" :mode "News-Browse")
+(bind-key "Previous Line" #k"p" :mode "News-Browse")
+
+
 ;;;; Process (Shell).
 
-(bind-key "Confirm Process Input" #k"return" :mode "Process")
 (bind-key "Shell" #k"control-meta-s")
+(bind-key "Confirm Process Input" #k"return" :mode "Process")
+(bind-key "Shell Complete Filename" #k"M-escape" :mode "Process")
 (bind-key "Interrupt Buffer Subprocess" #k"hyper-c" :mode "Process")
 (bind-key "Stop Buffer Subprocess" #k"hyper-z" :mode "Process")
 (bind-key "Quit Buffer Subprocess" #k"hyper-\\")
@@ -648,7 +765,7 @@
 
 ;;;; Bufed.
 
-(bind-key "Bufed" #k"control-x control-meta-b"))
+(bind-key "Bufed" #k"control-x control-meta-b")
 (bind-key "Bufed Delete" #k"d" :mode "Bufed")
 (bind-key "Bufed Delete" #k"control-d" :mode "Bufed")
 (bind-key "Bufed Undelete" #k"u" :mode "Bufed")
@@ -667,7 +784,7 @@
 
 ;;;; Dired.
 
-(bind-key "Dired" #k"control-x control-meta-d"))
+(bind-key "Dired" #k"control-x control-meta-d")
 
 (bind-key "Dired Delete File and Down Line" #k"d" :mode "Dired")
 (bind-key "Dired Delete File with Pattern" #k"D" :mode "Dired")

@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.3 1994/02/11 21:54:09 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Written by Bill Chiles.
@@ -13,7 +16,7 @@
 
 (in-package "HEMLOCK-INTERNALS")
 
-(export '(redisplay redisplay-all))
+(export '(redisplay redisplay-all define-tty-font))
 
 
 
@@ -48,8 +51,9 @@
 ;;; 
 (defstruct (si-line (:print-function print-screen-image-line)
 		    (:constructor %make-si-line (chars)))
-  chars
-  (length 0))
+  (chars nil :type simple-string)
+  (length 0)
+  (fonts nil :type list))
 
 (defun make-si-line (n)
   (%make-si-line (make-string n)))
@@ -61,22 +65,159 @@
   (write-string "\">" str))
 
 
+(defun find-identical-prefix (dis-line dis-line-fonts si-line)
+  (declare (type dis-line dis-line)
+	   (type list dis-line-fonts)
+	   (type si-line si-line))
+  (let* ((dl-chars (dis-line-chars dis-line))
+	 (dl-len (dis-line-length dis-line))
+	 (si-chars (si-line-chars si-line))
+	 (si-len (si-line-length si-line))
+	 (okay-until 0))
+    (declare (type simple-string dl-chars si-chars)
+	     (type (and unsigned-byte fixnum) dl-len si-len)
+	     (type (and unsigned-byte fixnum) okay-until))
+    (do ((dl-fonts dis-line-fonts (cdr dis-line-fonts))
+	 (si-fonts (si-line-fonts si-line) (cdr si-fonts)))
+	((or (null dl-fonts) (null si-fonts))
+	 (let ((next-font (car (or dl-fonts si-fonts))))
+	   (if next-font
+	       (let ((end (min dl-len si-len (cadr next-font))))
+		 (or (string/= dl-chars si-chars
+			       :start1 okay-until :start2 okay-until
+			       :end1 end :end2 end)
+		     end))
+	       (let ((end (min dl-len si-len)))
+		 (or (string/= dl-chars si-chars
+			       :start1 okay-until :start2 okay-until
+			       :end1 end :end2 end)
+		     (if (= dl-len si-len) nil end))))))
+      (let ((dl-font (caar dl-fonts))
+	    (dl-start (cadar dl-fonts))
+	    (dl-stop (cddar dl-fonts))
+	    (si-font (caar si-fonts))
+	    (si-start (cadar si-fonts))
+	    (si-stop (cddar si-fonts)))
+	(unless (and (= dl-font si-font)
+		     (= dl-start si-start))
+	  (let ((font-lossage (min dl-start si-start)))
+	    (return (or (string/= dl-chars si-chars
+				  :start1 okay-until :start2 okay-until
+				  :end1 font-lossage :end2 font-lossage)
+			font-lossage))))
+	(unless (= dl-stop si-stop)
+	  (let ((font-lossage (min dl-stop si-stop)))
+	    (return (or (string/= dl-chars si-chars
+				  :start1 okay-until :start2 okay-until
+				  :end1 font-lossage :end2 font-lossage)
+			font-lossage))))
+	(let ((mismatch (string/= dl-chars si-chars
+				  :start1 okay-until :start2 okay-until
+				  :end1 dl-stop :end2 si-stop)))
+	  (if mismatch
+	      (return mismatch)
+	      (setf okay-until dl-stop)))))))
+
+
+(defun find-identical-suffix (dis-line dis-line-fonts si-line)
+  (declare (type dis-line dis-line)
+	   (type list dis-line-fonts)
+	   (type si-line si-line))
+  (let* ((dl-chars (dis-line-chars dis-line))
+	 (dl-len (dis-line-length dis-line))
+	 (si-chars (si-line-chars si-line))
+	 (si-len (si-line-length si-line))
+	 (count (dotimes (i (min dl-len si-len) i)
+		  (when (char/= (schar dl-chars (- dl-len i 1))
+				(schar si-chars (- si-len i 1)))
+		    (return i)))))
+    (declare (type simple-string dl-chars si-chars)
+	     (type (and unsigned-byte fixnum) dl-len si-len))
+    (do ((dl-fonts (reverse dis-line-fonts) (cdr dis-line-fonts))
+	 (si-fonts (reverse (si-line-fonts si-line)) (cdr si-fonts)))
+	((or (null dl-fonts) (null si-fonts))
+	 (cond (dl-fonts
+		(min (- dl-len (cddar dl-fonts)) count))
+	       (si-fonts
+		(min (- si-len (cddar si-fonts)) count))
+	       (t
+		count)))
+      (let ((dl-font (caar dl-fonts))
+	    (dl-start (- dl-len (cadar dl-fonts)))
+	    (dl-stop (- dl-len (cddar dl-fonts)))
+	    (si-font (caar si-fonts))
+	    (si-start (- si-len (cadar si-fonts)))
+	    (si-stop (- si-len (cddar si-fonts))))
+	(unless (and (= dl-font si-font)
+		     (= dl-stop si-stop))
+	  (return (min dl-stop si-stop count)))
+	(unless (= dl-start si-start)
+	  (return (min dl-start si-start count)))
+	(when (<= count dl-start)
+	  (return count))))))
+
+
 (defmacro si-line (screen-image n)
   `(svref ,screen-image ,n))
 
 
 
+;;; Font support.
+
+(defvar *tty-font-strings* (make-array font-map-size :initial-element nil)
+  "Array of (start-string . end-string) for fonts, or NIL if no such font.")
+
+(defun define-tty-font (font-id &rest stuff)
+  (unless (<= 0 font-id (1- font-map-size))
+    (error "Bogus font-id: ~S" font-id))
+  (cond ((every #'keywordp stuff)
+	 (error "Can't extract font strings from the termcap entry yet."))
+	((and (= (length stuff) 2)
+	      (stringp (car stuff))
+	      (stringp (cadr stuff)))
+	 (setf (aref *tty-font-strings* font-id)
+	       (cons (car stuff) (cadr stuff))))
+	(t
+	 (error "Bogus font spec: ~S~%Must be either a list of keywords or ~
+		 a list of the start string and end string."))))
+
+
+(defun compute-font-usages (dis-line)
+  (do ((results nil)
+       (change (dis-line-font-changes dis-line) (font-change-next change))
+       (prev nil change))
+      ((null change)
+       (when prev
+	 (let ((font (font-change-font prev)))
+	   (when (and (not (zerop font))
+		      (aref *tty-font-strings* font))
+	     (push (list* (font-change-font prev)
+			  (font-change-x prev)
+			  (dis-line-length dis-line))
+		   results))))
+       (nreverse results))
+    (when prev
+      (let ((font (font-change-font prev)))
+	(when (and (not (zerop font))
+		   (aref *tty-font-strings* font))
+	  (push (list* (font-change-font prev)
+		       (font-change-x prev)
+		       (font-change-x change))
+		results))))))
+
+
 ;;;; Dumb window redisplay.
 
 (defmacro tty-dumb-line-redisplay (device hunk dis-line &optional y)
-  (let ((dl (gensym)) (dl-chars (gensym)) (dl-len (gensym))
+  (let ((dl (gensym)) (dl-chars (gensym)) (dl-fonts (gensym)) (dl-len (gensym))
 	(dl-pos (gensym)) (screen-image-line (gensym)))
     `(let* ((,dl ,dis-line)
 	    (,dl-chars (dis-line-chars ,dl))
+	    (,dl-fonts (compute-font-usages ,dis-line))
 	    (,dl-len (dis-line-length ,dl))
 	    (,dl-pos ,(or y `(dis-line-position ,dl))))
        (funcall (tty-device-display-string ,device)
-		,hunk 0 ,dl-pos ,dl-chars 0 ,dl-len)
+		,hunk 0 ,dl-pos ,dl-chars ,dl-fonts 0 ,dl-len)
        (setf (dis-line-flags ,dl) unaltered-bits)
        (setf (dis-line-delta ,dl) 0)
        (select-hunk ,hunk)
@@ -84,7 +225,8 @@
 					  (+ *hunk-top-line* ,dl-pos))))
 	 (replace-si-line (si-line-chars ,screen-image-line) ,dl-chars
 			  0 0 ,dl-len)
-	 (setf (si-line-length ,screen-image-line) ,dl-len)))))
+	 (setf (si-line-length ,screen-image-line) ,dl-len)
+	 (setf (si-line-fonts ,screen-image-line) ,dl-fonts)))))
 
 (defun tty-dumb-window-redisplay (window)
   (let* ((first (window-first-line window))
@@ -101,17 +243,21 @@
 	      (i (+ *hunk-top-line* i) (1+ i)))
 	     ((> i last))
 	   (declare (fixnum i last))
-	   (setf (si-line-length (si-line screen-image i)) 0)))
+	   (let ((si-line (si-line screen-image i)))
+	     (setf (si-line-length si-line) 0)
+	     (setf (si-line-fonts si-line) nil))))
       (tty-dumb-line-redisplay device hunk (car dl) i))
     (setf (window-first-changed window) the-sentinel
 	  (window-last-changed window) first)
     (when (window-modeline-buffer window)
       (let ((dl (window-modeline-dis-line window))
 	    (y (tty-hunk-modeline-pos hunk)))
-	(funcall (tty-device-standout-init device) hunk)
-	(funcall (tty-device-clear-to-eol device) hunk 0 y)
-	(tty-dumb-line-redisplay device hunk dl y)
-	(funcall (tty-device-standout-end device) hunk)
+	(unwind-protect
+	    (progn
+	      (funcall (tty-device-standout-init device) hunk)
+	      (funcall (tty-device-clear-to-eol device) hunk 0 y)
+	      (tty-dumb-line-redisplay device hunk dl y))
+	  (funcall (tty-device-standout-end device) hunk))
 	(setf (dis-line-flags dl) unaltered-bits)))))
 
 
@@ -155,7 +301,7 @@
     ;;
     ;; Clear any extra lines at the end of the window.
     (let ((pos (dis-line-position (car (window-last-line window)))))
-      (when (< pos (window-old-lines window))
+      (when (< pos (1- (window-height window)))
 	(tty-smart-clear-to-eow hunk (1+ pos)))
       (setf (window-old-lines window) pos))
     ;;
@@ -163,10 +309,11 @@
     (when (window-modeline-buffer window)
       (let ((dl (window-modeline-dis-line window)))
 	(when (/= (dis-line-flags dl) unaltered-bits)
-	  (funcall (tty-device-standout-init device) hunk)
 	  (unwind-protect
-	      (tty-smart-line-redisplay device hunk dl
-					(tty-hunk-modeline-pos hunk))
+	      (progn
+		(funcall (tty-device-standout-init device) hunk)
+		(tty-smart-line-redisplay device hunk dl
+					  (tty-hunk-modeline-pos hunk)))
 	    (funcall (tty-device-standout-end device) hunk)))))))
 
 ;;; NEXT-DIS-LINE is used in DO-SEMI-DUMB-LINE-WRITES and
@@ -193,7 +340,6 @@
   (let* ((dl first-changed)
 	 flags ;(dis-line-flags (car dl))) flags bound for NEXT-DIS-LINE.
 	 prev)
-    (declare (ignore flags))
     ;;
     ;; Skip old, unchanged, unmoved lines.
     ;; (loop
@@ -217,7 +363,8 @@
 				     &optional (dl-pos (dis-line-position dl)))
   (declare (fixnum dl-pos))
   (let* ((dl-chars (dis-line-chars dl))
-	 (dl-len (dis-line-length dl)))
+	 (dl-len (dis-line-length dl))
+	 (dl-fonts (compute-font-usages dl)))
     (declare (fixnum dl-len) (simple-string dl-chars))
     (when (listen-editor-input *editor-input*)
       (throw 'redisplay-catcher :editor-input))
@@ -226,9 +373,8 @@
 				       (+ *hunk-top-line* dl-pos)))
 	   (si-line-chars (si-line-chars screen-image-line))
 	   (si-line-length (si-line-length screen-image-line))
-	   (findex (string/= dl-chars si-line-chars
-			     :end1 dl-len :end2 si-line-length)))
-      (declare (fixnum findex) (simple-string si-line-chars))
+	   (findex (find-identical-prefix dl dl-fonts screen-image-line)))
+      (declare (type (or fixnum null) findex) (simple-string si-line-chars))
       ;;
       ;; When the dis-line and screen chars are not string=.
       (when findex
@@ -236,18 +382,19 @@
 	 ;; See if the screen shows an initial substring of the dis-line.
 	 ((= findex si-line-length)
 	  (funcall (tty-device-display-string device)
-		   hunk findex dl-pos dl-chars findex dl-len)
+		   hunk findex dl-pos dl-chars dl-fonts findex dl-len)
 	  (replace-si-line si-line-chars dl-chars findex findex dl-len))
 	 ;; When the dis-line is an initial substring of what's on the screen.
 	 ((= findex dl-len)
 	  (funcall (tty-device-clear-to-eol device) hunk dl-len dl-pos))
 	 ;; Otherwise, blast dl-chars and clear to eol as necessary.
 	 (t (funcall (tty-device-display-string device)
-		     hunk findex dl-pos dl-chars findex dl-len)
+		     hunk findex dl-pos dl-chars dl-fonts findex dl-len)
 	    (when (< dl-len si-line-length)
 	      (funcall (tty-device-clear-to-eol device) hunk dl-len dl-pos))
 	    (replace-si-line si-line-chars dl-chars findex findex dl-len)))
-	(setf (si-line-length screen-image-line) dl-len)))
+	(setf (si-line-length screen-image-line) dl-len)
+	(setf (si-line-fonts screen-image-line) dl-fonts)))
     (setf (dis-line-flags dl) unaltered-bits)
     (setf (dis-line-delta dl) 0)))
 
@@ -267,6 +414,8 @@
 (defvar *tty-line-deletions* (make-array (* 2 tty-hunk-height-limit)))
 
 (defvar *tty-line-writes* (make-array tty-hunk-height-limit))
+
+(defvar *tty-line-moves* (make-array tty-hunk-height-limit))
 
 (eval-when (compile eval)
 
@@ -368,6 +517,7 @@
 	      (declare (fixnum ,insert-index ,free-lines-index ,n))
 	      (let ((,temp (si-line *screen-image-temp* ,free-lines-index)))
 		(setf (si-line-length ,temp) 0)
+		(setf (si-line-fonts ,temp) nil)
 		(setf (si-line ,do-screen-image ,insert-index) ,temp)))
 	    (decf ,fsil ,num))
 	 (declare (fixnum ,target-terminus ,source-index ,target-index))
@@ -399,7 +549,7 @@
 	    ;; One line-changed.
 	    (tty-smart-line-redisplay device hunk (car first-changed))
 	    ;; More lines changed.
-	    (multiple-value-bind (ins outs writes)
+	    (multiple-value-bind (ins outs writes moves)
 				 (compute-tty-changes
 				  first-changed last-changed
 				  (tty-hunk-modeline-pos hunk))
@@ -413,6 +563,7 @@
 		      (t
 		       (do-line-insertions hunk ins
 					   (do-line-deletions hunk outs))
+		       (note-line-moves moves)
 		       (do-line-writes hunk writes))))))
 	;; Set the bounds so we know we displayed...
 	(setf (window-first-changed window) the-sentinel
@@ -420,7 +571,7 @@
     ;;
     ;; Clear any extra lines at the end of the window.
     (let ((pos (dis-line-position (car (window-last-line window)))))
-      (when (< pos (window-old-lines window))
+      (when (< pos (1- (window-height window)))
 	(tty-smart-clear-to-eow hunk (1+ pos)))
       (setf (window-old-lines window) pos))
     ;;
@@ -428,10 +579,11 @@
     (when (window-modeline-buffer window)
       (let ((dl (window-modeline-dis-line window)))
 	(when (/= (dis-line-flags dl) unaltered-bits)
-	  (funcall (tty-device-standout-init device) hunk)
 	  (unwind-protect
-	      (tty-smart-line-redisplay device hunk dl
-					(tty-hunk-modeline-pos hunk))
+	      (progn
+		(funcall (tty-device-standout-init device) hunk)
+		(tty-smart-line-redisplay device hunk dl
+					  (tty-hunk-modeline-pos hunk)))
 	    (funcall (tty-device-standout-end device) hunk)))))))
 
 
@@ -533,10 +685,11 @@
 ;;; done to the screen, we save the changed bit on, so the line will be
 ;;; queued to be written after redisplay is re-entered.
 ;;; 
-;;; If the line is changed or new, then queue it to be written.  Note
-;;; before that we checked the flags for equality with the new bits, and
-;;; it is possible that updating the window image will yield lines that
-;;; are both new and changed.
+;;; If the line is changed or new, then queue it to be written.  Since we can
+;;; abort out of the actual dislpay at any time (due to pending input), we
+;;; don't clear the flags or delta here.  A dis-line may be groveled many times
+;;; by this function before it actually makes it to the screen, so we may have
+;;; odd combinations of bits such as both new and changed.
 ;;; 
 ;;; Otherwise, get the next display line, loop, and see if it's
 ;;; interesting.
@@ -545,68 +698,63 @@
   (declare (fixnum modeline-pos))
   (let* ((dl first-changed)
 	 (flags (dis-line-flags (car dl)))
-	 (ins 0) (outs 0) (writes 0)
+	 (ins 0) (outs 0) (writes 0) (moves 0)
 	 (prev-delta 0) (cum-deletes 0) (net-delta 0) (cum-inserts 0)
 	 prev)
-    (declare (fixnum flags ins outs writes prev-delta cum-deletes net-delta
-		     cum-inserts))
+    (declare (fixnum flags ins outs writes moves prev-delta cum-deletes
+		     net-delta cum-inserts))
     (loop
-     (cond
-      ((= flags new-bit)
-       (queue (car dl) *tty-line-writes* writes)
-       (next-dis-line))
-      ((not (zerop (the fixnum (logand flags moved-bit))))
-       (let* ((start-dl (car dl))
-	      (start-pos (dis-line-position start-dl))
-	      (curr-delta (dis-line-delta start-dl))
-	      (delta-delta (- prev-delta curr-delta))
-	      (car-dl start-dl))
-	 (declare (fixnum start-pos curr-delta delta-delta))
-	 (cond ((plusp delta-delta)
-		(queue (the fixnum (- start-pos cum-inserts))
-		       *tty-line-deletions* outs)
-		(queue delta-delta *tty-line-deletions* outs)
-		(incf cum-deletes delta-delta)
-		(decf net-delta delta-delta))
-	       ((minusp delta-delta)
-		(let ((eff-pos (the fixnum (+ start-pos delta-delta)))
-		      (num (the fixnum (- delta-delta))))
-		  (queue eff-pos *tty-line-insertions* ins)
-		  (queue num *tty-line-insertions* ins)
-		  (incf net-delta num)
-		  (incf cum-inserts num)))
-	       (t (error "Internal error -- unexpected zero transition delta ~
-			 in redisplay.")))
-	 (loop
-	  (cond ((and (zerop (the fixnum (logand flags changed-bit)))
-		      (zerop (the fixnum (logand flags new-bit))))
-		 (setf (dis-line-flags car-dl) unaltered-bits))
-		(t (queue car-dl *tty-line-writes* writes)
-		   ;; keep just the changed-bit on.
-		   (setf (dis-line-flags car-dl) changed-bit)))
-	  (setf (dis-line-delta car-dl) 0)
-	  (next-dis-line)
-	  (setf car-dl (car dl))
-	  (when (/= (the fixnum (dis-line-delta car-dl)) curr-delta)
-	    (setf prev-delta curr-delta)
-	    (return)))))
-      ((not (and (zerop (logand (the fixnum flags) changed-bit))
-		 (zerop (logand (the fixnum flags) new-bit))))
-       (queue (car dl) *tty-line-writes* writes)
-       (next-dis-line))
-      (t (next-dis-line)))
-     (when (eq prev last-changed)
-       (unless (zerop net-delta)
-	 (cond ((plusp net-delta)
-		(queue (the fixnum (- modeline-pos cum-deletes net-delta))
-		       *tty-line-deletions* outs)
-		(queue net-delta *tty-line-deletions* outs))
-	       (t (queue (the fixnum (+ modeline-pos net-delta))
-			 *tty-line-insertions* ins)
-		  (queue (the fixnum (- net-delta))
-			 *tty-line-insertions* ins))))
-       (return (values ins outs writes))))))
+      (cond
+       ((logtest flags new-bit)
+	(queue (car dl) *tty-line-writes* writes)
+	(next-dis-line))
+       ((logtest flags moved-bit)
+	(let* ((start-dl (car dl))
+	       (start-pos (dis-line-position start-dl))
+	       (curr-delta (dis-line-delta start-dl))
+	       (delta-delta (- prev-delta curr-delta))
+	       (car-dl start-dl))
+	  (declare (fixnum start-pos curr-delta delta-delta))
+	  (cond ((plusp delta-delta)
+		 (queue (the fixnum (- start-pos cum-inserts))
+			*tty-line-deletions* outs)
+		 (queue delta-delta *tty-line-deletions* outs)
+		 (incf cum-deletes delta-delta)
+		 (decf net-delta delta-delta))
+		((minusp delta-delta)
+		 (let ((eff-pos (the fixnum (+ start-pos delta-delta)))
+		       (num (the fixnum (- delta-delta))))
+		   (queue eff-pos *tty-line-insertions* ins)
+		   (queue num *tty-line-insertions* ins)
+		   (incf net-delta num)
+		   (incf cum-inserts num))))
+	  (loop
+	    (if (logtest flags (logior changed-bit new-bit))
+		(queue car-dl *tty-line-writes* writes)
+		(queue car-dl *tty-line-moves* moves))
+	    (next-dis-line)
+	    (setf car-dl (car dl))
+	    (when (or (eq prev last-changed)
+		      (/= (the fixnum (dis-line-delta car-dl)) curr-delta))
+	      (setf prev-delta curr-delta)
+	      (return)))))
+       ((logtest flags (logior changed-bit new-bit))
+	(queue (car dl) *tty-line-writes* writes)
+	(next-dis-line))
+       (t
+	(next-dis-line)))
 
+      (when (eq prev last-changed)
+	(unless (zerop net-delta)
+	  (cond ((plusp net-delta)
+		 (queue (the fixnum (- modeline-pos cum-deletes net-delta))
+			*tty-line-deletions* outs)
+		 (queue net-delta *tty-line-deletions* outs))
+		(t (queue (the fixnum (+ modeline-pos net-delta))
+			  *tty-line-insertions* ins)
+		   (queue (the fixnum (- net-delta))
+			  *tty-line-insertions* ins))))
+	(return (values ins outs writes moves))))))
 
 
 ;;;; Smart window redisplay -- operation methods.
@@ -628,7 +776,20 @@
       (let ((si-line (si-line screen-image si-idx)))
 	(unless (zerop (si-line-length si-line))
 	  (funcall clear-to-eol hunk 0 y)
-	  (setf (si-line-length si-line) 0))))))
+	  (setf (si-line-length si-line) 0)
+	  (setf (si-line-fonts si-line) nil))))))
+
+;;; NOTE-LINE-MOVES  --  Internal
+;;;
+;;;    Clear out the flags and delta of lines that have been moved.
+;;;
+(defun note-line-moves (moves)
+  (let ((i 0))
+    (loop
+      (when (= i moves) (return))
+      (let ((dl (dequeue *tty-line-moves* i)))
+	(setf (dis-line-flags dl) unaltered-bits)
+	(setf (dis-line-delta dl) 0)))))
 
 ;;; DO-LINE-DELETIONS pops elements off the *tty-lines-deletions* queue,
 ;;; deleting lines from hunk's area of the screen.  The internal screen
@@ -711,7 +872,8 @@
 				 &optional (dl-pos (dis-line-position dl)))
   (declare (fixnum dl-pos))
   (let* ((dl-chars (dis-line-chars dl))
-	 (dl-len (dis-line-length dl)))
+	 (dl-len (dis-line-length dl))
+	 (dl-fonts (compute-font-usages dl)))
     (declare (fixnum dl-len) (simple-string dl-chars))
     (when (listen-editor-input *editor-input*)
       (throw 'redisplay-catcher :editor-input))
@@ -720,9 +882,8 @@
 				       (+ *hunk-top-line* dl-pos)))
 	   (si-line-chars (si-line-chars screen-image-line))
 	   (si-line-length (si-line-length screen-image-line))
-	   (findex (string/= dl-chars si-line-chars
-			      :end1 dl-len :end2 si-line-length)))
-      (declare (fixnum findex) (simple-string si-line-chars))
+	   (findex (find-identical-prefix dl dl-fonts screen-image-line)))
+      (declare (type (or fixnum null) findex) (simple-string si-line-chars))
       ;;
       ;; When the dis-line and screen chars are not string=.
       (when findex
@@ -731,7 +892,7 @@
 	  ;; See if the screen shows an initial substring of the dis-line.
 	  (when (= findex si-line-length)
 	    (funcall (tty-device-display-string device)
-		     hunk findex dl-pos dl-chars findex dl-len)
+		     hunk findex dl-pos dl-chars dl-fonts findex dl-len)
 	    (replace-si-line si-line-chars dl-chars findex findex dl-len)
 	    (return-from tslr-main-body t))
 	  ;;
@@ -741,20 +902,18 @@
 	    (return-from tslr-main-body t))
 	  ;;
 	  ;; Find trailing substrings that are the same.
-	  (multiple-value-bind (sindex dindex)
-			       (do ((sindex (1- si-line-length) (1- sindex))
-				    (dindex (1- dl-len) (1- dindex)))
-				   ((or (= sindex -1)
-					(= dindex -1)
-					(char/= (schar dl-chars dindex)
-						(schar si-line-chars sindex)))
-				    (values (1+ sindex) (1+ dindex))))
+	  (multiple-value-bind
+	      (sindex dindex)
+	      (let ((count (find-identical-suffix dl dl-fonts
+						  screen-image-line)))
+		(values (- si-line-length count)
+			(- dl-len count)))
 	    (declare (fixnum sindex dindex))
 	    ;;
 	    ;; No trailing substrings -- blast and clear to eol.
 	    (when (= dindex dl-len)
 	      (funcall (tty-device-display-string device)
-		       hunk findex dl-pos dl-chars findex dl-len)
+		       hunk findex dl-pos dl-chars dl-fonts findex dl-len)
 	      (when (< dindex sindex)
 		(funcall (tty-device-clear-to-eol device)
 			 hunk dl-len dl-pos))
@@ -766,7 +925,8 @@
 		     (setf lindex findex))
 		    (t
 		     (funcall (tty-device-display-string device)
-			      hunk findex dl-pos dl-chars findex lindex)
+			      hunk findex dl-pos dl-chars dl-fonts
+			      findex lindex)
 		     (replace-si-line si-line-chars dl-chars
 				      findex findex lindex)))
 	      (cond
@@ -780,19 +940,23 @@
 				  hunk dindex dl-pos delete-char-num))
 			(t 
 			 (funcall (tty-device-display-string device)
-				  hunk dindex dl-pos dl-chars dindex dl-len)
+				  hunk dindex dl-pos dl-chars dl-fonts
+				  dindex dl-len)
 			 (funcall (tty-device-clear-to-eol device)
 				  hunk dl-len dl-pos)))))
 	       (t
 		(if (and (tty-device-insert-string device)
-			 (worth-using-insert-mode device (- dindex sindex)))
+			 (worth-using-insert-mode device (- dindex sindex)
+						  (- dl-len sindex)))
 		    (funcall (tty-device-insert-string device)
 			     hunk sindex dl-pos dl-chars sindex dindex)
 		    (funcall (tty-device-display-string device)
-			     hunk sindex dl-pos dl-chars sindex dl-len))))
+			     hunk sindex dl-pos dl-chars dl-fonts
+			     sindex dl-len))))
 	      (replace-si-line si-line-chars dl-chars
 			       lindex lindex dl-len))))
-	(setf (si-line-length screen-image-line) dl-len)))
+	(setf (si-line-length screen-image-line) dl-len)
+	(setf (si-line-fonts screen-image-line) dl-fonts)))
     (setf (dis-line-flags dl) unaltered-bits)
     (setf (dis-line-delta dl) 0)))
 
@@ -908,11 +1072,36 @@
 
 ;;; DISPLAY-STRING is used to put a string at (x,y) on the device.
 ;;; 
-(defun display-string (hunk x y string
+(defun display-string (hunk x y string font-info
 			    &optional (start 0) (end (strlen string)))
   (declare (fixnum x y start end))
   (update-cursor hunk x y)
-  (device-write-string string start end)
+  ;; Ignore font info for chars before the start of the string.
+  (loop
+    (if (or (null font-info)
+	    (< start (cddar font-info)))
+	(return)
+	(pop font-info)))
+  (let ((posn start))
+    (dolist (next-font font-info)
+      (let ((font (car next-font))
+	    (start (cadr next-font))
+	    (stop (cddr next-font)))
+	(when (<= end start)
+	  (return))
+	(when (< posn start)
+	  (device-write-string string posn start)
+	  (setf posn start))
+	(let ((new-posn (min stop end))
+	      (font-strings (aref *tty-font-strings* font)))
+	  (unwind-protect
+	      (progn
+		(device-write-string (car font-strings))
+		(device-write-string string posn new-posn))
+	    (device-write-string (cdr font-strings)))
+	  (setf posn new-posn))))
+    (when (< posn end)
+      (device-write-string string posn end)))
   (setf (tty-device-cursor-x (device-hunk-device hunk))
 	(the fixnum (+ x (the fixnum (- end start))))))
 
@@ -922,16 +1111,17 @@
 ;;; what the sequence is), whether the terminal has insert-mode, or whether
 ;;; the terminal has delete-mode.
 ;;; 
-(defun display-string-checking-underlines (hunk x y string
+(defun display-string-checking-underlines (hunk x y string font-info
 						&optional (start 0)
 						          (end (strlen string)))
+  (declare (ignore font-info))
   (declare (fixnum x y start end) (simple-string string))
   (update-cursor hunk x y)
   (let ((upos (position #\_ string :test #'char= :start start :end end))
 	(device (device-hunk-device hunk)))
     (if upos
 	(let ((previous start)
-	      after-pos)
+	      (after-pos 0))
 	  (declare (fixnum previous after-pos))
 	  (loop (device-write-string string previous upos)
 		(setf after-pos (do ((i (1+ upos) (1+ i)))
@@ -1026,25 +1216,25 @@
   (let* ((device (device-hunk-device hunk))
 	 (init-string (tty-device-insert-init-string device))
 	 (char-init-string (tty-device-insert-char-init-string device))
-	 (cis-len (if char-init-string (length char-init-string)))
 	 (char-end-string (tty-device-insert-char-end-string device))
-	 (ces-len (if char-end-string (length char-end-string)))
 	 (end-string (tty-device-insert-end-string device)))
-    (declare (simple-string char-init-string char-end-string))
+    (declare (type (or simple-string null) char-init-string char-end-string))
     (when init-string (device-write-string init-string))
     (if char-init-string
-	(do ((i start (1+ i)))
-	    ((= i end))
-	  (device-write-string char-init-string 0 cis-len)
-	  (tty-write-char (schar string i))
-	  (when char-end-string
-	    (device-write-string char-end-string 0 ces-len)))
+	(let ((cis-len (length char-init-string))
+	      (ces-len (length char-end-string)))
+	  (do ((i start (1+ i)))
+	      ((= i end))
+	    (device-write-string char-init-string 0 cis-len)
+	    (tty-write-char (schar string i))
+	    (when char-end-string
+	      (device-write-string char-end-string 0 ces-len))))
 	(device-write-string string start end))
     (when end-string (device-write-string end-string))
     (setf (tty-device-cursor-x device)
 	  (the fixnum (+ x (the fixnum (- end start)))))))
 
-(defun worth-using-insert-mode (device insert-char-num)
+(defun worth-using-insert-mode (device insert-char-num chars-saved)
   (let* ((init-string (tty-device-insert-init-string device))
 	 (char-init-string (tty-device-insert-char-init-string device))
 	 (char-end-string (tty-device-insert-char-end-string device))
@@ -1059,9 +1249,9 @@
 							char-end-string))
 					   0)))))
     (when end-string (incf cost (length (the simple-string end-string))))
-    (< cost insert-char-num)))
+    (< cost chars-saved)))
 
-(defun delete-char (hunk x y &optional n)
+(defun delete-char (hunk x y &optional (n 1))
   (declare (fixnum x y n))
   (update-cursor hunk x y)
   (let* ((device (device-hunk-device hunk))
@@ -1074,13 +1264,14 @@
     (when end-string (device-write-string end-string))))
 
 (defun worth-using-delete-mode (device delete-char-num clear-char-num)
-  (declare (fixnum num))
+  (declare (fixnum delete-char-num clear-char-num))
   (let ((init-string (tty-device-delete-init-string device))
 	(end-string (tty-device-delete-end-string device))
 	(delete-char-string (tty-device-delete-char-string device))
 	(clear-to-eol-string (tty-device-clear-to-eol-string device))
 	(cost 0))
-    (declare (simple-string init-string end-string delete-char-string)
+    (declare (type (or simple-string null) init-string end-string
+		   delete-char-string)
 	     (fixnum cost))
     (when init-string (incf cost (the fixnum (length init-string))))
     (when end-string (incf cost (the fixnum (length end-string))))

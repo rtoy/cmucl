@@ -1,22 +1,35 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC).
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.4 1994/02/11 21:53:41 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; "Site dependent" stuff for the editor while on the IBM RT PC machine.
 ;;;
 
+;;; Stuff to set up the packages Hemlock uses.
+;;;
+(in-package "HEMLOCK-INTERNALS"
+	    :nicknames '("HI")
+	    :use '("LISP" "EXTENSIONS" "SYSTEM"))
+;;;
+(in-package "HEMLOCK"
+	    :nicknames '("ED")
+	    :use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM"))
+;;;
 (in-package "SYSTEM")
-
-(export '(without-hemlock))
-
-
-(in-package "HEMLOCK-INTERNALS" :nicknames '("HI"))
+(export '(without-hemlock %sp-byte-blt %sp-find-character
+			  %sp-find-character-with-attribute 
+			  %sp-reverse-find-character-with-attribute))
+;;;
+(in-package "HI")
 
 (export '(show-mark editor-sleep *input-transcript* fun-defined-from-pathname
 	  editor-describe-function pause-hemlock store-cut-string
@@ -99,7 +112,7 @@
   (defhvar "Cursor Bitmap File"
     "File to read to setup cursors for Hemlock windows.  The mask is found by
      merging this name with \".mask\"."
-    :value "/usr/misc/.lisp/lib/hemlock11.cursor")
+    :value "library:hemlock11.cursor")
   (defhvar "Enter Window Hook"
     "When the mouse enters an editor window, this hook is invoked.  These
      functions take the Hemlock Window as an argument."
@@ -133,37 +146,26 @@
 
 ;;; MERGE-RELATIVE-PATHNAMES takes a pathname that is either absolute or
 ;;; relative to default-dir, merging it as appropriate and returning a definite
-;;; directory pathname.  If the component comes back with a trailing slash, we
-;;; have to remove it to get the MERGE-PATHNAMES to work correctly.  The result
-;;; must have a trailing slash.
+;;; directory pathname.
+;;;
+;;; This function isn't really needed anymore now that merge-pathnames does
+;;; this, but the semantics are slightly different.  So it's easier to just
+;;; keep this around instead of changing all the uses of it.
 ;;; 
 (defun merge-relative-pathnames (pathname default-directory)
   "Merges pathname with default-directory.  If pathname is not absolute, it
    is assumed to be relative to default-directory.  The result is always a
    directory."
-  (setf pathname (pathname pathname))
-  (flet ((return-with-slash (pathname)
-	   (let ((ns (namestring pathname)))
-	     (declare (simple-string ns))
-	     (if (char= #\/ (schar ns (1- (length ns))))
-		 pathname
-		 (pathname (concatenate 'simple-string ns "/"))))))
-    (let ((dir (pathname-directory pathname)))
-      (if dir
-	  (let ((dev (pathname-device pathname)))
-	    (if (eq dev :absolute)
-		(return-with-slash pathname)
-		(return-with-slash
-		    (make-pathname :device (pathname-device default-directory)
-				   :directory
-				   (concatenate
-				    'simple-vector
-				    (pathname-directory default-directory)
-				    dir)
-				   :defaults pathname))))
-	  (return-with-slash (merge-pathnames pathname default-directory))))))
+  (let ((pathname (merge-pathnames pathname default-directory)))
+    (if (directoryp pathname)
+	pathname
+	(pathname (concatenate 'simple-string
+			       (namestring pathname)
+			       "/")))))
 
 (defun directoryp (pathname)
+  "Returns whether pathname names a directory, that is whether it has no
+   name and no type components."
   (not (or (pathname-name pathname) (pathname-type pathname))))
 
 
@@ -181,33 +183,42 @@
 ;;; 
 (defvar *editor-windowed-input* nil)
 
-
 ;;; These are used for selecting X events.
-;;; 
-(defconstant group-interesting-xevents
-  '(:structure-notify))
+#+clx
+(eval-when (compile load eval)
+  (defconstant group-interesting-xevents
+    '(:structure-notify)))
+#+clx
 (defconstant group-interesting-xevents-mask
   (apply #'xlib:make-event-mask group-interesting-xevents))
 
-(defconstant child-interesting-xevents
-  '(:key-press :button-press :button-release :structure-notify :exposure
-    :enter-window :leave-window))
+#+clx
+(eval-when (compile load eval)
+  (defconstant child-interesting-xevents
+    '(:key-press :button-press :button-release :structure-notify :exposure
+		 :enter-window :leave-window)))
+#+clx
 (defconstant child-interesting-xevents-mask
   (apply #'xlib:make-event-mask child-interesting-xevents))
 
-(defconstant random-typeout-xevents
-  '(:key-press :button-press :button-release :enter-window :leave-window
-    :exposure))
+#+clx
+(eval-when (compile load eval)
+  (defconstant random-typeout-xevents
+    '(:key-press :button-press :button-release :enter-window :leave-window
+		 :exposure)))
+#+clx
 (defconstant random-typeout-xevents-mask
   (apply #'xlib:make-event-mask random-typeout-xevents))
 
+
+#+clx
 (proclaim '(special ed::*open-paren-highlight-font*
 		    ed::*active-region-highlight-font*))
 
-(defparameter lisp-fonts-pathnames
-  '("/usr/misc/.lisp/lib/fonts/"
-    "/afs/cs.cmu.edu/unix/rt_mach/omega/usr/misc/.lisp/lib/fonts/"))
+#+clx
+(defparameter lisp-fonts-pathnames '("library:fonts/"))
 
+(proclaim '(special *editor-input* *real-editor-input*))
 
 (proclaim '(special *editor-input* *real-editor-input*))
 
@@ -217,12 +228,12 @@
 ;;; lisp.  It sets up process specific data structures.
 ;;;
 (defun init-raw-io (display)
+  #-clx (declare (ignore display))
   (setf *editor-windowed-input* nil)
-  (cond (display
+  (cond #+clx
+	(display
 	 (setf *editor-windowed-input* (ext:open-clx-display display))
 	 (setf *editor-input* (make-windowed-editor-input))
-	 (ext:carefully-add-font-paths *editor-windowed-input*
-				       lisp-fonts-pathnames)
 	 (setup-font-family *editor-windowed-input*
 			    (variable-value 'ed::default-font)
 			    "8x13u" "8x13bold"))
@@ -245,6 +256,7 @@
 ;;; font-map-size should be defined in font.lisp, but SETUP-FONT-FAMILY would
 ;;; assume it to be special, issuing a nasty warning.
 ;;;
+#+clx
 (defconstant font-map-size 16
   "The number of possible fonts in a font-map.")
 
@@ -255,6 +267,7 @@
 ;;; in lieu of "Active Region Highlighting Font" and "Open Paren Highlighting
 ;;; Font" when these are defined.
 ;;;
+#+clx
 (defun setup-font-family (display default-font default-highlight-font
 				  default-open-paren-font)
   (let* ((font-family (make-font-family :map (make-array font-map-size
@@ -293,6 +306,7 @@
 ;;; level, we want to deal with this error here returning nil if the font
 ;;; couldn't be opened.
 ;;;
+#+clx
 (defun setup-one-font (display font-name font-family-map index)
   (handler-case (let ((font (xlib:open-font display (namestring font-name))))
 		  (xlib:display-finish-output display)
@@ -300,7 +314,6 @@
     (xlib:name-error ()
      (warn "Cannot open font -- ~S" font-name)
      nil)))
-
 
 
 ;;;; HEMLOCK-BEEP.
@@ -313,36 +326,40 @@
 (defun tty-beep (&optional device stream)
   (declare (ignore device stream))
   (when (variable-value 'ed::bell-style)
-    (mach:unix-write 1 *editor-bell* 0 1)))
+    (unix:unix-write 1 *editor-bell* 0 1)))
 
 (proclaim '(special *current-window*))
 
 ;;; BITMAP-BEEP is used in Hemlock for beeping when running under windowed
 ;;; input.
 ;;;
-(defun bitmap-beep (display stream)
+#+clx
+(defun bitmap-beep (device stream)
   (declare (ignore stream))
-  (ecase (variable-value 'ed::bell-style)
-    (:border-flash
-     (flash-window-border *current-window*))
-    (:feep
-     (xlib:bell display)
-     (xlib:display-force-output display))
-    (:border-flash-and-feep
-     (xlib:bell display)
-     (xlib:display-force-output display)
-     (flash-window-border *current-window*))
-    (:flash
-     (flash-window *current-window*))
-    (:flash-and-feep
-     (xlib:bell display)
-     (xlib:display-force-output display)
-     (flash-window *current-window*))
-    ((nil) ;Do nothing.
-     )))
+  (let ((display (bitmap-device-display device)))
+    (ecase (variable-value 'ed::bell-style)
+      (:border-flash
+       (flash-window-border *current-window*))
+      (:feep
+       (xlib:bell display)
+       (xlib:display-force-output display))
+      (:border-flash-and-feep
+       (xlib:bell display)
+       (xlib:display-force-output display)
+       (flash-window-border *current-window*))
+      (:flash
+       (flash-window *current-window*))
+      (:flash-and-feep
+       (xlib:bell display)
+       (xlib:display-force-output display)
+       (flash-window *current-window*))
+      ((nil) ;Do nothing.
+       ))))
 
+#+clx
 (proclaim '(special *foreground-background-xor*))
 
+#+clx
 (defun flash-window-border (window)
   (let* ((hunk (window-hunk window))
 	 (xwin (bitmap-hunk-xwindow hunk))
@@ -358,17 +375,20 @@
 	 (bottom-y (- h top-border)))
     (xlib:with-gcontext (gcontext :function xlib::boole-xor
 				  :foreground *foreground-background-xor*)
-      (dotimes (i 8)
-	(xlib:draw-rectangle xwin gcontext 0 0 side-border h t)
+      (flet ((zot ()
+	       (xlib:draw-rectangle xwin gcontext 0 0 side-border h t)
+	       (xlib:draw-rectangle xwin gcontext side-border bottom-y
+				    top-width top-border t)
+	       (xlib:draw-rectangle xwin gcontext right-x 0 side-border h t)
+	       (xlib:draw-rectangle xwin gcontext side-border 0
+				    top-width top-border t)))
+	(zot)
 	(xlib:display-force-output display)
-	(xlib:draw-rectangle xwin gcontext side-border bottom-y
-			     top-width top-border t)
-	(xlib:display-force-output display)
-	(xlib:draw-rectangle xwin gcontext right-x 0 side-border h t)
-	(xlib:display-force-output display)
-	(xlib:draw-rectangle xwin gcontext side-border 0 top-width top-border t)
+	(sleep 0.1)
+	(zot)
 	(xlib:display-force-output display)))))
 
+#+clx
 (defun flash-window (window)
   (let* ((hunk (window-hunk window))
 	 (xwin (bitmap-hunk-xwindow hunk))
@@ -381,15 +401,14 @@
 				  :foreground *foreground-background-xor*)
       (xlib:draw-rectangle xwin gcontext 0 0 width height t)
       (xlib:display-force-output display)
+      (sleep 0.1)
       (xlib:draw-rectangle xwin gcontext 0 0 width height t)
       (xlib:display-force-output display))))
-
-
 
 (defun hemlock-beep (stream)
   "Using the current window, calls the device's beep function on stream."
   (let ((device (device-hunk-device (window-hunk (current-window)))))
-    (funcall (device-beep device) (bitmap-device-display device) stream)))
+    (funcall (device-beep device) device stream)))
 
 
 
@@ -452,6 +471,7 @@
 	 (cond ((not *editor-windowed-input*)
 		,@body)
 	       (t
+		#+clx
 		(ext:with-clx-event-handling
 		    (*editor-windowed-input* #'ext:object-set-event-handler)
 		  ,@body)))))
@@ -469,6 +489,7 @@
 ;;; Maybe bury/unbury hemlock window when we go to and from Lisp.
 ;;; This should do something more sophisticated when we know what that is.
 ;;; 
+#+clx
 (defun default-hemlock-window-mngt (display on)
   (let ((xparent (window-group-xparent
 		  (bitmap-hunk-window-group (window-hunk *current-window*))))
@@ -482,7 +503,7 @@
 	     (setf (xlib:window-priority xparent) :below))))
   (xlib:display-force-output display))
 
-(defvar *hemlock-window-mngt* #'default-hemlock-window-mngt
+(defvar *hemlock-window-mngt* nil;#'default-hemlock-window-mngt
   "This function is called by HEMLOCK-WINDOW, passing its arguments.  This may
    be nil.")
 
@@ -503,7 +524,7 @@
 
 ;;;; Current terminal character translation.
 
-(defconstant termcap-file "/etc/termcap")
+(defvar termcap-file "/etc/termcap")
 
 
 
@@ -666,6 +687,7 @@
 	   t)
 	(t nil)))
 
+#+clx
 (defun bitmap-show-mark (window x y time)
   (cond ((listen-editor-input *editor-input*))
 	(x (let* ((hunk (window-hunk window))
@@ -679,7 +701,6 @@
 	     t))
 	(t nil)))
 
-
 
 ;;;; Function description and defined-from.
 
@@ -688,23 +709,26 @@
 ;;; not defined in some file, then nil is returned.
 ;;; 
 (defun fun-defined-from-pathname (function)
-  "Takes a symbol or function and returns the pathname for the file the function
-   was defined in.  If it was not defined in some file, nil is returned."
-  (typecase function
-    (symbol (fun-defined-from-pathname (careful-symbol-function function)))
-    (compiled-function
-     (let* ((string (%primitive header-ref function
-				system:%function-defined-from-slot))
-	    (file (subseq string 0 (position #\space string :test #'char=))))
-       (declare (simple-string file))
-       (if (or (char= #\# (schar file 0))
-	       (string-equal file "lisp"))
-	   nil
-	   (if (string= file "/.." :end1 3)
-	       (pathname (subseq file
-				 (position #\/ file :test #'char= :start 4)))
-	       (pathname file)))))
-    (t nil)))
+  "Takes a symbol or function and returns the pathname for the file the
+   function was defined in.  If it was not defined in some file, nil is
+   returned."
+  (flet ((frob (code)
+	   (let ((info (kernel:%code-debug-info code)))
+	     (when info
+	       (let ((sources (c::debug-info-source info)))
+		 (when sources
+		   (let ((source (car sources)))
+		     (when (eq (c::debug-source-from source) :file)
+		       (c::debug-source-name source)))))))))
+    (typecase function
+      (symbol (fun-defined-from-pathname (fdefinition function)))
+      (kernel:byte-closure
+       (fun-defined-from-pathname (kernel:byte-closure-function function)))
+      (kernel:byte-function
+       (frob (c::byte-function-component function)))
+      (function
+       (frob (kernel:function-code-header (kernel:%function-self function))))
+      (t nil))))
 
 
 (defvar *editor-describe-stream*
@@ -729,7 +753,8 @@
    *standard-output*."
   (describe fun)
   (when (and (compiled-function-p fun)
-	     (not (eq (%primitive header-ref fun %function-name-slot) sym)))
+	     (not (eq (kernel:%function-name (kernel:%closure-function fun))
+		      sym)))
     (let ((doc (documentation sym 'function)))
       (when doc
 	(format t "~&Function documentation for ~S:" sym)
@@ -743,31 +768,38 @@
 
 
 ;;;; X Stuff.
-
 ;;; Setting window cursors ...
 ;;; 
 
+#+clx
 (proclaim '(special *default-foreground-pixel* *default-background-pixel*))
 
+#+clx
 (defvar *hemlock-cursor* nil "Holds cursor for Hemlock windows.")
 
 ;;; DEFINE-WINDOW-CURSOR in shoved on the "Make Window Hook".
 ;;; 
+#+clx
 (defun define-window-cursor (window)
   (setf (xlib:window-cursor (bitmap-hunk-xwindow (window-hunk window)))
 	*hemlock-cursor*))
 
 ;;; These are set in INIT-BITMAP-SCREEN-MANAGER and REVERSE-VIDEO-HOOK-FUN.
 ;;;
+#+clx
 (defvar *cursor-foreground-color* nil)
+#+clx
 (defvar *cursor-background-color* nil)
+#+clx
 (defun make-white-color () (xlib:make-color :red 1.0 :green 1.0 :blue 1.0))
+#+clx
 (defun make-black-color () (xlib:make-color :red 0.0 :green 0.0 :blue 0.0))
 
 
 ;;; GET-HEMLOCK-CURSOR is used in INIT-BITMAP-SCREEN-MANAGER to load the
 ;;; hemlock cursor for DEFINE-WINDOW-CURSOR.
 ;;;
+#+clx
 (defun get-hemlock-cursor (display)
   (when *hemlock-cursor* (xlib:free-cursor *hemlock-cursor*))
   (let* ((cursor-file (truename (variable-value 'ed::cursor-bitmap-file)))
@@ -785,6 +817,7 @@
       (xlib:free-pixmap cursor-pixmap)
       (when mask-pixmap (xlib:free-pixmap mask-pixmap)))))
 
+#+clx
 (defun get-cursor-pixmap (root pathname)
   (let* ((image (xlib:read-bitmap-file pathname))
 	 (pixmap (xlib:create-pixmap :width 16 :height 16
@@ -801,9 +834,11 @@
 ;;; Setting up grey borders ...
 ;;; 
 
+#+clx
 (defparameter hemlock-grey-bitmap-data
   '(#*10 #*01))
 
+#+clx
 (defun get-hemlock-grey-pixmap (display)
   (let* ((screen (xlib:display-default-screen display))
 	 (depth (xlib:screen-root-depth screen))
@@ -826,25 +861,28 @@
 ;;; Cut Buffer manipulation ...
 ;;;
 
+#+clx
 (defun store-cut-string (display string)
   (check-type string simple-string)
   (setf (xlib:cut-buffer display) string))
 
+#+clx
 (defun fetch-cut-string (display)
   (xlib:cut-buffer display))
 
 
 ;;; Window naming ...
 ;;;
+#+clx
 (defun set-window-name-for-buffer-name (buffer new-name)
   (dolist (ele (buffer-windows buffer))
     (xlib:set-standard-properties (bitmap-hunk-xwindow (window-hunk ele))
 				  :icon-name new-name)))
   
+#+clx
 (defun set-window-name-for-window-buffer (window new-buffer)
   (xlib:set-standard-properties (bitmap-hunk-xwindow (window-hunk window))
 				:icon-name (buffer-name new-buffer)))
-
 
 
 ;;;; Some hacks for supporting Hemlock under Mach.
@@ -864,44 +902,28 @@
   (cdr (assoc :termcap *environment-list* :test #'eq)))
 
 
-
-(defvar *editor-buffer* (make-string 256))
-
 ;;; GET-EDITOR-TTY-INPUT reads from stream's Unix file descriptor queuing events
 ;;; in the stream's queue.
 ;;;
 (defun get-editor-tty-input (fd)
-  (let* ((buf *editor-buffer*)
-	 (len (mach:unix-read fd buf 256))
-	 (i 0))
-    (declare (simple-string buf) (fixnum len i))
-    (loop
-      (when (>= i len) (return t))
-      (q-event *real-editor-input*
-	       (ext:char-key-event (schar buf i)))
-      (incf i))))
-
-;;; This is used to get listening during smart redisplay to pick up input
-;;; in between displaying each line by listening longer (or slowing down
-;;; line output depending on your model).  10-20 seems to be good for 9600
-;;; baud, and 250 seems to do it with 1200 baud.
-;;; 
-(defparameter listen-iterations-hack 1) ; 10-20 seems to really pick up input.
+  (alien:with-alien ((buf (alien:array c-call:unsigned-char 256)))
+    (multiple-value-bind
+	(len errno)
+	(unix:unix-read fd (alien:alien-sap buf) 256)
+      (declare (type (or null fixnum) len))
+      (unless len
+	(error "Problem with tty input: ~S"
+	       (unix:get-unix-error-msg errno)))
+      (dotimes (i len t)
+	(q-event *real-editor-input*
+		 (ext:char-key-event (code-char (alien:deref buf i))))))))
 
 (defun editor-tty-listen (stream)
-  (mach::with-trap-arg-block mach::int1 nc
-    (dotimes (i listen-iterations-hack nil)
-      (multiple-value-bind (val err) 
-			   (mach::Unix-ioctl (tty-editor-input-fd stream)
-					     mach::FIONREAD
-					     (lisp::alien-value-sap
-					      mach::int1))
-	(declare (ignore err))
-	(when (and val
-		   (> (alien-access (mach::int1-int (alien-value nc))) 0))
-	  (return t))))))
-
-
+  (alien:with-alien ((nc c-call:int))
+    (and (unix:unix-ioctl (tty-editor-input-fd stream)
+			  unix::FIONREAD
+			  (alien:alien-sap (alien:addr nc)))
+	 (> nc 0))))
 
 (defvar old-flags)
 
@@ -909,157 +931,233 @@
 
 (defvar old-ltchars)
 
+#+hpux
+(progn
+  (defvar old-c-iflag)
+  (defvar old-c-oflag)
+  (defvar old-c-cflag)
+  (defvar old-c-lflag)
+  (defvar old-c-cc))
+
 (defun setup-input ()
   (let ((fd *editor-file-descriptor*))
-    (when (mach:unix-isatty 0)
-      (mach:with-trap-arg-block mach:sgtty sg
+    (when (unix:unix-isatty 0)
+      #+hpux
+      (alien:with-alien ((tios (alien:struct unix:termios)))
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCGETP
-			     (lisp::alien-value-sap mach:sgtty))
-	  (if (null val)
-	      (error "Could not get tty information, unix error ~S."
-		     (mach:get-unix-error-msg err)))
-	  (let ((flags (alien-access (mach::sgtty-flags (alien-value sg)))))
-	    (setq old-flags flags)
-	    (setf (alien-access (mach::sgtty-flags (alien-value sg)))
-		  (logand (logior flags mach::tty-cbreak)
-			  (lognot mach::tty-echo)
-			  (lognot mach::tty-crmod)))
-	    (multiple-value-bind
-		(val err)
-		(mach:unix-ioctl fd mach:TIOCSETP
-				 (lisp::alien-value-sap mach:sgtty))
-	      (if (null val)
-		  (error "Could not set tty information, unix error ~S."
-			 (mach:get-unix-error-msg err)))))))
-      (mach:with-trap-arg-block mach:tchars tc
+	    (unix:unix-tcgetattr fd (alien:alien-sap tios))
+	  (when (null val)
+	    (error "Could not tcgetattr, unix error ~S."
+		   (unix:get-unix-error-msg err))))
+	(setf old-c-iflag (alien:slot tios 'unix:c-iflag))
+	(setf old-c-oflag (alien:slot tios 'unix:c-oflag))
+	(setf old-c-cflag (alien:slot tios 'unix:c-cflag))
+	(setf old-c-lflag (alien:slot tios 'unix:c-lflag))
+	(setf old-c-cc
+	      (vector (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:veof)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vquit)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vstart)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vstop)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vsusp)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vmin)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vtime)))
+	(setf (alien:slot tios 'unix:c-lflag)
+	      (logand (alien:slot tios 'unix:c-lflag)
+		      (lognot (logior unix:tty-echo unix:tty-icanon))))
+	(setf (alien:slot tios 'unix:c-iflag)
+	      (logand (alien:slot tios 'unix:c-iflag)
+		      (lognot (logior unix:tty-icrnl unix:tty-ixon))))
+	(setf (alien:slot tios 'unix:c-oflag)
+	      (logand (alien:slot tios 'unix:c-oflag) (lognot unix:tty-ocrnl)))
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:veof) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)
+	      (if *editor-windowed-input* #xff 28))
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vquit) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vstart) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vstop) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vsusp) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vmin) 1)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vtime) 0)
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCGETC
-			     (lisp::alien-value-sap mach:tchars))
-	  (if (null val)
-	      (error "Could not get tty tchars information, unix error ~S."
-		     (mach:get-unix-error-msg err)))
-	  (setq old-tchars
-		(vector (alien-access (mach::tchars-intrc (alien-value tc)))
-			(alien-access (mach::tchars-quitc (alien-value tc)))
-			(alien-access (mach::tchars-startc (alien-value tc)))
-			(alien-access (mach::tchars-stopc (alien-value tc)))
-			(alien-access (mach::tchars-eofc (alien-value tc)))
-			(alien-access (mach::tchars-brkc (alien-value tc))))))
-	(setf (alien-access (mach::tchars-intrc (alien-value tc)))
+	    (unix:unix-tcsetattr fd unix:tcsaflush (alien:alien-sap tios))
+	  (when (null val)
+	    (error "Could not tcsetattr, unix error ~S."
+		   (unix:get-unix-error-msg err)))))
+      #-hpux
+      (alien:with-alien ((sg (alien:struct unix:sgttyb)))
+	(multiple-value-bind
+	    (val err)
+	    (unix:unix-ioctl fd unix:TIOCGETP (alien:alien-sap sg))
+	  (unless val
+	    (error "Could not get tty information, unix error ~S."
+		   (unix:get-unix-error-msg err))))
+	(let ((flags (alien:slot sg 'unix:sg-flags)))
+	  (setq old-flags flags)
+	  (setf (alien:slot sg 'unix:sg-flags)
+		(logand #-hpux (logior flags unix:tty-cbreak)
+			(lognot unix:tty-echo)
+			(lognot unix:tty-crmod)))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-ioctl fd unix:TIOCSETP (alien:alien-sap sg))
+	    (if (null val)
+		(error "Could not set tty information, unix error ~S."
+		       (unix:get-unix-error-msg err))))))
+      #-hpux
+      (alien:with-alien ((tc (alien:struct unix:tchars)))
+	(multiple-value-bind
+	    (val err)
+	    (unix:unix-ioctl fd unix:TIOCGETC (alien:alien-sap tc))
+	  (unless val
+	    (error "Could not get tty tchars information, unix error ~S."
+		   (unix:get-unix-error-msg err))))
+	(setq old-tchars
+	      (vector (alien:slot tc 'unix:t-intrc)
+		      (alien:slot tc 'unix:t-quitc)
+		      (alien:slot tc 'unix:t-startc)
+		      (alien:slot tc 'unix:t-stopc)
+		      (alien:slot tc 'unix:t-eofc)
+		      (alien:slot tc 'unix:t-brkc)))
+	(setf (alien:slot tc 'unix:t-intrc)
 	      (if *editor-windowed-input* -1 28))
-	(setf (alien-access (mach::tchars-quitc (alien-value tc))) -1)
-	(setf (alien-access (mach::tchars-startc (alien-value tc))) -1)
-	(setf (alien-access (mach::tchars-stopc (alien-value tc))) -1)
-	(setf (alien-access (mach::tchars-eofc (alien-value tc))) -1)
-	(setf (alien-access (mach::tchars-brkc (alien-value tc))) -1)
+	(setf (alien:slot tc 'unix:t-quitc) -1)
+	(setf (alien:slot tc 'unix:t-startc) -1)
+	(setf (alien:slot tc 'unix:t-stopc) -1)
+	(setf (alien:slot tc 'unix:t-eofc) -1)
+	(setf (alien:slot tc 'unix:t-brkc) -1)
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCSETC
-			     (lisp::alien-value-sap mach:tchars))
-	  (if (null val) (error "Failed to set tchars, unix error ~S."
-				(mach:get-unix-error-msg err)))))
-      (mach:with-trap-arg-block mach:ltchars tc
-	(multiple-value-bind
-	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCGLTC
-			     (lisp::alien-value-sap mach:ltchars))
-	  (if (null val)
-	      (error "Could not get tty ltchars information, unix error ~S."
-		     (mach:get-unix-error-msg err)))
-	  (setq old-ltchars
-		(vector (alien-access (mach::ltchars-suspc (alien-value tc)))
-			(alien-access (mach::ltchars-dsuspc (alien-value tc)))
-			(alien-access (mach::ltchars-rprntc (alien-value tc)))
-			(alien-access (mach::ltchars-flushc (alien-value tc)))
-			(alien-access (mach::ltchars-werasc (alien-value tc)))
-			(alien-access (mach::ltchars-lnextc (alien-value tc))))))
-	(setf (alien-access (mach::ltchars-suspc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-dsuspc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-rprntc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-flushc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-werasc (alien-value tc))) -1)
-	(setf (alien-access (mach::ltchars-lnextc (alien-value tc))) -1)
-	(multiple-value-bind
-	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCSLTC
-			     (lisp::alien-value-sap mach:ltchars))
-	  (if (null val) (error "Failed to set ltchars, unix error ~S."
-				(mach:get-unix-error-msg err))))))))
+	    (unix:unix-ioctl fd unix:TIOCSETC (alien:alien-sap tc))
+	  (unless val
+	    (error "Failed to set tchars, unix error ~S."
+		   (unix:get-unix-error-msg err)))))
 
-	
+      ;; Needed even under HpUx to suppress dsuspc.
+      (alien:with-alien ((tc (alien:struct unix:ltchars)))
+	(multiple-value-bind
+	    (val err)
+	    (unix:unix-ioctl fd unix:TIOCGLTC (alien:alien-sap tc))
+	  (unless val
+	    (error "Could not get tty ltchars information, unix error ~S."
+		   (unix:get-unix-error-msg err))))
+	(setq old-ltchars
+	      (vector (alien:slot tc 'unix:t-suspc)
+		      (alien:slot tc 'unix:t-dsuspc)
+		      (alien:slot tc 'unix:t-rprntc)
+		      (alien:slot tc 'unix:t-flushc)
+		      (alien:slot tc 'unix:t-werasc)
+		      (alien:slot tc 'unix:t-lnextc)))
+	(setf (alien:slot tc 'unix:t-suspc) -1)
+	(setf (alien:slot tc 'unix:t-dsuspc) -1)
+	(setf (alien:slot tc 'unix:t-rprntc) -1)
+	(setf (alien:slot tc 'unix:t-flushc) -1)
+	(setf (alien:slot tc 'unix:t-werasc) -1)
+	(setf (alien:slot tc 'unix:t-lnextc) -1)
+	(multiple-value-bind
+	    (val err)
+	    (unix:unix-ioctl fd unix:TIOCSLTC (alien:alien-sap tc))
+	  (unless val
+	    (error "Failed to set ltchars, unix error ~S."
+		   (unix:get-unix-error-msg err))))))))
+
 (defun reset-input ()
-  (when (mach:unix-isatty 0)
-    (if (boundp 'old-flags)
-	(let ((fd *editor-file-descriptor*))
-	  (mach:with-trap-arg-block mach:sgtty sg
+  (when (unix:unix-isatty 0)
+    (let ((fd *editor-file-descriptor*))
+      #+hpux
+      (when (boundp 'old-c-lflag)
+	(alien:with-alien ((tios (alien:struct unix:termios)))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-tcgetattr fd (alien:alien-sap tios))
+	    (when (null val)
+	      (error "Could not tcgetattr, unix error ~S."
+		     (unix:get-unix-error-msg err))))
+	  (setf (alien:slot tios 'unix:c-iflag) old-c-iflag)
+	  (setf (alien:slot tios 'unix:c-oflag) old-c-oflag)
+	  (setf (alien:slot tios 'unix:c-cflag) old-c-cflag)
+	  (setf (alien:slot tios 'unix:c-lflag) old-c-lflag)
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp)
+		(svref old-c-cc 0))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:veof)
+		(svref old-c-cc 1))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)
+		(svref old-c-cc 2))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vquit)
+		(svref old-c-cc 3))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vstart)
+		(svref old-c-cc 4))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vstop)
+		(svref old-c-cc 5))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vsusp)
+		(svref old-c-cc 6))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vmin)
+		(svref old-c-cc 7))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vtime)
+		(svref old-c-cc 8))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-tcsetattr fd unix:tcsaflush (alien:alien-sap tios))
+	    (when (null val)
+	      (error "Could not tcsetattr, unix error ~S."
+		     (unix:get-unix-error-msg err))))))
+      #-hpux
+      (when (boundp 'old-flags)
+	(alien:with-alien ((sg (alien:struct unix:sgttyb)))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-ioctl fd unix:TIOCGETP (alien:alien-sap sg))
+	    (unless val
+	      (error "Could not get tty information, unix error ~S."
+		     (unix:get-unix-error-msg err)))
+	    (setf (alien:slot sg 'unix:sg-flags) old-flags)
 	    (multiple-value-bind
 		(val err)
-		(mach:unix-ioctl fd mach:TIOCGETP
-				 (lisp::alien-value-sap mach:sgtty))
-	      (if (null val)
-		  (error "Could not get tty information, unix error ~S."
-			 (mach:get-unix-error-msg err)))
-	      (setf (alien-access (mach::sgtty-flags (alien-value sg)))
-		    old-flags)
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl fd mach:TIOCSETP
-				   (lisp::alien-value-sap mach:sgtty))
-		(if (null val)
-		    (error "Could not set tty information, unix error ~S."
-			   (mach:get-unix-error-msg err))))))
-	  (cond ((and (boundp 'old-tchars)
-		      (simple-vector-p old-tchars)
-		      (eq (length old-tchars) 6))
-		 (mach:with-trap-arg-block mach:tchars tc
-		   (setf (alien-access (mach::tchars-intrc (alien-value tc)))
-			 (svref old-tchars 0))
-		   (setf (alien-access (mach::tchars-quitc (alien-value tc)))
-			 (svref old-tchars 1))
-		   (setf (alien-access (mach::tchars-startc (alien-value tc)))
-			 (svref old-tchars 2))
-		   (setf (alien-access (mach::tchars-stopc (alien-value tc)))
-			 (svref old-tchars 3))
-		   (setf (alien-access (mach::tchars-eofc (alien-value tc)))
-			 (svref old-tchars 4))
-		   (setf (alien-access (mach::tchars-brkc (alien-value tc)))
-			 (svref old-tchars 5))
-		   (multiple-value-bind
-		       (val err)
-		       (mach:unix-ioctl fd mach:TIOCSETC
-					(lisp::alien-value-sap mach:tchars))
-		     (if (null val)
-			 (error "Failed to set tchars, unix error ~S."
-				(mach:get-unix-error-msg err)))))))
-	  (cond ((and (boundp 'old-ltchars)
-		      (simple-vector-p old-ltchars)
-		      (eq (length old-ltchars) 6))
-		 (mach:with-trap-arg-block mach:ltchars tc
-		   (setf (alien-access (mach::ltchars-suspc (alien-value tc)))
-			 (svref old-ltchars 0))
-		   (setf (alien-access (mach::ltchars-dsuspc (alien-value tc)))
-			 (svref old-ltchars 1))
-		   (setf (alien-access (mach::ltchars-rprntc (alien-value tc)))
-			 (svref old-ltchars 2))
-		   (setf (alien-access (mach::ltchars-flushc (alien-value tc)))
-			 (svref old-ltchars 3))
-		   (setf (alien-access (mach::ltchars-werasc (alien-value tc)))
-			 (svref old-ltchars 4))
-		   (setf (alien-access (mach::ltchars-lnextc (alien-value tc)))
-			 (svref old-ltchars 5))
-		   (multiple-value-bind
-		       (val err)
-		       (mach:unix-ioctl fd mach:TIOCSLTC
-					(lisp::alien-value-sap mach:ltchars))
-		     (if (null val)
-			 (error "Failed to set ltchars, unix error ~S."
-				(mach:get-unix-error-msg err)))))))))))
+		(unix:unix-ioctl fd unix:TIOCSETP (alien:alien-sap sg))
+	      (unless val
+		(error "Could not set tty information, unix error ~S."
+		       (unix:get-unix-error-msg err)))))))
+      #-hpux
+      (when (and (boundp 'old-tchars)
+		 (simple-vector-p old-tchars)
+		 (eq (length old-tchars) 6))
+	(alien:with-alien ((tc (alien:struct unix:tchars)))
+	  (setf (alien:slot tc 'unix:t-intrc) (svref old-tchars 0))
+	  (setf (alien:slot tc 'unix:t-quitc) (svref old-tchars 1))
+	  (setf (alien:slot tc 'unix:t-startc) (svref old-tchars 2))
+	  (setf (alien:slot tc 'unix:t-stopc) (svref old-tchars 3))
+	  (setf (alien:slot tc 'unix:t-eofc) (svref old-tchars 4))
+	  (setf (alien:slot tc 'unix:t-brkc) (svref old-tchars 5))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-ioctl fd unix:TIOCSETC (alien:alien-sap tc))
+	    (unless val
+	      (error "Failed to set tchars, unix error ~S."
+		     (unix:get-unix-error-msg err))))))
 
+      (when (and (boundp 'old-ltchars)
+		 (simple-vector-p old-ltchars)
+		 (eq (length old-ltchars) 6))
+	(alien:with-alien ((tc (alien:struct unix:ltchars)))
+	  (setf (alien:slot tc 'unix:t-suspc) (svref old-ltchars 0))
+	  (setf (alien:slot tc 'unix:t-dsuspc) (svref old-ltchars 1))
+	  (setf (alien:slot tc 'unix:t-rprntc) (svref old-ltchars 2))
+	  (setf (alien:slot tc 'unix:t-flushc) (svref old-ltchars 3))
+	  (setf (alien:slot tc 'unix:t-werasc) (svref old-ltchars 4))
+	  (setf (alien:slot tc 'unix:t-lnextc) (svref old-ltchars 5))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-ioctl fd unix:TIOCSLTC (alien:alien-sap tc))
+	    (unless val
+	      (error "Failed to set ltchars, unix error ~S."
+		     (unix:get-unix-error-msg err)))))))))
 
 (defun pause-hemlock ()
   "Pause hemlock and pop out to the Unix Shell."
-  (mach:unix-kill (mach:unix-getpid) mach:sigtstp)
+  (system:without-hemlock
+   (unix:unix-kill (unix:unix-getpid) :sigstop))
   T)

@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/fill.lisp,v 1.3 1994/02/11 21:53:06 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Written by Bill Chiles
@@ -82,7 +85,6 @@
 (setf (character-attribute :sentence-closing-char #\>) 1)
 
 
-
 ;;;; -- Commands --
 
 (defcommand "Auto Fill Mode" (p)
@@ -118,7 +120,6 @@
 (defcommand "Auto Fill Linefeed" (p)
   "Does an immediate CRLF inserting Fill Prefix if it exists."
   "Does an immediate CRLF inserting Fill Prefix if it exists."
-  (declare (ignore p))
   (let ((point (current-point)))
     (check-fill-prefix (value fill-prefix) (value fill-column) point)
     (%auto-fill-space point nil)
@@ -138,7 +139,6 @@
    followed by a newline."
   "Does an Auto Fill Space with a prefix argument of 0
    followed by a newline."
-  (declare (ignore p))
   (let ((point (current-point)))
     (check-fill-prefix (value fill-prefix) (value fill-column) point)
     (%auto-fill-space point nil)
@@ -188,7 +188,6 @@
 (defcommand "Fill Region" (p)
   "Fill text from point to mark."
   "Fill text from point to mark."
-  (declare (ignore p))
   (let* ((region (current-region))
 	 (prefix (value fill-prefix))
 	 (column (if p (abs p) (value fill-column))))
@@ -226,6 +225,7 @@
 	  :value val  :buffer (current-buffer))
 	(message "Fill Prefix now ~:[empty~;~:*~S~]" val)))))
 
+(declaim (optimize (speed 2))); turn off byte compilation.
 
 ;;;; -- Auto Filling --
 

@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spellcoms.lisp,v 1.3 1994/02/11 21:53:54 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Written by Bill Chiles and Rob Maclachlan.
@@ -14,7 +17,7 @@
 ;;; checking/correcting stuff in Spell-Corr.Lisp and the dictionary
 ;;; augmenting stuff in Spell-Augment.Lisp.
 
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 
 
@@ -25,7 +28,9 @@
 
 (defun print-spell-info (obj str n)
   (declare (ignore n))
-  (format str "#<Spell Info ~S>" (namestring (spell-info-pathname obj))))
+  (let ((pn (spell-info-pathname obj)))
+    (format str "#<Spell Info~@[ ~S~]>"
+	    (and pn (namestring pn)))))
 
 
 (defattribute "Spell Word Character"
@@ -641,7 +646,7 @@
 				      (name (spell-info-pathname info)))
   (when (spell-info-insertions info)
     (with-open-file (stream name
-			    :direction :output :element-type 'string-char
+			    :direction :output :element-type 'base-char
 			    :if-exists :append :if-does-not-exist :create)
       (dolist (w (spell-info-insertions info))
 	(write-line w stream)))

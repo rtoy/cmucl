@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/morecoms.lisp,v 1.3 1994/02/11 21:53:36 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Written by Bill Chiles and Rob MacLachlan.
@@ -136,7 +139,9 @@
 		     (insert-character mark #\space))
 		   (mark-before mark)))
 		((mark-before mark))
-		(t (return)))))
+		(t
+		 (setq errorp t)
+		 (return)))))
       (kill-characters point (- n))
       (when errorp
 	(editor-error "There were not ~D characters before point." n)))))
@@ -273,7 +278,7 @@
   "Display stats on allocated storage."
   "Run Room into a With-Random-Typeout window."
   (declare (ignore p))
-  (with-pop-up-display (*standard-output* :height 19)
+  (with-pop-up-display (*standard-output*)
     (room)))
 
 
@@ -618,7 +623,6 @@
    directory at point."
   "Insert a listing of the first non-blank line after each page mark at
    the beginning of the buffer."
-  (declare (ignore p))
   (let ((point (current-point)))
     (unless p
       (push-buffer-mark (copy-mark point))

@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC).
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/diredcoms.lisp,v 1.3 1994/02/11 21:52:56 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Simple directory editing support.
@@ -331,11 +334,8 @@
     (editor-error "Not in Dired buffer."))
   (let ((dirs (pathname-directory
 	       (dired-info-pathname (value dired-information)))))
-    (declare (simple-vector dirs))
     (dired-command nil
-		   (make-pathname
-		    :device :absolute
-		    :directory (subseq dirs 0 (1- (length dirs)))))))
+		   (truename (make-pathname :directory (nconc dirs '(:UP)))))))
 
 
 
@@ -434,14 +434,12 @@
 (defcommand "Dired Next File" (p)
   "Moves to next undeleted file."
   "Moves to next undeleted file."
-  (declare (ignore p))
   (unless (dired-line-offset (current-point) (or p 1))
     (editor-error "Not enough lines.")))
 
 (defcommand "Dired Previous File" (p)
   "Moves to previous undeleted file."
   "Moves to next undeleted file."
-  (declare (ignore p))
   (unless (dired-line-offset (current-point) (or p -1))
     (editor-error "Not enough lines.")))
 
@@ -760,15 +758,17 @@
 	      (push (cons pathname (file-write-date pathname))
 		    marked-files)))))))
 
-;;; ARRAY-ELEMENT-FROM-MARK counts the lines between it and the beginning
-;;; of the buffer.  The number is used to index vector as if each line
-;;; mapped to an element starting with the zero'th element (lines are
-;;; numbered starting at 1).
+;;; ARRAY-ELEMENT-FROM-MARK -- Internal Interface.
+;;;
+;;; This counts the lines between it and the beginning of the buffer.  The
+;;; number is used to index vector as if each line mapped to an element
+;;; starting with the zero'th element (lines are numbered starting at 1).
+;;; This must use AREF since some modes use this with extendable vectors.
 ;;;
 (defun array-element-from-mark (mark vector
 				&optional (error-msg "Invalid line."))
   (when (blank-line-p (mark-line mark)) (editor-error error-msg))
-  (svref vector
+  (aref vector
 	 (1- (count-lines (region
 			   (buffer-start-mark (line-buffer (mark-line mark)))
 			   mark)))))
@@ -787,7 +787,7 @@
 ;;; one directory.
 ;;;
 (defun dired-directorify (pathname)
-  (let ((directory (lisp::predict-name pathname t)))
+  (let ((directory (ext:unix-namestring pathname)))
     (if (directoryp directory)
 	directory
 	(pathname (concatenate 'simple-string (namestring directory) "/")))))

@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/screen.lisp,v 1.3 1994/02/11 21:53:44 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Written by Bill Chiles.
@@ -42,17 +45,20 @@
 
 ;;;; Window operations.
 
-(defun make-window (start &key
-			  (modelinep t)
-			  (device nil)
-			  window
+(defun make-window (start &key (modelinep t) (device nil) window
+			  (proportion .5)			  
 			  (font-family *default-font-family*)
-			  (ask-user nil)
-			  x y
+			  (ask-user nil) x y
 			  (width (value ed::default-window-width))
 			  (height (value ed::default-window-height)))
-  "Make a window that displays text starting at the mark Start.  The default
-   action is to split the current window to make room for the new window.
+  "Make a window that displays text starting at the mark start.  The default
+   action is to make the new window a proportion of the current window's height
+   to make room for the new window.
+
+   Proportion determines what proportion of the current window's height
+   the new window will use.  The current window retains whatever space left
+   after accommodating the new one.  The default is to split the current window
+   in half.
 
    Modelinep specifies whether the window should display buffer modelines.
 
@@ -74,7 +80,7 @@
   (let* ((device (or device (device-hunk-device (window-hunk (current-window)))))
 	 (window (funcall (device-make-window device)
 			  device start modelinep window font-family
-			  ask-user x y width height)))
+			  ask-user x y width height proportion)))
     (unless window (editor-error "Could not make a window."))
     (invoke-hook ed::make-window-hook window)
     window))
@@ -188,7 +194,7 @@
   (list (make-modeline-field
 	 :name :more-prompt
 	 :function #'(lambda (buffer window)
-		       (declare (ignore buffer window))
+		       (declare (ignore window))
 		       (ecase *more-prompt-action*
 			 (:more "--More--")
 			 (:flush "--Flush--")

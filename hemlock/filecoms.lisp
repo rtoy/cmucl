@@ -1,15 +1,19 @@
 ;;; -*- Package: Hemlock; Log: hemlock.log -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/filecoms.lisp,v 1.4 1994/02/11 21:53:02 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains file/buffer manipulating commands.
 ;;;
+
 (in-package "HEMLOCK")
 
 
@@ -271,8 +275,8 @@
       (unless (eq b buffer)
 	(let ((bpn (buffer-pathname b)))
 	  (when (equal bpn buffer-pn)
-	    (message "Buffer ~A also contains ~A."
-		     (buffer-name b) (namestring buffer-pn))
+	    (loud-message "Buffer ~A also contains ~A."
+			  (buffer-name b) (namestring buffer-pn))
 	    (return)))))))
 
 
@@ -282,15 +286,15 @@
 
 (defcommand "Revert File" (p)
   "Unless in Save Mode, reads in the last saved version of the file in
-  the current buffer. When in Save Mode, reads in the last checkpoint or
-  the last saved version, whichever is more recent. An argument will always
-  force Revert File to use the last saved version. In either case, if the
-  buffer has been modified and \"Revert File Confirm\" is true, then Revert
-  File will ask for confirmation beforehand. An attempt is made to maintain
-  the point's relative position."
+   the current buffer. When in Save Mode, reads in the last checkpoint or
+   the last saved version, whichever is more recent. An argument will always
+   force Revert File to use the last saved version. In either case, if the
+   buffer has been modified and \"Revert File Confirm\" is true, then Revert
+   File will ask for confirmation beforehand. An attempt is made to maintain
+   the point's relative position."
   "With an argument reverts to the last saved version of the file in the
-  current buffer. Without, reverts to the last checkpoint or last saved
-  version, whichever is more recent."
+   current buffer. Without, reverts to the last checkpoint or last saved
+   version, whichever is more recent."
   (let* ((buffer (current-buffer))
 	 (buffer-pn (buffer-pathname buffer))
 	 (point (current-point))
@@ -326,7 +330,8 @@
   (let* ((buffer-pn (buffer-pathname buffer))
 	 (buffer-pn-date (file-write-date buffer-pn))
 	 (checkpoint-pn (get-checkpoint-pathname buffer))
-	 (checkpoint-pn-date (file-write-date checkpoint-pn)))
+	 (checkpoint-pn-date (and checkpoint-pn
+				  (file-write-date checkpoint-pn))))
     (cond (checkpoint-pn-date
 	   (if (> checkpoint-pn-date (or buffer-pn-date 0))
 	       (values checkpoint-pn t)
@@ -340,11 +345,11 @@
 
 (defcommand "Find File" (p &optional pathname)
   "Visit a file in its own buffer.
-  If the file is already in some buffer, select that buffer,
-  otherwise make a new buffer with the same name as the file and
-  read the file into it."
+   If the file is already in some buffer, select that buffer,
+   otherwise make a new buffer with the same name as the file and
+   read the file into it."
   "Make a buffer containing the file Pathname current, creating a buffer
-  if necessary.  The buffer is returned."
+   if necessary.  The buffer is returned."
   (declare (ignore p))
   (let* ((pn (or pathname
 		 (prompt-for-file 
@@ -369,13 +374,13 @@
 		     :key #'buffer-pathname :test #'equal)))
     (cond ((not found)
 	   (let* ((name (pathname-to-buffer-name trial-pathname))
-		  (buffer (getstring name *buffer-names*))
-		  (use (if buffer
+		  (found (getstring name *buffer-names*))
+		  (use (if found
 			   (prompt-for-buffer
 			    :prompt "Buffer to use: "
 			    :help
   "Buffer name in use; give another buffer name, or confirm to reuse."
-			    :default buffer :must-exist nil)
+			    :default found :must-exist nil)
 			   (make-buffer name)))
 		  (buffer (if (stringp use) (make-buffer use) use)))
 	     (when (and (buffer-modified buffer)
@@ -456,6 +461,7 @@
    file exists, set the buffer's pathname to the probed pathname; else, set it
    to pathname merged with DEFAULT-DIRECTORY.  Set \"Pathname Defaults\" to the
    same thing.  Process the file options, and then invoke \"Read File Hook\"."
+  (setf (buffer-writable buffer) t)
   (delete-region (buffer-region buffer))
   (let* ((pathname (pathname pathname))
 	 (probed-pathname (probe-file pathname)))
@@ -777,6 +783,14 @@
     (message "Buffer ~S is now ~:[read-only~;writable~]."
 	     (buffer-name buffer)
 	     (setf (buffer-writable buffer) (not (buffer-writable buffer))))))
+
+(defcommand "Set Buffer Writable" (p)
+  "Make the current buffer modifiable."
+  "Make the current buffer modifiable."
+  (declare (ignore p))
+  (let ((buffer (current-buffer)))
+    (setf (buffer-writable buffer) t)
+    (message "Buffer ~S is now writable." (buffer-name buffer))))
 
 (defcommand "Kill Buffer" (p &optional buffer-name)
   "Prompts for a buffer to delete.

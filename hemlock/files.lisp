@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/files.lisp,v 1.3 1994/02/11 21:53:04 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Hemlock File manipulation functions.
@@ -18,6 +21,21 @@
 
 
 
+;;;; Utility functions.
+
+(defun find-char-from-sap (sap start end char)
+  (declare (type system-area-pointer sap)
+	   (type (integer 0 (#.most-positive-fixnum)) start end)
+	   (type base-char char))
+  (do ((index start (1+ index))
+       (code (char-code char)))
+      ((>= index end) nil)
+    (declare (type (integer 0 #.most-positive-fixnum) index)
+	     (type (unsigned-byte 8) code))
+    (when (= (sap-ref-8 sap index) code)
+      (return index))))
+
+
 ;;; Read-File:
 
 (defun read-file (pathname mark)
@@ -25,36 +43,36 @@
   (with-mark ((mark mark :left-inserting))
     (let* ((tn (truename pathname))
 	   (name (namestring tn))
-	   (alien ())
+	   (sap nil)
 	   (size 0))
-      (declare (fixnum size))
-      (multiple-value-bind (fd err) (mach:unix-open name mach:o_rdonly 0)
-	(if (not (null fd))
-	    (multiple-value-bind (res dev ino mode nlnk uid gid rdev len)
-				 (mach:unix-fstat fd)
-	      (declare (ignore ino mode nlnk uid gid rdev))
-	      (setq err ())
-	      (if (null res)
-		  (setq err dev)
-		  (multiple-value-bind (gr addr)
-				       (mach::vm_allocate lisp::*task-self*
-							  0 len t)
-		    (gr-error 'mach::vm_allocate gr 'read-file)
-		    (setq alien (lisp::fixnum-to-sap addr))
-		    (setq size len)
-		    (multiple-value-bind
-			(bytes err3)
-			(mach:unix-read fd (lisp::fixnum-to-sap addr) len)
-		      (if (or (null bytes) (not (eq len bytes)))
-			  (setq err err3)))))
-	      (mach:unix-close fd)))
-	(if err (error "Reading file ~A, unix error ~A."
-		       name (mach:get-unix-error-msg err)))
-	(when (zerop size) (return-from read-file nil))
-	(let* ((sap alien)
-	       (first-line (mark-line mark))
+      (declare (fixnum size)
+	       (type (or null system-area-pointer) sap))
+      (multiple-value-bind (fd err) (unix:unix-open name unix:o_rdonly 0)
+	(when fd
+	  (multiple-value-bind (res dev ino mode nlnk uid gid rdev len)
+			       (unix:unix-fstat fd)
+	    (declare (ignore ino mode nlnk uid gid rdev))
+	    (cond ((null res)
+		   (setq err dev))
+		  (t
+		   (setf sap (system:allocate-system-memory len))
+		   (setf size len)
+		   (multiple-value-bind
+		       (bytes err3)
+		       (unix:unix-read fd sap len)
+		     (if (or (null bytes) (not (= len bytes)))
+			 (setq err err3)
+			 (setq err nil))))))
+	  (unix:unix-close fd))
+	(when err
+	  (error "Reading file ~A, unix error ~A."
+		 name (unix:get-unix-error-msg err)))
+	(when (zerop size)
+	  (return-from read-file nil))
+	(let* ((first-line (mark-line mark))
 	       (buffer (line-%buffer first-line))
-	       (index (%primitive find-character sap 0 size #\newline)))
+	       (index (find-char-from-sap sap 0 size #\newline)))
+	  (declare (type (or null (integer 0 (#.most-positive-fixnum))) index))
 	  (modifying-buffer buffer)
 	  (let* ((len (or index size))
 		 (chars (make-string len)))
@@ -62,11 +80,9 @@
 	    (insert-string mark chars))
 	  (when index
 	    (insert-character mark #\newline)
-	    (do* ((old-index (1+ (the fixnum index)) (1+ (the fixnum index)))
-		  (index (%primitive find-character sap old-index size
-				     #\newline)
-			 (%primitive find-character sap old-index size
-				     #\newline))
+	    (do* ((old-index (1+ index) (1+ index))
+		  (index (find-char-from-sap sap old-index size #\newline)
+			 (find-char-from-sap sap old-index size #\newline))
 		  (number (+ (line-number first-line) line-increment)
 			  (+ number line-increment))
 		  (previous first-line))
@@ -89,7 +105,7 @@
 			   :previous previous
 			   :%buffer buffer
 			   :number number
-			   :chars (%primitive sap+ sap old-index)
+			   :chars (system:sap+ sap old-index)
 			   :buffered-p
 			   (the fixnum (- (the fixnum index) old-index)))))
 		(setf (line-next previous) line)
@@ -109,18 +125,25 @@
 
 ;;; Write-File:
 
-(defun write-file (region pathname &key
+(defun write-file (region pathname &key append
 			  (keep-backup (value ed::keep-backup-files))
 			  access)
-  "Writes the characters in the Region to the file named by Pathname.
-   Region is written using a stream opened with :if-exists :rename-and-delete,
-   but keep-backup, when supplied as non-nil, causes :rename to be supplied
-   instead of :rename-and-delete.  Access is an implementation dependent value
-   that is suitable for setting pathname's access or protection bits."
-  (let ((if-exists-action (if keep-backup
-			      :rename
-			      :rename-and-delete)))
-    (with-open-file (file pathname :direction :output :element-type 'string-char
+  "Writes the characters in region to the file named by pathname.  This writes
+   region using a stream opened with :if-exists :rename-and-delete, unless
+   either append or keep-backup is supplied.  If append is supplied, this
+   writes the file opened with :if-exists :append.  If keep-backup is supplied,
+   this writes the file opened with :if-exists :rename.  This signals an error
+   if both append and keep-backup are supplied.  Access is an implementation
+   dependent value that is suitable for setting pathname's access or protection
+   bits."
+  (let ((if-exists-action (cond ((and keep-backup append)
+				 (error "Cannot supply non-nil values for ~
+				         both keep-backup and append."))
+				(keep-backup :rename)
+				(append :append)
+				(t :rename-and-delete))))
+    (with-open-file (file pathname :direction :output
+			  :element-type 'base-char
 			  :if-exists if-exists-action)
       (close-line)
       (fast-write-file region file))
@@ -132,17 +155,10 @@
 	  ;; If this is ever moved to the beginning of this function to use
 	  ;; Unix CREAT to create the file protected initially, they TRUENAME
 	  ;; will signal an error, and LISP::PREDICT-NAME will have to be used.
-	  (mach:unix-chmod (namestring (truename pathname)) access)
+	  (unix:unix-chmod (namestring (truename pathname)) access)
 	(unless winp
 	  (error "Could not set access code: ~S"
-		 (mach:get-unix-error-msg code)))))))
-
-(proclaim '(special vm_page_size))
-
-(ext:def-c-variable "vm_page_size" int)
-
-(defvar *vm-page-size* (system:alien-access vm_page_size)
-  "Size, in bytes, of each VM page.")
+		 (unix:get-unix-error-msg code)))))))
 
 (defun fast-write-file (region file)
   (let* ((start (region-start region))
@@ -159,44 +175,39 @@
 	(do ((line (line-next start-line) (line-next line)))
 	    ((eq line end-line))
 	  (incf length (1+ (line-length line))))
-	(let ((bytes (* *vm-page-size*
-			(ceiling length *vm-page-size*))))
-	  (system:gr-bind (address)
-			  (mach:vm_allocate system:*task-self* 0 bytes t)
-	    (unwind-protect
-		(let ((sap (system:int-sap address)))
-		  (macrolet ((chars (line)
-				    `(if (line-buffered-p ,line)
-				       (line-%chars ,line)
-				       (line-chars ,line))))
+	(let ((sap (system:allocate-system-memory length)))
+	  (unwind-protect
+	      (macrolet ((chars (line)
+				`(if (line-buffered-p ,line)
+				     (line-%chars ,line)
+				     (line-chars ,line))))
+		(system:%primitive byte-blt
+				   (chars start-line) start-charpos
+				   sap 0 first-length)
+		(setf (system:sap-ref-8 sap first-length)
+		      (char-code #\newline))
+		(let ((offset (1+ first-length)))
+		  (do ((line (line-next start-line)
+			     (line-next line)))
+		      ((eq line end-line))
+		    (let ((end (+ offset (line-length line))))
+		      (system:%primitive byte-blt
+					 (chars line) 0
+					 sap offset end)
+		      (setf (system:sap-ref-8 sap end)
+			    (char-code #\newline))
+		      (setf offset (1+ end))))
+		  (unless (zerop end-charpos)
 		    (system:%primitive byte-blt
-				       (chars start-line) start-charpos
-				       sap 0 first-length)
-		    (system:%primitive 8bit-system-set
-				       sap first-length #\newline)
-		    (let ((offset (1+ first-length)))
-		      (do ((line (line-next start-line)
-				 (line-next line)))
-			  ((eq line end-line))
-			(let ((end (+ offset (line-length line))))
-			  (system:%primitive byte-blt
-					     (chars line) 0
-					     sap offset end)
-			  (system:%primitive 8bit-system-set
-					     sap end #\newline)
-			  (setf offset (1+ end))))
-		      (unless (zerop end-charpos)
-			(system:%primitive byte-blt
-					   (chars end-line) 0
-					   sap offset
-					   (+ offset end-charpos)))))
-		  (multiple-value-bind
-		      (okay errno)
-		      (mach:unix-write (system:fd-stream-fd file)
-				       sap 0 length)
-		    (unless okay
-		      (error "Could not write ~S: ~A"
-			     file
-			     (mach:get-unix-error-msg errno))))
-		  (system:gr-call mach:vm_deallocate system:*task-self*
-				  address bytes)))))))))
+				       (chars end-line) 0
+				       sap offset
+				       (+ offset end-charpos))))
+		(multiple-value-bind
+		    (okay errno)
+		    (unix:unix-write (system:fd-stream-fd file)
+				     sap 0 length)
+		  (unless okay
+		    (error "Could not write ~S: ~A"
+			   file
+			   (unix:get-unix-error-msg errno)))))
+	    (system:deallocate-system-memory sap length)))))))

@@ -1,13 +1,16 @@
 ;;; -*- Package: Hemlock; Log: hemlock.log -*-
-;;; 
+;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CS.CMU.EDU).
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/mh.lisp,v 1.4 1994/02/11 21:53:28 ram Exp $")
+;;;
 ;;; **********************************************************************
-;;; 
+;;;
 ;;; This is a mailer interface to MH.
 ;;; 
 ;;; Written by Bill Chiles.
@@ -206,7 +209,7 @@
 (defhvar "MH Scan Line Form"
   "This is a pathname of a file containing an MH format expression for headers
    lines."
-  :value (pathname "/usr/misc/.lisp/lib/mh-scan"))
+  :value (pathname "library:mh-scan"))
 
 ;;; MESSAGE-HEADERS-TO-REGION uses the MH "scan" utility output headers into
 ;;; buffer for folder and msgs.
@@ -219,7 +222,7 @@
     (with-output-to-mark (*standard-output* (region-end region) :full)
       (mh "scan"
 	  `(,folder ,@msgs
-	    "-form" ,(namestring (value mh-scan-line-form))
+	    "-form" ,(namestring (truename (value mh-scan-line-form)))
 	    "-width" ,(number-string (or width (value fill-column)))
 	    "-noheader")))
     region))
@@ -1124,39 +1127,41 @@
 	      (dolist (w (buffer-windows b))
 		(update-modeline-field b w :replied-to-message))))))
       (maybe-delete-extra-draft-window dbuffer (current-window))
-      (let* ((mbuf (value message-buffer))
-	     (minfo (if mbuf
-			(variable-value 'message-information :buffer mbuf))))
-	(when (and minfo (not (message-info-keep minfo)))
-	  (delete-buffer-if-possible mbuf)))
+      (let ((mbuf (value message-buffer)))
+	(when (and mbuf
+		   (not (hemlock-bound-p 'netnews-message-info :buffer mbuf)))
+	  (let ((minfo (variable-value 'message-information :buffer mbuf)))
+	    (when (and minfo (not (message-info-keep minfo)))
+	      (delete-buffer-if-possible mbuf)))))
       (delete-buffer-if-possible dbuffer))))
 
 (defcommand "Delete Draft and Buffer" (p)
-  "Delete the current draft message and buffer."
-  "Delete the current draft message and buffer."
+  "Delete the current draft and associated message and buffer."
+  "Delete the current draft and associated message and buffer."
   (declare (ignore p))
   (let ((dinfo (value draft-information))
 	(dbuffer (current-buffer)))
     (unless dinfo (editor-error "No draft associated with buffer."))
     (maybe-delete-extra-draft-window dbuffer (current-window))
     (delete-file (draft-info-pathname dinfo))
-    (let* ((mbuf (value message-buffer))
-	   (minfo (if mbuf
-		      (variable-value 'message-information :buffer mbuf))))
-      (when (and minfo (not (message-info-keep minfo)))
-	(delete-buffer-if-possible mbuf)))
-    (delete-buffer-if-possible dbuffer)))
+    (let ((mbuf (value message-buffer)))
+      (when (and mbuf
+		 (not (hemlock-bound-p 'netnews-message-info :buffer mbuf)))
+	(let ((minfo (variable-value 'message-information :buffer mbuf)))
+	  (when (and minfo (not (message-info-keep minfo)))
+	    (delete-buffer-if-possible mbuf)))))
+    (delete-buffer-if-possible dbuffer)))    
 
-;;; MAYBE-DELETE-EXTRA-DRAFT-WINDOW takes a draft buffer and a window into it
-;;; that should not be deleted.  If "Split Window Draft" is bound in the buffer,
-;;; and there are more than two windows (two windows plus the echo area at
-;;; least), then we delete some window if it is not the dbuffer-window or the
-;;; echo area window.  Blow away the variable, so we don't think this is still
-;;; a split window draft buffer.
+;;; MAYBE-DELETE-EXTRA-DRAFT-WINDOW -- Internal.
+;;;
+;;; This takes a draft buffer and a window into it that should not be deleted.
+;;; If "Split Window Draft" is bound in the buffer, and there are at least two
+;;; windows in dbuffer-window's group, then we delete some window.  Blow away
+;;; the variable, so we don't think this is still a split window draft buffer.
 ;;;
 (defun maybe-delete-extra-draft-window (dbuffer dbuffer-window)
   (when (and (hemlock-bound-p 'split-window-draft :buffer dbuffer)
-	     ;; Since we now bitmap devices have window groups, this loop is
+	     ;; Since we know bitmap devices have window groups, this loop is
 	     ;; more correct than testing the length of *window-list* and
 	     ;; accounting for *echo-area-window* being in there.
 	     (do ((start dbuffer-window)
@@ -1165,7 +1170,6 @@
 		 ((eq start w) (> count 1))))
     (delete-window (next-window dbuffer-window))
     (delete-variable 'split-window-draft :buffer dbuffer)))
-
 
 (defcommand "Remail Message" (p)
   "Prompts for a folder and message to remail.  Prompts for a resend-to
@@ -1303,35 +1307,58 @@
   :value 75)
 
 (defcommand "Insert Message Region" (p)
-  "Copy the current region into the associated draft buffer.
-   When in a message buffer that has an associated draft buffer, the current
-   active region is copied into the draft buffer.  It is filled using \"Message
-   Insertion Prefix\" and \"Message Insertion Column\".  If an argument is
-   supplied, the filling is inhibited."
-  "When in a message buffer that has an associated draft buffer, the current
-   active region is copied into the draft buffer.  It is filled using
-   \"Message Insertion Prefix\" and \"Message Insertion Column\".  If an
-   argument is supplied, the filling is inhibited."
-  (let ((minfo (value message-information)))
-    (unless minfo (editor-error "Not in a message buffer."))
-    (let ((dbuf (message-info-draft-buf minfo)))
-      (unless dbuf
-	(editor-error "Message buffer not associated with any draft buffer."))
-      (let* ((region (copy-region (current-region)))
-	     (dbuf-point (buffer-point dbuf))
-	     (dbuf-mark (copy-mark dbuf-point)))
-	(if (and (hemlock-bound-p 'split-window-draft :buffer dbuf)
-		 (> (length (the list *window-list*)) 2)
-		 (buffer-windows dbuf))
-	    (setf (current-buffer) dbuf
-		  (current-window) (car (buffer-windows dbuf)))
-	    (change-to-buffer dbuf))
-	(push-buffer-mark dbuf-mark)
-	(ninsert-region dbuf-point region)
-	(unless p
-	  (fill-region-by-paragraphs (region dbuf-mark dbuf-point)
-				     (value message-insertion-prefix)
-				     (value message-insertion-column))))))
+  "Copy the current region into the associated draft or post buffer.  When
+   in a message buffer that has an associated draft or post buffer, the
+   current active region is copied into the draft or post buffer.  It is
+   filled using \"Message Insertion Prefix\" and \"Message Insertion
+   Column\".  If an argument is supplied, the filling is inhibited.
+   If both a draft buffer and post buffer are associated with this, then it
+   is inserted into the draft buffer."
+  "When in a message buffer that has an associated draft or post buffer,
+   the current active region is copied into the post or draft buffer.  It is
+   filled using \"Message Insertion Prefix\" and \"Message Insertion
+   Column\".  If an argument is supplied, the filling is inhibited."
+  (let* ((minfo (value message-information))
+	 (nm-info (if (hemlock-bound-p 'netnews-message-info)
+		      (value netnews-message-info)))
+	 (post-buffer (and nm-info (nm-info-post-buffer nm-info)))
+	 (post-info (and post-buffer
+			 (variable-value 'post-info :buffer post-buffer)))
+	 dbuf kind)
+    (cond (minfo
+	   (setf kind :mail)
+	   (setf dbuf (message-info-draft-buf minfo)))
+	  (nm-info
+	   (setf kind :netnews)
+	   (setf dbuf (or (nm-info-draft-buffer nm-info)
+			  (nm-info-post-buffer nm-info))))
+	  (t (editor-error "Not in a netnews message or message buffer.")))
+    (unless dbuf
+      (editor-error "Message buffer not associated with any draft or post ~
+                     buffer."))
+    (let* ((region (copy-region (current-region)))
+	   (dbuf-point (buffer-point dbuf))
+	   (dbuf-mark (copy-mark dbuf-point)))
+      (cond ((and (eq kind :mail)
+		  (hemlock-bound-p 'split-window-draft :buffer dbuf)
+		  (> (length (the list *window-list*)) 2)
+		  (buffer-windows dbuf))
+	     (setf (current-buffer) dbuf
+		   (current-window) (car (buffer-windows dbuf))))
+	    ((and (eq kind :netnews)
+		  (and (member (post-info-message-window post-info)
+			       *window-list*)
+		       (member (post-info-reply-window post-info)
+			       *window-list*)))
+	     (setf (current-buffer) dbuf
+		   (current-window) (post-info-reply-window post-info)))
+	    (t (change-to-buffer dbuf)))
+      (push-buffer-mark dbuf-mark)
+      (ninsert-region dbuf-point region)
+      (unless p
+	(fill-region-by-paragraphs (region dbuf-mark dbuf-point)
+				   (value message-insertion-prefix)
+				   (value message-insertion-column)))))
   (setf (last-command-type) :ephemerally-active))
 
 
@@ -1342,21 +1369,24 @@
   :value "    ")
 
 (defcommand "Insert Message Buffer" (p)
-  "Insert entire (associated) message buffer into (associated) draft buffer.
-   When in a draft buffer with an associated message buffer, or when in a
-   message buffer that has an associated draft buffer, the message buffer is
-   inserted into the draft buffer.  Each inserted line is modified by prefixing
-   it with \"Message Buffer Insertion Prefix\".  If an argument is supplied the
-   prefixing is inhibited."
-  "When in a draft buffer with an associated message buffer, or when in a
-   message buffer that has an associated draft buffer, the message buffer
-   is inserted into the draft buffer.  Each inserted line is modified by
-   prefixing it with \"Message Buffer Insertion Prefix\".  If an argument
-   is supplied the prefixing is inhibited."
+  "Insert entire (associated) message buffer into (associated) draft or
+   post buffer.  When in a draft or post buffer with an associated message
+   buffer, or when in a message buffer that has an associated draft or post
+   buffer, the message buffer is inserted into the draft buffer.  When
+   there are both an associated draft and post buffer, the text is inserted
+   into the draft buffer.  Each inserted line is modified by prefixing it
+   with \"Message Buffer Insertion Prefix\".  If an argument is supplied
+   the prefixing is inhibited."
+  "When in a draft or post buffer with an associated message buffer, or
+   when in a message buffer that has an associated draft or post buffer, the
+   message buffer is inserted into the draft buffer.  Each inserted line is
+   modified by prefixing it with \"Message Buffer Insertion Prefix\".  If an
+   argument is supplied the prefixing is inhibited."
   (let ((minfo (value message-information))
 	(dinfo (value draft-information))
-	mbuf dbuf)
+	mbuf dbuf message-kind)
     (cond (minfo
+	   (setf message-kind :mail)
 	   (setf dbuf (message-info-draft-buf minfo))
 	   (unless dbuf
 	     (editor-error
@@ -1364,12 +1394,32 @@
 	   (setf mbuf (current-buffer))
 	   (change-to-buffer dbuf))
 	  (dinfo
+	   (setf message-kind :mail)
 	   (setf mbuf (value message-buffer))
 	   (unless mbuf
 	     (editor-error
 	      "Draft buffer not associated with any message buffer."))
 	   (setf dbuf (current-buffer)))
-	  (t (editor-error "Not in a draft or message buffer.")))
+	  ((hemlock-bound-p 'netnews-message-info)
+	   (setf message-kind :netnews)
+	   (setf mbuf (current-buffer))
+	   (let ((nm-info (value netnews-message-info)))
+	     (setf dbuf (or (nm-info-draft-buffer nm-info)
+			    (nm-info-post-buffer nm-info)))
+	     (unless dbuf
+	       (editor-error "Message buffer not associated with any draft ~
+	       		      or post buffer.")))
+	   (change-to-buffer dbuf))
+	  ((hemlock-bound-p 'post-info)
+	   (setf message-kind :netnews)
+	   (let ((post-info (value post-info)))
+	     (setf mbuf (post-info-message-buffer post-info))
+	     (unless mbuf
+	       (editor-error "Post buffer not associated with any message ~
+	                      buffer.")))
+	   (setf dbuf (current-buffer)))
+	  (t (editor-error "Not in a draft, message, news-message, or post ~
+	                    buffer.")))	  
     (let* ((dbuf-point (buffer-point dbuf))
 	   (dbuf-mark (copy-mark dbuf-point)))
       (push-buffer-mark dbuf-mark)
@@ -1381,7 +1431,11 @@
 	      (when (mark>= temp dbuf-point) (return))
 	      (insert-string temp prefix)
 	      (unless (line-offset temp 1 0) (return)))))))
-    (insert-message-buffer-cleanup-split-draft dbuf mbuf))
+    (ecase message-kind
+      (:mail
+       (insert-message-buffer-cleanup-split-draft dbuf mbuf))
+      (:netnews 
+       (nn-reply-cleanup-split-windows dbuf))))
   (setf (last-command-type) :ephemerally-active))
 
 ;;; INSERT-MESSAGE-BUFFER-CLEANUP-SPLIT-DRAFT tries to delete an extra window
@@ -1614,41 +1668,6 @@
   (change-to-buffer *new-mail-buffer*))
 
 
-(defhvar "Store Password"
-  "When this is set, the user is only prompted once for his password."
-  :value nil)
-
-(defvar *stored-password* nil)
-
-(defun get-password ()
-  (if (value store-password)
-      (or *stored-password*
-	  (setf *stored-password* (prompt-for-password)))
-      (prompt-for-password)))
-
-
-(defhvar "Authenticate Incorporation"
-  "When this is set (the default), incorporating new mail prompts for a
-   password to access a remote mail drop."
-  :value t)
-(defhvar "Authentication User Name"
-  "When incorporating new mail accesses a remote mail drop, this is the user
-   name supplied for authentication on the remote machine.  If this is nil
-   it is looked up on the local machine."
-  :value nil)
-#|
-(defhvar "Authentication Group Name"
-  "When incorporating new mail accesses a remote mail drop, this is the group
-   name supplied for authentication on the remote machine.  If this is nil
-   it is looked up on the local machine."
-  :value nil)
-(defhvar "Authentication Account Name"
-  "When incorporating new mail accesses a remote mail drop, this is the account
-   name supplied for authentication on the remote machine.  If this is nil
-   it is looked up on the local machine."
-  :value nil)
-|#
-
 (defhvar "Incorporate New Mail Hook"
   "Functions on this hook are invoked immediately after new mail is
    incorporated."
@@ -1660,27 +1679,10 @@
   (unless (new-mail-p) (editor-error "No new mail."))
   (let ((args `(,(coerce-folder-name (value new-mail-folder))
 		,@(if stream nil '("-silent"))
-		"-form" ,(namestring (value mh-scan-line-form))
+		"-form" ,(namestring (truename (value mh-scan-line-form)))
 		"-width" ,(number-string (value fill-column)))))
-    (cond ((value authenticate-incorporation)
-	   (let ((password (get-password)))
-	     ;; Since we know there is mail due to above check, look for a
-	     ;; possible password failure since MH or the rfs stuff is stupid.
-	     (multiple-value-bind
-		 (winp error-string)
-		 (let ((*standard-output* (or stream *standard-output*)))
-		   (message "Incorporating new mail ...")
-		   (mh "inc" args :errorp nil :password password
-		       :username (value authentication-user-name)))
-	       (declare (simple-string error-string))
-	       (unless winp
-		 (when (string= error-string "inc: unable to read" :end1 19)
-		   (setf *stored-password* nil)
-		   (editor-error
-		    "Couldn't read maildrop, possible mistyped password."))
-		 (editor-error "MH Error -- ~A" error-string)))))
-	  (t (message "Incorporating new mail ...")
-	     (mh "inc" args))))
+    (message "Incorporating new mail ...")
+    (mh "inc" args))
   (when (value incorporate-new-mail-hook)
     (message "Invoking new mail hooks ..."))
   (invoke-hook incorporate-new-mail-hook))
@@ -2699,32 +2701,24 @@
 
 (defvar *mh-error-output* (make-string-output-stream))
 
-(defun mh (utility args &key (errorp *signal-mh-errors*)
-		             password username environment)
+(defun mh (utility args &key (errorp *signal-mh-errors*) environment)
   "Runs the MH utility with the list of args (suitable for EXT:RUN-PROGRAM),
-   outputting to *standard-output*.  If password is supplied, then the MH
-   utility is run with RFS authentication.  If username is nil, this looks it
-   up on the editor's machine.  Environment is a list of strings appended with
-   ext:*environment-list*.  This returns t, unless there is an error.
-   When errorp, this reports any MH errors in the echo area as an editor error,
-   and this does not return; otherwise, nil and the error output from the MH
-   utility are returned."
+   outputting to *standard-output*.  Environment is a list of strings
+   appended with ext:*environment-list*.  This returns t, unless there is
+   an error.  When errorp, this reports any MH errors in the echo area as
+   an editor error, and this does not return; otherwise, nil and the error
+   output from the MH utility are returned."
   (fresh-line)
-  (let* ((utility (namestring (truename
-			       (merge-pathnames utility
-						(value mh-utility-pathname)))))
+  (let* ((utility
+	  (namestring
+	   (or (probe-file (merge-pathnames utility
+					    (value mh-utility-pathname)))
+	       utility)))
 	 (proc (ext:run-program
 		utility args
 		:output *standard-output*
 		:error *mh-error-output*
-		:env (append environment ext:*environment-list*)
-		:before-execve
-		(if password
-		    #'(lambda ()
-			(mach:rfs-authenticate
-			 (or username
-			     (lisp::lookup-login-name (mach:unix-getuid)))
-			 nil nil password))))))
+		:env (append environment ext:*environment-list*))))
     (fresh-line)
     (ext:process-close proc)
     (cond ((zerop (ext:process-exit-code proc))
@@ -2803,7 +2797,8 @@
       (let ((path (mh-profile-component "path")))
 	(unless path (error "MH profile does not contain a Path component."))
 	(setf *mh-directory-pathname*
-	      (merge-relative-pathnames path (user-homedir-pathname))))))
+	      (truename (merge-relative-pathnames path
+						  (user-homedir-pathname)))))))
 
 ;;; Profile components.
 ;;; 
@@ -2845,11 +2840,13 @@
       (setf *mh-profile-pathname*
 	    (merge-pathnames (or (cdr (assoc :mh ext:*environment-list*))
 				 ".mh_profile")
-			     (user-homedir-pathname)))))
+			     (truename (user-homedir-pathname))))))
 
 
 
 ;;;; Sequence handling.
+
+(declaim (optimize (speed 2))); byte compile off
 
 (defun mark-one-message (folder msg sequence add-or-delete)
   "Msg is added or deleted to the sequence named sequence in the folder's
@@ -3084,7 +3081,7 @@
 	    (push (format nil "~D-~D" low high) result))))
     (nreverse result)))
 
-
+(declaim (optimize (speed 0))); byte compile again.
 
 ;;;; CMU Common Lisp support.
 
@@ -3096,10 +3093,10 @@
 (defun hacking-rename-file (old new)
   (let ((ses-name1 (namestring old))
 	(ses-name2 (namestring new)))
-    (multiple-value-bind (res err) (mach:unix-rename ses-name1 ses-name2)
+    (multiple-value-bind (res err) (unix:unix-rename ses-name1 ses-name2)
       (unless res
 	(error "Failed to rename ~A to ~A: ~A."
-	       ses-name1 ses-name2 (mach:get-unix-error-msg err))))))
+	       ses-name1 ses-name2 (unix:get-unix-error-msg err))))))
 
 
 ;;; Folder existence and creation.
@@ -3111,10 +3108,10 @@
   (declare (simple-string folder))
   (let* ((folder (strip-folder-name folder))
 	 (pathname (merge-relative-pathnames folder (mh-directory-pathname)))
-	 (ses-name (namestring pathname)))
-    (multiple-value-bind (winp type)
-			 (mach:unix-subtestname ses-name)
-      (and winp (eq type :entry_directory)))))
+	 (pf (probe-file pathname)))
+    (and pf
+	 (null (pathname-name pf))
+	 (null (pathname-type pf)))))
 
 (defun create-folder (folder)
   "Creates folder directory with default protection #o711 but considers the
@@ -3134,11 +3131,11 @@
       (setf protection
 	    (parse-integer protection :radix 8 :junk-allowed t)))
     (multiple-value-bind (winp err)
-			 (mach:unix-mkdir name (or protection #o711))
+			 (unix:unix-mkdir name (or protection #o711))
       (unless winp
 	(error "Couldn't make directory ~S: ~A"
 	       name
-	       (mach:get-unix-error-msg err)))
+	       (unix:get-unix-error-msg err)))
       (check-folder-name-table)
       (setf (getstring folder *folder-name-table*) t))))
 
@@ -3153,17 +3150,17 @@
    (setf *mailbox*
 	 (probe-file (or (cdr (assoc :mail ext:*environment-list*))
 			 (cdr (assoc :maildrop ext:*environment-list*))
-			 (mh-profile-component "mail-drop")
+			 (mh-profile-component "MailDrop")
 			 (merge-pathnames
 			  (cdr (assoc :user ext:*environment-list*))
 			  "/usr/spool/mail/")))))
   (when *mailbox*
     (multiple-value-bind (success dev ino mode nlink uid gid rdev size
 			  atime)
-			 (mach:unix-stat (namestring *mailbox*))
+			 (unix:unix-stat (namestring *mailbox*))
       (declare (ignore dev ino nlink uid gid rdev atime))
       (and success
-	   (plusp (logand mach::s_ifreg mode))
+	   (plusp (logand unix:s-ifreg mode))
 	   (not (zerop size))))))
 
 

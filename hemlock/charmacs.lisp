@@ -1,65 +1,43 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.3 1994/02/11 21:52:52 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Implementation specific character-hacking macros and constants.
 ;;;
-(in-package 'hemlock-internals)
-(export ' (syntax-char-code-limit command-char-bits-limit
-	   command-char-code-limit search-char-code-limit
-	   do-alpha-chars))
+(in-package "HEMLOCK-INTERNALS")
+(export ' (syntax-char-code-limit search-char-code-limit do-alpha-chars))
 
-;;; This file contains various constants and macros which are
-;;; implementation or ASCII dependant.  In particular it contains
-;;; all the character implementation parameters such as
-;;; Command-Char-Bits-Limit, and contains various versions
-;;; of char-code which don't check types and omit the top bit
-;;; so that various structures can be allocated 128 long instead
-;;; of 256, and we don't get errors if a loser visits a binary file.
+;;; This file contains various constants and macros which are implementation or
+;;; ASCII dependant.  It contains some versions of CHAR-CODE which do not check
+;;; types and ignore the top bit so that various structures can be allocated
+;;; 128 long instead of 256, and we don't get errors if a loser visits a binary
+;;; file.
+;;;
+;;; There are so many different constants and macros implemented the same.
+;;; This is to separate various mechanisms; for example, in principle the
+;;; char-code-limit for the syntax functions is independant of that for the
+;;; searching functions
+;;;
 
-;;; There are so many different constants and macros that do the same
-;;; thing because in principle the char-code-limit for the syntax
-;;; functions is independant of that for the searching functions, etc.
-
-;;; This file also contains code which adds any implementation specific
-;;; character names to the char file's Char-Name-Alist so that there
-;;; is a reasonable read-syntax and print-representation for all
-;;; characters a user might run across.
 
 
 ;;;; Stuff for the Syntax table functions (syntax)
 
-(defconstant syntax-char-code-limit 128
+(defconstant syntax-char-code-limit char-code-limit
   "The highest char-code which a character argument to the syntax
   table functions may have.")
-(defconstant syntax-char-code-mask #x+7f
-  "Mask we AND with characters given to syntax table functions to blow away
-  bits we don't want.")
-(defmacro syntax-char-code (char)
-  `(logand syntax-char-code-mask (lisp::%sp-make-fixnum ,char)))
 
-;;;; Stuff for the command interpreter (interp)
-;;;
-;;;    On the Perq we have bits for command bindings, on the VAX there 
-;;; aren't.  The code to interpret them is conditionally compiled
-;;; so that the VAX isnt't slowed down.
-;;;
-;;; Make command-char-code-limit 256 instead of 128 for X keyboard scan-codes.
-(defconstant command-char-code-limit 256
-  "The upper bound on character codes supported for key bindings.")
-(defconstant command-char-bits-limit 16
-  "The maximum value of character bits supported for key bindings.")
-(defmacro key-char-bits (char)
-  `(ash (logand #x+F00 (lisp::%sp-make-fixnum ,char)) -8))
-(defmacro key-char-code (char)
+(defmacro syntax-char-code (char)
   `(char-code ,char))
-;;; `(logand #x+7f (lisp::%sp-make-fixnum ,char))) can't use with X scan-codes.
 
 
 ;;;; Stuff used by the searching primitives (search)
@@ -67,7 +45,7 @@
 (defconstant search-char-code-limit 128
   "The exclusive upper bound on significant char-codes for searching.")
 (defmacro search-char-code (ch)
-  `(logand (lisp::%sp-make-fixnum ,ch) #x+7F))
+  `(logand (char-code ,ch) #x+7F))
 ;;;
 ;;;    search-hash-code must be a function with the following properties:
 ;;; given any character it returns a number between 0 and 
@@ -76,12 +54,12 @@
 ;;;    In ASCII this is can be done by ANDing out the 5'th bit.
 ;;;
 (defmacro search-hash-code (ch)
-  `(logand (lisp::%sp-make-fixnum ,ch) #x+5F))
+  `(logand (char-code ,ch) #x+5F))
 
 ;;; Doesn't do anything special, but it should fast and not waste any time
 ;;; checking type and whatnot.
 (defmacro search-char-upcase (ch)
-  `(lisp::fast-char-upcase ,ch))
+  `(char-upcase (the base-char ,ch)))
 
 
 

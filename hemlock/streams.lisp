@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.3 1994/02/11 21:53:56 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains definitions of various types of streams used
@@ -124,13 +127,12 @@
     ((:finish-output :force-output)
      (redisplay-windows-from-mark (hemlock-output-stream-mark stream)))
     (:close (setf (hemlock-output-stream-mark stream) nil))
-    (:element-type 'string-char)))
+    (:element-type 'base-char)))
 
 (defstruct (hemlock-region-stream
 	    (:include stream
 		      (:in #'region-in)
-		      (:misc #'region-misc)
-		      (:in-buffer (make-string lisp::in-buffer-length)))
+		      (:misc #'region-misc))
 	    (:print-function %print-region-stream)
 	    (:constructor internal-make-hemlock-region-stream (region mark)))
   ;;
@@ -151,8 +153,7 @@
    region (copy-mark (region-start region) :right-inserting)))
 
 (defun modify-hemlock-region-stream (stream region)
-  (setf (hemlock-region-stream-region stream) region
-	(lisp::stream-in-index stream) lisp::in-buffer-length)
+  (setf (hemlock-region-stream-region stream) region)
   (let* ((mark (hemlock-region-stream-mark stream))
 	 (start (region-start region))
 	 (start-line (mark-line start)))
@@ -162,102 +163,42 @@
     (push mark (line-marks start-line)))
   stream)
 
-(defun region-readline (stream eof-errorp eof-value)
-  (close-line)
-  (let ((mark (hemlock-region-stream-mark stream))
-	(end (region-end (hemlock-region-stream-region stream))))
-    (cond ((mark>= mark end)
-	   (if eof-errorp
-	       (error "~A hit end of file." stream)
-	       (values eof-value nil)))
-	  ((eq (mark-line mark) (mark-line end))
-	   (let* ((limit (mark-charpos end))
-		  (charpos (mark-charpos mark))
-		  (dst-end (- limit charpos))
-		  (result (make-string dst-end)))
-	     (declare (simple-string result))
-	     (%sp-byte-blt (line-chars (mark-line mark)) charpos
-			   result 0 dst-end)
-	     (setf (mark-charpos mark) limit)
-	     (values result t)))
-	  ((= (mark-charpos mark) 0)
-	   (let* ((line (mark-line mark))
-		  (next (line-next line)))
-	     (always-change-line mark next)
-	     (values (line-chars line) nil)))
-	  (t
-	   (let* ((line (mark-line mark))
-		  (chars (line-chars line))
-		  (next (line-next line))
-		  (charpos (mark-charpos mark))
-		  (dst-end (- (length chars) charpos))
-		  (result (make-string dst-end)))
-	     (declare (simple-string chars result))
-	     (%sp-byte-blt chars charpos result 0 dst-end)
-	     (setf (mark-charpos mark) 0)
-	     (always-change-line mark next)
-	     (values result nil))))))
-
 (defun region-in (stream eof-errorp eof-value)
-  (close-line)
-  (let* ((mark (hemlock-region-stream-mark stream))
-	 (charpos (mark-charpos mark))
-	 (line (mark-line mark))
-	 (chars (line-chars line))
-	 (length (length chars))
-	 (last (region-end (hemlock-region-stream-region stream)))
-	 (last-line (mark-line last))
-	 (buffer (lisp::stream-in-buffer stream)) start len)
-    (declare (fixnum length charpos last-charpos start len)
-	     (simple-string chars))
-    (cond 
-     ((eq line last-line)
-      (let ((last-charpos (mark-charpos last)))
-	(setq len (- last-charpos charpos))
-	(cond
-	 ((>= charpos last-charpos)
-	  (if eof-errorp
-	      (error "~A hit end of file." stream) 
-	      (return-from region-in eof-value)))
-	 ((> len lisp::in-buffer-length)       
-	  (%sp-byte-blt chars charpos buffer 0 lisp::in-buffer-length)
-	  (setq start 0  len lisp::in-buffer-length))
-	 (t
-	  (setq start (- lisp::in-buffer-length len))
-	  (%sp-byte-blt chars charpos buffer start lisp::in-buffer-length)))))
-     ((line> line last-line)
-      (if eof-errorp
-	  (error "~a hit end of file." stream) 
-	  (return-from region-in eof-value)))
-     (t
-      (setq len (- length charpos))
-      (cond
-       ((< len lisp::in-buffer-length)
-	(let ((end (1- lisp::in-buffer-length)))
-	  (setq start (- lisp::in-buffer-length len 1))
-	  (%sp-byte-blt chars charpos buffer start end)
-	  (setf (schar buffer end) #\newline))
-	(incf len))
-       (t
-	(%sp-byte-blt chars charpos buffer 0 lisp::in-buffer-length)
-	(setq start 0  len lisp::in-buffer-length)))))
-    (setf (lisp::stream-in-index stream) (1+ start))
-    (character-offset mark len)
-    (schar buffer start)))
+  (let ((mark (hemlock-region-stream-mark stream)))
+    (cond ((mark< mark
+		  (region-end (hemlock-region-stream-region stream)))
+	   (prog1 (next-character mark) (mark-after mark)))
+	  (eof-errorp (error "~A hit end of file." stream)) 
+	  (t eof-value))))
 
 (defun region-misc (stream operation &optional arg1 arg2)
-  (declare (ignore arg1 arg2))
+  (declare (ignore arg2))
   (case operation
     (:listen (mark< (hemlock-region-stream-mark stream)
 		    (region-end (hemlock-region-stream-region stream))))
-    (:read-line (region-readline stream arg1 arg2))
     (:clear-input (move-mark
                    (hemlock-region-stream-mark stream)
                    (region-end (hemlock-region-stream-region stream))))
+    (:unread
+     (let ((mark (hemlock-region-stream-mark stream)))
+       (unless (mark> mark
+		      (region-start (hemlock-region-stream-region stream)))
+	 (error "Nothing to unread."))
+       (unless (char= arg1 (previous-character mark))
+	 (error "Unreading something not read: ~S" arg1))
+       (mark-before mark)))
+    (:file-position
+     (let ((start (region-start (hemlock-region-stream-region stream)))
+	   (mark (hemlock-region-stream-mark stream)))
+       (cond (arg1
+	      (move-mark mark start)
+	      (character-offset mark arg1))
+	     (t
+	      (count-characters (region start mark))))))
     (:close
      (delete-mark (hemlock-region-stream-mark stream))
      (setf (hemlock-region-stream-region stream) nil))
-    (:element-type 'string-char)))
+    (:element-type 'base-char)))
 
 ;;;; Stuff to support keyboard macros.
 

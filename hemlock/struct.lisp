@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/struct.lisp,v 1.4 1994/02/11 21:53:57 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Structures and assorted macros for Hemlock.
@@ -18,8 +21,8 @@
 	  buffer-delete-hook buffer-windows buffer-variables buffer-write-date
 	  region regionp region-start region-end window windowp window-height
 	  window-width window-display-start window-display-end window-point
-	  commandp command command-function command-documentation
-	  modeline-field modeline-field-p))
+	  window-display-recentering commandp command command-function
+	  command-documentation modeline-field modeline-field-p))
 
 
 ;;;; Marks.
@@ -57,8 +60,7 @@
   font)
 
 (defmacro fast-font-mark-p (s)
-  `(eq (svref ,s 0) 'font-mark))
-
+  `(typep ,s 'font-mark))
 
 
 ;;;; Regions, buffers, modeline fields.
@@ -219,7 +221,9 @@
   point				; Where the cursor is in this window.  
   modeline-dis-line		; Dis-line for modeline display.
   modeline-buffer		; Complete string of all modeline data.
-  modeline-buffer-len)		; Valid chars in modeline-buffer.
+  modeline-buffer-len		; Valid chars in modeline-buffer.
+  display-recentering)		; Tells whether redisplay recenters window
+				;    regardless of whether it is current.
 
 (setf (documentation 'windowp 'function)
   "Returns true if its argument is a Hemlock window object, Nil otherwise.")
@@ -229,16 +233,19 @@
   "Return the width of a Hemlock window in character positions.")
 (setf (documentation 'window-display-start 'function)
   "Return the mark which points before the first character displayed in
-  the supplied window.")
+   the supplied window.")
 (setf (documentation 'window-display-end 'function)
   "Return the mark which points after the last character displayed in
-  the supplied window.")
+   the supplied window.")
 (setf (documentation 'window-point 'function)
-  "Return the mark that points to where the cursor is displayed in this
-  window.  When the window is made current, the Buffer-Point of this
-  window's buffer is moved to this position.  While the window is
-  current, redisplay makes this mark point to the same position as the
-  Buffer-Point of its buffer.")
+ "Return the mark that points to where the cursor is displayed in this
+  window.  When the window is made current, the Buffer-Point of this window's
+  buffer is moved to this position.  While the window is current, redisplay
+  makes this mark point to the same position as the Buffer-Point of its
+  buffer.")
+(setf (documentation 'window-display-recentering 'function)
+ "This determines whether redisplay recenters window regardless of whether it
+  is current.  This is SETF'able.")
 
 (defstruct (dis-line (:copier nil)
 		     (:constructor nil))
@@ -457,9 +464,11 @@
 			; 0 sends digit-chars.
   (cm-y-pad nil)	; nil, 0, 2, or 3 for places to pad.
 			; 0 sends digit-chars.
-  screen-image)		; vector device-lines long of strings
+  screen-image		; vector device-lines long of strings
 			; device-columns long.
-
+  ;;
+  ;; This terminal's baud rate, or NIL for infinite.
+  (speed nil :type (or (unsigned-byte 16) null)))
 
 
 ;;;; Device screen hunks and window-group.

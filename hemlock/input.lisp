@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC).
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.3 1994/02/11 21:53:12 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the code that handles input to Hemlock.
@@ -186,7 +189,7 @@
 ;;; input method (recursively even).
 ;;;
 (eval-when (compile eval)
-(defmacro editor-input-method-macro (&optional screen-image-trashed-concern)
+(defmacro editor-input-method-macro ()
   `(handler-bind ((error #'(lambda (condition)
 			     (let ((device (device-hunk-device
 					    (window-hunk (current-window)))))
@@ -203,10 +206,8 @@
 	   (dolist (f (variable-value 'ed::input-hook)) (funcall f))
 	   (return))
 	 (invoke-scheduled-events)
-	 (unless (system:serve-event 0)
-	   (internal-redisplay)
-	   ,@(if screen-image-trashed-concern
-		 '((when *screen-image-trashed* (internal-redisplay))))
+	 (unless (or (system:serve-event 0)
+		     (internal-redisplay))
 	   (when nrw-fun (funcall nrw-fun t))
 	   (let ((wait (next-scheduled-event-wait)))
 	     (if wait (system:serve-event wait) (system:serve-event)))))
@@ -223,7 +224,7 @@
 
 
 ;;;; Editor input from windowing system.
-
+#+clx
 (defstruct (windowed-editor-input
 	    (:include editor-input
 		      (:get #'windowed-get-key-event)
@@ -232,18 +233,22 @@
 		      (:clear #'windowed-clear-input))
 	    (:print-function
 	     (lambda (s stream d)
-	       (declare (ignore s d write))
+	       (declare (ignore s d))
 	       (write-string "#<Editor-Window-Input stream>" stream)))
 	    (:constructor make-windowed-editor-input
 			  (&optional (head (make-input-event)) (tail head))))
   hunks)      ; List of bitmap-hunks which input to this stream.
 
+#+clx
+;;; There's actually no difference from the TTY case...
 (defun windowed-get-key-event (stream ignore-abort-attempts-p)
-  (editor-input-method-macro))
+  (tty-get-key-event stream ignore-abort-attempts-p))
 
+#+clx
 (defun windowed-unget-key-event (key-event stream)
   (un-event key-event stream))
 
+#+clx
 (defun windowed-clear-input (stream)
   (loop (unless (system:serve-event 0) (return)))
   (without-interrupts
@@ -255,14 +260,16 @@
 	       *free-input-events* next)
        (setf (editor-input-tail stream) head)))))
 
+#+clx
 (defun windowed-listen (stream)
-  (loop (unless (system:serve-event 0)
-	  ;; If nothing is pending, check the queued input.
-	  (return (not (null (input-event-next (editor-input-head stream))))))
+  (loop
+    ;; Don't service anymore events if we just got some input.
     (when (input-event-next (editor-input-head stream))
-      ;; Don't service anymore events if we just got some input.
-      (return t))))
-
+      (return t))
+    ;;
+    ;; If nothing is pending, check the queued input.
+    (unless (system:serve-event 0)
+      (return (not (null (input-event-next (editor-input-head stream))))))))
 
 
 ;;;; Editor input from a tty.
@@ -282,7 +289,7 @@
   fd)
 
 (defun tty-get-key-event (stream ignore-abort-attempts-p)
-  (editor-input-method-macro t))
+  (editor-input-method-macro))
 
 (defun tty-unget-key-event (key-event stream)
   (un-event key-event stream))
@@ -297,11 +304,20 @@
 	       *free-input-events* next)
        (setf (editor-input-tail stream) head)))))
 
+;;; Note that we never return NIL as long as there are events to be served with
+;;; SERVE-EVENT.  Thus non-keyboard input (i.e. process output) 
+;;; effectively causes LISTEN to block until either all the non-keyboard input
+;;; has happened, or there is some real keyboard input.
+;;;
 (defun tty-listen (stream)
-  (cond ((input-event-next (editor-input-head stream)) t)
-	((editor-tty-listen stream) t)
-	(t nil)))
-
+  (loop
+    ;; Don't service anymore events if we just got some input.
+    (when (or (input-event-next (editor-input-head stream))
+	      (editor-tty-listen stream))
+      (return t))
+    ;; If nothing is pending, check the queued input.
+    (unless (system:serve-event 0)
+      (return (not (null (input-event-next (editor-input-head stream))))))))
 
 
 ;;;; GET-KEY-EVENT, UNGET-KEY-EVENT, LISTEN-EDITOR-INPUT, CLEAR-EDITOR-INPUT.

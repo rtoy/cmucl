@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.3 1994/02/11 21:53:25 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Hemlock LISP Mode commands
@@ -15,10 +18,11 @@
 
 (in-package "HEMLOCK")
 
+(declaim (optimize (speed 2))); turn off byte compilation.
 
 
-;;;;  ####  VARIABLES  ####
-;;;
+;;;; Variables and lisp-info structure.
+
 ;;; These routines are used to define, for standard LISP mode, the start and end
 ;;; of a block to parse.  If these need to be changed for a minor mode that sits
 ;;; on top of LISP mode, simply do a DEFHVAR with the minor mode and give the
@@ -35,10 +39,9 @@
   :value 'end-of-parse-block)
 
 	    
-;;;; #### STRUCTURES ####
-;;; 
-;;; LISP-INFO is the structure used to store the data about the line in its Plist.
-;;; 
+;;; LISP-INFO is the structure used to store the data about the line in its
+;;; Plist.
+;;;
 ;;;     -> BEGINS-QUOTED, ENDING-QUOTED are both Boolean slots that tell whether
 ;;;        or not a line's begining and/or ending are quoted.
 ;;; 
@@ -62,8 +65,8 @@
 
 
 
-;;;;  ####  MACROS  ####
-;;; 
+;;;; Macros.
+
 ;;; The following Macros exist to make it easy to acces the Syntax primitives
 ;;; without uglifying the code.  They were originally written by Maddox.
 ;;; 
@@ -154,10 +157,10 @@
       `(line-previous ,line)))
 
 
-;;;; #### PARSING FUNCTIONS ###
-;;;
-;;; PRE-COMMAND-PARSE-CHECK
+;;;; Parsing functions.
 
+;;; PRE-COMMAND-PARSE-CHECK -- Public.
+;;;
 (defun pre-command-parse-check (mark &optional (fer-sure-parse nil))
   "Parse the area before the command is actually executed."
   (with-mark ((top mark)
@@ -166,9 +169,8 @@
     (funcall (value parse-end-function) bottom)
     (parse-over-block (mark-line top) (mark-line bottom) fer-sure-parse)))
 
-;;; 
 ;;; PARSE-OVER-BLOCK
-
+;;;
 (defun parse-over-block (start-line end-line &optional (fer-sure-parse nil))
   "Parse over an area indicated from END-LINE to START-LINE."
   (let ((test-line start-line)
@@ -226,8 +228,7 @@
 	 (setq test-line (line-next test-line)))))))
 
 
-;;;;  ####  PARSE BLOCK FINDERS  ####
-;;; 
+;;;; Parse block finders.
 
 (defhvar "Minimum Lines Parsed"
   "The minimum number of lines before and after the point parsed by Lisp mode."
@@ -288,20 +289,23 @@
     (setq line (mark-line mark))))
 
 
-;;; PARSE-LISP-LINE-INFO parses through the line doing the following things:
-;;; 
+;;;; PARSE-LISP-LINE-INFO.
+
+;;; PARSE-LISP-LINE-INFO -- Internal.
+;;;
+;;; This parses through the line doing the following things:
+;;;
 ;;;      Counting/Setting the NET-OPEN-PARENS & NET-CLOSE-PARENS.
-;;; 
+;;;
 ;;;      Making all areas of the line that should be invalid (comments,
 ;;;      char-quotes, and the inside of strings) and such be in
 ;;;      RANGES-TO-IGNORE.
 ;;;
 ;;;      Set BEGINS-QUOTED and ENDING-QUOTED 
-;;; 
-
+;;;
 (defun parse-lisp-line-info (mark line-info prev-line-info)
   "Parse line and set line information like NET-OPEN-PARENS, NET-CLOSE-PARENS,
-RANGES-TO-INGORE, and ENDING-QUOTED."
+   RANGES-TO-INGORE, and ENDING-QUOTED."
   (let ((net-open-parens 0)
 	(net-close-parens 0))
     (declare (fixnum net-open-parens net-close-parens))
@@ -362,26 +366,23 @@ RANGES-TO-INGORE, and ENDING-QUOTED."
     (setf (lisp-info-net-close-parens line-info) net-close-parens)
     (setf (lisp-info-signature-slot line-info) 
 	  (line-signature (mark-line mark)))))
-
-;;;;  #### STRING QUOTE UTILITIES ####
-;;; 
-;;; 
- 
-;;; 
-;;; VALID-STRING-QUOTE-P
 
+
+
+;;;; String quote utilities.
+
+;;; VALID-STRING-QUOTE-P
+;;;
 (defmacro valid-string-quote-p (mark forwardp)
   "Return T if the string-quote indicated by MARK is valid."
   (let ((test-mark (gensym)))
     `(with-mark ((,test-mark ,mark))
-       
-       ,(unless forwardp              ; TEST-MARK should always be right before the
-	  `(mark-before ,test-mark))   ; String-quote to be checked.
-       
+       ,(unless forwardp
+	  ;; TEST-MARK should always be right before the String-quote to be
+	  ;; checked.
+	  `(mark-before ,test-mark))
        (when (test-char (next-character ,test-mark) :lisp-syntax :string-quote)
-	 
 	 (let ((slash-count 0))
-	   
 	   (loop
 	     (mark-before ,test-mark)
 	     (if (test-char (next-character ,test-mark) :lisp-syntax :char-quote)
@@ -418,45 +419,41 @@ RANGES-TO-INGORE, and ENDING-QUOTED."
 	
 	(neighbor-mark ,e-mark ,forwardp)))))
 
-;;; DEAL-WITH-STRING-QUOTE 
-;;; 
-;;; Called when a string is begun (i.e. parse hits a #\").  It checks for a
-;;; matching quote on the line that MARK points to, and puts the
-;;; appropriate area in the RANGES-TO-IGNORE slot and leaves MARK pointing
-;;; after this area.  The "appropriate area" is from MARK to the end of the
-;;; line or the matching string-quote, whichever comes first.
+;;;; DEAL-WITH-STRING-QUOTE.
 
+;;; DEAL-WITH-STRING-QUOTE
+;;;
+;;; Called when a string is begun (i.e. parse hits a #\").  It checks for a
+;;; matching quote on the line that MARK points to, and puts the appropriate
+;;; area in the RANGES-TO-IGNORE slot and leaves MARK pointing after this area.
+;;; The "appropriate area" is from MARK to the end of the line or the matching
+;;; string-quote, whichever comes first.
+;;;
 (defun deal-with-string-quote (mark info-struct)
   "Alter the current line's info struct as necessary as due to encountering a
-string quote character."
+   string quote character."
   (with-mark ((e-mark mark))
-    
     (cond ((find-valid-string-quote e-mark :forwardp t :cease-at-eol t)
-    
-	   ;; If matching quote is on this line then mark the area between 
-	   ;; the first quote (MARK) and the matching quote as invalid by 
-	   ;; pushing its begining and ending into the IGNORE-RANGE.
-	   
+	   ;; If matching quote is on this line then mark the area between the
+	   ;; first quote (MARK) and the matching quote as invalid by pushing
+	   ;; its begining and ending into the IGNORE-RANGE.
 	   (push-range (cons (mark-charpos mark) (mark-charpos e-mark))
 		       info-struct)
-		       
 	   (setf (lisp-info-ending-quoted info-struct) nil)
 	   (mark-after e-mark)
 	   (move-mark mark e-mark))
-	   
-	  ;; If the EOL has been hit before the matching quote then mark
-	  ;; the area from MARK to the EOL as invalid.
-	  
+	  ;; If the EOL has been hit before the matching quote then mark the
+	  ;; area from MARK to the EOL as invalid.
 	  (t
-	   (push-range (cons (mark-charpos mark) (1+ (line-length (mark-line mark))))
+	   (push-range (cons (mark-charpos mark)
+			     (1+ (line-length (mark-line mark))))
 		       info-struct)
-			 
 	   ;; The Ending is marked as still being quoted. 
-
 	   (setf (lisp-info-ending-quoted info-struct) t)
 	   (line-end mark)
 	   nil))))
-	     
+
+
 
 ;;;; Character validity checking:
 
@@ -469,7 +466,6 @@ string quote character."
 ;;; the buffer beginning or end), then return both values NIL.
 ;;;
 (defun find-ignore-region (mark forwardp)
-  (declare (fixnum pos))
   (flet ((scan (line pos)
 	   (declare (fixnum pos))
 	   (let ((info (getf (line-plist line) 'lisp-info)))
@@ -537,15 +533,15 @@ string quote character."
 	   (setq ,n-won t))))))
 
 
-;;;; #### LIST-OFFSETING ####
-;;; 
+;;;; List offseting.
+
 ;;; %LIST-OFFSET allows for BACKWARD-LIST and FORWARD-LIST to be built
 ;;; with the same existing structure, with the altering of one variable.
 ;;; This one variable being FORWARDP.
 ;;; 
 (defmacro %list-offset (actual-mark forwardp &key (extra-parens 0) )
   "Expand to code that will go forward one list either backward or forward, 
-according to the FORWARDP flag."
+   according to the FORWARDP flag."
   (let ((mark (gensym)))
     `(let ((paren-count ,extra-parens))
        (declare (fixnum paren-count))
@@ -559,8 +555,10 @@ according to the FORWARDP flag."
 	       (case (character-attribute :lisp-syntax ch)
 		 (:close-paren
 		  (decf paren-count)
-		  ,(when forwardp               ; When going forward, an unmatching
-		     `(when (<= paren-count 0)  ; close-paren means the end of list.
+		  ,(when forwardp
+		     ;; When going forward, an unmatching close-paren means the
+		     ;; end of list.
+		     `(when (<= paren-count 0)
 			(neighbor-mark ,mark ,forwardp)
 			(move-mark ,actual-mark ,mark)
 			(return t))))
@@ -573,10 +571,10 @@ according to the FORWARDP flag."
 			(return t))))
 		 
 		 (:newline 
-		  ;; When a #\Newline is hit, then the matching paren must lie on
-		  ;; some other line so drop down into the multiple line balancing
-		  ;; function:  QUEST-FOR-BALANCING-PAREN
-		  ;; If no paren seen yet, keep going.
+		  ;; When a #\Newline is hit, then the matching paren must lie
+		  ;; on some other line so drop down into the multiple line
+		  ;; balancing function: QUEST-FOR-BALANCING-PAREN If no paren
+		  ;; seen yet, keep going.
 		  (cond ((zerop paren-count))
 			((quest-for-balancing-paren ,mark paren-count ,forwardp)
 			 (move-mark ,actual-mark ,mark)
@@ -742,7 +740,7 @@ according to the FORWARDP flag."
 
 
 
-;;;; #### FORM OFFSETING ####
+;;;; Form offseting.
 
 (defmacro %form-offset (mark forwardp)
   `(with-mark ((m ,mark))
@@ -799,8 +797,7 @@ according to the FORWARDP flag."
 
 
 
-;;; Table of special forms with special indenting requirements.
-
+;;;; Table of special forms with special indenting requirements.
 
 (defhvar "Indent Defanything"
   "This is the number of special arguments implicitly assumed to be supplied
@@ -907,6 +904,47 @@ according to the FORWARDP flag."
 (defindent "abort" 1)
 (defindent "continue" 1)
 
+;;; Debug-internals forms.
+;;;
+(defindent "do-debug-function-blocks" 1)
+(defindent "di:do-debug-function-blocks" 1)
+(defindent "do-debug-function-variables" 1)
+(defindent "di:do-debug-function-variables" 1)
+(defindent "do-debug-block-locations" 1)
+(defindent "di:do-debug-block-locations" 1)
+;;;
+;;; Debug-internals conditions
+;;; (define these to make uses of HANDLER-CASE indent branches correctly.)
+;;;
+(defindent "debug-condition" 1)
+(defindent "di:debug-condition" 1)
+(defindent "no-debug-info" 1)
+(defindent "di:no-debug-info" 1)
+(defindent "no-debug-function-returns" 1)
+(defindent "di:no-debug-function-returns" 1)
+(defindent "no-debug-blocks" 1)
+(defindent "di:no-debug-blocks" 1)
+(defindent "lambda-list-unavailable" 1)
+(defindent "di:lambda-list-unavailable" 1)
+(defindent "no-debug-variables" 1)
+(defindent "di:no-debug-variables" 1)
+(defindent "invalid-value" 1)
+(defindent "di:invalid-value" 1)
+(defindent "ambiguous-variable-name" 1)
+(defindent "di:ambiguous-variable-name" 1)
+(defindent "debug-error" 1)
+(defindent "di:debug-error" 1)
+(defindent "unhandled-condition" 1)
+(defindent "di:unhandled-condition" 1)
+(defindent "unknown-code-location" 1)
+(defindent "di:unknown-code-location" 1)
+(defindent "unknown-debug-variable" 1)
+(defindent "di:unknown-debug-variable" 1)
+(defindent "invalid-control-stack-pointer" 1)
+(defindent "di:invalid-control-stack-pointer" 1)
+(defindent "frame-function-mismatch" 1)
+(defindent "di:frame-function-mismatch" 1)
+
 ;;; Xlib forms.
 ;;;
 (defindent "with-gcontext" 1)
@@ -935,22 +973,37 @@ according to the FORWARDP flag."
 (defindent "def-c-record" 1)
 (defindent "defrecord" 1)
 
+;;; Wire forms.
+(defindent "remote" 1)
+(defindent "wire:remote" 1)
+(defindent "remote-value" 1)
+(defindent "wire:remote-value" 1)
+(defindent "remote-value-bind" 3)
+(defindent "wire:remote-value-bind" 3)
+
 
 
-;;; Compute number of spaces which mark should be indented according to
-;;; local context and lisp grinding conventions.
+;;;; Indentation.
 
+;;; LISP-INDENTATION -- Internal Interface.
+;;;
 (defun lisp-indentation (mark)
+  "Compute number of spaces which mark should be indented according to
+   local context and lisp grinding conventions.  This assumes mark is at the
+   beginning of the line to be indented."
   (with-mark ((m mark)
 	      (temp mark))
+    ;; See if we are in a quoted context.
     (unless (valid-spot m nil)
-      (return-from lisp-indentation
-		   (lisp-generic-indentation m)))
+      (return-from lisp-indentation (lisp-generic-indentation m)))
+    ;; Look for the paren that opens the containing form.
     (unless (backward-up-list m)
       (return-from lisp-indentation 0))
+    ;; Move after the paren, save the start, and find the form name.
     (mark-after m)
     (with-mark ((start m))
-      (unless (and (scan-char m :lisp-syntax (not (or :space :prefix :char-quote)))
+      (unless (and (scan-char m :lisp-syntax
+			      (not (or :space :prefix :char-quote)))
 		   (test-char (next-character m) :lisp-syntax :constituent))
 	(return-from lisp-indentation (mark-column start)))
       (with-mark ((fstart m))
@@ -961,6 +1014,7 @@ according to the FORWARDP flag."
 				      (string= fname "DEF" :end1 3)
 				      (value indent-defanything)))))
 	  (declare (simple-string fname))
+	  ;; Now that we have the form name, did it have special syntax?
 	  (cond (special-args
 		 (with-mark ((spec m))
 		   (cond ((and (form-offset spec special-args)
@@ -970,28 +1024,96 @@ according to the FORWARDP flag."
 			  (mark-column m))
 			 (t
 			  (+ (mark-column start) 3)))))
+		;; See if the user seems to have altered the editor's
+		;; indentation, and if so, try to adhere to it.  This usually
+		;; happens when you type in a quoted list constant that line
+		;; wraps.  You want all the items on successive lines to fall
+		;; under the first character after the opening paren, not as if
+		;; you are calling a function.
 		((and (form-offset temp -1)
-		      (or (blank-before-p temp)
-			  (not (same-line-p temp fstart)))
+		      (or (blank-before-p temp) (not (same-line-p temp fstart)))
 		      (not (same-line-p temp mark)))
 		 (unless (blank-before-p temp)
 		   (line-start temp)
 		   (find-attribute temp :space #'zerop))
 		 (mark-column temp))
+		;; Appears to be a normal form.  Is the first arg on the same
+		;; line as the form name?
 		((skip-valid-space m)
-		 (mark-column m))
+		 (or (lisp-indentation-check-for-local-def
+		      mark temp fstart start t)
+		     (mark-column m)))
+		;; Okay, fall under the first character after the opening paren.
 		(t
-		 (mark-column start))))))))
+		 (or (lisp-indentation-check-for-local-def
+		      mark temp fstart start nil)
+		     (mark-column start)))))))))
 
+(defhvar "Lisp Indentation Local Definers"
+  "Forms with syntax like LABELS, MACROLET, etc."
+  :value '("LABELS" "MACROLET" "FLET"))
+
+;;; LISP-INDENTATION-CHECK-FOR-LOCAL-DEF -- Internal.
+;;;
+;;; This is a temporary hack to see how it performs.  When we are indenting
+;;; what appears to be a function call, let's look for FLET or MACROLET to see
+;;; if we really are indenting a local definition.  If we are, return the
+;;; indentation for a DEFUN; otherwise, nil
+;;;
+;;; Mark is the argument to LISP-INDENTATION.  Start is just inside the paren
+;;; of what looks like a function call.  If we are in an FLET, arg-list
+;;; indicates whether the local function's arg-list has been entered, that is,
+;;; whether we need to normally indent for a DEFUN body or indent specially for
+;;; the arg-list.
+;;;
+(defun lisp-indentation-check-for-local-def (mark temp1 temp2 start arg-list)
+  ;; We know this succeeds from LISP-INDENTATION.
+  (backward-up-list (move-mark temp1 mark)) ;Paren for local definition.
+  (cond ((and (backward-up-list temp1)	    ;Paren opening the list of defs
+	      (form-offset (move-mark temp2 temp1) -1)
+	      (mark-before temp2)
+	      (backward-up-list temp1)	    ;Paren for FLET or MACROLET.
+	      (mark= temp1 temp2))	    ;Must be in first arg form.
+	 ;; See if the containing form is named FLET or MACROLET.
+	 (mark-after temp1)
+	 (unless (and (scan-char temp1 :lisp-syntax
+				 (not (or :space :prefix :char-quote)))
+		      (test-char (next-character temp1) :lisp-syntax
+				 :constituent))
+	   (return-from lisp-indentation-check-for-local-def nil))
+	 (move-mark temp2 temp1)
+	 (scan-char temp2 :lisp-syntax (not :constituent))
+	 (let ((fname (nstring-upcase (region-to-string (region temp1 temp2)))))
+	   (cond ((not (member fname (value lisp-indentation-local-definers)
+			       :test #'string=))
+		  nil)
+		 (arg-list
+		  (1+ (mark-column start)))
+		 (t
+		  (+ (mark-column start) 3)))))))
+
+;;; LISP-GENERIC-INDENTATION -- Internal.
+;;;
+;;; LISP-INDENTATION calls this when mark is in a invalid spot, or quoted
+;;; context.  If we are inside a string, we return the column one greater
+;;; than the opening double quote.  Otherwise, we just use the indentation
+;;; of the first preceding non-blank line.
+;;;
 (defun lisp-generic-indentation (mark)
-  (let* ((line (mark-line mark))
-	 (prev (do ((line (line-previous line) (line-previous line)))
-		   ((or (null line) (not (blank-line-p line))) line))))
-    (cond (prev 
-	   (line-start mark prev)
-	   (find-attribute mark :space #'zerop)
-	   (mark-column mark))
-	  (t 0))))
+  (with-mark ((m mark))
+    (form-offset m -1)
+    (cond ((eq (character-attribute :lisp-syntax (next-character m))
+	       :string-quote)
+	   (1+ (mark-column m)))
+	  (t
+	   (let* ((line (mark-line mark))
+		  (prev (do ((line (line-previous line) (line-previous line)))
+			    ((not (and line (blank-line-p line))) line))))
+	     (cond (prev
+		    (line-start mark prev)
+		    (find-attribute mark :space #'zerop)
+		    (mark-column mark))
+		   (t 0)))))))
 
 ;;; Skip-Valid-Space  --  Internal
 ;;;
@@ -1007,8 +1129,10 @@ according to the FORWARDP flag."
 	    ((valid-spot mark t) (return mark))))
     (mark-after mark)))
 
+(declaim (optimize (speed 0))); byte compile again
+
 
-;;;; LISP Mode commands
+;;;; Indentation commands and hook functions.
 
 (defcommand "Defindent" (p)
   "Define the Lisp indentation for the current function.
@@ -1016,7 +1140,6 @@ according to the FORWARDP flag."
   of special arguments for the form.  Examples: 2 for Do, 1 for Dolist.
   If a prefix argument is supplied, then delete the indentation information."
   "Do a defindent, man!"
-  (declare (ignore p))
   (with-mark ((m (current-point)))
     (pre-command-parse-check m)
     (unless (backward-up-list m) (editor-error))
@@ -1034,7 +1157,72 @@ according to the FORWARDP flag."
 	      (when (minusp i)
 		(editor-error "Indentation must be non-negative."))
 	      (defindent s i))))))
-  (indent-command ()))
+  (indent-command nil))
+
+(defcommand "Indent Form" (p)
+  "Indent Lisp code in the next form."
+  "Indent Lisp code in the next form."
+  (declare (ignore p))
+  (let ((point (current-point)))
+    (pre-command-parse-check point)
+    (with-mark ((m point))
+      (unless (form-offset m 1) (editor-error))
+      (lisp-indent-region (region point m) "Indent Form"))))
+
+;;; LISP-INDENT-REGION -- Internal.
+;;;
+;;; This indents a region of Lisp code without doing excessive redundant
+;;; computation.  We parse the entire region once, then scan through doing
+;;; indentation on each line.  We forcibly reparse each line that we indent so
+;;; that the list operations done to determine indentation of subsequent lines
+;;; will work.  This is done undoably with save1, save2, buf-region, and
+;;; undo-region.
+;;;
+(defun lisp-indent-region (region &optional (undo-text "Lisp region indenting"))
+  (check-region-query-size region)
+  (let ((start (region-start region))
+	(end (region-end region)))
+    (with-mark ((m1 start)
+		(m2 end))
+      (funcall (value parse-start-function) m1)
+      (funcall (value parse-end-function) m2)
+      (parse-over-block (mark-line m1) (mark-line m2)))
+    (let* ((first-line (mark-line start))
+	   (last-line (mark-line end))
+	   (prev (line-previous first-line))
+	   (prev-line-info
+	    (and prev (getf (line-plist prev) 'lisp-info)))
+	   (save1 (line-start (copy-mark start :right-inserting)))
+	   (save2 (line-end (copy-mark end :left-inserting)))
+	   (buf-region (region save1 save2))
+	   (undo-region (copy-region buf-region)))
+      (with-mark ((bol start :left-inserting))
+	(do ((line first-line (line-next line)))
+	    (nil)
+	  (line-start bol line)
+	  (insert-lisp-indentation bol)
+	  (let ((line-info (getf (line-plist line) 'lisp-info)))
+	    (parse-lisp-line-info bol line-info prev-line-info)
+	    (setq prev-line-info line-info))
+	  (when (eq line last-line) (return nil))))
+      (make-region-undo :twiddle undo-text buf-region undo-region))))
+
+;;; INDENT-FOR-LISP -- Internal.
+;;;
+;;; This is the value of "Indent Function" for "Lisp" mode.
+;;;
+(defun indent-for-lisp (mark)
+  (line-start mark)
+  (pre-command-parse-check mark)
+  (insert-lisp-indentation mark))
+
+(defun insert-lisp-indentation (m)
+  (delete-horizontal-space m)
+  (funcall (value indent-with-tabs) m (lisp-indentation m)))
+
+
+
+;;;; Most "Lisp" mode commands.
 
 (defcommand "Beginning of Defun" (p)
   "Move the point to the beginning of a top-level form.
@@ -1257,64 +1445,6 @@ according to the FORWARDP flag."
 	      (move-mark point s2)))))))
 
 
-(defcommand "Indent Form" (p)
-  "Indent Lisp code in the next form."
-  "Indent Lisp code in the next form."
-  (declare (ignore p))
-  (let ((point (current-point)))
-    (pre-command-parse-check point)
-    (with-mark ((m point))
-      (unless (form-offset m 1) (editor-error))
-      (lisp-indent-region (region point m) "Indent Form"))))
-
-;;; LISP-INDENT-REGION indents a region of Lisp code without doing excessive
-;;; redundant computation.  We parse the entire region once, then scan through
-;;; doing indentation on each line.  We forcibly reparse each line that we
-;;; indent so that the list operations done to determine indentation of
-;;; subsequent lines will work.  This is done undoably with save1, save2,
-;;; buf-region, and undo-region.
-;;;
-(defun lisp-indent-region (region &optional (undo-text "Lisp region indenting"))
-  (check-region-query-size region)
-  (let ((start (region-start region))
-	(end (region-end region)))
-    (with-mark ((m1 start)
-		(m2 end))
-      (funcall (value parse-start-function) m1)
-      (funcall (value parse-end-function) m2)
-      (parse-over-block (mark-line m1) (mark-line m2)))
-    (let* ((first-line (mark-line start))
-	   (last-line (mark-line end))
-	   (prev (line-previous first-line))
-	   (prev-line-info
-	    (and prev (getf (line-plist prev) 'lisp-info)))
-	   (save1 (line-start (copy-mark start :right-inserting)))
-	   (save2 (line-end (copy-mark end :left-inserting)))
-	   (buf-region (region save1 save2))
-	   (undo-region (copy-region buf-region)))
-      (with-mark ((bol start :left-inserting))
-	(do ((line first-line (line-next line)))
-	    (nil)
-	  (line-start bol line)
-	  (insert-lisp-indentation bol)
-	  (let ((line-info (getf (line-plist line) 'lisp-info)))
-	    (parse-lisp-line-info bol line-info prev-line-info)
-	    (setq prev-line-info line-info))
-	  (when (eq line last-line) (return nil))))
-      (make-region-undo :twiddle undo-text buf-region undo-region))))
-
-;;; INDENT-FOR-LISP is the value of "Indent Function" for "Lisp" mode.
-;;;
-(defun indent-for-lisp (mark)
-  (line-start mark)
-  (pre-command-parse-check mark)
-  (insert-lisp-indentation mark))
-
-(defun insert-lisp-indentation (m)
-  (delete-horizontal-space m)
-  (funcall (value indent-with-tabs) m (lisp-indentation m)))
-
-
 (defcommand "Insert ()" (p)
   "Insert a pair of parentheses ().
    With positive argument, puts parentheses around the next p
@@ -1342,13 +1472,16 @@ according to the FORWARDP flag."
   (declare (ignore p))
   (let ((point (current-point)))
     (pre-command-parse-check point)
-    (with-mark ((m point))
+    (with-mark ((m point :left-inserting))
       (cond ((scan-char m :lisp-syntax :close-paren)
 	     (delete-horizontal-space m)
 	     (mark-after m)
 	     (move-mark point m)
+	     (delete-mark m)
 	     (indent-new-line-command 1))
-	    (t (editor-error))))))
+	    (t 
+	     (delete-mark m)
+	     (editor-error))))))
 
 
 (defcommand "Forward Up List" (p)
@@ -1392,7 +1525,153 @@ according to the FORWARDP flag."
 
 
 
-;;;; "Lisp Mode".
+;;;; Filling Lisp comments, strings, and indented text.
+
+(defhvar "Fill Lisp Comment Paragraph Confirm"
+  "This determines whether \"Fill Lisp Comment Paragraph\" will prompt for
+   confirmation to fill contiguous lines with the same initial whitespace when
+   it is invoked outside of a comment or string."
+  :value t)
+
+(defcommand "Fill Lisp Comment Paragraph" (p)
+  "This fills a flushleft or indented Lisp comment.
+   This also fills Lisp string literals using the proper indentation as a
+   filling prefix.  When invoked outside of a comment or string, this tries
+   to fill all contiguous lines beginning with the same initial, non-empty
+   blankspace.  When filling a comment, the current line is used to determine a
+   fill prefix by taking all the initial whitespace on the line, the semicolons,
+   and any whitespace following the semicolons."
+  "Fills a flushleft or indented Lisp comment."
+  (declare (ignore p))
+  (let ((point (current-point)))
+    (pre-command-parse-check point)
+    (with-mark ((start point)
+		(end point)
+		(m point))
+      (let ((commentp (fill-lisp-comment-paragraph-prefix start end)))
+	(cond (commentp
+	       (fill-lisp-comment-or-indented-text start end))
+	      ((and (not (valid-spot m nil))
+		    (form-offset m -1)
+		    (eq (character-attribute :lisp-syntax (next-character m))
+			:string-quote))
+	       (fill-lisp-string m))
+	      ((or (not (value fill-lisp-comment-paragraph-confirm))
+		   (prompt-for-y-or-n
+		    :prompt '("Not in a comment or string.  Fill contiguous ~
+			       lines with the same initial whitespace? ")))
+	       (fill-lisp-comment-or-indented-text start end)))))))
+
+;;; FILL-LISP-STRING -- Internal.
+;;;
+;;; This fills the Lisp string containing mark as if it had been entered using
+;;; Hemlock's Lisp string indentation, "Indent Function" for "Lisp" mode.  This
+;;; assumes the area around mark has already been PRE-COMMAND-PARSE-CHECK'ed,
+;;; and it ensures the string ends before doing any filling.  This function
+;;; is undo'able.
+;;;
+(defun fill-lisp-string (mark)
+  (with-mark ((end mark))
+    (unless (form-offset end 1)
+      (editor-error "Attempted to fill Lisp string, but it doesn't end?"))
+    (let* ((mark (copy-mark mark :left-inserting))
+	   (end (copy-mark end :left-inserting))
+	   (string-region (region mark end))
+	   (undo-region (copy-region string-region))
+	   (hack (make-empty-region)))
+      ;; Generate prefix.
+      (funcall (value indent-with-tabs)
+	       (region-end hack) (1+ (mark-column mark)))
+      ;; Skip opening double quote and fill string starting on its own line.
+      (mark-after mark)
+      (insert-character mark #\newline)
+      (line-start mark)
+      (setf (mark-kind mark) :right-inserting)
+      (fill-region string-region (region-to-string hack))
+      ;; Clean up inserted prefix on first line, delete inserted newline, and
+      ;; move before the double quote for undo.
+      (with-mark ((text mark :left-inserting))
+	(find-attribute text :whitespace #'zerop)
+	(delete-region (region mark text)))
+      (delete-characters mark -1)
+      (mark-before mark)
+      ;; Save undo.
+      (make-region-undo :twiddle "Fill Lisp Comment Paragraph"
+			string-region undo-region))))
+
+;;; FILL-LISP-COMMENT-OR-INDENTED-TEXT -- Internal.
+;;;
+;;; This fills all contiguous lines around start and end containing fill prefix
+;;; designated by the region between start and end.  These marks can only be
+;;; equal when there is no comment and no initial whitespace.  This is a bad
+;;; situation since this function in that situation would fill the entire
+;;; buffer into one paragraph.  This function is undo'able.
+;;;
+(defun fill-lisp-comment-or-indented-text (start end)
+  (when (mark= start end)
+    (editor-error "This command only fills Lisp comments, strings, or ~
+		   indented text, but this line is flushleft."))
+  ;;
+  ;; Find comment block.
+  (let* ((prefix (region-to-string (region start end)))
+	 (length (length prefix)))
+    (declare (simple-string prefix))
+    (flet ((frob (mark direction)
+	     (loop
+	       (let* ((line (line-string (mark-line mark)))
+		      (line-len (length line)))
+		 (declare (simple-string line))
+		 (unless (string= line prefix :end1 (min line-len length))
+		   (when (= direction -1)
+		     (unless (same-line-p mark end) (line-offset mark 1 0)))
+		   (return)))
+	       (unless (line-offset mark direction 0)
+		 (when (= direction 1) (line-end mark))
+		 (return)))))
+      (frob start -1)
+      (frob end 1))
+    ;;
+    ;; Do it undoable.
+    (let* ((start1 (copy-mark start :right-inserting))
+	   (end2 (copy-mark end :left-inserting))
+	   (region (region start1 end2))
+	   (undo-region (copy-region region)))
+      (fill-region region prefix)
+      (make-region-undo :twiddle "Fill Lisp Comment Paragraph"
+			region undo-region))))
+
+;;; FILL-LISP-COMMENT-PARAGRAPH-PREFIX -- Internal.
+;;;
+;;; This sets start and end around the prefix to be used for filling.  We
+;;; assume we are dealing with a comment.  If there is no ";", then we try to
+;;; find some initial whitespace.  If there is a ";", we make sure the line is
+;;; blank before it to eliminate ";"'s in the middle of a line of text.
+;;; Finally, if we really have a comment instead of some indented text, we skip
+;;; the ";"'s and any immediately following whitespace.  We allow initial
+;;; whitespace, so we can fill strings with the same command.
+;;;
+(defun fill-lisp-comment-paragraph-prefix (start end)
+  (line-start start)
+  (let ((commentp t)) ; Assumes there's a comment.
+    (unless (to-line-comment (line-start end) ";")
+      (find-attribute end :whitespace #'zerop)
+      #|(when (start-line-p end)
+	(editor-error "No comment on line, and no initial whitespace."))|#
+      (setf commentp nil))
+    (when commentp
+      (unless (blank-before-p end)
+	(find-attribute (line-start end) :whitespace #'zerop)
+	#|(when (start-line-p end)
+	  (editor-error "Semicolon preceded by unindented text."))|#
+	(setf commentp nil)))
+    (when commentp
+      (find-attribute end :lisp-syntax #'(lambda (x) (not (eq x :comment))))
+      (find-attribute end :whitespace #'zerop))
+    commentp))
+
+
+
+;;;; "Lisp" mode.
 
 (defcommand "LISP Mode" (p)
   "Put current buffer in LISP mode." 
@@ -1454,6 +1733,23 @@ according to the FORWARDP flag."
    the cursor is directly to the right of the corresponding close paren."
   :value t
   :mode "Lisp")
+
+
+(defhvar "Open Paren Finder Function"
+  "Should be a function that takes a mark for input and returns either NIL
+   if the mark is not after a close paren, or two (temporary) marks
+   surrounding the corresponding open paren."
+  :mode "Lisp"
+  :value 'lisp-open-paren-finder-function)
+
+(defun lisp-open-paren-finder-function (mark)
+  (when (eq (character-attribute :lisp-syntax (previous-character mark))
+	    :close-paren)
+    (with-mark ((mark mark))
+      (pre-command-parse-check mark)
+      (if (not (and (valid-spot mark nil) (list-offset mark -1)))
+	  (values nil nil)
+	  (values mark (mark-after (copy-mark mark)))))))
 
 
 

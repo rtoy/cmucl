@@ -1,18 +1,21 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.3 1994/02/11 21:52:59 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Echo area commands.
 ;;;
 ;;; Written by Rob MacLachlan and Skef Wholey.
 ;;;
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 (defhvar "Beep on Ambiguity"
   "If non-NIL, beep when completion of a parse is ambiguous."
@@ -21,7 +24,7 @@
 (defhvar "Ignore File Types"
   "File types to ignore when trying to complete a filename."
   :value
-  (list "fasl" "err"			    ; Lisp
+  (list "fasl" "pmaxf" "sparcf" "rtf" "hpf" "axpf" "err" ; Lisp
 	"BAK" "CKP"			    ; Backups & Checkpoints
 	"PS" "ps" "press" "otl" "dvi" "toc" ; Formatting
 	"bbl" "lof" "idx" "lot" "aux"	    ; Formatting
@@ -85,9 +88,20 @@
 	  (write-line help s)
 	  (cond (pns
 		 (write-line "Possible completions of what you have typed:" s)
-		 (dolist (pn pns)
-		   (format s " ~A~25T ~A~%" (file-namestring pn)
-			   (directory-namestring pn))))
+		 (let ((width (- (window-width (current-window)) 27)))
+		   (dolist (pn pns)
+		     (let* ((dir (directory-namestring pn))
+			    (len (length dir)))
+		       (unless (<= len width)
+			 (let ((slash (position #\/ dir
+						:start (+ (- len width) 3))))
+			   (setf dir
+				 (if slash
+				     (concatenate 'string "..."
+						  (subseq dir slash))
+				     "..."))))
+		       (format s " ~A~25T ~A~%"
+			       (file-namestring pn) dir)))))
 		(t
 		 (write-line 
  "There are no possible completions of what you have typed." s))))))
@@ -215,7 +229,6 @@
   "Pop the *echo-area-history* ring buffer."
   (let ((length (ring-length *echo-area-history*))
 	(p (or p 1)))
-    (declare (simple-string current))
     (when (zerop length) (editor-error))
     (cond
      ((eq (last-command-type) :echo-history)
@@ -250,6 +263,12 @@
   "Just signals an editor-error."
   (declare (ignore p))
   (editor-error))
+
+(add-hook window-buffer-hook
+	  #'(lambda (window new-buff)
+	      (when (and (eq window *echo-area-window*)
+			 (not (eq new-buff *echo-area-buffer*)))
+		(editor-error "Can't change echo area window."))))
 
 (defcommand "Beginning Of Parse" (p)
   "Moves to immediately after the prompt when in the echo area."

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.1.1.7 1993/08/25 02:23:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.2 1994/02/11 21:53:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;

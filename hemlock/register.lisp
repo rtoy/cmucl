@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/register.lisp,v 1.3 1994/02/11 21:53:39 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Registers for holding text and positions.
@@ -13,7 +16,7 @@
 ;;; Written by Dave Touretzky.
 ;;; Modified by Bill Chiles for Hemlock consistency.
 ;;;
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 
 
@@ -71,7 +74,6 @@
 ;;; 
 (defun flush-reg-references-to-deleted-buffer (buffer)
   (do-registers (name value)
-    (declare (ignore name))
     (etypecase value
       (mark (when (eq (line-buffer (mark-line value)) buffer)
 	      (free-register name)))

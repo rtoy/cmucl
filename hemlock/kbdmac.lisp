@@ -1,11 +1,14 @@
 ;;; -*- Log: hemlock.log; Package: Hemlock -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/kbdmac.lisp,v 1.3 1994/02/11 21:53:14 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains the implementation of keyboard macros for
@@ -115,7 +118,7 @@
   (insert-character (buffer-point (current-buffer)) character))
 
 (defun key-vector-to-string (key-vector)
-  (let ((string (make-array (length key-vector) :element-type 'string-char)))
+  (let ((string (make-array (length key-vector) :element-type 'base-char)))
     (dotimes (i (length key-vector) string)
       (setf (aref string i) (key-event-char (aref key-vector i))))))
 
