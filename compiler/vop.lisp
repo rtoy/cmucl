@@ -63,7 +63,7 @@
   ;;
   ;; The Lisp type equivalent to this type.  If this type could never be
   ;; returned by Primitive-Type, then this is the NIL (or empty) type.
-  (type nil :type ctype)
+  (type (required-argument) :type ctype)
   ;;
   ;; The template used to check that an object is of this type.  This is
   ;; a template of one argument and one result, both of primitive-type T.  If
@@ -138,7 +138,7 @@
   (number nil :type (or index null))
   ;;
   ;; The IR1 block that this block is in the Info for.  
-  (block nil :type cblock)
+  (block (required-argument) :type cblock)
   ;;
   ;; The next and previous block in emission order (not DFO).  This determines
   ;; which block we drop though to, and also used to chain together overflow
@@ -354,28 +354,32 @@
 
 
 ;;; The Entry-Info structure condenses all the information that the dumper
-;;; needs to create each XEP's function entry data structure.
+;;; needs to create each XEP's function entry data structure.  The Entry-Info
+;;; structures are somtimes created before they are initialized, since ir2
+;;; conversion may need to compile a forward reference.  In this case
+;;; the slots aren't actually initialized until entry analysis runs.
 ;;;
 (defstruct entry-info
   ;;
   ;; True if this function has a non-null closure environment.
   (closure-p nil :type boolean)
   ;;
-  ;; A label pointing to the entry vector for this function.
-  (offset nil :type label)
+  ;; A label pointing to the entry vector for this function.  Null until
+  ;; ENTRY-ANALYZE runs. 
+  (offset nil :type (or label null))
   ;;
   ;; If this function was defined using DEFUN, then this is the name of the
   ;; function, a symbol or (SETF <symbol>).  Otherwise, this is some string
   ;; that is intended to be informative.
-  (name nil :type (or simple-string list symbol))
+  (name "<not computed>" :type (or simple-string list symbol))
   ;;
   ;; A string representing the argument list that the function was defined
   ;; with.
-  (arguments nil :type simple-string)
+  (arguments "<not computed>" :type simple-string)
   ;;
   ;; A function type specifier representing the arguments and results of this
   ;; function.
-  (type nil :type list))
+  (type nil :type (or list (member function))))
 
 
 ;;; The IR2-Environment is used to annotate non-let lambdas with their passing
@@ -403,7 +407,7 @@
   ;; differently from the other arguments, since in some implementations we may
   ;; use a call instruction that requires the return PC to be passed in a
   ;; particular place.
-  (return-pc-pass nil :type tn)
+  (return-pc-pass (required-argument) :type tn)
   ;;
   ;; True if this function has a frame on the number stack.  This is set by
   ;; representation selection whenever it is possible that some function in
@@ -444,12 +448,12 @@
   ;; The return convention used:
   ;; -- If :Unknown, we use the standard return convention.
   ;; -- If :Fixed, we use the known-values convention.
-  (kind nil :type (member :fixed :unknown))
+  (kind (required-argument) :type (member :fixed :unknown))
   ;;
   ;; The number of values returned, or :Unknown if we don't know.  Count may be
   ;; known when Kind is :Unknown, since we may choose the standard return
   ;; convention for other reasons.
-  (count nil :type (or index (member :unknown)))
+  (count (required-argument) :type (or index (member :unknown)))
   ;;
   ;; If count isn't :Unknown, then this is a list of the primitive-types of
   ;; each value.
@@ -476,7 +480,7 @@
   (home nil :type (or tn null))
   ;;
   ;; The saved control stack pointer.
-  (save-sp nil :type tn)
+  (save-sp (required-argument) :type tn)
   ;;
   ;; The list of dynamic state save TNs.
   (dynamic-state (make-dynamic-state-tns) :type list)
@@ -512,7 +516,7 @@
   ;;    :Strange
   ;;        A segment of a "strange loop" in a non-reducible flow graph.
   ;;
-  (kind nil :type (member :outer :natural :strange))
+  (kind (required-argument) :type (member :outer :natural :strange))
   ;;
   ;; The first and last blocks in the loop.  There may be more than one tail,
   ;; since there may be multiple back branches to the same head.
@@ -554,7 +558,7 @@
   (info nil :type (or vop-info null))
   ;;
   ;; The IR2-Block this VOP is in.
-  (block nil :type ir2-block)
+  (block (required-argument) :type ir2-block)
   ;;
   ;; VOPs evaluated after and before this one.  Null at the beginning/end of
   ;; the block, and temporarily during IR2 translation.
@@ -600,7 +604,7 @@
 		   (:constructor really-make-tn-ref (tn write-p)))
   ;;
   ;; The TN referenced.
-  (tn nil :type tn)
+  (tn (required-argument) :type tn)
   ;;
   ;; True if this is a write reference, false if a read.
   (write-p nil :type boolean)
@@ -646,7 +650,7 @@
   ;; A Function-Type describing the arg/result type restrictions.  We compute
   ;; this from the Primitive-Type restrictions to make life easier for IR1
   ;; phases that need to anticipate LTN's template selection.
-  (type nil :type function-type)
+  (type (required-argument) :type function-type)
   ;;
   ;; Lists of restrictions on the argument and result types.  A restriction may
   ;; take several forms:
@@ -683,11 +687,11 @@
   ;; The policy under which this template is the best translation.  Note that
   ;; LTN might use this template under other policies if it can't figure our
   ;; anything better to do.
-  (policy nil :type policies)
+  (policy (required-argument) :type policies)
   ;;
   ;; The base cost for this template, given optimistic assumptions such as no
   ;; operand loading, etc.
-  (cost nil :type index)
+  (cost (required-argument) :type index)
   ;;
   ;; If true, then a short noun-like phrase describing what this VOP "does",
   ;; i.e. the implementation strategy.  This is for use in efficiency notes.
@@ -709,7 +713,7 @@
   ;; Two values are returned: the first and last VOP emitted.  This vop
   ;; sequence must be linked into the VOP Next/Prev chain for the block.  At
   ;; least one VOP is always emitted.
-  (emit-function nil :type function))
+  (emit-function (required-argument) :type function))
 
 (defprinter template
   name
@@ -733,8 +737,8 @@
   ;;
   ;; Side-effects of this VOP and side-effects that affect the value of this
   ;; VOP.
-  (effects nil :type attributes)
-  (affected nil :type attributes)
+  (effects (required-argument) :type attributes)
+  (affected (required-argument) :type attributes)
   ;;
   ;; If true, causes special casing of TNs live after this VOP that aren't
   ;; results:
@@ -994,9 +998,10 @@
   ;;        replaces all uses of the alias with the original TN.  SAVE-TN holds
   ;;        the aliased TN.
   ;;
-  (kind nil :type (member :normal :environment :debug-environment
-			  :save :save-once :specified-save :load :constant
-			  :component :alias))
+  (kind (required-argument)
+	:type (member :normal :environment :debug-environment
+		      :save :save-once :specified-save :load :constant
+		      :component :alias))
   ;;
   ;; The primitive-type for this TN's value.  Null in restricted or wired TNs.
   (primitive-type nil :type (or primitive-type null))
@@ -1079,7 +1084,7 @@
 
   ;;
   ;; The IR2-Block that this structure represents the conflicts for.
-  (block nil :type ir2-block)
+  (block (required-argument) :type ir2-block)
   ;;
   ;; Thread running through all the Global-Conflict for Block.  This
   ;; thread is sorted by TN number.
@@ -1115,12 +1120,12 @@
 	     :type local-tn-bit-vector)
   ;;
   ;; The TN we are recording conflicts for.
-  (tn nil :type tn)
+  (tn (required-argument) :type tn)
   ;;
   ;; Thread through all the Global-Conflicts for TN.
   (tn-next nil :type (or global-conflicts null))
   ;;
-  ;; TN's local TN number in Block.  :Live TNs don't have local numbers. 
+  ;; TN's local TN number in Block.  :Live TNs don't have local numbers.  
   (number nil :type (or local-tn-number null)))
 
 (defprinter global-conflicts
