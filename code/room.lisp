@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.7 1991/04/14 23:57:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.8 1991/04/19 13:31:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.7 1991/04/14 23:57:14 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.8 1991/04/19 13:31:00 ram Exp $
 ;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
@@ -19,7 +19,7 @@
 (use-package "SYSTEM")
 (export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
 		       structure-usage find-holes print-allocated-objects
-		       code-package-breakdown uninterned-symbol-count))
+		       code-breakdown uninterned-symbol-count))
 (in-package "LISP")
 (import '(
 	  dynamic-0-space-start dynamic-1-space-start read-only-space-start
@@ -250,7 +250,7 @@
 	(counts (make-array 256 :initial-element 0 :element-type 'fixnum)))
     (map-allocated-objects
      #'(lambda (obj type size)
-	 (declare (fixnum size) (optimize (speed 3) (safety 0)))
+	 (declare (fixnum size) (optimize (speed 3) (safety 0)) (ignore obj))
 	 (incf (aref sizes type) size)
 	 (incf (aref counts type)))
      space)
@@ -620,14 +620,25 @@
      space)
     (values uninterned (float (/ uninterned total)))))
 
-(defun code-package-breakdown (space)
-  (let ((info (make-hash-table :test #'equal)))
+
+(defun code-breakdown (space &key (how :package))
+  (declare (type spaces space) (type (member :file :package) how))
+  (let ((info (make-hash-table :test (if (eq how :package) #'equal #'eq))))
     (map-allocated-objects
      #'(lambda (obj type size)
 	 (when (eql type code-header-type)
 	   (let* ((dinfo (code-debug-info obj))
 		  (name (if dinfo
-			    (c::compiled-debug-info-package dinfo)
+			    (ecase how
+			      (:package (c::compiled-debug-info-package dinfo))
+			      (:file
+			       (let ((source
+				      (first (c::compiled-debug-info-source
+					      dinfo))))
+				 (if (eq (c::debug-source-from source)
+					 :file)
+				     (c::debug-source-name source)
+				     "FROM LISP"))))
 			    "UNKNOWN"))
 		  (found (or (gethash name info)
 			     (setf (gethash name info) (cons 0 0)))))
@@ -640,4 +651,139 @@
 		   (res (list v k)))
 	       info)
       (loop for ((count . size) name) in (sort (res) #'> :key #'cdar) do
-	(format t "~20@A: ~:D bytes, ~:D objects.~%" name size count))))
+	(format t "~20@A: ~:D bytes, ~:D object~:P.~%"
+		(if (pathnamep name)
+		    (let ((name (namestring name)))
+		      (subseq name (max (- (length name) 20) 0)))
+		    name)
+		size count))))
+  (values))
+
+
+;;;; Histogram interface.  Uses Scott's Hist package.
+#+nil
+(defun memory-histogram (space &key (low 4) (high 20)
+			       (bucket-size 1)
+			       (function
+				#'(lambda (obj type size)
+				    (declare (ignore obj type) (fixnum size))
+				    (integer-length size)))
+			       (type nil))
+  (let ((function (if (eval:interpreted-function-p function)
+		      (compile nil function)
+		      function)))
+    (hist:hist (low high bucket-size)
+      (map-allocated-objects
+       #'(lambda (obj this-type size)
+	   (when (or (not type) (eql this-type type))
+	     (hist:hist-record (funcall function obj type size))))
+       space)))
+  (values))
+
+;;; Return the number of fbound constants in a code object.
+;;;
+(defun code-object-calls (obj)
+  (loop for i from code-constants-offset below (get-header-data obj)
+    count (find-code-object (code-header-ref obj i))))
+
+;;; Return the number of calls in Obj to functions with <= N calls.  Calls is
+;;; an eq hashtable translating code objects to the number of references.
+;;;
+(defun code-object-leaf-calls (obj n calls)
+  (loop for i from code-constants-offset below (get-header-data obj)
+    count (let ((code (find-code-object (code-header-ref obj i))))
+	    (and code (<= (gethash code calls 0) n)))))
+
+#+nil
+(defun report-histogram (table &key (low 1) (high 20) (bucket-size 1)
+			       (function #'identity))
+  "Given a hashtable, print a histogram of the contents.  Function should give
+  the value to plot when applied to the hashtable values."
+  (let ((function (if (eval:interpreted-function-p function)
+		      (compile nil function)
+		      function)))
+    (hist:hist (low high bucket-size)
+      (loop for count being each hash-value in table do
+	(hist:hist-record (funcall function count))))))
+
+(defun report-top-n (table &key (top-n 20) (function #'identity))
+  "Report the Top-N entries in the hashtable Table, when sorted by Function
+  applied to the hash value.  If Top-N is NIL, report all entries."
+  (let ((function (if (eval:interpreted-function-p function)
+		      (compile nil function)
+		      function)))
+    (collect ((totals-list)
+	      (total-val 0 +))
+      (maphash #'(lambda (name what)
+		   (let ((val (funcall function what)))
+		     (totals-list (cons name val))
+		     (total-val val)))
+	       table)
+      (let ((sorted (sort (totals-list) #'> :key #'cdr))
+	    (printed 0))
+	(declare (fixnum printed))
+	(dolist (what (if top-n
+			  (subseq sorted 0 (min (length sorted) top-n))
+			  sorted))
+	  (let ((val (cdr what)))
+	    (incf printed val)
+	    (format t "~8:D: ~S~%" val (car what))))
+
+	(let ((residual (- (total-val) printed)))
+	  (unless (zerop residual)
+	    (format t "~8:D: Other~%" residual))))
+
+      (format t "~8:D: Total~%" (total-val))))
+  (values))
+
+
+;;; Given any Lisp object, return the associated code object, or NIL.
+;;;
+(defun find-code-object (const)
+  (flet ((frob (def)
+	   (function-code-header
+	    (ecase (get-type def)
+	      ((#.closure-header-type
+		#.funcallable-instance-header-type)
+	       (%closure-function def))
+	      (#.function-header-type
+	       def)))))
+    (typecase const
+      (function (frob const))
+      (symbol
+       (if (fboundp const)
+	   (frob (symbol-function const))
+	   nil))
+      (t nil))))
+	
+
+(defun find-caller-counts (space)
+  "Return a hashtable mapping each function in for which a call appears in
+  Space to the number of times such a call appears."
+  (let ((counts (make-hash-table :test #'eq)))
+    (map-allocated-objects
+     #'(lambda (obj type size)
+	 (declare (ignore size))
+	 (when (eql type code-header-type)
+	   (loop for i from code-constants-offset below (get-header-data obj)
+	     do (let ((code (find-code-object (code-header-ref obj i))))
+		  (when code
+		    (incf (gethash code counts 0)))))))
+       space)
+    counts))
+
+(defun find-high-callers (space &key (above 10) table (threshold 2))
+  "Return a hashtable translating code objects to function constant counts for
+  all code objects in Space with more than Above function constants."
+  (let ((counts (make-hash-table :test #'eq)))
+    (map-allocated-objects
+     #'(lambda (obj type size)
+	 (declare (ignore size))
+	 (when (eql type code-header-type)
+	   (let ((count (if table
+			    (code-object-leaf-calls obj threshold table)
+			    (code-object-calls obj))))
+	     (when (> count above)
+	       (setf (gethash obj counts) count)))))
+     space)
+    counts))
