@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.99 2003/10/21 13:09:23 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.100 2003/10/26 17:31:25 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -335,6 +335,15 @@
   (declare (type cblock block) (inline node-home-lambda))
   (lambda-environment (node-home-lambda (block-last block))))
 
+
+;;;
+;;; Value is true if Block in unreachable and thus can be deleted.
+;;;
+(defun block-unreachable-p (block)
+  (declare (type cblock block))
+  (or (block-delete-p block)
+      (null (block-pred block))
+      (eq (functional-kind (block-home-lambda block)) :deleted)))
 
 ;;; SOURCE-PATH-TLF-NUMBER  --  Interface
 ;;;
@@ -772,6 +781,7 @@
 	    (let ((return-block (node-block return)))
 	      (when (and return-block
 			 (not (block-delete-p return-block)))
+		(mark-for-deletion return-block)
 		(unlink-blocks return-block (component-tail component)))))
 	  (setf (component-reanalyze component) t)
 	  (let ((tails (lambda-tail-set leaf)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.81 2003/10/13 09:57:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.82 2003/10/26 17:31:25 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,9 +293,7 @@
   (setf (component-reoptimize component) nil)
   (do-blocks (block component)
     (cond
-     ((or (block-delete-p block)
-	  (null (block-pred block))
-	  (eq (functional-kind (block-home-lambda block)) :deleted))
+     ((block-unreachable-p block)
       (delete-block block))
      (t
       (loop
@@ -306,30 +304,31 @@
 	(let ((last (block-last block)))
 	  (typecase last
 	    (cif
-	     ;;
-	     ;; Don't flush an if-test if it requires a type check.
-	     (cond ((memq (continuation-type-check (if-test last))
-			  '(nil :deleted))
-		    (flush-dest (if-test last))
-		    (when (unlink-node last) (return)))
-		   (t
-		    (return))))
+	     (let ((if-test (if-test last)))
+	       ;; Don't flush an if-test if it requires a type check.
+	       (unless (memq (continuation-type-check if-test) '(nil :deleted))
+		 (return))
+	       (flush-dest if-test)
+	       (when (unlink-node last)
+		 (return))))
 	    (exit
-	     (when (maybe-delete-exit last) (return)))))
+	     (when (maybe-delete-exit last)
+	       (return)))))
 	
 	(unless (join-successor-if-possible block)
 	  (return)))
-
-      (when (and (block-reoptimize block) (block-component block))
-	(assert (not (block-delete-p block)))
-	(ir1-optimize-block block))
-
-      (when (and (block-flush-p block) (block-component block))
-	(assert (not (block-delete-p block)))
-	(flush-dead-code block)))))
-
-  (undefined-value))
-
+      ;;
+      ;; Block-Component is nil for deleted blocks.
+      (when (block-component block)
+	(cond ((block-unreachable-p block)
+	       (delete-block block))
+	      (t
+	       (when (block-reoptimize block)
+		 (ir1-optimize-block block))
+	       (when (and (block-flush-p block)
+			  (block-component block))
+		 (flush-dead-code block))))))))
+  (values))
 
 ;;; IR1-Optimize-Block  --  Internal
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.35 2003/08/05 15:50:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.36 2003/10/26 17:31:25 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -90,7 +90,7 @@
 		   (*all-components* (list component)))
 	      (local-call-analyze component)))
 	  (multiple-value-bind (components top-components)
-			       (find-initial-dfo lambdas)
+	      (find-initial-dfo lambdas)
 	    (let ((*all-components* (append components top-components)))
 	      (when *check-consistency*
 		(check-ir1-consistency *all-components*))
@@ -98,6 +98,13 @@
 	      ;; This DOLIST body comes from the beginning of
 	      ;; COMPILE-COMPONENT.
 	      (dolist (component *all-components*)
+		;;
+		;; Since we don't call IR1-OPTIMIZE, delete
+		;; unreachable blocks here.
+		(do-blocks (block component)
+		  (when (block-unreachable-p block)
+		    (delete-block block)))
+		
 		(ir1-finalize component)
 		(let ((*compile-component* component))
 		  (environment-analyze component))
