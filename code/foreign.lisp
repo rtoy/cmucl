@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.19 1994/11/04 05:23:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.20 1995/02/16 22:41:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,7 +300,7 @@
 			    #-hpux
 			    (merge-pathnames *command-line-utility-name*
 					     "path:")
-			    #+hpux "library:lisp.orig")
+			    #+hpux "library:cmucl.orig")
 			   (env ext:*environment-list*))
   "Load-foreign loads a list of C object files into a running Lisp.  The files
   argument should be a single file or a list of files.  The files may be
