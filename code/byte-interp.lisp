@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.9 1993/05/11 18:15:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.10 1993/05/11 18:36:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -321,8 +321,9 @@
 		(declare (type stack-pointer old-sp))
 		(dolist (arg args)
 		  (push-eval-stack arg))
-		(invoke-xep nil 0 old-sp 0 num-args xep
-			    (byte-closure-data xep)))))
+		(invoke-xep nil 0 old-sp 0 num-args
+			    (byte-closure-function res)
+			    (byte-closure-data res)))))
     res))
 
 
