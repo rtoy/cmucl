@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.30 1993/03/01 20:08:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.31 1993/03/13 16:53:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,7 +163,6 @@
 ;;; 
 (defun typep (object type)
   "Return T iff OBJECT is of type TYPE."
-  (declare (type (or list symbol) type))
   (%typep object type))
 
 (eval-when (compile eval)
