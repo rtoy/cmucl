@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.37 1998/11/26 11:46:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.38 1999/04/30 15:19:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1926,15 +1926,18 @@
        (ecase kind
 	 (:jump
 	  (assert (zerop (ash value -28)))
-	  (setf (ldb (byte 26 0) (sap-ref-32 sap 0))
-		(ash value -2)))
+	  (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
+	    (setf (ldb (byte 26 0) inst) (ash value -2))
+	    (setf (sap-ref-32 sap 0) (maybe-byte-swap inst))))
 	 (:lui
 	  (setf (sap-ref-16 sap 0)
-		(+ (ash value -16)
-		   (if (logbitp 15 value) 1 0))))
+		(maybe-byte-swap-short
+		 (+ (ash value -16)
+		    (if (logbitp 15 value) 1 0)))))
 	 (:addi
 	  (setf (sap-ref-16 sap 0)
-		(ldb (byte 16 0) value)))))
+		(maybe-byte-swap-short
+		 (ldb (byte 16 0) value))))))
       (#.c:sparc-fasl-file-implementation
        (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
 	 (ecase kind
@@ -2057,15 +2060,18 @@
        (ecase kind
 	 (:jump
 	  (assert (zerop (ash value -28)))
-	  (setf (ldb (byte 26 0) (sap-ref-32 sap 0))
-		(ash value -2)))
+	  (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
+	    (setf (ldb (byte 26 0) inst) (ash value -2))
+	    (setf (sap-ref-32 sap 0) (maybe-byte-swap inst))))
 	 (:lui
 	  (setf (sap-ref-16 sap 2)
-		(+ (ash value -16)
-		   (if (logbitp 15 value) 1 0))))
+		(maybe-byte-swap-short
+		 (+ (ash value -16)
+		    (if (logbitp 15 value) 1 0)))))
 	 (:addi
 	  (setf (sap-ref-16 sap 2)
-		(ldb (byte 16 0) value)))))))
+		(maybe-byte-swap-short
+		 (ldb (byte 16 0) value))))))))
   (undefined-value))
 
 (defun linkage-info-to-core ()
