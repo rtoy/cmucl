@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-os.c,v 1.2 1992/09/08 20:24:49 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-os.c,v 1.3 1992/09/16 22:26:53 wlott Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -41,9 +41,7 @@ void os_init()
 	os_vm_page_size = vm_page_size;
 }
 
-os_vm_address_t os_validate(addr, len)
-vm_address_t addr;
-vm_size_t len;
+os_vm_address_t os_validate(vm_address_t addr, vm_size_t len)
 {
     kern_return_t res;
 
@@ -54,15 +52,13 @@ vm_size_t len;
 
     segments = -1;
 
-    vm_protect(task_self(), addr, len, TRUE,
+    vm_protect(task_self(), addr, len, FALSE,
 	       VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE);
 
     return addr;
 }
 
-void os_invalidate(addr, len)
-vm_address_t addr;
-vm_size_t len;
+void os_invalidate(vm_address_t addr, vm_size_t len)
 {
     kern_return_t res;
 
@@ -74,10 +70,7 @@ vm_size_t len;
     segments = -1;
 }
 
-vm_address_t os_map(fd, offset, addr, len)
-int fd, offset;
-vm_address_t addr;
-vm_size_t len;
+vm_address_t os_map(int fd, int offset, vm_address_t addr, vm_size_t len)
 {
     kern_return_t res;
 
@@ -95,15 +88,13 @@ vm_size_t len;
 
     segments = -1;
 
-    vm_protect(task_self(), addr, len, TRUE,
+    vm_protect(task_self(), addr, len, FALSE,
 	       VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE);
 
     return addr;
 }
 
-void os_flush_icache(address, length)
-vm_address_t address;
-vm_size_t length;
+void os_flush_icache(vm_address_t address, vm_size_t length)
 {
 #ifdef mips
 	vm_machine_attribute_val_t flush;
@@ -118,14 +109,10 @@ vm_size_t length;
 #endif
 }
 
-void os_protect(address, length, protection)
-vm_address_t address;
-vm_size_t length;
-vm_prot_t protection;
+void os_protect(vm_address_t address, vm_size_t length, vm_prot_t protection)
 {
 	vm_protect(task_self(), address, length, FALSE, protection);
 }
-
 
 boolean valid_addr(test)
 vm_address_t test;
