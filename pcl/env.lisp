@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.24 2003/05/17 19:08:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.25 2003/06/13 08:53:09 gerd Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -145,11 +145,13 @@
 		(ft "Its name is ~S, but this is not a proper name.~%" name))
 	    (ft "It has no name (the name is NIL).~%")))
       (ft "The direct superclasses are: ~:S, and the direct~%~
-           subclasses are: ~:S.  The class precedence list is:~%~S~%~
+           subclasses are: ~:S.  The class is ~:[not ~;~]finalized.  ~
+           The class precedence list is:~%~S~%~
            There are ~D methods specialized for this class."
 	  (mapcar #'pretty-class (class-direct-superclasses class))
 	  (mapcar #'pretty-class (class-direct-subclasses class))
-	  (mapcar #'pretty-class (class-precedence-list class))
+	  (class-finalized-p class)
+	  (mapcar #'pretty-class (cpl-or-nil class))
 	  (length (specializer-direct-methods class)))
       (unless (typep class 'condition-class)
 	(loop initially (ft "~&Its direct slots are:~%")
