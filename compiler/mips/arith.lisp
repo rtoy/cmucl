@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.48 1992/08/16 19:35:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.49 1993/01/13 15:51:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.48 1992/08/16 19:35:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.49 1993/01/13 15:51:36 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -446,10 +446,7 @@
 
 
 (defmacro define-conditional-vop (translate &rest generator)
-  ;;
-  ;; Squelch dead-code notes...
-  `(;locally (declare (optimize (inhibit-warnings 3)))
-    progn ; but not really, since that makes a big function, which doesn't load.
+  `(progn
      ,@(mapcar #'(lambda (suffix cost signed)
 		   (unless (and (member suffix '(/fixnum -c/fixnum))
 				(eq translate 'eql))
@@ -463,6 +460,7 @@
 			  (let* ((signed ,signed)
 				 (-c/fixnum ,(eq suffix '-c/fixnum))
 				 (y (if -c/fixnum (fixnum y) y)))
+			    (declare (optimize (inhibit-warnings 3)))
 			    ,@generator)))))
 	       '(/fixnum -c/fixnum /signed -c/signed /unsigned -c/unsigned)
 	       '(3 2 5 4 5 4)
@@ -524,7 +522,7 @@
 ;;; consing the argument.
 ;;;
 (define-vop (fast-eql/fixnum fast-conditional)
-  (:args (x :scs (any-reg descriptor-reg))
+  (:args (x :scs (any-reg))
 	 (y :scs (any-reg)))
   (:arg-types tagged-num tagged-num)
   (:note "inline fixnum comparison")
@@ -537,11 +535,13 @@
     (inst nop)))
 ;;;
 (define-vop (generic-eql/fixnum fast-eql/fixnum)
+  (:args (x :scs (any-reg descriptor-reg))
+	 (y :scs (any-reg)))
   (:arg-types * tagged-num)
   (:variant-cost 7))
 
 (define-vop (fast-eql-c/fixnum fast-conditional/fixnum)
-  (:args (x :scs (any-reg descriptor-reg)))
+  (:args (x :scs (any-reg)))
   (:arg-types tagged-num (:constant (signed-byte 14)))
   (:info target not-p y)
   (:translate eql)
@@ -556,6 +556,7 @@
       (inst nop))))
 ;;;
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
+  (:args (x :scs (any-reg descriptor-reg)))
   (:arg-types * (:constant (signed-byte 14)))
   (:variant-cost 6))
   
@@ -682,7 +683,7 @@
   (unsigned-reg) unsigned-num bignum::%bignum-ref)
 
 (define-full-setter bignum-set * bignum-digits-offset other-pointer-type
-  (unsigned-reg) unsigned-num bignum::%bignum-set)
+  (unsigned-reg) unsigned-num bignum::%bignum-set #+gengc nil)
 
 (define-vop (digit-0-or-plus)
   (:translate bignum::%digit-0-or-plusp)
