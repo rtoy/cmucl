@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.6 1994/10/27 01:11:32 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.7 1994/10/30 21:36:58 ram Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -38,7 +38,7 @@ getegid,
 geteuid,
 getgid,
 getgroups,
-#ifndef SVR4
+#ifndef SOLARIS
 gethostid,
 #endif
 gethostname,
@@ -54,7 +54,7 @@ getppid,
 getpriority,
 #endif
 getrlimit,
-#if !defined(hpux) && !defined(SVR4)
+#ifndef SOLARIS
 getrusage,
 #endif
 getsockname,
@@ -63,7 +63,7 @@ gettimeofday,
 getuid,
 ioctl,
 kill,
-#ifndef SVR4
+#ifndef SOLARIS
 killpg,
 #endif
 link,
@@ -218,7 +218,7 @@ dlsym,
 dlclose,
 dlerror,
 #endif
-#ifndef SVR4
+#ifndef SOLARIS
 getwd,
 #endif
 ttyname
