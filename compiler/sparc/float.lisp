@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.26 1999/11/19 14:55:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.27 2000/02/18 01:24:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
 ;;;
 (defun load-long-reg (reg base offset &optional (restore-offset t))
   (if (backend-featurep :sparc-v9)
-      (inst ldxf reg base offset)
+      (inst ldqf reg base offset)
       (let ((reg0 (make-random-tn :kind :normal
 				  :sc (sc-or-lose 'double-reg *backend*)
 				  :offset (tn-offset reg)))
@@ -75,7 +75,7 @@
 ;;;
 (defun store-long-reg (reg base offset &optional (restore-offset t))
   (if (backend-featurep :sparc-v9)
-      (inst stxf reg base offset)
+      (inst stqf reg base offset)
       (let ((reg0 (make-random-tn :kind :normal
 				  :sc (sc-or-lose 'double-reg *backend*)
 				  :offset (tn-offset reg)))
