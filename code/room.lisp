@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.12 1991/12/22 15:27:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.13 1992/01/02 22:45:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -695,8 +695,8 @@
 		   (res (list v k)))
 	       info)
       (loop for ((count . size) name) in (sort (res) #'> :key #'cdar) do
-	(format t "~20@A: ~:D bytes, ~:D object~:P.~%"
-		(subseq name (max (- (length name) 20) 0))
+	(format t "~40@A: ~:D bytes, ~:D object~:P.~%"
+		(subseq name (max (- (length name) 40) 0))
 		size count))))
   (values))
 
