@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.6 1997/12/03 08:17:02 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.7 1997/12/25 09:33:48 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -5248,8 +5248,16 @@ garbage_collect_generation(int generation, int raise)
   }
 
   /* Scavenge all the rest of the roots. */
-  scavenge((lispobj *) interrupt_handlers,
-	   sizeof(interrupt_handlers) / sizeof(lispobj));
+
+  /* Scavenge the Lisp functions of the interrupt handlers, taking
+     care to avoid SIG_DFL, SIG_IGN. */
+  for (i = 0; i < NSIG; i++) {
+    union interrupt_handler handler = interrupt_handlers[i];
+    if ((handler.c != SIG_IGN) && (handler.c != SIG_DFL))
+      scavenge((lispobj *)(interrupt_handlers + i), 1);
+  }
+
+  /* Scavenge the binding stack. */
   scavenge(binding_stack,
 	   (lispobj *)SymbolValue(BINDING_STACK_POINTER) - binding_stack);
 
