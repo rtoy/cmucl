@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.23 1990/05/16 01:08:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.24 1990/05/18 01:09:06 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -299,8 +299,8 @@
 	  structure-type-p system-area-clear system-area-copy truth
 	  type-expand type-init two-arg-* two-arg-+ two-arg-- two-arg-/
 	  two-arg-/= two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->=
-	  two-arg-and two-arg-ior two-arg-xor type-difference
-	  type-intersect type-intersection type-specifier
+	  two-arg-and two-arg-gcd two-arg-ior two-arg-lcm two-arg-xor
+	  type-difference type-intersect type-intersection type-specifier
 	  type-specifier-symbols type-union type/= type= types-intersect
 	  unboxed-array union-type union-type-p union-type-types
 	  unknown-type unknown-type-p unknown-type-specifier
@@ -396,30 +396,32 @@
 	  *xwindow-table* add-fd-handler add-port-death-handler
 	  add-port-object add-xwindow-object alien alien-access
 	  alien-address alien-assign alien-bind alien-index alien-indirect
-	  alien-sap alien-size alien-type alien-value beep bits boolean
-	  bytes c-procedure check<= check= compiler-version copy-alien
-	  ct-a-val ct-a-val-alien ct-a-val-offset ct-a-val-p ct-a-val-sap
-	  ct-a-val-size ct-a-val-type defalien default-interrupt
-	  defenumeration define-alien-stack defoperator defrecord
-	  deport-boolean deport-integer dispose-alien double-float-radix
-	  enable-interrupt enumeration fd-stream fd-stream-fd fd-stream-p
-	  fexpr find-if-in-closure gr-bind gr-call gr-call* gr-error
-	  ignore-interrupt int-sap invalidate-descriptor long-float-radix
-	  long-words macro make-alien make-ct-a-val make-fd-stream
-	  make-indenting-stream make-object-set map-port map-xwindow
-	  naturalize-boolean naturalize-integer null-terminated-string
-	  object-set-operation output-raw-bytes parse-body perq-string
-	  pointer port primep read-n-bytes record-size remove-fd-handler
-	  remove-port-death-handler remove-port-object
-	  remove-xwindow-object resolve-loaded-assembler-references sap+
-	  sap- sap-int sap-ref-16 sap-ref-32 sap-ref-8 sap-ref-sap
-	  serve-all-events serve-event server server-message
-	  short-float-radix signed-sap-ref-16 signed-sap-ref-32
-	  signed-sap-ref-8 single-float-radix symbol-macro-let
-	  system-area-pointer system-area-pointer-p unproclaim unstructured
-	  wait-until-fd-usable with-enabled-interrupts with-fd-handler
-	  with-interrupts with-reply-port with-stack-alien without-gcing
-	  without-hemlock without-interrupts words))
+	  alien-sap alien-size alien-type alien-value
+	  allocate-system-memory beep bits boolean bytes c-procedure
+	  check<= check= compiler-version copy-alien ct-a-val
+	  ct-a-val-alien ct-a-val-offset ct-a-val-p ct-a-val-sap
+	  ct-a-val-size ct-a-val-type deallocate-system-memory defalien
+	  default-interrupt defenumeration define-alien-stack defoperator
+	  defrecord deport-boolean deport-integer dispose-alien
+	  double-float-radix enable-interrupt enumeration fd-stream
+	  fd-stream-fd fd-stream-p fexpr find-if-in-closure gr-bind gr-call
+	  gr-call* gr-error ignore-interrupt int-sap invalidate-descriptor
+	  long-float-radix long-words macro make-alien make-ct-a-val
+	  make-fd-stream make-indenting-stream make-object-set map-port
+	  map-xwindow naturalize-boolean naturalize-integer
+	  null-terminated-string object-set-operation output-raw-bytes
+	  parse-body perq-string pointer port primep read-n-bytes
+	  record-size remove-fd-handler remove-port-death-handler
+	  remove-port-object remove-xwindow-object
+	  resolve-loaded-assembler-references sap+ sap- sap-int sap-ref-16
+	  sap-ref-32 sap-ref-8 sap-ref-sap serve-all-events serve-event
+	  server server-message short-float-radix signed-sap-ref-16
+	  signed-sap-ref-32 signed-sap-ref-8 single-float-radix
+	  symbol-macro-let system-area-pointer system-area-pointer-p
+	  unproclaim unstructured wait-until-fd-usable
+	  with-enabled-interrupts with-fd-handler with-interrupts
+	  with-reply-port with-stack-alien without-gcing without-hemlock
+	  without-interrupts words))
 
 
 (in-package "USER")
