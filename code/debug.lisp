@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.55 2001/12/13 01:10:18 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.56 2003/01/16 20:53:01 cracauer Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,7 @@
 
 (export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
 	  *debug-print-level* *debug-print-length* *debug-prompt*
+	  *default-print-frame-call-verbosity*
 	  *debug-readtable* *help-line-scroll-count* *stack-top-hint*
 
 	  *auto-eval-in-frame* var arg
@@ -47,6 +48,9 @@
 (defparameter *debug-print-length* 5
   "*PRINT-LENGTH* is bound to this value when debug prints a function call.  If
   null, use *PRINT-LENGTH*.")
+
+(defparameter *default-print-frame-call-verbosity* 1
+  "default value for the verbose argument to print-frame-call.  If set to >= 2, source will be printed for all frames")
 
 (defvar *in-the-debugger* nil
   "This is T while in the debugger.")
@@ -638,7 +642,7 @@ See the CMU Common Lisp User's Manual for more information.
 				(or *debug-print-length* *print-length*))
 			       ((:print-level *print-level*)
 				(or *debug-print-level* *print-level*))
-			       (verbosity 1)
+			       (verbosity *default-print-frame-call-verbosity*)
 			       (number nil))
   (cond
    ((zerop verbosity)
