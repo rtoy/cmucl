@@ -1,5 +1,7 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.2 1990/02/03 18:05:04 wlott Exp $
+;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
 ;;; Written by Christopher Hoover.
@@ -48,7 +50,7 @@
 
 ;;;; Register Names
 
-(defparameter register-name-style :c
+(defparameter register-name-style :lisp
   "The register name style: :c, :lisp, :raw")
 
 (defvar *c-register-names*
@@ -58,10 +60,10 @@
      "$t8" "$t9" "$k0" "$k1" "$gp" "$sp" "$s8" "$ra"))
 
 (defvar *lisp-register-names*
-  '#("$r0" "$r1" "$r2" "$r3" "$r4" "$r5" "$r6" "$r7"
-     "$r8" "$r9" "$r10" "$r12" "$r13" "$r14" "$r15"
-     "$r16" "$r17" "$r18" "$r19" "$r20" "$r21" "$r22" "$r23"
-     "$r24" "$r25" "$r26" "$r27" "$r28" "$r29" "$r30" "$r31"))
+  '#("$zero" "$lip" "$nl0" "$nl1" "$nl2" "$nl3" "$nl4" "$nl5/nargs"
+     "$l0" "$l1" "$l2" "$l3" "$l4" "$l5/env" "$l6/old-cont" "$l7/call-name"
+     "$a0" "$a1" "$a2" "$a3" "$a4" "$a5" "$l14/args" "$l15/lra"
+     "$bsp" "$csp" "$k0" "$k1" "$null" "$nsp" "$code" "$cont"))
 
 (defvar *raw-register-names*
   '#("$r0" "$r1" "$r2" "$r3" "$r4" "$r5" "$r6" "$r7"
@@ -110,72 +112,81 @@
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word))
 	(immed (signed-ldb (byte 16 0) word)))
-    (format stream "~A ~A, #x~X(~A)~%"
+    (format stream "~8,8T~A~8,8T~A, #x~X(~A)~%"
 	    name (register-name rt) immed (register-name rs))))
 
 (def-mips-instruction-type (:si-type)
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word))
 	(immed (signed-ldb (byte 16 0) word)))
-    (format stream "~A ~A, ~A, #x~X~%"
+    (format stream "~8,8T~A~8,8T~A, ~A, #x~X~%"
 	    name (register-name rt) (register-name rs) immed)))
 
 (def-mips-instruction-type (:ui-type)
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word))
 	(immed (ldb (byte 16 0) word)))
-    (format stream "~A ~A, ~A, #x~X~%"
+    (format stream "~8,8T~A~8,8T~A, ~A, #x~X~%"
 	    name (register-name rt) (register-name rs) immed)))
 
 (def-mips-instruction-type (:lui-type)
   (let ((rt (ldb (byte 5 16) word))
 	(immed (ldb (byte 16 0) word)))
-    (format stream "~A ~A, #x~X~%" name (register-name rt) immed)))
+    (format stream "~8,8T~A~8,8T~A, #x~X~%" name (register-name rt) immed)))
 
 (def-mips-instruction-type (:j-type)
   (let ((target (ldb (byte 26 0) word)))
-    (format stream "~A target = ~D~%" name target)))
+    (format stream "~8,8T~A~8,8Ttarget = ~D~%" name target)))
 
 (def-mips-instruction-type (:jr-type)
   (let ((rs (ldb (byte 5 21) word)))
-    (format stream "~A ~A~%" name (register-name rs))))
+    (format stream "~8,8T~A~8,8T~A~%" name (register-name rs))))
 
 (def-mips-instruction-type (:jalr-type)
   (let ((rs (ldb (byte 5 21) word))
 	(rd (ldb (byte 5 11) word)))
-    (format stream "~A ~A, ~A~%" name (register-name rd) (register-name rs))))
+    (format stream "~8,8T~A~8,8T~A, ~A~%" name (register-name rd) (register-name rs))))
 
 (def-mips-instruction-type (:branch-type)
   (let ((rs (ldb (byte 5 21) word))
 	(offset (ldb (byte 16 0) word)))
-    (format stream "~A ~A, offset = ~D~%" name (register-name rs) offset)))
+    (format stream "~8,8T~A~8,8T~A, offset = ~D~%" name (register-name rs) offset)))
 
 (def-mips-instruction-type (:branch2-type)
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word))
 	(offset (ldb (byte 16 0) word)))
-    (format stream "~A ~A, ~A, offset = ~D~%"
+    (format stream "~8,8T~A~8,8T~A, ~A, offset = ~D~%"
 	    name (register-name rs) (register-name rt) offset)))
 
 (def-mips-instruction-type (:r3-type)
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word))
 	(rd (ldb (byte 5 11) word)))
-    (format stream "~A ~A, ~A, ~A~%"
-	    name (register-name rd) (register-name rs) (register-name rt))))
+    (cond ((zerop rd)
+	   ;; Hack for NOP
+	   (format stream "~8,8TNOP~%"))
+	  ((and (zerop rt) (string= name "OR"))
+	   ;; Hack for MOVE
+	   (format stream "~8,8TMOVE~8,8T~A, ~A~%"
+		   (register-name rd) (register-name rs)))
+	  (t
+	   (format stream "~8,8T~A~8,8T~A, ~A, ~A~%"
+		   name (register-name rd) (register-name rs)
+		   (register-name rt))))))
 
 (def-mips-instruction-type (:mf-type)
   (let ((rd (ldb (byte 5 11) word)))
-    (format stream "~A ~A~%" name (register-name rd))))
+    (format stream "~8,8T~A~8,8T~A~%" name (register-name rd))))
 
 (def-mips-instruction-type (:mt-type)
   (let ((rs (ldb (byte 5 21) word)))
-    (format stream "~A ~A~%" name (register-name rs))))
+    (format stream "~8,8T~A~8,8T~A~%" name (register-name rs))))
 
 (def-mips-instruction-type (:mult-type)
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word)))
-    (format stream "~A ~A, ~A~%" name (register-name rs) (register-name rt))))
+    (format stream "~8,8T~A~8,8T~A, ~A~%" name (register-name rs) (register-name rt))))
 
 (def-mips-instruction-type (:shift-type)
   (let ((rt (ldb (byte 5 16) word))
@@ -183,28 +194,28 @@
 	(shamt (ldb (byte 5 6) word)))
     ;; Hack for NOP
     (cond ((= word 0)
-	   (format stream "NOP~%"))
+	   (format stream "~8,8TNOP~%"))
 	  (t
-	   (format stream "~A ~A, ~A, #x~X~%"
+	   (format stream "~8,8T~A~8,8T~A, ~A, #x~X~%"
 		   name (register-name rd) (register-name rt) shamt)))))
 
 (def-mips-instruction-type (:shiftv-type)
   (let ((rs (ldb (byte 5 21) word))
 	(rt (ldb (byte 5 16) word))
 	(rd (ldb (byte 5 11) word)))
-    (format stream "~A ~A, ~A, ~A~%"
+    (format stream "~8,8T~A~8,8T~A, ~A, ~A~%"
 	    name (register-name rd) (register-name rt) (register-name rs))))
 
 (def-mips-instruction-type (:break-type)
   (let ((code (ldb (byte 10 16) word))) ; the whole field is (byte 20 6)
-    (format stream "~A #x~X~%" name code)))
+    (format stream "~8,8T~A~8,8T#x~X~%" name code)))
 
 (def-mips-instruction-type (:syscall-type)
   (declare (ignore word))
-  (format stream "~A~%" name))
+  (format stream "~8,8T~A~%" name))
 
 (def-mips-instruction-type (:cop0-type :cop1-type :cop2-type :cop3-type)
-  (format stream "~A (#x~X)~%" name word))
+  (format stream "~8,8T~A~8,8T(#x~X)~%" name word))
 
 
 ;;;; Instruction Definition
@@ -416,4 +427,4 @@
 				(ash (aref code-vector (+ i 1)) 16)
 				(ash (aref code-vector (+ i 2)) 8)
 				(aref code-vector (+ i 3)))
-			     t)))
+			     stream)))
