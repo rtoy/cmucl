@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.33 2003/11/01 15:40:35 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.34 2004/05/04 12:38:13 rtoy Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -513,6 +513,11 @@ boolean interrupt_maybe_gc(HANDLER_ARGS)
 * Noise to install handlers.                                     *
 \****************************************************************/
 
+#ifndef i386
+#define SIGNAL_STACK_SIZE SIGSTKSZ
+static char altstack[SIGNAL_STACK_SIZE];
+#endif
+
 void
 interrupt_install_low_level_handler (int signal, void handler (HANDLER_ARGS))
 {
@@ -536,6 +541,17 @@ interrupt_install_low_level_handler (int signal, void handler (HANDLER_ARGS))
     {
       stack_t sigstack;
       sigstack.ss_sp = (void *) SIGNAL_STACK_START;
+      sigstack.ss_flags = 0;
+      sigstack.ss_size = SIGNAL_STACK_SIZE;
+      if (sigaltstack (&sigstack, 0) == -1)
+	perror ("sigaltstack");
+      sa.sa_flags |= SA_ONSTACK;
+    }
+#else
+  if (signal == PROTECTION_VIOLATION_SIGNAL)
+    {
+      stack_t sigstack;
+      sigstack.ss_sp = (void *) altstack;
       sigstack.ss_flags = 0;
       sigstack.ss_size = SIGNAL_STACK_SIZE;
       if (sigaltstack (&sigstack, 0) == -1)
