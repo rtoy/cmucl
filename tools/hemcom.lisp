@@ -2,73 +2,68 @@
 ;;; This file compiles all of Hemlock.
 ;;;
 
-(when (ext:get-command-line-switch "slave")
-  (error "Cannot compile Hemlock in a slave due to its clobbering needed
-	  typescript routines by renaming the package."))
-
-
-;;; Blast the old packages in case they are around.  We do this solely to
-;;; prove Hemlock can compile cleanly without its having to exist already.
-;;;
-(when (find-package "ED")
-  (rename-package (find-package "ED") "OLD-ED"))
-;;;
-(when (find-package "HI")
-  (rename-package (find-package "HI") "OLD-HI"))
+#+bootstrap
+(progn
+  (when (ext:get-command-line-switch "slave")
+    (error "Cannot compile Hemlock in a slave due to its clobbering needed
+    typescript routines by renaming the package."))
+  
+  ;;; Blast the old packages in case they are around.  We do this solely to
+  ;;; prove Hemlock can compile cleanly without its having to exist already.
+  ;;;
+  (copy-packages '("ED" "HI")))
 
 
 ;;; Stuff to set up the packages Hemlock uses.
 ;;;
-(in-package "HEMLOCK-INTERNALS"
-	    :nicknames '("HI")
-	    :use '("LISP" "EXTENSIONS" "SYSTEM"))
-;;;
-(in-package "HEMLOCK"
-	    :nicknames '("ED")
-	    :use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM"))
-;;;
-(in-package "SYSTEM")
-(export '(%sp-byte-blt %sp-find-character %sp-find-character-with-attribute
-		       %sp-reverse-find-character-with-attribute))
+(unless (find-package "HEMLOCK-INTERNALS")
+  (make-package "HEMLOCK-INTERNALS"
+		:nicknames '("HI")
+		:use '("LISP" "EXTENSIONS" "SYSTEM")))
 
-(in-package "HEMLOCK-INTERNALS")
+(unless (find-package "HEMLOCK")
+  (make-package "HEMLOCK"
+		:nicknames '("ED")
+		:use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM")))
+;;;
+(export 'c::compile-from-stream (find-package "C"))
 
+
+(in-package "USER")
+
+(defvar *byte-compile* #+small t #-small :maybe)
 
 (pushnew :command-bits *features*)
 (pushnew :buffered-lines *features*)
 
-(defparameter the-log-file "hem:lossage.log")
+#-clx
+;;; If CLX has not been loaded, but has been compiled, then load it.
+;;;
+(when (probe-file (make-pathname :defaults "target:clx/clx-library"
+				 :type (c:backend-fasl-file-type c:*backend*)))
+  (load "target:clx/clx-library"))
+  
+(with-compiler-log-file
+    ("target:compile-hemlock.log"
+     :optimize
+     '(optimize (debug #-small 2 #+small .5) 
+		(speed 2) (inhibit-warnings 2)
+		(safety #-small 1 #+small 0))
+     :optimize-interface
+     '(optimize-interface (debug .5))
+     :context-declarations
+     '(((:or :external (:match "$%SET-"))
+	(declare (optimize (safety 2))
+		 (optimize-interface (debug 1))))
+       (:macro (declare (optimize (speed 0))))))
 
-(when (probe-file the-log-file)
-  (delete-file the-log-file))
-
-(defun cf (file &key load)
-  (write-line file)
-  (finish-output nil)
-  (let ((*error-output* (open the-log-file
-			      :direction :output 
-			      :if-exists :append
-			      :if-does-not-exist :create)))
-    (unwind-protect
-	(progn
-	  (compile-file file :error-file nil)
-	  (terpri *error-output*) (terpri *error-output*)
-	  (when load
-	    (let ((fasl (make-pathname :device (pathname-device file)
-				       :directory (pathname-directory file)
-				       :name (pathname-name file)
-				       :type "fasl")))
-	      (write-string "Loading ")
-	      (write-line (namestring fasl))
-	      (load fasl))))
-      (close *error-output*))))
-
-(cf "hem:struct.lisp")
-(cf "hem:struct-ed.lisp")
-(cf "hem:rompsite.lisp")
-(cf "hem:charmacs.lisp")
-
-(cf "hem:key-event.lisp" :load t)
+(comf "target:code/globals")
+(comf "target:code/struct")
+(comf "target:hemlock/charmacs")
+(comf "target:hemlock/key-event" :load t)
+(comf "target:hemlock/struct")
+;(comf "target:hemlock/struct-ed")
+(comf "target:hemlock/rompsite")
 ;;;
 ;;; This is necessary since all the #k uses in Hemlock will expand into
 ;;; EXT:MAKE-KEY-EVENT calls with keysyms and bits from the compiling Lisp, not
@@ -78,90 +73,205 @@
 ;;; for the new system.
 ;;;
 (ext::re-initialize-key-events)
-(cf "hem:keysym-defs.lisp" :load t)
+(comf "target:hemlock/keysym-defs")
+(comf "target:hemlock/input")
+(comf "target:hemlock/macros" :byte-compile t)
+(comf "target:hemlock/line")
+(comf "target:hemlock/ring")
+(comf "target:hemlock/table")
+(comf "target:hemlock/htext1")
+(comf "target:hemlock/htext2")
+(comf "target:hemlock/htext3")
+(comf "target:hemlock/htext4")
+(comf "target:hemlock/search1")
+(comf "target:hemlock/search2")
+(comf "target:hemlock/linimage")
+(comf "target:hemlock/cursor")
+(comf "target:hemlock/syntax")
+(comf "target:hemlock/winimage")
+#+clx (comf "target:hemlock/hunk-draw")
+;(comf "target:hemlock/bit-stream")
+(comf "target:hemlock/termcap")
+(comf "target:hemlock/display")
+#+clx (comf "target:hemlock/bit-display")
+(comf "target:hemlock/tty-disp-rt")
+(with-compilation-unit (:optimize '(optimize (safety 2) (debug 3)))
+  (comf "target:hemlock/tty-display")) ; Buggy...
+;(comf "target:hemlock/tty-stream")
+(comf "target:hemlock/pop-up-stream")
+(comf "target:hemlock/screen")
+#+clx (comf "target:hemlock/bit-screen")
+(comf "target:hemlock/tty-screen")
+(comf "target:hemlock/window")
+(comf "target:hemlock/font")
+(comf "target:hemlock/interp")
+(comf "target:hemlock/vars")
+(comf "target:hemlock/buffer")
+(comf "target:hemlock/files")
+(comf "target:hemlock/streams")
+(comf "target:hemlock/echo" :byte-compile t)
+(comf "target:hemlock/main" :byte-compile t)
+(comf "target:hemlock/echocoms" :byte-compile t)
+(comf "target:hemlock/defsyn")
 
-(cf "hem:input.lisp")
-(cf "hem:macros.lisp")
-(cf "hem:line.lisp")
-(cf "hem:ring.lisp")
-(cf "hem:table.lisp")
-(cf "hem:htext1.lisp")
-(cf "hem:htext2.lisp")
-(cf "hem:htext3.lisp")
-(cf "hem:htext4.lisp")
-(cf "hem:search1.lisp")
-(cf "hem:search2.lisp")
-(cf "hem:linimage.lisp")
-(cf "hem:cursor.lisp")
-(cf "hem:syntax.lisp")
-(cf "hem:winimage.lisp")
-(cf "hem:hunk-draw.lisp")
-;(cf "hem:bit-stream.lisp")
-(cf "hem:termcap.lisp")
-(cf "hem:display.lisp")
-(cf "hem:bit-display.lisp")
-(cf "hem:tty-disp-rt.lisp")
-(cf "hem:tty-display.lisp")
-;(cf "hem:tty-stream.lisp")
-(cf "hem:pop-up-stream.lisp")
-(cf "hem:screen.lisp")
-(cf "hem:bit-screen.lisp")
-(cf "hem:tty-screen.lisp")
-(cf "hem:window.lisp")
-(cf "hem:font.lisp")
-(cf "hem:interp.lisp")
-(cf "hem:vars.lisp")
-(cf "hem:buffer.lisp")
-(cf "hem:files.lisp")
-(cf "hem:streams.lisp")
-(cf "hem:echo.lisp")
-(cf "hem:main.lisp")
-(cf "hem:echocoms.lisp")
-(cf "hem:defsyn.lisp")
-(cf "hem:command.lisp")
-(cf "hem:morecoms.lisp")
-(cf "hem:undo.lisp")
-(cf "hem:killcoms.lisp")
-(cf "hem:searchcoms.lisp")
-(cf "hem:filecoms.lisp")
-(cf "hem:indent.lisp")
-(cf "hem:lispmode.lisp")
-(cf "hem:comments.lisp")
-(cf "hem:fill.lisp")
-(cf "hem:text.lisp")
-(cf "hem:doccoms.lisp")
-(cf "hem:srccom.lisp")
-(cf "hem:group.lisp")
-(cf "hem:spell-rt.lisp")
-(cf "hem:spell-corr.lisp")
-(cf "hem:spell-aug.lisp")
-(cf "hem:spell-build.lisp")
-(cf "hem:spellcoms.lisp")
-(cf "hem:abbrev.lisp")
-(cf "hem:overwrite.lisp")
-(cf "hem:gosmacs.lisp")
-(cf "hem:ts-buf.lisp")
-(cf "hem:ts-stream.lisp")
-(cf "hem:eval-server.lisp")
-(cf "hem:lispbuf.lisp")
-(cf "hem:lispeval.lisp")
-(cf "hem:kbdmac.lisp")
-(cf "hem:icom.lisp")
-(cf "hem:hi-integrity.lisp")
-(cf "hem:ed-integrity.lisp")
-(cf "hem:scribe.lisp")
-(cf "hem:pascal.lisp")
-(cf "hem:edit-defs.lisp")
-(cf "hem:auto-save.lisp")
-(cf "hem:register.lisp")
-(cf "hem:xcoms.lisp")
-(cf "hem:unixcoms.lisp")
-(cf "hem:mh.lisp")
-(cf "hem:highlight.lisp")
-(cf "hem:dired.lisp")
-(cf "hem:diredcoms.lisp")
-(cf "hem:bufed.lisp")
-(cf "hem:lisp-lib.lisp")
-(cf "hem:completion.lisp")
-(cf "hem:shell.lisp")
-(cf "hem:bindings.lisp")
+(comf "target:hemlock/ts-buf")
+(comf "target:hemlock/ts-stream")
+
+(with-compilation-unit
+    (:optimize
+     '(optimize (safety 2) (speed 0))
+     :context-declarations
+     '(((:match "-COMMAND$")
+	(declare (optimize (safety #+small 0 #-small 1))
+		 (optimize-interface (safety 2))))))
+
+(comf "target:hemlock/command" :byte-compile t)
+(comf "target:hemlock/morecoms" :byte-compile t)
+(comf "target:hemlock/undo" :byte-compile t)
+(comf "target:hemlock/killcoms" :byte-compile t)
+(comf "target:hemlock/searchcoms" :byte-compile t)
+(comf "target:hemlock/filecoms" :byte-compile t)
+(comf "target:hemlock/indent" :byte-compile t)
+(comf "target:hemlock/lispmode")
+(comf "target:hemlock/comments" :byte-compile t)
+(comf "target:hemlock/fill")
+(comf "target:hemlock/text" :byte-compile t)
+(comf "target:hemlock/doccoms" :byte-compile t)
+(comf "target:hemlock/srccom" :byte-compile t)
+(comf "target:hemlock/abbrev" :byte-compile t)
+(comf "target:hemlock/group" :byte-compile t)
+(comf "target:hemlock/overwrite" :byte-compile t)
+(comf "target:hemlock/gosmacs" :byte-compile t)
+(comf "target:hemlock/eval-server" :byte-compile t)
+(comf "target:hemlock/dylan" :byte-compile t)
+(comf "target:hemlock/lispbuf" :byte-compile t)
+(comf "target:hemlock/lispeval" :byte-compile t)
+(comf "target:hemlock/icom" :byte-compile t)
+(comf "target:hemlock/hi-integrity" :byte-compile t)
+(comf "target:hemlock/ed-integrity" :byte-compile t)
+(comf "target:hemlock/scribe" :byte-compile t)
+(comf "target:hemlock/pascal" :byte-compile t)
+(comf "target:hemlock/edit-defs" :byte-compile t)
+(comf "target:hemlock/auto-save" :byte-compile t)
+(comf "target:hemlock/register" :byte-compile t)
+(comf "target:hemlock/xcoms" :byte-compile t)
+(comf "target:hemlock/unixcoms" :byte-compile t)
+(comf "target:hemlock/mh")
+(comf "target:hemlock/highlight" :byte-compile t)
+(comf "target:hemlock/dired" :byte-compile t)
+(comf "target:hemlock/diredcoms" :byte-compile t)
+(comf "target:hemlock/bufed" :byte-compile t)
+(comf "target:hemlock/lisp-lib" :byte-compile t)
+(comf "target:hemlock/completion" :byte-compile t)
+(comf "target:hemlock/shell" :byte-compile t)
+(comf "target:hemlock/debug" :byte-compile t)
+(comf "target:hemlock/netnews" :byte-compile t)
+(comf "target:hemlock/rcs" :byte-compile t)
+
+) ;WITH-COMPILATION-UNIT for commands
+
+;; Stuff we want compiled native:
+
+(comf "target:hemlock/spell-rt")
+(comf "target:hemlock/spell-corr")
+(comf "target:hemlock/spell-aug")
+(comf "target:hemlock/spell-build")
+(comf "target:hemlock/spellcoms")
+(comf "target:hemlock/kbdmac")
+
+(comf "target:hemlock/bindings")
+(comf "target:hemlock/hacks")
+
+) ;WITH-COMPILER-LOG-FILE
+
+
+(cat-if-anything-changed
+ "target:hemlock/hemlock-library"
+ "target:hemlock/rompsite"
+ "target:hemlock/struct"
+ ; "target:hemlock/struct-ed"
+ "target:hemlock/charmacs"
+ "target:hemlock/input"
+ "target:hemlock/line"
+ "target:hemlock/ring"
+ "target:hemlock/vars"
+ "target:hemlock/buffer"
+ "target:hemlock/macros"
+ "target:hemlock/interp"
+ "target:hemlock/syntax"
+ "target:hemlock/htext1"
+ "target:hemlock/htext2"
+ "target:hemlock/htext3"
+ "target:hemlock/htext4"
+ "target:hemlock/files"
+ "target:hemlock/search1"
+ "target:hemlock/search2"
+ "target:hemlock/table"
+ #+clx "target:hemlock/hunk-draw"
+ "target:hemlock/window"
+ "target:hemlock/screen"
+ "target:hemlock/winimage"
+ "target:hemlock/linimage"
+ "target:hemlock/display"
+ "target:hemlock/termcap"
+ #+clx "target:hemlock/bit-display"
+ "target:hemlock/tty-disp-rt"
+ "target:hemlock/tty-display"
+ "target:hemlock/pop-up-stream"
+ #+clx "target:hemlock/bit-screen"
+ "target:hemlock/tty-screen"
+ "target:hemlock/cursor"
+ "target:hemlock/font"
+ "target:hemlock/streams"
+ "target:hemlock/hacks"
+ "target:hemlock/main"
+ "target:hemlock/echo"
+ "target:hemlock/echocoms"
+ "target:hemlock/command"
+ "target:hemlock/indent"
+ "target:hemlock/comments"
+ "target:hemlock/morecoms"
+ "target:hemlock/undo"
+ "target:hemlock/killcoms"
+ "target:hemlock/searchcoms"
+ "target:hemlock/filecoms"
+ "target:hemlock/doccoms"
+ "target:hemlock/srccom"
+ "target:hemlock/group"
+ "target:hemlock/fill"
+ "target:hemlock/text"
+ "target:hemlock/lispmode"
+ "target:hemlock/ts-buf"
+ "target:hemlock/ts-stream"
+ "target:hemlock/eval-server"
+ "target:hemlock/dylan"
+ "target:hemlock/lispbuf"
+ "target:hemlock/lispeval"
+ "target:hemlock/spell-rt"
+ "target:hemlock/spell-corr"
+ "target:hemlock/spell-aug"
+ "target:hemlock/spellcoms"
+ "target:hemlock/overwrite"
+ "target:hemlock/abbrev"
+ "target:hemlock/icom"
+ "target:hemlock/kbdmac"
+ "target:hemlock/defsyn"
+ "target:hemlock/scribe"
+ "target:hemlock/pascal"
+ "target:hemlock/edit-defs"
+ "target:hemlock/auto-save"
+ "target:hemlock/register"
+ "target:hemlock/xcoms"
+ "target:hemlock/unixcoms"
+ "target:hemlock/mh"
+ "target:hemlock/highlight"
+ "target:hemlock/dired"
+ "target:hemlock/diredcoms"
+ "target:hemlock/bufed"
+ "target:hemlock/lisp-lib"
+ "target:hemlock/completion"
+ "target:hemlock/shell"
+ "target:hemlock/debug"
+ "target:hemlock/netnews"
+ "target:hemlock/rcs"
+ "target:hemlock/bindings")
