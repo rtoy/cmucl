@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.115 2003/06/06 16:23:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.116 2003/07/01 15:04:09 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -596,7 +596,7 @@
   (foldable flushable call))
 (defknown endp (list) boolean (foldable flushable movable))
 (defknown list-length (list) (or index null) (foldable flushable))
-(defknown (nth nthcdr) (index list) t (foldable flushable))
+(defknown (nth nthcdr) (unsigned-byte list) t (foldable flushable))
 (defknown last (list &optional index) list (foldable flushable))
 (defknown list (&rest t) list (movable flushable unsafe))
 (defknown list* (t &rest t) t (movable flushable unsafe))

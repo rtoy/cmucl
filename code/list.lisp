@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.31 2003/05/26 20:20:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.32 2003/07/01 15:04:09 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,12 +173,21 @@
   (cdr list))
 
 (defun nthcdr (n list)
-  (declare (type index n))
   "Performs the cdr function n times on a list."
-  (do ((i n (1- i))
-       (result list (cdr result)))
-      ((not (plusp i)) result)
-      (declare (type index i))))
+  (flet ((fast-nthcdr (n list)
+           (declare (type index n))
+           (do ((i n (1- i))
+                (result list (cdr result)))
+               ((not (plusp i)) result)
+             (declare (type index i)))))
+    (typecase n
+      (index (fast-nthcdr n list))
+      (t (do ((i 0 (1+ i))
+              (r-i list (cdr r-i))
+              (r-2i list (cddr r-2i)))
+             ((and (eq r-i r-2i) (not (zerop i)))
+              (fast-nthcdr (mod n i) r-i))
+           (declare (type index i)))))))
 
 (defun last (list &optional (n 1))
   "Returns the last N conses (not the last element!) of a list."

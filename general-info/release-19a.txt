@@ -127,6 +127,7 @@ New in this release:
      - SLOT-VALUE, (SETF SLOT-VALUE), SLOT-BOUNDP, SLOT-MAKUNBOUND
        returning values specified by the standard when SLOT-UNBOUND
        or SLOT-MISSING are called and return.
+     - NTH and NTHCDR accepting bignums as first argument.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
