@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.12 1992/03/09 08:44:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.13 1992/12/11 17:16:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -211,6 +211,9 @@
 		(quick-integer-to-string
 		 (if (integerp string) string (incf *gensym-counter*))))))
 
+(defvar *gentemp-counter* 0)
+(declaim (type index *gentemp-counter*))
+
 (defun gentemp (&optional (prefix t) (package *package*))
   "Creates a new symbol interned in package Package with the given Prefix."
   (loop
@@ -218,7 +221,7 @@
 	  (*print-radix* nil)
 	  (*print-pretty* nil)
 	  (new-pname (format nil "~A~D"
-			     (string prefix) (incf *gensym-counter*))))
+			     (string prefix) (incf *gentemp-counter*))))
       (multiple-value-bind (symbol existsp)
 			   (find-symbol new-pname package)
 	(declare (ignore symbol))
