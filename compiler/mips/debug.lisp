@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.3 1990/06/18 18:14:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.4 1990/07/02 04:48:43 wlott Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -74,12 +74,20 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:variant-vars lowtag)
   (:generator 5
-    (loadw temp thing 0 lowtag)
-    (inst srl temp vm:type-bits)
-    (inst sll temp (1- (integer-length vm:word-bytes)))
-    (unless (= lowtag vm:other-pointer-type)
-      (inst addu temp (- vm:other-pointer-type lowtag)))
-    (inst subu code thing temp)))
+    (let ((bogus (gen-label))
+	  (done (gen-label)))
+      (loadw temp thing 0 lowtag)
+      (inst srl temp vm:type-bits)
+      (inst beq temp bogus)
+      (inst sll temp (1- (integer-length vm:word-bytes)))
+      (unless (= lowtag vm:other-pointer-type)
+	(inst addu temp (- lowtag vm:other-pointer-type)))
+      (inst subu code thing temp)
+      (emit-label done)
+      (assemble (*elsewhere*)
+	(emit-label bogus)
+	(inst b done)
+	(move code null-tn)))))
 
 (define-vop (code-from-lra code-from-mumble)
   (:translate lra-code-header)
