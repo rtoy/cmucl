@@ -49,11 +49,7 @@ Setting up a build environment
 
     mkdir cmucl ; cd cmucl
 
-2.) Extract/move the build tools into that directory
-
-    tar xzf /tmp/build-tools.tgz
-
-3.) Fetch the sources and put them into the base directory
+2.) Fetch the sources and put them into the base directory
 
     tar xzf /tmp/cmucl-18d.source.tar.gz
 
@@ -175,7 +171,7 @@ the scripts included with this little text?
 Overview of the included build scripts
 --------------------------------------
 
-* create-target.sh target-directory lisp-variant [motif-variant]
+* src/tools/create-target.sh target-directory [lisp-variant [motif-variant]]
 
 This script creates a new target directory, which is a shadow of the
 source directory, that will contain all the files that are created by
@@ -188,7 +184,9 @@ The arguments are the name of the target directory to create, the
 lisp-variant (i.e. the suffix of the src/lisp/Config.* to use as the
 target's Config file), and optionally the motif-variant (again the
 suffix of the src/motif/server/Config.* file to use as the Config file
-for the target's CMUCL/Motif server code).
+for the target's CMUCL/Motif server code).  If you do not supply the
+lisp-variant or motif-variant, the script will try to guess a value
+based the system the script is running on.
 
 The script will generate the target directory tree, link the relevant
 Config files, and generate place-holder files for various files, in
@@ -197,19 +195,22 @@ creates a sample setenv.lisp file in the target directory, which is
 used by the build and load processes to set up the correct list of
 *features* for your target lisp core.
 
-IMPORTANT:  You will normally have to modify the sample setenv.lisp
-file, to include code that puts at least a minimal set of features
-onto the list (use PUSHNEW and/or REMOVE).  You can use the current
-set of *features* of your lisp as a first guide.  The sample
-setenv.lisp includes a set of features that should work for
-Linux/x86.
+IMPORTANT: You will normally NOT have to modify the sample setenv.lisp
+file.  If you do not modify setenv.lisp, then you will get the same
+set of *features* as the lisp used to compile.  The sample setenv.lisp
+includes a set of features that should work, but you may need to
+adjust them.
 
-* clean-target.sh target-directory
+If you want to enable some new feature, it may be sufficient to just
+include the new feature in setenv.lisp.  This may or may not work,
+because some features require a cross-compile to enable them.
+
+* src/tools/clean-target.sh target-directory
 
 Cleans the given target directory, so that all created files will be
 removed.  This is useful to force recompilation.
 
-* build-world.sh target-directory [build-binary] [build-flags...]
+* src/tools/build-world.sh target-directory [build-binary] [build-flags...]
 
 Starts a complete world build for the given target, using the lisp
 binary/core specified as a build host.  The recompilation step will
@@ -220,13 +221,13 @@ step of the world build will inform you of that fact.  In that case,
 you'll have to use the rebuild-lisp.sh script, and then restart the
 world build process with build-world.sh
 
-* rebuild-lisp.sh target-directory
+* src/tools/rebuild-lisp.sh target-directory
 
 This script will force a complete recompilation of the C runtime code
 of CMU CL (aka the lisp executable).  Doing this will necessitate
 building a new kernel.core file, using build-world.sh.
 
-* load-world.sh target-directory version
+* src/tools/load-world.sh target-directory version
 
 This will finish the CMU CL rebuilding process, by loading the
 remaining compiled files generated in the world build process into the
@@ -241,20 +242,39 @@ ISO8601 format is often a good idea, e.g. "18d+ 2002-05-06" for a
 binary that is based on sources current on the 6th May, 2002, which is
 post the 18d release.
 
-* build-utils.sh target-directory
+* src/tools/build-utils.sh target-directory
 
 This script will build auxiliary libraries packaged with CMU CL,
 including CLX, CMUCL/Motif, the Motif debugger, inspector, and control
 panel, and the Hemlock editor.  It will use the lisp executable and
 core of the given target.
 
-* make-dist.sh target-directory version arch os
+* src/tools/make-dist.sh [options] target-directory version arch os
 
 This script creates both main and extra distribution tarballs from the
 given target directory, using the make-main-dist.sh and
-make-extra-dist.sh scripts.
+make-extra-dist.sh scripts.  The result will be two tar files.  One
+contains the main distribution including the runtime and lisp.core
+with PCL (CLOS); the second contains the extra libraries such as
+Gray-streams, simple-streams, CLX, CLM, and Hemlock.
 
-* make-main-dist.sh target-directory version arch os
+Some options that are available:
+
+  -b           Use bzip2 compression
+  -g           Use gzip compression
+  -G group     Group to use
+  -O owner     Owner to use
+
+The remaining arguments used to create the name of the tarfiles.  The
+names will have the form:
+
+   cmucl-<version>-<arch>-<os>.tar.bz2
+   cmucl-<version>-<arch>-<os>.extras.tar.bz2
+
+Of course, the "bz2" will be "gz" if you specified gzip compression
+instead of bzip.
+
+* /src/tools/make-main-dist.sh target-directory version arch os
 
 This script creates a main distribution tarball (both in gzipped and
 bzipped variants) from the given target directory.  This will include
@@ -267,8 +287,8 @@ bzipped variants) from the given target directory.  This will include
 all the stuff that is normally included in official extra release
 tarballs, i.e. the auxiliary libraries.
 
-* cross-build-world.sh target-directory cross-directory cross-script 
-                       [build-binary] [build-flags...]
+* src/tools/cross-build-world.sh target-directory cross-directory 
+                       cross-script [build-binary] [build-flags...]
 
 This is a script that can be used instead of build-world.sh for
 cross-compiling CMUCL.  In addition to the arguments of build-world.sh
@@ -382,17 +402,14 @@ a) Bootfiles
    in the order they are numbered.  Be sure to remove the bootstrap
    file once it is no longer needed.
 
+   Alternatively, the bootstrap file can just "load" the individual
+   bootfiles as needed.
 
 b) Cross-compiling
 
-   Under certain rare circumstances (i.e. hasn't happened since before
-   18c), bootstrap code will not be sufficient, and a cross-compilation
-   is needed.  In that case you will have to use cross-build-world.sh,
-   instead of build-world.sh.  Please read the instructions of that
-   script for details of the more complex procedure.
-
-   << This isn't really true anymore, and we should place a more
-      elaborate description of the cross-compiling process here >>
+   Under certain some circumstances, bootstrap code will not be
+   sufficient, and a cross-compilation is needed.  In that case you
+   will have to use cross-build-world.sh, instead of build-world.sh.
 
    When cross-compiling, there are two sorts of bootscripts that can be
    used:  Those that want to be executed prior to compiling and loading
@@ -407,3 +424,59 @@ b) Cross-compiling
    which are also placed in one of the bootfiles/*/* files.  In those
    cases follow the instructions provided in that file, possibly merging
    the changed contents thereof with your normal cross-script.
+
+Step-by-Step Example of Cross-Compiling CMUCL
+---------------------------------------------
+
+To do a cross compile, a more elaborate scheme is needed.  You need to
+create the directory and get a copy of the sources as mentioned above.
+
+Then you need to do the following steps.
+
+1.  Create a directory for the cross-compiler:
+
+           src/tools/create-target.sh xcross <other options>
+
+2.  Create a directory for the compiled target:
+
+           src/tools/create-target.sh xcross <other options>
+
+3.  Build the cross compiler and target:
+
+          src/tools/cross-build-world.sh xtarget xcross \
+            <cross-compile-script> <old lisp>
+
+    The cross-compile-script is some cross compile script needed for
+    the cross-compile.  You can usually find this in the
+    src/bootfiles/<ver> directory.  If not, you can start with one of
+    the sample scripts in src/tools/cross-scripts.
+
+    This will build the cross-compiler in xcross, and then build a new
+    target in xtarget.
+
+4.  Rebuild the lisp files:
+
+	src/tools/rebuild-lisp.sh xtarget
+
+5.  Build the world:
+
+	src/tools/load-world.sh xtarget <label>
+
+
+    You may get into the debugger when doing this.  The first one is
+    an error about OLD-X86 (OLD-SPARC) package already existing.
+    Ignore it and continue.  Then you will probably get a not about
+    PCL not existing.  Select restart 3, which is to return NIL from
+    pclload or something.  (Yes, these should be fixed.)
+
+At this point xtarget/lisp/lisp will be your shiny new cross-compiled
+Lisp.
+
+However, this lisp will be missing some functionality like PCL.  You
+probably now want to use the compiler to rebuild everything once
+again.  Just follow the directions for a normal build, and use
+xtarget/lisp/lisp as your compiler.  Be sure to use create-target.sh
+to create a new directory where the result can go.
+
+
+
