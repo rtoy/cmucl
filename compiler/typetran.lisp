@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.10 1991/02/20 15:00:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.11 1991/05/23 17:55:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.10 1991/02/20 15:00:12 ram Exp $
 ;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
@@ -104,7 +102,6 @@
   (ir1-transform-type-predicate
    object
    (specifier-type (continuation-value type))))
-
 
 ;;; Fold-Type-Predicate IR1 transform  --  Internal
 ;;;
@@ -361,8 +358,9 @@
      (t
       (let ((frozen (info type frozen type))
 	    (included (dd-included-by def))
+	    (predicate (dd-predicate def))
 	    (n-name (gensym)))
-	(if (or frozen (dd-predicate def))
+	(if (or frozen predicate)
 	    (once-only ((object obj))
 	      `(and (structurep ,object)
 		    (let ((,n-name (structure-ref ,object 0)))
@@ -371,7 +369,8 @@
 			  ,(if frozen
 			       (when included
 				 `(member ,n-name ',included :test #'eq))
-			       `(,(dd-predicate def) ,object))))))
+			       `(locally (declare (notinline ,predicate))
+				  (,predicate ,object)))))))
 	    `(lisp::structure-typep ,obj ',type)))))))
 
 
