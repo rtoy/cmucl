@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.47 2003/10/24 02:57:00 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.48 2003/10/27 18:33:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,9 +102,6 @@
 (defconstant lowtag-limit (ash 1 lowtag-bits)
   "Exclusive upper bound on the value of the low tag bits from a
   pointer.")
-
-(defconstant lowtag-bits 3
-  "Number of bits at the low end of a pointer used for type information.")
 
 (defconstant fixnum-tag-bits (1- lowtag-bits)
   "Number of tag bits used for a fixnum")
