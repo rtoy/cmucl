@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.13 1998/09/17 10:54:24 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.14 1998/11/13 04:39:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,10 +175,9 @@
 ;;; 
 #-linux (defparameter target-read-only-space-start #x10000000)
 #-linux (defparameter target-static-space-start    #x28000000)
-#-linux (defparameter target-dynamic-space-start   #x48000000)
 #+linux (defparameter target-read-only-space-start #x01000000)
 #+linux (defparameter target-static-space-start    #x05000000)
-#+linux (defparameter target-dynamic-space-start   #x09000000)
+(defparameter target-dynamic-space-start   #x48000000)
 
 ;;; Given that NIL is the first things allocated in static space, we
 ;;; know its value at compile time:

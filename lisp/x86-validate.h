@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.9 1998/09/17 10:54:23 dtc Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.10 1998/11/13 04:39:42 dtc Exp $
  *
  */
 
@@ -63,19 +63,20 @@
 #define STATIC_SPACE_START	(0x05000000)
 #define STATIC_SPACE_SIZE	(0x02fff000) /* 48MB - 1 page */
 
-#define BINDING_STACK_START	(0x60000000)
+#define BINDING_STACK_START	(0x20000000)
 #define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
 
-#define CONTROL_STACK_START	(0x50000000)
+#define CONTROL_STACK_START	(0x38000000)
 #define CONTROL_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
 
-#define DYNAMIC_0_SPACE_START	(0x09000000)
+#define DYNAMIC_0_SPACE_START	(0x48000000)
 #ifdef GENCGC
 #define DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
 #else
 #define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
 #endif
 #endif
+
 
 #define CONTROL_STACK_END	(CONTROL_STACK_START + CONTROL_STACK_SIZE)
 
