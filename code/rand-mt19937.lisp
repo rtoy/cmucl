@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.4 1997/12/16 02:55:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.5 1998/01/13 19:18:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,6 +84,11 @@
 				       (logand (get-universal-time)
 					       #xffffffff))))
 	  (t (error "Argument is not a RANDOM-STATE, T or NIL: ~S" state)))))
+
+(pushnew #'(lambda ()
+	     (init-random-state (logand (get-universal-time) #xffffffff)
+				(random-state-state *random-state*)))
+	 ext:*after-save-initializations*)
 
 
 ;;;; Random entries:
