@@ -77,6 +77,9 @@ New in this release:
        condition, the user is returned to top-level without warning.
        Use lisp::*reserved-heap-pages* to set the number of pages to
        reserve.
+     - C functions are displayed in backtraces now for x86/linux and
+       sparc.  Previously, it just said "Foreign function call land".
+       (From Helmut Eller.)
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
@@ -153,7 +156,10 @@ New in this release:
      - MAKE-STRING-OUTPUT-STREAM accepts :ELEMENT-TYPE.
      - Numerous LOOP fixes.
      - On FreeBSD, CLtS-required floating-point conditions are signaled.
-     - PARSE-INTEGER skipping over whitespace after a number.
+     - The minimum rehash-threshold is 0.1, and is enforced silently.
+       This is to prevent overflows and divide-by-zero errors when
+       creating a hash-table with a too-small rehash-threshold.
+     - MACROLET now accepts declarations, as prescribed by ANSI CL.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
@@ -184,7 +190,7 @@ New in this release:
        similar cases.
      - GCD sometimes returning a negative value.
      - LCM sometimes returning a negative value, or signaling division-by-zero.
-     - FLOAT in sometimes returning a float of the wrong type.
+     - FLOAT sometimes returning a float of the wrong type.
      - ROOM should handle the large heaps now without overflowing
        internal counters or signaling type errors.  Columns should
        line up better too.
@@ -292,6 +298,9 @@ New in this release:
        versions of his scripts.  Should make building CMUCL easier.
   * Deprecated features:
      - EXT:ENCAPSULATE and associated functions; use fwrappers instead.
+     - The sparc port with the Cheney stop-and-copy garbage collector
+       will no longer be supported after this release.  The supported
+       GC will be gencgc.
 
 This release is not binary compatible with code compiled using CMUCL
 18e; you will need to recompile FASL files. 
