@@ -720,8 +720,8 @@
 	  ((not (probe-file name))
 	   (format t "~%Source file no longer exists -- ~A."
 		   (namestring name)))
-	  ((<= (di:debug-source-created d-source)
-	       (file-write-date name))
+	  ((= (di:debug-source-created d-source)
+	      (file-write-date name))
 	   (let* ((tlf-offset (di:code-location-top-level-form-offset
 			       location))
 		  (char-offset (aref (di:debug-source-start-positions
