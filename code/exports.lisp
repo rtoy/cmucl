@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.35 1990/06/29 11:01:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.36 1990/07/02 04:44:08 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -18,14 +18,21 @@
 ;;; Old compiler cleanup.
 
 #-new-compiler
-(progn
-
 (labels
-    ((nuke (name package)
+    ((move (name old-package new-package)
+	   (let* ((old-package (find-package old-package))
+		  (symbol (find-symbol name old-package)))
+	     (when symbol
+	       (let ((orig-package (symbol-package symbol)))
+		 (unintern symbol orig-package)
+		 (import symbol (find-package new-package))
+		 (import symbol orig-package)))))
+     (nuke (name package)
 	   (let* ((package (find-package package))
 		  (symbol (find-symbol name package)))
 	     (when symbol
 	       (unintern symbol package)))))
+
   (nuke "REAL" "XLIB")
   (nuke "FORM" "LISP")
   (nuke "INDEX" "LISP")
@@ -38,36 +45,28 @@
   (nuke "CONCAT-PNAMES" "LISP")
   (nuke "ONCE-ONLY" "COMPILER")
   (nuke "CONSTANT" "COMPILER")
-  (nuke "SAP+" "COMPILER")
-  (nuke "POINTER<" "COMPILER")
-  (nuke "POINTER>" "COMPILER")
-  (nuke "SAP+" "LISP"))
+  (nuke "GET-TYPE" "LISP")
+  (nuke "INFO" "HEMLOCK")
 
-(labels
-    ((lisp->system (name)
-		   (let ((symbol (find-symbol name (find-package "LISP"))))
-		     (when symbol
-		       (import symbol (find-package "SYSTEM"))))))
-  (lisp->system "%SET-ALIEN-ACCESS")
-  (lisp->system "CHECK<=")
-  (lisp->system "CT-A-VAL")
-  (lisp->system "CT-A-VAL-ALIEN")
-  (lisp->system "CT-A-VAL-OFFSET")
-  (lisp->system "CT-A-VAL-P")
-  (lisp->system "CT-A-VAL-SAP")
-  (lisp->system "CT-A-VAL-SIZE")
-  (lisp->system "CT-A-VAL-TYPE")
-  (lisp->system "DEPORT-BOOLEAN")
-  (lisp->system "DEPORT-INTEGER")
-  (lisp->system "MAKE-CT-A-VAL")
-  (lisp->system "NATURALIZE-BOOLEAN")
-  (lisp->system "NATURALIZE-INTEGER")
-  (lisp->system "SAP-REF-SAP"))
-
-(let ((symbol (find-symbol "CHECK=" (find-package "COMPILER"))))
-  (when symbol (import symbol (find-package "SYSTEM"))))
-
-); #-new-compiler progn
+  (move "POINTER<" "COMPILER" "SYSTEM")
+  (move "POINTER>" "COMPILER" "SYSTEM")
+  (move "SAP+" "LISP" "SYSTEM")
+  (move "%SET-ALIEN-ACCESS" "LISP" "SYSTEM")
+  (move "CHECK<=" "LISP" "SYSTEM")
+  (move "CT-A-VAL" "LISP" "SYSTEM")
+  (move "CT-A-VAL-ALIEN" "LISP" "SYSTEM")
+  (move "CT-A-VAL-OFFSET" "LISP" "SYSTEM")
+  (move "CT-A-VAL-P" "LISP" "SYSTEM")
+  (move "CT-A-VAL-SAP" "LISP" "SYSTEM")
+  (move "CT-A-VAL-SIZE" "LISP" "SYSTEM")
+  (move "CT-A-VAL-TYPE" "LISP" "SYSTEM")
+  (move "DEPORT-BOOLEAN" "LISP" "SYSTEM")
+  (move "DEPORT-INTEGER" "LISP" "SYSTEM")
+  (move "MAKE-CT-A-VAL" "LISP" "SYSTEM")
+  (move "NATURALIZE-BOOLEAN" "LISP" "SYSTEM")
+  (move "NATURALIZE-INTEGER" "LISP" "SYSTEM")
+  (move "SAP-REF-SAP" "LISP" "SYSTEM")
+  (move "CHECK=" "COMPILER" "SYSTEM"))
 
 
 
@@ -290,13 +289,14 @@
 	  function-type function-type-allowp function-type-keyp
 	  function-type-keywords function-type-optional function-type-p
 	  function-type-required function-type-rest function-type-returns
-	  function-type-wild-args hairy-type hairy-type-check-template
-	  hairy-type-specifier index internal-time irrational key-info
-	  key-info-name key-info-p key-info-type lexical-environment
-	  make-args-type make-function-type make-key-info make-member-type
-	  make-named-type make-numeric-type make-structure-type
-	  make-union-type make-values-type member-type member-type-members
-	  member-type-p merge-bits named-type named-type-name named-type-p
+	  function-type-wild-args get-header-data get-lowtag get-type
+	  hairy-type hairy-type-check-template hairy-type-specifier index
+	  internal-time irrational key-info key-info-name key-info-p
+	  key-info-type lexical-environment make-args-type
+	  make-function-type make-key-info make-member-type make-named-type
+	  make-numeric-type make-structure-type make-union-type
+	  make-values-type member-type member-type-members member-type-p
+	  merge-bits named-type named-type-name named-type-p
 	  native-byte-order negate never-subtypep numeric-contagion
 	  numeric-type numeric-type-class numeric-type-complexp
 	  numeric-type-format numeric-type-high numeric-type-low
@@ -620,6 +620,7 @@
 
 (use-package "SYSTEM")
 (use-package "EXT")
+(use-package "KERNEL")
 
 ;;; The compiler's debug-source structure is almost exactly what we want, so
 ;;; just get these symbols and export them.
