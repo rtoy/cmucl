@@ -296,9 +296,13 @@
   ;;    elected not to store a vector to save space.
   (returns :fixed :type (or (simple-array * (*)) (member :standard :fixed)))
   ;;
-  ;; SC-Offsets describing where the return PC and return CONT are kept.
+  ;; SC-Offsets describing where the return PC and return FP are kept.
   (return-pc nil :type sc-offset)
-  (old-cont nil :type sc-offset)
+  (old-fp nil :type sc-offset)
+  ;;
+  ;; SC-Offset for the number stack FP in this function, or NIL if no NFP
+  ;; allocated.
+  (nfp nil :type (or sc-offset null))
   ;;
   ;; The earliest PC in this function at which the environment is properly
   ;; initialized (arguments moved from passing locations, etc.)
@@ -319,6 +323,9 @@
   ;; If :File, the file name, if :Lisp, the lambda compiled, otherwise some
   ;; descriptive string.
   (name nil :type (or pathname list simple-string))
+  ;;
+  ;; File comment for this file, if any.
+  (comment nil :type (or simple-string null))
   ;;
   ;; The universal time that the source was written, or NIL if unavailable.
   (created nil :type (or unsigned-byte null))
