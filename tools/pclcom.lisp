@@ -43,7 +43,10 @@
   (let ((class 'pcl::class))
     (rename-package "PCL" "OLD-PCL")
     (make-package "PCL")
-    (shadowing-import class "PCL")))
+    (shadowing-import class "PCL")
+    ;; Move class back to the PCL package so that the respective debug
+    ;; variable has a valid package name.
+    (kernel:%set-symbol-package class (find-package "PCL"))))
 
 (when (find-package  "SLOT-ACCESSOR-NAME")
   (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
