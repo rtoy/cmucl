@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.20 1991/02/08 13:33:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.21 1991/02/14 18:55:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.20 1991/02/08 13:33:44 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.21 1991/02/14 18:55:56 ram Exp $
 ;;;
 ;;; Initialization stuff for CMU Common Lisp, plus some other random functions
 ;;; that we don't have any better place for.
@@ -654,10 +654,7 @@
 (defun interactive-eval (form)
   "Evaluate FORM, returning whatever it returns but adjust ***, **, *, +++, ++,
   +, ///, //, /, and -."
-  (setf +++ ++
-	++ +
-	+ -
-	- form)
+  (setf - form)
   (let ((results (multiple-value-list (eval form))))
     (setf /// //
 	  // /
@@ -665,12 +662,16 @@
 	  *** **
 	  ** *
 	  * (car results)))
+  (setf +++ ++
+	++ +
+	+ -)
   (unless (boundp '*)
     ;; The bogon returned an unbound marker.
     (setf * nil)
     (cerror "Go on with * set to NIL."
 	    "EVAL returned an unbound marker."))
   (values-list /))
+
 
 (defconstant eofs-before-quit 10)
 
