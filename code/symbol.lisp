@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.20 1997/02/22 12:49:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.21 1997/02/27 21:03:08 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -134,7 +134,10 @@
   "Look on property list of SYMBOL for property with specified
   INDICATOR.  If found, splice this indicator and its value out of
   the plist, and return the tail of the original list starting with
-  INDICATOR.  If not found, return () with no side effects."
+  INDICATOR.  If not found, return () with no side effects.
+
+  NOTE: The ANSI specification requires REMPROP to return true (not false)
+  or false (the symbol NIL). Portable code should not rely on any other value."
   (do ((pl (symbol-plist symbol) (cddr pl))
        (prev nil pl))
       ((atom pl) nil)
@@ -145,7 +148,7 @@
 	   (cond (prev (rplacd (cdr prev) (cddr pl)))
 		 (t
 		  (setf (symbol-plist symbol) (cddr pl))))
-	   (return t)))))
+	   (return pl)))))
 
 (defun getf (place indicator &optional (default ()))
   "Searches the property list stored in Place for an indicator EQ to Indicator.
