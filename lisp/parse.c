@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.4 1997/11/23 08:52:52 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.5 2004/05/19 23:33:44 cwang Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -258,7 +258,7 @@ static boolean lookup_symbol(char *name, lispobj *result)
 
     /* Search dynamic space */
     headerptr = current_dynamic_space;
-#if !defined(ibmrt) && !defined(i386)
+#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64)
     count = current_dynamic_space_free_pointer - current_dynamic_space;
 #else
     count = (lispobj *)SymbolValue(ALLOCATION_POINTER) - current_dynamic_space;

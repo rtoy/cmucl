@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.17 2004/01/09 04:36:39 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.18 2004/05/19 23:38:13 cwang Exp $
  *
  * Memory Validation
  */
@@ -38,7 +38,7 @@ ensure_space(lispobj *start, size_t size)
    builtin_image_flag is used as a flag indicating that the lisp image
    is built into the executable.  FMG */
 extern int builtin_image_flag;
-int image_dynamic_space_size = 0;
+long image_dynamic_space_size = 0;
 
 void
 validate(void)
@@ -90,7 +90,7 @@ validate(void)
 
     /* Control Stack */
     control_stack = (lispobj *) CONTROL_STACK_START;
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
     control_stack_end = (lispobj *) (CONTROL_STACK_START
 				     + CONTROL_STACK_SIZE);
 #endif
