@@ -75,30 +75,39 @@
 
 (defun elt (sequence index)
   "Returns the element of SEQUENCE specified by INDEX."
-  (if (listp sequence)
-      (if (< index 0)
-	  (error "~S: index too small." index)
-	  (do ((count index (1- count)))
-	      ((= count 0) (car sequence))
-	    (declare (fixnum count))
-	    (if (atom sequence)
-		(error "~S: index too large." index)
-		(setq sequence (cdr sequence)))))
-      (aref sequence index)))
+  (etypecase sequence
+    (list
+     (if (< index 0)
+	 (error "~S: index too small." index)
+	 (do ((count index (1- count)))
+	     ((= count 0) (car sequence))
+	   (declare (fixnum count))
+	   (if (atom sequence)
+	       (error "~S: index too large." index)
+	       (setq sequence (cdr sequence))))))
+    (vector
+     (when (>= index (length sequence))
+       (error "~S: index too large." index))
+     (aref sequence index))))
 
 (defun %setelt (sequence index newval)
   "Store NEWVAL as the component of SEQUENCE specified by INDEX."
-  (if (listp sequence)
-      (if (< index 0)
-	  (error "~S: index too small." index)
-	  (do ((count index (1- count))
-	       (seq sequence))
-	      ((= count 0) (rplaca seq newval) sequence)
-	    (declare (fixnum count))
-	    (if (atom (cdr seq))
-		(error "~S: index too large." index)
-		(setq seq (cdr seq)))))
-      (setf (aref sequence index) newval)))
+  (etypecase sequence
+    (list
+     (if (< index 0)
+	 (error "~S: index too small." index)
+	 (do ((count index (1- count))
+	      (seq sequence))
+	     ((= count 0) (rplaca seq newval) sequence)
+	   (declare (fixnum count))
+	   (if (atom (cdr seq))
+	       (error "~S: index too large." index)
+	       (setq seq (cdr seq))))))
+    (vector
+     (when (>= index (length sequence))
+       (error "~S: index too large." index))
+     (setf (aref sequence index) newval))))
+
 
 (defun length (sequence)
   "Returns an integer that is the length of SEQUENCE."
