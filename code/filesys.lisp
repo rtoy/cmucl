@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.68 2002/10/02 13:36:48 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.69 2002/10/16 14:01:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -334,7 +334,10 @@
 (defun unparse-unix-host (pathname)
   (declare (type pathname pathname)
 	   (ignore pathname))
-  "Unix")
+  ;; this host designator needs to be recognized as a physical host in
+  ;; PARSE-NAMESTRING. Until sbcl-0.7.3.x, we had "Unix" here, but
+  ;; that's a valid Logical Hostname, so that's a bad choice. -- CSR,
+  "")
 
 (defun unparse-unix-piece (thing)
   (etypecase thing

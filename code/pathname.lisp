@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.56 2002/08/12 20:56:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.57 2002/10/16 14:01:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,10 +68,15 @@
 		      (:unparse-directory #'unparse-logical-directory)
 		      (:unparse-file #'unparse-unix-file)
 		      (:unparse-enough #'unparse-enough-namestring)
-		      (:customary-case :upper)))
+		      (:customary-case :upper))
+	    (:make-load-form-fun make-logical-host-load-form-fun))
   (name "" :type simple-base-string)
   (translations nil :type list)
   (canon-transls nil :type list))
+
+(defun make-logical-host-load-form-fun (logical-host)
+  (values `(find-logical-host ',(logical-host-name logical-host))
+	  nil))
 
 ;;; The various magic tokens that are allowed to appear in pretty much all
 ;;; pathname components.
@@ -657,7 +662,8 @@ a host-structure or string."
 	 ;; HS is silent on what happens if the :host arg is NOT one of these.
 	 ;; It seems an error message is appropriate.
 	 (host (typecase host
-		 (host host) 		; A valid host, use it. 
+		 (host host) 		; A valid host, use it.
+		 ((string 0) default-host) ; "" cannot be a logical host
 		 (string (find-logical-host host t)) ; logical-host or lose.
 		 (t default-host)))	; unix-host
 	 (diddle-args (and (eq (host-customary-case host) :lower)
@@ -866,10 +872,62 @@ a host-structure or string."
    for a physical pathname, returns the printed representation. Host may be
    a physical host structure or host namestring."
   (declare (type path-designator thing)
-	   (type (or null string host) host)
+	   (type (or list string host (member :unspecific)) host)
 	   (type pathname defaults)
 	   (type index start)
 	   (type (or index null) end))
+  ;; Generally, redundant specification of information in software,
+  ;; whether in code or in comments, is bad. However, the ANSI spec
+  ;; for this is messy enough that it's hard to hold in short-term
+  ;; memory, so I've recorded these redundant notes on the
+  ;; implications of the ANSI spec.
+  ;; 
+  ;; According to the ANSI spec, HOST can be a valid pathname host, or
+  ;; a logical host, or NIL.
+  ;;
+  ;; A valid pathname host can be a valid physical pathname host or a
+  ;; valid logical pathname host.
+  ;; 
+  ;; A valid physical pathname host is "any of a string, a list of
+  ;; strings, or the symbol :UNSPECIFIC, that is recognized by the
+  ;; implementation as the name of a host". In SBCL as of 0.6.9.8,
+  ;; that means :UNSPECIFIC: though someday we might want to
+  ;; generalize it to allow strings like "RTFM.MIT.EDU" or lists like
+  ;; '("RTFM" "MIT" "EDU"), that's not supported now.
+  ;; 
+  ;; A valid logical pathname host is a string which has been defined as
+  ;; the name of a logical host, as with LOAD-LOGICAL-PATHNAME-TRANSLATIONS.
+  ;; 
+  (let ((host (etypecase host
+		((string 0)
+		 ;; This is a special host. It's not valid as a
+		 ;; logical host, so it is a sensible thing to
+		 ;; designate the physical Unix host object. So
+		 ;; we do that.
+		 *unix-host*)
+		(string
+		 ;; In general ANSI-compliant Common Lisps, a
+		 ;; string might also be a physical pathname host,
+		 ;; but ANSI leaves this up to the implementor,
+		 ;; and in CMUCL we don't do it, so it must be a
+		 ;; logical host.
+		 (find-logical-host host))
+		((or null (member :unspecific))
+		 ;; CLHS says that HOST=:UNSPECIFIC has
+		 ;; implementation-defined behavior. We
+		 ;; just turn it into NIL.
+		 nil)
+		(list
+		 ;; ANSI also allows LISTs to designate hosts,
+		 ;; but leaves its interpretation
+		 ;; implementation-defined. Our interpretation
+		 ;; is that it's unsupported.:-|
+		 (error "A LIST representing a pathname host is not ~
+                              supported in this implementation:~%  ~S"
+			host))
+		(host
+		 host))))
+    (declare (type (or null host) host))
     (etypecase thing
       (simple-string
        (%parse-namestring thing host defaults start end junk-allowed))
@@ -887,7 +945,7 @@ a host-structure or string."
 	 (unless name
 	   (error "Can't figure out the file associated with stream:~%  ~S"
 		  thing))
-	 (values name nil)))))
+	 (values name nil))))))
 
 
 ;;; NAMESTRING -- Interface
