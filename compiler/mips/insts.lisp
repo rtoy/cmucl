@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.10 1990/02/26 23:45:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.11 1990/03/05 21:06:44 wlott Exp $
 ;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
@@ -440,6 +440,34 @@
   :op2 #b100011)
 
 (def-instruction store-foreign-value load-foreign-format
+  :op2 #b101011)
+
+
+
+;;; LOAD-ASSEMBLY-ADDRESS and LOAD-ASSEMBLY-VALUE
+;;; 
+;;; This ``instruction'' emits a LUI followed by either an ADDIU, LW, or SW.
+;;; The difference is that we use :assembly fixups.
+;;;
+(def-instruction-format (load-assembly-format 8) (rt symbol)
+  ;; We need to switch the order of the two instructions because the MIPS
+  ;; is little-endian.
+  (op2 :unsigned 6 :instruction-constant)
+  (rt :unsigned 5 :register)
+  (rt :unsigned 5 :register)
+  (filler :unsigned 16 :constant 0)
+  (op1 :unsigned 6 :constant #b001111)
+  (rt :unsigned 5 :register)
+  (rt :unsigned 5 :register)
+  (symbol :unsigned 16 :fixup :assembly))
+
+(def-instruction load-assembly-address load-assembly-format
+  :op2 #b001001)
+
+(def-instruction load-assembly-value load-assembly-format
+  :op2 #b100011)
+
+(def-instruction store-assembly-value load-assembly-format
   :op2 #b101011)
 
 
