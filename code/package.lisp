@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.28 1993/02/16 16:26:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.29 1993/02/19 23:02:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -81,10 +81,10 @@
       (multiple-value-bind (iu it) (internal-symbol-count s)
 	(multiple-value-bind (eu et) (external-symbol-count s)
 	  (print-unreadable-object (s stream)
-	    (format stream "#<The ~A package, ~D/~D internal, ~D/~D external>"
+	    (format stream "The ~A package, ~D/~D internal, ~D/~D external"
 		    (package-%name s) iu it eu et))))
       (print-unreadable-object (s stream :identity t)
-	(format stream "#<deleted package>"))))
+	(format stream "deleted package"))))
 
 ;;; Can get the name (NIL) of a deleted package.
 ;;;
