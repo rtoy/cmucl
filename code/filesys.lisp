@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.78 2004/01/09 15:09:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.79 2004/04/01 17:48:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -838,7 +838,9 @@
   "Delete the specified file."
   (let ((namestring (unix-namestring file t)))
     (when (streamp file)
-      (close file :abort t))
+      ;; Close the file, but don't try to revert or anything.  We want
+      ;; to delete it, man!
+      (close file))
     (unless namestring
       (error 'simple-file-error
 	     :pathname file
