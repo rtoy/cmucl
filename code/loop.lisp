@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.10 2001/10/04 13:21:45 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.11 2002/07/06 00:58:04 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -483,10 +483,10 @@ code to be loaded.
     ;;Cloe could be done with the above except for bootstrap lossage...
     #+CLOE
     (format stream "#<~S ~A ~X>" (type-of u) str (sys::address-of u))
-    #+Genera					;@@@@ This is reallly the ANSI definition.
+    #+(or Genera cmu)					;@@@@ This is reallly the ANSI definition.
     (print-unreadable-object (u stream :type t :identity t)
       (princ str stream))
-    #-(or Genera CLOE)
+    #-(or Genera CLOE cmu)
     (format stream "#<~S ~A>" (type-of u) str)
     ))
 
@@ -2095,6 +2095,7 @@ collected result will be returned as the value of the LOOP."
 			     (below (loop-for-arithmetic :below))
 			     (to (loop-for-arithmetic :to))
 			     (upto (loop-for-arithmetic :upto))
+			     (by (loop-for-arithmetic :by))
 			     (being (loop-for-being)))
 	     :iteration-keywords '((for (loop-do-for))
 				   (as (loop-do-for))
@@ -2129,7 +2130,7 @@ collected result will be returned as the value of the LOOP."
     (add-loop-path '(present-symbol present-symbols) 'loop-package-symbols-iteration-path w
 		   :preposition-groups '((:of :in))
 		   :inclusive-permitted nil
-		   :user-data '(:symbol-types (:internal)))
+		   :user-data '(:symbol-types (:internal :external)))
     w))
 
 
