@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.2 1991/08/02 03:37:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.3 1991/08/02 03:40:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,6 +156,12 @@
      (:temp nl0 non-descriptor-reg nl0-offset)
      (:temp nl1 non-descriptor-reg nl1-offset)
 
+     (:temp nl2 non-descriptor-reg nl2-offset)
+     (:temp nl3 non-descriptor-reg nl3-offset)
+     (:temp nl4 non-descriptor-reg nl4-offset)
+     (:temp nl5 non-descriptor-reg nl5-offset)
+     (:temp nargs non-descriptor-reg nargs-offset)
+
      (:temp a2 any-reg a2-offset)
      (:temp a3 any-reg a3-offset)
      (:temp a4 any-reg a4-offset)
@@ -209,7 +215,8 @@
     ;; Turn off pseudo-atomic.
     (end-pseudo-atomic nl0)
 
-    ;; Move the other non-descriptor regs into saved regs.
+    ;; Move the non-descriptor regs into saved regs.
+    (inst move l1 nl2)
     (inst move l2 nl3)
     (inst move l3 nl4)
     (inst move nfp nl5)
@@ -228,7 +235,8 @@
     ;; Deallocate the stack frame.
     (inst addu nsp-tn nsp-tn (* 4 word-bytes))
 
-    ;; Restore the other non-descriptor regs.
+    ;; Restore the non-descriptor regs.
+    (inst move nl2 l1)
     (inst move nl3 l2)
     (inst move nl4 l3)
     (inst move nl5 nfp)
