@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.5 1990/05/25 15:57:38 wlott Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.6 1990/07/02 05:22:23 wlott Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -17,7 +17,8 @@
 struct call_frame {
 	struct call_frame *old_cont;
 	lispobj saved_lra;
-	lispobj other_state[6];
+        lispobj code;
+	lispobj other_state[5];
 };
 
 struct call_info {
@@ -99,7 +100,7 @@ struct sigcontext *csp;
     else {
         info->frame = (struct call_frame *)csp->sc_regs[CONT];
         info->code = code_pointer(csp->sc_regs[CODE]);
-        info->lra = 0;
+        info->lra = NIL;
         pc = csp->sc_pc;
     }
     if (info->code != NULL)
@@ -130,24 +131,26 @@ struct call_info *info;
     if (info->frame == NULL || info->frame == this_frame)
         return 0;
 
-    info->code = code_pointer(info->lra);
-
-    if (info->code == (struct code *)PTR(info->lra)) {
+    if (info->lra == NIL) {
         /* We were interrupted.  Find the correct sigcontext. */
         free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
         while (free-- > 0) {
             csp = lisp_interrupt_contexts[free];
-            if ((struct call_frame *)(csp->sc_regs[CONT]) == info->frame)
+            if ((struct call_frame *)(csp->sc_regs[CONT]) == info->frame) {
                 info_from_sigcontext(info, csp);
+                break;
+            }
         }
     }
-    else if (info->code != NULL)
-        info->pc = (unsigned long)PTR(info->lra) - (unsigned long)info->code -
-            (HEADER_LENGTH(info->code->header) * sizeof(lispobj));
-    else
-        info->pc = 0;
-
-        
+    else {
+        info->code = code_pointer(info->lra);
+        if (info->code != NULL)
+            info->pc = (unsigned long)PTR(info->lra) -
+                (unsigned long)info->code -
+                (HEADER_LENGTH(info->code->header) * sizeof(lispobj));
+        else
+            info->pc = 0;
+    }
 
     return 1;
 }
@@ -205,7 +208,7 @@ int nframes;
         else
             printf("CODE: ???, ");
 
-        if (info.lra != 0)
+        if (info.lra != NIL)
             printf("LRA: 0x%08x, ", (unsigned long)info.lra);
         else
             printf("<no LRA>, ");
