@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.3 2000/11/03 18:13:45 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.4 2000/12/05 03:03:48 dtc Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -58,12 +58,12 @@ extern char *getenv();
 long os_vm_page_size=(-1);
 static long os_real_page_size=(-1);
 
-static int zero_fd=(-1), empty_fd=(-1);
+static int zero_fd=(-1);
 
 static os_vm_size_t real_page_size_difference=0;
 
-static void os_init_bailout(arg)
-char *arg;
+static void
+os_init_bailout(char* arg)
 {
     char buf[500];
     sprintf(buf,"os_init: %s",arg);
@@ -71,18 +71,9 @@ char *arg;
     exit(1);
 }
 
-void os_init()
+void
+os_init(void)
 {
-    char *empty_file=getenv("CMUCL_EMPTYFILE");
-
-    if(empty_file==NULL)
-	empty_file=EMPTYFILE;
-
-    empty_fd=open(empty_file,O_RDONLY|O_CREAT);
-    if(empty_fd<0)
-	os_init_bailout(empty_file);
-    unlink(empty_file);
-
     zero_fd=open(ZEROFILE,O_RDONLY);
     if(zero_fd<0)
 	os_init_bailout(ZEROFILE);
@@ -115,7 +106,8 @@ os_validate(os_vm_address_t addr, os_vm_size_t len)
 
   if(addr) flags|=MAP_FIXED;
 
-  if((addr=mmap(addr,len,OS_VM_PROT_ALL,flags,zero_fd,0)) == (os_vm_address_t) -1)
+  if((addr = (os_vm_address_t) mmap((void*)addr, len, OS_VM_PROT_ALL, flags, zero_fd, 0))
+     == (os_vm_address_t) -1)
     perror("mmap");
 
   return addr;
@@ -124,23 +116,22 @@ os_validate(os_vm_address_t addr, os_vm_size_t len)
 void
 os_invalidate(os_vm_address_t addr, os_vm_size_t len)
 {
-  if(munmap(addr,len) == -1)
+  if(munmap((void*) addr, len) == -1)
     perror("munmap");
 }
 
 os_vm_address_t
 os_map(int fd, int offset, os_vm_address_t addr, os_vm_size_t len)
 {
-  if((addr=mmap(addr,len,OS_VM_PROT_ALL,MAP_PRIVATE|MAP_FIXED,fd,
+  if((addr = (os_vm_address_t) mmap((void*) addr, len, OS_VM_PROT_ALL, MAP_PRIVATE|MAP_FIXED, fd,
 		(off_t) offset)) == (os_vm_address_t) -1)
     perror("mmap");
   
   return addr;
 }
 
-void os_flush_icache(address, length)
-os_vm_address_t address;
-os_vm_size_t length;
+void
+os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 {
   static int flushit = -1;
   /*
@@ -165,15 +156,34 @@ os_vm_size_t length;
 void
 os_protect(os_vm_address_t address, os_vm_size_t length, os_vm_prot_t prot)
 {
-  if(mprotect(address, length, prot) == -1)
+  if(mprotect((void*)address, length, prot) == -1)
     perror("mprotect");
 }
 
-boolean valid_addr(test)
-os_vm_address_t test;
+static boolean
+in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 {
-  /* XXX needs implementing */
-  return 1;
+  char* beg = (char*) sbeg;
+  char* end = (char*) sbeg + slen;
+  char* adr = (char*) a;
+  return (adr >= beg && adr < end);
+}
+
+boolean
+valid_addr(os_vm_address_t addr)
+{
+  /* Stolen from Linux-os.c */
+  os_vm_address_t newaddr;
+  newaddr = os_trunc_to_page(addr);
+
+  /* Just assume address is valid if it lies within one of the known
+     spaces.  (Unlike sunos-os which keeps track of every valid page.) */
+  return (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
+          || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
+          || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size  )
+          || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size  )
+          || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
+          || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ));
 }
 
 /* ---------------------------------------------------------------- */
@@ -181,7 +191,8 @@ os_vm_address_t test;
 /*
  * Running into the gc trigger page will end up here...
  */
-void segv_handler(HANDLER_ARGS)
+void
+segv_handler(HANDLER_ARGS)
 {
   caddr_t addr = code->si_addr;
 
@@ -195,15 +206,17 @@ void segv_handler(HANDLER_ARGS)
   }
 }
 
-void os_install_interrupt_handlers()
+void
+os_install_interrupt_handlers()
 {
     interrupt_install_low_level_handler(SIGSEGV,segv_handler);
 }
 
 
-/* function defintions for register lvalues */
+/* function definitions for register lvalues */
 
-int * solaris_register_address(struct ucontext *context, int reg)
+int *
+solaris_register_address(struct ucontext *context, int reg)
 {
     if (reg == 0) {
 	static int zero;
