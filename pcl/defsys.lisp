@@ -70,32 +70,40 @@
 ;;; 
 (defvar *the-pcl-package* (find-package :pcl))
 
-(defvar *pcl-system-date* "5/1/90  May Day PCL (REV 2)")
+(defvar *pcl-system-date* "5/1/90  May Day PCL (REV 4b)")
 
 
 ;;;
 ;;; Various hacks to get people's *features* into better shape.
 ;;; 
 (eval-when (compile load eval)
-
   #+(and Symbolics Lispm)
   (multiple-value-bind (major minor) (sct:get-release-version)
+    (etypecase minor
+      (integer)
+      (string (setf minor (parse-integer minor :junk-allowed t))))
     (pushnew :genera *features*)
     (ecase major
       ((6)
        (pushnew :genera-release-6 *features*))
       ((7)
        (pushnew :genera-release-7 *features*)
-       (ecase (etypecase minor
-		(integer minor)
-		(string (digit-char-p (char minor 0))))
+       (ecase minor
 	 ((0 1) (pushnew :genera-release-7-1 *features*))
 	 ((2)   (pushnew :genera-release-7-2  *features*))
 	 ((3)   (pushnew :genera-release-7-3  *features*))
-	 ((4)   (pushnew :genera-release-7-4  *features*))
-	 ((5)   (pushnew :genera-release-7-5  *features*))))))
-
+	 ((4)   (pushnew :genera-release-7-4  *features*))))
+      ((8)
+       (pushnew :genera-release-8 *features*)
+       (ecase minor
+	 ((0) (pushnew :genera-release-8-0 *features*))
+	 ((1) (pushnew :genera-release-8-1 *features*))))))
   
+  #+CLOE-Runtime
+  (let ((version (lisp-implementation-version)))
+    (when (string-equal version "2.0" :end1 (min 3 (length version)))
+      (pushnew :cloe-release-2 *features*)))
+
   (dolist (feature *features*)
     (when (and (symbolp feature)                ;3600!!
                (equal (symbol-name feature) "CMU"))
@@ -118,7 +126,7 @@
 
   #+(and HP Lucid)
   (push :HP-Lucid *features*)
-  #+(and HP (not Lucid))
+  #+(and HP (not Lucid) (not excl))
   (push :HP-HPLabs *features*)
 
   #+Xerox
@@ -208,7 +216,9 @@ and load your system with:
           #+Genera-Release-7-2   Rel-7-2
 	  #+Genera-Release-7-3   Rel-7-2	;OK for now
 	  #+Genera-Release-7-4   Rel-7-2	;OK for now
+	  #+Genera-Release-8	 Rel-8
 	  #+imach                Ivory
+	  #+Cloe-Runtime	 Cloe
           #+Lucid                Lucid
           #+Xerox                Xerox
 	  #+Xerox-Lyric          Xerox-Lyric
@@ -218,6 +228,7 @@ and load your system with:
           #+KCL                  KCL
           #+IBCL                 IBCL
           #+excl                 excl
+	  #+(and excl sun4)      excl-sun4
           #+:CMU                 CMU
           #+HP-HPLabs            HP-HPLabs
           #+:gclisp              gclisp
@@ -255,6 +266,7 @@ and load your system with:
           (car
            '(#+(and Genera (not imach))          ("lisp"  . "bin")
 	     #+(and Genera imach)                ("lisp"  . "ibin")
+	     #+Cloe-Runtime			 ("l"	  . "fasl")
              #+(and dec common vax (not ultrix)) ("LSP"   . "FAS")
              #+(and dec common vax ultrix)       ("lsp"   . "fas")
              #+KCL                               ("lsp"   . "o")
@@ -268,6 +280,7 @@ and load your system with:
              #+(and Lucid IBM-RT-PC)             ("lisp"  . "bbin")
              #+(and Lucid MIPS)                  ("lisp"  . "mbin")
              #+(and Lucid PRISM)                 ("lisp"  . "abin")
+             #+(and Lucid PA)                    ("lisp"  . "hbin")
 	     #+excl                              ("cl"    . "fasl")
 	     #+cmu ("lisp" . #.(c:backend-fasl-file-type c:*backend*))
              #+HP                                ("l"     . "b")
@@ -556,13 +569,31 @@ and load your system with:
     ;; compatibility.  In 2.1 it was in the SYSTEM package, and i
     ;; 3.0 it's in the LUCID-COMMON-LISP package.
     ;;
-    #+LUCID (or lucid::*source-pathname* (bad-time))))
+    #+LUCID (or lucid::*source-pathname* (bad-time))
+    #-(or Lispm excl Xerox (and dec vax common) LUCID) nil))
 
 (defvar *pcl-directory* (pathname "pcl:"))
 
+#+Genera
+(defvar *pcl-directory*
+	(let ((source (load-truename t)))
+	  (flet ((subdir (name)
+		   (scl:send source :new-pathname :raw-directory
+			     (append (scl:send source :raw-directory)
+				     (list name)))))
+	    (cons source
+		  #+genera-release-7-2       (subdir "rel-7-2")
+		  #+genera-release-7-3       (subdir "rel-7-3") 
+		  #+genera-release-7-4       (subdir "rel-7-4")
+		  #+genera-release-8-0       (subdir "rel-8-0")
+		  #+genera-release-8-1       (subdir "rel-8-1")
+		  ))))
+
+#+Cloe-Runtime
+(defvar *pcl-directory* (pathname "/usr3/hornig/pcl/"))
 
 (defsystem pcl	   
-	   *pcl-directory*
+           *pcl-directory*
   ;;
   ;; file         load           compile      files which       port
   ;;              environment    environment  force the of
@@ -573,6 +604,7 @@ and load your system with:
 ;  (rel-6-patches   t            t            ()                rel-6)
 ;  (rel-7-1-patches t            t            ()                rel-7-1)
    (rel-7-2-patches t            t            ()                rel-7-2)
+   (rel-8-patches   t            t            ()                rel-8)
    (ti-patches      t            t            ()                ti)
    (pyr-patches     t          t              ()                pyramid)
    (xerox-patches   t            t            ()                xerox)
@@ -588,6 +620,7 @@ and load your system with:
    
    
    (genera-low     (low)         (low)        (low)            Genera)
+   (cloe-low	   (low)	 (low)	      (low)            Cloe)
    (lucid-low      (low)         (low)        (low)            Lucid)
    (Xerox-low      (low)         (low)        (low)            Xerox)
    (ti-low         (low)         (low)        (low)            TI)
@@ -607,8 +640,8 @@ and load your system with:
    (fngen       t                                   t (low))
    (lap         t                                   t (low))
    (plap        t                                   t (low))
-   (cpatch      t                                   t (low)    excl)	;***
-   (quadlap     t                                   t (low)    excl)	;***
+   (cpatch      t                                   t (low)    excl-sun4)
+   (quadlap     t                                   t (low)    excl-sun4)
    (cache       t                                   t (low defs))
    (dlap        t                                   t (defs low fin cache lap))
    (boot        t                                   t (defs fin))
@@ -637,6 +670,7 @@ and load your system with:
   (let (#+:coral(ccl::*warn-if-redefine-kernel* nil)
 	#+Lucid (lcl:*redefinition-action* nil)
 	#+excl  (excl::*redefinition-warnings* nil)
+	#+Genera (sys:inhibit-fdefine-warnings t)
 	)
     (cond ((null m)        (operate-on-system 'pcl :compile))
 	  ((eq m :print)   (operate-on-system 'pcl :compile () t))
@@ -650,11 +684,29 @@ and load your system with:
   (let (#+:coral(ccl::*warn-if-redefine-kernel* nil)
 	#+Lucid (lcl:*redefinition-action* nil)
 	#+excl  (excl::*redefinition-warnings* nil)
+	#+Genera (sys:inhibit-fdefine-warnings t)
 	)
     (cond ((null m)      (operate-on-system 'pcl :load))
 	  ((eq m :query) (operate-on-system 'pcl :query-load)))
     (pushnew :pcl *features*)
     (pushnew :portable-commonloops *features*)))
+
+#+Genera
+;;; Make sure Genera bug mail contains the PCL bug data.  A little
+;;; kludgy, but what the heck.  If they didn't mean for people to do
+;;; this, they wouldn't have made private patch notes be flavored
+;;; objects, right?  Right.
+(progn
+  (scl:defflavor pcl-private-patch-info ((description)) ())
+  (scl:defmethod (sct::private-patch-info-description pcl-private-patch-info) ()
+    (or description
+	(setf description (string-append "PCL version: " *pcl-system-date*))))
+  (scl:defmethod (sct::private-patch-info-pathname pcl-private-patch-info) ()
+    *pcl-directory*)
+  (unless (find-if #'(lambda (x) (typep x 'pcl-private-patch-info))
+		   sct::*private-patch-info*)
+    (push (scl:make-instance 'pcl-private-patch-info)
+	  sct::*private-patch-info*)))
 
 (defun bug-report-info (&optional (stream *standard-output*))
   (format stream "~&PCL system date: ~A~
@@ -745,5 +797,6 @@ and load your system with:
              (format t "~&Just sent ~A  (~A of ~A)." b i total-number)
              (zwei:kill-buffer mail-buffer)))
       (zwei:make-buffer-current original-buffer))))
+
 
 

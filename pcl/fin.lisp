@@ -305,7 +305,7 @@ explicitly marked saying who wrote it.
 ;;;  3650), at least one nasty bug is fixed, and so far at least I've not
 ;;;  seen any problems at all with this code.   - mike thome (mthome@bbn.com)
 ;;;      
-#+Genera
+#+(and Genera (not Genera-Release-8))
 (progn
 
 (defvar *funcallable-instance-marker* (list "Funcallable Instance Marker"))
@@ -358,7 +358,9 @@ explicitly marked saying who wrote it.
                                             (make-trampoline new-value)))))
 
 (defun make-trampoline (function)
+  (declare (optimize (speed 3) (safety 0)))
   #'(lambda (&rest args)
+      #+Genera (declare (dbg:invisible-frame :pcl-internals))
       (apply function args)))
 
 (defmacro funcallable-instance-data-1 (fin data)
@@ -373,30 +375,321 @@ explicitly marked saying who wrote it.
 ;;;
 ;;; Make funcallable instances print out properly.
 ;;; 
-(defvar *old-print-lexical-closure*)
-
 (defvar *print-lexical-closure* nil)
 
 (defun pcl-print-lexical-closure (exp stream slashify-p &optional (depth 0))
   (declare (ignore depth))
+  (declare (special *boot-state*))
   (if (or (eq *print-lexical-closure* exp)
 	  (neq *boot-state* 'complete)
 	  (eq (class-of exp) *the-class-t*))
       (let ((*print-lexical-closure* nil))
-	(funcall *old-print-lexical-closure* exp stream slashify-p))
+	(funcall (get 'si:print-lexical-closure ':definition-before-pcl)
+		 exp stream slashify-p))
       (let ((*print-escape* slashify-p)
 	    (*print-lexical-closure* exp))
 	(print-object exp stream))))
 
 (eval-when (load eval)
-  (unless (boundp '*old-print-lexical-closure*)
-    (setq *old-print-lexical-closure* #'si:print-lexical-closure)
-    (setf (symbol-function 'si:print-lexical-closure)
-	  'pcl-print-lexical-closure)))
+  (unless (boundp '*boot-state*)
+    (setq *boot-state* nil))
+  (unless (get 'si:print-lexical-closure ':definition-before-pcl)
+    (setf (get 'si:print-lexical-closure ':definition-before-pcl)
+	  (symbol-function 'si:print-lexical-closure)))
+  (setf (symbol-function 'si:print-lexical-closure)
+	(symbol-function 'pcl-print-lexical-closure)))
 
+(defvar *function-name-level* 0)
+
+(defun pcl-function-name (function &rest other-args)
+  (if (and (eq *boot-state* 'complete)
+	   (funcallable-instance-p function)
+	   (generic-function-p function)
+	   (<= *function-name-level* 2))
+      (let ((*function-name-level* (1+ *function-name-level*)))
+	(generic-function-name function))
+      (apply (get 'si:function-name ':definition-before-pcl) function other-args)))
+
+(eval-when (eval load)
+  (unless (get 'si:function-name ':definition-before-pcl)
+    (setf (get 'si:function-name ':definition-before-pcl) 
+	  (symbol-function 'si:function-name)))
+  (setf (symbol-function 'si:function-name) 
+	(symbol-function 'pcl-function-name)))
+
+(defun pcl-arglist (function &rest other-args)
+  (let ((defn nil))
+    (cond ((and (funcallable-instance-p function)
+		(generic-function-p function))
+	   (generic-function-pretty-arglist function))
+	  ((and (sys:validate-function-spec function)
+		(sys:fdefinedp function)
+		(setq defn (sys:fdefinition function))
+		(funcallable-instance-p defn)
+		(generic-function-p defn))
+	   (generic-function-pretty-arglist defn))
+	  (t (apply (get 'zl:arglist ':definition-before-pcl) function other-args)))))
+
+(eval-when (eval load)
+  (unless (get 'zl:arglist ':definition-before-pcl)
+    (setf (get 'zl:arglist ':definition-before-pcl)
+	  (symbol-function 'zl:arglist)))
+  (setf (symbol-function 'zl:arglist)
+	(symbol-function 'pcl-arglist)))
+
+
+;;;
+;;; This code is adapted from frame-lexical-environment and frame-function.
+;;;
+#||
+dbg:
+(progn
+
+(defvar *old-frame-function*)
+
+(defvar *inside-new-frame-function* nil)
+
+(defun new-frame-function (frame)
+  (let* ((fn (funcall *old-frame-function* frame))
+	 (location (%pointer-plus frame #+imach (defstorage-size stack-frame) #-imach 0))
+	 (env? #+3600 (location-contents location)
+	       #+imach (%memory-read location :cycle-type %memory-scavenge)))
+    (or (when (cl:consp env?)
+	  (let ((l2 (last2 env?)))
+	    (when (eq (car l2) '.this-is-a-dfun.)
+	      (cadr l2))))
+	fn)))
+
+(defun pcl::doctor-dfun-for-the-debugger (gf dfun)
+  (when (sys:lexical-closure-p dfun)
+    (let* ((env (si:lexical-closure-environment dfun))
+	   (l2 (last2 env)))
+      (unless (eq (car l2) '.this-is-a-dfun.)
+	(setf (si:lexical-closure-environment dfun)
+	      (nconc env (list '.this-is-a-dfun. gf))))))
+  dfun)
+
+(defun last2 (l)
+  (labels ((scan (2ago tail)
+	     (if (null tail)
+		 2ago
+		 (if (cl:consp tail)
+		     (scan (cdr 2ago) (cdr tail))
+		     nil))))
+    (and (cl:consp l)
+	 (cl:consp (cdr l))
+	 (scan l (cddr l)))))
+
+(eval-when (load)
+  (unless (boundp '*old-frame-function*)
+    (setq *old-frame-function* #'frame-function)
+    (setf (cl:symbol-function 'frame-function) 'new-frame-function)))
+
+)
+||#
 
 );end of #+Genera
 
+
+
+;;;
+;;; In Genera 8.0, we use a real funcallable instance (from Genera CLOS) for this.
+;;; This minimizes the subprimitive mucking around.
+;;;
+#+(and Genera Genera-Release-8)
+(progn
+
+(clos-internals::ensure-class
+  'pcl-funcallable-instance
+  :direct-superclasses '(clos-internals:funcallable-instance)
+  :slots `((:name function
+	    :initform #'(lambda (ignore &rest ignore-them-too)
+			  (declare (ignore ignore ignore-them-too))
+			  (called-fin-without-function))
+	    :initfunction ,#'(lambda nil
+			       #'(lambda (ignore &rest ignore-them-too)
+				   (declare (ignore ignore ignore-them-too))
+				   (called-fin-without-function))))
+	   ,@(mapcar #'(lambda (slot) `(:name ,slot)) funcallable-instance-data))
+  :metaclass 'clos:funcallable-standard-class)
+
+(defun pcl-funcallable-instance-trampoline (extra-arg &rest args)
+  (apply (sys:%instance-ref (clos-internals::%dispatch-instance-from-extra-argument extra-arg)
+			    3)
+	 args))
+
+(defun allocate-funcallable-instance-1 ()
+  (let ((fin (clos:make-instance 'pcl-funcallable-instance)))
+    (setf (clos-internals::%funcallable-instance-function fin)
+	  #'pcl-funcallable-instance-trampoline)
+    (setf (clos-internals::%funcallable-instance-extra-argument fin)
+	  (sys:%make-pointer sys:dtp-instance
+			     (clos-internals::%funcallable-instance-extra-argument fin)))
+    (setf (clos:slot-value fin 'clos-internals::funcallable-instance) fin)
+    fin))
+
+(scl:defsubst funcallable-instance-p (x)
+  (and (sys:funcallable-instance-p x)
+       (eq (clos-internals::%funcallable-instance-function x)
+	   #'pcl-funcallable-instance-trampoline)))
+
+(defun set-funcallable-instance-function (fin new-value)
+  (setf (clos:slot-value fin 'function) new-value))
+
+(defmacro funcallable-instance-data-1 (fin data)
+  `(clos-internals:%funcallable-instance-ref
+     ,fin (+ 4 (funcallable-instance-data-position ,data))))
+
+(defsetf funcallable-instance-data-1 (fin data) (new-value)
+  `(setf (clos-internals:%funcallable-instance-ref
+	   ,fin (+ 4 (funcallable-instance-data-position ,data)))
+	 ,new-value))
+
+(clos:defmethod clos:print-object ((fin pcl-funcallable-instance) stream)
+  (print-object fin stream))
+
+(clos:defmethod clos-internals:debugging-information-function ((fin pcl-funcallable-instance))
+  nil)
+
+(clos:defmethod clos-internals:function-name-object ((fin pcl-funcallable-instance))
+  (declare (special *boot-state*))
+  (if (and (eq *boot-state* 'complete)
+	   (generic-function-p fin))
+      (generic-function-name fin)
+      fin))
+
+(clos:defmethod clos-internals:arglist-object ((fin pcl-funcallable-instance))
+  (declare (special *boot-state*))
+  (if (and (eq *boot-state* 'complete)
+	   (generic-function-p fin))
+      (generic-function-pretty-arglist fin)
+      '(&rest args)))
+
+);end of #+Genera
+
+
+
+#+Cloe-Runtime
+(progn
+
+(defconstant funcallable-instance-closure-slots 5)
+(defconstant funcallable-instance-closure-size
+	     (+ funcallable-instance-closure-slots (length funcallable-instance-data) 1))
+
+#-CLOE-Release-2 (progn
+
+(defun allocate-funcallable-instance-1 ()
+  (let ((data (system::make-funcallable-structure 'funcallable-instance
+						  funcallable-instance-closure-size)))
+    (setf (system::%trampoline-ref data funcallable-instance-closure-slots)
+	  'funcallable-instance)
+    (set-funcallable-instance-function
+      data
+      #'(lambda (&rest ignore-them-too)
+	  (declare (ignore ignore-them-too))
+	  (called-fin-without-function)))
+    data))
+
+(proclaim '(inline funcallable-instance-p))
+(defun funcallable-instance-p (x)
+  (and (typep x 'system::trampoline)
+       (= (system::%trampoline-data-length x) funcallable-instance-closure-size)
+       (eq (system::%trampoline-ref x funcallable-instance-closure-slots)
+	   'funcallable-instance)))
+
+(defun set-funcallable-instance-function (fin new-value)
+  (when (not (funcallable-instance-p fin))
+    (error "~S is not a funcallable-instance" fin))
+  (etypecase new-value
+    (system::trampoline
+      (let ((length (system::%trampoline-data-length new-value)))
+	(cond ((> length funcallable-instance-closure-slots)
+	       (set-funcallable-instance-function
+		 fin
+		 #'(lambda (&rest args)
+		     (declare (sys:downward-rest-argument))
+		     (apply new-value args))))
+	      (t
+	       (setf (system::%trampoline-function fin)
+		     (system::%trampoline-function new-value))
+	       (dotimes (i length)
+		 (setf (system::%trampoline-ref fin i)
+		       (system::%trampoline-ref new-value i)))))))
+    (compiled-function
+      (setf (system::%trampoline-function fin) new-value))
+    (function
+      (set-funcallable-instance-function
+	fin
+	#'(lambda (&rest args)
+	    (declare (sys:downward-rest-argument))
+	    (apply new-value args))))))
+
+(defmacro funcallable-instance-data-1 (fin data)
+  `(system::%trampoline-ref ,fin (+ funcallable-instance-closure-slots
+				    1 (funcallable-instance-data-position ,data))))
+
+(defsetf funcallable-instance-data-1 (fin data) (new-value)
+  `(setf (system::%trampoline-ref ,fin (+ funcallable-instance-closure-slots
+					  1 (funcallable-instance-data-position ,data)))
+	 ,new-value))
+
+)
+
+#+CLOE-Release-2 (progn
+
+(defun allocate-funcallable-instance-1 ()
+  (let ((data (si::cons-closure funcallable-instance-closure-size)))
+    (setf (si::closure-ref data funcallable-instance-closure-slots) 'funcallable-instance)
+    (set-funcallable-instance-function
+      data
+      #'(lambda (&rest ignore-them-too)
+	  (declare (ignore ignore-them-too))
+	  (error "Called a FIN without first setting its function.")))
+    data))
+
+(proclaim '(inline funcallable-instance-p))
+(defun funcallable-instance-p (x)
+  (and (si::closurep x)
+       (= (si::closure-length x) funcallable-instance-closure-size)
+       (eq (si::closure-ref x funcallable-instance-closure-slots) 'funcallable-instance)))
+
+(defun set-funcallable-instance-function (fin new-value)
+  (when (not (funcallable-instance-p fin))
+    (error "~S is not a funcallable-instance" fin))
+  (etypecase new-value
+    (si::closure
+      (let ((length (si::closure-length new-value)))
+	(cond ((> length funcallable-instance-closure-slots)
+	       (set-funcallable-instance-function
+		 fin
+		 #'(lambda (&rest args)
+		     (declare (sys:downward-rest-argument))
+		     (apply new-value args))))
+	      (t
+	       (setf (si::closure-function fin) (si::closure-function new-value))
+	       (dotimes (i length)
+		 (si::object-set fin (+ i 3) (si::object-ref new-value (+ i 3))))))))
+    (compiled-function
+      (setf (si::closure-function fin) new-value))
+    (function
+      (set-funcallable-instance-function
+	fin
+	#'(lambda (&rest args)
+	    (declare (sys:downward-rest-argument))
+	    (apply new-value args))))))
+
+(defmacro funcallable-instance-data-1 (fin data)
+  `(si::closure-ref ,fin (+ funcallable-instance-closure-slots
+			    1 (funcallable-instance-data-position ,data))))
+
+(defsetf funcallable-instance-data-1 (fin data) (new-value)
+  `(setf (si::closure-ref ,fin (+ funcallable-instance-closure-slots
+				  1 (funcallable-instance-data-position ,data)))
+	 ,new-value))
+
+)
+
+)
 
 
 ;;;
@@ -1119,7 +1412,7 @@ explicitly marked saying who wrote it.
 ;;; this file.
 ;;;
 
-#+(or KCL IBCL)
+#+(and KCL (not IBCL))
 (progn
 
 (defvar *funcallable-instance-marker* (list "Funcallable Instance Marker"))
@@ -1223,6 +1516,111 @@ make_turbo_trampoline_internal(base0)
 ")
 
 (defentry make-trampoline (object) (object make_trampoline))
+)
+
+#+IBCL
+(progn ; From Rainy Day PCL.  
+
+(defvar *funcallable-instance-marker* (list "Funcallable Instance Marker"))
+
+(defconstant funcallable-instance-closure-size 15)
+
+(defun allocate-funcallable-instance-1 ()
+  (let ((fin (allocate-funcallable-instance-2))
+	(env
+	  (make-list funcallable-instance-closure-size :initial-element nil)))
+    (set-cclosure-env fin env)
+    #+:turbo-closure (si:turbo-closure fin)
+    (dotimes (i (1- funcallable-instance-closure-size)) (pop env))
+    (setf (car env) *funcallable-instance-marker*)
+    fin))
+
+(defun allocate-funcallable-instance-2 ()
+  (let ((what-a-dumb-closure-variable ()))
+    #'(lambda (&rest args)
+	(declare (ignore args))
+	(called-fin-without-function)
+	(setq what-a-dumb-closure-variable
+	      (dummy-function what-a-dumb-closure-variable)))))
+
+(defun funcallable-instance-p (x)
+  (and (cclosurep x)
+       (let ((env (cclosure-env x)))
+	 (when (listp env)
+	   (dotimes (i (1- funcallable-instance-closure-size)) (pop env))
+	   (eq (car env) *funcallable-instance-marker*)))))
+
+(defun set-funcallable-instance-function (fin new-value)
+  (cond ((not (funcallable-instance-p fin))
+         (error "~S is not a funcallable-instance" fin))
+        ((not (functionp new-value))
+         (error "~S is not a function." new-value))
+        ((cclosurep new-value)
+         (let* ((fin-env (cclosure-env fin))
+                (new-env (cclosure-env new-value))
+                (new-env-size (length new-env))
+                (fin-env-size (- funcallable-instance-closure-size
+                                 (length funcallable-instance-data)
+				 1)))
+           (cond ((<= new-env-size fin-env-size)
+		  (do ((i 0 (+ i 1))
+		       (new-env-tail new-env (cdr new-env-tail))
+		       (fin-env-tail fin-env (cdr fin-env-tail)))
+		      ((= i fin-env-size))
+		    (setf (car fin-env-tail)
+			  (if (< i new-env-size)
+			      (car new-env-tail)
+			      nil)))		  
+		  (set-cclosure-self fin (cclosure-self new-value))
+		  (set-cclosure-data fin (cclosure-data new-value))
+		  (set-cclosure-start fin (cclosure-start new-value))
+		  (set-cclosure-size fin (cclosure-size new-value)))
+                 (t                 
+                  (set-funcallable-instance-function
+                    fin
+                    (make-trampoline new-value))))))
+	((typep new-value 'compiled-function)
+	 ;; Write NILs into the part of the cclosure environment that is
+	 ;; not being used to store the funcallable-instance-data.  Then
+	 ;; copy over the parts of the compiled function that need to be
+	 ;; copied over.
+	 (let ((env (cclosure-env fin)))
+	   (dotimes (i (- funcallable-instance-closure-size
+			  (length funcallable-instance-data)
+			  1))
+	     (setf (car env) nil)
+	     (pop env)))
+	 (set-cclosure-self fin (cfun-self new-value))
+	 (set-cclosure-data fin (cfun-data new-value))
+	 (set-cclosure-start fin (cfun-start new-value))
+	 (set-cclosure-size fin (cfun-size new-value)))	 
+        (t
+         (set-funcallable-instance-function fin
+                                            (make-trampoline new-value))))
+  fin)
+
+
+(defun make-trampoline (function)
+  #'(lambda (&rest args)
+      (apply function args)))
+
+;; this replaces funcallable-instance-data-1, set-funcallable-instance-data-1
+;; and the defsetf
+(defmacro funcallable-instance-data-1 (fin data &environment env)
+  ;; The compiler won't expand macros before deciding on optimizations,
+  ;; so we must do it here.
+  (let* ((pos-form (macroexpand `(funcallable-instance-data-position ,data)
+				env))
+	 (index-form (if (constantp pos-form)
+			 (- funcallable-instance-closure-size
+			    (eval pos-form)
+			    2)
+			 `(- funcallable-instance-closure-size
+			     (funcallable-instance-data-position ,data)
+			     2))))
+    #+:turbo-closure `(car (tc-cclosure-env-nthcdr ,index-form ,fin))
+    #-:turbo-closure `(nth ,index-form (cclosure-env ,fin))))
+
 )
 
 
@@ -1515,18 +1913,20 @@ make_turbo_trampoline_internal(base0)
 	     (called-fin-without-function))
          ccl::initial-fin-slots))
 
-;;; Make uvector-based objects (like funcallable instances) print better.
 #+:ccl-1.3
+(eval-when (eval compile load)
+
+;;; Make uvector-based objects (like funcallable instances) print better.
 (defun print-uvector-object (obj stream &optional print-level)
   (declare (ignore print-level))
   (print-object obj stream))
 
 ;;; Inform the print system about funcallable instance uvectors.
-#+:ccl-1.3
-(eval-when (eval compile load)
-  (pushnew (cons 'ccl::funcallable-instance #'print-uvector-object)
-           ccl:*write-uvector-alist*
-           :test #'equal))
+(pushnew (cons 'ccl::funcallable-instance #'print-uvector-object)
+	 ccl:*write-uvector-alist*
+	 :test #'equal)
+
+)
 
 (defun funcallable-instance-p (x)
   (and (eq (ccl::%type-of x) 'ccl::internal-structure)
@@ -1576,3 +1976,4 @@ make_turbo_trampoline_internal(base0)
     (setf (fsc-instance-wrapper fin) wrapper
           (fsc-instance-slots fin) slots)
     fin))
+

@@ -475,6 +475,32 @@
 
 );#+Genera
 
+#+Cloe-Runtime
+(progn
+
+(defmacro with-augmented-environment
+	  ((new-env old-env &key functions macros) &body body)
+  `(let ((,new-env (with-augmented-environment-internal ,old-env ,functions ,macros)))
+     ,@body))
+
+(defun with-augmented-environment-internal (env functions macros)
+  functions
+  (dolist (m macros)
+    (setf env `(,(first m) (compiler::macro . ,(second m)) ,@env)))
+  env)
+
+(defun environment-function (env fn)
+  nil)
+
+(defun environment-macro (env macro)
+  (let ((entry (getf env macro)))
+    (if (and (consp entry)
+	     (eq (car entry) 'compiler::macro))
+	(values (cdr entry) t)
+	(values nil nil))))
+
+);#+Cloe-Runtime
+
 
 ;;;
 ;;; In Xerox Lisp, the compiler and interpreter use different structures for
@@ -986,12 +1012,13 @@
 ;;; Common Lisp nit:
 ;;;   variable-globally-special-p should be defined in Common Lisp.
 ;;;
-#-(or Genera Lucid Xerox Excl KCL IBCL (and dec vax common) :CMU HP-HPLabs
+#-(or Genera Cloe-Runtime Lucid Xerox Excl KCL IBCL (and dec vax common) :CMU HP-HPLabs
       GCLisp TI pyramid)
 (defvar *globally-special-variables* ())
 
 (defun variable-globally-special-p (symbol)
   #+Genera                      (si:special-variable-p symbol)
+  #+Cloe-Runtime		(compiler::specialp symbol)
   #+Lucid                       (lucid::proclaimed-special-p symbol)
   #+TI                          (get symbol 'special)
   #+Xerox                       (il:variable-globally-special-p symbol)
@@ -1007,7 +1034,7 @@
 				    (get symbol
 					 'clc::globally-special-in-compiler))
   #+:CORAL                      (ccl::proclaimed-special-p symbol)
-  #-(or Genera Lucid Xerox Excl KCL IBCL (and dec vax common) :CMU HP-HPLabs
+  #-(or Genera Cloe-Runtime Lucid Xerox Excl KCL IBCL (and dec vax common) :CMU HP-HPLabs
 	GCLisp TI pyramid :CORAL)
   (or (not (null (member symbol *globally-special-variables* :test #'eq)))
       (when (eval `(flet ((ref () ,symbol))
@@ -1534,23 +1561,30 @@
 
 (defun walk-prog/prog* (form context old-env sequentialp)
   (walker-environment-bind (new-env old-env)
-    (let* ((let/let* (car form))
-	   (bindings (cadr form))
-	   (body (cddr form))
-	   (walked-bindings 
-	     (walk-bindings-1 bindings
-			      old-env
-			      new-env
-			      context
-			      sequentialp))
-	   (walked-body
-	     (walk-declarations 
-	       body
-	       #'(lambda (real-body real-env)
-		   (walk-tagbody-1 real-body context real-env))
-	       new-env)))
-      (relist*
-	form let/let* walked-bindings walked-body))))
+    (let* ((possible-block-name (second form))
+	   (blocked-prog (and (symbolp possible-block-name)
+			      (not (eq possible-block-name 'nil)))))
+      (multiple-value-bind (let/let* block-name bindings body)
+	  (if blocked-prog
+	      (values (car form) (cadr form) (caddr form) (cdddr form))
+	      (values (car form) nil	     (cadr  form) (cddr  form)))
+	(let* ((walked-bindings 
+		 (walk-bindings-1 bindings
+				  old-env
+				  new-env
+				  context
+				  sequentialp))
+	       (walked-body
+		 (walk-declarations 
+		   body
+		   #'(lambda (real-body real-env)
+		       (walk-tagbody-1 real-body context real-env))
+		   new-env)))
+	  (if block-name
+	      (relist*
+		form let/let* block-name walked-bindings walked-body)
+	      (relist*
+		form let/let* walked-bindings walked-body)))))))
 
 (defun walk-do/do* (form context old-env sequentialp)
   (walker-environment-bind (new-env old-env)
@@ -2042,3 +2076,4 @@
 |#
 
 ()
+

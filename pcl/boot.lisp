@@ -268,9 +268,8 @@ work during bootstrapping.
 	  ',name
 	  ',qualifiers
 	  (list ,@(mapcar #'(lambda (specializer)
-			      (if (and (consp specializer)
-				       (eq (car specializer) 'eql))
-				  ``(eql ,,(cadr specializer))
+			      (if (consp specializer)
+				  ``(,',(car specializer) ,,(cadr specializer))
 				  `',specializer))
 			  specializers))
 	  ',(specialized-lambda-list-lambda-list lambda-list)
@@ -287,16 +286,32 @@ work during bootstrapping.
   (when (listp name) (do-standard-defsetf-1 (cadr name)))
   (multiple-value-bind (fn-form specializers doc plist)
       (expand-defmethod-internal name qualifiers lambda-list body env)
-    (declare (ignore doc plist))
     (let ((fn-args (cadadr fn-form))
-	  (fn-body (cddadr fn-form)))
-      `(defun (method ,name ,@qualifiers ,specializers) ,fn-args
-	 (declare ,@(when proto-method
-		      `((pcl-method-class
-			  ,(class-name (class-of proto-method)))))
-		  (pcl-lambda-list
-		    ,(specialized-lambda-list-lambda-list lambda-list)))
-	 ,@fn-body))))
+	  (fn-body (cddadr fn-form))
+	  (method-name `(method ,name ,@qualifiers ,specializers)))
+      `(progn
+	 (proclaim '(function ,name))
+	 (defun ,method-name ,fn-args
+	   ,@fn-body)
+	 (load-defmethod
+	   ',(if proto-method
+		 (class-name (class-of proto-method))
+		 'standard-method)
+	   ',name
+	   ',qualifiers
+	   (list ,@(mapcar #'(lambda (specializer)
+			       (if (consp specializer)
+				   ``(,',(car specializer) ,,(cadr specializer))
+				   `',specializer))
+			   specializers))
+	   ',(specialized-lambda-list-lambda-list lambda-list)
+	   ',doc
+	   ',(getf plist :isl-cache-symbol)	;Paper over a bug in KCL by
+						;passing the cache-symbol
+						;here in addition to in the
+						;plist.
+	   ',plist
+	   #',method-name)))))
 
 (defun expand-defmethod-internal
        (generic-function-name qualifiers specialized-lambda-list body env)
@@ -348,6 +363,8 @@ work during bootstrapping.
 
 	     (call-next-method-p nil)   ;flag indicating that call-next-method
 	                                ;should be in the method definition
+	     (closurep nil)		;flag indicating that #'call-next-method
+					;was seen in the body of a method
 	     (next-method-p-p nil)      ;flag indicating that next-method-p
                                         ;should be in the method definition
 	     (save-original-args nil)   ;flag indicating whether or not the
@@ -380,7 +397,8 @@ work during bootstrapping.
 		       ((not (listp form)) form)
 		       ((eq (car form) 'call-next-method)
 			(setq call-next-method-p 't)
-			(setq save-original-args (not (cdr form)))
+			(unless (cdr form)
+			  (setq save-original-args t))
 			form)
 		       ((eq (car form) 'next-method-p)
 			(setq next-method-p-p 't)
@@ -389,13 +407,16 @@ work during bootstrapping.
 			     (cond ((eq (cadr form) 'call-next-method)
 				    (setq call-next-method-p 't)
 				    (setq save-original-args 't)
+				    (setq closurep t)
 				    form)
 				   ((eq (cadr form) 'next-method-p)
 				    (setq next-method-p-p 't)
+				    (setq closurep t)
 				    form)
 				   (t nil))))
 		       ((and (or (eq (car form) 'slot-value)
-				 (eq (car form) 'set-slot-value))
+				 (eq (car form) 'set-slot-value)
+				 (eq (car form) 'slot-boundp))
 			     (symbolp (cadr form))
 			     (constantp (caddr form)))
 			(let ((parameter
@@ -406,7 +427,9 @@ work during bootstrapping.
 				(slot-value
 				  (optimize-slot-value     slots parameter form))
 				(set-slot-value
-				  (optimize-set-slot-value slots parameter form))))))
+				  (optimize-set-slot-value slots parameter form))
+				(slot-boundp
+				  (optimize-slot-boundp    slots parameter form))))))
 		       (t form))))
 	  
 	  (setq walked-lambda (walk-form method-lambda env #'walk-function))
@@ -476,16 +499,11 @@ work during bootstrapping.
 				applyp
 				aux-bindings
 				call-next-method-p
-				next-method-p-p)
+				next-method-p-p
+				closurep)
 			      `(lambda ,lambda-list
 				 ,@walked-declarations
 				 ,.walked-lambda-body))))
-	      #+Genera
-	      (setq fn-body `(lambda ,(cadr fn-body)
-			       (declare (pcl-documentation ,documentation)
-					(pcl-plist ,plist))
-			       ,@(cddr fn-body)))
-
 	      (values
 		`(function ,fn-body)
 		specializers
@@ -501,8 +519,46 @@ work during bootstrapping.
 					       applyp
 					       aux-bindings
 					       call-next-method-p
-					       next-method-p-p)
-  (cond ((and (null save-original-args)
+					       next-method-p-p
+					       closurep)
+  (cond ((and (null closurep)
+	      (null applyp)
+	      (null save-original-args))
+	 ;; OK to use MACROLET, CALL-NEXT-METHOD is always passed some args, and
+	 ;; all args are mandatory (else APPLYP would be true).
+	 `(lambda ,lambda-list
+	    ,@walked-declarations
+	    (let ((.next-method. (car *next-methods*))
+		  (.next-methods. (cdr *next-methods*)))
+	      (macrolet ((call-next-method ,lambda-list
+			   '(if .next-method.
+				(let ((*next-methods* .next-methods.))
+				  (funcall .next-method. ,@lambda-list))
+				(error "No next method.")))
+			 (next-method-p () `(not (null .next-method.))))
+		,@walked-lambda-body))))
+	((and (null closurep)
+	      (null applyp)
+	      save-original-args)
+	 ;; OK to use MACROLET.  CALL-NEXT-METHOD is sometimes called in the
+	 ;; body with zero args, so we have to save the original args.
+	 (if save-original-args
+	     ;; CALL-NEXT-METHOD is sometimes called with no args
+	     `(lambda ,original-args
+		(let ((.next-method. (car *next-methods*))
+		      (.next-methods. (cdr *next-methods*)))
+		  (macrolet ((call-next-method (&rest cnm-args)
+			       `(if .next-method.
+				    (let ((*next-methods* .next-methods.))
+				      (funcall .next-method.
+					       ,@(if cnm-args cnm-args ',original-args)))
+				    (error "No next method.")))
+			     (next-method-p () `(not (null .next-method.))))
+		    (let* (,@(mapcar #'list lambda-list original-args)
+			     ,@aux-bindings)
+		      ,@walked-declarations
+		      ,@walked-lambda-body))))))
+	((and (null save-original-args)
 	      (null applyp))
 	 ;;
 	 ;; We don't have to save the original arguments.  In addition,
@@ -719,7 +775,7 @@ work during bootstrapping.
   :initable-instance-variables)
 
 #+Lispm
-(zl:defmethod #+symbolics (dbg:report generic-clobbers-function)
+(zl:defmethod #+Genera (dbg:report generic-clobbers-function)
 	      #+ti (generic-clobbers-function :report)
 	      (stream)
  (format stream
@@ -727,7 +783,7 @@ work during bootstrapping.
 	 name
 	 (if (and (symbolp name) (macro-function name)) "macro" "function")))
 
-#+Symbolics
+#+Genera
 (zl:defmethod (sys:proceed generic-clobbers-function :specialize-it) ()
   "Make it specializable anyway?"
   (make-specializable name))
@@ -860,9 +916,7 @@ work during bootstrapping.
 (defun real-make-a-method
        (class qualifiers lambda-list specializers function doc
 	&optional slot-name)
-  ;; Hmm what is this use of when buying me??
-  (when (some #'(lambda (x) (and (neq x 't) (symbolp x))) specializers)
-    (setq specializers (parse-specializers specializers)))
+  (setq specializers (parse-specializers specializers))
   (make-instance class :qualifiers qualifiers
 		       :lambda-list lambda-list
 		       :specializers specializers
@@ -1053,7 +1107,9 @@ work during bootstrapping.
 			  #'do-main-combined-method)))
 	    (apply (caar around) args))))))
 
-(defun fix-early-generic-functions (&optional noisyp)
+(defvar *fegf-debug-p* nil)
+
+(defun fix-early-generic-functions (&optional (noisyp *fegf-debug-p*))
   (allocate-instance (find-class 'standard-generic-function));Be sure this
 						             ;class has an
 						             ;instance.
@@ -1166,33 +1222,22 @@ work during bootstrapping.
 
 (defun parse-specializers (specializers)
   (flet ((parse (spec)
-	   (cond ((symbolp spec)
-		  (or (find-class spec nil)
-		      (error
-			"~S used as a specializer,~%~
-                         but is not the name of a class."
-			spec)))
-		 ((and (listp spec)
-		       (eq (car spec) 'eql)
-		       (null (cddr spec)))
-		  (make-instance 'eql-specializer :object (cadr spec))	;*EQL*
-;		  spec
-		  )
-		 (t (error "~S is not a legal specializer." spec)))))
+	   (let ((result (specializer-from-type spec)))
+	     (if (specializerp result)
+		 result
+		 (if (symbolp spec)
+		     (error "~S used as a specializer,~%~
+                             but is not the name of a class."
+			    spec)
+		     (error "~S is not a legal specializer." spec))))))
     (mapcar #'parse specializers)))
 
 (defun unparse-specializers (specializers-or-method)
   (if (listp specializers-or-method)
       (flet ((unparse (spec)
-	       (cond ((classp spec)
-		      (or (class-name spec) spec))
-		     ((eql-specializer-p spec)	   ;*EQL*
-		      (eql-specializer-object spec)
-;		      (and (listp spec) (eq (car spec) 'eql))
-;		      spec
-		      )
-		     (t
-		      (error "~S is not a legal specializer." spec)))))
+	       (if (specializerp spec)
+		   (type-from-specializer spec)
+		   (error "~S is not a legal specializer." spec))))
 	(mapcar #'unparse specializers-or-method))
       (unparse-specializers (method-specializers specializers-or-method))))
 
@@ -1303,59 +1348,56 @@ work during bootstrapping.
 
 
 
-(defmacro with-slots
-	  (slots instance &body body &environment env)
-  (let ((gensym (gensym))
-	(specs (mapcar #'(lambda (ss)
-			   (if (consp ss)
-			       (list (car ss)
-				     (variable-lexical-p (car ss) env)
-				     (cadr ss))
-			       (list ss (variable-lexical-p ss env) ss)))
-		       slots)))
-    (expand-with-slots specs
-		       body
-		       env
-		       gensym
-		       instance
-		       #'(lambda (s) `(slot-value ,gensym ',s)))))
+(defmacro symbol-macrolet (bindings &body body &environment env)
+  (let ((specs (mapcar #'(lambda (binding)
+			   (list (car binding)
+				 (variable-lexical-p (car binding) env)
+				 (cadr binding)))
+		       bindings)))
+    (walk-form `(progn ,@body)
+	       env
+	       #'(lambda (f c e)
+		   (expand-symbol-macrolet-internal specs f c e)))))
 
-(defmacro with-accessors
-	  (slot-accessor-pairs instance &body body &environment env)
-  (let ((gensym (gensym))
-	(specs (mapcar #'(lambda (ss)
-			   (list (car ss)
-				 (variable-lexical-p (car ss) env)
-				 (cadr ss)))
-		       slot-accessor-pairs)))    
-    (expand-with-slots specs
-		       body
-		       env
-		       gensym
-		       instance
-		       #'(lambda (a) `(,a ,gensym)))))
+(defmacro with-slots (slots instance &body body)
+  (let ((in (gensym)))
+    `(let ((,in ,instance))
+       ,@(and (symbolp instance)
+	      `((declare (variable-rebinding ,in ,instance))
+       (symbol-macrolet ,(mapcar #'(lambda (slot-entry)
+				   (let ((variable-name 
+					  (if (symbolp slot-entry)
+					      slot-entry
+					      (car slot-entry)))
+					 (slot-name
+					  (if (symbolp slot-entry)
+					      slot-entry
+					      (cadr slot-entry))))
+				     `(,variable-name
+				        (slot-value ,in ',slot-name))))
+			       slots)
+          ,@body))))))
 
-(defun expand-with-slots (specs body env gensym instance translate-fn)
-  `(let ((,gensym ,instance))
-     ,@(and (symbolp instance)
-	    `((declare (variable-rebinding ,gensym ,instance))))
-     ,gensym
-     ,@(cdr (walk-form `(progn ,@body)
-		       env
-		       #'(lambda (f c e)
-			   (expand-with-slots-internal specs
-						       f
-						       c
-						       translate-fn
-						       e))))))
+(defmacro with-accessors (slots instance &body body)
+  (let ((in (gensym)))
+    `(let ((,in ,instance))
+       ,@(and (symbolp instance)
+	      `((declare (variable-rebinding ,in ,instance))
+       (symbol-macrolet ,(mapcar #'(lambda (slot-entry)
+				   (let ((variable-name (car slot-entry))
+					 (accessor-name (cadr slot-entry)))
+				     `(,variable-name
+				        (,accessor-name ,in))))
+			       slots)
+          ,@body))))))
 
-(defun expand-with-slots-internal (specs form context translate-fn env)
+(defun expand-symbol-macrolet-internal (specs form context env)
   (let ((entry nil))
     (cond ((not (eq context :eval)) form)
 	  ((symbolp form)
 	   (if (and (setq entry (assoc form specs))
 		    (eq (cadr entry) (variable-lexical-p form env)))
-	       (funcall translate-fn (caddr entry))
+	       (caddr entry)
 	       form))
 	  ((not (listp form)) form)
 	  ((member (car form) '(setq setf))
@@ -1374,7 +1416,7 @@ work during bootstrapping.
 					   (variable-lexical-p (car tail)
 							       env)))
 				  (progn (setq kind 'setf)
-					 (funcall translate-fn (caddr entry)))
+					 (caddr entry))
 				  (car tail))
 			      (cadr tail)
 			      (scan-setf (cddr tail))))))
@@ -1391,4 +1433,5 @@ work during bootstrapping.
 				   vars
 				   gensyms)))))
 	  (t form))))
+
 
