@@ -7,11 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.2 1990/03/07 18:46:43 wlott Exp $
+;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 ;;; We need to define these predicates, since the TYPEP source transform picks
 ;;; whichever predicate was defined last when there are multiple predicates for
@@ -30,9 +32,34 @@
   `(functionp ,x))
 
 (def-source-transform char-int (x)
-  `(truly-the char-int (%primitive make-fixnum ,x)))
+  `(char-code ,x))
 
 (def-source-transform abs (x)
   (once-only ((n-x x))
     `(if (< ,n-x 0) (- ,n-x) ,n-x)))
 
+
+
+(macrolet ((frob (name primitive)
+	     `(def-source-transform ,name (&rest foo)
+		`(truly-the nil
+			    (%primitive ,',primitive ,@foo)))))
+  (frob %type-check-error type-check-error)
+  (frob %odd-keyword-arguments-error odd-keyword-arguments-error)
+  (frob %unknown-keyword-argument-error unknown-keyword-argument-error)
+  (frob %argument-count-error argument-count-error))
+
+
+;;; Let these pass for now.
+
+(def-primitive-translator header-ref (obj slot)
+  (warn "Someone used HEADER-REF.")
+  `(%primitive fast-svref ,obj ,slot))
+
+(def-primitive-translator header-set (obj slot value)
+  (warn "Someone used HEADER-SET.")
+  `(%primitive fast-svset ,obj ,slot ,value))
+
+(def-primitive-translator header-length (obj)
+  (warn "Someone used HEADER-LENGTH.")
+  `(%primitive vector-length ,obj))
