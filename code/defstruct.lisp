@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.2 1993/02/08 22:20:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.3 1993/02/10 23:39:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -305,8 +305,8 @@
 	     (eval-when (compile)
 	       (%compiler-only-defstruct ',defstruct ',inherits))
 	     (%compiler-defstruct ',defstruct)
-	     ,@(define-constructors defstruct)
 	     ,@(define-raw-accessors defstruct)
+	     ,@(define-constructors defstruct)
 	     ,@(define-class-methods defstruct)
 	   ',name))
 	`(progn
@@ -644,9 +644,10 @@
        (let ((,temp (truly-the ,(dd-name defstruct)
 			       (%make-instance ,(dd-length defstruct)))))
 	 (setf (%instance-layout ,temp)
-	       (load-time-value
-		(class-layout
-		 (find-class ',(dd-name defstruct)))))
+	       (truly-the layout
+			  (load-time-value
+			   (class-layout
+			    (find-class ',(dd-name defstruct))))))
 	 ,@(when (dd-raw-index defstruct)
 	     `((setf (%instance-ref ,temp ,(dd-raw-index defstruct))
 		     (make-array ,(dd-raw-length defstruct)
@@ -657,7 +658,8 @@
 			       ,temp)
 			      ,value))
 		   (dd-slots defstruct)
-		   values)))))
+		   values)
+	 ,temp))))
 
 
 ;;; CREATE-KEYWORD-CONSTRUCTOR   --  Internal
@@ -687,7 +689,7 @@
 ;;;
 (defun create-boa-constructor (defstruct boa creator)
   (multiple-value-bind (req opt restp rest keyp keys allowp aux)
-		       (kernel:parse-lambda-list boa)
+		       (kernel:parse-lambda-list (second boa))
     (collect ((arglist)
 	      (vars)
 	      (types))
@@ -842,7 +844,8 @@
 				    (setf ,aname))))
 	      (res
 	       `(defun (setf ,aname) (new-value object)
-		  (setf (,accessor ,data ,offset) new-value))))))))
+		  (setf (,accessor ,data ,offset) new-value)
+		  new-value)))))))
     (res)))
 	  
 
@@ -916,6 +919,10 @@
 ;;;    What we do is defined the accessors and copier as closures over
 ;;; general-case code.  Since the compiler will normally open-code accesors,
 ;;; the (minor) efficiency penalty is not a concern.
+
+#+ns-boot
+(defun %defstruct (&rest ignore)
+  (declare (ignore ignore)))
 
 #-ns-boot(progn
 ;;; Typep-To-Layout  --  Internal
