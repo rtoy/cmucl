@@ -7,14 +7,17 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.18 1990/07/23 14:51:33 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.19 1990/08/16 16:16:50 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
+(in-package "KERNEL")
+(export '(%caller-frame-and-pc))
+(in-package "C")
 
 
 ;;;; Moves and type checks:
@@ -684,33 +687,79 @@
   (undefined-value))
 
 
+;;; EMIT-PSETQ-MOVES  --  Internal
+;;;
+;;;    Emit any necessary moves into assignment temps for a local call to Fun.
+;;; OLD-FP is the TN currently holding the value we want to pass as OLD-FP.
+;;; We return two lists of TNs: TNs holding the actual argument values, and
+;;; (possibly EQ) TNs that are the actual destination of the arguments.  When
+;;; necessary, we allocate temporaries for arguments to preserve paralell
+;;; assignment semantics.   These lists exclude unused arguments and include
+;;; implicit environment arguments, i.e. they exactly correspond to the
+;;; arguments passed.
+;;;
+(defun emit-psetq-moves (node block fun old-fp)
+  (declare (type combination node) (type ir2-block block) (type clambda fun)
+	   (type tn old-fp))
+  (let* ((called-env (environment-info (lambda-environment fun)))
+	 (this-1env (node-environment node))
+	 (actuals (mapcar #'(lambda (x)
+			     (when x
+			       (continuation-tn node block x)))
+			 (combination-args node))))
+    (collect ((temps)
+	      (locs))
+      (dolist (var (lambda-vars fun))
+	(let ((actual (pop actuals))
+	      (loc (leaf-info var)))
+	  (when actual
+	    (cond
+	     ((lambda-var-indirect var)
+	      (let ((temp (make-normal-tn *any-primitive-type*)))
+		(vop make-value-cell node block actual temp)
+		(temps temp)))
+	     ((member actual (locs))
+	      (let ((temp (make-normal-tn (tn-primitive-type loc))))
+		(emit-move node block actual temp)
+		(temps temp)))
+	     (t
+	      (temps actual)))
+	    (locs loc))))
+    
+      (dolist (thing (ir2-environment-environment called-env))
+	(temps (find-in-environment (car thing) this-1env))
+	(locs (cdr thing)))
+
+      (temps old-fp)
+      (locs (ir2-environment-old-fp called-env))
+
+      (values (temps) (locs)))))
+
+
 ;;; IR2-Convert-Tail-Local-Call   --  Internal
 ;;;
 ;;;    A tail-recursive local call is done by emitting moves of stuff into the
 ;;; appropriate passing locations.  After setting up the args and environment,
-;;; we just move our return-pc and old-fp into the called function's passing
-;;; locations.
+;;; we just move our return-pc into the called function's passing
+;;; location.
 ;;;
 (defun ir2-convert-tail-local-call (node block fun)
   (declare (type combination node) (type ir2-block block) (type clambda fun))
-  (let* ((called-env (environment-info (lambda-environment fun)))
-	 (arg-locs (ir2-environment-arg-locs called-env))
-	 (this-1env (node-environment node))
-	 (this-env (environment-info this-1env)))
-    (dolist (arg (basic-combination-args node))
-      (when arg
-	(emit-move node block (continuation-tn node block arg)
-		   (pop arg-locs))))
-    
-    (dolist (thing (ir2-environment-environment called-env))
-      (emit-move node block (find-in-environment (car thing) this-1env)
-		 (pop arg-locs)))
-
-    (emit-move node block (ir2-environment-old-fp this-env)
-	       (ir2-environment-old-fp-pass called-env))
-    (emit-move node block (ir2-environment-return-pc this-env)
-	        (ir2-environment-return-pc-pass called-env)))
-
+  (let ((this-env (environment-info (node-environment node))))
+    (multiple-value-bind
+	(temps locs)
+	(emit-psetq-moves node block fun (ir2-environment-old-fp this-env))
+      
+      (mapc #'(lambda (temp loc)
+		(emit-move node block temp loc))
+	    temps locs))
+  
+    (emit-move node block
+	       (ir2-environment-return-pc this-env)
+	       (ir2-environment-return-pc-pass
+		(environment-info
+		 (lambda-environment fun)))))
+  
   (undefined-value))
 
 
@@ -719,37 +768,20 @@
 ;;;    Do stuff to set up the arguments to a non-tail local call (including
 ;;; implicit environment args.)  We allocate a frame (returning the FP and
 ;;; NFP), and also compute the TN-Refs list for the values to pass and the list
-;;; of passingt location TNs.
+;;; of passing location TNs.
 ;;;
-(defun ir2-convert-local-call-args (node block env)
-  (declare (type combination node) (type ir2-block block)
-	   (type ir2-environment env))
+(defun ir2-convert-local-call-args (node block fun)
+  (declare (type combination node) (type ir2-block block) (type clambda fun))
   (let ((fp (make-stack-pointer-tn))
 	(nfp (make-number-stack-pointer-tn))
-	(old-fp (make-stack-pointer-tn))
-	(this-1env (node-environment node)))
-
-    (vop current-fp node block old-fp)
-    (vop allocate-frame node block env fp nfp)
-    
-    (let* ((args (reference-tn old-fp nil))
-	   (tail args))
-      (dolist (arg (basic-combination-args node))
-	(when arg
-	  (let ((arg-ref (reference-tn (continuation-tn node block arg) nil)))
-	    (setf (tn-ref-across tail) arg-ref)
-	    (setf tail arg-ref))))
-      
-      (dolist (thing (ir2-environment-environment env))
-	(let ((arg-ref (reference-tn
-			(find-in-environment (car thing) this-1env)
-			nil)))
-	  (setf (tn-ref-across tail) arg-ref)
-	  (setf tail arg-ref)))
-
-      (values fp nfp args
-	      (cons (ir2-environment-old-fp-pass env)
-		    (ir2-environment-arg-locs env))))))
+	(old-fp (make-stack-pointer-tn)))
+    (multiple-value-bind (temps locs)
+			 (emit-psetq-moves node block fun old-fp)
+      (vop current-fp node block old-fp)
+      (vop allocate-frame node block
+	   (environment-info (lambda-environment fun))
+	   fp nfp)
+      (values fp nfp temps (mapcar #'make-alias-tn locs)))))
 
 
 ;;; IR2-Convert-Local-Known-Call  --  Internal
@@ -757,17 +789,17 @@
 ;;;    Handle a non-TR known-values local call.  We Emit the call, then move
 ;;; the results to the continuation's destination.
 ;;;
-(defun ir2-convert-local-known-call (node block env returns cont start)
-  (declare (type node node) (type ir2-block block) (type ir2-environment env)
+(defun ir2-convert-local-known-call (node block fun returns cont start)
+  (declare (type node node) (type ir2-block block) (type clambda fun)
 	   (type return-info returns) (type continuation cont)
 	   (type label start))
-  (multiple-value-bind (fp nfp args arg-locs)
-		       (ir2-convert-local-call-args node block env)
+  (multiple-value-bind (fp nfp temps arg-locs)
+		       (ir2-convert-local-call-args node block fun)
     (let ((locs (return-info-locations returns)))
       (vop* known-call-local node block
-	    (fp nfp args)
+	    (fp nfp (reference-tn-list temps nil))
 	    ((reference-tn-list locs t))
-	    arg-locs env start)
+	    arg-locs (environment-info (lambda-environment fun)) start)
       (move-continuation-result node block locs cont)))
   (undefined-value))
 
@@ -785,22 +817,24 @@
 ;;; then call Move-Continuation-Result to do any necessary type checks or
 ;;; coercions.
 ;;;
-(defun ir2-convert-local-unknown-call (node block env cont start)
-  (declare (type node node) (type ir2-block block) (type ir2-environment env)
+(defun ir2-convert-local-unknown-call (node block fun cont start)
+  (declare (type node node) (type ir2-block block) (type clambda fun)
 	   (type continuation cont) (type label start))
-  (multiple-value-bind (fp nfp args arg-locs)
-		       (ir2-convert-local-call-args node block env)
-    (let ((2cont (continuation-info cont)))
+  (multiple-value-bind (fp nfp temps arg-locs)
+		       (ir2-convert-local-call-args node block fun)
+    (let ((2cont (continuation-info cont))
+	  (env (environment-info (lambda-environment fun)))
+	  (temp-refs (reference-tn-list temps nil)))
       (if (and 2cont (eq (ir2-continuation-kind 2cont) :unknown))
-	  (vop* multiple-call-local node block (fp nfp args)
+	  (vop* multiple-call-local node block (fp nfp temp-refs)
 		((reference-tn-list (ir2-continuation-locs 2cont) t))
 		arg-locs env start)
-	  (let ((temps (standard-result-tns cont)))
+	  (let ((locs (standard-result-tns cont)))
 	    (vop* call-local node block
-		  (fp nfp args)
-		  ((reference-tn-list temps t))
-		  arg-locs env start (length temps))
-	    (move-continuation-result node block temps cont)))))
+		  (fp nfp temp-refs)
+		  ((reference-tn-list locs t))
+		  arg-locs env start (length locs))
+	    (move-continuation-result node block locs cont)))))
   (undefined-value))
 
 
@@ -817,15 +851,14 @@
 	  ((node-tail-p node)
 	   (ir2-convert-tail-local-call node block fun))
 	  (t
-	   (let* ((env (environment-info (lambda-environment fun)))
-		  (start (block-label (node-block (lambda-bind fun))))
+	   (let* ((start (block-label (node-block (lambda-bind fun))))
 		  (returns (tail-set-info (lambda-tail-set fun)))
 		  (cont (node-cont node)))
 	     (ecase (return-info-kind returns)
 	       (:unknown
-		(ir2-convert-local-unknown-call node block env cont start))
+		(ir2-convert-local-unknown-call node block fun cont start))
 	       (:fixed
-		(ir2-convert-local-known-call node block env returns
+		(ir2-convert-local-known-call node block fun returns
 					      cont start)))))))
   (undefined-value))
 
@@ -1034,6 +1067,8 @@
 ;;; -- Create frame
 ;;; -- Copy any more arg
 ;;; -- Set up the environment, accessing any closure variables
+;;; -- Move args from the standard passing locations to their internal
+;;;    locations.
 ;;; 
 (defun init-xep-environment (node block fun)
   (declare (type bind node) (type ir2-block block) (type clambda fun))
@@ -1042,7 +1077,7 @@
     (when (and (optional-dispatch-p ef)
 	       (optional-dispatch-more-entry ef))
       (vop copy-more-arg node block (optional-dispatch-max-args ef))))
-
+  
   (let ((env (environment-info (node-environment node))))
     (if (ir2-environment-environment env)
 	(let ((closure (make-normal-tn *any-primitive-type*)))
@@ -1050,53 +1085,51 @@
 	  (let ((n (1- system:%function-closure-variables-offset)))
 	    (dolist (loc (ir2-environment-environment env))
 	      (vop closure-ref node block closure (incf n) (cdr loc)))))
-	(vop setup-environment node block)))
+	(vop setup-environment node block))
+
+    (unless (eq (functional-kind fun) :top-level)
+      (let ((vars (lambda-vars fun))
+	    (n 0))
+	(when (leaf-refs (first vars))
+	  (emit-move node block (make-argument-count-location)
+		     (leaf-info (first vars))))
+	(dolist (arg (rest vars))
+	  (when (leaf-refs arg)
+	    (let ((pass (standard-argument-location n))
+		  (home (leaf-info arg)))
+	      (if (lambda-var-indirect arg)
+		  (vop make-value-cell node block pass home)
+		  (emit-move node block pass home))))
+	  (incf n))))
+    
+    (emit-move node block (make-old-fp-passing-location t)
+	       (ir2-environment-old-fp env)))
 
   (undefined-value))
 
 
 ;;; IR2-Convert-Bind  --  Internal
 ;;;
-;;;    Emit moves from the passing locations to the internal locations.  This
-;;; is only called on bind nodes for functions that allocate environments.  All
-;;; semantics of let calls are handled by IR2-Convert-Let.
+;;;    Emit function prolog code.  This is only called on bind nodes for
+;;; functions that allocate environments.  All semantics of let calls are
+;;; handled by IR2-Convert-Let.
 ;;;
-;;;    We special-case XEPs by calling Init-XEP-Environment before moving the
-;;; arguments.  Init-XEP-Environment accesses any environment values from the
-;;; closure, so initialization of the environment from implicit arguments is
-;;; suppressed.
+;;;    If not an XEP, all we do is move the return PC from its passing
+;;; location, since in a local call, the caller allocates the frame and sets up
+;;; the arguments.
 ;;;
 (defun ir2-convert-bind (node block)
   (declare (type bind node) (type ir2-block block))
   (let* ((fun (bind-lambda node))
-	 (xep-p (external-entry-point-p fun))
-	 (env (environment-info (lambda-environment fun)))
-	 (args (ir2-environment-arg-locs env)))
+	 (env (environment-info (lambda-environment fun))))
     (assert (member (functional-kind fun)
 		    '(nil :external :optional :top-level :cleanup)))
 
-    (when xep-p
+    (when (external-entry-point-p fun)
       (init-xep-environment node block fun))
 
-    (dolist (arg (lambda-vars fun))
-      (when (leaf-refs arg)
-	(let ((pass (pop args))
-	      (home (leaf-info arg)))
-	  (if (lambda-var-indirect arg)
-	      (vop make-value-cell node block pass home)
-	      (emit-move node block pass home)))))
-
-    (unless xep-p
-      (dolist (loc (ir2-environment-environment env))
-	(emit-move node block (pop args) (cdr loc))))
-    
-    (when (ir2-environment-old-fp env)
-      (emit-move node block (ir2-environment-old-fp-pass env)
-		 (ir2-environment-old-fp env)))
-    
-    (when (ir2-environment-return-pc env)
-      (emit-move node block (ir2-environment-return-pc-pass env)
-		 (ir2-environment-return-pc env)))
+    (emit-move node block (ir2-environment-return-pc-pass env)
+	       (ir2-environment-return-pc env))
 
     (let ((lab (gen-label)))
       (setf (ir2-environment-environment-start env) lab)
@@ -1157,6 +1190,20 @@
 
   (undefined-value))
 
+
+;;;; Debugger hooks:
+
+;;; This is used by the debugger to find the top function on the stack.  It
+;;; returns the OLD-FP and RETURN-PC for the current function as multiple
+;;; values.
+;;;
+(defoptimizer (kernel:%caller-frame-and-pc ir2-convert) (() node block)
+  (let ((env (environment-info (node-environment node))))
+    (move-continuation-result node block
+			      (list (ir2-environment-old-fp env)
+				    (ir2-environment-return-pc env))
+			      (node-cont node))))
+			    
 
 ;;;; Multiple values:
 
