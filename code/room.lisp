@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.15 1992/02/21 22:00:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.16 1992/02/26 12:13:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -245,8 +245,8 @@
 		#+nil
 		(setq prev current)
 		(setq current (sap+ current size))))))
-	  (unless (pointer< current end)
-	    (assert (not (pointer> current end)))
+	  (unless (sap< current end)
+	    (assert (sap= current end))
 	    (return)))
 
 	#+nil
