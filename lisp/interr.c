@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.5 2001/04/11 18:01:34 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.6 2004/07/08 18:00:26 rtoy Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 #include "arch.h"
 #include "signal.h"

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.19 2004/07/08 17:49:04 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.20 2004/07/08 18:00:26 rtoy Exp $
  *
  * Memory Validation
  */
@@ -7,9 +7,11 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #ifdef sparc
 #include <alloca.h>
 #endif
+
 #include "lisp.h"
 #include "os.h"
 #include "globals.h"

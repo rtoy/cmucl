@@ -1,10 +1,11 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.4 2004/07/07 22:22:59 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.5 2004/07/08 18:00:26 rtoy Exp $
  *
  * Support for run-program.
  *
  */
 
+#include <stdlib.h>
 #include <sys/file.h>
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
