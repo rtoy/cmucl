@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.31 1991/11/15 13:53:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.32 1991/11/16 13:16:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -729,32 +729,36 @@
 ;;;
 (defun maybe-terminate-block (call ir1-p)
   (declare (type basic-combination call))
-  (let ((block (node-block call))
-	(cont (node-cont call)))
-    (when (or (and (eq (continuation-asserted-type cont) *empty-type*)
-		   (not (or ir1-p (eq (continuation-kind cont) :deleted))))
-	      (eq (node-derived-type call) *empty-type*))
-      (cond (ir1-p
-	     (delete-continuation-use call)
-	     (cond
-	      ((block-last block)
-	       (assert (and (eq (block-last block) call)
-			    (eq (continuation-kind cont) :block-start))))
+  (let* ((block (node-block call))
+	 (cont (node-cont call))
+	 (tail (component-tail (block-component block)))
+	 (succ (first (block-succ block))))
+    (unless (or (and (eq call (block-last block)) (eq succ tail))
+		(block-delete-p block))
+      (when (or (and (eq (continuation-asserted-type cont) *empty-type*)
+		     (not (or ir1-p (eq (continuation-kind cont) :deleted))))
+		(eq (node-derived-type call) *empty-type*))
+	(cond (ir1-p
+	       (delete-continuation-use call)
+	       (cond
+		((block-last block)
+		 (assert (and (eq (block-last block) call)
+			      (eq (continuation-kind cont) :block-start))))
+		(t
+		 (setf (block-last block) call)
+		 (link-blocks block (continuation-starts-block cont)))))
 	      (t
-	       (setf (block-last block) call)
-	       (link-blocks block (continuation-starts-block cont)))))
-	    (t
-	     (node-ends-block call)
-	     (delete-continuation-use call)
-	     (if (eq (continuation-kind cont) :unused)
-		 (delete-continuation cont)
-		 (reoptimize-continuation cont))))
-
-      (unlink-blocks block (first (block-succ block)))
-      (assert (not (block-succ block)))
-      (link-blocks block (component-tail (block-component block)))
-      (add-continuation-use call (make-continuation))
-      t)))
+	       (node-ends-block call)
+	       (delete-continuation-use call)
+	       (if (eq (continuation-kind cont) :unused)
+		   (delete-continuation cont)
+		   (reoptimize-continuation cont))))
+	
+	(unlink-blocks block (first (block-succ block)))
+	(assert (not (block-succ block)))
+	(link-blocks block tail)
+	(add-continuation-use call (make-continuation))
+	t))))
 
 
 ;;; Recognize-Known-Call  --  Interface
@@ -1275,7 +1279,18 @@
 
 ;;; IR1-OPTIMIZE-MV-COMBINATION  --  Internal
 ;;;
-;;;    Do stuff to notice a change to a MV combination node.
+;;;    Do stuff to notice a change to a MV combination node.  There are two
+;;; main branches here:
+;;;  -- If the call is local, then it is already a MV let, or should become one.
+;;;     Note that although all :LOCAL MV calls must eventually be converted to
+;;;     :MV-LETs, there can be a window when the call is local, but has not
+;;;     been let converted yet.  This is because the entry-point lambdas may
+;;;     have stray references (in other entry points) that have not been
+;;;     deleted yet.
+;;;  -- The call is full.  This case is somewhat similar to the non-MV
+;;;     combination optimization: we propagate return type information and
+;;;     notice non-returning calls.  We also have an optimization
+;;;     which tries to convert MV-CALLs into MV-binds.
 ;;;
 (defun ir1-optimize-mv-combination (node)
   (cond
@@ -1285,8 +1300,9 @@
 	(setf (continuation-reoptimize fun) nil)
 	(maybe-let-convert (combination-lambda node))))
     (setf (continuation-reoptimize (first (basic-combination-args node))) nil)
-    (unless (convert-mv-bind-to-let node)
-      (ir1-optimize-mv-bind node)))
+    (when (eq (functional-kind (combination-lambda node)) :mv-let)
+      (unless (convert-mv-bind-to-let node)
+	(ir1-optimize-mv-bind node))))
    (t
     (let* ((fun (basic-combination-fun node))
 	   (fun-changed (continuation-reoptimize fun))
