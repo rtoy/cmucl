@@ -1707,35 +1707,33 @@
 
 ;;; IR1-Top-Level  --  Interface
 ;;;
-;;;    This function takes a form and the initial source path for that form,
+;;;    This function takes a form and the top-level form number for that form,
 ;;; and returns a lambda representing the translation of that form in the
 ;;; current global environment.  The lambda is top-level lambda that can be
 ;;; called to cause evaluation of the forms.  This lambda is in the initial
 ;;; component.  If For-Value is T, then the value of the form is returned from
 ;;; the function, otherwise NIL is returned.
 ;;;
-;;; This function may have arbitrary effects on the global environment due to
-;;; processing of Proclaims and Eval-Whens.  All syntax error checking is done,
-;;; with erroneous forms being replaced by a proxy which signals an error if it
-;;; is evaluated.  Warnings about possibly inconsistent or illegal changes to
-;;; the global environment will also be given.
+;;;    This function may have arbitrary effects on the global environment due
+;;; to processing of Proclaims and Eval-Whens.  All syntax error checking is
+;;; done, with erroneous forms being replaced by a proxy which signals an error
+;;; if it is evaluated.  Warnings about possibly inconsistent or illegal
+;;; changes to the global environment will also be given.
 ;;;
-;;;    First, we find the source paths for all the subforms, then we make the
-;;; initial component and convert the form in a progn with a NIL tacked on the
-;;; end so that the value of the last form is discarded.  We then return the
-;;; lambda.  We bind all of our state variables here, rather than relying on
-;;; the global value (if any) so that IR1 conversion will be reentrant.  This
-;;; is necessary for eval-when processing, etc.
+;;;    We make the initial component and convert the form in a progn (and an
+;;; optional NIL tacked on the end.)  We then return the lambda.  We bind all
+;;; of our state variables here, rather than relying on the global value (if
+;;; any) so that IR1 conversion will be reentrant.  This is necessary for
+;;; eval-when processing, etc.
 ;;;
 ;;;    The hashtables used to hold global namespace info must be reallocated
 ;;; elsewhere.  Note also that *fenv* is not rebound, so that local macro
 ;;; definitions can be introduced by enclosing code.
 ;;;
-(defun ir1-top-level (form path for-value)
-  (declare (list path))
-  (clrhash *source-paths*)
-  (find-source-paths form path)
-  (let* ((*current-path* path)
+(defun ir1-top-level (form tlf-num for-value)
+  (declare (type index tlf-num))
+  (let* ((*current-path* (or (gethash form *source-paths*)
+			     (list 0 tlf-num)))
 	 (*inlines* ())
 	 (*type-restrictions* ())
 	 (*venv* ())
@@ -1758,19 +1756,33 @@
       res)))
 
 
-;;; Find-Source-Paths  --  Internal
+;;; *CURRENT-FORM-NUMBER* is used in FIND-SOURCE-PATHS to compute the form
+;;; number to associate with a source path.  This should be bound to 0 around
+;;; the processing of each truly top-level form.
+;;;
+(proclaim '(type index *current-form-number*))
+(defvar *current-form-number*)
+
+;;; Find-Source-Paths  --  Interface
 ;;;
 ;;;    This function is called on freshly read forms to record the initial
 ;;; location of each form (and subform.)  Form is the form to find the paths
-;;; in, and Path is the path taken to reach Form.
+;;; in, and TLF-Num is the top-level form number of the truly top-level form.
 ;;;
 ;;;    This gets a bit interesting when the source code is circular.  This can
 ;;; (reasonably?) happen in the case of circular list constants. 
 ;;;
-(proclaim '(function find-source-paths (t list) void))
-(defun find-source-paths (form path)
+(defun find-source-paths (form tlf-num)
+  (declare (type index tlf-num))
+  (let ((*current-form-number* 0))
+    (sub-find-source-paths form (list tlf-num)))
+  (undefined-value))
+;;;
+(defun sub-find-source-paths (form path)
   (unless (gethash form *source-paths*)
-    (setf (gethash form *source-paths*) path)
+    (setf (gethash form *source-paths*)
+	  (cons *current-form-number* path))
+    (incf *current-form-number*)
     (let ((pos 0)
 	  (subform form)
 	  (trail form))
