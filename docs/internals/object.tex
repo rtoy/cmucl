@@ -220,57 +220,58 @@ byte and comparing it against a constant is more efficient than wasting even a
 small amount of time shifting out the other-immediate tag to compare against a
 five bit constant.
 \begin{verbatim}
+                                                         HEX
 Number   (< 36)
-  bignum                                           10
-    ratio                                          14
-    single-float                                   18
-    double-float                                   22
-    complex                                        26
-    (complex single-float)                         30
-    (complex double-float)                         34
+  bignum                                           10     0A
+    ratio                                          14     0E
+    single-float                                   18     12
+    double-float                                   22     16
+    complex                                        26     1A
+    (complex single-float)                         30     1E
+    (complex double-float)                         34     22
 
 Array   (>= 38 code 118)
    Simple-Array   (>= 38 code 102)
-         simple-array                              38
+         simple-array                              38     26
       Vector  (>= 42 code 114)
-         simple-string                             42
-         simple-bit-vector                         46
-         simple-vector                             50
-         (simple-array (unsigned-byte 2) (*))      54
-         (simple-array (unsigned-byte 4) (*))      58
-         (simple-array (unsigned-byte 8) (*))      62
-         (simple-array (unsigned-byte 16) (*))     66
-         (simple-array (unsigned-byte 32) (*))     70
-         (simple-array (signed-byte 8) (*))        74
-         (simple-array (signed-byte 16) (*))       78
-         (simple-array (signed-byte 30) (*))       82
-         (simple-array (signed-byte 32) (*))       86
-         (simple-array single-float (*))           90
-         (simple-array double-float (*))           94
-         (simple-array (complex single-float) (*)  98
-         (simple-array (complex double-float) (*)  102
-      complex-string                               106
-      complex-bit-vector                           110
-      (array * (*))   -- general complex vector.   114
-   complex-array                                   118
+         simple-string                             42     2A
+         simple-bit-vector                         46     2E 
+         simple-vector                             50     32
+         (simple-array (unsigned-byte 2) (*))      54     36
+         (simple-array (unsigned-byte 4) (*))      58     3A
+         (simple-array (unsigned-byte 8) (*))      62     3E
+         (simple-array (unsigned-byte 16) (*))     66     42
+         (simple-array (unsigned-byte 32) (*))     70     46
+         (simple-array (signed-byte 8) (*))        74     4A
+         (simple-array (signed-byte 16) (*))       78     4E
+         (simple-array (signed-byte 30) (*))       82     52
+         (simple-array (signed-byte 32) (*))       86     56
+         (simple-array single-float (*))           90     5A
+         (simple-array double-float (*))           94     5E
+         (simple-array (complex single-float) (*)  98     62
+         (simple-array (complex double-float) (*)  102    66
+      complex-string                               106    6A
+      complex-bit-vector                           110    6E
+      (array * (*))   -- general complex vector.   114    72
+   complex-array                                   118    76
 
-code-header-type                                   122
-function-header-type                               126
-closure-header-type                                130
-funcallable-instance-header-type                   134
-unused-function-header-1-type                      138
-unused-function-header-2-type                      142
-unused-function-header-3-type                      146
-closure-function-header-type                       150
-return-pc-header-type (a.k.a LRA)                  154
-value-cell-header-type                             158
-symbol-header-type                                 162
-base-character-type                                166
-system-area-pointer-type (header type)             170
-unbound-marker                                     174
-weak-pointer-type                                  178
-structure-header-type                              182
-fdefn-type                                         186
+code-header-type                                   122    7A
+function-header-type                               126    7E
+closure-header-type                                130    82
+funcallable-instance-header-type                   134    86
+unused-function-header-1-type                      138    8A
+unused-function-header-2-type                      142    8E
+unused-function-header-3-type                      146    92
+closure-function-header-type                       150    96
+return-pc-header-type (a.k.a LRA)                  154    9A
+value-cell-header-type                             158    9E
+symbol-header-type                                 162    A2
+base-character-type                                166    A6
+system-area-pointer-type (header type)             170    AA
+unbound-marker                                     174    AE
+weak-pointer-type                                  178    B2
+structure-header-type                              182    B6
+fdefn-type                                         186    BA
 \end{verbatim}
 
 \section{Strings}
