@@ -625,7 +625,17 @@
   (let* ((current-event-symbol (car (display-current-event-symbol display)))
 	 (current-event (and (boundp current-event-symbol)
 			     (symbol-value current-event-symbol)))
-	 (queue (or current-event (display-event-queue-head display))))
+	 ;; #+CMU  Change how we bind queue here:
+	 ;; Old line:
+	 ;;    (queue (or current-event (display-event-queue-head display))))
+	 ;; New binding causes this routine to correctly count pending events
+	 ;; when called from within an EVENT-CASE branch.  This previously
+	 ;; was counting one more than it should, but calling EVENT-CASE
+	 ;; recursively would wedge waiting for an event because that one
+	 ;; event really wasn't available for handling.
+	 (queue (if current-event
+		    (reply-next (the reply-buffer current-event))
+		    (display-event-queue-head display))))
     (declare (type symbol current-event-symbol)
 	     (type (or null reply-buffer) current-event queue))
     (if queue
