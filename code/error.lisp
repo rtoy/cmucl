@@ -312,11 +312,6 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 ;;;; Conditions.
 
-(defstruct (condition (:constructor |constructor for condition|)
-                      (:predicate nil)
-                      (:print-function condition-print))
-  )
-
 (defun condition-print (condition stream depth)
   (declare (ignore depth))
   (if *print-escape*
