@@ -32,16 +32,74 @@ os_vm_address_t arch_get_bad_addr(int sig, int code, struct sigcontext *scp)
     return (os_vm_address_t)scp->sc_badvaddr;
 }
 
+#ifdef irix
+void
+emulate_branch(struct sigcontext *scp, unsigned long inst)
+{
+  long opcode = inst >> 26;
+  long r1 = (inst >> 21) & 0x1f;
+  long r2 = (inst >> 16) & 0x1f;
+  long bdisp = (inst&(1<<15)) ? inst | (-1 << 16) : inst&0xffff;
+  long jdisp = (inst&(1<<25)) ? inst | (-1 << 26) : inst&0xffff;
+  long disp = 0;
+
+  switch(opcode) {
+  case 0x1: /* bltz, bgez, bltzal, bgezal */
+    switch((inst >> 16) & 0x1f) {
+    case 0x00: /* bltz */
+      if(scp->sc_regs[r1] < 0)
+	disp = bdisp;
+      break;
+    case 0x01: /* bgez */
+      if(scp->sc_regs[r1] >= 0)
+	disp = bdisp;
+      break;
+    case 0x10: /* bltzal */
+      if(scp->sc_regs[r1] < 0)
+	disp = bdisp;
+      scp->sc_regs[31] = scp->sc_pc + 4;
+      break;
+    case 0x11: /* bgezal */
+      if(scp->sc_regs[r1] >= 0)
+	disp = bdisp;
+      scp->sc_regs[31] = scp->sc_pc + 4;
+      break;
+    }
+    break;
+  case 0x4: /* beq */
+    if(scp->sc_regs[r1] == scp->sc_regs[r2])
+      disp = bdisp;
+    break;
+  case 0x5: /* bne */
+    if(scp->sc_regs[r1] != scp->sc_regs[r2])
+      disp = bdisp;
+    break;
+  case 0x6: /* ble */
+    if(scp->sc_regs[r1] <= scp->sc_regs[r2])
+      disp = bdisp;
+    break;
+  case 0x7: /* bgtz */
+    if(scp->sc_regs[r1] >= scp->sc_regs[r2])
+      disp = bdisp;
+    break;
+  case 0x2: /* j */
+    disp = jdisp;
+    break;
+  case 0x3: /* jal */
+    disp = jdisp;
+    scp->sc_regs[31] = scp->sc_pc + 4;
+    break;
+  }
+  scp->sc_pc += disp*4;
+}
+#endif
+
 void arch_skip_instruction(scp)
 struct sigcontext *scp;
 {
     /* Skip the offending instruction */
     if (scp->sc_cause & CAUSE_BD)
-#ifdef mach
         emulate_branch(scp, *(unsigned long *)scp->sc_pc);
-#else
-      ;
-#endif
     else
         scp->sc_pc += 4;
 }
@@ -118,9 +176,7 @@ void arch_do_displaced_inst(struct sigcontext *scp,
     opcode = next_inst >> 26;
     if (opcode == 1 || ((opcode & 0x3c) == 0x4) || ((next_inst & 0xf00e0000) == 0x80000000)) {
 	tmp = *scp;
-#ifdef mach
         emulate_branch(&tmp, next_inst);
-#endif
         next_pc = (unsigned long *)tmp.sc_pc;
     }
     else
