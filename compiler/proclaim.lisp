@@ -339,12 +339,15 @@
     (setf (info type structure-info name) nil)
     (undefine-function-name (dd-copier info))
     (undefine-function-name (dd-predicate info))
-    
+    ;;
+    ;; Update the INCLUDED-BY list, copying the DD and included list so that we
+    ;; don't clobber the type in the compiler's Lisp.
     (dolist (include (dd-includes info))
       (let ((iinfo (info type structure-info include)))
 	(when iinfo
-	  (setf (dd-included-by iinfo)
-		(delete name (dd-included-by iinfo)))))))
+	  (let ((new (copy-defstruct-description iinfo)))
+	    (setf (dd-included-by new) (remove name (dd-included-by new)))
+	    (setf (info type structure-info include) new))))))
 
   (dolist (included (dd-included-by info))
     (let ((iinfo (info type structure-info included)))
@@ -393,14 +396,23 @@
 
     (let ((old (info type structure-info name)))
       (when old
-	(setf (dd-included-by info) (copy-list (dd-included-by old)))
-	(undefine-structure old))
-      (dolist (inc (dd-includes info))
-	(let ((info (info type structure-info inc)))
-	  (unless info
-	    (error "Structure type ~S is included by ~S but not defined."
-		   inc name))
-	  (pushnew name (dd-included-by info)))))
+	(undefine-structure old)))
+
+    (dolist (inc (dd-includes info))
+      (let ((info (info type structure-info inc)))
+	(unless info
+	  (error "Structure type ~S is included by ~S but not defined."
+		 inc name))
+	;;
+	;; Note that NAME will already be in INCLUDED-BY at the first time the
+	;; DEFSTRUCT is loaded, since STRUCTURE-INFO is then EQ to
+	;; DEFINED-STRUCTURE-INFO, so %DEFSTRUCT has already added NAME to the
+	;; list.  The purpose of the copying is for the compiler's info
+	;; on compiling a new definition.
+	(unless (member name (dd-included-by info))
+	  (let ((new (copy-defstruct-description info)))
+	    (setf (info type structure-info inc) new)
+	    (push name (dd-included-by new))))))
 
     (setf (info type kind name) :structure)
     (setf (info type structure-info name) info)
