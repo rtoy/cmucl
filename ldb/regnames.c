@@ -1,15 +1,15 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/regnames.c,v 1.1 1990/03/29 21:03:00 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/regnames.c,v 1.2 1990/10/22 12:31:21 wlott Exp $ */
 
 #include "lispregs.h"
 
 char *lisp_register_names[] = {
 	"ZERO",
-	"LIP",
+	"NL3",
+	"NL4",
+	"FLAGS",
 	"NL0",
 	"NL1",
 	"NL2",
-	"NL3",
-	"NL4",
 	"NARGS",
 	"A0",
 	"A1",
@@ -19,22 +19,22 @@ char *lisp_register_names[] = {
 	"A5",
 	"CNAME",
 	"LEXENV",
-	"ARGS",
-	"OCONT",
+	"NFP",
+	"OCFP",
 	"LRA",
 	"L0",
 	"NULL",
 	"BSP",
-	"CONT",
+	"CFP",
 	"CSP",
-	"FLAGS",
+	"L1",
 	"ALLOC",
 	"K0",
 	"K1",
-	"L1",
+	"L2",
 	"NSP",
 	"CODE",
-	"L2"
+	"LIP"
 };
 
 		
