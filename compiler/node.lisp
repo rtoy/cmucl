@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.27 1993/02/26 08:39:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.28 1993/03/12 15:37:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 ;;;
 (in-package "C")
 
-(export '(component component-info))
+(export '(component component-info block-number))
 
 ;;; Defvars for these variables appear later.
 (proclaim '(special *current-path* *lexical-environment* *current-component*
@@ -317,7 +317,10 @@
 
 ;;; The CBlock structure represents a basic block.  We include SSet-Element so
 ;;; that we can have sets of blocks.  Initially the SSet-Element-Number is
-;;; null, but we number in reverse DFO before we do any set operations.
+;;; null, DFO analysis numbers in reverse DFO.  During IR2 conversion, IR1
+;;; blocks are re-numbered in forward emit order.  This latter numbering also
+;;; forms the basis of the block numbering in the debug-info (though that is
+;;; relative to the start of the function.)
 ;;;
 (defstruct (cblock (:print-function %print-block)
 		   (:include sset-element)
@@ -850,8 +853,11 @@
   ;;
   ;; The original function or macro lambda list, or :UNSPECIFIED if this is a
   ;; compiler created function.
-  (arg-documentation nil :type (or list (member :unspecified))))
-  
+  (arg-documentation nil :type (or list (member :unspecified)))
+  ;;
+  ;; Various rare random info that dives code generation & stuff.
+  (plist () :type list))
+ 
 (defprinter functional
   name)
 
