@@ -1792,7 +1792,7 @@
 		      (when (atom subform) (return))
 		      (let ((fm (car subform)))
 			(when (consp fm)
-			  (find-source-paths fm (cons pos path)))
+			  (sub-find-source-paths fm (cons pos path)))
 			(incf pos))
 		      (setq subform (cdr subform))
 		      (when (eq subform trail) (return)))))
