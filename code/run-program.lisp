@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.18 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.19 1996/07/25 14:58:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,6 +125,7 @@
   proc)
 
 
+#-hpux
 ;;; FIND-CURRENT-FOREGROUND-PROCESS -- internal
 ;;;
 ;;; Finds the current foreground process group id.
@@ -139,7 +140,9 @@
       (unless wonp
 	(error "TIOCPGRP ioctl failed: ~S"
 	       (unix:get-unix-error-msg error)))
-      result)))
+      result))
+  (process-pid proc))
+
 
 ;;; PROCESS-KILL -- public
 ;;;
@@ -147,18 +150,28 @@
 ;;;
 (defun process-kill (proc signal &optional (whom :pid))
   "Hand SIGNAL to PROC.  If whom is :pid, use the kill Unix system call.  If
-  whom is :process-group, use the killpg Unix system call.  If whom is
-  :pty-process-group deliver the signal to whichever process group is currently
-  in the foreground."
+   whom is :process-group, use the killpg Unix system call.  If whom is
+   :pty-process-group deliver the signal to whichever process group is currently
+   in the foreground."
   (let ((pid (ecase whom
 	       ((:pid :process-group)
 		(process-pid proc))
 	       (:pty-process-group
+		#-hpux
 		(find-current-foreground-process proc)))))
-    (multiple-value-bind (okay errno)
-			 (if (eq whom :pty-process-group)
-			   (unix:unix-killpg pid signal)
-			   (unix:unix-kill pid signal))
+    (multiple-value-bind
+	(okay errno)
+	(case whom
+	  (:pty-process-group
+	   #+hpux
+	   (unix:unix-ioctl (system:fd-stream-fd (process-pty proc))
+			    unix:TIOCSIGSEND
+			    (system:int-sap
+			     (unix:unix-signal-number signal)))
+	   #-hpux
+	   (unix:unix-killpg pid signal))
+	  (t
+	   (unix:unix-kill pid signal)))
       (cond ((not okay)
 	     (values nil errno))
 	    ((and (eql pid (process-pid proc))
@@ -170,6 +183,7 @@
 	     t)
 	    (t
 	     t)))))
+
 
 ;;; PROCESS-ALIVE-P -- public
 ;;;
