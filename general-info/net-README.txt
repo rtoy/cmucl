@@ -131,5 +131,4 @@ the compiler description.
 
 See hackers/ram/scribe/internals/architecture.tex (the System Architecture
 chapter in the internals document) for more information on the source tree
-organization.  Note however that we have changed our RCS file locations since
-that was written.
+organization.
