@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.17 1999/10/06 14:32:36 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.18 2000/05/06 16:55:53 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -143,7 +143,11 @@ GNAME(call_into_lisp):
 
 	movl	(%esp),%eax	# Load NPX control word
 	andl	$0xfffff3ff,%eax	# Set rounding mode to nearest
+#ifdef type_LongFloat
 	orl	$0x00000300,%eax	# Set precision to 64 bits
+#else
+	orl	$0x00000200,%eax	# Set precision to 53 bits
+#endif	
 	pushl	%eax
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
