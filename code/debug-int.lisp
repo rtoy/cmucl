@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.41 1992/03/06 11:37:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.42 1992/03/10 15:56:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2998,7 +2998,11 @@
 			 (function-end-cookie-debug-fun cookie)))))
     (do ((frame frame (frame-down frame)))
 	((not frame) nil)
-      (when (eq lra (get-context-value frame vm::lra-save-offset lra-sc-offset))
+      (when (and (compiled-frame-p frame)
+		 (eq lra
+		     (get-context-value frame
+					vm::lra-save-offset
+					lra-sc-offset)))
 	(return t)))))
 
 ;;;
