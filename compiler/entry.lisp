@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/entry.lisp,v 1.11 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/entry.lisp,v 1.12 2005/01/25 15:40:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,12 +52,12 @@
     (assert (not (eq args :unspecified)))
     (if (null args)
 	"()"
-	(let ((*print-pretty* t)
-	      (*print-escape* t)
-	      (*print-base* 10)
-	      (*print-radix* nil)
-	      (*print-case* :downcase))
-	  (write-to-string args)))))
+	(let ((package *package*))
+	  (with-standard-io-syntax
+	    (let ((*package* package)
+		  (*print-pretty* t)
+		  (*print-case* :downcase))
+	      (write-to-string args)))))))
   
 
 ;;; Compute-Entry-Info  --  Internal
