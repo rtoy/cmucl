@@ -1,0 +1,17 @@
+vpath %.h /usr/dtc2/cmucl/p86/lisp:/usr/dtc2/cmucl/src/lisp
+vpath %.c /usr/dtc2/cmucl/p86/lisp:/usr/dtc2/cmucl/src/lisp
+vpath %.S /usr/dtc2/cmucl/p86/lisp
+CPPFLAGS = -I. -I/usr/dtc2/cmucl/p86/lisp -I/usr/dtc2/cmucl/src/lisp -I- -I/usr/X11R6/include
+CC = gcc # -Wall -Wstrict-prototypes -Wmissing-prototypes
+LD = ld
+CPP = cpp
+CFLAGS =  -g -O2 -DGENCGC
+ASFLAGS = -g -DGENCGC
+NM = nm -gp
+UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
+ASSEM_SRC = x86-assem.S
+ARCH_SRC = x86-arch.c
+OS_SRC = FreeBSD-os.c os-common.c undefineds.c
+OS_LINK_FLAGS=-static
+OS_LIBS=
+GC_SRC= gencgc.c

@@ -1,0 +1,17 @@
+vpath %.h /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
+vpath %.c /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
+vpath %.S /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
+CPPFLAGS = -I. -I/usr/src/cmucl/cmucl/src/lisp -I- -I/usr/X11R6/include
+CC = gcc  -Wstrict-prototypes -O2 -fno-strength-reduce # -Wall
+LD = ld
+CPP = cpp
+CFLAGS =  -g -O2 -DGENCGC
+ASFLAGS = -g -DGENCGC
+NM = nm -p
+UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
+ASSEM_SRC = x86-assem.S linux-stubs.S
+ARCH_SRC = x86-arch.c
+OS_SRC = Linux-os.c os-common.c
+OS_LINK_FLAGS=
+OS_LIBS= -ldl
+GC_SRC= gencgc.c
