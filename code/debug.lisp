@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.22 1991/12/12 13:49:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.23 1991/12/12 16:56:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -266,7 +266,7 @@
 	    (progn
 	      (di:code-location-debug-block loc)
 	      (format t "~%Source: ")
-	 (*current-level* 0)
+	      (print-code-location-source-form loc 0))
 	  (di:debug-condition (ignore) ignore))))))
 
 
