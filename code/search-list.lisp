@@ -39,12 +39,13 @@
     (nstring-downcase dev)
     (setf (gethash dev *search-list-table*)
 	  (mapcar #'(lambda (x)
-		      (declare (simple-string x))
-		      (let* ((len (length x))
-			     (char (schar x (1- len))))
-			(if (or (char= char #\:) (char= char #\/))
-			    x
-			    (concatenate 'simple-string x "/"))))
+		      (let ((x (namestring x)))
+			(declare (simple-string x))
+			(let* ((len (length x))
+			       (char (schar x (1- len))))
+			  (if (or (char= char #\:) (char= char #\/))
+			      x
+			      (concatenate 'simple-string x "/")))))
 		  new-value)))
   new-value)
 
