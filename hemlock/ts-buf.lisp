@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-buf.lisp,v 1.7 1991/05/16 20:11:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-buf.lisp,v 1.8 1991/05/20 15:40:32 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,16 +207,6 @@
 (defmode "Typescript"
   :setup-function #'setup-typescript
   :documentation "The Typescript mode is used to interact with slave lisps.")
-
-;;; This stuff keeps the end of typescript buffers visible in their windows, so
-;;; when they are not current, you can still track output being dumped there.
-;;;
-(defun set-recentering-for-typescript-windows (window buffer)
-  (setf (window-display-recentering window) nil)
-  (when (hemlock-bound-p 'typescript-data :buffer buffer)
-    (setf (window-display-recentering window) t)))
-;;;
-(add-hook window-buffer-hook #'set-recentering-for-typescript-windows)
 
 
 ;;; TYPESCRIPTIFY-BUFFER -- Internal interface.
