@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.9 1993/03/14 17:16:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.10 1993/07/30 11:00:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1453,9 +1453,10 @@
 	      ((eq class1 'float)
 	       (make-numeric-type
 		:class 'float
-		:format (if (eq class2 'float)
-			    (float-format-max format1 format2)
-			    format1)
+		:format (ecase class2
+			  (float (float-format-max format1 format2))
+			  ((integer rational) format1)
+			  ((nil) nil))
 		:complexp (if (or (eq complexp1 :complex)
 				  (eq complexp2 :complex))
 			      :complex
