@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.12 1993/02/17 17:10:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.13 1993/02/17 18:18:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1102,14 +1102,19 @@
       #+ns-boot
       (when (and old-layout (not (layout-info old-layout)))
 	(setf (layout-info old-layout) info))
-      (if (or (not old-layout)
-	      (let ((old-info (layout-info old-layout)))
-		(or (redefine-layout-warning old-layout old-context
-					     new-layout new-context)
-		    (not (defstruct-description-p old-info))
-		    (redefine-structure-warning class old-info info))))
-	  (values class new-layout old-layout)
-	  (values class old-layout old-layout)))))
+      (cond
+       ((not *type-system-initialized*)
+	(setf (layout-info old-layout) info)
+	(values class old-layout old-layout))
+       ((or (not old-layout)
+	    (let ((old-info (layout-info old-layout)))
+	      (or (redefine-layout-warning old-layout old-context
+					   new-layout new-context)
+		  (not (defstruct-description-p old-info))
+		  (redefine-structure-warning class old-info info))))
+	(values class new-layout old-layout))
+       (t
+	(values class old-layout old-layout))))))
 	    
 
 ;;; COMPARE-SLOTS  --  Internal
