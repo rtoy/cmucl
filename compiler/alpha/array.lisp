@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.3 1998/01/21 19:23:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,7 @@
 ;;;
 ;;; Written by William Lott
 ;;; Conversion by Sean Hallgren
+;;; Complex-float support by Douglas Crosher 1998.
 ;;;
 (in-package "ALPHA")
 
@@ -145,7 +146,10 @@
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
 
-
+#+signed-array
+(def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num any-reg)
+#+signed-array
+(def-full-data-vector-frobs simple-array-signed-byte-32 signed-num signed-reg)
 
 ;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
 ;;; and 4-bit vectors.
@@ -439,3 +443,117 @@
 (define-vop (get-vector-subtype get-header-data))
 (define-vop (set-vector-subtype set-header-data))
 
+
+;;; Complex float arrays.
+#+complex-float
+(progn
+
+(define-vop (data-vector-ref/simple-array-complex-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-single-float positive-fixnum)
+  (:results (value :scs (complex-single-reg)))
+  (:temporary (:scs (interior-reg)) lip)
+  (:result-types complex-single-float)
+  (:generator 5
+    (let ((real-tn (complex-single-reg-real-tn value)))
+      (inst addq object index lip)
+      (inst addq lip index lip)
+      (inst lds real-tn
+	    (- (* vector-data-offset word-bytes) other-pointer-type)
+	    lip))
+    (let ((imag-tn (complex-single-reg-imag-tn value)))
+      (inst lds imag-tn
+	    (- (* (1+ vector-data-offset) word-bytes) other-pointer-type)
+	    lip))))
+
+(define-vop (data-vector-set/simple-array-complex-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (complex-single-reg) :target result))
+  (:arg-types simple-array-complex-single-float positive-fixnum
+	      complex-single-float)
+  (:results (result :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 5
+    (let ((value-real (complex-single-reg-real-tn value))
+	  (result-real (complex-single-reg-real-tn result)))
+      (inst addq object index lip)
+      (inst addq lip index lip)
+      (inst sts value-real
+	    (- (* vector-data-offset word-bytes) other-pointer-type)
+	    lip)
+      (unless (location= result-real value-real)
+	(inst fmove value-real result-real)))
+    (let ((value-imag (complex-single-reg-imag-tn value))
+	  (result-imag (complex-single-reg-imag-tn result)))
+      (inst sts value-imag
+	    (- (* (1+ vector-data-offset) word-bytes) other-pointer-type)
+	    lip)
+      (unless (location= result-imag value-imag)
+	(inst fmove value-imag result-imag)))))
+
+(define-vop (data-vector-ref/simple-array-complex-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-double-float positive-fixnum)
+  (:results (value :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 7
+    (let ((real-tn (complex-double-reg-real-tn value)))
+      (inst addq object index lip)
+      (inst addq lip index lip)
+      (inst addq lip index lip)
+      (inst addq lip index lip)
+      (inst ldt real-tn
+	    (- (* vector-data-offset word-bytes) other-pointer-type)
+	    lip))
+    (let ((imag-tn (complex-double-reg-imag-tn value)))
+      (inst ldt imag-tn
+	    (- (* (+ vector-data-offset 2) word-bytes) other-pointer-type)
+	    lip))))
+
+(define-vop (data-vector-set/simple-array-complex-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (complex-double-reg) :target result))
+  (:arg-types simple-array-complex-double-float positive-fixnum
+	      complex-double-float)
+  (:results (result :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 20
+    (let ((value-real (complex-double-reg-real-tn value))
+	  (result-real (complex-double-reg-real-tn result)))
+      (inst addq object index lip)
+      (inst addq lip index lip)
+      (inst addq lip index lip)
+      (inst addq lip index lip)
+      (inst stt value-real
+	    (- (* vector-data-offset word-bytes) other-pointer-type)
+	    lip)
+      (unless (location= result-real value-real)
+	(inst fmove value-real result-real)))
+    (let ((value-imag (complex-double-reg-imag-tn value))
+	  (result-imag (complex-double-reg-imag-tn result)))
+      (inst stt value-imag
+	    (- (* (+ vector-data-offset 2) word-bytes) other-pointer-type)
+	    lip)
+      (unless (location= result-imag value-imag)
+	(inst fmove value-imag result-imag)))))
+
+) ; end progn complex-float
