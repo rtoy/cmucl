@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.55 2003/05/14 14:38:38 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.56 2003/05/15 21:40:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2149,29 +2149,28 @@ incompatible redefinitions."
 ;;; to prevent name clashes.
 
 (deftype void$ () '(satisfies alien-void-type-p))
-(deftype integer$ () 'alien::alien-integer-type)
+(deftype integer$ () 'alien-integer-type)
 (deftype integer-64$ () '(satisfies alien-integer-64-type-p))
 (deftype signed-integer$ () '(satisfies alien-signed-integer-type-p))
-(deftype pointer$ () 'alien::alien-pointer-type)
-(deftype single$ () 'alien::alien-single-float-type)
-(deftype double$ () 'alien::alien-double-float-type)
+(deftype pointer$ () 'alien-pointer-type)
+(deftype single$ () 'alien-single-float-type)
+(deftype double$ () 'alien-double-float-type)
 (deftype sap$ () '(satisfies alien-sap-type=))
 
 (defun alien-sap-type= (type)
-  (alien::alien-type-= type 
-		       (alien::parse-alien-type 'system-area-pointer)))
+  (alien-type-= type (parse-alien-type 'system-area-pointer)))
 
 (defun alien-void-type-p (type)
-  (and (alien::alien-values-type-p type)
-       (null (alien::alien-values-type-values type))))
+  (and (alien-values-type-p type)
+       (null (alien-values-type-values type))))
 
 (defun alien-integer-64-type-p (type)
-  (and (alien::alien-integer-type-p type)
-       (= (alien::alien-type-bits type) 64)))
+  (and (alien-integer-type-p type)
+       (= (alien-type-bits type) 64)))
 
 (defun alien-signed-integer-type-p (type)
-  (and (alien::alien-integer-type-p type)
-       (alien::alien-integer-type-signed type)))
+  (and (alien-integer-type-p type)
+       (alien-integer-type-signed type)))
 
 (defun segment-to-trampoline (segment length)
   (let* ((code (alien-funcall 
@@ -2233,18 +2232,18 @@ Create new trampoline (old trampoline calls old lisp function).")))
 	(register-new-callback))))
 
 (defun word-aligned-bits (type)
-  (alien::align-offset (alien::alien-type-bits type) vm:word-bits))
+  (align-offset (alien-type-bits type) vm:word-bits))
 
 (defun argument-size (spec)
-  (let ((type (alien::parse-alien-type spec)))
+  (let ((type (parse-alien-type spec)))
     (typecase type
       ((or integer$ single$ double$ pointer$ sap$)
        (ceiling (word-aligned-bits type) vm:byte-bits))
       (t (error "Unsupported argument type: ~A" spec)))))
 
 (defun parse-return-type (spec)
-  (let ((alien::*values-type-okay* t))
-    (alien::parse-alien-type spec)))
+  (let ((*values-type-okay* t))
+    (parse-alien-type spec)))
 
 (defun return-exp (spec sap body)
   (flet ((store (spec) `(setf (deref (sap-alien ,sap (* ,spec))) ,body)))
@@ -2259,8 +2258,9 @@ Create new trampoline (old trampoline calls old lisp function).")))
 	 (store spec))
 	(t (error "Unsupported return type: ~A" spec))))))
 
-(defmacro def-callback (name (return-type &rest arg-specs) &body body)
-  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
+(defmacro def-callback (name (return-type &rest arg-specs) &parse-body (body decls doc))
+  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*)
+     {doc-string} {decls}* {FORM}*)
 
 Define a function which can be called by foreign code.  The pointer
 returned by (callback NAME), when called by foreign code, invokes the
@@ -2277,22 +2277,24 @@ incremental redefinition of callback functions."
 	(ret (gensym (string :ret-))))
     `(progn
       (defun ,name (,sp-fixnum ,ret-addr)
+	,@(when doc (list doc))
 	(declare (type fixnum ,sp-fixnum ,ret-addr))
+	,@decls
 	;; We assume sp-fixnum is word aligned and pass it untagged to
 	;; this function.  The shift compensates this.
 	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2))))
 	      (,ret (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,ret-addr 2)))))
-	  (declare (ignorable ,sp))
+	  (declare (ignorable ,sp ,ret))
 	  ;; Copy all arguments to local variables.
 	  (with-alien ,(loop for offset = 0 then (+ offset 
-						    (alien::argument-size type))
+						    (argument-size type))
 			     for (name type) in arg-specs
 			     collect `(,name ,type
 				       :local ,(vm:callback-accessor-form type sp offset)))
-	    ,(alien::return-exp return-type `(sys:sap+ ,ret 0) `(progn ,@body))
+	    ,(return-exp return-type ret `(progn ,@body))
 	    (values))))
-      (alien::define-callback-function 
-	  ',name #',name ',(alien::parse-return-type return-type)))))
+      (define-callback-function 
+	  ',name #',name ',(parse-return-type return-type)))))
 
 ;;; dumping support
 
