@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.24 1998/03/10 18:22:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.25 1998/03/11 17:33:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,7 +86,7 @@
 ;;;
 ;;; Using a Pop then load.
 (defun copy-fp-reg-to-fr0 (reg)
-  (assert (not (zerop (tn-offset ,reg))))
+  (assert (not (zerop (tn-offset reg))))
   (inst fstp fr0-tn)
   (inst fld (make-random-tn :kind :normal
 			    :sc (sc-or-lose 'double-reg *backend*)
@@ -2678,48 +2678,133 @@
 #+complex-float
 (progn
 
-(define-vop (make-complex-float)
-  (:args (x :target r)
-	 (y :to :save))
-  (:results (r :from (:argument 0)))
+(define-vop (make-complex-single-float)
+  (:translate complex)
+  (:args (real :scs (single-reg) :target r)
+	 (imag :scs (single-reg) :to :save))
+  (:arg-types single-float single-float)
+  (:results (r :scs (complex-single-reg complex-single-stack)
+	       :from (:argument 0)))
+  (:result-types complex-single-float)
+  (:note "inline complex single-float creation")
   (:policy :fast-safe)
   (:generator 5
-    (let ((r-real (complex-double-reg-real-tn r)))
-      (unless (location= x r-real)
-	(cond ((zerop (tn-offset r-real))
-	       (copy-fp-reg-to-fr0 x))
-	      ((zerop (tn-offset x))
-	       (inst fstd r-real))
-	      (t
-	       (inst fxch x)
-	       (inst fstd r-real)
-	       (inst fxch x)))))
-    (let ((r-imag (complex-double-reg-imag-tn r)))
-      (unless (location= y r-imag)
-	(cond ((zerop (tn-offset y))
-	       (inst fstd r-imag))
-	      (t
-	       (inst fxch y)
-	       (inst fstd r-imag)
-	       (inst fxch y)))))))
+    (sc-case r
+      (complex-single-reg
+       (let ((r-real (complex-double-reg-real-tn r)))
+	 (unless (location= real r-real)
+	   (cond ((zerop (tn-offset r-real))
+		  (copy-fp-reg-to-fr0 real))
+		 ((zerop (tn-offset real))
+		  (inst fstd r-real))
+		 (t
+		  (inst fxch real)
+		  (inst fstd r-real)
+		  (inst fxch real)))))
+       (let ((r-imag (complex-double-reg-imag-tn r)))
+	 (unless (location= imag r-imag)
+	   (cond ((zerop (tn-offset imag))
+		  (inst fstd r-imag))
+		 (t
+		  (inst fxch imag)
+		  (inst fstd r-imag)
+		  (inst fxch imag))))))
+      (complex-single-stack
+       (cond ((zerop (tn-offset real))
+	      (inst fst (ea-for-csf-real-stack r)))
+	     (t
+	      (inst fxch real)
+	      (inst fst (ea-for-csf-real-stack r))
+	      (inst fxch real)))
+       (inst fxch imag)
+       (inst fst (ea-for-csf-imag-stack r))
+       (inst fxch imag)))))
 
-(define-vop (make-complex-single-float make-complex-float)
+(define-vop (make-complex-double-float)
   (:translate complex)
-  (:args (x :scs (single-reg) :target r)
-	 (y :scs (single-reg) :to :save))
-  (:arg-types single-float single-float)
-  (:results (r :scs (complex-single-reg) :from (:argument 0)))
-  (:result-types complex-single-float)
-  (:note "inline complex single-float creation"))
-
-(define-vop (make-complex-double-float make-complex-float)
-  (:translate complex)
-  (:args (x :scs (double-reg) :target r)
-	 (y :scs (double-reg) :to :save))
+  (:args (real :scs (double-reg) :target r)
+	 (imag :scs (double-reg) :to :save))
   (:arg-types double-float double-float)
-  (:results (r :scs (complex-double-reg) :from (:argument 0)))
+  (:results (r :scs (complex-double-reg complex-double-stack)
+	       :from (:argument 0)))
   (:result-types complex-double-float)
-  (:note "inline complex double-float creation"))
+  (:note "inline complex double-float creation")
+  (:policy :fast-safe)
+  (:generator 5
+    (sc-case r
+      (complex-double-reg
+       (let ((r-real (complex-double-reg-real-tn r)))
+	 (unless (location= real r-real)
+	   (cond ((zerop (tn-offset r-real))
+		  (copy-fp-reg-to-fr0 real))
+		 ((zerop (tn-offset real))
+		  (inst fstd r-real))
+		 (t
+		  (inst fxch real)
+		  (inst fstd r-real)
+		  (inst fxch real)))))
+       (let ((r-imag (complex-double-reg-imag-tn r)))
+	 (unless (location= imag r-imag)
+	   (cond ((zerop (tn-offset imag))
+		  (inst fstd r-imag))
+		 (t
+		  (inst fxch imag)
+		  (inst fstd r-imag)
+		  (inst fxch imag))))))
+      (complex-double-stack
+       (cond ((zerop (tn-offset real))
+	      (inst fstd (ea-for-cdf-real-stack r)))
+	     (t
+	      (inst fxch real)
+	      (inst fstd (ea-for-cdf-real-stack r))
+	      (inst fxch real)))
+       (inst fxch imag)
+       (inst fstd (ea-for-cdf-imag-stack r))
+       (inst fxch imag)))))
+
+#+long-float
+(define-vop (make-complex-long-float)
+  (:translate complex)
+  (:args (real :scs (long-reg) :target r)
+	 (imag :scs (long-reg) :to :save))
+  (:arg-types long-float long-float)
+  (:results (r :scs (complex-long-reg complex-long-stack)
+	       :from (:argument 0)))
+  (:result-types complex-long-float)
+  (:note "inline complex long-float creation")
+  (:policy :fast-safe)
+  (:generator 5
+    (sc-case r
+      (complex-long-reg
+       (let ((r-real (complex-double-reg-real-tn r)))
+	 (unless (location= real r-real)
+	   (cond ((zerop (tn-offset r-real))
+		  (copy-fp-reg-to-fr0 real))
+		 ((zerop (tn-offset real))
+		  (inst fstd r-real))
+		 (t
+		  (inst fxch real)
+		  (inst fstd r-real)
+		  (inst fxch real)))))
+       (let ((r-imag (complex-double-reg-imag-tn r)))
+	 (unless (location= imag r-imag)
+	   (cond ((zerop (tn-offset imag))
+		  (inst fstd r-imag))
+		 (t
+		  (inst fxch imag)
+		  (inst fstd r-imag)
+		  (inst fxch imag))))))
+      (complex-long-stack
+       (cond ((zerop (tn-offset real))
+	      (store-long-float (ea-for-clf-real-stack r)))
+	     (t
+	      (inst fxch real)
+	      (store-long-float (ea-for-clf-real-stack r))
+	      (inst fxch real)))
+       (inst fxch imag)
+       (store-long-float (ea-for-clf-imag-stack r))
+       (inst fxch imag)))))
+
 
 (define-vop (complex-float-value)
   (:args (x :target r))
