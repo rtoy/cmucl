@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.25 1993/09/14 00:05:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.26 1993/09/14 22:14:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -291,9 +291,8 @@
   (declare (ignore count))
   ptr)
 
-(defun %more-arg-values (args count)
-  (declare (ignore count))
-  (values-list args))
+(defun %more-arg-values (args start count)
+  (values-list (subseq args start count)))
 
 (defun %argument-count-error (args-passed-count)
   (error "Wrong number of arguments passed -- ~S." args-passed-count))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/values.lisp,v 1.2 1993/09/13 19:30:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/values.lisp,v 1.3 1993/09/14 22:15:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,14 +93,21 @@
 ;;;
 (define-vop (%more-arg-values)
   (:args (context :scs (descriptor-reg any-reg) :target src)
-	 (num :scs (descriptor-reg any-reg) :target count))
+	 (skip :scs (any-reg zero immediate))
+	 (num :scs (any-reg) :target count))
   (:temporary (:sc any-reg :from (:argument 0)) src)
   (:temporary (:sc any-reg :from (:argument 1)) dst end)
   (:temporary (:sc descriptor-reg :from (:argument 1)) temp)
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))
   (:generator 20
-    (move context src)
+    (sc-case skip
+      (zero
+       (move context src))
+      (immediate
+       (inst addi (tn-value skip) context src))
+      (any-reg
+       (inst add skip context src)))
     (move num count)
     (inst comb := num zero-tn done)
     (inst move csp-tn start)

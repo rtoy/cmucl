@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.55 1993/09/13 19:31:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.56 1993/09/14 22:14:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1387,7 +1387,7 @@
 		 ((reference-tn-list locs t)))))))))
 
 
-(defoptimizer (%more-arg-values ir2-convert) ((context count) node block)
+(defoptimizer (%more-arg-values ir2-convert) ((context start count) node block)
   (let* ((cont (node-cont node))
 	 (2cont (continuation-info cont)))
     (when 2cont
@@ -1397,6 +1397,7 @@
 	 (let ((locs (ir2-continuation-locs 2cont)))
 	   (vop* %more-arg-values node block
 		 ((continuation-tn node block context)
+		  (continuation-tn node block start)
 		  (continuation-tn node block count)
 		  nil)
 		 ((reference-tn-list locs t)))))))))

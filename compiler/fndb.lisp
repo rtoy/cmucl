@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.61 1993/09/13 19:30:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.62 1993/09/14 22:14:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1102,10 +1102,10 @@
 (defknown %cleanup-point () void)
 (defknown %special-bind (t t) void)
 (defknown %special-unbind (t) void)
-(defknown %listify-rest-args (t t) list (flushable))
-(defknown %more-arg-context (t t) (values t fixnum) (flushable))
-(defknown %more-arg (t t) t)
-(defknown %more-arg-values (t t) * (flushable))
+(defknown %listify-rest-args (t index) list (flushable))
+(defknown %more-arg-context (t t) (values t index) (flushable))
+(defknown %more-arg (t index) t)
+(defknown %more-arg-values (t index index) * (flushable))
 (defknown %verify-argument-count (index index) (values))
 (defknown %argument-count-error (t) nil)
 (defknown %unknown-values () *)
