@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.20 2003/01/03 18:50:23 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.21 2003/02/06 15:20:13 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -120,6 +120,14 @@
       `(load-short-defcombin
 	 ',type ',operator ',identity-with-one-arg ',documentation))))
 
+(defun set-random-documentation (type doc-type doc)
+  (let ((pair (assoc doc-type
+		     (ext:info random-documentation stuff type))))
+    (if pair
+	(setf (cdr pair) doc)
+	(push (cons doc-type doc)
+	      (ext:info random-documentation stuff type)))))
+
 (defun load-short-defcombin (type operator ioa doc)
   (let* ((specializers
 	   (list (find-class 'generic-function)
@@ -133,7 +141,7 @@
 	    :qualifiers ()
 	    :specializers specializers
 	    :lambda-list '(generic-function type options)
-	    :function (lambda(args nms &rest cm-args)
+	    :function (lambda (args nms &rest cm-args)
 			(declare (ignore nms cm-args))
 			(apply 
 			 (lambda (gf type options)
@@ -146,6 +154,7 @@
     (when old-method
       (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)
+    (set-random-documentation type 'method-combination doc)
     type))
 
 (defun make-short-method-combination (type options operator ioa method doc)
@@ -271,6 +280,7 @@
     (setf (gethash type *long-method-combination-functions*) function)
     (when old-method (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)
+    (set-random-documentation type 'method-combination doc)
     type))
 
 (defmethod compute-effective-method ((generic-function generic-function)

@@ -648,7 +648,7 @@
 
 (defclass method (standard-object) ())
 
-(defclass standard-method (definition-source-mixin plist-mixin method)
+(defclass standard-method (definition-source-mixin documentation-mixin method)
      ((generic-function
 	:initform nil	
 	:accessor method-generic-function)

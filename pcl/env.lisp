@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.16 2002/11/28 16:23:33 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.17 2003/02/06 15:20:12 gerd Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -100,20 +100,24 @@
 
 (defvar *describe-metaobjects-as-objects-p* nil)
 
-(defmethod describe-object ((fun standard-generic-function) stream)
-  (format stream "~A is a generic function.~%" fun)
-  (format stream "Its arguments are:~%  ~S~%"
-          (generic-function-pretty-arglist fun))
-  (format stream "Its methods are:")
-  (dolist (meth (generic-function-methods fun))
-    (format stream "~2%    ~{~S ~}~:S =>~%"
-            (method-qualifiers meth)
-            (unparse-specializers meth))
-    (describe-object (or (method-fast-function meth)
-			 (method-function meth))
-		     stream))
-  (when *describe-metaobjects-as-objects-p*
-    (call-next-method)))
+(defmethod describe-object ((gf standard-generic-function) stream)
+  (format stream "~A is a generic function.~%" gf)
+  (let* ((gf-name (generic-function-name gf))
+	 (doc (documentation gf-name 'function)))
+    (format stream "Its arguments are:~%  ~S~%"
+	    (generic-function-pretty-arglist gf))
+    (when doc
+      (format stream "Generic function documentation:~%  ~s~%" doc))
+    (format stream "Its methods are:~%")
+    (loop for method in (generic-function-methods gf) and i from 1
+	  as doc = (plist-value method 'documentation) do
+	    (format stream "  ~d: ~a ~@[~{~s ~}~]~:s~%"
+		    i gf-name (method-qualifiers method)
+		    (unparse-specializers method))
+	    (when doc
+	      (format stream "    Method documentation: ~s~%" doc)))
+    (when *describe-metaobjects-as-objects-p*
+      (call-next-method))))
 
 ;;;
 ;;;
@@ -121,7 +125,7 @@
 (defmethod describe-object ((class class) stream)
   (flet ((pretty-class (c) (or (class-name c) c)))
     (macrolet ((ft (string &rest args) `(format stream ,string ,@args)))
-      (ft "~&~S is a class, it is an instance of ~S.~%"
+      (ft "~&~@<~S is a class, it is an instance of ~S.~@:>~%"
 	  class (pretty-class (class-of class)))
       (let ((name (class-name class)))
 	(if name
@@ -135,7 +139,13 @@
 	  (mapcar #'pretty-class (class-direct-superclasses class))
 	  (mapcar #'pretty-class (class-direct-subclasses class))
 	  (mapcar #'pretty-class (class-precedence-list class))
-	  (length (specializer-direct-methods class)))))
+	  (length (specializer-direct-methods class)))
+      (loop initially
+	      (ft "~&Its direct slots are:~%")
+	    for slotd in (class-direct-slots class)
+	    as name = (slot-definition-name slotd)
+	    as doc = (slot-value slotd 'documentation) do
+	      (ft "  ~a~@[, documentation ~s~]~%" name doc))))
   (when *describe-metaobjects-as-objects-p*
     (call-next-method)))
 

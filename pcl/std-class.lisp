@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.42 2003/01/03 21:41:00 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.43 2003/02/06 15:20:12 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -114,7 +114,7 @@
                                      &key (documentation nil documentation-p))
   (declare (ignore slot-names))
   (when documentation-p
-    (setf (plist-value object 'documentation) documentation)))
+    (setf (documentation object nil) documentation)))
 
 (defmethod documentation (object doc-type)
   (declare (ignore object doc-type))
@@ -132,7 +132,6 @@
   (declare (ignore doc-type))
   (setf (plist-value object 'documentation) new-value))
 
-
 (defmethod documentation ((slotd standard-slot-definition) doc-type)
   (declare (ignore doc-type))
   (slot-value slotd 'documentation))
@@ -140,6 +139,11 @@
 (defmethod (setf documentation) (new-value (slotd standard-slot-definition) doc-type)
   (declare (ignore doc-type))
   (setf (slot-value slotd 'documentation) new-value))
+
+(defmethod (setf documentation) (doc (gf generic-function) type)
+  (declare (ignore type))
+  (setf (ext:info function documentation (generic-function-name gf))
+	doc))
 
 
 ;;;

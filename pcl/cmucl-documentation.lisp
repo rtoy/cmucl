@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.8 2002/08/27 19:01:37 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.9 2003/02/06 15:20:13 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,11 +125,7 @@
 	      (values (ext:info random-documentation stuff x)))))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type symbol))
-  (let ((pair (assoc doc-type (ext:info random-documentation stuff x))))
-    (if pair
-	(setf (cdr pair) new-value)
-	(push (cons doc-type new-value)
-	      (ext:info random-documentation stuff x))))
+  (set-random-documentation x doc-type new-value)
   new-value)
 
 ;;; Replace the minimal documentation function with the PCL version
