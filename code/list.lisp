@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.16 1993/08/25 01:13:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.17 1993/08/25 01:41:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -967,11 +967,12 @@
 
 (defun delq (item list)
   "Returns list with all elements with all elements EQ to ITEM deleted."
-  (do ((x list (cdr x))
-       (splice '()))
-      ((endp x) list)
-    (cond ((eq item (car x))
-	   (if (null splice) 
-	       (setq list (cdr x))
-	       (rplacd splice (cdr x))))
-	  (T (setq splice x)))))	; move splice along to include element
+  (let ((list list))
+    (do ((x list (cdr x))
+	 (splice '()))
+	((endp x) list)
+      (cond ((eq item (car x))
+	     (if (null splice) 
+		 (setq list (cdr x))
+		 (rplacd splice (cdr x))))
+	    (T (setq splice x))))))	; move splice along to include element
