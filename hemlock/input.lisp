@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.6 1997/01/18 14:31:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.7 2001/01/27 14:22:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,6 +167,19 @@
 ;;;
 (defparameter editor-abort-key-events (list #k"Control-g" #k"Control-G"))
 
+(defun cleanup-for-wm-closed-display(closed-display)
+  ;; Remove fd-handlers
+  (ext:disable-clx-event-handling closed-display)
+  ;; Close file descriptor and note DEAD.
+  (xlib:close-display closed-display)
+  ;;
+  ;; At this point there is not much sense to returning to Lisp
+  ;; as the editor cannot be re-entered (there are lots of pointers
+  ;; to the dead display around that will cause subsequent failures).
+  ;; Maybe could switch to tty mode then (save-all-files-and-exit)?
+  ;; For now, just assume user wanted an easy way to kill the session.
+  (ext:quit))
+
 (defmacro abort-key-event-p (key-event)
   `(member ,key-event editor-abort-key-events))
 
@@ -187,12 +200,34 @@
 ;;; input method (recursively even).
 ;;;
 (eval-when (compile eval)
+
 (defmacro editor-input-method-macro ()
-  `(handler-bind ((error #'(lambda (condition)
-			     (let ((device (device-hunk-device
-					    (window-hunk (current-window)))))
-			       (funcall (device-exit device) device))
-			     (invoke-debugger condition))))
+  `(handler-bind
+       ((error
+	 (lambda (condition)
+	   (when (typep condition 'stream-error)
+	     (let* ((stream (stream-error-stream condition))
+		    (display *editor-windowed-input*)
+		    (display-stream 
+		     #+CLX
+		     (and display (xlib::display-input-stream display))))
+	       (when (eq stream display-stream)
+		 ;;(format *error-output* "~%Hemlock: Display died!~%~%")
+		 (cleanup-for-wm-closed-display display)
+		 (exit-hemlock nil))
+	       (let ((device
+		      (device-hunk-device (window-hunk (current-window)))))
+		 (funcall (device-exit device) device))
+	       (invoke-debugger condition)))))
+	#+(and CLX )
+	(xlib:closed-display
+	 (lambda(condition)
+	   (let ((display (xlib::closed-display-display condition)))
+	     (format *error-output*
+		     "Closed display on stream ~a~%"
+		     (xlib::display-input-stream display)))
+	   (exit-hemlock nil)))
+	)
 ;     (when *in-hemlock-stream-input-method*
 ;       (error "Entering Hemlock stream input method recursively!"))
      (let ((*in-hemlock-stream-input-method* t)
