@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.4 1992/06/23 21:56:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.5 1992/06/25 03:18:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,7 +128,7 @@
   (inst extru y 31 2 zero-tn :=)
   (inst b do-static-fun :nullify t)
   (inst addo x y res)
-  (lisp-return lra :offset 2)
+  (lisp-return lra :offset 1)
 
   DO-STATIC-FUN
   (inst ldw (static-function-offset 'two-arg-+) null-tn lip)
@@ -157,7 +157,7 @@
   (inst extru y 31 2 zero-tn :=)
   (inst b do-static-fun :nullify t)
   (inst subo x y res)
-  (lisp-return lra :offset 2)
+  (lisp-return lra :offset 1)
 
   DO-STATIC-FUN
   (inst ldw (static-function-offset 'two-arg--) null-tn lip)
@@ -195,7 +195,7 @@
 	  (inst comclr x y zero-tn ,cond)
 	  (inst move null-tn res :tr)
 	  (load-symbol res t)
-	  (lisp-return lra :offset 2)
+	  (lisp-return lra :offset 1)
 
 	  DO-STATIC-FN
 	  (inst ldw (static-function-offset ',static-fn) null-tn lip)
@@ -233,7 +233,7 @@
 
   RETURN-NIL
   (inst move null-tn res)
-  (lisp-return lra :offset 2)
+  (lisp-return lra :offset 1)
 
   DO-STATIC-FN
   (inst ldw (static-function-offset 'eql) null-tn lip)
@@ -269,7 +269,7 @@
   (inst b do-static-fn :nullify t)
 
   (inst move null-tn res)
-  (lisp-return lra :offset 2)
+  (lisp-return lra :offset 1)
 
   DO-STATIC-FN
   (inst ldw (static-function-offset 'two-arg-=) null-tn lip)
