@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.3 1990/02/28 18:26:09 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.4 1990/03/08 17:30:04 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -7,13 +7,14 @@
 #include "vars.h"
 
 static int max_lines = 20, cur_lines = 0;
-static int max_depth = 5, cur_depth = 0;
+static int max_depth = 5, brief_depth = 2, cur_depth = 0;
+static int max_length = 5;
 static boolean dont_decend = FALSE, skip_newline = FALSE;
 static cur_clock = 0;
 
 static void print_obj();
 
-#define NEWLINE if (continue_p()) newline(NULL); else return;
+#define NEWLINE if (continue_p(TRUE)) newline(NULL); else return;
 
 char *lowtag_Names[] = {
     "even fixnum",
@@ -27,7 +28,8 @@ char *lowtag_Names[] = {
 };
 
 char *subtype_Names[] = {
-    "subtype 0",
+    "unused 0",
+    "unused 1",
     "bignum",
     "ratio",
     "single float",
@@ -73,28 +75,31 @@ int in;
         fputs(spaces + 64 - in, stdout);
 }
 
-static boolean continue_p()
+static boolean continue_p(newline)
+boolean newline;
 {
     char buffer[256];
 
     if (cur_depth >= max_depth || dont_decend)
         return FALSE;
 
-    if (skip_newline)
-        skip_newline = FALSE;
-    else
-        putchar('\n');
-
-    if (cur_lines >= max_lines) {
-        printf("More? [y] ");
-        fflush(stdout);
-
-        gets(buffer);
-
-        if (buffer[0] == 'n' || buffer[0] == 'N')
-            throw_to_monitor();
+    if (newline) {
+        if (skip_newline)
+            skip_newline = FALSE;
         else
-            cur_lines = 0;
+            putchar('\n');
+
+        if (cur_lines >= max_lines) {
+            printf("More? [y] ");
+            fflush(stdout);
+
+            gets(buffer);
+
+            if (buffer[0] == 'n' || buffer[0] == 'N')
+                throw_to_monitor();
+            else
+                cur_lines = 0;
+        }
     }
 
     return TRUE;
@@ -110,10 +115,65 @@ char *label;
     indent(cur_depth * 2);
 }
 
+
+static void brief_fixnum(obj)
+lispobj obj;
+{
+    printf("%d", obj>>2);
+}
+
 static void print_fixnum(obj)
 lispobj obj;
 {
     printf(": %d", obj>>2);
+}
+
+static void brief_otherimm(obj)
+lispobj obj;
+{
+    int type = TypeOf(obj);
+    int c;
+    char buffer[10];
+
+    switch (type) {
+        case type_BaseCharacter:
+            c = (obj>>8)&0xff;
+            switch (c) {
+                case '\0':
+                    printf("#\\Null");
+                    break;
+                case '\n':
+                    printf("#\\Newline");
+                    break;
+                case '\b':
+                    printf("#\\Backspace");
+                    break;
+                case '\177':
+                    printf("#\\Delete");
+                    break;
+                default:
+                    strcpy(buffer, "#\\");
+                    if (c >= 128) {
+                        strcat(buffer, "m-");
+                        c -= 128;
+                    }
+                    if (c < 32) {
+                        strcat(buffer, "c-");
+                        c += '@';
+                    }
+                    printf("%s%c", buffer, c);
+                    break;
+            }
+            break;
+
+        case type_UnboundMarker:
+            printf("<unbound marker>");
+            break;
+
+        default:
+            printf("%s", subtype_Names[type>>2]);
+            break;
+    }
 }
 
 static void print_otherimm(obj)
@@ -121,13 +181,12 @@ lispobj obj;
 {
     int c;
 
-    printf(", %s", subtype_Names[TypeOf(obj)>>3]);
+    printf(", %s", subtype_Names[TypeOf(obj)>>2]);
 
     switch (TypeOf(obj)) {
         case type_BaseCharacter:
-            printf(": font=0x%x, bits=0x%x, char=0x%x", (obj>>24)&0xff, (obj>>16)&0xff, c = ((obj>>8)&0xff));
-            if (c >= ' ' && c <= '~')
-                printf(" (%c)", c);
+            printf(": ");
+            brief_otherimm(obj);
             break;
 
         case type_Sap:
@@ -137,6 +196,40 @@ lispobj obj;
         default:
             printf(": data=%d", (obj>>8)&0xffffff);
             break;
+    }
+}
+
+static void brief_list(obj)
+lispobj obj;
+{
+    int space = FALSE;
+    int length = 0;
+
+    if (obj == NIL)
+        printf("NIL");
+    else {
+        putchar('(');
+        while (LowtagOf(obj) == type_ListPointer) {
+            struct cons *cons = (struct cons *)PTR(obj);
+
+            if (space)
+                putchar(' ');
+            if (++length >= max_length) {
+                printf("...");
+                obj = NIL;
+                break;
+            }
+            print_obj(NULL, cons->car);
+            obj = cons->cdr;
+            space = TRUE;
+            if (obj == NULL)
+                break;
+        }
+        if (obj != NIL) {
+            printf(" . ");
+            print_obj(NULL, obj);
+        }
+        putchar(')');
     }
 }
 
@@ -155,14 +248,52 @@ lispobj obj;
     }
 }
 
+static void brief_struct(obj)
+lispobj obj;
+{
+}
+
 static void print_struct(obj)
 lispobj obj;
 {
 }
 
-static void print_unused(obj)
+static void brief_otherptr(obj)
 lispobj obj;
 {
+    lispobj *ptr = (lispobj *)PTR(obj), header = *ptr;
+    int type = TypeOf(header);
+    struct symbol *symbol;
+    struct vector *vector;
+    char *charptr;
+
+    switch (type) {
+        case type_SymbolHeader:
+            symbol = (struct symbol *)ptr;
+            vector = (struct vector *)PTR(symbol->name);
+            for (charptr = (char *)vector->data; *charptr != '\0'; charptr++) {
+                if (*charptr == '"')
+                    putchar('\\');
+                putchar(*charptr);
+            }
+            break;
+
+        case type_SimpleString:
+            vector = (struct vector *)ptr;
+            putchar('"');
+            for (charptr = (char *)vector->data; *charptr != '\0'; charptr++) {
+                if (*charptr == '"')
+                    putchar('\\');
+                putchar(*charptr);
+            }
+            putchar('"');
+            break;
+            
+        default:
+            printf("#<ptr to ");
+            brief_otherimm(header);
+            putchar('>');
+    }
 }
 
 static void print_slots(slots, count, ptr)
@@ -294,7 +425,7 @@ lispobj obj;
             case type_BaseCharacter:
             case type_UnboundMarker:
                 NEWLINE;
-                printf("pointer to an immediate?\n");
+                printf("pointer to an immediate?");
                 break;
         }
     }
@@ -304,12 +435,14 @@ static void print_obj(prefix, obj)
 char *prefix;
 lispobj obj;
 {
-    static void (*Fns[])() = {print_fixnum, print_otherptr, print_otherimm, print_list, print_fixnum, print_struct, print_unused, print_otherptr};
+    static void (*verbose_fns[])() = {print_fixnum, print_otherptr, print_otherimm, print_list, print_fixnum, print_struct, print_otherimm, print_otherptr};
+    static void (*brief_fns[])() = {brief_fixnum, brief_otherptr, brief_otherimm, brief_list, brief_fixnum, brief_struct, brief_otherimm, brief_otherptr};
     int type = LowtagOf(obj);
     struct var *var = lookup_by_obj(obj);
     char buffer[256];
+    boolean verbose = cur_depth < brief_depth;
 
-    if (!continue_p())
+    if (!continue_p(verbose))
         return;
 
     if (var != NULL && var_clock(var) == cur_clock)
@@ -318,29 +451,50 @@ lispobj obj;
     if (var == NULL && (obj & type_FunctionPointer & type_ListPointer & type_StructurePointer & type_OtherPointer) != 0)
         var = define_var(NULL, obj, FALSE);
 
-    if (var != NULL) {
+    if (var != NULL)
         var_setclock(var, cur_clock);
-        sprintf(buffer, "$%s=", var_name(var));
-        newline(buffer);
-    }
-    else
-        newline(NULL);
 
-    printf("%s0x%x: %s", prefix, obj, lowtag_Names[type]);
     cur_depth++;
-    (*Fns[type])(obj);
+    if (verbose) {
+        if (var != NULL) {
+            sprintf(buffer, "$%s=", var_name(var));
+            newline(buffer);
+        }
+        else
+            newline(NULL);
+        printf("%s0x%x: ", prefix, obj);
+        if (cur_depth < brief_depth) {
+            fputs(lowtag_Names[type], stdout);
+            (*verbose_fns[type])(obj);
+        }
+        else
+            (*brief_fns[type])(obj);
+    }
+    else {
+        if (dont_decend)
+            printf("$%s", var_name(var));
+        else {
+            if (var != NULL)
+                printf("$%s=", var_name(var));
+            (*brief_fns[type])(obj);
+        }
+    }
     cur_depth--;
+    dont_decend = FALSE;
+}
+
+void reset_printer()
+{
+    cur_clock++;
+    cur_lines = 0;
     dont_decend = FALSE;
 }
 
 void print(obj)
 lispobj obj;
 {
-    cur_clock++;
-    cur_depth = 0;
-    cur_lines = 0;
-    dont_decend = FALSE;
     skip_newline = TRUE;
+    cur_depth = 0;
 
     print_obj("", obj);
 
