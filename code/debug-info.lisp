@@ -320,6 +320,9 @@
   ;; descriptive string.
   (name nil :type (or pathname list simple-string))
   ;;
+  ;; FILE-COMMENT for this file, or NIL if none (or not from a file.)
+  (comment nil :type (or simple-string null))
+  ;;
   ;; The universal time that the source was written, or NIL if unavailable.
   (created nil :type (or unsigned-byte null))
   ;;
