@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.54 1993/08/30 15:10:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.55 1993/08/30 21:34:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1386,7 +1386,7 @@
 				clayout))
     (cond
      (old-layout
-      (undefine-structure (layout-info old-layout))
+      (undefine-structure (layout-class old-layout))
       (when (and (class-subclasses class)
 		 (not (eq layout old-layout)))
 	(collect ((subs))
