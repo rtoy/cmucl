@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.50 2004/10/22 16:56:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.51 2004/12/14 23:57:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1534,6 +1534,63 @@
        (pprint-newline :mandatory stream)
        (output-object (pprint-pop) stream))))
 
+(defun pprint-defgeneric (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; DEFGENERIC
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-indent :block 2 stream)
+    (write-char #\space stream)
+    ;; Output class-name
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-newline :fill stream)
+    (write-char #\space stream)
+    ;; Output lambda list
+    (pprint-lambda-list stream (pprint-pop))
+    (pprint-indent :block 1 stream)
+    ;;(pprint-newline :linear stream)
+    ;; Output options and stuff
+    (loop
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :mandatory stream)
+       (let ((option-or-method (pprint-pop)))
+	 ;; Try to print the various options neatly.  Right now, we
+	 ;; just handle :method
+	 (cond ((and (consp option-or-method)
+		     (eq (car option-or-method) :method))
+		(flet
+		    ((almost-defmethod (stream list)
+		       (pprint-logical-block (stream list :prefix "(" :suffix ")")
+			 ;; :method
+			 (output-object (pprint-pop) stream)
+			 (pprint-exit-if-list-exhausted)
+			 ;; Print out all qualifiers then the lambda list
+			 (loop
+			    (let ((qual-or-lambda (pprint-pop)))
+			      (write-char #\space stream)
+			      (cond ((listp qual-or-lambda)
+				     ;; Print out lambda-list
+				     (pprint-lambda-list stream qual-or-lambda)
+				     (return))
+				    (t
+				     (output-object qual-or-lambda stream)))
+			      (pprint-exit-if-list-exhausted)))
+			 ;; Rest of the forms
+			 (pprint-newline :mandatory stream)
+			 (pprint-indent :block 0 stream)
+			 (loop
+			    (write-char #\space stream)
+			    (output-object (pprint-pop) stream)
+			    (pprint-exit-if-list-exhausted)
+			    (pprint-newline :linear stream)))))
+		  (almost-defmethod stream option-or-method)))
+	       (t
+		(output-object option-or-method stream)))))))
+
+  
+
 (defun pprint-defpackage (stream list &rest noise)
   (declare (ignore noise))
   (funcall (formatter "~:<~W ~W~I~@{~@:_ ~:<~@{~W~^~:I~@{ ~W~^~:_~}~}~:>~}~:>")
@@ -1542,9 +1599,11 @@
 (defun pprint-defmethod (stream list &rest noise)
   (declare (ignore noise))
   (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; DEFMETHOD
     (output-object (pprint-pop) stream)
     (pprint-exit-if-list-exhausted)
     (write-char #\space stream)
+    ;; Method name
     (output-object (pprint-pop) stream)
     (pprint-exit-if-list-exhausted)
     ;; Print out method qualifiers, if any
