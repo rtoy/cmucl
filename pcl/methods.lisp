@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.30 2003/05/11 11:30:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.31 2003/05/12 11:27:47 gerd Exp $")
 
 (in-package :pcl)
 
@@ -455,7 +455,6 @@
       method)))
   
 (defun real-remove-method (gf method)
-  ;; Note: Error check prohibited by ANSI spec removed.
   (when (eq gf (method-generic-function method))
     (let* ((methods (generic-function-methods gf))
 	   (new-methods (remove method methods)))	      
@@ -466,8 +465,8 @@
       (set-arg-info gf)
       (update-ctors 'remove-method :generic-function gf :method method)
       (update-dfun gf)
-      (update-accessor-pvs 'remove-method gf method)
-      gf)))
+      (update-accessor-pvs 'remove-method gf method)))
+  gf)
 
 
 ;;;; **************************
