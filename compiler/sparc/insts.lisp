@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.9 1992/07/09 19:46:32 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.10 1992/07/23 17:46:06 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,9 +15,6 @@
 ;;;
 ;;; Written by William Lott.
 ;;;
-;;; Converted to the SPARC by Sean Hallgren.
-;;;
-
 (in-package "SPARC")
 
 (use-package "NEW-ASSEM")
@@ -28,7 +25,7 @@
     :scheduler-p nil)
 
 
-;;;; Functions to convert TN's and random symbolic things into values.
+;;;; Constants, types, conversion functions, some disassembler stuff.
 
 (defun reg-tn-encoding (tn)
   (declare (type tn tn))
@@ -48,8 +45,62 @@
       (1+ (tn-offset tn))
       (tn-offset tn)))
 
+(disassem:set-disassem-params :instruction-alignment 32)
+
+(defvar *disassem-use-lisp-reg-names* t)
+
+(defconstant reg-symbols
+  (map 'vector
+       #'(lambda (name)
+	   (cond ((null name) nil)
+		 (t (make-symbol (concatenate 'string "%" name)))))
+       sparc::*register-names*))
+
+(disassem:define-argument-type reg
+  :printer #'(lambda (value stream dstate)
+	       (declare (stream stream) (fixnum value))
+	       (let ((regname (aref reg-symbols value)))
+		 (princ regname stream)
+		 (disassem:maybe-note-associated-storage-ref
+		  value
+		  'registers
+		  regname
+		  dstate))))
+
+(defconstant float-reg-symbols
+  (coerce 
+   (loop for n from 0 to 31 collect (make-symbol (format nil "%F~d" n)))
+   'vector))
+
+(disassem:define-argument-type fp-reg
+  :printer #'(lambda (value stream dstate)
+	       (declare (stream stream) (fixnum value))
+	       (let ((regname (aref float-reg-symbols value)))
+		 (princ regname stream)
+		 (disassem:maybe-note-associated-storage-ref
+		  value
+		  'float-registers
+		  regname
+		  dstate))))
+
+(disassem:define-argument-type relative-label
+  :sign-extend t
+  :use-label #'(lambda (value dstate)
+		 (declare (type (signed-byte 13) value)
+			  (type disassem:disassem-state dstate))
+		 (+ (ash value 2) (disassem:dstate-cur-addr dstate))))
+
 (defconstant branch-conditions
   '(:f :eq :le :lt :leu :ltu :n :vs :t :ne :gt :ge :gtu :geu :p :vc))
+
+;;; Note that these aren't the standard names for branch-conditions, I think
+;;; they're a bit more readable (e.g., "eq" instead of "e").  You could just
+;;; put a vector of the normal ones here too.
+(defconstant branch-cond-name-vec
+  (coerce branch-conditions 'vector))
+
+(disassem:define-argument-type branch-condition
+  :printer branch-cond-name-vec)
 
 (deftype branch-condition ()
   `(member ,@branch-conditions))
@@ -59,16 +110,100 @@
       (error "Unknown branch condition: ~S~%Must be one of: ~S"
 	     condition branch-conditions)))
 
-(defconstant fp-branch-conditions
+(defconstant branch-cond-true
+  #b1000)
+
+(defconstant branch-fp-conditions
   '(:f :ne :lg :ul :l :ug :g :u :t :eq :ue :ge :uge :le :ule :o))
 
+(defconstant branch-fp-cond-name-vec
+  (coerce branch-fp-conditions 'vector))
+
+(disassem:define-argument-type branch-fp-condition
+  :printer branch-fp-cond-name-vec)
+
+(disassem:define-argument-type call-fixup :use-label t)
+
 (deftype fp-branch-condition ()
-  `(member ,@fp-branch-conditions))
+  `(member ,@branch-fp-conditions))
 
 (defun fp-branch-condition (condition)
-  (or (position condition fp-branch-conditions)
+  (or (position condition branch-fp-conditions)
       (error "Unknown fp-branch condition: ~S~%Must be one of: ~S"
-	     condition fp-branch-conditions)))
+	     condition branch-fp-conditions)))
+
+
+;;;; dissassem:define-instruction-formats
+
+(disassem:define-instruction-format
+    (format-1 32 :default-printer '(:name :tab disp))
+  (op   :field (byte 2 30) :value 1)
+  (disp :field (byte 30 0)))
+
+(disassem:define-instruction-format
+    (format-2-immed 32 :default-printer '(:name :tab immed ", " rd))
+  (op    :field (byte 2 30) :value 0)
+  (rd    :field (byte 5 25) :type 'reg)
+  (op2   :field (byte 3 22))
+  (immed :field (byte 22 0)))
+
+(defconstant branch-printer
+  `(:name (:unless (:constant ,branch-cond-true) cond)
+	  (:unless (a :constant 0) "," 'A)
+	  :tab
+	  disp))
+
+(disassem:define-instruction-format
+    (format-2-branch 32 :default-printer branch-printer)
+  (op   :field (byte 2 30) :value 0)
+  (a    :field (byte 1 29) :value 0)
+  (cond :field (byte 4 25) :type 'branch-condition)
+  (op2  :field (byte 3 22))
+  (disp :field (byte 22 0) :type 'relative-label))
+
+(disassem:define-instruction-format
+    (format-2-unimp 32 :default-printer '(:name :tab data))
+  (op     :field (byte 2 30) :value 0)
+  (ignore :field (byte 5 25) :value 0)
+  (op2    :field (byte 3 22) :value 0)
+  (data   :field (byte 22 0)))
+
+(defconstant f3-printer
+  '(:name :tab
+	  (:unless (:same-as rd) rs1 ", ")
+	  (:choose rs2 immed) ", "
+	  rd))
+
+(disassem:define-instruction-format
+    (format-3-reg 32 :default-printer f3-printer)
+  (op  :field (byte 2 30))
+  (rd  :field (byte 5 25) :type 'reg)
+  (op3 :field (byte 6 19))
+  (rs1 :field (byte 5 14) :type 'reg)
+  (i   :field (byte 1 13) :value 0)
+  (asi :field (byte 8 5)  :value 0)
+  (rs2 :field (byte 5 0)  :type 'reg))
+
+(disassem:define-instruction-format
+    (format-3-immed 32 :default-printer f3-printer)
+  (op    :field (byte 2 30))
+  (rd    :field (byte 5 25) :type 'reg)
+  (op3   :field (byte 6 19))
+  (rs1   :field (byte 5 14) :type 'reg)
+  (i     :field (byte 1 13) :value 1)
+  (immed :field (byte 13 0) :sign-extend t))	; usually sign extended
+
+(disassem:define-instruction-format
+    (format-3-fpop 32
+     :default-printer
+        '(:name :tab (:unless (:same-as rd) rs1 ", ") rs2 ", " rd))
+  (op	:field (byte 2 30))
+  (rd 	:field (byte 5 25) :type 'fp-reg)
+  (op3  :field (byte 6 19))
+  (rs1  :field (byte 5 14) :type 'fp-reg)
+  (opf  :field (byte 9 5))
+  (rs2  :field (byte 5 0) :type 'fp-reg))
+
 
 
 ;;;; Primitive emitters.
@@ -98,15 +233,15 @@
 (define-emitter emit-format-3-immed 32
   (byte 2 30) (byte 5 25) (byte 6 19) (byte 5 14) (byte 1 13) (byte 13 0))
 
-
 (define-emitter emit-format-3-fpop 32
   (byte 2 30) (byte 5 25) (byte 6 19) (byte 5 14) (byte 9 5) (byte 5 0))
 
 
 
-;;;; Buncha format-3-instructions.
+;;;; Most of the format-3-instructions.
 
-(defun emit-format-3-inst (segment op op3 dst src1 src2 &key load-store fixup)
+(defun emit-format-3-inst (segment op op3 dst src1 src2
+				   &key load-store fixup dest-kind odd)
   (unless src2
     (cond ((and (typep src1 'tn) load-store)
 	   (setf src2 0))
@@ -115,58 +250,70 @@
 	   (setf src1 dst))))
   (etypecase src2
     (tn
-     (emit-format-3-reg segment op (reg-tn-encoding dst) op3
-			(reg-tn-encoding src1) 0 0 (reg-tn-encoding src2)))
+     (emit-format-3-reg segment op
+			(if dest-kind
+			    (fp-reg-tn-encoding dst odd)
+			    (reg-tn-encoding dst))
+			op3 (reg-tn-encoding src1) 0 0 (reg-tn-encoding src2)))
     (integer
-     (emit-format-3-immed segment op (reg-tn-encoding dst) op3
-			  (reg-tn-encoding src1) 1 src2))
+     (emit-format-3-immed segment op
+			  (if dest-kind
+			      (fp-reg-tn-encoding dst odd)
+			      (reg-tn-encoding dst))
+			  op3 (reg-tn-encoding src1) 1 src2))
     (fixup
      (unless (or load-store fixup)
        (error "Fixups aren't allowed."))
      (note-fixup segment :add src2)
-     (emit-format-3-immed segment op (reg-tn-encoding dst) op3
-			  (reg-tn-encoding src1) 1 0))))
-
-(defun emit-fp-format-3-inst (segment op op3 dst src1 src2
-				      &key load-store fixup odd)
-  (unless src2
-    (cond ((and (typep src1 'tn) load-store)
-	   (setf src2 0))
-	  (t
-	   (setf src2 src1)
-	   (setf src1 dst))))
-  (etypecase src2
-    (tn
-     (emit-format-3-reg segment op (fp-reg-tn-encoding dst odd) op3
-			(reg-tn-encoding src1) 0 0
-			(reg-tn-encoding src2)))
-    (integer
-     (emit-format-3-immed segment op (fp-reg-tn-encoding dst odd) op3
-			  (reg-tn-encoding src1) 1 src2))
-    (fixup
-     (unless (or load-store fixup)
-       (error "Fixups aren't allowed."))
-     (note-fixup segment :add src2)
-     (emit-format-3-immed segment op (fp-reg-tn-encoding dst odd) op3
-			  (reg-tn-encoding src1) 1 0))))
-
+     (emit-format-3-immed segment op
+			  (if dest-kind
+			      (fp-reg-tn-encoding dst odd)
+			      (reg-tn-encoding dst))
+			  op3 (reg-tn-encoding src1) 1 0))))
 
 (eval-when (compile eval)
 
-(defmacro define-f3-inst (name op op3 &key fixup load-store dest-kind)
-  `(define-instruction ,name (segment dst src1 &optional src2)
-     (:declare (type tn dst)
-	       ,(if (or fixup load-store)
-		    '(type (or tn (signed-byte 13) null fixup) src1 src2)
-		    '(type (or tn (signed-byte 13) null) src1 src2)))
-     ,(if dest-kind
-	  `(:emitter (emit-fp-format-3-inst segment ,op ,op3 dst src1 src2
-					    :load-store ,load-store
-					    :fixup ,fixup
-					    :odd (eq ',dest-kind 'odd-fp-reg)))
-	  `(:emitter (emit-format-3-inst segment ,op ,op3 dst src1 src2
-					 :load-store ,load-store
-					 :fixup ,fixup)))))
+;;; have to do this because defconstant is evalutated in the null lex env.
+(defmacro with-ref-format (printer)
+  `(let* ((addend
+	   '(:choose (:plus-integer immed) ("+" rs2)))
+	  (ref-format
+	   `("[" rs1 (:unless (:constant 0) ,addend) "]"
+	     (:choose (:unless (:constant 0) asi) nil))))
+     ,printer))
+
+(defconstant load-printer
+  (with-ref-format `(:NAME :TAB ,ref-format ", " rd)))
+
+(defconstant store-printer
+  (with-ref-format `(:NAME :TAB rd ", " ,ref-format)))
+
+(defmacro define-f3-inst (name op op3 &key fixup load-store (dest-kind 'reg)
+			       (printer :default))
+  (let ((printer
+	 (if (eq printer :default)
+	     (case load-store
+	       ((nil) :default)
+	       ((:load t) 'load-printer)
+	       (:store 'store-printer))
+	     printer)))
+    `(define-instruction ,name (segment dst src1 &optional src2)
+       (:declare (type tn dst)
+		 ,(if (or fixup load-store)
+		      '(type (or tn (signed-byte 13) null fixup) src1 src2)
+		      '(type (or tn (signed-byte 13) null) src1 src2)))
+       ,@(unless (eq dest-kind 'odd-fp-reg)
+	   `((:printer format-3-reg
+		       ((op ,op) (op3 ,op3) (rd nil :type ',dest-kind))
+		       ,printer)
+	     (:printer format-3-immed
+		       ((op ,op) (op3 ,op3) (rd nil :type ',dest-kind))
+		       ,printer)))
+       (:emitter (emit-format-3-inst segment ,op ,op3 dst src1 src2
+				     :load-store ,load-store
+				     :fixup ,fixup
+				     :dest-kind (not (eq ',dest-kind 'reg))
+				     :odd (eq ',dest-kind 'odd-fp-reg))))))
 
 ) ; eval-when (compile eval)
 
@@ -184,7 +331,8 @@
 (define-f3-inst st #b11 #b000100 :load-store :store)
 (define-f3-inst std #b11 #b000111 :load-store :store)
 (define-f3-inst stf #b11 #b100100 :dest-kind fp-reg :load-store :store)
-(define-f3-inst stf-odd #b11 #b100100 :dest-kind odd-fp-reg :load-store :store)(define-f3-inst stdf #b11 #b100111 :dest-kind fp-reg :load-store :store)
+(define-f3-inst stf-odd #b11 #b100100 :dest-kind odd-fp-reg :load-store :store)
+(define-f3-inst stdf #b11 #b100111 :dest-kind fp-reg :load-store :store)
 (define-f3-inst ldstub #b11 #b001101 :load-store t)
 (define-f3-inst swap #b11 #b001111 :load-store t)
 (define-f3-inst add #b10 #b000000 :fixup t)
@@ -218,22 +366,38 @@
 (define-f3-inst save #b10 #b111100)
 (define-f3-inst restore #b10 #b111101)
 
+
 
 ;;;; Random instructions.
 
 (define-instruction ldfsr (segment src1 src2)
   (:declare (type tn src1) (type (signed-byte 13) src2))
+  (:printer format-3-immed ((op #b11) (op3 #b100001)))
+  (:reads (list src1 :memory))
+  (:writes :float-status)
   (:emitter (emit-format-3-immed segment #b11 0 #b100001
 				 (reg-tn-encoding src1) 1 src2)))
 
 (define-instruction stfsr (segment src1 src2)
   (:declare (type tn src1) (type (signed-byte 13) src2))
+  (:printer format-3-immed ((op #b11) (op3 #b100101)))
+  (:reads (list src1 :float-status))
+  (:writes :memory)
   (:emitter (emit-format-3-immed segment #b11 0 #b100101 
 				 (reg-tn-encoding src1) 1 src2)))
+
+(eval-when (compile load eval)
+  (defun sethi-arg-printer (value stream dstate)
+    (declare (ignore dstate))
+    (format stream "%hi(#x~8,'0x)" (ash value 10)))
+) ; eval-when (compile load eval)
 
 (define-instruction sethi (segment dst src1)
   (:declare (type tn dst)
 	    (type (or (signed-byte 22) (unsigned-byte 22) fixup) src1))
+  (:printer format-2-immed
+            ((op2 #b100) (immed nil :printer #'sethi-arg-printer)))
+  (:writes dst)
   (:emitter
    (etypecase src1
      (integer
@@ -243,14 +407,23 @@
       (note-fixup segment :sethi src1)
       (emit-format-2-immed segment #b00 (reg-tn-encoding dst) #b100 0)))))
 			   
-
 (define-instruction rdy (segment dst)
   (:declare (type tn dst))
+  (:printer format-3-immed ((op #b10) (op3 #b101000) (rs1 0) (immed 0))
+            '('RD :tab '%Y ", " rd))
+  (:reads dst)
   (:emitter (emit-format-3-immed segment #b10 (reg-tn-encoding dst) #b101000
 				 0 1 0)))
 
+(defconstant wry-printer
+  '('WR :tab rs1 (:unless (:constant 0) ", " (:choose immed rs2)) ", " '%Y))
+
 (define-instruction wry (segment src1 &optional src2)
   (:declare (type tn src1) (type (or (signed-byte 13) tn null) src2))
+  (:printer format-3-reg ((op #b10) (op3 #b110000) (rd 0)) wry-printer)
+  (:printer format-3-immed ((op #b10) (op3 #b110000) (rd 0)) wry-printer)
+  (:writes (if src2 (list src1 src2) src1))
+  (:delay 3)
   (:emitter
    (etypecase src2
      (null 
@@ -262,8 +435,63 @@
       (emit-format-3-immed segment #b10 0 #b110000 (reg-tn-encoding src1) 1
 			   src2)))))
 
+(defun snarf-error-junk (sap offset &optional length-only)
+  (let* ((length (system:sap-ref-8 sap offset))
+         (vector (make-array length :element-type '(unsigned-byte 8))))
+    (declare (type system:system-area-pointer sap)
+             (type (unsigned-byte 8) length)
+             (type (simple-array (unsigned-byte 8) (*)) vector))
+    (cond (length-only
+           (values 0 (1+ length) nil nil))
+          (t
+           (kernel:copy-from-system-area sap (* sparc:byte-bits (1+ offset))
+                                         vector (* sparc:word-bits
+                                                   sparc:vector-data-offset)
+                                         (* length sparc:byte-bits))
+           (collect ((sc-offsets)
+                     (lengths))
+             (lengths 1)                ; the length byte
+             (let* ((index 0)
+                    (error-number (c::read-var-integer vector index)))
+               (lengths index)
+               (loop
+                 (when (>= index length)
+                   (return))
+                 (let ((old-index index))
+                   (sc-offsets (c::read-var-integer vector index))
+                   (lengths (- index old-index))))
+               (values error-number
+                       (1+ length)
+                       (sc-offsets)
+                       (lengths))))))))
+
+(defun unimp-control (chunk inst stream dstate)
+  (declare (ignore inst))
+  (flet ((nt (x) (if stream (disassem:note x dstate))))
+    (case (format-2-unimp-data chunk dstate)
+      (#.vm:error-trap
+       (nt "Error trap")
+       (disassem:handle-break-args #'snarf-error-junk stream dstate))
+      (#.vm:cerror-trap
+       (nt "Cerror trap")
+       (disassem:handle-break-args #'snarf-error-junk stream dstate))
+      (#.vm:object-not-list-trap
+       (nt "Object not list trap"))
+      (#.vm:breakpoint-trap
+       (nt "Breakpoint trap"))
+      (#.vm:pending-interrupt-trap
+       (nt "Pending interrupt trap"))
+      (#.vm:halt-trap
+       (nt "Halt trap"))
+      (#.vm:function-end-breakpoint-trap
+       (nt "Function end breakpoint trap"))
+      (#.vm:object-not-structure-trap
+       (nt "Object not structure trap"))
+    )))
+
 (define-instruction unimp (segment data)
   (:declare (type (unsigned-byte 22) data))
+  (:printer format-2-unimp () :default :control #'unimp-control)
   (:emitter (emit-format-2-unimp segment 0 0 0 data)))
 
 
@@ -287,30 +515,52 @@
 (define-instruction b (segment cond-or-target &optional target)
   (:declare (type (or label branch-condition) cond-or-target)
 	    (type (or label null) target))
+  (:printer format-2-branch ((op #b00) (op2 #b010)))
   (:emitter
    (emit-relative-branch segment 0 #b010 cond-or-target target)))
 
 (define-instruction ba (segment cond-or-target &optional target)
   (:declare (type (or label branch-condition) cond-or-target)
 	    (type (or label null) target))
+  (:printer format-2-branch ((op #b00) (op2 #b010) (a 1))
+            nil
+            :print-name 'b)
   (:emitter
    (emit-relative-branch segment 1 #b010 cond-or-target target)))
 
 (define-instruction t (segment condition target)
   (:declare (type branch-condition condition)
 	    (type (or (signed-byte 13) (unsigned-byte 13)) target))
+  (:printer format-3-immed ((op #b10)
+                            (rd nil :type 'branch-condition)
+                            (op3 #b111010)
+                            (rs1 0))
+            '(:name rd :tab immed))
   (:emitter (emit-format-3-immed segment #b10 (branch-condition condition)
 				 #b111010 0 1 target)))
 
 (define-instruction fb (segment condition target)
   (:declare (type fp-branch-condition condition) (type label target))
+  (:printer format-2-branch ((Op #B00)
+                             (cond nil :type 'branch-fp-condition)
+                             (op2 #b110)))
   (:emitter
    (emit-relative-branch segment 0 #b110 condition target t)))
+
+(defconstant jal-printer
+  '(:name :tab
+          (:choose (rs1 (:unless (:constant 0) (:plus-integer immed)))
+                   (:cond ((rs2 :constant 0) rs1)
+                          ((rs1 :constant 0) rs2)
+                          (t rs1 "+" rs2)))
+          (:unless (:constant 0) ", " rd)))
 
 (define-instruction jal (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn integer) src1)
 	    (type (or null fixup tn (signed-byte 13)) src2))
+  (:printer format-3-reg ((op #b10) (op3 #b111000)) jal-printer)
+  (:printer format-3-immed ((op #b10) (op3 #b111000)) jal-printer)
   (:emitter
    (unless src2
      (setf src2 src1)
@@ -330,9 +580,10 @@
       (emit-format-3-immed segment #b10 (reg-tn-encoding dst)
 			   #b111000 (reg-tn-encoding src1) 1 0)))))
 
-
 (define-instruction j (segment src1 &optional src2)
   (:declare (type tn src1) (type (or tn (signed-byte 13) fixup null) src2))
+  (:printer format-3-reg ((op #b10) (op3 #b111000) (rd 0)) jal-printer)
+  (:printer format-3-immed ((op #b10) (op3 #b111000) (rd 0)) jal-printer)
   (:emitter
    (etypecase src2
      (null
@@ -364,11 +615,13 @@
 (defmacro define-unary-fp-inst (name opf)
   `(define-instruction ,name (segment dst src1 &optional src2)
      (:declare (type tn dst src1) (type (or null tn) src2))
+     (:printer format-3-fpop ((op #b10) (op3 #b110100) (opf ,opf)))
      (:emitter (emit-fp-inst segment ,opf #b110100 dst src1 src2))))
 
 (defmacro define-binary-fp-inst (name opf &optional (op3 #b110100))
   `(define-instruction ,name (segment dst src1 &optional src2)
      (:declare (type tn dst src1) (type (or null tn) src2))
+     (:printer format-3-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
      (:emitter (emit-fp-inst segment ,opf ,op3 dst src1 src2))))
   
 ); eval-when (compile eval)
@@ -394,7 +647,9 @@
 (define-unary-fp-inst fxtod #b011001011)
 
 (define-unary-fp-inst fmovs #b000000001)
-(define-unary-fp-inst fmovs-odd #b000000001)
+(define-instruction fmovs-odd (segment dst src1 &optional src2)
+  (:declare (type tn dst src1) (type (or null tn) src2))
+  (:emitter (emit-fp-inst segment #b000000001 #b110100 dst src1 src2)))
 (define-unary-fp-inst fnegs #b000000101)
 (define-unary-fp-inst fabss #b000001001)
 
@@ -480,10 +735,15 @@
 	     (inst jali zero-tn tmpreg value))))
 
 (define-instruction nop (segment)
+  (:printer format-2-immed ((rd 0) (op2 #b100) (immed 0)) '(:name))
   (:emitter (emit-format-2-immed segment 0 0 #b100 0)))
 
 (define-instruction cmp (segment src1 &optional src2)
   (:declare (type tn src1) (type (or null tn (signed-byte 13)) src2))
+  (:printer format-3-reg ((op #b10) (op3 #b010100) (rd 0))
+            '(:name :tab rs1 ", " rs2))
+  (:printer format-3-immed ((op #b10) (op3 #b010100) (rd 0))
+            '(:name :tab rs1 ", " immed))
   (:emitter
    (etypecase src2
      (null
@@ -497,6 +757,8 @@
 
 (define-instruction not (segment dst &optional src1)
   (:declare (type tn dst) (type (or tn null) src1))
+  (:printer format-3-reg ((op #b10) (op3 #b000111) (rs2 0))
+            '(:name :tab (:unless (:same-as rd) rs1 ", " ) rd))
   (:emitter
    (unless src1
      (setf src1 dst))
@@ -505,6 +767,8 @@
 
 (define-instruction neg (segment dst &optional src1)
   (:declare (type tn dst) (type (or tn null) src1))
+  (:printer format-3-reg ((op #b10) (op3 #b000100) (rs1 0))
+            '(:name :tab (:unless (:same-as rd) rs2 ", " ) rd))
   (:emitter
    (unless src1
      (setf src1 dst))
@@ -513,8 +777,11 @@
 
 (define-instruction move (segment dst src1)
   (:declare (type tn dst src1))
+  (:printer format-3-reg ((op #b10) (op3 #b000010) (rs1 0))
+            '(:name :tab rs2 ", " rd))
   (:emitter (emit-format-3-reg segment #b10 (reg-tn-encoding dst) #b000010
 			       0 0 0 (reg-tn-encoding src1))))
+
 
 
 ;;;; Instructions for dumping data and header objects.
@@ -563,7 +830,6 @@
 
 
 ;;;; Instructions for converting between code objects, functions, and lras.
-
 
 (defun emit-compute-inst (segment vop dst src label temp calc)
   (emit-chooser
