@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.12 1992/12/18 13:52:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.13 1993/02/12 19:09:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
 
 ;;;; C string support.
 
-(def-alien-type-class (c-string :include pointer))
+(def-alien-type-class (c-string :include pointer :include-args (to)))
 
 (def-alien-type-translator c-string ()
   (make-alien-c-string-type :to (parse-alien-type 'char)))
