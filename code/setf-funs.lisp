@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.5 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.6 1998/07/19 00:22:19 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,6 +54,6 @@
 
 (define-setters ("LISP")
   ;; Semantically silly...
-  getf apply ldb mask-field logbitp subseq
+  getf apply ldb mask-field logbitp subseq values
   ;; Have explicit redundant definitions...
   setf bit sbit get aref gethash)
