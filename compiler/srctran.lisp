@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.37 1992/06/05 18:45:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.38 1992/08/05 00:27:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1065,18 +1065,18 @@
 ;;; function or a constant.
 
 
-(loop for (name identity result) in
-  '((ash 0 x)
-    (logand -1 x)
-    (logand 0 0)
-    (logior 0 x)
-    (logior -1 -1)
-    (logxor -1 (lognot x))
-    (logxor 0 x)) do
-  (deftransform name ((x y) `(* (constant-argument (member ,identity))) '*
-		      :eval-name t)
-    "fold identity operations"
-    result))
+(dolist (stuff '((ash 0 x)
+		 (logand -1 x)
+		 (logand 0 0)
+		 (logior 0 x)
+		 (logior -1 -1)
+		 (logxor -1 (lognot x))
+		 (logxor 0 x)))
+  (destructuring-bind (name identity result) stuff
+    (deftransform name ((x y) `(* (constant-argument (member ,identity))) '*
+			:eval-name t)
+      "fold identity operations"
+      result)))
 
 
 ;;; These are restricted to rationals, because (- 0 0.0) is 0.0, not -0.0, and
@@ -1109,32 +1109,32 @@
 ;;;
 ;;;    If y is not constant, not zerop, or is contagious, then give up.
 ;;;
-(loop for (name result) in
-  '((+ x)
-    (- x)
-    (expt 1)) do
-  (deftransform name ((x y) '(t (constant-argument t)) '* :eval-name t)
-    "fold zero arg"
-    (let ((val (continuation-value y)))
-      (unless (and (zerop val)
-		   (not (and (floatp val) (minusp (float-sign val))))
-		   (not-more-contagious y x))
-	(give-up)))
-    result))
+(dolist (stuff '((+ x)
+		 (- x)
+		 (expt 1)))
+  (destructuring-bind (name result) stuff
+    (deftransform name ((x y) '(t (constant-argument t)) '* :eval-name t)
+      "fold zero arg"
+      (let ((val (continuation-value y)))
+	(unless (and (zerop val)
+		     (not (and (floatp val) (minusp (float-sign val))))
+		     (not-more-contagious y x))
+	  (give-up)))
+      result)))
 
 ;;; Fold (OP x +/-1)
 ;;;
-(loop for (name result minus-result) in
-  '((* x (%negate x))
-    (/ x (%negate x))
-    (expt x (/ 1 x))) do
-  (deftransform name ((x y) '(t (constant-argument real)) '* :eval-name t)
-    "fold identity operations"
-    (let ((val (continuation-value y)))
-      (unless (and (= (abs val) 1)
-		   (not-more-contagious y x))
-	(give-up))
-      (if (minusp val) minus-result result))))
+(dolist (stuff '((* x (%negate x))
+		 (/ x (%negate x))
+		 (expt x (/ 1 x))))
+  (destructuring-bind (name result minus-result) stuff
+    (deftransform name ((x y) '(t (constant-argument real)) '* :eval-name t)
+      "fold identity operations"
+      (let ((val (continuation-value y)))
+	(unless (and (= (abs val) 1)
+		     (not-more-contagious y x))
+	  (give-up))
+	(if (minusp val) minus-result result)))))
 
 
 ;;;; Character operations:
