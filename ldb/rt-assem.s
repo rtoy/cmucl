@@ -150,14 +150,21 @@ call_into_c:
 	ti	7, r0, trap_PendingInterrupt
 
 1:
-	/* Get the first 4 args. */
+	/* Get the first 4 args, and adjust the stack pointer.  We need to */
+	/* adjust the stack pointer because r1 is supposed to point at the */
+	/* 5th argument, not the 1st.  This is easier than trying to fix */
+	/* pack to be able to deal with TNs with a negative offset. */
 	l	r2, 0(r1)
 	l	r3, 4(r1)
 	l	r4, 8(r1)
-	l	r5, 9(r1)
+	l	r5, 12(r1)
+	cal	r1, 16(r1)
 
 	/* And hit it. */
 	balr	r15, r15
+
+	/* Save the second return value (assuming there is one) */
+	mr	NARGS, OCFP
 
 	/* Clear desriptor regs.  We have to do this before we clear the
 	foreign-function-call-active flag even if we are just going to
@@ -174,18 +181,18 @@ call_into_c:
 /* No longer in foreign function call. */
 /* Note: the atomic flag should still be set. */
 	lis	A0, 0
-	store	A0, _foreign_function_call_active, NL0
+	store	A0, _foreign_function_call_active, OCFP
 
 /* Load the rest of lisp state. */
 	load	CSP, _current_control_stack_pointer
 	load	CFP, _current_control_frame_pointer
 
 /* No longer atomic. */
-	store	A0, PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET, NL0
+	store	A0, PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET, OCFP
 
 /* Were we interrupted? */
-	load	NL0, PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET
-	ci	NL0, 0
+	load	OCFP, PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET
+	ci	OCFP, 0
 	je	1f
 
 	ti	7, r0, trap_PendingInterrupt
@@ -199,6 +206,10 @@ call_into_c:
 	/* Reset the stack. */
 	mr	CSP, CFP
 	mr	CFP, OCFP
+	cal	r1, -16(r1)
+
+	/* Restore the second return value */
+	mr	OCFP, NARGS
 
 	/* And return */
 	cal	LIP, (4-type_OtherPointer)(LRA)
