@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.24 1992/04/21 04:15:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.25 1992/09/07 15:26:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 (export '(component component-info))
 
@@ -33,7 +33,7 @@
 	    (:constructor make-null-environment ())
 	    (:constructor internal-make-lexenv
 			  (functions variables blocks tags type-restrictions
-				     inlines lambda cleanup cookie
+				     lambda cleanup cookie
 				     interface-cookie options)))
   ;;
   ;; Alist (name . what), where What is either a Functional (a local function)
@@ -66,9 +66,6 @@
   ;; binding of the affected name.  When Thing is a continuation, this is used
   ;; to track the innermost THE type declaration.
   (type-restrictions nil :type list)
-  ;;
-  ;; An alist (Leaf . Inlinep) describing local inline declarations.
-  (inlines nil :type list)
   ;;
   ;; The lexically enclosing lambda, if any.
   (lambda nil :type (or clambda null))
@@ -415,10 +412,13 @@
   ;; The kind of component:
   ;; 
   ;; NIL
-  ;;     An ordinary component, containing arbitrary code.
+  ;;     An ordinary component, containing non-top-level code.
   ;;
   ;; :Top-Level
   ;;     A component containing only load-time code.
+  ;;
+  ;; :Complex-Top-Level
+  ;;     A component containing both top-level and run-time code.
   ;;
   ;; :Initial
   ;;     The result of initial IR1 conversion, on which component analysis has
@@ -427,7 +427,7 @@
   ;; :Deleted
   ;;     Debris left over from component analysis.
   ;;
-  (kind nil :type (member nil :top-level :initial :deleted))
+  (kind nil :type (member nil :top-level :complex-top-level :initial :deleted))
   ;;
   ;; The blocks that are the dummy head and tail of the DFO.  Entry/exit points
   ;; have these blocks as their predecessors/successors.  Null temporarily.
@@ -465,7 +465,19 @@
   ;;
   ;; The Source-Info structure describing where this component was compiled
   ;; from.
-  (source-info *source-info* :type source-info))
+  (source-info *source-info* :type source-info)
+  ;;
+  ;; Count of the number of inline expansions we have done while compiling this
+  ;; component, to detect infinite or exponential blowups.
+  (inline-expansions 0 :type index)
+  ;;
+  ;;    A hashtable from combination nodes to things describing how an
+  ;; optimization of the node failed.  The value is an alist
+  ;; (Transform .  Args), where Transform is the structure describing the
+  ;; transform that failed, and Args is either a list of format arguments for
+  ;; the note, or the FUNCTION-TYPE that would have enabled the transformation
+  ;; but failed to match.
+  (failed-optimizations (make-hash-table :test #'eq) :type hash-table))
 
 (defprinter component
   name
@@ -701,6 +713,32 @@
   for
   slot)
 
+;;; The Defined-Function structure represents functions that are defined in
+;;; the same compilation block, or that have inline expansions, or have a
+;;; non-NIL INLINEP value.  Whenever we change the INLINEP state (i.e. an
+;;; inline proclamation) we copy the structure so that former inlinep values
+;;; are preserved.
+;;;
+(defstruct (defined-function (:include global-var
+				       (where-from :defined)
+				       (kind :global-function))
+			     (:print-function %print-defined-function))
+  ;;
+  ;; The values of INLINEP and INLINE-EXPANSION initialized from the global
+  ;; environment.
+  (inlinep nil :type inlinep)
+  (inline-expansion nil :type (or cons null))
+  ;;
+  ;; The block-local definition of this function (either because it was
+  ;; semi-inline, or because it was defined in this block.)  If this function
+  ;; is not an entry point, then this may be deleted or let-converted.  Null if
+  ;; we haven't converted the expansion yet.
+  (functional nil :type (or functional null)))
+
+(defprinter defined-function
+  name
+  inlinep
+  (functional :test functional))
 
 
 ;;;; Function stuff:
@@ -790,9 +828,13 @@
   ;; With all other kinds, this is null.
   (entry-function nil :type (or functional null))
   ;;
+  ;; The value of any inline/notinline declaration for a local function.
+  (inlinep nil :type inlinep)
+  ;;
   ;; If we have a lambda that can be used as in inline expansion for this
   ;; function, then this is it.  If there is no source-level lambda
-  ;; corresponding to this function then this is Null.
+  ;; corresponding to this function then this is Null (but then INLINEP will
+  ;; always be NIL as well.)
   (inline-expansion nil :type list)
   ;;
   ;; The lexical environment that the inline-expansion should be converted in.
@@ -1041,19 +1083,14 @@
 ;;;
 (defstruct (ref
 	    (:include node (:reoptimize nil))
-	    (:constructor really-make-ref (derived-type leaf inlinep))
+	    (:constructor really-make-ref (derived-type leaf))
 	    (:print-function %print-ref))
   ;;
   ;; The leaf referenced.
-  (leaf nil :type leaf)
-  ;;
-  ;; For a function variable, indicates the legality of coding inline.  Nil,
-  ;; means that there is no relevent declaration so we can do whatever we want.
-  (inlinep nil :type inlinep))
+  (leaf nil :type leaf))
 
 (defprinter ref
-  leaf
-  (inlinep :test inlinep))
+  leaf)
 
 
 ;;; Naturally, the IF node always appears at the end of a block.  Node-Cont is
@@ -1115,13 +1152,14 @@
   ;; variable is unreferenced, and thus no argument value need be passed.
   (args nil :type list)
   ;;
-  ;; The kind of function call being made.  :Full is a standard call, with the
-  ;; function being determined at run time.  :Local is used when we are calling
-  ;; a function known at compile time.  The IR1 for the called function is
-  ;; spliced into the flow graph for the caller.  Calls to known global
-  ;; functions are represented by storing the Function-Info for the function in
-  ;; this slot.
-  (kind :full :type (or (member :full :local) function-info))
+  ;; The kind of function call being made.  :LOCAL means that this is a local
+  ;; call to a function in the same component, and that argument syntax
+  ;; checking has been done, etc.  Calls to known global functions are
+  ;; represented by storing the FUNCTION-INFO for the function in this slot.
+  ;; :FULL is a call to an (as yet) unknown function.  :ERROR is like :FULL,
+  ;; but means that we have discovered that the call contains an error, and
+  ;; should not be reconsidered for optimization.
+  (kind :full :type (or (member :local :full :error) function-info))
   ;;
   ;; Some kind of information attached to this node by the back end.
   (info nil))
