@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.46 1992/04/07 19:21:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.47 1992/04/15 01:02:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,7 +138,7 @@
 (defknown (macroexpand macroexpand-1) (t &optional lexical-environment)
   (values form &optional boolean))
 
-(defknown compiler-macro-function (t & optional lexical-environment)
+(defknown compiler-macro-function (t &optional lexical-environment)
   (or function null)
   (flushable))
 (defknown (compiler-macroexpand compiler-macroexpand-1)
