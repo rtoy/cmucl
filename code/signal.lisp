@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.5 1990/09/09 20:36:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.6 1990/10/13 04:54:33 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -249,7 +249,7 @@
   (enable-interrupt :sigtrap #'kernel::internal-error)
   (enable-interrupt :sigiot #'sigiot-handler)
   (enable-interrupt :sigemt #'sigemt-handler)
-  #+nil (enable-interrupt :sigfpe #'sigfpe-handler)
+  (enable-interrupt :sigfpe #'sigfpe-handler)
   (enable-interrupt :sigbus #'sigbus-handler)
   (enable-interrupt :sigsegv #'sigsegv-handler)
   (enable-interrupt :sigsys #'sigsys-handler)
