@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.1 1990/11/03 03:15:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.2 1990/11/13 22:53:30 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -17,12 +17,32 @@
 (in-package "VM")
 
 (export '(lowtag-bits lowtag-mask lowtag-limit type-bits type-mask
-	  primitive-object primitive-object-p primitive-object-name
-	  primitive-object-header primitive-object-lowtag
-	  primitive-object-options primitive-object-slots
-	  primitive-object-size primitive-object-variable-length
-	  slot-name slot-docs slot-rest-p slot-offset slot-length
-	  slot-options define-for-each-primitive-object))
+	  target-most-positive-fixnum target-most-negative-fixnum
+	  even-fixnum-type function-pointer-type other-immediate-0-type
+	  list-pointer-type odd-fixnum-type structure-pointer-type
+	  other-immediate-1-type other-pointer-type bignum-type ratio-type
+	  single-float-type double-float-type complex-type
+	  simple-array-type simple-string-type simple-bit-vector-type
+	  simple-vector-type simple-array-unsigned-byte-2-type
+	  simple-array-unsigned-byte-4-type
+	  simple-array-unsigned-byte-8-type
+	  simple-array-unsigned-byte-16-type
+	  simple-array-unsigned-byte-32-type simple-array-single-float-type
+	  simple-array-double-float-type complex-string-type
+	  complex-bit-vector-type complex-vector-type complex-array-type
+	  code-header-type function-header-type closure-header-type
+	  closure-function-header-type return-pc-header-type
+	  value-cell-header-type symbol-header-type base-character-type
+	  sap-type unbound-marker-type weak-pointer-type
+	  structure-header-type vector-normal-subtype
+	  vector-valid-hashing-subtype vector-must-rehash-subtype
+	  primitive-object primitive-object-p
+	  primitive-object-name primitive-object-header
+	  primitive-object-lowtag primitive-object-options
+	  primitive-object-slots primitive-object-size
+	  primitive-object-variable-length slot-name slot-docs slot-rest-p
+	  slot-offset slot-length slot-options
+	  define-for-each-primitive-object))
 
 
 
@@ -238,7 +258,7 @@
        :setf-vop c::set-car :set-trans c::%rplaca
        :init :arg)
   (cdr :ref-vop cdr :ref-trans cdr
-       :setf-vop c::set-cdr :set-trans c::%rplacd
+       :setf-vop set-cdr :set-trans c::%rplacd
        :init :arg))
 
 (define-primitive-object (bignum :lowtag other-pointer-type
@@ -273,40 +293,40 @@
 				:header t)
   (fill-pointer :type index
 		:ref-trans %array-fill-pointer
-		:ref-known (c::flushable c::foldable)
+		:ref-known (flushable foldable)
 		:set-trans (setf %array-fill-pointer)
-		:set-known (c::unsafe))
+		:set-known (unsafe))
   (fill-pointer-p :type (member t nil)
 		  :ref-trans %array-fill-pointer-p
-		  :ref-known (c::flushable c::foldable)
+		  :ref-known (flushable foldable)
 		  :set-trans (setf %array-fill-pointer-p)
-		  :set-known (c::unsafe))
+		  :set-known (unsafe))
   (elements :type index
 	    :ref-trans %array-available-elements
-	    :ref-known (c::flushable c::foldable)
+	    :ref-known (flushable foldable)
 	    :set-trans (setf %array-available-elements)
-	    :set-known (c::unsafe))
+	    :set-known (unsafe))
   (data :type array
 	:ref-trans %array-data-vector
-	:ref-known (c::flushable c::foldable)
+	:ref-known (flushable foldable)
 	:set-trans (setf %array-data-vector)
-	:set-known (c::unsafe))
+	:set-known (unsafe))
   (displacement :type (or index null)
 		:ref-trans %array-displacement
-		:ref-known (c::flushable c::foldable)
+		:ref-known (flushable foldable)
 		:set-trans (setf %array-displacement)
-		:set-known (c::unsafe))
+		:set-known (unsafe))
   (displaced-p :type (member t nil)
 	       :ref-trans %array-displaced-p
-	       :ref-known (c::flushable c::foldable)
+	       :ref-known (flushable foldable)
 	       :set-trans (setf %array-displaced-p)
-	       :set-known (c::unsafe))
+	       :set-known (unsafe))
   (dimensions :rest-p t))
 
 (define-primitive-object (vector :lowtag other-pointer-type :header t)
   (length :ref-trans c::vector-length
 	  :type index
-	  :ref-known (c::flushable c::foldable))
+	  :ref-known (flushable foldable))
   (data :rest-p t :c-type "unsigned long"))
 
 (define-primitive-object (code :lowtag other-pointer-type :header t)
@@ -315,7 +335,7 @@
 		:set-vop c::set-code-entry-points)
   (debug-info :type t
 	      :ref-trans di::code-debug-info
-	      :ref-known (c::flushable)
+	      :ref-known (flushable)
 	      :set-vop c::set-code-debug-info)
   (constants :rest-p t))
 
@@ -324,15 +344,15 @@
   (self :ref-vop c::function-self :set-vop c::set-function-self)
   (next :ref-vop c::function-next :set-vop c::set-function-next)
   (name :ref-vop c::function-name
-	:ref-known (c::flushable)
+	:ref-known (flushable)
 	:ref-trans %function-header-name
 	:set-vop c::set-function-name)
   (arglist :ref-vop c::function-arglist
-	   :ref-known (c::flushable)
+	   :ref-known (flushable)
 	   :ref-trans lisp::%function-header-arglist
 	   :set-vop c::set-function-arglist)
   (type :ref-vop c::function-type
-	:ref-known (c::flushable)
+	:ref-known (flushable)
 	:ref-trans lisp::%function-header-type
 	:set-vop c::set-function-type)
   (code :rest-p t :c-type "unsigned char"))
@@ -345,7 +365,7 @@
 				  :alloc-vop c::make-closure)
   (function :init :arg
 	    :ref-vop c::closure-function
-	    :ref-known (c::flushable)
+	    :ref-known (flushable)
 	    :ref-trans %closure-function)
   (info :rest-p t :set-vop c::closure-init :ref-vop c::closure-ref))
 
@@ -379,14 +399,14 @@
 				       :header weak-pointer-type
 				       :alloc-trans c::%make-weak-pointer)
   (value :ref-trans c::%weak-pointer-value
-	 :ref-known (c::flushable)
+	 :ref-known (flushable)
 	 :set-trans (setf c::%weak-pointer-value)
-	 :set-known (c::unsafe)
+	 :set-known (unsafe)
 	 :init :arg)
   (broken :ref-trans c::%weak-pointer-broken
-	  :ref-known (c::flushable)
+	  :ref-known (flushable)
 	  :set-trans (setf c::%weak-pointer-broken)
-	  :set-known (c::unsafe)
+	  :set-known (unsafe)
 	  :init :arg)
   (next :c-type "struct weak_pointer *"))
   
