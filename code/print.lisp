@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.25 1991/11/09 02:47:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.26 1991/11/16 00:22:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1399,4 +1399,4 @@
 	   (write value :stream stream)
 	   (write-char #\> stream))
 	  (t
-	   (write-string "#<Broken Weak Pointer>")))))
+	   (write-string "#<Broken Weak Pointer>" stream)))))
