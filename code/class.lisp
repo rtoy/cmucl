@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.6 1993/02/16 10:51:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.7 1993/02/16 14:44:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -732,6 +732,9 @@
 			   :length length)))
     (cond ((not old)
 	   (setf (gethash name *forward-referenced-layouts*) res))
+	  ((not *type-system-initialized*)
+	   (setf (layout-class old) class)
+	   old)
 	  ((redefine-layout-warning old "current" res "compile time")
 	   (restart-case
 	       (error "Loading a reference to class ~S when the compile ~@
