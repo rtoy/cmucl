@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.24 2004/05/14 16:08:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.25 2005/02/11 14:45:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,17 +48,18 @@
 (defreg csp 3)				; %g3
 (defreg cfp 4)				; %g4
 (defreg bsp 5)				; %g5
-;; %g6 and %g7 are supposed to be reserved for the system.  %g6 is
-;; apparently used by thread libraries.  %g7 doesn't seem to be
+;; %g6 and %g7 are supposed to be reserved for the system.  %g7 is
+;; apparently used by thread libraries, and on Solaris 10, is always
+;; used, even for apps that aren't threaded.  %g6 doesn't seem to be
 ;; currently used.
 
-;; NOTE: We are going to use this as a global temp for use by the
+;; NOTE: We need some otherwise unused register for the
 ;; define-move-function functions so we can access things where the
 ;; offset of the object is too large to fit in the offset part of an
-;; instruction.  This breaks ABI.  If this is not desired, we can
-;; probably use a5 (aka %l5).  But if we do, be sure to remove a5 from
-;; the list of arg registers, descriptor-regs, etc.
-(defreg gtemp 7)			; %g7
+;; instruction.  It needs to be fixed because these move functions
+;; don't have any other args to use.  And since the register allocator
+;; doesn't know about such uses, we can't use it for anything else.
+(defreg gtemp 26)			; %i2, aka L0
 
 ;; Outs.  These get clobbered when we call into C.
 (defreg nl0 8)				; %o0
@@ -83,7 +84,12 @@
 ;; Ins.  These are preserved just like locals.
 (defreg cname 24)			; %i0
 (defreg lexenv 25)			; %i1
+;; WARNING: Register L0 is used as a global temp for
+;; define-move-functions to access stack variables when needed.  We
+;; can't use it for anything else!
+#+nil
 (defreg l0 26)				; %i2
+
 (defreg nfp 27)				; %i3
 (defreg cfunc 28)			; %i4
 (defreg code 29)			; %i5
@@ -96,7 +102,8 @@
   ;; disassemble code that uses these registers.  (Callbacks use %fp).
   ;; So manually give names to these registers
   (setf (aref *register-names* 6) "G6")
-  #+nil(setf (aref *register-names* 7) "G7")
+  (setf (aref *register-names* 7) "G7")
+  (setf (aref *register-names* 26) "L0")
   (setf (aref *register-names* 30) "FP")
   )
 
@@ -111,7 +118,7 @@
   nl0 nl1 nl2 nl3 nl4 nl5 nargs)
 
 (defregset descriptor-regs
-  a0 a1 a2 a3 a4 a5 ocfp lra cname lexenv l0)
+  a0 a1 a2 a3 a4 a5 ocfp lra cname lexenv)
 
 (defregset register-arg-offsets
   a0 a1 a2 a3 a4 a5)
