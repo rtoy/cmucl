@@ -1,3 +1,43 @@
+2/18/92 to 2/23/92
+
+Code:
+
+Several bug fixes to the new alien stuff.
+
+All SAP-REF-mumble functions now uniformly take the offset argument in
+bytes.
+
+Changed *LOAD-VERBOSE* initial value to T.
+
+Added *GC-RUN-TIME* accounting.  Added some declarations, primarily for the
+benefit of GET-BYTES-CONSED.
+
+Changed TIME to use *GC-RUN-TIME* to print the amount of time spent in GC.
+
+Allow search-lists to expand into relative pathnames by quietly merging
+them with ``default:''.
+
+
+Compiler:
+
+Added a new DEFTRANSFORM keyword, :IMPORTANT, which means an failed
+transform efficiency note should be generated when brevity<=speed, not just
+brevity<speed.
+
+Added an assertion that we don't join components with random kinds.
+
+Bind *PRINT-LINES* around compiler error output to *ERROR-PRINT-LINES*.
+
+Make DELETE-COMPONENT set COMPONENT-KIND to :DELETED so that we can detect
+inconsistencies more easily.
+
+When checking if the call we are about to convert is going to be deleted, look
+at the block holding the combination, not the ref, since the combination may be
+deleted when the ref isn't.
+
+
+
+
 2/12/92 to 2/18/92
 
 Aliens and the foreign function call interface have been totally
