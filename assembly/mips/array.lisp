@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.1 1990/03/07 19:04:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.2 1990/03/18 23:53:17 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -26,7 +26,7 @@
      (inst and alloc-tn alloc-tn ,ndescr)
      ,(if (constantp type)
 	  `(loadi ,ndescr ,type)
-	  `(inst slr ,ndescr ,type vm:word-shift))
+	  `(inst srl ,ndescr ,type vm:word-shift))
      (storew ,ndescr ,vector 0 vm:other-pointer-type)
      (storew ,length ,vector vm:vector-length-slot vm:other-pointer-type)))
 
@@ -59,7 +59,7 @@
 			  (:temp lip :sc interior-reg :type interior)
 			  (:temp vector :sc descriptor-reg))
 
-  (allocate-vector vm:simple-vector-type length length ndescr)
+  (allocate-vector vm:simple-vector-type length length vector ndescr)
   (inst beq length zero-tn done)
   (inst addiu lip vector (- (* vm:vector-data-offset vm:word-bytes)
 			    vm:other-pointer-type))
@@ -67,9 +67,9 @@
   loop
 
   (storew fill lip)
-  (inst addiu length (fixnum -1))
-  (bne length zero-tn loop)
-  (inst addiu lip vm:word-bytes)
+  (inst addiu length length (fixnum -1))
+  (inst bne length zero-tn loop)
+  (inst addiu lip lip vm:word-bytes)
 
   done
 
@@ -102,7 +102,7 @@
   (inst sra words length (+ vm:word-shift 2))
   (inst addiu words words 1)
   (inst sll words words 2)
-  (allocate-vector vm:simple-string-type length words ndescr)
+  (allocate-vector vm:simple-string-type length words vector ndescr)
   (maybe-invoke-gc vector words)
   (move result vector))
 
