@@ -50,7 +50,7 @@
 (setf (search-list "pcl:") '("target:pcl/"))
 
 (let ((obj (make-pathname :defaults "pcl:defsys"
-			  :type (c:backend-fasl-file-type c:*backend*))))
+			  :type (c:backend-byte-fasl-file-type c:*backend*))))
   (when (< (or (file-write-date obj) 0)
 	   (file-write-date "pcl:defsys.lisp"))
     (compile-file "pcl:defsys" :byte-compile t)))
