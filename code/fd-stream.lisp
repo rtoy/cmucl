@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.64 2003/06/02 14:42:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.65 2003/06/05 14:34:22 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1216,6 +1216,37 @@
       (simple-string (concatenate 'simple-string name ext))
       (function (funcall ext name)))))
 
+;;; NEXT-VERSION -- internal
+;;;
+;;; Find the next available versioned name for a file.
+;;;
+(defun next-version (name)
+  (declare (type simple-string name))
+  (let* ((sep (position #\/ name :from-end t))
+	 (base (if sep (subseq name 0 (1+ sep)) ""))
+	 (dir (unix:open-dir base)))
+    (multiple-value-bind (name type version)
+	(extract-name-type-and-version name (if sep (1+ sep) 0) (length name))
+      (let ((version (if (symbolp version) 1 (1+ version)))
+	    (match (concatenate 'string name "." type ".~")))
+	(when dir
+	  (unwind-protect
+	       (loop
+		 (let ((name (unix:read-dir dir)))
+		   (cond ((null name) (return))
+			 ((and (> (length name) (length match))
+			       (string= name match :end1 (length match)))
+			  (multiple-value-bind (v e)
+			      (parse-integer name :start (length match)
+						  :junk-allowed t)
+			    (when (and v
+				       (= (length name) (1+ e))
+				       (char= (schar name e) #\~))
+			      (setq version (max version (1+ v)))))))))
+	    (unix:close-dir dir)))
+	(concatenate 'string base
+		     match (quick-integer-to-string version) "~")))))
+
 ;;; ASSURE-ONE-OF -- internal
 ;;;
 ;;; Assure that the given arg is one of the given list of valid things.
@@ -1330,9 +1361,9 @@
 	     (case if-exists
 	       ((:error nil)
 		(setf mask (logior mask unix:o_excl)))
-	       ((:rename :rename-and-delete)
+	       ((:new-version :rename :rename-and-delete)
 		(setf mask (logior mask unix:o_creat)))
-	       ((:new-version :supersede)
+	       ((:supersede)
 		(setf mask (logior mask unix:o_trunc)))
 	       (:append
 		(setf mask (logior mask unix:o_append)))))
@@ -1356,9 +1387,10 @@
       (if (eq if-does-not-exist :create)
 	(setf mask (logior mask unix:o_creat)))
        
-      (let ((original (if (member if-exists
-				  '(:rename :rename-and-delete))
-			  (pick-backup-name namestring)))
+      (let ((original (cond ((eq if-exists :new-version)
+			     (next-version namestring))
+			    ((member if-exists '(:rename :rename-and-delete))
+			     (pick-backup-name namestring))))
 	    (delete-original (eq if-exists :rename-and-delete))
 	    (mode #o666))
 	(when original
