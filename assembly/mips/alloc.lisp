@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.6 1993/05/25 00:52:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.7 1993/08/27 15:01:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -134,10 +134,10 @@
   ;; be large.
   (emit-label large-alloc-entry)
 
-  ;; Disable suspends.
-  (loadw temp mutator-tn mutator-suspends-disabled-count-slot)
+  ;; Disable interrupts.
+  (loadw temp mutator-tn mutator-interrupts-disabled-count-slot)
   (inst addu temp temp 1)
-  (storew temp mutator-tn mutator-suspends-disabled-count-slot)
+  (storew temp mutator-tn mutator-interrupts-disabled-count-slot)
 
   (with-regs-saved (a1 a2 a3 a4 a5 fdefn lexenv ra)
     (inst li temp (make-fixup "allocate_large_object" :foreign))
@@ -146,13 +146,13 @@
 
   (inst move result temp)
 
-  ;; Re-enable suspends.
-  (loadw temp mutator-tn mutator-suspends-disabled-count-slot)
+  ;; Re-enable interrupts.
+  (loadw temp mutator-tn mutator-interrupts-disabled-count-slot)
   (inst subu temp temp 1)
   (inst bne temp zero-tn done)
-  (storew temp mutator-tn mutator-suspends-disabled-count-slot)
+  (storew temp mutator-tn mutator-interrupts-disabled-count-slot)
   ;; Check to see if any are pending.
-  (loadw temp mutator-tn mutator-suspend-pending-slot)
+  (loadw temp mutator-tn mutator-interrupt-pending-slot)
   (inst beq temp zero-tn done)
   (inst nop)
 
