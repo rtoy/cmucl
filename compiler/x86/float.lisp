@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.4 1997/04/23 19:05:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.5 1997/04/24 20:27:06 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1108,7 +1108,7 @@
   (frob %unary-round double-reg double-float t))
 
 (macrolet ((frob (trans from-sc from-type round-p)
-	     `(define-vop (,(symbolicate trans "/unsigned" from-type))
+	     `(define-vop (,(symbolicate trans "/" from-type "=>UNSIGNED"))
 	       (:args (x :scs (,from-sc) :target fr0))
 	       (:temporary (:sc double-reg :offset fr0-offset
 			    :from :argument :to :result) fr0)
