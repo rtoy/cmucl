@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.11 1990/09/19 21:31:12 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.12 1990/10/01 14:56:10 ram Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -43,6 +43,19 @@
 (defvar *print-gensym* T
   "If true, symbols with no home package are printed with a #: prefix.
   If false, no prefix is printed.")
+
+;;; These next two vars are *not* really fully implemented, but I added them
+;;; here so that I wouldn't be forced to write new code incorrectly.  
+;;;        -- Ram, 9/28/90
+;;;
+(defvar *print-readably* nil
+  "If true, all objects will printed readably.  If readably printing is
+  impossible, an error will be signalled.  This overrides the value of
+  *PRINT-ESCAPE*.  But this isn't really implemented yet.")
+
+(defvar *read-eval* t
+  "If false, then the #. read macro is disabled.  But this isn't really
+  implemented yet.")
 
 
 ;;; Imported from reader.
@@ -958,8 +971,11 @@
 	 (setf (fill-pointer *digit-string*) 0)
 	 (multiple-value-bind (sig exp)
 			      (integer-decode-float x)
-	   (float-string sig exp (float-digits x) width fdigits scale
-			 fmin)))))
+	   (let* ((precision (float-precision x))
+		  (digits (float-digits x))
+		  (fudge (- digits precision)))
+	   (float-string (ash sig (- fudge)) (+ exp fudge) precision width
+			 fdigits scale fmin))))))
 
 
 (defun float-string (fraction exponent precision width fdigits scale fmin)
@@ -1073,35 +1089,42 @@
     ;;all done
     (values *digit-string* (1+ digits) (= decpnt 0) (= decpnt digits) decpnt)))
 
-
-;;; Given a non-negative floating point number, SCALE-EXPONENT returns a
-;;; new floating point number Z in the range (0.1, 1.0] and and exponent
-;;; E such that Z * 10^E is (approximately) equal to the original number.
-;;; There may be some loss of precision due the floating point representation.
-
-(defun scale-exponent (x)
-  (let ((zero (float 0 x))
-	(one (float 1 x))
-	(ten (float 10 x))
-	(one-tenth (float 1/10 x))
-	(log10-of-2 (float (log 2l0 10) x)))
+;;; SCALE-EXPONENT  --  Internal
+;;;
+;;;    Given a non-negative floating point number, SCALE-EXPONENT returns a new
+;;; floating point number Z in the range (0.1, 1.0] and and exponent E such
+;;; that Z * 10^E is (approximately) equal to the original number.  There may
+;;; be some loss of precision due the floating point representation.  The
+;;; scaling is always done with long float arithmetic, which helps printing of
+;;; lesser precisions as well as avoiding generic arithmetic.
+;;;
+;;;    When computing our initial scale factor using EXPT, we pull out part of
+;;; the computation to avoid over/under flow.  When denormalized, we must pull
+;;; out a large factor, since there is more negative exponent range than
+;;; positive range.
+;;;
+(defun scale-exponent (original-x)
+  (let* ((x (coerce original-x 'long-float)))
     (multiple-value-bind (sig exponent)
 			 (decode-float x)
       (declare (ignore sig))
-      (if (= x zero)
-	  (values zero 1)
-	  (let* ((ex (round (* exponent log10-of-2)))
-		 (x (if (minusp ex)		;For the end ranges.
-			(* x ten (expt ten (- -1 ex)))
-			(/ x ten (expt ten (1- ex))))))
-	    (do ((d ten (* d ten))
+      (if (= x 0.0l0)
+	  (values (float 0.0l0 original-x) 1)
+	  (let* ((ex (round (* exponent (log 2l0 10))))
+		 (x (if (minusp ex)
+			(if (float-denormalized-p x)
+			    (* x 1.0l16 (expt 10.0l0 (- (- ex) 16)))
+			    (* x 10.0l0 (expt 10.0l0 (- (- ex) 1))))
+			(/ x 10.0l0 (expt 10.0l0 (1- ex))))))
+	    (do ((d 10.0l0 (* d 10.0l0))
 		 (y x (/ x d))
 		 (ex ex (1+ ex)))
-		((< y one)
-		 (do ((m ten (* m ten))
-		      (z y (* z m))
+		((< y 1.0l0)
+		 (do ((m 10.0l0 (* m 10.0l0))
+		      (z y (* y m))
 		      (ex ex (1- ex)))
-		     ((>= z one-tenth) (values z ex))))))))))
+		     ((>= z 0.1l0)
+		      (values (float z original-x) ex))))))))))
 
 
 ;;;; Entry point for the float printer.
@@ -1141,17 +1164,77 @@
 		  (long-float #\L))
 		plusp exp))))
 
+
+;;; FLOAT-FORMAT-NAME  --  Internal
+;;;
+;;;    Return the string name of X's float format.
+;;;
+(defun float-format-name (x)
+  (declare (float x))
+  (etypecase x
+    (single-float "SINGLE-FLOAT")
+    (double-float "DOUBLE-FLOAT")
+    (short-float "SHORT-FLOAT")
+    (long-float "LONG-FLOAT")))
+
+
+;;; OUTPUT-FLOAT-INFINITY  --  Internal
+;;;
+;;;    Write out an infinity using #. notation, or flame out if
+;;; *print-readably* is true and *read-eval* is false.
+;;;
+(defun output-float-infinity (x stream)
+  (declare (float x) (stream stream))
+  (cond (*read-eval*
+	 (write-string "#." stream))
+	(*print-readably*
+	 (error "Unable to print infinities readably without #."))
+	(t
+	 (write-string "#<" stream)))
+  (write-string "EXT:" stream)
+  (write-string (float-format-name x) stream)
+  (write-string (if (plusp x) "-POSITIVE-" "-NEGATIVE-")
+		stream)
+  (write-string "INFINITY" stream)
+  (unless *read-eval*
+    (write-string ">" stream)))
+
+
+;;; OUTPUT-FLOAT-NAN  --  Internal
+;;;
+;;;    Output a #< NaN or die trying.
+;;;
+(defun output-float-nan (x stream)
+  (when *print-readably*
+    (error "Can't print NaN's readably."))
+  (write-string "#<" stream)
+  (write-string (float-format-name x) stream)
+  (write-string (if (float-trapping-nan-p x) " Trapping" " Quiet") stream)
+  (write-string " NaN>" stream))
+
+
+;;; OUTPUT-FLOAT  --  Internal
+;;;
+;;;    Functioned called by OUTPUT-OBJECT to handle floats.
+;;;
 (defun output-float (x stream)
-  (let ((x (cond ((minusp (float-sign x))
-		  (write-char #\- stream)
-		  (- x))
-		 (t
-		  x))))
-    (cond ((zerop x)
-	   (write-string "0.0" stream)
-	   (print-float-exponent x 0 stream))
-	  (t
-	   (output-float-aux x stream (float 1/1000 x) (float 10000000 x))))))
+  (cond
+   ((float-infinity-p x)
+    (output-float-infinity x stream))
+   ((float-nan-p x)
+    (output-float-nan x stream))
+   (t
+    (let ((x (cond ((minusp (float-sign x))
+		    (write-char #\- stream)
+		    (- x))
+		   (t
+		    x))))
+      (cond
+       ((zerop x)
+	(write-string "0.0" stream)
+	(print-float-exponent x 0 stream))
+       (t
+	(output-float-aux x stream (float 1/1000 x) (float 10000000 x))))))))
 ;;;  
 (defun output-float-aux (x stream e-min e-max)
   (if (and (>= x e-min) (< x e-max))
