@@ -381,7 +381,7 @@
 		     (the fixnum ,place))))))
 
 (defmacro sxhash-simple-string (sequence)
-  `(truly-the index (%primitive sxhash-simple-string ,sequence)))
+  `(%sxhash-simple-string ,sequence))
 
 (defmacro sxhash-string (sequence)
   (let ((data (gensym))
@@ -391,7 +391,7 @@
 		       (,start)
 		       (,end))
        (if (zerop ,start)
-	   (truly-the index (%primitive sxhash-simple-substring ,data ,end))
+	   (%sxhash-simple-substring ,data ,end)
 	   (sxhash-simple-string (coerce (the string ,sequence)
 					 'simple-string))))))
 
