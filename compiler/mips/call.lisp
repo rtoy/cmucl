@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.60 1993/05/27 01:48:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.61 1993/07/20 11:31:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -355,7 +355,7 @@ default-value-8
 		    (tn (tn-ref-tn val)))
 		(defaults (cons default-lab tn))
 		
-		(inst bltz temp default-lab)
+		(inst blez temp default-lab)
 		(inst lw move-temp ocfp-tn (* i word-bytes))
 		(inst addu temp temp (fixnum -1))
 		(store-stack-tn tn move-temp)))
