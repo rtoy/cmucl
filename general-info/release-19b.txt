@@ -196,6 +196,16 @@ New in this release:
         can be used for character input.  READ-VECTOR and WRITE-VECTOR
         also implemented.  This is somewhat experimental right now,
         and may change slightly in a future version.
+      - The config script uses REQUIRE instead of LOAD to load up
+        CMUCL's system libraries so there are no package-lock errors.
+      - REQUIRE no longer disables package-locks when loading
+        requested file.  But package-locks are disabled for CMUCL's
+        own system libraries like gray-streams, clx, etc.
+      - MAKE-INDENTING-STREAM and INDENTING-STREAM-P are exported from
+        the EXTENSIONS package instead of being internal.
+      - TRACE will work now for the known-return convention, which
+        used to require encapsulation so that only the first call was
+        traced.  Useful for tracing recursive functions.
 
   * Improvements to the PCL implementation of CLOS:
       - AMOP-style custom slot allocation supported.
