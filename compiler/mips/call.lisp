@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.27 1990/08/23 18:48:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.28 1990/09/06 17:41:50 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -67,16 +67,18 @@
 ;;; known location.
 ;;;
 (defun make-old-fp-save-location (env)
-  (environment-live-tn
+  (specify-save-tn
+   (environment-debug-live-tn (make-normal-tn *fixnum-primitive-type*) env)
    (make-wired-tn *fixnum-primitive-type*
 		  control-stack-arg-scn
-		  old-fp-save-offset)
-   env))
+		  old-fp-save-offset)))
 ;;;
 (defun make-return-pc-save-location (env)
-  (environment-live-tn
-   (make-wired-tn *any-primitive-type* control-stack-arg-scn lra-save-offset)
-   env))
+  (specify-save-tn
+   (environment-debug-live-tn (make-normal-tn *any-primitive-type*) env)
+   (make-wired-tn *any-primitive-type*
+		  control-stack-arg-scn
+		  lra-save-offset)))
 
 ;;; Make-Argument-Count-Location  --  Interface
 ;;;
