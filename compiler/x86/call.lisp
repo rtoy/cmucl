@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.11 1997/12/05 14:56:30 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.12 1997/12/19 20:19:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -962,12 +962,12 @@
 
 		#+x86-lra
 		(sc-case return-pc
-		  ((control-stack)
+		  ((sap-stack)
 		   (unless (= return-pc-save-offset (tn-offset return-pc))
 		     (format t "** tail-call ret-pc not S1~%")
 		     (move ret-pc-tmp return-pc)
 		     (storew ret-pc-tmp ebp-tn (- (1+ return-pc-save-offset)))))
-		  ((any-reg descriptor-reg)
+		  ((sap-reg)
 		   (format t "** tail-call ret-pc in reg not S1~%")
 		   (storew return-pc ebp-tn (- (1+ return-pc-save-offset)))))
 		
