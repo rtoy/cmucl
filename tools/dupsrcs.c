@@ -7,7 +7,7 @@
 
 /* Duplicates a source tree. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/dupsrcs.c,v 1.1 1991/11/06 22:17:29 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/dupsrcs.c,v 1.2 1991/11/07 22:55:36 wlott Exp $ */
 
 void duptree(srcdir, dstdir)
 char *srcdir, *dstdir;
@@ -16,6 +16,8 @@ char *srcdir, *dstdir;
     struct direct *entry;
     char srcpath[MAXPATHLEN], dstpath[MAXPATHLEN];
     struct stat buf;
+
+    printf("Duplicating %s\n  into %s\n", srcdir, dstdir);
 
     /* Make sure the dstdir is there. */
     if (mkdir(dstdir) == 0)
@@ -77,6 +79,5 @@ char *argv[];
     }
     getwd(srcdir);
 
-    printf("Duplicating %s\n  into %s\n", srcdir, dstdir);
     duptree(srcdir, dstdir);
 }
