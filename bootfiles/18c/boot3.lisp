@@ -12,4 +12,7 @@
 	    GET-SETF-METHOD)
 	  :lisp)
 
+;;; Needed before load of exports.lisp to bootstrap ANSI defstruct fix
+(intern "*ANSI-DEFSTRUCT-OPTIONS-P*" :kernel)
+
 (load "target:code/exports.lisp")
