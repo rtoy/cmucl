@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.56 1992/11/03 07:04:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.57 1993/02/03 17:53:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -898,11 +898,19 @@
 ;;;
 ;;;    Check if Call satisfies Type.  If so, apply the type to the call, and do
 ;;; MAYBE-TERMINATE-BLOCK and return the values of RECOGNIZE-KNOWN-CALL.  If an
-;;; error, set the combination kind and return NIL, NIL.
+;;; error, set the combination kind and return NIL, NIL.  If the type is just
+;;; FUNCTION, then skip the syntax check, arg/result type processing, but still
+;;; call RECOGNIZE-KNOWN-CALL, since the call might be to a known lambda, and
+;;; that checking is done by local call analysis.
 ;;;
 (defun validate-call-type (call type ir1-p)
   (declare (type combination call) (type ctype type))
-  (cond ((not (function-type-p type)) (values nil nil))
+  (cond ((not (function-type-p type))
+	 (assert (multiple-value-bind
+		     (val win)
+		     (csubtypep type (specifier-type 'function))
+		   (or val (not win))))
+	 (recognize-known-call call ir1-p))
 	((valid-function-use call type
 			     :argument-test #'always-subtypep
 			     :result-test #'always-subtypep
