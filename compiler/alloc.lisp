@@ -120,7 +120,7 @@
     (setf (continuation-%type-check structure) t))
    ((setf (continuation-info structure) nil)
     (setf (continuation-dest structure) dest)))
-
+  
   ((block (start)) block-next
    ((setf (block-pred structure) nil)
     (setf (block-succ structure) nil)
@@ -149,7 +149,7 @@
     (setf (node-derived-type structure) derived-type)
     (setf (ref-leaf structure) leaf)
     (setf (ref-inlinep structure) inlinep)))
-
+  
   ((combination (fun)) node-source-path
    ((node-deinits)
     (setf (basic-combination-fun structure) *undefined*)
@@ -180,7 +180,7 @@
     (setf (ir2-block-locations structure) nil))
    ((setf (ir2-block-next structure) nil)
     (setf (ir2-block-block structure) block)))
-
+  
   ((vop (block node info args results)) vop-next
    ((setf (vop-block structure) *undefined*)
     (setf (vop-prev structure) nil)
@@ -197,7 +197,7 @@
     (setf (vop-info structure) info)
     (setf (vop-args structure) args)
     (setf (vop-results structure) results)))
-
+  
   ((tn-ref (tn write-p)) tn-ref-next
    ((setf (tn-ref-tn structure) *undefined*)
     (setf (tn-ref-vop structure) nil)
@@ -208,7 +208,7 @@
    ((setf (tn-ref-next structure) nil)
     (setf (tn-ref-tn structure) tn)
     (setf (tn-ref-write-p structure) write-p)))
-
+  
   ((tn (number kind primitive-type sc)) tn-next
    ((setf (tn-leaf structure) nil)
     (setf (tn-reads structure) nil)
@@ -230,12 +230,12 @@
     (setf (tn-offset structure) nil)
     (setf (tn-environment structure) nil)
     (setf (tn-cost structure) 0))
-  ((setf (tn-next structure) nil)
-   (setf (tn-number structure) number)
-   (setf (tn-kind structure) kind)
-   (setf (tn-primitive-type structure) primitive-type)
-   (setf (tn-sc structure) sc)))
-
+   ((setf (tn-next structure) nil)
+    (setf (tn-number structure) number)
+    (setf (tn-kind structure) kind)
+    (setf (tn-primitive-type structure) primitive-type)
+    (setf (tn-sc structure) sc)))
+  
   ((global-conflicts (kind tn block number)) global-conflicts-next
    ((setf (global-conflicts-block structure) *undefined*)
     (clear-bit-vector (global-conflicts-conflicts structure))
@@ -246,15 +246,15 @@
     (setf (global-conflicts-tn structure) tn)
     (setf (global-conflicts-block structure) block)
     (setf (global-conflicts-number structure) number)))
-
-  ((instruction (prev info . #.assem::instruction-slot-order))
+  
+  ((instruction (prev info . #.assem::instruction-slot-order)) assem::node-prev
    ((setf (assem::node-next structure) nil))
    ((setf (assem::node-vop structure) assem::*current-vop*)
     (setf (assem::node-prev structure) prev)
     (setf (assem::instruction-info structure) info)
     . #.(mapcar #'(lambda (slot)
-		    `(setf (,slot structure) ,slot)
-		    assem::instruction-slot-order)))))
+		    `(setf (,slot structure) ,slot))
+		assem::instruction-slot-order))))
 
 
 ;;; NUKE-IR2-COMPONENT  --  Interface
