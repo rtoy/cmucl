@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.7 1998/08/30 04:56:49 dtc Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.8 1998/09/01 13:00:44 dtc Exp $
  *
  */
 
@@ -48,7 +48,7 @@
 #ifdef __linux__
 #define BINDING_STACK_START	(0x20000000)
 #define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
-#define CONTROL_STACK_START	(0x30001000)
+#define CONTROL_STACK_START	(0x38001000)
 #define CONTROL_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
 #endif
 
