@@ -954,6 +954,43 @@
       (options       :reader method-combination-options
 	             :initarg :options)))
 
+;;;
+;;; The constructor objects. See construct.lisp.
+;;; 
+(defclass constructor (standard-object #+cmu17 kernel:funcallable-instance)
+     ((class					;The class with which this
+	:initarg :class				;constructor is associated.
+	:reader constructor-class)		;The actual class object,
+						;not the class name.
+						;      
+      (name					;The name of this constructor.
+	:initform nil				;This is the symbol in whose
+	:initarg :name				;function cell the constructor
+	:reader constructor-name)		;usually sits.  Of course, this
+						;is optional.  defconstructor
+						;makes named constructors, but
+						;it is possible to manipulate
+						;anonymous constructors also.
+						;
+      (code-type				;The type of code currently in
+	:initform nil				;use by this constructor.  This
+	:accessor constructor-code-type)	;is mostly for debugging and
+						;analysis purposes.
+						;The lazy installer sets this
+						;to LAZY.  The most basic and
+						;least optimized type of code
+						;is called FALLBACK.
+						;
+      (supplied-initarg-names			;The names of the initargs this
+	:initarg :supplied-initarg-names	;constructor supplies when it
+	:reader					;"calls" make-instance.
+	   constructor-supplied-initarg-names)	;
+						;
+      (code-generators				;Generators for the different
+	:initarg :code-generators		;types of code this constructor
+	:reader constructor-code-generators))	;could use.
+  (:metaclass funcallable-standard-class))
+
 (defparameter *early-class-predicates*
   '((specializer specializerp)
     (exact-class-specializer exact-class-specializer-p)

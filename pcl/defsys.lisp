@@ -602,7 +602,6 @@ and load your system with:
    (fixup       t                                   t (boot defs low fin))
    (defcombin   t                                   t (defclass boot defs low fin))
    (ctypes      t                                   t (defclass defcombin))
-   #+ignore
    (construct   t                                   t (defclass boot defs low))
    (env         t                                   t (defclass boot defs low fin))
    (compat      t                                   t ())
