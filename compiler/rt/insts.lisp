@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.8 1991/07/23 12:14:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.9 1991/08/25 18:15:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,49 +24,55 @@
 
 ;;;; Resources:
 
-(define-resources memory float-status high low)
+(define-resources memory float-status mq cc)
 
 
 ;;;; Formats.
 
-(define-format (j1 16)
+(define-format (j1 16 :use (cc))
   (op (byte 4 12))
   (sub-op (byte 1 11))
   (n (byte 3 8))
   (j1 (byte 8 0)))
 
-(define-format (x 16)
+(define-format (x 16 :clobber (cc))
   (op (byte 4 12))
-  (r1 (byte 4 8))
-  (r2 (byte 4 4))
-  (r3 (byte 4 0)))
+  (r1 (byte 4 8) :write t)
+  (r2 (byte 4 4) :read t)
+  (r3 (byte 4 0) :read t))
 
-(define-format (d-short 16)
-  (op (byte 4 12))
-  (i (byte 4 8))
-  (r2 (byte 4 4))
-  (r3 (byte 4 0)))
 
-(define-format (r 16)
+(define-format (r 16 :clobber (cc))
   (op (byte 8 8))
-  (r2 (byte 4 4))
+  (r2 (byte 4 4) :read t :write t)
+  (r3 (byte 4 0) :read t))
+
+(define-format (r-immed 16 :clobber (cc))
+  (op (byte 8 8))
+  (r2 (byte 4 4) :read t :write t)
   (r3 (byte 4 0)))
 
-(define-format (bi 32)
+
+(define-format (bi 32 :use (cc))
   (op (byte 8 24))
   (r2 (byte 4 20))
   (bi (byte 20 0)))
 
-(define-format (ba 32)
+(define-format (ba 32 :attributes (assembly-call))
   (op (byte 8 24))
   (ba (byte 24 0)))
 
-(define-format (d 32)
+(define-format (d 32 :clobber (cc))
   (op (byte 8 24))
-  (r2 (byte 4 20))
-  (r3 (byte 4 16))
+  (r2 (byte 4 20) :write t)
+  (r3 (byte 4 16) :read t)
   (i (byte 16 0)))
 
+(define-format (d-short 16 :clobber (cc))
+  (op (byte 4 12))
+  (i (byte 4 8))
+  (r2 (byte 4 4) :write t)
+  (r3 (byte 4 0) :read t))
 
 
 ;;;; Special argument types and fixups.
@@ -162,15 +168,15 @@
 ;;;
 (define-instruction (stc)
   (d-short (op :constant 1)
-	   (r2 :argument register)
+	   (r2 :argument register :read t :write nil)
 	   (r3 :argument address-register)
 	   (i :argument (unsigned-byte 4)))
   (d-short (op :constant 1)
-	   (r2 :argument register)
+	   (r2 :argument register :read t :write nil)
 	   (r3 :argument address-register)
 	   (i :constant 0))
   (d (op :constant #xDE)
-     (r2 :argument register)
+     (r2 :argument register :read t :write nil)
      (r3 :argument address-register)
      (i :argument (signed-byte 16))))
 
@@ -182,7 +188,7 @@
      (r3 :argument address-register)
      (i :argument (signed-byte 16)))
   (r (op :constant #xEB)
-     (r2 :argument register)
+     (r2 :argument register :read nil)
      (r3 :argument register)))
 
 ;;; load-half-algebraic.
@@ -204,14 +210,14 @@
 ;;;
 (define-instruction (sth)
   (d-short (op :constant 2)
-	   (r2 :argument register)
+	   (r2 :argument register :read t :write nil)
 	   (r3 :argument address-register)
 	   ;; We want the instruction to take byte indexes, but we plug the
 	   ;; index into the instruction as a half-word index.
 	   (i :argument (member 0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
 	      :function (lambda (x) (ash x -1))))
   (d (op :constant #xDC)
-     (r2 :argument register)
+     (r2 :argument register :read t :write nil)
      (r3 :argument address-register)
      (i :argument (signed-byte 16))))
 
@@ -238,21 +244,20 @@
 ;;;
 (define-instruction (st)
   (d-short (op :constant 3)
-	   (r2 :argument register)
+	   (r2 :argument register :read t :write nil)
 	   (r3 :argument address-register)
 	   ;; We want the instruction to take byte indexes, but we plug the
 	   ;; index into the instruction as a word index.
 	   (i :argument (member 0 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60)
 	      :function (lambda (x) (ash x -2))))
   (d-short (op :constant 3)
-	   (r2 :argument register)
+	   (r2 :argument register :read t :write nil)
 	   (r3 :argument address-register)
 	   (i :constant 0))
   (d (op :constant #xDD)
-     (r2 :argument register)
+     (r2 :argument register :read t :write nil)
      (r3 :argument address-register)
      (i :argument (signed-byte 16))))
-
 
 
 ;;;; Address computation.
@@ -272,7 +277,7 @@
      (i :argument (signed-byte 16)))
   (d (op :constant #xC8)
      (r2 :argument register)
-     (r3 :argument (integer 0 0))
+     (r3 :argument (integer 0 0) :read nil)
      (i :argument (signed-byte 16)))
   (d (op :constant #xC8)
      (r2 :argument register)
@@ -302,7 +307,7 @@
      (i :argument (unsigned-byte 16)))
   (d (op :constant #xD8)
      (r2 :argument register)
-     (r3 :argument (integer 0 0))
+     (r3 :argument (integer 0 0) :read nil)
      (i :argument (unsigned-byte 16)))
   (d (op :constant #xD8)
      (r2 :argument register)
@@ -330,32 +335,39 @@
 ;;; increment.
 ;;;
 (define-instruction (inc)
-  (r (op :constant #x91)
-     (r2 :argument register)
-     (r3 :argument (unsigned-byte 4))))
+  (r-immed
+   (op :constant #x91)
+   (r2 :argument register)
+   (r3 :argument (unsigned-byte 4))))
 
 ;;; decrement
 ;;;
 (define-instruction (dec)
-  (r (op :constant #x93)
-     (r2 :argument register)
-     (r3 :argument (unsigned-byte 4))))
+  (r-immed
+   (op :constant #x93)
+   (r2 :argument register)
+   (r3 :argument (unsigned-byte 4))))
 
 
 ;;; load-immediate-short.
 ;;;
 (define-instruction (lis)
-  (r (op :constant #xA4)
-     (r2 :argument register)
-     (r3 :argument (unsigned-byte 4))))
+  (r-immed
+   (op :constant #xA4)
+   (r2 :argument register :read nil)
+   (r3 :argument (unsigned-byte 4))))
 
 
 
 ;;;; Arithmetics.
 
-(macrolet ((define-math-inst (name &key two-regs short-immediate immediate
-				   function (signed t))
-	     `(define-instruction (,name)
+(macrolet ((define-math-inst (name &key two-regs unary short-immediate
+				   immediate function (signed t)
+				   (use nil use-p) 
+				   (clobber nil clobber-p))
+	     `(define-instruction (,name
+				   ,@(when use-p `(:use ,use))
+				   ,@(when clobber-p `(:clobber ,clobber)))
 		,@(when two-regs
 		    `((r (op :constant ,two-regs)
 			 (r2 :argument register)
@@ -363,10 +375,18 @@
 		      (r (op :constant ,two-regs)
 			 (r2 :argument register)
 			 (r3 :same-as r2))))
+		,@(when unary
+		    `((r (op :constant ,unary)
+			 (r2 :argument register :read nil)
+			 (r3 :argument register))
+		      (r (op :constant ,unary)
+			 (r2 :argument register :read nil)
+			 (r3 :same-as r2))))
 		,@(when short-immediate
-		    `((r (op :constant ,short-immediate)
-			 (r2 :argument register)
-			 (r3 :argument (unsigned-byte 4)))))
+		    `((r-immed
+		       (op :constant ,short-immediate)
+		       (r2 :argument register)
+		       (r3 :argument (unsigned-byte 4)))))
 		,@(when immediate
 		    `((d (op :constant ,immediate)
 			 (r2 :argument register)
@@ -382,24 +402,24 @@
 			    ,@(if function `(:function ,function)))))))))
 
   (define-math-inst a :two-regs #xE1 :short-immediate #x90 :immediate #xC1)
-  (define-math-inst ae :two-regs #xF1 :immediate #xD1)
-  (define-math-inst abs :two-regs #xE0)
-  (define-math-inst neg :two-regs #xE4) ;Arithmetic negation (two's complement).
+  (define-math-inst ae :two-regs #xF1 :immediate #xD1 :use (cc))
+  (define-math-inst abs :unary #xE0)
+  (define-math-inst neg :unary #xE4) ;Arithmetic negation (two's complement).
   (define-math-inst s :two-regs #xE2 :short-immediate #x92
     :immediate #xC1 :function -)
   (define-math-inst sf :two-regs #xB2 :immediate #xD2)
-  (define-math-inst se :two-regs #xF2)
-  (define-math-inst d :two-regs #xB6)
-  (define-math-inst m :two-regs #xE6)
+  (define-math-inst se :two-regs #xF2 :use (cc))
+  (define-math-inst d :two-regs #xB6 :use (cc mq) :clobber (cc mq))
+  (define-math-inst m :two-regs #xE6 :use (cc mq) :clobber (cc mq))
   
-  (define-math-inst exts :two-regs #xB1)
+  (define-math-inst exts :unary #xB1)
   
   (define-math-inst clrbl :short-immediate #x99)
   (define-math-inst clrbu :short-immediate #x98)
   (define-math-inst setbl :short-immediate #x9B)
   (define-math-inst setbu :short-immediate #x9A)
   
-  (define-math-inst not :two-regs #xF4) ;Logical not.
+  (define-math-inst not :unary #xF4) ;Logical not.
   (define-math-inst n :two-regs #xE5)
   (define-math-inst nilz :immediate #xC5 :signed nil)
   (define-math-inst nilo :immediate #xC6 :signed nil)
@@ -423,11 +443,12 @@
 ;;;
 (define-instruction (c)
   (r (op :constant #xB4)
-     (r2 :argument register)
+     (r2 :argument register :write nil)
      (r3 :argument register))
-  (r (op :constant #x94)
-     (r2 :argument register)
-     (r3 :argument (unsigned-byte 4)))
+  (r-immed
+   (op :constant #x94)
+   (r2 :argument register :write nil)
+   (r3 :argument (unsigned-byte 4)))
   (d (op :constant #xD4)
      (r2 :constant 0)
      (r3 :argument register)
@@ -439,7 +460,7 @@
 ;;;
 (define-instruction (cl)
   (r (op :constant #xB3)
-     (r2 :argument register)
+     (r2 :argument register :write nil)
      (r3 :argument register))
   (d (op :constant #xD3)
      (r2 :constant 0)
@@ -454,38 +475,43 @@
   (r (op :constant #xB8)
      (r2 :argument register)
      (r3 :argument register))
-  (r (op :constant #xA8)
-     (r2 :argument register)
-     (r3 :argument (unsigned-byte 4)))
-  (r (op :constant #xA9)
-     (r2 :argument register)
-     (r3 :argument (integer 16 31)
-	 :function (lambda (x) (- x 16)))))
+  (r-immed
+   (op :constant #xA8)
+   (r2 :argument register :write nil)
+   (r3 :argument (unsigned-byte 4)))
+  (r-immed
+   (op :constant #xA9)
+   (r2 :argument register :write nil)
+   (r3 :argument (integer 16 31)
+       :function (lambda (x) (- x 16)))))
 
 (define-instruction (sl)
   (r (op :constant #xBA)
      (r2 :argument register)
      (r3 :argument register))
-  (r (op :constant #xAA)
-     (r2 :argument register)
-     (r3 :argument (unsigned-byte 4)))
-  (r (op :constant #xAB)
-     (r2 :argument register)
-     (r3 :argument (integer 16 31)
-	 :function (lambda (x) (- x 16)))))
+  (r-immed
+   (op :constant #xAA)
+   (r2 :argument register)
+   (r3 :argument (unsigned-byte 4)))
+  (r-immed
+   (op :constant #xAB)
+   (r2 :argument register)
+   (r3 :argument (integer 16 31)
+       :function (lambda (x) (- x 16)))))
 
 (define-instruction (sar)
   (r (op :constant #xB0)
      (r2 :argument register)
      (r3 :argument register))
-  (r (op :constant #xA0)
-     (r2 :argument register)
-     (r3 :argument (unsigned-byte 4)))
-  (r (op :constant #xA1)
-     (r2 :argument register)
-     (r3 :argument (integer 16 31)
-	 :function (lambda (x) (- x 16)))))
-
+  (r-immed
+   (op :constant #xA0)
+   (r2 :argument register)
+   (r3 :argument (unsigned-byte 4)))
+  (r-immed
+   (op :constant #xA1)
+   (r2 :argument register)
+   (r3 :argument (integer 16 31)
+       :function (lambda (x) (- x 16)))))
 
 
 ;;;; Branch instructions.
@@ -512,7 +538,7 @@
 		    (r2 :argument branch-condition)
 		    (bi :argument relative-label))
 		(r (op :constant ,register-op)
-		   (r2 :argument branch-condition)
+		   (r2 :argument branch-condition :read nil :write nil)
 		   (r3 :argument register)))))
 
   ;; branch-on-condition-bit-immediate.
