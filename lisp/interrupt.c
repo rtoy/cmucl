@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.11 1997/11/21 12:20:34 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.12 1997/11/22 14:38:21 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -205,6 +205,15 @@ interrupt_handle_pending(struct sigcontext *context)
 	if (were_in_lisp)
 	    undo_fake_foreign_function_call(context);
     }
+
+#ifdef POSIX_SIGS
+    context->uc_sigmask = pending_mask;
+    sigemptyset(&pending_mask);
+#else
+    context->sc_mask = pending_mask;
+    pending_mask = 0;
+#endif
+
     if (pending_signal) {
 	int signal;
 #ifdef SOLARIS
@@ -222,13 +231,6 @@ interrupt_handle_pending(struct sigcontext *context)
 	interrupt_handle_now(signal, PASSCODE(code), context);
 #endif
     }
-#ifdef POSIX_SIGS
-    context->uc_sigmask = pending_mask;
-    sigemptyset(&pending_mask);
-#else
-    context->sc_mask = pending_mask;
-    pending_mask = 0;
-#endif
 }
 
 
