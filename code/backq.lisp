@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.4 1992/02/12 01:45:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.5 1992/03/10 13:09:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,6 +177,9 @@
 
 ;;; Use synonyms for the lisp functions we use, so we can recognize backquoted
 ;;; material when pretty-printing
+
+(declaim (inline backq-list backq-list* backq-append backq-nconc backq-cons
+		 backq-vector))
 
 (defun backq-list (&rest args)
   args)
