@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.24 1994/11/01 17:57:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25 1994/12/05 00:02:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -580,6 +580,7 @@
 	 (dolist (stream streams (if (> (length res) 1) `(and ,@res) res))
 	   (pushnew (funcall (stream-misc stream) stream :element-type) res
 		    :test #'equal))))
+      (:close)
       (t
        (let ((res nil))
 	 (dolist (stream streams res)
