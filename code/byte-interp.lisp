@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.18 1993/05/21 12:38:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.19 1993/05/27 17:05:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1226,8 +1226,8 @@
 			(byte-apply function num-args old-sp)))))
 		(dolist (result results)
 		  (push-eval-stack result))
-		(push-eval-stack (length results)))
-	      (byte-interpret old-component old-pc old-fp))
+		(push-eval-stack (length results))
+		(byte-interpret old-component old-pc old-fp)))
 	     (t
 	      ;; We were called for one value.  So return one value.
 	      (push-eval-stack
