@@ -363,9 +363,9 @@ inlines
 
 ;;;; Flow/DFO/Component hackery:
 
-;;; Link-Blocks, Unlink-Blocks  --  Interface
+;;; Link-Blocks  --  Interface
 ;;;
-;;;    Join or separate Block1 and Block2.
+;;;    Join Block1 and Block2.
 ;;;
 (defun link-blocks (block1 block2)
   (declare (type cblock block1 block2))
@@ -373,14 +373,26 @@ inlines
   (push block2 (block-succ block1))
   (push block1 (block-pred block2))
   (undefined-value))
+
+;;; UNLINK-BLOCKS  --  Interface
+;;;
+;;;    Like LINK-BLOCKS, but we separate BLOCK1 and BLOCK2.  If this leaves a
+;;; successor with a single predecessor that ends in an IF, then set
+;;; BLOCK-TEST-MODIFIED so that any test constraint will now be able to be
+;;; propagated to the successor.
 ;;;
 (defun unlink-blocks (block1 block2)
   (declare (type cblock block1 block2))
   (assert (member block2 (block-succ block1)))
   (setf (block-succ block1)
 	(delete block2 (block-succ block1)))
-  (setf (block-pred block2)
-	(delete block1 (block-pred block2)))
+
+  (let ((new-pred (delete block1 (block-pred block2))))
+    (setf (block-pred block2) new-pred)
+    (when (and new-pred (null (rest new-pred)))
+      (let ((pred-block (first new-pred)))
+	(when (if-p (block-last pred-block))
+	  (setf (block-test-modified pred-block) t)))))
   (undefined-value))
 
 
@@ -388,7 +400,9 @@ inlines
 ;;;
 ;;;    Swing the succ/pred link between Block and Old to be between Block and
 ;;; New.  If Block ends in an IF, then we have to fix up the
-;;; consequent/alternative blocks to point to New.
+;;; consequent/alternative blocks to point to New.  We also set
+;;; BLOCK-TEST-MODIFIED so that any test constraint will be applied to the new
+;;; successor.
 ;;;
 (defun change-block-successor (block old new)
   (declare (type cblock new old block))
@@ -398,6 +412,7 @@ inlines
   
   (let ((last (block-last block)))
     (when (if-p last)
+      (setf (block-test-modified block) t)
       (macrolet ((frob (slot)
 		   `(when (eq (,slot last) old)
 		      (setf (,slot last) new))))
