@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.54 1991/03/23 12:30:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.55 1991/09/13 23:34:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.54 1991/03/23 12:30:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.55 1991/09/13 23:34:05 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -278,9 +278,9 @@
 	  (done (gen-label)))
       (move where arg)
       (inst beq where bsp-tn done)
-      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
 
       (emit-label loop)
+      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
       (inst beq symbol zero-tn skip)
       (loadw value bsp-tn (- vm:binding-value-slot vm:binding-size))
       (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
@@ -289,7 +289,7 @@
       (emit-label skip)
       (inst addu bsp-tn bsp-tn (* -2 vm:word-bytes))
       (inst bne where bsp-tn loop)
-      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
+      (inst nop)
 
       (emit-label done))))
 
