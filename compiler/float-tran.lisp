@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.52 1997/12/16 15:54:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.53 1997/12/17 15:07:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -612,9 +612,9 @@
 		     :class 'float
 		     :format f-type
 		     :low (or (bound-func fcn lo)
-			      (coerce default-lo f-type))
+			      (and default-lo (coerce default-lo f-type)))
 		     :high (or (bound-func fcn hi)
-			       (coerce default-hi f-type))))
+			       (and default-hi (coerce default-hi f-type)))))
 		  (float-or-complex-type arg))))
 	   (t
 	    (float-or-complex-type arg default-lo default-hi))))))
