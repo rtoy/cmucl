@@ -13,7 +13,7 @@
 (export '(asm asm-files) (find-package 'compiler))
 
 (defun asm (f)
-  (assemble-file (concatenate 'simple-string "nmiscops:" f ".romp")))
+  (assemble-file (concatenate 'simple-string "miscops:" f ".romp")))
 
 (defun asm-files ()
   (asm "abs")
