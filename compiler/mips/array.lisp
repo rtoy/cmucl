@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.42 1993/06/12 20:35:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.43 1993/06/12 21:35:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,7 +136,9 @@
 (defmacro def-full-data-vector-frobs (type element-type &rest scs)
   `(progn
      (define-full-reffer ,(symbolicate "DATA-VECTOR-REF/" type) ,type
-       vector-data-offset other-pointer-type ,scs ,element-type
+       vector-data-offset other-pointer-type
+       ,(remove-if #'(lambda (x) (member x '(null zero))) scs)
+       ,element-type
        data-vector-ref)
      (define-full-setter ,(symbolicate "DATA-VECTOR-SET/" type) ,type
        vector-data-offset other-pointer-type ,scs ,element-type
