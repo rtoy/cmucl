@@ -46,7 +46,7 @@ inst breakpoint_install(code_obj, pc_offset)
 		      trap_Breakpoint
 #endif
 #ifdef ibmrt
-		      0 \* hack *\
+		      0 /* hack */
 #endif
 	);
 }
