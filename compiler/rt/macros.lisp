@@ -2,9 +2,11 @@
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
-;;; Carnegie Mellon University, and has been placed in the public
-;;; domain.  If you want to use this code or any part of CMU Common
-;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/macros.lisp,v 1.11 1994/10/31 04:45:41 ram Rel $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains various useful macros for generating code for the IBM

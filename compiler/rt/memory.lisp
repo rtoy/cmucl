@@ -1,13 +1,15 @@
 ;;; -*- Package: RT; Log: c.log -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/memory.lisp,v 1.2 1994/10/31 04:45:41 ram Rel $")
+;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/memory.lisp,v 1.1 1991/02/18 15:07:59 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/memory.lisp,v 1.2 1994/10/31 04:45:41 ram Rel $
 ;;;
 ;;; This file contains the IBM RT definitions of some general purpose memory
 ;;; reference VOPs inherited by basic memory reference operations.

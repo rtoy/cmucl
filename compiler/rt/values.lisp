@@ -1,13 +1,15 @@
 ;;; -*- Package: RT; Log: c.log -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.4 1994/10/31 04:45:41 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.3 1991/12/21 23:05:29 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.4 1994/10/31 04:45:41 ram Exp $
 ;;;
 ;;; This file contains the implementation of unknown-values VOPs.
 ;;;

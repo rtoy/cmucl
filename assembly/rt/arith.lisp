@@ -1,13 +1,15 @@
 ;;; -*- Package: RT -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.7 1994/10/31 04:57:00 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.6 1991/10/24 09:49:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.7 1994/10/31 04:57:00 ram Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;

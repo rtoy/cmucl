@@ -2,12 +2,14 @@
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
-;;; Carnegie Mellon University, and has been placed in the public
-;;; domain.  If you want to use this code or any part of CMU Common
-;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/static-fn.lisp,v 1.2 1994/10/31 04:45:41 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/static-fn.lisp,v 1.1 1991/02/18 15:08:13 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/static-fn.lisp,v 1.2 1994/10/31 04:45:41 ram Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.

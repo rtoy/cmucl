@@ -1,10 +1,11 @@
 ;;; -*- Package: HEMLOCK -*-
 ;;;
 ;;; **********************************************************************
-;;; Copyright (c) 1993 Carnegie Mellon University, all rights reserved.
-;;; 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dylan.lisp,v 1.2 1994/08/21 15:17:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dylan.lisp,v 1.3 1994/10/31 04:50:12 ram Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
