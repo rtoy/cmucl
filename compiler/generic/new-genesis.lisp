@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.68 2004/06/18 22:50:02 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.69 2004/07/08 04:44:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2304,8 +2304,11 @@
 	(unless (= prev-priority (second const))
 	  (terpri)
 	  (setf prev-priority (second const)))
-	(format t "#define ~A ~D~@[  /* ~A */~]~%"
-		(first const) (third const) (fourth const)))))
+	(if (search "SpaceStart" (first const))
+	    (format t "#define ~A 0x~XU~@[  /* ~A */~]~%"
+		    (first const) (third const) (fourth const))
+	    (format t "#define ~A ~D~@[  /* ~A */~]~%"
+		    (first const) (third const) (fourth const))))))
 
   ;; Write out internal error codes and error descriptions
   (terpri)
