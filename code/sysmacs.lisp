@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.19 1998/05/05 00:14:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.20 1998/05/15 01:01:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,41 +107,37 @@
 	     (T ,@(if check-type `((check-type ,svar ,check-type)))
 		,svar)))))
 
-;;; With-Mumble-Stream calls the function in the given Slot of the Stream with
-;;; the Args for lisp-streams or the pcl-fn for fundamental-streams.
+;;; With-Mumble-Stream calls the function in the given Slot of the
+;;; Stream with the Args for lisp-streams, or the Function with the
+;;; Args for fundamental-streams.
 ;;;
-(defmacro with-in-stream (stream lisp-dispatch &optional pcl-dispatch)
+(defmacro with-in-stream (stream (slot &rest args) &optional stream-dispatch)
   `(let ((stream (in-synonym-of ,stream)))
-    (etypecase stream
-      (lisp-stream
-       ,(destructuring-bind (slot &rest args) lisp-dispatch
-          `(funcall (,slot stream) stream ,@args)))
-      ,@(when pcl-dispatch
-          `((fundamental-stream
-	     ,(destructuring-bind (pcl-fn &rest args) pcl-dispatch
-	        `(,pcl-fn stream ,@args))))))))
+    (if (lisp-stream-p stream)
+	(funcall (,slot stream) stream ,@args)
+	,@(when stream-dispatch
+            `(,(destructuring-bind (function &rest args) stream-dispatch
+	         `(,function stream ,@args)))))))
 
-(defmacro with-out-stream (stream lisp-dispatch &optional pcl-dispatch)
+(defmacro with-out-stream (stream (slot &rest args) &optional stream-dispatch)
   `(let ((stream (out-synonym-of ,stream)))
-    (etypecase stream
-      (lisp-stream
-       ,(destructuring-bind (slot &rest args) lisp-dispatch
-          `(funcall (,slot stream) stream ,@args)))
-      ,@(when pcl-dispatch
-          `((fundamental-stream
-	     ,(destructuring-bind (pcl-fn &rest args) pcl-dispatch
-	        `(,pcl-fn stream ,@args))))))))
+    (if (lisp-stream-p stream)
+	(funcall (,slot stream) stream ,@args)
+	,@(when stream-dispatch
+	     `(,(destructuring-bind (function &rest args) stream-dispatch
+	          `(,function stream ,@args)))))))
 
 
 ;;;; These are hacks to make the reader win.
 
 ;;; Prepare-For-Fast-Read-Char  --  Internal
 ;;;
-;;;    This macro sets up some local vars for use by the Fast-Read-Char
-;;; macro within the enclosed lexical scope.
+;;;    This macro sets up some local vars for use by the
+;;; Fast-Read-Char macro within the enclosed lexical scope. The stream
+;;; is assumed to be a lisp-stream.
 ;;;
 (defmacro prepare-for-fast-read-char (stream &body forms)
-  `(let* ((%frc-stream% (in-synonym-of ,stream lisp-stream))
+  `(let* ((%frc-stream% ,stream)
 	  (%frc-method% (lisp-stream-in %frc-stream%))
 	  (%frc-buffer% (lisp-stream-in-buffer %frc-stream%))
 	  (%frc-index% (lisp-stream-in-index %frc-stream%)))
@@ -178,10 +174,10 @@
 ;;; Prepare-For-Fast-Read-Byte  --  Internal
 ;;;
 ;;;    Just like Prepare-For-Fast-Read-Char except that we get the Bin
-;;; method.
+;;; method. The stream is assumed to be a lisp-stream.
 ;;;
 (defmacro prepare-for-fast-read-byte (stream &body forms)
-  `(let* ((%frc-stream% (in-synonym-of ,stream lisp-stream))
+  `(let* ((%frc-stream% ,stream)
 	  (%frc-method% (lisp-stream-bin %frc-stream%))
 	  (%frc-buffer% (lisp-stream-in-buffer %frc-stream%))
 	  (%frc-index% (lisp-stream-in-index %frc-stream%)))

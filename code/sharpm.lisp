@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.18 1998/05/05 00:14:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.19 1998/05/15 01:01:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,35 +351,34 @@
 (defun sharp-vertical-bar (stream sub-char numarg)
   (ignore-numarg sub-char numarg)
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (prepare-for-fast-read-char stream
-         (do ((level 1)
-	      (prev (fast-read-char) char)
-	      (char (fast-read-char) (fast-read-char)))
-	     (())
-	   (cond ((and (char= prev #\|) (char= char #\#))
-		  (setq level (1- level))
-		  (when (zerop level)
-		    (done-with-fast-read-char)
-		    (return (values)))
-		  (setq char (fast-read-char)))
-		 ((and (char= prev #\#) (char= char #\|))
-		  (setq char (fast-read-char))
-		  (setq level (1+ level)))))))
-      (fundamental-stream
-       (do ((level 1)
-	    (prev (read-char stream t) char)
-	    (char (read-char stream t) (read-char stream t)))
-	   (())
-	 (cond ((and (char= prev #\|) (char= char #\#))
-		(setq level (1- level))
-		(when (zerop level)
-		  (return (values)))
-		(setq char (read-char stream t)))
-	       ((and (char= prev #\#) (char= char #\|))
-		(setq char (read-char stream t))
-		(setq level (1+ level)))))))))
+    (if (lisp-stream-p stream)
+	(prepare-for-fast-read-char stream
+          (do ((level 1)
+	       (prev (fast-read-char) char)
+	       (char (fast-read-char) (fast-read-char)))
+	      (())
+	    (cond ((and (char= prev #\|) (char= char #\#))
+		   (setq level (1- level))
+		   (when (zerop level)
+		     (done-with-fast-read-char)
+		     (return (values)))
+		   (setq char (fast-read-char)))
+		  ((and (char= prev #\#) (char= char #\|))
+		   (setq char (fast-read-char))
+		   (setq level (1+ level))))))
+	;; Fundamental-stream.
+	(do ((level 1)
+	     (prev (read-char stream t) char)
+	     (char (read-char stream t) (read-char stream t)))
+	    (())
+	  (cond ((and (char= prev #\|) (char= char #\#))
+		 (setq level (1- level))
+		 (when (zerop level)
+		   (return (values)))
+		 (setq char (read-char stream t)))
+		((and (char= prev #\#) (char= char #\|))
+		 (setq char (read-char stream t))
+		 (setq level (1+ level))))))))
 
 (defun sharp-illegal (stream sub-char ignore)
   (declare (ignore ignore))
