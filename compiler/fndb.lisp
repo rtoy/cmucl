@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.83 1998/05/29 06:41:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.84 1999/01/15 09:30:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -584,13 +584,11 @@
 
 (defknown read-sequence (sequence stream &key (:start index)
 				  (:end sequence-end))
-  (index)
-  (flushable))
+  (index) ())
 
 (defknown write-sequence (sequence stream &key (:start index)
 				   (:end sequence-end))
-  (sequence)
-  ()
+  (sequence) ()
   :derive-type (sequence-result-nth-arg 1))
 
 
