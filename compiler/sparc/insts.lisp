@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.14 1997/04/23 02:24:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.15 1998/03/03 16:12:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -690,43 +690,37 @@
 ;;;; Unary and binary fp insts.
 
 (defun emit-fp-inst (segment opf op3 dst src1 src2 &optional odd)
-  (unless src2
-    (setf src2 src1)
-    (setf src1 dst))
-  (emit-format-3-fpop segment #b10 (fp-reg-tn-encoding dst odd) op3
-		      (fp-reg-tn-encoding src1 odd) opf
-		      (fp-reg-tn-encoding src2 odd)))
-
-(defun emit-fp-inst-no-dst (segment opf op3 src1 src2 &optional odd)
-  (emit-format-3-fpop segment #b10 0 op3
-		      (fp-reg-tn-encoding src1 odd) opf
-		      (fp-reg-tn-encoding src2 odd)))
+  (flet ((maybe-fp-reg-tn-encoding (reg)
+	   (if reg (fp-reg-tn-encoding reg odd) 0)))
+    (emit-format-3-fpop segment #b10 (maybe-fp-reg-tn-encoding dst) op3
+		      (maybe-fp-reg-tn-encoding src1) opf
+		      (maybe-fp-reg-tn-encoding src2))))
 
 (eval-when (compile eval)
 
 (defmacro define-unary-fp-inst (name opf &key reads odd)
-  `(define-instruction ,name (segment dst src1)
-     (:declare (type tn dst src1))
+  `(define-instruction ,name (segment dst src)
+     (:declare (type tn dst src))
      (:printer format-3-fpop ((op #b10) (op3 #b110100) (opf ,opf)))
      (:dependencies
       ,@(when reads
 	  `((reads ,reads)))
       (reads dst)
-      (reads src1)
+      (reads src)
       (writes dst))
      (:delay 0)
-     (:emitter (emit-fp-inst segment ,opf #b110100 dst src1 nil ,odd))))
+     (:emitter (emit-fp-inst segment ,opf #b110100 dst nil src ,odd))))
 
 (defmacro define-binary-fp-inst (name opf
 				      &key (op3 #b110100) reads writes delay)
-  `(define-instruction ,name (segment dst src1 &optional src2)
-     (:declare (type tn dst src1) (type (or null tn) src2))
+  `(define-instruction ,name (segment dst src1 src2)
+     (:declare (type tn dst src1 src2))
      (:printer format-3-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
      (:dependencies
       ,@(when reads
 	  `((reads ,reads)))
       (reads src1)
-      (if src2 (reads src2) (reads dst))
+      (reads src2)
       ,@(when writes
 	  `((writes ,writes)))
       (writes dst))
@@ -735,23 +729,16 @@
 	   '((:delay 0)))
      (:emitter (emit-fp-inst segment ,opf ,op3 dst src1 src2))))
 
-(defmacro define-binary-fp-inst-no-dst (name opf
-					     &key (op3 #b110100) reads writes
-					     delay)
+(defmacro define-fp-cmp-inst (name opf)
   `(define-instruction ,name (segment src1 src2)
      (:declare (type tn src1 src2))
-     (:printer format-3-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
+     (:printer format-3-fpop ((op #b10) (op3 #b110101) (opf ,opf)))
      (:dependencies
-      ,@(when reads
-	  `((reads ,reads)))
       (reads src1)
       (reads src2)
-      ,@(when writes
-	  `((writes ,writes))))
-     ,@(if delay
-	   `((:delay ,delay))
-	   '((:delay 0)))
-     (:emitter (emit-fp-inst-no-dst segment ,opf ,op3 src1 src2))))
+      (writes :fsr))
+     (:delay 1)
+     (:emitter (emit-fp-inst segment ,opf #b110101 nil src1 src2))))
   
 ); eval-when (compile eval)
 
@@ -780,7 +767,7 @@
   (:declare (type tn dst src1))
   (:dependencies (reads dst) (reads src1) (writes dst))
   (:delay 0)
-  (:emitter (emit-fp-inst segment #b000000001 #b110100 dst src1 nil t)))
+  (:emitter (emit-fp-inst segment #b000000001 #b110100 dst nil src1 t)))
 
 (define-unary-fp-inst fnegs #b000000101)
 (define-unary-fp-inst fabss #b000001001)
@@ -788,7 +775,6 @@
 (define-unary-fp-inst fsqrts #b000101001 :reads :fsr)
 (define-unary-fp-inst fsqrtd #b000101010 :reads :fsr)
 (define-unary-fp-inst fsqrtx #b000101011 :reads :fsr)
-
 
 
 (define-binary-fp-inst fadds #b001000001)
@@ -805,18 +791,14 @@
 (define-binary-fp-inst fdivd #b001001110)
 (define-binary-fp-inst fdivx #b001001111)
 
-(define-binary-fp-inst-no-dst fcmps #b001010001 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmpd #b001010010 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmpx #b001010011 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmpes #b001010101 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmped #b001010110 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmpex #b001010111 :op3 #b110101 :writes :fsr
-			      :delay 1)
+;;; Float comparison instructions.
+;;;
+(define-fp-cmp-inst fcmps #b001010001)
+(define-fp-cmp-inst fcmpd #b001010010)
+(define-fp-cmp-inst fcmpx #b001010011)
+(define-fp-cmp-inst fcmpes #b001010101)
+(define-fp-cmp-inst fcmped #b001010110)
+(define-fp-cmp-inst fcmpex #b001010111)
 
 
 
