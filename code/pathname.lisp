@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.17 1993/07/31 01:40:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.18 1993/07/31 09:08:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -608,9 +608,8 @@
 			   (%pathname-host defaults)
 			   (pathname-host *default-pathname-defaults*)))
 	 (host (or host default-host))
-	 (diddle-args (ecase (host-customary-case host)
-			(:lower (eq case :common))
-			(:upper (eq case :local))))
+	 (diddle-args (and (eq (host-customary-case host) :lower)
+			   (eq case :common)))
 	 (diddle-defaults
 	  (not (eq (host-customary-case host)
 		   (host-customary-case default-host))))
