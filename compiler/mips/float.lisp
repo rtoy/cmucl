@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.1 1990/07/02 16:33:56 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.2 1990/07/03 17:30:11 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -102,6 +102,29 @@
 		(define-move-vop ,name :move (descriptor-reg) (,sc)))))
   (frob move-to-single single-reg nil vm:single-float-value-slot)
   (frob move-to-double double-reg t vm:double-float-value-slot))
+
+
+(macrolet ((frob (name sc stack-sc format double-p)
+	     `(progn
+		(define-vop (,name)
+		  (:args (x :scs (,sc))
+			 (nfp :scs (any-reg)
+			      :load-if (not (sc-is y ,sc))))
+		  (:results (y))
+		  (:generator ,(if double-p 2 1)
+		    (sc-case y
+		      (,sc
+		       (unless (location= x y)
+			 (inst move ,format y x)))
+		      (,stack-sc
+		       (let ((offset (* (tn-offset y) vm:word-bytes)))
+			 (inst swc1 x nfp offset)
+			 ,@(when double-p
+			     '((inst swc1-odd x nfp
+				     (+ offset vm:word-bytes)))))))))
+		(define-move-vop ,name :move-argument (,sc) (,sc)))))
+  (frob move-single-float-argument single-reg single-stack :single nil)
+  (frob move-double-float-argument double-reg double-stack :double t))
 
 
 (define-move-vop move-argument :move-argument
