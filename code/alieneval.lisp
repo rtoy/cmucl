@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.14 1990/06/02 16:10:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.15 1990/06/02 16:41:43 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -347,7 +347,7 @@
 			(lognot (1- (truncate alien-alignment
 					      alien-address-unit)))))
 	 (new (sap+ *current-alien-free-pointer* bytes)))
-    (when (pointer> new alien-allocation-end)
+    (when (#-new-compiler %primitive pointer> new alien-allocation-end)
       (error "Not enough room to allocate a ~D bit alien." bits))
     (setq *current-alien-free-pointer* new)
     alien))
@@ -427,8 +427,10 @@
   "Release the storage allocated for Alien."
   (check-type alien alien-value)
   (let ((address (alien-value-sap alien)))
-    (unless (not (or (pointer< address system-space-start)
-		     (pointer> address alien-allocation-end)))
+    (unless (not (or (#-new-compiler %primitive pointer<
+				     address system-space-start)
+		     (#-new-compiler %primitive pointer>
+				     address alien-allocation-end)))
       (gr-call mach:vm_deallocate *task-self* address
 	       (logand #x-200 (ash (+ (alien-value-size alien) #xFFF)
 				   (- alien-address-shift)))))))
