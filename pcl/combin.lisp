@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.20 2003/09/05 23:03:36 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.21 2003/11/05 17:01:18 gerd Exp $")
 
 (in-package "PCL")
 
@@ -468,9 +468,21 @@
 		,body))))))
 
 ;;;
+;;; Return true if a fast-method-call to METHOD can be inlined.
+;;;
+;;; We don't generate funcalls for standard accessor methods because
+;;; they have a fast function, but that's not what is actually to be
+;;; called.  What is called is a closure over MAKE-STD-*-METHOD-FUNCTION.
+;;;
+(defun inlinable-method-p (method)
+  (and (eq *boot-state* 'complete)
+       *inline-methods-in-emfs*
+       (not (standard-accessor-method-p method))))
+
+;;;
 ;;; Return a form for calling METHOD's fast function.  METATYPES is a
 ;;; list of metatypes, whose length is used to figure out the names of
-;;; required emf parameters.  APPLY? true means the method has a &rest
+;;; required emf parameters.  REST? true means the method has a &rest
 ;;; arg.  CALLABLE-VAR is the name of a closed-over variable
 ;;; containing a FAST-METHOD-CALL instance corresponding to the
 ;;; method invocation.
@@ -485,26 +497,11 @@
     `(funcall ,fn ,cell ,next ,@req ,@(when rest? `(.dfun-rest-arg.)))))
 
 ;;;
-;;; Return a form for successive calls to the fast functions of
-;;; the methods in METHODS.  LIST-VAR is the name of a 
-;;; variable containing a list of FAST-METHOD-CALL structures
-;;; corresponding to the method function calls.
-;;;
-(defun make-direct-calls (methods metatypes rest? list-var)
-  (collect ((calls))
-    (dolist (method methods)
-      (calls `(let ((.call. (pop .list.)))
-		,(make-direct-call method metatypes rest? '.call.))))
-    `(let ((.list. ,list-var))
-       (declare (ignorable .list.))
-       ,@(calls))))
-
-;;;
 ;;; Return the list of methods from a CALL-METHOD-LIST form.
 ;;;
 (defun call-method-list-methods (call-method-list)
-  (mapcar (lambda (call-method) (cadr call-method))
-	  (cdr call-method-list)))
+  (loop for call-method-form in (cdr call-method-list)
+	collect (second call-method-form)))
 
 ;;;
 ;;; Compute a key from FORM.  This function is called via the
@@ -515,29 +512,28 @@
 ;;; key, a previously compiled function can be used.
 ;;;
 (defun memf-test-converter (form gf method-alist-p wrappers-p)
-  (case (car-safe form)
-    ;;
-    (call-method
-     (case (get-method-call-type gf form method-alist-p wrappers-p)
-       (fast-method-call
-	(let ((method (cadr form)))
-	  (if (and (eq *boot-state* 'complete) *inline-methods-in-emfs*)
-	      (method-function-name method)
-	      '.fast-call-method.)))
-       (t '.call-method.)))
-    ;;
-    (call-method-list
-     (case (get-method-list-call-type gf form method-alist-p wrappers-p)
-       (fast-method-call
-	(if (and (eq *boot-state* 'complete) *inline-methods-in-emfs*)
-	    (mapcar #'method-function-name (call-method-list-methods form))
-	    '.fast-call-method-list.))
-       (t '.call-method-list.)))
-    ;;
-    (check-applicable-keywords
-     'check-applicable-keywords)
-    (t
-     (default-test-converter form))))
+  (flet ((method-key (method)
+	   (if (inlinable-method-p method)
+	       (method-function-name method)
+	       '.fast-call-method.)))
+    (case (car-safe form)
+      ;;
+      (call-method
+       (if (eq (get-method-call-type gf form method-alist-p wrappers-p)
+	       'fast-method-call)
+	   (method-key (second form))
+	   '.call-method.))
+      ;;
+      (call-method-list
+       (if (eq (get-method-list-call-type gf form method-alist-p wrappers-p)
+	       'fast-method-call)
+	  (mapcar #'method-key (call-method-list-methods form))
+	  '.call-method-list.))
+      ;;
+      (check-applicable-keywords
+       'check-applicable-keywords)
+      (t
+       (default-test-converter form)))))
 
 ;;;
 ;;; This function is called via the GET-FUNCTION mechanism on forms of
@@ -545,46 +541,48 @@
 ;;; lambda.  Second value is a list of variable names that become
 ;;; closure variables.
 ;;;
-(defun memf-code-converter (form gf metatypes applyp method-alist-p
+(defun memf-code-converter (form gf metatypes rest? method-alist-p
 			    wrappers-p)
-  (case (car-safe form)
-    ;;
-    ;; (CALL-METHOD <method-object> &optional <next-methods>)
-    (call-method
-     (let ((method (cadr form))
-	   (callable-var (gensym))
-	   (call-type (get-method-call-type gf form method-alist-p
-					    wrappers-p)))
-       (if (and (eq call-type 'fast-method-call)
-		(eq *boot-state* 'complete)
-		*inline-methods-in-emfs*)
-	   (values (make-direct-call method metatypes applyp callable-var)
-		   (list callable-var))
-	   (values (make-emf-call metatypes applyp callable-var call-type)
-		   (list callable-var)))))
-    ;;
-    ;; (CALL-METHOD-LIST <call-method-form>*)
-    ;; where each CALL-METHOD form is (CALL-METHOD <method>)
-    (call-method-list
-     (let ((list-var (gensym))
-	   (call-type (get-method-list-call-type gf form method-alist-p
-						 wrappers-p)))
-       (if (and (eq call-type 'fast-method-call)
-		(eq *boot-state* 'complete)
-		*inline-methods-in-emfs*)
-	   (let ((methods (call-method-list-methods form)))
-	     (values (make-direct-calls methods metatypes applyp list-var)
-		     (list list-var)))
-	   (values `(dolist (.tem. ,list-var)
-		      ,(make-emf-call metatypes applyp '.tem. call-type))
-		   (list list-var)))))
-    ;;
-    (check-applicable-keywords
-     (values `(check-applicable-keywords .dfun-rest-arg.
-					 .keyargs-start. .valid-keys.)
-	      '(.keyargs-start. .valid-keys.)))
-    (t
-     (default-code-converter form))))
+  (labels ((make-call (call-type method metatypes rest? callable-var)
+	     (if (and (eq call-type 'fast-method-call)
+		      (inlinable-method-p method))
+		 (make-direct-call method metatypes rest? callable-var)
+		 (make-emf-call metatypes rest? callable-var call-type)))
+	   
+	   (make-calls (call-type methods metatypes rest? list-var)
+	     `(let ((.list. ,list-var))
+		(declare (ignorable .list.))
+		,@(loop for method in methods collect
+			  `(let ((.call. (pop .list.)))
+			     ,(make-call call-type method metatypes
+					 rest? '.call.))))))
+    (case (car-safe form)
+      ;;
+      ;; (CALL-METHOD <method-object> &optional <next-methods>)
+      (call-method
+       (let ((method (cadr form))
+	     (callable-var (gensym))
+	     (call-type (get-method-call-type gf form method-alist-p
+					      wrappers-p)))
+	 (values (make-call call-type method metatypes rest? callable-var)
+		 (list callable-var))))
+      ;;
+      ;; (CALL-METHOD-LIST <call-method-form>*)
+      ;; where each CALL-METHOD form is (CALL-METHOD <method>)
+      (call-method-list
+       (let ((list-var (gensym))
+	     (call-type (get-method-list-call-type gf form method-alist-p
+						   wrappers-p))
+	     (methods (call-method-list-methods form)))
+	 (values (make-calls call-type methods metatypes rest? list-var)
+		 (list list-var))))
+      ;;
+      (check-applicable-keywords
+       (values `(check-applicable-keywords .dfun-rest-arg.
+					   .keyargs-start. .valid-keys.)
+	       '(.keyargs-start. .valid-keys.)))
+      (t
+       (default-code-converter form)))))
 
 (defun memf-constant-converter (form gf)
   (case (car-safe form)
