@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.8 1990/12/16 19:19:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.9 1992/03/11 21:37:45 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -35,7 +35,6 @@
 			  (:temp temp2 non-descriptor-reg nl1-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst andcc zero-tn x 3)
   (inst b :ne DO-STATIC-FUN)
@@ -54,9 +53,8 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FUN
-  (load-symbol cname 'two-arg-+)
+  (inst ld code-tn null-tn (static-function-offset 'two-arg-+))
   (inst li nargs (fixnum 2))
-  (loadw code-tn cname vm:symbol-raw-function-addr-slot vm:other-pointer-type)
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* vm:function-header-code-offset vm:word-bytes)
@@ -82,7 +80,6 @@
 			  (:temp temp2 non-descriptor-reg nl1-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst andcc zero-tn x 3)
   (inst b :ne DO-STATIC-FUN)
@@ -101,9 +98,8 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FUN
-  (load-symbol cname 'two-arg--)
+  (inst ld code-tn null-tn (static-function-offset 'two-arg--))
   (inst li nargs (fixnum 2))
-  (loadw code-tn cname vm:symbol-raw-function-addr-slot vm:other-pointer-type)
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* vm:function-header-code-offset vm:word-bytes)
@@ -134,7 +130,6 @@
 			  (:temp hi non-descriptor-reg nl2-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   ;; If either arg is not a fixnum, call the static function.
   (inst andcc zero-tn x 3)
@@ -193,9 +188,8 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FUN
-  (load-symbol cname 'two-arg-*)
+  (inst ld code-tn null-tn (static-function-offset 'two-arg-*))
   (inst li nargs (fixnum 2))
-  (loadw code-tn cname symbol-raw-function-addr-slot other-pointer-type)
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* vm:function-header-code-offset vm:word-bytes)
@@ -384,7 +378,6 @@
 				  (:res res descriptor-reg a0-offset)
 				  
 				  (:temp nargs any-reg nargs-offset)
-				  (:temp cname descriptor-reg cname-offset)
 				  (:temp ocfp any-reg ocfp-offset))
 	  (inst andcc zero-tn x 3)
 	  (inst b :ne DO-STATIC-FN)
@@ -393,10 +386,8 @@
 	  (inst cmp x y)
 	  
 	  DO-STATIC-FN
-	  (load-symbol cname ',static-fn)
+	  (inst ld code-tn null-tn (static-function-offset ',static-fn))
 	  (inst li nargs (fixnum 2))
-	  (loadw code-tn cname vm:symbol-raw-function-addr-slot
-		 vm:other-pointer-type)
 	  (inst move ocfp cfp-tn)
 	  (inst j code-tn
 		(- (* vm:function-header-code-offset vm:word-bytes)
@@ -428,7 +419,6 @@
 
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst cmp x y)
   (inst b :eq RETURN-T)
@@ -443,9 +433,8 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FN
-  (load-symbol cname 'eql)
+  (inst ld code-tn null-tn (static-function-offset 'eql))
   (inst li nargs (fixnum 2))
-  (loadw code-tn cname vm:symbol-raw-function-addr-slot vm:other-pointer-type)
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* vm:function-header-code-offset vm:word-bytes)
@@ -468,7 +457,6 @@
 
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst cmp x y)
   (inst b :eq RETURN-T)
@@ -482,9 +470,8 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FN
-  (load-symbol cname 'two-arg-=)
+  (inst ld code-tn null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnum 2))
-  (loadw code-tn cname vm:symbol-raw-function-addr-slot vm:other-pointer-type)
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* vm:function-header-code-offset vm:word-bytes)
@@ -507,7 +494,6 @@
 
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst cmp x y)
   (inst b :eq RETURN-NIL)
@@ -521,9 +507,8 @@
   (lisp-return lra :offset 2)
 
   DO-STATIC-FN
-  (load-symbol cname 'two-arg-=)
+  (inst ld code-tn null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnum 2))
-  (loadw code-tn cname vm:symbol-raw-function-addr-slot vm:other-pointer-type)
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* vm:function-header-code-offset vm:word-bytes)
