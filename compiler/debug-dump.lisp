@@ -498,7 +498,7 @@
 				    ((let ((ef (functional-entry-function
 						fun)))
 				       (and ef (leaf-name ef))))
-				    (main-p (leaf-name dispatch))
+				    ((and main-p (leaf-name dispatch)))
 				    (t
 				     (component-name component)))
 			:kind (if main-p nil (functional-kind fun))
