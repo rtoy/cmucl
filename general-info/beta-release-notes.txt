@@ -1,3 +1,51 @@
+	    Release notes for CMU Common Lisp 15e, 25 February 92
+
+Mainly a bug-fix release.  This will probably be the last version 15 release,
+and is thus the most stable system you're going to see for a while.  We're
+reluctant to call this a "default" release because there still isn't any good
+stack overflow detection, however that probably won't be fixed until the C
+code rewrite associated with generational GC comes out (version 17 or later.)
+
+We are also distributing the CMU CL user manual in Gnu Info format (in
+doc/cmu-user.info.)  You can either have your EMACS maintainer install this in
+the info root, or you can use the info "g(<cmucl root dir>/doc/cmu-user.info)"
+command.  Many thanks to Mike Clarkson (the LaTeXinfo maintainer) who
+volunteered to convert our Scribe documents.
+
+Changes:
+
+Improved recursive error handling.  Errors during reporting of errors are
+detected and suppressed.  Other recursive errors are eventually detected, and
+hopefully recovered from.  This should eliminate some "recursive map failure
+(stack overflow?)" errors.
+
+Fixed a bad declaration In CLX which caused array an index error on font
+attribute queries (such as CHAR-WIDTH.)
+
+Changed NCONC to signal an error if a non-null ATOM appears other than as the
+last argument.
+
+Changed FEATUREP to signal an error if it is passed a list form with a strange
+CAR.
+
+Fixed interpreted (typep x '(and ...)) to not always return NIL.
+
+Fixed PROFILE to work again, now that argument count information may be
+missing. 
+
+Do type checking on the arguments to %PUTHASH so that 
+(setf (gethash foo 'bar) x) doesn't get a bus error.
+
+Changed LET* and &AUX to allow duplicate variable names.
+
+Fixed DEFTYPE to properly invalidate type system caches so that type
+redefinitions predictably take effect.
+
+Improvements to MIPS disassembler database.
+
+Fixed interpreted CLOS methods to work once again.
+
+
 	    Release notes for CMU Common Lisp 15d, 2 February 92
 
 These release notes cover changes since the beta release of version 15b on 6
