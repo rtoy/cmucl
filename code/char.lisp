@@ -128,6 +128,10 @@
 	     (= n 13)
 	     (= n 10)))))
 
+(defun %standard-char-p (thing)
+  "Return T if and only if THING is a standard-char.  Differs from
+  standard-char-p in that THING doesn't have to be a character."
+  (and (characterp thing) (standard-char-p thing)))
 
 (defun graphic-char-p (char)
   "The argument must be a character object.  Graphic-char-p returns T if the
