@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.11 1991/10/03 18:29:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.12 1991/10/08 15:49:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,8 @@
   (let* ((ctype (specifier-type type))
 	 (note (or note "optimize"))
 	 (info (function-info-or-lose name))
-	 (old (find ctype (function-info-transforms info) :test #'type=)))
+	 (old (find ctype (function-info-transforms info)
+		    :key #'transform-type :test #'type=)))
     (if old
 	(setf (transform-function old) fun  (transform-note old) note)
 	(push (make-transform :type ctype :function fun :note note)
