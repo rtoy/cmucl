@@ -45,7 +45,7 @@
 (comf "target:hemlock/charmacs" :always-once t)
 (comf "target:hemlock/key-event" :load t)
 (comf "target:hemlock/struct" :always-once t)
-(comf "target:hemlock/struct-ed" :always-once t)
+;(comf "target:hemlock/struct-ed" :always-once t)
 (comf "target:hemlock/rompsite" :always-once t)
 ;;;
 ;;; This is necessary since all the #k uses in Hemlock will expand into
