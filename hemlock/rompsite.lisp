@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.22 1992/02/16 16:50:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.23 1992/02/16 17:24:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -893,10 +893,8 @@
   (alien:with-alien ((buf (alien:array c-call:char 256)))
     (multiple-value-bind
 	(len errno)
-	(unix:unix-read fd
-			(alien:alien-sap buf)
-			(alien:alien-size buf :bytes))
-      (type (or null fixnum) len)
+	(unix:unix-read fd (alien:alien-sap buf) 256)
+      (declare (type (or null fixnum) len))
       (unless len
 	(error "Problem with tty input: ~S"
 	       (unix:get-unix-error-msg errno)))
