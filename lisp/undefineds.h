@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.19 1997/08/23 16:00:23 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.20 1998/01/29 07:39:07 dtc Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -158,6 +158,9 @@ F(tcsendbreak)
 F(tcdrain)
 F(tcflush)
 F(tcflow)
+#endif
+#if defined(SOLARIS)
+F(times)
 #endif
 F(truncate)
 F(umask)
