@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.7 1992/02/14 23:45:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.8 1992/02/16 13:53:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -265,7 +265,7 @@
 		       (cons char
 			     handler))
 		 *oob-handlers*)
-	   (system:enable-interrupt mach:sigurg #'sigurg-handler)
+	   (system:enable-interrupt unix:sigurg #'sigurg-handler)
 	   (unix:unix-fcntl fd unix:f-setown (unix:unix-getpid)))))
   (values))
 
