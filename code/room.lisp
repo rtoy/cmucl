@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (Scott.Fahlman@CS.CMU.EDU). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.1 1990/09/19 00:12:05 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.2 1990/09/27 06:11:22 wlott Exp $
 ;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
@@ -35,7 +35,8 @@
   (name nil :type symbol)
   ;;
   ;; Kind of type (how we determine length).
-  (kind nil :type (member :lowtag :fixed :header :vector :code :closure))
+  (kind nil :type (member :lowtag :fixed :header :vector
+			  :string :code :closure))
   ;;
   ;; Length if fixed-length, shift amount for element size if :vector.
   (length nil :type (or fixnum null)))
@@ -74,8 +75,7 @@
 (setf (svref *room-info* closure-header-type)
       (make-room-info :name 'closure  :kind :closure))
 
-(dolist (stuff '((simple-string-type . 0)
-		 (simple-bit-vector-type . -3)
+(dolist (stuff '((simple-bit-vector-type . -3)
 		 (simple-vector-type . 2)
 		 (simple-array-unsigned-byte-2-type . -2)
 		 (simple-array-unsigned-byte-4-type . -1)
@@ -88,6 +88,9 @@
 	(size (cdr stuff)))
     (setf (svref *room-info* (symbol-value name))
 	  (make-room-info :name name  :kind :vector  :length size))))
+
+(setf (svref *room-info* simple-string-type)
+      (make-room-info :name 'simple-string-type :kind :string :length 0))
 
 (setf (svref *room-info* code-header-type)
       (make-room-info :name 'code  :kind :code))
@@ -131,7 +134,10 @@
 (proclaim '(inline vector-total-size))
 (defun vector-total-size (obj info)
   (let ((shift (room-info-length info))
-	(len (vector-length obj)))
+	(len (+ (vector-length obj)
+		(ecase (room-info-kind info)
+		  (:vector 0)
+		  (:string 1)))))
     (declare (type (integer -3 3) shift))
     (round-to-dualword
      (+ (* vector-data-offset word-bytes)
@@ -190,7 +196,7 @@
 					(floatp obj)))
 			    (round-to-dualword
 			     (* (room-info-length info) word-bytes)))
-			   (:vector
+			   ((:vector :string)
 			    (vector-total-size obj info))
 			   (:header
 			    (round-to-dualword
@@ -436,4 +442,33 @@
       (format t "Structure total: ~:D bytes, ~:D object~:P.~%"
 	      total-bytes total-objects)))
 
+  (values))
+
+
+;;; FIND-HOLES -- Public
+;;; 
+(defun find-holes (&rest spaces)
+  (dolist (space (or spaces '(:read-only :static :dynamic)))
+    (format t "In ~A space:~%" space)
+    (let ((start-addr nil)
+	  (total-bytes 0))
+      (declare (type (or null (unsigned-byte 32)) start-addr)
+	       (type (unsigned-byte 32) total-bytes))
+      (map-allocated-objects
+       #'(lambda (object typecode bytes)
+	   (declare (ignore typecode)
+		    (type (unsigned-byte 32) bytes))
+	   (if (and (consp object)
+		    (eql (car object) 0)
+		    (eql (cdr object) 0))
+	       (if start-addr
+		   (incf total-bytes bytes)
+		   (setf start-addr (di::get-lisp-obj-address object)
+			 total-bytes bytes))
+	       (when start-addr
+		 (format t "~D bytes at #x~X~%" total-bytes start-addr)
+		 (setf start-addr nil))))
+       space)
+      (when start-addr
+	(format t "~D bytes at #x~X~%" total-bytes start-addr))))
   (values))
