@@ -264,8 +264,8 @@ _closure_tramp:
 
 	.text
 	.align	8
-	.global	function_end_breakpoint_guts
-function_end_breakpoint_guts:
+	.global	_function_end_breakpoint_guts
+_function_end_breakpoint_guts:
 	.word	type_ReturnPcHeader
 	b	1f
 	nop
@@ -277,14 +277,14 @@ function_end_breakpoint_guts:
 	mov	NULLREG, A5
 1:
 
-	.global	function_end_breakpoint_trap
-function_end_breakpoint_trap:
+	.global	_function_end_breakpoint_trap
+_function_end_breakpoint_trap:
 	unimp	trap_FunctionEndBreakpoint
 	b	1b
 	nop
 
-	.global	function_end_breakpoint_end
-function_end_breakpoint_end:
+	.global	_function_end_breakpoint_end
+_function_end_breakpoint_end:
 
 
 
@@ -505,3 +505,4 @@ _sigreturn:
 	t	0
 	unimp	0			! just in case it returns
 	/*NOTREACHED*/
+
