@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.43 2002/11/22 00:39:55 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.44 2002/11/28 16:10:11 pmai Exp $")
 
 (in-package :pcl)
 
@@ -246,42 +246,42 @@ work during bootstrapping.
 	       (if new-supplied-p
 		   (setf (getf initargs key) new)
 		   (getf initargs key))))
-	(dolist (option options)
-	  (case (car option)
-	    (:argument-precedence-order
-	      (if (initarg :argument-precedence-order)
-		  (duplicate-option :argument-precedence-order)
-		  (initarg :argument-precedence-order `',(cdr option))))
-	    (declare
-	      (check-declaration (cdr option))
-	      (initarg :declarations
-		       (append (cdr option) (initarg :declarations))))
-	    (:documentation
-	      (if (initarg :documentation)
-		  (duplicate-option :documentation)
-		  (initarg :documentation `',(cadr option))))
-	    (:method-combination
-	      (if (initarg :method-combination)
-		  (duplicate-option :method-combination)
-		  (initarg :method-combination `',(cdr option))))
-	    (:generic-function-class
-	      (if (initarg :generic-function-class)
-		  (duplicate-option :generic-function-class)
-		  (initarg :generic-function-class `',(cadr option))))
-	    (:method-class
-	      (if (initarg :method-class)
-		  (duplicate-option :method-class)
-		  (initarg :method-class `',(cadr option))))
-	    (:method
-	     (push `(defmethod ,function-specifier ,@(cdr option))
-		   methods))
-	    (t ;unsuported things must get a 'program-error
-	     (simple-program-error "Unsupported option ~S." option))))
+      (dolist (option options)
+	(case (car option)
+	  (:argument-precedence-order
+	   (if (initarg :argument-precedence-order)
+	       (duplicate-option :argument-precedence-order)
+	       (initarg :argument-precedence-order `',(cdr option))))
+	  (declare
+	   (check-declaration (cdr option))
+	   (initarg :declarations
+		    (append (cdr option) (initarg :declarations))))
+	  (:documentation
+	   (if (initarg :documentation)
+	       (duplicate-option :documentation)
+	       (initarg :documentation `',(cadr option))))
+	  (:method-combination
+	   (if (initarg :method-combination)
+	       (duplicate-option :method-combination)
+	       (initarg :method-combination `',(cdr option))))
+	  (:generic-function-class
+	   (if (initarg :generic-function-class)
+	       (duplicate-option :generic-function-class)
+	       (initarg :generic-function-class `',(cadr option))))
+	  (:method-class
+	   (if (initarg :method-class)
+	       (duplicate-option :method-class)
+	       (initarg :method-class `',(cadr option))))
+	  (:method
+	   (push `(defmethod ,function-specifier ,@(cdr option))
+		 methods))
+	  (t ;unsuported things must get a 'program-error
+	   (simple-program-error "Unsupported option ~S." option))))
 
-	(let ((declarations (initarg :declarations)))
-	  (when declarations (initarg :declarations `',declarations))))
-
-      (tell-compiler-about-gf function-specifier lambda-list)
+      (let ((declarations (initarg :declarations)))
+	(when declarations (initarg :declarations `',declarations))))
+    
+    (tell-compiler-about-gf function-specifier lambda-list)
 
     `(progn 
        (proclaim-defgeneric ',function-specifier ',lambda-list)
@@ -290,7 +290,7 @@ work during bootstrapping.
 	 *defgeneric-times*
 	 `(load-defgeneric ',function-specifier ',lambda-list ,@initargs))
        ,@methods
-       `,(function ,function-specifier)))))
+       `,(function ,function-specifier))))
 
 (defun load-defgeneric (function-specifier lambda-list &rest initargs)
   (apply #'ensure-generic-function
