@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.39 2004/06/01 23:36:07 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.40 2004/07/25 18:25:16 pmai Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,7 @@
 ;; enabled upon startup from the function PACKAGE-LOCKS-INIT.
 (in-package "LISP")
 (defparameter *enable-package-locked-errors* nil)
+(ext:unlock-all-packages)
 
 (define-condition genesis-c-header-file-changed (warning)
   ((name :initarg :name :reader genesis-c-header-file-name))
