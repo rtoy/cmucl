@@ -508,17 +508,34 @@ _closure_tramp:
 	 */
 	/*
 	 * Need to save all parameter regs to the stack because we 
-	 * need them for later.
+	 * need them for later.  We save the FP registers too.  (Do
+	 * we really need to?  lazy_resolve_linkage shouldn't call
+	 * anything that uses FP registers.  It's safe to do so.)
 	 */
-	subi	r1, r1, 8*4+8
-	stw	r3, 0(r1)
-	stw	r4, 4(r1)
-	stw	r5, 8(r1)
-	stw	r6, 12(r1)
-	stw	r7, 16(r1)
-	stw	r8, 20(r1)
-	stw	r9, 24(r1)
-	stw	r10, 28(r1)
+	subi	r1, r1, 8*4+8+8*13
+	stfd	f1, 0(r1)
+	stfd	f2, 8(r1)
+	stfd	f3, 16(r1)
+	stfd	f4, 24(r1)
+	stfd	f5, 32(r1)
+	stfd	f6, 40(r1)
+	stfd	f7, 48(r1)
+	stfd	f8, 56(r1)
+	stfd	f9, 64(r1)
+	stfd	f10, 72(r1)
+	stfd	f11, 80(r1)
+	stfd	f12, 88(r1)
+	stfd	f13, 96(r1)
+	
+	stw	r3, 104+0(r1)
+	stw	r4, 104+4(r1)
+	stw	r5, 104+8(r1)
+	stw	r6, 104+12(r1)
+	stw	r7, 104+16(r1)
+	stw	r8, 104+20(r1)
+	stw	r9, 104+24(r1)
+	stw	r10, 104+28(r1)
+
 	
 	mr	reg_NL0, reg_A0
 
@@ -541,14 +558,30 @@ _closure_tramp:
 	 */
 
 	mtctr	reg_NL0
-	lwz	r3, 0(r1)
-	lwz	r4, 4(r1)
-	lwz	r5, 8(r1)
-	lwz	r6, 12(r1)
-	lwz	r7, 16(r1)
-	lwz	r8, 20(r1)
-	lwz	r9, 24(r1)
-	lwz	r10, 28(r1)
+	lfd	f1, 0(r1)
+	lfd	f2, 8(r1)
+	lfd	f3, 16(r1)
+	lfd	f4, 24(r1)
+	lfd	f5, 32(r1)
+	lfd	f6, 40(r1)
+	lfd	f7, 48(r1)
+	lfd	f8, 56(r1)
+	lfd	f9, 64(r1)
+	lfd	f10, 72(r1)
+	lfd	f11, 80(r1)
+	lfd	f12, 88(r1)
+	lfd	f13, 96(r1)
+	
+	lwz	r3, 104+0(r1)
+	lwz	r4, 104+4(r1)
+	lwz	r5, 104+8(r1)
+	lwz	r6, 104+12(r1)
+	lwz	r7, 104+16(r1)
+	lwz	r8, 104+20(r1)
+	lwz	r9, 104+24(r1)
+	lwz	r10, 104+28(r1)
+
+	addi	r1,r1,8*4+8+8*13
 
 	/*
 	 * Got it, so we can now jump directly to the desired function.
