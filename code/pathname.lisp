@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.71 2004/10/22 18:30:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.72 2004/12/23 16:22:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -643,7 +643,7 @@
 
 ;;; MAKE-PATHNAME -- Interface
 ;;;
-(defun make-pathname (&key host
+(defun make-pathname (&key (host nil hostp)
 			   (device nil devp)
 			   (directory nil dirp)
 			   (name nil namep)
@@ -653,7 +653,7 @@
 			   (case :local))
   "Makes a new pathname from the component arguments.  Note that host is
 a host-structure or string."
-  (declare (type (or string host component-tokens) host)
+  (declare (type (or null string host component-tokens) host)
 	   (type (or string component-tokens) device)
 	   (type (or list string pattern component-tokens) directory)
 	   (type (or string pattern component-tokens) name type)
@@ -687,12 +687,22 @@ a host-structure or string."
 		 (host host) 		; A valid host, use it.
 		 ((string 0) default-host) ; "" cannot be a logical host
 		 (string (find-logical-host host t)) ; logical-host or lose.
-		 (t default-host)))	; unix-host
-	 (diddle-args (and (eq (host-customary-case host) :lower)
-			   (eq case :common)))
+		 (t
+		  ;; If the user specifically set :host to be NIL, use
+		  ;; it.  Otherwise, we use the default host.
+		  (if (and hostp (null host))
+		      nil
+		      default-host))))
+	 (diddle-args
+	  ;; What to do if no host is given?  Can't figure out the
+	  ;; customary case, so I (rtoy) am going to assume we don't
+	  ;; need to diddle args.
+	  (and host (eq (host-customary-case host) :lower)
+	       (eq case :common)))
 	 (diddle-defaults
-	  (not (eq (host-customary-case host)
-		   (host-customary-case default-host))))
+	  ;; Same for diddle-defaults.  Do nothing if no host was given.
+	  (and host (not (eq (host-customary-case host)
+			     (host-customary-case default-host)))))
 	 (dev (if devp device (if defaults (%pathname-device defaults))))
 	 (dir (import-directory directory diddle-args))
 	 (ver (cond
