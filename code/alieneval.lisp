@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.23 1992/03/07 08:34:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.24 1992/03/10 11:24:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -457,13 +457,20 @@
 
 (defun alien-subtype-p (type1 type2)
   "Return T iff the alien type TYPE1 is a subtype of TYPE2.  Currently, the
-   only supported subtype relationship is that any pointer type is a subtype
-   of (* t).  Otherwise, the two types have to be ALIEN-TYPE-=."
+   only supported subtype relationships are is that any pointer type is a
+   subtype of (* t), and any array type first dimension will match 
+   (array <eltype> nil ...).  Otherwise, the two types have to be
+   ALIEN-TYPE-=."
   (typecase type1
     (alien-pointer-type
      (and (alien-pointer-type-p type2)
 	  (or (null (alien-pointer-type-to type2))
 	      (alien-type-= type1 type2))))
+    (alien-array-type
+     (and (alien-array-type-p type2)
+	  (let ((dims (alien-array-type-dimensions type2)))
+	    (or (and dims (null (first dims)))
+		(alien-type-= type1 type2)))))
     (t
      (alien-type-= type1 type2))))
 
@@ -1370,6 +1377,7 @@
 	     (unparse-alien-type (alien-value-type value))
 	     (sap-int (alien-value-sap value)))))
 
+(declaim (freeze-type alien-value))
 
 (declaim (inline null-alien))
 (defun null-alien (x)
