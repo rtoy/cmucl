@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.44 2004/10/05 22:01:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.45 2004/10/07 17:06:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1302,6 +1302,16 @@
   (funcall (formatter "~:<~^~W~^~3I ~_~W~^ ~_~W~^~1I~@{ ~_~W~}~:>")
 	   stream list))
 
+(defun pprint-multiple-value-bind (stream list &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~^~W~^~5I ~:_~W~3I ~:@_~W~1I~@{ ~:@_~W~}~:>")
+	   stream list))
+
+(defun pprint-handler-bind (stream list &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~^~W~3I ~:_~W~1I~@{ ~:@_~W~}~:>")
+	   stream list))
+  
 (defun pprint-quote (stream list &rest noise)
   (declare (ignore noise))
   (if (and (consp list)
@@ -1499,10 +1509,10 @@
     (dotimes pprint-dolist)
     (ecase pprint-case)
     (etypecase pprint-typecase)
-    #+nil (handler-bind ...)
-    #+nil (handler-case ...)
+    (handler-bind pprint-handler-bind)
+    (handler-case pprint-handler-bind)
     #+nil (loop ...)
-    (multiple-value-bind pprint-progv)
+    (multiple-value-bind pprint-multiple-value-bind)
     (multiple-value-setq pprint-block)
     (pprint-logical-block pprint-block)
     (print-unreadable-object pprint-block)
@@ -1521,7 +1531,7 @@
     (unless pprint-block)
     (when pprint-block)
     (with-compilation-unit pprint-block)
-    #+nil (with-condition-restarts ...)
+    (with-condition-restarts pprint-multiple-value-bind)
     (with-hash-table-iterator pprint-block)
     (with-input-from-string pprint-block)
     (with-open-file pprint-block)
