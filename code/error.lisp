@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.75 2003/05/03 11:22:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.76 2003/07/20 11:02:48 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -209,13 +209,19 @@
       (error 'simple-control-error
 	     :format-control "Restart ~S is not active."
 	     :format-arguments (list restart)))
-    (apply (restart-function real-restart)
-	   (let ((interactive-function
-		  (restart-interactive-function real-restart)))
-	     (if interactive-function
-		 (funcall interactive-function)
-		 '())))))
+    (%invoke-restart-interactively real-restart)))
 
+;;;
+;;; Like Invoke-Restart-Interactively, but don't check if the restart
+;;; is currently active.  Used by the debugger.
+;;;
+(defun %invoke-restart-interactively (restart)
+  (apply (restart-function restart)
+	 (let ((interactive-function
+		(restart-interactive-function restart)))
+	   (if interactive-function
+	       (funcall interactive-function)
+	       '()))))
 
 (eval-when (compile load eval)
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.61 2003/06/26 13:27:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.62 2003/07/20 11:02:48 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1151,8 +1151,17 @@ See the CMU Common Lisp User's Manual for more information.
 	(num 0))			; better be the same as show-restarts!
     (dolist (restart restarts)
       (let ((name (string (restart-name restart))))
+	;;
+	;; Use %Invoke-Restart-Interactively because the dynamic
+	;; environment when the debugger invokes the restart can be
+	;; different from the dynamic environment when the debugger
+	;; computes active restarts.  If this is the case,
+	;; Invoke-Restart-Interactively might find that the restart
+	;; being invoked is not currently active and signal a
+	;; Control-Error.
         (let ((restart-fun
-	       #'(lambda () (invoke-restart-interactively restart))))
+	       (lambda ()
+		 (conditions::%invoke-restart-interactively restart))))
 	  (push (cons (format nil "~d" num) restart-fun) commands)
 	  (unless (or (null (restart-name restart)) 
 	              (find name commands :key #'car :test #'string=))
