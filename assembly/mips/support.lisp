@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.1 1990/10/31 23:44:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.2 1990/11/01 01:16:55 wlott Exp $
 ;;;
 ;;; This file contains the machine specific support routines needed by
 ;;; the file assembler.
@@ -17,27 +17,42 @@
 (defun generate-call-sequence (name style vop temp nfp-save lra)
   (ecase style
     (:raw
-     `((inst jal (make-fixup ',name :assembly-routine))
-       (inst nop)))
+     (values
+      `((inst jal (make-fixup ',name :assembly-routine))
+	(inst nop))
+      nil))
     (:full-call
-     `((let ((lra-label (gen-label))
-	     (cur-nfp (current-nfp-tn ,vop)))
-	 (when cur-nfp
-	   (store-stack-tn ,nfp-save cur-nfp))
-	 (inst compute-lra-from-code ,lra code-tn lra-label ,temp)
-	 (inst j (make-fixup ',name :assembly-routine))
-	 (inst nop)
-	 (emit-return-pc lra-label)
-	 (note-this-location ,vop :unknown-return)
-	 (move csp-tn old-fp-tn)
-	 (inst nop)
-	 (inst compute-code-from-lra code-tn code-tn
-	       lra-label ,temp)
-	 (when cur-nfp
-	   (load-stack-tn cur-nfp ,nfp-save)))))
+     (let ((temp (make-symbol "TEMP"))
+	   (nfp-save (make-symbol "NFP-SAVE"))
+	   (lra (make-symbol "LRA")))
+       (values
+	`((let ((lra-label (gen-label))
+		(cur-nfp (current-nfp-tn ,vop)))
+	    (when cur-nfp
+	      (store-stack-tn ,nfp-save cur-nfp))
+	    (inst compute-lra-from-code ,lra code-tn lra-label ,temp)
+	    (inst j (make-fixup ',name :assembly-routine))
+	    (inst nop)
+	    (emit-return-pc lra-label)
+	    (note-this-location ,vop :unknown-return)
+	    (move csp-tn old-fp-tn)
+	    (inst nop)
+	    (inst compute-code-from-lra code-tn code-tn
+		  lra-label ,temp)
+	    (when cur-nfp
+	      (load-stack-tn cur-nfp ,nfp-save))))
+	`((:temporary (:scs (non-descriptor-reg) :from (:eval 0) :to (:eval 1))
+		      ,temp)
+	  (:temporary (:sc descriptor-reg :offset lra-offset
+			   :from (:eval 0) :to (:eval 1))
+		      ,lra)
+	  (:temporary (:scs (control-stack) :offset nfp-save-offset)
+		      ,nfp-save)))))
     (:none
-     `((inst j (make-fixup ',name :assembly-routine))
-       (inst nop)))))
+     (values
+      `((inst j (make-fixup ',name :assembly-routine))
+	(inst nop))
+      nil))))
 
 
 (defun generate-return-sequence (style)
