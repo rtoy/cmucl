@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/nlx.lisp,v 1.1 2004/05/24 22:35:00 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/nlx.lisp,v 1.2 2004/07/06 20:21:09 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -108,8 +108,8 @@
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp block unwind-block-current-uwp-slot)
     (storew rbp-tn block unwind-block-current-cont-slot)
-    (storew (make-fixup nil :code-object entry-label)
-	    block catch-block-entry-pc-slot)))
+    (inst mov-imm temp (make-fixup nil :code-object entry-label))
+    (storew temp block catch-block-entry-pc-slot)))
 
 ;;; Like Make-Unwind-Block, except that we also store in the specified tag, and
 ;;; link the block into the Current-Catch list.
@@ -126,8 +126,8 @@
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp block  unwind-block-current-uwp-slot)
     (storew rbp-tn block  unwind-block-current-cont-slot)
-    (storew (make-fixup nil :code-object entry-label)
-	    block catch-block-entry-pc-slot)
+    (inst mov-imm temp (make-fixup nil :code-object entry-label))
+    (storew temp block catch-block-entry-pc-slot)
     (storew tag block catch-block-tag-slot)
     (load-symbol-value temp lisp::*current-catch-block*)
     (storew temp block catch-block-previous-catch-slot)
