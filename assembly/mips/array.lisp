@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.4 1990/03/29 21:29:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.5 1990/04/13 20:29:43 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -197,7 +197,8 @@
 
   done
 
-  (inst sll result accum 2))
+  (inst sll result accum 5)
+  (inst srl result result 3))
 
 
 (define-assembly-routine (sxhash-simple-substring
@@ -285,4 +286,5 @@
 
   done
 
-  (inst sll result accum 2))
+  (inst sll result accum 5)
+  (inst srl result result 3))
