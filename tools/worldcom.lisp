@@ -65,6 +65,8 @@
 (comf "target:code/kernel")
 (comf "target:code/lispinit")
 (comf "target:code/fdefinition")
+#+mach (comf "target:code/mach-os")
+#+sunos (comf "target:code/sunos-os")
 
 (comf "target:code/error")
 (comf "target:code/salterror")
