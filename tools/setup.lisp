@@ -203,3 +203,33 @@
 		(compile-file src  :error-file nil  :output-file obj))
 	    (when load
 	      (load name :verbose t)))))))))
+
+
+
+;;; CAT-IF-ANYTHING-CHAGNED
+
+(defun cat-if-anything-changed (output-file &rest input-files)
+  (flet ((add-correct-type (pathname)
+	   (make-pathname :type (c:backend-fasl-file-type c:*target-backend*)
+			  :defaults pathname)))
+    (let* ((output-file (add-correct-type output-file))
+	   (write-date (file-write-date output-file))
+	   (input-namestrings
+	    (mapcar #'(lambda (file)
+			(let ((file (add-correct-type file)))
+			  (let ((src-write-date (file-write-date file)))
+			    (unless src-write-date
+			      (error "Missing file: ~S" file))
+			    (when (and write-date
+				       (> src-write-date write-date))
+			      (setf write-date nil)))
+			  (unix-namestring file)))
+		    input-files)))
+      (cond ((null write-date)
+	     (format t "~S out of date.~%" (namestring output-file))
+	     (run-program "/bin/cat" input-namestrings
+			  :output output-file
+			  :if-output-exists :supersede
+			  :error t))
+	    (t
+	     (format t "~S up to date.~%" (namestring output-file)))))))
