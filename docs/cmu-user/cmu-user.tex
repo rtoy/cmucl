@@ -1,4 +1,4 @@
-\documentstyle[latexinfo,elisp,cmu-titlepage,cmulisp]{report} % -*-latexinfo-*-
+\documentstyle[latexinfo,elisp,cmu-titlepage,cmulisp]{report}  % -*-latexinfo-*-
 \pagestyle{headings}
 
 \begin{document}
@@ -114,7 +114,8 @@ Design Choices and Extensions
 * The Reader::                  
 * Running Programs from Lisp::  
 * Saving a Core Image::         
-* Search Lists::                
+* Pathnames::                   
+* Filesystem Operations::       
 * Time Parsing and Formatting::  
 * Lisp Library::                
 
@@ -137,16 +138,37 @@ Floats
 
 The Inspector
 
-* The Windowing Inspector::     
+* The Graphical Interface::     
 * The TTY Inspector::           
 
 Running Programs from Lisp
 
 * Process Accessors::           
 
-Search Lists
+Pathnames
+
+* Unix Pathnames::              
+* Wildcard Pathnames::          
+* Logical Pathnames::           
+* Search Lists::                
+* Predefined Search-Lists::     
+* Search-List Operations::      
+* Search List Example::         
+
+Logical Pathnames
+
+* Search Lists::
+* Search List Example::
+
+Search-List Operations
 
 * Search List Example::         
+
+Filesystem Operations
+
+* Wildcard Matching::           
+* File Name Completion::        
+* Miscellaneous Filesystem Operations::  
 
 The Debugger
 
@@ -158,7 +180,7 @@ The Debugger
 * Compiler Policy Control::     
 * Exiting Commands::            
 * Information Commands::        
-* Breakpoint Commands::
+* Breakpoint Commands::         
 * Function Tracing::            
 * Specials::                    
 
@@ -183,7 +205,7 @@ Source Location Printing
 
 Breakpoint Commands
 
-* Breakpoint Example::
+* Breakpoint Example::          
 
 Function Tracing
 
@@ -203,8 +225,6 @@ The Compiler
 Compilation Units
 
 * Undefined Warnings::          
-* Context Declarations::        
-* Context Declaration Example::  
 
 Interpreting Error Messages
 
@@ -237,6 +257,7 @@ Advanced Compiler Use and Efficiency Hints
 * Local Call::                  
 * Block Compilation::           
 * Inline Expansion::            
+* Byte Coded Compilation::      
 * Object Representation::       
 * Numbers::                     
 * General Efficiency Hints::    
@@ -303,6 +324,8 @@ Block Compilation
 * Block Compilation Declarations::  
 * Compiler Arguments::          
 * Practical Difficulties::      
+* Context Declarations::        
+* Context Declaration Example::  
 
 Inline Expansion
 
@@ -313,7 +336,7 @@ Inline Expansion
 Object Representation
 
 * Think Before You Use a List::  
-* Structures::                  
+* Structure Representation::
 * Arrays::                      
 * Vectors::                     
 * Bit-Vectors::                 
@@ -329,6 +352,7 @@ Numbers
 * Word Integers::               
 * Floating Point Efficiency::   
 * Specialized Arrays::          
+* Specialized Structure Slots::  
 * Interactions With Local Call::  
 * Representation of Characters::  
 
@@ -759,7 +783,8 @@ choices and extensions.
 * The Reader::                  
 * Running Programs from Lisp::  
 * Saving a Core Image::         
-* Search Lists::                
+* Pathnames::                   
+* Filesystem Operations::       
 * Time Parsing and Formatting::  
 * Lisp Library::                
 \end{menu}
@@ -1316,82 +1341,41 @@ selected Lisp object.
 \enddefun
 
 \begin{menu}
-* The Windowing Inspector::     
+* The Graphical Interface::     
 * The TTY Inspector::           
 \end{menu}
 
-\node The Windowing Inspector, The TTY Inspector, The Inspector, The Inspector
-\subsection{The Windowing Inspector}
+\node The Graphical Interface, The TTY Inspector, The Inspector, The Inspector
+\subsection{The Graphical Interface}
+\label{motif-interface}
 
-If X is available, \code{inspect} creates an X window and displays
-\var{object} in the window.  While \code{inspect} is running and the
-cursor is in the inspector's X window, mouse clicks and keyboard input
-have the following meaning:
-\begin{description}
+CMU Common Lisp has an interface to Motif which is functionally similar to
+CLM, but works better in CMU CL.  See:
+\begin{example}
+\file{doc/motif-toolkit.doc}
+\file{doc/motif-internals.doc}
+\end{example}
 
-\item[Left]
-When the left mouse button is clicked over a component object, that
-object will be inspected in the current inspector window.
+This motif interface has been used to write the inspector and graphical
+debugger.  There is also a Lisp control panel with a simple file management
+facility, apropos and inspector dialogs, and controls for setting global
+options.  See the \code{interface} and \code{toolkit} packages.
 
-\item[Middle]
-When the middle mouse button is clicked over a component object,
-\code{inspect} is exited returning the component as the result.  All the new
-inspector windows are deleted.
+\defun{lisp-control-panel}[interface]{}
+This function creates a control panel for the Lisp process.
+\enddefun
 
-\item[Shift Middle]
-When the shift key is depressed and the middle mouse button is
-clicked over a component object, \code{inspect} exits and returns the component
-as the result.  All the inspector windows are left displayed on the screen.
+\defvar{interface-style}[interface]
+When the graphical interface is loaded, this variable controls whether it is
+used by \code{inspect} and the error system.  If the value is \kwd{graphics}
+(the default) and the \code{DISPLAY} environment variable is defined, the
+graphical inspector and debugger will be invoked by \findexed{inspect} or when
+an error is signalled.  Possible values are \kwd{graphics} and {tty}.  If the
+value is \kwd{graphics}, but there is no X display, then we quietly use the TTY
+interface.
+\enddefvar
 
-\item[Right]
-When the right mouse button is clicked over a component object,
-that object will be inspected in a new inspector window.
-
-\item[d, D]
-When either d or D is typed, the current window is
-deleted.  If there are no more windows, then \code{inspect} exits and returns the
-original \var{object}.
-
-\item[h, H, ?]
-When any of h, H, or ? are typed while in an inspector window, a
-new window with help information is displayed.
-
-\item[m, M]
-When either m or M is typed, a component object may be modified.  The
-cursor changes to an arrow with an M beside it.  Clicking any mouse button
-while the mouse is over a component will select that component as the
-destination for modification.  If m was typed, the source object is also
-selected by the mouse which is indicated by an S beside the arrow in the
-cursor.  If M was typed, the source object will be prompted for on the
-*query-io* stream.  The source object replaces the destination object.
-While choosing the destination or source with the mouse, the operation can
-be aborted by type q or Q.
-
-\item[q, Q]
-When either q or Q is typed, \code{inspect} exits and
-returns the original \var{object}.  All new inspector windows are deleted.
-
-\item[p, P]
-When either p or P is typed, \code{inspect} exits and
-returns the original \var{object}.  All the inspector windows are left on the
-screen.
-
-\item[r, R]
-When either r or R is typed, the current inspector display is
-recomputed.  This is necessary to maintain a consistent display for an
-object that may have changed since the display was originally computed.
-
-\item[u, U]
-When either u or U is typed, the object of which the current object
-is a component is displayed.  This is the inverse operation to clicking the
-left mouse button over a component object.  If the window is currently
-displaying the top level object, nothing changes.
-\end{description}
-When the cursor is over a component object, the object is highlighted with a
-surrounding box.
-
-
-\node The TTY Inspector,  , The Windowing Inspector, The Inspector
+\node The TTY Inspector,  , The Graphical Interface, The Inspector
 \subsection{The TTY Inspector}
 
 If X is unavailable, a terminal inspector is invoked.  The TTY inspector
@@ -1703,7 +1687,7 @@ done using a process, call this to reclaim system resources.
 \enddefun
 
 
-\node Saving a Core Image, Search Lists, Running Programs from Lisp, Design Choices and Extensions
+\node Saving a Core Image, Pathnames, Running Programs from Lisp, Design Choices and Extensions
 \section{Saving a Core Image}
 
 A mechanism has been provided to save a running Lisp core image and to
@@ -1714,7 +1698,7 @@ size of each saved Lisp image, typically at least 20 megabytes.
 \defun{save-lisp}[extensions]{
        \args{\var{file}}
        \keys{:purify :root-structures :init-function}
-       \morekeys{:load-init-file :print-herald}
+       \morekeys{:load-init-file :print-herald :site-init}
        \yetmorekeys{:process-command-line}}
 The \code{save-lisp} function saves the state of the currently running Lisp
 core image in \var{file}.  The keyword arguments have the following meaning:
@@ -1739,9 +1723,9 @@ still be localized but probably not as optimally as they could be.  This
 argument has no meaning if \kwd{purify} is NIL.
 
 \item[\kwd{init-function}]
-This is a function which is called when the saved core is
-resumed.  The default function simply aborts to the top-level read-eval-print
-loop.  If the function returns, it will be the value of \code{save-lisp}.
+This is the function that starts running when the created core file is
+resumed.  The default function simply invokes the top level
+read-eval-print loop.  If the function returns the lisp will exit.
 
 \item[\kwd{load-init-file}]
 If non-NIL, then load an init file; either the one
@@ -1750,12 +1734,16 @@ specified on the command line or \w{"\file{init.}\var{fasl-type}"}, or, if
 home directory.  If the init file is found, it is loaded into the resumed core
 file before the read-eval-print loop is entered.
 
+\item[\kwd{site-init}]
+If non-NIL, the name of the site init file to quietly load.  The default is
+\file{library:site-init}.  No error is signalled if the file does not exist.
+
 \item[\kwd{print-herald}]
-If non-NIL, then print out the standard Lisp herald when
+If non-NIL (the default), then print out the standard Lisp herald when
 starting.
 
 \item[\kwd{process-command-line}]
-If non-NIL, processes the command line switches
+If non-NIL (the default), processes the command line switches
 and performs the appropriate actions.
 \end{description}
 \enddefun
@@ -1765,12 +1753,113 @@ To resume a saved file, type:
 lisp -core file
 \end{example}
 
+\node Pathnames, Filesystem Operations, Saving a Core Image, Design Choices and Extensions
+\section{Pathnames}
 
-\node Search Lists, Time Parsing and Formatting, Saving a Core Image, Design Choices and Extensions
-\section{Search Lists}
+In \clisp{} quite a few aspects of \tindexed{pathname} semantics are left to
+the implementation.  
 
-Search lists are an extension to Common Lisp pathnames.  Search lists are used
-for two purposes:
+\begin{menu}
+* Unix Pathnames::              
+* Wildcard Pathnames::          
+* Logical Pathnames::           
+* Search Lists::                
+* Predefined Search-Lists::     
+* Search-List Operations::      
+* Search List Example::         
+\end{menu}
+
+\node Unix Pathnames, Wildcard Pathnames, Pathnames, Pathnames
+\subsection{Unix Pathnames}
+\cpsubindex{unix}{pathnames}
+
+Unix pathnames are always parsed with a \code{unix-host} object as the host and
+\code{nil} as the device.  The last two dots (\code{.}) in the namestring mark
+the type and version, however if the first character is a dot, it is considered
+part of the name.  If the last character is a dot, then the pathname has the
+empty-string as its type.  The type defaults to \code{nil} and the version
+defaults to \kwd{newest}.
+\begin{example}
+(defun parse (x)
+  (values (pathname-name x) (pathname-type x) (pathname-version x)))
+
+(parse "foo") \result "foo", NIL, :NEWEST
+(parse "foo.bar") \result "foo", "bar", :NEWEST
+(parse ".foo") \result ".foo", NIL, :NEWEST
+(parse ".foo.bar") \result ".foo", "bar", :NEWEST
+(parse "..") \result ".", "", :NEWEST
+(parse "foo.") \result "foo", "", :NEWEST
+(parse "foo.bar.1") \result "foo", "bar", 1
+(parse "foo.bar.baz") \result "foo.bar", "baz", :NEWEST
+\end{example}
+
+The directory of pathnames beginning with a slash (or a search-list,
+\pxlref{search-lists}) is starts \kwd{absolute}, others start with
+\kwd{relative}.  The \code{..} directory is parsed as \kwd{up}; there is no
+namestring for \kwd{back}:
+\begin{example}
+(pathname-directory "/usr/foo/bar.baz") \result (:ABSOLUTE "usr" "foo")
+(pathname-directory "../foo/bar.baz") \result (:RELATIVE :UP "foo")
+\end{example}
+
+\node Wildcard Pathnames, Logical Pathnames, Unix Pathnames, Pathnames
+\subsection{Wildcard Pathnames}
+
+Wildcards are supported in Unix pathnames.  If `\code{*}' is specified for a
+part of a pathname, that is parsed as \kwd{wild}.  `\code{**}' can be used as a
+directory name to indicate \kwd{wild-inferiors}.  Filesystem operations
+treat \kwd{wild-inferiors} the same as\ \kwd{wild}, but pathname pattern
+matching (e.g. for logical pathname translation, \pxlref{logical-pathnames})
+matches any number of directory parts with `\code{**}' (see
+\pxlref{wildcard-matching}.)
+
+
+`\code{*}' embedded in a pathname part matches any number of characters.
+Similarly, `\code{?}' matches exactly one character, and `\code{[a,b]}'
+matches the characters `\code{a}' or `\code{b}'.  These pathname parts are
+parsed as \code{pattern} objects.
+
+Backslash can be used as an escape character in namestring
+parsing to prevent the next character from being treated as a wildcard.  Note
+that if typed in a string constant, the backslash must be doubled, since the
+string reader also uses backslash as a quote:
+\begin{verbatim}
+(pathname-name "foo\\*bar") => "foo*bar"
+\end{verbatim}
+
+\node Logical Pathnames, Search Lists, Wildcard Pathnames, Pathnames
+\subsection{Logical Pathnames}
+\cindex{logical pathnames}
+\label{logical-pathnames}
+
+If a namestring begins with the name of a defined logical pathname host
+followed by a colon, then it will be parsed as a logical pathname.
+Both `\code{*}' and `\code{**}' wildcards are implemented.
+\findexed{load-logical-pathname-defaults} on \var{name} looks for a
+logical host definition file in
+\w{\file{library:}\var{name}\file{.translations}} (Note that
+\file{library:} designates the search list \pxlref{search-lists}
+initialized to the \cmucl{} \file{lib/} directory, not a logical
+pathname.)  The format of the file is a single list of two-lists of the
+from and to patterns:
+\begin{example}
+(("foo;*.text" "/usr/ram/foo/*.txt")
+ ("foo;*.lisp" "/usr/ram/foo/*.l"))
+\end{example}
+
+\begin{menu}
+* Search Lists::
+* Search List Example::
+\end{menu}
+
+\node Search Lists, Predefined Search-Lists, Logical Pathnames, Pathnames
+\subsection{Search Lists}
+\cindex{search lists}
+\label{search-lists}
+
+Search lists are an extension to Common Lisp pathnames.  They serve a function
+somewhat similar to Common Lisp logical pathnames, but work more like Unix PATH
+variables.  Search lists are used for two purposes:
 \begin{itemize}
 \item They provide a convenient shorthand for commonly used directory names,
 and
@@ -1790,6 +1879,36 @@ as \code{open}, \code{load} or \code{truename}, each directory in the search
 list is successively used as the root of the pathname until the file is
 located.  When a file is written to a search list directory, the file is always
 written to the first directory in the list.
+
+\node Predefined Search-Lists, Search-List Operations, Search Lists, Pathnames
+\subsection{Predefined Search-Lists}
+
+These search-lists are initialized from the Unix environment or when Lisp was
+built:
+\begin{description}
+\item[default:] The current directory at startup.
+
+\item[home:] The user's home directory.
+
+\item[library:] The \cmucl{} \file{lib/} directory (\code{CMUCLLIB} environment
+variable.)
+
+\item[path:] The Unix command path (\code{PATH} environment variable.)
+
+\item[target:] The root of the tree where \cmucl{} was compiled.
+\end{description}
+It can be useful to redefine these search-lists, for example, \file{library:}
+can be augmented to allow logical pathname translations to be located, and
+\file{target:} can be redefined to point to where \cmucl{} system sources are
+locally installed. 
+
+\node Search-List Operations, Search List Example, Predefined Search-Lists, Pathnames
+\subsection{Search-List Operations}
+
+These operations define and access search-list definitions.  A search-list name
+may be parsed into a pathname before the search-list is actually defined, but
+the search-list must be defined before it can actually be used in a filesystem
+operation.
 
 \defun{search-list}[extensions]{\var{name}}
 This function returns the list of directories associated with the search list
@@ -1823,7 +1942,7 @@ the body is executed exactly once.  Everything is wrapped in a block named
 * Search List Example::         
 \end{menu}
 
-\node Search List Example,  , Search Lists, Search Lists
+\node Search List Example,  , Search-List Operations, Pathnames
 \subsection{Search List Example}
 
 The search list \code{code:} can be defined as follows:
@@ -1846,8 +1965,100 @@ calling \code{ext:search-list} on \code{code:} as follows:
 \end{example}
 returns the list \code{("/usr/lisp/code/")}.
 
+\node Filesystem Operations, Time Parsing and Formatting, Pathnames, Design Choices and Extensions
+\section{Filesystem Operations}
 
-\node Time Parsing and Formatting, Lisp Library, Search Lists, Design Choices and Extensions
+\cmucl{} provides a number of extensions and optional features beyond those
+require by \clisp.
+
+\begin{menu}
+* Wildcard Matching::           
+* File Name Completion::        
+* Miscellaneous Filesystem Operations::  
+\end{menu}
+
+\node Wildcard Matching, File Name Completion, Filesystem Operations, Filesystem Operations
+\subsection{Wildcard Matching}
+\label{wildcard-matching}
+
+Unix filesystem operations such as \code{open} will accept wildcard pathnames
+that match a single file (of course, \code{directory} allows any number of
+matches.)  Filesystem operations treat \kwd{wild-inferiors} the same as\
+\kwd{wild}.
+
+\defun{directory}{\var{wildname}\keys{:all :check-for-subdirs}
+	         \morekeys{:follow-links}}
+The keyword arguments to this \clisp{} function are a CMU extension.  The
+arguments (all default to \code{t}) have the following functions:
+\begin{description}
+\item[\kwd{all}] Include files beginning with dot such as \file{.login},
+similar to ``\code{ls -a}''.
+
+\item[\kwd{check-for-subdirs}] Test whether files are directories, similar to
+``\code{ls -F}''.
+
+\item[\kwd{follow-links}] Call \code{truename} on each file, which expands out
+all symbolic links.  Note that this option can easily result in pathnames being
+returned which have a different directory from the one in the  \var{wildname}
+argument.
+\end{description}
+\enddefun
+
+\defun{print-directory}[extensions]{\args{\var{wildname}\&optional\var{stream}}
+                       \keys{:all :verbose}
+   	               \morekeys{:return-list}} 
+
+Print a directory of \var{wildname} listing to \var{stream} (default
+\code{*standard-output*}.)  \kwd{all} and \kwd{verbose} both default to
+\false{} and correspond to the ``\code{-a}'' and ``\code{-l}'' options of
+\file{ls}.  Normally this function returns \false{}, but if \kwd{return-list}
+is true, a list of the matched pathnames are returned.
+\enddefun
+
+\node File Name Completion, Miscellaneous Filesystem Operations, Wildcard Matching, Filesystem Operations
+\subsection{File Name Completion}
+
+\defun{complete-file}[extensions]{\args{\var{pathname}}
+		      \keys{:defaults :ignore-types}}
+
+Attempt to complete a file name to the longest unambiguous prefix.  If
+supplied, directory from \kwd{defaults} is used as the ``working directory''
+when doing completion.  \kwd{ignore-types} is a list of strings of the pathname
+types (a.k.a. extensions) that should be disregarded as possible matches
+(binary file names, etc.)
+\enddefun
+
+\defun{ambiguous-files}[extensions]{\args{\var{pathname}
+				    \&optional\var{defaults}}}
+Return a list of pathnames for all the possible completions of \var{pathname}
+with respect to \var{defaults}.
+\enddefun
+
+\node Miscellaneous Filesystem Operations,  , File Name Completion, Filesystem Operations
+\subsection{Miscellaneous Filesystem Operations}
+
+\defun{default-directory}[extensions]{}
+Return the current working directory as a pathname.  If set with \code{setf},
+set the working directory.
+\enddefun
+
+\defun{file-writable}[extensions]{\var{name}}
+This function accepts a pathname and returns \true{} if the current
+process can write it, and \false{} otherwise.
+\enddefun
+
+\defun{unix-namestring}[extensions]{\args{\var{pathname}
+					\&optional\var{for-input}}}
+
+This function converts \var{pathname} into a string that can be used with UNIX
+system calls.  Search-lists and wildcards are expanded.  \var{for-input}
+controls the treatment of search-lists: when true (the default) and the
+file exists anywhere on the search-list, then that absolute pathname is
+returned; otherwise the first element of the search-list is used as the
+directory.
+\enddefun
+
+\node Time Parsing and Formatting, Lisp Library, Filesystem Operations, Design Choices and Extensions
 \section{Time Parsing and Formatting}
 
 \cindex{time parsing} \cindex{time formatting}
@@ -2019,7 +2230,7 @@ way to browse the library.
 * Compiler Policy Control::     
 * Exiting Commands::            
 * Information Commands::        
-* Breakpoint Commands::
+* Breakpoint Commands::         
 * Function Tracing::            
 * Specials::                    
 \end{menu}
@@ -2057,7 +2268,14 @@ A \tindexed{serious-condition} is signalled, and it is not handled, or
 The debugger is explicitly invoked with the \clisp{} \findexed{break}
 or \findexed{debug} functions.
 \end{itemize}
-When you enter the debugger, it looks something like this:
+
+{\it Note: there are two debugger interfaces in CMU CL: the TTY debugger
+(described below) and the Motif debugger.  Since the difference is only in the
+user interface, much of this chapter also applies to the Motif version.  See
+\xlref{motif-interface} for a very brief discussion of the graphical
+interface.}
+
+When you enter the TTY debugger, it looks something like this:
 \begin{example}
 Error in function CAR.
 Wrong type argument, 3, should have been of type LIST.
@@ -2930,7 +3148,7 @@ This always steps over function calls, instead of stepping into them
 \end{description}
 
 \begin{menu}
-* Breakpoint Example::
+* Breakpoint Example::          
 \end{menu}
 
 \node Breakpoint Example,  , Breakpoint Commands, Breakpoint Commands
@@ -3349,7 +3567,8 @@ compiler diagnostics issued, or that other conditions of type
         \args{\var{input-pathname}}
         \keys{:output-file :error-file :trace-file}
         \morekeys{:error-output :verbose :print :progress}
-        \yetmorekeys{:load :block-compile :entry-points}}
+        \yetmorekeys{:load :block-compile :entry-points}
+	\yetmorekeys{:byte-compile}}
 The \cmucl{} \code{compile-file} is extended through the addition of several new
 keywords and an additional interpretation of \var{input-pathname}:
 \begin{description}
@@ -3405,6 +3624,10 @@ file.  \xlref{compile-file-block}.
 names of all functions in the file that should have global
 definitions installed (because they are referenced in other files.)
 \xlref{compile-file-block}.
+
+\item[\var{byte-compile}] If true, compiling to a compact interpreted byte code
+is enabled.  Possible values are \true{}, \false{}, and \kwd{maybe} (the
+default.)  See \varref{byte-compile-default} and \xlref{byte-compile}.
 \end{description}
 
 The return values are as per the proposed X3J13 cleanup
@@ -3424,7 +3647,8 @@ These variables determine the default values for the \kwd{verbose},
 \defun{compile-from-stream}[extensions]{\args{input-stream}
         \keys{:error-stream}
         \morekeys{:trace-stream}
-        \yetmorekeys{:block-compile :entry-points}}
+        \yetmorekeys{:block-compile :entry-points}
+	\yetmorekeys{:byte-compile}}
 This function is similar to \code{compile-file}, but it takes all its
 arguments as streams.  It reads \llisp{} code from \var{input-stream}
 until end of file is reached, compiling into the current environment.
@@ -3483,11 +3707,9 @@ definition.  \xlref{context-declarations}.
 
 \begin{menu}
 * Undefined Warnings::          
-* Context Declarations::        
-* Context Declaration Example::  
 \end{menu}
 
-\node Undefined Warnings, Context Declarations, Compilation Units, Compilation Units
+\node Undefined Warnings,  , Compilation Units, Compilation Units
 \subsection{Undefined Warnings}
 
 \cindex{undefined warnings}
@@ -3528,119 +3750,6 @@ Warning: \var{count} more uses of undefined function \var{name}.
 When the value is \code{0}, then the undefined warnings are not broken down by
 name at all: only the summary listing of undefined names is printed.
 \enddefvar
-
-\node Context Declarations, Context Declaration Example, Undefined Warnings, Compilation Units
-\subsection{Context Declarations}
-\label{context-declarations}
-\cindex{context sensitive declarations}
-\cpsubindex{declarations}{context-sensitive}
-
-\cmucl{} has a context-sensitive declaration mechanism which is useful because it
-allows flexible control of the compilation policy in large systems without
-requiring changes to the source files.  The primary use of this feature is to
-allow the exported interfaces of a system to be compiled more safely than the
-system internals.  The context used is the name being defined and the kind of
-definition (function, macro, etc.) 
-
-The \kwd{context-declarations} option to \macref{with-compilation-unit} has
-dynamic scope, affecting all compilation done during the evaluation of the
-body.  The argument to this option should evaluate to a list of lists of the
-form:
-\begin{example}
-(\var{context-spec} \mplus{\var{declare-form}})
-\end{example}
-In the indicated context, the specified declare forms are inserted at
-the head of each definition.  The declare forms for all contexts that
-match are appended together, with earlier declarations getting
-precedence over later ones.  A simple example:
-\begin{example}
-    :context-declarations
-    '((:external (declare (optimize (safety 2)))))
-\end{example}
-This will cause all functions that are named by external symbols to be
-compiled with \code{safety 2}.
-
-The full syntax of context specs is:
-\begin{description}
-
-\item[\kwd{internal}, \kwd{external}]
-True if the symbol is internal (external) in its home package.
-
-\item[\kwd{uninterned}]
-True if the symbol has no home package.
-
-\item[\code{\w{(:package \mstar{\var{package-name}})}}]
-True if the symbol's home package is in any of the named packages (false if
-uninterned.)
-
-\item[\kwd{anonymous}]
-True if the function doesn't have any interesting name (not
-\code{defmacro}, \code{defun}, \code{labels} or \code{flet}).
-
-\item[\kwd{macro}, \kwd{function}]
-\kwd{macro} is a global (\code{defmacro}) macro.  \kwd{function} is anything
-else.
-
-\item[\kwd{local}, \kwd{global}]
-\kwd{local} is a \code{labels} or \code{flet}.  \kwd{global} is anything else.
-
-\item[\code{\w{(:or \mstar{\var{context-spec}})}}]
-True when any supplied \var{context-spec} is true.
-
-\item[\code{\w{(:and \mstar{\var{context-spec}})}}]
-True only when all supplied \var{context-spec}s are true.
-
-\item[\code{\w{(:not \mstar{\var{context-spec}})}}]
-True when \var{context-spec} is false.
-
-\item[\code{\w{(:member \mstar{\var{name}})}}]
-True when the defined name is one of these names (\code{equal} test.)
-
-\item[\code{\w{(:match \mstar{\var{pattern}})}}]
-True when any of the patterns is a substring of the name.  The name is wrapped
-with \code{$}'s, so "\code{$FOO}" matches names beginning with "\code{FOO}", etc.
-\end{description}
-
-\node Context Declaration Example,  , Context Declarations, Compilation Units
-\subsection{Context Declaration Example}
-
-Here is a more complex example of \code{with-compilation-unit} options:
-\begin{example}
-:optimize '(optimize (speed 2) (space 2) (inhibit-warnings 2)
-                     (debug 1) (safety 0))
-:optimize-interface '(optimize-interface (safety 1) (debug 1))
-:context-declarations
-'(((:or :external (:and (:match "%") (:match "SET")))
-   (declare (optimize-interface (safety 2))))
-  ((:or (:and :external :macro)
-        (:match "$PARSE-"))
-   (declare (optimize (safety 2)))))
-\end{example}
-The \code{optimize} and \code{extensions:optimize-interface} declarations (\pxlref{optimize-declaration}) set up the global compilation policy.  The
-bodies of functions are to be compiled completely unsafe (\code{safety 0}), but
-argument count and weakened argument type checking is to be done when a
-function is called (\code{speed 2 safety 1}).
-
-The first declaration specifies that all functions that are external or
-whose names contain both "\code{%}" and "\code{SET}" are to be compiled
-compiled with completely safe interfaces (\code{safety 2}).  The reason for this
-particular \kwd{match} rule is that \code{setf} inverse functions in this system
-tend to have both strings in their name somewhere.  We want \code{setf} inverses
-to be safe because they are implicitly called by users even though their name
-is not exported.
-
-The second declaration makes external macros or functions whose names start
-with "\code{PARSE-}" have safe bodies (as well as interfaces).  This is desirable
-because a syntax error in a macro may cause a type error inside the body.  The
-\kwd{match} rule is used because macros often have auxiliary functions whose
-names begin with this string.
-
-This particular example is used to build part of the standard \cmucl{} system.
-Note however, that context declarations must be set up according to the needs
-and coding conventions of a particular system; different parts of \cmucl{} are
-compiled with different context declarations, and your system will probably
-need its own declarations.  In particular, any use of the \kwd{match} option
-depends on naming conventions used in coding.
 
 
 \node Interpreting Error Messages, Types in Python, Compilation Units, The Compiler
@@ -4385,7 +4494,6 @@ loop body (see section \ref{ND-variables}.)
 
 In summary, remember that \var{all} values that a variable \var{ever} has must be
 of the declared type, and that you should test using safe code initially.
-
 
 \node Compiler Policy, Open Coding and Inline Expansion, Getting Existing Programs to Run, The Compiler
 \section{Compiler Policy}
@@ -4593,6 +4701,7 @@ redefinition.
 * Local Call::                  
 * Block Compilation::           
 * Inline Expansion::            
+* Byte Coded Compilation::      
 * Object Representation::       
 * Numbers::                     
 * General Efficiency Hints::    
@@ -4706,7 +4815,18 @@ missed even in highly tuned programs.  \xlref{efficiency-notes}.
 
 \item
 Existing programs can be compiled safely without prohibitive speed penalty,
-although they would be faster and safer with added declarations.  \xlref{type-check-optimization}.
+although they would be faster and safer with added declarations.
+\xlref{type-check-optimization}.
+
+\item
+The context declaration mechanism allows both space and runtime of large
+systems to be reduced without sacrificing robustness by semi-automatically
+varying compilation policy without addition any \code{optimize} declarations to
+the source. \xlref{context-declarations}.
+
+\item 
+Byte compilation can be used to dramatically reduce the size of code that
+is not speed-critical. \xlref{byte-compile}
 \end{itemize}
 
 
@@ -5286,6 +5406,10 @@ Define \findexed{deftype} or \findexed{defstruct} types before they
 are used.  Definition after use is legal (producing no "undefined
 type" warnings), but type tests and structure operations will be
 compiled much less efficiently.
+
+\item
+Use the \code{extensions:freeze-type} declaration to speed up type testing for
+structure types which won't have new subtypes added later. \xlref{freeze-type}
 
 \item
 In addition to declaring the array element type and simpleness, also declare
@@ -6544,6 +6668,8 @@ values in non-trivial programs (\pxlref{number-local-call}).
 * Block Compilation Declarations::  
 * Compiler Arguments::          
 * Practical Difficulties::      
+* Context Declarations::        
+* Context Declaration Example::  
 \end{menu}
 
 \node Block Compilation Semantics, Block Compilation Declarations, Block Compilation, Block Compilation
@@ -6669,7 +6795,7 @@ variable is \kwd{specified}, but \false{} is sometimes useful for totally
 inhibiting block compilation.
 \enddefvar
 
-\node Practical Difficulties,  , Compiler Arguments, Block Compilation
+\node Practical Difficulties, Context Declarations, Compiler Arguments, Block Compilation
 \subsection{Practical Difficulties}
 
 The main problem with block compilation is that the compiler uses
@@ -6692,9 +6818,122 @@ Unless files are very small, it is probably impractical to block compile
 multiple files as a unit by specifying a list of files to \code{compile-file}.
 Semi-inline expansion (\pxlref{semi-inline}) provides another way to
 extend block compilation across file boundaries.
+
+\node Context Declarations, Context Declaration Example, Practical Difficulties, Block Compilation
+\subsection{Context Declarations}
+\label{context-declarations}
+\cindex{context sensitive declarations}
+\cpsubindex{declarations}{context-sensitive}
+
+\cmucl{} has a context-sensitive declaration mechanism which is useful because it
+allows flexible control of the compilation policy in large systems without
+requiring changes to the source files.  The primary use of this feature is to
+allow the exported interfaces of a system to be compiled more safely than the
+system internals.  The context used is the name being defined and the kind of
+definition (function, macro, etc.) 
+
+The \kwd{context-declarations} option to \macref{with-compilation-unit} has
+dynamic scope, affecting all compilation done during the evaluation of the
+body.  The argument to this option should evaluate to a list of lists of the
+form:
+\begin{example}
+(\var{context-spec} \mplus{\var{declare-form}})
+\end{example}
+In the indicated context, the specified declare forms are inserted at
+the head of each definition.  The declare forms for all contexts that
+match are appended together, with earlier declarations getting
+precedence over later ones.  A simple example:
+\begin{example}
+    :context-declarations
+    '((:external (declare (optimize (safety 2)))))
+\end{example}
+This will cause all functions that are named by external symbols to be
+compiled with \code{safety 2}.
+
+The full syntax of context specs is:
+\begin{description}
+
+\item[\kwd{internal}, \kwd{external}]
+True if the symbol is internal (external) in its home package.
+
+\item[\kwd{uninterned}]
+True if the symbol has no home package.
+
+\item[\code{\w{(:package \mstar{\var{package-name}})}}]
+True if the symbol's home package is in any of the named packages (false if
+uninterned.)
+
+\item[\kwd{anonymous}]
+True if the function doesn't have any interesting name (not
+\code{defmacro}, \code{defun}, \code{labels} or \code{flet}).
+
+\item[\kwd{macro}, \kwd{function}]
+\kwd{macro} is a global (\code{defmacro}) macro.  \kwd{function} is anything
+else.
+
+\item[\kwd{local}, \kwd{global}]
+\kwd{local} is a \code{labels} or \code{flet}.  \kwd{global} is anything else.
+
+\item[\code{\w{(:or \mstar{\var{context-spec}})}}]
+True when any supplied \var{context-spec} is true.
+
+\item[\code{\w{(:and \mstar{\var{context-spec}})}}]
+True only when all supplied \var{context-spec}s are true.
+
+\item[\code{\w{(:not \mstar{\var{context-spec}})}}]
+True when \var{context-spec} is false.
+
+\item[\code{\w{(:member \mstar{\var{name}})}}]
+True when the defined name is one of these names (\code{equal} test.)
+
+\item[\code{\w{(:match \mstar{\var{pattern}})}}]
+True when any of the patterns is a substring of the name.  The name is wrapped
+with \code{$}'s, so "\code{$FOO}" matches names beginning with "\code{FOO}", etc.
+\end{description}
+
+\node Context Declaration Example,  , Context Declarations, Block Compilation
+\subsection{Context Declaration Example}
+
+Here is a more complex example of \code{with-compilation-unit} options:
+\begin{example}
+:optimize '(optimize (speed 2) (space 2) (inhibit-warnings 2)
+                     (debug 1) (safety 0))
+:optimize-interface '(optimize-interface (safety 1) (debug 1))
+:context-declarations
+'(((:or :external (:and (:match "%") (:match "SET")))
+   (declare (optimize-interface (safety 2))))
+  ((:or (:and :external :macro)
+        (:match "$PARSE-"))
+   (declare (optimize (safety 2)))))
+\end{example}
+The \code{optimize} and \code{extensions:optimize-interface} declarations (\pxlref{optimize-declaration}) set up the global compilation policy.  The
+bodies of functions are to be compiled completely unsafe (\code{safety 0}), but
+argument count and weakened argument type checking is to be done when a
+function is called (\code{speed 2 safety 1}).
+
+The first declaration specifies that all functions that are external or
+whose names contain both "\code{%}" and "\code{SET}" are to be compiled
+compiled with completely safe interfaces (\code{safety 2}).  The reason for this
+particular \kwd{match} rule is that \code{setf} inverse functions in this system
+tend to have both strings in their name somewhere.  We want \code{setf} inverses
+to be safe because they are implicitly called by users even though their name
+is not exported.
+
+The second declaration makes external macros or functions whose names start
+with "\code{PARSE-}" have safe bodies (as well as interfaces).  This is desirable
+because a syntax error in a macro may cause a type error inside the body.  The
+\kwd{match} rule is used because macros often have auxiliary functions whose
+names begin with this string.
+
+This particular example is used to build part of the standard \cmucl{} system.
+Note however, that context declarations must be set up according to the needs
+and coding conventions of a particular system; different parts of \cmucl{} are
+compiled with different context declarations, and your system will probably
+need its own declarations.  In particular, any use of the \kwd{match} option
+depends on naming conventions used in coding.
 
 
-\node Inline Expansion, Object Representation, Block Compilation, Advanced Compiler Use and Efficiency Hints
+\node Inline Expansion, Byte Coded Compilation, Block Compilation, Advanced Compiler Use and Efficiency Hints
 \section{Inline Expansion}
 \label{inline-expansion}
 \cindex{inline expansion}
@@ -6933,7 +7172,58 @@ the obvious definition of a function is not necessarily the one that will be in
 effect at the time of the call.
 
 
-\node Object Representation, Numbers, Inline Expansion, Advanced Compiler Use and Efficiency Hints
+\node Byte Coded Compilation, Object Representation, Inline Expansion, Advanced Compiler Use and Efficiency Hints
+\section{Byte Coded Compilation}
+\label{byte-compile}
+\cindex{byte coded compilation}
+\cindex{space optimization}
+
+\Python{} supports byte compilation to reduce the size of Lisp programs by
+allowing functions to be compiled more compactly.  Byte compilation provides an
+extreme speed/space tradeoff: byte code is typically six times more compact
+than native code, but runs fifty times (or more) slower.  This is about ten
+times faster than the standard interpreter, which is itself considered fast in
+comparison to other \clisp{} interpreters.
+
+Large Lisp systems (such as \cmucl{} itself) often have large amounts of
+user-interface code, compile-time (macro) code, debugging code, or rarely
+executed special-case code.  This code is a good target for byte compilation:
+very little time is spent running in it, but it can take up quite a bit of
+space.  Straight-line code with many function calls is much more suitable than
+inner loops.
+
+When byte-compiling, the compiler compiles about twice as fast, and can produce
+a hardware independent object file (\file{.bytef} type.)  This file can be
+loaded like a normal fasl file on any implementation of CMU CL with the same
+byte-ordering (DEC PMAX has \file{.lbytef} type.)
+
+The decision to byte compile or native compile can be done on a per-file or
+per-code-object basis.  The \kwd{byte-compile} argument to 
+\funref{compile-file} has these possible values:
+\begin{description}
+\item[\false{}] Don't byte compile anything in this file.
+
+\item[\true{}] Byte compile everything in this file and produce a
+processor-independent \file{.bytef} file.
+
+\item[\kwd{maybe}] Produce a normal fasl file, but byte compile any functions
+for which the \code{speed} optimization quality is \code{0} and the
+\code{debug} quality is not greater than \code{1}.
+\end{description}
+
+\defvar{byte-compile-top-level}[extensions]
+If this variable is true (the default) and the \kwd{byte-compile}
+argument to \code{compile-file} is \kwd{maybe}, then byte compile top-level
+code (code outside of any \code{defun}, \code{defmethod}, etc.)
+\enddefvar
+
+\defvar{byte-compile-default}[extensions]
+This variable determines the default value for the \kwd{byte-compile} argument
+to \code{compile-file}, initially \kwd{maybe}.
+\enddefvar
+
+
+\node Object Representation, Numbers, Byte Coded Compilation, Advanced Compiler Use and Efficiency Hints
 \section{Object Representation}
 \label{object-representation}
 \cindex{object representation}
@@ -6951,14 +7241,14 @@ how the program operates on them.
 
 \begin{menu}
 * Think Before You Use a List::  
-* Structures::                  
+* Structure Representation::
 * Arrays::                      
 * Vectors::                     
 * Bit-Vectors::                 
 * Hashtables::                  
 \end{menu}
 
-\node Think Before You Use a List, Structures, Object Representation, Object Representation
+\node Think Before You Use a List, Structure Representation, Object Representation, Object Representation
 \subsection{Think Before You Use a List}
 \cpsubindex{lists}{efficiency of}
 
@@ -6967,8 +7257,8 @@ astute observer may have noticed that the chapter on list manipulation makes up
 less that three percent of \i{Common Lisp: the Language II}.  The language has
 grown since Lisp 1.5 \dash{} new data types supersede lists for many purposes.
 
-\node Structures, Arrays, Think Before You Use a List, Object Representation
-\subsection{Structures}
+\node Structure Representation, Arrays, Think Before You Use a List, Object Representation
+\subsection{Structure Representation}
 \cpsubindex{structure types}{efficiency of}
 One of the best ways of building complex data structures is to define
 appropriate structure types using \findexed{defstruct}.  In \python, access of
@@ -6998,7 +7288,7 @@ Note that the structure definition should be compiled before any uses of its
 accessors or type predicate so that these function calls can be efficiently
 open-coded.
 
-\node Arrays, Vectors, Structures, Object Representation
+\node Arrays, Vectors, Structure Representation, Object Representation
 \subsection{Arrays}
 \label{array-types}
 \cpsubindex{arrays}{efficiency of}
@@ -7160,6 +7450,7 @@ collection.
 * Word Integers::               
 * Floating Point Efficiency::   
 * Specialized Arrays::          
+* Specialized Structure Slots::  
 * Interactions With Local Call::  
 * Representation of Characters::  
 \end{menu}
@@ -7252,7 +7543,8 @@ pointers, \pxlref{system-area-pointers}.)  Many \llisp{} compilers
 support non-descriptor representations for variables (section
 \ref{ND-variables}) and array elements (section \ref{specialized-array-types}.)
 \python{} adds support for non-descriptor arguments and return values in local
-call (\pxlref{number-local-call}).
+call (\pxlref{number-local-call}) and structure slots (\pxlref{raw-slots}).
+
 \node Variables, Generic Arithmetic, Non-Descriptor Representations, Numbers
 \subsection{Variables}
 \label{ND-variables}
@@ -7489,13 +7781,13 @@ but Python currently makes little use of bounds on float types.
 When a float must be represented as a descriptor, a pointer representation is
 used, creating consing overhead.  For this reason, you should try to avoid
 situations (such as full call and non-specialized data structures) that force a
-descriptor representation.  See sections \ref{specialized-array-types} and
-\ref{number-local-call}.
+descriptor representation.  See sections \ref{specialized-array-types},
+\ref{raw-slots} and \ref{number-local-call}.
 
 \xlref{ieee-float} for information on the extensions to support IEEE
 floating point.
 
-\node Specialized Arrays, Interactions With Local Call, Floating Point Efficiency, Numbers
+\node Specialized Arrays, Specialized Structure Slots, Floating Point Efficiency, Numbers
 \subsection{Specialized Arrays}
 \label{specialized-array-types}
 \cindex{specialized array types}
@@ -7546,7 +7838,26 @@ operation overhead, efficiency is lost when the array element is converted to a
 descriptor so that it can be passed to (or from) the generic access routine.
 You can detect inefficient array accesses by enabling efficiency notes, \pxlref{efficiency-notes}.  \xlref{array-types}.
 
-\node Interactions With Local Call, Representation of Characters, Specialized Arrays, Numbers
+\node Specialized Structure Slots, Interactions With Local Call, Specialized Arrays, Numbers
+\subsection{Specialized Structure Slots}
+\label{raw-slots}
+\cpsubindex{structure types}{numeric slots}
+\cindex{specialized structure slots}
+
+Structure slots declared by the \kwd{type} \code{defstruct} slot option
+to have certain known numeric types are also given non-descriptor
+representations.  These types (and subtypes of these types) are supported:
+\begin{lisp}
+(unsigned-byte 32)
+single-float
+double-float
+\end{lisp}
+
+The primary advantage of specialized slot representations is a large reduction
+spurious memory allocation and access overhead of programs that intensively use
+these types.
+
+\node Interactions With Local Call, Representation of Characters, Specialized Structure Slots, Numbers
 \subsection{Interactions With Local Call}
 \label{number-local-call}
 \cpsubindex{local call}{numeric operands}
@@ -7787,7 +8098,7 @@ to use the \kwd{trace-file} argument to \code{compile-file} to generate a trace
 file.
 
 A trace file is a dump of the compiler's internal representations, including
-annotated assembly code.  Each component in the program gets three pages in
+annotated assembly code.  Each component in the program gets four pages in
 the trace file (separated by "\code{^L}"):
 \begin{itemize}
 
@@ -7814,6 +8125,10 @@ An assembly listing, annotated with the VOP responsible for generating the
 instructions.  This listing is useful for figuring out what a VOP does and how
 it is implemented in a particular context, but its large size makes it more
 difficult to read.
+
+\item
+A disassembly of the generated code, which has all pseudo-operations expanded
+out, but is not annotated with VOPs.
 \end{itemize}
 
 
@@ -8105,11 +8420,15 @@ gathering code.
 This variable holds a list of all functions that are currently being profiled.
 \enddefvar
 
-\defmac{profile}{ \args{\mstar{\var{name}}}}
-This macro wraps profiling code around the named functions.  As in \code{trace},
-the \var{name}s are not evaluated.  If a function is already profiled, then the
-function is unprofiled and reprofiled (useful to notice function redefinition.)
-A warning is printed for each name that is not a defined function.
+\defmac{profile}{ \args{\mstar{\var{name} \mor \kwd{callers} \code{t}}}}
+This macro wraps profiling code around the named functions.  As in
+\code{trace}, the \var{name}s are not evaluated.  If a function is already
+profiled, then the function is unprofiled and reprofiled (useful to notice
+function redefinition.)  A warning is printed for each name that is not a
+defined function.
+
+If \code{:CALLERS T} is specified, then each function that calls this function
+is recorded along with the number of calls made.
 \enddefmac
 
 \defmac{unprofile}{ \args{\mstar{\var{name}}}}
@@ -8446,13 +8765,6 @@ descriptors.
 A stream connected to \file{/dev/tty}.
 \enddefvar
 
-\defvar{task-self}[system]
-\defvarx{task-data}[system]
-\defvarx{task-notify}[system]
-The initial ports for the Lisp process (Mach only.)
-\enddefvar
-
-
 \node Lisp Equivalents for C Routines, Type Translations, Useful Variables, UNIX Interface
 \section{Lisp Equivalents for C Routines}
 
@@ -8623,7 +8935,7 @@ For this purpose, fd-streams exist.
          \keys{:input :output :element-type}
         \morekeys{:buffering :name :file :original}
         \yetmorekeys{:delete-original :auto-close}
-        \yetmorekeys{:timeout}}
+        \yetmorekeys{:timeout :pathname}}
 
 This function creates a file descriptor stream using \var{descriptor}.
 If \var{input} is non-\nil, input operations are allowed.  If
@@ -8644,11 +8956,11 @@ the system prepends the streams name with \code{Stream for }.  If
 \var{name} is unspecified, it defaults to a string containing \var{file}
 or \var{descriptor}, in order of preference.
 
-\item[\var{file}, \var{original}]: \var{file} specifies the name of the
-associated file when creating a file stream (must be a
-\code{simple-string}). \var{original} is the \code{simple-string} name
-of a backup file containing the original contents of \var{file} while
-writing \var{file}.
+\item[\var{file}, \var{original}]: \var{file} specifies the defaulted
+namestring of the associated file when creating a file stream (must be a
+\code{simple-string}). \var{original} is the \code{simple-string} name of a
+backup file containing the original contents of \var{file} while writing
+\var{file}.
 
 When you abort the stream by passing \true{} to
 \code{close} as the second argument, if you supplied both \var{file} and
@@ -8658,6 +8970,9 @@ When you abort the stream by passing \true{} to
 deletes \var{original}.  If \var{auto-close} is true (the default), then
 \var{descriptor} will be closed when the stream is garbage collected.
 
+\item[\var{pathname}]: The original pathname passed to open and returned by
+\code{pathname}; not defaulted or translated.
+
 \item[\var{timeout}] if non-null, then \var{timeout} is an integer
 number of seconds after which an input wait should time out.  If a read
 does time out, then the \code{system:io-timeout} condition is signalled.
@@ -8665,7 +8980,8 @@ does time out, then the \code{system:io-timeout} condition is signalled.
 \enddefun
 
 \defun{fd-stream-p}[system]{\args{\var{object}}}
-This function returns \true{} if \var{object} is an fd-stream, and \nil{} if not.
+This function returns \true{} if \var{object} is an fd-stream, and \nil{} if
+not.  Obsolete: use the portable \code{(typep x 'file-stream)}.
 \enddefun
 
 \defun{fd-stream-fd}[system]{\args{\var{stream}}}
@@ -10184,10 +10500,14 @@ and two return values (\var{a} and \var{i}).
 \node Calling Lisp from C,  , def-alien-routine Example, Alien Function Calls
 \subsection{Calling Lisp from C}
 
-{\it There is currently a mechanism for calling Lisp functions from C, but it
-is rather restricted, and is scheduled for replacement.  If you need to call
-Lisp functions from C, contact us and we will let you know what capabilities
-are available in the system you have.  }
+Calling Lisp functions from C is sometimes possible, but is rather hackish.
+See \code{call_into_lisp} and \code{funcall0} ... \code{funcall3} in the C
+startup code.  The arguments must be valid CMU CL object descriptors (e.g.
+fixnums must be left-shifted by 2.)  See \file{compiler/generic/objdef.lisp} or
+the derived file \file{lisp/internals.h} for details of the object
+representation.  Note that the garbage collector moves objects, and won't be
+able to fix up any references in C variables, so either turn GC off or don't
+keep Lisp pointers in C data unless they are to statically allocated objects.
 
 
 \node Step-by-Step Alien Example,  , Alien Function Calls, Alien Objects
@@ -11038,7 +11358,7 @@ inexact debug information: \code{invalid-value},
 also \funref{preprocess-for-eval}.
 \enddefun
 
-
+\begin{ignore}
 \defun{return-from-frame}{frame values}
 This returns the elements in the list \var{values} as multiple values from
 \var{frame} as if the function \var{frame} represents returned these values.
@@ -11047,6 +11367,7 @@ debug-function lacks information on returning values.
 
 \i{Not Yet Implemented}
 \enddefun
+\end{ignore}
 
 
 \node Debug-functions, Debug-blocks, Frames, Debugger Programmer's Interface
@@ -11255,6 +11576,12 @@ may save the cookie when passed to the function-end-cookie function for
 later comparison in the hook function.
 
 This signals an error if \var{what} is an unknown code-location.
+
+\i{Note: Breakpoints in interpreted code or byte-compiled code are not
+implemented.  Function-end breakpoints are not implemented for compiled
+functions that use the known local return convention (e.g. for block-compiled
+or self-recursive functions.)}
+
 \enddefun
 
 
@@ -11450,9 +11777,10 @@ obscure (but highly compact) representation of source locations into an
 actual source form:
 
 \defun{debug-source-start-positions}{debug-source}
-This function returns the file position of each top-level form as an array if
+This function returns the file position of each top-level form a vector if
 \var{debug-source} is from a \code{:file}.  If \code{debug-source-from} is 
-\code{:lisp} or \code{:stream}, this returns \nil.
+\code{:lisp} or \code{:stream}, or the file is byte-compiled, then the result
+is \false.
 \enddefun
 
 
