@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.8 2000/10/24 13:32:32 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.9 2000/12/05 03:07:57 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -147,10 +147,47 @@ void arch_do_displaced_inst(struct sigcontext *scp,
 #endif
 }
 
+static int pseudo_atomic_trap_p(struct sigcontext *context)
+{
+  unsigned int* pc;
+  unsigned int badinst;
+  int result;
+  
+  
+  pc = (unsigned int*) SC_PC(context);
+  badinst = *pc;
+  result = 0;
+
+  /* Check to see if the current instruction is a trap #16 */
+  if (((badinst >> 30) == 2) && (((badinst >> 19) & 0x3f) == 0x3a)
+      && (((badinst >> 13) & 1) == 1) && ((badinst & 0x3f) == 16))
+    {
+      unsigned int previnst;
+      previnst = pc[-1];
+      /*
+       * Check to see if the previous instruction was an andcc alloc-tn,
+       * 3, zero-tn instruction.
+       */
+      if (((previnst >> 30) == 2) && (((previnst >> 19) & 0x3f) == 0x11)
+          && (((previnst >> 14) & 0x1f) == reg_ALLOC)
+          && (((previnst >> 25) & 0x1f) == reg_ZERO)
+          && (((previnst >> 13) & 1) == 1)
+          && ((previnst & 0x1fff) == 3))
+        {
+          result = 1;
+        }
+      else
+        {
+          fprintf(stderr, "Oops!  Got a trap 16 without a preceeding andcc!\n");
+        }
+    }
+  return result;
+}
+
+
+
 static void sigill_handler(HANDLER_ARGS)
 {
-    int badinst;
-
     SAVE_CONTEXT();
 
 #ifdef POSIX_SIGS
@@ -166,10 +203,12 @@ static void sigill_handler(HANDLER_ARGS)
 #endif
     {
 	int trap;
-	unsigned inst;
-	unsigned * pc = (unsigned *)(SC_PC(context));
+	unsigned int inst;
+	unsigned int* pc = (unsigned int *)(SC_PC(context));
 
 	inst = *pc;
+#if 0
+        /* CMUCL shouldn't be generating these yucky trap instructions anymore. */
 #ifdef SOLARIS
 	/* SPARC v9 doesn't like our trap instructions */
 	if ((inst & 0xe1f82000) == 0x81d02000) {
@@ -180,6 +219,7 @@ static void sigill_handler(HANDLER_ARGS)
 	    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
 	    return;
 	}
+#endif
 #endif
 	trap = inst & 0x3fffff;
 
@@ -231,9 +271,26 @@ static void sigill_handler(HANDLER_ARGS)
     else if (CODE(code) >= T_SOFTWARE_TRAP + 16 &&
 	     CODE(code) < T_SOFTWARE_TRAP + 32)
 #endif
-	interrupt_internal_error(signal, code, context, FALSE);
+      {
+        if (pseudo_atomic_trap_p(context))
+          {
+            /* A trap instruction from a pseudo-atomic.  We just need
+               to fixup up alloc-tn to remove the interrupted flag,
+               skip over the trap instruction, and then handle the
+               pending interrupt(s). */
+            SC_REG(context, reg_ALLOC) &= ~7;
+            arch_skip_instruction(context);
+            interrupt_handle_pending(context);
+          }
+        else
+          {
+            interrupt_internal_error(signal, code, context, FALSE);
+          }
+      }
     else
+      {
 	interrupt_handle_now(signal, code, context);
+      }
 }
 
 static void sigemt_handler(HANDLER_ARGS)
@@ -248,7 +305,9 @@ static void sigemt_handler(HANDLER_ARGS)
 	interrupt_handle_now(signal, code, context);
 	return;
     }
-	
+
+    fprintf(stderr, "SIGEMT trap handler with tagged op instruction!\n");
+    
     /* Extract the parts of the inst. */
     subtract = badinst & (1<<19);
     rs1 = (badinst>>14) & 0x1f;
