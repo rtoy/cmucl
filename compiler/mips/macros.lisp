@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.22 1990/03/06 19:57:21 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.23 1990/03/08 11:13:37 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -251,7 +251,11 @@
 	      (n-type-code type-code))
     `(cond ((< ,n-type-code vm:lowtag-limit)
 	    (simple-test-tag ,n-register ,n-temp ,n-target ,n-not-p
-			     ,n-type-code lowtag-mask))
+			     ,n-type-code vm:lowtag-mask))
+	   ((or (= ,n-type-code vm:base-character-type)
+		(= ,n-type-code vm:unbound-marker-type))
+	    (simple-test-tag ,n-register ,n-temp ,n-target ,n-not-p
+			     ,n-type-code vm:type-mask))
 	   (t
 	    (let* ((out-label (gen-label))
 		   (not-other-label (if ,n-not-p ,n-target out-label)))
