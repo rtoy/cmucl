@@ -682,10 +682,16 @@
 ;;; compile something.  If *BLOCK-COMPILE* is true, then we still convert the
 ;;; form, but delay compilation, pushing the result on *TOP-LEVEL-LAMBDAS*
 ;;; instead.
+;;;
+;;;   The *DEFAULT-COOKIE* at this time becomes the default policy for
+;;; compiling the form.  Any enclosed PROCLAIMs will affect only subsequent
+;;; forms.
 ;;; 
 (defun convert-and-maybe-compile (form path object)
   (declare (list path) (type object object))
-  (let ((tll (ir1-top-level form path nil)))
+  (let* ((*lexical-environment*
+	  (make-lexenv :cookie *default-cookie*))
+	 (tll (ir1-top-level form path nil)))
     (cond (*block-compile* (push tll *top-level-lambdas*))
 	  (t
 	   (compile-top-level (list tll) object)
@@ -755,8 +761,11 @@
 			   unexport use-package unuse-package import)
 	     (eval form)
 	     (etypecase object
-	       (fasl-file (fasl-dump-cold-load-form form object))
-	       ((or null core-object))))
+	       (fasl-file
+		(compile-top-level-lambdas () t object)
+		(fasl-dump-cold-load-form form object))
+	       ((or null core-object)
+		(convert-and-maybe-compile form path object))))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
 	       (compiler-error "EVAL-WHEN form is too short: ~S." form))
