@@ -36,12 +36,9 @@
 #-clx
 ;;; If CLX has not been loaded, but has been compiled, then load it.
 ;;;
-(when (probe-file (make-pathname :defaults "target:clx/defsystem"
+(when (probe-file (make-pathname :defaults "target:clx/clx-library"
 				 :type (c:backend-fasl-file-type c:*backend*)))
-  (setf (search-list "clx:") '("target:clx/"))
-  (load "clx:defsystem")
-  (xlib::load-clx (pathname "clx:"))
-  (load "target:code/clx-ext"))
+  (load "target:clx/clx-library"))
   
 (with-compiler-log-file
     ("target:compile-hemlock.log"
@@ -179,3 +176,101 @@
 (comf "target:hemlock/hacks")
 
 ) ;WITH-COMPILER-LOG-FILE
+
+
+(ext:run-program
+ "cat"
+ (mapcar #'(lambda (x)
+	     (namestring
+	      (truename
+	       (make-pathname
+		:name x
+		:type (c:backend-fasl-file-type c:*target-backend*)))))
+	 '("target:hemlock/rompsite"
+	   "target:hemlock/struct"
+	   ; "target:hemlock/struct-ed"
+	   "target:hemlock/charmacs"
+	   "target:hemlock/input"
+	   "target:hemlock/line"
+	   "target:hemlock/ring"
+	   "target:hemlock/vars"
+	   "target:hemlock/buffer"
+	   "target:hemlock/macros"
+	   "target:hemlock/interp"
+	   "target:hemlock/syntax"
+	   "target:hemlock/htext1"
+	   "target:hemlock/htext2"
+	   "target:hemlock/htext3"
+	   "target:hemlock/htext4"
+	   "target:hemlock/files"
+	   "target:hemlock/search1"
+	   "target:hemlock/search2"
+	   "target:hemlock/table"
+	   #+clx "target:hemlock/hunk-draw"
+	   "target:hemlock/window"
+	   "target:hemlock/screen"
+	   "target:hemlock/winimage"
+	   "target:hemlock/linimage"
+	   "target:hemlock/display"
+	   "target:hemlock/termcap"
+	   #+clx "target:hemlock/bit-display"
+	   "target:hemlock/tty-disp-rt"
+	   "target:hemlock/tty-display"
+	   "target:hemlock/pop-up-stream"
+	   #+clx "target:hemlock/bit-screen"
+	   "target:hemlock/tty-screen"
+	   "target:hemlock/cursor"
+	   "target:hemlock/font"
+	   "target:hemlock/streams"
+	   "target:hemlock/hacks"
+	   "target:hemlock/main"
+	   "target:hemlock/echo"
+	   "target:hemlock/echocoms"
+	   "target:hemlock/command"
+	   "target:hemlock/indent"
+	   "target:hemlock/comments"
+	   "target:hemlock/morecoms"
+	   "target:hemlock/undo"
+	   "target:hemlock/killcoms"
+	   "target:hemlock/searchcoms"
+	   "target:hemlock/filecoms"
+	   "target:hemlock/doccoms"
+	   "target:hemlock/srccom"
+	   "target:hemlock/group"
+	   "target:hemlock/fill"
+	   "target:hemlock/text"
+	   "target:hemlock/lispmode"
+	   "target:hemlock/ts-buf"
+	   "target:hemlock/ts-stream"
+	   "target:hemlock/eval-server"
+	   "target:hemlock/lispbuf"
+	   "target:hemlock/lispeval"
+	   "target:hemlock/spell-rt"
+	   "target:hemlock/spell-corr"
+	   "target:hemlock/spell-aug"
+	   "target:hemlock/spellcoms"
+	   "target:hemlock/overwrite"
+	   "target:hemlock/abbrev"
+	   "target:hemlock/icom"
+	   "target:hemlock/kbdmac"
+	   "target:hemlock/defsyn"
+	   "target:hemlock/scribe"
+	   "target:hemlock/pascal"
+	   "target:hemlock/edit-defs"
+	   "target:hemlock/auto-save"
+	   "target:hemlock/register"
+	   "target:hemlock/xcoms"
+	   "target:hemlock/unixcoms"
+	   "target:hemlock/mh"
+	   "target:hemlock/highlight"
+	   "target:hemlock/dired"
+	   "target:hemlock/diredcoms"
+	   "target:hemlock/bufed"
+	   "target:hemlock/lisp-lib"
+	   "target:hemlock/completion"
+	   "target:hemlock/shell"
+	   "target:hemlock/debug"
+	   "target:hemlock/netnews"
+	   "target:hemlock/bindings"))
+ :output (make-pathname :defaults "target:hemlock/hemlock-library
+			:type (c:backend-fasl-file-type c:*target-backend*)))
