@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.30 1993/05/19 13:57:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.31 1993/05/19 16:17:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,7 +222,8 @@
 
   (loadw next-uwp cur-uwp vm:unwind-block-current-uwp-slot)
   (inst b do-exit)
-  (store-symbol-value next-uwp lisp::*current-unwind-protect-block*))
+  #-gengc (store-symbol-value next-uwp lisp::*current-unwind-protect-block*)
+  #+gengc (storew next-uwp mutator-tn mutator-current-unwind-protect-slot))
 
 
 (define-assembly-routine
@@ -236,7 +237,7 @@
   (progn start count) ; We just need them in the registers.
 
   #-gengc (load-symbol-value catch lisp::*current-catch-block*)
-  #+gengc (loadw temp mutator-tn mutator-current-catch-block-slot)
+  #+gengc (loadw catch mutator-tn mutator-current-catch-block-slot)
   
   loop
   
@@ -256,5 +257,3 @@
   (move target catch)
   (inst j (make-fixup 'unwind :assembly-routine))
   (inst nop))
-
-
