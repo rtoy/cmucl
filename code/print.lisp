@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.49 1993/02/26 08:25:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.50 1993/03/14 12:27:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -493,9 +493,8 @@
     (instance
      (output-instance object stream))
     (function
-     (if (and (fboundp 'funcallable-instance-p)
-	      (funcallable-instance-p object))
-	 (pcl:print-object object stream)
+     (if (funcallable-instance-p object)
+	 (output-instance object stream)
 	 (output-function object stream)))
     (symbol
      (output-symbol object stream))
@@ -1099,9 +1098,9 @@
 ;;; Otherwise, call PCL if it's loaded.  If not, print unreadably.
 
 (defun output-instance (instance stream)
-  (let ((class (layout-class (%instance-layout instance))))
-    (cond ((typep class 'structure-class)
-	   (funcall (or (structure-class-print-function class)
+  (let ((class (class-of instance)))
+    (cond ((typep class 'basic-structure-class)
+	   (funcall (or (basic-structure-class-print-function class)
 			#'default-structure-print)
 		    instance stream *current-level*))
 	  ((fboundp 'pcl:print-object)
