@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.77 2003/10/24 02:56:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.78 2003/10/26 12:48:23 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1071,65 +1071,6 @@
 
 ;;;; HANDLER-CASE and IGNORE-ERRORS.
 
-#|
-;;; Version used in older versions of CMUCL which had lossage closing over
-;;; tags.
-;;;
-(defmacro handler-case (form &rest cases)
-  "(HANDLER-CASE form
-   { (type ([var]) body) }* )
-   Executes form in a context with handlers established for the condition
-   types.  A peculiar property allows type to be :no-error.  If such a clause
-   occurs, and form returns normally, all its values are passed to this clause
-   as if by MULTIPLE-VALUE-CALL.  The :no-error clause accepts more than one
-   var specification."
-  (let ((no-error-clause (assoc ':no-error cases)))
-    (if no-error-clause
-	(let ((normal-return (make-symbol "normal-return"))
-	      (error-return  (make-symbol "error-return")))
-	  `(block ,error-return
-	     (multiple-value-call #'(lambda ,@(cdr no-error-clause))
-	       (block ,normal-return
-		 (return-from ,error-return
-		   (handler-case (return-from ,normal-return ,form)
-		     ,@(remove no-error-clause cases)))))))
-	(let ((var (gensym))
-	      (outer-tag (gensym))
-	      (inner-tag (gensym))
-	      (tag-var (gensym))
-	      (annotated-cases (mapcar #'(lambda (case) (cons (gensym) case))
-				       cases)))
-	  `(let ((,outer-tag (cons nil nil))
-		 (,inner-tag (cons nil nil))
-		 ,var ,tag-var)
-	     (declare (ignorable ,var))
-	     (catch ,outer-tag
-	       (catch ,inner-tag
-		 (throw ,outer-tag
-			(handler-bind
-			    ,(mapcar #'(lambda (annotated-case)
-					 `(,(cadr annotated-case)
-					   #'(lambda (temp)
-					       ,(if (caddr annotated-case)
-						    `(setq ,var temp)
-						    '(declare (ignore temp)))
-					       (setf ,tag-var
-						     ',(car annotated-case))
-					       (throw ,inner-tag nil))))
-				     annotated-cases)
-			  ,form)))
-	       (case ,tag-var
-		 ,@(mapcar #'(lambda (annotated-case)
-			       (let ((body (cdddr annotated-case))
-				     (varp (caddr annotated-case)))
-				 `(,(car annotated-case)
-				   ,@(if varp
-					 `((let ((,(car varp) ,var))
-					     ,@body))
-					 body))))
-			   annotated-cases))))))))
-|#
-
 ;;; This macro doesn't work in older version of CMUCL system due to lossage
 ;;; in closing over tags.  The previous version sets up unique run-time tags.
 ;;;
@@ -1146,48 +1087,44 @@
 	(let ((normal-return (make-symbol "normal-return"))
 	      (error-return  (make-symbol "error-return")))
 	  `(block ,error-return
-	     (multiple-value-call #'(lambda ,@(cdr no-error-clause))
+	     (multiple-value-call (lambda ,@(cdr no-error-clause))
 	       (block ,normal-return
 		 (return-from ,error-return
 		   (handler-case (return-from ,normal-return ,form)
 		     ,@(remove no-error-clause cases)))))))
 	(let ((tag (gensym))
 	      (var (gensym))
-	      (annotated-cases (mapcar #'(lambda (case) (cons (gensym) case))
+	      (annotated-cases (mapcar (lambda (case) (cons (gensym) case))
 				       cases)))
 	  `(block ,tag
 	     (let ((,var nil))
 	       (declare (ignorable ,var))
 	       (tagbody
-		 (handler-bind
-		  ,(mapcar #'(lambda (annotated-case)
-			       (list (cadr annotated-case)
-				     `#'(lambda (temp)
-					  ,(if (caddr annotated-case)
-					       `(setq ,var temp)
-					       '(declare (ignore temp)))
-					  (go ,(car annotated-case)))))
-			   annotated-cases)
-			       (return-from ,tag
-				 #-x86 ,form
-				 #+x86 (multiple-value-prog1 ,form
-					 ;; Need to catch FP errors here!
-					 (kernel::float-wait))))
-		 ,@(mapcan
-		    #'(lambda (annotated-case)
-			(list (car annotated-case)
-			      (let ((body (cdddr annotated-case)))
-				`(return-from
-				  ,tag
-				  ,(cond ((caddr annotated-case)
-					  `(let ((,(caaddr annotated-case)
-						  ,var))
-					     ,@body))
-					 ((not (cdr body))
-					  (car body))
-					 (t
-					  `(locally ,@body)))))))
-			   annotated-cases))))))))
+		  (handler-bind
+		      ,(mapcar (lambda (annotated-case)
+				 (list (cadr annotated-case)
+				       `#'(lambda (temp)
+					    ,(if (caddr annotated-case)
+						 `(setq ,var temp)
+						 '(declare (ignore temp)))
+					    (go ,(car annotated-case)))))
+			       annotated-cases)
+		    (return-from ,tag
+		      #-x86 ,form
+		      #+x86 (multiple-value-prog1 ,form
+			      ;; Need to catch FP errors here!
+			      (kernel::float-wait))))
+		  ,@(mapcan
+		     (lambda (annotated-case)
+		       (list (car annotated-case)
+			     (let ((body (cdddr annotated-case)))
+			       `(return-from
+				 ,tag
+				  ,(if (caddr annotated-case)
+				       `(let ((,(caaddr annotated-case) ,var))
+					  ,@body)
+				       `(locally ,@body))))))
+		     annotated-cases))))))))
 
 (defmacro ignore-errors (&rest forms)
   "Executes forms after establishing a handler for all error conditions that
