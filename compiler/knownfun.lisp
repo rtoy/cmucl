@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.7 1991/02/20 14:58:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.8 1991/04/09 17:22:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,10 +150,9 @@
 (proclaim '(function %defknown (list list attributes &key (derive-type function)
 				     (optimizer function))))
 (defun %defknown (names type attributes &key derive-type optimizer)
-  (declare (ignore derive-type))
   (let ((ctype (specifier-type type))
 	(info (make-function-info :attributes attributes
-;				  :derive-type derive-type  Until database is fixed...
+				  :derive-type derive-type
 				  :optimizer optimizer))
 	(*info-environment* (or (backend-info-environment *target-backend*)
 				*info-environment*)))
@@ -179,3 +178,31 @@
     (let ((old (info function info name)))
       (unless old (error "~S is not a known function." name))
       (setf (info function info name) (copy-function-info old)))))
+
+
+;;;; Generic type inference methods:
+
+;;; RESULT-TYPE-xxx-ARG  --  Interface
+;;;
+;;;    Derive the type to be the type of the xxx'th arg.
+;;;
+(defun result-type-first-arg (call)
+  (declare (type combination call))
+  (let ((cont (first (combination-args call))))
+    (when cont (continuation-type cont))))
+;;;
+(defun result-type-last-arg (call)
+  (declare (type combination call))
+  (let ((cont (car (last (combination-args call)))))
+    (when cont (continuation-type cont))))
+
+
+;;; RESULT-TYPE-SPECIFIER-FIRST-ARG  --  Interface
+;;;
+;;;    Derive the type to be the type specifier which is the first arg.
+;;; 
+(defun result-type-specifier-first-arg (call)
+  (declare (type combination call))
+  (let ((cont (car (last (combination-args call)))))
+    (when (and cont (constant-continuation-p cont))
+      (specifier-type (continuation-value cont)))))
