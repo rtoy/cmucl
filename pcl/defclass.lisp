@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.10.2.2 2000/05/23 16:38:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.10.2.3 2000/07/01 22:03:26 dtc Exp $")
 ;;;
 
 (in-package :pcl)
@@ -97,12 +97,12 @@
     ;; TBD - ANSI compliant class and slot option checking.
     (dolist (option options)
       (if (not (listp option))
-          (error 'simple-program-error
+          (error 'kernel:simple-program-error
 		 :format-control "~S is not a legal defclass option."
 		 :format-arguments (list option))
           (when (eq (car option) ':metaclass)
             (unless (legal-class-name-p (cadr option))
-              (error 'simple-program-error
+              (error 'kernel:simple-program-error
 		     :format-control 
 		     "The value of the :metaclass option (~S) is not a~%~
 		      legal class name."
