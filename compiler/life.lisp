@@ -650,6 +650,41 @@
     (when (find-in #'tn-ref-across tn (vop-args vop) :key #'tn-ref-tn)
       (return nil))))
 
+;;; MAKE-DEBUG-ENVIRONMENT-TNS-LIVE  --  Internal
+;;;
+;;; If the block has no successors, or its successor is the component tail,
+;;; then all :DEBUG-ENVIRONMENT TNs are always added, regardless of whether
+;;; they appeared to be live.  This ensures that these TNs are considered to be
+;;; live throughout blocks that read them, but don't have any interesting
+;;; successors (such as a return or tail call.)  In this case, we set the
+;;; corresponding bit in LIVE-IN as well.
+;;;
+(defun make-debug-environment-tns-live (block live-bits live-list)
+  (let* ((1block (ir2-block-block block))
+	 (live-in (ir2-block-live-in block))
+	 (succ (block-succ 1block))
+	 (next (ir2-block-next block)))
+    (when (and next
+	       (not (eq (ir2-block-block next) 1block))
+	       (or (null succ)
+		   (eq (first succ)
+		       (component-tail (block-component 1block)))))
+      (do ((conf (ir2-block-global-tns block)
+		 (global-conflicts-next conf)))
+	  ((null conf))
+	(let* ((tn (global-conflicts-tn conf))
+	       (num (global-conflicts-number conf)))
+	  (when (and num (zerop (sbit live-bits num))
+		     (eq (tn-kind tn) :debug-environment)
+		     (eq (tn-environment tn) (block-environment 1block))
+		     (saved-after-read tn block))
+	    (note-conflicts live-bits live-list tn num)
+	    (setf (sbit live-bits num) 1)
+	    (push-in tn-next* tn live-list)
+	    (setf (sbit live-in num) 1))))))
+  
+  (values live-bits live-list))
+
 
 ;;; Compute-Initial-Conflicts  --  Internal
 ;;;
@@ -660,12 +695,11 @@
 ;;; end, setting up the TN-Local-Conflicts and TN-Local-Number, and adding the
 ;;; TN to the live list.
 ;;;
-;;; If the block has no successors, or its successor is the component tail,
-;;; then all :DEBUG-ENVIRONMENT TNs are always added, regardless of whether
-;;; they appeared to be live.  This ensures that these TNs are considered to be
-;;; live throughout blocks that read them, but don't have any interesting
-;;; successors (such as a return or tail call.)  In this case, we set the
-;;; corresponding bit in LIVE-IN as well.
+;;; If a :MORE result is not live, we effectively fake a read to it.  This is
+;;; part of the action described in ENSURE-RESULTS-LIVE.
+;;;
+;;; At the end, we call MAKE-DEBUG-ENVIRONEMNT-TNS-LIVE to make debug
+;;; environment TNs appear live when appropriate, even when they aren't.
 ;;;
 ;;; ### Note: we alias the global-conflicts-conflicts here as the
 ;;; tn-local-conflicts.
@@ -673,6 +707,7 @@
 (defun compute-initial-conflicts (block)
   (declare (type ir2-block block))
   (let* ((live-in (ir2-block-live-in block))
+	 (ltns (ir2-block-local-tns block))
 	 (live-bits (bit-vector-copy live-in))
 	 (live-list nil))
 
@@ -681,50 +716,58 @@
 	((null conf))
       (let ((bits (global-conflicts-conflicts conf))
 	    (tn (global-conflicts-tn conf))
-	    (num (global-conflicts-number conf)))
+	    (num (global-conflicts-number conf))
+	    (kind (global-conflicts-kind conf)))
 	(setf (tn-local-number tn) num)
-	(unless (eq (global-conflicts-kind conf) :live)
-	  (unless (zerop (sbit live-bits num))
-	    (bit-vector-replace bits live-bits)
-	    (setf (sbit bits num) 0)
-	    (push-in tn-next* tn live-list))
+	(unless (eq kind :live)
+	  (cond ((not (zerop (sbit live-bits num)))
+		 (bit-vector-replace bits live-bits)
+		 (setf (sbit bits num) 0)
+		 (push-in tn-next* tn live-list))
+		((and (eq (svref ltns num) :more)
+		      (eq kind :write))
+		 (note-conflicts live-bits live-list tn num)
+		 (setf (sbit live-bits num) 1)
+		 (push-in tn-next* tn live-list)
+		 (setf (sbit live-in num) 1)))
+
 	  (setf (tn-local-conflicts tn) bits))))
 
-    (let* ((1block (ir2-block-block block))
-	   (succ (block-succ 1block))
-	   (next (ir2-block-next block)))
-      (when (and next
-		 (not (eq (ir2-block-block next) 1block))
-		 (or (null succ)
-		     (eq (first succ)
-			 (component-tail (block-component 1block)))))
-	(do ((conf (ir2-block-global-tns block)
-		   (global-conflicts-next conf)))
-	    ((null conf))
-	  (let* ((tn (global-conflicts-tn conf))
-		 (num (global-conflicts-number conf)))
-	    (when (and num (zerop (sbit live-bits num))
-		       (eq (tn-kind tn) :debug-environment)
-		       (eq (tn-environment tn) (block-environment 1block))
-		       (saved-after-read tn block))
-	      (note-conflicts live-bits live-list tn num)
-	      (setf (sbit live-bits num) 1)
-	      (push-in tn-next* tn live-list)
-	      (setf (sbit live-in num) 1))))))
+    (make-debug-environment-tns-live block live-bits live-list)))
 
-    (values live-bits live-list)))
+
+;;; DO-SAVE-P-STUFF  --  Internal
+;;;
+;;;    A function called in Conflict-Analyze-1-Block when we have a VOP with
+;;; SAVE-P true.  We compute the save-set, and if :FORCE-TO-STACK, force all
+;;; the live TNs to be stack environment TNs.
+;;;
+(defun do-save-p-stuff (vop block live-bits)
+  (declare (type vop vop) (type ir2-block block)
+	   (type local-tn-bit-vector live-bits))
+  (let ((ss (compute-save-set vop live-bits)))
+    (setf (vop-save-set vop) ss)
+    (when (eq (vop-info-save-p (vop-info vop)) :force-to-stack)
+      (do-live-tns (tn ss block)
+	(unless (eq (tn-kind tn) :component)
+	  (force-tn-to-stack tn)
+	  (unless (eq (tn-kind tn) :environment)
+	    (convert-to-environment-tn
+	     tn
+	     (block-environment (ir2-block-block block))))))))
+  (undefined-value))
 
 
 (eval-when (compile eval)
 
 ;;; Frob-More-TNs  --  Internal
 ;;;
-;;;    Used in the guts of Conflict-Analyze-1-Block to simultaneously do
-;;; something to all of the TNs referenced by a big more arg.  We have to treat
-;;; these TNs specially, since when we set or clear the bit in the live TNs,
-;;; the represents a change in the liveness of all the more TNs.  If we
-;;; iterated as normal, the next more ref would be thought to be not live when
-;;; it was, etc.  We return true if there where more TNs.
+;;;    Used in SCAN-VOP-REFS to simultaneously do something to all of the TNs
+;;; referenced by a big more arg.  We have to treat these TNs specially, since
+;;; when we set or clear the bit in the live TNs, the represents a change in
+;;; the liveness of all the more TNs.  If we iterated as normal, the next more
+;;; ref would be thought to be not live when it was, etc.  We return true if
+;;; there where more TNs.
 ;;;
 (defmacro frob-more-tns (action)
   `(when (eq (svref ltns num) :more)
@@ -735,6 +778,53 @@
 	   (return))
 	 ,action))
      t))
+
+;;; SCAN-VOP-REFS  --  Internal
+;;;
+;;;    	Handle the part of CONFLICT-ANALYZE-1-BLOCK that scans the REFs for the
+;;; current VOP.  This macro shamelessly references free variables in C-A-1-B.
+;;;
+(defmacro scan-vop-refs ()
+  '(do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
+       ((null ref))
+     (let* ((tn (tn-ref-tn ref))
+	    (num (tn-local-number tn)))
+       (cond
+	((not num))
+	((not (zerop (sbit live-bits num)))
+	 (when (tn-ref-write-p ref)
+	   (setf (sbit live-bits num) 0)
+	   (deletef-in tn-next* live-list tn)
+	   (when (frob-more-tns (deletef-in tn-next* live-list mtn))
+	     (return))))
+	(t
+	 (assert (not (tn-ref-write-p ref)))
+	 (note-conflicts live-bits live-list tn num)
+	 (frob-more-tns (note-conflicts live-bits live-list mtn num))
+	 (setf (sbit live-bits num) 1)
+	 (push-in tn-next* tn live-list)
+	 (when (frob-more-tns (push-in tn-next* mtn live-list))
+	   (return)))))))
+
+;;; ENSURE-RESULTS-LIVE  --  Internal
+;;;
+;;;    This macro is called by CONFLICT-ANALYZE-1-BLOCK to scan the current
+;;; VOP's results, and make any dead ones live.  This is necessary, since even
+;;; though a result is dead after the VOP, it may be in use for an extended
+;;; period within the VOP (especially if it has :FROM specified.)  During this
+;;; interval, temporaries must be noted to conflict with the result.  More
+;;; results are finessed in COMPUTE-INITIAL-CONFLICTS, so we ignore them here.
+;;;
+(defmacro ensure-results-live ()
+  '(do ((res (vop-results vop) (tn-ref-across res)))
+       ((null res))
+     (let* ((tn (tn-ref-tn res))
+	    (num (tn-local-number tn)))
+       (when (and num (zerop (sbit live-bits num)))
+	 (unless (eq (svref ltns num) :more)
+	   (note-conflicts live-bits live-list tn num)
+	   (setf (sbit live-bits num) 1)
+	   (push-in tn-next* tn live-list))))))
 
 ); Eval-When (Compile Eval)
 
@@ -751,46 +841,13 @@
       (live-bits live-list)
       (compute-initial-conflicts block)
     (let ((ltns (ir2-block-local-tns block)))
-      
       (do ((vop (ir2-block-last-vop block)
 		(vop-prev vop)))
 	  ((null vop))
-	
-	(let ((save-p (vop-info-save-p (vop-info vop))))
-	  (when save-p
-	    (let ((ss (compute-save-set vop live-bits)))
-	      (setf (vop-save-set vop) ss)
-	      (when (eq save-p :force-to-stack)
-		(do-live-tns (tn ss block)
-		  (unless (eq (tn-kind tn) :component)
-		    (force-tn-to-stack tn)
-		    (unless (eq (tn-kind tn) :environment)
-		      (convert-to-environment-tn
-		       tn
-		       (block-environment (ir2-block-block block))))))))))
-	
-	(do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
-	    ((null ref))
-	  (let* ((tn (tn-ref-tn ref))
-		 (num (tn-local-number tn)))
-	    
-	    (cond
-	     ((not num))
-	     ((not (zerop (sbit live-bits num)))
-	      (when (tn-ref-write-p ref)
-		(setf (sbit live-bits num) 0)
-		(deletef-in tn-next* live-list tn)
-		(when (frob-more-tns (deletef-in tn-next* live-list mtn))
-		  (return))))
-	     ((tn-ref-write-p ref)
-	      (note-conflicts live-bits live-list tn num))
-	     (t
-	      (note-conflicts live-bits live-list tn num)
-	      (frob-more-tns (note-conflicts live-bits live-list mtn num))
-	      (setf (sbit live-bits num) 1)
-	      (push-in tn-next* tn live-list)
-	      (when (frob-more-tns (push-in tn-next* mtn live-list))
-		(return))))))))))
+	(when (vop-info-save-p (vop-info vop))
+	  (do-save-p-stuff vop block live-bits))
+	(ensure-results-live)
+	(scan-vop-refs)))))
 
 
 ;;; Lifetime-Post-Pass  --  Internal
