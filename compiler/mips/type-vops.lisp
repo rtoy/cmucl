@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.40 1993/02/26 08:49:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.41 1993/03/13 17:26:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -338,7 +338,7 @@
 (def-type-vops fdefn-p nil nil nil
   fdefn-type)
 
-(def-type-vops funcallable-instance-p nil nil nil
+(def-type-vops funcallable-instance-p nil funcallable-instance nil
   funcallable-instance-header-type)
 
 (def-type-vops dylan::dylan-function-p nil nil nil
