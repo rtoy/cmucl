@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.6 1990/04/25 21:46:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.7 1990/04/25 23:34:18 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -70,9 +70,13 @@
   (:variant :pointer nil))
 
 (define-vop (write-control-stack sap-set)
+  (:args (object :scs (sap-reg) :target sap)
+	 (offset :scs (descriptor-reg any-reg negative-immediate
+				      zero immediate))
+	 (value :scs (descriptor-reg) :target result))
   (:arg-types system-area-pointer fixnum *)
   (:results (result :scs (descriptor-reg)))
-  (:variant :pointer nil))
+  (:variant :pointer))
 
 
 
