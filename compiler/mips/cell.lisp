@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.3 1990/02/03 16:11:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.4 1990/02/09 13:51:37 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -16,6 +16,26 @@
 ;;;
 ;;; Converted by William Lott.
 ;;; 
+(in-package "VM")
+
+(export '(%cons-car-slot %cons-cdr-slot
+
+	  %symbol-value-slot %symbol-function-slot %symbol-plist-slot
+	  %symbol-name-slot %symbol-package-slot
+
+	  %array-fill-pointer-slot %array-elements-slot %array-data-slot
+	  %array-displacement-slot %array-displaced-p-slot
+	  %array-dimensions-offset
+
+	  %code-code-size-slot %code-entry-points-slot %code-debug-info-slot
+	  %code-constants-offset
+
+	  %function-header-self-slot %function-header-next-slot
+	  %function-header-name-slot %function-header-arglist-slot
+	  %function-header-type-slot %function-header-code-offset
+
+	  %closure-function-slot %closure-info-offset))
+
 (in-package "C")
 
 
@@ -82,7 +102,7 @@
 	   :set-vop set-package))
 
 
-(defslots (%array)
+(defslots (%array :lowtag other-pointer-type)
   fill-pointer
   elements
   data
@@ -91,14 +111,14 @@
   &rest
   dimensions)
 
-(defslots (%code)
+(defslots (%code :lowtag other-pointer-type)
   code-size
   entry-points
   debug-info
   &rest
   constants)
-  
-(defslots (%function-header)
+
+(defslots (%function-header :lowtag function-pointer-type)
   self
   next
   name
@@ -107,7 +127,7 @@
   &rest
   code)
 
-(defslots (%closure)
+(defslots (%closure :lowtag function-pointer-type)
   function
   &rest
   info)
