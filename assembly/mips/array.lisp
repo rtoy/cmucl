@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.7 1990/04/24 03:13:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.8 1990/05/23 06:11:51 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -15,6 +15,8 @@
 ;;; 
 (in-package "C")
 
+
+(eval-when (eval)
 
 (defmacro allocate-vector (type length words vector ndescr)
   `(pseudo-atomic (,ndescr)
@@ -36,28 +38,32 @@
   (declare (ignore vector words))
   nil)
 
+); eval-when (eval)
+
 
 (define-assembly-routine (allocate-vector
-			  (:arg type)
-			  (:arg length)
-			  (:arg words)
-			  (:res result)
+			  ()
+			  (:arg type any-reg a0-offset)
+			  (:arg length any-reg a1-offset)
+			  (:arg words any-reg a2-offset)
+			  (:res result descriptor-reg a0-offset)
 
-			  (:temp vector :sc descriptor-reg)
-			  (:temp ndescr :sc non-descriptor-reg :type random))
+			  (:temp ndescr non-descriptor-reg nl0-offset)
+			  (:temp vector descriptor-reg a3-offset))
   (allocate-vector type length words vector ndescr)
   (maybe-invoke-gc vector words)
   (move result vector))
 
 
 (define-assembly-routine (alloc-g-vector
-			  (:arg length)
-			  (:arg fill)
-			  (:res result)
+			  ()
+			  (:arg length any-reg a0-offset)
+			  (:arg fill any-reg a1-offset)
+			  (:res result descriptor-reg a0-offset)
 
-			  (:temp ndescr :sc non-descriptor-reg :type random)
-			  (:temp lip :sc interior-reg :type interior)
-			  (:temp vector :sc descriptor-reg))
+			  (:temp ndescr non-descriptor-reg nl0-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp vector descriptor-reg a3-offset))
 
   (allocate-vector vm:simple-vector-type length length vector ndescr)
   (inst beq length zero-tn done)
@@ -72,17 +78,18 @@
   (inst addu lip lip vm:word-bytes)
 
   done
-
+  
   (move result vector))
 
 
 (define-assembly-routine (alloc-string
-			  (:arg length)
-			  (:res result)
+			  ()
+			  (:arg length any-reg a0-offset)
+			  (:res result descriptor-reg a0-offset)
 
-			  (:temp ndescr :sc non-descriptor-reg :type random)
-			  (:temp vector :sc descriptor-reg)
-			  (:temp words :sc non-descriptor-reg :type fixnum))
+			  (:temp ndescr non-descriptor-reg nl0-offset)
+			  (:temp words any-reg nl1-offset)
+			  (:temp vector descriptor-reg a3-offset))
   ;; Note: When we calculate the number of words needed, we assure that there
   ;; will be at least one extra byte available.  This allows us to pass strings
   ;; to C land without having to tack an extra null on the end ourselves.
@@ -108,19 +115,19 @@
 
 
 
-
 
 ;;;; Hash primitives
 
 (define-assembly-routine (sxhash-simple-string
-			  (:arg string)
-			  (:res result)
+			  ()
+			  (:arg string descriptor-reg a0-offset)
+			  (:res result any-reg a0-offset)
 
-			  (:temp lip :sc interior-reg :type interior)
-			  (:temp length :sc any-reg :type fixnum)
-			  (:temp accum :sc non-descriptor-reg :type random)
-			  (:temp data :sc non-descriptor-reg :type random)
-			  (:temp byte :sc non-descriptor-reg :type random))
+			  (:temp lip interior-reg lip-offset)
+			  (:temp length any-reg a2-offset)
+			  (:temp accum non-descriptor-reg nl0-offset)
+			  (:temp data non-descriptor-reg nl1-offset)
+			  (:temp byte non-descriptor-reg nl2-offset))
   (loadw length string vm:vector-length-slot vm:other-pointer-type)
   (inst addu lip string
 	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
@@ -203,15 +210,15 @@
 
 
 (define-assembly-routine (sxhash-simple-substring
-			  (:arg string)
-			  (:arg length)
-			  (:res result)
+			  ()
+			  (:arg string descriptor-reg a0-offset)
+			  (:arg length any-reg a1-offset)
+			  (:res result any-reg a0-offset)
 
-			  (:temp lip :sc interior-reg :type interior)
-			  (:temp accum :sc non-descriptor-reg :type random)
-			  (:temp data :sc non-descriptor-reg :type random)
-			  (:temp byte :sc non-descriptor-reg :type random))
-  (loadw length string vm:vector-length-slot vm:other-pointer-type)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp accum non-descriptor-reg nl0-offset)
+			  (:temp data non-descriptor-reg nl1-offset)
+			  (:temp byte non-descriptor-reg nl2-offset))
   (inst addu lip string
 	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
   (inst b test)
@@ -290,3 +297,4 @@
 
   (inst sll result accum 5)
   (inst srl result result 3))
+
