@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.30 1998/01/16 07:22:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.31 1998/01/17 05:52:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1570,9 +1570,7 @@
     (read-n-bytes *fasl-file* sym 0 len)
     (let ((offset (read-arg 4))
 	  (value (lookup-foreign-symbol sym)))
-      (when (c:backend-featurep :x86)
-	(note-load-time-code-fixup code-object offset value kind))
-      (do-cold-fixup code-object (calc-offset code-object offset) value kind))
+      (do-cold-fixup code-object offset value kind))
     code-object))
 
 (define-cold-fop (fop-assembler-code)
@@ -1622,9 +1620,7 @@
 	 (code-object (pop-stack))
 	 (offset (read-arg 4))
 	 (value (descriptor-bits code-object)))
-    (when (c:backend-featurep :x86)
-      (note-load-time-code-fixup code-object offset value kind))
-    (do-cold-fixup code-object (calc-offset code-object offset) value kind)
+    (do-cold-fixup code-object offset value kind)
     code-object))
 
 
@@ -1764,12 +1760,7 @@
     (let* ((routine (car fixup))
 	   (value (lookup-assembler-reference routine)))
       (when value
-	(when (c:backend-featurep :x86)
-	  (note-load-time-code-fixup (second fixup) (third fixup) value
-				     (fourth fixup)))
-	(do-cold-fixup (second fixup)
-	  (calc-offset (second fixup) (third fixup))
-	  value (fourth fixup))))))
+	(do-cold-fixup (second fixup) (third fixup) value (fourth fixup))))))
 
 ;;; The x86 port needs to store code fixups along with code objects if
 ;;; they are to be moved, so fixups for code objects in the dynamic
@@ -1806,8 +1797,9 @@
 		      *nil-descriptor*)))))
 		 *current-init-functions-cons*))))
 
-(defun do-cold-fixup (code-object offset value kind)
-  (let ((sap (sap+ (descriptor-sap code-object) offset)))
+(defun do-cold-fixup (code-object after-header value kind)
+  (let* ((offset (calc-offset code-object after-header))
+	 (sap (sap+ (descriptor-sap code-object) offset)))
     (ecase (c:backend-fasl-file-implementation c:*backend*)
       (#.c:pmax-fasl-file-implementation
        (ecase kind
@@ -1863,21 +1855,30 @@
 	  (setf (sap-ref-16 sap 2)
 		(maybe-byte-swap-short (ldb (byte 16 0) value))))))
       (#.c:x86-fasl-file-implementation
-       (let* ((disp (logior (sap-ref-8 sap 0)
-			    (ash (sap-ref-8 sap 1) 8)
-			    (ash (sap-ref-8 sap 2) 16)
-			    (ash (sap-ref-8 sap 3) 24)))
-	      (high (descriptor-high code-object))
-	      (low (descriptor-low code-object))
-	      (value (ecase kind
-		       (:absolute (+ value disp))
-		       (:relative (- (+ value disp vm:other-pointer-type)
-				     (ash high descriptor-low-bits)
-				     low offset 4)))))
-	 (setf (sap-ref-8 sap 0) (ldb (byte 8 0) value))
-	 (setf (sap-ref-8 sap 1) (ldb (byte 8 8) value))
-	 (setf (sap-ref-8 sap 2) (ldb (byte 8 16) value))
-	 (setf (sap-ref-8 sap 3) (ldb (byte 8 24) value))))
+       (let* ((disp (maybe-byte-swap (sap-ref-32 sap 0)))
+	      (obj-start-addr (logandc2 (descriptor-bits code-object)
+					vm:lowtag-mask)))
+	 (ecase kind
+	   (:absolute
+	    (let ((new-value (+ value disp)))
+	      (setf (sap-ref-8 sap 0) (ldb (byte 8 0) new-value))
+	      (setf (sap-ref-8 sap 1) (ldb (byte 8 8) new-value))
+	      (setf (sap-ref-8 sap 2) (ldb (byte 8 16) new-value))
+	      (setf (sap-ref-8 sap 3) (ldb (byte 8 24) new-value))
+	      ;; Note absolute fixups that point within the object.
+	      (unless (< new-value obj-start-addr)
+		(note-load-time-code-fixup code-object after-header value
+					   kind))))
+	   (:relative
+	    (let ((new-value (- (+ value disp)
+				obj-start-addr offset 4)))
+	      (setf (sap-ref-8 sap 0) (ldb (byte 8 0) new-value))
+	      (setf (sap-ref-8 sap 1) (ldb (byte 8 8) new-value))
+	      (setf (sap-ref-8 sap 2) (ldb (byte 8 16) new-value))
+	      (setf (sap-ref-8 sap 3) (ldb (byte 8 24) new-value))
+	      ;; Note relative fixups that point outside the code object.
+	      (note-load-time-code-fixup code-object after-header value
+					 kind))))))
       (#.c:hppa-fasl-file-implementation
        (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
 	 (setf (sap-ref-32 sap 0)
