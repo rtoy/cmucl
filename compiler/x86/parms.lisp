@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4.2.1 1997/09/08 02:37:10 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4.2.2 1997/09/15 10:44:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,11 +161,10 @@
 (defparameter target-static-space-start    #x05000000)
 (defparameter target-dynamic-space-start   #x09000000)
 
-;;; Given that NIL and T are the first things allocated in static space, we
-;;; can know their values at compile time:
+;;; Given that NIL is the first things allocated in static space, we
+;;; know its value at compile time:
 ;;; 
 (defparameter nil-value #x0500000B)
-(defparameter t-value #x0500002F)
 
 
 ;;;; Other random constants.
