@@ -33,6 +33,9 @@ New in this release:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
        ANSI test suite have been fixed.
      - Non-keyword keyword names in lambda lists are now accepted.
+     - Condition slot initialization fixed for the case that two
+       or more slots have the same :INITARG.
+     - Condition slot initforms are now evaluated only once.
 
   * Numerous bugfixes:
 
