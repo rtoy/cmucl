@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.8 1991/03/15 22:48:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.9 1991/09/23 09:27:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 
 (in-package "HEMLOCK-INTERNALS")
 
-(export '(redisplay redisplay-all))
+(export '(redisplay redisplay-all define-tty-font))
 
 
 
@@ -51,8 +51,9 @@
 ;;; 
 (defstruct (si-line (:print-function print-screen-image-line)
 		    (:constructor %make-si-line (chars)))
-  chars
-  (length 0))
+  (chars nil :type simple-string)
+  (length 0)
+  (fonts nil :type list))
 
 (defun make-si-line (n)
   (%make-si-line (make-string n)))
@@ -64,22 +65,159 @@
   (write-string "\">" str))
 
 
+(defun find-identical-prefix (dis-line dis-line-fonts si-line)
+  (declare (type dis-line dis-line)
+	   (type list dis-line-fonts)
+	   (type si-line si-line))
+  (let* ((dl-chars (dis-line-chars dis-line))
+	 (dl-len (dis-line-length dis-line))
+	 (si-chars (si-line-chars si-line))
+	 (si-len (si-line-length si-line))
+	 (okay-until 0))
+    (declare (type simple-string dl-chars si-chars)
+	     (type (and unsigned-byte fixnum) dl-len si-len)
+	     (type (and unsigned-byte fixnum) okay-until))
+    (do ((dl-fonts dis-line-fonts (cdr dis-line-fonts))
+	 (si-fonts (si-line-fonts si-line) (cdr si-fonts)))
+	((or (null dl-fonts) (null si-fonts))
+	 (let ((next-font (car (or dl-fonts si-fonts))))
+	   (if next-font
+	       (let ((end (min dl-len si-len (cadr next-font))))
+		 (or (string/= dl-chars si-chars
+			       :start1 okay-until :start2 okay-until
+			       :end1 end :end2 end)
+		     end))
+	       (let ((end (min dl-len si-len)))
+		 (or (string/= dl-chars si-chars
+			       :start1 okay-until :start2 okay-until
+			       :end1 end :end2 end)
+		     (if (= dl-len si-len) nil end))))))
+      (let ((dl-font (caar dl-fonts))
+	    (dl-start (cadar dl-fonts))
+	    (dl-stop (cddar dl-fonts))
+	    (si-font (caar si-fonts))
+	    (si-start (cadar si-fonts))
+	    (si-stop (cddar si-fonts)))
+	(unless (and (= dl-font si-font)
+		     (= dl-start si-start))
+	  (let ((font-lossage (min dl-start si-start)))
+	    (return (or (string/= dl-chars si-chars
+				  :start1 okay-until :start2 okay-until
+				  :end1 font-lossage :end2 font-lossage)
+			font-lossage))))
+	(unless (= dl-stop si-stop)
+	  (let ((font-lossage (min dl-stop si-stop)))
+	    (return (or (string/= dl-chars si-chars
+				  :start1 okay-until :start2 okay-until
+				  :end1 font-lossage :end2 font-lossage)
+			font-lossage))))
+	(let ((mismatch (string/= dl-chars si-chars
+				  :start1 okay-until :start2 okay-until
+				  :end1 dl-stop :end2 si-stop)))
+	  (if mismatch
+	      (return mismatch)
+	      (setf okay-until dl-stop)))))))
+
+
+(defun find-identical-suffix (dis-line dis-line-fonts si-line)
+  (declare (type dis-line dis-line)
+	   (type list dis-line-fonts)
+	   (type si-line si-line))
+  (let* ((dl-chars (dis-line-chars dis-line))
+	 (dl-len (dis-line-length dis-line))
+	 (si-chars (si-line-chars si-line))
+	 (si-len (si-line-length si-line))
+	 (count (dotimes (i (min dl-len si-len) i)
+		  (when (char/= (schar dl-chars (- dl-len i 1))
+				(schar si-chars (- si-len i 1)))
+		    (return i)))))
+    (declare (type simple-string dl-chars si-chars)
+	     (type (and unsigned-byte fixnum) dl-len si-len))
+    (do ((dl-fonts (reverse dis-line-fonts) (cdr dis-line-fonts))
+	 (si-fonts (reverse (si-line-fonts si-line)) (cdr si-fonts)))
+	((or (null dl-fonts) (null si-fonts))
+	 (cond (dl-fonts
+		(min (- dl-len (cddar dl-fonts)) count))
+	       (si-fonts
+		(min (- si-len (cddar si-fonts)) count))
+	       (t
+		count)))
+      (let ((dl-font (caar dl-fonts))
+	    (dl-start (- dl-len (cadar dl-fonts)))
+	    (dl-stop (- dl-len (cddar dl-fonts)))
+	    (si-font (caar si-fonts))
+	    (si-start (- si-len (cadar si-fonts)))
+	    (si-stop (- si-len (cddar si-fonts))))
+	(unless (and (= dl-font si-font)
+		     (= dl-stop si-stop))
+	  (return (min dl-stop si-stop count)))
+	(unless (= dl-start si-start)
+	  (return (min dl-start si-start count)))
+	(when (<= count dl-start)
+	  (return count))))))
+
+
 (defmacro si-line (screen-image n)
   `(svref ,screen-image ,n))
 
 
 
+;;; Font support.
+
+(defvar *tty-font-strings* (make-array font-map-size :initial-element nil)
+  "Array of (start-string . end-string) for fonts, or NIL if no such font.")
+
+(defun define-tty-font (font-id &rest stuff)
+  (unless (<= 0 font-id (1- font-map-size))
+    (error "Bogus font-id: ~S" font-id))
+  (cond ((every #'keywordp stuff)
+	 (error "Can't extract font strings from the termcap entry yet."))
+	((and (= (length stuff) 2)
+	      (stringp (car stuff))
+	      (stringp (cadr stuff)))
+	 (setf (aref *tty-font-strings* font-id)
+	       (cons (car stuff) (cadr stuff))))
+	(t
+	 (error "Bogus font spec: ~S~%Must be either a list of keywords or ~
+		 a list of the start string and end string."))))
+
+
+(defun compute-font-usages (dis-line)
+  (do ((results nil)
+       (change (dis-line-font-changes dis-line) (font-change-next change))
+       (prev nil change))
+      ((null change)
+       (when prev
+	 (let ((font (font-change-font prev)))
+	   (when (and (not (zerop font))
+		      (aref *tty-font-strings* font))
+	     (push (list* (font-change-font prev)
+			  (font-change-x prev)
+			  (dis-line-length dis-line))
+		   results))))
+       (nreverse results))
+    (when prev
+      (let ((font (font-change-font prev)))
+	(when (and (not (zerop font))
+		   (aref *tty-font-strings* font))
+	  (push (list* (font-change-font prev)
+		       (font-change-x prev)
+		       (font-change-x change))
+		results))))))
+
+
 ;;;; Dumb window redisplay.
 
 (defmacro tty-dumb-line-redisplay (device hunk dis-line &optional y)
-  (let ((dl (gensym)) (dl-chars (gensym)) (dl-len (gensym))
+  (let ((dl (gensym)) (dl-chars (gensym)) (dl-fonts (gensym)) (dl-len (gensym))
 	(dl-pos (gensym)) (screen-image-line (gensym)))
     `(let* ((,dl ,dis-line)
 	    (,dl-chars (dis-line-chars ,dl))
+	    (,dl-fonts (compute-font-usages ,dis-line))
 	    (,dl-len (dis-line-length ,dl))
 	    (,dl-pos ,(or y `(dis-line-position ,dl))))
        (funcall (tty-device-display-string ,device)
-		,hunk 0 ,dl-pos ,dl-chars 0 ,dl-len)
+		,hunk 0 ,dl-pos ,dl-chars ,dl-fonts 0 ,dl-len)
        (setf (dis-line-flags ,dl) unaltered-bits)
        (setf (dis-line-delta ,dl) 0)
        (select-hunk ,hunk)
@@ -87,7 +225,8 @@
 					  (+ *hunk-top-line* ,dl-pos))))
 	 (replace-si-line (si-line-chars ,screen-image-line) ,dl-chars
 			  0 0 ,dl-len)
-	 (setf (si-line-length ,screen-image-line) ,dl-len)))))
+	 (setf (si-line-length ,screen-image-line) ,dl-len)
+	 (setf (si-line-fonts ,screen-image-line) ,dl-fonts)))))
 
 (defun tty-dumb-window-redisplay (window)
   (let* ((first (window-first-line window))
@@ -222,7 +361,8 @@
 				     &optional (dl-pos (dis-line-position dl)))
   (declare (fixnum dl-pos))
   (let* ((dl-chars (dis-line-chars dl))
-	 (dl-len (dis-line-length dl)))
+	 (dl-len (dis-line-length dl))
+	 (dl-fonts (compute-font-usages dl)))
     (declare (fixnum dl-len) (simple-string dl-chars))
     (when (listen-editor-input *editor-input*)
       (throw 'redisplay-catcher :editor-input))
@@ -231,8 +371,7 @@
 				       (+ *hunk-top-line* dl-pos)))
 	   (si-line-chars (si-line-chars screen-image-line))
 	   (si-line-length (si-line-length screen-image-line))
-	   (findex (string/= dl-chars si-line-chars
-			     :end1 dl-len :end2 si-line-length)))
+	   (findex (find-identical-prefix dl dl-fonts screen-image-line)))
       (declare (type (or fixnum null) findex) (simple-string si-line-chars))
       ;;
       ;; When the dis-line and screen chars are not string=.
@@ -241,18 +380,19 @@
 	 ;; See if the screen shows an initial substring of the dis-line.
 	 ((= findex si-line-length)
 	  (funcall (tty-device-display-string device)
-		   hunk findex dl-pos dl-chars findex dl-len)
+		   hunk findex dl-pos dl-chars dl-fonts findex dl-len)
 	  (replace-si-line si-line-chars dl-chars findex findex dl-len))
 	 ;; When the dis-line is an initial substring of what's on the screen.
 	 ((= findex dl-len)
 	  (funcall (tty-device-clear-to-eol device) hunk dl-len dl-pos))
 	 ;; Otherwise, blast dl-chars and clear to eol as necessary.
 	 (t (funcall (tty-device-display-string device)
-		     hunk findex dl-pos dl-chars findex dl-len)
+		     hunk findex dl-pos dl-chars dl-fonts findex dl-len)
 	    (when (< dl-len si-line-length)
 	      (funcall (tty-device-clear-to-eol device) hunk dl-len dl-pos))
 	    (replace-si-line si-line-chars dl-chars findex findex dl-len)))
-	(setf (si-line-length screen-image-line) dl-len)))
+	(setf (si-line-length screen-image-line) dl-len)
+	(setf (si-line-fonts screen-image-line) dl-fonts)))
     (setf (dis-line-flags dl) unaltered-bits)
     (setf (dis-line-delta dl) 0)))
 
@@ -728,7 +868,8 @@
 				 &optional (dl-pos (dis-line-position dl)))
   (declare (fixnum dl-pos))
   (let* ((dl-chars (dis-line-chars dl))
-	 (dl-len (dis-line-length dl)))
+	 (dl-len (dis-line-length dl))
+	 (dl-fonts (compute-font-usages dl)))
     (declare (fixnum dl-len) (simple-string dl-chars))
     (when (listen-editor-input *editor-input*)
       (throw 'redisplay-catcher :editor-input))
@@ -737,8 +878,7 @@
 				       (+ *hunk-top-line* dl-pos)))
 	   (si-line-chars (si-line-chars screen-image-line))
 	   (si-line-length (si-line-length screen-image-line))
-	   (findex (string/= dl-chars si-line-chars
-			      :end1 dl-len :end2 si-line-length)))
+	   (findex (find-identical-prefix dl dl-fonts screen-image-line)))
       (declare (type (or fixnum null) findex) (simple-string si-line-chars))
       ;;
       ;; When the dis-line and screen chars are not string=.
@@ -748,7 +888,7 @@
 	  ;; See if the screen shows an initial substring of the dis-line.
 	  (when (= findex si-line-length)
 	    (funcall (tty-device-display-string device)
-		     hunk findex dl-pos dl-chars findex dl-len)
+		     hunk findex dl-pos dl-chars dl-fonts findex dl-len)
 	    (replace-si-line si-line-chars dl-chars findex findex dl-len)
 	    (return-from tslr-main-body t))
 	  ;;
@@ -758,20 +898,18 @@
 	    (return-from tslr-main-body t))
 	  ;;
 	  ;; Find trailing substrings that are the same.
-	  (multiple-value-bind (sindex dindex)
-			       (do ((sindex (1- si-line-length) (1- sindex))
-				    (dindex (1- dl-len) (1- dindex)))
-				   ((or (= sindex -1)
-					(= dindex -1)
-					(char/= (schar dl-chars dindex)
-						(schar si-line-chars sindex)))
-				    (values (1+ sindex) (1+ dindex))))
+	  (multiple-value-bind
+	      (sindex dindex)
+	      (let ((count (find-identical-suffix dl dl-fonts
+						  screen-image-line)))
+		(values (- si-line-length count)
+			(- dl-len count)))
 	    (declare (fixnum sindex dindex))
 	    ;;
 	    ;; No trailing substrings -- blast and clear to eol.
 	    (when (= dindex dl-len)
 	      (funcall (tty-device-display-string device)
-		       hunk findex dl-pos dl-chars findex dl-len)
+		       hunk findex dl-pos dl-chars dl-fonts findex dl-len)
 	      (when (< dindex sindex)
 		(funcall (tty-device-clear-to-eol device)
 			 hunk dl-len dl-pos))
@@ -783,7 +921,8 @@
 		     (setf lindex findex))
 		    (t
 		     (funcall (tty-device-display-string device)
-			      hunk findex dl-pos dl-chars findex lindex)
+			      hunk findex dl-pos dl-chars dl-fonts
+			      findex lindex)
 		     (replace-si-line si-line-chars dl-chars
 				      findex findex lindex)))
 	      (cond
@@ -797,7 +936,8 @@
 				  hunk dindex dl-pos delete-char-num))
 			(t 
 			 (funcall (tty-device-display-string device)
-				  hunk dindex dl-pos dl-chars dindex dl-len)
+				  hunk dindex dl-pos dl-chars dl-fonts
+				  dindex dl-len)
 			 (funcall (tty-device-clear-to-eol device)
 				  hunk dl-len dl-pos)))))
 	       (t
@@ -807,10 +947,12 @@
 		    (funcall (tty-device-insert-string device)
 			     hunk sindex dl-pos dl-chars sindex dindex)
 		    (funcall (tty-device-display-string device)
-			     hunk sindex dl-pos dl-chars sindex dl-len))))
+			     hunk sindex dl-pos dl-chars dl-fonts
+			     sindex dl-len))))
 	      (replace-si-line si-line-chars dl-chars
 			       lindex lindex dl-len))))
-	(setf (si-line-length screen-image-line) dl-len)))
+	(setf (si-line-length screen-image-line) dl-len)
+	(setf (si-line-fonts screen-image-line) dl-fonts)))
     (setf (dis-line-flags dl) unaltered-bits)
     (setf (dis-line-delta dl) 0)))
 
@@ -926,11 +1068,36 @@
 
 ;;; DISPLAY-STRING is used to put a string at (x,y) on the device.
 ;;; 
-(defun display-string (hunk x y string
+(defun display-string (hunk x y string font-info
 			    &optional (start 0) (end (strlen string)))
   (declare (fixnum x y start end))
   (update-cursor hunk x y)
-  (device-write-string string start end)
+  ;; Ignore font info for chars before the start of the string.
+  (loop
+    (if (or (null font-info)
+	    (< start (cddar font-info)))
+	(return)
+	(pop font-info)))
+  (let ((posn start))
+    (dolist (next-font font-info)
+      (let ((font (car next-font))
+	    (start (cadr next-font))
+	    (stop (cddr next-font)))
+	(when (<= end start)
+	  (return))
+	(when (< posn start)
+	  (device-write-string string posn start)
+	  (setf posn start))
+	(let ((new-posn (min stop end))
+	      (font-strings (aref *tty-font-strings* font)))
+	  (unwind-protect
+	      (progn
+		(device-write-string (car font-strings))
+		(device-write-string string posn new-posn))
+	    (device-write-string (cdr font-strings)))
+	  (setf posn new-posn))))
+    (when (< posn end)
+      (device-write-string string posn end)))
   (setf (tty-device-cursor-x (device-hunk-device hunk))
 	(the fixnum (+ x (the fixnum (- end start))))))
 
@@ -940,9 +1107,10 @@
 ;;; what the sequence is), whether the terminal has insert-mode, or whether
 ;;; the terminal has delete-mode.
 ;;; 
-(defun display-string-checking-underlines (hunk x y string
+(defun display-string-checking-underlines (hunk x y string font-info
 						&optional (start 0)
 						          (end (strlen string)))
+  (declare (ignore font-info))
   (declare (fixnum x y start end) (simple-string string))
   (update-cursor hunk x y)
   (let ((upos (position #\_ string :test #'char= :start start :end end))
