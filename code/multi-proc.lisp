@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.1 1997/09/24 06:08:14 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.2 1997/09/29 04:44:44 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -489,6 +489,7 @@
 
 (defstruct (process
 	     (:constructor %make-process)
+	     (:predicate processp)
 	     (:print-function
 	      (lambda (process stream depth)
 		(declare (type process process)
@@ -900,30 +901,35 @@
   (name nil)
   (process nil :type (or null process)))
 
-;;; Try to seize a lock for the current process, installing the
-;;; current process in the lock's process slot on success.
-;;;
-;;; This currently use without-interrupts but could be implement as a
-;;; fast atomic VOP.
-;;;
-(defun seize-lock (lock)
+;;; Compare the lock's process slot to test-process and when equal set
+;;; to new-process, returning the old slot value.
+(declaim (inline seize-lock))
+#-pentium
+(defun seize-lock (lock test-process new-process)
+  (declare (type lock lock))
   (sys:without-interrupts
-   (when (null (lock-process lock))
-     (setf (lock-process lock) *current-process*))
-   (values)))
+   (let ((process (lock-process lock)))
+     (when (eq process test-process)
+       (setf (lock-process lock) new-process))
+     process)))
 
-;;; Only waits if it can't seize the lock.
+;;; Fast inline version for Pentium.
+#+pentium
+(defun seize-lock (lock test-process new-process)
+  (declare (type lock lock))
+  (kernel:%instance-set-conditional lock 2 test-process new-process))
+
 (defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
 			  &body body)
-  `(unwind-protect
-    (progn
-      (seize-lock ,lock)
-      (unless (eq (lock-process ,lock) *current-process*)
-	(process-wait ,whostate
-		      #'(lambda ()
-			  (if (or (eq (lock-process ,lock) *current-process*)
-				  (null (lock-process ,lock)))
-			      (setf (lock-process ,lock) *current-process*)))))
-      ,@body)
-    (when (eq (lock-process ,lock) *current-process*)
-      (setf (lock-process ,lock) nil))))
+  (let ((have-lock (gensym)))
+    `(let ((,have-lock (eq (lock-process ,lock) *current-process*)))
+      (unwind-protect
+	   (progn
+	     (unless (or ,have-lock
+			 (null (seize-lock ,lock nil *current-process*)))
+	       (process-wait ,whostate
+		     #'(lambda ()
+			 (null (seize-lock ,lock nil *current-process*)))))
+	     ,@body)
+	(unless ,have-lock
+	  (setf (lock-process ,lock) nil))))))
