@@ -290,20 +290,19 @@
 
 ;;;; Alien allocation:
 
-(eval-when (compile)
-  (dolist (x '(system-space-start alien-allocation-end))
-    (remprop x 'lisp::%constant)))
-
 ;;;    In order to improve memory locality static alien values are allocated
 ;;; contiguously in a pre-validated area at the beginning of system space.  We
 ;;; keep a free pointer to the next word we can allocate.
 ;;;
+#+new-compiler
 (defparameter system-space-start (int-sap #x80000000)
   "The address of the first statically allocated alien.")
 
+#+new-compiler
 (defparameter alien-allocation-end (int-sap #x8fffffff)
   "The end of statically allocated aliens.")
 
+#+new-compiler
 (defvar *current-alien-free-pointer* system-space-start
   "The next word in system space for static alien allocation.")
 
