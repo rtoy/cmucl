@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.26 2004/06/28 22:48:32 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.27 2004/06/28 23:04:40 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -1174,7 +1174,7 @@ static int pscav_scavenger_hook(struct scavenger_hook *scav_hook)
     /* Check if this hook is already noted. */
     if (scav_hook->next == NULL) {
       scav_hook->next = scavenger_hooks;
-      scavenger_hooks = (unsigned long)scav_hook | type_OtherPointer;
+      scavenger_hooks = (struct scavenger_hook*) ((unsigned long)scav_hook | type_OtherPointer);
     }
   }
   
@@ -1656,13 +1656,13 @@ int purify(lispobj static_roots, lispobj read_only_roots)
   /* Call the scavenger hook functions */
   {
     struct scavenger_hook *sh;
-    for (sh = PTR((int)scavenger_hooks); (lispobj)sh != PTR(NIL);) {
-      struct scavenger_hook *sh_next = PTR((unsigned long) sh->next);
+    for (sh = (struct scavenger_hook*) PTR((int)scavenger_hooks); (lispobj)sh != PTR(NIL);) {
+      struct scavenger_hook *sh_next = (struct scavenger_hook*) PTR((unsigned long) sh->next);
       funcall0(sh->function);
       sh->next = NULL;
       sh = sh_next;
     }
-    scavenger_hooks = (unsigned long) NIL;
+    scavenger_hooks = (struct scavenger_hook*) NIL;
   }
 #endif
   
