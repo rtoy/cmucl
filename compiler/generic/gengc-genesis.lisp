@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.6 1993/05/21 17:41:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.7 1993/05/22 16:16:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -914,6 +914,8 @@
     (frob mach::handle-exception)
     (frob di::handle-breakpoint)
     (frob di::handle-function-end-breakpoint)
+    (frob lisp::do-before-gc-stuff)
+    (frob lisp::do-after-gc-stuff)
     (frob lisp::fdefinition-object)
     (frob apply))
   (macrolet ((frob (symbol value)
@@ -2181,13 +2183,17 @@
 (defstruct (range
 	    (:print-function %print-range))
   ;;
+  ;; The core address this range corresponds to.
   (address (required-argument) :type address)
   ;;
-  bytes
+  ;; The number of bytes at that address to dump.
+  (bytes 0 :type (unsigned-byte #.vm:word-bits))
   ;;
-  pieces
+  ;; List of (sap . bytes) indicating where to get the bytes to dump.
+  (pieces nil :type list)
   ;;
-  next)
+  ;; The next range in the chain, sorted by by address.
+  (next nil :type (or null range)))
 
 (defun %print-range (range stream depth)
   (declare (ignore depth))
@@ -2362,6 +2368,9 @@
 			  :element-type '(unsigned-byte 8)
 			  :if-exists :rename-and-delete)
       (write-magic-number version)
+      (write-long *heap-start*)
+      (write-long (ash (- *heap-free-pointer* *heap-start*) (- block-shift)))
+      (write-long 0)
       (let* ((chunks-start *header-fill-pointer*)
 	     (chunks (compute-ranges generations)))
 	(write-chunks chunks)
