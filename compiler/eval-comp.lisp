@@ -58,6 +58,7 @@
 	   (*compiler-error-bailout*
 	    #'(lambda () (error "Fatal error, aborting evaluation.")))
 	   ;;
+	   (*current-path* nil)
 	   (*last-source-context* nil)
 	   (*last-original-source* nil)
 	   (*last-source-form* nil)
