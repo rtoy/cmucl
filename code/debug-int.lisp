@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.93 1998/08/14 07:14:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.94 1999/08/03 13:36:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -838,6 +838,16 @@
 ;;;
 (defsetf kernel:stack-ref kernel:%set-stack-ref)
 
+;;; DESCRIPTOR-SAP -- internal
+;;;
+;;; Convert the descriptor into a SAP.  The bits all stay the same, we just
+;;; change our notion of what we think they are.
+;;; 
+(declaim (inline descriptor-sap))
+(defun descriptor-sap (x)
+  (system:int-sap (kernel:get-lisp-obj-address x)))
+
+
 (declaim (inline cstack-pointer-valid-p))
 (defun cstack-pointer-valid-p (x)
   (declare (type system:system-area-pointer x))
@@ -850,9 +860,9 @@
        (zerop (logand (system:sap-int x) #b11)))
   #+:x86 ;; stack grows to low address values
   (and (system:sap>= x (kernel:current-sp))
-       (system:sap>   (alien:alien-sap
-		       (alien:extern-alien "control_stack_end" (* t)))
-		      x)
+       (system:sap> (alien:alien-sap
+		     (alien:extern-alien "control_stack_end" (* t)))
+		    x)
        (zerop (logand (system:sap-int x) #b11))))
 
 #+(or gengc x86)
@@ -972,15 +982,6 @@
 ) ; end progn x86
 
 
-;;; DESCRIPTOR-SAP -- internal
-;;;
-;;; Convert the descriptor into a SAP.  The bits all stay the same, we just
-;;; change our notion of what we think they are.
-;;; 
-(declaim (inline descriptor-sap))
-(defun descriptor-sap (x)
-  (system:int-sap (kernel:get-lisp-obj-address x)))
-
 ;;; TOP-FRAME -- Public.
 ;;;
 (defun top-frame ()
@@ -1337,7 +1338,7 @@
 		   (component-ptr-from-pc (vm:sigcontext-program-counter scp)))
 		  (code (if (sap= component-ptr (int-sap #x0))
 			    nil
-			  (component-from-component-ptr component-ptr))))
+			    (component-from-component-ptr component-ptr))))
 	     (when (null code)
 	       (return (values code 0 scp)))
 	     (let* ((code-header-len (* (kernel:get-header-data code)
@@ -3920,7 +3921,7 @@
     (do ((frame frame (frame-down frame)))
 	((not frame) nil)
       (when (and (compiled-frame-p frame)
-		 (eq lra
+		 (#-x86 eq #+x86 sys:sap= lra
 		     (get-context-value frame
 					#-gengc vm::lra-save-offset
 					#+gengc vm::ra-save-offset
