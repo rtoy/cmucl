@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.28 2004/05/24 22:52:34 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.29 2004/08/03 00:12:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -586,7 +586,8 @@
     (give-up))
   (let* ((denominator (continuation-value denominator))
 	 (bits (1- (integer-length denominator))))
-    (unless (= (ash 1 bits) denominator)
+    (unless (and (plusp denominator)
+		 (= (ash 1 bits) denominator))
       (give-up))
     (let ((alignment (count-low-order-zeros numerator)))
       (unless (>= alignment bits)

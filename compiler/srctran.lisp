@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.151 2004/07/21 04:01:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.152 2004/08/03 00:12:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2906,7 +2906,9 @@
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
 	 (len (1- (integer-length y-abs))))
-    (unless (= y-abs (ash 1 len)) (give-up))
+    (unless (and (plusp y-abs)
+		 (= y-abs (ash 1 len)))
+      (give-up))
     (if (minusp y)
 	`(- (ash x ,len))
 	`(ash x ,len))))
@@ -3013,7 +3015,9 @@
 	 (let* ((y (continuation-value y))
 		(y-abs (abs y))
 		(len (1- (integer-length y-abs))))
-	   (unless (= y-abs (ash 1 len)) (give-up))
+	   (unless (and (plusp y-abs)
+			(= y-abs (ash 1 len)))
+	     (give-up))
 	   (let ((shift (- len))
 		 (mask (1- y-abs))
                  (delta (if ceil-p (* (signum y) (1- y-abs)) 0)))
@@ -3039,7 +3043,9 @@
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
 	 (len (1- (integer-length y-abs))))
-    (unless (= y-abs (ash 1 len)) (give-up))
+    (unless (and (plusp y-abs)
+		 (= y-abs (ash 1 len)))
+      (give-up))
     (let ((mask (1- y-abs)))
       (if (minusp y)
 	  `(- (logand (- x) ,mask))
@@ -3054,7 +3060,9 @@
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
 	 (len (1- (integer-length y-abs))))
-    (unless (= y-abs (ash 1 len)) (give-up))
+    (unless (and (plusp y-abs)
+		 (= y-abs (ash 1 len)))
+      (give-up))
     (let* ((shift (- len))
 	   (mask (1- y-abs)))
       `(if (minusp x)
@@ -3075,7 +3083,9 @@
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
 	 (len (1- (integer-length y-abs))))
-    (unless (= y-abs (ash 1 len)) (give-up))
+    (unless (and (plusp y-abs)
+		 (= y-abs (ash 1 len)))
+      (give-up))
     (let ((mask (1- y-abs)))
       `(if (minusp x)
 	   (- (logand (- x) ,mask))
