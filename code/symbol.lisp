@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.11 1992/03/08 18:33:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.12 1992/03/09 08:44:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,7 @@
 
 (defun fset (symbol new-value)
   (declare (type symbol symbol) (type function new-value))
-  (setf (raw-definition variable) new-value))
+  (setf (raw-definition symbol) new-value))
 
 
 (defun symbol-plist (variable)
