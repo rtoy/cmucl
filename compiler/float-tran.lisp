@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.48 1997/12/14 14:10:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.49 1997/12/14 15:28:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -645,7 +645,10 @@
   ;; return value of (OR FLOAT (COMPLEX FLOAT)) is ok as the default.
   (frob sqrt #'(lambda (lo hi)
 		 (declare (ignore hi))
-		 (and lo (> (bound-value lo) 0)))
+		 (typecase lo
+		   (cons (>= (car lo) 0))
+		   (rational (>= lo 0))
+		   (float (> lo 0))))
 	0 nil)
   (frob asin #'(lambda (lo hi)
 		 (and lo hi
@@ -884,7 +887,11 @@
   (elfun-derive-type-simple
    arg #'log #'(lambda (lo hi)
 		 (declare (ignore hi))
-		 (and lo (> (bound-value lo) 0)))
+		 (format t "*D1 ~s~%"  lo)
+		 (typecase lo
+		   (cons (>= (car lo) 0))
+		   (rational (>= lo 0))
+		   (float (> lo 0))))
    nil nil))
 
 (defun log-derive-type-aux (x y same-arg)
