@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.6 1991/05/05 15:37:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.7 1991/08/25 19:06:23 ram Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -393,6 +393,7 @@
 
 ;;;; Float vectors.
 
+#-afpa(progn
 (define-vop (data-vector-ref/simple-array-mc68881-single-float)
   (:note "inline array access")
   (:translate data-vector-ref)
@@ -470,6 +471,7 @@
     (inst mc68881-wait)
     (unless (location= result value)
       (inst mc68881-move result value scratch))))
+)
 
 
 ;;;; Raw bits without regard to vector type.
