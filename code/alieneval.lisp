@@ -71,7 +71,7 @@
 	   (fixnum offset))
   (sap+ sap offset))
 
-(defun sap- (sap1 sap1)
+(defun sap- (sap1 sap2)
   "Return the byte offset between SAP1 and SAP2."
   (declare (type system-area-pointer sap1 sap2))
   (sap- sap1 sap2))
@@ -298,12 +298,10 @@
 ;;; contiguously in a pre-validated area at the beginning of system space.  We
 ;;; keep a free pointer to the next word we can allocate.
 ;;;
-(defparameter system-space-start
-  (%primitive make-immediate-type 0 %static-alien-area)
+(defparameter system-space-start (int-sap #x80000000)
   "The address of the first statically allocated alien.")
 
-(defparameter alien-allocation-end
-  (%primitive make-immediate-type #x40000 %static-alien-area)
+(defparameter alien-allocation-end (int-sap #x8fffffff)
   "The end of statically allocated aliens.")
 
 (defvar *current-alien-free-pointer* system-space-start
@@ -318,9 +316,10 @@
 (defun allocate-static-alien (bits)
   (declare (fixnum bits))
   (let* ((alien *current-alien-free-pointer*)
-	 (bytes (logand (ash (the fixnum (+ bits 31))
+	 (bytes (logand (ash (the fixnum (+ bits alien-alignment -1))
 			     (- alien-address-shift))
-			(lognot 3)))
+			(lognot (1- (truncate alien-alignment
+					      alien-address-unit)))))
 	 (new (sap+ *current-alien-free-pointer* bytes)))
     (when (%primitive pointer> new alien-allocation-end)
       (error "Not enough room to allocate a ~D bit alien." bits))
@@ -825,7 +824,8 @@
 	    ,@(unless source-p
 		`((declare (ignore ,source-var))))
 	    
-	    (unless (memq (mostcar ,alien-var) '(,atype ,@more-types))
+	    (unless (member (mostcar ,alien-var) '(,atype ,@more-types)
+			    :test #'eq)
 	      (error "Wrong Alien type ~S, should have been ~S~
 	      ~{~#[~; or~:;,~] ~S~}."
 		     ,alien-var ',atype ',more-types))
@@ -1274,7 +1274,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	(unless (and min (< min val)) (setq min val))
 	(when (rassoc val (cdr el))
 	  (error "Element value ~S used more than once." val))
-	(when (assq sym (cdr el))
+	(when (assoc sym (cdr el) :test #'eq)
 	  (error "Enumeration element ~S used more than once." sym))))
     (let* ((signed (minusp min))
 	   (to (intern (concatenate 'simple-string (string name)
@@ -1329,7 +1329,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	  (mapcar #'car alist))
    (write-string "New value: " *query-io*)
    (let* ((response (read *query-io*))
-	  (res (cdr (assq response alist))))
+	  (res (cdr (assoc response alist :test #'eq))))
      (when res (return res)))))
 
 
@@ -1357,7 +1357,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 			  ,to))))
 	  `(deport-integer
 	    ,signed ,sap ,offset ,size
-	    (or (cdr (assq ,value ,from))
+	    (or (cdr (assoc ,value ,from :test #'eq))
 		(enumeration-error ,from))
 	    ',form)))))
 
