@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.14 1992/02/14 23:45:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.15 1992/03/03 12:12:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,9 +71,9 @@
   handle arbitrary combinations of atoms using NOT, AND, OR."
   (if (consp x)
       (case (car x)
-	(:not (not (featurep (cadr x))))
-	(:and (every #'featurep (cdr x)))
-	(:or (some #'featurep (cdr x)))
+	((:not not) (not (featurep (cadr x))))
+	((:and and) (every #'featurep (cdr x)))
+	((:or or) (some #'featurep (cdr x)))
 	(t
 	 (error "Unknown operator in feature expression: ~S." x)))
       (not (null (memq x *features*)))))
