@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.95 2003/09/12 12:55:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.96 2004/01/09 04:20:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1007,12 +1007,16 @@
 	 ;; A real raised to an integer power is well-defined
 	 (merged-interval-expt x y))
 	(t
-	 ;; A real raised to a non-integral power can be a float or a
-	 ;; complex number.
+	 ;; A real raised to a non-integral power is complicated....
 	 (cond ((or (csubtypep x (specifier-type '(rational 0)))
 		    (csubtypep x (specifier-type '(float (0d0)))))
-		;; But a positive real to any power is well-defined.
+		;; A positive real to any power is well-defined.
 		(merged-interval-expt x y))
+	       ((and (csubtypep x (specifier-type 'rational))
+		     (csubtypep x (specifier-type 'rational)))
+		;; A rational to a rational power can be a rational or
+		;; a single-float or a complex single-float.
+		(specifier-type '(or rational single-float (complex single-float))))
 	       (t
 		;; A real to some power.  The result could be a real
 		;; or a complex.
