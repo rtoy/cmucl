@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.3 1991/12/12 02:35:37 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.4 1992/02/05 19:01:20 wlott Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -28,6 +28,7 @@ endif
 $lisp -noinit << EOF
 (setf *features* (list* $features *features*))
 (setf (search-list "target:") '("$dest/" "$src/"))
+(load "target:bootstrap" :if-does-not-exist nil)
 (load "target:tools/setup")
 (comf "target:tools/setup")
 (comf "target:tools/rcs")
@@ -37,6 +38,7 @@ EOF
 $lisp -noinit << EOF
 (setf *features* (list* $features *features*))
 (setf (search-list "target:") '("$dest/" "$src/"))
+(load "target:bootstrap" :if-does-not-exist nil)
 (load "target:tools/setup")
 (setf *interactive* nil *gc-verbose* nil)
 (load "target:tools/worldcom")
@@ -47,6 +49,7 @@ $lisp -noinit << EOF
 (setf *features* (list* $features *features*))
 (setf (search-list "target:") '("$dest/" "$src/"))
 (setf (search-list "clx:") '("target:clx/"))
+(load "target:bootstrap" :if-does-not-exist nil)
 (load "target:tools/setup")
 (setf *interactive* nil *gc-verbose* nil)
 (load "target:tools/clxcom")
@@ -56,6 +59,7 @@ EOF
 $lisp -noinit << EOF
 (setf *features* (list* $features *features*))
 (setf (search-list "target:") '("$dest/" "$src/"))
+(load "target:bootstrap" :if-does-not-exist nil)
 (load "target:tools/setup")
 (setf *interactive* nil *gc-verbose* nil)
 (load "target:tools/hemcom")
@@ -65,6 +69,7 @@ EOF
 $lisp -noinit << EOF
 (setf *features* (list* $features *features*))
 (setf (search-list "target:") '("$dest/" "$src/"))
+(load "target:bootstrap" :if-does-not-exist nil)
 (load "target:tools/setup")
 (setf *interactive* nil *gc-verbose* nil)
 (load "target:tools/comcom")
@@ -74,6 +79,7 @@ EOF
 $lisp -noinit << EOF
 (setf *features* (list* $features *features*))
 (setf (search-list "target:") '("$dest/" "$src/"))
+(load "target:bootstrap" :if-does-not-exist nil)
 (setf *gc-verbose* nil)
 (load "target:tools/pclcom")
 (quit)
