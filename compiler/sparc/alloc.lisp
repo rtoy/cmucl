@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.17 2003/08/26 11:50:04 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.18 2003/09/03 20:09:31 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,7 +33,6 @@
        (let ((offset (tn-offset saved-stack-pointer)))
 	 (storew csp-tn cfp-tn offset)))
       (any-reg
-       (format t "DE-START Using any-reg ~A~%" saved-stack-pointer)
        (move saved-stack-pointer csp-tn)))))
 
 (define-vop (%dynamic-extent-end)
@@ -46,7 +45,6 @@
        (let ((offset (tn-offset saved-stack-pointer)))
 	 (loadw csp-tn cfp-tn offset)))
       (any-reg
-       (format t "DE-END Using any-reg ~A~%" saved-stack-pointer)
        (move csp-tn saved-stack-pointer)))))
 
 ;;;; LIST and LIST*
