@@ -60,4 +60,13 @@
 (defparameter vm-version "IBM RT PC/Mach 0.0")
 
 
+;;; The byte ordering of the target implementation.
+;;;
+(defparameter target-byte-order :big-endian)
+
+;;;
+;;; The native byte ordering (should come from somewhere else once
+;;; bootstrapped.)
+(defconstant native-byte-order :big-endian)
+
 ); Eval-When (Compile Load Eval)
