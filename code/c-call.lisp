@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.5 1991/02/13 21:41:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.6 1991/02/28 20:50:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -426,14 +426,13 @@
   ;;
   ;; String name of the routine and symbol name of the interface function.
   (name "" :type string)
-  (function-name (required-argument) :type symbol)
+  (function-name nil :type symbol)
   ;;
   ;; List of all the doc strings.
   docs
   ;;
   ;; List of Arg-Info structures describing the args.
-  (args (required-argument) :type list)
-  )
+  (args () :type list))
 
 (defstruct arg-info
   ;;
