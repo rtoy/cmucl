@@ -460,9 +460,11 @@ create the directory and get a copy of the sources as mentioned above.
 
 Then you need to do the following steps.
 
-1.  Create a directory for the cross-compiler:
+1.  Select a directory for the cross-compiler:
 
-           src/tools/create-target.sh xcross <other options>
+           In our case we will use xcross.  Make sure that this
+           directory doesn't exist, and especially isn't the same
+           as the directory in the next step.
 
 2.  Create a directory for the compiled target:
 
