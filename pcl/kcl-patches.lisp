@@ -29,44 +29,38 @@
 (in-package "COMPILER")
 
 #+akcl
+(eval-when (compile load eval)
+(when (<= system::*akcl-version* 609)
+  (pushnew :pre_akcl_610 *features*))
+)
+
+#+pre_akcl_610
 (progn
 
 ;(proclaim '(optimize (safety 0) (speed 3) (space 1)))
 
-(setq compiler::*compile-ordinaries* t)
+;Not needed... make-top-level-form generates defuns now.
+;(setq compiler::*compile-ordinaries* t)
 
-(defun print-current-form ()
-  (when *first-error*
-    (setq *first-error* nil)
-    (fresh-line)
-    (let ((*current-form* (if (and (consp *current-form*)
-				   (eq (first *current-form*) 'defun)
-				   (symbolp (second *current-form*))
-				   (null (symbol-package (second *current-form*)))
-				   (let ((prefix "progn 'compile"))
-				     (string= prefix
-					      (symbol-name (second *current-form*))
-					      :end2 (length prefix))))
-			      (fourth *current-form*)
-			      *current-form*)))
-    (cond
-      ((and (consp *current-form*)
-	    (eq (car *current-form*) 'si:|#,|))
-       (format t "; #,~s is being compiled.~%" (cdr *current-form*)))
-      ((and (consp *current-form*)
-	    (symbolp (first *current-form*))
-	    (string= "LOAD-DEFMETHOD" (first *current-form*))
-	    (string= "PCL" (package-name (symbol-package (first *current-form*)))))
-       (format t "; ~s is being compiled.~%"
-	       `(,(intern "DEFMETHOD" "PCL")
-		 ,(eval (third *current-form*))
-		 ,@(eval (fourth *current-form*))
-		 ,(eval (fifth *current-form*)))))
-      (t
-       (let ((*print-length* 2)
-	     (*print-level* 2))
-	 (format t "; ~s is being compiled.~%" *current-form*))))))
-  nil)
+(eval-when (compile load eval)
+(unless (fboundp 'original-co1typep)
+  (setf (symbol-function 'original-co1typep) #'co1typep))
+)
+
+(defun new-co1typep (f args)
+  (or (original-co1typep f args)
+      (let ((x (car args))
+	    (type (cadr args)))
+	(when (constantp type)
+	  (let ((ntype (si::normalize-type (eval type))))
+	    (when (and (eq (car ntype) 'satisfies)
+		       (cadr ntype)
+		       (symbolp (cadr ntype))
+		       (symbol-package (cadr ntype)))
+	      (c1expr `(the boolean (,(cadr ntype) ,x)))))))))
+
+(setf (symbol-function 'co1typep) #'new-co1typep)
+
 )
 
 #-(or akcl xkcl)

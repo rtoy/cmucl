@@ -57,31 +57,35 @@
 (defvar *lap-rest-p*)
 (defvar *lap-i-regs*)
 (defvar *lap-v-regs*)
+(defvar *lap-fv-regs*)
 (defvar *lap-t-regs*)
 
-(defvar *lap-optimize-declaration*
-	'((speed 3) (safety 0) (compilation-speed 0)))
+(defvar *lap-optimize-declaration* '#.*optimize-speed*)
 
 
 (eval-when (load eval)
   (setq *make-lap-closure-generator*
-	#'(lambda (closure-var-names arg-names index-regs vector-regs t-regs lap-code)
+	#'(lambda (closure-var-names arg-names index-regs 
+		   vector-regs fixnum-vector-regs t-regs lap-code)
 	    (compile-lambda
 	      (make-lap-closure-generator-lambda
-		closure-var-names arg-names index-regs vector-regs t-regs lap-code)))
+		closure-var-names arg-names index-regs 
+		vector-regs fixnum-vector-regs t-regs lap-code)))
 
 	*precompile-lap-closure-generator*
-	#'(lambda (cvars args i-regs v-regs t-regs lap)
+	#'(lambda (cvars args i-regs v-regs fv-regs t-regs lap)
 	    `(function
-	       ,(make-lap-closure-generator-lambda cvars args i-regs v-regs t-regs lap)))
+	       ,(make-lap-closure-generator-lambda cvars args i-regs 
+		 v-regs fv-regs t-regs lap)))
 	*lap-in-lisp*
-	#'(lambda (cvars args iregs vregs tregs lap)
+	#'(lambda (cvars args iregs vregs fvregs tregs lap)
 	    (declare (ignore cvars args))
 	    (make-lap-prog
-	      iregs vregs tregs (flatten-lap lap ;(opcode :label 'exit-lap-in-lisp)
-					     )))))
+	      iregs vregs fvregs tregs 
+	      (flatten-lap lap ;(opcode :label 'exit-lap-in-lisp)
+			   )))))
 
-(defun make-lap-closure-generator-lambda (cvars args i-regs v-regs t-regs lap)
+(defun make-lap-closure-generator-lambda (cvars args i-regs v-regs fv-regs t-regs lap)
   (let* ((rest (memq '&rest args))
 	 (ldiff (and rest (ldiff args rest))))
     (when rest (setq args (append ldiff '(&rest .lap-rest-arg.))))
@@ -89,36 +93,48 @@
 	   (*lap-rest-p* (not (null rest))))
       `(lambda ,cvars
 	 #'(lambda ,args
-	     ;;
-	     ;; Use LOCALLY instead of a declare on the lambda so that we don't
-	     ;; suppress arg count checking...
-	     (locally (declare (optimize . ,*lap-optimize-declaration*))
-	       ,(make-lap-prog-internal i-regs v-regs t-regs lap)))))))
+	     #-CMU (declare ,*lap-optimize-declaration*)
+	     #-CMU ,(make-lap-prog-internal i-regs v-regs fv-regs t-regs lap)
+	     #+CMU
+             ;;
+             ;; Use LOCALLY instead of a declare on the lambda so that we don't
+             ;; suppress arg count checking...
+             (locally (declare ,*lap-optimize-declaration*)
+	       ,(make-lap-prog-internal i-regs v-regs fv-regs t-regs lap)))))))
 
-(defun make-lap-prog (i-regs v-regs t-regs lap)
+(defun make-lap-prog (i-regs v-regs fv-regs t-regs lap)
   (let* ((*lap-args* 'lap-in-lisp)
 	 (*lap-rest-p* 'lap-in-lisp))
-    (make-lap-prog-internal i-regs v-regs t-regs lap)))
+    (make-lap-prog-internal i-regs v-regs fv-regs t-regs lap)))
 
-(defun make-lap-prog-internal (i-regs v-regs t-regs lap)
+(defun make-lap-prog-internal (i-regs v-regs fv-regs t-regs lap)
   (let* ((*lap-i-regs* i-regs)
 	 (*lap-v-regs* v-regs)
+	 (*lap-fv-regs* fv-regs)
 	 (*lap-t-regs* t-regs)
 	 (code (mapcar #'lap-opcode lap)))
     `(prog ,(mapcar #'(lambda (reg)
 			`(,(lap-reg reg)
 			  ,(lap-reg-initial-value-form reg)))
-		    (append i-regs v-regs t-regs))
+		    (append i-regs v-regs fv-regs t-regs))
 	   (declare (type fixnum ,@(mapcar #'lap-reg *lap-i-regs*))
 		    (type simple-vector ,@(mapcar #'lap-reg *lap-v-regs*))
-	            (optimize . ,*lap-optimize-declaration*))
+		    (type #+structure-wrapper cache-number-vector
+		          #-structure-wrapper (simple-array fixnum)
+		          ,@(mapcar #'lap-reg *lap-fv-regs*))
+	            #-cmu ,*lap-optimize-declaration*)
 	   ,.code)))
 
-(defconstant *empty-vector* '#())
+(defvar *empty-vector* '#())
+(defvar *empty-fixnum-vector*
+  (make-array 8
+	      :element-type 'fixnum
+	      :initial-element 0))
  
 (defun lap-reg-initial-value-form (reg)
   (cond ((member reg *lap-i-regs*) 0)
         ((member reg *lap-v-regs*) '*empty-vector*)
+        ((member reg *lap-fv-regs*) '*empty-fixnum-vector*)
         ((member reg *lap-t-regs*) nil)
         (t
          (error "What kind of register is ~S?" reg))))
@@ -147,7 +163,7 @@
      (declare (ignore from))
      `(when ,t (go ,label)))			                ;***
     (:structure-instance-p (from label)
-     `(when ,(lap-operands 'RUNTIME\ ??? from) (go ,label)))	;***
+     `(when ,(lap-operands 'RUNTIME\ STRUCTURE-INSTANCE-P from) (go ,label)))	;***
     
     (:jmp (fn)
      (if (eq *lap-args* 'lap-in-lisp)
@@ -177,15 +193,20 @@
     ((:cvar :arg) (name) name)
     (:constant (c) `',c)
     ((:std-wrapper :fsc-wrapper :built-in-wrapper :structure-wrapper
-		   :std-slots :fsc-slots)
+      :built-in-or-structure-wrapper :std-slots :fsc-slots
+      :wrapper-cache-number-vector)
      (x)
      (lap-operands (ecase (car operand)
 		     (:std-wrapper       'RUNTIME\ STD-WRAPPER)
 		     (:fsc-wrapper       'RUNTIME\ FSC-WRAPPER)
 		     (:built-in-wrapper  'RUNTIME\ BUILT-IN-WRAPPER)
 		     (:structure-wrapper 'RUNTIME\ STRUCTURE-WRAPPER)
+		     (:built-in-or-structure-wrapper
+		                         'RUNTIME\ BUILT-IN-OR-STRUCTURE-WRAPPER)
 		     (:std-slots         'RUNTIME\ STD-SLOTS)
-		     (:fsc-slots         'RUNTIME\ FSC-SLOTS))
+		     (:fsc-slots         'RUNTIME\ FSC-SLOTS)
+		     (:wrapper-cache-number-vector 
+		      'RUNTIME\ WRAPPER-CACHE-NUMBER-VECTOR))
 		   x))
     
      
@@ -219,17 +240,13 @@
 ;;; 
 (proclaim '(declaration pcl-fast-call))
 
-#+CMU
 (defmacro RUNTIME\ FUNCALL (fn &rest args)
-  `(funcall (the function ,fn) ,.args))
-#-CMU
-(defmacro RUNTIME\ FUNCALL (fn &rest args)
-  `(funcall ,fn ,.args))
+  #+CMU `(funcall (the function ,fn) ,.args)
+  #-CMU `(funcall ,fn ,.args))
 
-#+CMU
-(defmacro RUNTIME\ APPLY (fn &rest args) `(apply (the function ,fn) ,.args))
-#-CMU
-(defmacro RUNTIME\ APPLY (fn &rest args) `(apply ,fn ,.args))
+(defmacro RUNTIME\ APPLY (fn &rest args)
+  #+CMU `(apply (the function ,fn) ,.args)
+  #-CMU `(apply ,fn ,.args))
 
 (defmacro RUNTIME\ STD-WRAPPER (x)
   `(std-instance-wrapper ,x))
@@ -241,13 +258,22 @@
   `(built-in-wrapper-of ,x))
 
 (defmacro RUNTIME\ STRUCTURE-WRAPPER (x)
-  `(??? ,x))
+  `(built-in-or-structure-wrapper ,x))
+
+(defmacro RUNTIME\ BUILT-IN-OR-STRUCTURE-WRAPPER (x)
+  `(built-in-or-structure-wrapper ,x))
+
+(defmacro RUNTIME\ STRUCTURE-INSTANCE-P (x)
+  `(structure-instance-p ,x))
 
 (defmacro RUNTIME\ STD-SLOTS (x)
   `(std-instance-slots (the std-instance ,x)))
 
 (defmacro RUNTIME\ FSC-SLOTS (x)
   `(fsc-instance-slots ,x))
+
+(defmacro RUNTIME\ WRAPPER-CACHE-NUMBER-VECTOR (x)
+  `(wrapper-cache-number-vector ,x))
 
 (defmacro RUNTIME\ STD-INSTANCE-P (x)
   `(std-instance-p ,x))

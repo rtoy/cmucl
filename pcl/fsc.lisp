@@ -53,10 +53,10 @@
 ;;;
 ;;;
 
-(defmethod check-super-metaclass-compatibility
+(defmethod validate-superclass
 	   ((fsc funcallable-standard-class)
 	    (class standard-class))
-  (null (wrapper-instance-slots-layout (class-wrapper class))))
+  t) ; was (null (wrapper-instance-slots-layout (class-wrapper class)))
 
 
 (defmethod allocate-instance

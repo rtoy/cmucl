@@ -129,7 +129,7 @@
        ;; is with defun.
        (proclaim '(notinline ,name))
        (defun ,name ,lambda-list
-	 (declare (ignore ,@(specialized-lambda-list-parameters lambda-list)))
+	 (declare (ignore ,@(extract-parameters lambda-list)))
 	 (error "Constructor ~S not loaded." ',name))
 
        ,(make-top-level-form `(defconstructor ,name)
@@ -258,18 +258,18 @@
 ;(defmethod class-constructors ((class std-class))
 ;  (with-slots (plist) class (getf plist 'constructors)))
 
-(defmethod add-constructor ((class std-class)
+(defmethod add-constructor ((class slot-class)
 			    (constructor constructor))
   (with-slots (plist) class
     (pushnew constructor (getf plist 'constructors))))
 
-(defmethod remove-constructor ((class std-class)
+(defmethod remove-constructor ((class slot-class)
 			       (constructor constructor))
   (with-slots (plist) class
     (setf (getf plist 'constructors)
 	  (delete constructor (getf plist 'constructors)))))
 
-(defmethod get-constructor ((class std-class) name &optional (error-p t))
+(defmethod get-constructor ((class slot-class) name &optional (error-p t))
   (or (dolist (c (class-constructors class))
 	(when (eq (constructor-name c) name) (return c)))
       (if error-p
@@ -283,7 +283,7 @@
 ;;; and also add this constructor to the list of constructors the class has.
 ;;; 
 (defmethod load-constructor-internal
-	   ((class std-class) name initargs generators)
+	   ((class slot-class) name initargs generators)
   (let ((constructor (make-constructor class name initargs generators))
 	(old (get-constructor class name nil)))
     (when old (remove-constructor class old))
@@ -338,7 +338,7 @@
 ;      (when (classp (car (method-specializers method)))
 ;	(recurse (car (method-specializers method)))))))
 ;
-;(defmethod update-constructors ((class std-class))
+;(defmethod update-constructors ((class slot-class))
 ;  (dolist (cons (class-constructors class))
 ;    (install-lazy-constructor-installer cons)))
 ;
@@ -402,7 +402,7 @@
     type))
 
 (defmethod make-constructor-code-generators
-	   ((class std-class)
+	   ((class slot-class)
 	    name lambda-list supplied-initarg-names supplied-initargs)
   (cons 'list
 	(gathering1 (collecting)
@@ -415,7 +415,7 @@
 		(gather1 `',(car entry))
 		(gather1 generator)))))))
 
-(defmethod compute-constructor-code ((class std-class)
+(defmethod compute-constructor-code ((class slot-class)
 				     (constructor constructor))
   (let* ((proto (class-prototype class))
 	 (wrapper (class-wrapper class))
@@ -433,8 +433,8 @@
            (compute-applicable-methods #'initialize-instance (list proto)))
          (shared
            (compute-applicable-methods #'shared-initialize (list proto t)))
-         (code-generators
-           (constructor-code-generators constructor)))
+	 (code-generators
+	   (constructor-code-generators constructor)))
     (flet ((call-code-generator (generator)
 	     (when (null generator)
 	       (unless (setq generator (getf code-generators 'fallback))
@@ -508,12 +508,12 @@
 (defvar *standard-initialize-instance-method*
         (get-method #'initialize-instance
 		    ()
-		    (list *the-class-standard-object*)))
+		    (list *the-class-slot-object*)))
 
 (defvar *standard-shared-initialize-method*
         (get-method #'shared-initialize
 		    ()
-		    (list *the-class-standard-object* *the-class-t*)))
+		    (list *the-class-slot-object* *the-class-t*)))
 
 (defun non-pcl-initialize-instance-methods-p (methods)
   (notevery #'(lambda (m) (eq m *standard-initialize-instance-method*))
@@ -539,7 +539,7 @@
 ;;;
 (defun check-initargs (class supplied-initarg-names defaults methods)
   (let ((legal (apply #'append
-		      (mapcar #'slotd-initargs (class-slots class)))))
+		      (mapcar #'slot-definition-initargs (class-slots class)))))
     ;; Add to the set of slot-filling initargs the set of
     ;; initargs that are accepted by the methods.  If at
     ;; any point we come across &allow-other-keys, we can
@@ -573,18 +573,17 @@
 ;;;    t              there is at least one non-constant initform
 ;;; 
 (defun compute-constant-vector (class)
-  (declare (values constants flag))
+  ;;(declare (values constants flag))
   (let* ((wrapper (class-wrapper class))
 	 (layout (wrapper-instance-slots-layout wrapper))
 	 (flag :unsupplied)
 	 (constants ()))
     (dolist (slotd (class-slots class))
-      (let ((name (slotd-name slotd))
-	    (initform (slotd-initform slotd))
-	    (initfn (slotd-initfunction slotd)))
+      (let ((name (slot-definition-name slotd))
+	    (initform (slot-definition-initform slotd))
+	    (initfn (slot-definition-initfunction slotd)))
 	(cond ((null (memq name layout)))
-	      ((or (eq initform *slotd-unsupplied*)
-		   (null initfn))
+	      ((null initfn)
 	       (push (cons name *slot-unbound*) constants))
 	      ((constantp initform)
 	       (push (cons name (eval initform)) constants)
@@ -621,8 +620,8 @@
 	       (gather1 (cons slot-name position)))))
 	 (slot-initargs
 	   (mapcar #'(lambda (slotd)
-		       (list (slotd-initargs slotd)
-			     (or (cdr (assq (slotd-name slotd) positions))
+		       (list (slot-definition-initargs slotd)
+			     (or (cdr (assq (slot-definition-name slotd) positions))
 				 ':class)))
 		   (class-slots class))))
     ;; Go through each of the initargs, and figure out what position
@@ -701,7 +700,7 @@
 			      shared)))
 	     (function
 	       (lambda ,arglist
-		 (declare (optimize (speed 3) (safety 0)))
+		 (declare #.*optimize-speed*)
 		 (let ((.instance. (,raw-allocator))
 		       (.slots. (copy-constant-vector .constants.))
 		       (.positions. .supplied-initarg-positions.)
@@ -811,18 +810,17 @@
       ;;    - Otherwise, record its initfn and position
       ;;
       (dolist (slotd (class-slots class))
-	(let* ((alloc (slotd-allocation slotd))
-	       (name (slotd-name slotd))
-	       (form (slotd-initform slotd))
-	       (initfn (slotd-initfunction slotd))
+	(let* ((alloc (slot-definition-allocation slotd))
+	       (name (slot-definition-name slotd))
+	       (form (slot-definition-initform slotd))
+	       (initfn (slot-definition-initfunction slotd))
 	       (position (position name layout)))
 	  (cond ((neq alloc :instance)
-		 (unless (or (eq form *slotd-unsupplied*)
-			     (null initfn))
+		 (unless (null initfn)
 		   (bail-out)))
 		((member position used-positions))
 		((or (constantp form)
-		     (eq form *slotd-unsupplied*)))
+		     (null initfn)))
 		(t
 		 (push (list initfn nil position)
 		       initfns-initargs-and-positions)))))
@@ -866,7 +864,7 @@
 		      (null (non-pcl-initialize-instance-methods-p init))
 		      (null (non-pcl-shared-initialize-methods-p shared)))
 	     #'(lambda ,arglist
-		 (declare (optimize (speed 3) (safety 0)))
+		 (declare #.*optimize-speed*)
 		 (let ((.instance. (,raw-allocator))
 		       (.slots. (copy-constant-vector .constants.))
 		       (.positions. .supplied-initarg-positions.))
@@ -958,18 +956,17 @@
       ;;    - Otherwise, record its initfn and position
       ;;
       (dolist (slotd (class-slots class))
-	(let* ((alloc (slotd-allocation slotd))
-	       (name (slotd-name slotd))
-	       (form (slotd-initform slotd))
-	       (initfn (slotd-initfunction slotd))
+	(let* ((alloc (slot-definition-allocation slotd))
+	       (name (slot-definition-name slotd))
+	       (form (slot-definition-initform slotd))
+	       (initfn (slot-definition-initfunction slotd))
 	       (position (position name layout)))
 	  (cond ((neq alloc :instance)
-		 (unless (or (eq form *slotd-unsupplied*) 
-			     (null initfn))
+		 (unless (null initfn)
 		   (bail-out)))
 		((member position used-positions))
 		((or (constantp form)
-		     (eq form *slotd-unsupplied*)))
+		     (null initfn)))
 		(t
 		 (push (list initfn position) initfns-and-positions)))))
 
@@ -1004,7 +1001,7 @@
 	     (when .constants.
 	       (function
 		 (lambda ,arglist
-		   (declare (optimize (speed 3) (safety 0)))
+		   (declare #.*optimize-speed*)
 		   (let ((.instance. (,raw-allocator))
 			 (.slots. (copy-constant-vector .constants.))
 			 (.positions. .supplied-initarg-positions.))
@@ -1089,18 +1086,17 @@
       ;;      constants vector.
       ;;
       (dolist (slotd (class-slots class))
-	(let* ((alloc (slotd-allocation slotd))
-	       (name (slotd-name slotd))
-	       (form (slotd-initform slotd))
-	       (initfn (slotd-initfunction slotd))
+	(let* ((alloc (slot-definition-allocation slotd))
+	       (name (slot-definition-name slotd))
+	       (form (slot-definition-initform slotd))
+	       (initfn (slot-definition-initfunction slotd))
 	       (position (position name layout)))
 	  (cond ((neq alloc :instance)
-		 (unless (or (eq form *slotd-unsupplied*)
-			     (null initfn))
+		 (unless (null initfn)
 		   (bail-out)))
 		((member position used-positions))
 		((or (constantp form)
-		     (eq form *slotd-unsupplied*)))
+		     (null initfn)))
 		(t
 		 (bail-out)))))
       

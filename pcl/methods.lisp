@@ -38,7 +38,8 @@
 ;;;   
 ;;;
 
-(defclass method (metaobject) ())
+(defclass method (metaobject) ()
+  (:predicate-name method-p))
 
 (defclass standard-method (definition-source-mixin plist-mixin method)
      ((generic-function
@@ -58,30 +59,41 @@
 	:reader method-lambda-list)
       (function
 	:initform nil
-	:initarg :function
-	:reader method-function)		;writer defined by hand
+	:initarg :function		;no writer
+	:reader method-function)
+      (function-name
+        :initform nil
+        :accessor method-function-name)
+      (closure-generator
+        :initform nil
+	:reader method-closure-generator)
 ;     (documentation
 ;	:initform nil
 ;	:initarg  :documentation
 ;	:reader method-documentation)
-      ))
+      )
+  (:predicate-name standard-method-p))
 
 (defclass standard-accessor-method (standard-method)
      ((slot-name :initform nil
-		 :initarg :slot-name)))
+		 :initarg :slot-name
+		 :reader accessor-method-slot-name))
+  (:predicate-name standard-accessor-method-p))
 
-;;;
-;;; This method has to be defined by hand!  Don't try to define it using
-;;; :accessor or :reader.  It can't be an automatically generated reader
-;;; method because that would break the way the special discriminator
-;;; code which uses this feature works.  -- Probably false now 8/21
-;;; 
-(defmethod accessor-method-slot-name ((m standard-accessor-method))
-  (slot-value m 'slot-name))
+(defclass standard-reader-method (standard-accessor-method) ()
+  (:predicate-name standard-reader-method-p))
 
-(defclass standard-reader-method (standard-accessor-method) ())
-(defclass standard-writer-method (standard-accessor-method) ())
+(defclass standard-writer-method (standard-accessor-method) ()
+  (:predicate-name standard-writer-method-p))
 
+(defclass standard-boundp-method (standard-accessor-method) ()
+  (:predicate-name standard-boundp-method-p))
+
+(defvar *the-class-method*                    (find-class 'method))
+(defvar *the-class-standard-method*           (find-class 'standard-method))
+(defvar *the-class-standard-reader-method*    (find-class 'standard-reader-method))
+(defvar *the-class-standard-writer-method*    (find-class 'standard-writer-method))
+(defvar *the-class-standard-boundp-method*    (find-class 'standard-boundp-method))
 
 (defmethod print-object ((method standard-method) stream)
   (printing-random-thing (method stream)
@@ -102,6 +114,36 @@
 	      (and generic-function (generic-function-name generic-function))
 	      (accessor-method-slot-name method)
 	      (unparse-specializers method)))))
+
+;;; closure-generators are used only by method-function-for-caching
+;;; and make-not-for-caching-method-function (in vector.lisp).
+(defmethod method-function-for-caching ((method standard-method) wrappers)
+  (let* ((function (slot-value method 'function))
+	 (closure-generator (slot-value method 'closure-generator)))
+    (if closure-generator
+	(let ((new-function (function-funcall closure-generator wrappers)))
+	  (setq new-function (set-function-name-1 new-function
+						  (method-function-name method) nil))
+	  #+(and kcl turbo-closure) (si:turbo-closure new-function)
+	  new-function)
+	function)))
+
+(defmethod method-function-for-caching-p ((method standard-method))
+  (slot-value method 'closure-generator))
+
+(defmethod method-function-for-caching ((method standard-accessor-method) wrappers)
+  (let* ((slot-name (slot-value method 'slot-name))
+	 (type (cond ((standard-reader-method-p method) 'reader)
+		     ((standard-writer-method-p method) 'writer)
+		     ((standard-boundp-method-p method) 'boundp)))
+	 (class (wrapper-class (if (eq type 'writer) (cadr wrappers) (car wrappers))))
+	 (slotd (find-slot-definition class slot-name)))
+    (if slotd
+	(slot-accessor-function slotd type)
+	(slot-value method 'function))))
+
+(defmethod method-function-for-caching-p ((method standard-accessor-method))
+  t)
 
 ;;;
 ;;; INITIALIZATION
@@ -210,8 +252,12 @@
     (unless (eq legalp t)
       (error "The value of the :SLOT-NAME initarg ~A." legalp))))
 
-(defmethod shared-initialize :after ((method standard-method) slot-names &key qualifiers)
-  (setf (plist-value method 'qualifiers) qualifiers))
+(defmethod shared-initialize :after ((method standard-method) slot-names 
+				     &key qualifiers)
+  (declare (ignore slot-names))
+  (setf (plist-value method 'qualifiers) qualifiers)
+  (setf (slot-value method 'closure-generator) 
+	(method-function-closure-generator (slot-value method 'function))))
 
 (defmethod method-qualifiers ((method standard-method))
   (plist-value method 'qualifiers))
@@ -220,9 +266,11 @@
 
 (defclass generic-function (dependent-update-mixin
 			    definition-source-mixin
+			    documentation-mixin
 			    metaobject)
      ()
-  (:metaclass funcallable-standard-class))
+  (:metaclass funcallable-standard-class)
+  (:predicate-name generic-function-p))
     
 (defclass standard-generic-function (generic-function)
      ((name
@@ -242,14 +290,11 @@
 ;     (permutation
 ;	:accessor gf-permutation)
       (arg-info
-	:initform ()
-	:accessor gf-arg-info)
+        :initform (make-arg-info)
+	:reader gf-arg-info)
       (dfun-state
 	:initform ()
 	:accessor gf-dfun-state)
-      (effective-method-functions		;((methods . fn) ..)
-	:initform ()
-	:accessor gf-effective-method-functions)
       (valid-p
 	:initform nil
 	:accessor gf-valid-p)
@@ -258,17 +303,11 @@
 	:accessor gf-pretty-arglist)
       )
   (:metaclass funcallable-standard-class)
+  (:predicate-name standard-generic-function-p)
   (:default-initargs :method-class *the-class-standard-method*
 		     :method-combination *standard-method-combination*))
 
-(define-gf-predicate generic-function-p         generic-function)
-(define-gf-predicate method-p                   method)
-(define-gf-predicate standard-accessor-method-p standard-accessor-method)
-(define-gf-predicate standard-reader-method-p   standard-reader-method)
-(define-gf-predicate standard-writer-method-p   standard-writer-method)
 
-(defvar *the-class-method*                    (find-class 'method))
-(defvar *the-class-standard-method*           (find-class 'standard-method))
 (defvar *the-class-generic-function*          (find-class 'generic-function))
 (defvar *the-class-standard-generic-function* (find-class 'standard-generic-function))
 
@@ -292,7 +331,7 @@
 		 (method-class nil method-class-supplied-p)
 		 (method-combination nil method-combination-supplied-p))
   (declare (ignore slot-names
-		   declarations argument-precedence-order
+		   declarations argument-precedence-order documentation
 		   lambda-list lambda-list-p name))
 
   (when namep
@@ -307,7 +346,8 @@
 	   (when (symbolp method-class)
 	     (setq method-class (find-class method-class)))
 	   (unless (and (classp method-class)
-			(*subtypep method-class *the-class-method*))
+			(*subtypep (class-eq-specializer method-class)
+				   *the-class-method*))
 	     (initarg-error :method-class
 			    method-class
 			    "a subclass of the class METHOD"))
@@ -328,12 +368,8 @@
 			  "not supplied"
 			  "a method combination object")))))
 
-(defmethod initialize-instance :after ((gf standard-generic-function)
-				       &key lambda-list argument-precedence-order)
-  (when lambda-list
-    (setf (gf-arg-info gf)
-	  (new-arg-info-from-generic-function lambda-list argument-precedence-order))))
 
+#||
 (defmethod reinitialize-instance ((generic-function standard-generic-function)
 				  &rest initargs
 				  &key name
@@ -359,6 +395,7 @@
 ;   (add-initarg method-class :method-class 'method-class)
 ;   (add-initarg method-combination :method-combination 'method-combination)
     (apply #'call-next-method generic-function initargs)))
+||#
 
 
 ;;;
@@ -397,7 +434,8 @@
   ;; like class-for-redefinition?
   (let* ((generic-function
 	   (ensure-generic-function generic-function-name
-				    :lambda-list (method-ll->generic-function-ll lambda-list)))
+				    :lambda-list (method-ll->generic-function-ll
+						  lambda-list)))
 	 (specs (parse-specializers specializers))
 ;	 (existing (get-method generic-function qualifiers specs nil))
 	 (proto (method-prototype-for-gf generic-function-name))
@@ -457,7 +495,8 @@
   (let ((hit
 	  (dolist (method (generic-function-methods generic-function))
 	    (when (and (equal qualifiers (method-qualifiers method))
-		       (every #'same-specializer-p specializers (method-specializers method)))
+		       (every #'same-specializer-p specializers
+			      (method-specializers method)))
 	      (return method)))))
     (cond (hit hit)
 	  ((null errorp) nil)
@@ -484,9 +523,8 @@
 ;;;
 (defmethod compute-discriminating-function-arglist-info
 	   ((generic-function standard-generic-function))
-  (declare (values number-of-required-arguments
-                   &rest-argument-p
-                   specialized-argument-postions))
+  ;;(declare (values number-of-required-arguments &rest-argument-p
+  ;;                 specialized-argument-postions))
   (let ((number-required nil)
         (restp nil)
         (specialized-positions ())
@@ -500,8 +538,9 @@
 (defun compute-discriminating-function-arglist-info-internal
        (generic-function method number-of-requireds restp
 	specialized-argument-positions)
-  (declare (ignore generic-function))
+  (declare (ignore generic-function) (type (or null fixnum) number-of-requireds))
   (let ((requireds 0))
+    (declare (fixnum requireds))
     ;; Go through this methods arguments seeing how many are required,
     ;; and whether there is an &rest argument.
     (dolist (arg (method-lambda-list method))
@@ -540,125 +579,174 @@
 ;;;
 ;;;
 ;;;
-(defun make-arg-info (precedence metatypes number-optional key/rest-p keywords)
-  (let ((new (make-array 6 :adjustable nil)))
-    (setf (svref new 0) 'arg-info
-	  (svref new 1) precedence
-	  (svref new 2) metatypes 
-	  (svref new 3) number-optional
-	  (svref new 4) key/rest-p
-	  (svref new 5) keywords)		;nil         no keyword or rest allowed
-						;
-						;(k1 k2 ..)  each method must accept these
-						;            keyword arguments
-						;
-						;T           must have &key or &rest
-    new))
+(defstruct (arg-info
+	     (:conc-name nil)
+	     (:constructor make-arg-info ()))
+  arg-info-precedence
+  arg-info-metatypes
+  arg-info-number-optional
+  arg-info-key/rest-p
+  arg-info-keywords ;nil         no keyword or rest allowed
+	            ;(k1 k2 ..)  each method must accept these keyword arguments
+	            ;T           must have &key or &rest
 
-(defun check-arg-info (x)
-  (or (and (simple-vector-p x)
-	   (= (array-dimension x 0) 6)
-	   (eq (svref x 0) 'arg-info))
-      (error "~S is not an ARG-INFO." x)))
+  gf-info-simple-accessor-type ; nil, reader, writer, boundp
+  (gf-precompute-dfun-and-emf-p nil) ; set by set-arg-info
 
+  gf-info-static-c-a-m-emf
+  gf-info-c-a-m-emf-std-p
+  (arg-info-lambda-list :no-lambda-list))
 
-(defun arg-info-precedence (arg-info)
-  (check-arg-info arg-info)
-  (svref arg-info 1))
-
-(defun arg-info-metatypes (arg-info)
-  (check-arg-info arg-info)
-  (svref arg-info 2))
-
-(defun arg-info-number-optional (arg-info)
-  (check-arg-info arg-info)
-  (svref arg-info 3))
-
-(defun arg-info-key/rest-p (arg-info)
-  (check-arg-info arg-info)
-  (svref arg-info 4))
-
-(defun arg-info-keywords (arg-info)
-  (check-arg-info arg-info)
-  (svref arg-info 5))
+(defun arg-info-valid-p (arg-info)
+  (not (null (arg-info-number-optional arg-info))))
 
 (defun arg-info-applyp (arg-info)
-  (check-arg-info arg-info)
   (or (plusp (arg-info-number-optional arg-info))
       (arg-info-key/rest-p arg-info)))
 
 (defun arg-info-number-required (arg-info)
-  (check-arg-info arg-info)
   (length (arg-info-metatypes arg-info)))
 
 (defun arg-info-nkeys (arg-info)
   (count-if #'(lambda (x) (neq x 't)) (arg-info-metatypes arg-info)))
 
+(defun set-arg-info (gf precedence metatypes number-optional key/rest-p keywords
+			&optional (lambda-list nil lambda-list-p))
+  (let ((arg-info (gf-arg-info gf)))
+    (setf (arg-info-precedence arg-info) precedence)
+    (setf (arg-info-metatypes arg-info) metatypes)
+    (setf (arg-info-number-optional arg-info) number-optional)
+    (setf (arg-info-key/rest-p arg-info) key/rest-p)
+    (setf (arg-info-keywords arg-info) keywords)
+    (when lambda-list-p
+      (setf (arg-info-lambda-list arg-info) lambda-list))
+    (setf (gf-precompute-dfun-and-emf-p arg-info)
+	  (let* ((name (generic-function-name gf))
+		 (sym (if (atom name) name (cadr name)))
+		 (pkg-list (cons *the-pcl-package* 
+				 (package-use-list *the-pcl-package*))))
+	    (not (null (memq (symbol-package sym) pkg-list)))))
+    arg-info))
 
-(defun new-arg-info-from-generic-function (lambda-list argument-precedence-order)
+(defun new-arg-info-from-generic-function (gf lambda-list argument-precedence-order)
   (multiple-value-bind (nreq nopt keysp restp allow-other-keys-p keywords)
       (analyze-lambda-list lambda-list)
     (declare (ignore allow-other-keys-p))
     (let ((metatypes (make-list nreq))
 	  (precedence (compute-precedence lambda-list nreq argument-precedence-order)))
-      (make-arg-info precedence
-		     metatypes
-		     nopt
-		     (or keysp restp)
-		     keywords))))
+      (set-arg-info gf
+		    precedence
+		    metatypes
+		    nopt
+		    (or keysp restp)
+		    keywords
+		    lambda-list))))
 
-(defun new-arg-info-from-method (method)
+(defun new-arg-info-from-method (gf method)
   (multiple-value-bind (nreq nopt keysp restp)
       (analyze-lambda-list (method-lambda-list method))
-    (make-arg-info (compute-precedence (method-lambda-list method) nreq ())
-		   (mapcar #'raise-metatype (make-list nreq) (method-specializers method))
-		   nopt
-		   (or keysp restp)
-		   ())))
+    (set-arg-info gf
+		  (compute-precedence (method-lambda-list method) nreq ())
+		  (mapcar #'raise-metatype 
+			  (make-list nreq) (method-specializers method))
+		  nopt
+		  (or keysp restp)
+		  ())))
 
-(defun add-arg-info (generic-function method arg-info)
-  (flet ((lose (string &rest args)
-	   (error "Attempt to add the method ~S to the generic function ~S.~%~
+(defun add-arg-info (generic-function method)
+  (let ((arg-info (gf-arg-info generic-function)))
+    (if (not (arg-info-valid-p arg-info))
+	(new-arg-info-from-method generic-function method)
+	(flet ((lose (string &rest args)
+		 (error "Attempt to add the method ~S to the generic function ~S.~%~
                    But ~A"
-		  method
-		  generic-function
-		  (apply #'format nil string args)))
-	 (compare (x y)
-	   (if (> x y) "more" "fewer")))
-    (multiple-value-bind (nreq nopt keysp restp allow-other-keys-p keywords)
-	(analyze-lambda-list (method-lambda-list method))
-      (let ((gf-nreq (arg-info-number-required arg-info))
-	    (gf-nopt (arg-info-number-optional arg-info))
-	    (gf-key/rest-p (arg-info-key/rest-p arg-info))
-	    (gf-keywords (arg-info-keywords arg-info)))
+			method
+			generic-function
+			(apply #'format nil string args)))
+	       (compare (x y)
+		 (if (> x y) "more" "fewer")))
+	  (multiple-value-bind (nreq nopt keysp restp allow-other-keys-p keywords)
+	      (analyze-lambda-list (method-lambda-list method))
+	    (let ((gf-nreq (arg-info-number-required arg-info))
+		  (gf-nopt (arg-info-number-optional arg-info))
+		  (gf-key/rest-p (arg-info-key/rest-p arg-info))
+		  (gf-keywords (arg-info-keywords arg-info)))
 
-	(unless (= nreq gf-nreq)
-	  (lose "the method has ~A required arguments than the generic function."
-		(compare nreq gf-nreq)))
-	(unless (= nopt gf-nopt)
-	  (lose "the method has ~S optional arguments than the generic function."
-		(compare nopt gf-nopt)))
-	(unless (eq (or keysp restp) gf-key/rest-p)
-	  (error "the method and generic function differ in whether they accept~%~
+	      (unless (= nreq gf-nreq)
+		(lose "the method has ~A required arguments than the generic function."
+		      (compare nreq gf-nreq)))
+	      (unless (= nopt gf-nopt)
+		(lose "the method has ~S optional arguments than the generic function."
+		      (compare nopt gf-nopt)))
+	      (unless (eq (or keysp restp) gf-key/rest-p)
+		(error "the method and generic function differ in whether they accept~%~
                   rest or keyword arguments."))
-	(when gf-keywords
-	  (unless (or (and restp (not keysp))
-		      allow-other-keys-p
-		      (every #'(lambda (k) (memq k keywords)) gf-keywords))
-	    (error
-	      "the generic function requires each method to accept the keyword arguments~%~
-               ~S.  The method does not all of accept these."
-	      gf-keywords)))
-	(make-arg-info (arg-info-precedence arg-info)
-		       (mapcar #'raise-metatype (arg-info-metatypes arg-info)
-						(method-specializers method))
-		       gf-nopt
-		       gf-key/rest-p
-		       gf-keywords)))))
+	      (when gf-keywords
+		(unless (or (and restp (not keysp))
+			    allow-other-keys-p
+			    (every #'(lambda (k) (memq k keywords)) gf-keywords))
+		  (error
+		   "the generic function requires each method to accept the keyword arguments~%~
+               ~S.  The method does not accept all of these."
+		   gf-keywords)))
+	      (set-arg-info generic-function
+			    (arg-info-precedence arg-info)
+			    (mapcar #'raise-metatype (arg-info-metatypes arg-info)
+				    (method-specializers method))
+			    gf-nopt
+			    gf-key/rest-p
+			    gf-keywords)))))))
 
-(defun remove-arg-info (generic-function method arg-info)
-  (declare (ignore generic-function method))
-  arg-info)
+(defun remove-arg-info (generic-function method)
+  (let ((arg-info (gf-arg-info generic-function)))
+    (set-arg-info generic-function
+		  (arg-info-precedence arg-info)
+		  (let* ((nreq (arg-info-number-required arg-info))
+			 (metatypes (make-list nreq))
+			 (old-methods (generic-function-methods generic-function))
+			 (methods (remove method old-methods)))
+		    (dolist (specls (mapcar #'method-specializers methods))
+		      (setq metatypes (mapcar #'raise-metatype metatypes specls)))
+		    metatypes)
+		  (arg-info-number-optional arg-info)
+		  (arg-info-key/rest-p arg-info)
+		  (arg-info-keywords arg-info))))
+
+(defmethod generic-function-lambda-list ((gf generic-function))
+  (let ((arg-info (gf-arg-info gf)))
+    (if (or (not (arg-info-valid-p arg-info))
+	    (and (eq ':no-lambda-list (arg-info-lambda-list arg-info))
+		 (null (generic-function-methods gf))))
+	(progn
+	  (warn "No way to determine the lambda list for ~S." gf)
+	  nil)
+	(if (eq ':no-lambda-list (arg-info-lambda-list arg-info))
+	    (let* ((ll (method-lambda-list (car (last (generic-function-methods gf)))))
+		   (k (member '&key ll)))
+	      (if k 
+		  (append (ldiff ll (cdr k)) '(&allow-other-keys))
+		  ll))
+	    (arg-info-lambda-list arg-info)))))
+
+(defmethod initialize-instance :after ((gf standard-generic-function)
+				       &key (lambda-list nil lambda-list-p)
+				       argument-precedence-order)
+  (when lambda-list-p
+    (new-arg-info-from-generic-function gf lambda-list argument-precedence-order))
+  (when (arg-info-valid-p (gf-arg-info gf))
+    (update-dfun gf)))
+
+(defmethod reinitialize-instance :after ((gf standard-generic-function)
+					 &key (lambda-list nil lambda-list-p)
+					 argument-precedence-order)
+  (let* ((arg-info (gf-arg-info gf))
+	 (valid-p (arg-info-valid-p arg-info)))
+    (when lambda-list-p
+      (if (not valid-p)
+	  (new-arg-info-from-generic-function gf lambda-list argument-precedence-order)
+	  (setf (arg-info-lambda-list arg-info) lambda-list)))
+    (when valid-p
+      (update-dfun gf))))
 
 ;;;
 ;;;
@@ -666,25 +754,18 @@
 (defun compute-precedence (lambda-list nreq argument-precedence-order)
   (let ((nreq (analyze-lambda-list lambda-list)))
     (if (null argument-precedence-order)
-	(let ((c -1)) (gathering1 (collecting) (dotimes (i nreq) (gather1 (incf c)))))
+	(let ((list nil))(dotimes (i nreq list) (push (- (1- nreq) i) list)))
 	(mapcar #'(lambda (x) (position x lambda-list)) argument-precedence-order))))
 
-
-
-
-
 
 (defmethod no-applicable-method (generic-function &rest args)
   (cerror "Retry call to ~S"
 	  "No matching method for the generic-function ~S,~@
           when called with arguments ~S."
 	  generic-function args)
-  (let ((*invalid-dfuns-on-stack* (remove generic-function *invalid-dfuns-on-stack*)))
-    (invalidate-discriminating-function generic-function)
-    (apply generic-function args)))
+  (apply generic-function args))
 
-
-
+(proclaim '(special *lazy-dfun-compute-p*))
 
 (defun real-add-method (generic-function method)
   (if (method-generic-function method)
@@ -693,7 +774,8 @@
               function until it is removed from the first one."
 	     method (method-generic-function method))
 
-      (let* ((qualifiers   (method-qualifiers method))
+      (let* ((name (generic-function-name generic-function))
+	     (qualifiers   (method-qualifiers method))
 	     (lambda-list  (method-lambda-list method))
 	     (specializers (method-specializers method))
 	     (existing (get-method generic-function qualifiers specializers nil)))
@@ -705,18 +787,20 @@
 	;; 
 	(when existing (remove-method generic-function existing))
 	;;
-	(let ((arg-info (gf-arg-info generic-function)))
-	  (setf (gf-arg-info generic-function)
-		(if (null arg-info)
-		    (new-arg-info-from-method method)
-		    (add-arg-info generic-function method arg-info)))
-	  (setf (method-generic-function method) generic-function)
-	  (pushnew method (generic-function-methods generic-function))
-	  (dolist (specializer specializers)
-	    (add-method-on-specializer method specializer))
-	  (invalidate-discriminating-function generic-function)    
-	  (maybe-update-constructors generic-function method)
-	  method))))
+	(setf (method-generic-function method) generic-function)
+	(setf (method-function-name method)
+	      (intern-function-name
+	       (make-method-spec name
+				 qualifiers
+				 (unparse-specializers specializers))))
+	(add-arg-info generic-function method)
+	(pushnew method (generic-function-methods generic-function))
+	(dolist (specializer specializers)
+	  (add-direct-method specializer method))
+	(update-gf-info generic-function)
+	(update-dfun generic-function)
+	(maybe-update-constructors generic-function method)
+	method)))
   
 (defun real-remove-method (generic-function method)
   (if  (neq generic-function (method-generic-function method))
@@ -725,613 +809,1138 @@
                to which it is not attached."
 	      method (method-generic-function method))
        (let* ((methods      (generic-function-methods generic-function))
-	      (new-methods  (remove method methods))
-	      (new-arg-info (remove-arg-info generic-function
-					     method
-					     (gf-arg-info generic-function))))
-	      
+	      (new-methods  (remove method methods)))	      
 	 (setf (method-generic-function method) nil)
 	 (setf (generic-function-methods generic-function) new-methods)
 	 (dolist (specializer (method-specializers method))
-	   (remove-method-on-specializer method specializer))
-	 (setf (gf-arg-info generic-function) new-arg-info)
-	 (invalidate-discriminating-function generic-function)
+	   (remove-direct-method specializer method))
+	 (remove-arg-info generic-function method)
+	 (update-dfun generic-function)
 	 (maybe-update-constructors generic-function method)
 	 generic-function)))
 
-
 
-;;;
-;;;
-;;;
-;;; This is it.  You have reached the special place where everything comes
-;;; together.  This is where we ensure that the metacircularity will bottom
-;;; out properly.
-;;;
-;;; Remember once again that the source of the problem is that the specified
-;;; behavior clearly calls for the process of method lookup to itself call
-;;; generic functions.  This implies that for a given generic function in
-;;; the method lookup protocol (compute-applicable-methods for example), we
-;;; can end up in the unfortunate situation of having to call that generic
-;;; function in order to call it!
-;;;
-;;; So, we must arrange to snap this infinite regress.
-;;;
-;;; The strategy taken here is to identify a particular subset of calls to
-;;; method lookup protocol generic functions and snap the recursion there.
-;;; This subset of generic function calls has the following properties:
-;;;
-;;;   - Any generic function call in the world will, eventually
-;;;     reach one of these generic function calls.  That is we
-;;;     are sure that if we can arrange for these calls not to
-;;;     recurse we know we are all set.
-;;;
-;;;   - These calls themselves don't recurse.  We arrange, by
-;;;     magic, for the method lookup and application involved
-;;;     in these calls not to call any other generic functions.
-;;;
-;;; 
-;;;
-(defvar *magic-generic-functions*
-	'((compute-discriminating-function ((standard-generic-function)
-					    (standard-generic-function)))
-	  (compute-applicable-methods               ((standard-generic-function t)
-						     (generic-function t)))
-	  (compute-applicable-methods-using-classes ((standard-generic-function t)
-						     (generic-function t)))
-	  (compute-applicable-methods-using-types ((standard-generic-function t)
-						   (generic-function t)))
-	  (specializer-applicable-using-type-p 
-	   ((standard-class t) (class t))
-	   ((funcallable-standard-class t) (class t))
-	   ((built-in-class t) (class t)))
-;	  (same-specializer-p       ((standard-class standard-class) (t t)))
-;	  (specializer-applicable-p ((standard-class t) (class t)))
-	  (order-specializers-using-class
-	    ((standard-class standard-class t) (class class t))
-	    ((funcallable-standard-class standard-class t) (class class t))
-	    ((standard-class funcallable-standard-class t) (class class t))
-	    ((funcallable-standard-class funcallable-standard-class t) (class class t))
-	    ((eql-specializer standard-class t) (eql-specializer class t))
-	    ((eql-specializer funcallable-standard-class t) (eql-specializer class t))
-	    ((standard-class eql-specializer t) (class eql-specializer t))
-	    ((funcallable-standard-class eql-specializer t) (class eql-specializer t))
-	    ((eql-specializer eql-specializer t) (eql-specializer eql-specializer t)))
-	  
-	  (compute-effective-method
-	    ((standard-generic-function (eql *standard-method-combination*) t)
-	     (generic-function          standard-method-combination t)))
-	  
-	  (method-p
-	    ((standard-method)        (method))
-	    ((standard-reader-method) (method))
-	    ((standard-writer-method) (method)))
-	  (generic-function-p
-	   ((standard-generic-function) (generic-function)))
-	  (generic-function-name
-	   ((standard-generic-function) (standard-generic-function)))
-	  (exact-class-specializer-p
-	   ((standard-class) (t))
-	   ((funcallable-standard-class) (t))
-	   ((built-in-class) (t))
-	   ((class-eq-specializer) (exact-class-specializer)))
-	  (specializer-class
-	   ((standard-class) (class))
-	   ((funcallable-standard-class) (class))
-	   ((built-in-class) (class)))
-	  (class-eq-specializer-p
-	   ((standard-class) (t))
-	   ((funcallable-standard-class) (t))
-	   ((built-in-class) (t))
-	   ((class-eq-specializer) (class-eq-specializer)))
-	  (eql-specializer-p
-	   ((standard-class) (t))
-	   ((funcallable-standard-class) (t))
-	   ((built-in-class) (t))
-	   ((eql-specializer) (eql-specializer)))
-	  (standard-accessor-method-p
-	    ((standard-method)        (t))
-	    ((standard-reader-method) (standard-accessor-method))
-	    ((standard-writer-method) (standard-accessor-method)))
-	  (standard-reader-method-p
-	    ((standard-method)        (t))
-	    ((standard-reader-method) (standard-reader-method))
-	    ((standard-writer-method) (t)))
-	  (standard-writer-method-p
-	    ((standard-method)        (t))
-	    ((standard-reader-method) (t))
-	    ((standard-writer-method) (standard-writer-method)))
-	  
-	  (method-qualifiers   ((standard-method)        (standard-method))
-			       ((standard-reader-method) (standard-method)))
-	  (method-specializers ((standard-method)        (standard-method))
-			       ((standard-reader-method) (standard-method)))
-	  (method-lambda-list  ((standard-method)        (standard-method))
-			       ((standard-reader-method) (standard-method)))
-	  (method-function     ((standard-method)        (standard-method))
-			       ((standard-reader-method) (standard-method)))
-	  (accessor-method-slot-name
-	    ((standard-reader-method) (standard-accessor-method))
-	    ((standard-writer-method) (standard-accessor-method)))
+(defun compute-applicable-methods-function (generic-function arguments)
+  (values (compute-applicable-methods-using-types 
+	   generic-function
+	   (types-from-arguments generic-function arguments 'eql))))
+  
+(defmethod compute-applicable-methods 
+    ((generic-function generic-function) arguments)
+  (values (compute-applicable-methods-using-types 
+	   generic-function
+	   (types-from-arguments generic-function arguments 'eql))))
 
-	  (classp        
-	   ((standard-class) (class))
-	   ((funcallable-standard-class) (class))
-	   ((built-in-class) (class)))
-	  (class-precedence-list
-	   ((standard-class) (pcl-class))
-	   ((funcallable-standard-class) (pcl-class)))
-	  (class-finalized-p     
-	   ((standard-class) (pcl-class))
-	   ((funcallable-standard-class) (pcl-class)))
-
-	  (generic-function-methods             ((standard-generic-function)
-						 (standard-generic-function)))
-	  (generic-function-method-combination  ((standard-generic-function)
-						 (standard-generic-function)))
-
-	  (gf-arg-info                          ((standard-generic-function)
-						 (standard-generic-function)))
-	  (gf-dfun-state                        ((standard-generic-function)
-						 (standard-generic-function)))
-	  (gf-effective-method-functions        ((standard-generic-function)
-						 (standard-generic-function)))
-	  ((setf gf-effective-method-functions) ((t standard-generic-function)
-						 (t standard-generic-function)))
-;	  (gf-permutation                       ((standard-generic-function)
-;						 (standard-generic-function)))
-
-	  (class-slots
-	   ((standard-class) (std-class))
-	   ((funcallable-standard-class) (std-class)))
-	  (slotd-name
-	   ((standard-effective-slot-definition) (standard-slot-definition)))
-	  (slotd-instance-index
-	   ((standard-effective-slot-definition) (standard-slot-definition)))
-	  (slot-value-using-class  
-	   ((standard-class t standard-effective-slot-definition); the t is a bug
-	    (std-class standard-object standard-effective-slot-definition))
-	   ((funcallable-standard-class t standard-effective-slot-definition)
-	    (std-class standard-object standard-effective-slot-definition)))
-	  ((setf slot-value-using-class)
-	   ((t standard-class t standard-effective-slot-definition)
-	    (t std-class standard-object standard-effective-slot-definition))
-	   ((t funcallable-standard-class t standard-effective-slot-definition)
-	    (t std-class standard-object standard-effective-slot-definition)))
-	  ))
-
-(defvar *magic-generic-functions-1* 
-  #-genera (make-hash-table :test 'eq) ; There is a problem invloving the cold-load
-  #+genera nil)                        ; stream, gc, and the hash-table's gc lock
-
-(defun add-magic-magic-generic-function (gf value)
-  #-genera (setf (gethash gf *magic-generic-functions-1*) value)
-  #+genera (setq *magic-generic-functions-1*
-		 (cons value (delete gf *magic-generic-functions-1*
-				     :key #'car))))
-
-(defun lookup-magic-magic-generic-function (gf)
-  #-genera (gethash gf *magic-generic-functions-1*)
-  #+genera (assoc gf *magic-generic-functions-1*))
-
-(defun fixup-magic-generic-function (gfspec early-methods gf methods)
-  (flet ((get-specls (names convert-t-p)
-	   (mapcar #'(lambda (s)
-		       (cond ((consp s)
-			      `(eql ,(eval (cadr s))))
-			     ((eq s t)
-			      (if convert-t-p (find-class t) t))
-			     (t
-			      (find-class s))))
-		   names)))
-    (let ((e (assoc gfspec *magic-generic-functions* :test #'equal)))
-      (when e
-	(add-magic-magic-generic-function
-	 gf
-	 (list* gf 
-		(make-arg-info
-		 nil
-		 (apply #'mapcar
-			#'(lambda (&rest args)
-			    (if (every #'(lambda (arg) (eq arg 't)) args)
-				't 'standard-instance))
-			(mapcar #'second (cdr e)))
-		 nil nil nil)
-		(gathering1 (collecting)
-			    (dolist (pair (cdr e))
-			      (iterate ((em (list-elements early-methods))
-					(m  (list-elements methods)))
-				       (when (equal (early-method-specializers em t)
-						    (get-specls (cadr pair) t))
-					 (gather1 (list (get-specls (car pair) nil)
-							(list m)
-							(early-method-function em)))
-					 (return t)))))))))))
-
-(defun get-secondary-dispatch-function (generic-function args)
-  (declare (values compiled-secondary-dispatch-function methods arg-info))
-  (multiple-value-bind (fn methods arg-info)
-      (get-magic-secondary-dispatch-function generic-function args)
-    (if fn
-	(values fn methods arg-info)
-	(get-normal-secondary-dispatch-function generic-function args))))
-
-(defun get-magic-secondary-dispatch-function (generic-function args)
-  (let ((e (lookup-magic-magic-generic-function generic-function)))
-    (when e
-      (dolist (entry (cddr e))
-	(destructuring-bind (specls appl function)
-			    entry
-	  (unless (iterate ((arg   (list-elements args))
-			    (specl (list-elements specls)))
-		    (let ((class (class-of arg)))
-		      (unless (if (consp specl)
-				  (eql (cadr specl) arg)
-				  (or (eq specl t)
-				      (eq specl class)))
-			(return t))))
-	    (return (values function appl (cadr e)))))))))
-
-(defmacro protect-cache-miss-code (gf args &body body)
-  (let ((wrappers (gensym)) (invalidp (gensym)) (function (gensym)) (appl (gensym)))
-    (once-only (gf args)
-      `(if (memq ,gf *invalid-dfuns-on-stack*)
-	   (multiple-value-bind (,wrappers ,invalidp ,function ,appl)
-	       (cache-miss-values ,gf ,args)
-             (declare (ignore ,wrappers ,invalidp))
-	     (if (null ,appl)
-		 (apply #'no-applicable-method ,gf ,args)
-		 (apply ,function ,args)))
-	   (let ((*invalid-dfuns-on-stack* (cons ,gf *invalid-dfuns-on-stack*)))
-	     ,@body)))))
-
-
-(defmethod compute-applicable-methods
-    ((generic-function generic-function) arguments &optional (two-values-p t))
+(defmethod compute-applicable-methods-using-classes 
+    ((generic-function generic-function) classes)
   (compute-applicable-methods-using-types 
-    generic-function arguments 'eql two-values-p))
+   generic-function
+   (types-from-arguments generic-function classes 'class-eq)))
 
-(defmethod compute-applicable-methods-using-classes
-    ((generic-function generic-function) classes &optional (two-values-p t))
-  (compute-applicable-methods-using-types
-    generic-function classes 'class-eq two-values-p))
-
-(defmethod compute-applicable-methods-using-types
-    ((generic-function generic-function) types 
-     &optional type-modifier (two-values-p t))
-  (let* ((arg-info (gf-arg-info generic-function))
-	 (number-required-arguments (arg-info-number-required arg-info))
-	 (types (cond ((null type-modifier) types)
-		      ((consp type-modifier) (mapcar #'list types type-modifier))
-		      (t (mapcar #'(lambda (type) (list type-modifier type)) types))))
-	 (applicable-methods nil)
-	 (possibly-applicable-methods nil))
-    (unless (<= number-required-arguments (length types))
-      (error "The function ~S requires at least ~D arguments"
-	     (generic-function-name generic-function)
-	     number-required-arguments))
+(defun compute-applicable-methods-using-types (generic-function types)
+  (let ((definite-p t) (possibly-applicable-methods nil))
     (dolist (method (generic-function-methods generic-function))
-      (let ((types types)
-	    (possibly-applicable-p t)
-	    (applicable-p t))
-	(dolist (specializer (method-specializers method))
-	  (let ((type (pop types)))
-	    (multiple-value-bind (specl-applicable-p specl-possibly-applicable-p)
-		(specializer-applicable-using-type-p specializer type)
-	      (unless specl-applicable-p 
-		(setq applicable-p nil))
-	      (unless specl-possibly-applicable-p
-		(setq possibly-applicable-p nil)
-		(return nil)))))
+      (let ((specls (method-specializers method))
+	    (types types)
+	    (possibly-applicable-p t) (applicable-p t))
+	(dolist (specl specls)
+	  (multiple-value-bind (specl-applicable-p specl-possibly-applicable-p)
+	      (specializer-applicable-using-type-p specl (pop types))
+	    (unless specl-applicable-p
+	      (setq applicable-p nil))
+	    (unless specl-possibly-applicable-p
+	      (setq possibly-applicable-p nil)
+	      (return nil))))
 	(when possibly-applicable-p
-	  (if (or applicable-p (null two-values-p))
-	      (push method applicable-methods)
-	      (push method possibly-applicable-methods)))))
-    (flet ((sorter (method-1 method-2)
-	     (dolist (index (arg-info-precedence (gf-arg-info generic-function)))
-	       (let* ((specl1 (nth index (method-specializers method-1)))
-		      (specl2 (nth index (method-specializers method-2)))
-		      (class (type-class (nth index types)))
-		      (order (order-specializers-using-class specl1 specl2 class)))
-		 (when order
-		   (return-from sorter (eq order specl1)))))))
-      (values (stable-sort (nreverse applicable-methods) #'sorter)
-	      (nreverse possibly-applicable-methods)))))
+	  (unless applicable-p (setq definite-p nil))
+	  (push method possibly-applicable-methods))))
+    (values (sort-applicable-methods generic-function
+				     (nreverse possibly-applicable-methods)
+				     types)
+	    definite-p)))
 
-;---------------------------------------------
+;This is used to speed up precompute-effective-methods.
+(defvar *in-precompute-effective-methods-p* nil)
+
+;used only in specializer-applicable-using-type-p
+(defun class-applicable-using-class-p (specl type)
+  (let ((pred (memq specl (class-precedence-list type))))
+    (values pred
+	    (or pred
+		(if (not *in-precompute-effective-methods-p*)
+		    ;; classes might get common subclass
+		    (superclasses-compatible-p specl type)
+		    ;; worry only about existing classes
+		    (classes-have-common-subclass-p specl type))))))
+
+;used only in map-all-orders
+(defun class-might-precede-p (class1 class2)
+  (if (not *in-precompute-effective-methods-p*)
+      (not (member class1 (cdr (class-precedence-list class2))))
+      (class-can-precede-p class1 class2)))
+
+(defun saut-and (specl type)
+  (let ((applicable nil)
+	(possibly-applicable t))
+    (dolist (type (cdr type))
+      (multiple-value-bind (appl poss-appl)
+	  (specializer-applicable-using-type-p specl type)
+	(when appl (return (setq applicable t)))
+	(unless poss-appl (return (setq possibly-applicable nil)))))
+    (values applicable possibly-applicable)))
+
+(defun saut-not (specl type)
+  (let ((ntype (cadr type)))
+    (values nil
+	    (case (car ntype)
+	      (class      (saut-not-class specl ntype))
+	      (class-eq   (saut-not-class-eq specl ntype))
+	      (eql        (saut-not-eql specl ntype))
+	      (t (error "~s cannot handle the second argument ~s"
+			'specializer-applicable-using-type-p type))))))
+
+(defun saut-not-class (specl ntype)
+  (let* ((class (type-class specl))
+	  (cpl (class-precedence-list class)))
+     (not (memq (cadr ntype) cpl))))
+
+(defun saut-not-class-eq (specl ntype)
+  (let ((class (case (car specl)
+		 (eql      (class-of (cadr specl)))
+		 (class-eq (cadr specl)))))
+    (not (eq class (cadr ntype)))))
+
+(defun saut-not-eql (specl ntype)
+  (case (car specl)
+    (eql (not (eql (cadr specl) (cadr ntype))))
+    (t   t)))
+
+(defun saut-class (specl type)
+  (case (car specl)
+    (class (class-applicable-using-class-p (cadr specl) (cadr type)))
+    (t     (values nil (let ((class (type-class specl)))
+			 (memq (cadr type)
+			       (class-precedence-list class)))))))
+
+(defun saut-class-eq (specl type)
+  (if (eq (car specl) 'eql)
+      (values nil (eq (class-of (cadr specl)) (cadr type)))
+      (let ((pred (case (car specl)
+		    (class-eq   (eq (cadr specl) (cadr type)))
+		    (class      (or (eq (cadr specl) (cadr type))
+				    (memq (cadr specl) 
+					  (class-precedence-list (cadr type))))))))
+	(values pred pred))))
+
+(defun saut-eql (specl type) 
+  (let ((pred (case (car specl)
+		(eql        (eql (cadr specl) (cadr type)))
+		(class-eq   (eq (cadr specl) (class-of (cadr type))))
+		(class      (memq (cadr specl)
+				  (class-precedence-list 
+				   (class-of (cadr type))))))))
+    (values pred pred)))
+
+(defun specializer-applicable-using-type-p (specl type)
+  (setq specl (type-from-specializer specl))
+  (when (eq specl 't)
+    (return-from specializer-applicable-using-type-p (values t t)))
+  ;; This is used by c-a-m-u-t and generate-discrimination-net-internal,
+  ;; and has only what they need.
+  (if (or (atom type) (eq (car type) 't))
+      (values nil t)
+      (case (car type)
+	(and        (saut-and specl type))
+	(not        (saut-not specl type))
+	(class      (saut-class specl type))
+	(class-eq   (saut-class-eq specl type))
+	(eql        (saut-eql specl type))
+	(t          (error "~s cannot handle the second argument ~s"
+			   'specializer-applicable-using-type-p type)))))
+
+(defun proclaim-incompatible-superclasses (classes)
+  (setq classes (mapcar #'(lambda (class)
+			    (if (symbolp class)
+				(find-class class)
+				class))
+			classes))
+  (dolist (class classes)
+    (dolist (other-class classes)
+      (unless (eq class other-class)
+	(pushnew other-class (class-incompatible-superclass-list class))))))
+
+(defun superclasses-compatible-p (class1 class2)
+  (let ((cpl1 (class-precedence-list class1))
+	(cpl2 (class-precedence-list class2)))
+    (dolist (sc1 cpl1 t)
+      (dolist (ic (class-incompatible-superclass-list sc1))
+	(when (memq ic cpl2)
+	  (return-from superclasses-compatible-p nil))))))
+
+(mapc
+ #'proclaim-incompatible-superclasses
+ '(;; superclass class
+   (built-in-class std-class structure-class) ; direct subclasses of pcl-class
+   (standard-class funcallable-standard-class)
+   ;; superclass metaobject
+   (class eql-specializer class-eq-specializer method ; method-combination
+    generic-function slot-definition)
+   ;; metaclass built-in-class
+   (number sequence character symbol	; direct subclasses of t, but not array
+    standard-object structure-object)
+   (number array character symbol	; direct subclasses of t, but not sequence
+    standard-object structure-object)
+   (complex float rational)		; direct subclasses of number
+   (integer ratio)			; direct subclasses of rational
+   (list vector)			; direct subclasses of sequence
+   (cons null)				; direct subclasses of list
+   (string bit-vector)			; direct subclasses of vector
+   ))
+
+(defun classes-have-common-subclass-p (class1 class2)
+  (or (eq class1 class2)
+      (let ((class1-subs (class-direct-subclasses class1)))
+	(or (memq class2 class1-subs)
+	    (dolist (class1-sub class1-subs nil)
+	      (when (classes-have-common-subclass-p class1-sub class2)
+		(return t)))))))
+
+(defun order-specializers (specl1 specl2 index compare-classes-function)
+  (let ((type1 (specializer-type specl1))
+	(type2 (specializer-type specl2)))
+    (cond ((eq specl1 specl2)
+	   nil)
+	  ((atom type1)
+	   specl2)
+	  ((atom type2)
+	   specl1)
+	  (t
+	   (case (car type1)
+	     (class    (case (car type2)
+			 (class (funcall compare-classes-function specl1 specl2 index))
+			 (t specl2)))
+	     (class-eq (case (car type2)
+			 (eql specl2)
+			 (class-eq nil)
+			 (class type1)))
+	     (eql      (case (car type2)
+			 (eql nil)
+			 (t specl1))))))))
+
+(defun sort-applicable-methods (generic-function methods types)
+  (sort-methods methods
+		(arg-info-precedence (gf-arg-info generic-function))
+		#'(lambda (class1 class2 index)
+		    (let* ((class (type-class (nth index types)))
+			   (cpl (class-precedence-list class)))
+		      (if (memq class2 (memq class1 cpl))
+			  class1 class2)))))
+
+(defun sort-methods (methods precedence compare-classes-function)
+  (flet ((sorter (method1 method2)
+	   (dolist (index precedence)
+	     (let* ((specl1 (nth index (method-specializers method1)))
+		    (specl2 (nth index (method-specializers method2)))
+		    (order (order-specializers 
+			     specl1 specl2 index compare-classes-function)))
+	       (when order
+		 (return-from sorter (eq order specl1)))))))
+    (stable-sort methods #'sorter)))
+
+(defun map-all-orders (methods precedence function)
+  (let ((choices nil))
+    (flet ((compare-classes-function (class1 class2 index)
+	     (declare (ignore index))
+	     (let ((choice nil))
+	       (dolist (c choices nil)
+		 (when (or (and (eq (first c) class1)
+				(eq (second c) class2))
+			   (and (eq (first c) class2)
+				(eq (second c) class1)))
+		   (return (setq choice c))))
+	       (unless choice
+		 (setq choice
+		       (if (class-might-precede-p class1 class2)
+			   (if (class-might-precede-p class2 class1)
+			       (list class1 class2 nil t)
+			       (list class1 class2 t))
+			   (if (class-might-precede-p class2 class1)
+			       (list class2 class1 t)
+			       (let ((name1 (class-name class1))
+				     (name2 (class-name class2)))
+				 (if (and name1 name2 (symbolp name1) (symbolp name2)
+					  (string< (symbol-name name1)
+						   (symbol-name name2)))
+				     (list class1 class2 t)
+				     (list class2 class1 t))))))
+		 (push choice choices))
+	       (car choice))))
+      (loop (funcall function
+		     (sort-methods methods precedence #'compare-classes-function))
+	    (unless (dolist (c choices nil)
+		      (unless (third c)
+			(rotatef (car c) (cadr c))
+			(return (setf (third c) t))))
+	      (return nil))))))
+
+
+
+(defmethod same-specializer-p ((specl1 specializer) (specl2 specializer))
+  nil)
 
 (defmethod same-specializer-p ((specl1 class) (specl2 class))
   (eq specl1 specl2))
 
-(defmethod order-specializers-using-class ((specl1 class) (specl2 class) class)
-  (cond ((eq specl1 specl2) nil)
-	((memq specl2 (memq specl1 (class-precedence-list class))) specl1)
-	(t specl2)))
-
 (defmethod specializer-class ((specializer class))
   specializer)
 
-(defclass specializer-with-object (specializer)
-  ((object :initarg :object :reader specializer-object)))
+(defmethod same-specializer-p ((specl1 class-eq-specializer)
+			       (specl2 class-eq-specializer))
+  (eq (specializer-class specl1) (specializer-class specl2)))
 
-(defmethod same-specializer-p ((specl1 specializer-with-object)
-			       (specl2 specializer-with-object))
+(defmethod same-specializer-p ((specl1 eql-specializer)
+			       (specl2 eql-specializer))
   (eq (specializer-object specl1) (specializer-object specl2)))
-
-(defclass exact-class-specializer (class-specializer) ())
-
-(defclass class-eq-specializer (exact-class-specializer specializer-with-object)
-  ((object :initarg :class :reader specializer-class)))
-
-(defclass eql-specializer (exact-class-specializer specializer-with-object)
-  ())
 
 (defmethod specializer-class ((specializer eql-specializer))
   (class-of (slot-value specializer 'object)))
 
-(defmethod order-specializers-using-class ((specl1 eql-specializer)
-					   (specl2 eql-specializer)
-					   argument-class)
-  (declare (ignore argument-class))
-  nil)
+(defvar *in-gf-arg-info-p* nil)
+(defvar arg-info-reader (make-internal-reader-method-function 'arg-info))
 
-(defmethod order-specializers-using-class ((specl1 class)
-					   (specl2 eql-specializer)
-					   argument-class)
-  (declare (ignore argument-class))
-  specl2)
-
-(defmethod order-specializers-using-class ((specl1 eql-specializer)
-					   (specl2 class)
-					   argument-class)
-  (declare (ignore argument-class))
-  specl1)
-
-(define-gf-predicate specializerp specializer)
-(define-gf-predicate class-specializer-p class-specializer)
-(define-gf-predicate exact-class-specializer-p exact-class-specializer)
-(define-gf-predicate class-eq-specializer-p class-eq-specializer)
-(define-gf-predicate eql-specializer-p eql-specializer)
-
-;---------------------------------------------
-
-;(specializer-applicable-using-type-p spec type)
-;returns two values: applicable-p possibly-applicable-p
-;applicable-p is t when:
-;   (forall x (implies (typep x type) (typep x spec))) is true
-;possibly-applicable-p is t when:
-;   (exists x (and (typep x type) (typep x spec))) might become true
-(defmethod specializer-type-p (object (spec class))
-  (memq spec (class-precedence-list (class-of object))))
-
-(defmethod specializer-applicable-using-type-p ((spec class) type)
-  (let ((type-class (type-class type)))
-    (if type-class
-	(let ((typep (memq spec (class-precedence-list type-class))))
-	  (values typep (or typep (not (exact-class-type-p type)))))
-	(values nil
-		(not (and (not-type-p type)
-			  (let ((type-class (class-type-p (not-type type))))
-			    (if type-class
-				(memq type-class (class-precedence-list spec))))))))))
-
-(defmethod specializer-type-p (object (spec class-eq-specializer))
-  (eq (class-of object) (specializer-class spec)))
-
-(defmethod specializer-applicable-using-type-p ((spec class-eq-specializer) type)
-  (let ((s-class (specializer-class spec)))
-    (if (exact-class-type-p type)
-	(let ((typep (eq s-class (type-class type))))
-	  (values typep typep))
-	(values nil 
-		(not (and (not-type-p type)
-			  (let* ((type (not-type type))
-				 (type-class (class-type-p type)))
-			    (cond (type-class
-				   (memq type-class (class-precedence-list s-class)))
-				  ((class-eq-type-p type)
-				   (eq (type-class type) s-class))))))))))
-
-(defmethod specializer-type-p (object (spec eql-specializer))
-  (eql object (specializer-object spec)))
-
-(defmethod specializer-applicable-using-type-p ((spec eql-specializer) type)
-  (values (and (eql-type-p type)
-	       (eql (specializer-object spec) (type-object spec)))
-	  (*typep (specializer-object spec) type)))
-
-;;;
-;;; Does a given pair of values for {<specializer1> <truth1>} imply a given pair of
-;;; values for {<specializer2> <truth2>}.
-;;; 
-(defun outcome-implies-p (type1 value1 type2 value2)
-  (multiple-value-bind (app-p maybe-app-p)
-      (specializer-applicable-using-type-p type2 (if value1 type1 `(not ,type1)))
-    (if value2
-	app-p
-	(not maybe-app-p))))
-
-;---------------------------------------------
-#||
-(defmethod specializer-from-type ((type cons) &rest args)
-  (apply #'specializer-from-type type))
-
-(defmethod specializer-from-type ((type symbol) &rest args)
-  (or (and (null args) (find-class type nil))
-      (cons type args)))
-
-(defmethod specializer-from-type ((type specializer) &rest args)
-  (declare (ignore args))
-  type)
-
-(defmethod specializer-from-type ((type (eql 'class-eq)) &rest args)
-  (make-instance 'class-eq-specializer :class (car args)))
-
-(defmethod specializer-from-type ((type (eql 'eql)) &rest args)
-  (make-instance 'eql-specializer :object (car args)))
-||#
-
-(defun specializer-from-type (type &aux args)
-  (when (consp type)
-    (setq args (cdr type) type (car type)))
-  (typecase type
-    (symbol 
-     (or (and (null args) (find-class type nil))
-	 (case type
-	   (class-eq (make-instance 'class-eq-specializer :class (car args)))
-	   (eql      (make-instance 'eql-specializer :object (car args))))))
-    (specializer type)))
-
-(defmethod type-from-specializer ((spec t))
-  spec)
-
-(defmethod type-from-specializer ((spec class))
-  (or (class-name spec) spec))
-
-(defmethod type-from-specializer ((spec class-eq-specializer))
-  `(class-eq ,(specializer-class spec)))
-
-(defmethod type-from-specializer ((spec eql-specializer))
-  `(eql ,(specializer-object spec)))
-
-;;;
-;;; Return a form which tests a given argument against a given specializer.
-;;; 
-(defmethod compute-argument-test-form
-	   ((generic-function generic-function) argument-form
-	    (specializer class))
-  `(let ((class (class-of ,argument-form)))
-     (if class
-	 (memq ',specializer (class-precedence-list class))
-	 nil)))
-
-(defmethod compute-argument-test-form
-	   ((generic-function generic-function) argument-form
-	    (specializer class-eq-specializer))
-  `(eq (class-of ,argument-form) ',(specializer-object specializer)))
-
-(defmethod compute-argument-test-form
-	   ((generic-function generic-function) argument-form
-	    (specializer eql-specializer))
-  `(eql ,argument-form ',(specializer-object specializer)))
-
-
-(defun get-normal-secondary-dispatch-function (generic-function args)
-  (let* ((classes (mapcar #'(lambda (arg mt) (declare (ignore mt)) (class-of arg))
-			  args
-			  (arg-info-metatypes (gf-arg-info generic-function))))
-	 (methods (compute-applicable-methods-using-classes 
-		    generic-function classes nil))
-	 (net (generate-discrimination-net generic-function methods))
-	 (arg-info (gf-arg-info generic-function))
+(defun types-from-arguments (generic-function arguments &optional type-modifier)
+  (let* ((arg-info (if *in-gf-arg-info-p*
+		       (function-funcall arg-info-reader generic-function)
+		       (let ((*in-gf-arg-info-p* t))
+			 (gf-arg-info generic-function))))
 	 (metatypes (arg-info-metatypes arg-info))
-	 (applyp (arg-info-applyp arg-info)))
-    (flet ((net-test-converter (form)
-	      (if (and (consp form) (eq (car form) 'methods))
-		  '.methods.
-		  (default-test-converter form)))
-	   (net-code-converter (form)
-	      (if (and (consp form) (eq (car form) 'methods))
-		  (let ((gensym (gensym)))
-		    (values (make-dfun-call metatypes applyp gensym) (list gensym)))
-		  (default-code-converter form)))
-	   (net-constant-converter (form)
-	     (if (and (consp form) (eq (car form) 'methods))
-		 (list (get-effective-method-function generic-function (cdr form)))
-		 (default-constant-converter form))))
-      (if (eq (car net) 'methods)
-	  (and (cdr net)
-	       (values (get-effective-method-function generic-function (cdr net))
-		       methods))
-	  (values (get-function `(lambda ,(make-dfun-lambda-list metatypes applyp) ,net)
-				#'net-test-converter
-				#'net-code-converter
-				#'net-constant-converter)
-		  methods)))))
+	 (types-rev nil))
+    (dolist (mt metatypes)
+      (declare (ignore mt))
+      (unless arguments
+	(error "The function ~S requires at least ~D arguments"
+	       (generic-function-name generic-function)
+	       (length metatypes)))
+      (let ((arg (pop arguments)))
+	(push (if type-modifier `(,type-modifier ,arg) arg) types-rev)))
+    (values (nreverse types-rev) arg-info)))
 
-(defun get-effective-method-function (generic-function methods)
-  (let ((combin (generic-function-method-combination generic-function))
-	(precomputed (gf-effective-method-functions generic-function)))
-    ;;
-    ;; NOTE: We are assuming a restriction on user code that the method
-    ;;       combination must not change once it is connected to the
-    ;;       generic function.
-    ;;
-    ;;       This has to be legal, because otherwise any kind of method
-    ;;       lookup caching couldn't work.  See this by saying that this
-    ;;       cache, is just a backing cache for the fast cache.  If that
-    ;;       cache is legal, this one must be too.
-    ;;
-    ;;       Should altering the set of methods flush this cache?
-    ;;       
-    (let ((entry (assoc methods precomputed :test #'equal)))
-      (if entry
-	  (values (cdr entry) (car entry))
-	  (let* ((effective (compute-effective-method generic-function combin methods))
-		 (fn (make-effective-method-function generic-function effective)))
-	    (setf (gf-effective-method-functions generic-function)
-		  (cons (cons methods fn) precomputed))
-	    (values fn methods))))))
+(defun get-wrappers-from-classes (nkeys wrappers classes metatypes)
+  (let* ((w wrappers) (w-tail w) (mt-tail metatypes))
+    (dolist (class (if (listp classes) classes (list classes)))
+      (unless (eq 't (car mt-tail))
+	(let ((c-w (class-wrapper class)))
+	  (unless c-w (return-from get-wrappers-from-classes nil))
+	  (if (eql nkeys 1)
+	      (setq w c-w)
+	      (setf (car w-tail) c-w
+		    w-tail (cdr w-tail)))))
+      (setq mt-tail (cdr mt-tail)))
+    w))
 
-(defun generate-discrimination-net (generic-function methods)
+;;;
+;;; Given a generic function and a set of arguments to that generic function,
+;;; returns a mess of values.
+;;;
+;;;  <function>   The compiled effective method function for this set of
+;;;               arguments. 
+;;;
+;;;  <applicable> Sorted list of applicable methods. 
+;;;
+;;;  <wrappers>   Is a single wrapper if the generic function has only
+;;;               one key, that is arg-info-nkeys of the arg-info is 1.
+;;;               Otherwise a list of the wrappers of the specialized
+;;;               arguments to the generic function.
+;;;
+;;;               Note that all these wrappers are valid.  This function
+;;;               does invalid wrapper traps when it finds an invalid
+;;;               wrapper and then returns the new, valid wrapper.
+;;;
+;;;  <invalidp>   True if any of the specialized arguments had an invalid
+;;;               wrapper, false otherwise.
+;;;
+;;;  <type>       READER or WRITER when the only method that would be run
+;;;               is a standard reader or writer method.  To be specific,
+;;;               the value is READER when the method combination is eq to
+;;;               *standard-method-combination*; there are no applicable
+;;;               :before, :after or :around methods; and the most specific
+;;;               primary method is a standard reader method.
+;;;
+;;;  <index>      If <type> is READER or WRITER, and the slot accessed is
+;;;               an :instance slot, this is the index number of that slot
+;;;               in the object argument.
+;;;
+
+(defun cache-miss-values (gf args state)
+  (let* ((arg-info (function-funcall arg-info-reader gf))
+	 (metatypes (arg-info-metatypes arg-info))
+	 (for-accessor-p (eq state 'accessor))
+	 (for-cache-p (or (eq state 'caching) (eq state 'accessor)))
+	 (cam-std-p (gf-info-c-a-m-emf-std-p arg-info))
+	 (args-tail args) (invalid-wrapper-p nil)
+	 (wrappers-rev nil) (dfun-wrappers-rev nil)
+	 (types-rev nil) (classes-rev nil))
+    (dolist (mt metatypes)
+      (unless args-tail
+	(error "The function ~S requires at least ~D arguments"
+	       (generic-function-name gf) (length metatypes)))
+      (let ((arg (pop args-tail)))
+	(multiple-value-bind (wrapper class type)
+	    (if (eq mt 't)
+		(values nil *the-class-t* 't)
+		(let ((wrapper (wrapper-of arg)))
+		  (when (invalid-wrapper-p wrapper)
+		    (setq invalid-wrapper-p t)
+		    (setq wrapper (check-wrapper-validity arg)))
+		  (push wrapper dfun-wrappers-rev)
+		  (let ((wclass (wrapper-class wrapper)))
+		    (values wrapper wclass `(class-eq ,wclass)))))
+	  (push wrapper wrappers-rev) (push class classes-rev) (push type types-rev))))
+    (let* ((wrappers (nreverse wrappers-rev))
+	   (classes (nreverse classes-rev))
+	   (types (mapcar #'(lambda (class) `(class-eq ,class)) classes)))
+      (multiple-value-bind (methods all-applicable-and-sorted-p)
+	  (if cam-std-p
+	      (compute-applicable-methods-using-types gf types)
+	      (compute-applicable-methods-using-classes gf classes))
+	(let ((sdfun (if (or all-applicable-and-sorted-p cam-std-p)
+			 (function-funcall (get-secondary-dispatch-function1 
+					    gf methods types
+					    all-applicable-and-sorted-p)
+					   nil (and for-cache-p wrappers))
+			 (default-secondary-dispatch-function gf))))
+	  (multiple-value-bind (accessor-type index)
+	      (and for-accessor-p all-applicable-and-sorted-p methods
+		   (accessor-values arg-info classes methods))
+	    (values (if (and dfun-wrappers-rev (null (cdr dfun-wrappers-rev)))
+			(car dfun-wrappers-rev)
+			(nreverse dfun-wrappers-rev))
+		    invalid-wrapper-p
+		    sdfun methods accessor-type index)))))))
+
+(defun accessor-values (arg-info classes methods)
+  (let* ((accessor-type (gf-info-simple-accessor-type arg-info))
+	 (accessor-class (case accessor-type
+			   (reader (car classes))
+			   (writer (cadr classes))
+			   (boundp (car classes))))
+	 (slot-name (and accessor-class
+			 (member *the-class-standard-object*
+				 (class-precedence-list accessor-class))
+			 (accessor-method-slot-name (car methods))))
+	 (slotd (and accessor-class
+		     (find-slot-definition accessor-class slot-name))))
+    (when (and slotd 
+	       (slot-accessor-std-p slotd accessor-type))
+      (values accessor-type (slot-definition-location slotd)))))
+
+(defun sdfun-for-caching (gf classes)
+  (let ((types (mapcar #'class-eq-type classes)))
+    (multiple-value-bind (methods all-applicable-and-sorted-p)
+	(compute-applicable-methods-using-types gf types)
+      (function-funcall (get-secondary-dispatch-function1 
+			 gf methods types all-applicable-and-sorted-p)
+			nil (mapcar #'class-wrapper classes)))))
+
+(defun value-for-caching (gf classes)
+  (let ((methods (compute-applicable-methods-using-types 
+		   gf (mapcar #'class-eq-type classes))))
+    (getf (method-function-plist (method-function (car methods)))
+	  :constant-value)))
+
+(defun default-secondary-dispatch-function (generic-function)
+  #'(lambda (&rest args)
+      (let ((methods (compute-applicable-methods generic-function args)))
+	(if methods
+	    (function-apply (get-effective-method-function generic-function methods)
+			    args)
+	    (apply #'no-applicable-method generic-function args)))))
+
+(defun list-eq (x y)
+  (loop (when (atom x) (return (eq x y)))
+	(when (atom y) (return nil))
+	(unless (eq (car x) (car y)) (return nil))
+	(setq x (cdr x)  y (cdr y))))
+
+(defvar *std-cam-methods* nil)
+
+(defun compute-applicable-methods-emf (generic-function)  
+  (if (eq *boot-state* 'complete)
+      (let* ((cam (gdefinition 'compute-applicable-methods))
+	     (cam-methods (compute-applicable-methods-using-types
+			   cam (list `(eql ,generic-function) t))))
+	(values (get-effective-method-function cam cam-methods)
+		(list-eq cam-methods 
+			 (or *std-cam-methods*
+			     (setq *std-cam-methods*
+				   (compute-applicable-methods-using-types
+				    cam (list `(eql ,cam) t)))))))
+      (values #'compute-applicable-methods-function t)))
+
+(defun compute-applicable-methods-emf-std-p (gf)
+  (gf-info-c-a-m-emf-std-p (gf-arg-info gf)))
+
+(defvar *old-c-a-m-gf-methods* nil)
+
+(defun update-all-c-a-m-gf-info (c-a-m-gf)
+  (let ((methods (generic-function-methods c-a-m-gf)))
+    (if (every #'(lambda (old-method)
+		   (member old-method methods))
+	       *old-c-a-m-gf-methods*)
+	(let ((gfs-to-do nil)
+	      (gf-classes-to-do nil))
+	  (dolist (method methods)
+	    (unless (member method *old-c-a-m-gf-methods*)
+	      (let ((specl (car (method-specializers method))))
+		(if (eql-specializer-p specl)
+		    (pushnew (specializer-object specl) gfs-to-do)
+		    (pushnew (specializer-class specl) gf-classes-to-do)))))
+	  (map-all-generic-functions 
+	   #'(lambda (gf)
+	       (when (or (member gf gfs-to-do)
+			 (dolist (class gf-classes-to-do nil)
+			   (member class (class-precedence-list (class-of gf)))))
+		 (update-c-a-m-gf-info gf)))))
+	(map-all-generic-functions #'update-c-a-m-gf-info))
+    (setq *old-c-a-m-gf-methods* methods)))
+
+(defun update-gf-info (gf)
+  (update-c-a-m-gf-info gf)
+  (update-gf-simple-accessor-type gf))
+
+(defun update-c-a-m-gf-info (gf)
+  (multiple-value-bind (c-a-m-emf std-p)
+      (compute-applicable-methods-emf gf)
+    (let ((arg-info (gf-arg-info gf)))
+      (setf (gf-info-static-c-a-m-emf arg-info) c-a-m-emf)
+      (setf (gf-info-c-a-m-emf-std-p arg-info) std-p))))
+
+(defun update-gf-simple-accessor-type (gf)
+  (let ((arg-info (gf-arg-info gf)))
+    (setf (gf-info-simple-accessor-type arg-info)
+	  (let* ((methods (generic-function-methods gf))
+		 (class (and methods (class-of (car methods))))
+		 (type (and class (cond ((eq class *the-class-standard-reader-method*)
+					 'reader)
+					((eq class *the-class-standard-writer-method*)
+					 'writer)
+					((eq class *the-class-standard-boundp-method*)
+					 'boundp)))))
+	    (when (and (gf-info-c-a-m-emf-std-p arg-info)
+		       type
+		       (dolist (method (cdr methods) t)
+			 (unless (eq class (class-of method)) (return nil)))
+		       (eq (generic-function-method-combination gf)
+			   *standard-method-combination*))
+	      type)))))
+
+(defun get-accessor-method-function (gf type class slotd)  
+  (let* ((std-method (standard-svuc-method type))
+	 (str-method (structure-svuc-method type))
+	 (types1 `((eql ,class) (class-eq ,class) (eql ,slotd)))
+	 (types (if (eq type 'writer) `(t ,@types1) types1))
+	 (methods (compute-applicable-methods-using-types gf types))
+	 (std-p (null (cdr methods))))
+    (values
+     (if std-p
+	 (get-optimized-std-accessor-method-function class slotd type)
+	 (get-accessor-from-svuc-method-function
+	  class slotd
+	  (get-secondary-dispatch-function 
+	   gf methods types
+	   `((,(car (or (member std-method methods)
+			(member str-method methods)
+			(error "error in get-accessor-method-function")))
+	      ,(get-optimized-std-slot-value-using-class-method-function
+		class slotd type)))
+	   (unless (and (eq type 'writer)
+			(dolist (method methods t)
+			  (unless (eq (car (method-specializers method))
+				      *the-class-t*)
+			    (return nil))))
+	     (let ((wrappers (list (wrapper-of class)
+				   (class-wrapper class)
+				   (wrapper-of slotd))))
+	       (if (eq type 'writer)
+		   (cons (class-wrapper *the-class-t*) wrappers)
+		   wrappers))))
+	  type))
+     std-p)))
+
+(defvar *new-class* nil)
+
+;used by optimize-slot-value-by-class-p (vector.lisp)
+(defun update-slot-value-gf-info (gf type)
+  (unless *new-class*
+    (update-std-or-str-methods gf type))
+  (when (and (standard-svuc-method type) (structure-svuc-method type))
+    (flet ((update-class (class)
+	     (when (class-finalized-p class)
+	       (dolist (slotd (class-slots class))
+		 (multiple-value-bind (function std-p)
+		     (get-accessor-method-function gf type class slotd)
+		   #+kcl (si:turbo-closure function)
+		   (setf (slot-accessor-std-p slotd type) std-p)
+		   (setf (slot-accessor-function slotd type) function))))))
+      (if *new-class*
+	  (update-class *new-class*)
+	  (map-all-classes #'update-class 'slot-object)))))
+
+(defvar *standard-slot-value-using-class-method* nil)
+(defvar *standard-setf-slot-value-using-class-method* nil)
+(defvar *standard-slot-boundp-using-class-method* nil)
+(defvar *structure-slot-value-using-class-method* nil)
+(defvar *structure-setf-slot-value-using-class-method* nil)
+(defvar *structure-slot-boundp-using-class-method* nil)
+
+(defun standard-svuc-method (type)
+  (case type
+    (reader *standard-slot-value-using-class-method*)
+    (writer *standard-setf-slot-value-using-class-method*)
+    (boundp *standard-slot-boundp-using-class-method*)))
+
+(defun set-standard-svuc-method (type method)
+  (case type
+    (reader (setq *standard-slot-value-using-class-method* method))
+    (writer (setq *standard-setf-slot-value-using-class-method* method))
+    (boundp (setq *standard-slot-boundp-using-class-method* method))))
+
+(defun structure-svuc-method (type)
+  (case type
+    (reader *structure-slot-value-using-class-method*)
+    (writer *structure-setf-slot-value-using-class-method*)
+    (boundp *structure-slot-boundp-using-class-method*)))
+
+(defun set-structure-svuc-method (type method)
+  (case type
+    (reader (setq *structure-slot-value-using-class-method* method))
+    (writer (setq *structure-setf-slot-value-using-class-method* method))
+    (boundp (setq *structure-slot-boundp-using-class-method* method))))
+
+(defun update-std-or-str-methods (gf type)
+  (dolist (method (generic-function-methods gf))
+    (let ((specls (method-specializers method)))
+      (when (and (or (not (eq type 'writer))
+		     (eq (pop specls) *the-class-t*))
+		 (every #'classp specls))
+	(cond ((and (eq (class-name (car specls))
+			'std-class)
+		    (eq (class-name (cadr specls)) 
+			'standard-object)
+		    (eq (class-name (caddr specls)) 
+			'standard-effective-slot-definition))
+	       (set-standard-svuc-method type method))
+	      ((and (eq (class-name (car specls))
+			'structure-class)
+		    (eq (class-name (cadr specls))
+			'structure-object)
+		    (eq (class-name (caddr specls)) 
+			'structure-effective-slot-definition))
+	       (set-structure-svuc-method type method)))))))
+
+(defvar *free-hash-tables* (mapcar #'list '(eq equal eql)))
+
+(defmacro with-hash-table ((table test) &body forms)
+  `(let* ((.free. (assoc ',test *free-hash-tables*))
+	  (,table (if (cdr .free.)
+		      (pop (cdr .free.))
+		      (make-hash-table :test ',test))))
+     (multiple-value-prog1
+	 (progn ,@forms)
+       (clrhash ,table)
+       (push ,table (cdr .free.)))))
+
+(defmacro with-eq-hash-table ((table) &body forms)
+  `(with-hash-table (,table eq) ,@forms))
+
+(defmacro with-equal-hash-table ((table) &body forms)
+  `(with-hash-table (,table equal) ,@forms))
+
+(defun make-accessor-table (generic-function type &optional table)
+  (unless table (setq table (make-hash-table :test 'eq)))
+  (let ((methods (generic-function-methods generic-function))
+	(all-index nil)
+	(no-class-slots-p t)
+	first second (size 0))
+    (declare (fixnum size))
+    ;; class -> {(specl slotd)}
+    (dolist (method methods)
+	(let* ((specializers (method-specializers method))
+	       (specl (if (eq type 'reader)
+			  (car specializers)
+			  (cadr specializers)))
+	       (specl-cpl (class-precedence-list specl))
+	       (so-p (member *the-class-standard-object* specl-cpl))
+	       (slot-name (accessor-method-slot-name method)))
+	  (when (member *the-class-structure-object* specl-cpl)
+	    (return-from make-accessor-table nil))
+	  (maphash #'(lambda (class slotd)
+		       (let ((cpl (class-precedence-list class)))
+			 (when (memq specl cpl)
+			   (unless (and (or so-p
+					    (member *the-class-standard-object* cpl))
+					(slot-accessor-std-p slotd type))
+			     (return-from make-accessor-table nil))
+			   (push (cons specl slotd) (gethash class table)))))
+		   (gethash slot-name *name->class->slotd-table*))))
+    (maphash #'(lambda (class specl+slotd-list)
+		 (dolist (sclass (class-precedence-list class) 
+			  (error "This can't happen"))
+		   (let ((a (assq sclass specl+slotd-list)))
+		     (when a
+		       (let* ((slotd (cdr a))
+			      (index (slot-definition-location slotd)))
+			 (unless index (return-from make-accessor-table nil))
+			 (setf (gethash class table) index)
+			 (when (consp index) (setq no-class-slots-p nil))
+			 (setq all-index (if (or (null all-index)
+						 (eql all-index index))
+					     index t))
+			 (incf size)
+			 (cond ((= size 1) (setq first class))
+			       ((= size 2) (setq second class)))
+			 (return nil))))))
+	     table)
+    (values table all-index first second size no-class-slots-p)))
+
+(defun mec-all-classes-internal (spec precompute-p)
+  (cons (specializer-class spec)
+	(and (classp spec)
+	     precompute-p
+	     (not (or (eq spec *the-class-t*)
+		      (eq spec *the-class-slot-object*)
+		      (eq spec *the-class-standard-object*)
+		      (eq spec *the-class-structure-object*)))
+	     (let ((sc (class-direct-subclasses spec)))
+	       (when sc
+		 (mapcan #'(lambda (class)
+			     (mec-all-classes-internal class precompute-p))
+			 sc))))))
+
+(defun mec-all-classes (spec precompute-p)
+  (let ((classes (mec-all-classes-internal spec precompute-p)))
+    (if (null (cdr classes))
+	classes
+	(let* ((a-classes (cons nil classes))
+	       (tail classes))
+	  (loop (when (null (cdr tail))
+		  (return (cdr a-classes)))
+		(let ((class (cadr tail))
+		      (ttail (cddr tail)))
+		  (if (dolist (c ttail nil)
+			(when (eq class c) (return t)))
+		      (setf (cdr tail) (cddr tail))
+		      (setf tail (cdr tail)))))))))
+
+(defun mec-all-class-lists (spec-list precompute-p)
+  (if (null spec-list)
+      (list nil)
+      (let* ((car-all-classes (mec-all-classes (car spec-list) precompute-p))
+	     (all-class-lists (mec-all-class-lists (cdr spec-list) precompute-p)))
+	(mapcan #'(lambda (list)
+		    (mapcar #'(lambda (c) (cons c list)) car-all-classes))
+		all-class-lists))))
+
+(defun make-emf-cache (generic-function valuep cache classes-list new-class)
   (let* ((arg-info (gf-arg-info generic-function))
+	 (nkeys (arg-info-nkeys arg-info))
+	 (metatypes (arg-info-metatypes arg-info))
+	 (wrappers (unless (eq nkeys 1) (make-list nkeys)))
+	 (precompute-p (gf-precompute-dfun-and-emf-p arg-info))
+	 (default '(default)))
+    (flet ((add-class-list (classes)
+	     (when (or (null new-class) (memq new-class classes))
+	       (let ((wrappers (get-wrappers-from-classes 
+				nkeys wrappers classes metatypes)))
+		 (when (and wrappers
+			    (eq default (probe-cache cache wrappers default)))
+		   (let ((value (cond ((eq valuep t)
+				       (sdfun-for-caching generic-function classes))
+				      ((eq valuep :constant-value)
+				       (value-for-caching generic-function classes)))))
+		     (setq cache (fill-cache cache wrappers value t))))))))
+      (if classes-list
+	  (mapc #'add-class-list classes-list)
+	  (dolist (method (generic-function-methods generic-function))
+	    (mapc #'add-class-list
+		  (mec-all-class-lists (method-specializers method) precompute-p))))
+      cache)))
+
+(defun methods-contain-eql-specializer-p (methods)
+  (dolist (method methods nil)
+    (when (dolist (spec (method-specializers method) nil)
+	    (when (eql-specializer-p spec) (return t)))
+      (return t))))
+
+(defmacro class-test (arg class)
+  (cond ((eq class *the-class-t*)
+	 't)
+	((eq class *the-class-slot-object*)
+	 `(not (eq *the-class-built-in-class* 
+		(wrapper-class (std-instance-wrapper (class-of ,arg))))))
+	((eq class *the-class-standard-object*)
+	 `(or (std-instance-p ,arg) (fsc-instance-p ,arg)))
+	;; TYPEP is now faster than doing memq of the cpl
+	(t
+	 `(typep ,arg ',(class-name class)))))
+
+(defmacro class-eq-test (arg class)
+  `(eq (class-of ,arg) ',class))
+
+(defmacro eql-test (arg object)
+  `(eql ,arg ',object))
+
+(defun dnet-methods-p (form)
+  (and (consp form)
+       (or (eq (car form) 'methods)
+	   (eq (car form) 'unordered-methods))))
+
+(defmacro scase (arg &rest clauses) ; This is case, but without gensyms
+  `(let ((.case-arg. ,arg))
+     (cond ,@(mapcar #'(lambda (clause)
+			 (list* (cond ((listp (car clause))
+				       `(member .case-arg. ',(car clause)))
+				      ((member (car clause) '(t otherwise))
+				       `t)
+				      (t
+				       `(eql .case-arg. ',(car clause))))
+				nil
+				(cdr clause)))
+		     clauses))))
+
+(defmacro mcase (arg &rest clauses) `(scase ,arg ,@clauses))
+
+(defun generate-discrimination-net (generic-function methods types sorted-p)
+  (let* ((arg-info (gf-arg-info generic-function))
+	 (precedence (arg-info-precedence arg-info)))
+    (generate-discrimination-net-internal 
+     generic-function methods types
+     #'(lambda (methods known-types)
+	 (if (or sorted-p
+		 (block one-order-p
+		   (let ((sorted-methods nil))
+		     (map-all-orders 
+		      (copy-list methods) precedence
+		      #'(lambda (methods)
+			  (when sorted-methods (return-from one-order-p nil))
+			  (setq sorted-methods methods)))
+		     (setq methods sorted-methods))
+		   t))
+	     `(methods ,methods ,known-types)
+	     `(unordered-methods ,methods ,known-types)))
+     #'(lambda (position type true-value false-value)
+	 (let ((arg (dfun-arg-symbol position)))
+	   (if (eq (car type) 'eql)
+	       (let* ((false-case-p (and (consp false-value)
+					 (or (eq (car false-value) 'scase)
+					     (eq (car false-value) 'mcase))
+					 (eq arg (cadr false-value))))
+		      (false-clauses (if false-case-p
+					 (cddr false-value)
+					 `((t ,false-value))))
+		      (case-sym (if (and (dnet-methods-p true-value)
+					 (if false-case-p
+					     (eq (car false-value) 'mcase)
+					     (dnet-methods-p false-value)))
+				    'mcase
+				    'scase))
+		      (type-sym (if (member (cadr type) '(t nil otherwise))
+				    `(,(cadr type))
+				    (cadr type))))
+		 `(,case-sym ,arg
+		    (,type-sym ,true-value)
+		    ,@false-clauses))
+	       `(if ,(let ((arg (dfun-arg-symbol position)))
+		       (case (car type)
+			 (class    `(class-test    ,arg ,(cadr type)))
+			 (class-eq `(class-eq-test ,arg ,(cadr type)))))
+		    ,true-value
+		    ,false-value))))
+     #'identity)))
+
+(defun class-from-type (type)
+  (if (or (atom type) (eq (car type) 't))
+      *the-class-t*
+      (case (car type)
+	(and (dolist (type (cdr type) *the-class-t*)
+	       (when (and (consp type) (not (eq (car type) 'not)))
+		 (return (class-from-type type)))))
+	(not *the-class-t*)
+        (eql (class-of (cadr type)))
+        (class-eq (cadr type))
+        (class (cadr type)))))
+
+(defun precompute-effective-methods (gf &optional classes-list-p)
+  (let* ((arg-info (gf-arg-info gf))
+	 (methods (generic-function-methods gf))
+	 (precedence (arg-info-precedence arg-info))
+	 (*in-precompute-effective-methods-p* t)
+	 (classes-list nil))
+    (generate-discrimination-net-internal 
+     gf methods nil
+     #'(lambda (methods known-types)
+	 (when methods
+	   (when classes-list-p
+	     (push (mapcar #'class-from-type known-types) classes-list))
+	   (map-all-orders 
+	      methods precedence
+	      #'(lambda (methods)
+		  (get-secondary-dispatch-function gf methods known-types)))))
+     #'(lambda (position type true-value false-value)
+	 (declare (ignore position type true-value false-value))
+	 nil)
+     #'(lambda (type)
+	 (if (and (consp type) (eq (car type) 'eql))
+	     `(class-eq ,(class-of (cadr type)))
+	     type)))
+    classes-list))
+
+; we know that known-type implies neither new-type nor `(not ,new-type) 
+(defun augment-type (new-type known-type)
+  (if (or (eq known-type 't)
+	  (eq (car new-type) 'eql))
+      new-type
+      (let ((so-far (if (and (consp known-type) (eq (car known-type) 'and))
+			(cdr known-type)
+			(list known-type))))
+	(unless (eq (car new-type) 'not)
+	  (setq so-far
+		(mapcan #'(lambda (type)
+			    (unless (*subtypep type new-type)
+			      (list type)))
+			so-far)))
+	(if (null so-far)
+	    new-type
+	    `(and ,new-type ,@so-far)))))
+
+#+lcl3.0 (dont-use-production-compiler)
+
+(defun generate-discrimination-net-internal 
+    (gf methods types methods-function test-function type-function)
+  (let* ((arg-info (gf-arg-info gf))
+	 (precedence (arg-info-precedence arg-info))
 	 (nreq (arg-info-number-required arg-info))
 	 (metatypes (arg-info-metatypes arg-info)))
-    (labels ((do-column (position contenders)
-	       (if (< position nreq)
-		   (if (eq (nth position metatypes) 't)
-		       (do-column (1+ position) contenders)
-		       (do-methods position contenders () ()))
-		   `(methods ,@contenders)))
-	     (do-methods (position contenders known-outcomes winners)
+    (labels ((do-column (p-tail contenders known-types)
+	       (if p-tail
+		   (let* ((position (car p-tail))
+			  (known-type (or (nth position types) t)))
+		     (if (eq (nth position metatypes) 't)
+			 (do-column (cdr p-tail) contenders
+				    (cons (cons position known-type) known-types))
+			 (do-methods p-tail contenders 
+				     known-type () known-types)))
+		   (funcall methods-function contenders 
+			    (let ((k-t (make-list nreq)))
+			      (dolist (index+type known-types)
+				(setf (nth (car index+type) k-t) (cdr index+type)))
+			      k-t))))			      
+	     (do-methods (p-tail contenders known-type winners known-types)
 	       ;;
                ;; <contenders>
 	       ;;   is a (sorted) list of methods that must be discriminated
-               ;; <known-outcomes>
-	       ;;   is a list of outcomes from tests already made on this argument
-	       ;;   each outcome looks like (<specializer> [t | nil])
+               ;; <known-type>
+	       ;;   is the type of this argument, constructed from tests already made.
                ;; <winners>
 	       ;;   is a (sorted) list of methods that are potentially applicable
 	       ;;   after the discrimination has been made.
 	       ;;   
                (if (null contenders)
-                   (do-column (1+ position) winners)
-                   (let* ((method (car contenders))
-                          (specl (nth position (method-specializers method))))
-                     (flet ((determined-to-be (truth-value)
-                              (if (classp specl)
-                                  truth-value
-                                  (some #'(lambda (outcome)
-                                            (outcome-implies-p (car outcome)
-                                                               (cadr outcome)
-                                                               specl
-                                                               truth-value))
-                                        known-outcomes)))
-                            (if-true () 
-                              (do-methods position
-					  (cdr contenders)
-					  (if (not (classp specl))
-					      (cons `(,specl t) known-outcomes)
-					      known-outcomes)
-					  (append winners `(,method))))
-                            (if-false ()
-                              (do-methods position
-					  (cdr contenders)
-					  (if (not (classp specl))
-					      (cons `(,specl nil) known-outcomes)
-					      known-outcomes)
-					  winners)))
-                       (cond ((determined-to-be nil) (if-false))
-                             ((determined-to-be t)   (if-true))
-                             (t
-			      `(if ,(compute-argument-test-form generic-function
-								(dfun-arg-symbol position)
-								specl)
-				   ,(if-true)
-				   ,(if-false)))))))))
+		   (do-column (cdr p-tail) winners
+			      (cons (cons (car p-tail) known-type) known-types))
+                   (let* ((position (car p-tail))
+			  (method (car contenders))
+			  (specl (nth position (method-specializers method)))
+                          (type (funcall type-function (type-from-specializer specl))))
+		     (multiple-value-bind (app-p maybe-app-p)
+			 (specializer-applicable-using-type-p type known-type)
+		       (flet ((determined-to-be (truth-value)
+				(if truth-value app-p (not maybe-app-p)))
+			      (do-if (truth &optional implied)
+				(let ((ntype (if truth type `(not ,type))))
+				  (do-methods p-tail
+				    (cdr contenders)
+				    (if implied
+					known-type
+					(augment-type ntype known-type))
+				    (if truth
+					(append winners `(,method))
+					winners)
+				    known-types))))
+			 (cond ((determined-to-be nil) (do-if nil t))
+			       ((determined-to-be t)   (do-if t   t))
+			       (t (funcall test-function position type 
+					   (do-if t) (do-if nil))))))))))
+      (do-column precedence methods ()))))
 
-      (do-column 0 methods))))
+#+lcl3.0 (use-previous-compiler)
 
+(defun compute-secondary-dispatch-function (generic-function net &optional 
+					    method-alist wrappers)
+  (function-funcall (compute-secondary-dispatch-function1 generic-function net)
+		    method-alist wrappers))
+
+(defvar *case-table-limit* 10)
+
+(defun net-test-converter (form)
+  (cond ((and (consp form) (eq (car form) 'methods))
+	 '.methods.)
+	((and (consp form) (eq (car form) 'unordered-methods))
+	 '.umethods.)
+	((and (consp form) (eq (car form) 'mcase)
+	      (< *case-table-limit* (length (cddr form))))
+	 '.mcase.)
+	(t (default-test-converter form))))
+
+(defun net-code-converter (form metatypes applyp)
+  (cond ((and (consp form) (or (eq (car form) 'methods)
+			       (eq (car form) 'unordered-methods)))
+	 (let ((gensym (gensym)))
+	   (values (make-dfun-call metatypes applyp gensym)
+		   (list gensym))))
+	((and (consp form) (eq (car form) 'mcase)
+	      (< *case-table-limit* (length (cddr form))))
+	 (let ((gensym (gensym)) (default (gensym)))
+	   (values (make-dfun-call metatypes applyp 
+				   `(gethash ,(cadr form) ,gensym ,default))
+		   (list gensym default))))
+	(t (default-code-converter form))))
+
+(defun net-constant-converter (form generic-function)
+  (or (let ((c (methods-converter form generic-function)))
+	(when c (list c)))
+      (cond ((and (consp form) (eq (car form) 'mcase)
+		  (< *case-table-limit* (length (cddr form))))
+	     (let* ((list (mapcar #'(lambda (clause)
+				      (let ((key (car clause))
+					    (meth (cadr clause)))
+					(cons (if (consp key) (car key) key)
+					      (methods-converter meth
+								 generic-function))))
+				  (cddr form)))
+		    (default (car (last list))))
+	       (list (list* '.table. (nbutlast list))
+		     (cdr default))))
+	    (t (default-constant-converter form)))))
+
+(defun methods-converter (form generic-function)
+  (cond ((and (consp form) (eq (car form) 'methods))
+	 (cons '.methods.
+	       (get-effective-method-function1 generic-function (cadr form))))
+	((and (consp form) (eq (car form) 'unordered-methods))
+	 (default-secondary-dispatch-function generic-function))))
+
+(defun convert-methods (constant method-alist wrappers)
+  (if (and (consp constant)
+	   (eq (car constant) '.methods.))
+      (funcall (cdr constant) method-alist wrappers)
+      constant))
+
+(defun convert-table (constant method-alist wrappers)
+  (when (and (consp constant)
+	     (eq (car constant) '.table.))
+    (let ((table (make-hash-table :test 'eql)))
+      (dolist (k+v (cdr constant))
+	(setf (gethash (car k+v) table)
+	      (convert-methods (cdr k+v) method-alist wrappers)))
+      table)))
+
+(defun compute-secondary-dispatch-function1 (generic-function net)
+  (if (eq (car net) 'methods)
+      (get-effective-method-function1 generic-function (cadr net))
+      (multiple-value-bind (cfunction constants)
+	  (let* ((arg-info (gf-arg-info generic-function))
+		 (metatypes (arg-info-metatypes arg-info))
+		 (applyp (arg-info-applyp arg-info)))
+	    (get-function1 `(lambda ,(make-dfun-lambda-list metatypes applyp) ,net)
+			   #'net-test-converter
+			   #'(lambda (form)
+			       (net-code-converter form metatypes applyp))
+			   #'(lambda (form)
+			       (net-constant-converter form generic-function))))
+	#'(lambda (method-alist wrappers)
+	    (apply cfunction
+		   (mapcar #'(lambda (constant)
+			       (or (convert-table constant method-alist wrappers)
+				   (convert-methods constant method-alist wrappers)))
+			   constants))))))
+
+(defvar *show-make-unordered-methods-emf-calls* nil)
+
+(defun make-unordered-methods-emf (generic-function methods)
+  (when *show-make-unordered-methods-emf-calls*
+    (format t "~&make-unordered-methods-emf ~s~%" 
+	    (generic-function-name generic-function)))
+  #'(lambda (&rest args)
+      (let* ((types (types-from-arguments generic-function args 'eql))
+	     (smethods (sort-applicable-methods generic-function methods types))
+	     (emf (get-effective-method-function generic-function smethods)))
+	(function-apply emf args))))
+
+;;;
+;;; NOTE: We are assuming a restriction on user code that the method
+;;;       combination must not change once it is connected to the
+;;;       generic function.
+;;;
+;;;       This has to be legal, because otherwise any kind of method
+;;;       lookup caching couldn't work.  See this by saying that this
+;;;       cache, is just a backing cache for the fast cache.  If that
+;;;       cache is legal, this one must be too.
+;;;
+;;; Don't clear this table!  
+(defvar *effective-method-table* (make-hash-table :test 'eq))
+
+(defun get-secondary-dispatch-function (gf methods types &optional 
+							 method-alist wrappers)
+  (function-funcall (get-secondary-dispatch-function1 
+		     gf methods types
+		     (not (methods-contain-eql-specializer-p methods)))
+		    method-alist wrappers))
+
+(defun get-secondary-dispatch-function1 (gf methods types 
+					    &optional all-applicable-p
+					    (all-sorted-p t))
+  (if (null methods)
+      #'(lambda (method-alist wrappers)
+	  (declare (ignore method-alist wrappers))
+	  #'(lambda (&rest args)
+	      (apply #'no-applicable-method gf args)))
+      (let* ((key (car methods))
+	     (ht-value (or (gethash key *effective-method-table*)
+			   (setf (gethash key *effective-method-table*)
+				 (cons nil nil)))))
+	(if (and (null (cdr methods)) all-applicable-p) ; the most common case
+	    (or (car ht-value)
+		(setf (car ht-value)
+		      (get-secondary-dispatch-function2 
+		       gf methods types all-applicable-p all-sorted-p)))
+	    (let ((akey (list methods (if all-applicable-p 'all-applicable types))))
+	      (or (cdr (assoc akey (cdr ht-value) :test #'equal))
+		  (let ((value (get-secondary-dispatch-function2 
+				gf methods types all-applicable-p all-sorted-p)))
+		    (push (cons akey value) (cdr ht-value))
+		    value)))))))
+
+(defun get-secondary-dispatch-function2 (gf methods types all-applicable-p all-sorted-p)
+  (if (and all-applicable-p all-sorted-p)
+      (let* ((combin (generic-function-method-combination gf))
+	     (effective (compute-effective-method gf combin methods)))
+	(make-effective-method-function1 gf effective))
+      (let ((net (generate-discrimination-net 
+		  gf methods types all-sorted-p)))
+	(compute-secondary-dispatch-function1 gf net))))
+
+(defun get-effective-method-function (gf methods &optional method-alist wrappers)
+  (function-funcall (get-secondary-dispatch-function1 gf methods nil t)
+		    method-alist wrappers))
+
+(defun get-effective-method-function1 (gf methods &optional (sorted-p t))
+  (get-secondary-dispatch-function1 gf methods nil t sorted-p))
+
+(defun get-dispatch-function (gf)
+  (let ((methods (generic-function-methods gf)))
+    (function-funcall (get-secondary-dispatch-function1 gf methods nil nil nil)
+		      nil nil)))
 
 ;;;
 ;;; The value returned by compute-discriminating-function is a function
@@ -1370,7 +1979,7 @@
 ;;; permitted itself to change the funcallable instance function of the
 ;;; generic function.
 ;;;
-;;; Discriminating functions are may set the funcallable instance function
+;;; Discriminating functions may set the funcallable instance function
 ;;; of the generic function, but the new value must be generated by making
 ;;; a call to COMPUTE-DISCRIMINATING-FUNCTION.  This is to ensure that any
 ;;; more specific methods which may have encapsulated the discriminating
@@ -1410,86 +2019,91 @@
 ;;;                <call-a-method-of-gf>))))
 ;;;
 ;;; NOTE:  All the examples above assume that all instances of the class
-;;;        my generic function accept only one argument.
+;;;        my-generic-function accept only one argument.
 ;;;
 ;;;
 ;;;
 ;;;
-(defvar *uncompiled-discriminating-function-table*
-  (make-hash-table :test 'eq))
+(defun gf-dfun-cache (gf)
+  (let ((state (gf-dfun-state gf)))
+    (typecase state
+      (function nil)
+      (cons (cadr state)))))
+
+(defun gf-dfun-info (gf)
+  (let ((state (gf-dfun-state gf)))
+    (typecase state
+      (function nil)
+      (cons (cddr state)))))
+
+(defun slot-value-using-class-dfun (class object slotd)
+  (declare (ignore class))
+  (function-funcall (slot-definition-reader-function slotd) object))
+
+(defun setf-slot-value-using-class-dfun (new-value class object slotd)
+  (declare (ignore class))
+  (function-funcall (slot-definition-writer-function slotd) new-value object))
+
+(defun slot-boundp-using-class-dfun (class object slotd)
+  (declare (ignore class))
+  (function-funcall (slot-definition-boundp-function slotd) object))
 
 (defmethod compute-discriminating-function ((gf standard-generic-function))
-  (let* ((state (gf-dfun-state gf))
-	 (dfun (typecase state
-		 (null (make-initial-dfun gf))
-		 (function state)
-		 (cons (car state)))))
-    (unless (compiled-function-p 
-	      (typecase dfun
-		#+genera (si:lexical-closure 
-			   (si:lexical-closure-function dfun))
-		(t dfun)))
-      (setf (gethash gf *uncompiled-discriminating-function-table*) t))
-    (doctor-dfun-for-the-debugger gf dfun)))
+  (with-slots (dfun-state arg-info) gf
+    (typecase dfun-state
+      (null (let ((name (generic-function-name gf)))
+	      (when (eq name 'compute-applicable-methods)
+		(update-all-c-a-m-gf-info gf))
+	      (cond ((eq name 'slot-value-using-class)
+		     (update-slot-value-gf-info gf 'reader)
+		     #'slot-value-using-class-dfun)
+		    ((equal name '(setf slot-value-using-class))
+		     (update-slot-value-gf-info gf 'writer)
+		     #'setf-slot-value-using-class-dfun)
+		    ((eq name 'slot-boundp-using-class)
+		     (update-slot-value-gf-info gf 'boundp)
+		     #'slot-boundp-using-class-dfun)
+		    ((gf-precompute-dfun-and-emf-p arg-info)
+		     (make-final-dfun gf))
+		    (t
+		     (make-initial-dfun gf)))))
+      (function dfun-state)
+      (cons (car dfun-state)))))
 
-(defun invalidate-uncompiled-discriminating-functions ()
-  (let ((old-table *uncompiled-discriminating-function-table*))
-    (setq *uncompiled-discriminating-function-table*
-	  (make-hash-table :test 'eq))
-    (maphash #'(lambda (gf value)
-		 (declare (ignore value))
-		 (invalidate-discriminating-function gf))
-	     old-table)
-    nil))
+(defun set-dfun (generic-function &optional dfun cache info)
+  (setf (gf-dfun-state generic-function) 
+	(if (and dfun (or cache info))
+	    (list* dfun cache info)
+	    dfun))
+  dfun)
 
-(defun update-dfun (generic-function dfun &optional cache)
-  (let ((ostate (gf-dfun-state generic-function)))
-    (setf (gf-dfun-state generic-function) (if cache (cons dfun cache) dfun))
-    (invalidate-dfun-internal generic-function)
-    (unless (typep ostate '(or null function)) (free-cache (cdr ostate)))))
+(defun update-dfun (generic-function &optional dfun cache info)
+  (let ((ocache (gf-dfun-cache generic-function)))
+    (set-dfun generic-function dfun cache info)
+    (setq dfun (doctor-dfun-for-the-debugger 
+		generic-function
+		(set-function-name
+		 (compute-discriminating-function generic-function)
+		 (generic-function-name generic-function))))
+    (set-funcallable-instance-function generic-function dfun)
+    (when (and ocache (not (eq ocache cache))) (free-cache ocache))
+    dfun))
 
-(defvar *generate-random-code-segments* nil)
-
-(defun invalidate-discriminating-function (generic-function)
-  (let ((ostate (gf-dfun-state generic-function)))
-    (setf (gf-dfun-state generic-function) nil)
-    (setf (gf-effective-method-functions generic-function) nil)
-    (invalidate-dfun-internal generic-function)
-    (unless (typep ostate '(or null function)) (free-cache (cdr ostate)))
-    (when *generate-random-code-segments*
-      (let ((*generate-random-code-segments* nil))
-	(generate-random-code-segments generic-function)))))
-
-(defun invalidate-dfun-internal (generic-function)
-  ;;
-  ;; Set the funcallable instance function to something that just calls
-  ;; invalid-dfun, that is, arrange to use lazy evaluation to update the
-  ;; dfun later.
-  ;; 
-  (set-funcallable-instance-function
-    generic-function
-    #'(lambda (&rest args)
-	#+Genera (declare (dbg:invisible-frame :pcl-internals))
-	(invalid-dfun generic-function args)))
-  ;;
-  ;; Except that during bootstrapping, we would like to update the dfun
-  ;; right away, and this arranges for that.
-  ;;
-  (when *invalidate-discriminating-function-force-p*
-    (unless (memq generic-function *invalid-dfuns-on-stack*)
-      (let ((*invalid-dfuns-on-stack*
-	     (cons generic-function *invalid-dfuns-on-stack*)))
-	(set-funcallable-instance-function
-	  generic-function
-	  (compute-discriminating-function generic-function))))))
-
-(defun invalid-dfun (gf args)
-  #+Genera (declare (dbg:invisible-frame :pcl-internals))
-  (protect-cache-miss-code gf args
-    (let ((new-dfun (compute-discriminating-function gf)))
-      (set-funcallable-instance-function gf new-dfun)
-      (apply gf args))))
-
+(defmethod update-gf-dfun ((class std-class) gf)
+  (let ((*new-class* class)
+	(name (generic-function-name gf))
+	(arg-info (gf-arg-info gf)))
+    (cond ((eq name 'slot-value-using-class)
+	   (update-slot-value-gf-info gf 'reader))
+	  ((equal name '(setf slot-value-using-class))
+	   (update-slot-value-gf-info gf 'writer))
+	  ((eq name 'slot-boundp-using-class)
+	   (update-slot-value-gf-info gf 'boundp))
+	  ((gf-precompute-dfun-and-emf-p arg-info)
+	   (multiple-value-bind (dfun cache info)
+	       (make-final-dfun-internal gf)
+	     (set-dfun gf dfun cache info) ; otherwise cache might get freed twice
+	     (update-dfun gf dfun cache info))))))
 
 ;;;
 ;;;
@@ -1499,50 +2113,6 @@
       (analyze-lambda-list (method-lambda-list method))
     (declare (ignore nreq nopt keysp restp))
     (values keywords allow-other-keys-p)))
-
-(defun analyze-lambda-list (lambda-list)
-  (declare (values nrequired
-		   noptional
-		   keysp
-		   restp
-		   allow-other-keys-p
-		   keywords
-		   keyword-parameters))
-  (flet ((parse-keyword-argument (arg)
-	   (if (listp arg)
-	       (if (listp (car arg))
-		   (cadar arg)
-		   (make-keyword (car arg)))
-	       (make-keyword arg))))
-    (let ((nrequired 0)
-	  (noptional 0)
-	  (keysp nil)
-	  (restp nil)
-	  (allow-other-keys-p nil)
-	  (keywords ())
-	  (keyword-parameters ())
-	  (state 'required))
-      (dolist (x lambda-list)
-	(if (memq x lambda-list-keywords)
-	    (case x
-	      (&optional         (setq state 'optional))
-	      (&key              (setq keysp 't
-				       state 'key))
-	      (&allow-other-keys (setq allow-other-keys-p 't))
-	      (&rest             (setq restp 't
-				       state 'rest))
-	      (&aux              (return t))
-	      (otherwise
-		(error "Encountered the non-standard lambda list keyword ~S." x)))
-	    (ecase state
-	      (required  (incf nrequired))
-	      (optional  (incf noptional))
-	      (key       (push (parse-keyword-argument x) keywords)
-			 (push x keyword-parameters))
-	      (rest      ()))))
-      (values nrequired noptional keysp restp allow-other-keys-p
-	      (reverse keywords)
-	      (reverse keyword-parameters)))))
 
 (defun method-ll->generic-function-ll (ll)
   (multiple-value-bind (nreq nopt keysp restp allow-other-keys-p keywords keyword-parameters)
@@ -1614,3 +2184,4 @@
 	    rest
 	    (nreverse key)
 	    allow-other-keys)))
+

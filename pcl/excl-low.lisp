@@ -66,14 +66,14 @@
 (defun std-instance-p (x)
   (and (excl::structurep x)
        (locally
-	 (declare (optimize (speed 3) (safety 0)))
+	 (declare #.*optimize-speed*)
 	 (eq (svref x 0) 'std-instance))))
 
 (excl::defcmacro std-instance-p (x)
   (once-only (x)
     `(and (excl::structurep ,x)
 	  (locally
-	    (declare (optimize (speed 3) (safety 0)))
+	    (declare #.*optimize-speed*)
 	    (eq (svref ,x 0) 'std-instance)))))
 
 (defmacro %std-instance-wrapper (x)
@@ -124,15 +124,15 @@
 	(desc (list (inspect::make-field-def "class" #'class-of :lisp)))
 	(slots (slots-to-inspect class object) (cdr slots)))
        ((null slots) (nreverse desc))
-    (let ((name (slotd-name (car slots)))
+    (let ((name (slot-definition-name (car slots)))
 	  res)
       (push (inspect::make-field-def
 	     (string name)
 	     (or (block foo
 		   (dolist (comp components)
 		     (dolist (slot (class-direct-slots comp))
-		       (and (eq (slotd-name slot) name)
-			    (setq res (first (slotd-readers slot)))
+		       (and (eq (slot-definition-name slot) name)
+			    (setq res (first (slot-definition-readers slot)))
 			    (return-from foo res)))))
 		 #'(lambda (x) 
 		     (declare (ignore x))

@@ -80,8 +80,8 @@
 ;;;    rule is used to choose among them.
 ;;;    
 
-(defmethod compute-class-precedence-list ((root std-class) direct-superclasses)
-  (compute-std-cpl root direct-superclasses))
+(defmethod compute-class-precedence-list ((root slot-class))
+  (compute-std-cpl root (class-direct-superclasses root)))
 
 (defstruct (class-precedence-description
 	     (:conc-name nil)
@@ -117,6 +117,7 @@
 	(all-cpds ())
 	(table (make-hash-table :size *compute-std-cpl-class->entry-table-size*
 				:test #'eq)))
+    (declare (fixnum nclasses))
     (labels ((get-cpd (c)
 	       (or (gethash c table)
 		   (setf (gethash c table) (make-cpd))))
@@ -309,3 +310,4 @@
 	  (chase (list cpd))))
 
       cycle-reasons)))
+

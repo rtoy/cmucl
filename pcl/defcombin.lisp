@@ -77,9 +77,8 @@
 	:initarg :operator)
       (identity-with-one-argument
 	:reader short-combination-identity-with-one-argument
-	:initarg :identity-with-one-argument)))
-
-(define-gf-predicate short-method-combination-p short-method-combination)
+	:initarg :identity-with-one-argument))
+  (:predicate-name short-method-combination-p))
 
 (defun expand-short-defcombin (whole)
   (let* ((type (cadr whole))
@@ -98,7 +97,7 @@
   (let* ((truename (load-truename))
 	 (specializers
 	   (list (find-class 'generic-function)
-		 (make-instance 'eql-specializer :object type)
+		 (intern-eql-specializer type)
 		 *the-class-t*))
 	 (old-method
 	   (get-method #'find-method-combination () specializers nil))
@@ -214,7 +213,7 @@
 (defun load-long-defcombin (type doc function)
   (let* ((specializers
 	   (list (find-class 'generic-function)
-		 (make-instance 'eql-specializer :object type)
+		 (intern-eql-specializer type)
 		 *the-class-t*))
 	 (old-method
 	   (get-method #'find-method-combination () specializers nil))
@@ -249,7 +248,8 @@
 ;;;
 (defun make-long-method-combination-function
        (type ll method-group-specifiers arguments-option gf-var body)
-  (declare (ignore type) (values documentation function))
+  ;;(declare (values documentation function))
+  (declare (ignore type))
   (multiple-value-bind (documentation declarations real-body)
       (extract-declarations body)
 
@@ -330,7 +330,7 @@
       ,@real-body)))
    
 (defun parse-method-group-specifier (method-group-specifier)
-  (declare (values name tests description order required))
+  ;;(declare (values name tests description order required))
   (let* ((name (pop method-group-specifier))
 	 (patterns ())
 	 (tests 

@@ -30,20 +30,26 @@
 
 (in-package 'pcl)
 
-(defmethod make-instance ((class std-class) &rest initargs)
+(defvar *check-initargs-p* nil)
+
+(defmacro checking-initargs (&body forms)
+  `(when *check-initargs-p* ,@forms))
+
+(defmethod make-instance ((class slot-class) &rest initargs)
   (unless (class-finalized-p class) (finalize-inheritance class))
   (setq initargs (default-initargs class initargs))
   (when initargs
-    (when (and (eq *boot-state* 'complete)
-	       (not (getf initargs :allow-other-keys)))
-      (check-initargs-1
-	class initargs
-	(append (compute-applicable-methods
+    (checking-initargs
+      (when (and (eq *boot-state* 'complete)
+		 (not (getf initargs :allow-other-keys)))
+	(check-initargs-1
+	 class initargs
+	 (append (compute-applicable-methods
 		  #'allocate-instance (list* class initargs))
-		(compute-applicable-methods 
+		 (compute-applicable-methods 
 		  #'initialize-instance (list* (class-prototype class) initargs))
-		(compute-applicable-methods 
-		  #'shared-initialize (list* (class-prototype class) t initargs))))))
+		 (compute-applicable-methods 
+		  #'shared-initialize (list* (class-prototype class) t initargs)))))))
   (let ((instance (apply #'allocate-instance class initargs)))
     (apply #'initialize-instance instance initargs)
     instance))
@@ -53,7 +59,7 @@
 
 (defvar *default-initargs-flag* (list nil))
 
-(defmethod default-initargs ((class std-class) supplied-initargs)
+(defmethod default-initargs ((class slot-class) supplied-initargs)
   ;; This implementation of default initargs is critically dependent
   ;; on all-default-initargs not having any duplicate initargs in it.
   (let ((all-default (class-default-initargs class))
@@ -75,18 +81,19 @@
 	(append supplied-initargs (default-1 all-default))))))
 
 
-(defmethod initialize-instance ((instance standard-object) &rest initargs)
+(defmethod initialize-instance ((instance slot-object) &rest initargs)
   (apply #'shared-initialize instance t initargs))
 
-(defmethod reinitialize-instance ((instance standard-object) &rest initargs)
-  (when (and initargs (eq *boot-state* 'complete)
-	     (not (getf initargs :allow-other-keys)))
-    (check-initargs-1
-     (class-of instance) initargs
-     (append (compute-applicable-methods 
-	      #'reinitialize-instance (list* instance initargs))
-	     (compute-applicable-methods 
-	      #'shared-initialize (list* instance nil initargs)))))
+(defmethod reinitialize-instance ((instance slot-object) &rest initargs)
+  (checking-initargs
+    (when (and initargs (eq *boot-state* 'complete)
+	       (not (getf initargs :allow-other-keys)))
+      (check-initargs-1
+       (class-of instance) initargs
+       (append (compute-applicable-methods 
+		#'reinitialize-instance (list* instance initargs))
+	       (compute-applicable-methods 
+		#'shared-initialize (list* instance nil initargs))))))
   (apply #'shared-initialize instance nil initargs)
   instance)
 
@@ -99,19 +106,21 @@
   ;; the same name exists in the previous class."
   (let ((added-slots '())
 	(current-slotds (class-slots (class-of current)))
-	(previous-slot-names (mapcar #'slotd-name
+	(previous-slot-names (mapcar #'slot-definition-name
 				     (class-slots (class-of previous)))))
     (dolist (slotd current-slotds)
-      (if (and (not (memq (slotd-name slotd) previous-slot-names))
-	       (eq (slotd-allocation slotd) ':instance))
-	  (push (slotd-name slotd) added-slots)))
-    (when (and initargs (not (getf initargs :allow-other-keys)))
-      (check-initargs-1
-       (class-of current) initargs
-       (append (compute-applicable-methods 
-	        #'update-instance-for-different-class (list* previous current initargs))
-	       (compute-applicable-methods 
-	        #'shared-initialize (list* current added-slots initargs)))))
+      (if (and (not (memq (slot-definition-name slotd) previous-slot-names))
+	       (eq (slot-definition-allocation slotd) ':instance))
+	  (push (slot-definition-name slotd) added-slots)))
+    (checking-initargs
+      (when (and initargs (not (getf initargs :allow-other-keys)))
+	(check-initargs-1
+	 (class-of current) initargs
+	 (append (compute-applicable-methods 
+		  #'update-instance-for-different-class 
+		  (list* previous current initargs))
+		 (compute-applicable-methods 
+		  #'shared-initialize (list* current added-slots initargs))))))
     (apply #'shared-initialize current added-slots initargs)))
 
 (defmethod update-instance-for-redefined-class ((instance standard-object)
@@ -119,19 +128,19 @@
 						discarded-slots
 						property-list
 						&rest initargs)
-  (declare (ignore discarded-slots property-list))
-  (when (and initargs (not (getf initargs :allow-other-keys)))
-    (check-initargs-1
-      (class-of instance) initargs
-      (append (compute-applicable-methods 
-	       #'update-instance-for-redefined-class 
-	       (list* instance added-slots discarded-slots property-list initargs))
-	      (compute-applicable-methods 
-	       #'shared-initialize (list instance added-slots initargs)))))
+  (checking-initargs
+    (when (and initargs (not (getf initargs :allow-other-keys)))
+      (check-initargs-1
+       (class-of instance) initargs
+       (append (compute-applicable-methods 
+		#'update-instance-for-redefined-class 
+		(list* instance added-slots discarded-slots property-list initargs))
+	       (compute-applicable-methods 
+		#'shared-initialize (list instance added-slots initargs))))))
   (apply #'shared-initialize instance added-slots initargs))
 
 (defmethod shared-initialize
-	   ((instance standard-object) slot-names &rest initargs)
+	   ((instance slot-object) slot-names &rest initargs)
   ;;
   ;; initialize the instance's slots in a two step process
   ;;   1) A slot for which one of the initargs in initargs can set
@@ -153,32 +162,28 @@
   ;;            no slots are set from initforms
   ;;
   (let* ((class (class-of instance))
-	 (slotds (class-slots class)))
+	 (slotds (class-slots class))
+	 (std-p (or (std-instance-p instance) (fsc-instance-p instance))))
     (dolist (slotd slotds)
-      (let ((slot-name (slotd-name slotd))
-	    (slot-initargs (slotd-initargs slotd)))
-	(flet ((from-initargs ()
-		 ;; Try to initialize the slot from one of the initargs.
-		 ;; If we succeed return T, otherwise return nil.
-		 (doplist (initarg val)
-			  initargs
-		   (when (memq initarg slot-initargs)
-		     (setf (slot-value-using-class class instance slotd) val)
-		     (return 't))))
-	       (from-initforms ()
-		 ;; Try to initialize the slot from its initform.  This
-		 ;; returns no meaningful value.
-		 (if (and slot-names
-			  (or (eq slot-names 't)
-			      (memq slot-name slot-names))
-			  (not (slot-boundp-using-class class instance slotd)))
-		     (let ((initfunction (slotd-initfunction slotd)))
-		       (when initfunction
-			 (setf (slot-value-using-class class instance slotd)
-			       (funcall initfunction)))))))
-	  
-	  (or (from-initargs)
-	      (from-initforms))))))
+      (let ((slot-name (slot-definition-name slotd))
+	    (slot-initargs (slot-definition-initargs slotd)))
+	(unless (progn
+		  ;; Try to initialize the slot from one of the initargs.
+		  ;; If we succeed return T, otherwise return nil.
+		  (doplist (initarg val) initargs
+			   (when (memq initarg slot-initargs)
+			     (setf (slot-value-using-class class instance slotd) val)
+			     (return 't))))
+	  ;; Try to initialize the slot from its initform.
+	  (if (and slot-names
+		   (or (eq slot-names 't)
+		       (memq slot-name slot-names))
+		   (or (and (not std-p) (eq slot-names 't))
+		       (not (slot-boundp-using-class class instance slotd))))
+	      (let ((initfunction (slot-definition-initfunction slotd)))
+		(when initfunction
+		  (setf (slot-value-using-class class instance slotd)
+			(funcall initfunction)))))))))
   instance)
 
 
@@ -186,7 +191,8 @@
 ;;; if initargs are valid return nil, otherwise signal an error
 ;;;
 (defun check-initargs-1 (class initargs methods)
-  (let ((legal (apply #'append (mapcar #'slotd-initargs (class-slots class)))))
+  (let ((legal (apply #'append (mapcar #'slot-definition-initargs
+				       (class-slots class)))))
     (unless nil ; (getf initargs :allow-other-keys) ; This is already checked.
       ;; Add to the set of slot-filling initargs the set of
       ;; initargs that are accepted by the methods.  If at

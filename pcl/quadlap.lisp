@@ -1,6 +1,6 @@
 ;;				-[Thu Mar  1 10:54:27 1990 by jkf]-
 ;; pcl to quad translation
-;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/quadlap.lisp,v 1.2 1991/10/19 17:23:26 ram Exp $
+;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/quadlap.lisp,v 1.3 1992/06/01 18:38:55 ram Exp $
 ;;
 ;; copyright (c) 1990 Franz Inc.
 ;;
@@ -42,12 +42,13 @@
 				   arg-names
 				   index-regs
 				   vector-regs
+				   fixnum-vector-regs
 				   t-regs
 				   lap-code)
   (let ((function (pcl::excl-lap-closure-gen closure-vars-names
 				   arg-names
 				   index-regs
-				   vector-regs
+				   (append vector-regs fixnum-vector-regs)
 				   t-regs
 				   lap-code)))
     #'(lambda (&rest closure-vals)
@@ -361,7 +362,7 @@
 	   (case (car op2)
 	     (:iref
 	      ;; assume that this is a lisp store
-	      (warn "assuming lisp store in ~s" lap)
+	      ;;(warn "assuming lisp store in ~s" lap)
 	      (let (op1-treg)
 		(if* (not (vector-preg-p (cadr op2)))
 		   then ; must offset before store
@@ -422,12 +423,10 @@
 				(+ (* (- 15 2) 4)
 				   (comp::mdparam 'md-function-const0-adj))
 				op2))
-	       (:built-in-wrapper
-		(qe call :arg 'pcl::built-in-wrapper-of
+	       ((:built-in-wrapper :structure-wrapper :built-in-or-structure-wrapper)
+		(qe call :arg 'pcl::built-in-or-structure-wrapper
 		    :u (list (get-treg-of (cadr op1)))
 		    :d (list (get-treg-of op2))))
-	       (:structure-wrapper
-		(warn "do structure-wrapper"))
 	       (:other-wrapper
 		(warn "do other-wrapper"))
 	       ((:i+ :i- :ilogand :ilogxor)
@@ -563,8 +562,9 @@
 	   (qe bra :arg (caddr lap)))
 	  (:jmp
 	   (qe tail-funcall :u (list *nargs-treg* (get-treg-of op1))))
-	  ((:structure-instance-p)
-	   (warn "didn't do ~s" lap))
+	  (:structure-instance-p
+	   ; always true
+	   (qe bra :arg (caddr lap)))
 	  
 	  (:return
 	    (let (op-treg)

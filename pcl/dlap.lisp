@@ -41,7 +41,7 @@
   (let ((instance nil)
 	(arglist  ())
 	(closure-variables ())
-	(field (wrapper-field 'number)))			   ;we need some field to do
+	(field (first-wrapper-cache-number-index)))			   ;we need some field to do
 								   ;the fast obsolete check
     (ecase reader/writer
       (:reader (setq instance (dfun-arg-symbol 0)
@@ -54,7 +54,9 @@
     (generating-lap closure-variables
 		    arglist
        (with-lap-registers ((inst t)				   ;reg for the instance
-			    (wrapper vector)			   ;reg for the wrapper
+			    (wrapper #-structure-wrapper vector	   ;reg for the wrapper
+				     #+structure-wrapper t)
+			    #+structure-wrapper (cnv fixnum-vector)
 			    (cache-no index))			   ;reg for the cache no
 	  (let ((index cache-no)				   ;This register is used
 								   ;for different values at
@@ -81,7 +83,12 @@
 			  (opcode :move (operand :std-slots inst) slots))
 
 		     (opcode :label 'have-wrapper)
+		     #-structure-wrapper
 		     (opcode :move (operand :cref wrapper field) cache-no)
+		     #+structure-wrapper
+		     (opcode :move (emit-wrapper-cache-number-vector wrapper) cnv)
+		     #+structure-wrapper
+		     (opcode :move (operand :cref cnv field) cache-no)
 		     (opcode :izerop cache-no 'trap)		   ;obsolete wrapper?
 
 		     (ecase 1-or-2-class
@@ -109,7 +116,7 @@
 
 (defun emit-one-index-readers (class-slot-p)
   (let ((arglist (list (dfun-arg-symbol 0))))
-    (generating-lap '(field cache mask size index miss-fn)
+    (generating-lap '(field cache-vector mask size index miss-fn)
 		    arglist
       (with-lap-registers ((slots vector))
 	(emit-dlap  arglist
@@ -129,7 +136,7 @@
 
 (defun emit-one-index-writers (class-slot-p)
   (let ((arglist (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))))
-    (generating-lap '(field cache mask size index miss-fn)
+    (generating-lap '(field cache-vector mask size index miss-fn)
 		    arglist
       (with-lap-registers ((slots vector))
 	(emit-dlap arglist
@@ -151,7 +158,7 @@
 
 (defun emit-n-n-readers ()
   (let ((arglist (list (dfun-arg-symbol 0))))
-    (generating-lap '(field cache mask size miss-fn)
+    (generating-lap '(field cache-vector mask size miss-fn)
 		    arglist
       (with-lap-registers ((slots vector)
 			   (index index))
@@ -167,7 +174,7 @@
 
 (defun emit-n-n-writers ()
   (let ((arglist (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))))
-    (generating-lap '(field cache mask size miss-fn)
+    (generating-lap '(field cache-vector mask size miss-fn)
 		    arglist
       (with-lap-registers ((slots vector)
 			   (index index))
@@ -186,7 +193,7 @@
 
 (defun emit-checking (metatypes applyp)
   (let ((dlap-lambda-list (make-dlap-lambda-list metatypes applyp)))
-    (generating-lap '(field cache mask size function miss-fn)
+    (generating-lap '(field cache-vector mask size function miss-fn)
 		    dlap-lambda-list
       (emit-dlap (remove '&rest dlap-lambda-list)
 		 metatypes		 
@@ -204,7 +211,7 @@
 
 (defun emit-caching (metatypes applyp)
   (let ((dlap-lambda-list (make-dlap-lambda-list metatypes applyp)))
-    (generating-lap '(field cache mask size miss-fn)
+    (generating-lap '(field cache-vector mask size miss-fn)
 		    dlap-lambda-list
       (with-lap-registers ((function t))
 	(emit-dlap (remove '&rest dlap-lambda-list)
@@ -218,16 +225,35 @@
 		       (opcode :jmp miss-function)))
 		   function)))))
 
+(defun emit-constant-value (metatypes)
+  (let ((dlap-lambda-list (make-dlap-lambda-list metatypes nil)))
+    (generating-lap '(field cache-vector mask size miss-fn)
+		    dlap-lambda-list
+      (with-lap-registers ((value t))
+	(emit-dlap dlap-lambda-list
+		   metatypes
+		   'trap
+		   (flatten-lap 
+		     (opcode :return value))
+		   (with-lap-registers ((miss-function t))
+		     (flatten-lap
+		       (opcode :label 'trap)
+		       (opcode :move (operand :cvar 'miss-fn) miss-function)
+		       (opcode :jmp miss-function)))
+		   value)))))
+
 
 
 (defun emit-check-1-class-wrapper (wrapper cwrapper-0 miss-label)
-  (with-lap-registers ((cwrapper vector))
+  (with-lap-registers ((cwrapper #-structure-wrapper vector
+				 #+structure-wrapper t))
     (flatten-lap
      (opcode :move (operand :cvar cwrapper-0) cwrapper)
      (opcode :neq wrapper cwrapper miss-label))))		;wrappers not eq, trap
 
 (defun emit-check-2-class-wrapper (wrapper cwrapper-0 cwrapper-1 miss-label)
-  (with-lap-registers ((cwrapper vector))
+  (with-lap-registers ((cwrapper #-structure-wrapper vector
+				 #+structure-wrapper t))
     (flatten-lap
      (opcode :move (operand :cvar cwrapper-0) cwrapper)		;This is an OR.  Isn't
      (opcode :eq wrapper cwrapper 'hit-internal)		;assembly code fun
@@ -274,7 +300,9 @@
 
 
 (defun dlap-wrappers (metatypes)
-  (mapcar #'(lambda (x) (and (neq x 't) (allocate-register 'vector)))
+  (mapcar #'(lambda (x) (and (neq x 't)
+			     (allocate-register #-structure-wrapper 'vector
+						#+structure-wrapper t)))
 	  metatypes))
 
 (defun dlap-wrapper-moves (wrappers args metatypes miss-label slot-regs)
@@ -315,15 +343,15 @@
 (defun emit-1-nil-dlap (wrapper wrapper-move hit miss miss-label)
   (with-lap-registers ((location index)
 		       (primary index)
-		       (cache vector))
+		       (cache-vector vector))
     (flatten-lap
       wrapper-move
-      (opcode :move (operand :cvar 'cache) cache)
+      (opcode :move (operand :cvar 'cache-vector) cache-vector)
       (with-lap-registers ((wrapper-cache-no index))
 	(flatten-lap
 	  (emit-1-wrapper-compute-primary-cache-location wrapper primary wrapper-cache-no)
 	  (opcode :move primary location)
-	  (emit-check-1-wrapper-in-cache cache location wrapper hit)	   ;inline hit code
+	  (emit-check-1-wrapper-in-cache cache-vector location wrapper hit)	   ;inline hit code
 	  (opcode :izerop wrapper-cache-no miss-label)))
       (with-lap-registers ((size index))
 	(flatten-lap
@@ -333,7 +361,7 @@
 	  (opcode :fix= location primary miss-label)
 	  (opcode :fix= location size 'set-location-to-min)
 	  (opcode :label 'continue)
-	  (emit-check-1-wrapper-in-cache cache location wrapper hit) 
+	  (emit-check-1-wrapper-in-cache cache-vector location wrapper hit) 
 	  (opcode :go 'loop)
 	  (opcode :label 'set-location-to-min)
 	  (opcode :izerop primary miss-label)
@@ -342,23 +370,23 @@
       miss)))
 
 ;;;
-;;; The function below implements CACHE-LOCK-COUNT as the first entry 
-;;; in a cache (svref cache 0).  This should probably be abstracted.
+;;; The function below implements CACHE-VECTOR-LOCK-COUNT as the first entry 
+;;; in a cache (svref cache-vector 0).  This should probably be abstracted.
 ;;;
 (defun emit-1-t-dlap (wrapper wrapper-move hit miss miss-label value)
   (with-lap-registers ((location index)
 		       (primary index)
-		       (cache vector)
+		       (cache-vector vector)
 		       (initial-lock-count t))
     (flatten-lap
       wrapper-move
-      (opcode :move (operand :cvar 'cache) cache)
+      (opcode :move (operand :cvar 'cache-vector) cache-vector)
       (with-lap-registers ((wrapper-cache-no index))
 	(flatten-lap
 	  (emit-1-wrapper-compute-primary-cache-location wrapper primary wrapper-cache-no)
 	  (opcode :move primary location)
-	  (opcode :move (operand :cref cache 0) initial-lock-count)	   ;get lock-count
-	  (emit-check-cache-entry cache location wrapper 'hit-internal)
+	  (opcode :move (operand :cref cache-vector 0) initial-lock-count)	   ;get lock-count
+	  (emit-check-cache-entry cache-vector location wrapper 'hit-internal)
 	  (opcode :izerop wrapper-cache-no miss-label)))    ;check for obsolescence
       (with-lap-registers ((size index))
 	(flatten-lap
@@ -370,7 +398,7 @@
 	  (opcode :label 'continue)
 	  (opcode :fix= location primary miss-label)
 	  (opcode :fix= location size 'set-location-to-min)
-	  (emit-check-cache-entry cache location wrapper 'hit-internal)
+	  (emit-check-cache-entry cache-vector location wrapper 'hit-internal)
 	  (opcode :go 'loop)
 
 	  (opcode :label 'set-location-to-min)
@@ -379,8 +407,8 @@
 	  (opcode :go 'continue)))
       (opcode :label 'hit-internal)
       (opcode :move (operand :i1+ location) location)		   ;position for getting value
-      (opcode :move (emit-cache-ref cache location) value)
-      (emit-lock-count-test initial-lock-count cache 'hit)
+      (opcode :move (emit-cache-vector-ref cache-vector location) value)
+      (emit-lock-count-test initial-lock-count cache-vector 'hit)
       miss
       (opcode :label 'hit)
       hit)))
@@ -389,7 +417,7 @@
   (let ((cache-line-size (compute-line-size (+ (length wrappers) (if value 1 0)))))
     (with-lap-registers ((location index)
 			 (primary index)
-			 (cache vector)
+			 (cache-vector vector)
 			 (initial-lock-count t)
 			 (next-location index)
 			 (line-size index))	;Line size holds a constant
@@ -399,21 +427,21 @@
       (flatten-lap
 	(apply #'flatten-lap wrapper-moves)
 	(opcode :move (operand :constant cache-line-size) line-size)
-	(opcode :move (operand :cvar 'cache) cache)
+	(opcode :move (operand :cvar 'cache-vector) cache-vector)
 	(emit-n-wrapper-compute-primary-cache-location wrappers primary miss-label)
 	(opcode :move primary location)
 	(opcode :move location next-location)
-	(opcode :move (operand :cref cache 0) initial-lock-count)  ;get the lock-count
+	(opcode :move (operand :cref cache-vector 0) initial-lock-count)  ;get the lock-count
 	(with-lap-registers ((size index))
 	  (flatten-lap
 	    (opcode :move (operand :cvar 'size) size)
 	    (opcode :label 'continue)
 	    (opcode :move (operand :i+ location line-size) next-location)
-	    (emit-check-cache-line cache location wrappers 'hit)
+	    (emit-check-cache-line cache-vector location wrappers 'hit)
 	    (emit-adjust-location location next-location primary size 'continue miss-label)
 	    (opcode :label 'hit)
-	    (and value (opcode :move (emit-cache-ref cache location) value))
-	    (emit-lock-count-test initial-lock-count cache 'hit-internal)
+	    (and value (opcode :move (emit-cache-vector-ref cache-vector location) value))
+	    (emit-lock-count-test initial-lock-count cache-vector 'hit-internal)
 	    miss
 	    (opcode :label 'hit-internal)
 	    hit))))))
@@ -424,31 +452,34 @@
 ;;; Cache related lap code
 ;;;
 
-(defun emit-check-1-wrapper-in-cache (cache location wrapper hit-code)
+(defun emit-check-1-wrapper-in-cache (cache-vector location wrapper hit-code)
   (let ((exit-emit-check-1-wrapper-in-cache 
 	  (make-symbol "exit-emit-check-1-wrapper-in-cache")))
-    (with-lap-registers ((cwrapper vector))
+    (with-lap-registers ((cwrapper #-structure-wrapper vector
+				   #+structure-wrapper t))
       (flatten-lap
-	(opcode :move (emit-cache-ref cache location) cwrapper)
+	(opcode :move (emit-cache-vector-ref cache-vector location) cwrapper)
 	(opcode :neq cwrapper wrapper exit-emit-check-1-wrapper-in-cache)
 	hit-code
 	(opcode :label exit-emit-check-1-wrapper-in-cache)))))
 
-(defun emit-check-cache-entry (cache location wrapper hit-label)
-  (with-lap-registers ((cwrapper vector))
+(defun emit-check-cache-entry (cache-vector location wrapper hit-label)
+  (with-lap-registers ((cwrapper #-structure-wrapper vector
+				 #+structure-wrapper t))
     (flatten-lap
-      (opcode :move (emit-cache-ref cache location) cwrapper)
+      (opcode :move (emit-cache-vector-ref cache-vector location) cwrapper)
       (opcode :eq cwrapper wrapper hit-label))))
 
-(defun emit-check-cache-line (cache location wrappers hit-label)
+(defun emit-check-cache-line (cache-vector location wrappers hit-label)
   (let ((checks
 	  (flatten-lap
 	    (gathering1 (flattening-lap)
 	      (iterate ((wrapper (list-elements wrappers)))
-		(with-lap-registers ((cwrapper vector))
+		(with-lap-registers ((cwrapper #-structure-wrapper vector
+					       #+structure-wrapper t))
 		  (gather1
 		    (flatten-lap
-		      (opcode :move (emit-cache-ref cache location) cwrapper)
+		      (opcode :move (emit-cache-vector-ref cache-vector location) cwrapper)
 		      (opcode :neq cwrapper wrapper 'exit-emit-check-cache-line)
 		      (opcode :move (operand :i1+ location) location)))))))))
     (flatten-lap
@@ -456,13 +487,13 @@
       (opcode :go hit-label)
       (opcode :label 'exit-emit-check-cache-line))))
 
-(defun emit-lock-count-test (initial-lock-count cache hit-label)
+(defun emit-lock-count-test (initial-lock-count cache-vector hit-label)
   ;;
-  ;; jumps to hit-label if cache-lock-count consistent, otherwise, continues
+  ;; jumps to hit-label if cache-vector-lock-count consistent, otherwise, continues
   ;; 
   (with-lap-registers ((new-lock-count t))
     (flatten-lap
-      (opcode :move (operand :cref cache 0) new-lock-count)	   ;get new cache-lock-count
+      (opcode :move (operand :cref cache-vector 0) new-lock-count) ;get new cache-vector-lock-count
       (opcode :fix= new-lock-count initial-lock-count hit-label))))
 
 

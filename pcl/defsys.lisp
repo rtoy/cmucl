@@ -70,7 +70,7 @@
 ;;; 
 (defvar *the-pcl-package* (find-package :pcl))
 
-(defvar *pcl-system-date* "5/1/90  May Day PCL (REV 4b)")
+(defvar *pcl-system-date* "March 92 PCL (2a)")
 
 
 ;;;
@@ -260,35 +260,40 @@ and load your system with:
 ;;;       same Unix hackers are invited to fix mv so that I can type
 ;;;       "mv *.lisp *.lsp".
 ;;;
+(defvar *default-pathname-extensions*
+  (car '(#+(and (not imach) genera)          ("lisp"  . "bin")
+	 #+(and imach genera)                ("lisp"  . "ibin")
+	 #+Cloe-Runtime                      ("l"     . "fasl")
+	 #+(and dec common vax (not ultrix)) ("LSP"   . "FAS")
+	 #+(and dec common vax ultrix)       ("lsp"   . "fas")
+	 #+KCL                               ("lsp"   . "o")
+	 #+IBCL                              ("lsp"   . "o")
+	 #+Xerox                             ("lisp"  . "dfasl")
+	 #+(and Lucid MC68000)               ("lisp"  . "lbin")
+	 #+(and Lucid VAX)                   ("lisp"  . "vbin")
+	 #+(and Lucid Prime)                 ("lisp"  . "pbin")
+	 #+(and Lucid SUNRise)               ("lisp"  . "sbin")
+	 #+(and Lucid SPARC)                 ("lisp"  . "sbin")
+	 #+(and Lucid IBM-RT-PC)             ("lisp"  . "bbin")
+	 #+(and Lucid MIPS)                  ("lisp"  . "mbin")
+	 #+(and Lucid PRISM)                 ("lisp"  . "abin")
+	 #+(and Lucid PA)                    ("lisp"  . "hbin")
+	 #+(and excl SPARC)                  ("cl"    . "sparc")
+	 #+(and excl m68k)                   ("cl"    . "m68k")
+	 #+excl                              ("cl"    . "fasl")
+         #+cmu ("lisp" . #.(c:backend-fasl-file-type c:*backend*))
+	 #+HP-HPLabs                         ("l"     . "b")
+	 #+TI ("lisp" . #.(string (si::local-binary-file-type)))
+	 #+:gclisp                           ("LSP"   . "F2S")
+	 #+pyramid                           ("clisp" . "o")
+	 #+:coral                            ("lisp"  . "fasl")
+	 #-(or symbolics (and dec common vax) KCL IBCL Xerox 
+	       lucid excl :CMU HP TI :gclisp pyramid coral)
+	                                     ("lisp"  . "lbin"))))
+
 (defvar *pathname-extensions*
-  (let ((files-renamed-p t)
-        (proper-extensions
-          (car
-           '(#+(and Genera (not imach))          ("lisp"  . "bin")
-	     #+(and Genera imach)                ("lisp"  . "ibin")
-	     #+Cloe-Runtime			 ("l"	  . "fasl")
-             #+(and dec common vax (not ultrix)) ("LSP"   . "FAS")
-             #+(and dec common vax ultrix)       ("lsp"   . "fas")
-             #+KCL                               ("lsp"   . "o")
-             #+IBCL                              ("lsp"   . "o")
-             #+Xerox                             ("lisp"  . "dfasl")
-             #+(and Lucid MC68000)               ("lisp"  . "lbin")
-             #+(and Lucid VAX)                   ("lisp"  . "vbin")
-             #+(and Lucid Prime)                 ("lisp"  . "pbin")
-	     #+(and Lucid SUNRise)               ("lisp"  . "sbin")
-	     #+(and Lucid SPARC)                 ("lisp"  . "sbin")
-             #+(and Lucid IBM-RT-PC)             ("lisp"  . "bbin")
-             #+(and Lucid MIPS)                  ("lisp"  . "mbin")
-             #+(and Lucid PRISM)                 ("lisp"  . "abin")
-             #+(and Lucid PA)                    ("lisp"  . "hbin")
-	     #+excl                              ("cl"    . "fasl")
-	     #+cmu ("lisp" . #.(c:backend-fasl-file-type c:*backend*))
-             #+HP                                ("l"     . "b")
-             #+TI ("lisp" . #.(string (si::local-binary-file-type)))
-             #+:gclisp                           ("LSP"   . "F2S")
-             #+pyramid                           ("clisp" . "o")
-             #+:coral                            ("lisp"  . "fasl")
-             ))))
+  (let* ((files-renamed-p t)
+	 (proper-extensions *default-pathname-extensions*))
     (cond ((null proper-extensions) '("l" . "lbin"))
           ((null files-renamed-p) (cons "lisp" (cdr proper-extensions)))
           (t proper-extensions))))
@@ -332,9 +337,11 @@ and load your system with:
                (if (eq spec 't)
                    (reverse (cdr modules))
 		   (case (car spec)
-		     (+ (append (reverse (cdr modules)) (mapcar #'get-module (cdr spec))))
+		     (+ (append (reverse (cdr modules))
+				(mapcar #'get-module (cdr spec))))
 		     (- (let ((rem (mapcar #'get-module (cdr spec))))
-			  (remove-if #'(lambda (m) (member m rem)) (reverse (cdr modules)))))
+			  (remove-if #'(lambda (m) (member m rem))
+				     (reverse (cdr modules)))))
 		     (otherwise (mapcar #'get-module spec))))))
       (dolist (file system-description)
         (let* ((name (car file))
@@ -345,8 +352,7 @@ and load your system with:
             (setq module (get-module name))
             (setf (module-load-env module) (parse-spec (cadr file))
                   (module-comp-env module) (parse-spec (caddr file))
-                  (module-recomp-reasons module) (parse-spec
-                                                   (cadddr file))))))
+                  (module-recomp-reasons module) (parse-spec (cadddr file))))))
       (let ((filenames (mapcar #'car system-description)))
 	(sort modules #'(lambda (name1 name2)
 			  (member name2 (member name1 filenames)))
@@ -366,7 +372,8 @@ and load your system with:
 		 (return t)))
     (dolist (c (module-comp-env module)) (make-load-transformation c transforms))
     (setf (cdr transforms)
-	  (remove-if #'(lambda (trans) (and (eq (car trans) :load) (eq (cadr trans) module)))
+	  (remove-if #'(lambda (trans) (and (eq (car trans) :load)
+					    (eq (cadr trans) module)))
 		     (cdr transforms)))
     (push `(:compile ,module) (cdr transforms))))
 
@@ -381,7 +388,8 @@ and load your system with:
 		    (when (and (eq (car trans) ':load)
 			       (eq (cadr trans) module))
 		      (return t)))
-	    (dolist (l (module-load-env module)) (make-load-transformation l transforms))
+	    (dolist (l (module-load-env module))
+	      (make-load-transformation l transforms))
 	    (push `(:load ,module) (cdr transforms)))))))
 
 (defun make-load-without-dependencies-transformation (module transforms)
@@ -402,19 +410,83 @@ and load your system with:
       (> (file-write-date (make-source-pathname (module-name module)))
          (file-write-date (make-binary-pathname (module-name module))))))
 
-(defun operate-on-system (name mode &optional arg print-only)
+(defun operation-transformations (name mode arg)
   (let ((system (get-system name)))
     (unless system (error "Can't find system with name ~S." name))
     (let ((*system-directory* (funcall (car system)))
-	  (modules (cadr system))
-	  (transformations ()))
-      (labels ((load-source (name pathname)
-		 (format t "~&Loading source of ~A..." name)
-		 (force-output)
-		 (or print-only (load pathname)))
-	       (load-binary (name pathname)
-		 (format t "~&Loading binary of ~A..." name)
-		 (force-output)
+	  (modules (cadr system)))
+      (ecase mode
+	(:compile
+	  ;; Compile any files that have changed and any other files
+	  ;; that require recompilation when another file has been
+	  ;; recompiled.
+	  (make-transformations
+	   modules
+	   #'compile-filter
+	   #'make-compile-transformation))
+	(:recompile
+	  ;; Force recompilation of all files.
+	  (make-transformations
+	   modules
+	   #'true
+	   #'make-compile-transformation))
+	(:recompile-some
+	  ;; Force recompilation of some files.  Also compile the
+	  ;; files that require recompilation when another file has
+	  ;; been recompiled.
+	  (make-transformations
+	   modules
+	   #'(lambda (m transforms)
+	       (or (member (module-name m) arg)
+		   (compile-filter m transforms)))
+	   #'make-compile-transformation))
+	(:query-compile
+	  ;; Ask the user which files to compile.  Compile those
+	  ;; and any other files which must be recompiled when
+	  ;; another file has been recompiled.
+	  (make-transformations
+	   modules
+	   #'(lambda (m transforms)
+	       (or (compile-filter m transforms)
+		   (y-or-n-p "Compile ~A?"
+			     (module-name m))))
+	   #'make-compile-transformation))
+	(:confirm-compile
+	  ;; Offer the user a chance to prevent a file from being
+	  ;; recompiled.
+	  (make-transformations
+	   modules
+	   #'(lambda (m transforms)
+	       (and (compile-filter m transforms)
+		    (y-or-n-p "Go ahead and compile ~A?"
+			      (module-name m))))
+	   #'make-compile-transformation))
+	(:load
+	  ;; Load the whole system.
+	  (make-transformations
+	   modules
+	   #'true
+	   #'make-load-transformation))
+	(:query-load
+	  ;; Load only those files the user says to load.
+	  (make-transformations
+	   modules
+	   #'(lambda (m transforms)
+	       (declare (ignore transforms))
+	       (y-or-n-p "Load ~A?" (module-name m)))
+	   #'make-load-without-dependencies-transformation))))))
+
+(defun true (&rest ignore)
+  (declare (ignore ignore))
+  't)
+
+(defun operate-on-system (name mode &optional arg print-only)
+  (let ((system (get-system name)))
+    (unless system (error "Can't find system with name ~S." name))
+    (let* ((*system-directory* (funcall (car system)))
+	   (transformations (operation-transformations name mode arg)))
+      (labels ((load-binary (name pathname)
+		 (format t "~&Loading binary of ~A...~%" name)
 		 (or print-only (load pathname)))	       
 	       (load-module (m)
 		 (let* ((name (module-name m))
@@ -422,92 +494,29 @@ and load your system with:
 			(binary (make-binary-pathname name)))
 		   (load-binary name binary)))
 	       (compile-module (m)
-		 (format t "~&Compiling ~A..." (module-name m))
-		 (force-output)
+		 (format t "~&Compiling ~A...~%" (module-name m))
 		 (unless print-only
 		   (let  ((name (module-name m)))
 		     (compile-file (make-source-pathname name)
 				   :output-file
 				   (make-pathname :defaults
 						  (make-binary-pathname name)
-						  :version :newest)))))
-	       (true (&rest ignore) (declare (ignore ignore)) 't))
-	
-	(setq transformations
-	      (ecase mode
-		(:compile
-		  ;; Compile any files that have changed and any other files
-		  ;; that require recompilation when another file has been
-		  ;; recompiled.
-		  (make-transformations
-		    modules
-		    #'compile-filter
-		    #'make-compile-transformation))
-		(:recompile
-		  ;; Force recompilation of all files.
-		  (make-transformations
-		    modules
-		    #'true
-		    #'make-compile-transformation))
-		(:recompile-some
-		  ;; Force recompilation of some files.  Also compile the
-		  ;; files that require recompilation when another file has
-		  ;; been recompiled.
-		  (make-transformations
-		    modules
-		    #'(lambda (m transforms)
-			(or (member (module-name m) arg)
-			    (compile-filter m transforms)))
-		    #'make-compile-transformation))
-		(:query-compile
-		  ;; Ask the user which files to compile.  Compile those
-		  ;; and any other files which must be recompiled when
-		  ;; another file has been recompiled.
-		  (make-transformations
-		    modules
-		    #'(lambda (m transforms)
-			(or (compile-filter m transforms)
-			    (y-or-n-p "Compile ~A?"
-				      (module-name m))))
-		    #'make-compile-transformation))
-		(:confirm-compile
-		  ;; Offer the user a chance to prevent a file from being
-		  ;; recompiled.
-		  (make-transformations
-		    modules
-		    #'(lambda (m transforms)
-			(and (compile-filter m transforms)
-			     (y-or-n-p "Go ahead and compile ~A?"
-				       (module-name m))))
-		    #'make-compile-transformation))
-		(:load
-		  ;; Load the whole system.
-		  (make-transformations
-		    modules
-		    #'true
-		    #'make-load-transformation))
-		(:query-load
-		  ;; Load only those files the user says to load.
-		  (make-transformations
-		    modules
-		    #'(lambda (m transforms)
-			(declare (ignore transforms))
-			(y-or-n-p "Load ~A?" (module-name m)))
-		    #'make-load-without-dependencies-transformation))))
-	
+						  :version :newest))))))
 	(#+Genera
 	 compiler:compiler-warnings-context-bind
 	 #+TI
 	 COMPILER:COMPILER-WARNINGS-CONTEXT-BIND
 	 #+:LCL3.0
 	 lucid-common-lisp:with-deferred-warnings
-	 #-(or Genera TI :LCL3.0)
+	 #+cmu
+	 with-compilation-unit #+cmu ()
+	 #-(or Genera TI :LCL3.0 cmu)
 	 progn
-	 (loop (when (null transformations) (return t))
-	       (let ((transform (pop transformations)))
-		 (ecase (car transform)
-		   (:compile (compile-module (cadr transform)))
-		   (:load (load-module (cadr transform)))))))))))
+           (loop (when (null transformations) (return t))
+		 (let ((transform (pop transformations)))
+		   (ecase (car transform)
+		     (:compile (compile-module (cadr transform)))
+		     (:load (load-module (cadr transform)))))))))))
 
 
 (defun make-source-pathname (name) (make-pathname-internal name :source))
@@ -536,7 +545,23 @@ and load your system with:
 
     pathname))
 
+(defun system-source-files (name)
+  (let ((system (get-system name)))
+    (unless system (error "Can't find system with name ~S." name))
+    (let ((*system-directory* (funcall (car system)))
+	  (modules (cadr system)))
+      (mapcar #'(lambda (module)
+		  (make-source-pathname (module-name module)))
+	      modules))))
 
+(defun system-binary-files (name)
+  (let ((system (get-system name)))
+    (unless system (error "Can't find system with name ~S." name))
+    (let ((*system-directory* (funcall (car system)))
+	  (modules (cadr system)))
+      (mapcar #'(lambda (module)
+		  (make-binary-pathname (module-name module)))
+	      modules))))
 
 ;;; ***                SITE SPECIFIC PCL DIRECTORY                        ***
 ;;;
@@ -562,7 +587,6 @@ and load your system with:
   (flet ((bad-time ()
 	   (when errorp
 	     (error "LOAD-TRUENAME called but a file isn't being loaded."))))
-    #+CMU (pathname "pcl:")
     #+Lispm  (or sys:fdefine-file-pathname (bad-time))
     #+excl   excl::*source-pathname*
     #+Xerox  (pathname (or (il:fullname *standard-input*) (bad-time)))
@@ -573,14 +597,18 @@ and load your system with:
     ;; 3.0 it's in the LUCID-COMMON-LISP package.
     ;;
     #+LUCID (or lucid::*source-pathname* (bad-time))
-    #-(or CMU Lispm excl Xerox (and dec vax common) LUCID) nil))
+    #+akcl   si:*load-pathname*
+    #-(or Lispm excl Xerox (and dec vax common) LUCID akcl) nil))
 
-#-Symbolics
+#-(or cmu Symbolics)
 (defvar *pcl-directory*
- 	(or (load-truename t)
- 	    (error "Because load-truename is not implemented in this port~%~
-                     of PCL, you must manually edit the definition of the~%~
-                     variable *pcl-directory* in the file defsys.lisp.")))
+	(or (load-truename t)
+	    (error "Because load-truename is not implemented in this port~%~
+                    of PCL, you must manually edit the definition of the~%~
+                    variable *pcl-directory* in the file defsys.lisp.")))
+
+#+cmu
+(defvar *pcl-directory* (pathname "pcl:"))
 
 #+Genera
 (defvar *pcl-directory*
@@ -614,13 +642,14 @@ and load your system with:
    (rel-7-2-patches t            t            ()                rel-7-2)
    (rel-8-patches   t            t            ()                rel-8)
    (ti-patches      t            t            ()                ti)
-   (pyr-patches     t          t              ()                pyramid)
+   (pyr-patches     t            t            ()                pyramid)
    (xerox-patches   t            t            ()                xerox)
    (kcl-patches     t            t            ()                kcl)
    (ibcl-patches    t            t            ()                ibcl)
    (gcl-patches     t            t            ()                gclisp)
    
    (pkg             t            t            ())
+   (sys-proclaim    t            t            ()                kcl)
    (walk            (pkg)        (pkg)        ())
    (iterate         t            t            ())
    (macros          t            t            ())
@@ -653,6 +682,7 @@ and load your system with:
    (cache       t                                   t (low defs))
    (dlap        t                                   t (defs low fin cache lap))
    (boot        t                                   t (defs fin))
+   (generic-functions t                             t (boot))
    (vector      t                                   t (boot defs cache fin))
    (slots       t                                   t (vector boot defs low cache fin))
    (init        t                                   t (vector boot defs low cache fin))
@@ -663,7 +693,7 @@ and load your system with:
    (methods     t                                   t (defclass boot defs low fin cache))
    (combin      t                                   t (defclass boot defs low fin cache))
    (dfun        t                                   t (dlap))
-   (fixup       (+ precom1 precom2 precom4)         t (boot defs low fin))
+   (fixup       (+ precom1 precom2)                 t (boot defs low fin))
    (defcombin   t                                   t (defclass boot defs low fin))
    (ctypes      t                                   t (defclass defcombin))
    (construct   t                                   t (defclass boot defs low))
@@ -671,7 +701,6 @@ and load your system with:
    (compat      t                                   t ())
    (precom1     (dlap)                              t (defs low cache fin dfun))
    (precom2     (dlap)                              t (defs low cache fin dfun))
-   (precom4     (dlap)                              t (defs low cache fin dfun))
    ))
 
 (defun compile-pcl (&optional m)
@@ -695,9 +724,7 @@ and load your system with:
 	#+Genera (sys:inhibit-fdefine-warnings t)
 	)
     (cond ((null m)      (operate-on-system 'pcl :load))
-	  ((eq m :query) (operate-on-system 'pcl :query-load)))
-    (pushnew :pcl *features*)
-    (pushnew :portable-commonloops *features*)))
+	  ((eq m :query) (operate-on-system 'pcl :query-load)))))
 
 #+Genera
 ;;; Make sure Genera bug mail contains the PCL bug data.  A little

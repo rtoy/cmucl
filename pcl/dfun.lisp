@@ -83,36 +83,23 @@ And so, we are saved.
 |#
 
 
-;************************************************************************
-;   temporary for data gathering          temporary for data gathering
-;************************************************************************
 
-(defvar *dfun-states* (make-hash-table :test #'eq))
+;An alist in which each entry is of the form :
+;  (<generator> . (<subentry> ...))
+;Each subentry is of the form:
+;  (<args> <constructor> <system>)
+(defvar *dfun-constructors* ())			
 
-(defun notice-dfun-state (generic-function state &optional nkeys valuep)
-  (setf (gethash generic-function *dfun-states*) 
-	(cons state (when nkeys (list nkeys valuep)))))
-
-;************************************************************************
-;   temporary for data gathering          temporary for data gathering
-;************************************************************************
-
-
-
-(defvar *dfun-constructors* ())			;An alist in which each entry is
-						;of the form (<generator> . (<subentry> ...))
-						;Each subentry is of the form:
-						;  (<args> <constructor> <system>)
-
-(defvar *enable-dfun-constructor-caching* t)	;If this is NIL, then the whole mechanism
-						;for caching dfun constructors is turned
-						;off.  The only time that makes sense is
-						;when debugging LAP code. 
+;If this is NIL, then the whole mechanism
+;for caching dfun constructors is turned
+;off.  The only time that makes sense is
+;when debugging LAP code. 
+(defvar *enable-dfun-constructor-caching* t)	
 
 (defun show-dfun-constructors ()
-  (format t "~&DFUN constructor caching is ~A." (if *enable-dfun-constructor-caching*
-						    "enabled"
-						    "disabled"))
+  (format t "~&DFUN constructor caching is ~A." 
+	  (if *enable-dfun-constructor-caching*
+	      "enabled" "disabled"))
   (dolist (generator-entry *dfun-constructors*)
     (dolist (args-entry (cdr generator-entry))
       (format t "~&~S ~S"
@@ -149,10 +136,12 @@ And so, we are saved.
 	     (dolist (args-entry (cdr generator-entry))
 	       (when (or (null (caddr args-entry))
 			 (eq (caddr args-entry) system))
-		 (multiple-value-bind (closure-variables arguments iregs vregs tregs lap)
+		 (multiple-value-bind (closure-variables arguments 
+							 iregs vregs fvregs tregs lap)
 		     (apply (symbol-function (car generator-entry)) (car args-entry))
 		   (gather1
-		     (make-top-level-form `(precompile-dfun-constructor ,(car generator-entry))
+		     (make-top-level-form `(precompile-dfun-constructor 
+					    ,(car generator-entry))
 					  '(load)
 		       `(load-precompiled-dfun-constructor
 			  ',(car generator-entry)
@@ -162,17 +151,10 @@ And so, we are saved.
 							    ,arguments
 							    ,iregs
 							    ,vregs
+			                                    ,fvregs
 							    ,tregs
-							    ,lap)))))))))
-      (invalidate-uncompiled-discriminating-functions))))
+							    ,lap))))))))))))
 
-
-
-(defun make-initial-dfun (generic-function)
-  #'(lambda (&rest args)
-      #+Genera (declare (dbg:invisible-frame :pcl-internals))
-      (initial-dfun args generic-function)))
-    
 
 ;;;
 ;;; When all the methods of a generic function are automatically generated
@@ -209,213 +191,227 @@ And so, we are saved.
 ;;;     slot indexes.  Because each cache line is more than one element
 ;;;     long, a cache lock count is used.
 ;;;
+(defstruct (dfun-info
+	     (:constructor nil)
+	     (:print-function print-dfun-info))
+  (cache nil))
 
+(defun print-dfun-info (dfun-info stream depth)
+  (declare (ignore depth) (stream stream))
+  (printing-random-thing (dfun-info stream)
+    (format stream "~A" (type-of dfun-info))))
+
+(defstruct (dispatch
+	     (:constructor dispatch-dfun-info ())
+	     (:include dfun-info)))
+
+(defstruct (default-method-only
+	     (:constructor default-method-only-dfun-info ())
+	     (:include dfun-info)))
+
+;without caching:
+;  dispatch one-class two-class default-method-only
+
+;with caching:
+;  one-index n-n checking caching
+
+;accessor:
+;  one-class two-class one-index n-n
+(defstruct (accessor-dfun-info
+	     (:constructor nil)
+	     (:include dfun-info))
+  accessor-type) ; (member reader writer)
+
+(defmacro dfun-info-accessor-type (di)
+  `(accessor-dfun-info-accessor-type ,di))
+
+(defstruct (one-index-dfun-info
+	     (:constructor nil)
+	     (:include accessor-dfun-info))
+  index)
+
+(defmacro dfun-info-index (di)
+  `(one-index-dfun-info-index ,di))
+
+(defstruct (n-n
+	     (:constructor n-n-dfun-info (accessor-type cache))
+	     (:include accessor-dfun-info)))
+
+(defstruct (one-class
+	     (:constructor one-class-dfun-info (accessor-type index wrapper0))
+	     (:include one-index-dfun-info))
+  wrapper0)
+
+(defmacro dfun-info-wrapper0 (di)
+  `(one-class-wrapper0 ,di))
+
+(defstruct (two-class
+	     (:constructor two-class-dfun-info (accessor-type index wrapper0 wrapper1))
+	     (:include one-class))
+  wrapper1)
+
+(defmacro dfun-info-wrapper1 (di)
+  `(two-class-wrapper1 ,di))
+
+(defstruct (one-index
+	     (:constructor one-index-dfun-info
+			   (accessor-type index cache))
+	     (:include one-index-dfun-info)))	     
+
+(defstruct (checking
+	     (:constructor checking-dfun-info (function cache))
+	     (:include dfun-info))
+  function)
+
+(defmacro dfun-info-function (di)
+  `(checking-function ,di))
+
+(defstruct (caching
+	     (:constructor caching-dfun-info (cache))
+	     (:include dfun-info)))
+
+(defstruct (constant-value
+	     (:constructor constant-value-dfun-info (cache))
+	     (:include dfun-info)))
+
+(defmacro dfun-update (generic-function function &rest args)
+  `(multiple-value-bind (dfun cache info)
+       (funcall ,function ,generic-function ,@args)
+     (update-dfun ,generic-function dfun cache info)))
+
+(defun accessor-miss-function (gf dfun-info)
+  (ecase (dfun-info-accessor-type dfun-info)
+    (reader
+      #'(lambda (arg)
+	   (declare (pcl-fast-call))
+	   (accessor-miss gf nil arg dfun-info)))
+    (writer
+     #'(lambda (new arg)
+	 (declare (pcl-fast-call))
+	 (accessor-miss gf new arg dfun-info)))))
 
 ;;;
 ;;; ONE-CLASS-ACCESSOR
 ;;;
-(defun update-to-one-class-readers-dfun (generic-function wrapper index)
-  (let ((constructor (get-dfun-constructor 'emit-one-class-reader (consp index))))
-    (notice-dfun-state generic-function `(one-class readers ,(consp index)))	;***
-    (update-dfun
-      generic-function
-      (funcall constructor
-	       wrapper
-	       index
-	       #'(lambda (arg)
-		   (declare (pcl-fast-call))
-		   (one-class-readers-miss
-		     arg generic-function index wrapper))))))
+(defun make-one-class-accessor-dfun (gf type wrapper index)
+  (let ((emit (if (eq type 'reader) 'emit-one-class-reader 'emit-one-class-writer))
+	(dfun-info (one-class-dfun-info type index wrapper)))
+    (values
+     (funcall (get-dfun-constructor emit (consp index))
+	      wrapper index
+	      (accessor-miss-function gf dfun-info))
+     nil
+     dfun-info)))
 
-(defun update-to-one-class-writers-dfun (generic-function wrapper index)
-  (let ((constructor (get-dfun-constructor 'emit-one-class-writer (consp index))))
-    (notice-dfun-state generic-function `(one-class writers ,(consp index)))	;***
-    (update-dfun
-      generic-function
-      (funcall constructor
-	       wrapper
-	       index
-	       #'(lambda (new-value arg)
-		   (declare (pcl-fast-call))
-		   (one-class-writers-miss
-		     new-value arg generic-function index wrapper))))))
-
-(defun one-class-readers-miss (arg generic-function index wrapper)
-  (accessor-miss
-    generic-function 'one-class 'reader nil arg index wrapper nil nil nil))
-
-(defun one-class-writers-miss (new arg generic-function index wrapper)
-  (accessor-miss
-    generic-function 'one-class 'writer new arg index wrapper nil nil nil))
-
-
 ;;;
 ;;; TWO-CLASS-ACCESSOR
 ;;;
-(defun update-to-two-class-readers-dfun
-       (generic-function wrapper-0 wrapper-1 index)
-  (let ((constructor (get-dfun-constructor 'emit-two-class-reader (consp index))))
-    (notice-dfun-state generic-function `(two-class readers ,(consp index)))	;***
-    (update-dfun
-      generic-function
-      (funcall constructor
-	       wrapper-0 wrapper-1 index
-	       #'(lambda (arg)
-		   (declare (pcl-fast-call))
-		   (two-class-readers-miss 
-		     arg
-		     generic-function index wrapper-0 wrapper-1))))))
+(defun make-two-class-accessor-dfun (gf type w0 w1 index)
+  (let ((emit (if (eq type 'reader) 'emit-two-class-reader 'emit-two-class-writer))
+	(dfun-info (two-class-dfun-info type index w0 w1)))
+    (values
+     (funcall (get-dfun-constructor emit (consp index))
+	      w0 w1 index
+	      (accessor-miss-function gf dfun-info))
+     nil
+     dfun-info)))
 
-(defun update-to-two-class-writers-dfun
-       (generic-function wrapper-0 wrapper-1 index)
-  (let ((constructor (get-dfun-constructor 'emit-two-class-writer (consp index))))
-    (notice-dfun-state generic-function `(two-class writers ,(consp index)))	;***
-    (update-dfun
-      generic-function
-      (funcall constructor
-	       wrapper-0 wrapper-1 index
-	       #'(lambda (new-value arg)
-		   (declare (pcl-fast-call))
-		   (two-class-writers-miss
-		     new-value arg
-		     generic-function index wrapper-0 wrapper-1))))))
-
-(defun two-class-readers-miss (arg generic-function index w0 w1)
-  (accessor-miss
-    generic-function 'two-class 'reader nil arg index w0 w1 nil nil))
-
-(defun two-class-writers-miss (new arg generic-function index w0 w1)
-  (accessor-miss
-    generic-function 'two-class 'writer new arg index w0 w1 nil nil))
-
-
-
 ;;;
 ;;; std accessors same index dfun
 ;;;
-(defun update-to-one-index-readers-dfun
-       (generic-function index &optional field cache)
-  (unless field (setq field (wrapper-field 'number)))
-  (let ((constructor (get-dfun-constructor 'emit-one-index-readers (consp index))))
-    (multiple-value-bind (mask size)
-	(compute-cache-parameters 1 nil (or cache 4))
-      (unless cache (setq cache (get-cache size)))
-      (notice-dfun-state generic-function `(one-index readers ,(consp index)))	;***
-      (update-dfun
-	generic-function
-	(funcall constructor
-		 field cache mask size index
-		 #'(lambda (arg)
-		     (declare (pcl-fast-call))
-		     (one-index-readers-miss
-		       arg generic-function index field cache)))
-	cache))))
+(defun make-one-index-accessor-dfun (gf type index &optional cache)
+  (let* ((emit (if (eq type 'reader) 'emit-one-index-readers 'emit-one-index-writers))
+	 (cache (or cache (get-cache 1 nil #'one-index-limit-fn 4)))
+	 (dfun-info (one-index-dfun-info type index cache)))
+    (declare (type cache cache))
+    (values
+     (funcall (get-dfun-constructor emit (consp index))
+	      (cache-field cache) (cache-vector cache) 
+	      (cache-mask cache) (cache-size cache)
+	      index
+	      (accessor-miss-function gf dfun-info))
+     cache
+     dfun-info)))
 
-(defun update-to-one-index-writers-dfun
-       (generic-function index &optional field cache)
-  (unless field (setq field (wrapper-field 'number)))
-  (let ((constructor (get-dfun-constructor 'emit-one-index-writers (consp index))))
-    (multiple-value-bind (mask size)
-	(compute-cache-parameters 1 nil (or cache 4))
-      (unless cache (setq cache (get-cache size)))
-      (notice-dfun-state generic-function `(one-index writers ,(consp index)))	;***
-      (update-dfun
-	generic-function
-	(funcall constructor
-		 field cache mask size index 
-		 #'(lambda (new-value arg)
-		     (declare (pcl-fast-call))
-		     (one-index-writers-miss
-		       new-value arg generic-function index field cache)))
-	cache))))
-
-(defun one-index-readers-miss (arg gf index field cache)
-  (accessor-miss
-    gf 'one-index 'reader nil arg index nil nil field cache))
-
-(defun one-index-writers-miss (new arg gf index field cache)
-  (accessor-miss
-    gf 'one-index 'writer new arg index nil nil field cache))
-
+(defun make-final-one-index-accessor-dfun (gf type index table)
+  (let ((cache (fill-dfun-cache table nil 1 #'one-index-limit-fn)))
+    (make-one-index-accessor-dfun gf type index cache)))				
 
 (defun one-index-limit-fn (nlines)
   (default-limit-fn nlines))
 
 
-
-(defun update-to-n-n-readers-dfun (generic-function &optional field cache)
-  (unless field (setq field (wrapper-field 'number)))
-  (let ((constructor (get-dfun-constructor 'emit-n-n-readers)))
-    (multiple-value-bind (mask size)
-	(compute-cache-parameters 1 t (or cache 2))
-      (unless cache (setq cache (get-cache size)))
-      (notice-dfun-state generic-function `(n-n readers))	;***
-      (update-dfun
-	generic-function
-	(funcall constructor
-		 field cache mask size
-		 #'(lambda (arg)
-		     (declare (pcl-fast-call))
-		     (n-n-readers-miss
-		       arg generic-function field cache)))
-	cache))))
+(defun make-n-n-accessor-dfun (gf type &optional cache)
+  (let* ((emit (if (eq type 'reader) 'emit-n-n-readers 'emit-n-n-writers))
+	 (cache (or cache (get-cache 1 t #'n-n-accessors-limit-fn 2)))
+	 (dfun-info (n-n-dfun-info type cache)))
+    (declare (type cache cache))
+    (values
+     (funcall (get-dfun-constructor emit)
+	      (cache-field cache) (cache-vector cache) 
+	      (cache-mask cache) (cache-size cache)
+	      (accessor-miss-function gf dfun-info))
+     cache
+     dfun-info)))
 
-(defun update-to-n-n-writers-dfun (generic-function &optional field cache)
-  (unless field (setq field (wrapper-field 'number)))
-  (let ((constructor (get-dfun-constructor 'emit-n-n-writers)))
-    (multiple-value-bind (mask size)
-	(compute-cache-parameters 1 t (or cache 2))
-      (unless cache (setq cache (get-cache size)))
-      (notice-dfun-state generic-function `(n-n writers))	;***
-      (update-dfun
-	generic-function
-	(funcall constructor
-		 field cache mask size
-		 #'(lambda (new arg)
-		     (declare (pcl-fast-call))
-		     (n-n-writers-miss
-		       new arg generic-function field cache)))
-	cache))))
-
-(defun n-n-readers-miss (arg gf field cache)
-  (accessor-miss gf 'n-n 'reader nil arg nil nil nil field cache))
-
-(defun n-n-writers-miss (new arg gf field cache)
-  (accessor-miss gf 'n-n 'writer new arg nil nil nil field cache))
-
+(defun make-final-n-n-accessor-dfun (gf type table)
+  (let ((cache (fill-dfun-cache table t 1 #'n-n-accessors-limit-fn)))
+    (make-n-n-accessor-dfun gf type cache)))
 
 (defun n-n-accessors-limit-fn (nlines)
   (default-limit-fn nlines))
 
+(defun fill-dfun-cache (table valuep nkeys limit-fn &optional cache)
+  (let ((cache (or cache (get-cache nkeys valuep limit-fn
+				    (+ (hash-table-count table) 3)))))
+    (maphash #'(lambda (classes value)
+		 (setq cache (fill-cache cache
+					 (class-wrapper classes)
+					 value
+					 t)))
+	     table)
+    cache))
+
 
 ;;;
 ;;;
 ;;;
-(defun update-to-checking-dfun (generic-function function &optional field
-								    cache)
-  (unless field (setq field (wrapper-field 'number)))
+(defun make-checking-dfun (generic-function function &optional cache)
+  (unless cache
+    (when (some #'(lambda (method)
+		    (method-function-closure-generator (method-function method)))
+		(generic-function-methods generic-function))
+      (return-from make-checking-dfun (make-caching-dfun generic-function)))
+    (when (use-dispatch-dfun-p generic-function)
+      (return-from make-checking-dfun (make-dispatch-dfun generic-function))))
   (let* ((arg-info (gf-arg-info generic-function))
 	 (metatypes (arg-info-metatypes arg-info))
 	 (applyp (arg-info-applyp arg-info))
 	 (nkeys (arg-info-nkeys arg-info)))
     (if (every #'(lambda (mt) (eq mt 't)) metatypes)
-	(progn
-	  (notice-dfun-state generic-function `(default-method-only))	;***
-	  (update-dfun generic-function function))
-	(multiple-value-bind (mask size)
-	    (compute-cache-parameters nkeys nil (or cache 2))
-	  (unless cache (setq cache (get-cache size)))
-	  (let ((constructor (get-dfun-constructor 'emit-checking metatypes applyp)))
-	    (notice-dfun-state generic-function '(checking) nkeys nil) ;****
-	    (update-dfun
-	      generic-function
-	      (funcall constructor
-		       field cache mask size function
-		       #'(lambda (&rest args)
-			   (declare (pcl-fast-call))
-			   (checking-miss generic-function args function field cache)))
-	      cache))))))
+	(values function nil (default-method-only-dfun-info))
+	(let* ((cache (or cache (get-cache nkeys nil #'checking-limit-fn 2)))
+	       (dfun-info (checking-dfun-info function cache)))
+	  (values
+	   (funcall (get-dfun-constructor 'emit-checking metatypes applyp)
+		    (cache-field cache) (cache-vector cache) 
+		    (cache-mask cache) (cache-size cache)
+		    function 
+		    #'(lambda (&rest args)
+			(declare (pcl-fast-call))
+			(checking-miss generic-function args dfun-info)))
+	   cache
+	   dfun-info)))))
 
+(defun make-final-checking-dfun (generic-function function
+						  classes-list new-class)
+  (let ((metatypes (arg-info-metatypes (gf-arg-info generic-function))))
+    (if (every #'(lambda (mt) (eq mt 't)) metatypes)
+	(values function nil (default-method-only-dfun-info))
+	(let ((cache (make-final-ordinary-dfun-internal 
+		      generic-function nil #'checking-limit-fn 
+		      classes-list new-class)))
+	  (make-checking-dfun generic-function function cache)))))
 
 (defun checking-limit-fn (nlines)
   (default-limit-fn nlines))
@@ -424,31 +420,147 @@ And so, we are saved.
 ;;;
 ;;;
 ;;;
-(defun update-to-caching-dfun (generic-function &optional field cache)
-  (unless field (setq field (wrapper-field 'number)))
+(defun make-caching-dfun (generic-function &optional cache)
+  (unless cache
+    (when (use-constant-value-dfun-p generic-function)
+      (return-from make-caching-dfun (make-constant-value-dfun generic-function)))
+    (when (use-dispatch-dfun-p generic-function)
+      (return-from make-caching-dfun (make-dispatch-dfun generic-function))))
   (let* ((arg-info (gf-arg-info generic-function))
 	 (metatypes (arg-info-metatypes arg-info))
 	 (applyp (arg-info-applyp arg-info))
 	 (nkeys (arg-info-nkeys arg-info))
-	 (constructor (get-dfun-constructor 'emit-caching metatypes applyp)))
-    (multiple-value-bind (mask size)
-	(compute-cache-parameters nkeys t (or cache 2))
-      (unless cache (setq cache (get-cache size)))
-      (notice-dfun-state generic-function '(caching) nkeys t) ;****
-      (update-dfun
-	generic-function
-	(funcall constructor
-		 field cache mask size
-		 #'(lambda (&rest args) 
-		     (declare (pcl-fast-call))
-		     (caching-miss generic-function args field cache)))
-	cache))))
+	 (cache (or cache (get-cache nkeys t #'caching-limit-fn 2)))
+	 (dfun-info (caching-dfun-info cache)))
+    (values
+     (funcall (get-dfun-constructor 'emit-caching metatypes applyp)
+	      (cache-field cache) (cache-vector cache) 
+	      (cache-mask cache) (cache-size cache)
+	      #'(lambda (&rest args)
+		  (declare (pcl-fast-call))
+		  (caching-miss generic-function args dfun-info)))
+     cache
+     dfun-info)))
 
+(defun make-final-caching-dfun (generic-function classes-list new-class)
+  (let ((cache (make-final-ordinary-dfun-internal 
+		generic-function t #'caching-limit-fn
+		classes-list new-class)))
+    (make-caching-dfun generic-function cache)))
 
 (defun caching-limit-fn (nlines)
   (default-limit-fn nlines))
 
+(defun use-constant-value-dfun-p (gf)
+  (let ((methods (generic-function-methods gf))
+	(default '(unknown)))
+    (and (null (arg-info-applyp (gf-arg-info gf)))
+	 (compute-applicable-methods-emf-std-p gf)
+	 (< 1 (length methods))
+	 (some #'(lambda (method)
+		   (every #'(lambda (specl) (eq specl *the-class-t*))
+			  (method-specializers method)))
+	       methods)
+	 (notany #'(lambda (method)
+		     (or (some #'eql-specializer-p (method-specializers method))
+			 (eq (getf (method-function-plist (method-function method))
+				   :constant-value default)
+			     default)))
+		methods))))
+
+(defun make-constant-value-dfun (generic-function &optional cache)
+  (let* ((arg-info (gf-arg-info generic-function))
+	 (metatypes (arg-info-metatypes arg-info))
+	 (nkeys (arg-info-nkeys arg-info))
+	 (cache (or cache (get-cache nkeys t #'caching-limit-fn 2)))
+	 (dfun-info (constant-value-dfun-info cache)))
+    (values
+     (funcall (get-dfun-constructor 'emit-constant-value metatypes)
+	      (cache-field cache) (cache-vector cache) 
+	      (cache-mask cache) (cache-size cache)
+	      #'(lambda (&rest args)
+		  (declare (pcl-fast-call))
+		  (constant-value-miss generic-function args dfun-info)))
+     cache
+     dfun-info)))
+
+(defun make-final-constant-value-dfun (generic-function classes-list new-class)
+  (let ((cache (make-final-ordinary-dfun-internal 
+		generic-function :constant-value #'caching-limit-fn
+		classes-list new-class)))
+    (make-constant-value-dfun generic-function cache)))
+
+(defun make-final-ordinary-dfun-internal (generic-function valuep limit-fn
+							   classes-list new-class)
+  (let* ((arg-info (gf-arg-info generic-function))
+	 (nkeys (arg-info-nkeys arg-info))
+	 (new-class (and new-class
+			 (equal (type-of (gf-dfun-info generic-function))
+				(cond ((eq valuep t) 'caching)
+				      ((eq valuep :constant-value) 'constant-value)
+				      ((null valuep) 'checking)))
+			 new-class))
+	 (cache (if new-class
+		    (copy-cache (gf-dfun-cache generic-function))
+		    (get-cache nkeys (not (null valuep)) limit-fn 4))))
+      (make-emf-cache generic-function valuep cache classes-list new-class)))
+
+(defun use-caching-dfun-p (gf)
+  (some #'method-function-for-caching-p (generic-function-methods gf)))
+
+(defun use-dispatch-dfun-p (gf)
+  (unless (use-caching-dfun-p gf)
+    (let* ((methods (generic-function-methods gf))
+	   (arg-info (gf-arg-info gf))
+	   (mt (arg-info-metatypes arg-info))
+	   (nreq (length mt)))
+      ;;Is there a position at which every specializer is eql or non-standard?
+      (dotimes (i nreq nil)
+	(when (not (eq 't (nth i mt)))
+	  (let ((some-std-class-specl-p nil))
+	    (dolist (method methods)
+	      (let ((specl (nth i (method-specializers method))))
+		(when (and (not (eql-specializer-p specl))
+			   (let ((sclass (specializer-class specl)))
+			     (or (null (class-finalized-p sclass))
+				 (member *the-class-standard-object*
+					 (class-precedence-list sclass)))))
+		  (setq some-std-class-specl-p t))))
+	    (unless some-std-class-specl-p
+	      (return-from use-dispatch-dfun-p t))))))))
+
+(defvar *lazy-dispatch-dfun-compute-p* t)
+(defvar *lazy-dfun-compute-p* nil)
+
+(defun make-dispatch-dfun (gf)
+  (values (get-dispatch-function gf) nil (dispatch-dfun-info)))
+
+(defun make-final-dispatch-dfun (gf)
+  (if *lazy-dispatch-dfun-compute-p*
+      (values (let ((*lazy-dfun-compute-p* t))
+		(make-initial-dfun gf))
+	      nil nil)
+      (make-dispatch-dfun gf)))
+
+(defun before-precompile-random-code-segments ()
+  (dolist (gf (gfs-of-type 'dispatch))
+    (dfun-update gf #'make-dispatch-dfun)))
 
+(defvar *dfun-miss-gfs-on-stack* ())
+
+(defmacro dfun-miss ((gf args wrappers invalidp nfunction 
+		      &optional type index caching-p applicable)
+		     &body body)
+  (unless applicable (setq applicable (gensym)))
+  `(multiple-value-bind (,wrappers ,invalidp ,nfunction ,applicable 
+				   ,@(when type `(,type ,index)))
+       (cache-miss-values ,gf ,args ',(cond (type 'accessor)
+					    (caching-p 'caching)
+					    (t 'checking)))
+     (when (and ,applicable (not (memq ,gf *dfun-miss-gfs-on-stack*)))
+       (let ((*dfun-miss-gfs-on-stack* (cons ,gf *dfun-miss-gfs-on-stack*)))
+	 ,@body))
+     (apply ,nfunction ,args)))
 
 ;;;
 ;;; The dynamically adaptive method lookup algorithm is implemented is
@@ -463,286 +575,252 @@ And so, we are saved.
 ;;; simply select a new cache or cache field.  Those are not considered
 ;;; as state transitions.
 ;;; 
+(defun make-initial-dfun (gf)
+  (if (or *lazy-dfun-compute-p* (not (compute-applicable-methods-emf-std-p gf)))
+      #'(lambda (&rest args)
+	  #+Genera (declare (dbg:invisible-frame :pcl-internals))
+	  (initial-dfun args gf))
+      (make-final-dfun gf (precompute-effective-methods gf t))))
+
 (defun initial-dfun (args generic-function)
   #+Genera (declare (dbg:invisible-frame :pcl-internals))
-  (protect-cache-miss-code generic-function
-			   args
-    (multiple-value-bind (wrappers invalidp nfunction applicable)
-	(cache-miss-values generic-function args)
-      (multiple-value-bind (ntype nindex)
-	  (accessor-miss-values generic-function applicable args)
-	(cond ((null applicable)
-	       (apply #'no-applicable-method generic-function args))
-	      (invalidp
-	       (apply nfunction args))
-	      ((and ntype nindex)
-	       (ecase ntype
-		 (reader (update-to-one-class-readers-dfun generic-function wrappers nindex))
-		 (writer (update-to-one-class-writers-dfun generic-function wrappers nindex)))
-	       (apply nfunction args))
-	      (ntype
-	       (apply nfunction args))
-	      (t
-	       (update-to-checking-dfun generic-function nfunction)
-	       (apply nfunction args)))))))
+  (dfun-miss (generic-function args wrappers invalidp nfunction ntype nindex)
+    (cond (invalidp)
+	  ((and ntype nindex)
+	   (dfun-update generic-function
+			#'make-one-class-accessor-dfun ntype wrappers nindex))
+	  (t
+	   (dfun-update generic-function #'make-checking-dfun
+			;; nfunction is suitable only for caching, have to do this:
+			(multiple-value-bind (w i function)
+			    (cache-miss-values generic-function args 'checking)
+			  (declare (ignore w i))
+			  function))))))
 
-(defun accessor-miss (gf ostate otype new object oindex ow0 ow1 field cache)
-  (declare (ignore ow1))
-  (let ((args (ecase otype			;The congruence rules assure
+(defun make-final-dfun (gf &optional classes-list)
+  (multiple-value-bind (dfun cache info)
+      (make-final-dfun-internal gf classes-list)
+    (set-dfun gf dfun cache info)))
+
+(defun make-final-dfun-internal (gf &optional classes-list)
+  (let ((methods (generic-function-methods gf)) type
+	(new-class *new-class*) (*new-class* nil))
+    (cond ((null methods)
+	   #'(lambda (&rest args)
+	       (apply #'no-applicable-method gf args)))
+	  ((setq type (cond ((every #'standard-reader-method-p methods)
+			     'reader)
+			    ((every #'standard-writer-method-p methods)
+			     'writer)))
+	   (with-eq-hash-table (table)
+	     (multiple-value-bind (table all-index first second size no-class-slots-p)
+		 (make-accessor-table gf type table)
+	       (if table
+		   (cond ((= size 1)
+			  (let ((w (class-wrapper first)))
+			    (make-one-class-accessor-dfun gf type w all-index)))
+			 ((and (= size 2) (or (integerp all-index) (consp all-index)))
+			  (let ((w0 (class-wrapper first))
+				(w1 (class-wrapper second)))
+			    (make-two-class-accessor-dfun gf type w0 w1 all-index)))
+			 ((or (integerp all-index) (consp all-index))
+			  (make-final-one-index-accessor-dfun 
+			   gf type all-index table))
+			 (no-class-slots-p
+			  (make-final-n-n-accessor-dfun gf type table))
+			 (t
+			  (make-final-caching-dfun gf classes-list new-class)))
+		   (make-final-caching-dfun gf classes-list new-class)))))
+	  ((use-constant-value-dfun-p gf)
+	   (make-final-constant-value-dfun gf classes-list new-class))
+	  ((use-dispatch-dfun-p gf)
+	   (make-final-dispatch-dfun gf))
+	  ((let ((specls (method-specializers (car methods))))
+	     (and (every #'(lambda (method)
+			     (and (equal specls (method-specializers method))))
+			 methods)
+		  (not (use-caching-dfun-p gf))))
+	   (let ((function (get-secondary-dispatch-function gf methods nil)))
+	     (make-final-checking-dfun gf function classes-list new-class)))
+	  (t
+	   (make-final-caching-dfun gf classes-list new-class)))))
+
+(defun accessor-miss (gf new object dfun-info)
+  (let* ((ostate (type-of dfun-info))
+	 (otype (dfun-info-accessor-type dfun-info))
+	 oindex ow0 ow1 cache
+	 (args (ecase otype			;The congruence rules assure
 		(reader (list object))		;us that this is safe despite
 		(writer (list new object)))))	;not knowing the new type yet.
-    
-    (protect-cache-miss-code gf
-			     args
-      (multiple-value-bind (wrappers invalidp nfunction applicable)
-	  (cache-miss-values gf args)
-	(multiple-value-bind (ntype nindex)
-	    (accessor-miss-values gf applicable args)
-	  ;;
-	  ;; The following lexical functions change the state of the
-	  ;; dfun to that which is their name.  They accept arguments
-	  ;; which are the parameters of the new state, and get other
-	  ;; information from the lexical variables bound above.
-	  ;; 
-	  (flet ((two-class (index w0 w1)
-		   (when (zerop (random 2)) (psetf w0 w1 w1 w0))
-		   (ecase ntype
-		     (reader (update-to-two-class-readers-dfun gf w0 w1 index))
-		     (writer (update-to-two-class-writers-dfun gf w0 w1 index))
-		     ))
-		 (one-index (index &optional field cache)
-		   (ecase ntype
-		     (reader
-		       (update-to-one-index-readers-dfun gf index field cache))
-		     (writer
-		       (update-to-one-index-writers-dfun gf index field cache))
-		     ))
-		 (n-n (&optional field cache)
-		   (ecase ntype
-		     (reader (update-to-n-n-readers-dfun gf field cache))
-		     (writer (update-to-n-n-writers-dfun gf field cache))))
-		 (checking ()
-		   (update-to-checking-dfun gf nfunction))
-		 ;;
-		 ;;
-		 ;;		 
-		 (do-fill (valuep limit-fn update-fn)
-		   (multiple-value-bind (nfield ncache)
-		       (fill-cache field cache
-				   1 valuep
-				   limit-fn wrappers nindex)
-		     (unless (and (= nfield field)
-				  (eq ncache cache))
-		       (funcall update-fn nfield ncache)))))
-
-	    (cond ((null nfunction)
-                   (apply #'no-applicable-method gf args))
-		  ((null ntype)
-		   (checking)
-		   (apply nfunction args))
-                  ((or invalidp
-                       (null nindex))
-                   (apply nfunction args))
-		  ((not (or (std-instance-p object)
-			    (fsc-instance-p object)))
-		   (checking)
-		   (apply nfunction args))
-		  ((neq ntype otype)
-		   (checking)
-		   (apply nfunction args))
-		  (t
-		   (ecase ostate
-		     (one-class
-		       (if (eql nindex oindex)
-			   (two-class nindex ow0 wrappers)
-			   (n-n)))
-		     (two-class
-		       (if (eql nindex oindex)
-			   (one-index nindex)
-			   (n-n)))
-		     (one-index
-		       (if (eql nindex oindex)
-			   (do-fill nil
-				    #'one-index-limit-fn
-				    #'(lambda (nfield ncache)
-					(one-index nindex nfield ncache)))
-			   (n-n)))
-		     (n-n
-		       (unless (consp nindex)
-			 (do-fill t
-				  #'n-n-accessors-limit-fn
-				  #'n-n))))
-		   (apply nfunction args)))))))))
-
-
-
-(defun checking-miss (generic-function args ofunction field cache)
-  (protect-cache-miss-code generic-function
-			   args
-    (let* ((arg-info (gf-arg-info generic-function))
-	   (nkeys (arg-info-nkeys arg-info)))
-      (multiple-value-bind (wrappers invalidp nfunction)
-	  (cache-miss-values generic-function args)
-	(cond (invalidp
-	       (apply nfunction args))
-	      ((null nfunction)
-	       (apply #'no-applicable-method generic-function args))
-	      ((eq ofunction nfunction)
-	       (multiple-value-bind (nfield ncache)
-		   (fill-cache field cache nkeys nil #'checking-limit-fn wrappers nil)
-		 (unless (and (= nfield field)
-			      (eq ncache cache))
-		   (update-to-checking-dfun generic-function
-					    nfunction nfield ncache)))
-	       (apply nfunction args))
+    (dfun-miss (gf args wrappers invalidp nfunction ntype nindex)
+      ;;
+      ;; The following lexical functions change the state of the
+      ;; dfun to that which is their name.  They accept arguments
+      ;; which are the parameters of the new state, and get other
+      ;; information from the lexical variables bound above.
+      ;; 
+      (flet ((two-class (index w0 w1)
+	       (when (zerop (random 2)) (psetf w0 w1 w1 w0))
+	       (dfun-update gf #'make-two-class-accessor-dfun ntype w0 w1 index))
+	     (one-index (index &optional cache)
+	       (dfun-update gf #'make-one-index-accessor-dfun ntype index cache))
+	     (n-n (&optional cache)
+	       (if (consp nindex)
+		   (dfun-update gf #'make-checking-dfun nfunction)
+		   (dfun-update gf #'make-n-n-accessor-dfun ntype cache)))
+	     (caching () ; because cached accessor emfs are much faster for accessors
+	       (dfun-update gf #'make-caching-dfun))
+	     ;;
+	     (do-fill (update-fn)
+	       (let ((ncache (fill-cache cache wrappers nindex)))
+		 (unless (eq ncache cache)
+		   (funcall update-fn ncache)))))
+	(cond ((null ntype)
+	       (caching))
+	      ((or invalidp
+		   (null nindex)))
+	      ((not (or (std-instance-p object)
+			(fsc-instance-p object)))
+	       (caching))
+	      ((or (neq ntype otype) (listp wrappers))
+	       (caching))
 	      (t
-	       (update-to-caching-dfun generic-function)
-	       (apply nfunction args)))))))
+	       (ecase ostate
+		 (one-class
+		  (setq oindex (dfun-info-index dfun-info))
+		  (setq ow0 (dfun-info-wrapper0 dfun-info))
+		  (unless (eq ow0 wrappers)
+		    (if (eql nindex oindex)
+			(two-class nindex ow0 wrappers)
+			(n-n))))
+		 (two-class
+		  (setq oindex (dfun-info-index dfun-info))
+		  (setq ow0 (dfun-info-wrapper0 dfun-info))
+		  (setq ow1 (dfun-info-wrapper1 dfun-info))
+		  (unless (or (eq ow0 wrappers) (eq ow1 wrappers))
+		    (if (eql nindex oindex)
+			(one-index nindex)
+			(n-n))))
+		 (one-index
+		  (setq oindex (dfun-info-index dfun-info))
+		  (setq cache (dfun-info-cache dfun-info))
+		  (if (eql nindex oindex)
+		      (do-fill #'(lambda (ncache)
+				   (one-index nindex ncache)))
+		      (n-n)))
+		 (n-n
+		  (setq cache (dfun-info-cache dfun-info))
+		  (if (consp nindex)
+		      (caching)
+		      (do-fill #'n-n))))))))))
 
-(defun caching-miss (generic-function args ofield ocache)
-  (protect-cache-miss-code generic-function
-			   args
-    (let* ((arg-info (gf-arg-info generic-function))
-	   (nkeys (arg-info-nkeys arg-info)))
-      (multiple-value-bind (wrappers invalidp function)
-	  (cache-miss-values generic-function args)
-	(cond (invalidp
-	       (apply function args))
-	      ((null function)
-	       (apply #'no-applicable-method generic-function args))
-	      (t
-	       (multiple-value-bind (nfield ncache)
-		   (fill-cache ofield ocache nkeys t #'caching-limit-fn wrappers function)
-		 (unless (and (= nfield ofield)
-			      (eq ncache ocache))
-		   (update-to-caching-dfun generic-function nfield ncache)))
-	       (apply function args)))))))
+(defun checking-miss (generic-function args dfun-info)
+  (let ((ofunction (dfun-info-function dfun-info))
+	(cache (dfun-info-cache dfun-info)))
+    (dfun-miss (generic-function args wrappers invalidp nfunction)
+      (cond (invalidp)
+	    ((eq ofunction nfunction)
+	     (let ((ncache (fill-cache cache wrappers nil)))
+	       (unless (eq ncache cache)
+		 (dfun-update generic-function #'make-checking-dfun 
+			      nfunction ncache))))
+	    (t
+	     (dfun-update generic-function #'make-caching-dfun))))))
+
+(defun caching-miss (generic-function args dfun-info)
+  (let ((ocache (dfun-info-cache dfun-info)))
+    (dfun-miss (generic-function args wrappers invalidp function nil nil t)
+      (cond (invalidp)
+	    (t
+	     (let ((ncache (fill-cache ocache wrappers function)))
+	       (unless (eq ncache ocache)
+		 (dfun-update generic-function 
+			      #'make-caching-dfun ncache))))))))
+
+(defun constant-value-miss (generic-function args dfun-info)
+  (let ((ocache (dfun-info-cache dfun-info)))
+    (dfun-miss (generic-function args wrappers invalidp function nil nil t)
+      (cond (invalidp)
+	    (t
+	     (let* ((value (getf (method-function-plist function) :constant-value))
+		    (ncache (fill-cache ocache wrappers value)))
+	       (unless (eq ncache ocache)
+		 (dfun-update generic-function
+			      #'make-constant-value-dfun ncache))))))))
 
 
-;;;
-;;; Some useful support functions which are shared by the implementations of
-;;; the different kinds of dfuns.
-;;;
+
+(defvar dfun-count nil)
+(defvar dfun-list nil)
+(defvar *minimum-cache-size-to-list*)
+
+(defun list-dfun (gf)
+  (let* ((sym (type-of (gf-dfun-info gf)))
+	 (a (assq sym dfun-list)))
+    (unless a
+      (push (setq a (list sym)) dfun-list))
+    (push (generic-function-name gf) (cdr a))))
+
+(defun list-all-dfuns ()
+  (setq dfun-list nil)
+  (map-all-generic-functions #'list-dfun)
+  dfun-list)
+
+(defun list-large-cache (gf)
+  (let* ((sym (type-of (gf-dfun-info gf)))
+	 (cache (gf-dfun-cache gf)))
+    (when cache
+      (let ((size (cache-size cache)))
+	(when (>= size *minimum-cache-size-to-list*)
+	  (let ((a (assoc size dfun-list)))
+	    (unless a
+	      (push (setq a (list size)) dfun-list))
+	    (push (let ((name (generic-function-name gf)))
+		    (if (eq sym 'caching) name (list name sym)))
+		  (cdr a))))))))
+
+(defun list-large-caches (&optional (*minimum-cache-size-to-list* 130))
+  (setq dfun-list nil)
+  (map-all-generic-functions #'list-large-cache)
+  (setq dfun-list (sort dfun-list #'< :key #'car))
+  (mapc #'print dfun-list)
+  (values))
 
 
+(defun count-dfun (gf)
+  (let* ((sym (type-of (gf-dfun-info gf)))
+	 (cache (gf-dfun-cache gf))
+	 (a (assq sym dfun-count)))
+    (unless a
+      (push (setq a (list sym 0 nil)) dfun-count))
+    (incf (cadr a))
+    (when cache
+      (let* ((size (cache-size cache))
+	     (b (assoc size (third a))))
+	(unless b 
+	  (push (setq b (cons size 0)) (third a)))
+	(incf (cdr b))))))
 
-;;;
-;;; Given a generic function and a set of arguments to that generic function,
-;;; returns a mess of values.
-;;;
-;;;  <wrappers>   Is a single wrapper if the generic function has only
-;;;               one key, that is arg-info-nkeys of the arg-info is 1.
-;;;               Otherwise a list of the wrappers of the specialized
-;;;               arguments to the generic function.
-;;;
-;;;               Note that all these wrappers are valid.  This function
-;;;               does invalid wrapper traps when it finds an invalid
-;;;               wrapper and then returns the new, valid wrapper.
-;;;
-;;;  <invalidp>   True if any of the specialized arguments had an invalid
-;;;               wrapper, false otherwise.
-;;;
-;;;  <function>   The compiled effective method function for this set of
-;;;               arguments.  Gotten from get-secondary-dispatch-function
-;;;               so effective-method-function caching is in effect, and
-;;;               that is important since it is what keeps us in checking
-;;;               dfun state when possible.
-;;;
-;;;  <type>       READER or WRITER when the only method that would be run
-;;;               is a standard reader or writer method.  To be specific,
-;;;               the value is READER when the method combination is eq to
-;;;               *standard-method-combination*; there are no applicable
-;;;               :before, :after or :around methods; and the most specific
-;;;               primary method is a standard reader method.
-;;;
-;;;  <index>      If <type> is READER or WRITER, and the slot accessed is
-;;;               an :instance slot, this is the index number of that slot
-;;;               in the object argument.
-;;;
-;;;  <applicable> Sorted list of applicable methods.
-;;;
-;;;
-(defun cache-miss-values (generic-function args)
-  (declare (values wrappers invalidp function applicable))
-  (multiple-value-bind (function appl arg-info)
-      (get-secondary-dispatch-function generic-function args)
-    (multiple-value-bind (wrappers invalidp)
-	(get-wrappers generic-function args arg-info)
-      (values wrappers invalidp 
-	      (cache-miss-values-function generic-function function)
-	      appl))))
+(defun count-all-dfuns ()
+  (setq dfun-count (mapcar #'(lambda (type) (list type 0 nil))
+			   '(ONE-CLASS TWO-CLASS DEFAULT-METHOD-ONLY
+			     ONE-INDEX N-N CHECKING CACHING 
+			     DISPATCH)))
+  (map-all-generic-functions #'count-dfun)
+  (mapc #'(lambda (type+count+sizes)
+	    (setf (third type+count+sizes)
+		  (sort (third type+count+sizes) #'< :key #'car)))
+	dfun-count)
+  (mapc #'(lambda (type+count+sizes)
+	    (format t "~&There are ~4d dfuns of type ~s"
+		    (cadr type+count+sizes) (car type+count+sizes))
+	    (format t "~%   ~S~%" (caddr type+count+sizes)))
+	dfun-count)
+  (values))
 
-(defun get-wrappers (generic-function args &optional arg-info)
-  (let* ((invalidp nil)
-	 (wrappers ())
-	 (arg-info (or arg-info (gf-arg-info generic-function)))
-	 (metatypes (arg-info-metatypes arg-info))
-	 (nkeys (arg-info-nkeys arg-info)))
-    (flet ((get-valid-wrapper (x)
-	     (let ((wrapper (wrapper-of x)))
-	       (cond ((invalid-wrapper-p wrapper)
-		      (setq invalidp t)
-		      (check-wrapper-validity x))
-		     (t wrapper)))))
-      (setq wrappers
-	    (block collect-wrappers
-	      (gathering1 (collecting)
-		(iterate ((arg (list-elements args))
-			  (metatype (list-elements metatypes)))
-		  (when (neq metatype 't)
-		    (if (= nkeys 1)
-			(return-from collect-wrappers
-			  (get-valid-wrapper arg))
-			(gather1 (get-valid-wrapper arg))))))))
-      (values wrappers invalidp))))
-
-(defun cache-miss-values-function (generic-function function)
-  #+(and excl sun4) 
-  (when (and (consp function) 
-	     (eq 'lambda (car function)))
-    (setq function (comp::.primcall 'make-interp-function-obj function)))
-  (if (eq *generate-random-code-segments* generic-function)
-      (progn
-	(setq *generate-random-code-segments* nil) 
-	#'(lambda (&rest args) (declare (ignore args)) nil))
-      function))
-
-(defun generate-random-code-segments (generic-function)
-  (dolist (arglist (generate-arglists generic-function))
-    (let ((*generate-random-code-segments* generic-function))
-      (apply generic-function arglist))))
-
-(defun generate-arglists (generic-function)
-  ;;Generate arglists using class-prototypes and specializer-objects
-  ;;to get all the "different" values that could be returned by 
-  ;;get-secondary-dispatch-function for this generic-function.
-  nil)
-
-(defun accessor-miss-values (generic-function applicable args)
-  (declare (values type index))
-  (let ((type (and (eq (generic-function-method-combination generic-function)
-		       *standard-method-combination*)
-		   (every #'(lambda (m) (null (method-qualifiers m))) applicable)
-		   (let ((method (car applicable)))
-		     (cond ((standard-reader-method-p method)
-			    (and (optimize-slot-value-by-class-p
-				  (class-of (car args))
-				  (accessor-method-slot-name method)
-				  'slot-value)
-				 'reader))
-			   ((standard-writer-method-p method)
-			    (and (optimize-slot-value-by-class-p
-				  (class-of (cadr args))
-				  (accessor-method-slot-name method)
-				  'set-slot-value)
-				 'writer))
-			   (t nil))))))
-    (values type
-	    (and type
-		 (let ((wrapper (wrapper-of (case type
-					      (reader (car args))
-					      (writer (cadr args)))))
-		       (slot-name (accessor-method-slot-name (car applicable))))
-		   (or (instance-slot-index wrapper slot-name)
-		       (assq slot-name (wrapper-class-slots wrapper))))))))
-
+(defun gfs-of-type (type)
+  (let ((gf-list nil))
+    (map-all-generic-functions #'(lambda (gf)
+				   (when (eq type (type-of (gf-dfun-info gf)))
+				     (push gf gf-list))))
+    gf-list))

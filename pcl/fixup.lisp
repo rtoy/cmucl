@@ -27,9 +27,8 @@
 
 (in-package 'pcl)
 
-(eval-when (compile load eval)
-  (fix-early-generic-functions)
-  (setq *boot-state* 'complete))
+(fix-early-generic-functions)
+(setq *boot-state* 'complete)
 
 #+Lispm
 (eval-when (load eval)

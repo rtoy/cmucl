@@ -34,167 +34,25 @@
 (defvar *defmethod-times*  '(load eval))
 (defvar *defgeneric-times* '(load eval))
 
+(defvar *boot-state* ())			;NIL
+						;EARLY
+						;BRAID
+						;COMPLETE
+
 )
 
-
-;;;
-;;; Convert a function name to its standard setf function name.  We have to
-;;; do this hack because not all Common Lisps have yet converted to having
-;;; setf function specs.
-;;;
-;;; In a port that does have setf function specs you can use those just by
-;;; making the obvious simple changes to these functions.  The rest of PCL
-;;; believes that there are function names like (SETF <foo>), this is the
-;;; only place that knows about this hack.
-;;;
-(eval-when (compile load eval)
-
-#-cmu
-(defvar *setf-function-names* (make-hash-table :size 200 :test #'eq))
-
-#-cmu
-(defun get-setf-function-name (name)
-  (or (gethash name *setf-function-names*)
-      (setf (gethash name *setf-function-names*)
-	    (intern (format nil
-			    "SETF ~A ~A"
-			    (package-name (symbol-package name))
-			    (symbol-name name))
-		    *the-pcl-package*))))
-
-;;;
-;;; Call this to define a setf macro for a function with the same behavior as
-;;; specified by the SETF function cleanup proposal.  Specifically, this will
-;;; cause: (SETF (FOO a b) x) to expand to (|SETF FOO| x a b).
-;;;
-;;; do-standard-defsetf                  A macro interface for use at top level
-;;;                                      in files.  Unfortunately, users may
-;;;                                      have to use this for a while.
-;;;                                      
-;;; do-standard-defsetfs-for-defclass    A special version called by defclass.
-;;; 
-;;; do-standard-defsetf-1                A functional interface called by the
-;;;                                      above, defmethod and defgeneric.
-;;;                                      Since this is all a crock anyways,
-;;;                                      users are free to call this as well.
-;;;
-(defmacro do-standard-defsetf (&rest function-names)
-  `(eval-when (compile load eval)
-     (dolist (fn-name ',function-names) (do-standard-defsetf-1 fn-name))))
-
-(defun do-standard-defsetfs-for-defclass (accessors)
-  (dolist (name accessors) (do-standard-defsetf-1 name)))
-
-(defun do-standard-defsetf-1 (function-name)
-  #+cmu
-  (declare (ignore function-name))
-  #-cmu
-  (unless (setfboundp function-name)
-    (let* ((setf-function-name (get-setf-function-name function-name)))
-    
-      #+Genera
-      (let ((fn #'(lambda (form)
-		    (lt::help-defsetf
-		      '(&rest accessor-args) '(new-value) function-name 'nil
-		      `(`(,',setf-function-name ,new-value .,accessor-args))
-		      form))))
-	(setf (get function-name 'lt::setf-method) fn
-	      (get function-name 'lt::setf-method-internal) fn))
-
-      #+Lucid
-      (lucid::set-simple-setf-method 
-	function-name
-	#'(lambda (form new-value)
-	    (let* ((bindings (mapcar #'(lambda (x) `(,(gensym) ,x))
-				     (cdr form)))
-		   (vars (mapcar #'car bindings)))
-	      ;; This may wrap spurious LET bindings around some form,
-	      ;;   but the PQC compiler will unwrap then.
-	      `(LET (,.bindings)
-		 (,setf-function-name ,new-value . ,vars)))))
-      
-      #+kcl
-      (let ((helper (gensym)))
-	(setf (macro-function helper)
-	      #'(lambda (form env)
-		  (declare (ignore env))
-		  (let* ((loc-args (butlast (cdr form)))
-			 (bindings (mapcar #'(lambda (x) `(,(gensym) ,x)) loc-args))
-			 (vars (mapcar #'car bindings)))
-		    `(let ,bindings
-		       (,setf-function-name ,(car (last form)) ,@vars)))))
-	(eval `(defsetf ,function-name ,helper)))
-      #+Xerox
-      (flet ((setf-expander (body env)
-	       (declare (ignore env))
-	       (let ((temps
-		       (mapcar #'(lambda (x) (declare (ignore x)) (gensym))
-			       (cdr body)))
-		     (forms (cdr body))
-		     (vars (list (gensym))))
-		 (values temps
-			 forms
-			 vars
-			 `(,setf-function-name ,@vars ,@temps)
-			 `(,function-name ,@temps)))))
-	(let ((setf-method-expander (intern (concatenate 'string
-						         (symbol-name function-name)
-						         "-setf-expander")
-				     (symbol-package function-name))))
-	  (setf (get function-name :setf-method-expander) setf-method-expander
-		(symbol-function setf-method-expander) #'setf-expander)))
-      
-      #-(or Genera Lucid kcl Xerox)
-      (eval `(defsetf ,function-name (&rest accessor-args) (new-value)
-	       `(,',setf-function-name ,new-value ,@accessor-args)))
-      
-      )))
-
-#-cmu
-(defun setfboundp (symbol)
-  #+Genera (not (null (get-properties (symbol-plist symbol)
-				      'lt::(derived-setf-function trivial-setf-method
-					    setf-equivalence setf-method))))
-  #+Lucid  (locally
-	     (declare (special lucid::*setf-inverse-table*
-			       lucid::*simple-setf-method-table*
-			       lucid::*setf-method-expander-table*))
-	     (or (gethash symbol lucid::*setf-inverse-table*)
-		 (gethash symbol lucid::*simple-setf-method-table*)
-		 (gethash symbol lucid::*setf-method-expander-table*)))
-  #+kcl    (or (get symbol 'si::setf-method)
-	       (get symbol 'si::setf-update-fn)
-	       (get symbol 'si::setf-lambda))
-  #+Xerox  (or (get symbol :setf-inverse)
-	       (get symbol 'il:setf-inverse)
-	       (get symbol 'il:setfn)
-	       (get symbol :shared-setf-inverse)
-	       (get symbol :setf-method-expander)
-	       (get symbol 'il:setf-method-expander))
-
-  #+:coral (or (get symbol 'ccl::setf-inverse)
-	       (get symbol 'ccl::setf-method-expander))
-  
-  #-(or Genera Lucid KCL Xerox :coral) nil)
-
-);eval-when
-
-
-;;;
-;;; PCL, like user code, must endure the fact that we don't have a properly
-;;; working setf.  Many things work because they get mentioned by a defclass
-;;; or defmethod before they are used, but others have to be done by hand.
-;;; 
-(do-standard-defsetf
-  class-wrapper					;***
-  generic-function-name
-  method-function-plist
-  method-function-get
-  gdefinition
-  slot-value-using-class
+(eval-when (load eval)
+  (when (eq *boot-state* 'complete)
+    (error "Trying to load (or compile) PCL in an environment in which it~%~
+            has already been loaded.  This doesn't work, you will have to~%~
+            get a fresh lisp (reboot) and then load PCL."))
+  (when *boot-state*
+    (cerror "Try loading (or compiling) PCL anyways."
+	    "Trying to load (or compile) PCL in an environment in which it~%~
+             has already been partially loaded.  This may not work, you may~%~
+             need to get a fresh lisp (reboot) and then load PCL."))
   )
 
-(defsetf slot-value set-slot-value)
 
 
 ;;;
@@ -210,13 +68,12 @@
 ;;; has a 'real' function spec mechanism can use that instead and in that way
 ;;; get rid of setf generic function names.
 ;;;
-#-cmu
 (defmacro parse-gspec (spec
 		       (non-setf-var . non-setf-case)
 		       (setf-var . setf-case))
   (declare (indentation 1 1))
   (once-only (spec)
-    `(cond ((symbolp ,spec)
+    `(cond (#-setf (symbolp ,spec) #+setf t
 	    (let ((,non-setf-var ,spec)) ,@non-setf-case))
 	   ((and (listp ,spec)
 		 (eq (car ,spec) 'setf)
@@ -236,21 +93,19 @@
 ;;; function object even when it is traced.
 ;;;
 (defun unencapsulated-fdefinition (symbol)
-  #+cmu (fdefinition symbol)
   #+Lispm (si:fdefinition (si:unencapsulate-function-spec symbol))
   #+Lucid (lucid::get-unadvised-procedure (symbol-function symbol))
   #+excl  (or (excl::encapsulated-basic-definition symbol)
 	      (symbol-function symbol))
   #+xerox (il:virginfn symbol)
-  
-  #-(or cmu Lispm Lucid excl Xerox) (symbol-function symbol))
+  #+setf (fdefinition symbol)
+  #-(or Lispm Lucid excl Xerox setf) (symbol-function symbol))
 
 ;;;
 ;;; If symbol names a function which is traced or advised, redefine
 ;;; the `real' definition without affecting the advise.
 ;;;
 (defun fdefine-carefully (symbol new-definition)
-  #+cmu (setf (fdefinition symbol) new-definition)
   #+Lispm (si:fdefine symbol new-definition t t)
   #+Lucid (let ((lucid::*redefinition-action* nil))
 	    (setf (symbol-function symbol) new-definition))
@@ -265,131 +120,220 @@
             (setf (symbol-function symbol) new-definition)
             (when brokenp (xcl:rebreak-function symbol))
             (when advisedp (xcl:readvise-function symbol)))
-
-  #-(or cmu Lispm Lucid excl Xerox)
+  #+setf (setf (fdefinition symbol) new-definition)
+  #-(or Lispm Lucid excl Xerox setf)
   (setf (symbol-function symbol) new-definition)
   
   new-definition)
 
 (defun gboundp (spec)
-  #+cmu
-  (fboundp spec)
-  #-cmu
   (parse-gspec spec
     (name (fboundp name))
     (name (fboundp (get-setf-function-name name)))))
 
 (defun gmakunbound (spec)
-  #+cmu
-  (fmakunbound spec)
-  #-cmu
   (parse-gspec spec
     (name (fmakunbound name))
     (name (fmakunbound (get-setf-function-name name)))))
 
 (defun gdefinition (spec)
-  #+cmu
-  (fdefinition spec)
-  #-cmu
   (parse-gspec spec
-    (name (or (macro-function name)		;??
+    (name (or #-setf (macro-function name)		;??
 	      (unencapsulated-fdefinition name)))
     (name (unencapsulated-fdefinition (get-setf-function-name name)))))
 
-#+cmu
-(defun (setf gdefinition) (new-value spec)
-  (setf (fdefinition spec) new-value))
-
-#-cmu
-(defun SETF\ PCL\ GDEFINITION (new-value spec)
+(defun #-setf SETF\ PCL\ GDEFINITION #+setf (setf gdefinition) (new-value spec)
   (parse-gspec spec
     (name (fdefine-carefully name new-value))
     (name (fdefine-carefully (get-setf-function-name name) new-value))))
 
 
-(defun type-class (type)
-  (if (consp type)
-      (case (car type)
-	(class-eq (cadr type))
-	(eql (class-of (cadr type)))
-	(t (and (null (cdr type)) (find-class (car type) nil))))
-      (if (symbolp type)
-	  (find-class type nil)
-	  (and (class-specializer-p type)
-	       (specializer-class type)))))
+(proclaim '(special *the-class-t* 
+                    *the-class-vector* *the-class-symbol*
+                    *the-class-string* *the-class-sequence*
+                    *the-class-rational* *the-class-ratio*
+                    *the-class-number* *the-class-null* *the-class-list*
+                    *the-class-integer* *the-class-float* *the-class-cons*
+                    *the-class-complex* *the-class-character*
+                    *the-class-bit-vector* *the-class-array*
 
-(defun class-type-p (type)
-  (if (consp type)
-      (and (null (cdr type)) (find-class (car type) nil))
-      (if (symbolp type)
-	  (find-class type nil)
-	  (and (classp type) type))))
-;;;;;;
-(defun exact-class-type-p (type)
-  (if (consp type)
-      (or (eq (car type) 'class-eq) (eq (car type) 'eql))
-      (exact-class-specializer-p type)))
+                    *the-class-slot-object*
+                    *the-class-standard-object*
+                    *the-class-structure-object*
+                    *the-class-class*
+                    *the-class-method*
+                    *the-class-generic-function*
+                    *the-class-built-in-class*
+                    *the-class-slot-class*
+                    *the-class-structure-class*
+                    *the-class-standard-class*
+                    *the-class-funcallable-standard-class*
+                    *the-class-standard-method*
+                    *the-class-standard-generic-function*
+                    *the-class-standard-effective-slot-definition*
+
+                    *the-eslotd-standard-class-slots*
+                    *the-eslotd-funcallable-standard-class-slots*))
+
+(proclaim '(special *the-wrapper-of-t*
+                    *the-wrapper-of-vector* *the-wrapper-of-symbol*
+                    *the-wrapper-of-string* *the-wrapper-of-sequence*
+                    *the-wrapper-of-rational* *the-wrapper-of-ratio*
+                    *the-wrapper-of-number* *the-wrapper-of-null*
+                    *the-wrapper-of-list* *the-wrapper-of-integer*
+                    *the-wrapper-of-float* *the-wrapper-of-cons*
+                    *the-wrapper-of-complex* *the-wrapper-of-character*
+                    *the-wrapper-of-bit-vector* *the-wrapper-of-array*))
+
+(defun coerce-to-class (class &optional make-forward-referenced-class-p)
+  (if (symbolp class)
+      (or (find-class class (not make-forward-referenced-class-p))
+	  (ensure-class class))
+      class))
+
+(defun specializer-from-type (type &aux args)
+  (when (consp type)
+    (setq args (cdr type) type (car type)))
+  (cond ((symbolp type)
+	 (or (and (null args) (find-class type))
+	     (ecase type
+	       (class    (coerce-to-class (car args)))
+	       (class-eq (class-eq-specializer (coerce-to-class (car args))))
+	       (eql      (intern-eql-specializer (car args))))))
+	((specializerp type) type)))
+
+(defun type-from-specializer (specl)
+  (when (symbolp specl)
+    (setq specl (find-class specl))) ;(or (find-class specl nil) (ensure-class specl))
+  (cond ((consp specl)
+         (unless (member (car specl) '(class class-eq eql))
+           (error "~S is not a legal specializer type" specl))
+         specl)
+        ((specializerp specl)
+         (specializer-type specl))
+        (t
+         (error "~s is neither a type nor a specializer" specl))))
+
+(defun type-class (type)
+  (declare (special *the-class-t*))
+  (setq type (type-from-specializer type))
+  (if (atom type)
+      *the-class-t*
+      (case (car type)
+        (eql (class-of (cadr type)))
+        (class-eq (cadr type))
+        (class (cadr type)))))
+
+(defun class-eq-type (class)
+  (specializer-type (class-eq-specializer class)))
+
+(defun inform-type-system-about-std-class (name)
+  (let ((predicate-name (make-type-predicate-name name)))
+    (setf (symbol-function predicate-name) (make-type-predicate name))
+    (do-satisfies-deftype name predicate-name)))
+
+(defun make-type-predicate (name)
+  (let ((cell (find-class-cell name)))
+    #'(lambda (x)
+	(funcall (the function (find-class-cell-predicate cell)) x))))
+
+
+;This stuff isn't right.  Good thing it isn't used.
+;The satisfies predicate has to be a symbol.  There is no way to
+;construct such a symbol from a class object if class names change.
+(defun class-predicate (class)
+  (when (symbolp class) (setq class (find-class class)))
+  #'(lambda (object) (memq class (class-precedence-list (class-of object)))))
 
 (defun make-class-eq-predicate (class)
   (when (symbolp class) (setq class (find-class class)))
   #'(lambda (object) (eq class (class-of object))))
 
-(deftype class-eq (class)
-  `(satisfies ,(make-class-eq-predicate class)))
-
-(defun class-eq-type-p (type)
-  (if (consp type)
-      (eq (car type) 'class-eq)
-      (class-eq-specializer-p type)))
-;;;;;;
 (defun make-eql-predicate (eql-object)
   #'(lambda (object) (eql eql-object object)))
 
+#|| ; The argument to satisfies must be a symbol.  
+(deftype class (&optional class)
+  (if class
+      `(satisfies ,(class-predicate class))
+      `(satisfies ,(class-predicate 'class))))
+
+(deftype class-eq (class)
+  `(satisfies ,(make-class-eq-predicate class)))
+||#
+
 (deftype eql (type-object)
-  `(satisfies ,(make-eql-predicate type-object)))
+  `(member ,type-object))
 
-(defun eql-type-p (type)
-  (if (consp type)
-      (eq (car type) 'eql)
-      (eql-specializer-p type)))
 
-(defun type-object (type)
-  (if (consp type)
-      (cadr type)
-      (specializer-object type)))
-
-;;;;;;
-(defun not-type-p (type)
-  (and (consp type) (eq (car type) 'not)))
-
-(defun not-type (type)
-  (cadr type))
 
 ;;;
 ;;; These functions are a pale imitiation of their namesake.  They accept
 ;;; class objects or types where they should.
 ;;; 
+(defun *normalize-type (type)
+  (cond ((consp type)
+         (if (member (car type) '(not and or))
+             `(,(car type) ,@(mapcar #'*normalize-type (cdr type)))
+             (if (null (cdr type))
+                 (*normalize-type (car type))
+                 type)))
+        ((symbolp type)
+         (let ((class (find-class type nil)))
+           (if class
+               (let ((type (specializer-type class)))
+		 (if (listp type) type `(,type)))
+               `(,type))))
+        ((specializerp type)
+         (specializer-type type))
+        (t
+         (error "~s is not a type" type))))
+
+(defun unparse-type-list (tlist)
+  (mapcar #'unparse-type tlist))
+
+(defun unparse-type (type)
+  (if (atom type)
+      (if (specializerp type)
+          (unparse-type (specializer-type type))
+          type)
+      (case (car type)
+        (eql type)
+        (class-eq `(class-eq ,(class-name (cadr type))))
+        (class (class-name (cadr type)))
+        (t `(,(car type) ,@(unparse-type-list (cdr type)))))))
+
+(defun convert-to-system-type (type)
+  (case (car type)
+    ((not and or) `(,(car type) ,@(mapcar #'convert-to-system-type (cdr type))))
+    (class (class-name (cadr type))) ; it had better be a named class
+    (class-eq (class-name (cadr type))) ; this one is impossible to do right
+    (eql type)
+    (t (if (null (cdr type))
+	   (car type)
+	   type))))
+
 (defun *typep (object type)
-  (let ((specializer (or (class-type-p type) 
-			 (and (specializerp type) type))))
-    (cond (specializer
-	    (specializer-type-p object specializer))
-	  ((not-type-p type)
-	   (not (*typep object (not-type type))))
-	  (t
-	   (typep object type)))))
+  (setq type (*normalize-type type))
+  (cond ((member (car type) '(eql wrapper-eq class-eq class))
+         (specializer-applicable-using-type-p type `(eql ,object)))
+        ((eq (car type) 'not)
+         (not (*typep object (cadr type))))
+        (t
+         (typep object (convert-to-system-type type)))))
 
 (defun *subtypep (type1 type2)
-  (let ((c1 (class-type-p type1))
-	(c2 (class-type-p type2)))
-    (cond ((and c1 c2)
-	   (values (memq c2 (class-precedence-list c1)) t))
-	  ((setq c1 (or c1 (specializerp type1)))
-	   (specializer-applicable-using-type-p c1 type2))
-	  ((or (null c2) (classp c2))
-	   (subtypep type1 (if c2 (class-name c2) type2))))))
+  (setq type1 (*normalize-type type1))
+  (setq type2 (*normalize-type type2))
+  (if (member (car type2) '(eql wrapper-eq class-eq class))
+      (multiple-value-bind (app-p maybe-app-p)
+          (specializer-applicable-using-type-p type2 type1)
+        (values app-p (or app-p (not maybe-app-p))))
+      (subtypep (convert-to-system-type type1)
+		(convert-to-system-type type2))))
 
 (defun do-satisfies-deftype (name predicate)
+  #+(or :Genera (and :Lucid (not :Prime)) ExCL :coral)
   (let* ((specifier `(satisfies ,predicate))
 	 (expand-fn #'(lambda (&rest ignore)
 			(declare (ignore ignore))
@@ -404,54 +348,26 @@
 	#+ExCL
 	(setf (get name 'excl::deftype-expander) expand-fn)
 	#+:coral
-	(setf (get name 'ccl::deftype-expander) expand-fn)
-	;; This is the default for ports for which we don't know any
-	;; better.  Note that for most ports, providing this definition
-	;; should just speed up class definition.  It shouldn't have an
-	;; effect on performance of most user code.
-	(eval `(deftype ,name () '(satisfies ,predicate))))))
+	(setf (get name 'ccl::deftype-expander) expand-fn)))
+  #-(or :Genera (and :Lucid (not :Prime)) ExCL :coral)
+  ;; This is the default for ports for which we don't know any
+  ;; better.  Note that for most ports, providing this definition
+  ;; should just speed up class definition.  It shouldn't have an
+  ;; effect on performance of most user code.
+  (eval `(deftype ,name () '(satisfies ,predicate))))
 
-
-(defun make-type-predicate-name (name)
-  (intern (format nil
-		  "TYPE-PREDICATE ~A ~A"
-		  (package-name (symbol-package name))
-		  (symbol-name name))
-	  *the-pcl-package*))
-
-
-
-(proclaim '(special *the-class-t* 
-		    *the-class-vector* *the-class-symbol*
-		    *the-class-string* *the-class-sequence*
-		    *the-class-rational* *the-class-ratio*
-		    *the-class-number* *the-class-null* *the-class-list*
-		    *the-class-integer* *the-class-float* *the-class-cons*
-		    *the-class-complex* *the-class-character*
-		    *the-class-bit-vector* *the-class-array*
-
-		    *the-class-standard-object*
-		    *the-class-class*
-		    *the-class-method*
-		    *the-class-generic-function*
-		    *the-class-standard-class*
-	            *the-class-funcallable-standard-class*
-		    *the-class-standard-method*
-		    *the-class-standard-generic-function*
-	            *the-class-standard-effective-slot-definition*
-
-	            *the-eslotd-standard-class-slots*
-	            *the-eslotd-funcallable-standard-class-slots*))
-
-(proclaim '(special *the-wrapper-of-t*
-		    *the-wrapper-of-vector* *the-wrapper-of-symbol*
-		    *the-wrapper-of-string* *the-wrapper-of-sequence*
-		    *the-wrapper-of-rational* *the-wrapper-of-ratio*
-		    *the-wrapper-of-number* *the-wrapper-of-null*
-		    *the-wrapper-of-list* *the-wrapper-of-integer*
-		    *the-wrapper-of-float* *the-wrapper-of-cons*
-		    *the-wrapper-of-complex* *the-wrapper-of-character*
-		    *the-wrapper-of-bit-vector* *the-wrapper-of-array*))
+(defun make-type-predicate-name (name &optional kind)
+  (if (symbol-package name)
+      (intern (format nil
+		      "~@[~A ~]TYPE-PREDICATE ~A ~A"
+		      kind
+		      (package-name (symbol-package name))
+		      (symbol-name name))
+	      *the-pcl-package*)
+      (make-symbol (format nil
+			   "~@[~A ~]TYPE-PREDICATE ~A"
+			   kind
+			   (symbol-name name)))))
 
 
 
@@ -486,22 +402,7 @@
   (caddr (variable-declaration 'class var env)))
 
 
-(defvar *boot-state* ())			;NIL
-						;EARLY
-						;BRAID
-						;COMPLETE
 
-(eval-when (load eval)
-  (when (eq *boot-state* 'complete)
-    (error "Trying to load (or compile) PCL in an environment in which it~%~
-            has already been loaded.  This doesn't work, you will have to~%~
-            get a fresh lisp (reboot) and then load PCL."))
-  (when *boot-state*
-    (cerror "Try loading (or compiling) PCL anyways."
-	    "Trying to load (or compile) PCL in an environment in which it~%~
-             has already been partially loaded.  This may not work, you may~%~
-             need to get a fresh lisp (reboot) and then load PCL."))
-  )
 
 ;;;
 ;;; This is used by combined methods to communicate the next methods to
@@ -525,48 +426,67 @@
 (defvar *slotd-unsupplied* (list '*slotd-unsupplied*))	;***
 
 
-(defmacro define-gf-predicate (predicate &rest classes)
-  `(progn (defmethod ,predicate ((x t)) nil)
-	  ,@(mapcar #'(lambda (c) `(defmethod ,predicate ((x ,c)) t))
-		    classes)))
+(defmacro define-gf-predicate (predicate-name &rest classes)
+  `(progn 
+     (defmethod ,predicate-name ((x t)) nil)
+     ,@(mapcar #'(lambda (c) `(defmethod ,predicate-name ((x ,c)) t))
+	       classes)))
 
-(defmacro plist-value (object name)
-  `(with-slots (plist) ,object (getf plist ,name)))
+(defun make-class-predicate-name (name)
+  (intern (let ((*package* *the-pcl-package*))
+	    (format nil "~S class predicate" name))
+	  *the-pcl-package*))
 
-(defsetf plist-value (object name) (new-value)
-  (once-only (new-value)
-    `(with-slots (plist) ,object
-       (if ,new-value
-	   (setf (getf plist ,name) ,new-value)
-	   (progn (remf plist ,name) nil)))))
+(defun plist-value (object name)
+  (getf (object-plist object) name))
+
+(defun #-setf SETF\ PCL\ PLIST-VALUE #+setf (setf plist-value) (new-value object name)
+  (if new-value
+      (setf (getf (object-plist object) name) new-value)
+      (progn
+        (remf (object-plist object) name)
+        nil)))
 
 
 
 (defvar *built-in-classes*
   ;;
   ;; name       supers     subs                     cdr of cpl
-  ;;
-  '((number     (t)        (complex float rational) (t))
-    (complex    (number)   ()                       (number t))
-    (float      (number)   ()                       (number t))
+  ;; prototype
+  '(;(t         ()         (number sequence array character symbol) ())
+    (number     (t)        (complex float rational) (t))
+    (complex    (number)   ()                       (number t)
+     #c(1 1))
+    (float      (number)   ()                       (number t)
+     1.0)
     (rational   (number)   (integer ratio)          (number t))
-    (integer    (rational) ()                       (rational number t))
-    (ratio      (rational) ()                       (rational number t))
+    (integer    (rational) ()                       (rational number t)
+     1)
+    (ratio      (rational) ()                       (rational number t)
+     1/2)
 
     (sequence   (t)        (list vector)            (t))
     (list       (sequence) (cons null)              (sequence t))
-    (cons       (list)     ()                       (list sequence t))
+    (cons       (list)     ()                       (list sequence t)
+     (nil))
     
 
-    (array      (t)        (vector)                 (t))
+    (array      (t)        (vector)                 (t)
+     #2A((NIL)))
     (vector     (array
-		 sequence) (string bit-vector)      (array sequence t))
-    (string     (vector)   ()                       (vector array sequence t))
-    (bit-vector (vector)   ()                       (vector array sequence t))
-    (character  (t)        ()                       (t))
+		 sequence) (string bit-vector)      (array sequence t)
+     #())
+    (string     (vector)   ()                       (vector array sequence t)
+     "")
+    (bit-vector (vector)   ()                       (vector array sequence t)
+     #*1)
+    (character  (t)        ()                       (t)
+     #\c)
    
-    (symbol     (t)        (null)                   (t))
-    (null       (symbol)   ()                       (symbol list sequence t))))
+    (symbol     (t)        (null)                   (t)
+     symbol)
+    (null       (symbol)   ()                       (symbol list sequence t)
+     nil)))
 
 
 ;;;
@@ -575,13 +495,23 @@
 (defclass t () ()
   (:metaclass built-in-class))
 
-(defclass standard-object (t) ())
+(defclass slot-object (t) ()
+  (:metaclass slot-class))
+
+(defclass structure-object (slot-object) ()
+  (:metaclass structure-class))
+
+(defstruct (structure-object
+	     (:constructor |STRUCTURE-OBJECT class constructor|)))
+
+(defclass standard-object (slot-object) ())
 
 (defclass metaobject (standard-object) ())
 
-(defclass specializer (metaobject) ())
-
-(defclass class-specializer (specializer) ())
+(defclass specializer (metaobject) 
+     ((type
+        :initform nil
+        :reader specializer-type)))
 
 (defclass definition-source-mixin (standard-object)
      ((source
@@ -591,7 +521,8 @@
 
 (defclass plist-mixin (standard-object)
      ((plist
-	:initform ())))
+	:initform ()
+	:accessor object-plist)))
 
 (defclass documentation-mixin (plist-mixin)
      ())
@@ -605,11 +536,14 @@
 ;;; have the class CLASS in its class precedence list.
 ;;; 
 (defclass class (documentation-mixin dependent-update-mixin definition-source-mixin
-				     class-specializer)
+		 specializer)
      ((name
 	:initform nil
 	:initarg  :name
 	:accessor class-name)
+      (class-eq-specializer
+        :initform nil
+        :reader class-eq-specializer)
       (direct-superclasses
 	:initform ()
 	:reader class-direct-superclasses)
@@ -617,7 +551,10 @@
 	:initform ()
 	:reader class-direct-subclasses)
       (direct-methods
-	:initform (cons nil nil))))
+	:initform (cons nil nil))
+      (predicate-name
+        :initform nil
+	:reader class-predicate-name)))
 
 ;;;
 ;;; The class PCL-CLASS is an implementation-specific common superclass of
@@ -625,26 +562,36 @@
 ;;; 
 (defclass pcl-class (class)
      ((class-precedence-list
-	:initform ())
+	:reader class-precedence-list)
+      (can-precede-list
+        :initform ()
+	:reader class-can-precede-list)
+      (incompatible-superclass-list
+        :initform ()
+	:accessor class-incompatible-superclass-list)
       (wrapper
-	:initform nil)))
+	:initform nil
+	:reader class-wrapper)
+      (prototype
+	:initform nil
+	:reader class-prototype)))
+
+(defclass slot-class (pcl-class)
+     ((direct-slots
+	:initform ()
+	:accessor class-direct-slots)
+      (slots
+        :initform ()
+	:accessor class-slots)))
 
 ;;;
 ;;; The class STD-CLASS is an implementation-specific common superclass of
 ;;; the classes STANDARD-CLASS and FUNCALLABLE-STANDARD-CLASS.
 ;;; 
-(defclass std-class (pcl-class)
-     ((direct-slots
-	:initform ()
-	:accessor class-direct-slots)
-      (slots
-	:initform ()
-	:accessor class-slots)
-      (no-of-instance-slots		    ;*** MOVE TO WRAPPER ***
+(defclass std-class (slot-class)
+     ((no-of-instance-slots		    ;*** MOVE TO WRAPPER ***
 	:initform 0
-	:accessor class-no-of-instance-slots)
-      (prototype
-	:initform nil)))
+	:accessor class-no-of-instance-slots)))
 
 (defclass standard-class (std-class)
      ())
@@ -656,82 +603,137 @@
 
 (defclass built-in-class (pcl-class) ())
 
+(defclass structure-class (slot-class)
+     ((defstruct-form
+        :initform ()
+	:accessor class-defstruct-form)
+      (defstruct-constructor
+        :initform nil
+	:accessor class-defstruct-constructor)
+      (from-defclass-p
+        :initform nil
+	:initarg :from-defclass-p)))
+     
+
+(defclass specializer-with-object (specializer) ())
+
+(defclass exact-class-specializer (specializer) ())
+
+(defclass class-eq-specializer (exact-class-specializer specializer-with-object)
+  ((object :initarg :class :reader specializer-class :reader specializer-object)))
+
+(defclass eql-specializer (exact-class-specializer specializer-with-object)
+  ((object :initarg :object :reader specializer-object 
+	   :reader eql-specializer-object)))
+
+(defvar *eql-specializer-table* (make-hash-table :test 'eql))
+
+(defun intern-eql-specializer (object)
+  (or (gethash object *eql-specializer-table*)
+      (setf (gethash object *eql-specializer-table*)
+	    (make-instance 'eql-specializer :object object))))
+
 
 ;;;
 ;;; Slot definitions.
 ;;;
 ;;; Note that throughout PCL, "SLOT-DEFINITION" is abbreviated as "SLOTD".
 ;;;
-(defclass slot-definition (metaobject) ())
-
-(defclass direct-slot-definition    (slot-definition) ())
-(defclass effective-slot-definition (slot-definition) ())
-
-(defclass standard-slot-definition (slot-definition) 
+(defclass slot-definition (metaobject) 
      ((name
 	:initform nil
-        :accessor slotd-name)
+	:initarg :name
+        :accessor slot-definition-name)
       (initform
-	:initform *slotd-unsupplied*
-	:accessor slotd-initform)
+	:initform nil
+	:initarg :initform
+	:accessor slot-definition-initform)
       (initfunction
-	:initform *slotd-unsupplied*
-	:accessor slotd-initfunction)
+	:initform nil
+	:initarg :initfunction
+	:accessor slot-definition-initfunction)
       (readers
 	:initform nil
-	:accessor slotd-readers)
+	:initarg :readers
+	:accessor slot-definition-readers)
       (writers
 	:initform nil
-	:accessor slotd-writers)
+	:initarg :writers
+	:accessor slot-definition-writers)
       (initargs
 	:initform nil
-	:accessor slotd-initargs)
-      (allocation
-	:initform nil
-	:accessor slotd-allocation)
+	:initarg :initargs
+	:accessor slot-definition-initargs)
       (type
-	:initform nil
-	:accessor slotd-type)
+	:initform t
+	:initarg :type
+	:accessor slot-definition-type)
       (documentation
 	:initform ""
 	:initarg :documentation)
       (class
         :initform nil
-	:accessor slotd-class)
-      (instance-index
-        :initform nil
-	:accessor slotd-instance-index)))
+	:initarg :class
+	:accessor slot-definition-class)))
+
+(defclass standard-slot-definition (slot-definition)
+  ((allocation
+    :initform :instance
+    :initarg :allocation
+    :accessor slot-definition-allocation)))
+
+(defclass structure-slot-definition (slot-definition)
+  ((defstruct-accessor-symbol 
+     :initform nil
+     :initarg :defstruct-accessor-symbol
+     :accessor slot-definition-defstruct-accessor-symbol)
+   (internal-reader-function 
+     :initform nil
+     :initarg :internal-reader-function
+     :accessor slot-definition-internal-reader-function)
+   (internal-writer-function 
+     :initform nil
+     :initarg :internal-writer-function
+     :accessor slot-definition-internal-writer-function)))
+
+(defclass direct-slot-definition (slot-definition)
+  ())
+
+(defclass effective-slot-definition (slot-definition)
+  ((reader-function ; #'(lambda (object) ...)
+    :accessor slot-definition-reader-function)
+   (writer-function ; #'(lambda (new-value object) ...)
+    :accessor slot-definition-writer-function)
+   (boundp-function ; #'(lambda (object) ...)
+    :accessor slot-definition-boundp-function)
+   (accessor-flags
+    :initform 0)))
 
 (defclass standard-direct-slot-definition (standard-slot-definition
 					   direct-slot-definition)
-     ())					;Adding slots here may
-						;involve extra work to
-						;the code in braid.lisp
+  ())
 
 (defclass standard-effective-slot-definition (standard-slot-definition
 					      effective-slot-definition)
-     ())					;Adding slots here may
-						;involve extra work to
-						;the code in braid.lisp
+  ((location ; nil, a fixnum, a cons: (slot-name . value)
+    :initform nil
+    :accessor slot-definition-location)))
 
+(defclass structure-direct-slot-definition (structure-slot-definition
+					    direct-slot-definition)
+  ())
 
+(defclass structure-effective-slot-definition (structure-slot-definition
+					       effective-slot-definition)
+  ())
 
-(defclass eql-specializer (specializer)
-     ((object :initarg :object :reader specializer-object)))
-
-
-
-;;;
-;;;
-;;;
-(defmacro dolist-carefully ((var list improper-list-handler) &body body)
-  `(let ((,var nil)
-	 (.dolist-carefully. ,list))
-     (loop (when (null .dolist-carefully.) (return nil))
-	   (if (consp .dolist-carefully.)
-	       (progn
-		 (setq ,var (pop .dolist-carefully.))
-		 ,@body)
-	       (,improper-list-handler)))))
-
-
+(defparameter *early-class-predicates*
+  '((specializer specializerp)
+    (exact-class-specializer exact-class-specializer-p)
+    (class-eq-specializer class-eq-specializer-p)
+    (eql-specializer eql-specializer-p)
+    (class classp)
+    (standard-class standard-class-p)
+    (funcallable-standard-class funcallable-standard-class-p)
+    (structure-class structure-class-p)
+    (forward-referenced-class forward-referenced-class-p)))

@@ -38,8 +38,8 @@
 ;;; 
 (eval-when (load)
   (flet ((allocate (n size)
-	   (mapcar #'free-cache
-		   (mapcar #'get-cache
+	   (mapcar #'free-cache-vector
+		   (mapcar #'get-cache-vector
 			   (make-list n :initial-element size)))))
     (allocate 128 4)
     (allocate 64 8)
@@ -48,3 +48,4 @@
     (allocate 16 17)
     (allocate 16 32)
     (allocate 1  64)))
+

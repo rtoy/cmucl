@@ -42,22 +42,34 @@
 		      &optional (test-converter     #'default-test-converter)
 		                (code-converter     #'default-code-converter)
 				(constant-converter #'default-constant-converter))
-  (apply (get-function-generator lambda test-converter code-converter)
-	 (compute-constants      lambda constant-converter)))
+  (function-apply (get-function-generator lambda test-converter code-converter)
+		  (compute-constants      lambda constant-converter)))
+
+(defun get-function1 (lambda
+		      &optional (test-converter     #'default-test-converter)
+		                (code-converter     #'default-code-converter)
+				(constant-converter #'default-constant-converter))
+  (values (the function (get-function-generator lambda test-converter code-converter))
+	  (compute-constants      lambda constant-converter)))
+
+(defun default-constantp (form)
+  (and (constantp form)
+       (not (symbolp (eval form)))))
 
 (defun default-test-converter (form)
-  (if (not (constantp form)) form '.constant.))
+  (if (default-constantp form)
+      '.constant.
+      form))
 
 (defun default-code-converter  (form)
-  (if (not (constantp form))
-      form
-      (let ((gensym (gensym))) (values gensym (list gensym)))))
+  (if (default-constantp form)
+      (let ((gensym (gensym))) (values gensym (list gensym)))
+      form))
 
 (defun default-constant-converter (form)
-  (and (constantp form)
-       (list (if (and (consp form) (eq (car form) 'quote)) ;This had better
-		 (cadr form)                               ;do the same as
-		 form))))                                  ;EVAL would have.
+  (if (default-constantp form)
+      (list (eval form))
+      nil))
 
 
 ;;;

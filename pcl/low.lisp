@@ -64,13 +64,17 @@
 
 (in-package 'pcl)
 
+(eval-when (compile load eval)
+(defvar *optimize-speed* '(optimize (speed 3) (safety 0)))
+)
+
 (defmacro %svref (vector index)
-  `(locally (declare (optimize (speed 3) (safety 0))
+  `(locally (declare #.*optimize-speed*
 		     (inline svref))
 	    (svref (the simple-vector ,vector) (the fixnum ,index))))
 
 (defsetf %svref (vector index) (new-value)
-  `(locally (declare (optimize (speed 3) (safety 0))
+  `(locally (declare #.*optimize-speed*
 		     (inline svref))
      (setf (svref (the simple-vector ,vector) (the fixnum ,index))
 	   ,new-value)))
@@ -116,7 +120,7 @@
 (defun print-std-instance (instance stream depth) ;A temporary definition used
   (declare (ignore depth))		          ;for debugging the bootstrap
   (printing-random-thing (instance stream)        ;code of PCL (See high.lisp).
-    (format stream "#<std-instance>")))
+    (format stream "std-instance")))
 
 (defmacro %allocate-instance--class (no-of-slots)
   `(let ((instance (%%allocate-instance--class)))
@@ -201,6 +205,7 @@
 	((listp name)
 	 (intern (let ((*package* *the-pcl-package*)
 		       (*print-case* :upcase)
+		       (*print-pretty* nil)
 		       (*print-gensym* 't))
 		   (format nil "~S" name))
 		 *the-pcl-package*))))
@@ -265,20 +270,23 @@
 	  (compile-lambda-uncompiled lambda))))
 
 (defun compile-lambda-uncompiled (uncompiled)
-  #'(lambda (&rest args) (apply uncompiled args)))
+  (let ((function (coerce uncompiled 'function)))
+    #'(lambda (&rest args) (apply function args))))
 
 (defun compile-lambda-deferred (uncompiled)
-  (let ((compiled nil))
+  (let ((function (coerce uncompiled 'function))
+	(compiled nil))
     #'(lambda (&rest args)
 	(if compiled
 	    (apply compiled args)
 	    (if (in-the-compiler-p)
-		(apply uncompiled args)
+		(apply function args)
 		(progn (setq compiled (compile nil uncompiled))
 		       (apply compiled args)))))))
 
 (defmacro precompile-random-code-segments (&optional system)
   `(progn
+     (eval-when (compile) (before-precompile-random-code-segments))
      (precompile-function-generators ,system)
      (precompile-dfun-constructors ,system)))
 
@@ -289,4 +297,86 @@
   ())
 
 (defun doctor-dfun-for-the-debugger (gf dfun) (declare (ignore gf)) dfun)
+
+;; From braid.lisp
+(defmacro built-in-or-structure-wrapper (x)
+  (once-only (x)
+    (if (structure-functions-exist-p) ; otherwise structurep is too slow for this
+	`(if (structurep ,x)
+	     (wrapper-for-structure ,x)
+	     (if (symbolp ,x)
+		 (if ,x *the-wrapper-of-symbol* *the-wrapper-of-null*)
+		 (built-in-wrapper-of ,x)))
+	`(or (and (symbolp ,x)
+		  (if ,x *the-wrapper-of-symbol* *the-wrapper-of-null*))
+	     (built-in-or-structure-wrapper1 ,x)))))
+
+
+;Low level functions for structures
+
+
+;Functions on arbitrary objects
+
+(defvar *structure-table* (make-hash-table :test 'eq))
+
+(defun declare-structure (name included-name slot-description-list)
+  (setf (gethash name *structure-table*)
+	(cons included-name slot-description-list)))
+
+(unless (fboundp 'structure-functions-exist-p)
+  (setf (symbol-function 'structure-functions-exist-p) 
+	#'(lambda () nil)))
+
+(defun default-structurep (x)
+  (structure-type-p (type-of x)))
+
+(defun default-structure-instance-p (x)
+  (let ((type (type-of x)))
+    (and (not (eq type 'std-instance))
+	 (structure-type-p type))))
+
+(defun default-structure-type (x)
+  (type-of x))
+
+(unless (fboundp 'structurep)
+  (setf (symbol-function 'structurep) #'default-structurep))
+
+; excludes std-instance
+(unless (fboundp 'structure-instance-p)
+  (setf (symbol-function 'structure-instance-p) #'default-structure-instance-p))
+
+; returns a symbol
+(unless (fboundp 'structure-type)
+  (setf (symbol-function 'structure-type) #'default-structure-type))
+
+
+;Functions on symbols naming structures
+
+; Excludes structures types created with the :type option
+(defun structure-type-p (symbol)
+  (not (null (gethash symbol *structure-table*))))
+
+(defun structure-type-included-type-name (symbol)
+  (car (gethash symbol *structure-table*)))
+
+; direct slots only
+; The results of this function are used only by the functions below.
+(defun structure-type-slot-description-list (symbol)
+  (cdr (gethash symbol *structure-table*)))
+
+
+;Functions on slot-descriptions (returned by the function above)
+
+;returns a symbol
+(defun structure-slotd-name (structure-slot-description)
+  (first structure-slot-description))
+
+;returns a symbol
+(defun structure-slotd-accessor-symbol (structure-slot-description)
+  (second structure-slot-description))
+
+;returns a symbol or a list or nil
+(defun structure-slotd-writer-function (structure-slot-description)
+  (third structure-slot-description))
+
 

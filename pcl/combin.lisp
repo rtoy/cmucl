@@ -27,66 +27,98 @@
 
 (in-package 'pcl)
 
-(defun make-effective-method-function (generic-function form)
-  (flet ((name-function (fn) (set-function-name fn 'a-combined-method) fn))
-    (if (and (listp form)
-	     (eq (car form) 'call-method)
-	     (method-p (cadr form))
-	     (every #'method-p (caddr form)))
-	;;
-	;; The effective method is just a call to call-method.  This opens up
-	;; the possibility of just using the method function of the method as
-	;; as the effective method function.
-	;;
-	;; But we have to be careful.  If that method function will ask for
-	;; the next methods we have to provide them.  We do not look to see
-	;; if there are next methods, we look at whether the method function
-	;; asks about them.  If it does, we must tell it whether there are
-	;; or aren't to prevent the leaky next methods bug.
-	;; 
-	(let* ((method-function (method-function (cadr form)))
-	       (arg-info (gf-arg-info generic-function))
+(defun get-method-function (method &optional method-alist wrappers)
+  (or (cadr (assoc method method-alist))
+      (if wrappers
+	  (method-function-for-caching method wrappers)
+	  (method-function method))))
+
+(defun make-effective-method-function (generic-function form &optional 
+				       method-alist wrappers)
+  (funcall (make-effective-method-function1 generic-function form)
+	   method-alist wrappers))
+
+(defun make-effective-method-function1 (generic-function form)
+  (if (and (listp form)
+	   (eq (car form) 'call-method)
+	   (method-p (cadr form))
+	   (every #'method-p (caddr form)))
+      (make-effective-method-function-simple generic-function form)
+      ;;
+      ;; We have some sort of `real' effective method.  Go off and get a
+      ;; compiled function for it.  Most of the real hair here is done by
+      ;; the GET-FUNCTION mechanism.
+      ;; 
+      (make-effective-method-function-internal generic-function form)))
+
+(defun make-effective-method-function-simple (generic-function form)
+  ;;
+  ;; The effective method is just a call to call-method.  This opens up
+  ;; the possibility of just using the method function of the method as
+  ;; as the effective method function.
+  ;;
+  ;; But we have to be careful.  If that method function will ask for
+  ;; the next methods we have to provide them.  We do not look to see
+  ;; if there are next methods, we look at whether the method function
+  ;; asks about them.  If it does, we must tell it whether there are
+  ;; or aren't to prevent the leaky next methods bug.
+  ;; 
+  (let ((method (cadr form)))
+    (if (not (method-function-needs-next-methods-p (method-function method)))
+	#'(lambda (method-alist wrappers)
+	    (get-method-function method method-alist wrappers))
+	(let* ((arg-info (gf-arg-info generic-function))
 	       (metatypes (arg-info-metatypes arg-info))
-	       (applyp (arg-info-applyp arg-info)))
-	  (if (not (method-function-needs-next-methods-p method-function))
-	      method-function
-	      (let ((next-method-functions (mapcar #'method-function (caddr form))))
-		(name-function
-		  (get-function `(lambda ,(make-dfun-lambda-list metatypes applyp)
-				   (let ((*next-methods* .next-method-functions.))
-				     ,(make-dfun-call metatypes applyp '.method-function.)))
-		    #'default-test-converter	;This could be optimized by making
-						;the interface from here to the
-						;walker more clear so that the
-						;form wouldn't get walked at all.
-		    #'(lambda (form)
-			(if (memq form '(.next-method-functions. .method-function.))
-			    (values form (list form))
-			    form))
-		    #'(lambda (form)
-			(cond ((eq form '.next-method-functions.)
-			       (list next-method-functions))
-			      ((eq form '.method-function.)
-			       (list method-function)))))))))
-	;;
-	;; We have some sort of `real' effective method.  Go off and get a
-	;; compiled function for it.  Most of the real hair here is done by
-	;; the GET-FUNCTION mechanism.
-	;; 
-	(name-function (make-effective-method-function-internal generic-function form)))))
+	       (applyp (arg-info-applyp arg-info))
+	       (next-methods (caddr form)))
+	  (multiple-value-bind (cfunction constants)
+	      (get-function1
+	       `(lambda ,(make-dfun-lambda-list metatypes applyp)
+		  (let ((*next-methods* .next-methods.))
+		    ,(make-dfun-call metatypes applyp '.method.)))
+	       #'default-test-converter ;This could be optimized by making
+					;the interface from here to the
+					;walker more clear so that the
+					;form wouldn't get walked at all.
+	       #'(lambda (form)
+		   (if (memq form '(.next-methods. .method.))
+		       (values form (list form))
+		       form))
+	       #'(lambda (form)
+		   (cond ((eq form '.next-methods.)
+			  (list (cons '.meth-list. next-methods)))
+			 ((eq form '.method.)
+			  (list (cons '.meth. method))))))
+	    #'(lambda (method-alist wrappers)
+		(flet ((fix-meth (meth)
+			 (get-method-function meth method-alist wrappers)))
+		  (function-apply cfunction
+				  (mapcar #'(lambda (constant)
+					      (cond ((atom constant)
+						     constant)
+						    ((eq (car constant) '.meth.)
+						     (fix-meth (cdr constant)))
+						    ((eq (car constant) '.meth-list.)
+						     (mapcar #'fix-meth (cdr constant)))
+						    (t constant)))
+					  constants)))))))))
 
 (defvar *global-effective-method-gensyms* ())
 (defvar *rebound-effective-method-gensyms*)
 
 (defun get-effective-method-gensym ()
   (or (pop *rebound-effective-method-gensyms*)
-      (let ((new (make-symbol "EFFECTIVE-METHOD-GENSYM-")))
-	(push new *global-effective-method-gensyms*)
+      (let ((new (intern (format nil "EFFECTIVE-METHOD-GENSYM-~D" 
+				 (length *global-effective-method-gensyms*))
+			 "PCL")))
+	(setq *global-effective-method-gensyms*
+	      (append *global-effective-method-gensyms* (list new)))
 	new)))
 
-(eval-when (load)
-  (let ((*rebound-effective-method-gensyms* ()))
-    (dotimes (i 10) (get-effective-method-gensym))))
+(let ((*rebound-effective-method-gensyms* ()))
+  (dotimes (i 10) (get-effective-method-gensym)))
+
+#+lcl3.0 (dont-use-production-compiler)
 
 (defun make-effective-method-function-internal (generic-function effective-method)
   (let* ((*rebound-effective-method-gensyms* *global-effective-method-gensyms*)
@@ -95,46 +127,67 @@
 	 (applyp (arg-info-applyp arg-info)))
     (labels ((test-converter (form)
 	       (if (and (consp form) (eq (car form) 'call-method))
-		   '.call-method.
+		   (if (caddr form)
+		       '.call-method-with-next.
+		       '.call-method-without-next.)
 		   (default-test-converter form)))
 	     (code-converter (form)
 	       (if (and (consp form) (eq (car form) 'call-method))
 		   ;;
-		   ;; We have a `call' to CALL-METHOD.  There may or may not be next methods
-		   ;; and the two cases are a little different.  It controls how many gensyms
-		   ;; we will generate.
+		   ;; We have a `call' to CALL-METHOD.  There may or may not be next
+		   ;; methods and the two cases are a little different.  It controls
+		   ;; how many gensyms we will generate.
 		   ;;
 		   (let ((gensyms
-			   (if (cddr form)
-			       (list (get-effective-method-gensym)
-				     (get-effective-method-gensym))
-			       (list (get-effective-method-gensym)
-				     ()))))
+			  (if (caddr form)
+			      (list (get-effective-method-gensym)
+				    (get-effective-method-gensym))
+			      (list (get-effective-method-gensym)))))
 		     (values `(let ((*next-methods* ,(cadr gensyms)))
-				,(make-dfun-call metatypes applyp (car gensyms)))
+			       ,(make-dfun-call metatypes applyp (car gensyms)))
 			     gensyms))
 		   (default-code-converter form)))
 	     (constant-converter (form)
 	       (if (and (consp form) (eq (car form) 'call-method))
-		   (if (cddr form)
-		       (list (check-for-make-method (cadr form))
-			     (mapcar #'check-for-make-method (caddr form)))
-		       (list (check-for-make-method (cadr form))
-			     ()))
+		   (if (caddr form)
+		       (list (cons '.meth. (check-for-make-method (cadr form)))
+			     (cons '.meth-list.
+				   (mapcar #'check-for-make-method (caddr form))))
+		       (list (cons '.meth. (check-for-make-method (cadr form)))))
 		   (default-constant-converter form)))
 	     (check-for-make-method (effective-method)
 	       (cond ((method-p effective-method)
-		      (method-function effective-method))
+		      effective-method)
 		     ((and (listp effective-method)
 			   (eq (car effective-method) 'make-method))
-		      (make-effective-method-function generic-function
-						      (make-progn (cadr effective-method))))
+		      (make-effective-method-function1
+		       generic-function
+		       (make-progn (cadr effective-method))))
 		     (t
 		      (error "Effective-method form is malformed.")))))
-      (get-function `(lambda ,(make-dfun-lambda-list metatypes applyp) ,effective-method)
-		  #'test-converter
-		  #'code-converter
-		  #'constant-converter))))
+      (multiple-value-bind (cfunction constants)
+	  (get-function1 `(lambda ,(make-dfun-lambda-list metatypes applyp)
+			   ,effective-method)
+			 #'test-converter
+			 #'code-converter
+			 #'constant-converter)
+	#'(lambda (method-alist wrappers)
+	    (flet ((fix-meth (meth)
+		     (if (method-p meth)
+			 (get-method-function meth method-alist wrappers)
+			 (funcall meth method-alist wrappers))))
+	      (function-apply cfunction
+			      (mapcar #'(lambda (constant)
+					  (cond ((atom constant)
+						 constant)
+						((eq (car constant) '.meth.)
+						 (fix-meth (cdr constant)))
+						((eq (car constant) '.meth-list.)
+						 (mapcar #'fix-meth (cdr constant)))
+						(t constant)))
+				      constants))))))))
+
+#+lcl3.0 (use-previous-compiler)
 
 
 
@@ -192,9 +245,15 @@
 ;;; the code in the file defcombin, look there for more details.
 ;;;
 
-(defclass method-combination () ())
+(defclass method-combination (metaobject) ()
+  (:predicate-name method-combination-p))
 
-(define-gf-predicate method-combination-p method-combination)
+(mapc
+ #'proclaim-incompatible-superclasses
+ '(;; superclass metaobject
+   (class eql-specializer class-eq-specializer method method-combination
+    generic-function slot-definition)
+   ))
 
 (defclass standard-method-combination
 	  (definition-source-mixin method-combination)
@@ -260,15 +319,14 @@
 	   `(call-method ,(first primary) ,(rest primary)))
 	  (t
 	   (let ((main-effective-method
-		   (if (or before after (rest primary))
+		   (if (or before after)
 		       `(multiple-value-prog1
 			  (progn ,@(make-call-methods before)
 				 (call-method ,(first primary) ,(rest primary)))
 			  ,@(make-call-methods (reverse after)))
-		       `(call-method ,(first primary) ()))))
+		       `(call-method ,(first primary) ,(rest primary)))))
 	     (if around
 		 `(call-method ,(first around)
 			       (,@(rest around) (make-method ,main-effective-method)))
 		 main-effective-method))))))
-
 

@@ -94,9 +94,16 @@
        (eval-when ,times ,form))
     #+cmu
     (if (member 'compile times)
-	`(eval-when ,times ,form)
-	form)
-    #-(or Genera LCL3.0 cmu)
+        `(eval-when ,times ,form)
+        form)
+    #+kcl
+    (let* ((*print-pretty* nil)
+           (thunk-name (gensym (definition-name))))
+      `(eval-when ,times
+         (defun ,thunk-name ()
+           ,form)
+         (,thunk-name)))
+    #-(or Genera LCL3.0 cmu kcl)
     (make-progn `',name `(eval-when ,times ,form))))
 
 (defun make-progn (&rest forms)
@@ -129,6 +136,7 @@
   (expand-defclass name direct-superclasses direct-slots options))
 
 (defun expand-defclass (name supers slots options)
+  (declare (special *defclass-times*))
   (setq supers  (copy-tree supers)
 	slots   (copy-tree slots)
 	options (copy-tree options))
@@ -146,9 +154,9 @@
 	    (return t))))
 
     (let ((*initfunctions* ())
-	  (*accessors* ())			   ;Truly a crock, but we got
-	  (*readers* ())			   ;to have it to live nicely.
-	  (*writers* ()))
+          (*accessors* ())                         ;Truly a crock, but we got
+          (*readers* ())                           ;to have it to live nicely.
+          (*writers* ()))
       (declare (special *initfunctions* *accessors* *readers* *writers*))
       (let ((canonical-slots
 	      (mapcar #'(lambda (spec)
@@ -157,24 +165,46 @@
 	    (other-initargs
 	      (mapcar #'(lambda (option)
 			  (canonicalize-defclass-option name option))
-		      options)))
+		      options))
+	    (defstruct-p (and (eq *boot-state* 'complete)
+			      (let ((mclass (find-class metaclass nil)))
+				(and mclass
+				     (*subtypep mclass 
+						*the-class-structure-class*))))))
 	(do-standard-defsetfs-for-defclass *accessors*)
-	(make-top-level-form `(defclass ,name)
-			     *defclass-times*
-	  `(progn
-	     ,@(mapcar #'(lambda (x)
-			   `(declaim (ftype (function (t) t) ,x)))
-		       *readers*)
-	     ,@(mapcar #'(lambda (x)
-			   `(declaim (ftype (function (t t) t) ,x)))
-		       *writers*)
-	     (let ,(mapcar #'cdr *initfunctions*)
-	       (load-defclass ',name
-			      ',metaclass
-			      ',supers
-			      (list ,@canonical-slots)
-			      (list ,@(apply #'append other-initargs))
-			      ',*accessors*))))))))
+        (let ((defclass-form 
+                 (make-top-level-form `(defclass ,name)
+                   (if defstruct-p '(load eval) *defclass-times*)
+		   `(progn
+		      ,@(mapcar #'(lambda (x)
+				    `(declaim (ftype (function (t) t) ,x)))
+				#+cmu *readers* #-cmu nil)
+		      ,@(mapcar #'(lambda (x)
+				    #-setf (when (consp x)
+					     (setq x (get-setf-function-name (cadr x))))
+				    `(declaim (ftype (function (t t) t) ,x)))
+				#+cmu *writers* #-cmu nil)
+		      (let ,(mapcar #'cdr *initfunctions*)
+			(load-defclass ',name
+				       ',metaclass
+				       ',supers
+				       (list ,@canonical-slots)
+				       (list ,@(apply #'append 
+						      (when defstruct-p
+							'(:from-defclass-p t))
+						      other-initargs))
+				       ',*accessors*))))))
+          (if defstruct-p
+              (progn
+                (eval defclass-form) ; define the class now, so that
+                `(progn              ; the defstruct can be compiled.
+                   ,(class-defstruct-form (find-class name))
+                   ,defclass-form))
+	      (progn
+		(when (and (eq *boot-state* 'complete)
+			   (not (member 'compile *defclass-times*)))
+		  (inform-type-system-about-std-class name))
+		defclass-form)))))))
 
 (defun make-initfunction (initform)
   (declare (special *initfunctions*))
@@ -229,8 +259,8 @@
 	   (loop (unless (remf spec :reader)   (return)))
 	   (loop (unless (remf spec :writer)   (return)))
 	   (loop (unless (remf spec :initarg)  (return)))
-	   (setq *writers* (append writers *writers*))
-	   (setq *readers* (append readers *readers*))
+           (setq *writers* (append writers *writers*))
+           (setq *readers* (append readers *readers*))
 	   (setq spec `(:name     ',name
 			:readers  ',readers
 			:writers  ',writers
@@ -289,6 +319,8 @@
 	canonical-slots   (copy-tree canonical-slots)
 	canonical-options (copy-tree canonical-options))
   (do-standard-defsetfs-for-defclass accessor-names)
+  (when (eq metaclass 'standard-class)
+    (inform-type-system-about-std-class name))
   (let ((ecd
 	  (make-early-class-definition name
 				       (load-truename)

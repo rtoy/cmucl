@@ -35,6 +35,10 @@
 
 (eval-when (eval compile load)
 
+(#-LCL3.0 progn #+LCL3.0 lcl:handler-bind 
+    #+LCL3.0 ((lcl:warning #'(lambda (condition)
+			       (declare (ignore condition))
+			       (lcl:muffle-warning))))
 (let ((importer
         #+LCL3.0 #'sys:import-from-lucid-pkg
 	#-LCL3.0 (let ((x (find-symbol "IMPORT-FROM-LUCID-PKG" "LUCID")))
@@ -67,6 +71,7 @@
   ;;  accessed as SYS:<foo>
   (mapc importer '(
 		   "NEW-STRUCTURE"   	"STRUCTURE-REF"
+		   "STRUCTUREP"         "STRUCTURE-TYPE"  "STRUCTURE-LENGTH"
 		   "PROCEDUREP"     	"PROCEDURE-SYMBOL"
 		   "PROCEDURE-REF" 	"SET-PROCEDURE-REF" 
 		   ))
@@ -85,7 +90,7 @@
   #-(or (and APOLLO DOMAIN/OS) LCL3.0 VAX) 
   (mapc importer '("COPY-STRUCTURE"  "GET-FDESC"  "SET-FDESC"))
   
-  nil)
+  nil))
 
 ;; end of eval-when
 
@@ -100,6 +105,25 @@
 
 
 
+
+#+lcl3.0
+(progn
+
+(defvar *saved-compilation-speed* 3)
+
+; the production compiler sometimes
+; screws up vars within labels
+
+(defmacro dont-use-production-compiler ()
+  '(eval-when (compile)
+     (setq *saved-compilation-speed* (if LUCID:*USE-SFC* 3 0))
+     (proclaim '(optimize (compilation-speed 3)))))
+
+(defmacro use-previous-compiler ()
+  `(eval-when (compile)
+     (proclaim '(optimize (compilation-speed ,*saved-compilation-speed*)))))
+
+)
 
 (defmacro %logand (x y)
   #-VAX `(%logand& ,x ,y)
@@ -179,7 +203,9 @@
 	  ;;   compiled-function, funcallable-instance, compiled-closure
 	  ;;   or a macro.
 	  ;; So just go ahead and set its name.
-	  (set-procedure-ref fn procedure-symbol new-name)
+	  ;; Only change the name when necessary: maybe it is read-only.
+	  (unless (eq new-name (procedure-ref fn procedure-symbol))
+	    (set-procedure-ref fn procedure-symbol new-name))
 	  ;; This is an interpreted function.
 	  ;; Seems like any number of different things can happen depending
 	  ;; vaguely on what release you are running.  Try to do something
@@ -277,3 +303,74 @@
 ;;; (UNDECLARE-MACHINE-CLASS)
 (restore-compiler-params)
 
+
+(in-package 'pcl)
+
+(pushnew :structure-wrapper *features*)
+
+(defun structure-functions-exist-p ()
+  t)
+
+(defun structure-instance-p (x)
+  (and (structurep x)
+       (not (eq 'std-instance (structure-type x)))))
+
+(defvar *structure-type* nil)
+(defvar *structure-length* nil)
+
+(defun structure-type-p (type)
+  (let ((s-data (gethash type lucid::*defstructs*)))
+    (or (and s-data 
+	     (eq 'structure (structure-ref s-data 1 'defstruct))) ; type - Fix this
+	(and type (eq *structure-type* type)))))
+
+(defun structure-type-included-type-name (type)
+  (let ((s-data (gethash type lucid::*defstructs*)))
+    (and s-data (structure-ref s-data 6 'defstruct)))) ; include - Fix this
+
+(defun structure-type-slot-description-list (type)
+  (let ((s-data (gethash type lucid::*defstructs*)))
+    (if s-data
+	(nthcdr (let ((include (structure-ref s-data 6 'defstruct)))
+		  (if include
+		      (let ((inc-s-data (gethash include lucid::*defstructs*)))
+			(if inc-s-data
+			    (length (structure-ref inc-s-data 7 'defstruct))
+			    0))
+		      0))
+		(map 'list
+		     #'(lambda (slotd)
+			 (let* ((ds 'lucid::defstruct-slot)
+				(slot-name (system:structure-ref slotd 0 ds))
+				(position (system:structure-ref slotd 1 ds))
+				(accessor (system:structure-ref slotd 2 ds))
+				(read-only-p (system:structure-ref slotd 5 ds)))
+			   (list slot-name accessor
+				 #'(lambda (x)
+				     (system:structure-ref x position type))
+				 (unless read-only-p
+				   #'(lambda (v x)
+				       (setf (system:structure-ref x position type)
+					     v))))))
+		     (structure-ref s-data 7 'defstruct))) ; slots  - Fix this
+	(let ((result (make-list *structure-length*)))
+	  (dotimes (i *structure-length* result)
+	    (let* ((name (format nil "SLOT~D" i))
+		   (slot-name (intern name (or (symbol-package type) *package*)))
+		   (i i))
+	      (setf (elt result i) (list slot-name nil
+					 #'(lambda (x)
+					     (system:structure-ref x i type))
+					 nil))))))))
+
+(defun structure-slotd-name (slotd)
+  (first slotd))
+
+(defun structure-slotd-accessor-symbol (slotd)
+  (second slotd))
+
+(defun structure-slotd-reader-function (slotd)
+  (third slotd))
+
+(defun structure-slotd-writer-function (slotd)
+  (fourth slotd))

@@ -1,7 +1,7 @@
-;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
+;;;-*-Mode:LISP; Package:(PCL LISP 1000); Base:10; Syntax:Common-lisp -*-
 ;;;
 ;;; *************************************************************************
-;;; Copyright (c) 1985, 1986, 1987, 1988 Xerox Corporation.
+;;; Copyright (c) 1985, 1986, 1987, 1988, 1989, 1990 Xerox Corporation.
 ;;; All rights reserved.
 ;;;
 ;;; Use and copying of this software and preparation of derivative works
@@ -29,8 +29,10 @@
 
 (in-package 'pcl)
 
-(setf (getf ext:*herald-items* :pcl)
-      `("    CLOS based on PCL version:  " ,*pcl-system-date*))
+(defmacro dotimes ((var count &optional (result nil)) &body body)
+  `(lisp:dotimes (,var (the fixnum ,count) ,result)
+     (declare (fixnum ,var))
+     ,@body))
 
 ;;; Just use our without-interrupts.  We don't have the INTERRUPTS-ON/OFF local
 ;;; macros spec'ed in low.lisp, but they aren't used.
@@ -49,7 +51,7 @@
   (c:def-source-transform std-instance-p (x)
     (ext:once-only ((n-x x))
       `(and (ext:structurep ,n-x)
-	    (eq (kernel:structure-ref ,n-x 0) 'std-instance)))))
+            (eq (kernel:structure-ref ,n-x 0) 'std-instance)))))
 
   ;;   
 ;;;;;; Cache No's
@@ -59,23 +61,23 @@
 
 (defun object-cache-no (symbol mask)
   (logand (ext:truly-the fixnum (system:%primitive make-fixnum symbol))
-	  (the fixnum mask)))
+          (the fixnum mask)))
 
 
 (defun function-arglist (fcn)
   "Returns the argument list of a compiled function, if possible."
   (cond ((symbolp fcn)
-	 (when (fboundp fcn)
-	   (function-arglist (symbol-function fcn))))
-	((eval:interpreted-function-p fcn)
-	 (eval:interpreted-function-arglist fcn))
-	((functionp fcn)
-	 (let ((lambda-expr (function-lambda-expression fcn)))
-	   (if lambda-expr
-	       (cadr lambda-expr)
-	       (let ((function (kernel:%closure-function fcn)))
-		 (values (read-from-string
-			  (kernel:%function-header-arglist function)))))))))
+         (when (fboundp fcn)
+           (function-arglist (symbol-function fcn))))
+        ((eval:interpreted-function-p fcn)
+         (eval:interpreted-function-arglist fcn))
+        ((functionp fcn)
+         (let ((lambda-expr (function-lambda-expression fcn)))
+           (if lambda-expr
+               (cadr lambda-expr)
+               (let ((function (kernel:%closure-function fcn)))
+                 (values (read-from-string
+                          (kernel:%function-header-arglist function)))))))))
 
 
 ;;; We have this here and in fin.lisp, 'cause PCL wants to compile this
@@ -87,54 +89,67 @@
 (defun set-function-name (fcn new-name)
   "Set the name of a compiled function object."
   (cond ((symbolp fcn)
-	 (set-function-name (symbol-function fcn) new-name))
-	((funcallable-instance-p fcn)
-	 (setf (funcallable-instance-name fcn) new-name)
-	 fcn)
-	((eval:interpreted-function-p fcn)
-	 (setf (eval:interpreted-function-name fcn) new-name)
-	 fcn)
-	(t
-	 (let ((header (kernel:%closure-function fcn)))
-	   (system:%primitive c::set-function-name header new-name))
-	 fcn)))
+         (set-function-name (symbol-function fcn) new-name))
+        ((funcallable-instance-p fcn)
+         (setf (funcallable-instance-name fcn) new-name)
+         fcn)
+        ((eval:interpreted-function-p fcn)
+         (setf (eval:interpreted-function-name fcn) new-name)
+         fcn)
+        (t
+         (let ((header (kernel:%closure-function fcn)))
+           (system:%primitive c::set-function-name header new-name))
+         fcn)))
 
 (in-package "C")
 
+;;From compiler/ir1util
+(def-source-context pcl::defmethod (name &rest stuff)
+  (let ((arg-pos (position-if #'listp stuff)))
+    (if arg-pos
+	`(pcl::defmethod ,name ,@(subseq stuff 0 arg-pos)
+	   ,(nth-value 2 (pcl::parse-specialized-lambda-list
+			  (elt stuff arg-pos))))
+	`(pcl::defmethod ,name "<illegal syntax>"))))
 
-(defun keyword-spec-name (x)
-  (if (atom x)
-      (intern (symbol-name x) (find-package "KEYWORD"))
-      (let ((cx (car x)))
-	(if (atom cx)
-	    (intern (symbol-name cx) (find-package "KEYWORD"))
-	    (car cx)))))
-		  
+(in-package 'pcl)
 
-(defun generic-function-type-from-lambda-list (name ll)
-  (multiple-value-bind (req opt restp ignore keyp keys allowp)
-		       (parse-lambda-list ll)
-    (declare (ignore ignore))
-    (let* ((old (info function type name))
-	   (old-ftype (if (function-type-p old) old nil))
-	   (old-keys (and old-ftype
-			  (mapcar #'key-info-name
-				  (function-type-keywords old-ftype)))))
-      `(function (,@(make-list (length req) :initial-element t)
-		  ,@(when opt
-		      `(&optional ,@(make-list (length opt)
-					       :initial-element t)))
-		  ,@(when (or (and old-ftype (function-type-rest old-ftype))
-			      restp)
-		      '(&rest t))
-		  ,@(when (or (and old-ftype (function-type-keyp old-ftype))
-			      keyp)
-		      '(&key))
-		  ,@(mapcar #'(lambda (name)
-				`(,name t))
-			    (union old-keys
-				   (mapcar #'keyword-spec-name keys)))
-		  ,@(when (or (and old-ftype (function-type-allowp old-ftype))
-			      allowp)
-		      '(&allow-other-keys)))
-		 *))))
+(pushnew :structure-wrapper *features*)
+
+(defun structure-functions-exist-p ()
+  t)
+
+(defun structure-instance-p (x)
+  (and (structurep x)
+       (not (eq (kernel:structure-ref x 0) 'std-instance))))
+
+(defun structure-type (x)
+  (kernel:structure-ref x 0))
+
+(defun structure-type-p (type)
+  (not (null (ext:info c::type c::defined-structure-info type))))
+
+(defun structure-type-included-type-name (type)
+  (let ((include (c::dd-include (ext:info c::type c::defined-structure-info type))))
+    (if (consp include)
+	(car include)
+	include)))
+
+(defun structure-type-slot-description-list (type)
+  (nthcdr (length (let ((include (structure-type-included-type-name type)))
+		    (and include (structure-type-slot-description-list include))))
+	  (c::dd-slots (ext:info c::type c::defined-structure-info type))))
+
+(defun structure-slotd-name (slotd)
+  (intern (c::dsd-%name slotd) "USER"))
+
+(defun structure-slotd-accessor-symbol (slotd)
+  (c::dsd-accessor slotd))
+
+(defun structure-slotd-reader-function (slotd)
+  (fdefinition (c::dsd-accessor slotd)))
+
+(defun structure-slotd-writer-function (slotd)
+  (unless (c::dsd-read-only slotd)
+    (fdefinition `(setf ,(c::dsd-accessor slotd)))))
+

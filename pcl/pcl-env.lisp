@@ -274,7 +274,7 @@ arg-types."
 			      (multiple-value-bind (name qualifiers arglist)
 				  (parse-defmethod (cdr form))
 				(make-full-method-name name qualifiers
-				    (specialized-lambda-list-specializers
+				    (extract-specializer-names
 					arglist)))))
 		     (:undefiner
 		      (lambda (method-name)

@@ -1,5 +1,5 @@
 
-Some notes on using "5/1/90  May Day PCL (REV 3)" with KCL and AKCL.
+Some notes on using "5/1/90  May Day PCL (REV 4b)" with KCL and AKCL.
 
 1. KCL will try to load the PCL file "init" when it starts up,
    if you rename the files as is mentioned in defsys.lisp and the 
@@ -19,7 +19,8 @@ Some notes on using "5/1/90  May Day PCL (REV 3)" with KCL and AKCL.
    (fix-early-generic-functions) to (fix-early-generic-functions t)
    in fixup.lisp to see what is happening.
 
-4. If you want, you can apply the changes in kcl-mods.text
+4. (If you are using AKCL 605 or newer, skip this step.)
+   If you want, you can apply the changes in kcl-mods.text
    to your KCL or AKCL to make PCL run faster.  The file kcl-mods.text
    is different from what it was in versions of PCL earlier than
    May Day PCL.  If you do not make these changes, or if you made 

@@ -47,17 +47,21 @@
 (defvar *precompile-lap-closure-generator*)
 (defvar *lap-in-lisp*)
 
-(defun make-lap-closure-generator (closure-variables arguments iregs vregs tregs lap-code)
+(defun make-lap-closure-generator 
+    (closure-variables arguments iregs vregs fvregs tregs lap-code)
   (funcall *make-lap-closure-generator*
-	   closure-variables arguments iregs vregs tregs lap-code))
+	   closure-variables arguments iregs 
+	   vregs fvregs tregs lap-code))
 
-(defmacro precompile-lap-closure-generator (cvars args i-regs v-regs t-regs lap)
-  (funcall *precompile-lap-closure-generator* cvars args i-regs v-regs t-regs lap))
+(defmacro precompile-lap-closure-generator 
+    (cvars args i-regs v-regs fv-regs t-regs lap)
+  (funcall *precompile-lap-closure-generator* cvars args i-regs 
+	   v-regs fv-regs t-regs lap))
 
-(defmacro lap-in-lisp (cvars args iregs vregs tregs lap)
+(defmacro lap-in-lisp (cvars args iregs vregs fvregs tregs lap)
   (declare (ignore cvars args))
-  `(locally (declare (optimize (safety 0) (speed 3)))
-     ,(make-lap-prog iregs vregs tregs
+  `(locally (declare #.*optimize-speed*)
+     ,(make-lap-prog iregs vregs fvregs tregs
 		     (flatten-lap lap (opcode :label 'exit-lap-in-lisp)))))
 
 
@@ -143,19 +147,24 @@
   (when (cadr *generating-lap*) (error "Registers still allocated when lap being finalized."))
   (let ((iregs ())
 	(vregs ())
+	(fvregs ())
 	(tregs ()))
     (dolist (entry (car *generating-lap*))
       (ecase (car entry)
 	(index  (push (caddr entry) iregs))
 	(vector (push (caddr entry) vregs))
+	(fixnum-vector (push (caddr entry) fvregs))
 	((t)    (push (caddr entry) tregs))))
     (cond (in-lisp-p
-	   `(lap-in-lisp ,closure-variables ,arguments ,iregs ,vregs ,tregs ,lap-code))
+	   `(lap-in-lisp ,closure-variables ,arguments ,iregs 
+	                 ,vregs ,fvregs ,tregs ,lap-code))
 	  (*precompiling-lap*
-	   (values closure-variables arguments iregs vregs tregs lap-code))
+	   (values closure-variables arguments iregs 
+		   vregs fvregs tregs lap-code))
 	  (t
 	   (make-lap-closure-generator
-	     closure-variables arguments iregs vregs tregs lap-code)))))
+	     closure-variables arguments iregs 
+	     vregs fvregs tregs lap-code)))))
 
 (defun flatten-lap (&rest opcodes-or-sequences)
   (let ((result ()))
@@ -297,7 +306,7 @@
 (defopcode :built-in-instance-p  (:reg :label))
 (defopcode :structure-instance-p (:reg :label))
 
-(defopcode :jmp    ((or :reg :constant)))
+(defopcode :jmp      ((or :reg :constant)))
 
 (defopcode :label  (:label))
 (defopcode :go     (:label))
@@ -322,9 +331,12 @@
 (defoperand :built-in-wrapper  (:reg))
 (defoperand :structure-wrapper (:reg))
 (defoperand :other-wrapper     (:reg))
+(defoperand :built-in-or-structure-wrapper (:reg))
 
 (defoperand :std-slots (:reg))
 (defoperand :fsc-slots (:reg))
+
+(defoperand :wrapper-cache-number-vector (:reg))
 
 (defoperand :cref (:reg :fixnum))
 

@@ -32,8 +32,6 @@
 #+Lucid
 (progn
 
-(defvar *old-arglist*)
-
 (defun pcl-arglist (function &rest other-args)
   (let ((defn nil))
     (cond ((and (fsc-instance-p function)
@@ -45,12 +43,10 @@
 		(fsc-instance-p defn)
 		(generic-function-p defn))
 	   (generic-function-pretty-arglist defn))
-	  (t (apply *old-arglist* function other-args)))))
+	  (t (apply (original-definition 'sys::arglist)
+		    function other-args)))))
 
-(eval-when (eval load)
-  (unless (boundp '*old-arglist*)
-    (setq *old-arglist* (symbol-function 'sys::arglist))
-    (setf (symbol-function 'sys::arglist) #'pcl-arglist)))
+(redefine-function 'sys::arglist 'pcl-arglist)
 
 )
 
@@ -61,34 +57,24 @@
 
 (defgeneric describe-object (object stream))
 
-#-Genera (progn
+#-Genera
+(progn
 
-#-cmu
-(defvar *old-describe* ())
-
-#-cmu
-(eval-when (load)
-  (unless *old-describe* (setq *old-describe* (symbol-function 'describe)))
-  (setf (symbol-function 'describe)
-	#+Lispm
-	#'(lambda (object &optional no-complaints)
-	    (let ((*describe-no-complaints* no-complaints))
-	      (declare (special *describe-no-complaints*))
-	      (describe-object object *standard-output*)
-	      (values)))
-	#-Lispm
-	#'(lambda (object)
-	    (describe-object object *standard-output*)
-	    (values))))
+(defun pcl-describe (object #+Lispm &optional #+Lispm no-complaints)
+  (let (#+Lispm (*describe-no-complaints* no-complaints))
+    #+Lispm (declare (special *describe-no-complaints*))
+    (describe-object object *standard-output*)
+    (values)))
 
 (defmethod describe-object (object stream)
-  #-cmu
   (let ((*standard-output* stream))
-    (funcall *old-describe* object))
-  #+cmu
-  (describe object stream))
+    (funcall (original-definition 'describe) object)))
 
-(defmethod describe-object ((object standard-object) stream)
+(redefine-function 'describe 'pcl-describe)
+
+)
+
+(defmethod describe-object ((object slot-object) stream)
   (let* ((class (class-of object))
 	 (slotds (slots-to-inspect class object))
 	 (max-slot-name-length 0)
@@ -109,8 +95,8 @@
 			 name max-slot-name-length value))))
       ;; Figure out a good width for the slot-name column.
       (dolist (slotd slotds)
-	(adjust-slot-name-length (slotd-name slotd))
-	(case (slotd-allocation slotd)
+	(adjust-slot-name-length (slot-definition-name slotd))
+	(case (slot-definition-allocation slotd)
 	  (:instance (push slotd instance-slotds))
 	  (:class  (push slotd class-slotds))
 	  (otherwise (push slotd other-slotds))))
@@ -120,42 +106,42 @@
       (when instance-slotds
 	(format stream "~% The following slots have :INSTANCE allocation:")
 	(dolist (slotd (nreverse instance-slotds))
-	  (describe-slot (slotd-name slotd)
-			 (slot-value-or-default object (slotd-name slotd)))))
+	  (describe-slot (slot-definition-name slotd)
+			 (slot-value-or-default object (slot-definition-name slotd)))))
 
       (when class-slotds
 	(format stream "~% The following slots have :CLASS allocation:")
 	(dolist (slotd (nreverse class-slotds))
-	  (describe-slot (slotd-name slotd)
-			 (slot-value-or-default object (slotd-name slotd)))))
+	  (describe-slot (slot-definition-name slotd)
+			 (slot-value-or-default object (slot-definition-name slotd)))))
 
       (when other-slotds 
 	(format stream "~% The following slots have allocation as shown:")
 	(dolist (slotd (nreverse other-slotds))
-	  (describe-slot (slotd-name slotd)
-			 (slot-value-or-default object (slotd-name slotd))
-			 (slotd-allocation slotd))))
+	  (describe-slot (slot-definition-name slotd)
+			 (slot-value-or-default object (slot-definition-name slotd))
+			 (slot-definition-allocation slotd))))
       (values))))
 
-#+cmu
+(defmethod slots-to-inspect ((class slot-class) (object slot-object))
+  (class-slots class))
+
 (defmethod describe-object ((fun standard-generic-function) stream)
   (format stream "~A is a generic function.~%" fun)
   (format stream "Its arguments are:~%  ~S~%"
-	  (generic-function-pretty-arglist fun))
+          (generic-function-pretty-arglist fun))
   (format stream "Its methods are:")
   (dolist (meth (generic-function-methods fun))
     (format stream "~2%**** ~{~S ~}~:S =>~%"
-	    (method-qualifiers meth)
-	    (unparse-specializers meth))
+            (method-qualifiers meth)
+            (unparse-specializers meth))
     (describe-object (method-function meth) stream)))
 
+;;;
+;;;
+;;;
+(defvar *describe-classes-as-objects-p* nil)
 
-(defmethod slots-to-inspect ((class std-class) (object standard-object))
-  (class-slots class))
-
-;;;
-;;;
-;;;
 (defmethod describe-object ((class class) stream)
   (flet ((pretty-class (c) (or (class-name c) c)))
     (macrolet ((ft (string &rest args) `(format stream ,string ,@args)))
@@ -173,7 +159,9 @@
 	  (mapcar #'pretty-class (class-direct-superclasses class))
 	  (mapcar #'pretty-class (class-direct-subclasses class))
 	  (mapcar #'pretty-class (class-precedence-list class))
-	  (length (specializer-methods class))))))
+	  (length (specializer-direct-methods class)))))
+  (when *describe-classes-as-objects-p*
+    (call-next-method)))
 
 
 
@@ -280,4 +268,7 @@
       (remove-method gf method)
       method)))
 
-); #-genera progn
+
+(pushnew :pcl *features*)
+(pushnew :portable-commonloops *features*)
+(pushnew :pcl-structures *features*)

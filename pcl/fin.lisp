@@ -106,31 +106,28 @@ explicitly marked saying who wrote it.
 ;;;       This must be SETF'able.
 ;;;       
 
-(eval-when (compile eval load)
-
+(eval-when (compile load eval)
 (defconstant funcallable-instance-data
              '(wrapper slots)
   "These are the 'data-slots' which funcallable instances have so that
    the meta-class funcallable-standard-class can store class, and static
    slots in them.")
-
-); eval-when (compile eval load)
+)
 
 (defmacro funcallable-instance-data-position (data)
   (if (and (consp data)
-           (eq (car data) 'quote)
-           (boundp 'funcallable-instance-data))
+           (eq (car data) 'quote))
       (or (position (cadr data) funcallable-instance-data :test #'eq)
           (progn
             (warn "Unknown funcallable-instance data: ~S." (cadr data))
             `(error "Unknown funcallable-instance data: ~S." ',(cadr data))))
       `(position ,data funcallable-instance-data :test #'eq)))
 
-(defun called-fin-without-function ()
+(proclaim '(notinline called-fin-without-function))
+(defun called-fin-without-function (&rest args)
+  (declare (ignore args))
   (error "Attempt to funcall a funcallable-instance without first~%~
           setting its funcallable-instance-function."))
-
-
 
 
 ;;;
@@ -209,7 +206,9 @@ explicitly marked saying who wrote it.
 		'(#xD0 #xAC #x11 #x5C #xD0 #xAC #x1 #x57 #x17 #xA7 #x5)
 		#+PA
 		'(#x4891 #x3C #xE461 #x6530 #x48BF #x3FF9)
-		#-(or MC68000 SPARC BSP I386 VAX PA)
+                #+MIPS
+                '(#x8FD4 #x1E #x2785 #x2EEF #xA0 #x8 #x14 #xF000)
+                #-(or MC68000 SPARC BSP I386 VAX PA MIPS)
 		'(0 0 0 0)))
 
 
@@ -384,20 +383,16 @@ explicitly marked saying who wrote it.
 	  (neq *boot-state* 'complete)
 	  (eq (class-of exp) *the-class-t*))
       (let ((*print-lexical-closure* nil))
-	(funcall (get 'si:print-lexical-closure ':definition-before-pcl)
+	(funcall (original-definition 'si:print-lexical-closure)
 		 exp stream slashify-p))
       (let ((*print-escape* slashify-p)
 	    (*print-lexical-closure* exp))
 	(print-object exp stream))))
 
-(eval-when (load eval)
-  (unless (boundp '*boot-state*)
-    (setq *boot-state* nil))
-  (unless (get 'si:print-lexical-closure ':definition-before-pcl)
-    (setf (get 'si:print-lexical-closure ':definition-before-pcl)
-	  (symbol-function 'si:print-lexical-closure)))
-  (setf (symbol-function 'si:print-lexical-closure)
-	(symbol-function 'pcl-print-lexical-closure)))
+(unless (boundp '*boot-state*)
+  (setq *boot-state* nil))
+
+(redefine-function 'si:print-lexical-closure 'pcl-print-lexical-closure)
 
 (defvar *function-name-level* 0)
 
@@ -408,14 +403,9 @@ explicitly marked saying who wrote it.
 	   (<= *function-name-level* 2))
       (let ((*function-name-level* (1+ *function-name-level*)))
 	(generic-function-name function))
-      (apply (get 'si:function-name ':definition-before-pcl) function other-args)))
+      (apply (original-definition 'si:function-name) function other-args)))
 
-(eval-when (eval load)
-  (unless (get 'si:function-name ':definition-before-pcl)
-    (setf (get 'si:function-name ':definition-before-pcl) 
-	  (symbol-function 'si:function-name)))
-  (setf (symbol-function 'si:function-name) 
-	(symbol-function 'pcl-function-name)))
+(redefine-function 'si:function-name 'pcl-function-name)
 
 (defun pcl-arglist (function &rest other-args)
   (let ((defn nil))
@@ -428,14 +418,9 @@ explicitly marked saying who wrote it.
 		(funcallable-instance-p defn)
 		(generic-function-p defn))
 	   (generic-function-pretty-arglist defn))
-	  (t (apply (get 'zl:arglist ':definition-before-pcl) function other-args)))))
+	  (t (apply (original-definition 'zl:arglist) function other-args)))))
 
-(eval-when (eval load)
-  (unless (get 'zl:arglist ':definition-before-pcl)
-    (setf (get 'zl:arglist ':definition-before-pcl)
-	  (symbol-function 'zl:arglist)))
-  (setf (symbol-function 'zl:arglist)
-	(symbol-function 'pcl-arglist)))
+(redefine-function 'zl:arglist 'pcl-arglist)
 
 
 ;;;
@@ -1302,9 +1287,9 @@ dbg:
 ;;;
 (defun allocate-funcallable-instance-1 ()
   (let* ((len (+ (length funcallable-instance-data) fin-data-offset))
-	 (res (kernel:%make-funcallable-instance
-	       len
-	       #'called-fin-without-function)))
+         (res (kernel:%make-funcallable-instance
+               len
+               #'called-fin-without-function)))
     (dotimes (i (length funcallable-instance-data))
       (kernel:%set-funcallable-instance-info res (+ i fin-data-offset) nil))
     (kernel:%set-funcallable-instance-info res fin-name-slot nil)
@@ -1324,26 +1309,27 @@ dbg:
 ;;;    Set the function that is called when FIN is called.
 ;;;
 (defun set-funcallable-instance-function (fin new-value)
+  (declare (type function new-value))
   (assert (funcallable-instance-p fin))
   (ecase (kernel:get-type new-value)
     (#.vm:closure-header-type
      (let ((len (- (kernel:get-closure-length new-value)
-		   (1- vm:closure-info-offset))))
+                   (1- vm:closure-info-offset))))
        (cond ((> len fin-name-slot)
-	      (set-funcallable-instance-function
-	       fin
-	       #'(lambda (&rest args)
-		   (apply new-value args))))
-	     (t
-	      (dotimes (i fin-data-offset)
-		(kernel:%set-funcallable-instance-info
-		 fin i
-		 (if (>= i len)
-		     nil
-		     (kernel:%closure-index-ref new-value i))))
-	      (kernel:%set-funcallable-instance-function
-	       fin
-	       (kernel:%closure-function new-value))))))
+              (set-funcallable-instance-function
+               fin
+               #'(lambda (&rest args)
+                   (apply new-value args))))
+             (t
+              (dotimes (i fin-data-offset)
+                (kernel:%set-funcallable-instance-info
+                 fin i
+                 (if (>= i len)
+                     nil
+                     (kernel:%closure-index-ref new-value i))))
+              (kernel:%set-funcallable-instance-function
+               fin
+               (kernel:%closure-function new-value))))))
     (#.vm:function-header-type
      (kernel:%set-funcallable-instance-function fin new-value)))
   new-value)
@@ -1371,33 +1357,32 @@ dbg:
 (defmacro funcallable-instance-data-1 (fin slot)
   (if (constantp slot)
       `(sys:%primitive c:closure-ref ,fin
-		       (+ (or (position ,slot funcallable-instance-data)
-			      (error "Unknown slot: ~S." ,slot))
-			  fin-data-offset))
+                       (+ (or (position ,slot funcallable-instance-data)
+                              (error "Unknown slot: ~S." ,slot))
+                          fin-data-offset))
       (ext:once-only ((n-slot slot))
-	`(kernel:%closure-index-ref
-	  ,fin
-	  (+ (or (position ,n-slot funcallable-instance-data)
-		 (error "Unknown slot: ~S." ,n-slot))
-	     fin-data-offset)))))
+        `(kernel:%closure-index-ref
+          ,fin
+          (+ (or (position ,n-slot funcallable-instance-data)
+                 (error "Unknown slot: ~S." ,n-slot))
+             fin-data-offset)))))
 ;;;
 (defmacro %set-funcallable-instance-data-1 (fin slot new-value)
   (ext:once-only ((n-fin fin)
-		  (n-slot slot)
-		  (n-val new-value))
+                  (n-slot slot)
+                  (n-val new-value))
     `(progn
        (kernel:%set-funcallable-instance-info
-	,n-fin
-	(+ (or (position ,n-slot funcallable-instance-data)
-	       (error "Unknown slot: ~S." ,n-slot))
-	   fin-data-offset)
-	,n-val)
+        ,n-fin
+        (+ (or (position ,n-slot funcallable-instance-data)
+               (error "Unknown slot: ~S." ,n-slot))
+           fin-data-offset)
+        ,n-val)
        ,n-val)))
 ;;;
 (defsetf funcallable-instance-data-1 %set-funcallable-instance-data-1)
-		
+                
 ); End of #+cmu progn
-
 
 
 ;;;
