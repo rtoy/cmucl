@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.4 1990/11/03 17:14:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.5 1991/02/04 18:45:01 ram Exp $
 ;;;
 ;;; This file contains the machine specific support routines needed by
 ;;; the file assembler.
@@ -37,6 +37,7 @@
 	    (note-this-location ,vop :unknown-return)
 	    (move csp-tn old-fp-tn)
 	    (inst nop)
+	    (inst entry-point)
 	    (inst compute-code-from-lra code-tn code-tn
 		  lra-label ,temp)
 	    (when cur-nfp
