@@ -57,10 +57,7 @@
 
 ;; Note: all of the following is in the package XLIB.
 
-;; Note: various perversions of the CL type system are used below.
-;; Examples: (list elt-type) (sequence elt-type)
-
-(proclaim '(declaration arglist values))
+(declaim (declaration arglist clx-values))
 
 ;; Note: if you have read the Version 11 protocol document or C Xlib manual, most of
 ;; the relationships should be fairly obvious.  We have no intention of writing yet
@@ -106,18 +103,18 @@
 
 (defun <mumble>-display (<mumble>)
   (declare (type <mumble> <mumble>)
-	   (values display)))
+	   (clx-values display)))
 
 (defun <mumble>-id (<mumble>)
   (declare (type <mumble> <mumble>)
-	   (values resource-id)))
+	   (clx-values resource-id)))
 
 (defun <mumble>-equal (<mumble>-1 <mumble>-2)
   (declare (type <mumble> <mumble>-1 <mumble>-2)))
 
 (defun <mumble>-p (<mumble>)
   (declare (type <mumble> <mumble>)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 ;; The following functions are provided by color objects:
 
@@ -129,26 +126,26 @@
 
 (defun make-color (&key red green blue &allow-other-keys)	; for expansion
   (declare (type rgb-val red green blue)
-	   (values color)))
+	   (clx-values color)))
 
 (defun color-rgb (color)
   (declare (type color color)
-	   (values red green blue)))
+	   (clx-values red green blue)))
 
 (defun color-red (color)
   ;; setf'able
   (declare (type color color)
-	   (values rgb-val)))
+	   (clx-values rgb-val)))
 
 (defun color-green (color)
   ;; setf'able
   (declare (type color color)
-	   (values rgb-val)))
+	   (clx-values rgb-val)))
 
 (defun color-blue (color)
   ;; setf'able
   (declare (type color color)
-	   (values rgb-val)))
+	   (clx-values rgb-val)))
 
 (deftype drawable () '(or window pixmap))
 
@@ -187,6 +184,9 @@
 
 (deftype alist (key-type-and-name datum-type-and-name) 'list)
 
+(deftype clx-list (&optional element-type) 'list)
+(deftype clx-sequence (&optional element-type) 'sequence)
+
 ;; A sequence, containing zero or more repetitions of the given elements,
 ;; with the elements expressed as (type name).
 
@@ -215,7 +215,7 @@
 	   :focus-change :property-change :colormap-change :keymap-state))
 
 (deftype event-mask ()
-  '(or mask32 (list event-mask-class)))
+  '(or mask32 (clx-list event-mask-class)))
 
 (deftype pointer-event-mask-class ()
   '(member :button-press :button-release
@@ -224,7 +224,7 @@
 	   :button-5-motion :button-motion :keymap-state))
 
 (deftype pointer-event-mask ()
-  '(or mask32 (list pointer-event-mask-class)))
+  '(or mask32 (clx-list pointer-event-mask-class)))
 
 (deftype device-event-mask-class ()
   '(member :key-press :key-release :button-press :button-release :pointer-motion
@@ -232,13 +232,13 @@
 	   :button-5-motion :button-motion))
 
 (deftype device-event-mask ()
-  '(or mask32 (list device-event-mask-class)))
+  '(or mask32 (clx-list device-event-mask-class)))
 
 (deftype modifier-key ()
   '(member :shift :lock :control :mod-1 :mod-2 :mod-3 :mod-4 :mod-5))
 
 (deftype modifier-mask ()
-  '(or (member :any) mask16 (list modifier-key)))
+  '(or (member :any) mask16 (clx-list modifier-key)))
 
 (deftype state-mask-key ()
   '(or modifier-key (member :button-1 :button-2 :button-3 :button-4 :button-5)))
@@ -293,7 +293,7 @@
   (height <unspec> :type card16)
   (width-in-millimeters <unspec> :type card16)
   (height-in-millimeters <unspec> :type card16)
-  (depths <unspec> :type (alist (image-depth depth) ((list visual-info) visuals)))
+  (depths <unspec> :type (alist (image-depth depth) ((clx-list visual-info) visuals)))
   (root-depth <unspec> :type image-depth)
   (root-visual-info <unspec> :type visual-info)
   (default-colormap <unspec> :type colormap)
@@ -307,7 +307,7 @@
 
 (defun screen-root-visual (screen)
   (declare (type screen screen)
-	   (values resource-id)))
+	   (clx-values resource-id)))
 
 ;; The list contains alternating keywords and integers.
 
@@ -319,62 +319,62 @@
   ;; default protocol is system specific.  Authorization, if any, is assumed to come
   ;; from the environment somehow.
   (declare (type integer display)
-	   (values display)))
+	   (clx-values display)))
 
 (defun display-protocol-major-version (display)
   (declare (type display display)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun display-protocol-minor-version (display)
   (declare (type display display)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun display-vendor-name (display)
   (declare (type display display)
-	   (values string)))
+	   (clx-values string)))
 
 (defun display-release-number (display)
   (declare (type display display)
-	   (values card32)))
+	   (clx-values card32)))
 
 (defun display-image-lsb-first-p (display)
   (declare (type display display)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun display-bitmap-formap (display)
   (declare (type display display)
-	   (values bitmap-format)))
+	   (clx-values bitmap-format)))
 
 (defun display-pixmap-formats (display)
   (declare (type display display)
-	   (values (list pixmap-formats))))
+	   (clx-values (clx-list pixmap-formats))))
 
 (defun display-roots (display)
   (declare (type display display)
-	   (values (list screen))))
+	   (clx-values (clx-list screen))))
 
 (defun display-motion-buffer-size (display)
   (declare (type display display)
-	   (values card32)))
+	   (clx-values card32)))
 
 (defun display-max-request-length (display)
   (declare (type display display)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun display-min-keycode (display)
   (declare (type display display)
-	   (values card8)))
+	   (clx-values card8)))
 
 (defun display-max-keycode (display)
   (declare (type display display)
-	   (values card8)))
+	   (clx-values card8)))
 
 (defun close-display (display)
   (declare (type display display)))
 
 (defun display-error-handler (display)
   (declare (type display display)
-	   (values handler)))
+	   (clx-values handler)))
 
 (defsetf display-error-handler (display) (handler)
   ;; All errors (synchronous and asynchronous) are processed by calling an error
@@ -397,8 +397,8 @@
   ;; For :value errors, another pair is:
   ;;    :value card32
   (declare (type display display)
-	   (type (or (sequence (function (display symbol &rest key-vals)))
-		     (function (display symbol &rest key-vals)))
+	   (type (or (clx-sequence (function (display symbol &key &allow-other-keys)))
+		     (function (display symbol &key &allow-other-keys)))
 		 handler)))
 
 (defsetf display-report-asynchronous-errors (display) (when)
@@ -450,7 +450,7 @@
   current-sequence
   asynchronous)
 
-(defun default-error-handler (display error-key &rest key-vals)
+(defun default-error-handler (display error-key &key &allow-other-keys)
   ;; The default display-error-handler.
   ;; It signals the conditions listed below.
   (declare (type display display)
@@ -525,7 +525,7 @@
   ;; request.  Default value is nil.  Can be set, for example, to
   ;; #'display-force-output or #'display-finish-output.
   (declare (type display display)
-	   (values (or null (function (display))))))
+	   (clx-values (or null (function (display))))))
 
 (defun create-window (&key parent x y width height (depth 0) (border-width 0)
 		      (class :copy) (visual :copy)
@@ -552,19 +552,19 @@
 	   (type (or null (member :on :off)) save-under override-redirect)
 	   (type (or null (member :copy) colormap) colormap)
 	   (type (or null (member :none) cursor) cursor)
-	   (values window)))
+	   (clx-values window)))
 
 (defun window-class (window)
   (declare (type window window)
-	   (values (member :input-output :input-only))))
+	   (clx-values (member :input-output :input-only))))
 
 (defun window-visual-info (window)
   (declare (type window window)
-	   (values visual-info)))
+	   (clx-values visual-info)))
 
 (defun window-visual (window)
   (declare (type window window)
-	   (values resource-id)))
+	   (clx-values resource-id)))
 
 (defsetf window-background (window) (background)
   (declare (type window window)
@@ -577,51 +577,51 @@
 (defun window-gravity (window)
   ;; setf'able
   (declare (type window window)
-	   (values win-gravity)))
+	   (clx-values win-gravity)))
 
 (defun window-bit-gravity (window)
   ;; setf'able
   (declare (type window window)
-	   (values bit-gravity)))
+	   (clx-values bit-gravity)))
 
 (defun window-backing-store (window)
   ;; setf'able
   (declare (type window window)
-	   (values (member :not-useful :when-mapped :always))))
+	   (clx-values (member :not-useful :when-mapped :always))))
 
 (defun window-backing-planes (window)
   ;; setf'able
   (declare (type window window)
-	   (values pixel)))
+	   (clx-values pixel)))
 
 (defun window-backing-pixel (window)
   ;; setf'able
   (declare (type window window)
-	   (values pixel)))
+	   (clx-values pixel)))
 
 (defun window-save-under (window)
   ;; setf'able
   (declare (type window window)
-	   (values (member :on :off))))
+	   (clx-values (member :on :off))))
 
 (defun window-event-mask (window)
   ;; setf'able
   (declare (type window window)
-	   (values mask32)))
+	   (clx-values mask32)))
 
 (defun window-do-not-propagate-mask (window)
   ;; setf'able
   (declare (type window window)
-	   (values mask32)))
+	   (clx-values mask32)))
 
 (defun window-override-redirect (window)
   ;; setf'able
   (declare (type window window)
-	   (values (member :on :off))))
+	   (clx-values (member :on :off))))
 
 (defun window-colormap (window)
   (declare (type window window)
-	   (values (or null colormap))))
+	   (clx-values (or null colormap))))
 
 (defsetf window-colormap (window) (colormap)
   (declare (type window window)
@@ -633,15 +633,15 @@
 
 (defun window-colormap-installed-p (window)
   (declare (type window window)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun window-all-event-masks (window)
   (declare (type window window)
-	   (values mask32)))
+	   (clx-values mask32)))
 
 (defun window-map-state (window)
   (declare (type window window)
-	   (values (member :unmapped :unviewable :viewable))))
+	   (clx-values (member :unmapped :unviewable :viewable))))
 
 (defsetf drawable-x (window) (x)
   (declare (type window window)
@@ -744,38 +744,38 @@
 
 (defun drawable-root (drawable)
   (declare (type drawable drawable)
-	   (values window)))
+	   (clx-values window)))
 
 (defun drawable-depth (drawable)
   (declare (type drawable drawable)
-	   (values card8)))
+	   (clx-values card8)))
 
 (defun drawable-x (drawable)
   (declare (type drawable drawable)
-	   (values int16)))
+	   (clx-values int16)))
 
 (defun drawable-y (drawable)
   (declare (type drawable drawable)
-	   (values int16)))
+	   (clx-values int16)))
 
 (defun drawable-width (drawable)
   ;; For windows, inside width, excluding border.
   (declare (type drawable drawable)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun drawable-height (drawable)
   ;; For windows, inside height, excluding border.
   (declare (type drawable drawable)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun drawable-border-width (drawable)
   (declare (type drawable drawable)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun query-tree (window &key (result-type 'list))
   (declare (type window window)
 	   (type type result-type)
-	   (values (sequence window) parent root)))
+	   (clx-values (clx-sequence window) parent root)))
 
 (defun change-property (window property data type format
 			&key (mode :replace) (start 0) end transform)
@@ -806,18 +806,18 @@
 	   (type boolean delete-p)
 	   (type type result-type)
 	   (type (or null (function (integer) t)) transform)
-	   (values data type format bytes-after)))
+	   (clx-values data type format bytes-after)))
 
 (defun rotate-properties (window properties &optional (delta 1))
   ;; Postive rotates left, negative rotates right (opposite of actual protocol request).
   (declare (type window window)
-	   (type (sequence xatom) properties)
+	   (type (clx-sequence xatom) properties)
 	   (type int16 delta)))
 
 (defun list-properties (window &key (result-type 'list))
   (declare (type window window)
 	   (type type result-type)
-	   (values (sequence keyword))))
+	   (clx-values (clx-sequence keyword))))
 
 ;; Although atom-ids are not visible in the normal user interface, atom-ids might
 ;; appear in window properties and other user data, so conversion hooks are needed.
@@ -825,22 +825,22 @@
 (defun intern-atom (display name)
   (declare (type display display)
 	   (type xatom name)
-	   (values resource-id)))
+	   (clx-values resource-id)))
 
 (defun find-atom (display name)
   (declare (type display display)
 	   (type xatom name)
-	   (values (or null resource-id))))
+	   (clx-values (or null resource-id))))
 
 (defun atom-name (display atom-id)
   (declare (type display display)
 	   (type resource-id atom-id)
-	   (values keyword)))
+	   (clx-values keyword)))
 
 (defun selection-owner (display selection)
   (declare (type display display)
 	   (type xatom selection)
-	   (values (or null window))))
+	   (clx-values (or null window))))
 
 (defsetf selection-owner (display selection &optional time) (owner)
   ;; A bit strange, but retains setf form.
@@ -877,7 +877,7 @@
 	   (type (or null window) confine-to)
 	   (type (or null cursor) cursor)
 	   (type timestamp time)
-	   (values grab-status)))
+	   (clx-values grab-status)))
 
 (defun ungrab-pointer (display &key time)
   (declare (type display display)
@@ -909,7 +909,7 @@
   (declare (type window window)
 	   (type boolean owner-p sync-pointer-p sync-keyboard-p)
 	   (type timestamp time)
-	   (values grab-status)))
+	   (clx-values grab-status)))
 
 (defun ungrab-keyboard (display &key time)
   (declare (type display display)
@@ -946,28 +946,28 @@
 
 (defun query-pointer (window)
   (declare (type window window)
-	   (values x y same-screen-p child mask root-x root-y root)))
+	   (clx-values x y same-screen-p child mask root-x root-y root)))
 
 (defun pointer-position (window)
   (declare (type window window)
-	   (values x y same-screen-p)))
+	   (clx-values x y same-screen-p)))
 
 (defun global-pointer-position (display)
   (declare (type display display)
-	   (values root-x root-y root)))
+	   (clx-values root-x root-y root)))
 
 (defun motion-events (window &key start stop (result-type 'list))
   (declare (type window window)
 	   (type timestamp start stop)
 	   (type type result-type)
-	   (values (repeat-seq (int16 x) (int16 y) (timestamp time)))))
+	   (clx-values (repeat-seq (int16 x) (int16 y) (timestamp time)))))
 
 (defun translate-coordinates (src src-x src-y dst)
   ;; If src and dst are not on the same screen, nil is returned.
   (declare (type window src)
 	   (type int16 src-x src-y)
 	   (type window dst)
-	   (values dst-x dst-y child)))
+	   (clx-values dst-x dst-y child)))
 
 (defun warp-pointer (dst dst-x dst-y)
   (declare (type window dst)
@@ -1002,11 +1002,11 @@
 
 (defun input-focus (display)
   (declare (type display display)
-	   (values focus revert-to)))
+	   (clx-values focus revert-to)))
 
 (defun query-keymap (display)
   (declare (type display display)
-	   (values (bit-vector 256))))
+	   (clx-values (bit-vector 256))))
 
 (defun open-font (display name)
   ;; Font objects may be cached and reference counted locally within the display
@@ -1014,7 +1014,7 @@
   ;; The protocol QueryFont request happens on-demand under the covers.
   (declare (type display display)
 	   (type stringable name)
-	   (values font)))
+	   (clx-values font)))
 
 ;; We probably want a per-font bit to indicate whether caching on
 ;; text-extents/width calls is desirable.  But what to name it?
@@ -1034,51 +1034,51 @@
 (defun font-name (font)
   ;; Returns nil for a pseudo font returned by gcontext-font.
   (declare (type font font)
-	   (values (or null string))))
+	   (clx-values (or null string))))
 
 (defun font-direction (font)
   (declare (type font font)
-	   (values draw-direction)))
+	   (clx-values draw-direction)))
 
 (defun font-min-char (font)
   (declare (type font font)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun font-max-char (font)
   (declare (type font font)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun font-min-byte1 (font)
   (declare (type font font)
-	   (values card8)))
+	   (clx-values card8)))
 
 (defun font-max-byte1 (font)
   (declare (type font font)
-	   (values card8)))
+	   (clx-values card8)))
 
 (defun font-min-byte2 (font)
   (declare (type font font)
-	   (values card8)))
+	   (clx-values card8)))
 
 (defun font-max-byte2 (font)
   (declare (type font font)
-	   (values card8)))
+	   (clx-values card8)))
 
 (defun font-all-chars-exist-p (font)
   (declare (type font font)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun font-default-char (font)
   (declare (type font font)
-	   (values card16)))
+	   (clx-values card16)))
 
 (defun font-ascent (font)
   (declare (type font font)
-	   (values int16)))
+	   (clx-values int16)))
 
 (defun font-descent (font)
   (declare (type font font)
-	   (values int16)))
+	   (clx-values int16)))
 
 ;; The list contains alternating keywords and int32s.
 
@@ -1086,12 +1086,12 @@
 
 (defun font-properties (font)
   (declare (type font font)
-	   (values font-props)))
+	   (clx-values font-props)))
 
 (defun font-property (font name)
   (declare (type font font)
 	   (type keyword name)
-	   (values (or null int32))))
+	   (clx-values (or null int32))))
 
 ;; For each of left-bearing, right-bearing, width, ascent, descent, attributes:
 
@@ -1101,17 +1101,17 @@
   ;; signalling might be better.
   (declare (type font font)
 	   (type card16 index)
-	   (values (or null int16))))
+	   (clx-values (or null int16))))
 
 (defun max-char-<metric> (font)
   ;; Note: I have tentatively chosen separate accessors over allowing :min and
   ;; :max as an index above.
   (declare (type font font)
-	   (values int16)))
+	   (clx-values int16)))
 
 (defun min-char-<metric> (font)
   (declare (type font font)
-	   (values int16)))
+	   (clx-values int16)))
 
 ;; Note: char16-<metric> accessors could be defined to accept two-byte indexes.
 
@@ -1125,7 +1125,7 @@
 	   (type string pattern)
 	   (type card16 max-fonts)
 	   (type type result-type)
-	   (values (sequence string))))
+	   (clx-values (clx-sequence string))))
 
 (defun list-fonts (display pattern &key (max-fonts 65535) (result-type 'list))
   ;; Returns "pseudo" fonts that contain basic font metrics and properties, but
@@ -1137,22 +1137,22 @@
 	   (type string pattern)
 	   (type card16 max-fonts)
 	   (type type result-type)
-	   (values (sequence font))))
+	   (clx-values (clx-sequence font))))
 
 (defun font-path (display &key (result-type 'list))
   (declare (type display display)
 	   (type type result-type)
-	   (values (sequence (or string pathname)))))
+	   (clx-values (clx-sequence (or string pathname)))))
 
 (defsetf font-path (display) (paths)
   (declare (type display display)
-	   (type (sequence (or string pathname)) paths)))
+	   (type (clx-sequence (or string pathname)) paths)))
 
 (defun create-pixmap (&key width height depth drawable)
   (declare (type card16 width height)
 	   (type card8 depth)
 	   (type drawable drawable)
-	   (values pixmap)))
+	   (clx-values pixmap)))
 
 (defun free-pixmap (pixmap)
   (declare (type pixmap pixmap)))
@@ -1191,9 +1191,9 @@
 	   (type (or null (member :on :off)) exposures)
 	   (type (or null (member :none) pixmap rect-seq) clip-mask)
 	   (type (or null (member :unsorted :y-sorted :yx-sorted :yx-banded)) clip-ordering)
-	   (type (or null (or card8 (sequence card8))) dashes)
+	   (type (or null (or card8 (clx-sequence card8))) dashes)
 	   (type boolean cache)
-	   (values gcontext)))
+	   (clx-values gcontext)))
 
 ;; For each argument to create-gcontext (except font, clip-mask and
 ;; clip-ordering) declared as (type <type> <name>), there is an accessor:
@@ -1202,7 +1202,7 @@
   ;; The value will be nil if the last value stored is unknown (e.g., the cache was
   ;; off, or the component was copied from a gcontext with unknown state).
   (declare (type gcontext gcontext)
-	   (values <type>)))
+	   (clx-values <type>)))
 
 ;; For each argument to create-gcontext (except clip-mask and clip-ordering) declared
 ;; as (type (or null <type>) <name>), there is a setf for the corresponding accessor:
@@ -1220,11 +1220,11 @@
   ;; result in an invalid-font error.
   (declare (type gcontext gcontext)
 	   (type boolean metrics-p)
-	   (values (or null font))))
+	   (clx-values (or null font))))
 
 (defun gcontext-clip-mask (gcontext)
   (declare (type gcontext gcontext)
-	   (values (or null (member :none) pixmap rect-seq)
+	   (clx-values (or null (member :none) pixmap rect-seq)
 		   (or null (member :unsorted :y-sorted :yx-sorted :yx-banded)))))
 
 (defsetf gcontext-clip-mask (gcontext &optional ordering) (clip-mask)
@@ -1255,7 +1255,7 @@
 
 (defun copy-gcontext-components (src dst &rest keys)
   (declare (type gcontext src dst)
-	   (type (list gcontext-key) keys)))
+	   (type (clx-list gcontext-key) keys)))
 
 (defun copy-gcontext (src dst)
   (declare (type gcontext src dst))
@@ -1363,7 +1363,7 @@
   ;; other arguments.
   (declare (type drawable drawable)
 	   (type gcontext gcontext)
-	   (type (sequence card8) data)
+	   (type (clx-sequence card8) data)
 	   (type array-index start)
 	   (type card8 depth left-pad)
 	   (type int16 x y)
@@ -1379,13 +1379,13 @@
   ;; transmission format; the caller is responsible for any byte and bit swapping and
   ;; compaction required for further local use.
   (declare (type drawable drawable)
-	   (type (or null (sequence card8)) data)
+	   (type (or null (clx-sequence card8)) data)
 	   (type array-index start)
 	   (type int16 x y)
 	   (type card16 width height)
 	   (type pixel plane-mask)
 	   (type (member :xy-pixmap :z-pixmap) format)
-	   (values (sequence card8) depth visual-info)))
+	   (clx-values (clx-sequence card8) depth visual-info)))
 
 (defun translate-default (src src-start src-end font dst dst-start)
   ;; dst is guaranteed to have room for (- src-end src-start) integer elements,
@@ -1406,7 +1406,7 @@
 	   (type array-index src-start src-end dst-start)
 	   (type (or null font) font)
 	   (type vector dst)
-	   (values array-index (or null int16 font) (or null int32))))
+	   (clx-values array-index (or null int16 font) (or null int32))))
 
 ;; There is a question below of whether translate should always be required, or
 ;; if not, what the default should be or where it should come from.  For
@@ -1424,7 +1424,7 @@
   (declare (type sequence sequence)
 	   (type (or font gcontext) font)
 	   (type translate translate)
-	   (values width ascent descent left right font-ascent font-descent direction
+	   (clx-values width ascent descent left right font-ascent font-descent direction
 		   (or null array-index))))
 
 (defun text-width (font sequence &key (start 0) end translate)
@@ -1432,7 +1432,7 @@
   (declare (type sequence sequence)
 	   (type (or font gcontext) font)
 	   (type translate translate)
-	   (values int32 (or null array-index))))
+	   (clx-values int32 (or null array-index))))
 
 ;; This controls the element size of the dst buffer given to translate.  If
 ;; :default is specified, the size will be based on the current font, if known,
@@ -1466,7 +1466,7 @@
 	   (type translate translate)
 	   (type (or null int32) width)
 	   (type index-size size)
-	   (values boolean (or null int32))))
+	   (clx-values boolean (or null int32))))
 
 (defun draw-glyphs (drawable gcontext x y sequence
 		    &key (start 0) end translate width (size :default))
@@ -1481,7 +1481,7 @@
 	   (type (or null int32) width)
 	   (type translate translate)
 	   (type index-size size)
-	   (values (or null array-index) (or null int32))))
+	   (clx-values (or null array-index) (or null int32))))
 
 (defun draw-image-glyph (drawable gcontext x y elt
 			 &key translate width (size :default))
@@ -1494,7 +1494,7 @@
 	   (type translate translate)
 	   (type (or null int32) width)
 	   (type index-size size)
-	   (values boolean (or null int32))))
+	   (clx-values boolean (or null int32))))
 
 (defun draw-image-glyphs (drawable gcontext x y sequence
 			  &key (start 0) end width translate (size :default))
@@ -1514,20 +1514,20 @@
 	   (type (or null int32) width)
 	   (type translate translate)
 	   (type index-size size)
-	   (values (or null array-index) (or null int32))))
+	   (clx-values (or null array-index) (or null int32))))
 
 (defun create-colormap (visual window &optional alloc-p)
   (declare (type visual-info visual)
 	   (type window window)
 	   (type boolean alloc-p)
-	   (values colormap)))
+	   (clx-values colormap)))
 
 (defun free-colormap (colormap)
   (declare (type colormap colormap)))
 
 (defun copy-colormap-and-free (colormap)
   (declare (type colormap colormap)
-	   (values colormap)))
+	   (clx-values colormap)))
 
 (defun install-colormap (colormap)
   (declare (type colormap colormap)))
@@ -1538,19 +1538,19 @@
 (defun installed-colormaps (window &key (result-type 'list))
   (declare (type window window)
 	   (type type result-type)
-	   (values (sequence colormap))))
+	   (clx-values (clx-sequence colormap))))
 
 (defun alloc-color (colormap color)
   (declare (type colormap colormap)
 	   (type (or stringable color) color)
-	   (values pixel screen-color exact-color)))
+	   (clx-values pixel screen-color exact-color)))
 
 (defun alloc-color-cells (colormap colors &key (planes 0) contiguous-p (result-type 'list))
   (declare (type colormap colormap)
 	   (type card16 colors planes)
 	   (type boolean contiguous-p)
 	   (type type result-type)
-	   (values (sequence pixel) (sequence mask))))
+	   (clx-values (clx-sequence pixel) (clx-sequence mask))))
 
 (defun alloc-color-planes (colormap colors
 			   &key (reds 0) (greens 0) (blues 0)
@@ -1559,11 +1559,11 @@
 	   (type card16 colors reds greens blues)
 	   (type boolean contiguous-p)
 	   (type type result-type)
-	   (values (sequence pixel) red-mask green-mask blue-mask)))
+	   (clx-values (clx-sequence pixel) red-mask green-mask blue-mask)))
 
 (defun free-colors (colormap pixels &optional (plane-mask 0))
   (declare (type colormap colormap)
-	   (type (sequence pixel) pixels)
+	   (type (clx-sequence pixel) pixels)
 	   (type pixel plane-mask)))
 
 (defun store-color (colormap pixel spec &key (red-p t) (green-p t) (blue-p t))
@@ -1582,21 +1582,21 @@
 
 (defun query-colors (colormap pixels &key (result-type 'list))
   (declare (type colormap colormap)
-	   (type (sequence pixel) pixels)
+	   (type (clx-sequence pixel) pixels)
 	   (type type result-type)
-	   (values (sequence color))))
+	   (clx-values (clx-sequence color))))
 
 (defun lookup-color (colormap name)
   (declare (type colormap colormap)
 	   (type stringable name)
-	   (values screen-color true-color)))
+	   (clx-values screen-color true-color)))
 
 (defun create-cursor (&key source mask x y foreground background)
   (declare (type pixmap source)
 	   (type (or null pixmap) mask)
 	   (type card16 x y)
 	   (type color foreground background)
-	   (values cursor)))
+	   (clx-values cursor)))
 
 (defun create-glyph-cursor (&key source-font source-char mask-font mask-char
 				 foreground background)
@@ -1605,7 +1605,7 @@
 	   (type (or null font) mask-font)
 	   (type (or null card16) mask-char)
 	   (type color foreground background)
-	   (values cursor)))
+	   (clx-values cursor)))
 
 (defun free-cursor (cursor)
   (declare (type cursor cursor)))
@@ -1617,27 +1617,27 @@
 (defun query-best-cursor (width height drawable)
   (declare (type card16 width height)
 	   (type drawable display)
-	   (values width height)))
+	   (clx-values width height)))
 
 (defun query-best-tile (width height drawable)
   (declare (type card16 width height)
 	   (type drawable drawable)
-	   (values width height)))
+	   (clx-values width height)))
 
 (defun query-best-stipple (width height drawable)
   (declare (type card16 width height)
 	   (type drawable drawable)
-	   (values width height)))
+	   (clx-values width height)))
 
 (defun query-extension (display name)
   (declare (type display display)
 	   (type stringable name)
-	   (values major-opcode first-event first-error)))
+	   (clx-values major-opcode first-event first-error)))
 
 (defun list-extensions (display &key (result-type 'list))
   (declare (type display display)
 	   (type type result-type)
-	   (values (sequence string))))
+	   (clx-values (clx-sequence string))))
 
 ;; Should pointer-mapping setf be changed to set-pointer-mapping?
 
@@ -1646,13 +1646,13 @@
   ;; Setf ought to allow multiple values.
   ;; Returns true for success, nil for failure
   (declare (type display display)
-	   (type (sequence card8) shift lock control mod1 mod2 mod3 mod4 mod5)
-	   (values (member :success :busy :failed))))
+	   (type (clx-sequence card8) shift lock control mod1 mod2 mod3 mod4 mod5)
+	   (clx-values (member :success :busy :failed))))
 
 (defun modifier-mapping (display)
   ;; each value is a list of card8s
   (declare (type display display)
-	   (values shift lock control mod1 mod2 mod3 mod4 mod5)))
+	   (clx-values shift lock control mod1 mod2 mod3 mod4 mod5)))
 
 ;; Either we will want lots of defconstants for well-known values, or perhaps
 ;; an integer-to-keyword translation function for well-known values.
@@ -1677,7 +1677,7 @@
 	   (type (or null card8) first-keycode)
 	   (type (or null array-index) start end)
 	   (type (or null (array * (* *))) data)
-	   (values (array * (* *)))))
+	   (clx-values (array * (* *)))))
 
 (defun change-keyboard-control (display &key key-click-percent
 				bell-percent bell-pitch bell-duration
@@ -1691,7 +1691,7 @@
 
 (defun keyboard-control (display)
   (declare (type display display)
-	   (values key-click-percent bell-percent bell-pitch bell-duration
+	   (clx-values key-click-percent bell-percent bell-pitch bell-duration
 		   led-mask global-auto-repeat auto-repeats)))
 
 (defun bell (display &optional (percent-from-normal 0))
@@ -1703,12 +1703,12 @@
 (defun pointer-mapping (display &key (result-type 'list))
   (declare (type display display)
 	   (type type result-type)
-	   (values (sequence card8))))
+	   (clx-values (clx-sequence card8))))
 
 (defsetf pointer-mapping (display) (map)
   ;; Can signal device-busy.
   (declare (type display display)
-	   (type (sequence card8) map)))
+	   (type (clx-sequence card8) map)))
 
 (defun change-pointer-control (display &key acceleration threshold)
   ;; Acceleration is rationalized if necessary.
@@ -1718,7 +1718,7 @@
 
 (defun pointer-control (display)
   (declare (type display display)
-	   (values acceleration threshold)))
+	   (clx-values acceleration threshold)))
 
 (defun set-screen-saver (display timeout interval blanking exposures)
   ;; Setf ought to allow multiple values.
@@ -1730,7 +1730,7 @@
 (defun screen-saver (display)
   ;; Returns timeout and interval in seconds.
   (declare (type display display)
-	   (values timeout interval blanking exposures)))
+	   (clx-values timeout interval blanking exposures)))
 
 (defun activate-screen-saver (display)
   (declare (type display display)))
@@ -1753,18 +1753,18 @@
   ;; be acceptable to add-access-host and remove-access-host.
   (declare (type display display)
 	   (type type result-type)
-	   (values (sequence host) enabled-p)))
+	   (clx-values (clx-sequence host) enabled-p)))
 
 (defun access-control (display)
   ;; setf'able
   (declare (type display display)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun close-down-mode (display)
   ;; setf'able
   ;; Cached locally in display object.
   (declare (type display display)
-	   (values (member :destroy :retain-permanent :retain-temporary))))
+	   (clx-values (member :destroy :retain-permanent :retain-temporary))))
 
 (defun kill-client (display resource-id)
   (declare (type display display)
@@ -1776,22 +1776,22 @@
 (defun make-event-mask (&rest keys)
   ;; This is only defined for core events.
   ;; Useful for constructing event-mask, pointer-event-mask, device-event-mask.
-  (declare (type (list event-mask-class) keys)
-	   (values mask32)))
+  (declare (type (clx-list event-mask-class) keys)
+	   (clx-values mask32)))
 
 (defun make-event-keys (event-mask)
   ;; This is only defined for core events.
   (declare (type mask32 event-mask)
-	   (values (list event-mask-class))))
+	   (clx-values (clx-list event-mask-class))))
 
 (defun make-state-mask (&rest keys)
   ;; Useful for constructing modifier-mask, state-mask.
-  (declare (type (list state-mask-key) keys)
-	   (values mask16)))
+  (declare (type (clx-list state-mask-key) keys)
+	   (clx-values mask16)))
 
 (defun make-state-keys (state-mask)
   (declare (type mask16 mask)
-	   (values (list state-mask-key))))
+	   (clx-values (clx-list state-mask-key))))
 
 (defmacro with-event-queue ((display) &body body)
   ;; Grants exclusive access to event queue.
@@ -1800,7 +1800,7 @@
 (defun event-listen (display &optional (timeout 0))
   (declare (type display display)
 	   (type (or null number) timeout)
-	   (values (or null number) (or null (member :timeout) (not null))))
+	   (clx-values (or null number) (or null (member :timeout) (not null))))
   ;; Returns the number of events queued locally, if any, else nil.  Hangs
   ;; waiting for events, forever if timeout is nil, else for the specified
   ;; number of seconds.  The second value returned is :timeout if the
@@ -1826,8 +1826,8 @@
   ;; process-event is invoked recursively, the nested invocation begins with
   ;; the event after the one currently being processed.
   (declare (type display display)
-	   (type (or (sequence (function (&rest key-vals) t))
-		     (function (&rest key-vals) t))
+	   (type (or (clx-sequence (function (&key &allow-other-keys) t))
+		     (function (&key &allow-other-keys) t))
 		 handler)
 	   (type (or null number) timeout)
 	   (type boolean peek-p)))
@@ -1835,14 +1835,14 @@
 (defun make-event-handlers (&key (type 'array) default)
   (declare (type t type)			;Sequence type specifier
 	   (type function default)
-	   (values sequence))			;Default handler for initial content
+	   (clx-values sequence))			;Default handler for initial content
   ;; Makes a handler sequence suitable for process-event
   )
    
 (defun event-handler (handlers event-key)
   (declare (type sequence handlers)
 	   (type event-key event-key)
-	   (values function))
+	   (clx-values function))
   ;; Accessor for a handler sequence
   )
 
@@ -1850,7 +1850,7 @@
   (declare (type sequence handlers)
 	   (type event-key event-key)
 	   (type function handler)
-	   (values function))
+	   (clx-values function))
   ;; Setf accessor for a handler sequence
   )
 
@@ -1932,7 +1932,7 @@
 
 (defun discard-current-event (display)
   (declare (type display display)
-	   (values boolean))
+	   (clx-values boolean))
   ;; Discard the current event for DISPLAY.
   ;; Returns NIL when the event queue is empty, else T.
   ;; To ensure events aren't ignored, application code should only call
@@ -2128,7 +2128,7 @@
   (card16 sequence)
   (window (window event-window))
   ((member 8 16 32) format)
-  ((sequence integer) data))
+  (sequence data))
 
 (defun queue-event (display event-key &rest args &key append-p &allow-other-keys)
   ;; The event is put at the head of the queue if append-p is nil, else the tail.
@@ -2148,19 +2148,19 @@
 
 (defun wm-name (window)
   (declare (type window window)
-	   (values string)))
+	   (clx-values string)))
 
 (defsetf wm-name (window) (name))
 
 (defun wm-icon-name (window)
   (declare (type window window)
-	   (values string)))
+	   (clx-values string)))
 
 (defsetf wm-icon-name (window) (name))
 
 (defun get-wm-class (window)
   (declare (type window window)
-	   (values (or null name-string) (or null class-string))))
+	   (clx-values (or null name-string) (or null class-string))))
 
 (defun set-wm-class (window resource-name resource-class)
   (declare (type window window)
@@ -2170,7 +2170,7 @@
   ;; Returns a list whose car is a command string and 
   ;; whose cdr is the list of argument strings.
   (declare (type window window)
-	   (values (list string))))
+	   (clx-values (clx-list string))))
 
 (defsetf wm-command (window) (command)
   ;; Uses PRIN1 inside the ANSI common lisp form WITH-STANDARD-IO-SYNTAX (or
@@ -2179,13 +2179,13 @@
   ;;   (with-standard-io-syntax (mapcar #'read-from-string (wm-command window)))
   ;; to recover a lisp command.
   (declare (type window window)
-	   (type (list stringable) command)))
+	   (type (clx-list stringable) command)))
 
 (defun wm-client-machine (window)
   ;; Returns a list whose car is a command string and 
   ;; whose cdr is the list of argument strings.
   (declare (type window window)
-	   (values string)))
+	   (clx-values string)))
 
 (defsetf wm-client-machine (window) (string)
   (declare (type window window)
@@ -2206,7 +2206,7 @@
 
 (defun wm-hints (window)
   (declare (type window window)
-	   (values wm-hints)))
+	   (clx-values wm-hints)))
 
 (defsetf wm-hints (window) (wm-hints))
 
@@ -2233,7 +2233,7 @@
 
 (defun wm-normal-hints (window)
   (declare (type window window)
-	   (values wm-size-hints)))
+	   (clx-values wm-size-hints)))
 
 (defsetf wm-normal-hints (window) (wm-size-hints))
 
@@ -2241,29 +2241,29 @@
 
 (defun icon-sizes (window)
   (declare (type window window)
-	   (values wm-size-hints)))
+	   (clx-values wm-size-hints)))
   
 (defsetf icon-sizes (window) (wm-size-hints))
 
 (defun wm-protocols (window)
   (declare (type window window)
-	   (values protocols)))
+	   (clx-values protocols)))
   
 (defsetf wm-protocols (window) (protocols)
   (declare (type window window)
-	   (type (list keyword) protocols)))
+	   (type (clx-list keyword) protocols)))
 
 (defun wm-colormap-windows (window)
   (declare (type window window)
-	   (values windows)))
+	   (clx-values windows)))
   
 (defsetf wm-colormap-windows (window) (windows)
   (declare (type window window)
-	   (type (list window) windows)))
+	   (type (clx-list window) windows)))
 
 (defun transient-for (window)
   (declare (type window window)
-	   (values window)))
+	   (clx-values window)))
 
 (defsetf transient-for (window) (transient)
   (declare (type window window transient)))
@@ -2316,13 +2316,13 @@
   (declare (type window window)
 	   (type (member :rgb_default_map :rgb_best_map :rgb_red_map
 			 :rgb_green_map :rgb_blue_map) property)
-	   (values (list standard-colormap))))
+	   (clx-values (clx-list standard-colormap))))
 
 (defsetf rgb-colormaps (window property) (standard-colormaps)
   (declare (type window window)
 	   (type (member :rgb_default_map :rgb_best_map :rgb_red_map
 			 :rgb_green_map :rgb_blue_map) property)
-	   (type (list standard-colormap) standard-colormaps)))
+	   (type (clx-list standard-colormap) standard-colormaps)))
 
 (defun cut-buffer (display &key (buffer 0) (type :string) (result-type 'string)
 		                (transform #'card8->char) (start 0) end)
@@ -2334,7 +2334,7 @@
 	   (type (or null array-index) end)
 	   (type t result-type)			;a sequence type
 	   (type (or null (function (integer) t)) transform)
-	   (values sequence type format bytes-after)))
+	   (clx-values sequence type format bytes-after)))
 
 (defsetf cut-buffer (display buffer &key (type :string) (format 8)
 			     (transform #'char->card8) (start 0) end) (data))
@@ -2361,7 +2361,7 @@
   ;; Return the character code set name of keysym
   ;; Note that the keyboard set (255) has been broken up into its parts.
   (declare (type keysym keysym)
-	   (values keyword)))
+	   (clx-values keyword)))
 
 (defun define-keysym (object keysym &key lowercase translate modifiers mask display)	              
   ;; Define the translation from keysym/modifiers to a (usually
@@ -2396,16 +2396,16 @@
   ;;
   (declare (type (or base-char t) object)
 	   (type keysym keysym)
-	   (type (or null mask16 list) ;; (list (or keysym state-mask-key))
+	   (type (or null mask16 (clx-list (or keysym state-mask-key)))
 	         modifiers)
-	   (type (or null (member :modifiers) mask16 list) ;; (list (or keysym state-mask-key))
+	   (type (or null (member :modifiers) mask16 (clx-list (or keysym state-mask-key)))
 	         mask)
 	   (type (or null display) display)
            (type (or null keysym) lowercase)
 	   (type (function (display card16 t) t) translate)))
 
 (defvar *default-keysym-translate-mask*
-	(the (or (member :modifiers) mask16 list)	; (list (or keysym state-mask-key))
+	(the (or (member :modifiers) mask16 (clx-list (or keysym state-mask-key)))
 	     (logand #xff (lognot (make-state-mask :lock))))
   "Default keysym state mask to use during keysym-translation.")
 
@@ -2414,7 +2414,7 @@
   ;; If DISPLAY is non-nil, undefine the translation for DISPLAY if it exists.
   (declare (type (or base-char t) object)
 	   (type keysym keysym)
-	   (type (or null mask16 list) ;; (list (or keysym state-mask-key))
+	   (type (or null mask16 (clx-list (or keysym state-mask-key)))
 	         modifiers)
 	   (type (or null display) display)))
 
@@ -2430,7 +2430,7 @@
   (declare (type display display)
 	   (type card16 state)
 	   (type t object)
-	   (values t))) ;; Object returned by keycode->character
+	   (clx-values t))) ;; Object returned by keycode->character
    
 (defmacro keysym (keysym &rest bytes)
   ;; Build a keysym.
@@ -2442,8 +2442,8 @@
   ;; This is a macro and not a function macro to promote compile-time
   ;; lookup. All arguments are evaluated.
   (declare (type t keysym)
-	   (type (list card8) bytes)
-	   (values keysym)))
+	   (type (clx-list card8) bytes)
+	   (clx-values keysym)))
 
 (defun character->keysyms (character &optional display)
   ;; Given a character, return a list of all matching keysyms.
@@ -2453,20 +2453,20 @@
   ;; May be slow [i.e. do a linear search over all known keysyms]
   (declare (type t character)
 	   (type (or null display) display)
-	   (values (list keysym))))
+	   (clx-values (clx-list keysym))))
 
 (defun keycode->keysym (display keycode keysym-index)
   (declare (type display display)
 	   (type card8 code)
 	   (type card16 state)
 	   (type card8 keysym-index)
-	   (values keysym)))
+	   (clx-values keysym)))
 
 (defun keysym->keycodes (display keysym)
   ;; Return keycodes for keysym, as multiple values
   (declare (type display display)
 	   (type keysym keysym)
-	   (values (or null keycode) (or null keycode) (or null keycode)))
+	   (clx-values (or null keycode) (or null keycode) (or null keycode)))
   )
 
 (defun keysym->character (display keysym &optional state)
@@ -2480,7 +2480,7 @@
   (declare (type display display)
 	   (type keysym keysym)
 	   (type (or null card16) state)
-	   (values (or null character))))
+	   (clx-values (or null character))))
 
 (defun keycode->character (display keycode state &key keysym-index
 	                   (keysym-index-function #'default-keysym-index))
@@ -2502,11 +2502,11 @@
 	   (type (or null card8) keysym-index)
 	   (type (or null (function (char0 state caps-lock-p keysyms-per-keycode) card8))
 		 keysym-index-function)
-	   (values (or null character))))
+	   (clx-values (or null character))))
 
 (defun default-keysym-index (display keycode state)
   ;; Returns a keysym-index for use with keycode->character
-  (declare (values card8))
+  (declare (clx-values card8))
 )
 
 ;;; default-keysym-index implements the following tables:
@@ -2536,7 +2536,7 @@
   (declare (type display display)
 	   (type card16 state)
 	   (type keysym keysym)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun mapping-notify (display request start count)
   ;; Called on a mapping-notify event to update
@@ -2572,7 +2572,7 @@
   ;; To define event handlers, use declare-event.
   ;; To define error handlers, use declare-error and define-condition.
   (declare (type stringable name)
-	   (type (list symbol) events errors)))
+	   (type (clx-list symbol) events errors)))
 
 (defmacro extension-opcode (display name)
   ;; Returns the major opcode for extension NAME.
@@ -2581,7 +2581,7 @@
   ;; Note: The case of NAME is important.
   (declare (type display display)
 	   (type stringable name)
-	   (values card8)))
+	   (clx-values card8)))
 
 (defmacro define-error (error-key function)
   ;; Associate a function with ERROR-KEY which will be called with
@@ -2610,7 +2610,7 @@
   (declare (type display display)
 	   (type reply-buffer event)
 	   (type (or null keyword) arg)
-	   (values keyword/arg-plist)))
+	   (clx-values keyword/arg-plist)))
 
 ;; This isn't new, just extended.
 (defmacro declare-event (event-codes &body declares)
@@ -2620,8 +2620,8 @@
   ;; A compiler warning is printed when all of EVENT-CODES are not
   ;; defined by a preceding DEFINE-EXTENSION.
   ;; See the INPUT file for lots of examples.
-  (declare (type (or keyword (list keywords)) event-codes)
-	   (type (alist (field-type symbol) (field-names (list symbol)))
+  (declare (type (or keyword (clx-list keywords)) event-codes)
+	   (type (alist (field-type symbol) (field-names (clx-list symbol)))
                  declares)))
 
 (defmacro define-gcontext-accessor (name &key default set-function copy-function)
@@ -2641,9 +2641,8 @@
   ;;	  (error "Can't copy unknown GContext component ~a" ',name)))
   (declare (type symbol name)
 	   (type t default)
-	   (type (function (gcontext t) t) set-function) ;; required
-	   (type (or null (function (gcontext gcontext t) t))
-		 copy-function)))
+	   (type symbol set-function) ;; required
+	   (type symbol copy-function)))
 
 
 ;; To aid extension implementors in attaching additional information to
@@ -2678,7 +2677,7 @@ drawable-plist
   ;; With no parameters, returns an empty region
   ;; If some parameters are given, all must be given.
   (declare (type (or null int16) x y width height)
-	   (values region)))
+	   (clx-values region)))
 
 (defun region-p (thing))
 
@@ -2686,13 +2685,13 @@ drawable-plist
 
 (defun region-empty-p (region)
   (declare (type region region)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun region-clip-box (region)
   ;; Returns a region which is the smallest enclosing rectangle
   ;; enclosing REGION
   (declare (type region region)
-	   (values region)))
+	   (clx-values region)))
 
 ;; Accessors that return the boundaries of a region
 (defun region-x (region))
@@ -2708,46 +2707,46 @@ drawable-plist
   "Returns a region which is the intersection of one or more REGIONS.
 Returns an empty region if the intersection is empty.
 If there are no regions given, return a very large region."
-  (declare (type (list region) regions)
-	   (values region)))
+  (declare (type (clx-list region) regions)
+	   (clx-values region)))
 
 (defun region-union (&rest regions)
   "Returns a region which is the union of a number of REGIONS
  (i.e. the smallest region that can contain all the other regions)
  Returns the empty region if no regions are given."
-  (declare (type (list region) regions)
-	   (values region)))
+  (declare (type (clx-list region) regions)
+	   (clx-values region)))
 
 (defun region-subtract (region subtract)
   "Returns a region containing the points that are in REGION but not in SUBTRACT"
   (declare (type region region subtract)
-	   (values region)))
+	   (clx-values region)))
 
 (defun point-in-region-p (region x y)
   ;; Returns T when X/Y are a point within REGION.
   (declare (type region region)
 	   (type int16 x y)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun region-equal (a b)
   ;; Returns T when regions a and b contain the same points.
   ;; That is, return t when for every X/Y (point-in-region-p a x y)
   ;; equals (point-in-region-p b x y)
   (declare (type region a b)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun subregion-p (large small)
   "Returns T if SMALL is within LARGE.
  That is, return T when for every X/Y (point-in-region-p small X Y)
  implies (point-in-region-p large X Y)."
   (declare (type region large small)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun region-intersect-p (a b)
   "Returns T if A intersects B.
  That is, return T when there is some point common to regions A and B."
   (declare (type region a b)
-	   (values boolean)))
+	   (clx-values boolean)))
 
 (defun map-region (region function &rest args)
   ;; Calls function with arguments (x y . args) for every point in REGION.
@@ -2763,7 +2762,7 @@ If there are no regions given, return a very large region."
 ;;(defun gcontext-clip-region (gcontext)
 ;;  ;; If the clip-mask of GCONTEXT is known, return it as a region.
 ;;  (declare (type gcontext gcontext)
-;;	   (values (or null region))))
+;;	   (clx-values (or null region))))
 
 ;;(defsetf gcontext-clip-region (gcontext) (region)
 ;;  ;; Set the clip-rectangles or clip-mask for for GCONTEXT to include
@@ -2775,17 +2774,17 @@ If there are no regions given, return a very large region."
   ;; Returns a region containing the 1 bits of a depth-1 image
   ;; Signals an error if image isn't of depth 1.
   (declare (type image image)
-	   (values region)))
+	   (clx-values region)))
 
 (defun region->image (region)
   ;; Returns a depth-1 image containg 1 bits for every pixel in REGION.
   (declare (type region region)
-	   (values image)))
+	   (clx-values image)))
 
 (defun polygon-region (points &optional (fill-rule :even-odd))
   (declare (type sequence points) ;(repeat-seq (integer x) (integer y))
 	   (type (member :even-odd :winding) fill-rule)
-	   (values region)))
+	   (clx-values region)))
 
 ;;;-----------------------------------------------------------------------------
 ;;; IMAGE functions
@@ -2833,7 +2832,7 @@ If there are no regions given, return a very large region."
 (defstruct (image-xy (:include image))
   ;; Public structure
   ;; Use this format for image processing
-  (bitmap-list nil :type (list bitmap)))
+  (bitmap-list nil :type (clx-list bitmap)))
 
 (defstruct (image-z (:include image))
   ;; Public structure
@@ -2853,7 +2852,7 @@ If there are no regions given, return a very large region."
     (type card16 width height)			; Required
     (type (or null card8) depth)		; Defualts to 1
     (type (or (array card8 (*))			;Returns image-x
-	      (list bitmap)			;Returns image-xy
+	      (clx-list bitmap)			;Returns image-xy
 	      pixarray) data)			;Returns image-z
     (type list plist)
     (type (or null stringable) name)
@@ -2867,7 +2866,7 @@ If there are no regions given, return a very large region."
     (type (or null (member 8 16 32)) scanline-pad)
     (type (or null card16) bytes-per-line) ;default from width and scanline-pad
     (type boolean byte-lsb-first-p bit-lsb-first-p)
-    (values image)))
+    (clx-values image)))
 
 (defun get-image (drawable &key 
 		  (x (required-arg x))
@@ -2887,7 +2886,7 @@ If there are no regions given, return a very large region."
 	   (type (or null pixel) plane-mask)
 	   (type (or null (member :xy-pixmap :z-pixmap)) format)
 	   (type (or null (member image-x image-xy image-z)) result-type)
-	   (values image)))
+	   (clx-values image)))
 
 (defun put-image (drawable gcontext image &key
 		  (src-x 0) (src-y 0)
@@ -2911,12 +2910,12 @@ If there are no regions given, return a very large region."
 	   (type card16 x y)
 	   (type (or null card16) width height) ;; Default from image
 	   (type (or null (member image-x image-xy image-z)) result-type)
-	   (values image)))
+	   (clx-values image)))
 
 (defun read-bitmap-file (pathname)
   ;; Creates an image from a C include file in standard X11 format
   (declare (type (or pathname string stream) pathname)
-	   (values image)))
+	   (clx-values image)))
 
 (defun write-bitmap-file (pathname image &optional name)
   ;; Writes an image to a C include file in standard X11 format
@@ -2931,7 +2930,7 @@ If there are no regions given, return a very large region."
 
 (defun make-resource-database ()
   ;; Returns an empty resource data-base
-  (declare (values resource-database)))
+  (declare (clx-values resource-database)))
 
 (defun get-resource (database value-name value-class full-name full-class)
   ;; Return the value of the resource in DATABASE whose partial name
@@ -2939,8 +2938,8 @@ If there are no regions given, return a very large region."
   ;;                      (append full-class (list value-class)).
   (declare (type resource-database database)
 	   (type stringable value-name value-class)
-	   (type (list stringable) full-name full-class)
-	   (values value)))
+	   (type (clx-list stringable) full-name full-class)
+	   (clx-values value)))
 
 (defun add-resource (database name-list value)
   ;; name-list is a list of either strings or symbols. If a symbol, 
@@ -2948,23 +2947,23 @@ If there are no regions given, return a very large region."
   ;; case-sensitive comparisons will be used.  The symbol '* or
   ;; string "*" are used as wildcards, matching anything or nothing.
   (declare (type resource-database database)
-	   (type (list stringable) name-list)
+	   (type (clx-list stringable) name-list)
 	   (type t value)))
 
 (defun delete-resource (database name-list)
   (declare (type resource-database database)
-	   (type (list stringable) name-list)))
+	   (type (clx-list stringable) name-list)))
 
 (defun map-resource (database function &rest args)
   ;; Call FUNCTION on each resource in DATABASE.
   ;; FUNCTION is called with arguments (name-list value . args)
   (declare (type resource-database database)
-	   (type (function ((list stringable) t &rest t) t) function)
-	   (values nil)))
+	   (type (function ((clx-list stringable) t &rest t) t) function)
+	   (clx-values nil)))
 
 (defun merge-resources (database with-database)
   (declare (type resource-database database with-database)
-	   (values resource-database))
+	   (clx-values resource-database))
   (map-resource #'add-resource database with-database)
   with-database)
 
@@ -2980,9 +2979,9 @@ If there are no regions given, return a very large region."
   (declare (type resource-database database)
 	   (type (or pathname string stream) pathname)
 	   (type (or null (function (string) t)) key)
-	   (type (or null (function ((list string) t) boolean))
+	   (type (or null (function ((clx-list string) t) boolean))
                  test test-not)
-	   (values resource-database)))
+	   (clx-values resource-database)))
 
 (defun write-resources (database pathname &key write test test-not)
   ;; Write resources to PATHNAME in the standard X11 format.
@@ -2992,7 +2991,7 @@ If there are no regions given, return a very large region."
   (declare (type resource-database database)
 	   (type (or pathname string stream) pathname)
 	   (type (or null (function (string stream) t)) write)
-	   (type (or null (function ((list string) t) boolean))
+	   (type (or null (function ((clx-list string) t) boolean))
                  test test-not)))
 
 (defun root-resources (screen &key database key test test-not)
@@ -3010,8 +3009,8 @@ If there are no regions given, return a very large region."
   (declare (type (or screen display) screen)
 	   (type (or null resource-database) database)
 	   (type (or null (function (string) t)) key)
-	   (type (or null (function (list t) boolean)) test test-not)
-	   (values resource-database)))
+	   (type (or null (function list boolean)) test test-not)
+	   (clx-values resource-database)))
 
 (defsetf root-resources (screen &key test test-not (write 'princ)) (database)
   "Changes the contents of the root window RESOURCE_MANAGER property for the
@@ -3024,9 +3023,9 @@ If there are no regions given, return a very large region."
 
   (declare (type (or screen display) screen)
 	(type (or null resource-database) database)
-	(type (or null (function (list t) boolean)) test test-not)
+	(type (or null (function list boolean)) test test-not)
 	(type (or null (function (string stream) t)) write)
-	(values resource-database)))
+	(clx-values resource-database)))
 
 ;;;-----------------------------------------------------------------------------
 ;;; Shared GContext's
@@ -3294,7 +3293,7 @@ SetDashes               FORCE-GCONTEXT-CHANGES
 
 SetFontPath
      (setf (font-path font) paths)
-	Where paths is (type (sequence (or string pathname)))
+	Where paths is (type (clx-sequence (or string pathname)))
 
 SetInputFocus           SET-INPUT-FOCUS
 SetKeyboardMapping      CHANGE-KEYBOARD-MAPPING

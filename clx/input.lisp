@@ -102,7 +102,7 @@
 (defun canonicalize-event-name (event)
   ;; Returns the event name keyword given an event name stringable
   (declare (type stringable event))
-  (declare (values event-key))
+  (declare (clx-values event-key))
   (kintern event))
 ) ;; end eval-when
 
@@ -134,7 +134,7 @@
   ;; Returns NIL when the event-code is for an extension that isn't handled.
   (declare (type display display)
 	   (type card8 code))
-  (declare (values (or null card8)))
+  (declare (clx-values (or null card8)))
   (setq code (logand #x7f code))
   (if (< code *first-extension-event-code*)
       code
@@ -153,7 +153,7 @@
   ;; Given an X11 event name, return the event-code
   (declare (type display display)
 	   (type event-key event))
-  (declare (values card8))
+  (declare (clx-values card8))
   (let ((code (get-event-code event)))
     (declare (type (or null card8) code))
     (when (>= code *first-extension-event-code*)
@@ -558,7 +558,7 @@
 (defun event-listen (display &optional (timeout 0))
   (declare (type display display)
 	   (type (or null number) timeout)
-	   (values number-of-events-queued eof-or-timeout))
+	   (clx-values number-of-events-queued eof-or-timeout))
   ;; Returns the number of events queued locally, if any, else nil.  Hangs
   ;; waiting for events, forever if timeout is nil, else for the specified
   ;; number of seconds.
@@ -689,7 +689,7 @@
 (define-event :mapping-notify 34)
 
 
-(defmacro declare-event (event-codes &body declares)
+(defmacro declare-event (event-codes &body declares &environment env)
   ;; Used to indicate the keyword arguments for handler functions in
   ;; process-event and event-case.
   ;; Generates the functions used in SEND-EVENT.
@@ -745,13 +745,16 @@
 	   (defun ,get-macro (display event-key variable)
 	     ;; Note: we take pains to macroexpand the get-code here to enable application
 	     ;; code to be compiled without having the CLX macros file loaded.
-	     (subst display '%buffer
-		    (getf `(:display (the display ,display)
-			    :event-key (the keyword ,event-key)
-			    :event-code (the card8 (logand #x7f (read-card8 0)))
-			    :send-event-p (the boolean (logbitp 7 (read-card8 0)))
-			    ,@',(mapcar #'macroexpand get-code))
-			  variable)))
+	     `(let ((%buffer ,display))
+		(declare (ignorable %buffer))
+		,(getf `(:display (the display ,display)
+			 :event-key (the keyword ,event-key)
+			 :event-code (the card8 (logand #x7f (read-card8 0)))
+			 :send-event-p (the boolean (logbitp 7 (read-card8 0)))
+			 ,@',(mapcar #'(lambda (form)
+					 (clx-macroexpand form env))
+				     get-code))
+		       variable)))
 
 	   (defun ,get-function (display event handler)
 	     (declare (type display display)
@@ -997,7 +1000,7 @@
 
 (defun event-loop-setup (display)
   (declare (type display display)
-	   (values progv-vars progv-vals
+	   (clx-values progv-vars progv-vals
 		   current-event-symbol current-event-discarded-p-symbol))
   (let* ((progv-vars (display-current-event-symbol display))
 	 (current-event-symbol (first progv-vars))
@@ -1024,7 +1027,7 @@
 	   (type (or null number) timeout)
 	   (type boolean force-output-p)
 	   (type symbol current-event-symbol)
-	   (values event eof-or-timeout))
+	   (clx-values event eof-or-timeout))
   (unless (symbol-value current-event-symbol)
     (let ((eof-or-timeout (wait-for-event display timeout force-output-p)))
       (when eof-or-timeout
@@ -1040,7 +1043,7 @@
 (defun dequeue-event (display event)
   (declare (type display display)
 	   (type reply-buffer event)
-	   (values next))
+	   (clx-values next))
   ;; Remove the current event from the event queue
   (with-event-queue-internal (display)
     (let ((next (reply-next event))
@@ -1129,7 +1132,7 @@
   ;; inside even-case, event-cond or process-event when :peek-p is T and
   ;; :discard-p is NIL.
   (declare (type display display)
-	   (values boolean))
+	   (clx-values boolean))
   (let* ((symbols (display-current-event-symbol display))
 	 (event
 	   (let ((current-event-symbol (first symbols)))
@@ -1203,14 +1206,14 @@
 (defun make-event-handlers (&key (type 'array) default)
   (declare (type t type)			;Sequence type specifier
 	   (type function default)
-	   (values sequence))			;Default handler for initial content
+	   (clx-values sequence))			;Default handler for initial content
   ;; Makes a handler sequence suitable for process-event
   (make-sequence type *max-events* :initial-element default))
    
 (defun event-handler (handlers event-key)
   (declare (type sequence handlers)
 	   (type event-key event-key)
-	   (values function))
+	   (clx-values function))
   ;; Accessor for a handler sequence
   (elt handlers (position event-key *event-key-vector* :test #'eq)))
 
@@ -1218,7 +1221,7 @@
   (declare (type sequence handlers)
 	   (type event-key event-key)
 	   (type function handler)
-	   (values handler))
+	   (clx-values handler))
   (setf (elt handlers (position event-key *event-key-vector* :test #'eq)) handler))
 
 (defsetf event-handler set-event-handler)
@@ -1313,7 +1316,7 @@
 (defun get-event-code (event)
   ;; Returns the event code given an event-key
   (declare (type event-key event))
-  (declare (values card8))
+  (declare (clx-values card8))
   (or (get event 'event-code)
       (x-type-error event 'event-key)))
 
@@ -1391,7 +1394,7 @@
     ;;  (component-key ((event-key event-key ...) . extraction-code)
     ;;		       ((event-key event-key ...) . extraction-code) ...)
     ;; There should probably be accessor macros for this, instead of things like cdadr.
-    (let ((vars (mapcar #'(lambda (var) (list var)) value-list))
+    (let ((vars (mapcar #'list value-list))
 	  (multiple-p nil))
       ;; Fill in the VARS alist with event-keys and extraction-code
       (do ((keys event-keys (cdr keys))
@@ -1527,7 +1530,7 @@
       (when (= code (second extension))
 	(return (first extension))))))
 
-#-(or clx-ansi-common-lisp excl lcl3.0)
+#-(or clx-ansi-common-lisp excl lcl3.0 CMU)
 (define-condition request-error (x-error)
   ((display :reader request-error-display)
    (error-key :reader request-error-error-key)
@@ -1552,7 +1555,7 @@
 
 ;; Since the :report arg is evaluated as (function report-request-error) the
 ;; define-condition must come after the function definition.
-#+(or clx-ansi-common-lisp excl lcl3.0)
+#+(or clx-ansi-common-lisp excl lcl3.0 CMU)
 (define-condition request-error (x-error)
   ((display :reader request-error-display :initarg :display)
    (error-key :reader request-error-error-key :initarg :error-key)
@@ -1823,7 +1826,7 @@
   (declare (type display display)
 	   (type reply-buffer event)
 	   (type (or null keyword) arg))
-  (declare (values keyword/arg-plist))
+  (declare (clx-values keyword/arg-plist))
   display
   (reading-event (event)
     (let* ((sequence (read-card16 2))

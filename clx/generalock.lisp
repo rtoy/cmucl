@@ -1,5 +1,15 @@
 ;;; -*- Mode: LISP; Syntax: Common-lisp; Package: PROCESS; Base: 10; Lowercase: Yes -*-
 
+;;; Copyright (C) 1990 Symbolics, Inc.
+;;;
+;;; Permission is granted to any individual or institution to use, copy, modify,
+;;; and distribute this software, provided that this complete copyright and
+;;; permission notice is maintained, intact, in all copies and supporting
+;;; documentation.
+;;;
+;;; Symbolics, Inc. provides this software "as is" without
+;;; express or implied warranty.
+
 (defflavor xlib::clx-lock () (simple-recursive-normal-lock)
   (:init-keywords :flavor))
 

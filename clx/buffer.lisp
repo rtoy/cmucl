@@ -173,21 +173,17 @@
 		    (buffer-lbuf (reply-ibuf32 %reply-buffer))))))
        (declare (type array-index buffer-boffset))
        #-clx-overlapping-arrays
-       (declare (type buffer-bytes buffer-bbuf)
-		(array-register buffer-bbuf))
+       (declare (type buffer-bytes buffer-bbuf))
        #+clx-overlapping-arrays
        ,@(append
 	   (when (member 8 sizes)
-	     '((declare (type buffer-bytes buffer-bbuf)
-			(array-register buffer-bbuf))))
+	     '((declare (type buffer-bytes buffer-bbuf))))
 	   (when (member 16 sizes)
 	     '((declare (type array-index buffer-woffset))
-	       (declare (type buffer-words buffer-wbuf)
-			(array-register buffer-wbuf))))
+	       (declare (type buffer-words buffer-wbuf))))
 	   (when (member 32 sizes)
 	     '((declare (type array-index buffer-loffset))
-	       (declare (type buffer-longs buffer-lbuf)
-			(array-register buffer-lbuf)))))
+	       (declare (type buffer-longs buffer-lbuf)))))
        buffer-boffset
        #-clx-overlapping-arrays
        buffer-bbuf
@@ -419,7 +415,7 @@
 	   (type vector vector)
 	   (type array-index start end)
 	   (type (or null number) timeout))
-  (declare (values eof-p))
+  (declare (clx-values eof-p))
   (when (buffer-dead buffer)
     (x-error 'closed-display :display buffer))
   (unless (= start end)
@@ -437,7 +433,7 @@
   ;; Returns :TIMEOUT when timeout exceeded
   (declare (type buffer buffer)
 	   (type (or null number) timeout))
-  (declare (values timeout))
+  (declare (clx-values timeout))
   (when (buffer-dead buffer)
     (x-error 'closed-display :display buffer))
   (let ((result
@@ -452,7 +448,7 @@
   ;; Returns T if there is input available for the buffer. This should never
   ;; block, so it can be called from the scheduler.
   (declare (type buffer buffer))
-  (declare (values input-available))
+  (declare (clx-values input-available))
   (or (not (null (buffer-dead buffer)))
       (wrap-buf-input (buffer)
 	(funcall (buffer-listen-function buffer) buffer))))
@@ -1623,8 +1619,7 @@
 	   (type array-index boffset)
 	   (type (or null (simple-bit-vector 256)) data))
   (let ((result (or data (make-array 256 :element-type 'bit :initial-element 0))))
-    (declare (type (simple-bit-vector 256) result)
-	     (array-register result))
+    (declare (type (simple-bit-vector 256) result))
     (do ((i (index+ boffset 1) (index+ i 1)) ;; Skip first byte
 	 (j 8 (index+ j 8)))
 	((index>= j 256))

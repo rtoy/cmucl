@@ -22,6 +22,9 @@
     rational
     ))
 
+#+(and CMU (not clx-ansi-common-lisp))
+(shadow '(define-condition))
+
 #+(and lispm (not clx-ansi-common-lisp))
 (import
   '(
@@ -35,7 +38,6 @@
   '(
     future-common-lisp:print-unreadable-object
     future-common-lisp:with-standard-io-syntax
-    sys:array-register
     zwei:indentation
     ))
 
@@ -232,7 +234,6 @@
   #+allegro (:use cltl1)
   #+allegro (:import-from excl without-interrupts)
   #+excl (:import-from excl arglist)
-  #+Genera (:import-from sys array-register)
   #+Genera (:import-from zwei indentation)
   #+lcl3.0 (:import-from lcl arglist)
   #+lispm (:import-from lisp char-bit)

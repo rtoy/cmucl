@@ -30,6 +30,7 @@
 ;;;   kcl
 ;;;   ibcl
 ;;;   excl
+;;;   CMU
 
 #+(or Genera Minima)
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -138,6 +139,23 @@
 	   (:type :lisp-example))
   (:serial
     "package" "depdefs" "generalock" "clx" "dependent" "macros" "bufmac"
+    "buffer" "display" "gcontext" "input" "requests" "fonts" "graphics"
+    "text" "attributes" "translate" "keysyms" "manager" "image" "resource"))
+
+#+Minima
+(zl:::scl:defsystem Minima-CLX
+    (:default-pathname "SYS:X11;CLX;"
+     :pretty-name "Minima CLX"
+     :maintain-journals nil
+     :maintaining-sites (:scrc)
+     :distribute-sources t
+     :distribute-binaries t
+     :source-category :basic
+     :default-module-type :minima-lisp)
+  (:module doc ("doc")
+	   (:type :lisp-example))
+  (:serial
+    "package" "depdefs" "clx" "dependent" "macros" "bufmac"
     "buffer" "display" "gcontext" "input" "requests" "fonts" "graphics"
     "text" "attributes" "translate" "keysyms" "manager" "image" "resource"))
 
@@ -322,7 +340,7 @@
       (format t "~&Finished faslinking ~A.~%" pathname)))
   )
 
-#-(or lispm allegro)
+#-(or lispm allegro Minima)
 (defun compile-clx (&optional
 		    (source-pathname-defaults "")
 		    (binary-pathname-defaults "")
@@ -378,7 +396,7 @@
 		 #+(or kcl ibcl) (load source)
 		 (if (equal source binary)
 		     (compile-file source)
-		   (compile-file source :output-file binary))
+		     (compile-file source :output-file binary))
 		 binary))
 	     (compile-and-load (filename)
 	       (load (compile-lisp filename)))
@@ -413,9 +431,9 @@
 
       ;; Now compile and load all the files.
       ;; Defer compiler warnings until everything's compiled, if possible.
-      (#+clx-ansi-common-lisp with-compilation-unit
+      (#+(or clx-ansi-common-lisp CMU) with-compilation-unit
        #+lcl3.0 lucid::with-deferred-warnings
-       #-(or lcl3.0 clx-ansi-common-lisp) progn
+       #-(or lcl3.0 clx-ansi-common-lisp CMU) progn
        ()
        
        (compile-and-load "package")
@@ -465,7 +483,7 @@
 ;;;		(LOAD <clx-defsystem-file>)
 ;;;		(LOAD-CLX <binary-specific-clx-directory>)
 
-#-(or lispm allegro)
+#-(or lispm allegro Minima)
 (defun load-clx (&optional (binary-pathname-defaults "")
 		 &key (macrosp nil))
 

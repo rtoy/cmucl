@@ -95,8 +95,14 @@
 (defstruct (gcontext-extension (:type vector) (:copier nil)) ;; un-named
   (name nil :type symbol :read-only t)
   (default nil :type t :read-only t)
-  (set-function #'identity :type (function (gcontext t) t) :read-only t)
-  (copy-function #'identity :type (function (gcontext gcontext t) t) :read-only t))
+  (set-function #'(lambda (gcontext value)
+		    (declare (ignore gcontext))
+		    value)
+		:type (function (gcontext t) t) :read-only t)
+  (copy-function #'(lambda (from-gc to-gc value)
+		     (declare (ignore from-gc to-gc))
+		     value)
+		 :type (function (gcontext gcontext t) t) :read-only t))
 
 (defvar *gcontext-extensions* nil) ;; list of gcontext-extension
 
@@ -144,7 +150,7 @@
 ;  ;; The value will be nil if the last value stored is unknown (e.g., the cache was
 ;  ;; off, or the component was copied from a gcontext with unknown state).
 ;  (declare (type gcontext gcontext)
-;	   (values <type>)))
+;	   (clx-values <type>)))
 
 ;; For each argument to create-gcontext (except clip-mask and clip-ordering) declared
 ;; as (type (or null <type>) <name>), there is a setf for the corresponding accessor:
@@ -178,7 +184,7 @@
 
        (defun ,gcontext-name (gcontext)
 	 (declare (type gcontext gcontext))
-	 (declare (values (or null ,type)))
+	 (declare (clx-values (or null ,type)))
 	 (let ((value (,internal-accessor (gcontext-local-state gcontext))))
 	   (declare (type (or null card32) value))
 	   (when value ;; Don't do anything when value isn't known
@@ -240,7 +246,7 @@
 
 (defun gcontext-clip-mask (gcontext)
   (declare (type gcontext gcontext))
-  (declare (values (or null (member :none) pixmap rect-seq)
+  (declare (clx-values (or null (member :none) pixmap rect-seq)
 		   (or null (member :unsorted :y-sorted :yx-sorted :yx-banded))))
   (access-gcontext (gcontext local-state)
     (multiple-value-bind (clip clip-mask)
@@ -296,7 +302,7 @@
 
 (defun gcontext-dashes (gcontext)
   (declare (type gcontext gcontext))
-  (declare (values (or null card8 sequence)))
+  (declare (clx-values (or null card8 sequence)))
   (access-gcontext (gcontext local-state)
     (multiple-value-bind (dash dashes)
 	(without-interrupts 
@@ -337,7 +343,7 @@
   ;; result in an invalid-font error.
   (declare (type gcontext gcontext)
 	   (type boolean metrics-p))
-  (declare (values (or null font)))
+  (declare (clx-values (or null font)))
   (access-gcontext (gcontext local-state)
     (let ((font (gcontext-internal-font-obj local-state)))
       (or font
@@ -477,8 +483,7 @@
   (let ((display (gcontext-display gcontext))
 	(server-state (gcontext-server-state gcontext))
 	(local-state (gcontext-local-state gcontext)))
-    (declare (type gcontext-state server-state local-state)
-	     (array-register server-state local-state))
+    (declare (type gcontext-state server-state local-state))
     ;; Update server when timestamps don't match
     (unless (= (the fixnum (gcontext-internal-timestamp local-state))
 	       (the fixnum (gcontext-internal-timestamp server-state)))
@@ -693,7 +698,7 @@
 	   (type (or null card8 sequence) dashes)
 	   (dynamic-extent options)
 	   (type boolean cache-p))
-  (declare (values gcontext))
+  (declare (clx-values gcontext))
   (let* ((display (drawable-display drawable))
 	 (gcontext (make-gcontext :display display :drawable drawable :cache-p cache-p))
 	 (local-state (gcontext-local-state gcontext))
@@ -899,9 +904,8 @@
   ;;	  (error "Can't copy unknown GContext component ~a" ',name)))
   (declare (type symbol name)
 	   (type t default)
-	   (type (function (gcontext t) t) set-function) ;; required
-	   (type (or null (function (gcontext gcontext t) t))
-		 copy-function))
+	   (type symbol set-function) ;; required
+	   (type symbol copy-function))
   (let* ((gc-name (intern (concatenate 'string
 				       (string 'gcontext-)
 				       (string name)))) ;; in current package

@@ -116,7 +116,7 @@
   ;; Compare two stringables.
   ;; Ignore case when comparing to a symbol.
   (declare (type stringable a b))
-  (declare (values boolean))
+  (declare (clx-values boolean))
   (etypecase a
     (string
       (etypecase b
@@ -150,7 +150,7 @@
   ;; case-sensitive comparisons will be used.  The symbol '* or
   ;; string "*" are used as wildcards, matching anything or nothing.
   (declare (type resource-database database)
-	   (type list name-list) ;; (list stringable)
+	   (type (clx-list stringable) name-list)
 	   (type t value))
   (unless value (error "Null resource values are ignored"))
   (incf-resource-database-timestamp database)
@@ -190,7 +190,7 @@
 
 (defun delete-resource-internal (database name-list)
   (declare (type resource-database database)
-	   (type list name-list)) ;; (list stringable)
+	   (type (clx-list stringable) name-list))
   (do* ((list name-list (cdr list))
 	(string (car list) (car list))
 	(node database)
@@ -232,8 +232,8 @@
   ;;                      (append full-class (list value-class)).
   (declare (type resource-database database)
 	   (type stringable value-name value-class)
-	   (type list full-name full-class)) ;; (list stringable)
-  (declare (values value))
+	   (type (clx-list stringable) full-name full-class))
+  (declare (clx-values value))
   (let ((names (append full-name (list value-name)))
 	(classes (append full-class (list value-class))))
     (let* ((result (get-entry (resource-database-tight database)
@@ -321,8 +321,8 @@
 (defun get-search-table (database full-name full-class)
   ;; Return a search table for use with get-search-resource.
   (declare (type resource-database database)
-	   (type list full-name full-class)) ;; (list stringable)
-  (declare (values value))
+	   (type (clx-list stringable) full-name full-class))
+  (declare (clx-values value))
   (let* ((tight (resource-database-tight database))
 	 (loose (resource-database-loose database))
 	 (result (cons nil nil))
@@ -411,7 +411,7 @@
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg function)
 	   (dynamic-extent args))
-  (declare (values nil))
+  (declare (clx-values nil))
   (labels ((map-resource-internal (database function args name)
 	     (declare (type resource-database database)
 		      (type (function (list t &rest t) t) function)
@@ -445,7 +445,7 @@
 
 (defun merge-resources (database with-database)
   (declare (type resource-database database with-database))
-  (declare (values resource-database))
+  (declare (clx-values resource-database))
   (map-resource
     database
     #'(lambda (name value database)
@@ -484,7 +484,7 @@
 	   (type (or null (function (string) t)) key)
 	   (type (or null (function (list t) boolean))
                  test test-not))
-  (declare (values resource-database))
+  (declare (clx-values resource-database))
   (resource-with-open-file (stream pathname)
     (loop
       (let ((string (read-line stream nil :eof)))
@@ -499,7 +499,7 @@
 	  (when i ;; else blank line
 	    (case (char string i)
 	      (#\! nil)  ;; Comment - skip
-	      (#.(card8->char 0) nil) ;; terminator for C strings - skip
+	      ;;(#.(card8->char 0) nil) ;; terminator for C strings - skip
 	      (#\#       ;; Include
 	       (setq term (position '(#\tab #\space) string :test #'char-memq
 				    :start i :end end))
@@ -525,7 +525,7 @@
   (declare (type string string)
 	   (type array-index start)
 	   (type (or null array-index) end))
-  (declare (values name-list value))
+  (declare (clx-values name-list value))
   (do ((i start)
        (end (or end (length string)))
        (term)
@@ -601,7 +601,7 @@
 	   (type (or null (function (string) t)) key)
 	   (type (or null (function (list t) boolean))
                  test test-not))
-  (declare (values resource-database))
+  (declare (clx-values resource-database))
   (let ((string (get-property window :RESOURCE_MANAGER :type :STRING
 			      :result-type 'string
 			      :transform #'xlib::card8->char)))
@@ -643,7 +643,7 @@
 	   (type (or null resource-database) database)
 	   (type (or null (function (string) t)) key)
 	   (type (or null (function (list t) boolean)) test test-not)
-	   (values resource-database))
+	   (clx-values resource-database))
   (let* ((screen (if (type? screen 'display)
 		     (display-default-screen screen)
 		   screen))
@@ -652,7 +652,7 @@
     (wm-resources database window :key key :test test :test-not test-not)
     database))
 
-(defun set-root-resources (screen &key test test-not (write 'princ) database)
+(defun set-root-resources (screen &key test test-not (write #'princ) database)
   "Changes the contents of the root window RESOURCE_MANAGER property for the
    given SCREEN. If SCREEN is a display, then its default screen is used. 
 
@@ -665,7 +665,7 @@
 	(type (or null resource-database) database)
 	(type (or null (function (list t) boolean)) test test-not)
 	(type (or null (function (string stream) t)) write)
-	(values resource-database))
+	(clx-values resource-database))
   (let* ((screen (if (type? screen 'display)
 		     (display-default-screen screen)
 		   screen))

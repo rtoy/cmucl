@@ -68,7 +68,7 @@
 	   (type (or null font) font)
 	   (type vector dst)
 	   (inline graphic-char-p))
-  (declare (values integer (or null integer font) (or null integer)))
+  (declare (clx-values integer (or null integer font) (or null integer)))
   font ;;not used
   (if (stringp src)
       (do ((i src-start (index+ i 1))
@@ -114,7 +114,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg #+Genera * #-Genera translate))
-  (declare (values width ascent descent left right
+  (declare (clx-values width ascent descent left right
 		  font-ascent font-descent direction
 		  (or null array-index)))
   (when (type? font 'gcontext)
@@ -221,7 +221,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg #+Genera * #-Genera translate))
-  (declare (values integer (or null integer)))
+  (declare (clx-values integer (or null integer)))
   (when (type? font 'gcontext)
     (force-gcontext-changes font)
     (setq font (gcontext-font font t)))
@@ -267,7 +267,7 @@
   (declare (type font font)
 	   (type string string)
 	   (type array-index start end))
-  (declare (values width ascent descent left right font-ascent font-descent direction))
+  (declare (clx-values width ascent descent left right font-ascent font-descent direction))
   (let ((display (font-display font))
 	(length (index- end start))
 	(font-id (font-id font)))
@@ -294,7 +294,7 @@
   (declare (type (or font gcontext) font)
 	   (type string string)
 	   (type array-index start end))
-  (declare (values integer))
+  (declare (clx-values integer))
   (let ((display (font-display font))
 	(length (index- end start))
 	(font-id (font-id font)))
@@ -314,12 +314,11 @@
 	   (type sequence sequence)
 	   (type integer start end)
 	   (type boolean width-only-p))
-  (declare (values width ascent descent overall-left overall-right))
+  (declare (clx-values width ascent descent overall-left overall-right))
   (let* ((char-infos (font-char-infos font))
 	 (font-info (font-font-info font)))
     (declare (type font-info font-info))
-    (declare (type (simple-array int16 (*)) char-infos)
-	     (array-register char-infos))
+    (declare (type (simple-array int16 (*)) char-infos))
     (if (zerop (length char-infos))
 	;; Fixed width font
 	(let* ((font-width (max-char-width font))
@@ -466,7 +465,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg #+Genera * #-Genera translate))
-  (declare (values boolean (or null int32)))
+  (declare (clx-values boolean (or null int32)))
   (let* ((display (gcontext-display gcontext))
 	 (result t)
 	 (opcode *x-polytext8*))
@@ -517,7 +516,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg #+Genera * #-Genera translate))
-  (declare (values (or null array-index) (or null int32)))
+  (declare (clx-values (or null array-index) (or null int32)))
   (unless end (setq end (length sequence)))
   (ecase size
     ((:default 8) (draw-glyphs8 drawable gcontext x y sequence start end
@@ -535,7 +534,7 @@
 	   (type sequence sequence)
 	   (type (or null array-index) end)
 	   (type (or null int32) width))
-  (declare (values (or null array-index) (or null int32)))
+  (declare (clx-values (or null array-index) (or null int32)))
   (declare (type translation-function translate)
 	   #+clx-ansi-common-lisp
 	   (dynamic-extent translate)
@@ -638,7 +637,7 @@
 	   (type sequence sequence)
 	   (type (or null array-index) end)
 	   (type (or null int32) width))
-  (declare (values (or null array-index) (or null int32)))
+  (declare (clx-values (or null array-index) (or null int32)))
   (declare (type translation-function translate)
 	   #+clx-ansi-common-lisp
 	   (dynamic-extent translate)
@@ -747,7 +746,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg #+Genera * #-Genera translate))
-  (declare (values boolean (or null int32)))
+  (declare (clx-values boolean (or null int32)))
   (let* ((display (gcontext-display gcontext))
 	 (result t)
 	 (opcode *x-imagetext8*))
@@ -803,7 +802,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg #+Genera * #-Genera translate))
-  (declare (values (or null array-index) (or null int32)))
+  (declare (clx-values (or null array-index) (or null int32)))
   (setf end (index-min (index+ start 255) (or end (length sequence))))
   (ecase size
     ((:default 8)
@@ -831,7 +830,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg translate))
-  (declare (values (or null array-index) (or null int32)))
+  (declare (clx-values (or null array-index) (or null int32)))
   (do* ((display (gcontext-display gcontext))
 	(length (index- end start))
 	;; Should metrics-p be T?  Don't want to pass a NIL font into translate...
@@ -897,7 +896,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg translate))
-  (declare (values (or null array-index) (or null int32)))
+  (declare (clx-values (or null array-index) (or null int32)))
   (do* ((display (gcontext-display gcontext))
 	(length (index- end start))
 	;; Should metrics-p be T?  Don't want to pass a NIL font into translate...
@@ -952,7 +951,7 @@
 
 (defun display-keycode-range (display)
   (declare (type display display))
-  (declare (values min max))
+  (declare (clx-values min max))
   (values (display-min-keycode display)
 	  (display-max-keycode display)))
 
@@ -965,7 +964,7 @@
   ;; Setf ought to allow multiple values.
   (declare (type display display)
 	   (type sequence shift lock control mod1 mod2 mod3 mod4 mod5))
-  (declare (values (member :success :busy :failed)))
+  (declare (clx-values (member :success :busy :failed)))
   (let* ((keycodes-per-modifier (index-max (length shift)
 					   (length lock)
 					   (length control)
@@ -993,7 +992,7 @@
 (defun modifier-mapping (display)
   ;; each value is a list of integers
   (declare (type display display))
-  (declare (values shift lock control mod1 mod2 mod3 mod4 mod5))
+  (declare (clx-values shift lock control mod1 mod2 mod3 mod4 mod5))
   (let ((lists nil))
     (with-buffer-request-and-reply (display *x-getmodifiermapping* nil :sizes 8)
 	 ()
@@ -1059,7 +1058,7 @@
 	   (type (or null card8) first-keycode)
 	   (type (or null array-index) start end)
 	   (type (or null (array * (* *))) data))
-  (declare (values (array * (* *))))
+  (declare (clx-values (array * (* *))))
   (unless first-keycode (setq first-keycode (display-min-keycode display)))
   (unless start (setq start first-keycode))
   (unless end (setq end (1+ (display-max-keycode display))))

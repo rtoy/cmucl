@@ -120,21 +120,17 @@
 		    (buffer-lbuf (buffer-obuf32 %buffer))))))
        (declare (type array-index buffer-boffset))
        #-clx-overlapping-arrays
-       (declare (type buffer-bytes buffer-bbuf)
-		(array-register buffer-bbuf))
+       (declare (type buffer-bytes buffer-bbuf))
        #+clx-overlapping-arrays
        ,@(append
 	   (when (member 8  sizes)
-	     '((declare (type buffer-bytes buffer-bbuf)
-			(array-register buffer-bbuf))))
+	     '((declare (type buffer-bytes buffer-bbuf))))
 	   (when (member 16 sizes)
 	     '((declare (type array-index buffer-woffset))
-	       (declare (type buffer-words buffer-wbuf)
-			(array-register buffer-wbuf))))
+	       (declare (type buffer-words buffer-wbuf))))
 	   (when (member 32 sizes)
 	     '((declare (type array-index buffer-loffset))
-	       (declare (type buffer-longs buffer-lbuf)
-			(array-register buffer-lbuf)))))
+	       (declare (type buffer-longs buffer-lbuf)))))
        buffer-boffset
        #-clx-overlapping-arrays
        buffer-bbuf

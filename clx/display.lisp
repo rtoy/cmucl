@@ -20,6 +20,62 @@
 
 (in-package :xlib)
 
+;;; Authorizaton
+
+(defparameter *known-authorizations* '("MIT-MAGIC-COOKIE-1"))
+
+(defun get-best-authorization (host display protocol)
+  (labels ((read-short (stream &optional (eof-errorp t))
+	     (let ((high-byte (read-byte stream eof-errorp)))
+	       (and high-byte
+		    (dpb high-byte (byte 8 8) (read-byte stream)))))
+	   (read-short-length-string (stream)
+	     (let ((length (read-short stream)))
+	       (let ((string (make-string length)))
+		 (dotimes (k length)
+		   (setf (schar string k) (card8->char (read-byte stream))))
+		 string)))
+	   (read-short-length-vector (stream)
+	     (let ((length (read-short stream)))
+	       (let ((vector (make-array length :element-type '(unsigned-byte 8))))
+		 (dotimes (k length)
+		   (setf (aref vector k) (read-byte stream)))
+		 vector))))
+    (let ((pathname (authority-pathname)))
+      (when pathname
+	(with-open-file (stream pathname :element-type '(unsigned-byte 8)
+				:if-does-not-exist nil)
+	  (when stream
+	    (let* ((host-family (ecase protocol
+				  ((:tcp :internet nil) 0)
+				  ((:dna :DECnet) 1)
+				  ((:chaos) 2)))
+		   (host-address (rest (host-address host host-family)))
+		   (best-name nil)
+		   (best-data nil))
+	      (loop
+		(let ((family (read-short stream nil)))
+		  (when (null family)
+		    (return))
+		  (let* ((address (read-short-length-vector stream))
+			 (number (parse-integer (read-short-length-string stream)))
+			 (name (read-short-length-string stream))
+			 (data (read-short-length-vector stream)))
+		    (when (and (= family host-family)
+			       (equal host-address (coerce address 'list))
+			       (= number display)
+			       (let ((pos1 (position name *known-authorizations* :test #'string=)))
+				 (and pos1
+				      (or (null best-name)
+					  (< pos1 (position best-name *known-authorizations*
+							    :test #'string=))))))
+		      (setf best-name name)
+		      (setf best-data data)))))
+	      (when best-name
+		(return-from get-best-authorization
+		  (values best-name best-data)))))))))
+  (values "" ""))
+
 ;;
 ;; Resource id management
 ;;
@@ -38,7 +94,7 @@
 (defun resourcealloc (display)
   ;; Allocate a resource-id for in DISPLAY
   (declare (type display display))
-  (declare (values resource-id))
+  (declare (clx-values resource-id))
   (dpb (incf (display-resource-id-count display))
        (display-resource-id-byte display)
        (display-resource-id-base display)))
@@ -68,7 +124,7 @@
   (declare (type display display)
 	   (type integer id)
 	   (type t object))
-  (declare (values object))
+  (declare (clx-values object))
   (setf (gethash id (display-resource-id-map display)) object))
 
 ;; Define functions to find the CLX data types given a display and resource-id
@@ -81,7 +137,7 @@
 			       (display id)
 			  (declare (type display display)
 				   (type resource-id id))
-			  (declare (values ,type))
+			  (declare (clx-values ,type))
 			  ,(if (member type *clx-cached-types*)
 			       `(let ((,type (lookup-resource-id display id)))
 				  (cond ((null ,type) ;; Not found, create and save it.
@@ -117,14 +173,14 @@
   ;; Return the cached atom for an atom ID
   (declare (type resource-id id)
 	   (type display display))
-  (declare (values (or null keyword)))
+  (declare (clx-values (or null keyword)))
   (gethash id (display-atom-id-map display)))
 
 (defun atom-id (atom display)
   ;; Return the ID for an atom in DISPLAY
   (declare (type xatom atom)
 	   (type display display))
-  (declare (values (or null resource-id)))
+  (declare (clx-values (or null resource-id)))
   (gethash (if (or (null atom) (keywordp atom)) atom (kintern atom))
 	   (display-atom-cache display)))
 
@@ -133,7 +189,7 @@
   (declare (type xatom atom)
 	   (type display display)
 	   (type resource-id id))
-  (declare (values resource-id))
+  (declare (clx-values resource-id))
   (let ((atom (if (or (null atom) (keywordp atom)) atom (kintern atom))))
     (setf (gethash id (display-atom-id-map display)) atom)
     (setf (gethash atom (display-atom-cache display)) id)
@@ -149,7 +205,7 @@
 (defun visual-info (display visual-id)
   (declare (type display display)
 	   (type resource-id visual-id)
-	   (values visual-info))
+	   (clx-values visual-info))
   (when (zerop visual-id)
     (return-from visual-info nil))
   (dolist (screen (display-roots display))
@@ -223,8 +279,7 @@
 		      ,@(and timeout `(:timeout ,timeout)))
 	 ,@body))))
 
-(defun open-display (host  &rest options &key (display 0) protocol
-		     authorization-name authorization-data &allow-other-keys)
+(defun open-display (host &key (display 0) protocol authorization-name authorization-data)
   ;; Implementation specific routine to setup the buffer for a specific host and display.
   ;; This must interface with the local network facilities, and will probably do special
   ;; things to circumvent the nework when displaying on the local host.
@@ -233,26 +288,25 @@
   ;; for host and protocol are not constrained, and will likely be very
   ;; system dependent.  The default protocol is system specific.  Authorization,
   ;; if any, is assumed to come from the environment somehow.
-  (declare (type integer display)
-	   (dynamic-extent options))
-  (declare (values display))
+  (declare (type integer display))
+  (declare (clx-values display))
+  ;; Get the authorization mechanism from the environment.
+  (when (null authorization-name)
+    (multiple-value-setq (authorization-name authorization-data)
+      (get-best-authorization host display protocol)))
   ;; PROTOCOL is the network protocol (something like :TCP :DNA or :CHAOS). See OPEN-X-STREAM.
   (let* ((stream (open-x-stream host display protocol))
-	 (disp (apply #'make-buffer
-		      *output-buffer-size*
-		      'make-display-internal
-		      :host host
-		      :display display
-		      :output-stream stream
-		      :input-stream stream
-		      :allow-other-keys t
-		      options))
+	 (disp (make-buffer *output-buffer-size* #'make-display-internal
+			    :host host :display display
+			    :output-stream stream :input-stream stream))
 	 (ok-p nil))
     (unwind-protect
 	(progn
 	  (display-connect disp
 			   :authorization-name authorization-name
 			   :authorization-data authorization-data)
+	  (setf (display-authorization-name disp) authorization-name)
+	  (setf (display-authorization-data disp) authorization-data)
 	  (initialize-resource-allocator disp)
 	  (initialize-predefined-atoms disp)
 	  (initialize-extensions disp)
@@ -272,8 +326,6 @@
   (close-buffer display :abort abort))
 
 (defun display-connect (display &key authorization-name authorization-data)
-  (unless authorization-name (setq authorization-name ""))
-  (unless authorization-data (setq authorization-data ""))
   (with-buffer-output (display :sizes (8 16))
     (card8-put
       0
@@ -285,8 +337,11 @@
     (card16-put 6 (length authorization-name))
     (card16-put 8 (length authorization-data))
     (write-sequence-char display 12 authorization-name)
-    (write-sequence-char display
-			 (lround (+ 12 (length authorization-name))) authorization-data))
+    (if (stringp authorization-data)
+	(write-sequence-char display (lround (+ 12 (length authorization-name)))
+			     authorization-data)
+	(write-sequence-card8 display (lround (+ 12 (length authorization-name)))
+			      authorization-data)))
   (buffer-force-output display)
   (let ((reply-buffer nil))
     (declare (type (or null reply-buffer) reply-buffer))
@@ -420,13 +475,13 @@
 
 (defun display-protocol-version (display)
   (declare (type display display))
-  (declare (values major minor))
+  (declare (clx-values major minor))
   (values (display-protocol-major-version display)
 	  (display-protocol-minor-version display)))
 
 (defun display-vendor (display)
   (declare (type display display))
-  (declare (values name release))
+  (declare (clx-values name release))
   (values (display-vendor-name display)
 	  (display-release-number display)))
 

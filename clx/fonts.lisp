@@ -31,17 +31,17 @@
 ;  ;; signalling might be better.
 ;  (declare (type font font)
 ;	   (type integer index)
-;	   (values (or null integer))))
+;	   (clx-values (or null integer))))
 
 ;(defun max-char-<metric> (font)
 ;  ;; Note: I have tentatively chosen separate accessors over allowing :min and
 ;  ;; :max as an index above.
 ;  (declare (type font font)
-;	   (values integer)))
+;	   (clx-values integer)))
 
 ;(defun min-char-<metric> (font)
 ;  (declare (type font font)
-;	   (values integer)))
+;	   (clx-values integer)))
 
 ;; Note: char16-<metric> accessors could be defined to accept two-byte indexes.
 
@@ -64,7 +64,7 @@
 		       `(defun ,name (font index)
 			  (declare (type font font)
 				   (type array-index index))
-			  (declare (values (or null ,type)))
+			  (declare (clx-values (or null ,type)))
 			  (when (and (font-name font)
 				     (index>= (font-max-char font) index (font-min-char font)))
 			    (the ,type
@@ -91,7 +91,7 @@
 		     (push
 		       `(defun ,name (font)
 			  (declare (type font font))
-			  (declare (values (or null ,type)))
+			  (declare (clx-values (or null ,type)))
 			  (when (font-name font)
 			    (the ,type
 				 ,(from
@@ -103,7 +103,7 @@
 		     (push
 		       `(defun ,name (font)
 			  (declare (type font font))
-			  (declare (values (or null ,type)))
+			  (declare (clx-values (or null ,type)))
 			  (when (font-name font)
 			    (the ,type
 				 ,(from
@@ -119,8 +119,7 @@
 				fields))
 		 (declare ,@(mapcar #'(lambda (field) `(type ,@(reverse field))) fields))
 		 (let ((result (make-array ,(length fields) :element-type 'int16)))
-		   (declare (type char-info-vec result)
-			    (array-register result))
+		   (declare (type char-info-vec result))
 		   ,@(do* ((field fields (cdr field))
 			   (var (caar field) (caar field))
 			   (type (cadar field) (cadar field))
@@ -147,7 +146,7 @@
   ;; The protocol QueryFont request happens on-demand under the covers.
   (declare (type display display)
 	   (type stringable name))
-  (declare (values font))
+  (declare (clx-values font))
   (let* ((name-string (string-downcase (string name)))
 	 (font (car (member name-string (display-font-cache display)
 			    :key 'font-name
@@ -169,7 +168,7 @@
 (defun open-font-internal (font)
   ;; Called "under the covers" to open a font object
   (declare (type font font))
-  (declare (values resource-id))
+  (declare (clx-values resource-id))
   (let* ((name-string (font-name font))
 	 (display (font-display font))
 	 (id (allocate-resource-id display font 'font)))
@@ -193,7 +192,7 @@
 (defun query-font (font)
   ;; Internal function called by font and char info accessors
   (declare (type font font))
-  (declare (values font-info))
+  (declare (clx-values font-info))
   (let ((display (font-display font))
 	font-id
 	font-info
@@ -258,7 +257,7 @@
 	   (type string pattern)
 	   (type card16 max-fonts)
 	   (type t result-type)) ;; CL type
-  (declare (values (sequence string)))
+  (declare (clx-values (clx-sequence string)))
   (let ((string (string pattern)))
     (with-buffer-request-and-reply (display *x-listfonts* size :sizes (8 16))
 	 ((card16 max-fonts (length string))
@@ -278,7 +277,7 @@
 	   (type string pattern)
 	   (type card16 max-fonts)
 	   (type t result-type)) ;; CL type
-  (declare (values (sequence font)))
+  (declare (clx-values (clx-sequence font)))
   (let ((string (string pattern))
 	(result nil))
     (with-buffer-request-and-reply (display *x-listfontswithinfo* 60
@@ -331,7 +330,7 @@
 (defun font-path (display &key (result-type 'list))
   (declare (type display display)
 	   (type t result-type)) ;; CL type
-  (declare (values (sequence (or string pathname))))
+  (declare (clx-values (clx-sequence (or string pathname))))
   (with-buffer-request-and-reply (display *x-getfontpath* size :sizes (8 16))
        ()
     (values
@@ -340,7 +339,7 @@
 
 (defun set-font-path (display paths)
   (declare (type display display)
-	   (type sequence paths)) ;; (sequence (or string pathname))
+	   (type (clx-sequence (or string pathname)) paths))
   (let ((path-length (length paths))
 	(request-length 8))
     ;; Find the request length

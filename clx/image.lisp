@@ -124,7 +124,7 @@
     (type boolean byte-lsb-first-p bit-lsb-first-p)
     (type (or null (member 8 16 32)) unit pad)
     (type (or null card8) left-pad))
-  (declare (values image))
+  (declare (clx-values image))
   (let ((image
 	  (etypecase data
 	    (buffer-bytes			; image-x
@@ -760,7 +760,7 @@
 	   (type (member 8 16 32) from-bitmap-unit to-bitmap-unit)
 	   (type boolean from-byte-lsb-first-p from-bit-lsb-first-p
 		 to-byte-lsb-first-p to-bit-lsb-first-p)
-	   (values function lsb-first-p))
+	   (clx-values function lsb-first-p))
   (cond ((index= bits-per-pixel 1)
 	 (let ((from-index
 		 (index+
@@ -1147,7 +1147,7 @@
 	   (type image-depth depth)
 	   (type (member 8 16 32) unit pad)
 	   (type boolean byte-lsb-first-p bit-lsb-first-p)
-	   (values image-x))
+	   (clx-values image-x))
   (assert (index<= (index* depth padded-bytes-per-plane) length))
   (let* ((bytes-per-line (index-ceiling width 8))
 	 (data-length (index* padded-bytes-per-plane depth)))
@@ -1184,7 +1184,7 @@
 	   (type (member 8 16 32) unit pad)
 	   (type boolean byte-lsb-first-p bit-lsb-first-p)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
-	   (values image-x))
+	   (clx-values image-x))
   (assert (index<= (index* height padded-bytes-per-line) length))
   (let ((bytes-per-line (index-ceiling (index* width bits-per-pixel) 8))
 	(data-length (index* padded-bytes-per-line height)))
@@ -1214,7 +1214,7 @@
 	   (type image-depth depth)
 	   (type (member 8 16 32) unit)
 	   (type boolean byte-lsb-first-p bit-lsb-first-p)
-	   (values image-xy))
+	   (clx-values image-xy))
   (check-type data list)
   (multiple-value-bind (dimensions element-type)
       (if data
@@ -1254,7 +1254,7 @@
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) unit)
 	   (type boolean byte-lsb-first-p bit-lsb-first-p)
-	   (values image-z))
+	   (clx-values image-z))
   (assert (index<= (index* (index+ y height) padded-bytes-per-line) length))
   (let* ((image-bits-per-line (index* width bits-per-pixel))
 	 (image-pixels-per-line
@@ -1295,7 +1295,7 @@
 	   (type (or null pixel) plane-mask)
 	   (type (or null (member :xy-pixmap :z-pixmap)) format)
 	   (type (or null (member image-xy image-x image-z)) result-type)
-	   (values image visual-info))
+	   (clx-values image visual-info))
   (unless result-type
     (setq result-type (ecase format
 			(:xy-pixmap 'image-xy)
@@ -1610,7 +1610,7 @@
 		(write-image-load-byte 8 pixel 32))
 	  (setf (aref buffer-bbuf (index+ i 2))
 		(write-image-load-byte 16 pixel 32))
-	  (setf (aref buffer-bbuf (index+ i 2))
+	  (setf (aref buffer-bbuf (index+ i 3))
 		(write-image-load-byte 24 pixel 32)))))))
 
 (defun write-pixarray-internal
@@ -1987,7 +1987,7 @@
 		  (declare (type (or null pixmap-format) pixmap-format))
 		  (if (null pixmap-format)
 		      (error "The depth of the image ~s does not match any server pixmap format." image))
-		  (if (not (= (typecase image
+		  (if (not (= (etypecase image
 				(image-z (image-z-bits-per-pixel image))
 				(image-x (image-x-bits-per-pixel image)))
 			      (pixmap-format-bits-per-pixel pixmap-format)))
@@ -2097,7 +2097,7 @@
 (defun xy-format-image-x->image-x (image x y width height)
   (declare (type image-x image)
 	   (type card16 x y width height)
-	   (values image-x))
+	   (clx-values image-x))
   (let* ((padded-x (index+ x (image-x-left-pad image)))
 	 (left-pad (index-mod padded-x 8))
 	 (x (index- padded-x left-pad))
@@ -2142,7 +2142,7 @@
 (defun z-format-image-x->image-x (image x y width height)
   (declare (type image-x image)
 	   (type card16 x y width height)
-	   (values image-x))
+	   (clx-values image-x))
   (let* ((padded-x (index+ x (image-x-left-pad image)))
 	 (left-pad
 	   (if (index= (image-depth image) 1)
@@ -2183,7 +2183,7 @@
 (defun image-x->image-x  (image x y width height)
   (declare (type image-x image)
 	   (type card16 x y width height)
-	   (values image-x))
+	   (clx-values image-x))
   (ecase (image-x-format image)
     ((:bitmap :xy-pixmap)
       (xy-format-image-x->image-x image x y width height))
@@ -2193,7 +2193,7 @@
 (defun image-x->image-xy (image x y width height)
   (declare (type image-x image)
 	   (type card16 x y width height)
-	   (values image-xy))
+	   (clx-values image-xy))
   (unless (or (eq (image-x-format image) :bitmap)
 	      (eq (image-x-format image) :xy-pixmap)
 	      (and (eq (image-x-format image) :z-pixmap)
@@ -2211,7 +2211,7 @@
 (defun image-x->image-z  (image x y width height)
   (declare (type image-x image)
 	   (type card16 x y width height)
-	   (values image-z))
+	   (clx-values image-z))
   (unless (or (eq (image-x-format image) :z-pixmap)
 	      (eq (image-x-format image) :bitmap)
 	      (and (eq (image-x-format image) :xy-pixmap)
@@ -2268,7 +2268,7 @@
 (defun image-xy->image-x (image x y width height)
   (declare (type image-xy image)
 	   (type card16 x y width height)
-	   (values image-x))
+	   (clx-values image-x))
   (let* ((padded-bits-per-line
 	   (index* (index-ceiling width *image-pad*) *image-pad*))
 	 (padded-bytes-per-line (index-ceiling padded-bits-per-line 8))
@@ -2297,7 +2297,7 @@
 (defun image-xy->image-xy (image x y width height)
   (declare (type image-xy image)
 	   (type card16 x y width height)
-	   (values image-xy))
+	   (clx-values image-xy))
   (create-image
     :width width :height height :depth (image-depth image)
     :data (mapcar
@@ -2316,7 +2316,7 @@
 (defun image-z->image-x (image x y width height)
   (declare (type image-z image)
 	   (type card16 x y width height)
-	   (values image-x))
+	   (clx-values image-x))
   (let* ((bits-per-line (index* width (image-z-bits-per-pixel image)))
 	 (padded-bits-per-line
 	   (index* (index-ceiling bits-per-line *image-pad*) *image-pad*))
@@ -2352,7 +2352,7 @@
 (defun image-z->image-z (image x y width height)
   (declare (type image-z image)
 	   (type card16 x y width height)
-	   (values image-z))
+	   (clx-values image-z))
   (create-image
     :width width :height height :depth (image-depth image)
     :data (copy-pixarray
@@ -2366,7 +2366,7 @@
 	   (type card16 x y)
 	   (type (or null card16) width height) ;; Default from image
 	   (type (or null (member image-x image-xy image-z)) result-type))
-  (declare (values image))
+  (declare (clx-values image))
   (let* ((image-width (image-width image))
 	 (image-height (image-height image))
 	 (width (or width image-width))
@@ -2409,7 +2409,7 @@
 (defun read-bitmap-file (pathname)
   ;; Creates an image from a C include file in standard X11 format
   (declare (type (or pathname string stream) pathname))
-  (declare (values image))
+  (declare (clx-values image))
   (with-open-file (fstream pathname :direction :input)
     (let ((line "")
 	  (properties nil)
@@ -2600,7 +2600,7 @@
   ;; If the first parameter is a list, its used as the image property-list.
   (declare (type (or list bit-vector) plist)
 	   (type list patterns)) ;; list of bitvector
-  (declare (values image))
+  (declare (clx-values image))
   (unless (listp plist)
     (push plist patterns)
     (setq plist nil))
@@ -2628,7 +2628,7 @@
 	   (type (or null gcontext) gcontext)
 	   (type (or null card16) width height)
 	   (type (or null card8) depth))
-  (declare (values pixmap))
+  (declare (clx-values pixmap))
   (let* ((image-width (image-width image))
 	 (image-height (image-height image))
 	 (image-depth (image-depth image))

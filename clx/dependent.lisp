@@ -53,7 +53,7 @@
 
 (eval-when (eval compile load)
 
-(defconstant *buffer-speed* 3
+(defconstant *buffer-speed* #+clx-debugging 1 #-clx-debugging 3
   "Speed compiler option for buffer code.")
 (defconstant *buffer-safety* #+clx-debugging 3 #-clx-debugging 0
   "Safety compiler option for buffer code.")
@@ -80,7 +80,7 @@
 
 (defun card8->int8 (x)
   (declare (type card8 x))
-  (declare (values int8))
+  (declare (clx-values int8))
   #.(declare-buffun)
   (the int8 (if (logbitp 7 x)
 		(the int8 (- x #x100))
@@ -88,13 +88,13 @@
 
 (defun int8->card8 (x)
   (declare (type int8 x))
-  (declare (values card8))
+  (declare (clx-values card8))
   #.(declare-buffun)
   (the card8 (ldb (byte 8 0) x)))
 
 (defun card16->int16 (x)
   (declare (type card16 x))
-  (declare (values int16))
+  (declare (clx-values int16))
   #.(declare-buffun)
   (the int16 (if (logbitp 15 x)
 		 (the int16 (- x #x10000))
@@ -102,13 +102,13 @@
 
 (defun int16->card16 (x)
   (declare (type int16 x))
-  (declare (values card16))
+  (declare (clx-values card16))
   #.(declare-buffun)
   (the card16 (ldb (byte 16 0) x)))
 
 (defun card32->int32 (x)
   (declare (type card32 x))
-  (declare (values int32))
+  (declare (clx-values int32))
   #.(declare-buffun)
   (the int32 (if (logbitp 31 x)
 		 (the int32 (- x #x100000000))
@@ -116,7 +116,7 @@
 
 (defun int32->card32 (x)
   (declare (type int32 x))
-  (declare (values card32))
+  (declare (clx-values card32))
   #.(declare-buffun)
   (the card32 (ldb (byte 32 0) x)))
 
@@ -159,7 +159,7 @@
 (defun aref-card8 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values card8))
+  (declare (clx-values card8))
   #.(declare-buffun)
   (the card8 (aref a i)))
 
@@ -173,7 +173,7 @@
 (defun aref-int8 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values int8))
+  (declare (clx-values int8))
   #.(declare-buffun)
   (card8->int8 (aref a i)))
 
@@ -285,7 +285,7 @@
 (defun aref-card8 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values card8))
+  (declare (clx-values card8))
   #.(declare-buffun)
   (the card8 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
 			 :unsigned-byte)))
@@ -301,7 +301,7 @@
 (defun aref-int8 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values int8))
+  (declare (clx-values int8))
   #.(declare-buffun)
   (the int8 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
 			:signed-byte)))
@@ -317,7 +317,7 @@
 (defun aref-card16 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values card16))
+  (declare (clx-values card16))
   #.(declare-buffun)
   (the card16 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
 			  :unsigned-word)))
@@ -333,7 +333,7 @@
 (defun aref-int16 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values int16))
+  (declare (clx-values int16))
   #.(declare-buffun)
   (the int16 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
 			 :signed-word)))
@@ -349,7 +349,7 @@
 (defun aref-card32 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values card32))
+  (declare (clx-values card32))
   #.(declare-buffun)
   (the card32 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
 			  :unsigned-long)))
@@ -365,7 +365,7 @@
 (defun aref-int32 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values int32))
+  (declare (clx-values int32))
   #.(declare-buffun)
   (the int32 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
 			 :signed-long)))
@@ -381,7 +381,7 @@
 (defun aref-card29 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values card29))
+  (declare (clx-values card29))
   #.(declare-buffun)
   (the card29 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
 			  :unsigned-long)))
@@ -402,7 +402,7 @@
 (defun aref-card8 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i)
-	   (values card8))
+	   (clx-values card8))
   #.(declare-buffun)
   (the card8 (lucid::%svref-8bit a i)))
 
@@ -416,7 +416,7 @@
 (defun aref-int8 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i)
-	   (values int8))
+	   (clx-values int8))
   #.(declare-buffun)
   (the int8 (lucid::%svref-signed-8bit a i)))
 
@@ -430,7 +430,7 @@
 (defun aref-card16 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i)
-	   (values card16))
+	   (clx-values card16))
   #.(declare-buffun)
   (the card16 (lucid::%svref-16bit a (index-ash i -1))))
   
@@ -444,7 +444,7 @@
 (defun aref-int16 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i)
-	   (values int16))
+	   (clx-values int16))
   #.(declare-buffun)
   (the int16 (lucid::%svref-signed-16bit a (index-ash i -1))))
   
@@ -458,7 +458,7 @@
 (defun aref-card32 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i)
-	   (values card32))
+	   (clx-values card32))
   #.(declare-buffun)
   (the card32 (lucid::%svref-32bit a (index-ash i -2))))
     
@@ -472,7 +472,7 @@
 (defun aref-int32 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i)
-	   (values int32))
+	   (clx-values int32))
   #.(declare-buffun)
   (the int32 (lucid::%svref-signed-32bit a (index-ash i -2))))
     
@@ -486,7 +486,7 @@
 (defun aref-card29 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i)
-	   (values card29))
+	   (clx-values card29))
   #.(declare-buffun)
   (the card29 (lucid::%svref-32bit a (index-ash i -2))))
 
@@ -507,7 +507,7 @@
 (defun aref-card16 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values card16))
+  (declare (clx-values card16))
   #.(declare-buffun)
   (the card16
        (logior (the card16
@@ -527,7 +527,7 @@
 (defun aref-int16 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values int16))
+  (declare (clx-values int16))
   #.(declare-buffun)
   (the int16
        (logior (the int16
@@ -547,7 +547,7 @@
 (defun aref-card32 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values card32))
+  (declare (clx-values card32))
   #.(declare-buffun)
   (the card32
        (logior (the card32
@@ -573,7 +573,7 @@
 (defun aref-int32 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values int32))
+  (declare (clx-values int32))
   #.(declare-buffun)
   (the int32
        (logior (the int32
@@ -599,7 +599,7 @@
 (defun aref-card29 (a i)
   (declare (type buffer-bytes a)
 	   (type array-index i))
-  (declare (values card29))
+  (declare (clx-values card29))
   #.(declare-buffun)
   (the card29
        (logior (the card29
@@ -650,7 +650,7 @@
 (defun rgb-val->card16 (value)
   ;; Short floats are good enough
   (declare (type rgb-val value))
-  (declare (values card16))
+  (declare (clx-values card16))
   #.(declare-buffun)
   ;; Convert VALUE from float to card16
   (the card16 (values (round (the rgb-val value) #.(/ 1.0s0 #xffff)))))
@@ -658,7 +658,7 @@
 (defun card16->rgb-val (value) 
   ;; Short floats are good enough
   (declare (type card16 value))
-  (declare (values short-float))
+  (declare (clx-values short-float))
   #.(declare-buffun)
   ;; Convert VALUE from card16 to float
   (the short-float (* (the card16 value) #.(/ 1.0s0 #xffff))))
@@ -666,14 +666,14 @@
 (defun radians->int16 (value)
   ;; Short floats are good enough
   (declare (type angle value))
-  (declare (values int16))
+  (declare (clx-values int16))
   #.(declare-buffun)
   (the int16 (values (round (the angle value) #.(float (/ pi 180.0s0 64.0s0) 0.0s0)))))
 
 (defun int16->radians (value)
   ;; Short floats are good enough
   (declare (type int16 value))
-  (declare (values short-float))
+  (declare (clx-values short-float))
   #.(declare-buffun)
   (the short-float (* (the int16 value) #.(coerce (/ pi 180.0 64.0) 'short-float))))
 
@@ -761,7 +761,7 @@
 						  (cdr pair)))
 					  array))
 			 (defconstant *card8-to-char-translation-table*
-				      ',(let ((array (make-string 256)))
+				      ',(let ((array (make-array 256)))
 					  (dotimes (i (length array))
 					    (setf (aref array i) (code-char i)))
 					  (dolist (pair alist)
@@ -779,8 +779,9 @@
 			     (declare (type card8 card8))
 			     #.(declare-buffun)
 			     (the base-char
-				  (aref (the simple-string *card8-to-char-translation-table*)
-					card8)))
+				  (or (aref (the simple-vector *card8-to-char-translation-table*)
+					    card8)
+				      (error "Invalid CHAR code ~D." card8))))
 			   )
 			 #+Genera
 			 (progn
@@ -791,6 +792,7 @@
 			     (declare lt:(side-effects reader reducible))
 			     (aref *card8-to-char-translation-table* card8))
 			   )
+			 #-Minima
 			 (dotimes (i 256)
 			   (unless (= i (char->card8 (card8->char i)))
 			     (warn "The card8->char mapping is not invertible through char->card8.  Info:~%~S"
@@ -798,6 +800,7 @@
 					 (card8->char i)
 					 (char->card8 (card8->char i))))
 			     (return nil)))
+			 #-Minima
 			 (dotimes (i (length *char-to-card8-translation-table*))
 			   (let ((char (code-char i)))
 			     (unless (eql char (card8->char (char->card8 char)))
@@ -849,7 +852,7 @@
 
 #+Minima
 (defun make-process-lock (name)
-  (minima:make-lock name))
+  (minima:make-lock name :recursive t))
 
 ;;; HOLDING-LOCK: Execute a body of code with a lock held.
 
@@ -859,10 +862,27 @@
 
 ;; If you're not sharing DISPLAY objects within a multi-processing
 ;; shared-memory environment, this is sufficient
-#-(or lispm excl lcl3.0 Minima)
+#-(or lispm excl lcl3.0 Minima CMU)
 (defmacro holding-lock ((locator display &optional whostate &key timeout) &body body)
   (declare (ignore locator display whostate timeout))
   `(progn ,@body))
+
+;;; HOLDING-LOCK for CMU Common Lisp.
+;;;
+;;; We are not multi-processing, but we use this macro to try to protect
+;;; against re-entering request functions.  This can happen if an interrupt
+;;; occurs and the handler attempts to use X over the same display connection.
+;;; This can happen if the GC hooks are used to notify the user over the same
+;;; display connection.  We lock out GC's just as a dummy check for our users.
+;;; Locking out interrupts has the problem that CLX always waits for replies
+;;; within this dynamic scope, so if the server cannot reply for some reason,
+;;; we potentially dead-lock without interrupts.
+;;;
+#+CMU
+(defmacro holding-lock ((locator display &optional whostate &key timeout)
+			&body body)
+  (declare (ignore locator display whostate timeout))
+  `(lisp::without-gcing (system:without-interrupts (progn ,@body))))
 
 #+Genera
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
@@ -1077,7 +1097,8 @@
 
 #+Minima
 (defun process-wakeup (process)
-  (minima:process-wakeup process))
+  (when process
+    (minima:process-wakeup process)))
 
 ;;; CURRENT-PROCESS: Return the current process object for input locking and
 ;;; for calling PROCESS-WAKEUP.
@@ -1201,7 +1222,7 @@
 ;;; OPEN-X-STREAM - create a stream for communicating to the appropriate X
 ;;; server
 
-#-(or explorer Genera lucid kcl ibcl excl Minima)
+#-(or explorer Genera lucid kcl ibcl excl Minima CMU)
 (defun open-x-stream (host display protocol)
   host display protocol ;; unused
   (error "OPEN-X-STREAM not implemented yet."))
@@ -1305,9 +1326,33 @@
 #+Minima
 (defun open-x-stream (host display protocol)
   (declare (ignore protocol));; unused
-  (minima:open-tcp-stream (minima:gensym-tcp-port)
-			  (apply #'minima:make-ip-address (cdr (host-address host)))
-			  (+ *x-tcp-port* display) :element-type '(unsigned-byte 8)))
+  (minima:open-tcp-stream :foreign-address (apply #'minima:make-ip-address
+						  (cdr (host-address host)))
+			  :foreign-port (+ *x-tcp-port* display)))
+
+;;; OPEN-X-STREAM -- for CMU Common Lisp.
+;;;
+;;; The file descriptor here just gets tossed into the stream slot of the
+;;; display object instead of a stream.
+;;;
+#+CMU
+(defun open-x-stream (host display protocol)
+  (declare (ignore protocol))
+  (let ((server-fd (connect-to-server host display)))
+    (unless (plusp server-fd)
+      (error "Failed to connect to X11 server: ~A (display ~D)" host display))
+    (system:make-fd-stream server-fd :input t :output t
+			   :element-type '(unsigned-byte 8))))
+
+;;; This loads the C foreign function used to make an IPC connection
+;;; to the X11 server.  It also defines the necessary types and things
+;;; to actually make the foreign call.  See the OPEN-X-STREAM function
+;;; in the dependent.lisp file.
+;;;
+#+CMU
+(ext:def-c-routine ("connect_to_server" connect-to-server) (ext:int)
+  (host system:null-terminated-string)
+  (port ext:int))
 
 ;;; BUFFER-READ-DEFAULT - read data from the X stream
 
@@ -1318,12 +1363,12 @@
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null number) timeout))
+	   (type (or null (real 0 *)) timeout))
   #.(declare-buffun)
   (let ((stream (display-input-stream display)))
     (or (cond ((null stream))
 	      ((funcall stream :listen) nil)
-	      ((eql timeout 0) :timeout)
+	      ((and timeout (= timeout 0)) :timeout)
 	      ((buffer-input-wait-default display timeout)))
 	(multiple-value-bind (ignore eofp)
 	    (funcall stream :string-in nil vector start end)
@@ -1338,16 +1383,15 @@
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null number) timeout))
+	   (type (or null (real 0 *)) timeout))
   #.(declare-buffun)
     
   (let* ((howmany (- end start))
 	 (fd (display-input-stream display)))
     (declare (type array-index howmany)
 	     (fixnum fd))
-	  
     (or (cond ((fd-char-avail-p fd) nil)
-	      ((eql timeout 0) :timeout)
+	      ((and timeout (= timeout 0)) :timeout)
 	      ((buffer-input-wait-default display timeout)))
 	(fd-read-bytes fd vector start howmany))))
 
@@ -1372,13 +1416,13 @@
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null number) timeout))
+	   (type (or null (real 0 *)) timeout))
   #.(declare-buffun)
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (or (cond ((null stream))
 	      ((listen stream) nil)
-	      ((eql timeout 0) :timeout)
+	      ((and timeout (= timeout 0)) :timeout)
 	      ((buffer-input-wait-default display timeout)))
 	(with-underlying-stream (stream stream display input)
 	  (eq (lcl:read-array stream vector start end nil :eof) :eof)))))
@@ -1390,41 +1434,53 @@
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null number) timeout))
+	   (type (or null (real 0 *)) timeout))
   #.(declare-buffun)
   (let ((stream (display-input-stream display)))
     (or (cond ((null stream))
 	      ((listen stream) nil)
-	      ((eql timeout 0) :timeout)
+	      ((and timeout (= timeout 0)) :timeout)
 	      ((buffer-input-wait-default display timeout)))
-	(loop while (< start end) do
-	  (multiple-value-bind (buffer bstart bend)
-	      (minima:get-input-buffer stream nil)
-	    (when (null buffer) (return t))
-	    (let ((n (min (- end start) (- bend bstart))))
-	      (replace vector buffer
-		       :start1 start :end1 (incf start n)
-		       :start2 bstart :end2 (incf bstart n)))
-	    (minima:advance-input-buffer stream bstart)))
-	nil)))
+	(eq :eof (minima:read-vector vector stream nil start end)))))
+
+;;; BUFFER-READ-DEFAULT for CMU Common Lisp.
+;;;
+;;;    If timeout is 0, then we call LISTEN to see if there is any input.
+;;; Timeout 0 is the only case where READ-INPUT dives into BUFFER-READ without
+;;; first calling BUFFER-INPUT-WAIT-DEFAULT.
+;;;
+#+CMU
+(defun buffer-read-default (display vector start end timeout)
+  (declare (type display display)
+	   (type buffer-bytes vector)
+	   (type array-index start end)
+	   (type (or null (real 0 *)) timeout))
+  #.(declare-buffun)
+  (cond ((and (and timeout (= timeout 0))
+	      (not (listen (display-input-stream display))))
+	 :timeout)
+	(t
+	 (system:read-n-bytes (display-input-stream display)
+			      vector start (- end start))
+	 nil)))
 
 ;;; WARNING:
 ;;;	CLX performance will suffer if your lisp uses read-byte for
 ;;;	receiving all data from the X Window System server.
 ;;;	You are encouraged to write a specialized version of
 ;;;	buffer-read-default that does block transfers.
-#-(or Genera explorer excl lcl3.0 Minima)
+#-(or Genera explorer excl lcl3.0 Minima CMU)
 (defun buffer-read-default (display vector start end timeout)
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null (rational 0 *) (float 0.0 *)) timeout))
+	   (type (or null (real 0 *)) timeout))
   #.(declare-buffun)
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (or (cond ((null stream))
 	      ((listen stream) nil)
-	      ((eql timeout 0) :timeout)
+	      ((and timeout (= timeout 0)) :timeout)
 	      ((buffer-input-wait-default display timeout)))
 	(do* ((index start (index1+ index)))
 	     ((index>= index end) nil)
@@ -1484,13 +1540,16 @@
   (let ((stream (display-output-stream display)))
     (declare (type (or null stream) stream))
     (unless (null stream) 
-      (loop while (< start end) do
-	(multiple-value-bind (buffer bstart bend)
-	    (minima:get-output-buffer stream)
-	  (let ((n (min (- end start) (- bend bstart))))
-	    (replace buffer vector
-		     :start1 bstart :end1 (incf bstart n) :start2 start :end2 (incf start n) ))
-	    (minima:advance-output-buffer stream bstart))))))
+      (minima:write-vector vector stream start end))))
+
+#+CMU
+(defun buffer-write-default (vector display start end)
+  (declare (type buffer-bytes vector)
+	   (type display display)
+	   (type array-index start end))
+  #.(declare-buffun)
+  (system:output-raw-bytes (display-output-stream display) vector start end)
+  nil)
 
 ;;; WARNING:
 ;;;	CLX performance will be severely degraded if your lisp uses
@@ -1498,7 +1557,7 @@
 ;;;	You are STRONGLY encouraged to write a specialized version
 ;;;	of buffer-write-default that does block transfers.
 
-#-(or Genera explorer excl lcl3.0 Minima)
+#-(or Genera explorer excl lcl3.0 Minima CMU)
 (defun buffer-write-default (vector display start end)
   ;; The default buffer write function for use with common-lisp streams
   (declare (type buffer-bytes vector)
@@ -1558,20 +1617,20 @@
 ;;; The default implementation
 
 ;; Poll for input every *buffer-read-polling-time* SECONDS.
-#-(or Genera explorer excl lcl3.0)
+#-(or Genera explorer excl lcl3.0 CMU)
 (defparameter *buffer-read-polling-time* 0.5)
 
-#-(or Genera explorer excl lcl3.0)
+#-(or Genera explorer excl lcl3.0 CMU)
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
-	   (type (or null number) timeout))
-  (declare (values timeout))
+	   (type (or null (real 0 *)) timeout))
+  (declare (clx-values timeout))
   
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (cond ((null stream))
 	  ((listen stream) nil)
-	  ((eql timeout 0) :timeout)
+	  ((and timeout (= timeout 0)) :timeout)
 	  ((not (null timeout))
 	   (multiple-value-bind (npoll fraction)
 	       (truncate timeout *buffer-read-polling-time*)
@@ -1585,16 +1644,31 @@
 		 (return-from buffer-input-wait-default nil)))
 	     :timeout)))))
 
+#+CMU
+(defun buffer-input-wait-default (display timeout)
+  (declare (type display display)
+	   (type (or null (real 0 *)) timeout))
+  (let ((stream (display-input-stream display)))
+    (declare (type (or null stream) stream))
+    (cond ((null stream))
+	  ((listen stream) nil)
+	  ((and timeout (= timeout 0)) :timeout)
+	  (t
+	   (if (system:wait-until-fd-usable (system:fd-stream-fd stream)
+					    :input timeout)
+	       nil
+	       :timeout)))))
+
 #+Genera
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
-	   (type (or null number) timeout))
-  (declare (values timeout))
+	   (type (or null (real 0 *)) timeout))
+  (declare (clx-values timeout))
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (cond ((null stream))
 	  ((scl:send stream :listen) nil)
-	  ((eql timeout 0) :timeout)
+	  ((and timeout (= timeout 0)) :timeout)
 	  ((null timeout) (si:stream-input-block stream "CLX Input"))
 	  (t
 	   (scl:condition-bind ((neti:protocol-timeout
@@ -1608,13 +1682,13 @@
 #+explorer
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
-	   (type (or null number) timeout))
-  (declare (values timeout))
+	   (type (or null (real 0 *)) timeout))
+  (declare (clx-values timeout))
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (cond ((null stream))
 	  ((zl:send stream :listen) nil)
-	  ((eql timeout 0) :timeout)
+	  ((and timeout (= timeout 0)) :timeout)
 	  ((null timeout)
 	   (si:process-wait "CLX Input" stream :listen))
 	  (t
@@ -1637,8 +1711,8 @@
 #+excl
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
-	   (type (or null number) timeout))
-  (declare (values timeout))
+	   (type (or null (real 0 *)) timeout))
+  (declare (clx-values timeout))
   (let ((fd (display-input-stream display)))
     (declare (fixnum fd))
     (when (>= fd 0)
@@ -1646,7 +1720,7 @@
 	     nil)
 	    
 	    ;; Otherwise no bytes were available on the socket
-	    ((and timeout (zerop timeout))
+	    ((and timeout (= timeout 0))
 	     ;; If there aren't enough and timeout == 0, timeout.
 	     :timeout)
 	  
@@ -1685,14 +1759,14 @@
 #+lcl3.0
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
-	   (type (or null number) timeout)
-	   (values timeout))
+	   (type (or null (real 0 *)) timeout)
+	   (clx-values timeout))
   #.(declare-buffun)
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (cond ((null stream))
 	  ((listen stream) nil)
-	  ((eql timeout 0) :timeout)
+	  ((and timeout (= timeout 0)) :timeout)
 	  ((with-underlying-stream (stream stream display input)
 	     (lucid::waiting-for-input-from-stream stream
                (lucid::with-io-unlocked
@@ -1797,6 +1871,18 @@
 	      (setf (aref target-sequence target-index)
 		(aref source-sequence source-index))))))
 
+#+cmu
+(defun buffer-replace (buf1 buf2 start1 end1 &optional (start2 0))
+  (declare (type buffer-bytes buf1 buf2)
+	   (type array-index start1 end1 start2))
+  #.(declare-buffun)
+  (kernel:bit-bash-copy
+   buf2 (+ (* start2 vm:byte-bits)
+	   (* vm:vector-data-offset vm:word-bits))
+   buf1 (+ (* start1 vm:byte-bits)
+	   (* vm:vector-data-offset vm:word-bits))
+   (* (- end1 start1) vm:byte-bits)))
+
 #+lucid
 ;;;The compiler is *supposed* to optimize calls to replace, but in actual
 ;;;fact it does not.
@@ -1815,7 +1901,7 @@
 	   (type array-index start1 end1 start2))
   (replace buf1 buf2 :start1 start1 :end1 end1 :start2 start2))
 
-#-(or lispm lucid excl clx-overlapping-arrays)
+#-(or lispm lucid excl CMU clx-overlapping-arrays)
 (defun buffer-replace (buf1 buf2 start1 end1 &optional (start2 0))
   (declare (type buffer-bytes buf1 buf2)
 	   (type array-index start1 end1 start2))
@@ -1920,7 +2006,7 @@
 ;;; This controls macro expansion, and isn't changable at run-time You will
 ;;; probably want to set this to nil if you want good performance at
 ;;; production time.
-(defconstant *type-check?* #+(or Genera Minima) nil #-(or Genera Minima) t)
+(defconstant *type-check?* #+(or Genera Minima CMU) nil #-(or Genera Minima CMU) t)
 
 ;; TYPE? is used to allow the code to do error checking at a different level from
 ;; the declarations.  It also does some optimizations for systems that don't have
@@ -1928,7 +2014,14 @@
 ;; include range checks.  You can modify TYPE? to do less extensive checking
 ;; for these types if you desire.
 
+;;
+;; ### This comment is a lie!  TYPE? is really also used for run-time type
+;; dispatching, not just type checking.  -- Ram.
+
 (defmacro type? (object type)
+  #+cmu
+  `(typep ,object ,type)
+  #-cmu
   (if (not (constantp type))
       `(typep ,object ,type)
     (progn
@@ -2004,17 +2097,43 @@
   (declare (dynamic-extent keyargs))
   (apply #'error condition keyargs))
 
-#+(or clx-ansi-common-lisp excl lcl3.0)
+#+(or clx-ansi-common-lisp excl lcl3.0 CMU)
 (defun x-cerror (proceed-format-string condition &rest keyargs)
   (declare (dynamic-extent keyargs))
   (apply #'cerror proceed-format-string condition keyargs))
 
-#-(or lispm clx-ansi-common-lisp excl lcl3.0)
+;;; X-ERROR for CMU Common Lisp
+;;;
+;;; We detect a couple condition types for which we disable event handling in
+;;; our system.  This prevents going into the debugger or returning to a
+;;; command prompt with CLX repeatedly seeing the same condition.  This occurs
+;;; because CMU Common Lisp provides for all events (that is, X, input on file
+;;; descriptors, Mach messages, etc.) to come through one routine anyone can
+;;; use to wait for input.
+;;;
+#+CMU
+(defun x-error (condition &rest keyargs)
+  (let ((condx (apply #'make-condition condition keyargs)))
+    (typecase condx
+      ;; This condition no longer exists.
+      #||
+      (server-disconnect
+	(let ((disp (server-disconnect-display condx)))
+	  (warn "Disabled event handling on ~S." disp)
+	  (ext::disable-clx-event-handling disp)))
+      ||#
+      (closed-display
+	(let ((disp (closed-display-display condx)))
+	  (warn "Disabled event handling on ~S." disp)
+	  (ext::disable-clx-event-handling disp))))
+    (error condx)))
+
+#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU)
 (defun x-error (condition &rest keyargs)
   (error "X-Error: ~a"
 	 (princ-to-string (apply #'make-condition condition keyargs))))
 
-#-(or lispm clx-ansi-common-lisp excl lcl3.0)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU)
 (defun x-cerror (proceed-format-string condition &rest keyargs)
   (cerror proceed-format-string "X-Error: ~a"
 	 (princ-to-string (apply #'make-condition condition keyargs))))
@@ -2035,6 +2154,14 @@
 #+(and excl (not clx-ansi-common-lisp))
 (defmacro define-condition (name parent-types &optional slots &rest args)
   `(excl::define-condition
+     ,name (,(first parent-types))
+     ,(mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
+	      slots)
+     ,@args))
+
+#+(and CMU (not clx-ansi-common-lisp))
+(defmacro define-condition (name parent-types &optional slots &rest args)
+  `(lisp:define-condition
      ,name (,(first parent-types))
      ,(mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
 	      slots)
@@ -2099,14 +2226,14 @@
 (sys:defmethod (dbg:document-proceed-type x-error :continue) (stream)
   (format stream continue-format-string))
 
-#+(or clx-ansi-common-lisp excl lcl3.0)
+#+(or clx-ansi-common-lisp excl lcl3.0 CMU)
 (define-condition x-error (error) ())
 
-#-(or lispm clx-ansi-common-lisp excl lcl3.0)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU)
 (defstruct x-error
   report-function)
 
-#-(or lispm clx-ansi-common-lisp excl lcl3.0)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU)
 (defmacro define-condition (name parent-types &body options)
   ;; Define a structure that when printed displays an error message
   (flet ((reporter-for-condition (name)
@@ -2143,7 +2270,7 @@
 	       ,condition))
 	 ',name))))
 
-#-(or lispm clx-ansi-common-lisp excl lcl3.0)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU)
 (defun condition-print (condition stream depth)
   (declare (type x-error condition)
 	   (type stream stream)
@@ -2153,14 +2280,14 @@
     (funcall (x-error-report-function condition) condition stream))
   condition)
   
-#-(or lispm clx-ansi-common-lisp excl lcl3.0)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU)
 (defun make-condition (type &rest slot-initializations)
   (declare (dynamic-extent slot-initializations))
   (let ((make-function (intern (concatenate 'string (string 'make-) (string type))
 			       (symbol-package type))))
     (apply make-function slot-initializations)))
 
-#-(or clx-ansi-common-lisp excl lcl3.0)
+#-(or clx-ansi-common-lisp excl lcl3.0 CMU)
 (define-condition type-error (x-error)
   ((datum :reader type-error-datum :initarg :datum)
    (expected-type :reader type-error-expected-type :initarg :expected-type))
@@ -2175,13 +2302,13 @@
 ;;  HOST hacking
 ;;-----------------------------------------------------------------------------
 
-#-(or explorer Genera Minima)
+#-(or explorer Genera Minima Allegro CMU)
 (defun host-address (host &optional (family :internet))
   ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
   ;; and cdr is a list of network address bytes.
-  (declare (type (or stringable list) host)
+  (declare (type stringable host)
 	   (type (or null (member :internet :decnet :chaos) card8) family))
-  (declare (values list))
+  (declare (clx-values list))
   host family
   (error "HOST-ADDRESS not implemented yet."))
 
@@ -2189,11 +2316,11 @@
 (defun host-address (host &optional (family :internet))
   ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
   ;; and cdr is a list of network address bytes.
-  (declare (type (or stringable list) host)
+  (declare (type stringable host)
 	   (type (or null (member :internet :decnet :chaos) card8) family))
-  (declare (values list))
+  (declare (clx-values list))
   (ecase family
-    (:internet
+    ((:internet nil 0)
      (let ((addr (ip:get-ip-address host)))
        (unless addr (error "~s isn't an internet host name" host))
        (list :internet
@@ -2201,7 +2328,7 @@
 	     (ldb (byte 8 16) addr)
 	     (ldb (byte 8 8) addr)
 	     (ldb (byte 8 0) addr))))
-    (:chaos
+    ((:chaos 2)
      (let ((addr (first (chaos:chaos-addresses host))))
        (unless addr (error "~s isn't a chaos host name" host))
        (list :chaos
@@ -2212,54 +2339,111 @@
 (defun host-address (host &optional (family :internet))
   ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
   ;; and cdr is a list of network address bytes.
-  (declare (type (or stringable list) host)
+  (declare (type stringable host)
 	   (type (or null (member :internet :decnet :chaos) card8) family))
-  (declare (values list))
-  (let ((net-type (if (eq family :DECnet)
-		      :DNA
-		      family)))
+  (declare (clx-values list))
+  (setf host (string host))
+  (let ((net-type (ecase family
+		    ((:internet nil 0) :internet)
+		    ((:DECnet 1) :dna)
+		    ((:chaos 2) :chaos))))
     (dolist (addr
 	      (sys:send (net:parse-host host) :network-addresses)
-	      (error "~s isn't a valid ~(~A~) host name" host family))
+	      (error "~S isn't a valid ~(~A~) host name" host family))
       (let ((network (car addr))
 	    (address (cadr addr)))
 	(when (sys:send network :network-typep net-type)
 	  (return (ecase family
-		    (:internet
-		      (multiple-value-bind (a b c d) (tcp:explode-internet-address address)
-			(list :internet a b c d)))
-		    ((:chaos :DECnet)
-		     (list family (ldb (byte 8 0) address) (ldb (byte 8 8) address))))))))))
+		    ((:internet nil 0)
+		     (multiple-value-bind (a b c d) (tcp:explode-internet-address address)
+		       (list :internet a b c d)))
+		    ((:DECnet 1)
+		     (list :DECnet (ldb (byte 8 0) address) (ldb (byte 8 8) address)))
+		    ((:chaos 2)
+		     (list :chaos (ldb (byte 8 0) address) (ldb (byte 8 8) address))))))))))
 
 #+Minima
 (defun host-address (host &optional (family :internet))
   ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
   ;; and cdr is a list of network address bytes.
-  (declare (type (or stringable list) host)
+  (declare (type stringable host)
 	   (type (or null (member :internet :decnet :chaos) card8) family))
-  (declare (values list))
-  (check-type family (member :internet))
-  (or (loop with (num delim)
-	    repeat 4
-	    for idx = 0 then (1+ delim)
-	    when (and delim (or (= delim (length host))
-				(char-not-equal (char host delim) #\.)))
-	      return nil
-	    do (multiple-value-setq (num delim)
-	         (parse-integer host :start idx :junk-allowed t))
-	    when (or (null num) (< num 0) (> num 255))
-	      return nil
-	    else collect num into nums
-	    finally (return (when (= delim (length host))
-			      (cons :internet nums))))
-      (error "Invalid internet address [~A]." host)))
+  (declare (clx-values list))
+  (etypecase family
+    ((:internet nil 0)
+      (list* :internet
+	     (multiple-value-list
+	       (minima:ip-address-components (minima:parse-ip-address (string host))))))))
+
+#+Allegro
+(defun host-address (host &optional (family :internet))
+  ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
+  ;; and cdr is a list of network address bytes.
+  (declare (type stringable host)
+	   (type (or null (member :internet :decnet :chaos) card8) family))
+  (declare (clx-values list))
+  (labels ((no-host-error ()
+	     (error "Unknown host ~S" host))
+	   (no-address-error ()
+	     (error "Host ~S has no ~S address" host family)))
+    (let ((hostent 0))
+      (unwind-protect
+	   (progn
+	     (setf hostent (ipc::gethostbyname (string host)))
+	     (when (zerop hostent)
+	       (no-host-error))
+	     (ecase family
+	       ((:internet nil 0)
+		(unless (= (ipc::hostent-addrtype hostent) 2)
+		  (no-address-error))
+		(assert (= (ipc::hostent-length hostent) 4))
+		(let ((addr (ipc::hostent-addr hostent)))
+		   (when (or (member comp::.target.
+				     '(:hp :sgi4d :sony :dec3100)
+				     :test #'eq)
+			     (probe-file "/lib/ld.so"))
+		     ;; BSD 4.3 based systems require an extra indirection
+		     (setq addr (si:memref-int addr 0 0 :unsigned-long)))
+		  (list :internet
+			(si:memref-int addr 0 0 :unsigned-byte)
+			(si:memref-int addr 1 0 :unsigned-byte)
+			(si:memref-int addr 2 0 :unsigned-byte)
+			(si:memref-int addr 3 0 :unsigned-byte))))))
+	(ff:free-cstruct hostent)))))
+
+#+CMU
+(defun host-address (host &optional (family :internet))
+  ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
+  ;; and cdr is a list of network address bytes.
+  (declare (type stringable host)
+	   (type (or null (member :internet :decnet :chaos) card8) family))
+  (declare (clx-values list))
+  (labels ((no-host-error ()
+	     (error "Unknown host ~S" host))
+	   (no-address-error ()
+	     (error "Host ~S has no ~S address" host family)))
+    (let ((hostent (ext:lookup-host-entry (string host))))
+      (when (not hostent)
+	(no-host-error))
+      (ecase family
+	((:internet nil 0)
+	 (unless (= (ext::host-entry-addr-type hostent) 2)
+	   (no-address-error))
+	 (let ((addr (first (ext::host-entry-addr-list hostent))))
+	   (list :internet
+		 (ldb (byte 8 24) addr)
+		 (ldb (byte 8 16) addr)
+		 (ldb (byte 8  8) addr)
+		 (ldb (byte 8  0) addr))))))))
+
+;;;
 
 #+explorer ;; This isn't required, but it helps make sense of the results from access-hosts
 (defun get-host (host-object)
   ;; host-object is a list whose car is the family keyword (:internet :DECnet :Chaos)
   ;; and cdr is a list of network address bytes.
   (declare (type list host-object))
-  (declare (values string family))
+  (declare (clx-values string family))
   (let* ((family (first host-object))
 	 (address (ecase family
 		    (:internet
@@ -2282,7 +2466,7 @@
   ;; host-object is a list whose car is the family keyword (:internet :DECnet :Chaos)
   ;; and cdr is a list of network address bytes.
   (declare (type list host-object))
-  (declare (values string family))
+  (declare (clx-values string family))
   (let ((family (first host-object)))
     (values (sys:send (net:get-host-from-address 
 			(ecase family
@@ -2294,6 +2478,20 @@
 						       :DNA
 						       family)))
 		      :name)
+	    family)))
+
+;;; This isn't required, but it helps make sense of the results from access-hosts
+#+Minima
+(defun get-host (host-object)
+  ;; host-object is a list whose car is the family keyword (:internet :DECnet :Chaos)
+  ;; and cdr is a list of network address bytes.
+  (declare (type list host-object))
+  (declare (clx-values string family))
+  (let ((family (first host-object)))
+    (values (ecase family
+	      (:internet
+		(minima:ip-address-string
+		  (apply #'minima:make-ip-address (rest host-object)))))
 	    family)))
 
 
@@ -2311,38 +2509,57 @@
   #+(or lispm Minima) t
   #-(or lispm Minima) nil)
 
+#+(or Genera Minima)
+(defun clx-macroexpand (form env)
+  (declare (ignore env))
+  form)
+
+#-(or Genera Minima)
+(defun clx-macroexpand (form env)
+  (macroexpand form env))
+
 
 ;;-----------------------------------------------------------------------------
 ;; Resource stuff
 ;;-----------------------------------------------------------------------------
 
 
+;;; Utilities 
+
+(defun getenv (name)
+  #+excl (sys:getenv name)
+  #+lcl3.0 (lcl:environment-value name)
+  #+CMU (cdr (assoc name ext:*environment-list* :test #'string=))
+  #-(or excl lcl3.0 CMU) (progn name nil))
+
+(defun homedir-file-pathname (name)
+  (and #-(or unix mach) (search "Unix" (software-type) :test #'char-equal)
+       (merge-pathnames (user-homedir-pathname) (pathname name))))
+
 ;;; DEFAULT-RESOURCES-PATHNAME - The pathname of the resources file to load if
 ;;; a resource manager isn't running.
 
 (defun default-resources-pathname ()
-  (when #+unix t #-unix (search "Unix" (software-type) :test #'char-equal)
-    (merge-pathnames (user-homedir-pathname) (pathname ".Xdefaults"))))
-
-
+  (homedir-file-pathname ".Xdefaults"))
 
 ;;; RESOURCES-PATHNAME - The pathname of the resources file to load after the
 ;;; defaults have been loaded.
 
 (defun resources-pathname ()
-  (when #+unix t #-unix (search "Unix" (software-type) :test #'char-equal)
-    (or #+(or excl (and lcl3.0 (not vax-vms)))
-	(let ((string (#+excl sys:getenv
-		       #+lcl3.0 lcl:environment-variable
-		       "XENVIRONMENT")))
-	  (when string
-	    (pathname string)))
-	(merge-pathnames
-	  (user-homedir-pathname)
-	  (pathname 
-	    (concatenate 'simple-string ".Xdefaults-"
-			 #+excl (short-site-name)
-			 #-excl (machine-instance)))))))
+  (or (let ((string (getenv "XENVIRONMENT")))
+	(and string
+	     (pathname string)))
+      (homedir-file-pathname (concatenate 'string ".Xdefaults-"
+					  #+excl (short-site-name)
+					  #-excl (machine-instance)))))
+
+;;; AUTHORITY-PATHNAME - The pathname of the authority file.
+
+(defun authority-pathname ()
+  (or (let ((xauthority (getenv "XAUTHORITY")))
+	(and xauthority
+	     (pathname xauthority)))
+      (homedir-file-pathname ".Xauthority")))
 
 
 ;;-----------------------------------------------------------------------------
@@ -2415,12 +2632,12 @@
 ;;; When MASK-MODIFIERS is missing, all other modifiers are ignored.
 ;;; In ambiguous cases, the most specific translation is used.
 
-#+(or (not clx-ansi-common-lisp) lispm allegro)
+#-(or (and clx-ansi-common-lisp (not lispm) (not allegro)) CMU)
 (defun default-keysym-translate (display state object)
   (declare (type display display)
 	   (type card16 state)
 	   (type t object)
-	   (values t)
+	   (clx-values t)
 	   (special left-meta-keysym right-meta-keysym
 		    left-super-keysym right-super-keysym
 		    left-hyper-keysym right-hyper-keysym))
@@ -2438,13 +2655,13 @@
       (setf (char-bit object :hyper) 1)))
   object)
 
-#+(and clx-ansi-common-lisp (not lispm) (not allegro))
+#+(or (and clx-ansi-common-lisp (not lispm) (not allegro)) CMU)
 (defun default-keysym-translate (display state object)
   (declare (type display display)
 	   (type card16 state)
 	   (type t object)
 	   (ignore display state)
-	   (values t))
+	   (clx-values t))
   object)
 
 
@@ -2513,7 +2730,7 @@
 			  ,bits-per-element)
 			:element-type ',element-type
 			:displaced-to ,pixarray)))
-       (declare (array-register ,variable))
+       (declare (type (vector ,element-type) ,variable))
        ,@body)))
 
 #+lcl3.0
@@ -2640,7 +2857,7 @@
   
 #+(or Genera lcl3.0 excl) 
 (defun compute-image-byte-and-bit-ordering ()
-  (declare (values image-byte-lsb-first-p image-bit-lsb-first-p))
+  (declare (clx-values image-byte-lsb-first-p image-bit-lsb-first-p))
   ;; First compute the ordering 
   (let ((ordering nil)
 	(a (make-array '(1 32) :element-type 'bit :initial-element 0)))

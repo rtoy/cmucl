@@ -429,7 +429,7 @@
 	   (type array-index start)
 	   (type pixel plane-mask)
 	   (type (member :xy-pixmap :z-pixmap) format))
-  (declare (values (sequence integer) depth visual-info))
+  (declare (clx-values (clx-sequence integer) depth visual-info))
   (let ((display (drawable-display drawable)))
     (with-buffer-request-and-reply (display *x-getimage* nil :sizes (8 32))
 	 (((data (member error :xy-pixmap :z-pixmap)) format)

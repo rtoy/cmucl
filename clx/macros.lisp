@@ -217,8 +217,9 @@
   ((index &rest keywords)
    (let ((value (gensym)))
      `(let ((,value (read-card8 ,index)))
-	(and (< ,value ,(length keywords))
-	     (svref ',(apply #'vector keywords) ,value)))))
+	(declare (type (integer 0 (,(length keywords))) ,value))
+	(type-check ,value (integer 0 (,(length keywords))))
+	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card8 ,index (position ,thing
 				  #+lispm ',keywords ;; Lispm's prefer lists
@@ -236,8 +237,9 @@
   ((index &rest keywords)
    (let ((value (gensym)))
      `(let ((,value (read-card16 ,index)))
-	(and (< ,value ,(length keywords))
-	     (svref ',(apply #'vector keywords) ,value)))))
+	(declare (type (integer 0 (,(length keywords))) ,value))
+	(type-check ,value (integer 0 (,(length keywords))))
+	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card16 ,index (position ,thing
 				   #+lispm ',keywords ;; Lispm's prefer lists
@@ -255,8 +257,9 @@
   ((index &rest keywords)
    (let ((value (gensym)))
      `(let ((,value (read-card29 ,index)))
-	(and (< ,value ,(length keywords))
-	     (svref ',(apply #'vector keywords) ,value)))))
+	(declare (type (integer 0 (,(length keywords))) ,value))
+	(type-check ,value (integer 0 (,(length keywords))))
+	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card29 ,index (position ,thing
 				   #+lispm ',keywords ;; Lispm's prefer lists
@@ -266,11 +269,11 @@
    (if (cdr keywords) ;; IF more than one
        (let ((value (gensym)))
 	 `(let ((,value (position ,thing
-				   #+lispm ',keywords
-				   #-lispm (the simple-vector ',(apply #'vector keywords))
+				  #+lispm ',keywords
+				  #-lispm (the simple-vector ',(apply #'vector keywords))
 				  :test #'eq)))
 	    (and ,value (write-card29 ,index ,value))))
-     `(and (eq ,thing ,(car keywords)) (write-card29 ,index 0)))))
+       `(and (eq ,thing ,(car keywords)) (write-card29 ,index 0)))))
 
 (deftype member-vector (vector) `(member ,@(coerce (symbol-value vector) 'list)))
 
@@ -303,8 +306,9 @@
   ((index)
    (let ((value (gensym)))
      `(let ((,value (read-card29 ,index)))
-	(and (< ,value ,(length *boole-vector*))
-	     (svref *boole-vector* ,value)))))
+	(declare (type (integer 0 (,(length *boole-vector*))) ,value))
+	(type-check ,value (integer 0 (,(length *boole-vector*))))
+	(svref *boole-vector* ,value))))
   ((index thing)
    `(write-card29 ,index (position ,thing (the simple-vector *boole-vector*))))
   ((index thing)
@@ -390,16 +394,17 @@
   '(let* ((format (read-card8 1))
  	  (sequence (make-array (ceiling 160 format)
 				:element-type `(unsigned-byte ,format))))
+     (declare (type (member 8 16 32) format))
      (do ((i 12)
-	  (j 0 (1+ j)))
+	  (j 0 (index1+ j)))
 	 ((>= i 32))
        (case format
 	 (8 (setf (aref sequence j) (read-card8 i))
-	    (incf i))
+	    (index-incf i))
 	 (16 (setf (aref sequence j) (read-card16 i))
-	     (incf i 2))
+	     (index-incf i 2))
 	 (32 (setf (aref sequence j) (read-card32 i))
-	     (incf i 4))))
+	     (index-incf i 4))))
      sequence))
 
 (defmacro client-message-event-put-sequence (format sequence)
@@ -470,7 +475,7 @@
 (defmacro or-expand (&rest forms &environment environment)
   `(cond ,@(mapcar #'(lambda (forms)
 		       (mapcar #'(lambda (form)
-				   (macroexpand form environment))
+				   (clx-macroexpand form environment))
 			       forms))
 		   forms)))
 
@@ -487,7 +492,7 @@
 	`(let ((,value (read-card32 ,index)))
 	   (macrolet ((read-card32 (index) index ',value)
 		      (read-card29 (index) index ',value))
-	     ,(macroexpand `(or-expand ,@(nreverse result)) environment))))
+	     ,(clx-macroexpand `(or-expand ,@(nreverse result)) environment))))
      (let ((item (car types))
 	   (args nil))
        (when (consp item)
