@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.84 1997/11/27 02:02:14 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.85 1997/11/27 02:09:21 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 ;;; Since it is unlikely that native code top-level forms are moved
 ;;; before being executed during worldload it is probably safe to load
 ;;; these into the dynamic space under CGC even without enabling
-;;; dynamic space code above.
+;;; dynamic space code below.
 ;(setf *load-x86-tlf-to-dynamic-space* t)
 
 ;;; Purify and GENCGC can move native code so all code can be loading
