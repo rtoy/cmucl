@@ -272,133 +272,118 @@
 
 (defmacro time (form)
   "Evaluates the Form and prints timing information on *Trace-Output*."
-  (let ((old-run-utime (gensym))
-	(new-run-utime (gensym))
-	(old-run-stime (gensym))
-	(new-run-stime (gensym))
-	(old-real-time (gensym))
-	(new-real-time (gensym))
-	(old-page-faults (gensym))
-	(new-page-faults (gensym))
-	(real-time-overhead (gensym))
-	(run-utime-overhead (gensym))
-	(run-stime-overhead (gensym))
-	(page-faults-overhead (gensym))
-	(old-bytes-consed (gensym))
-	(new-bytes-consed (gensym))
-	(cons-overhead (gensym))
-	(err? (gensym))
-	(utime (gensym))
-	(stime (gensym)))
-    `(let (,old-run-utime
-	   ,new-run-utime
-	   ,old-run-stime
-	   ,new-run-stime
-	   ,old-real-time
-	   ,new-real-time
-	   ,old-page-faults
-	   ,new-page-faults
-	   ,real-time-overhead
-	   ,run-utime-overhead
-	   ,run-stime-overhead
-	   ,page-faults-overhead
-	   ,old-bytes-consed
-	   ,new-bytes-consed
-	   ,cons-overhead)
-       ;; Calculate the overhead...
-       (multiple-value-bind (,err? ,utime ,stime)
-			    (mach:unix-getrusage mach:rusage_self)
-	 (cond ((null ,err?)
-		(error "Unix system call getrusage failed: ~A."
-		       (mach:get-unix-error-msg ,utime)))
-	       (T (setq ,old-run-utime ,utime)
-		  (setq ,old-run-stime ,stime))))
-       (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			    (mach:vm_statistics *task-self*)
-	 (declare (ignore ps fc ac ic wc zf ra in ot))
-	 (gr-error 'mach:vm_allocate gr)
-	 (setq ,old-page-faults pf))
-       (setq ,old-bytes-consed (get-bytes-consed))
-       ;; Do it a second time, to make sure everything is faulted in.
-       (multiple-value-bind (,err? ,utime ,stime)
-			    (mach:unix-getrusage mach:rusage_self)
-	 (cond ((null ,err?)
-		(error "Unix system call getrusage failed: ~A."
-		       (mach:get-unix-error-msg ,utime)))
-	       (T (setq ,old-run-utime ,utime)
-		  (setq ,old-run-stime ,stime))))
-       (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			    (mach:vm_statistics *task-self*)
-	 (declare (ignore ps fc ac ic wc zf ra in ot))
-	 (gr-error 'mach:vm_statistics gr)
-	 (setq ,old-page-faults pf))
-       (setq ,old-bytes-consed (get-bytes-consed))
+  `(%time #'(lambda () ,form)))
 
-       (multiple-value-bind (,err? ,utime ,stime)
-			    (mach:unix-getrusage mach:rusage_self)
-	 (cond ((null ,err?)
-		(error "Unix system call getrusage failed: ~A."
-		       (mach:get-unix-error-msg ,utime)))
-	       (T (setq ,new-run-utime ,utime)
-		  (setq ,new-run-stime ,stime))))
-       (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			    (mach:vm_statistics *task-self*)
-	 (declare (ignore ps fc ac ic wc zf ra in ot))
-	 (gr-error 'mach:vm_statistics gr)
-	 (setq ,new-page-faults pf))
-       (setq ,new-bytes-consed (get-bytes-consed))
-
-       (setq ,run-utime-overhead (- ,new-run-utime ,old-run-utime))
-       (setq ,run-stime-overhead (- ,new-run-stime ,old-run-stime))
-       (setq ,page-faults-overhead (- ,new-page-faults ,old-page-faults))
-       (setq ,old-real-time (get-internal-real-time))
-       (setq ,old-real-time (get-internal-real-time))
-       (setq ,new-real-time (get-internal-real-time))
-       (setq ,real-time-overhead (- ,new-real-time ,old-real-time))
-       (setq ,cons-overhead (- ,new-bytes-consed ,old-bytes-consed))
-       ;; Now get the initial times.
-       (multiple-value-bind (,err? ,utime ,stime)
-			    (mach:unix-getrusage mach:rusage_self)
-	 (cond ((null ,err?)
-		(error "Unix system call getrusage failed: ~A."
-		       (mach:get-unix-error-msg ,utime)))
-	       (T (setq ,old-run-utime ,utime)
-		  (setq ,old-run-stime ,stime))))
-       (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			    (mach:vm_statistics *task-self*)
-	 (declare (ignore ps fc ac ic wc zf ra in ot))
-	 (gr-error 'mach:vm_statistics gr)
-	 (setq ,old-page-faults pf))
-       (setq ,old-real-time (get-internal-real-time))
-       (setq ,old-bytes-consed (get-bytes-consed))
-       (multiple-value-prog1
-	;; Execute the form, and return its values.
-	   ,form
-	 (multiple-value-bind (,err? ,utime ,stime)
-			      (mach:unix-getrusage mach:rusage_self)
-	   (cond ((null ,err?)
-		  (error "Unix system call getrusage failed: ~A."
-			 (mach:get-unix-error-msg ,utime)))
-		 (T (setq ,new-run-utime (- ,utime ,run-utime-overhead))
-		    (setq ,new-run-stime (- ,stime ,run-stime-overhead)))))
-	 (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			      (mach:vm_statistics *task-self*)
-	   (declare (ignore ps fc ac ic wc zf ra in ot))
-	   (gr-error 'mach:vm_statistics gr)
-	   (setq ,new-page-faults (- pf ,page-faults-overhead)))
-	 (setq ,new-real-time (- (get-internal-real-time) ,real-time-overhead))
-	 (setq ,new-bytes-consed (- (get-bytes-consed) ,cons-overhead))
-	 (format *trace-output*
-		 "~&Evaluation took:~%  ~
-		 ~S second~:P of real time,~%  ~
-		 ~S second~:P of user run time,~%  ~
-		 ~S second~:P of system run time,~%  ~
-		 ~S page fault~:P, and~%  ~
-		 ~S bytes consed.~%"
-		 (max (/ (- ,new-real-time ,old-real-time)
-			 (float internal-time-units-per-second))
-		      0.0)
-		 (max (/ (- ,new-run-utime ,old-run-utime) 1000000.0) 0.0)
-		 (max (/ (- ,new-run-stime ,old-run-stime) 1000000.0) 0.0)
-		 (max (- ,new-page-faults ,old-page-faults) 0)
-		 (max (- ,new-bytes-consed ,old-bytes-consed) 0))))))
+(defun %time (fun)
+  (let (old-run-utime
+	new-run-utime
+	old-run-stime
+	new-run-stime
+	old-real-time
+	new-real-time
+	old-page-faults
+	new-page-faults
+	real-time-overhead
+	run-utime-overhead
+	run-stime-overhead
+	page-faults-overhead
+	old-bytes-consed
+	new-bytes-consed
+	cons-overhead)
+    ;; Calculate the overhead...
+    (multiple-value-bind (err? utime stime)
+			 (mach:unix-getrusage mach:rusage_self)
+      (cond ((null err?)
+	     (error "Unix system call getrusage failed: ~A."
+		    (mach:get-unix-error-msg utime)))
+	    (T (setq old-run-utime utime)
+	       (setq old-run-stime stime))))
+    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
+			 (mach:vm_statistics *task-self*)
+      (declare (ignore ps fc ac ic wc zf ra in ot))
+      (gr-error 'mach:vm_allocate gr)
+      (setq old-page-faults pf))
+    (setq old-bytes-consed (get-bytes-consed))
+    ;; Do it a second time to make sure everything is faulted in.
+    (multiple-value-bind (err? utime stime)
+			 (mach:unix-getrusage mach:rusage_self)
+      (cond ((null err?)
+	     (error "Unix system call getrusage failed: ~A."
+		    (mach:get-unix-error-msg utime)))
+	    (T (setq old-run-utime utime)
+	       (setq old-run-stime stime))))
+    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
+			 (mach:vm_statistics *task-self*)
+      (declare (ignore ps fc ac ic wc zf ra in ot))
+      (gr-error 'mach:vm_statistics gr)
+      (setq old-page-faults pf))
+    (setq old-bytes-consed (get-bytes-consed))
+    
+    (multiple-value-bind (err? utime stime)
+			 (mach:unix-getrusage mach:rusage_self)
+      (cond ((null err?)
+	     (error "Unix system call getrusage failed: ~A."
+		    (mach:get-unix-error-msg utime)))
+	    (T (setq new-run-utime utime)
+	       (setq new-run-stime stime))))
+    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
+			 (mach:vm_statistics *task-self*)
+      (declare (ignore ps fc ac ic wc zf ra in ot))
+      (gr-error 'mach:vm_statistics gr)
+      (setq new-page-faults pf))
+    (setq new-bytes-consed (get-bytes-consed))
+    
+    (setq run-utime-overhead (- new-run-utime old-run-utime))
+    (setq run-stime-overhead (- new-run-stime old-run-stime))
+    (setq page-faults-overhead (- new-page-faults old-page-faults))
+    (setq old-real-time (get-internal-real-time))
+    (setq old-real-time (get-internal-real-time))
+    (setq new-real-time (get-internal-real-time))
+    (setq real-time-overhead (- new-real-time old-real-time))
+    (setq cons-overhead (- new-bytes-consed old-bytes-consed))
+    ;; Now get the initial times.
+    (multiple-value-bind (err? utime stime)
+			 (mach:unix-getrusage mach:rusage_self)
+      (cond ((null err?)
+	     (error "Unix system call getrusage failed: ~A."
+		    (mach:get-unix-error-msg utime)))
+	    (T (setq old-run-utime utime)
+	       (setq old-run-stime stime))))
+    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
+			 (mach:vm_statistics *task-self*)
+      (declare (ignore ps fc ac ic wc zf ra in ot))
+      (gr-error 'mach:vm_statistics gr)
+      (setq old-page-faults pf))
+    (setq old-real-time (get-internal-real-time))
+    (setq old-bytes-consed (get-bytes-consed))
+    (multiple-value-prog1
+	;; Execute the form and return its values.
+	(funcall fun)
+      (multiple-value-bind (err? utime stime)
+			   (mach:unix-getrusage mach:rusage_self)
+	(cond ((null err?)
+	       (error "Unix system call getrusage failed: ~A."
+		      (mach:get-unix-error-msg utime)))
+	      (T (setq new-run-utime (- utime run-utime-overhead))
+		 (setq new-run-stime (- stime run-stime-overhead)))))
+      (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
+			   (mach:vm_statistics *task-self*)
+	(declare (ignore ps fc ac ic wc zf ra in ot))
+	(gr-error 'mach:vm_statistics gr)
+	(setq new-page-faults (- pf page-faults-overhead)))
+      (setq new-real-time (- (get-internal-real-time) real-time-overhead))
+      (setq new-bytes-consed (- (get-bytes-consed) cons-overhead))
+      (format *trace-output*
+	      "~&Evaluation took:~%  ~
+	      ~S second~:P of real time~%  ~
+	      ~S second~:P of user run time~%  ~
+	      ~S second~:P of system run time~%  ~
+	      ~S page fault~:P and~%  ~
+	      ~S bytes consed.~%"
+	      (max (/ (- new-real-time old-real-time)
+		      (float internal-time-units-per-second))
+		   0.0)
+	      (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
+	      (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
+	      (max (- new-page-faults old-page-faults) 0)
+	      (max (- new-bytes-consed old-bytes-consed) 0)))))
