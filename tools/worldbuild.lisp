@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.15 1992/07/28 22:13:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.16 1992/09/08 22:27:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,9 +17,7 @@
 (in-package "LISP")
 
 (unless (fboundp 'genesis)
-  (if (c:target-featurep '(or :hppa :x86 :pmax))
-      (load "target:compiler/generic/new-genesis")
-      (load "target:compiler/generic/genesis")))
+  (load "target:compiler/generic/new-genesis"))
 
 (defparameter lisp-files
   `(,@(when (c:backend-featurep :pmax)
@@ -30,7 +28,6 @@
     ,@(when (c:backend-featurep :sparc)
 	'("target:assembly/sparc/assem-rtns.assem"
 	  "target:assembly/sparc/array.assem"
-	  "target:assembly/sparc/bit-bash.assem"
 	  "target:assembly/sparc/arith.assem"
 	  "target:assembly/sparc/alloc.assem"))
     ,@(when (c:backend-featurep :rt)
@@ -128,19 +125,12 @@
     "target:code/debug"
     ))
 
-(cond ((c:target-featurep '(or :hppa :x86 :pmax))
-       (setf *genesis-core-name* "target:lisp/kernel.core")
-       (setf *genesis-c-header-name* "target:lisp/internals.h")
-       (setf *genesis-map-name* #+nil "target:lisp/kernel.map" nil)
-       (setf *genesis-symbol-table* "target:lisp/lisp.nm"))
-      (t
-       (setf *genesis-core-name*
-	     (if (c:backend-featurep '(and :sparc :mach))
-		 "/usr/tmp/kernel.core"
-		 "target:ldb/kernel.core"))
-       (setf *genesis-c-header-name* "target:ldb/lisp.h")
-       (setf *genesis-map-name* "target:ldb/lisp.map")
-       (setf *genesis-symbol-table* "target:ldb/ldb.map")))
+(if (c:target-featurep '(and :mach :sparc))
+    (setf *genesis-core-name* "/usr/tmp/kernel.core")
+    (setf *genesis-core-name* "target:lisp/kernel.core"))
+(setf *genesis-c-header-name* "target:lisp/internals.h")
+(setf *genesis-map-name* nil)
+(setf *genesis-symbol-table* "target:lisp/lisp.nm")
 
 (when (boundp '*target-page-size*)
   (locally
