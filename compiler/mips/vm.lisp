@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.34 1990/10/02 05:38:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.35 1990/10/23 02:23:46 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -15,6 +15,67 @@
 ;;; Written by Christopher Hoover and William Lott.
 ;;;
 (in-package "C")
+
+
+;;;; Registers
+
+(eval-when (compile eval)
+
+(defmacro defreg (name offset)
+  (let ((offset-sym (symbolicate name "-OFFSET")))
+    `(progn
+       (eval-when (compile eval load)
+	 (defconstant ,offset-sym ,offset))
+       (setf (svref *register-names* ,offset-sym) ,(symbol-name name)))))
+
+(defmacro defregset (name &rest regs)
+  `(eval-when (compile eval load)
+     (defconstant ,name
+       (list ,@(mapcar #'(lambda (name) (symbolicate name "-OFFSET")) regs)))))
+
+)
+
+(defvar *register-names* (make-array 32 :initial-element nil))
+
+(defreg zero 0)
+(defreg nl3 1)
+(defreg nl4 2)
+(defreg flags 3)
+(defreg nl0 4)
+(defreg nl1 5)
+(defreg nl2 6)
+(defreg nargs 7)
+(defreg a0 8)
+(defreg a1 9)
+(defreg a2 10)
+(defreg a3 11)
+(defreg a4 12)
+(defreg a5 13)
+(defreg cname 14)
+(defreg lexenv 15)
+(defreg nfp 16)
+(defreg old-fp 17)
+(defreg lra 18)
+(defreg l0 19)
+(defreg null 20)
+(defreg bsp 21)
+(defreg fp 22)
+(defreg csp 23)
+(defreg l1 24)
+(defreg alloc 25)
+(defreg l2 28)
+(defreg nsp 29)
+(defreg code 30)
+(defreg lip 31)
+
+(defregset non-descriptor-regs
+  nl0 nl1 nl2 nl3 nl4 nargs)
+
+(defregset descriptor-regs
+  a0 a1 a2 a3 a4 a5 cname lexenv nfp old-fp lra l0 l1 l2)
+
+(defregset register-arg-offsets
+  a0 a1 a2 a3 a4 a5)
 
 
 ;;;; SB and SC definition:
@@ -106,7 +167,7 @@
   ;; bad will happen if they are.  (fixnums, characters, header values, etc).
   (any-reg
    registers
-   :locations (2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 28 31)
+   :locations #.(append non-descriptor-regs descriptor-regs)
    :constant-scs (negative-immediate zero immediate unsigned-immediate
 			   immediate-base-character random-immediate)
    :save-p t
@@ -114,45 +175,45 @@
 
   ;; Pointer descriptor objects.  Must be seen by GC.
   (descriptor-reg registers
-   :locations (8 9 10 11 12 13 14 15 16 17 18 19 28 31)
+   :locations #.descriptor-regs
    :constant-scs (constant null random-immediate)
    :save-p t
    :alternate-scs (control-stack))
 
   ;; Non-Descriptor characters
   (base-character-reg registers
-   :locations (2 3 4 5 6 7)
+   :locations #.non-descriptor-regs
    :constant-scs (immediate-base-character)
    :save-p t
    :alternate-scs (base-character-stack))
 
   ;; Non-Descriptor SAP's (arbitrary pointers into address space)
   (sap-reg registers
-   :locations (2 3 4 5 6 7)
+   :locations #.non-descriptor-regs
    :constant-scs (immediate-sap)
    :save-p t
    :alternate-scs (sap-stack))
 
   ;; Non-Descriptor (signed or unsigned) numbers.
   (signed-reg registers
-   :locations (2 3 4 5 6 7)
+   :locations #.non-descriptor-regs
    :constant-scs (negative-immediate zero immediate unsigned-immediate
 				     random-immediate)
    :save-p t
    :alternate-scs (signed-stack))
   (unsigned-reg registers
-   :locations (2 3 4 5 6 7)
+   :locations #.non-descriptor-regs
    :constant-scs (zero immediate unsigned-immediate random-immediate)
    :save-p t
    :alternate-scs (unsigned-stack))
 
   ;; Random objects that must not be seen by GC.  Used only as temporaries.
   (non-descriptor-reg registers
-   :locations (2 3 4 5 6 7))
+   :locations #.non-descriptor-regs)
 
   ;; Pointers to the interior of objects.  Used only as an temporary.
   (interior-reg registers
-   :locations (1))
+   :locations (#.lip-offset))
 
 
   ;; **** Things that can go in the floating point registers.
@@ -414,115 +475,37 @@
        (any)))))
 
 
-;;;; Magical Registers
+;;;; Random TNs for interesting registers
 
-(eval-when (compile eval load)
-  (defconstant zero-offset 0)
-  (defconstant lip-offset 1)
-  (defconstant nl0-offset 2)
-  (defconstant nl1-offset 3)
-  (defconstant nl2-offset 4)
-  (defconstant nl3-offset 5)
-  (defconstant nl4-offset 6)
-  (defconstant nargs-offset 7)
-  (defconstant a0-offset 8)
-  (defconstant a1-offset 9)
-  (defconstant a2-offset 10)
-  (defconstant a3-offset 11)
-  (defconstant a4-offset 12)
-  (defconstant a5-offset 13)
-  (defconstant cname-offset 14)
-  (defconstant lexenv-offset 15)
-  (defconstant nfp-offset 16)
-  (defconstant old-fp-offset 17)
-  (defconstant lra-offset 18)
-  (defconstant l0-offset 19)
-  (defconstant null-offset 20)
-  (defconstant bsp-offset 21)
-  (defconstant fp-offset 22)
-  (defconstant csp-offset 23)
-  (defconstant flags-offset 24)
-  (defconstant alloc-offset 25)
-  (defconstant l1-offset 28)
-  (defconstant nsp-offset 29)
-  (defconstant code-offset 30)
-  (defconstant l2-offset 31))
+(eval-when (compile eval)
 
-;;; 
-;;; Wired Zero
-(defparameter zero-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset zero-offset))
+(defmacro defregtn (name sc)
+  (let ((offset-sym (symbolicate name "-OFFSET"))
+	(tn-sym (symbolicate name "-TN")))
+    `(defparameter ,tn-sym
+       (make-random-tn :kind :normal
+		       :sc (sc-or-lose ',sc)
+		       :offset ,offset-sym))))
 
-;;; 
-;;; Lisp-interior-pointer register.
-(defparameter lip-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset lip-offset))
+)
 
-;;;
-;;; ``Wired'' NIL
-(defparameter null-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset null-offset))
+(defregtn zero any-reg)
+(defregtn lip interior-reg)
+(defregtn code descriptor-reg)
+(defregtn flags non-descriptor-reg)
+(defregtn alloc any-reg)
+(defregtn null descriptor-reg)
 
-;;; 
-;;; Binding stack pointer
-(defparameter bsp-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset bsp-offset))
+(defregtn nargs any-reg)
+(defregtn cname descriptor-reg)
+(defregtn lexenv descriptor-reg)
 
-;;;
-;;; Frame Pointer
-(defparameter fp-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset fp-offset))
-
-;;; 
-;;; Control stack pointer
-(defparameter csp-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset csp-offset))
-
-;;;
-;;; FLAGS magic register
-(defparameter flags-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset flags-offset))
-
-;;; 
-;;; Allocation pointer
-(defparameter alloc-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset alloc-offset))
-;;; 
-;;; Number stack pointer
-(defparameter nsp-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset nsp-offset))
-
-;;; 
-;;; Code Pointer
-(defparameter code-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset code-offset))
-
-;;;
-;;; Global Pointer (for C call-out)
-(defparameter gp-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset 29))
+(defregtn bsp any-reg)
+(defregtn csp any-reg)
+(defregtn fp any-reg)
+(defregtn old-fp any-reg)
+(defregtn nsp any-reg)
+(defregtn nfp any-reg)
 
 
 
@@ -586,26 +569,6 @@
 (defconstant lra-save-offset 1)
 (defconstant nfp-save-offset 2)
 
-); Eval-When (Compile Load Eval)  
-
-
-(defparameter nargs-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'any-reg)
-		  :offset nargs-offset))
-
-(defparameter old-fp-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'descriptor-reg)
-		  :offset old-fp-offset))
-
-(defparameter lra-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'descriptor-reg)
-		  :offset lra-offset))
-
-
-(eval-when (compile load eval)
 
 ;;; The number of arguments/return values passed in registers.
 ;;;
@@ -614,7 +577,6 @@
 ;;; The offsets within the register-arg SC that we pass values in, first
 ;;; value first.
 ;;;
-(defconstant register-arg-offsets '(8 9 10 11 12 13))
 
 ;;; Names to use for the argument registers.
 ;;; 
@@ -644,7 +606,8 @@
   (let ((sb (sb-name (sc-sb (tn-sc tn))))
 	(offset (tn-offset tn)))
     (ecase sb
-      (registers (mips:register-name (tn-offset tn)))
+      (registers (or (svref *register-names* offset)
+		     (format nil "R~D" offset)))
       (float-registers (format nil "F~D" offset))
       (control-stack (format nil "CS~D" offset))
       (non-descriptor-stack (format nil "NS~D" offset))
