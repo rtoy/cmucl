@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.14 2004/01/15 16:14:37 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.15 2004/05/13 14:37:06 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.14 2004/01/15 16:14:37 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.15 2004/05/13 14:37:06 rtoy Rel $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -57,7 +57,7 @@
 
 (define-move-function (load-constant 5) (vop x y)
   ((constant) (descriptor-reg))
-  (loadw y code-tn (tn-offset x) other-pointer-type))
+  (loadw y code-tn (tn-offset x) other-pointer-type gtemp-tn))
 
 (define-move-function (load-stack 5) (vop x y)
   ((control-stack) (any-reg descriptor-reg))
@@ -116,13 +116,14 @@
 	    :scs (any-reg descriptor-reg zero null))
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y any-reg descriptor-reg))))
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (y))
   (:generator 0
     (sc-case y
       ((any-reg descriptor-reg)
        (move y x))
       (control-stack
-       (storew x fp (tn-offset y))))))
+       (storew x fp (tn-offset y) 0 temp)))))
 ;;;
 (define-move-vop move-argument :move-argument
   (any-reg descriptor-reg)
@@ -365,13 +366,14 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y sap-reg))))
   (:results (y))
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:note "word integer argument move")
   (:generator 0
     (sc-case y
       ((signed-reg unsigned-reg)
        (move y x))
       ((signed-stack unsigned-stack)
-       (storew x fp (tn-offset y))))))
+       (storew x fp (tn-offset y) 0 temp)))))
 ;;;
 (define-move-vop move-word-argument :move-argument
   (descriptor-reg any-reg signed-reg unsigned-reg) (signed-reg unsigned-reg))
