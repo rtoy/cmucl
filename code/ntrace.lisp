@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.28 2003/07/21 13:41:53 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.29 2005/02/22 22:55:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -641,7 +641,7 @@
        evaluates to true at the time of the call.  :CONDITION-AFTER is
        similar, but suppresses the initial printout, and is tested when the
        function returns.  :CONDITION-ALL tries both before and after.
-p
+
    :WHEREIN Names
        If specified, Names is a function name or list of names.  TRACE does
        nothing unless a call to one of those functions encloses the call to
