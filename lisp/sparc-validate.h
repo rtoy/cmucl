@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.16 2004/01/09 05:15:09 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.17 2004/04/28 04:29:37 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -53,6 +53,8 @@
 
 /*#include "internals.h"*/
 
+/* 128 MB */
+#define MB_128	(0x08000000)
 /*
  *
  * Note: I'm not sure why, but the sizes must be on a
@@ -87,16 +89,16 @@
 
 
 #define READ_ONLY_SPACE_START	(SpaceStart_TargetReadOnly)
-#define READ_ONLY_SPACE_SIZE	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 256 MB max */
+#define READ_ONLY_SPACE_SIZE	((2*MB_128) - SPARSE_BLOCK_SIZE) /* 256 MB - 32 KB, 256 MB max */
   
 #define BINDING_STACK_START 	(0x20000000)
-#define BINDING_STACK_SIZE  	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
+#define BINDING_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
 
 #define STATIC_SPACE_START  	(SpaceStart_TargetStatic)
-#define STATIC_SPACE_SIZE   	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 256 MB max */
+#define STATIC_SPACE_SIZE   	((2*MB_128) - SPARSE_BLOCK_SIZE) /* 256 MB - 32 KB, 256 MB max */
 
 #define CONTROL_STACK_START 	(0x38000000)
-#define CONTROL_STACK_SIZE  	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
+#define CONTROL_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
 #define CONTROL_STACK_END       (CONTROL_STACK_START + CONTROL_STACK_SIZE)
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
