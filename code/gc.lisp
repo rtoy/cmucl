@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.20 1997/01/18 14:30:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.21 1997/02/08 21:08:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,7 +65,7 @@
      (read-only-space-start)))
 
 (defun control-stack-usage ()
-#-x86 (- (system:sap-int (c::control-stack-pointer-sap)) (control-stack))
+#-x86 (- (system:sap-int (c::control-stack-pointer-sap)) (control-stack-start))
 #+x86 (- (control-stack-end) (system:sap-int (c::control-stack-pointer-sap))) )
 
 (defun binding-stack-usage ()
