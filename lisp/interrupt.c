@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.13 1997/11/25 15:27:31 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.14 1998/01/05 05:42:30 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -169,6 +169,8 @@ interrupt_internal_error(HANDLER_ARGS,
   GET_CONTEXT
 #endif
 
+    fake_foreign_function_call(context);
+
     /* Allocate the SAP object while the interrupts are still
        disabled. */
     if (internal_errors_enabled)
@@ -179,7 +181,7 @@ interrupt_internal_error(HANDLER_ARGS,
 #else
     sigsetmask(context->sc_mask);
 #endif
-    fake_foreign_function_call(context);
+
     if (internal_errors_enabled)
 	funcall2(SymbolFunction(INTERNAL_ERROR), context_sap,
 		 continuable ? T : NIL);
