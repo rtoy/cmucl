@@ -1,5 +1,17 @@
 ;;;; -*- Mode: Lisp ; Package: Debug -*-
 ;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+;;; **********************************************************************
+;;;
+;;; Written by Michael Garland
+;;;
+;;; This file implements the graphical interface to the debugger.
+;;;
 
 (in-package "DEBUG")
 (use-package '("TOOLKIT" "INTERFACE"))
@@ -16,8 +28,9 @@
 	    (:conc-name dd-info-)
 	    (:print-function print-debug-display)
 	    (:constructor make-debug-display
-			  (debug-pane restarts backtrace)))
+			  (debug-pane errmsg restarts backtrace)))
   (debug-pane nil :type (or null widget))
+  (errmsg nil :type (or null widget))
   (restarts nil :type (or null widget))
   (backtrace nil :type (or null widget))
   (level 0 :type fixnum)
@@ -31,9 +44,9 @@
 
 ;;;; Callback functions
 
-(defun quit-debugger-callback (widget call-data condition)
+(defun quit-debugger-callback (widget call-data)
   (declare (ignore widget call-data))
-  (close-motif-debugger condition)
+  (close-motif-debugger *debug-condition*)
   (throw 'lisp::top-level-catcher nil))
 
 (defun restart-callback (widget call-data restart)
@@ -249,28 +262,54 @@
 (defun debug-display-error (errmsg condition)
   (set-values errmsg :label-string (format nil "~A" condition)))
 
-(defun debug-display-restarts (restarts)
-  (let (buttons)
+(defun debug-display-restarts (restart-view)
+  (let ((widgets (reverse (xti:widget-children restart-view)))
+	(used-ones))
+
     (dolist (r *debug-restarts*)
-      (let ((button (create-highlight-button
-		     restarts "restartButton" (format nil "~A" r))))
+      (let* ((label (format nil "~A" r))
+	     (button (if widgets
+			 (let ((w (pop widgets)))
+			   (set-values w :label-string label)
+			   (remove-all-callbacks w :activate-callback)
+			   w)
+			 (create-highlight-button restart-view
+						  "restartButton"
+						  label))))
+	
 	(add-callback button :activate-callback 'restart-callback r)
-	(push button buttons)))
-    (apply #'manage-children buttons)))
+	(push button used-ones)))
+    (apply #'manage-children used-ones)
+    (when widgets
+      (apply #'unmanage-children widgets))))
 
 (defun debug-display-stack (backtrace)
-  (let ((buttons))
+  (let ((widgets (reverse (xti:widget-children backtrace)))
+	(used-ones)
+	(frames))
+
     (do ((frame *current-frame* (di:frame-down frame)))
 	((null frame))
-      (let ((button (create-highlight-button
-		     backtrace "stackFrame"
-		     (grab-output-as-string
-		      (print-frame-call frame)))))
-	(add-callback button :activate-callback 'stack-frame-callback frame)
-	(push button buttons)))
-    (apply #'manage-children buttons)))
+      (push frame frames))
+    (setf frames (nreverse frames))
 
-(defun create-debugger (condition)
+    (dolist (frame frames)
+      (let* ((label (grab-output-as-string
+		     (print-frame-call frame)))
+	     (button (if widgets
+			 (let ((w (pop widgets)))
+			   (set-values w :label-string label)
+			   (remove-all-callbacks w :activate-callback)
+			   w)
+			 (create-highlight-button
+			  backtrace "stackFrame" label))))
+	(add-callback button :activate-callback 'stack-frame-callback frame)
+	(push button used-ones)))
+    (apply #'manage-children used-ones)
+    (when widgets
+      (apply #'unmanage-children widgets))))
+
+(defun really-create-debugger (condition)
   (let* ((debug-pane (create-interface-pane-shell "Debugger" condition))
 	 (frame (create-frame debug-pane "debugFrame"))
 	 (form (create-form frame "debugForm"))
@@ -279,8 +318,8 @@
 				    :right-attachment :attach-form))
 	 (cascade (create-cached-menu
 		   menu-bar "Debug"
-		   `(("Close All Frames" close-all-callback)
-		     ("Quit Debugger" quit-debugger-callback ,condition))))
+		   '(("Close All Frames" close-all-callback)
+		     ("Quit Debugger" quit-debugger-callback))))
  	 (errlabel (create-label form "errorLabel"
 					:top-attachment :attach-widget
 					:top-widget menu-bar
@@ -338,15 +377,50 @@
 	  (debug-display-restarts restarts))
 	(set-values rlabel :label-string "No restarts available"))
 
-    (debug-display-stack backtrace)
+    (let ((quick-stack (create-highlight-button backtrace "quickStack"
+						"Display Stack")))
+      (add-callback quick-stack :activate-callback
+		    #'(lambda (w c) (declare (ignore w c))
+			(debug-display-stack backtrace)))
+      (manage-child quick-stack))
+
 
     (setf *current-debug-display*
-	  (make-debug-display debug-pane restarts backtrace))
+	  (make-debug-display debug-pane errmsg restarts backtrace))
 
     (popup-interface-pane debug-pane)
     debug-pane))
-    
+
+(defun reuse-debugger (condition info)
+  (let ((debug-pane (dd-info-debug-pane info))
+	(errmsg (dd-info-errmsg info))
+	(restarts (dd-info-restarts info))
+	(backtrace (dd-info-backtrace info)))
+
+    (debug-display-error errmsg condition)
+    (debug-display-restarts restarts)
+
+    (let* ((buttons (xti:widget-children backtrace))
+	   (quick-stack (car buttons)))
+      (remove-all-callbacks quick-stack :activate-callback)
+      (set-values quick-stack :label-string "Display Stack")
+      (add-callback quick-stack :activate-callback
+		    #'(lambda (w c) (declare (ignore w c))
+			(debug-display-stack backtrace)))
+      (manage-child quick-stack)
+      (apply #'unmanage-children (cdr buttons)))
+
+    (setf *current-debug-display* info)
+    (popup-interface-pane debug-pane)
+    debug-pane))
+
+(defun create-debugger (condition)
+  (if *old-display-frames*
+      (reuse-debugger condition (pop *old-display-frames*))
+      (really-create-debugger condition)))
+
 (defun close-motif-debugger (condition)
+  (declare (ignore condition))
   (push *current-debug-display* *old-display-frames*)
   ;;
   ;; Destroy all frame panes
@@ -354,9 +428,9 @@
     (destroy-widget (cdr info)))
   (setf *debug-active-frames* nil)
   ;;
-  ;; Destroy the restart/backtrace window
+  ;; Remove the restart/backtrace window
+  (popdown (dd-info-debug-pane *current-debug-display*))
   (setf *current-debug-display* nil)
-  (destroy-interface-pane condition)
 
   (format t "Leaving debugger.~%"))
 
