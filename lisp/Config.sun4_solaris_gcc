@@ -1,4 +1,4 @@
-CPPFLAGS = -I/usr/include/X11 -DSOLARIS -DSVR4
+CPPFLAGS = -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSVR4
 CC = gcc
 CPP = gcc -E
 CFLAGS = -g
