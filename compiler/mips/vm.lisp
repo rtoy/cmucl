@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.47 1993/01/13 15:59:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.48 1993/01/27 09:56:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,7 +80,7 @@
 (defreg ra 31)
 
 (defregset non-descriptor-regs
-  nl0 nl1 nl2 ra nl4 cfunc nargs)
+  nl0 nl1 nl2 #+gengc ra #-gengc nl3 nl4 cfunc nargs)
 
 (defregset descriptor-regs
   a0 a1 a2 a3 a4 a5 fdefn lexenv nfp ocfp #-gengc lra l0 #-gengc l1)
