@@ -596,7 +596,8 @@
 	(when icon-x (setf (wm-hints-icon-x wm-hints) icon-x))
 	(when icon-y (setf (wm-hints-icon-y wm-hints) icon-y))
 	(when icon-mask (setf (wm-hints-icon-mask wm-hints) icon-mask))
-	(when window-group (setf (wm-hints-input wm-hints) window-group))
+	(when window-group
+	  (setf (wm-hints-window-group wm-hints) window-group))
 	(setf (wm-hints window) wm-hints))
       (when hints (setf (wm-hints window) hints)))
   ;; WM-NORMAL-HINTS
