@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.3 1990/03/08 17:26:55 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.4 1990/03/08 20:38:24 ch Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o os.o vars.o assem.o parse.o interrupt.o test.o search.o
@@ -14,7 +14,7 @@ ldb: ${OBJS} version
 	mv ,version version
 	cc ${CFLAGS} -DVERSION=`cat version` -c version.c
 	cc -o ,ldb ${OBJS} version.o -lmach -lc
-	mv ,ldb ldb
+	mv -f ,ldb ldb
 
 version:
 	echo 0 > version
@@ -26,9 +26,9 @@ version:
 interrupt.o: interrupt.c
 	cc ${CFLAGS} -G 0 -c interrupt.c
 
-
-
-
+lisp.h:
+	@echo "You must run genesis to create lisp.h!"
+	@false
 
 depends:
 	rm -f Makefile.BAK
