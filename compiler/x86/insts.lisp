@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.14 1998/01/29 07:15:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.15 1998/02/15 20:24:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2084,6 +2084,15 @@
     (emit-fp-op segment source #b000)))
 
 ;;;
+;;; load long to st(0)
+;;;
+(define-instruction fldl (segment source)
+  (:printer floating-point ((op '(#b011 #b101))))
+  (:emitter
+    (emit-byte segment #b11011011)
+    (emit-fp-op segment source #b101)))
+
+;;;
 ;;; store single from st(0)
 ;;;
 (define-instruction fst (segment dest)
@@ -2455,6 +2464,15 @@
 	 (t
 	  (emit-byte segment #b11011101)
 	  (emit-fp-op segment dest #b011)))))
+;;;
+;;; store long from st(0) and pop
+;;;
+(define-instruction fstpl (segment dest)
+  (:printer floating-point ((op '(#b011 #b111))))
+  (:emitter
+    (emit-byte segment #b11011011)
+    (emit-fp-op segment dest #b111)))
+
 ;;;
 ;;; decrement stack-top pointer
 ;;;
