@@ -10,9 +10,23 @@
 
 (in-package "USER")
 
-(c::%proclaim '(optimize (speed 2) (space 2) (c::brevity 2)))
+(c::%proclaim ')
 
-(with-compiler-log-file ("target:compile-lisp.log")
+(with-compiler-log-file
+    ("target:compile-lisp.log"
+     :optimize '(optimize (speed 2) (space 2) (inhibit-warnings 2)
+			  (debug-info #-small 2 #+small 1)
+			  (safety #-small 1 #+small 0))
+     :optimize-interface '(optimize-interface (safety #-small 2 #+small 1)
+					      (debug-info 1))
+     :context-declarations
+     '(((:or :external (:and (:match "%") (:match "SET")))
+	(declare (optimize-interface (safety 2))))
+       ((:or (:and :external :macro)
+	     (match "$PARSE-"))
+	(declare (optimize (safety 2))))
+       ((:and :external (:match "LIST"))
+	(declare (optimize (safety 1))))))
 
 (let ((*features*
        (cons (intern (c:backend-name c:*backend*)
@@ -68,7 +82,10 @@
 (comf "target:code/array")
 (comf "target:code/hash")
 
-(comf "target:code/list")
+(with-compilation-unit
+  (:optimize '(optimize (safety 1)))
+  (comf "target:code/list"))
+
 (comf "target:code/seq") ; seq must come after list
 (comf "target:code/string")
 (comf "target:code/mipsstrops")
@@ -158,13 +175,6 @@
 
 #+clx
 (comf "target:code/clx-ext")
-
-#|
-These need serious work.
-
-(comf "target:code/lfloatcon")
-
-|#
 
 (comf "target:code/foreign")
 (comf "target:code/internet")
