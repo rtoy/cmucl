@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.19 1990/04/10 20:02:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.20 1990/04/11 16:42:56 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -132,6 +132,7 @@
 ;;;
 ;;; Move costs for operand loading and storing
 ;;;
+#+nil ;; These move costs don't work.
 (define-move-costs
   ((immediate zero null random-immediate)
    ;; load immediate or reg->reg move.
@@ -189,6 +190,45 @@
 
   ((sap-stack)
    ;; Just indirect.
+   (5 sap-reg)))
+
+(define-move-costs
+  ((any-reg descriptor-reg non-descriptor-reg)
+   (1 any-reg descriptor-reg non-descriptor-reg)
+   (2 base-character-reg sap-reg)
+   (5 control-stack number-stack))
+
+  ((control-stack number-stack constant)
+   (5 any-reg descriptor-reg non-descriptor-reg)
+   (6 base-character-reg sap-reg))
+
+  ((immediate zero null random-immediate)
+   (1 any-reg descriptor-reg non-descriptor-reg))
+
+  ((immediate-base-character)
+   (1 base-character-reg)
+   (2 any-reg descriptor-reg non-descriptor-reg))
+
+  ((immediate-sap)
+   (1 sap-reg)
+   (2 any-reg descriptor-reg non-descriptor-reg))
+
+  ((base-character-reg)
+   (1 base-character-reg)
+   (2 any-reg descriptor-reg non-descriptor-reg)
+   (5 base-character-stack)
+   (6 control-stack number-stack))
+
+  ((sap-reg)
+   (1 sap-reg)
+   (2 any-reg descriptor-reg non-descriptor-reg)
+   (5 sap-stack)
+   (6 control-stack number-stack))
+
+  ((base-character-stack)
+   (5 base-character-reg))
+
+  ((sap-stack)
    (5 sap-reg)))
 
 
