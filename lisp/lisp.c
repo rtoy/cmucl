@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.13 1997/11/18 17:08:42 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.14 1997/11/21 12:23:44 dtc Exp $
  *
  */
 
@@ -200,21 +200,15 @@ void main(int argc, char *argv[], char *envp[])
     arch_install_interrupt_handlers();
     os_install_interrupt_handlers();
 
-    /* Convert the argv and envp to something Lisp can grok. */
-    SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
-    SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
-
 #ifdef PSEUDO_ATOMIC_ATOMIC
-#ifdef i386
-    /* Turn on pseudo atomic for when we call into lisp. */
-    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
-    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0));
-#else
     /* Turn on pseudo atomic for when we call into lisp. */
     SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(1));
     SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0));
 #endif
-#endif
+
+    /* Convert the argv and envp to something Lisp can grok. */
+    SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
+    SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
 
     /* Pick off sigint until the lisp system gets far enough along to */
     /* install it's own. */
