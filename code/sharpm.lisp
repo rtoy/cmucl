@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.10.1.2 1993/02/11 14:00:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.10.1.3 1993/02/12 18:43:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -228,7 +228,7 @@
 	  (%reader-error
 	   stream "The ~S structure does not have a default constructor."
 	   (car body)))
-	(apply (fdefinition def-cont) (rest body))))))
+	(apply (fdefinition def-con) (rest body))))))
 
 
 ;;;; #=/##
