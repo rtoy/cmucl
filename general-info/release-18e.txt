@@ -89,7 +89,7 @@ New in this release:
        formatting directive
      - correction to CLX's handling of FamilyLocal authorization
        cookies (as created by versions of ssh after 3.4)
-     - fix to CLX handling of :any event-spec ??
+     - fix to CLX handling of :any event-spec
      - fix to boa-constructors ??
      - EXPT was not correctly handling a zero exponent
      - index calculations for operations bitvectors of sizes near the
@@ -171,8 +171,6 @@ New in this release:
      - the function MAKE-DISPATCH-MACRO-CHARACTER will quietly
        override existing definitions, instead of signalling an error
        if a previous binding for a macro character existed.
-  
-  * Code cleanups:
      - a number of stale symbols have been deleted from CMUCL images
 
   * Numerous improvements to the PCL implementation of CLOS:
@@ -184,6 +182,10 @@ New in this release:
      - the preallocation of caches for generic functions has been
        removed, since benchmarking indicated that this doesn't provide a
        noticeable performance increase
+
+  * Improvements to Hemlock, the Emacs-like editor:
+     - a dynamic-abbrev facility has been added (bound to M-/)
+     - support for C-w (copy work) during incremental search
 
   * Changes to rebuilding procedure:
      - the search-list "modules:" tracks the "library:" search-list,
