@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.16 1992/02/15 01:01:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.17 1993/05/13 20:55:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 
 (in-package "HEMLOCK")
 
+(declaim (optimize (speed 2))); turn off byte compilation.
 
 
 ;;;; Variables and lisp-info structure.
@@ -1128,6 +1129,7 @@
 	    ((valid-spot mark t) (return mark))))
     (mark-after mark)))
 
+(declaim (optimize (speed 0))); byte compile again
 
 
 ;;;; Indentation commands and hook functions.
