@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.23 1998/01/15 14:36:25 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.24 1998/01/17 13:43:47 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -462,10 +462,8 @@
 	    :interrupt-contexts (make-array 0 :element-type
 					    '(unsigned-byte 32))
 	    ;; Binding stack - some initial bindings.
-	    :binding-stack (vector 
-			    nil '*  nil '**  nil '***  nil '-
-			    nil '+  nil '++  nil '+++
-			    nil '///  nil '//  nil '/
+	    :binding-stack (vector
+			    (find-package "COMMON-LISP-USER") '*package*
 			    nil 'unix::*interrupts-enabled*
 			    t 'lisp::*gc-inhibit*)
 	    :binding-stack-size (* 2 12)
@@ -1445,7 +1443,10 @@
 ;;;
 (defun top-level ()
   "Top-level READ-EVAL-PRINT loop for processes."
-  (let ((magic-eof-cookie (cons :eof nil)))
+  (let ((* nil) (** nil) (*** nil)
+	(- nil) (+ nil) (++ nil) (+++ nil)
+	(/// nil) (// nil) (/ nil)
+	(magic-eof-cookie (cons :eof nil)))
     (loop
       (with-simple-restart (abort "Return to Top-Level.")
 	(catch 'top-level-catcher
