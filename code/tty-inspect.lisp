@@ -152,16 +152,21 @@
 	    parts-list))))
 
 (defun describe-function-parts (object)
-  (list (format nil "Function ~s.~%Argument List: ~a." object
-		(system:%primitive header-ref object
-				   lisp::%function-arg-names-slot)
-		#|###
-		(system:%primitive header-ref object
-				   lisp::%function-defined-from-slot)
-		~%Defined from: ~a
-		|#
-		)
-	t))
+  (let ((object (if (= (system:%primitive get-vector-subtype object)
+		       system:%function-closure-subtype)
+		    (system:%primitive header-ref object
+				       system:%function-name-slot)
+		    object)))
+    (list (format nil "Function ~s.~%Argument List: ~a." object
+		  (system:%primitive header-ref object
+				     lisp::%function-entry-arglist-slot)
+		  #|###
+		  (system:%primitive header-ref object
+				     lisp::%function-defined-from-slot)
+		  ~%Defined from: ~a
+		  |#
+		  )
+	  t)))
 
 (defun describe-vector-parts (object)
   (list* (format nil "Object is a ~:[~;displaced ~]vector of length ~d.~%"
