@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.224 2003/09/04 21:03:23 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.225 2003/09/25 03:04:08 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1670,7 +1670,9 @@
 	   "WITH-INTERRUPTS" "WITH-REPLY-PORT" "WITHOUT-GCING"
 	   "WITHOUT-HEMLOCK" "WITHOUT-INTERRUPTS" "WORDS"
 	   "OS-INIT" "ALLOCATE-SYSTEM-MEMORY-AT"
-	   "ALTERNATE-GET-GLOBAL-ADDRESS"))
+	   "ALTERNATE-GET-GLOBAL-ADDRESS"
+	   "*RUNTIME-FEATURES*" "REGISTER-LISP-FEATURE"
+	   "REGISTER-LISP-RUNTIME-FEATURE"))
 
 (dolist
     (name
