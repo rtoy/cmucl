@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.6 1999/03/13 06:23:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.7 1999/09/12 14:24:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1211,10 +1211,9 @@ length LEN and type TYPE."
     (declare (type system-area-pointer result))
     (if (zerop (sap-int result))
 	nil
-      result)))
+	result)))
 
 ;;; resourcebits.h
-
 
 (def-alien-type nil
   (struct rlimit
@@ -2385,20 +2384,23 @@ in at a time in poll.")
 
 ;;; sys/resource.h
 
-#+nil
-(defun unix-getrlimit (resource rlimits)
-  "Put the soft and hard limits for RESOURCE in *RLIMITS.
-   Returns 0 if successful, -1 if not (and sets errno)."
-  (int-syscall ("getrlimit" int (* (struct rlimit)))
-	       resource rlimits))
+(defun unix-getrlimit (resource)
+  "Get the soft and hard limits for RESOURCE."
+  (with-alien ((rlimits (struct rlimit)))
+    (syscall ("getrlimit" int (* (struct rlimit)))
+	     (values t
+		     (slot rlimits 'rlim-cur)
+		     (slot rlimits 'rlim-max))
+	     resource (addr rlimits))))
 
-#+nil
-(defun unix-setrlimit (resource rlimits)
-  "Set the soft and hard limits for RESOURCE to *RLIMITS.
-   Only the super-user can increase hard limits.
-   Return 0 if successful, -1 if not (and sets errno)."
-  (int-syscall ("setrlimit" int (* (struct rlimit)))
-	       resource rlimits))
+(defun unix-setrlimit (resource current maximum)
+  "Set the current soft and hard maximum limits for RESOURCE.
+   Only the super-user can increase hard limits."
+  (with-alien ((rlimits (struct rlimit)))
+    (setf (slot rlimits 'rlim-cur) current)
+    (setf (slot rlimits 'rlim-max) maximum)
+    (void-syscall ("setrlimit" int (* (struct rlimit)))
+		  resource (addr rlimits))))
 
 (declaim (inline unix-fast-getrusage))
 (defun unix-fast-getrusage (who)
