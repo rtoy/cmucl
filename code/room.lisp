@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.26 1997/11/01 22:58:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.27 1998/07/24 17:17:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,14 +84,14 @@
 		 (simple-array-unsigned-byte-8-type . 0)
 		 (simple-array-unsigned-byte-16-type . 1)
 		 (simple-array-unsigned-byte-32-type . 2)
-		 #+signed-array (simple-array-signed-byte-8-type . 0)
-		 #+signed-array (simple-array-signed-byte-16-type . 1)
-		 #+signed-array (simple-array-signed-byte-30-type . 2)
-		 #+signed-array (simple-array-signed-byte-32-type . 2)
+		 (simple-array-signed-byte-8-type . 0)
+		 (simple-array-signed-byte-16-type . 1)
+		 (simple-array-signed-byte-30-type . 2)
+		 (simple-array-signed-byte-32-type . 2)
 		 (simple-array-single-float-type . 2)
 		 (simple-array-double-float-type . 3)
-		 #+complex-float (simple-array-complex-single-float-type . 3)
-		 #+complex-float (simple-array-complex-double-float-type . 4)))
+		 (simple-array-complex-single-float-type . 3)
+		 (simple-array-complex-double-float-type . 4)))
   (let ((name (car stuff))
 	(size (cdr stuff)))
     (setf (svref *meta-room-info* (symbol-value name))
@@ -476,14 +476,14 @@
 	       #.simple-array-unsigned-byte-8-type
 	       #.simple-array-unsigned-byte-16-type
 	       #.simple-array-unsigned-byte-32-type
-	       #+signed-array #.simple-array-signed-byte-8-type
-	       #+signed-array #.simple-array-signed-byte-16-type
-	       #+signed-array #.simple-array-signed-byte-30-type
-	       #+signed-array #.simple-array-signed-byte-32-type
+	       #.simple-array-signed-byte-8-type
+	       #.simple-array-signed-byte-16-type
+	       #.simple-array-signed-byte-30-type
+	       #.simple-array-signed-byte-32-type
 	       #.simple-array-single-float-type
 	       #.simple-array-double-float-type
-	       #+complex-float #.simple-array-complex-single-float-type
-	       #+complex-float #.simple-array-complex-double-float-type)
+	       #.simple-array-complex-single-float-type
+	       #.simple-array-complex-double-float-type)
 	      (incf non-descriptor-headers)
 	      (incf non-descriptor-bytes (- size word-bytes)))
 	     ((#.list-pointer-type

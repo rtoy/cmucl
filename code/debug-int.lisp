@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.91 1998/04/10 11:42:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.92 1998/07/24 17:17:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3016,7 +3016,6 @@
       #+long-float
       (#.vm:long-reg-sc-number
        (escaped-float-value long-float))
-      #+complex-float
       (#.vm:complex-single-reg-sc-number
        (if escaped
 	   (complex
@@ -3025,7 +3024,6 @@
 	    (vm:sigcontext-float-register
 	     escaped (1+ (c:sc-offset-offset sc-offset)) 'single-float))
 	   :invalid-value-for-unescaped-register-storage))
-      #+complex-float
       (#.vm:complex-double-reg-sc-number
        (if escaped
 	   (complex
@@ -3035,7 +3033,7 @@
 	     escaped (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
 	     'double-float))
 	   :invalid-value-for-unescaped-register-storage))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-reg-sc-number
        (if escaped
 	   (complex
@@ -3058,7 +3056,6 @@
        (with-nfp (nfp)
 	 (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
 				     vm:word-bytes))))
-      #+complex-float
       (#.vm:complex-single-stack-sc-number
        (with-nfp (nfp)
 	 (complex
@@ -3066,7 +3063,6 @@
 					vm:word-bytes))
 	  (system:sap-ref-single nfp (* (1+ (c:sc-offset-offset sc-offset))
 					vm:word-bytes)))))
-      #+complex-float
       (#.vm:complex-double-stack-sc-number
        (with-nfp (nfp)
 	 (complex
@@ -3074,7 +3070,7 @@
 					vm:word-bytes))
 	  (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-stack-sc-number
        (with-nfp (nfp)
 	 (complex
@@ -3116,7 +3112,6 @@
 		 (vm:sigcontext-float-register
 		  escaped (c:sc-offset-offset sc-offset) ',format)
 		 :invalid-value-for-unescaped-register-storage))
-	     #+complex-float
 	     (escaped-complex-float-value (format)
 	       `(if escaped
 		 (complex
@@ -3171,13 +3166,11 @@
       #+long-float
       (#.vm:long-reg-sc-number
        (escaped-float-value long-float))
-      #+complex-float
       (#.vm:complex-single-reg-sc-number
        (escaped-complex-float-value single-float))
-      #+complex-float
       (#.vm:complex-double-reg-sc-number
        (escaped-complex-float-value double-float))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-reg-sc-number
        (escaped-complex-float-value long-float))
       (#.vm:single-stack-sc-number
@@ -3190,21 +3183,19 @@
       (#.vm:long-stack-sc-number
        (system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
 				     vm:word-bytes))))
-      #+complex-float
       (#.vm:complex-single-stack-sc-number
        (complex
 	(system:sap-ref-single fp (- (* (1+ (c:sc-offset-offset sc-offset))
 					vm:word-bytes)))
 	(system:sap-ref-single fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))))
-      #+complex-float
       (#.vm:complex-double-stack-sc-number
        (complex
 	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))
 	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 4)
 					vm:word-bytes)))))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-stack-sc-number
        (complex
 	(system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
@@ -3335,7 +3326,6 @@
       #+long-float
       (#.vm:long-reg-sc-number
        (set-escaped-float-value long-float value))
-      #+complex-float
       (#.vm:complex-single-reg-sc-number
        (when escaped
 	 (setf (vm:sigcontext-float-register
@@ -3346,7 +3336,6 @@
 		'single-float)
 	       (imagpart value)))
        value)
-      #+complex-float
       (#.vm:complex-double-reg-sc-number
        (when escaped
 	 (setf (vm:sigcontext-float-register
@@ -3358,7 +3347,7 @@
 		'double-float)
 	       (imagpart value)))
        value)
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-reg-sc-number
        (when escaped
 	 (setf (vm:sigcontext-float-register
@@ -3386,7 +3375,6 @@
 	 (setf (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
 					   vm:word-bytes))
 	       (the long-float value))))
-      #+complex-float
       (#.vm:complex-single-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-single
@@ -3395,7 +3383,6 @@
 	 (setf (system:sap-ref-single
 		nfp (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes))
 	       (the single-float (realpart value)))))
-      #+complex-float
       (#.vm:complex-double-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-double
@@ -3404,7 +3391,7 @@
 	 (setf (system:sap-ref-double
 		nfp (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes))
 	       (the double-float (realpart value)))))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-long
@@ -3482,7 +3469,6 @@
        (setf (system:sap-ref-long
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 3) vm:word-bytes)))
 	     (the long-float value)))
-      #+complex-float
       (#.vm:complex-single-stack-sc-number
        (setf (system:sap-ref-single
 	      fp (- (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes)))
@@ -3490,7 +3476,6 @@
        (setf (system:sap-ref-single
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes)))
 	     (imagpart (the (complex single-float) value))))
-      #+complex-float
       (#.vm:complex-double-stack-sc-number
        (setf (system:sap-ref-double
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes)))
@@ -3498,7 +3483,7 @@
        (setf (system:sap-ref-double
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 4) vm:word-bytes)))
 	     (imagpart (the (complex double-float) value))))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-stack-sc-number
        (setf (system:sap-ref-long
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 3) vm:word-bytes)))

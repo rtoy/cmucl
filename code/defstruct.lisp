@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.63 1998/05/04 01:27:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.64 1998/07/24 17:17:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,9 +79,6 @@
   (declare (type index index))
   (%raw-set-long vec index val))
 
-#+complex-float
-(progn
-
 (defun %raw-ref-complex-single (vec index)
   (declare (type index index))
   (%raw-ref-complex-single vec index))
@@ -107,8 +104,6 @@
 (defun %raw-set-complex-long (vec index val)
   (declare (type index index))
   (%raw-set-complex-long vec index val))
-
-) ; end progn complex-float
 
 (defun %instance-layout (instance)
   (%instance-layout instance))
@@ -167,11 +162,9 @@
 (defsetf %raw-ref-double %raw-set-double)
 #+long-float
 (defsetf %raw-ref-long %raw-set-long)
-#+complex-float
 (defsetf %raw-ref-complex-single %raw-set-complex-single)
-#+complex-float
 (defsetf %raw-ref-complex-double %raw-set-complex-double)
-#+(and complex-float long-float)
+#+long-float
 (defsetf %raw-ref-complex-long %raw-set-complex-long)
 (defsetf %instance-layout %set-instance-layout)
 (defsetf %funcallable-instance-info %set-funcallable-instance-info)
@@ -287,9 +280,8 @@
   ;;
   ;; If a raw slot, what it holds.  T means not raw.
   (raw-type t :type (member t single-float double-float #+long-float long-float
-			    #+complex-float complex-single-float
-			    #+complex-float complex-double-float
-			    #+(and complex-float long-float) complex-long-float
+			    complex-single-float complex-double-float
+			    #+long-float complex-long-float
 			    unsigned-byte))
   (read-only nil :type (member t nil)))
 
@@ -622,13 +614,11 @@
 	      #+long-float
 	      ((subtypep type 'long-float)
 	       (values 'long-float #+x86 3 #+sparc 4))
-	      #+complex-float
 	      ((subtypep type '(complex single-float))
 	       (values 'complex-single-float 2))
-	      #+complex-float
 	      ((subtypep type '(complex double-float))
 	       (values 'complex-double-float 4))
-	      #+(and long-float complex-float)
+	      #+long-float
 	      ((subtypep type '(complex long-float))
 	       (values 'complex-long-float #+x86 6 #+sparc 8))
 	      (t (values nil nil)))
@@ -997,11 +987,9 @@
        (double-float '%raw-ref-double)
        #+long-float
        (long-float '%raw-ref-long)
-       #+complex-float
        (complex-single-float '%raw-ref-complex-single)
-       #+complex-float
        (complex-double-float '%raw-ref-complex-double)
-       #+(and complex-float long-float)
+       #+long-float
        (complex-long-float '%raw-ref-complex-long)
        (unsigned-byte 'aref)
        ((t)
@@ -1009,7 +997,7 @@
 	    '%funcallable-instance-info
 	    '%instance-ref)))
      (case rtype
-       #+(and complex-float long-float)
+       #+long-float
        (complex-long-float
 	(truncate (dsd-index slot) #+x86 6 #+sparc 8))
        #+long-float
@@ -1017,10 +1005,8 @@
 	(truncate (dsd-index slot) #+x86 3 #+sparc 4))
        (double-float
 	(ash (dsd-index slot) -1))
-       #+complex-float
        (complex-double-float
 	(ash (dsd-index slot) -2))
-       #+complex-float
        (complex-single-float
 	(ash (dsd-index slot) -1))
        (t

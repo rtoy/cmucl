@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.72 1998/07/16 13:30:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.73 1998/07/24 17:17:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -786,7 +786,6 @@
   (let ((im (pop-stack)))
     (%make-complex (pop-stack) im)))
 
-#+complex-float
 (define-fop (fop-complex-single-float 72)
   (prepare-for-fast-read-byte *fasl-file*
     (prog1
@@ -794,7 +793,6 @@
 		 (make-single-float (fast-read-s-integer 4)))
       (done-with-fast-read-byte))))
 
-#+complex-float
 (define-fop (fop-complex-double-float 73)
   (prepare-for-fast-read-byte *fasl-file*
     (prog1
@@ -807,7 +805,7 @@
 	  (complex re im))
       (done-with-fast-read-byte))))
 
-#+(and complex-float long-float)
+#+long-float
 (define-fop (fop-complex-long-float 67)
   (prepare-for-fast-read-byte *fasl-file*
     (prog1
@@ -944,21 +942,19 @@
 		  (* length vm:word-bytes #+x86 3 #+sparc 4))
     result))
 
-#+complex-float
 (define-fop (fop-complex-single-float-vector 86)
   (let* ((length (read-arg 4))
 	 (result (make-array length :element-type '(complex single-float))))
     (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2))
     result))
 
-#+complex-float
 (define-fop (fop-complex-double-float-vector 87)
   (let* ((length (read-arg 4))
 	 (result (make-array length :element-type '(complex double-float))))
     (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2 2))
     result))
 
-#+(and complex-float long-float)
+#+long-float
 (define-fop (fop-complex-long-float-vector 89)
   (let* ((length (read-arg 4))
 	 (result (make-array length :element-type '(complex long-float))))
@@ -1005,7 +1001,6 @@
 ;;;
 ;;; Same as FOP-INT-VECTOR, except this is for signed simple-arrays.
 ;;; It appears that entry 50 and 51 are clear.
-#+signed-array
 (define-fop (fop-signed-int-vector 50)
   (prepare-for-fast-read-byte *fasl-file*
     (let* ((len (fast-read-u-integer 4))
@@ -1025,7 +1020,6 @@
       res)))
 
 ;;; Same as fop-uniform-int-vector, but for signed integers
-#+signed-array
 (define-fop (fop-uniform-signed-int-vector 51)
    (prepare-for-fast-read-byte *fasl-file*
      (let* ((n (fast-read-u-integer 4))

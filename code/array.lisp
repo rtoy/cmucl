@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.28 1998/07/16 13:30:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.29 1998/07/24 17:17:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,26 +128,20 @@
     ((unsigned-byte 8) (values #.vm:simple-array-unsigned-byte-8-type 8))
     ((unsigned-byte 16) (values #.vm:simple-array-unsigned-byte-16-type 16))
     ((unsigned-byte 32) (values #.vm:simple-array-unsigned-byte-32-type 32))
-    #+signed-array ((signed-byte 8)
-		    (values #.vm:simple-array-signed-byte-8-type 8))
-    #+signed-array ((signed-byte 16)
-		    (values #.vm:simple-array-signed-byte-16-type 16))
-    #+signed-array ((signed-byte 30)
-		    (values #.vm:simple-array-signed-byte-30-type 32))
-    #+signed-array ((signed-byte 32)
-		    (values #.vm:simple-array-signed-byte-32-type 32))
+    ((signed-byte 8) (values #.vm:simple-array-signed-byte-8-type 8))
+    ((signed-byte 16) (values #.vm:simple-array-signed-byte-16-type 16))
+    ((signed-byte 30) (values #.vm:simple-array-signed-byte-30-type 32))
+    ((signed-byte 32) (values #.vm:simple-array-signed-byte-32-type 32))
     (single-float (values #.vm:simple-array-single-float-type 32))
     (double-float (values #.vm:simple-array-double-float-type 64))
     #+long-float
     (long-float
      (values #.vm:simple-array-long-float-type #+x86 96 #+sparc 128))
-    #+complex-float
     ((complex single-float)
      (values #.vm:simple-array-complex-single-float-type 64))
-    #+complex-float
     ((complex double-float)
      (values #.vm:simple-array-complex-double-float-type 128))
-    #+(and complex-float long-float)
+    #+long-float
     ((complex long-float)
      (values #.vm:simple-array-complex-long-float-type #+x86 192 #+sparc 256))
     (t (values #.vm:simple-vector-type #.vm:word-bits))))
@@ -336,16 +330,16 @@
        (unsigned-byte 8)
        (unsigned-byte 16)
        (unsigned-byte 32)
-       #+signed-array (signed-byte 8)
-       #+signed-array (signed-byte 16)
-       #+signed-array (signed-byte 30)
-       #+signed-array (signed-byte 32)
+       (signed-byte 8)
+       (signed-byte 16)
+       (signed-byte 30)
+       (signed-byte 32)
        single-float
        double-float
        #+long-float long-float
-       #+complex-float (complex single-float)
-       #+complex-float (complex double-float)
-       #+(and complex-float long-float) (complex long-float)))))
+       (complex single-float)
+       (complex double-float)
+       #+long-float (complex long-float)))))
 
 (defun data-vector-set (array index new-value)
   (with-array-data ((vector array) (index index) (end))
@@ -368,16 +362,16 @@
        (unsigned-byte 8)
        (unsigned-byte 16)
        (unsigned-byte 32)
-       #+signed-array (signed-byte 8)
-       #+signed-array (signed-byte 16)
-       #+signed-array (signed-byte 30)
-       #+signed-array (signed-byte 32)
+       (signed-byte 8)
+       (signed-byte 16)
+       (signed-byte 30)
+       (signed-byte 32)
        single-float
        double-float
        #+long-float long-float
-       #+complex-float (complex single-float)
-       #+complex-float (complex double-float)
-       #+(and complex-float long-float) (complex long-float)))))
+       (complex single-float)
+       (complex double-float)
+       #+long-float (complex long-float)))))
 
 
 
@@ -530,19 +524,17 @@
        (vm:simple-array-unsigned-byte-8-type '(unsigned-byte 8))
        (vm:simple-array-unsigned-byte-16-type '(unsigned-byte 16))
        (vm:simple-array-unsigned-byte-32-type '(unsigned-byte 32))
-       #+signed-array (vm:simple-array-signed-byte-8-type '(signed-byte 8))
-       #+signed-array (vm:simple-array-signed-byte-16-type '(signed-byte 16))
-       #+signed-array (vm:simple-array-signed-byte-30-type '(signed-byte 30))
-       #+signed-array (vm:simple-array-signed-byte-32-type '(signed-byte 32))
+       (vm:simple-array-signed-byte-8-type '(signed-byte 8))
+       (vm:simple-array-signed-byte-16-type '(signed-byte 16))
+       (vm:simple-array-signed-byte-30-type '(signed-byte 30))
+       (vm:simple-array-signed-byte-32-type '(signed-byte 32))
        (vm:simple-array-single-float-type 'single-float)
        (vm:simple-array-double-float-type 'double-float)
        #+long-float
        (vm:simple-array-long-float-type 'long-float)
-       #+complex-float
        (vm:simple-array-complex-single-float-type '(complex single-float))
-       #+complex-float
        (vm:simple-array-complex-double-float-type '(complex double-float))
-       #+(and complex-float long-float)
+       #+long-float
        (vm:simple-array-complex-long-float-type '(complex long-float))
        ((vm:simple-array-type vm:complex-vector-type vm:complex-array-type)
 	(with-array-data ((array array) (start) (end))
@@ -839,21 +831,19 @@
 	((simple-array (unsigned-byte 8) (*)) 0)
 	((simple-array (unsigned-byte 16) (*)) 0)
 	((simple-array (unsigned-byte 32) (*)) 0)
-	#+signed-array ((simple-array (signed-byte 8) (*)) 0)
-	#+signed-array ((simple-array (signed-byte 16) (*)) 0)
-	#+signed-array ((simple-array (signed-byte 30) (*)) 0)
-	#+signed-array ((simple-array (signed-byte 32) (*)) 0)
+	((simple-array (signed-byte 8) (*)) 0)
+	((simple-array (signed-byte 16) (*)) 0)
+	((simple-array (signed-byte 30) (*)) 0)
+	((simple-array (signed-byte 32) (*)) 0)
 	((simple-array single-float (*)) (coerce 0 'single-float))
 	((simple-array double-float (*)) (coerce 0 'double-float))
 	#+long-float
 	((simple-array long-float (*)) (coerce 0 'long-float))
-	#+complex-float
 	((simple-array (complex single-float) (*))
 	 (coerce 0 '(complex single-float)))
-	#+complex-float
 	((simple-array (complex double-float) (*))
 	 (coerce 0 '(complex double-float)))
-	#+(and complex-float long-float)
+	#+long-float
 	((simple-array (complex long-float) (*))
 	 (coerce 0 '(complex long-float))))))
   ;; Only arrays have fill-pointers, but vectors have their length parameter

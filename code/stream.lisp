@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.34 1998/07/16 13:30:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.35 1998/07/24 17:17:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1683,7 +1683,7 @@
        (with-array-data ((data seq) (offset-start start) (offset-end end))
 	 (typecase data
 	   ((or (simple-array (unsigned-byte 8) (*))
-		#+signed-array (simple-array (signed-byte 8) (*))
+		(simple-array (signed-byte 8) (*))
 		simple-string)
 	    (let* ((numbytes (- end start))
 		   (bytes-read (system:read-n-bytes

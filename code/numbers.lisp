@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.33 1998/03/21 08:12:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.34 1998/07/24 17:17:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,7 +221,6 @@
 (defun canonical-complex (realpart imagpart)
   (if (eql imagpart 0)
       realpart
-      #+complex-float
       (cond #+long-float
 	    ((and (typep realpart 'long-float)
 		  (typep imagpart 'long-float))
@@ -233,9 +232,7 @@
 		  (typep imagpart 'single-float))
 	     (truly-the (complex single-float) (complex realpart imagpart)))
 	    (t
-	     (%make-complex realpart imagpart)))
-      #-complex-float
-      (%make-complex realpart imagpart)))
+	     (%make-complex realpart imagpart)))))
 
 
 ;;; BUILD-RATIO  --  Internal
@@ -268,14 +265,6 @@
 
 ;;;; Complexes:
 
-#-complex-float
-(defun upgraded-complex-part-type (spec)
-  "Returns the element type of the most specialized COMPLEX number type that
-   can hold parts of type Spec.  This is currently always T."
-  (declare (ignore spec))
-  t)
-
-#+complex-float
 (defun upgraded-complex-part-type (spec)
   "Returns the element type of the most specialized COMPLEX number type that
    can hold parts of type Spec."
@@ -290,15 +279,6 @@
 	 'rational)
 	(t)))
 
-#-complex-float
-(defun complex (realpart &optional (imagpart 0))
-  "Builds a complex number from the specified components."
-  (number-dispatch ((realpart real) (imagpart real))
-    ((rational rational)
-     (canonical-complex realpart imagpart))
-    (float-contagion %make-complex realpart imagpart (rational))))
-
-#+complex-float
 (defun complex (realpart &optional (imagpart 0))
   "Builds a complex number from the specified components."
   (flet ((%%make-complex (realpart imagpart)
@@ -322,17 +302,6 @@
      (canonical-complex realpart imagpart))
     (float-contagion %%make-complex realpart imagpart (rational)))))
 
-#-complex-float
-(defun realpart (number)
-  "Extracts the real part of a number."
-  (realpart number))
-
-#-complex-float
-(defun imagpart (number)
-  "Extracts the imaginary part of a number."
-  (imagpart number))
-
-#+complex-float
 (defun realpart (number)
   "Extracts the real part of a number."
   (typecase number
@@ -348,7 +317,6 @@
     (t
      number)))
 
-#+complex-float
 (defun imagpart (number)
   "Extracts the imaginary part of a number."
   (typecase number
@@ -642,8 +610,7 @@
     ((ratio)
      (%make-ratio (- (numerator n)) (denominator n)))
     ((complex)
-     #+complex-float (complex (- (realpart n)) (- (imagpart n)))
-     #-complex-float (%make-complex (- (realpart n)) (- (imagpart n))))))
+     (complex (- (realpart n)) (- (imagpart n))))))
 
 
 ;;;; Truncate & friends.

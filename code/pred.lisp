@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.48 1998/05/01 01:02:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.49 1998/07/24 17:17:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,11 +54,11 @@
       consp
       compiled-function-p
       complexp
-      #+complex-float complex-double-float-p
-      #+complex-float complex-float-p
-      #+(and complex-float long-float) complex-long-float-p
-      #+complex-float complex-rational-p
-      #+complex-float complex-single-float-p
+      complex-double-float-p
+      complex-float-p
+      #+long-float complex-long-float-p
+      complex-rational-p
+      complex-single-float-p
       double-float-p
       fdefn-p
       fixnump
@@ -94,16 +94,16 @@
       simple-array-unsigned-byte-8-p
       simple-array-unsigned-byte-16-p
       simple-array-unsigned-byte-32-p
-      #+signed-array simple-array-signed-byte-8-p
-      #+signed-array simple-array-signed-byte-16-p
-      #+signed-array simple-array-signed-byte-30-p
-      #+signed-array simple-array-signed-byte-32-p
+      simple-array-signed-byte-8-p
+      simple-array-signed-byte-16-p
+      simple-array-signed-byte-30-p
+      simple-array-signed-byte-32-p
       simple-array-single-float-p
       simple-array-double-float-p
       #+long-float simple-array-long-float-p
-      #+complex-float simple-array-complex-single-float-p
-      #+complex-float simple-array-complex-double-float-p
-      #+(and complex-float long-float) simple-array-complex-long-float-p
+      simple-array-complex-single-float-p
+      simple-array-complex-double-float-p
+      #+long-float simple-array-complex-long-float-p
       dylan::dylan-function-p
       )))
 
@@ -131,7 +131,7 @@
 ;;; 
 (defun type-of (object)
   "Return the type of OBJECT."
-  (if (typep object '(or function array #+complex-float complex))
+  (if (typep object '(or function array complex))
       (type-specifier (ctype-of object))
       (let* ((class (layout-class (layout-of object)))
 	     (name (class-name class)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.33 1998/03/21 08:11:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.34 1998/07/24 17:17:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,28 +364,24 @@
 	 :datum object
 	 :expected-type '(simple-array (unsigned-byte 32) (*))))
 
-#+signed-array 
 (deferr object-not-simple-array-signed-byte-8-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (signed-byte 8) (*))))
 
-#+signed-array 
 (deferr object-not-simple-array-signed-byte-16-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (signed-byte 16) (*))))
 
-#+signed-array 
 (deferr object-not-simple-array-signed-byte-30-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (signed-byte 30) (*))))
 
-#+signed-array 
 (deferr object-not-simple-array-signed-byte-32-error (object)
   (error 'type-error
 	 :function-name name
@@ -404,21 +400,19 @@
 	 :datum object
 	 :expected-type '(simple-array double-float (*))))
 
-#+complex-float
 (deferr object-not-simple-array-complex-single-float-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (complex single-float) (*))))
 
-#+complex-float
 (deferr object-not-simple-array-complex-double-float-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (complex double-float) (*))))
 
-#+(and complex-float long-float)
+#+long-float
 (deferr object-not-simple-array-complex-long-float-error (object)
   (error 'type-error
 	 :function-name name
@@ -431,28 +425,25 @@
 	 :datum object
 	 :expected-type 'complex))
 
-#+complex-float
 (deferr object-not-complex-rational-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(complex rational)))
 
-#+complex-float
 (deferr object-not-complex-single-float-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(complex single-float)))
 
-#+complex-float
 (deferr object-not-complex-double-float-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(complex double-float)))
 
-#+(and complex-float long-float)
+#+long-float
 (deferr object-not-complex-long-float-error (object)
   (error 'type-error
 	 :function-name name
