@@ -334,3 +334,36 @@ restore_state
 	b	_restore_state
 	copy	arg1,ret0
 	.procend
+
+
+
+	.export SingleStepTraps
+SingleStepTraps
+	break	trap_SingleStepBreakpoint,0
+	break	trap_SingleStepBreakpoint,0
+
+
+
+	.align	8
+	.export function_end_breakpoint_guts
+function_end_breakpoint_guts
+	.word	type_ReturnPcHeader
+	/* multiple value return point -- just jump to trap. */
+	b,n	function_end_breakpoint_trap
+	/* single value return point -- convert to multiple w/ n=1 */
+	copy	reg_CSP, reg_OCFP
+	addi	4, reg_CSP, reg_CSP
+	addi	4, r0, reg_NARGS
+	copy	reg_NULL, reg_A1
+	copy	reg_NULL, reg_A2
+	copy	reg_NULL, reg_A3
+	copy	reg_NULL, reg_A4
+	copy	reg_NULL, reg_A5
+
+	.export	function_end_breakpoint_trap
+function_end_breakpoint_trap
+	break	trap_FunctionEndBreakpoint,0
+	b,n	function_end_breakpoint_trap
+
+	.export	function_end_breakpoint_end
+function_end_breakpoint_end

@@ -37,7 +37,9 @@ void breakpoint_remove(lispobj code_obj, int pc_offset,
 void breakpoint_do_displaced_inst(struct sigcontext *scp,
 				  unsigned long orig_inst)
 {
+#ifndef hpux
     undo_fake_foreign_function_call(scp);
+#endif
     arch_do_displaced_inst(scp, orig_inst);
 }
 
@@ -67,13 +69,18 @@ static int compute_offset(struct sigcontext *scp, lispobj code)
     else {
 	unsigned long code_start;
 	struct code *codeptr = (struct code *)PTR(code);
+#ifdef parisc
+	unsigned long pc = SC_PC(scp) & ~3;
+#else
+	unsigned long pc = SC_PC(scp);
+#endif
 
 	code_start = (unsigned long)codeptr
 	    + HeaderValue(codeptr->header)*sizeof(lispobj);
-	if (SC_PC(scp) < code_start)
+	if (pc < code_start)
 	    return 0;
 	else {
-	    int offset = SC_PC(scp) - code_start;
+	    int offset = pc - code_start;
 	    if (offset >= codeptr->code_size)
 		return 0;
 	    else

@@ -30,12 +30,12 @@ os_vm_address_t arch_get_bad_addr(int signal,
 	return NULL;
 
     /* Check the instruction address first. */
-    addr = scp->sc_pcoq_head & ~3;
-    if (addr < 0x1000)
+    addr = (os_vm_address_t)((unsigned long)scp->sc_pcoq_head & ~3);
+    if (addr < (os_vm_address_t)0x1000)
 	return addr;
 
     /* Otherwise, it must have been a data fault. */
-    return state->ss_cr21;
+    return (os_vm_address_t)state->ss_cr21;
 #else
     struct hp800_thread_state *state;
     os_vm_address_t addr;
@@ -99,6 +99,7 @@ unsigned long arch_install_breakpoint(void *pc)
     unsigned long orig_inst = *ulpc;
 
     *ulpc = trap_Breakpoint;
+    os_flush_icache((os_vm_address_t)pc, sizeof(*ulpc));
     return orig_inst;
 }
 
@@ -107,32 +108,78 @@ void arch_remove_breakpoint(void *pc, unsigned long orig_inst)
     unsigned long *ulpc = (unsigned long *)pc;
 
     *ulpc = orig_inst;
+    os_flush_icache((os_vm_address_t)pc, sizeof(*ulpc));
 }
+
+#ifdef hpux
+extern void SingleStepTraps();
+static unsigned long *BreakpointAddr = NULL;
+static unsigned long NextPc = NULL;
+#endif
 
 void arch_do_displaced_inst(struct sigcontext *scp, unsigned long orig_inst)
 {
+#ifdef hpux
+    /* We change the next-pc to point to a breakpoint instruction, restore */
+    /* the original instruction, and exit.  We would like to be able to */
+    /* sigreturn, but we can't, because this is hpux. */
+    unsigned long *pc = (unsigned long *)(SC_PC(scp) & ~3);
+
+    NextPc = SC_NPC(scp);
+    SC_NPC(scp) = (unsigned)SingleStepTraps | (SC_NPC(scp)&3);
+
+    BreakpointAddr = pc;
+    *pc = orig_inst;
+    os_flush_icache((os_vm_address_t)pc, sizeof(unsigned long));
+#else
     /* We set the recovery counter to cover one instruction, put the */
     /* original instruction back in, and then resume.  We will then trap */
     /* after executing that one instruction, at which time we can put */
     /* the breakpoint back in. */
 
-#ifdef hpux
-    scp->sc_sl.sl_ss.ss_cr0 = 1;
-    scp->sc_flags |= 0x10;
-#else
     ((struct hp800_thread_state *)scp->sc_ap)->cr0 = 1;
     scp->sc_ps |= 0x10;
-#endif
     *(unsigned long *)SC_PC(scp) = orig_inst;
 
-    undo_fake_foreign_function_call(scp);
-
-#ifdef hpux
-    printf("ERROR: arch_do_displaced_inst doesn't work because no sigreturn\n");
-#else
     sigreturn(scp);
 #endif
 }
+
+#ifdef hpux
+static void restore_breakpoint(struct sigcontext *scp)
+{
+    /* We just single-stepped over an instruction that we want to replace */
+    /* with a breakpoint.  So we put the breakpoint back in, and tweek the */
+    /* state so that we will continue as if nothing happened. */
+
+    if (NextPc == NULL)
+	lose("SingleStepBreakpoint trap at strange time.");
+
+    if ((SC_PC(scp)&~3) == (unsigned long)SingleStepTraps) {
+	/* The next instruction was not nullified. */
+	SC_PC(scp) = NextPc;
+	if ((SC_NPC(scp)&~3) == (unsigned long)SingleStepTraps + 4) {
+	    /* The instruction we just stepped over was not a branch, so */
+	    /* we need to fix it up.  If it was a branch, it will point to */
+	    /* the correct place. */
+	    SC_NPC(scp) = NextPc + 4;
+	}
+    }
+    else {
+	/* The next instruction was nullified, so we want to skip it. */
+	SC_PC(scp) = NextPc + 4;
+	SC_NPC(scp) = NextPc + 8;
+    }
+    NextPc = NULL;
+
+    if (BreakpointAddr) {
+	*BreakpointAddr = trap_Breakpoint;
+	os_flush_icache((os_vm_address_t)BreakpointAddr,
+			sizeof(unsigned long));
+	BreakpointAddr = NULL;
+    }
+}
+#endif
 
 static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 {
@@ -173,26 +220,27 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 
 	  case trap_Breakpoint:
 	    sigsetmask(scp->sc_mask);
-	    fake_foreign_function_call(scp);
 	    handle_breakpoint(signal, code, scp);
-	    undo_fake_foreign_function_call(scp);
 	    break;
 
 	  case trap_FunctionEndBreakpoint:
 	    sigsetmask(scp->sc_mask);
-	    fake_foreign_function_call(scp);
 	    {
-		void *pc;
-		pc = handle_function_end_breakpoint(signal, code, scp);
+		unsigned long pc;
+		pc = (unsigned long)
+		    handle_function_end_breakpoint(signal, code, scp);
 #ifdef hpux
-		scp->sc_pcoq_head = (unsigned long)pc;
-		scp->sc_pcoq_tail = (unsigned long)pc + 4;
+		scp->sc_pcoq_head = pc;
+		scp->sc_pcoq_tail = pc + 4;
 #else
-		scp->sc_pcoqh = (unsigned long)pc;
-		scp->sc_pcoqt = (unsigned long)pc + 4;
+		scp->sc_pcoqh = pc;
+		scp->sc_pcoqt = pc + 4;
 #endif
 	    }
-	    undo_fake_foreign_function_call(scp);
+	    break;
+
+	  case trap_SingleStepBreakpoint:
+	    restore_breakpoint(scp);
 	    break;
 
 	  default:
