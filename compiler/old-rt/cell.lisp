@@ -23,7 +23,8 @@
   (:args (object :scs (descriptor-reg) :target obj-temp))
   (:results (value :scs (descriptor-reg any-reg)))
   (:policy :fast-safe)
-  (:node-var node)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:temporary (:type random  :scs (non-descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg)) obj-temp))
 
@@ -36,7 +37,7 @@
     (unless (location= obj-temp object)
       (inst lr obj-temp object))
     (loadw value obj-temp (/ clc::symbol-value 4))
-    (let ((err-lab (generate-error-code node clc::error-symbol-unbound
+    (let ((err-lab (generate-error-code vop clc::error-symbol-unbound
 					obj-temp)))
       (test-special-value value temp '%trap-object err-lab nil))))
 
@@ -49,7 +50,7 @@
     (unless (location= obj-temp object)
       (inst lr obj-temp object))
     (loadw value obj-temp (/ clc::symbol-definition 4))
-    (let ((err-lab (generate-error-code node clc::error-symbol-undefined
+    (let ((err-lab (generate-error-code vop clc::error-symbol-undefined
 					obj-temp)))
       (test-simple-type value temp err-lab t system:%function-type))))
 
