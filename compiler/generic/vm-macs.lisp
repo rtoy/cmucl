@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.5 1991/07/23 11:54:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.6 1992/04/21 04:27:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.5 1991/07/23 11:54:06 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.6 1992/04/21 04:27:52 wlott Exp $
 ;;;
 ;;;    This file contains some macros and constants that are object-format
 ;;; specific or are used for defining the object format.
@@ -74,16 +74,19 @@
 	  pmax-fasl-file-implementation
 	  sparc-fasl-file-implementation
 	  rt-fasl-file-implementation
-	  rt-afpa-fasl-file-implementation))
+	  rt-afpa-fasl-file-implementation
+	  x86-fasl-file-implementation))
 
 ;;; Constants for the different implementations.  These are all defined in
 ;;; one place to make sure they are all unique.
 
-(defconstant fasl-file-implementations '(nil "Pmax" "Sparc" "RT" "RT/AFPA"))
+(defparameter fasl-file-implementations
+  '(nil "Pmax" "Sparc" "RT" "RT/AFPA" "x86"))
 (defconstant pmax-fasl-file-implementation 1)
 (defconstant sparc-fasl-file-implementation 2)
 (defconstant rt-fasl-file-implementation 3)
 (defconstant rt-afpa-fasl-file-implementation 4)
+(defconstant x86-fasl-file-implementation 5)
 
 ;;; The maximum number of SCs in any implementation.
 (defconstant sc-number-limit 32)
