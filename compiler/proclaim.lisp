@@ -200,7 +200,8 @@
     (setf (info type kind name) :structure)
     (setf (info type structure-info name) info)
     (when (info type expander name)
-      (setf (info type expander name) nil)))
+      (setf (info type expander name) nil))
+    (%note-type-defined name))
 
   ;;; ### Should declare arg/result types. 
   (let ((copier (dd-copier info)))
@@ -229,6 +230,20 @@
   (undefined-value))
 
 (setf (symbol-function '%compiler-defstruct) #'%%compiler-defstruct)
+
+
+;;; %NOTE-TYPE-DEFINED  --  Interface
+;;;
+;;;    Note that the type Name has been (re)defined, updating the undefined
+;;; warnings and SPECIFIER-TYPE cache.
+;;; 
+(defun %note-type-defined (name)
+  (declare (symbol name))
+  (when (boundp '*undefined-warnings*)
+    (note-name-defined name :type))
+  (when (boundp '*specifier-type-cache-vector*)
+    (specifier-type-cache-clear))
+  (undefined-value))
 
 
 ;;;; Dummy definitions of COMPILER-ERROR, etc.
