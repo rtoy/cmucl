@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.4 1992/06/22 13:52:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.5 1992/07/12 19:35:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -704,6 +704,7 @@
 ;;; bogus SAPs, which would make all sorts of things unhappy.
 ;;;
 (defun forget-output-blocks ()
+  (setf *all-output-blocks* nil)
   (setf *available-output-blocks* nil))
 ;;;
 (pushnew 'forget-output-blocks ext:*after-save-initializations*)
@@ -726,7 +727,8 @@
 	(block-num offset)
 	(truncate index output-block-size)
       (when (>= block-num num-blocks)
-	(setf blocks (adjust-array blocks (+ block-num 3)))
+	(setf blocks
+	      (adjust-array blocks (+ block-num 3) :initial-element nil))
 	(setf (segment-output-blocks segment) blocks))
       (let ((block (or (aref blocks block-num)
 		       (setf (aref blocks block-num) (new-output-block)))))
