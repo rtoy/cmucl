@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.80 2004/06/02 09:12:24 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.81 2004/06/02 14:46:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,7 +379,7 @@
 	    (case (car piece)
 	      (:character-set
 	       (strings "[")
-	       (strings (cdr piece))
+	       (strings (second piece))
 	       (strings "]"))
 	      (t
 	       (error "Invalid pattern piece: ~S" piece))))))

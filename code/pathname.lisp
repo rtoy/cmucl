@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.65 2004/05/18 13:24:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.66 2004/06/02 14:46:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -312,7 +312,7 @@
 			  (:character-set
 			   (and (< start len)
 				(let ((char (schar string start)))
-				  (if (find char (cdr piece) :test #'char=)
+				  (if (find char (second piece) :test #'char=)
 				      (matches (cdr pieces) (1+ start) subs t
 					       (cons char chars))))))))
 		       ((member :single-char-wild)
