@@ -140,7 +140,7 @@
 (defun describe-structure-parts (object)
   (let ((dd-slots
 	 (c::dd-slots
-	  (ext:info type structure-info
+	  (ext:info type defined-structure-info
 		    (system:%primitive header-ref object
 				       system:%g-vector-structure-name-slot))))
 	(parts-list ()))
