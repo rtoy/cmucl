@@ -2162,8 +2162,8 @@
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(int-sap (escape-register escaped
-							  c::nfp-offset))
-				(sap-ref-sap fp c::nfp-save-offset))))
+							  vm::nfp-offset))
+				(sap-ref-sap fp vm::nfp-save-offset))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
