@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.46 2004/10/08 19:13:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.47 2004/10/09 14:38:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -763,8 +763,9 @@
 				    (output-object ,object-var ,stream-var)
 				    (return-from ,block-name nil))))
 			    (incf ,count-name)
-			    ,@(when object
-				`((pop ,object-var)))))
+			    ,@(if object
+				  `((pop ,object-var))
+				  `(nil))))
 		     (declare (ignorable #',pp-pop-name))
 		     (unwind-protect
 			  (macrolet ((pprint-pop ()
