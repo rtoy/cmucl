@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.46 1997/01/18 14:31:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.47 1997/02/05 16:15:54 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1365,24 +1365,22 @@
 
 
 ;;;; With-XXX
-
 (defmacro with-open-file ((var &rest open-args) &body (forms decls))
   "Bindspec is of the form (Stream File-Name . Options).  The file whose
    name is File-Name is opened using the Options and bound to the variable
-   Stream.  If the call to open is unsuccessful, the forms are not
-   evaluated.  The Forms are executed, and when they terminate, normally or
-   otherwise, the file is closed."
+   Stream. If the call to open is unsuccessful, the forms are not
+   evaluated.  The Forms are executed, and when they 
+   terminate, normally or otherwise, the file is closed."
   (let ((abortp (gensym)))
     `(let ((,var (open ,@open-args))
 	   (,abortp t))
        ,@decls
-       (when ,var
-	 (unwind-protect
-	     (multiple-value-prog1
-		 (progn ,@forms)
-	       (setq ,abortp nil))
+       (unwind-protect
+	   (multiple-value-prog1
+	       (progn ,@forms)
+	     (setq ,abortp nil))
+	 (when ,var
 	   (close ,var :abort ,abortp))))))
-
 
 
 (defmacro with-open-stream ((var stream) &body (forms decls))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.59 1997/01/18 14:30:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.60 1997/02/05 16:15:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -592,18 +592,18 @@
 
 ;;; TRY-DEFAULT-TYPES  --  Internal
 ;;;
-(defun try-default-types (pathname types)
-  (dolist (type types (values nil nil))
-    ;; toy@rtp.ericsson.se: add diddle-case so that this can handle
-    ;; both unix-namestrings and logical pathname namestrings.  The
-    ;; case handling seems to be the opposite between these two
-    ;; styles.
-    (let* ((pn (make-pathname
-		:type (maybe-diddle-case
-		       type (logical-pathname-p (pathname pathname)))
-		:defaults pathname))
-	   (tn (probe-file pn)))
-      (when tn (return (values pn tn))))))
+(defun try-default-types (pathname types lp-type)
+  ;; Modified 18-Jan-97/pw for logical-pathname support.
+  (flet ((frob (pathname type)
+	   (let* ((pn (make-pathname :type type :defaults pathname))
+		  (tn (probe-file pn)))
+	     (values pn tn))))
+    (if (logical-pathname-p pathname)
+	(frob pathname lp-type)
+	(dolist (type types (values nil nil))
+	  (multiple-value-bind (pn tn)(frob pathname type)
+	    (when tn
+	      (return (values pn tn))))))))
 
 ;;; INTERNAL-LOAD-DEFAULT-TYPE  --  Internal
 ;;;
@@ -612,10 +612,10 @@
 (defun internal-load-default-type (pathname if-does-not-exist)
   (multiple-value-bind
       (src-pn src-tn)
-      (try-default-types pathname *load-source-types*)
+      (try-default-types pathname *load-source-types* "LISP")
     (multiple-value-bind
 	(obj-pn obj-tn)
-	(try-default-types pathname *load-object-types*)
+	(try-default-types pathname *load-object-types* "FASL")
       (cond
        ((and obj-tn src-tn
 	     (> (file-write-date src-tn) (file-write-date obj-tn)))

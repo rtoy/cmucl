@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.35 1997/01/18 14:30:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.36 1997/02/05 16:15:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 (export '(typep null symbolp atom consp listp numberp integerp rationalp
 	  floatp complexp characterp stringp bit-vector-p vectorp
 	  simple-vector-p simple-string-p simple-bit-vector-p arrayp
-	  functionp compiled-function-p commonp eq eql equal equalp not
+	  functionp compiled-function-p eq eql equal equalp not
 	  type-of upgraded-array-element-type realp
 	  ;; Names of types...
 	  array atom bignum bit bit-vector character common

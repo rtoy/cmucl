@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.17 1997/01/18 14:30:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.18 1997/02/05 16:15:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,9 +66,9 @@
 (def-math-rtn "sinh" 1)
 (def-math-rtn "cosh" 1)
 (def-math-rtn "tanh" 1)
-#-hpux (def-math-rtn "asinh" 1)
-#-hpux (def-math-rtn "acosh" 1)
-#-hpux (def-math-rtn "atanh" 1)
+(def-math-rtn "asinh" 1)
+(def-math-rtn "acosh" 1)
+(def-math-rtn "atanh" 1)
 
 ;;; Exponential and Logarithmic.
 #-x86(def-math-rtn "exp" 1)
@@ -77,6 +77,7 @@
 (def-math-rtn "pow" 2)
 #-x86 (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
+#-hpux
 (def-math-rtn "log1p" 1)
 
 #+x86 ;; These are needed for use by byte-compiled files.
@@ -241,7 +242,9 @@
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
   (if base-p
-      (/ (log number) (log base))
+      (if (zerop base)
+	  base				; ANSI spec
+	  (/ (log number) (log base)))
       (number-dispatch ((number number))
 	(((foreach fixnum bignum ratio))
 	 (if (minusp number)
@@ -504,32 +507,16 @@
     ((complex)
      (complex-atanh number))))
 
-;;; HP-UX does not supply C versions of asinh, acosh, and atanh, so just
-;;; use the definitions.
+;;; HP-UX does not supply a C version of log1p, so 
+;;; use the definition.
 
 #+hpux
-(defun %asinh (number)
-  (declare (type double-float number)
-	   (values double-float)
-	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
-  (log (+ number (sqrt (+ 1.0d0 (* number number))))))
-
+(declaim (inline %log1p))
 #+hpux
-(defun %acosh (number)
-  (declare (type (double-float 1.0d0) number)
-	   (values double-float)
-	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
-  (log (+ number (* (sqrt (- number 1.0d0))
-		    (sqrt (+ number 1.0d0))))))
-
-#+hpux
-(defun %atanh (number)
-  (declare (type (double-float -1.0d0 1.0d0) number)
-	   (values double-float)
-	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
-  (* 0.5d0 (- (log (+ 1.0d0 number))
-	      (log (- 1.0d0 number)))))
-
+(defun %log1p (number)
+  (declare (double-float number)
+	   (optimize (speed 3) (safety 0)))
+  (the double-float (log (the (double-float 0d0) (+ number 1d0)))))
 
 
 #+old-elfun
@@ -898,10 +885,10 @@ Z may be any number, but the result is always a complex."
 	(y (float (imagpart z) 1.0d0)))
     (declare (double-float x y))
     (cond ((> (abs x)
-	      #-linux #.(/ (%asinh most-positive-double-float) 4d0)
+	      #-(or linux hpux) #.(/ (%asinh most-positive-double-float) 4d0)
 	      ;; This is more accurate under linux.
-	      #+linux #.(/ (+ (%log 2.0d0)
-			      (%log most-positive-double-float)) 4d0))
+	      #+(or linux hpux) #.(/ (+ (%log 2.0d0)
+					(%log most-positive-double-float)) 4d0))
 	   (complex (float-sign x)
 		    (float-sign y 0.0d0)))
 	  (t

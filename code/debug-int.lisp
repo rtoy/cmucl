@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.69 1997/01/18 14:31:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.70 1997/02/05 16:15:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2948,18 +2948,18 @@
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
-		 (let ((,var (vm:sigcontext-register
-			      escaped
-			      (c::sc-offset-offset sc-offset))))
-		   ,@forms)
-		 :invalid-value-for-unescaped-register-storage))
+		    (let ((,var (vm:sigcontext-register
+				 escaped
+				 (c::sc-offset-offset sc-offset))))
+		      ,@forms)
+		    :invalid-value-for-unescaped-register-storage))
 	     (escaped-float-value (format)
 	       `(if escaped
-		 (vm:sigcontext-float-register
-		  escaped
-		  (c::sc-offset-offset sc-offset)
-		  ',format)
-		 :invalid-value-for-unescaped-register-storage))
+		    (vm:sigcontext-float-register
+		     escaped
+		     (c::sc-offset-offset sc-offset)
+		     ',format)
+		    :invalid-value-for-unescaped-register-storage))
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(system:int-sap
@@ -3012,8 +3012,6 @@
 				       vm:word-bytes))))
       (#.vm:control-stack-sc-number
        (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
-      (#.vm:immediate-stack-sc-number
-       (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
        (with-nfp (nfp)
 	 (code-char (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
@@ -3030,7 +3028,6 @@
        (with-nfp (nfp)
 	 (system:sap-ref-sap nfp (* (c::sc-offset-offset sc-offset)
 				    vm:word-bytes)))))))
-
 #+x86
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (declare (type system:system-area-pointer fp))

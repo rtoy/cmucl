@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.29 1997/01/18 14:30:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.30 1997/02/05 16:15:59 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,8 +162,6 @@
 		(reinit)
 		(dolist (f *after-save-initializations*) (funcall f))
 		(environment-init)
-		(when site-init
-		  (load site-init :if-does-not-exist nil :verbose nil))
 		(when process-command-line
 		  (ext::process-command-strings))
 		(setf *editor-lisp-p* nil)
@@ -173,6 +171,8 @@
 				    :test #'(lambda (x y)
 					      (declare (simple-string x y))
 					      (string-equal x y)))))
+		  (when site-init
+		    (load site-init :if-does-not-exist nil :verbose nil))
 		  (when (and process-command-line (find-switch "edit"))
 		    (setf *editor-lisp-p* t))
 		  (when (and load-init-file

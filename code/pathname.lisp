@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.27 1997/01/18 14:30:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.28 1997/02/05 16:15:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,7 +112,7 @@
 	   (error "~S Cannot be printed readably." pathname))
 	  (t
 	   (funcall (formatter "#<Unprintable pathname, Host=~S, Device=~S, ~
-				Directory=~S, File=~S, Name=~S, Version=~S>")
+				Directory=~S, Name=~S, Type=~S, Version=~S>")
 		    stream
 		    (%pathname-host pathname)
 		    (%pathname-device pathname)
@@ -177,6 +177,17 @@
 		    (%pathname-name pathname)
 		    (%pathname-type pathname)
 		    (%pathname-version pathname))))))
+
+;;; %MAKE-PATHNAME-OBJECT -- internal
+;;;
+;;; A pathname is logical if the host component is a logical-host.
+;;; This constructor is used to make an instance of the correct type
+;;; from parsed arguments.
+
+(defun %make-pathname-object (host device directory name type version)
+  (if (typep host 'logical-host)
+      (%make-logical-pathname host :unspecific directory name type version)
+      (%make-pathname         host device      directory name type version)))
 
 ;;; *LOGICAL-HOSTS* --internal.
 ;;;
@@ -405,11 +416,14 @@
 ;;; Converts the var, a host or string name for a host, into a logical-host
 ;;; structure or nil if not defined.
 ;;;
+;;; pw notes 1/12/97 this potentially useful macro is not used anywhere
+;;; and 'find-host' is not defined. 'find-logical-host' seems to be needed.
+;;;
 (defmacro with-host ((var expr) &body body)
   `(let ((,var (let ((,var ,expr))
 		 (typecase ,var
 		   (logical-host ,var)
-		   (string (find-host ,var))
+		   (string (find-logical-host ,var nil))
 		   (t nil)))))
      ,@body))
 
@@ -532,26 +546,22 @@
 	      (and default-host pathname-host
 		   (not (eq (host-customary-case default-host)
 			    (host-customary-case pathname-host))))))
-	(make-pathname :host (or pathname-host default-host)
-		       :device
-		       (or (%pathname-device pathname)
-			    (maybe-diddle-case (%pathname-device defaults)
-					       diddle-case))
-		       :directory
-			(merge-directories (%pathname-directory pathname)
-					   (%pathname-directory defaults)
-					   diddle-case)
-			:name
-			(or (%pathname-name pathname)
-			    (maybe-diddle-case (%pathname-name defaults)
-					       diddle-case))
-			:type
-			(or (%pathname-type pathname)
-			    (maybe-diddle-case (%pathname-type defaults)
-					       diddle-case))
-			:version
-			(or (%pathname-version pathname)
-			    default-version))))))
+	(%make-pathname-object
+	 (or pathname-host default-host)
+	 (or (%pathname-device pathname)
+	     (maybe-diddle-case (%pathname-device defaults)
+				diddle-case))
+	 (merge-directories (%pathname-directory pathname)
+			    (%pathname-directory defaults)
+			    diddle-case)
+	 (or (%pathname-name pathname)
+	     (maybe-diddle-case (%pathname-name defaults)
+				diddle-case))
+	 (or (%pathname-type pathname)
+	     (maybe-diddle-case (%pathname-type defaults)
+				diddle-case))
+	 (or (%pathname-version pathname)
+	     default-version))))))
 
 ;;; IMPORT-DIRECTORY -- Internal
 ;;;
@@ -615,7 +625,25 @@ a host-structure or string."
 	 ;; toy@rtp.ericsson.se: CLHS says make-pathname can take a
 	 ;; string (as a logical-host) for the host part.  We map that
 	 ;; string into the corresponding logical host structure.
-	 (host (or (gethash host *logical-hosts*) host default-host))
+
+	 ;; pw@snoopy.mv.com:
+	 ;; HyperSpec says for the arg to MAKE-PATHNAME;
+	 ;; "host---a valid physical pathname host. ..."
+	 ;; where it probably means -- a valid pathname host.
+	 ;; "valid pathname host n. a valid physical pathname host or
+	 ;; a valid logical pathname host."
+	 ;; and defines 
+	 ;; "valid physical pathname host n. any of a string,
+	 ;; a list of strings, or the symbol :unspecific,
+	 ;; that is recognized by the implementation as the name of a host." 
+	 ;; "valid logical pathname host n. a string that has been defined
+	 ;; as the name of a logical host. ..."
+	 ;; HS is silent on what happens if the :host arg is NOT one of these.
+	 ;; It seems an error message is appropriate.
+	 (host (typecase host
+		 (host host) 		; A valid host, use it. 
+		 (string (find-logical-host host t)) ; logical-host or lose.
+		 (t default-host)))	; unix-host
 	 (diddle-args (and (eq (host-customary-case host) :lower)
 			   (eq case :common)))
 	 (diddle-defaults
@@ -647,21 +675,12 @@ a host-structure or string."
 					    diddle-defaults))
 			(t
 			 nil))))
-      (if (logical-host-p host)
-	  (%make-logical-pathname
-	   host
-	   :unspecific
-	   dir
-	   (pick name namep %pathname-name)
-	   (pick type typep %pathname-type)
-	   ver)
-	  (%make-pathname
-	   host
-	   dev
-	   dir
-	   (pick name namep %pathname-name)
-	   (pick type typep %pathname-type)
-	   ver)))))
+      (%make-pathname-object host
+			     dev ; forced to :unspecific when logical-host
+			     dir
+			     (pick name namep %pathname-name)
+			     (pick type typep %pathname-type)
+			     ver))))
 
 ;;; PATHNAME-HOST -- Interface
 ;;;
@@ -784,10 +803,8 @@ a host-structure or string."
 		    does not match explicit host argument: ~S"
 		   host))
 	  (let ((pn-host (or new-host parse-host)))
-	    (values (funcall (if (typep pn-host 'logical-host)
-				 #'%make-logical-pathname
-				 #'%make-pathname)
-			     pn-host device directory file type version)
+	    (values (%make-pathname-object
+		     pn-host device directory file type version)
 		    end))))))
 
 
@@ -1190,25 +1207,13 @@ a host-structure or string."
 			    (if (eq result :error)
 				(error "~S doesn't match ~S" source from)
 				result))))
-	      #+nil ;; pw- 1/3/97 This doesn't work.
-	      (%make-pathname (or to-host source-host)
-			      (frob %pathname-device)
-			      (frob %pathname-directory translate-directories)
-			      (frob %pathname-name)
-			      (frob %pathname-type)
-			      (frob %pathname-version))
-
-	      (let ((host      (or to-host source-host))
-		    (device    (frob %pathname-device))
-		    (directory (frob %pathname-directory translate-directories))
-		    (name      (frob %pathname-name))
-		    (type      (frob %pathname-type))
-		    (version   (frob %pathname-version)))
-		(if (logical-host-p host)
-		     (%make-logical-pathname
-		      host :unspecific directory name type version)
-		     (%make-pathname 
-		      host device directory name type version)))))))))
+	      (%make-pathname-object
+	       (or to-host source-host)
+	       (frob %pathname-device)
+	       (frob %pathname-directory translate-directories)
+	       (frob %pathname-name)
+	       (frob %pathname-type)
+	       (frob %pathname-version))))))))
 
 
 ;;;; Search lists.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.19 1997/01/18 14:30:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.20 1997/02/05 16:15:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,7 +77,6 @@
       (:big-endian big-endian)
       (:little-endian little-endian))))
 
-(proclaim '(inline shift-towards-start shift-towards-end))
 (defun shift-towards-start (number count)
   "Shift NUMBER by COUNT bits, adding zero bits at the ``end'' and removing
   bits from the ``start.''  On big-endian machines this is a left-shift and

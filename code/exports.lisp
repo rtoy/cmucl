@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.108 1997/01/18 14:30:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.109 1997/02/05 16:15:46 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -249,7 +249,26 @@
 	     "C-CFLAG" "TTY-OCRNL" "VMIN" "VEOF" "TCSAFLUSH"
 	     "TTY-IXON" "C-CC" "SIOCSPGRP" "TERMIOS" "VQUIT"
 	     "UNIX-TCSETATTR" "VINTR" "VSTART" "TIOCSIGSEND"
-	     #+(or svr4 freebsd linux) "O_NDELAY"))
+	     #+(or svr4 freebsd linux) "O_NDELAY")
+            #+(or svr4 linux)
+            (:export "EADDRINUSE" "EADDRNOTAVAIL" "EADV" "EAFNOSUPPORT"
+	     "EALREADY" "EBADE" "EBADFD" "EBADMSG" "EBADR" "EBADRQC"
+	     "EBADSLT" "EBFONT" #+svr4 "ECANCELED" "ECHRNG" "ECOMM"
+	     "ECONNABORTED" "ECONNREFUSED" "ECONNRESET" "EDEADLK"
+	     "EDEADLOCK" "EDESTADDRREQ" #+linux "EDOTDOT" #+linux "EDQUOT"
+	     "EHOSTDOWN" "EHOSTUNREACH" "EIDRM" "EILSEQ" "EINPROGRESS"
+	     "EISCONN" #+linux "EISNAM" "EL2HLT" "EL2NSYNC" "EL3HLT"
+	     "EL3RST" "ELIBACC" "ELIBBAD" "ELIBEXEC" "ELIBMAX" "ELIBSCN"
+	     "ELNRNG" "ELOOP" "EMSGSIZE" "EMULTIHOP" "ENAMETOOLONG"
+	     #+linux "ENAVAIL" "ENETDOWN" "ENETRESET" "ENETUNREACH" "ENOANO"
+	     "ENOBUFS" "ENOCSI" "ENODATA" "ENOLCK" "ENOLINK" "ENOMSG" "ENONET"
+	     "ENOPKG" "ENOPROTOOPT" "ENOSR" "ENOSTR" "ENOSYS" "ENOTCONN"
+	     "ENOTEMPTY" #+linux "ENOTNAM" "ENOTSOCK" #+svr4 "ENOTSUP"
+	     "ENOTUNIQ" "EOPNOTSUPP" "EOVERFLOW" "EPFNOSUPPORT" "EPROTO"
+	     "EPROTONOSUPPORT" "EPROTOTYPE" "EREMCHG" "EREMOTE"
+	     #+linux "EREMOTEIO" "ERESTART" "ESHUTDOWN" "ESOCKTNOSUPPORT"
+	     "ESRMNT" "ESTALE" "ESTRPIPE" "ETIME" "ETIMEDOUT" "ETOOMANYREFS"
+	     #+linux "EUCLEAN" "EUNATCH" "EUSERS" "EWOULDBLOCK" "EXFULL"))
   
 (defpackage "FORMAT")
 (defpackage "COMMON-LISP"
@@ -721,7 +740,9 @@
 	   "FUNCALLABLE-INSTANCE-LAYOUT-SLOT"
 	   "FUNCALLABLE-INSTANCE-LEXENV-SLOT"
 	   "FP-DOUBLE-ZERO-SC-NUMBER" "FP-SINGLE-ZERO-SC-NUMBER"
-	   "SINGLE-STEP-BREAKPOINT-TRAP"))
+	   "SINGLE-STEP-BREAKPOINT-TRAP"
+	   #+sparc "OBJECT-NOT-LIST-TRAP"
+	   #+sparc "OBJECT-NOT-INSTANCE-TRAP"))
 
 (defpackage "CONDITIONS")
 (intern "DISASSEMBLE" "LISP")

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.45 1997/01/18 14:30:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.46 1997/02/05 16:15:41 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -759,7 +759,8 @@
 		       `#'(lambda (condition stream)
 			    (declare (ignore condition))
 			    (write-string ,arg stream))
-		       `#',arg))))
+		       `#'(lambda (condition stream)
+			    (funcall #',arg condition stream))))))
 	  (:default-initargs
 	   (do ((initargs (rest option) (cddr initargs)))
 	       ((endp initargs))
