@@ -20,14 +20,12 @@
 ;;; implied warranty.
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/defsystem.lisp,v 1.6 1999/03/16 23:37:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/defsystem.lisp,v 1.7 2003/07/20 15:55:23 emarsden Exp $")
 
 ;;; #+ features used in this file
 ;;;   CMU
 
-#+cmu
-(lisp:in-package "XLIB")
-#+cmu
+(cl:in-package "XLIB")
 (export 'load-clx)
 
 (common-lisp:in-package :common-lisp-user)
@@ -55,27 +53,6 @@
 ;;; compile-file and load with a file type of NIL usually sorts things
 ;;; out correctly, but you may have to explicitly give the source and
 ;;; binary file types.
-
-;;; An attempt at compiling the C language sources is also made,
-;;; but you may have to set different compiler switches
-;;; should be.  If it doesn't do the right thing, then do
-;;;     (compile-clx "" "" :compile-c NIL)
-;;; to prevent the compilation.
-
-;;; compilation notes
-;;;   lucid2.0/hp9000s300
-;;;     must uudecode the file make-sequence-patch.uu
-
-#+(or cmu)
-(defun clx-foreign-files (binary-path)
-  #+cmu
-  (declare (ignore binary-path))
-  #+cmu
-  (alien:def-alien-routine ("connect_to_server" xlib::connect-to-server)
-			   c-call:int
-    (host c-call:c-string)
-    (port c-call:int))
-  )
 
 (defun compile-clx (&optional
 		    (source-pathname-defaults "")
@@ -190,7 +167,6 @@
 	       (load binary))))
 
       (load-binary "package")
-      #+(or cmu) (clx-foreign-files binary-path)
       (load-binary "depdefs")
       (load-binary "clx")
       (load-binary "dependent")

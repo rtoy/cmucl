@@ -18,7 +18,7 @@
 ;;; express or implied warranty.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.14 2003/06/06 15:04:55 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.15 2003/07/20 15:55:23 emarsden Exp $")
 
 (in-package :xlib)
 
@@ -648,7 +648,8 @@
                 :minor-version *protocol-minor-version*
                 :host host
                 :display display
-                :reason "Cannot connect to internet socket"))
+                :reason (format nil "Cannot connect to internet socket: ~S"
+                                (unix:get-unix-error-msg))))
        (system:make-fd-stream fd :input t :output t :element-type '(unsigned-byte 8))))
      ;; establish a connection to the X11 server over a Unix socket
     (:unix
@@ -660,7 +661,7 @@
                 :minor-version *protocol-minor-version*
                 :host host
                 :display display
-                :reason "Unix socket ~s does not exist" path))
+                :reason (format nil "Unix socket ~s does not exist" path)))
        (let ((fd (ext:connect-to-unix-socket (namestring path))))
          (unless (plusp fd)
            (error 'connection-failure
@@ -668,7 +669,8 @@
                 :minor-version *protocol-minor-version*
                 :host host
                 :display display
-                :reason "Can't connect to unix socket: ~S" (unix:get-unix-error-msg)))
+                :reason (format nil "Can't connect to unix socket: ~S"
+                                (unix:get-unix-error-msg))))
          (system:make-fd-stream fd :input t :output t :element-type '(unsigned-byte 8)))))))
 
 

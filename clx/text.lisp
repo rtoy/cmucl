@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/text.lisp,v 1.6 1999/03/16 23:37:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/text.lisp,v 1.7 2003/07/20 15:55:23 emarsden Exp $")
 
 (in-package :xlib)
 
@@ -260,7 +260,7 @@
 
 (defun text-extents-server (font string start end)
   (declare (type font font)
-	   (type string string)
+	   (type sequence string)
 	   (type array-index start end))
   (declare (clx-values width ascent descent left right font-ascent font-descent direction))
   (let ((display (font-display font))
@@ -287,7 +287,7 @@
 
 (defun text-width-server (font string start end)
   (declare (type (or font gcontext) font)
-	   (type string string)
+	   (type sequence string)
 	   (type array-index start end))
   (declare (clx-values integer))
   (let ((display (font-display font))

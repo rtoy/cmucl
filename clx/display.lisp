@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.9 2002/07/22 17:10:56 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.10 2003/07/20 15:55:23 emarsden Exp $")
 
 (in-package :xlib)
 
@@ -333,7 +333,7 @@
 			      (if (member host '("" "unix") :test #'equal)
 				  :unix
 				  protocol))))
-  ;; PROTOCOL is the network protocol (something like :TCP :DNA or :CHAOS). See OPEN-X-STREAM.
+  ;; PROTOCOL is the network protocol (something like :TCP or :UNIX).
   (let* ((stream (open-x-stream host display protocol))
 	 (disp (make-buffer *output-buffer-size* #'make-display-internal
 			    :host host :display display
