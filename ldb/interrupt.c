@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.28 1991/05/24 17:50:13 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.29 1991/09/27 10:31:55 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -26,7 +26,7 @@ boolean internal_errors_enabled = 0;
 struct sigcontext *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
 union interrupt_handler interrupt_handlers[NSIG];
-void (*interrupt_low_level_handlers[NSIG])() = {0};
+SIGHDLRTYPE (*interrupt_low_level_handlers[NSIG])() = {0};
 
 static int pending_signal = 0, pending_code = 0, pending_mask = 0;
 static boolean maybe_gc_pending = FALSE;
@@ -195,7 +195,7 @@ void interrupt_handle_pending(context)
 *    the two main signal handlers.                               *
 \****************************************************************/
 
-void interrupt_handle_now(signal, code, context)
+SIGHDLRTYPE interrupt_handle_now(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
@@ -244,7 +244,7 @@ struct sigcontext *context;
         undo_fake_foreign_function_call(context);
 }
 
-static void maybe_now_maybe_later(signal, code, context)
+static SIGHDLRTYPE maybe_now_maybe_later(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
@@ -336,7 +336,7 @@ struct sigcontext *context;
 
 void interrupt_install_low_level_handler(signal,handler)
 int signal;
-void (*handler)();
+SIGHDLRTYPE (*handler)();
 {
     struct sigvec sv;
 
@@ -351,7 +351,7 @@ void (*handler)();
 
 unsigned long install_handler(signal, handler)
 int signal;
-void (*handler)();
+SIGHDLRTYPE (*handler)();
 {
     struct sigvec sv;
     int oldmask;
