@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.1 1991/02/18 15:43:32 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.2 1991/04/07 15:13:47 wlott Exp $
 ;;;
 ;;; This file contains the support routines for arrays and vectors.
 ;;;
@@ -36,7 +36,7 @@
     (inst cal vector alloc vm:other-pointer-type)
     (inst cal alloc alloc (+ (1- (ash 1 vm:lowtag-bits))
 			     (* vm:vector-data-offset vm:word-bytes)))
-    (inst cal alloc alloc words)
+    (inst cas alloc alloc words)
     (inst li ndescr (lognot vm:lowtag-mask))
     (inst n alloc ndescr)
     (move ndescr type)
@@ -61,7 +61,7 @@
 			  (:temp accum non-descriptor-reg nl0-offset)
 			  (:temp data non-descriptor-reg nargs-offset)
 			  (:temp temp non-descriptor-reg ocfp-offset))
-  (declare (ignore result accum data temp offset))
+  (declare (ignore result accum data temp))
   (inst b sxhash-simple-substring-entry)
   (loadw length string vm:vector-length-slot vm:other-pointer-type))
 
@@ -79,14 +79,16 @@
 			  (:temp temp non-descriptor-reg ocfp-offset)
 			  (:temp lip interior-reg lip-offset))
   (emit-label sxhash-simple-substring-entry)
-  ;; Get a stack slot and save the contents of NFP.
+  ;; Get a stack slot to save the return-pc.
   (inst inc csp-tn word-bytes)
-  (storew nfp-tn csp-tn (* -1 word-bytes))
-  ;; Save the return-pc in NFP as a byte offset from the component start.
-  (move nfp-tn lip)
-  (inst s nfp-tn code-tn)
+  ;; Save the return-pc as a byte offset from the component start, shifted
+  ;; left to look like a fixnum.
+  (inst s lip code-tn)
+  (inst sl lip 2)
+  (storew lip csp-tn (* -1 word-bytes))
+  ;; Compute start of string as interior pointer.
   (inst a lip string (- (* vector-data-offset word-bytes) other-pointer-type))
-  (inst b test)
+  (inst bx test)
   (inst li accum 0)
   LOOP
   (inst x accum data)
@@ -97,7 +99,7 @@
   (inst inc lip 4)
   TEST
   (inst s length (fixnum 4))
-  (inst bnc :lt loop)
+  (inst bncx :lt loop)
   (loadw data lip)
   (inst a length (fixnum 4))
   (inst bc :eq done)
@@ -106,9 +108,13 @@
   (inst sr data length)
   (inst x accum data)
   DONE
-  (inst sl result accum 5)
-  (inst sr result result 3)
-  (move code-tn lip)
-  (inst a lip nfp-tn)
-  (loadw nft-tn csp-tn (* -1 word-bytes))
-  (inst dec csp-tn word-bytes))
+  ;; Give it fixnum low-tag bits.
+  (inst sl accum 3)
+  (move result accum)
+  ;; Make it positive.
+  (inst sr result 1)
+
+  (loadw lip csp-tn (* -1 word-bytes))
+  (inst dec csp-tn word-bytes)
+  (inst sr lip 2)
+  (inst cas lip lip code-tn))
