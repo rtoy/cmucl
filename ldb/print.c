@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.7 1990/03/28 22:51:13 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.8 1990/03/29 21:22:03 ch Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -530,8 +530,21 @@ lispobj obj;
 {
     skip_newline = TRUE;
     cur_depth = 0;
+    max_depth = 5;
+    max_lines = 20;
 
     print_obj("", obj);
 
+    putchar('\n');
+}
+
+void brief_print(obj)
+lispobj obj;
+{
+    skip_newline = TRUE;
+    max_depth = 1;
+    max_lines = 5000;
+
+    print_obj("", obj);
     putchar('\n');
 }
