@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.98 2003/10/13 10:24:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.99 2003/10/21 13:09:23 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -772,10 +772,6 @@
 	    (let ((return-block (node-block return)))
 	      (when (and return-block
 			 (not (block-delete-p return-block)))
-		(unless *converting-for-interpreter*
-		  ;; FIXME: Can't do this if converting for interpretation;
-		  ;; it leads to strange errors.  Go figure.
-		  (mark-for-deletion return-block))
 		(unlink-blocks return-block (component-tail component)))))
 	  (setf (component-reanalyze component) t)
 	  (let ((tails (lambda-tail-set leaf)))
