@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.11 1991/05/08 15:38:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.12 1991/05/28 17:13:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,11 +143,11 @@
 			      initial-contents adjustable fill-pointer
 			      displaced-to displaced-index-offset)
   "Creates an array of the specified Dimensions.  See manual for details."
-  (unless (listp dimensions) (setq dimensions (list dimensions)))
-  (let ((array-rank (length (the list dimensions)))
-	(simple (and (null fill-pointer)
-		     (not adjustable)
-		     (null displaced-to))))
+  (let* ((dimensions (if (listp dimensions) dimensions (list dimensions)))
+	 (array-rank (length (the list dimensions)))
+	 (simple (and (null fill-pointer)
+		      (not adjustable)
+		      (null displaced-to))))
     (declare (fixnum array-rank))
     (when (and displaced-index-offset (null displaced-to))
       (error "Can't specify :displaced-index-offset without :displaced-to"))
@@ -209,13 +209,12 @@
 		 (when (or initial-element-p initial-contents)
 		   (error "Neither :initial-element nor :initial-contents ~
 		   can be specified along with :displaced-to"))
-		 (unless displaced-index-offset
-		   (setf displaced-index-offset 0))
-		 (when (> (+ displaced-index-offset total-size)
-			  (array-total-size displaced-to))
-		   (error "~S doesn't have enough elements." displaced-to))
-		 (setf (%array-displacement array) displaced-index-offset)
-		 (setf (%array-displaced-p array) t))
+		 (let ((offset (or displaced-index-offset 0)))
+		   (when (> (+ offset total-size)
+			    (array-total-size displaced-to))
+		     (error "~S doesn't have enough elements." displaced-to))
+		   (setf (%array-displacement array) offset)
+		   (setf (%array-displaced-p array) t)))
 		(t
 		 (setf (%array-displaced-p array) nil)))
 	  (let ((axis 0))
@@ -610,89 +609,92 @@
 			   initial-contents fill-pointer
 			   displaced-to displaced-index-offset)
   "Adjusts the Array's dimensions to the given Dimensions and stuff."
-  (unless (listp dimensions) (setq dimensions (list dimensions)))
-  (cond ((not (array-header-p array))
-	 (error "~S is not an adjustable array." array))
-	((/= (the fixnum (length (the list dimensions)))
-	     (the fixnum (array-rank array)))
-	 (error "Number of dimensions not equal to rank of array."))
-	((not (subtypep element-type (array-element-type array)))
-	 (error "New element type, ~S, is incompatible with old."
-		element-type)))
-  (let ((array-rank (length (the list dimensions))))
-    (declare (fixnum array-rank))
-    (when (and fill-pointer (> array-rank 1))
-      (error "Multidimensional arrays can't have fill pointers."))
-    (cond (initial-contents
-	   (if (or initial-element-p displaced-to)
-	       (error "Initial contents may not be specified with ~
-		       the :initial-element or :displaced-to option."))
-	   (let* ((array-size (apply #'* dimensions))
-		  (array-data (data-vector-from-inits
-			       dimensions array-size element-type
-			       initial-contents initial-element
-			       initial-element-p)))
-	     (set-array-header array array-data array-size
-			       (get-new-fill-pointer array array-size
-						     fill-pointer)
-			       0 dimensions nil)))
-	  (displaced-to
-	   (when initial-element ;no initial-contents supplied is already known
-	       (error "The :initial-element option may not be specified ~
-		       with :displaced-to."))
-	   (unless (subtypep element-type (array-element-type displaced-to))
-	     (error "One can't displace an array of type ~S into another of ~
-		     type ~S." element-type (array-element-type displaced-to)))
-	   (let ((displacement (or displaced-index-offset 0))
-		 (array-size (apply #'* dimensions)))
-	     (declare (fixnum displacement array-size))
-	     (if (< (the fixnum (array-total-size displaced-to))
-		    (the fixnum (+ displacement array-size)))
-		 (error "The :displaced-to array is too small."))
-	     (set-array-header array displaced-to array-size
-			       (get-new-fill-pointer array array-size
-						     fill-pointer)
-			       displacement dimensions t)))
-	  ((= array-rank 1)
-	   (let ((old-length (%array-available-elements array))
-		 (new-length (car dimensions))
-		 new-data)
-	     (declare (fixnum old-length new-length))
-	     (with-array-data ((old-data array) (old-start)
-			       (old-end old-length))
-	       (cond ((or (%array-displaced-p array) (< old-length new-length))
-		      (setf new-data
-			    (data-vector-from-inits
-			     dimensions new-length element-type
-			     initial-contents initial-element
-			     initial-element-p))
-		      (replace new-data old-data
-			       :start2 old-start :end2 old-end))
-		      (t (setf new-data
-			       (shrink-vector old-data new-length))))
-	       (set-array-header array new-data new-length
-				 (get-new-fill-pointer array new-length
+  (let ((dimensions (if (listp dimensions) dimensions (list dimensions))))
+    (cond ((not (array-header-p array))
+	   (error "~S is not an adjustable array." array))
+	  ((/= (the fixnum (length (the list dimensions)))
+	       (the fixnum (array-rank array)))
+	   (error "Number of dimensions not equal to rank of array."))
+	  ((not (subtypep element-type (array-element-type array)))
+	   (error "New element type, ~S, is incompatible with old."
+		  element-type)))
+    (let ((array-rank (length (the list dimensions))))
+      (declare (fixnum array-rank))
+      (when (and fill-pointer (> array-rank 1))
+	(error "Multidimensional arrays can't have fill pointers."))
+      (cond (initial-contents
+	     (if (or initial-element-p displaced-to)
+		 (error "Initial contents may not be specified with ~
+		 the :initial-element or :displaced-to option."))
+	     (let* ((array-size (apply #'* dimensions))
+		    (array-data (data-vector-from-inits
+				 dimensions array-size element-type
+				 initial-contents initial-element
+				 initial-element-p)))
+	       (set-array-header array array-data array-size
+				 (get-new-fill-pointer array array-size
 						       fill-pointer)
-				 0 dimensions nil))))
-	  (t
-	   (let ((old-length (%array-available-elements array))
-		 (new-length (apply #'* dimensions)))
-	     (declare (fixnum old-length new-length))
-	     (with-array-data ((old-data array) (old-start)
-			       (old-end old-length))
-	       (declare (ignore old-end))
-	       (let ((new-data (if (or (%array-displaced-p array)
-				       (> new-length old-length))
-				   (data-vector-from-inits
-				    dimensions new-length
-				    element-type () initial-element
-				    initial-element-p)
-				   old-data)))
-		 (zap-array-data old-data (array-dimensions array) old-start
-				 new-data dimensions new-length element-type
-				 initial-element initial-element-p)
+				 0 dimensions nil)))
+	    (displaced-to
+	     ;; no initial-contents supplied is already known
+	     (when initial-element
+	       (error "The :initial-element option may not be specified ~
+	       with :displaced-to."))
+	     (unless (subtypep element-type (array-element-type displaced-to))
+	       (error "One can't displace an array of type ~S into another of ~
+	               type ~S."
+		      element-type (array-element-type displaced-to)))
+	     (let ((displacement (or displaced-index-offset 0))
+		   (array-size (apply #'* dimensions)))
+	       (declare (fixnum displacement array-size))
+	       (if (< (the fixnum (array-total-size displaced-to))
+		      (the fixnum (+ displacement array-size)))
+		   (error "The :displaced-to array is too small."))
+	       (set-array-header array displaced-to array-size
+				 (get-new-fill-pointer array array-size
+						       fill-pointer)
+				 displacement dimensions t)))
+	    ((= array-rank 1)
+	     (let ((old-length (%array-available-elements array))
+		   (new-length (car dimensions))
+		   new-data)
+	       (declare (fixnum old-length new-length))
+	       (with-array-data ((old-data array) (old-start)
+				 (old-end old-length))
+		 (cond ((or (%array-displaced-p array)
+			    (< old-length new-length))
+			(setf new-data
+			      (data-vector-from-inits
+			       dimensions new-length element-type
+			       initial-contents initial-element
+			       initial-element-p))
+			(replace new-data old-data
+				 :start2 old-start :end2 old-end))
+		       (t (setf new-data
+				(shrink-vector old-data new-length))))
 		 (set-array-header array new-data new-length
-				   new-length 0 dimensions nil)))))))
+				   (get-new-fill-pointer array new-length
+							 fill-pointer)
+				   0 dimensions nil))))
+	    (t
+	     (let ((old-length (%array-available-elements array))
+		   (new-length (apply #'* dimensions)))
+	       (declare (fixnum old-length new-length))
+	       (with-array-data ((old-data array) (old-start)
+				 (old-end old-length))
+		 (declare (ignore old-end))
+		 (let ((new-data (if (or (%array-displaced-p array)
+					 (> new-length old-length))
+				     (data-vector-from-inits
+				      dimensions new-length
+				      element-type () initial-element
+				      initial-element-p)
+				     old-data)))
+		   (zap-array-data old-data (array-dimensions array) old-start
+				   new-data dimensions new-length element-type
+				   initial-element initial-element-p)
+		   (set-array-header array new-data new-length
+				     new-length 0 dimensions nil))))))))
   array)
 
 (defun get-new-fill-pointer (old-array new-array-size fill-pointer)
