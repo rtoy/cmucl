@@ -28,6 +28,11 @@
   ;; FUNCTIONs for functions in this compilation.
   (entry-table (make-hash-table :test #'eq) :type hash-table)
   ;;
+  ;; A hashtable translating ENTRY-INFO structures to a list of pairs
+  ;; (<code object> . <offset>) describing the places that need to be
+  ;; backpatched to point to the function for ENTRY-INFO.
+  (patch-table (make-hash-table :test #'eq) :type hash-table)
+  ;;
   ;; A list of all the DEBUG-INFO objects created, kept so that we can
   ;; backpatch with the source info.
   (debug-info () :type list))
@@ -44,7 +49,8 @@
     (declare (type index offset))
     (unless (zerop (logand offset vm:lowtag-mask))
       (error "Unaligned function object, offset = #x~X." offset))
-    (let ((res (%primitive compute-function code-obj offset)))
+    (let* ((res (%primitive compute-function code-obj offset))
+	   (patch-table (core-object-patch-table object)))
       (%primitive set-function-self res res)
       (%primitive set-function-next res
 		  (%primitive code-entry-points code-obj))
@@ -54,19 +60,13 @@
 		  (entry-info-arguments entry))
       (%primitive set-function-type res
 		  (entry-info-type entry))
+
+      (dolist (patch (gethash entry patch-table))
+	(%primitive code-constant-set (car patch) (the index (cdr patch))
+		    res))
+      (remhash entry patch-table)
       (setf (gethash entry (core-object-entry-table object)) res)))
   (undefined-value))
-
-;;; CORE-FUNCTION-OR-LOSE  --  Internal
-;;;
-;;;    Get the function for a function entry that has been dumped to core.
-;;;
-#+new-compiler
-(defun core-function-or-lose (fun object)
-  (declare (type functional fun) (type core-object object))
-  (let ((res (gethash (leaf-info fun) (core-object-entry-table object))))
-    (assert res () "Unresolved forward function reference?")
-    res))
 
 
 ;;; DO-CORE-FIXUPS  --  Internal
@@ -97,6 +97,23 @@
 		   (:foreign "Unknown foreign symbol: ~S"))
 		 name))
 	(lisp::fixup-code-object code offset value kind)))))
+
+
+;;; REFERENCE-CORE-FUNCTION  --  Internal
+;;;
+;;;    Stick a reference to the function Fun in Code-Object at index I.  If the
+;;; function hasn't been compiled yet, make a note in the Patch-Table.
+;;;
+(defun reference-core-function (code-obj i fun object)
+  (declare (type core-object object) (type functional fun)
+	   (type index i))
+  (let* ((info (leaf-info fun))
+	 (found (gethash info (core-object-entry-table object))))
+    (if found
+	(%primitive code-constant-set code-obj i found)
+	(push (cons code-obj i)
+	      (gethash info (core-object-patch-table object)))))
+  (undefined-value))
 
 
 ;;; MAKE-CORE-COMPONENT  --  Interface
@@ -135,8 +152,7 @@
 	    (list
 	     (ecase (car const)
 	       (:entry
-		(%primitive code-constant-set code-obj i
-			    (core-function-or-lose (cdr const) object)))
+		(reference-core-function code-obj i (cdr const) object))
 	       #+nil
 	       (:label
 		(%primitive header-set code-obj i
@@ -148,22 +164,26 @@
 ;;; CORE-CALL-TOP-LEVEL-LAMBDA  --  Interface
 ;;;
 ;;;    Call the top-level lambda function dumped for Entry, returning the
-;;; values.  Entry may be a 
+;;; values.  Entry may be a :TOP-LEVEL-XEP functional.
 ;;;
 #+new-compiler
 (defun core-call-top-level-lambda (entry object)
   (declare (type functional entry) (type core-object object))
-  (funcall (core-function-or-lose entry object)))
+  (funcall (or (gethash (leaf-info entry)
+			(core-object-entry-table object))
+	       (error "Unresolved forward reference."))))
 
 
 ;;; FIX-CORE-SOURCE-INFO  --  Interface
 ;;;
 ;;;    Backpatch all the DEBUG-INFOs dumped so far with the specified
-;;; SOURCE-INFO list.
+;;; SOURCE-INFO list.  We also check that there are no outstanding forward
+;;; references to functions.
 ;;;
 #+new-compiler
 (defun fix-core-source-info (info object source-info)
   (declare (type source-info info) (type core-object object))
+  (assert (zerop (hash-table-count (core-object-patch-table object))))
   (let ((res (debug-source-for-info info)))
     (dolist (sinfo res)
       (setf (debug-source-info sinfo) source-info))
