@@ -406,7 +406,6 @@
 	    (t
 	     (car subscripts)))))
 
-
 (defun adjustable-array-p (array)
   "Returns T if the given Array is adjustable, or Nil otherwise."
   (array-header-p array))
@@ -529,14 +528,6 @@
       (error "~S: Object has no fill pointer." array)))
 
 
-
-(defun get-new-fill-pointer (new-array-size fill-pointer old-fill-pointer)
-  (cond ((not fill-pointer)
-	 old-fill-pointer)
-	((numberp fill-pointer)
-	 fill-pointer)
-	(t new-array-size)))
-
 (defun adjust-array (array dimensions &key
 			   (element-type (array-element-type array))
 			   (initial-element nil initial-element-p)
@@ -552,8 +543,7 @@
 	((not (subtypep element-type (array-element-type array)))
 	 (error "New element type, ~S, is incompatible with old."
 		element-type)))
-  (let ((array-rank (length (the list dimensions)))
-	(old-fill-pointer (fill-pointer array)))
+  (let ((array-rank (length (the list dimensions))))
     (declare (fixnum array-rank))
     (when (and fill-pointer (> array-rank 1))
       (error "Multidimensional arrays can't have fill pointers."))
@@ -567,8 +557,8 @@
 			       initial-contents initial-element
 			       initial-element-p)))
 	     (set-array-header array array-data array-size
-			       (get-new-fill-pointer array-size fill-pointer
-						     old-fill-pointer)
+			       (get-new-fill-pointer array array-size
+						     fill-pointer)
 			       0 dimensions nil)))
 	  (displaced-to
 	   (when initial-element ;no initial-contents supplied is already known
@@ -584,8 +574,8 @@
 		    (the fixnum (+ displacement array-size)))
 		 (error "The :displaced-to array is too small."))
 	     (set-array-header array displaced-to array-size
-			       (get-new-fill-pointer array-size fill-pointer
-						     old-fill-pointer)
+			       (get-new-fill-pointer array array-size
+						     fill-pointer)
 			       displacement dimensions t)))
 	  ((= array-rank 1)
 	   (let ((old-length (%primitive header-ref array %array-length-slot))
@@ -605,8 +595,8 @@
 		      (t (setf new-data
 			       (%primitive shrink-vector old-data new-length))))
 	       (set-array-header array new-data new-length
-				 (get-new-fill-pointer new-length fill-pointer
-						       old-fill-pointer)
+				 (get-new-fill-pointer array new-length
+						       fill-pointer)
 				 0 dimensions nil))))
 	  (t
 	   (let ((old-length (%primitive header-ref array %array-length-slot))
@@ -628,6 +618,13 @@
 		 (set-array-header array new-data new-length
 				   new-length 0 dimensions nil)))))))
   array)
+
+(defun get-new-fill-pointer (old-array new-array-size fill-pointer)
+  (cond ((not fill-pointer)
+	 (%primitive header-ref old-array %array-fill-pointer-slot))
+	((numberp fill-pointer)
+	 fill-pointer)
+	(t new-array-size)))
 
 (defun shrink-vector (vector new-size)
   "Destructively alters the Vector, changing its length to New-Size, which
@@ -661,22 +658,18 @@
   array)
 
 
-;;; Zap-Array-Data does the grinding work for Adjust-Array.  The data is zapped
-;;; from the Old-Data in an arrangement specified by the Old-Dims to the
-;;; New-Data in an arrangement specified by the New-Dims.  Offset is a displaced
-;;; offset to be added to computed indexes of Old-Data.  New-Length, Element-Type,
-;;; Initial-Element, and Initial-Element-P are used when Old-Data and New-Data
-;;; are EQ; in this case, a temporary must be used and filled appropriately.
-;;; When Old-Data and New-Data are not EQ, New-Data has already been filled with
-;;; any specified initial-element.
+
+;;;; ZAP-ARRAY-DATA for ADJUST-ARRAY.
 
 ;;; Make a temporary to be used when old-data and new-data are EQ.
+;;;
 (defvar *zap-array-data-temp* (%primitive alloc-g-vector 1000 t))
 
-(defun zap-array-data-temp (length element-type initial-element initial-element-p)
+(defun zap-array-data-temp (length element-type initial-element
+			    initial-element-p)
   (declare (fixnum length))
-  (if (> length (the fixnum (length *zap-array-data-temp*)))
-      (setf *zap-array-data-temp* (%primitive alloc-g-vector length t)))
+  (when (> length (the fixnum (length *zap-array-data-temp*)))
+    (setf *zap-array-data-temp* (%primitive alloc-g-vector length t)))
   (when initial-element-p
     (unless (typep initial-element element-type)
       (error "~S cannot be used to initialize an array of type ~S."
@@ -684,19 +677,18 @@
     (fill (the simple-vector *zap-array-data-temp*) initial-element :end length))
   *zap-array-data-temp*)
 
-;;; Bump-Index-List helps us out:
-(eval-when (compile eval)
-(defmacro bump-index-list (index limits)
-  `(do ((subscripts ,index (cdr subscripts))
-	(limits ,limits (cdr limits)))
-       ((null subscripts) nil)
-     (cond ((< (the fixnum (car subscripts))
-	       (the fixnum (car limits)))
-	    (rplaca subscripts (1+ (the fixnum (car subscripts))))
-	    (return ,index))
-	   (t (rplaca subscripts 0)))))
-)
 
+;;; ZAP-ARRAY-DATA  --  Internal.
+;;;
+;;; This does the grinding work for ADJUST-ARRAY.  It zaps the data from the
+;;; Old-Data in an arrangement specified by the Old-Dims to the New-Data in an
+;;; arrangement specified by the New-Dims.  Offset is a displaced offset to be
+;;; added to computed indexes of Old-Data.  New-Length, Element-Type,
+;;; Initial-Element, and Initial-Element-P are used when Old-Data and New-Data
+;;; are EQ; in this case, a temporary must be used and filled appropriately.
+;;; When Old-Data and New-Data are not EQ, New-Data has already been filled
+;;; with any specified initial-element.
+;;;
 (defun zap-array-data (old-data old-dims offset new-data new-dims new-length
 		       element-type initial-element initial-element-p)
   (declare (list old-dims new-dims))
@@ -716,19 +708,29 @@
 			    (declare (fixnum x y))
 			    (1- (the fixnum (min x y))))
 			old-dims new-dims)))
-    (do ((index (make-list (length old-dims) :initial-element 0)
-		(bump-index-list index limits)))
-	((null index))
-      (setf (aref new-data (row-major-index-from-dims index new-dims))
-	    (aref old-data
-		  (+ (the fixnum (row-major-index-from-dims index old-dims))
-		     offset))))))
+    (macrolet ((bump-index-list (index limits)
+		 `(do ((subscripts ,index (cdr subscripts))
+		       (limits ,limits (cdr limits)))
+		      ((null subscripts) nil)
+		    (cond ((< (the fixnum (car subscripts))
+			      (the fixnum (car limits)))
+			   (rplaca subscripts (1+ (the fixnum (car subscripts))))
+			   (return ,index))
+			  (t (rplaca subscripts 0))))))
+      (do ((index (make-list (length old-dims) :initial-element 0)
+		  (bump-index-list index limits)))
+	  ((null index))
+	(setf (aref new-data (row-major-index-from-dims index new-dims))
+	      (aref old-data
+		    (+ (the fixnum (row-major-index-from-dims index old-dims))
+		       offset)))))))
 
-
-;;; ROW-MAJOR-INDEX-FROM-DIMS figures out the row-major-order index of an
-;;; array reference from a list of subscripts and a list of dimensions.
-;;; This is for internal calls only, and the subscripts and dim-list variables
-;;; are assumed to be reversed from what the user supplied.
+;;; ROW-MAJOR-INDEX-FROM-DIMS  --  Internal.
+;;;
+;;; This figures out the row-major-order index of an array reference from a
+;;; list of subscripts and a list of dimensions.  This is for internal calls
+;;; only, and the subscripts and dim-list variables are assumed to be reversed
+;;; from what the user supplied.
 ;;;
 (defun row-major-index-from-dims (rev-subscripts rev-dim-list)
   (do ((rev-subscripts rev-subscripts (cdr rev-subscripts))
@@ -743,6 +745,9 @@
     (setq chunk-size (* chunk-size (the fixnum (car rev-dim-list))))))
 
 
+
+;;;; Some bit stuff.
+ 
 (defun bit (bit-array &rest subscripts)
   "Returns the bit from the Bit-Array at the specified Subscripts."
   (apply #'aref bit-array subscripts))
@@ -761,8 +766,7 @@
   (and (= (the fixnum (%primitive header-length array1))
 	  (the fixnum (%primitive header-length array2)))
        (do ((index %array-first-dim-slot (1+ index))
-	    (length (- (the fixnum (%primitive header-length array1))
-		       %array-dim-base)))
+	    (length (%primitive header-length array1)))
 	   ((= index length) t)
 	 (declare (fixnum index length))
 	 (if (/= (the fixnum (%primitive header-ref array1 index))
