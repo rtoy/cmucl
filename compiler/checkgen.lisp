@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.19 1992/03/21 19:41:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.20 1992/07/21 18:41:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -509,25 +509,22 @@
 		    (do-type-warning use))))))
 
 	  (when (eq type-check t)
-	    (let ((check-p (probable-type-check-p cont)))
-	      (multiple-value-bind (check types)
-				   (continuation-check-types cont)
-		(ecase check
-		  (:simple
-		   (unless check-p
-		     (setf (continuation-%type-check cont) :no-check)))
-		  (:hairy
-		   (if check-p
-		       (convert-type-check cont types)
-		       (setf (continuation-%type-check cont) :no-check)))
-		  (:too-hairy
-		   (let* ((context (continuation-dest cont))
-			  (*compiler-error-context* context))
-		     (when (policy context (>= safety brevity))
-		       (compiler-note
-			"Type assertion too complex to check:~% ~S."
-			(type-specifier (continuation-asserted-type cont)))))
-		   (setf (continuation-%type-check cont) :deleted))))))))
+	    (if (probable-type-check-p cont)
+		(multiple-value-bind (check types)
+				     (continuation-check-types cont)
+		  (ecase check
+		    (:simple)
+		    (:hairy
+		     (convert-type-check cont types))
+		    (:too-hairy
+		     (let* ((context (continuation-dest cont))
+			    (*compiler-error-context* context))
+		       (when (policy context (>= safety brevity))
+			 (compiler-note
+			  "Type assertion too complex to check:~% ~S."
+			  (type-specifier (continuation-asserted-type cont)))))
+		     (setf (continuation-%type-check cont) :deleted))))
+		(setf (continuation-%type-check cont) :no-check)))))
       
       (setf (block-type-check block) nil)))
   
