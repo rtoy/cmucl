@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.36 1992/02/12 16:11:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.37 1992/02/13 10:37:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -262,7 +262,8 @@
     (write (get-lisp-obj-address object) :stream stream
 	   :radix nil :base 16)
     (write-char #\} stream))
-  (write-char #\> stream))
+  (write-char #\> stream)
+  nil)
 
 
 ;;;; WHITESPACE-CHAR-P
