@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.59 2001/02/22 19:35:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.60 2001/02/23 18:56:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,16 +185,16 @@
 	     (values :wild (- end 4)))
 	    (t
 	     (do ((i (- end 2) (1- i)))
-		 ((< i (+ start 2)) (values :newest nil))
+		 ((< i (+ start 2)) (values :newest end))
 	       (let ((char (schar namestr i)))
 		 (when (eql char #\~)
-		   (return (and (char= (schar namestr (1- i)) #\.)
-				(values (parse-integer namestr
-						       :start (1+ i)
-						       :end (1- end))
-					(1- i)))))
+		   (return (if (char= (schar namestr (1- i)) #\.)
+			       (values (parse-integer namestr :start (1+ i)
+						      :end (1- end))
+				       (1- i))
+			       (values :newest end))))
 		 (unless (char<= #\0 char #\9)
-		   (return nil))))))
+		   (return (values :newest end)))))))
     (let ((last-dot (position #\. namestr :start (1+ start) :end vstart
 			      :from-end t)))
       (cond (last-dot
