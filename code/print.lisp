@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.48.1.3 1993/02/10 23:40:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.48.1.4 1993/02/11 14:22:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1749,7 +1749,7 @@
 	       (let ((*print-base* 16) (*print-radix* t))
 		 (output-integer type stream))))))
 	((#.vm:function-pointer-type
-	  #.vm:structure-pointer-type
+	  #.vm:instance-pointer-type
 	  #.vm:list-pointer-type)
 	 (write-string "Unknown Pointer Object, type=" stream))
 	(t
