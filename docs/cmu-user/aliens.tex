@@ -745,8 +745,9 @@ won't move during GC.
 Due to the way \cmucl{} manages memory, the amount of memory that can
 be dynamically allocated by \code{malloc} or \funref{make-alien} is
 limited\footnote{\cmucl{} mmaps a large piece of memory for its own
-use and this memory is typically about 8 MB above the start of the C
-heap. Thus, only about 8 MB of memory can be dynamically allocated.}.
+use and this memory is typically about 256~MB above the start of the C
+heap. Thus, only about 256~MB of memory can be dynamically allocated.
+In earlier versions, this limit was closer to 8~MB.}.
 
 To overcome this limitation, it is possible to access the content of
 Lisp arrays which are limited only by the amount of physical memory
@@ -779,14 +780,16 @@ must be an array of one of the following types:
                   (signed-byte 16)
                   (signed-byte  8)
 "
-  (declare (type (or #+signed-array (array (signed-byte 8))
-                     #+signed-array (array (signed-byte 16))
-                     #+signed-array (array (signed-byte 32))
-                     (array (unsigned-byte 8))
-                     (array (unsigned-byte 16))
-                     (array (unsigned-byte 32))
-                     (array single-float)
-                     (array double-float))
+  (declare (type (or (simple-array (signed-byte 8))
+                     (simple-array (signed-byte 16))
+                     (simple-array (signed-byte 32))
+                     (simple-array (unsigned-byte 8))
+                     (simple-array (unsigned-byte 16))
+                     (simple-array (unsigned-byte 32))
+                     (simple-array single-float)
+                     (simple-array double-float)
+                     (simple-array (complex single-float))
+                     (simple-array (complex double-float)))
                  array)
            (optimize (speed 3) (safety 0))
            (ext:optimize-interface (safety 3)))
@@ -827,6 +830,9 @@ must be an array of one of the following types:
       (system:int-sap (the (unsigned-byte 32)
                         (+ addr (* type-size start)))))))
 \end{example}
+
+We note, however, that the system function
+\findexed{system:vector-sap} will do the same thing as above does.
 
 Assume we have the C function below that we wish to use:
 
