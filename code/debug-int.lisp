@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.49 1992/06/22 11:17:39 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.50 1992/06/22 13:51:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,8 +52,8 @@
 
 	  code-location-debug-function code-location-debug-block
 	  code-location-top-level-form-offset code-location-form-number
-	  code-location-debug-source code-location code-location-p
-	  code-location-unknown-p code-location=
+	  code-location-debug-source code-location-kind
+	  code-location code-location-p code-location-unknown-p code-location=
 
 	  debug-source-from debug-source-name debug-source-created
 	  debug-source-compiled debug-source-root-number
@@ -2221,6 +2221,29 @@
 		     (c::node-source-path
 		      (interpreted-code-location-ir1-node code-location)))))))
 	  (t form-num))))
+
+;;; CODE-LOCATION-KIND -- Public
+;;; 
+(defun code-location-kind (code-location)
+  "Return the kind of CODE-LOCATION, one of:
+     :interpreted, :unknown-return, :known-return, :internal-error,
+     :non-local-exit, :block-start, :call-site, :single-value-return,
+     :non-local-entry"
+  (when (code-location-unknown-p code-location)
+    (error 'unknown-code-location :code-location code-location))
+  (etypecase code-location
+    (compiled-code-location
+     (let ((kind (compiled-code-location-kind code-location)))
+       (cond ((not (eq kind :unparsed)) kind)
+             ((not (fill-in-code-location code-location))
+              ;; This check should be unnecessary.  We're missing
+              ;; debug info the compiler should have dumped.
+              (error "Unknown code location?  It should be known."))
+             (t
+              (compiled-code-location-kind code-location)))))
+    (interpreted-code-location
+     :interpreted)))
+
 
 ;;; COMPILED-CODE-LOCATION-LIVE-SET -- Internal.
 ;;;
