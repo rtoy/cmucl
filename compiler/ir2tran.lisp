@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.47 1993/03/01 18:25:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.48 1993/03/01 19:28:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,7 @@
 ;;; someday.
 ;;;
 (defevent make-value-cell "Allocate heap value cell for lexical var.")
-(defun make-value-cell (node block value res)
+(defun do-make-value-cell (node block value res)
   (event make-value-cell node)
   (vop make-value-cell node block value res))
 
@@ -695,7 +695,7 @@
 	      (let ((src (continuation-tn node block arg))
 		    (dest (leaf-info var)))
 		(if (lambda-var-indirect var)
-		    (make-value-cell node block src dest)
+		    (do-make-value-cell node block src dest)
 		    (emit-move node block src dest)))))
 	(lambda-vars fun) (basic-combination-args node))
   (undefined-value))
@@ -734,7 +734,7 @@
 	     ((lambda-var-indirect var)
 	      (let ((temp
 		     (make-normal-tn (backend-any-primitive-type *backend*))))
-		(make-value-cell node block actual temp)
+		(do-make-value-cell node block actual temp)
 		(temps temp)))
 	     ((member actual (locs))
 	      (let ((temp (make-normal-tn (tn-primitive-type loc))))
@@ -1128,7 +1128,7 @@
 	    (let ((pass (standard-argument-location n))
 		  (home (leaf-info arg)))
 	      (if (lambda-var-indirect arg)
-		  (make-value-cell node block pass home)
+		  (do-make-value-cell node block pass home)
 		  (emit-move node block pass home))))
 	  (incf n))))
     
@@ -1259,7 +1259,7 @@
 	      (when (leaf-refs var)
 		(let ((dest (leaf-info var)))
 		  (if (lambda-var-indirect var)
-		      (make-value-cell node block src dest)
+		      (do-make-value-cell node block src dest)
 		      (emit-move node block src dest)))))
 	  (continuation-tns node block cont
 			    (mapcar #'(lambda (x)
@@ -1485,7 +1485,7 @@
 
     (ecase kind
       ((:block :tagbody)
-       (make-value-cell node block res (ir2-nlx-info-home 2info)))
+       (do-make-value-cell node block res (ir2-nlx-info-home 2info)))
       (:unwind-protect
        (vop set-unwind-protect node block block-tn))
       (:catch)))
