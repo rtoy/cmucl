@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.79 1994/10/02 23:35:31 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.80 1994/10/04 12:26:38 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,13 +86,13 @@
 (maybe-byte-load "code:sysmacs")
 #-gengc (maybe-byte-load "code:run-program")
 (maybe-byte-load "code:query")
-(maybe-byte-load "code:loop")
 #-runtime (maybe-byte-load "code:internet")
 #-runtime (maybe-byte-load "code:wire")
 #-runtime (maybe-byte-load "code:remote")
 (maybe-byte-load "code:foreign")
 (maybe-byte-load "code:setf-funs")
 (maybe-byte-load "code:module")
+(maybe-byte-load "code:loop")
 #-(or gengc runtime) (maybe-byte-load "code:room")
 
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
