@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.37 2003/09/04 14:22:01 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.38 2003/10/13 17:25:09 toy Exp $
  *
  */
 
@@ -111,7 +111,7 @@ static char* cmucllib_search_list[] =
  * default for CMUCLLIB
  */
 char *
-default_cmucllib(const char const* argv0arg)
+default_cmucllib(const char* argv0arg)
 {
     char* p;
     char* defpath;
@@ -389,7 +389,7 @@ int main(int argc, char *argv[], char *envp[])
     lispobj initial_function = 0;
 
     if (builtin_image_flag != 0)
-      initial_function = &initial_function_addr;
+      initial_function = (lispobj) &initial_function_addr;
 
 #if defined(SVR4) || defined(__linux__)
     tzset();
@@ -437,7 +437,9 @@ int main(int argc, char *argv[], char *envp[])
 	  }
         else if (strcmp(arg, "-dynamic-space-size") == 0)
 	  {
-            char *str = *++argptr;
+            char *str;
+
+            str = *++argptr;
             if (str == NULL)
 	      {
                 fprintf(stderr, "-dynamic-space-size must be followed by the size to use in MBytes.\n");
@@ -574,11 +576,11 @@ int main(int argc, char *argv[], char *envp[])
 
     if(builtin_image_flag != 0) {
       extern int image_dynamic_space_size;
-      int allocation_pointer = dynamic_0_space + (int)&image_dynamic_space_size;
+      long allocation_pointer = (long) dynamic_0_space + (int)&image_dynamic_space_size;
 #ifdef i386
       SetSymbolValue(ALLOCATION_POINTER, (lispobj)allocation_pointer);
 #else
-      current_dynamic_space_free_pointer = (lispobj)allocation_pointer;
+      current_dynamic_space_free_pointer = (lispobj*)allocation_pointer;
 #endif
     } else {
       initial_function = load_core_file(core);
