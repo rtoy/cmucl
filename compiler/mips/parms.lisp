@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.47 1990/05/10 04:50:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.48 1990/05/13 02:01:03 ch Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -174,7 +174,8 @@
   symbol-header
   base-character
   sap
-  unbound-marker)
+  unbound-marker
+  weak-pointer)
 
 
 ;;;; Other non-type constants.
@@ -422,6 +423,15 @@
 			      :header sap-type)
   (pointer :c-type "char *"))
 
+
+(define-primitive-object (weak-pointer :lowtag other-pointer-type
+				       :header weak-pointer-type
+				       :alloc-vop c::make-weak-pointer)
+  (value :ref-vop c::weak-pointer-value
+	 :setf-vop c::set-weak-pointer-value
+	 :init :arg)
+  (next :c-type "struct weak_pointer *"))
+  
 
 ;;; Other non-heap data blocks.
 
