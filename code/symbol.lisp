@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.14 1993/05/18 19:54:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.15 1993/08/06 03:59:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -211,11 +211,17 @@
   alter the prefix if it is a string, or the decimal number if it is a
   number, of this symbol.  The number, defaultly *gensym-counter*, is
   incremented by each call to GENSYM."
-  (make-symbol
-   (concatenate 'simple-string
-		(if (stringp string) string "G")
-		(quick-integer-to-string
-		 (if (integerp string) string (incf *gensym-counter*))))))
+  (multiple-value-bind
+      (prefix int)
+      (etypecase thing
+	(simple-string (values thing (incf *gensym-counter*)))
+	(fixnum (values "G" thing))
+	(string (values (coerce thing 'simple-string)
+			(incf *gensym-counter*))))
+    (declare (simple-string prefix) (fixnum int))
+    (make-symbol
+     (concatenate 'simple-string prefix 
+		  (quick-integer-to-string int)))))
 
 (defvar *gentemp-counter* 0)
 (declaim (type index *gentemp-counter*))
