@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.113 2002/10/07 17:44:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.114 2003/03/19 14:24:41 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2678,8 +2678,9 @@
 	(add '(ash x 31))))
     (or result 0)))
 
-;;; If arg is a constant power of two, turn floor into a shift and mask.
-;;; If ceiling, add in (1- (abs y)) and then do floor.
+;;; If arg is a constant power of two, turn floor into a shift and
+;;; mask. If ceiling, add in (1- (abs y)) and do floor, and correct
+;;; the remainder.
 ;;;
 (flet ((frob (y ceil-p)
 	 (unless (constant-continuation-p y) (give-up))
@@ -2688,13 +2689,14 @@
 		(len (1- (integer-length y-abs))))
 	   (unless (= y-abs (ash 1 len)) (give-up))
 	   (let ((shift (- len))
-		 (mask (1- y-abs)))
-	     `(let ,(when ceil-p `((x (+ x ,(1- y-abs)))))
+		 (mask (1- y-abs))
+                 (delta (if ceil-p (* (signum y) (1- y-abs)) 0)))
+	     `(let ((x (+ x ,delta)))
 		,(if (minusp y)
 		     `(values (ash (- x) ,shift)
-			      (- (logand (- x) ,mask)))
+			      (- (- (logand (- x) ,mask)) ,delta))
 		     `(values (ash x ,shift)
-			      (logand x ,mask))))))))
+			      (- (logand x ,mask) ,delta))))))))
   (deftransform floor ((x y) (integer integer) *)
     "convert division by 2^k to shift"
     (frob y nil))
