@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.5 1990/10/11 18:30:21 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.6 1990/10/17 03:46:22 ram Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -651,11 +651,11 @@
 	       (new ""))
 	      ((or (not eofp) (null current))
 	       (return-from concatenated-readline (values result eofp)))
-	    (declare (simple-string new))
+	    (declare (type (or simple-string (member :eof)) new))
 	    (setf (concatenated-stream-current stream) current)
 	    (let ((this (car current)))
 	      (multiple-value-setq (new eofp)
-		(read-line this nil nil))
+		(read-line this nil :eof))
 	      (if new
 		  (setq result (concatenate 'simple-string result new))
 		  (setq eofp t)))))))))
