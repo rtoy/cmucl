@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.10 1991/09/03 20:44:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.11 1992/02/06 01:09:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,11 +179,11 @@
 		  (load "home:.cmucl-init" :if-does-not-exist nil))))))
     (when enable-gc
       (gc-on))
-    (when print-herald
-      (print-herald))
     (when process-command-line
       (ext::invoke-switch-demons *command-line-switches*
 				 *command-switch-demons*))
+    (when print-herald
+      (print-herald))
     (funcall init-function)))
 
 
