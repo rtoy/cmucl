@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.76 1997/12/03 08:19:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.77 1997/12/04 04:05:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,9 +242,15 @@
 (defknown lcm (&rest integer) unsigned-byte
   (movable foldable flushable explicit-check))
 
+#-propagate-fun-type
 (defknown exp (number) irrational
   (movable foldable flushable explicit-check recursive)
   :derive-type #'result-type-float-contagion)
+
+#+propagate-fun-type
+(defknown exp (number) irrational
+  (movable foldable flushable explicit-check recursive))
+
 
 (defknown expt (number number) number
   (movable foldable flushable explicit-check recursive))
@@ -260,6 +266,8 @@
 (defknown cis (real) (complex float)
   (movable foldable flushable explicit-check))
 
+#-propagate-fun-type
+(progn
 (defknown (sin cos) (number)
   (or (float -1.0 1.0) (complex float))
   (movable foldable flushable explicit-check recursive)
@@ -273,6 +281,21 @@
 (defknown (tan sinh cosh tanh asinh)
   (number) irrational (movable foldable flushable explicit-check recursive)
   :derive-type #'result-type-float-contagion)
+)	; end progn
+
+#+propagate-fun-type
+(progn
+(defknown (sin cos) (number)
+  irrational
+  (movable foldable flushable explicit-check recursive))
+
+(defknown atan
+  (number &optional real) irrational
+  (movable foldable flushable explicit-check recursive))
+
+(defknown (tan sinh cosh tanh asinh)
+  (number) irrational (movable foldable flushable explicit-check recursive))
+)	; end progn
 
 (defknown (asin acos acosh atanh)
   (number) irrational
