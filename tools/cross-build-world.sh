@@ -44,7 +44,7 @@ fi
 $LISP "$@" -noinit -nositeinit <<EOF
 (in-package :cl-user)
 
-;;(setf lisp::*enable-package-locked-errors* nil)
+(setf lisp::*enable-package-locked-errors* nil)
 
 (setf (ext:search-list "target:")
       '("$CROSS/" "src/"))
