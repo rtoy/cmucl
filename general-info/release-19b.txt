@@ -62,6 +62,7 @@ New in this release:
         now.  (CMUCL doesn't really have a (COMPLEX INTEGER) type).
       - When a pathname can't be printed readably, signal a
         PRINT-NOT-READABLE condition
+      - Printing arrays readably was sometimes wrong.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -83,6 +84,7 @@ New in this release:
       - Fix bug in reading from streams with element-type SIGNED-BYTE
         for sizes greater than 32:  positive numbers were incorrectly
         being returned as negative.
+      - REMOVE-DUPLICATES was not honoring the :START option.
 
   * Other changes:
      
