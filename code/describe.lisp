@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.14 1991/12/20 02:44:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.15 1991/12/20 18:33:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -197,7 +197,8 @@
   (when (and name (typep name '(or symbol cons)))
     (let ((doc (documentation name kind)))
       (when doc
-	(format t "~&~@(~A~) documentation:~&  ~A" kind-doc doc)))))
+	(format t "~&~@(~A documentation:~)~&  ~A"
+		(or kind-doc kind) doc)))))
 
 
 ;;; DESCRIBE-FUNCTION-NAME  --  Internal
