@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.20 2004/07/08 18:00:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.21 2004/07/08 18:21:29 rtoy Exp $
  *
  * Memory Validation
  */
@@ -50,7 +50,7 @@ long image_dynamic_space_size = 0;
 void
 validate(void)
 {
-    void *dynamic_space_data;
+    void *dynamic_space_data = NULL;
 
     /* Note: XXX use alloca here because it's not malloc.  I'm assuming
      that anyone who wants to make this scheme work this will be using

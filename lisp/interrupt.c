@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.38 2004/07/07 15:03:12 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.39 2004/07/08 18:21:29 rtoy Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -100,9 +100,6 @@ void
 fake_foreign_function_call(os_context_t *context)
 {
     int context_index;
-#if !defined(i386) && !defined(__x86_64)
-    lispobj oldcont;
-#endif
 
     /* Get current LISP state from context */
 #ifdef reg_ALLOC
@@ -170,7 +167,7 @@ undo_fake_foreign_function_call(os_context_t *context)
 void 
 interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 {
-    lispobj context_sap;
+    lispobj context_sap = NIL;
 #if ( defined( __linux__ ) && (defined( i386 ) || defined( __x86_64 ) ) )
     GET_CONTEXT
 #endif

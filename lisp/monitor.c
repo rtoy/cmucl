@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.17 2004/07/08 17:49:04 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.18 2004/07/08 18:21:29 rtoy Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -224,7 +224,10 @@ static void search_cmd(char **ptr)
 
 static void call_cmd(char **ptr)
 {
-    lispobj thing = parse_lispobj(ptr), function, result, cons, args[3];
+    lispobj thing = parse_lispobj(ptr);
+    lispobj function, cons, args[3];
+    lispobj result = NIL;
+  
     int numargs;
 
     if (LowtagOf(thing) == type_OtherPointer) {
