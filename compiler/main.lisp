@@ -332,8 +332,8 @@
 	  (let ((warn-count (length warnings)))
 	    (when (and warnings (> count warn-count))
 	      (let ((more (- count warn-count)))
-		(compiler-warning "~D more use~P of undefined ~(~A~) ~S."
-				  more warnings more kind name))))))
+		(compiler-warning "~D more use~:P of undefined ~(~A~) ~S."
+				  more kind name))))))
       
       (dolist (kind '(:variable :function :type))
 	(let ((summary (mapcar #'undefined-warning-name
@@ -988,13 +988,12 @@
       (close-source-info info))))
 
 
-(defun elapsed-time-to-string (it)
-  (let ((tsec (truncate it internal-time-units-per-second)))
-    (multiple-value-bind (tmin sec)
-			 (truncate tsec 60)
-      (multiple-value-bind (thr min)
-			   (truncate tmin 60)
-	(format nil "~D:~2,'0D:~2,'0D" thr min sec)))))
+(defun elapsed-time-to-string (tsec)
+  (multiple-value-bind (tmin sec)
+		       (truncate tsec 60)
+    (multiple-value-bind (thr min)
+			 (truncate tmin 60)
+      (format nil "~D:~2,'0D:~2,'0D" thr min sec))))
 
 
 ;;; START-ERROR-OUTPUT, FINISH-ERROR-OUTPUT  --  Internal
@@ -1003,7 +1002,7 @@
 ;;;
 (defun start-error-output (source-info)
   (declare (type source-info source-info))
-  (compiler-mumble "~2&Python version ~A, VM ~A on ~A.~%"
+  (compiler-mumble "~2&Python version ~A, VM version ~A on ~A.~%"
 		   compiler-version vm-version
 		   (ext:format-universal-time nil (get-universal-time)
 					      :print-weekday nil
@@ -1019,7 +1018,7 @@
 ;;;
 (defun finish-error-output (source-info won)
   (declare (type source-info source-info))
-  (compiler-mumble "Compilation ~:[aborted after~;finished in] ~A.~&"
+  (compiler-mumble "Compilation ~:[aborted after~;finished in~] ~A.~&"
 		   won
 		   (elapsed-time-to-string
 		    (- (get-universal-time)
@@ -1070,7 +1069,6 @@
 	 (source (verify-source-files source))
 	 (source-info (make-file-source-info source))
 	 (default (pathname (first source))))
-    (start-error-output source-info)
     (unwind-protect
 	(progn
 	  #-new-compiler
@@ -1104,6 +1102,8 @@
 					 *error-output*
 					 error-output)
 				     error-file-stream))))
+
+	  (start-error-output source-info)
 	  (setq error-severity
 		(sub-compile-file source-info fasl-file))
 	  (setq compile-won t))
@@ -1116,7 +1116,7 @@
       (when fasl-file
 	(close-fasl-file fasl-file (not compile-won))
 	(when compile-won
-	  (compiler-mumble "~&~A written.~%"
+	  (compiler-mumble "~2&~A written.~%"
 			   (namestring (truename output-file-name)))))
 
       (finish-error-output source-info compile-won)
