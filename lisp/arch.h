@@ -1,3 +1,12 @@
+/*
+
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.4 1994/10/27 17:13:54 ram Exp $
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
+
 #ifndef __ARCH_H__
 #define __ARCH_H__
 

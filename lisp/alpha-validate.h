@@ -1,3 +1,12 @@
+/*
+
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-validate.h,v 1.2 1994/10/27 17:13:54 ram Exp $
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
+
 
 #define READ_ONLY_SPACE_START   (0x20000000)
 #define READ_ONLY_SPACE_SIZE    (0x04000000)

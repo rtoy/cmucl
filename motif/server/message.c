@@ -1,3 +1,12 @@
+/*
+
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.3 1994/10/27 17:16:51 ram Exp $
+
+ This code was written as part of the CMU Common Lisp project at
+ Carnegie Mellon University, and has been placed in the public domain.
+
+*/
+
 #include <stdio.h>
 #include <X11/Intrinsic.h>
 
