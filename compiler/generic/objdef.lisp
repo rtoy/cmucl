@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.21 1992/12/13 14:47:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.22 1992/12/15 20:09:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,13 +41,7 @@
 	  structure-header-type funcallable-instance-header-type
 	  fdefn-type vector-normal-subtype
 	  vector-valid-hashing-subtype vector-must-rehash-subtype
-	  primitive-object primitive-object-p
-	  primitive-object-name primitive-object-header
-	  primitive-object-lowtag primitive-object-options
-	  primitive-object-slots primitive-object-size
-	  primitive-object-variable-length slot-name slot-docs slot-rest-p
-	  slot-offset slot-length slot-options *primitive-objects*
-	  define-for-each-primitive-object))
+	  forwarding-pointer-type scavenger-hook-type))
 
 (in-package "KERNEL")
 (export '(%set-funcallable-instance-function %make-funcallable-instance))
@@ -139,7 +133,8 @@
   byte-code-closure
   dylan-function-header
   closure-function-header
-  #-gengc return-pc-header #+gengc forwarding-pointer
+  #-gengc return-pc-header
+  #+gengc forwarding-pointer
   value-cell-header
   symbol-header
   base-char
@@ -147,7 +142,9 @@
   unbound-marker
   weak-pointer
   structure-header
-  fdefn)
+  fdefn
+  #+gengc scavenger-hook
+  )
 
 
 ;;; The different vector subtypes.
@@ -237,12 +234,12 @@
 
 (define-primitive-object (vector :lowtag other-pointer-type :header t)
   (length :ref-trans c::vector-length
-	  :type index
-	  :ref-known (flushable foldable))
+	  :type index)
   (data :rest-p t :c-type "unsigned long"))
 
 (define-primitive-object (code :lowtag other-pointer-type :header t)
-  (code-size :ref-known (flushable movable)
+  (code-size :type index
+	     :ref-known (flushable movable)
 	     :ref-trans %code-code-size)
   (entry-points :type (or function null)
 		:ref-known (flushable)
