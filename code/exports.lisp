@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.32 1990/06/09 17:30:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.33 1990/06/16 15:56:30 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -102,6 +102,7 @@
 	  *print-escape* *print-gensym* *print-length* *print-level*
 	  *print-pretty* *print-radix* *query-io* *random-state*
 	  *read-base* *read-default-float-format* *read-suppress*
+
 	  *readtable* *standard-input* *standard-output* *terminal-io*
 	  *trace-output* + ++ +++ - / // /// /= 1+ 1- < <= = > >= abort abs
 	  acons acos acosh adjoin adjust-array adjustable-array-p
@@ -267,23 +268,24 @@
 (export '(%array-fill-pointer %array-available-elements %array-data-vector
 	  %array-displacement %array-displaced-p %array-dimension
 	  %check-bound %dpb %ldb %negate *empty-type* *eval-stack-top*
-	  *null-type* *universal-type* *wild-type* 32bit-logical-not
-	  32bit-logical-nor 32bit-logical-and 32bit-logical-or
-	  32bit-logical-xor always-subtypep args-type args-type-allowp
-	  args-type-keyp args-type-keywords args-type-optional args-type-p
-	  args-type-required args-type-rest array-rank array-total-size
-	  array-type array-type-complexp array-type-dimensions
-	  array-type-element-type array-type-p
+	  *null-type* *universal-type* *unparse-function-type-simplify*
+	  *wild-type* 32bit-logical-not 32bit-logical-nor 32bit-logical-and
+	  32bit-logical-or 32bit-logical-xor always-subtypep args-type
+	  args-type-allowp args-type-keyp args-type-keywords
+	  args-type-optional args-type-p args-type-required args-type-rest
+	  array-rank array-total-size array-type array-type-complexp
+	  array-type-dimensions array-type-element-type array-type-p
 	  array-type-specialized-element-type ash-index bit-bash-clear
 	  bit-bash-set bit-bash-not bit-bash-copy bit-bash-and bit-bash-ior
 	  bit-bash-xor bit-bash-eqv bit-bash-lognand bit-bash-lognor
 	  bit-bash-andc1 bit-bash-andc2 bit-bash-orc1 bit-bash-orc2
 	  bit-index boole-code boolean byte-specifier callable char-int
 	  consed-sequence constant-type constant-type-p constant-type-type
-	  containing-integer-type copy-from-system-area copy-to-system-area
+	  containing-integer-type copy-from-system-area copy-numeric-type
+	  copy-to-system-area
 	  csubtypep ctype ctype-of ctype-p ctypep data-vector-ref
-	  data-vector-set filename float-digits float-exponent
-	  float-format-max float-radix form function-type
+	  data-vector-set error-number-or-lose filename float-digits
+	  float-exponent float-format-max float-radix form function-type
 	  function-type-allowp function-type-keyp function-type-keywords
 	  function-type-optional function-type-p function-type-required
 	  function-type-rest function-type-returns function-type-wild-args
@@ -297,24 +299,26 @@
 	  native-byte-order negate never-subtypep numeric-contagion
 	  numeric-type numeric-type-class numeric-type-complexp
 	  numeric-type-format numeric-type-high numeric-type-low
-	  numeric-type-p parse-unknown-type parse-unknown-type-specifier
-	  pathname-device pathname-directory pathname-host pathname-name
-	  pathname-type pathname-version pathnamelike sequence-end
-	  simple-unboxed-array single-value-type specifier-type streamlike
-	  stringable stringlike structure-type structure-type-name
-	  structure-type-p system-area-clear system-area-copy truth
-	  type-expand type-init two-arg-* two-arg-+ two-arg-- two-arg-/
-	  two-arg-/= two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->=
-	  two-arg-and two-arg-gcd two-arg-ior two-arg-lcm two-arg-xor
-	  type-difference type-intersect type-intersection type-specifier
-	  type-specifier-symbols type-union type/= type= types-intersect
-	  unboxed-array union-type union-type-p union-type-types
-	  unknown-type unknown-type-p unknown-type-specifier
-	  values-subtypep values-type values-type-allowp
-	  values-type-intersect values-type-intersection values-type-keyp
-	  values-type-keywords values-type-optional values-type-p
-	  values-type-required values-type-rest values-type-union
-	  values-types values-types-intersect void))
+	  numeric-type-p parse-lambda-list parse-unknown-type
+	  parse-unknown-type-specifier pathname-device pathname-directory
+	  pathname-host pathname-name pathname-type pathname-version
+	  pathnamelike sequence-end simple-unboxed-array single-value-type
+	  specifier-type streamlike stringable stringlike structure-type
+	  structure-type-name structure-type-p system-area-clear
+	  system-area-copy truth type-expand type-init two-arg-* two-arg-+
+	  two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<= two-arg-=
+	  two-arg-> two-arg->= two-arg-and two-arg-gcd two-arg-ior
+	  two-arg-lcm two-arg-xor type-difference type-intersect
+	  type-intersection type-specifier type-specifier-symbols
+	  type-union type/= type= types-intersect unboxed-array union-type
+	  union-type-p union-type-types unknown-type unknown-type-p
+	  unknown-type-specifier values-specifier-type
+	  values-specifier-type-cache-clear values-subtypep
+	  values-type values-type-allowp values-type-intersect
+	  values-type-intersection values-type-keyp values-type-keywords
+	  values-type-optional values-type-p values-type-required
+	  values-type-rest values-type-union values-types
+	  values-types-intersect void))
 
 
 (in-package "EXTENSIONS")
@@ -383,11 +387,12 @@
  	  serve-selection-clear serve-selection-notify
  	  serve-selection-request serve-unmap-notify
  	  serve-visibility-notify set-symbol-function-carefully short
- 	  short-floatp signal single-floatp structurep translate-character
- 	  translate-mouse-character truly-the uncompile undefined-value
- 	  unencapsulate unsigned-char unsigned-int unsigned-long
- 	  unsigned-short void with-clx-event-handling
-	  weak-pointer weak-pointer-p make-weak-pointer weak-pointer-value))
+	  short-floatp signal single-floatp structurep symbolicate
+	  translate-character translate-mouse-character truly-the
+	  uncompile undefined-value unencapsulate unsigned-char
+	  unsigned-int unsigned-long unsigned-short void
+	  with-clx-event-handling weak-pointer weak-pointer-p
+ 	  make-weak-pointer weak-pointer-value))
 
 
 (in-package "SYSTEM")
