@@ -359,14 +359,22 @@
 
 (eval-when (compile eval)
 
-;;; We could use a rotate function here, but that isn't in ucode, so
-;;; instead we Xor the number with a lsh'ed version of itself...
-;;;
-(defmacro sxmash (x num)
-  (let ((n-x (gensym)))
-    `(let ((,n-x ,x))
-       (declare (fixnum ,n-x))
-       (abs (logxor (the fixnum (ash ,n-x ,num)) ,n-x)))))
+
+(defconstant sxmash-total-bits 26)
+(defconstant sxmash-rotate-bits 7)
+
+(defmacro sxmash (place with)
+  (let ((n-with (gensym)))
+    `(let ((,n-with ,with))
+       (declare (fixnum ,n-with))
+       (setf ,place
+	     (logxor (ash ,n-with ,(- sxmash-rotate-bits sxmash-total-bits))
+		     (ash (logand ,n-with
+				  ,(1- (ash 1
+					    (- sxmash-total-bits
+					       sxmash-rotate-bits))))
+			  ,sxmash-rotate-bits)
+		     (the fixnum ,place))))))
 
 (defmacro sxhash-simple-string (sequence)
   `(%primitive sxhash-simple-string ,sequence))
@@ -391,32 +399,27 @@
 	    (hash 2))
 	   ((or (atom sequence) (= index sxhash-max-len)) hash)
 	 (declare (fixnum hash index))
-	 (setq hash
-	       (sxmash
-		(logxor
-		 hash
-		 (internal-sxhash (car sequence) (1+ ,depth)))
-		7)))))
+	 (sxmash hash (internal-sxhash (car sequence) (1+ ,depth))))))
+
 
 ); eval-when (compile eval)
 
 
-;;; This multi-level type dispatch is faster, since typecase doesn't
-;;; turn into a real dispatch.
-;;;
 (defun sxhash (s-expr)
   "Computes a hash code for S-EXPR and returns it as an integer."
   (internal-sxhash s-expr 0))
 
+
 (defun internal-sxhash (s-expr depth)
   (typecase s-expr
-    (array
-     (typecase s-expr
-       (simple-string (sxhash-simple-string s-expr))
-       (string (sxhash-string s-expr))
-       (t (array-rank s-expr))))
-    (symbol (sxhash-simple-string (symbol-name s-expr)))
+    ;; The pointers and immediate types.
     (list (sxhash-list s-expr depth))
+    (fixnum (abs s-expr))
+    #+nil
+    (structure ???)
+    ;; Other-pointer types.
+    (simple-string (sxhash-simple-string s-expr))
+    (symbol (sxhash-simple-string (symbol-name s-expr)))
     (number
      (etypecase s-expr
        (integer (ldb (byte 23 0) s-expr))
@@ -428,6 +431,11 @@
 			     (internal-sxhash (denominator s-expr) 0))))
        (complex (the fixnum (+ (internal-sxhash (realpart s-expr) 0)
 			       (internal-sxhash (imagpart s-expr) 0))))))
+    (array
+     (typecase s-expr
+       (string (sxhash-string s-expr))
+       (t (array-rank s-expr))))
     #+nil
     (compiled-function (%primitive header-length s-expr))
+    ;; Everything else.
     (t (%primitive make-fixnum s-expr))))
