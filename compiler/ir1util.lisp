@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.50 1992/01/21 15:54:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.51 1992/01/24 07:49:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -341,6 +341,31 @@
 ;;;
 (defun source-path-forms (path)
   (subseq path 0 (position 'original-source-start path)))
+
+
+;;; NODE-SOURCE-FORM  --  Interface
+;;;
+;;;    Return the innermost source form for Node.
+;;;
+(defun node-source-form (node)
+  (declare (type node node))
+  (let* ((path (node-source-path node))
+	 (forms (source-path-forms path)))
+    (if forms
+	(first forms)
+	(values (find-original-source path)))))
+
+
+;;; CONTINUATION-SOURCE-FORM  --  Interface
+;;;
+;;;    Return NODE-SOURCE-FORM, T if continuation has a single use, otherwise
+;;; NIL, NIL.
+;;;
+(defun continuation-source (cont)
+  (let ((use (continuation-use cont)))
+    (if use
+	(values (node-source-form use) t)
+	(values nil nil))))
 
 
 ;;; MAKE-LEXENV  --  Interface
