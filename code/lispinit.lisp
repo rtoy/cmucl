@@ -75,6 +75,9 @@
 
 (defparameter %fasl-code-format 6)
 
+;;; Must be initialized in %INITIAL-FUNCTION before the DEFVAR runs...
+(proclaim '(special *gc-inhibit* *already-maybe-gcing*
+		    *need-to-collect-garbage* *gc-verbose*))
 
 ;;;; Global ports:
  
@@ -86,17 +89,6 @@
 
 (defvar *nameserverport* ()
   "Port to the name server.")
-
-
-;;; GC stuff.
-
-(defvar *gc-inhibit* nil)	; Inhibits GC's.
-
-(defvar *already-maybe-gcing* nil) ; Inhibits recursive GC's.
-
-(defvar *need-to-collect-garbage* nil
-  "*Need-to-collect-garbage* is set to T when GC is disabled, but the system
-  needs to do a GC.  When GC is enabled again, the GC is done then.")
 
 
 ;;; Software interrupt stuff.
@@ -513,6 +505,17 @@
       "Make an object set for use by a RPC/xevent server.  Name is for
       descriptive purposes only.")
 
+;;; Default-Default-Handler  --  Internal
+;;;
+;;;    If no such operation defined, signal an error.
+;;;
+(defun default-default-handler (object)
+  (alien-bind ((msg (server-message-msg server-message)))
+    (error "No operation for ID ~D on ~S in ~S."
+	   (alien-access (mach:msg-id (alien-value msg))) object
+	   (car (gethash (alien-access (mach:msg-localport (alien-value msg)))
+			 *port-table*)))))
+
 
 ;;; MAP-XWINDOW and MAP-PORT return as multiple values the object and
 ;;; object set mapped to by a xwindow or port in *xwindow-table* or
@@ -756,6 +759,7 @@
   (setq *already-maybe-gcing* t)
   (setf *gc-inhibit* t)
   (setf *need-to-collect-garbage* nil)
+  (setq *gc-verbose* t)
   (%primitive print "In initial-function, and running.")
 
   ;; Many top-level forms call INFO, (SETF INFO).
