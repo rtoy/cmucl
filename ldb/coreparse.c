@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.3 1990/03/29 00:50:53 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.4 1990/03/29 02:58:03 ch Exp $ */
 #include <stdio.h>
 #include <mach.h>
 #include <sys/types.h>
@@ -50,7 +50,9 @@ long *ptr;
 			os_map(fd, offset, addr, len);
 		}
 
+#if 0
 		printf("Space ID = %d, free pointer = 0x%08x.\n", id, free_pointer);
+#endif
 
 		switch (id) {
 		case DYNAMIC_SPACE_ID:
