@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.16 1992/03/24 11:03:16 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.17 1992/12/10 00:35:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 	  bit-and bit-ior bit-xor bit-eqv bit-nand bit-nor bit-andc1 bit-andc2
 	  bit-orc1 bit-orc2 bit-not array-has-fill-pointer-p
 	  fill-pointer vector-push vector-push-extend vector-pop adjust-array
-          adjustable-array-p row-major-aref))
+          adjustable-array-p row-major-aref array-displacement))
 
 (in-package "KERNEL")
 (export '(%with-array-data))
