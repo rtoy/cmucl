@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.43 2004/09/27 21:54:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.44 2004/10/05 22:01:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1529,7 +1529,11 @@
     (with-output-to-string pprint-block)
     (with-package-iterator pprint-block)
     (with-simple-restart pprint-block)
-    (with-standard-io-syntax pprint-progn)))
+    (with-standard-io-syntax pprint-progn)
+
+    ;; Other things in CMUCL that we ought to try to print out nicely.
+    (ext:collect pprint-block)
+    (ansi-loop::with-loop-list-collection-head pprint-block)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
