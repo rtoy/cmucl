@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.25 1997/02/05 15:41:50 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.26 1997/02/12 22:12:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,8 +318,7 @@
 		 (acos (real -1.0 1.0))
 		 (acosh (real 1.0))
 		 (atanh (real -1.0 1.0))
-		 (sqrt (real 0.0))
-		 ))
+		 (sqrt (real 0.0))))
   (destructuring-bind (name type) stuff
     (let ((type (specifier-type type)))
       (setf (function-info-derive-type (function-info-or-lose name))
@@ -452,41 +451,18 @@
     (deftransform name ((x y) '(double-float double-float)
 			rtype :eval-name t :when :both)
       `(,prim x y))))
-#+nil
-(deftransform log ((x y) (float float) float)
-  '(/ (log x) (log y)))
 
 ;;; ANSI says log with base zero returns zero.
 (deftransform log ((x y) (float float) float)
   '(if (zerop y) y (/ (log x) (log y))))
 
 
-;;; Return the float format of the result of an elementary function.
-;;; If the format is NIL (which means type FLOAT), we return NIL.  If
-;;; the format is 'DOUBLE-FLOAT, we return that.  For any other case,
-;;; we return 'SINGLE-FLOAT.
-  
-(proclaim '(inline elfun-format numeric-type-real-p))  
-(defun elfun-float-format (format)
-  (if format
-      (if (eq format 'double-float)
-	  'double-float
-	  'single-float)))
-
-#+propagate-fun-type
-(progn
-;;;; Optimizers for elementary functions
-;;;;
-;;;; These optimizers compute the output range of the elementary
-;;;; function, based on the domain of the input.
-;;;;
-
 ;;; Handle some simple transformations
   
 (deftransform abs ((x) ((complex double-float)) double-float :when :both)
   '(%hypot (realpart x) (imagpart x)))
 
-(deftransform abs ((x) ((complex single-float)) single-float :when :both)
+(deftransform abs ((x) ((complex single-float)) single-float)
   '(coerce (%hypot (coerce (the single-float (realpart x)) 'double-float)
 		  (coerce (the single-float (imagpart x)) 'double-float))
 	  'single-float))
@@ -494,7 +470,7 @@
 (deftransform phase ((x) ((complex double-float)) double-float :when :both)
   '(%atan2 (imagpart x) (realpart x)))
 
-(deftransform phase ((x) ((complex single-float)) single-float :when :both)
+(deftransform phase ((x) ((complex single-float)) single-float)
   '(coerce (%atan2 (coerce (the single-float (imagpart x)) 'double-float)
 		  (coerce (the single-float (realpart x)) 'double-float))
 	  'single-float))
@@ -504,9 +480,17 @@
       (float pi x)
       (float 0 x)))
 
+#+propagate-fun-type
+(progn
+;;;; Optimizers for elementary functions
+;;;;
+;;;; These optimizers compute the output range of the elementary
+;;;; function, based on the domain of the input.
+;;;;
 
 ;;; The number is of type REAL.
 
+(proclaim '(inline numeric-type-real-p))
 (defun numeric-type-real-p (type)
   (and (numeric-type-p type)
        (eq (numeric-type-complexp type) :real)))
@@ -547,16 +531,22 @@
 
 		     ;; The call to the limit-fun has (most) traps
 		     ;; disabled.  It can naively compute the result,
-		     ;; but it must call set-bound to make sure any
-		     ;; overflow is converted to NIL appropriately.
+		     ;; and return infinity for the value.  We convert
+		     ;; the infinity to nil, as needed.
 		     (multiple-value-bind (,lo-lim ,hi-lim)
 			 (funcall ,limit-fun lo hi)
 		       (make-numeric-type :class 'float
 					  :format (elfun-float-format
 						   (numeric-type-format ,type))
 					  :complexp :real
-					  :low ,lo-lim
-					  :high ,hi-lim)))
+					  :low (if (and (floatp ,lo-lim)
+							(float-infinity-p ,lo-lim))
+						   nil
+						   ,lo-lim)
+					  :high (if (and (floatp ,hi-lim)
+							 (float-infinity-p ,hi-lim))
+						    nil
+						    ,hi-lim))))
 		;; Restore the floating-point modes
 		(apply #'set-floating-point-modes ,fp-mode)
 		))))))))
@@ -576,14 +566,8 @@
 		      ;; lower bound and the upper bound are the values
 		      ;; of the function at the bounds of the input
 		      ;; range.
-		      (values (if ,lo-bnd
-				  (set-bound (,name (bound-value ,lo-bnd))
-					     (consp ,lo-bnd))
-				  ,def-lo-bnd)
-			      (if ,hi-bnd
-				  (set-bound (,name (bound-value ,hi-bnd))
-					     (consp ,hi-bnd))
-				  ,def-hi-bnd))))))))
+		      (values (or (bound-func #',name ,lo-bnd) ,def-lo-bnd)
+			      (or (bound-func #',name ,hi-bnd) ,def-hi-bnd))))))))
 
   ;; These functions are easy because they are defined for the whole
   ;; real line.
@@ -593,7 +577,7 @@
   (frob asinh t nil nil)
 
   ;; These functions are only defined for part of the real line.  The
-  ;; condition selectes the desired part of the line.
+  ;; condition selects the desired part of the line.
   (frob sqrt (and lo
 		  (>= (bound-value lo) 0))
 	0 nil)
@@ -606,8 +590,8 @@
   (frob atanh (and lo hi
 		   (>= (bound-value lo) -1)
 		   (<= (bound-value hi) 1))
-	-1 1)
-  )
+	-1 1))
+
 
 ;;; acos is monotonic decreasing, so we need to swap the function
 ;;; values at the lower and upper bounds of the input domain.
@@ -618,10 +602,8 @@
 	(>= (bound-value lo) -1)
 	(<= (bound-value hi) 1))
    #'(lambda (lo hi)
-       (values (if hi
-		   (set-bound (acos (bound-value hi)) (consp hi)))
-	       (if lo
-		   (set-bound (acos (bound-value lo)) (consp lo)))))))
+       (values (bound-func #'acos hi)
+	       (bound-func #'acos lo)))))
 
 ;;; Compute return type for EXPT.  No bounds are computed because
 ;;; that's pretty complicated in general.  We only return a lower
@@ -745,13 +727,10 @@
 	      y
 	      t
 	      #'(lambda (lo hi)
-		  (values (if lo
-			      (set-bound (atan (bound-value lo)) (consp lo))
-			      #.(- (/ pi 2)))
-			  (if hi
-			      (set-bound (atan (bound-value hi)) (consp hi))
-			      #.(/ pi 2))))))))))
+		  (values (or (bound-func #'atan lo) #.(- (/ pi 2)))
+			  (or (bound-func #'atan hi) #.(/ pi 2))))))))))
 
+#+nil
 (defoptimizer (cosh derive-type) ((num))
   (let ((type (continuation-type num)))
     (when (numeric-type-real-p type)
@@ -791,6 +770,17 @@
 	    ;; Restore the floating-point modes
 	    (apply #'set-floating-point-modes fp-modes)))))))
 
+(defoptimizer (cosh derive-type) ((num))
+  (elfun-derive-type
+   num t
+   #'(lambda (lo hi)
+       ;; Note that cosh(x) = cosh(|x|), and that cosh is monotonic
+       ;; increasing for the positive line.
+       (let ((x (interval-abs (make-interval :low lo :high hi))))
+	 (values (bound-func #'cosh (interval-low x))
+		 (bound-func #'cosh (interval-high x)))))))
+
+#+nil
 (defoptimizer (phase derive-type) ((num))
   (let ((type (continuation-type num)))
     (cond ((numeric-type-real-p type)
@@ -835,21 +825,71 @@
 			      :complexp :real
 			      :low #.(- pi)
 			      :high pi)))))
+
+(defoptimizer (phase derive-type) ((num))
+  (let ((type (continuation-type num)))
+    ;; Warning: This optimizer doesn't yet handle the case of -0.0.
+    ;; It returns 0 for this case instead of pi.  Need to fix this.
+    (cond ((numeric-type-real-p type)
+	   (case (interval-range-info (numeric-type->interval type))
+	     ('+
+	      ;; The number is positive, so the phase is 0.
+	      (make-numeric-type :class 'float
+				 :format (elfun-float-format
+					  (numeric-type-format type))
+				 :complexp :real
+				 :low 0
+				 :high 0))
+	     ('-
+	      ;; The number is always negative, so the phase is pi
+	      (make-numeric-type :class 'float
+				 :format (elfun-float-format
+					  (numeric-type-format type))
+				 :complexp :real
+				 :low pi
+				 :high pi))
+	     (t
+	      ;; We can't tell.  The result is 0 or pi.  Use a union type for this
+	      (make-union-type
+	       (list
+		(make-numeric-type :class 'float
+				   :format (elfun-float-format
+					    (numeric-type-format type))
+				   :complexp :real
+				   :low 0
+				   :high 0)
+		(make-numeric-type :class 'float
+				   :format (elfun-float-format
+					    (numeric-type-format type))
+				   :complexp :real
+				   :low pi
+				   :high pi))))))
+	  (t
+	   ;; We have a complex number.  The answer is the range -pi
+	   ;; to pi.  (-pi is included because we have -0.)
+	   (make-numeric-type :class 'float
+			      :format (elfun-float-format
+				       (numeric-type-format type))
+			      :complexp :real
+			      :low #.(- pi)
+			      :high pi)))))
 		 
+) ;end progn for propagate-fun-type
+
 ;;; Make REALPART and IMAGPART return the appropriate types.  This
 ;;; helps a lot in optimized code.
 
+;;; Doesn't work yet.
 #+nil
+(progn
 (defknown (%realpart)
     (complex) real
     (flushable movable))
 
-#+nil
 (defknown (%imagpart)
     (complex) real
     (flushable movable))
 
-#+nil
 (defoptimizer (%realpart derive-type) ((num))
   (let ((type (continuation-type num)))
     (cond ((numeric-type-real-p type)
@@ -869,7 +909,6 @@
 			      :low (numeric-type-low type)
 			      :high (numeric-type-high type))))))
 
-#+nil
 (defoptimizer (%imagpart derive-type) ((num))
   (let ((type (continuation-type num)))
     (cond ((numeric-type-real-p type)

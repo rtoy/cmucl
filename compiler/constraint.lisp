@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.16 1997/01/18 14:31:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.17 1997/02/12 22:12:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -321,19 +321,36 @@
 ;;;
 (defun constrain-float-type (x y greater or-equal)
   (declare (type numeric-type x y))
-  (flet ((exclude (x)
-	   (cond ((not x) nil)
-		 (or-equal x)
-		 (greater
-		  (if (consp x)
-		      (car x)
-		      x))
-		 (t
-		  (if (consp x)
-		      x
-		      (list x)))))
-	 (bound (x)
-	   (if greater (numeric-type-low x) (numeric-type-high x))))
+  (labels ((exclude (x)
+	     (cond ((not x) nil)
+		   (or-equal x)
+		   (greater
+		    (if (consp x)
+			(car x)
+			x))
+		   (t
+		    (if (consp x)
+			x
+			(list x)))))
+	   (bound (x)
+	     (if greater (numeric-type-low x) (numeric-type-high x)))
+	   (max-lower-bound (x y)
+	     ;; Both x and y are not null.  Find the max.
+	     (let ((res (max (bound-value x) (bound-value y))))
+	       ;; An open lower bound is greater than a close
+	       ;; lower bound because the open bound doesn't
+	       ;; contain the bound, so choose an open lower
+	       ;; bound.
+	       (set-bound res (or (consp x) (consp y)))))
+	   (min-upper-bound (x y)
+	     ;; Same as above, but for the min of upper bounds
+	     ;; Both x and y are not null.  Find the min.
+	     (let ((res (min (bound-value x) (bound-value y))))
+	       ;; An open upper bound is less than a closed
+	       ;; upper bound because the open bound doesn't
+	       ;; contain the bound, so choose an open lower
+	       ;; bound.
+	       (set-bound res (or (consp x) (consp y))))))
     #+nil
     (format t "~%constraint-float-type:~%  ~s~%  ~s~%  ~s~%  ~s~%"
 	    x y greater or-equal)
@@ -344,9 +361,9 @@
 			    ((not y-bound)
 			     x-bound)
 			    (greater
-			     (max-bound x-bound y-bound))
+			     (max-lower-bound x-bound y-bound))
 			    (t
-			     (min-bound x-bound y-bound))))
+			     (min-upper-bound x-bound y-bound))))
 	   (res (copy-numeric-type x)))
       #+nil
       (format t "x-bound, y-bound, new-bound = ~s, ~s, ~s~%"
