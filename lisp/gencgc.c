@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.17 2000/01/09 19:36:07 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.18 2000/01/19 18:09:16 dtc Exp $
  *
  */
 
@@ -6067,11 +6067,6 @@ void	collect_garbage(unsigned last_gen)
 
   update_x86_dynamic_space_free_pointer();
 
-  /* Now done by scrub-control-stack in sub-gc. */
-#if 0
-  zero_stack();
-#endif
-
   current_region_free_pointer = boxed_region.free_pointer;
   current_region_end_addr = boxed_region.end_addr;
 
@@ -6181,10 +6176,6 @@ void	gc_free_heap(void)
   unboxed_region.start_addr = page_address(0);
   unboxed_region.free_pointer = page_address(0);
   unboxed_region.end_addr = page_address(0);
-
-#if 0 /* purify is currently running on the C stack so don't do this */
-  zero_stack();
-#endif
 
   last_free_page = 0;
   SetSymbolValue(ALLOCATION_POINTER, (lispobj) heap_base);
