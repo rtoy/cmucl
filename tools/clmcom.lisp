@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.3 1993/02/01 12:17:51 garland Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.4 1993/02/03 18:47:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,7 +30,7 @@
  (comf "target:motif/lisp/conversion" :load t))
 
 (with-compiler-log-file
-    ("target:compiler-motif.log"
+    ("target:compile-motif.log"
      :optimize '(optimize (speed 2) (ext:inhibit-warnings 2)))
 
   (comf "target:motif/lisp/interface-glue" :load t)
