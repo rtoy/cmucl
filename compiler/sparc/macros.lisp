@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.1 1990/11/30 17:04:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.2 1991/03/22 14:02:52 wlott Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -426,33 +426,4 @@
        (emit-label ,label))))
 
 
-
-
-(defmacro pad-data-block (words)
-  `(logandc2 (+ (ash ,words word-shift) lowtag-mask) lowtag-mask))
-
-
-(defmacro defenum ((&key (prefix "") (suffix "") (start 0) (step 1))
-		   &rest identifiers)
-  (let ((results nil)
-	(index 0)
-	(start (eval start))
-	(step (eval step)))
-    (dolist (id identifiers)
-      (when id
-	(multiple-value-bind
-	    (root docs)
-	    (if (consp id)
-		(values (car id) (cdr id))
-		(values id nil))
-	  (push `(defconstant ,(intern (concatenate 'simple-string
-						    (string prefix)
-						    (string root)
-						    (string suffix)))
-		   ,(+ start (* step index))
-		   ,@docs)
-		results)))
-      (incf index))
-    `(eval-when (compile load eval)
-       ,@(nreverse results))))
 
