@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.20 1992/10/20 23:37:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.21 1992/12/17 09:39:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,7 +175,7 @@
     (emit-label start-lab)
     ;; Allocate function header.
     (inst function-header-word)
-    (dotimes (i (1- vm:function-header-code-offset))
+    (dotimes (i (1- vm:function-code-offset))
       (inst word 0))
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
@@ -821,7 +821,7 @@ default-value-8
 	   
 	   (note-this-location vop :call-site)
 	   (inst j function
-		 (- (ash vm:function-header-code-offset vm:word-shift)
+		 (- (ash vm:function-code-offset vm:word-shift)
 		    vm:function-pointer-type))
 	   (inst move code-tn function))
 

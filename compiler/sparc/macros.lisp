@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.8 1992/12/05 21:56:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.9 1992/12/17 09:40:58 wlott Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -81,9 +81,8 @@
 (defmacro lisp-jump (function)
   "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
-     (inst j ,function (- (ash function-header-code-offset
-			       word-shift)
-			  function-pointer-type))
+     (inst j ,function
+	   (- (ash function-code-offset word-shift) function-pointer-type))
      (move code-tn ,function)))
 
 (defmacro lisp-return (return-pc &key (offset 0) (frob-code t))
