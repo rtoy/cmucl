@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echo.lisp,v 1.3 1991/02/08 16:34:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echo.lisp,v 1.4 1991/10/23 11:00:02 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,7 +158,8 @@
 
 
 ;;; LOUD-MESSAGE -- Public.
-;;;    Like message, only more provocative.
+;;;
+;;; Like message, only more provocative.
 ;;;
 (defun loud-message (&rest args)
   "This is the same as MESSAGE, but it beeps and clears the echo area before
@@ -166,6 +167,24 @@
   (beep)
   (clear-echo-area)
   (apply #'message args))
+
+
+(defhvar "Raise Echo Area When Modified"
+  "When set, Hemlock raises the echo area window when output appears there."
+  :value nil)
+;;;
+(defun raise-echo-area-when-modified (buffer modified)
+  (when (and (value ed::raise-echo-area-when-modified)
+	     (eq buffer *echo-area-buffer*)
+	     modified)
+    (let* ((hunk (window-hunk *echo-area-window*))
+	   (win (window-group-xparent (bitmap-hunk-window-group hunk))))
+      (xlib:map-window win)
+      (setf (xlib:window-priority win) :above)
+      (xlib:display-force-output
+       (bitmap-device-display (device-hunk-device hunk))))))
+;;;
+(add-hook buffer-modified-hook 'raise-echo-area-when-modified)
 
 
 
@@ -343,7 +362,7 @@
    by the current buffer, and by any modes for the current buffer."
   (do ((tables (list (buffer-variables *current-buffer*)
 		     *global-variable-names*)
-	       (cons (hi::mode-object-variables (car mode)) tables))
+	       (cons (mode-object-variables (car mode)) tables))
        (mode (buffer-mode-objects *current-buffer*) (cdr mode)))
       ((null mode) tables)))
 
