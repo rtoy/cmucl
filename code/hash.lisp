@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.20 1992/10/26 03:44:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.21 1992/11/04 17:51:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 	  sxhash))
 
 (in-package :ext)
-(export '(*hash-table-tests*))
+(export '(define-hash-table-test))
 
 (in-package :common-lisp)
 
@@ -136,11 +136,25 @@
 
 
 
-;;;; Construction and simple accessors.
+;;;; User defined hash table tests.
 
-;;; *HASH-TABLE-TESTS* -- Public.
+;;; *HASH-TABLE-TESTS* -- Internal.
 ;;; 
 (defvar *hash-table-tests* nil)
+
+;;; DEFINE-HASH-TABLE-TEST -- Public.
+;;;
+(defun define-hash-table-test (name test-fun hash-fun)
+  "Define a new kind of hash table test."
+  (declare (type symbol name)
+	   (type function test-fun hash-fun))
+  (setf *hash-table-tests*
+	(cons (list name test-fun hash-fun)
+	      (remove name *hash-table-tests* :test #'eq :key #'car)))
+  name)
+
+
+;;;; Construction and simple accessors.
 
 ;;; MAKE-HASH-TABLE -- public.
 ;;; 
