@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/move.lisp,v 1.1 2004/05/24 22:35:00 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/move.lisp,v 1.2 2004/06/10 01:43:01 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,6 +79,7 @@
 	       (not (or (location= x y)
 			(and (sc-is x any-reg descriptor-reg immediate)
 			     (sc-is y control-stack))))))
+  (:temporary (:sc any-reg) temp)
   (:effects)
   (:affected)
   (:generator 0
@@ -89,7 +90,12 @@
 	    (integer
 	     (if (and (zerop val) (sc-is y any-reg descriptor-reg))
 		 (inst xor y y)
-	       (inst mov y (fixnumize val))))
+		 (if (sc-is y control-stack)
+		     (progn
+		       ;; we can't have 64-bit immediates here
+		       (inst mov temp (fixnumize val))
+		       (inst mov y temp))
+		     (inst mov y (fixnumize val)))))
 	    (symbol
 	     (inst mov y (+ nil-value (static-symbol-offset val))))
 	    (character
@@ -120,6 +126,7 @@
 			       (sc-is x control-stack))))
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y any-reg descriptor-reg))))
+  (:temporary (:sc any-reg) temp)
   (:results (y))
   (:generator 0
     (sc-case y
@@ -155,7 +162,9 @@
 	       ;; Lisp stack
 	       (etypecase val
 		 (integer
-		  (storew (fixnumize val) fp (- (1+ (tn-offset y)))))
+		  ;; we can't have 64-bit immediates here
+		  (inst mov temp (fixnumize val))
+		  (storew temp fp (- (1+ (tn-offset y)))))
 		 (symbol
 		  (storew (+ nil-value (static-symbol-offset val))
 			  fp (- (1+ (tn-offset y)))))
