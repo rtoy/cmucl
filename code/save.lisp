@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.42 2001/12/08 18:42:39 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.43 2002/01/18 17:58:15 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,7 +110,8 @@
 				 (load-init-file t)
 				 (site-init "library:site-init")
 				 (print-herald t)
-				 (process-command-line t))
+				 (process-command-line t)
+				 (batch-mode nil))
   "Saves a CMU Common Lisp core image in the file of the specified name.  The
   following keywords are defined:
   
@@ -143,7 +144,17 @@
       library:site-init.  No error if this does not exist.
 
   :print-herald
-      If true (the default), print out the lisp system herald when starting."
+      If true (the default), print out the lisp system herald when starting.
+
+  :process-command-line
+      If true (the default), process command-line switches via the normal
+  mechanisms, otherwise ignore all switches (except those processed by the
+  C startup code).
+
+  :batch-mode
+      If nil (the default), then the presence of the -batch command-line
+  switch will invoke batch-mode processing.  If true, the produced core
+  will always be in batch-mode, regardless of any command-line switches."
 
   #+mp (mp::shutdown-multi-processing)
   (when (fboundp 'eval:flush-interpreted-function-cache)
@@ -155,6 +166,7 @@
 	      :environment-name environment-name)
       #-gencgc (gc) #+gencgc (gc :full t))
   (dolist (f *before-save-initializations*) (funcall f))
+  (setq ext:*batch-mode* (if batch-mode t nil))
   (labels
       ((%restart-lisp ()
 	 (with-simple-restart (abort "Skip remaining initializations.")
