@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.15 1991/11/24 23:47:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.16 1992/06/27 21:51:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -295,7 +295,8 @@
 	(when (and (consp entry)
 		   (eq (car entry) kind)
 		   (eq (cdr entry) info))
-	  (setf (tn-offset res) i))))
+	  (setf (tn-offset res) i)
+	  (return))))
 
     (push-in tn-next res (ir2-component-constant-tns component))
     res))  
