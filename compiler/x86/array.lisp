@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.4 1997/04/01 19:24:11 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.5 1997/10/05 16:40:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,9 +91,9 @@
 (define-vop (check-bound)
   (:translate %check-bound)
   (:policy :fast-safe)
-  (:args (array)
-	 (bound :scs (any-reg))
-	 (index :scs (any-reg immediate) :target result))
+  (:args (array :scs (descriptor-reg))
+	 (bound :scs (any-reg descriptor-reg))
+	 (index :scs (any-reg descriptor-reg immediate) :target result))
   (:arg-types * positive-fixnum tagged-num)
   (:results (result :scs (any-reg descriptor-reg)))
   (:result-types positive-fixnum)
