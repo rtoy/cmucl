@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.7 1997/11/04 09:11:21 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.8 1997/11/25 14:21:08 pw Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -1995,3 +1995,79 @@ void collect_garbage()
 #endif
 
 }
+
+/* Some helpers for the debugger. */
+
+/* Scan an area looking for an object which encloses the given
+   pointer. Returns the object start on success or NULL on failure. */
+static lispobj*
+search_space(lispobj *start, size_t words, lispobj *pointer)
+{
+  while(words > 0) {
+    size_t count = 1;
+    lispobj thing = *start;
+    
+    /* If thing is an immediate then this is a cons */
+    if (Pointerp(thing)
+	|| ((thing & 3) == 0) /* fixnum */
+	|| (TypeOf(thing) == type_BaseChar)
+	|| (TypeOf(thing) == type_UnboundMarker))
+      count = 2;
+    else
+      count = sizeOfObject((obj_t)start);
+	      
+    /* Check if the pointer is within this object? */
+    if ((pointer >= start) && (pointer < (start+count))) {
+      /* Found it. */
+      /*	  fprintf(stderr,"* Found %x in %x %x\n",pointer, start, thing);*/
+      return(start);
+    }
+    
+    /* Round up the count */
+    count = CEILING(count,2);
+    
+    start += count;
+    words -= count;
+  }
+  return (NULL);
+}
+
+static lispobj*
+search_read_only_space(lispobj *pointer)
+{
+  lispobj* start = (lispobj*)READ_ONLY_SPACE_START;
+  lispobj* end = (lispobj*)SymbolValue(READ_ONLY_SPACE_FREE_POINTER);
+  if ((pointer < start) || (pointer >= end))
+    return NULL;
+  return (search_space(start, (pointer+2)-start, pointer));
+}
+
+static lispobj*
+search_static_space(lispobj *pointer)
+{
+  lispobj* start = (lispobj*)STATIC_SPACE_START;
+  lispobj* end = (lispobj*)SymbolValue(STATIC_SPACE_FREE_POINTER);
+  if ((pointer < start) || (pointer >= end))
+    return NULL;
+  return (search_space(start, (pointer+2)-start, pointer));
+}
+
+/* Find the code object for the given pc. Return NULL on failure */
+lispobj*
+component_ptr_from_pc(lispobj *pc)
+{
+  lispobj *object = NULL;
+  
+  if (object = search_read_only_space(pc));
+  else
+    object = search_static_space(pc);
+  
+  /* Found anything? */
+  if (object)
+    /* Check if it is a code object. */
+    if (TypeOf(*object) == type_CodeHeader)
+      return(object);
+
+  return (NULL);
+}
+
