@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.13 1990/11/26 18:43:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.14 1990/11/26 18:46:38 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -454,8 +454,7 @@
 	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
     (multiple-value-bind
 	(error-number arguments)
-	(vm:internal-error-arguments
-	 (alien-access (mach:sigcontext-pc (alien-value sc))))
+	(vm:internal-error-arguments (alien-value sc))
       (let ((fp (int-sap (di::escape-register (alien-value sc)
 					      vm::cfp-offset)))
 	    (name (find-interrupted-name))
