@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.6 1990/03/29 21:34:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.7 1990/04/01 17:38:48 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -22,7 +22,7 @@
   (:args (type :scs (any-reg descriptor-reg))
 	 (rank :scs (any-reg descriptor-reg)))
   (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
   (:results (result :scs (descriptor-reg)))
   (:generator 0
     (pseudo-atomic (ndescr)
