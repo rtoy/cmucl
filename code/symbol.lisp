@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.26 1998/03/30 03:25:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.27 1998/05/15 14:54:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -212,7 +212,7 @@
   "Counter for generating unique GENSYM symbols.")
 (declaim (type unsigned-byte *gensym-counter*))
 
-(defun gensym (&optional thing)
+(defun gensym (&optional (thing "G"))
   "Creates a new uninterned symbol whose name is a prefix string (defaults
    to \"G\"), followed by a decimal number.  Thing, when supplied, will
    alter the prefix if it is a string, or be used for the decimal number
@@ -229,7 +229,6 @@
     (multiple-value-bind
 	(prefix int)
 	(etypecase thing
-	  (null (values "G" old))
 	  (simple-string (values thing old))
 	  (fixnum (values "G" thing))
 	  (string (values (coerce thing 'simple-string) old)))
