@@ -95,8 +95,8 @@
 
 (defhvar "Slave Utility"
   "This is the pathname of the utility to fire up slave Lisps.  It defaults
-   to /usr/misc/.lisp/bin/lisp."
-  :value "/usr/misc/.lisp/bin/lisp")
+   to /usr/misc/.cmucl/bin/lisp."
+  :value "/usr/misc/.cmucl/bin/lisp")
 
 (defhvar "Slave Utility Switches"
   "These are additional switches to pass to the Slave Utility.

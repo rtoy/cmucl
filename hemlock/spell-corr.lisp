@@ -740,7 +740,7 @@
 ;;;; Binary File Reading
 
 (defparameter default-binary-dictionary
-  "/usr/misc/.lisp/lib/spell-dictionary.bin")
+  "/usr/misc/.cmucl/lib/spell-dictionary.bin")
 
 ;;; This is the first thing in a spell binary dictionary file to serve as a
 ;;; quick check of its proposed contents.  This particular number is
