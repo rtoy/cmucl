@@ -1,0 +1,4 @@
+# -DSVR4 is needed for X and for Solaris.
+CFLAGS = -O -DSVR4 -I/usr/openwin/include
+LDFLAGS = -L/usr/openwin/lib -R/usr/openwin/lib
+LIBS = -lXm -lXt -lX11 -lsocket -lnsl -lgen
