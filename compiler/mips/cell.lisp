@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.27 1990/03/20 00:43:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.28 1990/03/21 23:23:46 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -26,6 +26,7 @@
 (vm:define-for-each-primitive-object (obj)
   (collect ((forms))
     (let* ((options (vm:primitive-object-options obj))
+	   (obj-type (getf options :type t))
 	   (alloc-trans (getf options :alloc-trans))
 	   (alloc-vop (getf options :alloc-vop alloc-trans))
 	   (header (vm:primitive-object-header obj))
@@ -41,8 +42,10 @@
 		 (offset (vm:slot-offset slot))
 		 (rest-p (vm:slot-rest-p slot))
 		 (slot-opts (vm:slot-options slot))
+		 (slot-type (getf slot-opts :type t))
 		 (ref-trans (getf slot-opts :ref-trans))
 		 (ref-vop (getf slot-opts :ref-vop ref-trans))
+		 (ref-known (getf slot-opts :ref-known))
 		 (set-trans (getf slot-opts :set-trans))
 		 (setf-vop (getf slot-opts :setf-vop
 				 (when (and (listp set-trans)
@@ -53,12 +56,25 @@
 					    "SET-"
 					    (string (cadr set-trans)))))))
 		 (set-vop (getf slot-opts :set-vop
-				(if setf-vop nil set-trans))))
+				(if setf-vop nil set-trans)))
+		 (set-known (getf slot-opts :set-known)))
+	    (when ref-known
+	      (if ref-trans
+		  (forms `(defknown (,ref-trans) (,obj-type) ,slot-type
+			    ,ref-known))
+		  (error "Can't spec a :ref-known with no :ref-trans. ~S in ~S"
+			 name (vm:primitive-object-name obj))))
 	    (when ref-vop
 	      (forms `(define-vop (,ref-vop ,(if rest-p 'slot-ref 'cell-ref))
 			(:variant ,offset ,lowtag)
 			,@(when ref-trans
 			    `((:translate ,ref-trans))))))
+	    (when set-known
+	      (if set-trans
+		  (forms `(defknown (,set-trans) (,obj-type ,slot-type)
+			    ,slot-type ,set-known))
+		  (error "Can't spec a :set-known with no :set-trans. ~S in ~S"
+			 name (vm:primitive-object-name obj))))
 	    (when (or set-vop setf-vop)
 	      (forms `(define-vop ,(cond ((and rest-p setf-vop)
 		  (error "Can't automatically generate a setf VOP for :rest-p ~
