@@ -289,7 +289,8 @@
 
 ;;; TEST-TYPE-AUX -- Internal.
 ;;;
-(defun test-type-aux (reg temp target drop-through not-p lowtags immed hdrs)
+(defun test-type-aux (reg temp target drop-through not-p lowtags immed hdrs
+			  function-p)
   (let* ((fixnump (and (member even-fixnum-type lowtags :test #'eql)
 		       (member odd-fixnum-type lowtags :test #'eql)))
 	 (lowtags (sort (if fixnump
@@ -299,6 +300,9 @@
 				    :test #'eql)
 			    (copy-list lowtags))
 			#'<))
+	 (lowtag (if function-p
+		     vm:function-pointer-type
+		     vm:other-pointer-type))
 	 (hdrs (sort (copy-list hdrs) #'<))
 	 (immed (sort (copy-list immed) #'<)))
     (append
@@ -337,14 +341,18 @@
 		 (emit-label ,fall-through))))
 	   (gen-range-test temp target drop-through not-p lowtags)))
      (when hdrs
-       `((inst c ,temp other-pointer-type)
+       `((inst c ,temp ,lowtag)
 	 (inst bnc :eq ,(if not-p target drop-through))
-	 (load-type ,temp ,reg other-pointer-type)
+	 (load-type ,temp ,reg ,lowtag)
 	 ,@(gen-range-test temp target drop-through not-p
 			   hdrs type-separation min-type))))))
 
 (defconstant immediate-types
   (list base-character-type unbound-marker-type))
+
+(defconstant function-subtypes
+  (list funcallable-instance-header-type closure-header-type
+	function-header-type closure-function-header-type))
 
 ;;; TEST-TYPE -- Interface.
 ;;;
@@ -361,7 +369,8 @@
 	 (lowtags (remove lowtag-limit type-codes :test #'<))
 	 (extended (remove lowtag-limit type-codes :test #'>))
 	 (immediates (intersection extended immediate-types :test #'eql))
-	 (headers (set-difference extended immediate-types :test #'eql)))
+	 (headers (set-difference extended immediate-types :test #'eql))
+	 (function-p nil))
     (unless type-codes
       (error "Must supply at least on type for test-type."))
     (when (and headers (member other-pointer-type lowtags))
@@ -372,6 +381,11 @@
 		   (member other-immediate-1-type lowtags)))
       (warn "OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S" immediates)
       (setf immediates nil))
+    (when (intersection headers function-subtypes)
+      (unless (subsetp headers function-subtypes)
+	(error "Can't test for mix of function subtypes and normal ~
+		header types."))
+      (setq function-p t))
     (let ((n-reg (gensym))
 	  (n-temp (gensym))
 	  (n-target (gensym))
@@ -383,13 +397,16 @@
 	 (declare (ignorable ,n-temp))
 	 ,@(if (constantp not-p)
 	       (test-type-aux n-reg n-temp n-target drop-through
-			      (eval not-p) lowtags immediates headers)
+			      (eval not-p) lowtags immediates headers
+			      function-p)
 	       `((cond (,not-p
 			,@(test-type-aux n-reg n-temp n-target drop-through t
-					 lowtags immediates headers))
+					 lowtags immediates headers
+					 function-p))
 		       (t
 			,@(test-type-aux n-reg n-temp n-target drop-through nil
-					 lowtags immediates headers)))))
+					 lowtags immediates headers
+					 function-p)))))
 	 (emit-label ,drop-through)))))
 
 
