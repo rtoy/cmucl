@@ -159,12 +159,13 @@
 	   (args (basic-combination-args use)))
        (case name
 	 (%typep
-	  (add-complement-constraints if 'typep
-				      (ok-cont-lambda-var (first args))
-				      (specifier-type
-				       (continuation-value
-					(second args)))
-				      nil))
+	  (let ((type (second args)))
+	    (when (constant-continuation-p type)
+	      (add-complement-constraints if 'typep
+					  (ok-cont-lambda-var (first args))
+					  (specifier-type
+					   (continuation-value type))
+					  nil))))
 	 ((eq eql)
 	  (let* ((var1 (ok-cont-lambda-var (first args)))
 		 (arg2 (second args))
