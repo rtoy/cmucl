@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.111 1997/02/11 16:09:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.112 1997/02/11 19:00:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1339,8 +1339,8 @@
              "MAKE-LOCAL-ALIEN" "NATURALIZE" "NOTE-LOCAL-ALIEN-TYPE"
              "PARSE-ALIEN-TYPE" "UNPARSE-ALIEN-TYPE"))
 (defpackage "PROFILE"
-            (:export "*TIMED-FUNCTIONS*" "PROFILE" "REPORT-TIME" "RESET-TIME"
-             "UNPROFILE"))
+            (:export "*TIMED-FUNCTIONS*" "PROFILE" "PROFILE-ALL" "REPORT-TIME"
+	     "RESET-TIME" "UNPROFILE"))
 (dolist
     (name
      '("ARRAY-RANK" "ARRAY-TOTAL-SIZE" "CHAR-INT" "FLOAT-DIGITS" "FLOAT-RADIX"
