@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.66 1994/02/11 13:39:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.67 1994/05/22 17:03:56 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
 (when (eq c:*backend* c:*native-backend*)
   (load "target:assembly/assemfile"))
 
-(when (c:backend-featurep :pmax)
+(when (c:backend-featurep '(or :pmax :sgi))
   (comf "target:assembly/mips/assem-rtns" :assem t)
   (comf "target:assembly/mips/array" :assem t)
   (comf "target:assembly/mips/arith" :assem t)
@@ -152,6 +152,8 @@
   (comf "target:code/x86-vm"))
 (when (c:backend-featurep :alpha)
   (comf "target:code/alpha-vm"))
+(when (c:backend-featurep :sgi)
+  (comf "target:code/sgi-vm"))
 
 (comf "target:code/symbol")
 (comf "target:code/bignum")
