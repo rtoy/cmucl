@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.13 1993/05/20 13:43:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.14 1993/06/24 13:49:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,7 +87,7 @@
 
 (defmacro eof-or-lose (stream eof-errorp eof-value)
   `(if ,eof-errorp
-       (error "~S: Stream hit EOF unexpectedly." ,stream)
+       (error 'end-of-file :stream ,stream)
        ,eof-value))
 
 ;;; These macros handle the special cases of t and nil for input and
