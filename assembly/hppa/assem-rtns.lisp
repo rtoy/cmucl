@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/assem-rtns.lisp,v 1.1 1992/06/12 03:58:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/assem-rtns.lisp,v 1.2 1992/06/24 15:28:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,8 +59,8 @@
   (loadw a5 vals 5)
 
   ;; Copy the remaining args to the top of the stack.
-  (inst addi (* 6 word-bytes) src vals)
-  (inst addi (* 6 word-bytes) dst cfp-tn)
+  (inst addi (* 6 word-bytes) vals src)
+  (inst addi (* 6 word-bytes) cfp-tn dst)
 
   LOOP
   (inst ldwm 4 src temp)
@@ -70,22 +70,22 @@
   (inst b done :nullify t)
 
   DEFAULT-A0-AND-ON
-  (inst move a0 null-tn)
+  (inst move null-tn a0)
   DEFAULT-A1-AND-ON
-  (inst move a1 null-tn)
+  (inst move null-tn a1)
   DEFAULT-A2-AND-ON
-  (inst move a2 null-tn)
+  (inst move null-tn a2)
   DEFAULT-A3-AND-ON
-  (inst move a3 null-tn)
+  (inst move null-tn a3)
   DEFAULT-A4-AND-ON
-  (inst move a4 null-tn)
+  (inst move null-tn a4)
   DEFAULT-A5-AND-ON
-  (inst move a5 null-tn)
+  (inst move null-tn a5)
 
   DONE
   ;; Clear the stack.
-  (move ocfp-tn cfp-tn)
-  (move cfp-tn old-fp)
+  (move cfp-tn ocfp-tn)
+  (move old-fp cfp-tn)
   (inst add ocfp-tn nvals csp-tn)
   
   ;; Return.
@@ -138,7 +138,7 @@
   (inst addi (fixnum (- register-arg-count)) nargs count)
   (inst comb :<= count zero-tn done :nullify t)
   (inst addi (* word-bytes register-arg-count) args src)
-  (inst addi (* word-bytes register-arg-count) dst cfp-tn)
+  (inst addi (* word-bytes register-arg-count) cfp-tn dst)
 	
   LOOP
   ;; Copy one arg.
