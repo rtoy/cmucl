@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.65 2003/10/09 15:50:01 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.66 2004/09/08 15:01:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2139,83 +2139,94 @@
 	(make-numeric-type :complexp nil)))
 
 (def-type-translator complex (&optional (typespec '*))
-  (if (eq typespec '*)
-      (make-numeric-type :complexp :complex)
-      (labels ((not-numeric ()
-		 (error "The component type for COMPLEX is not numeric: ~S"
-			typespec))
-	       (not-real ()
-	         (error "The component type for COMPLEX is not real: ~S"
-			typespec))
-	       (complex1 (component-type)
-	         (unless (numeric-type-p component-type)
-		   (not-numeric))
-		 (when (eq (numeric-type-complexp component-type) :complex)
-		   (not-real))
-		 (modified-numeric-type component-type :complexp :complex))
-	       (complex-union (component)
-		 (unless (numberp component)
-		   (not-numeric))
-		 ;; KLUDGE: This TYPECASE more or less does
-		 ;; (UPGRADED-COMPLEX-PART-TYPE (TYPE-OF COMPONENT)),
-		 ;; (plus a small hack to treat (EQL COMPONENT 0) specially)
-		 ;; but uses logic cut and pasted from the DEFUN of
-		 ;; UPGRADED-COMPLEX-PART-TYPE. That's fragile, because
-		 ;; changing the definition of UPGRADED-COMPLEX-PART-TYPE
-		 ;; would tend to break the code here. Unfortunately,
-		 ;; though, reusing UPGRADED-COMPLEX-PART-TYPE here
-		 ;; would cause another kind of fragility, because
-		 ;; ANSI's definition of TYPE-OF is so weak that e.g.
-		 ;; (UPGRADED-COMPLEX-PART-TYPE (TYPE-OF 1/2)) could
-		 ;; end up being (UPGRADED-COMPLEX-PART-TYPE 'REAL)
-		 ;; instead of (UPGRADED-COMPLEX-PART-TYPE 'RATIONAL).
-		 ;; So using TYPE-OF would mean that ANSI-conforming
-		 ;; maintenance changes in TYPE-OF could break the code here.
-		 ;; It's not clear how best to fix this. -- WHN 2002-01-21,
-		 ;; trying to summarize CSR's concerns in his patch
-		 (typecase component
-		   (complex (error "The component type for COMPLEX (EQL X) ~
+  (labels ((not-numeric ()
+	     (error "The component type for COMPLEX is not numeric: ~S"
+		    typespec))
+	   (not-real ()
+	     (error "The component type for COMPLEX is not real: ~S"
+		    typespec))
+	   (complex1 (component-type)
+	     (unless (numeric-type-p component-type)
+	       (not-numeric))
+	     (when (eq (numeric-type-complexp component-type) :complex)
+	       (not-real))
+	     (modified-numeric-type component-type :complexp :complex))
+	   (complex-union (component)
+	     (unless (numberp component)
+	       (not-numeric))
+	     ;; KLUDGE: This TYPECASE more or less does
+	     ;; (UPGRADED-COMPLEX-PART-TYPE (TYPE-OF COMPONENT)),
+	     ;; (plus a small hack to treat (EQL COMPONENT 0) specially)
+	     ;; but uses logic cut and pasted from the DEFUN of
+	     ;; UPGRADED-COMPLEX-PART-TYPE. That's fragile, because
+	     ;; changing the definition of UPGRADED-COMPLEX-PART-TYPE
+	     ;; would tend to break the code here. Unfortunately,
+	     ;; though, reusing UPGRADED-COMPLEX-PART-TYPE here
+	     ;; would cause another kind of fragility, because
+	     ;; ANSI's definition of TYPE-OF is so weak that e.g.
+	     ;; (UPGRADED-COMPLEX-PART-TYPE (TYPE-OF 1/2)) could
+	     ;; end up being (UPGRADED-COMPLEX-PART-TYPE 'REAL)
+	     ;; instead of (UPGRADED-COMPLEX-PART-TYPE 'RATIONAL).
+	     ;; So using TYPE-OF would mean that ANSI-conforming
+	     ;; maintenance changes in TYPE-OF could break the code here.
+	     ;; It's not clear how best to fix this. -- WHN 2002-01-21,
+	     ;; trying to summarize CSR's concerns in his patch
+	     (typecase component
+	       (complex (error "The component type for COMPLEX (EQL X) ~
                                     is complex: ~S"
-				   component))
-		   ((eql 0) (specifier-type nil)) ; as required by ANSI
-		   (single-float (specifier-type '(complex single-float)))
-		   (double-float (specifier-type '(complex double-float)))
-		   #+long-float
-		   (long-float (specifier-type '(complex long-float)))
-		   (rational (specifier-type '(complex rational)))
-		   (t (specifier-type '(complex real))))))
-	(let ((ctype (specifier-type typespec)))
-	  (typecase ctype
-	    (numeric-type (complex1 ctype))
-	    (union-type (apply #'type-union
-			       ;; FIXME: This code could suffer from
-			       ;; (admittedly very obscure) cases of
-			       ;; bug 145 e.g. when TYPE is
-			       ;;   (OR (AND INTEGER (SATISFIES ODDP))
-			       ;;       (AND FLOAT (SATISFIES FOO))
-			       ;; and not even report the problem very well.
-			       (mapcar #'complex1
-				       (union-type-types ctype))))
-	    ;; MEMBER-TYPE is almost the same as UNION-TYPE, but
-	    ;; there's a gotcha: (COMPLEX (EQL 0)) is, according to
-	    ;; ANSI, equal to type NIL, the empty set.
-	    (member-type (apply #'type-union
-				(mapcar #'complex-union
-					(member-type-members ctype))))
-	    (t
-	     (multiple-value-bind (subtypep certainly)
-		 (csubtypep ctype (specifier-type 'real))
-	       (if (and (not subtypep) certainly)
-		   (not-real)
-		   ;; ANSI just says that TYPESPEC is any subtype of
-		   ;; type REAL, not necessarily a NUMERIC-TYPE. In
-		   ;; particular, at this point TYPESPEC could legally be
-		   ;; an intersection type like (AND REAL (SATISFIES ODDP)),
-		   ;; in which case we fall through the logic above and
-		   ;; end up here, stumped.
-		   (error "~@<(known bug #145): The type ~S is too hairy to be 
+			       component))
+	       ((eql 0) (specifier-type nil)) ; as required by ANSI
+	       (single-float (specifier-type '(complex single-float)))
+	       (double-float (specifier-type '(complex double-float)))
+	       #+long-float
+	       (long-float (specifier-type '(complex long-float)))
+	       (rational (specifier-type '(complex rational)))
+	       (t (specifier-type '(complex real))))))
+    (let ((ctype (specifier-type typespec)))
+      (typecase ctype
+	(numeric-type
+	 (if (csubtypep ctype (specifier-type 'rational))
+	     (complex1 (specifier-type 'rational))
+	     (complex1 ctype)))
+	(union-type (apply #'type-union
+			   ;; FIXME: This code could suffer from
+			   ;; (admittedly very obscure) cases of
+			   ;; bug 145 e.g. when TYPE is
+			   ;;   (OR (AND INTEGER (SATISFIES ODDP))
+			   ;;       (AND FLOAT (SATISFIES FOO))
+			   ;; and not even report the problem very well.
+			   (mapcar #'complex1
+				   (union-type-types ctype))))
+	(member-type
+	 ;; MEMBER-TYPE is almost the same as UNION-TYPE, but there's
+	 ;; a gotcha: (COMPLEX (EQL 0)) is unclear to me (rtoy).  For
+	 ;; now if the typespec is a subtype of rational, we create
+	 ;; (COMPLEX RATIONAL).
+	 (if (csubtypep ctype (specifier-type 'rational))
+	     (complex1 (specifier-type 'rational))
+	     (apply #'type-union
+		    (mapcar #'complex-union
+			    (member-type-members ctype)))))
+	(named-type
+	 (if (eq (named-type-name ctype) '*)
+	     (apply #'type-union
+		    (mapcar #'complex1
+			    (union-type-types (specifier-type 'real))))
+	     (not-real)))
+	(t
+	 (multiple-value-bind (subtypep certainly)
+	     (csubtypep ctype (specifier-type 'real))
+	   (if (and (not subtypep) certainly)
+	       (not-real)
+	       ;; ANSI just says that TYPESPEC is any subtype of
+	       ;; type REAL, not necessarily a NUMERIC-TYPE. In
+	       ;; particular, at this point TYPESPEC could legally be
+	       ;; an intersection type like (AND REAL (SATISFIES ODDP)),
+	       ;; in which case we fall through the logic above and
+	       ;; end up here, stumped.
+	       (error "~@<(known bug #145): The type ~S is too hairy to be 
                          used for a COMPLEX component.~:@>"
-			typespec)))))))))
+		      typespec))))))))
 
 ;;; Check-Bound  --  Internal
 ;;;
@@ -2897,6 +2908,7 @@
     ((type= type (specifier-type 'real)) 'real)
     ((type= type (specifier-type 'sequence)) 'sequence)
     ((type= type (specifier-type 'bignum)) 'bignum)
+    ((type= type (specifier-type 'complex)) 'complex)
     (t `(or ,@(mapcar #'type-specifier (union-type-types type))))))
 
 (define-type-method (union :simple-=) (type1 type2)
@@ -3389,7 +3401,10 @@
 	      (values :complex (min num imag) (max num imag)))
 	    (values :real num num))
       (make-numeric-type :class (etypecase num
-				  (integer 'integer)
+				  ;; We used to have an INTEGER type
+				  ;; here, but is it really necessary?
+				  ;; I (rtoy) think RATIONAL is as
+				  ;; good.
 				  (rational 'rational)
 				  (float 'float))
 			 :format (and (floatp num) (float-format-name num))
