@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.27 2003/10/16 16:25:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.28 2003/10/27 16:59:31 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.27 2003/10/16 16:25:19 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.28 2003/10/27 16:59:31 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -56,10 +56,10 @@
 		     (inst li ,temp ,offs)
 		     (inst ,',inst ,object ,base ,temp)))))
 	   `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
-  (frob loadw ld word-shift)
+  (frob loadw ldn word-shift)
   #+(and sparc-v9 sparc-v8plus)
   (frob loadsw ldsw word-shift)
-  (frob storew st word-shift))
+  (frob storew stn word-shift))
 
 #+(and sparc-v9 sparc-v8plus)
 (macrolet
@@ -95,12 +95,12 @@
 			     (find-package "VM"))))
 	 `(progn
 	    (defmacro ,loader (reg symbol)
-	      `(inst ld ,reg null-tn
+	      `(inst ldn ,reg null-tn
 		     (+ (static-symbol-offset ',symbol)
 			(ash ,',offset word-shift)
 			(- other-pointer-type))))
 	    (defmacro ,storer (reg symbol)
-	      `(inst st ,reg null-tn
+	      `(inst stn ,reg null-tn
 		     (+ (static-symbol-offset ',symbol)
 			(ash ,',offset word-shift)
 			(- other-pointer-type))))))))
