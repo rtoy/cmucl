@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.4 1991/04/24 23:37:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.5 1991/05/28 17:25:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,13 +30,6 @@
 	  string-downcase string-capitalize nstring-upcase nstring-downcase
 	  nstring-capitalize))
 
-(eval-when (compile)
-
-;;; %String returns its arg if it is a string, otherwise calls String.
-;;;
-(defmacro %string (thing)
-  `(if (stringp ,thing) ,thing (string ,thing)))
-)
 
 (defun string (X)
   "Coerces X into a string.  If X is a string, X is returned.  If X is a
@@ -377,8 +370,8 @@
   "Given a string, returns a new string that is a copy of it with
   all lower case alphabetic characters converted to uppercase."
   (declare (fixnum start))
-  (if (symbolp string) (setq string (symbol-name string)))
-  (let ((slen (length string)))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
     (declare (fixnum slen))
     (with-one-string string start end offset
       (let ((offset-slen (+ slen offset))
@@ -406,8 +399,8 @@
   "Given a string, returns a new string that is a copy of it with
   all upper case alphabetic characters converted to lowercase."
   (declare (fixnum start))
-  (if (symbolp string) (setq string (symbol-name string)))
-  (let ((slen (length string)))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
     (declare (fixnum slen))
     (with-one-string string start end offset
       (let ((offset-slen (+ slen offset))
@@ -438,8 +431,8 @@
   to be a string of case-modifiable characters delimited by
   non-case-modifiable chars."
   (declare (fixnum start))
-  (if (symbolp string) (setq string (symbol-name string)))
-  (let ((slen (length string)))
+  (let* ((string (if (stringp string) string (string string)))
+	 (slen (length string)))
     (declare (fixnum slen))
     (with-one-string string start end offset
       (let ((offset-slen (+ slen offset))
