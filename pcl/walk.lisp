@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.16 1999/05/30 23:14:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.17 2000/07/06 08:47:10 dtc Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -178,7 +178,7 @@
     (let ((entry (assoc macro (c::lexenv-functions env) :test #'eq)))
       (and entry 
 	   (eq (cadr entry) 'c::macro)
-	   (function-lambda-expression (cddr entry))))))
+	   (values (function-lambda-expression (cddr entry)))))))
 
 
 
