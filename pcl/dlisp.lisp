@@ -104,7 +104,7 @@
 	 (lambda `(lambda ,closure-variables
 		    ,@(when (member 'miss-fn closure-variables)
 			`((declare (type function miss-fn))))
-		    #'(lambda ,args
+		    #'(#+cmu kernel:instance-lambda #-cmu lambda ,args
 			#+copy-&rest-arg
 			,@(when rest
 			    `((setq .lap-rest-arg.
@@ -117,6 +117,12 @@
 		(compile-lambda lambda))
 	    nil)))
 
+;;; cmu17 note: since std-instance-p is weakened, that branch may run
+;;; on non-pcl instances (structures).  The result will be the 
+;;; non-wrapper layout for the structure, which will cause a miss.  The "slots"
+;;; will be whatever the first slot is, but will be ignored.  Similarly,
+;;; fsc-instance-p returns true on funcallable structures as well as PCL fins.
+;;;
 (defun emit-reader/writer (reader/writer 1-or-2-class class-slot-p)
   (when (and (null *precompiling-lap*) *emit-function-p*)
     (return-from emit-reader/writer
@@ -392,6 +398,12 @@
 					 #-lucid `(the fixnum ,form))))))))
 		 wrappers))))
      
+;;; cmu17 note: since std-instance-p is weakened, that branch may run
+;;; on non-pcl instances (structures).  The result will be the 
+;;; non-wrapper layout for the structure, which will cause a miss.  The "slots"
+;;; will be whatever the first slot is, but will be ignored.  Similarly,
+;;; fsc-instance-p returns true on funcallable structures as well as PCL fins.
+;;;
 (defun emit-fetch-wrapper (metatype argument miss-label &optional slot)
   (ecase metatype
     ((standard-instance #+new-kcl-wrapper structure-instance)

@@ -1028,15 +1028,18 @@
   (cond ((eq class *the-class-t*)
 	 't)
 	((eq class *the-class-slot-object*)
+	 #-(or new-kcl-wrapper cmu17)
+	 `(not (eq *the-class-built-in-class* 
+		   (wrapper-class (std-instance-wrapper (class-of ,arg)))))
 	 #+new-kcl-wrapper
 	 `(or (std-instance-p ,arg)
 	      (fsc-instance-p ,arg))
-	 #-new-kcl-wrapper
-	 `(not (eq *the-class-built-in-class* 
-		   (wrapper-class (std-instance-wrapper (class-of ,arg))))))
+	 #+cmu17
+	 `(not (lisp:typep (lisp:class-of ,arg) 'lisp:built-in-class)))
 	#-new-kcl-wrapper
 	((eq class *the-class-standard-object*)
 	 `(or (std-instance-p ,arg) (fsc-instance-p ,arg)))
+	#-cmu17
 	((eq class *the-class-structure-object*)
 	 `(memq ',class (class-precedence-list (class-of ,arg))))
 	;; TYPEP is now sometimes faster than doing memq of the cpl
@@ -1367,52 +1370,60 @@
 
 (defun compute-secondary-dispatch-function1 (generic-function net
 					     &optional function-p)
-  (if (eq (car net) 'methods)
-      (get-effective-method-function1 generic-function (cadr net))
-      (let* ((name (generic-function-name generic-function))
-	     (arg-info (gf-arg-info generic-function))
-	     (metatypes (arg-info-metatypes arg-info))
-	     (applyp (arg-info-applyp arg-info))
-	     (fmc-arg-info (cons (length metatypes) applyp))
-	     (arglist (if function-p
-			  (make-dfun-lambda-list metatypes applyp)
-			  (make-fast-method-call-lambda-list metatypes applyp))))
-	(multiple-value-bind (cfunction constants)
-	    (get-function1 `(lambda ,arglist
-			      ,@(unless function-p
-				  `((declare (ignore .pv-cell.
-						     .next-method-call.))))
-			      #+copy-&rest-arg
-			      ,@(when (and applyp function-p)
-				  `((setq .dfun-rest-arg.
-					  (copy-list .dfun-rest-arg.))))
-			      (let ((emf ,net))
-			        ,(make-emf-call metatypes applyp 'emf)))
-			   #'net-test-converter
-			   #'net-code-converter
-			   #'(lambda (form)
-			       (net-constant-converter form generic-function)))
-	  #'(lambda (method-alist wrappers)
-	      (let* ((alist (list nil))
-		     (alist-tail alist))
-		(dolist (constant constants)
-		  (let* ((a (or (dolist (a alist nil)
-				  (when (eq (car a) constant)
-				    (return a)))
-				(cons constant
-				      (or (convert-table
-					   constant method-alist wrappers)
-					  (convert-methods
-					   constant method-alist wrappers)))))
-			 (new (list a)))
-		    (setf (cdr alist-tail) new)
-		    (setf alist-tail new)))
-		(let ((function (apply cfunction (mapcar #'cdr (cdr alist)))))
-		  (if function-p
-		      function
-		      (make-fast-method-call
-		       :function (set-function-name function `(sdfun-method ,name))
-		       :arg-info fmc-arg-info)))))))))
+  (cond
+   ((and (eq (car net) 'methods) (not function-p))
+    (get-effective-method-function1 generic-function (cadr net)))
+   (t
+    (let* ((name (generic-function-name generic-function))
+	   (arg-info (gf-arg-info generic-function))
+	   (metatypes (arg-info-metatypes arg-info))
+	   (applyp (arg-info-applyp arg-info))
+	   (fmc-arg-info (cons (length metatypes) applyp))
+	   (arglist (if function-p
+			(make-dfun-lambda-list metatypes applyp)
+			(make-fast-method-call-lambda-list metatypes applyp))))
+      (multiple-value-bind
+	  (cfunction constants)
+	  (get-function1 `(#+cmu ,(if function-p
+				      'kernel:instance-lambda
+				      'lambda)
+			   #-cmu lambda
+			   ,arglist
+				 ,@(unless function-p
+				     `((declare (ignore .pv-cell.
+							.next-method-call.))))
+				 #+copy-&rest-arg
+				 ,@(when (and applyp function-p)
+				     `((setq .dfun-rest-arg.
+					     (copy-list .dfun-rest-arg.))))
+				 (locally (declare #.*optimize-speed*)
+				   (let ((emf ,net))
+				     ,(make-emf-call metatypes applyp 'emf))))
+			 #'net-test-converter
+			 #'net-code-converter
+			 #'(lambda (form)
+			     (net-constant-converter form generic-function)))
+	#'(lambda (method-alist wrappers)
+	    (let* ((alist (list nil))
+		   (alist-tail alist))
+	      (dolist (constant constants)
+		(let* ((a (or (dolist (a alist nil)
+				(when (eq (car a) constant)
+				  (return a)))
+			      (cons constant
+				    (or (convert-table
+					 constant method-alist wrappers)
+					(convert-methods
+					 constant method-alist wrappers)))))
+		       (new (list a)))
+		  (setf (cdr alist-tail) new)
+		  (setf alist-tail new)))
+	      (let ((function (apply cfunction (mapcar #'cdr (cdr alist)))))
+		(if function-p
+		    function
+		    (make-fast-method-call
+		     :function (set-function-name function `(sdfun-method ,name))
+		     :arg-info fmc-arg-info))))))))))
 
 (defvar *show-make-unordered-methods-emf-calls* nil)
 

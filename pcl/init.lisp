@@ -169,7 +169,10 @@
   (let* ((class (class-of instance))
 	 (slotds (class-slots class))
 	 #-new-kcl-wrapper
-	 (std-p (or (std-instance-p instance) (fsc-instance-p instance))))
+	 (std-p #+cmu17
+		(pcl-instance-p instance)
+		#-cmu17
+		(or (std-instance-p instance) (fsc-instance-p instance))))
     (dolist (slotd slotds)
       (let ((slot-name (slot-definition-name slotd))
 	    (slot-initargs (slot-definition-initargs slotd)))

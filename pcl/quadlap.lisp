@@ -1,6 +1,6 @@
 ;;				-[Thu Mar  1 10:54:27 1990 by jkf]-
 ;; pcl to quad translation
-;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/quadlap.lisp,v 1.5 1992/11/09 15:21:37 ram Exp $
+;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/quadlap.lisp,v 1.6 1997/02/06 21:24:19 pw Exp $
 ;;
 ;; copyright (c) 1990 Franz Inc.
 ;;

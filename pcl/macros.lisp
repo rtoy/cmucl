@@ -333,12 +333,18 @@
 ;;; Similar to printing-random-object in the lisp machine but much simpler
 ;;; and machine independent.
 (defmacro printing-random-thing ((thing stream) &body body)
-  (once-only (stream)
-  `(progn (format ,stream "#<")
-	  ,@body
-	  (format ,stream " ")
-	  (printing-random-thing-internal ,thing ,stream)
-	  (format ,stream ">"))))
+  #+cmu17
+  `(print-unreadable-object (,thing ,stream :identity t) ,@body)
+  #-cmu17
+  (once-only (thing stream)
+    `(progn
+       (when *print-readably*
+	 (error "~S cannot be printed readably." thing))
+       (format ,stream "#<")
+       ,@body
+       (format ,stream " ")
+       (printing-random-thing-internal ,thing ,stream)
+       (format ,stream ">"))))
 
 (defun printing-random-thing-internal (thing stream)
   (declare (ignore thing stream))
@@ -373,6 +379,7 @@
 ;(warn "****** Things will go faster if you fix define-compiler-macro")
 )
 
+#-cmu
 (defmacro define-compiler-macro (name arglist &body body)
   #+(or lucid kcl)
   `(#+lucid lcl:def-compiler-macro #+kcl si::define-compiler-macro
@@ -456,21 +463,54 @@
   (find-class-predicate-from-cell 
    symbol (find-class-cell symbol errorp) errorp))
 
+(defvar *boot-state* nil) ; duplicate defvar to defs.lisp
+
+; Use this definition in any CL implementation supporting 
+; both define-compiler-macro and load-time-value.
+#+cmu ; Note that in CMU, lisp:find-class /= pcl:find-class
+(define-compiler-macro find-class (&whole form
+				   symbol &optional (errorp t) environment)
+  (declare (ignore environment))
+  (if (and (constantp symbol) 
+	   (legal-class-name-p (eval symbol))
+	   (constantp errorp)
+	   (member *boot-state* '(braid complete)))
+      (let ((symbol (eval symbol))
+	    (errorp (not (null (eval errorp))))
+	    (class-cell (make-symbol "CLASS-CELL")))	
+	`(let ((,class-cell (load-time-value (find-class-cell ',symbol))))
+	   (or (find-class-cell-class ,class-cell)
+	       #-cmu17
+	       (find-class-from-cell ',symbol ,class-cell ,errorp)
+	       #+cmu17
+	       ,(if errorp
+		    `(find-class-from-cell ',symbol ,class-cell t)
+		    `(and (kernel:class-cell-class 
+			   ',(kernel:find-class-cell symbol))
+			  (find-class-from-cell ',symbol ,class-cell nil))))))
+      form))
+
 #-setf
 (defsetf find-class (symbol &optional (errorp t) environment) (new-value)
   (declare (ignore errorp environment))
   `(SETF\ PCL\ FIND-CLASS ,new-value ,symbol))
 
 (defun #-setf SETF\ PCL\ FIND-CLASS #+setf (setf find-class) (new-value symbol)
-  (declare (special *boot-state*))
   (if (legal-class-name-p symbol)
       (let ((cell (find-class-cell symbol)))
 	(setf (find-class-cell-class cell) new-value)
 	(when (or (eq *boot-state* 'complete)
 		  (eq *boot-state* 'braid))
+	  #+cmu17
+	  (let ((lclass (kernel:layout-class (class-wrapper new-value))))
+	    (setf (lisp:class-name lclass) (class-name new-value))
+	    (unless (eq (lisp:find-class symbol nil) lclass)
+	      (setf (lisp:find-class symbol) lclass)))
+
 	  (setf (find-class-cell-predicate cell)
 		(symbol-function (class-predicate-name new-value)))
 	  (when (and new-value (not (forward-referenced-class-p new-value)))
+
 	    (dolist (keys+aok (find-class-cell-make-instance-function-keys cell))
 	      (update-initialize-info-internal
 	       (initialize-info new-value (car keys+aok) nil (cdr keys+aok))

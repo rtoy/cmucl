@@ -562,14 +562,25 @@
 (defun make-default-initargs-form-list (class keys &optional (separate-p t))
   (let ((initargs-form-list (cons nil nil))
 	(default-initargs (class-default-initargs class))
-	(nkeys keys))
+	(nkeys keys)
+	(slots-alist
+	 (mapcan #'(lambda (slot)
+		     (mapcar #'(lambda (arg)
+				 (cons arg slot))
+			     (slot-definition-initargs slot)))
+		 (class-slots class)))
+	(nslots nil))
+    (dolist (key nkeys)
+      (pushnew (cdr (assoc key slots-alist)) nslots))
     (dolist (default default-initargs)
-      (let ((key (car default))
-	    (function (cadr default)))
-	(unless (member key nkeys)
+      (let* ((key (car default))
+	     (slot (cdr (assoc key slots-alist)))
+	     (function (cadr default)))
+	(unless (member slot nslots)
 	  (add-forms `((funcall ,function) (push-initarg ,key))
 		     initargs-form-list)
-	  (push key nkeys))))
+	  (push key nkeys)
+	  (push slot nslots))))
     (when separate-p
       (add-forms `((update-initialize-info-cache
 		    ,class ,(initialize-info class nkeys nil)))
@@ -886,3 +897,36 @@
 	    (iis-body ,@body)
 	    initargs))
      (list pv-cell (coerce cvector cvector-type)))))
+
+
+;The effect of this is to cause almost all of the overhead of make-instance
+;to happen at load time (or maybe at precompile time, as explained in a 
+;previous message) rather than the first time make-instance is called with 
+;a given class-name and sequence of keywords.  
+
+;This optimization applys only when the first argument and all the even 
+;numbered arguments are constants evaluating to interned symbols.
+
+#+cmu
+(declaim (ftype (function (t) symbol) get-make-instance-function-symbol))
+
+; Use this definition in any CL implementation supporting 
+; both define-compiler-macro and load-time-value.
+#+cmu
+(define-compiler-macro make-instance (&whole form &rest args)
+  (declare (ignore args))
+  (let* ((*make-instance-function-keys* nil)
+	 (expanded-form (expand-make-instance-form form)))
+    (if expanded-form
+	`(funcall (symbol-function
+		   ;; The symbol is guaranteed to be fbound.
+		   ;; Is there a way to declare this?
+		   (load-time-value
+		    (get-make-instance-function-symbol 
+		     ',(first *make-instance-function-keys*))))
+		  ,@(cdr expanded-form))
+	form)))
+
+(defun get-make-instance-function-symbol (key)
+  (get-make-instance-functions (list key))
+  (make-instance-function-symbol key))

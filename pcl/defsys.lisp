@@ -218,7 +218,7 @@
 ;;; 
 (defvar *the-pcl-package* (find-package :pcl))
 
-(defvar *pcl-system-date* "September 16 92 PCL (e)")
+(defvar *pcl-system-date* "September 16 92 PCL (f)")
 
 #+cmu
 (setf (getf ext:*herald-items* :pcl)
@@ -301,22 +301,7 @@
 (eval-when (eval compile load)
   (pushnew :excl-sun4 *features*))
 
-#+cmu
-(eval-when (compile load eval)
-  (let ((vs (lisp-implementation-version)))
-    (cond ((and (<= 2 (length vs))
-		(eql #\1 (aref vs 0))
-		(let ((d (digit-char-p (aref vs 1))))
-		  (and d (<= 6 d))))
-	   (pushnew :cmu16 *features*))
-	  ((string= "20-Dec-1992" vs)
-	   (pushnew :cmu16 *features*)
-	   (pushnew :cmu17 *features*)
-	   (when (fboundp 'pcl::original-defstruct)
-	     (setf (macro-function 'defstruct)
-		   (macro-function 'pcl::original-defstruct))))
-	  (t
-	   (error "what version of cmucl is this?")))))
+
 
 ;;; Yet Another Sort Of General System Facility and friends.
 ;;;
@@ -652,6 +637,9 @@ and load your system with:
   (declare (ignore ignore))
   't)
 
+#+cmu17
+(defparameter *byte-files* '(defclass defcombin iterate env))
+
 (defun operate-on-system (name mode &optional arg print-only)
   (let ((system (get-system name)))
     (unless system (error "Can't find system with name ~S." name))
@@ -673,7 +661,12 @@ and load your system with:
 				   :output-file
 				   (make-pathname :defaults
 						  (make-binary-pathname name)
-						  :version :newest))))))
+						  :version :newest)
+				   #+cmu17 :byte-compile #+cmu17
+				   (if (and (member name *byte-files*)
+					    (member :small *features*))
+				       t
+				       :maybe))))))
 	(#+Genera
 	 compiler:compiler-warnings-context-bind
 	 #+TI
@@ -773,15 +766,15 @@ and load your system with:
     #+cmu17 *load-truename*
     #-(or Lispm excl Xerox (and dec vax common) LUCID akcl cmu17) nil))
 
-#-(or (and cmu (not cmu17)) Symbolics)
+#-(or cmu Symbolics)
 (defvar *pcl-directory*
 	(or (load-truename t)
 	    (error "Because load-truename is not implemented in this port~%~
                     of PCL, you must manually edit the definition of the~%~
                     variable *pcl-directory* in the file defsys.lisp.")))
 
-#+(and cmu (not cmu17))
-(defvar *pcl-directory* (pathname "pcl:"))
+#+cmu 
+(defvar *pcl-directory* (pathname "target:pcl/"))
 
 #+Genera
 (defvar *pcl-directory*
@@ -1048,8 +1041,6 @@ and load your system with:
 		(or (c::info setf inverse sym)
 		    (c::info setf expander sym)
 		    (c::info type kind sym)
-		    (c::info type structure-info sym)
-		    (c::info type defined-structure-info sym)
 		    (c::info function macro-function sym)
 		    (c::info function compiler-macro-function sym)))
 	    (unintern sym pkg)

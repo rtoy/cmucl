@@ -1247,63 +1247,28 @@ dbg:
 
 ;;;; Implementation of funcallable instances for CMU Common Lisp:
 ;;;
-;;;    We represent a FIN like a closure, but the header has a distinct type
-;;; tag.  The FIN data slots are stored at the end of a fixed-length closure
-;;; (at FIN-DATA-OFFSET.)  When the function is set to a closure that has no
-;;; more than FIN-DATA-OFFSET slots, we can just replace the slots in the FIN
-;;; with the closure slots.  If the closure has too many slots, we must
-;;; indirect through a trampoline with a rest arg.  For non-closures, we just
-;;; set the function slot.
-;;;
-;;;    We can get away with this efficient and relatively simple scheme because
-;;; the compiler currently currently only references closure slots during the
-;;; initial call and on entry into the function.  So we don't have to worry
-;;; about bad things happening when the FIN is clobbered (the problem JonL
-;;; flames about somewhere...)
-;;;
-;;;    We also stick in a slot for the function name at the end, but before the
-;;; data slots.
+(defstruct (pcl-funcallable-instance
+	    (:alternate-metaclass kernel:funcallable-instance
+				  kernel:random-pcl-class
+				  kernel:make-random-pcl-class)
+	    (:type kernel:funcallable-structure)
+	    (:constructor allocate-funcallable-instance-1 ())
+	    (:conc-name nil))
+  ;;
+  ;; PCL wrapper is in the layout slot.
+  ;;
+  ;; PCL data vector.
+  (pcl-funcallable-instance-slots nil)
+  ;;
+  ;; The debug-name for this function.
+  (funcallable-instance-name nil))
 
 #+CMU
+;;; Note: returns true for non-pcl funcallable structures.
 (import 'kernel:funcallable-instance-p)
 
 #+CMU
 (progn
-
-(eval-when (compile load eval)
-  ;;; The offset of the function's name & the max number of real closure slots.
-  ;;;
-  (defconstant fin-name-slot 14)
-  
-  ;;; The offset of the data slots.
-  ;;;
-  (defconstant fin-data-offset 15))
-
-
-;;; ALLOCATE-FUNCALLABLE-INSTANCE-1  --  Interface
-;;;
-;;;    Allocate a funcallable instance, setting the function to an error
-;;; function and initializing the data slots to NIL.
-;;;
-(defun allocate-funcallable-instance-1 ()
-  (let* ((len (+ (length funcallable-instance-data) fin-data-offset))
-         (res (kernel:%make-funcallable-instance
-               len
-               #'called-fin-without-function)))
-    (dotimes (i (length funcallable-instance-data))
-      (kernel:%set-funcallable-instance-info res (+ i fin-data-offset) nil))
-    (kernel:%set-funcallable-instance-info res fin-name-slot nil)
-    res))
-
-
-;;; FUNCALLABLE-INSTANCE-P  --  Interface
-;;;
-;;;    Return true if X is a funcallable instance.  This is an interpreter
-;;; stub; the compiler directly implements this function.
-;;;
-(defun funcallable-instance-p (x) (funcallable-instance-p x))
-
-
 ;;; SET-FUNCALLABLE-INSTANCE-FUNCTION  --  Interface
 ;;;
 ;;;    Set the function that is called when FIN is called.
@@ -1311,80 +1276,23 @@ dbg:
 (defun set-funcallable-instance-function (fin new-value)
   (declare (type function new-value))
   (assert (funcallable-instance-p fin))
-  (ecase (kernel:get-type new-value)
-    (#.vm:closure-header-type
-     (let ((len (- (kernel:get-closure-length new-value)
-                   (1- vm:closure-info-offset))))
-       (cond ((> len fin-name-slot)
-              (set-funcallable-instance-function
-               fin
-               #'(lambda (&rest args)
-                   (apply new-value args))))
-             (t
-              (dotimes (i fin-data-offset)
-                (kernel:%set-funcallable-instance-info
-                 fin i
-                 (if (>= i len)
-                     nil
-                     (kernel:%closure-index-ref new-value i))))
-              (kernel:%set-funcallable-instance-function
-               fin
-               (kernel:%closure-function new-value))))))
-    (#.vm:function-header-type
-     (kernel:%set-funcallable-instance-function fin new-value)))
-  new-value)
-
-
-;;; FUNCALLABLE-INSTANCE-NAME, SET-FUNCALLABLE-INSTANCE-NAME  --  Interface
-;;;
-;;;    Read or set the name slot in a funcallable instance.
-;;;
-(defun funcallable-instance-name (fin)
-  (kernel:%closure-index-ref fin fin-name-slot))
-;;;
-(defun set-funcallable-instance-name (fin new-value)
-  (kernel:%set-funcallable-instance-info fin fin-name-slot new-value)
-  new-value)
-;;;
-(defsetf funcallable-instance-name set-funcallable-instance-name)
+  (setf (kernel:funcallable-instance-function fin) new-value))
 
 
 ;;; FUNCALLABLE-INSTANCE-DATA-1  --  Interface
 ;;;
-;;;    If the slot is constant, use CLOSURE-REF with the appropriate offset,
-;;; otherwise do a run-time lookup of the slot offset.
+;;;    This "works" on non-PCL FINs, which allows us to weaken
+;;; FUNCALLABLE-INSTANCE-P to return trure for all FINs.  This is also
+;;; necessary for bootstrapping to work, since the layouts for early GFs are
+;;; not initially initialized.
 ;;;
 (defmacro funcallable-instance-data-1 (fin slot)
-  (if (constantp slot)
-      `(sys:%primitive c:closure-ref ,fin
-                       ,(+ (or (position (eval slot) funcallable-instance-data)
-                               (error "Unknown slot: ~S." (eval slot)))
-                           fin-data-offset))
-      (ext:once-only ((n-slot slot))
-        `(kernel:%closure-index-ref
-          ,fin
-          (+ (or (position ,n-slot funcallable-instance-data)
-                 (error "Unknown slot: ~S." ,n-slot))
-             fin-data-offset)))))
-;;;
-(defmacro %set-funcallable-instance-data-1 (fin slot new-value)
-  (ext:once-only ((n-fin fin)
-                  (n-slot slot)
-                  (n-val new-value))
-    `(progn
-       (kernel:%set-funcallable-instance-info
-        ,n-fin
-	,(if (constantp slot)
-	     (+ (or (position (eval slot) funcallable-instance-data)
-		    (error "Unknown slot: ~S." (eval slot)))
-		fin-data-offset)
-	     `(+ (or (position ,n-slot funcallable-instance-data)
-		     (error "Unknown slot: ~S." ,n-slot))
-		 fin-data-offset))
-        ,n-val)
-       ,n-val)))
-;;;
-(defsetf funcallable-instance-data-1 %set-funcallable-instance-data-1)
+  (ecase (eval slot)
+    (wrapper `(kernel:%funcallable-instance-layout ,fin))
+    (slots `(kernel:%funcallable-instance-info ,fin 0))))
+
+(defmacro pcl-funcallable-instance-wrapper (x)
+  `(kernel:%funcallable-instance-layout ,x))
                 
 ); End of #+cmu progn
 
@@ -1957,6 +1865,3 @@ make_turbo_trampoline_internal(base0)
 
 (defmacro fsc-instance-slots (fin)
   `(funcallable-instance-data-1 ,fin 'slots))
-
-
-

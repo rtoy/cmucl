@@ -147,6 +147,9 @@
   (vector #() :type simple-vector)
   (overflow nil :type list))
 
+#+cmu
+(declaim (ext:freeze-type cache))
+
 (defun print-cache (cache stream depth)
   (declare (ignore depth))
   (printing-random-thing (cache stream)
@@ -243,10 +246,14 @@
 ;;; forms of this constant which it is more convenient for the runtime code
 ;;; to use.
 ;;; 
+#-cmu17
 (eval-when (compile load eval)
 
 (defconstant wrapper-cache-number-adds-ok 4)
 
+;;; Incorrect.  This actually allows 15 or 16 adds, depending on whether
+;;; most-positive-fixnum is all-ones.  -- Ram
+;;;
 (defconstant wrapper-cache-number-length
 	     (- (integer-length most-positive-fixnum)
 		wrapper-cache-number-adds-ok))
@@ -274,6 +281,16 @@
           performance.~@
           You may want to consider changing the value of the constant~@
           WRAPPER-CACHE-NUMBER-ADDS-OK.")))
+
+#+cmu17
+(progn
+  (defconstant wrapper-cache-number-length
+    (integer-length kernel:layout-hash-max))
+  
+  (defconstant wrapper-cache-number-mask kernel:layout-hash-max)
+  
+  (defconstant wrapper-cache-number-adds-ok
+    (truncate most-positive-fixnum kernel:layout-hash-max)))
 
 
 ;;;
@@ -384,10 +401,12 @@
 #+structure-wrapper
 (eval-when (compile load eval)
 
-(defconstant wrapper-cache-number-vector-length 8)
+(defconstant wrapper-cache-number-vector-length
+  #+cmu17 kernel:layout-hash-length #-cmu17 8)
 
+#-cmu17
 (deftype cache-number-vector ()
-  `(simple-array fixnum (8)))
+  `(simple-array fixnum (,wrapper-cache-number-vector-length)))
 
 (defconstant wrapper-layout (make-list wrapper-cache-number-vector-length
 				       :initial-element 'number))
@@ -397,7 +416,7 @@
 #+structure-wrapper
 (progn
 
-#-new-kcl-wrapper
+#-(or new-kcl-wrapper cmu17)
 (defun make-wrapper-cache-number-vector ()
   (let ((cnv (make-array #.wrapper-cache-number-vector-length
 			 :element-type 'fixnum)))
@@ -405,6 +424,8 @@
       (setf (aref cnv i) (get-wrapper-cache-number)))
     cnv))
 
+
+#-cmu17
 (defstruct (wrapper
 	     #+new-kcl-wrapper (:include si::basic-wrapper)
 	     (:print-function print-wrapper)
@@ -426,11 +447,60 @@
   #-new-kcl-wrapper
   (class *the-class-t* :type class))
 
+
 (unless (boundp '*the-class-t*) (setq *the-class-t* nil))
 
 #+new-kcl-wrapper
 (defmacro wrapper-no-of-instance-slots (wrapper)
   `(si::s-data-length ,wrapper))
+
+
+;;; Note that for CMU, the WRAPPER of a built-in or structure class will be
+;;; some other kind of KERNEL:LAYOUT, but this shouldn't matter, since the only
+;;; two slots that WRAPPER adds are meaningless in those cases.
+;;;
+#+cmu17
+(progn
+  (defstruct (wrapper
+	      (:include kernel:layout)
+	      (:conc-name %wrapper-)
+	      (:print-function print-wrapper)
+	      (:constructor make-wrapper-internal))
+    (instance-slots-layout nil :type list)
+    (class-slots nil :type list))
+  (declaim (ext:freeze-type wrapper))
+
+  (defmacro wrapper-class (wrapper)
+    `(kernel:class-pcl-class (kernel:layout-class ,wrapper)))
+  (defmacro wrapper-no-of-instance-slots (wrapper)
+    `(kernel:layout-length ,wrapper))
+  (declaim (inline wrapper-state (setf wrapper-state)))
+
+  (defun wrapper-state (wrapper)
+    (let ((invalid (kernel:layout-invalid wrapper)))
+      (cond ((null invalid)
+	     t)
+	    ((atom invalid)
+	     ;; Some non-pcl object.  invalid is probably :INVALID
+	     ;; We should compute the new wrapper here instead
+	     ;; of returning nil, but why bother, since
+	     ;; obsolete-instance-trap can't use it.
+	     '(:obsolete nil))
+	    (t
+	     invalid))))
+  
+  (defun (setf wrapper-state) (new-value wrapper)
+    (setf (kernel:layout-invalid wrapper)
+	  (if (eq new-value 't)
+	      nil
+	      new-value)))
+
+  (defmacro wrapper-instance-slots-layout (wrapper)
+    `(%wrapper-instance-slots-layout ,wrapper))
+  (defmacro wrapper-class-slots (wrapper)
+    `(%wrapper-class-slots ,wrapper))
+  (defmacro wrapper-cache-number-vector (x) x))
+
 
 #+new-kcl-wrapper
 (defun make-wrapper (size &optional class)
@@ -449,6 +519,62 @@
 			   :size (* size #.(si::size-of t))
 			   :class class)))
 
+#+cmu17
+;;; BOOT-MAKE-WRAPPER  --  Interface
+;;;
+;;;    Called in BRAID when we are making wrappers for classes whose slots are
+;;; not initialized yet, and which may be built-in classes.  We pass in the
+;;; class name in addition to the class.
+;;;
+(defun boot-make-wrapper (length name &optional class)
+  (let ((found (lisp:find-class name nil)))
+    (cond
+     (found
+      (unless (kernel:class-pcl-class found)
+	(setf (kernel:class-pcl-class found) class))
+      (assert (eq (kernel:class-pcl-class found) class))
+      (let ((layout (kernel:class-layout found)))
+	(assert layout)
+	layout))
+     (t
+      (kernel:initialize-layout-hash
+       (make-wrapper-internal
+	:length length
+	:class (kernel:make-standard-class :name name :pcl-class class)))))))
+
+
+#+cmu17
+;;; MAKE-WRAPPER  --  Interface
+;;;
+;;;    In CMU CL, the layouts (a.k.a wrappers) for built-in and structure
+;;; classes already exist when PCL is initialized, so we don't necessarily
+;;; always make a wrapper.  Also, we help maintain the mapping between
+;;; lisp:class and pcl::class objects.
+;;;
+(defun make-wrapper (length class)
+  (cond
+   ((typep class 'std-class)
+    (kernel:initialize-layout-hash
+     (make-wrapper-internal
+      :length length
+      :class
+      (let ((owrap (class-wrapper class)))
+	(cond (owrap
+	       (kernel:layout-class owrap))
+	      ((*subtypep (class-of class)
+			  *the-class-standard-class*)
+	       (kernel:make-standard-class :pcl-class class))
+	      (t
+	       (kernel:make-random-pcl-class :pcl-class class)))))))
+   (t
+    (let* ((found (lisp:find-class (slot-value class 'name)))
+	   (layout (kernel:class-layout found)))
+      (unless (kernel:class-pcl-class found)
+	(setf (kernel:class-pcl-class found) class))
+      (assert (eq (kernel:class-pcl-class found) class))
+      (assert layout)
+      layout))))
+
 (defun print-wrapper (wrapper stream depth)
   (declare (ignore depth))
   (printing-random-thing (wrapper stream)
@@ -461,26 +587,37 @@
   `(and (< ,field-number #.(1- wrapper-cache-number-vector-length))
         (1+ ,field-number)))
 
+#-cmu17
 (defmacro cache-number-vector-ref (cnv n)
   `(#-kcl svref #+kcl aref ,cnv ,n))
 
+#+cmu17
+(defmacro cache-number-vector-ref (cnv n)
+  `(wrapper-cache-number-vector-ref ,cnv ,n))
+
 )
 
+#-cmu17
 (defmacro wrapper-cache-number-vector-ref (wrapper n)
   `(the fixnum
         (#-structure-wrapper svref #+structure-wrapper aref
           (wrapper-cache-number-vector ,wrapper) ,n)))
+#+cmu17
+(defmacro wrapper-cache-number-vector-ref (wrapper n)
+  `(kernel:layout-hash ,wrapper ,n))
 
 (defmacro class-no-of-instance-slots (class)
   `(wrapper-no-of-instance-slots (class-wrapper ,class)))
 
 (defmacro wrapper-class* (wrapper)
-  #-new-kcl-wrapper
+  #-(or new-kcl-wrapper cmu17)
   `(wrapper-class ,wrapper)
-  #+new-kcl-wrapper
+  #+(or new-kcl-wrapper cmu17)
   `(let ((wrapper ,wrapper))
      (or (wrapper-class wrapper)
-         (find-structure-class (si::s-data-name wrapper)))))
+         (find-structure-class
+	  #+new-kcl-wrapper (si::s-data-name wrapper)
+	  #+cmu17 (lisp:class-name (kernel:layout-class wrapper))))))
 
 ;;;
 ;;; The wrapper cache machinery provides general mechanism for trapping on
@@ -555,6 +692,7 @@
 		 (error "Wrapper returned from trap invalid.")))
 	  nwrapper))))
 
+#-cmu17
 (defmacro check-wrapper-validity1 (object)
   (let ((owrapper (gensym)))
     `(let ((,owrapper (cond ((std-instance-p ,object)
@@ -568,6 +706,16 @@
        (if (eq 't (wrapper-state ,owrapper))
 	   ,owrapper
 	   (check-wrapper-validity ,object)))))
+
+#+cmu17
+;;; semantically equivalent, but faster.
+;;;
+(defmacro check-wrapper-validity1 (object)
+  (let ((owrapper (gensym)))
+    `(let ((,owrapper (kernel:layout-of object)))
+       (if (kernel:layout-invalid ,owrapper)
+	   (check-wrapper-validity ,object)
+	   ,owrapper))))
 
 
 (defvar *free-caches* nil)

@@ -318,12 +318,14 @@
 
 (defun real-load-defclass (name metaclass-name supers slots other accessors)
   (do-standard-defsetfs-for-defclass accessors)	                ;***
-  (apply #'ensure-class name :metaclass metaclass-name
-			     :direct-superclasses supers
-			     :direct-slots slots
-			     :definition-source `((defclass ,name)
-						  ,(load-truename))
-			     other))
+  (let ((res (apply #'ensure-class name :metaclass metaclass-name
+		    :direct-superclasses supers
+		    :direct-slots slots
+		    :definition-source `((defclass ,name)
+					 ,(load-truename))
+		    other)))
+    #+cmu17 (kernel:layout-class (class-wrapper res))
+    #-cmu17 res))
 
 (setf (gdefinition 'load-defclass) #'real-load-defclass)
 
@@ -413,8 +415,10 @@
         (dolist (superclass direct-superclasses)
 	  (unless (validate-superclass class superclass)
 	    (error "The class ~S was specified as a~%super-class of the class ~S;~%~
-                    but the meta-classes ~S and~%~S are incompatible."
-		   superclass class (class-of superclass) (class-of class))))
+                    but the meta-classes ~S and~%~S are incompatible.~%
+                    Define a method for ~S to avoid this error."
+		   superclass class (class-of superclass) (class-of class)
+                   'validate-superclass)))
         (setf (slot-value class 'direct-superclasses) direct-superclasses))
       (setq direct-superclasses (slot-value class 'direct-superclasses)))
   (setq direct-slots
@@ -552,9 +556,13 @@
   (setf (slot-value class 'class-precedence-list) 
 	(compute-class-precedence-list class))
   (setf (slot-value class 'slots) (compute-slots class))
-  #-new-kcl-wrapper
+  #-(or cmu17 new-kcl-wrapper)
   (unless (slot-value class 'wrapper) 
     (setf (slot-value class 'wrapper) (make-wrapper 0 class)))
+  #+cmu17
+ (let ((lclass (lisp:find-class (class-name class))))
+    (setf (kernel:class-pcl-class lclass) class)
+    (setf (slot-value class 'wrapper) (kernel:class-layout lclass)))
   #+new-kcl-wrapper
   (let ((wrapper (get (class-name class) 'si::s-data)))
     (setf (slot-value class 'wrapper) wrapper)
@@ -689,14 +697,18 @@
 		   ;;
 		   (make-instances-obsolete class)
 		   (class-wrapper class)))))
+
       (with-slots (wrapper slots) class
 	#+new-kcl-wrapper
 	(setf (si::s-data-name nwrapper) (class-name class))
+	#+cmu17
+	(update-lisp-class-layout class nwrapper)
 	(setf slots eslotds
 	      (wrapper-instance-slots-layout nwrapper) nlayout
 	      (wrapper-class-slots nwrapper) nwrapper-class-slots
 	      (wrapper-no-of-instance-slots nwrapper) nslots
 	      wrapper nwrapper))
+
       (unless (eq owrapper nwrapper)
 	(update-pv-table-cache-info class)))))
 
@@ -1021,6 +1033,8 @@
 	(setf (wrapper-class-slots nwrapper)
 	      (wrapper-class-slots owrapper))
 	(without-interrupts
+	  #+cmu17
+	  (update-lisp-class-layout class nwrapper)
 	  (setf (slot-value class 'wrapper) nwrapper)
 	  (invalidate-wrapper owrapper ':flush nwrapper))))))
 
@@ -1044,6 +1058,8 @@
       (setf (wrapper-class-slots nwrapper)
 	    (wrapper-class-slots owrapper))
       (without-interrupts
+	#+cmu17
+	(update-lisp-class-layout class nwrapper)
 	(setf (slot-value class 'wrapper) nwrapper)
 	(invalidate-wrapper owrapper ':obsolete nwrapper)
 	class)))
@@ -1072,66 +1088,101 @@
 ;;; happening when they should, and that the trap methods are computing
 ;;; apropriate new wrappers.
 ;;; 
-(defun obsolete-instance-trap (owrapper nwrapper instance)  
-  ;;
-  ;; local  --> local        transfer 
-  ;; local  --> shared       discard
-  ;; local  -->  --          discard
-  ;; shared --> local        transfer
-  ;; shared --> shared       discard
-  ;; shared -->  --          discard
-  ;;  --    --> local        add
-  ;;  --    --> shared        --
-  ;;
-  (let* ((class (wrapper-class* nwrapper))
-	 (guts (allocate-instance class))	;??? allocate-instance ???
-	 (olayout (wrapper-instance-slots-layout owrapper))
-	 (nlayout (wrapper-instance-slots-layout nwrapper))
-	 (oslots (get-slots instance))
-	 (nslots (get-slots guts))
-	 (oclass-slots (wrapper-class-slots owrapper))
-	 (added ())
-	 (discarded ())
-	 (plist ()))
-    ;;
-    ;; Go through all the old local slots.
-    ;; 
-    (iterate ((name (list-elements olayout))
-	      (opos (interval :from 0)))
-      (let ((npos (posq name nlayout)))
-	(if npos
-	    (setf (instance-ref nslots npos) (instance-ref oslots opos))
-	    (progn (push name discarded)
-		   (unless (eq (instance-ref oslots opos) *slot-unbound*)
-		     (setf (getf plist name) (instance-ref oslots opos)))))))
-    ;;
-    ;; Go through all the old shared slots.
-    ;;
-    (iterate ((oclass-slot-and-val (list-elements oclass-slots)))
-      (let ((name (car oclass-slot-and-val))
-	    (val (cdr oclass-slot-and-val)))
-	(let ((npos (posq name nlayout)))
-	  (if npos
-	      (setf (instance-ref nslots npos) (cdr oclass-slot-and-val))
-	      (progn (push name discarded)
-		     (unless (eq val *slot-unbound*)
-		       (setf (getf plist name) val)))))))
-    ;;
-    ;; Go through all the new local slots to compute the added slots.
-    ;; 
-    (dolist (nlocal nlayout)
-      (unless (or (memq nlocal olayout)
-		  (assq nlocal oclass-slots))
-	(push nlocal added)))
+
+;;; obsolete-instance-trap might be called on structure instances
+;;; after a structure is redefined.  In most cases, obsolete-instance-trap
+;;; will not be able to fix the old instance, so it must signal an
+;;; error.  The hard part of this is that the error system and debugger
+;;; might cause obsolete-instance-trap to be called again, so in that
+;;; case, we have to return some reasonable wrapper, instead.
+
+(defvar *in-obsolete-instance-trap* nil)
+(defvar *the-wrapper-of-structure-object* 
+  (class-wrapper (find-class 'structure-object)))
+
+#+cmu17
+(define-condition obsolete-structure (error)
+  ((datum :reader obsolete-structure-datum :initarg :datum))
+  (:report
+   (lambda (condition stream)
+     ;; Don't try to print the structure, since it probably
+     ;; won't work.
+     (format stream "Obsolete structure error in ~S:~@
+		     For a structure of type: ~S"
+	     (conditions::condition-function-name condition)
+	     (type-of (obsolete-structure-datum condition))))))
+
+(defun obsolete-instance-trap (owrapper nwrapper instance)
+  (if (not #-(or cmu17 new-kcl-wrapper)
+           (or (std-instance-p instance) (fsc-instance-p instance))
+	   #+cmu17
+           (pcl-instance-p instance)
+           #+new-kcl-wrapper
+           nil)
+      (if *in-obsolete-instance-trap*
+          *the-wrapper-of-structure-object* 
+           (let ((*in-obsolete-instance-trap* t))
+	     #-cmu17
+             (error "The structure ~S is obsolete." instance)
+	     #+cmu17
+	     (error 'obsolete-structure :datum instance)))
+      (let* ((class (wrapper-class* nwrapper))
+	     (copy (allocate-instance class)) ;??? allocate-instance ???
+	     (olayout (wrapper-instance-slots-layout owrapper))
+	     (nlayout (wrapper-instance-slots-layout nwrapper))
+	     (oslots (get-slots instance))
+	     (nslots (get-slots copy))
+	     (oclass-slots (wrapper-class-slots owrapper))
+	     (added ())
+	     (discarded ())
+	     (plist ()))
+	;; local  --> local        transfer 
+	;; local  --> shared       discard
+	;; local  -->  --          discard
+	;; shared --> local        transfer
+	;; shared --> shared       discard
+	;; shared -->  --          discard
+	;;  --    --> local        add
+	;;  --    --> shared        --
+	;;
+	;; Go through all the old local slots.
+	;; 
+	(iterate ((name (list-elements olayout))
+		  (opos (interval :from 0)))
+	  (let ((npos (posq name nlayout)))
+	    (if npos
+		(setf (instance-ref nslots npos) (instance-ref oslots opos))
+		(progn
+		  (push name discarded)
+		  (unless (eq (instance-ref oslots opos) *slot-unbound*)
+		    (setf (getf plist name) (instance-ref oslots opos)))))))
+	;;
+	;; Go through all the old shared slots.
+	;;
+	(iterate ((oclass-slot-and-val (list-elements oclass-slots)))
+	  (let ((name (car oclass-slot-and-val))
+		(val (cdr oclass-slot-and-val)))
+	    (let ((npos (posq name nlayout)))
+	      (if npos
+		  (setf (instance-ref nslots npos) (cdr oclass-slot-and-val))
+		  (progn (push name discarded)
+			 (unless (eq val *slot-unbound*)
+			   (setf (getf plist name) val)))))))
+	;;
+	;; Go through all the new local slots to compute the added slots.
+	;; 
+	(dolist (nlocal nlayout)
+	  (unless (or (memq nlocal olayout)
+		      (assq nlocal oclass-slots))
+	    (push nlocal added)))
       
-    (swap-wrappers-and-slots instance guts)
+	(swap-wrappers-and-slots instance copy)
 
-    (update-instance-for-redefined-class instance
-					 added
-					 discarded
-					 plist)
-    nwrapper))
-
+	(update-instance-for-redefined-class instance
+					     added
+					     discarded
+					     plist)
+	nwrapper)))
 
 
 ;;;
@@ -1151,14 +1202,13 @@
 
 (defun change-class-internal (instance new-class)
   (let* ((old-class (class-of instance))
-	 (copy (copy-instance-internal instance))
-	 (guts (allocate-instance new-class))
-	 (new-wrapper (get-wrapper guts))
+	 (copy (allocate-instance new-class))
+	 (new-wrapper (get-wrapper copy))
 	 (old-wrapper (class-wrapper old-class))
 	 (old-layout (wrapper-instance-slots-layout old-wrapper))
 	 (new-layout (wrapper-instance-slots-layout new-wrapper))
 	 (old-slots (get-slots instance))
-	 (new-slots (get-slots guts))
+	 (new-slots (get-slots copy))
 	 (old-class-slots (wrapper-class-slots old-wrapper)))
 
     ;;
@@ -1184,7 +1234,7 @@
 
     ;; Make the copy point to the old instance's storage, and make the
     ;; old instance point to the new storage.
-    (swap-wrappers-and-slots instance guts)
+    (swap-wrappers-and-slots instance copy)
 
     (update-instance-for-different-class copy instance)
     instance))

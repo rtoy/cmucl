@@ -111,6 +111,7 @@
 ;;;
 #-new-kcl-wrapper
 (progn
+#-cmu17
 (defstruct (std-instance (:predicate std-instance-p)
 			 (:conc-name %std-instance-)
 			 (:constructor %%allocate-instance--class ())
@@ -370,9 +371,7 @@
 		  (if ,x *the-wrapper-of-symbol* *the-wrapper-of-null*))
 	     (built-in-or-structure-wrapper1 ,x)))))
 
-
 ;Low level functions for structures
-
 
 ;Functions on arbitrary objects
 

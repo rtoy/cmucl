@@ -64,6 +64,11 @@
 #+CMU
 (shadow '(destructuring-bind)
         *the-pcl-package*)
+#+cmu17
+(shadow '(find-class class-name class-of
+		     class built-in-class structure-class
+		     standard-class)
+	*the-pcl-package*)
 
 #+GCLisp
 (shadow '(string-append memq assq delq neq make-instance)
@@ -154,7 +159,7 @@
 #+cmu (shadow 'lisp:dotimes)
 
 #+cmu
-(import '(kernel:funcallable-instance-p ext:structurep)
+(import '(kernel:funcallable-instance-p)
 	*the-pcl-package*)
 
 
@@ -205,12 +210,12 @@
 		    slot-unbound
 		    slot-value
 		    standard
-		    standard-class
+		    #-cmu17 standard-class
 		    standard-generic-function
 		    standard-method
 		    standard-object
-		    structure-class
-		    #-cmu symbol-macrolet
+		    #-cmu17 structure-class
+		    #-cmu17 symbol-macrolet
 		    update-instance-for-different-class
 		    update-instance-for-redefined-class
 		    with-accessors
@@ -251,9 +256,9 @@
           standard-effective-slot-definition
           specializer
           eql-specializer
-          built-in-class
+	  #-cmu17 built-in-class
           forward-referenced-class
-          standard-class
+          #-cmu17 standard-class
           funcallable-standard-class))
 
 (defvar *chapter-6-exports*

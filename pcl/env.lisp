@@ -67,12 +67,15 @@
     (values)))
 
 (defmethod describe-object (object stream)
-  (let ((*standard-output* stream))
+  #-cmu
     (cond ((or #+kcl (packagep object))
 	   (describe-package object stream))
 	  (t
-	   (funcall (original-definition 'describe) object)))))
+	   (funcall (original-definition 'describe) object)))
+  #+cmu
+  (describe object stream))
 
+#-cmu
 (redefine-function 'describe 'pcl-describe)
 
 )
@@ -218,7 +221,7 @@
   (format stream "~&Its rehash-size is ~d."
 	  (lisp::hash-table-rehash-size object))
   (format stream "~&Its rehash-threshold is ~d."
-	  (lisp::hash-table-rehash-threshold object))
+	  (hash-table-rehash-threshold object))
   (format stream "~&It currently holds ~d entries."
 	  (lisp::hash-table-number-entries object)))
 
@@ -329,3 +332,75 @@
 (pushnew :pcl *features*)
 (pushnew :portable-commonloops *features*)
 (pushnew :pcl-structures *features*)
+
+#+cmu
+(when (find-package "OLD-PCL")
+  (setf (symbol-function (find-symbol "PRINT-OBJECT" :old-pcl))
+        (symbol-function 'pcl::print-object)))
+
+
+;;;; MAKE-LOAD-FORM
+
+#+cmu17
+(export '(cl::make-load-form cl::make-load-form-saving-slots) "CL")
+
+#+cmu17
+(progn
+  (defgeneric make-load-form (object &optional environment))
+
+  (defmethod make-load-form ((object structure-object) &optional environment)
+    (declare (ignore environment))
+    (kernel:make-structure-load-form object))
+
+  (defmethod make-load-form ((object wrapper) &optional env)
+    (declare (ignore env))
+    (let ((pname (kernel:class-proper-name (kernel:layout-class object))))
+      (unless pname
+	(error "Can't dump wrapper for anonymous class:~%  ~S"
+	       (kernel:layout-class object)))
+      `(kernel:class-layout (lisp:find-class ',pname))))
+
+  (defun make-load-form-saving-slots (object &key slot-names environment)
+    (declare (ignore environment))
+    (when slot-names
+      (warn ":SLOT-NAMES MAKE-LOAD-FORM option not implemented, dumping all ~
+	     slots:~%  ~S"
+	    object))
+    :just-dump-it-normally))
+
+
+;;; The following are hacks to deal with CMU CL having two different CLASS
+;;; classes.
+;;;
+#+cmu17
+(defun coerce-to-pcl-class (class)
+  (if (typep class 'lisp:class)
+      (or (kernel:class-pcl-class class)
+	  (find-structure-class (lisp:class-name class)))
+      class))
+
+#+cmu17
+(progn
+  (defmethod make-instance ((class lisp:class) &rest stuff)
+    (apply #'make-instance (coerce-to-pcl-class class) stuff))
+  (defmethod change-class (instance (class lisp:class))
+    (apply #'change-class instance (coerce-to-pcl-class class))))
+
+#+cmu17
+(macrolet ((frob (&rest names)
+	     `(progn
+		,@(mapcar #'(lambda (name)
+			      `(defmethod ,name ((class lisp:class))
+				 (funcall #',name
+					  (coerce-to-pcl-class class))))
+			  names))))
+  (frob
+    class-direct-slots
+    class-prototype
+    class-precedence-list
+    class-direct-default-initargs
+    class-direct-superclasses
+    compute-class-precedence-list
+    class-default-initargs class-finalized-p
+    class-direct-subclasses class-slots
+    make-instances-obsolete))

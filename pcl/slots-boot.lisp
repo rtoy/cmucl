@@ -59,10 +59,8 @@
        (,sym ,@args)
        (no-slot ',sym ',slot-name)))
 
-(defun no-slot (slot-name sym)
-  (error "No class has a slot named ~S (~s has no function binding)
-          (or maybe your files were compiled with an old version of PCL:~
-          try recompiling.)"
+(defun no-slot (sym slot-name)
+  (error "No class has a slot named ~S (~s has no function binding)."
 	 slot-name sym))
 
 (defmacro accessor-slot-value (object slot-name)
@@ -305,10 +303,7 @@
   (list* ':method-spec `(internal-reader-method ,class-name ,slot-name)
 	 (make-method-function
 	  (lambda (instance)
-	    (let ((wrapper (cond ((std-instance-p instance) 
-				  (std-instance-wrapper instance))
-				 ((fsc-instance-p instance) 
-				  (fsc-instance-wrapper instance)))))
+	    (let ((wrapper (get-instance-wrapper-or-nil instance)))
 	      (if wrapper
 		  (let* ((class (wrapper-class* wrapper))
 			 (index (or (instance-slot-index wrapper slot-name)
