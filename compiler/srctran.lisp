@@ -273,19 +273,16 @@
 		  (when (numeric-type-p s-type)
 		    (let ((s-low (numeric-type-low s-type))
 			  (s-high (numeric-type-high s-type)))
-		      (let ((new-type
-	     (if (and s-low s-high (<= s-low 32) (<= s-high 32))
-		 (make-numeric-type :class 'integer  :complexp :real
-				    :low (when n-low
-					   (min (ash n-low s-high)
-						(ash n-low s-low)))
-				    :high (when n-high
-					    (max (ash n-high s-high)
-						 (ash n-high s-low))))
-		 (make-numeric-type :class 'integer
-				    :complexp :real))))
-			(format *trace-output* "new-type: ~S~2%" new-type)
-			new-type))))))))
+		      (if (and s-low s-high (<= s-low 32) (<= s-high 32))
+			  (make-numeric-type :class 'integer  :complexp :real
+					     :low (when n-low
+						    (min (ash n-low s-high)
+							 (ash n-low s-low)))
+					     :high (when n-high
+						     (max (ash n-high s-high)
+							  (ash n-high s-low))))
+			  (make-numeric-type :class 'integer
+					     :complexp :real)))))))))
       *universal-type*))
 
 
