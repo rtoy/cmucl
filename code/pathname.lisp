@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.67 2004/09/01 02:37:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.68 2004/09/07 15:13:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,13 +171,18 @@
 ;;; The potential conflict with search-lists requires isolating the printed
 ;;; representation to use the i/o macro #.(logical-pathname <path-designator>).
 ;;;
+;;; Is there really a potential conflict?  CMUCL does not allow
+;;; search-list hosts and logical pathname hosts have the same name.
+;;; Hence, if we use #P to print them out, we can always read them
+;;; back without confusion.  (rtoy)
+;;;
 (defun %print-logical-pathname (pathname stream depth)
   (declare (ignore depth))
   (let ((namestring (handler-case (namestring pathname)
 		      (error nil))))
     (cond (namestring
 	   (if (or *print-escape* *print-readably*)
-	       (format stream "#.(logical-pathname ~S)" namestring)
+	       (format stream "#P~S" namestring)
 	       (format stream "~A" namestring)))
 	  (*print-readably*
 	   (error "~S Cannot be printed readably." pathname))
