@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.27 1991/06/05 14:09:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.28 1991/06/10 16:30:12 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,7 +112,7 @@
 ;;; Hemlock.
 ;;;
 #-no-hemlock
-(load "hem:load-hem.lisp")
+(load "hem:hemload.lisp")
 #-no-hemlock
 (load "hem:rompsite") ;Contains site-init stuff called at load time.
 #-no-hemlock
