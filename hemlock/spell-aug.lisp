@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-aug.lisp,v 1.1.1.3 1993/08/25 02:10:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-aug.lisp,v 1.1.1.4 1993/08/25 02:34:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,10 +19,7 @@
 ;;; code relies on implementation dependent code found in Spell-RT.Lisp.
 
 
-(in-package "SPELL" :use '("LISP" "EXTENSIONS" "SYSTEM"))
-
-(export '(spell-add-entry spell-read-dictionary spell-remove-entry
-	  spell-root-flags))
+(in-package "SPELL")
 
 
 ;;;; Converting Flags to Masks
@@ -58,8 +55,6 @@
 
 (defmacro string-table-replace (src-string dst-start length)
   `(sap-replace *string-table* ,src-string 0 ,dst-start (+ ,dst-start ,length)))
-
-(defconstant spell-deleted-entry #xFFFF)
 
 ;;; HASH-ENTRY is used in SPELL-ADD-ENTRY to find a dictionary location for
 ;;; adding a new entry.  If a location contains a zero, then it has never been
