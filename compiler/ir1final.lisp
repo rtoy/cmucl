@@ -71,27 +71,27 @@
   (etypecase leaf
     (functional
      (let* ((where (info function where-from name))
-;	    (type (info function type name))
 	    (dtype (leaf-type leaf))
 	    (node (lambda-bind (main-entry leaf)))
 	    (*compiler-error-context* node))
        (note-name-defined name :function)
 
-       (ecase where
-	 (:assumed
-	  (let ((approx-type (info function assumed-type name)))
-	    (when approx-type
-	      (valid-approximate-type approx-type dtype))))
-	 ((:declared :defined)
-;	  ...
-	  ))
-
-       (when (and (eq (function-type-returns dtype) *empty-type*)
-		  (policy node (>= safety brevity)))
-	 (compiler-note "Function does not return."))
+       (when (function-type-p dtype)
+	 (ecase where
+	   (:assumed
+	    (let ((approx-type (info function assumed-type name)))
+	      (when approx-type
+		(valid-approximate-type approx-type dtype))))
+	   ((:declared :defined)
+	    ))
+	 
+	 (when (and (eq (function-type-returns dtype) *empty-type*)
+		    (policy node (>= safety brevity)))
+	   (compiler-note "Function does not return."))
+	 
+	 (setf (info function type name) dtype)
+	 (clear-info function assumed-type name))
 
        (setf (info function kind name) :function)
-       (setf (info function where-from name) :defined)
-       (setf (info function type name) dtype)
-       (clear-info function assumed-type name)))
+       (setf (info function where-from name) :defined)))
     (global-var)))
