@@ -181,7 +181,9 @@
 ;;;    reference to NLX-Info structure for the escape function reference.  This
 ;;;    will cause the escape function to be deleted (although not removed from
 ;;;    the DFO.)  The escape function is no longer needed, and we don't want to
-;;;    emit code for it.
+;;;    emit code for it.  We then also change the %NLX-ENTRY call to use
+;;;    the NLX continuation so that there will be a use to represent the NLX
+;;;    use.
 ;;;
 (defun note-non-local-exit (env exit)
   (declare (type environment env) (type exit exit))
@@ -199,7 +201,10 @@
       (assert info)
       (close-over info (node-environment exit) env)
       (when (eq (functional-kind exit-fun) :escape)
-	(substitute-leaf (find-constant info) exit-fun))))
+	(substitute-leaf (find-constant info) exit-fun)
+	(let ((node (block-last (nlx-info-target info))))
+	  (delete-continuation-use node)
+	  (add-continuation-use node (nlx-info-continuation info))))))
 
   (undefined-value))
 
