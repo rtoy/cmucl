@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.44 2003/10/13 21:56:55 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.45 2003/10/16 16:18:03 toy Exp $
  *
  */
 
@@ -58,7 +58,7 @@
   (current_dynamic_space_free_pointer = (lispobj*) ((value) \
          | ((unsigned long) current_dynamic_space_free_pointer & lowtag_Mask)))
 #define get_alloc_pointer() \
-  (current_dynamic_space_free_pointer)
+  ((unsigned long) current_dynamic_space_free_pointer & ~lowtag_Mask)
 #define get_binding_stack_pointer() \
   (current_binding_stack_pointer)
 #define get_pseudo_atomic_atomic() \
