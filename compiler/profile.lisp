@@ -1,4 +1,8 @@
 ;;; -*- Package: C -*-
+;;;
+;;; Load this file to profile the CMUCL compiler. 
+
+
 (in-package "C")
 
 (use-package "PROFILE")
@@ -28,12 +32,10 @@
 (declaim (ftype (function (t) *) generate-code))
 (declaim (ftype (function (t t t t t t) *) fasl-dump-component))
 (declaim (ftype (function (t) *) debug-info-for-component))
-(declaim (ftype (function (t) *) clear-ir2-info))
 (declaim (ftype (function (t) *) macerate-ir1-component))
 (declaim (ftype (function (t) *) merge-top-level-lambdas))
 (declaim (ftype (function (t t) *) note-failed-optimization))
 (declaim (ftype (function (&optional t) *) clear-stuff))
-(declaim (ftype (function (t) *) read-source-form))
 (declaim (ftype (function (t t) *) fasl-dump-source-info))
 (declaim (ftype (function (t t) *) fasl-dump-top-level-lambda-call))
 (declaim (ftype (function (t t) *) new-assem:append-segment))
@@ -49,9 +51,9 @@
 	 local-call-analyze
 	 delete-block
 	 ir1-optimize
-;	 join-successor-if-possible
-;	 ir1-optimize-block
-;	 flush-dead-code
+	 join-successor-if-possible
+	 ir1-optimize-block
+	 flush-dead-code
 	 generate-type-checks
 	 constraint-propagate
 	 pre-environment-analyze-top-level
@@ -84,7 +86,6 @@
 	 generate-code
 	 debug-info-for-component
 	 fasl-dump-component
-	 clear-ir2-info
 	 macerate-ir1-component
 	 merge-top-level-lambdas
 	 note-failed-optimization
