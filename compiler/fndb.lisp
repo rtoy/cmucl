@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.47 1992/04/15 01:02:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.48 1992/05/07 08:49:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -644,8 +644,9 @@
 ;;;; In the "Hash Tables" chapter:
 
 (defknown make-hash-table
-  (&key (test callable) (size index) (rehash-size (or (integer (0)) (float (1.0))))
-	(rehash-threshold (or (integer (0)) (float (0.0) (1.0)))))
+  (&key (test callable) (size index)
+	(rehash-size (or (integer 1) (float (1.0))))
+	(rehash-threshold (real 0 1)))
   hash-table
   (flushable unsafe))
 (defknown hash-table-p (t) boolean (movable foldable flushable))
@@ -655,8 +656,13 @@
 (defknown remhash (t hash-table) boolean ())
 (defknown maphash (callable hash-table) null (foldable flushable call))
 (defknown clrhash (hash-table) hash-table ())
-(defknown hash-table-count (hash-table) fixnum (foldable flushable))
-
+(defknown hash-table-count (hash-table) index (foldable flushable))
+(defknown hash-table-rehash-size (hash-table) (or (integer 1) (float (1.0)))
+  (foldable flushable))
+(defknown hash-table-rehash-threshold (hash-table) (real 0 1)
+  (foldable flushable))
+(defknown hash-table-size (hash-table) index (foldable flushable))
+(defknown hash-table-test (hash-table) symbol (foldable flushable))
 (deftype non-negative-fixnum () `(integer 0 ,most-positive-fixnum))
 (defknown sxhash (t) non-negative-fixnum (foldable flushable))
 
