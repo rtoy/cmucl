@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.1 1991/11/15 15:25:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.2 1991/11/17 17:07:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -630,7 +630,8 @@ containing only those things which PRINT-INST-USING can handle."
   `(list ,@(mapcar #'(lambda (fspec)
 		       (destructuring-bind (name op arg
 						 &key mask function
-						 inverse-function type)
+						 inverse-function type
+						 &allow-other-keys)
 			   fspec
 			 `(list ',name
 				,@(ecase op
