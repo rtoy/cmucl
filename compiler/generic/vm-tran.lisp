@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.10 1990/05/27 14:58:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.11 1990/06/06 03:57:36 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -130,31 +130,28 @@
 
 ;;; Transforms for getting at arrays of unsigned-byte n when n < 8.
 
-#+nil
 (macrolet
     ((frob (type bits)
-       `(progn
-	  (deftransform data-vector-ref ((vector index)
-					 (,type *))
-	    `(multiple-value-bind (word bit)
-				  (floor index ,(truncate 16 ,bits))
-	       (ldb ,(ecase vm:target-byte-order
-		       (:little-endian '(byte ,bits bit))
-		       (:big-endian '(byte 1 (- 16 ,bits bit))))
-		    (%raw-bits vector (+ (* word 16)
-					 (* vm:vector-data-offset
-					    vm:word-bits))))))
-	  (deftransform data-vector-set ((vector index new-value)
-					 (,type * *))
-	    `(multiple-value-bind (word bit)
-				  (floor index ,(truncate 16 ,bits))
-	       (setf (ldb ,(ecase vm:target-byte-order
-			     (:little-endian '(byte ,bits bit))
-			     (:big-endian '(byte 1 (- 16 ,bits bit))))
-			  (%raw-bits vector (+ (* word 16)
-					       (* vm:vector-data-offset
-						  vm:word-bits))))
-		     new-value))))))
+       (let ((elements-per-word (truncate vm:word-bits bits)))
+	 `(progn
+	    (deftransform data-vector-ref ((vector index)
+					   (,type *))
+	      `(multiple-value-bind (word bit)
+				    (floor index ,',elements-per-word)
+		 (ldb ,(ecase vm:target-byte-order
+			 (:little-endian '(byte ,bits bit))
+			 (:big-endian '(byte 1 (- vm:word-bits ,bits bit))))
+		      (%raw-bits vector (+ word vm:vector-data-offset)))))
+	    (deftransform data-vector-set ((vector index new-value)
+					   (,type * *))
+	      `(multiple-value-bind (word bit)
+				    (floor index ,',elements-per-word)
+		 (setf (ldb ,(ecase vm:target-byte-order
+			       (:little-endian '(byte ,bits bit))
+			       (:big-endian
+				'(byte 1 (- vm:word-bits ,bits bit))))
+			    (%raw-bits vector (+ word vm:vector-data-offset)))
+		       new-value)))))))
   (frob simple-bit-vector 1)
   (frob (simple-array (unsigned-byte 2) (*)) 2)
   (frob (simple-array (unsigned-byte 4) (*)) 4))
