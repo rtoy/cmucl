@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.23 1991/05/04 15:15:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.24 1991/05/06 13:31:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,7 +75,6 @@
 (load "code:rand")
 (load "code:trace")
 (load "code:profile")
-(load "code:room")
 (load "code:weak")
 (load "code:sysmacs")
 (load "code:pprint")
@@ -90,6 +89,10 @@
 ;;; Load the compiler.
 #-no-compiler
 (load "c:loadcom.lisp")
+#-no-compiler
+;;; Depends on backend definition for object format info...
+(load "code:room")
+
 
 ;;; Load the pretty printer after the compiler, 'cause it compiles stuff
 ;;; at load time.
