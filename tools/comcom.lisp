@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.56 2003/09/08 16:07:04 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57 2004/11/05 22:02:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,6 +113,7 @@
   (comf "target:compiler/ir1util")
   (comf "target:compiler/ir1opt"))
 
+(comf "target:compiler/loop")
 (comf "target:compiler/ir1final")
 ;;try(comf "target:compiler/srctran")
 (comf "target:compiler/array-tran" :byte-compile *byte-compile*)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.50 2003/02/05 19:32:20 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.51 2004/11/05 22:02:38 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,6 +24,7 @@
 (load "vm:vm-fndb")
 (load "c:ir1util")
 (load "c:ir1tran")
+(load "c:loop")
 (load "c:ir1final")
 (load "c:array-tran")
 (load "c:seqtran")

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.44 2003/10/02 19:23:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.45 2004/11/05 22:02:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -408,7 +408,14 @@
   ;;
   ;; If true, then constraints that hold in this block and its successors by
   ;; merit of being tested by its IF predecessor.
-  (test-constraint nil :type (or sset null)))
+  (test-constraint nil :type (or sset null))
+  ;; Set of all blocks that dominate this block. NIL is interpreted
+  ;; as "all blocks in component". 
+  (dominators nil :type (or null sset))
+  ;; the LOOP that this block belongs to
+  (loop nil :type (or null cloop))
+  ;; next block in the loop.
+  (loop-next nil :type (or null cblock)))
 
 (defun %print-block (s stream d)
   (declare (ignore d))
@@ -513,7 +520,9 @@
   ;; Similar to NEW-FUNCTIONS, but is used when a function has already been
   ;; analyzed, but new references have been added by inline expansion.  Unlike
   ;; NEW-FUNCTIONS, this is not disjoint from COMPONENT-LAMBDAS.
-  (reanalyze-functions nil :type list))
+  (reanalyze-functions nil :type list)
+  ;; The default LOOP in the component
+  (outer-loop nil :type (or null cloop)))
 
 (defprinter component
   name

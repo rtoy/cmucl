@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.41 2003/01/23 21:05:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.42 2004/11/05 22:02:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -508,7 +508,6 @@
   dynamic-state)
 
 
-#|
 ;;; The Loop structure holds information about a loop.
 ;;;
 (defstruct (cloop (:print-function %print-loop)
@@ -546,6 +545,7 @@
   ;;
   ;; A list of the loops nested directly within this one.
   (inferiors nil :type list)
+  (depth 0 :type fixnum)
   ;;
   ;; The head of the list of blocks directly within this loop.  We must recurse
   ;; on Inferiors to find all the blocks.
@@ -556,7 +556,6 @@
   head
   tail
   exits)
-|#
 
 
 ;;;; VOPs and Templates:
