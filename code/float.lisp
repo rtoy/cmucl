@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.29 2004/06/09 14:46:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.30 2004/06/18 18:18:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1077,6 +1077,7 @@ rounding modes & do ieee round-to-integer.
 	 (exp (ldb vm:single-float-exponent-byte bits))
 	 (biased (truly-the kernel:single-float-exponent
 			    (- exp vm:single-float-bias))))
+    (declare (type (signed-byte 32) bits))
     ;; At this point, we have the number represented as
     ;;
     ;; x = sign * 2^exp * frac
@@ -1105,7 +1106,6 @@ rounding modes & do ieee round-to-integer.
 	   ;; Somewhere in between.  Zap the bits that
 	   ;; represent the fraction part.
 	   (let ((frac-bits (- (float-digits x) biased)))
-	     (declare (type (signed-byte 32) bits))
 	     (setf bits (logandc2 bits (- (ash 1 frac-bits) 1)))
 	     (kernel:make-single-float bits))))))
 
@@ -1158,23 +1158,15 @@ rounding modes & do ieee round-to-integer.
 ;;; to be a (signed-byte 32).
 ;;;
 (defun %unary-ftruncate (number)
-  (macrolet ((truncate-float (rtype helper)
-	       `(if (< (float (- (- (ash 1 31)) 1) number)
-		       number
-		       (float (ash 1 31) number))
-		    (coerce (truly-the (signed-byte 32)
-				       (%unary-truncate number))
-			    ',rtype)
-		    (,helper number))))
   (number-dispatch ((number real))
     ((integer)
      (float number))
     ((ratio)
      (float (truncate (numerator number) (denominator number))))
     ((single-float)
-     (truncate-float single-float %unary-ftruncate/single-float))
+     (%unary-ftruncate/single-float number))
     ((double-float)
-     (truncate-float double-float %unary-ftruncate/double-float)))))
+     (%unary-ftruncate/double-float number))))
 	     
 
 
