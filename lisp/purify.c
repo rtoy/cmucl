@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.20 2000/10/27 19:25:55 dtc Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.21 2002/11/08 20:01:41 toy Exp $ 
 
    */
 #include <stdio.h>
@@ -406,7 +406,7 @@ valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
   return TRUE;
 }
 
-#define MAX_STACK_POINTERS 256
+#define MAX_STACK_POINTERS 1024
 lispobj *valid_stack_locations[MAX_STACK_POINTERS];
 unsigned int num_valid_stack_locations;
 
