@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.42 1992/04/21 04:24:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.43 1992/06/14 07:08:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,8 +29,8 @@
 
 (in-package "KERNEL")
 (export '(*current-level* *pretty-printer* output-object output-ugly-object
-	  check-for-circularity handle-circularity with-circularity-detection
-	  descend-into punt-if-too-long output-symbol-name))
+	  check-for-circularity handle-circularity descend-into
+	  punt-if-too-long output-symbol-name))
 
 (in-package "LISP")
 
@@ -281,22 +281,6 @@
 
 ;;;; Circularity detection stuff.
 
-;;; *CURRENT-STRUCTURE* -- internal
-;;;
-;;; We have to bend over backwards in order to make sure depth abbrevs and
-;;; circularity detection work right despite the fact that the user supplied
-;;; print function may or may not do anything special.
-;;;
-;;; In order to correctly handle depth abbrevs, OUTPUT-STRUCTURE binds a
-;;; this to the structure being output.  If the descend-into stuff notices
-;;; that we are trying to descend into that structure, we don't bother
-;;; doing the depth check/inc because we know it's already been done.  But
-;;; if we try to descend into something else, then we know that the
-;;; structure printer is being stupid and didn't check the depth or for
-;;; circularities.
-;;;
-(defvar *current-structure* nil)
-
 ;;; *CIRCULARITY-HASH-TABLE* -- internal.
 ;;;
 ;;; When *print-circle* is T, this gets bound to a hash table that (eventually)
@@ -332,9 +316,6 @@
   (cond ((null *print-circle*)
 	 ;; Don't bother, nobody cares.
 	 nil)
-	((eq object *current-structure*)
-	 ;; It's already been handled by output-structure.
-	 nil)
 	((null *circularity-hash-table*)
 	 :initiate)
 	((null *circularity-counter*)
@@ -355,13 +336,15 @@
 	(t
 	 (let ((value (gethash object *circularity-hash-table*)))
 	   (case value
-	     ((nil)
-	      ;; We found an object that wasn't there the first time around.
-	      (let ((*print-circle* nil))
-		(error "Found an object on the second pass that wasn't there ~
-			on the first pass.")))
-	     ((t)
-	      ;; Exactly one occurance of this object appears.  That's good.
+	     ((nil t)
+	      ;; If NIL, we found an object that wasn't there the first time
+	      ;; around.  If T, exactly one occurance of this object appears.
+	      ;; Either way, just print the thing without any special
+	      ;; processing.  Note: you might argue that finding a new object
+	      ;; means that something is broken, but this can happen.  If
+	      ;; someone uses the ~@<...~:> format directive, it conses a
+	      ;; new list each time though format (i.e. the &REST list), so
+	      ;; we will have different cdrs.
 	      nil)
 	     (0
 	      (if assign
@@ -382,7 +365,7 @@
    you should blow it off."
   (case marker
     (:initiate
-     ;; Someone forgor to initiate circularity detection.
+     ;; Someone forgot to initiate circularity detection.
      (let ((*print-circle* nil))
        (error "Attempt to use CHECK-FOR-CIRCULARITY when circularity ~
 	       checking has not been initiated.")))
@@ -402,37 +385,6 @@
 	      (write-char #\= stream)
 	      t))))))
 
-;;; WITH-CIRCULARITY-DETECTION -- interface.
-;;; 
-(defmacro with-circularity-detection ((object stream) &body body)
-  "Check to see if OBJECT needs to be delt with specially, and if so, do
-   whatever is necessary.  STREAM is the stream that the object is being
-   printed to (so we know where to print the #n= and #n#).  Note: BODY
-   might be executed twice, so it cannot have any side effects.  Also,
-   while initially looking for circularities, STREAM is rebound to a
-   stream that ignores all output so it must be a bindable symbol."
-  (let ((user-body (gensym))
-	(checker (gensym)))
-    (once-only ((object object))
-      `(labels ((,user-body (,stream)
-		  (let ((*current-structure* nil))
-		    ,@body))
-		(,checker (,stream)
-		  (let ((marker (check-for-circularity ,object t)))
-		    (case marker
-		      (:initiate
-		       (let ((*circularity-hash-table*
-			      (make-hash-table :test #'eq)))
-			 (,checker (make-broadcast-stream))
-			 (let ((*circularity-counter* 0))
-			   (,checker ,stream))))
-		      ((nil)
-		       (,user-body ,stream))
-		      (t
-		       (when (handle-circularity marker ,stream)
-			 (,user-body ,stream)))))))
-	 (,checker ,stream)))))
-
 
 ;;;; Level and Length abbreviations.
 
@@ -444,40 +396,25 @@
 
 ;;; DESCEND-INTO -- interface.
 ;;; 
-(defmacro descend-into ((object stream) &body body)
-  "Automatically handle *print-level* abbreviation and circularity detection.
-   If we are too deep, then a # is printed to STREAM and BODY is ignored.
-   If OBJECT isn't NIL, then it is checked to see if it is a circular
-   reference (see WITH-CIRCULARITY-DETECTION), and handled accordingly.
-   BODY should do it's output to STREAM (which might be rebound)."
-  (if object
-      (once-only ((object object))
-	`(if (and (null *print-readably*)
-		  *print-level*
-		  (>= *current-level* *print-level*)
-		  (or (null *current-structure*)
-		      (not (eq *current-structure* ,object))))
-	     (write-char #\# ,stream)
-	     (with-circularity-detection (,object ,stream)
-	       (let ((*current-level*
-		      (if (or (null *current-structure*)
-			      (not (eq *current-structure* ,object)))
-			  (1+ *current-level*)
-			  *current-level*)))
-		 ,@body))))
-      `(if (and (null *print-readably*)
-		*print-level*
-		(>= *current-level* *print-level*))
-	   (write-char #\# ,stream)
-	   (let ((*current-structure* nil)
-		 (*current-level* (1+ *current-level*)))
-	     ,@body))))
+(defmacro descend-into ((stream) &body body)
+  "Automatically handle *print-level* abbreviation.  If we are too deep, then
+   a # is printed to STREAM and BODY is ignored."
+  (let ((flet-name (gensym)))
+    `(flet ((,flet-name ()
+	      ,@body))
+       (cond ((and (null *print-readably*)
+		   *print-level*
+		   (>= *current-level* *print-level*))
+	      (write-char #\# ,stream))
+	     (t
+	      (let ((*current-level* (1+ *current-level*)))
+		(,flet-name)))))))
 
 ;;; PUNT-IF-TOO-LONG -- interface.
 ;;; 
 (defmacro punt-if-too-long (index stream)
   "Punt if INDEX is equal or larger then *PRINT-LENGTH* (and *PRINT-READABLY*
-   is NIL by outputting \"...\" and throwing to the block named NIL."
+   is NIL) by outputting \"...\" and returning from the block named NIL."
   `(when (and (not *print-readably*)
 	      *print-length*
 	      (>= ,index *print-length*))
@@ -498,12 +435,46 @@
 ;;; 
 (defun output-object (object stream)
   "Output OBJECT to STREAM observing all printer control variables."
-  (if *print-pretty*
-      (if *pretty-printer*
-	  (funcall *pretty-printer* object stream)
-	  (let ((*print-pretty* nil))
-	    (output-ugly-object object stream)))
-      (output-ugly-object object stream)))
+  (labels ((print-it (stream)
+	     (if *print-pretty*
+		 (if *pretty-printer*
+		     (funcall *pretty-printer* object stream)
+		     (let ((*print-pretty* nil))
+		       (output-ugly-object object stream)))
+		 (output-ugly-object object stream)))
+	   (check-it (stream)
+	     (let ((marker (check-for-circularity object t)))
+	       (case marker
+		 (:initiate
+		  (let ((*circularity-hash-table*
+			 (make-hash-table :test #'eq)))
+		    (check-it (make-broadcast-stream))
+		    (let ((*circularity-counter* 0))
+		      (check-it stream))))
+		 ((nil)
+		  (print-it stream))
+		 (t
+		  (when (handle-circularity marker stream)
+		    (print-it stream)))))))
+    (cond ((or (not *print-circle*)
+	       (numberp object)
+	       (characterp object)
+	       (and (symbolp object) (symbol-package object) t))
+	   ;; If it a number, character, or interned symbol, we do not want
+	   ;; to check for circularity/sharing.
+	   (print-it stream))
+	  ((or *circularity-hash-table*
+	       (consp object)
+	       (structurep object)
+	       (typep object '(array t *)))
+	   ;; If we have already started circularity detection, this object
+	   ;; might be a sharded reference.  If we have not, then if it is
+	   ;; a cons, a structure, or an array of element type t it might
+	   ;; contain a circular reference to itself or multiple shared
+	   ;; references.
+	   (check-it stream))
+	  (t
+	   (print-it stream)))))
 
 ;;; OUTPUT-UGLY-OBJECT -- interface.
 ;;; 
@@ -1020,7 +991,7 @@
 ;;;; Recursive objects.
 
 (defun output-list (list stream)
-  (descend-into (list stream)
+  (descend-into (stream)
     (write-char #\( stream)
     (let ((length 0)
 	  (list list))
@@ -1054,7 +1025,7 @@
 	 (when (and *print-readably*
 		    (not (eq (array-element-type vector) 't)))
 	   (error "Cannot print ~S in a readable format." vector))
-	 (descend-into (vector stream)
+	 (descend-into (stream)
 	   (write-string "#(" stream)
 	   (dotimes (i (length vector))
 	     (unless (zerop i)
@@ -1097,21 +1068,20 @@
 	     (not (eq (array-element-type array) t)))
     (error "Arrays of element-type ~S cannot be printed readably."
 	   (array-element-type array)))
-  (descend-into (array stream)
-    (write-char #\# stream)
-    (let ((*print-base* 10))
-      (output-integer (array-rank array) stream))
-    (write-char #\A stream)
-    (with-array-data ((data array) (start) (end))
-      (declare (ignore end))
-      (sub-output-array-guts data (array-dimensions array) stream start))))
+  (write-char #\# stream)
+  (let ((*print-base* 10))
+    (output-integer (array-rank array) stream))
+  (write-char #\A stream)
+  (with-array-data ((data array) (start) (end))
+    (declare (ignore end))
+    (sub-output-array-guts data (array-dimensions array) stream start)))
 
 (defun sub-output-array-guts (array dimensions stream index)
   (declare (simple-vector array) (fixnum index))
   (cond ((null dimensions)
 	 (output-object (svref array index) stream))
 	(t
-	 (descend-into (nil stream)
+	 (descend-into (stream)
 	   (write-char #\( stream)
 	   (let* ((dimension (car dimensions))
 		  (dimensions (cdr dimensions))
@@ -1136,12 +1106,9 @@
 ;;; Defstruct code.
 
 (defun output-structure (structure stream)
-  (let ((*current-structure* nil))
-    (descend-into (structure stream)
-      (let ((*current-structure* structure))
-	(funcall (or (info type printer (structure-ref structure 0))
-		     #'c::default-structure-print)
-		 structure stream *current-level*)))))
+  (funcall (or (info type printer (structure-ref structure 0))
+	       #'c::default-structure-print)
+	   structure stream *current-level*))
 
 
 ;;;; Integer, ratio, and complex printing.  (i.e. everything but floats)
