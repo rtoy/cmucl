@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.38 2002/10/19 14:46:24 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.39 2002/10/19 14:56:01 pmai Exp $")
 
 (in-package :pcl)
 
@@ -291,7 +291,7 @@ work during bootstrapping.
 	 function-specifier
 	 :lambda-list lambda-list
 	 :definition-source `((defgeneric ,function-specifier)
-			      ,(load-truename))
+			      ,*load-pathname*)
 	 initargs))
 
 
@@ -1128,7 +1128,7 @@ work during bootstrapping.
 		       :definition-source `((defmethod ,gf-spec
 						,@qualifiers
 					      ,specializers)
-					    ,(load-truename))
+					    ,*load-pathname*)
 		       initargs)))
     (unless (or (eq method-class 'standard-method)
 		(eq (find-class method-class nil) (class-of method)))
@@ -1542,7 +1542,7 @@ work during bootstrapping.
 			 has not been set" fin)))))
     (setf (gdefinition spec) fin)
     (bootstrap-set-slot 'standard-generic-function fin 'name spec)
-    (bootstrap-set-slot 'standard-generic-function fin 'source (load-truename))
+    (bootstrap-set-slot 'standard-generic-function fin 'source *load-pathname*)
     (set-function-name fin spec)
     (let ((arg-info (make-arg-info)))
       (setf (early-gf-arg-info fin) arg-info)

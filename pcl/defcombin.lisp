@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.17 2002/10/19 01:19:30 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.18 2002/10/19 14:56:02 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -121,8 +121,7 @@
 	 ',type ',operator ',identity-with-one-arg ',documentation))))
 
 (defun load-short-defcombin (type operator ioa doc)
-  (let* ((truename (load-truename))
-	 (specializers
+  (let* ((specializers
 	   (list (find-class 'generic-function)
 		 (intern-eql-specializer type)
 		 *the-class-t*))
@@ -142,7 +141,8 @@
 			   (make-short-method-combination
 			       type options operator ioa new-method doc))
 			 args))
-	    :definition-source `((define-method-combination ,type) ,truename)))
+	    :definition-source `((define-method-combination ,type)
+				 ,*load-pathname*)))
     (when old-method
       (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)))
@@ -277,7 +277,7 @@
 					   :documentation doc))
 			  args))
 	 :definition-source `((define-method-combination ,type)
-			      ,(load-truename)))))
+			      ,*load-pathname*))))
     (setf (gethash type *long-method-combination-functions*) function)
     (when old-method (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)))

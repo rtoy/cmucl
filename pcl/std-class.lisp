@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.35 2002/10/19 14:32:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.36 2002/10/19 14:56:03 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -327,7 +327,7 @@
 		    :direct-superclasses supers
 		    :direct-slots slots
 		    :definition-source `((defclass ,name)
-					 ,(load-truename))
+					 ,*load-pathname*)
 		    other)))
     ;; Defclass of a class with a forward-referenced superclass does not
     ;; have a wrapper. RES is the incomplete PCL class. The Lisp class

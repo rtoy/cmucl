@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.23 2002/09/09 14:54:37 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.24 2002/10/19 14:56:02 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -436,7 +436,7 @@
     (inform-type-system-about-std-class name))
   (let ((ecd
 	  (make-early-class-definition name
-				       (load-truename)
+				       *load-pathname*
 				       metaclass
 				       supers
 				       canonical-slots

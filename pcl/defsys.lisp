@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.27 2002/08/27 19:01:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.28 2002/10/19 14:56:02 pmai Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -446,10 +446,6 @@ and load your system with:
 ;;; here.
 ;;;
 ;;; ***                                                                   ***
-
-(defun load-truename (&optional (errorp nil))
-  (declare (ignore errorp))
-  *load-truename*)
 
 (defvar *pcl-directory* (pathname "target:pcl/"))
 
