@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.98 1993/08/24 02:12:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.99 1993/08/30 10:39:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1102,6 +1102,8 @@
 
 ;;;; Load time value support.
 
+;;; See EMIT-MAKE-LOAD-FORM.
+
 ;;; PRODUCING-FASL-FILE  --  interface.
 ;;;
 ;;; Returns T iff we are currently producing a fasl-file and hence constants
@@ -1147,7 +1149,6 @@
 ;;; INIT-FORMS.
 ;;; 
 (defun compile-load-time-stuff (form name for-value)
-  (compile-top-level-lambdas () t)
   (with-ir1-namespace
    (let* ((*lexical-environment* (make-null-environment))
 	  (lambda (ir1-top-level form *current-path* for-value)))
@@ -1189,8 +1190,8 @@
 ;;; It's not necessarily an error for this to happen.  If we are processing the
 ;;; init form for some object that showed up *after* the original reference
 ;;; to this constant, then we just need to defer the processing of that init
-;;; form.  To detect this, we maintain *constants-created-sense-last-init* as
-;;; a list of the constants created sense the last time we started processing
+;;; form.  To detect this, we maintain *constants-created-since-last-init* as
+;;; a list of the constants created since the last time we started processing
 ;;; an init form.  If the constant passed to emit-make-load-form shows up in
 ;;; this list, then there is a circular chain through creation forms, which is
 ;;; an error.
@@ -1206,26 +1207,26 @@
 ;;; do anything.  The dumper will eventually get it's hands on the object
 ;;; and use the normal structure dumping noise on it.
 ;;;
-;;; Otherwise, we bind *constants-being-created* and *constants-created-sense-
+;;; Otherwise, we bind *constants-being-created* and *constants-created-since-
 ;;; last-init* and compile the creation form a la load-time-value.  When this
 ;;; finishes, we tell the dumper to use that result instead whenever it sees
 ;;; this constant.
 ;;;
-;;; Now we try to compile the init form.  We bind *constants-created-sense-
+;;; Now we try to compile the init form.  We bind *constants-created-since-
 ;;; last-init* to NIL and compile the init form (and any init forms that were
 ;;; added because of circularity detection).  If this works, great.  If not,
 ;;; we add the init forms to the init forms for the object that caused the
 ;;; problems and let it deal with it.
 ;;; 
 (defvar *constants-being-created* nil)
-(defvar *constants-created-sense-last-init* nil)
-;;;
+(defvar *constants-created-since-last-init* nil)
+;;; 
 (defun emit-make-load-form (constant)
   (assert (fasl-file-p *compile-object*))
   (unless (fasl-constant-already-dumped constant *compile-object*)
     (let ((circular-ref (assoc constant *constants-being-created* :test #'eq)))
       (when circular-ref
-	(when (find constant *constants-created-sense-last-init* :test #'eq)
+	(when (find constant *constants-created-since-last-init* :test #'eq)
 	  (throw constant t))
 	(throw 'pending-init circular-ref)))
     (multiple-value-bind
@@ -1246,6 +1247,9 @@
 	(:ignore-it
 	 nil)
 	(t
+	 (compile-top-level-lambdas () t)
+	 (when (fasl-constant-already-dumped constant *compile-object*)
+	   (return-from emit-make-load-form nil))
 	 (let* ((name (let ((*print-level* 1) (*print-length* 2))
 			(with-output-to-string (stream)
 			  (write constant :stream stream))))
@@ -1254,8 +1258,8 @@
 			  (list constant))))
 	   (let ((*constants-being-created*
 		  (cons info *constants-being-created*))
-		 (*constants-created-sense-last-init*
-		  (cons constant *constants-created-sense-last-init*)))
+		 (*constants-created-since-last-init*
+		  (cons constant *constants-created-since-last-init*)))
 	     (when
 		 (catch constant
 		   (fasl-note-handle-for-constant
@@ -1268,7 +1272,7 @@
 	       (compiler-error "Circular references in creation form for ~S"
 			       constant)))
 	   (when (cdr info)
-	     (let* ((*constants-created-sense-last-init* nil)
+	     (let* ((*constants-created-since-last-init* nil)
 		    (circular-ref
 		     (catch 'pending-init
 		       (loop for (name form) on (cdr info) by #'cddr
