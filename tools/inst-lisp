@@ -1,6 +1,6 @@
 #!/bin/csh -fx
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/inst-lisp,v 1.4 1992/09/08 22:28:25 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/inst-lisp,v 1.5 1993/08/15 14:40:00 wlott Exp $
 #
 # Utility for installing an alpha core.
 #
@@ -14,6 +14,9 @@ endif
 set src = /afs/cs/project/clisp/build/@sys/$subdir
 set dst = /afs/cs/project/clisp-3/alphas/@sys
 
-rm -f $dst/lisp $dst/lisp.core
+rm -f $dst/lisp $dst/lisp.core $dst/site-init.* $dst/motifd
 cp -p $src/lisp/lisp $dst/lisp
 cp -p lisp.core $dst/lisp.core
+set siteinit = "$src/code/cmu-site.*f"
+cp -p $siteinit $dst/site-init.$siteinit:e
+cp -p $src/motif/server/motifd $dst
