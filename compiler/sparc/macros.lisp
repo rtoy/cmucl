@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.6 1992/03/21 21:44:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.7 1992/07/31 21:49:19 wlott Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -431,6 +431,8 @@
 (defmacro pseudo-atomic ((&key (extra 0)) &rest forms)
   (let ((n-extra (gensym)))
     `(let ((,n-extra ,extra))
-       (inst add alloc-tn 4)
+       (without-scheduling ()
+	 (inst add alloc-tn 4))
        ,@forms
-       (inst taddcctv alloc-tn (- ,n-extra 4)))))
+       (without-scheduling ()
+	 (inst taddcctv alloc-tn (- ,n-extra 4))))))
