@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.31 2003/01/23 21:05:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.32 2003/03/04 15:14:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -612,8 +612,7 @@ down to individual words.")
 		      ;; Return T if X >= Y.
 		      (do ((i (1- (+ x n)) (1- i))
 			   (j (1- (+ y n)) (1- j)))
-			  ((= i x)
-			   (return t))
+			  (())
 			(declare (type bignum-index i j))
 			(let ((x-digit (%bignum-ref result i))
 			      (y-digit (%bignum-ref result j)))
@@ -790,7 +789,7 @@ down to individual words.")
 ;;;
 (defun karatsuba (x y)
   (declare (type bignum-type x y)
-	   (optimize (speed 3) (safety 0) (debug 0)))
+	   (optimize (speed 3) (safety 0) (debug 2)))
   (flet ((power-of-two (n)
 	   ;; Compute the smallest power of two greater than or equal
 	   ;; to the given number.
