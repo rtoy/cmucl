@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.15 2001/03/04 20:12:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.16 2003/07/16 17:04:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,6 +53,7 @@
 	   ;;     to open an AF_UNIX socket instead of an AF_INET one.
 	   ;;     This is supposed to be faster on a local server.
 	   (host-name "unix")
+	   (protocol :unix)
 	   (auth-name nil)
 	   (auth-data nil)
 	   (display-num nil)
@@ -89,6 +90,7 @@
           (xlib::get-best-authorization (machine-instance) display-num :tcp)))
       (let ((display (xlib:open-display host-name
                                       :display display-num
+				      :protocol protocol
                                       :authorization-name auth-name
                                       :authorization-data auth-data)))
 	(when screen-num
