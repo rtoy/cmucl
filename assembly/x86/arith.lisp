@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.2 1997/02/10 08:01:00 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.3 1997/02/10 17:06:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,9 +57,9 @@
     (inst mov ecx (fixnum 2))		; arg count
 
     (inst mov ebx
-     (make-ea :dword
-      :disp (+ nil-value (static-function-offset
-			  ',(symbolicate "TWO-ARG-" fun)))))
+	  (make-ea :dword
+		   :disp (+ nil-value (static-function-offset
+				       ',(symbolicate "TWO-ARG-" fun)))))
     
     (inst jmp ebx)
     
@@ -156,8 +156,8 @@
   (inst push eax)
   (inst mov ecx (fixnum 1))		; arg count
 
-  (inst mov eax (make-ea
-		 :dword
+  (inst mov eax
+	(make-ea :dword
 		 :disp (+ nil-value (static-function-offset '%negate))))
   (inst jmp eax)
   
@@ -206,9 +206,10 @@
     (inst sub esp-tn (fixnum 3))	; pw -- was 2
     (inst push eax)
     (inst mov ecx (fixnum 2))
-    (inst mov eax (make-ea
-		   :dword
-		   :disp (+ nil-value (static-function-offset ',static-fn))))
+
+    (inst mov eax (make-ea :dword
+			   :disp (+ nil-value
+				    (static-function-offset ',static-fn))))
     (inst jmp eax)
     
      DO-COMPARE
@@ -301,8 +302,8 @@
   (inst sub esp-tn (fixnum 3))		; pw -- was 2
   (inst push eax)
   (inst mov ecx (fixnum 2))
-  (inst mov eax (make-ea
-		 :dword
+
+  (inst mov eax (make-ea :dword
 		 :disp (+ nil-value (static-function-offset 'two-arg-=))))
   (inst jmp eax)
   
