@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.19 2000/09/05 08:51:52 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.20 2002/01/28 20:17:12 pmai Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -22,7 +22,7 @@
 #endif
 
 /* Minimize conditionalization for different OS naming schemes */
-#if defined (__linux__) || (__FreeBSD_version >= 300000)
+#if defined (__linux__) || (__FreeBSD_version >= 300000) || defined (__NetBSD__)
 #define GNAME(var) var
 #else
 #define GNAME(var) _##var

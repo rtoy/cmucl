@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.17 2001/12/06 19:15:41 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.18 2002/01/28 20:17:09 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,7 +103,7 @@
 	(sc-sp      unsigned-int)	
 	(sc-ss	    unsigned-int)))
 
-;;; OpenBSD also has a sigcontext that looks more like Linux.
+;;; OpenBSD/NetBSD also have sigcontext structs that look more like Linux.
 #+openbsd
 (def-alien-type sigcontext
     (struct nil
@@ -127,6 +127,34 @@
 	(sc-mask    unsigned-int)
 	(sc-trapno  unsigned-int)
 	(sc-err     unsigned-int)
+	))
+
+#+netbsd
+(def-alien-type sigcontext
+    (struct nil
+	(sc-gs      unsigned-int)
+	(sc-fs      unsigned-int)
+	(sc-es	    unsigned-int)
+	(sc-ds	    unsigned-int)
+	(sc-edi	    unsigned-int)
+	(sc-esi	    unsigned-int)
+	(sc-fp	    unsigned-int) ;; ebp
+	(sc-ebx	    unsigned-int)
+	(sc-edx	    unsigned-int)
+	(sc-ecx	    unsigned-int)
+	(sc-eax	    unsigned-int)
+	(sc-pc      unsigned-int)
+	(sc-cs	    unsigned-int)
+	(sc-efl     unsigned-int)		; sc_ps
+	(sc-sp      unsigned-int)	
+	(sc-ss	    unsigned-int)
+	(sc-onstack unsigned-int)
+	;; Old NetBSD 1.3 signal mask
+	(sc-oldmask unsigned-int)
+	(sc-trapno  unsigned-int)
+	(sc-err     unsigned-int)
+	;; New signal mask (post NetBSD 1.3)
+	(sc-mask    (array unsigned-int 4))
 	))
 
 ;; For Linux...

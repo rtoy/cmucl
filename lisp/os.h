@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.8 2001/12/06 19:15:45 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.9 2002/01/28 20:17:11 pmai Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -32,8 +32,12 @@
 #ifdef __OpenBSD__
 #include "OpenBSD-os.h"
 #else
+#ifdef __NetBSD__
+#include "NetBSD-os.h"
+#else
 #ifdef __linux__
 #include "Linux-os.h"
+#endif
 #endif
 #endif
 #endif

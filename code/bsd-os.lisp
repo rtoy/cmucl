@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.4 2001/12/06 19:15:40 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.5 2002/01/28 20:17:08 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;;
 ;;; Hacked into (Free)bsd-os.lisp by Paul Werkowski.
 ;;; Generalized a bit for OpenBSD by Pierre R. Mai.
+;;; Support for NetBSD by Pierre R. Mai.
 
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
@@ -24,8 +25,9 @@
 (pushnew :bsd *features*)
 
 (setq *software-type* #+OpenBSD "OpenBSD"
+                      #+NetBSD "NetBSD"
                       #+FreeBSD "FreeBSD"
-		      #-(or FreeBSD OpenBSD) "BSD")
+		      #-(or FreeBSD NetBSD OpenBSD) "BSD")
 
 (defvar *software-version* nil "Version string for supporting software")
 

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.7 2001/12/06 19:15:45 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.8 2002/01/28 20:17:11 pmai Exp $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_
@@ -21,7 +21,7 @@
 #if !defined alpha
 typedef unsigned long lispobj;
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__linux__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__linux__)
 typedef unsigned int u32;
 typedef signed int s32;
 #endif

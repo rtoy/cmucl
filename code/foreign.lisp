@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.35 2001/12/06 19:15:41 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.36 2002/01/28 20:17:09 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,7 +89,7 @@
 ;;; The following definitions are taken from
 ;;; /usr/include/sys/elf_common.h and /usr/include/sys/elf32.h.
 ;;;
-#+(and FreeBSD elf)
+#+(or NetBSD (and FreeBSD elf))
 (progn
 (alien:def-alien-type elf-address      (alien:unsigned 32))
 (alien:def-alien-type elf-half-word    (alien:unsigned 16))
@@ -183,10 +183,12 @@
 	  (unless (elf-p (alien:slot header 'elf-ident))
 	      (error (format nil "~A is not an ELF file." name)))
 
-	  (let ((brand (elf-brand (alien:slot header 'elf-ident))))
-	    (unless (string= brand "FreeBSD" :end1 6 :end2 6)
-	      (error (format nil "~A is not a FreeBSD executable. Brand: ~A"
-			     name brand))))
+	  #-NetBSD
+	  (let ((brand (elf-brand (alien:slot header 'elf-ident)))
+		(correct-brand #+NetBSD "NetBSD" #+FreeBSD "FreeBSD"))
+	    (unless (string= brand correct-brand :end1 (length correct-brand))
+	      (error (format nil "~A is not a ~A executable. Brand: ~A"
+			     name correct-brand brand))))
 
 	  (unless (elf-executable-p (alien:slot header 'elf-type))
 	    (error (format nil "~A is not executable." name)))
@@ -436,7 +438,7 @@ to skip undefined symbols which don't have an address."
             ))
       (unix:unix-close fd))))
 
-#-(or linux solaris irix (and FreeBSD elf))
+#-(or linux solaris irix NetBSD (and FreeBSD elf))
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))

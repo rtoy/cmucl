@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.13 2001/12/06 19:15:46 pmai Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.14 2002/01/28 20:17:12 pmai Exp $
  *
  */
 
@@ -21,7 +21,7 @@
  *	0x48000000->0xC8000000 2GB  Dynamic Space.
  *	0xE0000000->           256M C stack - Alien stack.
  *
- *  OpenBSD:
+ *  OpenBSD and NetBSD:
  *	0x00000000->0x0E000000 224M C program and memory allocation.
  *	0x0E000000->0x10000000  32M Foreign segment.
  *	0x10000000->0x20000000 256M Read-Only Space.
@@ -67,7 +67,7 @@
 #endif
 
 
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__) || defined(__NetBSD__)
 #define READ_ONLY_SPACE_START   (0x10000000)
 #define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
 

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.42 2001/12/06 19:15:42 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.43 2002/01/28 20:17:09 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1861,9 +1861,10 @@
 		       "_"))
 		  (#.c:x86-fasl-file-implementation
 		   (if (and (c:backend-featurep :bsd)
-			    (not (c:backend-featurep :elf)))
+			    (not (c:backend-featurep :elf))
+			    (not (c:backend-featurep :netbsd)))
 		       "_" ; older FreeBSD, OpenBSD
-		       "")) ; Linux and FreeBSD V3+
+		       "")) ; Linux and ELF FreeBSD V3+, NetBSD
 		  )
 		name)))
 
