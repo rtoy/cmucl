@@ -181,12 +181,14 @@
 ;;;    number of successors + bit flags (single byte)
 ;;;        elsewhere-p
 ;;;    ...ordinal number of each successor in the function's blocks vector...
-;;;    kind of location (single byte)
+;;;    number of locations in this block
+;;;    kind of first location (single byte)
 ;;;    delta from previous PC (or from 0 if first location in function.)
 ;;;    [offset of first top-level form, if no function TLF-NUMBER]
 ;;;    form number of first source form
 ;;;    first live mask (length in bytes determined by number of VARIABLES)
-;;;    ...more <PC, top-level form offset, form-number, live-set> tuples...
+;;;    ...more <kind, delta, top-level form offset, form-number, live-set>
+;;;       tuples...
 
 
 (defconstant compiled-debug-block-nsucc-byte (byte 2 0))
