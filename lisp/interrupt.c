@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.14 1998/01/05 05:42:30 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.15 1998/05/01 01:21:42 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -161,23 +161,30 @@ undo_fake_foreign_function_call(struct sigcontext *context)
 }
 
 void 
-interrupt_internal_error(HANDLER_ARGS,
-			      boolean continuable)
+interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 {
-  lispobj context_sap;
+    lispobj context_sap;
 #ifdef __linux__
-  GET_CONTEXT
+    GET_CONTEXT
 #endif
 
     fake_foreign_function_call(context);
 
-    /* Allocate the SAP object while the interrupts are still
-       disabled. */
+    /* Allocate the SAP object while the interrupts are still disabled. */
     if (internal_errors_enabled)
-      context_sap = alloc_sap(context),
+	context_sap = alloc_sap(context);
 
 #ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
     sigprocmask(SIG_SETMASK,&context->uc_sigmask, 0);
+#else
+    {
+      sigset_t temp;
+      sigemptyset(&temp);
+      temp.__val[0] = context->uc_sigmask;
+      sigprocmask(SIG_SETMASK,&temp, 0);
+    }
+#endif
 #else
     sigsetmask(context->sc_mask);
 #endif
@@ -213,7 +220,11 @@ interrupt_handle_pending(struct sigcontext *context)
     }
 
 #ifdef POSIX_SIGS
+#if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
     context->uc_sigmask = pending_mask;
+#else
+    context->uc_sigmask = pending_mask.__val[0];
+#endif
     sigemptyset(&pending_mask);
 #else
     context->sc_mask = pending_mask;
@@ -284,7 +295,16 @@ interrupt_handle_now(HANDLER_ARGS)
 
         /* Allow signals again. */
 #ifdef POSIX_SIGS
+#if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
         sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+#else
+	{
+	  sigset_t temp;
+	  sigemptyset(&temp);
+	  temp.__val[0] = &context->uc_sigmask;
+	  sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+	}
+#endif
 #else
         sigsetmask(context->sc_mask);
 #endif
@@ -299,7 +319,16 @@ interrupt_handle_now(HANDLER_ARGS)
     } else {
         /* Allow signals again. */
 #ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
         sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+#else
+	{
+	  sigset_t temp;
+	  sigemptyset(&temp);
+	  temp.__val[0] = &context->uc_sigmask;
+	  sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+	}
+#endif
 #else
         sigsetmask(context->sc_mask);
 #endif
@@ -334,8 +363,21 @@ maybe_now_maybe_later(HANDLER_ARGS)
         pending_signal = signal;
         pending_code = DEREFCODE(code);
 #ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
         pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
+#else
+	{
+	  sigset_t temp;
+	  sigemptyset(&temp);
+	  pending_mask.__val[0] = context->uc_sigmask;
+	  temp.__val[0] = context->uc_sigmask;
+	  FILLBLOCKSET(&temp);
+	  
+	  context->uc_sigmask = temp.__val[0];
+	}
+#endif
+
 #else
         pending_mask = context->sc_mask;
         context->sc_mask |= BLOCKABLE;
@@ -349,8 +391,19 @@ maybe_now_maybe_later(HANDLER_ARGS)
         pending_signal = signal;
         pending_code = DEREFCODE(code);
 #ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
         pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
+#else
+	{
+	  sigset_t temp;
+	  sigemptyset(&temp);
+	  pending_mask.__val[0] = context->uc_sigmask;
+	  temp.__val[0] = context->uc_sigmask;
+	  FILLBLOCKSET(&temp);
+	  context->uc_sigmask = temp.__val[0];
+	}
+#endif
 #else
         pending_mask = context->sc_mask;
         context->sc_mask |= BLOCKABLE;

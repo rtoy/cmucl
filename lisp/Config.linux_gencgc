@@ -1,7 +1,7 @@
-vpath %.h /usr/dtc2/cmucl/p86/lisp:/usr/dtc2/cmucl/src/lisp
-vpath %.c /usr/dtc2/cmucl/p86/lisp:/usr/dtc2/cmucl/src/lisp
-vpath %.S /usr/dtc2/cmucl/p86/lisp:/usr/dtc2/cmucl/src/lisp
-CPPFLAGS = -I. -I/usr/dtc2/cmucl/p86/lisp -I/usr/dtc2/cmucl/src/lisp -I- -I/usr/X11R6/include
+vpath %.h /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
+vpath %.c /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
+vpath %.S /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
+CPPFLAGS = -I. -I/usr/src/cmucl/cmucl/src/lisp -I- -I/usr/X11R6/include
 CC = gcc  -Wstrict-prototypes -O2 -fno-strength-reduce # -Wall
 LD = ld
 CPP = cpp

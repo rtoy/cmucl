@@ -14,7 +14,7 @@
  * Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.3 1997/11/25 17:59:17 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.4 1998/05/01 01:21:40 dtc Exp $
  *
  */
 
@@ -57,6 +57,17 @@ static double estack_buf[SIG_STACK_SIZE];
 #include "gencgc.h"
 #endif
 
+#if ((LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6))
+int PVE_stub_errno;
+#endif
+
+#if ((LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6))
+void update_errno (void)
+{
+  PVE_stub_errno = errno;
+}
+#endif
+
 
 void
 os_init(void)
@@ -90,7 +101,7 @@ __setfpucw(0x1372|4|8|16|32); /*no interrupts */
 }
 
 int
-#if LINUX_VERSION_CODE >= linuxversion(2,1,0)
+#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 sc_reg(struct sigcontext *c, int offset)
 #else
 sc_reg(struct sigcontext_struct *c, int offset)

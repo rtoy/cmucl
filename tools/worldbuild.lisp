@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.40 1998/01/13 19:18:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.41 1998/05/01 01:21:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,7 +112,9 @@
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"
-    "target:code/unix"
+    ,@(if (c:backend-featurep :glibc2)
+	  '("target:code/unix-glibc2")
+	  '("target:code/unix"))
     ,@(when (c:backend-featurep :mach)
 	'("target:code/mach"
 	  "target:code/mach-os"))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.76 1997/12/12 15:28:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.77 1998/05/01 01:21:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,7 +137,10 @@
 (comf "target:code/string")
 (comf "target:code/mipsstrops")
 
-(comf "target:code/unix" :proceed t)
+(if (c:backend-featurep :glibc2)
+    (comf "target:code/unix-glibc2" :proceed t)
+    (comf "target:code/unix" :proceed t))
+
 (when (c:backend-featurep :mach)
   (comf "target:code/mach")
   (comf "target:code/mach-os"))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.27 1997/11/15 11:03:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.28 1998/05/01 01:21:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -391,9 +391,17 @@
 #+(or linux solaris irix)
 (progn
 
-(defconstant rtld-lazy 1)
-(defconstant rtld-now 2)
-(defconstant rtld-global #-irix #o400 #+irix 4)
+(defconstant rtld-lazy 1
+  "Lazy function call binding")
+(defconstant rtld-now 2
+  "Immediate function call binding")
+#+(and linux glibc2)
+(defconstant rtld-binding-mask #x3
+  "Mask of binding time value")
+
+(defconstant rtld-global #-irix #x100 #+irix 4
+  "If set the symbols of the loaded object and its dependencies are
+   made visible as if the object were linked directly into the program")
 
 (defvar *global-table* nil)
 ;;; Dynamically loaded stuff isn't there upon restoring from a
@@ -408,10 +416,10 @@
   #+(or linux irix) "/usr/bin/ld")
 
 (alien:def-alien-routine dlopen system-area-pointer
-  (str c-call:c-string) (i c-call:int))
+  (file c-call:c-string) (mode c-call:int))
 (alien:def-alien-routine dlsym system-area-pointer
   (lib system-area-pointer)
-  (str c-call:c-string))
+  (name c-call:c-string))
 (alien:def-alien-routine dlclose void (lib system-area-pointer))
 (alien:def-alien-routine dlerror c-call:c-string)
 
