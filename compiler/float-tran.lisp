@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.79 1999/07/13 15:42:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.80 1999/09/06 15:27:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1257,6 +1257,21 @@
 			 (iy (imagpart y)))
 		    (complex (- (* rx ry) (* ix iy))
 			     (+ (* rx iy) (* ix ry)))))
+	       (deftransform / ((x y) ((complex ,type) (complex ,type)) *
+				:policy (> speed space))
+		 '(let* ((rx (realpart x))
+			 (ix (imagpart x))
+			 (ry (realpart y))
+			 (iy (imagpart y)))
+		    (if (> (abs ry) (abs iy))
+			(let* ((r (/ iy ry))
+			       (dn (* ry (+ 1 (* r r)))))
+			  (complex (/ (+ rx (* ix r)) dn)
+				   (/ (- ix (* rx r)) dn)))
+			(let* ((r (/ ry iy))
+			       (dn (* iy (+ 1 (* r r)))))
+			  (complex (/ (+ (* rx r) ix) dn)
+				   (/ (- (* ix r) rx) dn))))))
 	       ;; Multiply a complex by a real or vice versa
 	       (deftransform * ((w z) ((complex ,type) real) *)
 		 '(complex (* (realpart w) z) (* (imagpart w) z)))
@@ -1283,53 +1298,6 @@
 
   (frob single-float)
   (frob double-float))
-
-;; These functions implement complex division for single and double-floats.
-(macrolet ((frob (type)
-	     (let ((name (intern (concatenate 'string "COMPLEX-" (symbol-name type) "-/"))))
-	       `(progn
-		 (defknown ,name ((complex ,type) (complex ,type)) (complex ,type) (movable foldable flushable))
-		 (defun ,name (x y)
-		   (declare (type (complex ,type) x y)
-			    (optimize (speed 3) (safety 0)))
-		   (let* ((rx (realpart x))
-			  (ix (imagpart x))
-			  (ry (realpart y))
-			  (iy (imagpart y)))
-		     (if (> (abs ry) (abs iy))
-			 (let* ((r (/ iy ry))
-				(dn (* ry (+ 1 (* r r)))))
-			   (complex (/ (+ rx (* ix r)) dn)
-				    (/ (- ix (* rx r)) dn)))
-			 (let* ((r (/ ry iy))
-				(dn (* iy (+ 1 (* r r)))))
-			   (complex (/ (+ (* rx r) ix) dn)
-				    (/ (- (* ix r) rx) dn))))))))))
-  (frob single-float)
-  (frob double-float)
-  #+long
-  (frob long-float))
-
-;; Only inline the complex division if the speed and space are right.
-(macrolet ((frob (name type)
-	     `(deftransform / ((x y) ((complex ,type) (complex ,type)) * :node node)
-	       (if (policy node (> speed space))
-		   '(let* ((rx (realpart x))
-			   (ix (imagpart x))
-			   (ry (realpart y))
-			   (iy (imagpart y)))
-		     (if (> (abs ry) (abs iy))
-			 (let* ((r (/ iy ry))
-				(dn (* ry (+ 1 (* r r)))))
-			   (complex (/ (+ rx (* ix r)) dn)
-				    (/ (- ix (* rx r)) dn)))
-			 (let* ((r (/ ry iy))
-				(dn (* iy (+ 1 (* r r)))))
-			   (complex (/ (+ (* rx r) ix) dn)
-				    (/ (- (* ix r) rx) dn)))))
-		   `(,',name x y)))))
-  (frob c::complex-single-float-/ single-float)
-  (frob c::complex-double-float-/ double-float))
 
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
 ;;; produce a minimal range for the result; the result is the widest
