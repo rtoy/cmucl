@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.18 1992/06/27 21:41:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.19 1992/09/25 23:31:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -521,13 +521,17 @@
   (values
    `(make-hash-table
      :test ',(hash-table-test table) :size ',(hash-table-size table)
-     :hash-table-rehash-size ',(hash-table-rehash-size table)
-     :hash-table-rehash-threshold ',(hash-table-rehash-threshold table))
-   (let ((sets nil))
+     :rehash-size ',(hash-table-rehash-size table)
+     :rehash-threshold ',(hash-table-rehash-threshold table))
+   (let ((values nil))
      (declare (inline maphash))
      (maphash #'(lambda (key value)
-		  (setf sets (list* `(gethash ',key ,table) `',value sets)))
+		  (push (cons key value) values))
 	      table)
-     (if sets
-	 `(setf ,@sets)
+     (if values
+	 `(stuff-hash-table ,table ',values)
 	 nil))))
+
+(defun stuff-hash-table (table alist)
+  (dolist (x alist)
+    (setf (gethash (car x) table) (cdr x))))
