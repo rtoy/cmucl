@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.4 1990/02/09 13:51:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.5 1990/02/13 17:13:15 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -18,23 +18,25 @@
 ;;; 
 (in-package "VM")
 
-(export '(%cons-car-slot %cons-cdr-slot
+(export '(cons-car-slot cons-cdr-slot
 
-	  %symbol-value-slot %symbol-function-slot %symbol-plist-slot
-	  %symbol-name-slot %symbol-package-slot
+	  symbol-value-slot symbol-function-slot symbol-plist-slot
+	  symbol-name-slot symbol-package-slot
 
-	  %array-fill-pointer-slot %array-elements-slot %array-data-slot
-	  %array-displacement-slot %array-displaced-p-slot
-	  %array-dimensions-offset
+	  vector-length-slot vector-data-offset
 
-	  %code-code-size-slot %code-entry-points-slot %code-debug-info-slot
-	  %code-constants-offset
+	  array-fill-pointer-slot array-elements-slot array-data-slot
+	  array-displacement-slot array-displaced-p-slot
+	  array-dimensions-offset
 
-	  %function-header-self-slot %function-header-next-slot
-	  %function-header-name-slot %function-header-arglist-slot
-	  %function-header-type-slot %function-header-code-offset
+	  code-code-size-slot code-entry-points-slot code-debug-info-slot
+	  code-constants-offset
 
-	  %closure-function-slot %closure-info-offset))
+	  function-header-self-slot function-header-next-slot
+	  function-header-name-slot function-header-arglist-slot
+	  function-header-type-slot function-header-code-offset
+
+	  closure-function-slot closure-info-offset))
 
 (in-package "C")
 
@@ -85,14 +87,14 @@
        ,@(nreverse load-time))))
 
 
-(defslots (%cons :lowtag list-pointer-type :header nil)
+(defslots (cons :lowtag list-pointer-type :header nil)
   (car :ref-vop car :ref-trans car
        :set-vop set-car :set-trans %rplaca)
   (cdr :ref-vop cdr :ref-trans cdr
        :set-vop set-cdr :set-trans %rplacd))
 
 
-(defslots (%symbol :lowtag other-pointer-type)
+(defslots (symbol :lowtag other-pointer-type)
   (value :set-vop set :set-trans set)
   (function :set-vop set-symbol-function :set-trans %sp-set-definition)
   (plist :ref-vop symbol-plist :ref-trans symbol-plist
@@ -102,7 +104,12 @@
 	   :set-vop set-package))
 
 
-(defslots (%array :lowtag other-pointer-type)
+(defslots (vector :lowtag other-pointer-type)
+  length
+  &rest
+  data)
+
+(defslots (array :lowtag other-pointer-type)
   fill-pointer
   elements
   data
@@ -111,14 +118,14 @@
   &rest
   dimensions)
 
-(defslots (%code :lowtag other-pointer-type)
+(defslots (code :lowtag other-pointer-type)
   code-size
   entry-points
   debug-info
   &rest
   constants)
 
-(defslots (%function-header :lowtag function-pointer-type)
+(defslots (function-header :lowtag function-pointer-type)
   self
   next
   name
@@ -127,7 +134,7 @@
   &rest
   code)
 
-(defslots (%closure :lowtag function-pointer-type)
+(defslots (closure :lowtag function-pointer-type)
   function
   &rest
   info)
@@ -154,7 +161,7 @@
   (:translate symbol-value)
   (:generator 9
     (move obj-temp object)
-    (loadw value obj-temp %symbol-value-slot)
+    (loadw value obj-temp symbol-value-slot)
     #+nil
     (let ((err-lab (generate-error-code node clc::error-symbol-unbound
 					obj-temp)))
@@ -167,7 +174,7 @@
   (:translate symbol-function)
   (:generator 10
     (move obj-temp object)
-    (loadw value obj-temp %symbol-function-slot)
+    (loadw value obj-temp symbol-function-slot)
     #+nil
     (let ((err-lab (generate-error-code node clc::error-symbol-undefined
 					obj-temp)))
@@ -212,12 +219,12 @@
 
 
 (define-vop (fast-symbol-value cell-ref)
-  (:variant %symbol-value-slot other-pointer-type)
+  (:variant symbol-value-slot other-pointer-type)
   (:policy :fast)
   (:translate symbol-value))
 
 (define-vop (fast-symbol-function cell-ref)
-  (:variant %symbol-function-slot other-pointer-type)
+  (:variant symbol-function-slot other-pointer-type)
   (:policy :fast)
   (:translate symbol-function))
 
