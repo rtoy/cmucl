@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.49 2003/12/02 17:40:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.50 2004/01/09 04:52:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -192,12 +192,12 @@
 
 ;;; Where to put the different spaces.  Must match the C code!
 ;;; 
-(defparameter target-read-only-space-start #x10000000)
-(defparameter target-static-space-start    #x28000000)
-(defparameter target-dynamic-space-start   #x40000000)
+(defconstant target-read-only-space-start #x10000000)
+(defconstant target-static-space-start    #x28000000)
+(defconstant target-dynamic-space-start   #x40000000)
 
 ;; This better match the value in sparc-validate.h!
-(defparameter target-foreign-linkage-space-start #x0f800000)
+(defconstant target-foreign-linkage-space-start #x0f800000)
 ;; This better agree with what sparc-arch.c thinks it is!  Right now,
 ;; it's 4 instructions, so 16 bytes.
 (defconstant target-foreign-linkage-entry-size 16)
@@ -299,6 +299,9 @@
     lisp::*cmucl-core-path*
 
     ;; Gencgc
+    ;;
+    ;; Sparc doesn't use current-region-free-pointer, but we leave it
+    ;; here anyway.
     #+gencgc
     *current-region-free-pointer*
     #+gencgc
