@@ -2,7 +2,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.15 2002/11/22 01:05:23 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.16 2002/12/18 19:16:28 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -768,6 +768,8 @@
 
 (defgeneric no-applicable-method (generic-function &rest args))
 ;          (t)
+
+(defgeneric no-primary-method (generic-function &rest args))
 
 (defgeneric reader-method-class (class direct-slot &rest initargs))
 ;          (slot-class t)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.11 2002/08/26 02:23:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.12 2002/12/18 19:16:28 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -175,14 +175,22 @@
   (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
       (get-generic-function-info gf)
     (declare (ignore nreq nkeys arg-info))
-    (let ((ll (make-fast-method-call-lambda-list metatypes applyp))
-	  ;; When there are no primary methods and a next-method call occurs
-	  ;; effective-method is (error "No mumble..") and the defined
-	  ;; args are not used giving a compiler warning.
-	  (error-p (eq (first effective-method) 'error)))
-      `(lambda ,ll
-	 (declare (ignore ,@(if error-p ll '(.pv-cell. .next-method-call.))))
-	 ,effective-method))))
+    (let ((ll (make-fast-method-call-lambda-list metatypes applyp)))
+      (cond
+	;; When there are no primary methods and a next-method call
+	;; occurs effective-method is (%no-primary-method <gf>),
+	;; which we define here to collect all gf arguments, to pass
+	;; those together with the GF to no-primary-method:
+	((eq (first effective-method) '%no-primary-method)
+	  `(lambda (.pv-cell. .next-method-call. &rest .args.)
+	     (declare (ignore .pv-cell. .next-method-call.))
+	     (flet ((%no-primary-method (gf)
+	              (apply #'no-primary-method gf .args.)))
+	       ,effective-method)))
+	(t
+	  `(lambda ,ll
+	     (declare (ignore .pv-cell. .next-method-call.))
+	     ,effective-method))))))
 
 (defun expand-emf-call-method (gf form metatypes applyp env)
   (declare (ignore gf metatypes applyp env))
@@ -340,8 +348,14 @@
 	  primary (reverse primary)
 	  around  (reverse around))
     (cond ((null primary)
-	   `(error "No primary method for the generic function ~S."
-	     ',generic-function))
+	   ;;
+	   ;; This form is recognized by expand-effective-method-function,
+	   ;; which provides a definition for %no-primary-method that
+	   ;; collects all gf arguments, and passes them together with the
+	   ;; generic function to no-primary-method for more informative
+	   ;; error reporting.
+	   ;;
+	   `(%no-primary-method ',generic-function))
 	  ((and (null before) (null after) (null around))
 	   ;;
 	   ;; By returning a single call-method `form' here we enable an

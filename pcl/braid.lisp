@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.27 2002/11/22 00:39:55 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.28 2002/12/18 19:16:27 pmai Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -619,6 +619,20 @@ when called with arguments ~S."
           'no-applicable-method
           :function generic-function
           :arguments args)
+  (apply generic-function args))
+
+(define-condition no-primary-method (no-applicable-method)
+  ()
+  (:report (lambda (condition stream)
+             (format stream "Generic function ~S~%~
+                             No primary method given arguments ~S"
+                     (no-applicable-method-function condition)
+                     (no-applicable-method-arguments condition)))))
+
+(defmethod no-primary-method ((generic-function standard-generic-function)
+			      &rest args)
+  (cerror "Try again." 'no-primary-method
+	  :function generic-function :arguments args)
   (apply generic-function args))
 
 (define-condition no-next-method (type-error)
