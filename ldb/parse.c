@@ -1,11 +1,16 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.3 1990/03/28 22:50:33 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.4 1990/05/12 16:41:58 ch Exp $ */
 #include <stdio.h>
+#include <ctype.h>
+#include <signal.h>
+#include <strings.h>
 
 #include "ldb.h"
 #include "lisp.h"
 #include "globals.h"
 #include "vars.h"
 #include "parse.h"
+#include "interrupt.h"
+#include "lispregs.h"
 
 static void skip_ws(ptr)
 char **ptr;
@@ -251,6 +256,33 @@ lispobj *result;
     return FALSE;
 }
 
+static int
+parse_regnum(s)
+char *s;
+{
+	if ((s[1] == 'R') || (s[1] == 'r')) {
+		int regnum;
+
+		if (s[2] == '\0')
+			return -1;
+
+		/* skip the $R part and call atoi on the number */
+		regnum = atoi(s + 2);
+		if ((regnum >= 0) && (regnum < NREGS))
+			return regnum;
+		else
+			return -1;
+	} else {
+		int i;
+
+		for (i = 0; i < NREGS ; i++)
+			if (strcasecmp(s + 1, lisp_register_names[i]) == 0)
+				return i;
+		
+		return -1;
+	}
+}
+
 lispobj parse_lispobj(ptr)
 char **ptr;
 {
@@ -261,14 +293,33 @@ char **ptr;
     if (token == NULL) {
         printf("Expected an object.\n");
         throw_to_monitor();
-    }
-    else if (token[0] == '$') {
-        if (!lookup_variable(token+1, &result)) {
+    } else if (token[0] == '$') {
+	if (isalpha(token[1])) {
+		int free;
+		int regnum;
+		struct sigcontext *context;
+
+		free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
+
+		if (free == 0) {
+			printf("Variable ``%s'' is not valid -- there is no current interrupt context.\n", token);
+			throw_to_monitor();
+		}
+
+		context = lisp_interrupt_contexts[free - 1];
+
+		regnum = parse_regnum(token);
+		if (regnum < 0) {
+			printf("Bogus register: ``%s''\n", token);
+			throw_to_monitor();
+		}
+
+		result = context->sc_regs[regnum];
+	} else if (!lookup_variable(token+1, &result)) {
             printf("Unknown variable: ``%s''\n", token);
             throw_to_monitor();
         }
-    }
-    else if (token[0] == '@') {
+    } else if (token[0] == '@') {
         if (string_to_long(token+1, &pointer)) {
             pointer &= ~3;
             if (valid_addr(pointer))
