@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.7 1991/02/20 15:15:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.8 1991/07/14 03:49:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.7 1991/02/20 15:15:05 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.8 1991/07/14 03:49:26 wlott Exp $
 ;;;
 ;;; This file contains temporary printing utilities and similar noise.
 ;;;
@@ -28,7 +28,6 @@
   (:temporary (:sc descriptor-reg :offset 4 :from (:argument 0)) a0)
   (:temporary (:sc any-reg :offset lra-offset) lra)
   (:temporary (:sc any-reg :offset code-offset) code)
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
@@ -38,10 +37,9 @@
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
       (inst addu nsp-tn nsp-tn -16)
-      (inst compute-lra-from-code lra code lra-label temp)
+      (inst compute-lra-from-code lra code lra-label v0)
       (inst li v0 (make-fixup "debug_print" :foreign))
-      (inst li temp (make-fixup "call_into_c" :foreign))
-      (inst j temp)
+      (inst j (make-fixup "call_into_c" :foreign))
       (inst nop)
 
       (align vm:lowtag-bits)
