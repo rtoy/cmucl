@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.3 1991/02/08 13:32:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.4 1993/11/13 00:57:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -18,7 +18,7 @@
 
 ;;; **********************************************************************
 
-(in-package "EXTENSIONS" :use '("LISP"))
+(in-package :extensions)
 
 (export '(format-universal-time format-decoded-time))
 
@@ -41,6 +41,9 @@
 
 (defconstant timezone-table
   '#("GMT" "" "" "" "" "EST" "CST" "MST" "PST"))
+
+(defconstant daylight-table
+  '#(nil nil nil nil nil "EDT" "CDT" "MDT" "PDT"))
 
 ;;; Valid-Destination-P ensures the destination stream is okay
 ;;; for the Format function.
@@ -86,7 +89,7 @@
 		       (if timezone
 			   (decode-universal-time universal-time timezone)
 			   (decode-universal-time universal-time))
-    (declare (ignore dst) (fixnum secs mins hours day month year dow))
+    (declare (fixnum secs mins hours day month year dow))
     (let ((time-string "~2,'0D:~2,'0D")
 	  (date-string
 	   (case style
@@ -133,18 +136,31 @@
 	     (if date-first
 		 (nconc date-args (nreverse time-args)
 			(if print-timezone
-			    (list
-			     (let ((which-zone (or timezone tz)))
-			       (if (or (= 0 which-zone) (<= 5 which-zone 8))
-				   (svref timezone-table which-zone)
-				   (format nil "[~D]" which-zone))))))
+			    (list (timezone-name dst tz))))
 		 (nconc (nreverse time-args) date-args
 			(if print-timezone
-			    (list
-			     (let ((which-zone (or timezone tz)))
-			       (if (or (= 0 which-zone) (< 5 which-zone 8))
-				   (svref timezone-table which-zone)
-				   (format nil "[~D]" which-zone)))))))))))
+			    (list (timezone-name dst tz)))))))))
+
+(defun timezone-name (dst tz)
+  (if (and (integerp tz)
+	   (or (and dst (= tz 0))
+	       (<= 5 tz 8)))
+      (svref (if dst daylight-table timezone-table) tz)
+      (multiple-value-bind
+	  (rest seconds)
+	  (truncate (* tz 60 60) 60)
+	(multiple-value-bind
+	    (hours minutes)
+	    (truncate rest 60)
+	  (format nil "[~C~D~@[~*:~2,'0D~@[~*:~2,'0D~]~]]"
+		  (if (minusp tz) #\- #\+)
+		  (abs hours)
+		  (not (and (zerop minutes) (zerop seconds)))
+		  (abs minutes)
+		  (not (zerop seconds))
+		  (abs seconds))))))
+
+
 
 ;;; Format-Decoded-Time - External.
 
