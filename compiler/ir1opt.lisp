@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.40 1992/02/11 22:47:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.41 1992/02/19 16:15:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -907,7 +907,10 @@
   (let* ((type (transform-type transform))
 	 (fun (transform-function transform))
 	 (constrained (function-type-p type))
-	 (flame (policy node (> speed brevity)))
+	 (flame
+	  (if (transform-important transform)
+	      (policy node (>= speed brevity))
+	      (policy node (> speed brevity))))
 	 (*compiler-error-context* node))
     (cond ((or (not constrained)
 	       (valid-function-use node type :strict-result t))
