@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.7 1990/04/26 20:23:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.8 1990/04/26 20:32:28 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -151,34 +151,37 @@
   (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
-    (sc-case offset
-      ((zero)
-       (move sap object))
-      ((negative-immediate immediate)
-       (inst addu sap object
-	     (ash (tn-value offset)
-		  (ecase size (:byte 0) (:short 1) (:long 2)))))
-      ((any-reg descriptor-reg)
-       (ecase size
-	 (:byte
-	  (inst sra temp offset 2)
-	  (inst addu sap object temp))
-	 (:short
-	  (inst sra temp offset 1)
-	  (inst addu sap object temp))
-	 (:long
-	  (inst addu sap object offset)))))
-    (ecase size
-      (:byte
-       (if signed
-	   (inst lb result sap 0)
-	   (inst lbu result sap 0)))
-      (:short
-       (if signed
-	   (inst lh result sap 0)
-	   (inst lhu result sap 0)))
-      (:long
-       (inst lw result sap 0)))
+    (multiple-value-bind
+	(base offset)
+	(sc-case offset
+	  ((zero)
+	   (values object 0))
+	  ((negative-immediate immediate)
+	   (values object
+		   (ash (tn-value offset)
+			(ecase size (:byte 0) (:short 1) (:long 2)))))
+	  ((any-reg descriptor-reg)
+	   (ecase size
+	     (:byte
+	      (inst sra temp offset 2)
+	      (inst addu sap object temp))
+	     (:short
+	      (inst sra temp offset 1)
+	      (inst addu sap object temp))
+	     (:long
+	      (inst addu sap object offset)))
+	   (values sap 0)))
+      (ecase size
+	(:byte
+	 (if signed
+	     (inst lb result base offset)
+	     (inst lbu result base offset)))
+	(:short
+	 (if signed
+	     (inst lh result base offset)
+	     (inst lhu result base offset)))
+	(:long
+	 (inst lw result base offset))))
     (inst nop)))
 
 
@@ -194,30 +197,33 @@
 	      sap)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
-    (sc-case offset
-      ((zero)
-       (move sap object))
-      ((negative-immediate immediate)
-       (inst addu sap object
-	     (ash (tn-value offset)
-		  (ecase size (:byte 0) (:short 1) (:long 2)))))
-      ((any-reg descriptor-reg)
-       (ecase size
-	 (:byte
-	  (inst sra temp offset 2)
-	  (inst addu sap object temp))
-	 (:short
-	  (inst sra temp offset 1)
-	  (inst addu sap object temp))
-	 (:long
-	  (inst addu sap object offset)))))
-    (ecase size
-      (:byte
-       (inst sb value sap 0))
-      (:short
-       (inst sh value sap 0))
-      (:long
-       (inst sw value sap 0)))
+    (multiple-value-bind
+	(base offset)
+	(sc-case offset
+	  ((zero)
+	   (values object 0))
+	  ((negative-immediate immediate)
+	   (values object
+		   (ash (tn-value offset)
+			(ecase size (:byte 0) (:short 1) (:long 2)))))
+	  ((any-reg descriptor-reg)
+	   (ecase size
+	     (:byte
+	      (inst sra temp offset 2)
+	      (inst addu sap object temp))
+	     (:short
+	      (inst sra temp offset 1)
+	      (inst addu sap object temp))
+	     (:long
+	      (inst addu sap object offset)))
+	   (values sap 0)))
+      (ecase size
+	(:byte
+	 (inst sb value base offset))
+	(:short
+	 (inst sh value base offset))
+	(:long
+	 (inst sw value base offset))))
     (move result value)))
 
 
