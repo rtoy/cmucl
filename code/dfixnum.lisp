@@ -5,7 +5,7 @@
 ;;; and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.1 2002/11/05 22:45:40 cracauer Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.2 2002/12/20 17:39:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,7 +186,7 @@
        (decf high)
        (setf low (+ low dfmax)))
      (when (< high 0)
-       (error "dfixnum became negative ~a - ~a/~a - ~a/~a(~a/~a)"
+       (error "dfixnum became negative ~a/~a - ~a/~a(~a/~a)"
 	      ,vh ,vl ,ih ,il low high))
      (setf ,vh high)
      (setf ,vl low)))
