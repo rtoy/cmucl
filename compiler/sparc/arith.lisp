@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.27 2001/11/05 21:38:15 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.28 2002/07/30 13:07:09 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,13 +173,13 @@
 (define-vop (fast-logand/signed-unsigned=>unsigned
 	     fast-logand/unsigned=>unsigned)
     (:args (x :target r :scs (signed-reg))
-	   (y :scs (unsigned-reg unsigned-stack)))
+	   (y :scs (unsigned-reg)))
   (:arg-types signed-num unsigned-num))
 
 (define-vop (fast-logand/unsigned-signed=>unsigned
 	     fast-logand/unsigned=>unsigned)
     (:args (x :target r :scs (unsigned-reg))
-	   (y :scs (signed-reg signed-stack)))
+	   (y :scs (signed-reg)))
   (:arg-types unsigned-num signed-num))
     
 ;;; Special case fixnum + and - that trap on overflow.  Useful when we
