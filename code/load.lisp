@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.39 1992/02/22 00:09:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.40 1992/03/08 18:31:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -987,6 +987,9 @@
 
 (define-fop (fop-small-code 59)
   (load-code (read-arg 1) (read-arg 2)))
+
+(define-fop (fop-fdefinition 60)
+  (fdefinition-object (pop-stack) t))
 
 
 ;;; Now a NOOP except in cold load... 
