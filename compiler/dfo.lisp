@@ -260,13 +260,28 @@
 	     (find-if #'entry-exits entries)))))
 
 
+;;; DELETE-COMPONENT-BLOCKS  --  Internal
+;;;
+;;;    Delete all the blocks in Component.  We scan first marking the blocks as
+;;; delete-p to prevent weird stuff from being triggered by deletion.
+;;;
+(defun delete-component-blocks (component)
+  (declare (type component component))
+  (do-blocks (block component)
+    (setf (block-delete-p block) t))
+  (do-blocks (block component)
+    (delete-block block))
+  (undefined-value))
+
+
 ;;; FIND-TOP-LEVEL-COMPONENTS  --  Internal
 ;;;
 ;;;    Compute the result of FIND-INITIAL-DFO given the list of all resulting
-;;; components.  Components that have no normal XEPs or potential non-local
-;;; exits are marked as :TOP-LEVEL.  If there is a :Top-Level lambda, and also
-;;; a normal XEP, then we treat the component as normal, but also return such
-;;; components in a list as the third value.
+;;; components.  Components with a :TOP-LEVEL lambda, but no normal XEPs or
+;;; potential non-local exits are marked as :TOP-LEVEL.  If there is a
+;;; :TOP-LEVEL lambda, and also a normal XEP, then we treat the component as
+;;; normal, but also return such components in a list as the third value.
+;;; Components with no entry of any sort are deleted.
 ;;;
 (defun find-top-level-components (components)
   (declare (list components))
@@ -277,16 +292,19 @@
       (unless (eq (block-next (component-head com)) (component-tail com))
 	(let* ((funs (component-lambdas com))
 	       (has-top (find :top-level funs :key #'functional-kind)))
-	  (cond ((and has-top (not (find-if #'has-xep-or-nlx funs)))
+	  (cond ((find-if #'has-xep-or-nlx funs)
+		 (setf (component-name com) (find-component-name com))
+		 (real com)
+		 (when has-top (real-top com)))
+		(has-top 
 		 (setf (component-kind com) :top-level)
 		 (setf (component-name com) "Top-Level Form")
 		 (top com))
 		(t
-		 (setf (component-name com) (find-component-name com))
-		 (real com)
-		 (when has-top (real-top com)))))))
+		 (delete-component-blocks com))))))
+
     (values (real) (top) (real-top))))
-	    
+
 
 ;;; Find-Initial-DFO  --  Interface
 ;;;
@@ -323,9 +341,7 @@
 	      (when (eq res new)
 		(components new)
 		(setq new (make-empty-component)))))
-      
-	  (do-blocks (block component)
-	    (delete-block block)))))
+	  (delete-component-blocks component))))
 
     (dolist (com (components))
       (let ((num 0))
