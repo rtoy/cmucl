@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.6 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.7 1994/10/30 22:09:49 ram Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -160,9 +160,7 @@ main(int argc, char **argv)
   fd_set rfds;
   int nfound,nfds,i;
   int port = PORT;
-#ifdef SVR4
-  int status;
-#else
+#ifdef MACH
   union wait status;
 #endif
 
@@ -249,9 +247,7 @@ main(int argc, char **argv)
       establish_client(inet_socket);
     }
     /* Prevent zombie children under Mach */
-#ifdef SVR4
-    waitpid(-1, &status, WNOHANG);
-#else
+#ifdef MACH
     wait3(&status,WNOHANG,NULL);
 #endif
   }
