@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.13 2003/05/25 14:33:50 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.14 2003/07/01 14:49:39 gerd Exp $")
 
 (in-package "PCL")
 
@@ -593,7 +593,7 @@
 		  collect `(,var (funcall ,initfn)) into bindings
 		  finally (return (values vars bindings)))
 	  `(let ,bindings
-	     (declare (ignorable ,@vars))
+	     (declare (ignorable ,@vars) (optimize (safety 3)))
 	     ,@instance-init-forms
 	     ,@class-init-forms))))))
 
@@ -636,28 +636,28 @@
 	  (ecase type
 	    ((nil)
 	     (unless before-method-p
-	       `(setf (%svref .slots. ,i) +slot-unbound+)))
+	       `(setf (svref .slots. ,i) +slot-unbound+)))
 	    ((param var)
-	     `(setf (%svref .slots. ,i) (the ,slot-type ,value)))
+	     `(setf (svref .slots. ,i) (the ,slot-type ,value)))
 	    (initfn
-	     `(setf (%svref .slots. ,i)
+	     `(setf (svref .slots. ,i)
 		    (the ,slot-type (funcall ,value))))
 	    (initform/initfn
 	     (if before-method-p
-		 `(when (eq (%svref .slots. ,i) +slot-unbound+)
-		    (setf (%svref .slots. ,i)
+		 `(when (eq (svref .slots. ,i) +slot-unbound+)
+		    (setf (svref .slots. ,i)
 			  (the ,slot-type (funcall ,value))))
-		 `(setf (%svref .slots. ,i)
+		 `(setf (svref .slots. ,i)
 			(the ,slot-type (funcall ,value)))))
 	    (initform
 	     (if before-method-p
-		 `(when (eq (%svref .slots. ,i) +slot-unbound+)
-		    (setf (%svref .slots. ,i)
+		 `(when (eq (svref .slots. ,i) +slot-unbound+)
+		    (setf (svref .slots. ,i)
 			  (the ,slot-type ',(eval value))))
-		 `(setf (%svref .slots. ,i)
+		 `(setf (svref .slots. ,i)
 			(the ,slot-type ',(eval value)))))
 	    (constant
-	     `(setf (%svref .slots. ,i)
+	     `(setf (svref .slots. ,i)
 		    (the ,slot-type ',(eval value)))))))
 
 ;;;
