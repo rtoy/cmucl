@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.16 1991/01/30 23:20:13 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.17 1991/02/14 20:43:41 ram Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -493,7 +493,7 @@
 (defknown endp (t) boolean (foldable flushable movable))
 (defknown list-length (list) (or index null) (foldable flushable))
 (defknown (nth nthcdr) (index list) t (foldable flushable))
-(defknown last (list) list (foldable flushable))
+(defknown last (list &optional index) list (foldable flushable))
 (defknown list (&rest t) list (movable flushable unsafe))
 (defknown list* (t &rest t) t (movable flushable unsafe))
 (defknown make-list (index &key (initial-element t)) list
@@ -771,7 +771,7 @@
 
 ;;; xxx-TO-STRING not foldable because they depend on the dynamic environment. 
 (defknown write-to-string
-  (t &key (stream streamlike) (escape t) (radix t) (base (integer 2 36))
+  (t &key (escape t) (radix t) (base (integer 2 36))
      (circle t) (pretty t) (level (or unsigned-byte null))
      (length (or unsigned-byte null)) (case t) (array t) (gensym t))
   simple-string
@@ -807,7 +807,9 @@
   (values (or pathname null) index)
   ())
 
-(defknown merge-pathnames (pathnamelike &optional pathnamelike) pathname
+(defknown merge-pathnames
+  (pathnamelike &optional pathnamelike pathname-version)
+  pathname
   (foldable flushable))
 
 (defknown make-pathname
