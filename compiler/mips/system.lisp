@@ -7,45 +7,45 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;;    RT VM definitions of various system hacking operations.
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.2 1990/03/06 19:14:06 wlott Exp $
+;;;
+;;;    MIPS VM definitions of various system hacking operations.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+;;; Mips conversion by William Lott.
+;;;
+(in-package "C")
 
 (define-vop (pointer+)
-  (:args (ptr :scs (descriptor-reg))
+  (:translate sap+)
+  (:args (ptr :scs (sap-reg))
 	 (offset :scs (any-reg descriptor-reg)))
-  (:results (res :scs (descriptor-reg)))
+  (:arg-types sap fixnum)
+  (:results (res :scs (sap-reg)))
   (:policy :fast-safe)
-  #+nil
   (:generator 1
-    (inst cas res offset ptr)))
-
-(define-vop (sap+ pointer+)
-  (:translate sap+))
+    (inst addu res ptr offset)))
 
 (define-vop (pointer-)
-  (:args (ptr1 :scs (descriptor-reg) :target temp)
-	 (ptr2 :scs (descriptor-reg)))
+  (:args (ptr1 :scs (sap-reg))
+	 (ptr2 :scs (sap-reg)))
+  (:arg-types sap sap)
   (:results (res :scs (any-reg descriptor-reg)))
-  (:temporary (:from (:argument 0) :to (:result 0) :target res) temp)
-  #+nil
   (:generator 1
-    (unless (location= ptr1 temp)
-      (inst lr temp ptr1))
-    (inst s temp ptr2)
-    (unless (location= temp res)
-      (inst lr res temp))))
+    (inst subu res ptr1 ptr2)))
 
+
+
+#+nil
 (define-vop (vector-word-length)
   (:args (vec :scs (descriptor-reg)))
   (:results (res :scs (any-reg descriptor-reg)))
-  #+nil
   (:generator 6
     (loadw res vec clc::g-vector-header-words)
     (inst niuo res res clc::g-vector-words-mask-16)))
 
+#+nil
 (define-vop (int-sap)
   (:args (x :scs (any-reg descriptor-reg) :target res))
   (:results (res :scs (any-reg descriptor-reg)))
@@ -61,6 +61,7 @@
       (loadw res x (/ clc::bignum-header-size 4))
       (emit-label fixp))))
 
+#+nil
 (define-vop (pointer-compare)
   (:args (x :scs (any-reg descriptor-reg))
 	 (y :scs (any-reg descriptor-reg)))
@@ -69,13 +70,13 @@
   (:policy :fast-safe)
   (:note "inline comparison")
   (:variant-vars condition)
-  #+nil
   (:generator 3
     (inst cl x y)
     (if not-p
 	(inst bnb condition target)
 	(inst bb condition target))))
 
+#+nil
 (macrolet ((frob (name cond)
 	     `(progn
 		(def-primitive-translator ,name (x y) `(,',name ,x ,y))
@@ -86,6 +87,7 @@
   (frob pointer< :lt)
   (frob pointer> :gt))
 
+#+nil
 (define-vop (check-op)
   (:args (x :scs (any-reg descriptor-reg))
 	 (y :scs (any-reg descriptor-reg)))
@@ -100,72 +102,208 @@
 	  (inst bb condition target)
 	  (inst bnb condition target)))))
 
+#+nil
 (define-vop (check<= check-op)
   (:variant :gt t clc::error-not-<=)
   (:translate check<=))
 
+#+nil
 (define-vop (check= check-op)
   (:variant :eq nil clc::error-not-=)
   (:translate check=))
 
-(def-primitive-translator make-fixnum (x)
-  `(%primitive make-immediate-type ,x system:%+-fixnum-type))
 
-(define-vop (make-immediate-type)
+
+(define-vop (make-fixnum)
+  (:args (ptr :scs (any-reg descriptor-reg)))
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:generator 1
+    (inst sll res ptr 2)))
+
+(define-vop (make-other-immediate-type)
   (:args (val :scs (any-reg descriptor-reg))
-	 (type :scs (any-reg descriptor-reg short-immediate
-			     unsigned-immediate)
+	 (type :scs (any-reg descriptor-reg immediate unsigned-immediate)
 	       :target temp))
   (:results (res :scs (any-reg descriptor-reg)))
   (:temporary (:type random  :scs (non-descriptor-reg)) temp)
-  #+nil
   (:generator 2
     (sc-case type
-      ((short-immediate unsigned-immediate)
-       (inst niuo res val clc::type-not-mask-16)
-       (let ((code (tn-value type)))
-	 (check-type code (unsigned-byte 5))
-	 (unless (zerop code)
-	   (inst oiu res res (ash code clc::type-shift-16)))))
+      ((immediate unsigned-immediate)
+       (inst sll temp val vm:type-bits)
+       (inst ori res temp (tn-value type)))
       (t
-       (unless (location= type temp)
-	 (inst lr temp type))
-       (inst niuo res val clc::type-not-mask-16)
-       (inst sli16 temp clc::type-shift-16)
-       (inst o res temp)))))
+       (inst sra temp type 2)
+       (inst sll res val (- vm:type-bits 2))
+       (inst or res res temp)))))
 
 
-(define-vop (16bit-system-ref halfword-index-ref)
+
+
+(define-vop (sap-ref)
+  (:variant-vars size signed)
+  (:args (object :scs (descriptor-reg sap-reg immediate-sap) :target sap)
+	 (offset :scs (descriptor-reg any-reg)))
+  (:arg-types sap fixnum)
+  (:results (result :scs (descriptor-reg any-reg)))
+  (:temporary (:scs (sap-reg) :type sap :from (:argument 0)) sap)
+  (:temporary (:scs (non-descriptor-reg) :type random
+		    :to (:result 0) :target result)
+	      temp)
+  (:generator 5
+    (sc-case object
+      (descriptor-reg
+       (loadw sap object vm:sap-pointer-slot vm:other-pointer-type))
+      (sap-reg
+       (move sap object))
+      (immediate-sap
+       (loadi sap (tn-value object))))
+    (ecase size
+      (:byte
+       (inst sra temp offset 2)
+       (inst addu sap sap temp)
+       (inst lb temp sap 0)
+       (cond (signed
+	      (inst sll temp temp 24)
+	      (inst sra result temp 22))
+	     (t
+	      (inst sll result temp 2))))
+      (:short
+       (inst sra temp offset 1)
+       (inst addu sap sap temp)
+       (inst lh temp sap 0)
+       (cond (signed
+	      (inst sll temp temp 16)
+	      (inst sra result temp 14))
+	     (t
+	      (inst sll result temp 2))))
+      (:long
+       (inst addu sap sap offset)
+       (inst lw temp sap 0)
+       ;; ### Need to assure that it doesn't overflow
+       (inst sll result temp 2))
+      (:pointer
+       (inst addu sap sap offset)
+       (inst lw temp sap 0)
+       (sc-case result
+	 (sap-reg
+	  (move result temp))
+	 (descriptor-reg
+	  ;; ### Need to allocate the silly thing instead of stripping
+	  ;; off the low two bits.
+	  (inst sra temp temp 2)
+	  (inst sll result temp 2)))))))
+
+
+(define-vop (sap-set)
+  (:variant-vars size)
+  (:args (object :scs (descriptor-reg sap-reg immediate-sap) :target sap)
+	 (offset :scs (descriptor-reg any-reg))
+	 (value :scs (descriptor-reg sap-reg any-reg) :target temp))
+  (:temporary (:scs (sap-reg) :type sap :from (:argument 0)) sap)
+  (:temporary (:scs (non-descriptor-reg) :type random :from (:result 3)) temp)
+  (:generator 5
+    (sc-case object
+      (descriptor-reg
+       (loadw sap object vm:sap-pointer-slot vm:other-pointer-type))
+      (sap-reg
+       (move sap object))
+      (immediate-sap
+       (loadi sap (tn-value object))))
+    (ecase size
+      (:byte
+       (inst sra temp offset 2)
+       (inst addu sap sap temp))
+      (:short
+       (inst sra temp offset 1)
+       (inst addu sap sap temp))
+      ((:long :pointer)
+       (inst addu sap sap offset)))
+    (ecase size
+      ((:byte :short)
+       (inst sra temp value 2))
+      (:long
+       ;; ### Need to see if it's a fixnum or bignum
+       (inst sra temp value 2))
+      (:pointer
+       (sc-case value
+	 (sap-reg
+	  (move temp value))
+	 (descriptor-reg
+	  (loadw temp value vm:sap-pointer-slot vm:other-pointer-type)))))
+    (ecase size
+      (:byte
+       (inst sb temp sap 0))
+      (:short
+       (inst sh temp sap 0))
+      ((:long :pointer)
+       (inst sw temp sap 0)))))
+
+
+
+(define-vop (pointer-sap-ref sap-ref)
+  (:results (result :scs (descriptor-reg sap-reg)))
+  (:variant :pointer nil))
+
+(define-vop (pointer-sap-set sap-set)
+  (:arg-types sap fixnum sap)
+  (:variant :pointer))
+
+
+
+(define-vop (32bit-system-ref sap-ref)
+  (:variant :long nil))
+
+(define-vop (signed-32bit-system-ref sap-ref)
+  (:variant :long t))
+
+(define-vop (32bit-system-set sap-set)
+  (:arg-types sap fixnum t)
+  (:variant :long))
+
+
+(define-vop (16bit-system-ref sap-ref)
   (:translate sap-ref-16)
-  (:variant 0))
+  (:variant :short nil))
 
-(define-vop (signed-16bit-system-ref signed-halfword-index-ref)
-  (:variant 0))
+(define-vop (signed-16bit-system-ref sap-ref)
+  (:variant :short t))
 
-(define-vop (16bit-system-set halfword-index-set)
+(define-vop (16bit-system-set sap-set)
   (:translate (setf sap-ref-16))
-  (:variant 0))
+  (:arg-types sap fixnum fixnum)
+  (:variant :short))
 
-(define-vop (8bit-system-ref byte-index-ref)
+
+(define-vop (8bit-system-ref sap-ref)
   (:translate sap-ref-8)
-  (:variant 0))
+  (:variant :byte nil))
 
-(define-vop (8bit-system-set byte-index-set)
+(define-vop (8bit-system-set sap-set)
   (:translate (setf sap-ref-8))
-  (:variant 0))
+  (:arg-types sap fixnum fixnum)
+  (:variant :byte))
+
+
 
 
 (define-vop (current-sp)
   (:results (val :scs (any-reg descriptor-reg)))
-  #+nil
   (:generator 1
-    (inst lr val sp-tn)))
+    (move val csp-tn)))
+
+
+
+(define-vop (halt)
+  (:generator 1
+    (inst break vm:halt-trap)))
+
 
 ;;; This guy makes sure that there aren't any random garbage pointers lying
 ;;; around in registers by clearing all of the boxed registers.  Our allocating
 ;;; all of the boxed registers as temporaries will prevent any TNs from being
 ;;; packed in those registers at the time this VOP is invoked.
 ;;;
+#+nil
 (define-vop (clear-registers)
   (:temporary (:sc any-reg :offset 1) a0)
   (:temporary (:sc any-reg :offset 3) a1)
@@ -176,7 +314,6 @@
   (:temporary (:sc any-reg :offset 9) l2)
   (:temporary (:sc any-reg :offset 10) l3)
   (:temporary (:sc any-reg :offset 11) l4)
-  #+nil
   (:generator 10
     (inst lis a0 0)
     (inst lis a1 0)
