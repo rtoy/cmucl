@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.4 1990/04/02 00:10:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.5 1990/04/03 03:17:25 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -251,7 +251,7 @@
 
 (export '(%array-fill-pointer %array-available-elements %array-data-vector
 	  %array-displacement %array-displaced-p %array-dimension
-	  %check-bound *empty-type* *eval-stack-top* *null-type*
+	  %check-bound %negate *empty-type* *eval-stack-top* *null-type*
 	  *universal-type* *wild-type* always-subtypep args-type
 	  args-type-allowp args-type-keyp args-type-keywords
 	  args-type-optional args-type-p args-type-required args-type-rest
@@ -260,8 +260,8 @@
 	  array-type-specialized-element-type ash-index bit-index
 	  boole-code boolean byte-specifier callable char-int
 	  consed-sequence csubtypep ctype ctype-of ctype-p ctypep
-	  data-vector-ref filename float-digits float-exponent
-	  float-format-max float-radix form function-type
+	  data-vector-ref data-vector-set filename float-digits
+	  float-exponent float-format-max float-radix form function-type
 	  function-type-allowp function-type-keyp function-type-keywords
 	  function-type-optional function-type-p function-type-required
 	  function-type-rest function-type-returns hairy-type
@@ -410,6 +410,7 @@
 (in-package "VM")
 
 (use-package "KERNEL")
+(use-package "EXT")
 
 (export '(*assembly-unit-length* *primitive-objects* array-data-slot
 	  array-dimensions-offset array-displaced-p-slot
