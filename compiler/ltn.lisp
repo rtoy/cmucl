@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.33 1992/09/07 16:04:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.34 1992/12/16 13:32:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,6 +240,16 @@
   
   (undefined-value))
 
+;;; Annotate-Funny-Call -- Internal.
+;;;
+;;; Annotate the call as ``funny.''  In other words, mark it as funny,
+;;; flush tail-call-ness, and mark all arg continuations as ordinary.
+;;;
+(defun annotate-funny-call (call policy)
+  (setf (basic-combination-info call) :funny)
+  (setf (node-tail-p call) nil)
+  (dolist (arg (basic-combination-args call))
+    (annotate-ordinary-continuation arg policy)))
 
 ;;; Annotate-Unknown-Values-Continuation  --  Internal
 ;;;
