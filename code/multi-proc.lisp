@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.19 1998/01/11 20:24:25 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.20 1998/01/11 20:35:45 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1418,6 +1418,107 @@
 	      (process-run-time process)
 	      (process-real-time process)
 	      (process-idle-time process)))))
+
+
+;;; Start-Lisp-Connection-Listener
+;;;
+;;; Create a process to listen for connections on a TCP port and start
+;;; a new top-level process for each connection.
+;;;
+(defun start-lisp-connection-listener (&optional (port 1025))
+  "Create a Lisp connection listener on the given port."
+  (labels (;; The session top level read eval. loop.
+	   (start-top-level (fd)
+	     (let ((stream (sys:make-fd-stream fd :input t :output t)))
+	       (unwind-protect
+		    (let* ((*terminal-io* stream)
+			   (*standard-input* (make-synonym-stream
+					      '*terminal-io*))
+			   (*standard-output* *standard-input*)
+			   (*error-output* *standard-input*)
+			   (*debug-io* *standard-input*)
+			   (*query-io* *standard-input*)
+			   (*trace-output* *standard-input*)
+			   (magic-eof-cookie (cons :eof nil)))
+		      
+		      (ext:print-herald)
+		      
+		      (with-simple-restart (close "Close connection.")
+			(loop
+			 (with-simple-restart (abort "Return to Top-Level.")
+			   (catch 'top-level-catcher
+			     (unix:unix-sigsetmask 0)
+			     (let ((lisp::*in-top-level-catcher* t))
+			       (loop
+				(sys:scrub-control-stack)
+				(fresh-line)
+				(princ (if (functionp ext:*prompt*)
+					   (funcall ext:*prompt*)
+					   ext:*prompt*))
+				(force-output)
+				(let ((form (read *standard-input*
+						  nil magic-eof-cookie)))
+				  (cond ((not (eq form magic-eof-cookie))
+					 (let ((results
+						(multiple-value-list
+						    (ext:interactive-eval
+						     form))))
+					   (dolist (result results)
+					     (fresh-line)
+					     (prin1 result))))
+					(t
+					 (throw '%end-of-the-process nil)))))))))))
+		 (handler-case 
+		  (close stream)
+		  (error ())))))
+	   ;; Turn internet address into string format
+	   (ip-address-string (address)
+	     (format nil "~D.~D.~D.~D"
+		     (ldb (byte 8 24) address)
+		     (ldb (byte 8 16) address)
+		     (ldb (byte 8 8)  address)
+		     (ldb (byte 8 0)  address)))
+	   ;; The body of the connection listener.
+	   (listener ()
+	     (declare (optimize (speed 3)))
+	     (let ((fd nil))
+	       (unwind-protect
+		    (progn
+		      ;; Try to start the listener - sleep until available.
+		      (do ((retry-wait 10 (* 2 retry-wait)))
+			  (fd)
+			(declare (fixnum retry-wait))
+			(handler-case
+			 (setf fd (ext:create-inet-listener port))
+			 (error ()
+			    (format *error-output*
+				    "~&Warning: unable to create listner on ~
+				     port ~d; retry in ~d seconds.~%"
+				    port retry-wait)
+			    (sleep retry-wait))))
+		      (loop
+		       ;; Wait until input ready.
+		       (process-wait-until-fd-usable fd :input)
+		       (multiple-value-bind (new-fd remote-host)
+			   (ext:accept-tcp-connection fd)
+			 (let ((host-entry (ext:lookup-host-entry
+					    remote-host)))
+			   (make-process
+			    #'(lambda ()
+				(start-top-level new-fd))
+			    :name (format nil "Lisp session from ~A"
+					  (if host-entry
+					      (ext:host-entry-name host-entry)
+					      (ip-address-string
+					       remote-host))))))))
+		 ;; Close the listener stream.
+		 (when fd
+		   (unix:unix-close fd))))))
+    
+    ;; Make the listening thread.
+    (make-process
+     #'listener
+     :name (format nil "Lisp Connection Listener on port ~d" port))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Simple Locking.
