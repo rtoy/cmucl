@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.44 2003/03/22 16:15:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.45 2003/03/25 11:40:03 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1490,6 +1490,11 @@
 ;;;
 ;;; Conditions
 ;;;
+(defmethod class-direct-slots ((class condition-class)) ())
+(defmethod class-slots ((class condition-class)) ())
+(defmethod class-default-initargs ((class condition-class)) ())
+(defmethod class-direct-default-initargs ((class condition-class)) ())
+
 (defmethod shared-initialize :after ((class condition-class) slot-names
 				     &key direct-superclasses)
   (declare (ignore slot-names))

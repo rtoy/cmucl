@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.18 2003/03/22 16:15:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.19 2003/03/25 11:40:03 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1505,8 +1505,8 @@ And so, we are saved.
 			;; worry only about existing classes
 			(classes-have-common-subclass-p specl type)))))
       (values nil
-	      (let ((class (type-class specl))
-		    (cpl (cpl-or-nil class)))
+	      (let* ((class (type-class specl))
+		     (cpl (cpl-or-nil class)))
 		(memq (cadr type) cpl)))))
 
 (defun classes-have-common-subclass-p (class1 class2)
