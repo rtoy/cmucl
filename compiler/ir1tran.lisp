@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.160 2003/08/06 19:01:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.161 2003/08/07 09:48:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1178,9 +1178,6 @@
 (defvar *suppress-values-declaration* nil
   "If true, processing of the VALUES declaration is inhibited.")
 
-(defvar *suppress-dynamic-extent-declaration* nil
-  "If true, processing of dynamic-extent declarations is inhibited.")
-
 ;;; PROCESS-1-DECLARATION  --  Internal
 ;;;
 ;;;    Process a single declaration spec, agumenting the specified LEXENV
@@ -1233,9 +1230,7 @@
 						    `(values ,@types)))
 			 cont res 'values))))
     (dynamic-extent
-     (if *suppress-dynamic-extent-declaration*
-	 res
-	 (process-dynamic-extent-declaration spec vars fvars res)))
+     (process-dynamic-extent-declaration spec vars fvars res))
     (t
      (let ((what (first spec)))
        (cond ((member what type-specifier-symbols)
