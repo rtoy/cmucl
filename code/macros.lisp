@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.101 2004/06/29 20:44:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.102 2004/10/14 13:46:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1307,7 +1307,13 @@
 			(error "No default clause allowed in ~S: ~S" name case)
 			(push `(t nil ,@(rest case)) clauses)))
 		   ((and (eq name 'case))
-		    (error "T and OTHERWISE may not be used as key designators for ~A" name))))
+		    (error "T and OTHERWISE may not be used as key designators for ~A" name))
+		   ((eq (first case) t)
+		    ;; The key T is normal clause, because it's not
+		    ;; the last clause.
+		    (push (first case) keys)
+		    (push `((,test ,keyform-value
+			    ',(first case)) nil ,@(rest case)) clauses))))
 	    ((and multi-p (listp (first case)))
 	     (setf keys (append (first case) keys))
 	     (push `((or ,@(mapcar #'(lambda (key)
