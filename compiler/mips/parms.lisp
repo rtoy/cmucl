@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.4 1990/02/14 21:53:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.5 1990/02/14 21:58:48 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -22,14 +22,13 @@
 
 
 (export '(sc-number-limit most-positive-cost word-bits byte-bits word-shift
-	  word-bytes target-byte-order register-names lowtag-bits
-	  lowtag-mask type-bits type-mask even-fixnum-type
-	  function-pointer-type other-immediate-type list-pointer-type
-	  odd-fixnum-type structure-pointer-type other-pointer-type
-	  bignum-type ratio-type single-float-type double-float-type
-	  complex-type simple-array-type simple-string-type
-	  simple-bit-vector-type simple-vector-type
-	  simple-array-unsigned-byte-2-type
+	  word-bytes target-byte-order lowtag-bits lowtag-mask type-bits
+	  type-mask even-fixnum-type function-pointer-type
+	  other-immediate-type list-pointer-type odd-fixnum-type
+	  structure-pointer-type other-pointer-type bignum-type ratio-type
+	  single-float-type double-float-type complex-type
+	  simple-array-type simple-string-type simple-bit-vector-type
+	  simple-vector-type simple-array-unsigned-byte-2-type
 	  simple-array-unsigned-byte-4-type
 	  simple-array-unsigned-byte-8-type
 	  simple-array-unsigned-byte-16-type
@@ -39,7 +38,7 @@
 	  code-header-type function-header-type return-pc-header-type
 	  closure-header-type symbol-header-type character-type SAP-type
 	  unbound-marker-type fixnum *assembly-unit-length*
-	  convert-byte-list target-fasl-code-format vm-version))
+	  target-fasl-code-format vm-version))
 	  
 
 (eval-when (compile load eval)
@@ -195,19 +194,6 @@
 ;;; The number of bits per element in the assemblers code vector.
 ;;;
 (defparameter *assembly-unit-length* 8)
-
-;;; Convert-Byte-List  --  Internal
-;;; 
-;;; Convert-Byte-List take a list of byte specifiers that define a field
-;;; and returns a list of byte specifiers that can be used to take apart
-;;; the value to be placed in that field.  This is somewhat architecture
-;;; dependent because of differences in byte ordering conventions.
-
-(defun convert-byte-list (byte-list)
-  (let ((offset (byte-position (first byte-list))))
-    (mapcar #'(lambda (byte)
-		(byte (byte-size byte) (- (byte-position byte) offset)))
-	    byte-list)))
 
 
 ;;;; Other parameters:
