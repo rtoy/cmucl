@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.41 1998/07/24 17:17:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.42 2000/01/10 14:43:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -742,7 +742,8 @@
 	   :inherits (integer rational real number generic-number)
 	   :codes (#.vm:even-fixnum-type #.vm:odd-fixnum-type))
 	  (bignum
-	   :translation (and integer (not fixnum))
+	   :translation (or (integer * (#.vm:target-most-negative-fixnum))
+			    (integer (#.vm:target-most-positive-fixnum) *))
 	   :inherits (integer rational real number generic-number)
 	   :codes (#.vm:bignum-type))
 	  
