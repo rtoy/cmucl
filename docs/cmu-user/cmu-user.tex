@@ -645,6 +645,10 @@ the man/man1 directory of the distribution.  See also cmucl(1).
 Currently Lisp accepts the following switches:
 \begin{description}
 
+\item[\code{-batch}] specifies batch mode, where all input is directed
+from standard-input.  An error code of 0 is returned upon
+encountering an EOF and 1 otherwise.
+
 \item[\code{-core}] requires an argument that should be the name of a
 core file.  Rather than using the default core file
 (\file{lib/lisp.core}), the specified core file is
