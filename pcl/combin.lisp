@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.22 2004/03/29 23:39:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.23 2004/04/02 15:24:02 rtoy Exp $")
 
 (in-package "PCL")
 
@@ -518,7 +518,7 @@
 		 ((eq (get-method-call-type gf form method-alist-p wrappers-p)
 		      'fast-method-call)
 		  '.fast-call-method.)
-		 (t .call-method.))))
+		 (t '.call-method.))))
     (case (car-safe form)
       ;;
       (call-method
