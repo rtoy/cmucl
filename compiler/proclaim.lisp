@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.40 2003/03/22 16:15:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.41 2004/04/27 15:01:04 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,11 +126,18 @@
 	  (allowp nil)
 	  (state :required))
       (dolist (arg list)
-	(if (and (symbolp arg)
-		 (let ((name (symbol-name arg)))
-		   (and (/= (length name) 0)
-			(char= (char name 0) #\&))))
-	    (case arg
+        ;; check for arguments that have the syntactic form of a
+        ;; keyword argument without being a recognized lambda-list keyword
+        (when (and (symbolp arg)
+                   (let ((name (symbol-name arg)))
+                     (and (/= (length name) 0)
+                          (char= (char name 0) #\&))))
+          (unless (member arg lambda-list-keywords)
+            (compiler-note
+             "~S uses lambda-list keyword naming convention, but is not a recognized lambda-list keyword."
+             arg)))
+	(if (member arg lambda-list-keywords)
+	    (ecase arg
 	      (&optional
 	       (unless (eq state :required)
 		 (compiler-error "Misplaced &optional in lambda-list: ~S." list))
@@ -156,9 +163,7 @@
 	      (&aux
 	       (when (member state '(&rest &more-context &more-count))
 		 (compiler-error "Misplaced &aux in lambda-list: ~S." list))
-	       (setq state '&aux))
-	      (t
-	       (compiler-error "Unknown &keyword in lambda-list: ~S." arg)))
+	       (setq state '&aux)))
 	    (case state
 	      (:required (required arg))
 	      (&optional (optional arg))
