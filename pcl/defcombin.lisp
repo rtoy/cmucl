@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.14 2002/08/26 02:23:12 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.15 2002/08/26 16:09:34 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -287,8 +287,9 @@
        (type ll method-group-specifiers arguments-option gf-var body)
   ;;(declare (values documentation function))
   (declare (ignore type))
-  (multiple-value-bind (documentation declarations real-body)
-      (extract-declarations body)
+  (multiple-value-bind (real-body declarations documentation)
+      ;; Note that PARSE-BODY ignores its second arg ENVIRONMENT.
+      (system:parse-body body nil)
 
     (let ((wrapped-body
 	    (wrap-method-group-specifier-bindings method-group-specifiers

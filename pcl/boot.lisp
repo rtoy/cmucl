@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.28 2002/08/26 02:23:10 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.29 2002/08/26 16:09:33 pmai Exp $")
 
 (in-package :pcl)
 
@@ -421,8 +421,8 @@ work during bootstrapping.
   (multiple-value-bind (parameters unspecialized-lambda-list specializers)
       (parse-specialized-lambda-list lambda-list)
     (declare (ignore parameters))
-    (multiple-value-bind (documentation declarations real-body)
-	(extract-declarations body env)
+    (multiple-value-bind (real-body declarations documentation)
+	(system:parse-body body env)
       (values `(lambda ,unspecialized-lambda-list
 		 ,@(when documentation `(,documentation))
 		 (declare (method-name ,(list name qualifiers specializers)))
@@ -451,8 +451,8 @@ work during bootstrapping.
   (unless (and (consp method-lambda) (eq (car method-lambda) 'lambda))
     (error "The method-lambda argument to make-method-lambda, ~S,~
             is not a lambda form" method-lambda))
-  (multiple-value-bind (documentation declarations real-body)
-      (extract-declarations (cddr method-lambda) env)
+  (multiple-value-bind (real-body declarations documentation)
+      (system:parse-body (cddr method-lambda) env)
     (let* ((name-decl (get-declaration 'method-name declarations))
 	   (sll-decl (get-declaration 'method-lambda-list declarations))
 	   (method-name (when (consp name-decl) (car name-decl)))
@@ -515,9 +515,10 @@ work during bootstrapping.
 						next-method-p-p)
 		(walk-method-lambda method-lambda required-parameters env 
 				    slots calls)
-	      (multiple-value-bind (ignore walked-declarations walked-lambda-body)
-		  (extract-declarations (cddr walked-lambda))
-		(declare (ignore ignore))
+	      (multiple-value-bind (walked-lambda-body walked-declarations
+						       walked-documentation)
+		  (system:parse-body (cddr walked-lambda) env)
+		(declare (ignore walked-documentation))
 		(when (or next-method-p-p call-next-method-p)
 		  (setq plist (list* :needs-next-methods-p t plist)))
 		(when (some #'cdr slots)
@@ -1012,10 +1013,11 @@ work during bootstrapping.
 				  method-name
 				  specializers)
   (flet ((ignoredp (symbol)
-	   (dolist (decl (cdar declarations))
-	     (when (and (eq (car decl) 'ignore)
-			(memq symbol (cdr decl)))
-	       (return t)))))
+	   (dolist (form declarations)
+	     (dolist (decl (cdr form))
+	       (when (and (eq (car decl) 'ignore)
+			  (memq symbol (cdr decl)))
+	         (return-from ignoredp t))))))
     (loop for s in specialized-lambda-list
 	  and p in required-parameters
 	  when (listp s)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.18 2002/08/26 02:23:14 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.19 2002/08/26 16:09:34 pmai Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -98,36 +98,6 @@
 (defun remtail (list tail)
   (if (eq list tail) () (cons (car list) (remtail (cdr list) tail))))
 
-(eval-when (compile load eval)
-(defun extract-declarations (body &optional environment)
-  ;;(declare (values documentation declarations body))
-  (let (documentation declarations form)
-    (when (and (stringp (car body))
-	       (cdr body))
-      (setq documentation (pop body)))
-    (block outer
-      (loop
-	(when (null body) (return-from outer nil))
-	(setq form (car body))
-	(when (block inner
-		(loop (cond ((not (listp form))
-			     (return-from outer nil))
-			    ((eq (car form) 'declare)
-			     (return-from inner t))
-			    (t
-			     (multiple-value-bind (newform macrop)
-				  (macroexpand-1 form environment)
-			       (if (or (not (eq newform form)) macrop)
-				   (setq form newform)
-				 (return-from outer nil)))))))
-	  (pop body)
-	  (dolist (declaration (cdr form))
-	    (push declaration declarations)))))
-    (values documentation
-	    (and declarations `((declare ,.(nreverse declarations))))
-	    body)))
-)
-
 (defun get-declaration (name declarations &optional default)
   (dolist (d declarations default)
     (dolist (form (cdr d))
@@ -167,8 +137,8 @@
 		(car ,alist)))))
 
 (defmacro doplist ((key val) plist &body body &environment env)
-  (multiple-value-bind (doc decls bod)
-      (extract-declarations body env)
+  (multiple-value-bind (bod decls doc)
+      (system:parse-body body env)
     (declare (ignore doc))
     `(let ((.plist-tail. ,plist) ,key ,val)
        ,@decls
