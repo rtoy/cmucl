@@ -385,9 +385,8 @@ default-value-5
 	      env-save)
   (:generator 5
     (store-stack-tn env-save env-tn)
-    (inst balix (callee-return-pc-tn callee) target)
     (inst lr fp-tn fp)
-    (no-op)
+    (inst bali (callee-return-pc-tn callee) target)
     (note-this-location vop :unknown-return)
     (unassemble
       (default-unknown-values node values nvals move-temp nil-temp))
@@ -412,9 +411,8 @@ default-value-5
 	      env-save)
   (:generator 20
     (store-stack-tn env-save env-tn)
-    (inst balix (callee-return-pc-tn callee) target)
     (inst lr fp-tn fp)
-    (no-op)
+    (inst bali (callee-return-pc-tn callee) target)
     (note-this-location vop :unknown-return)
     (unassemble
       (receive-unknown-values node values-start nvals start count))
@@ -438,9 +436,8 @@ default-value-5
   (:ignore arg-locs args res nfp)
   (:vop-var vop)
   (:generator 5
-    (inst balix (callee-return-pc-tn callee) target)
     (inst lr fp-tn fp)
-    (no-op)
+    (inst bali (callee-return-pc-tn callee) target)
     (note-this-location vop :known-return)))
 
 
