@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.45 1992/06/03 19:57:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.46 1992/06/04 17:48:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package :c)
 
 
 ;;;; Interface for obtaining results of constant folding:
@@ -457,29 +457,26 @@
 ;;;
 ;;;    This function is called on RETURN nodes that have their REOPTIMIZE flag
 ;;; set.  It iterates over the uses of the RESULT, looking for interesting
-;;; stuff to update the TAIL-SET:
-;;;  -- If a use is a tail local call, then we check that the called function
-;;;     has the tail set Tails.  If we encounter any different tail set, we
-;;;     return true.  If NODE-TAIL-P is not set, we also call
-;;;     CONVERT-TAIL-LOCAL-CALL, which changes the succesor of the call to be
-;;;     the called function and checks if the call can become an assignment.
-;;;  -- If a use isn't a local call, then we union its type together with the
-;;;     types of other such uses.  We assign to the RETURN-RESULT-TYPE the
-;;;     intersection of this type with the RESULT's asserted type.  We can make
-;;;     this intersection now (potentially before type checking) because this
-;;;     assertion on the result will eventually be checked (if appropriate.)
+;;; stuff to update the TAIL-SET.  If a use isn't a local call, then we union
+;;; its type together with the types of other such uses.  We assign to the
+;;; RETURN-RESULT-TYPE the intersection of this type with the RESULT's asserted
+;;; type.  We can make this intersection now (potentially before type checking)
+;;; because this assertion on the result will eventually be checked (if
+;;; appropriate.)
 ;;;
-(defun find-result-type (node tails)
+;;;    We call MAYBE-CONVERT-TAIL-LOCAL-CALL on each local non-MV combination,
+;;; which may change the succesor of the call to be the called function, and if
+;;; so, checks if the call can become an assignment.
+;;;
+(defun find-result-type (node)
   (declare (type creturn node))
-  (let ((result (return-result node))
-	(retry nil))
+  (let ((result (return-result node)))
     (collect ((use-union *empty-type* values-type-union))
       (do-uses (use result)
 	(cond ((and (basic-combination-p use)
-		    (eq (basic-combination-kind use) :local)
-		    (immediately-used-p result use))
-	       (when (merge-tail-sets use tails)
-		 (setq retry t))
+		    (eq (basic-combination-kind use) :local))
+	       (assert (eq (lambda-tail-set (node-home-lambda use))
+			   (lambda-tail-set (combination-lambda use))))
 	       (when (combination-p use)
 		 (maybe-convert-tail-local-call use)))
 	      (t
@@ -487,30 +484,8 @@
       (let ((int (values-type-intersection
 		  (continuation-asserted-type result)
 		  (use-union))))
-	(setf (return-result-type node) int)))
-    retry))
-
-
-;;; Merge-Tail-Sets  --  Internal
-;;;
-;;;    This function handles merging the tail sets if Call is a call to a
-;;; function with a different TAIL-SET than Ret-Set.  We return true if we do
-;;; anything.
-;;;
-;;;     It is assumed that Call sends its value to a RETURN node.  We
-;;; destructively modify the set for the returning function to represent both,
-;;; and then change all the functions in callee's set to reference the first.
-;;;
-(defun merge-tail-sets (call ret-set)
-  (declare (type basic-combination call) (type tail-set ret-set))
-  (let ((fun-set (lambda-tail-set (combination-lambda call))))
-    (unless (eq ret-set fun-set)
-      (let ((funs (tail-set-functions fun-set)))
-	(dolist (fun funs)
-	  (setf (lambda-tail-set fun) ret-set))
-	(setf (tail-set-functions ret-set)
-	      (nconc (tail-set-functions ret-set) funs)))
-      t)))
+	(setf (return-result-type node) int))))
+  (undefined-value))
 
 
 ;;; IR1-Optimize-Return  --  Internal
@@ -521,17 +496,6 @@
 ;;; up to date.  We iterate over the returns for all the functions in the tail
 ;;; set, reanalyzing them all (not treating Node specially.)
 ;;;
-;;;    During this iteration, we may discover new functions that should be
-;;; added to the tail set.  If this happens, we restart the iteration over the
-;;; TAIL-SET-FUNCTIONS.  Note that this really doesn't duplicate much work, as
-;;; we clear the NODE-REOPTIMIZE flags in the return nodes as we go, thus we
-;;; don't call FIND-RESULT-TYPE on any given return more than once.
-;;;
-;;;    Restarting the iteration doesn't disturb the computation of the result
-;;; type RES, since we will just be adding more types to the union.  (or when
-;;; we iterate over a return multiple times, unioning in the same type more
-;;; than once.)
-;;;
 ;;;    When we are done, we check if the new type is different from the old
 ;;; TAIL-SET-TYPE.  If so, we set the type and also reoptimize all the
 ;;; continuations for references to functions in the tail set.  This will
@@ -540,19 +504,16 @@
 ;;;
 (defun ir1-optimize-return (node)
   (declare (type creturn node))
-  (let ((tails (lambda-tail-set (return-lambda node))))
+  (let* ((tails (lambda-tail-set (return-lambda node)))
+	 (funs (tail-set-functions tails)))
     (collect ((res *empty-type* values-type-union))
-      (loop
-	(block RETRY
-	  (let ((funs (tail-set-functions tails)))
-	    (dolist (fun funs)
-	      (let ((return (lambda-return fun)))
-		(when return
-		  (when (node-reoptimize return)
-		    (setf (node-reoptimize node) nil)
-		    (when (find-result-type return tails) (return-from RETRY)))
-		  (res (return-result-type return))))))
-	  (return)))
+      (dolist (fun funs)
+	(let ((return (lambda-return fun)))
+	  (when return
+	    (when (node-reoptimize return)
+	      (setf (node-reoptimize node) nil)
+	      (find-result-type return))
+	    (res (return-result-type return)))))
       
       (when (type/= (res) (tail-set-type tails))
 	(setf (tail-set-type tails) (res))
@@ -655,7 +616,8 @@
 ;;; -- If the exit node and its Entry have the same home lambda then we know
 ;;;    the exit is local, and can delete the exit.  We change uses of the
 ;;;    Exit-Value to be uses of the original continuation, then unlink the
-;;;    node.
+;;;    node.  If the exit is to a TR context, then we must do MERGE-TAIL-SETS
+;;;    on any local calls which delivered their value to this exit.
 ;;; -- If there is no value (as in a GO), then we skip the value semantics.
 ;;;
 ;;; This function is also called by environment analysis, since it wants all
@@ -672,7 +634,15 @@
       (prog1
 	  (unlink-node node)
 	(when value
-	  (substitute-continuation-uses cont value))))))
+	  (collect ((merges))
+	    (when (return-p (continuation-dest cont))
+	      (do-uses (use value)
+		(when (and (basic-combination-p use)
+			   (eq (basic-combination-kind use) :local))
+		  (merges use))))
+	    (substitute-continuation-uses cont value)
+	    (dolist (merge (merges))
+	      (merge-tail-sets merge))))))))
 
 
 ;;;; Combination IR1 optimization:
