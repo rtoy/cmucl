@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.16 1993/08/12 16:51:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.17 1993/08/12 18:58:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -500,8 +500,11 @@
 	  (incf n)))
 
       (when *profile-hash-cache*
-	(forms `(defvar ,(symbolicate "*" name "-CACHE-PROBES*") 0))
-	(forms `(defvar ,(symbolicate "*" name "-CACHE-MISSES*") 0)))
+	(let ((n-probe (symbolicate "*" name "-CACHE-PROBES*"))
+	      (n-miss (symbolicate "*" name "-CACHE-MISSES*")))
+	  (forms `(defvar ,n-probe 0))
+	  (forms `(defvar ,n-miss 0))
+	  (forms `(declaim (type index ,n-miss ,n-probe)))))
 
       (let ((fun-name (symbolicate name "-CACHE-LOOKUP")))
 	(inlines fun-name)
