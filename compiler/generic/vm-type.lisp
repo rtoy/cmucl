@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.10 1990/04/10 14:43:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.11 1990/04/12 16:35:20 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -19,9 +19,6 @@
 
 
 ;;;; Implementation dependent deftypes:
-
-(#-new-compiler progn
- #+new-compiler defun #+new-compiler vm-type-init #+new-compiler ()
 
 ;;; Make double-float a synonym for long-float, single-float for Short-Float.
 ;;; This is be expanded before the translator gets a chance, so we will get
@@ -91,7 +88,6 @@
 ;;; Internal time format.  Not a fixnum (blag...)
 (deftype internal-time () 'unsigned-byte)
 
-); defun vm-type-init
 
 
 ;;;; Hooks into type system:
