@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.39 2003/07/20 13:48:38 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.40 2003/09/08 09:36:06 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1514,55 +1514,43 @@
   (with-array-data ((string string)
 		    (start start)
 		    (end (or end (length string))))
-    (let ((index (do ((i start (1+ i)))
-		     ((= i end)
-		      (if junk-allowed
-			  (return-from parse-integer (values nil end))
-			  (error 'simple-parse-error
-                                 :format-control "No non-whitespace characters in number.")))
-		   (declare (fixnum i))
-		   (unless (whitespacep (char string i)) (return i))))
-	  (minusp nil)
-	  (found-digit nil)
+    (let ((index start)
+	  (sign 1)
+	  (any-digits nil)
 	  (result 0))
-      (declare (fixnum index))
-      (let ((char (char string index)))
-	(cond ((char= char #\-)
-	       (setq minusp t)
-	       (incf index))
-	      ((char= char #\+)
-	       (incf index))))
-      (loop
-	(when (= index end) (return nil))
-	(let* ((char (char string index))
-	       (weight (digit-char-p char radix)))
-	  (cond (weight
-		 (setq result (+ weight (* result radix))
-		       found-digit t))
-		(junk-allowed (return nil))
-		((whitespacep char)
-		 (do ((jndex (1+ index) (1+ jndex)))
-		     ((= jndex end))
-		   (declare (fixnum jndex))
-		   (unless (whitespacep (char string jndex))
-		     (error 'simple-parse-error
-                            :format-control "There's junk in this string: ~S."
-                            :format-arguments (list string))))
-		 (return nil))
-		(t
-		 (error 'simple-parse-error
-                        :format-control "There's junk in this string: ~S."
-                        :format-arguments (list string)))))
-	(incf index))
-      (values
-       (if found-digit
-	   (if minusp (- result) result)
-	   (if junk-allowed
-	       nil
+      (declare (type index index)
+	       (type (member 1 -1) sign)
+	       (type boolean any-digits)
+	       (integer result))
+      (flet ((skip-whitespace ()
+	       (loop while (< index end)
+		     while (whitespacep (char string index)) do
+		       (incf index))))
+	(declare (inline skip-whitespace))
+	(skip-whitespace)
+	(when (< index end)
+	  (case (char string index)
+	    (#\+ (incf index))
+	    (#\- (incf index) (setq sign -1))))
+	(loop while (< index end)
+	      for weight = (digit-char-p (char string index) radix)
+	      while weight do
+		(incf index)
+		(setq any-digits t)
+		(setq result (+ (* radix result) weight)))
+	(skip-whitespace)
+	(cond ((not any-digits)
+	       (if junk-allowed
+		   (values nil index)
+		   (error 'simple-parse-error
+			  :format-control "There are no digits in this string: ~S"
+			  :format-arguments (list string))))
+	      ((and (< index end) (not junk-allowed))
 	       (error 'simple-parse-error
-                      :format-control "There are no digits in this string: ~S"
-                      :format-arguments (list string))))
-       index))))
+		      :format-control "There's junk in this string: ~S."
+		      :format-arguments (list string)))
+	      (t
+	       (values (* sign result) index)))))))
 
 
 ;;;; Reader initialization code.
