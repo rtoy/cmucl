@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.44 1991/11/16 16:03:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.45 1992/05/03 21:45:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -959,7 +959,7 @@
 ;;; of the registers.  This way, all of these temps probably end up in one
 ;;; register.
 ;;;
-(defun select-location (tn sc)
+(defun select-location (tn sc &optional use-reserved-locs)
   (declare (type tn tn) (type sc sc) (inline member))
   (let* ((sb (sc-sb sc))
 	 (element-size (sc-element-size sc))
@@ -980,7 +980,9 @@
 
 	(if (or (eq (sb-kind sb) :unbounded)
 		(and (member current-start (sc-locations sc))
-		     (not (member current-start (sc-reserve-locations sc)))))
+		     (or use-reserved-locs
+			 (not (member current-start
+				      (sc-reserve-locations sc))))))
 	    (dotimes (i element-size
 			(return-from select-location current-start))
 	      (let ((offset (+ current-start i)))
@@ -1418,6 +1420,8 @@
 		(not (and (minusp (tn-cost tn)) (sc-save-p sc))))
 	(let ((loc (or (find-ok-target-offset original sc)
 		       (select-location original sc)
+		       (and restricted
+			    (select-location original sc t))
 		       (when (eq (sb-kind (sc-sb sc)) :unbounded)
 			 (grow-sc sc)
 			 (or (select-location original sc)
