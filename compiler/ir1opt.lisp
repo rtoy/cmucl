@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.43 1992/04/02 15:25:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.44 1992/04/14 18:09:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1104,14 +1104,18 @@
 ;;; CONSTANT-REFERENCE-P  --  Interface
 ;;;
 ;;;    Return true if the value of Ref will always be the same (and is thus
-;;; legal to substitute.)
+;;; legal to substitute.)  Even though the value of a FUNCTIONAL really can't
+;;; change, we consider it non-constant when it is marker :NOTINLINE, since
+;;; this is used as a flag to inhibit local call conversion, and must not be
+;;; lost.
 ;;;
 (defun constant-reference-p (ref)
   (declare (type ref ref))
   (let ((leaf (ref-leaf ref)))
     (typecase leaf
       (constant t)
-      (functional t)
+      (functional
+       (not (eq (ref-inlinep ref) :notinline)))
       (lambda-var
        (null (lambda-var-sets leaf)))
       (global-var
