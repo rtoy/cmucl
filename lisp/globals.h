@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.5 2000/10/24 13:32:32 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.6 2002/05/02 21:10:53 toy Exp $ */
 
 #if !defined(_INCLUDE_GLOBALS_H_)
 #define _INCLUDED_GLOBALS_H_
@@ -33,7 +33,7 @@ extern lispobj *current_auto_gc_trigger;
 
 extern void globals_init(void);
 
-#else  LANGUAGE_ASSEMBLY
+#else  /* LANGUAGE_ASSEMBLY */
 
 /* These are needed by ./assem.s */
 
@@ -72,6 +72,6 @@ EXTERN(current_dynamic_space_free_pointer, 4)
 EXTERN(current_flags_register, 4)
 #endif
 
-#endif LANGUAGE_ASSEMBLY
+#endif /* LANGUAGE_ASSEMBLY */
 
-#endif _INCLUDED_GLOBALS_H_
+#endif /* _INCLUDED_GLOBALS_H_ */

@@ -1,7 +1,7 @@
 /*
  * Header file for GC
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.h,v 1.1 1992/07/28 20:14:28 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.h,v 1.2 2002/05/02 21:10:53 toy Exp $
  */
 
 #ifndef _GC_H_
@@ -17,6 +17,6 @@ extern void collect_garbage(void);
 extern void set_auto_gc_trigger(os_vm_size_t usage);
 extern void clear_auto_gc_trigger(void);
 
-#endif ibmrt
+#endif /* ibmrt */
 
-#endif _GC_H_
+#endif /* _GC_H_ */

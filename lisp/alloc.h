@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.h,v 1.1 1992/07/28 20:14:04 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.h,v 1.2 2002/05/02 21:10:52 toy Exp $ */
 
 #ifndef _ALLOC_H_
 #define _ALLOC_H_
@@ -10,4 +10,4 @@ extern lispobj alloc_number(long n);
 extern lispobj alloc_string(char *str);
 extern lispobj alloc_sap(void *ptr);
 
-#endif _ALLOC_H_
+#endif /* _ALLOC_H_ */
