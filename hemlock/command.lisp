@@ -389,27 +389,29 @@
 
 (defcommand "Universal Argument" (p)
   "Sets prefix argument for next command.
-   Typing digits, regardless of any modifier keys, specifies the argument.
-   Optionally, you may first type a sign (- or +).  While typing digits, if you
-   type C-U or C-u, the digits following the C-U form a number this command
-   multiplies by the digits preceding the C-U.  The default value for this
-   command and any number following a C-U is the value of \"Universal Argument
-   Default\"."
+  Typing digits, regardless of any modifier keys, specifies the argument.
+  Optionally, you may first type a sign (- or +).  While typing digits, if you
+  type C-U or C-u, the digits following the C-U form a number this command
+  multiplies by the digits preceding the C-U.  The default value for this
+  command and any number following a C-U is the value of \"Universal Argument
+  Default\"."
   "You probably don't want to use this as a function."
   (declare (ignore p))
   (clear-echo-area)
   (write-string "C-U " *echo-area-stream*)
   (let* ((key-event (get-key-event *editor-input*))
 	 (char (ext:key-event-char key-event)))
-    (multiple-value-call #'universal-argument-loop
-      (case (char-code char)
-	(#.(char-code #\-)
-	 (write-char #\- *echo-area-stream*)
-	 (values (get-key-event *editor-input*) -1))
-	(#.(char-code #\+) ;Just in case.
-	 (write-char #\+ *echo-area-stream*)
-	 (values (get-key-event *editor-input*) 1))
-	(t (values key-event 1))))))
+    (if char
+	(case char
+	  (#\-
+	   (write-char #\- *echo-area-stream*)
+	   (universal-argument-loop (get-key-event *editor-input*) -1))
+	  (#\+
+	   (write-char #\+ *echo-area-stream*)
+	   (universal-argument-loop (get-key-event *editor-input*) -1))
+	  (t
+	   (universal-argument-loop key-event 1)))
+	(universal-argument-loop key-event 1))))
 
 (defcommand "Negative Argument" (p)
   "This command is equivalent to invoking \"Universal Argument\" and typing
