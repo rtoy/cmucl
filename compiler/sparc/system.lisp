@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.6 1991/03/23 12:32:42 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.7 1992/02/25 07:13:02 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -16,62 +18,6 @@
 ;;; Mips conversion by William Lott and Christopher Hoover.
 ;;;
 (in-package "SPARC")
-
-
-;;;; Random pointer comparison VOPs
-
-(define-vop (pointer-compare)
-  (:args (x :scs (sap-reg))
-	 (y :scs (sap-reg)))
-  (:arg-types system-area-pointer system-area-pointer)
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline comparison")
-  (:variant-vars condition not-condition)
-  (:generator 3
-    (inst cmp x y)
-    (inst b (if not-p not-condition condition) target)
-    (inst nop)))
-
-(macrolet ((frob (name cond not-cond)
-	     `(progn
-		(def-primitive-translator ,name (x y)
-		  (warn "Someone used %primitive ~S" ',name)
-		  `(,',name ,x ,y))
-		(defknown ,name (t t) boolean (movable foldable flushable))
-		(define-vop (,name pointer-compare)
-		  (:translate ,name)
-		  (:variant ,cond ,not-cond)))))
-  (frob pointer< :ltu :geu)
-  (frob pointer> :gtu :leu))
-
-
-
-;;;; Random assertions VOPS.
-
-(define-vop (check-op)
-  (:args (x :scs (any-reg descriptor-reg))
-	 (y :scs (any-reg descriptor-reg)))
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:policy :fast-safe))
-
-(define-vop (check<= check-op)
-  (:translate system:check<=)
-  (:generator 3
-    (let ((target (generate-error-code vop not-<=-error x y)))
-      (inst cmp x y)
-      (inst b :gt target)
-      (inst nop))))
-
-(define-vop (check= check-op)
-  (:translate system:check=)
-  (:generator 3
-    (let ((target (generate-error-code vop not-<=-error x y)))
-      (inst cmp x y)
-      (inst b :ne target)
-      (inst nop))))
 
 
 
@@ -249,10 +195,10 @@
 ;;;; Other random VOPs.
 
 
-(defknown mach::do-pending-interrupt () (values))
-(define-vop (mach::do-pending-interrupt)
+(defknown unix::do-pending-interrupt () (values))
+(define-vop (unix::do-pending-interrupt)
   (:policy :fast-safe)
-  (:translate mach::do-pending-interrupt)
+  (:translate unix::do-pending-interrupt)
   (:generator 1
     (inst unimp pending-interrupt-trap)))
 
