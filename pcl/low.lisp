@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.24 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.25 2003/05/07 17:14:24 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -167,13 +167,35 @@ the compiler as completely as possible.  Currently this means that
 
 ;;;; STD-INSTANCE
 
-;;; Under CMU17 conditional, STD-INSTANCE-P is only used to discriminate
-;;; between functions (including FINs) and normal instances, so we can return
-;;; true on structures also.  A few uses of (or std-instance-p fsc-instance-p)
+;;; STD-INSTANCE-P is only used to discriminate between functions
+;;; (including FINs) and normal instances, so we can return true on
+;;; structures also.  A few uses of (or std-instance-p fsc-instance-p)
 ;;; are changed to pcl-instance-p.
 ;;;
 (defmacro std-instance-p (x)
   `(kernel:%instancep ,x))
+
+(defmacro std-instance-slots (x)
+  `(kernel:%instance-ref ,x 1))
+
+(defmacro std-instance-hash (x)
+  `(kernel:%instance-ref ,x 2))
+
+(defmacro std-instance-wrapper (x)
+  `(kernel:%instance-layout ,x))
+
+(defmacro fsc-instance-p (fin)
+  `(funcallable-instance-p ,fin))
+
+(defmacro fsc-instance-wrapper (fin)
+  `(kernel:%funcallable-instance-layout ,fin))
+
+(defmacro fsc-instance-slots (fin)
+  `(kernel:%funcallable-instance-info ,fin 0))
+
+(defmacro fsc-instance-hash (fin)
+  `(kernel:%funcallable-instance-info ,fin 2))
+
 
 ;;; PCL-INSTANCE-P is implemented via a compiler transform so that the
 ;;; test can be optimised away when the result is known, such as is
@@ -186,19 +208,55 @@ the compiler as completely as possible.  Currently this means that
   (movable foldable flushable explicit-check))
 
 (deftransform pcl::pcl-instance-p ((object))
-  (let* ((object-type (continuation-type object))
+  (let* ((ctype (continuation-type object))
 	 (standard-object (specifier-type 'standard-object)))
-    (cond ((csubtypep object-type standard-object)
+    (cond ((csubtypep ctype standard-object)
 	   t)
-	  ((not (types-intersect object-type standard-object))
+	  ((not (types-intersect ctype standard-object))
 	   nil)
-	  ((and (kernel::standard-class-p object-type)
-		(pcl::info-std-class-p (kernel:%class-name object-type)))
+	  ((and (kernel::standard-class-p ctype)
+		(let ((class-name (kernel:%class-name ctype)))
+		  (or (pcl::info-standard-class-p class-name)
+		      (pcl::info-funcallable-standard-class-p class-name))))
 	   t)
 	  (t
 	   `(typep (kernel:layout-of object) 'pcl::wrapper)))))
 
+(defknown pcl::slot-vector-or-nil (t)
+  (or null simple-vector)
+  (movable foldable flushable))
+
+(deftransform pcl::slot-vector-or-nil ((object))
+  (let ((ctype (continuation-type object))
+	(funcallable-standard-object
+	 (specifier-type 'mop:funcallable-standard-object))
+	(standard-object (specifier-type 'standard-object)))
+    (cond ((or (csubtypep ctype funcallable-standard-object)
+	       (and (kernel::standard-class-p ctype)
+		    (pcl::info-funcallable-standard-class-p
+		     (kernel:%class-name ctype))))
+	   (print "funcallable")
+	   '(kernel:%funcallable-instance-info object 0))
+	  ((or (csubtypep ctype standard-object)
+	       (and (kernel::standard-class-p ctype)
+		    (pcl::info-standard-class-p (kernel:%class-name ctype))))
+	   (print "instance")
+	   '(kernel:%instance-ref object 1))
+	  (t
+	   (print "give-up")
+	   `(when (pcl::pcl-instance-p object)
+	      (if (pcl::std-instance-p object)
+		  (pcl::std-instance-slots object)
+		  (pcl::fsc-instance-slots object)))))))
+
 (in-package "PCL")
+
+;;; Definition for interpreted code.
+(defun slot-vector-or-nil (obj)
+  (when (pcl-instance-p obj)
+    (if (std-instance-p obj)
+	(std-instance-slots obj)
+	(fsc-instance-slots obj))))
 
 ;;; Definition for interpreted code.
 (defun pcl-instance-p (x)
@@ -224,13 +282,6 @@ the compiler as completely as possible.  Currently this means that
   (slots nil)
   (hash-code (get-instance-hash-code) :type fixnum))
 
-
-;;; Both of these operations "work" on structures, which allows the above
-;;; weakening of std-instance-p.
-;;;
-(defmacro std-instance-slots (x) `(kernel:%instance-ref ,x 1))
-(defmacro std-instance-hash (x) `(kernel:%instance-ref ,x 2))
-(defmacro std-instance-wrapper (x) `(kernel:%instance-layout ,x))
 
 (defmacro built-in-or-structure-wrapper (x) `(kernel:layout-of ,x))
 
@@ -397,6 +448,7 @@ the compiler as completely as possible.  Currently this means that
 
 (in-package "PCL")
 
+#+bootable-pcl
 (defun early-pcl-init ()
   ;; defsys
   (setq *the-pcl-package* (find-package "PCL"))
@@ -410,6 +462,7 @@ the compiler as completely as possible.  Currently this means that
   ;; invoke the compiler.
   (setq *cold-boot-state* t))
 
+#+bootable-pcl
 (defun final-pcl-init ()
   (setq *cold-boot-state* nil)
   (setq *compile-lambda-silent-p* t)

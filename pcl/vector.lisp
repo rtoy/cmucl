@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.28 2003/05/04 13:11:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.29 2003/05/07 17:14:24 gerd Rel $")
 
 (in-package :pcl)
 
@@ -716,7 +716,7 @@
   (multiple-value-bind (bindings vars)
     (loop for v in slot-vars and p in pv-parameters
 	  when v
-	    collect `(,v (get-slots-or-nil ,p)) into bindings
+	    collect `(,v (slot-vector-or-nil ,p)) into bindings
 	    and collect v into vars
 	  finally
 	    (return (values bindings vars)))

@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.4 2003/05/04 13:11:21 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.5 2003/05/07 17:14:24 gerd Exp $")
 
 (in-package "PCL")
 
@@ -233,18 +233,18 @@
 	  (slot-definition-type slotd)))))
 
 ;;;
-;;; Return T if CLASS-NAME names a STD-CLASS, that is, either a
-;;; STANDARD-CLASS or FUNCALLABLE-STANDARD-CLASS in normal MOP spaak.
+;;; Test if a class names a STANDARD-CLASS or FUNCALLABLE-STANDARD-CLASS.
 ;;;
-;;; Structure classes are defined at compile-time, see the EVAL in
-;;; EXPAND-DEFCLASS.  If it's a structure, the class must be defined,
-;;; and be a structure class.
-;;;
-(defun info-std-class-p (class-name)
-  (let ((class (find-class class-name nil)))
-    (if class
-	(std-class-p class)
-	(class-info class-name))))
+(macrolet ((defpred (name metaclass)
+	     `(defun ,name (class-name)
+		(let ((class (find-class class-name nil)))
+		  (if class
+		      (typep class ',metaclass)
+		      (let* ((info (class-info class-name))
+			     (meta (and info (class-info-metaclass info))))
+			(eq meta ',metaclass)))))))
+  (defpred info-funcallable-standard-class-p funcallable-standard-class)
+  (defpred info-standard-class-p standard-class))
 
 
 ;;; **************

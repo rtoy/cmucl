@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.21 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.22 2003/05/07 17:14:24 gerd Rel $")
 ;;;
 
   ;;   
@@ -150,18 +150,3 @@ explicitly marked saying who wrote it.
   (assert (funcallable-instance-p fin))
   (setf (kernel:funcallable-instance-function fin) new-value))
 
-
-;;;; Slightly Higher-Level stuff built on the implementation-dependent stuff.
-;;;
-
-(defmacro fsc-instance-p (fin)
-  `(funcallable-instance-p ,fin))
-
-(defmacro fsc-instance-wrapper (fin)
-  `(kernel:%funcallable-instance-layout ,fin))
-
-(defmacro fsc-instance-slots (fin)
-  `(kernel:%funcallable-instance-info ,fin 0))
-
-(defmacro fsc-instance-hash (fin)
-  `(kernel:%funcallable-instance-info ,fin 2))
