@@ -482,10 +482,10 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn cur-nfp nfp-save))
-      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (maybe-load-stack-tn callee-nfp nfp)))
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label)
       (inst b target)
@@ -515,10 +515,10 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn cur-nfp nfp-save))
-      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (maybe-load-stack-tn callee-nfp nfp)))
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label)
       (inst b target)
@@ -551,10 +551,10 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn cur-nfp nfp-save))
-      (maybe-load-stack-tn cfp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (maybe-load-stack-tn callee-nfp nfp)))
+      (maybe-load-stack-tn cfp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label)
       (inst b target)
