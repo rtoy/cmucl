@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.7 1990/04/27 19:23:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.8 1990/05/11 06:53:17 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -20,7 +20,7 @@
 
 (define-vop (static-function-template)
   (:save-p t)
-  (:policy :fast-safe)
+  (:policy :safe)
   (:variant-vars symbol)
   (:temporary (:scs (any-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
