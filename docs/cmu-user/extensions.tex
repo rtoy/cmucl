@@ -552,22 +552,38 @@ editor by developing in the same \llisp{} with \hemlock{}.
 
 \section{Garbage Collection}
 
-\cmucl{} uses a stop-and-copy garbage collector that compacts
-the items in dynamic space every time it runs. Most users cause the
-system to garbage collect (GC) frequently, long before space is
-exhausted. With 16 or 24 megabytes of memory, causing GC's more
-frequently on less garbage allows the system to GC without much (if
-any) paging.
+\cmucl{} uses either a stop-and-copy garbage collector or a
+generational, mostly copying garbage collector.  Which collector is
+available depends on the platform and the features of the platform.
+The stop-and-copy GC is available on all RISC platforms.  The x86
+platform supports a conservative stop-and-copy collector, which is now
+rarely used, and a generational conservative collector.  On the Sparc
+platform, both the stop-and-copy GC and the generational GC are
+available, but the stop-and-copy GC is deprecated in favor of the
+generational GC.  
+
+The generational GC is available if \code{*features*} contains
+\code{:gencgc}.
+
+%% The stop-and-copy GC compacts the items in dynamic space every time it
+%% runs. Most users cause the system to garbage collect (GC) frequently,
+%% long before space is exhausted. With 16 or 24 megabytes of memory,
+%% causing GC's more frequently on less garbage allows the system to GC
+%% without much (if any) paging.
 
 The following functions invoke the garbage collector or control whether
 automatic garbage collection is in effect:
 
-\begin{defun}{extensions:}{gc}{}
+\begin{defun}[-cheney]{extensions:}{gc}{\args{\ampoptional{} \var{verbose-p}}}
   
   This function runs the garbage collector.  If
   \code{ext:*gc-verbose*} is non-\nil, then it invokes
   \code{ext:*gc-notify-before*} before GC'ing and
   \code{ext:*gc-notify-after*} afterwards.
+  
+  \code{verbose-p} indicates whether GC statistics are printed or
+  not. 
+
 \end{defun}
 
 \begin{defun}{extensions:}{gc-off}{}
@@ -583,7 +599,6 @@ automatic garbage collection is in effect:
   system would have GC'ed while automatic GC was inhibited, then this
   will call \code{ext:gc}.
 \end{defun}
-
 
 \subsection{GC Parameters}
 
@@ -1884,14 +1899,14 @@ function is called and
   standardized method combinations like \code{progn}, \code{and}, etc.
 \end{itemize}
 
-\begin{defgeneric}{pcl:}{no-primary-method}{gf \&rest args}
+\begin{defgeneric}[-generic]{pcl:}{no-primary-method}{gf \&rest args}
   In \cmucl, this generic function is called in the above erroneous
   cases.  The parameter \code{gf} is the generic function being
   called, and \code{args} is a list of actual arguments in the generic
   function call.
 \end{defgeneric}
 
-\begin{defmethod}{pcl:}{no-primary-method}{%
+\begin{defmethod}[-standard]{pcl:}{no-primary-method}{%
     (gf standard-generic-function) \&rest args}
   This method signals a continuable error of type
   \code{pcl:no-primary-method-error}.

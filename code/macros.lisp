@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.98 2004/04/14 17:01:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.98.2.2 2004/05/18 14:36:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,7 +387,10 @@
      (eval-when (:compile-toplevel)
        (c::do-defconstant-compile-time ',var ,val ',doc))
      (eval-when (:load-toplevel :execute)
-       (c::%%defconstant ',var ,val ',doc))))
+       (c::%%defconstant ',var ,val ',doc (c::source-location)))))
+
+(defun set-defvar-source-location (name source-location)
+  (setf (info :source-location :defvar name) source-location))
 
 ;;; %Defconstant, %%Defconstant  --  Internal
 ;;;
@@ -396,9 +399,9 @@
 ;;; redefined.
 ;;;
 (defun c::%defconstant (name value doc)
-  (c::%%defconstant name value doc))
+  (c::%%defconstant name value doc nil))
 ;;;
-(defun c::%%defconstant (name value doc)
+(defun c::%%defconstant (name value doc source-location)
   (when doc
     (setf (documentation name 'variable) doc))
   (when (boundp name)
@@ -408,6 +411,7 @@
   (setf (symbol-value name) value)
   (setf (info variable kind name) :constant)
   (clear-info variable constant-value name)
+  (set-defvar-source-location name source-location)
   name)
 
 
@@ -423,6 +427,7 @@
 	     (setq ,var ,val))))
     ,@(when docp
 	`((setf (documentation ',var 'variable) ',doc)))
+    (set-defvar-source-location ',var (c::source-location))
     ',var))
 
 (defmacro defparameter (var val &optional (doc nil docp))
@@ -435,6 +440,7 @@
     (setq ,var ,val)
     ,@(when docp
 	`((setf (documentation ',var 'variable) ',doc)))
+    (set-defvar-source-location ',var (c::source-location))
     ',var))
 
 
@@ -537,18 +543,18 @@
 ;;;
 (defmacro multiple-value-setq (varlist value-form)
   (unless (and (listp varlist) (every #'symbolp varlist))
-    (error "Varlist is not a list of symbols: ~S." varlist))
+    (simple-program-error "Varlist is not a list of symbols: ~S." varlist))
   `(values (setf (values ,@varlist) ,value-form)))
 
 ;;;
 (defmacro multiple-value-bind (varlist value-form &body body)
   (unless (and (listp varlist) (every #'symbolp varlist))
-    (error "Varlist is not a list of symbols: ~S." varlist))
+    (simple-program-error  "Varlist is not a list of symbols: ~S." varlist))
   (if (= (length varlist) 1)
       `(let ((,(car varlist) ,value-form))
 	 ,@body)
       (let ((ignore (gensym)))
-	`(multiple-value-call #'(lambda (&optional ,@varlist &rest ,ignore)
+	`(multiple-value-call #'(lambda (&optional ,@(mapcar #'list varlist) &rest ,ignore)
 				  (declare (ignore ,ignore))
 				  ,@body)
 	   ,value-form))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.46 2004/04/28 13:01:57 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.46.2.2 2004/06/14 14:44:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -637,19 +637,21 @@ to skip undefined symbols which don't have an address."
 	     ;; stale handles in the saved image.
 	     (setf (car lib-entry) (int-sap 0)))))
 
-;;; Open all the libraries in *global-table*
+;;; Open all the libraries in *GLOBAL-TABLE*. We open them in the same
+;;; order as the first time they were loaded, so that any dependencies
+;;; on load order are respected.
 (defun reinitialize-global-table ()
-  (loop for lib-entry in *global-table*
+  (loop for lib-entry in (reverse *global-table*)
 	for (sap . lib-path) = lib-entry
-	for new-sap = (dlopen (namestring lib-path)
-			      (logior rtld-now rtld-global))
-	do (progn
+	when lib-path
+	do (let ((new-sap (dlopen (namestring lib-path)
+				  (logior rtld-now rtld-global))))
 	     (when (zerop (sap-int new-sap))
 	       ;; We're going down
 	       (error "Couldn't open library ~S: ~S" lib-path (dlerror)))
 	     (setf (car lib-entry) new-sap)))
   (alien:alien-funcall (alien:extern-alien "os_resolve_data_linkage"
-					   (alien:function c-call:void))))
+                                           (alien:function c-call:void))))
 
 (defun alternate-get-global-address (symbol)
   (ensure-lisp-table-opened)
@@ -732,7 +734,7 @@ environment passed to Lisp."
                         ;; via the LDEMULATION environment variable, or via the "-m" command-line
                         ;; option. Here we assume that LDEMULATION will be ignored by the platform
                         ;; linker on Linux/i386 platforms. 
-                        :env `(#+(and x86 linux) ("LDEMULATION" . "elf_i386") ,@env)
+                        :env `(#+(and x86 linux) (:ldemulation . "elf_i386") ,@env)
                         :input nil
                         :output error-output
                         :error :output)))

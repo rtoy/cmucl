@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.64 2004/04/01 16:26:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.64.4.2 2004/06/02 15:17:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -199,7 +199,23 @@
 
 (defun %make-pathname-object (host device directory name type version)
   (if (typep host 'logical-host)
-      (%make-logical-pathname host :unspecific directory name type version)
+      (flet ((upcasify (thing)
+	       (typecase thing
+		 (list
+		  (mapcar #'(lambda (x)
+			      (if (stringp x)
+				  (string-upcase x)
+				  x))
+			  thing))
+		 (simple-base-string
+		  (string-upcase thing))
+		 (t
+		  thing))))
+	(%make-logical-pathname host :unspecific
+				(upcasify directory)
+				(upcasify name)
+				(upcasify type)
+				(upcasify version)))
       (%make-pathname         host device      directory name type version)))
 
 ;;; *LOGICAL-HOSTS* --internal.
@@ -296,7 +312,7 @@
 			  (:character-set
 			   (and (< start len)
 				(let ((char (schar string start)))
-				  (if (find char (cdr piece) :test #'char=)
+				  (if (find char (second piece) :test #'char=)
 				      (matches (cdr pieces) (1+ start) subs t
 					       (cons char chars))))))))
 		       ((member :single-char-wild)

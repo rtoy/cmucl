@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.229 2004/03/23 12:16:47 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.229.4.2 2004/06/28 21:24:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1043,6 +1043,7 @@
 	   "ZERO-SC-NUMBER"
 	   "CALLBACK-ACCESSOR-FORM" "MAKE-CALLBACK-TRAMPOLINE"
 	   "FIXNUMIZE"
+	   "WEAK-POINTER-MARK-BIT-SLOT"
 	   )
   #+sparc
   (:export "ALLOCATION-TRAP"
@@ -1863,7 +1864,7 @@
 	   "%SET-SAP-REF-SAP" "%SET-SAP-REF-SINGLE"
 	   "%SET-SIGNED-SAP-REF-16" "%SET-SIGNED-SAP-REF-32"
 	   "%SET-SIGNED-SAP-REF-64" "%SET-SIGNED-SAP-REF-8" 
-	   "%SET-STACK-REF" "%SIN" "%SIN-QUICK"
+	   "%SET-STACK-REF" "%SIN" "%SET-SYMBOL-HASH" "%SIN-QUICK"
 	   "%SINGLE-FLOAT" "%SINH" "%SP-SET-DEFINITION" "%SP-SET-PLIST"
 	   "%SQRT" "%SXHASH-SIMPLE-STRING" "%SXHASH-SIMPLE-SUBSTRING" "%TAN"
 	   "%TAN-QUICK"
@@ -2087,7 +2088,7 @@
 	   "MAKE-UNDEFINED-CLASS" "%COMPILER-ONLY-DEFSTRUCT"
 	   "CLASS-DIRECT-SUPERCLASSES" "MAKE-LAYOUT" "SIMPLE-CONTROL-ERROR"
 	   "SIMPLE-FILE-ERROR" "SIMPLE-PROGRAM-ERROR" "SIMPLE-STYLE-WARNING"
-	   "SIMPLE-UNDEFINED-FUNCTION" "SIMPLE-PARSE-ERROR"
+	   "SIMPLE-UNDEFINED-FUNCTION" "SIMPLE-PARSE-ERROR" "SIMPLE-STREAM-ERROR"
 	   "BYTE-FUNCTION-TYPE" "SLOT-CLASS-PRINT-FUNCTION"
 	   "REDEFINE-LAYOUT-WARNING" "SLOT-CLASS" "INSURED-FIND-CLASS"
 	   "CONDITION-FUNCTION-NAME")

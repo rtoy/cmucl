@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.3 2002/11/18 13:52:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.3.14.1 2004/06/14 14:42:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,11 +24,23 @@
 
 (setq *software-type* "Linux")
 
+;;; We use READ-SEQUENCE instead of READ-LINE to work around a bug in
+;;; the proc file system on Linux kernel 2.6.x. The select() system
+;;; call does not work correctly on certain files; it never reports
+;;; that data is available for reading. Since CMUCL's fd-streams use
+;;; select(), as a part of the SERVE-EVENT mechanism, normal I/O (for
+;;; instance with READ-CHAR or READ-LINE) will fail on these files.
+;;; Luckily READ-SEQUENCE does not suffer from this problem.
+;;;
+;;; We could also call "uname -r" here, but using the filesystem-based
+;;; interface seems cleaner.
 (defun software-version ()
   "Returns a string describing version of the supporting software."
   (when (probe-file "/proc/version")
     (with-open-file (f "/proc/version")
-      (read-line f))))
+      (let* ((buf (make-string 1024))
+             (count (read-sequence buf f :end 1024)))
+        (subseq buf 0 (1- count))))))
 
 
 ;;; OS-Init initializes our operating-system interface.
