@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.1 2004/05/18 21:58:06 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.2 2004/06/10 01:47:35 cwang Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -339,6 +339,29 @@ GNAME(do_pending_interrupt):
 	.byte 	trap_PendingInterrupt
 	ret
 	.size	GNAME(do_pending_interrupt),.-GNAME(do_pending_interrupt)
+	
+#ifdef trap_DynamicSpaceOverflowError
+	.global	GNAME(do_dynamic_space_overflow_error)
+	.type	GNAME(do_dynamic_space_overflow_error),@function
+	.align	align_4byte,0x90
+GNAME(do_dynamic_space_overflow_error):
+	int3
+	.byte 	trap_DynamicSpaceOverflowError
+	ret
+	.size	GNAME(do_dynamic_space_overflow_error),.-GNAME(do_dynamic_space_overflow_error)
+#endif
+
+#ifdef trap_DynamicSpaceOverflowWarning
+	.global	GNAME(do_dynamic_space_overflow_warning)
+	.type	GNAME(do_dynamic_space_overflow_warning),@function
+	.align	align_4byte,0x90
+GNAME(do_dynamic_space_overflow_warning):
+	int3
+	.byte 	trap_DynamicSpaceOverflowWarning
+	ret
+	.size	GNAME(do_dynamic_space_overflow_warning),.-GNAME(do_dynamic_space_overflow_warning)
+#endif
+
 
 #ifdef WANT_CGC
 /* A copy function optimized for the Pentium and works ok on
