@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.45 1992/10/09 14:02:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.46 1992/10/10 10:03:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.45 1992/10/09 14:02:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.46 1992/10/10 10:03:43 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -504,12 +504,12 @@
       (flush-fasl-file-buffer file)
       (dump-segment code-segment code-length file)
       (dump-i-vector trace-table file t)
+      (dump-fixups fixups file)
+      (dump-fop 'lisp::fop-sanctify-for-execution file)
       (let ((handle (dump-pop file)))
-	(dump-fixups handle fixups file)
 	(dolist (patch (patches))
 	  (push (cons handle (cdr patch))
 		(gethash (car patch) (fasl-file-patch-table file))))
-	(dump-fop 'lisp::fop-sanctify-for-execution file)
 	handle))))
 
 
@@ -529,9 +529,9 @@
     (dump-fop 'lisp::fop-maybe-cold-load file)
     (dump-fop 'lisp::fop-assembler-routine file)
     (dump-unsigned-32 (label-position (cdr routine)) file))
-  (let ((handle (dump-pop file)))
-    (dump-fixups handle fixups file)
-    handle))
+  (dump-fixups fixups file)
+  (dump-fop 'lisp::fop-sanctify-for-execution file)
+  (dump-pop file))
 
 ;;; Dump-Fixups  --  Internal
 ;;;
@@ -540,41 +540,37 @@
 ;;;  - foreign (C) symbols: named by a string
 ;;;  - code object references: don't need a name.
 ;;;
-(defun dump-fixups (code-handle fixups file)
-  (declare (type index code-handle) (list fixups)
-	   (type fasl-file file))
-  (when fixups
-    (dump-push code-handle file)
-    (dolist (info fixups)
-      (let* ((kind (first info))
-	     (fixup (second info))
-	     (name (fixup-name fixup))
-	     (flavor (fixup-flavor fixup))
-	     (offset (third info)))
-	(dump-fop 'lisp::fop-normal-load file)
-	(let ((*cold-load-dump* t))
-	  (dump-object kind file))
-	(dump-fop 'lisp::fop-maybe-cold-load file)
-	(ecase flavor
-	  (:assembly-routine
-	   (assert (symbolp name))
-	   (dump-fop 'lisp::fop-normal-load file)
-	   (let ((*cold-load-dump* t))
-	     (dump-object name file))
-	   (dump-fop 'lisp::fop-maybe-cold-load file)
-	   (dump-fop 'lisp::fop-assembler-fixup file))
-	  (:foreign
-	   (assert (stringp name))
-	   (dump-fop 'lisp::fop-foreign-fixup file)
-	   (let ((len (length name)))
-	     (assert (< len 256))
-	     (dump-byte len file)
-	     (dotimes (i len)
-	       (dump-byte (char-code (schar name i)) file))))
-	  (:code-object
-	   (dump-fop 'lisp::fop-code-object-fixup file)))
-	(dump-unsigned-32 offset file)))
-    (dump-fop 'lisp::fop-pop-for-effect file))
+(defun dump-fixups (fixups file)
+  (declare (list fixups) (type fasl-file file))
+  (dolist (info fixups)
+    (let* ((kind (first info))
+	   (fixup (second info))
+	   (name (fixup-name fixup))
+	   (flavor (fixup-flavor fixup))
+	   (offset (third info)))
+      (dump-fop 'lisp::fop-normal-load file)
+      (let ((*cold-load-dump* t))
+	(dump-object kind file))
+      (dump-fop 'lisp::fop-maybe-cold-load file)
+      (ecase flavor
+	(:assembly-routine
+	 (assert (symbolp name))
+	 (dump-fop 'lisp::fop-normal-load file)
+	 (let ((*cold-load-dump* t))
+	   (dump-object name file))
+	 (dump-fop 'lisp::fop-maybe-cold-load file)
+	 (dump-fop 'lisp::fop-assembler-fixup file))
+	(:foreign
+	 (assert (stringp name))
+	 (dump-fop 'lisp::fop-foreign-fixup file)
+	 (let ((len (length name)))
+	   (assert (< len 256))
+	   (dump-byte len file)
+	   (dotimes (i len)
+	     (dump-byte (char-code (schar name i)) file))))
+	(:code-object
+	 (dump-fop 'lisp::fop-code-object-fixup file)))
+      (dump-unsigned-32 offset file)))
   (undefined-value))
 
 
