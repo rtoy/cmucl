@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.24 2003/09/05 16:49:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.25 2003/09/22 13:28:26 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.24 2003/09/05 16:49:35 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.25 2003/09/22 13:28:26 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -275,7 +275,9 @@
 	    (inst or ,result-tn ,lowtag)))))
 
 
-(defmacro with-fixed-allocation ((result-tn temp-tn type-code size)
+(defmacro with-fixed-allocation ((result-tn temp-tn type-code size
+					    &key (lowtag other-pointer-type)
+					    stack-p)
 				 &body body)
   "Do stuff to allocate an other-pointer object of fixed Size with a single
   word header having the specified Type-Code.  The result is placed in
@@ -283,12 +285,15 @@
   by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
   initializes the object."
   (once-only ((result-tn result-tn) (temp-tn temp-tn)
-	      (type-code type-code) (size size))
+	      (type-code type-code) (size size)
+	      (lowtag lowtag))
     `(pseudo-atomic ()
-       (allocation ,result-tn (pad-data-block ,size) other-pointer-type
-	           #+gencgc :temp-tn #+gencgc ,temp-tn)
-       (inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
-       (storew ,temp-tn ,result-tn 0 other-pointer-type)
+       (allocation ,result-tn (pad-data-block ,size) ,lowtag
+	           #+gencgc :temp-tn #+gencgc ,temp-tn
+	           :stack-p ,stack-p)
+      (when ,type-code
+	(inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
+	(storew ,temp-tn ,result-tn 0 ,lowtag))
        ,@body)))
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.18 2003/09/03 20:09:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.19 2003/09/22 13:28:26 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,13 +153,10 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (let ((size (+ length closure-info-offset)))
-      (pseudo-atomic ()
-        (allocation result (pad-data-block size) function-pointer-type
-		    :stack-p dynamic-extent
-		    :temp-tn temp)
-	(inst li temp (logior (ash (1- size) type-bits) closure-header-type))
-	(storew temp result 0 function-pointer-type)))
-    (storew function result closure-function-slot function-pointer-type)))
+      (with-fixed-allocation (result temp closure-header-type size
+				     :lowtag function-pointer-type
+				     :stack-p dynamic-extent))
+      (storew function result closure-function-slot function-pointer-type))))
 
 ;;; The compiler likes to be able to directly make value cells.
 ;;; 
@@ -189,13 +186,8 @@
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
-    (pseudo-atomic ()
-      (allocation result (pad-data-block words) lowtag
-		  :stack-p dynamic-extent
-		  :temp-tn temp)
-      (when type
-	(inst li temp (logior (ash (1- words) type-bits) type))
-	(storew temp result 0 lowtag)))))
+    (with-fixed-allocation (result temp type words :lowtag lowtag :stack-p dynamic-extent)
+      )))
 
 (define-vop (var-alloc)
   (:args (extra :scs (any-reg)))
