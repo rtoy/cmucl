@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.12 1990/10/05 15:51:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.13 1990/10/09 23:03:53 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -15,8 +15,30 @@
 (in-package 'c)
 (export '(lisp::defstruct) "LISP")
 
+
+;;;; Structure frobbing primitives.
+
 ;;; Note: STRUCTURIFY is defined in struct.lisp.  It converts a simple-vector
-;;; into a structure.
+;;; into a structure.  It should go away when we have a real structure
+;;; allocation primitive.
+
+(defun structure-length (x)
+  "Return the number of slots used by the structure object X, including the
+  type slot."
+  (declare (type structure x))
+  (structure-length x))
+
+(defun structure-ref (struct index)
+  "Return the value from the INDEXth slot of STRUCT.  0 corresponds to the
+  type.  This is SETFable."
+  (structure-ref struct index)
+
+(defun structure-set (struct index new-value)
+  "Set the INDEXth slot of STRUCT to NEW-VALUE."
+  (setf (structure-ref struct index) new-value))
+
+(defsetf structure-ref structure-set)
+
 
 
 ;;; This version of Defstruct is implemented using Defstruct, and is free of
@@ -286,7 +308,7 @@
 (defun typep-to-structure (obj info)
   (declare (type defstruct-description info) (inline member))
   (and (structurep obj)
-       (let ((name (%primitive structure-ref obj 0)))
+       (let ((name (structure-ref obj 0)))
 	 (or (eq name (dd-name info))
 	     (member name (dd-included-by info) :test #'eq)))))
 
@@ -309,7 +331,7 @@
 		(unless (typep-to-structure structure info)
 		  (error "Structure for accessor ~S is not a ~S:~% ~S"
 			 (dsd-accessor dsd) (dd-name info) structure))
-		(%primitive structure-index-ref structure (dsd-index dsd))))
+		(structure-ref structure (dsd-index dsd))))
       
       (unless (dsd-read-only slot)
 	(setf (fdefinition `(setf ,(dsd-accessor slot)))
@@ -323,8 +345,8 @@
 		    (error "New-Value for setter ~S is not a ~S:~% ~S."
 			   `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
 			   new-value))
-		  (%primitive structure-index-set structure (dsd-index dsd)
-			      new-value))))))
+		  (setf (structure-ref structure (dsd-index dsd))
+			new-value))))))
 
   (when (dd-predicate info)
     (setf (symbol-function (dd-predicate info))
@@ -343,13 +365,13 @@
 	      (let ((len (dd-length info)))
 		(declare (fixnum len))
 		(do ((i 1 (1+ i))
-		     (res (%primitive alloc-g-vector len nil)))
+		     (res (structurify (%primitive alloc-g-vector len nil))))
 		    ((= i len)
-		     (%primitive structure-set res (dd-name info) 0)
-		     (structurify res))
+		     (setf (structure-ref res 0) (dd-name info))
+		     res)
 		  (declare (fixnum i))
-		  (%primitive structure-index-set res i
-			      (%primitive structure-index-ref structure i)))))))
+		  (setf (structure-ref res i)
+			(structure-ref structure i)))))))
   (when (dd-doc info)
     (setf (documentation (dd-name info) 'type) (dd-doc info))))
 
@@ -565,7 +587,7 @@
   (let ((def (info type structure-info type)))
     (if (and def (eq (dd-type def) 'structure) (dd-predicate def))
 	`(and (structurep ,object)
-	      (if (eq (%primitive structure-ref ,object 0) ',type)
+	      (if (eq (structure-ref ,object 0) ',type)
 		  t
 		  (,(dd-predicate def) ,object)))
 	`(lisp::structure-typep ,object ',type))))
@@ -575,7 +597,7 @@
 
 (defun default-structure-print (structure stream depth)
   (declare (ignore depth))
-  (let* ((type (%primitive structure-ref structure 0))
+  (let* ((type (structure-ref structure 0))
 	 (dd (info type defined-structure-info type)))
     (cond (*print-pretty*
 	   (let ((index 0))
@@ -591,8 +613,7 @@
 		 (prin1 (dsd-name (xp:pprint-pop)) stream)
 		 (write-char #\space stream)
 		 (xp:pprint-newline :miser stream)
-		 (prin1 (%primitive structure-index-ref structure (incf index))
-			stream)
+		 (prin1 (structure-ref structure (incf index)) stream)
 		 (xp:pprint-exit-if-list-exhausted)
 		 (write-char #\space stream)
 		 (xp:pprint-newline :linear stream)))))
@@ -600,8 +621,7 @@
 	   (write-string "#S(" stream)
 	   (prin1 type stream)
 	   (do ((index 1 (1+ index))
-		(length (truly-the index
-				   (%primitive structure-ref structure -1)))
+		(length (structure-length structure))
 		(slots (dd-slots dd) (cdr slots)))
 	       ((or (= index length)
 		    (and *print-length*
@@ -613,5 +633,4 @@
 	     (write-char #\space stream)
 	     (prin1 (dsd-name (car slots)) stream)
 	     (write-char #\space stream)
-	     (prin1 (%primitive structure-index-ref structure index)
-		    stream))))))
+	     (prin1 (structure-ref structure index) stream))))))
