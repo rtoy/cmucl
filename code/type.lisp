@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.67 2004/09/09 14:52:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.68 2004/11/10 16:00:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2347,8 +2347,23 @@
 (defun coerced-real-bound (bound type)
   (coerce-bound bound type #'inner-coerce-real-bound))
 
+(defun inner-coerce-float-bound (bound type)
+  (if (and (floatp bound) (not (typep bound type)))
+      ;; Return NIL if we can't coerce the floating-point bound to the
+      ;; given type.  Typically, a large number that won't fit in a
+      ;; single-float.
+      (ignore-errors (coerce bound type))
+      (coerce bound type)))
+
 (defun coerced-float-bound (bound type)
-  (coerce-bound bound type #'coerce))
+  (let ((bound (coerce-bound bound type #'inner-coerce-float-bound)))
+    ;; If the resulting bound is NIL or '(NIL), convert that to '* to
+    ;; mean unbounded.
+    (if (and (listp bound)
+	     (or (null bound)
+		 (null (car bound))))
+	'*
+	bound)))
 
 (def-type-translator real (&optional (low '*) (high '*))
   (specifier-type `(or (float ,(coerced-real-bound  low 'float)
