@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.9 1990/11/27 17:38:02 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.10 1990/12/01 22:50:38 wlott Exp $ */
 
 
 #include <mach.h>
@@ -37,8 +37,11 @@ static int later_count = 0;
 
 #define NWORDS(x,y) (CEILING((x),(y)) / (y))
 
+#ifdef sparc
+#define RAW_ADDR_OFFSET 0
+#else
 #define RAW_ADDR_OFFSET (6*sizeof(lispobj) - type_FunctionPointer)
-
+#endif
 
 static boolean forwarding_pointer_p(obj)
      lispobj obj;
