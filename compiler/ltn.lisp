@@ -536,7 +536,8 @@
 		     (eq mem type))
 	     (return t))))
 	(:constant
-	 (funcall (second restr) (continuation-value cont))))))
+	 (and (constant-continuation-p cont)
+	      (funcall (second restr) (continuation-value cont)))))))
 
   
 ;;; Template-Args-OK  --  Internal
