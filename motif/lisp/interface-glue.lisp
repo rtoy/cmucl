@@ -3,7 +3,9 @@
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of CMU Common Lisp, please contact;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-glue.lisp,v 1.3 1994/10/27 17:44:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,13 +21,15 @@
 ;;;; Functions for handling server requests
 
 (defvar reply-table
-  (vector :confirm :values :callback :event :error :warning :protocol :action))
+  (vector :confirm :values :callback :event :error :warning :protocol :action
+	  :timeout))
 
 (defun wait-for-server-reply (fd)
   (wait-for-input fd)
   (loop
     (let ((reply (dispatch-server-reply fd)))
       (when reply (return reply)))))
+
 
 (defun dispatch-server-reply (fd)
   (let* ((reply (receive-message fd))
@@ -36,6 +40,7 @@
       (:protocol (handle-protocol reply))
       (:action   (handle-action reply))
       (:event    (handle-event reply))
+      (:timeout  (handle-timeout reply))
       (:error
        (let ((errmsg (toolkit-read-value reply)))
 	 (destroy-message reply)
@@ -49,6 +54,7 @@
       (t 
        (destroy-message reply)
        (toolkit-error "Invalid reply type: ~d" kind)))))
+
 
 (defun send-request-to-server (message options)
   (let ((fd (motif-connection-fd *motif-connection*)))
