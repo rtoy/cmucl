@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.61 2003/06/06 16:23:45 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.62 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -698,9 +698,7 @@
   (let ((stream (out-synonym-of stream)))
     (stream-dispatch stream
       ;; simple-stream
-      (progn
-	(stream::%write-char stream character)
-	character)
+      (stream::%write-char stream character)
       ;; lisp-stream
       (funcall (lisp-stream-out stream) stream character)
       ;; fundamental-stream
@@ -746,20 +744,21 @@
   (let ((stream (out-synonym-of stream)))
     (stream-dispatch stream
       ;; simple-stream
-      (progn		     
-        (stream::%write-string stream string start end)
-	string)
+      (if (array-header-p string)
+	  (with-array-data ((data string) (offset-start start)
+			    (offset-end end))
+	    (stream::%write-string stream data offset-start offset-end))
+	  (stream::%write-string stream string start end))
       ;; lisp-stream
-      (progn
-	(if (array-header-p string)
-	    (with-array-data ((data string) (offset-start start)
-			      (offset-end end))
-	      (funcall (lisp-stream-sout stream)
-		       stream data offset-start offset-end))
-	    (funcall (lisp-stream-sout stream) stream string start end))
-	string)
+      (if (array-header-p string)
+	  (with-array-data ((data string) (offset-start start)
+			    (offset-end end))
+	    (funcall (lisp-stream-sout stream)
+		     stream data offset-start offset-end))
+	  (funcall (lisp-stream-sout stream) stream string start end))
       ;; fundamental-stream
-      (stream-write-string stream string start end))))
+      (stream-write-string stream string start end)))
+  string)
 
 (defun write-line (string &optional (stream *standard-output*)
 			  &key (start 0) (end (length string)))

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.1 2003/06/06 16:23:46 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,7 @@
       (make-array size :element-type '(unsigned-byte 8))))
 
 (defun free-buffer (buffer)
-  (unless (vectorp buffer)
+  (when (sys:system-area-pointer-p buffer)
     (push buffer cl::*available-buffers*))
   t)
 
@@ -85,6 +85,11 @@
 (defvar *std-control-out-table*
   (make-control-table #\Newline #'std-newline-out-handler
 		      #\Tab     #'std-tab-out-handler))
+
+
+
+(defun find-external-format (name)
+  nil)
 
 
 

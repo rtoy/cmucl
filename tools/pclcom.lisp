@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.28 2003/06/06 16:23:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.29 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -117,6 +117,7 @@
 
 (cat-if-anything-changed
  "pcl:simple-streams-library"
+ "pcl:simple-streams/herald"
  "pcl:simple-streams/classes"
  "pcl:simple-streams/internal"
  "pcl:simple-streams/strategy"
@@ -127,3 +128,11 @@
  "pcl:simple-streams/string"
  "pcl:simple-streams/terminal"
  "pcl:simple-streams/socket")
+
+(cat-if-anything-changed
+ "pcl:iodefs-library"
+ "pcl:simple-streams/iodefs")
+
+(cat-if-anything-changed
+ "pcl:gray-compat-library"
+ "pcl:simple-streams/gray-compat")

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/direct.lisp,v 1.1 2003/06/06 16:23:46 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/direct.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,10 +31,6 @@
 (defmethod device-file-length ((stream direct-simple-stream))
   ;; return buffer length
   )
-
-(defmethod device-extend ((stream direct-simple-stream) need action)
-  (declare (ignore need action))
-  nil)
 
 (defmethod device-open ((stream buffer-input-simple-stream) options)
   #| do something |#

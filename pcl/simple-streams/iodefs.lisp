@@ -5,7 +5,7 @@
 ;;; domain.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/iodefs.lisp,v 1.1 2003/06/06 16:23:46 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/iodefs.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,12 +41,19 @@
 
 (defmacro with-stream-class ((class-name &optional stream) &body body)
   (if stream
-    (let ((stm (gensym "STREAM")))
-      `(let ((,stm ,stream))
-	 (declare (type ,class-name ,stm) (ignorable ,stm))
+    (let ((stm (gensym "STREAM"))
+	  (slt (gensym "SV")))
+      `(let* ((,stm ,stream)
+	      (,slt (kernel:%instance-ref ,stm 1)))
+	 (declare (type ,class-name ,stm)
+		  (type simple-vector ,slt)
+		  (ignorable ,slt))
 	 (macrolet ((sm (slot-name stream)
 		      (declare (ignore stream))
-		      `(slot-value ,',stm ',slot-name))
+		      #-count-sm
+		      `(slot-value ,',stm ',slot-name)
+		      #+count-sm
+		      `(%sm ',slot-name ,',stm))
 		    (add-stream-instance-flags (stream &rest flags)
 		      (declare (ignore stream))
 		      `(setf (sm %flags ,',stm) (logior (sm %flags ,',stm)
@@ -61,7 +68,10 @@
 					   ,(%flags flags))))))
 	   ,@body)))
     `(macrolet ((sm (slot-name stream)
-		  `(slot-value ,stream ',slot-name)))
+		  #-count-sm
+		  `(slot-value ,stream ',slot-name)
+		  #+count-sm
+		  `(%sm ',slot-name ,stream)))
        ,@body)))
 
 (defmacro sm (slot-name stream)
@@ -102,7 +112,16 @@
        (with-stream-class (simple-stream ,s)
 	 (any-stream-instance-flags ,s ,@flags)))))
 
-(defun compose-encapsulating-streams (stream external-format)
-  #| implement me |#)
+(defmacro simple-stream-dispatch (stream single dual string)
+  (let ((s (gensym "STREAM")))
+    `(let ((,s ,stream))
+       (with-stream-class (simple-stream ,s)
+	 (let ((%flags (sm %flags ,s)))
+	   (cond ((zerop (logand %flags ,(%flags '(:string :dual))))
+		  ,single)
+		 ((zerop (logand %flags ,(%flags '(:string))))
+		  ,dual)
+		 (t
+		  ,string)))))))
 
 (provide :iodefs)

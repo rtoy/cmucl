@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.1 2003/06/06 16:23:46 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,7 @@
 	     (values fixnum &optional (member nil t :eof))))
 
 (deftype j-write-char-fn ()
-  '(function (character simple-stream) character))
+  '(function ((or character null) simple-stream) (or character null)))
 
 (deftype j-write-chars-fn ()
   '(function (string simple-stream fixnum fixnum) t)) ; return chars-written?
@@ -57,12 +57,12 @@
   ((%flags :initform 0 :type fixnum)
    (plist :initform nil :type list :accessor stream-plist)
 
-   (j-listen :type j-listen-fn)
-   (j-read-char :type j-read-char-fn)
-   (j-read-chars :type j-read-chars-fn)
-   (j-write-char :type j-write-char-fn)
-   (j-write-chars :type j-write-chars-fn)
-   (j-unread-char :type j-unread-char-fn)
+   (j-listen :initform #'cl::ill-in-any :type j-listen-fn)
+   (j-read-char :initform #'cl::ill-in-any :type j-read-char-fn)
+   (j-read-chars :initform #'cl::ill-in-any :type j-read-chars-fn)
+   (j-unread-char :initform #'cl::ill-in-any :type j-unread-char-fn)
+   (j-write-char :initform #'cl::ill-out-any :type j-write-char-fn) ;@@
+   (j-write-chars :initform #'cl::ill-out-any :type j-write-chars-fn) ;@@
 
    (external-format :initform :default)
 
@@ -101,10 +101,7 @@
    (max-out-pos :initform 0 :type fixnum)))
 
 (def-stream-class string-simple-stream (simple-stream)
-  ((buffer :initform nil :type (or simple-stream-buffer null))
-   (buffpos :initform 0 :type fixnum)
-   (buffer-ptr :initform 0 :type fixnum)
-   (buf-len :initform 0 :type fixnum)))
+  ())
 
 (def-stream-class file-simple-stream (single-channel-simple-stream)
   ((pathname :initform nil :initarg :pathname)
@@ -145,9 +142,6 @@
 (defgeneric device-clear-output (stream)
   (:documentation "Write me"))
 
-(defgeneric device-extend (stream need action)
-  (:documentation "Write me"))
-
 (defgeneric device-finish-record (stream blocking action)
   (:documentation "Write me"))
 
@@ -163,15 +157,19 @@
 
 (defmethod print-object ((object simple-stream) stream)
   (print-unreadable-object (object stream :type nil :identity nil)
-    (unless (any-stream-instance-flags object :input :output)
-      (princ "Closed " stream))
+    (cond ((not (any-stream-instance-flags object :simple))
+	   (princ "Invalid " stream))
+	  ((not (any-stream-instance-flags object :input :output))
+	   (princ "Closed " stream)))
     (format stream "~:(~A~)" (type-of object))))
 
 (defmethod print-object ((object file-simple-stream) stream)
   (print-unreadable-object (object stream :type nil :identity nil)
     (with-stream-class (file-simple-stream object)
-      (unless (any-stream-instance-flags object :input :output)
-	(princ "Closed " stream))
+      (cond ((not (any-stream-instance-flags object :simple))
+	   (princ "Invalid " stream))
+	  ((not (any-stream-instance-flags object :input :output))
+	   (princ "Closed " stream)))
       (format stream "~:(~A~) for ~S"
 	      (type-of object) (sm filename object)))))
 
@@ -184,7 +182,13 @@
 	    (finish-output stream)))
       (call-next-method)
       (setf (sm input-handle stream) nil
-	    (sm output-handle stream) nil)
+	    (sm output-handle stream) nil
+	    (sm j-listen stream) #'cl::closed-flame
+	    (sm j-read-char stream) #'cl::closed-flame
+	    (sm j-read-chars stream) #'cl::closed-flame
+	    (sm j-unread-char stream) #'cl::closed-flame
+	    (sm j-write-char stream) #'cl::closed-flame	;@@
+	    (sm j-write-chars stream) #'cl::closed-flame) ;@@
       (remove-stream-instance-flags stream :input :output)
       (ext:cancel-finalization stream))))
 
@@ -276,14 +280,3 @@
   (defmethod output-stream-p ((stream stream:simple-stream))
     (any-stream-instance-flags stream :output))
 ) ; WHEN
-
-
-
-(setf (getf ext:*herald-items* :simple-streams)
-      `("    Simple Streams "
-	#+CMU18E
-	,(let ((version "$Revision: 1.1 $"))
-	      (subseq version 11 (- (length version) 2)))))
-
-(pushnew :simple-streams *features*)
-(provide :simple-streams)

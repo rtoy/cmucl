@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.60 2003/03/21 21:36:34 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.61 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -426,7 +426,8 @@
 		 (etypecase ,var
 		   (pathname ,var)
 		   (string (parse-namestring ,var))
-		   (file-stream (file-name ,var))))))
+		   (file-stream (file-name ,var))
+		   (stream:file-simple-stream (file-name ,var))))))
      ,@body))
 
 ;;; WITH-HOST -- Internal

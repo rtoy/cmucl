@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.67 2003/06/02 16:00:03 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.68 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,7 +149,7 @@
                          "ALIEN-INTERNALS" "UNIX"
                          "CONDITIONS" "DEBUG" "DEBUG-INTERNALS" "SYSTEM"
                          "KERNEL" "EXTENSIONS" #+mp "MULTIPROCESSING"
-                         "WALKER" "XREF")))
+                         "WALKER" "XREF" "STREAM")))
     (dolist (p package-names)
       (let ((p (find-package p)))
         (when p
@@ -1287,7 +1287,7 @@
     (if where
 	(values symbol where)
         (progn
-          #+nil
+          #+(or)
           (when *enable-package-locked-errors*
             (when (ext:package-lock package)
               (restart-case

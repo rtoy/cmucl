@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.66 2003/06/06 16:23:45 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.67 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -139,7 +139,7 @@
 ;;; DO-OUTPUT-LATER -- internal
 ;;;
 ;;;   Called by the server when we can write to the given file descriptor.
-;;; Attemt to write the data again. If it worked, remove the data from the
+;;; Attempt to write the data again. If it worked, remove the data from the
 ;;; output-later list. If it didn't work, something is wrong.
 ;;;
 (defun do-output-later (stream)
@@ -161,7 +161,7 @@
 		 (error "Write would have blocked, but SERVER told us to go.")
 		 (error "While writing ~S: ~A"
 			stream (unix:get-unix-error-msg errno))))
-	    ((eql count length) ; Hot damn, it workded.
+	    ((eql count length) ; Hot damn, it worked.
 	     (when reuse-sap
 	       (push base *available-buffers*)))
 	    ((not (null count)) ; Sorta worked.
@@ -175,7 +175,7 @@
 
 ;;; OUTPUT-LATER -- internal
 ;;;
-;;;   Arange to output the string when we can write on the file descriptor.
+;;;   Arrange to output the string when we can write on the file descriptor.
 ;;;
 (defun output-later (stream base start end reuse-sap)
   (cond ((null (fd-stream-output-later stream))
@@ -1232,7 +1232,9 @@
     (multiple-value-bind (name type version)
 	(extract-name-type-and-version name (if sep (1+ sep) 0) (length name))
       (let ((version (if (symbolp version) 1 (1+ version)))
-	    (match (concatenate 'string name "." type ".~")))
+	    (match (if type
+		       (concatenate 'string name "." type ".~")
+		       (concatenate 'string name ".~"))))
 	(when dir
 	  (unwind-protect
 	       (loop
@@ -1515,10 +1517,11 @@
   (declare (ignore external-format input-handle output-handle))
   
   ;; First, make sure that DIRECTION is valid. Allow it to be changed if not.
-  (setf direction
+  (setq direction
 	(assure-one-of direction
 		       '(:input :output :io :probe)
 		       :direction))
+  (setf (getf options :direction) direction)
 
   (when (and if-exists-given (member direction '(:output :io)))
     (setq if-exists
@@ -1536,9 +1539,9 @@
 			 :if-does-not-exist))
     (setf (getf options :if-does-not-exist) if-does-not-exist))
 
-  (let ((class (or class 'fd-stream))
+  (let ((filespec (pathname filename))
 	(options (copy-list options))
-	(filespec (pathname filename)))
+	(class (or class 'fd-stream)))
     (cond ((eq class 'fd-stream)
 	   (remf options :class)
            (remf options :mapped)

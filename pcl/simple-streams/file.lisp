@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/file.lisp,v 1.1 2003/06/06 16:23:46 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/file.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -90,8 +90,9 @@
 		(sm buf-len stream) length)))
       (when (any-stream-instance-flags stream :output)
 	(setf (sm control-out stream) *std-control-out-table*))
-      (install-single-channel-character-strategy
-       stream (getf options :external-format :default) nil)
+      (let ((efmt (getf options :external-format :default)))
+	(compose-encapsulating-streams stream efmt)
+	(install-single-channel-character-strategy stream efmt nil))
       stream)))
 
 (defmethod device-close ((stream file-simple-stream) abort)
@@ -183,7 +184,7 @@
       (unix:unix-munmap (sm buffer stream) (sm buf-len stream))
       (setf (sm buffer stream) nil))
     (cond (abort
-	   ;; remove any FD handler
+	   ;; remove any fd handler
 	   ;; if it has an original name (is this possible for mapped files?)
 	   ;;   revert the file
 	   )
@@ -193,7 +194,3 @@
 	   ))
     (unix:unix-close (sm input-handle stream)))
   t)
-
-(defmethod device-extend ((stream mapped-file-simple-stream) need action)
-  (declare (ignore need action))
-  nil)
