@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.10 1998/03/21 08:08:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.11 1999/09/15 15:11:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,10 +56,8 @@
   (unsigned-byte 32)
   ())
 
-#+alpha
 (defknown sap-ref-64 (system-area-pointer fixnum) (unsigned-byte 64)
   (flushable))
-#+alpha
 (defknown %set-sap-ref-64 (system-area-pointer fixnum (unsigned-byte 64))
   (unsigned-byte 64)
   ())
@@ -83,10 +81,8 @@
   (signed-byte 32)
   ())
 
-#+alpha
 (defknown signed-sap-ref-64 (system-area-pointer fixnum) (signed-byte 64)
   (flushable))
-#+alpha
 (defknown %set-signed-sap-ref-64 (system-area-pointer fixnum (signed-byte 64))
   (signed-byte 64)
   ())
@@ -143,6 +139,8 @@
 	       signed-sap-ref-16 %set-signed-sap-ref-16
 	       sap-ref-32 %set-sap-ref-32
 	       signed-sap-ref-32 %set-signed-sap-ref-32
+	       sap-ref-64 %set-sap-ref-64
+	       signed-sap-ref-64 %set-signed-sap-ref-64
 	       sap-ref-sap %set-sap-ref-sap
 	       sap-ref-single %set-sap-ref-single
 	       sap-ref-double %set-sap-ref-double
