@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.17 2002/08/27 22:18:30 moore Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.18 2002/10/01 20:10:49 toy Exp $
 
 all: lisp.nm
 
@@ -25,7 +25,7 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 
 lisp.nm: lisp
 	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
-	$(NM) lisp | grep -v " F \| U " >> ,lisp.nm
+	$(NM) lisp | grep -v " [F] " >> ,lisp.nm
 	mv ,lisp.nm lisp.nm
 
 lisp: version.c ${OBJS} version
