@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.1 1997/06/15 21:31:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.2 1997/09/09 00:54:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,7 +248,7 @@
 
 #+(or hpux irix linux solaris)			; SVR4??
 (progn
-(defconstant +NCC+
+(defconstant +NCCS+
   #+hpux 16
   #+irix 23
   #+(or linux solaris) 19
@@ -262,7 +262,7 @@
     (c-lflag unsigned-int)
     #+(or linux hpux)
     (c-reserved #-linux unsigned-int #+linux unsigned-char)
-    (c-cc (array unsigned-char #.+NCC+))))
+    (c-cc (array unsigned-char #.+NCCS+))))
 )
 
 ;;; From sys/termios.h
