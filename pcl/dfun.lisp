@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.32 2003/07/28 10:43:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.33 2003/07/28 14:13:34 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1203,10 +1203,11 @@ And so, we are saved.
 			       class))
 	    (return-from break-vicious-metacircle
 	      (values index (list method) type index)))))))
-  (error "~@<Vicious metacircle:  The computation of an ~
-	  effective method of ~s for arguments of types ~s uses ~
-	  the effective method being computed.~@:>"
-	 gf classes))
+  (kernel:infinite-error-protect
+   (error "~@<Vicious metacircle:  The computation of an ~
+	   effective method of ~s for arguments of types ~s uses ~
+	   the effective method being computed.~@:>"
+	  gf classes)))
 
 ;;;
 ;;; Return (CLASS SLOTD ACCESSOR-TYPE) if some method of generic

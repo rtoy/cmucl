@@ -5,7 +5,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.11 2003/06/06 16:23:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.12 2003/07/28 14:13:34 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,6 @@
 
 
 
-
 (defgeneric pcl-close (stream &key abort)
   (:documentation
    "Closes the given Stream.  No more I/O may be performed, but
@@ -75,6 +74,7 @@
   (defmethod pcl-close ((stream stream:simple-stream) &key abort)
     (stream:device-close stream abort)))
 
+(pcl-close (make-string-output-stream))
 (setf (fdefinition 'close) #'pcl-close)
 
 
@@ -445,4 +445,6 @@
 
 (setf (getf *herald-items* :gray-streams)
       '("    Gray Streams Protocol Support"))
+
+
 
