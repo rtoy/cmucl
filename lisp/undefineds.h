@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.28 2002/11/19 12:51:00 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.29 2002/11/19 13:17:15 toy Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -256,8 +256,16 @@ F(dlsym)
 F(dlclose)
 F(dlerror)
 F(cfgetospeed)
+F(cfsetospeed)
 F(cfgetispeed)
 F(cfsetispeed)
+F(opendir)
+F(closedir)
+F(readdir)
+F(sched_yield)
+F(setpgid)
+D(tzname)
+D(errno)
 #endif
 
 #if defined(sparc)

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.2 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.3 2002/11/19 13:17:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.2 1994/10/31 04:11:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alpha-vm.lisp,v 1.3 2002/11/19 13:17:13 toy Exp $
 ;;;
 ;;; This file contains the Alpha specific runtime stuff.
 ;;;
@@ -209,6 +209,24 @@
 (defun extern-alien-name (name)
   (declare (type simple-base-string name))
   name)
+
+#+(and (or linux (and freebsd elf)) (not linkage-table))
+(defun lisp::foreign-symbol-address-aux (name flavor)
+  (declare (ignore flavor))
+  (multiple-value-bind (value found)
+      (gethash name lisp::*foreign-symbols* 0)
+    (if found
+	value
+	(multiple-value-bind (value found)
+	    (gethash
+	     (concatenate 'string "PVE_stub_" name)
+	     lisp::*foreign-symbols* 0)
+	  (if found
+	      value
+	      (let ((value (system:alternate-get-global-address name)))
+		(when (zerop value)
+		  (error "Unknown foreign symbol: ~S" name))
+		value))))))
 
 
 

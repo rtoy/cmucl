@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.49 2002/10/24 20:38:58 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.50 2002/11/19 13:17:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1872,8 +1872,10 @@
 	   (gethash name *cold-foreign-symbol-table* nil)
 	   #+linkage-table
 	   (cold-register-foreign-linkage name :code)))
-    (let ((linux-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			    #.c:x86-fasl-file-implementation)
+    (let ((linux-p (and (or (eq (c:backend-fasl-file-implementation c:*backend*)
+				#.c:x86-fasl-file-implementation)
+			    (eq (c:backend-fasl-file-implementation c:*backend*)
+				#.c:alpha-fasl-file-implementation))
 			(c:backend-featurep :linux)))
 	  (bsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
 			  #.c:x86-fasl-file-implementation)

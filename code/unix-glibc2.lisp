@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.17 2002/11/15 15:08:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.18 2002/11/19 13:17:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -294,9 +294,9 @@
 (defconstant +max-s-long+ 2147483647)
 (defconstant +max-u-long+ 4294967295)
 
-(def-alien-type quad-t #+nil long-long #-nil (array long 2))
-(def-alien-type uquad-t #+nil unsigned-long-long
-		#-nil (array unsigned-long 2))
+(def-alien-type quad-t #+alpha long #-alpha (array long 2))
+(def-alien-type uquad-t #+alpha unsigned-long
+		#-alpha (array unsigned-long 2))
 (def-alien-type qaddr-t (* quad-t))
 (def-alien-type daddr-t int)
 (def-alien-type caddr-t (* char))
@@ -313,21 +313,21 @@
 (def-alien-type u-int16-t unsigned-short)
 (def-alien-type int32-t int)
 (def-alien-type u-int32-t unsigned-int)
-(def-alien-type int64-t #+nil long-long #-nil (array long 2))
-(def-alien-type u-int64-t #+nil unsigned-long-long #-nil (array unsigned-long 2))
+(def-alien-type int64-t #+alpha long #-alpha (array long 2))
+(def-alien-type u-int64-t #+alpha unsigned-long #-alpha (array unsigned-long 2))
 (def-alien-type register-t #-alpha int #+alpha long)
 
 
-(def-alien-type dev-t #-alpha uquad-t #+alpha unsigned-long)
+(def-alien-type dev-t u-int64-t)
 (def-alien-type uid-t unsigned-int)
 (def-alien-type gid-t unsigned-int)
-(def-alien-type ino-t #-alpha unsigned-long #+alpha unsigned-int)
+(def-alien-type ino-t u-int32-t)
 (def-alien-type mode-t unsigned-int)
 (def-alien-type nlink-t unsigned-int)
 (def-alien-type off-t long)
 (def-alien-type loff-t quad-t)
 (def-alien-type pid-t int)
-(def-alien-type ssize-t #-alpha int #+alpha long)
+;(def-alien-type ssize-t #-alpha int #+alpha long)
 
 (def-alien-type fsid-t (array int 2))
 
@@ -1399,20 +1399,20 @@ length LEN and type TYPE."
   "Unlock password file."
   (void-syscall ("ulckpwdf")))
 
-;;; statbuf.h
+;;; bits/stat.h
 
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
     #-alpha (st-pad1 unsigned-short)
     (st-ino ino-t)
+    #+alpha (st-pad1 unsigned-int)
     (st-mode mode-t)
     (st-nlink  nlink-t)
     (st-uid  uid-t)
     (st-gid  gid-t)
     (st-rdev dev-t)
     #-alpha (st-pad2  unsigned-short)
-    #+alpha (st-pad2  unsigned-int)
     (st-size off-t)
     #-alpha (st-blksize unsigned-long)
     #-alpha (st-blocks unsigned-long)
@@ -1421,12 +1421,16 @@ length LEN and type TYPE."
     (st-mtime time-t)
     #-alpha (unused-2 unsigned-long)
     (st-ctime time-t)
-    #+alpha (st-blksize unsigned-int)
     #+alpha (st-blocks int)
+    #+alpha (st-pad2 unsigned-int)
+    #+alpha (st-blksize unsigned-int)
     #+alpha (st-flags unsigned-int)
     #+alpha (st-gen unsigned-int)
-    #-alpha (unused-3 unsigned-long)
-    #-alpha (unused-4 unsigned-long)
+    #+alpha (st-pad3 unsigned-int)
+    #+alpha (unused-1 unsigned-long)
+    #+alpha (unused-2 unsigned-long)
+    (unused-3 unsigned-long)
+    (unused-4 unsigned-long)
     #-alpha (unused-5 unsigned-long)))
 
 ;; Encoding of the file mode.
@@ -1660,8 +1664,8 @@ length LEN and type TYPE."
 ;; microsecond but also has a range of years.  
 (def-alien-type nil
   (struct timeval
-	  (tv-sec #-alpha time-t #+alpha int)		; seconds
-	  (tv-usec #-alpha time-t #+alpha int)))	; and microseconds
+	  (tv-sec time-t)	; seconds
+	  (tv-usec time-t)))	; and microseconds
 
 ;;; unistd.h
 
@@ -1845,11 +1849,17 @@ length LEN and type TYPE."
   "Put the absolute pathname of the current working directory in BUF.
    If successful, return BUF.  If not, put an error message in
    BUF and return NULL.  BUF should be at least PATH_MAX bytes long."
-  (with-alien ((buf (array char 1024)))
-    (values (not (zerop (alien-funcall (extern-alien "getwd"
-						     (function int (* char)))
-				       (cast buf (* char)))))
-	    (cast buf c-string))))
+  ;; 5120 is some randomly selected maximum size for the buffer for getcwd.
+  (with-alien ((buf (array c-call:char 5120)))
+    (let ((result (alien-funcall
+		    (extern-alien "getcwd"
+				  (function (* c-call:char)
+					    (* c-call:char) c-call:int))
+		    (cast buf (* c-call:char))
+		    5120)))
+      
+      (values (not (zerop (sap-int (alien-sap result))))
+	      (cast buf c-call:c-string)))))
 
 
 ;;; Unix-dup returns a duplicate copy of the existing file-descriptor

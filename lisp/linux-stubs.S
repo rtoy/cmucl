@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.11 2002/08/27 22:18:32 moore Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.12 2002/11/19 13:17:15 toy Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -12,7 +12,7 @@ gcc2_compiled.:
         .text
 
 #define doe(fct) \
-	.align 16 ;\
+	.balign 4 ;\
 .globl PVE_stub_ ## fct ;\
 	.type	 PVE_stub_ ## fct,@function ;\
 PVE_stub_ ## fct: ;\
@@ -88,6 +88,7 @@ PVE_stub_ ## fct: ;\
  doe(gettimeofday)
  doe(getuid)
  doe(getwd)
+ doe(getcwd)
  doe(hypot)
  doe(ioctl)
  doe(isatty)
@@ -143,7 +144,19 @@ PVE_stub_ ## fct: ;\
  doe(utimes)
  doe(wait3)	
  doe(write)
- 
+
+#ifdef alpha
+ doe(atan)
+ doe(atan2)
+ doe(cos)
+ doe(exp)
+ doe(log)
+ doe(log10)
+ doe(sin)
+ doe(sqrt)
+ doe(tan)
+#endif
+
 /*  doe(abort) */
 /*  doe(abs) */
 /*  doe(accept) */
