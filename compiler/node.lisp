@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.19 1991/11/09 22:08:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.20 1991/12/11 17:21:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -266,11 +266,15 @@
   ;; containing the orignal source.
   (source-path *current-path* :type list)
   ;;
-  ;; If this node is in a tail-recursive position, then this is set to the
-  ;; corresponding Tail-Set.  This is first computed at the end of IR1 (after
-  ;; cleanup code has been emitted).  If the back-end breaks tail-recursion for
-  ;; some reason, then it can null out this slot.
-  (tail-p nil :type (or tail-set null)))
+  ;; If this node is in a tail-recursive position, then this is set to T.  At
+  ;; the end of IR1 (in environment analysis) this is computed for all nodes
+  ;; (after cleanup code has been emitted).  Before then, a non-null value
+  ;; indicates that IR1 optimization has converted a tail local call to a
+  ;; direct transfer.
+  ;;
+  ;; If the back-end breaks tail-recursion for some reason, then it can null
+  ;; out this slot.
+  (tail-p nil :type boolean))
 
 
 ;;; Flags that are used to indicate various things about a block, such as what
@@ -512,14 +516,13 @@
 ;;; closure of the "is called tail-recursively by" relation.
 ;;;
 ;;; All functions in the same tail set share the same Tail-Set structure.
-;;; Initially each function has its own Tail-Set, but converting a TR local
-;;; call joins the tail sets of the called function and the calling function.
-;;; When computing the tail set, we consider a call to be TR when it delivers
-;;; its value to a return node; there may be an implicit MV-Prog1, and the
-;;; use of the result continuation might even turn out to be a non-local exit.
+;;; Initially each function has its own Tail-Set, but when IR1-OPTIMIZE-RETURN
+;;; notices a tail local call, it joins the tail sets of the called function
+;;; and the calling function.
 ;;;
-;;; This is the most useful interpretation for type inference.  Anyway, local
-;;; call analysis happens too early to determine which calls are truly TR.
+;;; The tail set is somewhat approximate, because it is too early to be sure
+;;; which calls will be TR.  Any call that *might* end up TR causes tail-set
+;;; merging.
 ;;;
 (defstruct (tail-set
 	    (:print-function %print-tail-set))
@@ -707,6 +710,10 @@
   ;;    :MV-Let
   ;;        Similar to :Let, but the call is an MV-Call.
   ;;
+  ;;    :Assignment
+  ;;        Similar to a let, but can have other than one call as long as there
+  ;;        is at most one non-tail call.
+  ;;
   ;;    :Optional
   ;;        A lambda that is an entry-point for an optional-dispatch.  Similar
   ;;        to NIL, but requires greater caution, since local call analysis may
@@ -744,7 +751,8 @@
   ;;        marked for deletion.
   ;;
   (kind nil :type (member nil :optional :deleted :external :top-level :escape
-			  :cleanup :let :mv-let :top-level-xep))
+			  :cleanup :let :mv-let :assignment
+			  :top-level-xep))
   ;;
   ;; In a normal function, this is the external entry point (XEP) lambda for
   ;; this function, if any.  Each function that is used other than in a local
@@ -822,7 +830,8 @@
   ;; its lets) using a non-let local call.
   (calls () :type list)
   ;;
-  ;; The Tail-Set that this lambda is in.  Null when Return is null.
+  ;; The Tail-Set that this lambda is in.  Null during creation and in let
+  ;; lambdas.
   (tail-set nil :type (or tail-set null))
   ;;
   ;; The structure which represents the environment that this Function's
