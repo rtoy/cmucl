@@ -628,25 +628,24 @@
 	method)))
   
 (defun real-remove-method (generic-function method)
-  (if  (neq generic-function (method-generic-function method))
-       (error "The method ~S is attached to the generic function~@
-               ~S.  It can't be removed from the generic function~@
-               to which it is not attached."
-	      method (method-generic-function method))
-       (let* ((name         (generic-function-name generic-function))
-	      (specializers (method-specializers method))
-	      (methods      (generic-function-methods generic-function))
-	      (new-methods  (remove method methods)))	      
-	 (setf (method-generic-function method) nil)
-	 (setf (generic-function-methods generic-function) new-methods)
-	 (dolist (specializer (method-specializers method))
-	   (remove-direct-method specializer method))
-	 (set-arg-info generic-function)
-	 (when (member name '(make-instance default-initargs
-			      allocate-instance shared-initialize initialize-instance))
-	   (update-make-instance-function-table (type-class (car specializers))))
-	 (update-dfun generic-function)
-	 generic-function)))
+  ;; Note: Error check prohibited by ANSI spec removed.
+  (when  (eq generic-function (method-generic-function method))
+    (let* ((name         (generic-function-name generic-function))
+	   (specializers (method-specializers method))
+	   (methods      (generic-function-methods generic-function))
+	   (new-methods  (remove method methods)))	      
+      (setf (method-generic-function method) nil)
+      (setf (generic-function-methods generic-function) new-methods)
+      (dolist (specializer (method-specializers method))
+	(remove-direct-method specializer method))
+      (set-arg-info generic-function)
+      (when (member name
+		    '(make-instance
+		      default-initargs
+		      allocate-instance shared-initialize initialize-instance))
+	(update-make-instance-function-table (type-class (car specializers))))
+      (update-dfun generic-function)
+      generic-function)))
 
 
 (defun compute-applicable-methods-function (generic-function arguments)
