@@ -449,12 +449,11 @@
 	 (a (if a-plusp a (negate-bignum a)))
 	 (b (if b-plusp b (negate-bignum b)))
 	 (len-a (%bignum-length a))
-	 (len-a-1 (1- len-a))
 	 (len-b (%bignum-length b))
 	 (len-res (+ len-a len-b))
 	 (res (%allocate-bignum len-res))
 	 (negate-res (not (eq a-plusp b-plusp))))
-    (declare (type bignum-index len-a len-a-1 len-b len-res))
+    (declare (type bignum-index len-a len-b len-res))
     (dotimes (i len-a)
       (declare (type bignum-index i))
       (let ((carry-digit 0)
@@ -462,16 +461,16 @@
 	    (k i))
 	(declare (type bignum-index k)
 		 (type bignum-element-type carry-digit x))
-	(dotimes (j len-b
-		    (unless (= i len-a-1)
-		      (setf (%bignum-ref res k) carry-digit)))
-	  (multiple-value-bind (res-digit big-carry)
+	(dotimes (j len-b)
+	  (multiple-value-bind (big-carry res-digit)
 			       (%multiply-and-add x (%bignum-ref b j)
 						  (%bignum-ref res k)
 						  carry-digit)
+	    (declare (type bignum-element-type big-carry res-digit))
 	    (setf (%bignum-ref res k) res-digit)
 	    (setf carry-digit big-carry)
-	    (incf k)))))
+	    (incf k)))
+	(setf (%bignum-ref res k) carry-digit)))
     (when negate-res (negate-bignum-in-place res))
     (%normalize-bignum res len-res)))
 
@@ -2032,7 +2031,8 @@
     ;; Multiply guess and divisor, subtracting from dividend simultaneously.
     (dotimes (j len-y)
       (multiple-value-bind (high-digit low-digit)
-			   (%multiply-and-add guess (%bignum-ref *truncate-y* j)
+			   (%multiply-and-add guess
+					      (%bignum-ref *truncate-y* j)
 					      carry-digit)
 	(declare (type bignum-element-type high-digit low-digit))
 	(setf carry-digit high-digit)
@@ -2051,24 +2051,23 @@
     (cond ((%digit-0-or-plusp (%bignum-ref *truncate-x* i))
 	   guess)
 	  (t
-	   ;; If subtraction has negative result, add one divisor value back in.
-	   ;; The guess was one too large in magnitude.
+	   ;; If subtraction has negative result, add one divisor value back
+	   ;; in.  The guess was one too large in magnitude.
 	   (let ((i low-x-digit)
 		 (carry 0))
 	     (dotimes (j len-y)
-	       (multiple-value-bind (v k)
-				    (%add-with-carry (%bignum-ref *truncate-y* j)
-						     (%bignum-ref *truncate-x* i)
-						     carry)
+	       (multiple-value-bind
+		   (v k)
+		   (%add-with-carry (%bignum-ref *truncate-y* j)
+				    (%bignum-ref *truncate-x* i)
+				    carry)
 		 (declare (type bignum-element-type v))
 		 (setf (%bignum-ref *truncate-x* i) v)
 		 (setf carry k))
 	       (incf i))
 	     (setf (%bignum-ref *truncate-x* i)
-		   (%add-with-carry (%bignum-ref *truncate-x* i) carry 0)))
-	   (if (%digit-0-or-plusp guess)
-	       (%subtract-with-borrow guess 1 1)
-	       (%add-with-carry guess 1 0))))))
+		   (%add-with-carry (%bignum-ref *truncate-x* i) 0 carry)))
+	   (%subtract-with-borrow guess 1 1)))))
 
 ;;; BIGNUM-TRUNCATE-GUESS -- Internal.
 ;;;
