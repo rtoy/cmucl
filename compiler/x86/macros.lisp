@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.1 1997/01/18 14:31:22 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.2 1997/02/12 21:01:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,10 @@
     (unless (zerop (tn-offset ,tn))
       (inst fxch ,tn))))
 
-;;; Use this to prepare for load of new value.
+;;; Use this to prepare for load of new value from memory. This
+;;; changes the register numbering so the next instruction had better
+;;; be a FP load from memory; a register load from another register
+;;; will probably be loading the wrong register!
 (defmacro with-empty-tn@fp-top((tn) &body body)
   `(progn
     (inst fstp ,tn)
@@ -113,8 +116,7 @@
   `(progn
     (load-symbol-value ,alloc lisp::*allocation-pointer*)
     ,@body
-    (store-symbol-value ,alloc lisp::*allocation-pointer*)
-    ))
+    (store-symbol-value ,alloc lisp::*allocation-pointer*)))
 
 #-cgc
 (defmacro with-fixed-allocation ((result alloc type-code size) &body body)
