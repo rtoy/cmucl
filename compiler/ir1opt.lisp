@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.25 1991/03/10 18:27:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.26 1991/03/11 00:38:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1114,6 +1114,11 @@
 ;;; being defeated, and also ensures that the best representation for the
 ;;; variable can be used.
 ;;;
+;;;     Substitution of individual references is inhibited if the reference is
+;;; in a different component from the home.  This can only happen with closures
+;;; over top-level lambda vars.  In such cases, the references may have already
+;;; been compiled, and thus can't be retroactively modified.
+;;;
 ;;;    If all of the variables are deleted (have no references) when we are
 ;;; done, then we delete the let.
 ;;;
@@ -1136,7 +1141,17 @@
 			 (values-subtypep (leaf-type leaf)
 					  (continuation-asserted-type arg)))
 		(propagate-to-refs var (continuation-type arg))
-		(substitute-leaf leaf var)
+		(let ((this-comp (block-component (node-block use))))
+		  (substitute-leaf-if
+		   #'(lambda (ref)
+		       (cond ((eq (block-component (node-block ref))
+				  this-comp)
+			      t)
+			     (t
+			      (assert (eq (functional-kind (lambda-home fun))
+					  :top-level))
+			      nil)))
+		   leaf var))
 		t)))))
        ((and (null (rest (leaf-refs var)))
 	     (substitute-single-use-continuation arg var)))
