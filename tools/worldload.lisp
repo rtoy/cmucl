@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.96 2002/05/16 19:52:58 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.97 2002/10/04 15:11:13 pmai Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,6 +82,24 @@
 ;;; Make sure the package structure is correct.
 ;;;
 (maybe-byte-load "code:exports")
+
+;;; Temporarily add OLD-XX nicknames needed for certain cross-compiles
+#+pmax
+(rename-package "PMAX" "PMAX" '("VM" "OLD-PMAX"))
+#+sparc
+(rename-package "SPARC" "SPARC" '("VM" "OLD-SPARC"))
+#+ibmrt
+(rename-package "RT" "RT" '("VM" "OLD-RT"))
+#+x86
+(rename-package "X86" "X86" '("VM" "OLD-X86"))
+#+hppa
+(rename-package "HPPA" "HPPA" '("VM" "OLD-HPPA"))
+#+alpha
+(rename-package "ALPHA" "ALPHA" '("VM" "OLD-ALPHA"))
+#+sgi
+(rename-package "SGI" "SGI" '("VM" "OLD-SGI"))
+#+ppc
+(rename-package "PPC" "PPC" '("VM" "OLD-PPC"))
 
 ;;; Load random code sources.
 
@@ -183,6 +201,24 @@
 ;;; 
 (setf (search-list "modules:") '("./"))
 (setf (search-list "target:") *target-sl*)
+
+;;; Remove temporarily added OLD-XX nicknames
+#+pmax
+(rename-package "PMAX" "PMAX" '("VM"))
+#+sparc
+(rename-package "SPARC" "SPARC" '("VM"))
+#+ibmrt
+(rename-package "RT" "RT" '("VM"))
+#+x86
+(rename-package "X86" "X86" '("VM"))
+#+hppa
+(rename-package "HPPA" "HPPA" '("VM"))
+#+alpha
+(rename-package "ALPHA" "ALPHA" '("VM"))
+#+sgi
+(rename-package "SGI" "SGI" '("VM"))
+#+ppc
+(rename-package "PPC" "PPC" '("VM"))
 
 ;;; Okay, build the thing!
 ;;;
