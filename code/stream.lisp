@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.47 2001/07/08 17:37:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.48 2001/09/20 14:23:05 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1249,7 +1249,7 @@
       (let ((offset-current (+ start current)))
 	(declare (fixnum offset-current))
 	(if (= offset-current end)
-	    (let* ((new-length (* current 2))
+	    (let* ((new-length (if (zerop current) 1 (* current 2)))
 		   (new-workspace (make-string new-length)))
 	      (declare (simple-string new-workspace))
 	      (%primitive byte-blt workspace start new-workspace 0 current)
