@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.5 1990/02/09 12:56:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.6 1990/02/09 21:11:05 wlott Exp $
 ;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
@@ -412,3 +412,19 @@
 ;;; More hacks here.
 ;;;
 
+
+;;; LOAD-FOREIGN
+;;; 
+;;; This ``instruction'' emits a LUI followed by a ORI.
+;;;
+(def-instruction-format (load-foreign-format 8) (rt symbol)
+  (op1 :unsigned 6 :constant #b001111)
+  (rt :unsigned 5 :register)
+  (rt :unsigned 5 :register)
+  (symbol :unsigned 16 :fixup :foreign)
+  (op2 :unsigned 6 :constant #b001101)
+  (rt :unsigned 5 :register)
+  (rt :unsigned 5 :register)
+  (filler :unsigned 16 :constant 0))
+
+(def-instruction load-foreign load-foreign-format)
