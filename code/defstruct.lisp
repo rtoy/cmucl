@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.44 1993/03/14 12:25:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.45 1993/03/14 14:35:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1445,7 +1445,7 @@
 (defun default-structure-print (structure stream depth)
   (declare (ignore depth))
   (if (funcallable-instance-p structure)
-      (print-unreadable-object (stream instance :identity t :type t)
+      (print-unreadable-object (stream structure :identity t :type t)
 	(write-string "Funcallable Structure" stream))
       (let* ((type (%instance-layout structure))
 	     (name (class-name (layout-class type)))
