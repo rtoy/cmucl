@@ -846,30 +846,6 @@
 (define-modify-macro decf (&optional (delta 1)) -
   "The first argument is some location holding a number.  This number is
   decremented by the second argument, DELTA, which defaults to 1.")
-#|
-(defmacro putf (place indicator value &environment env)
-  "Place may be any place expression acceptable to SETF, and is expected
-  to hold a property list or ().  This list is destructively altered so
-  that (GETF place indicator) will find the specified newvalue.  Returns
-  the new value."
-  (multiple-value-bind (dummies vals newval setter getter)
-		       (foo-get-setf-method place env)
-    (do* ((d dummies (cdr d))
-	  (v vals (cdr v))
-	  (let-list nil)
-	  (ind-temp (gensym))
-	  (val-temp (gensym)))
-	 ((null d)
-	  (push (list (car newval) getter) let-list)
-	  (push (list ind-temp indicator) let-list)
-	  (push (list val-temp value) let-list)
-	  `(let* ,(nreverse let-list)
-	     (setq ,(car newval)
-		   (%primitive putf ,(car newval) ,ind-temp ,val-temp))
-	     ,setter
-	     ,val-temp))
-      (push (list (car d) (car v)) let-list))))
-|#
 
 
 (defmacro remf (place indicator &environment env)
@@ -975,7 +951,7 @@
 	      `(,@values ,get ,prop ,@(if default `(,default)))
 	      `(,newval)
 	      `(progn (setq ,(car stores)
-			    (%primitive putf ,(car stores) ,ptemp ,newval))
+			    (%putf ,(car stores) ,ptemp ,newval))
 		      ,set
 		      ,newval)
 	      `(getf ,(car stores) ,ptemp ,@(if default `(,def-temp)))))))
