@@ -201,7 +201,7 @@
        (storew ,header-tn ,result-tn 0 other-pointer-type)
        ,@body)
      (load-symbol-value ,header-tn *internal-gc-trigger*)
-     (inst tlt ,alloc-tn ,header-tn)))
+     (inst tlt ,header-tn ,alloc-tn)))
 
 
 
