@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.25 2003/05/07 17:14:24 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.26 2003/05/07 17:15:48 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -235,15 +235,12 @@ the compiler as completely as possible.  Currently this means that
 	       (and (kernel::standard-class-p ctype)
 		    (pcl::info-funcallable-standard-class-p
 		     (kernel:%class-name ctype))))
-	   (print "funcallable")
 	   '(kernel:%funcallable-instance-info object 0))
 	  ((or (csubtypep ctype standard-object)
 	       (and (kernel::standard-class-p ctype)
 		    (pcl::info-standard-class-p (kernel:%class-name ctype))))
-	   (print "instance")
 	   '(kernel:%instance-ref object 1))
 	  (t
-	   (print "give-up")
 	   `(when (pcl::pcl-instance-p object)
 	      (if (pcl::std-instance-p object)
 		  (pcl::std-instance-slots object)
