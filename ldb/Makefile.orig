@@ -1,10 +1,10 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.12 1990/07/01 04:53:53 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.13 1990/08/30 16:44:01 wlott Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	os.o vars.o assem.o parse.o interrupt.o test.o \
 	search.o validate.o gc.o globals.o dynbind.o \
-	regnames.o backtrace.o bitbash.o save.o purify.o
+	regnames.o backtrace.o bitbash.o save.o purify.o socket.o
 
 ldb.map: ldb
 	echo -n 'Map file for ldb version ' > ldb.map
@@ -16,7 +16,7 @@ ldb: ${OBJS} version syscalls
 	echo -n '1 + ' | cat - version | bc > ,version
 	mv ,version version
 	cc ${CFLAGS} -DVERSION=`cat version` -c version.c
-	cc `cat syscalls` -o ,ldb ${OBJS} version.o -lmach -lc
+	cc `cat syscalls` -o ,ldb ${OBJS} version.o -lmach -lm -lc
 	mv -f ,ldb ldb
 
 version:
@@ -36,6 +36,9 @@ interrupt.o: interrupt.c
 
 assem.o: assem.s
 	as -G 0 -o $@ assem.s
+
+socket.o: socket.c
+	cc ${CFLAGS} -D UNIXCONN -c socket.c
 
 lisp.h:
 	@echo "You must run genesis to create lisp.h!"
@@ -111,6 +114,8 @@ ldb.o: ldb.h
 ldb.o: lisp.h
 ldb.o: alloc.h
 ldb.o: vars.h
+ldb.o: globals.h
+ldb.o: lisp.h
 monitor.o: monitor.c
 monitor.o: ldb.h
 monitor.o: lisp.h
@@ -164,6 +169,7 @@ save.o: lispregs.h
 search.o: search.c
 search.o: lisp.h
 search.o: ldb.h
+socket.o: socket.c
 test.o: test.c
 test.o: lisp.h
 test.o: ldb.h
