@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.1.1.4 1991/02/08 16:35:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.1.1.5 1991/03/13 23:24:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -304,11 +304,20 @@
 	       *free-input-events* next)
        (setf (editor-input-tail stream) head)))))
 
+;;; Note that we never return NIL as long as there are events to be served with
+;;; SERVE-EVENT.  Thus non-keyboard input (i.e. process output) 
+;;; effectively causes LISTEN to block until either all the non-keyboard input
+;;; has happened, or there is some real keyboard input.
+;;;
 (defun tty-listen (stream)
-  (cond ((input-event-next (editor-input-head stream)) t)
-	((editor-tty-listen stream) t)
-	(t nil)))
-
+  (loop
+    ;; Don't service anymore events if we just got some input.
+    (when (or (input-event-next (editor-input-head stream))
+	      (editor-tty-listen stream))
+      (return t))
+    ;; If nothing is pending, check the queued input.
+    (unless (system:serve-event 0)
+      (return (not (null (input-event-next (editor-input-head stream))))))))
 
 
 ;;;; GET-KEY-EVENT, UNGET-KEY-EVENT, LISTEN-EDITOR-INPUT, CLEAR-EDITOR-INPUT.
