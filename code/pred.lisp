@@ -41,7 +41,7 @@
 ;;; the following are named structures and need no special type hackery:
 ;;; PATHNAME, STREAM, READTABLE, PACKAGE, HASHTABLE, RANDOM-STATE.
 
-(defconstant type-pred-alist
+(defparameter type-pred-alist
   '((keyword . keywordp)
     (common . commonp)
     (null . null)
@@ -54,6 +54,7 @@
     (string . stringp)
     (sequence . sequencep)
     (simple-array . simple-array-p)
+    (c::structure-vector . simple-vector-p)
     (simple-vector . simple-vector-p)
     (simple-string . simple-string-p)
     (simple-bit-vector . simple-bit-vector-p)
