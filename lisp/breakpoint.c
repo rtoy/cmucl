@@ -37,34 +37,33 @@ void breakpoint_remove(lispobj code_obj, int pc_offset,
 void breakpoint_do_displaced_inst(struct sigcontext *scp,
 				  unsigned long orig_inst)
 {
+    undo_fake_foreign_function_call(scp);
     arch_do_displaced_inst(scp, orig_inst);
 }
 
 static lispobj find_code(struct sigcontext *scp)
 {
-#ifdef CODE
-    lispobj code = SC_REG(scp, CODE), header;
+#ifdef reg_CODE
+    lispobj code = SC_REG(scp, reg_CODE), header;
 
     if (LowtagOf(code) != type_OtherPointer)
 	return NIL;
 
-    header = *(lispobj *)PTR(code);
+    header = *(lispobj *)(code-type_OtherPointer);
 
     if (TypeOf(header) == type_CodeHeader)
 	return code;
     else
-	return code - HeaderValue(code)*sizeof(lispobj);
+	return code - HeaderValue(header)*sizeof(lispobj);
 #else
     return NIL;
 #endif
 }
 
-static void internal_handle_breakpoint(struct sigcontext *scp, lispobj code)
+static int compute_offset(struct sigcontext *scp, lispobj code)
 {
-    int offset;
-
     if (code == NIL)
-	offset = 0;
+	return 0;
     else {
 	unsigned long code_start;
 	struct code *codeptr = (struct code *)PTR(code);
@@ -72,39 +71,55 @@ static void internal_handle_breakpoint(struct sigcontext *scp, lispobj code)
 	code_start = (unsigned long)codeptr
 	    + HeaderValue(codeptr->header)*sizeof(lispobj);
 	if (SC_PC(scp) < code_start)
-	    offset = 0;
+	    return 0;
 	else {
-	    offset = SC_PC(scp) - code_start;
+	    int offset = SC_PC(scp) - code_start;
 	    if (offset >= codeptr->code_size)
-		offset = 0;
+		return 0;
+	    else
+		return make_fixnum(offset);
 	}
     }
-
-    funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     make_fixnum(offset),
-	     code,
-	     alloc_sap(scp));
-    scp->sc_mask = sigblock(0);
 }
 
 void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 {
-    internal_handle_breakpoint(scp, find_code(scp));
+    lispobj code;
+
+    fake_foreign_function_call(scp);
+
+    code = find_code(scp);
+    funcall3(SymbolFunction(HANDLE_BREAKPOINT),
+	     compute_offset(scp, code),
+	     code,
+	     alloc_sap(scp));
+
+    undo_fake_foreign_function_call(scp);
 }
 
 void *handle_function_end_breakpoint(int signal, int subcode,
 				     struct sigcontext *scp)
 {
-    lispobj code = find_code(scp);
-    struct code *codeptr = (struct code *)PTR(code);
-    lispobj lra;
+    lispobj code, lra;
+    struct code *codeptr;
 
-    internal_handle_breakpoint(scp, code);
+    fake_foreign_function_call(scp);
+
+    code = find_code(scp);
+    codeptr = (struct code *)PTR(code);
+
+    funcall3(SymbolFunction(HANDLE_BREAKPOINT),
+	     compute_offset(scp, code),
+	     code,
+	     alloc_sap(scp));
 
     lra = codeptr->constants[REAL_LRA_SLOT];
-#ifdef CODE
+#ifdef reg_CODE
     if (codeptr->constants[KNOWN_RETURN_P_SLOT] == NIL)
-	SC_REG(scp, CODE) = lra;
+	SC_REG(scp, reg_CODE) = lra;
 #endif
-    return (void *)(lra - type_OtherPointer+sizeof(lispobj));
+
+    undo_fake_foreign_function_call(scp);
+
+    return (void *)(lra-type_OtherPointer+sizeof(lispobj));
 }
