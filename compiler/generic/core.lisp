@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.21 1992/12/17 09:27:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.22 1993/05/11 14:06:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,14 +190,14 @@
 
 ;;; MAKE-CORE-BYTE-COMPONENT -- Interface.
 ;;;
-(defun make-core-byte-component (segment constants xeps object)
+(defun make-core-byte-component (segment length constants xeps object)
   (declare (type new-assem:segment segment)
+	   (type index length)
 	   (type vector constants)
 	   (type list xeps)
 	   (type core-object object))
   (without-gcing
     (let* ((num-constants (length constants))
-	   (length (byte-output-length segment))
 	   (code-obj (%primitive allocate-code-object
 				 (the index (1+ num-constants))
 				 length))
@@ -216,7 +216,7 @@
 
       (dolist (noise xeps)
 	(let ((xep (cdr noise)))
-	  (setf (byte-xep-component xep) code-obj)
+	  (setf (byte-function-component xep) code-obj)
 	  (note-function (lambda-info (car noise))
 			 (make-byte-compiled-function xep)
 			 object)))
