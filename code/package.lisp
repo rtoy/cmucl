@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.26 1992/11/04 19:23:32 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.27 1992/11/30 16:41:45 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -856,12 +856,11 @@
 	     ;; of that name.
 	     (cerror "Return NIL" "No package of name ~S." package)
 	     (return-from delete-package nil))
-	   (when pack-struc
-	     (setf use-list (package-used-by-list pack-struc)))))
+	  (setf use-list (package-used-by-list pack-struc))))
     (when (and pack-struc (not pack-name)) ; Package already deleted.
       (return-from delete-package nil))
     (when use-list ; The package is used by other packages.
-      ;; Correctable error, if continued, then effectively unuse-package on all.
+      ;; Correctable error, if continued, then unuse-package on all.
       (cerror "Remove dependency in other packages."
 	      "~S is used by package(s) ~S" package use-list)
       (dolist (p use-list)
