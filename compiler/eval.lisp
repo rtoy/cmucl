@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.14 1990/11/20 18:36:03 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.15 1990/11/23 18:13:32 wlott Exp $
 ;;; 
 ;;; This file contains the interpreter.  We first convert to the compiler's
 ;;; IR1 and interpret that.
@@ -255,13 +255,19 @@
 ;;; LEAF-TYPE of the definition, converting the definition if not currently
 ;;; cached.
 ;;;
+(defvar *already-looking-for-type-of* nil)
+;;;
 (defun interpreted-function-type (fun)
-  (let* ((eval-fun (get-eval-function fun))
-	 (def (or (eval-function-definition eval-fun)
-		  (system:without-gcing
-		    (convert-eval-fun eval-fun)
-		    (eval-function-definition eval-fun)))))
-    (c::leaf-type (c::functional-entry-function def))))
+  (if (member fun *already-looking-for-type-of*)
+      (specifier-type 'function)
+      (let* ((*already-looking-for-type-of*
+	      (cons fun *already-looking-for-type-of*))
+	     (eval-fun (get-eval-function fun))
+	     (def (or (eval-function-definition eval-fun)
+		      (system:without-gcing
+		       (convert-eval-fun eval-fun)
+		       (eval-function-definition eval-fun)))))
+	(c::leaf-type (c::functional-entry-function def)))))
 
 
 ;;; 
