@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.68 1998/03/30 03:05:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.69 1998/04/15 01:29:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -675,10 +675,8 @@
   (frob acos (specifier-type '(real -1d0 1d0)) 0 pi :increasingp nil)
   (frob acosh (specifier-type '(real 1d0)) nil nil)
   (frob atanh (specifier-type '(real -1d0 1d0))	-1 1)
-  (frob sqrt (specifier-type
-	      #-negative-zero-is-not-zero '(or (member 0f0 0d0)
-					       (real (0d0)))
-	      #+negative-zero-is-not-zero '(real 0d0))
+  (frob sqrt (specifier-type #-negative-zero-is-not-zero '(real 0d0)
+			     #+negative-zero-is-not-zero '(real -0d0))
 	0 nil))
  
 ;;; Compute bounds for (expt x y).  This should be easy since (expt x

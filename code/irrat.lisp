@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.27 1998/02/24 18:18:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.28 1998/04/15 01:29:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,8 +379,7 @@
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float)) 'single-float)))
     (((foreach single-float double-float))
-     (if (< (float-sign number)
-	    (coerce 0 '(dispatch-type number)))
+     (if (minusp number)
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float))
 		 '(dispatch-type number))))
