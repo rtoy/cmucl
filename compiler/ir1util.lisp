@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.104 2004/04/16 15:09:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.105 2004/04/23 03:28:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2088,7 +2088,7 @@ these can be NIL if unavailable or inapplicable.")
       (declare (ignore form))
       (let ((*print-level* 2)
 	    (*print-pretty* nil))
-	(format nil "~{~{~A~^ ~}~^ => ~}" context)))))
+	(format nil "~{~{~S~^ ~}~^ => ~}" context)))))
 
 
 ;;;; Condition system interface:
