@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.43 2004/07/15 18:08:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.44 2004/08/22 15:32:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -824,6 +824,31 @@
       (inst cmp shift)
       (inst b :ne loop)
       (inst srln shift 1))))
+
+(define-vop (unsigned-byte-32-len)
+  (:translate integer-length)
+  (:note "inline (unsigned-byte 32) integer-length")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg) :target shift))
+  (:arg-types unsigned-num)
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
+  (:generator 30
+    (let ((loop (gen-label))
+	  (test (gen-label)))
+      (move shift arg)
+      (inst b test)
+      (move res zero-tn)
+
+      (emit-label loop)
+      (inst add res (fixnumize 1))
+      
+      (emit-label test)
+      (inst cmp shift)
+      (inst b :ne loop)
+      (inst srln shift 1))))
+
 
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
@@ -2444,9 +2469,17 @@
   (unsigned-byte 32)
   (foldable flushable movable))
 
+(defknown vm::ash-mod32 (integer integer)
+  (unsigned-byte 32)
+  (foldable flushable movable))
+
 (define-vop (fast-ash-left-mod32-c/unsigned=>unsigned
 	     digit-ashl)
   (:translate ash-left-mod32))
+
+(define-vop (fast-ash-mod32/unsigned=>unsigned
+	     fast-ash/unsigned=>unsigned)
+    (:translate ash-mod32))
 
 )
 
@@ -2460,10 +2493,21 @@
   ;; which takes the count mod 64.  Then a left shift of 32 or more
   ;; will produce 0 in the lower 32 bits of the register, which is
   ;; what we want.)
-  (when (and (<= width 32)
-	     (csubtypep (continuation-type count) (specifier-type '(unsigned-byte 5))))
-    (cut-to-width integer width)
-    'vm::ash-left-mod32))
+  (when (<= width 32)
+    ;; We can do a modular shift.  If the shift is known to be a left
+    ;; shift, we can use the left shift vop to get a left shift
+    ;; instruction.  Otherwise, we can use the regular fast-ash vop to
+    ;; get the shift.
+    (let ((count-type (continuation-type count)))
+      (cond ((csubtypep count-type (specifier-type '(unsigned-byte 5)))
+	     (cut-to-width integer width)
+	     'vm::ash-left-mod32)
+	    ((csubtypep count-type (specifier-type '(integer -31 31)))
+	     (cut-to-width integer width)
+	     'vm::ash-mod32)
+	    (t
+	     ;; Do nothing
+	     nil)))))
 
 ;;; If both arguments and the result are (unsigned-byte 32), try to come up
 ;;; with a ``better'' multiplication using multiplier recoding.  There are two
