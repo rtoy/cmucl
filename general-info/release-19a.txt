@@ -179,6 +179,9 @@ New in this release:
      - GCD sometimes returning a negative value.
      - LCM sometimes returning a negative value, or signaling division-by-zero.
      - FLOAT in sometimes returning a float of the wrong type.
+     - ROOM should handle the large heaps now without overflowing
+       internal counters or signaling type errors.  Columns should
+       line up better too.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
