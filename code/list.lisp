@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.13 1993/08/06 04:59:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.14 1993/08/06 05:08:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -963,17 +963,17 @@
   "Return the first pair of alist where item EQ the key of pair"
   (assoc item alist :test #'eq))
 
-(defun delq (item list &optional (n 0 np))
+(defun delq (item list &optional (n most-positive-fixnum))
   (declare (fixnum n))
   "Returns list with all (up to n) elements with all elements EQ to ITEM
    deleted"
   (do ((x list (cdr x))
        (splice '()))
-      ((or (endp x)
-	   (and np (zerop n))) list)
+      ((endp x) list)
     (cond ((eq item (car x))
-	   (setq n (1- n))
 	   (if (null splice) 
 	       (setq list (cdr x))
-	       (rplacd splice (cdr x))))
+	       (rplacd splice (cdr x)))
+	   (setq n (1- n))
+	   (when (zerop n) (return list)))
 	  (T (setq splice x)))))	; move splice along to include element
