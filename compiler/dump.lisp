@@ -7,30 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.30 1991/01/25 21:43:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.31 1991/02/11 16:16:33 ram Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
 (in-package "C")
 
 (proclaim '(special compiler-version))
-
-(export '(fasl-file-implementations
-	  pmax-fasl-file-implementation
-	  sparc-fasl-file-implementation
-	  rt-fasl-file-implementation))
-
-
-;;;; Different Implementations:
-
-;;; Constants for the different implementations.  These are all defined in
-;;; one place to make sure they are all unique.
-
-(defconstant fasl-file-implementations '(nil "Pmax" "Sparc" "RT"))
-(defconstant pmax-fasl-file-implementation 1)
-(defconstant sparc-fasl-file-implementation 2)
-(defconstant rt-fasl-file-implementation 3)
-
 
 ;;;; Fasl dumper state:
 
