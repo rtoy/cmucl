@@ -970,8 +970,11 @@
   :value nil)
 
 
-(defcommand "Netnews Show All Headers" (p)
-  "" ""
+(defcommand "Netnews Show Whole Header" (p)
+  "This command will display the entire header of the message currently
+   being read."
+  "This command will display the entire header of the message currently
+   being read."
   (declare (ignore p))
   (let* ((headers-buffer (nn-get-headers-buffer))
 	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
