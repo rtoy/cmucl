@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.38 2000/01/13 16:53:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.39 2000/01/14 19:48:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -315,9 +315,9 @@
 
 ;;; Should be in VM:
 
-(defconstant sxhash-bits-byte (byte 23 0))
-(defconstant sxmash-total-bits 26)
-(defconstant sxmash-rotate-bits 7)
+(defconstant sxhash-bits-byte (byte 29 0))
+(defconstant sxmash-total-bits 29)
+(defconstant sxmash-rotate-bits 9)
 
 (deftransform sxhash ((s-expr) (integer))
   '(ldb sxhash-bits-byte s-expr))

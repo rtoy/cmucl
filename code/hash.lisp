@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.33 2000/01/14 19:47:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.34 2000/01/14 19:48:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -807,9 +807,9 @@
 
 (eval-when (compile eval)
 
-(defconstant sxhash-bits-byte (byte 23 0))
-(defconstant sxmash-total-bits 26)
-(defconstant sxmash-rotate-bits 7)
+(defconstant sxhash-bits-byte (byte 29 0))
+(defconstant sxmash-total-bits 29)
+(defconstant sxmash-rotate-bits 9)
 
 (defmacro sxmash (place with)
   `(setf ,place
