@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.31 1993/08/21 09:57:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.32 1993/09/10 19:09:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1042,7 +1042,8 @@
   ;;
   ;; The kind of argument being described.  Required args only have arg
   ;; info structures if they are special.
-  (kind (required-argument) :type (member :required :optional :keyword :rest))
+  (kind (required-argument) :type (member :required :optional :keyword :rest
+					  :more-context :more-count))
   ;;
   ;; If true, the Var for supplied-p variable of a keyword or optional arg.
   ;; This is true for keywords with non-constant defaults even when there is no

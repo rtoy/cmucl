@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.24 1993/08/19 21:03:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.25 1993/09/10 19:09:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -366,9 +366,12 @@
 		       nil))))
     (multiple-value-bind
 	(pred get-layout)
-	(if (csubtypep class (specifier-type 'funcallable-instance))
-	    (values 'funcallable-instance-p '%funcallable-instance-layout)
-	    (values '%instancep '%instance-layout))
+	(cond ((csubtypep class (specifier-type 'instance))
+	       (values '%instancep '%instance-layout))
+	      ((csubtypep class (specifier-type 'funcallable-instance))
+	       (values 'funcallable-instance-p '%funcallable-instance-layout))
+	      (t
+	       (values '(lambda (x) (declare (ignore x)) t) 'layout-of)))
       (cond
        ((not (and name (eq (find-class name) class)))
 	(compiler-error "Can't compile TYPEP of anonymous or undefined ~

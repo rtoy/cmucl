@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.27 1993/08/25 00:14:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.28 1993/09/10 19:09:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,8 +300,9 @@
 		    (:keyword
 		     (keys (make-key-info :name (arg-info-keyword info)
 					  :type type)))
-		    (:rest
-		     (setq rest *universal-type*)))
+		    ((:rest :more-context)
+		     (setq rest *universal-type*))
+		    (:more-count))
 		  (req type))))
 	  
 	  (make-function-type
@@ -671,7 +672,13 @@
 		 (res (type-union (pop opt) (or def-type *universal-type*))))
 		(:rest
 		 (when (function-type-rest type)
-		   (res (specifier-type 'list)))))
+		   (res (specifier-type 'list))))
+		(:more-context
+		 (when (function-type-rest type)
+		   (res *universal-type*)))
+		(:more-count
+		 (when (function-type-rest type)
+		   (res (specifier-type 'fixnum)))))
 	      (vars arg)
 	      (when (arg-info-supplied-p info)
 		(res *universal-type*)

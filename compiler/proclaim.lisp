@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.28 1993/03/16 01:52:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.29 1993/09/10 19:09:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,11 +23,11 @@
 (export '(inhibit-warnings freeze-type optimize-interface constant-function))
 (in-package "KERNEL")
 (export '(note-name-defined define-function-name undefine-function-name
-			    *type-system-initialized* %note-type-defined))
+	  *type-system-initialized* %note-type-defined))
 (in-package "LISP")
 (export '(declaim proclaim))
 (in-package "C")
-
+(export '(&more))
 
 ;;; True if the type system has been properly initialized, and thus is o.k. to
 ;;; use.
@@ -95,7 +95,7 @@
 
 ;;; Parse-Lambda-List  --  Interface
 ;;;
-;;;    Break a lambda-list into its component parts.  We return eight values:
+;;;    Break a lambda-list into its component parts.  We return eleven values:
 ;;;  1] A list of the required args.
 ;;;  2] A list of the optional arg specs.
 ;;;  3] True if a rest arg was specified.
@@ -104,13 +104,17 @@
 ;;;  6] A list of the keyword arg specs.
 ;;;  7] True if &allow-other-keys was specified.
 ;;;  8] A list of the &aux specifiers.
+;;;  9] True if a more arg was specified.
+;;; 10] The &more context var
+;;; 11] The &more count var
 ;;;
 ;;; The top-level lambda-list syntax is checked for validity, but the arg
 ;;; specifiers are just passed through untouched.  If something is wrong, we
 ;;; use Compiler-Error, aborting compilation to the last recovery point.
 ;;;
 (proclaim '(function parse-lambda-list (list)
-		     (values list list boolean t boolean list boolean list)))
+		     (values list list boolean t boolean list boolean list
+			     boolean t t)))
 (defun parse-lambda-list (list)
   (collect ((required)
 	    (optional)
@@ -118,6 +122,9 @@
 	    (aux))
     (let ((restp nil)
 	  (rest nil)
+	  (morep nil)
+	  (more-context nil)
+	  (more-count nil)
 	  (keyp nil)
 	  (allowp nil)
 	  (state :required))
@@ -135,8 +142,13 @@
 	       (unless (member state '(:required &optional))
 		 (compiler-error "Misplaced &rest in lambda-list: ~S." list))
 	       (setq state '&rest))
+	      (&more
+	       (unless (member state '(:required &optional))
+		 (compiler-error "Misplaced &more in lambda-list: ~S." list))
+	       (setq morep t  state '&more-context))
 	      (&key
-	       (unless (member state '(:required &optional :post-rest))
+	       (unless (member state '(:required &optional :post-rest
+						 :post-more))
 		 (compiler-error "Misplaced &key in lambda-list: ~S." list))
 	       (setq keyp t)
 	       (setq state '&key))
@@ -145,7 +157,7 @@
 		 (compiler-error "Misplaced &allow-other-keys in lambda-list: ~S." list))
 	       (setq allowp t  state '&allow-other-keys))
 	      (&aux
-	       (when (eq state '&rest)
+	       (when (member state '(&rest &more-context &more-count))
 		 (compiler-error "Misplaced &aux in lambda-list: ~S." list))
 	       (setq state '&aux))
 	      (t
@@ -155,11 +167,17 @@
 	      (&optional (optional arg))
 	      (&rest
 	       (setq restp t  rest arg  state :post-rest))
+	      (&more-context
+	       (setq more-context arg  state '&more-count))
+	      (&more-count
+	       (setq more-count arg  state :post-more))
 	      (&key (keys arg))
 	      (&aux (aux arg))
 	      (t
 	       (compiler-error "Found garbage in lambda-list when expecting a keyword: ~S." arg)))))
-    (values (required) (optional) restp rest keyp (keys) allowp (aux)))))
+      
+      (values (required) (optional) restp rest keyp (keys) allowp (aux)
+	      morep more-context more-count))))
 
 
 ;;; Check-Function-Name  --  Interface

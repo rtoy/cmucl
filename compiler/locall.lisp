@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.41 1993/05/08 00:42:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.42 1993/09/10 19:09:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -559,7 +559,11 @@
 	    (ecase (arg-info-kind info)
 	      (:keyword
 	       (key-vars var))
-	      ((:rest :optional))))))
+	      ((:rest :optional))
+	      ((:more-context :more-count)
+	       (compiler-warning "Can't local-call functions with &MORE args.")
+	       (setf (basic-combination-kind call) :error)
+	       (return-from convert-more-call))))))
 
       (dotimes (i max)
 	(temps (gensym "FIXED-ARG-TEMP-")))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.101 1993/08/24 02:12:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.102 1993/09/10 19:09:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1263,8 +1263,10 @@
 (proclaim '(function find-lambda-vars (list)
 		     (values list boolean boolean list list)))
 (defun find-lambda-vars (list)
-  (multiple-value-bind (required optional restp rest keyp keys allowp aux)
-		       (parse-lambda-list list)
+  (multiple-value-bind
+      (required optional restp rest keyp keys allowp aux
+		morep more-context more-count)
+      (parse-lambda-list list)
     (collect ((vars)
 	      (names-so-far)
 	      (aux-vars)
@@ -1307,6 +1309,18 @@
 	    (setf (lambda-var-arg-info var) (make-arg-info :kind :rest))
 	    (vars var)
 	    (names-so-far rest)))
+
+	(when morep
+	  (let ((var (varify-lambda-arg more-context (names-so-far))))
+	    (setf (lambda-var-arg-info var)
+		  (make-arg-info :kind :more-context))
+	    (vars var)
+	    (names-so-far more-context))
+	  (let ((var (varify-lambda-arg more-count (names-so-far))))
+	    (setf (lambda-var-arg-info var)
+		  (make-arg-info :kind :more-count))
+	    (vars var)
+	    (names-so-far more-count)))
 	
 	(dolist (spec keys)
 	  (cond
@@ -1609,7 +1623,7 @@
 ;;; the compilation policy over to the interface policy, so that keyword args
 ;;; will be checked even when type checking isn't on in general.
 ;;;
-(defun convert-more-entry (res entry-vars entry-vals rest keys)
+(defun convert-more-entry (res entry-vars entry-vals rest morep keys)
   (declare (type optional-dispatch res) (list entry-vars entry-vals keys))
   (collect ((arg-vars)
 	    (arg-vals (reverse entry-vals))
@@ -1635,6 +1649,9 @@
 
       (when rest
 	(arg-vals `(%listify-rest-args ,n-context ,n-count)))
+      (when morep
+	(arg-vals n-context)
+	(arg-vals n-count))
 
       (when (optional-dispatch-keyp res)
 	(let ((n-index (gensym))
@@ -1725,8 +1742,8 @@
 ;;; entry's argument.
 ;;;
 (defun ir1-convert-more (res default-vars default-vals entry-vars entry-vals
-			     rest keys supplied-p-p body aux-vars aux-vals
-			     cont)
+			     rest more-context more-count keys supplied-p-p
+			     body aux-vars aux-vals cont)
   (declare (type optional-dispatch res)
 	   (list default-vars default-vals entry-vars entry-vals keys body
 		 aux-vars aux-vals)
@@ -1738,6 +1755,11 @@
     (when rest
       (main-vars rest)
       (main-vals '()))
+    (when more-context
+      (main-vars more-context)
+      (main-vals nil)
+      (main-vars more-count)
+      (main-vals 0))
 
     (dolist (key keys)
       (let* ((info (lambda-var-arg-info key))
@@ -1783,7 +1805,7 @@
 	   (last-entry (convert-optional-entry main-entry default-vars
 					       (main-vals) ())))
       (setf (optional-dispatch-main-entry res) main-entry)
-      (convert-more-entry res entry-vars entry-vals rest keys)
+      (convert-more-entry res entry-vars entry-vals rest more-context keys)
 
       (push (if supplied-p-p
 		(convert-optional-entry last-entry entry-vars entry-vals ())
@@ -1840,7 +1862,7 @@
 	     ;; Handle &key with no keys...
 	     (ir1-convert-more res default-vars default-vals
 			       entry-vars entry-vals
-			       nil vars supplied-p-p body aux-vars
+			       nil nil nil vars supplied-p-p body aux-vars
 			       aux-vals cont)
 	     (let ((fun (ir1-convert-lambda-body body (reverse default-vars)
 						 aux-vars aux-vals t cont)))
@@ -1875,12 +1897,17 @@
 	     (:rest
 	      (ir1-convert-more res default-vars default-vals
 				entry-vars entry-vals
-				arg (rest vars) supplied-p-p body
+				arg nil nil (rest vars) supplied-p-p body
 				aux-vars aux-vals cont))
+	     (:more-context
+	      (ir1-convert-more res default-vars default-vals
+				entry-vars entry-vals
+				nil arg (second vars) (cddr vars) supplied-p-p
+				body aux-vars aux-vals cont))
 	     (:keyword
 	      (ir1-convert-more res default-vars default-vals
 				entry-vars entry-vals
-				nil vars supplied-p-p body aux-vars
+				nil nil nil vars supplied-p-p body aux-vars
 				aux-vals cont)))))))
 
 

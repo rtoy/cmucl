@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.38 1993/08/25 00:15:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.39 1993/09/10 19:09:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -522,6 +522,8 @@
 			  (res (arg-info-keyword info)))
 			 (:rest
 			  (res 'rest-arg))
+			 (:more-context
+			  (res 'more-arg))
 			 (:optional
 			  (unless saw-optional
 			    (res 'optional-args)
