@@ -61,19 +61,6 @@
       (loadw res x (/ clc::bignum-header-size 4))
       (emit-label fixp))))
 
-(define-vop (pointer-compare)
-  (:args (x :scs (any-reg descriptor-reg))
-	 (y :scs (any-reg descriptor-reg)))
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline comparison")
-  (:variant-vars condition)
-  (:generator 3
-    (inst cl x y)
-    (if not-p
-	(inst bnb condition target)
-	(inst bb condition target))))
 
 (macrolet ((frob (name cond)
 	     `(progn
