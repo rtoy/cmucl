@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.12 1990/05/14 01:58:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.13 1990/05/16 18:48:53 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -76,9 +76,8 @@
   (frob ratiop check-ratio ratio
     vm:ratio-type di:object-not-ratio-error)
 
-  #+nil ;; ### Need to verify the existance of this predicate.
   (frob complexp check-complex complex
-    vm:complex-type di:object-not-complex)
+    vm:complex-type di:object-not-complex-error)
 
   (frob single-float-p check-single-float single-float
     vm:single-float-type di:object-not-single-float-error)
