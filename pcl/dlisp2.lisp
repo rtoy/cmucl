@@ -137,7 +137,7 @@
   (if cached-emf-p
       #'(lambda (cache miss-fn)
 	  (declare (type function miss-fn))
-	  #'(lambda (&rest args)
+	  #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
 	      (declare #.*optimize-speed*)
 	      #+copy-&rest-arg (setq args (copy-list args))
 	      (with-dfun-wrappers (args metatypes)
@@ -153,7 +153,7 @@
 			      (invoke-emf emf args))))))))
       #'(lambda (cache emf miss-fn)
 	  (declare (type function miss-fn))
-	  #'(lambda (&rest args)
+	  #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
 	      (declare #.*optimize-speed*)
 	      #+copy-&rest-arg (setq args (copy-list args))
 	      (with-dfun-wrappers (args metatypes)
