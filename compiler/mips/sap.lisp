@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.4 1990/04/24 02:56:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.5 1990/04/25 21:45:44 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -143,84 +143,84 @@
 ;;;; mumble-SYSTEM-REF and mumble-SYSTEM-SET
 
 (define-vop (sap-ref)
+  (:policy :fast-safe)
   (:variant-vars size signed)
   (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (descriptor-reg any-reg)))
+	 (offset :scs (descriptor-reg any-reg negative-immediate zero
+				      immediate unsigned-immediate)))
   (:arg-types system-area-pointer fixnum)
-  (:results (result :scs (descriptor-reg any-reg)))
-  (:temporary (:scs (sap-reg) :type system-area-pointer :from (:argument 0))
-	      sap)
-  (:temporary (:scs (non-descriptor-reg) :type random
-		    :to (:result 0) :target result)
-	      temp)
+  (:results (result :scs (signed-reg unsigned-reg)))
+  (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
-    (move sap object)
+    (sc-case offset
+      ((zero)
+       (move sap object))
+      ((negative-immediate immediate)
+       (inst addu sap object
+	     (ash (tn-value offset)
+		  (ecase size (:byte 0) (:short 1) (:long 2)))))
+      ((any-reg descriptor-reg)
+       (ecase size
+	 (:byte
+	  (inst sra temp offset 2)
+	  (inst addu sap object temp))
+	 (:short
+	  (inst sra temp offset 1)
+	  (inst addu sap object temp))
+	 ((:long :pointer)
+	  (inst addu sap object offset)))))
     (ecase size
       (:byte
-       (inst sra temp offset 2)
-       (inst addu sap sap temp)
        (if signed
-	   (inst lb temp sap 0)
-	   (inst lbu temp sap 0))
-       (inst sll result temp 2))
+	   (inst lb result sap 0)
+	   (inst lbu result sap 0)))
       (:short
-       (inst sra temp offset 1)
-       (inst addu sap sap temp)
        (if signed
-	   (inst lh temp sap 0)
-	   (inst lhu temp sap 0))
-       (inst sll result temp 2))
-      (:long
-       (inst addu sap sap offset)
-       (inst lw temp sap 0)
-       ;; ### Need to assure that it doesn't overflow
-       (inst sll result temp 2))
-      (:pointer
-       (inst addu sap sap offset)
-       (inst lw temp sap 0)
-       (sc-case result
-	 (sap-reg
-	  (move result temp)))))))
+	   (inst lh result sap 0)
+	   (inst lhu result sap 0)))
+      ((:long :pointer)
+       (inst lw result sap 0)))
+    (inst nop)))
 
 
 (define-vop (sap-set)
+  (:policy :fast-safe)
   (:variant-vars size)
   (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (descriptor-reg any-reg))
-	 (value :scs (descriptor-reg sap-reg any-reg) :target temp))
-  (:temporary (:scs (sap-reg) :type system-area-pointer :from (:argument 0))
+	 (offset :scs (descriptor-reg any-reg negative-immediate
+				      zero immediate))
+	 (value :scs (signed-reg unsigned-reg) :target result))
+  (:results (result :scs (signed-reg unsigned-reg sap-reg)))
+  (:temporary (:scs (sap-reg) :from (:argument 0))
 	      sap)
-  (:temporary (:scs (non-descriptor-reg) :type random :from (:result 3)) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
-    (move sap object)
+    (sc-case offset
+      ((zero)
+       (move sap object))
+      ((negative-immediate immediate)
+       (inst addu sap object
+	     (ash (tn-value offset)
+		  (ecase size (:byte 0) (:short 1) (:long 2)))))
+      ((any-reg descriptor-reg)
+       (ecase size
+	 (:byte
+	  (inst sra temp offset 2)
+	  (inst addu sap object temp))
+	 (:short
+	  (inst sra temp offset 1)
+	  (inst addu sap object temp))
+	 ((:long :pointer)
+	  (inst addu sap object offset)))))
     (ecase size
       (:byte
-       (inst sra temp offset 2)
-       (inst addu sap sap temp))
+       (inst sb value sap 0))
       (:short
-       (inst sra temp offset 1)
-       (inst addu sap sap temp))
+       (inst sh value sap 0))
       ((:long :pointer)
-       (inst addu sap sap offset)))
-    (ecase size
-      ((:byte :short)
-       (inst sra temp value 2))
-      (:long
-       ;; ### Need to see if it's a fixnum or bignum
-       (inst sra temp value 2))
-      (:pointer
-       (sc-case value
-	 (sap-reg
-	  (move temp value))
-	 (descriptor-reg
-	  (loadw temp value vm:sap-pointer-slot vm:other-pointer-type)))))
-    (ecase size
-      (:byte
-       (inst sb temp sap 0))
-      (:short
-       (inst sh temp sap 0))
-      ((:long :pointer)
-       (inst sw temp sap 0)))))
+       (inst sw value sap 0)))
+    (move result value)))
 
 
 
@@ -231,6 +231,10 @@
 
 (define-vop (sap-system-set sap-set)
   (:translate (setf sap-ref-sap))
+  (:args (object :scs (sap-reg) :target sap)
+	 (offset :scs (descriptor-reg any-reg negative-immediate
+				      zero immediate))
+	 (value :scs (sap-reg) :target result))
   (:arg-types system-area-pointer fixnum system-area-pointer)
   (:variant :pointer))
 
@@ -246,7 +250,7 @@
 
 (define-vop (32bit-system-set sap-set)
   (:translate (setf sap-ref-32))
-  (:arg-types system-area-pointer fixnum t)
+  (:arg-types system-area-pointer fixnum *)
   (:variant :long))
 
 
