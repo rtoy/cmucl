@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.6 1991/04/09 14:39:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.7 1991/06/05 14:00:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.6 1991/04/09 14:39:43 ram Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.
@@ -153,9 +151,13 @@
     (write-line (machine-instance))
     (write-string "Hemlock ")
     (write-string (frob *hemlock-version*))
-    (write-string ", Compiler ")
-    (write-line (frob compiler-version))
-    (write-line "Send bug reports and questions to Gripe."))
+    (write-string ", Python ")
+    (write-string (frob compiler-version))
+    (when (boundp 'c:*backend*)
+      (write-string ", target ")
+      (write-string (c:backend-version c:*backend*)))
+    (terpri)
+    (write-line "Send bug reports and questions to cmucl-bugs+@cs.cmu.edu."))
   (values))
 
 
