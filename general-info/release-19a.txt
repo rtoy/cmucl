@@ -43,8 +43,14 @@ New in this release:
      - Interaction of COMPUTE-RESTARTS and RESTART-CASE fixed in
        presence of multiple restarts having the same name.
      - Condition slot readers/writers are generic functions.
+     - &WHOLE, &REST, &BODY in macro lambda lists can be followed
+       by destructuring patterns.  The previous behavior of &BODY
+       when followed by (<body> <declarations> <doc>) is available
+       through the new lambda-list keyword EXT:&PARSE-BODY.
 
   * Numerous bugfixes:
+     - NSET-EXCLUSIVE-OR implemented in terms of SET-EXCLUSIVE-OR
+       because it returned different results than SET-EXCLUSIVE-OR.
 
   * Other changes:
 
@@ -59,6 +65,7 @@ New in this release:
        to conform to AMOP.
      - COMPUTE-EFFECTIVE-SLOT-DEFINITION now takes a slot name as
        argument, for AMOP compliance.
+     - SUBTYPEP works in presence of forward-referenced classes.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
