@@ -1,17 +1,18 @@
 ;;; -*- Mode: Lisp; Package: Kernel -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written by Douglas T. Crosher based on public domain
-;;; code from Carnegie Mellon University and has been placed in the
-;;; Public domain, and is provided 'as is'.
+;;; This code was written by Douglas T. Crosher and Raymond Toy based
+;;; on public domain code from Carnegie Mellon University and has been
+;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.3 1997/12/12 15:16:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.4 1997/12/16 02:55:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Support for the Mersenne Twister, MT19937, random number generator
-;;; due to Matsumoto and Nishimura.
+;;; due to Matsumoto and Nishimura. This implementation has been
+;;; placed in the public domain with permission from M. Matsumoto.
 ;;;
 ;;; Makoto Matsumoto and T. Nishimura, "Mersenne twister: A
 ;;; 623-dimensionally equidistributed uniform pseudorandom number
