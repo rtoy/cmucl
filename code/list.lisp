@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.28 2003/04/18 12:00:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.29 2003/04/19 15:24:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -215,6 +215,14 @@
     (declare (type index count))))
 
 
+;; Signal a simple-type-error that LIST is not a proper list.
+(defun not-proper-list-error (list)
+  (error 'simple-type-error
+	 :datum list
+	 :expected-type 'list
+	 :format-control "~S is not a proper list"
+	 :format-arguments (list list)))
+
 ;;; The outer loop finds the first non-null list and the result is started.
 ;;; The remaining lists in the arguments are tacked to the end of the result
 ;;; using splice which cdr's down the end of the new list
@@ -235,7 +243,9 @@
 		 (let* ((result (cons (caar top) '())) 
 			(splice result))
 		   (do ((x (cdar top) (cdr x)))  ;;Copy first list
-		       ((atom x))
+		       ((atom x)
+			(unless (null x)
+			  (not-proper-list-error (car top))))
 		     (setq splice
 			   (cdr (rplacd splice (cons (car x) ()) ))) )
 		   (do ((y (cdr top) (cdr y)))	 ;;Copy rest of lists.
@@ -244,7 +254,9 @@
 			result)
 		     (if (listp (car y))
 			 (do ((x (car y) (cdr x)))   ;;Inner copy loop.
-			     ((atom x))
+			     ((atom x)
+			      (unless (null x)
+				(not-proper-list-error (car y))))
 			   (setq
 			    splice
 			    (cdr (rplacd splice (cons (car x) ())))))
@@ -287,10 +299,9 @@
 				       (car x)
 				       (cons (caar x) (cdar x)))
 				   nil)))))
-	    ;; Non-null terminated alist done here.
 	    ((atom x)
 	     (unless (null x)
-	       (rplacd splice x))))
+	       (not-proper-list-error alist))))
 	result)))
 
 (defun copy-tree (object)
@@ -352,7 +363,12 @@
   (do ((1st (cdr x) (if (atom 1st) 1st (cdr 1st)))
        (2nd x 1st)		;2nd follows first down the list.
        (3rd y 2nd))		;3rd follows 2nd down the list.
-      ((atom 2nd) 3rd)
+      ((atom 2nd)
+       (if 2nd
+	   (error 'simple-type-error
+		  :format-control "First argument is not a proper list."
+		  :format-arguments nil)
+	   3rd))
     (rplacd 2nd 3rd)))
 
 (defun butlast (list &optional (n 1))
