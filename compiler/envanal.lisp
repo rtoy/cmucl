@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.19 1991/12/08 17:23:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.20 1991/12/11 16:52:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,6 +30,9 @@
 ;;;  2] Find all values that need to be closed over by each environment.
 ;;;  3] Scan the blocks in the component closing over non-local-exit
 ;;;     continuations.
+;;;  4] Delete all non-top-level functions with no references.  This should
+;;;     only get functions with non-NULL kinds, since normal functions are
+;;;     deleted when their references go to zero.
 ;;;
 (defun environment-analyze (component)
   (declare (type component component))
@@ -44,6 +47,15 @@
   (find-non-local-exits component)
   (find-cleanup-points component)
   (tail-annotate component)
+
+  (dolist (fun (component-lambdas component))
+    (when (null (leaf-refs fun))
+      (let ((kind (functional-kind fun)))
+	(unless (eq kind :top-level)
+	  (assert (member kind '(:optional :cleanup :escape)))
+	  (setf (functional-kind fun) nil)
+	  (delete-lambda fun)))))
+
   (undefined-value))
 
 
@@ -287,6 +299,9 @@
 ;;; Unwind-Protect cleanup functions.  If we don't actually have to do
 ;;; anything, then we don't insert any cleanup code.
 ;;;
+;;; If we do insert cleanup code, we check that Block1 doesn't end in a "tail"
+;;; local call.
+;;;
 ;;;    We don't need to adjust the ending cleanup of the cleanup block, since
 ;;; the cleanup blocks are inserted at the start of the DFO, and are thus never
 ;;; scanned.
@@ -317,6 +332,7 @@
 	       (code `(%lexical-exit-breakup ',nlx)))))))
 
       (when (code)
+	(assert (not (node-tail-p (block-last block1))))
 	(insert-cleanup-code block1 block2
 			     (block-last block1)
 			     `(progn ,@(code)))
@@ -357,20 +373,19 @@
 ;;;
 ;;;    Mark all tail-recursive uses of function result continuations with the
 ;;; corresponding tail-set.  Nodes whose type is NIL (i.e. don't return) such
-;;; as calls to ERROR are never annotated as tail, so as to preserve debugging
-;;; information.
+;;; as calls to ERROR are never annotated as tail in order to preserve
+;;; debugging information.
 ;;;
 (defun tail-annotate (component)
   (declare (type component component))
   (dolist (fun (component-lambdas component))
     (let ((ret (lambda-return fun)))
       (when ret
-	(let ((result (return-result ret))
-	      (tails (lambda-tail-set fun)))
+	(let ((result (return-result ret)))
 	  (do-uses (use result)
 	    (when (and (immediately-used-p result use)
-		       (or (not (eq (node-derived-type use) *empty-type*))
-			   (not (basic-combination-p use))
-			   (eq (basic-combination-kind use) :local)))
-	      (setf (node-tail-p use) tails)))))))
+		     (or (not (eq (node-derived-type use) *empty-type*))
+			 (not (basic-combination-p use))
+			 (eq (basic-combination-kind use) :local)))
+		(setf (node-tail-p use) t)))))))
   (undefined-value))
