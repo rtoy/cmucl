@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.14 1992/09/03 12:58:42 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.15 1992/09/04 15:17:24 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -241,7 +241,9 @@
 	 (or (stringp to)
 	     (logical-host-p to)
 	     (pattern-p to)
-	     (member to '(nil :unspecific :wild :wild-inferiors))))
+	     (member to '(nil :unspecific :newest :wild :wild-inferiors))))
+	((member :newest)
+	 (member to '(:wild)))
 	(cons ; Watch for wildcards.
 	 (and (consp from)
 	      (let ((from1 (first from))
@@ -1887,21 +1889,21 @@
 	 ((<= slen i))
       (cond ((eq s-el :wild-inferiors)
 	     (setf s-next-el (nth (+ 1 i) source)) ; NIL if beyond end.
-	     (if (setf k (position s-next-el from :start (1+ j)))
-		 ;; Found it, splice this portion into ires.
-		 (setf ires
-		       (append ires
-			       (subseq from j (1- k))))
-		       j (1- k))
-		 (progn
-		   ;; Either did not find next source element in from,
-		   ;; or was nil.
-		   (setf ires
-			 (append ires
-				 (subseq from j flen)))
-		   (unless (= i (1- slen))
-		     (error "Source ~S inconsistent with from translation ~
-			     ~S~%." source from)))))
+	     (cond ((setf k (position s-next-el from :start (1+ j)))
+		    ;; Found it, splice this portion into ires.
+		    (setf ires
+			  (append ires
+				  (subseq from j (1- k)))
+			  j (1- k)))
+		   (t
+		    ;; Either did not find next source element in from,
+		    ;; or was nil.
+		    (setf ires
+			  (append ires
+				  (subseq from j flen)))
+		    (unless (= i (1- slen))
+		      (error "Source ~S inconsistent with from translation ~
+			      ~S~%." source from)))))
 	    (t 
 	     (setf ires (append ires (list (intermediate-rep s-el f-el)))))))
     ;; Remember to add leftover elements of from.
@@ -1918,21 +1920,21 @@
       ;; Remember to add leftover elements of to.
       (cond ((eq ir-el :wild-inferiors)
 	     (setf ir-next-el (nth (+ 1 i) ires)) ; NIL if beyond end.
-	     (if (setf k (position ir-next-el from :start (1+ j)))
-		 ;; Found it, splice this portion into rres.
-		 (setf rres
-		       (append rres
-			       (subseq from j (1- k)))
-		       j (1- k))
-		 (progn
-		   ;; Either did not find next source element in from,
-		   ;; or was nil.
-		   (setf rres
-			 (append rres
-				 (subseq from j tlen)))
-		   (unless (= i (1- irlen))
-		     (error "Intermediate path ~S inconsistent with to~
-			     translation ~S~%." ires to)))))
+	     (cond ((setf k (position ir-next-el from :start (1+ j)))
+		    ;; Found it, splice this portion into rres.
+		    (setf rres
+			  (append rres
+				  (subseq from j (1- k)))
+		       j (1- k)))
+		   (t
+		    ;; Either did not find next source element in from,
+		    ;; or was nil.
+		    (setf rres
+			  (append rres
+				  (subseq from j tlen)))
+		    (unless (= i (1- irlen))
+		      (error "Intermediate path ~S inconsistent with to~
+			      translation ~S~%." ires to)))))
 	    (t (if (setf dummy (intermediate-rep ir-el t-el))
 		   (setf rres (append rres (list dummy)))))))
     (if (< flen tlen)
@@ -1943,7 +1945,7 @@
 ;;; but is not a logical-pathname. 
 
 (deftype physical-pathname ()
-  '(and (satisfies pathname-p)
+  '(and (satisfies pathnamep)
 	(not (or (satisfies wild-pathname-p)
 		 (satisfies logical-pathname-p)))))
 
