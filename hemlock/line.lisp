@@ -36,9 +36,10 @@
 
 ;;;; The line object:
 
+(proclaim '(inline %make-line))
 (defstruct (line (:print-function %print-hline)
-		 (:predicate linep)
-		 (:constructor nil))
+		 (:constructor %make-line)
+		 (:predicate linep))
   "A Hemlock line object.  See Hemlock design document for details."
   ;;
   ;; Something that represents the contents of the line.  This is
@@ -130,22 +131,6 @@
   (line-%chars line))
 
 
-;;; Fast version of Make-Line does keyword hacking at compile time.
-;;;
-(defmacro make-line (&key chars previous next marks %buffer number
-			  plist #+Buffered-Lines buffered-p)
-  `(lisp::%sp-set-vector-subtype
-    (vector 'line
-	    ,chars
-	    ,previous
-	    ,next
-	    ,marks
-	    ,%buffer
-	    ,number
-	    ,plist
-	    #+Buffered-Lines ,buffered-p)
-    1))
-
 ;;; Return a copy of Line in buffer Buffer with the same chars.  We use
 ;;; this macro where we want to copy a line because it takes care of
 ;;; the case where the line is buffered.
@@ -157,6 +142,11 @@
 	      :%buffer ,%buffer
 	      #+Buffered-Lines :buffered-p
 	      #+Buffered-Lines (line-buffered-p ,line)))
+
+;;; Hide the fact that the slot isn't really called CHARS.
+;;;
+(defmacro make-line (&rest keys)
+  `(%make-line ,@(substitute :%chars :chars keys)))
 
 (defmacro line-length* (line)
   "Returns the number of characters on the line, but it's a macro!"
