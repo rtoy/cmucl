@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.6 2001/12/12 20:21:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.7 2003/06/18 09:23:09 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-(in-package "USER")
+(in-package "CL-USER")
 
 (pushnew :motif *features*)
 

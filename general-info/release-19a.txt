@@ -117,6 +117,9 @@ New in this release:
      - DEFCLASS redefining a class with the given name only if the
        name is the proper name of an existing class.
      - KEYWORD package no longer having nickname "".
+     - COMMON-LISP-USER package no longer having nickname USER.
+     - COMMON-LISP package no longer having nickname LISP; LISP
+       and COMMON-LISP are now separate packages.
      - SLOT-VALUE, (SETF SLOT-VALUE), SLOT-BOUNDP, SLOT-MAKUNBOUND
        returning values specified by the standard when SLOT-UNBOUND
        or SLOT-MISSING are called and return.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.88 2003/05/28 08:50:41 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.89 2003/06/18 09:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -449,11 +449,11 @@
 			 name-and-options)))
 	 (name (dd-name defstruct))
 	 (pkg (symbol-package name)))
-    (when (and cl::*enable-package-locked-errors*
+    (when (and lisp::*enable-package-locked-errors*
 	       pkg
 	       (ext:package-definition-lock pkg))
       (restart-case
-	  (error 'cl::package-locked-error
+	  (error 'lisp::package-locked-error
 		 :package pkg
 		 :format-control "defining structure ~A"
 		 :format-arguments (list name))

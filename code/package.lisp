@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.69 2003/06/14 14:37:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.70 2003/06/18 09:23:10 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,7 +142,7 @@
                      (simple-condition-format-arguments condition)))))
 
 (defun package-locks-init ()
-  (let ((package-names '("COMMON-LISP" "PCL" "CLOS-MOP" "EVAL"
+  (let ((package-names '("COMMON-LISP" "LISP" "PCL" "CLOS-MOP" "EVAL"
                          "NEW-ASSEM" "DISASSEM" "LOOP" "ANSI-LOOP" "INSPECT"
                          "C" "PROFILE" "WIRE" "BIGNUM" "VM"
                          "FORMAT" "DFIXNUM" "PRETTY-PRINT" "C-CALL" "ALIEN"
@@ -1691,15 +1691,14 @@
 	       (external-symbol-count pkg))
 	    (do-symbols (sym package)
 	      (multiple-value-bind (s w)
-				   (find-external-symbol (symbol-name sym) pkg)
+		  (find-external-symbol (symbol-name sym) pkg)
 		(when (and w (not (eq s sym))
 			   (not (member sym shadowing-symbols)))
 		  (push sym cset))))
 	    (dolist (p use-list)
 	      (do-external-symbols (sym p)
 		(multiple-value-bind (s w)
-				     (find-external-symbol (symbol-name sym)
-							   pkg)
+		    (find-external-symbol (symbol-name sym) pkg)
 		  (when (and w (not (eq s sym))
 			     (not (member (find-symbol (symbol-name sym)
 						       package)
@@ -1708,7 +1707,7 @@
 	   (t
 	    (do-external-symbols (sym pkg)
 	      (multiple-value-bind (s w)
-				   (find-symbol (symbol-name sym) package)
+		  (find-symbol (symbol-name sym) package)
 		(when (and w (not (eq s sym))
 			   (not (member s shadowing-symbols)))
 		  (push s cset))))))
@@ -1926,7 +1925,7 @@
     (makunbound '*initial-symbols*) ; So it gets GC'ed.
     
     ;; Make some other packages that should be around in the cold load:
-    (make-package "COMMON-LISP-USER" :nicknames '("CL-USER" "USER"))
+    (make-package "COMMON-LISP-USER" :nicknames '("CL-USER"))
 
     ;; Now do the *deferred-use-packages*:
     (dolist (args *deferred-use-packages*)

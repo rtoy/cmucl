@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.26 2003/06/12 09:24:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.27 2003/06/18 09:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,8 @@
   "The default value for the :ENCAPSULATE option to trace.")
 
 (defvar *trace-encapsulate-package-names*
-  '("COMMON-LISP"
+  '("LISP"
+    "COMMON-LISP"
     "CONDITIONS"
     "DEBUG"
     "EXTENSIONS"

@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.35 2003/06/11 13:03:25 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.36 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
                 Be sure to re-compile the startup code."
              (genesis-c-header-file-name c)))))
 
-(in-package "USER")
+(in-package "CL-USER")
 
 
 ;; these forward declarations are only intended to avoid compiler
@@ -77,9 +77,9 @@
             stream::%write-string
             debug::all-method-functions-in-package
             profile::reinitialize-method-function
-            cl::make-instance
-            cl::class-of
-            cl::sxhash-instance
+            lisp::make-instance
+            lisp::class-of
+            lisp::sxhash-instance
             hemlock::ts-stream-p
             hemlock::ts-stream-wire
             ext::call-display-event-handler

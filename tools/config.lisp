@@ -7,13 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.5 2000/06/06 10:01:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.6 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Utility to load subsystems and save a new core.
 ;;;
-(in-package "USER")
+(in-package "CL-USER")
 
 
 (block abort

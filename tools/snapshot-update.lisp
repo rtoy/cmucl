@@ -7,14 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/snapshot-update.lisp,v 1.2 1992/02/24 14:23:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/snapshot-update.lisp,v 1.3 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    A hack to generate a log of the changes since a particular snapshot.  We
 ;;; generate a shell script and run it to avoid many calls to run-program.
 ;;;
-(in-package "USER")
+(in-package "CL-USER")
 
 (defun snapshot-updates (&key (snapshot-file "RCSSNAP")
 			      (output

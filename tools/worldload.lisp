@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.100 2003/05/23 13:34:04 gerd Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.101 2003/06/18 09:23:08 gerd Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 ;;; into the dynamic space during worldload; overrides the above when
 ;;; enabled. Enable by default for GENCGC.  May also be safe with CGC
 ;;; but untested.
-;(setf cl::*enable-dynamic-space-code* t)
+;(setf lisp::*enable-dynamic-space-code* t)
 
 
 ;;; Get some data on this core.
@@ -226,7 +226,7 @@
 ;;;
 (progn
   ;; We want to be in the USER package when the command line switches run.
-  (in-package "USER")
+  (in-package "CL-USER")
   ;; Clean random top-level specials.
   (setq - nil)
   (setq + nil)
@@ -254,7 +254,7 @@
 
   ;;; GENCGC can move native code so all code can be loaded into the
   ;;; dynamic space; overrides the above when enabled.
-  #+gencgc (setf cl::*enable-dynamic-space-code* t)
+  #+gencgc (setf lisp::*enable-dynamic-space-code* t)
   ;;; Reset the counter of the number of native code fixups.
   #+x86 (setf x86::*num-fixups* 0)
 

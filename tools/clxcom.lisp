@@ -3,11 +3,11 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.26 1999/01/09 11:05:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.27 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-(in-package "USER")
+(in-package "CL-USER")
 
 #+bootstrap
 (unless (find-package "OLD-XLIB")

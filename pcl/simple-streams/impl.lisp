@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.3 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,13 +22,13 @@
 	 (%uninitialized stream))
 	((and (eq kind :open)
 	      (not (any-stream-instance-flags stream :input :output)))
-	 (cl::closed-flame stream))
+	 (lisp::closed-flame stream))
 	((and (or (eq kind :input) (eq kind :io))
 	      (not (any-stream-instance-flags stream :input)))
-	 (cl::ill-in-any stream))
+	 (lisp::ill-in-any stream))
 	((and (or (eq kind :output) (eq kind :io))
 	      (not (any-stream-instance-flags stream :output)))
-	 (cl::ill-out-any stream))))
+	 (lisp::ill-out-any stream))))
 
 #+count-sm
 (progn
@@ -162,7 +162,7 @@
 	  (when done
 	    ;; If there's only one buffer in use, return it directly
 	    (when (null (cdr bufs))
-	      (return (values (cl::shrink-vector cbuf index)
+	      (return (values (lisp::shrink-vector cbuf index)
 			      (eq done :eof))))
 	    ;; If total fits in final buffer, use it
 	    #-(or)
@@ -174,7 +174,7 @@
 		  (declare (type simple-base-string buf))
 		  (replace cbuf buf :start1 idx)
 		  (incf idx (length buf))))
-	      (return (values (cl::shrink-vector cbuf index)
+	      (return (values (lisp::shrink-vector cbuf index)
 			      (eq done :eof))))
 	    ;; Allocate new string of appropriate length
 	    (let ((string (make-string total))
@@ -229,7 +229,7 @@
 						  eof-error-p
 						  stream t)))
 		 ((or (eq char stream)
-		      (not (cl::whitespace-char-p char)))
+		      (not (lisp::whitespace-char-p char)))
 		  (unless (eq char stream)
 		    (funcall-stm-handler j-unread-char encap t))
 		  (if (eq char stream) eof-value char))))
@@ -282,7 +282,7 @@
   (with-stream-class (simple-stream stream)
     (%check stream :input)
     (if (any-stream-instance-flags stream :eof)
-	(cl::eof-or-lose stream eof-error-p eof-value)
+	(lisp::eof-or-lose stream eof-error-p eof-value)
 	(simple-stream-dispatch stream
 	  ;; single-channel-simple-stream
 	  (sc-read-byte stream eof-error-p eof-value t)

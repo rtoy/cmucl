@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/file.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/file.lisp,v 1.3 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,8 +46,8 @@
 	     stream)
 	    (t
 	     (multiple-value-bind (fd namestring original delete-original)
-		 (cl::fd-open filename direction if-exists if-exists-given
-			      if-does-not-exist if-does-not-exist-given)
+		 (lisp::fd-open filename direction if-exists if-exists-given
+				if-does-not-exist if-does-not-exist-given)
 	       (when fd
 		 (add-stream-instance-flags stream :simple)
 		 (setf (sm pathname stream) filename
@@ -101,11 +101,11 @@
       (cond (abort
 	     ;; Remove any fd-handler
 	     (when (any-stream-instance-flags stream :output)
-	       (cl::revert-file (sm filename stream) (sm original stream))))
+	       (lisp::revert-file (sm filename stream) (sm original stream))))
 	    (t
 	     (when (sm delete-original stream)
-	       (cl::delete-original (sm filename stream)
-				    (sm original stream)))))
+	       (lisp::delete-original (sm filename stream)
+				      (sm original stream)))))
       (unix:unix-close fd)
       ;; if buffer is a sap, put it back on cl::*available-buffers*
       (setf (sm buffer stream) nil)))

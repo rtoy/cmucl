@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.47 2002/09/04 11:21:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.48 2003/06/18 09:23:10 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -467,7 +467,7 @@
   (flushable movable))
 
 #+x86
-(defknown symbol-hash (symbol) cl::hash
+(defknown symbol-hash (symbol) lisp::hash
   (flushable movable))
 
 (define-primitive-object (symbol :lowtag other-pointer-type

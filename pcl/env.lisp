@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.25 2003/06/13 08:53:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.26 2003/06/18 09:23:09 gerd Rel $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -274,7 +274,7 @@
 
 ;;;; MAKE-LOAD-FORM
 
-(export '(cl::make-load-form cl::make-load-form-saving-slots) "CL")
+(export '(lisp::make-load-form lisp::make-load-form-saving-slots) "CL")
 
 (defgeneric make-load-form (object &optional environment))
 

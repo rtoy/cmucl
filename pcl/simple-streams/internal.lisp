@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.3 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,13 +43,13 @@
                             (* length 8))))
 
 (defun allocate-buffer (size)
-  (if (= size cl::bytes-per-buffer)
-      (cl::next-available-buffer)
+  (if (= size lisp::bytes-per-buffer)
+      (lisp::next-available-buffer)
       (make-array size :element-type '(unsigned-byte 8))))
 
 (defun free-buffer (buffer)
   (when (sys:system-area-pointer-p buffer)
-    (push buffer cl::*available-buffers*))
+    (push buffer lisp::*available-buffers*))
   t)
 
 

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.28 2003/05/23 11:05:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.29 2003/06/18 09:23:09 gerd Rel $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -75,7 +75,7 @@
 	     '(class-predicate slot-accessor
 	       method fast-method effective-method))))
 
-(import '(cl::make-keyword))
+(import '(lisp::make-keyword))
 
 (defmacro posq (item list)
   `(position ,item ,list :test #'eq))

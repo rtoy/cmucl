@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.42 2003/03/22 16:15:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.43 2003/06/18 09:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,7 +14,7 @@
 ;;; Everything except SXHASH rewritten by William Lott.
 ;;; Equalp hashing by William Newman, Cadabra Inc, and Douglas Crosher, 2000.
 ;;;
-(in-package :common-lisp)
+(in-package :lisp)
 
 (export '(hash-table hash-table-p make-hash-table
 	  gethash remhash maphash clrhash
@@ -25,7 +25,7 @@
 (in-package :ext)
 (export '(define-hash-table-test))
 
-(in-package :common-lisp)
+(in-package :lisp)
 
 
 ;;;; The hash-table structures.

@@ -7,14 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.87 2003/05/23 13:34:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.88 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains noise to compile the lisp world.
 ;;; 
 
-(in-package "USER")
+(in-package "CL-USER")
 
 (defvar *byte-compile* #+small t #-small :maybe)
 (defvar *original-%deftype* #'lisp::%deftype)

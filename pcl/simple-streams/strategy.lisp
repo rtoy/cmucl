@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.3 2003/06/11 16:10:21 emarsden Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.4 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,7 +136,7 @@
           (setq char (funcall (the (or symbol function) (svref ctrl code))
                               stream char))))
       (if (null char)
-          (cl::eof-or-lose stream eof-error-p eof-value)
+          (lisp::eof-or-lose stream eof-error-p eof-value)
           char))))
 
 (declaim (ftype j-read-char-fn (sc read-char :iso8859-1 buffer)))
@@ -158,7 +158,7 @@
           (setq char (funcall (the (or symbol function) (svref ctrl code))
                               stream char))))
       (if (null char)
-          (cl::eof-or-lose stream eof-error-p eof-value)
+          (lisp::eof-or-lose stream eof-error-p eof-value)
           char))))
 
 (declaim (ftype j-read-chars-fn (sc read-chars :iso8859-1)))
@@ -317,7 +317,7 @@
               (setf (sm buffer-ptr stream) bytes
                     ptr 0)
               (return-from sc-read-byte
-                (cl::eof-or-lose stream eof-error-p eof-value)))))
+                (lisp::eof-or-lose stream eof-error-p eof-value)))))
       (setf (sm buffpos stream) (1+ ptr))
       (setf (sm last-char-read-size stream) 0)
       (bref (sm buffer stream) ptr))))
@@ -362,7 +362,7 @@
           (setq char (funcall (the (or symbol function) (svref ctrl code))
                               stream char))))
       (if (null char)
-          (cl::eof-or-lose stream eof-error-p eof-value)
+          (lisp::eof-or-lose stream eof-error-p eof-value)
           char))))
 
 (declaim (ftype j-read-chars-fn (dc read-chars :iso8859-1)))
@@ -476,7 +476,7 @@
               (setf (sm buffer-ptr stream) bytes
                     ptr 0)
               (return-from dc-read-byte
-                (cl::eof-or-lose stream eof-error-p eof-value)))))
+                (lisp::eof-or-lose stream eof-error-p eof-value)))))
       (setf (sm buffpos stream) (1+ ptr))
       (setf (sm last-char-read-size stream) 0)
       (bref (sm buffer stream) ptr))))
@@ -490,13 +490,13 @@
            #|(optimize (speed 3) (space 2) (safety 0) (debug 0))|#)
   (with-stream-class (string-input-simple-stream stream)
     (when (any-stream-instance-flags stream :eof)
-      (cl::eof-or-lose stream eof-error-p eof-value))
+      (lisp::eof-or-lose stream eof-error-p eof-value))
     (let* ((ptr (sm buffpos stream))
            (char (if (< ptr (sm buffer-ptr stream))
                      (schar (sm buffer stream) ptr)
                      nil)))
       (if (null char)
-          (cl::eof-or-lose stream eof-error-p eof-value)
+          (lisp::eof-or-lose stream eof-error-p eof-value)
           (progn
             (setf (sm last-char-read-size stream) 1)
             ;; do string-streams do control-in processing?

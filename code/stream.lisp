@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.62 2003/06/07 17:56:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.63 2003/06/18 09:23:10 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2551,7 +2551,7 @@ SEQ:	a proper SEQUENCE
 	   (type index start)
 	   (type sequence-end end)
 	   (values index))
-  (when (not (cl::lisp-stream-p stream))
+  (when (not (lisp::lisp-stream-p stream))
      (return-from read-sequence (stream-read-sequence seq stream start end)))
   (let ((end (or end (length seq))))
     (declare (type index end))
@@ -2609,7 +2609,7 @@ SEQ:	a proper SEQUENCE
 	   (type index start)
 	   (type sequence-end end)
 	   (values sequence))
-  (when (not (cl::lisp-stream-p stream))
+  (when (not (lisp::lisp-stream-p stream))
     (return-from write-sequence (stream-write-sequence seq stream start end)))
   (let ((end (or end (length seq))))
     (declare (type index start end))

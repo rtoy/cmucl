@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/null.lisp,v 1.1 2003/06/06 16:23:46 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/null.lisp,v 1.2 2003/06/18 09:23:08 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 (declaim (ftype j-read-char-fn null-read-char))
 (defun null-read-char (stream eof-error-p eof-value blocking)
   (declare (ignore blocking))
-  (cl::eof-or-lose stream eof-error-p eof-value))
+  (lisp::eof-or-lose stream eof-error-p eof-value))
 
 (declaim (ftype j-read-chars-fn null-read-chars))
 (defun null-read-chars (stream string search start end blocking)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.93 2003/05/12 16:30:41 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.94 2003/06/18 09:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,7 +75,7 @@
 ;;; definition is done by %defmacro which we expand into.
 ;;;
 (defmacro defmacro (name lambda-list &body body)
-  (when cl::*enable-package-locked-errors*
+  (when lisp::*enable-package-locked-errors*
     (multiple-value-bind (valid block-name)
         (ext:valid-function-name-p name)
       (declare (ignore valid))
@@ -83,7 +83,7 @@
         (when package
           (when (ext:package-definition-lock package)
             (restart-case
-                (error 'cl::package-locked-error
+                (error 'lisp::package-locked-error
                        :package package
                        :format-control "defining macro ~A"
                        :format-arguments (list name))
@@ -204,11 +204,11 @@
   "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
     (simple-program-error "~S -- Type name not a symbol." name))
-  (and cl::*enable-package-locked-errors*
+  (and lisp::*enable-package-locked-errors*
        (symbol-package name)
        (ext:package-definition-lock (symbol-package name))
        (restart-case
-           (error 'cl::package-locked-error
+           (error 'lisp::package-locked-error
                   :package (symbol-package name)
                   :format-control "defining type ~A"
                   :format-arguments (list name))

@@ -7,14 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.19 1997/11/04 16:29:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.20 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; File for compiling the Motif toolkit and related interface
 ;;; stuff.
 ;;;
-(in-package "USER")
+(in-package "CL-USER")
 
 
 ;;; If CLX and PCL have not been loaded, then load them.

@@ -3,13 +3,13 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.54 2003/02/05 19:32:21 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.55 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Loading this file causes the CMUCL compiler to be compiled.
 ;;;
-(in-package "USER")
+(in-package "CL-USER")
 
 #+bootstrap
 (copy-packages (cons (c::backend-name c::*target-backend*) '("NEW-ASSEM" "C")))

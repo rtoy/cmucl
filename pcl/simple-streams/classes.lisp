@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.3 2003/06/18 09:23:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,12 +57,12 @@
   ((%flags :initform 0 :type fixnum)
    (plist :initform nil :type list :accessor stream-plist)
 
-   (j-listen :initform #'cl::ill-in-any :type j-listen-fn)
-   (j-read-char :initform #'cl::ill-in-any :type j-read-char-fn)
-   (j-read-chars :initform #'cl::ill-in-any :type j-read-chars-fn)
-   (j-unread-char :initform #'cl::ill-in-any :type j-unread-char-fn)
-   (j-write-char :initform #'cl::ill-out-any :type j-write-char-fn) ;@@
-   (j-write-chars :initform #'cl::ill-out-any :type j-write-chars-fn) ;@@
+   (j-listen :initform #'lisp::ill-in-any :type j-listen-fn)
+   (j-read-char :initform #'lisp::ill-in-any :type j-read-char-fn)
+   (j-read-chars :initform #'lisp::ill-in-any :type j-read-chars-fn)
+   (j-unread-char :initform #'lisp::ill-in-any :type j-unread-char-fn)
+   (j-write-char :initform #'lisp::ill-out-any :type j-write-char-fn) ;@@
+   (j-write-chars :initform #'lisp::ill-out-any :type j-write-chars-fn) ;@@
 
    (external-format :initform :default)
 
@@ -183,12 +183,12 @@
       (call-next-method)
       (setf (sm input-handle stream) nil
 	    (sm output-handle stream) nil
-	    (sm j-listen stream) #'cl::closed-flame
-	    (sm j-read-char stream) #'cl::closed-flame
-	    (sm j-read-chars stream) #'cl::closed-flame
-	    (sm j-unread-char stream) #'cl::closed-flame
-	    (sm j-write-char stream) #'cl::closed-flame	;@@
-	    (sm j-write-chars stream) #'cl::closed-flame) ;@@
+	    (sm j-listen stream) #'lisp::closed-flame
+	    (sm j-read-char stream) #'lisp::closed-flame
+	    (sm j-read-chars stream) #'lisp::closed-flame
+	    (sm j-unread-char stream) #'lisp::closed-flame
+	    (sm j-write-char stream) #'lisp::closed-flame	;@@
+	    (sm j-write-chars stream) #'lisp::closed-flame) ;@@
       (remove-stream-instance-flags stream :input :output)
       (ext:cancel-finalization stream))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.84 2003/01/06 22:27:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.85 2003/06/18 09:23:10 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,7 +102,7 @@
   `(%with-standard-io-syntax #'(lambda () ,@body)))
 
 (defun %with-standard-io-syntax (function)
-  (let ((*package* (find-package "USER"))
+  (let ((*package* (find-package "CL-USER"))
 	(*print-array* t)
 	(*print-base* 10)
 	(*print-case* :upcase)

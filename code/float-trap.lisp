@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.21 2003/04/14 21:03:25 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.22 2003/06/18 09:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -228,7 +228,7 @@
 		    :operation fop
 		    :operands operands))
 	    ((not (zerop (logand float-inexact-trap-bit traps)))
-	     (error 'ext:floating-point-inexact
+	     (error 'floating-point-inexact
 		    :operation fop
 		    :operands operands))
 	    #+BSD

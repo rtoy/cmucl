@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.50 2003/03/19 03:28:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.51 2003/06/18 09:23:10 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,7 +318,7 @@
 ;;;; Random functions used by worldload.
 
 (defun assert-user-package ()
-  (unless (eq *package* (find-package "USER"))
+  (unless (eq *package* (find-package "CL-USER"))
     (error "Change *PACKAGE* to the USER package and try again.")))
 
 ;;; MAYBE-BYTE-LOAD  --  Interface

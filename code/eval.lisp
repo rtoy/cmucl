@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.39 2003/05/19 10:47:26 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.40 2003/06/18 09:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,7 +98,7 @@
 	     (lambda (s stream d)
 	       (declare (ignore d)) 
 	       (print-unreadable-object (s stream :identity t)
-		 (cl::output-interpreted-function s stream)))))
+		 (lisp::output-interpreted-function s stream)))))
   ;;
   ;; The name of this interpreted function, or NIL if none specified.
   (%name nil)
