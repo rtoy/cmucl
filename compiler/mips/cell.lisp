@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.62 1992/12/16 13:58:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.63 1992/12/16 14:01:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,7 +107,7 @@
 ;;;; Fdefinition (fdefn) objects.
 
 (define-vop (fdefn-function cell-ref)
-  (:variant fdefn-function-slot-slot other-pointer-type))
+  (:variant fdefn-function-slot other-pointer-type))
 
 (define-vop (safe-fdefn-function)
   (:args (object :scs (descriptor-reg) :target obj-temp))
