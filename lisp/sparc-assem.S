@@ -286,12 +286,13 @@ restore_state:
 
 	.global	_restore_state
 _restore_state:
-	mov	%o0, %sp
-	add	%sp, (SA(8*4)+SA(MINFRAME)), %fp
-	ta	ST_CLEAN_WINDOWS
+	ta	ST_FLUSH_WINDOWS
+	mov	%o0, %fp
+	mov	%o1, %i0
+	restore
 	ld	[%sp+SA(MINFRAME)], %i7
 	b restore_state
-	mov	%o1, %i0
+	mov	%o0, %i0
 
 
 /****************************************************************\
