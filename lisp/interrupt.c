@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.39 2004/07/08 18:21:29 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.40 2004/07/13 00:26:22 pmai Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -256,9 +256,27 @@ interrupt_handle_pending(os_context_t *context)
 
 
 /****************************************************************\
-* interrupt_handle_now, maybe_now_maybe_later                    *
+* interrupt_handle_now_handler, maybe_now_maybe_later            *
 *    the two main signal handlers.                               *
+* interrupt_handle_now                                           *
+*    is called from those to do the real work, but isn't itself  *
+*    a handler.                                                  *
 \****************************************************************/
+
+void 
+interrupt_handle_now_handler(HANDLER_ARGS)
+{
+#if defined(__linux__) && (defined(i386) || defined(__x86_64))
+        interrupt_handle_now(signal, contextstruct);
+#else
+        interrupt_handle_now(signal, code, context);
+#endif
+
+#ifdef DARWIN
+   /* Work around G5 bug; fix courtesy gbyers via chandler */
+    sigreturn(context);
+#endif
+}
 
 void 
 interrupt_handle_now(HANDLER_ARGS)
@@ -439,7 +457,13 @@ maybe_now_maybe_later(HANDLER_ARGS)
 #else
         interrupt_handle_now(signal, code, context);
 #endif
+
     }
+
+#ifdef DARWIN
+    /* Work around G5 bug; fix courtesy gbyers via chandler */
+    sigreturn(context);
+#endif
 }
 
 /****************************************************************\
@@ -604,7 +628,7 @@ unsigned long install_handler(int signal,
 	else if (sigismember(&new, signal))
 	    sa.sa_sigaction = maybe_now_maybe_later;
 	else
-	    sa.sa_sigaction = interrupt_handle_now;
+	    sa.sa_sigaction = interrupt_handle_now_handler;
 
 	sigemptyset(&sa.sa_mask);
 	FILLBLOCKSET(&sa.sa_mask);
@@ -635,7 +659,7 @@ unsigned long install_handler(int signal,
 	else if (sigmask(signal) & BLOCKABLE)
 	    sv.sv_handler = maybe_now_maybe_later;
 	else
-	    sv.sv_handler = interrupt_handle_now;
+	    sv.sv_handler = interrupt_handle_now_handler;
 
 	sv.sv_mask = BLOCKABLE;
 	sv.sv_flags = 0;
@@ -651,6 +675,7 @@ unsigned long install_handler(int signal,
 }
 #endif
 
+#ifdef FEATURE_HEAP_OVERFLOW_CHECK
 void
 interrupt_handle_space_overflow(lispobj error, os_context_t *context)
 {
@@ -670,6 +695,7 @@ interrupt_handle_space_overflow(lispobj error, os_context_t *context)
   context->sc_rip = (unsigned long) ((struct function *) PTR (error))->code;
   context->sc_rcx = 0;
 #else
+#ifdef sparc
   build_fake_control_stack_frame (context);
   /* This part should be common to all non-x86 ports */
   SC_PC(context) = (long) ((struct function *) PTR (error))->code;
@@ -679,9 +705,13 @@ interrupt_handle_space_overflow(lispobj error, os_context_t *context)
   SC_REG(context, reg_CFP) = (long) current_control_frame_pointer;
   /* This is sparc specific */
   SC_REG(context, reg_CODE) = ((long) PTR(error)) + type_FunctionPointer;
+#else
+#error interrupt_handle_space_overflow not implemented for this system
+#endif
 #endif
 #endif
 }
+#endif /* FEATURE_HEAP_OVERFLOW_CHECK */
 
 void interrupt_init(void)
 {

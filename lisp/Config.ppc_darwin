@@ -1,0 +1,23 @@
+PATH1 = ../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
+CPPFLAGS = -I. -I$(PATH1) -I/usr/X11R6/include
+CC = gcc3
+LD = ld
+NM = nm
+CPP = cpp -no-cpp-precomp
+DEPEND = $(CC) -MM
+CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc
+ASFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
+ASSEM_SRC = ppc-assem.S linux-stubs.S
+ARCH_SRC = ppc-arch.c
+OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c
+OS_LINK_FLAGS = -g -dynamic -Wl,-sectcreate,CMUCLRO,core,/dev/null -Wl,-segaddr,CMUCLRO,0x01000000 -Wl,-seg1addr,0x05000000
+OS_LIBS = -lSystem -lc -lm
+GC_SRC = gc.c
+all: adjustlisp
+adjustlisp: lisp darwin-lispadjuster
+	./darwin-lispadjuster lisp
+darwin-lispadjuster: darwin-lispadjuster.c

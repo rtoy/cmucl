@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.13 2004/07/07 15:03:12 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.14 2004/07/13 00:26:22 pmai Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -11,6 +11,9 @@
 
 #include "lisp.h"
 
+#ifdef DARWIN
+#include "Darwin-os.h"
+#else
 #ifdef MACH
 #include "mach-os.h"
 #else
@@ -37,6 +40,7 @@
 #else
 #ifdef __linux__
 #include "Linux-os.h"
+#endif
 #endif
 #endif
 #endif

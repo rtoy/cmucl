@@ -1,10 +1,31 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.16 2003/03/20 23:56:14 cracauer Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.17 2004/07/13 00:26:22 pmai Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
 */
+
+#if defined DARWIN
+
+#define doe(fct) \
+.text						@\
+.globl  ldso_stub___ ## fct			@\
+ldso_stub___ ## fct:				@\
+	b ldso_stub__ ## fct ## stub		@\
+.symbol_stub ldso_stub__ ## fct ## stub:	@\
+.indirect_symbol _ ## fct			@\
+	lis	r11,ha16(ldso_stub__ ## fct ## $lazy_ptr)	@\
+	lwz	r12,lo16(ldso_stub__ ## fct ## $lazy_ptr)(r11)	@\
+	mtctr	r12				@\
+	addi	r11,r11,lo16(ldso_stub__ ## fct ## $lazy_ptr)	@\
+	bctr					@\
+.lazy_symbol_pointer				@\
+ldso_stub__ ## fct ## $lazy_ptr:		@\
+	.indirect_symbol _ ## fct		@\
+	.long dyld_stub_binding_helper
+
+#else
 
 	.file	"linux-stubs.S"
 	.version	"01.01"
@@ -19,6 +40,9 @@ PVE_stub_ ## fct: ;\
 	jmp fct ;\
 .L ## fct ## e1: ;\
 	.size	 PVE_stub_ ## fct,.L ## fct ## e1-PVE_stub_ ## fct  ;
+
+#endif
+
 #if defined(LINKAGE_TABLE) && !defined(__FreeBSD__)
  /* This is a workaround for glibc braindamage.  These symbols are
     magically transformed by the preprocessor and linker so that
@@ -56,10 +80,12 @@ PVE_stub_ ## fct: ;\
  doe(connect)
  doe(cosh)
  doe(creat)
+#ifndef DARWIN
  doe(dlclose)
  doe(dlerror)
  doe(dlopen)
  doe(dlsym)
+#endif
  doe(dup)
  doe(dup2)
  doe(execve)
@@ -104,9 +130,11 @@ PVE_stub_ ## fct: ;\
  doe(lseek)
  doe(lstat)
  doe(malloc)
+#ifndef DARWIN
  doe(__malloc_hook)
  doe(__realloc_hook)
  doe(__free_hook)
+#endif
  doe(mkdir)
  doe(open)
  doe(opendir)
@@ -152,7 +180,7 @@ PVE_stub_ ## fct: ;\
  doe(wait3)	
  doe(write)
 
-#ifdef alpha
+#if defined(alpha) || defined(DARWIN)
  doe(atan)
  doe(atan2)
  doe(cos)
@@ -169,6 +197,7 @@ PVE_stub_ ## fct: ;\
  doe(getpwuid_r)
  doe(getgrnam_r)
  doe(getgrgid_r)
+#ifndef DARWIN
  doe(open64)
  doe(creat64)
  doe(lseek64)
@@ -179,6 +208,7 @@ PVE_stub_ ## fct: ;\
  doe(lstat64)
  doe(readdir64)
  doe(statfs64)
+#endif
 
 /*  doe(abort) */
 /*  doe(abs) */
@@ -568,7 +598,7 @@ PVE_stub_ ## fct: ;\
 /*  doe(mktime) */
 /*  doe(mlock) */
 /*  doe(mlockall) */
-/*  doe(mmap) */
+  doe(mmap) 
 /*  doe(modf) */
 /*  doe(modfl) */
 /*  doe(mount) */
@@ -579,10 +609,10 @@ PVE_stub_ ## fct: ;\
 /*  doe(msgget) */
 /*  doe(msgrcv) */
 /*  doe(msgsnd) */
-/*  doe(msync) */
+  doe(msync) 
 /*  doe(munlock) */
 /*  doe(munlockall) */
-/*  doe(munmap) */
+  doe(munmap) 
 /*  doe(nice) */
 /*  doe(nl_langinfo) */
 /*  doe(nrand48) */
@@ -725,7 +755,7 @@ PVE_stub_ ## fct: ;\
 /*  doe(seteuid) */
 /*  doe(setfsgid) */
 /*  doe(setfsuid) */
-/*  doe(setgid) */
+  doe(setgid)
 /*  doe(setgrent) */
 /*  doe(setgroups) */
 /*  doe(sethostent) */
@@ -752,7 +782,7 @@ PVE_stub_ ## fct: ;\
 /*  doe(setspent) */
 /*  doe(setstate) */
 /*  doe(settimeofday) */
-/*  doe(setuid) */
+  doe(setuid) 
 /*  doe(setusershell) */
 /*  doe(setutent) */
 /*  doe(setvbuf) */

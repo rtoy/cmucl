@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.33 2004/07/07 15:03:12 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.34 2004/07/13 00:26:22 pmai Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -137,7 +137,7 @@ F(sigpause)
 #if !defined(ibmrt) && !defined(hpux) && !defined(SVR4) && !defined(i386)
 F(sigreturn)
 #endif
-#if !defined(SVR4) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
+#if !defined(SVR4) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(DARWIN)
 F(sigsetmask)
 F(sigstack)
 F(sigvec)
@@ -170,7 +170,8 @@ F(times)
 F(truncate)
 F(umask)
 #if !defined(SUNOS) && !defined(parisc) && !defined(SOLARIS) \
-  && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
+  && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) \
+  && !defined(DARWIN)
 F(umount)
 #endif
 F(unlink)
@@ -180,7 +181,7 @@ F(utimes)
 #ifndef irix
 F(vfork)
 #endif
-#if !defined(osf1) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
+#if !defined(osf1) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(DARWIN)
 F(vhangup)
 #endif
 F(wait)

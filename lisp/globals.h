@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.7 2004/05/18 22:27:56 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.8 2004/07/13 00:26:22 pmai Exp $ */
 
 #if !defined(_INCLUDE_GLOBALS_H_)
 #define _INCLUDED_GLOBALS_H_
@@ -37,6 +37,13 @@ extern void globals_init(void);
 
 /* These are needed by ./assem.s */
 
+#ifdef ppc
+#ifdef DARWIN
+#define EXTERN(name,bytes) .globl _/**/name
+#else
+#define EXTERN(name,bytes) .globl _/**/name
+#endif
+#endif
 #ifdef mips
 #define EXTERN(name,bytes) .extern name bytes
 #endif
