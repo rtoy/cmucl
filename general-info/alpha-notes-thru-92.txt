@@ -1,3 +1,42 @@
+7/24/92 to 7/31/92
+
+[SunOS SPARC only]
+
+Code:
+
+Fixed OUTPUT-SYMBOL to no longer call CHECK-FOR-CIRCULARITY now that
+OUTPUT-OBJECT does it for us.  This was causing gensyms to print as #1=#1#
+when *PRINT-CIRCLE* was T.
+
+In FORCE-PRETTY-OUTPUT, EXPAND-TABS before outputing the output buffer.
+
+Fixed RUN-PROGRAM to know that UNIX-FORK returns NIL, not -1, when it
+fails.
+
+Hacked over unix-select to actually work with nfds>32 and to be more
+effecient in that case.
+
+Fixed UNIX-FORK to actually return the error code when it fails.
+
+
+Compiler:
+
+Flushed old assembler.
+
+Changed NATIVE-COMPILE-COMPONENT to output the disassembly to the trace
+file, and added DISASSEM:DISASSEMBLE-BLOCKS, which actually does it.
+
+Moved the (compiler-mumble "~&") from native-compile-component to compile-
+component, so it happens when byte compiling also.
+
+Added stream argument to two write-char's in DISASSEM's
+PRINT-CURRENT-ADDRESS where it was left out.
+
+Several changes to the new assembler in preperation to running the
+instruction scheduler and supporting the disassembler.
+
+
+
 7/7/92 to 7/24/92
 
 [SunOS SPARC only.]
