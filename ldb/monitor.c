@@ -370,7 +370,7 @@ struct sigcontext *context;
 		printf("%s:\t", lisp_register_names[i]);
 		brief_print((lispobj) context->sc_regs[i]);
 	}
-	printf("PC:\t\t0x%08x\n", context->sc_pc);
+	printf("PC:\t\t  0x%08x\n", context->sc_pc);
 }
 
 static void print_context_cmd(ptr)
