@@ -819,14 +819,18 @@
       `(progn
 	 (defparameter ,symbol
 	   (make-alien ',c-type ,c-size
-		       (%primitive c::foreign-symbol-address ,name)))
+		       (truly-the system-area-pointer
+				  (%primitive c::foreign-symbol-address
+					      ,name))))
 	 (eval-when ,*alien-eval-when*
 	   (setf (info variable alien-value ',symbol)
 		 (lisp::make-ct-a-val
 		  :type ',c-type
 		  :size ,c-size
 		  :offset 0
-		  :sap '(%primitive c::foreign-symbol-address ,name)
+		  :sap '(truly-the system-area-pointer
+				   (%primitive c::foreign-symbol-address
+					       ,name))
 		  :alien ',symbol)))))))
 
 #|
