@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.23 1990/10/25 20:48:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.24 1990/11/03 03:13:41 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -15,14 +15,9 @@
 
 (proclaim '(special compiler-version))
 
-(in-package "VM")
-(export '(target-fasl-file-implementation
-	  target-fasl-file-version
-	  fasl-file-implementations
+(export '(fasl-file-implementations
 	  pmax-fasl-file-implementation
 	  sparc-fasl-file-implementation))
-
-(in-package "C")
 
 
 ;;;; Different Implementations:
@@ -33,10 +28,6 @@
 (defconstant fasl-file-implementations '(nil "Pmax" "Sparc"))
 (defconstant pmax-fasl-file-implementation 1)
 (defconstant sparc-fasl-file-implementation 2)
-
-(proclaim '(special vm:target-fasl-file-implementation))
-(proclaim '(special vm:target-fasl-file-version))
-
 
 
 ;;;; Fasl dumper state:
@@ -53,7 +44,7 @@
 		       (namestring (fasl-file-stream s))))))
   ;;
   ;; The stream we dump to.
-  (stream nil :type stream)
+  (stream (required-argument) :type stream)
   ;;
   ;; Hashtables we use to keep track of dumped constants so that we can get
   ;; them from the table rather than dumping them again.  The EQUAL-TABLE is
@@ -102,13 +93,13 @@
 (defstruct circularity
   ;;
   ;; Kind of modification to make to create circularity.
-  (type nil :type (member :rplaca :rplacd :svset :struct-set))
+  (type (required-argument) :type (member :rplaca :rplacd :svset :struct-set))
   ;;
   ;; Object containing circularity.
   object
   ;;
   ;; Index in object for circularity.
-  (index nil :type unsigned-byte)
+  (index (required-argument) :type unsigned-byte)
   ;;
   ;; The object to be stored at Index in Object.  This is that the key that we
   ;; were using when we discovered the circularity.
@@ -306,7 +297,9 @@
 	    where
 	    (ext:format-universal-time nil (get-universal-time))
 	    (machine-instance) compiler-version
-	    (lisp-implementation-version) vm-version target-fasl-file-version)
+	    (lisp-implementation-version)
+	    (backend-version *backend*)
+	    (backend-fasl-file-version *backend*))
     ;;
     ;; Terminate header.
     (dump-byte 255 res)
@@ -1029,11 +1022,12 @@
     (dump-fop 'lisp::fop-int-vector file)
     (quick-dump-number len 4 file)
     (dump-byte size file)
-    (cond ((or (eq target-byte-order native-byte-order)
+    (cond ((or (eq (backend-byte-order *backend*)
+		   (backend-byte-order *native-backend*))
 	       (= size 8))
 	   (system:output-raw-bytes (fasl-file-stream file) vec 0 bytes))
 	  ((> size 8)
-	   (ecase target-byte-order
+	   (ecase (backend-byte-order *backend*)
 	     (:little-endian
 	      (dotimes (i len)
 		(let ((int (aref vec i)))
@@ -1056,7 +1050,7 @@
 			       (dump-byte byte file)
 			       (setq shift ,initial  byte 0)))
 			   (unless (= shift ,initial) (dump-byte byte file)))))
-	   (ecase target-byte-order
+	   (ecase (backend-byte-order *backend*)
 	     (:little-endian
 	      (frob 0 incf (= shift 8)))
 	     (:big-endian

@@ -50,7 +50,7 @@
   (dolist (var (lambda-vars fun))
     (when (leaf-refs var)
       (let* ((type (if (lambda-var-indirect var)
-		       *any-primitive-type*
+		       (backend-any-primitive-type *backend*)
 		       (primitive-type (leaf-type var))))
 	     (temp (make-normal-tn type))
 	     (node (lambda-bind fun))
@@ -77,9 +77,9 @@
 	(let ((ptype (etypecase thing
 		       (lambda-var
 			(if (lambda-var-indirect thing)
-			    *any-primitive-type*
+			    (backend-any-primitive-type *backend*)
 			    (primitive-type (leaf-type thing))))
-		       (nlx-info *any-primitive-type*))))
+		       (nlx-info (backend-any-primitive-type *backend*)))))
 	  (env (cons thing (make-normal-tn ptype)))))
 
       (let ((res (make-ir2-environment
@@ -233,6 +233,6 @@
 	    (make-ir2-nlx-info
 	     :home (when (member (cleanup-kind (nlx-info-cleanup nlx))
 				 '(:block :tagbody))
-		     (make-normal-tn *any-primitive-type*))
+		     (make-normal-tn (backend-any-primitive-type *backend*)))
 	     :save-sp (make-nlx-sp-tn env)))))
   (undefined-value))
