@@ -61,6 +61,16 @@
     (format out "  ~a,~%" (aref *request-table* index)))
   (format out "  NULL~%};~%"))
 
+(defun build-string-table (out)
+  (declare (stream out))
+  (let ((table xti::*toolkit-string-table*))
+    (declare (simple-vector table))
+    (write-line "String string_table[] = {" out)
+    (dotimes (index (length table))
+      (format out "  \"~a\",~%" (svref table index)))
+    (format out "  NULL~%};~%~%")
+    (format out "#define STRING_TABLE_SIZE ~a~%" (length table))))
+
 (defun build-toolkit-interface ()
   (with-open-file (out *class-file*
 		       :direction :output :if-exists :supersede
@@ -73,17 +83,8 @@
   (with-open-file (out *interface-file*
 		       :direction :output :if-exists :supersede
 		       :if-does-not-exist :create)
-    (build-interface-file out)))
-
-(defun build-string-table ()
+    (build-interface-file out))
   (with-open-file (out *string-table-file*
 		       :direction :output :if-exists :supersede
 		       :if-does-not-exist :create)
-    (declare (stream out))
-    (let ((table xti::*toolkit-string-table*))
-      (declare (simple-vector table))
-      (write-line "String string_table[] = {" out)
-      (dotimes (index (length table))
-	(format out "  \"~a\",~%" (svref table index)))
-      (format out "  NULL~%};~%~%")
-      (format out "#define STRING_TABLE_SIZE ~a~%" (length table)))))
+    (build-string-table out)))
