@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.55 2000/07/11 04:19:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.56 2000/08/06 19:12:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -420,10 +420,10 @@
 				parent-types)))))
 	 (cond-layout (info type compiler-layout 'condition))
 	 (olayout (info type compiler-layout name))
-	 (new-inherits 
-	  (concatenate 'simple-vector
-		       (layout-inherits cond-layout)
-		       (mapcar #'class-layout cpl))))
+	 (new-inherits
+	  (order-layout-inherits (concatenate 'simple-vector
+					      (layout-inherits cond-layout)
+					      (mapcar #'class-layout cpl)))))
     (if (and olayout
 	     (not (mismatch (layout-inherits olayout) new-inherits)))
 	olayout

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.17 2000/08/06 19:11:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.18 2000/08/06 19:12:33 dtc Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -563,8 +563,9 @@
   (let ((lclass (kernel:layout-class layout)))
     (unless (eq (kernel:class-layout lclass) layout)
       (setf (kernel:layout-inherits layout)
-	    (map 'vector #'class-wrapper
-		 (reverse (rest (class-precedence-list class)))))
+	    (kernel:order-layout-inherits
+	     (map 'simple-vector #'class-wrapper
+		  (reverse (rest (class-precedence-list class))))))
       (kernel:register-layout layout :invalidate nil)
 
       ;; Subclasses of formerly forward-referenced-class may be unknown
