@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.62 2003/05/28 10:41:47 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.63 2003/05/30 09:14:34 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1139,7 +1139,6 @@ work during bootstrapping.
        (val method-function key)
   (setf (getf (method-function-plist method-function) key) val))
 
-
 (defun method-function-pv-table (method-function)
   (method-function-get method-function :pv-table))
 
@@ -1149,6 +1148,16 @@ work during bootstrapping.
 (defun method-function-needs-next-methods-p (method-function)
   (method-function-get method-function :needs-next-methods-p t))
 
+;;;
+;;; Return a method function name of METHOD.  If FAST-FUNCTION
+;;; is true, return the fast method function name, otherwise
+;;; return the slow method function name.
+;;;
+(defun method-function-name (method &optional (fast-function t))
+  (let ((fn (slot-value method
+			(if fast-function 'fast-function 'function))))
+    (assert (functionp fn))
+    (method-function-get fn :name)))
 
 
 (defun load-defmethod (class name quals specls ll initargs

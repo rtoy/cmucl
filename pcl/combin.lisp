@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.17 2003/05/28 10:41:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.18 2003/05/30 09:14:34 gerd Exp $")
 
 (in-package "PCL")
 
@@ -467,17 +467,6 @@
 		,body))))))
 
 ;;;
-;;; Return a method function name of METHOD.  If FAST-FUNCTION
-;;; is true, return the fast method function name, otherwise
-;;; return the slow method function name.
-;;;
-(defun method-function-name (method &optional (fast-function t))
-  (let ((name (nth-value 2 (parse-method-or-spec method))))
-    (if fast-function
-	(cons 'fast-method (cdr name))
-	name)))
-
-;;;
 ;;; Return a form for calling METHOD's fast function.  METATYPES is a
 ;;; list of metatypes, whose length is used to figure out the names of
 ;;; required emf parameters.  APPLY? true means the method has a &rest
@@ -500,11 +489,11 @@
 ;;; variable containing a list of FAST-METHOD-CALL structures
 ;;; corresponding to the method function calls.
 ;;;
-(defun make-direct-calls (methods metatypes apply? list-var)
+(defun make-direct-calls (methods metatypes rest? list-var)
   (collect ((calls))
     (dolist (method methods)
       (calls `(let ((.call. (pop .list.)))
-		,(make-direct-call method metatypes apply? '.call.))))
+		,(make-direct-call method metatypes rest? '.call.))))
     `(let ((.list. ,list-var))
        (declare (ignorable .list.))
        ,@(calls))))
