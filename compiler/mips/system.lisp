@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.38 1990/12/06 22:27:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.39 1990/12/18 20:49:24 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -166,19 +166,6 @@
       (zero))
     (storew t1 x 0 vm:other-pointer-type)
     (move res x)))
-
-
-(define-vop (structurify)
-  (:policy :fast-safe)
-  (:translate structurify)
-  (:args (vec :scs (descriptor-reg) :target struct))
-  (:results (struct :scs (descriptor-reg)))
-  (:temporary (:scs (any-reg)) temp)
-  (:generator 2
-    (inst li temp vm:structure-header-type)
-    (storew temp vec 0 vm:other-pointer-type)
-    (move struct vec)))
-
 
 (define-vop (c::make-fixnum)
   (:args (ptr :scs (any-reg descriptor-reg)))
