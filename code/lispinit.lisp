@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.35 1993/05/22 14:01:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.36 1993/05/25 18:39:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,18 +16,18 @@
 ;;; 
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
-(in-package "LISP" :use '("SYSTEM" "DEBUG"))
+(in-package :lisp)
 
 (export '(most-positive-fixnum most-negative-fixnum sleep
 	  ++ +++ ** *** // ///))
 
-(in-package "SYSTEM" :nicknames '("SYS"))
+(in-package :system)
 (export '(compiler-version scrub-control-stack))
 
-(in-package "EXTENSIONS")
+(in-package :extensions)
 (export '(quit *prompt*))
 
-(in-package "LISP")
+(in-package :lisp)
 
 ;;; Make the error system enable interrupts.
 
@@ -91,6 +91,7 @@
 
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
+  (%primitive print "In initial-function, and running.")
   #-gengc (setf *already-maybe-gcing* t)
   #-gengc (setf *gc-inhibit* t)
   #-gengc (setf *need-to-collect-garbage* nil)
@@ -100,7 +101,6 @@
   #-gengc (setf unix::*interrupts-enabled* t)
   #-gengc (setf unix::*interrupt-pending* nil)
   (setf *type-system-initialized* nil)
-  (%primitive print "In initial-function, and running.")
 
   ;; Many top-level forms call INFO, (SETF INFO).
   (print-and-call c::globaldb-init)
@@ -125,9 +125,12 @@
 	    (setf (svref *load-time-values* (third fun)) 
 		  (funcall (second fun))))
 	   (:load-time-value-fixup
+	    #-gengc
 	    (setf (sap-ref-32 (second fun) 0)
 		  (get-lisp-obj-address
-		   (svref *load-time-values* (third fun)))))
+		   (svref *load-time-values* (third fun))))
+	    #+gengc
+	    (do-load-time-value-fixup (second fun) (third fun) (fourth fun)))
 	   (t
 	    (%primitive print
 			"Bogus fixup in *lisp-initialization-functions*")
@@ -182,6 +185,28 @@
      (%top-level)
      (write-line "You're certainly a clever child.")))
   (unix:unix-exit 0))
+
+#+gengc
+(defun do-load-time-value-fixup (object offset value)
+  (declare (type index offset))
+  (macrolet ((lose (msg)
+	       `(progn
+		  (%primitive print ,msg)
+		  (%halt))))
+    (typecase object
+      (list
+       (case offset
+	 (0 (setf (car object) value))
+	 (1 (setf (cdr object) value))
+	 (t (lose "Bogus offset in cons cell."))))
+      (instance
+       (setf (%instance-ref object (- offset vm:instance-slots-offset)) value))
+      (code-component
+       (setf (code-header-ref object offset) value))
+      (simple-vector
+       (setf (svref object (- offset vm:vector-data-offset)) value))
+      (t
+       (lose "Unknown kind of object for load-time-value fixup.")))))
 
 
 ;;;; Initialization functions:
