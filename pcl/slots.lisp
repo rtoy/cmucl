@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.18 2003/03/26 17:15:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.19 2003/04/26 14:30:39 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -237,7 +237,7 @@
        (error "~@<The slot ~s has neither ~s nor ~s allocation, ~
                so it can't be written by the default ~s method.~@:>"
 	      slotd :instance :class 'slot-makunbound-using-class))))
-  nil)
+  object)
 
 (defmethod slot-value-using-class
     ((class structure-class)
