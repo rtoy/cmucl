@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.42 1997/05/16 11:45:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.43 1997/05/16 17:03:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1172,23 +1172,25 @@
 ;;; Ensure-Directories-Exist  --  Public
 ;;;
 (defun ensure-directories-exist (pathspec &key verbose (mode #o777))
-  (let ((dir (pathname-directory pathspec))
-	(created-p nil))
-    (when (wild-pathname-p (make-pathname :host (pathname-host pathspec)
-					  :device (pathname-device pathspec)
-					  :directory (pathname-directory pathspec)))
+  (let* ((pathname (pathname pathspec))
+	 (pathname (if (logical-pathname-p pathname)
+		       (translate-logical-pathname pathname)
+		       pathname))
+	 (dir (pathname-directory pathname))
+	 (created-p nil))
+    (when (wild-pathname-p pathname)
       (error (make-condition 'file-error :pathname pathspec)))
     (loop for i from 1 upto (length dir)
-	do (let ((newpath (make-pathname :host (pathname-host pathspec)
-					 :device (pathname-device pathspec)
-					 :directory (subseq dir 0 i))))
-	     (unless (probe-file newpath)
-	       (let ((namestring (namestring newpath)))
-		 (when verbose
-		   (format *standard-output* "~&Creating directory: ~A~%"
-			   namestring))
-		 (unix:unix-mkdir namestring mode)
-		 (unless (probe-file namestring)
-		   (error (make-condition 'file-error :pathname pathspec)))
-		 (setf created-p t)))))
-    (values (truename pathspec) created-p)))
+	  do (let ((newpath (make-pathname :host (pathname-host pathname)
+					   :device (pathname-device pathname)
+					   :directory (subseq dir 0 i))))
+	       (unless (probe-file newpath)
+		 (let ((namestring (namestring newpath)))
+		   (when verbose
+		     (format *standard-output* "~&Creating directory: ~A~%"
+			     namestring))
+		   (unix:unix-mkdir namestring mode)
+		   (unless (probe-file namestring)
+		     (error (make-condition 'file-error :pathname pathspec)))
+		   (setf created-p t)))))
+    (values pathname created-p)))
