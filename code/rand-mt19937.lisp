@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.12 2003/09/25 02:40:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.13 2003/11/12 22:49:53 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,17 +51,19 @@
 ;; /dev/random, this device does not block when the entropy pool has
 ;; been depleted.
 (defun generate-seed (&optional (nwords 1))
-  (cond ((probe-file "/dev/urandom")
-	 (let ((words (make-array nwords :element-type '(unsigned-byte 32))))
-	   (with-open-file (rand "/dev/urandom"
-				 :direction :input
-				 :element-type '(unsigned-byte 32))
-	     (read-sequence words rand))
-	   (if (= nwords 1)
-	       (aref words 0)
-	       words)))
-        (t
-         (logand (get-universal-time) #xffffffff))))
+  ;; On some systems (as reported by Ole Rohne on cmucl-imp),
+  ;; /dev/urandom isn't what we think it is, so if it doesn't work,
+  ;; silently generate the seed from the current time.
+  (or (ignore-errors
+	(let ((words (make-array nwords :element-type '(unsigned-byte 32))))
+	  (with-open-file (rand "/dev/urandom"
+				:direction :input
+				:element-type '(unsigned-byte 32))
+	    (read-sequence words rand))
+	  (if (= nwords 1)
+	      (aref words 0)
+	      words)))
+      (logand (get-universal-time) #xffffffff)))
 
 ;; New initializer proposed by Takuji Nishimura and Makota Matsumoto.
 ;; (See http://www.math.keio.ac.jp/~matumoto/MT2002/emt19937ar.html)
