@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.39 2003/07/02 21:45:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.40 2003/07/09 13:50:41 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1201,7 +1201,7 @@
 	     (* (1+ (tn-offset stack-temp)) vm:word-bytes)))
       (double-stack
        (inst ld hi-bits (current-nfp-tn vop)
-	     (* (tn-offset stack-temp) vm:word-bytes))
+	     (* (tn-offset float) vm:word-bytes))
        (inst ld lo-bits (current-nfp-tn vop)
 	     (* (1+ (tn-offset float)) vm:word-bytes)))
       (descriptor-reg
