@@ -56,7 +56,6 @@
 (load "c:assem-opt")
 (load "assem:assemfile")
 (load "assem:support")
-(load "vm:insts")
 (load "vm:macros")
 (load "vm:utils")
 (load "c:aliencomp")
@@ -67,6 +66,7 @@
 (load "vm:core")
 
 (load "vm:vm")
+(load "vm:insts")
 #-rt (load "vm:primtype")
 (load "vm:move")
 (load "vm:sap")
