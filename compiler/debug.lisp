@@ -523,7 +523,12 @@
     (ref
      (let ((leaf (ref-leaf node)))
        (when (functional-p leaf)
-	 (check-function-reached leaf node))))
+	 (if (eq (functional-kind leaf) :top-level-xep)
+	     (unless (eq (component-kind (block-component (node-block node)))
+			 :top-level)
+	       (barf ":TOP-LEVEL-XEP ref in non-top-level component: ~S."
+		     node))
+	     (check-function-reached leaf node)))))
     (basic-combination
      (check-dest (basic-combination-fun node) node)
      (dolist (arg (basic-combination-args node))
