@@ -78,7 +78,7 @@
     (do* ((name (read-line file nil nil) (read-line file nil nil))
 	  (length (if name (length name)) (if name (length name))))
 	 ((null name) tail)
-      (declare (simple-string name))
+      (declare (type (or simple-string null) name))
       (cond ((zerop length))
 	    ((char= (char name 0) #\@)
 	     (when (and (> length 1) (char= (char name 1) #\@))
