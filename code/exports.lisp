@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.15 1990/04/27 19:38:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.16 1990/04/29 02:53:26 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -295,9 +295,9 @@
 	  two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->= two-arg-and
 	  two-arg-ior two-arg-xor type-difference type-intersect
 	  type-intersection type-specifier type-specifier-symbols
-	  type-union type/= type= types-intersect union-type union-type-p
-	  union-type-types unknown-type unknown-type-p values-subtypep
-	  values-type values-type-allowp values-type-intersect
+	  type-union type/= type= types-intersect unboxed-array union-type
+	  union-type-p union-type-types unknown-type unknown-type-p
+	  values-subtypep values-type values-type-allowp values-type-intersect
 	  values-type-intersection values-type-keyp values-type-keywords
 	  values-type-optional values-type-p values-type-required
 	  values-type-rest values-type-union values-types
