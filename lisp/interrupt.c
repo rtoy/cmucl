@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.2 1992/09/08 20:25:46 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.3 1994/03/27 15:32:03 hallgren Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -47,6 +47,12 @@ void fake_foreign_function_call(struct sigcontext *context)
     /* Get current LISP state from context */
 #ifdef reg_ALLOC
     current_dynamic_space_free_pointer = (lispobj *)SC_REG(context, reg_ALLOC);
+#ifdef alpha
+    if((long) current_dynamic_space_free_pointer & 1) {
+      printf("Dead in fake_foriegn_function-call, context = %x\n",context);
+      lose("");
+    }
+#endif
 #endif
 #ifdef reg_BSP
     current_binding_stack_pointer = (lispobj *)SC_REG(context, reg_BSP);

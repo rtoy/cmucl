@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.1 1992/07/28 20:14:40 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.2 1994/03/27 15:27:35 hallgren Exp $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_
@@ -18,7 +18,13 @@
 #define SYMBOL(obj) ((struct symbol *)((obj)-type_OtherPointer))
 #define FDEFN(obj) ((struct fdefn *)((obj)-type_OtherPointer))
 
+#ifndef alpha
 typedef unsigned long lispobj;
+#else
+typedef unsigned int u32;
+typedef signed int s32;
+typedef u32 lispobj;
+#endif
 
 #define make_fixnum(n) ((lispobj)((n)<<2))
 #define fixnum_value(n) (((long)n)>>2)

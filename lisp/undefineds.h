@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.2 1993/07/27 15:11:19 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.3 1994/03/27 15:24:12 hallgren Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -71,7 +71,7 @@ open,
 pipe,
 profil,
 ptrace,
-#if !defined(SUNOS) && !defined(parisc)
+#if !defined(SUNOS) && !defined(parisc) && !defined(osf1)
 quota,
 #endif
 read,
@@ -96,7 +96,7 @@ sethostname,
 setitimer,
 setpgrp,
 setpriority,
-#if !defined(SUNOS) && !defined(parisc)
+#if !defined(SUNOS) && !defined(parisc) && !defined(osf1)
 setquota,
 #endif
 #ifndef hpux
@@ -139,7 +139,9 @@ unlink,
 utimes,
 #endif
 vfork,
+#ifndef osf1
 vhangup,
+#endif
 wait,
 wait3,
 write,
@@ -184,3 +186,4 @@ gethostbyaddr,
 /* Other random things. */
 getwd,
 ttyname
+

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/core.h,v 1.2 1993/04/28 01:58:30 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/core.h,v 1.3 1994/03/27 15:17:54 hallgren Exp $ */
 
 #ifndef _CORE_H_
 #define _CORE_H_
@@ -19,11 +19,19 @@
 #define READ_ONLY_SPACE_ID (3)
 
 struct ndir_entry {
+#ifndef alpha
 	long identifier;
 	long nwords;
 	long data_page;
 	long address;
 	long page_count;
+#else
+	u32 identifier;
+	u32 nwords;
+	u32 data_page;
+	u32 address;
+	u32 page_count;
+#endif
 };
 
 extern lispobj load_core_file(char *file);

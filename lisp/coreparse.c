@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.2 1993/04/28 01:58:31 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.3 1994/03/27 15:26:25 hallgren Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -40,7 +40,7 @@ static void process_directory(int fd, long *ptr, int count)
 		addr);
 	}
 
-#if 0
+#ifdef 0
 	printf("Space ID = %d, free pointer = 0x%08x.\n", id, free_pointer);
 #endif
 
@@ -73,7 +73,11 @@ static void process_directory(int fd, long *ptr, int count)
 lispobj load_core_file(char *file)
 {
     int fd = open(file, O_RDONLY), count;
+#ifndef alpha
     long header[CORE_PAGESIZE / sizeof(long)], val, len, *ptr;
+#else
+    u32 header[CORE_PAGESIZE / sizeof(u32)], val, len, *ptr;
+#endif
     lispobj initial_function = NIL;
 
     if (fd < 0) {
@@ -121,7 +125,11 @@ lispobj load_core_file(char *file)
 
 	  case CORE_NDIRECTORY:
 	    process_directory(fd, ptr,
+#ifndef alpha
 		  (len-2) / (sizeof(struct ndir_entry) / sizeof(long)));
+#else
+		  (len-2) / (sizeof(struct ndir_entry) / sizeof(u32)));
+#endif
 	    break;
 
 	  case CORE_INITIAL_FUNCTION:

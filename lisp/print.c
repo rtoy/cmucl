@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.2 1993/02/26 09:02:05 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.3 1994/03/27 15:18:07 hallgren Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -124,12 +124,20 @@ static void newline(char *label)
 
 static void brief_fixnum(lispobj obj)
 {
+#ifndef alpha
     printf("%d", ((long)obj)>>2);
+#else
+    printf("%d", ((s32)obj)>>2);
+#endif
 }
 
 static void print_fixnum(lispobj obj)
 {
+#ifndef alpha
     printf(": %d", ((long)obj)>>2);
+#else
+    printf(": %d", ((s32)obj)>>2);
+#endif
 }
 
 static void brief_otherimm(lispobj obj)
@@ -348,9 +356,15 @@ static void print_otherptr(lispobj obj)
     if (!valid_addr(obj))
 	    printf("(invalid address)");
     else {
+#ifndef alpha
         unsigned long *ptr; 
         unsigned long header;
         unsigned long length;
+#else
+        u32 *ptr; 
+        u32 header;
+        u32 length;
+#endif
         int count, type, index;
         char *cptr, buffer[16];
 
@@ -458,7 +472,11 @@ static void print_otherptr(lispobj obj)
 
             case type_Sap:
                 NEWLINE;
+#ifndef alpha
                 printf("0x%08x", *ptr);
+#else
+                printf("0x%016lx", *(long*)(ptr+1));
+#endif
                 break;
 
             case type_WeakPointer:

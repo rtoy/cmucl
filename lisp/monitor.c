@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.3 1993/04/28 01:59:00 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.4 1994/03/27 15:21:16 hallgren Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -101,9 +101,17 @@ static void dump_cmd(char **ptr)
     }
 
     while (count-- > 0) {
-        printf("0x%08X: ", (unsigned long)addr);
+#ifndef alpha
+        printf("0x%08X: ", (unsigned long) addr);
+#else
+        printf("0x%08X: ", (u32) addr);
+#endif
         if (valid_addr((os_vm_address_t)addr)) {
+#ifndef alpha
             unsigned long *lptr = (unsigned long *)addr;
+#else
+            u32 *lptr = (unsigned long *)addr;
+#endif
             unsigned short *sptr = (unsigned short *)addr;
             unsigned char *cptr = (unsigned char *)addr;
 

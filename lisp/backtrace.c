@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.2 1993/01/10 17:22:33 wlott Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.3 1994/03/27 15:19:14 hallgren Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -17,16 +17,28 @@
    better not change. */
 
 struct call_frame {
+#ifndef alpha
 	struct call_frame *old_cont;
+#else
+        u32 old_cont;
+#endif
 	lispobj saved_lra;
         lispobj code;
 	lispobj other_state[5];
 };
 
 struct call_info {
+#ifndef alpha
     struct call_frame *frame;
+#else
+    u32 frame;
+#endif
     int interrupted;
+#ifndef alpha
     struct code *code;
+#else
+    u32 code;
+#endif
     lispobj lra;
     int pc; /* Note: this is the trace file offset, not the actual pc. */
 };
@@ -104,7 +116,11 @@ info_from_sigcontext(struct call_info *info, struct sigcontext *csp)
     }
     if (info->code != NULL)
         info->pc = pc - (unsigned long) info->code -
+#ifndef alpha
             (HEADER_LENGTH(info->code->header) * sizeof(lispobj));
+#else
+            (HEADER_LENGTH(((struct code *)info->code)->header) * sizeof(lispobj));
+#endif
     else
         info->pc = 0;
 }
@@ -145,7 +161,11 @@ previous_info(struct call_info *info)
         if (info->code != NULL)
             info->pc = (unsigned long)PTR(info->lra) -
                 (unsigned long)info->code -
+#ifndef alpha
                 (HEADER_LENGTH(info->code->header) * sizeof(lispobj));
+#else
+                (HEADER_LENGTH(((struct code *)info->code)->header) * sizeof(lispobj));
+#endif
         else
             info->pc = 0;
     }
@@ -169,7 +189,11 @@ backtrace(int nframes)
 
             printf("CODE: 0x%08X, ", (unsigned long) info.code | type_OtherPointer);
 
+#ifndef alpha
             function = info.code->entry_points;
+#else
+            function = ((struct code *)info.code)->entry_points;
+#endif
             while (function != NIL) {
                 struct function *header;
                 lispobj name;

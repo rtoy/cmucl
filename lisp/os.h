@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.2 1993/07/27 15:40:17 hallgren Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.3 1994/03/27 15:22:39 hallgren Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -19,6 +19,10 @@
 #else
 #ifdef hpux
 #include "hpux-os.h"
+#else
+#ifdef osf1
+#include "osf1-os.h"
+#endif
 #endif
 #endif
 #endif

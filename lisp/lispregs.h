@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lispregs.h,v 1.1 1992/07/28 20:14:41 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lispregs.h,v 1.2 1994/03/27 15:20:39 hallgren Exp $ */
 
 #ifdef mips
 #include "mips-lispregs.h"
@@ -18,6 +18,10 @@
 
 #ifdef parisc
 #include "hppa-lispregs.h"
+#endif
+
+#ifdef alpha
+#include "alpha-lispregs.h"
 #endif
 
 #ifndef LANGUAGE_ASSEMBLY

@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.6 1993/07/27 15:00:59 hallgren Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.7 1994/03/27 15:17:01 hallgren Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -143,20 +143,31 @@ static double tv_diff(struct timeval *x, struct timeval *y)
 
 static void zero_stack(void)
 {
+#ifndef alpha
     unsigned long *ptr = (unsigned long *)current_control_stack_pointer;
-
+#else
+    u32 *ptr = (u32 *)current_control_stack_pointer;
+#endif
   search:
     do {
 	if (*ptr)
 	    goto fill;
 	ptr++;
+#ifndef alpha
     } while (((unsigned long)ptr) & (BYTES_ZERO_BEFORE_END-1));
+#else
+    } while (((u32)ptr) & (BYTES_ZERO_BEFORE_END-1));
+#endif
     return;
 
   fill:
     do {
 	*ptr++ = 0;
+#ifndef alpha
     } while (((unsigned long)ptr) & (BYTES_ZERO_BEFORE_END-1));
+#else
+    } while (((u32)ptr) & (BYTES_ZERO_BEFORE_END-1));
+#endif
     goto search;
 }
 
