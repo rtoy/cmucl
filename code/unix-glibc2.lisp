@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.15 2001/03/04 20:12:44 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.16 2002/08/24 01:59:38 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3291,12 +3291,20 @@ in at a time in poll.")
     (declare (fixnum len) (simple-string pending))
     (if (zerop len)
 	pathname
-	(let ((result (make-string 1024 :initial-element (code-char 0)))
+	(let ((result (make-string 100 :initial-element (code-char 0)))
 	      (fill-ptr 0)
 	      (name-start 0))
 	  (loop
 	    (let* ((name-end (or (position #\/ pending :start name-start) len))
 		   (new-fill-ptr (+ fill-ptr (- name-end name-start))))
+	      ;; grow the result string, if necessary.  the ">=" (instead of
+	      ;; using ">") allows for the trailing "/" if we find this
+	      ;; component is a directory.
+	      (when (>= new-fill-ptr (length result))
+		(let ((longer (make-string (* 3 (length result))
+					   :initial-element (code-char 0))))
+		  (replace longer result :end1 fill-ptr)
+		  (setq result longer)))
 	      (replace result pending
 		       :start1 fill-ptr
 		       :end1 new-fill-ptr
