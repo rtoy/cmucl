@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.18 1993/02/26 08:59:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.19 1993/02/26 16:36:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,10 +46,10 @@
 	  "target:assembly/x86/arith.assem"
 	  "target:assembly/x86/alloc.assem"))
 
+    "target:code/type-boot"
     "target:code/fdefinition"
     "target:code/eval"
 
-    "target:code/type-boot"
     "target:code/struct"
     "target:code/error"
     "target:code/typedefs"
@@ -131,13 +131,11 @@
       #+(and mach sparc) "/usr/tmp/kernel.core"
       #-(and mach sparc) "target:lisp/kernel.core")
 (setf *genesis-c-header-name* "target:lisp/internals.h")
-(setf *genesis-map-name* nil)
 (setf *genesis-symbol-table* "target:lisp/lisp.nm")
 
 (when (boundp '*target-page-size*)
-  (locally
-   (declare (optimize (inhibit-warnings 3)))
-   (setf *target-page-size*
-	 (c:backend-page-size c:*backend*))))
+  (locally (declare (optimize (inhibit-warnings 3)))
+    (setf *target-page-size*
+	  (c:backend-page-size c:*backend*))))
 
 (genesis lisp-files)
