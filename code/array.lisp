@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.36 2003/07/15 19:12:27 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.37 2003/07/23 09:39:25 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -155,7 +155,8 @@
 (defun make-array (dimensions &key
 			      (element-type t)
 			      (initial-element nil initial-element-p)
-			      initial-contents adjustable fill-pointer
+			      (initial-contents nil initial-contents-p)
+                              adjustable fill-pointer
 			      displaced-to displaced-index-offset)
   "Creates an array of the specified Dimensions.  See manual for details."
   (let* ((dimensions (if (listp dimensions) dimensions (list dimensions)))
@@ -184,8 +185,8 @@
 	    (declare (type index length))
 	    (when initial-element-p
 	      (fill array initial-element))
-	    (when initial-contents
-	      (when initial-element
+	    (when initial-contents-p
+	      (when initial-element-p
 		(error "Cannot specify both :initial-element and ~
 		:initial-contents"))
 	      (unless (= length (length initial-contents))
@@ -200,7 +201,8 @@
 	       (data (or displaced-to
 			 (data-vector-from-inits
 			  dimensions total-size element-type
-			  initial-contents initial-element initial-element-p)))
+			  initial-contents initial-contents-p
+                          initial-element initial-element-p)))
 	       (array (make-array-header
 		       (cond ((= array-rank 1)
 			      (%complex-vector-type-code element-type))
@@ -229,7 +231,7 @@
 	  (setf (%array-available-elements array) total-size)
 	  (setf (%array-data-vector array) data)
 	  (cond (displaced-to
-		 (when (or initial-element-p initial-contents)
+		 (when (or initial-element-p initial-contents-p)
 		   (error "Neither :initial-element nor :initial-contents ~
 		   can be specified along with :displaced-to"))
 		 (unless (subtypep element-type
@@ -256,9 +258,9 @@
 ;;; for error checking on the structure of initial-contents.
 ;;;
 (defun data-vector-from-inits (dimensions total-size element-type
-			       initial-contents initial-element
-			       initial-element-p)
-  (when (and initial-contents initial-element-p)
+			       initial-contents initial-contents-p
+			       initial-element initial-element-p)
+  (when (and initial-contents-p initial-element-p)
     (error "Cannot supply both :initial-contents and :initial-element to
             either make-array or adjust-array."))
   (let ((data (if initial-element-p
@@ -273,7 +275,7 @@
 	       (error "~S cannot be used to initialize an array of type ~S."
 		      initial-element element-type))
 	     (fill (the vector data) initial-element)))
-	  (initial-contents
+	  (initial-contents-p
 	   (fill-data-vector data dimensions initial-contents)))
     data))
 
@@ -680,7 +682,8 @@
 (defun adjust-array (array dimensions &key
 			   (element-type (array-element-type array))
 			   (initial-element nil initial-element-p)
-			   initial-contents fill-pointer
+			   (initial-contents nil initial-contents-p)
+                           fill-pointer
 			   displaced-to displaced-index-offset)
   "Adjusts the Array's dimensions to the given Dimensions and stuff."
   (let ((dimensions (if (listp dimensions) dimensions (list dimensions))))
@@ -694,7 +697,7 @@
       (declare (fixnum array-rank))
       (when (and fill-pointer (> array-rank 1))
 	(simple-program-error "Multidimensional arrays can't have fill pointers."))
-      (cond (initial-contents
+      (cond (initial-contents-p
 	     ;; Array former contents replaced by initial-contents.
 	     (if (or initial-element-p displaced-to)
 		 (simple-program-error "Initial contents may not be specified with ~
@@ -702,8 +705,8 @@
 	     (let* ((array-size (apply #'* dimensions))
 		    (array-data (data-vector-from-inits
 				 dimensions array-size element-type
-				 initial-contents initial-element
-				 initial-element-p)))
+				 initial-contents initial-contents-p
+                                 initial-element initial-element-p)))
 	       (if (adjustable-array-p array)
 		   (set-array-header array array-data array-size
 				 (get-new-fill-pointer array array-size
@@ -762,8 +765,8 @@
 		    (setf new-data
 			  (data-vector-from-inits
 			   dimensions new-length element-type
-			   initial-contents initial-element
-			   initial-element-p))
+			   initial-contents initial-contents-p
+			   initial-element initial-element-p))
 		    (replace new-data old-data
 			     :start2 old-start :end2 old-end)))
 		 (if (adjustable-array-p array)
@@ -783,8 +786,8 @@
 					 (> new-length old-length))
 				     (data-vector-from-inits
 				      dimensions new-length
-				      element-type () initial-element
-				      initial-element-p)
+				      element-type () nil
+                                      initial-element initial-element-p)
 				     old-data)))
 		   (if (or (zerop old-length) (zerop new-length))
 		       (when initial-element-p (fill new-data initial-element))
