@@ -50,6 +50,8 @@
 ;;; the primitive types of the operands, and the primitive type of a value
 ;;; is used to constrain the possible representations of that value.
 ;;;
+(eval-when (compile load eval)
+;;;
 (defstruct (primitive-type (:print-function %print-primitive-type))
   ;;
   ;; The name of this primitive-type.
@@ -71,9 +73,12 @@
 
 (defprinter primitive-type
   name
-  (type :test (not (eq (type-specifier type)
-		       (primitive-type-name structure)))
+  (type :test (and type
+		   (not (eq (type-specifier type)
+			    (primitive-type-name structure))))
 	:prin1 (type-specifier type)))
+
+); eval-when (compile load eval)
 
 
 ;;;; IR1 annotations used for IR2 conversion:
