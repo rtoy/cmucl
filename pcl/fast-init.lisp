@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.6 2001/01/27 15:07:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.7 2002/04/13 22:40:07 pmai Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 
@@ -490,7 +490,7 @@
 				      initialize-instance-methods)))))
       #'(lambda (class1 initargs)
 	  (if (not (eq wrapper (class-wrapper class)))
-	      (let* ((info (initialize-info class1 initargs))
+	      (let* ((info (initialize-info (coerce-to-class class1) initargs))
 		     (fn (initialize-info-make-instance-function info)))
 		(declare (type function fn))
 		(funcall fn class1 initargs))
@@ -533,7 +533,7 @@
 	     (list wrapper *the-wrapper-of-t*))))
       #'(lambda (class1 initargs)
 	  (if (not (eq wrapper (class-wrapper class)))
-	      (let* ((info (initialize-info class1 initargs))
+	      (let* ((info (initialize-info (coerce-to-class class1) initargs))
 		     (fn (initialize-info-make-instance-function info)))
 		(declare (type function fn))
 		(funcall fn class1 initargs))
