@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.12 1991/02/20 15:14:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.13 1991/05/23 15:36:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.12 1991/02/20 15:14:35 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -322,7 +320,12 @@
 		    (inst and new-status status-save)
 		    (inst or new-status float-round-to-zero)
 		    (inst ctc1 new-status 31)
+
+		    ;; These instructions seem to be necessary to ensure that
+		    ;; the new modes affect the fcvt instruction.
 		    (inst nop)
+		    (inst cfc1 new-status 31)
+
 		    (note-this-location vop :internal-error)
 		    (inst fcvt :word ,from-format temp x)
 		    (inst mfc1 y temp)
