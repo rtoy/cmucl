@@ -1,0 +1,5 @@
+#!/bin/csh -f
+
+/bin/nm -Bgv $argv | sed -e 's/ (weak)//'
+
+exit 0
