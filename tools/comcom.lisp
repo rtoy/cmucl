@@ -33,7 +33,7 @@
 	     (:match "$SOURCE-TRANSFORM-" "$IR1-CONVERT-"
 		     "$PRIMITIVE-TRANSLATE-" "$PARSE-"))
 	(declare (optimize (safety 1))))
-       ((:or :macro (match "$%PRINT-"))
+       ((:or :macro (:match "$%PRINT-"))
 	(declare (optimize (speed 0))))
        (:external (declare (optimize-interface (safety 2) (debug 1))))))
 
