@@ -239,6 +239,7 @@
 (defun %floor (a b c)
   (let ((a a) (b b) (c c))
     (declare (type bignum-element-type a b c))
+    (setq a a b b c c)
     (%floor a b c)))
 
 
