@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.5 1990/06/06 20:56:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.6 1990/06/09 00:55:37 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -382,6 +382,26 @@
 
 
 #+new-compiler
+(defvar *finding-name* nil)
+
+#+new-compiler
+(defun find-interrupted-name ()
+  (if *finding-name*
+      "<error finding name>"
+      (handler-case
+	  (let ((*finding-name* t))
+	    (do ((frame (di:top-frame) (di:frame-down frame)))
+		((or (null frame)
+		     (di::frame-escaped frame))
+		 (if frame
+		     (di:debug-function-name
+		      (di:frame-debug-function frame))
+		     "<error finding name>"))))
+	(error () "<error finding name>")
+	(di:debug-condition () "<error finding name>"))))
+
+
+#+new-compiler
 (defun internal-error (signal code scp)
   (declare (ignore signal code))
   (alien-bind ((sc (make-alien 'mach:sigcontext
@@ -390,16 +410,16 @@
 		   mach:sigcontext
 		   t)
 	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
-    (let* ((pc (int-sap (+ (alien-access
-			    (mach:sigcontext-pc
-			     (alien-value sc)))
-			   (if (logbitp 31
-					(alien-access
-					 (mach:sigcontext-cause
-					  (alien-value sc))))
-			       4
-			       0))))
-	   (bad-inst (sap-ref-32 pc 0))
+    (let* ((pc (sap+ (alien-access
+		      (mach:sigcontext-pc
+		       (alien-value sc)))
+		     (if (logbitp 31
+				  (alien-access
+				   (mach:sigcontext-cause
+				    (alien-value sc))))
+			 4
+			 0)))
+	   #+nil (bad-inst (sap-ref-32 pc 0))
 	   (number (sap-ref-8 pc 4))
 	   (info (svref *internal-errors* number))
 	   (args nil))
@@ -410,7 +430,11 @@
 		(alien-access (mach:int-array-ref (alien-value regs)
 						  (sap-ref-8 ptr 0))))
 	       args)))
-      (error "~A [~D]:~{ ~S~}"
-	     (if info (error-info-description info) "Unknown error")
-	     number
-	     (nreverse args)))))
+      (error 'simple-error
+	     :format-string "~A [~D]:~{ ~S~}"
+	     :format-arguments (list (if info
+					 (error-info-description info)
+					 "Unknown error")
+				     number
+				     (nreverse args))
+	     :function-name (find-interrupted-name)))))
