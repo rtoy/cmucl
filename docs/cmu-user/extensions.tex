@@ -897,13 +897,33 @@ object may have changed.
 
 \section{The Reader}
 
+\subsection{Reader Extensions}
+\cmucl{} supports an ANSI-compatible extension to enable reading of
+specialized arrays.  Thus
+\begin{example}
+  * (setf *print-readably* nil)
+  NIL
+  * (make-array '(2 2) :element-type '(signed-byte 8))
+  #2A((0 0) (0 0))
+  * (setf *print-readably* t)
+  T
+  * (make-array '(2 2) :element-type '(signed-byte 8))
+  #A((SIGNED-BYTE 8) (2 2) ((0 0) (0 0)))
+  * (type-of (read-from-string "#A((SIGNED-BYTE 8) (2 2) ((0 0) (0 0)))"))
+  (SIMPLE-ARRAY (SIGNED-BYTE 8) (2 2))
+  * (setf *print-readably* nil)
+  NIL
+  * (type-of (read-from-string "#A((SIGNED-BYTE 8) (2 2) ((0 0) (0 0)))"))
+  (SIMPLE-ARRAY (SIGNED-BYTE 8) (2 2))
+\end{example}
+
+\subsection{Reader Parameters}
 \begin{defvar}{extensions:}{ignore-extra-close-parentheses}
   
   If this variable is \true{} (the default), then the reader merely
   prints a warning when an extra close parenthesis is detected
   (instead of signalling an error.)
 \end{defvar}
-
 
 \section{Stream Extensions}
 \begin{defun}{extensions:}{read-n-bytes}{%
