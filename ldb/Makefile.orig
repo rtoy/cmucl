@@ -1,10 +1,10 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.11 1990/05/23 19:07:59 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.12 1990/07/01 04:53:53 wlott Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	os.o vars.o assem.o parse.o interrupt.o test.o \
 	search.o validate.o gc.o globals.o dynbind.o \
-	regnames.o backtrace.o bitbash.o
+	regnames.o backtrace.o bitbash.o save.o purify.o
 
 ldb.map: ldb
 	echo -n 'Map file for ldb version ' > ldb.map
@@ -70,10 +70,13 @@ backtrace.o: globals.h
 backtrace.o: lisp.h
 backtrace.o: interrupt.h
 backtrace.o: lispregs.h
+bitbash.o: bitbash.c
 coreparse.o: coreparse.c
 coreparse.o: lisp.h
 coreparse.o: globals.h
 coreparse.o: lisp.h
+coreparse.o: core.h
+coreparse.o: ldb.h
 dynbind.o: dynbind.c
 dynbind.o: ldb.h
 dynbind.o: lisp.h
@@ -82,6 +85,8 @@ dynbind.o: lisp.h
 egets.o: egets.c
 gc.o: gc.c
 gc.o: lisp.h
+gc.o: ldb.h
+gc.o: os.h
 gc.o: ldb.h
 gc.o: gc.h
 gc.o: lisp.h
@@ -117,6 +122,11 @@ monitor.o: interrupt.h
 monitor.o: lispregs.h
 os.o: os.c
 os.o: ldb.h
+os.o: os.h
+os.o: ldb.h
+pager.o: pager.c
+pager.o: pager.h
+pagerlog.o: pagerlog.c
 parse.o: parse.c
 parse.o: ldb.h
 parse.o: lisp.h
@@ -131,8 +141,26 @@ print.o: ldb.h
 print.o: print.h
 print.o: lisp.h
 print.o: vars.h
+purify.o: purify.c
+purify.o: lisp.h
+purify.o: ldb.h
+purify.o: os.h
+purify.o: ldb.h
+purify.o: globals.h
+purify.o: lisp.h
+purify.o: validate.h
+purify.o: interrupt.h
+purify.o: gc.h
+purify.o: lisp.h
 regnames.o: regnames.c
 regnames.o: lispregs.h
+save.o: save.c
+save.o: lisp.h
+save.o: ldb.h
+save.o: core.h
+save.o: globals.h
+save.o: lisp.h
+save.o: lispregs.h
 search.o: search.c
 search.o: lisp.h
 search.o: ldb.h
@@ -141,6 +169,8 @@ test.o: lisp.h
 test.o: ldb.h
 validate.o: validate.c
 validate.o: lisp.h
+validate.o: os.h
+validate.o: ldb.h
 validate.o: globals.h
 validate.o: lisp.h
 validate.o: validate.h
