@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.1 1991/02/18 15:08:26 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.2 1991/03/31 18:45:02 wlott Exp $
 ;;;
 ;;; This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -98,5 +98,5 @@
       (error-call vop bogus-argument-to-values-list-error list)
 
       (emit-label done)
-      (move csp-tn count)
+      (move count csp-tn)
       (inst s count start))))
