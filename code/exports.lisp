@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.213 2003/06/06 16:23:45 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.214 2003/06/11 12:59:16 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,7 +243,7 @@
              "WRITEGRP" "WRITEOTH" "WRITEOWN" "WS-COL" "WS-ROW" "WS-XPIXEL"
              "WS-YPIXEL" "W_OK" "X_OK" "SIGSYS" "TCSETPGRP" "FD-ZERO"
              "SIGEMSG" "SIGQUIT" "SIGCHLD" "SIGSEGV" "FD-CLR" "SIGUSR2"
-             "EALREADY" "SIGPIPE" "EACCES" "CHECK" "SIGXCPU" "EOPNOTSUPP"
+             "EALREADY" "SIGPIPE" "EACCES" "SIGXCPU" "EOPNOTSUPP"
              "SIGFPE" "SIGHUP" "ENOTSOCK" "OPEN-DIR" "SIGMASK" "EINTR"
              "SIGCONT" "UNIX-RESOLVE-LINKS" "SIGKILL" "EMSGSIZE" "ERANGE"
              "EPROTOTYPE" "UNIX-SIGNAL-NUMBER" "EPFNOSUPPORT" "SIGILL"
@@ -1006,10 +1006,10 @@
              "PROCESS-CORE-DUMPED" "PROCESS-ERROR" "PROCESS-EXIT-CODE"
              "PROCESS-INPUT" "PROCESS-KILL" "PROCESS-OUTPUT" "PROCESS-P"
              "PROCESS-PID" "PROCESS-PLIST" "PROCESS-PTY" "PROCESS-STATUS"
-             "PROCESS-STATUS-HOOK" "PROCESS-WAIT" "PUTF" "QUIT" "RATIOP"
+             "PROCESS-STATUS-HOOK" "PROCESS-WAIT" "PUTF" "PURGE-FILES" "QUIT" "RATIOP"
              "READ-CHAR-NO-EDIT" "REALP" "REMOVE-ALL-OOB-HANDLERS"
              "REMOVE-OOB-HANDLER" "REQUIRED-ARGUMENT" "RESET-FOREIGN-POINTERS"
-             "RUN-PROGRAM" "SAVE" "SAVE-ALL-BUFFERS" "SAVE-LISP"
+             "RUN-PROGRAM" "SAVE" "SAVE-LISP"
              "SCAVENGER-HOOK" "SCAVENGER-HOOK-P"
 	     "SCAVENGER-HOOK-VALUE" "SCAVENGER-HOOK-FUNCTION"
 	     "SEARCH-LIST"
@@ -1583,6 +1583,7 @@
 (defpackage "KERNEL"
   (:import-from "LISP" "BOOLEAN")
   (:import-from "C-CALL" "VOID")
+  (:import-from "CONDITIONS" "PARSE-UNKNOWN-TYPE-SPECIFIER")
   (:shadow "CLASS" "STRUCTURE-CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS"
            "FIND-CLASS" "CLASS-OF")
   (:export "%CLASS-LAYOUT" "%CLASS-STATE" "%CLASS-DIRECT-SUPERCLASSES"
