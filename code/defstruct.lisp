@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.4 1993/02/11 19:08:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.5 1993/02/11 19:20:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -833,7 +833,7 @@
        (single-float '%raw-ref-single)
        (double-float '%raw-ref-double)
        (unsigned-byte 'aref)
-       (t '%instance-ref))
+       ((t) '%instance-ref))
      (if (eq rtype 'double-float)
 	 (ash (dsd-index slot) -1)
 	 (dsd-index slot))
