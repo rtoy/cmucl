@@ -1,3 +1,29 @@
+6/22/92 to 7/7/92
+
+Code:
+
+Added debugger commands to manipulate breakpoints.  See the debugger help
+string for details.
+
+Changed the type of *TOTAL-BYTES-CONSED* from fixnum to integer because it
+is very easy to cons more than most-positive-fixnum bytes.  It just takes a
+while.
+
+Added some type declarations so that a call to make-array in
+make-hash-table gets open coded.
+
+Removed *task-data* and *task-notify* because they aren't used, and I have
+no idea what they should be changed to under mach 3.0.
+
+
+Compiler:
+
+Fixed MAKE-LOAD-TIME-CONSTANT-TN to quit looking once it found an matching
+constant, so that it actually uses the same constant slot for the same
+value.
+
+
+
 6/15/92 to 6/22/92
 
 Code:
