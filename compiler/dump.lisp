@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.80 2003/06/30 14:59:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.81 2005/02/15 18:15:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1195,6 +1195,11 @@
     (cond ((null pkg)
 	   (dump-fop* pname-length lisp::fop-uninterned-small-symbol-save
 		      lisp::fop-uninterned-symbol-save file))
+	  ;; Why do we do this?  It causes weird things to happen if
+	  ;; you're in, say, the KERNEL package when you compile-file
+	  ;; something and load the fasl back in when you're in a
+	  ;; different package.
+	  #-(and)
 	  ((eq pkg *package*)
 	   (dump-fop* pname-length lisp::fop-small-symbol-save
 		      lisp::fop-symbol-save file))
