@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49 1997/01/18 14:30:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.1 1997/09/15 16:51:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,7 +64,7 @@
 (progn
 
 (defvar *current-catch-block*)
-(defvar *current-unwind-block*)
+(defvar *current-unwind-protect-block*)
 (defvar *free-interrupt-context-index*)
 
 ); #-gengc progn
