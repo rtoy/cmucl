@@ -131,7 +131,6 @@
   (comf "target:compiler/mips/type-vops")
 
   (comf "target:assembly/mips/assem-rtns")
-  (comf "target:assembly/mips/bit-bash")
   (comf "target:assembly/mips/array")
   (comf "target:assembly/mips/arith")
   (comf "target:assembly/mips/alloc"))
@@ -164,7 +163,6 @@
 
   (comf "target:assembly/sparc/support" :load *load-stuff*)
   (comf "target:assembly/sparc/assem-rtns")
-  (comf "target:assembly/sparc/bit-bash")
   (comf "target:assembly/sparc/array")
   (comf "target:assembly/sparc/arith")
   (comf "target:assembly/sparc/alloc"))
