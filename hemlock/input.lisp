@@ -223,7 +223,7 @@
 
 
 ;;;; Editor input from windowing system.
-#+clx
+
 (defstruct (windowed-editor-input
 	    (:include editor-input
 		      (:get #'windowed-get-key-event)
@@ -232,21 +232,18 @@
 		      (:clear #'windowed-clear-input))
 	    (:print-function
 	     (lambda (s stream d)
-	       (declare (ignore s d))
+	       (declare (ignore s d write))
 	       (write-string "#<Editor-Window-Input stream>" stream)))
 	    (:constructor make-windowed-editor-input
 			  (&optional (head (make-input-event)) (tail head))))
   hunks)      ; List of bitmap-hunks which input to this stream.
 
-#+clx
 (defun windowed-get-key-event (stream ignore-abort-attempts-p)
   (editor-input-method-macro))
 
-#+clx
 (defun windowed-unget-key-event (key-event stream)
   (un-event key-event stream))
 
-#+clx
 (defun windowed-clear-input (stream)
   (loop (unless (system:serve-event 0) (return)))
   (without-interrupts
@@ -258,7 +255,6 @@
 	       *free-input-events* next)
        (setf (editor-input-tail stream) head)))))
 
-#+clx
 (defun windowed-listen (stream)
   (loop (unless (system:serve-event 0)
 	  ;; If nothing is pending, check the queued input.
@@ -406,8 +402,11 @@
 	(update-modeline-field buffer window :more-prompt)
 	(random-typeout-redisplay window))
       (buffer-start (buffer-point buffer))
-      (unless (make-window start :window (make-xwindow-like-hwindow window))
-	(editor-error "Could not create random typeout window.")))))
+      (let* ((xwindow (make-xwindow-like-hwindow window))
+	     (window (make-window start :window xwindow)))
+	(unless window
+	  (xlib:destroy-window xwindow)
+	  (editor-error "Could not create random typeout window."))))))
 
 (defun end-random-typeout (stream)
   (let ((*more-prompt-action* :flush)

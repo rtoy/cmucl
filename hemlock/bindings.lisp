@@ -10,7 +10,8 @@
 ;;;
 ;;; Some bindings:
 ;;;
-(in-package 'hemlock)
+
+(in-package "HEMLOCK")
 
 
 
@@ -282,6 +283,7 @@
 ;;; 
 (bind-key "Illegal" #k"control-x" :mode "Echo Area")
 (bind-key "Illegal" #k"control-meta-c" :mode "Echo Area")
+(bind-key "Illegal" #k"control-meta-s" :mode "Echo Area")
 (bind-key "Illegal" #k"control-meta-l" :mode "Echo Area")
 (bind-key "Illegal" #k"meta-x" :mode "Echo Area")
 (bind-key "Illegal" #k"control-s" :mode "Echo Area")
@@ -458,10 +460,11 @@
 (bind-key "Add Word to Spelling Dictionary" #k"control-x $")
 
 (dolist (info (command-bindings (getstring "Self Insert" *command-names*)))
-  (let* ((key-event (car info))
-	 (character (key-event-char (svref (car info) 0))))
+  (let* ((key (car info))
+	 (key-event (svref key 0))
+	 (character (key-event-char key-event)))
     (unless (or (alpha-char-p character) (eq key-event #k"'"))
-      (bind-key "Auto Check Word Spelling" (car info) :mode "Spell"))))
+      (bind-key "Auto Check Word Spelling" key :mode "Spell"))))
 (bind-key "Auto Check Word Spelling" #k"return" :mode "Spell")
 (bind-key "Auto Check Word Spelling" #k"tab" :mode "Spell")
 (bind-key "Auto Check Word Spelling" #k"linefeed" :mode "Spell")

@@ -1156,12 +1156,14 @@
 ;;;
 (defun maybe-delete-extra-draft-window (dbuffer dbuffer-window)
   (when (and (hemlock-bound-p 'split-window-draft :buffer dbuffer)
-	     (> (length (the list *window-list*)) 2))
-    (delete-window
-     (find-if #'(lambda (w)
-		  (not (or (eq w dbuffer-window)
-			   (eq w *echo-area-window*))))
-	      *window-list*))
+	     ;; Since we now bitmap devices have window groups, this loop is
+	     ;; more correct than testing the length of *window-list* and
+	     ;; accounting for *echo-area-window* being in there.
+	     (do ((start dbuffer-window)
+		  (count 1 (1+ count))
+		  (w (next-window dbuffer-window) (next-window w)))
+		 ((eq start w) (> count 1))))
+    (delete-window (next-window dbuffer-window))
     (delete-variable 'split-window-draft :buffer dbuffer)))
 
 

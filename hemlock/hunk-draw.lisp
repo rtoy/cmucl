@@ -347,13 +347,20 @@
       (cond (*current-highlighted-border*
 	     (unless (eq *current-highlighted-border* *cursor-hunk*)
 	       (setf (xlib:window-border
-		      (bitmap-hunk-xwindow *current-highlighted-border*))
+		      (window-group-xparent
+		       (bitmap-hunk-window-group *current-highlighted-border*)))
 		     *default-border-pixmap*)
-	       (setf (xlib:window-border (bitmap-hunk-xwindow *cursor-hunk*))
+	       (setf (xlib:window-border
+		      (window-group-xparent
+		       (bitmap-hunk-window-group *cursor-hunk*)))
 		     *highlight-border-pixmap*)
+	       ;; For complete gratuitous pseudo-generality, should force
+	       ;; output on *current-highlighted-border* device too.
 	       (xlib:display-force-output
 		(bitmap-device-display (device-hunk-device *cursor-hunk*)))))
-	    (t (setf (xlib:window-border (bitmap-hunk-xwindow *cursor-hunk*))
+	    (t (setf (xlib:window-border
+		      (window-group-xparent
+		       (bitmap-hunk-window-group *cursor-hunk*)))
 		     *highlight-border-pixmap*)
 	       (xlib:display-force-output
 		(bitmap-device-display (device-hunk-device *cursor-hunk*)))))

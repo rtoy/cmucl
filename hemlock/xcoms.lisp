@@ -13,7 +13,7 @@
 ;;; Written by Bill Chiles.
 ;;;
 
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 
 (defcommand "Region to Cut Buffer" (p)
@@ -37,22 +37,3 @@
 	  (insert-string (current-point) str))
 	(editor-error "X cut buffer empty.")))
   (setf (last-command-type) :ephemerally-active))
-
-
-(defcommand "Stack Window" (p)
-  "Make a new window that overlays the current window.
-   The new window is made the current window and displays starting at
-   the same place as the current window."
-  "Create a new window which displays starting at the same place
-   as the current window."
-  (declare (ignore p))
-  (let ((cw (current-window)))
-    (unless (typep (hi::device-hunk-device (hi::window-hunk cw))
-		   'hi::bitmap-device)
-      (editor-error
-       "This command is only valid when running under a graphical windowing ~
-	system."))
-    (let ((new (make-window (window-display-start cw)
-			    :window (make-xwindow-like-hwindow cw))))
-      (unless new (editor-error "Could not make a new window."))
-      (setf (current-window) new))))

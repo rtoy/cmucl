@@ -17,16 +17,32 @@
 
 (in-package "HEMLOCK-INTERNALS")
 
-(export '(make-window delete-window next-window previous-window
-	  make-xwindow-like-hwindow *create-window-hook* *delete-window-hook*
+(export '(make-xwindow-like-hwindow *create-window-hook* *delete-window-hook*
 	  *random-typeout-hook* *create-initial-windows-hook*))
 
 
 (proclaim '(special *echo-area-window*))
 
+;;; We have an internal notion of window groups on bitmap devices.  Every
+;;; Hemlock window has a hunk slot which holds a structure with information
+;;; about physical real-estate on some device.  Bitmap-hunks have an X window
+;;; and a window-group.  The X window is a child of the window-group's window.
+;;; The echo area, pop-up display window, and the initial window are all in
+;;; their own group.
+;;;
+;;; MAKE-WINDOW splits the current window which is some child window in a group.
+;;; If the user supplied an X window, it becomes the parent window of some new
+;;; group, and we make a child for the Hemlock window.  If the user supplies
+;;; ask-user, we prompt for a group/parent window.  We link the hunks for
+;;; NEXT-WINDOW and PREVIOUS-WINDOW only within a group, so the group maintains
+;;; a stack of windows that always fill the entire group window.
+;;;
+
 ;;; This is the object set for Hemlock windows.  All types of incoming
 ;;; X events on standard editing windows have the same handlers via this set.
-;;; 
+;;; We also include the group/parent windows in here, but they only handle
+;;; :configure-notify events.
+;;;
 (defvar *hemlock-windows*
   (system:make-object-set "Hemlock Windows" #'ext:default-clx-event-handler))
 
@@ -457,23 +473,32 @@
 ;;; This buys us a lot of events we have to write dummy handlers to ignore.
 ;;;
 
-;;; HUNK-RECONFIGURED must note that the hunk changed to prevent certain
-;;; redisplay problems with recentering the window that caused bogus lines
-;;; to be drawn after the actual visible text in the window.  We must also
-;;; indicate the hunk is trashed to eliminate exposure event handling that
-;;; comes after resizing.  This also causes a full redisplay on the window
-;;; which is the easiest and generall best looking thing.
+;;; HUNK-RECONFIGURED -- Internal.
 ;;;
-(defun hunk-reconfigured (hunk event-key event-window window x y width height
-			       border-width above-sibling override-redirect-p
-			       send-event-p)
+;;; This must note that the hunk changed to prevent certain redisplay problems
+;;; with recentering the window that caused bogus lines to be drawn after the
+;;; actual visible text in the window.  We must also indicate the hunk is
+;;; trashed to eliminate exposure event handling that comes after resizing.
+;;; This also causes a full redisplay on the window which is the easiest and
+;;; generally best looking thing.
+;;;
+(defun hunk-reconfigured (object event-key event-window window x y width
+				 height border-width above-sibling
+				 override-redirect-p send-event-p)
   (declare (ignore event-key event-window window x y border-width
 		   above-sibling override-redirect-p send-event-p))
-  (when (or (/= width (bitmap-hunk-width hunk))
-	    (/= height (bitmap-hunk-height hunk)))
-    ;; Under X11, don't redisplay since an exposure event is coming next.
-    (hunk-changed hunk width height nil) ; :redisplay)
-    (setf (bitmap-hunk-trashed hunk) t)))
+  (typecase object
+    (bitmap-hunk
+     (when (or (/= width (bitmap-hunk-width object))
+	       (/= height (bitmap-hunk-height object)))
+       (hunk-changed object width height nil)
+       ;; Under X11, don't redisplay since an exposure event is coming next.
+       (setf (bitmap-hunk-trashed object) t)))
+    (window-group
+     (let ((old-width (window-group-width object))
+	   (old-height (window-group-height object)))
+       (when (or (/= width old-width) (/= height old-height))
+	 (window-group-changed object width height))))))
 ;;;
 (ext:serve-configure-notify *hemlock-windows* #'hunk-reconfigured)
 
@@ -564,21 +589,20 @@
 
 ;;;; Handling boundary crossing events.
 
-;;; Entering and leaving a window are handled basically the same except
-;;; that it is possible to get an entering event under X without getting
-;;; an exiting event; specifically, when the mouse is in a Hemlock window
-;;; that is over another window, and the top window is buried, Hemlock
-;;; only gets an entering event on the lower window (no exiting event
-;;; for the buried window).
-;;; 
+;;; Entering and leaving a window are handled basically the same except that it
+;;; is possible to get an entering event under X without getting an exiting
+;;; event; specifically, when the mouse is in a Hemlock window that is over
+;;; another window, and someone buries the top window, Hemlock only gets an
+;;; entering event on the lower window (no exiting event for the buried
+;;; window).
+;;;
 ;;; :enter-notify and :leave-notify events are sent because we select
 ;;; :enter-window and :leave-window events.
 ;;;
 
 (defun hunk-mouse-entered (hunk event-key event-window root child same-screen-p
-				x y root-x root-y state time mode kind
-				send-event-p)
-  (declare (ignore event-key event-window root child same-screen-p
+			   x y root-x root-y state time mode kind send-event-p)
+  (declare (ignore event-key event-window child root same-screen-p
 		   x y root-x root-y state time mode kind focus-p
 		   send-event-p))
   (when (and *cursor-dropped* (not *hemlock-listener*))
@@ -587,39 +611,33 @@
   (let ((current-hunk (window-hunk (current-window))))
     (unless (and *current-highlighted-border*
 		 (eq *current-highlighted-border* current-hunk))
-      (setf (xlib:window-border (bitmap-hunk-xwindow current-hunk))
+      (setf (xlib:window-border (window-group-xparent
+				 (bitmap-hunk-window-group current-hunk)))
 	    *highlight-border-pixmap*)
       (xlib:display-force-output
        (bitmap-device-display (device-hunk-device current-hunk)))
       (setf *current-highlighted-border* current-hunk)))
-  (let ((window (device-hunk-window hunk)))
-    ;; Why was I ever doing this?
-    ;; -- (find hunk *window-list* :key #'window-hunk)))
-    ;;
-    ;; The random typeout hunk does not have a window.
+  (let ((window (bitmap-hunk-window hunk)))
     (when window (invoke-hook ed::enter-window-hook window))))
 ;;;
 (ext:serve-enter-notify *hemlock-windows* #'hunk-mouse-entered)
 
 (defun hunk-mouse-left (hunk event-key event-window root child same-screen-p
-			     x y root-x root-y state time mode kind
-			     send-event-p)
-  (declare (ignore event-key event-window root child same-screen-p
+			x y root-x root-y state time mode kind send-event-p)
+  (declare (ignore event-key event-window child root same-screen-p
 		   x y root-x root-y state time mode kind focus-p
 		   send-event-p))
   (setf *hemlock-listener* nil)
   (when *cursor-dropped* (cursor-invert-center))
   (when *current-highlighted-border*
-    (setf (xlib:window-border (bitmap-hunk-xwindow *current-highlighted-border*))
+    (setf (xlib:window-border (window-group-xparent
+			       (bitmap-hunk-window-group
+				*current-highlighted-border*)))
 	  *default-border-pixmap*)
     (xlib:display-force-output
      (bitmap-device-display (device-hunk-device *current-highlighted-border*)))
     (setf *current-highlighted-border* nil))
-  (let ((window (device-hunk-window hunk)))
-    ;; Why was I ever doing this?
-    ;; -- (find hunk *window-list* :key #'window-hunk)))
-    ;;
-    ;; The random typeout hunk does not have a window.
+  (let ((window (bitmap-hunk-window hunk)))
     (when window (invoke-hook ed::exit-window-hook window))))
 ;;;
 (ext:serve-leave-notify *hemlock-windows* #'hunk-mouse-left)
@@ -632,16 +650,6 @@
   "If the window created by splitting a window would be shorter than this,
   then we create an overlapped window the same size instead.")
 
-(defparameter window-y-offset 20
-  "When we create an overlapped window, it is positioned this many pixels
-   farther down the screen than the current window.")
-
-(defparameter minimum-y-above-root-bottom 10
-  "When we create an overlapped window, if the top of the window is within
-   this many pixels from the bottom of the root window, then nil is returned
-   to MAKE-WINDOW.")
-
-;;; These constants are used in DEFAULT-CREATE-WINDOW-HOOK and SET-HUNK-SIZE.
 ;;; The width must be that of a tab for the screen image builder, and the
 ;;; height must be one line (two with a modeline).
 ;;; 
@@ -650,12 +658,8 @@
 (defconstant minimum-window-columns 8
   "Windows must be at least this many characters wide.")
 
-(eval-when (compile load eval)
-
 (defconstant xwindow-border-width 2 "X border around X windows")
 (defconstant xwindow-border-width*2 (* xwindow-border-width 2))
-
-); eval-when
 
 ;;; We must name windows (set the "name" property) to get around a bug in
 ;;; awm and twm.  They will not handle menu clicks without a window having
@@ -667,52 +671,46 @@
   (let ((*print-base* 10))
     (format nil "Hemlock ~S" (incf *hemlock-window-count*))))
 
-
-;;; DEFAULT-CREATE-WINDOW-HOOK is the default value for *create-window-hook*.
-;;; It makes an X window on the given display.  Start is a mark into a buffer
-;;; for which some Hemlock window is being made for which this X window will
-;;; be used.  When ask-user is non-nil, we supply x, y, width, and height as
-;;; standard properties for the X window which guides the window manager in
-;;; prompting the user for a window.  When ask-user is nil, and there is a
-;;; current window, use it to guide making the new one.  As a last resort,
-;;; which is only used for creating the initial Hemlock window, create a window
-;;; according to some variables, prompting the user when all the variables
-;;; aren't there.
+(proclaim '(inline surplus-window-height surplus-window-height-w/-modeline))
 ;;;
-(defun default-create-window-hook (display start ask-user x y width height
+(defun surplus-window-height (thumb-bar-p)
+  (+ hunk-top-border (if thumb-bar-p
+			 hunk-thumb-bar-bottom-border
+			 hunk-bottom-border)))
+;;;
+(defun surplus-window-height-w/-modeline (thumb-bar-p)
+  (+ (surplus-window-height thumb-bar-p)
+     hunk-modeline-top
+     hunk-modeline-bottom))
+
+
+;;; DEFAULT-CREATE-WINDOW-HOOK -- Internal.
+;;;
+;;; This is the default value for *create-window-hook*.  It makes an X window
+;;; for a new group/parent on the given display possibly prompting the user.
+;;;
+(defun default-create-window-hook (display x y width height name font-family
 				   &optional modelinep thumb-bar-p)
-  (let ((name (buffer-name (line-buffer (mark-line start))))
-	(root (xlib:screen-root (xlib:display-default-screen display))))
-    (cond (ask-user
-	   (maybe-prompt-user-for-window root x y width height
-					 modelinep thumb-bar-p name))
-	  (*current-window*
-	   (default-create-window-from-current root name))
-	  (t
-	   (maybe-prompt-user-for-window
-	    root
-	    (value ed::default-initial-window-x)
-	    (value ed::default-initial-window-y)
-	    (value ed::default-initial-window-width)
-	    (value ed::default-initial-window-height)
-	    modelinep thumb-bar-p name)))))
+  (maybe-prompt-user-for-window
+   (xlib:screen-root (xlib:display-default-screen display))
+   x y width height font-family modelinep thumb-bar-p name))
 
-;;; MAYBE-PROMPT-USER-FOR-WINDOW makes an X window and sets its standard
-;;; properties according to supplied values.  When some of these are nil, the
-;;; window manager should prompt the user for those missing values when the
-;;; window gets mapped.  Returns the window without mapping it.
+;;; MAYBE-PROMPT-USER-FOR-WINDOW -- Internal.
 ;;;
-(defun maybe-prompt-user-for-window (parent x y width height
+;;; This makes an X window and sets its standard properties according to
+;;; supplied values.  When some of these are nil, the window manager should
+;;; prompt the user for those missing values when the window gets mapped.  We
+;;; use this when making new group/parent windows.  Returns the window without
+;;; mapping it.
+;;;
+(defun maybe-prompt-user-for-window (root x y width height font-family
 				     modelinep thumb-bar-p icon-name)
-  (let* ((extra-y (+ hunk-top-border (if thumb-bar-p
-					 hunk-thumb-bar-bottom-border
-					 hunk-bottom-border)))
-	 (font-height (font-family-height *default-font-family*))
-	 (font-width (font-family-width *default-font-family*))
-	 (extra-y-w/-modeline (+ extra-y hunk-modeline-top
-				 hunk-modeline-bottom)))
+  (let ((font-height (font-family-height font-family))
+	(font-width (font-family-width font-family))
+	(extra-y (surplus-window-height thumb-bar-p))
+	(extra-y-w/-modeline (surplus-window-height-w/-modeline thumb-bar-p)))
     (create-window-with-properties
-     parent x y
+     root x y
      (if width (+ (* width font-width) hunk-left-border))
      (if height
 	 (if modelinep
@@ -722,141 +720,193 @@
      (+ (* minimum-window-columns font-width) hunk-left-border)
      (if modelinep
 	 (+ (* (1+ minimum-window-lines) font-height) extra-y-w/-modeline)
-	 (+ (* minimum-window-lines font-height) extra-y)))))
-
-
-;;; DEFAULT-CREATE-WINDOW-FROM-CURRENT makes a window on the given parent window
-;;; according to the current window.  We split the current window unless the
-;;; result would be too small, in which case we create an overlapped window.
-;;; When setting standard properties, we set x, y, width, and height to tell
-;;; window managers to put the window where we intend without querying the user.
-;;; The window name is set to get around an awm and twm bug that inhibits
-;;; menu clicks unless the window has a name; this could be used better.
-;;;
-(defun default-create-window-from-current (parent icon-name)
-  (let ((cwin (bitmap-hunk-xwindow (window-hunk *current-window*))))
-    (xlib:with-state (cwin)
-      (let ((cw (xlib:drawable-width cwin))
-	    (ch (xlib:drawable-height cwin)))
-	(declare (fixnum cw ch))
-	(multiple-value-bind (cx cy)
-			     (window-root-xy cwin (xlib:drawable-x cwin)
-					     (xlib:drawable-y cwin))
-	  (declare (fixnum cx cy))
-	  (multiple-value-bind (ch/2 rem) (truncate ch 2)
-	    (declare (fixnum ch/2 rem))
-	    (let ((newh (- ch/2 xwindow-border-width))
-		  (font-height (font-family-height *default-font-family*))
-		  (font-width (font-family-width *default-font-family*)))
-	      (declare (fixnum newh))
-	      (cond
-	       ((>= newh minimum-window-height)
-		(let ((win (create-window-with-properties
-			    parent cx (+ cy ch/2 rem xwindow-border-width)
-			    cw newh font-width font-height
-			    icon-name)))
-		  ;; No need to reshape current Hemlock window structure
-		  ;; here since this call will send an appropriate event.
-		  (setf (xlib:drawable-height cwin) (+ newh rem))
-		  win))
-	       ((> (+ cy window-y-offset)
-		   (- (xlib:drawable-height parent) minimum-y-above-root-bottom))
-		nil)
-	       (t
-		(create-window-with-properties parent cx (+ cy window-y-offset)
-					       cw ch font-width font-height
-					       icon-name))))))))))
+	 (+ (* minimum-window-lines font-height) extra-y))
+     t)))
 
 (defvar *create-window-hook* #'default-create-window-hook
-  "This function is called by MAKE-WINDOW when it wants to make a new
-   X window.  Hemlock passes as arguments the starting mark, ask-user, default,
-   and modelinep arguments given to MAKE-WINDOW.  The function should return a
-   window.")
+  "Hemlock calls this function when it makes a new X window for a new group.
+   It passes as arguments the X display, x (from MAKE-WINDOW), y (from
+   MAKE-WINDOW), width (from MAKE-WINDOW), height (from MAKE-WINDOW), a name
+   for the window's icon-name, font-family (from MAKE-WINDOW), modelinep (from
+   MAKE-WINDOW), and whether the window will have a thumb-bar meter.  The
+   function returns a window or nil.")
  
+;;; BITMAP-MAKE-WINDOW -- Internal.
+;;; 
 (defun bitmap-make-window (device start modelinep window font-family
 				  ask-user x y width-arg height-arg)
   (let* ((display (bitmap-device-display device))
 	 (thumb-bar-p (value ed::thumb-bar-meter))
 	 (hunk (make-bitmap-hunk
-	       :font-family font-family
-	       :end the-sentinel  :trashed t
-	       :input-handler #'window-input-handler
-	       :device device
-	       :thumb-bar-p (and modelinep thumb-bar-p))))
-    (multiple-value-bind (window width height)
-			 (maybe-make-x-window window display start ask-user
-					      x y width-arg height-arg
-					      modelinep thumb-bar-p)
-      (unless window (return-from bitmap-make-window nil))
-      (setf (bitmap-hunk-xwindow hunk) window)
-      (setf (bitmap-hunk-gcontext hunk)
-	    (default-gcontext window font-family))
-      ;;
-      ;; Select input and enable event service before showing the window.
-      (setf (xlib:window-event-mask window) interesting-xevents-mask)
-      (add-xwindow-object window hunk *hemlock-windows*)
-      (xlib:map-window window)
+		:font-family font-family
+		:end the-sentinel  :trashed t
+		:input-handler #'window-input-handler
+		:device device
+		:thumb-bar-p (and modelinep thumb-bar-p))))
+    (multiple-value-bind
+	(xparent xwindow)
+	(maybe-make-x-window-and-parent window display start ask-user x y
+					width-arg height-arg font-family
+					modelinep thumb-bar-p)
+      (unless xwindow (return-from bitmap-make-window nil))
+      (let ((window-group (make-window-group xparent
+					     (xlib:drawable-width xparent)
+					     (xlib:drawable-height xparent))))
+	(setf (bitmap-hunk-xwindow hunk) xwindow)
+	(setf (bitmap-hunk-window-group hunk) window-group)
+	(setf (bitmap-hunk-gcontext hunk)
+	      (default-gcontext xwindow font-family))
+	;;
+	;; Select input and enable event service before showing the window.
+	(setf (xlib:window-event-mask xwindow) child-interesting-xevents-mask)
+	(setf (xlib:window-event-mask xparent) group-interesting-xevents-mask)
+	(add-xwindow-object xwindow hunk *hemlock-windows*)
+	(add-xwindow-object xparent window-group *hemlock-windows*))
+      (when xparent (xlib:map-window xparent))
+      (xlib:map-window xwindow)
       (xlib:display-finish-output display)
-      ;; A window is not really mapped until it is viewable (not visible).
-      ;; It is said to be mapped if a map request has been sent whether it
-      ;; is handled or not.
-      (loop (when (eq (xlib:window-map-state window) :viewable)
+      ;; A window is not really mapped until it is viewable.  It is said to be
+      ;; mapped if a map request has been sent whether it is handled or not.
+      (loop (when (and (eq (xlib:window-map-state xwindow) :viewable)
+		       (eq (xlib:window-map-state xparent) :viewable))
 	      (return)))
       ;;
       ;; Find out how big it is...
-      (if width
-	  (set-hunk-size hunk width height modelinep)
-	  (xlib:with-state (window)
-	    (set-hunk-size hunk (xlib:drawable-width window)
-			   (xlib:drawable-height window) modelinep)))
-      (setf (bitmap-hunk-window hunk)
-	    (window-for-hunk hunk start modelinep))
-      ;;
-      ;; If there is a current window, link this in after it, otherwise
-      ;; make this circularly linked, and set *current-window* to it.
-      (cond (*current-window*
-	     (let ((h (window-hunk *current-window*)))
-	       (shiftf (bitmap-hunk-next hunk) (bitmap-hunk-next h) hunk)
-	       (setf (bitmap-hunk-previous (bitmap-hunk-next hunk)) hunk)
-	       (setf (bitmap-hunk-previous hunk) h)))
-	    (t
-	     (setq *current-window* (bitmap-hunk-window hunk))
-	     (setf (bitmap-hunk-previous hunk) hunk)
-	     (setf (bitmap-hunk-next hunk) hunk)))
-      (push hunk (device-hunks device))
-      (bitmap-hunk-window hunk))))
+      (xlib:with-state (xwindow)
+	(set-hunk-size hunk (xlib:drawable-width xwindow)
+		       (xlib:drawable-height xwindow) modelinep)))
+    (setf (bitmap-hunk-window hunk)
+	  (window-for-hunk hunk start modelinep))
+    ;; If window is non-nil, then it is a new group/parent window, so don't
+    ;; link it into the current window's group.  When ask-user is non-nil,
+    ;; we make a new group too.
+    (cond ((or window ask-user)
+	   ;; This occurs when we make the world's first Hemlock window.
+	   (unless *current-window*
+	     (setq *current-window* (bitmap-hunk-window hunk)))
+	   (setf (bitmap-hunk-previous hunk) hunk)
+	   (setf (bitmap-hunk-next hunk) hunk))
+	  (t
+	   (let ((h (window-hunk *current-window*)))
+	     (shiftf (bitmap-hunk-next hunk) (bitmap-hunk-next h) hunk)
+	     (setf (bitmap-hunk-previous (bitmap-hunk-next hunk)) hunk)
+	     (setf (bitmap-hunk-previous hunk) h))))
+    (push hunk (device-hunks device))
+    (bitmap-hunk-window hunk)))
 
-;;; MAYBE-MAKE-X-WINDOW is called by BITMAP-MAKE-WINDOW.  If window is an X
-;;; window, we clear it and return the window with its width and height.
-;;; Otherwise, we call *create-window-hook* on the other arguments passed in,
-;;; returning the created window and nil for the width and height.  When a
-;;; window is created, it may not be mapped, and, therefore, it's width and
-;;; height would not be known.
+;;; MAYBE-MAKE-X-WINDOW-AND-PARENT -- Internal.
 ;;;
-(defun maybe-make-x-window (window display start ask-user x y width height
-			    modelinep thumb-bar-p)
-  (cond (window
-	 (check-type window xlib:window)
-	 (xlib:with-state (window)
-	   (let ((width (xlib:drawable-width window))
-		 (height (xlib:drawable-height window)))
-	     (xlib:clear-area window :width width :height height)
-	     (values window width height))))
-	(t
-	 (let ((window (funcall *create-window-hook*
-				display start ask-user x y width height
-				modelinep thumb-bar-p)))
-	   (values window nil nil)))))
+;;; BITMAP-MAKE-WINDOW calls this.  If xparent is non-nil, we clear it and
+;;; return it with a child that fills it.  If xparent is nil, and ask-user is
+;;; non-nil, then we invoke *create-window-hook* to get a parent window and
+;;; return it with a child that fills it.  By default, we make a child in the
+;;; CURRENT-WINDOW's parent.
+;;;
+(defun maybe-make-x-window-and-parent (xparent display start ask-user x y width
+				       height font-family modelinep thumb-p)
+  (let ((icon-name (buffer-name (line-buffer (mark-line start)))))
+    (cond (xparent
+	   (check-type xparent xlib:window)
+	   (let ((width (xlib:drawable-width xparent))
+		 (height (xlib:drawable-height xparent)))
+	     (xlib:clear-area xparent :width width :height height)
+	     (modify-parent-properties :set xparent modelinep thumb-p
+				       (font-family-width font-family)
+				       (font-family-height font-family))
+	     (values xparent (xwindow-for-xparent xparent icon-name))))
+	  (ask-user
+	   (let ((xparent (funcall *create-window-hook*
+				   display x y width height icon-name
+				   font-family modelinep thumb-p)))
+	     (values xparent (xwindow-for-xparent xparent icon-name))))
+	  (t
+	   (let ((xparent (window-group-xparent
+			   (bitmap-hunk-window-group
+			    (window-hunk (current-window))))))
+	     (values xparent
+		     (create-window-from-current
+		      font-family modelinep thumb-p xparent icon-name)))))))
 
-;;; MAKE-XWINDOW-LIKE-HWINDOW makes a new X window that overlays the supplied
-;;; Hemlock window.  When setting standard properties, we set x, y, width, and
-;;; height to tell window managers to put the window where we intend without
-;;; querying the user.  The window name is set to get around an awm and twm bug
-;;; that inhibits menu clicks unless the window has a name; this could be used
-;;; better.
+;;; XWINDOW-FOR-XPARENT -- Internal.
+;;;
+;;; This returns a child of xparent that completely fills that parent window.
+;;; We supply the font-width and font-height as nil because these are useless
+;;; for child windows.
+;;;
+(defun xwindow-for-xparent (xparent icon-name)
+  (xlib:with-state (xparent)
+    (create-window-with-properties xparent 0 0
+				   (xlib:drawable-width xparent)
+				   (xlib:drawable-height xparent)
+				   nil nil icon-name)))
+
+;;; CREATE-WINDOW-FROM-CURRENT -- Internal.
+;;;
+;;; This makes a child window on parent by splitting the current window.  If
+;;; the result will be too small, this returns nil.  If the current window's
+;;; height is odd, the extra pixel stays with it, and the new window is one
+;;; pixel smaller.
+;;;
+(defun create-window-from-current (font-family modelinep thumb-p
+				   parent icon-name)
+  (let* ((cur-hunk (window-hunk *current-window*))
+	 (cwin (bitmap-hunk-xwindow cur-hunk)))
+    ;; Compute current window's height and divide by 2.
+    (xlib:with-state (cwin)
+      (let ((cw (xlib:drawable-width cwin))
+	    (ch (xlib:drawable-height cwin)))
+	(declare (fixnum cw ch))
+	(let ((cy (xlib:drawable-y cwin)))
+	  (declare (fixnum cy))
+	  (multiple-value-bind (ch/2 rem) (truncate ch 2)
+	    (declare (fixnum ch/2 rem))
+		   ;; See if we have room for a new window.  This should really
+		   ;; check the current window and the new one against their
+		   ;; relative fonts and the minimal window columns and line
+		   ;; (including whether there is a modeline).
+
+
+	    (let* ((font-height (font-family-height font-family))
+		   (font-width (font-family-width font-family))
+		   (cwin-min (minimum-window-height
+			      (font-family-height
+			       (bitmap-hunk-font-family cur-hunk))
+			      (bitmap-hunk-modeline-pos cur-hunk)
+			      (bitmap-hunk-thumb-bar-p cur-hunk)))
+		   (new-min (minimum-window-height font-height modelinep
+						   thumb-p)))
+	      (if (< (+ cwin-min new-min) ch)
+		  (let ((win (create-window-with-properties
+			      parent 0 (+ cy ch/2 rem)
+			      cw ch/2 font-width font-height
+			      icon-name)))
+		    ;; No need to reshape current Hemlock window structure here
+		    ;; since this call will send an appropriate event.
+		    (setf (xlib:drawable-height cwin) (+ ch/2 rem))
+		    ;; Set hints on parent, so the user can't resize it to be
+		    ;; smaller than what will hold the current number of
+		    ;; children.
+		    (modify-parent-properties :add parent modelinep
+					      thumb-p
+					      (font-family-width font-family)
+					      font-height)
+		    win)
+		  nil))))))))
+
+
+;;; MAKE-XWINDOW-LIKE-HWINDOW -- Interface.
+;;;
+;;; The window name is set to get around an awm and twm bug that inhibits menu
+;;; clicks unless the window has a name; this could be used better.
 ;;;
 (defun make-xwindow-like-hwindow (window)
+  "This returns an group/parent xwindow with dimensions suitable for making a
+   Hemlock window like the argument window.  The new window's position should
+   be the same as the argument window's position relative to the root.  When
+   setting standard properties, we set x, y, width, and height to tell window
+   managers to put the window where we intend without querying the user."
   (let* ((hunk (window-hunk window))
+	 (font-family (bitmap-hunk-font-family hunk))
 	 (xwin (bitmap-hunk-xwindow hunk)))
     (multiple-value-bind (x y)
 			 (window-root-xy xwin)
@@ -864,63 +914,112 @@
        (xlib:screen-root (xlib:display-default-screen
 			  (bitmap-device-display (device-hunk-device hunk))))
        x y (bitmap-hunk-width hunk) (bitmap-hunk-height hunk)
-       (font-family-width *default-font-family*)
-       (font-family-height *default-font-family*)
-       (buffer-name (window-buffer window))))))
+       (font-family-width font-family)
+       (font-family-height font-family)
+       (buffer-name (window-buffer window))
+       ;; When the user hands this window to MAKE-WINDOW, it will set the
+       ;; minimum width and height properties.
+       nil nil
+       t))))
 
 
 
 ;;;; Deleting a window.
 
-;;; DEFAULT-DELETE-WINDOW-HOOK destroys the X window after obtaining its
-;;; necessary state information.  If the previous or next window (in that
-;;; order) is "stacked" over or under the target window, then it is grown to
-;;; fill in the newly opened space.  We fetch all the necessary configuration
-;;; data up front, so we don't have to call XLIB:DESTROY-WINDOW while in the
-;;; XLIB:WITH-STATE.
+;;; DEFAULT-DELETE-WINDOW-HOOK -- Internal.
 ;;;
-(defun default-delete-window-hook (xwin hwin)
-  (multiple-value-bind (h x y)
-		       (xlib:with-state (xwin)
-			 (multiple-value-bind
-			     (x y)
-			     (window-root-xy xwin (xlib:drawable-x xwin)
-					     (xlib:drawable-y xwin))
-			   (values (xlib:drawable-height xwin) x y)))
-    (xlib:destroy-window xwin)
-    (let ((hunk (window-hunk hwin)))
-      (xlib:free-gcontext (bitmap-hunk-gcontext hunk))
-      (unless (default-delete-window-hook-prev-merge hunk x y h)
-	(default-delete-window-hook-next-merge hunk x y h)))))
+(defun default-delete-window-hook (xparent)
+  (xlib:destroy-window xparent))
 ;;;
 (defvar *delete-window-hook* #'default-delete-window-hook
-  "This function is called by DELETE-WINDOW when it wants to delete an X
-   window.  It is passed the X window and the Hemlock window as arguments.")
+  "Hemlock calls this function to delete an X group/parent window.  It passes
+   the X window as an argument.")
 
-;;; DEFAULT-DELETE-WINDOW-HOOK-PREV-MERGE returns non-nil when the previous
-;;; hunk to hunk is grown to take up hunk's space on the screen.
+
+;;; BITMAP-DELETE-WINDOW  --  Internal
 ;;;
-(defun default-delete-window-hook-prev-merge (hunk x y h)
-  (declare (fixnum x y h))
+;;;
+(defun bitmap-delete-window (window)
+  (let* ((hunk (window-hunk window))
+	 (xwindow (bitmap-hunk-xwindow hunk))
+	 (xparent (window-group-xparent (bitmap-hunk-window-group hunk)))
+	 (display (bitmap-device-display (device-hunk-device hunk))))
+    (remove-xwindow-object xwindow)
+    (setq *window-list* (delete window *window-list*))
+    (when (eq *current-highlighted-border* hunk)
+      (setf *current-highlighted-border* nil))
+    (when (and (eq *cursor-hunk* hunk) *cursor-dropped*) (lift-cursor))
+    (xlib:display-force-output display)
+    (bitmap-delete-and-reclaim-window-space xwindow window)
+    (loop (unless (deleting-window-drop-event display xwindow) (return)))
+    (let ((device (device-hunk-device hunk)))
+      (setf (device-hunks device) (delete hunk (device-hunks device))))
+    (cond ((eq hunk (bitmap-hunk-next hunk))
+	   ;; Is this the last window in the group?
+	   (remove-xwindow-object xparent)
+	   (xlib:display-force-output display)
+	   (funcall *delete-window-hook* xparent)
+	   (loop (unless (deleting-window-drop-event display xparent)
+		   (return)))
+	   (let ((window (find-if-not #'(lambda (window)
+					  (eq window *echo-area-window*))
+				      *window-list*)))
+	     (setf (current-buffer) (window-buffer window)
+		   (current-window) window)))
+	  (t
+	   (modify-parent-properties :delete xparent
+				     (bitmap-hunk-modeline-pos hunk)
+				     (bitmap-hunk-thumb-bar-p hunk)
+				     (font-family-width
+				      (bitmap-hunk-font-family hunk))
+				     (font-family-height
+				      (bitmap-hunk-font-family hunk)))
+	   (let ((next (bitmap-hunk-next hunk))
+		 (prev (bitmap-hunk-previous hunk)))
+	     (setf (bitmap-hunk-next prev) next)
+	     (setf (bitmap-hunk-previous next) prev))))
+    (let ((buffer (window-buffer window)))
+      (setf (buffer-windows buffer) (delete window (buffer-windows buffer)))))
+  nil)
+
+;;; BITMAP-DELETE-AND-RECLAIM-WINDOW-SPACE -- Internal.
+;;;
+;;; This destroys the X window after obtaining its necessary state information.
+;;; If the previous or next window (in that order) is "stacked" over or under
+;;; the target window, then it is grown to fill in the newly opened space.  We
+;;; fetch all the necessary configuration data up front, so we don't have to
+;;; call XLIB:DESTROY-WINDOW while in the XLIB:WITH-STATE.
+;;;
+(defun bitmap-delete-and-reclaim-window-space (xwindow hwindow)
+  (multiple-value-bind (y height)
+		       (xlib:with-state (xwindow)
+			 (values (xlib:drawable-y xwindow)
+				 (xlib:drawable-height xwindow)))
+    (xlib:destroy-window xwindow)
+    (let ((hunk (window-hunk hwindow)))
+      (xlib:free-gcontext (bitmap-hunk-gcontext hunk))
+      (unless (eq hunk (bitmap-hunk-next hunk))
+	(unless (maybe-merge-with-previous-window hunk y height)
+	  (merge-with-next-window hunk y height))))))
+
+;;; MAYBE-MERGE-WITH-PREVIOUS-WINDOW -- Internal.
+;;;
+;;; This returns non-nil when it grows the previous hunk to include the
+;;; argument hunk's screen space.
+;;;
+(defun maybe-merge-with-previous-window (hunk y h)
+  (declare (fixnum y h))
   (let* ((prev (bitmap-hunk-previous hunk))
 	 (prev-xwin (bitmap-hunk-xwindow prev)))
     (xlib:with-state (prev-xwin)
-      (let ((ph (xlib:drawable-height prev-xwin)))
-	(declare (fixnum ph))
-	(multiple-value-bind (px py)
-			     (window-root-xy prev-xwin
-					     (xlib:drawable-x prev-xwin)
-					     (xlib:drawable-y prev-xwin))
-	  (declare (fixnum px py))
-	  (if (and (= x px)
-		   (= y (the fixnum (+ py ph xwindow-border-width*2))))
-	      (setf (xlib:drawable-height prev-xwin)
-		    (the fixnum (+ ph xwindow-border-width*2 h)))))))))
+      (if (< (xlib:drawable-y prev-xwin) y)
+	  (incf (xlib:drawable-height prev-xwin) h)))))
 
-;;; DEFAULT-DELETE-WINDOW-HOOK-NEXT-MERGE trys to grow the next hunk's window
-;;; to make use of the space created by deleting hunk's window.  If this is
-;;; possible, then we must also move the next window up to where hunk's window
-;;; was.
+;;; MERGE-WITH-NEXT-WINDOW -- Internal.
+;;;
+;;; This trys to grow the next hunk's window to make use of the space created
+;;; by deleting hunk's window.  If this is possible, then we must also move the
+;;; next window up to where hunk's window was.
 ;;;
 ;;; When we reconfigure the window, we must set the hunk trashed.  This is a
 ;;; hack since twm is broken again and is sending exposure events before
@@ -928,101 +1027,25 @@
 ;;; reconfigures come before exposures to set the hunk trashed before getting
 ;;; the exposure.  For now, we'll do it here too.
 ;;;
-(defun default-delete-window-hook-next-merge (hunk x y h)
-  (declare (fixnum x y h))
+(defun merge-with-next-window (hunk y h)
+  (declare (fixnum y h))
   (let* ((next (bitmap-hunk-next hunk))
-	 (next-xwin (bitmap-hunk-xwindow next))
-	 (newy
-	  (xlib:with-state (next-xwin)
-	    (multiple-value-bind (nx ny)
-				 (window-root-xy next-xwin
-						 (xlib:drawable-x next-xwin)
-						 (xlib:drawable-y next-xwin))
-	      (declare (fixnum nx ny))
-	      (when (and (= x nx)
-			 (= ny (the fixnum (+ y h xwindow-border-width*2))))
-		;; Fetch height before setting y to save one extra round trip to
-		;; the X server.
-		(let ((nh (xlib:drawable-height next-xwin)))
-		  (declare (fixnum nh))
-		  (setf (xlib:drawable-y next-xwin) y)
-		  (setf (xlib:drawable-height next-xwin)
-			(the fixnum (+ h xwindow-border-width*2 nh))))
-		y)))))
-    (when newy
-      (setf (bitmap-hunk-trashed next) t)
-      (let ((hints (xlib:wm-normal-hints next-xwin)))
-	(setf (xlib:wm-size-hints-y hints) newy)
-	(setf (xlib:wm-normal-hints next-xwin) hints)))))
-
-#|
-;;; DEFAULT-DELETE-WINDOW-HOOK-NEXT-MERGE ... Hack!
-;;;
-;;; This version works when window managers refuse to allow clients to
-;;; reposition windows.  What we do instead is to delete the next hunk's X
-;;; window, making a new one in the place of hunk's window that fills the empty
-;;; space created by deleting both windows.  Some code from the default window
-;;; creation hook and BITMAP-MAKE-WINDOW is duplicated here.  Also, there is
-;;; is a funny issue over whether to invoke the "Make Window Hook" even though
-;;; we didn't really make a new Hemlock window.
-;;;
-(defun default-delete-window-hook-next-merge (hunk x y h)
-  (let* ((next (bitmap-hunk-next hunk))
-	 (next-hwin (device-hunk-window next))
 	 (next-xwin (bitmap-hunk-xwindow next)))
-    (multiple-value-bind
-	(nx ny nh)
-	(xlib:with-state (next-xwin)
-	  (multiple-value-bind (nx ny)
-			       (window-root-xy next-xwin
-					       (xlib:drawable-x next-xwin)
-					       (xlib:drawable-y next-xwin))
-	    (declare (fixnum nx ny))
-	    (when (and (= x nx)
-		       (= ny (the fixnum (+ y h xwindow-border-width*2))))
-	      (values x y (the fixnum (+ h xwindow-border-width*2
-					 (xlib:drawable-height next-xwin)))))))
-      (when nx
-	(let* ((font-family (bitmap-hunk-font-family next))
-	       (display (bitmap-device-display (device-hunk-device next)))
-	       (nwin (create-window-with-properties
-		      (xlib:screen-root (xlib:display-default-screen display))
-		      nx ny (bitmap-hunk-width next) nh
-		      (font-family-width font-family)
-		      (font-family-height font-family)
-		      (buffer-name (window-buffer next-hwin)))))
-	  ;;
-	  ;; Delete next's X window.
-	  (remove-xwindow-object next-xwin)
-	  (when (eq *current-highlighted-border* next)
-	    (setf *current-highlighted-border* nil))
-	  (when (and (eq *cursor-hunk* next) *cursor-dropped*) (lift-cursor))
-	  (xlib:display-force-output display)
-	  (xlib:destroy-window next-xwin)
-	  (xlib:free-gcontext (bitmap-hunk-gcontext next))
-	  (loop (unless (deleting-window-drop-event display next-xwin)
-		  (return)))
-	  ;;
-	  ;; Install new X window.
-	  (setf (bitmap-hunk-xwindow next) nwin)
-	  (setf (xlib:window-event-mask nwin) interesting-xevents-mask)
-	  (add-xwindow-object nwin next *hemlock-windows*)
-	  (xlib:map-window nwin)
-	  (xlib:display-finish-output display)
-	  (loop (when (eq (xlib:window-map-state nwin) :viewable)
-		  (return)))
-	  (xlib:with-state (nwin)
-	    (hunk-changed next (xlib:drawable-width nwin)
-			  (xlib:drawable-height nwin) nil))
-	  ;; This normally occurs as a result of "Make Window Hook".  Other
-	  ;; problems may occur if users are using this hook to do things to
-	  ;; their X windows.  Invoking this hook here could be bad too since
-	  ;; we didn't really create a new Hemlock window.
-	  (define-window-cursor next-hwin))))))
-|#
+    ;; Fetch height before setting y to save an extra round trip to the X
+    ;; server.
+    (let ((next-h (xlib:drawable-height next-xwin)))
+      (setf (xlib:drawable-y next-xwin) y)
+      (setf (xlib:drawable-height next-xwin) (+ next-h h)))
+    (setf (bitmap-hunk-trashed next) t)
+    (let ((hints (xlib:wm-normal-hints next-xwin)))
+      (setf (xlib:wm-size-hints-y hints) y)
+      (setf (xlib:wm-normal-hints next-xwin) hints))))
 
-;;; DELETING-WINDOW-DROP-EVENT checks for any events on win.  If there is one,
-;;; it is removed from the queue, and t is returned.  Otherwise, returns nil.
+
+;;; DELETING-WINDOW-DROP-EVENT -- Internal.
+;;;
+;;; This checks for any events on win.  If there is one, remove it from the
+;;; queue and return t.  Otherwise, return nil.
 ;;;
 (defun deleting-window-drop-event (display win)
   (xlib:display-finish-output display)
@@ -1036,30 +1059,59 @@
     result))
 
 
-;;; BITMAP-DELETE-WINDOW  --  Internal
+;;; MODIFY-PARENT-PROPERTIES -- Internal.
 ;;;
+;;; This adds or deletes from xparent's min-height and min-width hints, so the
+;;; window manager will hopefully prevent users from making a window group too
+;;; small to hold all the windows in it.  We add to the height when we split
+;;; windows making additional ones, and we delete from it when we delete a
+;;; window.
 ;;;
-(defun bitmap-delete-window (window)
-  (let* ((hunk (window-hunk window))
-	 (xwindow (bitmap-hunk-xwindow hunk))
-	 (display (bitmap-device-display (device-hunk-device hunk))))
-    (remove-xwindow-object xwindow)
-    (setq *window-list* (delete window *window-list*))
-    (when (eq *current-highlighted-border* hunk)
-      (setf *current-highlighted-border* nil))
-    (when (and (eq *cursor-hunk* hunk) *cursor-dropped*) (lift-cursor))
-    (xlib:display-force-output display)
-    (funcall *delete-window-hook* xwindow window)
-    (loop (unless (deleting-window-drop-event display xwindow) (return)))
-    (let ((device (device-hunk-device hunk)))
-      (setf (device-hunks device) (delete hunk (device-hunks device))))
-    (let ((next (bitmap-hunk-next hunk))
-	  (prev (bitmap-hunk-previous hunk)))
-      (setf (bitmap-hunk-next prev) next)
-      (setf (bitmap-hunk-previous next) prev)
-      (let ((buffer (window-buffer window)))
-	(setf (buffer-windows buffer) (delete window (buffer-windows buffer))))))
-  nil)
+;;; NOTE, THIS FAILS TO MAINTAIN THE WIDTH CORRECTLY.  We need to maintain the
+;;; width as the MAX of all the windows' minimal widths.  A window's minimal
+;;; width is its font's width multiplied by minimum-window-columns.
+;;;
+(defun modify-parent-properties (type xparent modelinep thumb-p
+				 font-width font-height)
+  (let ((hints (xlib:wm-normal-hints xparent)))
+    (xlib:set-wm-properties
+     xparent
+     :resource-name "Hemlock"
+     :x (xlib:wm-size-hints-x hints)
+     :y (xlib:wm-size-hints-y hints)
+     :width (xlib:drawable-width xparent)
+     :height (xlib:drawable-height xparent)
+     :user-specified-position-p t
+     :user-specified-size-p t
+     :width-inc (xlib:wm-size-hints-width-inc hints)
+     :height-inc (xlib:wm-size-hints-height-inc hints)
+     :min-width (or (xlib:wm-size-hints-min-width hints)
+		    (+ (* minimum-window-columns font-width) hunk-left-border))
+     :min-height
+     (let ((delta (minimum-window-height font-height modelinep thumb-p)))
+       (ecase type
+	 (:delete
+	  (let ((min-height (xlib:wm-size-hints-min-height hints)))
+	    (unless hints
+	      (error "Existing parent has no min-height hit?!"))
+	    (- min-height delta)))
+	 (:add
+	  (+ (or (xlib:wm-size-hints-min-height hints) 0)
+	     delta))
+	 (:set delta))))))
+
+;;; MINIMUM-WINDOW-HEIGHT -- Internal.
+;;;
+;;; This returns the minimum height necessary for a window given some of its
+;;; parameters.  This is the number of lines times font-height plus any extra
+;;; pixels for aesthetics.
+;;;
+(defun minimum-window-height (font-height modelinep thumb-p)
+  (if modelinep
+      (+ (* (1+ minimum-window-lines) font-height)
+	 (surplus-window-height-w/-modeline thumb-p))
+      (+ (* minimum-window-lines font-height)
+	 (surplus-window-height thumb-p))))
 
 
 
@@ -1157,12 +1209,9 @@
 			:border-width xwindow-border-width
 			:border *default-border-pixmap*
 			:event-mask random-typeout-xevents-mask
-			:override-redirect :on :class :input-output))))
+			:override-redirect :on :class :input-output
+			:cursor *hemlock-cursor*))))
 	   (gcontext (if (not window) (default-gcontext win))))
-      (unless window
-	(xlib:with-state (win)
-	  (setf (xlib:window-event-mask win) random-typeout-xevents-mask)
-	  (setf (xlib:window-cursor win) *hemlock-cursor*)))
       (values win gcontext)))
 
 (defvar *random-typeout-hook* #'default-random-typeout-hook
@@ -1293,28 +1342,36 @@
 ;;; name; this could be used better.
 ;;;
 (defun default-create-initial-windows-hook (device)
-  (let* ((main-win (make-window (buffer-start-mark *current-buffer*)
-				:device device))
-	 (main-xwin (bitmap-hunk-xwindow (window-hunk main-win)))
-	 (root (xlib:screen-root (xlib:display-default-screen
-				  (bitmap-device-display device)))))
-    (multiple-value-bind
-	(echo-x echo-y echo-width echo-height f-width f-height)
-	(default-create-initial-windows-echo
-	 (xlib:drawable-height root)
-	 (bitmap-hunk-font-family (window-hunk main-win))
-	 main-xwin)
-      (let ((echo-win (create-window-with-properties
-		       root echo-x echo-y echo-width echo-height
-		       f-width f-height "Echo Area")))
-	(setf *echo-area-window*
-	      (hlet ((ed::thumb-bar-meter nil))
-		(make-window
-		 (buffer-start-mark *echo-area-buffer*)
-		 :device device :window echo-win
-		 :modelinep t)))))
-    (setf *current-window* main-win)
-    (setf (xlib:window-border main-xwin) *highlight-border-pixmap*)))
+  (let ((root (xlib:screen-root (xlib:display-default-screen
+				 (bitmap-device-display device)))))
+    (let* ((xwindow (maybe-prompt-user-for-window
+		     root
+		     (value ed::default-initial-window-x)
+		     (value ed::default-initial-window-y)
+		     (value ed::default-initial-window-width)
+		     (value ed::default-initial-window-height)
+		     *default-font-family*
+		     t ;modelinep
+		     (value ed::thumb-bar-meter)
+		     "Hemlock")))
+      (setf (xlib:window-border xwindow) *highlight-border-pixmap*)
+      (let ((main-win (make-window (buffer-start-mark *current-buffer*)
+				   :device device
+				   :window xwindow)))
+	(multiple-value-bind
+	    (echo-x echo-y echo-width echo-height)
+	    (default-create-initial-windows-echo
+		(xlib:drawable-height root)
+		(window-hunk main-win))
+	  (let ((echo-xwin (make-echo-xwindow root echo-x echo-y echo-width
+					      echo-height)))
+	    (setf *echo-area-window*
+		  (hlet ((ed::thumb-bar-meter nil))
+		    (make-window
+		     (buffer-start-mark *echo-area-buffer*)
+		     :device device :modelinep t
+		     :window echo-xwin)))))
+	(setf *current-window* main-win)))))
 
 ;;; DEFAULT-CREATE-INITIAL-WINDOWS-ECHO makes the echo area window as wide as
 ;;; the main window and places it directly under it.  If the echo area does not
@@ -1324,40 +1381,50 @@
 ;;; managers (awm and twm) reparent the window, so we have to make sure
 ;;; main-xwin's x and y are relative to the root and not some false parent.
 ;;;
-(defun default-create-initial-windows-echo (full-height font-family main-xwin)
+(defun default-create-initial-windows-echo (full-height hunk)
   (declare (fixnum full-height))
-  (xlib:with-state (main-xwin)
-    (let ((w (xlib:drawable-width main-xwin))
-	  (h (xlib:drawable-height main-xwin)))
-      (declare (fixnum w h))
-      (multiple-value-bind (x y)
-			   (window-root-xy main-xwin
-					   (xlib:drawable-x main-xwin)
-					   (xlib:drawable-y main-xwin))
-	(declare (fixnum x y))
-	(let* ((ff-height (font-family-height font-family))
-	       (ff-width (font-family-width font-family))
-	       (echo-height (+ (* ff-height 4)
-			       hunk-top-border hunk-bottom-border
-			       hunk-modeline-top hunk-modeline-bottom)))
-	  (declare (fixnum echo-height))
-	  (if (<= (+ y h echo-height xwindow-border-width*2) full-height)
-	      (values x (+ y h xwindow-border-width*2)
-		      w echo-height ff-width ff-height)
-	      (let* ((newh (- full-height y echo-height xwindow-border-width*2
-			      ;; Since y is really the outside y, subtract
-			      ;; two more borders, so the echo area's borders
-			      ;; both appear on the screen.
-			      xwindow-border-width*2)))
-		(setf (xlib:drawable-height main-xwin) newh)
-		(values x (+ y newh xwindow-border-width*2)
-			w echo-height ff-width ff-height))))))))
+  (let ((font-family (bitmap-hunk-font-family hunk))
+	(xwindow (bitmap-hunk-xwindow hunk))
+	(xparent (window-group-xparent (bitmap-hunk-window-group hunk))))
+    (xlib:with-state (xwindow)
+      (let ((w (xlib:drawable-width xwindow))
+	    (h (xlib:drawable-height xwindow)))
+	(declare (fixnum w h))
+	(multiple-value-bind (x y)
+			     (window-root-xy xwindow
+					     (xlib:drawable-x xwindow)
+					     (xlib:drawable-y xwindow))
+	  (declare (fixnum x y))
+	  (let* ((ff-height (font-family-height font-family))
+		 (ff-width (font-family-width font-family))
+		 (echo-height (+ (* ff-height 4)
+				 hunk-top-border hunk-bottom-border
+				 hunk-modeline-top hunk-modeline-bottom)))
+	    (declare (fixnum echo-height))
+	    (if (<= (+ y h echo-height xwindow-border-width*2) full-height)
+		(values x (+ y h xwindow-border-width*2)
+			w echo-height ff-width ff-height)
+		(let* ((newh (- full-height y echo-height xwindow-border-width*2
+				;; Since y is really the outside y, subtract
+				;; two more borders, so the echo area's borders
+				;; both appear on the screen.
+				xwindow-border-width*2)))
+		  (setf (xlib:drawable-height xparent) newh)
+		  (values x (+ y newh xwindow-border-width*2)
+			  w echo-height ff-width ff-height)))))))))
 
 (defvar *create-initial-windows-hook* #'default-create-initial-windows-hook
-  "This function is used when the screen manager is initialized to make the
-   first windows, typically the main and echo area windows.  It takes a
+  "Hemlock uses this function when it initializes the screen manager to make
+   the first windows, typically the main and echo area windows.  It takes a
    Hemlock device as a required argument.  It sets *current-window* and
    *echo-area-window*.")
+
+(defun make-echo-xwindow (root x y width height)
+  (let* ((font-width (font-family-width *default-font-family*))
+	 (font-height (font-family-height *default-font-family*)))
+    (create-window-with-properties root x y width height
+				   font-width font-height
+				   "Echo Area" nil nil t)))
 
 (defun init-bitmap-screen-manager (display)
   ;;
@@ -1389,16 +1456,6 @@
     ;;
     ;; Create initial windows.
     (funcall *create-initial-windows-hook* device)
-    ;;
-    ;; Unlink the echo area window from the next/prev list.
-    (let* ((hunk (window-hunk *echo-area-window*))
-	   (next (bitmap-hunk-next hunk))
-	   (prev (bitmap-hunk-previous hunk)))
-      (setf (bitmap-hunk-next prev) next)
-      (setf (bitmap-hunk-previous next) prev)
-      (setf (bitmap-hunk-previous hunk) hunk)
-      (setf (bitmap-hunk-next hunk) hunk)
-      (setf (bitmap-hunk-thumb-bar-p hunk) nil))
     ;;
     ;; Setup random typeout over the user's main window.
     (let ((xwindow (bitmap-hunk-xwindow (window-hunk *current-window*))))
@@ -1491,6 +1548,34 @@
   (funcall (bitmap-hunk-changed-handler hunk) hunk)
   (when redisplay (dumb-window-redisplay (bitmap-hunk-window hunk))))
 
+(defun window-group-changed (window-group new-width new-height)
+  (let ((xparent (window-group-xparent window-group))
+	(affected-windows nil)
+	(count 0))
+    (setf (window-group-width window-group) new-width)
+    (setf (window-group-height window-group) new-height)
+    (dolist (window *window-list*)
+      (let ((test (window-group-xparent (bitmap-hunk-window-group
+					 (window-hunk window)))))
+	(when (eq test xparent)
+	  (push window affected-windows)
+	  (incf count))))
+    (multiple-value-bind
+	(pixels-per-window remainder)
+	(truncate new-height count)
+      (let ((count-1 (1- count)))
+	(do ((windows affected-windows (cdr windows))
+	     (i 0 (1+ i)))
+	    ((endp windows))
+	  (let ((xwindow (bitmap-hunk-xwindow (window-hunk (car windows)))))
+	    (setf (xlib:drawable-y xwindow) (* i pixels-per-window))
+	    (setf (xlib:drawable-width xwindow) new-width)
+	    (if (= i count-1)
+		(return (setf (xlib:drawable-height
+			       (bitmap-hunk-xwindow
+				(window-hunk (car windows))))
+			      (+ pixels-per-window remainder)))
+		(setf (xlib:drawable-height xwindow) pixels-per-window))))))))
 
 ;;; SET-HUNK-SIZE  --  Internal
 ;;;
@@ -1523,6 +1608,8 @@
 	    (if modelinep (- h font-height
 			     hunk-modeline-top hunk-modeline-bottom))))))
 
+;;; BITMAP-HUNK-BOTTOM-BORDER -- Internal.
+;;;
 (defun bitmap-hunk-bottom-border (hunk)
   (if (bitmap-hunk-thumb-bar-p hunk)
       hunk-thumb-bar-bottom-border
@@ -1571,14 +1658,16 @@
 ;;; min-height are optional and only used for prompting the user for a window.
 ;;;
 (defun create-window-with-properties (parent x y w h font-width font-height
-				      icon-name &optional min-width min-height)
-  (let ((win (xlib:create-window
-	      :parent parent :x (or x 0) :y (or y 0)
-	      :width (or w 0) :height (or h 0)
-	      :background *default-background-pixel*
-	      :border-width xwindow-border-width
-	      :border *default-border-pixmap*
-	      :class :input-output)))
+				      icon-name
+				      &optional min-width min-height
+				      window-group-p)
+  (let* ((win (xlib:create-window
+	       :parent parent :x (or x 0) :y (or y 0)
+	       :width (or w 0) :height (or h 0)
+	       :background (if window-group-p :none *default-background-pixel*)
+	       :border-width (if window-group-p xwindow-border-width 0)
+	       :border (if window-group-p *default-border-pixmap* nil)
+	       :class :input-output)))
     (xlib:set-wm-properties
      win :name (new-hemlock-window-name) :icon-name icon-name
      :resource-name "Hemlock"
@@ -1614,7 +1703,7 @@
 	       (or (not (eq auto :echo-only))
 		   (eq window *echo-area-window*)))
       (let* ((hunk (window-hunk window))
-	     (win (bitmap-hunk-xwindow hunk)))
+	     (win (window-group-xparent (bitmap-hunk-window-group hunk))))
 	(xlib:map-window win)
 	(setf (xlib:window-priority win) :above)
 	(xlib:display-force-output

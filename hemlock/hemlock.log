@@ -1,3 +1,85 @@
+.../systems-work/hemlock/mh.lisp, 18-Oct-90 13:41:38, Edit by Chiles.
+  MAYBE-DELETE-EXTRA-DRAFT-WINDOW modified to correctly delete another window
+  if one exists when a draft is a split window draft.  This had to be modified
+  to handle separate, unstacked windows correctly.
+
+.../systems-work/hemlock/bindings.lisp, 06-Sep-90 16:59:32, Edit by Chiles.
+  We failed to avoid binding "Auto Check Word Spelling" to #k"'" when we added
+  the new key-event stuff.  Actually, Blaine did.
+
+.../systems-work/hemlock/bindings.lisp, 24-Aug-90 14:04:34, Edit by Chiles.
+  Bound C-M-s (typically "Shell") to "Illegal" in the echo area.
+
+.../systems-work/hemlock/bit-screen.lisp, 06-Aug-90 13:48:10, Edit by Chiles.
+  I modified CREATE-WINDOW-FROM-CURRENT to correctly determin if there is
+  enough room to split the current window to make the new window.
+
+.../systems-work/hemlock/bit-screen.lisp, 06-Aug-90 12:59:40, Edit by Chiles.
+  Made SET-WINDOW-HOOK-RAISE-FUN frob the windows group X window, instead of
+  the child X window.
+
+.../systems-work/hemlock/hunk-draw.lisp, 05-Aug-90 12:57:21, Edit by Chiles.
+  Fixed DROP-CURSOR to beat on the parent borders instead of the non-existent
+  child borders.
+
+.../systems-work/hemlock/bit-screen.lisp, 05-Aug-90 11:58:46, Edit by Chiles.
+  Removed exports for MAKE-WINDOW, DELETE-WINDOW, NEXT-WINDOW, and
+  PREVIOUS-WINDOW since they're in screen.lisp.
+
+  Modified HUNK-RECONFIGURED to realize it object arg is either a hunk (for a
+  child changing) or a window-group (for a group/parent window changing).
+
+  Modified HUNK-MOUSE-ENTERED and HUNK-MOUSE-LEFT to frob the group window's
+  border instead of the child's border.
+
+  Totally redefined *create-window-hook* and *delete-window-hook*.  This
+  affected most of the arrangement of creation and deletion functionality.
+
+  Made the random-typeout window made from keeping a pop-up display, adhere to
+  the minimum resizing parameters Hemlock windows like to try to keep users
+  from screwing themselves.
+
+  Made MAYBE-MAKE-X-WINDOW-AND-PARENT set window manager hints for supplied
+  parents as if Hemlock had made the parent window.
+
+  Made code correctly handle font-family parameters instead of dropping into
+  lower-level code that incorrectly assumed *default-font-family*.
+
+  Consolidated some code, notably MODIFY-PARENT-PROPERTIES.
+
+
+.../systems-work/hemlock/xcoms.lisp, 01-Aug-90 14:00:43, Edit by Chiles.
+  Blew away "Stack Window".
+
+.../systems-work/hemlock/input.lisp, 01-Aug-90 13:49:27, Edit by Chiles.
+  Blaine modified MAYBE-KEEP-RANDOM-TYPEOUT-WINDOW in accordance with the new
+  bitmap window group stuff.
+
+.../systems-work/hemlock/filecoms.lisp, 01-Aug-90 11:23:07, Edit by Chiles.
+  Blaine modified "Delete Window" and "Delete Next Window" in accordance with
+  the new bitmap window group stuff.  They now test the length of *window-list*
+  to determine if they can delete the window instead of using next and previous
+  window commands and primitives and testing against the CURRENT-WINDOW.
+
+.../systems-work/hemlock/screen.lisp, 01-Aug-90 10:15:53, Edit by Chiles.
+  Blaine modified DELETE-WINDOW to test for *window-list* having length two or
+  less, signalling an error if so.  This allows the bitmap window deletion
+  method to delete the current window by changing to another group.  The
+  "Delete Window" command cannot tell there are other windows, and it already
+  tries to make the previous window the current one before calling the
+  DELETE-WINDOW primitive.  With the new bitmap window groups, this doesn't
+  work.  We still have a problem if a programmer calls DELETE-WINDOW on the
+  current window which will break Hemlock.
+
+.../systems-work/hemlock/rompsite.lisp, 01-Aug-90 09:33:02, Edit by Chiles.
+  Blaine modified the X events masks and the raising and lowering of Hemlock
+  windows upon entering and leaving in accordance with the new bitmap window
+  groups.
+
+.../systems-work/hemlock/struct.lisp, 01-Aug-90 09:07:25, Edit by Chiles.
+  Blaine added window-group structure and the window-group slot to
+  bitmap-hunks for the new bitmap window groups.
+
 .../systems-work/hemlock/keysym-defs.lisp, 04-Jul-90 12:14:09, Edit by Chiles.
   Added a few key-event to character translations at the end of the file to
   make quoting characters work better when running under X.

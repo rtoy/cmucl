@@ -2,33 +2,22 @@
 
 
 
-;;;; eval servers.
-
-"Remote Compile File" is losing now.
-
-Flakey prompt handling when eval text is used and it gets and error.
-
-
-
 ;;;; X problems.
 
-Intermittant line blanking while typing, like server isn't really forcing
-output.  Tracing shows that it really happens.
+Compute mininum width of a window group by taking the maximum of all the
+windows' font-widths, each multiplied by minimum-window-columns.  Right now it
+just uses the default font or current window.
+
+Compute minimum window split correctly: look at current window's font-height
+and new window's font-height, extra height pixels, whether each has a modeline,
+and minimum-window-lines to determine if we can split the current window.
 
 Server not implementing DRAW-IMAGE-GLYPHS correctly, so we don't have to do our
 pixmap hack.
 
-Possibly auto saving and typing ahead tickles the servers force output problem.
-There is the remote chance that Hemlock is slipping up and not calling
-redisplay or something under perverse conditions.
-
 
 
 ;;;; Bill and/or Rob.
-
-Blow away default case translations.  Change bindings to lowercase, unless
-inappropriate.  Modify tty code to always translate to lowercase control
-characters on input.
 
 Make editor-error messages; that is just make many of the (editor-error)
 forms have some string to be printed.
@@ -52,7 +41,7 @@ function position.  Think about whizzy, general definition location logging and
 finding mechanism that is user extensible.
 
 Think about regular expression searching.
-   Importance: probably should be there by Spring 89.
+   Importance: it would be used weekly by some and daily by others.
 
 Make illegal setting window width and height, (or support this).
 
@@ -266,8 +255,6 @@ Write "Refile Message and Show Next".
 Do something about message headers when reading mail.  Suggestions include a
 list of headers components that get deleted from the buffer and simply
 scrolling the window past the "Received:" lines.
-
-"Examine Message"
 
 Add more folder support and possibly something specific for Bovik groveling.
 For example, rehashing the cached folder names and/or adding new ones from a
@@ -645,9 +632,6 @@ Synchronization/exclusion issues:
     Find other places where exclusion is needed:
         Redisplay?
         Typescript code?
-
-Flush case in keyboard events?  Instead, have a shift bit that is used by
-text-character.  You would still want shift-8 to be *, though....
 
 Online documentation stuff: What to do and how to do it.  Rob has some
 notes on this from a year or two ago.

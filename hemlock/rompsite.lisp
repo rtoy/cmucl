@@ -184,33 +184,22 @@
 
 ;;; These are used for selecting X events.
 ;;; 
-;;; This says to send :key-press, :button-press, :button-release, :enter-notify,
-;;; and :leave-notify events.
-;;;
-(defconstant input/boundary-xevents-selection-keys
-  '(:key-press :button-press :button-release :enter-window :leave-window))
-(defconstant input/boundary-xevents-mask
-  (apply #'xlib:make-event-mask input/boundary-xevents-selection-keys))
-;;;
-;;; This says to send :exposure, :destroy-notify, :unmap-notify, :map-notify,
-;;; :reparent-notify, :configure-notify, :gravity-notify, and :circulate-notify
-;;; in addition to the above events.  Of those enumerated here, we only care
-;;; about :exposure and :configure-notify.
-;;;
-(defconstant interesting-xevents-receive-keys
-  '(:key-press :button-press :button-release :enter-notify :leave-notify
-    :exposure :graphics-exposure :configure-notify :destroy-notify :unmap-notify
-    :map-notify :reparent-notify :gravity-notify :circulate-notify))
-(defconstant interesting-xevents-mask
-  (apply #'xlib:make-event-mask
-	 (append input/boundary-xevents-selection-keys
-		 '(:exposure :structure-notify))))
+(defconstant group-interesting-xevents
+  '(:structure-notify))
+(defconstant group-interesting-xevents-mask
+  (apply #'xlib:make-event-mask group-interesting-xevents))
 
+(defconstant child-interesting-xevents
+  '(:key-press :button-press :button-release :structure-notify :exposure
+    :enter-window :leave-window))
+(defconstant child-interesting-xevents-mask
+  (apply #'xlib:make-event-mask child-interesting-xevents))
+
+(defconstant random-typeout-xevents
+  '(:key-press :button-press :button-release :enter-window :leave-window
+    :exposure))
 (defconstant random-typeout-xevents-mask
-  (apply #'xlib:make-event-mask
-	 (append input/boundary-xevents-selection-keys
-		 '(:exposure))))
-
+  (apply #'xlib:make-event-mask random-typeout-xevents))
 
 (proclaim '(special ed::*open-paren-highlight-font*
 		    ed::*active-region-highlight-font*))
@@ -481,13 +470,16 @@
 ;;; This should do something more sophisticated when we know what that is.
 ;;; 
 (defun default-hemlock-window-mngt (display on)
-  (let ((win (bitmap-hunk-xwindow (window-hunk *current-window*)))
-	(ewin (bitmap-hunk-xwindow (window-hunk *echo-area-window*))))
-    (cond (on (setf (xlib:window-priority ewin) :above)
+  (let ((xparent (window-group-xparent
+		  (bitmap-hunk-window-group (window-hunk *current-window*))))
+	(echo-xparent (window-group-xparent
+		       (bitmap-hunk-window-group
+			(window-hunk *echo-area-window*)))))
+    (cond (on (setf (xlib:window-priority echo-xparent) :above)
 	      (clear-editor-input *editor-input*)
-	      (setf (xlib:window-priority win) :above))
-	  (t (setf (xlib:window-priority ewin) :below)
-	     (setf (xlib:window-priority win) :below))))
+	      (setf (xlib:window-priority xparent) :above))
+	  (t (setf (xlib:window-priority echo-xparent) :below)
+	     (setf (xlib:window-priority xparent) :below))))
   (xlib:display-force-output display))
 
 (defvar *hemlock-window-mngt* #'default-hemlock-window-mngt
