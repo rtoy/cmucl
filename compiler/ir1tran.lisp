@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83 1992/12/10 16:48:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.1 1993/01/15 15:31:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -302,10 +302,10 @@
 		 ((array t)
 		  (dotimes (i (array-total-size value))
 		    (grovel (row-major-aref value i))))
-		 (structure
+		 (instance
 		  (when (emit-make-load-form value)
-		    (dotimes (i (structure-length value))
-		      (grovel (structure-ref value i)))))
+		    (dotimes (i (%instance-length value))
+		      (grovel (%instance-ref value i)))))
 		 (t
 		  (compiler-error
 		   "Cannot dump objects of type ~S into fasl files."
@@ -2586,7 +2586,7 @@
 				      form)))))
 	  
 	  (unless ignore
-	    (funcall #'%proclaim form))
+	    (%proclaim form))
 	  (if ignore
 	      (ir1-convert start cont nil)
 	      (ir1-convert start cont `(%proclaim ,what)))))
@@ -2596,12 +2596,14 @@
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
 ;;;
 ;;;    This is a frob that DEFMACRO expands into to establish the compiler
-;;; semantics.  %%COMPILER-DEFSTRUCT does most of the work, we just clear all
-;;; of the functions out of *FREE-FUNCTIONS* to keep things in synch.
+;;; semantics.  %COMPILER-ONLY-DEFSTRUCT and %%COMPILER-DEFSTRUCT do most of
+;;; the work, we just clear all of the functions out of *FREE-FUNCTIONS* to
+;;; keep things in synch.  %%COMPILER-DEFSTRUCT is also called at load-time.
 ;;;
 (def-ir1-translator %compiler-defstruct ((info) start cont :kind :function)
   (let* ((info (eval info)))
-    (funcall #'%%compiler-defstruct info)
+    (%compiler-only-defstruct info)
+    (%%compiler-defstruct info)
     (dolist (slot (dd-slots info))
       (let ((fun (dsd-accessor slot)))
 	(remhash fun *free-functions*)
