@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.21 1991/02/20 14:57:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.22 1991/04/04 14:38:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,9 +18,8 @@
 ;;;
 (in-package 'c)
 
-(defvar *byte-buffer*
-  (make-array 10 :element-type '(unsigned-byte 8)
-	      :fill-pointer 0  :adjustable t))
+(defvar *byte-buffer*)
+(declaim (type (vector (unsigned-byte 8)) *byte-buffer*))
 
 
 ;;;; Debug blocks:
@@ -71,7 +70,7 @@
 ;;; COMPUTE-LIVE-VARS  --  Internal
 ;;;
 ;;;    Given a local conflicts vector and an IR2 block to represent the set of
-;;; live TNs, and the Var-Locs hashtable representing the variables dumped,
+;;; live TNs, and the Var-Locs hash-table representing the variables dumped,
 ;;; compute a bit-vector representing the set of live variables.  If the TN is
 ;;; environment-live, we only mark it as live when it is in scope at Node.
 ;;;
@@ -347,27 +346,33 @@
 ;;;
 ;;;    Dump info to represent Var's location being TN.  ID is an integer that
 ;;; makes Var's name unique in the function.  Buffer is the vector we stick the
-;;; result in.
+;;; result in.  If Minimal is true, we suppress name dumping, and set the
+;;; minimal flag.
 ;;;
 ;;;    The debug-variable is only marked as always-live if the TN is
 ;;; environment live and is an argument.  If a :debug-environment TN, then we
 ;;; also exclude set variables, since the variable is not guranteed to be live
 ;;; everywhere in that case.
 ;;;
-(defun dump-1-variable (fun var tn id buffer)
-  (declare (type lambda-var var) (type tn tn) (type index id)
+(defun dump-1-variable (fun var tn id minimal buffer)
+  (declare (type lambda-var var) (type (or tn null) tn) (type index id)
 	   (type clambda fun))
   (let* ((name (leaf-name var))
 	 (package (symbol-package name))
 	 (package-p (and package (not (eq package *package*))))
-	 (save-tn (tn-save-tn tn))
-	 (kind (tn-kind tn))
+	 (save-tn (and tn (tn-save-tn tn)))
+	 (kind (and tn (tn-kind tn)))
 	 (flags 0))
     (declare (type index flags))
-    (unless package
-      (setq flags (logior flags compiled-debug-variable-uninterned)))
-    (when package-p
-      (setq flags (logior flags compiled-debug-variable-packaged)))
+    (cond (minimal
+	   (setq flags (logior flags compiled-debug-variable-minimal-p))
+	   (unless tn
+	     (setq flags (logior flags compiled-debug-variable-deleted-p))))
+	  (t
+	   (unless package
+	     (setq flags (logior flags compiled-debug-variable-uninterned)))
+	   (when package-p
+	     (setq flags (logior flags compiled-debug-variable-packaged)))))
     (when (and (or (eq kind :environment)
 		   (and (eq kind :debug-environment)
 			(null (basic-var-sets var))))
@@ -377,15 +382,18 @@
       (setq flags (logior flags compiled-debug-variable-environment-live)))
     (when save-tn
       (setq flags (logior flags compiled-debug-variable-save-loc-p)))
-    (unless (zerop id)
+    (unless (or (zerop id) minimal)
       (setq flags (logior flags compiled-debug-variable-id-p)))
     (vector-push-extend flags buffer)
-    (write-var-string (symbol-name name) buffer)
-    (when package-p
-      (write-var-string (package-name package) buffer))
-    (unless (zerop id)
-      (write-var-integer id buffer))
-    (write-var-integer (tn-sc-offset tn) buffer)
+    (unless minimal
+      (write-var-string (symbol-name name) buffer)
+      (when package-p
+	(write-var-string (package-name package) buffer))
+      (unless (zerop id)
+	(write-var-integer id buffer)))
+    (if tn
+	(write-var-integer (tn-sc-offset tn) buffer)
+	(assert minimal))
     (when save-tn
       (write-var-integer (tn-sc-offset save-tn) buffer)))
   (undefined-value))
@@ -436,11 +444,23 @@
 		 (incf id))
 		(t
 		 (setq id 0  prev-name name)))
-	  (dump-1-variable fun var (cdr x) id *byte-buffer*)
+	  (dump-1-variable fun var (cdr x) id nil *byte-buffer*)
 	  (setf (gethash var var-locs) i))
 	(incf i)))
 
     (copy-seq *byte-buffer*)))
+
+
+;;; COMPUTE-MINIMAL-VARIABLES  --  Internal
+;;;
+;;;    Dump out the arguments to Fun in the minimal variable format.
+;;;
+(defun compute-minimal-variables (fun)
+  (declare (type clambda fun))
+  (setf (fill-pointer *byte-buffer*) 0)
+  (dolist (var (lambda-vars fun))
+    (dump-1-variable fun var (leaf-info var) 0 t *byte-buffer*))
+  (copy-seq *byte-buffer*))
 
 
 ;;; DEBUG-LOCATION-FOR  --  Internal
@@ -513,89 +533,240 @@
 	   (return-info-locations (tail-set-info (lambda-tail-set fun))))))
 
 
+;;;; Debug functions:
+
+;;; DFUN-FROM-FUN  --  Internal
+;;;
+;;;    Return a C-D-F structure with all the mandatory slots filled in.
+;;;
+(defun dfun-from-fun (fun)
+  (declare (type clambda fun))
+  (let* ((2env (environment-info (lambda-environment fun)))
+	 (dispatch (lambda-optional-dispatch fun))
+	 (main-p (and dispatch
+		      (eq fun (optional-dispatch-main-entry dispatch)))))
+    (make-compiled-debug-function
+     :name (cond ((leaf-name fun))
+		 ((let ((ef (functional-entry-function
+			     fun)))
+		    (and ef (leaf-name ef))))
+		 ((and main-p (leaf-name dispatch)))
+		 (t
+		  (component-name
+		   (block-component (node-block (lambda-bind fun))))))
+     :kind (if main-p nil (functional-kind fun))
+     :return-pc (tn-sc-offset (ir2-environment-return-pc 2env))
+     :old-fp (tn-sc-offset (ir2-environment-old-fp 2env))
+     :start-pc (label-position (ir2-environment-environment-start 2env))
+     :elsewhere-pc (label-position (ir2-environment-elsewhere-start 2env)))))
+
+
+;;; COMPUTE-1-DEBUG-FUNCTION  --  Internal
+;;;
+;;;    Return a complete C-D-F structure for Fun.  This involves determining
+;;; the DEBUG-INFO level and filling in optional slots as appropriate.
+;;;
+(defun compute-1-debug-function (fun var-locs)
+  (declare (type clambda fun) (type hash-table var-locs))
+  (let* ((dfun (dfun-from-fun fun))
+	 (level (cookie-debug
+		 (lexenv-cookie (node-lexenv (lambda-bind fun))))))
+
+    (cond ((zerop level))
+	  ((and (<= level 1)
+		(let ((od (lambda-optional-dispatch fun)))
+		  (or (not od)
+		      (not (eq (optional-dispatch-main-entry od) fun)))))
+	   (setf (compiled-debug-function-variables dfun)
+		 (compute-minimal-variables fun))
+	   (setf (compiled-debug-function-arguments dfun) :minimal))
+	  (t
+	   (when (>= level 1)
+	     (setf (compiled-debug-function-variables dfun)
+		   (compute-variables fun level var-locs)))
+	   
+	   (unless (= level 0)
+	     (setf (compiled-debug-function-arguments dfun)
+		   (compute-arguments fun var-locs)))))
+    
+    (when (>= level 2)
+      (multiple-value-bind (blocks tlf-num)
+			   (compute-debug-blocks fun var-locs)
+	(setf (compiled-debug-function-tlf-number dfun) tlf-num)
+	(setf (compiled-debug-function-blocks dfun) blocks)))
+
+    (if (external-entry-point-p fun)
+	(setf (compiled-debug-function-returns dfun) :standard)
+	(let ((tails (lambda-tail-set fun)))
+	  (when tails
+	    (let ((info (tail-set-info tails)))
+	      (cond ((eq (return-info-kind info) :unknown)
+		     (setf (compiled-debug-function-returns dfun)
+			   :standard))
+		    ((/= level 0)
+		     (setf (compiled-debug-function-returns dfun)
+			   (compute-debug-returns fun))))))))
+    dfun))
+
+
+;;;; Minimal debug functions:
+
+;;; DEBUG-FUNCTION-MINIMAL-P  --  Internal
+;;;
+;;;    Return true if Dfun can be represented as a minimal debug function.
+;;; Dfun is a cons (<start offset> . C-D-F).
+;;;
+(defun debug-function-minimal-p (dfun)
+  (declare (type cons dfun))
+  (let ((dfun (cdr dfun)))
+    (and (member (compiled-debug-function-arguments dfun) '(:minimal nil))
+	 (null (compiled-debug-function-blocks dfun)))))
+
+
+;;; DUMP-1-MINIMAL-DFUN  --  Internal
+;;;
+;;;    Dump a packed binary representation of a Dfun into *byte-buffer*.
+;;; Prev-Start and Start are the byte offsets in the code where the previous
+;;; function started and where this one starts.  Prev-Elsewhere is the previous
+;;; function's elsewhere PC.
+;;;
+(defun dump-1-minimal-dfun (dfun prev-start start prev-elsewhere)
+  (declare (type compiled-debug-function dfun)
+	   (type index prev-start start prev-elsewhere))
+  (let* ((name (compiled-debug-function-name dfun))
+	 (setf-p (and (consp name) (eq (car name) 'setf)
+		      (consp (cdr name)) (symbolp (cadr name))))
+	 (base-name (if setf-p (cadr name) name))
+	 (pkg (when (symbolp base-name)
+		(symbol-package base-name)))
+	 (name-rep
+	  (cond ((stringp base-name)
+		 minimal-debug-function-name-component)
+		((not pkg)
+		 minimal-debug-function-name-uninterned)
+		((eq pkg *package*)
+		 minimal-debug-function-name-symbol)
+		(t
+		 minimal-debug-function-name-packaged))))
+    (assert (or (atom name) setf-p))
+    (let ((options 0))
+      (setf (ldb minimal-debug-function-name-style-byte options) name-rep)
+      (setf (ldb minimal-debug-function-kind-byte options)
+	    (position (compiled-debug-function-kind dfun)
+		      minimal-debug-function-kinds))
+      (setf (ldb minimal-debug-function-returns-byte options)
+	    (etypecase (compiled-debug-function-returns dfun)
+	      ((member :standard) minimal-debug-function-returns-standard)
+	      ((member :fixed) minimal-debug-function-returns-fixed)
+	      (vector minimal-debug-function-returns-specified)))
+      (vector-push-extend options *byte-buffer*))
+
+    (let ((flags 0))
+      (when setf-p
+	(setq flags (logior flags minimal-debug-function-setf-bit)))
+      (when (compiled-debug-function-nfp dfun)
+	(setq flags (logior flags minimal-debug-function-nfp-bit)))
+      (when (compiled-debug-function-variables dfun)
+	(setq flags (logior flags minimal-debug-function-variables-bit)))
+      (vector-push-extend flags *byte-buffer*))
+
+    (when (eql name-rep minimal-debug-function-name-packaged)
+      (write-var-string (package-name pkg) *byte-buffer*))
+    (unless (stringp base-name)
+      (write-var-string (symbol-name base-name) *byte-buffer*))
+
+    (let ((vars (compiled-debug-function-variables dfun)))
+      (when vars
+	(let ((len (length vars)))
+	  (write-var-integer len *byte-buffer*)
+	  (dotimes (i len)
+	    (vector-push-extend (aref vars i) *byte-buffer*)))))
+
+    (let ((returns (compiled-debug-function-returns dfun)))
+      (when (vectorp returns)
+	(let ((len (length returns)))
+	  (write-var-integer len *byte-buffer*)
+	  (dotimes (i len)
+	    (write-var-integer (aref returns i) *byte-buffer*)))))
+
+    (write-var-integer (compiled-debug-function-return-pc dfun)
+		       *byte-buffer*)
+    (write-var-integer (compiled-debug-function-old-fp dfun)
+		       *byte-buffer*)
+    (when (compiled-debug-function-nfp dfun)
+      (write-var-integer (compiled-debug-function-nfp dfun)
+			 *byte-buffer*))
+    (write-var-integer (- start prev-start) *byte-buffer*)
+    (write-var-integer (- (compiled-debug-function-start-pc dfun) start)
+		       *byte-buffer*)
+    (write-var-integer (- (compiled-debug-function-elsewhere-pc dfun)
+			  prev-elsewhere)
+		       *byte-buffer*)))
+
+
+;;; COMPUTE-MINIMAL-DEBUG-FUNCTIONS  --  Internal
+;;;
+;;;    Return a byte-vector holding all the debug functions for a component in
+;;; the packed binary minimal-debug-function format.
+;;;
+(defun compute-minimal-debug-functions (dfuns)
+  (declare (list dfuns))
+  (setf (fill-pointer *byte-buffer*) 0)
+  (let ((prev-start 0)
+	(prev-elsewhere 0))
+    (dolist (dfun dfuns)
+      (let ((start (car dfun))
+	    (elsewhere (compiled-debug-function-elsewhere-pc (cdr dfun))))
+	(dump-1-minimal-dfun (cdr dfun) prev-start start prev-elsewhere)
+	(setq prev-start start  prev-elsewhere elsewhere))))
+  (copy-seq *byte-buffer*))
+
+
+;;;; Full component dumping:
+
+;;; COMPUTE-DEBUG-FUNCTION-MAP  --  Internal
+;;;
+;;;    Compute the full form (simple-vector) function map.
+;;;
+(defun compute-debug-function-map (sorted)
+  (declare (list sorted))
+  (let* ((len (1- (* (length sorted) 2)))
+	 (funs-vec (make-array len)))
+    (do ((i -1 (+ i 2))
+	 (sorted sorted (cdr sorted)))
+	((= i len))
+      (declare (fixnum i))
+      (let ((dfun (car sorted)))
+	(unless (minusp i)
+	  (setf (svref funs-vec i) (car dfun)))
+	(setf (svref funs-vec (1+ i)) (cdr dfun))))
+    funs-vec))
+
+
 ;;; DEBUG-INFO-FOR-COMPONENT  --  Interface
 ;;;
-;;; Return a debug-info structure describing component.  This has to be called
-;;; at some particular time (after assembly) so that source map information is
-;;; available.
-;;; 
+;;;    Return a debug-info structure describing component.  This has to be
+;;; called after assembly so that source map information is available.
+;;;
 (defun debug-info-for-component (component)
   (declare (type component component))
   (let ((res (make-compiled-debug-info :name (component-name component)
 				       :package (package-name *package*))))
     (collect ((dfuns))
-      (let ((var-locs (make-hash-table :test #'eq)))
+      (let ((var-locs (make-hash-table :test #'eq))
+	    (*byte-buffer* 
+	     (make-array 10 :element-type '(unsigned-byte 8)
+			 :fill-pointer 0  :adjustable t)))
 	(dolist (fun (component-lambdas component))
 	  (clrhash var-locs)
-	  (let* ((2env (environment-info (lambda-environment fun)))
-		 (dispatch (lambda-optional-dispatch fun))
-		 (main-p (and dispatch
-			      (eq fun (optional-dispatch-main-entry dispatch))))
-		 (dfun (make-compiled-debug-function
-			:name (cond ((leaf-name fun))
-				    ((let ((ef (functional-entry-function
-						fun)))
-				       (and ef (leaf-name ef))))
-				    ((and main-p (leaf-name dispatch)))
-				    (t
-				     (component-name component)))
-			:kind (if main-p nil (functional-kind fun))
-			:return-pc (tn-sc-offset
-				    (ir2-environment-return-pc 2env))
-			:old-fp (tn-sc-offset
-				 (ir2-environment-old-fp 2env))
-			:start-pc (label-position
-				   (ir2-environment-environment-start 2env))
+	  (dfuns (cons (label-position
+			(block-label (node-block (lambda-bind fun))))
+		       (compute-1-debug-function fun var-locs)))))
 
-			:elsewhere-pc
-			(label-position
-			 (ir2-environment-elsewhere-start 2env))))
-		 (level (cookie-debug
-			 (lexenv-cookie
-			  (node-lexenv
-			   (lambda-bind fun))))))
-	    
-	    (when (>= level 1)
-	      (setf (compiled-debug-function-variables dfun)
-		    (compute-variables fun level var-locs)))
-
-	    (unless (= level 0)
-	      (setf (compiled-debug-function-arguments dfun)
-		    (compute-arguments fun var-locs)))
-
-	    (when (>= level 2)
-	      (multiple-value-bind (blocks tlf-num)
-				   (compute-debug-blocks fun var-locs)
-		(setf (compiled-debug-function-tlf-number dfun) tlf-num)
-		(setf (compiled-debug-function-blocks dfun) blocks)))
-
-	    (let ((tails (lambda-tail-set fun)))
-	      (when tails
-		(let ((info (tail-set-info tails)))
-		  (cond ((eq (return-info-kind info) :unknown)
-			 (setf (compiled-debug-function-returns dfun)
-			       :standard))
-			((/= level 0)
-			 (setf (compiled-debug-function-returns dfun)
-			       (compute-debug-returns fun)))))))
-
-	    (dfuns (cons (label-position
-			  (block-label
-			   (node-block
-			    (lambda-bind fun))))
-			 dfun)))))
-
-      (let* ((sorted (sort (dfuns) #'< :key #'car))
-	     (len (1- (* (length sorted) 2)))
-	     (funs-vec (make-array len)))
-	(do ((i -1 (+ i 2))
-	     (sorted sorted (cdr sorted)))
-	    ((= i len))
-	  (declare (fixnum i))
-	  (let ((dfun (car sorted)))
-	    (unless (minusp i)
-	      (setf (svref funs-vec i) (car dfun)))
-	    (setf (svref funs-vec (1+ i)) (cdr dfun))))
-	(setf (compiled-debug-info-function-map res) funs-vec)))
+      (let ((sorted (sort (dfuns) #'< :key #'car)))
+	(setf (compiled-debug-info-function-map res)
+	      (if (every #'debug-function-minimal-p sorted)
+		  (compute-minimal-debug-functions sorted)
+		  (compute-debug-function-map sorted)))))
 
     res))
