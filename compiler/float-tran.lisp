@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.15 1993/05/07 16:03:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.16 1993/05/11 13:50:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,26 +24,30 @@
 (defknown %single-float (real) single-float (movable foldable flushable))
 (defknown %double-float (real) double-float (movable foldable flushable))
 
-(deftransform float ((n &optional f) (* &optional single-float))
+(deftransform float ((n &optional f) (* &optional single-float) *
+		     :when :both)
+		     
   '(%single-float n))
 
-(deftransform float ((n f) (* double-float))
+(deftransform float ((n f) (* double-float) * :when :both)
   '(%double-float n))
 
-(deftransform %single-float ((n) (single-float))
+(deftransform %single-float ((n) (single-float) * :when :both)
   'n)
 
-(deftransform %double-float ((n) (double-float))
+(deftransform %double-float ((n) (double-float) * :when :both)
   'n)
 
 (deftransform coerce ((n type)
 		      (* (constant-argument
-			  (member float short-float single-float))))
+			  (member float short-float single-float)))
+		      * :when :both)
   '(%single-float n))
 
 (deftransform coerce ((n type)
 		      (* (constant-argument
-			  (member double-float long-float))))
+			  (member double-float long-float)))
+		      * :when :both)
   '(%double-float n))
 
 ;;; Not strictly float functions, but primarily useful on floats:
@@ -63,7 +67,8 @@
 ;;;
 (macrolet ((frob (fun type)
 	     `(deftransform random ((num &optional state)
-				    (,type &optional *))
+				    (,type &optional *) *
+				    :when :both)
 		"use inline float operations"
 		'(,fun num state))))
   (frob %random-single-float single-float)
@@ -100,16 +105,17 @@
 (defun double-float-low-bits (x) (double-float-low-bits x))
 
 (def-source-transform float-sign (float1 &optional (float2 nil f2-p))
-  (let ((n-f1 (gensym)))
-    (if f2-p
-	`(* (float-sign ,float1) (abs ,float2))
-	`(let ((,n-f1 ,float1))
-	   (declare (float ,n-f1))
-	   (if (minusp (if (typep ,n-f1 'single-float)
-			   (single-float-bits ,n-f1)
-			   (double-float-high-bits ,n-f1)))
-	       (float -1 ,n-f1)
-	       (float 1 ,n-f1))))))
+  (cond (*byte-compiling* (values nil t))
+	(f2-p `(* (float-sign ,float1) (abs ,float2)))
+	(t
+	 (let ((n-f1 (gensym)))
+	   `(let ((,n-f1 ,float1))
+	      (declare (float ,n-f1))
+	      (if (minusp (if (typep ,n-f1 'single-float)
+			      (single-float-bits ,n-f1)
+			      (double-float-high-bits ,n-f1)))
+		  (float -1 ,n-f1)
+		  (float 1 ,n-f1)))))))
 
 
 ;;;; DECODE-FLOAT, INTEGER-DECODE-FLOAT, SCALE-FLOAT:
@@ -169,22 +175,22 @@
 (defknown scale-double-float (double-float fixnum) double-float
   (movable foldable flushable))
 
-(deftransform decode-float ((x) (single-float))
+(deftransform decode-float ((x) (single-float) * :when :both)
   '(decode-single-float x))
 
-(deftransform decode-float ((x) (double-float))
+(deftransform decode-float ((x) (double-float) * :when :both)
   '(decode-double-float x))
 
-(deftransform integer-decode-float ((x) (single-float))
+(deftransform integer-decode-float ((x) (single-float) * :when :both)
   '(integer-decode-single-float x))
 
-(deftransform integer-decode-float ((x) (double-float))
+(deftransform integer-decode-float ((x) (double-float) * :when :both)
   '(integer-decode-double-float x))
 
-(deftransform scale-float ((f ex) (single-float *))
+(deftransform scale-float ((f ex) (single-float *) * :when :both)
   '(scale-single-float f ex))
 
-(deftransform scale-float ((f ex) (double-float *))
+(deftransform scale-float ((f ex) (double-float *) * :when :both)
   '(scale-double-float f ex))
 
 
@@ -221,7 +227,7 @@
 ;;; has a precise representation as a float (such as 0).
 ;;;
 (macrolet ((frob (op)
-	     `(deftransform ,op ((x y) (float rational))
+	     `(deftransform ,op ((x y) (float rational) :when :both)
 		(unless (constant-continuation-p y)
 		  (give-up "Can't open-code float to rational comparison."))
 		(let ((val (continuation-value y)))
@@ -283,7 +289,7 @@
   (destructuring-bind (name prim rtype) stuff
     (deftransform name ((x) '(single-float) rtype :eval-name t)
       `(coerce (,prim (coerce x 'double-float)) 'single-float))
-    (deftransform name ((x) '(double-float) rtype :eval-name t)
+    (deftransform name ((x) '(double-float) rtype :eval-name t :when :both)
       `(,prim x))))
 
 (dolist (stuff '((expt %pow t)
@@ -293,7 +299,7 @@
       `(coerce (,prim (coerce x 'double-float)
 		      (coerce y 'double-float))
 	       'single-float))
-    (deftransform name ((x y) '(double-float) rtype :eval-name t)
+    (deftransform name ((x y) '(double-float) rtype :eval-name t :when :both)
       `(,prim x y))))
 
 (deftransform log ((x y) (float float) float)

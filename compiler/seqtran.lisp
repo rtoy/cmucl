@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.16 1992/08/05 00:36:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.17 1993/05/11 13:50:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,20 +72,20 @@
 (def-source-transform mapcon (function list &rest more-lists)
   (mapper-transform function (cons list more-lists) :nconc nil))
 
-(deftransform elt ((s i) ((simple-array * (*)) *))
+(deftransform elt ((s i) ((simple-array * (*)) *) * :when :both)
   '(aref s i))
 
-(deftransform elt ((s i) (list *))
+(deftransform elt ((s i) (list *) * :when :both)
   '(nth i s))
 
-(deftransform %setelt ((s i v) ((simple-array * (*)) * *))
+(deftransform %setelt ((s i v) ((simple-array * (*)) * *) * :when :both)
   '(%aset s i v))
 
 (deftransform %setelt ((s i v) (list * *))
   '(setf (car (nthcdr i s)) v))
 
 
-(deftransform member ((e l &key (test #'eql)) * * :node node)
+(deftransform member ((e l &key (test #'eql)) * * :node node :when :both)
   (unless (constant-continuation-p l) (give-up))
   
   (let ((val (continuation-value l)))
@@ -421,7 +421,7 @@
   (destructuring-bind (fun pred*) stuff
     (deftransform fun ((string1 string2 &key (start1 0) end1
 				(start2 0) end2)
-		       '* '* :eval-name t)
+		       '* '* :eval-name t :when :both)
       `(,pred* string1 string2 start1 end1 start2 end2))))
 
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.40 1993/02/03 18:26:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.41 1993/05/11 13:50:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,7 +62,7 @@
 ;;; FUNCALL, then do the &REST APPLY thing, and let MV optimization figure
 ;;; things out.
 ;;;
-(deftransform complement ((fun) * * :node node)
+(deftransform complement ((fun) * * :node node :when :both)
   "open code"
   (multiple-value-bind (min max)
 		       (function-type-nargs (continuation-type fun))
@@ -84,34 +84,27 @@
 
 ;;;
 ;;; Translate CxxR into car/cdr combos.
-(def-source-transform caar (x) `(car (car ,x)))
-(def-source-transform cadr (x) `(car (cdr ,x)))
-(def-source-transform cdar (x) `(cdr (car ,x)))
-(def-source-transform cddr (x) `(cdr (cdr ,x)))
-(def-source-transform caaar (x) `(car (car (car ,x))))
-(def-source-transform caadr (x) `(car (car (cdr ,x))))
-(def-source-transform cadar (x) `(car (cdr (car ,x))))
-(def-source-transform caddr (x) `(car (cdr (cdr ,x))))
-(def-source-transform cdaar (x) `(cdr (car (car ,x))))
-(def-source-transform cdadr (x) `(cdr (car (cdr ,x))))
-(def-source-transform cddar (x) `(cdr (cdr (car ,x))))
-(def-source-transform cdddr (x) `(cdr (cdr (cdr ,x))))
-(def-source-transform caaaar (x) `(car (car (car (car ,x)))))
-(def-source-transform caaadr (x) `(car (car (car (cdr ,x)))))
-(def-source-transform caadar (x) `(car (car (cdr (car ,x)))))
-(def-source-transform caaddr (x) `(car (car (cdr (cdr ,x)))))
-(def-source-transform cadaar (x) `(car (cdr (car (car ,x)))))
-(def-source-transform cadadr (x) `(car (cdr (car (cdr ,x)))))
-(def-source-transform caddar (x) `(car (cdr (cdr (car ,x)))))
-(def-source-transform cadddr (x) `(car (cdr (cdr (cdr ,x)))))
-(def-source-transform cdaaar (x) `(cdr (car (car (car ,x)))))
-(def-source-transform cdaadr (x) `(cdr (car (car (cdr ,x)))))
-(def-source-transform cdadar (x) `(cdr (car (cdr (car ,x)))))
-(def-source-transform cdaddr (x) `(cdr (car (cdr (cdr ,x)))))
-(def-source-transform cddaar (x) `(cdr (cdr (car (car ,x)))))
-(def-source-transform cddadr (x) `(cdr (cdr (car (cdr ,x)))))
-(def-source-transform cdddar (x) `(cdr (cdr (cdr (car ,x)))))
-(def-source-transform cddddr (x) `(cdr (cdr (cdr (cdr ,x)))))
+
+(defun source-transform-cxr (form)
+  (if (or *byte-compiling* (/= (length form) 2))
+      (values nil t)
+      (let ((name (symbol-name (car form))))
+	(do ((i (- (length name) 2) (1- i))
+	     (res (cadr form)
+		  `(,(ecase (char name i)
+		       (#\A 'car)
+		       (#\D 'cdr))
+		    ,res)))
+	    ((zerop i) res)))))
+
+(do ((i 2 (1+ i))
+     (b '(1 0) (cons i b)))
+    ((= i 5))
+  (dotimes (j (ash 1 i))
+    (setf (info function source-transform
+		(intern (format nil "C~{~:[A~;D~]~}R"
+				(mapcar #'(lambda (x) (logbitp x j)) b))))
+	  #'source-transform-cxr)))
 
 ;;;
 ;;; Turn First..Fourth and Rest into the obvious synonym, assuming whatever is
@@ -875,7 +868,7 @@
 
 ;;; Handle the case of a constant boole-code.
 ;;;
-(deftransform boole ((op x y))
+(deftransform boole ((op x y) * * :when :both)
   "convert to inline logical ops"
   (unless (constant-continuation-p op)
     (give-up "BOOLE code is not a constant."))
@@ -905,7 +898,7 @@
 
 ;;; If arg is a constant power of two, turn * into a shift.
 ;;;
-(deftransform * ((x y) (integer integer))
+(deftransform * ((x y) (integer integer) * :when :both)
   "convert x*2^k to shift"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
@@ -981,17 +974,17 @@
 			      (- (logand (- x) ,mask)))
 		     `(values (ash x ,shift)
 			      (logand x ,mask))))))))
-  (deftransform floor ((x y) (integer integer))
+  (deftransform floor ((x y) (integer integer) *)
     "convert division by 2^k to shift"
     (frob y nil))
-  (deftransform ceiling ((x y) (integer integer))
+  (deftransform ceiling ((x y) (integer integer) *)
     "convert division by 2^k to shift"
     (frob y t)))
 
 
 ;;; Do the same for mod.
 ;;;
-(deftransform mod ((x y) (integer integer))
+(deftransform mod ((x y) (integer integer) * :when :both)
   "convert remainder mod 2^k to LOGAND"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
@@ -1027,7 +1020,7 @@
 
 ;;; And the same for rem.
 ;;;
-(deftransform rem ((x y) (integer integer))
+(deftransform rem ((x y) (integer integer) * :when :both)
   "convert remainder mod 2^k to LOGAND"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
@@ -1055,7 +1048,7 @@
 		 (logxor 0 x)))
   (destructuring-bind (name identity result) stuff
     (deftransform name ((x y) `(* (constant-argument (member ,identity))) '*
-			:eval-name t)
+			:eval-name t :when :both)
       "fold identity operations"
       result)))
 
@@ -1063,11 +1056,13 @@
 ;;; These are restricted to rationals, because (- 0 0.0) is 0.0, not -0.0, and
 ;;; (* 0 -4.0) is -0.0.
 ;;;
-(deftransform - ((x y) ((constant-argument (member 0)) rational))
+(deftransform - ((x y) ((constant-argument (member 0)) rational) *
+		 :when :both)
   "convert (- 0 x) to negate"
   '(%negate y))
 ;;;
-(deftransform * ((x y) (rational (constant-argument (member 0))))
+(deftransform * ((x y) (rational (constant-argument (member 0))) *
+		 :when :both)
   "convert (* x 0) to 0."
   0)
 
@@ -1094,7 +1089,8 @@
 		 (- x)
 		 (expt 1)))
   (destructuring-bind (name result) stuff
-    (deftransform name ((x y) '(t (constant-argument t)) '* :eval-name t)
+    (deftransform name ((x y) '(t (constant-argument t)) '* :eval-name t
+			:when :both)
       "fold zero arg"
       (let ((val (continuation-value y)))
 	(unless (and (zerop val)
@@ -1109,7 +1105,8 @@
 		 (/ x (%negate x))
 		 (expt x (/ 1 x))))
   (destructuring-bind (name result minus-result) stuff
-    (deftransform name ((x y) '(t (constant-argument real)) '* :eval-name t)
+    (deftransform name ((x y) '(t (constant-argument real)) '* :eval-name t
+			:when :both)
       "fold identity operations"
       (let ((val (continuation-value y)))
 	(unless (and (= (abs val) 1)
@@ -1171,7 +1168,8 @@
 ;;; there is no intersection between the types of the arguments, then the
 ;;; result is definitely false.
 ;;;
-(deftransform simple-equality-transform ((x y) * * :defun-only t)
+(deftransform simple-equality-transform ((x y) * * :defun-only t
+					 :when :both)
   (cond ((same-leaf-ref-p x y)
 	 't)
 	((not (types-intersect (continuation-type x) (continuation-type y)))
@@ -1198,7 +1196,7 @@
 ;;; -- If Y is a fixnum, then we quietly pass because the back end can handle
 ;;;    that case, otherwise give an efficency note.
 ;;;
-(deftransform eql ((x y))
+(deftransform eql ((x y) * * :when :both)
   "convert to simpler equality predicate"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y))
@@ -1230,7 +1228,7 @@
 ;;; either both rational or both floats of the same format.  Complexp must also
 ;;; be specified and identical.
 ;;; 
-(deftransform = ((x y))
+(deftransform = ((x y) * * :when :both)
   "open code"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y)))
@@ -1289,10 +1287,10 @@
 	       (give-up))))))
 	      
 
-(deftransform < ((x y) (integer integer))
+(deftransform < ((x y) (integer integer) * :when :both)
   (ir1-transform-< x y x y '>))
 
-(deftransform > ((x y) (integer integer))
+(deftransform > ((x y) (integer integer) * :when :both)
   (ir1-transform-< y x x y '<))
 
 
@@ -1511,7 +1509,8 @@
 ;;; string is a function (i.e. formatter), then convert the call to format to
 ;;; just a funcall of that function.
 ;;; 
-(deftransform format ((dest control &rest args) (t simple-string &rest t))
+(deftransform format ((dest control &rest args) (t simple-string &rest t) *
+		      :policy (> speed space))
   (unless (constant-continuation-p control)
     (give-up "Control string is not a constant."))
   (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
@@ -1519,13 +1518,15 @@
        (declare (ignore control))
        (format dest (formatter ,(continuation-value control)) ,@arg-names))))
 ;;;
-(deftransform format ((stream control &rest args) (stream function &rest t))
+(deftransform format ((stream control &rest args) (stream function &rest t) *
+		      :policy (> speed space))
   (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
     `(lambda (stream control ,@arg-names)
        (funcall control stream ,@arg-names)
        nil)))
 ;;;
-(deftransform format ((tee control &rest args) ((member t) function &rest t))
+(deftransform format ((tee control &rest args) ((member t) function &rest t) *
+		      :policy (> speed space))
   (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
     `(lambda (tee control ,@arg-names)
        (declare (ignore tee))

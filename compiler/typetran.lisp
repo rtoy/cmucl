@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.18 1993/03/13 17:27:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.19 1993/05/11 13:50:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -425,32 +425,35 @@
 ;;; If the type is Type= to a type that has a predicate, then expand to that
 ;;; predicate.  Otherwise, we dispatch off of the type's type.  These
 ;;; transformations can increase space, but it is hard to tell when, so we
-;;; ignore policy and always do them.
+;;; ignore policy and always do them.  When byte-compiling, we only do
+;;; transforms that have potential for control simplification.
 ;;;
 (def-source-transform typep (object spec)
   (if (and (consp spec) (eq (car spec) 'quote))
-      (let* ((type (specifier-type (cadr spec)))
-	     (pred (cdr (assoc type (backend-type-predicates *backend*)
-			       :test #'type=))))
-	(if pred
-	    `(,pred ,object)
+      (let ((type (specifier-type (cadr spec))))
+	(or (let ((pred (cdr (assoc type (backend-type-predicates *backend*)
+				    :test #'type=))))
+	      (when pred `(,pred ,object)))
 	    (typecase type
-	      (numeric-type
-	       (source-transform-numeric-typep object type))
 	      (hairy-type
 	       (source-transform-hairy-typep object type))
 	      (union-type
 	       (source-transform-union-typep object type))
 	      (member-type
 	       `(member ,object ',(member-type-members type)))
-	      (class
-	       (source-transform-instance-typep object type))
 	      (args-type
 	       (compiler-warning "Illegal type specifier for Typep: ~S."
 				 (cadr spec))
 	       `(%typep ,object ,spec))
-	      (array-type
-	       (source-transform-array-typep object type))
-	      (t
-	       `(%typep ,object ,spec)))))
+	      (t nil))
+	    (and (not *byte-compiling*)
+		 (typecase type
+		   (numeric-type
+		    (source-transform-numeric-typep object type))
+		   (class
+		    (source-transform-instance-typep object type))
+		   (array-type
+		    (source-transform-array-typep object type))
+		   (t nil)))
+	    `(%typep ,object ,spec)))
       (values nil t)))

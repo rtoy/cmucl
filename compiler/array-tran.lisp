@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.14 1991/11/12 14:14:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.15 1993/05/11 13:49:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,16 +157,19 @@
 ;;; Convert VECTOR into a make-array followed by setfs of all the elements.
 ;;;
 (def-source-transform vector (&rest elements)
-  (let ((len (length elements))
-	(n -1))
-    (once-only ((n-vec `(make-array ,len)))
-      `(progn 
-	 ,@(mapcar #'(lambda (el)
-		       (once-only ((n-val el))
-			 `(locally (declare (optimize (safety 0)))
-			    (setf (svref ,n-vec ,(incf n)) ,n-val))))
-		   elements)
-	 ,n-vec))))
+  (if *byte-compiling*
+      (values nil t)
+      (let ((len (length elements))
+	    (n -1))
+	(once-only ((n-vec `(make-array ,len)))
+	  `(progn 
+	     ,@(mapcar #'(lambda (el)
+			   (once-only ((n-val el))
+			     `(locally (declare (optimize (safety 0)))
+				       (setf (svref ,n-vec ,(incf n))
+					     ,n-val))))
+		       elements)
+	     ,n-vec)))))
 
 
 ;;; MAKE-STRING  --  source-transform.
@@ -174,9 +177,11 @@
 ;;; Just convert it into a make-array.
 ;;;
 (def-source-transform make-string (length &key (initial-element #\NULL))
-  `(make-array (the index ,length)
-	       :element-type 'base-char
-	       :initial-element ,initial-element))
+  (if *byte-compiling*
+      (values nil t)
+      `(make-array (the index ,length)
+		   :element-type 'base-char
+		   :initial-element ,initial-element)))
 
 (defconstant array-info
   '((base-char #\NULL 8 vm:simple-string-type)
@@ -499,9 +504,13 @@
 (macrolet ((frob (reffer setter type)
 	     `(progn
 		(def-source-transform ,reffer (a &rest i)
-		  `(aref (the ,',type ,a) ,@i))
+		  (if *byte-compiling*
+		      (values nil t)
+		      `(aref (the ,',type ,a) ,@i)))
 		(def-source-transform ,setter (a &rest i)
-		  `(%aset (the ,',type ,a) ,@i)))))
+		  (if *byte-compiling*
+		      (values nil t)
+		      `(%aset (the ,',type ,a) ,@i))))))
   (frob svref %svset simple-vector)
   (frob schar %scharset simple-string)
   (frob char %charset string)
