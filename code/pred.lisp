@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.21 1992/02/06 19:22:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.22 1992/02/07 12:36:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 	  floatp complexp characterp stringp bit-vector-p vectorp
 	  simple-vector-p simple-string-p simple-bit-vector-p arrayp
 	  functionp compiled-function-p commonp eq eql equal equalp not
-	  type-of
+	  type-of upgraded-array-element-type
 	  ;; Names of types...
 	  array atom bignum bit bit-vector character common
 	  compiled-function complex cons double-float
@@ -158,7 +158,15 @@
     (t
      (warn "Can't figure out the type of ~S" object)
      t)))
-
+
+;;;; UPGRADED-ARRAY-ELEMENT-TYPE  --  public
+;;;
+(defun upgraded-array-element-type (spec)
+  "Return the element type that will actually be used to implement an array
+   with the specifier :ELEMENT-TYPE Spec."
+  (type-specifier
+   (array-type-specialized-element-type
+    (specifier-type `(array ,spec)))))
 
 ;;;; SUBTYPEP -- public.
 ;;;
