@@ -67,15 +67,15 @@
 
 ;;; PRE-ENVIRONMENT-ANALYZE-TOP-LEVEL  --  Interface
 ;;;
-;;;    Called on top-level components before the compilation of the associated
-;;; non-top-level code to detect closed over top-level variables.  We just do
-;;; COMPUTE-CLOSURE on all the lambdas.  This will pre-allocate environments
-;;; for all the functions with closed-over top-level variables.  The post-pass
-;;; will use the existing structure, rather than allocating a new one.
+;;;    Called on component with top-level lambdas before the compilation of the
+;;; associated non-top-level code to detect closed over top-level variables.
+;;; We just do COMPUTE-CLOSURE on all the lambdas.  This will pre-allocate
+;;; environments for all the functions with closed-over top-level variables.
+;;; The post-pass will use the existing structure, rather than allocating a new
+;;; one.
 ;;;
 (defun pre-environment-analyze-top-level (component)
   (declare (type component component))
-  (assert (eq (component-kind component) :top-level))
   (dolist (lambda (component-lambdas component))
     (compute-closure lambda)
     (dolist (let (lambda-lets lambda))
