@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.27 2000/11/06 13:02:23 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.28 2001/02/22 20:28:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,7 @@
 
 (defun internet-protocol (kind)
   (when (eq kind :data-gram) ; Sep-2000. Remove someday.
-    (warn "Internet protocol :DATA-GRAM is depreciated. Using :DATAGRAM")
+    (warn "Internet protocol :DATA-GRAM is deprecated. Using :DATAGRAM")
     (setq kind :datagram))
   (let ((entry (assoc kind *internet-protocols*)))
     (unless entry
@@ -340,6 +340,7 @@ struct in_addr {
 
 (defun accept-tcp-connection (unconnected)
   (declare (fixnum unconnected))
+  #+MP (mp:process-wait-until-fd-usable unconnected :input)
   (with-alien ((sockaddr inet-sockaddr))
     (let ((connected (unix:unix-accept unconnected
 				       (alien-sap sockaddr)

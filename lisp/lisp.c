@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.22 2000/10/27 19:25:55 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.23 2001/02/22 20:28:54 pw Exp $
  *
  */
 
@@ -85,7 +85,7 @@ static lispobj alloc_str_list(char *list[])
 
 /* And here be main. */
 
-void main(int argc, char *argv[], char *envp[])
+int main(int argc, char *argv[], char *envp[])
 {
     char *arg, **argptr;
     char *core = NULL, *default_core;

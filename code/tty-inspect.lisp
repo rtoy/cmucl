@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.17 2000/04/02 20:25:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.18 2001/02/22 20:28:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,7 +110,7 @@
 (defun do-tty-inspect-eval (command stream)
   (let ((result-list (restart-case (multiple-value-list (eval command))
 		       (nil () :report "Return to the TTY-INSPECTOR"
-			  (format stream "~%Returning to INPSECTOR.~%")
+			  (format stream "~%Returning to INSPECTOR.~%")
 			  (return-from do-tty-inspect-eval nil)))))
     (setf /// // // / / result-list)
     (setf +++ ++ ++ + + - - command)

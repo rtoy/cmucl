@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.51 2001/01/28 12:54:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.52 2001/02/22 20:28:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -716,6 +716,9 @@ See the CMU Common Lisp User's Manual for more information.
   "When non-NIL, becomes the system *READTABLE* in the debugger
    read-eval-print loop")
 
+(defvar *debug-print-current-frame* t
+  "When non-NIL, print the current frame when entering the debugger.")
+
 (defun maybe-handle-dead-input-stream (condition)
   ;; Scenario: "xon <remote-box> cmucl -edit"
   ;; Then close the display with the window manager or shutdown the
@@ -748,8 +751,9 @@ See the CMU Common Lisp User's Manual for more information.
     (handler-bind ((di:debug-condition #'(lambda (condition)
 					   (princ condition *debug-io*)
 					   (throw 'debug-loop-catcher nil))))
-      (fresh-line)
-      (print-frame-call *current-frame* :verbosity 2)
+      (when *debug-print-current-frame*
+        (fresh-line)
+        (print-frame-call *current-frame* :verbosity 2))
       (loop
 	(catch 'debug-loop-catcher
 	  (handler-bind ((error #'(lambda (condition)
