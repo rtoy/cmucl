@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.3 1997/11/30 05:08:29 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.4 1997/12/01 16:44:57 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -5778,6 +5778,11 @@ char
     void *result;
     void *new_free_pointer;
 
+#if 0
+    /*
+     * Check that the interrupts are masked, else there could be
+     * trouble if the allocation is interrupted.
+     */
     sigset_t mask;
     sigprocmask(0,NULL,&mask);
     if (!mask) {
@@ -5794,7 +5799,7 @@ char
       */
       fprintf(stderr,"* Alloc non-atomic %x\n", mask);
     }
-      
+#endif      
     
   retry2:
     /* At least wrap this allocation in a pseudo atomic to prevent
