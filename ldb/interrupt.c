@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.32 1992/03/08 18:42:36 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.33 1992/03/22 19:57:46 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -164,7 +164,15 @@ void interrupt_handle_pending(context)
 #ifdef mips
     context->sc_regs[FLAGS] &= ~(1<<flag_Interrupted);
 #else
+#ifdef sparc
+    /* Bit 0 is the pseudo-atomic-interrupted flag, and bit 2 is the
+	pseudo-atomic-atomic flag.  Normally, p-a-a is cleared before
+	we get control, but sometimes (assembly/sparc/bit-bash.lisp)
+	it is not.  So we clear them both here. */
+    context->sc_regs[ALLOC] &= ~5;
+#else
     SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, 0);
+#endif
 #endif
     SetSymbolValue(INTERRUPT_PENDING, NIL);
     if (maybe_gc_pending) {
@@ -252,8 +260,12 @@ struct sigcontext *context;
 #ifdef mips
                && (context->sc_regs[FLAGS] & (1<<flag_Atomic))
 #else
+#ifdef sparc
+	       && (context->sc_regs[ALLOC] & 4)
+#else
 	       && (SymbolValue(PSEUDO_ATOMIC_ATOMIC))
-#endif               
+#endif
+#endif
                ) {
         pending_signal = signal;
         pending_code = code;
@@ -262,7 +274,11 @@ struct sigcontext *context;
 #ifdef mips
         context->sc_regs[FLAGS] |= (1<<flag_Interrupted);
 #else
+#ifdef sparc
+	context->sc_regs[ALLOC] |= 1;
+#else
 	SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, T);
+#endif
 #endif
     } else
         interrupt_handle_now(signal, code, context);
