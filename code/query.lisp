@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.3 1991/02/14 19:03:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.4 1993/12/28 16:54:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,9 +25,10 @@
 
 (export '(y-or-n-p yes-or-no-p))
 
-(eval-when (compile)
-  (defmacro query-readline ()
-    `(string-trim " 	" (read-line *query-io*))))
+(defun query-readline ()
+  (force-output *query-io*)
+  (string-trim " 	" (read-line *query-io*)))
+
 
 ;;; Y-OR-N-P  --  Public.
 ;;;
@@ -38,8 +39,7 @@
    enter any other characters."
   (when format-string
     (fresh-line *query-io*)
-    (apply #'format *query-io* format-string arguments)
-    (force-output *query-io*))
+    (apply #'format *query-io* format-string arguments))
   (loop
     (let* ((line (query-readline))
 	   (ans (if (string= line "")
