@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.60 2002/11/14 16:54:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.61 2002/11/25 18:59:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -661,7 +661,11 @@
 	    (,packages `,(mapcar #'(lambda (package)
 				     (if (packagep package)
 					 package
-					 (find-package package)))
+					 (or (find-package package)
+					     (error 'simple-package-error
+						    :name (string package)
+						    :format-control "~@<~S does not name a package ~:>"
+						    :format-arguments (list package)))))
 				 (if (consp ,these-packages)
 				     ,these-packages
 				     (list ,these-packages))))
