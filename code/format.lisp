@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.8 1991/02/25 23:52:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.9 1991/07/08 13:09:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -984,7 +984,7 @@
 			     :end2 pos))
 	(pos length  (- pos 3))
 	(new-pos new-length (- new-pos 4)))
-       ((not (plusp pos)) new-string)
+       ((minusp pos) new-string)
     (declare (fixnum length new-length pos new-pos))))
 
 
@@ -1019,19 +1019,20 @@
 (defun format-print-number (number radix print-commas-p print-sign-p parms)
   (with-format-parameters parms
     ((mincol 0) (padchar #\space) (commachar #\,))
-    (let* ((*print-base* radix)
-	   (text (princ-to-string number)))
+    (let ((*print-base* radix))
       (if (integerp number)
-	  (format-write-field
-	   (if (and (plusp number) print-sign-p)
-	       (if print-commas-p
-		   (concatenate 'string "+" (format-add-commas text commachar))
-		   (concatenate 'string "+" text))
-	       (if print-commas-p
-		   (format-add-commas text commachar)
-		   text))
-	   mincol 1 0 padchar t)	;colinc = 1, minpad = 0, padleft = t
-	  (write-string text)))))
+	  (let* ((text (princ-to-string (abs number)))
+		 (commaed (if print-commas-p
+			      (format-add-commas text commachar)
+			      text))
+		 (signed (cond ((minusp number)
+				(concatenate 'string "-" commaed))
+			       (print-sign-p
+				(concatenate 'string "+" commaed))
+			       (t commaed))))
+	    ;; colinc = 1, minpad = 0, padleft = t
+	    (format-write-field signed mincol 1 0 padchar t))
+	  (princ number)))))
 
 
 ;;;; Print a cardinal number in English
