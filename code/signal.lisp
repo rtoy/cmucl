@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.13 1992/02/14 23:45:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.14 1992/03/23 04:23:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.13 1992/02/14 23:45:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.14 1992/03/23 04:23:09 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -41,8 +41,8 @@
 (defstruct (unix-signal
 	    (:constructor make-unix-signal (%name %number %description)))
   %name				; Signal keyword
-  (%number :type integer)       ; UNIX signal number
-  (%description :type string))  ; Documentation
+  (%number nil :type integer)       ; UNIX signal number
+  (%description nil :type string))  ; Documentation
 
 (defvar *unix-signals* nil
   "A list of unix signal structures.")
