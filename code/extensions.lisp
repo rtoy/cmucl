@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.19 1993/08/12 20:28:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.20 1993/08/19 14:14:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -610,5 +610,4 @@
 (defun cache-hash-eq (x)
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
-  (the fixnum (ash (truly-the fixnum (%primitive lisp::make-fixnum x)) -3)))
-
+  (lisp::pointer-hash x))
