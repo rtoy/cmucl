@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.10 1997/11/16 13:59:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.11 1997/12/17 22:46:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,7 +189,7 @@
 	       (rel-val (- fixup loc-sap 4)))
 	  (declare (type (unsigned-byte 32) loc-sap)
 		   (type (signed-byte 32) rel-val))
-	  (setf (sap-ref-32 sap offset)  rel-val)) ))))
+	  (setf (signed-sap-ref-32 sap offset) rel-val))))))
   nil)
 
 
