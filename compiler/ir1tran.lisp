@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.85 1993/03/12 15:36:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.86 1993/03/13 15:13:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 (export '(ignorable symbol-macrolet))
 
 (in-package "KERNEL")
-(export '(lambda-with-environment))
+(export '(lambda-with-environment fin-function))
 
 (in-package "C")
 
