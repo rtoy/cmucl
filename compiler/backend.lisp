@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.20 1992/03/24 17:40:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.21 1992/05/18 17:53:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,6 +26,7 @@
 	  backend-instruction-formats backend-instruction-flavors
 	  backend-assembler-resources backend-special-arg-types
 	  backend-disassem-params backend-internal-errors
+	  backend-assembler-params
 	  
 	  ;; The various backends need to call these support routines
 	  make-stack-pointer-tn primitive-type primitive-type-of))
@@ -214,8 +215,10 @@
 
   ;; Vector of the internal errors defined for this backend, or NIL if
   ;; they haven't been installed yet.
-  (internal-errors nil :type (or simple-vector null)))
+  (internal-errors nil :type (or simple-vector null))
 
+  ;; Assembler parameters.
+  (assembler-params nil :type list))
 
 (defprinter backend
   name)
@@ -279,13 +282,9 @@
     (unless (member "VM" nicknames :test #'string=)
       (rename-package pkg name (cons "VM" nicknames)))
     ;; And make sure we are using the necessary packages.
-    (use-package "C" pkg)
-    (use-package "ASSEM" pkg)
-    (use-package "EXT" pkg)
-    (use-package "KERNEL" pkg)
-    (use-package "SYSTEM" pkg)
-    (use-package "ALIEN" pkg)
-    (use-package "C-CALL" pkg))
+    (use-package '("C-CALL" "ALIEN-INTERNALS" "ALIEN" "BIGNUM" "UNIX"
+		   "LISP" "KERNEL" "EXTENSIONS" "SYSTEM" "C")
+		 pkg))
   ;; Make sure the native info env list is stored in *native-backend*
   (unless (backend-info-environment *native-backend*)
     (setf (backend-info-environment *native-backend*) *info-environment*))
