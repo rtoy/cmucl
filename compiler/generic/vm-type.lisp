@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.25 1991/02/20 15:17:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.26 1991/04/24 12:24:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.25 1991/02/20 15:17:35 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.26 1991/04/24 12:24:57 ram Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -190,10 +190,6 @@
 	   ((type= type (specifier-type '(unsigned-byte 32)))
 	    'c:check-unsigned-byte-32)
 	   (t nil)))
-    (union-type
-     (if (type= type (specifier-type '(or function symbol)))
-	 'c:check-function-or-symbol
-	 nil))
     (function-type
      'c:check-function)
     (t
