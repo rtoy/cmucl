@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.29 1992/02/19 16:13:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.30 1992/03/24 20:35:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -860,6 +860,7 @@
       `(defun ,(symbolicate "%PRINT-" name) (structure stream depth)
 	 (declare (ignore depth))
 	 (flet ((do-prints (stream)
+		  (declare (ignorable stream))
 		  ,@(prints)))
 	   (cond (*print-pretty*
 		  (pprint-logical-block (stream nil :prefix "#<" :suffix ">")
