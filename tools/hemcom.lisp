@@ -1,15 +1,3 @@
-;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
-;;;
-;;; **********************************************************************
-;;; This code was written as part of the CMU Common Lisp project at
-;;; Carnegie Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of CMU Common Lisp, please contact
-;;; Scott Fahlman or slisp-group@cs.cmu.edu.
-;;;
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemcom.lisp,v 1.1.1.9 1991/02/14 00:25:14 ram Exp $")
-;;;
-;;; **********************************************************************
 ;;;
 ;;; This file compiles all of Hemlock.
 ;;;
@@ -52,13 +40,13 @@
 
 (with-compiler-log-file ("target:compile-hemlock.log")
 
-(comf "target:code/globals" :always-once t)
-(comf "target:code/struct" :always-once t)
-(comf "target:hemlock/charmacs" :always-once t)
-(comf "target:hemlock/key-event" :load t)
-(comf "target:hemlock/struct" :always-once t)
-;(comf "target:hemlock/struct-ed" :always-once t)
-(comf "target:hemlock/rompsite" :always-once t)
+(comf "target:code/globals")
+(comf "target:code/struct")
+(comf "target:hemlock/charmacs")
+(comf "target:hemlock/key-event")
+(comf "target:hemlock/struct")
+;(comf "target:hemlock/struct-ed")
+(comf "target:hemlock/rompsite")
 ;;;
 ;;; This is necessary since all the #k uses in Hemlock will expand into
 ;;; EXT:MAKE-KEY-EVENT calls with keysyms and bits from the compiling Lisp, not
@@ -68,10 +56,10 @@
 ;;; for the new system.
 ;;;
 (ext::re-initialize-key-events)
-(comf "target:hemlock/keysym-defs" :load t)
+(comf "target:hemlock/keysym-defs")
 (comf "target:hemlock/input")
-(comf "target:hemlock/macros" :always-once t)
-(comf "target:hemlock/line" :always-once t)
+(comf "target:hemlock/macros")
+(comf "target:hemlock/line")
 (comf "target:hemlock/ring")
 (comf "target:hemlock/table")
 (comf "target:hemlock/htext1")
