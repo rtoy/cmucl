@@ -53,6 +53,11 @@
 	  )
 	"C")
 
+(in-package "KERNEL")
+
+(export '(%caller-frame-and-pc))
+
+
 (in-package 'c)
 
 #| Something to convert the old FNDEFS database into our format:
@@ -1039,6 +1044,7 @@
 (defknown (%dpb %deposit-field) (integer bit-index bit-index integer) integer
   (movable foldable flushable))
 (defknown %negate (number) number (movable foldable flushable))
+(defknown kernel:%caller-frame-and-pc () (values t t) (flushable))
 
 ;;; Structure slot accessors or setters are magically "known" to be these
 ;;; functions, although the var remains the Slot-Accessor describing the actual
