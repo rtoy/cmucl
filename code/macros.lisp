@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.20 1991/02/08 13:34:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.21 1991/04/20 14:20:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.20 1991/02/08 13:34:07 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.21 1991/04/20 14:20:06 ram Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -1427,11 +1427,136 @@
 ;;;
 (defvar *aborted-compilation-units*)
 
+(declaim (special c::*context-declarations*))
+
+
+;;; EVALUATE-DECLARATION-CONTEXT  --  Internal
+;;;
+;;;    Recursively descend the context form, returning true if this subpart
+;;; matches the specified context.
+;;;
+(defun evaluate-declaration-context (context name parent)
+  (let ((base (if (and (consp name) (consp (cdr name)))
+		  (cadr name)
+		  name)))
+    (if (atom context)
+	(let ((package (and (symbolp base) (symbol-package base))))
+	  (multiple-value-bind (ignore how)
+			       (if package
+				   (find-symbol (symbol-name base) package)
+				   (values nil nil))
+	    (declare (ignore ignore))
+	    (case context
+	      (:internal (eq how :internal))
+	      (:external (eq how :external))
+	      (:uninterned (and (symbolp base) (not package)))
+	      (:anonymous (not name))
+	      (:macro (eq parent 'defmacro))
+	      (:function (member parent '(defun labels flet function)))
+	      (:global (member parent '(defun defmacro function)))
+	      (:local (member parent '(labels flet)))
+	      (t
+	       (error "Unknown declaration context: ~S." context)))))
+	(case (first context)
+	  (:or
+	   (loop for x in (rest context)
+	     thereis (evaluate-declaration-context x name parent)))
+	  (:and
+	   (loop for x in (rest context)
+	     always (evaluate-declaration-context x name parent)))
+	  (:not
+	   (evaluate-declaration-context (second context) name parent))
+	  (:member
+	   (member name (rest context) :test #'equal))
+	  (:match
+	   (let ((name (concatenate 'string "$" (string base) "$")))
+	     (loop for x in (rest context)
+	       thereis (search (string x) name))))
+	  (t
+	   (error "Unknown declaration context: ~S." context))))))
+
+  
+;;; PROCESS-CONTEXT-DECLARATIONS  --  Internal
+;;;
+;;;    Given a list of context declaration specs, return a new value for
+;;; C::*CONTEXT-DECLARATIONS*.
+;;;
+(defun process-context-declarations (decls)
+  (append
+   (mapcar
+    #'(lambda (decl)
+	(unless (>= (length decl) 2)
+	  (error "Context declaration spec should have context and at ~
+	  least one DECLARE form:~%  ~S" decl))
+	#'(lambda (name parent)
+	    (when (evaluate-declaration-context (first decl) name parent)
+	      (rest decl))))
+    decls)
+   c::*context-declarations*))
+
+
 ;;; With-Compilation-Unit  --  Public
 ;;;
-;;;
 (defmacro with-compilation-unit (options &body body)
-  (let ((force nil)
+  "WITH-COMPILATION-UNIT ({Key Value}*) Form*
+  This form affects compilations that take place within its dynamic extent.  It
+  is intended to be wrapped around the compilation of all files in the same
+  system.  These keywords are defined:
+    :OVERRIDE Boolean-Form
+        One of the effects of this form is to delay undefined warnings 
+        until the end of the form, instead of giving them at the end of each
+        compilation.  If OVERRIDE is NIL (the default), then the outermost
+        WITH-COMPILATION-UNIT form grabs the undefined warnings.  Specifying
+        OVERRIDE true causes that form to grab any enclosed warnings, even if
+        it is enclosed by another WITH-COMPILATION-UNIT.
+    :OPTIMIZE Decl-Form
+        Decl-Form should evaluate to an OPTIMIZE declaration specifier.  This
+        declaration changes the `global' policy for compilations within the
+        body.
+    :OPTIMIZE-INTERFACE Decl-Form
+        Like OPTIMIZE, except that it specifies the value of the CMU extension
+        OPTIMIZE-INTERFACE policy (which controls argument type and syntax
+        checking.)
+    :CONTEXT-DECLARATIONS List-of-Context-Decls-Form
+        This is a CMU extension which allows compilation to be controlled
+        by pattern matching on the context in which a definition appears.  The
+        argument should evaluate to a list of lists of the form:
+            (Context-Spec Declare-Form+)
+        In the indicated context, the specified declare forms are inserted at
+        the head of each definition.  The declare forms for all contexts that
+	match are appended together, with earlier declarations getting
+	predecence over later ones.  A simple example:
+            :context-declarations
+            '((:external (declare (optimize (safety 2)))))
+        This will cause all functions that are named by external symbols to be
+        compiled with SAFETY 2.  The full syntax of context specs is:
+	:INTERNAL, :EXTERNAL
+	    True if the symbols is internal (external) in its home package.
+	:UNINTERNED
+	    True if the symbol has no home package.
+	:ANONYMOUS
+	    True if the function doesn't have any interesting name (not
+	    DEFMACRO, DEFUN, LABELS or FLET).
+	:MACRO, :FUNCTION
+	    :MACRO is a global (DEFMACRO) macro.  :FUNCTION is anything else.
+	:LOCAL, :GLOBAL
+	    :LOCAL is a LABELS or FLET.  :GLOBAL is anything else.
+	(:OR Context-Spec*)
+	    True in any specified context.
+	(:AND Context-Spec*)
+	    True only when all specs are true.
+	(:NOT Context-Spec)
+	    True when the spec is false.
+        (:MEMBER Name*)
+	    True when the name is one of these names (EQUAL test.)
+	(:MATCH Pattern*)
+	    True when any of the patterns is a substring of the name.  The name
+	    is wrapped with $'s, so $FOO matches names beginning with FOO,
+	    etc."
+  (let ((override nil)
+	(optimize nil)
+	(optimize-interface nil)
+	(context-declarations nil)
 	(n-fun (gensym))
 	(n-abort-p (gensym)))
     (when (oddp (length options))
@@ -1439,13 +1564,33 @@
     (do ((opt options (cddr opt)))
 	((null opt))
       (case (first opt)
-	(:force
-	 (setq force (second opt)))
+	(:override
+	 (setq override (second opt)))
+	(:optimize
+	 (setq optimize (second opt)))
+	(:optimize-interface
+	 (setq optimize-interface (second opt)))
+	(:context-declarations
+	 (setq context-declarations (second opt)))
 	(t
 	 (warn "Ignoring unknown option: ~S." (first opt)))))
 
-    `(flet ((,n-fun () ,@body))
-       (if (or ,force (not *in-compilation-unit*))
+    `(flet ((,n-fun ()
+	      (let (,@(when optimize
+			`((c::*default-cookie*
+			   (c::process-optimize-declaration
+			    ,optimize c::*default-cookie*))))
+		    ,@(when optimize-interface
+			`((c::*default-interface-cookie*
+			   (c::process-optimize-declaration
+			    ,optimize-interface
+			    c::*default-interface-cookie*))))
+		    ,@(when context-declarations
+			`((c::*context-declarations*
+			   (process-context-declarations
+			    ,context-declarations)))))
+		,@body)))
+       (if (or ,override (not *in-compilation-unit*))
 	   (let ((c::*undefined-warnings* nil)
 		 (c::*compiler-error-count* 0)
 		 (c::*compiler-warning-count* 0)
