@@ -1,3 +1,66 @@
+3/4/92 to 3/7/92
+
+Code:
+
+Several new-aliens changes:
+- Export SYSTEM-AREA-POINTER from ALIEN for consistency.
+- Export MAKE-ALIEN and FREE-ALIEN from ALIEN.
+- Export ALIEN-VALUE-TYPE from ALIEN-INTERNALS so that TYPE-OF can use it.
+- Changed ALIEN-VALUE printer to be less verbose.
+- Implemented %MAKE-ALIEN and FREE-ALIEN using malloc/free.  Changed MAKE-ALIEN
+to accept an alien-type object as well as an Alien type descriptor.
+- Now that we've implemented FREE-ALIEN, finalize the Aliens created by
+interpreted WITH-ALIEN. 
+- Added an (OPTIMIZE-INTERFACE (SAFETY 2)) declaration on %CAST so that we get
+a better type error message.
+- Added NULL-ALIEN and many doc-strings.
+- Allow (* char) in the c-string lisp-rep as well.
+- Allow storing of (* char) in c-strings so that we can initialize c-string
+variables and slots.
+- Added support in TYPE-OF for alien-value structures.
+
+Added compiled-debug-function branch to DI:DEBUG-FUNCTION-FUNCTION.
+
+Changed a few places where ESCAPE-REGISTER was left over to
+VM:SIGCONTEXT-REGISTER.  This was causing function-end breakpoints
+to die.
+
+Added Miles' changes to keep errors and warnings on one line if they fit.
+
+Added Miles' stuff to use the same stream for input and output if they are
+the same file descriptor.  This makes CHAR-POS work after input.
+
+Changed LOAD-FOREIGN to be exported from ALIEN.  Changed it have keyword args
+instead of optionals.  Deleted obsolete linker argument.
+
+Added Miles' stuff to diddle the child's pgrp for better signal handling in
+EXT:RUN-PROGRAM.
+
+Fixed UNIX-IOCTL to not flame out of the cmd is a ub-32 instead of a sb-32.
+
+Added Miles' UNIX:TCSETPGRP, UNIX:TCGETPGRP, and UNIX:TTY-PROCESS-GROUP.
+
+
+Compiler:
+
+Picked up a SPARC specific assembly routine call improvement from Miles.
+
+Miles' fixes to make disassembling [mc][tf]c1 work on the PMAX.
+
+
+Hemlock:
+
+Fixed GET-EDITOR-TTY-INPUT to read the data into an c-call:unsigned-char
+buffer instead of a c-call:char so that when we access the elements from
+it, we don't get negative numbers, which make code-char unhappy.
+
+
+C Runtime Support:
+
+Fixed function-end breakpoints for the sparc.
+
+
+
 3/2/92 to 3/4/92  [16a]
 
 Code:
