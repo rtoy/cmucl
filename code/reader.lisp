@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.42 2003/09/08 17:34:57 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.43 2003/11/08 11:45:48 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -410,70 +410,106 @@
 
 ;;;; read-buffer implementation.
 
-(defvar read-buffer)
-(defvar read-buffer-length)
+(defvar *read-buffer*)
+(defvar *read-buffer-length*)
 
-(defvar inch-ptr)
-(defvar ouch-ptr)
+(defvar *inch-ptr*)
+(defvar *ouch-ptr*)
 
-(declaim (type index read-buffer-length inch-ptr ouch-ptr))
-(declaim (simple-string read-buffer))
+(declaim (type index *read-buffer-length* *inch-ptr* *ouch-ptr*))
+(declaim (simple-string *read-buffer*))
+
+(defconstant +read-buffer-pool-size+ 16)
+(defconstant +read-buffer-initial-size+ 16)
+
+(defun make-read-buffer-stack (size count)
+  (let ((stack (make-array count :fill-pointer 0)))
+    (dotimes (i count)
+      (vector-push (make-string size) stack))
+    stack))
+
+(defvar *read-buffer-stack*)
+
+(defun init-read-buffer-stack ()
+  (setq *read-buffer-stack*
+	(make-read-buffer-stack +read-buffer-initial-size+ +read-buffer-pool-size+)))
+
+(defun allocate-read-buffer ()
+  (cond ((zerop (fill-pointer *read-buffer-stack*))
+	 (make-string 32))
+	(t (vector-pop  *read-buffer-stack*))))
+
+(defun free-read-buffer (buffer)
+  (vector-push buffer *read-buffer-stack*))
+
+;;; Recursive reader functions use with-read-buffer to allocate a
+;;; fresh buffer.  We currently allocate a fresh buffer only for the
+;;; exported functions READ, READ-PRESERVING-WHITESPACE,
+;;; READ-FROM-STRING, and READ-DELIMITED-LIST.  Some internal
+;;; functions like READ-TOKEN, INTERNAL-READ-EXTENDED-TOKEN and
+;;; READ-STRING avoid the overhead for the allocation and clobber the
+;;; current read-buffer.  
+
+(defmacro with-read-buffer (() &body body)
+  "Bind *read-buffer* to a fresh buffer and execute Body."
+  `(let* ((*read-buffer* (allocate-read-buffer))
+	  (*read-buffer-length* (length *read-buffer*))
+	  (*ouch-ptr* 0)
+	  (*inch-ptr* 0))
+    (unwind-protect (progn ,@body)
+      (free-read-buffer *read-buffer*))))
 
 (defmacro reset-read-buffer ()
-  ;;turn read-buffer into an empty read-buffer.
-  ;;ouch-ptr always points to next char to write
+  ;;turn *read-buffer* into an empty read-buffer.
+  ;;*ouch-ptr* always points to next char to write
   `(progn
-    (setq ouch-ptr 0)
-    ;;inch-ptr always points to next char to read
-    (setq inch-ptr 0)))
-
-(defun init-read-buffer ()
-  (setq read-buffer (make-string 512))			;initial bufsize
-  (setq read-buffer-length 512)
-  (reset-read-buffer))
+    (setq *ouch-ptr* 0)
+    ;;*inch-ptr* always points to next char to read
+    (setq *inch-ptr* 0)))
 
 (defmacro ouch-read-buffer (char)
   `(progn
-    (if (>= (the fixnum ouch-ptr)
-	    (the fixnum read-buffer-length))
+    (if (>= (the fixnum *ouch-ptr*)
+	    (the fixnum *read-buffer-length*))
 	;;buffer overflow -- double the size
 	(grow-read-buffer))
-    (setf (elt (the simple-string read-buffer) ouch-ptr) ,char)
-    (setq ouch-ptr (1+ ouch-ptr))))
-;; macro to move ouch-ptr back one.
+    (setf (elt (the simple-string *read-buffer*) *ouch-ptr*) ,char)
+    (setq *ouch-ptr* (1+ *ouch-ptr*))))
+
+;; macro to move *ouch-ptr* back one.
 (defmacro ouch-unread-buffer ()
-  '(if (> (the fixnum ouch-ptr) (the fixnum inch-ptr))
-       (setq ouch-ptr (1- (the fixnum ouch-ptr)))))
+  '(if (> (the fixnum *ouch-ptr*) (the fixnum *inch-ptr*))
+       (setq *ouch-ptr* (1- (the fixnum *ouch-ptr*)))))
 
 (defun grow-read-buffer ()
-  (let ((rbl (length (the simple-string read-buffer))))
+  (let ((rbl (length (the simple-string *read-buffer*))))
     (declare (fixnum rbl))
-    (setq read-buffer
+    (setq *read-buffer*
 	  (concatenate 'simple-string
-		       (the simple-string read-buffer)
+		       (the simple-string *read-buffer*)
 		       (the simple-string (make-string rbl))))
-    (setq read-buffer-length (* 2 rbl))))
+    (setq *read-buffer-length* (* 2 rbl))))
 
 (defun inchpeek-read-buffer ()
-  (if (>= (the fixnum inch-ptr) (the fixnum ouch-ptr))
+  (if (>= (the fixnum *inch-ptr*) (the fixnum *ouch-ptr*))
       eof-object
-      (elt (the simple-string read-buffer) inch-ptr)))
+      (elt (the simple-string *read-buffer*) *inch-ptr*)))
 
 (defun inch-read-buffer ()
-  (cond ((>= (the fixnum inch-ptr) (the fixnum ouch-ptr))
+  (cond ((>= (the fixnum *inch-ptr*) (the fixnum *ouch-ptr*))
 	 eof-object)
-	(t (prog1 (elt (the simple-string read-buffer) inch-ptr)
-		  (setq inch-ptr (1+ (the fixnum inch-ptr)))))))
+	(t (prog1 (elt (the simple-string *read-buffer*) *inch-ptr*)
+		  (setq *inch-ptr* (1+ (the fixnum *inch-ptr*)))))))
 
 (defmacro unread-buffer ()
-  `(decf (the fixnum inch-ptr)))
+  `(decf (the fixnum *inch-ptr*)))
 
 (defun read-unwind-read-buffer ()
   ;;keep contents, but make next (inch..) return first char.
-  (setq inch-ptr 0))
+  (setq *inch-ptr* 0))
 
 (defun read-buffer-to-string ()
-  (subseq (the simple-string read-buffer) 0 ouch-ptr))
+  (subseq (the simple-string *read-buffer*) 0 *ouch-ptr*))
 
 
 
@@ -493,14 +529,21 @@
 ;;; to leave terminating whitespace in the stream.
 ;;;
 (defun read-preserving-whitespace (&optional (stream *standard-input*)
-					     (eof-errorp t) (eof-value nil)
-					     (recursivep nil))
+				   (eof-errorp t) (eof-value nil)
+				   (recursivep nil))
   "Reads from stream and returns the object read, preserving the whitespace
    that followed the object."
+  (with-read-buffer ()
+    (read-preserving-whitespace-internal stream eof-errorp eof-value recursivep)))
+
+(defun read-preserving-whitespace-internal (&optional (stream *standard-input*)
+					    (eof-errorp t) (eof-value nil)
+					    (recursivep nil))
+  
   (cond
-   (recursivep
-    ;; Loop for repeating when a macro returns nothing.
-    (loop
+    (recursivep
+     ;; Loop for repeating when a macro returns nothing.
+     (loop
       (let ((char (read-char stream eof-errorp eof-object)))
 	(cond ((eofp char) (return eof-value))
 	      ((whitespacep char))
@@ -510,9 +553,9 @@
 			       (funcall macrofun stream char))))
 		 ;; Repeat if macro returned nothing.
 		 (if result (return (car result)))))))))
-   (t
-    (let ((*sharp-equal-alist* nil))
-      (read-preserving-whitespace stream eof-errorp eof-value t)))))
+    (t
+     (let ((*sharp-equal-alist* nil))
+       (read-preserving-whitespace-internal stream eof-errorp eof-value t)))))
 
 
 (defun read-maybe-nothing (stream char)
@@ -528,8 +571,13 @@
   "Reads in the next object in the stream, which defaults to
    *standard-input*. For details see the I/O chapter of
    the manual."
+  (with-read-buffer ()
+    (read-internal stream eof-errorp eof-value recursivep)))
+
+(defun read-internal (&optional (stream *standard-input*) (eof-errorp t)
+		      (eof-value ()) (recursivep ()))
   (prog1
-      (read-preserving-whitespace stream eof-errorp eof-value recursivep)
+      (read-preserving-whitespace-internal stream eof-errorp eof-value recursivep)
     (let ((whitechar (read-char stream nil eof-object)))
       (if (and (not (eofp whitechar))
 	       (or (not (whitespacep whitechar))
@@ -543,19 +591,19 @@
    object's representation is endchar.  A list of those objects read
    is returned."
   (declare (ignore recursive-p))
-  (do ((char (flush-whitespace input-stream)
-	     (flush-whitespace input-stream))
-       (retlist ()))
-      ((char= char endchar) (nreverse retlist))
-    (setq retlist (nconc (read-maybe-nothing input-stream char) retlist))))
-
+  (with-read-buffer ()
+    (do ((char (flush-whitespace input-stream)
+	       (flush-whitespace input-stream))
+	 (retlist ()))
+	((char= char endchar) (nreverse retlist))
+      (setq retlist (nconc (read-maybe-nothing input-stream char) retlist)))))
 
 
 ;;;; Standard ReadMacro definitions to implement the reader.
 
 (defun read-quote (stream ignore)
   (declare (ignore ignore))
-  (list 'quote (read stream t nil t)))
+  (list 'quote (read-internal stream t nil t)))
 
 (defun read-comment (stream ignore)
   (declare (ignore ignore))
@@ -666,7 +714,7 @@
 ;;;
 ;;; Read from the stream up to the next delimiter.  If escape-firstchar is
 ;;; true then the firstchar is assumed to be escaped.  Leaves resulting token
-;;; in read-buffer, returns two values:
+;;; in *read-buffer*, returns two values:
 ;;; -- a list of the escaped character positions, and
 ;;; -- The position of the first package delimiter (or NIL).
 ;;;
@@ -674,7 +722,7 @@
   (reset-read-buffer)
   (let ((escapes ()))
     (when escape-firstchar
-      (push ouch-ptr escapes)
+      (push *ouch-ptr* escapes)
       (ouch-read-buffer firstchar)
       (setq firstchar (read-char stream nil eof-object)))
     (do ((char firstchar (read-char stream nil eof-object))
@@ -688,7 +736,7 @@
       (cond ((escapep char)
 	     ;; It can't be a number, even if it's 1\23.
 	     ;; Read next char here, so it won't be casified.
-	     (push ouch-ptr escapes)
+	     (push *ouch-ptr* escapes)
 	     (let ((nextchar (read-char stream nil eof-object)))
 	       (if (eofp nextchar)
 		   (reader-eof-error stream "after escape character")
@@ -707,17 +755,17 @@
 		     (cond ((eofp nextchar)
 			    (reader-eof-error stream "after escape character"))
 			   (t
-			    (push ouch-ptr escapes)
+			    (push *ouch-ptr* escapes)
 			    (ouch-read-buffer nextchar)))))
 		  (t
-		   (push ouch-ptr escapes)
+		   (push *ouch-ptr* escapes)
 		   (ouch-read-buffer ch))))))
 	    (t
 	     (when (and (constituentp char)
 			(eql (get-secondary-attribute char)
 			     #.package-delimiter)
 			(not colon))
-	       (setq colon ouch-ptr))
+	       (setq colon *ouch-ptr*))
 	     (ouch-read-buffer char))))))
 
 
@@ -781,19 +829,19 @@
 
 ;;; CASIFY-READ-BUFFER  --  Internal
 ;;;
-;;;    Modify the read-buffer according to READTABLE-CASE, ignoring escapes.
+;;;    Modify the *read-buffer* according to READTABLE-CASE, ignoring escapes.
 ;;; ESCAPES is a list of the escaped indices, in reverse order. 
 ;;;
 (defun casify-read-buffer (escapes)
   (let ((case (readtable-case *readtable*)))
     (cond
      ((and (null escapes) (eq case :upcase))
-      (dotimes (i ouch-ptr)
-	(setf (schar read-buffer i) (char-upcase (schar read-buffer i)))))
+      (dotimes (i *ouch-ptr*)
+	(setf (schar *read-buffer* i) (char-upcase (schar *read-buffer* i)))))
      ((eq case :preserve))
      (t
       (macrolet ((skip-esc (&body body)
-		   `(do ((i (1- ouch-ptr) (1- i))
+		   `(do ((i (1- *ouch-ptr*) (1- i))
 			 (escapes escapes))
 			((minusp i))
 		      (declare (fixnum i))
@@ -805,12 +853,12 @@
 					 (assert (= esc i))
 					 (pop escapes)
 					 nil))))
-			(let ((ch (schar read-buffer i)))
+			(let ((ch (schar *read-buffer* i)))
 			  ,@body)))))
 	(flet ((lower-em ()
-		 (skip-esc (setf (schar read-buffer i) (char-downcase ch))))
+		 (skip-esc (setf (schar *read-buffer* i) (char-downcase ch))))
 	       (raise-em ()
-		 (skip-esc (setf (schar read-buffer i) (char-upcase ch)))))
+		 (skip-esc (setf (schar *read-buffer* i) (char-upcase ch)))))
 	  (ecase case
 	    (:upcase (raise-em))
 	    (:downcase (lower-em))
@@ -832,7 +880,7 @@
   ;;Report an error if these are violated (if we called this, we want
   ;;something that is a legitimate token!).
   ;;read in the longest possible string satisfying the bnf for
-  ;;"unqualified-token".  Leave the result in the READ-BUFFER.
+  ;;"unqualified-token".  Leave the result in the *READ-BUFFER*.
   ;;Return next char after token (last char read).
   (when *read-suppress*
     (internal-read-extended-token stream firstchar nil)
@@ -1071,7 +1119,7 @@
       (let ((nextchar (read-char stream nil nil)))
 	(unless nextchar
 	  (reader-eof-error stream "after escape character"))
-	(push ouch-ptr escapes)
+	(push *ouch-ptr* escapes)
 	(ouch-read-buffer nextchar))
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
@@ -1085,7 +1133,7 @@
       (do ((char (read-char stream t) (read-char stream t)))
 	  ((multiple-escape-p char))
 	(if (escapep char) (setq char (read-char stream t)))
-	(push ouch-ptr escapes)
+	(push *ouch-ptr* escapes)
 	(ouch-read-buffer char))
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
@@ -1145,9 +1193,9 @@
 		 :format-control "Package ~S not found."))
 
 	(if (or (zerop colons) (= colons 2) (eq found *keyword-package*))
-	    (return (intern* read-buffer ouch-ptr found))
+	    (return (intern* *read-buffer* *ouch-ptr* found))
 	    (multiple-value-bind (symbol test)
-				 (find-symbol* read-buffer ouch-ptr found)
+				 (find-symbol* *read-buffer* *ouch-ptr* found)
 	      (when (eq test :external) (return symbol))
 	      (let ((name (read-buffer-to-string)))
 		(with-simple-restart (continue "Use symbol anyway.")
@@ -1263,7 +1311,7 @@
 
 
 (defun make-float ()
-  ;;assume that the contents of read-buffer are a legal float, with nothing
+  ;;assume that the contents of *read-buffer* are a legal float, with nothing
   ;;else after it.
   (read-unwind-read-buffer)
   (let ((negative-fraction nil)
@@ -1364,7 +1412,7 @@
 
 
 (defun make-ratio ()
-  ;;assume read-buffer contains a legal ratio.  Build the number from
+  ;;assume *read-buffer* contains a legal ratio.  Build the number from
   ;;the string.
   ;;look for optional "+" or "-".
   (let ((numerator 0) (denominator 0) (char ()) (negative-number nil))
@@ -1560,7 +1608,7 @@
 ;;;; Reader initialization code.
 
 (defun reader-init ()
-  (init-read-buffer)
+  (init-read-buffer-stack)
   (init-secondary-attribute-table)
   (init-std-lisp-readtable)
 ; (init-integer-reader)
