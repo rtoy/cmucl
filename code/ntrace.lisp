@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.2 1991/11/03 17:21:16 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.3 1991/11/15 14:52:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,31 +47,6 @@
   "This is currently unused.")
 
 
-;;;; TRACE.
-
-(eval-when (compile eval)
-
-;;; WITH-KEYWORDS -- Internal.
-;;;
-;;; This takes an options list of the following form:
-;;;    (<option-name> <value> ...)
-;;; It also takes a keyword binding spec of the following form:
-;;;    ((<keyword> <binding-var> <default>)
-;;;     ...)
-;;; This returns a form that binds the variables to any provided value in
-;;; options-list or to the default.
-;;;
-(defmacro with-keywords (option-list key-list &rest body)
-  `(let ,(mapcar #'(lambda (kl)
-		     `(,(cadr kl)		;var
-		       (or (getf ,option-list ,(car kl))
-			   ,(caddr kl))))	;default
-		 key-list)
-     ,@body))
-
-) ;EVAL-WHEN
-
-
 ;;; TRACE -- Public.
 ;;;
 (defmacro trace (&rest specs)
@@ -132,15 +107,9 @@
 		       (t (error "Illegal function name:  ~S." fun)))))
 	      (t (error "Illegal trace spec:  ~S." spec)))
 	  (push name name-list)
-	  (with-keywords options
-	    ((:condition condition nil)
-	     (:break break nil)
-	     (:break-after break-after nil)
-	     (:break-all break-all nil)
-	     (:wherein wherein nil)
-	     (:print print nil)
-	     (:print-after print-after nil)
-	     (:print-all print-all nil))
+	  (destructuring-bind (&key condition break break-after break-all
+				    wherein print print-after print-all)
+			      options
 	    (when break-all
 	      (setf break (setf break-after break-all)))
 	    (when print-all
