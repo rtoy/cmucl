@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.63 2001/03/12 12:44:31 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.64 2001/05/31 17:00:51 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,13 +412,14 @@
 (defun unparse-unix-directory (pathname)
   (declare (type pathname pathname))
   (unparse-unix-directory-list (%pathname-directory pathname)))
-  
+
 (defun unparse-unix-file (pathname)
   (declare (type pathname pathname))
   (collect ((strings))
     (let* ((name (%pathname-name pathname))
 	   (type (%pathname-type pathname))
 	   (type-supplied (not (or (null type) (eq type :unspecific))))
+	   (logical-p (logical-pathname-p pathname))
 	   (version (%pathname-version pathname))
 	   (version-supplied (not (or (null version) (eq version :newest)))))
       (when name
@@ -430,8 +431,9 @@
 	(strings (unparse-unix-piece type)))
       (when version-supplied
 	(strings (if (eq version :wild)
-		     ".~*~"
-		     (format nil ".~~~D~~" version)))))
+		     (if logical-p ".*" ".~*~")
+		     (format nil (if logical-p ".~D" ".~~~D~~")
+			     version)))))
     (and (strings) (apply #'concatenate 'simple-string (strings)))))
 
 (defun unparse-unix-namestring (pathname)
