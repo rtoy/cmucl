@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.19 1990/05/07 14:34:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.20 1990/05/09 06:48:08 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -478,6 +478,7 @@
 	  target-byte-order target-control-stack-start
 	  target-dynamic-space-start target-fasl-code-format
 	  target-fasl-file-type target-heap-address-space
+	  target-most-negative-fixnum target-most-positive-fixnum
 	  target-read-only-space-start target-static-space-start type-bits
 	  type-mask unbound-marker-type unwind-block-current-code-slot
 	  unwind-block-current-cont-slot unwind-block-current-uwp-slot
@@ -531,11 +532,10 @@
 
 (import 'vm:bignum-type)
 
-(export '(add-bignums multiply-bignums negate-bignum subtract-bignum
-	  bignum-ashift-right bignum-ashift-left bignum-gcd bignum=
-	  bignum-to-short-float bignum-to-long-float bignum-integer-length
-	  bignum-logical-and bignum-logical-ior bignum-logical-xor
-	  bignum-logical-not bignum-load-byte bignum-deposit-byte
-	  bignum-truncate bignum= bignum/= bignum> bignum< bignum<= bignum>=
-	  bignum-type bignum-element-type bignum-index))
-
+(export '(add-bignums bignum-ashift-left bignum-ashift-right bignum-compare
+	  bignum-deposit-byte bignum-gcd bignum-integer-length
+	  bignum-load-byte bignum-logcount bignum-logical-and
+	  bignum-logical-ior bignum-logical-not bignum-logical-xor
+	  bignum-plus-p bignum-to-double-float bignum-to-single-float
+	  bignum-truncate make-small-bignum multiply-bignums negate-bignum
+	  subtract-bignum))
