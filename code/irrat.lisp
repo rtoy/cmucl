@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.34 2002/12/31 14:28:08 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.35 2003/01/08 23:28:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -388,9 +388,23 @@
 	 (if (minusp number)
 	     (complex (coerce (log (- number)) 'single-float)
 		      (coerce pi 'single-float))
-	     (coerce (- (log (numerator number))
-			(log (denominator number)))
-		     'single-float)))
+	     ;; What happens when the ratio is close to 1?  We need to
+	     ;; be careful to preserve accuracy.
+	     (let ((top (numerator number))
+		   (bot (denominator number)))
+	       ;; If the number of bits in the numerator and
+	       ;; denominator are different, just use the fact
+	       ;; log(x/y) = log(x) - log(y).  However, if they have
+	       ;; the same number of bits, implying the quotient is
+	       ;; near one, we use log1p(x) = log(1+x).  Since the
+	       ;; number is rational, we don't lose precision
+	       ;; subtracting 1 from it, and converting it to
+	       ;; double-float is accurate.
+	       (if (= (integer-length top)
+			       (integer-length bot))
+		   (coerce (%log1p (coerce (- number 1) 'double-float))
+			   'single-float)
+		   (coerce (- (log2 top) (log2 bot)) 'single-float)))))
 	(((foreach single-float double-float))
 	 ;; Is (log -0) -infinity (libm.a) or -infinity + i*pi (Kahan)?
 	 ;; Since this doesn't seem to be an implementation issue
@@ -990,8 +1004,8 @@ Z may be any number, but the result is always a complex."
 ;;
 ;; (sqrt (conjugate z)) = exp(0.5*log|z|)*exp(0.5*j*arg conj z)
 ;;
-;;.and these two expressions are equal if and only if arg conj z =
-;;-arg z, which is clearly true for all z.
+;; and these two expressions are equal if and only if arg conj z =
+;; -arg z, which is clearly true for all z.
 
 (defun complex-acos (z)
   "Compute acos z = pi/2 - asin z
