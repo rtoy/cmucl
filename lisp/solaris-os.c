@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.2 1997/09/08 00:32:00 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.3 2000/11/03 18:13:45 dtc Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -29,6 +29,11 @@
 #define OS_ERRNO(code)		((code)->si_errno)
 
 #include "os.h"
+
+/* To get dynamic_0_space and friends */
+#include "globals.h"
+/* To get memory map */
+#include "sparc-validate.h"
 
 /* block size must be larger than the system page size */
 #define SPARSE_BLOCK_SIZE (1<<15)
@@ -340,3 +345,92 @@ sigsetmask(int mask)
     return old.__sigbits[0];
 
 }
+
+os_vm_address_t
+round_up_sparse_size(os_vm_address_t addr)
+{
+  return (addr + SPARSE_BLOCK_SIZE - 1) & ~SPARSE_SIZE_MASK;
+}
+
+/*
+ * An array of the start of the spaces which should have holes placed
+ * after them.  Must not include the dynamic spaces because the size
+ * of the dynamic space can be controlled from the command line.
+ */
+static os_vm_address_t spaces[] =
+{
+  READ_ONLY_SPACE_START, STATIC_SPACE_START, 
+  BINDING_STACK_START, CONTROL_STACK_START
+};
+
+/*
+  
+ * The corresponding array for the size of each space.  Be sure that
+ * the spaces and holes don't overlap!  The sizes MUST be on
+ * SPARSE_BLOCK_SIZE boundaries.
+ 
+ */
+static unsigned long space_size[] = 
+{
+  READ_ONLY_SPACE_SIZE, STATIC_SPACE_SIZE, 
+  BINDING_STACK_SIZE, CONTROL_STACK_SIZE
+};
+
+/*
+ * The size of the hole to make.  It should be strictly smaller than
+ * SPARSE_BLOCK_SIZE.
+ */
+
+#define HOLE_SIZE 0x2000
+
+void make_holes(void)
+{
+  int k;
+  os_vm_address_t hole;
+  
+  /* Make holes of the appropriate size for desired spaces */
+  
+  for (k = 0; k < sizeof(spaces)/sizeof(spaces[0]); ++k)
+    {
+
+      hole = spaces[k] + space_size[k];
+    
+      if (os_validate(hole, HOLE_SIZE) == NULL) {
+        fprintf(stderr,
+                "ensure_space: Failed to validate hole of %ld bytes at 0x%08X\n",
+                HOLE_SIZE,
+                (unsigned long)hole);
+        exit(1);
+      }
+      /* Make it inaccessible */
+      os_protect(hole, HOLE_SIZE, 0);
+    }
+
+  /* Round up the dynamic_space_size to the nearest SPARSE_BLOCK_SIZE */
+  dynamic_space_size = round_up_sparse_size(dynamic_space_size);
+  
+  /* Now make a hole for the dynamic spaces */
+  hole = dynamic_space_size + (os_vm_address_t) dynamic_0_space;
+  
+  if (os_validate(hole, HOLE_SIZE) == NULL)
+    {
+      fprintf(stderr,
+              "ensure_space: Failed to validate hold of %ld bytes at 0x%08X\n",
+              HOLE_SIZE,
+              (unsigned long)hole);
+      exit(1);
+    }
+  os_protect(hole, HOLE_SIZE, 0);
+
+  hole = dynamic_space_size + (os_vm_address_t) dynamic_1_space;
+  if (os_validate(hole, HOLE_SIZE) == NULL)
+    {
+      fprintf(stderr,
+              "ensure_space: Failed to validate hole of %ld bytes at 0x%08X\n",
+              HOLE_SIZE,
+              (unsigned long)hole);
+      exit(1);
+    }
+  os_protect(hole, HOLE_SIZE, 0);
+}
+
