@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.71 1992/04/04 01:56:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.72 1992/04/14 17:28:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2476,13 +2476,7 @@
 	(reference-leaf start cont var inlinep))))
 
 
-;;;; Magic functions:
-;;;
-;;;    Various global functions must be treated magically in IR1 conversion.
-;;; If a function is always magical, then we just define an IR1-Convert method
-;;; for it.  If the magic is effectively a form of inline expansion, then we
-;;; define a source transform which transforms to an internal thing which we
-;;; pretend is a special form.
+;;;; Funcall:
 ;;;
 ;;; %Funcall is used by people who want the call to be open-coded regardless of
 ;;; user policy settings.
@@ -2507,6 +2501,15 @@
     (ir1-convert start fun-cont function)
     (assert-continuation-type fun-cont (specifier-type 'function))
     (ir1-convert-combination-args fun-cont cont args)))
+
+;;; This source transform exists to reduce the amount of work for the compiler.
+;;; If the called function is a FUNCTION form, then convert directly to
+;;; %FUNCALL, instead of waiting around for type inference.
+;;;
+(def-source-transform funcall (function &rest args)
+  (if (and (consp function) (eq (car function) 'function))
+      `(%funcall ,function ,@args)
+      (values nil t)))
 
 (deftransform %coerce-to-function ((thing))
   (give-up "Might be a symbol, so must call FDEFINITION at runtime."))
