@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.13 1990/02/22 20:33:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.14 1990/02/23 20:19:24 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -54,7 +54,9 @@
 
 	  symbol-structure symbol-size symbol-value-slot
 	  symbol-function-slot symbol-plist-slot symbol-name-slot
-	  symbol-package-slot))
+	  symbol-package-slot
+
+	  sap-structure sap-size sap-pointer-slot))
 
 
 (in-package "C")
@@ -71,7 +73,8 @@
 	    (values (car slot) (cdr slot)))
       (values name
 	      (getf props :rest)
-	      (getf props :boxed t)
+	      (getf props :c-type "lispobj")
+	      (getf props :length 1)
 	      (getf props :ref-vop)
 	      (getf props :ref-trans)
 	      (getf props :set-vop)
@@ -85,7 +88,7 @@
   (let ((compile-time nil)
 	(load-time nil)
 	(index (if header 1 0))
-	(slot-names (if header '(header)))
+	(slot-names (if header '((header :c-type "lispobj"))))
 	(did-rest nil)
 	(init-forms nil)
 	(init-args nil)
@@ -95,7 +98,7 @@
 	(error "Rest slot ~S in defslots of ~S is not the last one."
 	       did-rest name))
       (multiple-value-bind
-	  (slot-name rest boxed ref-vop ref-trans
+	  (slot-name rest c-type length ref-vop ref-trans
 		     set-vop setf-vop set-trans docs init)
 	  (parse-slot slot)
 	(let ((const (intern (concatenate 'simple-string
@@ -131,22 +134,20 @@
 	    (:arg
 	     (push slot-name init-args)
 	     (push `(storew ,slot-name result ,const ,lowtag) init-forms))))
-	(push (if (or (not boxed) rest)
-		  `(,slot-name
-		    ,@(if (not boxed) '(:boxed nil))
-		    ,@(if rest '(:rest t)))
-		  slot-name)
+	(push `(,slot-name :c-type ,c-type
+			   ,@(if rest '(:rest t)))
 	      slot-names)
 	(if rest
 	    (setf did-rest slot-name)
-	    (incf index))))
+	    (incf index length))))
     (let ((size (intern (concatenate 'simple-string
 				     (string name)
 				     (if did-rest "-BASE-SIZE" "-SIZE")))))
       (push `(defconstant ,size ,index
 	       ,(format nil
 			"Number of slots used by each ~S~
-			~@[ including the header~]~@[ excluding any data~]."
+			~@[~* including the header~]~
+			~@[~* excluding any data~]."
 			name header did-rest))
 	    compile-time)
       (when alloc-vop
@@ -219,18 +220,17 @@
 
 
 (defslots (bignum :lowtag other-pointer-type :header bignum-type)
-  (digits :rest t :boxed nil))
+  (digits :rest t :c-type "long"))
 
 (defslots (ratio :lowtag other-pointer-type :header ratio-type)
   numerator
   denominator)
 
 (defslots (single-float :lowtag other-pointer-type :header single-float-type)
-  value)
+  (value :c-type "float"))
 
 (defslots (double-float :lowtag other-pointer-type :header double-float-type)
-  value
-  more-value)
+  (value :c-type "double" :length 2))
 
 (defslots (complex :lowtag other-pointer-type :header complex-type)
   real
@@ -246,7 +246,7 @@
 
 (defslots (vector :lowtag other-pointer-type :header t)
   length
-  (data :rest t :boxed nil))
+  (data :rest t :c-type "unsigned long"))
 
 (defslots (code :lowtag other-pointer-type :header t)
   code-size
@@ -261,10 +261,10 @@
   name
   arglist
   type
-  (code :rest t :boxed nil))
+  (code :rest t :c-type "unsigned char"))
 
 (defslots (return-pc :lowtag other-pointer-type :header t)
-  (return-point :boxed nil :rest t))
+  (return-point :c-type "unsigned char" :rest t))
 
 (defslots (closure :lowtag function-pointer-type :header closure-header-type
 		   :alloc-vop make-closure)
@@ -287,7 +287,8 @@
   (package :ref-vop symbol-package :ref-trans symbol-package
 	   :setf-vop set-package :init :null))
 
-
+(defslots (sap :lowtag other-pointer-type :header sap-header-type)
+  (pointer :c-type "char *"))
 
 
 
