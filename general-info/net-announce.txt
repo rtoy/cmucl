@@ -4,9 +4,64 @@
 Hewlett-Packard 700-series workstations running HP/UX version 9.x.  The main
 missing features on HP/UX are LOAD-FOREIGN and the Motif interface.
 
-
 Distribution:
 
+CMU Common Lisp is only available via anonymous FTP.  We don't have the
+manpower to make tapes.  These are our distribution machines:
+    lisp-sun1.slisp.cs.cmu.edu (128.2.250.58)
+    lisp-rt1.slisp.cs.cmu.edu (128.2.217.9)
+    lisp-rt2.slisp.cs.cmu.edu (128.2.217.10)
+
+Log in with the user "anonymous" and "username@host" as password (i.e. your
+EMAIL address.)  When you log in, cd to /pub (a symbolic link to the CMU CL
+release area.)  If you have any trouble with FTP access, please send mail to
+slisp@cs.cmu.edu.
+
+The most recent version is: 17e
+The old version is: 16f
+
+The currently supported platforms are:
+    sunos:
+        Sun SPARC machines running the the pre-Solaris BSD SunOS system,
+        version 4.x.
+
+    hp700_ux90:
+        HP 700 series machines (based on the HPPA architecture) running HP/UX
+        9.x.
+
+The release area holds compressed tar files with names of the form:
+    <version>-<platform>.tar.Z
+    <version>-extra-<platform>.tar.Z
+    <version>-runtime-<platform>.tar.Z
+
+ -- The first file holds binaries and documentation for the standard Common
+    Lisp portion of CMU CL.  This includes our version of the PCL
+    implementation of the CLOS object system.  
+ -- The `-extra' file contains the Hemlock editor, the Motif toolkit,
+    the graphical debugger and the CLX interface to X11.
+ -- The `-runtime' file contins one file: lib/runtime.core, which is a
+    smaller substitute for lib/lisp.core.  See the "runtime distribution"
+    section.
+
+The sizes of the configurations are approximately:
+    Basic: 15 megabytes
+    Basic+Extra: 24 megabytes
+    Runtime: 5.3 megabytes
+
+For installation directions, see the section "site initialization".
+
+FTP compressed tar archives in binary mode.  To extract, "cd" to the
+directory that is to be the root of the tree, then type:
+    uncompress <file.tar.Z | tar xf - .
+
+If poor network connections make it difficult to transfer a 7 meg file, the
+release is also available split into 2 megabyte chunks, suffixed `.0', `.1',
+etc.  To extract from multiple files, use:
+    cat file.tar.Z.* | uncompress | tar xf - .
+
+The release area also contains source distributions and other binary
+distributions.  A listing of the current contents of the release area is in
+FILES.  Major release announcements will be made to comp.lang.lisp.
 CMU Common Lisp is only available via anonymous FTP.  We don't have the
 manpower to make tapes.  These are our distribution machines:
     lisp-sun1.slisp.cs.cmu.edu (128.2.250.58)
@@ -26,27 +81,6 @@ FTP compressed tar archives in binary mode.  To extract, "cd" to the
 directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
-As of 11/11/93, the latest SunOS Sparc release is:
-    17e-sunos.tar.Z (6.6 meg)
-    17e-extra-sunos.tar.Z (3.9 meg)
-This version works with all the versions of SunOS we've tried it on, but does
-*NOT* work under Solaris.
-
-The first file holds binaries and documentation for the basic Lisp system,
-while the second `-extra' file contains the Hemlock editor, the Motif toolkit,
-the graphical debugger and the CLX interface to X11.  The basic configuration
-takes 15 megabytes of disk space; adding the extras takes another 8 megabytes.
-For installation directions, see the section "site initialization".
-
-If poor network connections make it difficult to transfer a 7 meg file, the
-release is also available split into 2 megabyte chunks, suffixed `.0', `.1',
-etc.  To extract from multiple files, use:
-    cat file.tar.Z.* | uncompress | tar xf - .
-
-The release area also contains source distributions and other binary
-distributions.  A listing of the current contents of the release area is in
-FILES.  Major release announcements will be made to comp.lang.lisp.
-
 Source availability:
 
 Lisp and documentation sources are available via anonymous FTP ftp to any CMU
@@ -56,8 +90,8 @@ packages: PCL and CLX.  Although these packages are copyrighted, they may be
 freely distributed without any licensing agreement or fee.
 
 The release area contains a source distribution, which is an image of all the
-".lisp" source files used to build version 17e:
-    17e-source.tar.Z (4.9 meg)
+source code files used to build the current version:
+    <version>-source.tar.Z (5 meg)
 
 ________________________________________________________________
 
