@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.39 1991/03/12 19:36:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.40 1991/04/04 14:34:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -909,6 +909,9 @@
 ;;; pervasive special and function type declarations, (not)inline declarations
 ;;; and optimize declarations.  Cont is the continuation affected by VALUES
 ;;; declarations.
+;;;
+;;; This is also called in main.lisp when PROCESS-FORM handles a use of
+;;; LOCALLY.
 ;;;
 (defun process-declarations (decls vars fvars cont)
   (declare (list decls vars fvars) (type continuation cont))
@@ -2485,6 +2488,10 @@
 	    ;;
 	    ;; No non-global state to be updated.
 	    ((inline notinline maybe-inline optimize declaration freeze-type))
+	    ;;
+	    ;; Totally ignore these operations at non-top-level.
+	    ((start-block end-block)
+	     (setq ignore t))
 	    (t
 	     (cond ((member name type-specifier-symbols)
 		    (process-type-proclamation name args))
@@ -2492,7 +2499,8 @@
 		    (setq ignore t))
 		   (t
 		    (setq ignore t)
-		    (compiler-warning "Unrecognized proclamation: ~S." form)))))
+		    (compiler-warning "Unrecognized proclamation: ~S."
+				      form)))))
 	  
 	  (unless ignore
 	    (funcall #'%proclaim form))
@@ -3073,7 +3081,9 @@
 
       (ir1-convert start cont `(%%defmacro ',name ,fun ,doc)))
 
-    (compiler-mumble "Converted ~S.~%" name)))
+    (when *compile-print*
+      (compiler-mumble "Converted ~S.~%" name))))
+
 
 ;;; %DEFUN IR1 convert  --  Internal
 ;;;
@@ -3083,6 +3093,12 @@
 ;;; the function cannot be called outside of the correct environment.  If the
 ;;; function is gloablly NOTINLINE, then that inhibits even local substitution.
 ;;; Also, emit top-level code to install the definition.
+;;;
+;;; This is one of the major places where the semantics of block compilation is
+;;; handled.  Substituion for global names is titally inhibited if
+;;; *block-compile* it NIL.  And if *block-compile* us true and entry points
+;;; are specified, then we don't install global definitions for non-entry
+;;; functions (effectively turning them into local lexical functions.)
 ;;;
 (def-ir1-translator %defun ((name def doc source) start cont
 			    :kind :function)
@@ -3100,15 +3116,20 @@
 	 (function-info (info function info name)))
     (setf (info function inline-expansion name) expansion)
     ;;
-    ;; If *FREE-FUNCTIONS* has type information from a previous DEFUN, or a
-    ;; previous DEFUN itself, then blow away the entry.  Unless :DECLARED, also
-    ;; clear the recorded function type so that we don't pull possibly
+    ;; If *FREE-FUNCTIONS* has a previous DEFUN for this name, then blow it
+    ;; away.  If it is a global defined variable, then clear the type.
     ;; bogus information back in.
-    (when (or (eq where-from :defined)
-	      (functional-p (gethash name *free-functions*)))
-      (remhash name *free-functions*)
-      (unless (eq where-from :declared)
-	(setf (info function type name) (specifier-type 'function))))
+    (let ((old (gethash name *free-functions*)))
+      (cond ((functional-p old)
+	     (remhash name *free-functions*))
+	    (old
+	     (when (eq (leaf-where-from old) :defined)
+	       (setf (leaf-type old) (specifier-type 'function))))))
+    ;;
+    ;; If a defined variable, clear the recorded function type so that we don't
+    ;; pull possibly bogus information back in.
+    (when (eq where-from :defined)
+      (setf (info function type name) (specifier-type 'function)))
     ;;
     ;; If not in a null environment, discard any forward references to this
     ;; function.
@@ -3120,6 +3141,7 @@
       ;; If definitely not an interpreter stub, then substitute for any
       ;; old references that aren't :NOTINLINE. 
       (unless (or (eq (info function inlinep name) :notinline)
+		  (not *block-compile*)
 		  (and function-info
 		       (or (function-info-transforms function-info)
 			   (function-info-templates function-info)
@@ -3130,6 +3152,10 @@
 	   #'(lambda (x)
 	       (not (eq (ref-inlinep x) :notinline)))
 	   fun old))
+	;;
+	;; This gets block-compiled functions that aren't entry points (and
+	;; hence have no XEP).
+	(note-name-defined name :function)
 	;;
 	;; If not in a null environment, prevent any backward references to
 	;; this function from other top-level forms.
@@ -3147,10 +3173,15 @@
 	   :really-assert (and for-real (not function-info))
 	   :where (if for-real "declaration" "definition"))))
 
-      (ir1-convert start cont
-		   `(%%defun ',name ,fun ,doc
-			     ,@(when expansion `(',expansion))))
-      (compiler-mumble "Converted ~S.~%" name))))
+      (ir1-convert
+       start cont
+       (if (and *block-compile* *entry-points*
+		(not (member name *entry-points* :test #'equal)))
+	   `',name
+	   `(%%defun ',name ,fun ,doc
+		     ,@(when expansion `(',expansion)))))
+      (when *compile-print*
+	(compiler-mumble "Converted ~S.~%" name)))))
 
 
 ;;; Update the global environment to correspond to the new definition.  We only
