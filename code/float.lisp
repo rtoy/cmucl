@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.3 1990/10/03 18:46:31 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.4 1990/10/14 19:07:15 ram Exp $
 ;;;
 ;;;    This file contains the definitions of float specific number support
 ;;; (other than irrational stuff, which is in irrat.)  There is code in here
@@ -505,7 +505,7 @@
 		 :operands (list x exp)))
 	(let ((shift (1- new-exp)))
 	  (cond
-	   ((< shift (- digits))
+	   ((< shift (- (1- digits)))
 	    (when (current-float-trap :underflow)
 	      (error 'floating-point-underflow :operation 'scale-float
 		     :operands (list x exp)))
@@ -534,15 +534,15 @@
    ((float-nan-p x)
     (when (and (float-trapping-nan-p x)
 	       (current-float-trap :invalid))
-      (error 'floating-point-invalid :operator 'scale-float
+      (error 'floating-point-invalid :operation 'scale-float
 	     :operands (list x exp)))
     x)
    (t
     (when (current-float-trap :overflow)
-      (error 'floating-point-overflow :operator 'scale-float
+      (error 'floating-point-overflow :operation 'scale-float
 	     :operands (list x exp)))
     (when (current-float-trap :inexact)
-      (error 'floating-point-inexact :operator 'scale-float
+      (error 'floating-point-inexact :operation 'scale-float
 	     :operands (list x exp)))
     (* (float-sign x)
        (etypecase x
