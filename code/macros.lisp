@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.83 2002/11/22 15:43:09 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.84 2002/11/22 18:12:03 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1603,15 +1603,20 @@
 ;;;; Miscellaneous macros:
 
 (defmacro psetq (&rest pairs)
-  (do ((lets nil)
-       (setqs nil)
-       (pairs pairs (cddr pairs)))
-      ((atom (cdr pairs))
-       `(let ,(nreverse lets) (setq ,@(nreverse setqs)) nil))
-    (let ((gen (gensym)))
-      (push `(,gen ,(cadr pairs)) lets)
-      (push (car pairs) setqs)
-      (push gen setqs))))
+  "PSETQ {var value}*
+   Set the variables to the values, like SETQ, except that assignments
+   happen in parallel, i.e. no assignments take place until all the
+   forms have been evaluated."
+  ;; Given the possibility of symbol-macros, we delegate to PSETF
+  ;; which knows how to deal with them, after checking that syntax is
+  ;; compatible with PSETQ.
+  (do ((pair pairs (cddr pair)))
+      ((endp pair) `(psetf ,@pairs))
+    (unless (symbolp (car pair))
+      (error 'simple-program-error
+             :format-control "variable ~S in PSETQ is not a SYMBOL"
+             :format-arguments (list (car pair))))))
+
 
 ;;; LAMBDA -- from the ANSI spec.
 ;;;
