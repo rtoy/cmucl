@@ -2,6 +2,9 @@
 ;;;
 (in-package "USER")
 
+(c::%proclaim '(optimize (speed 2) (space 2) (c::brevity 2)))
+(setq *print-pretty* nil)
+
 (with-compiler-log-file ("c:compile-compiler.log")
 
 (unless *new-compile*
