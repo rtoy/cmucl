@@ -39,7 +39,7 @@
     (nstring-downcase dev)
     (setf (gethash dev *search-list-table*)
 	  (mapcar #'(lambda (x)
-		      (let ((x (namestring x)))
+		      (let ((x (if (pathnamep x) (namestring x) x)))
 			(declare (simple-string x))
 			(let* ((len (length x))
 			       (char (schar x (1- len))))
