@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.4 1990/02/09 13:22:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.5 1990/02/18 05:47:26 ch Exp $
 ;;;
 ;;;    This file contains the RT VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -38,8 +38,8 @@
 	    (loadi dest (fixnum val)))
 	   (null
 	    (move dest null-tn))
-	   ((member t)	   
-	    (error "can't load T yet."))
+	   (symbol
+	    (inst addi dest null-tn (initial-symbol-offset-symbol val)))
 	   (string-char
 	    (loadi dest (logior (ash (char-code val) type-bits)
 				character-type))))
