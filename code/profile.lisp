@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.3 1992/01/30 17:04:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.4 1992/02/02 23:43:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,11 +39,6 @@
 
 ;;;; Implementation dependent interfaces:
 
-#+(and cmu (not new-compiler))
-(eval-when (compile eval)
-  (defmacro fdefinition (x)
-    `(lisp::careful-symbol-function ,x))
-  (defsetf fdefinition lisp::set-symbol-function-carefully))
 
 (progn
   #-cmu
@@ -71,46 +66,38 @@
 ;;; is the number of required arguments, and the second is T iff there are any
 ;;; non-required arguments (e.g. &optional, &rest, &key).
 
-#+cmu
-(progn
-  #-new-compiler
-  (defun required-arguments (name)
-    (let ((function (symbol-function name)))
-      (if (eql (system:%primitive get-type function) system:%function-type)
-	  (let ((min (ldb system:%function-min-args-byte
-			  (system:%primitive header-ref function
-					     system:%function-min-args-slot)))
-		(max (ldb system:%function-max-args-byte
-			  (system:%primitive header-ref function
-					     system:%function-max-args-slot)))
-		(rest (ldb system:%function-rest-arg-byte
-			   (system:%primitive header-ref function
-					      system:%function-rest-arg-slot)))
-		(key (ldb system:%function-keyword-arg-byte
-			  (system:%primitive
-			   header-ref function
-			   system:%function-keyword-arg-slot))))
-	    (values min (or (/= min max) (/= rest 0) (/= key 0))))
-	  (values 0 t))))
-  #+new-compiler
-  (defun required-arguments (name)
-    (let* ((function (fdefinition name)))
-      (if (eql (kernel:get-type function) vm:function-header-type)
-	  (let ((type (kernel:%function-header-type function)))
-	    (if (consp type)
-		(let* ((args (cadr type))
-		       (pos (position-if
-			     #'(lambda (x)
-				 (and (symbolp x)
-				      (let ((name (symbol-name x)))
-					(and (>= (length name) 1)
-					     (char= (schar name 0) #\&)))))
-			     args)))
-		  (if pos
-		      (values pos t)
-		      (values (length args) nil)))
-		(values 0 t)))
-	  (values 0 t)))))
+#+cmu (progn
+(defun required-arguments-aux (name function)
+  (let ((type (kernel:%function-header-type function)))
+    (typecase type
+      (cons
+       (let* ((args (cadr type))
+	      (pos (position-if
+		    #'(lambda (x)
+			(and (symbolp x)
+			     (let ((name (symbol-name x)))
+			       (and (>= (length name) 1)
+				    (char= (schar name 0) #\&)))))
+		    args)))
+	 (if pos
+	     (values pos t)
+	     (values (length args) nil))))
+      (t
+       (warn "No argument count information available for:~%  ~S~@
+	      Allow for &rest arg consing."
+	     name)
+       (values 0 t)))))
+
+(defun required-arguments (name)
+  (let* ((function (fdefinition name)))
+    (case (kernel:get-type function)
+      (#.vm:function-header-type (required-arguments-aux name function))
+      ((#.vm:closure-header-type #.vm:funcallable-instance-header-type)
+       (required-arguments-aux name (kernel:%closure-function function)))
+      (t
+       (values 0 t)))))
+
+); #+cmu progn
 
 #-cmu
 (progn
@@ -397,7 +384,7 @@
 ;;; within this profiled function.  This factor is the total profiling overhead
 ;;; *minus the internal overhead*.  We don't subtract out the internal
 ;;; overhead, since it was already subtracted when the nested profiled
-;;; functions subtracted their running time from the time for the encolsing
+;;; functions subtracted their running time from the time for the enclosing
 ;;; function.
 ;;;
 (defun compensate-time (calls time profile)
