@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.78 2003/10/05 12:34:35 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.79 2003/10/06 12:39:58 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -744,6 +744,8 @@
 		(when (and (basic-combination-p use)
 			   (eq (basic-combination-kind use) :local))
 		  (merges use))))
+	    (when (null (continuation-dest cont))
+	      (flush-dest value))
 	    (substitute-continuation-uses cont value)
 	    (dolist (merge (merges))
 	      (merge-tail-sets merge))))))))

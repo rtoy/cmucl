@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.44 2003/02/16 19:05:19 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.45 2003/10/06 12:39:58 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,6 +379,16 @@
 	 (kind (and tn (tn-kind tn)))
 	 (flags 0))
     (declare (type index flags))
+    ;;
+    ;; FIXME: Dead code elimination sometimes leaves spurious
+    ;; references to unused lambda-vars.  Unused vars are not packed,
+    ;; and so have a tn but a null tn-offset.  Some of these cases
+    ;; have been fixed, but not all of them, and since it's not sure
+    ;; if/when all of them will be fixed, add a hack for these cases.
+    ;; -- gerd 2003-10-06
+    (when (and tn (null (tn-offset tn)))
+      (setq tn nil))
+      
     (cond (minimal
 	   (setq flags (logior flags compiled-debug-variable-minimal-p))
 	   (unless tn
