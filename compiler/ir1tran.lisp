@@ -2482,11 +2482,11 @@
 		  (setq ignore t))
 		 (t
 		  (setq ignore t)
-		  (compiler-warning "Unrecognized proclamation: ~S." form))))))
+		  (compiler-warning "Unrecognized proclamation: ~S." form)))))
 
-      (unless ignore
-	(funcall #'%proclaim form)
-	(ir1-convert start cont `(%proclaim ,what))))))
+	(unless ignore
+	  (funcall #'%proclaim form)
+	  (ir1-convert start cont `(%proclaim ,what)))))))
 
 
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
