@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.27 1992/11/11 02:33:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.28 1993/02/10 22:29:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,6 +195,9 @@
 ); eval-when
 
 
+;;; We define a keyword "BOA" constructor so that we can reference the slots
+;;; names in init forms.
+;;;
 (defmacro def-alien-type-class ((name &key include) &rest slots)
   (let ((defstruct-name
 	 (intern (concatenate 'string "ALIEN-" (symbol-name name) "-TYPE"))))
@@ -221,7 +224,14 @@
 	 (defstruct (,defstruct-name
 			(:include ,include-defstruct
 				  (:class ',name)
-				  ,@overrides))
+				  ,@overrides)
+			(:constructor
+			 (intern (concatenate 'string "MAKE-"
+					      (string defstruct-name)))
+			 (&key class bits alignment
+			       ,@(mapcar #'(lambda (x)
+					     (if (atom x) x (car x)))
+					 slots))))
 	   ,@slots)))))
 
 (defmacro def-alien-type-method ((class method) lambda-list &rest body)
@@ -258,7 +268,8 @@
 
 (defstruct (alien-type
 	    (:print-function %print-alien-type)
-	    (:make-load-form-fun :just-dump-it-normally))
+	    (:make-load-form-fun :just-dump-it-normally)
+	    (:constructor make-alien-type (&key class bits alignment)))
   (class 'root :type symbol)
   (bits nil :type (or null unsigned-byte))
   (alignment (guess-alignment bits) :type (or null unsigned-byte)))
