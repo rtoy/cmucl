@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14.1.3 1993/02/08 22:12:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14.1.4 1993/02/10 12:50:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -390,8 +390,9 @@
 		   `(if (eq ,n-layout ',layout)
 			t
 			(and (> (layout-inheritance-depth ,n-layout) ,idepth)
-			     (eq (svref (layout-inherits ,n-layout) ,idepth)
-				 ',layout)))))))))
+			     (locally (declare (optimize (safety 0)))
+			       (eq (svref (layout-inherits ,n-layout) ,idepth)
+				   ',layout))))))))))
 
 
 ;;; Source-Transform-Typep  --  Internal
