@@ -3,10 +3,16 @@ and executables are freely available via anonymous FTP; this software is
 "as is", and has no warranty of any kind.  CMU and the authors assume no
 responsibility for the consequences of any use of this software.
 
-This is a general beta release, meaning that anyone can FTP it, but we won't be
-very sympathetic about catastrophes resulting from your dependence on CMU CL.
-This release mostly fixes bugs in the previous release, and if all goes well,
-we will announce a later default release of this system
+15e will probably be the last version 15 release, and is thus the most stable
+system you're going to see for a while.  We're reluctant to call it a
+"default" release because some things are stably broken:
+ -- There still isn't any good stack overflow detection.  Probably stack
+    overflow detection won't appear until the C code rewrite associated with
+    generational GC comes out (version 17 or later.)
+ -- The Alien/foreign function call mechanism is fairly broken.  It doesn't
+    work at all in interpreted code, and DEF-C-ROUTINE doesn't work properly
+    for many argument type signatures.  We've redesigned and reimplemented
+    our foreign interface for version 16.
 
 The CMU Common Lisp project's goal is to develop a high quality public domain
 system, so we want your bug reports, bug fixes and enhancements.  However,
@@ -39,8 +45,8 @@ FTP compressed tar archives in binary mode.  To extract, "cd" to the
 directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
-The latest SunOS Sparc release is:
-    -rw-r--r--  1 ram       9248115 Feb  2 17:13 15d-sun4c_41.tar.Z
+As of 2/26/92, the latest SunOS Sparc release is:
+    15e-sun4c_41.tar.Z (9.3 meg)
 
 The resulting tree is 23 megabytes.  For installation directions, see the
 section "site initialization" in README file at the root of the tree.
@@ -99,9 +105,8 @@ also makes use of several imported packages: PCL, CLX and XP.  Although these
 packages are copyrighted, they may be freely distributed without any licensing
 agreement or fee.
 
-Also in /afs/cs/project/clisp/release:
--rw-r--r--  1 ram       3626581 Feb  2 16:59 15d-source.tar.Z
-	Image of all ".lisp" source files used to build version 15d.
+/afs/cs/project/clisp/release/15e-source.tar.Z (3.6 meg) is an image of all
+the ".lisp" source files used to build version 15e.
 
 Totally machine-independent compiler code:
     /afs/cs/project/clisp/src/beta/compiler/*.lisp
