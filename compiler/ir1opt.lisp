@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.52 1992/09/16 16:45:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.53 1992/09/21 15:38:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -860,7 +860,7 @@
       (flet ((frob ()
 	       (let ((res (ir1-convert-lambda-for-defun
 			   (defined-function-inline-expansion leaf)
-			   leaf
+			   leaf t
 			   #'ir1-convert-inline-lambda
 			   'labels)))
 		 (setf (defined-function-functional leaf) res)
@@ -870,6 +870,7 @@
 	    (with-ir1-environment call
 	      (frob)
 	      (local-call-analyze *current-component*))))
+				  
       (values (ref-leaf (continuation-use (basic-combination-fun call)))
 	      nil))
      (t
