@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.8 1991/07/23 12:04:51 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.9 1991/07/23 12:18:03 ram Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -51,7 +51,8 @@
 (setf (backend-version *target-backend*) "IBM RT/Mach 1.0")
 (setf (backend-fasl-file-type *target-backend*) "rtf")
 (setf (backend-fasl-file-implementation *target-backend*)
-      rt-fasl-file-implementation))
+      rt-fasl-file-implementation)
+(setf *features* (delete :afpa *features*)))
 
 #+afpa (progn
 (setf *target-float-hardware* :afpa)
@@ -59,7 +60,8 @@
 (setf (backend-version *target-backend*) "IBM RT EAPC/Mach 1.0")
 (setf (backend-fasl-file-type *target-backend*) "eapcf")
 (setf (backend-fasl-file-implementation *target-backend*)
-      rt-afpa-fasl-file-implementation))
+      rt-afpa-fasl-file-implementation)
+(pushnew :afpa *features*))
 
 (setf (backend-fasl-file-version *target-backend*) 1)
 (setf (backend-register-save-penalty *target-backend*) 3)
