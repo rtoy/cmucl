@@ -78,7 +78,10 @@ i/o based on TERM and /etc/termcap.
 Source availability:
 
 Lisp and documentation sources are available via anonymous FTP ftp to any CMU
-CS machine.  [See the "Distribution" section for FTP instructions.]
+CS machine.  [See the "Distribution" section for FTP instructions.]  All CMU
+written code is public domain, but CMU CL also makes use of several imported
+packages: PCL, CLX and XP.  Although these packages are copyrighted, they may
+be freely distributed without any licensing agreement or fee.
 
 Totally machine-independent compiler code:
     /afs/cs/project/clisp/pmax_mach/alpha/compiler/*.lisp
