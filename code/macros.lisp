@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.28 1992/02/24 00:51:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.29 1992/03/31 04:52:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -481,12 +481,10 @@
 ;;; of value forms, a list of the single store-value form, a storing function,
 ;;; and an accessing function.
 
-(eval-when (compile load eval)
-;;;
-(defun get-setf-method (form &optional environment)
+(defun get-setf-method-multiple-value (form &optional environment)
   "Returns five values needed by the SETF machinery: a list of temporary
-  variables, a list of values with which to fill them, the temporary for the
-  new value in a list, the setting function, and the accessing function."
+   variables, a list of values with which to fill them, a list of temporaries
+   for the new values, the setting function, and the accessing function."
   (let (temp)
     (cond ((symbolp form)
 	   (let ((new-var (gensym)))
@@ -528,9 +526,17 @@
 	    `(,(car form) ,@vars))))
 
 
-(defun get-setf-method-multiple-value (form &optional environment)
-  "Like Get-Setf-Method, but may return multiple new-value variables."
-  (get-setf-method form environment))
+(defun get-setf-method (form &optional environment)
+  "Like Get-Setf-Method-Multiple-Value, but signal an error if there are
+   more than one new-value variables."
+  (multiple-value-bind
+      (temps value-forms store-vars store-form access-form)
+      (get-setf-method-multiple-value form environment)
+    (when (cdr store-vars)
+      (error "GET-SETF-METHOD used for a form with multiple store ~
+	      variables:~%  ~S" form))
+    (values temps value-forms store-vars store-form access-form)))
+
 
 (defun defsetter (fn rest)
   (let ((arglist (car rest))
@@ -545,8 +551,6 @@
 	  ,body)
        doc))))
 
-) ; End of Eval-When.
-
 
 (defmacro defsetf (access-fn &rest rest)
   "Associates a SETF update function or macro with the specified access
@@ -557,34 +561,47 @@
 	    (%define-setf-macro ',access-fn nil ',(car rest)
 				,(when (and (car rest) (stringp (cadr rest)))
 				   `',(cadr rest)))))
-	((and (listp (car rest)) (cdr rest) (listp (cadr rest)))
-	 (if (not (= (length (cadr rest)) 1))
-	     (cerror "Ignore the extra items in the list."
-		     "Only one new-value variable allowed in DEFSETF."))
-	 (multiple-value-bind (setting-form-generator doc)
-			      (defsetter access-fn rest)
-	   `(eval-when (load compile eval)
-	      (%define-setf-macro
-	       ',access-fn
-	       #'(lambda (access-form environment)
-		   (declare (ignore environment))
-		   (do* ((args (cdr access-form) (cdr args))
-			 (dummies nil (cons (gensym) dummies))
-			 (newval-var (gensym))
-			 (new-access-form nil))
-			((atom args)
-			 (setq new-access-form 
-			       (cons (car access-form) dummies))
-			 (values
-			  dummies
-			  (cdr access-form)
-			  (list newval-var)
-			  (funcall (function ,setting-form-generator)
-				   new-access-form newval-var)
-			  new-access-form))))
-	       nil
-	       ',doc))))
-	(t (error "Ill-formed DEFSETF for ~S." access-fn))))
+	((and (cdr rest) (listp (cadr rest)))
+	 (destructuring-bind
+	     (lambda-list (&rest store-variables) &body body)
+	     rest
+	   (let ((arglist-var (gensym "ARGS-"))
+		 (access-form-var (gensym "ACCESS-FORM-"))
+		 (env-var (gensym "ENVIRONMENT-")))
+	     (multiple-value-bind
+		 (body local-decs doc)
+		 (parse-defmacro `(,lambda-list ,@store-variables)
+				 arglist-var body access-fn 'defsetf
+				 :annonymousp t)
+	       `(eval-when (load compile eval)
+		  (%define-setf-macro
+		   ',access-fn
+		   #'(lambda (,access-form-var ,env-var)
+		       (declare (ignore ,env-var))
+		       (%defsetf ,access-form-var ,(length store-variables)
+				 #'(lambda (,arglist-var)
+				     ,@local-decs
+				     (block ,access-fn
+				       ,body))))
+		   nil
+		   ',doc))))))
+	(t
+	 (error "Ill-formed DEFSETF for ~S." access-fn))))
+
+(defun %defsetf (orig-access-form num-store-vars expander)
+  (collect ((subform-vars) (store-vars))
+    (let ((subforms (cdr orig-access-form)))
+      (dolist (subform subforms)
+	(declare (ignore subform))
+	(subform-vars (gensym)))
+      (dotimes (i num-store-vars)
+	(store-vars (gensym)))
+      (values (subform-vars)
+	      subforms
+	      (store-vars)
+	      (funcall expander (cons (subform-vars) (store-vars)))
+	      `(,(car orig-access-form) ,@(subform-vars))))))
+
 
 ;;; SETF  --  Public
 ;;;
@@ -607,14 +624,14 @@
 	(if (atom place)
 	    `(setq ,place ,value-form)
 	    (multiple-value-bind (dummies vals newval setter getter)
-				 (get-setf-method place env)
+				 (get-setf-method-multiple-value place env)
 	      (declare (ignore getter))
 	      (let ((inverse (info setf inverse (car place))))
 		(if (and inverse (eq inverse (car setter)))
 		    `(,inverse ,@(cdr place) ,value-form)
-		    `(let* (,@(mapcar #'list dummies vals)
-			    (,(first newval) ,value-form))
-		       ,setter)))))))
+		    `(let* (,@(mapcar #'list dummies vals))
+		       (multiple-value-bind ,newval ,value-form
+			 ,setter))))))))
      ((oddp nargs) 
       (error "Odd number of args to SETF."))
      (t
@@ -622,83 +639,93 @@
 	  ((null a) `(progn ,@(nreverse l)))
 	(setq l (cons (list 'setf (car a) (cadr a)) l)))))))
 
-
 (defmacro psetf (&rest args &environment env)
   "This is to SETF as PSETQ is to SETQ.  Args are alternating place
   expressions and values to go into those places.  All of the subforms and
   values are determined, left to right, and only then are the locations
   updated.  Returns NIL."
-  (do ((a args (cddr a))
-       (let-list nil)
-       (setf-list nil))
-      ((atom a)
-       `(let* ,(nreverse let-list) ,@(nreverse setf-list) nil))
-    (if (atom (cdr a))
-	(error "Odd number of args to PSETF."))
-    (multiple-value-bind (dummies vals newval setter getter)
-      (get-setf-method (car a) env)
-      (declare (ignore getter))
-      (do* ((d dummies (cdr d))
-	    (v vals (cdr v)))
-	   ((null d))
-	(push (list (car d) (car v)) let-list))
-      (push (list (car newval) (cadr a)) let-list)
-      (push setter setf-list))))
-
+  (collect ((let*-bindings) (mv-bindings) (setters))
+    (do ((a args (cddr a)))
+	((endp a))
+      (if (endp (cdr a))
+	  (error "Odd number of args to PSETF."))
+      (multiple-value-bind
+	  (dummies vals newval setter getter)
+	  (get-setf-method-multiple-value (car a) env)
+	(declare (ignore getter))
+	(let*-bindings (mapcar #'list dummies vals))
+	(mv-bindings (list newval (cadr a)))
+	(setters setter)))
+    (labels ((thunk (let*-bindings mv-bindings)
+	       (if let*-bindings
+		   `(let* ,(car let*-bindings)
+		      (multiple-value-bind ,@(car mv-bindings)
+			,(thunk (cdr let*-bindings) (cdr mv-bindings))))
+		   `(progn ,@(setters) nil))))
+      (thunk (let*-bindings) (mv-bindings)))))
 
 
 (defmacro shiftf (&rest args &environment env)
   "One or more SETF-style place expressions, followed by a single
-  value expression.  Evaluates all of the expressions in turn, then
-  assigns the value of each expression to the place on its left,
-  returning the value of the leftmost."
+   value expression.  Evaluates all of the expressions in turn, then
+   assigns the value of each expression to the place on its left,
+   returning the value of the leftmost."
   (if (< (length args) 2)
       (error "Too few argument forms to a SHIFTF."))
-  (let ((leftmost (gensym)))
-    (do ((a args (cdr a))
-	 (let-list nil)
-	 (setf-list nil)
-	 (next-var leftmost))
-	((atom (cdr a))
-	 (push (list next-var (car a)) let-list)
-	 `(let* ,(nreverse let-list) ,@(nreverse setf-list) ,leftmost))
-      (multiple-value-bind (dummies vals newval setter getter)
-	(get-setf-method (car a) env)
-	(do* ((d dummies (cdr d))
-	      (v vals (cdr v)))
-	     ((null d))
-	  (push (list (car d) (car v)) let-list))
-	(push (list next-var getter) let-list)
-	(push setter setf-list)
-	(setq next-var (car newval))))))
-
+  (collect ((let*-bindings) (forms))
+    (do ((first t nil)
+	 (a args (cdr a))
+	 (prev-store-vars)
+	 (prev-setter))
+	((endp (cdr a))
+	 (forms `(multiple-value-bind ,prev-store-vars ,(car a)
+		   ,prev-setter)))
+      (multiple-value-bind
+	  (temps exprs store-vars setter getter)
+	  (get-setf-method-multiple-value (car a) env)
+	(loop
+	  for temp in temps
+	  for expr in exprs
+	  do (let*-bindings `(,temp ,expr)))
+	(forms (if first
+		   getter
+		   `(multiple-value-bind ,prev-store-vars ,getter
+		      ,prev-setter)))
+	(setf prev-store-vars store-vars)
+	(setf prev-setter setter)))
+    `(let* ,(let*-bindings)
+       (multiple-value-prog1
+	   ,@(forms)))))
 
 (defmacro rotatef (&rest args &environment env)
   "Takes any number of SETF-style place expressions.  Evaluates all of the
-  expressions in turn, then assigns to each place the value of the form to
-  its right.  The rightmost form gets the value of the leftmost.  Returns NIL."
-  (cond ((null args) nil)
-	((null (cdr args)) `(progn ,(car args) nil))
-	(t (do ((a args (cdr a))
-		(let-list nil)
-		(setf-list nil)
-		(next-var nil)
-		(fix-me nil))
-	       ((atom a)
-		  (rplaca fix-me next-var)
-		  `(let* ,(nreverse let-list) ,@(nreverse setf-list) nil))
-	       (multiple-value-bind (dummies vals newval setter getter)
-                 (get-setf-method (car a) env)
-		 (do ((d dummies (cdr d))
-		      (v vals (cdr v)))
-		     ((null d))
-		   (push (list (car d) (car v)) let-list))
-		 (push (list next-var getter) let-list)
-		 ;; We don't know the newval variable for the last form yet,
-		 ;; so fake it for the first getter and fix it at the end.
-		 (unless fix-me (setq fix-me (car let-list)))
-		 (push setter setf-list)
-		 (setq next-var (car newval)))))))
+   expressions in turn, then assigns to each place the value of the form to
+   its right.  The rightmost form gets the value of the leftmost.
+   Returns NIL."
+  (when args
+    (collect ((let*-bindings) (mv-bindings) (setters) (getters))
+      (dolist (arg args)
+	(multiple-value-bind
+	    (temps subforms store-vars setter getter)
+	    (get-setf-method-multiple-value arg env)
+	  (loop
+	    for temp in temps
+	    for subform in subforms
+	    do (let*-bindings `(,temp ,subform)))
+	  (mv-bindings store-vars)
+	  (setters setter)
+	  (getters getter)))
+      (setters nil)
+      (getters (car (getters)))
+      (labels ((thunk (mv-bindings getters)
+		 (if mv-bindings
+		     `((multiple-value-bind
+			   ,(car mv-bindings)
+			   ,(car getters)
+			 ,@(thunk (cdr mv-bindings) (cdr getters))))
+		     (setters))))
+	`(let* ,(let*-bindings)
+	   ,@(thunk (mv-bindings) (cdr (getters))))))))
 
 
 (defmacro define-modify-macro (name lambda-list function &optional doc-string)
@@ -935,8 +962,9 @@
 	      `(getf ,(car stores) ,ptemp ,@(if default `(,def-temp)))))))
 
 (define-setf-method get (symbol prop &optional default)
-  "Get turns into %put. Don't put in the default unless it really is supplied and 
-  non-nil, so that we can transform into the get instruction whenever possible."
+  "Get turns into %put. Don't put in the default unless it really is supplied
+   and non-nil, so that we can transform into the get instruction whenever
+   possible."
   (let ((symbol-temp (gensym))
 	(prop-temp (gensym))
 	(def-temp (gensym))
@@ -1052,7 +1080,6 @@
 	      (subst `(the ,type ,(car newval)) (car newval) setter)
 	      `(the ,type ,getter))))
 
-
 
 ;;;; CASE, TYPECASE, & Friends.
 
@@ -1144,7 +1171,6 @@
 		(format stream "Supply a new value for ~S." keyform))
       :interactive read-evaluated-form
       value)))
-
 
 
 (defmacro case (keyform &body cases)
