@@ -555,6 +555,10 @@
 ;;; we fail, but is simpler than trying to figure out the soonest failure
 ;;; point.
 ;;;
+;;; We also give up without bothering to wrap if the current size isn't large
+;;; enough to hold a single element of element-size without bothering to wrap.
+;;; If it doesn't fit this iteration, it won't fit next.
+;;; 
 ;;; ### Note that we actually try to pack as many consecutive TNs as possible
 ;;; in the same location, since we start scanning at the same offset that the
 ;;; last TN was successfully packed in.  This is a weakening of the scattering
@@ -572,7 +576,8 @@
 	  (wrap-p nil))
       (loop
 	(when (> (+ current-start element-size) size)
-	  (cond (wrap-p (return nil))
+	  (cond ((or wrap-p (> element-size size))
+		 (return nil))
 		(t
 		 (setq current-start 0)
 		 (setq wrap-p t))))
