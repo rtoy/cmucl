@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.22 1993/05/19 11:16:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.23 1994/06/17 17:47:41 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -140,7 +140,8 @@
   (inst bne length zero-tn done)
   (inst nop)
 
-  (inst srl byte data 16)
+  #+sgi  (inst srl byte data 8)
+  #+pmax (inst srl byte data 16)
   (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
@@ -149,7 +150,8 @@
 
   two-more
 
-  (inst srl byte data 8)
+  #+sgi  (inst srl byte data 16)
+  #+pmax (inst srl byte data 8)
   (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
@@ -158,6 +160,7 @@
 
   one-more
 
+  #+sgi (inst srl data data 24)
   (inst and byte data #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
