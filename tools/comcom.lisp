@@ -47,7 +47,6 @@
 (comf "c:srctran")
 (comf "c:seqtran")
 (comf "c:typetran")
-(comf "c:rt/vm-tran")
 (comf "c:locall")
 (comf "c:dfo")
 (comf "c:checkgen")
@@ -74,6 +73,7 @@
 
 (comf "c:rt/assem-insts" :load t)
 
+#+new-compiler
 (when *new-compile*
   (comf "c:eval-comp")
   (comf "c:eval" :bootstrap-macros :both)
@@ -98,8 +98,8 @@
   (comf "c:rt/core"))
 
 (comf "c:rt/vm" :always-once *new-compile*)
-(comf "c:rt/move")
 (comf "c:rt/miscop")
+(comf "c:rt/move")
 (comf "c:rt/subprim")
 (comf "c:rt/values")
 (comf "c:rt/memory")
@@ -119,6 +119,7 @@
 (comf "c:control")
 (comf "c:entry")
 (comf "c:ir2tran")
+(comf "c:rt/vm-tran")
 (comf "c:pack")
 (comf "c:codegen")
 (comf "c:debug")
