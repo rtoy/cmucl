@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.24 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.24.2.1 1998/06/23 11:22:47 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,7 +146,7 @@
 ;;;    Cont is a continuation we are doing a type check on and Types is a list
 ;;; of types that we are checking its values against.  If we have proven
 ;;; that Cont generates a fixed number of values, then for each value, we check
-;;; whether it is cheaper to then difference between the the proven type and
+;;; whether it is cheaper to then difference between the proven type and
 ;;; the corresponding type in Types.  If so, we opt for a :HAIRY check with
 ;;; that test negated.  Otherwise, we try to do a simple test, and if that is
 ;;; impossible, we do a hairy test with non-negated types.  If true,
@@ -493,39 +493,48 @@
 ;;; the hairy case, we must indicate to LTN that it must choose a safe
 ;;; implementation, since IR2 conversion will choke on the check.
 ;;;
+;;;    The generation of the type checks is delayed until all the type
+;;; check decisions have been made because the generation of the type
+;;; checks creates new nodes who's derived types aren't always updated
+;;; which may lead to inappropriate template choices due to the
+;;; modification of argument types.
+;;;
 (defun generate-type-checks (component)
-  (do-blocks (block component)
-    (when (block-type-check block)
-      (do-nodes (node cont block)
-	(let ((type-check (continuation-type-check cont)))
-	  (unless (member type-check '(nil :error :deleted))
-	    (let ((atype (continuation-asserted-type cont)))
-	      (do-uses (use cont)
-		(unless (values-types-intersect (node-derived-type use)
-						atype)
-		  (mark-error-continuation cont)
-		  (unless (policy node (= brevity 3))
-		    (do-type-warning use))))))
+  (collect ((conts))
+    (do-blocks (block component)
+      (when (block-type-check block)
+        (do-nodes (node cont block)
+	  (let ((type-check (continuation-type-check cont)))
+	    (unless (member type-check '(nil :error :deleted))
+	      (let ((atype (continuation-asserted-type cont)))
+		(do-uses (use cont)
+		  (unless (values-types-intersect (node-derived-type use)
+						  atype)
+		    (mark-error-continuation cont)
+		    (unless (policy node (= brevity 3))
+		      (do-type-warning use))))))
+	    (when (and (eq type-check t)
+		       (not *byte-compiling*))
+	      (if (probable-type-check-p cont)
+		  (conts cont)
+		  (setf (continuation-%type-check cont) :no-check)))))
 
-	  (when (and (eq type-check t)
-		     (not *byte-compiling*))
-	    (if (probable-type-check-p cont)
-		(multiple-value-bind (check types)
-				     (continuation-check-types cont)
-		  (ecase check
-		    (:simple)
-		    (:hairy
-		     (convert-type-check cont types))
-		    (:too-hairy
-		     (let* ((context (continuation-dest cont))
-			    (*compiler-error-context* context))
-		       (when (policy context (>= safety brevity))
-			 (compiler-note
-			  "Type assertion too complex to check:~% ~S."
-			  (type-specifier (continuation-asserted-type cont)))))
-		     (setf (continuation-%type-check cont) :deleted))))
-		(setf (continuation-%type-check cont) :no-check)))))
-      
-      (setf (block-type-check block) nil)))
-  
+	(setf (block-type-check block) nil)))
+
+    (dolist (cont (conts))
+      (multiple-value-bind (check types)
+	  (continuation-check-types cont)
+	(ecase check
+	  (:simple)
+	  (:hairy
+	   (convert-type-check cont types))
+	  (:too-hairy
+	   (let* ((context (continuation-dest cont))
+		  (*compiler-error-context* context))
+	     (when (policy context (>= safety brevity))
+	       (compiler-note
+		"Type assertion too complex to check:~% ~S."
+		(type-specifier (continuation-asserted-type cont)))))
+	   (setf (continuation-%type-check cont) :deleted))))))
+
   (undefined-value))

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/callbacks.c,v 1.3 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/callbacks.c,v 1.3.2.1 1998/06/23 11:25:16 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -173,46 +173,49 @@ void write_button_callback(message_t reply,XmPushButtonCallbackStruct *info)
 
 void write_drawing_callback(message_t reply,XmDrawingAreaCallbackStruct *info)
 {
-  message_write_xid(reply,info->window,window_tag);
+  message_write_xid(reply,info?info->window:0,window_tag);
 }
 
 void write_drawn_button_callback(message_t reply,
 				 XmDrawnButtonCallbackStruct *info)
 {
-  message_write_xid(reply,info->window,window_tag);
-  message_write_int(reply,info->click_count,int_tag);
+  message_write_xid(reply,info?info->window:0,window_tag);
+  message_write_int(reply,info?info->click_count:0,int_tag);
 }
 
 void write_scrollbar_callback(message_t reply,XmScrollBarCallbackStruct *info)
 {
-  message_write_int(reply,info->value,int_tag);
-  message_write_int(reply,info->pixel,int_tag);
+  message_write_int(reply,info?info->value:0,int_tag);
+  message_write_int(reply,info?info->pixel:0,int_tag);
 }
 
 void write_toggle_callback(message_t reply,XmToggleButtonCallbackStruct *info)
 {
-  message_write_boolean(reply,info->set,boolean_tag);
+  message_write_boolean(reply,info?info->set:0,boolean_tag);
 }
 
 void write_text_callback(message_t reply,XmTextVerifyCallbackStruct *info)
 {
-  message_write_boolean(reply,info->doit,boolean_tag);
-  message_write_int(reply,info->currInsert,int_tag);
-  message_write_int(reply,info->newInsert,int_tag);
+  message_write_boolean(reply,info?info->doit:0,boolean_tag);
+  message_write_int(reply,info?info->currInsert:0,int_tag);
+  message_write_int(reply,info?info->newInsert:0,int_tag);
 
-  if( info->reason == XmCR_LOSING_FOCUS ) {
-    message_write_int(reply,info->startPos,int_tag);
-    message_write_int(reply,info->endPos,int_tag);
-  } else if( info->reason == XmCR_MODIFYING_TEXT_VALUE ) {
-    message_write_int(reply,info->startPos,int_tag);
-    message_write_int(reply,info->endPos,int_tag);
-    really_write_string(reply,info->text->ptr,info->text->length+1);
-    /* ***** Perhaps this should be an enumerated type ***** */
-    message_write_int(reply,info->text->format,int_tag);
-    printf("modifying_text_value: %s ; length=%d\n",info->text->ptr,
-	   info->text->length);
-    fflush(stdout);
-  }
+  if(info) {
+     if( info->reason == XmCR_LOSING_FOCUS ) {
+        message_write_int(reply,info->startPos,int_tag);
+        message_write_int(reply,info->endPos,int_tag);
+        }
+     else if( info->reason == XmCR_MODIFYING_TEXT_VALUE ) {
+        message_write_int(reply,info->startPos,int_tag);
+        message_write_int(reply,info->endPos,int_tag);
+        really_write_string(reply,info->text->ptr,info->text->length+1);
+        /* ***** Perhaps this should be an enumerated type ***** */
+        message_write_int(reply,info->text->format,int_tag);
+        printf("modifying_text_value: %s ; length=%d\n",info->text->ptr,
+               info->text->length);
+        fflush(stdout);
+        }
+     }
 }
 
 void write_list_callback(message_t reply,XmListCallbackStruct *info)
@@ -220,10 +223,10 @@ void write_list_callback(message_t reply,XmListCallbackStruct *info)
   StringTable item_table;
   IntList pos_table;
 
-  message_write_xm_string(reply,info->item,xm_string_tag);
-  message_write_int(reply,info->item_position,int_tag);
+  message_write_xm_string(reply,info?info->item:0,xm_string_tag);
+  message_write_int(reply,info?info->item_position:0,int_tag);
 
-  if(info->reason==XmCR_MULTIPLE_SELECT || info->reason==XmCR_EXTENDED_SELECT){
+  if(info && (info->reason==XmCR_MULTIPLE_SELECT || info->reason==XmCR_EXTENDED_SELECT)){
     item_table.data = (char **)info->selected_items;
     item_table.length = info->selected_item_count;
     message_write_xm_string_table(reply,&item_table,xm_string_table_tag);
@@ -237,21 +240,21 @@ void write_list_callback(message_t reply,XmListCallbackStruct *info)
 
 void write_selection_callback(message_t reply, XmCommandCallbackStruct *info)
 {
-  message_write_xm_string(reply,info->value,xm_string_tag);
+  message_write_xm_string(reply,info?info->value:0,xm_string_tag);
 }
 
 void write_fileselection_callback(message_t reply,
 				  XmFileSelectionBoxCallbackStruct *info)
 {
-  message_write_xm_string(reply,info->value,xm_string_tag);
-  message_write_xm_string(reply,info->mask,xm_string_tag);
-  message_write_xm_string(reply,info->dir,xm_string_tag);
-  message_write_xm_string(reply,info->pattern,xm_string_tag);
+  message_write_xm_string(reply,info?info->value:0,xm_string_tag);
+  message_write_xm_string(reply,info?info->mask:0,xm_string_tag);
+  message_write_xm_string(reply,info?info->dir:0,xm_string_tag);
+  message_write_xm_string(reply,info?info->pattern:0,xm_string_tag);
 }
 
 void write_scale_callback(message_t reply,XmScaleCallbackStruct *info)
 {
-  message_write_int(reply,info->value,int_tag);
+  message_write_int(reply,info?info->value:0,int_tag);
 }
 
 void CallbackHandler(Widget *w, int name_token, XmAnyCallbackStruct *info)
@@ -269,8 +272,8 @@ void CallbackHandler(Widget *w, int name_token, XmAnyCallbackStruct *info)
   message_write_string_token(reply,name_token,string_token_tag);
   
   /* Now, we write the Reason structure into the message */
-  message_write_enum(reply,info->reason,callback_reason_tag);
-  message_write_int(reply,info->event,int_tag);
+  message_write_enum(reply,info?info->reason:0,callback_reason_tag);
+  message_write_int(reply,info?info->event:0,int_tag);
 
   if( class==xmArrowButtonWidgetClass || class==xmArrowButtonGadgetClass ||
      class==xmPushButtonWidgetClass || class==xmPushButtonGadgetClass )
@@ -294,9 +297,9 @@ void CallbackHandler(Widget *w, int name_token, XmAnyCallbackStruct *info)
   else if( class==xmScaleWidgetClass )
     write_scale_callback(reply,(XmScaleCallbackStruct *)info);
   else if( class==xmTextWidgetClass || class==xmTextFieldWidgetClass )
-    if( info->reason==XmCR_LOSING_FOCUS ||
+    if( info && (info->reason==XmCR_LOSING_FOCUS ||
         info->reason==XmCR_MODIFYING_TEXT_VALUE ||
-        info->reason==XmCR_MOVING_INSERT_CURSOR )
+        info->reason==XmCR_MOVING_INSERT_CURSOR ))
       write_text_callback(reply,(XmTextVerifyCallbackStruct *)info);
 
   message_send(client_socket,reply);

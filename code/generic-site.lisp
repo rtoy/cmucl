@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.11 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.11.2.1 1998/06/23 11:22:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,9 +23,8 @@
 ;;; found a bug.  Fill in the maintainer's address here..
 (rplaca
  (cdr (member :bugs *herald-items*))
- '("Send bug reports and questions to your local CMU CL maintainer, "
-   "or to" terpri
-   "cmucl-bugs@cs.cmu.edu." terpri
+ '("Send questions and bug reports to your local CMU CL maintainer, "
+   "or to cmucl-help@cons.org. and cmucl-imp@cons.org. respectively." terpri
    "Loaded subsystems:" terpri))
 
 ;;; If you have sources installed on your system, un-comment the following form

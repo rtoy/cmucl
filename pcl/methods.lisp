@@ -464,6 +464,11 @@
 	   (error "No method on ~S with qualifiers ~:S and specializers ~:S."
 		  generic-function qualifiers specializers)))))
 
+(defmethod find-method ((generic-function standard-generic-function)
+			qualifiers specializers &optional (errorp t))
+  (real-get-method generic-function qualifiers
+		   (parse-specializers specializers) errorp))
+  
 
 ;;;
 ;;; Compute various information about a generic-function's arglist by looking
@@ -949,7 +954,7 @@
 	(cond ((and (eq (class-name (car specls))
 			'std-class)
 		    (eq (class-name (cadr specls)) 
-			'standard-object)
+			'std-object)
 		    (eq (class-name (caddr specls)) 
 			'standard-effective-slot-definition))
 	       (set-standard-svuc-method type method))
@@ -967,6 +972,7 @@
 	     precompute-p
 	     (not (or (eq spec *the-class-t*)
 		      (eq spec *the-class-slot-object*)
+		      (eq spec *the-class-std-object*)
 		      (eq spec *the-class-standard-object*)
 		      (eq spec *the-class-structure-object*)))
 	     (let ((sc (class-direct-subclasses spec)))
@@ -1024,21 +1030,18 @@
 		  (mec-all-class-lists (method-specializers method) precompute-p))))
       cache)))
 
+#+cmu
 (defmacro class-test (arg class)
   (cond ((eq class *the-class-t*)
 	 't)
 	((eq class *the-class-slot-object*)
-	 #-(or new-kcl-wrapper cmu17)
-	 `(not (eq *the-class-built-in-class* 
-		   (wrapper-class (std-instance-wrapper (class-of ,arg)))))
-	 #+new-kcl-wrapper
-	 `(or (std-instance-p ,arg)
-	      (fsc-instance-p ,arg))
-	 #+cmu17
 	 `(not (lisp:typep (lisp:class-of ,arg) 'lisp:built-in-class)))
-	#-new-kcl-wrapper
-	((eq class *the-class-standard-object*)
+	((eq class *the-class-std-object*)
 	 `(or (std-instance-p ,arg) (fsc-instance-p ,arg)))
+	((eq class *the-class-standard-object*)
+	 `(std-instance-p ,arg))
+	((eq class *the-class-funcallable-standard-object*)
+	 `(fsc-instance-p ,arg))
 	#-cmu17
 	((eq class *the-class-structure-object*)
 	 `(memq ',class (class-precedence-list (class-of ,arg))))

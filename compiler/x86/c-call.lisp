@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.3.2.1 1997/09/07 23:30:55 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.3.2.2 1998/06/23 11:23:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Debugging and Enhancements by Douglas Crosher 1996.
+;;; Debugging and Enhancements by Douglas Crosher 1996,1997,1998.
 ;;;
 
 (in-package :x86)
@@ -55,6 +55,13 @@
 		      'sap-stack
 		      stack-frame-size)))
 
+#+long-float
+(def-alien-type-method (long-float :arg-tn) (type state)
+  (declare (ignore type))
+  (let ((stack-frame-size (arg-state-stack-frame-size state)))
+    (setf (arg-state-stack-frame-size state) (+ stack-frame-size 3))
+    (my-make-wired-tn 'long-float 'long-stack stack-frame-size)))
+
 (def-alien-type-method (double-float :arg-tn) (type state)
   (declare (ignore type))
   (let ((stack-frame-size (arg-state-stack-frame-size state)))
@@ -91,6 +98,13 @@
     (setf (result-state-num-results state) (1+ num-results))
     (my-make-wired-tn 'system-area-pointer 'sap-reg
 		      (result-reg-offset num-results))))
+
+#+long-float
+(def-alien-type-method (long-float :result-tn) (type state)
+  (declare (ignore type))
+  (let ((num-results (result-state-num-results state)))
+    (setf (result-state-num-results state) (1+ num-results))
+    (my-make-wired-tn 'long-float 'long-reg (* num-results 2))))
 
 (def-alien-type-method (double-float :result-tn) (type state)
   (declare (ignore type))
@@ -149,8 +163,8 @@
 	 (args :more t))
   (:results (results :more t))
   ;; eax is already wired
-  (:temporary (:sc dword-reg :offset ecx-offset) ecx)
-  (:temporary (:sc dword-reg :offset edx-offset) edx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) ecx)
+  (:temporary (:sc unsigned-reg :offset edx-offset) edx)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
@@ -160,10 +174,6 @@
 	   (move eax-tn function)
 	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
 	  (t
-	   (inst mov (make-ea :dword :disp (make-fixup
-					    (extern-alien-name
-					     "foreign_function_call_active")
-					    :foreign))  1)
 	   ;; Setup the NPX for C; all the FP registers need to be
 	   ;; empty; pop them all.
 	   (inst fstp fr0-tn)
@@ -193,11 +203,7 @@
 	       ;; The return result is in fr0.
 	       (inst fxch fr7-tn) ; move the result back to fr0
 	       (inst fldz)) ; insure no regs are empty
-	   
-	   (inst mov (make-ea :dword :disp (make-fixup
-					    (extern-alien-name
-					     "foreign_function_call_active")
-					    :foreign))  0)))))
+	   ))))
 
 (define-vop (alloc-number-stack-space)
   (:info amount)
@@ -205,7 +211,7 @@
   (:generator 0
     (assert (location= result esp-tn))
     (unless (zerop amount)
-      (let ( (delta (logandc2 (+ amount 3) 3)) )
+      (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub esp-tn delta)))
     (move result esp-tn)))
 
@@ -213,7 +219,7 @@
   (:info amount)
   (:generator 0
     (unless (zerop amount)
-      (let ( (delta (logandc2 (+ amount 3) 3)) )
+      (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst add esp-tn delta)))))
 
 (define-vop (alloc-alien-stack-space)
@@ -222,7 +228,7 @@
   (:generator 0
     (assert (not (location= result esp-tn)))
     (unless (zerop amount)
-      (let ( (delta (logandc2 (+ amount 3) 3)) )
+      (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub (make-ea :dword
 			   :disp (+ nil-value
 				    (static-symbol-offset '*alien-stack*)
@@ -235,7 +241,7 @@
   (:info amount)
   (:generator 0
     (unless (zerop amount)
-      (let ( (delta (logandc2 (+ amount 3) 3)) )
+      (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst add (make-ea :dword
 			   :disp (+ nil-value
 				    (static-symbol-offset '*alien-stack*)

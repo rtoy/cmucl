@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/widgets.c,v 1.3 1997/04/19 20:13:26 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/widgets.c,v 1.3.2.1 1998/06/23 11:25:20 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -79,7 +79,7 @@ int RXtUnmapWidget(message_t message)
 int RXtSetSensitive(message_t message)
 {
   Widget widget;
-  int sensitivity;
+  Boolean sensitivity;
 
   toolkit_read_value(message,&widget,XtRWidget);
   toolkit_read_value(message,&sensitivity,XtRBoolean);
@@ -257,6 +257,44 @@ int RXtIsSensitive(message_t message)
   toolkit_read_value(message,&w,XtRWidget);
   reply_with_boolean(message,XtIsSensitive(w));
 }
+
+#define XT_IS_REQUEST(WHAT) \
+int RXtIs##WHAT(message_t message) \
+{\
+    Widget w;\
+    toolkit_read_value(message, &w, XtRWidget);\
+    reply_with_boolean(message, XtIs##WHAT(w));\
+   }
+
+XT_IS_REQUEST(ApplicationShell)
+XT_IS_REQUEST(Composite)
+XT_IS_REQUEST(Constraint)
+XT_IS_REQUEST(Object)
+XT_IS_REQUEST(OverrideShell)
+XT_IS_REQUEST(RectObj)
+XT_IS_REQUEST(Shell)
+XT_IS_REQUEST(TopLevelShell)
+XT_IS_REQUEST(TransientShell)
+XT_IS_REQUEST(VendorShell)
+XT_IS_REQUEST(WMShell)
+
+int RXtNameToWidget(message_t message)
+{
+   String name;
+   Widget reference;
+
+   toolkit_read_value(message,&reference,XtRWidget);
+   toolkit_read_value(message,&name,XtRString);
+
+   reply_with_widget(message, XtNameToWidget(reference, name));
+   }
+
+int RXtParent(message_t message)
+{
+   Widget widget;
+   toolkit_read_value(message, &widget, XtRWidget);
+   reply_with_widget(message, XtParent(widget));
+   }
 
 int RXtTranslateCoords(message_t message)
 {

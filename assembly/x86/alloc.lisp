@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/alloc.lisp,v 1.2 1997/02/10 16:59:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/alloc.lisp,v 1.2.2.1 1998/06/23 11:21:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,9 +25,8 @@
 #+assembler ; we don't want a vop for this one.
 (define-assembly-routine
     (move-from-signed)
-    ((:temp eax dword-reg eax-offset)
-     (:temp ebx dword-reg ebx-offset)
-     (:temp ecx dword-reg ecx-offset))
+    ((:temp eax unsigned-reg eax-offset)
+     (:temp ebx unsigned-reg ebx-offset))
   (inst mov ebx eax)
   (inst shl ebx 1)
   (inst jmp :o bignum)
@@ -36,7 +35,7 @@
   (inst ret)
   BIGNUM
 
-  (with-fixed-allocation (ebx ecx bignum-type (+ bignum-digits-offset 1))
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1))
     (storew eax ebx bignum-digits-offset other-pointer-type))
 
   (inst ret))
@@ -44,9 +43,8 @@
 #+assembler ; we don't want a vop for this one either.
 (define-assembly-routine
   (move-from-unsigned)
-  ((:temp eax dword-reg eax-offset)
-   (:temp ebx dword-reg ebx-offset)
-   (:temp ecx dword-reg ecx-offset))
+  ((:temp eax unsigned-reg eax-offset)
+   (:temp ebx unsigned-reg ebx-offset))
 
   (inst test eax #xe0000000)
   (inst jmp :nz bignum)
@@ -66,11 +64,11 @@
   (inst mov ebx eax)
 
   ;; Two word bignum
-  (with-fixed-allocation (ebx ecx bignum-type (+ bignum-digits-offset 2))
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 2))
     (storew eax ebx bignum-digits-offset other-pointer-type))
   (inst ret)
   
   ONE-WORD-BIGNUM
-  (with-fixed-allocation (ebx ecx bignum-type (+ bignum-digits-offset 1))
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1))
     (storew eax ebx bignum-digits-offset other-pointer-type))
   (inst ret))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.32 1997/04/01 19:24:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.32.2.1 1998/06/23 11:23:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,9 @@
 ;;; This is be expanded before the translator gets a chance, so we will get
 ;;; precedence.
 ;;;
+#-long-float
 (setf (info type kind 'long-float) :defined)
+#-long-float
 (deftype long-float (&optional low high)
   `(double-float ,low ,high))
 ;;;
@@ -44,8 +46,12 @@
 ;;;
 ;;; Worst case values for float attributes.
 ;;;
-(deftype float-exponent () 'double-float-exponent)
-(deftype float-digits () `(integer 0 ,vm:double-float-digits))
+(deftype float-exponent ()
+  #-long-float 'double-float-exponent
+  #+long-float 'long-float-exponent)
+(deftype float-digits ()
+  #-long-float `(integer 0 ,vm:double-float-digits)
+  #+long-float `(integer 0 ,vm:long-float-digits))
 (deftype float-radix () '(integer 2 2))
 ;;;
 ;;; A code for Boole.
@@ -59,7 +65,7 @@
 ;;;
 ;;; Pathname pieces, as returned by the PATHNAME-xxx functions.
 (deftype pathname-host () '(or lisp::host null))
-(deftype pathname-device () '(member nil :unspecific))
+(deftype pathname-device () '(or simple-string (member nil :unspecific)))
 (deftype pathname-directory () 'list)
 (deftype pathname-name ()
   '(or simple-string lisp::pattern (member nil :unspecific :wild)))
@@ -90,19 +96,25 @@
     (unsigned-byte 16) (unsigned-byte 32)
     #+signed-array (signed-byte 8) #+signed-array (signed-byte 16)
     #+signed-array (signed-byte 30) #+signed-array (signed-byte 32)
-    base-char single-float double-float))
+    #+complex-float (complex single-float)
+    #+complex-float (complex double-float)
+    #+(and complex-float long-float) (complex long-float)
+    base-char single-float double-float
+    #+long-float long-float))
 
 (deftype unboxed-array (&optional dims)
   (collect ((types (list 'or)))
     (dolist (type specialized-array-element-types)
-      (when (subtypep type '(or integer character float))
+      (when (subtypep type '(or integer character float
+			     #+complex-float (complex float)))
 	(types `(array ,type ,dims))))
     (types)))
 
 (deftype simple-unboxed-array (&optional dims)
   (collect ((types (list 'or)))
     (dolist (type specialized-array-element-types)
-      (when (subtypep type '(or integer character float))
+      (when (subtypep type '(or integer character float
+			     #+complex-float (complex float)))
 	(types `(simple-array ,type ,dims))))
     (types)))
 
@@ -115,7 +127,8 @@
 (defun float-format-name (x)
   (etypecase x
     (single-float 'single-float)
-    (double-float 'double-float)))
+    (double-float 'double-float)
+    #+long-float (long-float 'long-float)))
 
 ;;; Specialize-Array-Type  --  Internal
 ;;;

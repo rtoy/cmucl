@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.62.2.1 1997/06/11 18:25:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.62.2.2 1998/06/23 11:22:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,7 @@
   "Count of the number of recursive loads.")
 (declaim (type index *load-depth*))
 (defvar *fasl-file*)
-(declaim (type stream fasl-file))
+(declaim (type lisp-stream fasl-file))
 
 
 ;;; LOAD-FRESH-LINE -- internal.
@@ -203,8 +203,8 @@
 ;;; Define-FOP  --  Internal
 ;;;
 ;;;    Defines Name as a fasl operation, with op-code op.  If pushp is :nope,
-;;; the the body neither pushes or pops the fop stack.  If it is nil, then
-;;; the body may pop, but the result is ignored.  If it is true, the the result
+;;; the body neither pushes or pops the fop stack.  If it is nil, then
+;;; the body may pop, but the result is ignored.  If it is true, the result
 ;;; is pushed on the stack.
 ;;;
 (defmacro define-fop ((name op &optional (pushp t)) &rest forms)
@@ -783,6 +783,44 @@
   (let ((im (pop-stack)))
     (%make-complex (pop-stack) im)))
 
+#+complex-float
+(define-fop (fop-complex-single-float 72)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(complex (make-single-float (fast-read-s-integer 4))
+		 (make-single-float (fast-read-s-integer 4)))
+      (done-with-fast-read-byte))))
+
+#+complex-float
+(define-fop (fop-complex-double-float 73)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let* ((re-lo (fast-read-u-integer 4))
+	       (re-hi (fast-read-u-integer 4))
+	       (re (make-double-float re-hi re-lo))
+	       (im-lo (fast-read-u-integer 4))
+	       (im-hi (fast-read-u-integer 4))
+	       (im (make-double-float im-hi im-lo)))
+	  (complex re im))
+      (done-with-fast-read-byte))))
+
+#+(and complex-float long-float)
+(define-fop (fop-complex-long-float 67)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let* ((re-lo (fast-read-u-integer 4))
+	       #+sparc (re-mid (fast-read-u-integer 4))
+	       (re-hi (fast-read-u-integer 4))
+	       (re-exp (fast-read-s-integer #+x86 2 #+sparc 4))
+	       (re (make-long-float re-exp re-hi #+sparc re-mid re-lo))
+	       (im-lo (fast-read-u-integer 4))
+	       #+sparc (im-mid (fast-read-u-integer 4))
+	       (im-hi (fast-read-u-integer 4))
+	       (im-exp (fast-read-s-integer #+x86 2 #+sparc 4))
+	       (im (make-long-float im-exp im-hi #+sparc im-mid im-lo)))
+	  (complex re im))
+      (done-with-fast-read-byte))))
+
 (define-fop (fop-single-float 46)
   (prepare-for-fast-read-byte *fasl-file*
     (prog1 (make-single-float (fast-read-s-integer 4))
@@ -793,6 +831,17 @@
     (prog1
 	(let ((lo (fast-read-u-integer 4)))
 	  (make-double-float (fast-read-s-integer 4) lo))
+      (done-with-fast-read-byte))))
+
+#+long-float
+(define-fop (fop-long-float 52)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let ((lo (fast-read-u-integer 4))
+	      #+sparc (mid (fast-read-u-integer 4))
+	      (hi (fast-read-u-integer 4))
+	      (exp (fast-read-s-integer #+x86 2 #+sparc 4)))
+	  (make-long-float exp hi #+sparc mid lo))
       (done-with-fast-read-byte))))
 
 
@@ -884,6 +933,35 @@
     (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2))
     result))
 
+#+long-float
+(define-fop (fop-long-float-vector 88)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type 'long-float)))
+    (read-n-bytes *fasl-file* result 0
+		  (* length vm:word-bytes #+x86 3 #+sparc 4))
+    result))
+
+#+complex-float
+(define-fop (fop-complex-single-float-vector 86)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex single-float))))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2))
+    result))
+
+#+complex-float
+(define-fop (fop-complex-double-float-vector 87)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex double-float))))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2 2))
+    result))
+
+#+(and complex-float long-float)
+(define-fop (fop-complex-long-float-vector 89)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex long-float))))
+    (read-n-bytes *fasl-file* result 0
+		  (* length vm:word-bytes #+x86 3 #+sparc 4 2))
+    result))
 
 ;;; FOP-INT-VECTOR  --  Internal
 ;;;
@@ -1092,9 +1170,9 @@
 ;;;
 
 (defvar *load-byte-compiled-code-to-dynamic-space* t)
-(defvar *load-x86-tlf-to-dynamic-space* nil)  ; potentially dangerous.
+(defvar *load-x86-tlf-to-dynamic-space* nil)  ; potentially dangerous with CGC.
 (defvar *load-code-verbose* nil)
-(defvar *enable-dynamic-space-code* nil) ; experimental
+(defvar *enable-dynamic-space-code* #-gencgc nil #+gencgc t)
 
 #+x86
 (defun load-code (box-num code-length)
@@ -1270,7 +1348,10 @@
   (multiple-value-bind
       (value found)
       (gethash symbol *foreign-symbols* 0)
-    (if found
+    ;; can't make irix linker give values in the symbol table to global vars
+    ;;from dsos, so we have to resolve at runtime (and handle symbols being
+    ;;defined with null values)
+    (if #-irix found #+irix (and found (not (zerop value)))
 	value
 	(let ((value (system:alternate-get-global-address symbol)))
 	  (when (zerop value)

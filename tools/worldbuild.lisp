@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.35 1997/01/18 14:31:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.35.2.1 1998/06/23 11:25:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,7 +89,9 @@
     "target:code/irrat"
     "target:code/bignum"
     "target:code/list"
-    "target:code/hash"
+    ,@(if (c:backend-featurep :hash-new)
+	'("target:code/hash-new")
+	'("target:code/hash"))
     "target:code/macros"
     "target:code/symbol"
     "target:code/string"
@@ -100,13 +102,19 @@
     ,@(when (c:backend-featurep :gengc)
 	'("target:code/gengc"
 	  "target:code/scavhook"))
-   
-    "target:code/rand"
+    ,@(when (c:backend-featurep :gencgc)
+	'("target:code/scavhook"))
+
     "target:code/save"
+    ,@(if (c:backend-featurep :random-mt19937)
+	  '("target:code/rand-mt19937")
+	  '("target:code/rand"))
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"
-    "target:code/unix"
+    ,@(if (c:backend-featurep :glibc2)
+	  '("target:code/unix-glibc2")
+	  '("target:code/unix"))
     ,@(when (c:backend-featurep :mach)
 	'("target:code/mach"
 	  "target:code/mach-os"))
@@ -153,6 +161,9 @@
     "target:code/debug-info"
     "target:code/debug-int"
     "target:code/debug"
+
+    ,@(when (c:backend-featurep :mp)
+	'("target:code/multi-proc"))
     ))
 
 (setf *genesis-core-name*

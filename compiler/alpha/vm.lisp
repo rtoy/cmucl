@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/vm.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/vm.lisp,v 1.2.2.1 1998/06/23 11:23:19 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,6 +156,10 @@
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
+  #+complex-float
+  (complex-single-stack non-descriptor-stack :element-size 2)
+  #+complex-float
+  (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
 
   ;; **** Things that can go in the integer registers.
@@ -215,17 +219,33 @@
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
-   :locations #.(loop for i from 4 to 31 collect i)
+   :locations #.(loop for i from 4 to 30 collect i)
    :constant-scs (fp-single-zero)
    :save-p t
    :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-   :locations #.(loop for i from 4 to 31 collect i)
+   :locations #.(loop for i from 4 to 30 collect i)
    :constant-scs (fp-double-zero)
    :save-p t
    :alternate-scs (double-stack))
+
+  #+complex-float
+  (complex-single-reg float-registers
+   :locations #.(loop for i from 4 to 28 by 2 collect i)
+   :element-size 2
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-single-stack))
+
+  #+complex-float
+  (complex-double-reg float-registers
+   :locations #.(loop for i from 4 to 28 by 2 collect i)
+   :element-size 2
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-stack))
 
   ;; A catch or unwind block.
   (catch-block control-stack :element-size vm:catch-block-size))
@@ -291,11 +311,11 @@
 	 (sc-number-or-lose 'immediate *backend*)
 	 nil))
     (single-float
-     (if (zerop value)
+     (if (eql value 0f0)
 	 (sc-number-or-lose 'fp-single-zero *backend*)
 	 nil))
     (double-float
-     (if (zerop value)
+     (if (eql value 0d0)
 	 (sc-number-or-lose 'fp-double-zero *backend*)
 	 nil))))
 

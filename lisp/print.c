@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.4.2.1 1997/08/26 02:25:00 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.4.2.2 1998/06/23 11:25:04 pw Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -36,7 +36,19 @@ char *subtype_Names[] = {
     "ratio",
     "single float",
     "double float",
+#ifdef type_LongFloat
+    "long float",
+#endif
     "complex",
+#ifdef type_ComplexSingleFloat
+    "complex single float",
+#endif
+#ifdef type_ComplexDoubleFloat
+    "complex double float",
+#endif
+#ifdef type_ComplexLongFloat
+    "complex long float",
+#endif
     "simple-array",
     "simple-string",
     "simple-bit-vector",
@@ -46,8 +58,32 @@ char *subtype_Names[] = {
     "(simple-array (unsigned-byte 8) (*))",
     "(simple-array (unsigned-byte 16) (*))",
     "(simple-array (unsigned-byte 32) (*))",
+#ifdef type_SimpleArraySignedByte8
+    "(simple-array (signed-byte 8) (*))",
+#endif
+#ifdef type_SimpleArraySignedByte16
+    "(simple-array (signed-byte 16) (*))",
+#endif
+#ifdef type_SimpleArraySignedByte30
+    "(simple-array fixnum (*))",
+#endif
+#ifdef type_SimpleArraySignedByte32
+    "(simple-array (signed-byte 32) (*))",
+#endif
     "(simple-array single-float (*))",
     "(simple-array double-float (*))",
+#ifdef type_SimpleArrayLongFloat
+    "(simple-array long-float (*))",
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+    "(simple-array (complex single-float) (*))",
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+    "(simple-array (complex double-float) (*))",
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+    "(simple-array (complex long-float) (*))",
+#endif
     "complex-string",
     "complex-bit-vector",
     "(array * (*))",
@@ -69,6 +105,9 @@ char *subtype_Names[] = {
     "weak pointer",
     "instance header",
     "fdefn"
+#ifdef type_ScavengerHook
+    ,"scavenger hook"
+#endif
 };
 
 static void indent(int in)
@@ -348,8 +387,13 @@ static char *complex_slots[] = {"real: ", "imag: ", NULL};
 static char *code_slots[] = {"words: ", "entry: ", "debug: ", NULL};
 static char *fn_slots[] = {"self: ", "next: ", "name: ", "arglist: ", "type: ", NULL};
 static char *closure_slots[] = {"fn: ", NULL};
+static char *funcallable_instance_slots[] = {"fn: ", "lexenv: ", "layout: ", NULL};
 static char *weak_pointer_slots[] = {"value: ", NULL};
 static char *fdefn_slots[] = {"name: ", "function: ", "raw_addr: ", NULL};
+static char *value_cell_slots[] = {"value: ", NULL};
+#ifdef type_ScavengerHook
+static char *scavenger_hook_slots[] = {"value: ", "function: ", "next: ", NULL};
+#endif
 
 static void print_otherptr(lispobj obj)
 {
@@ -417,6 +461,40 @@ static void print_otherptr(lispobj obj)
                 printf("%g", ((struct double_float *)PTR(obj))->value);
                 break;
 
+#ifdef type_LongFloat
+            case type_LongFloat:
+                NEWLINE;
+                printf("%Lg", ((struct long_float *)PTR(obj))->value);
+                break;
+#endif
+
+#ifdef type_ComplexSingleFloat
+            case type_ComplexSingleFloat:
+                NEWLINE;
+                printf("%g", ((struct complex_single_float *)PTR(obj))->real);
+                NEWLINE;
+                printf("%g", ((struct complex_single_float *)PTR(obj))->imag);
+                break;
+#endif
+
+#ifdef type_ComplexDoubleFloat
+            case type_ComplexDoubleFloat:
+                NEWLINE;
+                printf("%g", ((struct complex_double_float *)PTR(obj))->real);
+                NEWLINE;
+                printf("%g", ((struct complex_double_float *)PTR(obj))->imag);
+                break;
+#endif
+
+#ifdef type_ComplexLongFloat
+            case type_ComplexLongFloat:
+                NEWLINE;
+                printf("%Lg", ((struct complex_long_float *)PTR(obj))->real);
+                NEWLINE;
+                printf("%Lg", ((struct complex_long_float *)PTR(obj))->imag);
+                break;
+#endif
+
             case type_SimpleString:
                 NEWLINE;
                 cptr = (char *)(ptr+1);
@@ -445,8 +523,32 @@ static void print_otherptr(lispobj obj)
             case type_SimpleArrayUnsignedByte8:
             case type_SimpleArrayUnsignedByte16:
             case type_SimpleArrayUnsignedByte32:
+#ifdef type_SimpleArraySignedByte8
+	    case type_SimpleArraySignedByte8:
+#endif
+#ifdef type_SimpleArraySignedByte16
+	    case type_SimpleArraySignedByte16:
+#endif
+#ifdef type_SimpleArraySignedByte30
+	    case type_SimpleArraySignedByte30:
+#endif
+#ifdef type_SimpleArraySignedByte32
+	    case type_SimpleArraySignedByte32:
+#endif
             case type_SimpleArraySingleFloat:
             case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayLongFloat
+            case type_SimpleArrayLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+	    case type_SimpleArrayComplexSingleFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+	    case type_SimpleArrayComplexDoubleFloat:
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+	    case type_SimpleArrayComplexLongFloat:
+#endif
             case type_ComplexString:
             case type_ComplexBitVector:
             case type_ComplexVector:
@@ -470,6 +572,14 @@ static void print_otherptr(lispobj obj)
                 print_slots(closure_slots, count, ptr);
                 break;
 
+            case type_FuncallableInstanceHeader:
+                print_slots(funcallable_instance_slots, count, ptr);
+                break;
+
+            case type_ValueCellHeader:
+		print_slots(value_cell_slots, 1, ptr);
+                break;
+
             case type_Sap:
                 NEWLINE;
 #ifndef alpha
@@ -489,10 +599,16 @@ static void print_otherptr(lispobj obj)
                 printf("pointer to an immediate?");
                 break;
 
-	      case type_Fdefn:
+	    case type_Fdefn:
 		print_slots(fdefn_slots, count, ptr);
 		break;
 		
+#ifdef type_ScavengerHook
+	    case type_ScavengerHook:
+		print_slots(scavenger_hook_slots, count, ptr);
+		break;
+#endif
+
             default:
                 NEWLINE;
                 printf("Unknown header object?");

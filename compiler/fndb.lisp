@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68.2.5 1997/09/03 20:29:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68.2.6 1998/06/23 11:22:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,20 +175,20 @@
 ;;;; In the "Packages" chapter:
 
 
-(deftype packagelike () '(or stringlike package))
+(deftype packagelike () '(or stringable package))
 (deftype symbols () '(or list symbol))
 
 ;;; Should allow a package name, I think, tho CLtL II doesn't say so...
 (defknown gentemp (&optional string packagelike) symbol)
 
-(defknown make-package (stringlike &key (:use list) (:nicknames list)
+(defknown make-package (stringable &key (:use list) (:nicknames list)
 				   ;; ### Extensions...
 				   (:internal-symbols index) (:external-symbols index))
 	  package)
-(defknown find-package (stringlike) (or package null) (flushable))
+(defknown find-package (packagelike) (or package null) (flushable))
 (defknown package-name (packagelike) (or simple-string null) (flushable))
 (defknown package-nicknames (packagelike) list (flushable))
-(defknown rename-package (packagelike stringlike &optional list) package)
+(defknown rename-package (packagelike packagelike &optional list) package)
 (defknown package-use-list (packagelike) list (flushable))
 (defknown package-used-by-list (packagelike) list (flushable))
 (defknown package-shadowing-symbols (packagelike) list (flushable))
@@ -205,7 +205,7 @@
 (defknown shadowing-import (symbols &optional packagelike) truth)
 (defknown shadow ((or symbol string list) &optional packagelike) truth)
 (defknown (use-package unuse-package) ((or list packagelike) &optional packagelike) truth)
-(defknown find-all-symbols (stringlike) list (flushable))
+(defknown find-all-symbols (stringable) list (flushable))
 
 
 ;;;; In the "Numbers" chapter:
@@ -242,9 +242,15 @@
 (defknown lcm (&rest integer) unsigned-byte
   (movable foldable flushable explicit-check))
 
+#-propagate-fun-type
 (defknown exp (number) irrational
   (movable foldable flushable explicit-check recursive)
   :derive-type #'result-type-float-contagion)
+
+#+propagate-fun-type
+(defknown exp (number) irrational
+  (movable foldable flushable explicit-check recursive))
+
 
 (defknown expt (number number) number
   (movable foldable flushable explicit-check recursive))
@@ -260,8 +266,10 @@
 (defknown cis (real) (complex float)
   (movable foldable flushable explicit-check))
 
+#-propagate-fun-type
+(progn
 (defknown (sin cos) (number)
-  (or (float -1.0 1.0) (complex (float -1.0 1.0)))
+  (or (float -1.0 1.0) (complex float))
   (movable foldable flushable explicit-check recursive)
   :derive-type #'result-type-float-contagion)
 
@@ -273,6 +281,21 @@
 (defknown (tan sinh cosh tanh asinh)
   (number) irrational (movable foldable flushable explicit-check recursive)
   :derive-type #'result-type-float-contagion)
+)	; end progn
+
+#+propagate-fun-type
+(progn
+(defknown (sin cos) (number)
+  (or (float -1.0 1.0) (complex float))
+  (movable foldable flushable explicit-check recursive))
+
+(defknown atan
+  (number &optional real) irrational
+  (movable foldable flushable explicit-check recursive))
+
+(defknown (tan sinh cosh tanh asinh)
+  (number) irrational (movable foldable flushable explicit-check recursive))
+)	; end progn
 
 (defknown (asin acos acosh atanh)
   (number) irrational
@@ -559,6 +582,17 @@
   (flushable call)
   :derive-type (result-type-specifier-nth-arg 1))
 
+(defknown read-sequence (sequence stream &key (:start index)
+				  (:end sequence-end))
+  (index)
+  (flushable))
+
+(defknown write-sequence (sequence stream &key (:start index)
+				   (:end sequence-end))
+  (sequence)
+  ()
+  :derive-type (sequence-result-nth-arg 1))
+
 
 ;;;; In the "Manipulating List Structure" chapter:
 
@@ -591,10 +625,10 @@
 (defknown copy-tree (t) t (flushable))
 (defknown revappend (list t) t (flushable))
 (defknown nconc (&rest list) list ())
-(defknown nreconc (list list) list ())
+(defknown nreconc (list t) list ())
 (defknown butlast (list &optional index) list (flushable))
 (defknown nbutlast (list &optional index) list ())
-(defknown ldiff (list list) list (flushable))
+(defknown ldiff (list t) list (flushable))
 (defknown (rplaca rplacd) (cons t) list (unsafe))
 
 (defknown (nsubst subst) (t t t &key (:key callable) (:test callable)
@@ -615,7 +649,7 @@
 (defknown (member-if member-if-not) (callable list &key (:key callable))
   list (foldable flushable call))
 
-(defknown tailp (list list) boolean (foldable flushable))
+(defknown tailp (t list) boolean (foldable flushable))
 
 (defknown adjoin (t list &key (:key callable) (:test callable)
 		    (:test-not callable))
@@ -752,7 +786,8 @@
   (or index null)
   (foldable flushable))
 
-(defknown make-string (index &key (:initial-element character))
+(defknown make-string (index &key (:element-type type-specifier)
+		       (:initial-element character))
   simple-string (flushable))
 
 (defknown (string-trim string-left-trim string-right-trim)
@@ -786,7 +821,8 @@
 ;;;; In the "Eval" chapter:
 
 (defknown eval (t) *)
-(defknown constantp (t) boolean (foldable flushable))
+(defknown constantp (t &optional lexical-environment) boolean
+  (foldable flushable))
 
 
 ;;;; In the "Streams" chapter:
@@ -854,11 +890,11 @@
 (defknown read-from-string
   (string &optional t t &key (:start index) (:end sequence-end)
 	  (:preserve-whitespace t))
-  t)
+  (values t index))
 (defknown parse-integer
   (string &key (:start index) (:end sequence-end) (:radix (integer 2 36))
 	  (:junk-allowed t)) 
-  (or integer null ()))
+  (values (or integer null ()) index))
 
 (defknown read-byte (stream &optional t t) t (explicit-check))
 
@@ -948,7 +984,7 @@
 (defknown make-pathname
  (&key (:defaults pathnamelike)
        (:host (or string pathname-host))
-       (:device pathname-device)
+       (:device (or string pathname-device))
        (:directory (or pathname-directory string (member :wild)))
        (:name (or pathname-name string (member :wild)))
        (:type (or pathname-type string (member :wild)))
@@ -1055,8 +1091,8 @@
   t)
 (defknown dribble (&optional filename &key (:if-exists t)) t)
 
-(defknown apropos (stringlike &optional packagelike t) (values))
-(defknown apropos-list (stringlike &optional packagelike t) list (flushable))
+(defknown apropos (stringable &optional packagelike t) (values))
+(defknown apropos-list (stringable &optional packagelike t) list (flushable))
 
 (defknown get-decoded-time ()
   (values (integer 0 59) (integer 0 59) (integer 0 23) (integer 1 31)
@@ -1101,6 +1137,8 @@
 ;;; Can't fold in general because of SATISFIES.  There is a special optimizer
 ;;; anyway.
 (defknown %typep (t (or type-specifier ctype)) boolean
+  (movable flushable explicit-check))
+(defknown %instance-typep (t (or type-specifier ctype)) boolean
   (movable flushable explicit-check))
 
 (defknown %cleanup-point () void)

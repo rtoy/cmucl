@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.2 1997/09/09 00:49:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.3 1998/06/23 11:22:27 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,7 +80,24 @@
       (t
        (error "~S is a bad type specifier for sequence functions." type)))))
 
-  
+(define-condition index-too-large-error (type-error)
+  ()
+  (:report
+   (lambda(condition stream)
+     (format stream "Error in ~S: ~S: Index too large."
+	     (condition-function-name condition)
+	     (type-error-datum condition)))))
+
+(defun signal-index-too-large-error (sequence index)
+  (let* ((length (length sequence))
+	 (max-index (and (plusp length)(1- length))))
+    (error 'index-too-large-error
+	   :datum index
+	   :expected-type (if max-index
+			      `(integer 0 ,max-index)
+			      ;; This seems silly, is there something better?
+			      '(integer (0) (0))))))
+
 (defun make-sequence-of-type (type length)
   "Returns a sequence of the given TYPE and LENGTH."
   (declare (fixnum length))
@@ -103,13 +120,14 @@
     (list
      (do ((count index (1- count))
 	  (list sequence (cdr list)))
-	 ((= count 0) (car list))
-       (declare (fixnum count))
-       (when (endp list)
-	 (error "~S: index too large." index))))
+	 ((= count 0)
+	  (if (endp list)
+	      (signal-index-too-large-error sequence index)
+	      (car list)))
+       (declare (type (integer 0) count))))
     (vector
      (when (>= index (length sequence))
-       (error "~S: index too large." index))
+       (signal-index-too-large-error sequence index))
      (aref sequence index))))
 
 (defun %setelt (sequence index newval)
@@ -121,11 +139,11 @@
  	 ((= count 0) (rplaca seq newval) newval)
        (declare (fixnum count))
        (if (atom (cdr seq))
-	   (error "~S: index too large." index)
+	   (signal-index-too-large-error sequence index)
 	   (setq seq (cdr seq)))))
     (vector
      (when (>= index (length sequence))
-       (error "~S: index too large." index))
+       (signal-index-too-large-error sequence index))
      (setf (aref sequence index) newval))))
 
 
@@ -801,69 +819,78 @@
 
 (defun coerce (object output-type-spec)
   "Coerces the Object to an object of type Output-Type-Spec."
-  (let ((type (specifier-type output-type-spec)))
-    (cond
-     ((%typep object output-type-spec)
-      object)
-     ((csubtypep type (specifier-type 'character))
-      (character object))
-     ((csubtypep type (specifier-type 'function))
-      (eval `#',object))
-     ((numberp object)
-      (let ((res
-	     (cond
-	      ((csubtypep type (specifier-type 'single-float))
-	       (%single-float object))
-	      ((csubtypep type (specifier-type 'double-float))
-	       (%double-float object))
-	      ((csubtypep type (specifier-type 'float))
-	       (%single-float object))
-	      ((csubtypep type (specifier-type '(complex single-float)))
-	       (complex (%single-float (realpart object))
-			(%single-float (imagpart object))))
-	      ((csubtypep type (specifier-type '(complex double-float)))
-	       (complex (%double-float (realpart object))
-			(%double-float (imagpart object))))
-	      ((csubtypep type (specifier-type 'complex))
-	       (complex object))
-	      (t
-	       (error "~S can't be converted to type ~S."
-		      object output-type-spec)))))
-	;; If RES has the wrong type, that means that rule of
-	;; canonical representation for complex rationals was invoked.
-	;; According to the Hyperspec, (coerce 7/2 'complex) returns
-	;; 7/2.  Thus, if the object was a rational, there is no error
-	;; here.
-	(unless (or (typep res output-type-spec) (rationalp object))
-	  (error "~S can't be converted to type ~S."
-		 object output-type-spec))
-	res))
-     ((csubtypep type (specifier-type 'list))
-      (if (vectorp object)
-	  (vector-to-list* object)
-	  (error "~S can't be converted to type ~S."
-		 object output-type-spec)))
-     ((csubtypep type (specifier-type 'string))
-      (typecase object
-	(list (list-to-string* object))
-	(string (string-to-simple-string* object))
-	(vector (vector-to-string* object))
+  (flet ((coerce-error ()
+	   (error 'simple-type-error
+		  :format-control "~S can't be converted to type ~S."
+		  :format-arguments (list object output-type-spec))))
+    (let ((type (specifier-type output-type-spec)))
+      (cond
+	((%typep object output-type-spec)
+	 object)
+	((eq type *empty-type*)
+	 (coerce-error))
+	((csubtypep type (specifier-type 'character))
+	 (character object))
+	((csubtypep type (specifier-type 'function))
+	 (eval `#',object))
+	((numberp object)
+	 (let ((res
+		(cond
+		  ((csubtypep type (specifier-type 'single-float))
+		   (%single-float object))
+		  ((csubtypep type (specifier-type 'double-float))
+		   (%double-float object))
+		  #+long-float
+		  ((csubtypep type (specifier-type 'long-float))
+		   (%long-float object))
+		  ((csubtypep type (specifier-type 'float))
+		   (%single-float object))
+		  ((csubtypep type (specifier-type '(complex single-float)))
+		   (complex (%single-float (realpart object))
+			    (%single-float (imagpart object))))
+		  ((csubtypep type (specifier-type '(complex double-float)))
+		   (complex (%double-float (realpart object))
+			    (%double-float (imagpart object))))
+		  #+long-float
+		  ((csubtypep type (specifier-type '(complex long-float)))
+		   (complex (%long-float (realpart object))
+			    (%long-float (imagpart object))))
+		  ((csubtypep type (specifier-type 'complex))
+		   (complex object))
+		  (t
+		   (coerce-error)))))
+	   ;; If RES has the wrong type, that means that rule of canonical
+	   ;; representation for complex rationals was invoked.  According to
+	   ;; the Hyperspec, (coerce 7/2 'complex) returns 7/2.  Thus, if the
+	   ;; object was a rational, there is no error here.
+	   (unless (or (typep res output-type-spec) (rationalp object))
+	     (coerce-error))
+	   res))
+	((csubtypep type (specifier-type 'list))
+	 (if (vectorp object)
+	     (vector-to-list* object)
+	     (coerce-error)))
+	((csubtypep type (specifier-type 'string))
+	 (typecase object
+	   (list (list-to-string* object))
+	   (string (string-to-simple-string* object))
+	   (vector (vector-to-string* object))
+	   (t
+	    (coerce-error))))
+	((csubtypep type (specifier-type 'bit-vector))
+	 (typecase object
+	   (list (list-to-bit-vector* object))
+	   (vector (vector-to-bit-vector* object))
+	   (t
+	    (coerce-error))))
+	((csubtypep type (specifier-type 'vector))
+	 (typecase object
+	   (list (list-to-vector* object output-type-spec))
+	   (vector (vector-to-vector* object output-type-spec))
+	   (t
+	    (coerce-error))))
 	(t
-	 (error "~S can't be converted to type ~S." object output-type-spec))))
-     ((csubtypep type (specifier-type 'bit-vector))
-      (typecase object
-	(list (list-to-bit-vector* object))
-	(vector (vector-to-bit-vector* object))
-	(t
-	 (error "~S can't be converted to type ~S." object output-type-spec))))
-     ((csubtypep type (specifier-type 'vector))
-      (typecase object
-	(list (list-to-vector* object output-type-spec))
-	(vector (vector-to-vector* object output-type-spec))
-	(t
-	 (error "~S can't be converted to type ~S." object output-type-spec))))
-     (t
-      (error "~S can't be converted to type ~S." object output-type-spec)))))
+	 (coerce-error))))))
 
 
 ;;; Internal Frobs:
@@ -1035,13 +1062,15 @@
 )
 
 (defun delete (item sequence &key from-end (test #'eql) test-not (start 0)
-		end (count most-positive-fixnum) key)
+		end count key)
   "Returns a sequence formed by destructively removing the specified Item from
   the given Sequence."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length )))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (normal-list-delete-from-end)
@@ -1070,14 +1099,15 @@
 
 )
 
-(defun delete-if (predicate sequence &key from-end (start 0) key
-			    end (count most-positive-fixnum))
+(defun delete-if (predicate sequence &key from-end (start 0) key end count)
   "Returns a sequence formed by destructively removing the elements satisfying
   the specified Predicate from the given Sequence."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-list-delete-from-end)
@@ -1106,14 +1136,15 @@
 
 )
 
-(defun delete-if-not (predicate sequence &key from-end (start 0) 
-			end key (count most-positive-fixnum))
+(defun delete-if-not (predicate sequence &key from-end (start 0) end key count)
   "Returns a sequence formed by destructively removing the elements not
   satisfying the specified Predicate from the given Sequence."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-not-list-delete-from-end)
@@ -1251,13 +1282,15 @@
 )
 
 (defun remove (item sequence &key from-end (test #'eql) test-not (start 0)
-		end (count most-positive-fixnum) key)
+		end count key)
   "Returns a copy of SEQUENCE with elements satisfying the test (default is
    EQL) with ITEM removed."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (normal-list-remove-from-end)
@@ -1266,14 +1299,15 @@
 		      (normal-mumble-remove-from-end)
 		      (normal-mumble-remove)))))
 
-(defun remove-if (predicate sequence &key from-end (start 0)
-		    end (count most-positive-fixnum) key)
+(defun remove-if (predicate sequence &key from-end (start 0) end count key)
   "Returns a copy of sequence with elements such that predicate(element)
    is non-null are removed"
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-list-remove-from-end)
@@ -1282,15 +1316,15 @@
 		      (if-mumble-remove-from-end)
 		      (if-mumble-remove)))))
 
-(defun remove-if-not (predicate sequence &key
-				from-end (start 0) end
-				(count most-positive-fixnum) key)
+(defun remove-if-not (predicate sequence &key from-end (start 0) end count key)
   "Returns a copy of sequence with elements such that predicate(element)
    is null are removed"
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-not-list-remove-from-end)
@@ -1327,7 +1361,7 @@
 				(nthcdr (1+ start) result)
 				:test test
 				:test-not test-not
-				:key (if key key #'identity))))
+				:key key)))
 	      (and (not from-end)
 		   (not (do ((it (apply-key key (car current)))
 			     (l (cdr current) (cdr l))
@@ -1561,47 +1595,51 @@
 ;;; Substitute:
 
 (defun substitute (new old sequence &key from-end (test #'eql) test-not
-		   (start 0) (count most-positive-fixnum)
-		   end key)
+		   (start 0) count end key)
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements equal to Old are replaced with New.  See manual
   for details."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (subst-dispatch 'normal)))
 
 
 ;;; Substitute-If:
 
-(defun substitute-if (new test sequence &key from-end (start 0)
-		       end (count most-positive-fixnum) key)
+(defun substitute-if (new test sequence &key from-end (start 0) end count key)
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements satisfying the Test are replaced with New.  See
   manual for details."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
+	 (count (or count most-positive-fixnum))
 	 test-not
 	 old)
-    (declare (type index length end))
+    (declare (type index length end)
+	     (fixnum count))
     (subst-dispatch 'if)))
   
 
 ;;; Substitute-If-Not:
 
 (defun substitute-if-not (new test sequence &key from-end (start 0)
-			   end (count most-positive-fixnum) key)
+			   end count key)
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements not satisfying the Test are replaced with New.
   See manual for details."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
+	 (count (or count most-positive-fixnum))
 	 test-not
 	 old)
-    (declare (type index length end))
+    (declare (type index length end)
+	     (fixnum count))
     (subst-dispatch 'if-not)))
 
 
@@ -1609,12 +1647,14 @@
 ;;; NSubstitute:
 
 (defun nsubstitute (new old sequence &key from-end (test #'eql) test-not 
-		     end (count most-positive-fixnum) key (start 0))
+		     end count key (start 0))
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements equal to Old are replaced with New.  The Sequence
   may be destroyed.  See manual for details."
-  (declare (fixnum count start))
-  (let ((end (or end (length sequence))))
+  (declare (fixnum start))
+  (let ((end (or end (length sequence)))
+	(count (or count most-positive-fixnum)))
+    (declare (fixnum count))
     (if (listp sequence)
 	(if from-end
 	    (nreverse (nlist-substitute*
@@ -1655,14 +1695,14 @@
 
 ;;; NSubstitute-If:
 
-(defun nsubstitute-if (new test sequence &key from-end (start 0)
-			   end (count most-positive-fixnum) key)
+(defun nsubstitute-if (new test sequence &key from-end (start 0) end count key)
   "Returns a sequence of the same kind as Sequence with the same elements
    except that all elements satisfying the Test are replaced with New.  The
    Sequence may be destroyed.  See manual for details."
-  (declare (fixnum start count))
-  (let ((end (or end (length sequence))))
-    (declare (fixnum end))
+  (declare (fixnum start))
+  (let ((end (or end (length sequence)))
+	(count (or count most-positive-fixnum)))
+    (declare (fixnum end count))
     (if (listp sequence)
 	(if from-end
 	    (nreverse (nlist-substitute-if*
@@ -1697,13 +1737,14 @@
 ;;; NSubstitute-If-Not:
 
 (defun nsubstitute-if-not (new test sequence &key from-end (start 0)
-			       end (count most-positive-fixnum) key)
+			       end count key)
   "Returns a sequence of the same kind as Sequence with the same elements
    except that all elements not satisfying the Test are replaced with New.
    The Sequence may be destroyed.  See manual for details."
-  (declare (fixnum start count))
-  (let ((end (or end (length sequence))))
-    (declare (fixnum end))
+  (declare (fixnum start))
+  (let ((end (or end (length sequence)))
+	(count (or count most-positive-fixnum)))
+    (declare (fixnum end count))
     (if (listp sequence)
 	(if from-end
 	    (nreverse (nlist-substitute-if-not*

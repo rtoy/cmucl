@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.4 1997/04/13 21:04:51 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.4.2.1 1998/06/23 11:24:49 pw Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -404,7 +404,7 @@ static void new_cluster(int min_blocks)
     region->space = NULL;
 }
 
-unsigned long cgc_bytes_allocated = 0;	/* Seen by (dynamic-usage) */
+unsigned long bytes_allocated = 0;	/* Seen by (dynamic-usage) */
 static unsigned long auto_gc_trigger = 0;
 static int maybe_gc_called = 0;
 
@@ -471,7 +471,7 @@ static void *alloc_large(int nbytes)
     region->next = NULL;
     region->prev = NULL;
     region->space = NULL;
-    cgc_bytes_allocated += region->num_chunks*CHUNK_BYTES;
+    bytes_allocated += region->num_chunks*CHUNK_BYTES;
     move_to_newspace(region);
     return (char *)region + REGION_OVERHEAD;
 }
@@ -506,7 +506,7 @@ void *cgc_alloc(int nbytes)
 	  region->contains_small_objects = 1;
 	  space->alloc_ptr = (char *)region + REGION_OVERHEAD;
 	  space->alloc_end = (char *)region + CHUNK_BYTES;
-	  cgc_bytes_allocated += region->num_chunks*CHUNK_BYTES;
+	  bytes_allocated += region->num_chunks*CHUNK_BYTES;
 	}
       
       res = space->alloc_ptr;
@@ -772,6 +772,12 @@ static void init_osc()
   SETSCT(type_Ratio			,SC_ISBOXED,0);
   SETSCT(type_SingleFloat		,SC_UNBOXED,0);
   SETSCT(type_DoubleFloat		,SC_UNBOXED,0);
+#if defined type_ComplexSingleFloat
+  SETSCT(type_ComplexSingleFloat	,SC_UNBOXED,0);
+#endif
+#if defined type_ComplexDoubleFloat
+  SETSCT(type_ComplexDoubleFloat	,SC_UNBOXED,0);
+#endif
   SETSCT(type_Complex			,SC_ISBOXED,0);
   SETSCT(type_SimpleArray		,SC_ISBOXED,0);
   SETSCT(type_SimpleString		,SC_STRING,3);
@@ -796,6 +802,12 @@ static void init_osc()
 #endif
   SETSCT(type_SimpleArraySingleFloat	,SC_VECTOR,5);
   SETSCT(type_SimpleArrayDoubleFloat	,SC_VECTOR,6);
+#if defined type_SimpleArrayComplexSingleFloat
+  SETSCT(type_SimpleArrayComplexSingleFloat	,SC_VECTOR,6);
+#endif
+#if defined type_SimpleArrayComplexDoubleFloat
+  SETSCT(type_SimpleArrayComplexDoubleFloat	,SC_VECTOR,7);
+#endif
   SETSCT(type_ComplexString		,SC_ISBOXED,0);
   SETSCT(type_ComplexBitVector		,SC_ISBOXED,0);
   SETSCT(type_ComplexVector		,SC_ISBOXED,0);
@@ -1386,7 +1398,7 @@ scavengex(lispobj*obj)
 static void
 scavenge_space( lispobj*where, int words, char*name )
 {
-  int allocated = cgc_bytes_allocated;
+  int allocated = bytes_allocated;
   lispobj*end = where + words;
   lispobj*last;
   bytes_copied = 0;
@@ -1400,7 +1412,7 @@ scavenge_space( lispobj*where, int words, char*name )
   gc_assert(where == end);
   if(name)
     dprintf(noise,(" %ld bytes moved, %ld bytes allocated.\n",
-		   bytes_copied, cgc_bytes_allocated - allocated));
+		   bytes_copied, bytes_allocated - allocated));
 }
 
 static int boxed_registers[] = BOXED_REGISTERS;
@@ -1454,23 +1466,57 @@ static void flip_spaces()
 #define ACROSS_STACK(var) var=(void**)BOS-1; var > (void**)&var; var--
 #endif
 
+void  preserve_pointer(void *ptr)
+{
+  if (ptr > heap_base && ptr < heap_end)
+    {
+      struct region *region = find_region(ptr);
+      if (region != NULL && region->space == oldspace)
+	{
+	  dprintf(0,("move %x\n",ptr));
+	  move_to_newspace(region);
+	}
+    }
+}
+
 static void preserve_stack()
 {
   void **addr;			/* auto var is current TOS */
   for (ACROSS_STACK(addr))
-    {
-      void *ptr = *addr;
-      if (ptr > heap_base && ptr < heap_end)
-	{
-	  struct region *region = find_region(ptr);
-	  if (region != NULL && region->space == oldspace)
-	    {
-	      dprintf(0,("move %x\n",ptr));
-	      move_to_newspace(region);
-	    }
-	}
-    }
+    preserve_pointer(*addr);
 }
+
+#ifdef CONTROL_STACKS
+/* Scavenge the thread stack conservative roots. */
+void scavenge_thread_stacks(void)
+{
+  lispobj thread_stacks = SymbolValue(CONTROL_STACKS);
+  int type = TypeOf(thread_stacks);
+  
+  if (LowtagOf(thread_stacks)==type_OtherPointer) {
+    struct vector *vector = (struct vector *) PTR(thread_stacks);
+    int length, i;
+    if (TypeOf(vector->header)!=type_SimpleVector)
+      return;
+    length = fixnum_value(vector->length);    
+    for (i=0; i<length; i++) {
+      lispobj stack_obj = vector->data[i];
+      if (LowtagOf(stack_obj)==type_OtherPointer) {
+	struct vector *stack = (struct vector *) PTR(stack_obj);
+	int length, j;
+	if (TypeOf(stack->header)!=type_SimpleArrayUnsignedByte32)
+	  return;
+	length = fixnum_value(stack->length);
+	/* fprintf(stderr,"Scavenging control stack %d of length %d words\n",
+		  i,length); */
+	for (j=0; j<length; j++)
+	  preserve_pointer((void *)stack->data[j]);
+      }
+    }
+  }
+}
+#endif
+
 static void zero_stack()
 {
   /* This is a bit tricky because we don't want to zap any
@@ -1771,7 +1817,7 @@ static int dolog=0;			/* log copy ops to file */
 static int dover=0;			/* hunt pointers to oldspace */
 void cgc_collect_garbage()
 {
-  unsigned long allocated =  cgc_bytes_allocated;
+  unsigned long allocated =  bytes_allocated;
 
   dprintf(noise,("GC\n"));
   if(dolog && !log)
@@ -1785,6 +1831,7 @@ void cgc_collect_garbage()
   preserve_interrupt_contexts();
   dprintf(noise,("[Preserve Stack]\n"));
   preserve_stack();
+  scavenge_thread_stacks();
   dprintf(noise,("[Scavenge Roots]\n"));
   scavenge_roots();
   dprintf(noise,("[Scavenge New]\n"));
@@ -1803,10 +1850,10 @@ void cgc_collect_garbage()
   if(log)
     fclose(log);
   log=NULL;
-  dprintf(noise,("  %ld bytes copied.\n",(cgc_bytes_allocated - allocated)));
+  dprintf(noise,("  %ld bytes copied.\n",(bytes_allocated - allocated)));
   dprintf(noise,("  %ld bytes (%ld pages) reclaimed.\n",
 	     chunks_freed*CHUNK_BYTES, chunks_freed));
-  cgc_bytes_allocated -= chunks_freed*CHUNK_BYTES;
+  bytes_allocated -= chunks_freed*CHUNK_BYTES;
   maybe_gc_called = 0;
 }
 void cgc_free_heap()
@@ -1814,7 +1861,7 @@ void cgc_free_heap()
   /* Like above but just zap everything 'cause purify has
    * cleaned house!
    */
-  unsigned long allocated =  cgc_bytes_allocated;
+  unsigned long allocated =  bytes_allocated;
   flip_spaces();
   post_purify_fixup(oldspace);
   free_oldspace();
@@ -1822,7 +1869,7 @@ void cgc_free_heap()
 #if 0 /* purify is currently running on the C stack so don't do this */
   zero_stack();
 #endif
-  cgc_bytes_allocated -= chunks_freed*CHUNK_BYTES;
+  bytes_allocated -= chunks_freed*CHUNK_BYTES;
 }
 
 
@@ -1887,7 +1934,7 @@ char*alloc(int nbytes)
        * though because lisp will remember *need to collect garbage*
        * and get to it when it can.  */
       if( auto_gc_trigger		/* Only when enabled */
-	  && cgc_bytes_allocated > auto_gc_trigger
+	  && bytes_allocated > auto_gc_trigger
 	  && !maybe_gc_called++)		/* Only once         */
 	funcall0(SymbolFunction(MAYBE_GC));
       
@@ -1948,3 +1995,79 @@ void collect_garbage()
 #endif
 
 }
+
+/* Some helpers for the debugger. */
+
+/* Scan an area looking for an object which encloses the given
+   pointer. Returns the object start on success or NULL on failure. */
+static lispobj*
+search_space(lispobj *start, size_t words, lispobj *pointer)
+{
+  while(words > 0) {
+    size_t count = 1;
+    lispobj thing = *start;
+    
+    /* If thing is an immediate then this is a cons */
+    if (Pointerp(thing)
+	|| ((thing & 3) == 0) /* fixnum */
+	|| (TypeOf(thing) == type_BaseChar)
+	|| (TypeOf(thing) == type_UnboundMarker))
+      count = 2;
+    else
+      count = sizeOfObject((obj_t)start);
+	      
+    /* Check if the pointer is within this object? */
+    if ((pointer >= start) && (pointer < (start+count))) {
+      /* Found it. */
+      /*	  fprintf(stderr,"* Found %x in %x %x\n",pointer, start, thing);*/
+      return(start);
+    }
+    
+    /* Round up the count */
+    count = CEILING(count,2);
+    
+    start += count;
+    words -= count;
+  }
+  return (NULL);
+}
+
+static lispobj*
+search_read_only_space(lispobj *pointer)
+{
+  lispobj* start = (lispobj*)READ_ONLY_SPACE_START;
+  lispobj* end = (lispobj*)SymbolValue(READ_ONLY_SPACE_FREE_POINTER);
+  if ((pointer < start) || (pointer >= end))
+    return NULL;
+  return (search_space(start, (pointer+2)-start, pointer));
+}
+
+static lispobj*
+search_static_space(lispobj *pointer)
+{
+  lispobj* start = (lispobj*)STATIC_SPACE_START;
+  lispobj* end = (lispobj*)SymbolValue(STATIC_SPACE_FREE_POINTER);
+  if ((pointer < start) || (pointer >= end))
+    return NULL;
+  return (search_space(start, (pointer+2)-start, pointer));
+}
+
+/* Find the code object for the given pc. Return NULL on failure */
+lispobj*
+component_ptr_from_pc(lispobj *pc)
+{
+  lispobj *object = NULL;
+  
+  if (object = search_read_only_space(pc));
+  else
+    object = search_static_space(pc);
+  
+  /* Found anything? */
+  if (object)
+    /* Check if it is a code object. */
+    if (TypeOf(*object) == type_CodeHeader)
+      return(object);
+
+  return (NULL);
+}
+

@@ -248,52 +248,56 @@ until it either dissipates or encounters the wall at the end of the
 straight-line corridor.  When the fireball hits the wall, it often
 dissipates, but it may be reflected back in the direction it came from
 with probability @b[*fireball-reflection-probability*] (1/2).  More
-precisely, if the fireball is in square S, the last space of a corridor,
-at time T, and would move into a solid-rock square at T+1, and it
-happens to be successfully reflected, its direction is reversed and it
-appears to be entering square S from the solid rock square at the start
-of time T+1.  In addition to the possibility that it will not be
-reflected, the fireball must face the usual dissipation probability on
-this turn as well.  A reflected fireball then proceeds to travel back in
-the direction it came from until it dissipates or is reflected again.
-Fireballs pass through one another with no interference.
+precisely, if the fireball is in square S, the last space of a
+corridor, at time T, and would move into a solid-rock square at T+1,
+and it happens to be successfully reflected, its direction is reversed
+and it appears to be entering square S from the solid rock square at
+the start of time T+1.  In addition to the possibility that it will
+not be reflected, the fireball must face the usual dissipation
+probability on this turn as well.  A reflected fireball then proceeds
+to travel back in the direction it came from until it dissipates or is
+reflected again.  Fireballs pass through one another with no
+interference.
 
 The relatively slow motion of the fireballs has some interesting
-consequences.  If a feeb sees a fireball coming, it may well be able to
-outrun it or to duck into a side corridor, though time wasted in turning
-may be fatal.  It is safe to dash past the mouth of a tunnel in which
-another feeb is lurking unless the second feeb happens to flame in
-anticipation of the move.  However, it is unwise to stop or turn while
-in such an intersection.  Because of the rule that a feeb moving into a
-square occupied by a fireball is killed, a feeb cannot avoid a fireball
-by rushing toward it, attempting to swap places.  However, a feeb can
-safely move into the square of an enemy feeb that is firing on the
-current turn.  It is very unhealthy for a feeb to move forward in the
-turn immediately following one in which it fires.
+consequences.  If a feeb sees a fireball coming, it may well be able
+to outrun it or to duck into a side corridor, though time wasted in
+turning may be fatal.  It is safe to dash past the mouth of a tunnel
+in which another feeb is lurking unless the second feeb happens to
+flame in anticipation of the move.  However, it is unwise to stop or
+turn while in such an intersection.  Because of the rule that a feeb
+moving into a square occupied by a fireball is killed, a feeb cannot
+avoid a fireball by rushing toward it, attempting to swap places.
+However, a feeb can safely move into the square of an enemy feeb that
+is firing on the current turn.  It is very unhealthy for a feeb to
+move forward in the turn immediately following one in which it fires.
 
-After flaming, the feeb must wait an unpredictable amount of time before
-it can flame again.  On the turn after it fires, a feeb definitely will
-be unable to fire.  On every every turn thereafter, the flamer will have
-a probability of @b[*flame-recovery-probability*] (1/2) of recovering
-and being able to flame again.  A feeb can sense whether it is ready to
-fire or not, but cannot tell whether an opponent is able to fire.  Thus,
-a certain amount of bluffing is possible.
+After flaming, the feeb must wait an unpredictable amount of time
+before it can flame again.  On the turn after it fires, a feeb
+definitely will be unable to fire.  On every every turn thereafter,
+the flamer will have a probability of @b[*flame-recovery-probability*]
+(1/2) of recovering and being able to flame again.  A feeb can sense
+whether it is ready to fire or not, but cannot tell whether an
+opponent is able to fire.  Thus, a certain amount of bluffing is
+possible.
 
 @subsection [Timing]
 
-It is dangerous for a feeb to spend too much time thinking about what to do
-next.  The time taken by each of the behavior functions is recorded.  The
-action ordered by the feeb has a chance of being aborted (turned into a
-no-op) with a probability that is proportional to the time the feeb took to
-generate the order.  This can be particularly awkward in the middle of a
-shootout or when running from a fireball.
+It is dangerous for a feeb to spend too much time thinking about what
+to do next.  The time taken by each of the behavior functions is
+recorded.  The action ordered by the feeb has a chance of being
+aborted (turned into a no-op) with a probability that is proportional
+to the time the feeb took to generate the order.  This can be
+particularly awkward in the middle of a shootout or when running from
+a fireball.
 
-More precisely, if @b[*slow-feeb-noop-switch*] (T) is non-nil, then the
-probability of aborting a feeb's move is the product of the time the feeb
-took and @b[*slow-feeb-noop-factor*] (.25), divided by the total time taken
-by all feebs on this turn.  If @b[*slow-feeb-noop-switch*] is NIL, this
-feature is disabled and no moves are aborted; this mode is recommended when
-some of the feebs are being controlled by hand.
+More precisely, if @b[*slow-feeb-noop-switch*] (T) is non-nil, then
+the probability of aborting a feeb's move is the product of the time
+the feeb took and @b[*slow-feeb-noop-factor*] (.25), divided by the
+total time taken by all feebs on this turn.  If
+@b[*slow-feeb-noop-switch*] is NIL, this feature is disabled and no
+moves are aborted; this mode is recommended when some of the feebs are
+being controlled by hand.
 
 @subsection [Actions]
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.8 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.8.2.1 1998/06/23 11:22:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,6 +48,7 @@
 ;;;
 ;;;    Return system time, user time and number of page faults.
 ;;;
+#-(and sparc svr4)
 (defun get-system-info ()
   (multiple-value-bind
       (err? utime stime maxrss ixrss idrss isrss minflt majflt)
@@ -59,6 +60,18 @@
 	  (T
 	   (values utime stime majflt)))))
 
+;;; GET-SYSTEM-INFO  --  Interface
+;;;
+;;;    Return system time, user time and number of page faults.
+;;;
+#+(and sparc svr4)
+(defun get-system-info ()
+  (multiple-value-bind
+      (err? utime stime cutime cstime)
+      (unix:unix-times)
+    (declare (ignore err? cutime cstime))
+    ;; Return times in microseconds; page fault statistics not supported.
+    (values (* utime 10000) (* stime 10000) 0)))
 
 ;;; GET-PAGE-SIZE  --  Interface
 ;;;

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/resources.c,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/resources.c,v 1.2.2.1 1998/06/23 11:25:19 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -33,7 +33,6 @@ int RXtSetValues(message_t message)
   toolkit_read_value(message,&resources,ExtRResourceList);
 
   XtSetValues(w,resources.args,resources.length);
-  register_garbage(resources.args,GarbageData);
 }
 
 int RXtGetValues(message_t message)
@@ -53,7 +52,6 @@ int RXtGetValues(message_t message)
   message_write_resource_list(reply,&resources,resource_list_tag);
   message_send(client_socket,reply);
   message_free(reply);
-  register_garbage(resources.args,GarbageData);
 
   must_confirm = False;
 }

@@ -1,11 +1,11 @@
-;;; -*- Package: KERNEL; Log: C.Log -*-
+;;; -*- Mode: Lisp; Package: KERNEL; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.21.2.1 1997/09/05 19:17:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.21.2.2 1998/06/23 11:22:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -975,9 +975,30 @@
 
 (define-type-method (hairy :unparse) (x) (hairy-type-specifier x))
 
-(define-type-method (hairy :complex-subtypep-arg1 :complex-subtypep-arg2
-			   :complex-=)
-		    (type1 type2)
+(define-type-method (hairy :simple-subtypep) (type1 type2)
+  (let ((hairy-spec1 (hairy-type-specifier type1))
+	(hairy-spec2 (hairy-type-specifier type2)))
+    (cond ((and (consp hairy-spec1) (eq (car hairy-spec1) 'not)
+		(consp hairy-spec2) (eq (car hairy-spec2) 'not))
+	   (csubtypep (specifier-type (cadr hairy-spec2))
+		      (specifier-type (cadr hairy-spec1))))
+	  ((equal hairy-spec1 hairy-spec2)
+	   (values t t))
+	  (t
+	   (values nil nil)))))
+
+(define-type-method (hairy :complex-subtypep-arg2) (type1 type2)
+  (let ((hairy-spec (hairy-type-specifier type2)))
+    (cond ((and (consp hairy-spec) (eq (car hairy-spec) 'not))
+	   (multiple-value-bind (val win)
+	       (type-intersection type1 (specifier-type (cadr hairy-spec)))
+	     (if win
+		 (values (eq val *empty-type*) t)
+		 (values nil nil))))
+	  (t
+	   (values nil nil)))))
+
+(define-type-method (hairy :complex-subtypep-arg1 :complex-=) (type1 type2)
   (declare (ignore type1 type2))
   (values nil nil))
 
@@ -989,7 +1010,7 @@
 (define-type-method (hairy :complex-union) (type1 type2)
   (make-union-type (list type1 type2)))
 
-(define-type-method (hairy :simple-= :simple-subtypep) (type1 type2)
+(define-type-method (hairy :simple-=) (type1 type2)
   (if (equal (hairy-type-specifier type1)
 	     (hairy-type-specifier type2))
       (values t t)
@@ -1028,6 +1049,8 @@
 ;;; such as FIXNUM.
 (defstruct (numeric-type (:include ctype
 				   (:class-info (type-class-or-lose 'number)))
+			 #+negative-zero-is-not-zero
+			 (:constructor %make-numeric-type)
 			 (:print-function %print-type))
   ;;
   ;; The kind of numeric type we have.  NIL if not specified (just NUMBER or
@@ -1047,7 +1070,28 @@
   (low nil :type (or number cons null))
   (high nil :type (or number cons null)))
 
-
+#+negative-zero-is-not-zero
+(defun make-numeric-type (&key class format (complexp :real) low high
+			       enumerable)
+  (flet ((canonicalise-low-bound (x)
+	   ;; Canonicalise a low bound of (-0.0) to 0.0.
+	   (if (and (consp x) (floatp (car x)) (zerop (car x))
+		    (minusp (float-sign (car x))))
+	       (float 0.0 (car x))
+	       x))
+	 (canonicalise-high-bound (x)
+	   ;; Canonicalise a high bound of (+0.0) to -0.0.
+	   (if (and (consp x) (floatp (car x)) (zerop (car x))
+		    (plusp (float-sign (car x))))
+	       (float -0.0 (car x))
+	       x)))
+    (%make-numeric-type :class class
+			:format format
+			:complexp complexp
+			:low (canonicalise-low-bound low)
+			:high (canonicalise-high-bound high)
+			:enumerable enumerable)))
+ 
 (define-type-class number)
 
 (define-type-method (number :simple-=) (type1 type2)
@@ -1118,6 +1162,7 @@
 ;;;    This is for comparing bounds of the same kind, e.g. upper and upper.
 ;;; Use Numeric-Bound-Test* for different kinds of bounds.
 ;;;
+#-negative-zero-is-not-zero
 (defmacro numeric-bound-test (x y closed open)
   `(cond ((not ,y) t)
 	 ((not ,x) nil)
@@ -1130,6 +1175,24 @@
 	      (,open ,x (car ,y))
 	      (,closed ,x ,y)))))
 
+#+negative-zero-is-not-zero
+(defmacro numeric-bound-test-zero (op x y)
+  `(if (and (zerop ,x) (zerop ,y) (floatp ,x) (floatp ,y))
+       (,op (float-sign ,x) (float-sign ,y))
+       (,op ,x ,y)))
+
+#+negative-zero-is-not-zero
+(defmacro numeric-bound-test (x y closed open)
+  `(cond ((not ,y) t)
+	 ((not ,x) nil)
+	 ((consp ,x)
+	  (if (consp ,y)
+	      (numeric-bound-test-zero ,closed (car ,x) (car ,y))
+	      (numeric-bound-test-zero ,closed (car ,x) ,y)))
+	 (t
+	  (if (consp ,y)
+	      (numeric-bound-test-zero ,open ,x (car ,y))
+	      (numeric-bound-test-zero ,closed ,x ,y)))))
 
 ;;; Numeric-Bound-Test*  --  Internal
 ;;;
@@ -1140,6 +1203,7 @@
 ;;; -- an open inner bound is "greater" and also squeezes the interval, causing
 ;;;    us to use the Open test for those cases as well.
 ;;;
+#-negative-zero-is-not-zero
 (defmacro numeric-bound-test* (x y closed open)
   `(cond ((not ,y) t)
 	 ((not ,x) t)
@@ -1151,6 +1215,19 @@
 	  (if (consp ,y)
 	      (,open ,x (car ,y))
 	      (,closed ,x ,y)))))
+
+#+negative-zero-is-not-zero
+(defmacro numeric-bound-test* (x y closed open)
+  `(cond ((not ,y) t)
+	 ((not ,x) t)
+	 ((consp ,x)
+	  (if (consp ,y)
+	      (numeric-bound-test-zero ,open (car ,x) (car ,y))
+	      (numeric-bound-test-zero ,open (car ,x) ,y)))
+	 (t
+	  (if (consp ,y)
+	      (numeric-bound-test-zero ,open ,x (car ,y))
+	      (numeric-bound-test-zero ,closed ,x ,y)))))
 
 
 ;;; Numeric-Bound-Max  --  Internal
@@ -1214,16 +1291,36 @@
 ;;; NUMERIC-TYPES-ADJACENT  --  Internal
 ;;;
 ;;;    If the high bound of Low is adjacent to the low bound of High, then
-;;; return T, otherwise NIL.
+;;; return True, otherwise NIL.
 ;;;
 (defun numeric-types-adjacent (low high)
   (let ((low-bound (numeric-type-high low))
 	(high-bound (numeric-type-low high)))
     (cond ((not (and low-bound high-bound)) nil)
+	  ((and (consp low-bound) (consp high-bound)) nil)
 	  ((consp low-bound)
+	   #-negative-zero-is-not-zero
+	   (let ((low-value (car low-bound)))
+	     (or (eql low-value high-bound)
+		 (and (eql low-value -0f0) (eql high-bound 0f0))
+		 (and (eql low-value 0f0) (eql high-bound -0f0))
+		 (and (eql low-value -0d0) (eql high-bound 0d0))
+		 (and (eql low-value 0d0) (eql high-bound -0d0))))
+	   #+negative-zero-is-not-zero
 	   (eql (car low-bound) high-bound))
 	  ((consp high-bound)
+	   #-negative-zero-is-not-zero
+	   (let ((high-value (car high-bound)))
+	     (or (eql high-value low-bound)
+		 (and (eql high-value -0f0) (eql low-bound 0f0))
+		 (and (eql high-value 0f0) (eql low-bound -0f0))
+		 (and (eql high-value -0d0) (eql low-bound 0d0))
+		 (and (eql high-value 0d0) (eql low-bound -0d0))))
+	   #+negative-zero-is-not-zero
 	   (eql (car high-bound) low-bound))
+	  #+negative-zero-is-not-zero
+	  ((or (and (eql low-bound -0f0) (eql high-bound 0f0))
+	       (and (eql low-bound -0d0) (eql high-bound 0d0))))
 	  ((and (eq (numeric-type-class low) 'integer)
 		(eq (numeric-type-class high) 'integer))
 	   (eql (1+ low-bound) high-bound))
@@ -1261,10 +1358,10 @@
 	      :complexp complexp1
 	      :low (numeric-bound-max (numeric-type-low type1)
 				      (numeric-type-low type2)
-				      < <= t)
+				      <= < t)
 	      :high (numeric-bound-max (numeric-type-high type1)
 				       (numeric-type-high type2)
-				       > >= t)))))))
+				       >= > t)))))))
 
 
 (cold-load-init
@@ -1469,13 +1566,13 @@
 				     class format t)
 		(round-numeric-bound (numeric-type-low type2)
 				     class format t)
-		>= > nil)
+		> >= nil)
 	  :high (numeric-bound-max
 		 (round-numeric-bound (numeric-type-high type1)
 				      class format nil)
 		 (round-numeric-bound (numeric-type-high type2)
 				      class format nil)
-		 <= < nil))
+		 < <= nil))
 	 t))
       (values *empty-type* t)))
 
@@ -2294,7 +2391,7 @@
 
 (deftype extended-char ()
   "Type of characters that aren't base-char's.  None in CMU CL."
-  'nil)
+  '(and character (not base-char)))
 
 (deftype standard-char ()
   "Type corresponding to the charaters required by the standard."

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.2 1997/02/08 22:09:34 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.2.2.1 1998/06/23 11:24:11 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
 ;;;
 (in-package :x86)
 
@@ -39,12 +39,12 @@
 ;;;
 
 (define-vop (move-from-sap)
-  (:args (sap :scs (sap-reg) :to :save))
-  (:temporary (:sc dword-reg) alloc)
-  (:results (res :scs (descriptor-reg)))
+  (:args (sap :scs (sap-reg) :to :result))
+  (:results (res :scs (descriptor-reg) :from :argument))
   (:note "SAP to pointer coercion") 
+  (:node-var node)
   (:generator 20
-    (with-fixed-allocation (res alloc sap-type sap-size)
+    (with-fixed-allocation (res sap-type sap-size node)
       (storew sap res sap-pointer-slot other-pointer-type))))
 	   
 ;;;
@@ -130,27 +130,30 @@
 
 (define-vop (pointer+)
   (:translate sap+)
-  (:args (ptr :scs (sap-reg) :target res)
-	 (offset :scs (signed-reg)))
+  (:args (ptr :scs (sap-reg) :target res
+	      :load-if (not (location= ptr res)))
+	 (offset :scs (signed-reg immediate)))
   (:arg-types system-area-pointer signed-num)
-  (:results (res :scs (sap-reg) :from (:argument 0)))
+  (:results (res :scs (sap-reg) :from (:argument 0)
+		 :load-if (not (location= ptr res))))
   (:result-types system-area-pointer)
   (:policy :fast-safe)
   (:generator 1
-    (move res ptr)
-    (inst add res offset)))
-
-(define-vop (pointer+-c)
-  (:translate sap+)
-  (:args (ptr :scs (sap-reg) :target res))
-  (:info offset)
-  (:arg-types system-area-pointer (:constant (signed-byte 32)))
-  (:results (res :scs (sap-reg)))
-  (:result-types system-area-pointer)
-  (:policy :fast-safe)
-  (:generator 1
-    (move res ptr)
-    (inst add res offset)))
+    (cond ((and (sc-is ptr sap-reg) (sc-is res sap-reg)
+		(not (location= ptr res)))
+	   (sc-case offset
+	     (signed-reg
+	      (inst lea res (make-ea :dword :base ptr :index offset :scale 1)))
+	     (immediate
+	      (inst lea res (make-ea :dword :base ptr
+				     :disp (tn-value offset))))))
+	  (t
+	   (move res ptr)
+	   (sc-case offset
+	     (signed-reg
+	      (inst add res offset))
+	     (immediate
+	      (inst add res (tn-value offset))))))))
 
 (define-vop (pointer-)
   (:translate sap-)
@@ -436,6 +439,62 @@
 		  ;; Neither value or result are in ST0
 		  (unless (location= value result)
 			  (inst fst result))
+		  (inst fxch value)))))))
+
+
+;;; Sap-Ref-Long
+(define-vop (sap-ref-long)
+  (:translate sap-ref-long)
+  (:policy :fast-safe)
+  (:args (sap :scs (sap-reg))
+	 (offset :scs (signed-reg)))
+  (:arg-types system-area-pointer signed-num)
+  (:results (result :scs (#+long-float long-reg #-long-float double-reg)))
+  (:result-types #+long-float long-float #-long-float double-float)
+  (:generator 5
+     (with-empty-tn@fp-top(result)
+        (inst fldl (make-ea :dword :base sap :index offset)))))
+
+(define-vop (sap-ref-long-c)
+  (:translate sap-ref-long)
+  (:policy :fast-safe)
+  (:args (sap :scs (sap-reg)))
+  (:arg-types system-area-pointer (:constant (signed-byte 32)))
+  (:info offset)
+  (:results (result :scs (#+long-float long-reg #-long-float double-reg)))
+  (:result-types #+long-float long-float #-long-float double-float)
+  (:generator 4
+     (with-empty-tn@fp-top(result)
+        (inst fldl (make-ea :dword :base sap :disp offset)))))
+
+#+long-float
+(define-vop (%set-sap-ref-long)
+  (:translate %set-sap-ref-long)
+  (:policy :fast-safe)
+  (:args (sap :scs (sap-reg) :to (:eval 0))
+	 (offset :scs (signed-reg) :to (:eval 0))
+	 (value :scs (long-reg)))
+  (:arg-types system-area-pointer signed-num long-float)
+  (:results (result :scs (long-reg)))
+  (:result-types long-float)
+  (:generator 5
+    (cond ((zerop (tn-offset value))
+	   ;; Value is in ST0
+	   (store-long-float (make-ea :dword :base sap :index offset))
+	   (unless (zerop (tn-offset result))
+	     ;; Value is in ST0 but not result.
+	     (inst fstd result)))
+	  (t
+	   ;; Value is not in ST0.
+	   (inst fxch value)
+	   (store-long-float (make-ea :dword :base sap :index offset))
+	   (cond ((zerop (tn-offset result))
+		  ;; The result is in ST0.
+		  (inst fstd value))
+		 (t
+		  ;; Neither value or result are in ST0
+		  (unless (location= value result)
+		    (inst fstd result))
 		  (inst fxch value)))))))
 
 

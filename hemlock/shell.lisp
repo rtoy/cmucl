@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.4.2.1 1998/06/23 11:24:37 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,7 +63,7 @@
 ;;;
 
 (defstruct (shell-filter-stream
-	    (:include stream
+	    (:include sys:lisp-stream
 		      (:out #'shell-filter-out)
 		      (:sout #'shell-filter-string-out)
 		      (:misc #'shell-filter-output-misc))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.19 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.19.2.1 1998/06/23 11:22:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,13 +20,13 @@
 (deftype in-buffer-type ()
   `(simple-array (unsigned-byte 8) (,in-buffer-length)))
 
-;;; Change the kind of stream to :instance so that the defstruct doesn't flame
-;;; out.
+;;; Change the kind of lisp-stream to :instance so that the defstruct
+;;; doesn't flame out.
 ;;; 
 (eval-when (compile eval)
-  (setf (info type kind 'stream) :instance))
+  (setf (info type kind 'lisp-stream) :instance))
 
-(defstruct (stream (:predicate streamp) (:print-function %print-stream))
+(defstruct (lisp-stream (:print-function %print-stream))
   ;;
   ;; Buffered input.
   (in-buffer nil :type (or in-buffer-type null))
@@ -39,6 +39,9 @@
   (sout #'ill-out :type function)		; String output function
   (misc #'do-nothing :type function))		; Less used methods
 
+(declaim (inline streamp))
+(defun streamp (stream)
+  (typep stream 'stream))
 
 ;;; Alien value structures:
 

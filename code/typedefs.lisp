@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.10 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.10.2.1 1998/06/23 11:22:37 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 ;;; These are the Common Lisp defined type specifier symbols.  These are the
 ;;; things which can be used as declarations without requiring the use of TYPE.
 (defconstant type-specifier-symbols
-  '(array atom bignum bit bit-vector character common compiled-function
+  '(array atom bignum bit bit-vector character compiled-function
     complex cons double-float extended-char fixnum float function
     hash-table integer keyword list long-float nil null number package
     pathname random-state ratio rational real readtable sequence

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.2 1997/02/08 21:57:56 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.2.2.1 1998/06/23 11:23:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
 
@@ -35,7 +35,7 @@
   (if (< n register-arg-count)
       (make-wired-tn *any-primitive-type* descriptor-reg-sc-number
 		     (nth n register-arg-offsets))
-      (make-wired-tn *any-primitive-type* descriptor-stack-sc-number n)))
+      (make-wired-tn *any-primitive-type* control-stack-sc-number n)))
 
 
 ;;; Make-Return-PC-Passing-Location  --  Interface
@@ -49,9 +49,8 @@
 ;#+nil
 (def-vm-support-routine make-return-pc-passing-location (standard)
   (declare (ignore standard))
-  (make-wired-tn *fixnum-primitive-type*
-		 immediate-stack-sc-number
-		 return-pc-save-offset))
+  (make-wired-tn (primitive-type-or-lose 'system-area-pointer *backend*)
+		 sap-stack-sc-number return-pc-save-offset))
 ;;;
 ;;; If standard is true, then use the standard (full call) location,
 ;;; otherwise use any legal location.
@@ -59,10 +58,10 @@
 ;;; No problems.
 #+nil
 (def-vm-support-routine make-return-pc-passing-location (standard)
-  (if standard
-      (make-wired-tn *fixnum-primitive-type* immediate-stack-sc-number
-		     return-pc-save-offset)
-      (make-normal-tn *fixnum-primitive-type*)))
+  (let ((ptype (primitive-type-or-lose 'system-area-pointer *backend*)))
+    (if standard
+	(make-wired-tn ptype sap-stack-sc-number return-pc-save-offset)
+	(make-normal-tn ptype))))
 
 ;;; Make-Old-FP-Passing-Location  --  Interface
 ;;;
@@ -78,9 +77,8 @@
 ;#+nil
 (def-vm-support-routine make-old-fp-passing-location (standard)
   (declare (ignore standard))
-  (make-wired-tn *fixnum-primitive-type*
-		 immediate-stack-sc-number
-		 old-fp-save-offset))
+  (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
+		 ocfp-save-offset))
 ;;;
 ;;; If standard is true, then use the standard (full call) location,
 ;;; otherwise use any legal location.
@@ -89,7 +87,8 @@
 #+nil
 (def-vm-support-routine make-old-fp-passing-location (standard)
   (if standard
-      (make-wired-tn *fixnum-primitive-type* immediate-stack-sc-number old-fp-save-offset)
+      (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
+		     ocfp-save-offset)
       (make-normal-tn *fixnum-primitive-type*)))
 
 ;;; Make-Old-FP-Save-Location, Make-Return-PC-Save-Location  --  Interface
@@ -102,8 +101,8 @@
 ;;; wire to the stack? No problems.
 (def-vm-support-routine make-old-fp-save-location (env)
   (environment-debug-live-tn (make-wired-tn *fixnum-primitive-type*
-					    immediate-stack-sc-number
-					    old-fp-save-offset)
+					    control-stack-sc-number
+					    ocfp-save-offset)
 			     env))
 ;;;
 ;;; Using a save-tn. No problems.
@@ -111,28 +110,25 @@
 (def-vm-support-routine make-old-fp-save-location (env)
   (specify-save-tn
    (environment-debug-live-tn (make-normal-tn *fixnum-primitive-type*) env)
-   (make-wired-tn *fixnum-primitive-type*
-		  immediate-stack-sc-number
+   (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
 		  ocfp-save-offset)))
 
 ;;;
 ;;; Without using a save-tn - which does not make much sense if it is
 ;;; wire to the stack? No problems.
 (def-vm-support-routine make-return-pc-save-location (env)
-  (environment-debug-live-tn (make-wired-tn *fixnum-primitive-type*
-					    immediate-stack-sc-number
-					    return-pc-save-offset)
-			     env))
+  (environment-debug-live-tn
+   (make-wired-tn (primitive-type-or-lose 'system-area-pointer *backend*)
+		  sap-stack-sc-number return-pc-save-offset)
+   env))
 ;;;
 ;;; Using a save-tn. No problems.
 #+nil
 (def-vm-support-routine make-return-pc-save-location (env)
-  (let ((ptype *fixnum-primitive-type*))
+  (let ((ptype (primitive-type-or-lose 'system-area-pointer *backend*)))
     (specify-save-tn
      (environment-debug-live-tn (make-normal-tn ptype) env)
-     (make-wired-tn ptype
-		    immediate-stack-sc-number
-		    return-pc-save-offset))))
+     (make-wired-tn ptype sap-stack-sc-number return-pc-save-offset))))
 
 ;;; Make-Argument-Count-Location  --  Interface
 ;;;
@@ -179,9 +175,12 @@
 ;;; placeholder entries in the Constants to leave room for additional
 ;;; noise in the code object header.
 ;;;
+;;; For the x86 the first constant is a pointer to a list of fixups,
+;;; or nil if the code object has none.
+;;;
 (def-vm-support-routine select-component-format (component)
   (declare (type component component))
-  (dotimes (i code-constants-offset)
+  (dotimes (i (1+ code-constants-offset))
     (vector-push-extend nil
 			(ir2-component-constants (component-info component))))
   (undefined-value))
@@ -192,7 +191,7 @@
 ;;; Used for setting up the Old-FP in local call.
 ;;;
 (define-vop (current-fp)
-  (:results (val :scs (any-reg immediate-stack)))
+  (:results (val :scs (any-reg control-stack)))
   (:generator 1
     (move val ebp-tn)))
 
@@ -224,7 +223,7 @@
     (popw ebp-tn (- (1+ return-pc-save-offset)))
 
     ;; If copy-more-arg follows it will allocate the correct stack
-    ;; size. The stack is not allocate first here as this may expose
+    ;; size. The stack is not allocated first here as this may expose
     ;; args on the stack if they take up more space than the frame!
     (unless copy-more-arg-follows
       ;; The args fit within the frame so just allocate the frame.
@@ -240,7 +239,7 @@
 ;;; callee (who has the same size stack as us).
 ;;; 
 (define-vop (allocate-frame)
-  (:results (res :scs (any-reg immediate-stack))
+  (:results (res :scs (any-reg control-stack))
 	    (nfp))
   (:info callee)
   (:ignore nfp callee)
@@ -254,7 +253,7 @@
 ;;;
 (define-vop (allocate-full-call-frame)
   (:info nargs)
-  (:results (res :scs (any-reg immediate-stack)))
+  (:results (res :scs (any-reg control-stack)))
   (:generator 2
     (move res esp-tn)
     (inst sub esp-tn (* (max nargs 3) vm:word-bytes))))
@@ -311,32 +310,35 @@
       (inst mov ebx-tn esp-tn)
       (emit-label regs-defaulted)
       (inst mov esp-tn ebx-tn)))
-   #+bogus-code-broken-optimization
-   ((<= nvals 6)
-    ;; 29+(nvals-3)*21 bytes for this branch.  For nvals=6 that is 92
-    ;; bytes, which is the same as using the blt below.
+   ((<= nvals 7)
+    ;; Number of bytes depends on the relative jump instructions. Best
+    ;; case is 31+(n-3)*14, worst case is 35+(n-3)*18.  For nvals=6
+    ;; that is 73/89 bytes, and for nvals=7 that is 87/107 bytes which
+    ;; is likely better than using the blt below.
     (let ((regs-defaulted (gen-label))
 	  (defaulting-done (gen-label))
 	  (default-stack-slots (gen-label)))
+      (note-this-location vop :unknown-return)
       ;; Branch off to the MV case.
       (inst jmp-short regs-defaulted)
-
+      ;; Do the single value case.
       ;; Default the register args
       (inst mov eax-tn nil-value)
-      (loop
-	for tn-ref = (tn-ref-across values)
-	         then (tn-ref-across tn-ref)
-	for count from 2 below register-arg-count
-	do count (inst mov (tn-ref-tn tn-ref) eax-tn))
+      (do ((i 1 (1+ i))
+	   (val (tn-ref-across values) (tn-ref-across val)))
+	  ((= i (min nvals register-arg-count)))
+	(inst mov (tn-ref-tn val) eax-tn))
+
       ;; Fake other registers so it looks like we returned with all the
       ;; registers filled in.
       (move ebx-tn esp-tn)
       (inst push edx-tn)
       (inst jmp default-stack-slots)
-
+      
       (emit-label regs-defaulted)
+
       (inst mov eax-tn nil-value)
-      (storew edx-tn ebx-tn (- word-bytes))
+      (storew edx-tn ebx-tn -1)
       (collect ((defaults))
 	(do ((i register-arg-count (1+ i))
 	     (val (do ((i 0 (1+ i))
@@ -350,24 +352,25 @@
 
 	    (inst cmp ecx-tn (fixnum i))
 	    (inst jmp :be default-lab)
-	    (loadw edx-tn ebx-tn i)
+	    (loadw edx-tn ebx-tn (- (1+ i)))
 	    (inst mov tn edx-tn)))
 	    
 	(emit-label defaulting-done)
-	(loadw edx-tn ebx-tn (- word-bytes))
+	(loadw edx-tn ebx-tn -1)
 	(move esp-tn ebx-tn)
 	    
 	(let ((defaults (defaults)))
 	  (when defaults
 	    (assemble (*elsewhere*)
 	      (trace-table-entry trace-table-function-prologue)
+	      (emit-label default-stack-slots)
 	      (dolist (default defaults)
 		(emit-label (car default))
 		(inst mov (cdr default) eax-tn))
 	      (inst jmp defaulting-done)
 	      (trace-table-entry trace-table-normal)))))))
    (t
-    ;; 92 bytes for this branch.
+    ;; 91 bytes for this branch.
     (let ((regs-defaulted (gen-label))
 	  (restore-edi (gen-label))
 	  (no-stack-args (gen-label))
@@ -431,9 +434,10 @@
       ;; Restore ESI.
       (loadw esi-tn ebx-tn (- (1+ 2)))
       ;; Now we have to default the remaining args.  Find out how many.
-      ;; If none, then just blow out of here.
       (inst sub eax-tn (fixnum (- nvals register-arg-count)))
-      (inst jmp :be restore-edi)
+      (inst neg eax-tn)
+      ;; If none, then just blow out of here.
+      (inst jmp :le restore-edi)
       (inst mov ecx-tn eax-tn)
       (inst shr ecx-tn word-shift)	; word count
       ;; Load EAX with NIL for fast storing.
@@ -483,14 +487,13 @@
     (inst jmp done)
 
     (emit-label variable-values)
+    ;; dtc: this writes the registers onto the stack even if they are
+    ;; not needed, only the number specified in ecx are used and have
+    ;; stack allocated to them. No harm is done.
     (loop
       for arg in register-arg-tns
       for i downfrom -1
-      do (storew arg args i)) ; dtc: this writes the registers onto
-                              ; the stack even if they are not needed,
-                              ; only the number specified in ecx are
-                              ; used and have stack allocated to
-                              ; them. No harm is done.
+      do (storew arg args i))
     (move start args)
     (move count nargs)
 
@@ -508,8 +511,8 @@
   (:temporary (:sc any-reg :offset ecx-offset
 	       :from :eval :to (:result 1))
 	      nvals)
-  (:results (start :scs (any-reg immediate-stack))
-	    (count :scs (any-reg immediate-stack))))
+  (:results (start :scs (any-reg control-stack))
+	    (count :scs (any-reg control-stack))))
 
 
 ;;;; Local call with unknown values convention return:
@@ -549,33 +552,25 @@
     (move ebp-tn fp)
 
     (let ((ret-tn (callee-return-pc-tn callee)))
-
-#+nil      (format t "*call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
+      #+nil
+      (format t "*call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
 	      ret-tn (c::tn-kind ret-tn) (c::tn-save-tn ret-tn)
 	      (c::tn-kind (c::tn-save-tn ret-tn)))
 
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((immediate-stack)
-#+nil	 (format t "*call-local: ret-tn on stack; offset=~s~%"
-		 (tn-offset ret-tn))
+	((sap-stack)
+	 #+nil (format t "*call-local: ret-tn on stack; offset=~s~%"
+		       (tn-offset ret-tn))
 	 ;; Stack
 	 (storew (make-fixup nil :code-object return)
 		 ebp-tn (- (1+ (tn-offset ret-tn)))))
-
-	((any-reg descriptor-reg)
+	((sap-reg)
 	 ;; Register
 	 (inst lea ret-tn (make-fixup nil :code-object return)))))
 
     (note-this-location vop :call-site)
     (inst jmp target)
-    #+x86-lra
-    (progn 
-      (align lowtag-bits #x90)
-      (inst lra-header-word)
-      (inst nop)
-      (inst nop)
-      (inst nop))
     RETURN
     (default-unknown-values vop values nvals)
     (trace-table-entry trace-table-normal)))
@@ -598,33 +593,25 @@
     (move ebp-tn fp)
 
     (let ((ret-tn (callee-return-pc-tn callee)))
-
-#+nil      (format t "*multiple-call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
+      #+nil
+      (format t "*multiple-call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
 	      ret-tn (c::tn-kind ret-tn) (c::tn-save-tn ret-tn)
 	      (c::tn-kind (c::tn-save-tn ret-tn)))
 
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((immediate-stack)
-#+nil	 (format t "*multiple-call-local: ret-tn on stack; offset=~s~%"
-		 (tn-offset ret-tn))
+	((sap-stack)
+	 #+nil (format t "*multiple-call-local: ret-tn on stack; offset=~s~%"
+		       (tn-offset ret-tn))
 	 ;; Stack
 	 (storew (make-fixup nil :code-object return)
 		 ebp-tn (- (1+ (tn-offset ret-tn)))))
-
-	((any-reg descriptor-reg)
+	((sap-reg)
 	 ;; Register
 	 (inst lea ret-tn (make-fixup nil :code-object return)))))
 
     (note-this-location vop :call-site)
     (inst jmp target)
-    #+x86-lra
-    (progn 
-      (align lowtag-bits #x90)
-      (inst lra-header-word)
-      (inst nop)
-      (inst nop)
-      (inst nop))
     RETURN
     (note-this-location vop :unknown-return)
     (receive-unknown-values values-start nvals start count)
@@ -656,32 +643,25 @@
 
     (let ((ret-tn (callee-return-pc-tn callee)))
 
-#+nil      (format t "*known-call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
+      #+nil
+      (format t "*known-call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
 	      ret-tn (c::tn-kind ret-tn) (c::tn-save-tn ret-tn)
 	      (c::tn-kind (c::tn-save-tn ret-tn)))
-
+      
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((immediate-stack)
-#+nil	 (format t "*known-call-local: ret-tn on stack; offset=~s~%"
-		 (tn-offset ret-tn))
+	((sap-stack)
+	 #+nil (format t "*known-call-local: ret-tn on stack; offset=~s~%"
+		       (tn-offset ret-tn))
 	 ;; Stack
 	 (storew (make-fixup nil :code-object return)
 		 ebp-tn (- (1+ (tn-offset ret-tn)))))
-
-	((any-reg descriptor-reg)
+	((sap-reg)
 	 ;; Register
 	 (inst lea ret-tn (make-fixup nil :code-object return)))))
 
     (note-this-location vop :call-site)
     (inst jmp target)
-    #+x86-lra
-    (progn 
-      (align lowtag-bits #x90)
-      (inst lra-header-word)
-      (inst nop)
-      (inst nop)
-      (inst nop))
     RETURN
     (note-this-location vop :known-return)
     (trace-table-entry trace-table-normal)))
@@ -701,7 +681,7 @@
 	 (vals :more t))
   (:move-args :known-return)
   (:info val-locs)
-  (:temporary (:sc dword-reg :from (:argument 1)) rpc)
+  (:temporary (:sc unsigned-reg :from (:argument 1)) rpc)
   (:ignore val-locs vals)
   (:vop-var vop)
   (:generator 6
@@ -740,29 +720,28 @@
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
 
-#+nil    (format t "*known-return: old-fp ~s, tn-kind ~s; ~s ~s~%"
-	    old-fp (c::tn-kind old-fp) (c::tn-save-tn old-fp)
-	    (c::tn-kind (c::tn-save-tn old-fp)))
+    #+nil (format t "*known-return: old-fp ~s, tn-kind ~s; ~s ~s~%"
+		  old-fp (c::tn-kind old-fp) (c::tn-save-tn old-fp)
+		  (c::tn-kind (c::tn-save-tn old-fp)))
 
-#+nil    (format t "*known-return: return-pc ~s, tn-kind ~s; ~s ~s~%"
-	    return-pc (c::tn-kind return-pc) (c::tn-save-tn return-pc)
-	    (c::tn-kind (c::tn-save-tn return-pc)))
-
+    #+nil (format t "*known-return: return-pc ~s, tn-kind ~s; ~s ~s~%"
+		  return-pc (c::tn-kind return-pc) (c::tn-save-tn return-pc)
+		  (c::tn-kind (c::tn-save-tn return-pc)))
+    
     ;; return-pc may be either in a register or on the stack.
     (sc-case return-pc
-      ((any-reg descriptor-reg)
+      ((sap-reg)
        (sc-case old-fp
-         ((immediate-stack)
+         ((control-stack)
 
-#+nil	  (format t "*known-return: old-fp ~s on stack; offset=~s~%"
-		  old-fp (tn-offset old-fp))
-
+	  #+nil (format t "*known-return: old-fp ~s on stack; offset=~s~%"
+			old-fp (tn-offset old-fp))
+	  
 	  (cond ((zerop (tn-offset old-fp))
 		 ;; Zot all of the stack except for the old-fp.
-		 (inst lea esp-tn
-		       (make-ea :dword :base ebp-tn
-				:disp
-				(- (* (1+ old-fp-save-offset) word-bytes))))
+		 (inst lea esp-tn (make-ea :dword :base ebp-tn
+					   :disp (- (* (1+ ocfp-save-offset)
+						       word-bytes))))
 		 ;; Restore the old fp from its save location on the stack,
 		 ;; and zot the stack.
 		 (inst pop ebp-tn))
@@ -781,16 +760,15 @@
        ;; Return; return-pc is in a register.
        (inst jmp return-pc))
 
-      ((immediate-stack descriptor-stack)
+      ((sap-stack)
 
-#+nil       (format t "*known-return: return-pc ~s on stack; offset=~s~%"
-	       return-pc (tn-offset return-pc))
-
+       #+nil (format t "*known-return: return-pc ~s on stack; offset=~s~%"
+		     return-pc (tn-offset return-pc))
+       
        ;; Zot all of the stack except for the old-fp and return-pc.
        (inst lea esp-tn
 	     (make-ea :dword :base ebp-tn
-		      :disp
-		      (- (* (1+ (tn-offset return-pc)) word-bytes))))
+		      :disp (- (* (1+ (tn-offset return-pc)) word-bytes))))
        ;; Restore the old fp.  old-fp may be either on the stack in its
        ;; save location or in a register, in either case this restores it.
        (move ebp-tn old-fp)
@@ -851,7 +829,7 @@
      ,@(unless (eq return :tail)
 	       '((new-fp :scs (any-reg) :to (:argument 1))))
      
-     (fun :scs (descriptor-reg descriptor-stack)
+     (fun :scs (descriptor-reg control-stack)
           :target eax :to (:argument 0))
      
      ,@(when (eq return :tail)
@@ -888,7 +866,7 @@
      eax)
 
     ;; We pass the number of arguments in ECX.
-    (:temporary (:sc dword-reg :offset ecx-offset :to :eval) ecx)
+    (:temporary (:sc unsigned-reg :offset ecx-offset :to :eval) ecx)
 
     ;; With variable call, we have to load the register-args out
     ;; of the (new) stack frame before doing the call.  Therefore,
@@ -903,12 +881,8 @@
 		    register-arg-names register-arg-offsets))
 
     ,@(when (eq return :tail)
-	    '((:temporary (:sc dword-reg :from (:argument 1) :to (:argument 2))
-			  old-fp-tmp)
-	      #+x86-lra
-	      (:temporary (:sc dword-reg :from (:argument 2) :to (:argument 3))
-			  ret-pc-tmp)
-	      ))
+	    '((:temporary (:sc unsigned-reg
+			   :from (:argument 1) :to (:argument 2)) old-fp-tmp)))
 
     (:generator ,(+ (if named 5 0)
 		    (if variable 19 1)
@@ -952,26 +926,15 @@
 		;; standard locations then these moves will be
 		;; un-necessary; this is probably best for the x86.
 		(sc-case old-fp
-		  ((immediate-stack descriptor-stack)
-		   (unless (= old-fp-save-offset (tn-offset old-fp))
+		  ((control-stack)
+		   (unless (= ocfp-save-offset (tn-offset old-fp))
 		     (format t "** tail-call old-fp not S0~%")
 		     (move old-fp-tmp old-fp)
-		     (storew old-fp-tmp ebp-tn (- (1+ old-fp-save-offset)))))
+		     (storew old-fp-tmp ebp-tn (- (1+ ocfp-save-offset)))))
 		  ((any-reg descriptor-reg)
 		     (format t "** tail-call old-fp in reg not S0~%")
-		   (storew old-fp ebp-tn (- (1+ old-fp-save-offset)))))
+		   (storew old-fp ebp-tn (- (1+ ocfp-save-offset)))))
 
-		#+x86-lra
-		(sc-case return-pc
-		  ((immediate-stack descriptor-stack)
-		   (unless (= return-pc-save-offset (tn-offset return-pc))
-		     (format t "** tail-call ret-pc not S1~%")
-		     (move ret-pc-tmp return-pc)
-		     (storew ret-pc-tmp ebp-tn (- (1+ return-pc-save-offset)))))
-		  ((any-reg descriptor-reg)
-		   (format t "** tail-call ret-pc in reg not S1~%")
-		   (storew return-pc ebp-tn (- (1+ return-pc-save-offset)))))
-		
 		;; For tail call, we have to push the return-pc so
 		;; that it looks like we CALLed despite the fact that
 		;; we are going to JMP.
@@ -981,38 +944,25 @@
 	      ;; For non-tail call, we have to save our frame pointer
 	      ;; and install the new frame pointer.  We can't load stack
 	      ;; tns after this point.
-	      `(
-		;; Python doesn't seem to allocate a frame here which
+	      `(;; Python doesn't seem to allocate a frame here which
 		;; doesn't leave room for the ofp/ret stuff.
-
+		
 		;; The variable args are on the stack and become the
 		;; frame, but there may be <3 args and 3 stack slots
 		;; are assumed allocate on the call. So need to ensure
-		;; there are at least 3 slots. This hack justs adds 3
+		;; there are at least 3 slots. This hack just adds 3
 		;; more.
 		,(if variable
 		     '(inst sub esp-tn (fixnum 3)))
 
 		;; Save the fp
-		(storew ebp-tn new-fp (- (1+ old-fp-save-offset)))
-
-		;; Save the return address.
-		#+x86-lra
-		(storew (make-fixup nil :code-object return)
-			new-fp (- (1+ return-pc-save-offset)))
+		(storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
 
 		(move ebp-tn new-fp)	; NB - now on new stack frame.
-		
-		;; Push the return address for backward compatability.
-		#+x86-lra
-		(inst push (make-fixup nil :code-object return))
-;		(inst push (make-ea :dword :base new-fp :disp -8))
-		))
-	     )
+		)))
   
      (note-this-location vop :call-site)
 
-     #-x86-lra
      (inst ,(if (eq return :tail) 'jmp 'call)
       (make-ea :dword :base eax
 	       :disp ,(if named
@@ -1020,42 +970,12 @@
 			    other-pointer-type)
 			  '(- (* closure-function-slot word-bytes)
 			    function-pointer-type))))
-
-     #+x86-lra
-     (inst jmp (make-ea :dword :base eax
-			:disp ,(if named
-				   '(- (* fdefn-raw-addr-slot word-bytes)
-				       other-pointer-type)
-				 '(- (* closure-function-slot word-bytes)
-				     function-pointer-type))))
-     
      ,@(ecase return
 	      (:fixed
-		 #+x86-lra
-		 '((align lowtag-bits #x90)
-		   (inst lra-header-word)
-		   (inst nop)
-		   (inst nop)
-		   (inst nop)
-		   RETURN
-		   (default-unknown-values vop values nvals))
-		 #-x86-lra
-		 '((default-unknown-values vop values nvals))
-		 )
+		 '((default-unknown-values vop values nvals)))
 	      (:unknown
-	       #+x86-lra
-	       '((align lowtag-bits #x90)
-		 (inst lra-header-word)
-		 (inst nop)
-		 (inst nop)
-		 (inst nop)
-		 RETURN
-		 (note-this-location vop :unknown-return)
-		 (receive-unknown-values values-start nvals start count))
-	       #-x86-lra
 	       '((note-this-location vop :unknown-return)
-		 (receive-unknown-values values-start nvals start count))
-	       )
+		 (receive-unknown-values values-start nvals start count)))
 	      (:tail))
      (trace-table-entry trace-table-normal))))
 
@@ -1076,12 +996,12 @@
 ;;; set things up so that it can find what it needs.
 ;;;
 (define-vop (tail-call-variable)
-  (:args (args :scs (any-reg immediate-stack) :target esi)
-	 (function :scs (descriptor-reg descriptor-stack) :target eax)
+  (:args (args :scs (any-reg control-stack) :target esi)
+	 (function :scs (descriptor-reg control-stack) :target eax)
 	 (old-fp)
 	 (ret-addr))
-  (:temporary (:sc dword-reg :offset esi-offset :from (:argument 0)) esi)
-  (:temporary (:sc dword-reg :offset eax-offset :from (:argument 1)) eax)
+  (:temporary (:sc unsigned-reg :offset esi-offset :from (:argument 0)) esi)
+  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 1)) eax)
 ;  (:ignore ret-addr old-fp)
   (:generator 75
     ;; Move these into the passing locations if they are not already there.
@@ -1090,10 +1010,10 @@
 
     ;; The following assumes that the return-pc and old-fp are on the
     ;; stack in their standard save locations - Check this.
-    (unless (and (sc-is old-fp immediate-stack descriptor-stack)
-		 (= (tn-offset old-fp) old-fp-save-offset))
-	    (error "tail-call-variable: old-fp not on stack in standard save location?"))
-    (unless (and (sc-is ret-addr immediate-stack descriptor-stack)
+    (unless (and (sc-is old-fp control-stack)
+		 (= (tn-offset old-fp) ocfp-save-offset))
+	    (error "tail-call-variable: ocfp not on stack in standard save location?"))
+    (unless (and (sc-is ret-addr sap-stack)
 		 (= (tn-offset ret-addr) return-pc-save-offset))
 	    (error "tail-call-variable: ret-addr not on stack in standard save location?"))
     
@@ -1117,8 +1037,8 @@
   (:args (old-fp)
 	 (return-pc)
 	 (value))
-  (:temporary (:sc dword-reg) ofp)
-  (:temporary (:sc dword-reg) ret)
+  (:temporary (:sc unsigned-reg) ofp)
+  (:temporary (:sc unsigned-reg) ret)
   (:ignore value)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
@@ -1150,18 +1070,18 @@
 
   ;; In the case of other than one value, we need these registers to tell
   ;; the caller where they are and how many there are.
-  (:temporary (:sc dword-reg :offset ebx-offset) ebx)
-  (:temporary (:sc dword-reg :offset ecx-offset) ecx)
+  (:temporary (:sc unsigned-reg :offset ebx-offset) ebx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) ecx)
 
   ;; We need to stretch the lifetime of return-pc past the argument
   ;; registers so that we can default the argument registers without
   ;; trashing return-pc.
-  (:temporary (:sc dword-reg :offset (first register-arg-offsets) :from :eval)
-	      a0)
-  (:temporary (:sc dword-reg :offset (second register-arg-offsets) :from :eval)
-	      a1)
-  (:temporary (:sc dword-reg :offset (third register-arg-offsets) :from :eval)
-	      a2)
+  (:temporary (:sc unsigned-reg :offset (first register-arg-offsets)
+		   :from :eval) a0)
+  (:temporary (:sc unsigned-reg :offset (second register-arg-offsets)
+		   :from :eval) a1)
+  (:temporary (:sc unsigned-reg :offset (third register-arg-offsets)
+		   :from :eval) a2)
 
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
@@ -1170,9 +1090,12 @@
     (if (zerop nvals)
 	(inst xor ecx ecx) ; smaller
       (inst mov ecx (fixnum nvals)))
-    ;; restore the frame pointer and clear as much of the stack as possible.
+    ;; restore the frame pointer.
     (move ebp-tn old-fp)
-    (inst lea esp-tn (make-ea :dword :base ebx :disp (- (* nvals word-bytes))))
+    ;; clear as much of the stack as possible, but not past the return
+    ;; address.
+    (inst lea esp-tn (make-ea :dword :base ebx
+			      :disp (- (* (max nvals 2) word-bytes))))
     ;; pre-default any argument register that need it.
     (when (< nvals register-arg-count)
       (let* ((arg-tns (nthcdr nvals (list a0 a1 a2)))
@@ -1183,11 +1106,18 @@
     ;; And away we go.  Except that return-pc is still on the
     ;; stack and we've changed the stack pointer.  So we have to
     ;; tell it to index off of EBX instead of EBP.
-    (inst jmp
-	  (make-ea :dword :base ebx
-		   :disp
-		   (- (* (1+ (tn-offset return-pc)) word-bytes))))
-
+    (cond ((zerop nvals)
+	   ;; Return popping the return address and the OCFP.
+	   (inst ret word-bytes))
+	  ((= nvals 1)
+	   ;; Return popping the return, leaving 1 slot. Can this
+	   ;; happen, or is a single value return handled elsewhere?
+	   (inst ret))
+	  (t
+	   (inst jmp (make-ea :dword :base ebx
+			      :disp (- (* (1+ (tn-offset return-pc))
+					  word-bytes))))))
+    
     (trace-table-entry trace-table-normal)))
 
 ;;; Do unknown-values return of an arbitrary number of values (passed on the
@@ -1207,13 +1137,13 @@
 	 (vals :scs (any-reg) :target esi)
 	 (nvals :scs (any-reg) :target ecx))
 
-  (:temporary (:sc dword-reg :offset eax-offset :from (:argument 1)) eax)
-  (:temporary (:sc dword-reg :offset esi-offset :from (:argument 2)) esi)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 3)) ecx)
-  (:temporary (:sc dword-reg :offset ebx-offset :from (:eval 0)) ebx)
+  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 1)) eax)
+  (:temporary (:sc unsigned-reg :offset esi-offset :from (:argument 2)) esi)
+  (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 3)) ecx)
+  (:temporary (:sc unsigned-reg :offset ebx-offset :from (:eval 0)) ebx)
   (:temporary (:sc descriptor-reg :offset (first register-arg-offsets)
 		   :from (:eval 0)) a0)
-  (:temporary (:sc dword-reg :from (:eval 1)) old-fp-temp)
+  (:temporary (:sc unsigned-reg :from (:eval 1)) old-fp-temp)
   (:node-var node)
 
   (:generator 13
@@ -1387,35 +1317,34 @@
     
     DONE))
 
-;;; More args are stored contiguously on the stack, starting immediately at
-;;; the context pointer.  The context pointer is not typed, so the lowtag is 0.
+;;; More args are stored contiguously on the stack, starting
+;;; immediately at the context pointer.  The context pointer is not
+;;; typed, so the lowtag is 0.
 ;;;
-;(define-full-reffer more-arg * 0 0 (any-reg descriptor-reg) * %more-arg)
-
-(DEFINE-VOP (MORE-ARG)
-    (:TRANSLATE %MORE-ARG)
-  (:POLICY :FAST-SAFE)
-  (:ARGS (OBJECT :SCS (DESCRIPTOR-REG) :to :result )
-	 (INDEX :SCS (ANY-REG) :target temp))
-  (:ARG-TYPES * TAGGED-NUM)
-  (:temporary (:sc dword-reg :from (:argument 1)) temp)
-  (:RESULTS (VALUE :SCS (ANY-REG DESCRIPTOR-REG)))
-  (:RESULT-TYPES *)
-  (:GENERATOR 5
+(define-vop (more-arg)
+  (:translate %more-arg)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg) :target temp))
+  (:arg-types * tagged-num)
+  (:temporary (:sc unsigned-reg :from (:argument 1) :to :result) temp)
+  (:results (value :scs (any-reg descriptor-reg)))
+  (:result-types *)
+  (:generator 5
     (move temp index)
     (inst neg temp)
-    (INST MOV VALUE (MAKE-EA :DWORD :BASE OBJECT :INDEX temp))))
+    (inst mov value (make-ea :dword :base object :index temp))))
 
-(DEFINE-VOP (MORE-ARG-C)
-	    (:TRANSLATE %MORE-ARG)
-  (:POLICY :FAST-SAFE)
-  (:ARGS (OBJECT :SCS (DESCRIPTOR-REG)))
-  (:INFO INDEX)				; Note this is raw number.
-  (:ARG-TYPES * (:CONSTANT (SIGNED-BYTE 30)))
-  (:RESULTS (VALUE :SCS (ANY-REG DESCRIPTOR-REG)))
-  (:RESULT-TYPES *)
-  (:GENERATOR 5
-   (INST MOV VALUE
+(define-vop (more-arg-c)
+  (:translate %more-arg)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types * (:constant (signed-byte 30)))
+  (:results (value :scs (any-reg descriptor-reg)))
+  (:result-types *)
+  (:generator 4
+   (inst mov value
 	 (make-ea :dword :base object :disp (- (* index word-bytes))))))
 
 
@@ -1427,48 +1356,48 @@
   (:args (context :scs (descriptor-reg) :target src)
 	 (count :scs (any-reg) :target ecx))
   (:arg-types * tagged-num)
-  (:temporary (:sc dword-reg :offset esi-offset :from (:argument 0)) src)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
-  (:temporary (:sc dword-reg :offset eax-offset) eax)
-  (:temporary (:sc dword-reg) dst)
+  (:temporary (:sc unsigned-reg :offset esi-offset :from (:argument 0)) src)
+  (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:temporary (:sc unsigned-reg :offset eax-offset) eax)
+  (:temporary (:sc unsigned-reg) dst)
   (:results (result :scs (descriptor-reg)))
+  (:node-var node)
   (:generator 20
-    (move src context)
-    (move ecx count)
-    ;; Check to see if there are no arguments, and just return NIL if so.
-    (inst mov result nil-value)
-    (inst jecxz done)
-    #-cgc
-    (with-allocation (eax)
-      (inst lea dst (make-ea :byte :base eax :disp list-pointer-type))
-      (inst lea eax (make-ea :dword :base eax :index ecx :scale 2)))
-    #+cgc
-    (progn
-      (inst lea eax (make-ea :dword :index ecx :scale 2))
-      (with-cgc-allocation (eax eax)
-	(inst lea dst (make-ea :byte :base eax :disp list-pointer-type))))
-    ;; Convert the count into a raw value, so we can use the LOOP inst.
-    (inst shr ecx 2)
-    ;; Set decrement mode (successive args at lower addresses)
-    (inst std)
-    ;; Set up the result.
-    (move result dst)
-    ;; Jump into the middle of the loop, 'cause that's were we want to start.
-    (inst jmp enter)
-    LOOP
-    ;; Compute a pointer to the next cons.
-    (inst add dst (* cons-size word-bytes))
-    ;; Store a pointer to this cons in the CDR of the previous cons.
-    (storew dst dst -1 list-pointer-type)
-    ENTER
-    ;; Grab one value and stash it in the car of this cons.
-    (inst lods eax)
-    (storew eax dst 0 list-pointer-type)
-    ;; Go back for more.
-    (inst loop loop)
-    ;; NIL out the last cons.
-    (storew nil-value dst 1 vm:list-pointer-type)
-    DONE))
+    (let ((enter (gen-label))
+	  (loop (gen-label))
+	  (done (gen-label)))
+      (move src context)
+      (move ecx count)
+      ;; Check to see if there are no arguments, and just return NIL if so.
+      (inst mov result nil-value)
+      (inst jecxz done)
+      (inst lea dst (make-ea :dword :index ecx :scale 2))
+      (pseudo-atomic
+       (allocation dst dst node)
+       (inst lea dst (make-ea :byte :base dst :disp list-pointer-type))
+       ;; Convert the count into a raw value, so we can use the LOOP inst.
+       (inst shr ecx 2)
+       ;; Set decrement mode (successive args at lower addresses)
+       (inst std)
+       ;; Set up the result.
+       (move result dst)
+       ;; Jump into the middle of the loop, 'cause that's were we want
+       ;; to start.
+       (inst jmp enter)
+       (emit-label loop)
+       ;; Compute a pointer to the next cons.
+       (inst add dst (* cons-size word-bytes))
+       ;; Store a pointer to this cons in the CDR of the previous cons.
+       (storew dst dst -1 list-pointer-type)
+       (emit-label enter)
+       ;; Grab one value and stash it in the car of this cons.
+       (inst lods eax)
+       (storew eax dst 0 list-pointer-type)
+       ;; Go back for more.
+       (inst loop loop)
+       ;; NIL out the last cons.
+       (storew nil-value dst 1 vm:list-pointer-type))
+      (emit-label done))))
 
 ;;; Return the location and size of the more arg glob created by Copy-More-Arg.
 ;;; Supplied is the total number of arguments supplied (originally passed in
@@ -1483,12 +1412,13 @@
 (define-vop (more-arg-context)
   (:policy :fast-safe)
   (:translate c::%more-arg-context)
-  (:args (supplied :target count))
+  (:args (supplied :scs (any-reg) :target count))
   (:arg-types positive-fixnum (:constant fixnum))
   (:info fixed)
   (:results (context :scs (descriptor-reg))
 	    (count :scs (any-reg)))
   (:result-types t tagged-num)
+  (:note "more-arg-context")
   (:generator 5
     (move count supplied)
     ;; SP at this point points at the last arg pushed.
@@ -1517,24 +1447,8 @@
 	(inst cmp nargs (fixnum count)))
       (inst jmp :ne err-lab))))
 
-;;; Signal various errors.
+;;; Various other error signallers.
 ;;;
-#+old
-(macrolet ((frob (name error &rest args)
-	     `(define-vop (,name)
-		(:args ,@(mapcar #'(lambda (arg)
-				     `(,arg :scs (any-reg descriptor-reg)))
-				 args))
-		(:vop-var vop)
-		(:save-p :compute-only)
-		(:generator 1000
-		  (error-call vop ,error ,@args)))))
-  (frob argument-count-error invalid-argument-count-error nargs)
-  (frob type-check-error object-not-type-error object type)
-  (frob odd-keyword-arguments-error odd-keyword-arguments-error)
-  (frob unknown-keyword-argument-error unknown-keyword-argument-error key)
-  (frob nil-function-returned-error nil-function-returned-error fun))
-
 (macrolet ((frob (name error translate &rest args)
 	     `(define-vop (,name)
 		,@(when translate
@@ -1548,15 +1462,13 @@
 		(:generator 1000
 		  (error-call vop ,error ,@args)))))
   (frob argument-count-error invalid-argument-count-error
-	c::%argument-count-error nargs)
-  (frob type-check-error object-not-type-error
-	c::%type-check-error
+    c::%argument-count-error nargs)
+  (frob type-check-error object-not-type-error c::%type-check-error
     object type)
-  (frob layout-invalid-error layout-invalid-error
-	c::%layout-invalid-error
+  (frob layout-invalid-error layout-invalid-error c::%layout-invalid-error
     object layout)
   (frob odd-keyword-arguments-error odd-keyword-arguments-error
-	c::%odd-keyword-arguments-error)
+    c::%odd-keyword-arguments-error)
   (frob unknown-keyword-argument-error unknown-keyword-argument-error
-	c::%unknown-keyword-argument-error key)
+    c::%unknown-keyword-argument-error key)
   (frob nil-function-returned-error nil-function-returned-error nil fun))

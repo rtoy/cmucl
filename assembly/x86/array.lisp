@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.2 1997/02/10 17:03:44 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.2.2.1 1998/06/23 11:21:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,26 +32,16 @@
 			 ((:arg type unsigned-reg eax-offset)
 			  (:arg length any-reg ebx-offset)
 			  (:arg words any-reg ecx-offset)
-			  (:res result descriptor-reg edx-offset)
-
-			  (:temp alloc dword-reg edi-offset))
-  #-cgc
-  (with-allocation (alloc)
-    (inst lea result (make-ea :byte :base alloc :disp other-pointer-type))
-    (inst add alloc
-	  (+ (1- (ash 1 lowtag-bits)) (* vector-data-offset word-bytes)))
-    (inst add alloc words)
-    (inst and alloc (lognot vm:lowtag-mask)))
-  #+cgc
-  (progn
-    (inst mov alloc (+ (1- (ash 1 lowtag-bits))
-		       (* vector-data-offset word-bytes)))
-    (inst add alloc words)
-    (inst and alloc (lognot vm:lowtag-mask))
-    (with-cgc-allocation(alloc alloc)
-      (inst lea result (make-ea :byte :base alloc :disp other-pointer-type))))
-  (storew type result 0 other-pointer-type)
-  (storew length result vector-length-slot other-pointer-type)
+			  (:res result descriptor-reg edx-offset))
+  (inst mov result (+ (1- (ash 1 lowtag-bits))
+		      (* vector-data-offset word-bytes)))
+  (inst add result words)
+  (inst and result (lognot vm:lowtag-mask))
+  (pseudo-atomic
+   (allocation result result)
+   (inst lea result (make-ea :byte :base result :disp other-pointer-type))
+   (storew type result 0 other-pointer-type)
+   (storew length result vector-length-slot other-pointer-type))
   (inst ret))
 
 
@@ -66,15 +56,12 @@
 			  (:res result any-reg edx-offset)
 
 			  (:temp length any-reg edi-offset)
-			  (:temp esi dword-reg esi-offset)
-			  (:temp ecx dword-reg ecx-offset)
-			  (:temp eax dword-reg eax-offset))
+			  (:temp esi unsigned-reg esi-offset)
+			  (:temp ecx unsigned-reg ecx-offset)
+			  (:temp eax unsigned-reg eax-offset))
   (declare (ignore result esi ecx eax))
   (loadw length string vector-length-slot other-pointer-type)
-  ;; zzzzz this appears to be busted
-  ;; (inst jmp nil (make-fixup 'sxhash-simple-substring :assembly-routine))
-  ;; just fall through???
-  )
+  (inst jmp (make-fixup 'sxhash-simple-substring :assembly-routine)))
 
 (define-assembly-routine (sxhash-simple-substring
 			  (:translate %sxhash-simple-substring)
@@ -85,14 +72,13 @@
 			  (:arg length any-reg edi-offset)
 			  (:res result any-reg edx-offset)
 
-			  (:temp esi dword-reg esi-offset)
-			  (:temp ecx dword-reg ecx-offset)
-			  (:temp eax dword-reg eax-offset))
+			  (:temp esi unsigned-reg esi-offset)
+			  (:temp ecx unsigned-reg ecx-offset)
+			  (:temp eax unsigned-reg eax-offset))
   ;; Compute a pointer to where we are going to be extracting the bits.
-  (inst lea esi
-	(make-ea :byte :base string
-		 :disp (- (* vector-data-offset word-bytes)
-			  other-pointer-type)))
+  (inst lea esi	(make-ea :byte :base string
+			 :disp (- (* vector-data-offset word-bytes)
+				  other-pointer-type)))
   ;; Initialize the result.
   (inst xor result result)
   ;; Get the count.  If it's zero, blow out.

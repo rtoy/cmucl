@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.81 1997/01/18 14:31:47 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.81.2.1 1998/06/23 11:25:45 pw Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,13 +18,26 @@
 
 (in-package "LISP")
 
+;;; Since it is unlikely that native code top-level forms are moved
+;;; before being executed during worldload it is probably safe to load
+;;; these into the dynamic space under CGC even without enabling
+;;; dynamic space code below.
+;(setf *load-x86-tlf-to-dynamic-space* t)
+
+;;; Purify and GENCGC can move native code so all code can be loading
+;;; into the dynamic space during worldload; overrides the above when
+;;; enabled. Enable by default for GENCGC.  May also be safe with CGC
+;;; but untested.
+;(setf cl::*enable-dynamic-space-code* t)
+
+
 ;;; Get some data on this core.
 ;;;
 (write-string "What is the current lisp-implementation-version? ")
 (force-output)
 (set '*lisp-implementation-version* (read-line))
 
-;;; Load the rest of the reader (may be byte-compiled.)
+;;; Load the rest of the reader (maybe byte-compiled.)
 (maybe-byte-load "target:code/sharpm")
 (maybe-byte-load "target:code/backq")
 (setq std-lisp-readtable (copy-readtable *readtable*))
@@ -78,7 +91,8 @@
 (maybe-byte-load "code:time")
 (maybe-byte-load "code:tty-inspect")
 (maybe-byte-load "code:describe")
-(maybe-byte-load "code:rand")
+#+random-mt19937 (maybe-byte-load "code:rand-mt19937")
+#-random-mt19937 (maybe-byte-load "code:rand")
 (maybe-byte-load "code:ntrace")
 #-runtime (maybe-byte-load "code:profile")
 (maybe-byte-load "code:weak")
@@ -96,7 +110,7 @@
 #-(or gengc runtime) (maybe-byte-load "code:room")
 
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
-#-(or x86 gengc)			; x86 has stuff in static space
+#-(or gengc cgc)	; x86/cgc has stuff in static space.
 (progn
   (byte-load-over "target:code/debug")
   (byte-load-over "target:code/error")
@@ -121,7 +135,7 @@
   (maybe-byte-load "c:loadbackend.lisp")
   ;;
   ;; If we want a small core, blow away the meta-compile time VOP info.
-  ;; Redundant clarhash to work around gc leakage.
+  ;; Redundant clrhash to work around gc leakage.
   #+small
   (progn
     (clrhash (c::backend-parsed-vops c:*backend*))
@@ -185,6 +199,20 @@
   ;; so any garbage will be collected then.
   #-gengc (setf *need-to-collect-garbage* nil)
   #-gengc (gc-on)
+  (setf *gc-run-time* 0)
+
+  ;; Disable the loading of native code top level forms into the
+  ;; dynamic space under CGC as it is potentially dangerous if a
+  ;; native code top level form is executed after being moved without
+  ;; fixups.
+  #+x86 (setf *load-x86-tlf-to-dynamic-space* nil)
+
+  ;;; GENCGC can move native code so all code can be loaded into the
+  ;;; dynamic space; overrides the above when enabled.
+  #+gencgc (setf cl::*enable-dynamic-space-code* t)
+  ;;; Reset the counter of the number of native code fixups.
+  #+x86 (setf x86::*num-fixups* 0)
+
   ;;
   ;; Save the lisp.  If RUNTIME, there is nothing new to purify, so don't.
   (save-lisp "lisp.core"

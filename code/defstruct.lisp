@@ -1,11 +1,11 @@
-;;; -*- Package: KERNEL -*-
+;;; -*- Mode: Lisp; Package: KERNEL -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.58 1997/04/09 17:49:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.58.2.1 1998/06/23 11:21:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,8 +15,7 @@
 (in-package "LISP")
 (export '(defstruct copy-structure structure-object))
 (in-package "KERNEL")
-(export '(
-	  default-structure-print make-structure-load-form 
+(export '(default-structure-print make-structure-load-form 
 	  %compiler-defstruct %%compiler-defstruct
 	  %compiler-only-defstruct
 	  %make-instance
@@ -62,6 +61,11 @@
   (declare (type index index))
   (%raw-ref-double vec index))
 
+#+long-float
+(defun %raw-ref-long (vec index)
+  (declare (type index index))
+  (%raw-ref-long vec index))
+
 (defun %raw-set-single (vec index val)
   (declare (type index index))
   (%raw-set-single vec index val))
@@ -69,6 +73,42 @@
 (defun %raw-set-double (vec index val)
   (declare (type index index))
   (%raw-set-double vec index val))
+
+#+long-float
+(defun %raw-set-long (vec index val)
+  (declare (type index index))
+  (%raw-set-long vec index val))
+
+#+complex-float
+(progn
+
+(defun %raw-ref-complex-single (vec index)
+  (declare (type index index))
+  (%raw-ref-complex-single vec index))
+
+(defun %raw-ref-complex-double (vec index)
+  (declare (type index index))
+  (%raw-ref-complex-double vec index))
+
+#+long-float
+(defun %raw-ref-complex-long (vec index)
+  (declare (type index index))
+  (%raw-ref-complex-long vec index))
+
+(defun %raw-set-complex-single (vec index val)
+  (declare (type index index))
+  (%raw-set-complex-single vec index val))
+
+(defun %raw-set-complex-double (vec index val)
+  (declare (type index index))
+  (%raw-set-complex-double vec index val))
+
+#+long-float
+(defun %raw-set-complex-long (vec index val)
+  (declare (type index index))
+  (%raw-set-complex-long vec index val))
+
+) ; end progn complex-float
 
 (defun %instance-layout (instance)
   (%instance-layout instance))
@@ -125,6 +165,14 @@
 (defsetf %instance-ref %instance-set)
 (defsetf %raw-ref-single %raw-set-single)
 (defsetf %raw-ref-double %raw-set-double)
+#+long-float
+(defsetf %raw-ref-long %raw-set-long)
+#+complex-float
+(defsetf %raw-ref-complex-single %raw-set-complex-single)
+#+complex-float
+(defsetf %raw-ref-complex-double %raw-set-complex-double)
+#+(and complex-float long-float)
+(defsetf %raw-ref-complex-long %raw-set-complex-long)
 (defsetf %instance-layout %set-instance-layout)
 (defsetf %funcallable-instance-info %set-funcallable-instance-info)
 
@@ -238,7 +286,11 @@
   (type t)			; declared type specifier
   ;;
   ;; If a raw slot, what it holds.  T means not raw.
-  (raw-type t :type (member t single-float double-float unsigned-byte))
+  (raw-type t :type (member t single-float double-float #+long-float long-float
+			    #+complex-float complex-single-float
+			    #+complex-float complex-double-float
+			    #+(and complex-float long-float) complex-long-float
+			    unsigned-byte))
   (read-only nil :type (member t nil)))
 
 (defun print-defstruct-description (structure stream depth)
@@ -269,7 +321,7 @@
 
 ;;; DSD-Name  --  External
 ;;;
-;;;    Return the the name of a defstruct slot as a symbol.  We store it
+;;;    Return the name of a defstruct slot as a symbol.  We store it
 ;;; as a string to avoid creating lots of worthless symbols at load time.
 ;;;
 (defun dsd-name (dsd)
@@ -512,7 +564,9 @@
 		spec))
 	spec))
     (when (find name (dd-slots defstruct) :test #'string= :key #'dsd-%name)
-      (error "Duplicate slot name ~S." name))
+      (error 'program-error
+	     :format-control "Duplicate slot name ~S."
+	     :format-arguments (list name)))
     (setf (dsd-%name islot) (string name))
     (setf (dd-slots defstruct) (nconc (dd-slots defstruct) (list islot)))
 
@@ -565,6 +619,18 @@
 	       (values 'single-float 1))
 	      ((subtypep type 'double-float)
 	       (values 'double-float 2))
+	      #+long-float
+	      ((subtypep type 'long-float)
+	       (values 'long-float #+x86 3 #+sparc 4))
+	      #+complex-float
+	      ((subtypep type '(complex single-float))
+	       (values 'complex-single-float 2))
+	      #+complex-float
+	      ((subtypep type '(complex double-float))
+	       (values 'complex-double-float 4))
+	      #+(and long-float complex-float)
+	      ((subtypep type '(complex long-float))
+	       (values 'complex-long-float #+x86 6 #+sparc 8))
 	      (t (values nil nil)))
 
       (cond ((not raw-type)
@@ -929,14 +995,36 @@
      (ecase rtype
        (single-float '%raw-ref-single)
        (double-float '%raw-ref-double)
+       #+long-float
+       (long-float '%raw-ref-long)
+       #+complex-float
+       (complex-single-float '%raw-ref-complex-single)
+       #+complex-float
+       (complex-double-float '%raw-ref-complex-double)
+       #+(and complex-float long-float)
+       (complex-long-float '%raw-ref-complex-long)
        (unsigned-byte 'aref)
        ((t)
 	(if (eq (dd-type defstruct) 'funcallable-structure)
 	    '%funcallable-instance-info
 	    '%instance-ref)))
-     (if (eq rtype 'double-float)
-	 (ash (dsd-index slot) -1)
-	 (dsd-index slot))
+     (case rtype
+       #+(and complex-float long-float)
+       (complex-long-float
+	(truncate (dsd-index slot) #+x86 6 #+sparc 8))
+       #+long-float
+       (long-float
+	(truncate (dsd-index slot) #+x86 3 #+sparc 4))
+       (double-float
+	(ash (dsd-index slot) -1))
+       #+complex-float
+       (complex-double-float
+	(ash (dsd-index slot) -2))
+       #+complex-float
+       (complex-single-float
+	(ash (dsd-index slot) -1))
+       (t
+	(dsd-index slot)))
      (cond
       ((eq rtype 't) object)
       (data)
@@ -1216,7 +1304,11 @@
 				#'(lambda (x) (typep x (find-class class))))
 			    (fdefinition constructor)))
     (setf (class-direct-superclasses class)
-	  (list (layout-class (svref inherits (1- (length inherits))))))
+	  (if (eq (dd-name info) 'lisp-stream)
+	      ;; Hack to add stream as a superclass mixin to lisp-streams.
+	      (list (layout-class (svref inherits (1- (length inherits))))
+		    (layout-class (svref inherits (- (length inherits) 2))))
+	      (list (layout-class (svref inherits (1- (length inherits)))))))
     (let ((new-layout (make-layout :class class
 				   :inherits inherits
 				   :inheritance-depth (length inherits)
@@ -1387,8 +1479,11 @@
 	      (compiler-layout-or-lose (first include))
 	      (class-layout (find-class (or (first superclass-opt)
 					    'structure-object))))))
-    (concatenate 'simple-vector (layout-inherits super) (vector super))))
-
+    (if (eq (dd-name info) 'lisp-stream)
+	;; Hack to added the stream class as a mixin for lisp-streams.
+	(concatenate 'simple-vector (layout-inherits super)
+		     (vector super (class-layout (find-class 'stream))))
+	(concatenate 'simple-vector (layout-inherits super) (vector super)))))
 
 ;;; %COMPILER-ONLY-DEFSTRUCT  --  Internal
 ;;;
@@ -1438,7 +1533,7 @@
 ;;; %%Compiler-Defstruct  --  External
 ;;;
 ;;;    This function does the (compile load eval) time actions for updating the
-;;; compiler's global meta-information to represent the definition of the the
+;;; compiler's global meta-information to represent the definition of the
 ;;; structure described by Info.  This primarily amounts to setting up info
 ;;; about the accessor and other implicitly defined functions.  The
 ;;; constructors are explicitly defined by top-level code.

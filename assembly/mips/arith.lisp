@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.14 1994/10/31 04:56:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.14.2.1 1998/06/23 11:21:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -291,6 +291,7 @@
   (inst bne temp DO-STATIC-FN)
   (inst and temp y 3)
   (inst bne temp DO-STATIC-FN)
+  (inst nop)
   (inst beq x y RETURN-T)
 
   (inst move res null-tn)
@@ -333,6 +334,7 @@
   (inst bne temp DO-STATIC-FN)
   (inst and temp y 3)
   (inst bne temp DO-STATIC-FN)
+  (inst nop)
   (inst beq x y RETURN-NIL)
 
   (load-symbol res t)

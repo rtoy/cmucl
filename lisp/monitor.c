@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.6 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.6.2.1 1998/06/23 11:25:03 pw Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -336,7 +336,11 @@ static void print_context(struct sigcontext *context)
 
 	for (i = 0; i < NREGS; i++) {
 		printf("%s:\t", lisp_register_names[i]);
+#ifdef i386
+		brief_print((lispobj) SC_REG(context, i*2));
+#else
 		brief_print((lispobj) SC_REG(context, i));
+#endif
 	}
 	printf("PC:\t\t  0x%08lx\n", SC_PC(context));
 }
@@ -395,7 +399,19 @@ static void catchers_cmd(char **ptr)
         printf("There are no active catchers!\n");
     else {
         while (catch != NULL) {
-            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ", (unsigned long)catch, (unsigned long)(catch->current_uwp), (unsigned long)(catch->current_cont), catch->current_code, catch->entry_pc);
+#ifndef i386
+            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ",
+		   (unsigned long)catch, (unsigned long)(catch->current_uwp),
+		   (unsigned long)(catch->current_cont),
+		   catch->current_code,
+		   catch->entry_pc);
+#else
+            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ",
+		   (unsigned long)catch, (unsigned long)(catch->current_uwp),
+		   (unsigned long)(catch->current_cont),
+		   component_ptr_from_pc(catch->entry_pc) + type_OtherPointer,
+		   catch->entry_pc);
+#endif
             brief_print((lispobj)catch->tag);
             catch = catch->previous_catch;
         }

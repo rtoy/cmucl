@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.21 1997/02/08 21:08:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.21.2.1 1998/06/23 11:21:59 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,14 +47,14 @@
 (c-var-frob current-dynamic-space-start "current_dynamic_space")
 (declaim (inline dynamic-usage))
 
-#-cgc
+#-(or cgc gencgc)
 (defun dynamic-usage ()
   (the (unsigned-byte 32)
        (- (system:sap-int (c::dynamic-space-free-pointer))
 	  (current-dynamic-space-start))))
 
-#+cgc
-(c-var-frob dynamic-usage "cgc_bytes_allocated")
+#+(or cgc gencgc)
+(c-var-frob dynamic-usage "bytes_allocated")
 
 (defun static-space-usage ()
   (- (* lisp::*static-space-free-pointer* vm:word-bytes)
@@ -301,7 +301,8 @@
 
 ;;;; Internal GC
 
-(alien:def-alien-routine collect-garbage c-call:int)
+(alien:def-alien-routine collect-garbage c-call:int
+  #+gencgc (last-gen c-call:int))
 
 #-ibmrt
 (alien:def-alien-routine set-auto-gc-trigger c-call:void
@@ -353,7 +354,9 @@
 ;;; called.  The FORCE-P flags controls if a GC should occur even if the
 ;;; dynamic usage is not greater than *GC-TRIGGER*.
 ;;; 
-(defun sub-gc (&key (verbose-p *gc-verbose*) force-p)
+;;; For GENCGC all generations < GEN will be GC'ed.
+;;;
+(defun sub-gc (&key (verbose-p *gc-verbose*) force-p #+gencgc (gen 0))
   (unless *already-maybe-gcing*
     (let* ((*already-maybe-gcing* t)
 	   (start-time (get-internal-run-time))
@@ -383,7 +386,10 @@
 	      (carefully-funcall hook))
 	    (when *gc-trigger*
 	      (clear-auto-gc-trigger))
-	    (funcall *internal-gc*)
+	    #-gencgc (funcall *internal-gc*)
+	    #+gencgc (if (eq *internal-gc* #'collect-garbage)
+			 (funcall *internal-gc* gen)
+			 (funcall *internal-gc*))
 	    (let* ((post-gc-dyn-usage (dynamic-usage))
 		   (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
 	      (when *last-bytes-in-use*
@@ -420,11 +426,20 @@
 ;;;
 ;;; This is the user advertised garbage collection function.
 ;;; 
+#-gencgc
 (defun gc (&optional (verbose-p *gc-verbose*))
   "Initiates a garbage collection.  The optional argument, VERBOSE-P,
   which defaults to the value of the variable *GC-VERBOSE* controls
   whether or not GC statistics are printed."
   (sub-gc :verbose-p verbose-p :force-p t))
+;;;
+#+gencgc
+(defun gc (&key (verbose *gc-verbose*) (gen 0) (full nil))
+  "Initiates a garbage collection.  The keyword :VERBOSE, which
+   defaults to the value of the variable *GC-VERBOSE* controls whether or
+   not GC statistics are printed. The keyword :GEN defaluts to 0, and
+   controls the number of generations to garbage collect."
+  (sub-gc :verbose-p verbose :force-p t :gen (if full 6 gen)))
 
 
 ;;;; Auxiliary Functions.

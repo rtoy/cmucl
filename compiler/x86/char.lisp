@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.1 1997/01/18 14:31:20 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.1.2.1 1998/06/23 11:24:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -19,9 +19,10 @@
 ;;; And then to the x86, again by William.
 ;;;
 ;;; Debugged by Paul F. Werkowski, June-95.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
-(in-package :x86)
 
+(in-package :x86)
 
 
 ;;;; Moves and coercions:
@@ -29,7 +30,7 @@
 ;;; Move a tagged char to an untagged representation.
 ;;;
 (define-vop (move-to-base-char)
-  (:args (x :scs (any-reg immediate-stack) :target al))
+  (:args (x :scs (any-reg control-stack) :target al))
   (:temporary (:sc byte-reg :offset al-offset
 		   :from (:argument 0) :to (:eval 0)) al)
   (:ignore al)
@@ -42,7 +43,7 @@
     (move y ah)))
 ;;;
 (define-move-vop move-to-base-char :move
-  (any-reg immediate-stack) (base-char-reg base-char-stack))
+  (any-reg control-stack) (base-char-reg base-char-stack))
 
 
 ;;; Move an untagged char to a tagged representation.
@@ -53,7 +54,7 @@
 		   :from (:argument 0) :to (:result 0)) al)
   (:temporary (:sc byte-reg :offset ah-offset
 		   :from (:argument 0) :to (:result 0)) ah)
-  (:results (y :scs (any-reg descriptor-reg immediate-stack)))
+  (:results (y :scs (any-reg descriptor-reg control-stack)))
   (:note "character tagging")
   (:generator 1
     (move ah x)				; maybe move char byte
@@ -63,7 +64,7 @@
 
 ;;;
 (define-move-vop move-from-base-char :move
-  (base-char-reg base-char-stack) (any-reg descriptor-reg immediate-stack))
+  (base-char-reg base-char-stack) (any-reg descriptor-reg control-stack))
 
 ;;; Move untagged base-char values.
 ;;;
@@ -130,7 +131,7 @@
   (:policy :fast-safe)
   (:args (code :scs (unsigned-reg unsigned-stack) :target eax))
   (:arg-types positive-fixnum)
-  (:temporary (:sc dword-reg :offset eax-offset :target res
+  (:temporary (:sc unsigned-reg :offset eax-offset :target res
 		   :from (:argument 0) :to (:result 0))
 	      eax)
   (:results (res :scs (base-char-reg)))

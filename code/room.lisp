@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.25 1997/04/01 19:23:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.25.2.1 1998/06/23 11:22:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,7 +89,9 @@
 		 #+signed-array (simple-array-signed-byte-30-type . 2)
 		 #+signed-array (simple-array-signed-byte-32-type . 2)
 		 (simple-array-single-float-type . 2)
-		 (simple-array-double-float-type . 3)))
+		 (simple-array-double-float-type . 3)
+		 #+complex-float (simple-array-complex-single-float-type . 3)
+		 #+complex-float (simple-array-complex-double-float-type . 4)))
   (let ((name (car stuff))
 	(size (cdr stuff)))
     (setf (svref *meta-room-info* (symbol-value name))
@@ -479,7 +481,9 @@
 	       #+signed-array #.simple-array-signed-byte-30-type
 	       #+signed-array #.simple-array-signed-byte-32-type
 	       #.simple-array-single-float-type
-	       #.simple-array-double-float-type)
+	       #.simple-array-double-float-type
+	       #+complex-float #.simple-array-complex-single-float-type
+	       #+complex-float #.simple-array-complex-double-float-type)
 	      (incf non-descriptor-headers)
 	      (incf non-descriptor-bytes (- size word-bytes)))
 	     ((#.list-pointer-type

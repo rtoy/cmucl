@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.1.2.3 1997/09/10 04:24:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.1.2.4 1998/06/23 11:25:27 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,9 +24,10 @@
   (lisp::function-doc x))
 
 (defmethod documentation ((x list) (doc-type (eql 'function)))
-  (or (values (ext:info setf documentation (cadr x)))
-      ;; Try the pcl function documentation.
-      (and (fboundp x) (documentation (fdefinition x) 't))))
+  (when (eq (car x) 'setf)	; Give-up if not a setf function name.
+    (or (values (ext:info setf documentation (cadr x)))
+	;; Try the pcl function documentation.
+	(and (fboundp x) (documentation (fdefinition x) 't)))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'function)))
   (or (values (ext:info function documentation x))
@@ -59,11 +60,21 @@
 (defmethod documentation ((x structure-class) (doc-type (eql 't)))
   (values (ext:info type documentation (class-name x))))
 
+(defmethod documentation ((x lisp:standard-class) (doc-type (eql 't)))
+  (or (values (ext:info type documentation (lisp:class-name x)))
+      (let ((pcl-class (kernel:class-pcl-class x)))
+	(and pcl-class (plist-value pcl-class 'documentation)))))
+
 (defmethod documentation ((x lisp:structure-class) (doc-type (eql 'type)))
   (values (ext:info type documentation (lisp:class-name x))))
 
 (defmethod documentation ((x structure-class) (doc-type (eql 'type)))
   (values (ext:info type documentation (class-name x))))
+
+(defmethod documentation ((x lisp:standard-class) (doc-type (eql 'type)))
+  (or (values (ext:info type documentation (lisp:class-name x)))
+      (let ((pcl-class (kernel:class-pcl-class x)))
+	(and pcl-class (plist-value pcl-class 'documentation)))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'type)))
   (or (values (ext:info type documentation x))
@@ -107,7 +118,8 @@
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'variable)))
   (setf (ext:info variable documentation x) new-value))
 
-;;; CMUCL random documentation.
+;;; CMUCL random documentation. Compiler-macro documentation is stored
+;;; as random-documentation and handled here.
 (defmethod documentation ((x symbol) (doc-type symbol))
   (cdr (assoc doc-type
 	      (values (ext:info random-documentation stuff x)))))

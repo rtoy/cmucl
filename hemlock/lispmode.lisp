@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.6.2.1 1997/09/09 01:28:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.6.2.2 1998/06/23 11:24:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -848,6 +848,7 @@
 (defindent "ctypecase" 1)
 (defindent "defconstant" 1)
 (defindent "define-setf-method" 2)
+(defindent "destructuring-bind" 2)
 (defindent "defmacro" 2)
 (defindent "defpackage" 1)
 (defindent "defparameter" 1)
@@ -888,6 +889,7 @@
 (defindent "with-open-file" 1)
 (defindent "with-open-stream" 1)
 (defindent "with-output-to-string" 1)
+(defindent "with-package-iterator" 1)
 
 ;;; Error/condition system forms.
 ;;; 
@@ -974,6 +976,8 @@
 (defindent "alien-bind" 1)
 (defindent "def-c-record" 1)
 (defindent "defrecord" 1)
+(defindent "add-fd-handler" 2)
+(defindent "with-fd-handler" 1)
 
 ;;; Wire forms.
 (defindent "remote" 1)
@@ -983,6 +987,12 @@
 (defindent "remote-value-bind" 3)
 (defindent "wire:remote-value-bind" 3)
 
+;;; Multiprocessing forms.
+(defindent "with-lock-held" 1)
+(defindent "process-wait" 1)
+
+;;; Alien forms.
+(defindent "with-alien" 1)
 
 
 ;;;; Indentation.

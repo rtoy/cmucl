@@ -38,11 +38,21 @@
 		(t
 		 (setf (kernel:class-pcl-class class) nil)))))))
 
-  (rename-package "PCL" "OLD-PCL")
-  (make-package "PCL"))
+  ;; Shadowing-import 'pcl::class so that this symbol is the same as
+  ;; used by the compiler in ir1tran.
+  (let ((class 'pcl::class))
+    (rename-package "PCL" "OLD-PCL")
+    (make-package "PCL")
+    (shadowing-import class "PCL")
+    ;; Move class back to the PCL package so that the respective debug
+    ;; variable has a valid package name.
+    (kernel:%set-symbol-package class (find-package "PCL"))))
 
 (when (find-package  "SLOT-ACCESSOR-NAME")
   (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
+
+(when (find-package "CLOS-MOP")
+  (rename-package "CLOS-MOP" "OLD-CLOS-MOP"))
 
 (setf c:*suppress-values-declaration* t)
 (pushnew :setf *features*)
@@ -50,7 +60,7 @@
 (setf (search-list "pcl:") '("target:pcl/"))
 
 (let ((obj (make-pathname :defaults "pcl:defsys"
-			  :type (c:backend-fasl-file-type c:*backend*))))
+			  :type (c:backend-byte-fasl-file-type c:*backend*))))
   (when (< (or (file-write-date obj) 0)
 	   (file-write-date "pcl:defsys.lisp"))
     (compile-file "pcl:defsys" :byte-compile t)))

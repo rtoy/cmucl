@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.19.2.1 1997/09/09 01:45:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.19.2.2 1998/06/23 11:22:41 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,13 +30,24 @@
   
 ;;; EXTRACT-ELEMENT-TYPE  -- internal
 ;;;
-;;; Array access functions return an object from the array, hence it's type
-;;; is going to be the array element type.
+;;; Array access functions return an object from the array, hence it's
+;;; type will be asserted to be array element type.
 ;;;
 (defun extract-element-type (array)
   (let ((type (continuation-type array)))
     (if (array-type-p type)
 	(array-type-element-type type)
+	*universal-type*)))
+
+;;; EXTRACT-UPGRADED-ELEMENT-TYPE  -- internal
+;;;
+;;; Array access functions return an object from the array, hence it's
+;;; type is going to be the array upgraded element type.
+;;;
+(defun extract-upgraded-element-type (array)
+  (let ((type (continuation-type array)))
+    (if (array-type-p type)
+	(array-type-specialized-element-type type)
 	*universal-type*)))
 
 ;;; ASSERT-NEW-VALUE-TYPE  --  internal
@@ -70,9 +81,13 @@
 
 ;;; AREF  --  derive-type optimizer.
 ;;;
-(defoptimizer (aref derive-type) ((array &rest indices))
+(defoptimizer (aref derive-type) ((array &rest indices) node)
   (assert-array-rank array (length indices))
-  (extract-element-type array))
+  ;; If the node continuation has a single use then assert its type.
+  (let ((cont (node-cont node)))
+    (when (= (length (find-uses cont)) 1)
+      (assert-continuation-type cont (extract-element-type array))))
+  (extract-upgraded-element-type array))
 
 ;;; %ASET  --  derive-type optimizer.
 ;;;
@@ -83,7 +98,7 @@
 ;;; DATA-VECTOR-REF  --  derive-type optimizer.
 ;;;
 (defoptimizer (data-vector-ref derive-type) ((array index))
-  (extract-element-type array))
+  (extract-upgraded-element-type array))
 
 ;;; DATA-VECTOR-SET  --  derive-type optimizer.
 ;;;
@@ -114,7 +129,7 @@
 ;;; ROW-MAJOR-AREF  --  derive-type optimizer.
 ;;;
 (defoptimizer (row-major-aref derive-type) ((array index))
-  (extract-element-type array))
+  (extract-upgraded-element-type array))
   
 ;;; %SET-ROW-MAJOR-AREF  --  derive-type optimizer.
 ;;;
@@ -174,17 +189,20 @@
 ;;; 
 ;;; Just convert it into a make-array.
 ;;;
-(def-source-transform make-string (length &key (initial-element #\NULL))
+(def-source-transform make-string (length &key (element-type ''base-char)
+					  (initial-element #\NULL))
   (if (byte-compiling)
       (values nil t)
       `(make-array (the index ,length)
-		   :element-type 'base-char
+		   :element-type ,element-type
 		   :initial-element ,initial-element)))
 
 (defconstant array-info
   '((base-char #\NULL 8 vm:simple-string-type)
     (single-float 0.0s0 32 vm:simple-array-single-float-type)
     (double-float 0.0d0 64 vm:simple-array-double-float-type)
+    #+long-float (long-float 0.0l0 #+x86 96 #+sparc 128
+		  vm:simple-array-long-float-type)
     (bit 0 1 vm:simple-bit-vector-type)
     ((unsigned-byte 2) 0 2 vm:simple-array-unsigned-byte-2-type)
     ((unsigned-byte 4) 0 4 vm:simple-array-unsigned-byte-4-type)
@@ -195,6 +213,13 @@
     #+signed-array ((signed-byte 16) 0 16 vm:simple-array-signed-byte-16-type)
     #+signed-array ((signed-byte 30) 0 32 vm:simple-array-signed-byte-30-type)
     #+signed-array ((signed-byte 32) 0 32 vm:simple-array-signed-byte-32-type)
+    #+complex-float ((complex single-float) #C(0.0s0 0.0s0) 64
+		     vm:simple-array-complex-single-float-type)
+    #+complex-float ((complex double-float) #C(0.0d0 0.0d0) 128
+		     vm:simple-array-complex-double-float-type)
+    #+(and complex-float long-float)
+    ((complex long-float) #C(0.0l0 0.0l0) #+x86 192 #+sparc 256
+     vm:simple-array-complex-long-float-type)
     (t 0 32 vm:simple-vector-type)))
 
 ;;; MAKE-ARRAY  --  source-transform.
@@ -234,13 +259,18 @@
 	      `(truly-the ,spec
 			  (allocate-vector ,typecode length ,nwords-form))))
 	(values
-	 (if (and default-initial-element
-		  (or (null initial-element)
-		      (and (constant-continuation-p initial-element)
-			   (eql (continuation-value initial-element)
-				default-initial-element))))
-	     constructor
-	     `(truly-the ,spec (fill ,constructor initial-element)))
+	 (cond ((and default-initial-element
+		     (or (null initial-element)
+			 (and (constant-continuation-p initial-element)
+			      (eql (continuation-value initial-element)
+				   default-initial-element))))
+		(unless (csubtypep (ctype-of default-initial-element)
+				   eltype-type)
+		  (compiler-note "Default initial element ~s is not a ~s."
+				 default-initial-element eltype))
+		constructor)
+	       (t
+		`(truly-the ,spec (fill ,constructor initial-element))))
 	 '((declare (type index length))))))))
 
 ;;; MAKE-ARRAY  --  transform.

@@ -980,7 +980,7 @@ work during bootstrapping.
       (let ((bindings (mapcan #'process-var lambda-list)))
 	`(let* ((,args-tail ,args)
 		,@bindings)
-	   ,@(unless bindings `((declare (ignore ,args-tail))))
+	   (declare (ignorable ,args-tail))
 	   ,@body)))))
 
 (defun get-key-arg (keyword list)

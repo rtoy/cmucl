@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.16 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.16.2.1 1998/06/23 11:22:54 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,6 +57,7 @@
 	     (temp (make-normal-tn type))
 	     (node (lambda-bind fun))
 	     (res (if (or (and let-p (policy node (< debug 3)))
+			  (policy node (zerop debug))
 			  (policy node (= speed 3)))
 		      temp
 		      (environment-debug-live-tn temp

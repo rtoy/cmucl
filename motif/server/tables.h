@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/tables.h,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/tables.h,v 1.2.2.1 1998/06/23 11:25:19 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -17,6 +17,7 @@ typedef struct {
   String type;
   type_writer writer;
   type_reader reader;
+  int size;
 } type_entry;
 
 extern String string_table[];

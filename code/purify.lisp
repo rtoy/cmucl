@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.18 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.18.2.1 1998/06/23 11:22:22 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,5 +71,6 @@
 	 #'(lambda (&rest ignore)
 	     (declare (ignore ignore))
 	     (write-line "Done.]"))))
-    (gc t))
+    #-gencgc (gc t)
+    #+gencgc (gc :verbose t))
   nil)

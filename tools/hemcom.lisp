@@ -44,7 +44,8 @@
   #+(and (not pcl) (not no-pcl-clx))
   (load "target:pcl/pclload")
   (load "target:clx/clx-library")
-  (ext:purify))
+  #+gencgc (gc :full t)
+  #-gencgc (ext:purify))
   
 (with-compiler-log-file
     ("target:compile-hemlock.log"

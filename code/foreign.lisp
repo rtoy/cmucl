@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.22.2.1 1997/09/09 10:18:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.22.2.2 1998/06/23 11:21:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -241,7 +241,11 @@
 #+hppa
 (defconstant reloc-magic #x106)
 #+hppa
+(defconstant cpu-pa-risc1-0 #x20b)
+#+hppa
 (defconstant cpu-pa-risc1-1 #x210)
+#+hppa
+(defconstant cpu-pa-risc-max #x2ff)
 
 #+hppa
 (defun load-object-file (name)
@@ -284,7 +288,7 @@
             ))
       (unix:unix-close fd))))
 
-#-(or linux solaris)
+#-(or linux solaris irix)
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))
@@ -332,7 +336,10 @@
     #+hpux
     (dolist (f files)
       (with-open-file (stream f :element-type '(unsigned-byte 16))
-	(unless (eql (read-byte stream) cpu-pa-risc1-1)
+	(unless (let ((sysid (read-byte stream)))
+                  (or (eql sysid cpu-pa-risc1-0)
+		      (and (>= sysid cpu-pa-risc1-1)
+			   (<= sysid cpu-pa-risc-max))))
 	  (error "Object file is wrong format, so can't load-foreign:~
 		  ~%  ~S"
 		 f))
@@ -375,44 +382,73 @@
 
 (export '(alternate-get-global-address))
 
-#-(or freebsd solaris linux)
+#-(or solaris linux irix)
 (defun alternate-get-global-address (symbol)
   (declare (type simple-string symbol)
 	   (ignore symbol))
   0)
 
-#+(or linux solaris)
+#+(or linux solaris irix)
 (progn
 
-(defconstant rtld-lazy 1)
-(defconstant rtld-now 2)
-(defconstant rtld-global #o400)
-(defvar *global-table* NIL)
+(defconstant rtld-lazy 1
+  "Lazy function call binding")
+(defconstant rtld-now 2
+  "Immediate function call binding")
+#+(and linux glibc2)
+(defconstant rtld-binding-mask #x3
+  "Mask of binding time value")
+
+(defconstant rtld-global #-irix #x100 #+irix 4
+  "If set the symbols of the loaded object and its dependencies are
+   made visible as if the object were linked directly into the program")
+
+(defvar *global-table* nil)
+;;; Dynamically loaded stuff isn't there upon restoring from a
+;;; save--this is primarily for irix, which resolves tzname at
+;;; runtime, resulting in *global-table* being set in the saved core
+;;; image, resulting in havoc upon restart.
+(pushnew #'(lambda () (setq *global-table* nil))
+	 ext:*after-save-initializations*)
+
+(defvar *dso-linker*
+  #+solaris "/usr/ccs/bin/ld"
+  #+(or linux irix) "/usr/bin/ld")
 
 (alien:def-alien-routine dlopen system-area-pointer
-  (str c-call:c-string) (i c-call:int))
+  (file c-call:c-string) (mode c-call:int))
 (alien:def-alien-routine dlsym system-area-pointer
   (lib system-area-pointer)
-  (str c-call:c-string))
+  (name c-call:c-string))
 (alien:def-alien-routine dlclose void (lib system-area-pointer))
 (alien:def-alien-routine dlerror c-call:c-string)
 
+;;; Ensure we've opened our own binary so can resolve global variables
+;;; in the lisp image that come from libraries. This used to happen
+;;; only in alternate-get-global-address, and only if no libraries
+;;; were dlopened already, but that didn't work if something was
+;;; dlopened before any problem global vars were used. So now we do
+;;; this in any function that can add to the global-table, as well as
+;;; in alternate-get-global-address.
+(defun ensure-lisp-table-opened ()
+  (unless *global-table*
+    ;; Prevent recursive call if dlopen isn't defined
+    (setf *global-table* (int-sap 0))
+    (setf *global-table* (list (dlopen nil rtld-lazy)))
+    (when (zerop (system:sap-int (car *global-table*)))
+      (error "Can't open global symbol table: ~S" (dlerror)))))
+
 (defun load-object-file (file)
+  (ensure-lisp-table-opened)
   ; rtld global: so it can find all the symbols previously loaded
   ; rtld now: that way dlopen will fail if not all symbols are defined.
   (let ((sap (dlopen file (logior rtld-now rtld-global))))
        (if (zerop (sap-int sap))
 	   (error "Can't open object ~S: ~S" file (dlerror))
-	   (pushnew sap *global-table*))))
+	   (pushnew sap *global-table* :test #'sap=))))
 
 (defun alternate-get-global-address (symbol)
-  (unless *global-table*
-	  ;; Prevent recursive call when dlopen isn't defined.
-	  (setq *global-table* (int-sap 0))
-	  ;; Load standard object
-	  (setq *global-table* (list (dlopen nil rtld-lazy)))
-	  (if (zerop (system:sap-int (car *global-table*)))
-	      (error "Can't open global symbol table: ~S" (dlerror))))
+  (ensure-lisp-table-opened)
   ;; find the symbol in any of the loaded obbjects,
   ;; search in reverse order of loading, later loadings
   ;; take precedence
@@ -441,15 +477,13 @@
   (let ((output-file (pick-temporary-file-name
 		      (concatenate 'string "/tmp/~D~C" (string (gensym)))))
 	(error-output (make-string-output-stream)))
-
-    #-linux (format t ";;; Running /usr/ccs/bin/ld...~%")
-    #+linux (format t ";;; Running /usr/bin/ld...~%")
+ 
+    (format t ";;; Running ~A...~%" *dso-linker*)
     (force-output)
     (let ((proc (ext:run-program
-		 #-linux "/usr/ccs/bin/ld"
-		 #+linux "/usr/bin/ld"
+		 *dso-linker*
 		 (list*
-			"-G"
+		        #+(or solaris linux) "-G" #+irix "-shared"
 			"-o"
 			output-file
 			(append (mapcar #'(lambda (name)
@@ -463,12 +497,10 @@
 		 :output error-output
 		 :error :output)))
       (unless proc
-	(error  #+linux "Could not run /usr/bin/ld"
-                #-linux "Could not run /usr/ccs/bin/ld"))
+       (error "Could not run ~A" *dso-linker*))
       (unless (zerop (ext:process-exit-code proc))
 	(system:serve-all-events 0)
-	(error #-linux "/usr/ccs/bin/ld failed:~%~A" 
-               #+linux "/usr/bin/ld failed:~%~A"
+        (error "~A failed:~%~A" *dso-linker*
 	       (get-output-stream-string error-output)))
       (load-object-file output-file)
       (unix:unix-unlink output-file)

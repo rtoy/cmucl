@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.2 1997/09/13 20:31:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.3 1998/06/23 11:22:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -999,6 +999,8 @@
 (defsetf sap-ref-sap %set-sap-ref-sap)
 (defsetf sap-ref-single %set-sap-ref-single)
 (defsetf sap-ref-double %set-sap-ref-double)
+#+long-float
+(defsetf sap-ref-long %set-sap-ref-long)
 
 (define-setf-method getf (place prop &optional default &environment env)
   (multiple-value-bind (temps values stores set get)
@@ -1467,7 +1469,7 @@
   Iteration construct.  Each Var is initialized in parallel to the value of the
   specified Init form.  On subsequent iterations, the Vars are assigned the
   value of the Step form (if any) in paralell.  The Test is evaluated before
-  each evaluation of the body Forms.  When the Test is true, the the Exit-Forms
+  each evaluation of the body Forms.  When the Test is true, the Exit-Forms
   are evaluated as a PROGN, with the result being the value of the DO.  A block
   named NIL is established around the entire expansion, allowing RETURN to be
   used as an laternate exit mechanism."
@@ -1481,7 +1483,7 @@
   value of the specified Init form.  On subsequent iterations, the Vars are
   sequentially assigned the value of the Step form (if any).  The Test is
   evaluated before each evaluation of the body Forms.  When the Test is true,
-  the the Exit-Forms are evaluated as a PROGN, with the result being the value
+  the Exit-Forms are evaluated as a PROGN, with the result being the value
   of the DO.  A block named NIL is established around the entire expansion,
   allowing RETURN to be used as an laternate exit mechanism."
   (do-do-body varlist endlist body decls 'let* 'setq 'do* nil))
@@ -1498,7 +1500,7 @@
        (setqs nil)
        (pairs pairs (cddr pairs)))
       ((atom (cdr pairs))
-       `(let ,(nreverse lets) (setq ,@(nreverse setqs))))
+       `(let ,(nreverse lets) (setq ,@(nreverse setqs)) nil))
     (let ((gen (gensym)))
       (push `(,gen ,(cadr pairs)) lets)
       (push (car pairs) setqs)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.19.2.2 1997/09/08 00:22:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.19.2.3 1998/06/23 11:22:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,8 +77,7 @@
 (def-math-rtn "pow" 2)
 #-x86 (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
-#-hpux
-(def-math-rtn "log1p" 1)
+#-(or hpux x86) (def-math-rtn "log1p" 1)
 
 #+x86 ;; These are needed for use by byte-compiled files.
 (progn
@@ -149,6 +148,10 @@
     (declare (double-float x)
 	     (values double-float))
     (%logb x))
+  (defun %log1p (x)
+    (declare (double-float x)
+	     (values double-float))
+    (%log1p x))
   ) ; progn
 
 
@@ -201,42 +204,149 @@
   "Returns BASE raised to the POWER."
   (if (zerop power)
       (1+ (* base power))
-      (labels ((real-expt (base power rtype)
-		 (let* ((fbase (coerce base 'double-float))
-			(fpower (coerce power 'double-float))
-			(res (coerce (%pow fbase fpower) rtype)))
-		   (if (and (zerop res) (minusp fbase))
-		       (multiple-value-bind (re im)
-					    (complex-pow fbase fpower)
-			 (%make-complex (coerce re rtype) (coerce im rtype)))
-		       res)))
-	       (complex-pow (fbase fpower)
-		 (let ((pow (%pow (- fbase) fpower))
-		       (fpower*pi (* fpower pi)))
-		   (values (* pow (%cos fpower*pi))
-			   (* pow (%sin fpower*pi))))))
-	(declare (inline real-expt))
-	(number-dispatch ((base number) (power number))
-	  (((foreach fixnum (or bignum ratio) (complex rational)) integer)
-	   (intexp base power))
-	  (((foreach single-float double-float) rational)
-	   (real-expt base power '(dispatch-type base)))
-	  (((foreach fixnum (or bignum ratio) single-float)
-	    (foreach ratio single-float))
-	   (real-expt base power 'single-float))
-	  (((foreach fixnum (or bignum ratio) single-float double-float)
-	    double-float)
-	   (real-expt base power 'double-float))
-	  ((double-float single-float)
-	   (real-expt base power 'double-float))
-	  (((foreach (complex rational) (complex float)) rational)
-	   (* (expt (abs base) power)
-	      (cis (* power (phase base)))))
-	  (((foreach fixnum (or bignum ratio) single-float double-float)
-	    complex)
-	   (exp (* power (log base))))
-	  (((foreach (complex float) (complex rational)) number)
-	   (exp (* power (log base))))))))
+    (labels (;; determine if the double float is an integer.
+	     ;;  0 - not an integer
+	     ;;  1 - an odd int
+	     ;;  2 - an even int
+	     (isint (ihi lo)
+	       (declare (type (unsigned-byte 31) ihi)
+			(type (unsigned-byte 32) lo)
+			(optimize (speed 3) (safety 0)))
+	       (let ((isint 0))
+		 (declare (type fixnum isint))
+		 (cond ((>= ihi #x43400000)	; exponent >= 53
+			(setq isint 2))
+		       ((>= ihi #x3ff00000)
+			(let ((k (- (ash ihi -20) #x3ff)))	; exponent
+			  (declare (type (mod 53) k))
+			  (cond ((> k 20)
+				 (let* ((shift (- 52 k))
+					(j (logand (ash lo (- shift))))
+					(j2 (ash j shift)))
+				   (declare (type (mod 32) shift)
+					    (type (unsigned-byte 32) j j2))
+				   (when (= j2 lo)
+				     (setq isint (- 2 (logand j 1))))))
+				((= lo 0)
+				 (let* ((shift (- 20 k))
+					(j (ash ihi (- shift)))
+					(j2 (ash j shift)))
+				   (declare (type (mod 32) shift)
+					    (type (unsigned-byte 31) j j2))
+				   (when (= j2 ihi)
+				     (setq isint (- 2 (logand j 1))))))))))
+		 isint))
+	     (real-expt (x y rtype)
+	       (let ((x (coerce x 'double-float))
+		     (y (coerce y 'double-float)))
+		 (declare (double-float x y))
+		 (let* ((x-hi (kernel:double-float-high-bits x))
+			(x-lo (kernel:double-float-low-bits x))
+			(x-ihi (logand x-hi #x7fffffff))
+			(y-hi (kernel:double-float-high-bits y))
+			(y-lo (kernel:double-float-low-bits y))
+			(y-ihi (logand y-hi #x7fffffff)))
+		   (declare (type (signed-byte 32) x-hi y-hi)
+			    (type (unsigned-byte 31) x-ihi y-ihi)
+			    (type (unsigned-byte 32) x-lo y-lo))
+		   ;; y==zero: x**0 = 1
+		   (when (zerop (logior y-ihi y-lo))
+		     (return-from real-expt (coerce 1d0 rtype)))
+		   ;; +-NaN return x+y
+		   (when (or (> x-ihi #x7ff00000)
+			     (and (= x-ihi #x7ff00000) (/= x-lo 0))
+			     (> y-ihi #x7ff00000)
+			     (and (= y-ihi #x7ff00000) (/= y-lo 0)))
+		     (return-from real-expt (coerce (+ x y) rtype)))
+		   (let ((yisint (if (< x-hi 0) (isint y-ihi y-lo) 0)))
+		     (declare (type fixnum yisint))
+		     ;; special value of y
+		     (when (and (zerop y-lo) (= y-ihi #x7ff00000))
+		       ;; y is +-inf
+		       (return-from real-expt
+			 (cond ((and (= x-ihi #x3ff00000) (zerop x-lo))
+				;; +-1**inf is NaN
+				(coerce (- y y) rtype))
+			       ((>= x-ihi #x3ff00000)
+				;; (|x|>1)**+-inf = inf,0
+				(if (>= y-hi 0)
+				    (coerce y rtype)
+				    (coerce 0 rtype)))
+			       (t
+				;; (|x|<1)**-,+inf = inf,0
+				(if (< y-hi 0)
+				    (coerce (- y) rtype)
+				    (coerce 0 rtype))))))
+
+		     (let ((abs-x (abs x)))
+		       (declare (double-float abs-x))
+		       ;; special value of x
+		       (when (and (zerop x-lo)
+				  (or (= x-ihi #x7ff00000) (zerop x-ihi)
+				      (= x-ihi #x3ff00000)))
+			 ;; x is +-0,+-inf,+-1
+			 (let ((z (if (< y-hi 0)
+				      (/ 1 abs-x)	; z = (1/|x|)
+				      abs-x)))
+			   (declare (double-float z))
+			   (when (< x-hi 0)
+			     (cond ((and (= x-ihi #x3ff00000) (zerop yisint))
+				    ;; (-1)**non-int
+				    (let ((y*pi (* y pi)))
+				      (declare (double-float y*pi))
+				      (return-from real-expt
+				        (complex
+					 (coerce (%cos y*pi) rtype)
+					 (coerce (%sin y*pi) rtype)))))
+				   ((= yisint 1)
+				    ;; (x<0)**odd = -(|x|**odd)
+				    (setq z (- z)))))
+			   (return-from real-expt (coerce z rtype))))
+		       
+		       (if (>= x-hi 0)
+			   ;; x>0
+			   (coerce (kernel::%pow x y) rtype)
+			   ;; x<0
+			   (let ((pow (kernel::%pow abs-x y)))
+			     (declare (double-float pow))
+			     (case yisint
+			       (1 ; Odd
+				(coerce (* -1d0 pow) rtype))
+			       (2 ; Even
+				(coerce pow rtype))
+			       (t ; Non-integer
+				(let ((y*pi (* y pi)))
+				  (declare (double-float y*pi))
+				  (complex
+				   (coerce (* pow (%cos y*pi)) rtype)
+				   (coerce (* pow (%sin y*pi)) rtype)))))))))))))
+      (declare (inline real-expt))
+      (number-dispatch ((base number) (power number))
+        (((foreach fixnum (or bignum ratio) (complex rational)) integer)
+	 (intexp base power))
+	(((foreach single-float double-float) rational)
+	 (real-expt base power '(dispatch-type base)))
+	(((foreach fixnum (or bignum ratio) single-float)
+	  (foreach ratio single-float))
+	 (real-expt base power 'single-float))
+	(((foreach fixnum (or bignum ratio) single-float double-float)
+	  double-float)
+	 (real-expt base power 'double-float))
+	((double-float single-float)
+	 (real-expt base power 'double-float))
+	(((foreach (complex rational) (complex float)) rational)
+	 (* (expt (abs base) power)
+	    (cis (* power (phase base)))))
+	(((foreach fixnum (or bignum ratio) single-float double-float)
+	  complex)
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (log base)))))
+	(((foreach (complex float) (complex rational))
+	  (foreach complex double-float single-float))
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (log base)))))))))
 
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
@@ -269,16 +379,7 @@
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float)) 'single-float)))
     (((foreach single-float double-float))
-     ;; NOTE there is a problem with (at least x86 NPX) of what result
-     ;; should be returned for (sqrt -0.0). The x86 hardware FSQRT
-     ;; instruction returns -0d0. The result is that Python will perhaps
-     ;; note the following test in generic sqrt, non-negatively constrained
-     ;; float types will be passed to FSQRT (or libm on other boxes).
-     ;; So, in the interest of consistency of compiled and interpreted
-     ;; codes, the following test is disabled for now. Maybe the float-sign
-     ;; test could be moved to the optimization codes.
-     (if (< (#+nil float-sign #-nil identity number)
-	    (coerce 0 '(dispatch-type number)))
+     (if (minusp number)
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float))
 		 '(dispatch-type number))))
@@ -651,7 +752,7 @@ For the special cases, the following values are used:
    0              -infinity
 "
   (declare (type double-float x))
-  (cond ((float-trapping-nan-p x)
+  (cond ((float-nan-p x)
 	 x)
 	((float-infinity-p x)
 	 #.ext:double-float-positive-infinity)
@@ -703,7 +804,7 @@ and Y are coerced to single-float."
     ;; signal would have been raised.
     (with-float-traps-masked (:underflow :overflow)
       (setf rho (+ (square x) (square y)))
-      (cond ((and (or (float-trapping-nan-p rho)
+      (cond ((and (or (float-nan-p rho)
 		      (float-infinity-p rho))
 		  (or (float-infinity-p (abs x))
 		      (float-infinity-p (abs y))))
@@ -737,7 +838,7 @@ Z may be any number, but the result is always a complex."
 	  (nu 0d0))
       (declare (double-float x y eta nu))
 
-      (if (not (float-trapping-nan-p x))
+      (if (not (float-nan-p x))
 	  (setf rho (+ (scalb (abs x) (- k)) (sqrt rho))))
 
       (cond ((oddp k)

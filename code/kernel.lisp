@@ -5,11 +5,10 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.11 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.11.2.1 1998/06/23 11:22:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.11 1994/10/31 04:11:27 ram Exp $
 ;;;    
 (in-package "KERNEL")
 
@@ -139,6 +138,17 @@
 
 (defun make-single-float (x) (make-single-float x))
 (defun make-double-float (hi lo) (make-double-float hi lo))
+#+long-float
+(defun make-long-float (exp hi #+sparc mid lo)
+  (make-long-float exp hi #+sparc mid lo))
 (defun single-float-bits (x) (single-float-bits x))
 (defun double-float-high-bits (x) (double-float-high-bits x))
 (defun double-float-low-bits (x) (double-float-low-bits x))
+#+long-float
+(defun long-float-exp-bits (x) (long-float-exp-bits x))
+#+long-float
+(defun long-float-high-bits (x) (long-float-high-bits x))
+#+(and long-float sparc)
+(defun long-float-mid-bits (x) (long-float-mid-bits x))
+#+long-float
+(defun long-float-low-bits (x) (long-float-low-bits x))

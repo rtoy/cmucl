@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/call.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/call.lisp,v 1.2.2.1 1998/06/23 11:23:13 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,7 +170,8 @@
 
 
 (define-vop (xep-allocate-frame)
-  (:info start-lab)
+  (:info start-lab copy-more-arg-follows)
+  (:ignore copy-more-arg-follows)
   (:vop-var vop)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 1

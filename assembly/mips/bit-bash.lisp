@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.14 1994/10/31 04:56:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.14.2.1 1998/06/23 11:21:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.14 1994/10/31 04:56:40 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.14.2.1 1998/06/23 11:21:15 pw Exp $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
@@ -52,6 +52,7 @@
      (inst bne src dst copy-left)
      (inst sltu ntemp1 src-bit-offset dst-bit-offset)
      (inst bne ntemp1 copy-right)
+     (inst nop)
      (inst beq src-bit-offset dst-bit-offset done)
      (inst nop)
 

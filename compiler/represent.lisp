@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.34 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.34.2.1 1998/06/23 11:23:04 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -304,18 +304,20 @@
 
 ;;; SELECT-TN-REPRESENTATION  --  Internal
 ;;;
-;;;    Return the best representation for a normal TN.  SCs is a list of the SC
-;;; numbers of the SCs to select from.  Costs is a scratch vector.
+;;;    Return the best representation for a normal TN.  SCs is a list
+;;; of the SC numbers of the SCs to select from.  Costs is a scratch
+;;; vector.
 ;;;
-;;;    What we do is sum the costs for each reference to TN in each of the
-;;; SCs, and then return the SC having the lowest cost.
+;;;    What we do is sum the costs for each reference to TN in each of
+;;; the SCs, and then return the SC having the lowest cost. A second
+;;; value is returned which is true when the selection is unique which
+;;; is often not the case for the MOVE VOP.
 ;;;
 (defun select-tn-representation (tn scs costs)
   (declare (type tn tn) (type sc-vector costs)
 	   (inline add-representation-costs))
   (dolist (scn scs)
     (setf (svref costs scn) 0))
-  
   
   (add-representation-costs (tn-reads tn) scs costs
 			    #'vop-args #'vop-info-arg-costs
@@ -327,14 +329,17 @@
 			    t)
   
   (let ((min most-positive-fixnum)
-	(min-scn nil))
+	(min-scn nil)
+	(unique nil))
     (dolist (scn scs)
       (let ((cost (svref costs scn)))
-	(when (< cost min)
-	  (setq min cost)
-	  (setq min-scn scn))))
-    
-    (svref (backend-sc-numbers *backend*) min-scn)))
+	(cond ((= cost min)
+	       (setf unique nil))
+	      ((< cost min)
+	       (setq min cost)
+	       (setq min-scn scn)
+	       (setq unique t)))))
+    (values (svref (backend-sc-numbers *backend*) min-scn) unique)))
 
 (declaim (end-block))
 
@@ -472,6 +477,10 @@
 ;;; VOP will accept.  We pick any acceptable coerce VOP, since it practice it
 ;;; seems uninteresting to have more than one applicable.
 ;;;
+;;;    On the X86 port, stack SCs may be placed in the list of operand
+;;; preferred SCs, and to prevent these stack SCs being selected when
+;;; a register SC is available the non-stack SCs are searched first.
+;;;
 ;;;    What we do is look at each SC allowed by both the operand restriction
 ;;; and the operand primitive-type, and see if there is a move VOP which moves
 ;;; between the operand's SC and load SC.  If we find such a VOP, then we make
@@ -492,24 +501,39 @@
 	 (vop (tn-ref-vop op))
 	 (node (vop-node vop))
 	 (block (vop-block vop)))
-    (dotimes (i sc-number-limit (bad-coerce-error op))
-      (let ((i-sc (svref (backend-sc-numbers *backend*) i)))
-	(when (and (eq (svref scs i) t)
-		   (sc-allowed-by-primitive-type i-sc ptype))
-	  (let ((res (find-move-vop op-tn write-p i-sc ptype #'sc-move-vops)))
-	    (when res
-	      (when (>= (vop-info-cost res) *efficiency-note-cost-threshold*)
-		(do-coerce-efficiency-note res op dest-tn))
-	      (let ((temp (make-representation-tn ptype i)))
-		(change-tn-ref-tn op temp)
-		(cond
-		 ((not write-p)
-		  (emit-move-template node block res op-tn temp before))
-		 ((and (null (tn-reads op-tn))
-		       (eq (tn-kind op-tn) :normal)))
-		 (t
-		  (emit-move-template node block res temp op-tn before))))
-	      (return))))))))
+    (flet ((check-sc (scn sc)
+	     (when (sc-allowed-by-primitive-type sc ptype)
+	       (let ((res (find-move-vop op-tn write-p sc ptype
+					 #'sc-move-vops)))
+		 (when res
+		   (when (>= (vop-info-cost res)
+			     *efficiency-note-cost-threshold*)
+		     (do-coerce-efficiency-note res op dest-tn))
+		   (let ((temp (make-representation-tn ptype scn)))
+		     (change-tn-ref-tn op temp)
+		     (cond
+		       ((not write-p)
+			(emit-move-template node block res op-tn temp before))
+		       ((and (null (tn-reads op-tn))
+			     (eq (tn-kind op-tn) :normal)))
+		       (t
+			(emit-move-template node block res temp op-tn
+					    before))))
+		   t)))))
+      ;; Search the non-stack load SCs first.
+      (dotimes (scn sc-number-limit)
+	(let ((sc (svref (backend-sc-numbers *backend*) scn)))
+	  (when (and (eq (svref scs scn) t)
+		     (not (eq (sb-kind (sc-sb sc)) :unbounded))
+		     (check-sc scn sc))
+	    (return-from emit-coerce-vop))))
+      ;; Search the stack SCs if the above failed.
+      (dotimes (scn sc-number-limit (bad-coerce-error op))
+	(let ((sc (svref (backend-sc-numbers *backend*) scn)))
+	  (when (and (eq (svref scs scn) t)
+		     (eq (sb-kind (sc-sb sc)) :unbounded)
+		     (check-sc scn sc))
+	    (return)))))))
 
 
 ;;; COERCE-SOME-OPERANDS  --  Internal
@@ -688,7 +712,23 @@
 (defun select-representations (component)
   (let ((costs (make-array sc-number-limit))
 	(2comp (component-info component)))
-	        
+
+    ;; First pass; only allocate SCs where there is a distinct choice.
+    (do ((tn (ir2-component-normal-tns 2comp)
+	     (tn-next tn)))
+	((null tn))
+      (assert (tn-primitive-type tn))
+      (unless (tn-sc tn)
+	(let* ((scs (primitive-type-scs (tn-primitive-type tn))))
+	  (cond ((rest scs)
+		 (multiple-value-bind (sc unique)
+		    (select-tn-representation tn scs costs)
+		    (when unique
+			  (setf (tn-sc tn) sc))))
+		(t
+		 (setf (tn-sc tn) 
+		       (svref (backend-sc-numbers *backend*) (first scs))))))))
+
     (do ((tn (ir2-component-normal-tns 2comp)
 	     (tn-next tn)))
 	((null tn))

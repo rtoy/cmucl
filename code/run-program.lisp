@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.22 1997/03/13 22:19:02 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.22.2.1 1998/06/23 11:22:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -276,6 +276,7 @@
 					   #o666)))
 	    (when slave-fd
 	      ; Maybe put a vhangup here?
+              #-glibc2
 	      (alien:with-alien ((stuff (alien:struct unix:sgttyb)))
 		(let ((sap (alien:alien-sap stuff)))
 		  (unix:unix-ioctl slave-fd unix:TIOCGETP sap)
@@ -309,6 +310,7 @@
 	   (slave-fd (unix:unix-open slave-name unix:o_rdwr #o666)))
       (when slave-fd
 	; Maybe put a vhangup here?
+        #-glibc2
 	(alien:with-alien ((stuff (alien:struct unix:sgttyb)))
           (let ((sap (alien:alien-sap stuff)))
 	    (unix:unix-ioctl slave-fd unix:TIOCGETP sap)

@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11 1997/01/21 00:28:13 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11.2.1 1998/06/23 11:25:02 pw Exp $
  *
  */
 
@@ -25,6 +25,9 @@
 #include "gc.h"
 #include "monitor.h"
 #include "validate.h"
+#if defined GENCGC
+#include "gencgc.h"
+#endif
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
@@ -171,6 +174,10 @@ void main(int argc, char *argv[], char *envp[])
 
     initial_function = load_core_file(core);
 
+
+#if defined GENCGC
+    gencgc_pickup_dynamic();
+#else
 #if defined WANT_CGC && defined X86_CGC_ACTIVE_P
     {
       extern int use_cgc_p;
@@ -179,12 +186,13 @@ void main(int argc, char *argv[], char *envp[])
 	use_cgc_p = 1;		/* enable allocator */
     }
 #endif
+#endif
 
 #ifdef BINDING_STACK_POINTER
     SetSymbolValue(BINDING_STACK_POINTER, (lispobj)binding_stack);
 #endif
 #if defined INTERNAL_GC_TRIGGER && !defined i386
-    SetSymbolValue(INTERNAL_GC_TRIGGER, fixnum(-1));
+    SetSymbolValue(INTERNAL_GC_TRIGGER, make_fixnum(-1));
 #endif
 
     interrupt_init();
@@ -192,15 +200,15 @@ void main(int argc, char *argv[], char *envp[])
     arch_install_interrupt_handlers();
     os_install_interrupt_handlers();
 
+#ifdef PSEUDO_ATOMIC_ATOMIC
+    /* Turn on pseudo atomic for when we call into lisp. */
+    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(1));
+    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0));
+#endif
+
     /* Convert the argv and envp to something Lisp can grok. */
     SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
-
-#ifdef PSEUDO_ATOMIC_ATOMIC
-    /* Turn on pseudo atomic for when we call into lisp. */
-    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, fixnum(1));
-    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, fixnum(0));
-#endif
 
     /* Pick off sigint until the lisp system gets far enough along to */
     /* install it's own. */

@@ -316,7 +316,7 @@
 (defun with-buffer-request-and-reply-function
        (display multiple-reply request-function reply-function)
   (declare (type display display)
-	   (type boolean multiple-reply))
+	   (type generalized-boolean multiple-reply))
   (declare (type function request-function reply-function)
 	   #+clx-ansi-common-lisp
 	   (dynamic-extent request-function reply-function)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/debug.lisp,v 1.1 1997/01/18 14:31:21 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/debug.lisp,v 1.1.2.1 1998/06/23 11:24:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,12 +16,10 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Debugged by Douglas Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;; 
 (in-package :x86)
 
-(defknown di::stack-ref (system-area-pointer index)
-  #-x86 t #+x86 (unsigned-byte 32) (flushable))
 (define-vop (debug-cur-sp)
   (:translate current-sp)
   (:policy :fast-safe)
@@ -38,34 +36,18 @@
   (:generator 1
     (move res ebp-tn)))
 
-#+nil
+;;; Stack-ref and %set-stack-ref can be used to read and store
+;;; descriptor objects on the control stack.  Use the sap-ref
+;;; functions to access other data types.
 (define-vop (read-control-stack)
-  (:translate kernel:stack-ref)
+  (:translate stack-ref)
   (:policy :fast-safe)
-  (:args (sap :scs (sap-reg) :to (:argument 1))
-	 (offset :scs (any-reg) :to (:argument 0) :target temp))
-  (:arg-types system-area-pointer tagged-num)
-  (:temporary (:sc dword-reg :from (:argument 0)) temp)
-  (:results (result :scs (descriptor-reg)))
-  (:result-types *)
-  (:generator 9
-    (move temp offset)
-    (inst neg temp)
-    (inst sub temp (fixnum 1))
-    (inst mov result (make-ea :dword :base sap :index temp))))
-
-;;; Unlike the RISC implementations, the control stack also is a number
-;;; stack and not just descriptors live there.
-
-(define-vop (read-control-stack)
-  (:translate kernel:stack-ref)
-  (:policy :fast-safe)
-  (:args (sap :scs (sap-reg) :to :eval)	; NOTE lifetime stuff IMPORTANT (why?)
+  (:args (sap :scs (sap-reg) :to :eval)
 	 (offset :scs (any-reg) :target temp))
   (:arg-types system-area-pointer positive-fixnum)
-  (:temporary (:sc dword-reg :from (:argument 1)) temp)
-  (:results (result :scs (unsigned-reg)))
-  (:result-types unsigned-num)
+  (:temporary (:sc unsigned-reg :from (:argument 1)) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:result-types *)
   (:generator 9
     (move temp offset)
     (inst neg temp)
@@ -73,13 +55,13 @@
 	  (make-ea :dword :base sap :disp (- word-bytes) :index temp))))
 
 (define-vop (read-control-stack-c)
-  (:translate kernel:stack-ref)
+  (:translate stack-ref)
   (:policy :fast-safe)
   (:args (sap :scs (sap-reg)))
   (:info index)
-  (:arg-types system-area-pointer (:constant (signed-byte 32)))
-  (:results (result :scs (unsigned-reg)))
-  (:result-types unsigned-num)
+  (:arg-types system-area-pointer (:constant (signed-byte 30)))
+  (:results (result :scs (descriptor-reg)))
+  (:result-types *)
   (:generator 5
     (inst mov result (make-ea :dword :base sap
 			      :disp (- (* (1+ index) word-bytes))))))
@@ -91,7 +73,7 @@
 	 (offset :scs (any-reg) :target temp)
 	 (value :scs (descriptor-reg) :to :result :target result))
   (:arg-types system-area-pointer positive-fixnum *)
-  (:temporary (:sc dword-reg :from (:argument 1) :to :result) temp)
+  (:temporary (:sc unsigned-reg :from (:argument 1) :to :result) temp)
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 9
@@ -120,7 +102,7 @@
   (:policy :fast-safe)
   (:args (thing :scs (descriptor-reg)))
   (:results (code :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) temp)
+  (:temporary (:sc unsigned-reg) temp)
   (:variant-vars lowtag)
   (:generator 5
     (let ((bogus (gen-label))
@@ -161,7 +143,7 @@
 (define-vop (get-lisp-obj-address)
   (:policy :fast-safe)
   (:translate di::get-lisp-obj-address)
-  (:args (thing :scs (descriptor-reg descriptor-stack) :target result))
+  (:args (thing :scs (descriptor-reg control-stack) :target result))
   (:results (result :scs (unsigned-reg)
 		    :load-if (not (and (sc-is thing descriptor-reg)
 				       (sc-is result unsigned-stack)))))

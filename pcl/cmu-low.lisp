@@ -75,10 +75,9 @@
 	       (kernel:byte-closure
 		(set-function-name (kernel:byte-closure-function fcn) new-name))
 	       (kernel:byte-function
-		(setf (kernel:byte-function-name fcn) new-name))))
-         fcn)
-        ((eval:interpreted-function-p fcn)
-         (setf (eval:interpreted-function-name fcn) new-name)
+		(setf (kernel:byte-function-name fcn) new-name))
+	       (eval:interpreted-function
+		(setf (eval:interpreted-function-name fcn) new-name))))
          fcn)
         (t
 	 ;; pw-- This seems wrong and causes trouble. Tests show
@@ -128,8 +127,32 @@
 ;;;
 (defmacro std-instance-p (x)
   `(kernel:%instancep ,x))
-(defmacro pcl-instance-p (x)
-  `(typep (kernel:layout-of ,x) 'wrapper))
+
+;;; PCL-INSTANCE-P is implemented via a compiler transform so that the
+;;; test can be optimised away when the result is known, such as is
+;;; typically the case during slot access within methods, see
+;;; get-slots-or-nil below.
+
+(in-package "C")
+
+(defknown pcl::pcl-instance-p (t) boolean
+  (movable foldable flushable explicit-check))
+
+(deftransform pcl::pcl-instance-p ((object))
+  (let* ((otype (continuation-type object))
+	 (std-obj (specifier-type 'pcl::std-object)))
+    (cond
+      ;; Flush tests whose result is known at compile time.
+      ((csubtypep otype std-obj) 't)
+      ((not (types-intersect otype std-obj)) 'nil)
+      (t
+       `(typep (kernel:layout-of object) 'pcl::wrapper)))))
+
+(in-package "PCL")
+
+;;; Definition for interpreted code.
+(defun pcl-instance-p (x)
+  (typep (kernel:layout-of x) 'wrapper))
 
 
 ;;; We define this as STANDARD-INSTANCE, since we're going to clobber the

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.3.2.1 1997/09/15 10:44:40 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.3.2.2 1998/06/23 11:21:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,12 +37,11 @@
 
 			     (:res res (descriptor-reg any-reg) edx-offset)
 
-			     (:temp eax dword-reg eax-offset)
-			     (:temp ebx dword-reg ebx-offset)
-			     (:temp ecx dword-reg ecx-offset))
-    ;; for now, pass this off
-    ;; (inst jmp DO-STATIC-FUN)
-    ;; ebx ; ignorable
+			     (:temp eax unsigned-reg eax-offset)
+			     (:temp ebx unsigned-reg ebx-offset)
+			     (:temp ecx unsigned-reg ecx-offset))
+    (declare (ignorable ebx))
+
     (inst test x 3)			; fixnum?
     (inst jmp :nz DO-STATIC-FUN)	; no - do generic
     (inst test y 3)			; fixnum?
@@ -52,16 +51,12 @@
     (inst pop eax)
     (inst push ebp-tn)
     (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-    (inst sub esp-tn (fixnum 3))	; pw -- was 2
+    (inst sub esp-tn (fixnum 2))
     (inst push eax)			; callers return addr
     (inst mov ecx (fixnum 2))		; arg count
-
-    (inst mov ebx
-	  (make-ea :dword
-		   :disp (+ nil-value (static-function-offset
-				       ',(symbolicate "TWO-ARG-" fun)))))
-    
-    (inst jmp ebx)
+    (inst jmp (make-ea :dword
+	       	       :disp (+ nil-value (static-function-offset
+					   ',(symbolicate "TWO-ARG-" fun)))))
     
     DO-BODY
     ,@body))
@@ -78,9 +73,8 @@
 
   (move ecx res)
 
-  (with-fixed-allocation (res ebx bignum-type (1+ bignum-digits-offset))
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset))
     (storew ecx res bignum-digits-offset other-pointer-type))
-
   
   OKAY)
 
@@ -99,7 +93,7 @@
   
   (move ecx res)
   
-  (with-fixed-allocation (res ebx bignum-type (1+ bignum-digits-offset))
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset))
     (storew ecx res bignum-digits-offset other-pointer-type))
   OKAY)
 
@@ -120,14 +114,14 @@
   (inst cmp x ecx)
   (inst jmp :e SINGLE-WORD-BIGNUM)
 
-  (with-fixed-allocation (res ebx bignum-type (+ bignum-digits-offset 2))
+  (with-fixed-allocation (res bignum-type (+ bignum-digits-offset 2))
     (storew eax res bignum-digits-offset other-pointer-type)
     (storew ecx res (1+ bignum-digits-offset) other-pointer-type))
   (inst jmp DONE)
 
   SINGLE-WORD-BIGNUM
   
-  (with-fixed-allocation (res ebx bignum-type (1+ bignum-digits-offset))
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset))
     (storew eax res bignum-digits-offset other-pointer-type))
   (inst jmp DONE)
 
@@ -144,22 +138,19 @@
 			 ((:arg x (descriptor-reg any-reg) edx-offset)
 			  (:res res (descriptor-reg any-reg) edx-offset)
 
-			  (:temp eax dword-reg eax-offset)
-			  (:temp ecx dword-reg ecx-offset))
+			  (:temp eax unsigned-reg eax-offset)
+			  (:temp ecx unsigned-reg ecx-offset))
   (inst test x 3)
   (inst jmp :z FIXNUM)
 
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 3))		; pw -- was 2
+  (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 1))		; arg count
-
-  (inst mov eax
-	(make-ea :dword
-		 :disp (+ nil-value (static-function-offset '%negate))))
-  (inst jmp eax)
+  (inst jmp (make-ea :dword
+		     :disp (+ nil-value (static-function-offset '%negate))))
   
   FIXNUM
   (move res x)
@@ -168,9 +159,8 @@
   (inst shr res 2)			; sign bit is data - remove type bits
   (move ecx res)
 
-  (with-fixed-allocation (res eax bignum-type (1+ bignum-digits-offset))
+  (with-fixed-allocation (res bignum-type (1+ bignum-digits-offset))
     (storew ecx res bignum-digits-offset other-pointer-type))
-
   
   OKAY)
 
@@ -192,8 +182,8 @@
 			     
 			     (:res res descriptor-reg edx-offset)
 
-			     (:temp eax dword-reg eax-offset)
-			     (:temp ecx dword-reg ecx-offset))
+			     (:temp eax unsigned-reg eax-offset)
+			     (:temp ecx unsigned-reg ecx-offset))
     (inst test x 3)
     (inst jmp :nz DO-STATIC-FN)
     (inst test y 3)
@@ -203,25 +193,23 @@
     (inst pop eax)
     (inst push ebp-tn)
     (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-    (inst sub esp-tn (fixnum 3))	; pw -- was 2
+    (inst sub esp-tn (fixnum 2))
     (inst push eax)
     (inst mov ecx (fixnum 2))
-
-    (inst mov eax (make-ea :dword
-			   :disp (+ nil-value
-				    (static-function-offset ',static-fn))))
+    (inst jmp (make-ea :dword
+	       	       :disp (+ nil-value
+				(static-function-offset ',static-fn))))
+    
+    DO-COMPARE
+    (inst cmp x y)
+    (inst jmp ,test TRUE)
+    (inst mov res nil-value)
+    (inst pop eax)
+    (inst add eax 2)
     (inst jmp eax)
     
-     DO-COMPARE
-     (inst cmp x y)
-     (inst jmp ,test TRUE)
-     (inst mov res nil-value)
-     (inst pop eax)
-     (inst add eax 2)
-     (inst jmp eax)
-
-     TRUE
-     (load-symbol res t)))
+    TRUE
+    (load-symbol res t)))
 
 ); eval-when
 
@@ -239,8 +227,8 @@
 			  
 			  (:res res descriptor-reg edx-offset)
 			  
-			  (:temp eax dword-reg eax-offset)
-			  (:temp ecx dword-reg ecx-offset))
+			  (:temp eax unsigned-reg eax-offset)
+			  (:temp ecx unsigned-reg ecx-offset))
   (inst cmp x y)
   (inst jmp :e RETURN-T)
   (inst test x 3)
@@ -258,13 +246,11 @@
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 3))		; pw -- was 2
+  (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 2))
-
-  (inst mov eax (make-ea :dword
-			 :disp (+ nil-value (static-function-offset 'eql))))
-  (inst jmp eax)
+  (inst jmp (make-ea :dword
+		     :disp (+ nil-value (static-function-offset 'eql))))
   
   RETURN-T
   (load-symbol res t))
@@ -280,8 +266,8 @@
 			  
 			  (:res res descriptor-reg edx-offset)
 			  
-			  (:temp eax dword-reg eax-offset)
-			  (:temp ecx dword-reg ecx-offset)
+			  (:temp eax unsigned-reg eax-offset)
+			  (:temp ecx unsigned-reg ecx-offset)
 			  )
   (inst test x 3)			; descriptor?
   (inst jmp :nz DO-STATIC-FN)		; yes do it here
@@ -299,14 +285,129 @@
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 3))		; pw -- was 2
+  (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 2))
-
-  (inst mov eax (make-ea :dword
-		 :disp (+ nil-value (static-function-offset 'two-arg-=))))
-  (inst jmp eax)
+  (inst jmp (make-ea :dword
+		     :disp (+ nil-value (static-function-offset 'two-arg-=))))
   
   RETURN-T
   (load-symbol res t))
 
+
+;;; Support for the Mersenne Twister, MT19937, random number generator
+;;; due to Matsumoto and Nishimura.
+;;;
+;;; Makoto Matsumoto and T. Nishimura, "Mersenne twister: A
+;;; 623-dimensionally equidistributed uniform pseudorandom number
+;;; generator.", ACM Transactions on Modeling and Computer Simulation,
+;;; 1997, to appear.
+;;;
+;;; State:
+;;;  0-1:   Constant matrix A. [0, #x9908b0df] (not used here)
+;;;  2:     Index; init. to 1.
+;;;  3-626: State.
+;;;
+
+;;; This assembly routine is called from the inline VOP and updates
+;;; the state vector with new random numbers. The state vector is
+;;; passed in the EAX register.
+;;;
+#+assembler ; we don't want a vop for this one.
+(define-assembly-routine
+    (random-mt19937-update)
+    ((:temp state unsigned-reg eax-offset)
+     (:temp k unsigned-reg ebx-offset)
+     (:temp y unsigned-reg ecx-offset)
+     (:temp tmp unsigned-reg edx-offset))
+
+  ;; Save the temporary registers.
+  (inst push k)
+  (inst push y)
+  (inst push tmp)
+
+  ;; Generate a new set of results.
+  (inst xor k k)
+  LOOP1
+  (inst mov y (make-ea :dword :base state :index k :scale 4
+		       :disp (- (* (+ 3 vm:vector-data-offset) vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov tmp (make-ea :dword :base state :index k :scale 4
+			 :disp (- (* (+ 1 3 vm:vector-data-offset)
+				     vm:word-bytes)
+				  vm:other-pointer-type)))
+  (inst and y #x80000000)
+  (inst and tmp #x7fffffff)
+  (inst or y tmp)
+  (inst shr y 1)
+  (inst jmp :nc skip1)
+  (inst xor y #x9908b0df)
+  SKIP1
+  (inst xor y (make-ea :dword :base state :index k :scale 4
+		       :disp (- (* (+ 397 3 vm:vector-data-offset)
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov (make-ea :dword :base state :index k :scale 4
+		     :disp (- (* (+ 3 vm:vector-data-offset) vm:word-bytes)
+			      vm:other-pointer-type))
+	y)
+  (inst inc k)
+  (inst cmp k (- 624 397))
+  (inst jmp :b loop1)
+  LOOP2
+  (inst mov y (make-ea :dword :base state :index k :scale 4
+		       :disp (- (* (+ 3 vm:vector-data-offset) vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov tmp (make-ea :dword :base state :index k :scale 4
+			 :disp (- (* (+ 1 3 vm:vector-data-offset)
+				     vm:word-bytes)
+				  vm:other-pointer-type)))
+  (inst and y #x80000000)
+  (inst and tmp #x7fffffff)
+  (inst or y tmp)
+  (inst shr y 1)
+  (inst jmp :nc skip2)
+  (inst xor y #x9908b0df)
+  SKIP2
+  (inst xor y (make-ea :dword :base state :index k :scale 4
+		       :disp (- (* (+ (- 397 624) 3 vm:vector-data-offset)
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov (make-ea :dword :base state :index k :scale 4
+		     :disp (- (* (+ 3 vm:vector-data-offset) vm:word-bytes)
+			      vm:other-pointer-type))
+	y)
+  (inst inc k)
+  (inst cmp k (- 624 1))
+  (inst jmp :b loop2)
+  
+  (inst mov y (make-ea :dword :base state
+		       :disp (- (* (+ (- 624 1) 3 vm:vector-data-offset)
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov tmp (make-ea :dword :base state
+			 :disp (- (* (+ 0 3 vm:vector-data-offset)
+				     vm:word-bytes)
+				  vm:other-pointer-type)))
+  (inst and y #x80000000)
+  (inst and tmp #x7fffffff)
+  (inst or y tmp)
+  (inst shr y 1)
+  (inst jmp :nc skip3)
+  (inst xor y #x9908b0df)
+  SKIP3
+  (inst xor y (make-ea :dword :base state
+		       :disp (- (* (+ (- 397 1) 3 vm:vector-data-offset)
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov (make-ea :dword :base state
+		     :disp (- (* (+ (- 624 1) 3 vm:vector-data-offset)
+				 vm:word-bytes)
+			      vm:other-pointer-type))
+	y)
+
+  ;; Restore the temporary registers and return.
+  (inst pop tmp)
+  (inst pop y)
+  (inst pop k)
+  (inst ret))

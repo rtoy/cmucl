@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.25 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.25.2.1 1998/06/23 11:22:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1694,7 +1694,13 @@
 		      (eq (byte-block-info-block next) first-succ)
 		      (eq (component-tail component) first-succ)
 		      (and (basic-combination-p last)
-			   (node-tail-p last)))
+			   (node-tail-p last)
+			   ;; Tail local calls that have been
+			   ;; converted to an assignment need the branch.
+			   (not (and (eq (basic-combination-kind last) :local)
+				     (member (functional-kind
+					      (combination-lambda last))
+					     '(:let :assignment))))))
 	    (output-branch segment
 			   byte-branch-always
 			   (byte-block-info-label

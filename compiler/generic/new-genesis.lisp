@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23 1997/03/15 19:54:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23.2.1 1998/06/23 11:23:21 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -437,7 +437,63 @@
 	 (:big-endian
 	  (write-indexed des vm:double-float-value-slot high-bits)
 	  (write-indexed des (1+ vm:double-float-value-slot) low-bits)))
+       des))
+    #+(and long-float x86)
+    (long-float
+     (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					 (1- vm:long-float-size)
+					 vm:long-float-type))
+	   (exp-bits (make-random-descriptor (long-float-exp-bits num)))
+	   (high-bits (make-random-descriptor (long-float-high-bits num)))
+	   (low-bits (make-random-descriptor (long-float-low-bits num))))
+       (ecase (c:backend-byte-order c:*backend*)
+	 (:little-endian
+	  (write-indexed des vm:long-float-value-slot low-bits)
+	  (write-indexed des (1+ vm:long-float-value-slot) high-bits)
+	  (write-indexed des (+ 2 vm:long-float-value-slot) exp-bits))
+	 (:big-endian
+	  (error "Long-Float not supported")))
        des))))
+
+#+complex-float
+(defun complex-single-float-to-core (num)
+  (declare (type (complex single-float) num))
+  (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
+				      (1- vm:complex-single-float-size)
+				      vm:complex-single-float-type)))
+    (write-indexed des vm:complex-single-float-real-slot
+		   (make-random-descriptor (single-float-bits (realpart num))))
+    (write-indexed des vm:complex-single-float-imag-slot
+		   (make-random-descriptor (single-float-bits (imagpart num))))
+    des))
+
+#+complex-float
+(defun complex-double-float-to-core (num)
+  (declare (type (complex double-float) num))
+  (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
+				      (1- vm:complex-double-float-size)
+				      vm:complex-double-float-type)))
+    (let* ((real (realpart num))
+	   (high-bits (make-random-descriptor (double-float-high-bits real)))
+	   (low-bits (make-random-descriptor (double-float-low-bits real))))
+      (ecase (c:backend-byte-order c:*backend*)
+	(:little-endian
+	 (write-indexed des vm:complex-double-float-real-slot low-bits)
+	 (write-indexed des (1+ vm:complex-double-float-real-slot) high-bits))
+	(:big-endian
+	 (write-indexed des vm:complex-double-float-real-slot high-bits)
+	 (write-indexed des (1+ vm:complex-double-float-real-slot) low-bits))))
+    (let* ((imag (imagpart num))
+	   (high-bits (make-random-descriptor (double-float-high-bits imag)))
+	   (low-bits (make-random-descriptor (double-float-low-bits imag))))
+      (ecase (c:backend-byte-order c:*backend*)
+	(:little-endian
+	 (write-indexed des vm:complex-double-float-imag-slot low-bits)
+	 (write-indexed des (1+ vm:complex-double-float-imag-slot) high-bits))
+	(:big-endian
+	 (write-indexed des vm:complex-double-float-imag-slot high-bits)
+	 (write-indexed des (1+ vm:complex-double-float-imag-slot) low-bits))))
+    des))
 
 (defun number-to-core (number)
   "Copy the given number to the core, or flame out if we can't deal with it."
@@ -448,6 +504,13 @@
     (ratio (number-pair-to-core (number-to-core (numerator number))
 				(number-to-core (denominator number))
 				vm:ratio-type))
+    #+complex-float
+    ((complex single-float) (complex-single-float-to-core number))
+    #+complex-float
+    ((complex double-float) (complex-double-float-to-core number))
+    #+(and complex-float long-float)
+    ((complex long-float)
+     (error "~S isn't a cold-loadable number at all!" number))
     (complex (number-pair-to-core (number-to-core (realpart number))
 				  (number-to-core (imagpart number))
 				  vm:complex-type))
@@ -499,6 +562,10 @@
 		 (or *cold-symbol-allocation-space* *dynamic*)
 		 vm:word-bits (1- vm:symbol-size) vm:symbol-header-type)))
     (write-indexed symbol vm:symbol-value-slot unbound-marker)
+    (when (c:backend-featurep :x86)
+      (write-indexed
+       symbol #+x86 vm:symbol-hash-slot #-x86 vm:symbol-unused-slot
+       (make-fixnum-descriptor (1+ (random vm:target-most-positive-fixnum)))))
     (write-indexed symbol vm:symbol-plist-slot *nil-descriptor*)
     (write-indexed symbol vm:symbol-name-slot (string-to-core name *dynamic*))
     (write-indexed symbol vm:symbol-package-slot *nil-descriptor*)
@@ -706,7 +773,21 @@
       (frob "*FP-CONSTANT-0D0*" "X86" (number-to-core 0d0))
       (frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
       (frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
-      (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0)))))
+      (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
+      #+long-float
+      (when (c:backend-featurep :long-float)
+	(frob "*FP-CONSTANT-0L0*" "X86" (number-to-core 0l0))
+	(frob "*FP-CONSTANT-1L0*" "X86" (number-to-core 1l0))
+	(frob "*FP-CONSTANT-PI*" "X86" (number-to-core pi))
+	(frob "*FP-CONSTANT-L2T*" "X86" (number-to-core (log 10l0 2l0)))
+	(frob "*FP-CONSTANT-L2E*" "X86"
+	      (number-to-core (log 2.718281828459045235360287471352662L0 2l0)))
+	(frob "*FP-CONSTANT-LG2*" "X86" (number-to-core (log 2l0 10l0)))
+	(frob "*FP-CONSTANT-LN2*" "X86"
+	      (number-to-core
+	       (log 2l0 2.718281828459045235360287471352662L0))))
+      (when (c:backend-featurep :gencgc)
+	(frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil))))))
 
 ;;; Make-Make-Package-Args  --  Internal
 ;;;
@@ -1251,6 +1332,11 @@
 		    (* len vm:word-bytes 2)))
     result))
 
+#+long-float (not-cold-fop fop-long-float-vector)
+#+complex-float (not-cold-fop fop-complex-single-float-vector)
+#+complex-float (not-cold-fop fop-complex-double-float-vector)
+#+(and complex-float long-float) (not-cold-fop fop-complex-long-float-vector)
+
 (define-cold-fop (fop-array)
   (let* ((rank (read-arg 4))
 	 (data-vector (pop-stack))
@@ -1294,6 +1380,96 @@
 (cold-number fop-small-integer)
 (cold-number fop-word-integer)
 (cold-number fop-byte-integer)
+#+complex-float (cold-number fop-complex-single-float)
+#+complex-float (cold-number fop-complex-double-float)
+
+#+long-float
+(define-cold-fop (fop-long-float)
+  (ecase (c:backend-fasl-file-implementation c:*backend*)
+    (#.c:x86-fasl-file-implementation		; 80 bit long-float format.
+     (prepare-for-fast-read-byte *fasl-file*
+       (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					    (1- vm:long-float-size)
+					    vm:long-float-type))
+	      (low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (exp-bits (make-random-descriptor (fast-read-s-integer 2))))
+	 (done-with-fast-read-byte)
+	 (write-indexed des vm:long-float-value-slot low-bits)
+	 (write-indexed des (1+ vm:long-float-value-slot) high-bits)
+	 (write-indexed des (+ 2 vm:long-float-value-slot) exp-bits)
+	 des)))
+    (#.c:sparc-fasl-file-implementation		; 128 bit long-float format.
+     (prepare-for-fast-read-byte *fasl-file*
+       (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					    (1- vm:long-float-size)
+					    vm:long-float-type))
+	      (low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (mid-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (exp-bits (make-random-descriptor (fast-read-s-integer 4))))
+	 (done-with-fast-read-byte)
+	 (write-indexed des vm:long-float-value-slot exp-bits)
+	 (write-indexed des (1+ vm:long-float-value-slot) high-bits)
+	 (write-indexed des (+ 2 vm:long-float-value-slot) mid-bits)
+	 (write-indexed des (+ 3 vm:long-float-value-slot) low-bits)
+	 des)))))
+
+#+(and complex-float long-float)
+(define-cold-fop (fop-complex-long-float)
+  (ecase (c:backend-fasl-file-implementation c:*backend*)
+    (#.c:x86-fasl-file-implementation		; 80 bit long-float format.
+     (prepare-for-fast-read-byte *fasl-file*
+       (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					    (1- vm:complex-long-float-size)
+					    vm:complex-long-float-type))
+	      (real-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-exp-bits (make-random-descriptor (fast-read-s-integer 2)))
+	      (imag-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-exp-bits (make-random-descriptor (fast-read-s-integer 2))))
+	 (done-with-fast-read-byte)
+	 (write-indexed des vm:complex-long-float-real-slot real-low-bits)
+	 (write-indexed des (1+ vm:complex-long-float-real-slot)
+			real-high-bits)
+	 (write-indexed des (+ 2 vm:complex-long-float-real-slot)
+			real-exp-bits)
+	 (write-indexed des vm:complex-long-float-imag-slot imag-low-bits)
+	 (write-indexed des (1+ vm:complex-long-float-imag-slot)
+			imag-high-bits)
+	 (write-indexed des (+ 2 vm:complex-long-float-imag-slot)
+			imag-exp-bits)
+	 des)))
+    (#.c:sparc-fasl-file-implementation		; 128 bit long-float format.
+     (prepare-for-fast-read-byte *fasl-file*
+       (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					    (1- vm:complex-long-float-size)
+					    vm:complex-long-float-type))
+	      (real-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-mid-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-exp-bits (make-random-descriptor (fast-read-s-integer 4)))
+	      (imag-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-mid-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-exp-bits (make-random-descriptor (fast-read-s-integer 4))))
+	 (done-with-fast-read-byte)
+	 (write-indexed des vm:complex-long-float-real-slot real-exp-bits)
+	 (write-indexed des (1+ vm:complex-long-float-real-slot)
+			real-high-bits)
+	 (write-indexed des (+ 2 vm:complex-long-float-real-slot)
+			real-mid-bits)
+	 (write-indexed des (+ 3 vm:complex-long-float-real-slot)
+			real-low-bits)
+	 (write-indexed des vm:complex-long-float-real-slot imag-exp-bits)
+	 (write-indexed des (1+ vm:complex-long-float-real-slot)
+			imag-high-bits)
+	 (write-indexed des (+ 2 vm:complex-long-float-real-slot)
+			imag-mid-bits)
+	 (write-indexed des (+ 3 vm:complex-long-float-real-slot)
+			imag-low-bits)
+	 des)))))
 
 (define-cold-fop (fop-ratio)
   (let ((den (pop-stack)))
@@ -1434,9 +1610,9 @@
 	     ;; the code vector will be properly aligned.
 	     (round-up raw-header-size 2))
 	    (des (allocate-descriptor
-		  (if (c:backend-featurep :x86)
+		  (if (and (c:backend-featurep :x86) (c:backend-featurep :cgc))
 		      *static*
-		    *dynamic*)
+		      *dynamic*)
 		  (+ (ash header-size vm:word-shift) size)
 		  vm:other-pointer-type)))
        (write-memory des
@@ -1516,8 +1692,9 @@
 	 (len (read-arg 1))
 	 (sym (make-string len)))
     (read-n-bytes *fasl-file* sym 0 len)
-    (let ((offset (calc-offset code-object (read-arg 4))))
-      (do-cold-fixup code-object offset (lookup-foreign-symbol sym) kind))
+    (let ((offset (read-arg 4))
+	  (value (lookup-foreign-symbol sym)))
+      (do-cold-fixup code-object offset value kind))
     code-object))
 
 (define-cold-fop (fop-assembler-code)
@@ -1558,17 +1735,16 @@
   (let* ((routine (pop-stack))
 	 (kind (pop-stack))
 	 (code-object (pop-stack))
-	 (offset (calc-offset code-object (read-arg 4))))
+	 (offset (read-arg 4)))
     (record-cold-assembler-fixup routine code-object offset kind)
     code-object))
 
 (define-cold-fop (fop-code-object-fixup)
   (let* ((kind (pop-stack))
 	 (code-object (pop-stack))
-	 (offset (calc-offset code-object (read-arg 4))))
-    (do-cold-fixup code-object offset
-		   (descriptor-bits code-object)
-		   kind)
+	 (offset (read-arg 4))
+	 (value (descriptor-bits code-object)))
+    (do-cold-fixup code-object offset value kind)
     code-object))
 
 
@@ -1630,21 +1806,32 @@
       version)))
 
 (defun lookup-foreign-symbol (name)
-  (let ((is-linux (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			   #.c:x86-fasl-file-implementation)
-		       (c:backend-featurep :linux))))
-
+  (let ((linux-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			  #.c:x86-fasl-file-implementation)
+		      (c:backend-featurep :linux)))
+	(freebsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			    #.c:x86-fasl-file-implementation)
+			(c:backend-featurep :freebsd))))
+    
     (cond
-     ((and is-linux (gethash (concatenate 'string "PVE_stub_" name)
-			     *cold-foreign-symbol-table* nil)))
+     ((and freebsd-p (gethash (concatenate 'string "_" name)
+			      *cold-foreign-symbol-table* nil)))
+     ((and linux-p (gethash (concatenate 'string "PVE_stub_" name)
+			    *cold-foreign-symbol-table* nil)))
      ;; Non-linux case
-     ((gethash name *cold-foreign-symbol-table* nil))
-     ((and is-linux (gethash (concatenate 'string "__libc_" name)
-			     *cold-foreign-symbol-table* nil)))
-     ((and is-linux (gethash (concatenate 'string "__" name)
-			     *cold-foreign-symbol-table* nil)))
-     ((and is-linux (gethash (concatenate 'string "_" name)
-			     *cold-foreign-symbol-table* nil)))
+     (#-irix
+      (gethash name *cold-foreign-symbol-table* nil)
+      #+irix
+      (let ((value (gethash name *cold-foreign-symbol-table* nil)))
+        (when (and (numberp value) (zerop value))
+	  (warn "Not-really-defined foreign symbol: ~S" name))
+        value))
+     ((and linux-p (gethash (concatenate 'string "__libc_" name)
+			    *cold-foreign-symbol-table* nil)))
+     ((and linux-p (gethash (concatenate 'string "__" name)
+			    *cold-foreign-symbol-table* nil)))
+     ((and linux-p (gethash (concatenate 'string "_" name)
+			    *cold-foreign-symbol-table* nil)))
      (t
       (warn "Undefined foreign symbol: ~S" name)
       0))))
@@ -1699,8 +1886,44 @@
       (when value
 	(do-cold-fixup (second fixup) (third fixup) value (fourth fixup))))))
 
-(defun do-cold-fixup (code-object offset value kind)
-  (let ((sap (sap+ (descriptor-sap code-object) offset)))
+;;; The x86 port needs to store code fixups along with code objects if
+;;; they are to be moved, so fixups for code objects in the dynamic
+;;; heap need to be noted.
+;;;
+(defvar *load-time-code-fixups* nil)
+
+(defun note-load-time-code-fixup (code-object offset value kind)
+  (assert (c:backend-featurep :x86))
+  (when (= (space-identifier (descriptor-space code-object)) dynamic-space-id)
+    (push (list code-object offset value kind) *load-time-code-fixups*)))
+
+(defun output-load-time-code-fixups ()
+  (dolist (fixups *load-time-code-fixups*)
+    (let ((code-object (first fixups))
+	  (offset (second fixups))
+	  (value (third fixups))
+	  (kind (fourth fixups)))
+      (cold-push (allocate-cons
+		  *dynamic*
+		  (cold-intern :load-time-code-fixup)
+		  (allocate-cons
+		   *dynamic*
+		   code-object
+		   (allocate-cons
+		    *dynamic*
+		    (number-to-core offset)
+		    (allocate-cons
+		     *dynamic*
+		     (number-to-core value)
+		     (allocate-cons
+		      *dynamic*
+		      (cold-intern kind)
+		      *nil-descriptor*)))))
+		 *current-init-functions-cons*))))
+
+(defun do-cold-fixup (code-object after-header value kind)
+  (let* ((offset (calc-offset code-object after-header))
+	 (sap (sap+ (descriptor-sap code-object) offset)))
     (ecase (c:backend-fasl-file-implementation c:*backend*)
       (#.c:pmax-fasl-file-implementation
        (ecase kind
@@ -1760,17 +1983,29 @@
 			    (ash (sap-ref-8 sap 1) 8)
 			    (ash (sap-ref-8 sap 2) 16)
 			    (ash (sap-ref-8 sap 3) 24)))
-	      (high (descriptor-high code-object))
-	      (low (descriptor-low code-object))
-	      (value (ecase kind
-		       (:absolute (+ value disp))
-		       (:relative (- (+ value disp vm:other-pointer-type)
-				     (ash high descriptor-low-bits)
-				     low offset 4)))))
-	 (setf (sap-ref-8 sap 0) (ldb (byte 8 0) value))
-	 (setf (sap-ref-8 sap 1) (ldb (byte 8 8) value))
-	 (setf (sap-ref-8 sap 2) (ldb (byte 8 16) value))
-	 (setf (sap-ref-8 sap 3) (ldb (byte 8 24) value))))
+	      (obj-start-addr (logandc2 (descriptor-bits code-object)
+					vm:lowtag-mask)))
+	 (ecase kind
+	   (:absolute
+	    (let ((new-value (+ value disp)))
+	      (setf (sap-ref-8 sap 0) (ldb (byte 8 0) new-value))
+	      (setf (sap-ref-8 sap 1) (ldb (byte 8 8) new-value))
+	      (setf (sap-ref-8 sap 2) (ldb (byte 8 16) new-value))
+	      (setf (sap-ref-8 sap 3) (ldb (byte 8 24) new-value))
+	      ;; Note absolute fixups that point within the object.
+	      (unless (< new-value obj-start-addr)
+		(note-load-time-code-fixup code-object after-header value
+					   kind))))
+	   (:relative
+	    (let ((new-value (- (+ value disp)
+				obj-start-addr offset 4)))
+	      (setf (sap-ref-8 sap 0) (ldb (byte 8 0) new-value))
+	      (setf (sap-ref-8 sap 1) (ldb (byte 8 8) new-value))
+	      (setf (sap-ref-8 sap 2) (ldb (byte 8 16) new-value))
+	      (setf (sap-ref-8 sap 3) (ldb (byte 8 24) new-value))
+	      ;; Note relative fixups that point outside the code object.
+	      (note-load-time-code-fixup code-object after-header value
+					 kind))))))
       (#.c:hppa-fasl-file-implementation
        (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
 	 (setf (sap-ref-32 sap 0)
@@ -1957,7 +2192,7 @@
     (format t "#define ~A LISPOBJ(0x~X)~%"
 	    (nsubstitute #\_ #\-
 			 (remove-if #'(lambda (char)
-					(member char '(#\% #\*)))
+					(member char '(#\% #\* #\.)))
 				    (symbol-name symbol)))
 	    (if *static*
 		;; We actually ran Genesis, use the real value.
@@ -2032,7 +2267,7 @@
   (setq *current-init-functions-cons* *nil-descriptor*)
   (let ((*load-time-value-counter* 0)
 	*static* *dynamic* *read-only* *cold-assembler-routines*
-	*cold-assembler-fixups*)
+	*cold-assembler-fixups* *load-time-code-fixups*)
     (unwind-protect
 	(progn
 	  (clrhash *fdefn-objects*)
@@ -2057,6 +2292,8 @@
 		(cold-load file))
 	      (maybe-gc))
 	    (resolve-assembler-fixups)
+	    (when (c:backend-featurep :x86)
+	      (output-load-time-code-fixups))
 	    (linkage-info-to-core)
 	    (finish-symbols)
 	    (finalize-load-time-value-noise)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.39 1997/04/01 19:23:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.39.2.1 1998/06/23 11:22:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,12 +29,12 @@
 	  functionp compiled-function-p eq eql equal equalp not
 	  type-of upgraded-array-element-type realp
 	  ;; Names of types...
-	  array atom bignum bit bit-vector character common
+	  array atom bignum bit bit-vector character
 	  compiled-function complex cons double-float
 	  fixnum float function integer keyword list long-float nil
 	  null number ratio rational real sequence short-float signed-byte
 	  simple-array simple-bit-vector simple-string simple-vector
-	  single-float standard-char string string-char symbol t
+	  single-float standard-char base-char string symbol t
 	  unsigned-byte vector satisfies))
 
 
@@ -54,6 +54,11 @@
       consp
       compiled-function-p
       complexp
+      #+complex-float complex-double-float-p
+      #+complex-float complex-float-p
+      #+(and complex-float long-float) complex-long-float-p
+      #+complex-float complex-rational-p
+      #+complex-float complex-single-float-p
       double-float-p
       fdefn-p
       fixnump
@@ -95,6 +100,10 @@
       #+signed-array simple-array-signed-byte-32-p
       simple-array-single-float-p
       simple-array-double-float-p
+      #+long-float simple-array-long-float-p
+      #+complex-float simple-array-complex-single-float-p
+      #+complex-float simple-array-complex-double-float-p
+      #+(and complex-float long-float) simple-array-complex-long-float-p
       dylan::dylan-function-p
       )))
 
@@ -122,7 +131,7 @@
 ;;; 
 (defun type-of (object)
   "Return the type of OBJECT."
-  (if (typep object '(or function array))
+  (if (typep object '(or function array #+complex-float complex))
       (type-specifier (ctype-of object))
       (let* ((class (layout-class (layout-of object)))
 	     (name (class-name class)))
@@ -203,6 +212,7 @@
 		 (long-float (typep num 'long-float))
 		 ((nil) (floatp num))))
 	      ((nil) t)))
+	  #-negative-zero-is-not-zero
 	  (flet ((bound-test (val)
 		   (let ((low (numeric-type-low type))
 			 (high (numeric-type-high type)))
@@ -212,6 +222,37 @@
 			  (cond ((null high) t)
 				((listp high) (< val (car high)))
 				(t (<= val high)))))))
+	    (ecase (numeric-type-complexp type)
+	      ((nil) t)
+	      (:complex
+	       (and (complexp object)
+		    (bound-test (realpart object))
+		    (bound-test (imagpart object))))
+	      (:real
+	       (and (not (complexp object))
+		    (bound-test object)))))
+	  #+negative-zero-is-not-zero
+	  (labels ((signed-> (x y)
+		     (if (and (zerop x) (zerop y) (floatp x) (floatp y))
+			 (> (float-sign x) (float-sign y))
+			 (> x y)))
+		   (signed->= (x y)
+		     (if (and (zerop x) (zerop y) (floatp x) (floatp y))
+			 (>= (float-sign x) (float-sign y))
+			 (>= x y)))
+		   (bound-test (val)
+		     (let ((low (numeric-type-low type))
+			   (high (numeric-type-high type)))
+		       (and (cond ((null low) t)
+				  ((listp low)
+				   (signed-> val (car low)))
+				  (t
+				   (signed->= val low)))
+			    (cond ((null high) t)
+				  ((listp high)
+				   (signed-> (car high) val))
+				  (t
+				   (signed->= high val)))))))
 	    (ecase (numeric-type-complexp type)
 	      ((nil) t)
 	      (:complex
@@ -291,8 +332,7 @@
 ;;;    Do type test from a class cell, allowing forward reference and
 ;;; redefinition.
 ;;;
-;;; 2-Feb-97 add third arg optional for back compatibility and boot
-(defun class-cell-typep (obj-layout cell &optional object)
+(defun class-cell-typep (obj-layout cell object)
   (let ((class (class-cell-class cell)))
     (unless class
       (error "Class has not yet been defined: ~S" (class-cell-name cell)))

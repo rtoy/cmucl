@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.12.2.2 1997/09/04 06:18:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.12.2.3 1998/06/23 11:22:01 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
 (declaim (ftype (function * *)
 		find-keyword keyword-test assert-error
 		assert-prompt check-type-error case-body-error print-object
-		pcl::describe-object pcl::check-wrapper-validity))
+		describe-object pcl::check-wrapper-validity))
 
 #-clx
 (declaim (ftype (function * *)
@@ -64,3 +64,13 @@
 		hemlock-internals::device-init 
 		hemlock::ts-stream-p hemlock::ts-stream-wire
 		hemlock-internals::window-hunk))
+
+;;; Gray streams functions not defined until after PCL is loaded.
+(declaim (ftype (function * *)
+		stream-advance-to-column stream-clear-input 
+		stream-clear-output stream-finish-output stream-force-output
+		stream-fresh-line stream-line-column stream-line-length
+		stream-listen stream-peek-char stream-read-byte
+		stream-read-char stream-read-char-no-hang stream-read-line
+		stream-start-line-p stream-terpri stream-unread-char
+		stream-write-byte stream-write-char stream-write-string))

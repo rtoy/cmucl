@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.37.2.1 1997/08/07 00:33:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.37.2.2 1998/06/23 11:22:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,7 +126,9 @@
 ;;;
 (defun find-package (name)
   "Find the package having the specified name."
-  (values (gethash (string name) *package-names*)))
+  (if (packagep name)
+      name
+      (values (gethash (string name) *package-names*))))
 
 ;;; Package-Listify  --  Internal
 ;;;
@@ -143,9 +145,7 @@
 ;;;    Make a package name into a simple-string.
 ;;;
 (defun package-namify (n)
-  (if (symbolp n)
-      (symbol-name n)
-      (coerce n 'simple-string)))
+  (stringify-name n "package"))
 
 ;;; Package-Or-Lose  --  Internal
 ;;;
@@ -160,8 +160,14 @@
 	 (let ((thing (package-namify thing)))
 	   (cond ((gethash thing *package-names*))
 		 (t
-		  (cerror "Make this package."
-			  "~S is not the name of a package." thing)
+		  ;; ANSI spec's TYPE-ERROR where this is called. But,
+		  ;; but the resulting message is somewhat unclear.
+		  ;; May need a new condition type?
+		  (with-simple-restart
+		      (continue "Make this package.")
+		    (error 'type-error
+			   :datum thing
+			   :expected-type 'package))
 		  (make-package thing)))))))
 
 
@@ -179,7 +185,7 @@
 ;;; Using a similar scheme without the entry hash, the fasloader was
 ;;; spending more than half its time paging in INTERN.
 ;;;    The hash code also indicates the status of an entry.  If it zero,
-;;; the the entry is unused.  If it is one, then it is deleted.
+;;; the entry is unused.  If it is one, then it is deleted.
 ;;; Double-hashing is used for collision resolution.
 
 (deftype hash-vector () '(simple-array (unsigned-byte 8) (*)))
@@ -384,13 +390,15 @@
 ;;;; Iteration macros.
 
 (defmacro do-symbols ((var &optional (package '*package*) result-form)
-		      &body body)
+		      &body (body decls))
   "DO-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECLARATION}* {TAG | FORM}*
    Executes the FORMs at least once for each symbol accessible in the given
    PACKAGE with VAR bound to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
     `(block nil
-       (flet ((,flet-name (,var) ,@body))
+       (flet ((,flet-name (,var)
+		,@decls
+		(tagbody ,@body)))
 	 (let* ((package (package-or-lose ,package))
 		(shadows (package-%shadowing-symbols package)))
 	   (flet ((iterate-over-hash-table (table ignore)
@@ -403,7 +411,7 @@
 			(when (>= (aref hash-vec i) 2)
 			  (let ((sym (aref sym-vec i)))
 			    (declare (inline member))
-			    (unless (member sym ignore :test #'eq)
+			    (unless (member sym ignore :test #'string=)
 			      (,flet-name sym))))))))
 	     (iterate-over-hash-table (package-internal-symbols package) nil)
 	     (iterate-over-hash-table (package-external-symbols package) nil)
@@ -412,17 +420,19 @@
 					shadows)))))
        (let ((,var nil))
 	 (declare (ignorable ,var))
+	 ,@decls
 	 ,result-form))))
 
 (defmacro do-external-symbols ((var &optional (package '*package*) result-form)
-			       &body body)
+			       &body (body decls))
   "DO-EXTERNAL-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECL}* {TAG | FORM}*
    Executes the FORMs once for each external symbol in the given PACKAGE with
    VAR bound to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
     `(block nil
        (flet ((,flet-name (,var)
-		,@body))
+		,@decls
+		(tagbody ,@body)))
 	 (let* ((package (package-or-lose ,package))
 		(table (package-external-symbols package))
 		(hash-vec (package-hashtable-hash table))
@@ -435,16 +445,18 @@
 	       (,flet-name (aref sym-vec i))))))
        (let ((,var nil))
 	 (declare (ignorable ,var))
+	 ,@decls
 	 ,result-form))))
 
-(defmacro do-all-symbols ((var &optional result-form) &body body)
+(defmacro do-all-symbols ((var &optional result-form) &body (body decls))
   "DO-ALL-SYMBOLS (VAR [RESULT-FORM]) {DECLARATION}* {TAG | FORM}*
    Executes the FORMs once for each symbol in every package with VAR bound
    to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
     `(block nil
        (flet ((,flet-name (,var)
-		,@body))
+		,@decls
+		(tagbody ,@body)))
 	 (dolist (package (list-all-packages))
 	   (flet ((iterate-over-hash-table (table)
 		    (let ((hash-vec (package-hashtable-hash table))
@@ -459,6 +471,7 @@
 	     (iterate-over-hash-table (package-external-symbols package)))))
        (let ((,var nil))
 	 (declare (ignorable ,var))
+	 ,@decls
 	 ,result-form))))
 
 
@@ -466,6 +479,10 @@
 
 (defmacro with-package-iterator ((mname package-list &rest symbol-types)
 				 &body body)
+  "Within the lexical scope of the body forms, MNAME is defined via macrolet
+   such that successive invocations of (mname) will return the symbols,
+   one by one, from the packages in PACKAGE-LIST. SYMBOL-TYPES may be
+   any of :inherited :external :internal."
   (let* ((packages (gensym))
 	 (these-packages (gensym))
 	 (ordered-types (let ((res nil))
@@ -481,6 +498,7 @@
 	 (init-macro (gensym))
 	 (end-test-macro (gensym))
 	 (real-symbol-p (gensym))
+	 (inherited-symbol-p (gensym))
 	 (BLOCK (gensym)))
     `(let* ((,these-packages ,package-list)
 	    (,packages `,(mapcar #'(lambda (package)
@@ -507,18 +525,24 @@
 		 (:internal
 		  `(let ((,symbols (package-internal-symbols
 				    (car ,',packages))))
-		     (setf ,',vector (package-hashtable-table ,symbols))
-		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))
+		     (when ,symbols
+		       (setf ,',vector (package-hashtable-table ,symbols))
+		       (setf ,',hash-vector (package-hashtable-hash ,symbols)))))
 		 (:external
 		  `(let ((,symbols (package-external-symbols
 				    (car ,',packages))))
-		     (setf ,',vector (package-hashtable-table ,symbols))
-		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))
+		     (when ,symbols
+		       (setf ,',vector (package-hashtable-table ,symbols))
+		       (setf ,',hash-vector
+			     (package-hashtable-hash ,symbols)))))
 		 (:inherited
-		  `(let ((,symbols (package-external-symbols
-				    (car ,',package-use-list))))
-		     (setf ,',vector (package-hashtable-table ,symbols))
-		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))))))
+		  `(let ((,symbols (and ,',package-use-list
+					(package-external-symbols
+					 (car ,',package-use-list)))))
+		     (when ,symbols
+		       (setf ,',vector (package-hashtable-table ,symbols))
+		       (setf ,',hash-vector
+			     (package-hashtable-hash ,symbols)))))))))
 		  (,end-test-macro (this-kind)
 		     `,(let ((next-kind (cadr (member this-kind
 						      ',ordered-types))))
@@ -529,12 +553,16 @@
 				  (,',init-macro ,(car ',ordered-types)))))))
 	 (when ,packages
 	   ,(when (null symbol-types)
-	      (error "Must supply at least one of :internal, :external, or ~
-	      :inherited."))
+	      (error 'program-error
+		     :format-control
+		     "Must supply at least one of :internal, :external, or ~
+		      :inherited."))
 	   ,(dolist (symbol symbol-types)
 	      (unless (member symbol '(:internal :external :inherited))
-		(error "~S is not one of :internal, :external, or :inherited."
-		       symbol)))
+		(error 'program-error
+		       :format-control
+		       "~S is not one of :internal, :external, or :inherited."
+		       :format-argument symbol)))
 	   (,init-macro ,(car ordered-types))
 	   (flet ((,real-symbol-p (number)
 		    (> number 1)))
@@ -568,16 +596,31 @@
 				(,',end-test-macro :external)))))
 		     ,@(when (member :inherited ',ordered-types)
 			 `((:inherited
-			    (setf ,',counter
-				  (position-if #',',real-symbol-p ,',hash-vector
-					       :start (if ,',counter
-							  (1+ ,',counter)
-							  0)))
+			    (flet ((,',inherited-symbol-p (number)
+				     (when (,',real-symbol-p number)
+				       (let* ((p (position
+						  number ,',hash-vector
+						  :start (if ,',counter
+							     (1+ ,',counter)
+							     0)))
+					      (s (svref ,',vector p)))
+					 (eql (nth-value
+					       1 (find-symbol
+						  (symbol-name s)
+						  (car ,',packages)))
+					      :inherited)))))
+			      (setf ,',counter
+				    (position-if #',',inherited-symbol-p
+						 ,',hash-vector
+						 :start (if ,',counter
+							    (1+ ,',counter)
+							    0))))
 			    (cond (,',counter
 				   (return-from
 				    ,',BLOCK
 				    (values t (svref ,',vector ,',counter)
-					    ,',kind (car ,',packages))))
+					    ,',kind (car ,',packages))
+				    ))
 				  (t
 				   (setf ,',package-use-list
 					 (cdr ,',package-use-list))
@@ -592,7 +635,6 @@
 					 (t (,',init-macro :inherited)
 					    (setf ,',counter nil)))))))))))))
 	       ,@body)))))))
-
 
 ;;;; DEFPACKAGE:
 
@@ -608,7 +650,7 @@
      (:INTERN {symbol-name}*)
      (:EXPORT {symbol-name}*)
      (:DOCUMENTATION doc-string)
-   All options except :SIZE can be used multiple times."
+   All options except :SIZE and :DOCUMENTATION can be used multiple times."
   (let ((nicknames nil)
 	(size nil)
 	(shadows nil)
@@ -618,33 +660,33 @@
 	(imports nil)
 	(interns nil)
 	(exports nil)
-	(incomming nil)
-	(outgoing nil)
 	(doc nil))
     (dolist (option options)
       (unless (consp option)
-	(error "Bogus DEFPACKAGE option: ~S" option))
+	(error 'program-error
+	       :format-control "Bogus DEFPACKAGE option: ~S"
+	       :format-arguments (list option)))
       (case (car option)
 	(:nicknames
-	 (let ((new (stringify-names (cdr option) "package")))
-	   (setf nicknames (append-unique new nicknames :nicknames))))
+	 (setf nicknames (stringify-names (cdr option) "package")))
 	(:size
 	 (cond (size
-		(error "Can't specify :SIZE twice."))
+		(error 'program-error
+		       :format-control "Can't specify :SIZE twice."))
 	       ((and (consp (cdr option))
 		     (typep (second option) 'unsigned-byte))
 		(setf size (second option)))
 	       (t
-		(error "Bogus :SIZE, must be a positive integer: ~S"
-		       (second option)))))
+		(error
+		 'program-error
+		 :format-control "Bogus :SIZE, must be a positive integer: ~S"
+		 :format-arguments (list (second option))))))
 	(:shadow
 	 (let ((new (stringify-names (cdr option) "symbol")))
-	   (setf incomming (append-unique new incomming :shadow))
 	   (setf shadows (append shadows new))))
 	(:shadowing-import-from
 	 (let ((package-name (stringify-name (second option) "package"))
 	       (names (stringify-names (cddr option) "symbol")))
-	   (setf incomming (append-unique names incomming :shadowing-import))
 	   (let ((assoc (assoc package-name shadowing-imports
 			       :test #'string=)))
 	     (if assoc
@@ -652,13 +694,11 @@
 		 (setf shadowing-imports
 		       (acons package-name names shadowing-imports))))))
 	(:use
-	 (let ((new (stringify-names (cdr option) "package")))
-	   (setf use (append-unique new use :use))
-	   (setf use-p t)))
+	 (setf use (stringify-names (cdr option) "package") )
+	 (setf use-p t))
 	(:import-from
 	 (let ((package-name (stringify-name (second option) "package"))
 	       (names (stringify-names (cddr option) "symbol")))
-	   (setf incomming (append-unique names incomming :import-from))
 	   (let ((assoc (assoc package-name imports
 			       :test #'string=)))
 	     (if assoc
@@ -666,27 +706,50 @@
 		 (setf imports (acons package-name names imports))))))
 	(:intern
 	 (let ((new (stringify-names (cdr option) "symbol")))
-	   (setf incomming (append-unique new incomming :intern))
-	   (setf outgoing (append-unique new outgoing :intern))
 	   (setf interns (append interns new))))
 	(:export
 	 (let ((new (stringify-names (cdr option) "symbol")))
-	   (setf outgoing (append-unique new outgoing :export))
 	   (setf exports (append exports new))))
 	(:documentation
+	 (when doc
+	   (error 'program-error
+		  :format-control "Can't specify :DOCUMENTATION twice."))
 	 (setf doc (coerce (second option) 'simple-string)))
 	(t
-	 (error "Bogus DEFPACKAGE option: ~S" option))))
+	 (error 'program-error
+		:format-control "Bogus DEFPACKAGE option: ~S"
+		:format-arguments (list option)))))
+    (check-disjoint `(:intern ,@interns) `(:export  ,@exports))
+    (check-disjoint `(:intern ,@interns)
+		    `(:import-from
+		      ,@(apply #'append (mapcar #'rest imports)))
+		    `(:shadow ,@shadows)
+		    `(:shadowing-import-from
+		      ,@(apply #'append (mapcar #'rest shadowing-imports))))
     `(eval-when (compile load eval)
        (%defpackage ,(stringify-name package "package") ',nicknames ',size
 		    ',shadows ',shadowing-imports ',(if use-p use :default)
 		    ',imports ',interns ',exports ',doc))))
+
+(defun check-disjoint(&rest args)
+  ;; An arg is (:key . set)
+  (do ((list args (cdr list)))
+      ((endp list))
+    (loop
+      with x = (car list)
+      for y in (rest list)
+      for z = (remove-duplicates (intersection (cdr x)(cdr y) :test #'string=))
+      when z do (error 'program-error
+		       :format-control "Parameters ~S and ~S must be disjoint ~
+					but have common elements ~%   ~S"
+		       :format-arguments (list (car x)(car y) z)))))
 
 (defun stringify-name (name kind)
   (typecase name
     (simple-string name)
     (string (coerce name 'simple-string))
     (symbol (symbol-name name))
+    (base-char (string name))
     (t
      (error "Bogus ~A name: ~S" kind name))))
 
@@ -694,14 +757,6 @@
   (mapcar #'(lambda (name)
 	      (stringify-name name kind))
 	  names))
-
-(defun append-unique (new old list)
-  (dolist (name new)
-    (if (member name old)
-	(cerror "Ignore it."
-		"Duplicate name in the ~S list: ~A" list name)
-	(push name old)))
-  old)
 
 (defun %defpackage (name nicknames size shadows shadowing-imports
 			 use imports interns exports doc-string)
@@ -719,8 +774,10 @@
 				     :internal-symbols (or size 10)
 				     :external-symbols (length exports))))))
     (unless (string= (the string (package-name package)) name)
-      (error "~A is a nick-name for the package ~A"
-	     name (package-name name)))
+      (error 'package-error
+	     :package name
+	     :format-control "~A is a nick-name for the package ~A"
+	     :format-arguments (list name (package-name name))))
     (enter-new-nicknames package nicknames)
     ;; Shadows and Shadowing-imports.
     (let ((old-shadows (package-%shadowing-symbols package)))
@@ -753,7 +810,8 @@
     (dolist (imports-from imports)
       (let ((other-package (package-or-lose (car imports-from))))
 	(dolist (sym-name (cdr imports-from))
-	  (import (find-or-make-symbol sym-name other-package) package))))
+	  (import (list (find-or-make-symbol sym-name other-package))
+		  package))))
     ;; Exports.
     (let ((old-exports nil)
 	  (exports (mapcar #'(lambda (sym-name) (intern sym-name package))
@@ -776,10 +834,11 @@
     (cond (how
 	   symbol)
 	  (t
-	   (cerror "INTERN it."
-		   "~A does not contain a symbol ~A"
-		   (package-name package)
-		   name)
+	   (with-simple-restart (continue "INTERN it.")
+	     (error 'package-error
+		    :package package
+		    :format-control "~A does not contain a symbol ~A"
+		    :format-arguments (list (package-name package) name)))
 	   (intern name package)))))
 
 
@@ -799,13 +858,16 @@
 	     (push n (package-%nicknames package)))
 	    ((eq found package))
 	    ((string= (the string (package-%name found)) n)
-	     (cerror "Ignore this nickname."
-		     "~S is a package name, so it cannot be a nickname for ~S."
-		     n (package-%name package)))
+	     (with-simple-restart (continue "Ignore this nickname.")
+	       (error 'program-error
+		      :format-control
+		      "~S is a package name, so it cannot be a nickname for ~S."
+		      :format-arguments (list n (package-%name package)))))
 	    (t
-	     (cerror "Redefine this nickname."
-		     "~S is already a nickname for ~S."
-		     n (package-%name found))
+	     (with-simple-restart (continue  "Redefine this nickname.")
+	       (error 'program-error
+		      :format-control "~S is already a nickname for ~S."
+		      :format-arguments (list n (package-%name found))))
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))))))
 
@@ -824,7 +886,8 @@
   estimates for the number of internal and external symbols which
   will ultimately be present in the package."
   (when (find-package name)
-    (error "A package named ~S already exists" name))
+    (cerror "Leave existing package alone."
+	    "A package named ~S already exists" name))
   (let* ((name (package-namify name))
 	 (package (internal-make-package
 		   :%name name
@@ -869,7 +932,15 @@
 	 `(%in-package ',(stringify-name package "package")))))
 ;;;
 (defun %in-package (name)
-  (setf *package* (package-or-lose name)))
+  (let ((package (find-package name)))
+    (unless package
+      (with-simple-restart (continue "Make this package.")
+	(error 'package-error
+	       :package name
+	       :format-control "The package named ~S doesn't exist."
+	       :format-arguments (list name)))
+      (setq package (make-package name)))
+    (setf *package* package)))
 
 ;;; Rename-Package  --  Public
 ;;;
@@ -900,15 +971,25 @@
 		     package-or-name
 		     (find-package package-or-name))))
     (cond ((not package)
-	   (cerror "Return NIL" "No package of name ~S." package-or-name)
+	   (with-simple-restart (continue "Return NIL")
+	     (error 'package-error
+		    :package package-or-name
+		    :format-control "No package of name ~S."
+		    :format-arguments (list package-or-name)))
 	   nil)
 	  ((not (package-name package)) nil)
 	  (t
 	   (let ((use-list (package-used-by-list package)))
 	     (when use-list
-	       (cerror "Remove dependency in other packages."
-		       "Package ~S is used by package(s):~%  ~S"
-		       (package-name package) (mapcar #'package-name use-list))
+	       (with-simple-restart
+		   (continue "Remove dependency in other packages.")
+		 (error 'package-error
+			:package package
+			:format-control
+			"Package ~S is used by package(s):~%  ~S"
+			:format-arguments
+			(list (package-name package)
+			      (mapcar #'package-name use-list))))
 	       (dolist (p use-list)
 		 (unuse-package package p))))
 	   (dolist (used (package-use-list package))
@@ -1139,9 +1220,15 @@
 		(pushnew p cpackages))))))
       (when cset
 	(restart-case
-	    (error "Exporting these symbols from the ~A package:~%~S~%~
-		    results in name conflicts with these packages:~%~{~A ~}"
-		   (package-%name package) cset (mapcar #'package-%name cpackages))
+	    (error
+	     'package-error
+	     :package package
+	     :format-control
+	     "Exporting these symbols from the ~A package:~%~S~%~
+	      results in name conflicts with these packages:~%~{~A ~}"
+	     :format-arguments
+	     (list (package-%name package) cset
+		   (mapcar #'package-%name cpackages)))
 	  (unintern-conflicting-symbols ()
 	   :report "Unintern conflicting symbols."
 	   (dolist (p cpackages)
@@ -1159,9 +1246,15 @@
 	  (cond ((not (and w (eq s sym))) (push sym missing))
 		((eq w :inherited) (push sym imports)))))
       (when missing
-	(cerror "Import these symbols into the ~A package."
-		"These symbols are not accessible in the ~A package:~%~S"
-		(package-%name package) missing)
+	(with-simple-restart
+	    (continue "Import these symbols into the ~A package."
+	      (package-%name package))
+	  (error 'package-error
+		 :package package
+		 :format-control
+		 "These symbols are not accessible in the ~A package:~%~S"
+		 :format-arguments
+		 (list (package-%name package) missing)))
 	(import missing package))
       (import imports package))
     ;;
@@ -1185,8 +1278,10 @@
     (dolist (sym (symbol-listify symbols))
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)
 	(cond ((or (not w) (not (eq s sym)))
-	       (error "~S is not accessible in the ~A package."
-		      sym (package-%name package)))
+	       (error 'package-error
+		      :package package
+		      :format-control "~S is not accessible in the ~A package."
+		      :format-arguments (list sym (package-%name package))))
 	      ((eq w :external) (pushnew sym syms)))))
 
     (let ((internal (package-internal-symbols package))
@@ -1220,10 +1315,14 @@
 	      ((not (eq s sym)) (push sym cset))
 	      ((eq w :inherited) (push sym syms)))))
     (when cset
-      (cerror
-       "Import these symbols with Shadowing-Import."
-       "Importing these symbols into the ~A package causes a name conflict:~%~S"
-       (package-%name package) cset))
+      (with-simple-restart
+	  (continue "Import these symbols with Shadowing-Import.")
+	(error 'package-error
+	       :package package
+	       :format-control
+	       "Importing these symbols into the ~A package ~
+		causes a name conflict:~%~S"
+	       :format-arguments (list (package-%name package) cset))))
     ;;
     ;; Add the new symbols to the internal hashtable.
     (let ((internal (package-internal-symbols package)))
@@ -1339,7 +1438,7 @@
 	  
 	  (when cset
 	    (cerror
-	     "unintern the conflicting symbols in the ~2*~A package."
+	     "Unintern the conflicting symbols in the ~2*~A package."
 	     "Use'ing package ~A results in name conflicts for these symbols:~%~S"
 	     (package-%name pkg) cset (package-%name package))
 	    (dolist (s cset) (moby-unintern s package))))
@@ -1400,7 +1499,8 @@
        ((> index terminus)
 	nil)
     (declare (simple-string name)
-	     (type index index terminus length))
+	     (type index index length)
+	     (fixnum terminus))
     (if (do ((jndex 0 (1+ jndex))
 	     (kndex index (1+ kndex)))
 	    ((= jndex length)

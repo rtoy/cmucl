@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.19.2.1 1997/08/06 11:57:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.19.2.2 1998/06/23 11:22:05 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -356,42 +356,52 @@
     (rplacd 2nd 3rd)))
 
 (defun butlast (list &optional (n 1))
-  "Returns a new list the same as List without the N last elements."
+  "Returns a new list the same as List without the last N conses.
+   List must not be circular."
   (declare (list list) (type index n))
-  (let ((length (1- (length list))))
+  (let ((length (do ((list list (cdr list))
+		     (i 0 (1+ i)))
+		    ((atom list) (1- i)))))
     (declare (type index length))
-    (if (< length n)
-        ()
-        (do* ((top (cdr list) (cdr top))
-              (result (list (car list)))
-              (splice result)
-              (count length (1- count)))
-             ((= count n) result)
-          (declare (type index count))
-          (setq splice (cdr (rplacd splice (list (car top)))))))))
+    (unless (< length n)
+      (do* ((top (cdr list) (cdr top))
+	    (result (list (car list)))
+	    (splice result)
+	    (count length (1- count)))
+	   ((= count n) result)
+	(declare (type index count))
+	(setq splice (cdr (rplacd splice (list (car top)))))))))
 
 (defun nbutlast (list &optional (n 1))
-  "Modifies List to remove the last N elements."
+  "Modifies List to remove the last N conses. List must not be circular."
   (declare (list list) (type index n))
-  (let ((length (1- (length list))))
+  (let ((length (do ((list list (cdr list))
+		     (i 0 (1+ i)))
+		    ((atom list) (1- i)))))
     (declare (type index length))
-    (if (< length n) ()
-        (do ((1st (cdr list) (cdr 1st))
-             (2nd list 1st)
-             (count length (1- count)))
-            ((= count n)
-             (rplacd 2nd ())
-             list)
-          (declare (type index count))))))
+    (unless (< length n)
+      (do ((1st (cdr list) (cdr 1st))
+	   (2nd list 1st)
+	   (count length (1- count)))
+	  ((= count n)
+	   (rplacd 2nd ())
+	   list)
+	(declare (type index count))))))
 
-(defun ldiff (list sublist)
+(defun ldiff (list object)
   "Returns a new list, whose elements are those of List that appear before
-   Sublist.  If Sublist is not a tail of List, a copy of List is returned."
+   Object.  If Object is not a tail of List, a copy of List is returned.
+   List must be a proper list or a dotted list."
   (do* ((list list (cdr list))
 	(result (list ()))
 	(splice result))
-       ((or (null list) (eq list sublist)) (cdr result))
-    (setq splice (cdr (rplacd splice (list (car list)))))))
+       ((atom list)
+	(if (eql list object)
+	    (cdr result)
+	    (progn (rplacd splice list) (cdr result))))
+    (if (eql list object)
+	(return (cdr result))
+	(setq splice (cdr (rplacd splice (list (car list))))))))
 
 ;;; Functions to alter list structure
 
@@ -422,373 +432,7 @@
       (return newval))))
 
 
-;;;; Macros for (&key (key #'identity) (test #'eql testp) (test-not nil notp)).
-;;; Use these with the following keyword args:
-;;;
-(defmacro with-set-keys (funcall)
-  `(cond ((and testp notp) (error "Test and test-not both supplied."))
-	 (notp ,(append funcall '(:key key :test-not test-not)))
-	 (t ,(append funcall '(:key key :test test)))))
-
-(defmacro satisfies-the-test (item elt)
-  `(cond (testp
-	  (funcall test ,item (funcall key ,elt)))
-	 (notp
-	  (not (funcall test-not ,item (funcall key ,elt))))
-	 (t (funcall test ,item (funcall key ,elt)))))
-
-
-;;; Substitution of expressions
-
-
-
-(defun subst (new old tree &key (key #'identity)
-		  (test #'eql testp) (test-not nil notp))
-  "Substitutes new for subtrees matching old."
-  (labels ((s (subtree)
-	      (cond ((satisfies-the-test old subtree) new)
-		    ((atom subtree) subtree)
-		    (t (let ((car (s (car subtree)))
-			     (cdr (s (cdr subtree))))
-			 (if (and (eq car (car subtree))
-				  (eq cdr (cdr subtree)))
-			     subtree
-			     (cons car cdr)))))))
-    (s tree)))
-
-(defun subst-if (new test tree &key (key #'identity))
-  "Substitutes new for subtrees for which test is true."
-  (labels ((s (subtree)
-	      (cond ((funcall test (funcall key subtree)) new)
-		    ((atom subtree) subtree)
-		    (t (let ((car (s (car subtree)))
-			     (cdr (s (cdr subtree))))
-			 (if (and (eq car (car subtree))
-				  (eq cdr (cdr subtree)))
-			     subtree
-			     (cons car cdr)))))))
-    (s tree)))
-
-(defun subst-if-not (new test tree &key (key #'identity))
-  "Substitutes new for subtrees for which test is false."
-  (labels ((s (subtree)
-	      (cond ((not (funcall test (funcall key subtree))) new)
-		    ((atom subtree) subtree)
-		    (t (let ((car (s (car subtree)))
-			     (cdr (s (cdr subtree))))
-			 (if (and (eq car (car subtree))
-				  (eq cdr (cdr subtree)))
-			     subtree
-			     (cons car cdr)))))))
-    (s tree)))
-
-(defun nsubst (new old tree &key (key #'identity)
-		  (test #'eql testp) (test-not nil notp))
-  "Substitutes new for subtrees matching old."
-  (labels ((s (subtree)
-	      (cond ((satisfies-the-test old subtree) new)
-		    ((atom subtree) subtree)
-		    (t (do* ((last nil subtree)
-			     (subtree subtree (Cdr subtree)))
-			    ((atom subtree)
-			     (if (satisfies-the-test old subtree)
-				 (setf (cdr last) new)))
-			 (if (satisfies-the-test old subtree)
-			     (return (setf (cdr last) new))
-			     (setf (car subtree) (s (car subtree)))))
-		       subtree))))
-    (s tree)))
-
-(defun nsubst-if (new test tree &key (key #'identity))
-  "Substitutes new for subtrees of tree for which test is true."
-  (labels ((s (subtree)
-	      (cond ((funcall test (funcall key subtree)) new)
-		    ((atom subtree) subtree)
-		    (t (do* ((last nil subtree)
-			     (subtree subtree (Cdr subtree)))
-			    ((atom subtree)
-			     (if (funcall test (funcall key subtree))
-				 (setf (cdr last) new)))
-			 (if (funcall test (funcall key subtree))
-			     (return (setf (cdr last) new))
-			     (setf (car subtree) (s (car subtree)))))
-		       subtree))))
-    (s tree)))
-
-(defun nsubst-if-not (new test tree &key (key #'identity))
-  "Substitutes new for subtrees of tree for which test is false."
-  (labels ((s (subtree)
-	      (cond ((not (funcall test (funcall key subtree))) new)
-		    ((atom subtree) subtree)
-		    (t (do* ((last nil subtree)
-			     (subtree subtree (Cdr subtree)))
-			    ((atom subtree)
-			     (if (not (funcall test (funcall key subtree)))
-				 (setf (cdr last) new)))
-			 (if (not (funcall test (funcall key subtree)))
-			     (return (setf (cdr last) new))
-			     (setf (car subtree) (s (car subtree)))))
-		       subtree))))
-    (s tree)))
-
-
-
-
-(defun sublis (alist tree &key (key #'identity)
-		     (test #'eql) (test-not nil notp))
-  "Substitutes from alist into tree nondestructively."
-  (declare (inline assoc))
-  (labels ((s (subtree)
-	     (let ((assoc
-		    (if notp
-			(assoc (funcall key subtree) alist :test-not test-not)
-			(assoc (funcall key subtree) alist :test test))))
-	       (cond (assoc (cdr assoc))
-		     ((atom subtree) subtree)
-		     (t (let ((car (s (car subtree)))
-			      (cdr (s (cdr subtree))))
-			  (if (and (eq car (car subtreE))
-				   (eq cdr (cdr subtree)))
-			      subtree
-			      (cons car cdr))))))))
-    (s tree)))
-
-;;; In run-time env, since can be referenced in line expansions.
-(defmacro nsublis-macro ()
-  '(if notp
-       (assoc (funcall key subtree) alist :test-not test-not)
-       (assoc (funcall key subtree) alist :test test)))
-
-(defun nsublis (alist tree &key (key #'identity)
-		  (test #'eql) (test-not nil notp))
-  "Substitutes new for subtrees matching old."
-  (declare (inline assoc))
-  (let (temp)
-    (labels ((s (subtree)
-		(cond ((Setq temp (nsublis-macro))
-		       (cdr temp))
-		      ((atom subtree) subtree)
-		      (t (do* ((last nil subtree)
-			       (subtree subtree (Cdr subtree)))
-			      ((atom subtree)
-			       (if (setq temp (nsublis-macro))
-				   (setf (cdr last) (cdr temp))))
-			   (if (setq temp (nsublis-macro))
-			       (return (setf (Cdr last) (Cdr temp)))
-			       (setf (car subtree) (s (car subtree)))))
-			 subtree))))
-      (s tree))))
-
-
-;;;; Functions for using lists as sets
-
-(defun member (item list &key (key #'identity) (test #'eql testp)
-		    (test-not nil notp))
-  "Returns tail of list beginning with first element satisfying EQLity,
-   :test, or :test-not with a given item."
-  (do ((list list (cdr list)))
-      ((null list) nil)
-    (let ((car (car list)))
-      (if (satisfies-the-test item car)
-	  (return list)))))
-
-(defun member-if (test list &key (key #'identity))
-  "Returns tail of list beginning with first element satisfying test(element)"
-  (do ((list list (Cdr list)))
-      ((endp list) nil)
-    (if (funcall test (funcall key (car list)))
-	(return list))))
-
-(defun member-if-not (test list &key (key #'identity))
-  "Returns tail of list beginning with first element not satisfying test(el)"
-  (do ((list list (cdr list)))
-      ((endp list) ())
-    (if (not (funcall test (funcall key (car list))))
-	(return list))))
-
-(defun tailp (sublist list)
-  "Returns T if (EQL Sublist (NTHCDR <n> List)) for some value of <n>, NIL
-  otherwise."
-  (do ((list list (cdr list)))
-      ((atom list) (eql list sublist))
-    (if (eql sublist list)
-	(return t))))
-
-(defun adjoin (item list &key (key #'identity) (test #'eql)
-		    (test-not nil notp))
-  "Add item to list unless it is already a member"
-  (declare (inline member))
-  (if (if notp (member (funcall key item) list :test-not test-not :key key)
-	  (member (funcall key item) list :test test :key key))
-      list
-      (cons item list)))
-
-
-;;; UNION -- Public.
-;;;
-;;; This function assumes list2 is the result, adding to it from list1 as
-;;; necessary.  List2 must initialize the result value, so the call to MEMBER
-;;; will apply the test to the elements from list1 and list2 in the correct
-;;; order.
-;;;
-(defun union (list1 list2 &key
-		    (key #'identity) (test #'eql testp) (test-not nil notp))
-  "Returns the union of list1 and list2."
-  (declare (inline member))
-  (when (and testp notp) (error "Test and test-not both supplied."))
-  (let ((res list2))
-    (dolist (elt list1)
-      (unless (with-set-keys (member (funcall key elt) list2))
-	(push elt res)))
-    res))
-
-;;; Destination and source are setf-able and many-evaluable.  Sets the source
-;;; to the cdr, and "conses" the 1st elt of source to destination.
-;;;
-(defmacro steve-splice (source destination)
-  `(let ((temp ,source))
-     (setf ,source (cdr ,source)
-	   (cdr temp) ,destination
-	   ,destination temp)))
-
-(defun nunion (list1 list2 &key (key #'identity)
-		     (test #'eql testp) (test-not nil notp))
-  "Destructively returns the union list1 and list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (let ((res list2)
-	(list1 list1))
-    (do ()
-	((endp list1))
-      (if (not (with-set-keys (member (funcall key (car list1)) list2)))
-	  (steve-splice list1 res)
-	  (setf list1 (cdr list1))))
-    res))
-  
-
-(defun intersection (list1 list2  &key (key #'identity)
-			       (test #'eql testp) (test-not nil notp))
-  "Returns the intersection of list1 and list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (let ((res nil))
-    (dolist (elt list1)
-      (if (with-set-keys (member (funcall key elt) list2))
-	  (push elt res)))
-    res))
-
-(defun nintersection (list1 list2 &key (key #'identity)
-		     (test #'eql testp) (test-not nil notp))
-  "Destructively returns the intersection of list1 and list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (let ((res nil)
-	(list1 list1))
-    (do () ((endp list1))
-      (if (with-set-keys (member (funcall key (car list1)) list2))
-	  (steve-splice list1 res)
-	  (setq list1 (Cdr list1))))
-    res))
-
-(defun set-difference (list1 list2 &key (key #'identity)
-			     (test #'eql testp) (test-not nil notp))
-  "Returns the elements of list1 which are not in list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (if (null list2)
-      list1
-      (let ((res nil))
-	(dolist (elt list1)
-	  (if (not (with-set-keys (member (funcall key elt) list2)))
-	      (push elt res)))
-	res)))
-
-
-(defun nset-difference (list1 list2 &key (key #'identity)
-			      (test #'eql testp) (test-not nil notp))
-  "Destructively returns the elements of list1 which are not in list2."
-  (declare (inline member))
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (let ((res nil)
-	(list1 list1))
-    (do () ((endp list1))
-      (if (not (with-set-keys (member (funcall key (car list1)) list2)))
-	  (steve-splice list1 res)
-	  (setq list1 (cdr list1))))
-    res))
-
-
-(defun set-exclusive-or (list1 list2 &key (key #'identity)
-			       (test #'eql testp) (test-not nil notp))
-  "Returns new list of elements appearing exactly once in list1 and list2."
-  (declare (inline member))
-  (let ((result nil))
-    (dolist (elt list1)
-      (unless (with-set-keys (member (funcall key elt) list2))
-	(setq result (cons elt result))))
-    (dolist (elt list2)
-      (unless (with-set-keys (member (funcall key elt) list1))
-	(setq result (cons elt result))))
-    result))
-
-
-;;; The outer loop examines list1 while the inner loop examines list2. If an
-;;; element is found in list2 "equal" to the element in list1, both are
-;;; spliced out. When the end of list1 is reached, what is left of list2 is
-;;; tacked onto what is left of list1.  The splicing operation ensures that
-;;; the correct operation is performed depending on whether splice is at the
-;;; top of the list or not
-
-(defun nset-exclusive-or (list1 list2 &key (test #'eql) (test-not nil notp)
-				(key #'identity))
-  "Destructively return a list with elements which appear but once in list1
-   and list2."
-  (do ((list1 list1)
-       (list2 list2)
-       (x list1 (cdr x))
-       (splicex ()))
-      ((endp x)
-       (if (null splicex)
-	   (setq list1 list2)
-	   (rplacd splicex list2))
-       list1)
-    (do ((y list2 (cdr y))
-	 (splicey ()))
-	((endp y) (setq splicex x))
-      (cond ((if notp
-		 (not (funcall test-not (funcall key (car x))
-			       (funcall key (Car y))))
-		 (funcall test (funcall key (car x)) (funcall key (Car y))))
-	     (if (null splicex)
-		 (setq list1 (cdr x))
-		 (rplacd splicex (cdr x)))
-	     (if (null splicey) 
-		 (setq list2 (cdr y))
-		 (rplacd splicey (cdr y)))
-	     (return ()))			; assume lists are really sets
-	    (t (setq splicey y))))))
-
-(defun subsetp (list1 list2 &key (key #'identity)
-		      (test #'eql testp) (test-not nil notp))
-  "Returns T if every element in list1 is also in list2."
-  (declare (inline member))
-  (dolist (elt list1)
-    (unless (with-set-keys (member (funcall key elt) list2))
-      (return-from subsetp nil)))
-  T)
-
-
-
 ;;;; :key arg optimization to save funcall of IDENTITY.
-
-;;; We should move this earlier in this file and make other functions use it as
-;;; well.
-;;;
 
 ;;; APPLY-KEY saves us a function call sometimes.
 ;;;    This is not in and (eval-when (compile eval) ...
@@ -838,6 +482,364 @@
 	     value))))
 
 
+;;;; Macros for (&key (key #'identity) (test #'eql testp) (test-not nil notp)).
+;;; Use these with the following keyword args:
+;;;
+(defmacro with-set-keys (funcall)
+  `(cond ((and testp notp) (error "Test and test-not both supplied."))
+	 (notp ,(append funcall '(:key key :test-not test-not)))
+	 (t ,(append funcall '(:key key :test test)))))
+
+(defmacro satisfies-the-test (item elt)
+  (let ((key-tmp (gensym)))
+    `(let ((,key-tmp (apply-key key ,elt)))
+      (cond (testp (funcall test ,item ,key-tmp))
+	    (notp (not (funcall test-not ,item ,key-tmp)))
+	    (t (funcall test ,item ,key-tmp))))))
+
+
+;;; Substitution of expressions
+
+
+
+(defun subst (new old tree &key key (test #'eql testp) (test-not nil notp))
+  "Substitutes new for subtrees matching old."
+  (labels ((s (subtree)
+	      (cond ((satisfies-the-test old subtree) new)
+		    ((atom subtree) subtree)
+		    (t (let ((car (s (car subtree)))
+			     (cdr (s (cdr subtree))))
+			 (if (and (eq car (car subtree))
+				  (eq cdr (cdr subtree)))
+			     subtree
+			     (cons car cdr)))))))
+    (s tree)))
+
+(defun subst-if (new test tree &key key)
+  "Substitutes new for subtrees for which test is true."
+  (labels ((s (subtree)
+	      (cond ((funcall test (apply-key key subtree)) new)
+		    ((atom subtree) subtree)
+		    (t (let ((car (s (car subtree)))
+			     (cdr (s (cdr subtree))))
+			 (if (and (eq car (car subtree))
+				  (eq cdr (cdr subtree)))
+			     subtree
+			     (cons car cdr)))))))
+    (s tree)))
+
+(defun subst-if-not (new test tree &key key)
+  "Substitutes new for subtrees for which test is false."
+  (labels ((s (subtree)
+	      (cond ((not (funcall test (apply-key key subtree))) new)
+		    ((atom subtree) subtree)
+		    (t (let ((car (s (car subtree)))
+			     (cdr (s (cdr subtree))))
+			 (if (and (eq car (car subtree))
+				  (eq cdr (cdr subtree)))
+			     subtree
+			     (cons car cdr)))))))
+    (s tree)))
+
+(defun nsubst (new old tree &key key (test #'eql testp) (test-not nil notp))
+  "Substitutes new for subtrees matching old."
+  (labels ((s (subtree)
+	      (cond ((satisfies-the-test old subtree) new)
+		    ((atom subtree) subtree)
+		    (t (do* ((last nil subtree)
+			     (subtree subtree (Cdr subtree)))
+			    ((atom subtree)
+			     (if (satisfies-the-test old subtree)
+				 (setf (cdr last) new)))
+			 (if (satisfies-the-test old subtree)
+			     (return (setf (cdr last) new))
+			     (setf (car subtree) (s (car subtree)))))
+		       subtree))))
+    (s tree)))
+
+(defun nsubst-if (new test tree &key key)
+  "Substitutes new for subtrees of tree for which test is true."
+  (labels ((s (subtree)
+	      (cond ((funcall test (apply-key key subtree)) new)
+		    ((atom subtree) subtree)
+		    (t (do* ((last nil subtree)
+			     (subtree subtree (Cdr subtree)))
+			    ((atom subtree)
+			     (if (funcall test (apply-key key subtree))
+				 (setf (cdr last) new)))
+			 (if (funcall test (apply-key key subtree))
+			     (return (setf (cdr last) new))
+			     (setf (car subtree) (s (car subtree)))))
+		       subtree))))
+    (s tree)))
+
+(defun nsubst-if-not (new test tree &key key)
+  "Substitutes new for subtrees of tree for which test is false."
+  (labels ((s (subtree)
+	      (cond ((not (funcall test (apply-key key subtree))) new)
+		    ((atom subtree) subtree)
+		    (t (do* ((last nil subtree)
+			     (subtree subtree (Cdr subtree)))
+			    ((atom subtree)
+			     (if (not (funcall test (apply-key key subtree)))
+				 (setf (cdr last) new)))
+			 (if (not (funcall test (apply-key key subtree)))
+			     (return (setf (cdr last) new))
+			     (setf (car subtree) (s (car subtree)))))
+		       subtree))))
+    (s tree)))
+
+
+
+
+(defun sublis (alist tree &key key (test #'eql) (test-not nil notp))
+  "Substitutes from alist into tree nondestructively."
+  (declare (inline assoc))
+  (labels ((s (subtree)
+	     (let* ((key-val (apply-key key subtree))
+		    (assoc (if notp
+			       (assoc key-val alist :test-not test-not)
+			       (assoc key-val alist :test test))))
+	       (cond (assoc (cdr assoc))
+		     ((atom subtree) subtree)
+		     (t (let ((car (s (car subtree)))
+			      (cdr (s (cdr subtree))))
+			  (if (and (eq car (car subtreE))
+				   (eq cdr (cdr subtree)))
+			      subtree
+			      (cons car cdr))))))))
+    (s tree)))
+
+;;; In run-time env, since can be referenced in line expansions.
+(defmacro nsublis-macro ()
+  (let ((key-tmp (gensym)))
+    `(let ((,key-tmp (apply-key key subtree)))
+      (if notp
+	  (assoc ,key-tmp alist :test-not test-not)
+	  (assoc ,key-tmp alist :test test)))))
+
+(defun nsublis (alist tree &key key (test #'eql) (test-not nil notp))
+  "Substitutes new for subtrees matching old."
+  (declare (inline assoc))
+  (let (temp)
+    (labels ((s (subtree)
+		(cond ((Setq temp (nsublis-macro))
+		       (cdr temp))
+		      ((atom subtree) subtree)
+		      (t (do* ((last nil subtree)
+			       (subtree subtree (Cdr subtree)))
+			      ((atom subtree)
+			       (if (setq temp (nsublis-macro))
+				   (setf (cdr last) (cdr temp))))
+			   (if (setq temp (nsublis-macro))
+			       (return (setf (Cdr last) (Cdr temp)))
+			       (setf (car subtree) (s (car subtree)))))
+			 subtree))))
+      (s tree))))
+
+
+;;;; Functions for using lists as sets
+
+(defun member (item list &key key (test #'eql testp) (test-not nil notp))
+  "Returns tail of list beginning with first element satisfying EQLity,
+   :test, or :test-not with a given item."
+  (do ((list list (cdr list)))
+      ((null list) nil)
+    (let ((car (car list)))
+      (if (satisfies-the-test item car)
+	  (return list)))))
+
+(defun member-if (test list &key key)
+  "Returns tail of list beginning with first element satisfying test(element)"
+  (do ((list list (Cdr list)))
+      ((endp list) nil)
+    (if (funcall test (apply-key key (car list)))
+	(return list))))
+
+(defun member-if-not (test list &key key)
+  "Returns tail of list beginning with first element not satisfying test(el)"
+  (do ((list list (cdr list)))
+      ((endp list) ())
+    (if (not (funcall test (apply-key key (car list))))
+	(return list))))
+
+(defun tailp (object list)
+  "Returns true if Object is the same as some tail of List, otherwise
+   returns false. List must be a proper list or a dotted list."
+  (do ((list list (cdr list)))
+      ((atom list) (eql list object))
+    (if (eql object list)
+	(return t))))
+
+(defun adjoin (item list &key key (test #'eql) (test-not nil notp))
+  "Add item to list unless it is already a member"
+  (declare (inline member))
+  (if (let ((key-val (apply-key key item)))
+	(if notp
+	    (member key-val list :test-not test-not :key key)
+	    (member key-val list :test test :key key)))
+      list
+      (cons item list)))
+
+
+;;; UNION -- Public.
+;;;
+;;; This function assumes list2 is the result, adding to it from list1 as
+;;; necessary.  List2 must initialize the result value, so the call to MEMBER
+;;; will apply the test to the elements from list1 and list2 in the correct
+;;; order.
+;;;
+(defun union (list1 list2 &key key (test #'eql testp) (test-not nil notp))
+  "Returns the union of list1 and list2."
+  (declare (inline member))
+  (when (and testp notp) (error "Test and test-not both supplied."))
+  (let ((res list2))
+    (dolist (elt list1)
+      (unless (with-set-keys (member (apply-key key elt) list2))
+	(push elt res)))
+    res))
+
+;;; Destination and source are setf-able and many-evaluable.  Sets the source
+;;; to the cdr, and "conses" the 1st elt of source to destination.
+;;;
+(defmacro steve-splice (source destination)
+  `(let ((temp ,source))
+     (setf ,source (cdr ,source)
+	   (cdr temp) ,destination
+	   ,destination temp)))
+
+(defun nunion (list1 list2 &key key (test #'eql testp) (test-not nil notp))
+  "Destructively returns the union list1 and list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  (let ((res list2)
+	(list1 list1))
+    (do ()
+	((endp list1))
+      (if (not (with-set-keys (member (apply-key key (car list1)) list2)))
+	  (steve-splice list1 res)
+	  (setf list1 (cdr list1))))
+    res))
+  
+
+(defun intersection (list1 list2 &key key
+			   (test #'eql testp) (test-not nil notp))
+  "Returns the intersection of list1 and list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  (let ((res nil))
+    (dolist (elt list1)
+      (if (with-set-keys (member (apply-key key elt) list2))
+	  (push elt res)))
+    res))
+
+(defun nintersection (list1 list2 &key key
+			    (test #'eql testp) (test-not nil notp))
+  "Destructively returns the intersection of list1 and list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  (let ((res nil)
+	(list1 list1))
+    (do () ((endp list1))
+      (if (with-set-keys (member (apply-key key (car list1)) list2))
+	  (steve-splice list1 res)
+	  (setq list1 (Cdr list1))))
+    res))
+
+(defun set-difference (list1 list2 &key key
+			     (test #'eql testp) (test-not nil notp))
+  "Returns the elements of list1 which are not in list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  (if (null list2)
+      list1
+      (let ((res nil))
+	(dolist (elt list1)
+	  (if (not (with-set-keys (member (apply-key key elt) list2)))
+	      (push elt res)))
+	res)))
+
+
+(defun nset-difference (list1 list2 &key key
+			      (test #'eql testp) (test-not nil notp))
+  "Destructively returns the elements of list1 which are not in list2."
+  (declare (inline member))
+  (if (and testp notp)
+      (error "Test and test-not both supplied."))
+  (let ((res nil)
+	(list1 list1))
+    (do () ((endp list1))
+      (if (not (with-set-keys (member (apply-key key (car list1)) list2)))
+	  (steve-splice list1 res)
+	  (setq list1 (cdr list1))))
+    res))
+
+
+(defun set-exclusive-or (list1 list2 &key key
+			       (test #'eql testp) (test-not nil notp))
+  "Returns new list of elements appearing exactly once in list1 and list2."
+  (declare (inline member))
+  (let ((result nil))
+    (dolist (elt list1)
+      (unless (with-set-keys (member (apply-key key elt) list2))
+	(setq result (cons elt result))))
+    (dolist (elt list2)
+      (unless (with-set-keys (member (apply-key key elt) list1))
+	(setq result (cons elt result))))
+    result))
+
+
+;;; The outer loop examines list1 while the inner loop examines list2. If an
+;;; element is found in list2 "equal" to the element in list1, both are
+;;; spliced out. When the end of list1 is reached, what is left of list2 is
+;;; tacked onto what is left of list1.  The splicing operation ensures that
+;;; the correct operation is performed depending on whether splice is at the
+;;; top of the list or not
+
+(defun nset-exclusive-or (list1 list2 &key (test #'eql) (test-not nil notp)
+				key)
+  "Destructively return a list with elements which appear but once in list1
+   and list2."
+  (do ((list1 list1)
+       (list2 list2)
+       (x list1 (cdr x))
+       (splicex ()))
+      ((endp x)
+       (if (null splicex)
+	   (setq list1 list2)
+	   (rplacd splicex list2))
+       list1)
+    (do ((y list2 (cdr y))
+	 (splicey ()))
+	((endp y) (setq splicex x))
+      (cond ((let ((key-val-x (apply-key key (car x)))
+		   (key-val-y (apply-key key (Car y))))
+	       (if notp
+		   (not (funcall test-not key-val-x key-val-y))
+		   (funcall test key-val-x key-val-y)))
+	     (if (null splicex)
+		 (setq list1 (cdr x))
+		 (rplacd splicex (cdr x)))
+	     (if (null splicey) 
+		 (setq list2 (cdr y))
+		 (rplacd splicey (cdr y)))
+	     (return ()))			; assume lists are really sets
+	    (t (setq splicey y))))))
+
+(defun subsetp (list1 list2 &key key (test #'eql testp) (test-not nil notp))
+  "Returns T if every element in list1 is also in list2."
+  (declare (inline member))
+  (dolist (elt list1)
+    (unless (with-set-keys (member (apply-key key elt) list2))
+      (return-from subsetp nil)))
+  T)
+
+
+
 ;;; Functions that operate on association lists
 
 (defun acons (key datum alist)
@@ -863,40 +865,66 @@
 (defun assoc (item alist &key key test test-not)
   "Returns the cons in alist whose car is equal (by a given test or EQL) to
    the Item."
-  (cond (test (assoc-guts (funcall test item (apply-key key (caar alist)))))
-	(test-not (assoc-guts (not (funcall test-not item
-					    (apply-key key (caar alist))))))
-	(t (assoc-guts (eql item (apply-key key (caar alist)))))))
+  (cond (test
+	 (if key
+	     (assoc-guts (funcall test item (funcall key (caar alist))))
+	     (assoc-guts (funcall test item (caar alist)))))
+	(test-not
+	 (if key
+	     (assoc-guts (not (funcall test-not item
+				       (funcall key (caar alist)))))
+	     (assoc-guts (not (funcall test-not item (caar alist))))))
+	(t
+	 (if key
+	     (assoc-guts (eql item (funcall key (caar alist))))
+	     (assoc-guts (eql item (caar alist)))))))
 
 (defun assoc-if (predicate alist &key key)
   "Returns the first cons in alist whose car satisfies the Predicate.  If
    key is supplied, apply it to the car of each cons before testing."
-  (assoc-guts (funcall predicate (apply-key key (caar alist)))))
+  (if key
+      (assoc-guts (funcall predicate (funcall key (caar alist))))
+      (assoc-guts (funcall predicate (caar alist)))))
 
 (defun assoc-if-not (predicate alist &key key)
   "Returns the first cons in alist whose car does not satisfiy the Predicate.
   If key is supplied, apply it to the car of each cons before testing."
-  (assoc-guts (not (funcall predicate (apply-key key (caar alist))))))
+  (if key
+      (assoc-guts (not (funcall predicate (funcall key (caar alist)))))
+      (assoc-guts (not (funcall predicate (caar alist))))))
 
 
 (defun rassoc (item alist &key key test test-not)
   (declare (list alist))
   "Returns the cons in alist whose cdr is equal (by a given test or EQL) to
    the Item."
-  (cond (test (assoc-guts (funcall test item (apply-key key (cdar alist)))))
-	(test-not (assoc-guts (not (funcall test-not item
-					    (apply-key key (cdar alist))))))
-	(t (assoc-guts (eql item (apply-key key (cdar alist)))))))
+  (cond (test
+	 (if key
+	     (assoc-guts (funcall test item (funcall key (cdar alist))))
+	     (assoc-guts (funcall test item (cdar alist)))))
+	(test-not
+	 (if key
+	     (assoc-guts (not (funcall test-not item
+				       (funcall key (cdar alist)))))
+	     (assoc-guts (not (funcall test-not item (cdar alist))))))
+	(t
+	 (if key
+	     (assoc-guts (eql item (funcall key (cdar alist))))
+	     (assoc-guts (eql item (cdar alist)))))))
 
 (defun rassoc-if (predicate alist &key key)
   "Returns the first cons in alist whose cdr satisfies the Predicate.  If key
   is supplied, apply it to the cdr of each cons before testing."
-  (assoc-guts (funcall predicate (apply-key key (cdar alist)))))
+  (if key
+      (assoc-guts (funcall predicate (funcall key (cdar alist))))
+      (assoc-guts (funcall predicate (cdar alist)))))
 
 (defun rassoc-if-not (predicate alist &key key)
   "Returns the first cons in alist whose cdr does not satisfy the Predicate.
   If key is supplied, apply it to the cdr of each cons before testing."
-  (assoc-guts (not (funcall predicate (apply-key key (cdar alist))))))
+  (if key
+      (assoc-guts (not (funcall predicate (funcall key (cdar alist)))))
+      (assoc-guts (not (funcall predicate (cdar alist))))))
 
 
 

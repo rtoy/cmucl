@@ -71,8 +71,8 @@
   (format :z-pixmap :type (member :bitmap :xy-pixmap :z-pixmap))
   (bytes-per-line 0 :type card16)
   (bits-per-pixel 1 :type (member 1 4 8 16 24 32))
-  (bit-lsb-first-p *image-bit-lsb-first-p* :type boolean)	; Bit order
-  (byte-lsb-first-p *image-byte-lsb-first-p* :type boolean)	; Byte order
+  (bit-lsb-first-p *image-bit-lsb-first-p* :type generalized-boolean)	; Bit order
+  (byte-lsb-first-p *image-byte-lsb-first-p* :type generalized-boolean)	; Byte order
   (data *empty-data-x* :type (array card8 (*)))			; row-major
   (unit *image-unit* :type (member 8 16 32))			; Bitmap unit
   (pad *image-pad* :type (member 8 16 32))			; Scanline pad
@@ -121,7 +121,7 @@
     (type (or null (member :bitmap :xy-pixmap :z-pixmap))
 	  format)				; defaults to :z-pixmap
     (type (or null card16) bytes-per-line)
-    (type boolean byte-lsb-first-p bit-lsb-first-p)
+    (type generalized-boolean byte-lsb-first-p bit-lsb-first-p)
     (type (or null (member 8 16 32)) unit pad)
     (type (or null card8) left-pad))
   (declare (clx-values image))
@@ -215,7 +215,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p)
+	   (type generalized-boolean lsb-first-p)
 	   (ignore lsb-first-p))
   #.(declare-buffun)
   (if (index= srcinc destinc)
@@ -237,7 +237,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p))
+	   (type generalized-boolean lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
     (with-vector (dest buffer-bytes)
@@ -270,7 +270,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p))
+	   (type generalized-boolean lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
     (with-vector (dest buffer-bytes)
@@ -308,7 +308,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p))
+	   (type generalized-boolean lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
     (with-vector (dest buffer-bytes)
@@ -356,7 +356,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p))
+	   (type generalized-boolean lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
     (with-vector (dest buffer-bytes)
@@ -404,7 +404,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p)
+	   (type generalized-boolean lsb-first-p)
 	   (ignore lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
@@ -433,7 +433,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p)
+	   (type generalized-boolean lsb-first-p)
 	   (ignore lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
@@ -492,7 +492,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p)
+	   (type generalized-boolean lsb-first-p)
 	   (ignore lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
@@ -519,7 +519,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p))
+	   (type generalized-boolean lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
     (with-vector (dest buffer-bytes)
@@ -556,7 +556,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p))
+	   (type generalized-boolean lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
     (with-vector (dest buffer-bytes)
@@ -608,7 +608,7 @@
   (declare (type buffer-bytes src dest)
 	   (type array-index srcoff destoff srclen srcinc destinc)
 	   (type card16 height)
-	   (type boolean lsb-first-p))
+	   (type generalized-boolean lsb-first-p))
   #.(declare-buffun)
   (with-vector (src buffer-bytes)
     (with-vector (dest buffer-bytes)
@@ -758,7 +758,7 @@
 	to-bitmap-unit to-byte-lsb-first-p to-bit-lsb-first-p)
   (declare (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) from-bitmap-unit to-bitmap-unit)
-	   (type boolean from-byte-lsb-first-p from-bit-lsb-first-p
+	   (type generalized-boolean from-byte-lsb-first-p from-bit-lsb-first-p
 		 to-byte-lsb-first-p to-bit-lsb-first-p)
 	   (clx-values function lsb-first-p))
   (cond ((index= bits-per-pixel 1)
@@ -1088,7 +1088,7 @@
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type function read-pixarray-function)
 	   (type (member 8 16 32) from-unit to-unit)
-	   (type boolean from-byte-lsb-first-p from-bit-lsb-first-p
+	   (type generalized-boolean from-byte-lsb-first-p from-bit-lsb-first-p
 		 to-byte-lsb-first-p to-bit-lsb-first-p))
   (multiple-value-bind (image-swap-function image-swap-lsb-first-p)
       (image-swap-function
@@ -1121,7 +1121,7 @@
 	   (type card16 x y width height)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (unless (fast-read-pixarray
 	    bbuf boffset pixarray x y width height padded-bytes-per-line
 	    bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
@@ -1148,7 +1148,7 @@
 		 padded-bytes-per-plane)
 	   (type image-depth depth)
 	   (type (member 8 16 32) unit pad)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p)
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p)
 	   (clx-values image-x))
   (assert (index<= (index* depth padded-bytes-per-plane) length))
   (let* ((bytes-per-line (index-ceiling width 8))
@@ -1184,7 +1184,7 @@
 	   (type array-index index length padded-bytes-per-line)
 	   (type image-depth depth)
 	   (type (member 8 16 32) unit pad)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p)
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (clx-values image-x))
   (assert (index<= (index* height padded-bytes-per-line) length))
@@ -1215,7 +1215,7 @@
 		 padded-bytes-per-plane)
 	   (type image-depth depth)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p)
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p)
 	   (clx-values image-xy))
   (check-type data list)
   (multiple-value-bind (dimensions element-type)
@@ -1255,7 +1255,7 @@
 	   (type image-depth depth)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p)
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p)
 	   (clx-values image-z))
   (assert (index<= (index* (index+ y height) padded-bytes-per-line) length))
   (let* ((image-bits-per-line (index* width bits-per-pixel))
@@ -1333,7 +1333,7 @@
 		 (type (or null visual-info) visual-info)
 		 (type bitmap-format bitmap-format)
 		 (type (member 8 16 32) unit)
-		 (type boolean byte-lsb-first-p bit-lsb-first-p))
+		 (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
 	(multiple-value-bind (pad bits-per-pixel)
 	    (ecase format
 	      (:xy-pixmap
@@ -1627,7 +1627,7 @@
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type function write-pixarray-function)
 	   (type (member 8 16 32) from-unit to-unit)
-	   (type boolean from-byte-lsb-first-p from-bit-lsb-first-p
+	   (type generalized-boolean from-byte-lsb-first-p from-bit-lsb-first-p
 		 to-byte-lsb-first-p to-bit-lsb-first-p))
   (multiple-value-bind (image-swap-function image-swap-lsb-first-p)
       (image-swap-function
@@ -1635,7 +1635,7 @@
 	from-unit from-byte-lsb-first-p from-bit-lsb-first-p
 	to-unit to-byte-lsb-first-p to-bit-lsb-first-p)
     (declare (type symbol image-swap-function)
-	     (type boolean image-swap-lsb-first-p))
+	     (type generalized-boolean image-swap-lsb-first-p))
     (if (eq image-swap-function 'image-noswap)
 	(funcall
 	  write-pixarray-function
@@ -1661,7 +1661,7 @@
 	   (type array-index boffset padded-bytes-per-line)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (unless (fast-write-pixarray
 	    bbuf boffset pixarray x y width height padded-bytes-per-line
 	    bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
@@ -1688,7 +1688,7 @@
 		 from-padded-bytes-per-line to-padded-bytes-per-line)
 	   (type card16 x y width height)
 	   (type (member 8 16 32) from-bitmap-unit to-bitmap-unit)
-	   (type boolean from-byte-lsb-first-p from-bit-lsb-first-p
+	   (type generalized-boolean from-byte-lsb-first-p from-bit-lsb-first-p
 		 to-byte-lsb-first-p to-bit-lsb-first-p))
   (assert (index-zerop (index-mod x 8)))
   (multiple-value-bind (image-swap-function image-swap-lsb-first-p)
@@ -1697,7 +1697,7 @@
 	from-bitmap-unit from-byte-lsb-first-p from-bit-lsb-first-p
 	to-bitmap-unit to-byte-lsb-first-p to-bit-lsb-first-p)
     (declare (type symbol image-swap-function)
-	     (type boolean image-swap-lsb-first-p))
+	     (type generalized-boolean image-swap-lsb-first-p))
     (let ((x-mod-unit (index-mod x from-bitmap-unit)))
       (declare (type card16 x-mod-unit))
       (if (and (index-plusp x-mod-unit)
@@ -1743,7 +1743,7 @@
 	   (type card16 width height)
 	   (type array-index padded-bytes-per-line)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (dotimes (plane (image-depth image))
     (let ((data-start
 	    (index* (index* plane (image-height image))
@@ -1787,7 +1787,7 @@
 	   (type card16 x y width height)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) from-bitmap-unit to-bitmap-unit)
-	   (type boolean from-byte-lsb-first-p from-bit-lsb-first-p
+	   (type generalized-boolean from-byte-lsb-first-p from-bit-lsb-first-p
 		 to-byte-lsb-first-p to-bit-lsb-first-p))
   (if (index= bits-per-pixel 1)
       (write-xy-format-image-x-data
@@ -1818,7 +1818,7 @@
 	      from-bitmap-unit from-byte-lsb-first-p from-bit-lsb-first-p
 	      to-bitmap-unit to-byte-lsb-first-p to-bit-lsb-first-p)
 	  (declare (type symbol image-swap-function)
-		   (type boolean image-swap-lsb-first-p))
+		   (type generalized-boolean image-swap-lsb-first-p))
 	  (funcall
 	    (symbol-function image-swap-function) data obuf srcoff obuf-start
 	    srclen from-padded-bytes-per-line to-padded-bytes-per-line height
@@ -1832,7 +1832,7 @@
 	   (type int16 src-x src-y)
 	   (type card16 width height)
 	   (type array-index padded-bytes-per-line)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (loop 
     (when (index-zerop height) (return))
     (let ((nlines
@@ -1865,7 +1865,7 @@
 	   (type int16 src-x src-y)
 	   (type card16 width height)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (dolist (bitmap (image-xy-bitmap-list image))
     (declare (type pixarray-1 bitmap))
     (let ((src-y src-y)
@@ -1900,7 +1900,7 @@
 	   (type int16 src-x src-y)
 	   (type card16 width height)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (loop 
     (let ((bits-per-pixel (image-z-bits-per-pixel image))
 	  (nlines
@@ -1942,7 +1942,7 @@
 	   (type int16 x y) ;; required
 	   (type int16 src-x src-y)
 	   (type (or null card16) width height)
-	   (type boolean bitmap-p))
+	   (type generalized-boolean bitmap-p))
   (let* ((format
 	   (etypecase image
 	     (image-x (image-x-format (the image-x image)))
@@ -1968,7 +1968,7 @@
 	     (type display display)
 	     (type bitmap-format bitmap-format)
 	     (type (member 8 16 32) unit)
-	     (type boolean byte-lsb-first-p bit-lsb-first-p))
+	     (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
     (when (and bitmap-p (not (index= depth 1)))
       (error "Bitmaps must have depth 1"))
     (unless (<= 0 src-x (index1- (image-width image)))
@@ -2556,7 +2556,7 @@
 	    (image-x-unit image) (image-x-byte-lsb-first-p image)
 	    (image-x-bit-lsb-first-p image) 32 t t)
 	(declare (type symbol image-swap-function)
-		 (type boolean image-swap-lsb-first-p))
+		 (type generalized-boolean image-swap-lsb-first-p))
 	(funcall
 	  (symbol-function image-swap-function) (image-x-data image)
 	  data 0 0 bytes-per-line (image-x-bytes-per-line image)
@@ -2652,7 +2652,8 @@
 	  (unless gcontext (xlib::required-arg gcontext))
 	(error "Pixmap depth ~d incompatable with image depth ~d"
 	       depth image-depth)))	       
-    (put-image pixmap gc image :x 0 :y 0 :bitmap-p (and (= image-depth 1) gcontext))
+    (put-image pixmap gc image :x 0 :y 0 :bitmap-p (and (= image-depth 1)
+							gcontext))
     ;; Tile when image-width is less than the pixmap width, or
     ;; the image-height is less than the pixmap height.
     ;; ??? Would it be better to create a temporary pixmap and 

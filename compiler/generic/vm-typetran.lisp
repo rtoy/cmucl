@@ -5,13 +5,12 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.12 1997/04/01 19:24:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.12.2.1 1998/06/23 11:23:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.12 1997/04/01 19:24:10 dtc Exp $
 ;;;
-;;; This file contains the implimentation specific type transformation magic.
+;;; This file contains the implementation specific type transformation magic.
 ;;; Basically, the various non-standard predicates that can be used in typep
 ;;; transformations.
 ;;; 
@@ -28,6 +27,12 @@
 
 (define-type-predicate base-char-p base-char)
 (define-type-predicate bignump bignum)
+#+complex-float
+(define-type-predicate complex-double-float-p (complex double-float))
+#+complex-float
+(define-type-predicate complex-single-float-p (complex single-float))
+#+(and complex-float long-float)
+(define-type-predicate complex-long-float-p (complex long-float))
 (define-type-predicate double-float-p double-float)
 (define-type-predicate fixnump fixnum)
 (define-type-predicate long-float-p long-float)
@@ -61,6 +66,18 @@
 		       (simple-array single-float (*)))
 (define-type-predicate simple-array-double-float-p
 		       (simple-array double-float (*)))
+#+long-float
+(define-type-predicate simple-array-long-float-p
+		       (simple-array long-float (*)))
+#+complex-float
+(define-type-predicate simple-array-complex-single-float-p
+		       (simple-array (complex single-float) (*)))
+#+complex-float
+(define-type-predicate simple-array-complex-double-float-p
+		       (simple-array (complex double-float) (*)))
+#+(and complex-float long-float)
+(define-type-predicate simple-array-complex-long-float-p
+		       (simple-array (complex long-float) (*)))
 (define-type-predicate system-area-pointer-p system-area-pointer)
 (define-type-predicate unsigned-byte-32-p (unsigned-byte 32))
 (define-type-predicate signed-byte-32-p (signed-byte 32))
@@ -73,5 +90,4 @@
 ;;; Unlike the un-%'ed versions, these are true type predicates, accepting any
 ;;; type object.
 ;;;
-;(define-type-predicate %string-char-p string-char)
 (define-type-predicate %standard-char-p standard-char)

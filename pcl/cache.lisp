@@ -543,6 +543,13 @@
 	:class (kernel:make-standard-class :name name :pcl-class class)))))))
 
 
+;;; The following variable may be set to a standard-class that has
+;;; already been created by the lisp code and which is to be redefined
+;;; by PCL. This allows standard-classes to be defined and used for
+;;; type testing and dispatch before PCL is loaded.
+#+cmu17
+(defvar *pcl-class-boot* nil)
+
 #+cmu17
 ;;; MAKE-WRAPPER  --  Interface
 ;;;
@@ -563,7 +570,15 @@
 	       (kernel:layout-class owrap))
 	      ((*subtypep (class-of class)
 			  *the-class-standard-class*)
-	       (kernel:make-standard-class :pcl-class class))
+	       (cond ((and *pcl-class-boot*
+			   (eq (slot-value class 'name) *pcl-class-boot*))
+		      (let ((found (lisp:find-class (slot-value class 'name))))
+			(unless (kernel:class-pcl-class found)
+			  (setf (kernel:class-pcl-class found) class))
+			(assert (eq (kernel:class-pcl-class found) class))
+			found))
+		     (t
+		      (kernel:make-standard-class :pcl-class class))))
 	      (t
 	       (kernel:make-random-pcl-class :pcl-class class)))))))
    (t
@@ -915,6 +930,7 @@
 ;;;  
 (defun raise-metatype (metatype new-specializer)
   (let ((slot      (find-class 'slot-class))
+	(std       (find-class 'std-class))
 	(standard  (find-class 'standard-class))
 	(fsc       (find-class 'funcallable-standard-class))
 	(structure (find-class 'structure-class))
@@ -925,6 +941,7 @@
 			 (class-of (specializer-class x))
 			 (class-of x))))
 	       (cond ((eq x *the-class-t*) t)
+		     ((*subtypep meta-specializer std)  'standard-instance)
 		     ((*subtypep meta-specializer standard)  'standard-instance)
 		     ((*subtypep meta-specializer fsc)       'standard-instance)
 		     ((*subtypep meta-specializer structure) 'structure-instance)

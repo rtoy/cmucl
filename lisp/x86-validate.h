@@ -3,25 +3,37 @@
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
+  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.2.2.1 1998/06/23 11:25:11 pw Exp $
 */
 
 
 #define READ_ONLY_SPACE_START   (0x01000000)
-#define READ_ONLY_SPACE_SIZE    (0x04000000) /* 64MB!! */
+#ifdef GENCGC
+#define READ_ONLY_SPACE_SIZE    (0x02800000) /* 40MB */
+#else
+#define READ_ONLY_SPACE_SIZE    (0x01800000) /* 24MB */
+#endif
 
 #define STATIC_SPACE_START	(0x05000000)
-#define STATIC_SPACE_SIZE	(0x02fff000) /* 64MB - 1 page */
+#ifdef GENCGC
+#define STATIC_SPACE_SIZE	(0x00fff000) /* 16MB - 1 page */
+#else
+#define STATIC_SPACE_SIZE	(0x02fff000) /* 48MB - 1 page */
+#endif
 
+/* Note that GENCGC only uses dynamic_space 0. */
 #define DYNAMIC_0_SPACE_START	(0x09000000)
+#ifdef GENCGC
+#define DYNAMIC_1_SPACE_START	(0x29000000)
+#define DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
+#else
 #define DYNAMIC_1_SPACE_START	(0x0d000000)
-#define DYNAMIC_SPACE_SIZE	(0x04000000)
+#define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
+#endif
 
-/* Note that i386 has the stack growing from high
- * to low addresses. The code for the RISC systems
- * seem to go the other way. May have to make
- * a lot of changes in the GC and supporting code
- * to account for stack direction.
- */
+/* Note that i386 has the control stack growing from high to low
+ * addresses, as opposed to the control stack used on the other RISC
+ * systems for which the stack grows the other way. */
 #define CONTROL_STACK_START	(0x50000000)
 #define CONTROL_STACK_SIZE	(0x00100000)
 #define CONTROL_STACK_END	(CONTROL_STACK_START + CONTROL_STACK_SIZE)

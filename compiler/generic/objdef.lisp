@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.38 1997/04/01 19:24:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.38.2.1 1998/06/23 11:23:23 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,15 +21,15 @@
 	  even-fixnum-type function-pointer-type other-immediate-0-type
 	  list-pointer-type odd-fixnum-type instance-pointer-type
 	  other-immediate-1-type other-pointer-type bignum-type ratio-type
-	  single-float-type double-float-type complex-type
+	  single-float-type double-float-type long-float-type complex-type
 	  simple-array-type simple-string-type simple-bit-vector-type
 	  simple-vector-type simple-array-unsigned-byte-2-type
 	  simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
 	  simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
 	  simple-array-signed-byte-8-type simple-array-signed-byte-16-type
 	  simple-array-signed-byte-30-type simple-array-signed-byte-32-type
-	  simple-array-single-float-type
-	  simple-array-double-float-type complex-string-type
+	  simple-array-single-float-type simple-array-double-float-type
+	  simple-array-long-float-type complex-string-type
 	  complex-bit-vector-type complex-vector-type complex-array-type
 	  code-header-type function-header-type closure-header-type
 	  closure-function-header-type return-pc-header-type
@@ -40,7 +40,12 @@
 	  instance-header-type funcallable-instance-header-type
 	  fdefn-type vector-normal-subtype
 	  vector-valid-hashing-subtype vector-must-rehash-subtype
-	  forwarding-pointer-type scavenger-hook-type))
+	  forwarding-pointer-type scavenger-hook-type
+	  complex-single-float-type complex-double-float-type
+	  complex-long-float-type
+	  simple-array-complex-single-float-type
+	  simple-array-complex-double-float-type
+	  simple-array-complex-long-float-type))
 
 (in-package "KERNEL")
 (export '(%make-funcallable-instance
@@ -109,7 +114,11 @@
   ratio
   single-float
   double-float
+  #+long-float long-float
   complex
+  #+complex-float complex-single-float
+  #+complex-float complex-double-float
+  #+(and complex-float long-float) complex-long-float
   
   simple-array
   simple-string
@@ -126,6 +135,10 @@
   #+signed-array simple-array-signed-byte-32
   simple-array-single-float
   simple-array-double-float
+  #+long-float simple-array-long-float
+  #+complex-float simple-array-complex-single-float
+  #+complex-float simple-array-complex-double-float
+  #+(and complex-float long-float) simple-array-complex-long-float
   complex-string
   complex-bit-vector
   complex-vector
@@ -149,7 +162,7 @@
   weak-pointer
   instance-header
   fdefn
-  #+gengc scavenger-hook
+  #+(or gengc gencgc) scavenger-hook
   )
 
 
@@ -200,6 +213,12 @@
 				       :header double-float-type)
   (filler)
   (value :c-type "double" :length 2))
+
+#+long-float
+(define-primitive-object (long-float :lowtag other-pointer-type
+				     :header long-float-type)
+  #+sparc (filler)
+  (value :c-type "long double" :length #+x86 3 #+sparc 4))
 
 (define-primitive-object (complex :type complex
 				  :lowtag other-pointer-type
@@ -363,7 +382,7 @@
 	  :init :null)
   (next :c-type #-alpha "struct weak_pointer *" #+alpha "u32"))
 
-#+gengc
+#+(or gengc gencgc)
 (define-primitive-object (scavenger-hook :type scavenger-hook
 					 :lowtag other-pointer-type
 					 :header scavenger-hook-type
@@ -384,13 +403,13 @@
 (define-primitive-object (unwind-block)
   (current-uwp :c-type #-alpha "struct unwind_block *" #+alpha "u32")
   (current-cont :c-type #-alpha "lispobj *" #+alpha "u32")
-  current-code
+  #-x86 current-code
   entry-pc)
 
 (define-primitive-object (catch-block)
   (current-uwp :c-type #-alpha "struct unwind_block *" #+alpha "u32")
   (current-cont :c-type #-alpha "lispobj *" #+alpha "u32")
-  current-code
+  #-x86 current-code
   entry-pc
   tag
   (previous-catch :c-type #-alpha "struct catch_block *" #+alpha "u32")
@@ -444,15 +463,20 @@
 (defknown symbol-hash (symbol) index
   (flushable movable))
 
+#+x86
+(defknown symbol-hash (symbol) cl::hash
+  (flushable movable))
+
 (define-primitive-object (symbol :lowtag other-pointer-type
 				 :header symbol-header-type
-				 :alloc-trans
-				 #-gengc make-symbol
+				 #-x86 :alloc-trans
+				 #-(or gengc x86) make-symbol
 				 #+gengc %make-symbol)
   (value :set-trans %set-symbol-value
 	 :init :unbound)
-  #-gengc unused
+  #-(or gengc x86) unused
   #+gengc (hash :init :arg)
+  #+x86 (hash)
   (plist :ref-trans symbol-plist
 	 :set-trans %set-symbol-plist
 	 :init :null)
@@ -460,3 +484,26 @@
   (package :ref-trans symbol-package
 	   :set-trans %set-symbol-package
 	   :init :null))
+
+#+complex-float
+(define-primitive-object (complex-single-float
+			  :lowtag other-pointer-type
+			  :header complex-single-float-type)
+  (real :c-type "float")
+  (imag :c-type "float"))
+
+#+complex-float
+(define-primitive-object (complex-double-float
+			  :lowtag other-pointer-type
+			  :header complex-double-float-type)
+  (filler)
+  (real :c-type "double" :length 2)
+  (imag :c-type "double" :length 2))
+
+#+(and complex-float long-float)
+(define-primitive-object (complex-long-float
+			  :lowtag other-pointer-type
+			  :header complex-long-float-type)
+  #+sparc (filler)
+  (real :c-type "long double" :length #+x86 3 #+sparc 4)
+  (imag :c-type "long double" :length #+x86 3 #+sparc 4))

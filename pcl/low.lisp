@@ -191,7 +191,7 @@
 ;;; code which actually use ..slot-unbound.. rather than this variable.  So
 ;;; much for modularity
 ;;; 
-(defvar *slot-unbound* '..slot-unbound..)
+(defconstant *slot-unbound* '..slot-unbound..)
 
 (defmacro %allocate-static-slot-storage--class (no-of-slots)
   #+new-kcl-wrapper (declare (ignore no-of-slots))

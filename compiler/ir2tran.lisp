@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.61 1997/04/16 18:06:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.61.2.1 1998/06/23 11:23:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,13 +318,19 @@
 	     (first (ir2-continuation-locs 2cont)))))
 	 (ptype (ir2-continuation-primitive-type 2cont)))
     
-    (cond ((eq (continuation-type-check cont) t)
-	   (multiple-value-bind (check types)
-				(continuation-check-types cont)
-	     (assert (eq check :simple))
-	     (let ((temp (make-normal-tn ptype)))
-	       (emit-type-check node block cont-tn temp (first types))
-	       temp)))
+    (cond ((and (eq (continuation-type-check cont) t)
+		(multiple-value-bind (check types)
+		    (continuation-check-types cont)
+		  (assert (eq check :simple))
+		  ;; If the proven type is a subtype of the possibly
+		  ;; weakened type check then it's always True and is
+		  ;; flushed.
+		  (unless (values-subtypep (continuation-proven-type cont)
+					   (first types))
+		    (let ((temp (make-normal-tn ptype)))
+		      (emit-type-check node block cont-tn temp
+				       (first types))
+		      temp)))))
 	  ((eq (tn-primitive-type cont-tn) ptype) cont-tn)
 	  (t
 	   (let ((temp (make-normal-tn ptype)))
@@ -1134,15 +1140,13 @@
   (let ((start-label (entry-info-offset (leaf-info fun)))
 	(env (environment-info (node-environment node))))
     (let ((ef (functional-entry-function fun)))
-      (if (and (optional-dispatch-p ef)
-	       (optional-dispatch-more-entry ef))
-	  ;; Special case the xep-allocate-frame + copy-more-arg case.
-	  (progn 
-	    (vop xep-allocate-frame node block start-label #+(or x86 sparc) t)
-	    (vop copy-more-arg node block (optional-dispatch-max-args ef)))
-	;; No more args, so normal entry.
-	(vop xep-allocate-frame node block start-label #+(or x86 sparc) nil))
-      
+      (cond ((and (optional-dispatch-p ef) (optional-dispatch-more-entry ef))
+	     ;; Special case the xep-allocate-frame + copy-more-arg case.
+	     (vop xep-allocate-frame node block start-label t)
+	     (vop copy-more-arg node block (optional-dispatch-max-args ef)))
+	    (t
+	     ;; No more args, so normal entry.
+	     (vop xep-allocate-frame node block start-label nil)))
       (if (ir2-environment-environment env)
 	  (let ((closure
 		 (make-normal-tn (backend-any-primitive-type *backend*))))
@@ -1601,7 +1605,7 @@
 	 (2cont (continuation-info cont))
 	 (2info (nlx-info-info info))
 	 (top-loc (ir2-nlx-info-save-sp 2info))
-	 (start-loc (make-old-fp-passing-location t))
+	 (start-loc (make-nlx-entry-argument-start-location))
 	 (count-loc (make-argument-count-location))
 	 (target (ir2-nlx-info-target 2info)))
 

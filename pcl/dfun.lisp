@@ -1094,7 +1094,7 @@ And so, we are saved.
 		      (if (consp meth)
 			  (and (early-method-standard-accessor-p meth)
 			       (early-method-standard-accessor-slot-name meth))
-			  (and (member *the-class-standard-object*
+			  (and (member *the-class-std-object*
 				       (if early-p
 					   (early-class-precedence-list accessor-class)
 					   (class-precedence-list accessor-class)))
@@ -1141,7 +1141,7 @@ And so, we are saved.
 			    (early-class-precedence-list specl)
 			    (and (class-finalized-p specl)
 				 (class-precedence-list specl))))
-	     (so-p (member *the-class-standard-object* specl-cpl))
+	     (so-p (member *the-class-std-object* specl-cpl))
 	     (slot-name (if (consp method)
 			    (and (early-method-standard-accessor-p method)
 				 (early-method-standard-accessor-slot-name method))
@@ -1155,7 +1155,7 @@ And so, we are saved.
 				    (class-precedence-list class))))
 		       (when (memq specl cpl)
 			 (unless (and (or so-p
-					  (member *the-class-standard-object* cpl))
+					  (member *the-class-std-object* cpl))
 				      (or early-p
 					  (slot-accessor-std-p slotd type)))
 			   (return-from make-accessor-table nil))

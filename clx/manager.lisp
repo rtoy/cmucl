@@ -231,8 +231,8 @@
 ;; WM_SIZE_HINTS
 
 (def-clx-class (wm-size-hints)
-  (user-specified-position-p nil :type boolean) ;; True when user specified x y
-  (user-specified-size-p nil :type boolean)     ;; True when user specified width height
+  (user-specified-position-p nil :type generalized-boolean) ;; True when user specified x y
+  (user-specified-size-p nil :type generalized-boolean)     ;; True when user specified width height
   (x nil :type (or null int16))			;; Obsolete
   (y nil :type (or null int16))			;; Obsolete
   (width nil :type (or null card16))		;; Obsolete
@@ -248,8 +248,8 @@
   (base-width nil :type (or null card16))
   (base-height nil :type (or null card16))
   (win-gravity nil :type (or null win-gravity))
-  (program-specified-position-p nil :type boolean) ;; True when program specified x y
-  (program-specified-size-p nil :type boolean)     ;; True when program specified width height
+  (program-specified-position-p nil :type generalized-boolean) ;; True when program specified x y
+  (program-specified-size-p nil :type generalized-boolean)     ;; True when program specified width height
   )
 
 
@@ -494,8 +494,8 @@
 	   (type (or null list) command)
 	   (type (or null wm-hints) hints)
 	   (type (or null wm-size-hints) normal-hints zoom-hints)
-	   (type boolean user-specified-position-p user-specified-size-p)
-	   (type boolean program-specified-position-p program-specified-size-p)
+	   (type generalized-boolean user-specified-position-p user-specified-size-p)
+	   (type generalized-boolean program-specified-position-p program-specified-size-p)
 	   (type (or null int16) x y)
 	   (type (or null card16) width height min-width min-height max-width max-height width-inc height-inc base-width base-height)
 	   (type (or null win-gravity) win-gravity)
@@ -776,7 +776,7 @@
   ;; When careful-p, ensure all cut-buffer properties are defined, to prevent errors.
   (declare (type display display)
 	   (type int16 delta)
-	   (type boolean careful-p))
+	   (type generalized-boolean careful-p))
   (let* ((root (screen-root (first (display-roots display))))
 	 (buffers '#(:cut_buffer0 :cut_buffer1 :cut_buffer2 :cut_buffer3
 		     :cut_buffer4 :cut_buffer5 :cut_buffer6 :cut_buffer7)))

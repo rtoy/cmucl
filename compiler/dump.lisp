@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.64 1997/04/01 19:23:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.64.2.1 1998/06/23 11:22:48 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,7 +113,7 @@
 
 
 ;;; A list of the Circularity structures for all of the circularities detected
-;;; in the the current top-level call to Dump-Object.  Setting this lobotomizes
+;;; in the current top-level call to Dump-Object.  Setting this lobotomizes
 ;;; circularity detection as well, since circular dumping uses the table.
 ;;;
 (defvar *circularities-detected*)
@@ -1044,8 +1044,76 @@
   (sub-dump-object (denominator x) file)
   (dump-fop 'lisp::fop-ratio file))
 
+;;; Dump a long-float in the current *backend* format which may
+;;; require conversion from the native backend format.
+;;;
+#+(and long-float x86)
+(defun dump-long-float (float file)
+  (declare (long-float float))
+  (let ((exp-bits (long-float-exp-bits float))
+	(high-bits (long-float-high-bits float))
+	(low-bits (long-float-low-bits float)))
+    (cond ((backend-featurep :x86)	; Native dump.
+	   (dump-unsigned-32 low-bits file)
+	   (dump-unsigned-32 high-bits file)
+	   (dump-var-signed exp-bits 2 file))
+	  ((backend-featurep :sparc)
+	   ;; Some format converstion will be needed, just dump 0l0
+	   ;; for now.
+	   (unless (zerop float)
+	     (format t "Warning: dumping ~s as 0l0~%" float))
+	   (dump-unsigned-32 0 file)
+	   (dump-unsigned-32 0 file)
+	   (dump-unsigned-32 0 file)
+	   (dump-var-signed 0 4 file))
+	  (t
+	   (error "Unable to dump long-float")))))
+
+#+(and long-float sparc)
+(defun dump-long-float (float file)
+  (declare (long-float float))
+  (let ((exp-bits (long-float-exp-bits float))
+	(high-bits (long-float-high-bits float))
+	(mid-bits (long-float-mid-bits float))
+	(low-bits (long-float-low-bits float)))
+    (cond ((backend-featurep :sparc)	; Native dump
+	   (dump-unsigned-32 low-bits file)
+	   (dump-unsigned-32 mid-bits file)
+	   (dump-unsigned-32 high-bits file)
+	   (dump-var-signed exp-bits 4 file))
+	  (t
+	   (error "Unable to dump long-float")))))
+	   
 ;;; Or a complex...
 
+#+complex-float
+(defun dump-complex (x file)
+  (typecase x
+    ((complex single-float)
+     (dump-fop 'lisp::fop-complex-single-float file)
+     (dump-var-signed (single-float-bits (realpart x)) 4 file)
+     (dump-var-signed (single-float-bits (imagpart x)) 4 file))
+    ((complex double-float)
+     (dump-fop 'lisp::fop-complex-double-float file)
+     (let ((re (realpart x)))
+       (declare (double-float re))
+       (dump-unsigned-32 (double-float-low-bits re) file)
+       (dump-var-signed (double-float-high-bits re) 4 file))
+     (let ((im (imagpart x)))
+       (declare (double-float im))
+       (dump-unsigned-32 (double-float-low-bits im) file)
+       (dump-var-signed (double-float-high-bits im) 4 file)))
+    #+long-float
+    ((complex long-float)
+     (dump-fop 'lisp::fop-complex-long-float file)
+     (dump-long-float (realpart x) file)
+     (dump-long-float (imagpart x) file))
+    (t
+     (sub-dump-object (realpart x) file)
+     (sub-dump-object (imagpart x) file)
+     (dump-fop 'lisp::fop-complex file))))
+
+#-complex-float
 (defun dump-complex (x file)
   (sub-dump-object (realpart x) file)
   (sub-dump-object (imagpart x) file)
@@ -1080,7 +1148,11 @@
      (let ((x x))
        (declare (double-float x))
        (dump-unsigned-32 (double-float-low-bits x) file)
-       (dump-var-signed (double-float-high-bits x) 4 file)))))
+       (dump-var-signed (double-float-high-bits x) 4 file)))
+    #+long-float
+    (long-float
+     (dump-fop 'lisp::fop-long-float file)
+     (dump-long-float x file))))
 
 
 ;;;; Symbol Dumping:
@@ -1289,6 +1361,22 @@
       ((simple-array double-float (*))
        (dump-double-float-vector simple-version file)
        (eq-save-object x file))
+      #+long-float
+      ((simple-array long-float (*))
+       (dump-long-float-vector simple-version file)
+       (eq-save-object x file))
+      #+complex-float
+      ((simple-array (complex single-float) (*))
+       (dump-complex-single-float-vector simple-version file)
+       (eq-save-object x file))
+      #+complex-float
+      ((simple-array (complex double-float) (*))
+       (dump-complex-double-float-vector simple-version file)
+       (eq-save-object x file))
+      #+(and complex-float long-float)
+      ((simple-array (complex long-float) (*))
+       (dump-complex-long-float-vector simple-version file)
+       (eq-save-object x file))
       (t
        (dump-i-vector simple-version file)
        (eq-save-object x file)))))
@@ -1365,12 +1453,12 @@
 		 (dump-unsigned-32 len file)
 		 (dump-byte size file))
 	       (dump-data-maybe-byte-swapping vec bytes size file))
-	     (dump-signed (size bytes)
+	     (dump-signed (size dump-size bytes)
 	       (unless data-only
 		 (dump-fop 'lisp::fop-signed-int-vector file)
 		 (dump-unsigned-32 len file)
 		 (dump-byte size file))
-	       (dump-data-maybe-byte-swapping vec bytes size file)))
+	       (dump-data-maybe-byte-swapping vec bytes dump-size file)))
       (etypecase vec
 	(simple-bit-vector
 	 (dump-unsigned 1 (ash (+ (the index len) 7) -3)))
@@ -1385,13 +1473,13 @@
 	((simple-array (unsigned-byte 32) (*))
 	 (dump-unsigned 32 (* 4 len)))
 	((simple-array (signed-byte 8) (*))
-	 (dump-signed 8 len))
+	 (dump-signed 8 8 len))
 	((simple-array (signed-byte 16) (*))
-	 (dump-signed 16 (* 2 len)))
+	 (dump-signed 16 16 (* 2 len)))
 	((simple-array (signed-byte 30) (*))
-	 (dump-signed 30 (* 4 len)))
+	 (dump-signed 30 32 (* 4 len)))
 	((simple-array (signed-byte 32) (*))
-	 (dump-signed 32 (* 4 len)))))))
+	 (dump-signed 32 32 (* 4 len)))))))
 
 ;;; DUMP-SINGLE-FLOAT-VECTOR  --  internal.
 ;;; 
@@ -1411,6 +1499,48 @@
     (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2)
 				   (* vm:word-bytes 2) file)))
 
+;;; DUMP-LONG-FLOAT-VECTOR  --  internal.
+;;; 
+#+long-float
+(defun dump-long-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-long-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping
+     vec (* length vm:word-bytes #+x86 3 #+sparc 4)
+     (* vm:word-bytes #+x86 3 #+sparc 4) file)))
+
+;;; DUMP-COMPLEX-SINGLE-FLOAT-VECTOR  --  internal.
+;;; 
+#+complex-float
+(defun dump-complex-single-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-complex-single-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2)
+				   vm:word-bytes file)))
+
+;;; DUMP-COMPLEX-DOUBLE-FLOAT-VECTOR  --  internal.
+;;; 
+#+complex-float
+(defun dump-complex-double-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-complex-double-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2 2)
+				   (* vm:word-bytes 2) file)))
+
+;;; DUMP-COMPLEX-LONG-FLOAT-VECTOR  --  internal.
+;;; 
+#+(and complex-float long-float)
+(defun dump-complex-long-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-complex-long-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping
+     vec (* length vm:word-bytes #+x86 3 #+sparc 4 2)
+     (* vm:word-bytes #+x86 3 #+sparc 4) file)))
+
 ;;; DUMP-DATA-BITS-MAYBE-BYTE-SWAPPING  --  internal.
 ;;;
 ;;; Dump BYTES of data from DATA-VECTOR (which must be some unboxed vector)
@@ -1425,11 +1555,13 @@
 	     (= element-size vm:byte-bits))
 	 (dump-bytes data-vector bytes file))
 	((>= element-size vm:word-bits)
-	 (let ((words-per-element (/ element-size vm:word-bits))
-	       (result (make-array bytes :element-type '(unsigned-byte 8))))
+	 (let* ((words-per-element (/ element-size vm:word-bits))
+		(bytes-per-element (* words-per-element vm:word-bytes))
+		(elements (/ bytes bytes-per-element))
+		(result (make-array bytes :element-type '(unsigned-byte 8))))
 	   (declare (type (integer 1 #.most-positive-fixnum)
-			  words-per-element))
-	   (dotimes (index (the integer (/ bytes words-per-element)))
+			  words-per-element bytes-per-element elements))
+	   (dotimes (index elements)
 	     (dotimes (offset words-per-element)
 	       (let ((word (%raw-bits data-vector
 				      (+ (* index words-per-element)

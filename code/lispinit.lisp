@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.1 1997/09/15 16:51:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.2 1998/06/23 11:22:04 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,6 +47,8 @@
   (special *gc-inhibit* *already-maybe-gcing*
 	   *need-to-collect-garbage* *gc-verbose*
 	   *before-gc-hooks* *after-gc-hooks*
+	   #+x86 *pseudo-atomic-atomic*
+	   #+x86 *pseudo-atomic-interrupted*
 	   unix::*interrupts-enabled*
 	   unix::*interrupt-pending*
 	   *type-system-initialized*)
@@ -322,6 +324,10 @@
 		   (svref *load-time-values* (third fun))))
 	    #+gengc
 	    (do-load-time-value-fixup (second fun) (third fun) (fourth fun)))
+	   #+(and x86 gencgc)
+	   (:load-time-code-fixup
+	    (vm::do-load-time-code-fixup (second fun) (third fun) (fourth fun)
+					 (fifth fun)))
 	   (t
 	    (%primitive print
 			"Bogus fixup in *lisp-initialization-functions*")
@@ -348,7 +354,7 @@
   (print-and-call loader-init)
   (print-and-call package-init)
   (print-and-call kernel::signal-init)
-  (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
+  (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
 
   (set-floating-point-modes :traps '(:overflow #-x86 :underflow :invalid
 					       :divide-by-zero))
@@ -415,10 +421,13 @@
     (stream-reinit)
     (kernel::signal-init)
     (gc-init)
-    (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
+    (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
     (set-floating-point-modes :traps
 			      '(:overflow #-x86 :underflow :invalid
-					  :divide-by-zero)))))
+					  :divide-by-zero))
+    ;; Clear pseudo atomic in case it this core wasn't compiled with
+    ;; support.
+    #+x86 (setf lisp::*pseudo-atomic-atomic* 0))))
 
 
 
@@ -434,6 +443,7 @@
       (throw '%end-of-the-world 0)))
 
 
+#-mp ; Multi-processing version defined in multi-proc.lisp.
 (defun sleep (n)
   "This function causes execution to be suspended for N seconds.  N may
   be any non-negative, non-complex number."
@@ -518,7 +528,8 @@
 	 (let ((loc (int-sap (- (sap-int ptr) offset))))
 	   (cond ((= offset bytes-per-scrub-unit)
 		  count)
-		 ((zerop (stack-ref loc 0))
+		 ((zerop (kernel::get-lisp-obj-address (stack-ref loc 0)))
+;		 ((zerop (stack-ref loc 0))
 		  (look ptr (+ offset vm:word-bytes) count))
 		 (t
 		  (scrub ptr offset (+ count vm:word-bytes)))))))

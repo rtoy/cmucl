@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.13 1997/01/18 14:30:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.13.2.1 1998/06/23 11:22:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
   "If the trace indentation exceeds this value, then indentation restarts at
    0.")
 
-(defvar *trace-encapsulate-default* #-x86 :default #+x86 t
+(defvar *trace-encapsulate-default* :default
   "The default value for the :ENCAPSULATE option to trace.")
 
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.6.2.1 1997/09/09 01:19:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.6.2.2 1998/06/23 11:24:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Debugging and enhancements by Douglas Crosher 1996, 1997.
+;;; Debugging and enhancements by Douglas Crosher 1996, 1997, 1998.
 ;;;
 
 (in-package :x86)
@@ -103,11 +103,11 @@
 	(t
 	 (format stream "~A PTR [" (symbol-name (ea-size ea)))
 	 (when (ea-base ea)
-	   (write-string (c::location-print-name (ea-base ea)) stream)
+	   (write-string (x86-location-print-name (ea-base ea)) stream)
 	   (when (ea-index ea)
 	     (write-string "+" stream)))
 	 (when (ea-index ea)
-	   (write-string (c::location-print-name (ea-index ea)) stream))
+	   (write-string (x86-location-print-name (ea-index ea)) stream))
 	 (unless (= (ea-scale ea) 1)
 	   (format stream "*~A" (ea-scale ea)))
 	 (typecase (ea-disp ea)
@@ -522,22 +522,13 @@
 	      word-width))))
 
 (defun offset-next (value dstate)
-  (declare #|(type integer value)|#
+  (declare (type integer value)
 	   (type disassem:disassem-state dstate))
-  ;; XXX dtc; a hack to stop the disassembler causing a fatal error;
-  ;; probably caused by out of bounds offsets?
-  (if (or (null value)
-	  (and (listp value) (null (car value))))
-      0
-    (+ (disassem:dstate-next-addr dstate) (if (listp value) (car value) value))))
+  (+ (disassem:dstate-next-addr dstate) value))
 
 (defun read-address (value dstate)
   (declare (ignore value))		; always nil anyway
   (disassem:read-suffix (width-bits *default-address-size*) dstate))
-
-(defun read-signed-imm-dword (value dstate)
-  (declare (ignore value))		; always nil anyway
-  (disassem:read-signed-suffix 32 dstate))
 
 (defun width-bits (width)
   (ecase width
@@ -602,7 +593,9 @@
 		 (disassem:read-signed-suffix 8 dstate)))
 
 (disassem:define-argument-type signed-imm-dword
-  :prefilter #'read-signed-imm-dword)
+  :prefilter #'(lambda (value dstate)
+		 (declare (ignore value))		; always nil anyway
+		 (disassem:read-signed-suffix 32 dstate)))
 
 (disassem:define-argument-type imm-word
   :prefilter #'(lambda (value dstate)
@@ -802,8 +795,7 @@
 				      :default-printer `(:name :tab reg/mem))
   (prefix :field (byte 5 3) :value #b11011)
   (op     :fields (list (byte 3 0) (byte 3 11)))
-  (reg/mem :fields (list (byte 2 14) (byte 3 8)) :type 'reg/mem)
-  )
+  (reg/mem :fields (list (byte 2 14) (byte 3 8)) :type 'reg/mem))
 
 ;;;
 ;;; fp insn to/from fp reg
@@ -813,8 +805,7 @@
   (prefix :field (byte 5 3) :value #b11011)
   (suffix :field (byte 2 14) :value #b11)
   (op     :fields (list (byte 3 0) (byte 3 11)))
-  (fp-reg :field (byte 3 8) :type 'fp-reg)
-  )
+  (fp-reg :field (byte 3 8) :type 'fp-reg))
 
 ;;;
 ;;; fp insn to/from fp reg, with the reversed source/destination flag.
@@ -826,8 +817,7 @@
   (suffix :field (byte 2 14) :value #b11)
   (op     :fields (list (byte 2 0) (byte 3 11)))
   (d      :field (byte 1 2))
-  (fp-reg :field (byte 3 8) :type 'fp-reg)
-  )
+  (fp-reg :field (byte 3 8) :type 'fp-reg))
 
 
 ;;; pfw
@@ -838,6 +828,12 @@
   (prefix :field (byte 8  0) :value #b11011001)
   (suffix :field (byte 3 13) :value #b111)
   (op     :field (byte 5  8)))
+
+(disassem:define-instruction-format (floating-point-3 16
+				      :default-printer '(:name))
+  (prefix :field (byte 5 3) :value #b11011)
+  (suffix :field (byte 2 14) :value #b11)
+  (op     :fields (list (byte 3 0) (byte 6 8))))
 
 (disassem:define-instruction-format (floating-point-5 16
 				      :default-printer '(:name))
@@ -1053,6 +1049,16 @@
    (emit-byte segment #b10001101)
    (emit-ea segment src (reg-tn-encoding dst))))
 
+(define-instruction cmpxchg (segment dst src)
+  ;; Register/Memory with Register.
+  (:printer ext-reg-reg/mem ((op #b1011000)) '(:name :tab reg/mem ", " reg))
+  (:emitter
+   (assert (register-p src))
+   (let ((size (matching-operand-size src dst)))
+     (maybe-emit-operand-size-prefix segment size)
+     (emit-byte segment #b00001111)
+     (emit-byte segment (if (eq size :byte) #b10110000 #b10110001))
+     (emit-ea segment dst (reg-tn-encoding src)))))
 
 
 ;;;; Flag control instructions.
@@ -1371,6 +1377,17 @@
   (:emitter
    (maybe-emit-operand-size-prefix segment :dword)
    (emit-byte segment #b10011001)))
+
+(define-instruction xadd (segment dst src)
+  ;; Register/Memory with Register.
+  (:printer ext-reg-reg/mem ((op #b1100000)) '(:name :tab reg/mem ", " reg))
+  (:emitter
+   (assert (register-p src))
+   (let ((size (matching-operand-size src dst)))
+     (maybe-emit-operand-size-prefix segment size)
+     (emit-byte segment #b00001111)
+     (emit-byte segment (if (eq size :byte) #b11000000 #b11000001))
+     (emit-ea segment dst (reg-tn-encoding src)))))
 
 
 ;;;; Logic.
@@ -1697,14 +1714,20 @@
   (cc	 :field (byte 4 8) :type 'condition-code)
   ;; The disassembler currently doesn't let you have an instruction > 32 bits
   ;; long, so we fake it by using a prefilter to read the offset.
-  (label :type 'displacement :prefilter #'read-signed-imm-dword))
+  (label :type 'displacement
+	 :prefilter #'(lambda (value dstate)
+			(declare (ignore value))   ; always nil anyway
+			(disassem:read-signed-suffix 32 dstate))))
 
 (disassem:define-instruction-format (near-jump 8
 				     :default-printer '(:name :tab label))
   (op    :field (byte 8 0))
   ;; The disassembler currently doesn't let you have an instruction > 32 bits
   ;; long, so we fake it by using a prefilter to read the address.
-  (label :type 'displacement :prefilter #'read-signed-imm-dword))
+  (label :type 'displacement
+	 :prefilter #'(lambda (value dstate)
+			(declare (ignore value))   ; always nil anyway
+			(disassem:read-signed-suffix 32 dstate))))
 
 
 (define-instruction call (segment where)
@@ -1849,17 +1872,19 @@
 
 ;;;; Enter/Leave
 
-(disassem:define-instruction-format
-    (enter-format
-     24
-     :default-printer '(:name :tab disp (:unless (:constant 0) ", " level)))
+(disassem:define-instruction-format (enter-format 32
+				     :default-printer '(:name
+							:tab disp
+							(:unless (:constant 0)
+							  ", " level)))
   (op :field (byte 8 0))
   (disp :field (byte 16 8))
-  (level :field (byte 8 16)))
+  (level :field (byte 8 24)))
 
 (define-instruction enter (segment disp &optional (level 0))
   (:declare (type (unsigned-byte 16) disp)
 	    (type (unsigned-byte 8) level))
+  (:printer enter-format ((op #b11001000)))
   (:emitter
    (emit-byte segment #b11001000)
    (emit-word segment disp)
@@ -1873,13 +1898,11 @@
 
 ;;;; Interrupt instructions.
 
-(disassem:define-instruction-format
- (break 16 :default-printer '(:name :tab code))
- (op :field (byte 8 0) :value #b11001100)
+;;; Single byte instruction with an immediate byte argument.
+(disassem:define-instruction-format (byte-imm 16
+				     :default-printer '(:name :tab code))
+ (op :field (byte 8 0))
  (code :field (byte 8 8)))
-
-(define-emitter emit-break-inst 16
-  (byte 8 0) (byte 8 8))
 
 (defun snarf-error-junk (sap offset &optional length-only)
   (let* ((length (system:sap-ref-8 sap offset))
@@ -1922,7 +1945,7 @@
 (defun break-control (chunk inst stream dstate)
   (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (case (break-code chunk dstate)
+    (case (byte-imm-code chunk dstate)
       (#.vm:error-trap
        (nt "Error trap")
        (disassem:handle-break-args #'snarf-error-junk stream dstate))
@@ -1941,14 +1964,15 @@
 
 (define-instruction break (segment code)
   (:declare (type (unsigned-byte 8) code))
-  (:printer break ((op #b11001100))
-	    '(:name :tab code)
-	    :control #'break-control )
+  (:printer byte-imm ((op #b11001100)) '(:name :tab code)
+	    :control #'break-control)
   (:emitter
-   (emit-break-inst segment #b11001100 code)))
+   (emit-byte segment #b11001100)
+   (emit-byte segment code)))
 
 (define-instruction int (segment number)
   (:declare (type (unsigned-byte 8) number))
+  (:printer byte-imm ((op #b11001101)))
   (:emitter
    (etypecase number
      ((member 3)
@@ -2061,6 +2085,15 @@
        (emit-byte segment #b11011001)
      (emit-byte segment #b11011101))
     (emit-fp-op segment source #b000)))
+
+;;;
+;;; load long to st(0)
+;;;
+(define-instruction fldl (segment source)
+  (:printer floating-point ((op '(#b011 #b101))))
+  (:emitter
+    (emit-byte segment #b11011011)
+    (emit-fp-op segment source #b101)))
 
 ;;;
 ;;; store single from st(0)
@@ -2414,7 +2447,6 @@
 ;;;
 (define-instruction fstp (segment dest)
   (:printer floating-point ((op '(#b001 #b011))))
-  (:printer floating-point-fp ((op '(#b101 #b011))))
   (:emitter 
    (cond ((fp-reg-tn-p dest)
 	  (emit-byte segment #b11011101)
@@ -2422,6 +2454,28 @@
 	 (t
 	  (emit-byte segment #b11011001)
 	  (emit-fp-op segment dest #b011)))))
+;;;
+;;; store double from st(0) and pop
+;;;
+(define-instruction fstpd (segment dest)
+  (:printer floating-point ((op '(#b101 #b011))))
+  (:printer floating-point-fp ((op '(#b101 #b011))))
+  (:emitter 
+   (cond ((fp-reg-tn-p dest)
+	  (emit-byte segment #b11011101)
+	  (emit-fp-op segment dest #b011))
+	 (t
+	  (emit-byte segment #b11011101)
+	  (emit-fp-op segment dest #b011)))))
+;;;
+;;; store long from st(0) and pop
+;;;
+(define-instruction fstpl (segment dest)
+  (:printer floating-point ((op '(#b011 #b111))))
+  (:emitter
+    (emit-byte segment #b11011011)
+    (emit-fp-op segment dest #b111)))
+
 ;;;
 ;;; decrement stack-top pointer
 ;;;
@@ -2545,13 +2599,13 @@
 ;;;
 ;;; Comparison
 ;;;
-(define-instruction fcom(segment src)
+(define-instruction fcom (segment src)
   (:printer floating-point ((op '(#b000 #b010))))
   (:emitter
    (emit-byte segment #b11011000)
    (emit-fp-op segment src #b010)))
 
-(define-instruction fcomd(segment src)
+(define-instruction fcomd (segment src)
   (:printer floating-point ((op '(#b100 #b010))))
   (:printer floating-point-fp ((op '(#b000 #b010))))
   (:emitter
@@ -2560,10 +2614,17 @@
      (emit-byte segment #b11011100))
    (emit-fp-op segment src #b010)))
 
+;;; Compare ST1 to ST0, popping the stack twice.
+(define-instruction fcompp (segment)
+  (:printer floating-point-3 ((op '(#b110 #b011001))))
+  (:emitter
+   (emit-byte segment #b11011110)
+   (emit-byte segment #b11011001)))
+
 ;;;
 ;;; Unordered comparison
 ;;;
-(define-instruction fucom(segment src)
+(define-instruction fucom (segment src)
   ;; XX Printer conflicts with frstor
   ;; (:printer floating-point ((op '(#b101 #b100))))
   (:emitter

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.1 1997/01/18 14:31:22 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.1.2.1 1998/06/23 11:24:11 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,12 +15,13 @@
 ;;; core to keep the user entertained.
 ;;;
 ;;; Written by William Lott.
+;;; Enhancements/debugging by Douglas T. Crosher 1996.
 ;;;
 (in-package :x86)
 
 (define-vop (print)
   (:args (object :scs (descriptor-reg any-reg)))
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from :eval :to (:result 0))
 	      eax)
   (:results (result :scs (descriptor-reg)))

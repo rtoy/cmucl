@@ -132,7 +132,7 @@
     gcontext-id gcontext-join-style gcontext-key gcontext-line-style
     gcontext-line-width gcontext-p gcontext-plane-mask gcontext-plist
     gcontext-stipple gcontext-subwindow-mode gcontext-tile gcontext-ts-x
-    gcontext-ts-y get-external-event-code get-image get-property
+    gcontext-ts-y generalized-boolean get-external-event-code get-image get-property
     get-raw-image get-resource get-search-resource get-search-table
     get-standard-colormap get-wm-class global-pointer-position grab-button
     grab-key grab-keyboard grab-pointer grab-server grab-status
@@ -301,7 +301,7 @@
     gcontext-id gcontext-join-style gcontext-key gcontext-line-style
     gcontext-line-width gcontext-p gcontext-plane-mask gcontext-plist
     gcontext-stipple gcontext-subwindow-mode gcontext-tile gcontext-ts-x
-    gcontext-ts-y get-external-event-code get-image get-property
+    gcontext-ts-y generalized-boolean get-external-event-code get-image get-property
     get-raw-image get-resource get-search-resource get-search-table
     get-standard-colormap get-wm-class global-pointer-position grab-button
     grab-key grab-keyboard grab-pointer grab-server grab-status

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.45 1997/02/12 20:09:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.45.2.1 1998/06/23 11:21:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -485,9 +485,10 @@ See the CMU Common Lisp User's Manual for more information.
     (do ((frame (if *in-the-debugger* *current-frame* (di:top-frame))
 		(di:frame-down frame))
 	 (count count (1- count)))
-	((or (null frame) (zerop count))
-	 (values))
-      (print-frame-call frame :number t))))
+	((or (null frame) (zerop count)))
+      (print-frame-call frame :number t))
+    (fresh-line *standard-output*)
+    (values)))
 
 
 ;;;; Frame printing:
@@ -700,7 +701,8 @@ See the CMU Common Lisp User's Manual for more information.
     (unless (typep *debug-condition* 'step-condition)
       (clear-input *debug-io*)
       (format *debug-io* "~2&Debug  (type H for help)~2%"))
-    (debug-loop)))
+    #-mp (debug-loop)
+    #+mp (mp:without-scheduling (debug-loop))))
 
 
 
@@ -1487,6 +1489,7 @@ See the CMU Common Lisp User's Manual for more information.
 		  (setf function (eval (pop command-line)))
 		  (setf *default-breakpoint-debug-function*
 			(di:function-debug-function function))
+                  (setf place *default-breakpoint-debug-function*)
 		  (setf *possible-breakpoints*
 			(possible-breakpoints
 			 *default-breakpoint-debug-function*))))))

@@ -152,18 +152,20 @@
 			      ((fsc-instance-p ,instance)
 			       ,@(unless class-slot-p
 				   `((setq slots (fsc-instance-slots ,instance))))
-			       (fsc-instance-wrapper ,instance))))
-	       ,@(when readp '(value)))
-	  (if (or (null wrapper)
-		  (zerop (wrapper-cache-number-vector-ref wrapper ,field))
-		  (not (or (eq wrapper wrapper-0)
-			   ,@(when (eql 2 1-or-2-class)
-			       `((eq wrapper wrapper-1)))))
-		  ,@(when readp `((eq *slot-unbound* (setq value ,read-form)))))
-	      (funcall miss-fn ,@arglist)
-	      ,(if readp
-		   'value
-		   `(setf ,read-form ,(car arglist))))))))
+			       (fsc-instance-wrapper ,instance)))))
+	  (block access
+	    (when (and wrapper
+		       (/= (wrapper-cache-number-vector-ref wrapper ,field) 0)
+		       ,@(if (eql 1 1-or-2-class)
+			     `((eq wrapper wrapper-0))
+			     `((or (eq wrapper wrapper-0)
+				   (eq wrapper wrapper-1)))))
+	      ,@(if readp
+		    `((let ((value ,read-form))
+			(unless (eq value *slot-unbound*)
+			  (return-from access value))))
+		    `((return-from access (setf ,read-form ,(car arglist))))))
+	    (funcall miss-fn ,@arglist))))))
 
 (defun emit-slot-read-form (class-slot-p index slots)
   (if class-slot-p

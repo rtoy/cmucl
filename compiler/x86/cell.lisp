@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.2 1997/02/13 01:20:32 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.2.2.1 1998/06/23 11:23:59 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;; 
 
 (in-package :x86)
@@ -106,6 +107,12 @@
   (:policy :fast)
   (:translate symbol-value))
 
+(defknown fast-symbol-value-xadd (symbol fixnum) fixnum ())
+(define-vop (fast-symbol-value-xadd cell-xadd)
+  (:variant symbol-value-slot other-pointer-type)
+  (:policy :fast)
+  (:translate fast-symbol-value-xadd)
+  (:arg-types * tagged-num))
 
 (define-vop (boundp)
   (:translate boundp)
@@ -118,6 +125,19 @@
     (loadw value object symbol-value-slot other-pointer-type)
     (inst cmp value unbound-marker-type)
     (inst jmp (if not-p :e :ne) target)))
+
+(define-vop (symbol-hash)
+  (:policy :fast-safe)
+  (:translate symbol-hash)
+  (:args (symbol :scs (descriptor-reg)))
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:generator 2
+    ;; the symbol-hash slot of NIL holds NIL because it is also the cdr
+    ;; slot, so we have to strip off the two low bits to make sure it is
+    ;; a fixnum.
+    (loadw res symbol symbol-hash-slot other-pointer-type)
+    (inst and res (lognot #b11))))
 
 
 ;;;; Fdefinition (fdefn) objects.
@@ -141,7 +161,7 @@
   (:translate (setf fdefn-function))
   (:args (function :scs (descriptor-reg) :target result)
 	 (fdefn :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) raw)
+  (:temporary (:sc unsigned-reg) raw)
   (:temporary (:sc byte-reg) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
@@ -180,7 +200,7 @@
 (define-vop (bind)
   (:args (val :scs (any-reg descriptor-reg))
 	 (symbol :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) temp bsp)
+  (:temporary (:sc unsigned-reg) temp bsp)
   (:generator 5
     (load-symbol-value bsp *binding-stack-pointer*)
     (loadw temp symbol symbol-value-slot other-pointer-type)
@@ -191,7 +211,7 @@
     (storew val symbol symbol-value-slot other-pointer-type)))
 
 (define-vop (unbind)
-  (:temporary (:sc dword-reg) symbol value bsp)
+  (:temporary (:sc unsigned-reg) symbol value bsp)
   (:generator 0
     (load-symbol-value bsp *binding-stack-pointer*)
     (loadw symbol bsp (- binding-symbol-slot binding-size))
@@ -204,7 +224,7 @@
 
 (define-vop (unbind-to-here)
   (:args (where :scs (descriptor-reg any-reg)))
-  (:temporary (:sc dword-reg) symbol value bsp)
+  (:temporary (:sc unsigned-reg) symbol value bsp)
   (:generator 0
     (load-symbol-value bsp *binding-stack-pointer*)
     (inst cmp where bsp)
@@ -291,6 +311,43 @@
 (define-full-setter instance-index-set * instance-slots-offset
   instance-pointer-type (any-reg descriptor-reg) * %instance-set)
 
+(export 'kernel::%instance-set-conditional "KERNEL")
+(defknown kernel::%instance-set-conditional (instance index t t) t
+  (unsafe))
+
+(define-vop (instance-set-conditional-c slot-set-conditional)
+  (:policy :fast-safe)
+  (:translate kernel::%instance-set-conditional)
+  (:variant instance-slots-offset instance-pointer-type)
+  (:arg-types instance (:constant index) * *))
+
+(define-vop (instance-set-conditional)
+  (:translate kernel::%instance-set-conditional)
+  (:args (object :scs (descriptor-reg) :to :eval)
+	 (slot :scs (any-reg) :to :result)
+	 (old-value :scs (descriptor-reg any-reg) :target eax)
+	 (new-value :scs (descriptor-reg any-reg) :target temp))
+  (:arg-types instance positive-fixnum * *)
+  (:temporary (:sc descriptor-reg :offset eax-offset
+		   :from (:argument 1) :to :result :target result)  eax)
+  (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:policy :fast-safe)
+  (:generator 5
+    (move eax old-value)
+    (move temp new-value)
+    (inst cmpxchg (make-ea :dword :base object :index slot :scale 1
+			   :disp (- (* instance-slots-offset word-bytes)
+				    instance-pointer-type))
+	  temp)
+    (move result eax)))
+
+(defknown %instance-xadd (instance index fixnum) fixnum ())
+(define-vop (instance-xadd-c slot-xadd)
+  (:policy :fast-safe)
+  (:translate %instance-xadd)
+  (:variant instance-slots-offset instance-pointer-type)
+  (:arg-types instance (:constant index) tagged-num))
 
 
 ;;;; Code object frobbing.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.31 1997/03/15 16:58:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.31.2.1 1998/06/23 11:22:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,6 +146,7 @@
   :print-herald
       If true (the default), print out the lisp system herald when starting."
 
+  #+mp (mp::shutdown-multi-processing)
   (when (fboundp 'eval:flush-interpreted-function-cache)
     (eval:flush-interpreted-function-cache))
   (when (fboundp 'cancel-finalization)
@@ -153,7 +154,7 @@
   (if purify
       (purify :root-structures root-structures
 	      :environment-name environment-name)
-      (gc))
+      #-gencgc (gc) #+gencgc (gc :full t))
   (dolist (f *before-save-initializations*) (funcall f))
   (flet
       ((restart-lisp ()
@@ -227,7 +228,7 @@
 	,#'(lambda (stream) (write-string (machine-instance) stream))))
 
 (setf (getf *herald-items* :bugs)
-      '("Send bug reports and questions to cmucl-bugs@cs.cmu.edu."
+      '("Send questions to cmucl-help@cons.org. and bug reports to cmucl-imp@cons.org."
 	terpri
 	"Loaded subsystems:"))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66.2.1 1997/07/26 17:16:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66.2.2 1998/06/23 11:22:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,7 +161,8 @@
 (defun princ (object &optional stream)
   "Outputs an asthetic but not READable printed representation of OBJECT on the
   specified stream."
-  (let ((*print-escape* NIL))
+  (let ((*print-escape* NIL)
+	(*print-readably* NIL))
     (output-object object (out-synonym-of stream)))
   object)
 
@@ -1466,7 +1467,7 @@
 ;;; SCALE-EXPONENT  --  Internal
 ;;;
 ;;;    Given a non-negative floating point number, SCALE-EXPONENT returns a new
-;;; floating point number Z in the range (0.1, 1.0] and and exponent E such
+;;; floating point number Z in the range (0.1, 1.0] and an exponent E such
 ;;; that Z * 10^E is (approximately) equal to the original number.  There may
 ;;; be some loss of precision due the floating point representation.  The
 ;;; scaling is always done with long float arithmetic, which helps printing of
@@ -1487,7 +1488,10 @@
 	  (let* ((ex (round (* exponent (log 2l0 10))))
 		 (x (if (minusp ex)
 			(if (float-denormalized-p x)
+			    #-long-float
 			    (* x 1.0l16 (expt 10.0l0 (- (- ex) 16)))
+			    #+long-float
+			    (* x 1.0l18 (expt 10.0l0 (- (- ex) 18)))
 			    (* x 10.0l0 (expt 10.0l0 (- (- ex) 1))))
 			(/ x 10.0l0 (expt 10.0l0 (1- ex))))))
 	    (do ((d 10.0l0 (* d 10.0l0))

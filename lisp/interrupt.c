@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.9 1997/03/16 15:59:41 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.9.2.1 1998/06/23 11:24:59 pw Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -161,21 +161,36 @@ undo_fake_foreign_function_call(struct sigcontext *context)
 }
 
 void 
-interrupt_internal_error(HANDLER_ARGS,
-			      boolean continuable)
+interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 {
+    lispobj context_sap;
 #ifdef __linux__
-  GET_CONTEXT
+    GET_CONTEXT
 #endif
 
+    fake_foreign_function_call(context);
+
+    /* Allocate the SAP object while the interrupts are still disabled. */
+    if (internal_errors_enabled)
+	context_sap = alloc_sap(context);
+
 #ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
     sigprocmask(SIG_SETMASK,&context->uc_sigmask, 0);
+#else
+    {
+      sigset_t temp;
+      sigemptyset(&temp);
+      temp.__val[0] = context->uc_sigmask;
+      sigprocmask(SIG_SETMASK,&temp, 0);
+    }
+#endif
 #else
     sigsetmask(context->sc_mask);
 #endif
-    fake_foreign_function_call(context);
+
     if (internal_errors_enabled)
-	funcall2(SymbolFunction(INTERNAL_ERROR), alloc_sap(context),
+	funcall2(SymbolFunction(INTERNAL_ERROR), context_sap,
 		 continuable ? T : NIL);
     else
 	internal_error(context);
@@ -193,12 +208,29 @@ interrupt_handle_pending(struct sigcontext *context)
 
     if (maybe_gc_pending) {
 	maybe_gc_pending = FALSE;
+#ifndef i386
 	if (were_in_lisp)
+#endif
 	    fake_foreign_function_call(context);
 	funcall0(SymbolFunction(MAYBE_GC));
+#ifndef i386
 	if (were_in_lisp)
+#endif
 	    undo_fake_foreign_function_call(context);
     }
+
+#ifdef POSIX_SIGS
+#if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
+    context->uc_sigmask = pending_mask;
+#else
+    context->uc_sigmask = pending_mask.__val[0];
+#endif
+    sigemptyset(&pending_mask);
+#else
+    context->sc_mask = pending_mask;
+    pending_mask = 0;
+#endif
+
     if (pending_signal) {
 	int signal;
 #ifdef SOLARIS
@@ -216,13 +248,6 @@ interrupt_handle_pending(struct sigcontext *context)
 	interrupt_handle_now(signal, PASSCODE(code), context);
 #endif
     }
-#ifdef POSIX_SIGS
-    context->uc_sigmask = pending_mask;
-    sigemptyset(&pending_mask);
-#else
-    context->sc_mask = pending_mask;
-    pending_mask = 0;
-#endif
 }
 
 
@@ -253,37 +278,71 @@ interrupt_handle_now(HANDLER_ARGS)
     SAVE_CONTEXT(); /**/
 
     were_in_lisp = !foreign_function_call_active;
+#ifndef i386
     if (were_in_lisp)
+#endif
         fake_foreign_function_call(context);
     
-    /* Allow signals again. */
-#ifdef POSIX_SIGS
-    sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
-#else
-    sigsetmask(context->sc_mask);
-#endif
-
     if (handler.c==SIG_DFL)
 	/* This can happen if someone tries to ignore or default on of the */
 	/* signals we need for runtime support, and the runtime support */
 	/* decides to pass on it.  */
 	lose("interrupt_handle_now: No handler for signal %d?\n", signal);
-    else if (LowtagOf(handler.lisp) == type_FunctionPointer)
-#if 1
-	funcall3(handler.lisp, make_fixnum(signal), make_fixnum(CODE(code)),
-	         alloc_sap(context));
+    else if (LowtagOf(handler.lisp) == type_FunctionPointer) {
+        /* Allocate the SAP object while the interrupts are still
+           disabled. */
+        lispobj context_sap = alloc_sap(context);
+
+        /* Allow signals again. */
+#ifdef POSIX_SIGS
+#if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
+        sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
 #else
-	funcall3(handler.lisp, make_fixnum(signal), alloc_sap(code),
-	         alloc_sap(context));
+	{
+	  sigset_t temp;
+	  sigemptyset(&temp);
+	  temp.__val[0] = &context->uc_sigmask;
+	  sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+	}
 #endif
-    else
+#else
+        sigsetmask(context->sc_mask);
+#endif
+      
+#if 1
+        funcall3(handler.lisp, make_fixnum(signal), make_fixnum(CODE(code)),
+		 context_sap);
+#else
+        funcall3(handler.lisp, make_fixnum(signal), alloc_sap(code),
+		 alloc_sap(context));
+#endif
+    } else {
+        /* Allow signals again. */
+#ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
+        sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+#else
+	{
+	  sigset_t temp;
+	  sigemptyset(&temp);
+	  temp.__val[0] = &context->uc_sigmask;
+	  sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+	}
+#endif
+#else
+        sigsetmask(context->sc_mask);
+#endif
+      
 #ifdef __linux__
         (*handler.c)(signal, contextstruct);
 #else
         (*handler.c)(signal, code, context);
 #endif
+    }
     
+#ifndef i386
     if (were_in_lisp)
+#endif
         undo_fake_foreign_function_call(context);
 }
 
@@ -304,20 +363,47 @@ maybe_now_maybe_later(HANDLER_ARGS)
         pending_signal = signal;
         pending_code = DEREFCODE(code);
 #ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
         pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
+#else
+	{
+	  sigset_t temp;
+	  sigemptyset(&temp);
+	  pending_mask.__val[0] = context->uc_sigmask;
+	  temp.__val[0] = context->uc_sigmask;
+	  FILLBLOCKSET(&temp);
+	  
+	  context->uc_sigmask = temp.__val[0];
+	}
+#endif
+
 #else
         pending_mask = context->sc_mask;
         context->sc_mask |= BLOCKABLE;
 #endif
         SetSymbolValue(INTERRUPT_PENDING, T);
-    } else if ((!foreign_function_call_active)
-	       && arch_pseudo_atomic_atomic(context)) {
+    } else if (
+#ifndef i386
+	       (!foreign_function_call_active) &&
+#endif
+	       arch_pseudo_atomic_atomic(context)) {
         pending_signal = signal;
         pending_code = DEREFCODE(code);
 #ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
         pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
+#else
+	{
+	  sigset_t temp;
+	  sigemptyset(&temp);
+	  pending_mask.__val[0] = context->uc_sigmask;
+	  temp.__val[0] = context->uc_sigmask;
+	  FILLBLOCKSET(&temp);
+	  context->uc_sigmask = temp.__val[0];
+	}
+#endif
 #else
         pending_mask = context->sc_mask;
         context->sc_mask |= BLOCKABLE;
@@ -349,13 +435,9 @@ static boolean gc_trigger_hit(HANDLER_ARGS)
 }
 #endif
 
-
+#ifndef i386
 boolean interrupt_maybe_gc(HANDLER_ARGS)
 {
-#ifdef __linux__
-  GET_CONTEXT
-#endif
-
     if (!foreign_function_call_active
 #ifndef INTERNAL_GC_TRIGGER
 		  && gc_trigger_hit(signal, code, context)
@@ -388,6 +470,7 @@ boolean interrupt_maybe_gc(HANDLER_ARGS)
     }else
 	return FALSE;
 }
+#endif
 
 /****************************************************************\
 * Noise to install handlers.                                     *

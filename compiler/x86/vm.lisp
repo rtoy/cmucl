@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.2.2.1 1997/07/26 17:09:07 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.2.2.2 1998/06/23 11:24:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996, 1997, 1998.
 ;;;
 
 (in-package :x86)
@@ -105,17 +106,6 @@
 (defreg fr7 7 :float)
 (defregset float-regs fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
 
-;(defvar *double-float-register-names* (make-array 8 :initial-element nil))
-;(defreg dfr0 0 :double-float)
-;(defreg dfr1 1 :double-float)
-;(defreg dfr2 2 :double-float)
-;(defreg dfr3 3 :double-float)
-;(defreg dfr4 4 :double-float)
-;(defreg dfr5 5 :double-float)
-;(defreg dfr6 6 :double-float)
-;(defreg dfr7 7 :double-float)
-;(defregset double-float-regs dfr0 dfr1 dfr2 dfr3 dfr4 dfr5 dfr6 dfr7)
-
 
 ;;;; SB definitions.
 
@@ -167,18 +157,15 @@
   ;; Non-immediate contstants in the constant pool
   (constant constant)
 
-    ;; Some FP constants can be generated in the i387 silicon.
-
-    (fp-single-constant immediate-constant)
-    (fp-double-constant immediate-constant)
+  ;; Some FP constants can be generated in the i387 silicon.
+  (fp-constant immediate-constant)
     
   (immediate immediate-constant)
 
   ;; **** The stacks.
 
   ;; The control stack.
-  (descriptor-stack stack)		; may be pointers, scanned by GC
-  (immediate-stack stack)		; isn't pointers, ignored by GC
+  (control-stack stack)			; may be pointers, scanned by GC
 
   ;; The non-descriptor stacks.
   (signed-stack stack)			; (signed-byte 32)
@@ -186,7 +173,15 @@
   (base-char-stack stack)		; non-descriptor characters.
   (sap-stack stack)			; System area pointers.
   (single-stack stack)			; single-floats
-  (double-stack stack :element-size 2)	; double floats.
+  (double-stack stack :element-size 2)	; double-floats.
+  #+long-float
+  (long-stack stack :element-size 3)	; long-floats.
+  #+complex-float
+  (complex-single-stack stack :element-size 2)	; complex-single-floats
+  #+complex-float
+  (complex-double-stack stack :element-size 4)	; complex-double-floats
+  #+(and complex-float long-float)
+  (complex-long-stack stack :element-size 6)	; complex-long-floats
 
   ;; **** Magic SCs.
 
@@ -194,38 +189,30 @@
 
   ;; **** Things that can go in the integer registers.
 
-  ;; We don't have to distinguish between descriptor and non-descriptor
-  ;; registers, because we dump explicit information about what descriptor
-  ;; values are live at any potential GC point.  Therefore, we only different
-  ;; scs to distinguish between descriptor and non-descriptor values and
-  ;; to specify size.
+  ;; We don't have to distinguish between descriptor and
+  ;; non-descriptor registers, because of the conservative GC.
+  ;; Therefore, we only use different scs to distinguish between
+  ;; descriptor and non-descriptor values and to specify size.
 
+
+  ;; Immediate descriptor objects.  Don't have to be seen by GC, but nothing
+  ;; bad will happen if they are.  (fixnums, characters, header values, etc).
   (any-reg registers
 	   :locations #.dword-regs
 	   :element-size 2
-	   :reserve-locations (#.eax-offset)
+;	   :reserve-locations (#.eax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
-	   :alternate-scs (immediate-stack))
+	   :alternate-scs (control-stack))
 
   ;; Pointer descriptor objects.  Must be seen by GC.
   (descriptor-reg registers
 		  :locations #.dword-regs
 		  :element-size 2
-		  :reserve-locations (#.eax-offset)
-		  :constant-scs
-		  (constant immediate 
-			    ;; zzz jrd added IMMEDIATE-STACK here.  
-			    ;; it seems right, and references elsewhere
-			    ;; in the code suggest that we expect to be
-			    ;; able to do this.  see 
-			    ;; DEFINE-MOVE-VOP MOVE :MOVE in MOVE.LISP
-			    
-			    ;; zzz this may not be right after all
-			    ;; immediate-stack
-			    )
+;		  :reserve-locations (#.eax-offset)
+		  :constant-scs (constant immediate)
 		  :save-p t
-		  :alternate-scs (descriptor-stack))
+		  :alternate-scs (control-stack))
 
   ;; Non-Descriptor characters
   (base-char-reg registers
@@ -239,7 +226,7 @@
   (sap-reg registers
 	   :locations #.dword-regs
 	   :element-size 2
-	   :reserve-locations (#.eax-offset)
+;	   :reserve-locations (#.eax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
 	   :alternate-scs (sap-stack))
@@ -248,76 +235,88 @@
   (signed-reg registers
 	      :locations #.dword-regs
 	      :element-size 2
-	      :reserve-locations (#.eax-offset)
+;	      :reserve-locations (#.eax-offset)
 	      :constant-scs (immediate)
 	      :save-p t
 	      :alternate-scs (signed-stack))
   (unsigned-reg registers
 		:locations #.dword-regs
 		:element-size 2
-		:reserve-locations (#.eax-offset)
+;		:reserve-locations (#.eax-offset)
 		:constant-scs (immediate)
 		:save-p t
 		:alternate-scs (unsigned-stack))
 
   ;; Random objects that must not be seen by GC.  Used only as temporaries.
-  (dword-reg registers
-	     :locations #.dword-regs
-	     :element-size 2
-	     :reserve-locations (#.eax-offset))
   (word-reg registers
 	    :locations #.word-regs
 	    :element-size 2
-	    :reserve-locations (#.ax-offset))
+;	    :reserve-locations (#.ax-offset)
+	    )
   (byte-reg registers
 	    :locations #.byte-regs
-	    :reserve-locations (#.al-offset #.ah-offset))
+;	    :reserve-locations (#.al-offset #.ah-offset)
+	    )
 
   ;; **** Things that can go in the floating point registers.
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
 	      :locations (0 1 2 3 4 5 6 7)
-	      :constant-scs (fp-single-constant)
+	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
 	      :locations (0 1 2 3 4 5 6 7)
-	      :constant-scs (fp-double-constant)
+	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (double-stack))
 
+  ;; Non-Descriptor long-floats.
+  #+long-float
+  (long-reg float-registers
+	    :locations (0 1 2 3 4 5 6 7)
+	    :constant-scs (fp-constant)
+	    :save-p t
+	    :alternate-scs (long-stack))
+
+  #+complex-float
+  (complex-single-reg float-registers
+		      :locations (0 2 4 6)
+		      :element-size 2
+		      :constant-scs ()
+		      :save-p t
+		      :alternate-scs (complex-single-stack))
+
+  #+complex-float
+  (complex-double-reg float-registers
+		      :locations (0 2 4 6)
+		      :element-size 2
+		      :constant-scs ()
+		      :save-p t
+		      :alternate-scs (complex-double-stack))
+
+  #+(and complex-float long-float)
+  (complex-long-reg float-registers
+		    :locations (0 2 4 6)
+		    :element-size 2
+		    :constant-scs ()
+		    :save-p t
+		    :alternate-scs (complex-long-stack))
+
   ;; A catch or unwind block.
   (catch-block stack :element-size vm:catch-block-size)
-  
-  ;; added by jrd.  need to define non-descriptor-reg-sc-number for the
-  ;; debug code, among others.  this doesn't actually get used in any code.
-  (non-descriptor-reg registers
-		      :locations #.dword-regs
-		      :element-size 2
-		      :reserve-locations ())
-  ;; this one too
-  (interior-reg registers
-		      :locations #.dword-regs
-		      :element-size 2
-		      :reserve-locations ())
   )
-
-;;; zzz added by jrd; has somebody been changing names of these things on me?
-(export 'control-stack-sc-number)
-(defconstant control-stack-sc-number descriptor-stack-sc-number)
-
 
 (eval-when (compile load eval)
 
 (defconstant byte-sc-names '(base-char-reg byte-reg base-char-stack))
 (defconstant word-sc-names '(word-reg))
 (defconstant dword-sc-names
-  '(any-reg descriptor-reg sap-reg signed-reg unsigned-reg dword-reg
-    descriptor-stack immediate-stack signed-stack unsigned-stack
-    sap-stack single-stack constant))
+  '(any-reg descriptor-reg sap-reg signed-reg unsigned-reg control-stack
+    signed-stack unsigned-stack sap-stack single-stack constant))
 
 ;;;
 ;;; added by jrd.  I guess the right thing to do is to treat floats
@@ -345,7 +344,7 @@
 				    :offset ,reg-offset-name)))))
       `(progn ,@(forms)))))
 
-(def-random-reg-tns dword-reg eax ebx ecx edx ebp esp edi esi)
+(def-random-reg-tns unsigned-reg eax ebx ecx edx ebp esp edi esi)
 (def-random-reg-tns word-reg ax bx cx dx bp sp di si)
 (def-random-reg-tns byte-reg al ah bl bh cl ch dl dh)
 
@@ -354,90 +353,54 @@
 
 ;; Added by pw.
 
-(defparameter fp-single-constant-tn
+(defparameter fp-constant-tn
   (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'fp-single-constant)
+		  :sc (sc-or-lose 'fp-constant)
 		  :offset 31))		; Offset doesn't get used.
-(defparameter fp-double-constant-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'fp-single-constant)
-		  :offset 31))
-
-
 
 
 ;;; Immediate-Constant-SC
 ;;;
-;;; Basically, if it's easier to represent the value as an immediate in
-;;; some instruction instead of in the constants pool, then return
-;;; the immediate SC.
+;;; If value can be represented as an immediate constant, then return the
+;;; appropriate SC number, otherwise return NIL.
 ;;;
-
-#+nil ;; pw-- the way it was.
-(def-vm-support-routine immediate-constant-sc (value)
-  (if (or (and (symbolp value) (static-symbol-p value))
-	  #-cross-compiler
-	  (typep value 'fixnum)
-	  #+cross-compiler
-	  (and (typep value 'integer)
-	       (>= value (info variable constant-value 'most-negative-fixnum))
-	       (<= value (info variable constant-value 'most-positive-fixnum)))
-	  #-cross-compiler
-	  (typep value 'system-area-pointer)
-	  (typep value 
-                 #+lispworks3 'lisp::base-character 
-                 #-lispworks3 'base-char))
-      (sc-number-or-lose 'immediate *backend*)
-      nil))
-
-;;; I probably should use double-from-bits here
-;;; to avoid any compilation errors, but lets see
-;;; what happens. These should be part of lisp like PI?
-(defconstant i387-lg2 3.010299956639811952137389d0)
-(defconstant i387-ln2 0.6931471805599453094172321d0)
-(defconstant i387-l10 2.3025850929940456840179915d0)
-(defconstant i387-l2e (/ i387-ln2))
-(defconstant i387-l2t (/ i387-l10 i387-ln2))
-(export '(i387-lg2 i387-ln2 i387-l10 i387-l2e i387-l2t))
-
-
-;;; pw-- A good try and it works, but it also results in
-;;; extra consing when the constant is an argument to
-;;; some function. The descriptor from the constants vector
-;;; would normally be passed instead. DTC processes zero and
-;;; one in move-from-single|double as static symbols to
-;;; save on CV space for these common values.
-
 (def-vm-support-routine immediate-constant-sc (value)
   (typecase value
     ((or fixnum system-area-pointer character)
      (sc-number-or-lose 'immediate *backend*))
     (symbol
-     (if (static-symbol-p value)
-	 (sc-number-or-lose 'immediate *backend*)
-	 nil))
+     (when (static-symbol-p value)
+       (sc-number-or-lose 'immediate *backend*)))
     (single-float
      (when (or (eql value 0f0) (eql value 1f0))
-       (sc-number-or-lose 'fp-single-constant *backend*)))
+       (sc-number-or-lose 'fp-constant *backend*)))
     (double-float
      (when (or (eql value 0d0) (eql value 1d0))
-       (sc-number-or-lose 'fp-double-constant *backend*)))))
+       (sc-number-or-lose 'fp-constant *backend*)))
+    #+long-float
+    (long-float
+     (when (or (eql value 0l0) (eql value 1l0)
+	       (eql value pi)
+	       (eql value (log 10l0 2l0))
+	       (eql value (log 2.718281828459045235360287471352662L0 2l0))
+	       (eql value (log 2l0 10l0))
+	       (eql value (log 2l0 2.718281828459045235360287471352662L0)))
+       (sc-number-or-lose 'fp-constant *backend*)))))
 
 
 ;;;; Function Call Parameters
 
 ;;; Offsets of special stack frame locations
-(defconstant old-fp-save-offset 0)
+(defconstant ocfp-save-offset 0)
 (defconstant return-pc-save-offset 1)
 (defconstant code-save-offset 2)
 
-
 ;;; names of these things seem to have changed.  these aliases by jrd
-(defconstant ocfp-save-offset old-fp-save-offset)
 (defconstant lra-save-offset return-pc-save-offset)
 
 (defconstant cfp-offset ebp-offset)	; pfw - needed by stuff in /code
 					; related to sigcontext stuff
+
 ;;; The number of arguments/return values passed in registers.
 ;;;
 (defconstant register-arg-count 3)
@@ -479,7 +442,6 @@
 		  (< -1 offset (length name-vec))
 		  (svref name-vec offset))
 	     (format nil "<Unknown Reg: off=~D, sc=~A>" offset sc-name))))
-      ;; (float-registers "FloatStackTop")
       (float-registers (format nil "FR~D" offset))
       (stack (format nil "S~D" offset))
       (constant (format nil "Const~D" offset))

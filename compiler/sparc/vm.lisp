@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.7 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.7.2.1 1998/06/23 11:23:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
 ;;;; SB and SC definition:
 
 (define-storage-base registers :finite :size 32)
-(define-storage-base float-registers :finite :size 32)
+(define-storage-base float-registers :finite :size 64)
 (define-storage-base control-stack :unbounded :size 8)
 (define-storage-base non-descriptor-stack :unbounded :size 0)
 (define-storage-base constant :non-packed)
@@ -148,6 +148,17 @@
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
+  #+long-float
+  (long-stack non-descriptor-stack :element-size 4 :alignment 4) ; long floats.
+  #+complex-float
+  ;; complex-single-floats
+  (complex-single-stack non-descriptor-stack :element-size 2)
+  #+complex-float
+  ;; complex-double-floats.
+  (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
+  #+(and complex-float long-float)
+  ;; complex-long-floats.
+  (complex-long-stack non-descriptor-stack :element-size 8 :alignment 4)
 
 
   ;; **** Things that can go in the integer registers.
@@ -207,21 +218,60 @@
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
-   :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
-   ;; ### Note: We really should have every location listed, but then we
-   ;; would have to make load-tns work with element-sizes other than 1.
+   :locations #.(loop for i from 0 to 31 collect i)
+   :reserve-locations (28 29 30 31)
    :constant-scs ()
    :save-p t
    :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-   :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
-   ;; ### Note: load-tns don't work with an element-size other than 1.
-   ;; :element-size 2 :alignment 2
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+		      by 2 collect i)
+   :element-size 2 :alignment 2
+   :reserve-locations (28 30)
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
+
+  ;; Non-Descriptor double-floats.
+  #+long-float
+  (long-reg float-registers
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+		      by 4 collect i)
+   :element-size 4 :alignment 4
+   :reserve-locations (28)
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (long-stack))
+
+  #+complex-float
+  (complex-single-reg float-registers
+   :locations #.(loop for i from 0 to 31 by 2 collect i)
+   :element-size 2 :alignment 2
+   :reserve-locations (28 30)
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-single-stack))
+
+  #+complex-float
+  (complex-double-reg float-registers
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+		      by 4 collect i)
+   :element-size 4 :alignment 4
+   :reserve-locations (28)
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-stack))
+
+  #+(and complex-float long-float)
+  (complex-long-reg float-registers
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+		      by 8 collect i)
+   :element-size 8 :alignment 8
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-long-stack))
 
 
   ;; A catch or unwind block.

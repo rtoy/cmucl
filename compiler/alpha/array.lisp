@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.2.2.1 1998/06/23 11:23:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,7 @@
 ;;;
 ;;; Written by William Lott
 ;;; Conversion by Sean Hallgren
+;;; Complex-float support by Douglas Crosher 1998.
 ;;;
 (in-package "ALPHA")
 
@@ -145,7 +146,19 @@
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
 
+#+signed-array
+(def-partial-data-vector-frobs simple-array-signed-byte-8 tagged-num
+  :byte t signed-reg)
 
+#+signed-array
+(def-partial-data-vector-frobs simple-array-signed-byte-16 tagged-num
+  :short t signed-reg)
+
+#+signed-array
+(def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num any-reg)
+
+#+signed-array
+(def-full-data-vector-frobs simple-array-signed-byte-32 signed-num signed-reg)
 
 ;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
 ;;; and 4-bit vectors.
@@ -175,8 +188,6 @@
 		    other-pointer-type)
 		  lip)
 	   (inst and index ,(1- elements-per-word) temp)
-	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
-	       `((inst xor temp ,(1- elements-per-word) temp)))
 	   ,@(unless (= bits 1)
 	       `((inst sll temp ,(1- (integer-length bits)) temp)))
 	   (inst srl result temp result)
@@ -199,8 +210,6 @@
 	 (:result-types positive-fixnum)
 	 (:generator 15
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
-	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
-		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (loadw result object (+ word vector-data-offset) 
 		    other-pointer-type)
 	     (unless (zerop extra)
@@ -229,8 +238,6 @@
 		    other-pointer-type)
 		 lip)
 	   (inst and index ,(1- elements-per-word) shift)
-	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
-	       `((inst xor shift ,(1- elements-per-word) shift)))
 	   ,@(unless (= bits 1)
 	       `((inst sll shift ,(1- (integer-length bits)) shift)))
 	   (unless (and (sc-is value immediate)
@@ -278,8 +285,6 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp old)
 	 (:generator 20
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
-	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
-		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (inst ldl object
 		   (- (* (+ word vector-data-offset) word-bytes)
 		      other-pointer-type)
@@ -402,7 +407,122 @@
     (unless (location= result value)
       (inst fmove value result))))
 
+
+;;; Complex float arrays.
+#+complex-float
+(progn
 
+(define-vop (data-vector-ref/simple-array-complex-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-single-float positive-fixnum)
+  (:results (value :scs (complex-single-reg)))
+  (:temporary (:scs (interior-reg)) lip)
+  (:result-types complex-single-float)
+  (:generator 5
+    (let ((real-tn (complex-single-reg-real-tn value)))
+      (inst addq object index lip)
+      (inst addq lip index lip)
+      (inst lds real-tn
+	    (- (* vector-data-offset word-bytes) other-pointer-type)
+	    lip))
+    (let ((imag-tn (complex-single-reg-imag-tn value)))
+      (inst lds imag-tn
+	    (- (* (1+ vector-data-offset) word-bytes) other-pointer-type)
+	    lip))))
+
+(define-vop (data-vector-set/simple-array-complex-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (complex-single-reg) :target result))
+  (:arg-types simple-array-complex-single-float positive-fixnum
+	      complex-single-float)
+  (:results (result :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 5
+    (let ((value-real (complex-single-reg-real-tn value))
+	  (result-real (complex-single-reg-real-tn result)))
+      (inst addq object index lip)
+      (inst addq lip index lip)
+      (inst sts value-real
+	    (- (* vector-data-offset word-bytes) other-pointer-type)
+	    lip)
+      (unless (location= result-real value-real)
+	(inst fmove value-real result-real)))
+    (let ((value-imag (complex-single-reg-imag-tn value))
+	  (result-imag (complex-single-reg-imag-tn result)))
+      (inst sts value-imag
+	    (- (* (1+ vector-data-offset) word-bytes) other-pointer-type)
+	    lip)
+      (unless (location= result-imag value-imag)
+	(inst fmove value-imag result-imag)))))
+
+(define-vop (data-vector-ref/simple-array-complex-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-double-float positive-fixnum)
+  (:results (value :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 7
+    (let ((real-tn (complex-double-reg-real-tn value)))
+      (inst addq object index lip)
+      (inst addq lip index lip)
+      (inst addq lip index lip)
+      (inst addq lip index lip)
+      (inst ldt real-tn
+	    (- (* vector-data-offset word-bytes) other-pointer-type)
+	    lip))
+    (let ((imag-tn (complex-double-reg-imag-tn value)))
+      (inst ldt imag-tn
+	    (- (* (+ vector-data-offset 2) word-bytes) other-pointer-type)
+	    lip))))
+
+(define-vop (data-vector-set/simple-array-complex-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (complex-double-reg) :target result))
+  (:arg-types simple-array-complex-double-float positive-fixnum
+	      complex-double-float)
+  (:results (result :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 20
+    (let ((value-real (complex-double-reg-real-tn value))
+	  (result-real (complex-double-reg-real-tn result)))
+      (inst addq object index lip)
+      (inst addq lip index lip)
+      (inst addq lip index lip)
+      (inst addq lip index lip)
+      (inst stt value-real
+	    (- (* vector-data-offset word-bytes) other-pointer-type)
+	    lip)
+      (unless (location= result-real value-real)
+	(inst fmove value-real result-real)))
+    (let ((value-imag (complex-double-reg-imag-tn value))
+	  (result-imag (complex-double-reg-imag-tn result)))
+      (inst stt value-imag
+	    (- (* (+ vector-data-offset 2) word-bytes) other-pointer-type)
+	    lip)
+      (unless (location= result-imag value-imag)
+	(inst fmove value-imag result-imag)))))
+
+) ; end progn complex-float
+
+
 ;;; These VOPs are used for implementing float slots in structures (whose raw
 ;;; data is an unsigned-32 vector.
 ;;;
@@ -422,6 +542,31 @@
   (:translate %raw-set-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
 
+#+complex-float
+(progn
+(define-vop (raw-ref-complex-single
+	     data-vector-ref/simple-array-complex-single-float)
+  (:translate %raw-ref-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+(define-vop (raw-set-complex-single
+	     data-vector-set/simple-array-complex-single-float)
+  (:translate %raw-set-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum
+	      complex-single-float))
+;;;
+(define-vop (raw-ref-complex-double
+	     data-vector-ref/simple-array-complex-double-float)
+  (:translate %raw-ref-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+(define-vop (raw-set-complex-double
+	     data-vector-set/simple-array-complex-double-float)
+  (:translate %raw-set-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum
+	      complex-double-float))
+) ; end progn complex-float
+
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of
 ;;; what type of vector it is.
@@ -438,4 +583,3 @@
 
 (define-vop (get-vector-subtype get-header-data))
 (define-vop (set-vector-subtype set-header-data))
-

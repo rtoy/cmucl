@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/functions.h,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/functions.h,v 1.2.2.1 1998/06/23 11:25:17 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -46,6 +46,19 @@ extern RXtIsRealized();
 extern RXtWindow();
 extern RXtName();
 extern RXtIsSensitive();
+extern RXtIsApplicationShell();
+extern RXtIsComposite();
+extern RXtIsConstraint();
+extern RXtIsObject();
+extern RXtIsOverrideShell();
+extern RXtIsRectObj();
+extern RXtIsShell();
+extern RXtIsTopLevelShell();
+extern RXtIsTransientShell();
+extern RXtIsVendorShell();
+extern RXtIsWMShell();
+extern RXtNameToWidget();
+extern RXtParent();
 extern RXtTranslateCoords();
 extern RXmCreateMenuBar();
 extern RXmCreateOptionMenu();

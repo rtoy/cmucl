@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.13 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.13.2.1 1998/06/23 11:23:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,7 +70,9 @@
 			     'double-reg
 			     (+ (* float-args 2) 12)))
 	  (t
-	   (error "Can't put floats in int regs yet.")))))
+           (my-make-wired-tn 'double-float
+                             'double-int-carg-reg
+                             (+ stack-frame-size 4))))))
 
 (def-alien-type-method (single-float :arg-tn) (type state)
   (declare (ignore type))
@@ -88,7 +90,9 @@
 			     'single-reg
 			     (+ (* float-args 2) 12)))
 	  (t
-	   (error "Can't put floats in int regs yet.")))))
+           (my-make-wired-tn 'single-float
+                             'single-int-carg-reg
+                             (+ stack-frame-size 4))))))
 
 
 (defstruct result-state

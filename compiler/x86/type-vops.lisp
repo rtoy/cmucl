@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.2 1997/04/01 19:24:15 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.2.2.1 1998/06/23 11:24:13 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -17,6 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski, Spring-95.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
 ;;;
 (in-package :x86)
 
@@ -116,19 +117,50 @@
 
 ); eval-when (compile eval)
 
+;;; Emit the most compact form of the test immediate instruction,
+;;; using an 8 bit test when the immediate is only 8 bits and the
+;;; value is one of the four low registers (eax, ebx, ecx, edx) or the
+;;; control-stack.
+;;;
+(defun generate-fixnum-test (value)
+  (let ((offset (tn-offset value)))
+    (cond ((and (sc-is value any-reg descriptor-reg)
+		(or (= offset eax-offset) (= offset ebx-offset)
+		    (= offset ecx-offset) (= offset edx-offset)))
+	   (inst test (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'byte-reg *backend*)
+				      :offset offset)
+		 3))
+	  ((sc-is value control-stack)
+	   (inst test (make-ea :byte :base ebp-tn
+			       :disp (- (* (1+ offset) vm:word-bytes)))
+		 3))
+	  (t
+	   (inst test value 3)))))
+
 (defun %test-fixnum (value target not-p)
-  (inst test value 3)
+  (generate-fixnum-test value)
   (inst jmp (if not-p :nz :z) target))
 
 (defun %test-fixnum-and-headers (value target not-p headers)
   (let ((drop-through (gen-label)))
-    (inst test value 3)
+    (generate-fixnum-test value)
     (inst jmp :z (if not-p drop-through target))
     (%test-headers value target not-p nil headers drop-through)))
 
 (defun %test-immediate (value target not-p immediate)
-  (move eax-tn value)
-  (inst cmp al-tn immediate)
+  ;; Code a single instruction byte test if possible.
+  (let ((offset (tn-offset value)))
+    (cond ((and (sc-is value any-reg descriptor-reg)
+		(or (= offset eax-offset) (= offset ebx-offset)
+		    (= offset ecx-offset) (= offset edx-offset)))
+	   (inst cmp (make-random-tn :kind :normal
+				     :sc (sc-or-lose 'byte-reg *backend*)
+				     :offset offset)
+		 immediate))
+	  (t
+	   (move eax-tn value)
+	   (inst cmp al-tn immediate))))
   (inst jmp (if not-p :ne :e) target))
 
 (defun %test-lowtag (value target not-p lowtag &optional al-loaded)
@@ -228,15 +260,30 @@
 (define-vop (check-type)
   (:args (value :target result :scs (any-reg descriptor-reg)))
   (:results (result :scs (any-reg descriptor-reg)))
-  (:temporary (:sc dword-reg :offset eax-offset :to (:result 0)) eax)
+  (:temporary (:sc unsigned-reg :offset eax-offset :to (:result 0)) eax)
   (:ignore eax)
   (:vop-var vop)
   (:save-p :compute-only))
 
 (define-vop (type-predicate)
   (:args (value :scs (any-reg descriptor-reg)))
-  (:temporary (:sc dword-reg :offset eax-offset) eax)
+  (:temporary (:sc unsigned-reg :offset eax-offset) eax)
   (:ignore eax)
+  (:conditional)
+  (:info target not-p)
+  (:policy :fast-safe))
+
+;;; Simpler VOP that don't need a temporary register.
+(define-vop (simple-check-type)
+  (:args (value :target result :scs (any-reg descriptor-reg)))
+  (:results (result :scs (any-reg descriptor-reg)
+		    :load-if (not (and (sc-is value any-reg descriptor-reg)
+				       (sc-is result control-stack)))))
+  (:vop-var vop)
+  (:save-p :compute-only))
+
+(define-vop (simple-type-predicate)
+  (:args (value :scs (any-reg descriptor-reg control-stack)))
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe))
@@ -266,9 +313,28 @@
        ,@(when ptype
 	   `((primitive-type-vop ,check-name (:check) ,ptype))))))
 
+(defmacro def-simple-type-vops (pred-name check-name ptype error-code
+					  &rest type-codes)
+  (let ((cost (cost-to-test-types (mapcar #'eval type-codes))))
+    `(progn
+       ,@(when pred-name
+	   `((define-vop (,pred-name simple-type-predicate)
+	       (:translate ,pred-name)
+	       (:generator ,cost
+		 (test-type value target not-p ,@type-codes)))))
+       ,@(when check-name
+	   `((define-vop (,check-name simple-check-type)
+	       (:generator ,cost
+		 (let ((err-lab
+			(generate-error-code vop ,error-code value)))
+		   (test-type value err-lab t ,@type-codes)
+		   (move result value))))))
+       ,@(when ptype
+	   `((primitive-type-vop ,check-name (:check) ,ptype))))))
+
 ); eval-when (compile eval)
 
-(def-type-vops fixnump check-fixnum fixnum object-not-fixnum-error
+(def-simple-type-vops fixnump check-fixnum fixnum object-not-fixnum-error
   even-fixnum-type odd-fixnum-type)
 
 (def-type-vops functionp check-function function
@@ -286,14 +352,46 @@
 (def-type-vops ratiop check-ratio ratio
   object-not-ratio-error ratio-type)
 
-(def-type-vops complexp check-complex complex
-  object-not-complex-error complex-type)
+(def-type-vops complexp check-complex complex object-not-complex-error
+  complex-type
+  #+complex-float complex-single-float-type
+  #+complex-float complex-double-float-type
+  #+(and complex-float long-float) complex-long-float-type)
+
+#+complex-float
+(def-type-vops complex-rational-p check-complex-rational nil
+  object-not-complex-rational-error complex-type)
+
+#+complex-float
+(def-type-vops complex-float-p check-complex-float nil
+  object-not-complex-float-error
+  complex-single-float-type complex-double-float-type
+  #+long-float complex-long-float-type)
+
+#+complex-float
+(def-type-vops complex-single-float-p check-complex-single-float
+  complex-single-float object-not-complex-single-float-error
+  complex-single-float-type)
+
+#+complex-float
+(def-type-vops complex-double-float-p check-complex-double-float
+  complex-double-float object-not-complex-double-float-error
+  complex-double-float-type)
+
+#+(and complex-float long-float)
+(def-type-vops complex-long-float-p check-complex-long-float
+  complex-long-float object-not-complex-long-float-error
+  complex-long-float-type)
 
 (def-type-vops single-float-p check-single-float single-float
   object-not-single-float-error single-float-type)
 
 (def-type-vops double-float-p check-double-float double-float
   object-not-double-float-error double-float-type)
+
+#+long-float
+(def-type-vops long-float-p check-long-float long-float
+  object-not-long-float-error long-float-type)
 
 (def-type-vops simple-string-p check-simple-string simple-string
   object-not-simple-string-error simple-string-type)
@@ -370,6 +468,32 @@
   simple-array-double-float object-not-simple-array-double-float-error
   simple-array-double-float-type)
 
+#+long-float
+(def-type-vops simple-array-long-float-p check-simple-array-long-float
+  simple-array-long-float object-not-simple-array-long-float-error
+  simple-array-long-float-type)
+
+#+complex-float
+(def-type-vops simple-array-complex-single-float-p
+  check-simple-array-complex-single-float
+  simple-array-complex-single-float
+  object-not-simple-array-complex-single-float-error
+  simple-array-complex-single-float-type)
+
+#+complex-float
+(def-type-vops simple-array-complex-double-float-p
+  check-simple-array-complex-double-float
+  simple-array-complex-double-float
+  object-not-simple-array-complex-double-float-error
+  simple-array-complex-double-float-type)
+
+#+(and complex-float long-float)
+(def-type-vops simple-array-complex-long-float-p
+  check-simple-array-complex-long-float
+  simple-array-complex-long-float
+  object-not-simple-array-complex-long-float-error
+  simple-array-complex-long-float-type)
+
 (def-type-vops base-char-p check-base-char base-char
   object-not-base-char-error base-char-type)
 
@@ -380,7 +504,7 @@
   object-not-weak-pointer-error weak-pointer-type)
 
 (def-type-vops scavenger-hook-p nil nil nil
-  0)
+  #-gencgc 0 #+gencgc scavenger-hook-type)
 
 (def-type-vops code-component-p nil nil nil
   code-header-type)
@@ -418,6 +542,10 @@
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+long-float simple-array-long-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type
+  #+(and complex-float long-float) simple-array-complex-long-float-type
   complex-string-type complex-bit-vector-type complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
@@ -429,7 +557,11 @@
   #+signed-array simple-array-signed-byte-16-type
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
-  simple-array-single-float-type simple-array-double-float-type)
+  simple-array-single-float-type simple-array-double-float-type
+  #+long-float simple-array-long-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type
+  #+(and complex-float long-float) simple-array-complex-long-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
   simple-array-type simple-string-type simple-bit-vector-type
@@ -441,12 +573,19 @@
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+long-float simple-array-long-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type
+  #+(and complex-float long-float) simple-array-complex-long-float-type
   complex-string-type complex-bit-vector-type complex-vector-type
   complex-array-type)
 
 (def-type-vops numberp check-number nil object-not-number-error
   even-fixnum-type odd-fixnum-type bignum-type ratio-type
-  single-float-type double-float-type complex-type)
+  single-float-type double-float-type #+long-float long-float-type complex-type
+  #+complex-float complex-single-float-type
+  #+complex-float complex-double-float-type
+  #+(and complex-float long-float) complex-long-float-type)
 
 (def-type-vops rationalp check-rational nil object-not-rational-error
   even-fixnum-type odd-fixnum-type ratio-type bignum-type)
@@ -455,11 +594,11 @@
   even-fixnum-type odd-fixnum-type bignum-type)
 
 (def-type-vops floatp check-float nil object-not-float-error
-  single-float-type double-float-type)
+  single-float-type double-float-type #+long-float long-float-type)
 
 (def-type-vops realp check-real nil object-not-real-error
   even-fixnum-type odd-fixnum-type ratio-type bignum-type
-  single-float-type double-float-type)
+  single-float-type double-float-type #+long-float long-float-type)
 
 
 ;;;; Other integer ranges.
@@ -475,7 +614,7 @@
 	(if not-p
 	    (values not-target target)
 	    (values target not-target))
-      (inst test value #x3)
+      (generate-fixnum-test value)
       (inst jmp :e yep)
       (move eax-tn value)
       (inst and al-tn lowtag-mask)
@@ -491,7 +630,7 @@
     (let ((nope (generate-error-code vop
 				     object-not-signed-byte-32-error
 				     value)))
-      (inst test value #x3)
+      (generate-fixnum-test value)
       (inst jmp :e yep)
       (move eax-tn value)
       (inst and al-tn lowtag-mask)
@@ -519,7 +658,7 @@
 	      (values not-target target)
 	      (values target not-target))
 	;; Is it a fixnum?
-	(inst test value 3)
+	(generate-fixnum-test value)
 	(move eax-tn value)
 	(inst jmp :e fixnum)
 
@@ -562,7 +701,7 @@
 	  (single-word (gen-label)))
 
       ;; Is it a fixnum?
-      (inst test value 3)
+      (generate-fixnum-test value)
       (move eax-tn value)
       (inst jmp :e fixnum)
 

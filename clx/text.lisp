@@ -154,7 +154,7 @@
 	(declare (type buffer-text16 wbuf)
 		 (type array-index src-start src-end end buf-end)
 		 (type int16 font-ascent font-descent)
-		 (type boolean stop-p))
+		 (type generalized-boolean stop-p))
 	;; Translate the text
 	(multiple-value-setq (buf-end new-font)
 	  (funcall (or translate #'translate-default)
@@ -246,7 +246,7 @@
 	      (setq next-start src-start)))
 	(declare (type buffer-text16 wbuf)
 		 (type array-index src-start src-end end buf-end)
-		 (type boolean stop-p))
+		 (type generalized-boolean stop-p))
 	;; Translate the text
 	(multiple-value-setq (buf-end new-font)
 	  (funcall (or translate #'translate-default)
@@ -313,7 +313,7 @@
   (declare (type font font)
 	   (type sequence sequence)
 	   (type integer start end)
-	   (type boolean width-only-p))
+	   (type generalized-boolean width-only-p))
   (declare (clx-values width ascent descent overall-left overall-right))
   (let* ((char-infos (font-char-infos font))
 	 (font-info (font-font-info font)))
@@ -465,7 +465,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg #+Genera * #-Genera translate))
-  (declare (clx-values boolean (or null int32)))
+  (declare (clx-values generalized-boolean (or null int32)))
   (let* ((display (gcontext-display gcontext))
 	 (result t)
 	 (opcode *x-polytext8*))
@@ -578,7 +578,7 @@
 
 	    (declare (type array-index src-chunk dst-chunk offset)
 		     (type (or null int32) overall-width)
-		     (type boolean stop-p))
+		     (type generalized-boolean stop-p))
 	    (setq src-chunk (index-min length *max-string-size*))
 	    (multiple-value-bind (new-start new-font translated-width)
 		(funcall translate
@@ -683,7 +683,7 @@
 
 	    (declare (type array-index boffset src-chunk dst-chunk offset)
 		     (type (or null int32) overall-width)
-		     (type boolean stop-p))
+		     (type generalized-boolean stop-p))
 	    (setq src-chunk (index-min length *max-string-size*))
 	    (multiple-value-bind (new-start new-font translated-width)
 		(funcall translate
@@ -746,7 +746,7 @@
 	   (dynamic-extent translate)
 	   #+(and lispm (not clx-ansi-common-lisp))
 	   (sys:downward-funarg #+Genera * #-Genera translate))
-  (declare (clx-values boolean (or null int32)))
+  (declare (clx-values generalized-boolean (or null int32)))
   (let* ((display (gcontext-display gcontext))
 	 (result t)
 	 (opcode *x-imagetext8*))
@@ -956,7 +956,7 @@
 	  (display-max-keycode display)))
 
 ;; Should this signal device-busy like the pointer-mapping setf, and return a
-;; boolean instead (true for success)?  Alternatively, should the
+;; generalized-boolean instead (true for success)?  Alternatively, should the
 ;; pointer-mapping setf be changed to set-pointer-mapping with a (member
 ;; :success :busy) result?
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-stream.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-stream.lisp,v 1.3.2.1 1998/06/23 11:24:41 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
   (point-y 0 :type fixnum)
   (buffer "" :type simple-string))
 
-(defstruct (tty-hunk-output-stream (:include stream
+(defstruct (tty-hunk-output-stream (:include sys:lisp-stream
 					     (out #'hunk-out)
 					     (sout #'hunk-sout)
 					     (misc #'hunk-misc))

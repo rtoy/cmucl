@@ -116,7 +116,7 @@
   ;; Compare two stringables.
   ;; Ignore case when comparing to a symbol.
   (declare (type stringable a b))
-  (declare (clx-values boolean))
+  (declare (clx-values generalized-boolean))
   (etypecase a
     (string
       (etypecase b
@@ -482,7 +482,7 @@
   (declare (type resource-database database)
 	   (type (or pathname string stream) pathname)
 	   (type (or null (function (string) t)) key)
-	   (type (or null (function (list t) boolean))
+	   (type (or null (function (list t) generalized-boolean))
                  test test-not))
   (declare (clx-values resource-database))
   (resource-with-open-file (stream pathname)
@@ -567,7 +567,7 @@
   (declare (type resource-database database)
 	   (type (or pathname string stream) pathname)
 	   (type (or null (function (string stream) t)) write)
-	   (type (or null (function (list t) boolean))
+	   (type (or null (function (list t) generalized-boolean))
                  test test-not))
   (resource-with-open-file (stream pathname :direction :output)
     (map-resource
@@ -601,7 +601,7 @@
   (declare (type resource-database database)
 	   (type window window)
 	   (type (or null (function (string) t)) key)
-	   (type (or null (function (list t) boolean))
+	   (type (or null (function (list t) generalized-boolean))
                  test test-not))
   (declare (clx-values resource-database))
   (let ((string (get-property window :RESOURCE_MANAGER :type :STRING
@@ -621,7 +621,7 @@
   (declare (type resource-database database)
 	   (type window window)
 	   (type (or null (function (string stream) t)) write)
-	   (type (or null (function (list t) boolean))
+	   (type (or null (function (list t) generalized-boolean))
                  test test-not))
   (xlib::set-string-property
     window :RESOURCE_MANAGER
@@ -644,7 +644,7 @@
   (declare (type (or screen display) screen)
 	   (type (or null resource-database) database)
 	   (type (or null (function (string) t)) key)
-	   (type (or null (function (list t) boolean)) test test-not)
+	   (type (or null (function (list t) generalized-boolean)) test test-not)
 	   (clx-values resource-database))
   (let* ((screen (if (type? screen 'display)
 		     (display-default-screen screen)
@@ -665,7 +665,7 @@
 
   (declare (type (or screen display) screen)
 	(type (or null resource-database) database)
-	(type (or null (function (list t) boolean)) test test-not)
+	(type (or null (function (list t) generalized-boolean)) test test-not)
 	(type (or null (function (string stream) t)) write)
 	(clx-values resource-database))
   (let* ((screen (if (type? screen 'display)
@@ -676,7 +676,9 @@
 		      :write write :test test :test-not test-not)
     database))
 
-(defsetf root-resources set-root-resources)
+(defsetf root-resources (screen &key test test-not (write #'princ))(database)
+  `(set-root-resources
+    ,screen :test ,test :test-not ,test-not :write ,write :database ,database))
 
 (defun initialize-resource-database (display)
   ;; This function is (supposed to be) equivalent to the Xlib initialization

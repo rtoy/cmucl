@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.24 1997/06/04 22:12:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.24.2.1 1998/06/23 11:23:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
 (setf (backend-fasl-file-type *target-backend*) "sparcf")
 (setf (backend-fasl-file-implementation *target-backend*)
       sparc-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 6)
+(setf (backend-fasl-file-version *target-backend*) 7)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :big-endian)
 (setf (backend-page-size *target-backend*)
@@ -62,6 +62,11 @@
 	  double-float-significand-byte double-float-normal-exponent-min
 	  double-float-normal-exponent-max double-float-hidden-bit
 	  double-float-trapping-nan-bit double-float-digits
+
+	  long-float-bias long-float-exponent-byte
+	  long-float-significand-byte long-float-normal-exponent-min
+	  long-float-normal-exponent-max long-float-hidden-bit
+	  long-float-trapping-nan-bit long-float-digits
 
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
@@ -102,12 +107,24 @@
 (defconstant double-float-hidden-bit (ash 1 20))
 (defconstant double-float-trapping-nan-bit (ash 1 19))
 
+;;; X These values are for the x86 80 bit format and are no doubt
+;;; incorrect for the sparc.
+(defconstant long-float-bias 16382)
+(defconstant long-float-exponent-byte (byte 15 0))
+(defconstant long-float-significand-byte (byte 31 0))
+(defconstant long-float-normal-exponent-min 1)
+(defconstant long-float-normal-exponent-max #x7FFE)
+(defconstant long-float-hidden-bit (ash 1 31))
+(defconstant long-float-trapping-nan-bit (ash 1 30))
+
 (defconstant single-float-digits
   (+ (byte-size single-float-significand-byte) 1))
 
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
 
+(defconstant long-float-digits
+  (+ (byte-size long-float-significand-byte) word-bits 1))
 
 (defconstant float-inexact-trap-bit (ash 1 0))
 (defconstant float-divide-by-zero-trap-bit (ash 1 1))
@@ -125,9 +142,11 @@
 (defconstant float-traps-byte (byte 5 23))	  ; TEM
 (defconstant float-exceptions-byte (byte 5 0))	  ; cexc
 
-;;; According to the SPARC doc (as opposed to FPU doc), the fast mode bit (EFM)
-;;; is "reserved", and should always be zero.
-(defconstant float-fast-bit 0)
+;;; According to the SPARC doc (as opposed to FPU doc), the fast mode
+;;; bit (EFM) is "reserved", and should always be zero.  However, for
+;;; sparc-V8 and sparc-V9, it appears to work, causing denormals to
+;;; be truncated to 0 silently.
+(defconstant float-fast-bit (ash 1 22))
 
 ); eval-when
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.15 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.15.2.1 1998/06/23 11:22:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,7 +150,7 @@
     (instance (describe-instance-parts object :structure))
     (function
      (if (kernel:funcallable-instance-p object)
-	 (describe-instance-parts object :funcallabe-instance)
+	 (describe-instance-parts object :funcallable-instance)
 	 (describe-function-parts object)))
     (vector (describe-vector-parts object))
     (array (describe-array-parts object))

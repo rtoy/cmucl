@@ -6,26 +6,25 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;(ext:file-comment
-;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.2 1997/04/13 21:07:29 pw Exp $")
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.2.2.1 1998/06/23 11:22:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the X86 specific runtime stuff.
 ;;;
 
-(in-package :vm)
+(in-package "X86")
 (use-package "SYSTEM")
 (use-package "ALIEN")
 (use-package "C-CALL")
 (use-package "UNIX")
-(use-package :kernel)
+(use-package "KERNEL")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
-	  extern-alien-name sanctify-for-execution
-	  alternate-get-global-address))
+	  extern-alien-name sanctify-for-execution))
 
 
 ;;;; The sigcontext structure.
@@ -126,34 +125,117 @@
 
 
 
-;;; FIXUP-CODE-OBJECT -- Interface
+;;; Fixup-Code-Object -- Interface
+;;;
 ;;; This gets called by LOAD to resolve newly positioned objects
 ;;; with things (like code instructions) that have to refer to them.
-
+;;;
+;;; Add a fixup offset to the vector of fixup offsets for the given
+;;; code object.
+;;;
+;;; Counter to measure the storage overhead.
+(defvar *num-fixups* 0)
+;;;
 (defun fixup-code-object (code offset fixup kind)
   (declare (type index offset))
-  (system:without-gcing
-   (let ((sap (truly-the system-area-pointer (c::code-instructions code))))
-     (unless (member kind '(:absolute :relative))
-       (error "Unknown code-object-fixup kind ~s." kind))
-     (ecase kind
-       (:absolute
-	;; word at sap + offset contains a value to be replaced by
-	;; adding that value to fixup.
-	(setf (sap-ref-32 sap offset)
-	      (+ fixup (sap-ref-32 sap offset))))
-       (:relative
-	;; fixup is actual address wanted. replace word with value
-	;; to add to that loc to get there.
-	;; (format t "x86-fixup ~a ~x ~x ~a~&" code offset fixup kind)
-	(let* ((loc-sap (+ (sap-int sap) offset))
-	       (rel-val (- fixup loc-sap 4)))
-	  (declare (type (unsigned-byte 32) loc-sap)
-		   (type (signed-byte 32) rel-val))
-	  ;;(format t "sap ~x ~x ~x~&" (sap-int sap) loc-sap rel-val)
-	  (setf (sap-ref-32 sap offset)  rel-val)) ))))
-  nil)
+  (flet ((add-fixup (code offset)
+	   ;; Although this could check for and ignore fixups for code
+	   ;; objects in the read-only and static spaces, this should
+	   ;; only be the case when *enable-dynamic-space-code* is
+	   ;; True.
+	   (when lisp::*enable-dynamic-space-code*
+	     (incf *num-fixups*)
+	     (let ((fixups (code-header-ref code code-constants-offset)))
+	       (cond ((typep fixups '(simple-array (unsigned-byte 32) (*)))
+		      (let ((new-fixups
+			     (adjust-array fixups (1+ (length fixups))
+					   :element-type '(unsigned-byte 32))))
+			(setf (aref new-fixups (length fixups)) offset)
+			(setf (code-header-ref code code-constants-offset)
+			      new-fixups)))
+		     (t
+		      (unless (or (eq (get-type fixups) vm:unbound-marker-type)
+				  (zerop fixups))
+			(format t "** Init. code FU = ~s~%" fixups))
+		      (setf (code-header-ref code code-constants-offset)
+			    (make-array 1 :element-type '(unsigned-byte 32)
+					:initial-element offset))))))))
+    (system:without-gcing
+     (let* ((sap (truly-the system-area-pointer
+			    (kernel:code-instructions code)))
+	    (obj-start-addr (logand (kernel:get-lisp-obj-address code)
+				    #xfffffff8))
+	    #+nil (const-start-addr (+ obj-start-addr (* 5 4)))
+	    (code-start-addr (sys:sap-int (kernel:code-instructions code)))
+	    (ncode-words (kernel:code-header-ref code 1))
+	    (code-end-addr (+ code-start-addr (* ncode-words 4))))
+       (unless (member kind '(:absolute :relative))
+	 (error "Unknown code-object-fixup kind ~s." kind))
+       (ecase kind
+	 (:absolute
+	  ;; Word at sap + offset contains a value to be replaced by
+	  ;; adding that value to fixup.
+	  (setf (sap-ref-32 sap offset) (+ fixup (sap-ref-32 sap offset)))
+	  ;; Record absolute fixups that point within the code object.
+	  (when (> code-end-addr (sap-ref-32 sap offset) obj-start-addr)
+	    (add-fixup code offset)))
+	 (:relative
+	  ;; Fixup is the actual address wanted.
+	  ;;
+	  ;; Record relative fixups that point outside the code
+	  ;; object.
+	  (when (or (< fixup obj-start-addr) (> fixup code-end-addr))
+	    (add-fixup code offset))
+	  ;; Replace word with value to add to that loc to get there.
+	  (let* ((loc-sap (+ (sap-int sap) offset))
+		 (rel-val (- fixup loc-sap 4)))
+	    (declare (type (unsigned-byte 32) loc-sap)
+		     (type (signed-byte 32) rel-val))
+	    (setf (signed-sap-ref-32 sap offset) rel-val))))))
+    nil))
 
+;;; Do-Load-Time-Code-Fixups
+;;;
+;;; Add a code fixup to a code object generated by new-genesis. The
+;;; fixup has already been applied, it's just a matter of placing the
+;;; fixup in the code's fixup vector if necessary.
+;;;
+#+gencgc
+(defun do-load-time-code-fixup (code offset fixup kind)
+  (flet ((add-load-time-code-fixup (code offset)
+	   (let ((fixups (code-header-ref code vm:code-constants-offset)))
+	     (cond ((typep fixups '(simple-array (unsigned-byte 32) (*)))
+		    (let ((new-fixups
+			   (adjust-array fixups (1+ (length fixups))
+					 :element-type '(unsigned-byte 32))))
+		      (setf (aref new-fixups (length fixups)) offset)
+		      (setf (code-header-ref code vm:code-constants-offset)
+			    new-fixups)))
+		   (t
+		    (unless (or (eq (get-type fixups) vm:unbound-marker-type)
+				(zerop fixups))
+		      (%primitive print "** Init. code FU"))
+		    (setf (code-header-ref code vm:code-constants-offset)
+			  (make-array 1 :element-type '(unsigned-byte 32)
+				      :initial-element offset)))))))
+    (let* ((sap (truly-the system-area-pointer
+			   (kernel:code-instructions code)))
+	   (obj-start-addr
+	    (logand (kernel:get-lisp-obj-address code) #xfffffff8))
+	   (code-start-addr (sys:sap-int (kernel:code-instructions code)))
+	   (ncode-words (kernel:code-header-ref code 1))
+	 (code-end-addr (+ code-start-addr (* ncode-words 4))))
+      (ecase kind
+	(:absolute
+	 ;; Record absolute fixups that point within the
+	 ;; code object.
+	 (when (> code-end-addr (sap-ref-32 sap offset) obj-start-addr)
+	   (add-load-time-code-fixup code offset)))
+	(:relative
+	 ;; Record relative fixups that point outside the
+	 ;; code object.
+	 (when (or (< fixup obj-start-addr) (> fixup code-end-addr))
+	   (add-load-time-code-fixup code offset)))))))
 
 
 ;;;; Internal-error-arguments.
@@ -211,8 +293,7 @@
       (#.edx-offset (slot scp 'sc-edx))
       (#.ebx-offset (slot scp 'sc-ebx))
       (#.esp-offset (slot scp 'sc-sp))
-#-linux      (#.ebp-offset (slot scp 'sc-fp))
-#+linux      (#.ebp-offset (slot scp 'ebp))
+      (#.ebp-offset (slot scp #-linux 'sc-fp #+linux 'ebp))
       (#.esi-offset (slot scp 'sc-esi))
       (#.edi-offset (slot scp 'sc-edi)))))
 
@@ -226,8 +307,7 @@
       (#.edx-offset (setf (slot scp 'sc-edx) new))
       (#.ebx-offset (setf (slot scp 'sc-ebx) new))
       (#.esp-offset (setf (slot scp 'sc-sp)  new))
-#-linux      (#.ebp-offset (setf (slot scp 'sc-fp)  new))
-#+linux      (#.ebp-offset (setf (slot scp 'ebp)  new))
+      (#.ebp-offset (setf (slot scp #-linux 'sc-fp #+linux 'ebp)  new))
       (#.esi-offset (setf (slot scp 'sc-esi) new))
       (#.edi-offset (setf (slot scp 'sc-edi) new))))
   new)
@@ -239,48 +319,23 @@
 ;;;
 ;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
 ;;; Format is the type of float to return.
-;;; XXX
-#-linux
-(defun sigcontext-float-register (scp index format)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
-    ;; fp regs not in sigcontext -- need new vop or c support
-    (let ((sap #+nil (alien-sap (slot scp 'sc-fpregs))))
-      (declare (ignore sap))
-      index
-      (ecase format
-	(single-float 0s0
-	 #+nil (system:sap-ref-single sap (* index vm:word-bytes)))
-	(double-float 0d0
-	 #+nil(system:sap-ref-double sap (* index vm:word-bytes)))))))
-
+;;;
 #+linux
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    ;; fp regs in sigcontext !!!
     (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
-					    'fpreg)
+					   'fpreg)
 				     index))))
-      (ecase format
-        (single-float
-          (system:sap-ref-single reg-sap 0))
-        (double-float 
-          (system:sap-ref-double reg-sap 0))))))
+      (coerce (sys:sap-ref-long reg-sap 0) format))))
 
-;;;
-#-linux
-(defun %set-sigcontext-float-register (scp index format new-value)
-  (declare (type (alien (* sigcontext)) scp))
-  scp index format new-value
-  #+nil
-  (with-alien ((scp (* sigcontext) scp))
-    (let ((sap (alien-sap (slot scp 'fpregs))))
-      (ecase format
-	(single-float
-	 (setf (sap-ref-single sap (* index vm:word-bytes)) new-value))
-	(double-float
-	 (setf (sap-ref-double sap (* index vm:word-bytes)) new-value))))))
+;;; Not supported on FreeBSD because the floating point state is not
+;;; saved.
+#+FreeBSD
+(defun sigcontext-float-register (scp index format)
+  (declare (ignore scp index))
+  (coerce 0l0 format))
+
 #+linux
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (type (alien (* sigcontext)) scp))
@@ -288,14 +343,18 @@
     (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
 					    'fpreg)
 				     index))))
-      (ecase format
-        (single-float
-         (setf (system:sap-ref-single reg-sap 0) new-value))
-        (double-float
-         (setf (system:sap-ref-double reg-sap 0)new-value))))))
+      (declare (ignorable reg-sap))
+      #+not-yet
+      (setf (sys:sap-ref-long reg-sap 0) (coerce new-value 'long-float))
+      (coerce new-value format))))
+
+;;; Not supported on FreeBSD.
+#+FreeBSD
+(defun %set-sigcontext-float-register (scp index format new-value)
+  (declare (ignore scp index))
+  (coerce new-value format))
 
 ;;;
-
 (defsetf sigcontext-float-register %set-sigcontext-float-register)
 
 ;;; SIGCONTEXT-FLOATING-POINT-MODES  --  Interface
@@ -329,39 +388,31 @@
 ;;; The loader uses this to convert alien names to the form they occure in
 ;;; the symbol table (for example, prepending an underscore).
 ;;;
-;;; On the x86 under FreeBSD, we prepend an underscore. If this is not
-;;; done under Linux then this is the place to make the change.
-;;;
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  (lisp:concatenate 'string #+linux "" #-linux "_" name))
+  name)
 
-;;; This used to live in foreign.lisp but it gets loaded too late
-;;; to be useful. This gets used by the loader to map lisp foreign
-;;; symbol names to the OS's version of it. This was added for the
-;;; Linux port -- maybe it makes the above extern-alien-name
-;;; obsolete?
-(defun system:alternate-get-global-address(symbol)
-  (declare (type simple-string symbol))
-  (let ((namex symbol)
-        (table lisp::*foreign-symbols*)) ; defined in load.lisp
-    (cond ((gethash namex table nil))
-#+linux   ((gethash (concatenate 'string "PVE_stub_" namex) table nil))
-#+linux   ((gethash (concatenate 'string "" namex) table nil)) ; Linux
-#+freebsd ((gethash (concatenate 'string "_" namex) table nil)); FreeBSD
-          ((gethash (concatenate 'string "__" namex) table nil))
-          ((gethash (concatenate 'string "__libc_" namex) table nil))
-          (t (progn (format t "Error: can't be in alt-get-gl-addr ~a" namex)
-	;; returning 0 is VERY dangerous!
-		0)))))
-
+(defun lisp::foreign-symbol-address-aux (name)
+  (multiple-value-bind (value found)
+      (gethash name lisp::*foreign-symbols* 0)
+    (if found
+	value
+	(multiple-value-bind (value found)
+	    (gethash
+	     (concatenate 'string #+linux "PVE_stub_" #+freebsd "_" name)
+	     lisp::*foreign-symbols* 0)
+	  (if found
+	      value
+	      (let ((value (system:alternate-get-global-address name)))
+		(when (zerop value)
+		  (error "Unknown foreign symbol: ~S" name))
+		value))))))
 
 
 ;;; SANCTIFY-FOR-EXECUTION -- Interface.
 ;;;
-;;; Do whatever is necessary to make the given code component executable.
-;;; On the sparc, we don't need to do anything, because the i and d caches
-;;; are unified.
+;;; Do whatever is necessary to make the given code component
+;;; executable - nothing on the x86.
 ;;; 
 (defun sanctify-for-execution (component)
   (declare (ignore component))
@@ -371,18 +422,50 @@
 ;;;
 ;;; This is used in error.lisp to insure floating-point  exceptions
 ;;; are properly trapped. The compiler translates this to a VOP.
-;;; Note: if you are compiling this from an old version you may need
-;;; to disable this until the float-wait VOP is entrenched.
+;;;
 (defun float-wait()
   (float-wait))
 
 ;;; FLOAT CONSTANTS
 ;;;
-;;; These are used by the FP move-from-{single|double} VOPs
-;;; rather than the i387 load constant instructions to avoid
-;;; consing in some cases.
+;;; These are used by the FP move-from-{single|double} VOPs rather
+;;; than the i387 load constant instructions to avoid consing in some
+;;; cases. Note these are initialise by genesis as they are needed
+;;; early.
+;;;
+(defvar *fp-constant-0s0*)
+(defvar *fp-constant-1s0*)
+(defvar *fp-constant-0d0*)
+(defvar *fp-constant-1d0*)
+;;; The long-float constants.
+(defvar *fp-constant-0l0*)
+(defvar *fp-constant-1l0*)
+(defvar *fp-constant-pi*)
+(defvar *fp-constant-l2t*)
+(defvar *fp-constant-l2e*)
+(defvar *fp-constant-lg2*)
+(defvar *fp-constant-ln2*)
 
-(defvar *fp-constant-0s0* 0s0)
-(defvar *fp-constant-0d0* 0d0)
-(defvar *fp-constant-1s0* 1s0)
-(defvar *fp-constant-1d0* 1d0)
+;;; Enable/Disable scavenging of the read-only space.
+(defvar *scavenge-read-only-space* nil)
+
+;;; The current alien stack pointer; saved/restored for non-local
+;;; exits.
+(defvar *alien-stack*)
+
+;;;
+(defun kernel::%instance-set-conditional (object slot test-value new-value)
+  (declare (type instance object)
+	   (type index slot))
+  "Atomically compare object's slot value to test-value and if EQ store
+   new-value in the slot. The original value of the slot is returned."
+  (kernel::%instance-set-conditional object slot test-value new-value))
+
+;;; Support for the MT19937 random number generator. The update
+;;; function is implemented as an assembly routine. This definition is
+;;; transformed to a call to this routine allowing its use in byte
+;;; compiled code.
+;;;
+(defun random-mt19937 (state)
+  (declare (type (simple-array (unsigned-byte 32) (627)) state))
+  (random-mt19937 state))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.1 1997/01/18 14:31:22 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.1.2.1 1998/06/23 11:24:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
 
@@ -27,13 +28,10 @@
   (:variant-vars function)
   (:vop-var vop)
   (:node-var node)
-  #+nil
-  (:temporary (:sc dword-reg :offset eax-offset) eax) ; used for call
-  (:temporary (:sc dword-reg :offset ebx-offset :from (:eval 1) :to (:eval 2))
-	      ebx)
-  (:ignore #+nil eax ebx)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:eval 0) :to (:eval 2))
-	      ecx))
+  (:temporary (:sc unsigned-reg :offset ebx-offset
+		   :from (:eval 0) :to (:eval 2)) ebx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:eval 0) :to (:eval 2)) ecx))
 
 (eval-when (compile load eval)
 
@@ -64,7 +62,7 @@
       (dotimes (i num-temps)
 	(let ((temp-name (intern (format nil "TEMP-~D" i))))
 	  (temp-names temp-name)
-	  (temps `(:temporary (:sc dword-reg
+	  (temps `(:temporary (:sc descriptor-reg
 			       :offset ,(nth i register-arg-offsets)
 			       :from ,(if (< i num-args)
 					  `(:argument ,i)
@@ -88,51 +86,38 @@
 	(:results ,@(results))
 	(:generator ,(+ 50 num-args num-results)
 	 ,@(moves (temp-names) (arg-names))
-	 ;; If speed is more important than size, duplicate the effect of
-	 ;; the ENTER with discrete instructions.  Takes 9 bytes/6 cycles
-	 ;; as opposed to 4 bytes/10 cycles.
-	 (cond ((policy node (> speed space))
+
+	 ;; If speed not more important than size, duplicate the
+	 ;; effect of the ENTER with discrete instructions.  Takes
+	 ;; 2+1+3+2=8 bytes as opposed to 4+3=7 bytes.
+	 (cond ((policy node (>= speed space))
+		(inst mov ebx esp-tn)
+		;; Save the old-fp
 		(inst push ebp-tn)
-		(inst mov ebp-tn esp-tn)
-		(inst sub esp-tn (fixnum 3))) ; pw -- was 2
+		;; Ensure that at least three slots are available; one
+		;; above, two more needed.
+		(inst sub esp-tn (fixnum 2))
+		(inst mov ebp-tn ebx))
 	       (t
-		(inst enter (fixnum 3))))	; pw -- was 2
-	 ;; The enter instruction pushes EBP and then copies ESP into
-	 ;; EBP.  We want the new EBP to be the original ESP, so we fix it
-	 ;; up afterwards.
-	 (inst add ebp-tn (fixnum 1))
-	 (inst mov ecx (fixnum ,num-args))
-
-	 ;; jrd fixed it up this way, to deal with the fact that the thing in 
-	 ;; static-symbols is the fdefn
-	 ;; pfw says this is no longer true
-	 (inst mov eax-tn
-	  (make-ea :dword
-		   :disp (+ nil-value (static-function-offset function))))
-
-	 ;; Save the return address.
-	 #+x86-lra
-	 (storew (make-fixup nil :code-object return)
-		 ebp-tn (- (1+ return-pc-save-offset)))
-
-	 ;; Push the return address for backward compatability.
-	 #+x86-lra
-	 (inst push (make-ea :dword :base ebp-tn :disp -8))
+		(inst enter (fixnum 2))
+		;; The enter instruction pushes EBP and then copies
+		;; ESP into EBP.  We want the new EBP to be the
+		;; original ESP, so we fix it up afterwards.
+		(inst add ebp-tn (fixnum 1))))
+	 
+	 ,(if (zerop num-args)
+	      '(inst xor ecx ecx)
+	      `(inst mov ecx (fixnum ,num-args)))
 	 
 	 (note-this-location vop :call-site)
-	 #-x86-lra
-	 (inst call eax-tn)
-	 #+x86-lra
-	 (progn
-	   (inst jmp eax-tn)
-	   (align lowtag-bits #x90)
-	   (inst lra-header-word)
-	   (inst nop)
-	   (inst nop)
-	   (inst nop))
-	 #+x86-lra
-	 RETURN
-
+	 ;; Static-function-offset gives the offset from the start of
+	 ;; the nil object to the static function fdefn and has the
+	 ;; low tag of 1 added.  When the nil symbol value with its
+	 ;; low tag of 3 is added the resulting value points to the
+	 ;; raw address slot of the fdefn (at +4).
+	 (inst call (make-ea :dword
+			     :disp (+ nil-value
+				      (static-function-offset function))))
 	 ,(collect ((bindings) (links))
 		   (do ((temp (temp-names) (cdr temp))
 			(name 'values (gensym))

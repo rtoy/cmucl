@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.44 1997/05/05 23:13:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.44.2.1 1998/06/23 11:23:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;;
 ;;; Written by William Lott
 ;;; Earlier versions by Rob MacLachlan and Christopher Hoover.
+;;; Complex-float support by Douglas Crosher 1998.
 ;;;
 (in-package "MIPS")
 
@@ -259,8 +260,29 @@
 (def-type-vops ratiop check-ratio ratio
   object-not-ratio-error ratio-type)
 
-(def-type-vops complexp check-complex complex
-  object-not-complex-error complex-type)
+(def-type-vops complexp check-complex complex object-not-complex-error
+  complex-type
+  #+complex-float complex-single-float-type
+  #+complex-float complex-double-float-type)
+
+#+complex-float
+(def-type-vops complex-rational-p check-complex-rational nil
+  object-not-complex-rational-error complex-type)
+
+#+complex-float
+(def-type-vops complex-float-p check-complex-float nil
+  object-not-complex-float-error
+  complex-single-float-type complex-double-float-type)
+
+#+complex-float
+(def-type-vops complex-single-float-p check-complex-single-float
+  complex-single-float object-not-complex-single-float-error
+  complex-single-float-type)
+
+#+complex-float
+(def-type-vops complex-double-float-p check-complex-double-float
+  complex-double-float object-not-complex-double-float-error
+  complex-double-float-type)
 
 (def-type-vops single-float-p check-single-float single-float
   object-not-single-float-error single-float-type)
@@ -343,6 +365,20 @@
   simple-array-double-float object-not-simple-array-double-float-error
   simple-array-double-float-type)
 
+#+complex-float
+(def-type-vops simple-array-complex-single-float-p
+  check-simple-array-complex-single-float
+  simple-array-complex-single-float
+  object-not-simple-array-complex-single-float-error
+  simple-array-complex-single-float-type)
+
+#+complex-float
+(def-type-vops simple-array-complex-double-float-p
+  check-simple-array-complex-double-float
+  simple-array-complex-double-float
+  object-not-simple-array-complex-double-float-error
+  simple-array-complex-double-float-type)
+
 (def-type-vops base-char-p check-base-char base-char
   object-not-base-char-error base-char-type)
 
@@ -393,9 +429,10 @@
   #+signed-array simple-array-signed-byte-16-type
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
-  simple-array-single-float-type
-  simple-array-double-float-type complex-string-type
-  complex-bit-vector-type complex-vector-type)
+  simple-array-single-float-type simple-array-double-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type
+  complex-string-type complex-bit-vector-type complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
   simple-array-type simple-string-type simple-bit-vector-type
@@ -406,7 +443,9 @@
   #+signed-array simple-array-signed-byte-16-type
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
-  simple-array-single-float-type simple-array-double-float-type)
+  simple-array-single-float-type simple-array-double-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
   simple-array-type simple-string-type simple-bit-vector-type
@@ -418,12 +457,16 @@
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+complex-float simple-array-complex-single-float-type
+  #+complex-float simple-array-complex-double-float-type
   complex-string-type complex-bit-vector-type complex-vector-type
   complex-array-type)
 
 (def-type-vops numberp check-number nil object-not-number-error
   even-fixnum-type odd-fixnum-type bignum-type ratio-type
-  single-float-type double-float-type complex-type)
+  single-float-type double-float-type complex-type
+  #+complex-float complex-single-float-type
+  #+complex-float complex-double-float-type)
 
 (def-type-vops rationalp check-rational nil object-not-rational-error
   even-fixnum-type odd-fixnum-type ratio-type bignum-type)

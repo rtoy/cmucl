@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34 1997/04/16 18:11:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34.2.1 1998/06/23 11:22:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,16 +289,16 @@
 (defun info-hash (x)
   (cond
    ((symbolp x)
-    #-gengc (%sxhash-simple-string (symbol-name x))
-    #+gengc (symbol-hash x))
+    #-(or gengc x86) (%sxhash-simple-string (symbol-name x))
+    #+(or gengc x86) (symbol-hash x))
    ((and (listp x)
 	 (eq (car x) 'setf)
 	 (let ((next (cdr x)))
 	   (when (listp next)
 	     (let ((name (car next)))
 	       (when (and (symbolp name) (null (cdr next)))
-		 (logxor #-gengc (%sxhash-simple-string (symbol-name name))
-			 #+gengc (symbol-hash name)
+		 (logxor #-(or gengc x86) (%sxhash-simple-string (symbol-name name))
+			 #+(or gengc x86) (symbol-hash name)
 			 110680597)))))))
    (t
     (sxhash x))))
@@ -459,8 +459,8 @@
 	(logand
 	 (the fixnum
 	      (logxor (the fixnum
-			   #+gengc (info-hash ,name)
-			   #-gengc (cache-hash-eq ,name))
+			   #+(or gengc x86) (info-hash ,name)
+			   #-(or gengc x86) (cache-hash-eq ,name))
 		      (the fixnum (ash (the fixnum ,type) 7))))
 	 #x3FF)))
 
@@ -492,11 +492,11 @@
 ;;; Not needed with the gengc system, because we use an address independent
 ;;; hashing.
 ;;; 
-#-gengc
+#-(or gengc x86)
 (defun info-cache-gc-hook ()
   (setq *cached-info-environment* nil))
 ;;;
-#-gengc
+#-(or gengc x86)
 (pushnew 'info-cache-gc-hook *after-gc-hooks*)
 
 
@@ -885,7 +885,7 @@
 ;;; CLEAR-INFO  --  Public
 ;;;
 (defmacro clear-info (class type name)
-  "Clear the information of the the specified Type and Class for Name in the
+  "Clear the information of the specified Type and Class for Name in the
   current environment, allowing any inherited info to become visible.  We
   return true if there was any info."
   (let* ((class (symbol-name class))
@@ -1083,7 +1083,7 @@
 (define-info-type variable where-from (member :declared :assumed :defined)
   :assumed)
 
-;;; The the lisp object which is the value of this constant, if known.
+;;; The lisp object which is the value of this constant, if known.
 (define-info-type variable constant-value t
   (if (boundp name)
       (values (symbol-value name) t)

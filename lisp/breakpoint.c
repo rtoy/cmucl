@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.6 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.6.2.1 1998/06/23 11:24:49 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -21,8 +21,13 @@
 #include "breakpoint.h"
 
 #define REAL_LRA_SLOT 0
+#ifndef i386
 #define KNOWN_RETURN_P_SLOT 1
 #define BOGUS_LRA_CONSTANTS 2
+#else
+#define KNOWN_RETURN_P_SLOT 2
+#define BOGUS_LRA_CONSTANTS 3
+#endif
 
 static void *compute_pc(lispobj code_obj, int pc_offset)
 {
@@ -47,12 +52,13 @@ void breakpoint_remove(lispobj code_obj, int pc_offset,
 void breakpoint_do_displaced_inst(struct sigcontext *scp,
 				  unsigned long orig_inst)
 {
-#if !defined(hpux) && !defined(irix)
+#if !defined(hpux) && !defined(irix) && !defined(i386)
     undo_fake_foreign_function_call(scp);
 #endif
     arch_do_displaced_inst(scp, orig_inst);
 }
 
+#ifndef i386
 static lispobj find_code(struct sigcontext *scp)
 {
 #ifdef reg_CODE
@@ -71,6 +77,18 @@ static lispobj find_code(struct sigcontext *scp)
     return NIL;
 #endif
 }
+#endif
+
+#ifdef i386
+static lispobj find_code(struct sigcontext *scp)
+{
+  lispobj codeptr = component_ptr_from_pc(SC_PC(scp));
+
+  if (codeptr==NULL)
+    return NIL;
+  return (codeptr+type_OtherPointer);
+}
+#endif
 
 static int compute_offset(struct sigcontext *scp, lispobj code)
 {
@@ -99,6 +117,7 @@ static int compute_offset(struct sigcontext *scp, lispobj code)
     }
 }
 
+#ifndef i386
 void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 {
     lispobj code;
@@ -106,6 +125,7 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
     fake_foreign_function_call(scp);
 
     code = find_code(scp);
+
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
 	     compute_offset(scp, code),
 	     code,
@@ -113,7 +133,29 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 
     undo_fake_foreign_function_call(scp);
 }
+#else
+void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
+{
+    lispobj code, scp_sap=alloc_sap(scp);
 
+    fake_foreign_function_call(scp);
+
+    code = find_code(scp);
+
+    /* Don't disallow recursive breakpoint traps.  Otherwise, we can't */
+    /* use debugger breakpoints anywhere in here. */
+    sigsetmask(scp->sc_mask);
+
+    funcall3(SymbolFunction(HANDLE_BREAKPOINT),
+	     compute_offset(scp, code),
+	     code,
+	     scp_sap);
+
+    undo_fake_foreign_function_call(scp);
+}
+#endif
+
+#ifndef i386
 void *handle_function_end_breakpoint(int signal, int subcode,
 				     struct sigcontext *scp)
 {
@@ -135,8 +177,33 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     if (codeptr->constants[KNOWN_RETURN_P_SLOT] == NIL)
 	SC_REG(scp, reg_CODE) = lra;
 #endif
+    undo_fake_foreign_function_call(scp);
+    return (void *)(lra-type_OtherPointer+sizeof(lispobj));
+}
+#else
+void *handle_function_end_breakpoint(int signal, int subcode,
+				     struct sigcontext *scp)
+{
+    lispobj code, scp_sap=alloc_sap(scp);
+    struct code *codeptr;
+
+    fake_foreign_function_call(scp);
+
+    code = find_code(scp);
+    codeptr = (struct code *)PTR(code);
+
+    /* Don't disallow recursive breakpoint traps.  Otherwise, we can't
+     * use debugger breakpoints anywhere in here. */
+    sigsetmask(scp->sc_mask);
+
+    funcall3(SymbolFunction(HANDLE_BREAKPOINT),
+	     compute_offset(scp, code),
+	     code,
+	     scp_sap);
 
     undo_fake_foreign_function_call(scp);
 
-    return (void *)(lra-type_OtherPointer+sizeof(lispobj));
+    return compute_pc(codeptr->constants[REAL_LRA_SLOT],
+		      fixnum_value(codeptr->constants[REAL_LRA_SLOT+1]));
 }
+#endif

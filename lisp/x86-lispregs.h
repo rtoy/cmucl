@@ -1,5 +1,5 @@
-/* 86-lispregs.h -*- Mode: C; -*-
- *
+/* x86-lispregs.h -*- Mode: C; -*-
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.1.2.1 1998/06/23 11:25:11 pw Exp $
  */
 
 /* These register names and offsets correspond to definitions

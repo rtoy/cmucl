@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.6 1997/01/18 14:31:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.6.2.1 1998/06/23 11:24:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
   "File types to ignore when trying to complete a filename."
   :value
   (list "fasl" "pmaxf" "sparcf" "rtf" "hpf" "axpf" "sgif" "err"
-	"x86f" "lbytef"	"core"		    ; Lisp
+	"x86f" "lbytef"	"core" "trace"	    ; Lisp
 	"BAK" "CKP"			    ; Backups & Checkpoints
 	"PS" "ps" "press" "otl" "dvi" "toc" ; Formatting
 	"bbl" "lof" "idx" "lot" "aux"	    ; Formatting

@@ -138,7 +138,8 @@
 ;  (declare (type <mumble> <mumble>-1 <mumble>-2)
 ;	   (clx-values boolean)))
 
-(deftype boolean () '(or null (not null)))
+
+(deftype generalized-boolean () 't)	; (or null (not null))
 
 (deftype card32 () '(unsigned-byte 32))
 
@@ -228,7 +229,7 @@
 (def-clx-class (bitmap-format (:copier nil) (:print-function print-bitmap-format))
   (unit 8 :type (member 8 16 32))
   (pad 8 :type (member 8 16 32))
-  (lsb-first-p nil :type boolean))
+  (lsb-first-p nil :type generalized-boolean))
 
 (defun print-bitmap-format (bitmap-format stream depth)
   (declare (type bitmap-format bitmap-format)
@@ -296,7 +297,7 @@
   (roots nil :type list)			; List of screens
   (motion-buffer-size 0 :type card32)		; size of motion buffer
   (xdefaults)					; contents of defaults from server
-  (image-lsb-first-p nil :type boolean)
+  (image-lsb-first-p nil :type generalized-boolean)
   (bitmap-format (make-bitmap-format)		; Screen image info
 		 :type bitmap-format)
   (pixmap-formats nil :type sequence)		; list of pixmap formats
@@ -532,7 +533,7 @@
   (id 0 :type resource-id)
   (display nil :type (or null display))
   (drawable nil :type (or null drawable))
-  (cache-p t :type boolean)
+  (cache-p t :type generalized-boolean)
   (server-state (allocate-gcontext-state) :type gcontext-state)
   (local-state (allocate-gcontext-state) :type gcontext-state)
   (plist nil :type list)			; Extension hook
@@ -665,7 +666,7 @@
   (min-installed-maps 1 :type card16)
   (max-installed-maps 1 :type card16)
   (backing-stores :never :type (member :never :when-mapped :always))
-  (save-unders-p nil :type boolean)
+  (save-unders-p nil :type generalized-boolean)
   (event-mask-at-open 0 :type mask32)
   (plist nil :type list)			; Extension hook
   )
@@ -704,7 +705,7 @@
   (max-byte1 0 :type card8)   ;; and specify min&max values for
   (min-byte2 0 :type card8)   ;; the two character bytes
   (max-byte2 0 :type card8)
-  (all-chars-exist-p nil :type boolean)
+  (all-chars-exist-p nil :type generalized-boolean)
   (default-char 0 :type card16)
   (min-bounds nil :type (or null vector))
   (max-bounds nil :type (or null vector))
@@ -720,7 +721,7 @@
   (name "" :type (or null string)) ;; NIL when ID is for a GContext
   (font-info-internal nil :type (or null font-info))
   (char-infos-internal nil :type (or null (simple-array int16 (*))))
-  (local-only-p t :type boolean) ;; When T, always calculate text extents locally
+  (local-only-p t :type generalized-boolean) ;; When T, always calculate text extents locally
   (plist nil :type list)			; Extension hook
   )
 
@@ -792,7 +793,7 @@
     (max-byte1 card8)
     (min-byte2 card8)
     (max-byte2 card8)
-    (all-chars-exist-p boolean)
+    (all-chars-exist-p generalized-boolean)
     (default-char card16)
     (min-bounds vector)
     (max-bounds vector)

@@ -10,7 +10,8 @@
 #+(and (not pcl) (not no-pcl-clx))
 (progn
   (load "target:pcl/pclload")
-  (ext:purify))
+  #+gencgc (gc :full t)
+  #-gencgc (ext:purify))
 
 (pushnew :clx-ansi-common-lisp *features*)
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.11 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.11.2.1 1998/06/23 11:23:47 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,6 +62,15 @@
   (declare (ignore type))
   (my-make-wired-tn 'double-float 'double-reg 0))
 
+(def-alien-type-method (single-float :result-tn) (type)
+  (declare (ignore type))
+  (my-make-wired-tn 'single-float 'single-reg 0))
+
+#+long-float
+(def-alien-type-method (long-float :result-tn) (type)
+  (declare (ignore type))
+  (my-make-wired-tn 'long-float 'long-reg 0))
+
 (def-alien-type-method (values :result-tn) (type)
   (mapcar #'(lambda (type)
 	      (invoke-alien-type-method :result-tn type))
@@ -87,7 +96,8 @@
 	 (arg-types (alien-function-type-arg-types type))
 	 (result-type (alien-function-type-result-type type)))
     (assert (= (length arg-types) (length args)))
-    (if (some #'alien-double-float-type-p arg-types)
+    (if (or (some #'alien-double-float-type-p arg-types)
+	    #+long-float (some #'alien-long-float-type-p arg-types))
 	(collect ((new-args) (lambda-vars) (new-arg-types))
 	  (dolist (type arg-types)
 	    (let ((arg (gensym)))
@@ -96,6 +106,16 @@
 		     (new-args `(double-float-high-bits ,arg))
 		     (new-args `(double-float-low-bits ,arg))
 		     (new-arg-types (parse-alien-type '(signed 32)))
+		     (new-arg-types (parse-alien-type '(unsigned 32))))
+		    #+long-float
+		    ((alien-long-float-type-p type)
+		     (new-args `(long-float-exp-bits ,arg))
+		     (new-args `(long-float-high-bits ,arg))
+		     (new-args `(long-float-mid-bits ,arg))
+		     (new-args `(long-float-low-bits ,arg))
+		     (new-arg-types (parse-alien-type '(signed 32)))
+		     (new-arg-types (parse-alien-type '(unsigned 32)))
+		     (new-arg-types (parse-alien-type '(unsigned 32)))
 		     (new-arg-types (parse-alien-type '(unsigned 32))))
 		    (t
 		     (new-args arg)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.22 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.22.2.1 1998/06/23 11:22:29 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -439,33 +439,62 @@
 
 ); eval-when (compile eval)
 
+;;; When a *periodic-polling-function* is defined the server will not
+;;; block for more than the maximum event timeout and will call the
+;;; polling function if it does times out. One important use of this
+;;; is to periodically call process-yield.
+;;;
+(declaim (type (or null function) *periodic-polling-function*))
+(defvar *periodic-polling-function*
+  #-mp nil #+mp #'mp:process-yield)
+(declaim (type (unsigned-byte 29) *max-event-to-sec* *max-event-to-usec*))
+(defvar *max-event-to-sec* 1)
+(defvar *max-event-to-usec* 0)
 
 ;;; SUB-SERVE-EVENT  --  Internal
 ;;;
 ;;;    Takes timeout broken into seconds and microseconds.
 ;;;
 (defun sub-serve-event (to-sec to-usec)
+  (declare (type (or null (unsigned-byte 29)) to-sec to-usec))
+
   (when (handle-queued-clx-event) (return-from sub-serve-event t))
-  
-  ;; Next, wait for something to happen.
-  (alien:with-alien ((read-fds (alien:struct unix:fd-set))
-		     (write-fds (alien:struct unix:fd-set)))
-    (let ((count (calc-masks)))
-      (multiple-value-bind
-	  (value err)
-	  (unix:unix-fast-select
-	   count
-	   (alien:addr read-fds) (alien:addr write-fds)
-	   nil to-sec to-usec)
+
+  (let ((call-polling-fn nil))
+    (when (and *periodic-polling-function*
+	       ;; Enforce a maximum timeout.
+	       (or (null to-sec)
+		   (> to-sec *max-event-to-sec*)
+		   (and (= to-sec *max-event-to-sec*)
+			(> to-usec *max-event-to-usec*))))
+      (setf to-sec *max-event-to-sec*)
+      (setf to-usec *max-event-to-usec*)
+      (setf call-polling-fn t))
+
+    ;; Next, wait for something to happen.
+    (alien:with-alien ((read-fds (alien:struct unix:fd-set))
+		       (write-fds (alien:struct unix:fd-set)))
+      (let ((count (calc-masks)))
+	(multiple-value-bind
+	      (value err)
+	    (unix:unix-fast-select
+	     count
+	     (alien:addr read-fds) (alien:addr write-fds)
+	     nil to-sec to-usec)
 	
-	;; Now see what it was (if anything)
-	(cond (value
-	       (unless (zerop value) (call-fd-handler)))
-	      ((eql err unix:eintr)
-	       ;; We did an interrupt.
-	       t)
-	      (t
-	       ;; One of the file descriptors is bad.
-	       (handler-descriptors-error)
-	       nil))))))
+	  ;; Now see what it was (if anything)
+	  (cond (value
+		 (cond ((zerop value)
+			;; Timed out.
+			(when call-polling-fn
+			  (funcall *periodic-polling-function*)))
+		       (t
+			(call-fd-handler))))
+		((eql err unix:eintr)
+		 ;; We did an interrupt.
+		 t)
+		(t
+		 ;; One of the file descriptors is bad.
+		 (handler-descriptors-error)
+		 nil)))))))
 

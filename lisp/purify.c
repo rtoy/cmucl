@@ -1,11 +1,18 @@
-/* Purify. */
+/* Purify.
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.10 1997/04/09 17:49:36 dtc Exp $ */
+   This code is based on public domain codes from CMUCL. It is placed
+   in the public domain and is provided as-is.
 
-/* This file has been hacked a bunch by Werkowski as part of
- * the x86 port. Stack direction changes as well as more conservative
- * decisions about pointers.
- */
+   Stack direction changes, the x86/CGC stack scavenging, and static
+   blue bag feature, by Paul Werkowski, 1995, 1996.
+ 
+   Bug fixes, x86 code movement support, the scavenger hook support,
+   and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
+   1998.
+
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.10.2.1 1998/06/23 11:25:05 pw Exp $ 
+
+   */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -18,6 +25,9 @@
 #include "interrupt.h"
 #include "purify.h"
 #include "interr.h"
+#ifdef GENCGC
+#include "gencgc.h"
+#endif
 
 #undef PRINTNOISE
 
@@ -89,7 +99,13 @@ dynamic_pointer_p(lispobj ptr)
 	    ptr < (lispobj)current_dynamic_space_free_pointer);
 #endif
 }
+
 
+#ifdef i386
+
+#ifdef WANT_CGC
+/* Original x86/CGC stack scavenging code by Paul Werkowski */
+
 static int
 maybe_can_move_p(lispobj thing)
 {
@@ -108,6 +124,9 @@ maybe_can_move_p(lispobj thing)
       case type_Bignum:
       case type_SingleFloat:
       case type_DoubleFloat:
+#ifdef type_LongFloat
+      case type_LongFloat:
+#endif
       case type_Sap:
       case type_SimpleVector:
       case type_SimpleString:
@@ -131,6 +150,18 @@ maybe_can_move_p(lispobj thing)
 #endif
       case type_SimpleArraySingleFloat:
       case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayLongFloat
+      case type_SimpleArrayLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+      case type_SimpleArrayComplexSingleFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+      case type_SimpleArrayComplexDoubleFloat:
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+      case type_SimpleArrayComplexLongFloat:
+#endif
       case type_CodeHeader:
       case type_FunctionHeader:
       case type_ClosureFunctionHeader:
@@ -144,6 +175,9 @@ maybe_can_move_p(lispobj thing)
       case type_DylanFunctionHeader:
       case type_WeakPointer:
       case type_Fdefn:
+#ifdef type_ScavengerHook
+      case type_ScavengerHook:
+#endif
 	return kind;
 	break;
       default:
@@ -151,7 +185,7 @@ maybe_can_move_p(lispobj thing)
       }}}
   return 0;
 }
-
+
 static int pverbose=0;
 #define PVERBOSE pverbose
 static void
@@ -172,6 +206,275 @@ carefully_pscav_stack(lispobj*lowaddr, lispobj*base)
       sp++;
     }
 }
+#endif
+
+#ifdef GENCGC
+/*
+ * Enhanced x86/GENCGC stack scavenging by Douglas Crosher.
+ *
+ * Scavenging the stack on the i386 is problematic due to conservative
+ * roots and raw return addresses. Here it is handled in two passes:
+ * the first pass runs before any objects are moved and tries to
+ * identify valid pointers and return address on the stack, the second
+ * pass scavenges these.
+ */
+
+static unsigned pointer_filter_verbose = 0;
+
+static int
+valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
+{
+  /* If it's not a return address then it needs to be a valid lisp
+     pointer. */
+  if (!Pointerp((lispobj)pointer))
+    return FALSE;
+
+  /* Check that the object pointed to is consistent with the pointer
+     low tag. */
+  switch (LowtagOf((lispobj)pointer)) {
+  case type_FunctionPointer:
+    /* Start_addr should be the enclosing code object, or a closure
+       header. */
+    switch (TypeOf(*start_addr)) {
+    case type_CodeHeader:
+      /* This case is probably caught above. */
+      break;
+    case type_ClosureHeader:
+    case type_FuncallableInstanceHeader:
+    case type_ByteCodeFunction:
+    case type_ByteCodeClosure:
+    case type_DylanFunctionHeader:
+      if ((int)pointer != ((int)start_addr+type_FunctionPointer)) {
+	if (pointer_filter_verbose)
+	  fprintf(stderr,"*Wf2: %x %x %x\n", pointer, start_addr, *start_addr);
+	return FALSE;
+      }
+      break;
+    default:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wf3: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    break;
+  case type_ListPointer:
+    if ((int)pointer != ((int)start_addr+type_ListPointer)) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wl1: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    /* Is it plausible cons? */
+    if((Pointerp(start_addr[0])
+	|| ((start_addr[0] & 3) == 0) /* fixnum */
+	|| (TypeOf(start_addr[0]) == type_BaseChar)
+	|| (TypeOf(start_addr[0]) == type_UnboundMarker))
+       && (Pointerp(start_addr[1])
+	   || ((start_addr[1] & 3) == 0) /* fixnum */
+	   || (TypeOf(start_addr[1]) == type_BaseChar)
+	   || (TypeOf(start_addr[1]) == type_UnboundMarker)))
+      break;
+    else {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wl2: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+  case type_InstancePointer:
+    if ((int)pointer != ((int)start_addr+type_InstancePointer)) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wi1: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    if (TypeOf(start_addr[0]) != type_InstanceHeader) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wi2: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    break;
+  case type_OtherPointer:
+    if ((int)pointer != ((int)start_addr+type_OtherPointer)) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo1: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    /* Is it plausible?  Not a cons. X should check the headers. */
+    if(Pointerp(start_addr[0]) || ((start_addr[0] & 3) == 0)) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo2: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    switch (TypeOf(start_addr[0])) {
+    case type_UnboundMarker:
+    case type_BaseChar:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo3: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+      
+      /* Only pointed to by function pointers? */
+    case type_ClosureHeader:
+    case type_FuncallableInstanceHeader:
+    case type_ByteCodeFunction:
+    case type_ByteCodeClosure:
+    case type_DylanFunctionHeader:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo4: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+      
+    case type_InstanceHeader:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo5: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+      
+      /* The valid other immediate pointer objects */
+    case type_SimpleVector:
+    case type_Ratio:
+    case type_Complex:
+#ifdef type_ComplexSingleFloat
+    case type_ComplexSingleFloat:
+#endif
+#ifdef type_ComplexDoubleFloat
+    case type_ComplexDoubleFloat:
+#endif
+#ifdef type_ComplexLongFloat
+    case type_ComplexLongFloat:
+#endif
+    case type_SimpleArray:
+    case type_ComplexString:
+    case type_ComplexBitVector:
+    case type_ComplexVector:
+    case type_ComplexArray:
+    case type_ValueCellHeader:
+    case type_SymbolHeader:
+    case type_Fdefn:
+    case type_CodeHeader:
+    case type_Bignum:
+    case type_SingleFloat:
+    case type_DoubleFloat:
+#ifdef type_LongFloat
+    case type_LongFloat:
+#endif
+    case type_SimpleString:
+    case type_SimpleBitVector:
+    case type_SimpleArrayUnsignedByte2:
+    case type_SimpleArrayUnsignedByte4:
+    case type_SimpleArrayUnsignedByte8:
+    case type_SimpleArrayUnsignedByte16:
+    case type_SimpleArrayUnsignedByte32:
+#ifdef type_SimpleArraySignedByte8
+    case type_SimpleArraySignedByte8:
+#endif
+#ifdef type_SimpleArraySignedByte16
+    case type_SimpleArraySignedByte16:
+#endif
+#ifdef type_SimpleArraySignedByte30
+    case type_SimpleArraySignedByte30:
+#endif
+#ifdef type_SimpleArraySignedByte32
+    case type_SimpleArraySignedByte32:
+#endif
+    case type_SimpleArraySingleFloat:
+    case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayLongFloat
+    case type_SimpleArrayLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+    case type_SimpleArrayComplexSingleFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+    case type_SimpleArrayComplexDoubleFloat:
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+    case type_SimpleArrayComplexLongFloat:
+#endif
+    case type_Sap:
+    case type_WeakPointer:
+    case type_ScavengerHook:
+      break;
+
+    default:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo6: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    break;
+  default:
+    if (pointer_filter_verbose)
+      fprintf(stderr,"*W?: %x %x %x\n", pointer, start_addr, *start_addr);
+    return FALSE;
+  }
+  
+  /* Looks good */
+  return TRUE;
+}
+
+#define MAX_STACK_POINTERS 256
+lispobj *valid_stack_locations[MAX_STACK_POINTERS];
+unsigned int num_valid_stack_locations;
+
+#define MAX_STACK_RETURN_ADDRESSES 128
+lispobj *valid_stack_ra_locations[MAX_STACK_RETURN_ADDRESSES];
+lispobj *valid_stack_ra_code_objects[MAX_STACK_RETURN_ADDRESSES];
+unsigned int num_valid_stack_ra_locations;
+
+/* Identify valid stack slots. */
+static void
+setup_i386_stack_scav(lispobj *lowaddr, lispobj *base)
+{
+  lispobj *sp = lowaddr;
+  num_valid_stack_locations = 0;  
+  num_valid_stack_ra_locations = 0;  
+  for (sp = lowaddr; sp < base; sp++) {
+    lispobj thing = *sp;
+    lispobj* start_addr;
+    /* Find the object start address */
+    if ((start_addr = search_dynamic_space((void *)thing)) != NULL) {
+      /* Need to allow raw pointers into Code objects for return
+	 addresses. This will also pickup pointers to functions in code
+	 objects. */
+      if (TypeOf(*start_addr) == type_CodeHeader) {
+	gc_assert(num_valid_stack_ra_locations < MAX_STACK_RETURN_ADDRESSES);
+	valid_stack_ra_locations[num_valid_stack_ra_locations] = sp;
+	valid_stack_ra_code_objects[num_valid_stack_ra_locations++] =
+	  (lispobj *)((int)start_addr + type_OtherPointer);
+      } else {
+	if (valid_dynamic_space_pointer((void *)thing, start_addr)) {
+	  gc_assert(num_valid_stack_locations < MAX_STACK_POINTERS);
+	  valid_stack_locations[num_valid_stack_locations++] = sp;
+	}
+      }
+    }
+  }
+  if (pointer_filter_verbose) {
+    fprintf(stderr, "Number of valid stack pointers = %d\n",
+	    num_valid_stack_locations);
+    fprintf(stderr, "Number of stack return addresses = %d\n",
+	    num_valid_stack_ra_locations);
+  }
+}
+
+static void
+pscav_i386_stack(void)
+{
+  int i;
+
+  for (i = 0; i < num_valid_stack_locations; i++)
+    pscav(valid_stack_locations[i], 1, FALSE);
+
+  for (i = 0; i < num_valid_stack_ra_locations; i++) {
+    lispobj code_obj = valid_stack_ra_code_objects[i];
+    pscav(&code_obj, 1, FALSE);
+    if (pointer_filter_verbose)
+      fprintf(stderr,"*C moved RA %x to %x; for code object %x to %x\n",
+	      *valid_stack_ra_locations[i],
+	      (int)(*valid_stack_ra_locations[i])
+	      - ((int)valid_stack_ra_code_objects[i] - (int)code_obj),
+	      valid_stack_ra_code_objects[i], code_obj);
+    *valid_stack_ra_locations[i] = 
+      (lispobj *)((int)(*valid_stack_ra_locations[i])
+		  - ((int)valid_stack_ra_code_objects[i] - (int)code_obj));
+  }
+}
+#endif
+#endif
+
 
 static void 
 pscav_later(lispobj *where, int count)
@@ -361,6 +664,91 @@ static lispobj ptrans_vector(lispobj thing, int bits, int extra,
     return result;
 }
 
+#ifdef i386
+static void
+apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
+{
+  int nheader_words, ncode_words, nwords;
+  void  *constants_start_addr, *constants_end_addr;
+  void  *code_start_addr, *code_end_addr;
+  lispobj p;
+  lispobj fixups = NIL;
+  unsigned  displacement = (unsigned)new_code - (unsigned)old_code;
+  struct vector *fixups_vector;
+  
+  /* Byte compiled code has no fixups. The trace table offset will be
+     a fixnum if it's x86 compiled code - check. */
+  if (new_code->trace_table_offset & 0x3)
+    return;
+
+  /* Else it's x86 machine code. */
+  ncode_words = fixnum_value(new_code->code_size);
+  nheader_words = HeaderValue(*(lispobj *)new_code);
+  nwords = ncode_words + nheader_words;
+
+  constants_start_addr = (void *)new_code + 5*4;
+  constants_end_addr = (void *)new_code + nheader_words*4;
+  code_start_addr = (void *)new_code + nheader_words*4;
+  code_end_addr = (void *)new_code + nwords*4;
+
+  /* The first constant should be a pointer to the fixups for this
+     code objects. Check. */
+  fixups = new_code->constants[0];
+  
+  /* It will be 0 or the unbound-marker if there are no fixups, and
+     will be an other-pointer to a vector if it is valid. */
+  if ((fixups==0) || (fixups==type_UnboundMarker) || !Pointerp(fixups)) {
+#ifdef GENCGC    
+    /* Check for a possible errors. */
+    sniff_code_object(new_code,displacement);
+#endif
+    return;
+  }
+  
+  fixups_vector = (struct vector *)PTR(fixups);
+
+  /* Could be pointing to a forwarding pointer. */
+  if (Pointerp(fixups) && (dynamic_pointer_p(fixups))
+      && forwarding_pointer_p(*(lispobj *)fixups_vector)) {
+    /* If so then follow it. */
+    fixups_vector = (struct vector *)PTR(*(lispobj *)fixups_vector);
+  }
+
+  if (TypeOf(fixups_vector->header) == type_SimpleArrayUnsignedByte32) {
+    /* Got the fixups for the code block.  Now work through the vector,
+       and apply a fixup at each address. */
+    int length = fixnum_value(fixups_vector->length);
+    int i;
+    for (i=0; i<length; i++) {
+      unsigned offset = fixups_vector->data[i];
+      /* Now check the current value of offset. */
+      unsigned  old_value = *(unsigned *)((unsigned)code_start_addr + offset);
+    
+      /* If it's within the old_code object then it must be an
+	 absolute fixup (relative ones are not saved) */
+      if ((old_value>=(unsigned)old_code)
+	  && (old_value<((unsigned)old_code + nwords*4)))
+	/* So add the dispacement. */
+	*(unsigned *)((unsigned)code_start_addr + offset) = old_value
+	  + displacement;
+      else
+	/* It is outside the old code object so it must be a relative
+	   fixup (absolute fixups are not saved). So subtract the
+	   displacement. */
+	*(unsigned *)((unsigned)code_start_addr + offset) = old_value
+	  - displacement;
+    }
+  }
+
+  /* No longer need the fixups. */
+  new_code->constants[0] = 0;
+  
+#ifdef GENCGC
+  /* Check for possible errors. */
+  sniff_code_object(new_code,displacement);
+#endif
+}
+#endif
 
 static lispobj ptrans_code(lispobj thing)
 {
@@ -371,19 +759,15 @@ static lispobj ptrans_code(lispobj thing)
     code = (struct code *)PTR(thing);
     nwords = HeaderValue(code->header) + fixnum_value(code->code_size);
 
-#if defined(i386)
-    /* Moving machine code around does not work on the x86 port, but
-       byte compiled function code blocks can be moved.  Perhaps for
-       all byte compiled code blocks the entry_points slot is nil.
-       Check and print a warning. */
-    if ( (code->entry_points) != NIL )
-      fprintf(stderr,"** ptrans_code(%x)\n",thing);
-#endif
     new = (struct code *)read_only_free;
     read_only_free += CEILING(nwords, 2);
 
     bcopy(code, new, nwords * sizeof(lispobj));
-    
+
+#ifdef i386    
+    apply_code_fixups_during_purify(code,new);
+#endif
+
     result = (lispobj)new | type_OtherPointer;
 
     /* Stick in a forwarding pointer for the code object. */
@@ -419,7 +803,16 @@ static lispobj ptrans_code(lispobj thing)
          func = ((struct function *)PTR(func))->next) {
         gc_assert(LowtagOf(func) == type_FunctionPointer);
         gc_assert(!dynamic_pointer_p(func));
+
+#ifdef i386    
+	/* Temporarly convert the self pointer to a real function
+           pointer. */
+	((struct function *)PTR(func))->self -= RAW_ADDR_OFFSET;
+#endif
         pscav(&((struct function *)PTR(func))->self, 2, TRUE);
+#ifdef i386    
+	((struct function *)PTR(func))->self += RAW_ADDR_OFFSET;
+#endif
         pscav_later(&((struct function *)PTR(func))->name, 3);
     }
 
@@ -441,10 +834,6 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
     if (TypeOf(header) == type_FunctionHeader ||
         TypeOf(header) == type_ClosureFunctionHeader) {
 
-#if defined(i386)
-      /* Moving code around is not good on the x86 port; print a warning. */
-      fprintf(stderr,"ptrans_function(%x, %x)\n",thing,header);
-#endif
 	/* We can only end up here if the code object has not been */
         /* scavenged, because if it had been scavenged, forwarding pointers */
         /* would have been left behind for all the entry points. */
@@ -558,6 +947,18 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
       case type_Bignum:
       case type_SingleFloat:
       case type_DoubleFloat:
+#ifdef type_LongFloat
+      case type_LongFloat:
+#endif
+#ifdef type_ComplexSingleFloat
+      case type_ComplexSingleFloat:
+#endif
+#ifdef type_ComplexDoubleFloat
+      case type_ComplexDoubleFloat:
+#endif
+#ifdef type_ComplexLongFloat
+      case type_ComplexLongFloat:
+#endif
       case type_Sap:
         return ptrans_unboxed(thing, header);
 
@@ -568,9 +969,12 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
       case type_ComplexVector:
       case type_ComplexArray:
         return ptrans_boxed(thing, header, constant);
-
+	
       case type_ValueCellHeader:
       case type_WeakPointer:
+#ifdef type_ScavengerHook
+      case type_ScavengerHook:
+#endif
         return ptrans_boxed(thing, header, FALSE);
 
       case type_SymbolHeader:
@@ -618,6 +1022,36 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
       case type_SimpleArrayDoubleFloat:
         return ptrans_vector(thing, 64, 0, FALSE, constant);
 
+#ifdef type_SimpleArrayLongFloat
+      case type_SimpleArrayLongFloat:
+#ifdef i386
+        return ptrans_vector(thing, 96, 0, FALSE, constant);
+#endif
+#ifdef sparc
+        return ptrans_vector(thing, 128, 0, FALSE, constant);
+#endif
+#endif
+
+#ifdef type_SimpleArrayComplexSingleFloat
+      case type_SimpleArrayComplexSingleFloat:
+        return ptrans_vector(thing, 64, 0, FALSE, constant);
+#endif
+
+#ifdef type_SimpleArrayComplexDoubleFloat
+      case type_SimpleArrayComplexDoubleFloat:
+        return ptrans_vector(thing, 128, 0, FALSE, constant);
+#endif
+
+#ifdef type_SimpleArrayComplexLongFloat
+      case type_SimpleArrayComplexLongFloat:
+#ifdef i386
+        return ptrans_vector(thing, 192, 0, FALSE, constant);
+#endif
+#ifdef sparc
+        return ptrans_vector(thing, 256, 0, FALSE, constant);
+#endif
+#endif
+
       case type_CodeHeader:
         return ptrans_code(thing);
 
@@ -655,7 +1089,6 @@ pscav_code(struct code*code)
     lispobj func;
     nwords = HeaderValue(code->header) + fixnum_value(code->code_size);
 
-
     /* pw--The trace_table_offset slot can contain a list pointer. This
      * occurs when the code object is a top level form that initializes
      * a byte-compiled function. The fact that purify was ignoring this
@@ -683,13 +1116,47 @@ pscav_code(struct code*code)
          func = ((struct function *)PTR(func))->next) {
         gc_assert(LowtagOf(func) == type_FunctionPointer);
         gc_assert(!dynamic_pointer_p(func));
+
+#ifdef i386
+	/* Temporarly convert the self pointer to a real function
+           pointer. */
+	((struct function *)PTR(func))->self -= RAW_ADDR_OFFSET;
+#endif
         pscav(&((struct function *)PTR(func))->self, 2, TRUE);
+#ifdef i386
+	((struct function *)PTR(func))->self += RAW_ADDR_OFFSET;
+#endif
         pscav_later(&((struct function *)PTR(func))->name, 3);
     }
 
     return CEILING(nwords,2);
 }
+#endif
 
+#ifdef type_ScavengerHook
+static struct scavenger_hook *scavenger_hooks=NIL;
+
+static int pscav_scavenger_hook(struct scavenger_hook *scav_hook)
+{
+  lispobj *old_value = scav_hook->value;
+
+  /* Scavenge the value */
+  pscav((lispobj *)scav_hook+1, 1, FALSE);
+
+  /* Did the value object move? */
+  if (scav_hook->value != old_value) {
+    /* Check if this hook is already noted. */
+    if (scav_hook->next == NULL) {
+      scav_hook->next = scavenger_hooks;
+      scavenger_hooks = (int)scav_hook | type_OtherPointer;
+    }
+  }
+  
+  /* Scavenge the function */
+  pscav((lispobj *)scav_hook+2, 1, FALSE);
+
+  return 4;
+}
 #endif
 
 static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
@@ -744,6 +1211,9 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
               case type_Bignum:
               case type_SingleFloat:
               case type_DoubleFloat:
+#ifdef type_LongFloat
+              case type_LongFloat:
+#endif
               case type_Sap:
                 /* It's an unboxed simple object. */
                 count = HeaderValue(thing)+1;
@@ -809,9 +1279,43 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
                 break;
 
               case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayComplexSingleFloat
+              case type_SimpleArrayComplexSingleFloat:
+#endif
                 vector = (struct vector *)addr;
                 count = fixnum_value(vector->length)*2+2;
                 break;
+
+#ifdef type_SimpleArrayLongFloat
+              case type_SimpleArrayLongFloat:
+                vector = (struct vector *)addr;
+#ifdef i386
+                count = fixnum_value(vector->length)*3+2;
+#endif
+#ifdef sparc
+                count = fixnum_value(vector->length)*4+2;
+#endif
+                break;
+#endif
+
+#ifdef type_SimpleArrayComplexDoubleFloat
+              case type_SimpleArrayComplexDoubleFloat:
+                vector = (struct vector *)addr;
+                count = fixnum_value(vector->length)*4+2;
+                break;
+#endif
+
+#ifdef type_SimpleArrayComplexLongFloat
+              case type_SimpleArrayComplexLongFloat:
+                vector = (struct vector *)addr;
+#ifdef i386
+                count = fixnum_value(vector->length)*6+2;
+#endif
+#ifdef sparc
+                count = fixnum_value(vector->length)*8+2;
+#endif
+                break;
+#endif
 
               case type_CodeHeader:
 #ifndef i386
@@ -838,14 +1342,15 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 	      case type_ByteCodeFunction:
 	      case type_ByteCodeClosure:
 	      case type_DylanFunctionHeader:
- 		/* The function self pointer needs special care on the
-		   x86 because it is the real entry point. */
- 		{
- 		  lispobj fun = ((struct closure *)addr)->function
- 		    - RAW_ADDR_OFFSET;
- 		  pscav(&fun, 1, constant);
- 		}
- 		count = 2;
+		/* The function self pointer needs special care on the
+                   x86 because it is the real entry point. */
+		{
+		  lispobj fun = ((struct closure *)addr)->function
+		    - RAW_ADDR_OFFSET;
+		  pscav(&fun, 1, constant);
+		  ((struct closure *)addr)->function = fun + RAW_ADDR_OFFSET;
+		}
+		count = 2;
 		break;
 #endif
 
@@ -861,6 +1366,12 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 		/* up the raw function address. */
 		count = pscav_fdefn((struct fdefn *)addr);
 		break;
+
+#ifdef type_ScavengerHook
+              case type_ScavengerHook:
+                count = pscav_scavenger_hook((struct scavenger_hook *)addr);
+                break;
+#endif
 
               default:
                 count = 1;
@@ -910,6 +1421,12 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     printf(" roots");
     fflush(stdout);
 #endif
+
+#ifdef GENCGC
+    gc_assert(control_stack_end > ((&read_only_roots)+1));
+    setup_i386_stack_scav(((&static_roots)-2), control_stack_end);
+#endif
+
     pscav(&static_roots, 1, FALSE);
     pscav(&read_only_roots, 1, TRUE);
 
@@ -928,8 +1445,13 @@ int purify(lispobj static_roots, lispobj read_only_roots)
 #ifndef i386
     pscav(control_stack, current_control_stack_pointer - control_stack, FALSE);
 #else
+#ifdef GENCGC
+    pscav_i386_stack();
+#endif
+#ifdef WANT_CGC
     gc_assert(control_stack_end > ((&read_only_roots)+1));
     carefully_pscav_stack(((&read_only_roots)+1), control_stack_end);
+#endif
 #endif
 
 #ifdef PRINTNOISE
@@ -940,6 +1462,17 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     pscav(binding_stack, current_binding_stack_pointer - binding_stack, FALSE);
 #else
     pscav(binding_stack, (lispobj *)SymbolValue(BINDING_STACK_POINTER) - binding_stack, FALSE);
+#endif
+
+#ifdef SCAVENGE_READ_ONLY_SPACE
+    if (SymbolValue(SCAVENGE_READ_ONLY_SPACE) != type_UnboundMarker
+	&& SymbolValue(SCAVENGE_READ_ONLY_SPACE) != NIL) {
+      unsigned  read_only_space_size =
+	(lispobj *)SymbolValue(READ_ONLY_SPACE_FREE_POINTER) - read_only_space;
+      fprintf(stderr,"Scavenge read only space: %d bytes\n",
+	      read_only_space_size * sizeof(lispobj));
+      pscav(read_only_space, read_only_space_size, FALSE);
+    }
 #endif
 
 #ifdef PRINTNOISE
@@ -973,15 +1506,13 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     } while (clean != static_free || later_blocks != NULL);
 
 
+
 #ifdef PRINTNOISE
     printf(" cleanup");
     fflush(stdout);
 #endif
 
-/* well, something seems messed up in FreeBSD VM, hacking to resolve it.
- * Nope -- problem was 'auto-gc-trigger' mprotecting pages in background.
- */
-#if defined X86_CGC_ACTIVE_P
+#if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)
     if(SymbolValue(X86_CGC_ACTIVE_P) != T)
       os_zero((os_vm_address_t) current_dynamic_space,
 	      (os_vm_size_t) DYNAMIC_SPACE_SIZE);
@@ -989,20 +1520,17 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     os_zero((os_vm_address_t) current_dynamic_space,
             (os_vm_size_t) DYNAMIC_SPACE_SIZE);
 #endif
-    /* Zero stack. */
+
+    /* Zero stack. Note the stack is also zeroed by sub-gc calling
+       scrub-control-stack - this zeros the stack on the x86. */
 #ifndef i386
     os_zero((os_vm_address_t) current_control_stack_pointer,
             (os_vm_size_t) (CONTROL_STACK_SIZE -
                             ((current_control_stack_pointer - control_stack) *
                              sizeof(lispobj))));
-#else
-    /* os_zero won't work cause it things the junk is above the 
-     * start address where here it is below. I don't see why we want
-     * to zero stuff anyhow.
-     */
 #endif
 
-#if defined STATIC_BLUE_BAG
+#if defined(WANT_CGC) && defined(STATIC_BLUE_BAG)
     {
       lispobj bag = SymbolValue(STATIC_BLUE_BAG);
       struct cons*cons = (struct cons*)static_free;
@@ -1023,23 +1551,40 @@ int purify(lispobj static_roots, lispobj read_only_roots)
        verify after it's done. */
     SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj)read_only_free);
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj)static_free);
-    
+
 #if !defined(ibmrt) && !defined(i386)
-    /* normal case for most ports */
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
-#if defined X86_CGC_ACTIVE_P
+#if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)
     /* X86 using CGC */
     if(SymbolValue(X86_CGC_ACTIVE_P) != T)
       SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
     else
       cgc_free_heap();
 #else
-    /* ibmrt or X86 using GC */
+#if defined GENCGC
+    gc_free_heap();
+#else
+    /* ibmrt using GC */
     SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
 #endif
 #endif
+#endif
 
+#ifdef type_ScavengerHook
+  /* Call the scavenger hook functions */
+  {
+    struct scavenger_hook *sh;
+    for (sh=PTR((int)scavenger_hooks); sh!=PTR(NIL);) {
+      struct scavenger_hook *sh_next = PTR((int)sh->next);
+      funcall0(sh->function);
+      sh->next=NULL;
+      sh=sh_next;
+    }
+    scavenger_hooks = NIL;
+  }
+#endif
+  
 #ifdef PRINTNOISE
     printf(" Done.]\n");
     fflush(stdout);

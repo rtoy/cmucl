@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.36.2.1 1997/09/09 00:35:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.36.2.2 1998/06/23 11:21:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1465,7 +1465,8 @@
 	       (output-spaces stream (- colnum cur)))
 	      (t
 	       (unless (zerop colinc)
-		 (output-spaces stream (- colinc (rem cur colinc)))))))))
+		 (output-spaces stream
+				(- colinc (rem (- cur colnum) colinc)))))))))
 
 (def-format-directive #\_ (colonp atsignp params)
   (expand-bind-defaults () params
@@ -2350,28 +2351,31 @@
 (def-format-directive #\/ (string start end colonp atsignp params)
   (let ((symbol (extract-user-function-name string start end)))
     (collect ((param-names) (bindings))
-      (dolist (param params)
-	(let ((param-name (gensym)))
-	  (param-names param-name)
-	  (bindings `(,param-name
-		      ,(case param
-			 (:arg (expand-next-arg))
-			 (:remaining '(length args))
-			 (t param))))))
-	     `(let ,(bindings)
-		(,symbol stream ,(expand-next-arg) ,colonp ,atsignp
-			 ,@(param-names))))))
+      (dolist (param-and-offset params)
+	(let ((offset (car param-and-offset))
+	      (param (cdr param-and-offset)))
+	  (let ((param-name (gensym)))
+	    (param-names param-name)
+	    (bindings `(,param-name
+			,(case param
+			   (:arg (expand-next-arg))
+			   (:remaining '(length args))
+			   (t param)))))))
+      `(let ,(bindings)
+	 (,symbol stream ,(expand-next-arg) ,colonp ,atsignp
+		  ,@(param-names))))))
 
 (def-format-interpreter #\/ (string start end colonp atsignp params)
   (let ((symbol (extract-user-function-name string start end)))
     (collect ((args))
-      (dolist (param params)
-	(case param
-	  (:arg (args (next-arg)))
-	  (:remaining (args (length args)))
-	  (t (args param))))
-      (apply (fdefinition symbol) stream (next-arg)
-	     colonp atsignp (args)))))
+      (dolist (param-and-offset params)
+	(let ((offset (car param-and-offset))
+	      (param (cdr param-and-offset)))
+	  (case param
+	    (:arg (args (next-arg)))
+	    (:remaining (args (length args)))
+	    (t (args param)))))
+      (apply (fdefinition symbol) stream (next-arg) colonp atsignp (args)))))
 
 (defun extract-user-function-name (string start end)
   (let ((slash (position #\/ string :start start :end (1- end)

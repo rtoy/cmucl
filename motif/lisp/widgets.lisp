@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/widgets.lisp,v 1.3 1996/05/08 14:15:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/widgets.lisp,v 1.3.2.1 1998/06/23 11:25:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -200,6 +200,7 @@
 (def-widget-maker :separator)
 (def-widget-maker :separator-gadget)
 (def-widget-maker :text)
+(def-widget-maker :text-field)
 (def-widget-maker :toggle-button)
 (def-widget-maker :toggle-button-gadget)
 

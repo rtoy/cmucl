@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.31 1997/06/06 06:48:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.31.2.1 1998/06/23 11:22:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,7 +87,7 @@
   ;; Slot holds the host, at present either a UNIX or logical host.
   (host nil :type (or host null))
   ;; Device is the name of a logical or physical device holding files.
-  (device nil :type component-tokens)
+  (device nil :type (or simple-string component-tokens))
   ;; A list of strings that are the component subdirectory components.
   (directory nil :type list)
   ;; The filename.
@@ -611,7 +611,7 @@
   "Makes a new pathname from the component arguments.  Note that host is
 a host-structure or string."
   (declare (type (or string host component-tokens) host)
-	   (type component-tokens device)
+	   (type (or string component-tokens) device)
 	   (type (or list string pattern component-tokens) directory)
 	   (type (or string pattern component-tokens) name type)
 	   (type (or integer component-tokens (member :newest)) version)
@@ -1164,7 +1164,7 @@ a host-structure or string."
 		 (when (listp match)
 		   (error ":WILD-INFERIORS not paired in from and to ~
 			   patterns:~%  ~S ~S" from to))
-		 (maybe-diddle-case match diddle-case)))
+		 (res (maybe-diddle-case match diddle-case))))
 	      ((member :wild-inferiors)
 	       (assert subs-left)
 	       (let ((match (pop subs-left)))
@@ -1178,7 +1178,7 @@ a host-structure or string."
 		   (new new-subs-left)
 		   (substitute-into to-part subs-left diddle-case)
 		 (setf subs-left new-subs-left)
-		 new))
+		 (res new)))
 	      (t (res to-part)))))
 	(res))))
 

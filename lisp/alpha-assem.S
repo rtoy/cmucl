@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.6 1997/03/19 20:06:34 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.6.2.1 1998/06/23 11:24:48 pw Exp $ */
 #include <machine/regdef.h>
 #include <machine/pal.h>
 
@@ -228,7 +228,7 @@ undefined_tramp_offset:
         .byte    4
         .byte    23
         .byte    254
-        .byte    238
+        .byte    (0xe0 + sc_DescriptorReg)
         .byte    2
         .align 2
         .end    undefined_tramp

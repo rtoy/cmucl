@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.65 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.65.2.1 1998/06/23 11:22:54 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1112,6 +1112,9 @@
       (cond
        ((not win)
 	(setf (combination-kind call) :error))
+       ;; X Always transform the call below so that non-flushable
+       ;; functions get flushed if the constant folding works.
+       #+nil
        ((= (length values) 1)
 	(with-ir1-environment call
 	  (when (producing-fasl-file)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.17 1996/07/12 19:19:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.17.2.1 1998/06/23 11:22:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,6 +62,7 @@
 
 ;;; Get-Internal-Run-Time  --  Public
 ;;;
+#-(and sparc svr4)
 (defun get-internal-run-time ()
   "Return the run time in the internal time format.  This is useful for
   finding CPU usage."
@@ -77,6 +78,20 @@
 		 internal-time-units-per-second))
 	 (truncate (+ utime-usec stime-usec)
 		   micro-seconds-per-internal-time-unit)))))
+
+;;; Get-Internal-Run-Time  --  Public
+;;;
+#+(and sparc svr4)
+(defun get-internal-run-time ()
+  "Return the run time in the internal time format.  This is useful for
+  finding CPU usage."
+  (declare (values (unsigned-byte 32)))
+  (locally (declare (optimize (speed 3) (safety 0)))
+    (multiple-value-bind (ignore utime stime cutime cstime)
+	(unix:unix-times)
+      (declare (ignore ignore cutime cstime)
+	       (type (unsigned-byte 31) utime stime))
+      (the (unsigned-byte 32) (+ utime stime)))))
 
 
 ;;;; Encode and Decode universal times.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.50 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.50.2.1 1998/06/23 11:23:37 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -927,6 +927,22 @@
    (emit-register-inst segment cop1-op #b00000 (reg-tn-encoding to)
 		       (1+ (fp-reg-tn-encoding from)) 0 0)))
 
+(define-instruction mfc1-odd2 (segment to from)
+  (:declare (type tn to from))
+  (:dependencies (reads from) (writes to))
+  (:delay 1)
+  (:emitter
+   (emit-register-inst segment cop1-op #b00000 (1+ (reg-tn-encoding to))
+		       (fp-reg-tn-encoding from) 0 0)))
+
+(define-instruction mfc1-odd3 (segment to from)
+  (:declare (type tn to from))
+  (:dependencies (reads from) (writes to))
+  (:delay 1)
+  (:emitter
+   (emit-register-inst segment cop1-op #b00000 (1+ (reg-tn-encoding to))
+		       (1+ (fp-reg-tn-encoding from)) 0 0)))
+
 (define-instruction cfc1 (segment reg cr)
   (:declare (type tn reg) (type (unsigned-byte 5) cr))
   (:printer register ((op cop1-op) (rs #b00010) (rd nil :type 'control-reg)
@@ -1186,12 +1202,13 @@
 
 ;;;; Loads and Stores
 
-(defun emit-load/store-inst (segment opcode reg base index)
+(defun emit-load/store-inst (segment opcode reg base index
+                                     &optional (oddhack 0))
   (when (fixup-p index)
     (note-fixup segment :addi index)
     (setf index 0))
   (emit-immediate-inst segment opcode (reg-tn-encoding reg)
-		       (reg-tn-encoding base) index))
+		       (+ (reg-tn-encoding base) oddhack) index))
 
 (defconstant load-store-printer
   '(:name :tab
@@ -1234,6 +1251,15 @@
   (:delay 1)
   (:emitter
    (emit-load/store-inst segment #b100011 base reg index)))
+
+;; next is just for ease of coding double-in-int c-call convention
+(define-instruction lw-odd (segment reg base &optional (index 0))
+  (:declare (type tn reg base)
+	    (type (or (signed-byte 16) fixup) index))
+  (:dependencies (reads base) (reads :memory) (writes reg))
+  (:delay 1)
+  (:emitter
+   (emit-load/store-inst segment #b100011 base reg index 1)))
 
 (define-instruction lbu (segment reg base &optional (index 0))
   (:declare (type tn reg base)

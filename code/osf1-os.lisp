@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/osf1-os.lisp,v 1.3.2.1 1997/07/09 12:10:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/osf1-os.lisp,v 1.3.2.2 1998/06/23 11:22:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,13 +20,21 @@
 (export '(*task-self* *task-data* *task-notify*))
 
 (pushnew :osf1 *features*)
+
 (setq *software-type* "OSF1")
+
+(defvar *software-version* nil "Version string for supporting software")
 
 (defun software-version ()
   "Returns a string describing version of the supporting software."
-  (string-trim '(#\newline)
-	       (with-output-to-string (stream)
-		 (run-program "/usr/bin/uname" '("-sr") :output stream))))
+  (unless *software-version*
+    (setf *software-version*
+	  (string-trim '(#\newline)
+		       (with-output-to-string (stream)
+			 (run-program "/usr/bin/uname"
+				      '("-sr")
+				      :output stream)))))
+  *software-version*)
 
 
 ;;; OS-Init initializes our operating-system interface.  It sets the values

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.14 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.14.2.1 1998/06/23 11:22:29 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,13 +119,6 @@
      (colon
       (%reader-error stream "Symbol following #: contains a package marker: ~S"
 		     token))
-     ((eql (length token) 0)
-      (let ((ch (read-char stream nil nil t)))
-	(when ch
-	  (%reader-error stream
-			 "Illegal terminating character after a colon: ~S."
-			 ch))
-	(reader-eof-error stream "after a colon")))
      (t
       (make-symbol token)))))
 
@@ -357,20 +350,35 @@
 
 (defun sharp-vertical-bar (stream sub-char numarg)
   (ignore-numarg sub-char numarg)
-  (prepare-for-fast-read-char stream
-    (do ((level 1)
-	 (prev (fast-read-char) char)
-	 (char (fast-read-char) (fast-read-char)))
-	(())
-      (cond ((and (char= prev #\|) (char= char #\#))
-	     (setq level (1- level))
-	     (when (zerop level)
-	       (done-with-fast-read-char)
-	       (return (values)))
-	     (setq char (fast-read-char)))
-	    ((and (char= prev #\#) (char= char #\|))
-	     (setq char (fast-read-char))
-	     (setq level (1+ level)))))))
+  (let ((stream (in-synonym-of stream)))
+    (if (lisp-stream-p stream)
+	(prepare-for-fast-read-char stream
+          (do ((level 1)
+	       (prev (fast-read-char) char)
+	       (char (fast-read-char) (fast-read-char)))
+	      (())
+	    (cond ((and (char= prev #\|) (char= char #\#))
+		   (setq level (1- level))
+		   (when (zerop level)
+		     (done-with-fast-read-char)
+		     (return (values)))
+		   (setq char (fast-read-char)))
+		  ((and (char= prev #\#) (char= char #\|))
+		   (setq char (fast-read-char))
+		   (setq level (1+ level))))))
+	;; Fundamental-stream.
+	(do ((level 1)
+	     (prev (read-char stream t) char)
+	     (char (read-char stream t) (read-char stream t)))
+	    (())
+	  (cond ((and (char= prev #\|) (char= char #\#))
+		 (setq level (1- level))
+		 (when (zerop level)
+		   (return (values)))
+		 (setq char (read-char stream t)))
+		((and (char= prev #\#) (char= char #\|))
+		 (setq char (read-char stream t))
+		 (setq level (1+ level))))))))
 
 (defun sharp-illegal (stream sub-char ignore)
   (declare (ignore ignore))
@@ -378,7 +386,9 @@
 
 (defun sharp-P (stream sub-char numarg)
   (ignore-numarg sub-char numarg)
-  (parse-namestring (read stream t nil t)))
+  (let ((namestring (read stream t nil t)))
+    (unless *read-suppress*
+      (parse-namestring namestring))))
 
 (make-dispatch-macro-character #\# t)
 (set-dispatch-macro-character #\# #\\ #'sharp-backslash)

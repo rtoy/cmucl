@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.2 1998/06/02 02:43:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.2.2.1 1998/06/23 11:25:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;

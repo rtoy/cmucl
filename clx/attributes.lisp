@@ -520,7 +520,7 @@
 
 (defun window-colormap-installed-p (window)
   (declare (type window window))
-  (declare (clx-values boolean))
+  (declare (clx-values generalized-boolean))
   (with-attributes (window :sizes 8)
     (boolean-get 25)))
 

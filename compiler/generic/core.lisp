@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.34 1997/04/02 20:53:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.34.2.1 1998/06/23 11:23:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,21 +95,13 @@
 	     (gethash name lisp::*assembler-routines*))
 	    (:foreign
 	     (assert (stringp name))
-	     #-linux
-	     (gethash name lisp::*foreign-symbols*)
-	     #+linux
-	     (multiple-value-bind
-		   (value found)
-		 (gethash name lisp::*foreign-symbols*)
-	       (if found
-		   (values value found)
-		   (gethash (concatenate 'string "PVE_stub_" name)
-			    lisp::*foreign-symbols*))))
+	     (let ((val (lisp::foreign-symbol-address-aux name)))
+	       ;; Foreign-symbol-address-aux always signals exactly
+	       ;; the same error we would if the symbol isn't found
+	       (values val t)))
 	    #+x86
 	    (:code-object
-	     (values
-	      (get-lisp-obj-address code)
-	      t)))
+	     (values (get-lisp-obj-address code) t)))
 	(unless found
 	  (error (ecase flavor
 		   (:assembly-routine "Undefined assembler routine: ~S")
@@ -156,7 +148,15 @@
 	   (trace-table-bits (* trace-table-len tt-bits-per-entry))
 	   (total-length (+ length (ceiling trace-table-bits vm:byte-bits)))
 	   (box-num (- (length constants) vm:code-trace-table-offset-slot))
-	   (code-obj (%primitive allocate-code-object box-num total-length))
+	   #+x86
+	   (code-obj
+	    (if (and (boundp lisp::*enable-dynamic-space-code*)
+		     lisp::*enable-dynamic-space-code*)
+		(%primitive allocate-dynamic-code-object box-num total-length)
+	      (%primitive allocate-code-object box-num total-length)))
+	   #-x86
+	   (code-obj
+	    (%primitive allocate-code-object box-num total-length))
 	   (fill-ptr (code-instructions code-obj)))
       (declare (type index box-num total-length))
 
@@ -312,7 +312,7 @@
 
 (defstruct (code-instruction-stream
 	    (:print-function %print-code-inst-stream)
-	    (:include stream
+	    (:include lisp-stream
 		      (lisp::sout #'code-inst-stream-sout)
 		      (lisp::bout #'code-inst-stream-bout)
 		      (lisp::misc #'code-inst-stream-misc))

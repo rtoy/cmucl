@@ -37,15 +37,30 @@
 (in-package :pcl)
 
 (defun allocate-standard-instance (wrapper &optional (slots-init nil slots-init-p))
-  #-new-kcl-wrapper (declare (special *slot-unbound*))
   #-new-kcl-wrapper
   (let ((instance (%%allocate-instance--class))
 	(no-of-slots (wrapper-no-of-instance-slots wrapper)))
     (setf (std-instance-wrapper instance) wrapper)
+    #-cmu
     (setf (std-instance-slots instance) 
 	  (if slots-init-p
 	      (make-array no-of-slots :initial-contents slots-init)
 	      (make-array no-of-slots :initial-element *slot-unbound*)))
+    #+cmu ; faster version for CMUCL
+    (setf (std-instance-slots instance) 
+	  (cond (slots-init-p
+		 ;; Inline the slots vector allocation and initialisation.
+		 (let ((slots (make-array no-of-slots :initial-element 0)))
+		   (do ((rem-slots slots-init (rest rem-slots))
+			(i 0 (1+ i)))
+		       ((>= i no-of-slots)) ;endp rem-slots))
+		     (declare (list rem-slots)
+			      (type kernel:index i))
+		     (setf (aref slots i) (first rem-slots)))
+		   slots))
+		(t
+		 (make-array no-of-slots
+			     :initial-element pcl::*slot-unbound*))))
     instance)
   #+new-kcl-wrapper
   (apply #'si:make-structure wrapper
@@ -137,6 +152,7 @@
 	  #'(lambda (x) (declare (ignore x)) t))
     (do-satisfies-deftype name predicate-name))  
   (let* ((*create-classes-from-internal-structure-definitions-p* nil)
+	 std-class-wrapper std-class
 	 standard-class-wrapper standard-class
 	 funcallable-standard-class-wrapper funcallable-standard-class
 	 slot-class-wrapper slot-class
@@ -148,7 +164,7 @@
 	 standard-generic-function-wrapper standard-generic-function)
     (initial-classes-and-wrappers 
      standard-class funcallable-standard-class
-     slot-class built-in-class structure-class
+     slot-class built-in-class structure-class std-class
      standard-direct-slot-definition standard-effective-slot-definition 
      class-eq-specializer standard-generic-function)
     ;;
@@ -161,6 +177,7 @@
 	     (meta (ecd-metaclass definition))
 	     (wrapper (ecase meta
 			(slot-class slot-class-wrapper)
+			(std-class std-class-wrapper)
 			(standard-class standard-class-wrapper)
 			(funcallable-standard-class funcallable-standard-class-wrapper)
 			(built-in-class built-in-class-wrapper)
@@ -187,6 +204,8 @@
 	    (let* ((class (find-class name))
 		   (wrapper (cond ((eq class slot-class)
 				   slot-class-wrapper)
+				  ((eq class std-class) 
+				   std-class-wrapper)
 				  ((eq class standard-class) 
 				   standard-class-wrapper)
 				  ((eq class funcallable-standard-class) 
@@ -237,7 +256,7 @@
 		     standard-effective-slot-definition-wrapper t))
 	      
 	      (case meta
-		((standard-class funcallable-standard-class)
+		((std-class standard-class funcallable-standard-class)
 		 (bootstrap-initialize-class 
 		  meta
 		  class name class-eq-specializer-wrapper source
@@ -309,7 +328,7 @@
 		,@(and default-initargs
 		       `(default-initargs ,default-initargs))))
     (when (memq metaclass-name '(standard-class funcallable-standard-class
-				 structure-class slot-class))
+				 structure-class slot-class std-class))
       (set-slot 'direct-slots direct-slots)
       (set-slot 'slots slots)
       (set-slot 'initialize-info nil))
@@ -610,6 +629,10 @@
 			       (list (lisp:class-name
 				      (first (kernel:class-direct-superclasses
 					      (lisp:find-class symbol))))))
+			      ;; Hack to add the stream class as a
+			      ;; mixin to the lisp-stream class.
+			      ((eq symbol 'sys:lisp-stream)
+			       '(structure-object stream))
 			      ((structure-type-included-type-name symbol)
 			       (list (structure-type-included-type-name symbol))))
 			:direct-slots
@@ -712,13 +735,19 @@
 ;;; class in the lisp type system.
 ;;;
 (defun update-lisp-class-layout (class layout)
-  (unless (eq (kernel:class-layout (kernel:layout-class layout))
-	      layout)
-    (setf (kernel:layout-inherits layout)
-	  (map 'vector #'class-wrapper
-	       (reverse (rest (class-precedence-list class)))))
+  (let ((lclass (kernel:layout-class layout)))
+    (unless (eq (kernel:class-layout lclass) layout)
+      (setf (kernel:layout-inherits layout)
+	    (map 'vector #'class-wrapper
+		 (reverse (rest (class-precedence-list class)))))
+      (kernel:register-layout layout :invalidate nil)
 
-    (kernel:register-layout layout :invalidate nil)))
+      ;; Subclasses of formerly forward-referenced-class may be unknown
+      ;; to lisp:find-class and also anonymous. This functionality moved
+      ;; here from (setf find-class).
+      (let ((name (class-name class)))
+	(setf (lisp:find-class name) lclass
+	      (lisp:class-name lclass) name)))))
 
 (eval-when (load eval)
   (clrhash *find-class*)

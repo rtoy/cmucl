@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.26 1997/02/08 17:22:46 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.26.2.1 1998/06/23 11:21:48 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -452,9 +452,10 @@ internally...
     (frob form env)))
 |#
 
-(defun constantp (object)
+(defun constantp (object &optional environment)
   "True of any Lisp object that has a constant value: types that eval to
   themselves, keywords, constants, and list whose car is QUOTE."
+  (declare (ignore environment))
   (typecase object
     (number t)
     (character t)

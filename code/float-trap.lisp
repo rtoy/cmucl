@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9.2.4 1997/09/07 23:53:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9.2.5 1998/06/23 11:21:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -205,7 +205,7 @@
   which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
   :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
   accrued exceptions are cleared at the start of the body to support
-  their testing within and restored on exit."
+  their testing within, and restored on exit."
   (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
 	(exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
 	(trap-mask (dpb (lognot (float-trap-mask traps))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.39.2.1 1997/08/24 03:18:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.39.2.2 1998/06/23 11:21:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,8 +17,8 @@
 (use-package "SYSTEM")
 
 (export '(alien * array struct union enum function integer signed unsigned
-	  boolean values single-float double-float system-area-pointer
-	  def-alien-type def-alien-variable sap-alien
+	  boolean values single-float double-float long-float
+	  system-area-pointer def-alien-type def-alien-variable sap-alien
 	  extern-alien with-alien slot deref addr cast alien-sap alien-size
 	  alien-funcall def-alien-routine make-alien free-alien
 	  null-alien))
@@ -39,6 +39,7 @@
 	  alien-float-type alien-float-type-p
 	  alien-single-float-type alien-single-float-type-p
 	  alien-double-float-type alien-double-float-type-p
+	  alien-long-float-type alien-long-float-type-p
 	  alien-pointer-type alien-pointer-type-p alien-pointer-type-to
 	  make-alien-pointer-type
 	  alien-array-type alien-array-type-p alien-array-type-element-type
@@ -84,6 +85,7 @@
 	  alien-float-type alien-float-type-p
 	  alien-single-float-type alien-single-float-type-p
 	  alien-double-float-type alien-double-float-type-p
+	  alien-long-float-type alien-long-float-type-p
 	  alien-pointer-type alien-pointer-type-p alien-pointer-type-to
 	  make-alien-pointer-type
 	  alien-array-type alien-array-type-p alien-array-type-element-type
@@ -126,7 +128,7 @@
 
 (defun guess-alignment (bits)
   (cond ((null bits) nil)
-	((> bits 32) 64)
+	#-x86 ((> bits 32) 64)
 	((> bits 16) 32)
 	((> bits 8) 16)
 	((> bits 1) 8)
@@ -668,7 +670,7 @@
   (declare (ignore type))
   `(not (zerop ,alien)))
 
-(def-alien-type-method (boolean :deport-gen) (value type)
+(def-alien-type-method (boolean :deport-gen) (type value)
   (declare (ignore type))
   `(if ,value 1 0))
 
@@ -846,6 +848,19 @@
   (declare (ignore type))
   `(sap-ref-double ,sap (/ ,offset vm:byte-bits)))
 
+
+#+long-float
+(def-alien-type-class (long-float :include (float (:bits #+x86 96 #+sparc 128))
+				  :include-args (type)))
+
+#+long-float
+(def-alien-type-translator long-float ()
+  (make-alien-long-float-type :type 'long-float))
+
+#+long-float
+(def-alien-type-method (long-float :extract-gen) (type sap offset)
+  (declare (ignore type))
+  `(sap-ref-long ,sap (/ ,offset vm:byte-bits)))
 
 
 ;;;; The SAP type
@@ -1113,23 +1128,57 @@
 			    (list (alien-record-field-bits field)))))
 		(alien-record-type-fields type)))))
 
-(defun record-fields-match (fields1 fields2)
-  (declare (type list fields1 fields2))
-  (or (eq fields1 fields2)
-      (and fields1
-	   fields2
-	   (let ((field1 (car fields1))
-		 (field2 (car fields2)))
-	     (declare (type alien-record-field field1 field2))
-	     (and (eq (alien-record-field-name field1)
-		      (alien-record-field-name field2))
-		  (eql (alien-record-field-bits field1)
-		       (alien-record-field-bits field2))
-		  (eql (alien-record-field-offset field1)
-		       (alien-record-field-offset field2))
-		  (alien-type-= (alien-record-field-type field1)
-				(alien-record-field-type field2))))
-	   (record-fields-match (cdr fields1) (cdr fields2)))))
+;;; Test the record fields. The depth is limiting in case of cyclic
+;;; pointers.
+(defun record-fields-match (fields1 fields2 depth)
+  (declare (type list fields1 fields2)
+	   (type (mod 64) depth))
+  (labels ((record-type-= (type1 type2 depth)
+	     (and (eq (alien-record-type-name type1)
+		      (alien-record-type-name type2))
+		  (eq (alien-record-type-kind type1)
+		      (alien-record-type-kind type2))
+		  (= (length (alien-record-type-fields type1))
+		     (length (alien-record-type-fields type2)))
+		  (record-fields-match (alien-record-type-fields type1)
+				       (alien-record-type-fields type2)
+				       (1+ depth))))
+	   (pointer-type-= (type1 type2 depth)
+	     (let ((to1 (alien-pointer-type-to type1))
+		   (to2 (alien-pointer-type-to type2)))
+	       (if to1
+		   (if to2
+		       (type-= to1 to2 (1+ depth))
+		       nil)
+		   (null to2))))
+	   (type-= (type1 type2 depth)
+	     (cond ((and (alien-pointer-type-p type1)
+			 (alien-pointer-type-p type2))
+		    (or (> depth 10)
+			(pointer-type-= type1 type2 depth)))
+		   ((and (alien-record-type-p type1)
+			 (alien-record-type-p type2))
+		    (record-type-= type1 type2 depth))
+		   (t
+		    (alien-type-= type1 type2)))))
+    (do ((fields1-rem fields1 (rest fields1-rem))
+	 (fields2-rem fields2 (rest fields2-rem)))
+	((or (eq fields1-rem fields2-rem)
+	     (endp fields1-rem) (endp fields2-rem))
+	 (eq fields1-rem fields2-rem))
+      (let ((field1 (first fields1-rem))
+	    (field2 (first fields2-rem)))
+	(declare (type alien-record-field field1 field2))
+	(unless (and (eq (alien-record-field-name field1)
+			 (alien-record-field-name field2))
+		     (eql (alien-record-field-bits field1)
+			  (alien-record-field-bits field2))
+		     (eql (alien-record-field-offset field1)
+			  (alien-record-field-offset field2))
+		     (let ((field1 (alien-record-field-type field1))
+			   (field2 (alien-record-field-type field2)))
+		       (type-= field1 field2 (1+ depth))))
+	  (return nil))))))
 
 (def-alien-type-method (record :type=) (type1 type2)
   (and (eq (alien-record-type-name type1)
@@ -1139,7 +1188,7 @@
        (= (length (alien-record-type-fields type1))
 	  (length (alien-record-type-fields type2)))
        (record-fields-match (alien-record-type-fields type1)
-			    (alien-record-type-fields type2))))
+			    (alien-record-type-fields type2) 0)))
 
 
 ;;;; The FUNCTION and VALUES types.
@@ -1394,9 +1443,9 @@
 			       (dispose-local-alien ',info ,var)
 			       )))))))))))
     (verify-local-auxiliaries-okay)
-    `(compiler-let (*auxiliary-type-definitions*
-		    ',(append *new-auxiliary-types*
-			      *auxiliary-type-definitions*))
+    `(compiler-let ((*auxiliary-type-definitions*
+		     ',(append *new-auxiliary-types*
+			       *auxiliary-type-definitions*)))
        ,@body)))
 
 
@@ -1706,8 +1755,14 @@
 ;;;; Accessing local aliens.
 
 (defun make-local-alien (info)
-  (let ((alien (eval `(make-alien ,(local-alien-info-type info)))))
-    (finalize info #'(lambda () (free-alien alien)))
+  (let* ((alien (eval `(make-alien ,(local-alien-info-type info))))
+	 (alien-sap (alien-sap alien)))
+    (finalize
+     alien
+     #'(lambda ()
+	 (alien-funcall
+	  (extern-alien "free" (function (values) system-area-pointer))
+	  alien-sap)))
     alien))
 
 (defun note-local-alien-type (info alien)
@@ -1751,8 +1806,7 @@
 
 (defun dispose-local-alien (info alien)
   (declare (ignore info))
-  #+nil
-  (cancel-finalization info)
+  (cancel-finalization alien)
   (free-alien alien))
 
 

@@ -5,12 +5,12 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/parms.lisp,v 1.3 1997/06/07 19:04:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/parms.lisp,v 1.3.2.1 1998/06/23 11:23:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains some parameterizations of various VM
-;;; attributes for the Apha.  This file is separate from other stuff so 
+;;; attributes for the Alpha.  This file is separate from other stuff so 
 ;;; that it can be compiled and loaded earlier. 
 ;;;
 ;;; Written by William Lott.
@@ -215,6 +215,8 @@
 
 (defparameter static-functions
   '(length
-    two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-= eql
-    %negate two-arg-and two-arg-ior two-arg-xor two-arg-gcd two-arg-lcm
+    two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
+    ;; Probably need the following as they are defined in arith.lisp
+    ;; two-arg-<= two-arg->= two-arg-/= 
+    eql %negate two-arg-and two-arg-ior two-arg-xor two-arg-gcd two-arg-lcm
     ))

@@ -27,6 +27,16 @@
 
 (in-package :pcl)
 
+;;; ANSI CL condition for unbound slots.
+
+(define-condition unbound-slot (cell-error)
+  ((instance :reader unbound-slot-instance :initarg :instance)
+   (slot :reader unbound-slot-slot :initarg :slot))
+  (:report (lambda(condition stream)
+	     (format stream "The slot ~S is unbound in the object ~S"
+		     (unbound-slot-slot condition)
+		     (unbound-slot-instance condition)))))
+
 (defmethod wrapper-fetcher ((class standard-class))
   'std-instance-wrapper)
 
@@ -209,7 +219,7 @@
   (%instance-ref (fsc-instance-slots instance) location))
 
 (defmethod slot-value-using-class ((class std-class)
-                                   (object standard-object)
+                                   (object std-object)
                                    (slotd standard-effective-slot-definition))
   (let* ((location (slot-definition-location slotd))
 	 (value (typecase location
@@ -235,7 +245,7 @@
 
 (defmethod (setf slot-value-using-class)
 	   (new-value (class std-class)
-		      (object standard-object)
+		      (object std-object)
 		      (slotd standard-effective-slot-definition))
   (let ((location (slot-definition-location slotd)))
     (typecase location
@@ -258,7 +268,7 @@
 
 (defmethod slot-boundp-using-class
 	   ((class std-class) 
-	    (object standard-object) 
+	    (object std-object) 
 	    (slotd standard-effective-slot-definition))
   (let* ((location (slot-definition-location slotd))
 	 (value (typecase location
@@ -282,7 +292,7 @@
 
 (defmethod slot-makunbound-using-class
 	   ((class std-class)
-	    (object standard-object) 
+	    (object std-object) 
 	    (slotd standard-effective-slot-definition))
   (let ((location (slot-definition-location slotd)))
     (typecase location
@@ -355,7 +365,7 @@
 	 instance))
 
 (defmethod slot-unbound ((class t) instance slot-name)
-  (error "The slot ~S is unbound in the object ~S." slot-name instance))
+  (error 'unbound-slot :slot slot-name :instance instance))
 
 (defun slot-unbound-internal (instance position)
   (slot-unbound (class-of instance) instance 

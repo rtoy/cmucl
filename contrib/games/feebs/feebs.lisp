@@ -8,28 +8,31 @@
 ;;; Modified by Dan Kuokka.
 ;;; Modified by Jim Healy.
 
+;;; Graphics ported to X11 by Fred Gilham 8-FEB-1998.
 
-(in-package "FEEBS" :use "LISP")
+(defpackage "FEEBS"
+  (:use "COMMON-LISP")
+  ;; Export everything we want the players to get their hands on.
+  (:export *single-step* *delay* *number-of-feebs* *game-length*
+	   *points-for-killing* *points-for-dying* *maze-i-size*
+	   *maze-j-size* *flame-energy* *mushroom-energy*
+	   *carcass-energy* *maximum-energy* *minimum-starting-energy*
+	   *maximum-starting-energy* *number-of-mushrooms*
+	   *number-of-mushroom-sites* *carcass-guaranteed-lifetime*
+	   *carcass-rot-probability* *fireball-dissipation-probability*
+	   *fireball-reflection-probability* *flame-recovery-probability*
+	   *slow-feeb-noop-switch* *slow-feeb-noop-factor*
+	   name facing i-position j-position peeking line-of-sight
+	   energy-reserve score kills ready-to-fire aborted last-move
+	   feeb-image-p feeb-image-name feeb-image-facing
+	   fireball-image-p fireball-image-direction
+	   my-square left-square right-square rear-square
+	   list-parameter-settings
+	   define-feeb feebs load-feebs north south east west))
 
-;;; Export everything we want the players to get their hands on.
+(in-package "FEEBS")
 
-(export '(*single-step* *delay*
-          *number-of-feebs* *game-length*
-	  *points-for-killing* *points-for-dying* *maze-i-size*
-	  *maze-j-size* *flame-energy* *mushroom-energy*
-	  *carcass-energy* *maximum-energy* *minimum-starting-energy*
-	  *maximum-starting-energy* *number-of-mushrooms*
-	  *number-of-mushroom-sites* *carcass-guaranteed-lifetime*
-	  *carcass-rot-probability* *fireball-dissipation-probability*
-	  *fireball-reflection-probability* *flame-recovery-probability*
-	  *slow-feeb-noop-switch* *slow-feeb-noop-factor*
-	  name facing i-position j-position peeking line-of-sight
-	  energy-reserve score kills ready-to-fire aborted last-move
-	  feeb-image-p feeb-image-name feeb-image-facing
-	  fireball-image-p fireball-image-direction
-	  my-square left-square right-square rear-square
-	  list-parameter-settings
-	  define-feeb feebs load-feebs north south east west))
+(declaim (optimize (speed 3) (safety 1)))
 
 ;;; Macro for computing whether a random event has occurred, given the
 ;;; chance of occurrence as a ratio.
@@ -92,10 +95,10 @@
   with probability equal to the product of this factor times the time
   taken by this feeb divided by the total time taken by all feebs this turn.")
 
-(def-feeb-parm *feep-dead-feebs-volume* 1
-  "An integer between -7 and 7 which determines the volume of the feep
+(def-feeb-parm *feep-dead-feebs-volume* 75
+  "An integer between -100 and 100 which determines the volume of the feep
    emitted when a feeb dies.  The softest volume is 0 and the loudest
-   is 7.  Negative volumes are usually not heard.")
+   is 100.  Negative volumes are usually not heard.")
 
 ;;; Scoring:
 
@@ -140,7 +143,6 @@
 
 (def-feeb-parm *maximum-starting-energy* 100
   "Greatest amount of energy a feeb will start with.")
-
 
 ;;; Carcasses:
 
@@ -535,7 +537,8 @@
 (defun play ()
   (dotimes (*current-turn* *game-length*)
     (play-one-turn)
-    (when (plusp (x:xpending)) (system:server))
+    (when (xlib:event-listen *display*)
+      (system:serve-event))
     (redisplay)
     (display-status)
     (cond ((not *continue*) (return-from play))
@@ -832,6 +835,13 @@
 ;;; written for a monochrome display but could easily be adapted
 ;;; for a color display.
 
+;;; Ported to X11.  Color added.
+
+;;; Global X stuff
+(defvar *display*)
+(defvar *screen*)
+(defvar *root*)
+
 (defvar *birds-eye-window*)
 (defvar *status-window*)
 (defvar *banner-window*)
@@ -839,8 +849,29 @@
 (defvar *status-font-id*)
 (defvar *banner-font-id*)
 
+(defvar *gcontext*)
+(defvar *pixmap*)
+(defvar *pixmap-gcontext*)
+
+(defvar *black-pixel*)
+(defvar *white-pixel*)
+
+(defvar *colormap*)
+(defvar *mushroom-color*)
+(defvar *mushroom-color-name* "red")
+(defvar *fireball-color*)
+(defvar *fireball-color-name* "orange")
+(defvar *carcass-color*)
+(defvar *carcass-color-name* "green")
+(defvar *feeb-colors* (make-array 11 :initial-element 0))
+(defvar *feeb-color-names*
+  '("green3" "seagreen3" "aquamarine3" "cadetblue3" "lightblue3"
+    "lightskyblue3" "deepskyblue3" "steelblue3" "dodgerblue3" "royalblue3"
+    "blue3"))
+
 (defparameter bordercolor nil)
 (defparameter background nil)
+(defparameter foreground nil)
 (defparameter borderwidth 1)
 
 (defparameter birds-eye-width 704)
@@ -862,54 +893,135 @@
 (defparameter *char-width* 8)
 (defparameter *char-height* 13)
 
-(defparameter banner-font "micr25")
+;;;(defparameter banner-font "micr25")
+(defparameter banner-font "12x24")
 (defparameter feebs-banner
   "Planet of the Feebs: A Somewhat Educational Simulation Game")
 
 (defconstant redisplay-scale 22)
 (defconstant pixel-character #\X)
 
+
+;;;  A couple of misc. X utilities.
+(defun full-window-state (w)
+  (xlib:with-state (w)
+    (values (xlib:drawable-width w) (xlib:drawable-height w)
+	    (xlib:drawable-x w) (xlib:drawable-y w)
+	    (xlib:window-map-state w))))
+
+
+(defun wait-for-mapping (display win)
+  (xlib:display-finish-output display)
+  (multiple-value-bind (width height x y mapped) (full-window-state win)
+    (declare (ignore width height x y))
+    (if (eq mapped :viewable)
+	t
+      (wait-for-mapping display win))))
+
+
+
 (defun init-graphics ()
-  (x:open-console)
-  (setf bordercolor (x:blackpixmap))
-  (setf background (x:whitepixmap))
-  (setq *status-font-id* (x:xgetfont feebs-font))
-  (setq *banner-font-id* (x:xgetfont banner-font)))
+  (multiple-value-setq (*display* *screen*) (ext:open-clx-display))
+  (ext:enable-clx-event-handling *display* #'ext:object-set-event-handler)
+  (setf *root* (xlib:screen-root *screen*))
+  (setf *black-pixel* (xlib:screen-black-pixel *screen*))
+  (setf *white-pixel* (xlib:screen-white-pixel *screen*))
+  (setf bordercolor *black-pixel*)
+  (setf background *white-pixel*)
+  (setf foreground *black-pixel*)
+  (setf *colormap* (car (xlib:installed-colormaps (xlib:screen-root *screen*))))
+  (init-colors)
+  (setf *status-font-id* (xlib:open-font *display* feebs-font))
+  (setf *banner-font-id* (xlib:open-font *display* banner-font))
+  (setq *gcontext* (xlib:create-gcontext :drawable *root*
+					 :font *status-font-id*
+					 :background background
+					 :foreground foreground)))
+
+
+(defun init-colors ()
+  (if (> (xlib:screen-root-depth *screen*) 1)
+      (progn
+	(setf *mushroom-color* (xlib:alloc-color *colormap* *mushroom-color-name*))
+	(setf *fireball-color* (xlib:alloc-color *colormap* *fireball-color-name*))
+	(setf *carcass-color* (xlib:alloc-color *colormap* *carcass-color-name*))
+	(dotimes (i 10)
+	  (setf (aref *feeb-colors* i)
+		(xlib:alloc-color *colormap* (nth i *feeb-color-names*)))))
+    (progn
+      (setf *mushroom-color* foreground)
+      (setf *fireball-color* foreground)
+	(setf *carcass-color* foreground)
+	(dotimes (i 10)
+	  (setf (aref *feeb-colors* i) foreground)))))
+
 
 (defun tini-graphics ()
-  (x:xfreefont *status-font-id*)
-  (x:xfreefont *banner-font-id*))
+  (xlib::close-display *display*))
 
 (defmacro create-window (x y width height)
   (declare (fixnum x y width height))
-  `(x:xcreatewindow (x:rootwindow) ,x ,y ,width ,height borderwidth
-		  bordercolor background))
+  `(xlib:create-window :parent *root*
+		       :x ,x :y ,y
+		       :width ,width :height ,height
+		       :border-width borderwidth
+		       :border bordercolor
+		       :background background
+		       :event-mask (xlib:make-event-mask
+				    :exposure
+				    :button-press
+				    :key-press)))
 
 (defmacro prepare-for-xevents (window)
-  `(progn (x:xselectinput ,window important-xevents)
+  `(progn
      (system:add-xwindow-object ,window ,window *feebs-windows*)))
 
-(defmacro display-window (window)
-  `(x:xmapwindow ,window))
+(defun display-window (window)
+  (xlib:map-window window)
+  (wait-for-mapping *display* window)
+  (xlib:clear-area window)
+  (xlib:display-force-output *display*))
 
-(defmacro delete-window (window)
-  `(x:xdestroywindow ,window))
+(defun delete-window (window)
+  ;; Remove the windows from the object sets before destroying them.
+  (system:remove-xwindow-object window)
+  ;; Destroy the window.
+  (xlib:destroy-window window)
+  ;; Pick off any events the X server has already queued for our
+  ;; windows, so we don't choke since SYSTEM:SERVE-EVENT is no longer
+  ;; prepared to handle events for us.
+  (loop
+   (unless (deleting-window-drop-event *display* window)
+     (return))))
+
+(defun deleting-window-drop-event (display win)
+  "Check for any events on win.  If there is one, remove it from the
+   event queue and return t; otherwise, return nil."
+  (xlib:display-finish-output display)
+  (let ((result nil))
+    (xlib:process-event
+     display :timeout 0
+     :handler #'(lambda (&key event-window &allow-other-keys)
+		  (if (eq event-window win)
+		      (setf result t)
+		    nil)))
+    result))
 
 ;;; Window event control section.  Lots of hair necessary to deal
 ;;; with funny stuff of X windows.  Ignore it if you want to, but
 ;;; it won't go away.
 
-(defconstant important-xevents
-  (logior x:exposeregion x:exposewindow x:buttonpressed x:keypressed))
-
 (defvar *buttonpressed-flag* nil)
 (defconstant blow-away-feebs-character #\q)
 (defconstant single-step-feebs-character #\s)
 (defconstant auto-mode-feebs-character #\a)
+(defconstant feebs-noop-character #\z)
 
 ;;; Create an object set of windows to receive certain events from X.
 
-(defvar *feebs-windows* (system:make-object-set "Feebs Windows"))
+(defvar *feebs-windows*
+  (system:make-object-set "Feebs Windows"
+			  #'ext:default-clx-event-handler))
 
 ;;; Sleep-with-server sleeps the appropriate amount of time but
 ;;; still processes xevents with the system server.
@@ -920,13 +1032,13 @@
     (loop
       (let ((left (- end (get-internal-real-time))))
 	(unless (plusp left) (return nil))
-	(system:server (* left (truncate 1000 internal-time-units-per-second)))))))
+	(system:serve-event (/ left internal-time-units-per-second))))))
 
 ;;; Redraws a specific window if an exposure event (either exposewindow
 ;;; or exposeregion) occurs.
 
-(defun redraw-all-exposed-regions (object width height x y subwindow)
-  (declare (ignore width height x y subwindow))
+(defun redraw-all-exposed-regions (object &rest args)
+  (declare (ignore args))
   (cond ((eq object *birds-eye-window*)
 	 (redisplay-all))
 	((eq object *status-window*)
@@ -934,8 +1046,8 @@
 	((eq object *banner-window*)
 	 (redisplay-banner))))
 
-(defun redraw-all-exposed-windows (object subwindow)
-  (declare (ignore object subwindow))
+(defun redraw-all-exposed-windows (object &rest args)
+  (declare (ignore args))
   (cond ((eq object *birds-eye-window*)
 	 (redisplay-all))
 	((eq object *status-window*)
@@ -945,24 +1057,34 @@
 
 ;;; Sets the buttonpressed flag to true when a mouse button is pressed.
 
-(defun set-buttonpressed-flag (object mod-bits scan-code x y
-				      subwindow time abs-x abs-y)
-  (declare (ignore object mod-bits scan-code x y subwindow time abs-x abs-y))
+(defun set-buttonpressed-flag (&rest args)
+  (declare (ignore args))
   (setq *buttonpressed-flag* t))
+
+
+(defun translate-character (scan-code bits)
+  (let ((key-event (ext:translate-key-event *display* scan-code bits))
+        (retval feebs-noop-character))
+    (if key-event
+        (let ((char (ext:key-event-char key-event)))
+          (if char (setf retval char))))
+    retval))
 
 ;;; Check which key was pressed and do the appropriate thing.
 
-(defun check-keypressed (object mod-bits scan-code x y
-				subwindow time abs-x abs-y)
-  (declare (ignore object x y subwindow time abs-x abs-y))
-  (cond ((eq (hemlock-internals::translate-character scan-code mod-bits)
+(defun check-keypressed (object event-key event-window root child
+				same-screen-p x y root-x root-y
+				mod-bits time scan-code send-event-p)
+  (declare (ignore object event-key event-window root child
+		   same-screen-p x y root-x root-y time send-event-p))
+  (cond ((eq (translate-character scan-code mod-bits)
 	     blow-away-feebs-character)
 	 (format t "Feebs was interrupted at turn ~D.~%" *current-turn*)
 	 (setq *continue* nil))
-	((eq (hemlock-internals::translate-character scan-code mod-bits)
+	((eq (translate-character scan-code mod-bits)
 	     single-step-feebs-character)
 	 (setq *single-step* t))
-	((eq (hemlock-internals::translate-character scan-code mod-bits)
+	((eq (translate-character scan-code mod-bits)
 	     auto-mode-feebs-character)
 	 (setq *single-step* nil))))
 
@@ -973,20 +1095,26 @@
     (when *buttonpressed-flag*
       (setq *buttonpressed-flag* nil)
       (return))
-    (system:server)))
+    (system:serve-event)))
+
+
+(defun do-nothing (&rest args)
+  (declare (ignore args))
+  t)
 
 ;;; Tell the X server which functions will handle which events when
 ;;; they occur.
 
-(x:serve-exposeregion  *feebs-windows* #'redraw-all-exposed-regions)
-(x:serve-exposewindow  *feebs-windows* #'redraw-all-exposed-windows)
-(x:serve-buttonpressed *feebs-windows* #'set-buttonpressed-flag)
-(x:serve-keypressed    *feebs-windows* #'check-keypressed)
+(ext:serve-graphics-exposure  *feebs-windows* #'redraw-all-exposed-regions)
+(ext:serve-exposure           *feebs-windows* #'redraw-all-exposed-windows)
+(ext:serve-no-exposure        *feebs-windows* #'do-nothing)
+(ext:serve-button-press       *feebs-windows* #'set-buttonpressed-flag)
+(ext:serve-key-press          *feebs-windows* #'check-keypressed)
 
 ;;; Rings the keyboard bell.
 
 (defun feep (feep-volume)
-  (x:xfeep feep-volume))
+  (xlib:bell *display* feep-volume))
 
 ;;; The following section of code is used to manipulate an array
 ;;; of 16-bit unsigned integers (a "bit-array").  This array
@@ -1015,7 +1143,7 @@
     (ldb (byte 1 bits)
 	 (aref array
 	       (+ (* y (bit-array-line-len width))
-		  words))))))
+		  words)))))
 
 ;;; Defines bit-array-ref as a setfable form to allow setting
 ;;; of the individual bits in the bit-array.
@@ -1039,8 +1167,8 @@
 (defun make-bit-array-from-strings (strings width height)
   (declare (list strings) (integer width height))
   (let ((bit-array (make-array (bit-array-size width height)
-				 :element-type '(unsigned-byte 16)
-				 :initial-element 0)))
+			       :element-type '(unsigned-byte 16)
+			       :initial-element 0)))
     (do ((strings strings (cdr strings))
 	 (row 0 (1+ row)))
 	((eq row height))
@@ -1051,12 +1179,32 @@
 	      (setf (bit-array-ref bit-array column row width) 1)))))
     bit-array))
 
-(defmacro make-bitmap (bit-array width height)
-  (declare (fixnum width height))
-  `(x:xstorebitmap ,width ,height ,bit-array))
+;;;
+;;; The following converts a bitmap from the old representation that
+;;; was compatible with x10 to the X11 representation that can be sent
+;;; to xlib::bitmap-image.  It's a little grody but it's easy and it
+;;; only has to be done once.
 
-(defmacro delete-bitmap (bitmap)
-  `(x:xfreebitmap ,bitmap))
+;;; Get one line from the bit array as an integer.
+(defun get-array-line (array line width)
+  (declare (fixnum line width))
+  (do ((i 0 (1+ i))
+       (sum 0 (+ (* sum 2) (bit-array-ref array i line width))))
+      ((>= i width) sum)))
+
+(defun expand-bitmap (bit-array width height)
+  (declare (fixnum width height))
+  (do ((i (1- height) (1- i))
+       (result nil (cons (read-from-string
+			  (format nil
+				  (format nil "#*~~~d,'0b" width)
+				  (get-array-line bit-array i width)))
+			 result)))
+      ((< i 0) result)))
+
+(defun make-bitmap (bit-array width height)
+  (declare (fixnum width height))
+  (apply #'xlib::bitmap-image (expand-bitmap bit-array width height)))
 
 ;;; Rotates the image in the bit-array to face in the
 ;;; specified direction relative to the current.
@@ -1088,35 +1236,54 @@
 					    j (- height i) width) 1))))))
 	rotated-bit-array)))
 
-;;; Completely shades in a rectangular region of the screen at
-;;; x and y coordinates and specified width and height.  (or
-;;; shades the region white if :undraw is t.)
+;;; Completely shades in a rectangular region of the screen with a
+;;; given color at x and y coordinates and specified width and height.
+;;; (or shades the region with the background color if :undraw is t.)
 
-(defmacro draw-rectangle (window x y width height &key (undraw nil))
+
+(defun draw-rectangle (window x y width height &key (undraw nil) (color foreground))
   (declare (fixnum x y width height))
-  `(x:xpixset ,window ,x ,y ,width ,height (if ,undraw x:whitepixel x:blackpixel)))
+  (let ((fg (if undraw
+		background
+	      color))
+	(bg (if undraw
+		foreground
+	      background)))
+    (xlib:with-gcontext (*gcontext* :background bg :foreground fg)
+	(xlib:draw-rectangle window *gcontext* x y width height t))))
+
 
 ;;; Draws an X bitmap to the screen at x and y coordinates with
 ;;; the specified width and height.
 
-(defmacro draw-bitmap (window x y width height bitmap)
+(defun draw-bitmap (window x y width height bitmap &optional (color foreground))
   (declare (fixnum x y width height))
-  `(x:xpixfill ,window ,x ,y ,width ,height x:blackpixel ,bitmap
-	     x:gxclear x:allplanes))
+  (xlib:put-image *pixmap* *pixmap-gcontext* bitmap
+		  :x 0 :y 0
+		  :width width :height height)
+  (xlib:with-gcontext (*gcontext* :foreground color
+				  :stipple *pixmap*
+				  :fill-style :opaque-stippled)
+    (xlib:draw-rectangle window *gcontext* x y width height t)))
+
 
 ;;; Prints a string of characters in the specified location.
 
 (defmacro draw-string (window x y string)
   (declare (fixnum x y) (simple-string string))
-  `(x:xtext ,window ,x ,y ,string (length ,string)
-	  *status-font-id* x:blackpixel x:whitepixel))
+  `(xlib:draw-glyphs ,window *gcontext*
+		     ,x (+ ,y *char-height*)
+		     ,string :end (length ,string)))
 
 ;;; Prints a feeb-id in inverse video in the specified location.
 
 (defmacro draw-feeb-id (window x y string)
   (declare (fixnum x y) (simple-string string))
-  `(x:xtext ,window ,x ,y ,string (length ,string)
-	  *status-font-id* x:whitepixel x:blackpixel))
+  `(xlib:with-gcontext (*gcontext* :background foreground
+				   :foreground background)
+     (xlib:draw-glyphs ,window *gcontext*
+		       ,x ,y
+		       ,string :end (length ,string))))
 
 
 ;;; Redisplay functions.  Control the movement of the feebs in the
@@ -1126,32 +1293,34 @@
   (setq *banner-window*
 	(create-window banner-window-x banner-window-y
 		       banner-window-width banner-window-height))
-  (x:xsync 1)
+  (xlib:display-finish-output *display*)
   (prepare-for-xevents *banner-window*)
   (display-window *banner-window*)
   (redisplay-banner))
 
 (defun tini-banner ()
-  (x:xflush)
+  (xlib:display-force-output *display*)
   (delete-window *banner-window*))
 
 (defun init-redisplay ()
   (setq *birds-eye-window* 
 	(create-window birds-eye-x birds-eye-y birds-eye-width birds-eye-height))
   (init-bitmaps)
-  (x:xsync 1)
+  (xlib:display-finish-output *display*)
   (prepare-for-xevents *birds-eye-window*)
   (display-window *birds-eye-window*)
   (redisplay-all))
 
 (defun tini-redisplay ()
-  (x:xflush)
+  (xlib:display-force-output *display*)
   (delete-window *birds-eye-window*)
   (tini-bitmaps))
 
 (defun redisplay-banner ()
-  (x:xtextpad *banner-window* 40 3 feebs-banner 59 *banner-font-id*
-	      0 8 x:blackpixel x:whitepixel x:gxcopy x:allplanes))
+  (xlib:with-gcontext (*gcontext* :font *banner-font-id*)
+    (xlib:draw-glyphs *banner-window* *gcontext*
+		      100 (- banner-window-height 3)
+		      feebs-banner :end 59)))
 
 (defvar *redisplay-map* (make-array (list *maze-i-size* *maze-j-size*)
 				    :element-type 'bit))
@@ -1171,7 +1340,8 @@
 	  (setf (aref *redisplay-map* i j) 0)
 	  (redisplay-square i j)))))
   (dolist (feeb *feebs*)
-    (draw-periscope feeb)))
+    (draw-periscope feeb))
+  (xlib:display-finish-output *display*))
 
 (defun redisplay-all ()
   (dotimes (i *maze-i-size*)
@@ -1188,14 +1358,14 @@
 	(display-x (* j redisplay-scale))
 	(display-y (* i redisplay-scale)))
     (if (eq stuff :rock)
+	(draw-rectangle *birds-eye-window* display-x display-y
+			redisplay-scale redisplay-scale)
       (draw-rectangle *birds-eye-window* display-x display-y
-		      redisplay-scale redisplay-scale)
-      (draw-rectangle *birds-eye-window* display-x display-y
-		      redisplay-scale redisplay-scale :undraw t))
+			redisplay-scale redisplay-scale :undraw t))
     (if (consp stuff)
 	(dolist (substuff stuff)
 	  (display-one-item substuff display-x display-y))
-	(display-one-item stuff display-x display-y))))
+      (display-one-item stuff display-x display-y))))
 
 (defun display-one-item (stuff display-x display-y)
   (cond ((null stuff)
@@ -1225,6 +1395,14 @@
 (defvar *fireball-bitmaps* (make-array 4))
 
 (defun init-bitmaps ()
+  (setf *pixmap* (xlib:create-pixmap
+		  :width redisplay-scale
+		  :height redisplay-scale
+		  :depth 1
+		  :drawable *birds-eye-window*)
+	*pixmap-gcontext* (xlib:create-gcontext :drawable *pixmap*
+					  :background background
+					  :foreground foreground))
   (setq *mushroom-bitmap*
 	(make-bitmap
 	 (make-bit-array-from-strings
@@ -1280,65 +1458,71 @@
 	  redisplay-scale redisplay-scale)
 	 redisplay-scale redisplay-scale))
   (let ((bit-array (make-bit-array-from-strings
-		      '("                      "
-			"           X          "
-			"         X  X  X      "
-			"      X X  X XX X     "
-			"       X       X      "
-			"     X    X X    X    "
-			"     X   XXXX  X      "
-			"     X   XXXX  X      "
-			"       X  XX   X X    "
-			"      X X       X     "
-			"     X  X     X       "
-			"       X X  X  X      "
-			"       X    X         "
-			"       X  X  X        "
-			"        X X  X        "
-			"        X   X         "
-			"         X            "
-			"         X X          "
-			"            X         "
-			"          X           "
-			"          X           "
-			"                      ")
-		      redisplay-scale redisplay-scale)))
+		    '("                      "
+		      "           X          "
+		      "         X  X  X      "
+		      "      X X  X XX X     "
+		      "       X       X      "
+		      "     X    X X    X    "
+		      "     X   XXXX  X      "
+		      "     X   XXXX  X      "
+		      "       X  XX   X X    "
+		      "      X X       X     "
+		      "     X  X     X       "
+		      "       X X  X  X      "
+		      "       X    X         "
+		      "       X  X  X        "
+		      "        X X  X        "
+		      "        X   X         "
+		      "         X            "
+		      "         X X          "
+		      "            X         "
+		      "          X           "
+		      "          X           "
+		      "                      ")
+		    redisplay-scale redisplay-scale)))
     (setf (svref *fireball-bitmaps* 0)
 	  (make-bitmap bit-array redisplay-scale redisplay-scale))
     (setf (svref *fireball-bitmaps* 1)
 	  (make-bitmap (rotate-bit-array bit-array redisplay-scale
-					   redisplay-scale east)
-			redisplay-scale redisplay-scale))
+					 redisplay-scale east)
+		       redisplay-scale redisplay-scale))
     (setf (svref *fireball-bitmaps* 2)
 	  (make-bitmap (rotate-bit-array bit-array redisplay-scale
-					   redisplay-scale south)
-			redisplay-scale redisplay-scale))
+					 redisplay-scale south)
+		       redisplay-scale redisplay-scale))
     (setf (svref *fireball-bitmaps* 3)
 	  (make-bitmap (rotate-bit-array bit-array redisplay-scale
-					   redisplay-scale west)
-			redisplay-scale redisplay-scale))))
+					 redisplay-scale west)
+		       redisplay-scale redisplay-scale))))
 
 (defun tini-bitmaps ()
-  (delete-bitmap *mushroom-bitmap*)
-  (delete-bitmap *carcass-bitmap*)
-  (dotimes (i 4)
-    (delete-bitmap (svref *fireball-bitmaps* i))))
+  (xlib:free-gcontext *pixmap-gcontext*)
+  (xlib:free-pixmap *pixmap*))
 
 (defun draw-mushroom (x y)
-  (draw-bitmap *birds-eye-window* x y redisplay-scale redisplay-scale
-	       *mushroom-bitmap*))
+  (draw-bitmap *birds-eye-window* x y
+	       redisplay-scale redisplay-scale
+	       *mushroom-bitmap* *mushroom-color*))
 
 (defun draw-carcass (x y)
   (draw-bitmap *birds-eye-window* x y redisplay-scale redisplay-scale
-	       *carcass-bitmap*))
+	       *carcass-bitmap* *carcass-color*))
 
 (defun draw-feeb (x y feeb)
-  (let ((id (make-string 1 :initial-element (digit-char (feeb-id feeb)))))
-    (draw-rectangle *birds-eye-window* (+ x 1) (+ y 1) 20 20)
+  (let ((id (make-string 1 :initial-element (digit-char (feeb-id feeb))))
+	(energy-index (floor (energy-reserve (feeb-status feeb))
+			     (floor *maximum-energy* 10))))
+    (unless (> energy-index 0)
+      (setf energy-index 0))
+    (draw-rectangle *birds-eye-window*
+		    (+ x 1) (+ y 1)
+		    20 20
+		    :color (aref *feeb-colors* energy-index))
     (case (facing (feeb-status feeb))
       (0
        ;; Draw the feeb-id on the feeb's chest.
-       (draw-feeb-id *birds-eye-window* (+ x 7) (+ y 8) id)
+       (draw-feeb-id *birds-eye-window* (+ x 7) (+ y 8 *char-height*) id)
        ;; Draw the feeb's eye-outline.
        (draw-rectangle *birds-eye-window* (+ x 4) (+ y 3) 5 5 :undraw t)
        (draw-rectangle *birds-eye-window* (+ x 14) (+ y 3) 5 5 :undraw t)
@@ -1349,7 +1533,7 @@
        (draw-rectangle *birds-eye-window* (+ x 16) (+ y 5) 1 1 :undraw t))
       (1
        ;; Draw the feeb-id on the feeb's chest.
-       (draw-feeb-id *birds-eye-window* (+ x 3) (+ y 5) id)
+       (draw-feeb-id *birds-eye-window* (+ x 3) (+ y 5 *char-height*) id)
        ;; Draw the feeb's eye-outline.
        (draw-rectangle *birds-eye-window* (+ x 14) (+ y 4) 5 5 :undraw t)
        (draw-rectangle *birds-eye-window* (+ x 14) (+ y 14) 5 5 :undraw t)
@@ -1360,7 +1544,7 @@
        (draw-rectangle *birds-eye-window* (+ x 16) (+ y 16) 1 1 :undraw t))
       (2
        ;; Draw the feeb-id on the feeb's chest.
-       (draw-feeb-id *birds-eye-window* (+ x 7) (+ y 1) id)
+       (draw-feeb-id *birds-eye-window* (+ x 7) (+ y 1 *char-height*) id)
        ;; Draw the feeb's eye-outline.
        (draw-rectangle *birds-eye-window* (+ x 14) (+ y 14) 5 5 :undraw t)
        (draw-rectangle *birds-eye-window* (+ x 4) (+ y 14) 5 5 :undraw t)
@@ -1371,7 +1555,7 @@
        (draw-rectangle *birds-eye-window* (+ x 6) (+ y 16) 1 1 :undraw t))
       (3
        ;; Draw the feeb-id on the feeb's chest.
-       (draw-feeb-id *birds-eye-window* (+ x 11) (+ y 5) id)
+       (draw-feeb-id *birds-eye-window* (+ x 11) (+ y 5 *char-height*) id)
        ;; Draw the feeb's eye-outline.
        (draw-rectangle *birds-eye-window* (+ x 4) (+ y 14) 5 5 :undraw t)
        (draw-rectangle *birds-eye-window* (+ x 4) (+ y 4) 5 5 :undraw t)
@@ -1415,8 +1599,10 @@
 
 (defun draw-fireball (x y facing)
   (declare (fixnum x y facing))
-  (draw-bitmap *birds-eye-window* x y redisplay-scale redisplay-scale
-	       (svref *fireball-bitmaps* facing)))
+  (draw-bitmap *birds-eye-window* x y
+	       redisplay-scale redisplay-scale
+	       (svref *fireball-bitmaps* facing)
+	       *fireball-color*))
 
 
 ;;; Status display.
@@ -1432,13 +1618,13 @@
 (defun init-status-display ()
   (setq *status-window* (create-window status-window-x status-window-y
 				       status-window-width status-window-height))
-  (x:xsync 1)
+  (xlib:display-finish-output *display*)
   (prepare-for-xevents *status-window*)
   (display-window *status-window*)
   (display-all-status))
 
 (defun tini-status-display ()
-  (x:xflush)
+  (xlib:display-force-output *display*)
   (delete-window *status-window*))
 
 ;;; Energy values change every turn, and always are in the range
@@ -1485,13 +1671,13 @@
   (dolist (feeb *feebs*)
     (let ((status (feeb-status feeb))
 	  (line (+ (feeb-id feeb) 6)))
-      (display-number (feeb-id feeb) line 0 3)
+      (display-number (feeb-id feeb) line 1 3)
       (display-string (name status) line 3 4)
       (setf (feeb-last-score feeb) (score status))
-      (display-number (score status) line 8 4)
+      (display-number (score status) line 10 4)
       (setf (feeb-last-kills feeb) (kills status))
-      (display-number (kills status) line 13 4)
-      (display-string (energy-to-string (energy-reserve status)) line 18 4)
+      (display-number (kills status) line 15 4)
+      (display-string (energy-to-string (energy-reserve status)) line 19 4)
       (display-string (cond ((feeb-dead-p feeb) "De")
 			    ((aborted status) "Ab")
 			    (t (case (last-move status)
@@ -1536,12 +1722,12 @@
       (unless (= (feeb-last-score feeb)
 		 (setq temp (score status)))
 	(setf (feeb-last-score feeb) temp)
-	(display-number temp line 8 4))
+	(display-number temp line 10 4))
       (unless (= (feeb-last-kills feeb)
 		 (setq temp (kills status)))
 	(setf (feeb-last-kills feeb) temp)
-	(display-number temp line 13 4))
-      (display-string (energy-to-string (energy-reserve status)) line 18 4)
+	(display-number temp line 15 4))
+      (display-string (energy-to-string (energy-reserve status)) line 19 4)
       (display-string (cond ((feeb-dead-p feeb) "De")
 			    ((aborted status) "Ab")
 			    (t (case (last-move status)
@@ -1558,7 +1744,7 @@
 		      line 23 2))))
 
 (defun display-string (string line column field-width)
-  (draw-rectangle *status-window* 
+  (draw-rectangle *status-window*
 		  (* (+ column 2) *char-width*) (* line *char-height*) 
 		  (* field-width *char-width*) *char-height* :undraw t)
   (draw-string *status-window* (* (+ column 2) *char-width*)
@@ -1572,7 +1758,7 @@
 
 (defvar *number-string-length* 5)
 (defvar *number-string-buffer* (make-array *number-string-length*
-					   :element-type 'string-char))
+					   :element-type 'character))
 
 (defun display-number (n line column field )
   (let ((charpos *number-string-length*)
@@ -1601,7 +1787,7 @@
       (setf (schar *number-string-buffer* charpos) #\space))
     ;; Now print it.
     (draw-rectangle *status-window*
-		    (* column *char-width*) (* line *char-height*)
+		    (* (+ column 1) *char-width*) (* line *char-height*)
 		    (* field *char-width*) *char-height* :undraw t)
     (draw-string *status-window* 
 		  (* (+ column field (- *number-string-length*)) *char-width*)
@@ -1646,11 +1832,12 @@
       (when (and (not *single-step*) *continue*)
 	(display-string "THE END." 19 8 8)
 	(get-mouse-buttonpress))
-      (x:xsync 1)
+      (xlib:display-finish-output *display*)
+      (ext:disable-clx-event-handling *display*)
       (tini-redisplay)
       (tini-status-display)
       (tini-banner)
-      (x:xflush)
+      (xlib:display-force-output *display*)
       (tini-graphics))
     (write-line "Final scores:")
     (dolist (feeb (reverse *feebs*))

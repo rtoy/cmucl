@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.4 1997/04/01 17:44:40 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.4.2.1 1998/06/23 11:24:08 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
 ;;;
 (in-package :x86)
 
@@ -111,46 +112,143 @@
 
 ;;;; Allocation helpers
 
-#-cgc
-(defmacro with-allocation ((alloc) &body body)
-  `(progn
-    (load-symbol-value ,alloc *allocation-pointer*)
-    ,@body
-    (store-symbol-value ,alloc *allocation-pointer*)))
+;;; Two allocation approaches are implemented. A call into C can be
+;;; used where special care can be taken to disable
+;;; interrupts. Alternatively with gencgc inline allocation is possible
+;;; although it isn't interrupt safe.
 
-#-cgc
-(defmacro with-fixed-allocation ((result alloc type-code size) &body body)
-  `(with-allocation (,alloc)
-     (inst lea ,result
-	   (make-ea :byte :base ,alloc :disp other-pointer-type))
-     (storew (logior (ash (1- ,size) vm:type-bits) ,type-code) ,alloc)
-     (inst add ,alloc (pad-data-block ,size))
-     ,@body))
+;;; For GENCGC it is possible to inline object allocation, to permit
+;;; this set the following variable to True.
+(defvar *maybe-use-inline-allocation* t)
 
-;;; Support for conservative GC and allocator. Call into C...
-#+cgc
-(defmacro with-cgc-allocation((alloc-tn size) &body body)
-  `(let ((stack-offset (- 28 (* 2 (tn-offset ,alloc-tn)))))
-    ;; I need to save all regs because C might trash a few.
-    ;; This works because register offsets are assigned in the
-    ;; same order that PUSHA pushes them on the stack.
-    (inst pusha)			; Save all registers
-    (inst push ,size)			; load the size param for C
-    (inst call (make-fixup (extern-alien-name "alloc") :foreign))
-    (inst add esp-tn word-bytes)	; pop off the arg
-    (inst mov (make-ea :dword		; move result over saved alloc-tn
-	       :base esp-tn :disp stack-offset) eax-tn)
-    (inst popa)				; restore all regs 
-    ,@body))
+;;;; Call into C.
+(defun allocation (alloc-tn size &optional inline)
+  "Allocate an object with a size in bytes given by Size.
+   The size may be an integer of a TN.
+   If Inline is a VOP node-var then it is used to make an appropriate
+   speed vs size decision."
+  (flet ((load-size (dst-tn size)
+	   (unless (and (tn-p size) (location= alloc-tn size))
+	     (inst mov dst-tn size))))
+    (let ((alloc-tn-offset (tn-offset alloc-tn)))
+      (if (and *maybe-use-inline-allocation*
+	       (or (null inline) (policy inline (>= speed space)))
+	       (backend-featurep :gencgc))
+	  ;; Inline allocation with GENCGC.
+	  (let ((ok (gen-label)))
+	    ;; Load the size first so that the size can be in the same
+	    ;; register as alloc-tn.
+	    (load-size alloc-tn size)
+	    (inst add alloc-tn
+		  (make-fixup (extern-alien-name "current_region_free_pointer")
+			      :foreign))
+	    (inst cmp alloc-tn
+		  (make-fixup (extern-alien-name "current_region_end_addr")
+			      :foreign))
+	    (inst jmp :be OK)
+	    ;; Dispatch to the appropriate overflow routine. There is a
+	    ;; routine for each destination.
+	    (ecase alloc-tn-offset
+	      (#.eax-offset
+	       (inst call (make-fixup (extern-alien-name "alloc_overflow_eax")
+				      :foreign)))
+	      (#.ecx-offset
+	       (inst call (make-fixup (extern-alien-name "alloc_overflow_ecx")
+				      :foreign)))
+	      (#.edx-offset
+	       (inst call (make-fixup (extern-alien-name "alloc_overflow_edx")
+				      :foreign)))
+	      (#.ebx-offset
+	       (inst call (make-fixup (extern-alien-name "alloc_overflow_ebx")
+				      :foreign)))
+	      (#.esi-offset
+	       (inst call (make-fixup (extern-alien-name "alloc_overflow_esi")
+				      :foreign)))
+	      (#.edi-offset
+	       (inst call (make-fixup (extern-alien-name "alloc_overflow_edi")
+				      :foreign))))
+	    (emit-label ok)
+	    (inst xchg (make-fixup
+			(extern-alien-name "current_region_free_pointer")
+			:foreign)
+		  alloc-tn))
+	  ;; C call to allocate via dispatch routines. Each
+	  ;; destination has a special entry point. The size may be a
+	  ;; register or a constant.
+	  (ecase alloc-tn-offset
+	    (#.eax-offset
+	     (case size
+	       (8 (inst call (make-fixup (extern-alien-name "alloc_8_to_eax")
+					 :foreign)))
+	       (16 (inst call (make-fixup (extern-alien-name "alloc_16_to_eax")
+					  :foreign)))
+	       (t
+		(load-size eax-tn size)
+		(inst call (make-fixup (extern-alien-name "alloc_to_eax")
+				       :foreign)))))
+	    (#.ecx-offset
+	     (case size
+	       (8 (inst call (make-fixup (extern-alien-name "alloc_8_to_ecx")
+					 :foreign)))
+	       (16 (inst call (make-fixup (extern-alien-name "alloc_16_to_ecx")
+					  :foreign)))
+	       (t
+		(load-size ecx-tn size)
+		(inst call (make-fixup (extern-alien-name "alloc_to_ecx")
+				       :foreign)))))
+	    (#.edx-offset
+	     (case size
+	       (8 (inst call (make-fixup (extern-alien-name "alloc_8_to_edx")
+					 :foreign)))
+	       (16 (inst call (make-fixup (extern-alien-name "alloc_16_to_edx")
+					  :foreign)))
+	       (t
+		(load-size edx-tn size)
+		(inst call (make-fixup (extern-alien-name "alloc_to_edx")
+				       :foreign)))))
+	    (#.ebx-offset
+	     (case size
+	       (8 (inst call (make-fixup (extern-alien-name "alloc_8_to_ebx")
+					 :foreign)))
+	       (16 (inst call (make-fixup (extern-alien-name "alloc_16_to_ebx")
+					  :foreign)))
+	       (t
+		(load-size ebx-tn size)
+		(inst call (make-fixup (extern-alien-name "alloc_to_ebx") 
+				       :foreign)))))
+	    (#.esi-offset
+	     (case size
+	       (8 (inst call (make-fixup (extern-alien-name "alloc_8_to_esi")
+					 :foreign)))
+	       (16 (inst call (make-fixup (extern-alien-name "alloc_16_to_esi")
+					  :foreign)))
+	       (t
+		(load-size esi-tn size)
+		(inst call (make-fixup (extern-alien-name "alloc_to_esi")
+				       :foreign)))))
+	    (#.edi-offset
+	     (case size
+	       (8 (inst call (make-fixup (extern-alien-name "alloc_8_to_edi")
+					 :foreign)))
+	       (16 (inst call (make-fixup (extern-alien-name "alloc_16_to_edi")
+					  :foreign)))
+	       (t
+		(load-size edi-tn size)
+		(inst call (make-fixup (extern-alien-name "alloc_to_edi")
+				       :foreign)))))))))
+  (values))
 
-#+cgc
-(defmacro with-fixed-allocation ((result alloc type-code size) &body body)
-  `(with-cgc-allocation (,alloc (pad-data-block ,size))
-    (inst lea ,result (make-ea :byte :base ,alloc :disp other-pointer-type))
-    (storew (logior (ash (1- ,size) vm:type-bits) ,type-code) ,alloc)
-    ,@body))
-
-
+(defmacro with-fixed-allocation ((result-tn type-code size &optional inline)
+				 &rest forms)
+  "Allocate an other-pointer object of fixed Size with a single
+   word header having the specified Type-Code.  The result is placed in
+   Result-TN."
+  `(pseudo-atomic
+    (allocation ,result-tn (pad-data-block ,size) ,inline)
+    (storew (logior (ash (1- ,size) vm:type-bits) ,type-code) ,result-tn)
+    (inst lea ,result-tn
+     (make-ea :byte :base ,result-tn :disp other-pointer-type))
+    ,@forms))
 
 
 ;;;; Error Code
@@ -233,6 +331,48 @@
 	 (cerror-call ,vop ,continue ,error-code ,@values))
        ,error)))
 
+
+
+;;;; PSEUDO-ATOMIC.
+
+(defvar *enable-pseudo-atomic* t)
+
+;;; PSEUDO-ATOMIC -- Internal Interface.
+;;;
+(defmacro pseudo-atomic (&rest forms)
+  (let ((label (gensym "LABEL-")))
+    `(let ((,label (gen-label)))
+      (when *enable-pseudo-atomic*
+	(inst mov (make-ea :byte :disp (+ nil-value
+					  (static-symbol-offset
+					   'lisp::*pseudo-atomic-interrupted*)
+					  (ash symbol-value-slot word-shift)
+					  (- other-pointer-type)))
+	      0)
+	(inst mov (make-ea :byte :disp (+ nil-value
+					  (static-symbol-offset
+					   'lisp::*pseudo-atomic-atomic*)
+					  (ash symbol-value-slot word-shift)
+					  (- other-pointer-type)))
+	      (fixnum 1)))
+      ,@forms
+      (when *enable-pseudo-atomic*
+	(inst mov (make-ea :byte :disp (+ nil-value
+					  (static-symbol-offset
+					   'lisp::*pseudo-atomic-atomic*)
+					  (ash symbol-value-slot word-shift)
+					  (- other-pointer-type)))
+	      0)
+	(inst cmp (make-ea :byte
+			   :disp (+ nil-value
+				    (static-symbol-offset
+				     'lisp::*pseudo-atomic-interrupted*)
+				    (ash symbol-value-slot word-shift)
+				    (- other-pointer-type)))
+	      0)
+	(inst jmp :eq ,label)
+	(inst break pending-interrupt-trap)
+	(emit-label ,label)))))
 
 
 ;;;; Indexed references:

@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.13 1997/04/21 00:52:21 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.13.2.1 1998/06/23 11:24:53 pw Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1640,6 +1640,192 @@ size_vector_double_float(lispobj *where)
 	return nwords;
 }
 
+
+#ifdef type_SimpleArrayLongFloat
+static int
+scav_vector_long_float(lispobj *where, lispobj object)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = fixnum_value(vector->length);
+#ifdef sparc
+	nwords = CEILING(length * 4 + 2, 2);
+#endif
+
+	return nwords;
+}
+
+static lispobj
+trans_vector_long_float(lispobj object)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	gc_assert(Pointerp(object));
+
+	vector = (struct vector *) PTR(object);
+	length = fixnum_value(vector->length);
+#ifdef sparc
+	nwords = CEILING(length * 4 + 2, 2);
+#endif
+
+	return copy_large_unboxed_object(object, nwords);
+}
+
+static int
+size_vector_long_float(lispobj *where)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = fixnum_value(vector->length);
+#ifdef sparc
+	nwords = CEILING(length * 4 + 2, 2);
+#endif
+
+	return nwords;
+}
+#endif
+
+
+#ifdef type_SimpleArrayComplexSingleFloat
+static int
+scav_vector_complex_single_float(lispobj *where, lispobj object)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = fixnum_value(vector->length);
+	nwords = CEILING(length * 2 + 2, 2);
+
+	return nwords;
+}
+
+static lispobj
+trans_vector_complex_single_float(lispobj object)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	gc_assert(Pointerp(object));
+
+	vector = (struct vector *) PTR(object);
+	length = fixnum_value(vector->length);
+	nwords = CEILING(length * 2 + 2, 2);
+
+	return copy_object(object, nwords);
+}
+
+static int
+size_vector_complex_single_float(lispobj *where)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = fixnum_value(vector->length);
+	nwords = CEILING(length * 2 + 2, 2);
+
+	return nwords;
+}
+#endif
+
+#ifdef type_SimpleArrayComplexDoubleFloat
+static int
+scav_vector_complex_double_float(lispobj *where, lispobj object)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = fixnum_value(vector->length);
+	nwords = CEILING(length * 4 + 2, 2);
+
+	return nwords;
+}
+
+static lispobj
+trans_vector_complex_double_float(lispobj object)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	gc_assert(Pointerp(object));
+
+	vector = (struct vector *) PTR(object);
+	length = fixnum_value(vector->length);
+	nwords = CEILING(length * 4 + 2, 2);
+
+	return copy_object(object, nwords);
+}
+
+static int
+size_vector_complex_double_float(lispobj *where)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = fixnum_value(vector->length);
+	nwords = CEILING(length * 4 + 2, 2);
+
+	return nwords;
+}
+#endif
+
+#ifdef type_SimpleArrayComplexLongFloat
+static int
+scav_vector_complex_long_float(lispobj *where, lispobj object)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = fixnum_value(vector->length);
+#ifdef sparc
+	nwords = CEILING(length * 8 + 2, 2);
+#endif
+
+	return nwords;
+}
+
+static lispobj
+trans_vector_complex_long_float(lispobj object)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	gc_assert(Pointerp(object));
+
+	vector = (struct vector *) PTR(object);
+	length = fixnum_value(vector->length);
+#ifdef sparc
+	nwords = CEILING(length * 8 + 2, 2);
+#endif
+
+	return copy_large_unboxed_object(object, nwords);
+}
+
+static int
+size_vector_complex_long_float(lispobj *where)
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = fixnum_value(vector->length);
+#ifdef sparc
+	nwords = CEILING(length * 8 + 2, 2);
+#endif
+
+	return nwords;
+}
+#endif
+
 
 /* Weak Pointers */
 
@@ -1783,7 +1969,19 @@ void gc_init(void)
 	scavtab[type_Ratio] = scav_boxed;
 	scavtab[type_SingleFloat] = scav_unboxed;
 	scavtab[type_DoubleFloat] = scav_unboxed;
+#ifdef type_LongFloat
+	scavtab[type_LongFloat] = scav_unboxed;
+#endif
 	scavtab[type_Complex] = scav_boxed;
+#ifdef type_ComplexSingleFloat
+	scavtab[type_ComplexSingleFloat] = scav_unboxed;
+#endif
+#ifdef type_ComplexDoubleFloat
+	scavtab[type_ComplexDoubleFloat] = scav_unboxed;
+#endif
+#ifdef type_ComplexLongFloat
+	scavtab[type_ComplexLongFloat] = scav_unboxed;
+#endif
 	scavtab[type_SimpleArray] = scav_boxed;
 	scavtab[type_SimpleString] = scav_string;
 	scavtab[type_SimpleBitVector] = scav_vector_bit;
@@ -1807,6 +2005,18 @@ void gc_init(void)
 #endif
 	scavtab[type_SimpleArraySingleFloat] = scav_vector_single_float;
 	scavtab[type_SimpleArrayDoubleFloat] = scav_vector_double_float;
+#ifdef type_SimpleArrayLongFloat
+	scavtab[type_SimpleArrayLongFloat] = scav_vector_long_float;
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+	scavtab[type_SimpleArrayComplexSingleFloat] = scav_vector_complex_single_float;
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+	scavtab[type_SimpleArrayComplexDoubleFloat] = scav_vector_complex_double_float;
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+	scavtab[type_SimpleArrayComplexLongFloat] = scav_vector_complex_long_float;
+#endif
 	scavtab[type_ComplexString] = scav_boxed;
 	scavtab[type_ComplexBitVector] = scav_boxed;
 	scavtab[type_ComplexVector] = scav_boxed;
@@ -1849,7 +2059,19 @@ void gc_init(void)
 	transother[type_Ratio] = trans_boxed;
 	transother[type_SingleFloat] = trans_unboxed;
 	transother[type_DoubleFloat] = trans_unboxed;
+#ifdef type_LongFloat
+	transother[type_LongFloat] = trans_unboxed;
+#endif
 	transother[type_Complex] = trans_boxed;
+#ifdef type_ComplexSingleFloat
+	transother[type_ComplexSingleFloat] = trans_unboxed;
+#endif
+#ifdef type_ComplexDoubleFloat
+	transother[type_ComplexDoubleFloat] = trans_unboxed;
+#endif
+#ifdef type_ComplexLongFloat
+	transother[type_ComplexLongFloat] = trans_unboxed;
+#endif
 	transother[type_SimpleArray] = trans_boxed;
 	transother[type_SimpleString] = trans_string;
 	transother[type_SimpleBitVector] = trans_vector_bit;
@@ -1873,6 +2095,18 @@ void gc_init(void)
 #endif
 	transother[type_SimpleArraySingleFloat] = trans_vector_single_float;
 	transother[type_SimpleArrayDoubleFloat] = trans_vector_double_float;
+#ifdef type_SimpleArrayLongFloat
+	transother[type_SimpleArrayLongFloat] = trans_vector_long_float;
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+	transother[type_SimpleArrayComplexSingleFloat] = trans_vector_complex_single_float;
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+	transother[type_SimpleArrayComplexDoubleFloat] = trans_vector_complex_double_float;
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+	transother[type_SimpleArrayComplexLongFloat] = trans_vector_complex_long_float;
+#endif
 	transother[type_ComplexString] = trans_boxed;
 	transother[type_ComplexBitVector] = trans_boxed;
 	transother[type_ComplexVector] = trans_boxed;
@@ -1914,7 +2148,19 @@ void gc_init(void)
 	sizetab[type_Ratio] = size_boxed;
 	sizetab[type_SingleFloat] = size_unboxed;
 	sizetab[type_DoubleFloat] = size_unboxed;
+#ifdef type_LongFloat
+	sizetab[type_LongFloat] = size_unboxed;
+#endif
 	sizetab[type_Complex] = size_boxed;
+#ifdef type_ComplexSingleFloat
+	sizetab[type_ComplexSingleFloat] = size_unboxed;
+#endif
+#ifdef type_ComplexDoubleFloat
+	sizetab[type_ComplexDoubleFloat] = size_unboxed;
+#endif
+#ifdef type_ComplexLongFloat
+	sizetab[type_ComplexLongFloat] = size_unboxed;
+#endif
 	sizetab[type_SimpleArray] = size_boxed;
 	sizetab[type_SimpleString] = size_string;
 	sizetab[type_SimpleBitVector] = size_vector_bit;
@@ -1938,6 +2184,18 @@ void gc_init(void)
 #endif
 	sizetab[type_SimpleArraySingleFloat] = size_vector_single_float;
 	sizetab[type_SimpleArrayDoubleFloat] = size_vector_double_float;
+#ifdef type_SimpleArrayLongFloat
+	sizetab[type_SimpleArrayLongFloat] = size_vector_long_float;
+#endif
+#ifdef type_SimpleArrayComplexSingleFloat
+	sizetab[type_SimpleArrayComplexSingleFloat] = size_vector_complex_single_float;
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+	sizetab[type_SimpleArrayComplexDoubleFloat] = size_vector_complex_double_float;
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+	sizetab[type_SimpleArrayComplexLongFloat] = size_vector_complex_long_float;
+#endif
 	sizetab[type_ComplexString] = size_boxed;
 	sizetab[type_ComplexBitVector] = size_boxed;
 	sizetab[type_ComplexVector] = size_boxed;

@@ -382,7 +382,7 @@
 (defun read-input (display timeout force-output-p predicate &rest predicate-args)
   (declare (type display display)
 	   (type (or null number) timeout)
-	   (type boolean force-output-p)
+	   (type generalized-boolean force-output-p)
 	   (dynamic-extent predicate-args))
   (declare (type function predicate)
 	   #+clx-ansi-common-lisp
@@ -503,9 +503,9 @@
 (defun wait-for-event (display timeout force-output-p)
   (declare (type display display)
 	   (type (or null number) timeout)
-	   (type boolean force-output-p))
+	   (type generalized-boolean force-output-p))
   (let ((event-process-p (not (eql timeout 0))))
-    (declare (type boolean event-process-p))
+    (declare (type generalized-boolean event-process-p))
     (unwind-protect
 	(loop
 	  (when event-process-p
@@ -592,7 +592,7 @@
   ;; in the event components.
   (declare (type display display)
 	   (type event-key event-key)
-	   (type boolean append-p send-event-p)
+	   (type generalized-boolean append-p send-event-p)
 	   (dynamic-extent args))
   (unless (get event-key 'event-code)
     (x-type-error event-key 'event-key))
@@ -750,7 +750,7 @@
 		,(getf `(:display (the display ,display)
 			 :event-key (the keyword ,event-key)
 			 :event-code (the card8 (logand #x7f (read-card8 0)))
-			 :send-event-p (the boolean (logbitp 7 (read-card8 0)))
+			 :send-event-p (logbitp 7 (read-card8 0))
 			 ,@',(mapcar #'(lambda (form)
 					 (clx-macroexpand form env))
 				     get-code))
@@ -1025,7 +1025,7 @@
 (defun event-loop-step-before (display timeout force-output-p current-event-symbol)
   (declare (type display display)
 	   (type (or null number) timeout)
-	   (type boolean force-output-p)
+	   (type generalized-boolean force-output-p)
 	   (type symbol current-event-symbol)
 	   (clx-values event eof-or-timeout))
   (unless (symbol-value current-event-symbol)
@@ -1074,7 +1074,7 @@
 	&optional aborted)
   (declare (type display display)
 	   (type reply-buffer event)
-	   (type boolean discard-p aborted)
+	   (type generalized-boolean discard-p aborted)
 	   (type symbol current-event-symbol current-event-discarded-p-symbol))
   (when (and discard-p
 	     (not aborted)
@@ -1097,7 +1097,7 @@
 	 (.discard-p. ,discard-p))
      (declare (type display .display.)
 	      (type (or null number) .timeout.)
-	      (type boolean .force-output-p. .discard-p.))
+	      (type generalized-boolean .force-output-p. .discard-p.))
      (with-event-queue (.display. ,@(and timeout `(:timeout .timeout.)))
        (multiple-value-bind (.progv-vars. .progv-vals.
 			     .current-event-symbol. .current-event-discarded-p-symbol.)
@@ -1132,7 +1132,7 @@
   ;; inside even-case, event-cond or process-event when :peek-p is T and
   ;; :discard-p is NIL.
   (declare (type display display)
-	   (clx-values boolean))
+	   (clx-values generalized-boolean))
   (let* ((symbols (display-current-event-symbol display))
 	 (event
 	   (let ((current-event-symbol (first symbols)))
@@ -1172,7 +1172,7 @@
   
   (declare (type display display)
 	   (type (or null number) timeout)
-	   (type boolean peek-p discard-p force-output-p))
+	   (type generalized-boolean peek-p discard-p force-output-p))
   (declare (type t handler)
 	   #+clx-ansi-common-lisp
 	   (dynamic-extent handler)
@@ -1324,7 +1324,7 @@
   (getf
     `(:display (the display ,display) :event-key (the keyword ,event-key) :event-code
 	       (the card8 (logand 127 (read-card8 0))) :send-event-p
-	       (the boolean (logbitp 7 (read-card8 0))))
+	       (logbitp 7 (read-card8 0)))
     variable))
 
 (defmacro event-dispatch ((display event peek-p) &body clauses)
@@ -1482,7 +1482,7 @@
 (defun make-error (display event asynchronous)
   (declare (type display display)
 	   (type reply-buffer event)
-	   (type boolean asynchronous))
+	   (type generalized-boolean asynchronous))
   (reading-event (event)
     (let* ((error-code (read-card8 1))
 	   (error-key (get-error-key display error-code))

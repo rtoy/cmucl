@@ -486,7 +486,7 @@
 
 (defgeneric change-class (instance new-class-name))
 ;          (standard-object standard-class)
-;          (standard-object funcallable-standard-class)
+;          (funcallable-standard-object funcallable-standard-class)
 ;          (t symbol)
 
 (defgeneric class-slot-value (class slot-name))
@@ -675,18 +675,18 @@
 ;          (t effective-slot-definition t)
 
 (defgeneric slot-boundp-using-class (class object slotd))
-;          (std-class standard-object standard-effective-slot-definition)
+;          (std-class std-object standard-effective-slot-definition)
 ;          (structure-class structure-object structure-effective-slot-definition)
 
 (defgeneric slot-makunbound-using-class (class object slotd))
-;          (std-class standard-object standard-effective-slot-definition)
+;          (std-class std-object standard-effective-slot-definition)
 ;          (structure-class structure-object structure-effective-slot-definition)
 
 (defgeneric slot-unbound (class instance slot-name))
 ;          (t t t)
 
 (defgeneric slot-value-using-class (class object slotd))
-;          (std-class standard-object standard-effective-slot-definition)
+;          (std-class std-object standard-effective-slot-definition)
 ;          (structure-class structure-object structure-effective-slot-definition)
 
 
@@ -695,7 +695,7 @@
 ;          (standard-generic-function standard-method t t)
 
 (defgeneric (setf slot-value-using-class) (new-value class object slotd))
-;          (t std-class standard-object standard-effective-slot-definition)
+;          (t std-class std-object standard-effective-slot-definition)
 ;          (t structure-class structure-object structure-effective-slot-definition)
 
 
@@ -706,6 +706,9 @@
 
 ;;; optional arguments  
 (defgeneric get-method (generic-function qualifiers specializers &optional (errorp t)))
+;          (standard-generic-function t t)
+
+(defgeneric find-method (generic-function qualifiers specializers &optional (errorp t)))
 ;          (standard-generic-function t t)
 
 (defgeneric remove-named-method (generic-function-name argument-specifiers &optional extra))
@@ -770,10 +773,10 @@
 (defgeneric update-dependent (metaobject dependent &rest initargs))
 
 (defgeneric update-instance-for-different-class (previous current &rest initargs))
-;          (standard-object standard-object)
+;          (std-object std-object)
 
 (defgeneric update-instance-for-redefined-class (instance added-slots discarded-slots property-list &rest initargs))
-;          (standard-object t t t)
+;          (std-object t t t)
 
 (defgeneric writer-method-class (class direct-slot &rest initargs))
 ;          (slot-class t)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.22 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.22.2.1 1998/06/23 11:21:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -370,7 +370,7 @@
   to the value of the specified Init form.  On subsequent iterations, the Vars
   are assigned the value of the Step form (if any) in paralell.  The Test is
   evaluated before each evaluation of the body Forms.  When the Test is true,
-  the the Exit-Forms are evaluated as a PROGN, with the result being the value
+  the Exit-Forms are evaluated as a PROGN, with the result being the value
   of the DO."
   (lisp::do-do-body varlist endlist body decls 'let 'psetq
 		    'do-anonymous (gensym)))

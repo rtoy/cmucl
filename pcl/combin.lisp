@@ -171,9 +171,14 @@
   (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
       (get-generic-function-info gf)
     (declare (ignore nreq nkeys arg-info))
-    `(lambda ,(make-fast-method-call-lambda-list metatypes applyp)
-       (declare (ignore .pv-cell. .next-method-call.))
-       ,effective-method)))
+    (let ((ll (make-fast-method-call-lambda-list metatypes applyp))
+	  ;; When there are no primary methods and a next-method call occurs
+	  ;; effective-method is (error "No mumble..") and the defined
+	  ;; args are not used giving a compiler warning.
+	  (error-p (eq (first effective-method) 'error)))
+      `(lambda ,ll
+	 (declare (ignore ,@(if error-p ll '(.pv-cell. .next-method-call.))))
+	 ,effective-method))))
 
 (defun expand-emf-call-method (gf form metatypes applyp env)
   (declare (ignore gf metatypes applyp env))

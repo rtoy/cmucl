@@ -123,14 +123,19 @@
               class ~S is defined."
 	     class-name))
     `(progn
-       ;; In order to avoid undefined function warnings, we want to tell
-       ;; the compile time environment that a function with this name and
-       ;; this argument list has been defined.  The portable way to do this
-       ;; is with defun.
-       (proclaim '(notinline ,name))
+       ;; In order to avoid undefined function warnings, we want to
+       ;; tell the compile time environment that a function with this
+       ;; name and this argument list has been defined.  The portable
+       ;; way to do this is with defun.
+       #-cmu (proclaim '(notinline ,name))
+       #-cmu
        (defun ,name ,lambda-list
 	 (declare (ignore ,@(extract-parameters lambda-list)))
 	 (error "Constructor ~S not loaded." ',name))
+       ;; But the derived result type for the above is wrong under CMUCL.
+       #+cmu
+       (proclaim '(ftype ,(ftype-declaration-from-lambda-list lambda-list name)
+		         ,name))
 
        ,(make-top-level-form `(defconstructor ,name)
 			     '(load eval)
@@ -178,7 +183,7 @@
 ;;;
 ;;; The actual constructor objects.
 ;;; 
-(defclass constructor ()			   
+(defclass constructor (funcallable-standard-object)
      ((class					;The class with which this
 	:initarg :class				;constructor is associated.
 	:reader constructor-class)		;The actual class object,
@@ -294,13 +299,11 @@
 (defmethod install-lazy-constructor-installer ((constructor constructor))
   (let ((class (constructor-class constructor)))
     (set-constructor-code constructor
-			  #'(lambda (&rest args)
+			  #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
 			      (multiple-value-bind (code type)
 				  (compute-constructor-code class constructor)
-				(prog1 (apply code args)
-				       (set-constructor-code constructor
-							     code
-							     type))))
+				(set-constructor-code constructor code type)
+				(apply constructor args)))
 			  'lazy)))
 
 ;;;
@@ -627,7 +630,7 @@
      (lambda (&rest ignore)
        (declare (ignore ignore))
        (function
-	 (lambda ,arglist
+	 (#+cmu kernel:instance-lambda #-cmu lambda ,arglist
 	   (make-instance
 	     ',(class-name class)
 	     ,@(gathering1 (collecting)
@@ -669,7 +672,7 @@
 		      (null (non-pcl-or-after-shared-initialize-methods-p
 			      shared)))
 	     (function
-	       (lambda ,arglist
+	       (#+cmu kernel:instance-lambda #-cmu lambda ,arglist
 		 (declare #.*optimize-speed*)
 		 (let* ((.instance. (,raw-allocator .wrapper. .constants.))
 			(.slots. (,slots-fetcher .instance.))
@@ -829,7 +832,7 @@
 	   (when (and .constants.
 		      (null (non-pcl-initialize-instance-methods-p init))
 		      (null (non-pcl-shared-initialize-methods-p shared)))
-	     #'(lambda ,arglist
+	     #'(#+cmu kernel:instance-lambda #-cmu lambda ,arglist
 		 (declare #.*optimize-speed*)
 		 (let* ((.instance. (,raw-allocator .wrapper. .constants.))
 			(.slots. (,slots-fetcher .instance.))
@@ -963,7 +966,7 @@
 						',supplied-initargs)
 	     (when .constants.
 	       (function
-		 (lambda ,arglist
+		 (#+cmu kernel:instance-lambda #-cmu lambda ,arglist
 		   (declare #.*optimize-speed*)
 		   (let* ((.instance. (,raw-allocator .wrapper. .constants.))
 			  (.slots. (,slots-fetcher .instance.))

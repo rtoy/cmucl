@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40 1997/03/25 17:07:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.1 1998/06/23 11:21:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,7 @@
 (defstruct (fd-stream
 	    (:print-function %print-fd-stream)
 	    (:constructor %make-fd-stream)
-	    (:include stream
+	    (:include lisp-stream
 		      (misc #'fd-stream-misc-routine)))
 
   (name nil)		      ; The name of this stream
@@ -476,28 +476,35 @@
 	     (setf (fd-stream-ibuf-tail stream) tail))))
     (setf (fd-stream-listen stream) nil)
     (multiple-value-bind
-	(count errno)
-	(unix:unix-select (1+ fd) (the (unsigned-byte 32) (ash 1 fd)) 0 0 0)
+	  (count errno)
+	(alien:with-alien ((read-fds (alien:struct unix:fd-set)))
+	  (unix:fd-zero read-fds)
+	  (unix:fd-set fd read-fds)
+	  (unix:unix-fast-select (1+ fd) (alien:addr read-fds) nil nil 0 0))
       (case count
 	(1)
 	(0
-	 (unless (system:wait-until-fd-usable
-		  fd :input (fd-stream-timeout stream))
+	 (unless #-mp (system:wait-until-fd-usable
+		       fd :input (fd-stream-timeout stream))
+		 #+mp (mp:process-wait-until-fd-usable
+		       fd :input (fd-stream-timeout stream))
 	   (error 'io-timeout :stream stream :direction :read)))
 	(t
 	 (error "Problem checking to see if ~S is readable: ~A"
 		stream
 		(unix:get-unix-error-msg errno)))))
     (multiple-value-bind
-	(count errno)
+	  (count errno)
 	(unix:unix-read fd
 			(system:int-sap (+ (system:sap-int ibuf-sap) tail))
 			(- buflen tail))
       (cond ((null count)
 	     (if (eql errno unix:ewouldblock)
 		 (progn
-		   (unless (system:wait-until-fd-usable
-			    fd :input (fd-stream-timeout stream))
+		   (unless #-mp (system:wait-until-fd-usable
+				 fd :input (fd-stream-timeout stream))
+			   #+mp (mp:process-wait-until-fd-usable
+				 fd :input (fd-stream-timeout stream))
 		     (error 'io-timeout :stream stream :direction :read))
 		   (do-input stream))
 		 (error "Error reading ~S: ~A"
@@ -851,7 +858,7 @@ non-server method is also significantly more efficient for large reads.
 	(when (eql size 1)
 	  (setf (fd-stream-n-bin stream) #'fd-stream-read-n-bytes)
 	  (when buffer-p
-	    (setf (stream-in-buffer stream)
+	    (setf (lisp-stream-in-buffer stream)
 		  (make-array in-buffer-length
 			      :element-type '(unsigned-byte 8)))))
 	(setf input-size size)
@@ -919,12 +926,12 @@ non-server method is also significantly more efficient for large reads.
 		   (fd-stream-ibuf-tail stream)))
 	 (fd-stream-listen stream)
 	 (setf (fd-stream-listen stream)
-	       (eql (unix:unix-select (1+ (fd-stream-fd stream))
-				      (the (unsigned-byte 32)
-					   (ash 1 (fd-stream-fd stream)))
-				      0
-				      0
-				      0)
+	       (eql (alien:with-alien ((read-fds (alien:struct unix:fd-set)))
+		      (unix:fd-zero read-fds)
+		      (unix:fd-set (fd-stream-fd stream) read-fds)
+		      (unix:unix-fast-select (1+ (fd-stream-fd stream))
+					     (alien:addr read-fds) nil nil
+					     0 0))
 		    1))))
     (:unread
      (setf (fd-stream-unread stream) arg1)
@@ -989,10 +996,12 @@ non-server method is also significantly more efficient for large reads.
      (setf (fd-stream-ibuf-tail stream) 0)
      (catch 'eof-input-catcher
        (loop
-	(let ((count (unix:unix-select (1+ (fd-stream-fd stream))
-				       (the (unsigned-byte 32)
-					    (ash 1 (fd-stream-fd stream)))
-				       0 0 0)))
+	(let ((count (alien:with-alien ((read-fds (alien:struct unix:fd-set)))
+		       (unix:fd-zero read-fds)
+		       (unix:fd-set (fd-stream-fd stream) read-fds)
+		       (unix:unix-fast-select (1+ (fd-stream-fd stream))
+					      (alien:addr read-fds) nil nil
+					      0 0))))
 	  (cond ((eql count 1)
 		 (do-input stream)
 		 (setf (fd-stream-ibuf-head stream) 0)

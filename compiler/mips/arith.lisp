@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.52 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.52.2.1 1998/06/23 11:23:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.52 1994/10/31 04:44:16 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.52.2.1 1998/06/23 11:23:32 pw Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -358,6 +358,7 @@
   (:generator 11
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst beq y zero-tn zero))
+    (inst nop)
     (inst div x y)
     (inst mflo temp)
     (inst sll q temp 2)
@@ -373,6 +374,7 @@
   (:generator 12
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst beq y zero-tn zero))
+    (inst nop)
     (inst divu x y)
     (inst mflo q)
     (inst mfhi r)))
@@ -387,6 +389,7 @@
   (:generator 12
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst beq y zero-tn zero))
+    (inst nop)
     (inst div x y)
     (inst mflo q)
     (inst mfhi r)))

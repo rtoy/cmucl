@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/requests.c,v 1.4 1996/05/08 14:15:40 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/requests.c,v 1.4.2.1 1998/06/23 11:25:19 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -27,14 +27,29 @@ Garbage garbage_list = NULL;
 
 #include "Interface.h"
 
+static int
+already_garbage(void*stuff)
+{
+  Garbage current = garbage_list;
+  while( current ) {
+    if (current->junk == (char*)stuff){
+      fprintf(stderr,"Redundant add to garbage list.\n");
+      return 1;
+    }
+    current = current->next;
+  }
+  return 0;
+}
+    
 void register_garbage(void *stuff,garbage_kind kind)
 {
-  Garbage garbage = XtNew(struct garbage_node);
-
-  garbage->junk = (char *)stuff;
-  garbage->kind = kind;
-  garbage->next = garbage_list;
-  garbage_list = garbage;
+  if (!already_garbage(stuff)) {
+    Garbage garbage = XtNew(struct garbage_node);
+    garbage->junk = (char *)stuff;
+    garbage->kind = kind;
+    garbage->next = garbage_list;
+    garbage_list = garbage;
+  }
 }
 
 void cleanup_garbage()

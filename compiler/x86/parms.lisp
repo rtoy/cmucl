@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4.2.2 1997/09/15 10:44:42 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4.2.3 1998/06/23 11:24:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 
 (in-package :x86)
@@ -41,7 +42,7 @@
 (setf (backend-fasl-file-type *target-backend*) "x86f")
 (setf (backend-fasl-file-implementation *target-backend*)
       x86-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 1)
+(setf (backend-fasl-file-version *target-backend*) 2)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :little-endian)
 
@@ -74,6 +75,11 @@
 	  double-float-significand-byte double-float-normal-exponent-min
 	  double-float-normal-exponent-max double-float-hidden-bit
 	  double-float-trapping-nan-bit double-float-digits
+
+	  long-float-bias long-float-exponent-byte
+	  long-float-significand-byte long-float-normal-exponent-min
+	  long-float-normal-exponent-max long-float-hidden-bit
+	  long-float-trapping-nan-bit long-float-digits
 
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
@@ -120,16 +126,26 @@
 (defconstant double-float-hidden-bit (ash 1 20))
 (defconstant double-float-trapping-nan-bit (ash 1 19))
 
+(defconstant long-float-bias 16382)
+(defconstant long-float-exponent-byte (byte 15 0))
+(defconstant long-float-significand-byte (byte 31 0))
+(defconstant long-float-normal-exponent-min 1)
+(defconstant long-float-normal-exponent-max #x7FFE)
+(defconstant long-float-hidden-bit (ash 1 31))		; Actually not hidden
+(defconstant long-float-trapping-nan-bit (ash 1 30))
+
 (defconstant single-float-digits
   (+ (byte-size single-float-significand-byte) 1))
 
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
 
+(defconstant long-float-digits
+  (+ (byte-size long-float-significand-byte) word-bits 1))
 
 ;;; pfw -- from i486 microprocessor programmers reference manual
 (defconstant float-invalid-trap-bit        (ash 1 0))
-(defconstant float-denormal-trap-bit       (ash 1 1)) ; not used by lisp
+(defconstant float-denormal-trap-bit       (ash 1 1))
 (defconstant float-divide-by-zero-trap-bit (ash 1 2))
 (defconstant float-overflow-trap-bit       (ash 1 3))
 (defconstant float-underflow-trap-bit      (ash 1 4))
@@ -239,34 +255,57 @@
       lisp::*current-catch-block*
       lisp::*current-unwind-protect-block*
       *eval-stack-top*
-
-      ;; Interrupt Handling
-      lisp::*free-interrupt-context-index*
-      unix::*interrupts-enabled*
-      unix::*interrupt-pending*
-
-      ;; added by pfw
-      *allocation-pointer*
-      *binding-stack-pointer*
-      *x86-cgc-active-p*
-      *internal-gc-trigger*	; Keep C code happy
-
-      *fp-constant-1s0*
-      *fp-constant-1d0*
-      *fp-constant-0s0*
-      *fp-constant-0d0*
-
       *alien-stack*
 
-      ;; Some unused static variables - very handy for hacking.
-      *unused-static-7*
-      *unused-static-6*
-      *unused-static-5*
-      *unused-static-4*
-      *unused-static-3*
-      *unused-static-2*
-      *unused-static-1*
+      ;; Interrupt Handling
+      lisp::*pseudo-atomic-atomic*
+      lisp::*pseudo-atomic-interrupted*
+      unix::*interrupts-enabled*
+      unix::*interrupt-pending*
+      lisp::*free-interrupt-context-index*
 
+      *allocation-pointer*
+      *binding-stack-pointer*
+      *internal-gc-trigger*   ; Not used.
+
+      ;; The FP constants
+      *fp-constant-0d0*
+      *fp-constant-1d0*
+      *fp-constant-0s0*
+      *fp-constant-1s0*
+      ;; Following are all long-floats.
+      *fp-constant-0l0*
+      *fp-constant-1l0*
+      *fp-constant-pi*
+      *fp-constant-l2t*
+      *fp-constant-l2e*
+      *fp-constant-lg2*
+      *fp-constant-ln2*
+
+      ;; Used by gencgc.
+      *scavenge-read-only-space*
+
+      ;; Multi-process support.
+      *control-stacks*
+
+      ;; Make the ..slot-unbound.. symbol static to optimise the
+      ;; common slot unbound check.
+      pcl::..slot-unbound..
+
+      ;; Spare symbols
+      spare-10
+      spare-9
+      spare-8
+      spare-7
+      spare-6
+      spare-5
+      spare-4
+      spare-3
+      spare-2
+      spare-1
+      
+      ;; Used by CGC.
+      *x86-cgc-active-p*
       *static-blue-bag*		; Must be last or change C code
       ))
 
@@ -283,4 +322,3 @@
 
 ;;; cf the sparc PARMS.LISP
 (defparameter *assembly-unit-length* 8)
-

@@ -52,159 +52,15 @@
 
 (in-package :user)
 
-#+excl
-(eval-when (compile load eval)
-  (when (eq (find-package :lisp) (find-package :common-lisp))
-    (let ((excl::*enable-package-locked-errors* nil))
-      (rename-package :common-lisp :common-lisp '(:cl)))
-    (make-package :lisp :use nil)
-    ((lambda (symbols)
-       (import symbols :lisp)
-       (export symbols :lisp))
-     '(&allow-other-keys &aux &body &environment &key &optional &rest &whole
-       * ** *** *applyhook* *break-on-warnings* *debug-io*
-       *default-pathname-defaults* *error-output* *evalhook* *features*
-       *load-verbose* *macroexpand-hook* *modules* *package* *print-array*
-       *print-base* *print-case* *print-circle* *print-escape*
-       *print-gensym* *print-length* *print-level* *print-pretty*
-       *print-radix* *query-io* *random-state* *read-base*
-       *read-default-float-format* *read-suppress* *readtable*
-       *standard-input* *standard-output* *terminal-io* *trace-output* +
-       ++ +++ - / // /// /= 1+ 1- < <= = > >= abs acons acos acosh adjoin
-       adjust-array adjustable-array-p akcl alpha-char-p alphanumericp and
-       append apply applyhook apropos apropos-list aref array
-       array-dimension array-dimension-limit array-dimensions
-       array-element-type array-has-fill-pointer-p array-in-bounds-p
-       array-rank array-rank-limit array-row-major-index array-total-size
-       array-total-size-limit arrayp ash asin asinh assert assoc assoc-if
-       assoc-if-not atan atanh atom bignum bit bit-and bit-andc1 bit-andc2
-       bit-eqv bit-ior bit-nand bit-nor bit-not bit-orc1 bit-orc2
-       bit-vector bit-vector-p bit-xor block boole boole-1 boole-2
-       boole-and boole-andc1 boole-andc2 boole-c1 boole-c2 boole-clr
-       boole-eqv boole-ior boole-nand boole-nor boole-orc1 boole-orc2
-       boole-set boole-xor both-case-p boundp break butlast byte
-       byte-position byte-size caaaar caaadr caaar caadar caaddr caadr
-       caar cadaar cadadr cadar caddar cadddr caddr cadr
-       call-arguments-limit car case catch ccase cdaaar cdaadr cdaar
-       cdadar cdaddr cdadr cdar cddaar cddadr cddar cdddar cddddr cdddr
-       cddr cdr ceiling cerror char char-bit char-bits char-bits-limit
-       char-code char-code-limit char-control-bit char-downcase char-equal
-       char-font char-font-limit char-greaterp char-hyper-bit char-int
-       char-lessp char-meta-bit char-name char-not-equal char-not-greaterp
-       char-not-lessp char-super-bit char-upcase char/= char< char<= char=
-       char> char>= character characterp check-type cis clear-input
-       clear-output close clrhash code-char coerce common commonp
-       compilation-speed compile compile-file compiled-function
-       compiled-function-p compiler-let complex complexp concatenate cond
-       conjugate cons consp constantp copy-alist copy-list copy-readtable
-       copy-seq copy-symbol copy-tree cos cosh count count-if count-if-not
-       ctypecase decf declaration declare decode-float
-       decode-universal-time defconstant define-modify-macro
-       define-setf-method defmacro defparameter defsetf defstruct deftype
-       defun defvar delete delete-duplicates delete-file delete-if
-       delete-if-not denominator deposit-field describe digit-char
-       digit-char-p directory directory-namestring disassemble do do*
-       do-all-symbols do-external-symbols do-symbols documentation dolist
-       dotimes double-float double-float-epsilon
-       double-float-negative-epsilon dpb dribble ecase ed eighth elt
-       encode-universal-time endp enough-namestring eq eql equal equalp
-       error etypecase eval eval-when evalhook evenp every exp export expt
-       fboundp fceiling ffloor fifth file-author file-length
-       file-namestring file-position file-write-date fill fill-pointer
-       find find-all-symbols find-if find-if-not find-package find-symbol
-       finish-output first fixnum flet float float-digits float-precision
-       float-radix float-sign floatp floor fmakunbound force-output format
-       fourth fresh-line fround ftruncate ftype funcall function functionp
-       gcd gensym gentemp get get-decoded-time
-       get-dispatch-macro-character get-internal-real-time
-       get-internal-run-time get-macro-character get-output-stream-string
-       get-properties get-setf-method get-setf-method-multiple-value
-       get-universal-time getf gethash gfun go graphic-char-p hash-table
-       hash-table-count hash-table-p host-namestring identity if ignore
-       imagpart import in-package incf inline input-stream-p inspect
-       int-char integer integer-decode-float integer-length integerp
-       intern internal-time-units-per-second intersection isqrt keyword
-       keywordp labels lambda lambda-list-keywords lambda-parameters-limit
-       last lcm ldb ldb-test ldiff least-negative-double-float
-       least-negative-long-float least-negative-short-float
-       least-negative-single-float least-positive-double-float
-       least-positive-long-float least-positive-short-float
-       least-positive-single-float length let let*
-       lisp-implementation-type lisp-implementation-version list list*
-       list-all-packages list-length listen listp load locally log logand
-       logandc1 logandc2 logbitp logcount logeqv logior lognand lognor
-       lognot logorc1 logorc2 logtest logxor long-float long-float-epsilon
-       long-float-negative-epsilon long-site-name loop lower-case-p
-       machine-instance machine-type machine-version macro-function
-       macroexpand macroexpand-1 macrolet make-array make-broadcast-stream
-       make-char make-concatenated-stream make-dispatch-macro-character
-       make-echo-stream make-hash-table make-list make-package
-       make-pathname make-random-state make-sequence make-string
-       make-string-input-stream make-string-output-stream make-symbol
-       make-synonym-stream make-two-way-stream makunbound map mapc mapcan
-       mapcar mapcon maphash mapl maplist mask-field max member member-if
-       member-if-not merge merge-pathnames min minusp mips mismatch mod
-       most-negative-double-float most-negative-fixnum
-       most-negative-long-float most-negative-short-float
-       most-negative-single-float most-positive-double-float
-       most-positive-fixnum most-positive-long-float
-       most-positive-short-float most-positive-single-float
-       multiple-value-bind multiple-value-call multiple-value-list
-       multiple-value-prog1 multiple-value-setq multiple-values-limit
-       name-char namestring nbutlast nconc nil nintersection ninth not
-       notany notevery notinline nreconc nreverse nset-difference
-       nset-exclusive-or nstring-capitalize nstring-downcase
-       nstring-upcase nsublis nsubst nsubst-if nsubst-if-not nsubstitute
-       nsubstitute-if nsubstitute-if-not nth nthcdr null number numberp
-       numerator nunion oddp open optimize or otherwise output-stream-p
-       package package-name package-nicknames package-shadowing-symbols
-       package-use-list package-used-by-list packagep pairlis
-       parse-integer parse-namestring pathname pathname-device
-       pathname-directory pathname-host pathname-name pathname-type
-       pathname-version pathnamep peek-char phase pi plusp pop position
-       position-if position-if-not pprint prin1 prin1-to-string princ
-       princ-to-string print probe-file proclaim prog prog* prog1 prog2
-       progn progv provide psetf psetq push pushnew quote random
-       random-state random-state-p rassoc rassoc-if rassoc-if-not ratio
-       rational rationalize rationalp read read-byte read-char
-       read-char-no-hang read-delimited-list read-from-string read-line
-       read-preserving-whitespace readtable readtablep realpart reduce rem
-       remf remhash remove remove-duplicates remove-if remove-if-not
-       remprop rename-file rename-package replace require rest return
-       return-from revappend reverse room rotatef round rplaca rplacd
-       safety satisfies sbit scale-float schar search second sequence set
-       set-char-bit set-difference set-dispatch-macro-character
-       set-exclusive-or set-macro-character set-syntax-from-char setf setq
-       seventh sfun shadow shadowing-import shiftf short-float
-       short-float-epsilon short-float-negative-epsilon short-site-name
-       signed-byte signum simple-array simple-bit-vector
-       simple-bit-vector-p simple-string simple-string-p simple-vector
-       simple-vector-p sin single-float single-float-epsilon
-       single-float-negative-epsilon sinh sixth sleep software-type
-       software-version some sort space special special-form-p speed sqrt
-       stable-sort standard-char standard-char-p step stream
-       stream-element-type streamp string string-capitalize string-char
-       string-char-p string-downcase string-equal string-greaterp
-       string-left-trim string-lessp string-not-equal string-not-greaterp
-       string-not-lessp string-right-trim string-trim string-upcase
-       string/= string< string<= string= string> string>= stringp
-       structure sublis subseq subsetp subst subst-if subst-if-not
-       substitute substitute-if substitute-if-not subtypep svref sxhash
-       symbol symbol-function symbol-name symbol-package symbol-plist
-       symbol-value symbolp t tagbody tailp tan tanh tenth terpri the
-       third throw time trace tree-equal truename truncate type type-of
-       typecase typep unexport unintern union unless unread-char
-       unsigned-byte untrace unuse-package unwind-protect upper-case-p
-       use-package user-homedir-pathname values values-list variable
-       vector vector-pop vector-push vector-push-extend vectorp warn when
-       with-input-from-string with-open-file with-open-stream
-       with-output-to-string write write-byte write-char write-line
-       write-string write-to-string y-or-n-p yes-or-no-p zerop))))
+(defpackage "WALKER" (:use :common-lisp))
+(defpackage "ITERATE" (:use :common-lisp :walker)(:export "ITERATE"))
+(defpackage "PCL" (:use :walker :iterate :common-lisp))
+(in-package "PCL")
 
-(in-package :walker :use '(:lisp))
-(in-package :iterate :use '(:lisp :walker))
-(in-package :pcl :use '(:walker :iterate :lisp))
-
+;;(in-package :walker :use '(:lisp))
+;;(in-package :iterate :use '(:lisp :walker))
+;;(in-package :pcl :use '(:walker :iterate :lisp))
+#+nil
 (export (intern (symbol-name :iterate)		;Have to do this here,
 		(find-package :iterate))	;because in the defsystem
 	(find-package :iterate))		;(later in this file)
@@ -223,84 +79,6 @@
 #+cmu
 (setf (getf ext:*herald-items* :pcl)
       `("    CLOS based on PCL version:  " ,*pcl-system-date*))
-
-;;;
-;;; Various hacks to get people's *features* into better shape.
-;;; 
-(eval-when (compile load eval)
-  #+(and Symbolics Lispm)
-  (multiple-value-bind (major minor) (sct:get-release-version)
-    (etypecase minor
-      (integer)
-      (string (setf minor (parse-integer minor :junk-allowed t))))
-    (pushnew :genera *features*)
-    (ecase major
-      ((6)
-       (pushnew :genera-release-6 *features*))
-      ((7)
-       (pushnew :genera-release-7 *features*)
-       (pushnew :copy-&rest-arg *features*)
-       (ecase minor
-	 ((0 1) (pushnew :genera-release-7-1 *features*))
-	 ((2)   (pushnew :genera-release-7-2  *features*))
-	 ((3)   (pushnew :genera-release-7-3  *features*))
-	 ((4)   (pushnew :genera-release-7-4  *features*))))
-      ((8)
-       (pushnew :genera-release-8 *features*)
-       (ecase minor
-	 ((0) (pushnew :genera-release-8-0 *features*))
-	 ((1) (pushnew :genera-release-8-1 *features*))))))
-  
-  #+CLOE-Runtime
-  (let ((version (lisp-implementation-version)))
-    (when (string-equal version "2.0" :end1 (min 3 (length version)))
-      (pushnew :cloe-release-2 *features*)))
-
-  (dolist (feature *features*)
-    (when (and (symbolp feature)                ;3600!!
-               (equal (symbol-name feature) "CMU"))
-      (pushnew :CMU *features*)))
-  
-  #+TI
-  (if (eq (si:local-binary-file-type) :xld)
-      (pushnew ':ti-release-3 *features*)
-      (pushnew ':ti-release-2 *features*))
-
-  #+Lucid
-  (when (search "IBM RT PC" (machine-type))
-    (pushnew :ibm-rt-pc *features*))
-
-  #+ExCL
-  (cond ((search "sun3" (lisp-implementation-version))
-	 (push :sun3 *features*))
-	((search "sun4" (lisp-implementation-version))
-	 (push :sun4 *features*)))
-
-  #+(and HP Lucid)
-  (push :HP-Lucid *features*)
-  #+(and HP (not Lucid) (not excl))
-  (push :HP-HPLabs *features*)
-
-  #+Xerox
-  (case il:makesysname
-    (:lyric (push :Xerox-Lyric *features*))
-    (otherwise (push :Xerox-Medley *features*)))
-;;;
-;;; For KCL and IBCL, push the symbol :turbo-closure on the list *features*
-;;; if you have installed turbo-closure patch.  See the file kcl-mods.text
-;;; for details.
-;;;
-;;; The xkcl version of KCL has this fixed already.
-;;; 
-
-  #+xkcl(pushnew :turbo-closure *features*)
-
-  )
-
-#+(and excl sun4)
-(eval-when (eval compile load)
-  (pushnew :excl-sun4 *features*))
-
 
 
 ;;; Yet Another Sort Of General System Facility and friends.
@@ -448,10 +226,8 @@ and load your system with:
 	                                     ("lisp"  . "lbin"))))
 
 (defvar *pathname-extensions*
-  (let* ((files-renamed-p t)
-	 (proper-extensions *default-pathname-extensions*))
+  (let ((proper-extensions *default-pathname-extensions*))
     (cond ((null proper-extensions) '("l" . "lbin"))
-          ((null files-renamed-p) (cons "lisp" (cdr proper-extensions)))
           (t proper-extensions))))
 
 (eval-when (compile load eval)
@@ -667,21 +443,12 @@ and load your system with:
 					    (member :small *features*))
 				       t
 				       :maybe))))))
-	(#+Genera
-	 compiler:compiler-warnings-context-bind
-	 #+TI
-	 COMPILER:COMPILER-WARNINGS-CONTEXT-BIND
-	 #+:LCL3.0
-	 lucid-common-lisp:with-deferred-warnings
-	 #+cmu
-	 with-compilation-unit #+cmu ()
-	 #-(or Genera TI :LCL3.0 cmu)
-	 progn
-           (loop (when (null transformations) (return t))
-		 (let ((transform (pop transformations)))
-		   (ecase (car transform)
-		     (:compile (compile-module (cadr transform)))
-		     (:load (load-module (cadr transform)))))))))))
+	(with-compilation-unit ()
+	  (loop (when (null transformations) (return t))
+	    (let ((transform (pop transformations)))
+	      (ecase (car transform)
+		(:compile (compile-module (cadr transform)))
+		(:load (load-module (cadr transform)))))))))))
 
 
 (defun make-source-pathname (name) (make-pathname-internal name :source))
@@ -703,10 +470,6 @@ and load your system with:
              :name (string-downcase (string name))
              :type extension
              :defaults directory)))
-
-    #+Genera
-    (setq pathname (zl:send pathname :new-raw-name (pathname-name pathname))
-          pathname (zl:send pathname :new-raw-type (pathname-type pathname)))
 
     pathname))
 
@@ -749,22 +512,9 @@ and load your system with:
 ;;; ***                                                                   ***
 
 (defun load-truename (&optional (errorp nil))
-  (flet ((bad-time ()
-	   (when errorp
-	     (error "LOAD-TRUENAME called but a file isn't being loaded."))))
-    #+Lispm  (or sys:fdefine-file-pathname (bad-time))
-    #+excl   excl::*source-pathname*
-    #+Xerox  (pathname (or (il:fullname *standard-input*) (bad-time)))
-    #+(and dec vax common) (truename (sys::source-file #'load-truename))
-    ;;
-    ;; The following use of  `lucid::' is a kludge for 2.1 and 3.0
-    ;; compatibility.  In 2.1 it was in the SYSTEM package, and i
-    ;; 3.0 it's in the LUCID-COMMON-LISP package.
-    ;;
-    #+LUCID (or lucid::*source-pathname* (bad-time))
-    #+akcl   si:*load-pathname*
-    #+cmu17 *load-truename*
-    #-(or Lispm excl Xerox (and dec vax common) LUCID akcl cmu17) nil))
+  (declare (ignore errorp))
+  #+(and dec vax common) (truename (sys::source-file #'load-truename))
+  #+cmu17 *load-truename*)
 
 #-(or cmu Symbolics)
 (defvar *pcl-directory*
@@ -775,24 +525,6 @@ and load your system with:
 
 #+cmu 
 (defvar *pcl-directory* (pathname "target:pcl/"))
-
-#+Genera
-(defvar *pcl-directory*
-	(let ((source (load-truename t)))
-	  (flet ((subdir (name)
-		   (scl:send source :new-pathname :raw-directory
-			     (append (scl:send source :raw-directory)
-				     (list name)))))
-	    (cons source
-		  #+genera-release-7-2       (subdir "rel-7-2")
-		  #+genera-release-7-3       (subdir "rel-7-3") 
-		  #+genera-release-7-4       (subdir "rel-7-4")
-		  #+genera-release-8-0       (subdir "rel-8-0")
-		  #+genera-release-8-1       (subdir "rel-8-1")
-		  ))))
-
-#+Cloe-Runtime
-(defvar *pcl-directory* (pathname "/usr3/hornig/pcl/"))
 
 (defsystem pcl	   
            *pcl-directory*
@@ -858,6 +590,7 @@ and load your system with:
    (dfun        t                                   t (boot low cache))
    (fast-init   t                                   t (boot low))
    (braid       (+ precom1 precom2)                 t (boot defs low fin cache))
+   (dlisp3      t                                   t (dlisp2 boot braid))
    (generic-functions t                             t (boot))
    (slots       t                                   t (vector boot defs low cache fin))
    (init        t                                   t (vector boot defs low fast-init))
@@ -868,7 +601,6 @@ and load your system with:
    (fixup       t                                   t (boot defs low fin))
    (defcombin   t                                   t (defclass boot defs low fin))
    (ctypes      t                                   t (defclass defcombin))
-   #+ignore
    (construct   t                                   t (defclass boot defs low))
    (env         t                                   t (defclass boot defs low fin))
    (compat      t                                   t ())
@@ -900,22 +632,6 @@ and load your system with:
     (cond ((null m)      (operate-on-system 'pcl :load))
 	  ((eq m :query) (operate-on-system 'pcl :query-load)))))
 
-#+Genera
-;;; Make sure Genera bug mail contains the PCL bug data.  A little
-;;; kludgy, but what the heck.  If they didn't mean for people to do
-;;; this, they wouldn't have made private patch notes be flavored
-;;; objects, right?  Right.
-(progn
-  (scl:defflavor pcl-private-patch-info ((description)) ())
-  (scl:defmethod (sct::private-patch-info-description pcl-private-patch-info) ()
-    (or description
-	(setf description (string-append "PCL version: " *pcl-system-date*))))
-  (scl:defmethod (sct::private-patch-info-pathname pcl-private-patch-info) ()
-    *pcl-directory*)
-  (unless (find-if #'(lambda (x) (typep x 'pcl-private-patch-info))
-		   sct::*private-patch-info*)
-    (push (scl:make-instance 'pcl-private-patch-info)
-	  sct::*private-patch-info*)))
 
 (defun bug-report-info (&optional (stream *standard-output*))
   (format stream "~&PCL system date: ~A~
@@ -926,8 +642,6 @@ and load your system with:
 	  (lisp-implementation-type)
 	  (lisp-implementation-version)
 	  *features*))
-
-
 
 ;;;;
 ;;;
@@ -941,71 +655,6 @@ and load your system with:
         (setq old (make-source-pathname (car f))))
       (setq new  (make-source-pathname (car f)))
       (rename-file old new))))
-
-#+Genera
-(defun edit-pcl ()
-  (dolist (f (cadr (get-system 'pcl)))
-    (let ((*system-directory* *pcl-directory*))
-      (zwei:find-file (make-source-pathname (car f))))))
-
-#+Genera
-(defun hardcopy-pcl (&optional query-p)
-  (let ((files (mapcar #'(lambda (f)
-                           (setq f (car f))
-                           (and (or (not query-p)
-                                    (y-or-n-p "~A? " f))
-                                f))
-		       (cadr (get-system 'pcl))))
-        (b zwei:*interval*))
-    (unwind-protect
-        (dolist (f files)
-          (when f
-            (multiple-value-bind (ignore b)
-                (zwei:find-file (make-source-pathname f))
-              (zwei:hardcopy-buffer b))))
-      (zwei:make-buffer-current b))))
-
-
-;;;
-;;; unido!ztivax!dae@seismo.css.gov
-;;; z30083%tansei.cc.u-tokyo.junet@utokyo-relay.csnet
-;;; Victor@carmen.uu.se
-;;; mcvax!harlqn.co.uk!chris@uunet.UU.NET
-;;; 
-#+Genera
-(defun mail-pcl (to)
-  (let* ((original-buffer zwei:*interval*)
-	 (*system-directory* (pathname "vaxc:/user/ftp/pub/pcl/")
-			    ;(funcall (car (get-system 'pcl)))
-			     )
-         (files (list* 'defsys
-			'test
-			(caddr (get-system 'pcl))))
-         (total-number (length files))
-         (file nil)
-	 (number-of-lines 0)
-         (i 0)
-         (mail-buffer nil))
-    (unwind-protect
-        (loop
-           (when (null files) (return nil))
-           (setq file (pop files))
-           (incf i)
-           (multiple-value-bind (ignore b)
-               (zwei:find-file (make-source-pathname file))
-	     (setq number-of-lines (zwei:count-lines b))
-             (zwei:com-mail-internal t
-                                     :initial-to to
-                                     :initial-body b
-				     :initial-subject
-                                     (format nil
-				       "PCL file   ~A   (~A of ~A) ~D lines"
-				       file i total-number number-of-lines))
-             (setq mail-buffer zwei:*interval*)
-             (zwei:com-exit-com-mail)
-             (format t "~&Just sent ~A  (~A of ~A)." b i total-number)
-             (zwei:kill-buffer mail-buffer)))
-      (zwei:make-buffer-current original-buffer))))
 
 (defun reset-pcl-package ()		; Try to do this safely
   (let* ((vars '(*pcl-directory* 

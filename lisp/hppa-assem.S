@@ -261,7 +261,7 @@ undefined_tramp
         .byte    4
         .byte    23
         .byte    254
-        .byte    46
+        .byte    (0x40 + sc_DescriptorReg)
         .byte    1
 	.align	4
 

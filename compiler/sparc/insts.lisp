@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.14 1997/04/23 02:24:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.14.2.1 1998/06/23 11:23:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 
 (def-assembler-params
     :scheduler-p t
-  :max-locations 68)
+  :max-locations 100)
 
 
 ;;;; Constants, types, conversion functions, some disassembler stuff.
@@ -36,13 +36,20 @@
 	 (tn-offset tn)
 	 (error "~S isn't a register." tn)))))
 
-(defun fp-reg-tn-encoding (tn &optional odd)
+(defun fp-reg-tn-encoding (tn)
   (declare (type tn tn))
   (unless (eq (sb-name (sc-sb (tn-sc tn))) 'float-registers)
     (error "~S isn't a floating-point register." tn))
-  (if odd
-      (1+ (tn-offset tn))
-      (tn-offset tn)))
+  (let ((offset (tn-offset tn)))
+    (cond ((> offset 31)
+	   ;; Use the sparc v9 double float register encoding.
+	   (assert (backend-featurep :sparc-v9))
+	   ;; No single register encoding greater than reg 31.
+	   (assert (zerop (mod offset 2)))
+	   ;; Upper bit of the register number is encoded in the low bit.
+	   (1+ (- offset 32)))
+	  (t
+	   (tn-offset tn)))))
 
 (disassem:set-disassem-params :instruction-alignment 32)
 
@@ -59,17 +66,28 @@
 	(unless (zerop (tn-offset loc))
 	  (tn-offset loc)))
        (float-registers
-	(+ (tn-offset loc) 32))
+	(sc-case loc
+	  (single-reg
+	   (+ (tn-offset loc) 32))
+	  (double-reg
+	   (let ((offset (tn-offset loc)))
+	     (assert (zerop (mod offset 2)))
+	     (values (+ offset 32) 2)))
+	  #+long-float
+	  (long-reg
+	   (let ((offset (tn-offset loc)))
+	     (assert (zerop (mod offset 4)))
+	     (values (+ offset 32) 4)))))
        (control-registers
-	64)
+	96)
        (immediate-constant
 	nil)))
     (symbol
      (ecase loc
        (:memory 0)
-       (:psr 65)
-       (:fsr 66)
-       (:y 67)))))
+       (:psr 97)
+       (:fsr 98)
+       (:y 99)))))
 
 ;;; symbols used for disassembly printing
 ;;;
@@ -93,13 +111,28 @@
 
 (defparameter float-reg-symbols
   (coerce 
-   (loop for n from 0 to 31 collect (make-symbol (format nil "%F~d" n)))
+   (loop for n from 0 to 63 collect (make-symbol (format nil "%F~d" n)))
    'vector))
 
 (disassem:define-argument-type fp-reg
   :printer #'(lambda (value stream dstate)
 	       (declare (stream stream) (fixnum value))
 	       (let ((regname (aref float-reg-symbols value)))
+		 (princ regname stream)
+		 (disassem:maybe-note-associated-storage-ref
+		  value
+		  'float-registers
+		  regname
+		  dstate))))
+
+;;; The extended 6 bit floating point register encoding for the double
+;;; and long instructions of the sparc v9.
+(disassem:define-argument-type fp-ext-reg
+  :printer #'(lambda (value stream dstate)
+	       (declare (stream stream) (fixnum value))
+	       (let* (;; Decode the register number.
+		      (value (if (oddp value) (+ value 31) value))
+		      (regname (aref float-reg-symbols value)))
 		 (princ regname stream)
 		 (disassem:maybe-note-associated-storage-ref
 		  value
@@ -218,9 +251,8 @@
   (immed :field (byte 13 0) :sign-extend t))	; usually sign extended
 
 (disassem:define-instruction-format
-    (format-3-fpop 32
-     :default-printer
-        '(:name :tab (:unless (:same-as rd) rs1 ", ") rs2 ", " rd))
+    (format-binary-fpop 32
+     :default-printer '(:name :tab rd ", " rs1 ", " rs2))
   (op	:field (byte 2 30))
   (rd 	:field (byte 5 25) :type 'fp-reg)
   (op3  :field (byte 6 19))
@@ -228,6 +260,56 @@
   (opf  :field (byte 9 5))
   (rs2  :field (byte 5 0) :type 'fp-reg))
 
+;;; Floating point load/save instructions encoding.
+(disassem:define-instruction-format
+    (format-unary-fpop 32 :default-printer '(:name :tab rd ", " rs2))
+  (op	:field (byte 2 30))
+  (rd 	:field (byte 5 25) :type 'fp-reg)
+  (op3  :field (byte 6 19))
+  (rs1  :field (byte 5 14) :value 0)
+  (opf  :field (byte 9 5))
+  (rs2  :field (byte 5 0) :type 'fp-reg))
+
+;;; Floating point comparison instructions encoding.
+(disassem:define-instruction-format
+    (format-cmp-fpop 32 :default-printer '(:name :tab rs1 ", " rs2))
+  (op	:field (byte 2 30))
+  (rd 	:field (byte 5 25) :value 0)
+  (op3  :field (byte 6 19))
+  (rs1  :field (byte 5 14) :type 'fp-reg)
+  (opf  :field (byte 9 5))
+  (rs2  :field (byte 5 0) :type 'fp-reg))
+
+;;; Double and long float instruction format of the sparc v9.
+(disassem:define-instruction-format
+    (format-binary-ext-fpop 32
+     :default-printer '(:name :tab rd ", " rs1 ", " rs2))
+  (op	:field (byte 2 30))
+  (rd 	:field (byte 5 25) :type 'fp-ext-reg)
+  (op3  :field (byte 6 19))
+  (rs1  :field (byte 5 14) :type 'fp-ext-reg)
+  (opf  :field (byte 9 5))
+  (rs2  :field (byte 5 0) :type 'fp-ext-reg))
+
+;;; Double and long floating point load/save instructions encoding.
+(disassem:define-instruction-format
+    (format-unary-ext-fpop 32 :default-printer '(:name :tab rd ", " rs2))
+  (op	:field (byte 2 30))
+  (rd 	:field (byte 5 25) :type 'fp-ext-reg)
+  (op3  :field (byte 6 19))
+  (rs1  :field (byte 5 14) :value 0)
+  (opf  :field (byte 9 5))
+  (rs2  :field (byte 5 0) :type 'fp-ext-reg))
+
+;;; Double and long floating point comparison instructions encoding.
+(disassem:define-instruction-format
+    (format-cmp-ext-fpop 32 :default-printer '(:name :tab rs1 ", " rs2))
+  (op	:field (byte 2 30))
+  (rd 	:field (byte 5 25) :value 0)
+  (op3  :field (byte 6 19))
+  (rs1  :field (byte 5 14) :type 'fp-ext-reg)
+  (opf  :field (byte 9 5))
+  (rs2  :field (byte 5 0) :type 'fp-ext-reg))
 
 
 ;;;; Primitive emitters.
@@ -260,12 +342,11 @@
 (define-emitter emit-format-3-fpop 32
   (byte 2 30) (byte 5 25) (byte 6 19) (byte 5 14) (byte 9 5) (byte 5 0))
 
-
 
 ;;;; Most of the format-3-instructions.
 
 (defun emit-format-3-inst (segment op op3 dst src1 src2
-				   &key load-store fixup dest-kind odd)
+				   &key load-store fixup dest-kind)
   (unless src2
     (cond ((and (typep src1 'tn) load-store)
 	   (setf src2 0))
@@ -276,13 +357,13 @@
     (tn
      (emit-format-3-reg segment op
 			(if dest-kind
-			    (fp-reg-tn-encoding dst odd)
+			    (fp-reg-tn-encoding dst)
 			    (reg-tn-encoding dst))
 			op3 (reg-tn-encoding src1) 0 0 (reg-tn-encoding src2)))
     (integer
      (emit-format-3-immed segment op
 			  (if dest-kind
-			      (fp-reg-tn-encoding dst odd)
+			      (fp-reg-tn-encoding dst)
 			      (reg-tn-encoding dst))
 			  op3 (reg-tn-encoding src1) 1 src2))
     (fixup
@@ -291,7 +372,7 @@
      (note-fixup segment :add src2)
      (emit-format-3-immed segment op
 			  (if dest-kind
-			      (fp-reg-tn-encoding dst odd)
+			      (fp-reg-tn-encoding dst)
 			      (reg-tn-encoding dst))
 			  op3 (reg-tn-encoding src1) 1 0))))
 
@@ -330,13 +411,12 @@
 		 ,(if (or fixup load-store)
 		      '(type (or tn (signed-byte 13) null fixup) src1 src2)
 		      '(type (or tn (signed-byte 13) null) src1 src2)))
-       ,@(unless (eq dest-kind 'odd-fp-reg)
-	   `((:printer format-3-reg
-		       ((op ,op) (op3 ,op3) (rd nil :type ',dest-kind))
-		       ,printer)
-	     (:printer format-3-immed
-		       ((op ,op) (op3 ,op3) (rd nil :type ',dest-kind))
-		       ,printer)))
+       (:printer format-3-reg
+		 ((op ,op) (op3 ,op3) (rd nil :type ',dest-kind))
+	 	 ,printer)
+       (:printer format-3-immed
+	 	 ((op ,op) (op3 ,op3) (rd nil :type ',dest-kind))
+	 	 ,printer)
        ,@(when flushable
 	   '((:attributes flushable)))
        (:dependencies
@@ -374,8 +454,7 @@
        (:emitter (emit-format-3-inst segment ,op ,op3 dst src1 src2
 				     :load-store ,load-store
 				     :fixup ,fixup
-				     :dest-kind (not (eq ',dest-kind 'reg))
-				     :odd (eq ',dest-kind 'odd-fp-reg))))))
+				     :dest-kind (not (eq ',dest-kind 'reg)))))))
 
 ) ; eval-when (compile eval)
 
@@ -386,15 +465,15 @@
 (define-f3-inst ld #b11 #b000000 :load-store :load)
 (define-f3-inst ldd #b11 #b000011 :load-store :load)
 (define-f3-inst ldf #b11 #b100000 :dest-kind fp-reg :load-store :load)
-(define-f3-inst ldf-odd #b11 #b100000 :dest-kind odd-fp-reg :load-store :load)
 (define-f3-inst lddf #b11 #b100011 :dest-kind fp-reg :load-store :load)
+(define-f3-inst ldxf #b11 #b100010 :dest-kind fp-reg :load-store :load)	; v9
 (define-f3-inst stb #b11 #b000101 :load-store :store)
 (define-f3-inst sth #b11 #b000110 :load-store :store)
 (define-f3-inst st #b11 #b000100 :load-store :store)
 (define-f3-inst std #b11 #b000111 :load-store :store)
 (define-f3-inst stf #b11 #b100100 :dest-kind fp-reg :load-store :store)
-(define-f3-inst stf-odd #b11 #b100100 :dest-kind odd-fp-reg :load-store :store)
 (define-f3-inst stdf #b11 #b100111 :dest-kind fp-reg :load-store :store)
+(define-f3-inst stxf #b11 #b100110 :dest-kind fp-reg :load-store :store) ; v9
 (define-f3-inst ldstub #b11 #b001101 :load-store t)
 (define-f3-inst swap #b11 #b001111 :load-store t)
 (define-f3-inst add #b10 #b000000 :fixup t)
@@ -428,6 +507,18 @@
 (define-f3-inst save #b10 #b111100 :reads :psr :writes :psr)
 (define-f3-inst restore #b10 #b111101 :reads :psr :writes :psr)
 
+(define-f3-inst smul #b10 #b001011 :writes :y)			; v8
+(define-f3-inst smulcc #b10 #b011011 :writes (:psr :y))		; v8
+(define-f3-inst umul #b10 #b001010 :writes :y)			; v8
+(define-f3-inst umulcc #b10 #b011010 :writes (:psr :y))		; v8
+(define-f3-inst sdiv #b10 #b001111 :reads :y)			; v8
+(define-f3-inst sdivcc #b10 #b011111 :reads :y :writes :psr)	; v8
+(define-f3-inst udiv #b10 #b001110 :reads :y)			; v8
+(define-f3-inst udivcc #b10 #b011110 :reads :y :writes :psr)	; v8
+
+(define-f3-inst mulx #b10 #b001001)	; v9 for both signed and unsigned
+(define-f3-inst sdivx #b10 #b101101)	; v9
+(define-f3-inst udivx #b10 #b001101)	; v9
 
 
 ;;;; Random instructions.
@@ -689,134 +780,165 @@
 
 ;;;; Unary and binary fp insts.
 
-(defun emit-fp-inst (segment opf op3 dst src1 src2 &optional odd)
-  (unless src2
-    (setf src2 src1)
-    (setf src1 dst))
-  (emit-format-3-fpop segment #b10 (fp-reg-tn-encoding dst odd) op3
-		      (fp-reg-tn-encoding src1 odd) opf
-		      (fp-reg-tn-encoding src2 odd)))
-
-(defun emit-fp-inst-no-dst (segment opf op3 src1 src2 &optional odd)
-  (emit-format-3-fpop segment #b10 0 op3
-		      (fp-reg-tn-encoding src1 odd) opf
-		      (fp-reg-tn-encoding src2 odd)))
-
 (eval-when (compile eval)
 
-(defmacro define-unary-fp-inst (name opf &key reads odd)
-  `(define-instruction ,name (segment dst src1)
-     (:declare (type tn dst src1))
-     (:printer format-3-fpop ((op #b10) (op3 #b110100) (opf ,opf)))
+(defmacro define-unary-fp-inst (name opf &key reads)
+  `(define-instruction ,name (segment dst src)
+     (:declare (type tn dst src))
+     (:printer format-unary-fpop ((op #b10) (op3 #b110100) (opf ,opf) (rs1 0)))
      (:dependencies
       ,@(when reads
 	  `((reads ,reads)))
       (reads dst)
-      (reads src1)
+      (reads src)
       (writes dst))
      (:delay 0)
-     (:emitter (emit-fp-inst segment ,opf #b110100 dst src1 nil ,odd))))
+     (:emitter (emit-format-3-fpop segment #b10 (fp-reg-tn-encoding dst)
+		#b110100 0 ,opf (fp-reg-tn-encoding src)))))
 
-(defmacro define-binary-fp-inst (name opf
-				      &key (op3 #b110100) reads writes delay)
-  `(define-instruction ,name (segment dst src1 &optional src2)
-     (:declare (type tn dst src1) (type (or null tn) src2))
-     (:printer format-3-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
-     (:dependencies
-      ,@(when reads
-	  `((reads ,reads)))
-      (reads src1)
-      (if src2 (reads src2) (reads dst))
-      ,@(when writes
-	  `((writes ,writes)))
-      (writes dst))
-     ,@(if delay
-	   `((:delay ,delay))
-	   '((:delay 0)))
-     (:emitter (emit-fp-inst segment ,opf ,op3 dst src1 src2))))
-
-(defmacro define-binary-fp-inst-no-dst (name opf
-					     &key (op3 #b110100) reads writes
-					     delay)
-  `(define-instruction ,name (segment src1 src2)
-     (:declare (type tn src1 src2))
-     (:printer format-3-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
+(defmacro define-binary-fp-inst (name opf &key (op3 #b110100)
+				      reads writes delay)
+  `(define-instruction ,name (segment dst src1 src2)
+     (:declare (type tn dst src1 src2))
+     (:printer format-binary-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
      (:dependencies
       ,@(when reads
 	  `((reads ,reads)))
       (reads src1)
       (reads src2)
       ,@(when writes
-	  `((writes ,writes))))
+	  `((writes ,writes)))
+      (writes dst))
      ,@(if delay
 	   `((:delay ,delay))
 	   '((:delay 0)))
-     (:emitter (emit-fp-inst-no-dst segment ,opf ,op3 src1 src2))))
-  
+     (:emitter (emit-format-3-fpop segment #b10 (fp-reg-tn-encoding dst)
+		,op3 (fp-reg-tn-encoding src1) ,opf
+		(fp-reg-tn-encoding src2)))))
+
+(defmacro define-cmp-fp-inst (name opf)
+  `(define-instruction ,name (segment src1 src2)
+     (:declare (type tn src1 src2))
+     (:printer format-cmp-fpop ((op #b10) (op3 #b110101) (opf ,opf) (rd 0)))
+     (:dependencies
+      (reads src1)
+      (reads src2)
+      (writes :fsr))
+     (:delay 1)
+     (:emitter (emit-format-3-fpop segment #b10 0 #b110101
+		(fp-reg-tn-encoding src1) ,opf (fp-reg-tn-encoding src2)))))
+
+;;; Double and long float instruction encodings.
+
+(defmacro define-unary-ext-fp-inst (name opf &key reads)
+  `(define-instruction ,name (segment dst src)
+     (:declare (type tn dst src))
+     (:printer format-unary-ext-fpop ((op #b10) (op3 #b110100) (opf ,opf)
+				      (rs1 0)))
+     (:dependencies
+      ,@(when reads
+	  `((reads ,reads)))
+      (reads dst)
+      (reads src)
+      (writes dst))
+     (:delay 0)
+     (:emitter (emit-format-3-fpop segment #b10
+		(fp-reg-tn-encoding dst) #b110100 0 ,opf
+		(fp-reg-tn-encoding src)))))
+
+(defmacro define-binary-ext-fp-inst (name opf &key (op3 #b110100)
+					  reads writes delay)
+  `(define-instruction ,name (segment dst src1 src2)
+     (:declare (type tn dst src1 src2))
+     (:printer format-binary-ext-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
+     (:dependencies
+      ,@(when reads
+	  `((reads ,reads)))
+      (reads src1)
+      (reads src2)
+      ,@(when writes
+	  `((writes ,writes)))
+      (writes dst))
+     ,@(if delay
+	   `((:delay ,delay))
+	   '((:delay 0)))
+     (:emitter (emit-format-3-fpop segment #b10
+		(fp-reg-tn-encoding dst) ,op3 (fp-reg-tn-encoding src1) ,opf
+		(fp-reg-tn-encoding src2)))))
+
+(defmacro define-cmp-ext-fp-inst (name opf)
+  `(define-instruction ,name (segment src1 src2)
+     (:declare (type tn src1 src2))
+     (:printer format-cmp-ext-fpop ((op #b10) (op3 #b110101) (opf ,opf)
+				    (rd 0)))
+     (:dependencies
+      (reads src1)
+      (reads src2)
+      (writes :fsr))
+     (:delay 1)
+     (:emitter (emit-format-3-fpop segment #b10 0 #b110101
+		(fp-reg-tn-encoding src1) ,opf (fp-reg-tn-encoding src2)))))
+
 ); eval-when (compile eval)
 
 
 (define-unary-fp-inst fitos #b011000100 :reads :fsr)
-(define-unary-fp-inst fitod #b011001000 :reads :fsr)
-(define-unary-fp-inst fitox #b011001100 :reads :fsr)
+(define-unary-ext-fp-inst fitod #b011001000 :reads :fsr)
+(define-unary-ext-fp-inst fitox #b011001100 :reads :fsr)	; v8
 
 (define-unary-fp-inst fstoir #b011000001 :reads :fsr)
-(define-unary-fp-inst fdtoir #b011000010 :reads :fsr)
-(define-unary-fp-inst fxtoir #b011000011 :reads :fsr)
+(define-unary-ext-fp-inst fdtoir #b011000010 :reads :fsr)
+(define-unary-ext-fp-inst fxtoir #b011000011 :reads :fsr)
 
 (define-unary-fp-inst fstoi #b011010001)
-(define-unary-fp-inst fdtoi #b011010010)
-(define-unary-fp-inst fxtoi #b011010011)
+(define-unary-ext-fp-inst fdtoi #b011010010)
+(define-unary-ext-fp-inst fxtoi #b011010011)	; v8
 
 (define-unary-fp-inst fstod #b011001001 :reads :fsr)
-(define-unary-fp-inst fstox #b011001101 :reads :fsr)
+(define-unary-fp-inst fstox #b011001101 :reads :fsr)	; v8
 (define-unary-fp-inst fdtos #b011000110 :reads :fsr)
-(define-unary-fp-inst fdtox #b011001110 :reads :fsr)
-(define-unary-fp-inst fxtos #b011000111 :reads :fsr)
-(define-unary-fp-inst fxtod #b011001011 :reads :fsr)
+(define-unary-fp-inst fdtox #b011001110 :reads :fsr)	; v8
+(define-unary-fp-inst fxtos #b011000111 :reads :fsr)	; v8
+(define-unary-fp-inst fxtod #b011001011 :reads :fsr)	; v8
 
 (define-unary-fp-inst fmovs #b000000001)
-(define-instruction fmovs-odd (segment dst src1)
-  (:declare (type tn dst src1))
-  (:dependencies (reads dst) (reads src1) (writes dst))
-  (:delay 0)
-  (:emitter (emit-fp-inst segment #b000000001 #b110100 dst src1 nil t)))
+(define-unary-ext-fp-inst fmovd #b000000010)	; v9
+(define-unary-ext-fp-inst fmovx #b000000011)	; v9
 
 (define-unary-fp-inst fnegs #b000000101)
+(define-unary-ext-fp-inst fnegd #b000000110)	; v9
+(define-unary-ext-fp-inst fnegx #b000000111)	; v9
+
 (define-unary-fp-inst fabss #b000001001)
+(define-unary-ext-fp-inst fabsd #b000001010)	; v9
+(define-unary-ext-fp-inst fabsx #b000001011)	; v9
 
-(define-unary-fp-inst fsqrts #b000101001 :reads :fsr)
-(define-unary-fp-inst fsqrtd #b000101010 :reads :fsr)
-(define-unary-fp-inst fsqrtx #b000101011 :reads :fsr)
-
-
+(define-unary-fp-inst fsqrts #b000101001 :reads :fsr)		; V7
+(define-unary-ext-fp-inst fsqrtd #b000101010 :reads :fsr)	; V7
+(define-unary-ext-fp-inst fsqrtx #b000101011 :reads :fsr)	; v8
 
 (define-binary-fp-inst fadds #b001000001)
-(define-binary-fp-inst faddd #b001000010)
-(define-binary-fp-inst faddx #b001000011)
+(define-binary-ext-fp-inst faddd #b001000010)
+(define-binary-ext-fp-inst faddx #b001000011)	; v8
 (define-binary-fp-inst fsubs #b001000101)
-(define-binary-fp-inst fsubd #b001000110)
-(define-binary-fp-inst fsubx #b001000111)
+(define-binary-ext-fp-inst fsubd #b001000110)
+(define-binary-ext-fp-inst fsubx #b001000111)	; v8
 
 (define-binary-fp-inst fmuls #b001001001)
-(define-binary-fp-inst fmuld #b001001010)
-(define-binary-fp-inst fmulx #b001001011)
+(define-binary-ext-fp-inst fmuld #b001001010)
+(define-binary-ext-fp-inst fmulx #b001001011)	; v8
 (define-binary-fp-inst fdivs #b001001101)
-(define-binary-fp-inst fdivd #b001001110)
-(define-binary-fp-inst fdivx #b001001111)
+(define-binary-ext-fp-inst fdivd #b001001110)
+(define-binary-ext-fp-inst fdivx #b001001111)	; v8
 
-(define-binary-fp-inst-no-dst fcmps #b001010001 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmpd #b001010010 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmpx #b001010011 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmpes #b001010101 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmped #b001010110 :op3 #b110101 :writes :fsr
-			      :delay 1)
-(define-binary-fp-inst-no-dst fcmpex #b001010111 :op3 #b110101 :writes :fsr
-			      :delay 1)
+;;; Float comparison instructions.
+;;;
+(define-cmp-fp-inst fcmps #b001010001)
+(define-cmp-ext-fp-inst fcmpd #b001010010)
+(define-cmp-ext-fp-inst fcmpx #b001010011)	; v8
+(define-cmp-fp-inst fcmpes #b001010101)
+(define-cmp-ext-fp-inst fcmped #b001010110)
+(define-cmp-ext-fp-inst fcmpex #b001010111)	; v8
 
 
 

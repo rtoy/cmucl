@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.1 1997/01/21 00:30:28 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.1.2.1 1998/06/23 11:21:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -17,6 +17,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski -- Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1997.
 ;;;
 (in-package :x86)
 
@@ -31,14 +32,14 @@
 (define-assembly-routine
     (return-multiple (:return-style :none))
     (;; These four are really arguments.
-     (:temp eax dword-reg eax-offset)
-     (:temp ebx dword-reg ebx-offset)
-     (:temp ecx dword-reg ecx-offset)
-     (:temp esi dword-reg esi-offset)
+     (:temp eax unsigned-reg eax-offset)
+     (:temp ebx unsigned-reg ebx-offset)
+     (:temp ecx unsigned-reg ecx-offset)
+     (:temp esi unsigned-reg esi-offset)
 
      ;; These we need as temporaries.
-     (:temp edx dword-reg edx-offset)
-     (:temp edi dword-reg edi-offset))
+     (:temp edx unsigned-reg edx-offset)
+     (:temp edi unsigned-reg edi-offset))
      
   ;; Pick off the cases where everything fits in register args.
   (inst jecxz zero-values)
@@ -127,12 +128,12 @@
     (tail-call-variable
      (:return-style :none))
 
-    ((:temp eax dword-reg eax-offset)
-     (:temp ebx dword-reg ebx-offset)
-     (:temp ecx dword-reg ecx-offset)
-     (:temp edx dword-reg edx-offset)
-     (:temp edi dword-reg edi-offset)
-     (:temp esi dword-reg esi-offset))
+    ((:temp eax unsigned-reg eax-offset)
+     (:temp ebx unsigned-reg ebx-offset)
+     (:temp ecx unsigned-reg ecx-offset)
+     (:temp edx unsigned-reg edx-offset)
+     (:temp edi unsigned-reg edi-offset)
+     (:temp esi unsigned-reg esi-offset))
 
   ;; Calculate NARGS (as a fixnum)
   (move ecx esi)
@@ -195,14 +196,9 @@
   (pushw ebp-tn -2)
 
   ;; And away we go.
-;  (inst jmp-indirect
-;	(make-ea :byte :base eax :disp (- (* closure-function-slot word-bytes)
-;					  function-pointer-type)))
-  ;; -- jrd
-  (inst jmp
-	(make-ea :byte :base eax :disp (- (* closure-function-slot word-bytes)
-					  function-pointer-type)))
-  )
+  (inst jmp (make-ea :byte :base eax
+		     :disp (- (* closure-function-slot word-bytes)
+			      function-pointer-type))))
 
 
 
@@ -230,13 +226,9 @@
   (inst jmp loop)
   
   EXIT
-
   
-  ;; hear eax points to catch block containing symbol pointed to by edx
-  ;; (inst jmp-near (make-fixup 'unwind :assembly-routine)) -- jrd
-  ;;
-  ;; fall into unwind
-  )
+  ;; Hear EAX points to catch block containing symbol pointed to by EDX.
+  (inst jmp (make-fixup 'unwind :assembly-routine)))
 
 ;;;; Non-local exit noise.
 
@@ -247,8 +239,8 @@
 			 ((:arg block (any-reg descriptor-reg) eax-offset)
 			  (:arg start (any-reg descriptor-reg) ebx-offset)
 			  (:arg count (any-reg descriptor-reg) ecx-offset)
-			  (:temp uwp dword-reg esi-offset))
-  (declare (ignore count))
+			  (:temp uwp unsigned-reg esi-offset))
+  (declare (ignore start count))
 
   (let ((error (generate-error-code nil invalid-unwind-error)))
     (inst or block block)		; check for NULL pointer
@@ -256,8 +248,9 @@
   
   (load-symbol-value uwp lisp::*current-unwind-protect-block*)
 
-  (inst;; does *cuwpb* match value stored in argument cuwp slot?
-   cmp uwp (make-ea-for-object-slot block unwind-block-current-uwp-slot 0))
+  ;; Does *cuwpb* match value stored in argument cuwp slot?
+  (inst cmp uwp
+	(make-ea-for-object-slot block unwind-block-current-uwp-slot 0))
   ;; If a match, return to context in arg block.
   (inst jmp :e do-exit)
 
@@ -273,18 +266,9 @@
   
   (loadw ebp-tn block unwind-block-current-cont-slot)
   
-  ;; apparently a carefully held secret is that uwp-entry expects
-  ;; some things in known locations so that they can be saved on
-  ;; the stack! Jeesh!
- 
-  ;;(move edx-tn block)			; gets shoved into 'block'
-  ;;(move ecx-tn count)			; a noop
-
-  ;; This seems needed to properly save the 'start' value so that the
-  ;; correct thing gets passed into the various nlx entry points although
-  ;; I think the compiler really ought to do it.
-
-  (storew start ebp-tn (- (1+ old-fp-save-offset)))
+  ;; Uwp-entry expects some things in known locations so that they can
+  ;; be saved on the stack: the block in edx-tn; start in ebx-tn; and
+  ;; count in ecx-tn
 
   (inst jmp (make-ea :byte :base block
 		     :disp (* unwind-block-entry-pc-slot word-bytes))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.9 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.9.2.1 1998/06/23 11:21:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,24 +47,51 @@
   `(integer 0 (,char-code-limit)))
 
 
-(defparameter char-name-alist
-	`(("NULL" . ,(code-char 0))
-	  ("BELL" . ,(code-char 7))
-	  ("BACKSPACE" . ,(code-char 8)) ("BS" . ,(code-char 8))
-	  ("TAB" . ,(code-char 9))
-	  ("NEWLINE" . ,(code-char 10)) ("NL" . ,(code-char 10))  
-	  ("LINEFEED" . ,(code-char 10)) ("LF" . ,(code-char 10))
-	  ("VT" . ,(code-char 11))
-	  ("PAGE" . ,(code-char 12)) ("FORM" . ,(code-char 12))
-	  ("FORMFEED" . ,(code-char 12)) ("FF" . ,(code-char 12))
-	  ("RETURN" . ,(code-char 13)) ("CR" . ,(code-char 13))
-	  ("ESCAPE" . ,(code-char 27)) ("ESC" . ,(code-char 27))
-	  ("ALTMODE" . ,(code-char 27)) ("ALT" . ,(code-char 27))
-	  ("SPACE" . ,(code-char 32)) ("SP" . ,(code-char 32))
-	  ("DELETE" . ,(code-char 127)) ("RUBOUT" . ,(code-char 127)))
-  "This is the alist of (character-name . character) for characters
-  with long names.  The first name in this list for a given character
-  is used on typeout and is the preferred form for input.")
+(macrolet ((frob (char-names-list)
+	     (collect ((results))
+	       (dolist (code char-names-list)
+		 (destructuring-bind (ccode names)
+		     code
+		   (dolist (name names)
+		     (results (cons name (code-char ccode))))))
+	       `(defparameter char-name-alist ',(results)
+  "This is the alist of (character-name . character) for characters with
+  long names.  The first name in this list for a given character is used
+  on typeout and is the preferred form for input."))))
+  (frob ((#x00 ("Null" "^@" "Nul"))
+	 (#x01 ("^a" "Soh"))
+	 (#x02 ("^b" "Stx"))
+	 (#x03 ("^c" "Etx"))
+	 (#x04 ("^d" "Eot"))
+	 (#x05 ("^e" "Enq"))
+	 (#x06 ("^f" "Ack"))
+	 (#x07 ("Bell" "^g" "Bel"))
+	 (#x08 ("Backspace" "^h" "Bs"))
+	 (#x09 ("Tab" "^i" "Ht"))
+	 (#x0A ("Linefeed" "Newline" "^j" "Lf" "Nl" ))
+	 (#x0B ("Vt" "^k"))
+	 (#x0C ("Page" "^l" "Form" "Formfeed" "Ff" "Np"))
+	 (#x0D ("Return" "^m" "Cr"))
+	 (#x0E ("^n" "So"))
+	 (#x0F ("^o" "Si"))
+	 (#x10 ("^p" "Dle"))
+	 (#x11 ("^q" "Dc1"))
+	 (#x12 ("^r" "Dc2"))
+	 (#x13 ("^s" "Dc3"))
+	 (#x14 ("^t" "Dc4"))
+	 (#x15 ("^u" "Nak"))
+	 (#x16 ("^v" "Syn"))
+	 (#x17 ("^w" "Etb"))
+	 (#x18 ("^x" "Can"))
+	 (#x19 ("^y" "Em"))
+	 (#x1A ("^z" "Sub"))
+	 (#x1B ("Escape" "^[" "Altmode" "Esc" "Alt"))
+	 (#x1C ("^\\" "Fs"))
+	 (#x1D ("^]" "Gs"))
+	 (#x1E ("^^" "Rs"))
+	 (#x1F ("^_" "Us"))
+	 (#x20 ("Space" "Sp"))
+	 (#x7f ("Rubout" "Delete" "Del")))))
 
 
 ;;;; Accessor functions:

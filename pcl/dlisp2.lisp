@@ -66,55 +66,9 @@
 		      (emit-one-or-n-index-reader/writer-macro :writer nil nil)))))
    nil))
 
-(eval-when (compile load eval)
-(defparameter checking-or-caching-list
-  '()
-  #||
-  '((T NIL (CLASS) NIL)
-    (T NIL (CLASS CLASS) NIL)
-    (T NIL (CLASS CLASS CLASS) NIL)
-    (T NIL (CLASS CLASS T) NIL)
-    (T NIL (CLASS CLASS T T) NIL)
-    (T NIL (CLASS CLASS T T T) NIL)
-    (T NIL (CLASS T) NIL)
-    (T NIL (CLASS T T) NIL)
-    (T NIL (CLASS T T T) NIL)
-    (T NIL (CLASS T T T T) NIL)
-    (T NIL (CLASS T T T T T) NIL)
-    (T NIL (CLASS T T T T T T) NIL)
-    (T NIL (T CLASS) NIL)
-    (T NIL (T CLASS T) NIL)
-    (T NIL (T T CLASS) NIL)
-    (T NIL (CLASS) T)
-    (T NIL (CLASS CLASS) T)
-    (T NIL (CLASS T) T)
-    (T NIL (CLASS T T) T)
-    (T NIL (CLASS T T T) T)
-    (T NIL (T CLASS) T)
-    (T T (CLASS) NIL)
-    (T T (CLASS CLASS) NIL)
-    (T T (CLASS CLASS CLASS) NIL)
-    (NIL NIL (CLASS) NIL)
-    (NIL NIL (CLASS CLASS) NIL)
-    (NIL NIL (CLASS CLASS T) NIL)
-    (NIL NIL (CLASS CLASS T T) NIL)
-    (NIL NIL (CLASS T) NIL)
-    (NIL NIL (T CLASS T) NIL)
-    (NIL NIL (CLASS) T)
-    (NIL NIL (CLASS CLASS) T)) ||# ))
-
-(defmacro make-checking-or-caching-function-list ()
-  `(list ,@(mapcar #'(lambda (key)
-		       `(cons ',key (emit-checking-or-caching-macro ,@key)))
-		   checking-or-caching-list)))
-
-(defvar checking-or-caching-function-list)
-
-(defun initialize-checking-or-caching-function-list ()
-  (setq checking-or-caching-function-list
-	(make-checking-or-caching-function-list)))
-
-(initialize-checking-or-caching-function-list)
+;;; Note this list is setup in dlisp3.lisp when all the necessary
+;;; macros have been loaded.
+(defvar checking-or-caching-function-list nil)
 
 (defmacro emit-checking-or-caching-function-precompiled ()
   `(cdr (assoc (list cached-emf-p return-value-p metatypes applyp)

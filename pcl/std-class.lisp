@@ -324,7 +324,11 @@
 		    :definition-source `((defclass ,name)
 					 ,(load-truename))
 		    other)))
-    #+cmu17 (kernel:layout-class (class-wrapper res))
+    ;; Defclass of a class with a forward-referenced superclass does not
+    ;; have a wrapper. RES is the incomplete PCL class. The Lisp class
+    ;; does not yet exist. Maybe should return NIL in that case as RES
+    ;; is not useful to the user?
+    #+cmu17 (and (class-wrapper res)(kernel:layout-class (class-wrapper res)))
     #-cmu17 res))
 
 (setf (gdefinition 'load-defclass) #'real-load-defclass)
@@ -408,19 +412,23 @@
 		 (direct-default-initargs nil direct-default-initargs-p)
 	         (predicate-name nil predicate-name-p))
   (declare (ignore slot-names))
-  (if direct-superclasses-p
-      (progn
-        (setq direct-superclasses (or direct-superclasses
-                                      (list *the-class-standard-object*)))
-        (dolist (superclass direct-superclasses)
-	  (unless (validate-superclass class superclass)
-	    (error "The class ~S was specified as a~%super-class of the class ~S;~%~
-                    but the meta-classes ~S and~%~S are incompatible.~%
-                    Define a method for ~S to avoid this error."
-		   superclass class (class-of superclass) (class-of class)
-                   'validate-superclass)))
-        (setf (slot-value class 'direct-superclasses) direct-superclasses))
-      (setq direct-superclasses (slot-value class 'direct-superclasses)))
+  (cond (direct-superclasses-p
+	 (setq direct-superclasses
+	       (or direct-superclasses
+		   (list (if (funcallable-standard-class-p class)
+			     *the-class-funcallable-standard-object*
+			     *the-class-standard-object*))))
+	 (dolist (superclass direct-superclasses)
+	   (unless (validate-superclass class superclass)
+	     (error "The class ~S was specified as a~%
+		     super-class of the class ~S;~%~
+		     but the meta-classes ~S and~%~S are incompatible.~@
+		     Define a method for ~S to avoid this error."
+		     superclass class (class-of superclass) (class-of class)
+		     'validate-superclass)))
+	 (setf (slot-value class 'direct-superclasses) direct-superclasses))
+	(t
+	 (setq direct-superclasses (slot-value class 'direct-superclasses))))
   (setq direct-slots
 	(if direct-slots-p
 	    (setf (slot-value class 'direct-slots)
@@ -645,10 +653,13 @@
     (dolist (sub (class-direct-subclasses class)) (update-class sub nil))))
 
 (defun update-cpl (class cpl)
-  (when (class-finalized-p class)
-    (unless (equal (class-precedence-list class) cpl)
-      (force-cache-flushes class)))
-  (setf (slot-value class 'class-precedence-list) cpl)
+  (if (class-finalized-p class)
+      (unless (equal (class-precedence-list class) cpl)
+	;; Need to have the cpl setup before update-lisp-class-layout
+	;; is called on CMUCL.
+	(setf (slot-value class 'class-precedence-list) cpl)
+	(force-cache-flushes class))
+      (setf (slot-value class 'class-precedence-list) cpl))
   (update-class-can-precede-p cpl))
 
 (defun update-class-can-precede-p (cpl)
@@ -1010,6 +1021,10 @@
   (or (eq new-super *the-class-t*)
       (eq (class-of class) (class-of new-super))))
 
+(defmethod validate-superclass ((class standard-class) (new-super std-class))
+  (let ((new-super-meta-class (class-of new-super)))
+    (or (eq new-super-meta-class *the-class-std-class*)
+	(eq (class-of class) new-super-meta-class))))
 
 
 ;;;
@@ -1241,23 +1256,23 @@
 
 (defmethod change-class ((instance standard-object)
 			 (new-class standard-class))
-  (unless (std-instance-p instance)
-    (error "Can't change the class of ~S to ~S~@
-            because it isn't already an instance with metaclass~%~S."
-	   instance
-	   new-class
-	   'standard-class))
+  (change-class-internal instance new-class))
+
+(defmethod change-class ((instance funcallable-standard-object)
+			 (new-class funcallable-standard-class))
   (change-class-internal instance new-class))
 
 (defmethod change-class ((instance standard-object)
 			 (new-class funcallable-standard-class))
-  (unless (fsc-instance-p instance)
-    (error "Can't change the class of ~S to ~S~@
-            because it isn't already an instance with metaclass~%~S."
-	   instance
-	   new-class
-	   'funcallable-standard-class))
-  (change-class-internal instance new-class))
+  (error "Can't change the class of ~S to ~S~@
+          because it isn't already an instance with metaclass ~S."
+	 instance new-class 'standard-class))
+
+(defmethod change-class ((instance funcallable-standard-object)
+			 (new-class standard-class))
+  (error "Can't change the class of ~S to ~S~@
+          because it isn't already an instance with metaclass ~S."
+	 instance new-class 'funcallable-standard-class))
 
 (defmethod change-class ((instance t) (new-class-name symbol))
   (change-class instance (find-class new-class-name)))
@@ -1285,7 +1300,7 @@
 (defmethod class-default-initargs        ((class built-in-class)) ())
 
 (defmethod validate-superclass ((c class) (s built-in-class))
-  (eq s *the-class-t*))
+  (or (eq s *the-class-t*) #+cmu (eq s *the-class-stream*)))
 
 
 
@@ -1294,7 +1309,7 @@
 ;;;
 
 (defmethod validate-superclass ((c slot-class)
-						(f forward-referenced-class))
+				(f forward-referenced-class))
   't)
 
 

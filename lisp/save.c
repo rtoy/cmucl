@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.5 1997/01/21 00:28:13 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.5.2.1 1998/06/23 11:25:06 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -20,6 +20,10 @@
 #include "save.h"
 #include "lispregs.h"
 #include "validate.h"
+
+#ifdef GENCGC
+#include "gencgc.h"
+#endif
 
 extern int version;
 
@@ -131,6 +135,12 @@ boolean save(char *filename, lispobj init_function)
     output_space(file, DYNAMIC_SPACE_ID, current_dynamic_space,
 		 current_dynamic_space_free_pointer);
 #else
+#ifdef GENCGC
+    /* Flush the current_region updating the tables. */
+    gc_alloc_update_page_tables(0,&boxed_region);
+    gc_alloc_update_page_tables(1,&unboxed_region);
+    update_x86_dynamic_space_free_pointer();
+#endif
     output_space(file, DYNAMIC_SPACE_ID, current_dynamic_space,
 		 (lispobj *)SymbolValue(ALLOCATION_POINTER));
 #endif

@@ -5,11 +5,23 @@
 ;;;
 ;;; This file should be portable to any valid Common Lisp with CLX -- DEC 88.
 ;;;
+;;; CMUCL MP support by Douglas Crosher 1998.
+;;; Enhancements including the CLX menu, rewrite of the greynetic
+;;; demo, and other fixes by Fred Gilham 1998.
+;;;
+;;; To run first compile and load menu.lisp, then after compiling and
+;;; loading this file run (demos:demo) to create a menu of demos.
+;;;
 
-(in-package "DEMOS" :use '("LISP"))
+(eval-when (compile load eval)
+  (defpackage "DEMOS"
+      (:use "COMMON-LISP")
+    (:export "DO-ALL-DEMOS" "DEMO" "BOUNCING-BALL-DEMO" "BOUNCE-DEMO"
+	     "FAST-HANOI-DEMO" "GREYNETIC-DEMO" "PETAL-DEMO" "PLAID-DEMO"
+	     "QIX-DEMO" "RECURRENCE-DEMO" "SHOVE-BOUNCE-DEMO"
+	     "SLOW-HANOI-DEMO")))
 
-(export '(do-all-demos demo))
-
+(in-package "DEMOS")
 
 
 ;;;; Graphic demos wrapper macro.
@@ -29,50 +41,71 @@
 (defvar *white-pixel* nil)
 (defvar *window* nil)
 
+;;; Machine-dependent; should calibrate this on the fly.
+;;; Set it to zero to have the demos go too fast.
+(defvar *delay* .01)
+
+(defun wait-for-mapping (display win)
+  (xlib:display-finish-output display)
+  (multiple-value-bind (width height x y mapped) (full-window-state win)
+    (declare (ignore width height x y))
+    (if (eq mapped :viewable)
+	t
+	(wait-for-mapping display win))))
+
+(defun wait-for-unmapping (display win)
+  (xlib:display-finish-output display)
+  (multiple-value-bind (width height x y mapped) (full-window-state win)
+    (declare (ignore width height x y))
+    (if (eq mapped :unmapped)
+	t
+	(wait-for-unmapping display win))))
+
 (defmacro defdemo (fun-name demo-name args x y width height doc &rest forms)
   `(progn
      (defun ,fun-name ,args
        ,doc
-       (cond (*display*
-	      (xlib:with-state (*window*)
-		(setf (xlib:drawable-x *window*) ,x)
-		(setf (xlib:drawable-y *window*) ,y)
-		(setf (xlib:drawable-width *window*) ,width)
-		(setf (xlib:drawable-height *window*) ,height)))
-	     (t
-	      #+:cmu
-	      (multiple-value-setq (*display* *screen*) (ext:open-clx-display))
-	      #-:cmu
-	      (progn
-		;; Portable method
-		(setf *display* (xlib:open-display (machine-instance)))
-		(setf *screen* (xlib:display-default-screen *display*)))
-	      (setf *root* (xlib:screen-root *screen*))
-	      (setf *black-pixel* (xlib:screen-black-pixel *screen*))
-	      (setf *white-pixel* (xlib:screen-white-pixel *screen*))
-	      (setf *window* (xlib:create-window :parent *root*
-						 :x ,x :y ,y
-						 :event-mask nil
-						 :width ,width :height ,height
-						 :background *white-pixel*
-						 :border *black-pixel*
-						 :border-width 2
-						 :override-redirect :on))))
-       (xlib:map-window *window*)
-       ;; 
-       ;; I hate to do this since this is not something any normal
-       ;; program should do ...
-       (setf (xlib:window-priority *window*) :above)
-       (xlib:display-finish-output *display*)
-       (unwind-protect
-	   (progn ,@forms)
-	 (xlib:unmap-window *window*)
-	 (xlib:display-finish-output *display*)))
-     (setf (get ',fun-name 'demo-name) ',demo-name)
-     (setf (get ',fun-name 'demo-doc) ',doc)
-     (export ',fun-name)
-     (pushnew ',fun-name *demos*)
-     ',fun-name))
+       (unless *display*
+	 #+:cmu
+	 (multiple-value-setq (*display* *screen*) (ext:open-clx-display))
+	 #-:cmu
+	 (progn
+	   ;; Portable method
+	   (setf *display* (xlib:open-display (machine-instance)))
+	   (setf *screen* (xlib:display-default-screen *display*)))
+	 (setf *root* (xlib:screen-root *screen*))
+	 (setf *black-pixel* (xlib:screen-black-pixel *screen*))
+	 (setf *white-pixel* (xlib:screen-white-pixel *screen*)))
+       (let ((*window* (xlib:create-window :parent *root*
+					   :x ,x :y ,y
+					   :event-mask '(:visibility-change)
+					   :width ,width :height ,height
+					   :background *black-pixel*
+					   :border *white-pixel*
+					   :border-width 2
+					   ;:override-redirect :on
+					   )))
+	 (xlib:set-wm-properties *window*
+				 :name ,demo-name
+				 :icon-name ,demo-name
+				 :resource-name ,demo-name
+				 :x ,x :y ,y :width ,width :height ,height
+				 :user-specified-position-p t
+				 :user-specified-size-p t
+				 :min-width ,width :min-height ,height
+				 :width-inc nil :height-inc nil)
+	 (xlib:map-window *window*)
+	 ;; Wait until we get mapped before doing anything.
+	 (wait-for-mapping *display* *window*) 
+	 (unwind-protect
+	      (progn ,@forms)
+	   (xlib:unmap-window *window*)
+	   (wait-for-unmapping *display* *window*))))
+    (setf (get ',fun-name 'demo-name) ',demo-name)
+    (setf (get ',fun-name 'demo-doc) ',doc)
+    (export ',fun-name)
+    (pushnew ',fun-name *demos*)
+    ',fun-name))
 
 
 ;;;; Main entry points.
@@ -82,50 +115,78 @@
     (funcall demo)
     (sleep 3)))
 
-;;; DEMO is a hack to get by.  It should be based on creating a menu.  At
-;;; that time, *name-to-function* should be deleted, since this mapping will
-;;; be manifested in the menu slot name cross its action.  Also the
-;;; "Shove-bounce" demo should be renamed to "Shove bounce"; likewise for
-;;; "Fast-towers-of-Hanoi" and "Slow-towers-of-hanoi".
-;;;
+;;; DEMO
 
 (defvar *name-to-function* (make-hash-table :test #'eq))
 (defvar *keyword-package* (find-package "KEYWORD"))
+(defvar *demo-names* nil)
 
-(defun demo ()
-  (macrolet ((read-demo ()
-	       `(let ((*package* *keyword-package*))
-		  (read))))
+(defun demo-chooser ()
+  (let ((*demo-names* '("Quit")))
     (dolist (d *demos*)
       (setf (gethash (intern (string-upcase (get d 'demo-name))
 			     *keyword-package*)
 		     *name-to-function*)
-	    d))
-    (loop
-      (fresh-line)
-      (dolist (d *demos*)
-	(write-string "   ")
-	(write-line (get d 'demo-name)))
-      (write-string "   ")
-      (write-line "Help <demo name>")
-      (write-string "   ")
-      (write-line "Quit")
-      (write-string "Enter demo name: ")
-      (let ((demo (read-demo)))
-	(case demo
-	  (:help
-	   (let* ((demo (read-demo))
-		  (fun (gethash demo *name-to-function*)))
-	     (fresh-line)
-	     (if fun
-		 (format t "~&~%~A~&~%" (get fun 'demo-doc))
-		 (format t "Unknown demo name -- ~A." demo))))
-	  (:quit (return t))
-	  (t
-	   (let ((fun (gethash demo *name-to-function*)))
-	     (if fun
-		 (funcall fun)
-		 (format t "~&~%Unknown demo name -- ~A.~&~%" demo)))))))))
+	    d)
+      (push (get d 'demo-name) *demo-names*))
+  
+    (multiple-value-bind (display screen) (ext:open-clx-display)
+      (let* ((fg-color (xlib:screen-white-pixel screen))
+	     (bg-color (xlib:screen-black-pixel screen))
+	     (nice-font (xlib:open-font display "fixed")))
+	
+	(let ((a-menu (xlib::create-menu
+		       (xlib::screen-root screen) ;the menu's parent
+		       fg-color bg-color nice-font)))
+	  
+	  (setf (xlib::menu-title a-menu) "Please pick your favorite demo:")
+	  (xlib::menu-set-item-list a-menu *demo-names*)
+	  (unwind-protect
+	       (do (choice)
+		   ((and (setf choice (xlib::menu-choose a-menu 100 100))
+			 (string-equal "Quit" choice)))
+		 (let* ((demo-choice (intern (string-upcase choice)
+					     *keyword-package*))
+			(fun (gethash demo-choice *name-to-function*)))
+		   (setf choice nil)
+		   (when fun
+		     #-mp (funcall fun)
+		     #+mp (mp:make-process #'(lambda ()
+					       (funcall fun))
+					   :name (format nil "~S"
+							 demo-choice)))))
+	    (xlib::close-display display)))))))
+
+#-mp
+(defun demo ()
+  (demo-chooser))
+
+;;; Example of how the multi-process support can be setup for use
+;;; with CLX.
+#+mp
+(defun demo ()
+  ;; Set the event server timeout so that an interactive process
+  ;; can act as the idle loop.
+  (setf lisp::*max-event-to-sec* 0)
+  (setf lisp::*max-event-to-usec* 10000)
+  ;;
+  ;; Start a background SIGALRM driven process-yield. This is
+  ;; currently not safe in CMUCL but almost works.
+  ;(mp::start-sigalrm-yield 0 250000)
+  ;;
+  ;; Setup the initial process as the idle process.
+  (setf mp::*idle-process* mp::*initial-process*)
+  ;;
+  ;; Startup a process to run the menu.
+  (mp:make-process #'demo-chooser :name "Demos Menu")
+  ;; Can start multiple demo menus.
+  (mp:make-process #'demo-chooser :name "Demos Menu")
+  ;;
+  ;; Optionally start the idle-process-loop which will better time any
+  ;; process sleeping.
+  (setf mp::*idle-loop-timeout* 0.010d0)
+  (mp::idle-process-loop))
+
 
 
 ;;;; Shared demo utilities.
@@ -139,58 +200,125 @@
 
 ;;;; Greynetic.
 
-;;; GREYNETIC displays random sized and shaded boxes in a window.  This is
-;;; real slow.  It needs work.
-;;; 
-(defun greynetic (window duration)
-  (let* ((pixmap (xlib:create-pixmap :width 32 :height 32 :depth 1
-				     :drawable window))
-	 (gcontext (xlib:create-gcontext :drawable window
-					 :background *white-pixel*
-					 :foreground *black-pixel*
-					 :tile pixmap
-					 :fill-style :tiled)))
-    (multiple-value-bind (width height) (full-window-state window)
-      (dotimes (i duration)
-	(let* ((pixmap-data (greynetic-pixmapper))
-	       (image (xlib:create-image :width 32 :height 32
-					 :depth 1 :data pixmap-data)))
-	  (xlib:put-image pixmap gcontext image :x 0 :y 0 :width 32 :height 32)
-	  (xlib:draw-rectangle window gcontext
-			       (- (random width) 5)
-			       (- (random height) 5)
-			       (+ 4 (random (truncate width 3)))
-			       (+ 4 (random (truncate height 3)))
-			       t))
-	(xlib:display-force-output *display*)))
-    (xlib:free-gcontext gcontext)
-    (xlib:free-pixmap pixmap)))
-
-(defvar *greynetic-pixmap-array*
-  (make-array '(32 32) :initial-element 0 :element-type 'xlib:pixel))
-
-(defun greynetic-pixmapper ()
-  (let ((pixmap-data *greynetic-pixmap-array*))
+(defun make-random-bitmap ()
+  (let ((bitmap-data (make-array '(32 32) :initial-element 0
+				 :element-type 'xlib::bit)))
     (dotimes (i 4)
       (declare (fixnum i))
       (let ((nibble (random 16)))
-	(setf nibble (logior nibble (ash nibble 4))
-	      nibble (logior nibble (ash nibble 8))
-	      nibble (logior nibble (ash nibble 12))
-	      nibble (logior nibble (ash nibble 16)))
-	(dotimes (j 32)
-	  (let ((bit (if (logbitp j nibble) 1 0)))
-	    (setf (aref pixmap-data i j) bit
-		  (aref pixmap-data (+ 4 i) j) bit
-		  (aref pixmap-data (+ 8 i) j) bit
-		  (aref pixmap-data (+ 12 i) j) bit
-		  (aref pixmap-data (+ 16 i) j) bit
-		  (aref pixmap-data (+ 20 i) j) bit
-		  (aref pixmap-data (+ 24 i) j) bit
-		  (aref pixmap-data (+ 28 i) j) bit)))))
-    pixmap-data))
+        (setf nibble (logior nibble (ash nibble 4))
+              nibble (logior nibble (ash nibble 8))
+              nibble (logior nibble (ash nibble 12))
+              nibble (logior nibble (ash nibble 16)))
+        (dotimes (j 32)
+          (let ((bit (if (logbitp j nibble) 1 0)))
+            (setf (aref bitmap-data i j) bit
+                  (aref bitmap-data (+ 4 i) j) bit
+                  (aref bitmap-data (+ 8 i) j) bit
+                  (aref bitmap-data (+ 12 i) j) bit
+                  (aref bitmap-data (+ 16 i) j) bit
+                  (aref bitmap-data (+ 20 i) j) bit
+                  (aref bitmap-data (+ 24 i) j) bit
+                  (aref bitmap-data (+ 28 i) j) bit)))))
+    bitmap-data))
 
-(defdemo greynetic-demo "Greynetic" (&optional (duration 300))
+
+(defun make-random-pixmap ()
+  (let ((image (xlib:create-image :depth 1 :data (make-random-bitmap))))
+    (make-pixmap image 32 32)))
+
+(defvar *pixmaps* nil)
+
+(defun make-pixmap (image width height)
+  (let* ((pixmap (xlib:create-pixmap :width width :height height
+				     :depth 1 :drawable *root*))
+	 (gc (xlib:create-gcontext :drawable pixmap
+				   :background *black-pixel*
+				   :foreground *white-pixel*)))
+    (xlib:put-image pixmap gc image :x 0 :y 0 :width width :height height)
+    (xlib:free-gcontext gc)
+    pixmap))
+
+
+;;;
+;;; This function returns one of the pixmaps in the *pixmaps* array.
+(defun greynetic-pixmapper ()
+  (aref *pixmaps* (random (length *pixmaps*))))
+
+
+(defun greynetic (window duration)
+  (let* ((depth (xlib:drawable-depth window))
+	 (draw-gcontext (xlib:create-gcontext :drawable window
+					      :foreground *white-pixel*
+					      :background *black-pixel*))
+	 ;; Need a random state per process.
+	 (*random-state* (make-random-state t))
+	 (*pixmaps* (let ((pixmap-array (make-array 30)))
+		      (dotimes (i 30)
+			(setf (aref pixmap-array i) (make-random-pixmap)))
+		      pixmap-array)))
+
+    (unwind-protect
+	(multiple-value-bind (width height) (full-window-state window)
+	  (declare (fixnum width height))
+	  (let ((border-x (truncate width 20))
+		(border-y (truncate height 20)))
+	    (declare (fixnum border-x border-y))
+	    (dotimes (i duration)
+	      (let ((pixmap (greynetic-pixmapper)))
+		(xlib:with-gcontext (draw-gcontext
+				     :foreground (random (ash 1 depth))
+				     :background (random (ash 1 depth))
+				     :stipple pixmap
+				     :fill-style
+				     :opaque-stippled)
+		   (cond ((zerop (mod i 500))
+			  (xlib:clear-area window)
+			  (sleep .1))
+			 (t
+			  (sleep *delay*)))
+		   (if (< (random 3) 2)
+		       (let* ((w (+ border-x
+				    (truncate (* (random (- width
+							    (* 2 border-x)))
+						 (random width)) width)))
+			      (h (+ border-y
+				    (truncate (* (random (- height
+							    (* 2 border-y)))
+						 (random height)) height)))
+			      (x (random (- width w)))
+			      (y (random (- height h))))
+			 (declare (fixnum w h x y))
+			 (if (zerop (random 2))
+			     (xlib:draw-rectangle window draw-gcontext
+						  x y w h t)
+			     (xlib:draw-arc window draw-gcontext
+					    x y w h 0 6.4 t)))
+		       (let ((p1-x (+ border-x
+				      (random (- width (* 2 border-x)))))
+			     (p1-y (+ border-y
+				      (random (- height (* 2 border-y)))))
+			     (p2-x (+ border-x
+				      (random (- width (* 2 border-x)))))
+			     (p2-y (+ border-y
+				      (random (- height (* 2 border-y)))))
+			     (p3-x (+ border-x
+				      (random (- width (* 2 border-x)))))
+			     (p3-y (+ border-y
+				      (random (- height (* 2 border-y))))))
+			 (declare (fixnum p1-x p1-y p2-x p2-y p3-x p3-y))
+			 (xlib:draw-lines window draw-gcontext
+					  (list p1-x p1-y p2-x p2-y p3-x p3-y)
+					  :relative-p nil
+					  :fill-p t
+					  :shape :convex)))
+		   (xlib:display-force-output *display*))))))
+      (dotimes (i (length *pixmaps*))
+	(xlib:free-pixmap (aref *pixmaps* i)))
+      (xlib:free-gcontext draw-gcontext))))
+
+
+(defdemo greynetic-demo "Greynetic" (&optional (duration 3000))
   100 100 600 600
   "Displays random grey rectangles."
   (greynetic *window* duration))
@@ -219,7 +347,9 @@
   "Each length is the number of lines to put in a qix, and that many qix
   (of the correct size) are put up on the screen.  Lets the qix wander around
   the screen for Duration steps."
-  (let ((histories (mapcar #'construct-qix lengths)))
+  (let ((histories (mapcar #'construct-qix lengths))
+	(depth (xlib:drawable-depth window))
+	(*random-state* (make-random-state t)))
     (multiple-value-bind (width height) (full-window-state window)
       (declare (fixnum width height))
       (xlib:clear-area window)
@@ -230,20 +360,21 @@
 	(do ((x (qix-buffer (car h)) (cdr x))
 	     (i 0 (1+ i)))
 	    ((= i (car l)))
-	  (rplaca x (make-array 4))))
+	  (rplaca x (make-array 5))))
       ;; Start each qix at a random spot on the screen.
       (dolist (h histories)
 	(let ((x (random width))
 	      (y (random height)))
 	  (rplaca (qix-buffer h)
-		  (make-array 4 :initial-contents (list x y x y)))))
+		  (make-array 5 :initial-contents (list x y x y -1)))))
       (rplacd (last histories) histories)
-      (let (x1 y1 x2 y2 dx1 dy1 dx2 dy2 tem line next-line qix
-	       (gc (xlib:create-gcontext :drawable window
-					 :foreground *white-pixel*
-					 :background *black-pixel*
-					 :line-width 0 :line-style :solid
-					 :function boole-c2)))
+      (let* ((x1 0) (y1 0) (x2 0) (y2 0)
+	     (dx1 0) (dy1 0) (dx2 0) (dy2 0)
+	     tem line next-line qix
+	     (gc (xlib:create-gcontext :drawable window
+				       :background *black-pixel*
+				       :line-width 0 :line-style :solid
+				       :function boole-xor)))
 	(declare (fixnum x1 y1 x2 y2 dx1 dy1 dx2 dy2))
 	(dotimes (i duration)
 	  ;; Line is the next line in the next qix. Rotate this qix and
@@ -257,6 +388,8 @@
 	  (setf y1 (svref line 1))
 	  (setf x2 (svref line 2))
 	  (setf y2 (svref line 3))
+	  (setf (xlib:gcontext-foreground gc) (svref line 4))
+	  (setf (xlib:gcontext-function gc) boole-xor)
 	  (xlib:draw-line window gc x1 y1 x2 y2)
 	  (setq dx1 (- (+ (qix-dx1 qix) (random 3)) 1))
 	  (setq dy1 (- (+ (qix-dy1 qix) (random 3)) 1))
@@ -283,6 +416,7 @@
 	  (setf (qix-dy1 qix) dy1)
 	  (setf (qix-dx1 qix) dx1)
 	  (when (svref next-line 0)
+	    (setf (xlib:gcontext-foreground gc) (svref next-line 4))
 	    (xlib:draw-line window gc
 			    (svref next-line 0) (svref next-line 1)
 			    (svref next-line 2) (svref next-line 3)))
@@ -290,10 +424,12 @@
 	  (setf (svref next-line 1) (+ y1 dy1))
 	  (setf (svref next-line 2) (+ x2 dx2))
 	  (setf (svref next-line 3) (+ y2 dy2))
+	  (setf (svref next-line 4) (random (ash 1 depth)))
+	  (sleep *delay*)
 	  (xlib:display-force-output *display*))))))
 
 
-(defdemo qix-demo "Qix" (&optional (lengths '(30 30)) (duration 2000))
+(defdemo qix-demo "Qix" (&optional (lengths '(30 30 14 12 7)) (duration 2000))
   0 0 700 700
   "Hypnotic wandering lines."
   (qix *window* lengths duration))
@@ -387,13 +523,15 @@
 ;;;; Petal Parameters and Petal itself
 
 (defparameter continuous t)
-(defparameter styinc 2)
+(defparameter styinc 7)
 (defparameter petinc 1)
 (defparameter scalfac-fac 8192)
 
 (defun petal (petal-window &optional (how-many 10) (style 0) (petal 0))
-  (let ((width 512)
-	(height 512))
+  (let ((width 800)
+	(height 800)
+	(depth (xlib:drawable-depth petal-window))
+	(*random-state* (make-random-state t)))
     (xlib:clear-area petal-window)
     (xlib:display-force-output *display*)
     (let ((veccnt 0)
@@ -415,38 +553,40 @@
 	  (y2 0)
 	  (i 0)
 	  (gc (xlib:create-gcontext :drawable petal-window
-				    :foreground *black-pixel*
-				    :background *white-pixel*
+				    :foreground *white-pixel*
+				    :background *black-pixel*
 				    :line-width 0 :line-style :solid)))
       (loop
-	(when (zerop veccnt)
-	  (setq tt 0 s 0 lststyle style lstpetal petal petal nupetal
-		style nustyle petstyle (rem (* petal style) d360)
-		vectors (complete style petal))
-	  (when continuous
-	    (setq nupetal  (+ nupetal petinc)
-		  nustyle (+ nustyle styinc)))
-	  (when (or (/= lststyle style) (/= lstpetal petal))
-	    (xlib:clear-area petal-window)
-	    (xlib:display-force-output *display*)))
-	(when (or (/= lststyle style) (/= lstpetal petal))
-	  (setq veccnt (1+ veccnt) i veccnt x1 x2 y1 y2
-		tt (rem (+ tt style) d360)
-		s (rem (+ s petstyle) d360)
-		r (pcos s))
-	  (setq x2 (+ ctrx (floor (high-16bits-* (pcos tt) r) scalfac))
-		y2 (+ ctry (floor (high-16bits-* (psin tt) r) scalfac)))
-	  (when (/= i 1)
-	    (xlib:draw-line petal-window gc x1 y1 x2 y2)
-	    (xlib:display-force-output *display*)))
-	(when (> veccnt vectors)
-	  (setq veccnt 0)
-	  (setq how-many (1- how-many))
-	  (sleep 2)
-	  (when (zerop how-many) (return)))))))
+       (when (zerop veccnt)
+	 (setq tt 0 s 0 lststyle style lstpetal petal petal nupetal
+	       style nustyle petstyle (rem (* petal style) d360)
+	       vectors (complete style petal))
+	 (when continuous
+	   (setq nupetal (+ nupetal petinc)
+		 nustyle (+ nustyle styinc)))
+	 (when (or (/= lststyle style) (/= lstpetal petal))
+	   (setf (xlib:gcontext-foreground gc)
+		 (random (ash 1 depth)))
+	   (xlib:clear-area petal-window)
+	   (xlib:display-force-output *display*)))
+       (when (or (/= lststyle style) (/= lstpetal petal))
+	 (setq veccnt (1+ veccnt) i veccnt x1 x2 y1 y2
+	       tt (rem (+ tt style) d360)
+	       s (rem (+ s petstyle) d360)
+	       r (pcos s))
+	 (setq x2 (+ ctrx (floor (high-16bits-* (pcos tt) r) scalfac))
+	       y2 (+ ctry (floor (high-16bits-* (psin tt) r) scalfac)))
+	 (when (/= i 1)
+	   (xlib:draw-line petal-window gc x1 y1 x2 y2)
+	   (xlib:display-force-output *display*)))
+       (when (> veccnt vectors)
+	 (setq veccnt 0)
+	 (setq how-many (1- how-many))
+	 (sleep 2)
+	 (when (zerop how-many) (return)))))))
 
 (defdemo petal-demo "Petal" (&optional (how-many 10) (style 0) (petal 0))
-  100 100 512 512
+  100 100 800 800
   "Flower-like display."
   (petal *window* how-many style petal))
 
@@ -458,8 +598,8 @@
 (defparameter disk-thickness 15 "The thickness of a disk in pixels.")
 (defparameter disk-spacing (+ disk-thickness 3)
   "The amount of vertical space used by a disk on a needle.")
-(defvar *horizontal-velocity* 20 "The speed at which disks slide sideways.")
-(defvar *vertical-velocity* 12 "The speed at which disks move up and down.")
+(defvar *horizontal-velocity* 30 "The speed at which disks slide sideways.")
+(defvar *vertical-velocity* 24 "The speed at which disks move up and down.")
 
 ;;; These variables are bound by the main function.
 
@@ -501,8 +641,9 @@
   `(xlib:draw-rectangle *hanoi-window* *hanoi-gcontext*
 			,x ,y ,width ,height t))
 
-(defmacro update-screen ()
-  `(xlib:display-force-output *display*))
+(defun update-screen ()
+  (xlib:display-force-output *display*)
+  (sleep *delay*))
 
 
 ;;;; Moving disks up and down
@@ -698,18 +839,22 @@
 						   :foreground *white-pixel*
 						   :background *black-pixel*
 						   :fill-style :solid
-						   :function boole-c2)))
+						   :function boole-xor
+						   )))
       (xlib:clear-area *hanoi-window*)
       (xlib:display-force-output *display*)
-      (setf (needle-disk-stack needle-1) ())
-      (setf (needle-disk-stack needle-2) ())
-      (setf (needle-disk-stack needle-3) ())
-      (do ((n n (1- n))
-	   (available-disks available-disks (cdr available-disks)))
-	  ((zerop n))
-	(drop-initial-disk (car available-disks) needle-1))
-      (move-n-disks n needle-1 needle-3 needle-2)
-      t)))
+      (let ((needle-1 (make-needle :position 184))
+	    (needle-2 (make-needle :position 382))
+	    (needle-3 (make-needle :position 584)))
+	(setf (needle-disk-stack needle-1) ())
+	(setf (needle-disk-stack needle-2) ())
+	(setf (needle-disk-stack needle-3) ())
+	(do ((n n (1- n))
+	     (available-disks available-disks (cdr available-disks)))
+	    ((zerop n))
+	  (drop-initial-disk (car available-disks) needle-1))
+	(move-n-disks n needle-1 needle-3 needle-2)
+	t))))
 
 ;;; Change the names of these when the DEMO loop isn't so stupid.
 ;;; 
@@ -829,13 +974,13 @@
 
 (defun recurrence (display window &optional (point-count 10000))
   (let ((gc (xlib:create-gcontext :drawable window
-				  :background *white-pixel*
-				  :foreground *black-pixel*)))
+				  :background *black-pixel*
+				  :foreground *white-pixel*)))
     (multiple-value-bind (width height) (full-window-state window)
       (xlib:clear-area window)
       (draw-ppict window gc point-count 0.0 0.0 (* width 0.5) (* height 0.5))
       (xlib:display-force-output display)
-      (sleep 4))
+      (sleep *delay*))
     (xlib:free-gcontext gc)))
 
 ;;; Draw points.  X assumes points are in the range of width x height,
@@ -880,8 +1025,8 @@
 					:function boole-c2
 					:plane-mask (logxor *white-pixel*
 							    *black-pixel*)
-					:background *white-pixel*
-					:foreground *black-pixel*
+					:background *black-pixel*
+					:foreground *white-pixel*
 					:fill-style :solid))
 	(rectangles (make-array (* 4 num-rectangles)
 				:element-type 'number
@@ -908,6 +1053,7 @@
 	      (decf y-off (ash y-dir 1))
 	      (setf y-dir (- y-dir))))
 	  (xlib:draw-rectangles window gcontext rectangles t)
+	  (sleep *delay*)
 	  (xlib:display-force-output display))))
     (xlib:free-gcontext gcontext)))
 
@@ -923,12 +1069,16 @@
 ;;; Ported to CLX by Blaine Burks
 ;;; 
 
-(defvar *ball-size-x* 38)
+(defvar *ball-size-x* 36)
 (defvar *ball-size-y* 34)
 
-(defmacro xor-ball (pixmap window gcontext x y)
-  `(xlib:copy-area ,pixmap ,gcontext 0 0 *ball-size-x* *ball-size-y*
-		   ,window ,x ,y))
+
+(defun xor-ball (pixmap window gcontext x y)
+  (xlib:copy-plane pixmap gcontext 1
+		  0 0
+		  *ball-size-x* *ball-size-y*
+		  window
+		  x y))
 
 (defconstant bball-gravity 1)
 (defconstant maximum-x-drift 7)
@@ -1014,25 +1164,25 @@
 					   :background *black-pixel*
 					   :function boole-xor
 					   :exposures :off))
-	   (bounce-pixmap (xlib:create-pixmap :width 38 :height 34 :depth 1
+	   (bounce-pixmap (xlib:create-pixmap :width 36 :height 34 :depth 1
 					      :drawable window))
 	   (pixmap-gc (xlib:create-gcontext :drawable bounce-pixmap
 					    :foreground *white-pixel*
 					    :background *black-pixel*)))
       (xlib:put-image bounce-pixmap pixmap-gc (get-bounce-image)
-		      :x 0 :y 0 :width 38 :height 34)
+		      :x 0 :y 0 :width 36 :height 34)
       (xlib:free-gcontext pixmap-gc)
       (dolist (ball balls)
 	(xor-ball bounce-pixmap window gcontext (ball-x ball) (ball-y ball)))
-      (xlib:display-force-output display)
       (dotimes (i duration)
 	(dolist (ball balls)
-	  (bounce-1-ball bounce-pixmap window gcontext ball))
-	(xlib:display-force-output display))
+	  (bounce-1-ball bounce-pixmap window gcontext ball)
+	  (xlib:display-force-output display))
+	(sleep *delay*))
       (xlib:free-pixmap bounce-pixmap)
       (xlib:free-gcontext gcontext))))
 
 (defdemo bouncing-ball-demo "Bouncing-Ball" (&optional (how-many 5) (duration 500))
-  34 34 700 500
+  36 34 700 500
   "Bouncing balls in space."
   (bounce-balls *display*  *window* how-many duration))

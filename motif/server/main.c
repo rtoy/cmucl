@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.8 1997/01/18 14:31:42 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.8.2.1 1998/06/23 11:25:18 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -23,9 +23,13 @@
 
 #ifdef __linux__
 #include <asm/posix_types.h>
+#include <linux/posix_types.h>
+#include <linux/types.h>
+#if 0
 #define FD_ZERO __FD_ZERO
 #define FD_SET __FD_SET
 #define FD_ISSET __FD_ISSET
+#endif
 #endif
 
 #ifdef SVR4
@@ -34,7 +38,9 @@
 
 #define PORT 8000
 
+#ifndef __linux__
 #define MAX(x,y) ((x<y)?y:x)
+#endif
 
 /* Some things (ie. RT) don't define this in errno.h.  Go figure.  */
 #ifndef SVR4
@@ -153,6 +159,7 @@ void establish_client(int s)
     main_err("establish_client:  Unable to accept client connection.");
 
   printf("Accepted client on fd %d\n",socket);
+  fflush(stdout);
 
   if( will_fork )
     pid = fork();
@@ -245,6 +252,8 @@ main(int argc, char **argv)
   signal(SIGQUIT, server_shutdown);
 #if defined BSD
   signal(SIGCHLD, bury_zombie);
+#elif defined(hpux)
+  signal(SIGCHLD, SIG_IGN);
 #endif
 
   printf("Waiting for connection.\n");
@@ -258,7 +267,7 @@ main(int argc, char **argv)
     nfound = select(nfds, &rfds, NULL, NULL, 0);
     if( nfound < 0 && errno != EINTR )
       main_err("main:  Unable to select on sockets.");
-    else {
+    else if( nfound > 0 ){
       if( FD_ISSET(unix_socket, &rfds) ) {
 	printf("Accepting client on Unix socket.\n");
 	fflush(stdout);

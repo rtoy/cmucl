@@ -1,7 +1,5 @@
 ;;;-*- Mode: Lisp; Syntax: Common-lisp; Package: user -*- 
 
-(in-package :bench :use '(:lisp :pcl))
-
 ;;;Here are a few homebrew benchmarks for testing out Lisp performance.
 ;;; BENCH-THIS-LISP: benchmarks for common lisp.
 ;;; BENCH-THIS-CLOS: benchmarks for CLOS.
@@ -30,10 +28,16 @@
 (eval-when (compile load eval)
   (import '(clos-internals::allocate-instance)))
 
-(proclaim '(optimize (speed 3) (safety 1) (space 0) #+lucid (compilation-speed 0)))
+#+cmu
+(eval-when (compile load eval)
+  (import '(pcl:allocate-instance)))
+
+(declaim (optimize (speed 3) (safety 3 #+nil 1) (space 0)
+		   #+lucid (compilation-speed 0)))
 
 ;;;*********************************************************************
 
+(declaim (single-float *min-time*))
 (defvar *min-time* (/ 500 (float internal-time-units-per-second))
   "At least 2 orders of magnitude larger than our time resolution.")
 
@@ -42,8 +46,10 @@
   ;; Note that this function is completely portable.
   (let ((start-time (gensym)) (end-time (gensym)))
     `(let ((,start-time (get-internal-run-time)))
+	 (declare (type (unsigned-byte 31) ,start-time))
 	 (values ,form
 		 (let ((,end-time (get-internal-run-time)))
+		   (declare (type (unsigned-byte 31) ,end-time))
 		   (/ (abs (- ,end-time ,start-time))
 		      ,(float internal-time-units-per-second)))))))
 
@@ -59,8 +65,10 @@
   `(without-interruption
      (let ((results nil))
        (dotimes (ignore ,I)
+	 (declare (fixnum ignore))
 	 (multiple-value-bind (ignore time) (elapsed-time ,form)
-	   (declare (ignore ignore))
+	   (declare (ignore ignore)
+		    (single-float time))
 	   (if (< time *min-time*)
 	       (format t "~% Warning.  Evaluating ~S took only ~S seconds.~
                           ~% You should probably use more iterations." ',form time))
@@ -82,6 +90,7 @@
   ;; Minimal loop
   (let ((count (gensym)) (result (gensym)))
     `(let ((,count ,N) ,result)
+       (declare (fixnum ,count))
        (loop 
 	 ;; If you don't use the setq, the compiler may decide that since the
 	 ;; result is ignored, FORM can be "compiled out" of the loop.
@@ -89,6 +98,7 @@
 	 (if (zerop (decf ,count)) (return ,result))))))
 
 (defun nempty (N)
+  (declare (fixnum N))
   "The empty loop."
   (repeat nil N))
 
@@ -96,14 +106,17 @@
 
 (defun compute-empty-iterations (&optional (default 1000000))
   (format t "~%Computing speed of empty loop...")
-  (let ((time nil))
+  (let ((time 0.0))
+    (declare (single-float time))
     (loop
       (setq time (empty-speed default))
       (if (< time *min-time*) (setq default (* default 10)) (return)))
     (format t "done.")
     default))
 
+(declaim (fixnum *empty-iterations*))
 (defvar *empty-iterations*)
+(declaim (single-float *speed-of-empty-loop*))
 (defvar *speed-of-empty-loop*)
 
 (eval-when (load eval)
@@ -114,7 +127,9 @@
 (defmacro operations-per-second (form N &optional (I 5))
   "Return the number of times FORM can evaluate in one second."
   `(let ((time (median-time (repeat ,form ,N) ,I)))
-     (/ (float ,N) (- time (* *speed-of-empty-loop* N)))))
+     (declare (single-float time)
+	      (fixnum ,N))
+     (/ (float ,N) (- time (* *speed-of-empty-loop* ,N)))))
 
 (defmacro bench (pretty-name name N &optional (stream t))
   `(format ,stream "~%~A: ~30T~S" ,pretty-name (,name ,N)))
@@ -359,7 +374,7 @@
   (operations-per-second (class-of 5) n))
 
 (defun n-alloc (N)
-  (let ((c (find-class 'point)))
+  (let ((c (pcl:find-class 'point)))
     (operations-per-second (allocate-instance c) n)))
 
 (defun n-make (N)
@@ -396,7 +411,7 @@
 
 (defun bench-this-clos ()
   (let ((N (/ *empty-iterations* 10)))
-    (bench "1 default method" n-strange N)
+    (bench "1 default method" n-strange (* N 2))
     (bench "1 dispatch, 1 method" n-color N)
     (bench "1 dispatch, :around + primary" n-call-next-method N)
     (bench "1 dispatch, 3 methods, instance" n-area-1 N)
@@ -406,41 +421,41 @@
     (bench "with-slots (1 access)" n-off N)
     (bench "with-slots (1 modify)" n-setoff N)
     (bench "naked slot-value" n-slot-value N)
-    (bench "class-of instance" n-class-of-1 N)
-    (bench "class-of noninstance" n-class-of-2 N)
+    (bench "class-of instance" n-class-of-1 (* N 5))
+    (bench "class-of noninstance" n-class-of-2 (* N 5))
     (bench "allocate-instance (2 slots)" n-alloc
-	   #+pcl 5000
+	   #+pcl 1000000
 	   #+allegro 100000
 	   #+(and Genera (not pcl)) 100000
 	   #+(and Lucid (not pcl)) 10000)
     (bench "make-instance (2 slots)" n-make
-	   #+pcl 5000
+	   #+pcl 200000
 	   #+allegro 100000
 	   #+(and Genera (not pcl)) 100000
 	   #+(and Lucid (not pcl)) 10000)
     (bench "make-instance (2 constant initargs)" n-make-initargs
-	   #+pcl 1000
+	   #+pcl 100000
 	   #+allegro 100000
 	   #+(and Genera (not pcl)) 100000
 	   #+(and Lucid (not pcl)) 10000)
     (bench "make-instance (2 variable initargs)" n-make-variable-initargs
-	   #+pcl 1000
+	   #+pcl 100000
 	   #+allegro 100000
 	   #+(and Genera (not pcl)) 100000
 	   #+(and Lucid (not pcl)) 10000)
     
     (bench "make-instance (2 slots)" n-make1
-	   #+pcl 5000
+	   #+pcl 100000
 	   #+allegro 100000
 	   #+(and Genera (not pcl)) 100000
 	   #+(and Lucid (not pcl)) 10000)
     (bench "make-instance (2 constant initargs)" n-make-initargs1
-	   #+pcl 1000
+	   #+pcl 100000
 	   #+allegro 100000
 	   #+(and Genera (not pcl)) 100000
 	   #+(and Lucid (not pcl)) 10000)
     (bench "make-instance (2 variable initargs)" n-make-variable-initargs1
-	   #+pcl 1000
+	   #+pcl 100000
 	   #+allegro 100000
 	   #+(and Genera (not pcl)) 100000
 	   #+(and Lucid (not pcl)) 10000)) )

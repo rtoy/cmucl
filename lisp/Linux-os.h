@@ -1,4 +1,4 @@
-/*
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.3.2.1 1998/06/23 11:24:47 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -12,7 +12,7 @@
 #include <sys/signal.h>
 #include <asm/sigcontext.h>
 #include <string.h> 
-#include <dlfcn.h>
+ /* #include <dlfcn.h> */
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -21,8 +21,6 @@
 #include <errno.h>
 #include <linux/version.h>
 #define MAP_VARIABLE 0
-#define PRINTNOISE
-/* #define DEBUG_SCAVENGE_VERBOSE */
 
 #define linuxversion(a, b, c) (((a)<<16)+((b)<<8)+(c))
 
@@ -37,7 +35,7 @@ typedef int os_vm_prot_t;        /* like hpux */
      
 #define OS_VM_DEFAULT_PAGESIZE	4096 /* like hpux */ 
 
-#if LINUX_VERSION_CODE >= linuxversion(2,1,0)
+#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 int sc_reg(struct sigcontext *,int);
 #else
 int sc_reg(struct sigcontext_struct *,int);
@@ -46,7 +44,7 @@ void os_save_context(void);
 
 #define SAVE_CONTEXT os_save_context
 
-#if LINUX_VERSION_CODE >= linuxversion(2,1,0)
+#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 typedef struct sigcontext sigcontext;
 #else
 typedef struct sigcontext_struct sigcontext;
@@ -54,7 +52,7 @@ typedef struct sigcontext_struct sigcontext;
 
 #define POSIX_SIGS
 
-#if LINUX_VERSION_CODE >= linuxversion(2,1,0)
+#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define HANDLER_ARGS int signal, struct sigcontext contextstruct
 #define GET_CONTEXT int code=0; struct sigcontext *context=&contextstruct;
 #else
@@ -66,12 +64,14 @@ typedef struct sigcontext_struct sigcontext;
 #define sv_mask         sa_mask
 #define sv_flags        sa_flags
 #define sv_handler      sa_handler
+#if (__GNU_LIBRARY__ < 6)
 #define sv_onstack      sa_mask /* ouch, this one really hurts */
+#endif
 #define uc_sigmask 	oldmask
 #define sc_pc		eip
 #define sc_mask		oldmask 
 #define sc_sp		esp
-#if LINUX_VERSION_CODE >= linuxversion(2,1,0)
+#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define sigcontext	sigcontext 
 #else
 #define sigcontext	sigcontext_struct 
@@ -88,10 +88,3 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_ebp ebp
 #define sc_esi esi
 #define sc_edi edi
-
-/*
- * On second thought, a separate stack would probably
- * confuse the hell out of the Lisp debugger!
- */
-#undef  USE_SIG_STACK
-
