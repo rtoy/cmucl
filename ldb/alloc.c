@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.2 1990/03/28 22:48:37 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.3 1990/05/25 23:55:32 ch Exp $ */
 #include "lisp.h"
 #include "ldb.h"
 #include "alloc.h"
@@ -70,6 +70,8 @@ long n;
         ptr = (struct bignum *)alloc_unboxed(type_Bignum, 1);
 
         ptr->digits[0] = n;
+
+	return (lispobj) ptr | type_OtherPointer;
     }
 }
 
@@ -92,5 +94,7 @@ char *ptr;
     struct sap *sap = (struct sap *)alloc_unboxed(type_Sap, 2);
 
     sap->pointer = ptr;
+
+    return (lispobj) sap | type_OtherPointer;
 }
 
