@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.31.2.3 2000/07/06 06:59:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.31.2.4 2000/07/10 06:31:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -789,8 +789,10 @@ a host-structure or string."
 ;;; call the parser, then check if the host matches.
 ;;;
 (defun %parse-namestring (namestr host defaults start end junk-allowed)
-  (declare (type (or host null) host) (type string namestr)
-	   (type index start) (type (or index null) end))
+  (declare (type string namestr)
+	   (type (or host null) host)
+	   (type index start)
+	   (type (or index null) end))
   (if junk-allowed
       (handler-case
 	  (%parse-namestring namestr host defaults start end nil)
@@ -845,9 +847,7 @@ a host-structure or string."
 	   (type (or null host) host)
 	   (type pathname defaults)
 	   (type index start)
-	   (type (or index null) end)
-	   (type (or t null) junk-allowed)
-	   (values (or null pathname) (or null index)))
+	   (type (or index null) end))
     (etypecase thing
       (simple-string
        (%parse-namestring thing host defaults start end junk-allowed))
