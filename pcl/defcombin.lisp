@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.15 2002/08/26 16:09:34 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.16 2002/09/09 16:48:45 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -139,7 +139,7 @@
 			(apply 
 			 (lambda (gf type options)
 			   (declare (ignore gf))
-			   (do-short-method-combination
+			   (make-short-method-combination
 			       type options operator ioa new-method doc))
 			 args))
 	    :definition-source `((define-method-combination ,type) ,truename)))
@@ -147,7 +147,7 @@
       (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)))
 
-(defun do-short-method-combination (type options operator ioa method doc)
+(defun make-short-method-combination (type options operator ioa method doc)
   (cond ((null options) (setq options '(:most-specific-first)))
 	((equal options '(:most-specific-first)))
 	((equal options '(:most-specific-last)))
