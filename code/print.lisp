@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.29 1991/12/05 05:12:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.30 1991/12/13 06:04:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,7 +30,7 @@
 (in-package "KERNEL")
 (export '(*current-level* *pretty-printer* output-object output-ugly-object
 	  check-for-circularity handle-circularity with-circularity-detection
-	  decend-into punt-if-too-long))
+	  descend-into punt-if-too-long))
 
 (in-package "LISP")
 
@@ -248,7 +248,8 @@
     (error "~S cannot be printed readably." object))
   (write-string "#<" stream)
   (when type
-    (write (type-of object) :stream stream :circle nil :level nil :length nil)
+    (write (type-of object) :stream stream :circle nil
+	   :level nil :length nil)
     (when (or body identity)
       (write-char #\space stream)))
   (when body
@@ -257,7 +258,8 @@
     (when body
       (write-char #\space stream))
     (write-char #\{ stream)
-    (write (get-lisp-obj-address object) :stream stream :radix nil :base 16)
+    (write (get-lisp-obj-address object) :stream stream
+	   :radix nil :base 16)
     (write-char #\} stream))
   (write-char #\> stream))
 
@@ -273,11 +275,43 @@
       (char= char #\return)
       (char= char #\linefeed)))
 
+
 
 ;;;; Circularity detection stuff.
 
+;;; *CURRENT-STRUCTURE* -- internal
+;;;
+;;; We have to bend over backwards in order to make sure depth abbrevs and
+;;; circularity detection work right despite the fact that the user supplied
+;;; print function may or may not do anything special.
+;;;
+;;; In order to correctly handle depth abbrevs, OUTPUT-STRUCTURE binds a
+;;; this to the structure being output.  If the descend-into stuff notices
+;;; that we are trying to descend into that structure, we don't bother
+;;; doing the depth check/inc because we know it's already been done.  But
+;;; if we try to descend into something else, then we know that the
+;;; structure printer is being stupid and didn't check the depth or for
+;;; circularities.
+;;;
+(defvar *current-structure* nil)
+
+;;; *CIRCULARITY-HASH-TABLE* -- internal.
+;;;
+;;; When *print-circle* is T, this gets bound to a hash table that (eventually)
+;;; ends up with entries for every object printed.  When we are initially
+;;; looking for circularities, we enter a T when we find an object for the
+;;; first time, and a 0 when we encounter an object a second time around.
+;;; When we are actually printing, the 0 entries get changed to the actual
+;;; marker value when they are first printed.
+;;; 
 (defvar *circularity-hash-table* nil)
 
+;;; *CIRCULARITY-COUNTER* -- internal.
+;;;
+;;; When NIL, we are just looking for circularities.  After we have found them
+;;; all, this gets bound to 0.  Then whenever we need a new marker, it is
+;;; incremented.
+;;;
 (defvar *circularity-counter* nil)
 
 ;;; CHECK-FOR-CIRCULARITY -- interface.
@@ -295,6 +329,9 @@
    info on how to do that."
   (cond ((null *print-circle*)
 	 ;; Don't bother, nobody cares.
+	 nil)
+	((eq object *current-structure*)
+	 ;; It's already been handled by output-structure.
 	 nil)
 	((null *circularity-hash-table*)
 	 :initiate)
@@ -376,7 +413,8 @@
 	(checker (gensym)))
     (once-only ((object object))
       `(labels ((,user-body (,stream)
-		  ,@body)
+		  (let ((*current-structure* nil))
+		    ,@body))
 		(,checker (,stream)
 		  (let ((marker (check-for-circularity ,object t)))
 		    (case marker
@@ -400,26 +438,38 @@
 ;;; 
 (defvar *current-level* 0
   "The current level we are printing at, to be compared against *PRINT-LEVEL*.
-   See the macro DECEND-INTO for a handy interface to depth abbreviation.")
+   See the macro DESCEND-INTO for a handy interface to depth abbreviation.")
 
-;;; DECEND-INTO -- interface.
+;;; DESCEND-INTO -- interface.
 ;;; 
-(defmacro decend-into ((object stream) &body body)
+(defmacro descend-into ((object stream) &body body)
   "Automatically handle *print-level* abbreviation and circularity detection.
    If we are too deep, then a # is printed to STREAM and BODY is ignored.
    If OBJECT isn't NIL, then it is checked to see if it is a circular
    reference (see WITH-CIRCULARITY-DETECTION), and handled accordingly.
    BODY should do it's output to STREAM (which might be rebound)."
-  (let ((guts `(let ((*current-level* (1+ *current-level*)))
-		 ,@body)))
-    `(if (and (null *print-readably*)
-	      *print-level*
-	      (>= *current-level* *print-level*))
-	 (write-char #\# ,stream)
-	 ,(if object
-	      `(with-circularity-detection (,object ,stream)
-		 ,guts)
-	      guts))))
+  (if object
+      (once-only ((object object))
+	`(if (and (null *print-readably*)
+		  *print-level*
+		  (>= *current-level* *print-level*)
+		  (or (null *current-structure*)
+		      (not (eq *current-structure* ,object))))
+	     (write-char #\# ,stream)
+	     (with-circularity-detection (,object ,stream)
+	       (let ((*current-level*
+		      (if (or (null *current-structure*)
+			      (not (eq *current-structure* ,object)))
+			  (1+ *current-level*)
+			  *current-level*)))
+		 ,@body))))
+      `(if (and (null *print-readably*)
+		*print-level*
+		(>= *current-level* *print-level*))
+	   (write-char #\# ,stream)
+	   (let ((*current-structure* nil)
+		 (*current-level* (1+ *current-level*)))
+	     ,@body))))
 
 ;;; PUNT-IF-TOO-LONG -- interface.
 ;;; 
@@ -872,7 +922,7 @@
 ;;;; Recursive objects.
 
 (defun output-list (list stream)
-  (decend-into (list stream)
+  (descend-into (list stream)
     (write-char #\( stream)
     (let ((length 0)
 	  (list list))
@@ -906,7 +956,7 @@
 	 (when (and *print-readably*
 		    (not (eq (array-element-type vector) 't)))
 	   (error "Cannot print ~S in a readable format." vector))
-	 (decend-into (vector stream)
+	 (descend-into (vector stream)
 	   (write-string "#(" stream)
 	   (dotimes (i (length vector))
 	     (unless (zerop i)
@@ -950,7 +1000,7 @@
 	     (not (eq (array-element-type array) t)))
     (error "Arrays of element-type ~S cannot be printed readably."
 	   (array-element-type array)))
-  (decend-into (array stream)
+  (descend-into (array stream)
     (write-char #\# stream)
     (let ((*print-base* 10))
       (output-integer (array-rank array) stream))
@@ -964,7 +1014,7 @@
   (cond ((null dimensions)
 	 (output-object (svref array index) stream))
 	(t
-	 (decend-into (nil stream)
+	 (descend-into (nil stream)
 	   (write-char #\( stream)
 	   (let* ((dimension (car dimensions))
 		  (dimensions (cdr dimensions))
@@ -989,10 +1039,12 @@
 ;;; Defstruct code.
 
 (defun output-structure (structure stream)
-  (decend-into (structure stream)
-    (funcall (or (info type printer (structure-ref structure 0))
-		 #'c::default-structure-print)
-	     structure stream *current-level*)))
+  (let ((*current-structure* nil))
+    (descend-into (stream structure)
+      (let ((*current-structure* structure))
+	(funcall (or (info type printer (structure-ref structure 0))
+		     #'c::default-structure-print)
+		 structure stream *current-level*)))))
 
 
 ;;;; Integer, ratio, and complex printing.  (i.e. everything but floats)
