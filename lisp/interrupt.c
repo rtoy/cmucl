@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.7 1997/02/05 18:01:15 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.8 1997/02/18 01:16:11 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -26,7 +26,6 @@
 #include "interr.h"
 
 boolean internal_errors_enabled = 0;
-boolean my_error_stuff_ok = 1;
 
 struct sigcontext *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
@@ -175,7 +174,7 @@ interrupt_internal_error(HANDLER_ARGS,
     sigsetmask(context->sc_mask);
 #endif
     fake_foreign_function_call(context);
-    if (internal_errors_enabled && my_error_stuff_ok)
+    if (internal_errors_enabled)
 	funcall2(SymbolFunction(INTERNAL_ERROR), alloc_sap(context),
 		 continuable ? T : NIL);
     else
