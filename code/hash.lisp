@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.34 2000/01/14 19:48:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.35 2000/01/15 15:10:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -962,14 +962,13 @@
 (defmacro array-equalp-hash (array depth)
   `(if (= ,depth sxhash-max-depth)
        0
-       (let ((hash 4))
+       (let* ((size (array-total-size ,array))
+	      (hash size)
+	      (,depth (+ ,depth 1)))
 	 (declare (type hash hash))
-	 (dotimes (index (min sxhash-max-len (array-rank ,array)))
-	   (sxmash hash (array-dimension ,array index)))
-	 (let ((,depth (+ ,depth 1)))
-	   (dotimes (index (min sxhash-max-len (array-total-size ,array)) hash)
-	     (sxmash hash (internal-equalp-hash
-			   (row-major-aref ,array index) ,depth)))))))
+	 (dotimes (index (min sxhash-max-len size) hash)
+	   (sxmash hash (internal-equalp-hash
+			 (row-major-aref ,array index) ,depth))))))
 
 ); eval-when (compile eval)
 
