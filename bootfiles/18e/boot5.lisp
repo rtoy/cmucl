@@ -4,7 +4,7 @@
 ;;; of EXT:&PARSE-BODY.
 ;;;
 
-(in-package :kernel)
+(in-package :lisp)
 
 (defun parse-defmacro-lambda-list
        (lambda-list arg-list-name name error-kind error-fun
