@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.7 1993/03/12 15:34:04 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.8 1993/08/04 15:54:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,83 +73,118 @@
       (incf sum (* (aref costs i) (aref counts i))))
     sum))
 
-;; 
-(defun get-stats (&optional (spaces '(:dynamic)) &key (clear nil))
+;;; FUNCTION-CYCLES -- External.
+;;;
+;;; When passed a function FUNCTION-CYCLES returns the number of cycles the
+;;; function has executed.  :clear t clears the costs.
+;;;
+(defun function-cycles (function &key (clear nil) (verbose nil))
+  (let ((info (find-info-for function)))
+    (when info
+      (when verbose
+	(let* ((object (di::compiled-debug-function-component
+			(di::function-debug-function function)))
+	       (map (di::get-debug-info-function-map
+		     (kernel:code-header-ref object 3)))
+	       (i 0))
+	  (map 'list
+	       #'(lambda (e)
+		   (when (compiled-debug-function-p e)
+		     (di:do-debug-function-blocks
+			 (ee (di::make-compiled-debug-function e object))
+		       (let ((cl (di::compiled-debug-block-code-locations ee)))
+			 (cond ((di:debug-block-elsewhere-p ee)
+				#+nil (format t "Elsewhere~&"))
+			       (t
+				(format t "Kind: ~S, Cost: ~S~&"
+					(compiled-debug-function-kind e)
+					(* (aref (dyncount-info-costs info) i)
+					   (aref (dyncount-info-counts info) i)))
+				(incf i)
+				(debug::print-code-location-source-form
+				 (svref cl 0) 0)
+				(format t "~&")))))))
+	       map)))
+      (format t "~S~&" (dyncount-total-cost info))
+      (when clear
+	(clear-dyncount-info info)))))
+
+;;; GET-SPACE-LIST -- Internal.
+;;;
+;;;
+(defun get-space-list (spaces clear)
   (locally
-      (declare (optimize (speed 3) (safety 0))
-	       (inline vm::map-allocated-objects))
-    (without-gcing
+   (declare (optimize (speed 3) (safety 0))
+	    (inline vm::map-allocated-objects))
+   (without-gcing
+    (let ((list nil))
       (dolist (space spaces)
 	(vm::map-allocated-objects
 	 #'(lambda (object type-code size)
 	     (declare (ignore type-code size))
 	     (when (kernel:code-component-p object)
-	       (let ((info (kernel:code-header-ref object 5)))
+	       (let ((info (kernel:code-header-ref object 5))
+		     (j 0)
+		     (sum 0)
+		     (alist))
+		 (declare (fixnum j))
 		 (when (dyncount-info-p info)
-		   (let ((debug-info (kernel:code-header-ref object 3)))
-		     (format t "Function: ~S  Cost: ~S~&XS"
-			     (compiled-debug-info-name debug-info)
-			     (dyncount-total-cost info)))
+		   (let* ((debug-info (kernel:code-header-ref object 3))
+			  (map (di::get-debug-info-function-map debug-info)))
+		     (declare (vector map))
+		     (dotimes (i (length map))
+		       (declare (fixnum i))
+		       (let ((e (svref map i)))
+			 (when (compiled-debug-function-p e)
+			   (let ((fn (di::make-compiled-debug-function
+				      e object)))
+			     (di:do-debug-function-blocks (blk fn)
+			       (unless (di:debug-block-elsewhere-p blk)
+				 (incf sum
+				       (* (aref (dyncount-info-costs info) j)
+					  (aref (dyncount-info-counts info) j)))
+				 (incf j)))
+			     (let ((a (find (di:debug-function-name fn)
+					    alist :key #'car)))
+			       (cond (a (incf (third a) sum))
+				     (t
+				      (push (list (di:debug-function-name fn)
+						  (compiled-debug-info-package
+						   debug-info)
+						   sum)
+					    alist)))
+			       (setf sum 0)))))))
 		   (when clear
-		     (clear-dyncount-info info))))))
-	 space))))
-  #+nil
-  (let ((counts (make-hash-table :test #'equal)))
-    (do-hash (k v (backend-template-names *backend*))
-      (declare (ignore v))
-      (let ((stats (get k 'vop-stats)))
-	(when stats
-	  (setf (gethash (symbol-name k) counts) stats)
-	  (when clear
-	    (remprop k 'vop-stats)))))
-    counts))
+		     (clear-dyncount-info info)))
+		 (dolist (e alist)
+		   (push e list)))))
+	 space))
+      list))))
 
-
-#|
-(defun setup-dynamic-count-info (component)
-  (let* ((info (ir2-component-dyncount-info (component-info component)))
-	 (vops (dyncount-info-vops info)))
-    (when (producing-fasl-file)
-      (fasl-validate-structure info *compile-object*))
-    (do-ir2-blocks (block component)
-      (let* ((start-vop (ir2-block-start-vop block))
-	     (1block (ir2-block-block block))
-	     (block-number (block-number 1block)))
-	(when (and start-vop block-number)
-	  (let* ((index (1- block-number))
-		 (counts (svref vops index))
-		 (length (length counts)))
-	    (do ((vop start-vop (vop-next vop)))
-		((null vop))
-	      (let ((vop-name (vop-info-name (vop-info vop))))
-		(do ((i 0 (+ i 4)))
-		    ((or (>= i length) (eq (svref counts i) vop-name))
-		     (when (>= i length)
-		       (incf length 4)
-		       (let ((new-counts
-			      (make-array length :initial-element 0)))
-			 (when counts
-			   (replace new-counts counts))
-			 (setf counts new-counts))
-		       (setf (svref counts i) vop-name))
-		     (incf (svref counts (1+ i)))))))
-	    (setf (svref vops index) counts)))))
-    #+nil
-    (assem:count-instructions
-     #'(lambda (vop bytes elsewherep)
-	 (let ((block-number (block-number (ir2-block-block (vop-block vop)))))
-	   (when block-number
-	     (let* ((name (vop-info-name (vop-info vop)))
-		    (counts (svref vops (1- block-number)))
-		    (length (length counts)))
-	       (do ((i 0 (+ i 4)))
-		   ((>= i length)
-		    (error "VOP ~S didn't exist earlier!~%  counts=~S"
-			   name counts))
-		 (when (eq (svref counts i) name)
-		   (incf (svref counts (+ i (if elsewherep 3 2))) bytes)
-		   (return)))))))
-     *code-segment*
-     *elsewhere*))
-  (undefined-value))
-|#
+;;; GET-STATS -- External.
+;;;
+;;; Returns the cycles of all the functions in the spaces.
+;;;
+(defun get-stats (&key (spaces '(:dynamic)) (clear nil) (top-n 10) (cost 0))
+  (let ((list (stable-sort (sort (get-space-list spaces clear)
+				 #'> :key #'third) #'string< :key #'second))
+	(package-name "")
+	(i 0)
+	(other 0))
+    (dolist (e list)
+      (unless (string= package-name (second e))
+	(setf package-name (second e))
+	(when (> other cost)
+	  (format t " ~10:D: Other~&" other))
+	(setf i 0)
+	(setf other 0)
+	(when (> (third e) cost)
+	  (format t "Package: ~A~&" package-name)))
+      (cond ((< i top-n)
+	     (when (> (third e) cost)
+	       (format t " ~10:D: ~S~&" (third e) (first e))))
+	    (t
+	     (incf other (third e))))
+      (incf i))
+    (when (> other cost)
+      (format t " ~10:D: Other~&" other))))
