@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.7 1992/02/19 01:50:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.8 1992/02/24 00:52:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -916,7 +916,7 @@
       (cond ((search-list-p search-list)
 	     search-list)
 	    (flame-if-none
-	     (error "~S doesn't start with a search-list."))
+	     (error "~S doesn't start with a search-list." pathname))
 	    (t
 	     nil)))))
 
