@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.3 1991/04/23 17:00:56 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.4 1991/05/04 03:37:56 wlott Exp $
 ;;;
 ;;; This file contains the VM definition of various primitive memory access
 ;;; VOPs for the IBM RT.
@@ -181,6 +181,8 @@
       (load-type type function vm:function-pointer-type)
       (inst c type vm:closure-header-type)
       (inst bc :eq closure)
+      (inst c type funcallable-instance-header-type)
+      (inst bc :eq closure)
       (inst c type vm:function-header-type)
       (inst bcx :eq normal-fn)
       (inst a temp function
@@ -289,6 +291,9 @@
   (:variant vm:closure-info-offset vm:function-pointer-type)
   (:translate %closure-index-ref))
 
+(define-vop (set-funcallable-instance-info word-index-set)
+  (:variant funcallable-instance-info-offset function-pointer-type)
+  (:translate %set-funcallable-instance-info))
 
 
 ;;;; Structure hackery:
