@@ -39,8 +39,8 @@ directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
 The latest SunOS Sparc release is:
-    25-sep-1991-sun4c_41.tar.Z
-This tar file is 12 megabytes, and the resulting tree is 27 megabytes.
+    15a-sun4c_41.tar.Z
+This tar file is 10 megabytes, and the resulting tree is 23 megabytes.
 
 Major release announcements will be made to comp.lang.lisp until there is
 enough volume to warrant a comp.lang.lisp.cmu.
@@ -52,8 +52,8 @@ The SunOS support was written by Miles Bader and Ted Dunning.
 SPARC Notes:
 
 We have not done any SPARC-specific tuning yet.  Performance will improve from
-10-30% when we add instruction scheduling and register windows.  At least 24meg
-of memory is strongly recommended, though 16meg may be usable.
+10-30% when we add instruction scheduling and register windows.  At least 16
+meg of memory is recommended, and more is better.
 
 Site initialization:
 
