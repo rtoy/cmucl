@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.23 1991/03/04 16:52:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.24 1991/06/06 16:36:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -347,7 +347,7 @@
       (cerror
        "Recklessly proceed with wanton disregard for Lisp and limb."
        "Structure ~S is being incompatibly redefined.  If proceeded, you must~@
-       recompile all uses this structure's accessors.~:[~;~@
+       recompile all uses of this structure's accessors.~:[~;~@
        ~S is included by these structures:~
        ~%  ~S~@
        You must also recompile these DEFSTRUCTs and all the uses of their ~
