@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.3 1992/01/16 19:08:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.4 1992/02/12 01:45:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,11 +56,11 @@
   (declare (ignore ignore))
   (let ((*backquote-count* (1+ *backquote-count*)))
     (multiple-value-bind (flag thing)
-			 (backquotify (read stream t nil t))
+			 (backquotify stream (read stream t nil t))
       (if (eq flag *bq-at-flag*)
-	  (error ",@ after backquote in ~S" thing))
+	  (%reader-error stream ",@ after backquote in ~S" thing))
       (if (eq flag *bq-dot-flag*)
-	  (error ",. after backquote in ~S" thing))
+	  (%reader-error stream ",. after backquote in ~S" thing))
       (values (backquotify-1 flag thing) 'list))))
 
 (defun comma-macro (stream ignore)
@@ -68,7 +68,7 @@
   (unless (> *backquote-count* 0)
     (when *read-suppress*
       (return-from comma-macro nil))
-    (error "Comma not inside a backquote."))
+    (%reader-error stream "Comma not inside a backquote."))
   (let ((c (read-char stream))
 	(*backquote-count* (1- *backquote-count*)))
     (values
@@ -81,7 +81,7 @@
      'list)))
 
 ;;; This does the expansion from table 2.
-(defun backquotify (code)
+(defun backquotify (stream code)
   (cond ((atom code)
 	 (cond ((null code) (values nil nil))
 	       ((or (numberp code)
@@ -95,15 +95,15 @@
 	((eq (car code) *bq-comma-flag*)
 	 (comma (cdr code)))
 	((eq (car code) *bq-vector-flag*)
-	 (multiple-value-bind (dflag d) (backquotify (cdr code))
+	 (multiple-value-bind (dflag d) (backquotify stream (cdr code))
 	   (values 'vector (backquotify-1 dflag d))))
-	(t (multiple-value-bind (aflag a) (backquotify (car code))
-	     (multiple-value-bind (dflag d) (backquotify (cdr code))
+	(t (multiple-value-bind (aflag a) (backquotify stream (car code))
+	     (multiple-value-bind (dflag d) (backquotify stream (cdr code))
 	       (if (eq dflag *bq-at-flag*)
 		   ;; get the errors later.
-		   (error ",@ after dot in ~S" code))
+		   (%reader-error stream ",@ after dot in ~S" code))
 	       (if (eq dflag *bq-dot-flag*)
-		   (error ",. after dot in ~S" code))
+		   (%reader-error stream ",. after dot in ~S" code))
 	       (cond
 		((eq aflag *bq-at-flag*)
 		 (if (null dflag)
