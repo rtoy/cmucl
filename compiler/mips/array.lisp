@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.23 1990/08/02 03:42:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.24 1990/08/15 02:54:35 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -45,8 +45,8 @@
 
 (defknown lisp::%array-dimension (t fixnum) fixnum
   (flushable))
-(defknown ((setf lisp::%array-dimension))
-	  (t fixnum fixnum) fixnum ())
+(defknown lisp::%set-array-dimension (t fixnum fixnum) fixnum
+  ())
 
 (define-vop (%array-dimension word-index-ref)
   (:translate lisp::%array-dimension)
@@ -54,7 +54,7 @@
   (:variant vm:array-dimensions-offset vm:other-pointer-type))
 
 (define-vop (%set-array-dimension word-index-set)
-  (:translate (setf lisp::%array-dimension))
+  (:translate lisp::%set-array-dimension)
   (:policy :fast-safe)
   (:variant vm:array-dimensions-offset vm:other-pointer-type))
 
