@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-glue.lisp,v 1.4 1997/01/18 14:31:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-glue.lisp,v 1.5 1998/01/07 12:18:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,16 +29,22 @@
     (let ((reply (dispatch-server-reply fd)))
       (when reply (return reply)))))
 
+;;; From Timothy Miller, Jan-98 -- 
+;;; wait-for-server-reply is only ever called (currently) when waiting for a
+;;;:confirm reply, and is currently the only place that cares about the return
+;;;value from this function. Hence, we make the return value for everything else
+;;;nil to avoid mysterious timing problems with actions or whatever getting
+;;;called while lisp is trying to execute requests.
 
 (defun dispatch-server-reply (fd)
   (let* ((reply (receive-message fd))
 	 (kind (svref reply-table (xti::message-get-dblword reply))))
     (case kind
       ((:confirm :values) reply)
-      (:callback (handle-callback reply))
-      (:protocol (handle-protocol reply))
-      (:action   (handle-action reply))
-      (:event    (handle-event reply))
+      (:callback (handle-callback reply) nil)
+      (:protocol (handle-protocol reply) nil)
+      (:action   (handle-action reply)   nil)
+      (:event    (handle-event reply)    nil)
       (:error
        (let ((errmsg (toolkit-read-value reply)))
 	 (destroy-message reply)
