@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.28 1990/11/21 16:22:37 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.29 1990/11/24 09:03:15 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -18,7 +18,7 @@
 (import '(lisp::%raw-bits lisp::simple-array-p))
 
 (in-package "KERNEL")
-(export '(%funcallable-instance-info-set funcallable-instance-p))
+(export '(%set-funcallable-instance-info funcallable-instance-p))
 
 (in-package "C")
 
