@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.9 1990/02/23 20:24:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.10 1990/02/24 17:03:52 ch Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -429,7 +429,7 @@
     ((integer #x1FFF #x3FFE)
      (sc-number-or-lose 'unsigned-immediate))
     (symbol
-     (if (member value vm:initial-symbols)
+     (if (vm:static-symbol-p value)
 	 (sc-number-or-lose 'random-immediate)
 	 nil))
     (fixnum
