@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.63 1992/05/25 21:37:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.64 1992/06/12 04:38:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -685,7 +685,8 @@
 (defun ignore-error-form (stream pos)
   (declare (type stream stream) (type unsigned-byte pos))
   (file-position stream pos)
-  (handler-case (let ((*read-suppress* t))
+  (handler-case (let ((*read-suppress* t)
+		      (*features* (backend-features *target-backend*)))
 		  (read stream))
     (error (condition)
       (declare (ignore condition))
@@ -725,7 +726,8 @@
 ;;; then attempt to recover if possible, returing a proxy error form.
 ;;;
 (defun careful-read (stream eof pos)
-  (handler-case (read stream nil eof)
+  (handler-case (let ((*features* (backend-features *target-backend*)))
+		  (read stream nil eof))
     (error (condition)
       (let ((new-pos (file-position stream)))
 	(cond ((= new-pos (file-length stream))
@@ -1399,10 +1401,7 @@
 	   (*last-message-count* 0)
 	   (*info-environment*
 	    (or (backend-info-environment *backend*)
-		*info-environment*))
-	   (*features*
-	    (or (backend-features *backend*)
-		*features*)))
+		*info-environment*)))
       (with-compilation-unit ()
 	(loop
 	  (multiple-value-bind (form tlf eof-p)
@@ -1715,9 +1714,6 @@
 	     (*info-environment*
 	      (or (backend-info-environment *backend*)
 		  *info-environment*))
-	     (*features*
-	      (or (backend-features *backend*)
-		  *features*))
 	     (start-errors *compiler-error-count*)
 	     (start-warnings *compiler-warning-count*)
 	     (start-notes *compiler-note-count*)
