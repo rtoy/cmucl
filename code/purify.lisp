@@ -207,7 +207,7 @@
 ;;;
 (defun mark-function (fun)
   (let ((len (%primitive header-length fun)))
-    (do ((i %function-constants-offset (1+ i)))
+    (do ((i %function-constants-constants-offset (1+ i)))
 	((= i len))
       (let ((el (%primitive header-ref fun i)))
 	(when (symbolp el)
