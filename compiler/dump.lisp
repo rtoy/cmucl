@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.46 1992/10/10 10:03:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.47 1993/01/13 18:09:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.46 1992/10/10 10:03:43 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -449,17 +447,27 @@
 	   (list trace-table) (type index code-length))
   (let* ((2comp (component-info component))
 	 (constants (ir2-component-constants 2comp))
-	 (num-consts (length constants))
+	 (gengc (backend-featurep :gengc))
+	 (header-length (length constants))
 	 (trace-table (pack-trace-table trace-table))
 	 (trace-table-length (length trace-table))
 	 (total-length (+ code-length (* trace-table-length 2))))
     (collect ((patches))
+      ;; Dump the debug info.
+      (when gengc
+	(let ((info (debug-info-for-component component))
+	      (*dump-only-valid-structures* nil))
+	  (dump-object info file)
+	  (let ((info-handle (dump-pop file)))
+	    (dump-push info-handle file)
+	    (push info-handle (fasl-file-debug-info file)))))
+
       ;; Dump the offset of the trace table.
       (dump-object code-length file)
 
       ;; Dump the constants, noting any :entries that have to be fixed up.
       (do ((i vm:code-constants-offset (1+ i)))
-	  ((>= i num-consts))
+	  ((>= i header-length))
 	(let ((entry (aref constants i)))
 	  (etypecase entry
 	    (constant
@@ -484,14 +492,20 @@
 	     (dump-fop 'lisp::fop-misc-trap file)))))
 
       ;; Dump the debug info.
-      (let ((info (debug-info-for-component component))
-	    (*dump-only-valid-structures* nil))
-	(dump-object info file)
-	(let ((info-handle (dump-pop file)))
-	  (dump-push info-handle file)
-	  (push info-handle (fasl-file-debug-info file))))
+      (unless gengc
+	(let ((info (debug-info-for-component component))
+	      (*dump-only-valid-structures* nil))
+	  (dump-object info file)
+	  (let ((info-handle (dump-pop file)))
+	    (dump-push info-handle file)
+	    (push info-handle (fasl-file-debug-info file)))))
 
-      (let ((num-consts (- num-consts vm:code-trace-table-offset-slot)))
+      (let ((num-consts (if gengc
+			    (- header-length vm:code-debug-info-slot)
+			    (- header-length vm:code-trace-table-offset-slot)))
+	    (total-length (if gengc
+			      (ceiling total-length 4)
+			      total-length)))
 	(cond ((and (< num-consts #x100) (< total-length #x10000))
 	       (dump-fop 'lisp::fop-small-code file)
 	       (dump-byte num-consts file)
@@ -515,7 +529,10 @@
 
 (defun dump-assembler-routines (code-segment length fixups routines file)
   (dump-fop 'lisp::fop-assembler-code file)
-  (dump-unsigned-32 length file)
+  (dump-unsigned-32 (if (backend-featurep :gengc)
+			(ceiling length 4)
+			length)
+		    file)
   (flush-fasl-file-buffer file)
   (let ((stream (fasl-file-stream file)))
     (new-assem:segment-map-output
