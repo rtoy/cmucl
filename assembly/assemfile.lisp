@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.18 1990/10/20 01:36:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.19 1990/10/23 02:22:30 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -123,10 +123,9 @@
 			 :offset ,(reg-spec-offset reg))))
 		  regs))
 	   ,@insts
-	   (inst addu lip-tn lra-tn (- vm:word-bytes vm:other-pointer-type))
 	   (inst j lip-tn)
 	   (inst nop)))
-       (format t "~S assembled~%" ',name))))
+       (format *error-output* "~S assembled~%" ',name))))
 
 (defun arg-or-res-spec (reg)
   `(,(reg-spec-name reg)
@@ -140,10 +139,7 @@
   (let* ((args (remove :arg vars :key #'reg-spec-kind :test-not #'eq))
 	 (temps (remove :temp vars :key #'reg-spec-kind :test-not #'eq))
 	 (results (remove :res vars :key #'reg-spec-kind :test-not #'eq))
-	 (return-pc-label (make-symbol "RETURN-PC-LABEL"))
-	 (return-pc (make-symbol "RETURN-PC"))
-	 (lip (make-symbol "LIP"))
-	 (ndescr (make-symbol "NDESCR")))
+	 (lip (make-symbol "LIP")))
     `(define-vop ,(if (atom name) (list name) name)
        (:args ,@(mapcar #'arg-or-res-spec args))
        ,@(let ((index -1))
@@ -164,12 +160,6 @@
        (:temporary (:scs (interior-reg) :type interior
 			 :from (:eval 0) :to (:eval 1))
 		   ,lip)
-       (:temporary (:sc any-reg :offset lra-offset
-			:from (:eval 0) :to (:eval 1))
-		   ,return-pc)
-       (:temporary (:scs (non-descriptor-reg) :type random
-			 :from (:eval 0) :to (:eval 1))
-		   ,ndescr)
        ,@(let ((index -1))
 	   (mapcar #'(lambda (res)
 		       `(:temporary (:sc ,(reg-spec-sc res)
@@ -183,21 +173,17 @@
        (:ignore ,lip ,@(mapcar #'reg-spec-name temps))
        ,@options
        (:generator 247
-	 (let ((,return-pc-label (gen-label)))
-	   ,@(mapcar #'(lambda (arg)
-			 `(move ,(reg-spec-temp arg)
-				,(reg-spec-name arg)))
-		     args)
-	   (inst compute-lra-from-code
-		 ,return-pc code-tn ,return-pc-label ,ndescr)
-	   (inst j (make-fixup ',name :assembly-routine))
-	   (inst nop)
-	   (emit-return-pc ,return-pc-label)
-	   
-	   ,@(mapcar #'(lambda (res)
-			 `(move ,(reg-spec-name res)
-				,(reg-spec-temp res)))
-		     results))))))
+	 ,@(mapcar #'(lambda (arg)
+		       `(move ,(reg-spec-temp arg)
+			      ,(reg-spec-name arg)))
+		   args)
+	 (inst jal (make-fixup ',name :assembly-routine))
+	 (inst nop)
+	 
+	 ,@(mapcar #'(lambda (res)
+		       `(move ,(reg-spec-name res)
+			      ,(reg-spec-temp res)))
+		   results)))))
 
 (defmacro define-assembly-routine ((name options &rest vars) &rest code)
   (let* ((regs (mapcar #'(lambda (var) (apply #'parse-reg-spec var)) vars)))
