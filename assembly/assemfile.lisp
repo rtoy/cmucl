@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.31 1992/06/12 03:55:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.32 1992/06/22 13:59:07 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -236,13 +236,19 @@
 		      :key #'car)
 	 (:generator ,cost
 	   ,@(mapcar #'(lambda (arg)
-			 `(move ,(reg-spec-temp arg)
-				,(reg-spec-name arg)))
+			 (if (target-featurep :hppa)
+			     `(move ,(reg-spec-name arg)
+				    ,(reg-spec-temp arg))
+			     `(move ,(reg-spec-temp arg)
+				    ,(reg-spec-name arg))))
 		     args)
 	   ,@call-sequence
 	   ,@(mapcar #'(lambda (res)
-			 `(move ,(reg-spec-name res)
-				,(reg-spec-temp res)))
+			 (if (target-featurep :hppa)
+			     `(move ,(reg-spec-temp res)
+				    ,(reg-spec-name res))
+			     `(move ,(reg-spec-name res)
+				    ,(reg-spec-temp res))))
 		     results))))))
 
 (defmacro define-assembly-routine (name&options vars &rest code)
