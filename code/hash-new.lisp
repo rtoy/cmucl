@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.27 2003/09/25 02:40:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.28 2003/12/01 22:08:11 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,7 +184,7 @@
 ;;; MAKE-HASH-TABLE -- public.
 ;;; 
 (defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 1.5)
-			     (rehash-threshold 1) (weak-p nil))
+			     (rehash-threshold 1.0) (weak-p nil))
   "Creates and returns a new hash table.  The keywords are as follows:
      :TEST -- Indicates what kind of test to use.  Only EQ, EQL, EQUAL,
        and EQUALP are currently supported.
@@ -229,6 +229,10 @@
 		    (return (values test-name test-fun hash-fun)))))))
       (let* ((size (max 36 size)) ; Needs to be at least 1, say 36.
 	     (size+1 (1+ size))   ; The first element is not usable.
+	     ;; Don't let rehash-threshold get too small to cause
+	     ;; overflows or division by zero.  It's a hint, not a
+	     ;; requirement, anyway.
+	     (rehash-threshold (max 0.1 (float rehash-threshold 1.0)))
 	     (scaled-size (round (/ (float size+1) rehash-threshold)))
 	     (length (if (<= scaled-size 37) 37 (almost-primify scaled-size))))
 	(declare (type index size+1 scaled-size length))
