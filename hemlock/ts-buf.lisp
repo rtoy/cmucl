@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-buf.lisp,v 1.4 1991/02/08 16:38:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-buf.lisp,v 1.5 1991/02/20 02:31:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,7 +166,7 @@
 		ts)))
     (setf (ts-data-stream ts) stream)
     (wire:remote (ts-data-wire ts)
-      (ts-stream-set-line-length (ts-buffer-line-length ts))))
+      (ts-stream-set-line-length stream (ts-buffer-line-length ts))))
   nil)
 
 
