@@ -396,7 +396,8 @@
   ;;
   ;; The first messed-up continuation.  This is Use'd by the node that is the
   ;; mess-up.  Null only temporarily.  This could be deleted if the mess-up was
-  ;; deleted.
+  ;; deleted.  Note that the cleanup "belongs" to the block holding the
+  ;; mess-up, rather than the start continuation's block.
   (start nil :type (or continuation null))
   ;;
   ;; The syntactically enclosing cleanup.  If there is no enclosing cleanup in
