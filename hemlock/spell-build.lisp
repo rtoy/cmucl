@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-build.lisp,v 1.1.1.6 1991/11/09 03:05:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-build.lisp,v 1.1.1.7 1993/08/25 02:41:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,7 @@
 ;;; spell-aug.lisp).
 
 
-(in-package "SPELL" :use '("LISP" "EXTENSIONS" "SYSTEM"))
+(in-package "SPELL")
 
 
 
