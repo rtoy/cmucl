@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.47 1993/05/18 23:36:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.48 1993/05/21 21:31:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -632,7 +632,7 @@
   (:attributes branch)
   (:delay 1)
   (:emitter
-   (emit-relative-branch segment bcond-op 0 #b01001 target)))
+   (emit-relative-branch segment bcond-op 0 #b10001 target)))
 
 
 (define-instruction beq (segment r1 r2-or-target &optional target)
@@ -719,7 +719,7 @@
   (:dependencies (reads reg) (writes :r31))
   (:delay 1)
   (:emitter
-   (emit-relative-branch segment bcond-op reg #b01000 target)))
+   (emit-relative-branch segment bcond-op reg #b10000 target)))
 
 (define-instruction bgezal (segment reg target)
   (:declare (type label target) (type tn reg))
@@ -730,7 +730,7 @@
   (:delay 1)
   (:dependencies (reads reg) (writes :r31))
   (:emitter
-   (emit-relative-branch segment bcond-op reg #b01001 target)))
+   (emit-relative-branch segment bcond-op reg #b10001 target)))
 
 (defconstant j-printer
   '(:name :tab (:choose rs target)))
