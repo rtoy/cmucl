@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.23 2003/08/28 14:14:57 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.24 2004/01/18 13:47:55 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1582,7 +1582,7 @@ collected result will be returned as the value of the LOOP."
 
 ;FOR variable keyword ..args..
 (defun loop-do-for ()
-  (let* ((var (loop-pop-source))
+  (let* ((var (or (loop-pop-source) (loop-gentemp 'loop-do-for-anon-)))
 	 (data-type (loop-optional-type var))
 	 (keyword (loop-pop-source))
 	 (first-arg nil)
