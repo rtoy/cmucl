@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.79 1990/11/03 03:20:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.80 1990/11/03 15:34:32 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -30,10 +30,6 @@
 
 
 ;;;; Compiler constants.
-
-;;; Maximum number of SCs allowed.
-;;;
-(defconstant sc-number-limit 32)
 
 (eval-when (compile eval load)
 
