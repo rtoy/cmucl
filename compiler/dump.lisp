@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.20 1990/10/23 02:38:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.21 1990/10/23 03:19:05 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -416,7 +416,10 @@
   (quick-dump-number length 4 file)
   (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment)))
     (dolist (routine routines)
-      (dump-object (car routine) file)
+      (dump-fop 'lisp::fop-normal-load file)
+      (let ((*cold-load-dump* t))
+	(dump-object (car routine) file))
+      (dump-fop 'lisp::fop-maybe-cold-load file)
       (dump-fop 'lisp::fop-assembler-routine file)
       (quick-dump-number (label-position (cdr routine)) 4 file))
     (let ((handle (dump-pop file)))
