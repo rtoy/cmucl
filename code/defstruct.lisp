@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.10 1993/02/16 20:51:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.11 1993/02/17 12:27:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -456,7 +456,10 @@
       (if #-ns-boot
 	  (and (structure-class-p existing)
 	       (not (eq (class-name existing) (dd-name defstruct)))
-	       (string= (dsd-%name (find aname (dd-slots existing)
+	       (string= (dsd-%name (find aname
+					 (dd-slots
+					  (layout-info
+					   (class-layout existing)))
 					 :key #'dsd-accessor))
 			name))
 	  #+ns-boot nil
