@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.9 1992/07/10 17:46:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.10 1992/12/08 20:10:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,7 +219,7 @@
   (let ((depth 0))
     (dolist (entry *traced-entries*)
       (when (cdr entry) (incf depth)))
-    (format t "~&~VT~D: "
+    (format t "~@V,0T~D: "
 	    (+ (mod (* depth 2) (- *max-trace-indentation* 2)) 2)
 	    depth)))
 
@@ -299,6 +299,7 @@
 	 (when conditionp
 	   (let ((*print-length* (or *debug-print-length* *print-length*))
 		 (*print-level* (or *debug-print-level* *print-level*))
+		 (kernel:*current-level* 0)
 		 (*standard-output* *trace-output*)
 		 (*in-trace* t))
 	     (fresh-line)
@@ -338,15 +339,20 @@
 			 (and cond (funcall (cdr cond) frame)))))
 	  (let ((*print-length* (or *debug-print-length* *print-length*))
 		(*print-level* (or *debug-print-level* *print-level*))
+		(kernel:*current-level* 0)
 		(*standard-output* *trace-output*)
 		(*in-trace* t))
-	    (print-trace-indentation)
-	    (format t "~S returned " (trace-info-what info))
-	    (dolist (v *trace-values*)
-	      (prin1 v)
-	      (write-char #\space))
-	    (trace-print frame (trace-info-print-after info))
-	    (terpri))
+	    (fresh-line)
+	    (pprint-logical-block (*standard-output* nil)
+	      (print-trace-indentation)
+	      (pprint-indent :current 2)
+	      (format t "~S returned" (trace-info-what info))
+	      (dolist (v *trace-values*)
+		(write-char #\space)
+		(pprint-newline :linear)
+		(prin1 v)))
+	    (terpri)
+	    (trace-print frame (trace-info-print-after info)))
 	  (trace-maybe-break info (trace-info-break-after info)
 			     "after" frame)))))
 
@@ -633,13 +639,15 @@
 	 (info (gethash fun *traced-functions*)))
     (cond
      ((not info) (warn "Function is not TRACE'd -- ~S." function-or-name))
-     ((trace-info-encapsulated info)
-      (ext:unencapsulate (trace-info-what info) 'trace))
      (t
-      (di:delete-breakpoint (trace-info-start-breakpoint info))
-      (di:delete-breakpoint (trace-info-end-breakpoint info))))
-    (setf (trace-info-untraced info) t)
-    (remhash fun *traced-functions*)))
+      (cond
+       ((trace-info-encapsulated info)
+	(ext:unencapsulate (trace-info-what info) 'trace))
+       (t
+	(di:delete-breakpoint (trace-info-start-breakpoint info))
+	(di:delete-breakpoint (trace-info-end-breakpoint info))))
+      (setf (trace-info-untraced info) t)
+      (remhash fun *traced-functions*)))))
 
 ;;; UNTRACE-ALL  --  Internal
 ;;;
