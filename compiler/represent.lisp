@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.25 1991/05/03 02:05:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.26 1991/05/03 12:55:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -238,6 +238,19 @@
 (check-move-function-consistency)
 
 
+;;;; Representation selection:
+
+;;; VOPs that we ignore in initial cost computation.  We ignore MOVE because
+;;; moves will be changed to appropriate representation specific moves, so
+;;; looking at the costs of the standard MOVE will just confuse us.  We ignore
+;;; SET in the hopes that nobody is setting specials inside of loops.  We
+;;; ignore TYPE-CHECK-ERROR because we don't want the possibility of error to
+;;; bias the result.  Notes are suppressed for T-C-E as well, since we don't
+;;; need to worry about the efficiency of that case.
+;;;
+(defconstant ignore-cost-vops '(move set type-check-error))
+(defconstant suppress-note-vops '(type-check-error))
+
 ;;; SELECT-TN-REPRESENTATION  --  Internal
 ;;;
 ;;;    Return the best representation for a normal TN.  SCs is a list of the SC
@@ -259,7 +272,7 @@
 		    ((null ref))
 		  (let* ((vop (tn-ref-vop ref))
 			 (info (vop-info vop)))
-		    (unless (eq (vop-info-name info) 'move)
+		    (unless (member (vop-info-name info) ignore-cost-vops)
 		      (do ((cost (,costs-slot info) (cdr cost))
 			   (op (,ops-slot vop) (tn-ref-across op)))
 			  ((null cost)
@@ -354,16 +367,18 @@
 	 (*compiler-error-context* op-node))
     (cond ((eq (tn-kind op-tn) :constant))
 	  ((policy op-node (<= speed brevity) (<= space brevity)))
+	  ((member (template-name (vop-info op-vop)) suppress-note-vops))
 	  ((null dest-tn)
 	   (let* ((op-info (vop-info op-vop))
 		  (op-note (or (template-note op-info)
 			       (template-name op-info)))
 		  (arg-p (not (tn-ref-write-p op)))
 		  (name (get-operand-name op-tn arg-p))
-		  (pos (1+ (position-in #'tn-ref-across op
-					(if arg-p
-					    (vop-args op-vop)
-					    (vop-results op-vop))))))
+		  (pos (1+ (or (position-in #'tn-ref-across op
+					    (if arg-p
+						(vop-args op-vop)
+						(vop-results op-vop)))
+			       (error "Couldn't fine op?  Bug!")))))
 	     (compiler-note
 	      "Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
 	       The ~:R ~:[result~;argument~] of ~A."
