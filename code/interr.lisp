@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.35 1998/08/14 07:16:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.36 1998/12/19 16:05:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,14 +232,16 @@
 	 :expected-type 'coercable-to-function))
 
 (deferr invalid-argument-count-error (nargs)
-  (error 'simple-error
+  (error 'simple-program-error
 	 :function-name name
 	 :format-control "Invalid number of arguments: ~S"
 	 :format-arguments (list nargs)))
 
 (deferr bogus-argument-to-values-list-error (list)
-  (error 'simple-error
+  (error 'simple-type-error
 	 :function-name name
+	 :datum list
+	 :expected-type 'list
 	 :format-control "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
 	 :format-arguments (list list)))
 
@@ -299,12 +301,13 @@
 	 :expected-type (layout-class layout)))
 
 (deferr odd-keyword-arguments-error ()
-  (error 'simple-error
+  (error 'simple-type-error
 	 :function-name name
+	 :datum nil :expected-type nil
 	 :format-control "Odd number of keyword arguments."))
 
 (deferr unknown-keyword-argument-error (key)
-  (error 'simple-error
+  (error 'simple-program-error
 	 :function-name name
 	 :format-control "Unknown keyword: ~S"
 	 :format-arguments (list key)))
