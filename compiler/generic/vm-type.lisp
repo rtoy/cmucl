@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.18 1990/09/28 06:44:23 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.19 1990/10/12 17:01:22 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -29,9 +29,11 @@
 ;;; 
 (compiler-let ((lisp::*bootstrap-deftype* t))
 
+(setf (info type kind 'long-float) :defined)
 (deftype long-float (&optional low high)
   `(double-float ,low ,high))
 ;;;
+(setf (info type kind 'short-float) :defined)
 (deftype short-float (&optional low high)
   `(single-float ,low ,high))
 
@@ -45,7 +47,9 @@
 ;;; so leave characters alone.  Also, make string-char look like base-char.
 (compiler-let ((lisp::*bootstrap-deftype* t))
   (setf (info type builtin 'character) nil)
+  (setf (info type kind 'character) :defined)
   (deftype character () 'base-character)
+  #-new-compiler
   (deftype string-char () 'base-character))
 
 ;;;
