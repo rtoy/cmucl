@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.5 1992/02/13 15:56:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.6 1992/02/15 12:56:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,9 @@
 
 (export '(system-area-pointer sap-ref-8 sap-ref-16 sap-ref-32 sap-ref-sap
 	  signed-sap-ref-8 signed-sap-ref-16 signed-sap-ref-32
-	  sap+ sap- sap< sap<= sap= sap>= sap>))
+	  sap+ sap- sap< sap<= sap= sap>= sap>
+	  allocate-system-memory reallocate-system-memory
+	  deallocate-system-memory))
 
 (in-package "KERNEL")
 (export '(%set-sap-ref-sap %set-sap-ref-32 %set-sap-ref-16
@@ -173,44 +175,17 @@
 
 ;;;; System memory allocation.
 
-;;; ALLOCATE-SYSTEM-MEMORY -- public
-;;;
-;;; Allocate random memory from the system area.
-;;; 
-(defun allocate-system-memory (bytes)
-  (declare (type index bytes))
-  (gr-call* mach:vm_allocate *task-self* (int-sap 0) bytes t))
+(alien:def-alien-routine ("os_allocate" allocate-system-memory)
+			 system-area-pointer
+  (bytes c-call:unsigned-long))
 
-;;; REALLOCATE-SYSTEM-MEMORY -- public
-;;;
-;;; Either allocate more memory at the end of this block, or allocate a new
-;;; block and move the old memory into it.
-;;; 
-(defun reallocate-system-memory (old old-size new-size)
-  (declare (type system-area-pointer old)
-	   (type index old-size new-size))
-  ;; ### Got to work the page size into this somehow.  The vm_allocate
-  ;; will fail much more often than it otherwise would 'cause if the old
-  ;; block stops in the middle of a page, we can't extend it.
-  (if (eql (mach:vm_allocate *task-self*
-			     (sap+ old old-size)
-			     (- new-size old-size)
-			     nil)
-	   mach:kern-success)
-      old
-      (let ((new (allocate-system-memory new-size)))
-	(declare (type system-area-pointer new))
-	(system-area-copy old 0 new 0 (* old-size vm:byte-bits))
-	(deallocate-system-memory old old-size)
-	new)))
+(alien:def-alien-routine ("os_reallocate" reallocate-system-memory)
+			 system-area-pointer
+  (old system-area-pointer)
+  (old-size c-call:unsigned-long)
+  (new-size c-call:unsigned-long))
 
-;;; DEALLOCATE-SYSTEM-MEMORY -- public
-;;;
-;;; Deallocate that memory.
-;;; 
-(defun deallocate-system-memory (addr bytes)
-  (declare (type system-area-pointer addr)
-	   (type index bytes))
-  (gr-call* mach:vm_deallocate *task-self* addr bytes))
-
-
+(alien:def-alien-routine ("os_deallocate" deallocate-system-memory)
+			 c-call:void
+  (addr system-area-pointer)
+  (bytes c-call:unsigned-long))
