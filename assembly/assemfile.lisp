@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.23 1990/11/03 17:21:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.24 1990/11/16 04:42:15 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -148,7 +148,8 @@
       (error "Unknown return-style for ~S: ~S" name return-style))
     (multiple-value-bind
 	(call-sequence call-temps)
-	(generate-call-sequence name return-style vop)
+	(let ((*backend* *target-backend*))
+	  (generate-call-sequence name return-style vop))
       `(define-vop ,(if (atom name) (list name) name)
 	 (:args ,@(mapcar #'arg-or-res-spec args))
 	 ,@(let ((index -1))
