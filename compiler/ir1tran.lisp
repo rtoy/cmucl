@@ -2249,7 +2249,9 @@
   (unless (symbolp name)
     (compiler-error "%Primitive name is not a symbol: ~S." name))
 
-  (let* ((name (intern (symbol-name name) "C"))
+  (let* ((name (intern (symbol-name name)
+		       (or (find-package "OLD-C")
+			   (find-package "C"))))
 	 (translator (gethash name *primitive-translators*)))
     (if translator
 	(ir1-convert start cont (funcall translator (cdr form)))
@@ -2420,7 +2422,6 @@
 	(setf (leaf-where-from new) :declared)
 	(setf (gethash name *free-functions*) new))))
 
-  (note-name-defined name :function)
   (undefined-value))
 
 
