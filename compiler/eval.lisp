@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.25 1993/08/25 00:15:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.26 1993/08/25 01:42:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1050,7 +1050,7 @@
 	     (symbol-value (c::global-var-name leaf)))))
       (c::dylan-var
        (locally
-	 (declare (optimize (inhibit-warnings 3)))
+	 (declare (optimize (ext:inhibit-warnings 3)))
 	 (dylan::value-datum
 	  (dylan::lookup-varinfo-value (c::dylan-var-name leaf)
 				       (dylan::find-module
