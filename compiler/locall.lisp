@@ -204,10 +204,10 @@
 ;;; there is hairy stuff such as conditionals in the expression that computes
 ;;; the function.
 ;;;
-;;;    We don't attempt to convert calls that appear in a top-level lambda
-;;; unless there is only one reference.  This ensures that top-level components
-;;; will contain only load-time code: any references to run-time functions will
-;;; be as closures.
+;;;    Except in the interpreter, we don't attempt to convert calls that appear
+;;; in a top-level lambda unless there is only one reference.  This ensures
+;;; that top-level components will contain only load-time code: any references
+;;; to run-time functions will be as closures.
 ;;;
 ;;;    If we cannot convert a reference, then we mark the referenced function
 ;;; as an entry-point, creating a new XEP if necessary.
@@ -226,6 +226,7 @@
 		    (eq (basic-combination-fun dest) cont)
 		    (eq (continuation-use cont) ref)
 		    (or (null (rest refs))
+			*converting-for-interpreter*
 			(not (eq (functional-kind
 				  (lambda-home
 				   (block-lambda (node-block ref))))
@@ -653,13 +654,20 @@
 ;;;    Actually do let conversion.  We call subfunctions to do most of the
 ;;; work.  We change the Call's cont to be the continuation heading the bind
 ;;; block, and also do Reoptimize-Continuation on the args and Cont so that
-;;; let-specific IR1 optimizations get a chance.
+;;; let-specific IR1 optimizations get a chance.  We blow away any entry for
+;;; the function in *free-functions* so that nobody will create new reference
+;;; to it.
 ;;;
 (defun let-convert (fun call)
   (declare (type clambda fun) (type basic-combination call))
   (insert-let-body fun call)
   (merge-cleanups-and-lets fun call)
   (move-return-uses fun call)
+
+  (let* ((fun (or (lambda-optional-dispatch fun) fun))
+	 (entry (gethash (leaf-name fun) *free-functions*)))
+    (when (eq entry fun)
+      (remhash (leaf-name fun) *free-functions*)))
 
   (dolist (arg (basic-combination-args call))
     (when arg
