@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.41 1990/04/04 19:04:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.42 1990/04/06 00:02:24 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -27,7 +27,7 @@
 
 ;;; Maximum number of SCs allowed.
 ;;;
-(defconstant sc-number-limit 20)
+(defconstant sc-number-limit 26)
 
 ;;; The inclusive upper bound on a cost.  We want to write cost frobbing
 ;;; code so that it is portable, but works on fixnums.  This constant
