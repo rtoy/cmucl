@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.8 1998/07/24 17:22:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.9 2003/07/21 12:57:19 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -281,10 +281,10 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp old)
 	 (:generator 20
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
-	     (inst ldl object
+	     (inst ldl old
 		   (- (* (+ word vector-data-offset) word-bytes)
 		      other-pointer-type)
-		    old)
+		    object)
 	     (unless (and (sc-is value immediate)
 			  (= (tn-value value) ,(1- (ash 1 bits))))
 	       (cond ((= extra ,(1- elements-per-word))
