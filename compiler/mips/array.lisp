@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.22 1990/08/02 03:28:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.23 1990/08/02 03:42:45 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -341,7 +341,8 @@
     (inst swc1 value lip
 	  (- (* vm:vector-data-offset vm:word-bytes)
 	     vm:other-pointer-type))
-    (move result value)))
+    (unless (location= result value)
+      (inst move :single result value))))
 
 (define-vop (data-vector-ref/simple-array-double-float)
   (:translate data-vector-ref)
@@ -384,7 +385,8 @@
 	  (+ (- (* vm:vector-data-offset vm:word-bytes)
 		vm:other-pointer-type)
 	     vm:word-bytes))
-    (move result value)))
+    (unless (location= result value)
+      (inst move :double result value))))
 
 
 
