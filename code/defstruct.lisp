@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.50 1993/07/30 12:08:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.51 1993/08/03 07:36:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -546,7 +546,7 @@
 	     (unless (dd-raw-index defstruct)
 	       (setf (dd-raw-index defstruct) (dd-length defstruct))
 	       (incf (dd-length defstruct)))
-	     (let ((off (rem (dd-length defstruct) words)))
+	     (let ((off (rem (dd-raw-length defstruct) words)))
 	       (unless (zerop off)
 		 (incf (dd-raw-length defstruct) (- words off))))
 	     (setf (dsd-raw-type dsd) raw-type)
