@@ -332,5 +332,6 @@
   ;; what function we were running in.  The function is valid between the PC
   ;; before it (inclusive) and the PC after it (exclusive).  The PCs are in
   ;; sorted order, so we can binary-search.  We omit the first and last PC,
-  ;; since their values are 0 and the length of the code vector.
-  (function-map nil :type simple-vector))
+  ;; since their values are 0 and the length of the code vector.  Null only
+  ;; temporarily.
+  (function-map nil :type (or simple-vector null)))
