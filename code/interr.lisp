@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.24 1992/03/28 21:07:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.25 1992/04/15 02:24:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,10 +213,12 @@
 	 :datum object
 	 :expected-type 'symbol))
 
-(deferr undefined-symbol-error (symbol)
+(deferr undefined-symbol-error (fdefn-or-symbol)
   (error 'undefined-function
 	 :function-name name
-	 :name symbol))
+	 :name (etypecase fdefn-or-symbol
+		 (symbol fdefn-or-symbol)
+		 (fdefn (fdefn-name fdefn-or-symbol)))))
 
 (deferr object-not-coercable-to-function-error (object)
   (error 'type-error
