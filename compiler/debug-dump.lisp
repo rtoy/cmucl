@@ -139,13 +139,78 @@
   (undefined-value))
 
 
+;;; FIND-TLF-AND-BLOCK-NUMBERS  --  Internal
+;;;
+;;;    Scan all the blocks, caching the block numbering in the BLOCK-FLAG and
+;;; determining if all locations are in the same TLF.
+;;;
+(defun find-tlf-and-block-numbers (fun)
+  (declare (type clambda fun))
+  (let ((res (node-tlf-number (lambda-bind fun)))
+	(num 0))
+    (do-environment-ir2-blocks (2block (lambda-environment fun))
+      (let ((block (ir2-block-block 2block)))
+	(when (eq (block-info block) 2block)
+	  (setf (block-flag block) num)
+	  (incf num)
+	  (unless (eql (node-tlf-number (continuation-next (block-start block)))
+		       res)
+	    (setq res nil)))
+	
+	(dolist (loc (ir2-block-locations 2block))
+	  (unless (eql (node-tlf-number (vop-node (location-info-vop loc)))
+		       res)
+	    (setq res nil)))))
+    res))
+
+
+;;; DUMP-BLOCK-LOCATIONS  --  Internal
+;;;
+;;;    Dump out the number of locations and the locations for Block.
+;;;
+(defun dump-block-locations (block locations tlf-num var-locs)
+  (declare (type cblock block) (list locations))
+  (write-var-integer (1+ (length locations)) *byte-buffer*)
+  (let ((2block (block-info block)))
+    (dump-1-location (continuation-next (block-start block))
+		     2block :block-start tlf-num
+		     (ir2-block-%label 2block)
+		     (ir2-block-live-out 2block)
+		     var-locs))
+  (dolist (loc locations)
+    (dump-location-from-info loc tlf-num var-locs))
+  (undefined-value))
+
+
+;;; DUMP-BLOCK-SUCCESSORS  --  Internal
+;;;
+;;;    Dump the successors of Block, being careful not to fly into space on
+;;; weird successors.
+;;;
+(defun dump-block-successors (block env)
+  (declare (type cblock block) (type environment env))
+  (let* ((tail (component-tail (block-component block)))
+	 (succ (block-succ block))
+	 (valid-succ
+	  (if (and succ
+		   (or (eq (car succ) tail)
+		       (not (eq (lambda-environment (block-lambda (car succ)))
+				env))))
+	      ()
+	      succ)))
+    (vector-push-extend
+     (dpb (length valid-succ) compiled-debug-block-nsucc-byte 0)
+     *byte-buffer*)
+    (dolist (b valid-succ)
+      (write-var-integer (block-flag b) *byte-buffer*)))
+  (undefined-value))
+
+
 ;;; COMPUTE-DEBUG-BLOCKS  --  Internal
 ;;;
 ;;;    Return a vector and an integer (or null) suitable for use as the BLOCKS
 ;;; and TLF-NUMBER in Fun's debug-function.  This requires three passes to
 ;;; compute:
-;;; -- Scan all the blocks, caching the block numbering in the BLOCK-FLAG and
-;;;    determining if all locations are in the same TLF.
 ;;; -- Scan all blocks, dumping the header and successors followed by all the
 ;;;    non-elsewhere locations.
 ;;; -- Dump the elsewhere block header and all the elsewhere locations (if
@@ -155,59 +220,27 @@
   (declare (type clambda fun) (type hash-table var-locs))
   (setf (fill-pointer *byte-buffer*) 0)
   (let ((*previous-location* 0)
-	(tlf-num (node-tlf-number (lambda-bind fun))))
-    (let ((num 0))
-      (do-environment-ir2-blocks (2block (lambda-environment fun))
+	(tlf-num (find-tlf-and-block-numbers fun))
+	(env (lambda-environment fun))
+	(prev-locs nil)
+	(prev-block nil))
+    (collect ((elsewhere))
+      (do-environment-ir2-blocks (2block env)
 	(let ((block (ir2-block-block 2block)))
 	  (when (eq (block-info block) 2block)
-	    (setf (block-flag block) num)
-	    (incf num)
-	    (unless (eql (node-tlf-number
-			  (continuation-next (block-start block)))
-			 tlf-num)
-	      (setq tlf-num nil)))
-	  
+	    (when prev-block
+	      (dump-block-locations prev-block prev-locs tlf-num var-locs))
+	    (setq prev-block block  prev-locs ())
+	    (dump-block-successors block env)))
+	
+	(collect ((here prev-locs))
 	  (dolist (loc (ir2-block-locations 2block))
-	    (unless (eql (node-tlf-number (vop-node (location-info-vop loc)))
-			 tlf-num)
-	      (setq tlf-num nil))))))
+	    (if (label-elsewhere-p (location-info-label loc))
+		(elsewhere loc)
+		(here loc)))
+	  (setq prev-locs (here))))
 
-    (collect ((elsewhere))
-      (let ((tail (component-tail
-		   (block-component (node-block (lambda-bind fun)))))
-	    (env (lambda-environment fun)))
-	(do-environment-ir2-blocks (2block env)
-	  (let ((block (ir2-block-block 2block)))
-	    (when (eq (block-info block) 2block)
-	      (let ((succ (let ((s (block-succ block)))
-			    (if (and s
-				     (or (eq (car s) tail)
-					 (not (eq (lambda-environment
-						   (block-lambda (car s)))
-						  env))))
-				()
-				s))))
-		(vector-push-extend
-		 (dpb (length succ) compiled-debug-block-nsucc-byte 0)
-		 *byte-buffer*)
-		(dolist (b succ)
-		  (write-var-integer (block-flag b) *byte-buffer*)))
-
-	      (collect ((here))
-		(dolist (loc (ir2-block-locations 2block))
-		  (if (label-elsewhere-p (location-info-label loc))
-		      (elsewhere loc)
-		      (here loc)))
-		(write-var-integer (1+ (length (here))) *byte-buffer*)
-	      
-		(dump-1-location (continuation-next (block-start block))
-				 2block :block-start tlf-num
-				 (ir2-block-%label 2block)
-				 (ir2-block-live-out 2block)
-				 var-locs)
-		
-		(dolist (loc (here))
-		  (dump-location-from-info loc tlf-num var-locs)))))))
+      (dump-block-locations prev-block prev-locs tlf-num var-locs)
 
       (when (elsewhere)
 	(vector-push-extend compiled-debug-block-elsewhere-p *byte-buffer*)
@@ -401,7 +434,8 @@
   (collect ((res))
     (let ((od (lambda-optional-dispatch fun)))
       (if (and od (eq (optional-dispatch-main-entry od) fun))
-	  (let ((actual-vars (lambda-vars fun)))
+	  (let ((actual-vars (lambda-vars fun))
+		(saw-optional nil))
 	    (dolist (arg (optional-dispatch-arglist od))
 	      (let ((info (lambda-var-arg-info arg))
 		    (actual (pop actual-vars)))
@@ -410,7 +444,11 @@
 			 (:keyword
 			  (res (arg-info-keyword info)))
 			 (:rest
-			  (res 'rest-arg)))
+			  (res 'rest-arg))
+			 (:optional
+			  (unless saw-optional
+			    (res 'optional-args)
+			    (setq saw-optional t))))
 		       (res (debug-location-for actual var-locs))
 		       (when (arg-info-supplied-p info)
 			 (res 'supplied-p)
@@ -452,14 +490,18 @@
 	(dolist (fun (component-lambdas component))
 	  (clrhash var-locs)
 	  (let* ((2env (environment-info (lambda-environment fun)))
+		 (dispatch (lambda-optional-dispatch fun))
+		 (main-p (and dispatch
+			      (eq fun (optional-dispatch-main-entry fun))))
 		 (dfun (make-compiled-debug-function
 			:name (cond ((leaf-name fun))
 				    ((let ((ef (functional-entry-function
 						fun)))
 				       (and ef (leaf-name ef))))
+				    (main-p (leaf-name dispatch))
 				    (t
 				     (component-name component)))
-			:kind (functional-kind fun)
+			:kind (if main-p nil (functional-kind fun))
 			:return-pc (tn-sc-offset
 				    (ir2-environment-return-pc 2env))
 			:old-fp (tn-sc-offset
