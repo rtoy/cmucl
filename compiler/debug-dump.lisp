@@ -263,7 +263,7 @@
 	      (frob)))))
     
     (if max
-	(coerce seq `(vector (integer 0 ,max)))
+	(coerce seq `(simple-array (integer 0 ,max)))
 	(coerce seq 'simple-vector))))
 
 
