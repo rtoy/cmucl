@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.32 1991/11/24 17:43:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.33 1991/12/02 23:41:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -834,8 +834,11 @@
 
 (defknown write
   (t &key (stream streamlike) (escape t) (radix t) (base (integer 2 36))
-     (circle t) (pretty t) (level (or unsigned-byte null))
-     (length (or unsigned-byte null)) (case t) (array t) (gensym t)) t
+     (circle t) (pretty t) (level (or unsigned-byte null)) (readably t)
+     (length (or unsigned-byte null)) (case t) (array t) (gensym t)
+     (lines (or unsigned-byte null)) (right-margin (or unsigned-byte null))
+     (miser-width (or unsigned-byte null)) (pprint-dispatch t))
+  t
   (any explicit-check)
   :derive-type #'result-type-first-arg)
 
@@ -844,9 +847,11 @@
 
 ;;; xxx-TO-STRING not foldable because they depend on the dynamic environment. 
 (defknown write-to-string
-  (t &key (escape t) (radix t) (base (integer 2 36))
+  (t &key (escape t) (radix t) (base (integer 2 36)) (readably t)
      (circle t) (pretty t) (level (or unsigned-byte null))
-     (length (or unsigned-byte null)) (case t) (array t) (gensym t))
+     (length (or unsigned-byte null)) (case t) (array t) (gensym t)
+     (lines (or unsigned-byte null)) (right-margin (or unsigned-byte null))
+     (miser-width (or unsigned-byte null)) (pprint-dispatch t))
   simple-string
   (foldable flushable explicit-check))
 
