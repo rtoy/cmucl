@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.36 1992/08/16 16:15:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.37 1992/09/04 11:16:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -441,7 +441,10 @@
 ;;; and the second digit all zeros.
 
 (defun unsigned-byte-32-test (value temp not-p target not-target)
-  (let ((nope (if not-p target not-target)))
+  (multiple-value-bind (yep nope)
+		       (if not-p
+			   (values not-target target)
+			   (values target not-target))
     (assemble ()
       ;; Is it a fixnum?
       (inst and temp value 3)
@@ -465,13 +468,9 @@
       ;; Get the second digit.
       (loadw temp value (1+ bignum-digits-offset) other-pointer-type)
       ;; All zeros, its an (unsigned-byte 32).
-      (cond (not-p
-	     (inst beq temp zero-tn not-target)
-	     (inst bne temp zero-tn target))
-	    (t
-	     (inst beq temp zero-tn target)
-	     (inst bne temp zero-tn not-target)))
+      (inst beq temp zero-tn yep)
       (inst nop)
+      (inst b nope)
 	
       SINGLE-WORD
       ;; Get the single digit.
