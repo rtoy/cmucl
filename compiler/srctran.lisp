@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.141 2004/01/10 05:07:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.142 2004/01/17 03:35:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,12 +367,8 @@
 (defun interval-range-info (x &optional (point 0))
   (declare (type interval x))
   (labels ((signed->= (x y)
-	     ;; If one of the args is a float, we need to do a float
-	     ;; comparison to get the correct value when testing for a
-	     ;; signed-zero.  That is, we want (>= -0.0 0) to be false.
-	     (if (and (zerop x) (zerop y)
-		      (or (floatp x) (floatp y)))
-		 (>= (float-sign (float x)) (float-sign (float y)))
+	     (if (and (zerop x) (zerop y) (floatp x) (floatp y))
+		 (>= (float-sign x) (float-sign y))
 		 (>= x y))))
     (let ((lo (interval-low x))
 	  (hi (interval-high x)))
