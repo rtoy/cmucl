@@ -269,7 +269,7 @@ and load your system with:
              #+(and Lucid MIPS)                  ("lisp"  . "mbin")
              #+(and Lucid PRISM)                 ("lisp"  . "abin")
 	     #+excl                              ("cl"    . "fasl")
-             #+:CMU ("lisp" . #+pmax "mips-fasl" #-(or pmax) "fasl")
+	     #+cmu ("lisp" . #.(c:backend-fasl-file-type c:*backend*))
              #+HP                                ("l"     . "b")
              #+TI ("lisp" . #.(string (si::local-binary-file-type)))
              #+:gclisp                           ("LSP"   . "F2S")
