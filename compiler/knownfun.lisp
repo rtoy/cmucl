@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.14 1992/01/31 19:10:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.15 1992/02/19 16:14:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,7 +144,10 @@
   (function (required-argument) :type function)
   ;;
   ;; String used in efficency notes.
-  (note (required-argument) :type string))
+  (note (required-argument) :type string)
+  ;;
+  ;; T if we should spew a failure note even if speed=brevity.
+  (important nil :type (member t nil)))
 
 (defprinter transform type note)
 
@@ -155,18 +158,21 @@
 ;;; with the same type and note.
 ;;;
 (proclaim '(function %deftransform
-		     (t list function &optional (or string null))))
-(defun %deftransform (name type fun &optional note)
+		     (t list function &optional (or string null)
+			(member t nil))))
+(defun %deftransform (name type fun &optional note important)
   (let* ((ctype (specifier-type type))
 	 (note (or note "optimize"))
 	 (info (function-info-or-lose name))
 	 (old (find-if #'(lambda (x)
 			   (and (type= (transform-type x) ctype)
-				(string-equal (transform-note x) note)))
+				(string-equal (transform-note x) note)
+				(eq (transform-important x) important)))
 		       (function-info-transforms info))))
     (if old
-	(setf (transform-function old) fun  (transform-note old) note)
-	(push (make-transform :type ctype :function fun :note note)
+	(setf (transform-function old) fun (transform-note old) note)
+	(push (make-transform :type ctype :function fun :note note
+			      :important important)
 	      (function-info-transforms info)))
     name))
 
