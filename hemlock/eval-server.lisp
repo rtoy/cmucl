@@ -325,23 +325,30 @@
        (when (getstring background *buffer-names*)
 	 (editor-error "Buffer ~A is already in use." background)))
     (message "Spawning slave ... ")
-    (unless (ext:run-program (namestring (truename (value slave-utility)))
-			     `("-slave" ,(get-editor-name)
-			       ,@(if slave (list "-slave-buffer" slave))
-			       ,@(if background
-				     (list "-background-buffer" background))
-			       ,@(value slave-utility-switches))
-			     :wait nil
-			     :output "/dev/null"
-			     :if-output-exists :append)
-      (editor-error "Could not start slave."))
-    (let ((*accept-connections* t)
+    (let ((proc
+	   (ext:run-program (namestring (truename (value slave-utility)))
+			    `("-slave" ,(get-editor-name)
+			      ,@(if slave (list "-slave-buffer" slave))
+			      ,@(if background
+				    (list "-background-buffer" background))
+			      ,@(value slave-utility-switches))
+			    :wait nil
+			    :output "/dev/null"
+			    :if-output-exists :append))
+	  (*accept-connections* t)
 	  (*newly-created-slave* nil))
+      (unless proc
+	(editor-error "Could not start slave."))
       (dotimes (i *slave-connect-wait*
 		  (editor-error "Client Lisp is still unconnected.  ~
 				 You must use \"Accept Slave Connections\" to ~
 				 allow the slave to connect at this point."))
 	(system:serve-event 1)
+	(case (ext:process-status proc)
+	  (:exited
+	   (editor-error "The slave lisp exited before connecting."))
+	  (:signaled
+	   (editor-error "The slave lisp was kill before connecting.")))
 	(when *newly-created-slave*
 	  (message "DONE")
 	  (return *newly-created-slave*))))))
