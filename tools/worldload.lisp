@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.61 1993/07/22 21:25:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.62 1993/08/03 11:06:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,10 +25,10 @@
 ;;; access violation when you first try to do file I/O in the new core.
 ;;;
 
-;;; Define a bunch of search lists relative to lisp:
+;;; Define a bunch of search lists relative to target:
 ;;;
-(setf (ext:search-list "code:") '("lisp:code/"))
-(setf (ext:search-list "c:") '("lisp:compiler/"))
+(setf (ext:search-list "code:") '("target:code/"))
+(setf (ext:search-list "c:") '("target:compiler/"))
 (setf (ext:search-list "vm:")
       '(#+pmax "c:mips/"
         #+sparc "c:sparc/"
@@ -37,16 +37,16 @@
 	#+x86 "c:x86/"
 	"c:generic/"))
 (setf (ext:search-list "assem:")
-      '(#+pmax "lisp:assembly/mips/"
-	#+sparc "lisp:assembly/sparc/"
-	#+rt "lisp:assembly/rt/"
-	#+hppa "lisp:assembly/hppa/"
-	#+x86 "lisp:assembly/x86/"
-	"lisp:assembly/"))
-(setf (ext:search-list "hem:") '("lisp:hemlock/"))
-(setf (ext:search-list "clx:") '("lisp:clx/"))
-(setf (ext:search-list "pcl:") '("lisp:pcl/"))
-(setf (ext:search-list "tools:") '("lisp:tools/"))
+      '(#+pmax "target:assembly/mips/"
+	#+sparc "target:assembly/sparc/"
+	#+rt "target:assembly/rt/"
+	#+hppa "target:assembly/hppa/"
+	#+x86 "target:assembly/x86/"
+	"target:assembly/"))
+(setf (ext:search-list "hem:") '("target:hemlock/"))
+(setf (ext:search-list "clx:") '("target:clx/"))
+(setf (ext:search-list "pcl:") '("target:pcl/"))
+(setf (ext:search-list "tools:") '("target:tools/"))
 
 ;;; Make sure the core will start up in the user package.
 (lisp::assert-user-package)
@@ -151,7 +151,7 @@
 ;;; Hemlock.
 ;;;
 #-no-hemlock
-(load "lisp:hemlock/hemlock-library")
+(load "target:hemlock/hemlock-library")
 
 ;;; PCL.
 ;;;
@@ -161,16 +161,18 @@
 ;;; CLM.
 ;;;
 #-no-clm
-(load "lisp:interface/clm-library")
+(load "target:interface/clm-library")
+
+(defvar *target-sl* (search-list "target:"))
 
 ;;; Don't include the search lists used for loading in the resultant core.
 ;;;
 (lisp::clear-all-search-lists)
-;;;
-;;; Set up a default for modules:
+
+;;; Set up a default for modules and target:
 ;;; 
 (setf (search-list "modules:") '("./"))
-
+(setf (search-list "target:") *target-sl*)
 
 ;; set up the initial info environment.
 (setq *old-ie* (car *info-environment*))
