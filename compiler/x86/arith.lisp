@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.5 1997/05/11 11:40:44 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.6 1997/09/29 04:49:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -342,12 +342,12 @@
   (:results (r :scs (any-reg) :from (:argument 0)))
   (:result-types tagged-num)
   (:note "inline fixnum arithmetic")
-  (:generator 20
+  (:generator 4
     (move r x)
     (inst sar r 2)
     (inst imul r y)))
 
-(define-vop (fast-*/fixnum=>fixnum-c fast-safe-arith-op)
+(define-vop (fast-*-c/fixnum=>fixnum fast-safe-arith-op)
   (:translate *)
   ;; We need different loading characteristics.
   (:args (x :scs (any-reg immediate-stack)))
@@ -356,7 +356,7 @@
   (:results (r :scs (any-reg)))
   (:result-types tagged-num)
   (:note "inline fixnum arithmetic")
-  (:generator 18
+  (:generator 3
     (inst imul r x y)))
 
 (define-vop (fast-*/signed=>signed fast-safe-arith-op)
@@ -368,11 +368,11 @@
   (:results (r :scs (signed-reg) :from (:argument 0)))
   (:result-types signed-num)
   (:note "inline (signed-byte 32) arithmetic")
-  (:generator 25
+  (:generator 5
     (move r x)
     (inst imul r y)))
 
-(define-vop (fast-*/signed=>signed-c fast-safe-arith-op)
+(define-vop (fast-*-c/signed=>signed fast-safe-arith-op)
   (:translate *)
   ;; We need different loading characteristics.
   (:args (x :scs (signed-reg signed-stack)))
@@ -381,9 +381,134 @@
   (:results (r :scs (signed-reg)))
   (:result-types signed-num)
   (:note "inline (signed-byte 32) arithmetic")
-  (:generator 23
+  (:generator 4
     (inst imul r x y)))
 
+(define-vop (fast-*/unsigned=>unsigned fast-safe-arith-op)
+  (:translate *)
+  (:args (x :scs (unsigned-reg) :target eax)
+	 (y :scs (unsigned-reg unsigned-stack)))
+  (:arg-types unsigned-num unsigned-num)
+  (:temporary (:sc unsigned-reg :offset eax-offset :target result
+		   :from (:argument 0) :to :result) eax)
+  (:temporary (:sc dword-reg :offset edx-offset :from :eval :to :result) edx)
+  (:ignore edx)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:note "inline (unsigned-byte 32) arithmetic")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 6
+    (move eax x)
+    (inst mul eax y)
+    (move result eax)))
+
+
+(define-vop (fast-truncate/fixnum=>fixnum fast-safe-arith-op)
+  (:translate truncate)
+  (:args (x :scs (any-reg) :target eax)
+	 (y :scs (any-reg immediate-stack)))
+  (:arg-types tagged-num tagged-num)
+  (:temporary (:sc dword-reg :offset eax-offset :target quo
+		   :from (:argument 0) :to (:result 0)) eax)
+  (:temporary (:sc any-reg :offset edx-offset :target rem
+		   :from (:argument 0) :to (:result 1)) edx)
+  (:results (quo :scs (any-reg))
+	    (rem :scs (any-reg)))
+  (:result-types tagged-num tagged-num)
+  (:note "inline fixnum arithmetic")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 31
+    (let ((zero (generate-error-code vop division-by-zero-error x y)))
+      (if (sc-is y any-reg)
+	  (inst test y y)  ; Smaller instruction
+	  (inst cmp y 0))
+      (inst jmp :eq zero))
+    (move eax x)
+    (inst cdq)
+    (inst idiv eax y)
+    (if (location= quo eax)
+	(inst shl eax 2)
+	(inst lea quo (make-ea :dword :index eax :scale 4)))
+    (move rem edx)))
+
+(define-vop (fast-truncate-c/fixnum=>fixnum fast-safe-arith-op)
+  (:translate truncate)
+  (:args (x :scs (any-reg) :target eax))
+  (:info y)
+  (:arg-types tagged-num (:constant (signed-byte 30)))
+  (:temporary (:sc dword-reg :offset eax-offset :target quo
+		   :from :argument :to (:result 0)) eax)
+  (:temporary (:sc any-reg :offset edx-offset :target rem
+		   :from :eval :to (:result 1)) edx)
+  (:temporary (:sc any-reg :from :eval :to :result) y-arg)
+  (:results (quo :scs (any-reg))
+	    (rem :scs (any-reg)))
+  (:result-types tagged-num tagged-num)
+  (:note "inline fixnum arithmetic")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 30
+    (move eax x)
+    (inst cdq)
+    (inst mov y-arg (fixnum y))
+    (inst idiv eax y-arg)
+    (if (location= quo eax)
+	(inst shl eax 2)
+	(inst lea quo (make-ea :dword :index eax :scale 4)))
+    (move rem edx)))
+
+(define-vop (fast-truncate/unsigned=>unsigned fast-safe-arith-op)
+  (:translate truncate)
+  (:args (x :scs (unsigned-reg) :target eax)
+	 (y :scs (unsigned-reg signed-stack)))
+  (:arg-types unsigned-num unsigned-num)
+  (:temporary (:sc dword-reg :offset eax-offset :target quo
+		   :from (:argument 0) :to (:result 0)) eax)
+  (:temporary (:sc dword-reg :offset edx-offset :target rem
+		   :from (:argument 0) :to (:result 1)) edx)
+  (:results (quo :scs (unsigned-reg))
+	    (rem :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:note "inline (unsigned-byte 32) arithmetic")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 33
+    (let ((zero (generate-error-code vop division-by-zero-error x y)))
+      (if (sc-is y unsigned-reg)
+	  (inst test y y)  ; Smaller instruction
+	  (inst cmp y 0))
+      (inst jmp :eq zero))
+    (move eax x)
+    (inst xor edx edx)
+    (inst div eax y)
+    (move quo eax)
+    (move rem edx)))
+
+(define-vop (fast-truncate-c/unsigned=>unsigned fast-safe-arith-op)
+  (:translate truncate)
+  (:args (x :scs (unsigned-reg) :target eax))
+  (:info y)
+  (:arg-types unsigned-num (:constant (unsigned-byte 32)))
+  (:temporary (:sc dword-reg :offset eax-offset :target quo
+		   :from :argument :to (:result 0)) eax)
+  (:temporary (:sc dword-reg :offset edx-offset :target rem
+		   :from :eval :to (:result 1)) edx)
+  (:temporary (:sc dword-reg :from :eval :to :result) y-arg)
+  (:results (quo :scs (unsigned-reg))
+	    (rem :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:note "inline (unsigned-byte 32) arithmetic")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 32
+    (move eax x)
+    (inst xor edx edx)
+    (inst mov y-arg y)
+    (inst div eax y-arg)
+    (move quo eax)
+    (move rem edx)))
 
 (define-vop (fast-truncate/signed=>signed fast-safe-arith-op)
   (:translate truncate)
@@ -391,18 +516,16 @@
 	 (y :scs (signed-reg signed-stack)))
   (:arg-types signed-num signed-num)
   (:temporary (:sc dword-reg :offset eax-offset :target quo
-		   :from (:argument 0) :to (:result 0))
-	      eax)
+		   :from (:argument 0) :to (:result 0)) eax)
   (:temporary (:sc dword-reg :offset edx-offset :target rem
-		   :from (:argument 0) :to (:result 1))
-	      edx)
+		   :from (:argument 0) :to (:result 1)) edx)
   (:results (quo :scs (signed-reg))
 	    (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
   (:note "inline (signed-byte 32) arithmetic")
   (:vop-var vop)
   (:save-p :compute-only)
-  (:generator 30
+  (:generator 33
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (if (sc-is y signed-reg)
 	  (inst test y y)  ; Smaller instruction
@@ -414,13 +537,94 @@
     (move quo eax)
     (move rem edx)))
 
+(define-vop (fast-truncate-c/signed=>signed fast-safe-arith-op)
+  (:translate truncate)
+  (:args (x :scs (signed-reg) :target eax))
+  (:info y)
+  (:arg-types signed-num (:constant (signed-byte 32)))
+  (:temporary (:sc dword-reg :offset eax-offset :target quo
+		   :from :argument :to (:result 0)) eax)
+  (:temporary (:sc dword-reg :offset edx-offset :target rem
+		   :from :eval :to (:result 1)) edx)
+  (:temporary (:sc dword-reg :from :eval :to :result) y-arg)
+  (:results (quo :scs (signed-reg))
+	    (rem :scs (signed-reg)))
+  (:result-types signed-num signed-num)
+  (:note "inline (signed-byte 32) arithmetic")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 32
+    (move eax x)
+    (inst cdq)
+    (inst mov y-arg y)
+    (inst idiv eax y-arg)
+    (move quo eax)
+    (move rem edx)))
+
 
 
 ;;;; Shifting
-(define-vop (fast-ash-c)
-  (:policy :fast-safe)
+(define-vop (fast-ash-c/fixnum=>fixnum)
   (:translate ash)
-  (:note nil)
+  (:policy :fast-safe)
+  (:args (number :scs (any-reg) :target result
+		 :load-if (not (and (sc-is number any-reg immediate-stack)
+				    (sc-is result any-reg immediate-stack)
+				    (location= number result)))))
+  (:info amount)
+  (:arg-types tagged-num (:constant integer))
+  (:results (result :scs (any-reg)
+		    :load-if (not (and (sc-is number immediate-stack)
+				       (sc-is result immediate-stack)
+				       (location= number result)))))
+  (:result-types tagged-num)
+  (:note "inline ASH")
+  (:generator 2
+    (cond ((and (= amount 1) (not (location= number result)))
+	   (inst lea result (make-ea :dword :index number :scale 2)))
+	  ((and (= amount 2) (not (location= number result)))
+	   (inst lea result (make-ea :dword :index number :scale 4)))
+	  ((and (= amount 3) (not (location= number result)))
+	   (inst lea result (make-ea :dword :index number :scale 8)))
+	  (t
+	   (move result number)
+	   (cond ((plusp amount)
+		  ;; We don't have to worry about overflow because of the
+		  ;; result type restriction.
+		  (inst shl result amount))
+		 (t
+		  ;; If the amount is greater than 31, only shift by 31.  We
+		  ;; have to do this because the shift instructions only look
+		  ;; at the low five bits of the result.
+		  (inst sar result (min 31 (- amount)))
+		  ;; Fixnum correction.
+		  (inst and result #xfffffffc)))))))
+
+(define-vop (fast-ash-left/fixnum=>fixnum)
+  (:translate ash)
+  (:args (number :scs (any-reg) :target result
+		 :load-if (not (and (sc-is number immediate-stack)
+				    (sc-is result immediate-stack)
+				    (location= number result))))
+	 (amount :scs (unsigned-reg) :target ecx))
+  (:arg-types tagged-num positive-fixnum)
+  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:results (result :scs (any-reg) :from (:argument 0)
+		    :load-if (not (and (sc-is number immediate-stack)
+				       (sc-is result immediate-stack)
+				       (location= number result)))))
+  (:result-types tagged-num)
+  (:policy :fast-safe)
+  (:note "inline ASH")
+  (:generator 3
+    (move result number)
+    (move ecx amount)
+    ;; The result-type assures us that this shift will not overflow.
+    (inst shl result :cl)))
+
+(define-vop (fast-ash-c)
+  (:translate ash)
+  (:policy :fast-safe)
   (:args (number :scs (signed-reg unsigned-reg) :target result
 		 :load-if (not (and (sc-is number signed-stack unsigned-stack)
 				    (sc-is result signed-stack unsigned-stack)
@@ -433,15 +637,13 @@
 				   (sc-is result signed-stack unsigned-stack)
 				   (location= number result)))))
   (:result-types (:or signed-num unsigned-num))
-  (:generator 2
-    (cond ((and (= amount 1)
-		(not (location= number result)))
+  (:note "inline ASH")
+  (:generator 3
+    (cond ((and (= amount 1) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 2)))
-	  ((and (= amount 2)
-		(not (location= number result)))
+	  ((and (= amount 2) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 4)))
-	  ((and (= amount 3)
-		(not (location= number result)))
+	  ((and (= amount 3) (not (location= number result)))
 	   (inst lea result (make-ea :dword :index number :scale 8)))
 	  (t
 	   (move result number)
@@ -457,51 +659,42 @@
 		 (t
 		  (inst shr result (min 31 (- amount)))))))))
 
-;; has problems when result is on stack -- maybe not spec'e right?
-;; targeting still not understood -- target number<>result seems ok now
-;; but extra moves required for amount.
-;; Problem shows up in code/type.lisp TYPE/=
 (define-vop (fast-ash-left)
-  (:note "inline ASH")
-  (:args (number :scs (signed-reg unsigned-reg)
-		 :target result
-		 :load-if
-		 (not (and (sc-is number signed-stack unsigned-stack)
-			   (sc-is result signed-stack unsigned-stack)
-			   (location= number result))))
+  (:translate ash)
+  (:args (number :scs (signed-reg unsigned-reg) :target result
+		 :load-if (not (and (sc-is number signed-stack unsigned-stack)
+				    (sc-is result signed-stack unsigned-stack)
+				    (location= number result))))
 	 (amount :scs (unsigned-reg) :target ecx))
   (:arg-types (:or signed-num unsigned-num) positive-fixnum)
   (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
-  (:results (result :scs (signed-reg unsigned-reg)
-		    :from (:argument 0)
-		    :load-if
-		    (not (and (sc-is number signed-stack unsigned-stack)
-			      (sc-is result signed-stack unsigned-stack)
-			      (location= number result)))))
+  (:results (result :scs (signed-reg unsigned-reg) :from (:argument 0)
+		    :load-if (not
+			      (and (sc-is number signed-stack unsigned-stack)
+				   (sc-is result signed-stack unsigned-stack)
+				   (location= number result)))))
   (:result-types (:or signed-num unsigned-num))
-  (:translate ash)
   (:policy :fast-safe)
-  (:generator 3
+  (:note "inline ASH")
+  (:generator 4
     (move result number)
     (move ecx amount)
     ;; The result-type assures us that this shift will not overflow.
     (inst shl result :cl)))
 
-
 (define-vop (fast-ash)
-  (:policy :fast-safe)
-  (:note "inline ASH")
   (:translate ash)
+  (:policy :fast-safe)
   (:args (number :scs (signed-reg unsigned-reg) :target result)
 	 (amount :scs (signed-reg) :target ecx))
   (:arg-types (:or signed-num unsigned-num) signed-num)
-  (:results (result :scs (signed-reg unsigned-reg)
-		    :from (:argument 0)))
+  (:results (result :scs (signed-reg unsigned-reg) :from (:argument 0)))
   (:result-types (:or signed-num unsigned-num))
   (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:note "inline ASH")
   (:generator 5
     (move result number)
-    (move ecx amount)
+     (move ecx amount)
     (inst or ecx ecx)
     (inst jmp :ns positive)
     (inst neg ecx)
@@ -519,6 +712,7 @@
     (inst shl result :cl)
       
     DONE))
+
 
 
 ;;; note documentation for this function is wrong - rtfm
