@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.33 2001/05/14 14:22:53 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.34 2001/10/30 22:14:36 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -648,6 +648,9 @@ to skip undefined symbols which don't have an address."
 		        #+(or solaris linux) "-G" #+irix "-shared"
 			"-o"
 			output-file
+			;; Cause all specified libs to be loaded in full
+			#+linux "--whole-archive"
+			#+solaris "-z" #+solaris "allextract"
 			(append (mapcar
 				 #'(lambda (name)
 				     (or (unix-namestring name)
@@ -660,6 +663,10 @@ to skip undefined symbols which don't have an address."
 				 (if (atom files)
 				     (list files)
 				     files))
+				;; Return to default ld behaviour for libs
+				(list
+				 #+linux "--no-whole-archive"
+				 #+solaris "-z" #+solaris "defaultextract")
 				libraries))
 		 :env env
 		 :input nil
