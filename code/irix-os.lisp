@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irix-os.lisp,v 1.1 1994/06/29 21:41:11 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irix-os.lisp,v 1.2 1994/10/29 06:26:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,8 @@
 (export '(get-system-info get-page-size os-init))
 
 (pushnew :irix *features*)
+(pushnew :svr4 *features*)
+
 (setq *software-type* "IRIX")
 
 (defvar *software-version* nil "Version string for supporting software")
