@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.30 1993/08/31 13:46:57 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.31 1994/05/22 20:29:15 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,6 +50,11 @@
 	  "target:assembly/alpha/array.assem"
 	  "target:assembly/alpha/arith.assem"
 	  "target:assembly/alpha/alloc.assem"))
+    ,@(when (c:backend-featurep :sgi)
+	'("target:assembly/mips/assem-rtns.assem"
+	  "target:assembly/mips/array.assem"
+	  "target:assembly/mips/arith.assem"
+	  "target:assembly/mips/alloc.assem"))
 
     "target:code/type-boot"
     "target:code/fdefinition"
@@ -132,6 +137,8 @@
 	'("target:code/x86-vm"))
     ,@(when (c:backend-featurep :alpha)
 	'("target:code/alpha-vm"))
+    ,@(when (c:backend-featurep :sgi)
+	'("target:code/sgi-vm"))
 
     "target:code/signal"
     "target:code/interr"

@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.76 1994/02/14 15:12:17 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.77 1994/05/22 20:25:56 hallgren Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,6 +50,7 @@
 	#+hppa "c:hppa/"
 	#+x86 "c:x86/"
 	#+alpha "c:alpha/"
+	#+sgi "c:mips/"
 	"c:generic/"))
 (setf (ext:search-list "assem:")
       '(#+pmax "target:assembly/mips/"
@@ -58,6 +59,7 @@
 	#+hppa "target:assembly/hppa/"
 	#+x86 "target:assembly/x86/"
 	#+alpha "target:assembly/alpha/"
+	#+sgi "c:mips/"
 	"target:assembly/"))
 (setf (ext:search-list "hem:") '("target:hemlock/"))
 (setf (ext:search-list "clx:") '("target:clx/"))
