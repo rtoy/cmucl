@@ -28,7 +28,7 @@
 ;;; This file defines the initialization and related protocols.
 ;;; 
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmethod make-instance ((class symbol) &rest initargs)
   (apply #'make-instance (find-class class) initargs))

@@ -27,7 +27,7 @@
 ;;; Permutation vectors.
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmacro instance-slot-index (wrapper slot-name)
   `(let ((pos 0))
@@ -183,11 +183,16 @@
 		  (make-permutation-vector (cons nil elements)))))))
 
 (defun compute-calls (call-list wrappers)
+  (declare (ignore call-list wrappers))
+  #||
   (map 'vector
        #'(lambda (call)
 	   (compute-emf-from-wrappers call wrappers))
-       call-list))
+       call-list)
+  ||#  
+  '#())
 
+#|| ; Need to finish this, then write the maintenance functions.
 (defun compute-emf-from-wrappers (call wrappers)
   (when call
     (destructuring-bind (gf-name nreq restp arg-info) call
@@ -204,7 +209,9 @@
 							  wrappers classes types 
 							  'caching)))
 		    (update-all-pv-tables call wrappers emf)
+		    #+copy-&rest-arg (setq args (copy-list args))
 		    (invoke-emf emf args))))))))
+||#
 
 (defun make-permutation-vector (indexes)
   (make-array (length indexes) :initial-contents indexes))
@@ -340,7 +347,7 @@
 
 (defun maybe-expand-accessor-form (form required-parameters slots env)
   (let* ((fname (car form))
-	 (len (length form))
+	 #||(len (length form))||#
 	 (gf (if (symbolp fname)
 		 (unencapsulated-fdefinition fname)
 		 (gdefinition fname))))
@@ -390,7 +397,7 @@
 (defun optimize-generic-function-call (form required-parameters env slots calls)
   (declare (ignore required-parameters env slots calls))
   (or (and (eq (car form) 'make-instance)
-	   (expand-make-instance-form form t))
+	   (expand-make-instance-form form))
       #||
       (maybe-expand-accessor-form form required-parameters slots env)
       (let* ((fname (car form))
@@ -856,9 +863,25 @@
      ,pv ,calls
      ,@forms))
 
+(defvar *non-variable-declarations*
+  '(method-name method-lambda-list
+    optimize ftype inline notinline))
+
+(defvar *variable-declarations-with-argument*
+  '(class
+    type))
+
+(defvar *variable-declarations-without-argument*
+  '(ignore special dynamic-extent
+    array atom base-char bignum bit bit-vector character common compiled-function
+    complex cons double-float extended-char fixnum float function hash-table integer
+    keyword list long-float nil null number package pathname random-state ratio
+    rational readtable sequence short-float signed-byte simple-array
+    simple-bit-vector simple-string simple-vector single-float standard-char
+    stream string-char symbol t unsigned-byte vector))
+
 (defun split-declarations (body args)
-  (let* ((must-rebind-args-p nil)
-	 (inner-decls nil) (outer-decls nil) decl)
+  (let ((inner-decls nil) (outer-decls nil) decl)
     (loop (when (null body) (return nil))
 	  (setq decl (car body))
 	  (unless (and (consp decl)
@@ -866,24 +889,40 @@
 	    (return nil))
 	  (dolist (form (cdr decl))
 	    (when (consp form)
-	      (case (car form)
-		((optimize method-name method-lambda-list)
-		 (push `(declare ,form) outer-decls))
-		((ignore type class)
-		 (let ((dname (list (pop form))) (inners nil) (outers nil))
-		   (when (member (car dname) '(type class))
-		     (setq dname (append dname (list (pop form)))))
-		   (dolist (var form)
-		     (if (member var args)
-			 (push var outers)
-			 (push var inners)))
-		   (when outers
-		     (push `(declare (,@dname ,@outers)) outer-decls))
-		   (when inners
-		     (push `(declare (,@dname ,@inners)) inner-decls))))
-		(t (setq must-rebind-args-p t)))))
+	      (let ((declaration-name (car form)))
+		(if (member declaration-name *non-variable-declarations*)
+		    (push `(declare ,form) outer-decls)
+		    (let ((arg-p
+			   (member declaration-name
+				   *variable-declarations-with-argument*))
+			  (non-arg-p
+			   (member declaration-name
+				   *variable-declarations-without-argument*))
+			  (dname (list (pop form)))
+			  (inners nil) (outers nil))
+		      (unless (or arg-p non-arg-p)
+			(warn "The declaration ~S is not understood by ~S.~@
+                               Please put ~S on one of the lists ~S,~%~S, or~%~S.~@
+                        (Assuming it is a variable declarations without argument)."
+			      declaration-name 'split-declarations
+			      declaration-name
+			      '*non-variable-declarations*
+			      '*variable-declarations-with-argument*
+			      '*variable-declarations-without-argument*)
+			(push declaration-name
+			      *variable-declarations-without-argument*))
+		      (when arg-p
+			(setq dname (append dname (list (pop form)))))
+		      (dolist (var form)
+			(if (member var args)
+			    (push var outers)
+			    (push var inners)))
+		      (when outers
+			(push `(declare (,@dname ,@outers)) outer-decls))
+		      (when inners
+			(push `(declare (,@dname ,@inners)) inner-decls)))))))
 	  (setq body (cdr body)))
-    (values outer-decls inner-decls must-rebind-args-p body)))
+    (values outer-decls inner-decls body)))
 
 (defun make-method-initargs-form-internal (method-lambda initargs env)
   (declare (ignore env))
@@ -910,7 +949,7 @@
 
 (defun make-method-initargs-form-internal1 
     (initargs body req-args lmf-params restp)
-  (multiple-value-bind (outer-decls inner-decls must-rebind-args-p body)
+  (multiple-value-bind (outer-decls inner-decls body)
       (split-declarations body req-args)
     (let* ((rest-arg (when restp '.rest-arg.))
 	   (args+rest-arg (if restp (append req-args (list rest-arg)) req-args)))
@@ -939,6 +978,7 @@
 ;will get called only when the user explicitly funcalls a result of method-function. 
 ;BUT, this is needed to make early methods work.
 (defun method-function-from-fast-function (fmf)
+  (declare (type function fmf))
   (let* ((method-function nil) (pv-table nil)
 	 (arg-info (method-function-get fmf ':arg-info))
 	 (nreq (car arg-info))

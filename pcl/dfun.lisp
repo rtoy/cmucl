@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 #|
 
@@ -419,6 +419,7 @@ And so, we are saved.
 		    function 
 		    #'(lambda (&rest args)
 			(declare (pcl-fast-call))
+			#+copy-&rest-arg (setq args (copy-list args))
 			(checking-miss generic-function args dfun-info)))
 	   cache
 	   dfun-info)))))
@@ -428,6 +429,7 @@ And so, we are saved.
   (let ((metatypes (arg-info-metatypes (gf-arg-info generic-function))))
     (if (every #'(lambda (mt) (eq mt 't)) metatypes)
 	(values #'(lambda (&rest args)
+		    #+copy-&rest-arg (setq args (copy-list args))
 		    (invoke-emf function args))
 		nil (default-method-only-dfun-info))
 	(let ((cache (make-final-ordinary-dfun-internal 
@@ -474,6 +476,7 @@ And so, we are saved.
 		cache
 		#'(lambda (&rest args)
 		    (declare (pcl-fast-call))
+		    #+copy-&rest-arg (setq args (copy-list args))
 		    (caching-miss generic-function args dfun-info)))
        cache
        dfun-info))))
@@ -535,6 +538,7 @@ And so, we are saved.
 		cache
 		#'(lambda (&rest args)
 		    (declare (pcl-fast-call))
+		    #+copy-&rest-arg (setq args (copy-list args))
 		    (constant-value-miss generic-function args dfun-info)))
        cache
        dfun-info))))
@@ -644,6 +648,7 @@ And so, we are saved.
 (defun make-initial-dfun (gf)
   (let ((initial-dfun 
 	 #'(lambda (&rest args)
+	     #+copy-&rest-arg (setq args (copy-list args))
 	     (initial-dfun gf args))))
     (multiple-value-bind (dfun cache info)
 	(if (and (eq *boot-state* 'complete)

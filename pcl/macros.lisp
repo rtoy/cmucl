@@ -31,7 +31,7 @@
 ;;; loaded before it can be compiled.
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (proclaim '(declaration
 	     #-Genera values          ;I use this so that Zwei can remind
@@ -376,8 +376,10 @@
 (defmacro define-compiler-macro (name arglist &body body)
   #+(or lucid kcl)
   `(#+lucid lcl:def-compiler-macro #+kcl si::define-compiler-macro
-        ,name ,arglist
-     ,@body)
+	    ,name ,arglist
+	    ,@body)
+  #-(or kcl lucid)
+  (declare (ignore name arglist body))
   #-(or kcl lucid)
   nil)
 
@@ -406,11 +408,14 @@
   `(car ,cell))
 
 (defmacro find-class-cell-predicate (cell)
-  `(cdr ,cell))
+  `(cadr ,cell))
+
+(defmacro find-class-cell-make-instance-function-keys (cell)
+  `(cddr ,cell))
 
 (defmacro make-find-class-cell (class-name)
   (declare (ignore class-name))
-  '(cons nil #'function-returning-nil))
+  '(list* nil #'function-returning-nil nil))
 
 (defun find-class-cell (symbol &optional dont-create-p)
   (or (gethash symbol *find-class*)
@@ -443,11 +448,13 @@
 
 (defun find-class (symbol &optional (errorp t) environment)
   (declare (ignore environment))
-  (find-class-from-cell symbol (find-class-cell symbol errorp) errorp))
+  (find-class-from-cell
+   symbol (find-class-cell symbol errorp) errorp))
 
 (defun find-class-predicate (symbol &optional (errorp t) environment)
   (declare (ignore environment))
-  (find-class-predicate-from-cell symbol (find-class-cell symbol errorp) errorp))
+  (find-class-predicate-from-cell 
+   symbol (find-class-cell symbol errorp) errorp))
 
 #-setf
 (defsetf find-class (symbol &optional (errorp t) environment) (new-value)
@@ -455,8 +462,19 @@
   `(SETF\ PCL\ FIND-CLASS ,new-value ,symbol))
 
 (defun #-setf SETF\ PCL\ FIND-CLASS #+setf (setf find-class) (new-value symbol)
+  (declare (special *boot-state*))
   (if (legal-class-name-p symbol)
-      (setf (find-class-cell-class (find-class-cell symbol)) new-value)
+      (let ((cell (find-class-cell symbol)))
+	(setf (find-class-cell-class cell) new-value)
+	(when (or (eq *boot-state* 'complete)
+		  (eq *boot-state* 'braid))
+	  (setf (find-class-cell-predicate cell)
+		(symbol-function (class-predicate-name new-value)))
+	  (when (and new-value (not (forward-referenced-class-p new-value)))
+	    (dolist (keys+aok (find-class-cell-make-instance-function-keys cell))
+	      (update-initialize-info-internal
+	       (initialize-info new-value (car keys+aok) nil (cdr keys+aok))
+	       'make-instance-function)))))
       (error "~S is not a legal class name." symbol)))
 
 #-setf
@@ -722,41 +740,4 @@
 	  (symbol-function name)))
   (setf (symbol-function name)
 	(symbol-function new)))
-
-(defun reset-pcl-package ()		; Try to do this safely
-  (let* ((vars '(*pcl-directory* 
-		 *default-pathname-extensions* 
-		 *pathname-extensions*
-		 *redefined-functions*))
-	 (names (mapcar #'symbol-name vars))
-	 (values (mapcar #'symbol-value vars)))
-    (declare (special *redefined-functions*))
-    (let ((pkg (find-package "PCL")))
-      (do-symbols (sym pkg)
-	(when (eq pkg (symbol-package sym))
-	  (if (or (constantp sym)
-		  (eq sym 'wrapper)
-		  (eq sym 'arg-info))
-	      (unintern sym pkg)
-	      (progn
-		(makunbound sym)
-		(unless (eq sym 'reset-pcl-package)
-		  (fmakunbound sym))
-		#+cmu (fmakunbound `(setf ,sym))
-		(setf (symbol-plist sym) nil))))))
-    (let ((pkg (find-package "SLOT-ACCESSOR-NAME")))
-      (when pkg
-	(do-symbols (sym pkg)
-	  (makunbound sym)
-	  (fmakunbound sym)
-	  (setf (symbol-plist sym) nil))))
-    (let ((pcl (find-package "PCL")))
-      (mapcar #'(lambda (name value)
-		  (let ((var (intern name pcl)))
-		    (proclaim `(special ,var))
-		    (set var value)))
-	      names values))      
-    (dolist (sym *redefined-functions*)
-      (setf (symbol-function sym) (get sym ':definition-before-pcl)))
-    nil))
 

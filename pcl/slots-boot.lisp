@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmacro slot-symbol (slot-name type)
   `(if (and (symbolp ,slot-name) (symbol-package ,slot-name))
@@ -53,11 +53,11 @@
 (defun slot-boundp-symbol (slot-name)
   (slot-symbol slot-name boundp))
 
-(defmacro asv-funcall (sym slot-name &rest args)
-  `(function-funcall (if (#-akcl fboundp #+akcl %fboundp ,sym)
-			 (#-akcl symbol-function #+akcl %symbol-function ,sym)
-			 (no-slot ,sym ,slot-name))
-                     ,@args))
+(defmacro asv-funcall (sym slot-name type &rest args)
+  (declare (ignore type))
+  `(if (#-akcl fboundp #+akcl %fboundp ',sym)
+       (,sym ,@args)
+       (no-slot ',sym ',slot-name)))
 
 (defun no-slot (slot-name sym)
   (error "No class has a slot named ~S (~s has no function binding)
@@ -71,7 +71,7 @@
 	   'accessor-slot-value))
   (let* ((slot-name (eval slot-name))
 	 (sym (slot-reader-symbol slot-name)))
-    `(asv-funcall ',sym ',slot-name ,object)))
+    `(asv-funcall ,sym ,slot-name reader ,object)))
 
 (defmacro accessor-set-slot-value (object slot-name new-value &environment env)
   (unless (constantp slot-name)
@@ -85,7 +85,7 @@
 		       (prog1 `((,object-var ,object))
 			 (setq object object-var)))))
 	 (sym (slot-writer-symbol slot-name))
-	 (form `(asv-funcall ',sym ',slot-name ,new-value ,object)))
+	 (form `(asv-funcall ,sym ,slot-name writer ,new-value ,object)))
     (if bindings
 	`(let ,bindings ,form)
 	form)))
@@ -100,7 +100,7 @@
 	 (sym (slot-boundp-symbol slot-name)))
     (if (not *optimize-slot-boundp*)
 	`(slot-boundp-normal ,object ',slot-name)
-	`(asv-funcall ',sym ',slot-name ,object))))
+	`(asv-funcall ,sym ,slot-name boundp ,object))))
 
 
 (defun structure-slot-boundp (object)
@@ -111,6 +111,7 @@
   (let* ((reader (slot-definition-internal-reader-function slotd))
 	 (fun #'(lambda (object)
 		  (not (eq (funcall reader object) *slot-unbound*)))))
+    (declare (type function reader))
     #+(and kcl turbo-closure) (si:turbo-closure fun)
     fun))		    
 
@@ -126,10 +127,11 @@
 	     (slot-name (slot-definition-name slotd))
 	     (index (slot-definition-location slotd))
 	     (function (ecase name
-			 (reader 'make-optimized-std-reader-method-function)
-			 (writer 'make-optimized-std-writer-method-function)
-			 (boundp 'make-optimized-std-boundp-method-function)))
+			 (reader #'make-optimized-std-reader-method-function)
+			 (writer #'make-optimized-std-writer-method-function)
+			 (boundp #'make-optimized-std-boundp-method-function)))
 	     (value (funcall function fsc-p slot-name index)))
+	(declare (type function function))
 	(values value index))))
 
 (defun make-optimized-std-reader-method-function (fsc-p slot-name index)
@@ -379,18 +381,29 @@
     (list* ':method-spec `(boundp-method ,class-name ,slot-name)
 	   initargs)))
 
-(defun initialize-internal-slot-gfs (slot-name)
-  (let* ((name (slot-reader-symbol slot-name))
-	 (gf (ensure-generic-function name)))
-    (unless (generic-function-methods gf)
-      (add-reader-method *the-class-slot-object* gf slot-name)))
-  (let* ((name (slot-writer-symbol slot-name))
-	 (gf (ensure-generic-function name)))
-    (unless (generic-function-methods gf)
-      (add-writer-method *the-class-slot-object* gf slot-name)))
-  (when *optimize-slot-boundp*
+(defun initialize-internal-slot-gfs (slot-name &optional type)
+  (when (or (null type) (eq type 'reader))
+    (let* ((name (slot-reader-symbol slot-name))
+	   (gf (ensure-generic-function name)))
+      (unless (generic-function-methods gf)
+	(add-reader-method *the-class-slot-object* gf slot-name))))
+  (when (or (null type) (eq type 'writer))
+    (let* ((name (slot-writer-symbol slot-name))
+	   (gf (ensure-generic-function name)))
+      (unless (generic-function-methods gf)
+	(add-writer-method *the-class-slot-object* gf slot-name))))
+  (when (and *optimize-slot-boundp*
+	     (or (null type) (eq type 'boundp)))
     (let* ((name (slot-boundp-symbol slot-name))
 	   (gf (ensure-generic-function name)))
       (unless (generic-function-methods gf)
 	(add-boundp-method *the-class-slot-object* gf slot-name))))
   nil)
+
+(defun initialize-internal-slot-gfs* (readers writers boundps)
+  (dolist (reader readers)
+    (initialize-internal-slot-gfs reader 'reader))
+  (dolist (writer writers)
+    (initialize-internal-slot-gfs writer 'writer))
+  (dolist (boundp boundps)
+    (initialize-internal-slot-gfs boundp 'boundp)))

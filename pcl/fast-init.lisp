@@ -28,58 +28,25 @@
 ;;; This file defines the optimized make-instance functions.
 ;;; 
 
-(in-package 'pcl)
+(in-package :pcl)
 
-;make-instance-functions take up more space when compiled.
-(defvar *inhibit-compile-make-instance-functions-p* nil)
+(defvar *compile-make-instance-functions-p* nil)
 
-(defvar *compile-make-instance-functions-p* nil) ; this gets bound to t below
-
-(defvar *make-instance-function-table* (make-hash-table :test 'equal))
-
-(defvar gmif-class nil)
-
-(defun update-make-instance-function-table (&optional (gmif-class *the-class-t*))
-  (when (symbolp gmif-class) (setq gmif-class (find-class gmif-class)))
-  (let ((class gmif-class))
+(defun update-make-instance-function-table (&optional (class *the-class-t*))
+  (when (symbolp class) (setq class (find-class class)))
     (when (eq class *the-class-t*) (setq class *the-class-slot-object*))
     (when (memq *the-class-slot-object* (class-precedence-list class))
       (map-all-classes #'reset-class-initialize-info class)))
-  (maphash #'get-make-instance-function *make-instance-function-table*))
-
-(defun get-make-instance-function-key (class initargs)
-  (let ((keys nil)(allow-other-keys-p nil) key value)
-    (when initargs
-      (let ((initargs-tail initargs))
-	(setq key (pop initargs-tail) value (pop initargs-tail))
-	(when (eq key ':allow-other-keys)
-	  (setq allow-other-keys-p value))
-	(setq keys (cons key nil))
-	(when initargs-tail
-	  (let ((keys-tail keys))
-	    (loop (setq key (pop initargs-tail) value (pop initargs-tail))
-		  (when (eq key ':allow-other-keys)
-		    (setq allow-other-keys-p value))
-		  (if keys-tail
-		      (setf (cdr keys-tail) (cons key nil)
-			    keys-tail (cdr keys-tail))
-		      (setf keys-tail (setf keys (cons key nil))))
-		  (when (null initargs-tail) (return nil)))))))
-    (list class keys allow-other-keys-p)))
-
-(defmacro %get-make-instance-function (class initargs)
-  `(let ((key (get-make-instance-function-key ,class ,initargs)))
-     (or (car (gethash key *make-instance-function-table*))
-	 (get-make-instance-function key))))
 
 (defun constant-symbol-p (form)
-  (and (constantp form) (symbolp (eval form))))
+  (and (constantp form) 
+       (let ((object (eval form)))
+	 (and (symbolp object)
+	      (symbol-package object)))))
 
 (defvar *make-instance-function-keys* nil)
-(defvar *skip-boundp-check* nil)
 
-(defun expand-make-instance-form (form &optional
-				       (skip-boundp-check *skip-boundp-check*))
+(defun expand-make-instance-form (form)
   (let ((class (cadr form)) (initargs (cddr form))
 	(keys nil)(allow-other-keys-p nil) key value)
     (when (and (constant-symbol-p class)
@@ -97,18 +64,11 @@
 	     (key (list class keys allow-other-keys-p))
 	     (sym (make-instance-function-symbol key)))
 	(push key *make-instance-function-keys*)
-	(if (and sym skip-boundp-check)
-	    `(,sym ',class (list ,@initargs))
-	    `(funcall ,(if sym
-			   `(if (#-akcl fboundp #+akcl %fboundp ',sym)
-			        (#-akcl symbol-function #+akcl %symbol-function ',sym)
-			        (get-make-instance-function ',key))
-			   `(get-make-instance-function ',key))
-	             ',class (list ,@initargs)))))))
+	(when sym
+	  `(,sym ',class (list ,@initargs)))))))
 
 (defmacro expanding-make-instance-top-level (&rest forms &environment env)
   (let* ((*make-instance-function-keys* nil)
-	 (*skip-boundp-check* t)
 	 (form (macroexpand `(expanding-make-instance ,@forms) env)))
     `(progn
        ,@(when *make-instance-function-keys*
@@ -134,262 +94,41 @@
     (defun ,name ,lambda-list
       (make-instance ',class ,@initialization-arguments))))
 
-(defun get-make-instance-functions (key-list &optional compile-p)
-  (let ((*compile-make-instance-functions-p* compile-p))
-    (dolist (key key-list)
-      (if compile-p
-	  (get-make-instance-function key)
-	  (set-make-instance-function (make-instance-function-symbol key)
-				      key
-				      (make-lazy-get-make-instance-function key)
-				      nil)))))
+(defun get-make-instance-functions (key-list)
+  (dolist (key key-list)
+    (let* ((cell (find-class-cell (car key)))
+	   (make-instance-function-keys 
+	    (find-class-cell-make-instance-function-keys cell))
+	   (mif-key (cons (cadr key) (caddr key))))
+      (unless (find mif-key make-instance-function-keys 
+		    :test #'equal)
+	(push mif-key (find-class-cell-make-instance-function-keys cell))
+	(let ((class (find-class-cell-class cell)))
+	  (when (and class (not (forward-referenced-class-p class)))
+	    (update-initialize-info-internal
+	     (initialize-info class (car mif-key) nil (cdr mif-key))
+	     'make-instance-function)))))))
 
 (defun make-instance-function-symbol (key)
-  (let ((class (car key)))
-    (when (or (symbolp class) (classp class))
+  (let* ((class (car key))
+	 (symbolp (symbolp class)))
+    (when (or symbolp (classp class))
       (let* ((class-name (if (symbolp class) class (class-name class)))
 	     (keys (cadr key))
 	     (allow-other-keys-p (caddr key)))
-	(let ((*package* *the-pcl-package*)
-	      (*print-length* nil) (*print-level* nil)
-	      (*print-circle* nil) (*print-case* :upcase)
-	      (*print-pretty* nil))
-	  (intern (format nil "MAKE-INSTANCE ~S ~S ~S"
-			  class-name keys allow-other-keys-p)))))))
+	(when (and (or symbolp 
+		       (and (symbolp class-name)
+			    (eq class (find-class class-name nil))))
+		   (symbol-package class-name))
+	  (let ((*package* *the-pcl-package*)
+		(*print-length* nil) (*print-level* nil)
+		(*print-circle* nil) (*print-case* :upcase)
+		(*print-pretty* nil))
+	    (intern (format nil "MAKE-INSTANCE ~S ~S ~S"
+			    class-name keys allow-other-keys-p))))))))
 
-(defun make-lazy-get-make-instance-function (key)
-  #'(lambda (class initargs)
-      (if (eq *boot-state* 'complete)
-	  (funcall (get-make-instance-function key) class initargs)
-	  (apply #'make-instance class initargs))))
-
-(defun get-make-instance-function (key &optional (value (list nil nil)))
-  (let* ((class (car key))
-	 (keys (cadr key))
-	 (gmif-class-1 gmif-class) (gmif-class nil)
-	 name)
-    (flet ((return-function (function)
-	     (return-from get-make-instance-function
-	       (set-make-instance-function name key function nil))))
-      (unless (eq *boot-state* 'complete)
-	(return-function (make-lazy-get-make-instance-function key)))
-      (when (symbolp class)
-	(let ((real-class (find-class class nil)))
-	  (unless real-class
-	    (if gmif-class-1
-		(return-function (make-lazy-get-make-instance-function key))
-		(error "class ~S not found" class)))
-	  (setq class real-class)))
-      (when (classp class)
-	(unless (class-finalized-p class) (finalize-inheritance class))
-	(when (and gmif-class-1
-		   (not (member gmif-class-1 (class-precedence-list class))))
-	  (return-from get-make-instance-function nil))
-	(setq name (make-instance-function-symbol key))
-      (when (and gmif-class-1 (not *compile-make-instance-functions-p*))
-	(return-function 
-	 #'(lambda (class initargs)
-	     (funcall (get-make-instance-function key) class initargs)))))
-    (let* ((initargs (mapcan #'(lambda (key) (list key nil)) keys))
-	   (class-and-initargs (list* class initargs))
-	   (make-instance (gdefinition 'make-instance))
-	   (make-instance-methods
-	    (compute-applicable-methods make-instance class-and-initargs))
-	   (std-mi-meth (find-standard-ii-method make-instance-methods 'class))
-	   (class+initargs (list class initargs))
-	   (default-initargs (gdefinition 'default-initargs))
-	   (default-initargs-methods
-	    (compute-applicable-methods default-initargs class+initargs))
-	   (proto (and (classp class) (class-prototype class)))
-	   (initialize-instance-methods
-	    (when proto
-	      (compute-applicable-methods (gdefinition 'initialize-instance)
-					  (list* proto initargs))))
-	   (shared-initialize-methods
-	    (when proto
-	      (compute-applicable-methods (gdefinition 'shared-initialize)
-					  (list* proto t initargs)))))
-      (when (null make-instance-methods)
-	(return-function 
-	 #'(lambda (class initargs)
-	     (apply #'no-applicable-method make-instance class initargs))))
-      (unless (and (null (cdr make-instance-methods))
-		   (eq (car make-instance-methods) std-mi-meth)
-		   (null (cdr default-initargs-methods))
-		   (eq (car (method-specializers (car default-initargs-methods)))
-		       *the-class-slot-class*)
-		   (flet ((check-meth (meth)
-			    (let ((quals (method-qualifiers meth)))
-			      (if (null quals)
-				  (eq (car (method-specializers meth))
-				      *the-class-slot-object*)
-				  (and (null (cdr quals))
-				       (or (eq (car quals) ':before)
-					   (eq (car quals) ':after)))))))
-		     (and (every #'check-meth initialize-instance-methods)
-			  (every #'check-meth shared-initialize-methods))))
-	(return-function
-	 #'(lambda (class initargs)
-	     (apply #'make-instance class initargs))))
-      (get-make-instance-function-internal 
-       class key (default-initargs class initargs) 
-       initialize-instance-methods shared-initialize-methods
-       name 
-       (or (cadr value)
-	   (and *compile-make-instance-functions-p*
-		(not *inhibit-compile-make-instance-functions-p*))))))))
-
-(defun get-make-instance-function-internal (class key initargs 
-						  initialize-instance-methods
-						  shared-initialize-methods
-						  &optional (name nil name-p)
-						  compile-p)
-  (let* ((*compile-make-instance-functions-p* compile-p)
-	 (keys (cadr key))
-	 (allow-other-keys-p (caddr key))
-	 (allocate-instance-methods
-	  (compute-applicable-methods (gdefinition 'allocate-instance)
-				      (list* class initargs))))
-    (unless allow-other-keys-p
-      (unless (check-initargs-1
-	       class initargs
-	       (append allocate-instance-methods
-		       initialize-instance-methods
-		       shared-initialize-methods)
-	       t nil)
-	(return-from get-make-instance-function-internal
-	  (make-lazy-get-make-instance-function key))))
-    (let ((function (if (or (cdr allocate-instance-methods)
-			    (some #'complicated-instance-creation-method
-				  initialize-instance-methods)
-			    (some #'complicated-instance-creation-method
-				  shared-initialize-methods))
-			(make-instance-function-complex
-			 key class keys
-			 initialize-instance-methods shared-initialize-methods)
-			(make-instance-function-simple
-			 key class keys
-			 initialize-instance-methods shared-initialize-methods))))
-      (when name-p (set-make-instance-function name key function compile-p))
-      function)))
-
-(defun set-make-instance-function (name key function compile-p)
-  #-cmu (set-function-name function name)
-  (when name (setf (symbol-function name) function))
-  (setf (gethash key *make-instance-function-table*) 
-	(list function compile-p))
-  function)
-
-(defun complicated-instance-creation-method (m)
-  (let ((qual (method-qualifiers m)))
-    (if qual 
-	(not (and (null (cdr qual)) (eq (car qual) ':after)))
-	(let ((specl (car (method-specializers m))))
-	  (or (not (classp specl))
-	      (not (eq 'slot-object (class-name specl))))))))
-
-(defun find-standard-ii-method (methods class-names)
-  (dolist (m methods)
-    (when (null (method-qualifiers m))
-      (let ((specl (car (method-specializers m))))
-	(when (and (classp specl)
-		   (if (listp class-names)
-		       (member (class-name specl) class-names)
-		       (eq (class-name specl) class-names)))
-	  (return m))))))
-
-(defmacro call-initialize-function (initialize-function instance initargs)
-  `(let ((.function. ,initialize-function))
-     (if (and (consp .function.)
-	      (eq (car .function.) 'call-initialize-instance-simple))
-	 (initialize-instance-simple (cadr .function.) (caddr .function.)
-				     ,instance ,initargs)
-	 (funcall .function. ,instance ,initargs))))
-
-(defun make-instance-function-simple (key class keys 
-					  initialize-instance-methods 
-					  shared-initialize-methods)
-  (multiple-value-bind (initialize-function constants)
-      (get-simple-initialization-function class keys (caddr key))
-    (let* ((wrapper (class-wrapper class))
-	   (lwrapper (list wrapper))
-	   (allocate-function 
-	    (cond ((structure-class-p class)
-		   #'allocate-structure-instance)
-		  ((standard-class-p class)
-		   #'allocate-standard-instance)
-		  ((funcallable-standard-class-p class)
-		   #'allocate-funcallable-instance)
-		  (t 
-		   (error "error in make-instance-function-simple"))))
-	   (std-si-meth (find-standard-ii-method shared-initialize-methods
-						 'slot-object))
-	   (shared-initfns
-	    (nreverse (mapcar #'(lambda (method)
-				  (make-effective-method-function
-				   #'shared-initialize
-				   `(call-method ,method nil)
-				   nil lwrapper))
-			      (remove std-si-meth shared-initialize-methods))))
-	   (std-ii-meth (find-standard-ii-method initialize-instance-methods
-						 'slot-object))
-	   (initialize-initfns 
-	    (nreverse (mapcar #'(lambda (method)
-				  (make-effective-method-function
-				   #'initialize-instance
-				   `(call-method ,method nil)
-				   nil lwrapper))
-			      (remove std-ii-meth
-				      initialize-instance-methods)))))
-      #'(lambda (class1 initargs)
-	  (declare (ignore class1))
-	  (if (not (eq wrapper (class-wrapper class)))
-	      (funcall (get-make-instance-function key) class initargs)
-	      (let* ((instance (funcall allocate-function wrapper constants))
-		     (initargs (call-initialize-function initialize-function
-							 instance initargs)))
-		(dolist (fn shared-initfns)
-		  (invoke-effective-method-function fn t instance t initargs))
-		(dolist (fn initialize-initfns)
-		  (invoke-effective-method-function fn t instance initargs))
-		instance))))))
-
-(defun make-instance-function-complex (key class keys
-					   initialize-instance-methods
-					   shared-initialize-methods)
-  (multiple-value-bind (initargs-function initialize-function)
-      (get-complex-initialization-functions class keys (caddr key))
-    (let* ((wrapper (class-wrapper class))
-	   (shared-initialize
-	    (get-secondary-dispatch-function
-	     #'shared-initialize shared-initialize-methods
-	     `((class-eq ,class) t t)
-	     `((,(find-standard-ii-method shared-initialize-methods 'slot-object)
-		,#'(lambda (instance init-type &rest initargs)
-		     (declare (ignore init-type))
-		     (call-initialize-function initialize-function 
-					       instance initargs)
-		     instance)))
-	     (list wrapper *the-wrapper-of-t* *the-wrapper-of-t*)))
-	   (initialize-instance
-	    (get-secondary-dispatch-function
-	     #'initialize-instance initialize-instance-methods
-	     `((class-eq ,class) t)
-	     `((,(find-standard-ii-method initialize-instance-methods 'slot-object)
-		,#'(lambda (instance &rest initargs)
-		     (invoke-effective-method-function
-		      shared-initialize t instance t initargs))))
-	     (list wrapper *the-wrapper-of-t*))))
-      #'(lambda (class1 initargs)
-	  (declare (ignore class1))
-	  (if (not (eq wrapper (class-wrapper class)))
-	      (funcall (get-make-instance-function key) class initargs)
-	      (let* ((initargs (call-initialize-function initargs-function 
-							 nil initargs))
-		     (instance (apply #'allocate-instance class initargs)))
-		(invoke-effective-method-function
-		 initialize-instance t instance initargs)
-		instance))))))
+(defun make-instance-1 (class initargs)
+  (apply #'make-instance class initargs))
 
 (defmacro define-cached-reader (type name trap)
   (let ((reader-name (intern (format nil "~A-~A" type name)))
@@ -412,22 +151,38 @@
     shared-initialize-t-function
     shared-initialize-nil-function
     constants
-    combined-initialize-function)))
+    combined-initialize-function ; allocate-instance + shared-initialize
+    make-instance-function ; nil means use gf
+    make-instance-function-symbol)))
 
 (defmacro define-initialize-info ()
-  (flet ((cached-slot-name (name)
-	   (intern (format nil "CACHED-~A" name)))
-	 (cached-name (name)
-	   (intern (format nil "~A-CACHED-~A" 'initialize-info name))))
+  (let ((cached-slot-names 
+	 (mapcar #'(lambda (name)
+		     (intern (format nil "CACHED-~A" name)))
+		 initialize-info-cached-slots))
+	(cached-names
+	 (mapcar #'(lambda (name)
+		     (intern (format nil "~A-CACHED-~A" 
+				     'initialize-info name)))
+		 initialize-info-cached-slots)))
     `(progn
        (defstruct initialize-info 
 	 key wrapper 
-	 ,@(mapcar #'cached-slot-name initialize-info-cached-slots))
-       (defun reset-initialize-info (info)
 	 ,@(mapcar #'(lambda (name)
-		       `(setf (,(cached-name name) info) ':unknown))
-		   initialize-info-cached-slots)
-	 info)
+		       `(,name :unknown))
+		   cached-slot-names))
+       (defmacro reset-initialize-info-internal (info)
+	 `(progn 
+	    ,@(mapcar #'(lambda (cname)
+			  `(setf (,cname ,info) ':unknown))
+		      ',cached-names)))
+       (defun initialize-info-bound-slots (info)
+	 (let ((slots nil))
+	   ,@(mapcar #'(lambda (name cached-name)
+			 `(unless (eq ':unknown (,cached-name info))
+			    (push ',name slots)))
+		     initialize-info-cached-slots cached-names)
+	   slots))
       ,@(mapcar #'(lambda (name)
 		    `(define-cached-reader initialize-info ,name 
 		      update-initialize-info-internal))
@@ -439,13 +194,26 @@
 (defvar *initialize-info-cache-initargs* nil)
 (defvar *initialize-info-cache-info* nil)
 
+(defvar *revert-initialize-info-p* nil)
+
+(defun reset-initialize-info (info)
+  (setf (initialize-info-wrapper info)
+	(class-wrapper (car (initialize-info-key info))))
+  (let ((slots-to-revert (if *revert-initialize-info-p*
+			     (initialize-info-bound-slots info)
+			     '(make-instance-function))))
+    (reset-initialize-info-internal info)
+    (dolist (slot slots-to-revert)
+      (update-initialize-info-internal info slot))
+    info))
+
 (defun reset-class-initialize-info (class)
   (reset-class-initialize-info-1 (class-initialize-info class)))
 
 (defun reset-class-initialize-info-1 (cell)
   (when (consp cell)
     (when (car cell)
-      (setf (initialize-info-wrapper (car cell)) nil))
+      (reset-initialize-info (car cell)))
     (let ((alist (cdr cell)))
       (dolist (a alist)
 	(reset-class-initialize-info-1 (cdr a))))))
@@ -489,17 +257,10 @@
 		  (when plist-p (pop initargs-tail)))
 	    (setf (initialize-info-key info)
 		  (list class (cdr klist-cell) allow-other-keys-arg))))
-	(update-initialize-info info)))
+	(reset-initialize-info info)))
     (setq *initialize-info-cache-class* class)
     (setq *initialize-info-cache-initargs* initargs)
     (setq *initialize-info-cache-info* info)    
-    info))
-
-(defun update-initialize-info (info)
-  (let* ((key (initialize-info-key info))
-	 (class (car key)))
-    (setf (initialize-info-wrapper info) (class-wrapper class))
-    (reset-initialize-info info)
     info))
 
 (defun update-initialize-info-internal (info name)
@@ -516,7 +277,9 @@
       ((default-initargs-function)
        (let ((initargs-form-list (initialize-info-initargs-form-list info)))
 	 (setf (initialize-info-cached-default-initargs-function info)
-	       (initialize-instance-simple-function class initargs-form-list))))
+	       (initialize-instance-simple-function 
+		'default-initargs-function info
+		class initargs-form-list))))
       ((valid-p ri-valid-p)
        (flet ((compute-valid-p (methods)
 		(or (not (null allow-other-keys-arg))
@@ -528,24 +291,30 @@
 			      (return (cons :invalid key)))))))))
 	 (let ((proto (class-prototype class)))
 	   (setf (initialize-info-cached-valid-p info)
-		 (compute-valid-p (list (list* 'allocate-instance class nil)
-					(list* 'initialize-instance proto nil)
-					(list* 'shared-initialize proto t nil))))
+		 (compute-valid-p
+		  (list (list* 'allocate-instance class nil)
+			(list* 'initialize-instance proto nil)
+			(list* 'shared-initialize proto t nil))))
 	   (setf (initialize-info-cached-ri-valid-p info)
-		 (compute-valid-p (list (list* 'reinitialize-instance proto nil)
-					(list* 'shared-initialize proto nil nil)))))))
+		 (compute-valid-p 
+		  (list (list* 'reinitialize-instance proto nil)
+			(list* 'shared-initialize proto nil nil)))))))
       ((shared-initialize-t-function)
        (multiple-value-bind (initialize-form-list ignore)
 	   (make-shared-initialize-form-list class keys t nil)
 	 (declare (ignore ignore))
 	 (setf (initialize-info-cached-shared-initialize-t-function info)
-	       (initialize-instance-simple-function class initialize-form-list))))
+	       (initialize-instance-simple-function 
+		'shared-initialize-t-function info
+		class initialize-form-list))))
       ((shared-initialize-nil-function)
        (multiple-value-bind (initialize-form-list ignore)
 	   (make-shared-initialize-form-list class keys nil nil)
 	 (declare (ignore ignore))
 	 (setf (initialize-info-cached-shared-initialize-nil-function info)
-	       (initialize-instance-simple-function class initialize-form-list))))
+	       (initialize-instance-simple-function 
+		'shared-initialize-nil-function info 
+		class initialize-form-list))))
       ((constants combined-initialize-function)
        (let ((initargs-form-list (initialize-info-initargs-form-list info))
 	     (new-keys (initialize-info-new-keys info)))
@@ -554,8 +323,215 @@
 	   (setf (initialize-info-cached-constants info) constants)
 	   (setf (initialize-info-cached-combined-initialize-function info)
 		 (initialize-instance-simple-function 
-		  class (append initargs-form-list initialize-form-list))))))))
+		  'combined-initialize-function info 
+		  class (append initargs-form-list initialize-form-list))))))
+      ((make-instance-function-symbol)
+       (setf (initialize-info-cached-make-instance-function-symbol info)
+	     (make-instance-function-symbol key)))
+      ((make-instance-function)
+       (let* ((function (get-make-instance-function key))
+	      (symbol (initialize-info-make-instance-function-symbol info)))
+	 (setf (initialize-info-cached-make-instance-function info) function)
+	 (when symbol (setf (gdefinition symbol)
+			    (or function #'make-instance-1)))))))
   info)
+
+(defun get-make-instance-function (key)
+  (let* ((class (car key))
+	 (keys (cadr key)))
+    (unless (eq *boot-state* 'complete) 
+      (return-from get-make-instance-function nil))
+    (when (symbolp class)
+      (setq class (find-class class)))
+    (when (classp class)
+      (unless (class-finalized-p class) (finalize-inheritance class)))
+    (let* ((initargs (mapcan #'(lambda (key) (list key nil)) keys))
+	   (class-and-initargs (list* class initargs))
+	   (make-instance (gdefinition 'make-instance))
+	   (make-instance-methods
+	    (compute-applicable-methods make-instance class-and-initargs))
+	   (std-mi-meth (find-standard-ii-method make-instance-methods 'class))
+	   (class+initargs (list class initargs))
+	   (default-initargs (gdefinition 'default-initargs))
+	   (default-initargs-methods
+	       (compute-applicable-methods default-initargs class+initargs))
+	   (proto (and (classp class) (class-prototype class)))
+	   (initialize-instance-methods
+	    (when proto
+	      (compute-applicable-methods (gdefinition 'initialize-instance)
+					  (list* proto initargs))))
+	   (shared-initialize-methods
+	    (when proto
+	      (compute-applicable-methods (gdefinition 'shared-initialize)
+					  (list* proto t initargs)))))
+      (when (null make-instance-methods)
+	(return-from get-make-instance-function
+	  #'(lambda (class initargs)
+	      (apply #'no-applicable-method make-instance class initargs))))
+      (unless (and (null (cdr make-instance-methods))
+		   (eq (car make-instance-methods) std-mi-meth)
+		   (null (cdr default-initargs-methods))
+		   (eq (car (method-specializers (car default-initargs-methods)))
+		       *the-class-slot-class*)
+		   (flet ((check-meth (meth)
+			    (let ((quals (method-qualifiers meth)))
+			      (if (null quals)
+				  (eq (car (method-specializers meth))
+				      *the-class-slot-object*)
+				  (and (null (cdr quals))
+				       (or (eq (car quals) ':before)
+					   (eq (car quals) ':after)))))))
+		     (and (every #'check-meth initialize-instance-methods)
+			  (every #'check-meth shared-initialize-methods))))
+	(return-from get-make-instance-function nil))
+      (get-make-instance-function-internal 
+       class key (default-initargs class initargs) 
+       initialize-instance-methods shared-initialize-methods))))
+
+(defun get-make-instance-function-internal (class key initargs 
+						  initialize-instance-methods
+						  shared-initialize-methods)
+  (let* ((keys (cadr key))
+	 (allow-other-keys-p (caddr key))
+	 (allocate-instance-methods
+	  (compute-applicable-methods (gdefinition 'allocate-instance)
+				      (list* class initargs))))
+    (unless allow-other-keys-p
+      (unless (check-initargs-1
+	       class initargs
+	       (append allocate-instance-methods
+		       initialize-instance-methods
+		       shared-initialize-methods)
+	       t nil)
+	(return-from get-make-instance-function-internal nil)))
+    (if (or (cdr allocate-instance-methods)
+	    (some #'complicated-instance-creation-method
+		  initialize-instance-methods)
+	    (some #'complicated-instance-creation-method
+		  shared-initialize-methods))
+	(make-instance-function-complex
+	 key class keys
+	 initialize-instance-methods shared-initialize-methods)
+	(make-instance-function-simple
+	 key class keys
+	 initialize-instance-methods shared-initialize-methods))))
+
+(defun complicated-instance-creation-method (m)
+  (let ((qual (method-qualifiers m)))
+    (if qual 
+	(not (and (null (cdr qual)) (eq (car qual) ':after)))
+	(let ((specl (car (method-specializers m))))
+	  (or (not (classp specl))
+	      (not (eq 'slot-object (class-name specl))))))))
+
+(defun find-standard-ii-method (methods class-names)
+  (dolist (m methods)
+    (when (null (method-qualifiers m))
+      (let ((specl (car (method-specializers m))))
+	(when (and (classp specl)
+		   (if (listp class-names)
+		       (member (class-name specl) class-names)
+		       (eq (class-name specl) class-names)))
+	  (return m))))))
+
+(defmacro call-initialize-function (initialize-function instance initargs)
+  `(let ((.function. ,initialize-function))
+     (if (and (consp .function.)
+	      (eq (car .function.) 'call-initialize-instance-simple))
+	 (initialize-instance-simple (cadr .function.) (caddr .function.)
+				     ,instance ,initargs)
+	 (funcall (the function .function.) ,instance ,initargs))))
+
+(defun make-instance-function-simple (key class keys
+					  initialize-instance-methods 
+					  shared-initialize-methods)
+  (multiple-value-bind (initialize-function constants)
+      (get-simple-initialization-function class keys (caddr key))
+    (let* ((wrapper (class-wrapper class))
+	   (lwrapper (list wrapper))
+	   (allocate-function 
+	    (cond ((structure-class-p class)
+		   #'allocate-structure-instance)
+		  ((standard-class-p class)
+		   #'allocate-standard-instance)
+		  ((funcallable-standard-class-p class)
+		   #'allocate-funcallable-instance)
+		  (t 
+		   (error "error in make-instance-function-simple"))))
+	   (std-si-meth (find-standard-ii-method shared-initialize-methods
+						 'slot-object))
+	   (shared-initfns
+	    (nreverse (mapcar #'(lambda (method)
+				  (make-effective-method-function
+				   #'shared-initialize
+				   `(call-method ,method nil)
+				   nil lwrapper))
+			      (remove std-si-meth shared-initialize-methods))))
+	   (std-ii-meth (find-standard-ii-method initialize-instance-methods
+						 'slot-object))
+	   (initialize-initfns 
+	    (nreverse (mapcar #'(lambda (method)
+				  (make-effective-method-function
+				   #'initialize-instance
+				   `(call-method ,method nil)
+				   nil lwrapper))
+			      (remove std-ii-meth
+				      initialize-instance-methods)))))
+      #'(lambda (class1 initargs)
+	  (if (not (eq wrapper (class-wrapper class)))
+	      (let* ((info (initialize-info class1 initargs))
+		     (fn (initialize-info-make-instance-function info)))
+		(declare (type function fn))
+		(funcall fn class1 initargs))
+	      (let* ((instance (funcall allocate-function wrapper constants))
+		     (initargs (call-initialize-function initialize-function
+							 instance initargs)))
+		(dolist (fn shared-initfns)
+		  (invoke-effective-method-function fn t instance t initargs))
+		(dolist (fn initialize-initfns)
+		  (invoke-effective-method-function fn t instance initargs))
+		instance))))))
+
+(defun make-instance-function-complex (key class keys
+					   initialize-instance-methods
+					   shared-initialize-methods)
+  (multiple-value-bind (initargs-function initialize-function)
+      (get-complex-initialization-functions class keys (caddr key))
+    (let* ((wrapper (class-wrapper class))
+	   (shared-initialize
+	    (get-secondary-dispatch-function
+	     #'shared-initialize shared-initialize-methods
+	     `((class-eq ,class) t t)
+	     `((,(find-standard-ii-method shared-initialize-methods 'slot-object)
+		,#'(lambda (instance init-type &rest initargs)
+		     (declare (ignore init-type))
+		     #+copy-&rest-arg (setq initargs (copy-list initargs))
+		     (call-initialize-function initialize-function 
+					       instance initargs)
+		     instance)))
+	     (list wrapper *the-wrapper-of-t* *the-wrapper-of-t*)))
+	   (initialize-instance
+	    (get-secondary-dispatch-function
+	     #'initialize-instance initialize-instance-methods
+	     `((class-eq ,class) t)
+	     `((,(find-standard-ii-method initialize-instance-methods 'slot-object)
+		,#'(lambda (instance &rest initargs)
+		     #+copy-&rest-arg (setq initargs (copy-list initargs))
+		     (invoke-effective-method-function
+		      shared-initialize t instance t initargs))))
+	     (list wrapper *the-wrapper-of-t*))))
+      #'(lambda (class1 initargs)
+	  (if (not (eq wrapper (class-wrapper class)))
+	      (let* ((info (initialize-info class1 initargs))
+		     (fn (initialize-info-make-instance-function info)))
+		(declare (type function fn))
+		(funcall fn class1 initargs))
+	      (let* ((initargs (call-initialize-function initargs-function 
+							 nil initargs))
+		     (instance (apply #'allocate-instance class initargs)))
+		(invoke-effective-method-function
+		 initialize-instance t instance initargs)
+		instance))))))
 
 (defun get-simple-initialization-function (class keys &optional allow-other-keys-arg)
   (let ((info (initialize-info class keys nil allow-other-keys-arg)))
@@ -682,23 +658,34 @@
 (defvar *initialize-instance-simple-alist* nil)
 (defvar *note-iis-entry-p* nil)
 
-(defun initialize-instance-simple-function (class form-list)
-  (let ((pv-cell (get-pv-cell-for-class class)))
-    (if (and *compile-make-instance-functions-p*
-	     (not *inhibit-compile-make-instance-functions-p*))
+(defvar *compiled-initialize-instance-simple-functions*
+  (make-hash-table :test #'equal))
+
+(defun initialize-instance-simple-function (use info class form-list)
+  (let* ((pv-cell (get-pv-cell-for-class class))
+	 (key (initialize-info-key info))
+	 (sf-key (list* use (class-name (car key)) (cdr key))))
+    (if (or *compile-make-instance-functions-p*
+	    (gethash sf-key *compiled-initialize-instance-simple-functions*))
 	(multiple-value-bind (form args)
 	    (form-list-to-lisp pv-cell form-list)
 	  (let ((entry (assoc form *initialize-instance-simple-alist*
 			      :test #'equal)))
-	    (unless entry
-	      (setq entry (list form
-				(unless *note-iis-entry-p* (compile-lambda form))
-				nil))
-	      (setq *initialize-instance-simple-alist*
-		    (nconc *initialize-instance-simple-alist*
-			   (list entry))))
+	    (setf (gethash sf-key
+			   *compiled-initialize-instance-simple-functions*)
+		  t)
+	    (if entry
+		(setf (cdddr entry) (union (list sf-key) (cdddr entry)
+					   :test #'equal))
+		(progn
+		  (setq entry (list* form nil nil (list sf-key)))
+		  (setq *initialize-instance-simple-alist*
+			(nconc *initialize-instance-simple-alist*
+			       (list entry)))))
+	    (unless (or *note-iis-entry-p* (cadr entry))
+	      (setf (cadr entry) (compile-lambda (car entry))))
 	    (if (cadr entry)
-		(apply (cadr entry) args)
+		(apply (the function (cadr entry)) args)
 		`(call-initialize-instance-simple ,pv-cell ,form-list))))
 	#||
 	#'(lambda (instance initargs)
@@ -706,16 +693,20 @@
 	||#
 	`(call-initialize-instance-simple ,pv-cell ,form-list))))
 
-(defun load-precompiled-iis-entry (form function system)
+(defun load-precompiled-iis-entry (form function system uses)
   (let ((entry (assoc form *initialize-instance-simple-alist*
 		      :test #'equal)))
     (unless entry
-      (setq entry (list form nil nil))
+      (setq entry (list* form nil nil nil))
       (setq *initialize-instance-simple-alist*
 	    (nconc *initialize-instance-simple-alist*
 		   (list entry))))
     (setf (cadr entry) function)
-    (setf (caddr entry) system)))
+    (setf (caddr entry) system)
+    (dolist (use uses)
+      (setf (gethash use *compiled-initialize-instance-simple-functions*) t))
+    (setf (cdddr entry) (union uses (cdddr entry)
+			       :test #'equal))))
 
 (defmacro precompile-iis-functions (&optional system)
   (let ((index -1))
@@ -732,10 +723,12 @@
 	       `(load-precompiled-iis-entry
 		 ',(car iis-entry)
 		 #',(car iis-entry)
-		 ',system)))))))))
+		 ',system
+		 ',(cdddr iis-entry))))))))))
 
 (defun compile-iis-functions (after-p)
   (let ((*compile-make-instance-functions-p* t)
+	(*revert-initialize-info-p* t)
 	(*note-iis-entry-p* (not after-p)))
     (declare (special *compile-make-instance-functions-p*))
     (when (eq *boot-state* 'complete)
@@ -764,7 +757,7 @@
 	      (const
 	       (setq value (cadr form)))
 	      (funcall
-	       (setq value (funcall (cadr form))))
+	       (setq value (funcall (the function (cadr form)))))
 	      (pop-initargs
 	       (setq initargs-tail (nthcdr (1- (cadr form)) initargs-tail))
 	       (setq value (pop initargs-tail)))

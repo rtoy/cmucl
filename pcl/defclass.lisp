@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 ;;;
 ;;; MAKE-TOP-LEVEL-FORM is used by all PCL macros that appear `at top-level'.

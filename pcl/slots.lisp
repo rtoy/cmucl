@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmethod wrapper-fetcher ((class standard-class))
   'std-instance-wrapper)
@@ -134,7 +134,7 @@
 	(slot-missing class object slot-name 'slot-value)
 	(slot-value-using-class class object slot-definition))))
 
-(setf (symbol-function 'slot-value-normal) #'slot-value)
+(setf (gdefinition 'slot-value-normal) #'slot-value)
 
 (define-compiler-macro slot-value (object-form slot-name-form)
   (if (and (constantp slot-name-form)
@@ -151,7 +151,7 @@
 	(setf (slot-value-using-class class object slot-definition) 
 	      new-value))))
 
-(setf (symbol-function 'set-slot-value-normal) #'set-slot-value)
+(setf (gdefinition 'set-slot-value-normal) #'set-slot-value)
 
 (define-compiler-macro set-slot-value (object-form slot-name-form new-value-form)
   (if (and (constantp slot-name-form)
@@ -169,7 +169,7 @@
 	(slot-missing class object slot-name 'slot-boundp)
 	(slot-boundp-using-class class object slot-definition))))
 
-(setf (symbol-function 'slot-boundp-normal) #'slot-boundp)
+(setf (gdefinition 'slot-boundp-normal) #'slot-boundp)
 
 (define-compiler-macro slot-boundp (object-form slot-name-form)
   (if (and (constantp slot-name-form)

@@ -27,7 +27,7 @@
 ;;; Basic environmental stuff.
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 #+Lucid
 (progn
@@ -209,9 +209,14 @@
 
 #+cmu
 (defmethod describe-object ((object hash-table) stream)
-  (format stream "~&~S is an ~a hash table." object (lisp::hash-table-kind object))
-  (format stream "~&Its size is ~d buckets." (lisp::hash-table-size object))
-  (format stream "~&Its rehash-size is ~d." (lisp::hash-table-rehash-size object))
+  (format stream "~&~S is an ~a hash table."
+	  object
+	  #-cmu17 (lisp::hash-table-kind object)
+	  #+cmu17 (lisp::hash-table-test object))
+  (format stream "~&Its size is ~d buckets."
+	  (lisp::hash-table-size object))
+  (format stream "~&Its rehash-size is ~d."
+	  (lisp::hash-table-rehash-size object))
   (format stream "~&Its rehash-threshold is ~d."
 	  (lisp::hash-table-rehash-threshold object))
   (format stream "~&It currently holds ~d entries."
@@ -262,6 +267,7 @@
 (defvar *traced-methods* ())
 
 (defun trace-method (spec &rest options)
+  #+copy-&rest-arg (setq options (copy-list options))
   (multiple-value-bind (gf omethod name)
       (parse-method-or-spec spec)
     (let* ((tfunction (trace-method-internal (method-function omethod)

@@ -27,7 +27,7 @@
 ;;; This is the CMU Lisp version of the file low.
 ;;; 
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmacro dotimes ((var count &optional (result nil)) &body body)
   `(lisp:dotimes (,var (the fixnum ,count) ,result)
@@ -87,8 +87,11 @@
          fcn)
         (t
          (let ((header (kernel:%closure-function fcn)))
+	   #+cmu17
+	   (setf (c::%function-name header) new-name)
+	   #-cmu17
            (system:%primitive c::set-function-name header new-name))
-         fcn)))
+	 fcn)))
 
 (in-package "C")
 

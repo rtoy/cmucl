@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 ;;; This file is (almost) functionally equivalent to dlap.lisp,
 ;;; but easier to read.
@@ -105,6 +105,10 @@
 		    ,@(when (member 'miss-fn closure-variables)
 			`((declare (type function miss-fn))))
 		    #'(lambda ,args
+			#+copy-&rest-arg
+			,@(when rest
+			    `((setq .lap-rest-arg.
+				    (copy-list .lap-rest-arg.))))
 			(let ()
 			  (declare #.*optimize-speed*)
 			  ,form)))))
@@ -116,7 +120,7 @@
 (defun emit-reader/writer (reader/writer 1-or-2-class class-slot-p)
   (when (and (null *precompiling-lap*) *emit-function-p*)
     (return-from emit-reader/writer
-      (emit-reader/writer-function reader/writer 1-or-2-class class-slot-p)))    
+      (emit-reader/writer-function reader/writer 1-or-2-class class-slot-p)))
   (let ((instance nil)
 	(arglist  ())
 	(closure-variables ())

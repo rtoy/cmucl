@@ -27,7 +27,7 @@
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 ;;;
 ;;; The caching algorithm implemented:
 ;;;

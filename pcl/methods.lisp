@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmethod print-object (instance stream)
   (printing-random-thing (instance stream)
@@ -388,13 +388,12 @@
 			      specializers
 			      lambda-list
 			      &rest other-initargs)
+  #+copy-&rest-arg (setq other-initargs (copy-list other-initargs))
   ;; What about changing the class of the generic-function if there is
   ;; one.  Whose job is that anyways.  Do we need something kind of
   ;; like class-for-redefinition?
   (let* ((generic-function
-	   (ensure-generic-function generic-function-name
-				    :lambda-list (method-ll->generic-function-ll
-						  lambda-list)))
+	   (ensure-generic-function generic-function-name))
 	 (specs (parse-specializers specializers))
 ;	 (existing (get-method generic-function qualifiers specs nil))
 	 (proto (method-prototype-for-gf generic-function-name))
@@ -434,7 +433,7 @@
 	    (if (memq arg lambda-list-keywords)
 		(return)
 		(incf nrequireds)))
-	  (setf (symbol-function function-name) generic-function)
+	  (setf (gdefinition function-name) generic-function)
 	  (set-function-name generic-function function-name)
 	  (when arglistp
 	    (setf (gf-pretty-arglist generic-function) arglist))
@@ -563,13 +562,17 @@
 (defmethod reinitialize-instance :after ((gf standard-generic-function)
 					 &rest args
 					 &key (lambda-list nil lambda-list-p)
-					 argument-precedence-order)
+					 (argument-precedence-order 
+					  nil argument-precedence-order-p))
   (with-slots (arg-info)
     gf
     (if lambda-list-p
-	(set-arg-info gf 
-		      :lambda-list lambda-list
-		      :argument-precedence-order argument-precedence-order)
+	(if argument-precedence-order-p
+	    (set-arg-info gf 
+			  :lambda-list lambda-list
+			  :argument-precedence-order argument-precedence-order)
+	    (set-arg-info gf 
+			  :lambda-list lambda-list))
 	(set-arg-info gf))
     (when (and (arg-info-valid-p arg-info)
 	       args
@@ -616,8 +619,7 @@
 			'(make-instance default-initargs
 			  allocate-instance shared-initialize initialize-instance))
 	    (update-make-instance-function-table (type-class (car specializers))))
-	  (update-dfun generic-function)
-	  (maybe-update-constructors generic-function method))
+	  (update-dfun generic-function))
 	method)))
   
 (defun real-remove-method (generic-function method)
@@ -639,7 +641,6 @@
 			      allocate-instance shared-initialize initialize-instance))
 	   (update-make-instance-function-table (type-class (car specializers))))
 	 (update-dfun generic-function)
-	 (maybe-update-constructors generic-function method)
 	 generic-function)))
 
 
@@ -723,7 +724,7 @@
   (class-of (slot-value specializer 'object)))
 
 (defvar *in-gf-arg-info-p* nil)
-(setf (symbol-function 'arg-info-reader)
+(setf (gdefinition 'arg-info-reader)
       (let ((mf (initialize-method-function
 		 (make-internal-reader-method-function
 		  'standard-generic-function 'arg-info)
@@ -775,6 +776,7 @@
 
 (defun default-secondary-dispatch-function (generic-function)
   #'(lambda (&rest args)
+      #+copy-&rest-arg (setq args (copy-list args))
       (let ((methods (compute-applicable-methods generic-function args)))
 	(if methods
 	    (let ((emf (get-effective-method-function generic-function methods)))
@@ -1363,7 +1365,8 @@
 		  (setf (gethash (car k+m) table) (cdr k+m)))
 		table)))))))
 
-(defun compute-secondary-dispatch-function1 (generic-function net &optional function-p)
+(defun compute-secondary-dispatch-function1 (generic-function net
+					     &optional function-p)
   (if (eq (car net) 'methods)
       (get-effective-method-function1 generic-function (cadr net))
       (let* ((name (generic-function-name generic-function))
@@ -1376,8 +1379,13 @@
 			  (make-fast-method-call-lambda-list metatypes applyp))))
 	(multiple-value-bind (cfunction constants)
 	    (get-function1 `(lambda ,arglist
-			      ,(unless function-p
-				 `(declare (ignore .pv-cell. .next-method-call.)))
+			      ,@(unless function-p
+				  `((declare (ignore .pv-cell.
+						     .next-method-call.))))
+			      #+copy-&rest-arg
+			      ,@(when (and applyp function-p)
+				  `((setq .dfun-rest-arg.
+					  (copy-list .dfun-rest-arg.))))
 			      (let ((emf ,net))
 			        ,(make-emf-call metatypes applyp 'emf)))
 			   #'net-test-converter
@@ -1413,6 +1421,7 @@
     (format t "~&make-unordered-methods-emf ~s~%" 
 	    (generic-function-name generic-function)))
   #'(lambda (&rest args)
+      #+copy-&rest-arg (setq args (copy-list args))
       (let* ((types (types-from-arguments generic-function args 'eql))
 	     (smethods (sort-applicable-methods generic-function methods types))
 	     (emf (get-effective-method-function generic-function smethods)))

@@ -564,8 +564,8 @@
 (defgeneric map-dependents (metaobject function))
 ;          (dependent-update-mixin t)
 
-(defgeneric maybe-update-constructors (generic-function method))
-;          (generic-function method)
+;(defgeneric maybe-update-constructors (generic-function method))
+;           (generic-function method)
 
 (defgeneric print-object (mc stream))
 ;          (t t)
@@ -764,6 +764,8 @@
 ;  :after  (standard-method t)
 ;  :after  (standard-accessor-method t)
 ;  :before (standard-generic-function t)
+
+(defgeneric update-dependent (metaobject dependent &rest initargs))
 
 (defgeneric update-instance-for-different-class (previous current &rest initargs))
 ;          (standard-object standard-object)

@@ -218,7 +218,7 @@
 ;;; 
 (defvar *the-pcl-package* (find-package :pcl))
 
-(defvar *pcl-system-date* "September 16 PCL")
+(defvar *pcl-system-date* "September 16 92 PCL (e)")
 
 #+cmu
 (setf (getf ext:*herald-items* :pcl)
@@ -239,6 +239,7 @@
        (pushnew :genera-release-6 *features*))
       ((7)
        (pushnew :genera-release-7 *features*)
+       (pushnew :copy-&rest-arg *features*)
        (ecase minor
 	 ((0 1) (pushnew :genera-release-7-1 *features*))
 	 ((2)   (pushnew :genera-release-7-2  *features*))
@@ -300,6 +301,22 @@
 (eval-when (eval compile load)
   (pushnew :excl-sun4 *features*))
 
+#+cmu
+(eval-when (compile load eval)
+  (let ((vs (lisp-implementation-version)))
+    (cond ((and (<= 2 (length vs))
+		(eql #\1 (aref vs 0))
+		(let ((d (digit-char-p (aref vs 1))))
+		  (and d (<= 6 d))))
+	   (pushnew :cmu16 *features*))
+	  ((string= "20-Dec-1992" vs)
+	   (pushnew :cmu16 *features*)
+	   (pushnew :cmu17 *features*)
+	   (when (fboundp 'pcl::original-defstruct)
+	     (setf (macro-function 'defstruct)
+		   (macro-function 'pcl::original-defstruct))))
+	  (t
+	   (error "what version of cmucl is this?")))))
 
 ;;; Yet Another Sort Of General System Facility and friends.
 ;;;
@@ -514,6 +531,7 @@ and load your system with:
 
 
 (defun make-transformations (modules filter make-transform)
+  (declare (type function filter make-transform))
   (let ((transforms (list nil)))
     (dolist (m modules)
       (when (funcall filter m transforms) (funcall make-transform m transforms)))
@@ -567,7 +585,7 @@ and load your system with:
 (defun operation-transformations (name mode &optional arg)
   (let ((system (get-system name)))
     (unless system (error "Can't find system with name ~S." name))
-    (let ((*system-directory* (funcall (car system)))
+    (let ((*system-directory* (funcall (the function (car system))))
 	  (modules (cadr system)))
       (ecase mode
 	(:compile
@@ -637,7 +655,7 @@ and load your system with:
 (defun operate-on-system (name mode &optional arg print-only)
   (let ((system (get-system name)))
     (unless system (error "Can't find system with name ~S." name))
-    (let* ((*system-directory* (funcall (car system)))
+    (let* ((*system-directory* (funcall (the function (car system))))
 	   (transformations (operation-transformations name mode arg)))
       (labels ((load-binary (name pathname)
 		 (format t "~&Loading binary of ~A...~%" name)
@@ -702,7 +720,7 @@ and load your system with:
 (defun system-source-files (name)
   (let ((system (get-system name)))
     (unless system (error "Can't find system with name ~S." name))
-    (let ((*system-directory* (funcall (car system)))
+    (let ((*system-directory* (funcall (the function (car system))))
 	  (modules (cadr system)))
       (mapcar #'(lambda (module)
 		  (make-source-pathname (module-name module)))
@@ -711,7 +729,7 @@ and load your system with:
 (defun system-binary-files (name)
   (let ((system (get-system name)))
     (unless system (error "Can't find system with name ~S." name))
-    (let ((*system-directory* (funcall (car system)))
+    (let ((*system-directory* (funcall (the function (car system))))
 	  (modules (cadr system)))
       (mapcar #'(lambda (module)
 		  (make-binary-pathname (module-name module)))
@@ -752,16 +770,17 @@ and load your system with:
     ;;
     #+LUCID (or lucid::*source-pathname* (bad-time))
     #+akcl   si:*load-pathname*
-    #-(or Lispm excl Xerox (and dec vax common) LUCID akcl) nil))
+    #+cmu17 *load-truename*
+    #-(or Lispm excl Xerox (and dec vax common) LUCID akcl cmu17) nil))
 
-#-(or cmu Symbolics)
+#-(or (and cmu (not cmu17)) Symbolics)
 (defvar *pcl-directory*
 	(or (load-truename t)
 	    (error "Because load-truename is not implemented in this port~%~
                     of PCL, you must manually edit the definition of the~%~
                     variable *pcl-directory* in the file defsys.lisp.")))
 
-#+cmu
+#+(and cmu (not cmu17))
 (defvar *pcl-directory* (pathname "pcl:"))
 
 #+Genera
@@ -1002,19 +1021,7 @@ and load your system with:
 	 (names (mapcar #'symbol-name vars))
 	 (values (mapcar #'symbol-value vars)))
     (declare (special *redefined-functions*))
-    (let ((pkg (find-package "PCL")))
-      (do-symbols (sym pkg)
-	(when (eq pkg (symbol-package sym))
-	  (if (or (constantp sym)
-		  (eq sym 'wrapper)
-		  (eq sym 'arg-info))
-	      (unintern sym pkg)
-	      (progn
-		(makunbound sym)
-		(unless (eq sym 'reset-pcl-package)
-		  (fmakunbound sym))
-		#+cmu (fmakunbound `(setf ,sym))
-		(setf (symbol-plist sym) nil))))))
+    (reset-package "PCL")
     (let ((pkg (find-package "SLOT-ACCESSOR-NAME")))
       (when pkg
 	(do-symbols (sym pkg)
@@ -1031,5 +1038,26 @@ and load your system with:
       (setf (symbol-function sym) (get sym ':definition-before-pcl)))
     nil))
 
-
-
+(defun reset-package (&optional (package-name "PCL"))
+  (let ((pkg (find-package package-name)))
+    (do-symbols (sym pkg)
+      (when (eq pkg (symbol-package sym))
+	(if (or (constantp sym)
+		#-cmu (member sym '(wrapper cache arg-info pv-table))
+		#+cmu
+		(or (c::info setf inverse sym)
+		    (c::info setf expander sym)
+		    (c::info type kind sym)
+		    (c::info type structure-info sym)
+		    (c::info type defined-structure-info sym)
+		    (c::info function macro-function sym)
+		    (c::info function compiler-macro-function sym)))
+	    (unintern sym pkg)
+	    (progn
+	      (makunbound sym)
+	      (unless (or (eq sym 'reset-pcl-package)
+			  (eq sym 'reset-package))
+		(fmakunbound sym)
+		#+cmu
+		(fmakunbound `(setf ,sym)))
+	      (setf (symbol-plist sym) nil)))))))

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defun get-method-function (method &optional method-alist wrappers)
   (let ((fn (cadr (assoc method method-alist))))

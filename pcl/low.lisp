@@ -62,7 +62,7 @@
 ;;; Thanks.
 ;;; 
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (eval-when (compile load eval)
 (defvar *optimize-speed* '(optimize (speed 3) (safety 0)))
@@ -328,6 +328,7 @@
 (defun compile-lambda-deferred (uncompiled)
   (let ((function (coerce uncompiled 'function))
 	(compiled nil))
+    (declare (type (or function null) compiled))
     #'(lambda (&rest args)
 	(if compiled
 	    (apply compiled args)

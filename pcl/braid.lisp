@@ -34,7 +34,7 @@
 ;;;
 ;;; 
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defun allocate-standard-instance (wrapper &optional (slots-init nil slots-init-p))
   #-new-kcl-wrapper (declare (special *slot-unbound*))
@@ -127,7 +127,7 @@
 (defun bootstrap-meta-braid ()
   (let* ((name 'class)
 	 (predicate-name (make-type-predicate-name name)))
-    (setf (symbol-function predicate-name)
+    (setf (gdefinition predicate-name)
 	  #'(lambda (x) (declare (ignore x)) t))
     (do-satisfies-deftype name predicate-name))  
   (let* ((*create-classes-from-internal-structure-definitions-p* nil)

@@ -66,7 +66,7 @@ explicitly marked saying who wrote it.
 
 |#
 
-(in-package 'pcl)
+(in-package :pcl)
 
 ;;;
 ;;; The first part of the file contains the implementation dependent code to
