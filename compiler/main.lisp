@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.50 1991/12/22 02:00:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.51 1992/02/12 17:39:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -458,7 +458,6 @@
 	     (cdr summary) kind summary))))))
   
   (unless (or *converting-for-interpreter*
-	      (not *compile-verbose*)
 	      (and (not abort-p) (zerop abort-count)
 		   (zerop *compiler-error-count*)
 		   (zerop *compiler-warning-count*)
