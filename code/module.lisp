@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.1 1992/11/04 19:56:48 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.2 1992/12/16 12:32:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -28,7 +28,7 @@
 (in-package 'lisp)
 
 
-^L
+
 ;;;; Exported specials.
 
 (defvar *modules* ()
@@ -55,7 +55,7 @@
   (gethash name *module-file-translations*))
 
 
-^L
+
 ;;;; Provide and Require.
 
 (defun provide (module-name)
@@ -88,7 +88,7 @@
         (load ele)))))
 
 
-^L
+
 ;;;; Misc.
 
 (defun module-name-string (name)
