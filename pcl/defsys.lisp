@@ -872,6 +872,7 @@ and load your system with:
    (construct   t                                   t (defclass boot defs low))
    (env         t                                   t (defclass boot defs low fin))
    (compat      t                                   t ())
+   (cmucl-documentation t			    t () CMU)
    (precom1     (dlisp)                             t (defs low cache fin dfun))
    (precom2     (dlisp)                             t (defs low cache fin dfun))
    ))
