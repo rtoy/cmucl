@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.38 1992/02/19 16:41:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.39 1992/02/22 00:09:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1047,7 +1047,7 @@
 (defun foreign-symbol-address (symbol)
   (multiple-value-bind
       (value found)
-      (gethash symbol *foreign-symbols* 0)
+      (gethash (vm:extern-alien-name symbol) *foreign-symbols* 0)
     (unless found
       (error "Unknown foreign symbol: ~S" symbol))
     (int-sap value)))
