@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.6 2004/10/09 00:09:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.7 2005/02/11 05:45:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,16 +83,19 @@
 		 (t (make-symbol (concatenate 'string "$" name)))))
        *register-names*))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defun reg-arg-printer (value stream dstate)
+  (declare (type stream stream) (fixnum value))
+  (let ((regname (aref reg-symbols value)))
+    (princ regname stream)
+    (disassem:maybe-note-associated-storage-ref value
+						'registers
+						regname
+						dstate)))
+)					; eval-when
+
 (disassem:define-argument-type reg
-  :printer #'(lambda (value stream dstate)
-	       (declare (type stream stream) (fixnum value))
-	       (let ((regname (aref reg-symbols value)))
-		 (princ regname stream)
-		 (disassem:maybe-note-associated-storage-ref
-		  value
-		  'registers
-		  regname
-		  dstate))))
+  :printer #'reg-arg-printer)
 
 (defparameter float-reg-symbols
   (coerce 
@@ -405,19 +408,19 @@
 (def-ppc-iformat (i-abs '(:name :tab li-abs)) 
   li-abs aa lk)
 
-(def-ppc-iformat (b '(:name :tab bo "," bi "," bd)) 
+(def-ppc-iformat (b '(:name :tab bo ", " bi ", " bd)) 
   bo bi bd aa lk)
 
-(def-ppc-iformat (d '(:name :tab rt "," d "(" ra ")"))
+(def-ppc-iformat (d '(:name :tab rt ", " d "(" ra ")"))
   rt ra d)
 
-(def-ppc-iformat (d-si '(:name :tab rt "," ra "," si ))
+(def-ppc-iformat (d-si '(:name :tab rt ", " ra ", " si ))
   rt ra si)
 
-(def-ppc-iformat (d-rs '(:name :tab rs "," d "(" ra ")"))
+(def-ppc-iformat (d-rs '(:name :tab rs ", " d "(" ra ")"))
   rs ra d)
 
-(def-ppc-iformat (d-rs-ui '(:name :tab ra "," rs "," ui))
+(def-ppc-iformat (d-rs-ui '(:name :tab ra ", " rs ", " ui))
   rs ra ui)
 
 (def-ppc-iformat (d-crf-si)
@@ -426,13 +429,13 @@
 (def-ppc-iformat (d-crf-ui)
   bf l ra ui)
 
-(def-ppc-iformat (d-to '(:name :tab to "," ra "," si))
+(def-ppc-iformat (d-to '(:name :tab to ", " ra ", " si))
   to ra rb si)
 
-(def-ppc-iformat (d-frt '(:name :tab frt "," d "(" ra ")"))
+(def-ppc-iformat (d-frt '(:name :tab frt ", " d "(" ra ")"))
   frt ra d)
 
-(def-ppc-iformat (d-frs '(:name :tab frs "," d "(" ra ")"))
+(def-ppc-iformat (d-frs '(:name :tab frs ", " d "(" ra ")"))
   frs ra d)
 
 
@@ -441,58 +444,58 @@
 ;;;  Some of them are only used by one instruction; some are used by dozens.
 ;;;  Some aren't used by instructions that we generate ...
 
-(def-ppc-iformat (x '(:name :tab rt "," ra "," rb))
+(def-ppc-iformat (x '(:name :tab rt ", " ra ", " rb))
   rt ra rb (xo xo21-30))
 
-(def-ppc-iformat (x-1 '(:name :tab rt "," ra "," nb))
+(def-ppc-iformat (x-1 '(:name :tab rt ", " ra ", " nb))
   rt ra nb (xo xo21-30))
 
 (def-ppc-iformat (x-4 '(:name :tab rt))
   rt (xo xo21-30))
 
-(def-ppc-iformat (x-5 '(:name :tab ra "," rs "," rb))
+(def-ppc-iformat (x-5 '(:name :tab ra ", " rs ", " rb))
   rs ra rb (xo xo21-30) rc)
 
-(def-ppc-iformat (x-7 '(:name :tab ra "," rs "," rb))
+(def-ppc-iformat (x-7 '(:name :tab ra ", " rs ", " rb))
   rs ra rb (xo xo21-30))
 
-(def-ppc-iformat (x-8 '(:name :tab ra "," rs "," nb))
+(def-ppc-iformat (x-8 '(:name :tab ra ", " rs ", " nb))
   rs ra nb (xo xo21-30))
 
-(def-ppc-iformat (x-9 '(:name :tab ra "," rs "," sh))
+(def-ppc-iformat (x-9 '(:name :tab ra ", " rs ", " sh))
   rs ra sh (xo xo21-30) rc)
 
-(def-ppc-iformat (x-10 '(:name :tab ra "," rs))
+(def-ppc-iformat (x-10 '(:name :tab ra ", " rs))
   rs ra (xo xo21-30) rc)
 
-(def-ppc-iformat (x-14 '(:name :tab bf "," l "," ra "," rb))
+(def-ppc-iformat (x-14 '(:name :tab bf ", " l ", " ra ", " rb))
   bf l ra rb (xo xo21-30))
 
-(def-ppc-iformat (x-15 '(:name :tab bf "," l "," fra "," frb))
+(def-ppc-iformat (x-15 '(:name :tab bf ", " l ", " fra ", " frb))
   bf l fra frb (xo xo21-30))
 
 (def-ppc-iformat (x-18 '(:name :tab bf))
   bf (xo xo21-30))
 
-(def-ppc-iformat (x-19 '(:name :tab to "," ra "," rb))
+(def-ppc-iformat (x-19 '(:name :tab to ", " ra ", " rb))
   to ra rb (xo xo21-30))
 
-(def-ppc-iformat (x-20 '(:name :tab frt "," ra "," rb))
+(def-ppc-iformat (x-20 '(:name :tab frt ", " ra ", " rb))
   frt ra rb (xo xo21-30))
 
-(def-ppc-iformat (x-21 '(:name :tab frt "," rb))
+(def-ppc-iformat (x-21 '(:name :tab frt ", " rb))
   frt rb (xo xo21-30) rc)
 
 (def-ppc-iformat (x-22 '(:name :tab frt))
   frt (xo xo21-30) rc)
 
-(def-ppc-iformat (x-23 '(:name :tab ra "," frs "," rb))
+(def-ppc-iformat (x-23 '(:name :tab ra ", " frs ", " rb))
   frs ra rb (xo xo21-30))
 
 (def-ppc-iformat (x-24 '(:name :tab bt))
   bt (xo xo21-30) rc)
 
-(def-ppc-iformat (x-25 '(:name :tab ra "," rb))
+(def-ppc-iformat (x-25 '(:name :tab ra ", " rb))
   ra rb (xo xo21-30))
 
 (def-ppc-iformat (x-26 '(:name :tab rb))
@@ -504,13 +507,13 @@
 
 ;;;;
 
-(def-ppc-iformat (xl '(:name :tab bt "," ba "," bb))
+(def-ppc-iformat (xl '(:name :tab bt ", " ba ", " bb))
   bt ba bb (xo xo21-30))
 
-(def-ppc-iformat (xl-bo-bi '(:name :tab bo "," bi))
+(def-ppc-iformat (xl-bo-bi '(:name :tab bo ", " bi))
   bo bi (xo xo21-30) lk)
 
-(def-ppc-iformat (xl-cr '(:name :tab bf "," bfa))
+(def-ppc-iformat (xl-cr '(:name :tab bf ", " bfa))
   bf bfa (xo xo21-30))
 
 (def-ppc-iformat (xl-xo '(:name))
@@ -522,44 +525,44 @@
 (def-ppc-iformat (xfx)
   rt spr (xo xo21-30))
 
-(def-ppc-iformat (xfx-fxm '(:name :tab fxm "," rs))
+(def-ppc-iformat (xfx-fxm '(:name :tab fxm ", " rs))
   rs fxm (xo xo21-30))
 
-(def-ppc-iformat (xfl '(:name :tab flm "," frb))
+(def-ppc-iformat (xfl '(:name :tab flm ", " frb))
   flm frb (xo xo21-30) rc)
 
 
 ;;;
 
-(def-ppc-iformat (xo '(:name :tab rt "," ra "," rb))
+(def-ppc-iformat (xo '(:name :tab rt ", " ra ", " rb))
   rt ra rb oe (xo xo22-30) rc)
 
-(def-ppc-iformat (xo-oe '(:name :tab rt "," ra "," rb))
+(def-ppc-iformat (xo-oe '(:name :tab rt ", " ra ", " rb))
   rt ra rb (xo xo22-30) rc)
 
-(def-ppc-iformat (xo-a '(:name :tab rt "," ra))
+(def-ppc-iformat (xo-a '(:name :tab rt ", " ra))
   rt ra oe (xo xo22-30) rc)
 
 
 ;;;
 
-(def-ppc-iformat (a '(:name :tab frt "," fra "," frb "," frc))
+(def-ppc-iformat (a '(:name :tab frt ", " fra ", " frb ", " frc))
   frt fra frb frc (xo xo26-30) rc)
 
-(def-ppc-iformat (a-tab '(:name :tab frt "," fra "," frb))
+(def-ppc-iformat (a-tab '(:name :tab frt ", " fra ", " frb))
   frt fra frb (xo xo26-30) rc)
 
-(def-ppc-iformat (a-tac '(:name :tab frt "," fra "," frc))
+(def-ppc-iformat (a-tac '(:name :tab frt ", " fra ", " frc))
   frt fra frc (xo xo26-30) rc)
 
-(def-ppc-iformat (a-tbc '(:name :tab frt "," frb "," frc))
+(def-ppc-iformat (a-tbc '(:name :tab frt ", " frb ", " frc))
   frt frb frc (xo xo26-30) rc)
 
 
-(def-ppc-iformat (m '(:name :tab ra "," rs "," rb "," mb "," me))
+(def-ppc-iformat (m '(:name :tab ra ", " rs ", " rb ", " mb ", " me))
   rs ra rb mb me rc)
 
-(def-ppc-iformat (m-sh '(:name :tab ra "," rs "," sh "," mb "," me))
+(def-ppc-iformat (m-sh '(:name :tab ra ", " rs ", " sh ", " mb ", " me))
   rs ra sh mb me rc)
 
 
@@ -1024,7 +1027,7 @@
 (define-d-si-instruction subfic 8)
 
 (define-instruction cmplwi (segment crf ra &optional (ui nil ui-p))
-  (:printer d-crf-ui ((op 10) (l 0)) '(:name :tab bf "," ra "," ui))
+  (:printer d-crf-ui ((op 10) (l 0)) '(:name :tab bf ", " ra ", " ui))
   (:dependencies (if ui-p (reads ra) (reads crf)) (writes :ccr))
   (:delay 1)
   (:emitter 
@@ -1037,7 +1040,7 @@
                      ui)))
 
 (define-instruction cmpwi (segment crf ra  &optional (si nil si-p))
-  (:printer d-crf-si ((op 11) (l 0)) '(:name :tab bf "," ra "," si))
+  (:printer d-crf-si ((op 11) (l 0)) '(:name :tab bf ", " ra ", " si))
   (:dependencies (if si-p (reads ra) (reads crf)) (writes :ccr))
   (:delay 1)
   (:emitter 
@@ -1105,14 +1108,14 @@
 
 (define-instruction bt (segment bi  target)
   (:printer b ((op 16) (bo #.(valid-bo-encoding :bo-t)) (aa 0) (lk 0))
-            '(:name :tab bi "," bd))
+            '(:name :tab bi ", " bd))
   (:delay 1)
   (:emitter
    (emit-conditional-branch segment #.(valid-bo-encoding :bo-t) bi target nil nil)))
 
 (define-instruction bf (segment bi  target)
   (:printer b ((op 16) (bo #.(valid-bo-encoding :bo-f)) (aa 0) (lk 0))
-            '(:name :tab bi "," bd))
+            '(:name :tab bi ", " bd))
   (:delay 1)
   (:emitter
    (emit-conditional-branch segment #.(valid-bo-encoding :bo-f) bi target nil nil)))
@@ -1341,7 +1344,7 @@
 (define-d-rs-ui-instruction andis. 29 :other-dependencies ((writes :ccr)))
 
 (define-instruction cmpw (segment crf ra  &optional (rb nil rb-p))
-  (:printer x-14 ((op 31) (xo 0) (l 0)) '(:name :tab bf "," ra "," rb))
+  (:printer x-14 ((op 31) (xo 0) (l 0)) '(:name :tab bf ", " ra ", " rb))
   (:delay 1)
   (:dependencies (reads ra) (if rb-p (reads rb) (reads crf)) (reads :xer) (writes :ccr))
   (:emitter 
@@ -1378,7 +1381,7 @@
 (define-2-x-5-instructions and 31 28)
 
 (define-instruction cmplw (segment crf ra  &optional (rb nil rb-p))
-  (:printer x-14 ((op 31) (xo 32) (l 0)) '(:name :tab bf "," ra "," rb))
+  (:printer x-14 ((op 31) (xo 32) (l 0)) '(:name :tab bf ", " ra ", " rb))
   (:delay 1)
   (:dependencies (reads ra) (if rb-p (reads rb) (reads crf)) (reads :xer) (writes :ccr))
   (:emitter 
@@ -1477,8 +1480,8 @@
                                              ((rs :same-as rb) 'mr)
                                              (t :name))
                                             :tab
-                                            ra "," rs
-                                            (:unless (:same-as rs) "," rb)))
+                                            ra ", " rs
+                                            (:unless (:same-as rs) ", " rb)))
   (:delay 1)
   (:cost 1)
   (:dependencies (reads rb) (reads rs) (writes ra))
@@ -1496,8 +1499,8 @@
                                              ((rs :same-as rb) 'mr.)
                                              (t :name))
                                             :tab
-                                            ra "," rs
-                                            (:unless (:same-as rs) "," rb)))
+                                            ra ", " rs
+                                            (:unless (:same-as rs) ", " rb)))
   (:delay 1)
   (:cost 1)
   (:dependencies (reads rb) (reads rs) (writes ra))
