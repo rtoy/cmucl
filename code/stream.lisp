@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.7 1991/01/12 15:50:40 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.8 1991/01/13 01:34:20 wlott Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -686,16 +686,18 @@
 		      (misc #'echo-misc)
 		      (n-bin #'ill-bin))
 	    (:print-function %print-echo-stream)
-	    (:constructor make-echo-stream (input-stream output-stream))))
+	    (:constructor make-echo-stream (input-stream output-stream)))
+  unread-stuff)
 
 
 (macrolet ((in-fun (name fun out-slot &rest args)
 	     `(defun ,name (stream ,@args)
-		(let* ((in (two-way-stream-input-stream stream))
-		       (out (two-way-stream-output-stream stream))
-		       (result (,fun in ,@args)))
-		  (funcall (,out-slot out) out result)
-		  result))))
+		(or (pop (echo-stream-unread-stuff stream))
+		    (let* ((in (echo-stream-input-stream stream))
+			   (out (echo-stream-output-stream stream))
+			   (result (,fun in ,@args)))
+		      (funcall (,out-slot out) out result)
+		      result)))))
   (in-fun echo-in read-char stream-out eof-errorp eof-value)
   (in-fun echo-bin read-byte stream-bout eof-errorp eof-value))
 
@@ -705,15 +707,29 @@
 	 (out (two-way-stream-output-stream stream))
 	 (out-method (stream-misc out)))
     (case operation
-      (:listen (or (/= (the fixnum (stream-in-index in)) in-buffer-length)
+      (:listen (or (not (null (echo-stream-unread-stuff stream)))
+		   (/= (the fixnum (stream-in-index in)) in-buffer-length)
 		   (funcall in-method in :listen)))
+      (:unread (push arg1 (echo-stream-unread-stuff stream)))
       (:read-line
-       (multiple-value-bind (result eofp)
-			    (read-line in arg1 arg2)
-	 (if eofp
-	     (write-string result out)
-	     (write-line result out))
-	 (values result eofp)))
+       (let* ((stuff (echo-stream-unread-stuff stream))
+	      (newline-pos (position #\newline stuff)))
+	 (if newline-pos
+	     (progn
+	       (setf (echo-stream-unread-stuff stream)
+		     (subseq stuff (1+ newline-pos)))
+	       (values (coerce (subseq stuff 0 newline-pos) 'simple-string)
+		       nil))
+	     (multiple-value-bind (result eofp)
+				  (read-line in arg1 arg2)
+	       (if eofp
+		   (write-string result out)
+		   (write-line result out))
+	       (setf (echo-stream-unread-stuff stream) nil)
+	       (values (if stuff
+			   (concatenate 'simple-string stuff result)
+			   result)
+		       eofp)))))
       (:element-type
        (let ((in-type (funcall in-method in :element-type))
 	     (out-type (funcall out-method out :element-type)))
