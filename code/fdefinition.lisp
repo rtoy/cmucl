@@ -7,12 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.1.1.2 1990/04/20 00:36:19 wlott Exp $
+;;;
 ;;;    Functions that hack on the global function namespace (primarily
 ;;; concerned with SETF functions here.)
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 (export '(fdefinition fboundp fmakunbound))
 
 (defvar *setf-functions* (make-hash-table :test #'equal))
@@ -34,6 +36,14 @@
       (error "Malformed function name: ~S." ,name))))
 
 ); Eval-When (Compile Eval)
+
+#+new-compiler
+(defun careful-symbol-function (name)
+  (symbol-function name))
+
+#+new-compiler
+(defun set-symbol-function-carefully (name value)
+  (setf (symbol-function name) value))
 
 (defun fdefinition (name)
   "Return Name's global function definition."
