@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.28 1992/07/28 20:43:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.29 1993/05/07 07:42:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,12 +25,12 @@
     ((:temp nvals any-reg nargs-offset)
      (:temp vals any-reg nl0-offset)
      (:temp ocfp any-reg nl1-offset)
-     (:temp lra descriptor-reg lra-offset)
+     #-gengc (:temp lra descriptor-reg lra-offset)
+     #+gengc (:temp ra descriptor-reg ra-offset)
 
      ;; These are just needed to facilitate the transfer
-     (:temp lip interior-reg lip-offset)
+     #-gengc (:temp lip interior-reg lip-offset)
      (:temp count any-reg nl2-offset)
-     (:temp src any-reg nl3-offset)
      (:temp dst any-reg nl4-offset)
      (:temp temp descriptor-reg l0-offset)
 
@@ -63,12 +63,12 @@
   (inst lw a5 vals (* 5 vm:word-bytes))
 
   ;; Copy the remaining args to the top of the stack.
-  (inst addu src vals (* 6 vm:word-bytes))
+  (inst addu vals vals (* 6 vm:word-bytes))
   (inst addu dst cfp-tn (* 6 vm:word-bytes))
 
   LOOP
-  (inst lw temp src)
-  (inst addu src vm:word-bytes)
+  (inst lw temp vals)
+  (inst addu vals vm:word-bytes)
   (inst sw temp dst)
   (inst subu count (fixnum 1))
   (inst bne count zero-tn loop)
@@ -96,8 +96,12 @@
   (inst addu csp-tn ocfp-tn nvals)
   
   ;; Return.
-  (lisp-return lra lip))
-
+  #-gengc
+  (lisp-return lra lip)
+  #+gengc
+  (progn
+    (inst j ra)
+    (inst nop)))
 
 
 ;;;; tail-call-variable.
@@ -117,7 +121,7 @@
      ;; These are needed by the blitting code.
      (:temp src any-reg nl1-offset)
      (:temp dst any-reg nl2-offset)
-     (:temp count any-reg nl3-offset)
+     (:temp count any-reg cfunc-offset)
      (:temp temp descriptor-reg l0-offset)
 
      ;; Needed for the jump
@@ -161,24 +165,32 @@
 	
   DONE
   ;; We are done.  Do the jump.
-  (loadw temp lexenv vm:closure-function-slot vm:function-pointer-type)
-  (lisp-jump temp lip))
-
+  #-gengc
+  (progn
+    (loadw temp lexenv vm:closure-function-slot vm:function-pointer-type)
+    (lisp-jump temp lip))
+  #+gengc
+  (progn
+    (loadw lip lexenv function-entry-point-slot function-pointer-type)
+    (inst j lip)
+    (inst nop)))
 
 
 ;;;; Non-local exit noise.
 
-(define-assembly-routine (unwind
-			  (:translate %continue-unwind)
-			  (:policy :fast-safe))
-			 ((:arg block (any-reg descriptor-reg) a0-offset)
-			  (:arg start (any-reg descriptor-reg) ocfp-offset)
-			  (:arg count (any-reg descriptor-reg) nargs-offset)
-			  (:temp lip interior-reg lip-offset)
-			  (:temp lra descriptor-reg lra-offset)
-			  (:temp cur-uwp any-reg nl0-offset)
-			  (:temp next-uwp any-reg nl1-offset)
-			  (:temp target-uwp any-reg nl2-offset))
+(define-assembly-routine
+    (unwind
+     (:translate %continue-unwind)
+     (:policy :fast-safe))
+    ((:arg block (any-reg descriptor-reg) a0-offset)
+     (:arg start (any-reg descriptor-reg) ocfp-offset)
+     (:arg count (any-reg descriptor-reg) nargs-offset)
+     #-gengc (:temp lip interior-reg lip-offset)
+     #-gengc (:temp lra descriptor-reg lra-offset)
+     #+gengc (:temp temp any-reg l0-offset)
+     (:temp cur-uwp any-reg nl0-offset)
+     (:temp next-uwp any-reg nl1-offset)
+     (:temp target-uwp any-reg nl2-offset))
   (declare (ignore start count))
 
   (let ((error (generate-error-code nil invalid-unwind-error)))
@@ -195,8 +207,15 @@
       
   (loadw cfp-tn cur-uwp vm:unwind-block-current-cont-slot)
   (loadw code-tn cur-uwp vm:unwind-block-current-code-slot)
-  (loadw lra cur-uwp vm:unwind-block-entry-pc-slot)
-  (lisp-return lra lip :frob-code nil)
+  #-gengc
+  (progn
+    (loadw lra cur-uwp vm:unwind-block-entry-pc-slot)
+    (lisp-return lra lip :frob-code nil))
+  #+gengc
+  (progn
+    (loadw temp cur-uwp vm:unwind-block-entry-pc-slot)
+    (inst j temp)
+    (inst nop))
 
   do-uwp
 
@@ -205,12 +224,13 @@
   (store-symbol-value next-uwp lisp::*current-unwind-protect-block*))
 
 
-(define-assembly-routine throw
-			 ((:arg target descriptor-reg a0-offset)
-			  (:arg start any-reg ocfp-offset)
-			  (:arg count any-reg nargs-offset)
-			  (:temp catch any-reg a1-offset)
-			  (:temp tag descriptor-reg a2-offset))
+(define-assembly-routine
+    throw
+    ((:arg target descriptor-reg a0-offset)
+     (:arg start any-reg ocfp-offset)
+     (:arg count any-reg nargs-offset)
+     (:temp catch any-reg a1-offset)
+     (:temp tag descriptor-reg a2-offset))
   
   (progn start count) ; We just need them in the registers.
 
