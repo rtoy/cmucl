@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/abbrev.lisp,v 1.1.1.3 1991/02/08 16:32:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/abbrev.lisp,v 1.1.1.4 1991/11/09 03:05:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -513,7 +513,7 @@
 	     :default (value abbrev-pathname-defaults)
 	     :must-exist nil)))
   (with-open-file (file (value abbrev-pathname-defaults) :direction :input
-			:element-type 'base-character :if-does-not-exist :error)
+			:element-type 'base-char :if-does-not-exist :error)
     (read-abbrevs file)))
 
 
@@ -587,7 +587,7 @@
 	   :help "Name of the file to write current abbrevs to."
 	   :must-exist nil)))
   (with-open-file (file filename :direction :output
-			:element-type 'base-character :if-exists :supersede
+			:element-type 'base-char :if-exists :supersede
 			:if-does-not-exist :create)
     (multiple-value-bind (x mode-tables) (count-abbrevs)
       (declare (ignore x))
@@ -630,7 +630,7 @@
 
 (defun write-incremental (mode filename)
   (with-open-file (file filename :direction :output
-			:element-type 'base-character
+			:element-type 'base-char
 			:if-exists mode :if-does-not-exist :create)
     (dolist (def *new-abbrevs*)
       (let ((abb (car def))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-stream.lisp,v 1.1.1.2 1991/02/08 16:38:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-stream.lisp,v 1.1.1.3 1991/11/09 03:06:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,7 +91,7 @@
 	 (funcall (device-force-output device)))))
     (:line-length
      (stream-hunk-width (tty-hunk-output-stream-hunk stream)))
-    (:element-type 'base-character)))
+    (:element-type 'base-char)))
 
 ;;; HUNK-SOUT writes a byte-blt's a string to a hunk-stream's buffer.
 ;;; When newlines are found, recurse on the substrings delimited by start,

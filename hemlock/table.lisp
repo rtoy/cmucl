@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.1.1.3 1991/04/23 11:53:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.1.1.4 1991/11/09 03:05:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,7 +73,7 @@
 	    (:print-function print-string-table))
   "This structure is used to implement the Hemlock string-table type."
   ;; Character used to 
-  (separator #\Space :type base-character) ; character used for word separator
+  (separator #\Space :type base-char) ; character used for word separator
   (num-nodes 0 :type fixnum)		   ; number of nodes in string table
   (value-nodes (make-array initial-string-table-size)) ; value node array
   (first-word-table (make-word-table)))	   ; pointer to first WORD-TABLE
@@ -86,7 +86,7 @@
   "Creates and returns a Hemlock string-table.  If Intitial-Contents is
   supplied in the form of an A-list of string-value pairs, these pairs
   will be used to initialize the table.  If Separator, which must be a
-  base-character, is specified then it will be used to distinguish word
+  base-char, is specified then it will be used to distinguish word
   boundaries."
   (let ((table (%make-string-table separator)))
     (dolist (x initial-contents)
@@ -264,7 +264,7 @@
 ) ; eval-when
 
 (defun with-folded-munge-string (str separator)
-  (declare (simple-string str) (base-character separator))
+  (declare (simple-string str) (base-char separator))
   (let ((str-len (length str))
 	(sep-pos nil)
 	(buf-pos 0))
@@ -570,7 +570,7 @@
   (values nil nil))
 
 (defun compute-field-pos (given best separator)
-  (declare (simple-string given best) (base-character separator))
+  (declare (simple-string given best) (base-char separator))
   (let ((give-pos 0)
 	(best-pos 0))
     (loop
@@ -584,7 +584,7 @@
 ;;;; Find-Longest-Completion
 
 (defun find-longest-completion (strings separator)
-  (declare (base-character separator))
+  (declare (base-char separator))
   (let ((first (car strings))
 	(rest-strings (cdr strings))
 	(punt-p nil)

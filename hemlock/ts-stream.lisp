@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.8 1991/06/10 16:59:22 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.9 1991/11/09 03:06:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,7 +219,7 @@
 ;;; Output a single character to stream.
 ;;;
 (defun %ts-stream-out (stream char)
-  (declare (base-character char))
+  (declare (base-char char))
   (system:without-interrupts
    (system:without-gcing
     (when (= (ts-stream-output-buffer-index stream)
@@ -363,7 +363,7 @@
      (setf (ts-stream-output-buffer-index stream) 0)
      t)
     (:element-type
-     'base-character)
+     'base-char)
     (:charpos
      (ts-stream-char-pos stream))
     (:line-length

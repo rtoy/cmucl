@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.5 1991/02/08 16:35:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.6 1991/11/09 03:05:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -316,7 +316,7 @@
 ;;; modifier identifier.
 ;;;
 (defvar *id-namestring*
-  (make-array 30 :adjustable t :fill-pointer 0 :element-type 'base-character))
+  (make-array 30 :adjustable t :fill-pointer 0 :element-type 'base-char))
 
 ;;; PARSE-KEY-FUN -- Internal.
 ;;;
