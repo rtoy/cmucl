@@ -68,6 +68,7 @@
 #+mach (comf "target:code/mach-os")
 #+sunos (comf "target:code/sunos-os")
 
+(comf "target:code/interr")
 (comf "target:code/error")
 (comf "target:code/salterror")
 
@@ -149,7 +150,6 @@
 (comf "target:code/eval")
 
 (comf "target:code/signal")
-(comf "target:code/interr")
 (comf "target:code/debug-info")
 (comf "target:code/debug-int")
 (comf "target:code/debug")
