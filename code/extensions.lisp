@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.27 2003/04/19 20:52:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.28 2003/10/05 11:41:22 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -484,18 +484,19 @@
 	    (let ((fun-name (symbolicate name "-CACHE-FLUSH-" arg-name)))
 	      (forms
 	       `(defun ,fun-name (,arg-name)
-		  (do ((,n-index ,(+ (- total-size entry-size) n)
-				 (- ,n-index ,entry-size))
-		       (,n-cache ,var-name))
-		      ((minusp ,n-index))
-		    (declare (type fixnum ,n-index))
-		    (when (,test (svref ,n-cache ,n-index) ,arg-name)
-		      (let ((,n-index (- ,n-index ,n)))
-			,@(mapcar #'(lambda (i val)
-				      `(setf (svref ,n-cache ,i) ,val))
-				  (values-indices)
-				  default-values))))
-		  (undefined-value)))))
+		  (sys:without-interrupts
+		   (do ((,n-index ,(+ (- total-size entry-size) n)
+				  (- ,n-index ,entry-size))
+			(,n-cache ,var-name))
+		       ((minusp ,n-index))
+		     (declare (type fixnum ,n-index))
+		     (when (,test (svref ,n-cache ,n-index) ,arg-name)
+		       (let ((,n-index (- ,n-index ,n)))
+			 ,@(mapcar #'(lambda (i val)
+				       `(setf (svref ,n-cache ,i) ,val))
+				   (values-indices)
+				   default-values))))
+		  (values))))))
 	  (incf n)))
 
       (when *profile-hash-cache*
@@ -511,49 +512,52 @@
 	(inlines fun-name)
 	(forms
 	 `(defun ,fun-name ,(arg-vars)
-	    ,@(when *profile-hash-cache*
-		`((incf ,(symbolicate  "*" name "-CACHE-PROBES*"))))
-	    (let ((,n-index (* (,hash-function ,@(arg-vars)) ,entry-size))
-		  (,n-cache ,var-name))
-	      (declare (type fixnum ,n-index))
-	      (cond ((and ,@(tests))
-		     (values ,@(mapcar #'(lambda (x) `(svref ,n-cache ,x))
-				       (values-indices))))
-		    (t
-		     ,@(when *profile-hash-cache*
-			 `((incf ,(symbolicate  "*" name "-CACHE-MISSES*"))))
-		     ,default))))))
+	    (sys:without-interrupts
+	     ,@(when *profile-hash-cache*
+		 `((incf ,(symbolicate  "*" name "-CACHE-PROBES*"))))
+	     (let ((,n-index (* (,hash-function ,@(arg-vars)) ,entry-size))
+		   (,n-cache ,var-name))
+	       (declare (type fixnum ,n-index))
+	       (cond ((and ,@(tests))
+		      (values ,@(mapcar #'(lambda (x) `(svref ,n-cache ,x))
+					(values-indices))))
+		     (t
+		      ,@(when *profile-hash-cache*
+			  `((incf ,(symbolicate  "*" name "-CACHE-MISSES*"))))
+		      ,default)))))))
 
       (let ((fun-name (symbolicate name "-CACHE-ENTER")))
 	(inlines fun-name)
 	(forms
 	 `(defun ,fun-name (,@(arg-vars) ,@(values-names))
-	    (let ((,n-index (* (,hash-function ,@(arg-vars)) ,entry-size))
-		  (,n-cache ,var-name))
-	      (declare (type fixnum ,n-index))
-	      ,@(sets)
-	      ,@(mapcar #'(lambda (i val)
-			    `(setf (svref ,n-cache ,i) ,val))
-			(values-indices)
-			(values-names))
-	      (undefined-value)))))
+	    (sys:without-interrupts
+	     (let ((,n-index (* (,hash-function ,@(arg-vars)) ,entry-size))
+		   (,n-cache ,var-name))
+	       (declare (type fixnum ,n-index))
+	       ,@(sets)
+	       ,@(mapcar #'(lambda (i val)
+			     `(setf (svref ,n-cache ,i) ,val))
+			 (values-indices)
+			 (values-names))
+	       (values))))))
 
       (let ((fun-name (symbolicate name "-CACHE-CLEAR")))
 	(forms
 	 `(defun ,fun-name ()
-	    (do ((,n-index ,(- total-size entry-size) (- ,n-index ,entry-size))
-		 (,n-cache ,var-name))
-		((minusp ,n-index))
-	      (declare (type fixnum ,n-index))
-	      ,@(collect ((arg-sets))
-		  (dotimes (i nargs)
-		    (arg-sets `(setf (svref ,n-cache (+ ,n-index ,i)) nil)))
-		  (arg-sets))
-	      ,@(mapcar #'(lambda (i val)
-			    `(setf (svref ,n-cache ,i) ,val))
-			(values-indices)
-			default-values))
-	    (undefined-value)))
+	    (sys:without-interrupts
+	     (do ((,n-index ,(- total-size entry-size) (- ,n-index ,entry-size))
+		  (,n-cache ,var-name))
+		 ((minusp ,n-index))
+	       (declare (type fixnum ,n-index))
+	       ,@(collect ((arg-sets))
+		   (dotimes (i nargs)
+		     (arg-sets `(setf (svref ,n-cache (+ ,n-index ,i)) nil)))
+		   (arg-sets))
+	       ,@(mapcar #'(lambda (i val)
+			     `(setf (svref ,n-cache ,i) ,val))
+			 (values-indices)
+			 default-values))
+	    (values))))
 	(forms `(,fun-name)))
 
       (inits `(unless (boundp ',var-name)
@@ -579,27 +583,25 @@
   (let ((default-values (if (and (consp default) (eq (car default) 'values))
 			    (cdr default)
 			    (list default)))
-	(arg-names (mapcar #'car args)))
-    (collect ((values-names))
-      (dotimes (i values)
-	(values-names (gensym)))
+	(arg-names (mapcar #'car args))
+	(values-names (loop repeat values collect (gensym)))
+	(cache-lookup (symbolicate name "-CACHE-LOOKUP"))
+	(cache-enter (symbolicate name "-CACHE-ENTER")))
       `(progn
 	 (define-hash-cache ,name ,args ,@options)
 	 (defun ,name ,arg-names
 	   ,@decls
 	   ,doc
-	   (multiple-value-bind
-	       ,(values-names)
-	       (,(symbolicate name "-CACHE-LOOKUP") ,@arg-names)
-	     (if (and ,@(mapcar #'(lambda (val def)
-				    `(eq ,val ,def))
-				(values-names) default-values))
-		 (multiple-value-bind ,(values-names)
-				      (progn ,@body)
-		   (,(symbolicate name "-CACHE-ENTER") ,@arg-names
-		    ,@(values-names))
-		   (values ,@(values-names)))
-		 (values ,@(values-names)))))))))
+	   (multiple-value-bind ,values-names
+	       (,cache-lookup ,@arg-names)
+	     (if (and ,@(mapcar (lambda (val def) `(eq ,val ,def))
+				values-names
+				default-values))
+		 (multiple-value-bind ,values-names
+		     (progn ,@body)
+		   (,cache-enter ,@arg-names ,@values-names)
+		   (values ,@values-names))
+		 (values ,@values-names)))))))
 
 
 ;;; CACHE-HASH-EQ  -- Public

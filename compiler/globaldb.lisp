@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.45 2003/08/27 09:55:24 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.46 2003/10/05 11:41:21 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -924,45 +924,44 @@
 ;;;
 (defun get-info-value (name type &optional (env-list nil env-list-p))
   (declare (type type-number type))
-  (flet ((lookup-ignoring-global-cache (env-list)
-	   (let ((hash nil))
-	     (dolist (env env-list
-			  (multiple-value-bind
-			      (val winp)
-			      (funcall (type-info-default
-					(svref *type-numbers* type))
-				       name)
-			    (values val winp)))
-	       (macrolet ((frob (lookup cache slot)
-			    `(progn
-			       (unless (eq name (,slot env))
-				 (unless hash
-				   (setq hash (info-hash name)))
-				 (setf (,slot env) 0)
-				 (,lookup env name hash))
-			       (multiple-value-bind
-				   (value winp)
-				   (,cache env type)
-				 (when winp (return (values value t)))))))
-		 (if (typep env 'volatile-info-env)
-		     (frob volatile-info-lookup volatile-info-cache-hit
-		       volatile-info-env-cache-name)
-		     (frob compact-info-lookup compact-info-cache-hit
-		       compact-info-env-cache-name)))))))
-    (cond (env-list-p
-	   (lookup-ignoring-global-cache env-list))
-	  (t
-	   (clear-invalid-info-cache)
-	   (multiple-value-bind
-	       (val winp)
-	       (info-cache-lookup name type)
-	     (if (eq winp :empty)
-		 (multiple-value-bind
-		     (val winp)
-		     (lookup-ignoring-global-cache *info-environment*)
-		   (info-cache-enter name type val winp)
-		   (values val winp))
-		 (values val winp)))))))
+  (sys:without-interrupts
+   (flet ((lookup-ignoring-global-cache (env-list)
+	    (let ((hash nil))
+	      (dolist (env env-list
+		       (multiple-value-bind
+			     (val winp)
+			   (funcall (type-info-default
+				     (svref *type-numbers* type))
+				    name)
+			 (values val winp)))
+		(macrolet ((frob (lookup cache slot)
+			     `(progn
+				(unless (eq name (,slot env))
+				  (unless hash
+				    (setq hash (info-hash name)))
+				  (setf (,slot env) 0)
+				  (,lookup env name hash))
+				(multiple-value-bind
+				      (value winp)
+				    (,cache env type)
+				  (when winp (return (values value t)))))))
+		  (if (typep env 'volatile-info-env)
+		      (frob volatile-info-lookup volatile-info-cache-hit
+			    volatile-info-env-cache-name)
+		      (frob compact-info-lookup compact-info-cache-hit
+			    compact-info-env-cache-name)))))))
+     (cond (env-list-p
+	    (lookup-ignoring-global-cache env-list))
+	   (t
+	    (clear-invalid-info-cache)
+	    (multiple-value-bind (val winp)
+		(info-cache-lookup name type)
+	      (if (eq winp :empty)
+		  (multiple-value-bind (val winp)
+		      (lookup-ignoring-global-cache *info-environment*)
+		    (info-cache-enter name type val winp)
+		    (values val winp))
+		  (values val winp))))))))
 
 
 ;;;; Initialization:
