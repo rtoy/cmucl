@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.13 1997/12/31 04:43:15 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.14 1997/12/31 18:05:45 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -225,7 +225,7 @@
   ;; State: :active or :inactive.
   (state :inactive :type (member :active :inactive))
   ;; The control stack; an index into *control-stacks*.
-  (control-stack-id nil :type (or lisp::index null))
+  (control-stack-id nil :type (or kernel:index null))
   ;; Binding stack.
   (binding-stack nil :type (or (simple-array t (*)) null))
   ;; Twice the number of bindings.
@@ -309,6 +309,32 @@
   (setf (stack-group-eval-stack-top stack-group) 0)
   (setf (stack-group-resumer stack-group) nil))
 
+;;; Scrub-Stack-Group-Stacks -- Internal
+;;;
+;;; Scrub the binding and eval stack of the give stack-group.
+;;;
+(defun scrub-stack-group-stacks (stack-group)
+  (declare (type stack-group stack-group)
+	   (optimize (speed 3) (safety 0)))
+  ;; Binding stack.
+  (let ((binding-save-stack (stack-group-binding-stack stack-group)))
+    (when binding-save-stack
+      (let ((size (stack-group-binding-stack-size stack-group))
+	    (len (length binding-save-stack)))
+	;; Scrub the remainder of the binding stack.
+	(do ((index size (+ index 1)))
+	    ((>= index len))
+	  (declare (type (unsigned-byte 29) index))
+	  (setf (aref binding-save-stack index) 0)))))
+  ;; Scrub the eval stack.
+  (let ((eval-stack (stack-group-eval-stack stack-group)))
+    (when eval-stack
+      (let ((eval-stack-top (stack-group-eval-stack-top stack-group))
+	    (len (length eval-stack)))
+	(do ((i eval-stack-top (1+ i)))
+	    ((= i len))
+	  (declare (type kernel:index i))
+	  (setf (svref eval-stack i) nil))))))
 
 ;;; Make-Stack-Group -- Interface
 ;;;
@@ -412,8 +438,8 @@
 	    :eval-stack (make-array 32)
 	    :eval-stack-top 0
 	    ;; Misc stacks.
-	    :current-catch-block lisp::*current-catch-block*
-	    :current-unwind-protect-block lisp::*current-unwind-protect-block*
+	    :current-catch-block 0
+	    :current-unwind-protect-block 0
 	    ;; Alien stack.
 	    :alien-stack (make-array 0 :element-type '(unsigned-byte 32))
 	    :alien-stack-size 0
@@ -441,7 +467,7 @@
 		    (allocate-child-stack-group control-stack-id)
 		    (allocate-new-stack-group control-stack-id)))
 	  ;; Fork the control-stack
-	  (if (x86:control-stack-fork control-stack)
+	  (if (x86:control-stack-fork control-stack inherit)
 	      ;; Current-stack-group returns the child-stack-group.
 	      child-stack-group
 	      ;; Child starts.
@@ -521,7 +547,8 @@
 ;;; and saving the *current-stack-group*.
 ;;;
 (defun stack-group-resume (new-stack-group)
-  (declare (type stack-group new-stack-group))
+  (declare (type stack-group new-stack-group)
+	   (optimize (speed 3)))
   (assert (and (eq (stack-group-state new-stack-group) :active)
 	       (not (eq new-stack-group *current-stack-group*))))
   (assert (eq new-stack-group (process-stack-group *current-process*)))
@@ -553,7 +580,7 @@
 	(setf (aref x86::*control-stacks*
 		    (stack-group-control-stack-id stack-group))
 	      control-stack))
-      
+
       ;; Eval-stack
       (setf (stack-group-eval-stack stack-group) kernel:*eval-stack*)
       (setf (stack-group-eval-stack-top stack-group) kernel:*eval-stack-top*)
@@ -985,7 +1012,7 @@
   (let ((destroyed-processes nil))
     (do ((cnt 0 (1+ cnt)))
 	((> cnt 10))
-      (declare (type lisp::index cnt))
+      (declare (type kernel:index cnt))
       (dolist (process *all-processes*)
 	(when (and (not (eq process *current-process*))
 		   (process-active-p process)
@@ -1249,6 +1276,20 @@
     (setf *inhibit-scheduling* nil)))
 
 (pushnew 'init-multi-processing ext:*after-save-initializations*)
+
+;;; Scrub-all-processes-stacks
+;;;
+;;; Scrub the stored stacks of all the processes.
+;;;
+(defun scrub-all-processes-stacks ()
+  (sys:without-interrupts
+   (dolist (process *all-processes*)
+     (let ((stack-group (process-stack-group process)))
+       (when stack-group
+	 (scrub-stack-group-stacks stack-group))))))
+;;;
+(pushnew 'scrub-all-processes-stacks ext:*before-gc-hooks*)
+
 
 ;;; Show-Processes
 ;;;
