@@ -768,17 +768,17 @@
 						     :strict-result t)))
 	      (when (or (not valid) (not strict-valid))
 		(frob "Unable to do ~A (cost ~D) because:"
-		      (template-note loser) (template-cost loser)))
-
-	      (cond ((not valid)
-		     (valid-function-use call type
-					 :error-function #'frob
-					 :warning-function #'frob))
-		    ((not strict-valid)
-		     (assert (policy-safe-p policy))
-		     (frob "Can't trust output type assertion under safe ~
-		            policy."))))
-	    (count 1)))
+		      (template-note loser) (template-cost loser))
+		
+		(cond ((not valid)
+		       (valid-function-use call type
+					   :error-function #'frob
+					   :warning-function #'frob))
+		      (t
+		       (assert (policy-safe-p policy))
+		       (frob "Can't trust output type assertion under safe ~
+		              policy.")))
+		(count 1)))))
 
 	(let ((*compiler-error-context* call))
 	  (compiler-note "~{~?~^~&~6T~}"
