@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.9 1990/04/19 15:28:43 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.10 1990/04/21 17:36:53 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -662,7 +662,7 @@
 	(this-1env (node-environment node)))
 
     (vop current-fp node block old-fp)
-    (vop allocate-frame node block fp nfp env)
+    (vop allocate-frame node block env fp nfp)
     
     (let* ((args (reference-tn old-fp nil))
 	   (tail args))
