@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.17 1993/08/12 18:58:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.18 1993/08/12 19:58:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -463,6 +463,7 @@
 
     (collect ((inlines)
 	      (forms)
+	      (inits)
 	      (tests)
 	      (sets)
 	      (arg-vars)
@@ -502,8 +503,10 @@
       (when *profile-hash-cache*
 	(let ((n-probe (symbolicate "*" name "-CACHE-PROBES*"))
 	      (n-miss (symbolicate "*" name "-CACHE-MISSES*")))
-	  (forms `(defvar ,n-probe 0))
-	  (forms `(defvar ,n-miss 0))
+	  (inits `(setq ,n-probe 0))
+	  (inits `(setq ,n-miss 0))
+	  (forms `(defvar ,n-probe))
+	  (forms `(defvar ,n-miss))
 	  (forms `(declaim (type index ,n-miss ,n-probe)))))
 
       (let ((fun-name (symbolicate name "-CACHE-LOOKUP")))
@@ -554,12 +557,13 @@
 			default-values))
 	    (undefined-value)))
 	(forms `(,fun-name)))
+
+      (inits `(unless (boundp ',var-name)
+		(setq ,var-name (make-array ,total-size))))
       
       `(progn
 	 (defvar ,var-name)
-	 (,init-form
-	  (unless (boundp ',var-name)
-	    (setq ,var-name (make-array ,total-size))))
+	 (,init-form ,@(inits))
 	 (proclaim '(type (simple-vector ,total-size) ,var-name))
 	 (proclaim '(inline ,@(inlines)))
 	 ,@(forms)
