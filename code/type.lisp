@@ -1,11 +1,11 @@
-;;; -*- Package: KERNEL; Log: C.Log -*-
+;;; -*- Mode: Lisp; Package: KERNEL; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.26 1998/01/21 00:55:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.27 1998/02/02 17:52:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1028,6 +1028,8 @@
 ;;; such as FIXNUM.
 (defstruct (numeric-type (:include ctype
 				   (:class-info (type-class-or-lose 'number)))
+			 #+negative-zero-is-not-zero
+			 (:constructor %make-numeric-type)
 			 (:print-function %print-type))
   ;;
   ;; The kind of numeric type we have.  NIL if not specified (just NUMBER or
@@ -1047,7 +1049,28 @@
   (low nil :type (or number cons null))
   (high nil :type (or number cons null)))
 
-
+#+negative-zero-is-not-zero
+(defun make-numeric-type (&key class format (complexp :real) low high
+			       enumerable)
+  (flet ((canonicalise-low-bound (x)
+	   ;; Canonicalise a low bound of (-0.0) to 0.0.
+	   (if (and (consp x) (floatp (car x)) (zerop (car x))
+		    (minusp (float-sign (car x))))
+	       (float 0.0 (car x))
+	       x))
+	 (canonicalise-high-bound (x)
+	   ;; Canonicalise a high bound of (+0.0) to -0.0.
+	   (if (and (consp x) (floatp (car x)) (zerop (car x))
+		    (plusp (float-sign (car x))))
+	       (float -0.0 (car x))
+	       x)))
+    (%make-numeric-type :class class
+			:format format
+			:complexp complexp
+			:low (canonicalise-low-bound low)
+			:high (canonicalise-high-bound high)
+			:enumerable enumerable)))
+ 
 (define-type-class number)
 
 (define-type-method (number :simple-=) (type1 type2)
