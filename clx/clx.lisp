@@ -17,7 +17,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.13 2002/08/19 16:22:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.14 2003/08/08 07:35:56 emarsden Exp $")
 
 ;; Primary Interface Author:
 ;;	Robert W. Scheifler
@@ -233,7 +233,7 @@
 
 (def-clx-class (pixmap-format (:copier nil) (:print-function print-pixmap-format))
   (depth 0 :type image-depth)
-  (bits-per-pixel 8 :type (member 1 4 8 16 24 32))
+  (bits-per-pixel 8 :type (member 1 4 8 12 16 24 32))
   (scanline-pad 8 :type (member 8 16 32)))
 
 (defun print-pixmap-format (pixmap-format stream depth)
