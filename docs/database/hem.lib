@@ -62,7 +62,7 @@
 @textform(hid = '@w{@f1{@parm(Text)}}')
 @commandstring[emacs = "@f1<Emacs>"]
 
-@specialfont(f2 = "BookmanDemi")
+@specialfont(f2 = "SouvenirDemi")
 @textform<binding = "@f2[@w(@parm{text})]">
 @textform<bf = "@f2[@w(@parm{text})]">
 
