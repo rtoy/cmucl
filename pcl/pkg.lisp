@@ -25,347 +25,298 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package ':walker :use '(:lisp))
+;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
+;;; Note that at this time CMUCL is not in compliance with ANSI
+;;; specified use of feature names :cltl2 :x3j13 :draft-ansi-cl or :ansi-cl
+;;; since all of them are in *features*. So I'm not going to try and be
+;;; clever with hacking around all the various ancient lisp quirks. 
+;;; This file is now CMUCL specific only.
 
-(export '(define-walker-template
-	  walk-form
-	  walk-form-expand-macros-p
-	  nested-walk-form
-	  variable-lexical-p
-	  variable-special-p
-	  variable-globally-special-p
-	  *variable-declarations*
-	  variable-declaration
-	  macroexpand-all
-	  ))
+(defpackage "WALKER" (:use :common-lisp)
+  (:export "DEFINE-WALKER-TEMPLATE"
+	   "WALK-FORM"
+	   "WALK-FORM-EXPAND-MACROS-P"
+	   "NESTED-WALK-FORM"
+	   "VARIABLE-LEXICAL-P"
+	   "VARIABLE-SPECIAL-P"
+	   "VARIABLE-GLOBALLY-SPECIAL-P"
+	   "*VARIABLE-DECLARATIONS*"
+	   "VARIABLE-DECLARATION"
+	   "MACROEXPAND-ALL"))
 
-(in-package :iterate :use '(:lisp :walker))
+(defpackage "ITERATE" (:use :common-lisp :walker)
+  (:export "ITERATE" "ITERATE*" "GATHERING" "GATHER" "WITH-GATHERING"
+	   "INTERVAL" "ELEMENTS" "LIST-ELEMENTS" "LIST-TAILS"
+	   "PLIST-ELEMENTS" "EACHTIME" "WHILE" "UNTIL"
+	   "COLLECTING" "JOINING" "MAXIMIZING" "MINIMIZING" "SUMMING"
+	   "*ITERATE-WARNINGS*"))
 
-(export '(iterate iterate* gathering gather with-gathering interval elements 
-	  list-elements list-tails plist-elements eachtime while until 
-	  collecting joining maximizing minimizing summing 
-	  *iterate-warnings*))
+(defpackage "PCL" (:use :common-lisp :walker :iterate)
+  #+CMU
+  (:shadow "DESTRUCTURING-BIND")
+  #+cmu17
+  (:shadow "FIND-CLASS" "CLASS-NAME" "CLASS-OF"
+	   "CLASS" "BUILT-IN-CLASS" "STRUCTURE-CLASS"
+	   "STANDARD-CLASS")
 
-(in-package :pcl :use '(:lisp :walker :iterate))
+  #+cmu
+  (:shadow "DOTIMES")
 
-;;;
-;;; Some CommonLisps have more symbols in the Lisp package than the ones that
-;;; are explicitly specified in CLtL.  This causes trouble. Any Lisp that has
-;;; extra symbols in the Lisp package should shadow those symbols in the PCL
-;;; package.
-;;;
-#+TI
-(shadow '(string-append once-only destructuring-bind
-	  memq assq delq neq true false
-	  without-interrupts
-	  defmethod)
-	*the-pcl-package*)
+  #+cmu
+  (:import-from :kernel "FUNCALLABLE-INSTANCE-P")
 
-#+CMU
-(shadow '(destructuring-bind)
-        *the-pcl-package*)
-#+cmu17
-(shadow '(find-class class-name class-of
-		     class built-in-class structure-class
-		     standard-class)
-	*the-pcl-package*)
-
-#+GCLisp
-(shadow '(string-append memq assq delq neq make-instance)
-	*the-pcl-package*)
-
-#+Genera
-(shadowing-import '(zl:arglist zwei:indentation) *the-pcl-package*)
-
-#+Lucid 
-(import '(#-LCL3.0 system:arglist #+LCL3.0 lcl:arglist
-	  system:structurep system:structure-type system:structure-length)
-	*the-pcl-package*)
-  
-#+lucid
-(#-LCL3.0 progn #+LCL3.0 lcl:handler-bind 
-    #+LCL3.0 ((lcl:warning #'(lambda (condition)
-			       (declare (ignore condition))
-			       (lcl:muffle-warning))))
-(let ((importer
-        #+LCL3.0 #'sys:import-from-lucid-pkg
-	#-LCL3.0 (let ((x (find-symbol "IMPORT-FROM-LUCID-PKG" "LUCID")))
-		   (if (and x (fboundp x))
-		       (symbol-function x)
-		       ;; Only the #'(lambda (x) ...) below is really needed, 
-		       ;;  but when available, the "internal" function 
-		       ;;  'import-from-lucid-pkg' provides better checking.
-		       #'(lambda (name)
-			   (import (intern name "LUCID")))))))
-  ;;
-  ;; We need the following "internal", undocumented Lucid goodies:
-  (mapc importer '("%POINTER" "DEFSTRUCT-SIMPLE-PREDICATE"
-		   #-LCL3.0 "LOGAND&" "%LOGAND&" #+VAX "LOGAND&-VARIABLE"))
-
-  ;;
-  ;; For without-interrupts.
-  ;; 
-  #+LCL3.0
-  (mapc importer '("*SCHEDULER-WAKEUP*" "MAYBE-CALL-SCHEDULER"))
-
-  ;;
-  ;; We import the following symbols, because in 2.1 Lisps they have to be
-  ;;  accessed as SYS:<foo>, whereas in 3.0 lisps, they are homed in the
-  ;;  LUCID-COMMON-LISP package.
-  (mapc importer '("ARGLIST" "NAMED-LAMBDA" "*PRINT-STRUCTURE*"))
-  ;;
-  ;; We import the following symbols, because in 2.1 Lisps they have to be
-  ;;  accessed as LUCID::<foo>, whereas in 3.0 lisps, they have to be
-  ;;  accessed as SYS:<foo>
-  (mapc importer '(
-		   "NEW-STRUCTURE"   	"STRUCTURE-REF"
-		   "STRUCTUREP"         "STRUCTURE-TYPE"  "STRUCTURE-LENGTH"
-		   "PROCEDUREP"     	"PROCEDURE-SYMBOL"
-		   "PROCEDURE-REF" 	"SET-PROCEDURE-REF" 
-		   ))
-; ;;
-; ;;  The following is for the "patch" to the general defstruct printer.
-; (mapc importer '(
-; 	           "OUTPUT-STRUCTURE" 	  "DEFSTRUCT-INFO"
-;		   "OUTPUT-TERSE-OBJECT"  "DEFAULT-STRUCTURE-PRINT" 
-;		   "STRUCTURE-TYPE" 	  "*PRINT-OUTPUT*"
-;		   ))
-  ;;
-  ;; The following is for a "patch" affecting compilation of %logand&.
-  ;; On APOLLO, Domain/CommonLISP 2.10 does not include %logand& whereas
-  ;; Domain/CommonLISP 2.20 does; Domain/CommonLISP 2.20 includes :DOMAIN/OS
-  ;; on *FEATURES*, so this conditionalizes correctly for APOLLO.
-  #-(or (and APOLLO DOMAIN/OS) LCL3.0 VAX) 
-  (mapc importer '("COPY-STRUCTURE"  "GET-FDESC"  "SET-FDESC"))
-  
-  nil))
-
-#+kcl
-(progn
-(import '(si:structurep si:structure-def si:structure-ref))
-(shadow 'lisp:dotimes)
-)
-#+kcl
-(in-package "SI")
-#+kcl
-(export '(%structure-name
-          %compiled-function-name
-          %set-compiled-function-name
-	  %instance-ref
-	  %set-instance-ref))
-#+kcl
-(in-package 'pcl)
-
-#+cmu (shadow 'lisp:dotimes)
-
-#+cmu
-(import '(kernel:funcallable-instance-p)
-	*the-pcl-package*)
-
-
-(shadow 'documentation)
+  (:shadow "DOCUMENTATION")
 
 
 ;;;						
 ;;; These come from the index pages of 88-002R.
 ;;;
 ;;;
-(eval-when (compile load eval)  
   
-(defvar *exports* '(add-method
-		    built-in-class
-		    call-method
-		    call-next-method
-		    change-class
-		    class-name
-		    class-of
-		    compute-applicable-methods
-		    defclass
-		    defgeneric
-		    define-method-combination
-		    defmethod
-		    ensure-generic-function
-		    find-class
-		    find-method
-		    function-keywords
-		    generic-flet
-		    generic-labels
-		    initialize-instance
-		    invalid-method-error
-		    make-instance
-		    make-instances-obsolete
-		    method-combination-error
-		    method-qualifiers
-		    next-method-p
-		    no-applicable-method
-		    no-next-method
-		    print-object
-		    reinitialize-instance
-		    remove-method
-		    shared-initialize
-		    slot-boundp
-		    slot-exists-p
-		    slot-makunbound
-		    slot-missing
-		    slot-unbound
-		    slot-value
-		    standard
-		    #-cmu17 standard-class
-		    standard-generic-function
-		    standard-method
-		    standard-object
-		    #-cmu17 structure-class
-		    #-cmu17 symbol-macrolet
-		    update-instance-for-different-class
-		    update-instance-for-redefined-class
-		    with-accessors
-		    with-added-methods
-		    with-slots
-		    ))
-
-);eval-when 
-
-#-(or KCL IBCL CMU)
-(export *exports* *the-pcl-package*)
-
-#+CMU
-(export '#.*exports* *the-pcl-package*)
-
-#+(or KCL IBCL)
-(mapc 'export (list *exports*) (list *the-pcl-package*))
-
-
-(eval-when (compile load eval)  
+  (:export "ADD-METHOD"
+	   "BUILT-IN-CLASS"
+	   "CALL-METHOD"
+	   "CALL-NEXT-METHOD"
+	   "CHANGE-CLASS"
+	   "CLASS-NAME"
+	   "CLASS-OF"
+	   "COMPUTE-APPLICABLE-METHODS"
+	   "DEFCLASS"
+	   "DEFGENERIC"
+	   "DEFINE-METHOD-COMBINATION"
+	   "DEFMETHOD"
+	   "ENSURE-GENERIC-FUNCTION"
+	   "FIND-CLASS"
+	   "FIND-METHOD"
+	   "FUNCTION-KEYWORDS"
+	   "GENERIC-FLET"
+	   "GENERIC-LABELS"
+	   "INITIALIZE-INSTANCE"
+	   "INVALID-METHOD-ERROR"
+	   "MAKE-INSTANCE"
+	   "MAKE-INSTANCES-OBSOLETE"
+	   "METHOD-COMBINATION-ERROR"
+	   "METHOD-QUALIFIERS"
+	   "NEXT-METHOD-P"
+	   "NO-APPLICABLE-METHOD"
+	   "NO-NEXT-METHOD"
+	   "PRINT-OBJECT"
+	   "REINITIALIZE-INSTANCE"
+	   "REMOVE-METHOD"
+	   "SHARED-INITIALIZE"
+	   "SLOT-BOUNDP"
+	   "SLOT-EXISTS-P"
+	   "SLOT-MAKUNBOUND"
+	   "SLOT-MISSING"
+	   "SLOT-UNBOUND"
+	   "SLOT-VALUE"
+	   "STANDARD"
+	   #-CMU17 "STANDARD-CLASS"
+	   "STANDARD-GENERIC-FUNCTION"
+	   "STANDARD-METHOD"
+	   "STANDARD-OBJECT"
+	   #-CMU17 "STRUCTURE-CLASS"
+	   #-CMU17 "SYMBOL-MACROLET"
+	   "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS"
+	   "UPDATE-INSTANCE-FOR-REDEFINED-CLASS"
+	   "WITH-ACCESSORS"
+	   "WITH-ADDED-METHODS"
+	   "WITH-SLOTS"
+	   )
   
-(defvar *class-exports*
-        '(standard-instance
-          funcallable-standard-instance
-          generic-function
-          standard-generic-function
-          method
-          standard-method
-          standard-accessor-method
-          standard-reader-method
-          standard-writer-method
-          method-combination
-          slot-definition
-          direct-slot-definition
-          effective-slot-definition
-          standard-slot-definition
-          standard-direct-slot-definition
-          standard-effective-slot-definition
-          specializer
-          eql-specializer
-	  #-cmu17 built-in-class
-          forward-referenced-class
-          #-cmu17 standard-class
-          funcallable-standard-class))
+  (:export "STANDARD-INSTANCE"
+	   "FUNCALLABLE-STANDARD-INSTANCE"
+	   "GENERIC-FUNCTION"
+	   "STANDARD-GENERIC-FUNCTION"
+	   "METHOD"
+	   "STANDARD-METHOD"
+	   "STANDARD-ACCESSOR-METHOD"
+	   "STANDARD-READER-METHOD"
+	   "STANDARD-WRITER-METHOD"
+	   "METHOD-COMBINATION"
+	   "SLOT-DEFINITION"
+	   "DIRECT-SLOT-DEFINITION"
+	   "EFFECTIVE-SLOT-DEFINITION"
+	   "STANDARD-SLOT-DEFINITION"
+	   "STANDARD-DIRECT-SLOT-DEFINITION"
+	   "STANDARD-EFFECTIVE-SLOT-DEFINITION"
+	   "SPECIALIZER"
+	   "EQL-SPECIALIZER"
+	   #-CMU17 "BUILT-IN-CLASS"
+	   "FORWARD-REFERENCED-CLASS"
+	   #-CMU17 "STANDARD-CLASS"
+	   "FUNCALLABLE-STANDARD-CLASS")
 
-(defvar *chapter-6-exports*
-        '(add-dependent
-          add-direct-method
-          add-direct-subclass
-          add-method
-          allocate-instance
-          class-default-initargs
-          class-direct-default-initargs
-          class-direct-slots
-          class-direct-subclasses
-          class-direct-superclasses
-          class-finalized-p
-          class-precedence-list
-          class-prototype
-          class-slots
-          compute-applicable-methods
-          compute-applicable-methods-using-classes
-          compute-class-precedence-list
-          compute-discriminating-function
-          compute-effective-method
-          compute-effective-slot-definition
-          compute-slots
-          direct-slot-definition-class
-          effective-slot-definition-class
-          ensure-class
-          ensure-class-using-class
-          ensure-generic-function
-          ensure-generic-function-using-class
-          eql-specializer-instance
-          extract-lambda-list
-          extract-specializer-names
-          finalize-inheritance
-          find-method-combination
-          funcallable-standard-instance-access
-          generic-function-argument-precedence-order
-          generic-function-declarations
-          generic-function-lambda-list
-          generic-function-method-class
-          generic-function-method-combination
-          generic-function-methods
-          generic-function-name
-          intern-eql-specializer
-          make-instance
-          make-method-lambda
-          map-dependents
-          method-function
-          method-generic-function
-          method-lambda-list
-          method-specializers
-          method-qualifiers
-          accessor-method-slot-definition
-          reader-method-class
-          remove-dependent
-          remove-direct-method
-          remove-direct-subclass
-          remove-method
-          set-funcallable-instance-function
-          slot-boundp-using-class
-          slot-definition-allocation
-          slot-definition-initargs
-          slot-definition-initform
-          slot-definition-initfunction
-          slot-definition-location
-          slot-definition-name
-          slot-definition-readers
-          slot-definition-writers
-          slot-definition-type
-          slot-makunbound-using-class
-          slot-value-using-class
-          specializer-direct-generic-function
-          specializer-direct-methods
-          standard-instance-access
-          update-dependent
-          validate-superclass
-          writer-method-class
+  ;;*chapter-6-exports*
+  (:export "ADD-DEPENDENT"
+	   "ADD-DIRECT-METHOD"
+	   "ADD-DIRECT-SUBCLASS"
+	   "ADD-METHOD"
+	   "ALLOCATE-INSTANCE"
+	   "CLASS-DEFAULT-INITARGS"
+	   "CLASS-DIRECT-DEFAULT-INITARGS"
+	   "CLASS-DIRECT-SLOTS"
+	   "CLASS-DIRECT-SUBCLASSES"
+	   "CLASS-DIRECT-SUPERCLASSES"
+	   "CLASS-FINALIZED-P"
+	   "CLASS-PRECEDENCE-LIST"
+	   "CLASS-PROTOTYPE"
+	   "CLASS-SLOTS"
+	   "COMPUTE-APPLICABLE-METHODS"
+	   "COMPUTE-APPLICABLE-METHODS-USING-CLASSES"
+	   "COMPUTE-CLASS-PRECEDENCE-LIST"
+	   "COMPUTE-DISCRIMINATING-FUNCTION"
+	   "COMPUTE-EFFECTIVE-METHOD"
+	   "COMPUTE-EFFECTIVE-SLOT-DEFINITION"
+	   "COMPUTE-SLOTS"
+	   "DIRECT-SLOT-DEFINITION-CLASS"
+	   "EFFECTIVE-SLOT-DEFINITION-CLASS"
+	   "ENSURE-CLASS"
+	   "ENSURE-CLASS-USING-CLASS"
+	   "ENSURE-GENERIC-FUNCTION"
+	   "ENSURE-GENERIC-FUNCTION-USING-CLASS"
+	   "EQL-SPECIALIZER-INSTANCE"
+	   "EXTRACT-LAMBDA-LIST"
+	   "EXTRACT-SPECIALIZER-NAMES"
+	   "FINALIZE-INHERITANCE"
+	   "FIND-METHOD-COMBINATION"
+	   "FUNCALLABLE-STANDARD-INSTANCE-ACCESS"
+	   "GENERIC-FUNCTION-ARGUMENT-PRECEDENCE-ORDER"
+	   "GENERIC-FUNCTION-DECLARATIONS"
+	   "GENERIC-FUNCTION-LAMBDA-LIST"
+	   "GENERIC-FUNCTION-METHOD-CLASS"
+	   "GENERIC-FUNCTION-METHOD-COMBINATION"
+	   "GENERIC-FUNCTION-METHODS"
+	   "GENERIC-FUNCTION-NAME"
+	   "INTERN-EQL-SPECIALIZER"
+	   "MAKE-INSTANCE"
+	   "MAKE-METHOD-LAMBDA"
+	   "MAP-DEPENDENTS"
+	   "METHOD-FUNCTION"
+	   "METHOD-GENERIC-FUNCTION"
+	   "METHOD-LAMBDA-LIST"
+	   "METHOD-SPECIALIZERS"
+	   "METHOD-QUALIFIERS"
+	   "ACCESSOR-METHOD-SLOT-DEFINITION"
+	   "READER-METHOD-CLASS"
+	   "REMOVE-DEPENDENT"
+	   "REMOVE-DIRECT-METHOD"
+	   "REMOVE-DIRECT-SUBCLASS"
+	   "REMOVE-METHOD"
+	   "SET-FUNCALLABLE-INSTANCE-FUNCTION"
+	   "SLOT-BOUNDP-USING-CLASS"
+	   "SLOT-DEFINITION-ALLOCATION"
+	   "SLOT-DEFINITION-INITARGS"
+	   "SLOT-DEFINITION-INITFORM"
+	   "SLOT-DEFINITION-INITFUNCTION"
+	   "SLOT-DEFINITION-LOCATION"
+	   "SLOT-DEFINITION-NAME"
+	   "SLOT-DEFINITION-READERS"
+	   "SLOT-DEFINITION-WRITERS"
+	   "SLOT-DEFINITION-TYPE"
+	   "SLOT-MAKUNBOUND-USING-CLASS"
+	   "SLOT-VALUE-USING-CLASS"
+	   "SPECIALIZER-DIRECT-GENERIC-FUNCTION"
+	   "SPECIALIZER-DIRECT-METHODS"
+	   "STANDARD-INSTANCE-ACCESS"
+	   "UPDATE-DEPENDENT"
+	   "VALIDATE-SUPERCLASS"
+	   "WRITER-METHOD-CLASS"
           ))
 
-);eval-when 
+(defpackage "SLOT-ACCESSOR-NAME" (:use)(:nicknames "S-A-N"))
 
-#-(or KCL IBCL)
-(export *class-exports* *the-pcl-package*)
-
-#+(or KCL IBCL)
-(mapc 'export (list *class-exports*) (list *the-pcl-package*))
-
-#-(or KCL IBCL)
-(export *chapter-6-exports* *the-pcl-package*)
-
-#+(or KCL IBCL)
-(mapc 'export (list *chapter-6-exports*) (list *the-pcl-package*))
-
+(in-package :pcl)
 (defvar *slot-accessor-name-package*
-  (or (find-package :slot-accessor-name)
-      (make-package :slot-accessor-name 
-		    :use '()
-		    :nicknames '(:s-a-n))))
+  (find-package :slot-accessor-name))
+
+;;; These symbol names came from "The Art of the Metaobject Protocol".
+;;;
 
-#+kcl
-(when (get 'si::basic-wrapper 'si::s-data)
-  (import (mapcar #'(lambda (s) (intern (symbol-name s) "SI"))
-		  '(:copy-structure-header :swap-structure-contents :set-structure-def
-		    :%instance-ref :%set-instance-ref
-		    
-		    :cache-number-vector :cache-number-vector-length
-		    :wrapper-cache-number-adds-ok :wrapper-cache-number-length
-		    :wrapper-cache-number-mask :wrapper-cache-number-vector-length
-		    :wrapper-layout :wrapper-cache-number-vector
-		    :wrapper-state :wrapper-class :wrapper-length))))
+(defpackage "CLOS-MOP"
+  (:use :pcl :common-lisp)
+  (:nicknames "MOP")
+
+  (:shadowing-import-from :pcl
+    "FIND-CLASS" "CLASS-NAME" "BUILT-IN-CLASS" "CLASS-OF")
+
+  (:export ;; Names taken from "The Art of the Metaobject Protocol"
+   "ADD-DEPENDENT"
+   "ADD-DIRECT-METHOD"
+   "ADD-DIRECT-SUBCLASS"
+   "ADD-METHOD"
+   "ALLOCATE-INSTANCE"
+   "CLASS-DEFAULT-INITARGS"
+   "CLASS-DIRECT-DEFAULT-INITARGS"
+   "CLASS-DIRECT-SLOTS"
+   "CLASS-DIRECT-SUBCLASSES"
+   "CLASS-DIRECT-SUPERCLASSES"
+   "CLASS-FINALIZED-P"
+   "CLASS-NAME"
+   "CLASS-PRECEDENCE-LIST"
+   "CLASS-PROTOTYPE"
+   "CLASS-SLOTS"
+   "COMPUTE-APPLICABLE-METHODS"
+   "COMPUTE-APPLICABLE-METHODS-USING-CLASSES"
+   "COMPUTE-CLASS-PRECEDENCE-LIST"
+   "COMPUTE-DEFAULT-INITARGS"
+   "COMPUTE-DISCRIMINATING-FUNCTION"
+   "COMPUTE-EFFECTIVE-METHOD"
+   "COMPUTE-EFFECTIVE-SLOT-DEFINITION"
+   "COMPUTE-SLOTS"
+   "DIRECT-SLOT-DEFINITION-CLASS"
+   "EFFECTIVE-SLOT-DEFINITION-CLASS"
+   "ENSURE-CLASS"
+   "ENSURE-CLASS-USING-CLASS"
+   "ENSURE-GENERIC-FUNCTION"
+   "ENSURE-GENERIC-FUNCTION-USING-CLASS"
+   "EQL-SPECIALIZER-OBJECT"
+   "EXTRACT-LAMBDA-LIST"
+   "EXTRACT-SPECIALIZER-NAMES"
+   "FINALIZE-INHERITANCE"
+   "FIND-METHOD-COMBINATION"
+   "FUNCALLABLE-STANDARD-INSTANCE-ACCESS"
+   "GENERIC-FUNCTION-ARGUMENT-PRECEDENCE-ORDER"
+   "GENERIC-FUNCTION-DECLARATIONS"
+   "GENERIC-FUNCTION-LAMBDA-LIST"
+   "GENERIC-FUNCTION-METHOD-CLASS"
+   "GENERIC-FUNCTION-METHOD-COMBINATION"
+   "GENERIC-FUNCTION-METHODS"
+   "GENERIC-FUNCTION-NAME"
+   "INTERN-EQL-SPECIALIZER"
+   "MAKE-INSTANCE"
+   "MAKE-METHOD-LAMBDA"
+   "MAP-DEPENDENTS"
+   "METHOD-FUNCTION"
+   "METHOD-GENERIC-FUNCTION"
+   "METHOD-LAMBDA-LIST"
+   "METHOD-SPECIALIZERS"
+   "METHOD-QUALIFIERS"
+   "ACCESSOR-METHOD-SLOT-DEFINITION"
+
+   "SLOT-DEFINITION-ALLOCATION"
+   "SLOT-DEFINITION-INITARGS"
+   "SLOT-DEFINITION-INITFORM"
+   "SLOT-DEFINITION-INITFUNCTION"
+   "SLOT-DEFINITION-NAME"
+   "SLOT-DEFINITION-TYPE"
+   "SLOT-DEFINITION-READERS"
+   "SLOT-DEFINITION-WRITERS"
+   "SLOT-DEFINITION-LOCATION"
+
+   "READER-METHOD-CLASS"
+   "REMOVE-DEPENDENT"
+   "REMOVE-DIRECT-METHOD"
+   "REMOVE-DIRECT-SUBCLASS"
+   "REMOVE-METHOD"
+   "SET-FUNCALLABLE-INSTANCE-FUNCTION"
+   "SLOT-BOUNDP-USING-CLASS"
+   "SLOT-MAKUNBOUND-USING-CLASS"
+   "SLOT-VALUE-USING-CLASS"
+   "SPECIALIZER-DIRECT-GENERIC-FUNCTIONS"
+   "SPECIALIZER-DIRECT-METHODS"
+   "STANDARD-INSTANCE-ACCESS"
+   "UPDATE-DEPENDENT"
+   "VALIDATE-SUPERCLASS"
+   "WRITER-METHOD-CLASS"
+   ))
