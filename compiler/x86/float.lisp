@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.2 1997/02/10 15:25:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.3 1997/03/26 20:29:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1005,11 +1005,29 @@
 		     (with-empty-tn@fp-top(y)
 		       (note-this-location vop :internal-error)
 		       (inst fild x))))))))
-
   (frob %single-float/signed %single-float single-reg single-float)
   (frob %double-float/signed %double-float double-reg double-float))
 
-
+(macrolet ((frob (name translate to-sc to-type)
+	     `(define-vop (,name)
+		(:args (x :scs (unsigned-reg)))
+		(:results (y :scs (,to-sc)))
+		(:arg-types unsigned-num)
+		(:result-types ,to-type)
+		(:policy :fast-safe)
+		(:note "inline float coercion")
+		(:translate ,translate)
+		(:vop-var vop)
+		(:save-p :compute-only)
+		(:generator 5
+		 (inst push 0)
+		 (inst push x)
+		 (with-empty-tn@fp-top(y)
+		   (note-this-location vop :internal-error)
+		   (inst fildl (make-ea :dword :base esp-tn)))
+		 (inst add esp-tn 8)))))
+  (frob %single-float/unsigned %single-float single-reg single-float)
+  (frob %double-float/unsigned %double-float double-reg double-float))
 
 ;;; These should be no-ops but the compiler might want to move
 ;;; some things around
