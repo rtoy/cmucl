@@ -1,11 +1,14 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.15 2003/08/21 15:26:36 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.16 2003/10/13 17:04:50 toy Exp $
  *
  * Memory Validation
  */
 
 #include <stdio.h>
 #include <unistd.h>
+#ifdef __SUNPRO_C
+#include <alloca.h>
+#endif
 #include "lisp.h"
 #include "os.h"
 #include "globals.h"
