@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.4 1990/12/15 20:26:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.5 1990/12/16 14:17:53 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -182,7 +182,7 @@
   (:result-types *)
   (:note nil)
   (:generator 3
-    (inst taddcctv r x y)))
+    (inst taddcctv r x (fixnum y))))
 
 (define-vop (fast--/fixnum fast--/fixnum=>fixnum)
   (:results (r :scs (any-reg descriptor-reg)))
@@ -196,7 +196,7 @@
   (:result-types *)
   (:note nil)
   (:generator 3
-    (inst tsubcctv r x y)))
+    (inst tsubcctv r x (fixnum y))))
 
 ;;; Shifting
 
