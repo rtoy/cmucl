@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.147 2003/04/21 21:00:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.148 2003/04/22 15:48:40 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -576,7 +576,10 @@
 	     ((symbolp fun)
 	      (let ((lexical-def (lexenv-find-function fun)))
 		(typecase lexical-def
-		  (null (ir1-convert-global-functoid start cont form))
+		  (null
+		   (when (eq fun 'declare)
+		     (compiler-error "Misplaced declaration."))
+		   (ir1-convert-global-functoid start cont form))
 		  (functional
 		   (ir1-convert-local-combination start cont form lexical-def))
 		  (global-var
@@ -2354,16 +2357,6 @@
   (do-macrolet-stuff definitions
 		     #'(lambda ()
 			 (ir1-convert-progn-body start cont body))))
-
-
-;;; Not really a special form, but...
-;;;
-;;; emarsden2003-04-09 should get rid of this, since it causes
-;;; (special-operator-p 'declare) to be true
-(def-ir1-translator declare ((&rest stuff) start cont)
-  (declare (ignore stuff))
-  start cont; Ignore hack
-  (compiler-error "Misplaced declaration."))
 
 
 ;;; COMPILER-OPTION-BIND

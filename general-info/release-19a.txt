@@ -51,10 +51,13 @@ New in this release:
        with an out-of-bounds index.
      - Accessing arrays in compiled code with out-of-bounds indices
        now signals a TYPE-ERROR.
+     - DECLARE no longer being a special operator.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR implemented in terms of SET-EXCLUSIVE-OR
        because it returned different results than SET-EXCLUSIVE-OR.
+     - Forms like (MULTIPLE-VALUE-BIND 'LIST) no longer trapping
+       an internal compiler error when compiled.
 
   * Other changes:
 
