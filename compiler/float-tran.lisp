@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.72 1998/08/22 11:30:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.73 1998/08/23 12:39:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1139,6 +1139,9 @@
 ;;;
 (macrolet ((frob (type)
 	     `(progn
+	       ;; Negation
+	       (deftransform %negate ((z) ((complex ,type)) *)
+		 '(complex (%negate (realpart z)) (%negate (imagpart z))))
 	       ;; Complex addition and subtraction
 	       (deftransform + ((w z) ((complex ,type) (complex ,type)) *)
 		 '(complex (+ (realpart w) (realpart z))
