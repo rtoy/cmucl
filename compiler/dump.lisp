@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.8 1990/04/24 02:58:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.9 1990/05/24 13:26:45 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -957,12 +957,6 @@
 ;;; a displaced array looks like, we can fix this.
 ;;;
 (defun dump-array (array file)
-  (declare (ignore array file))
-  (compiler-error "Can't dump arrays, bozo.")
-  (dump-fop 'lisp::fop-misc-trap file))
-
-#|
-(
   (unless (zerop (%primitive header-ref array %array-displacement-slot))
     (compiler-error
      "Attempt to dump an array with a displacement, you lose big."))
@@ -973,54 +967,62 @@
     (dump-fop 'lisp::fop-array file)
     (quick-dump-number rank 4 file)))
 
-|#
-
-;;; Dump-I-Vector  --  Internal  
+;;; DUMP-I-VECTOR  --  Internal
 ;;;
-;;;    Dump an I-Vector using the Guy Steele memorial fasl-operation.
+;;; *** NOT *** the FOP-INT-VECTOR as currently documented in rtguts.  Size
+;;; must be a directly supported I-vector element size, with no extra bits.
+;;;
+;;; If a byte vector, or if the native and target byte orderings are the same,
+;;; then just write the bits.  Otherwise, dispatch off of the target byte order
+;;; and write the vector one element at a time.
 ;;;
 (defun dump-i-vector (vec file)
-  (declare (ignore vec file))
-  (compiler-error "Can't dump i-vectors, bozo.")
-  (dump-fop 'lisp::fop-misc-trap file))
-
-#|
-  (let* ((len (length vec))
-	 (ac (%primitive get-vector-access-code
-			 (if #-new-compiler (%primitive complex-array-p vec)
-			     #+new-compiler (array-header-p vec)
-			     (%primitive header-ref vec %array-data-slot)
-			     vec)))
+  (let* ((vec (if #+new-compiler (array-header-p vec)
+		  #-new-compiler (%primitive complex-array-p vec)
+		  (coerce vec 'simple-array)
+		  vec))
+	 (ac (%primitive get-vector-access-code vec))
+	 (len (length vec))
 	 (size (ash 1 ac))
-	 (count (ceiling size 8))
-	 (ints-per-entry (floor (* count 8) size)))
-    (declare (fixnum len ac size count ints-per-entry))
+	 (bytes (ash (+ (ash len ac) 7) -3)))
+		    
     (dump-fop 'lisp::fop-int-vector file)
     (quick-dump-number len 4 file)
     (dump-byte size file)
-    (dump-byte count file)
-    (if (> ints-per-entry 1)
-	(do ((prev 0 end)
-	     (end ints-per-entry (the fixnum (+ end ints-per-entry))))
-	    ((>= end len)
-	     (unless (= prev len)
-	       (do ((pos (* (1- ints-per-entry) size) (- pos size))
-		    (idx prev (1+ idx))
-		    (res 0))
-		   ((= idx len)
-		    (dump-byte res file))
-		 (setq res (dpb (aref vec idx) (byte size pos) res)))))
-	  (declare (fixnum prev end))
-	  (do* ((idx prev (1+ idx))
-		(res 0))
-	       ((= idx end)
-		(dump-byte res file))
-	    (declare (fixnum idx))
-	    (setq res (logior (ash res size) (aref vec idx)))))
-	(dotimes (i len)
-	  (declare (fixnum i))
-	  (quick-dump-number (aref vec i) count file)))))
-|#
+    (cond ((or (eq target-byte-order native-byte-order)
+	       (= size 8))
+	   (dotimes (i bytes)
+	     (dump-byte (%primitive typed-vref 3 vec i) file)))
+	  ((> size 8)
+	   (ecase target-byte-order
+	     (:little-endian
+	      (dotimes (i len)
+		(let ((int (aref vec i)))
+		  (quick-dump-number int (ash size -3) file))))
+	     (:big-endian
+	      (dotimes (i len)
+		(let ((int (aref vec i)))
+		  (do ((shift (- 8 size) (+ shift 8)))
+		      ((plusp shift))
+		    (dump-byte (logand (ash int shift) #xFF) file)))))))
+	  (t
+	   (macrolet ((frob (initial step done)
+			`(let ((shift ,initial)
+			       (byte 0))
+			   (dotimes (i len)
+			     (let ((int (aref vec i)))
+			       (setq byte (logior byte (ash int shift)))
+			       (,step shift size))
+			     (when ,done
+			       (dump-byte byte file)
+			       (setq shift ,initial  byte 0)))
+			   (unless (= shift ,initial) (dump-byte byte file)))))
+	   (ecase target-byte-order
+	     (:little-endian
+	      (frob 0 incf (= shift 8)))
+	     (:big-endian
+	      (let ((initial-shift (- 8 size)))
+		(frob initial-shift decf (minusp shift))))))))))
 
 
 ;;; Dump a character.
