@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.1 1992/07/28 20:14:10 wlott Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.2 1993/01/10 17:22:33 wlott Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -171,10 +171,10 @@ backtrace(int nframes)
 
             function = info.code->entry_points;
             while (function != NIL) {
-                struct function_header *header;
+                struct function *header;
                 lispobj name;
 
-                header = (struct function_header *) PTR(function);
+                header = (struct function *) PTR(function);
                 name = header->name;
 
                 if (LowtagOf(name) == type_OtherPointer) {

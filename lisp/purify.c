@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.3 1992/12/05 22:36:32 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.4 1993/01/10 17:22:37 wlott Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -235,7 +235,7 @@ static lispobj ptrans_code(lispobj thing)
     /* Put in forwarding pointers for all the functions. */
     for (func = code->entry_points;
          func != NIL;
-         func = ((struct function_header *)PTR(func))->next) {
+         func = ((struct function *)PTR(func))->next) {
 
         gc_assert(LowtagOf(func) == type_FunctionPointer);
 
@@ -252,11 +252,11 @@ static lispobj ptrans_code(lispobj thing)
     pscav(&new->entry_points, 1, TRUE);
     for (func = new->entry_points;
          func != NIL;
-         func = ((struct function_header *)PTR(func))->next) {
+         func = ((struct function *)PTR(func))->next) {
         gc_assert(LowtagOf(func) == type_FunctionPointer);
         gc_assert(!dynamic_pointer_p(func));
-        pscav(&((struct function_header *)PTR(func))->self, 2, TRUE);
-        pscav_later(&((struct function_header *)PTR(func))->name, 3);
+        pscav(&((struct function *)PTR(func))->self, 2, TRUE);
+        pscav_later(&((struct function *)PTR(func))->name, 3);
     }
 
     return result;
@@ -266,7 +266,7 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
 {
     int nwords;
     lispobj code, *new, *old, result;
-    struct function_header *function;
+    struct function *function;
 
     /* THING can either be a function header, a closure function header, */
     /* a closure, or a funcallable-instance.  If it's a closure or a */
@@ -281,7 +281,7 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
         /* scavenged, because if it had been scavenged, forwarding pointers */
         /* would have been left behind for all the entry points. */
 
-        function = (struct function_header *)PTR(thing);
+        function = (struct function *)PTR(thing);
         code = (PTR(thing)-(HeaderValue(function->header)*sizeof(lispobj))) |
             type_OtherPointer;
 

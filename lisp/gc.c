@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.3 1992/12/05 22:36:17 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.4 1993/01/10 17:20:12 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -648,16 +648,16 @@ trans_code(struct code *code)
 	prev_pointer = &new_code->entry_points;
 
 	while (fheaderl != NIL) {
-		struct function_header *fheaderp, *nfheaderp;
+		struct function *fheaderp, *nfheaderp;
 		lispobj nfheaderl;
 		
-		fheaderp = (struct function_header *) PTR(fheaderl);
+		fheaderp = (struct function *) PTR(fheaderl);
 		gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
 
 		/* calcuate the new function pointer and the new */
 		/* function header */
 		nfheaderl = fheaderl + displacement;
-		nfheaderp = (struct function_header *) PTR(nfheaderl);
+		nfheaderp = (struct function *) PTR(nfheaderl);
 
 		/* set forwarding pointer */
 		fheaderp->header = nfheaderl;
@@ -680,7 +680,7 @@ scav_code_header(lispobj *where, lispobj object)
 	struct code *code;
 	int nheader_words, ncode_words, nwords;
 	lispobj fheaderl;
-	struct function_header *fheaderp;
+	struct function *fheaderp;
 
 	code = (struct code *) where;
 	ncode_words = fixnum_value(code->code_size);
@@ -703,7 +703,7 @@ scav_code_header(lispobj *where, lispobj object)
 	/* code data block */
 	fheaderl = code->entry_points;
 	while (fheaderl != NIL) {
-		fheaderp = (struct function_header *) PTR(fheaderl);
+		fheaderp = (struct function *) PTR(fheaderl);
 		gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
 		
 #if defined(DEBUG_CODE_GC)
@@ -760,11 +760,11 @@ scav_return_pc_header(lispobj *where, lispobj object)
 static lispobj
 trans_return_pc_header(lispobj object)
 {
-	struct function_header *return_pc;
+	struct function *return_pc;
 	unsigned long offset;
 	struct code *code, *ncode;
 	
-	return_pc = (struct function_header *) PTR(object);
+	return_pc = (struct function *) PTR(object);
 	offset = HeaderValue(return_pc->header) * 4;
 
 	/* Transport the whole code object */
@@ -809,11 +809,11 @@ scav_function_header(lispobj *where, lispobj object)
 static lispobj
 trans_function_header(lispobj object)
 {
-	struct function_header *fheader;
+	struct function *fheader;
 	unsigned long offset;
 	struct code *code, *ncode;
 	
-	fheader = (struct function_header *) PTR(object);
+	fheader = (struct function *) PTR(object);
 	offset = HeaderValue(fheader->header) * 4;
 
 	/* Transport the whole code object */
