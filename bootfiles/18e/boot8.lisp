@@ -5,6 +5,7 @@
 
 (in-package :lisp)
 
+(export '(ext::package-lock ext::package-definition-lock) :ext)
 (defvar *enable-package-locked-errors* nil)
 
 ;;;
