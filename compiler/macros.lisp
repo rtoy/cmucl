@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.49 2003/03/31 11:13:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.50 2003/04/11 15:28:11 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,7 +177,6 @@
 	     `((setf (documentation ',name 'function) ,doc)))
 	 (setf (info function ir1-convert ',name) #',fn-name)
 	 (setf (info function kind ',name) ,kind)
-	 #+new-compiler
 	 ,@(when (eq kind :special-form)
 	     `((setf (symbol-function ',name) #'special-form-function)))))))
 

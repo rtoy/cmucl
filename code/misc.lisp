@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.30 2003/03/22 16:15:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.31 2003/04/11 15:28:11 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,6 +93,7 @@
 	 (symbol (try-cmucl-random-doc x doc-type)))))))
 
 (defun (setf documentation) (string name doc-type)
+  #-no-docstrings
   (case doc-type
     (variable (setf (info variable documentation name) string))
     (function (setf (info function documentation name) string))
@@ -111,8 +112,7 @@
   string)
 
 
-(defvar *features* '(:common :cmu :new-compiler :common-lisp :ansi-cl
-			     :ieee-floating-point)
+(defvar *features* '(:common :common-lisp :ansi-cl :ieee-floating-point :cmu)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 

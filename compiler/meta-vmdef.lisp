@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.8 2002/12/07 18:19:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.9 2003/04/11 15:28:11 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -876,10 +876,7 @@
 		(ignores name))))
 	  `(if (and ,load-tn
 		    (let ,(binds)
-		      #+new-compiler
 		      (declare (ignorable ,@(ignores)))
-		      #-new-compiler
-		      (progn ,@(ignores))
 		      ,load))
 	       ,load-tn
 	       (tn-ref-tn ,temp))))))
