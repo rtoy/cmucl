@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.5 1991/06/05 16:24:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.6 1991/07/26 10:03:43 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -348,6 +348,7 @@
 	 (string (if pathname (namestring pathname))))
     (format t "Buffer ~S is ~:[UNmodified~;modified~], Save it? "
 	    name modified)
+    (force-output)
     (when (y-or-n-p)
       (let ((name (read-line-default "File to write" string)))
 	(format t "Writing file ~A..." name)
@@ -357,9 +358,11 @@
 
 (defun read-line-default (prompt default)
   (format t "~A:~@[ [~A]~] " prompt default)
+  (force-output)
   (do ((result (read-line) (read-line)))
       (())
     (declare (simple-string result))
     (when (plusp (length result)) (return result))
     (when default (return default))
-    (format t "~A:~@[ [~A]~] " prompt default)))
+    (format t "~A:~@[ [~A]~] " prompt default)
+    (force-output)))
