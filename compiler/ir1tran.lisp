@@ -1712,6 +1712,7 @@
 (defun ir1-top-level (form tlf-num for-value)
   (declare (type index tlf-num))
   (let* ((*current-path* (or (gethash form *source-paths*)
+			     *current-path*
 			     (list 0 tlf-num)))
 	 (*inlines* ())
 	 (*type-restrictions* ())
