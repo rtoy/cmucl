@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.4 1993/01/15 01:31:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.5 1993/01/15 22:46:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1193,8 +1193,10 @@ default-value-8
 ;;; Signal wrong argument count error if Nargs isn't = to Count.
 ;;;
 (define-vop (verify-argument-count)
+  (:policy :fast-safe)
+  (:translate c::%verify-argument-count)
   (:args (nargs :scs (any-reg)))
-  (:arg-types positive-fixnum)
+  (:arg-types positive-fixnum (:constant t))
   (:info count)
   (:vop-var vop)
   (:save-p :compute-only)
@@ -1208,8 +1210,11 @@ default-value-8
 
 ;;; Signal an argument count error.
 ;;;
-(macrolet ((frob (name error &rest args)
+(macrolet ((frob (name error translate &rest args)
 	     `(define-vop (,name)
+		,@(when translate
+		    `((:policy :fast-safe)
+		      (:translate ,translate)))
 		(:args ,@(mapcar #'(lambda (arg)
 				     `(,arg :scs (any-reg descriptor-reg)))
 				 args))
@@ -1217,8 +1222,12 @@ default-value-8
 		(:save-p :compute-only)
 		(:generator 1000
 		  (error-call vop ,error ,@args)))))
-  (frob argument-count-error invalid-argument-count-error nargs)
-  (frob type-check-error object-not-type-error object type)
-  (frob odd-keyword-arguments-error odd-keyword-arguments-error)
-  (frob unknown-keyword-argument-error unknown-keyword-argument-error key)
-  (frob nil-function-returned-error nil-function-returned-error fun))
+  (frob argument-count-error invalid-argument-count-error
+    c::%argument-count-error nargs)
+  (frob type-check-error object-not-type-error c::%type-check-error
+    object type)
+  (frob odd-keyword-arguments-error odd-keyword-arguments-error
+    c::%odd-keyword-arguments-error)
+  (frob unknown-keyword-argument-error unknown-keyword-argument-error
+    c::%unknown-keyword-argument-error key)
+  (frob nil-function-returned-error nil-function-returned-error nil fun))
