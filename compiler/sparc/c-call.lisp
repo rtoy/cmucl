@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.18 2003/05/14 14:38:39 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.19 2003/05/15 12:16:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,15 +289,21 @@
 (export '(make-callback-trampoline callback-accessor-form))
 
 (defun callback-accessor-form (type sp offset)
-  (cond ((eq type 'double)
-	 ;; Due to sparc calling conventions, a double doesn't have to
-	 ;; be aligned on a double word boundary.  We have to get the
-	 ;; two words separately and create the double from them.
-	 `(kernel:make-double-float (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* int)))
-	                            (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset 4))
-						  (* c-call:unsigned-int)))))
-	(t
-	 `(deref (sap-alien (sys:sap+ ,sp ,offset) (* ,type))))))
+  (typecase type
+    (alien::double$
+     ;; Due to sparc calling conventions, a double doesn't have to
+     ;; be aligned on a double word boundary.  We have to get the
+     ;; two words separately and create the double from them.
+     `(kernel:make-double-float
+       (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* c-call:int)))
+       (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset vm:word-bytes)) (* c-call:unsigned-int)))))
+    (alien::integer-64$
+     ;; Same as for double, above
+     `(+ (ash (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* c-call:int))) vm:word-bits)
+	 (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset vm:word-bytes))
+				 (* c-call:unsigned-int)))))
+    (t
+     `(deref (sap-alien (sys:sap+ ,sp ,offset) (* ,type))))))
 
 (defun make-callback-trampoline (index return-type)
   "Cons up a piece of code which calls call-callback with INDEX and a
@@ -417,16 +423,14 @@ pointer to the arguments."
 		(let ((addr (alien::address-of-funcall3)))
 		  (inst sethi %l0 (ldb (byte 22 10) addr))
 		  (inst jal %o7 %l0 (ldb (byte 10 0) addr))
-		;;(inst li %l0 (address-of-funcall3))
-		;;(inst jal %o7 %l0)
-		(inst nop)
-		)
+		  (inst nop))
 
 		;; Ok, we're back.  The value returned is actually stored in the args
 		(etypecase return-type
 		  (alien::integer-64$
-		   ;; A 64-bit bignum.
-		   )
+		   ;; A 64-bit bignum, stored big-endian
+		   (inst ld %o0 %fp (- return-value-size))
+		   (inst ld %o1 %fp (- (- return-value-size vm:word-bytes))))
 		  ((or alien::integer$ alien::pointer$ alien::sap$)
 		   (inst ld %i0 %fp (- return-value-size)))
 		  (alien::single$
