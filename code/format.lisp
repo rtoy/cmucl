@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.29 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.30 1994/11/05 18:39:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -847,7 +847,9 @@
 (defconstant cardinal-periods
   #("" " thousand" " million" " billion" " trillion" " quadrillion"
     " quintillion" " sextillion" " septillion" " octillion" " nonillion"
-    " decillion"))
+    " decillion" " undecillion" " duodecillion" " tredecillion"
+    " quattuordecillion" " quindecillion" " sexdecillion" " septendecillion"
+    " octodecillion" " novemdecillion" " vigintillion"))
 
 (defconstant ordinal-ones
   #(nil "first" "second" "third" "fourth"
@@ -891,7 +893,7 @@
 
 (defun format-print-cardinal-aux (stream n period err)
   (multiple-value-bind (beyond here) (truncate n 1000)
-    (unless (<= period 10)
+    (unless (<= period 20)
       (error "Number too large to print in English: ~:D" err))
     (unless (zerop beyond)
       (format-print-cardinal-aux stream beyond (1+ period) err))
