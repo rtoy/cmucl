@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.42 1993/05/12 11:13:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.43 1993/05/25 21:29:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1223,28 +1223,30 @@
 
 ;;; = IR1 Transform  --  Internal
 ;;;
-;;;    Convert to EQL if both args are the "same" numeric type.  This allows
-;;; all of EQL's type-specific expertise to come into play.  "Same" means
-;;; either both rational or both floats of the same format.  Complexp must also
-;;; be specified and identical.
+;;;    Convert to EQL if both args are rational and complexp is specified
+;;; and the same for both.
 ;;; 
 (deftransform = ((x y) * * :when :both)
   "open code"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y)))
-    (if (and (numeric-type-p x-type) (numeric-type-p y-type)
-	     (let ((x-class (numeric-type-class x-type))
-		   (y-class (numeric-type-class y-type))
-		   (x-format (numeric-type-format x-type)))
-	       (or (and (eq x-class 'float) (eq y-class 'float)
-			x-format
-			(eq x-format (numeric-type-format y-type)))
-		   (and (member x-class '(rational integer))
-			(member y-class '(rational integer)))))
-	     (let ((x-complexp (numeric-type-complexp x-type)))
-	       (and x-complexp
-		    (eq x-complexp (numeric-type-complexp y-type)))))
-	'(eql x y)
+    (if (and (numeric-type-p x-type) (numeric-type-p y-type))
+	(let ((x-class (numeric-type-class x-type))
+	      (y-class (numeric-type-class y-type)))
+	  (cond ((and (eq x-class 'float) (eq y-class 'float))
+		 ;; They are both floats.  Leave as = so that -0.0 is
+		 ;; handled correctly.
+		 (give-up))
+		((and (member x-class '(rational integer))
+		      (member y-class '(rational integer))
+		      (let ((x-complexp (numeric-type-complexp x-type)))
+			(and x-complexp
+			     (eq x-complexp (numeric-type-complexp y-type)))))
+		 ;; They are both rationals and complexp is the same.  Convert
+		 ;; to EQL.
+		 '(eql x y))
+		(t
+		 (give-up "Operands might not be the same type."))))
 	(give-up "Operands might not be the same type."))))
 
 
