@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.24 1992/03/04 17:42:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.25 1992/03/08 18:31:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,6 +56,7 @@
       compiled-function-p
       complexp
       double-float-p
+      fdefn-p
       fixnump
       floatp
       functionp
@@ -161,6 +162,7 @@
     (weak-pointer 'weak-pointer)
     (code-component 'code-component)
     (lra 'lra)
+    (fdefn 'fdefn)
     (scavenger-hook 'scavenger-hook)
     (t
      (warn "Can't figure out the type of ~S" object)
@@ -232,6 +234,7 @@
        (weak-pointer (weak-pointer-p object))
        (code-component (code-component-p object))
        (lra (lra-p object))
+       (fdefn (fdefn-p object))
        (scavenger-hook (scavenger-hook-p object))
        (structure (structurep object))))
     (numeric-type
