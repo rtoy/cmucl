@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.27 1998/02/03 19:02:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.28 1998/03/01 21:46:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -516,7 +516,7 @@
   (with-out-stream stream stream-misc :line-length))
 
 (defun finish-output (&optional (stream *standard-output*))
-  "Attempts to ensure that all output sent to the the Stream has reached its
+  "Attempts to ensure that all output sent to the Stream has reached its
    destination, and only then returns."
   (with-out-stream stream stream-misc :finish-output)
   nil)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.23 1997/02/21 01:42:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.24 1998/03/01 21:45:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1298,7 +1298,7 @@
 
 ;;; BIGNUM-LOGICAL-XOR-AUX -- Internal.
 ;;;
-;;; This takes the the shorter of two bignums in a and len-a.  Res is len-b
+;;; This takes the shorter of two bignums in a and len-a.  Res is len-b
 ;;; long.  Do the XOR.
 ;;;
 (defun bignum-logical-xor-aux (a len-a b len-b res)

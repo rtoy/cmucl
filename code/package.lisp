@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.40 1998/02/11 05:49:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.41 1998/03/01 21:46:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,7 +179,7 @@
 ;;; Using a similar scheme without the entry hash, the fasloader was
 ;;; spending more than half its time paging in INTERN.
 ;;;    The hash code also indicates the status of an entry.  If it zero,
-;;; the the entry is unused.  If it is one, then it is deleted.
+;;; the entry is unused.  If it is one, then it is deleted.
 ;;; Double-hashing is used for collision resolution.
 
 (deftype hash-vector () '(simple-array (unsigned-byte 8) (*)))

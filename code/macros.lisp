@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.52 1997/09/13 20:28:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.53 1998/03/01 21:46:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1467,7 +1467,7 @@
   Iteration construct.  Each Var is initialized in parallel to the value of the
   specified Init form.  On subsequent iterations, the Vars are assigned the
   value of the Step form (if any) in paralell.  The Test is evaluated before
-  each evaluation of the body Forms.  When the Test is true, the the Exit-Forms
+  each evaluation of the body Forms.  When the Test is true, the Exit-Forms
   are evaluated as a PROGN, with the result being the value of the DO.  A block
   named NIL is established around the entire expansion, allowing RETURN to be
   used as an laternate exit mechanism."
@@ -1481,7 +1481,7 @@
   value of the specified Init form.  On subsequent iterations, the Vars are
   sequentially assigned the value of the Step form (if any).  The Test is
   evaluated before each evaluation of the body Forms.  When the Test is true,
-  the the Exit-Forms are evaluated as a PROGN, with the result being the value
+  the Exit-Forms are evaluated as a PROGN, with the result being the value
   of the DO.  A block named NIL is established around the entire expansion,
   allowing RETURN to be used as an laternate exit mechanism."
   (do-do-body varlist endlist body decls 'let* 'setq 'do* nil))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.67 1998/01/16 07:22:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.68 1998/03/01 21:46:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -203,8 +203,8 @@
 ;;; Define-FOP  --  Internal
 ;;;
 ;;;    Defines Name as a fasl operation, with op-code op.  If pushp is :nope,
-;;; the the body neither pushes or pops the fop stack.  If it is nil, then
-;;; the body may pop, but the result is ignored.  If it is true, the the result
+;;; the body neither pushes or pops the fop stack.  If it is nil, then
+;;; the body may pop, but the result is ignored.  If it is true, the result
 ;;; is pushed on the stack.
 ;;;
 (defmacro define-fop ((name op &optional (pushp t)) &rest forms)

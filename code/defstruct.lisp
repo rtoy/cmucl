@@ -1,11 +1,11 @@
-;;; -*- Package: KERNEL -*-
+;;; -*- Mode: Lisp; Package: KERNEL -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.58 1997/04/09 17:49:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.59 1998/03/01 21:46:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -269,7 +269,7 @@
 
 ;;; DSD-Name  --  External
 ;;;
-;;;    Return the the name of a defstruct slot as a symbol.  We store it
+;;;    Return the name of a defstruct slot as a symbol.  We store it
 ;;; as a string to avoid creating lots of worthless symbols at load time.
 ;;;
 (defun dsd-name (dsd)
@@ -1438,7 +1438,7 @@
 ;;; %%Compiler-Defstruct  --  External
 ;;;
 ;;;    This function does the (compile load eval) time actions for updating the
-;;; compiler's global meta-information to represent the definition of the the
+;;; compiler's global meta-information to represent the definition of the
 ;;; structure described by Info.  This primarily amounts to setting up info
 ;;; about the accessor and other implicitly defined functions.  The
 ;;; constructors are explicitly defined by top-level code.

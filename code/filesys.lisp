@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.45 1998/02/11 18:15:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.46 1998/03/01 21:46:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1100,7 +1100,7 @@
 ;;; File-writable -- exported from extensions.
 ;;;
 ;;;   Determines whether the single argument (which should be a pathname)
-;;;   can be written by the the current task.
+;;;   can be written by the current task.
 ;;;
 (defun file-writable (name)
   "File-writable accepts a pathname and returns T if the current

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.58 1998/01/29 07:41:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.59 1998/03/01 21:46:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1410,7 +1410,7 @@
 
 ;;; Unix-write accepts a file descriptor, a buffer, an offset, and the
 ;;; length to write.  It attempts to write len bytes to the device
-;;; associated with fd from the the buffer starting at offset.  It returns
+;;; associated with fd from the buffer starting at offset.  It returns
 ;;; the actual number of bytes written.
 
 (defun unix-write (fd buf offset len)
