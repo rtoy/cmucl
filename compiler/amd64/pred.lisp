@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/pred.lisp,v 1.1 2004/05/24 22:35:00 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/pred.lisp,v 1.2 2004/07/06 20:22:07 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,8 +33,7 @@
 
 ;;;; Conditional VOPs:
 
-;;; Note: a constant-tn is allowed in CMP; it uses an EA displacement,
-;;; not immediate data.
+;;; Note: a constant-tn is NOT allowed in CMP.
 (define-vop (if-eq)
   (:args (x :scs (any-reg descriptor-reg control-stack constant)
 	    :load-if (not (and (sc-is x immediate)
@@ -43,6 +42,7 @@
 	 (y :scs (any-reg descriptor-reg immediate)
 	    :load-if (not (and (sc-is x any-reg descriptor-reg immediate)
 			       (sc-is y control-stack constant)))))
+  (:temporary (:sc any-reg) temp)
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
@@ -74,7 +74,26 @@
 	  (character
 	   (inst cmp y (logior (ash (char-code val) type-bits)
 			       base-char-type))))))
-      (t
-       (inst cmp x y)))
+
+     ;; y is a constant tn
+     ((and (tn-p y) (eq (sb-name (sc-sb (tn-sc y)))
+			'constant))
+      (inst mov-imm temp (make-fixup nil
+				     :code-object
+				     (- (* (tn-offset y) word-bytes)
+					other-pointer-type)))
+      (inst cmp x (make-ea :qword :base temp)))
+
+     ;; x is a constant tn
+     ((and (tn-p x) (eq (sb-name (sc-sb (tn-sc x)))
+			'constant))
+      (inst mov-imm temp (make-fixup nil
+				     :code-object
+				     (- (* (tn-offset x) word-bytes)
+					other-pointer-type)))
+      (inst cmp (make-ea :qword :base temp) y))
+
+     (t
+      (inst cmp x y)))
     
     (inst jmp (if not-p :ne :e) target)))
