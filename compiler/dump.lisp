@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.5 1990/03/05 20:48:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.6 1990/03/15 19:04:19 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -571,7 +571,8 @@
 		(dump-list x file)
 		(equal-save-object x file)))
 	     (structure
-	      (dump-structure x file))
+	      (dump-structure x file)
+	      (eq-save-object x file))
 	     (vector
 	      (cond ((stringp x)
 		     (unless (equal-check-table x file)
