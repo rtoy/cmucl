@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.46 1992/05/21 02:18:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.47 1992/05/21 14:36:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.46 1992/05/21 02:18:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.47 1992/05/21 14:36:14 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -677,10 +677,10 @@ default-value-8
      ,@(when (eq return :fixed)
 	 '((:results (values :more t))))
    
-     ,@(unless (eq return :tail)
-	 `((:save-p t)
-	   ,@(unless variable
-	       '((:move-args :full-call)))))
+     (:save-p ,(if (eq return :tail) :compute-only t))
+
+     ,@(unless (or (eq return :tail) variable)
+	 '((:move-args :full-call)))
 
      (:vop-var vop)
      (:info ,@(unless (or variable (eq return :tail)) '(arg-locs))

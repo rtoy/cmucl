@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.15 1992/05/21 03:04:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.16 1992/05/21 14:36:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -665,10 +665,10 @@ default-value-8
      ,@(when (eq return :fixed)
 	 '((:results (values :more t))))
    
-     ,@(unless (eq return :tail)
-	 `((:save-p t)
-	   ,@(unless variable
-	       '((:move-args :full-call)))))
+     (:save-p ,(if (eq return :tail) :compute-only t))
+
+     ,@(unless (or (eq return :tail) variable)
+	 '((:move-args :full-call)))
 
      (:vop-var vop)
      (:info ,@(unless (or variable (eq return :tail)) '(arg-locs))
