@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.12 1991/08/28 02:18:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.13 1991/09/29 16:10:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,8 +201,8 @@
     (dolist (ref (leaf-refs fun))
       (let* ((home (lambda-home (lexenv-lambda (node-lexenv ref))))
 	     (home-kind (functional-kind home)))
-	(cond ((and (eq (functional-kind home) :top-level)
-		    (eq home-kind :external))
+	(cond ((and (eq home-kind :top-level)
+		    (eq (functional-kind fun) :external))
 	       (setf (ref-inlinep ref) :notinline))
 	      ((eq home-kind :deleted))
 	      (t
@@ -314,11 +314,14 @@
 
 ;;; Find-Initial-DFO  --  Interface
 ;;;
-;;;    Given a list of top-level lambdas, return two lists of components
-;;; representing the actual component division.  The first value is the
-;;; non-top-level components, and the second is the top-level ones.  We assign
-;;; the DFO for each component, and delete any unreachable blocks.  We assume
-;;; that the Flags have already been cleared.
+;;;    Given a list of top-level lambdas, return three lists of components
+;;; representing the actual component division:
+;;;  1] the non-top-level components,
+;;;  2] and the second is the top-level components, and
+;;;  3] Components in [1] that also have a top-level lambda.
+;;;
+;;; We assign the DFO for each component, and delete any unreachable blocks.
+;;; We assume that the Flags have already been cleared.
 ;;;
 ;;;     We iterate over the lambdas in each initial component, trying to put
 ;;; each function in its own component, but joining it to an existing component
