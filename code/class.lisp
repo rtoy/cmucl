@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.7 1993/02/16 14:44:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.8 1993/02/17 17:12:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,13 +272,13 @@
 
 ;;; INSURED-FIND-CLASS  --  Interface
 ;;;
-;;;    Called when we are about to define Name as class with the specified
-;;; Meta-Class.  The first result is always of the desired class.  The second
-;;; result is any existing layout for this name.
+;;;    Called when we are about to define Name as a class meeting some
+;;; predicate (such as a meta-class type test.)  The first result is always of
+;;; the desired class.  The second result is any existing layout for this name.
 ;;;
-(defun insured-find-class (name meta-class constructor)
+(defun insured-find-class (name predicate constructor)
   (let* ((old (find-class name nil))
-	 (res (if (and old (eq (class-of old) meta-class))
+	 (res (if (and old (funcall predicate old))
 		  old
 		  (funcall constructor :name name)))
 	 (found (or (gethash name *forward-referenced-layouts*)
