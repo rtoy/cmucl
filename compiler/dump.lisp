@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.62 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.63 1997/02/18 01:35:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -877,11 +877,13 @@
 	   (typecase x
 	     (symbol (dump-symbol x file))
 	     (list
-	      (if *coalesce-constants*
-		  (unless (equal-check-table x file)
-		    (dump-list x file)
-		    (equal-save-object x file))
-		  (dump-list x file)))
+	      (cond (*coalesce-constants*
+		     (unless (equal-check-table x file)
+			     (dump-list x file)
+			     (equal-save-object x file)))
+		    (t
+		     (dump-list x file)
+		     (eq-save-object x file))))
 	     (layout
 	      (dump-layout x file)
 	      (eq-save-object x file))
