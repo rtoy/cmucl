@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.6 1997/11/19 03:00:32 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.7 1998/02/19 19:34:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,8 +26,8 @@
 
 (define-vop (list-or-list*)
   (:args (things :more t))
-  (:temporary (:sc dword-reg) ptr temp)
-  (:temporary (:sc dword-reg :to (:result 0) :target result) res)
+  (:temporary (:sc unsigned-reg) ptr temp)
+  (:temporary (:sc unsigned-reg :to (:result 0) :target result) res)
   (:info num)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
@@ -84,9 +84,9 @@
   (:args (boxed-arg :scs (any-reg) :target boxed)
 	 (unboxed-arg :scs (any-reg) :target unboxed))
   (:results (result :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg :from :eval) temp)
-  (:temporary (:sc dword-reg :from (:argument 0)) boxed)
-  (:temporary (:sc dword-reg :from (:argument 1)) unboxed)
+  (:temporary (:sc unsigned-reg :from :eval) temp)
+  (:temporary (:sc unsigned-reg :from (:argument 0)) boxed)
+  (:temporary (:sc unsigned-reg :from (:argument 1)) unboxed)
   (:generator 100
     (move boxed boxed-arg)
     (inst add boxed (fixnum (1+ code-trace-table-offset-slot)))
@@ -115,8 +115,8 @@
   (:args (boxed-arg :scs (any-reg) :target boxed)
 	 (unboxed-arg :scs (any-reg) :target unboxed))
   (:results (result :scs (descriptor-reg) :from :eval))
-  (:temporary (:sc dword-reg :from (:argument 0)) boxed)
-  (:temporary (:sc dword-reg :from (:argument 1)) unboxed)
+  (:temporary (:sc unsigned-reg :from (:argument 0)) boxed)
+  (:temporary (:sc unsigned-reg :from (:argument 1)) unboxed)
   (:node-var node)
   (:generator 100
     (move boxed boxed-arg)
@@ -233,7 +233,7 @@
   (:policy :fast-safe)
   (:translate make-symbol)
   (:args (name :scs (descriptor-reg) :to :eval))
-  (:temporary (:sc dword-reg :from :eval) temp)
+  (:temporary (:sc unsigned-reg :from :eval) temp)
   (:results (result :scs (descriptor-reg) :from :argument))
   (:node-var node)
   (:generator 37

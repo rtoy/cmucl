@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.20 1998/01/17 05:47:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.21 1998/02/19 19:34:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1584,7 +1584,8 @@
   (:result-types unsigned-num)
   (:translate floating-point-modes)
   (:policy :fast-safe)
-  (:temporary (:sc dword-reg :offset eax-offset :target res :to :result) eax)
+  (:temporary (:sc unsigned-reg :offset eax-offset :target res
+		   :to :result) eax)
   (:generator 8
    (inst sub esp-tn npx-env-size)	; make space on stack
    (inst wait)                          ; Catch any pending FPE exceptions
@@ -1605,7 +1606,8 @@
   (:result-types unsigned-num)
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
-  (:temporary (:sc dword-reg :offset eax-offset :from :eval :to :result) eax)
+  (:temporary (:sc unsigned-reg :offset eax-offset
+		   :from :eval :to :result) eax)
   (:generator 3
    (inst sub esp-tn npx-env-size)	; make space on stack
    (inst wait)                          ; Catch any pending FPE exceptions
@@ -1708,11 +1710,11 @@
 	     `(define-vop (,func)
 		(:translate ,trans)
 		(:args (x :scs (double-reg) :target fr0))
-		(:temporary (:sc dword-reg :offset eax-offset
+		(:temporary (:sc unsigned-reg :offset eax-offset
 				 :from :eval :to :result) eax)
-		(:temporary (:sc double-reg :offset fr0-offset
+		(:temporary (:sc unsigned-reg :offset fr0-offset
 				 :from :argument :to :result) fr0)
-		(:temporary (:sc double-reg :offset fr1-offset
+		(:temporary (:sc unsigned-reg :offset fr1-offset
 				 :from :argument :to :result) fr1)
 		(:results (y :scs (double-reg)))
 		(:arg-types double-float)
@@ -1753,7 +1755,7 @@
 (define-vop (ftan)
   (:translate %tan)
   (:args (x :scs (double-reg) :target fr0))
-  (:temporary (:sc dword-reg :offset eax-offset
+  (:temporary (:sc unsigned-reg :offset eax-offset
 		   :from :argument :to :result) eax)
   (:temporary (:sc double-reg :offset fr0-offset
 		   :from :argument :to :result) fr0)
@@ -1814,7 +1816,7 @@
 		(:args (x :scs (double-reg) :target fr0))
 		(:temporary (:sc double-reg :offset fr0-offset
 				 :from :argument :to :result) fr0)
-		(:temporary (:sc dword-reg :offset eax-offset
+		(:temporary (:sc unsigned-reg :offset eax-offset
 			     :from :argument :to :result) eax)
 		(:results (y :scs (double-reg)))
 	        (:arg-types double-float)
@@ -1850,7 +1852,7 @@
 		   :from :argument :to :result) fr0)
   (:temporary (:sc double-reg :offset fr1-offset
 		   :from :argument :to :result) fr1)
-  (:temporary (:sc dword-reg :offset eax-offset
+  (:temporary (:sc unsigned-reg :offset eax-offset
 		   :from :argument :to :result) eax)
   (:results (y :scs (double-reg)))
   (:arg-types double-float)

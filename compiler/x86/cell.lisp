@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.5 1997/11/04 09:11:01 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.6 1998/02/19 19:34:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,7 +161,7 @@
   (:translate (setf fdefn-function))
   (:args (function :scs (descriptor-reg) :target result)
 	 (fdefn :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) raw)
+  (:temporary (:sc unsigned-reg) raw)
   (:temporary (:sc byte-reg) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
@@ -200,7 +200,7 @@
 (define-vop (bind)
   (:args (val :scs (any-reg descriptor-reg))
 	 (symbol :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) temp bsp)
+  (:temporary (:sc unsigned-reg) temp bsp)
   (:generator 5
     (load-symbol-value bsp *binding-stack-pointer*)
     (loadw temp symbol symbol-value-slot other-pointer-type)
@@ -211,7 +211,7 @@
     (storew val symbol symbol-value-slot other-pointer-type)))
 
 (define-vop (unbind)
-  (:temporary (:sc dword-reg) symbol value bsp)
+  (:temporary (:sc unsigned-reg) symbol value bsp)
   (:generator 0
     (load-symbol-value bsp *binding-stack-pointer*)
     (loadw symbol bsp (- binding-symbol-slot binding-size))
@@ -224,7 +224,7 @@
 
 (define-vop (unbind-to-here)
   (:args (where :scs (descriptor-reg any-reg)))
-  (:temporary (:sc dword-reg) symbol value bsp)
+  (:temporary (:sc unsigned-reg) symbol value bsp)
   (:generator 0
     (load-symbol-value bsp *binding-stack-pointer*)
     (inst cmp where bsp)

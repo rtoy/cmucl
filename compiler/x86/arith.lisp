@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.9 1997/12/11 17:41:30 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.10 1998/02/19 19:34:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -391,7 +391,8 @@
   (:arg-types unsigned-num unsigned-num)
   (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from (:argument 0) :to :result) eax)
-  (:temporary (:sc dword-reg :offset edx-offset :from :eval :to :result) edx)
+  (:temporary (:sc unsigned-reg :offset edx-offset
+		   :from :eval :to :result) edx)
   (:ignore edx)
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
@@ -409,9 +410,9 @@
   (:args (x :scs (any-reg) :target eax)
 	 (y :scs (any-reg control-stack)))
   (:arg-types tagged-num tagged-num)
-  (:temporary (:sc dword-reg :offset eax-offset :target quo
+  (:temporary (:sc signed-reg :offset eax-offset :target quo
 		   :from (:argument 0) :to (:result 0)) eax)
-  (:temporary (:sc any-reg :offset edx-offset :target rem
+  (:temporary (:sc unsigned-reg :offset edx-offset :target rem
 		   :from (:argument 0) :to (:result 1)) edx)
   (:results (quo :scs (any-reg))
 	    (rem :scs (any-reg)))
@@ -438,7 +439,7 @@
   (:args (x :scs (any-reg) :target eax))
   (:info y)
   (:arg-types tagged-num (:constant (signed-byte 30)))
-  (:temporary (:sc dword-reg :offset eax-offset :target quo
+  (:temporary (:sc signed-reg :offset eax-offset :target quo
 		   :from :argument :to (:result 0)) eax)
   (:temporary (:sc any-reg :offset edx-offset :target rem
 		   :from :eval :to (:result 1)) edx)
@@ -464,9 +465,9 @@
   (:args (x :scs (unsigned-reg) :target eax)
 	 (y :scs (unsigned-reg signed-stack)))
   (:arg-types unsigned-num unsigned-num)
-  (:temporary (:sc dword-reg :offset eax-offset :target quo
+  (:temporary (:sc unsigned-reg :offset eax-offset :target quo
 		   :from (:argument 0) :to (:result 0)) eax)
-  (:temporary (:sc dword-reg :offset edx-offset :target rem
+  (:temporary (:sc unsigned-reg :offset edx-offset :target rem
 		   :from (:argument 0) :to (:result 1)) edx)
   (:results (quo :scs (unsigned-reg))
 	    (rem :scs (unsigned-reg)))
@@ -491,11 +492,11 @@
   (:args (x :scs (unsigned-reg) :target eax))
   (:info y)
   (:arg-types unsigned-num (:constant (unsigned-byte 32)))
-  (:temporary (:sc dword-reg :offset eax-offset :target quo
+  (:temporary (:sc unsigned-reg :offset eax-offset :target quo
 		   :from :argument :to (:result 0)) eax)
-  (:temporary (:sc dword-reg :offset edx-offset :target rem
+  (:temporary (:sc unsigned-reg :offset edx-offset :target rem
 		   :from :eval :to (:result 1)) edx)
-  (:temporary (:sc dword-reg :from :eval :to :result) y-arg)
+  (:temporary (:sc unsigned-reg :from :eval :to :result) y-arg)
   (:results (quo :scs (unsigned-reg))
 	    (rem :scs (unsigned-reg)))
   (:result-types unsigned-num unsigned-num)
@@ -515,9 +516,9 @@
   (:args (x :scs (signed-reg) :target eax)
 	 (y :scs (signed-reg signed-stack)))
   (:arg-types signed-num signed-num)
-  (:temporary (:sc dword-reg :offset eax-offset :target quo
+  (:temporary (:sc signed-reg :offset eax-offset :target quo
 		   :from (:argument 0) :to (:result 0)) eax)
-  (:temporary (:sc dword-reg :offset edx-offset :target rem
+  (:temporary (:sc signed-reg :offset edx-offset :target rem
 		   :from (:argument 0) :to (:result 1)) edx)
   (:results (quo :scs (signed-reg))
 	    (rem :scs (signed-reg)))
@@ -542,11 +543,11 @@
   (:args (x :scs (signed-reg) :target eax))
   (:info y)
   (:arg-types signed-num (:constant (signed-byte 32)))
-  (:temporary (:sc dword-reg :offset eax-offset :target quo
+  (:temporary (:sc signed-reg :offset eax-offset :target quo
 		   :from :argument :to (:result 0)) eax)
-  (:temporary (:sc dword-reg :offset edx-offset :target rem
+  (:temporary (:sc signed-reg :offset edx-offset :target rem
 		   :from :eval :to (:result 1)) edx)
-  (:temporary (:sc dword-reg :from :eval :to :result) y-arg)
+  (:temporary (:sc signed-reg :from :eval :to :result) y-arg)
   (:results (quo :scs (signed-reg))
 	    (rem :scs (signed-reg)))
   (:result-types signed-num signed-num)
@@ -608,7 +609,7 @@
 				    (location= number result))))
 	 (amount :scs (unsigned-reg) :target ecx))
   (:arg-types tagged-num positive-fixnum)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (any-reg) :from (:argument 0)
 		    :load-if (not (and (sc-is number control-stack)
 				       (sc-is result control-stack)
@@ -667,7 +668,7 @@
 				    (location= number result))))
 	 (amount :scs (unsigned-reg) :target ecx))
   (:arg-types (:or signed-num unsigned-num) positive-fixnum)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (signed-reg unsigned-reg) :from (:argument 0)
 		    :load-if (not
 			      (and (sc-is number signed-stack unsigned-stack)
@@ -690,7 +691,7 @@
   (:arg-types (:or signed-num unsigned-num) signed-num)
   (:results (result :scs (signed-reg unsigned-reg) :from (:argument 0)))
   (:result-types (:or signed-num unsigned-num))
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:temporary (:sc signed-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:note "inline ASH")
   (:generator 5
     (move result number)
@@ -747,7 +748,7 @@
   (:arg-types unsigned-num)
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
-  (:temporary (:sc dword-reg :from (:argument 0)) temp)
+  (:temporary (:sc unsigned-reg :from (:argument 0)) temp)
   (:generator 30
     (move result arg)
 
@@ -943,7 +944,7 @@
 	 (prev :scs (unsigned-reg) :target result)
 	 (next :scs (unsigned-reg)))
   (:arg-types tagged-num unsigned-num unsigned-num)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 0)) ecx)
+  (:temporary (:sc signed-reg :offset ecx-offset :from (:argument 0)) ecx)
   (:results (result :scs (unsigned-reg) :from (:argument 1)))
   (:result-types unsigned-num)
   (:policy :fast-safe)
@@ -1032,7 +1033,7 @@
   (:args (num :scs (unsigned-reg) :target r)
 	 (amount :scs (signed-reg) :target ecx))
   (:arg-types unsigned-num tagged-num)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:temporary (:sc signed-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (r :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num))
 
@@ -1262,7 +1263,7 @@
   (:args (digit :scs (unsigned-reg unsigned-stack) :target result)
 	 (count :scs (unsigned-reg) :target ecx))
   (:arg-types unsigned-num positive-fixnum)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
   (:results (result :scs (unsigned-reg) :from (:argument 0)
 		    :load-if (not (and (sc-is result unsigned-stack)
 				       (location= digit result)))))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.13 1998/01/24 14:53:40 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.14 1998/02/19 19:34:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -702,7 +702,7 @@
 	 (vals :more t))
   (:move-args :known-return)
   (:info val-locs)
-  (:temporary (:sc dword-reg :from (:argument 1)) rpc)
+  (:temporary (:sc unsigned-reg :from (:argument 1)) rpc)
   (:ignore val-locs vals)
   (:vop-var vop)
   (:generator 6
@@ -887,7 +887,7 @@
      eax)
 
     ;; We pass the number of arguments in ECX.
-    (:temporary (:sc dword-reg :offset ecx-offset :to :eval) ecx)
+    (:temporary (:sc unsigned-reg :offset ecx-offset :to :eval) ecx)
 
     ;; With variable call, we have to load the register-args out
     ;; of the (new) stack frame before doing the call.  Therefore,
@@ -902,12 +902,11 @@
 		    register-arg-names register-arg-offsets))
 
     ,@(when (eq return :tail)
-	    '((:temporary (:sc dword-reg :from (:argument 1) :to (:argument 2))
-			  old-fp-tmp)
+	    '((:temporary (:sc unsigned-reg
+			   :from (:argument 1) :to (:argument 2)) old-fp-tmp)
 	      #+x86-lra
-	      (:temporary (:sc dword-reg :from (:argument 2) :to (:argument 3))
-			  ret-pc-tmp)
-	      ))
+	      (:temporary (:sc unsigned-reg
+			   :from (:argument 2) :to (:argument 3)) ret-pc-tmp)))
 
     (:generator ,(+ (if named 5 0)
 		    (if variable 19 1)
@@ -1079,8 +1078,8 @@
 	 (function :scs (descriptor-reg control-stack) :target eax)
 	 (old-fp)
 	 (ret-addr))
-  (:temporary (:sc dword-reg :offset esi-offset :from (:argument 0)) esi)
-  (:temporary (:sc dword-reg :offset eax-offset :from (:argument 1)) eax)
+  (:temporary (:sc unsigned-reg :offset esi-offset :from (:argument 0)) esi)
+  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 1)) eax)
 ;  (:ignore ret-addr old-fp)
   (:generator 75
     ;; Move these into the passing locations if they are not already there.
@@ -1116,8 +1115,8 @@
   (:args (old-fp)
 	 (return-pc)
 	 (value))
-  (:temporary (:sc dword-reg) ofp)
-  (:temporary (:sc dword-reg) ret)
+  (:temporary (:sc unsigned-reg) ofp)
+  (:temporary (:sc unsigned-reg) ret)
   (:ignore value)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
@@ -1149,18 +1148,18 @@
 
   ;; In the case of other than one value, we need these registers to tell
   ;; the caller where they are and how many there are.
-  (:temporary (:sc dword-reg :offset ebx-offset) ebx)
-  (:temporary (:sc dword-reg :offset ecx-offset) ecx)
+  (:temporary (:sc unsigned-reg :offset ebx-offset) ebx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) ecx)
 
   ;; We need to stretch the lifetime of return-pc past the argument
   ;; registers so that we can default the argument registers without
   ;; trashing return-pc.
-  (:temporary (:sc dword-reg :offset (first register-arg-offsets) :from :eval)
-	      a0)
-  (:temporary (:sc dword-reg :offset (second register-arg-offsets) :from :eval)
-	      a1)
-  (:temporary (:sc dword-reg :offset (third register-arg-offsets) :from :eval)
-	      a2)
+  (:temporary (:sc unsigned-reg :offset (first register-arg-offsets)
+		   :from :eval) a0)
+  (:temporary (:sc unsigned-reg :offset (second register-arg-offsets)
+		   :from :eval) a1)
+  (:temporary (:sc unsigned-reg :offset (third register-arg-offsets)
+		   :from :eval) a2)
 
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
@@ -1216,13 +1215,13 @@
 	 (vals :scs (any-reg) :target esi)
 	 (nvals :scs (any-reg) :target ecx))
 
-  (:temporary (:sc dword-reg :offset eax-offset :from (:argument 1)) eax)
-  (:temporary (:sc dword-reg :offset esi-offset :from (:argument 2)) esi)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 3)) ecx)
-  (:temporary (:sc dword-reg :offset ebx-offset :from (:eval 0)) ebx)
+  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 1)) eax)
+  (:temporary (:sc unsigned-reg :offset esi-offset :from (:argument 2)) esi)
+  (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 3)) ecx)
+  (:temporary (:sc unsigned-reg :offset ebx-offset :from (:eval 0)) ebx)
   (:temporary (:sc descriptor-reg :offset (first register-arg-offsets)
 		   :from (:eval 0)) a0)
-  (:temporary (:sc dword-reg :from (:eval 1)) old-fp-temp)
+  (:temporary (:sc unsigned-reg :from (:eval 1)) old-fp-temp)
   (:node-var node)
 
   (:generator 13
@@ -1406,7 +1405,7 @@
   (:args (object :scs (descriptor-reg) :to :result)
 	 (index :scs (any-reg) :target temp))
   (:arg-types * tagged-num)
-  (:temporary (:sc dword-reg :from (:argument 1) :to :result) temp)
+  (:temporary (:sc unsigned-reg :from (:argument 1) :to :result) temp)
   (:results (value :scs (any-reg descriptor-reg)))
   (:result-types *)
   (:generator 5
@@ -1435,10 +1434,10 @@
   (:args (context :scs (descriptor-reg) :target src)
 	 (count :scs (any-reg) :target ecx))
   (:arg-types * tagged-num)
-  (:temporary (:sc dword-reg :offset esi-offset :from (:argument 0)) src)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
-  (:temporary (:sc dword-reg :offset eax-offset) eax)
-  (:temporary (:sc dword-reg) dst)
+  (:temporary (:sc unsigned-reg :offset esi-offset :from (:argument 0)) src)
+  (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1)) ecx)
+  (:temporary (:sc unsigned-reg :offset eax-offset) eax)
+  (:temporary (:sc unsigned-reg) dst)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
   (:generator 20

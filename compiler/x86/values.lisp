@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.3 1997/11/04 09:11:17 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.4 1998/02/19 19:35:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
 ;;;
 (define-vop (push-values)
   (:args (vals :more t))
-  (:temporary (:sc dword-reg :to (:result 0) :target start) temp)
+  (:temporary (:sc unsigned-reg :to (:result 0) :target start) temp)
   (:results (start) (count))
   (:info nvals)
   (:generator 20
@@ -57,8 +57,8 @@
   (:results (start :scs (any-reg))
 	    (count :scs (any-reg)))
   (:temporary (:sc descriptor-reg :from (:argument 0) :to (:result 1)) list)
-  (:temporary (:sc dword-reg :to (:result 1)) nil-temp)
-  (:temporary (:sc dword-reg :offset eax-offset :to (:result 1)) eax)
+  (:temporary (:sc descriptor-reg :to (:result 1)) nil-temp)
+  (:temporary (:sc unsigned-reg :offset eax-offset :to (:result 1)) eax)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 0
@@ -98,7 +98,7 @@
   (:arg-types * positive-fixnum positive-fixnum)
   (:temporary (:sc any-reg :offset esi-offset :from (:argument 0)) src)
   (:temporary (:sc descriptor-reg :offset eax-offset) temp)
-  (:temporary (:sc dword-reg :offset ecx-offset) temp1)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) temp1)
   (:results (start :scs (any-reg))
             (count :scs (any-reg)))
   (:generator 20

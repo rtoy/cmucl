@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.8 1998/01/29 07:15:45 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.9 1998/02/19 19:35:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,7 @@
   (:translate get-type)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg :offset eax-offset :to (:result 0)) eax)
+  (:temporary (:sc unsigned-reg :offset eax-offset :to (:result 0)) eax)
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
@@ -89,7 +89,7 @@
   (:args (type :scs (unsigned-reg) :target eax)
 	 (function :scs (descriptor-reg)))
   (:arg-types positive-fixnum *)
-  (:temporary (:sc dword-reg :offset eax-offset :from (:argument 0)
+  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 0)
 		   :to (:result 0) :target result)
 	      eax)
   (:results (result :scs (unsigned-reg)))
@@ -128,7 +128,7 @@
 	 (data :scs (any-reg) :target eax))
   (:arg-types * positive-fixnum)
   (:results (res :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg :offset eax-offset
+  (:temporary (:sc unsigned-reg :offset eax-offset
 		   :from (:argument 1) :to (:result 0)) eax)
   (:generator 6
     (move eax data)

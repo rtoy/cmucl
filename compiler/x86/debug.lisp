@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/debug.lisp,v 1.3 1997/11/18 10:53:22 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/debug.lisp,v 1.4 1998/02/19 19:34:54 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
   (:args (sap :scs (sap-reg) :to :eval)
 	 (offset :scs (any-reg) :target temp))
   (:arg-types system-area-pointer positive-fixnum)
-  (:temporary (:sc dword-reg :from (:argument 1)) temp)
+  (:temporary (:sc unsigned-reg :from (:argument 1)) temp)
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 9
@@ -73,7 +73,7 @@
 	 (offset :scs (any-reg) :target temp)
 	 (value :scs (descriptor-reg) :to :result :target result))
   (:arg-types system-area-pointer positive-fixnum *)
-  (:temporary (:sc dword-reg :from (:argument 1) :to :result) temp)
+  (:temporary (:sc unsigned-reg :from (:argument 1) :to :result) temp)
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 9
@@ -102,7 +102,7 @@
   (:policy :fast-safe)
   (:args (thing :scs (descriptor-reg)))
   (:results (code :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) temp)
+  (:temporary (:sc unsigned-reg) temp)
   (:variant-vars lowtag)
   (:generator 5
     (let ((bogus (gen-label))

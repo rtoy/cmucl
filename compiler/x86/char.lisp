@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.3 1997/11/18 10:53:21 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.4 1998/02/19 19:34:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -131,7 +131,7 @@
   (:policy :fast-safe)
   (:args (code :scs (unsigned-reg unsigned-stack) :target eax))
   (:arg-types positive-fixnum)
-  (:temporary (:sc dword-reg :offset eax-offset :target res
+  (:temporary (:sc unsigned-reg :offset eax-offset :target res
 		   :from (:argument 0) :to (:result 0))
 	      eax)
   (:results (res :scs (base-char-reg)))

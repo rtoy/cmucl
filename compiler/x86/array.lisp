@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.10 1998/01/17 05:47:17 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.11 1998/02/19 19:34:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -154,7 +154,7 @@
 	 (:arg-types ,type positive-fixnum)
 	 (:results (result :scs (unsigned-reg) :from (:argument 0)))
 	 (:result-types positive-fixnum)
-	 (:temporary (:sc dword-reg :offset ecx-offset) ecx)
+	 (:temporary (:sc unsigned-reg :offset ecx-offset) ecx)
 	 (:generator 20
 	   (move ecx index)
 	   (inst shr ecx ,bit-shift)
@@ -194,9 +194,9 @@
 	 (:arg-types ,type positive-fixnum positive-fixnum)
 	 (:results (result :scs (unsigned-reg)))
 	 (:result-types positive-fixnum)
-	 (:temporary (:sc dword-reg) word-index)
-	 (:temporary (:sc dword-reg :from (:argument 0)) ptr old)
-	 (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1))
+	 (:temporary (:sc unsigned-reg) word-index)
+	 (:temporary (:sc unsigned-reg :from (:argument 0)) ptr old)
+	 (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 1))
 		     ecx)
 	 (:generator 25
 	   (move word-index index)
@@ -236,7 +236,7 @@
 	 (:info index)
 	 (:results (result :scs (unsigned-reg)))
 	 (:result-types positive-fixnum)
-	 (:temporary (:sc dword-reg :to (:result 0)) old)
+	 (:temporary (:sc unsigned-reg :to (:result 0)) old)
 	 (:generator 20
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
 	     (inst mov old
@@ -877,7 +877,7 @@
 	 (index :scs (unsigned-reg) :to (:eval 0))
 	 (value :scs (unsigned-reg signed-reg) :target eax))
   (:arg-types simple-array-unsigned-byte-8 positive-fixnum positive-fixnum)
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from (:argument 2) :to (:result 0))
 	      eax)
   (:results (result :scs (unsigned-reg signed-reg)))
@@ -899,7 +899,7 @@
   (:info index)
   (:arg-types simple-array-unsigned-byte-8 (:constant (signed-byte 30))
 	      positive-fixnum)
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from (:argument 1) :to (:result 0))
 	      eax)
   (:results (result :scs (unsigned-reg signed-reg)))
@@ -952,7 +952,7 @@
 	 (index :scs (unsigned-reg) :to (:eval 0))
 	 (value :scs (unsigned-reg signed-reg) :target eax))
   (:arg-types simple-array-unsigned-byte-16 positive-fixnum positive-fixnum)
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from (:argument 2) :to (:result 0))
 	      eax)
   (:results (result :scs (unsigned-reg signed-reg)))
@@ -974,7 +974,7 @@
   (:info index)
   (:arg-types simple-array-unsigned-byte-16 (:constant (signed-byte 30))
 	      positive-fixnum)
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from (:argument 1) :to (:result 0))
 	      eax)
   (:results (result :scs (unsigned-reg signed-reg)))
@@ -997,7 +997,7 @@
   (:args (object :scs (descriptor-reg))
 	 (index :scs (unsigned-reg)))
   (:arg-types simple-string positive-fixnum)
-  (:temporary (:sc dword-reg ; byte-reg
+  (:temporary (:sc unsigned-reg ; byte-reg
 		   :offset eax-offset ; al-offset
 		   :target value
 		   :from (:eval 0) :to (:result 0))
@@ -1018,7 +1018,7 @@
   (:args (object :scs (descriptor-reg)))
   (:info index)
   (:arg-types simple-string (:constant (signed-byte 30)))
-  (:temporary (:sc dword-reg :offset eax-offset :target value
+  (:temporary (:sc unsigned-reg :offset eax-offset :target value
 		   :from (:eval 0) :to (:result 0))
 	      eax)
   (:ignore eax)
@@ -1105,7 +1105,7 @@
 	 (index :scs (unsigned-reg) :to (:eval 0))
 	 (value :scs (signed-reg) :target eax))
   (:arg-types simple-array-signed-byte-8 positive-fixnum tagged-num)
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from (:argument 2) :to (:result 0))
 	      eax)
   (:results (result :scs (signed-reg)))
@@ -1126,7 +1126,7 @@
   (:info index)
   (:arg-types simple-array-signed-byte-8 (:constant (signed-byte 30))
 	      tagged-num)
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from (:argument 1) :to (:result 0))
 	      eax)
   (:results (result :scs (signed-reg)))
@@ -1177,7 +1177,7 @@
 	 (index :scs (unsigned-reg) :to (:eval 0))
 	 (value :scs (signed-reg) :target eax))
   (:arg-types simple-array-signed-byte-16 positive-fixnum tagged-num)
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc signed-reg :offset eax-offset :target result
 		   :from (:argument 2) :to (:result 0))
 	      eax)
   (:results (result :scs (signed-reg)))
@@ -1197,7 +1197,7 @@
 	 (value :scs (signed-reg) :target eax))
   (:info index)
   (:arg-types simple-array-signed-byte-16 (:constant (signed-byte 30)) tagged-num)
-  (:temporary (:sc dword-reg :offset eax-offset :target result
+  (:temporary (:sc signed-reg :offset eax-offset :target result
 		   :from (:argument 1) :to (:result 0))
 	      eax)
   (:results (result :scs (signed-reg)))

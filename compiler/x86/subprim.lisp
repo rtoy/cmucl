@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/subprim.lisp,v 1.2 1997/11/18 10:53:25 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/subprim.lisp,v 1.3 1998/02/19 19:35:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,8 +27,8 @@
   (:translate length)
   (:args (object :scs (descriptor-reg control-stack) :target ptr))
   (:arg-types list)
-  (:temporary (:sc dword-reg :offset eax-offset) eax)
-  (:temporary (:sc dword-reg :from (:argument 0)) ptr)
+  (:temporary (:sc unsigned-reg :offset eax-offset) eax)
+  (:temporary (:sc unsigned-reg :from (:argument 0)) ptr)
   (:results (count :scs (any-reg)))
   (:result-types positive-fixnum)
   (:policy :fast-safe)
@@ -65,7 +65,7 @@
   (:translate length)
   (:args (object :scs (descriptor-reg control-stack) :target ptr))
   (:arg-types list)
-  (:temporary (:sc dword-reg :from (:argument 0)) ptr)
+  (:temporary (:sc unsigned-reg :from (:argument 0)) ptr)
   (:results (count :scs (any-reg)))
   (:result-types positive-fixnum)
   (:policy :fast)

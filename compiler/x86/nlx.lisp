@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.10 1998/01/17 05:56:38 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.11 1998/02/19 19:35:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,7 +100,7 @@
 (define-vop (make-unwind-block)
   (:args (tn))
   (:info entry-label)
-  (:temporary (:sc dword-reg) temp)
+  (:temporary (:sc unsigned-reg) temp)
   (:results (block :scs (any-reg)))
   (:generator 22
     (inst lea block (catch-block-ea tn))
@@ -137,13 +137,13 @@
 ;;;
 (define-vop (set-unwind-protect)
   (:args (tn))
-  (:temporary (:sc dword-reg) new-uwp)
+  (:temporary (:sc unsigned-reg) new-uwp)
   (:generator 7
     (inst lea new-uwp (catch-block-ea tn))
     (store-symbol-value new-uwp lisp::*current-unwind-protect-block*)))
 
 (define-vop (unlink-catch-block)
-  (:temporary (:sc dword-reg) block)
+  (:temporary (:sc unsigned-reg) block)
   (:policy :fast-safe)
   (:translate %catch-breakup)
   (:generator 17
@@ -152,7 +152,7 @@
     (store-symbol-value block lisp::*current-catch-block*)))
 
 (define-vop (unlink-unwind-protect)
-    (:temporary (:sc dword-reg) block)
+    (:temporary (:sc unsigned-reg) block)
   (:policy :fast-safe)
   (:translate %unwind-protect-breakup)
   (:generator 17
@@ -216,9 +216,9 @@
   ;; Again, no SC restrictions for the args, 'cause the loading would
   ;; happen before the entry label.
   (:info label)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 2)) ecx)
-  (:temporary (:sc dword-reg :offset esi-offset) esi)
-  (:temporary (:sc dword-reg :offset edi-offset) edi)
+  (:temporary (:sc unsigned-reg :offset ecx-offset :from (:argument 2)) ecx)
+  (:temporary (:sc unsigned-reg :offset esi-offset) esi)
+  (:temporary (:sc unsigned-reg :offset edi-offset) edi)
   (:results (result :scs (any-reg) :from (:argument 0))
 	    (num :scs (any-reg control-stack)))
   (:save-p :force-to-stack)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.6 1997/11/19 03:00:38 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.7 1998/02/19 19:34:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,9 +234,8 @@
   (:args (x :scs (descriptor-reg) :target eax))
   (:results (y :scs (signed-reg unsigned-reg)))
   (:note "integer to untagged word coercion")
-  (:temporary (:sc dword-reg :offset eax-offset
-		   :from (:argument 0)
-		   :to (:result 0) :target y) eax)
+  (:temporary (:sc unsigned-reg :offset eax-offset
+		   :from (:argument 0) :to (:result 0) :target y) eax)
   (:generator 4
     (move eax x)
     (inst test al-tn 3)
@@ -281,12 +280,11 @@
 #+nil
 (define-vop (move-from-signed)
   (:args (x :scs (signed-reg unsigned-reg) :target eax))
-  (:temporary (:sc dword-reg :offset eax-offset :from (:argument 0)) eax)
-  (:temporary (:sc dword-reg :offset ebx-offset :to (:result 0) :target y)
+  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 0)) eax)
+  (:temporary (:sc unsigned-reg :offset ebx-offset :to (:result 0) :target y)
 	      ebx)
-  (:temporary (:sc dword-reg :offset ecx-offset
-		   :from (:argument 0) :to (:result 0))
-	      ecx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:argument 0) :to (:result 0)) ecx)
   (:ignore ecx)
   (:results (y :scs (any-reg descriptor-reg)))
   (:note "signed word to integer coercion")
@@ -329,12 +327,11 @@
 #+nil
 (define-vop (move-from-unsigned)
   (:args (x :scs (signed-reg unsigned-reg) :target eax))
-  (:temporary (:sc dword-reg :offset eax-offset :from (:argument 0)) eax)
-  (:temporary (:sc dword-reg :offset ebx-offset :to (:result 0) :target y)
+  (:temporary (:sc unsigned-reg :offset eax-offset :from (:argument 0)) eax)
+  (:temporary (:sc unsigned-reg :offset ebx-offset :to (:result 0) :target y)
 	      ebx)
-  (:temporary (:sc dword-reg :offset ecx-offset
-		   :from (:argument 0) :to (:result 0))
-	      ecx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:argument 0) :to (:result 0)) ecx)
   (:ignore ecx)
   (:results (y :scs (any-reg descriptor-reg)))
   (:note "unsigned word to integer coercion")
@@ -346,7 +343,7 @@
 ;;; Faster inline version.
 (define-vop (move-from-unsigned)
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
-  (:temporary (:sc dword-reg) alloc)
+  (:temporary (:sc unsigned-reg) alloc)
   (:results (y :scs (any-reg descriptor-reg)))
   (:node-var node)
   (:note "unsigned word to integer coercion")

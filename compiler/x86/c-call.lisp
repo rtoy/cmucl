@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.6 1997/11/25 15:29:12 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.7 1998/02/19 19:34:44 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,8 +149,8 @@
 	 (args :more t))
   (:results (results :more t))
   ;; eax is already wired
-  (:temporary (:sc dword-reg :offset ecx-offset) ecx)
-  (:temporary (:sc dword-reg :offset edx-offset) edx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) ecx)
+  (:temporary (:sc unsigned-reg :offset edx-offset) edx)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.9 1998/01/17 05:47:18 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.10 1998/02/19 19:35:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -260,14 +260,14 @@
 (define-vop (check-type)
   (:args (value :target result :scs (any-reg descriptor-reg)))
   (:results (result :scs (any-reg descriptor-reg)))
-  (:temporary (:sc dword-reg :offset eax-offset :to (:result 0)) eax)
+  (:temporary (:sc unsigned-reg :offset eax-offset :to (:result 0)) eax)
   (:ignore eax)
   (:vop-var vop)
   (:save-p :compute-only))
 
 (define-vop (type-predicate)
   (:args (value :scs (any-reg descriptor-reg)))
-  (:temporary (:sc dword-reg :offset eax-offset) eax)
+  (:temporary (:sc unsigned-reg :offset eax-offset) eax)
   (:ignore eax)
   (:conditional)
   (:info target not-p)

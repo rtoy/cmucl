@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.3 1997/12/05 06:55:32 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.4 1998/02/19 19:35:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,10 +28,10 @@
   (:variant-vars function)
   (:vop-var vop)
   (:node-var node)
-  (:temporary (:sc dword-reg :offset ebx-offset :from (:eval 0) :to (:eval 2))
-	      ebx)
-  (:temporary (:sc dword-reg :offset ecx-offset :from (:eval 0) :to (:eval 2))
-	      ecx))
+  (:temporary (:sc unsigned-reg :offset ebx-offset
+		   :from (:eval 0) :to (:eval 2)) ebx)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from (:eval 0) :to (:eval 2)) ecx))
 
 (eval-when (compile load eval)
 
