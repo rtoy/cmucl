@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.10 1990/11/03 03:25:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.11 1990/12/12 00:11:43 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -281,9 +281,9 @@
 		(:temporary (:from (:argument 0) :sc ,from-sc) temp)
 		(:arg-types ,from-type)
 		(:result-types signed-num)
-		(:translate %unary-truncate)
+		(:translate %unary-round)
 		(:policy :fast-safe)
-		(:note "inline float truncate")
+		(:note "inline float round")
 		(:vop-var vop)
 		(:save-p :compute-only)
 		(:generator 3
@@ -291,6 +291,39 @@
 		  (inst fcvt :word ,from-format temp x)
 		  (inst mfc1 y temp)
 		  (inst nop)))))
+  (frob %unary-round/single-float single-reg single-float :single)
+  (frob %unary-round/double-float double-reg double-float :double))
+
+
+;;; These VOPs have to uninterruptibly frob the rounding mode in order to get
+;;; the desired round-to-zero behavior.
+;;;
+(macrolet ((frob (name from-sc from-type from-format)
+	     `(define-vop (,name)
+		(:args (x :scs (,from-sc)))
+		(:results (y :scs (signed-reg)))
+		(:temporary (:from (:argument 0) :sc ,from-sc) temp)
+		(:temporary (:sc non-descriptor-reg) status-save new-status)
+		(:arg-types ,from-type)
+		(:result-types signed-num)
+		(:translate %unary-truncate)
+		(:policy :fast-safe)
+		(:note "inline float truncate")
+		(:vop-var vop)
+		(:save-p :compute-only)
+		(:generator 16
+		  (pseudo-atomic (status-save)
+		    (inst cfc1 status-save 31)
+		    (inst li new-status (lognot 3))
+		    (inst and new-status status-save)
+		    (inst or new-status float-round-to-zero)
+		    (inst ctc1 new-status 31)
+		    (inst nop)
+		    (note-this-location vop :internal-error)
+		    (inst fcvt :word ,from-format temp x)
+		    (inst mfc1 y temp)
+		    (inst nop)
+		    (inst ctc1 status-save 31))))))
   (frob %unary-truncate/single-float single-reg single-float :single)
   (frob %unary-truncate/double-float double-reg double-float :double))
 
