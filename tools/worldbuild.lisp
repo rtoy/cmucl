@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.13 1992/06/24 03:59:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.14 1992/07/28 22:08:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,6 @@
   `(,@(when (c:backend-featurep :pmax)
 	'("target:assembly/mips/assem-rtns.assem"
 	  "target:assembly/mips/array.assem"
-	  "target:assembly/mips/bit-bash.assem"
 	  "target:assembly/mips/arith.assem"
 	  "target:assembly/mips/alloc.assem"))
     ,@(when (c:backend-featurep :sparc)
@@ -126,7 +125,7 @@
     "target:code/debug"
     ))
 
-(cond ((c:target-featurep '(or :hppa :x86))
+(cond ((c:target-featurep '(or :hppa :x86 :pmax))
        (setf *genesis-core-name* "target:lisp/kernel.core")
        (setf *genesis-c-header-name* "target:lisp/internals.h")
        (setf *genesis-map-name* #+nil "target:lisp/kernel.map" nil)
