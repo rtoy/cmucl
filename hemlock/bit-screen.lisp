@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.13 1991/11/23 21:48:32 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.14 1994/03/14 17:57:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1451,8 +1451,7 @@
 	   (setf *default-foreground-pixel*
 		 (xlib:screen-black-pixel (xlib:display-default-screen display)))
 	   (setf *cursor-background-color* (make-white-color))
-	   (setf *cursor-foreground-color* (make-black-color))
-	   (setf *hack-hunk-replace-line* t)))
+	   (setf *cursor-foreground-color* (make-black-color))))
   (setf *foreground-background-xor*
 	(logxor *default-foreground-pixel* *default-background-pixel*))
   (setf *highlight-border-pixmap* *default-foreground-pixel*)
@@ -1787,8 +1786,7 @@
 	  (setf *default-foreground-pixel*
 		(xlib:screen-black-pixel (xlib:display-default-screen display)))
 	  (setf *cursor-background-color* (make-white-color))
-	  (setf *cursor-foreground-color* (make-black-color))
-	  (setf *hack-hunk-replace-line* t)))
+	  (setf *cursor-foreground-color* (make-black-color))))
       (setf *highlight-border-pixmap* *default-foreground-pixel*)
       (get-hemlock-cursor display)
       (dolist (hunk (device-hunks device))
