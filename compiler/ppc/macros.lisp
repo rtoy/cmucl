@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.4 2004/08/09 03:34:54 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.5 2005/02/12 01:44:50 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -489,12 +489,12 @@
 	(progn
 	  (inst andi. ,flag-tn alloc-tn 7)
 	  (inst twi :ne ,flag-tn 0))
-	(inst lr ,flag-tn (- ,n-extra 4))
+	(inst lr ,flag-tn 4)
 	(inst addi alloc-tn alloc-tn 4))
       ,@forms
       (without-scheduling ()
-       (inst add alloc-tn alloc-tn ,flag-tn)
-       (inst twi :lt alloc-tn 0))
+       (inst subi ,flag-tn ,flag-tn 4)
+       (inst twi :ne ,flag-tn 0))
       #+debug
       (progn
 	(inst andi. ,flag-tn alloc-tn 7)
