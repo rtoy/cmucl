@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.48 2003/08/19 12:23:36 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.49 2003/08/22 09:20:02 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -733,19 +733,21 @@
   (if (eql divisor 1)
       (round number)
       (multiple-value-bind (tru rem) (truncate number divisor)
-	(let ((thresh (/ (abs divisor) 2)))
-	  (cond ((or (> rem thresh)
-		     (and (= rem thresh) (oddp tru)))
-		 (if (minusp divisor)
-		     (values (- tru 1) (+ rem divisor))
-		     (values (+ tru 1) (- rem divisor))))
-		((let ((-thresh (- thresh)))
-		   (or (< rem -thresh)
-		       (and (= rem -thresh) (oddp tru))))
-		 (if (minusp divisor)
-		     (values (+ tru 1) (- rem divisor))
-		     (values (- tru 1) (+ rem divisor))))
-		(t (values tru rem)))))))
+	(if (zerop rem)
+	    (values (if (minusp tru) -1 1) rem)
+	    (let ((thresh (/ (abs divisor) 2)))
+	      (cond ((or (> rem thresh)
+			 (and (= rem thresh) (oddp tru)))
+		     (if (minusp divisor)
+			 (values (- tru 1) (+ rem divisor))
+			 (values (+ tru 1) (- rem divisor))))
+		    ((let ((-thresh (- thresh)))
+		       (or (< rem -thresh)
+			   (and (= rem -thresh) (oddp tru))))
+		     (if (minusp divisor)
+			 (values (+ tru 1) (- rem divisor))
+			 (values (- tru 1) (+ rem divisor))))
+		    (t (values tru rem))))))))
 
 
 (defun rem (number divisor)
