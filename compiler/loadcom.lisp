@@ -93,6 +93,7 @@
 (load "c:pseudo-vops")
 (load "vm:vm-tran")
 (load "c:debug")
+(load "c:copyprop")
 (load "c:represent")
 
 (load "c:eval-comp")
