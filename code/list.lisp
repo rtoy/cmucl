@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.29 2003/04/19 15:24:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.30 2003/04/22 16:49:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -827,52 +827,61 @@
 ;;; spliced out. When the end of list1 is reached, what is left of list2 is
 ;;; tacked onto what is left of list1.  The splicing operation ensures that
 ;;; the correct operation is performed depending on whether splice is at the
-;;; top of the list or not
+;;; top of the list or not.
 
-#+nil
-(defun nset-exclusive-or (list1 list2 &key (test #'eql) (test-not nil notp)
-				key)
-  "Destructively return a list with elements which appear but once in list1
-   and list2."
+(defun nset-exclusive-or (list1 list2
+				&key key (test #'eql testp) (test-not #'eql notp))
+  "Destructively return a list with elements which appear but once in LIST1
+   and LIST2."
+  (when (and testp notp)
+    (error ":TEST and :TEST-NOT were both supplied."))
+  ;; The outer loop examines LIST1 while the inner loop examines
+  ;; LIST2. If an element is found in LIST2 "equal" to the element
+  ;; in LIST1, both are spliced out. When the end of LIST1 is
+  ;; reached, what is left of LIST2 is tacked onto what is left of
+  ;; LIST1. The splicing operation ensures that the correct
+  ;; operation is performed depending on whether splice is at the
+  ;; top of the list or not.
   (do ((list1 list1)
        (list2 list2)
        (x list1 (cdr x))
-       (splicex ()))
+       (splicex ())
+       ;; elements of LIST2, which are "equal" to some processed
+       ;; earlier elements of LIST1
+       (deleted-y ()))
       ((endp x)
        (if (null splicex)
 	   (setq list1 list2)
 	   (rplacd splicex list2))
        list1)
-    (do ((y list2 (cdr y))
-	 (splicey ()))
-	((endp y) (setq splicex x))
-      (cond ((let ((key-val-x (apply-key key (car x)))
-		   (key-val-y (apply-key key (Car y))))
-	       (if notp
-		   (not (funcall test-not key-val-x key-val-y))
-		   (funcall test key-val-x key-val-y)))
-	     (if (null splicex)
-		 (setq list1 (cdr x))
-		 (rplacd splicex (cdr x)))
-	     (if (null splicey) 
-		 (setq list2 (cdr y))
-		 (rplacd splicey (cdr y)))
-	     (return ()))			; assume lists are really sets
-	    (t (setq splicey y))))))
+    (let ((key-val-x (apply-key key (car x)))
+	  (found-duplicate nil))
 
-;;;
-;;; The above #+nil'ed out version returns different results than
-;;; SET-EXCLUSIVE-OR, for instance, for (SET-EXCLUSIVE-OR '(1 1)
-;;; '(1)).  Let's use SET-EXCLUSIVE-OR, and wait for someone who cares
-;;; enough to fix the above algorithm.
-;;;
-(defun nset-exclusive-or (list1 list2 &key (test #'eql) (test-not nil notp)
-				key)
-  "Destructively return a list with elements which appear but once in list1
-   and list2."
-  (if notp
-      (set-exclusive-or list1 list2 :key key :test-not test-not)
-      (set-exclusive-or list1 list2 :key key :test test)))
+      ;; Move all elements from LIST2, which are "equal" to (CAR X),
+      ;; to DELETED-Y.
+      (do* ((y list2 next-y)
+	    (next-y (cdr y) (cdr y))
+	    (splicey ()))
+	   ((endp y))
+	(cond ((let ((key-val-y (apply-key key (car y))))
+		 (if notp
+		     (not (funcall test-not key-val-x key-val-y))
+		     (funcall test key-val-x key-val-y)))
+	       (if (null splicey)
+		   (setq list2 (cdr y))
+		   (rplacd splicey (cdr y)))
+	       (setq deleted-y (rplacd y deleted-y))
+	       (setq found-duplicate t))
+	      (t (setq splicey y))))
+
+      (unless found-duplicate
+	(setq found-duplicate (with-set-keys (member key-val-x deleted-y))))
+
+      (if found-duplicate
+	  (if (null splicex)
+	      (setq list1 (cdr x))
+	      (rplacd splicex (cdr x)))
+	  (setq splicex x)))))
 
 (defun subsetp (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns T if every element in list1 is also in list2."
