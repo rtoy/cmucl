@@ -229,8 +229,8 @@
     (format stream
 	    "~S ~S (~S)"
 	    (or (class-name (class-of constructor)) "Constructor")
-	    (or (constructor-name constructor) "Anonymous")
-	    (constructor-code-type constructor))))
+	    (or (slot-value-or-default constructor 'name) "Anonymous")
+	    (slot-value-or-default constructor 'code-type))))
 
 (defmethod describe-object ((constructor constructor) stream)
   (format stream
@@ -421,18 +421,21 @@
 	 (wrapper (class-wrapper class))
 	 (defaults (class-default-initargs class))
          (make
-           (compute-applicable-methods #'make-instance (list class)))
+           (compute-applicable-methods (gdefinition 'make-instance) (list class)))
 	 (supplied-initarg-names
 	   (constructor-supplied-initarg-names constructor))
-;         (default
-;	   (compute-applicable-methods #'default-initargs
-;				       (list class supplied-initarg-names))) ;?
+         (default
+	   (compute-applicable-methods (gdefinition 'default-initargs)
+				       (list class supplied-initarg-names))) ;?
          (allocate
-           (compute-applicable-methods #'allocate-instance (list class)))
+           (compute-applicable-methods (gdefinition 'allocate-instance)
+				       (list class)))
          (initialize
-           (compute-applicable-methods #'initialize-instance (list proto)))
+           (compute-applicable-methods (gdefinition 'initialize-instance)
+				       (list proto)))
          (shared
-           (compute-applicable-methods #'shared-initialize (list proto t)))
+           (compute-applicable-methods (gdefinition 'shared-initialize)
+				       (list proto t)))
 	 (code-generators
 	   (constructor-code-generators constructor)))
     (flet ((call-code-generator (generator)
@@ -441,12 +444,12 @@
 		 (error "No FALLBACK generator?")))
 	     (funcall generator class wrapper defaults initialize shared)))
       (if (or (cdr make)
-;	      (cdr default)
+	      (cdr default)
 	      (cdr allocate)
-	      (check-initargs class
-			      supplied-initarg-names
-			      defaults
-			      (append initialize shared)))
+	      (not (check-initargs-1 class
+				     supplied-initarg-names
+				     (append initialize shared)
+				     nil nil)))
 	  ;; These are basic shared assumptions, if one of the
 	  ;; has been violated, we have to resort to the fallback
 	  ;; case.  Any of these assumptions could be moved out
@@ -465,10 +468,8 @@
 ;;; 
 
 (defun map-constructors (fn)
-  (declare (type real-function fn))
   (let ((nclasses 0)
 	(nconstructors 0))
-    (declare (type index nclasses nconstructors))
     (labels ((recurse (class)
 	       (incf nclasses)
 	       (dolist (constructor (class-constructors class))
@@ -535,36 +536,9 @@
 			      (equal '(:after) (method-qualifiers m))))
 	    methods))
 
-
-;;; 
-;;; if initargs are valid return nil, otherwise return t.
-;;;
-(defun check-initargs (class supplied-initarg-names defaults methods)
-  (let ((legal (apply #'append
-		      (mapcar #'slot-definition-initargs (class-slots class)))))
-    ;; Add to the set of slot-filling initargs the set of
-    ;; initargs that are accepted by the methods.  If at
-    ;; any point we come across &allow-other-keys, we can
-    ;; just quit.
-    (dolist (method methods)
-      (multiple-value-bind (keys allow-other-keys)
-	  (function-keywords method)
-	(when allow-other-keys
-	  (return-from check-initargs nil))
-	(setq legal (append keys legal))))
-    ;; Now check the supplied-initarg-names and the default initargs
-    ;; against the total set that we know are legal.
-    (dolist (key supplied-initarg-names)
-      (unless (memq key legal)
-	(return-from check-initargs t)))
-    (dolist (default defaults)
-      (unless (memq (car default) legal)
-	(return-from check-initargs t)))))
-
-
 ;;;
 ;;; This returns two values.  The first is a vector which can be used as the
-;;; initial value of the slots vector for the instance. The first is a symbol
+;;; initial value of the slots vector for the instance. The second is a symbol
 ;;; describing the initforms this class has.  
 ;;;
 ;;;  If the first value is:
@@ -575,12 +549,11 @@
 ;;;    t              there is at least one non-constant initform
 ;;; 
 (defun compute-constant-vector (class)
-  (declare (values constants flag))
+  ;;(declare (values constants flag))
   (let* ((wrapper (class-wrapper class))
 	 (layout (wrapper-instance-slots-layout wrapper))
 	 (flag :unsupplied)
 	 (constants ()))
-    (declare (list layout))
     (dolist (slotd (class-slots class))
       (let ((name (slot-definition-name slotd))
 	    (initform (slot-definition-initform slotd))
@@ -594,16 +567,11 @@
 	      (t
 	       (push (cons name *slot-unbound*) constants)
 	       (setq flag 't)))))
-    (values
-      (apply #'vector
-	     (mapcar #'cdr
-		     (sort constants #'(lambda (x y)
-					 (memq (car y)
-					       (memq (car x) layout))))))
-      flag)))
-
-(defmacro copy-constant-vector (constants)
-  `(copy-seq (the simple-vector ,constants)))
+    (let* ((constants-alist (sort constants #'(lambda (x y)
+						(memq (car y)
+						      (memq (car x) layout)))))
+	   (constants-list (mapcar #'cdr constants-alist)))
+    (values constants-list flag))))
 
 
 ;;;
@@ -627,7 +595,6 @@
 			     (or (cdr (assq (slot-definition-name slotd) positions))
 				 ':class)))
 		   (class-slots class))))
-    (declare (list layout positions slot-initargs))
     ;; Go through each of the initargs, and figure out what position
     ;; it fills by replacing the entries in slot-initargs it fills.
     (dolist (initarg initarg-names)
@@ -680,8 +647,7 @@
         (class name arglist supplied-initarg-names supplied-initargs)
   (declare (ignore name))
   (let ((raw-allocator (raw-instance-allocator class))
-	(slots-fetcher (slots-fetcher class))
-	(wrapper-fetcher (wrapper-fetcher class)))
+	(slots-fetcher (slots-fetcher class)))
     `(function
        (lambda (class .wrapper. defaults init shared)
 	 (multiple-value-bind (.constants.
@@ -705,15 +671,12 @@
 	     (function
 	       (lambda ,arglist
 		 (declare #.*optimize-speed*)
-		 (let ((.instance. (,raw-allocator))
-		       (.slots. (copy-constant-vector .constants.))
-		       (.positions. .supplied-initarg-positions.)
-		       (.initargs. .constant-initargs.))		   
+		 (let* ((.instance. (,raw-allocator .wrapper. .constants.))
+			(.slots. (,slots-fetcher .instance.))
+			(.positions. .supplied-initarg-positions.)
+			(.initargs. .constant-initargs.))		   
 		   .positions.
 		   
-		   (setf (,slots-fetcher .instance.) .slots.)	     
-		   (setf (,wrapper-fetcher .instance.) .wrapper.)
-
 		   (dolist (entry .initfns-initargs-and-positions.)
 		     (let ((val (funcall (car entry)))
 			   (initarg (cadr entry)))
@@ -721,7 +684,7 @@
 			 (push val .initargs.)
 			 (push initarg .initargs.))
 		       (dolist (pos (cddr entry))
-			 (setf (%svref .slots. pos) val))))
+			 (setf (%instance-ref .slots. pos) val))))
 
 		   ,@(gathering1 (collecting)
 		       (doplist (initarg value) supplied-initargs
@@ -730,7 +693,7 @@
 				       (push .value. .initargs.)
 				       (push ',initarg .initargs.)
 				       (dolist (.p. (pop .positions.))
-					 (setf (%svref .slots. .p.)
+					 (setf (%instance-ref .slots. .p.)
 					       .value.)))))))
 
 		   (dolist (fn .shared-initfns.)
@@ -753,7 +716,6 @@
 	   (supplied-initarg-positions ())
 	   (constant-initargs ())
 	   (used-positions ()))
-      (declare (list layout))
 					       
       ;;
       ;; Go through each of the supplied initargs for three reasons.
@@ -852,8 +814,7 @@
         (class name arglist supplied-initarg-names supplied-initargs)
   (declare (ignore name))
   (let ((raw-allocator (raw-instance-allocator class))
-	(slots-fetcher (slots-fetcher class))
-	(wrapper-fetcher (wrapper-fetcher class)))
+	(slots-fetcher (slots-fetcher class)))
     `(function
        (lambda (class .wrapper. defaults init shared)
 	 (multiple-value-bind (.constants.
@@ -870,17 +831,15 @@
 		      (null (non-pcl-shared-initialize-methods-p shared)))
 	     #'(lambda ,arglist
 		 (declare #.*optimize-speed*)
-		 (let ((.instance. (,raw-allocator))
-		       (.slots. (copy-constant-vector .constants.))
-		       (.positions. .supplied-initarg-positions.))
+		 (let* ((.instance. (,raw-allocator .wrapper. .constants.))
+			(.slots. (,slots-fetcher .instance.))
+			(.positions. .supplied-initarg-positions.))
 		   .positions.
-		   (setf (,slots-fetcher .instance.) .slots.)
-		   (setf (,wrapper-fetcher .instance.) .wrapper.)
 
 		   (dolist (entry .initfns-and-positions.)
 		     (let ((val (funcall (car entry))))
 		       (dolist (pos (cdr entry))
-			 (setf (%svref .slots. pos) val))))
+			 (setf (%instance-ref .slots. pos) val))))
 		 
 		   ,@(gathering1 (collecting)
 		       (doplist (initarg value) supplied-initargs
@@ -888,7 +847,7 @@
 			   (gather1
 			     `(let ((.value. ,value))
 				(dolist (.p. (pop .positions.))
-				  (setf (%svref .slots. .p.) .value.)))))))
+				  (setf (%instance-ref .slots. .p.) .value.)))))))
 		     
 		   .instance.))))))))
 
@@ -904,7 +863,6 @@
 	   (initfns-and-positions ())
 	   (supplied-initarg-positions ())
 	   (used-positions ()))
-      (declare (list layout))
       ;;
       ;; Go through each of the supplied initargs for three reasons.
       ;;
@@ -993,8 +951,7 @@
         (class name arglist supplied-initarg-names supplied-initargs)
   (declare (ignore name))
   (let ((raw-allocator (raw-instance-allocator class))
-	(slots-fetcher (slots-fetcher class))
-	(wrapper-fetcher (wrapper-fetcher class)))
+	(slots-fetcher (slots-fetcher class)))
     `(function
        (lambda (class .wrapper. defaults init shared)
 	 (when (and (null (non-pcl-initialize-instance-methods-p init))
@@ -1008,13 +965,10 @@
 	       (function
 		 (lambda ,arglist
 		   (declare #.*optimize-speed*)
-		   (let ((.instance. (,raw-allocator))
-			 (.slots. (copy-constant-vector .constants.))
-			 (.positions. .supplied-initarg-positions.))
-		     
+		   (let* ((.instance. (,raw-allocator .wrapper. .constants.))
+			  (.slots. (,slots-fetcher .instance.))
+			  (.positions. .supplied-initarg-positions.))
 		     .positions.
-		     (setf (,slots-fetcher .instance.) .slots.)	     
-		     (setf (,wrapper-fetcher .instance.) .wrapper.)
 		 
 		     ,@(gathering1 (collecting)
 			 (doplist (initarg value) supplied-initargs
@@ -1022,7 +976,7 @@
 			     (gather1
 			       `(let ((.value. ,value))
 				  (dolist (.p. (pop .positions.))
-				    (setf (%svref .slots. .p.) .value.)))))))
+				    (setf (%instance-ref .slots. .p.) .value.)))))))
 		     
 		     .instance.))))))))))
 
@@ -1037,7 +991,6 @@
 						(mapcar #'car defaults))))
 	   (supplied-initarg-positions ())
 	   (used-positions ()))
-      (declare (list layout))
       ;;
       ;; Go through each of the supplied initargs for three reasons.
       ;;

@@ -28,11 +28,26 @@
 (in-package 'pcl)
 
 ;;;
-;;; GET-FUNCTION is the main user interface to this code.  If it is called
-;;; with a lambda expression only, it will return a corresponding function.
-;;; The optional constant-converter argument, can be a function which will
-;;; be called to convert each constant appearing in the lambda to whatever
-;;; value should appear in the function.
+;;; GET-FUNCTION is the main user interface to this code. It is like
+;;; COMPILE-LAMBDA, only more efficient. It achieves this efficiency by 
+;;; reducing the number of times that the compiler needs to be called.  
+;;; Calls to GET-FUNCTION in which the lambda forms differ only by constants 
+;;; can use the same piece of compiled code.  (For example, dispatch dfuns and 
+;;; combined method functions can often be shared, if they differ only 
+;;; by referring to different methods.)
+;;;
+;;; If GET-FUNCTION is called with a lambda expression only, it will return 
+;;; a corresponding function. The optional constant-converter argument
+;;; can be a function which will be called to convert each constant appearing
+;;; in the lambda to whatever value should appear in the function.
+;;;
+;;; There are three internal functions which operate on the lambda argument 
+;;; to GET-FUNCTION:
+;;;   compute-test converts the lambda into a key to be used for lookup,
+;;;   compute-code is used by get-new-function-generator-internal to
+;;;                generate the actual lambda to be compiled, and
+;;;   compute-constants is used to generate the argument list that is
+;;;                to be passed to the compiled function.
 ;;;
 ;;; Whether the returned function is actually compiled depends on whether
 ;;; the compiler is present (see COMPILE-LAMBDA) and whether this shape of
@@ -42,33 +57,29 @@
 		      &optional (test-converter     #'default-test-converter)
 		                (code-converter     #'default-code-converter)
 				(constant-converter #'default-constant-converter))
-  (apply-function (get-function-generator lambda test-converter code-converter)
+  (function-apply (get-function-generator lambda test-converter code-converter)
 		  (compute-constants      lambda constant-converter)))
 
-(declaim (ftype (function (T &optional T T T) (values function T))
-                get-function1))
 (defun get-function1 (lambda
 		      &optional (test-converter     #'default-test-converter)
 		                (code-converter     #'default-code-converter)
 				(constant-converter #'default-constant-converter))
-  (values (the function
-               (get-function-generator lambda test-converter code-converter))
+  (values (the function (get-function-generator lambda test-converter code-converter))
 	  (compute-constants      lambda constant-converter)))
 
 (defun default-constantp (form)
   (and (constantp form)
-       (not (symbolp (eval form)))))
+       (not (typep (eval form) '(or symbol fixnum)))))
 
 (defun default-test-converter (form)
   (if (default-constantp form)
       '.constant.
       form))
 
-(declaim (ftype (function (T) (values T list)) default-code-converter))
 (defun default-code-converter  (form)
   (if (default-constantp form)
       (let ((gensym (gensym))) (values gensym (list gensym)))
-      (values form nil)))
+      form))
 
 (defun default-constant-converter (form)
   (if (default-constantp form)
@@ -84,7 +95,12 @@
 (defvar *fgens* ())
 
 (defun store-fgen (fgen)
-  (setq *fgens* (nconc *fgens* (list fgen))))
+  (let ((old (lookup-fgen (fgen-test fgen))))
+    (if old
+	(setf (svref old 2) (fgen-generator fgen)
+	      (svref old 4) (or (svref old 4)
+				(fgen-system fgen)))
+	(setq *fgens* (nconc *fgens* (list fgen))))))
 
 (defun lookup-fgen (test)
   (find test (the list *fgens*) :key #'fgen-test :test #'equal))
@@ -112,10 +128,6 @@
     (if fgen
 	(fgen-generator fgen)
 	(get-new-function-generator lambda test code-converter))))
-
-(declaim (ftype (function (T T) (values T list))
-                get-new-function-generator-internal
-                compute-code))
 
 (defun get-new-function-generator (lambda test code-converter)
   (multiple-value-bind (gensyms generator-lambda)
@@ -180,20 +192,22 @@
 ;;;
 ;;;
 (defmacro precompile-function-generators (&optional system)
-  (make-top-level-form `(precompile-function-generators ,system)
-		       '(load)
+  (let ((index -1))
     `(progn ,@(gathering1 (collecting)
 		(dolist (fgen *fgens*)
 		  (when (or (null (fgen-system fgen))
 			    (eq (fgen-system fgen) system))
 		    (when system (setf (svref fgen 4) system))
 		    (gather1
-		     `(load-function-generator
-		       ',(fgen-test fgen)
-		       ',(fgen-gensyms fgen)
-		       (function ,(fgen-generator-lambda fgen))
-		       ',(fgen-generator-lambda fgen)
-		       ',system))))))))
+		     (make-top-level-form
+		      `(precompile-function-generators ,system ,(incf index))
+		      '(load)
+		      `(load-function-generator
+			',(fgen-test fgen)
+			',(fgen-gensyms fgen)
+			(function ,(fgen-generator-lambda fgen))
+			',(fgen-generator-lambda fgen)
+			',system)))))))))
 
 (defun load-function-generator (test gensyms generator generator-lambda system)
   (store-fgen (make-fgen test gensyms generator generator-lambda system)))

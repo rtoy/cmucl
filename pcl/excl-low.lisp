@@ -43,10 +43,6 @@
 		  '(setq excl::*without-interrupts* 0)))
        ,.body)))
 
-(defmacro without-interrupts-simple (&body body)
-  `(let ((excl::*without-interrupts* 0))
-     ,.body))
-
 (eval-when (compile load eval)
   (unless (fboundp 'excl::sy_hash)
     (setf (symbol-function 'excl::sy_hash)
@@ -67,12 +63,6 @@
 		  (pop ,list-var)
 		  (go start))))))
 
-(defmacro structurep (x)
-  `(excl::structurep ,x))
-
-(defmacro structure-type (x)
-  `(svref ,x 0))
-
 (defun std-instance-p (x)
   (and (excl::structurep x)
        (locally
@@ -85,6 +75,13 @@
 	  (locally
 	    (declare #.*optimize-speed*)
 	    (eq (svref ,x 0) 'std-instance)))))
+
+(excl::defcmacro fast-method-call-p (x)
+  (once-only (x)
+    `(and (excl::structurep ,x)
+	  (locally
+	    (declare #.*optimize-speed*)
+	    (eq (svref ,x 0) 'fast-method-call)))))
 
 (defmacro %std-instance-wrapper (x)
   `(svref ,x 1))
@@ -124,32 +121,16 @@
 
 ;;; Define inspector hooks for PCL object instances.
 
-;;; Due to metacircularity certain slots of metaclasses do not have normal
-;;; accessors, and for now we just make them uninspectable.  They could be
-;;; special cased some day.
-
 (defun (:property pcl::std-instance :inspector-function) (object)
-  (do* ((class (class-of object))
-	(components (class-precedence-list class))
-	(desc (list (inspect::make-field-def "class" #'class-of :lisp)))
-	(slots (slots-to-inspect class object) (cdr slots)))
-       ((null slots) (nreverse desc))
-    (let ((name (slot-definition-name (car slots)))
-	  res)
-      (push (inspect::make-field-def
-	     (string name)
-	     (or (block foo
-		   (dolist (comp components)
-		     (dolist (slot (class-direct-slots comp))
-		       (and (eq (slot-definition-name slot) name)
-			    (setq res (first (slot-definition-readers slot)))
-			    (return-from foo res)))))
-		 #'(lambda (x) 
-		     (declare (ignore x))
-		     :|Uninspectable Metaclass Slot|))
-	     :lisp)
-	    desc))))
+  (let ((class (class-of object)))
+    (cons (inspect::make-field-def "class" #'class-of :lisp)
+	  (mapcar #'(lambda (slot)
+		      (inspect::make-field-def
+		       (string (slot-definition-name slot))
+		       #'(lambda (x)
+			   (slot-value-using-class class x slot))
+		       :lisp))
+		  (slots-to-inspect class object)))))
 
 (defun (:property pcl::std-instance :inspector-type-function) (x)
   (class-name (class-of x)))
-

@@ -274,7 +274,7 @@ compiler::
 		    specializers
 		    lambda-list
 		    doc
-		    (getf plist :isl-cache-symbol)
+		    (getf plist :pv-table-cache-symbol)
 		    plist
 		    fn)))
 ||#

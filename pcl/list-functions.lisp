@@ -5,26 +5,19 @@
 (defvar *defmethod-list* nil)
 (defvar *defmacro-list* nil)
 (defvar *defgeneric-list* nil)
-(defvar *proclaim-list* nil)
 
 (defun list-functions (&optional print-p)
   (let ((eof '(eof))
 	(*package* *package*))
     (setq *defun-list* nil
 	  *defmethod-list* nil
-	  *defmacro-list* nil
-          *proclaim-list* nil)
+	  *defmacro-list* nil)
     (labels ((process-form (form)
 	       (when (consp form)
 		 (case (car form)
 		   ((in-package export import shadow shadowing-import) (eval form))
 		   #+lcl3.0 (lcl:handler-bind (eval form))
 		   (let (when print-p (print form)))
-                   (declaim
-                     (if (eq (caadr form) 'ftype)
-                         (setf *proclaim-list*
-                               (append (cdr form) *proclaim-list*))
-                         (when print-p (print form))))
 		   (defun (push (list (cadr form) (caddr form))
 				*defun-list*))
 		   (defmethod (push (list (cadr form) (caddr form)) 
@@ -51,14 +44,14 @@
 	    (length *defmacro-list*)
 	    (length *defgeneric-list*))))
 
-(defun list-all-gfs (&optional all-p)
+(defun list-all-gfs (&key all-p (show-methods-p t) san-p (name "generic-functions"))
   (let ((keys nil) (opt nil)
 	(gf-vector (make-array 10 :initial-element nil))
+	(readers nil) (writers nil) (cv nil)
 	(*package* *the-pcl-package*)
 	(*print-pretty* nil)
 	(s-a-n (find-package "SLOT-ACCESSOR-NAME"))
-	(lisp-sans (list (slot-reader-symbol 'function)
-                         (slot-reader-symbol 'type))))
+	(lisp-sans (mapcar #'slot-reader-symbol '(function type))))
     (map-all-generic-functions 
      #'(lambda (gf)
 	 (when (or all-p
@@ -66,23 +59,38 @@
 		     (when (consp name) (setq name (cadr name)))
 		     (and (not (find #\: (symbol-name name)))
 			  (or (eq (symbol-package name) *the-pcl-package*)
-			      (memq name lisp-sans)
-			      (and (eq (symbol-package name) s-a-n)
-				   (string= "PCL " (symbol-name name) :end2 4))))))
+			      (and san-p
+				   (memq name lisp-sans)
+				   (and (eq (symbol-package name) s-a-n)
+					(string= "PCL " (symbol-name name)
+						 :end2 4)))))))
 	   (let ((ll (generic-function-lambda-list gf)))
 	     (multiple-value-bind (nrequired noptional 
 					     keysp restp allow-other-keys-p keywords)
 		 (analyze-lambda-list ll)
-	       (if (or keysp restp allow-other-keys-p keywords)
-		   (push gf keys)
-		   (if (plusp noptional)
-		       (push gf opt)
-		       (push gf (aref gf-vector nrequired)))))))))
+	       (cond ((use-constant-value-dfun-p gf t)
+		      (push gf cv))
+		     ((or keysp restp allow-other-keys-p keywords)
+		      (push gf keys))
+		     ((plusp noptional)
+		      (push gf opt))
+		     ((and (= nrequired 1)
+			   (let ((m (generic-function-methods gf)))
+			     (and m
+				  (every #'standard-reader-method-p m))))
+		      (push gf readers))
+		     ((and (= nrequired 2)
+			   (let ((m (generic-function-methods gf)))
+			     (and m
+				  (every #'standard-writer-method-p m))))
+		      (push gf writers))
+		     (t
+		      (push gf (aref gf-vector nrequired)))))))))
     (with-open-file (out (let* ((system (get-system 'pcl))
 				(*system-directory* (funcall (car system))))
 			   (make-pathname :defaults
 					  (truename (make-source-pathname "defsys"))
-					  :name "generic-functions"))
+					  :name name))
 			 :direction :output)
       (format out ";;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-~2%")
       (format out "(in-package :pcl)~%")
@@ -98,13 +106,31 @@
 				     (string< (symbol-name s1) (symbol-name s2))
 				     (string< (package-name p1) (package-name p2)))))))
 	       (dolist (sym list)
-		 (let ((*print-case* :downcase))
-		   (format out "~&~S~%"
-			   `(defgeneric ,sym ,(generic-function-lambda-list
-					       (gdefinition sym))))))))
+		 (let* ((*print-case* :downcase)
+			(gf (gdefinition sym))
+			(lambda-list (generic-function-lambda-list gf)))
+		   (format out "~&~S~%" `(defgeneric ,sym ,lambda-list))
+		   (when show-methods-p
+		     (dolist (m (generic-function-methods gf))
+		       (let* ((q (method-qualifiers m))
+			      (qs (if (null q) 
+				      ""
+				      (format nil "~{~S~^ ~}" q)))
+			      (s (unparse-specializers m)))
+			 (format out "~&;  ~7A ~S~%" qs s)))
+		     (terpri out))))))
+	(when cv
+	  (format out "~%;;; class predicates~%")
+	  (print-gf-list cv))
+	(when readers
+	  (format out "~%;;; readers~%")
+	  (print-gf-list readers))
+	(when writers
+	  (format out "~%;;; writers~%")
+	  (print-gf-list writers))
 	(dotimes (i 10)
 	  (when (aref gf-vector i)
-	    (format out "~%;;; ~D arguments ~%" i)
+	    (format out "~%;;; ~D argument~:P ~%" i)
 	    (print-gf-list (aref gf-vector i))))
 	(format out "~%;;; optional arguments  ~%")
 	(print-gf-list opt)

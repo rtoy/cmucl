@@ -30,12 +30,51 @@
 
 #+akcl
 (eval-when (compile load eval)
+
 (when (<= system::*akcl-version* 609)
   (pushnew :pre_akcl_610 *features*))
+
+(if (and (boundp 'si::*akcl-version*)
+	 (>= si::*akcl-version* 604))
+    (progn
+      (pushnew :turbo-closure *features*)
+      (pushnew :turbo-closure-env-size *features*))
+    (when (fboundp 'si::allocate-growth) 
+      (pushnew :turbo-closure *features*)))
+
+;; patch around compiler bug.
+(when (<= si::*akcl-version* 609)
+  (let ((vcs "static int Vcs;
+"))
+    (unless (search vcs compiler::*cmpinclude-string*)
+      (setq compiler::*cmpinclude-string*
+	    (concatenate 'string vcs compiler::*cmpinclude-string*)))))
+
+(let ((rset "int Rset;
+"))
+  (unless (search rset compiler::*cmpinclude-string*)
+      (setq compiler::*cmpinclude-string*
+	    (concatenate 'string rset compiler::*cmpinclude-string*))))
+
+(when (get 'si::basic-wrapper 'si::s-data)
+  (pushnew :new-kcl-wrapper *features*)
+  (pushnew :structure-wrapper *features*))
+  
 )
+
 
 #+akcl
 (progn
+
+(unless (fboundp 'real-c2lambda-expr-with-key)
+  (setf (symbol-function 'real-c2lambda-expr-with-key)
+	(symbol-function 'c2lambda-expr-with-key)))
+
+(defun c2lambda-expr-with-key (lambda-list body)
+  (declare (special *sup-used*))
+  (setq *sup-used* t)
+  (real-c2lambda-expr-with-key lambda-list body))
+
 
 ;There is a bug in the implementation of *print-circle* that
 ;causes some akcl debugging commands (including :bt and :bl)
@@ -94,34 +133,45 @@
 (defentry objnull-p (object) (object "objnull_p"))
 
 (defun can-use-print-circle-p (x)
+  (catch 'can-use-print-circle-p
+    (can-use-print-circle-p1 x nil)))
+
+(defun can-use-print-circle-p1 (x so-far)
   (and (not (objnull-p x)) ; because of deficiencies in the compiler, maybe?
-       (typecase x
-	 (vector  (or (not (eq 't (array-element-type x)))
-		      (every #'can-use-print-circle-p x)))
-	 (cons    (and (can-use-print-circle-p (car x))
-		       (can-use-print-circle-p (cdr x))))
-	 (array   (or (not (eq 't (array-element-type x)))
-		      (let* ((rank (array-rank x))
-			     (dimensions (make-list rank)))
-			(dotimes (i rank)
-			  (setf (nth i dimensions) (array-dimension x i)))
-			(or (member 0 dimensions)
-			    (do ((cursor (make-list rank :initial-element 0)))
-				(nil)
-			      (declare (:dynamic-extent cursor))
-			      (unless (can-use-print-circle-p (apply #'aref x cursor))
-				(return nil))
-			      (when (si::increment-cursor cursor dimensions)
-				(return t)))))))
-	 (t (or (not (si:structurep x))
-		(let* ((def (si:structure-def x))
-		       (name (si::s-data-name def))
-		       (len (si::s-data-length def))
-		       (pfun (si::s-data-print-function def)))
-		  (and (null pfun)
-		       (dotimes (i len t)
-			 (unless (can-use-print-circle-p (si:structure-ref x name i))
-			   (return nil))))))))))
+       (if (member x so-far)
+	   (throw 'can-use-print-circle-p t)
+	   (let ((so-far (cons x so-far)))
+	     (flet ((can-use-print-circle-p (x)
+		      (can-use-print-circle-p1 x so-far)))
+	       (typecase x
+		 (vector  (or (not (eq 't (array-element-type x)))
+			      (every #'can-use-print-circle-p x)))
+		 (cons    (and (can-use-print-circle-p (car x))
+			       (can-use-print-circle-p (cdr x))))
+		 (array   (or (not (eq 't (array-element-type x)))
+			      (let* ((rank (array-rank x))
+				     (dimensions (make-list rank)))
+				(dotimes (i rank)
+				  (setf (nth i dimensions) (array-dimension x i)))
+				(or (member 0 dimensions)
+				    (do ((cursor (make-list rank :initial-element 0)))
+					(nil)
+				      (declare (:dynamic-extent cursor))
+				      (unless (can-use-print-circle-p
+					       (apply #'aref x cursor))
+					(return nil))
+				      (when (si::increment-cursor cursor dimensions)
+					(return t)))))))
+		 (t (or (not (si:structurep x))
+			(let* ((def (si:structure-def x))
+			       (name (si::s-data-name def))
+			       (len (si::s-data-length def))
+			       (pfun (si::s-data-print-function def)))
+			  (and (null pfun)
+			       (dotimes (i len t)
+				 (unless (can-use-print-circle-p
+					  (si:structure-ref x name i))
+				   (return nil)))))))))))))
 
 (defun si::apply-display-fun (display-fun  n lis)  
   (let ((*print-length* si::*debug-print-level*)

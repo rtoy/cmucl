@@ -49,15 +49,14 @@
 
 (defun make-lap-closure-generator 
     (closure-variables arguments iregs vregs fvregs tregs lap-code)
-  (funcall-function *make-lap-closure-generator*
-	            closure-variables arguments iregs 
-	            vregs fvregs tregs lap-code))
+  (funcall *make-lap-closure-generator*
+	   closure-variables arguments iregs 
+	   vregs fvregs tregs lap-code))
 
 (defmacro precompile-lap-closure-generator 
     (cvars args i-regs v-regs fv-regs t-regs lap)
-  (funcall-function *precompile-lap-closure-generator*
-                    cvars args i-regs 
-	            v-regs fv-regs t-regs lap))
+  (funcall *precompile-lap-closure-generator* cvars args i-regs 
+	   v-regs fv-regs t-regs lap))
 
 (defmacro lap-in-lisp (cvars args iregs vregs fvregs tregs lap)
   (declare (ignore cvars args))
@@ -132,7 +131,7 @@
 		   (cadr *generating-lap*) (cons entry allocated))
 	     (cdr entry))
 	    (t
-	     (let ((new `(,type . (:reg ,(incf (the fixnum (caddr *generating-lap*)))))))
+	     (let ((new `(,type . (:reg ,(incf (caddr *generating-lap*))))))
 	       (setf (cadr *generating-lap*) (cons new allocated))
 	       (cdr new)))))))
 
@@ -160,8 +159,9 @@
 	   `(lap-in-lisp ,closure-variables ,arguments ,iregs 
 	                 ,vregs ,fvregs ,tregs ,lap-code))
 	  (*precompiling-lap*
-	   (values closure-variables arguments iregs 
-		   vregs fvregs tregs lap-code))
+	   `(precompile-lap-closure-generator 
+	     ,closure-variables ,arguments ,iregs
+	     ,vregs ,fvregs ,tregs ,lap))
 	  (t
 	   (make-lap-closure-generator
 	     closure-variables arguments iregs 
@@ -202,13 +202,13 @@
 (defun opcode (name &rest args)
   (let ((emitter (gethash name *lap-emitters*)))
     (if emitter
-	(apply-function (symbol-function emitter) args)
+	(apply emitter args)
 	(error "No opcode named ~S." name))))
 
 (defun operand (name &rest args)
   (let ((emitter (gethash name *lap-emitters*)))
     (if emitter
-	(apply-function (symbol-function emitter) args)
+	(apply emitter args)
 	(error "No operand named ~S." name))))
 
 (defmacro defopcode (name types)
@@ -260,7 +260,8 @@
 	     (and (consp arg) (eq (car arg) x)))
 	   (check (x)
 	     (ecase x	       
-	       ((:reg :cdr :constant :iref :cvar :arg :lisp :lisp-variable) (usual x))
+	       ((:reg :cdr :constant :iref :instance-ref :cvar :arg :lisp :lisp-variable)
+		(usual x))
 	       (:label (symbolp arg))
 	       (:operand (and (consp arg) (memq (car arg) *lap-operands*))))))
     (unless (if (consp type)
@@ -274,7 +275,7 @@
   (flet ((check (x)
 	   (ecase x
 	     (:symbol           (symbolp arg))
-	     (:register-number  (and (integerp arg) (>= (the fixnum arg) 0)))
+	     (:register-number  (and (integerp arg) (>= arg 0)))
 	     (:t                t)
 	     (:reg              (and (consp arg) (eq (car arg) :reg)))
 	     (:fixnum           (typep arg 'fixnum)))))
@@ -295,7 +296,7 @@
 (defopcode :print (:reg))			;implement this.
 
 
-(defopcode :move (:operand (or :reg :iref :cdr :lisp-variable)))
+(defopcode :move (:operand (or :reg :iref :instance-ref :cdr :lisp-variable)))
 
 (defopcode :eq     ((or :reg :constant) (or :reg :constant) :label))
 (defopcode :neq    ((or :reg :constant) (or :reg :constant) :label))
@@ -306,10 +307,9 @@
 (defopcode :fsc-instance-p       (:reg :label))
 (defopcode :built-in-instance-p  (:reg :label))
 (defopcode :structure-instance-p (:reg :label))
-#+pcl-user-instances
-(defopcode :user-instance-p      (:reg :label))
 
 (defopcode :jmp      ((or :reg :constant)))
+(defopcode :emf-call ((or :reg :constant)))
 
 (defopcode :label  (:label))
 (defopcode :go     (:label))
@@ -335,13 +335,9 @@
 (defoperand :structure-wrapper (:reg))
 (defoperand :other-wrapper     (:reg))
 (defoperand :built-in-or-structure-wrapper (:reg))
-#+pcl-user-instances
-(defoperand :user-wrapper      (:reg))
 
 (defoperand :std-slots (:reg))
 (defoperand :fsc-slots (:reg))
-#+pcl-user-instances
-(defoperand :user-slots (:reg))
 
 (defoperand :wrapper-cache-number-vector (:reg))
 
@@ -349,6 +345,9 @@
 
 (defoperand :iref (:reg :reg))
 (defoperand :iset (:reg :reg :reg))
+
+(defoperand :instance-ref (:reg :reg))
+(defoperand :instance-set (:reg :reg :reg))
 
 (defoperand :i1+     (:reg))
 (defoperand :i+      (:reg :reg))

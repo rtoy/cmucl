@@ -36,6 +36,7 @@
 	  variable-globally-special-p
 	  *variable-declarations*
 	  variable-declaration
+	  macroexpand-all
 	  ))
 
 (in-package :iterate :use '(:lisp :walker))
@@ -73,12 +74,9 @@
 
 #+Lucid 
 (import '(#-LCL3.0 system:arglist #+LCL3.0 lcl:arglist
-	  system:structurep system:structure-type system:structure-length
-          #-*lisp-hardware lucid::boolean
-          #+*lisp-hardware *lisp:boolean)
+	  system:structurep system:structure-type system:structure-length)
 	*the-pcl-package*)
-
-
+  
 #+lucid
 (#-LCL3.0 progn #+LCL3.0 lcl:handler-bind 
     #+LCL3.0 ((lcl:warning #'(lambda (condition)
@@ -139,7 +137,7 @@
 
 #+kcl
 (progn
-(import '(system:structurep))
+(import '(si:structurep si:structure-def si:structure-ref))
 (shadow 'lisp:dotimes)
 )
 #+kcl
@@ -147,23 +145,17 @@
 #+kcl
 (export '(%structure-name
           %compiled-function-name
-          %set-compiled-function-name))
+          %set-compiled-function-name
+	  %instance-ref
+	  %set-instance-ref))
 #+kcl
 (in-package 'pcl)
 
 #+cmu (shadow 'lisp:dotimes)
 
 #+cmu
-(import '(kernel:funcallable-instance-p ext:structurep c::boolean)
+(import '(kernel:funcallable-instance-p ext:structurep)
 	*the-pcl-package*)
-
-#+CMU
-(eval-when (compile)
-  (setq c:*suppress-values-declaration* T))
-
-#-(or cmu lucid)
-(deftype boolean () '(member t nil))
-
 
 
 (shadow 'documentation)
@@ -187,7 +179,6 @@
 		    defgeneric
 		    define-method-combination
 		    defmethod
-		    describe-object
 		    ensure-generic-function
 		    find-class
 		    find-method
@@ -332,7 +323,6 @@
           slot-definition-readers
           slot-definition-writers
           slot-definition-type
-          slot-exists-p-using-class
           slot-makunbound-using-class
           slot-value-using-class
           specializer-direct-generic-function
@@ -356,10 +346,21 @@
 
 #+(or KCL IBCL)
 (mapc 'export (list *chapter-6-exports*) (list *the-pcl-package*))
-
+
 (defvar *slot-accessor-name-package*
   (or (find-package :slot-accessor-name)
       (make-package :slot-accessor-name 
 		    :use '()
 		    :nicknames '(:s-a-n))))
 
+#+kcl
+(when (get 'si::basic-wrapper 'si::s-data)
+  (import (mapcar #'(lambda (s) (intern (symbol-name s) "SI"))
+		  '(:copy-structure-header :swap-structure-contents :set-structure-def
+		    :%instance-ref :%set-instance-ref
+		    
+		    :cache-number-vector :cache-number-vector-length
+		    :wrapper-cache-number-adds-ok :wrapper-cache-number-length
+		    :wrapper-cache-number-mask :wrapper-cache-number-vector-length
+		    :wrapper-layout :wrapper-cache-number-vector
+		    :wrapper-state :wrapper-class :wrapper-length))))

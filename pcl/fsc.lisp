@@ -47,7 +47,7 @@
   'fsc-instance-slots)
 
 (defmethod raw-instance-allocator ((class funcallable-standard-class))
-  'allocate-funcallable-instance-1)
+  'allocate-funcallable-instance)
 
 ;;;
 ;;;
@@ -63,48 +63,15 @@
 	   ((class funcallable-standard-class) &rest initargs)
   (declare (ignore initargs))
   (unless (class-finalized-p class) (finalize-inheritance class))
-  (let ((class-wrapper (class-wrapper class)))
-    (allocate-funcallable-instance
-      class-wrapper (wrapper-allocate-static-slot-storage-copy class-wrapper))))
+  (allocate-funcallable-instance (class-wrapper class)))
 
-(defmethod make-optimized-reader-method-function
-           ((class funcallable-standard-class)
-            generic-function
-            reader-method-prototype
-            slot-name)
-  (declare (ignore generic-function reader-method-prototype))
-  (make-funcallable-standard-instance-reader-method-function slot-name))
+(defmethod make-reader-method-function ((class funcallable-standard-class)
+					slot-name)
+  (make-std-reader-method-function (class-name class) slot-name))
 
-(defmethod make-optimized-writer-method-function
-           ((class funcallable-standard-class)
-            generic-function
-            writer-method-prototype
-            slot-name)
-  (declare (ignore generic-function writer-method-prototype))
-  (make-funcallable-standard-instance-writer-method-function slot-name))
-
-(defmethod make-optimized-boundp-method-function
-           ((class funcallable-standard-class)
-            generic-function
-            boundp-method-prototype
-            slot-name)
-  (declare (ignore generic-function boundp-method-prototype))
-  (make-funcallable-standard-instance-boundp-method-function slot-name))
-
-(defun make-funcallable-standard-instance-reader-method-function (slot-name)
-  (declare #.*optimize-speed*)
-  #'(lambda (instance)
-      (funcallable-standard-instance-slot-value instance slot-name)))
-
-(defun make-funcallable-standard-instance-writer-method-function (slot-name)
-  (declare #.*optimize-speed*)
-  #'(lambda (nv instance)
-      (setf (funcallable-standard-instance-slot-value instance slot-name) nv)))
-
-(defun make-funcallable-standard-instance-boundp-method-function (slot-name)
-  (declare #.*optimize-speed*)
-  #'(lambda (instance)
-      (funcallable-standard-instance-slot-boundp instance slot-name)))
+(defmethod make-writer-method-function ((class funcallable-standard-class)
+					slot-name)
+  (make-std-writer-method-function (class-name class) slot-name))
 
 ;;;;
 ;;;; See the comment about reader-function--std and writer-function--sdt.

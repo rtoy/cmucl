@@ -5,11 +5,6 @@
 ;; copyright (c) 1990 Franz Inc.
 ;;
 
-#+pcl-user-instances
-(eval-when (compile load eval)
-(error "Cannot use user-instances in EXCL on Sun4 with cpatch.lisp and
-        quadlap.lisp optimizations (see low.lisp).")
-)
 (in-package :comp)
 
 (def-quad-op tail-funcall qp-end-block

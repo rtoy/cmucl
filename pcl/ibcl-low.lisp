@@ -73,11 +73,6 @@
     `(and (si:structurep ,x)
 	  (eq (si:structure-name ,x) 'std-instance))))
 
-(import 'si:structurep)
-
-(defmacro structure-type (x)
-  `(si:structure-name ,x))
-
 (dolist (inline '((si:structurep
 		    ((t) compiler::boolean nil nil "type_of(#0)==t_structure")
 		    compiler::inline-always)

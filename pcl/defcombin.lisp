@@ -107,19 +107,10 @@
 	    :qualifiers ()
 	    :specializers specializers
 	    :lambda-list '(generic-function type options)
-            :function
-                #'(lambda (args next-methods)
-                    (declare (ignore next-methods))
-                    (apply #'(lambda (gf type options)
-		               (declare (ignore gf))
-		                 (do-short-method-combination
-		                   type options operator ioa new-method doc))
-                           args))
-	    :optimized-function
-                #'(lambda (gf type options)
-		    (declare (ignore gf))
-		      (do-short-method-combination
-		        type options operator ioa new-method doc))
+	    :function #'(lambda (gf type options)
+			  (declare (ignore gf))
+			  (do-short-method-combination
+			    type options operator ioa new-method doc))
 	    :definition-source `((define-method-combination ,type) ,truename)))
     (when old-method
       (remove-method #'find-method-combination old-method))
@@ -231,23 +222,12 @@
 	     :qualifiers ()
 	     :specializers specializers
 	     :lambda-list '(generic-function type options)
-	     :function
-               #'(lambda (args next-methods)
-                   (declare (ignore next-methods))
-                   (apply  #'(lambda (generic-function type options)
-		               (declare (ignore generic-function))
-		               (make-instance 'long-method-combination
-		                 :type type
-		                 :documentation doc
-		                 :options options))
-                           args))
-	     :optimized-function
-               #'(lambda (generic-function type options)
-		   (declare (ignore generic-function))
-		   (make-instance 'long-method-combination
-		     :type type
-		     :documentation doc
-		     :options options))
+	     :function #'(lambda (generic-function type options)
+			   (declare (ignore generic-function))
+			   (make-instance 'long-method-combination
+			     :type type
+			     :documentation doc
+			     :options options))
 	     :definition-source `((define-method-combination ,type)
 				  ,(load-truename)))))
     (setf (gethash type *long-method-combination-functions*) function)
@@ -257,18 +237,18 @@
 (defmethod compute-effective-method ((generic-function generic-function)
 				     (combin long-method-combination)
 				     applicable-methods)
-  (method-function-funcall (gethash (method-combination-type combin)
-		                    *long-method-combination-functions*)
-	                   generic-function
-	                   combin
-	                   applicable-methods))
+  (funcall (gethash (method-combination-type combin)
+		    *long-method-combination-functions*)
+	   generic-function
+	   combin
+	   applicable-methods))
 
 ;;;
 ;;;
 ;;;
 (defun make-long-method-combination-function
        (type ll method-group-specifiers arguments-option gf-var body)
-  (declare (values documentation function))
+  ;;(declare (values documentation function))
   (declare (ignore type))
   (multiple-value-bind (documentation declarations real-body)
       (extract-declarations body)
@@ -350,7 +330,7 @@
       ,@real-body)))
    
 (defun parse-method-group-specifier (method-group-specifier)
-  (declare (values name tests description order required))
+  ;;(declare (values name tests description order required))
   (let* ((name (pop method-group-specifier))
 	 (patterns ())
 	 (tests 

@@ -29,22 +29,26 @@
 
 
 
-(defun emit-one-class-reader (class-slot-p) (emit-reader/writer :reader 1 class-slot-p))
-(defun emit-one-class-writer (class-slot-p) (emit-reader/writer :writer 1 class-slot-p))
+(defun emit-one-class-reader (class-slot-p)
+  (emit-reader/writer :reader 1 class-slot-p))
 
-(defun emit-two-class-reader (class-slot-p) (emit-reader/writer :reader 2 class-slot-p))
-(defun emit-two-class-writer (class-slot-p) (emit-reader/writer :writer 2 class-slot-p))
+(defun emit-one-class-writer (class-slot-p)
+  (emit-reader/writer :writer 1 class-slot-p))
+
+(defun emit-two-class-reader (class-slot-p)
+  (emit-reader/writer :reader 2 class-slot-p))
+
+(defun emit-two-class-writer (class-slot-p)
+  (emit-reader/writer :writer 2 class-slot-p))
 
 
 
 (defun emit-reader/writer (reader/writer 1-or-2-class class-slot-p)
-  (declare (type index   1-or-2-class)
-           (type boolean class-slot-p))
   (let ((instance nil)
 	(arglist  ())
 	(closure-variables ())
-	(field (first-wrapper-cache-number-index)))			   ;we need some field to do
-								   ;the fast obsolete check
+	(field (first-wrapper-cache-number-index))) 
+    ;;we need some field to do the fast obsolete check
     (ecase reader/writer
       (:reader (setq instance (dfun-arg-symbol 0)
 		     arglist  (list instance)))
@@ -64,26 +68,15 @@
 								   ;for different values at
 								   ;different times.
 		(slots (and (null class-slot-p)
-			    (allocate-register 'vector)))
+			    (allocate-register #-new-kcl-wrapper 'vector
+					       #+new-kcl-wrapper t)))
 		(csv   (and class-slot-p
 			    (allocate-register t))))
 	    (prog1 (flatten-lap
 		     (opcode :move (operand :arg instance) inst)   ;get the instance
 		     (opcode :std-instance-p inst 'std-instance)   ;if not either std-inst
 		     (opcode :fsc-instance-p inst 'fsc-instance)   ;or fsc-instance then
-                     #+pcl-user-instances
-		     (opcode :user-instance-p inst 'user-instance) ;if not either std-inst
 		     (opcode :go 'trap)				   ;we lose
-
-                     #+pcl-user-instances
-		     (opcode :label 'user-instance)
-                     #+pcl-user-instances
-		     (opcode :move (operand :user-wrapper inst) wrapper)
-                     #+pcl-user-instances
-		     (and slots
-			  (opcode :move (operand :user-slots inst) slots))
-                     #+pcl-user-instances
-		     (opcode :go 'have-wrapper)
 
 		     (opcode :label 'fsc-instance)
 		     (opcode :move (operand :fsc-wrapper inst) wrapper)
@@ -129,11 +122,10 @@
 
 
 (defun emit-one-index-readers (class-slot-p)
-  (declare (type boolean class-slot-p))
   (let ((arglist (list (dfun-arg-symbol 0))))
     (generating-lap '(field cache-vector mask size index miss-fn)
 		    arglist
-      (with-lap-registers ((slots vector))
+      (with-lap-registers ((slots #-new-kcl-wrapper vector #+new-kcl-wrapper t))
 	(emit-dlap  arglist
 		    '(standard-instance)
 		    'trap
@@ -150,11 +142,10 @@
 		    (and (null class-slot-p) (list slots)))))))
 
 (defun emit-one-index-writers (class-slot-p)
-  (declare (type boolean class-slot-p))
   (let ((arglist (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))))
     (generating-lap '(field cache-vector mask size index miss-fn)
 		    arglist
-      (with-lap-registers ((slots vector))
+      (with-lap-registers ((slots #-new-kcl-wrapper vector #+new-kcl-wrapper t))
 	(emit-dlap arglist
 		   '(t standard-instance)
 		   'trap
@@ -176,7 +167,7 @@
   (let ((arglist (list (dfun-arg-symbol 0))))
     (generating-lap '(field cache-vector mask size miss-fn)
 		    arglist
-      (with-lap-registers ((slots vector)
+      (with-lap-registers ((slots #-new-kcl-wrapper vector #+new-kcl-wrapper t)
 			   (index index))
 	(emit-dlap arglist
 		   '(standard-instance)
@@ -192,7 +183,7 @@
   (let ((arglist (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))))
     (generating-lap '(field cache-vector mask size miss-fn)
 		    arglist
-      (with-lap-registers ((slots vector)
+      (with-lap-registers ((slots #-new-kcl-wrapper vector #+new-kcl-wrapper t)
 			   (index index))
 	(flatten-lap
 	  (emit-dlap arglist
@@ -209,15 +200,21 @@
 
 (defun emit-checking (metatypes applyp)
   (let ((dlap-lambda-list (make-dlap-lambda-list metatypes applyp)))
-    (generating-lap '(field cache-vector mask size function miss-fn)
+    (generating-lap '(field cache-vector mask size 
+		      #-excl-sun4 emf #+excl-sun4 function 
+		      miss-fn)
 		    dlap-lambda-list
       (emit-dlap (remove '&rest dlap-lambda-list)
 		 metatypes		 
 		 'trap
-		 (with-lap-registers ((function t))
+		 (with-lap-registers ((#-excl-sun4 emf #+excl-sun4 function t))
 		   (flatten-lap
-		     (opcode :move (operand :cvar 'function) function)
-		     (opcode :jmp function)))
+		     (opcode :move (operand :cvar 
+					    #-excl-sun4 'emf #+excl-sun4 'function)
+			     #-excl-sun4 emf 
+			     #+excl-sun4 function)
+		     #-excl-sun4 (opcode :emf-call emf)
+		     #+excl-sun4 (opcode :jmp function)))
 		 (with-lap-registers ((miss-function t))
 		   (flatten-lap
 		     (opcode :label 'trap)
@@ -229,17 +226,19 @@
   (let ((dlap-lambda-list (make-dlap-lambda-list metatypes applyp)))
     (generating-lap '(field cache-vector mask size miss-fn)
 		    dlap-lambda-list
-      (with-lap-registers ((function t))
+      (with-lap-registers ((#-excl-sun4 emf #+excl-sun4 function t))
 	(emit-dlap (remove '&rest dlap-lambda-list)
 		   metatypes
 		   'trap
-		   (flatten-lap (opcode :jmp function))
+		   (flatten-lap
+		    #-excl-sun4 (opcode :emf-call emf)
+		    #+excl-sun4 (opcode :jmp function))
 		   (with-lap-registers ((miss-function t))
 		     (flatten-lap
 		       (opcode :label 'trap)
 		       (opcode :move (operand :cvar 'miss-fn) miss-function)
 		       (opcode :jmp miss-function)))
-		   function)))))
+		   #-excl-sun4 emf #+excl-sun4 function)))))
 
 (defun emit-constant-value (metatypes)
   (let ((dlap-lambda-list (make-dlap-lambda-list metatypes nil)))
@@ -249,7 +248,7 @@
 	(emit-dlap dlap-lambda-list
 		   metatypes
 		   'trap
-		   (flatten-lap 
+		   (flatten-lap
 		     (opcode :return value))
 		   (with-lap-registers ((miss-function t))
 		     (flatten-lap
@@ -281,7 +280,7 @@
   (let ((slot-unbound (operand :constant *slot-unbound*)))
     (with-lap-registers ((val t :reuse temp))
       (flatten-lap
-	(opcode :move (operand :iref slots index) val)		;get slot value
+	(opcode :move (operand :instance-ref slots index) val)  ;get slot value
 	(opcode :eq val slot-unbound trap-label)		;is the slot unbound?
 	(opcode :return val)))))				;return the slot value
 
@@ -289,7 +288,7 @@
   (with-lap-registers ((new-val t :reuse temp))
     (flatten-lap
       (opcode :move (operand :arg new-value-arg) new-val)	;get new value into a reg
-      (opcode :move new-val (operand :iref slots index))	;set slot value
+      (opcode :move new-val (operand :instance-ref slots index));set slot value
       (opcode :return new-val))))
 
 (defun emit-get-class-slot (index trap-label &optional temp)
@@ -430,12 +429,7 @@
       hit)))
 
 (defun emit-greater-than-1-dlap (wrappers wrapper-moves hit miss miss-label value)
-  (declare (list wrappers))
-  (let ((cache-line-size (compute-line-size
-                           (if value
-                               (the index (1+ (the index (length wrappers))))
-                             (length wrappers)))))
-    (declare (type index cache-line-size))
+  (let ((cache-line-size (compute-line-size (+ (length wrappers) (if value 1 0)))))
     (with-lap-registers ((location index)
 			 (primary index)
 			 (cache-vector vector)
@@ -530,6 +524,116 @@
     (opcode :move (operand :constant (index-value->index 1)) location)
     (opcode :go cont-label)))
      
+
+;; From cache.lisp
+(defun emit-cache-vector-ref (cache-vector-operand location-operand)
+  (operand :iref cache-vector-operand location-operand))
 
+(defun emit-wrapper-ref (wrapper-operand field-operand)
+  (operand :iref wrapper-operand field-operand))
 
+(defun emit-wrapper-cache-number-vector (wrapper-operand)
+  (operand :wrapper-cache-number-vector wrapper-operand))
+
+(defun emit-cache-number-vector-ref (cnv-operand field-operand)
+  (operand :iref cnv-operand field-operand))
+
+(defun emit-1-wrapper-compute-primary-cache-location (wrapper primary wrapper-cache-no)
+  (with-lap-registers ((mask index) 
+		       #+structure-wrapper (cnv fixnum-vector))
+    (let ((field wrapper-cache-no))
+      (flatten-lap
+        (opcode :move (operand :cvar 'mask) mask)
+        (opcode :move (operand :cvar 'field) field)
+	#-structure-wrapper
+        (opcode :move (emit-wrapper-ref wrapper field) wrapper-cache-no)
+	#+structure-wrapper
+	(opcode :move (emit-wrapper-cache-number-vector wrapper) cnv)
+	#+structure-wrapper
+	(opcode :move (emit-cache-number-vector-ref cnv field) wrapper-cache-no)
+        (opcode :move (operand :ilogand wrapper-cache-no mask) primary)))))
+
+(defun emit-n-wrapper-compute-primary-cache-location (wrappers primary miss-label)
+  (with-lap-registers ((field index)
+		       (mask index))
+    (let ((add-wrapper-cache-numbers
+	   (flatten-lap
+	    (gathering1 (flattening-lap)
+	       (iterate ((wrapper (list-elements wrappers))
+			 (i (interval :from 1)))
+		 (gather1
+		  (with-lap-registers ((wrapper-cache-no index)
+				       #+structure-wrapper (cnv fixnum-vector))
+		    (flatten-lap
+		     #-structure-wrapper
+		     (opcode :move (emit-wrapper-ref wrapper field) wrapper-cache-no)
+		     #+structure-wrapper
+		     (opcode :move (emit-wrapper-cache-number-vector wrapper) cnv)
+		     #+structure-wrapper
+		     (opcode :move (emit-cache-number-vector-ref cnv field)
+			     wrapper-cache-no)
+		     (opcode :izerop wrapper-cache-no miss-label)
+		     (opcode :move (operand :i+ primary wrapper-cache-no) primary)
+		     (when (zerop (mod i wrapper-cache-number-adds-ok))
+		       (opcode :move (operand :ilogand primary mask) primary))))))))))
+      (flatten-lap
+       (opcode :move (operand :constant 0) primary)
+       (opcode :move (operand :cvar 'field) field)
+       (opcode :move (operand :cvar 'mask) mask)
+       add-wrapper-cache-numbers
+       (opcode :move (operand :ilogand primary mask) primary)
+       (opcode :move (operand :i1+ primary) primary)))))
+
+(defun emit-fetch-wrapper (metatype argument dest miss-label &optional slot)
+  (let ((exit-emit-fetch-wrapper (make-symbol "exit-emit-fetch-wrapper")))
+    (with-lap-registers ((arg t))
+      (ecase metatype
+	((standard-instance #+new-kcl-wrapper structure-instance)
+	  (let ((get-std-inst-wrapper (make-symbol "get-std-inst-wrapper"))
+		(get-fsc-inst-wrapper (make-symbol "get-fsc-inst-wrapper")))
+	    (flatten-lap
+	      (opcode :move (operand :arg argument) arg)
+	      (opcode :std-instance-p arg get-std-inst-wrapper)	   ;is it a std wrapper?
+	      (opcode :fsc-instance-p arg get-fsc-inst-wrapper)	   ;is it a fsc wrapper?
+	      (opcode :go miss-label)
+	      (opcode :label get-fsc-inst-wrapper)
+	      (opcode :move (operand :fsc-wrapper arg) dest)	   ;get fsc wrapper
+	      (and slot
+		   (opcode :move (operand :fsc-slots arg) slot))
+	      (opcode :go exit-emit-fetch-wrapper)
+	      (opcode :label get-std-inst-wrapper)
+	      (opcode :move (operand :std-wrapper arg) dest)	   ;get std wrapper
+	      (and slot
+		   (opcode :move (operand :std-slots arg) slot))
+	      (opcode :label exit-emit-fetch-wrapper))))
+	(class
+	  (when slot (error "Can't do a slot reg for this metatype."))
+	  (let ((get-std-inst-wrapper (make-symbol "get-std-inst-wrapper"))
+		(get-fsc-inst-wrapper (make-symbol "get-fsc-inst-wrapper")))
+	    (flatten-lap
+	      (opcode :move (operand :arg argument) arg)
+	      (opcode :std-instance-p arg get-std-inst-wrapper)
+	      (opcode :fsc-instance-p arg get-fsc-inst-wrapper)
+	      #-new-kcl-wrapper
+	      (opcode :move (operand :built-in-or-structure-wrapper arg) dest)
+	      #+new-kcl-wrapper
+	      (opcode :move (operand :built-in-wrapper arg) dest)
+	      (opcode :go exit-emit-fetch-wrapper)
+	      (opcode :label get-fsc-inst-wrapper)
+	      (opcode :move (operand :fsc-wrapper arg) dest)
+	      (opcode :go exit-emit-fetch-wrapper)
+	      (opcode :label get-std-inst-wrapper)
+	      (opcode :move (operand :std-wrapper arg) dest)
+	      (opcode :label exit-emit-fetch-wrapper))))
+	((built-in-instance #-new-kcl-wrapper structure-instance)
+	  (when slot (error "Can't do a slot reg for this metatype."))
+	  (let ()
+	    (flatten-lap
+	      (opcode :move (operand :arg argument) arg)
+	      (opcode :std-instance-p arg miss-label)
+	      (opcode :fsc-instance-p arg miss-label)
+	      #-new-kcl-wrapper
+	      (opcode :move (operand :built-in-or-structure-wrapper arg) dest)
+	      #+new-kcl-wrapper
+	      (opcode :move (operand :built-in-wrapper arg) dest))))))))
 

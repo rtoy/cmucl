@@ -28,9 +28,10 @@
 (in-package "SI")
 (export '(%structure-name
           %compiled-function-name
-          %set-compiled-function-name))
+          %set-compiled-function-name
+	  %instance-ref
+	  %set-instance-ref))
 (in-package 'pcl)
-(import 'si:structurep)
 
 (shadow 'lisp:dotimes)
 
@@ -83,31 +84,7 @@
            (incf ,index))))))
 
 (defun printing-random-thing-internal (thing stream)
-  (format stream "~O" (si:address thing)))
-
-
-#+akcl
-(eval-when (load compile eval)
-
-;compiler::*compile-ordinaries* is set to t in kcl-patches
-
-(if (and (boundp 'si::*akcl-version*)
-	 (>= si::*akcl-version* 604))
-    (progn
-      (pushnew :turbo-closure *features*)
-      (pushnew :turbo-closure-env-size *features*))
-    (when (fboundp 'si::allocate-growth) 
-      (pushnew :turbo-closure *features*)))
-
-;; patch around compiler bug.
-(when (<= si::*akcl-version* 609)
-  (let ((vcs "static int Vcs;
-"))
-    (unless (search vcs compiler::*cmpinclude-string*)
-      (setq compiler::*cmpinclude-string*
-	    (concatenate 'string vcs compiler::*cmpinclude-string*)))))
-
-)
+  (format stream "~X" (si:address thing)))
 
 (defmacro %svref (vector index)
   `(svref (the simple-vector ,vector) (the fixnum ,index)))
@@ -129,25 +106,26 @@
 #+akcl
 (progn
 
+#-new-kcl-wrapper
 ;; declare that std-instance-p may be computed simply, and will not change.
 (si::freeze-defstruct 'std-instance)
 
+(si::freeze-defstruct 'method-call)
+(si::freeze-defstruct 'fast-method-call)
 
-(defvar *pcl-funcall*  '(lambda (loc)
-          (compiler::wt-nl
-           "{object _funobj = " loc ";"
-           "if(type_of(_funobj)==t_cclosure && (_funobj->cc.cc_turbo))
-                   (*(_funobj->cc.cc_self))(_funobj->cc.cc_turbo);
-               else if (type_of(_funobj)==t_cfun) (*(_funobj->cc.cc_self))();
-               else super_funcall_no_event(_funobj);}")))
+(defvar *pcl-funcall* 
+  `(lambda (loc)
+     (compiler::wt-nl
+      "{object _funobj = " loc ";"
+      "if(Rset&&type_of(_funobj)!=t_symbol)funcall_no_event(_funobj);
+       else super_funcall(_funobj);}")))
+
 (setq compiler::*super-funcall* *pcl-funcall*)
 
+(defmacro fmc-funcall (fn pv-cell next-method-call &rest args)
+  `(funcall ,fn ,pv-cell ,next-method-call ,@args))
+
 )
-
-(defun function-ftype-declaimed-p (name)
-  "Returns whether the function given by name already has its ftype declaimed."
-  (get name 'compiler::proclaimed-function))
-
 
 ;;;
 ;;; turbo-closure patch.  See the file kcl-mods.text for details.
@@ -192,21 +170,43 @@ int n; object cc;
 ;;; #+akcl means this is an AKCL newer than 5/11/89 (structures changed)
 (eval-when (compile load eval)
 
+#+new-kcl-wrapper
+(progn
+
+(defun instance-ref (slots index)
+  (si:structure-ref1 slots index))
+
+(defun set-instance-ref (slots index value)
+  (si:structure-set1 slots index value))
+
+(defsetf instance-ref set-instance-ref)
+(defsetf %instance-ref %set-instance-ref)
+)
+
+(defsetf structure-def set-structure-def)
+
 ;;((name args-type result-type side-effect-p new-object-p c-expression) ...)
 (defparameter *kcl-function-inlines*
-  '(#-akcl (si:structurep (t) compiler::boolean nil nil "type_of(#0)==t_structure")
+  '((%fboundp (t) compiler::boolean nil nil "(#0)->s.s_gfdef!=OBJNULL")
+    (%symbol-function (t) t nil nil "(#0)->s.s_gfdef")
+    #-akcl (si:structurep (t) compiler::boolean nil nil "type_of(#0)==t_structure")
     #-akcl (si:%structure-name (t) t nil nil "(#0)->str.str_name")
     #+akcl (si:%structure-name (t) t nil nil "(#0)->str.str_def->str.str_self[0]")
+    #+new-kcl-wrapper
+    (si:%instance-ref (t t) t nil nil "(#0)->str.str_self[fix(#1)]")
+    #+new-kcl-wrapper
+    (si:%set-instance-ref (t t t) t t nil "(#0)->str.str_self[fix(#1)]=(#2)")
     (si:%compiled-function-name (t) t nil nil "(#0)->cf.cf_name")
     (si:%set-compiled-function-name (t t) t t nil "((#0)->cf.cf_name)=(#1)")
     (cclosurep (t) compiler::boolean nil nil "type_of(#0)==t_cclosure")
+    #+akcl (sfun-p (t) compiler::boolean nil nil "type_of(#0)==t_sfun")
     (%cclosure-env (t) t nil nil "(#0)->cc.cc_env")
     (%set-cclosure-env (t t) t t nil "((#0)->cc.cc_env)=(#1)")
     #+turbo-closure
     (%cclosure-env-nthcdr (fixnum t) t nil nil "(#1)->cc.cc_turbo[#0]")
     
     (logxor (fixnum fixnum) fixnum nil nil "((#0) ^ (#1))")))
-
+  
 (defun make-function-inline (inline)
   (setf (get (car inline) 'compiler::inline-always)
         (list (if (fboundp 'compiler::flags)
@@ -223,11 +223,12 @@ int n; object cc;
 (defmacro define-inlines ()
   `(progn
     ,@(mapcan #'(lambda (inline)
-                  (let ((name (intern (format nil "~S inline" (car inline))))
-                        (vars (mapcar #'(lambda (type)
-                                          (declare (ignore type))
-                                          (gensym))
-                                      (cadr inline))))
+                  (let* ((*package* *the-pcl-package*)
+			 (name (intern (format nil "~S inline" (car inline))))
+			 (vars (mapcar #'(lambda (type)
+					   (declare (ignore type))
+					   (gensym))
+				       (cadr inline))))
                     `((make-function-inline ',(cons name (cdr inline)))
                       ,@(when (or (every #'(lambda (type) (eq type 't))
                                          (cadr inline))
@@ -251,7 +252,7 @@ int n; object cc;
   (declare (ignore ignore))
   (cond ((compiled-function-p fn)
 	 (si::turbo-closure fn)
-	 (when (symbolp new-name) (proclaim-closure new-name))
+	 ;;(when (symbolp new-name) (proclaim-defgeneric new-name nil))
          (setf (si:%compiled-function-name fn) new-name))
         ((and (listp fn)
               (eq (car fn) 'lambda-block))
@@ -261,13 +262,6 @@ int n; object cc;
          (setf (car fn) 'lambda-block
                (cdr fn) (cons new-name (cdr fn)))))
   fn)
-
-
-(defun proclaim-closure (spec)
-  (when (consp spec)
-    (setq spec (get-setf-function-name (cadr spec))))
-  (unless (function-ftype-declaimed-p spec)
-    #+kcl (setf (get spec 'compiler::proclaimed-closure) t)))
 
 
 #+akcl (clines "#define AKCL206") 
@@ -304,12 +298,24 @@ object set_cclosure (result_cc,value_cc,available_size)
 (defentry %set-cclosure (object object int) (object set_cclosure))
 
 
-(pushnew :structure-functions *features*)
+(defun structure-functions-exist-p ()
+  t)
 
-(defmacro structure-type (x)
-  `(si:%structure-name (the structure ,x)))
+(si:define-compiler-macro structure-instance-p (x)
+  (once-only (x)
+    `(and (si:structurep ,x)
+          (not (eq (si:%structure-name ,x) 'std-instance)))))
 
-(defun known-structure-type-p (type)
+(defun structure-type (x)
+  (and (si:structurep x)
+       (si:%structure-name x)))
+
+(si:define-compiler-macro structure-type (x)
+  (once-only (x)
+    `(and (si:structurep ,x)
+          (si:%structure-name ,x))))
+
+(defun structure-type-p (type)
   (or (not (null (gethash type *structure-table*)))
       (let (#+akcl(s-data nil))
         (and (symbolp type)
@@ -332,6 +338,7 @@ object set_cclosure (result_cc,value_cc,available_size)
 (defun structure-type-slot-description-list (type)
   (or (cdr (gethash type *structure-table*))
       (mapcan #'(lambda (slotd)
+		  #-new-kcl-wrapper
                   (when (and slotd (car slotd))
                     (let ((offset (fifth slotd)))
                       (let ((reader #'(lambda (x)
@@ -353,7 +360,9 @@ object set_cclosure (result_cc,value_cc,available_size)
                           (list (list slot-name
                                       reader-sym
 				      reader
-                                      (and (not read-only-p) writer))))))))
+                                      (and (not read-only-p) writer)))))))
+		  #+new-kcl-wrapper
+		  (list slotd))
               (let ((slotds (structure-type-internal-slotds type))
                     (inc (structure-type-included-type-name type)))
                 (if inc
@@ -361,19 +370,32 @@ object set_cclosure (result_cc,value_cc,available_size)
                             slotds)
                     slotds)))))
             
+#+new-kcl-wrapper
+(defun si::slot-reader-function (slot)
+  (let ((offset (si::slot-offset slot)))
+    (si:turbo-closure #'(lambda (x)
+			  (si::structure-ref1 x offset)))))				
 
-(defun structure-slotd-name (slotd)
-  (first slotd))
+#+new-kcl-wrapper
+(defun si::slot-writer-function (slot)
+  (let ((offset (si::slot-offset slot)))
+    (si:turbo-closure #'(lambda (x)
+			  (si::structure-set1 x offset)))))
 
-(defun structure-slotd-accessor-symbol (slotd)
-  (second slotd))
-
-(defun structure-slotd-reader-function (slotd)
-  (third slotd))
-
-(defun structure-slotd-writer-function (slotd)
-  (fourth slotd))
-
+(mapcar #'(lambda (fname value)
+	    (setf (symbol-function fname) (symbol-function value)))
+	'(structure-slotd-name
+	  structure-slotd-accessor-symbol
+	  structure-slotd-reader-function
+	  structure-slotd-writer-function
+	  structure-slotd-type
+	  structure-slotd-init-form)
+	#-new-kcl-wrapper
+	'(first second third fourth function-returning-nil function-returning-nil)
+	#+new-kcl-wrapper
+	'(si::slot-name si::slot-accessor-name 
+	  si::slot-reader-function si::slot-writer-function
+	  si::slot-type si::slot-default-init))
 
 
 ;; Construct files sys-proclaim.lisp and sys-package.lisp
@@ -397,10 +419,11 @@ object set_cclosure (result_cc,value_cc,available_size)
 
   ;; proclaims
   (compiler::make-all-proclaims "*.fn")
+  (let ((*package* (find-package 'user)))
   (with-open-file (st "sys-proclaim.lisp"
 		      :direction :output
 		      :if-exists :append)
-    (format st "~%(IN-PACKAGE \"PCL\")~%")
+    ;;(format st "~%(IN-PACKAGE \"PCL\")~%")
     (print
      `(dolist (v ',
      
@@ -410,6 +433,6 @@ object set_cclosure (result_cc,value_cc,available_size)
 	(setf (get v 'compiler::proclaimed-closure) t))
      st)
     (format st "~%")
-    ))
+    )))
 
-
+	

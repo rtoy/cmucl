@@ -27,48 +27,82 @@
 
 (in-package 'pcl)
 
-(defun null-wrappers-method-function (&rest args)
-  ;; Function returned when get-method-function passed no wrappers for
-  ;; caching.  I'm not exactly sure why get-method-function gets called
-  ;; with null wrappers when a generic function is first created, but
-  ;; they do.  However, the method-function returned never seemed to
-  ;; get called, so to save a bunch of unneed closure-generation
-  ;; and other muckity-muck, this function is just returned instead.
-  (error "Internal PCL error:  Calling method-function created by
-          get-method-function with wrappers NIL.  Called with args: ~S"
-         args))
-
 (defun get-method-function (method &optional method-alist wrappers)
-  (or (cadr (assq method method-alist))
-      (if wrappers
-	  (method-function-for-caching method wrappers)
-	  (or (method-optimized-function method)
-              #'null-wrappers-method-function))))
+  (let ((fn (cadr (assoc method method-alist))))
+    (if fn
+	(values fn nil nil nil)
+	(multiple-value-bind (mf fmf)
+	    (if (listp method)
+		(early-method-function method)
+		(values nil (method-fast-function method)))
+	  (let* ((pv-table (and fmf (method-function-pv-table fmf))))
+	    (if (and fmf (or (null pv-table) wrappers))
+		(let* ((pv-wrappers (when pv-table 
+				      (pv-wrappers-from-all-wrappers
+				       pv-table wrappers)))
+		       (pv-cell (when (and pv-table pv-wrappers)
+				  (pv-table-lookup pv-table pv-wrappers))))
+		  (values mf t fmf pv-cell))
+		(values 
+		 (or mf (if (listp method)
+			    (setf (cadr method)
+				  (method-function-from-fast-function fmf))
+			    (method-function method)))
+		 t nil nil)))))))
 
 (defun make-effective-method-function (generic-function form &optional 
 				       method-alist wrappers)
-  (funcall-function (make-effective-method-function1 generic-function form)
-	            method-alist wrappers))
+  (funcall (make-effective-method-function1 generic-function form
+					    (not (null method-alist))
+					    (not (null wrappers)))
+	   method-alist wrappers))
 
-(defun make-effective-method-function1 (generic-function form)
+(defun make-effective-method-function1 (generic-function form 
+					method-alist-p wrappers-p)
   (if (and (listp form)
-	   (eq (car form) 'call-method)
-	   (method-p (cadr form))
-	   (or (every #'method-p (caddr form))
-	       (not (method-needs-next-methods-p (cadr form)))))
+	   (eq (car form) 'call-method))
       (make-effective-method-function-simple generic-function form)
       ;;
       ;; We have some sort of `real' effective method.  Go off and get a
       ;; compiled function for it.  Most of the real hair here is done by
       ;; the GET-FUNCTION mechanism.
       ;; 
-      (make-effective-method-function-internal generic-function form)))
+      (make-effective-method-function-internal generic-function form
+					       method-alist-p wrappers-p)))
 
-(defun make-effective-method-function-simple (generic-function form)
+(defun make-effective-method-function-type (generic-function form
+					    method-alist-p wrappers-p)
+  (if (and (listp form)
+	   (eq (car form) 'call-method))
+      (let* ((cm-args (cdr form))
+	     (method (car cm-args)))
+	(when method
+	  (if (if (listp method)
+		  (eq (car method) ':early-method)
+		  (method-p method))
+	      (if method-alist-p
+		  't
+		  (multiple-value-bind (mf fmf)
+		      (if (listp method)
+			  (early-method-function method)
+			  (values nil (method-fast-function method)))
+		    (declare (ignore mf))
+		    (let* ((pv-table (and fmf (method-function-pv-table fmf))))
+		      (if (and fmf (or (null pv-table) wrappers-p))
+			  'fast-method-call
+			  'method-call))))
+	      (if (and (consp method) (eq (car method) 'make-method))
+		  (make-effective-method-function-type 
+		   generic-function (cadr method) method-alist-p wrappers-p)
+		  (type-of method)))))
+      'fast-method-call))
+
+(defun make-effective-method-function-simple (generic-function form
+							       &optional no-fmf-p)
   ;;
   ;; The effective method is just a call to call-method.  This opens up
   ;; the possibility of just using the method function of the method as
-  ;; as the effective method function.
+  ;; the effective method function.
   ;;
   ;; But we have to be careful.  If that method function will ask for
   ;; the next methods we have to provide them.  We do not look to see
@@ -76,48 +110,47 @@
   ;; asks about them.  If it does, we must tell it whether there are
   ;; or aren't to prevent the leaky next methods bug.
   ;; 
-  (let ((method (cadr form)))
-    (if (not (method-needs-next-methods-p method))
-	#'(lambda (method-alist wrappers)
-	    (get-method-function method method-alist wrappers))
-	(let* ((arg-info (gf-arg-info generic-function))
-	       (metatypes (arg-info-metatypes arg-info))
-	       (applyp (arg-info-applyp arg-info))
-	       (next-methods (caddr form)))
-	  (declare (type boolean applyp))
-	  (multiple-value-bind (cfunction constants)
-	      (get-function1
-	       `(lambda ,(make-dfun-lambda-list metatypes applyp)
-		  (let ((*next-methods* .next-methods.))
-		    ,(make-dfun-call metatypes applyp '.method.)))
-	       #'default-test-converter ;This could be optimized by making
-					;the interface from here to the
-					;walker more clear so that the
-					;form wouldn't get walked at all.
-	       #'(lambda (form)
-		   (if (memq form '(.next-methods. .method.))
-		       (values form (list form))
-		       form))
-	       #'(lambda (form)
-		   (cond ((eq form '.next-methods.)
-			  (list (cons '.meth-list. next-methods)))
-			 ((eq form '.method.)
-			  (list (cons '.meth. method))))))
-	    #'(lambda (method-alist wrappers)
-		(flet ((fix-meth (meth)
-			 (get-method-function meth method-alist wrappers)))
-		  (apply-function cfunction
-				  (mapcar #'(lambda (constant)
-					      (cond ((atom constant)
-						     constant)
-						    ((eq (car constant) '.meth.)
-						     (fix-meth (cdr constant)))
-						    ((eq (car constant) '.meth-list.)
-						     (mapcar #'fix-meth (cdr constant)))
-						    (t constant)))
-					  constants)))))))))
+  (let* ((cm-args (cdr form))
+	 (fmf-p (and (null no-fmf-p)
+		     (or (not (eq *boot-state* 'complete))
+			 (gf-fast-method-function-p generic-function))
+		     (null (cddr cm-args))))
+	 (method (car cm-args))
+	 (cm-args1 (cdr cm-args)))
+    #'(lambda (method-alist wrappers)
+	(make-effective-method-function-simple1 generic-function method cm-args1 fmf-p
+						method-alist wrappers))))
 
-(declaim (type list *global-effective-method-gensyms*))
+(defun make-emf-from-method (method cm-args &optional gf fmf-p method-alist wrappers)
+  (multiple-value-bind (mf real-mf-p fmf pv-cell)
+      (get-method-function method method-alist wrappers)
+    (if fmf
+	(let* ((next-methods (car cm-args))
+	       (next (make-effective-method-function-simple1
+		      gf (car next-methods)
+		      (list* (cdr next-methods) (cdr cm-args))
+		      fmf-p method-alist wrappers))
+	       (arg-info (method-function-get fmf ':arg-info)))
+	  (make-fast-method-call :function fmf
+				 :pv-cell pv-cell
+				 :next-method-call next
+				 :arg-info arg-info))
+	(if real-mf-p
+	    (make-method-call :function mf
+			      :call-method-args cm-args)
+	    mf))))
+
+(defun make-effective-method-function-simple1 (gf method cm-args fmf-p
+						  &optional method-alist wrappers)
+  (when method
+    (if (if (listp method)
+	    (eq (car method) ':early-method)
+	    (method-p method))
+	(make-emf-from-method method cm-args gf fmf-p method-alist wrappers)
+	(if (and (consp method) (eq (car method) 'make-method))
+	    (make-effective-method-function gf (cadr method) method-alist wrappers)
+	    method))))
+
 (defvar *global-effective-method-gensyms* ())
 (defvar *rebound-effective-method-gensyms*)
 
@@ -133,75 +166,190 @@
 (let ((*rebound-effective-method-gensyms* ()))
   (dotimes (i 10) (get-effective-method-gensym)))
 
-(defun make-effective-method-function-internal (generic-function effective-method)
-  (let* ((*rebound-effective-method-gensyms* *global-effective-method-gensyms*)
-	 (arg-info (gf-arg-info generic-function))
-	 (metatypes (arg-info-metatypes arg-info))
-	 (applyp (arg-info-applyp arg-info)))
-    (declare (type boolean applyp))
-    (labels ((test-converter (form)
-	       (if (and (consp form) (eq (car form) 'call-method))
-		   (if (caddr form)
-		       '.call-method-with-next.
-		       '.call-method-without-next.)
-		   (default-test-converter form)))
-	     (code-converter (form)
-	       (if (and (consp form) (eq (car form) 'call-method))
-		   ;;
-		   ;; We have a `call' to CALL-METHOD.  There may or may not be next
-		   ;; methods and the two cases are a little different.  It controls
-		   ;; how many gensyms we will generate.
-		   ;;
-		   (let ((gensyms
-			  (if (caddr form)
-			      (list (get-effective-method-gensym)
-				    (get-effective-method-gensym))
-			      (list (get-effective-method-gensym)))))
-		     (values `(let ((*next-methods* ,(cadr gensyms)))
-			       ,(make-dfun-call metatypes applyp (car gensyms)))
-			     gensyms))
-		   (default-code-converter form)))
-	     (constant-converter (form)
-	       (if (and (consp form) (eq (car form) 'call-method))
-		   (if (caddr form)
-		       (list (cons '.meth. (check-for-make-method (cadr form)))
-			     (cons '.meth-list.
-				   (mapcar #'check-for-make-method (caddr form))))
-		       (list (cons '.meth. (check-for-make-method (cadr form)))))
-		   (default-constant-converter form)))
-	     (check-for-make-method (effective-method)
-	       (cond ((method-p effective-method)
-		      effective-method)
-		     ((and (listp effective-method)
-			   (eq (car effective-method) 'make-method))
-		      (make-effective-method-function1
-		       generic-function
-		       (make-progn (cadr effective-method))))
-		     (t
-		      (error "Effective-method form is malformed.")))))
-      (multiple-value-bind (cfunction constants)
-	  (get-function1 `(lambda ,(make-dfun-lambda-list metatypes applyp)
-			   ,effective-method)
-			 #'test-converter
-			 #'code-converter
-			 #'constant-converter)
-	#'(lambda (method-alist wrappers)
-	    (flet ((fix-meth (meth)
-		     (if (method-p meth)
-			 (get-method-function meth method-alist wrappers)
-			 (funcall-function meth method-alist wrappers))))
-	      (apply-function cfunction
-			      (mapcar #'(lambda (constant)
-					  (cond ((atom constant)
-						 constant)
-						((eq (car constant) '.meth.)
-						 (fix-meth (cdr constant)))
-						((eq (car constant) '.meth-list.)
-						 (mapcar #'fix-meth (cdr constant)))
-						(t constant)))
-				      constants))))))))
+(defun expand-effective-method-function (gf effective-method &optional env)
+  (declare (ignore env))
+  (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
+      (get-generic-function-info gf)
+    (declare (ignore nreq nkeys arg-info))
+    `(lambda ,(make-fast-method-call-lambda-list metatypes applyp)
+       (declare (ignore .pv-cell. .next-method-call.))
+       ,effective-method)))
 
-
+(defun expand-emf-call-method (gf form metatypes applyp env)
+  (declare (ignore gf metatypes applyp env))
+  `(call-method ,(cdr form)))
+
+(defmacro call-method (&rest args)
+  (declare (ignore args))
+  `(error "~S outsize of a effective method form" 'call-method))
+
+(defun memf-test-converter (form generic-function method-alist-p wrappers-p)
+  (cond ((and (consp form) (eq (car form) 'call-method))
+	 (case (make-effective-method-function-type 
+		generic-function form method-alist-p wrappers-p)
+	   (fast-method-call
+	    '.fast-call-method.)
+	   (t
+	    '.call-method.)))
+	((and (consp form) (eq (car form) 'call-method-list))
+	 (case (if (every #'(lambda (form)
+			      (eq 'fast-method-call
+				  (make-effective-method-function-type 
+				   generic-function form 
+				   method-alist-p wrappers-p)))
+			  (cdr form))
+		   'fast-method-call
+		   't)
+	   (fast-method-call
+	    '.fast-call-method-list.)
+	   (t
+	    '.call-method-list.)))
+	(t
+	 (default-test-converter form))))
+
+(defun memf-code-converter (form generic-function 
+				 metatypes applyp method-alist-p wrappers-p)
+  (cond ((and (consp form) (eq (car form) 'call-method))
+	 (let ((gensym (get-effective-method-gensym)))
+	   (values (make-emf-call metatypes applyp gensym
+				  (make-effective-method-function-type 
+				   generic-function form method-alist-p wrappers-p))
+		   (list gensym))))
+	((and (consp form) (eq (car form) 'call-method-list))
+	 (let ((gensym (get-effective-method-gensym))
+	       (type (if (every #'(lambda (form)
+				    (eq 'fast-method-call
+					(make-effective-method-function-type 
+					 generic-function form 
+					 method-alist-p wrappers-p)))
+				(cdr form))
+			 'fast-method-call
+			 't)))
+	   (values `(dolist (emf ,gensym nil)
+		      ,(make-emf-call metatypes applyp 'emf type))
+		   (list gensym))))		     
+	(t
+	 (default-code-converter form))))
+
+(defun memf-constant-converter (form generic-function)
+  (cond ((and (consp form) (eq (car form) 'call-method))
+	 (list (cons '.meth.
+		     (make-effective-method-function-simple
+		      generic-function form))))
+	((and (consp form) (eq (car form) 'call-method-list))
+	 (list (cons '.meth-list.
+		     (mapcar #'(lambda (form)
+				 (make-effective-method-function-simple
+				  generic-function form))
+			     (cdr form)))))
+	(t
+	 (default-constant-converter form))))
+
+(defun make-effective-method-function-internal (generic-function effective-method
+					        method-alist-p wrappers-p)
+  (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
+      (get-generic-function-info generic-function)
+    (declare (ignore nkeys arg-info))
+    (let* ((*rebound-effective-method-gensyms* *global-effective-method-gensyms*)
+	   (name (if (early-gf-p generic-function)
+		     (early-gf-name generic-function)
+		     (generic-function-name generic-function)))
+	   (arg-info (cons nreq applyp))
+	   (effective-method-lambda (expand-effective-method-function
+				     generic-function effective-method)))
+      (multiple-value-bind (cfunction constants)
+	  (get-function1 effective-method-lambda
+			 #'(lambda (form)
+			     (memf-test-converter form generic-function
+						  method-alist-p wrappers-p))
+			 #'(lambda (form)
+			     (memf-code-converter form generic-function
+						  metatypes applyp
+						  method-alist-p wrappers-p))
+			 #'(lambda (form)
+			     (memf-constant-converter form generic-function)))
+	#'(lambda (method-alist wrappers)
+	    (let* ((constants 
+		    (mapcar #'(lambda (constant)
+				(if (consp constant)
+				    (case (car constant)
+				      (.meth.
+				       (funcall (cdr constant)
+						method-alist wrappers))
+				      (.meth-list.
+				       (mapcar #'(lambda (fn)
+						   (funcall fn method-alist wrappers))
+					       (cdr constant)))
+				      (t constant))
+				    constant))
+			    constants))
+		   (function (set-function-name
+			      (apply cfunction constants)
+			      `(combined-method ,name))))
+	      (make-fast-method-call :function function
+				     :arg-info arg-info)))))))
+
+(defmacro call-method-list (&rest calls)
+  `(progn ,@calls))
+
+(defun make-call-methods (methods)
+  `(call-method-list
+    ,@(mapcar #'(lambda (method) `(call-method ,method ())) methods)))
+
+(defun standard-compute-effective-method (generic-function combin applicable-methods)
+  (declare (ignore combin))
+  (let ((before ())
+	(primary ())
+	(after ())
+	(around ()))
+    (dolist (m applicable-methods)
+      (let ((qualifiers (if (listp m)
+			    (early-method-qualifiers m)
+			    (method-qualifiers m))))			    
+	(cond ((member ':before qualifiers)  (push m before))
+	      ((member ':after  qualifiers)  (push m after))
+	      ((member ':around  qualifiers) (push m around))
+	      (t
+	       (push m primary)))))
+    (setq before  (reverse before)
+	  after   (reverse after)
+	  primary (reverse primary)
+	  around  (reverse around))
+    (cond ((null primary)
+	   `(error "No primary method for the generic function ~S." ',generic-function))
+	  ((and (null before) (null after) (null around))
+	   ;;
+	   ;; By returning a single call-method `form' here we enable an important
+	   ;; implementation-specific optimization.
+	   ;; 
+	   `(call-method ,(first primary) ,(rest primary)))
+	  (t
+	   (let ((main-effective-method
+		   (if (or before after)
+		       `(multiple-value-prog1
+			  (progn ,(make-call-methods before)
+				 (call-method ,(first primary) ,(rest primary)))
+			  ,(make-call-methods (reverse after)))
+		       `(call-method ,(first primary) ,(rest primary)))))
+	     (if around
+		 `(call-method ,(first around)
+			       (,@(rest around) (make-method ,main-effective-method)))
+		 main-effective-method))))))
+
+;;;
+;;; The STANDARD method combination type.  This is coded by hand (rather than
+;;; with define-method-combination) for bootstrapping and efficiency reasons.
+;;; Note that the definition of the find-method-combination-method appears in
+;;; the file defcombin.lisp, this is because EQL methods can't appear in the
+;;; bootstrap.
+;;;
+;;; The defclass for the METHOD-COMBINATION and STANDARD-METHOD-COMBINATION
+;;; classes has to appear here for this reason.  This code must conform to
+;;; the code in the file defcombin, look there for more details.
+;;;
+
+(defun compute-effective-method (generic-function combin applicable-methods)
+  (standard-compute-effective-method generic-function combin applicable-methods))
 
 (defvar *invalid-method-error*
 	#'(lambda (&rest args)
@@ -243,52 +391,6 @@
   (declare (arglist format-string &rest format-arguments))
   (apply *method-combination-error* args))
 
-
-
-;;;
-;;; The STANDARD method combination type.  This is coded by hand (rather than
-;;; with define-method-combination) for bootstrapping and efficiency reasons.
-;;; Note that the definition of the find-method-combination-method appears in
-;;; the file defcombin.lisp, this is because EQL methods can't appear in the
-;;; bootstrap.
-;;;
-;;; The defclass for the METHOD-COMBINATION and STANDARD-METHOD-COMBINATION
-;;; classes has to appear here for this reason.  This code must conform to
-;;; the code in the file defcombin, look there for more details.
-;;;
-
-(defclass method-combination (metaobject) ()
-  (:predicate-name method-combination-p))
-
-
-(mapc
- #'proclaim-incompatible-superclasses
- '(;; superclass metaobject
-   (class eql-specializer class-eq-specializer method method-combination
-    generic-function slot-definition)
-   ))
-
-(defclass standard-method-combination
-	  (documentation-mixin definition-source-mixin method-combination)
-     ((type          :reader method-combination-type
-	             :initarg :type)
-      (options       :reader method-combination-options
-	             :initarg :options)))
-
-(defmethod print-object ((mc method-combination) stream)
-  (printing-random-thing (mc stream)
-    (format stream
-	    "Method-Combination ~S ~S"
-	    (method-combination-type mc)
-	    (method-combination-options mc))))
-
-(eval-when (load eval)
-  (setq *standard-method-combination*
-	(make-instance 'standard-method-combination
-		       :type 'standard
-		       :documentation "The standard method combination."
-		       :options ())))
-
 ;This definition appears in defcombin.lisp.
 ;
 ;(defmethod find-method-combination ((generic-function generic-function)
@@ -298,46 +400,4 @@
 ;    (method-combination-error
 ;      "The method combination type STANDARD accepts no options."))
 ;  *standard-method-combination*)
-
-(defun make-call-methods (methods)
-  (mapcar #'(lambda (method) `(call-method ,method ())) methods))
-
-(defmethod compute-effective-method ((generic-function generic-function)
-				     (combin standard-method-combination)
-				     applicable-methods)
-  (let ((before ())
-	(primary ())
-	(after ())
-	(around ()))
-    (dolist (m applicable-methods)
-      (let ((qualifiers (method-qualifiers m)))
-	(cond ((memq ':before qualifiers)  (push m before))
-	      ((memq ':after  qualifiers)  (push m after))
-	      ((memq ':around  qualifiers) (push m around))
-	      (t
-	       (push m primary)))))
-    (setq before  (reverse before)
-	  after   (reverse after)
-	  primary (reverse primary)
-	  around  (reverse around))
-    (cond ((null primary)
-	   `(error "No primary method for the generic function ~S." ',generic-function))
-	  ((and (null before) (null after) (null around))
-	   ;;
-	   ;; By returning a single call-method `form' here we enable an important
-	   ;; implementation-specific optimization.
-	   ;; 
-	   `(call-method ,(first primary) ,(rest primary)))
-	  (t
-	   (let ((main-effective-method
-		   (if (or before after)
-		       `(multiple-value-prog1
-			  (progn ,@(make-call-methods before)
-				 (call-method ,(first primary) ,(rest primary)))
-			  ,@(make-call-methods (reverse after)))
-		       `(call-method ,(first primary) ,(rest primary)))))
-	     (if around
-		 `(call-method ,(first around)
-			       (,@(rest around) (make-method ,main-effective-method)))
-		 main-effective-method))))))
 
