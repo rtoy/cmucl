@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.148 2003/04/22 15:48:40 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.149 2003/04/30 07:25:15 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3538,7 +3538,15 @@
 	 (found (find-free-function name "Eh?")))
     (note-name-defined name :function)
     (cond ((not (defined-function-p found))
-	   (assert (not (info function inlinep name)))
+	   ;;
+	   ;; This assertion is wrong in block compilation mode, for
+	   ;; instance
+	   ;;
+	   ;; (defun foo (x) (bar x))
+	   ;; (declaim (inline bar))
+	   ;; (defun bar (x) x)
+	   ;;
+	   ;; (assert (not (info function inlinep name)))
 	   (let* ((where-from (leaf-where-from found))
 		  (res (make-defined-function
 			:name name
