@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.2 1990/02/26 20:59:15 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.3 1990/02/26 22:53:50 ch Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -17,6 +17,11 @@
 ;;; Converted for the MIPS R2000 by Christopher Hoover.
 ;;;
 (in-package "C")
+
+;;; ### These belongs in compiler/fundb.lisp
+;;; 
+(defknown realp (t) boolean (movable foldable flushable))
+(defknown sap-p (t) boolean (movable foldable flushable))
 
 
 ;;;; Simple type checking and testing:
@@ -96,11 +101,13 @@
   (frob simple-vector-p check-simple-vector simple-vector
     vm:simple-vector-type di:object-not-simple-vector-error)
 
-  (frob base-character-p check-base-character base-character
+  ;; ### This should really be base-character-p ...
+  (frob string-char-p check-base-character base-character
     vm:base-character-type di:object-not-base-character-error)
 
   (frob sap-p check-sap sap
-    vm:sap-type di:object-no-sap-error))
+    vm:sap-type di:object-not-sap-error))
+
 
 ;;; Slightly tenser versions for FIXNUM's
 ;;; 
@@ -147,10 +154,6 @@
    (res :scs (any-reg descriptor-reg)))
   (:temporary (:type random :scs (non-descriptor-reg)) temp)
   (:node-var node))
-
-;;; ### This belongs in compiler/fundb.lisp
-;;; 
-(defknown realp (t) boolean (movable foldable flushable))
 
 (macrolet ((frob (pred-name check-name error-code &rest types)
 	     (let ((cost (* (+ (length types)
@@ -257,9 +260,9 @@
 
 ;;;; Function Coercion
 
-;;; If not a function, get the symbol value and test for that being a function.
-;;; Since we test for a function rather than the unbound marker, this works on
-;;; NIL.
+;;; If not a function, get the symbol value and test for that being a
+;;; function.  Since we test for a function rather than the unbound
+;;; marker, this works on NIL.
 ;;;
 (define-vop (coerce-to-function)
   (:args (object :scs (descriptor-reg)
@@ -289,4 +292,4 @@
 	  (error-call di:undefined-symbol-error saved-object)
 
 	  (emit-label not-coercable-label)
-	  (error-call di:object-not-coercable-to-function object))))))
+	  (error-call di:object-not-coercable-to-function-error object))))))
