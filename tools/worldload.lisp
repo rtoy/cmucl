@@ -67,6 +67,7 @@
 (load "code:sysmacs")
 (load "code:pprint")
 (load "code:run-program")
+(load "code:query")
 
 ;;; Load the compiler.
 (load "c:loadcom.lisp")
@@ -184,4 +185,5 @@ Don't install any dir translations, 'cause we want the real things.
 				extensions:save-lisp
 				,lisp::fop-codes
 				compile-file)
-	     :constants (cadr *info-environment*)))
+	     #| :constants (cadr *info-environment*) |#
+	     ))
