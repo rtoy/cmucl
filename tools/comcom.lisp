@@ -65,9 +65,7 @@
 (comf "target:compiler/vop" :proceed t)
 (comf "target:compiler/vmdef" :load *load-stuff* :proceed t)
 
-(unless (c:target-featurep '(or :hppa :x86))
-  (comf "target:compiler/assembler" :proceed t)
-  (comf "target:compiler/disassem"))
+(comf "target:compiler/disassem")
 (comf "target:compiler/new-assem")
 (comf "target:compiler/alloc")
 (comf "target:compiler/knownfun")
