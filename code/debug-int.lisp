@@ -784,12 +784,20 @@
       (declare (simple-vector function-map))
       (if (= len 1)
 	  (make-compiled-debug-function (svref function-map 0) component)
-	  (let ((i 1))
+	  (let ((i 1)
+		(elsewhere-p
+		 (>= pc (c::compiled-debug-function-elsewhere-pc
+			 (svref function-map 0)))))
 	    (declare (type c::index i))
 	    (loop
-	      (when (or (= i len) (< pc (svref function-map i)))
-		(return (make-compiled-debug-function (svref function-map (1- i))
-						      component)))
+	      (when (or (= i len)
+			(< pc (if elsewhere-p
+				  (c::compiled-debug-function-elsewhere-pc
+				   (svref function-map (1+ i)))
+				  (svref function-map i))))
+		(return (make-compiled-debug-function
+			 (svref function-map (1- i))
+			 component)))
 	      (incf i 2)))))))
 
 ;;; FUNCTION-CODE-HEADER -- Internal.
