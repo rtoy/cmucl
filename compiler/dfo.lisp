@@ -331,21 +331,25 @@
 (defun merge-top-level-lambdas (lambdas)
   (declare (cons lambdas))
   (let* ((result-lambda (first lambdas))
+	 (result-env (lambda-environment result-lambda))
 	 (result-component
 	  (block-component (node-block (lambda-bind result-lambda))))
 	 (result-return (lambda-return result-lambda)))
-    (let ((pnode (continuation-use
-		  (node-prev
-		   (continuation-use (return-result result-return)))))
-	  (new (make-continuation)))
-      (node-ends-block pnode)
-      (delete-continuation-use pnode)
-      (add-continuation-use pnode new))
+
+    (let ((prev (node-prev (continuation-use (return-result result-return)))))
+      (when (continuation-use prev)
+	(node-ends-block (continuation-use prev)))
+      (do-uses (use prev)
+	(let ((new (make-continuation)))
+	  (delete-continuation-use use)
+	  (add-continuation-use use new))))
 
     (let ((result-return-block (node-block result-return)))
       (dolist (lambda (rest lambdas))
+	(setf (functional-kind lambda) :deleted)
 	(dolist (let (lambda-lets lambda))
 	  (setf (lambda-home let) result-lambda)
+	  (setf (lambda-environment let) result-env)
 	  (push let (lambda-lets result-lambda)))
 
 	(setf (lambda-entries result-lambda)
@@ -382,9 +386,9 @@
 	    (dolist (pred (block-pred tail))
 	      (unlink-blocks pred tail)))
 
-	  (assert (every #'(lambda (x)
-			     (eq (functional-kind x) :top-level))
-			 (component-lambdas component)))
+	  (let ((lambdas (component-lambdas component)))
+	    (assert (and (null (rest lambdas))
+			 (eq (first lambdas) lambda))))
 
 	  (dolist (pred (block-pred result-return-block))
 	    (unlink-blocks pred result-return-block)
