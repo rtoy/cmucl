@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.19 1994/01/28 17:22:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.20 1994/02/11 13:36:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,3 +255,30 @@
 (defun assert-user-package ()
   (unless (eq *package* (find-package "USER"))
     (error "Change *PACKAGE* to the USER package and try again.")))
+
+;;; MAYBE-BYTE-LOAD  --  Interface
+;;;
+;;;    If Name has been byte-compiled, and :runtime is a feature, then load the
+;;; byte-compiled version, otherwise just do normal load.
+;;;
+(defun maybe-byte-load (name &optional (load-native t))
+  (let ((bname (make-pathname
+		:defaults name
+		:type #.(c:backend-byte-fasl-file-type c:*target-backend*))))
+    (cond ((and (featurep :runtime)
+		(probe-file bname))
+	   (load bname))
+	  (load-native
+	   (load name)))))
+
+
+;;; BYTE-LOAD-OVER  --  Interface
+;;;
+;;;    Replace a cold-loaded native object file with a byte-compiled one, if it
+;;; exists.
+;;;
+(defun byte-load-over (name)
+  (load (make-pathname
+	 :defaults name
+	 :type #.(c:backend-byte-fasl-file-type c:*target-backend*))
+	:if-does-not-exist nil))
