@@ -404,7 +404,7 @@
   (let ((home (lambda-home (lambda-var-home var))))
     (flet ((frob (l)
 	     (dolist (node l nil)
-	       (unless (eq (lambda-home (block-lambda (node-block node))) home)
+	       (unless (eq (node-home-lambda node) home)
 		 (return t)))))
       (or (frob (leaf-refs var))
 	  (frob (basic-var-sets var))))))
