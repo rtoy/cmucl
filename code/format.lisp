@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.19 1991/12/05 05:08:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.20 1991/12/06 06:01:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1674,9 +1674,10 @@
 		  (interpret-bind-defaults ((index (next-arg))) params
 		    (let* ((default (and last-semi-with-colon-p
 					 (pop sublists)))
+			   (last (1- (length sublists)))
 			   (sublist
-			    (if (<= index 0 (1- (length sublists)))
-				(nth index sublists)
+			    (if (<= 0 index last)
+				(nth (- last index) sublists)
 				default)))
 		      (interpret-directive-list stream sublist orig-args
 						args))))))
