@@ -74,9 +74,11 @@
 
 ;;; Valid-Function-Use  --  Interface
 ;;;
-;;;    Determine whether a use of a function is consistent with its type.  The
-;;; first value is true if the call is thought to be valid, and the second
-;;; value is true when the first value is definitely correct.
+;;;    Determine whether a use of a function is consistent with its type.
+;;; These values are returned:
+;;;    T, T: the call is definitely valid.
+;;;    NIL, T: the call is definitely invalid.
+;;;    NIL, NIL: unable to determine if the call is valid.
 ;;;
 ;;; The Argument-Test function is used to determine whether an argument type
 ;;; matches the type we are checking against.  Similarly, the Result-Test is
@@ -156,7 +158,7 @@
     
     (cond (*lossage-detected* (values nil t))
 	  (*slime-detected* (values nil nil))
-	  (t (values t nil)))))
+	  (t (values t t)))))
 
 
 ;;; Check-Arg-Type  --  Internal
