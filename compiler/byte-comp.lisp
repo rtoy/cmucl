@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.6 1993/05/11 17:47:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.7 1993/05/11 22:03:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
     (:big-endian "bytef")
     (:little-endian "lbytef")))
 
-(defun backend-byte-fasl-file-type (backend)
+(defun backend-byte-fasl-file-implementation (backend)
   (ecase (backend-byte-order backend)
     (:big-endian big-endian-fasl-file-implementation)
     (:little-endian little-endian-fasl-file-implementation)))
