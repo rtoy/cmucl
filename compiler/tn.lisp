@@ -207,7 +207,6 @@
 ;;; if this is a write reference, otherwise false.  All we do other than
 ;;; calling the constructor is add the reference to the TN's references.
 ;;;
-(proclaim '(inline reference-tn))
 (defun reference-tn (tn write-p)
   (declare (type tn tn) (type boolean write-p))
   (let ((res (make-tn-ref tn write-p)))
