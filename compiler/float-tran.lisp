@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.99 2004/09/03 18:36:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.100 2004/09/23 13:16:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,12 +386,18 @@
 	 `(progn
 	   (defun ,aux-name (num)
 	     ;; When converting a number to a float, the limits are
-	     ;; the same.
+	     ;; the "same."  
 	     (let* ((lo (bound-func #'(lambda (x)
-					(coerce x ',type))
+					;; If we can't coerce it, we
+					;; return a NIL for the bound.
+					;; (Is IGNORE-ERRORS too
+					;; heavy-handed?  Should we
+					;; try to do something more
+					;; fine-grained?)
+					(ignore-errors (coerce x ',type)))
 				    (numeric-type-low num)))
 		    (hi (bound-func #'(lambda (x)
-					(coerce x ',type))
+					(ignore-errors (coerce x ',type)))
 				    (numeric-type-high num))))
 	       (specifier-type `(,',type ,(or lo '*) ,(or hi '*)))))
 	   
