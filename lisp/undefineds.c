@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.c,v 1.5 1997/08/23 16:00:23 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.c,v 1.6 2001/09/24 21:23:18 toy Exp $ */
 
 #ifdef sun
 #ifndef MACH
@@ -23,7 +23,7 @@ extern func
 #undef F
 #undef D
 exit; /* just a random function known to exist */
-
+ 
 #if defined(SOLARIS) || defined(irix)
 
 #ifdef irix
@@ -42,20 +42,52 @@ errno;                          /* a random variable known to exist */
 
 int reference_random_symbols(void) {
    int a;
-#define F(x) x();
+#if defined(SOLARIS) && defined(__GNUC__)
+   /*
+    * For some reason, gcc 3.0 still deletes function calls here, even
+    * with -O0.  I don't know why.  So, we don't define the functions
+    * here, but define them in the table below.
+    */
+#define F(x)
+#else
+#define F(x) x(0);
+#endif
 #define D(x) a+=x;
 #include "undefineds.h"
 #undef F
 #undef D
    return a;
-   }
+}
+
+#if defined(SOLARIS) && defined(__GNUC__)
+/*
+ * If we reference the functions here, gcc 3.0 will leave them in the
+ * object file.  However, don't try to put the data symbols here.  It
+ * will cause CMUCL to crash doing a get_timezone.
+ */
+
+func *reference_random_symbols_table[] = {
+#define F(x) x,
+#define D(x)
+#include "undefineds.h"
+#undef F
+#undef D
+   exit                         /* a random function known to exist */
+};
+#endif
 
 #else
 
+#if defined(SVR4)
+extern char *tzname[];
+extern int daylight;
+extern long altzone;
+extern long timezone;
+#endif
 func *reference_random_symbols[] = {
 #define F(x) x,
    /* XXXfixme next line is probably wrong but was previous behavior */
-#define D(x) x,
+#define D(x) &x,
 #include "undefineds.h"
 #undef F
 #undef D
