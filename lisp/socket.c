@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Attic/socket.c,v 1.3 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Attic/socket.c,v 1.4 2000/10/26 19:50:19 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -18,6 +18,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <X11/Xos.h>
 #include <X11/Xproto.h>
 #include <errno.h>
@@ -25,14 +26,12 @@
 #include <sys/ioctl.h>
 #include <netdb.h> 
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #ifndef hpux
 #include <netinet/tcp.h>
 #endif
 
 #include "os.h"
-
-extern int errno;		/* Certain (broken) OS's don't have this */
-				/* decl in errno.h */
 
 #ifdef UNIXCONN
 #include <sys/un.h>
@@ -45,18 +44,13 @@ extern int errno;		/* Certain (broken) OS's don't have this */
 #endif /* hpux */
 #endif /* X_UNIX_PATH */
 #endif /* UNIXCONN */
-#ifndef bcopy
-void bcopy();
-#endif
 
 /* 
  * Attempts to connect to server, given host and display. Returns file 
  * descriptor (network socket) or 0 if connection fails.
  */
 
-int connect_to_server (host, display)
-     char *host;
-     int display;
+int connect_to_server (char *host, int display)
 {
   struct sockaddr_in inaddr;	/* INET socket address. */
   struct sockaddr *addr;		/* address to connect to */
@@ -65,8 +59,6 @@ int connect_to_server (host, display)
 #ifdef UNIXCONN
   struct sockaddr_un unaddr;	/* UNIX socket address. */
 #endif
-  extern char *getenv();
-  extern struct hostent *gethostbyname();
   int fd;				/* Network socket */
   {
 #ifdef UNIXCONN
