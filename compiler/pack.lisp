@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.34 1991/03/25 08:44:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.35 1991/04/01 16:29:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1229,29 +1229,29 @@
   (declare (type sc sc) (type tn-ref op))
   (let ((vop (tn-ref-vop op))
 	(sb (sc-sb sc)))
-    (event spill-tn (vop-node vop))
     
     (dolist (loc (sc-locations sc)
 		 (failed-to-pack-load-tn-error sc op))
       (declare (type index loc))
       (unless (load-tn-conflicts-in-sc op sc loc t)
-	(collect ((spilled))
-	  (loop for i from loc
-	        as victim = (svref (finite-sb-live-tns sb) loc)
-	        repeat (sc-element-size sc)
-	        unless (or (null victim)
-			   (eq (tn-kind victim) :component)
-			   (member victim (spilled))) do
-	    (basic-save-tn victim vop)
-	    (note-spilled-tn victim vop)
-	    (when (eq (template-result-types (vop-info vop)) :conditional)
-	      (spill-conditional-arg-tn victim vop))
-	    (spilled victim))
-	  (assert (spilled))
+	(let ((spills (delete-duplicates
+		       (loop for i from loc
+			     as victim = (svref (finite-sb-live-tns sb) loc)
+			     repeat (sc-element-size sc)
+			     when victim
+			     collect victim))))
+	  (assert spills)
+	  (unless (find :component spills :key #'tn-kind)
+	    (dolist (victim spills)
+	      (event spill-tn (vop-node vop))
+	      (basic-save-tn victim vop)
+	      (note-spilled-tn victim vop)
+	      (when (eq (template-result-types (vop-info vop)) :conditional)
+		(spill-conditional-arg-tn victim vop)))
 	    
-	  (let ((res (make-tn 0 :load nil sc)))
-	    (setf (tn-offset res) loc)
-	    (return-from spill-and-pack-load-tn res)))))))
+	    (let ((res (make-tn 0 :load nil sc)))
+	      (setf (tn-offset res) loc)
+	      (return res))))))))
 
 
 ;;; Pack-Load-TN  --  Internal
