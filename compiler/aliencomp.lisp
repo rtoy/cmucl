@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.11 1991/02/20 14:56:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.12 1991/04/09 17:21:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -354,13 +354,16 @@
 
 (defknown %set-sap-ref-8
 	  (system-area-pointer index (or (unsigned-byte 8) (signed-byte 8)))
-  (or (unsigned-byte 8) (signed-byte 8)) ())
+  (or (unsigned-byte 8) (signed-byte 8)) ()
+  :derive-type #'result-type-last-arg)
 (defknown %set-sap-ref-16
 	  (system-area-pointer index (or (unsigned-byte 16) (signed-byte 16)))
-  (or (unsigned-byte 16) (signed-byte 16)) ())
+  (or (unsigned-byte 16) (signed-byte 16)) ()
+  :derive-type #'result-type-last-arg)
 (defknown %set-sap-ref-32
 	  (system-area-pointer index (or (unsigned-byte 32) (signed-byte 32)))
-  (or (unsigned-byte 32) (signed-byte 32)) ())
+  (or (unsigned-byte 32) (signed-byte 32)) ()
+  :derive-type #'result-type-last-arg)
 
 (defknown sap-ref-sap (system-area-pointer index) system-area-pointer
   (flushable))
