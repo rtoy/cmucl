@@ -417,9 +417,11 @@
 ;;; iterate over the referencing environments.
 ;;;
 (proclaim '(inline note-if-number-stack))
-(defun note-if-number-stack (tn 2comp)
+(defun note-if-number-stack (tn 2comp restricted)
   (declare (type tn tn) (type ir2-component 2comp))
-  (when (sc-number-stack-p (tn-sc tn))
+  (when (if restricted
+	    (eq (sb-name (sc-sb (tn-sc tn))) 'non-descriptor-stack)
+	    (sc-number-stack-p (tn-sc tn)))
     (unless (ir2-component-nfp 2comp)
       (setf (ir2-component-nfp 2comp) (make-nfp-tn)))
     (note-number-stack-tn (tn-reads tn))
@@ -455,12 +457,12 @@
     (do-ir2-blocks (block component)
       (emit-moves-and-coercions block))
     
-    (macrolet ((frob (slot)
+    (macrolet ((frob (slot restricted)
 		 `(do ((tn (,slot 2comp) (tn-next tn)))
 		      ((null tn))
-		    (note-if-number-stack tn 2comp))))
-      (frob ir2-component-normal-tns)
-      (frob ir2-component-wired-tns)
-      (frob ir2-component-restricted-tns)))
+		    (note-if-number-stack tn 2comp ,restricted))))
+      (frob ir2-component-normal-tns nil)
+      (frob ir2-component-wired-tns t)
+      (frob ir2-component-restricted-tns t)))
 
   (undefined-value))
