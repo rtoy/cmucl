@@ -42,10 +42,26 @@
   (let ((instance (%%allocate-instance--class))
 	(no-of-slots (wrapper-no-of-instance-slots wrapper)))
     (setf (std-instance-wrapper instance) wrapper)
+    #-cmu
     (setf (std-instance-slots instance) 
 	  (if slots-init-p
 	      (make-array no-of-slots :initial-contents slots-init)
 	      (make-array no-of-slots :initial-element *slot-unbound*)))
+    #+cmu ; faster version for CMUCL
+    (setf (std-instance-slots instance) 
+	  (cond (slots-init-p
+		 ;; Inline the slots vector allocation and initialisation.
+		 (let ((slots (make-array no-of-slots :initial-element 0)))
+		   (do ((rem-slots slots-init (rest rem-slots))
+			(i 0 (1+ i)))
+		       ((>= i no-of-slots)) ;endp rem-slots))
+		     (declare (list rem-slots)
+			      (type kernel:index i))
+		     (setf (aref slots i) (first rem-slots)))
+		   slots))
+		(t
+		 (make-array no-of-slots
+			     :initial-element pcl::*slot-unbound*))))
     instance)
   #+new-kcl-wrapper
   (apply #'si:make-structure wrapper
