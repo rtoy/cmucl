@@ -33,10 +33,13 @@
 ;;; Get some data on this core.
 ;;;
 (write-string "What is the current lisp-implementation-version? ")
+(force-output)
 (set '*lisp-implementation-version* (read-line))
 (write-string "What is the compiler version? ")
+(force-output)
 (set 'compiler-version (read-line))
 (write-string "What is the Hemlock version? ")
+(force-output)
 (set '*hemlock-version* (read-line))
 
 ;;;
@@ -45,7 +48,6 @@
 
 (export 'ed)
 
-(load "code:run-program")
 (load "code:lfloatcon")
 (load "code:spirrat")
 (load "code:foreign")
@@ -66,6 +68,10 @@
 ;;; Used by CLX for the C routine to connect to the X11 server.
 ;;;
 (load-foreign nil)
+
+;;; This has to occur after the call to LOAD-FOREIGN.
+;;;
+(load "code:run-program")
 
 #|
 ;;; CLX.
