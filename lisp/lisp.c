@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.42 2004/07/08 17:49:04 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.43 2004/07/30 18:11:08 rtoy Exp $
  *
  */
 
@@ -171,18 +171,21 @@ default_cmucllib(const char* argv0arg)
        struct stat buf;
 
 #ifdef DEBUG_LISP_SEARCH
-        fprintf(stderr, "User's PATH = %s\n", path);
+       fprintf(stderr, "User's PATH = %s\n", path ? path : "<NULL>");
 #endif
        cwd = malloc(MAXPATHLEN + strlen(argv0arg) + 100);
+       cwd[0] = '\0';
 
-       if (p == NULL) {
-         p = argv0arg;
-       }
+       if (path) {
+         
+         if (p == NULL) {
+           p = argv0arg;
+         }
 
-       for (p1 = path ; *p1 != '\0' ; p1 = p2) {
+         for (p1 = path ; *p1 != '\0' ; p1 = p2) {
            p2 = strchr(p1, ':');
            if (p2 == NULL)
-               p2 = p1 + strlen(p1);
+             p2 = p1 + strlen(p1);
            strncpy(cwd, p1, p2 - p1);
            cwd[p2 - p1] = '/';
            cwd[p2 - p1 + 1] = '\0';
@@ -200,19 +203,19 @@ default_cmucllib(const char* argv0arg)
            }
            
            if (*p2 == ':') {
-               p2++;
+             p2++;
            }
            
-       }
-       if (p1 == p2) {
-         cwd[0] = '\0';
-       } else {
-         cwd[p2 - p1 + 1] = '\0';
-       }
+         }
+         if ((p1 == p2) || (p2 == NULL)) {
+           cwd[0] = '\0';
+         } else {
+           cwd[p2 - p1 + 1] = '\0';
+         }
 #ifdef DEBUG_LISP_SEARCH
-             fprintf(stderr, "User's PATH, Final cwd %s\n", cwd);
+         fprintf(stderr, "User's PATH, Final cwd %s\n", cwd);
 #endif
-       
+       }
     }
 
     /* Create the appropriate value for CMUCLLIB */
