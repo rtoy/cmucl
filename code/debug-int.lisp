@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.113 2004/08/30 14:55:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.114 2004/10/13 13:50:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3785,7 +3785,13 @@
   (let ((n-frame (gensym))
 	(fun (code-location-debug-function loc)))
     (unless (debug-variable-info-available fun)
-      (debug-signal 'no-debug-variables :debug-function fun))
+      ;;; Do we really want to signal this?  This prevents the
+      ;;; debugger repl from evaluating other things that might be
+      ;;; useful that doesn't refer to local vars.  A warning,
+      ;;; however, might still be useful.
+      #+nil
+      (debug-signal 'no-debug-variables :debug-function fun)
+      (warn "~&~S has no debug-variable information." fun))
     (ext:collect ((binds) (symbol-macros) (special-binds))
       (do-debug-function-variables (var fun)
 	(let ((validity (debug-variable-validity var loc)))
