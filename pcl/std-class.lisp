@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.61 2003/05/04 13:11:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.62 2003/05/08 17:29:03 gerd Exp $")
 
 (in-package :pcl)
 
@@ -828,7 +828,7 @@
   (dolist (slot (class-slots class))
     (when (eq (slot-definition-allocation slot) :class)
       (let ((cell (assq (slot-definition-name slot) (class-slot-cells class))))
-	(when cell
+	(when (and cell (eq +slot-unbound+ (cdr cell)))
 	  (let ((initfn (slot-definition-initfunction slot)))
 	    (when initfn
 	      (setf (cdr cell) (funcall initfn)))))))))
