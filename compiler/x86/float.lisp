@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.8 1997/07/26 17:22:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.9 1997/08/30 16:01:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1321,49 +1321,39 @@
   (:result-types unsigned-num)
   (:translate floating-point-modes)
   (:policy :fast-safe)
-  (:vop-var vop)
-  (:temporary (:sc dword-reg :offset  eax-offset :target res)  eax)
-  (:temporary (:sc dword-reg) tmp)
+  (:temporary (:sc dword-reg :offset eax-offset :target res :to :result) eax)
   (:generator 8
-   (inst mov tmp esp-tn)		; save stack pointer
    (inst sub esp-tn npx-env-size)	; make space on stack
    (inst wait)                          ; Catch any pending FPE exceptions
    (inst fstenv (make-ea :dword :base esp-tn)) ; masks all exceptions
    (inst fldenv (make-ea :dword :base esp-tn)) ; restore previous state
-   (inst mov ax-tn (make-ea :word :base esp-tn :disp npx-sw-offset))
-   (inst shl eax 16)			; current status to high word
+   ;; Current status to high word
+   (inst mov eax (make-ea :dword :base esp-tn :disp (- npx-sw-offset 2)))
+   ;; Exception mask to low word
    (inst mov ax-tn (make-ea :word :base esp-tn :disp npx-cw-offset))
-   (inst xor ax-tn #x3f)       ; turn exception mask to trap enable bits
-   (inst mov esp-tn tmp)		; reset stack
+   (inst add esp-tn npx-env-size)	; Pop stack
+   (inst xor eax #x3f)	; Flip exception mask to trap enable bits
    (move res eax)))
 
 (define-vop (set-floating-point-modes)
-  (:args (new :scs (unsigned-reg) :target res))
+  (:args (new :scs (unsigned-reg) :to :result :target res))
   (:results (res :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:result-types unsigned-num)
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
-  (:vop-var vop)
-  (:temporary (:sc dword-reg :offset eax-offset) eax)
-  (:temporary (:sc dword-reg) stmp)
-  (:temporary (:sc dword-reg) wtmp)
+  (:temporary (:sc dword-reg :offset eax-offset :from :eval :to :result) eax)
   (:generator 3
-   (inst mov stmp esp-tn)		; save stack pointer
    (inst sub esp-tn npx-env-size)	; make space on stack
    (inst wait)                          ; Catch any pending FPE exceptions
    (inst fstenv (make-ea :dword :base esp-tn))
-   (inst mov ax-tn (make-ea :word :base esp-tn :disp npx-sw-offset))
-   (move wtmp new)
-   (inst shr wtmp 16)			; position sticky bits
-   (inst and wtmp #x3f)
-   (inst and eax wtmp)			; maybe new sticky bits
-   (inst mov (make-ea :word :base esp-tn :disp npx-sw-offset) ax-tn)
-   (move eax new)
+   (inst mov eax new)
    (inst xor eax #x3f)	    ; turn trap enable bits into exception mask
    (inst mov (make-ea :word :base esp-tn :disp npx-cw-offset) ax-tn)
+   (inst shr eax 16)			; position status word
+   (inst mov (make-ea :word :base esp-tn :disp npx-sw-offset) ax-tn)
    (inst fldenv (make-ea :dword :base esp-tn))
-   (move esp-tn stmp)			; reset stack
+   (inst add esp-tn npx-env-size)	; Pop stack
    (move res new)))
 
 
