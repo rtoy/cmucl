@@ -382,7 +382,7 @@
 
 ;;; Alien-Bind IR1 convert  --  Internal
 ;;;
-(def-ir1-translator alien-bind ((binds &body body &whole source) start cont)
+(def-ir1-translator alien-bind ((&whole source binds &body body) start cont)
   (if binds
       (let ((bind (first binds)))
 	(unless (<= 2 (length bind) 4)
@@ -563,7 +563,7 @@
 ;;; Alien-SAP soruce transform  --  Internal
 ;;;
 ;;;
-(def-source-transform alien-sap (alien &whole source)
+(def-source-transform alien-sap (&whole source alien)
   (multiple-value-bind (binds stuff res)
 		       (analyze-alien-expression nil alien)
     `(let* ,(reverse binds)
@@ -586,7 +586,7 @@
 ;;; form, since the transformation must be done even when functions wouldn't be
 ;;; transformed.
 ;;;
-(def-ir1-translator alien-value ((x &whole form) start cont)
+(def-ir1-translator alien-value ((&whole form x) start cont)
   x ; Ignore
   (ir1-convert start cont (alien=>lisp-transform form)))
 
@@ -598,7 +598,7 @@
 ;;;    We analyze the alien expression, converting to a call to %Alien-Access
 ;;; with the alien parts as separate arguments.
 ;;;
-(def-source-transform alien-access (alien &optional lisp-type &whole form)
+(def-source-transform alien-access (&whole form alien &optional lisp-type)
   (multiple-value-bind (binds stuff res)
 		       (analyze-alien-expression nil alien)
     `(let* ,(reverse binds)
@@ -635,9 +635,8 @@
 ;;;
 ;;;    Like the source transform for Alien-Access, only different.
 ;;;
-(def-source-transform %set-alien-access (alien lisp-type
-					  &optional (new-value nil nv-p)
-					  &whole form)
+(def-source-transform %set-alien-access (&whole form alien lisp-type
+					 &optional (new-value nil nv-p))
   (multiple-value-bind (binds stuff res)
 		       (analyze-alien-expression nil alien)
     `(let* ,(reverse binds)

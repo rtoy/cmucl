@@ -2237,7 +2237,7 @@
 ;;;    We do a bunch of error checking now so that we don't bomb out with a
 ;;; fatal error during IR2 conversion.
 ;;;
-(def-ir1-translator system:%primitive ((name &rest args &whole form)
+(def-ir1-translator system:%primitive ((&whole form name &rest args)
 				       start cont)
   
   (unless (symbolp name)
@@ -2740,7 +2740,7 @@
 ;;; look at the global information.  If the name is for a constant, then error
 ;;; out.
 
-(def-ir1-translator setq ((&rest things &whole source) start cont)
+(def-ir1-translator setq ((&whole source &rest things) start cont)
   "SETQ {Var Value}*
   Set the variables to the values.  If more than one pair is supplied, the
   assignments are done sequentially.  If Var names a symbol macro, SETF the
