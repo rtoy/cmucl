@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.3 1993/06/08 13:04:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.4 1993/07/26 15:16:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 
 (block abort
   (let ((output-file #p"library:lisp.core")
+	(load-clm t)
 	(load-clx t)
 	(load-hemlock t)
 	(other ()))
@@ -28,15 +29,19 @@
       (format t " 2: toggle loading of the CLX X library, currently ~
 		 ~:[dis~;en~]abled.~%"
 	      load-clx)
-      (format t " 3: toggle loading the Hemlock editor, currently ~
+      (format t " 3: toggle loading of Motif and the graphical debugger, ~
+		 currently ~:[dis~;en~]abled.~
+		 ~:[~%    (would force loading of CLX.)~;~]~%"
+	      load-clm load-clx)
+      (format t " 4: toggle loading the Hemlock editor, currently ~
 		 ~:[dis~;en~]abled.~
 		 ~:[~%    (would force loading of CLX.)~;~]~%"
 	      load-hemlock load-clx)
-      (format t " 4: specify some site-specific file to load.~@
+      (format t " 5: specify some site-specific file to load.~@
 		 ~@[    Current files:~%~{      ~S~%~}~]"
 	      (mapcar #'namestring other))
-      (format t " 5: configure according to current options.~%")
-      (format t " 6: abort the configuration process.~%")
+      (format t " 6: configure according to current options.~%")
+      (format t " 7: abort the configuration process.~%")
       (format t "~%Option number: ")
       (force-output)
       (flet ((file-prompt (prompt)
@@ -51,15 +56,18 @@
 	     (unless (setq load-clx (not load-clx))
 	       (setq load-hemlock nil)))
 	    (3
-	     (when (setq load-hemlock (not load-hemlock))
+	     (when (setq load-clm (not load-clm))
 	       (setq load-clx t)))
 	    (4
+	     (when (setq load-hemlock (not load-hemlock))
+	       (setq load-clx t)))
+	    (5
 	     (setq other
 		   (append other
 			   (list (file-prompt "File(s) to load ~
 					       (can have wildcards): ")))))
-	    (5 (return))
-	    (6
+	    (6 (return))
+	    (7
 	     (format t "~%Aborted.~%")
 	     (return-from abort))))))
     
@@ -67,6 +75,9 @@
     (when load-clx
       (setf *features* (delete :no-clx *features* :test #'eq))
       (load "library:subsystems/clx-library"))
+    (when load-clm
+      (setf *features* (delete :no-clm *features* :test #'eq))
+      (load "library:subsystems/clm-library"))
     (when load-hemlock
       (setf *features* (delete :no-hemlock *features* :test #'eq))
       (load "library:subsystems/hemlock-library"))
