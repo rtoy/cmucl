@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.15 1991/11/23 21:28:32 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.16 1991/12/18 11:46:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,35 +136,22 @@
 
 ;;; MERGE-RELATIVE-PATHNAMES takes a pathname that is either absolute or
 ;;; relative to default-dir, merging it as appropriate and returning a definite
-;;; directory pathname.  If the component comes back with a trailing slash, we
-;;; have to remove it to get the MERGE-PATHNAMES to work correctly.  The result
-;;; must have a trailing slash.
+;;; directory pathname.
+;;;
+;;; This function isn't really needed anymore now that merge-pathnames does
+;;; this, but the semantics are slightly different.  So it's easier to just
+;;; keep this around instead of changing all the uses of it.
 ;;; 
 (defun merge-relative-pathnames (pathname default-directory)
   "Merges pathname with default-directory.  If pathname is not absolute, it
    is assumed to be relative to default-directory.  The result is always a
    directory."
-  (setf pathname (pathname pathname))
-  (flet ((return-with-slash (pathname)
-	   (let ((ns (namestring pathname)))
-	     (declare (simple-string ns))
-	     (if (char= #\/ (schar ns (1- (length ns))))
-		 pathname
-		 (pathname (concatenate 'simple-string ns "/"))))))
-    (let ((dir (pathname-directory pathname)))
-      (if dir
-	  (let ((dev (pathname-device pathname)))
-	    (if (eq dev :absolute)
-		(return-with-slash pathname)
-		(return-with-slash
-		    (make-pathname :device (pathname-device default-directory)
-				   :directory
-				   (concatenate
-				    'simple-vector
-				    (pathname-directory default-directory)
-				    dir)
-				   :defaults pathname))))
-	  (return-with-slash (merge-pathnames pathname default-directory))))))
+  (let ((pathname (merge-pathnames pathname default-directory)))
+    (if (directoryp pathname)
+	pathname
+	(pathname (concatenate 'simple-string
+			       (namestring pathname)
+			       "/")))))
 
 (defun directoryp (pathname)
   "Returns whether pathname names a directory, that is whether it has no
@@ -909,7 +896,11 @@
   (let* ((buf *editor-buffer*)
 	 (len (mach:unix-read fd buf 256))
 	 (i 0))
-    (declare (simple-string buf) (fixnum len i))
+    (declare (simple-string buf)
+	     (type (or null fixnum) len)
+	     (fixnum i))
+    (unless len
+      (error "Problem with tty input: ~S" (mach:get-unix-error-msg)))
     (loop
       (when (>= i len) (return t))
       (q-event *real-editor-input*
