@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.17 1990/10/05 14:54:52 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.18 1990/10/06 18:30:21 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -1392,12 +1392,14 @@
 		       (and (constant-continuation-p initial-element)
 			    (eql (continuation-value initial-element) 0)))
 	     (give-up "Can't hack non-zero initial-elements in bit-vectors."))
-	   `(truly-the ,spec
-		       (%primitive allocate-vector
-				   vm:simple-bit-vector-type
-				   (the index length)
-				   (the index
-					(ceiling length vm:word-bits)))))
+	   (values
+	    `(truly-the ,spec
+			(%primitive allocate-vector
+				    vm:simple-bit-vector-type
+				    length
+				    (the index
+					 (ceiling length vm:word-bits))))
+	    '((declare (type index length)))))
 	  ((csubtypep type (specifier-type 'simple-vector))
 	   `(truly-the ,spec
 		       (%primitive alloc-g-vector
