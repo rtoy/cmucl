@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.48 1993/03/01 19:28:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.49 1993/03/12 15:36:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1112,6 +1112,8 @@
 	(let ((closure
 	       (make-normal-tn (backend-any-primitive-type *backend*))))
 	  (vop setup-closure-environment node block start-label closure)
+ 	  (when (getf (functional-plist ef) :fin-function)
+ 	    (vop funcallable-instance-lexenv node block closure closure))
 	  (let ((n -1))
 	    (dolist (loc (ir2-environment-environment env))
 	      (vop closure-ref node block closure (incf n) (cdr loc)))))
@@ -1159,7 +1161,7 @@
       (init-xep-environment node block fun)
       (when *collect-dynamic-statistics*
 	(vop count-me node block *dynamic-counts-tn*
-	     (1- (block-number (ir2-block-block block))))))
+	     (block-number (ir2-block-block block)))))
 
     (emit-move node block (ir2-environment-return-pc-pass env)
 	       (ir2-environment-return-pc env))
@@ -1575,7 +1577,7 @@
 
     (when *collect-dynamic-statistics*
       (vop count-me node block *dynamic-counts-tn*
-	   (1- (block-number (ir2-block-block block)))))
+	   (block-number (ir2-block-block block))))
 
     (vop* restore-dynamic-state node block
 	  ((reference-tn-list (cdr (ir2-nlx-info-dynamic-state 2info)) nil))
@@ -1642,35 +1644,38 @@
   (declare (type component component))
   (let ((*dynamic-counts-tn*
 	 (when *collect-dynamic-statistics*
-	   (let ((num 0))
-	     (declare (fixnum num))
-	     (do-blocks-backwards (block component :both)
-	       (setf (block-number block) (incf num))))
 	   (let* ((blocks
 		   (block-number (block-next (component-head component))))
-		  (counts-vector
-		   (make-array blocks
-			       :element-type '(unsigned-byte 32)
-			       :initial-element 0))
+		  (counts (make-array blocks
+				      :element-type '(unsigned-byte 32)
+				      :initial-element 0))
 		  (info (make-dyncount-info
 			 :for (component-name component)
-			 :counts counts-vector
-			 :vops (make-array blocks :initial-element nil))))
+			 :costs (make-array blocks
+					    :element-type '(unsigned-byte 32)
+					    :initial-element 0)
+			 :counts counts)))
 	     (setf (ir2-component-dyncount-info (component-info component))
 		   info)
 	     (emit-constant info)
-	     (emit-constant counts-vector)))))
-    (do-blocks (block component)
-      (when *collect-dynamic-statistics*
-	(let ((first-node (continuation-next (block-start block))))
-	  (unless (or (and (bind-p first-node)
-			   (external-entry-point-p (bind-lambda first-node)))
-		      (eq (continuation-function-name (node-cont first-node))
-			  '%nlx-entry))
-	    (vop count-me first-node (block-info block)
-		 *dynamic-counts-tn*
-		 (1- (block-number block))))))
-      (ir2-convert-block block)))
+	     (emit-constant counts)))))
+    (let ((num 0))
+      (declare (type index num))
+      (do-ir2-blocks (2block component)
+	(let ((block (ir2-block-block 2block)))
+	  (when (block-start block)
+	    (setf (block-number block) num)
+	    (incf num)
+	    (when *collect-dynamic-statistics*
+	      (let ((first-node (continuation-next (block-start block))))
+		(unless (or (and (bind-p first-node)
+				 (external-entry-point-p
+				  (bind-lambda first-node)))
+			    (eq (continuation-function-name
+				 (node-cont first-node))
+				'%nlx-entry))
+		  (vop count-me first-node 2block *dynamic-counts-tn* num))))
+	    (ir2-convert-block block))))))
   (undefined-value))
 
 
