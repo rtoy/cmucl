@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.14 1990/11/19 05:06:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.15 1990/11/19 15:00:41 wlott Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -834,12 +834,12 @@
 ;;; each *print-base*.  We want this number as close to *most-positive-fixnum*
 ;;; as possible, i.e. (floor (log most-positive-fixnum *print-base*)).
 ;;; 
-(defparameter *base-power* (make-array 36))
+(defparameter *base-power* (make-array 36 :initial-element nil))
 
 ;;; *FIXNUM-POWER--1* holds the number of digits for each *print-base* that
 ;;; fit in the corresponding *base-power*.
 ;;; 
-(defparameter *fixnum-power--1* (make-array 36))
+(defparameter *fixnum-power--1* (make-array 36 :initial-element nil))
 
 ;;; PRINT-BIGNUM -- internal.
 ;;;
