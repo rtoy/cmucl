@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.16 1992/10/27 12:02:54 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.17 1992/11/25 10:51:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1154,14 +1154,14 @@
 		     (funstate-compatible-p funstate args)))
 	(return cached-fun)))))
 
-(defmacro with-cached-function ((name-var funstate-var cache-place
+(defmacro with-cached-function ((name-var funstate-var cache cache-slot
 					  args &key constraint prefix)
 				&body defun-maker-forms)
   (let ((cache-var (gensym))
 	(constraint-var (gensym)))
     `(let* ((,constraint-var ,constraint)
-	    (,cache-var
-	     (find-cached-function ,cache-place ,args ,constraint-var)))
+	    (,cache-var (find-cached-function (,cache-slot ,cache)
+					      ,args ,constraint-var)))
        (cond (,cache-var
 	      #+nil
 	      (Format t "~&; Using cached function ~s~%"
@@ -1177,12 +1177,12 @@
 		#+nil
 		(format t "~&; Making new function ~s~%"
 			(cached-fun-name ,cache-var))
-		(multiple-value-prog1
-		 (values (cached-fun-name ,cache-var)
-			 (progn ,@defun-maker-forms))
-		 ;; Add to the cache second, so errors in defun-maker-forms
-		 ;; will result in nothing being added.
-		 (push ,cache-var ,cache-place))))))))
+		(values ,name-var
+			`(progn
+			   ,(progn ,@defun-maker-forms)
+			   (eval-when (compile eval)
+			     (push ,,cache-var
+				   (,',cache-slot ',,cache)))))))))))
 
 ;;; ----------------------------------------------------------------
 
@@ -1196,11 +1196,9 @@
       (values nil nil)
       (let ((printer-source (preprocess-printer printer-source args)))
 	(with-cached-function
-	    (name funstate
-	     (function-cache-printers cache)
-	     args
-	     :constraint printer-source
-	     :prefix "PRINTER")
+	    (name funstate cache function-cache-printers args
+		  :constraint printer-source
+		  :prefix "PRINTER")
 	  (make-printer-defun printer-source funstate name)))))
 
 (defun find-labeller-fun (args cache)
@@ -1209,9 +1207,7 @@
     (if (null labelled-fields)
 	(values nil nil)
 	(with-cached-function
-	    (name funstate
-	     (function-cache-labellers cache)
-	     args
+	    (name funstate cache function-cache-labellers args
 	     :prefix "LABELLER"
 	     :constraint labelled-fields)
 	  (let ((labels-form 'labels))
@@ -1249,9 +1245,7 @@
     (if (null filtered-args)
 	(values nil nil)
 	(with-cached-function
-	    (name funstate
-	     (function-cache-prefilters cache)
-	     args
+	    (name funstate cache function-cache-prefilters args
 	     :prefix "PREFILTER"
 	     :constraint filtered-args)
 	  (collect ((forms))
