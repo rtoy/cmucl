@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.41 1992/07/11 02:12:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.42 1992/07/22 22:49:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.41 1992/07/11 02:12:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.42 1992/07/22 22:49:44 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -414,6 +414,20 @@
 
 ;;;; Component (function) dumping:
 
+(defun dump-segment (segment code-length file)
+  (declare (type new-assem:segment segment)
+	   (type fasl-file file))
+  (let* ((stream (fasl-file-stream file))
+	 (posn (file-position stream)))
+    (new-assem:segment-map-output
+     segment
+     #'(lambda (sap amount)
+	 (system:output-raw-bytes stream sap 0 amount)))
+    (unless (= (- (file-position stream) posn) code-length)
+      (error "Tried to output ~D bytes, but only ~D made it."
+	     code-length (- (file-position stream) posn))))
+  (undefined-value))
+
 ;;; Dump-Code-Object  --  Internal
 ;;;
 ;;;    Dump out the constant pool and code-vector for component, push the
@@ -489,15 +503,7 @@
 
       (flush-fasl-file-buffer file)
       (if (backend-featurep :new-assembler)
-	  (let* ((stream (fasl-file-stream file))
-		 (posn (file-position stream)))
-	    (new-assem:segment-map-output
-	     code-segment
-	     #'(lambda (sap amount)
-		 (system:output-raw-bytes stream sap 0 amount)))
-	    (unless (= (- (file-position stream) posn) code-length)
-	      (error "Tried to output ~D bytes, but only ~D made it."
-		     code-length (- (file-position stream) posn))))
+	  (dump-segment code-segment code-length file)
 	  (setf fixups
 		(assem:emit-code-vector (fasl-file-stream file) code-segment)))
       (dump-i-vector trace-table file t)
@@ -648,8 +654,8 @@
 
 ;;; DUMP-BYTE-CODE-OBJECT -- internal.
 ;;; 
-(defun dump-byte-code-object (output constants file)
-  (declare (type byte-output output)
+(defun dump-byte-code-object (segment constants file)
+  (declare (type new-assem:segment segment)
 	   (type vector constants)
 	   (type fasl-file file))
   (collect ((entry-patches) (xep-patches))
@@ -688,7 +694,7 @@
     (dump-object nil file)
 
     (let ((num-consts (1+ (length constants)))
-	  (length (byte-output-length output)))
+	  (length (byte-output-length segment)))
       (cond ((and (< num-consts #x100) (< length #x10000))
 	     (dump-fop 'lisp::fop-small-code file)
 	     (dump-byte num-consts file)
@@ -696,9 +702,9 @@
 	    (t
 	     (dump-fop 'lisp::fop-code file)
 	     (dump-unsigned-32 num-consts file)
-	     (dump-unsigned-32 length file))))
-    (flush-fasl-file-buffer file)
-    (output-byte-output output (fasl-file-stream file))
+	     (dump-unsigned-32 length file)))
+      (flush-fasl-file-buffer file)
+      (dump-segment segment length file))
     (let ((code-handle (dump-pop file))
 	  (patch-table (fasl-file-patch-table file)))
       (dolist (patch (entry-patches))
@@ -711,8 +717,8 @@
 ;;; Dump a byte-component.  This is similar to FASL-DUMP-COMPONENT, but
 ;;; different.
 ;;;
-(defun fasl-dump-byte-component (output constants xeps file)
-  (declare (type byte-output output)
+(defun fasl-dump-byte-component (segment constants xeps file)
+  (declare (type new-assem:segment segment)
 	   (type vector constants)
 	   (type list xeps)
 	   (type fasl-file file))
@@ -723,7 +729,7 @@
   
   (multiple-value-bind
       (code-handle xep-patches)
-      (dump-byte-code-object output constants file)
+      (dump-byte-code-object segment constants file)
     (dump-fop 'lisp::fop-verify-empty-stack file)
     (dolist (noise xeps)
       (let* ((lambda (car noise))
