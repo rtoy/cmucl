@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.50 1992/06/22 13:54:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.51 1992/12/10 16:38:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,9 +175,9 @@
 ;;; Should allow a package name, I think, tho CLtL II doesn't say so...
 (defknown gentemp (&optional string packagelike) symbol)
 
-(defknown make-package (stringlike &key (use list) (nicknames list)
+(defknown make-package (stringlike &key (:use list) (:nicknames list)
 				   ;; ### Extensions...
-				   (internal-symbols index) (external-symbols index))
+				   (:internal-symbols index) (:external-symbols index))
 	  package)
 (defknown find-package (stringlike) (or package null) (flushable))
 (defknown package-name (packagelike) (or simple-string null) (flushable))
@@ -391,7 +391,7 @@
 (defknown nreverse (sequence) sequence ()
   :derive-type #'result-type-first-arg)
 
-(defknown make-sequence (type-specifier index &key (initial-element t)) consed-sequence
+(defknown make-sequence (type-specifier index &key (:initial-element t)) consed-sequence
   (movable flushable unsafe)
   :derive-type (result-type-specifier-nth-arg 1))
 
@@ -412,143 +412,143 @@
   (foldable flushable call))
 
 ;;; Unsafe for :Initial-Value...
-(defknown reduce (callable sequence &key (from-end t) (start index)
-			   (end sequence-end) (initial-value t) (key callable))
+(defknown reduce (callable sequence &key (:from-end t) (:start index)
+			   (:end sequence-end) (:initial-value t) (:key callable))
   t
   (foldable flushable call unsafe))
 
-(defknown fill (sequence t &key (start index) (end sequence-end)) sequence
+(defknown fill (sequence t &key (:start index) (:end sequence-end)) sequence
   (unsafe)
   :derive-type #'result-type-first-arg)
 
-(defknown replace (sequence sequence &key (start1 index) (end1 sequence-end)
-			    (start2 index) (end2 sequence-end))
+(defknown replace (sequence sequence &key (:start1 index) (:end1 sequence-end)
+			    (:start2 index) (:end2 sequence-end))
   consed-sequence ()
   :derive-type #'result-type-first-arg)
 
 (defknown remove
-  (t sequence &key (from-end t) (test callable)
-     (test-not callable) (start index) (end sequence-end)
-     (count sequence-end) (key callable))
+  (t sequence &key (:from-end t) (:test callable)
+     (:test-not callable) (:start index) (:end sequence-end)
+     (:count sequence-end) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown substitute
-  (t t sequence &key (from-end t) (test callable)
-     (test-not callable) (start index) (end sequence-end)
-     (count sequence-end) (key callable))
+  (t t sequence &key (:from-end t) (:test callable)
+     (:test-not callable) (:start index) (:end sequence-end)
+     (:count sequence-end) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown (remove-if remove-if-not)
-  (callable sequence &key (from-end t) (start index) (end sequence-end)
-	    (count sequence-end) (key callable))
+  (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
+	    (:count sequence-end) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown (substitute-if substitute-if-not)
-  (t callable sequence &key (from-end t) (start index) (end sequence-end)
-     (count sequence-end) (key callable))
+  (t callable sequence &key (:from-end t) (:start index) (:end sequence-end)
+     (:count sequence-end) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown delete
-  (t sequence &key (from-end t) (test callable)
-     (test-not callable) (start index) (end sequence-end)
-     (count sequence-end) (key callable))
+  (t sequence &key (:from-end t) (:test callable)
+     (:test-not callable) (:start index) (:end sequence-end)
+     (:count sequence-end) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown nsubstitute
-  (t t sequence &key (from-end t) (test callable)
-     (test-not callable) (start index) (end sequence-end)
-     (count sequence-end) (key callable))
+  (t t sequence &key (:from-end t) (:test callable)
+     (:test-not callable) (:start index) (:end sequence-end)
+     (:count sequence-end) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown (delete-if delete-if-not)
-  (callable sequence &key (from-end t) (start index) (end sequence-end)
-	    (count sequence-end) (key callable))
+  (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
+	    (:count sequence-end) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown (nsubstitute-if nsubstitute-if-not)
-  (t callable sequence &key (from-end t) (start index) (end sequence-end)
-     (count sequence-end) (key callable))
+  (t callable sequence &key (:from-end t) (:start index) (:end sequence-end)
+     (:count sequence-end) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown remove-duplicates
-  (sequence &key (test callable) (test-not callable) (start index) (from-end t)
-	    (end sequence-end) (key callable))
+  (sequence &key (:test callable) (:test-not callable) (:start index) (:from-end t)
+	    (:end sequence-end) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 1))
 
 (defknown delete-duplicates
-  (sequence &key (test callable) (test-not callable) (start index) (from-end t)
-	    (end sequence-end) (key callable))
+  (sequence &key (:test callable) (:test-not callable) (:start index) (:from-end t)
+	    (:end sequence-end) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 1))
 
-(defknown find (t sequence &key (test callable) (test-not callable)
-		  (start index) (from-end t) (end sequence-end) (key callable))
+(defknown find (t sequence &key (:test callable) (:test-not callable)
+		  (:start index) (:from-end t) (:end sequence-end) (:key callable))
   t
   (foldable flushable call))
 
 (defknown (find-if find-if-not)
-  (callable sequence &key (from-end t) (start index) (end sequence-end)
-	    (key callable))
+  (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
+	    (:key callable))
   t
   (foldable flushable call))
 
-(defknown position (t sequence &key (test callable) (test-not callable)
-		      (start index) (from-end t) (end sequence-end)
-		      (key callable))
+(defknown position (t sequence &key (:test callable) (:test-not callable)
+		      (:start index) (:from-end t) (:end sequence-end)
+		      (:key callable))
   (or index null)
   (foldable flushable call))
 
 (defknown (position-if position-if-not)
-  (callable sequence &key (from-end t) (start index) (end sequence-end)
-	    (key callable))
+  (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
+	    (:key callable))
   (or index null)
   (foldable flushable call))
 
-(defknown count (t sequence &key (test callable) (test-not callable)
-		      (start index) (from-end t) (end sequence-end)
-		      (key callable))
+(defknown count (t sequence &key (:test callable) (:test-not callable)
+		      (:start index) (:from-end t) (:end sequence-end)
+		      (:key callable))
   index
   (foldable flushable call))
 
 (defknown (count-if count-if-not)
-  (callable sequence &key (from-end t) (start index) (end sequence-end)
-	    (key callable))
+  (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
+	    (:key callable))
   index
   (foldable flushable call))
 
 (defknown (mismatch search)
-  (sequence sequence &key (from-end t) (test callable) (test-not callable)
-	    (start1 index) (end1 sequence-end) (start2 index) (end2 sequence-end)
-	    (key callable))
+  (sequence sequence &key (:from-end t) (:test callable) (:test-not callable)
+	    (:start1 index) (:end1 sequence-end) (:start2 index) (:end2 sequence-end)
+	    (:key callable))
   (or index null)
   (foldable flushable call))
 
 ;;; Not flushable, since vector sort guaranteed in-place...
-(defknown (stable-sort sort) (sequence callable &key (key callable)) sequence
+(defknown (stable-sort sort) (sequence callable &key (:key callable)) sequence
   (call)
   :derive-type (sequence-result-nth-arg 1))
 
 (defknown merge (type-specifier sequence sequence callable
-				&key (key callable))
+				&key (:key callable))
   sequence
   (flushable call)
   :derive-type (result-type-specifier-nth-arg 1))
@@ -565,7 +565,7 @@
 
 (defknown cons (t t) cons (movable flushable unsafe))
 
-(defknown tree-equal (t t &key (test callable) (test-not callable)) boolean
+(defknown tree-equal (t t &key (:test callable) (:test-not callable)) boolean
   (foldable flushable call))
 (defknown endp (t) boolean (foldable flushable movable))
 (defknown list-length (list) (or index null) (foldable flushable))
@@ -573,7 +573,7 @@
 (defknown last (list &optional index) list (foldable flushable))
 (defknown list (&rest t) list (movable flushable unsafe))
 (defknown list* (t &rest t) t (movable flushable unsafe))
-(defknown make-list (index &key (initial-element t)) list
+(defknown make-list (index &key (:initial-element t)) list
   (movable flushable unsafe))
 
 ;;;
@@ -591,42 +591,42 @@
 (defknown ldiff (list list) list (flushable))
 (defknown (rplaca rplacd) (cons t) list (unsafe))
 
-(defknown (nsubst subst) (t t t &key (key callable) (test callable)
-			    (test-not callable))
+(defknown (nsubst subst) (t t t &key (:key callable) (:test callable)
+			    (:test-not callable))
   list (flushable unsafe call))
 
 (defknown (subst-if subst-if-not nsubst-if nsubst-if-not)
-	  (t t t &key (key callable))
+	  (t t t &key (:key callable))
   list (flushable unsafe call))
 
-(defknown (sublis nsublis) (list t &key (key callable) (test callable)
-				 (test-not callable))
+(defknown (sublis nsublis) (list t &key (:key callable) (:test callable)
+				 (:test-not callable))
   list (flushable unsafe call))
 
-(defknown member (t list &key (key callable) (test callable)
-		    (test-not callable))
+(defknown member (t list &key (:key callable) (:test callable)
+		    (:test-not callable))
   list (foldable flushable call))
-(defknown (member-if member-if-not) (callable list &key (key callable))
+(defknown (member-if member-if-not) (callable list &key (:key callable))
   list (foldable flushable call))
 
 (defknown tailp (list list) boolean (foldable flushable))
 
-(defknown adjoin (t list &key (key callable) (test callable)
-		    (test-not callable))
+(defknown adjoin (t list &key (:key callable) (:test callable)
+		    (:test-not callable))
   list (foldable flushable unsafe call))
 
 (defknown (union intersection set-difference set-exclusive-or)
-	  (list list &key (key callable) (test callable) (test-not callable))
+	  (list list &key (:key callable) (:test callable) (:test-not callable))
   list
   (foldable flushable call))
 
 (defknown (nunion nintersection nset-difference nset-exclusive-or)
-	  (list list &key (key callable) (test callable) (test-not callable))
+	  (list list &key (:key callable) (:test callable) (:test-not callable))
   list
   (foldable flushable call))
 
 (defknown subsetp 
-	  (list list &key (key callable) (test callable) (test-not callable))
+	  (list list &key (:key callable) (:test callable) (:test-not callable))
   boolean
   (foldable flushable call))
 
@@ -634,7 +634,7 @@
 (defknown pairlis (t t &optional t) list (flushable unsafe))
 
 (defknown (rassoc assoc)
-	  (t list &key (key callable) (test callable) (test-not callable))
+	  (t list &key (:key callable) (:test callable) (:test-not callable))
   list (foldable flushable call))
 (defknown (assoc-if-not assoc-if rassoc-if rassoc-if-not)
 	  (callable list &key (:key callable)) list (foldable flushable call))
@@ -643,9 +643,9 @@
 ;;;; In the "Hash Tables" chapter:
 
 (defknown make-hash-table
-  (&key (test callable) (size index)
-	(rehash-size (or (integer 1) (float (1.0))))
-	(rehash-threshold (real 0 1)))
+  (&key (:test callable) (:size index)
+	(:rehash-size (or (integer 1) (float (1.0))))
+	(:rehash-threshold (real 0 1)))
   hash-table
   (flushable unsafe))
 (defknown hash-table-p (t) boolean (movable foldable flushable))
@@ -668,11 +668,11 @@
 
 ;;;; In the "Arrays" chapter:
 
-(defknown make-array ((or index list) &key (element-type type-specifier)
-		      (initial-element t) (initial-contents t)
-		      (adjustable t) (fill-pointer t)
-		      (displaced-to (or array null))
-		      (displaced-index-offset index))
+(defknown make-array ((or index list) &key (:element-type type-specifier)
+		      (:initial-element t) (:initial-contents t)
+		      (:adjustable t) (:fill-pointer t)
+		      (:displaced-to (or array null))
+		      (:displaced-index-offset index))
   array (flushable unsafe))
 
 (defknown vector (&rest t) simple-vector (flushable unsafe))
@@ -713,10 +713,10 @@
 (defknown vector-pop (vector) t ())
 
 (defknown adjust-array
-  (array (or index list) &key (element-type type-specifier)
-	 (initial-element t) (initial-contents list)
-	 (fill-pointer t) (displaced-to (or array null))
-	 (displaced-index-offset index))
+  (array (or index list) &key (:element-type type-specifier)
+	 (:initial-element t) (:initial-contents list)
+	 (:fill-pointer t) (:displaced-to (or array null))
+	 (:displaced-index-offset index))
   array (unsafe))
 ;  :derive-type 'result-type-arg1) Not even close...
 
@@ -729,31 +729,31 @@
 (deftype stringable () '(or character string symbol))
 
 (defknown (string= string-equal)
-  (stringable stringable &key (start1 index) (end1 sequence-end)
-	      (start2 index) (end2 sequence-end))
+  (stringable stringable &key (:start1 index) (:end1 sequence-end)
+	      (:start2 index) (:end2 sequence-end))
   boolean
   (foldable flushable))
 
 (defknown (string< string> string<= string>= string/= string-lessp
 		   string-greaterp string-not-lessp string-not-greaterp
 		   string-not-equal)
-  (stringable stringable &key (start1 index) (end1 sequence-end)
-	      (start2 index) (end2 sequence-end))
+  (stringable stringable &key (:start1 index) (:end1 sequence-end)
+	      (:start2 index) (:end2 sequence-end))
   (or index null)
   (foldable flushable))
 
-(defknown make-string (index &key (initial-element character))
+(defknown make-string (index &key (:initial-element character))
   simple-string (flushable))
 
 (defknown (string-trim string-left-trim string-right-trim)
   (sequence stringable) simple-string (flushable))
 
 (defknown (string-upcase string-downcase string-capitalize)
-  (stringable &key (start index) (end sequence-end))
+  (stringable &key (:start index) (:end sequence-end))
   simple-string (flushable))
 
 (defknown (nstring-upcase nstring-downcase nstring-capitalize)
-  (string &key (start index) (end sequence-end))
+  (string &key (:start index) (:end sequence-end))
   string ())
 
 (defknown string (stringable) string
@@ -793,7 +793,7 @@
 (defknown stream-element-type (stream) type-specifier (movable foldable flushable))
 (defknown (output-stream-p input-stream-p) (stream) boolean (movable foldable
 								     flushable))
-(defknown close (stream &key (abort t)) stream ())
+(defknown close (stream &key (:abort t)) stream ())
 
 
 ;;;; In the "Input/Output" chapter:
@@ -842,22 +842,22 @@
 (defknown clear-input (&optional stream) null (explicit-check))
 
 (defknown read-from-string
-  (string &optional t t &key (start index) (end sequence-end)
-	  (preserve-whitespace t))
+  (string &optional t t &key (:start index) (:end sequence-end)
+	  (:preserve-whitespace t))
   t)
 (defknown parse-integer
-  (string &key (start index) (end sequence-end) (radix (integer 2 36))
-	  (junk-allowed t)) 
+  (string &key (:start index) (:end sequence-end) (:radix (integer 2 36))
+	  (:junk-allowed t)) 
   (or integer null ()))
 
 (defknown read-byte (stream &optional t t) t (explicit-check))
 
 (defknown write
-  (t &key (stream streamlike) (escape t) (radix t) (base (integer 2 36))
-     (circle t) (pretty t) (level (or unsigned-byte null)) (readably t)
-     (length (or unsigned-byte null)) (case t) (array t) (gensym t)
-     (lines (or unsigned-byte null)) (right-margin (or unsigned-byte null))
-     (miser-width (or unsigned-byte null)) (pprint-dispatch t))
+  (t &key (:stream streamlike) (:escape t) (:radix t) (:base (integer 2 36))
+     (:circle t) (:pretty t) (:level (or unsigned-byte null)) (:readably t)
+     (:length (or unsigned-byte null)) (:case t) (:array t) (:gensym t)
+     (:lines (or unsigned-byte null)) (:right-margin (or unsigned-byte null))
+     (:miser-width (or unsigned-byte null)) (:pprint-dispatch t))
   t
   (any explicit-check)
   :derive-type #'result-type-first-arg)
@@ -867,11 +867,11 @@
 
 ;;; xxx-TO-STRING not foldable because they depend on the dynamic environment. 
 (defknown write-to-string
-  (t &key (escape t) (radix t) (base (integer 2 36)) (readably t)
-     (circle t) (pretty t) (level (or unsigned-byte null))
-     (length (or unsigned-byte null)) (case t) (array t) (gensym t)
-     (lines (or unsigned-byte null)) (right-margin (or unsigned-byte null))
-     (miser-width (or unsigned-byte null)) (pprint-dispatch t))
+  (t &key (:escape t) (:radix t) (:base (integer 2 36)) (:readably t)
+     (:circle t) (:pretty t) (:level (or unsigned-byte null))
+     (:length (or unsigned-byte null)) (:case t) (:array t) (:gensym t)
+     (:lines (or unsigned-byte null)) (:right-margin (or unsigned-byte null))
+     (:miser-width (or unsigned-byte null)) (:pprint-dispatch t))
   simple-string
   (foldable flushable explicit-check))
 
@@ -880,7 +880,7 @@
 (defknown write-char (character &optional streamlike) character
   (explicit-check))
 (defknown (write-string write-line)
-  (string &optional streamlike &key (start index) (end sequence-end))
+  (string &optional streamlike &key (:start index) (:end sequence-end))
   string
   (explicit-check))
 
@@ -922,7 +922,7 @@
 
 (defknown parse-namestring
   (pathnamelike &optional pathname-host pathnamelike
-		&key (start index) (end sequence-end) (junk-allowed t))
+		&key (:start index) (:end sequence-end) (:junk-allowed t))
   (values (or pathname null) index)
   ())
 
@@ -932,24 +932,24 @@
   (foldable flushable))
 
 (defknown make-pathname
- (&key (defaults pathnamelike) (host pathname-host) (device pathname-device)
-       (directory (or pathname-directory string (member :wild)))
-       (name (or pathname-name string (member :wild)))
-       (type (or pathname-type string (member :wild)))
-       (version pathname-version) (case (member :local :common)))
+ (&key (:defaults pathnamelike) (:host pathname-host) (:device pathname-device)
+       (:directory (or pathname-directory string (member :wild)))
+       (:name (or pathname-name string (member :wild)))
+       (:type (or pathname-type string (member :wild)))
+       (:version pathname-version) (:case (member :local :common)))
   pathname (foldable flushable))
 
 (defknown pathnamep (t) boolean (movable foldable flushable))
 
-(defknown pathname-host (pathnamelike &key (case (member :local :common)))
+(defknown pathname-host (pathnamelike &key (:case (member :local :common)))
   pathname-host (foldable flushable))
-(defknown pathname-device (pathnamelike &key (case (member :local :common)))
+(defknown pathname-device (pathnamelike &key (:case (member :local :common)))
   pathname-device (foldable flushable))
-(defknown pathname-directory (pathnamelike &key (case (member :local :common)))
+(defknown pathname-directory (pathnamelike &key (:case (member :local :common)))
   pathname-directory (foldable flushable))
-(defknown pathname-name (pathnamelike &key (case (member :local :common)))
+(defknown pathname-name (pathnamelike &key (:case (member :local :common)))
   pathname-name (foldable flushable))
-(defknown pathname-type (pathnamelike &key (case (member :local :common)))
+(defknown pathname-type (pathnamelike &key (:case (member :local :common)))
   pathname-type (foldable flushable))
 (defknown pathname-version (pathnamelike)
   pathname-version (foldable flushable))
@@ -965,12 +965,12 @@
 (defknown user-homedir-pathname (&optional t) pathname (flushable))
 
 (defknown open
-  (pathnamelike &key (direction (member :input :output :io :probe))
-		(element-type type-specifier)
-		(if-exists (member :error :new-version :rename
+  (pathnamelike &key (:direction (member :input :output :io :probe))
+		(:element-type type-specifier)
+		(:if-exists (member :error :new-version :rename
 				   :rename-and-delete :overwrite :append
 				   :supersede nil))
-		(if-does-not-exist (member :error :create nil)))
+		(:if-does-not-exist (member :error :create nil)))
   (or stream null))
 
 (defknown rename-file (pathnamelike filename) (values pathname pathname pathname))
@@ -986,13 +986,13 @@
 
 (defknown load
   ((or filename stream)
-   &key (verbose t) (print t) (if-does-not-exist (member :error :create nil))
-   (if-source-newer (member :load-source :load-object :query :compile))
-   (contents (or null (member :source :binary))))
+   &key (:verbose t) (:print t) (:if-does-not-exist (member :error :create nil))
+   (:if-source-newer (member :load-source :load-object :query :compile))
+   (:contents (or null (member :source :binary))))
   t)
 
-(defknown directory (pathnamelike &key (check-for-subdirs t) (all t)
-				  (follow-links t))
+(defknown directory (pathnamelike &key (:check-for-subdirs t) (:all t)
+				  (:follow-links t))
   list (flushable))
 
 
@@ -1013,9 +1013,9 @@
 (deftype optional-filename () '(or filename (member t nil)))
 
 (defknown compile-file
-  ((or optional-filename list) &key (output-file optional-filename) (error-file optional-filename)
-   (trace-file optional-filename) (error-output t) (load t) (verbose t)
-   (print t) (progress t) (block-compile t) (entry-points list))
+  ((or optional-filename list) &key (:output-file optional-filename) (:error-file optional-filename)
+   (:trace-file optional-filename) (:error-output t) (:load t) (:verbose t)
+   (:print t) (:progress t) (:block-compile t) (:entry-points list))
   (values (or pathname null) boolean boolean))
 (defknown disassemble (callable &optional stream) void)
 
@@ -1029,7 +1029,7 @@
 (defknown room (&optional (member t nil :default)) void)
 (defknown ed (&optional (or symbol cons filename) &key (:init t) (:display t))
   t)
-(defknown dribble (&optional filename &key (if-exists t)) t)
+(defknown dribble (&optional filename &key (:if-exists t)) t)
 
 (defknown apropos (stringlike &optional packagelike t) (values))
 (defknown apropos-list (stringlike &optional packagelike t) list (flushable))
