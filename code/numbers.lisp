@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.59 2004/08/23 16:15:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60 2004/09/08 16:09:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -281,6 +281,8 @@
 	#+long-float
 	((subtypep spec 'long-float)
 	 'long-float)
+	((subtypep spec 'rational)
+	 'rational)
 	((subtypep spec 'real)
 	 ;; CMUCL doesn't have a specialized type for any other type
 	 ;; of complex---only single-float and double-float (and
