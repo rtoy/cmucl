@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.28 2003/05/13 10:16:58 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.29 2003/05/18 18:09:30 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -336,6 +336,49 @@ the compiler as completely as possible.  Currently this means that
 (defmacro slot-ref (slots index)
   `(svref ,slots ,index))
 
+;;;
+;;; Like KERNEL::PARSE-LAMBDA-LIST, but check for repeated lambda
+;;; variable and &MORE.
+;;;
+(defun parse-lambda-list (lambda-list &optional specialized-p)
+  (multiple-value-bind (required optional restp rest keyp keys
+				 allow-other-keys-p aux morep)
+      (kernel:parse-lambda-list lambda-list)
+    (when morep
+      (simple-program-error "~@<~s not allowed here~@:>" 'c:&more))
+    (collect ((vars))
+      (labels ((check-var (var)
+		 (cond ((not (symbolp var))
+			(simple-program-error
+			 "~@<Invalid lambda variable: ~s~@:>" var))
+		       ((memq var (vars))
+			(simple-program-error
+			 "~@<Repeated lambda variable: ~s~@:>" var))
+		       (t
+			(vars var))))
+	       (check-required (var)
+		 (if (and (consp var) specialized-p)
+		     (check-var (car var))
+		     (check-var var)))
+	       (check-optional (var)
+		 (if (consp var)
+		     (destructuring-bind (var &optional value supplied-p)
+			 var
+		       (if (consp var)
+			   (check-var (cadr var))
+			   (check-var var))
+		       (when supplied-p
+			 (check-var supplied-p)))
+		     (check-var var))))
+	(mapc #'check-required required)
+	(mapc #'check-optional optional)
+	(mapc #'check-optional keys)
+	(when restp (check-var rest))
+	(mapc #'check-optional aux)
+	(values required optional restp rest keyp keys
+		allow-other-keys-p aux)))))
+
+    
 ;;;
 ;;; The problem with unbound markers is that they cannot be dumped to
 ;;; fasl files.  So, we need to create unbound markers in some way,

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.56 2003/05/18 12:23:21 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.57 2003/05/18 18:09:31 gerd Exp $")
 
 (in-package :pcl)
 
@@ -171,15 +171,13 @@ work during bootstrapping.
 ;;;
 
 (defun parse-generic-function-lambda-list (lambda-list)
-  ;; This is like kernel:parse-lambda-list, but returns an additional
+  ;; This is like PARSE-LAMBDA-LIST, but returns an additional
   ;; value AUXP which is true if LAMBDA-LIST contains any &aux keyword.
   (multiple-value-bind (required optional restp rest keyp keys
-				 allow-other-keys-p aux morep
-				 more-context more-count)
-      (kernel:parse-lambda-list lambda-list)
+				 allow-other-keys-p aux)
+      (parse-lambda-list lambda-list)
     (values required optional restp rest keyp keys allow-other-keys-p
-	    (or aux (member '&aux lambda-list :test #'eq)) aux
-	    morep more-context more-count)))
+	    (or aux (member '&aux lambda-list :test #'eq)) aux)))
 
 (defun check-generic-function-lambda-list (function-specifier lambda-list)
   (multiple-value-bind (required optional restp rest keyp keys
@@ -405,9 +403,9 @@ work during bootstrapping.
 	  (let ((initargs-form (make-method-initargs-form 
 				proto-gf proto-method
 				method-function-lambda initargs env)))
-	    (tell-compiler-about-gf name lambda-list)
+	    (tell-compiler-about-gf name unspecialized-lambda-list)
 	    `(progn
-	       (proclaim-defgeneric ',name ',lambda-list)
+	       (proclaim-defgeneric ',name ',unspecialized-lambda-list)
 	       ,(make-defmethod-form name qualifiers specializers
 				     unspecialized-lambda-list
 				     (if proto-method
@@ -1265,13 +1263,9 @@ work during bootstrapping.
 
 (defun analyze-lambda-list (lambda-list)
   (multiple-value-bind (required optional restp rest keyp keys
-				 allow-other-keys-p aux morep
-				 more-context more-count)
-      (kernel:parse-lambda-list lambda-list)
-    (declare (ignore rest aux more-context more-count))
-    (when morep
-      (simple-program-error "Lambda list keyword ~s not allowed here."
-			    '&more))
+				 allow-other-keys-p aux)
+      (parse-lambda-list lambda-list t)
+    (declare (ignore rest aux))
     (flet ((keyword-parameter-keyword (x)
 	     (let ((key (if (atom x) x (car x))))
 	       (if (atom key)
@@ -2191,12 +2185,9 @@ work during bootstrapping.
 
 (defun parse-specialized-lambda-list (lambda-list)
   (multiple-value-bind (required optional restp rest keyp keys
-				 allow-other-keys-p aux morep
-				 more-context more-count)
-      (kernel:parse-lambda-list lambda-list)
+				 allow-other-keys-p aux)
+      (parse-lambda-list lambda-list t)
     (declare (ignore more-context more-count))
-    (when morep
-      (error "~@<~s is not allowed in specialized lambda-lists~@:>" :more))
     (collect ((req) (spec))
       (dolist (x required)
 	(req (if (consp x) (car x) x))
