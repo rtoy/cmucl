@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.3 2004/08/08 11:15:11 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.4 2004/09/08 02:10:54 rtoy Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -65,6 +65,7 @@
   (inst b sxhash-simple-substring-entry))
 
 
+#+nil
 (define-assembly-routine (sxhash-simple-substring
 			  (:translate %sxhash-simple-substring)
 			  (:policy :fast-safe)
@@ -109,3 +110,61 @@
 
   (inst slwi result accum 5)
   (inst srwi result result 3))
+
+;; One-at-a-time hash algorithm.  See assembly/sparc/array.lisp for a
+;; description.
+
+(define-assembly-routine (sxhash-simple-substring
+			  (:translate %sxhash-simple-substring)
+			  (:policy :fast-safe)
+			  (:arg-types * positive-fixnum)
+			  (:result-types positive-fixnum))
+			 ((:arg string descriptor-reg a0-offset)
+			  (:arg length any-reg a1-offset)
+			  (:res result any-reg a0-offset)
+
+			  (:temp accum non-descriptor-reg nl0-offset)
+			  (:temp data non-descriptor-reg nl1-offset)
+			  (:temp temp non-descriptor-reg nl2-offset)
+			  (:temp offset non-descriptor-reg nl3-offset))
+  (emit-label sxhash-simple-substring-entry)
+
+  (inst li offset (- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
+  (move accum zero-tn)
+  (inst b test)
+
+  LOOP
+
+  ;; hash += key[i]
+  (inst add accum accum data)
+  ;; hash += (hash << 10)
+  (inst slwi temp accum 10)
+  (inst add accum accum temp)
+  
+  ;; hash ^= (hash >> 6)
+  (inst srwi temp accum 6)
+  (inst xor accum accum temp)
+  (inst addi offset offset 1)
+
+  TEST
+
+  (inst subic. length length (fixnumize 1))
+  (inst lbzx data string offset)
+  (inst bge loop)
+  
+  ;; hash += (hash << 3)
+  (inst slwi temp accum 3)
+  (inst add accum accum temp)
+  
+  ;; hash ^= (hash >> 11)
+  (inst srwi temp accum 11)
+  (inst xor accum accum temp)
+  
+  ;; hash += (hash << 15);
+  (inst slwi temp accum 15)
+  (inst add accum accum temp)
+  
+  ;; Make the result a positive fixnum.  Shifting it left, then right
+  ;; does what we want, and extracts the bits we need.
+  (inst slwi accum accum 3)
+  (inst srwi result accum 1))

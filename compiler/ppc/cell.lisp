@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.2 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.3 2004/09/08 02:10:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,6 +91,23 @@
   (:variant vm:symbol-value-slot vm:other-pointer-type)
   (:policy :fast)
   (:translate symbol-value))
+
+(define-vop (symbol-hash)
+  (:policy :fast-safe)
+  (:translate symbol-hash)
+  (:args (symbol :scs (descriptor-reg null)))
+  (:results (res :scs (any-reg)))
+  (:result-types tagged-num)
+  (:generator 2
+    ;; the symbol-hash slot of NIL holds NIL because it is also the cdr
+    ;; slot, so we have to strip off the two low bits to make sure it is
+    ;; a fixnum.
+    (loadw res symbol symbol-hash-slot other-pointer-type)
+    (inst clrrwi res res 2)))
+
+(define-vop (%set-symbol-hash cell-set)
+  (:translate %set-symbol-hash)
+  (:variant symbol-hash-slot other-pointer-type))
 
 
 ;;;; Fdefinition (fdefn) objects.

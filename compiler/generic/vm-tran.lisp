@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.54 2004/06/10 01:46:47 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.55 2004/09/08 02:10:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -424,11 +424,11 @@
 (deftransform sxhash ((s-expr) (simple-string))
   '(%sxhash-simple-string s-expr))
 
-#-(or sparc x86 amd64)
+#-(or sparc x86 amd64 ppc)
 (deftransform sxhash ((s-expr) (symbol))
   '(%sxhash-simple-string (symbol-name s-expr)))
 
-#+(or sparc x86 amd64)
+#+(or sparc x86 amd64 ppc)
 (deftransform sxhash ((s-expr) (symbol))
   ;; Pick off the constant case first. (Important!)
   (if (constant-continuation-p s-expr)

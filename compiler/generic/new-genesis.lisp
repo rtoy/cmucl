@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.72 2004/08/20 22:54:06 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.73 2004/09/08 02:10:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -589,9 +589,10 @@
     (write-indexed symbol vm:symbol-value-slot unbound-marker)
     (when (or (c:backend-featurep :x86)
 	      (c:backend-featurep :amd64)
-	      (c:backend-featurep :sparc))
-      (let ((offset #+(or x86 amd64 sparc) vm:symbol-hash-slot
-		    #-(or x86 amd64 sparc) vm:symbol-unused-slot)
+	      (c:backend-featurep :sparc)
+	      (c:backend-featurep :ppc))
+      (let ((offset #+(or x86 amd64 sparc ppc) vm:symbol-hash-slot
+		    #-(or x86 amd64 sparc ppc) vm:symbol-unused-slot)
 	    (value (sxhash name)))
 	
       (write-indexed symbol offset (make-fixnum-descriptor value))))

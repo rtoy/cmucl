@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.57 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.58 2004/09/08 02:10:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -466,15 +466,15 @@
 
 ;;;; Symbols
 
-#+(or gengc sparc x86 amd64)
+#+(or gengc sparc x86 amd64 ppc)
 (defknown %make-symbol (fixnum simple-string) symbol
   (flushable movable))
 
-#+(or gengc sparc x86 amd64)
+#+(or gengc sparc x86 amd64 ppc)
 (defknown symbol-hash (symbol) fixnum
   (flushable movable))
 
-#+(or gencgc sparc x86 amd64)
+#+(or gencgc sparc x86 amd64 ppc)
 (defknown %set-symbol-hash  (symbol index)
   t (unsafe))
 
@@ -488,12 +488,12 @@
 (define-primitive-object (symbol :lowtag other-pointer-type
 				 :header symbol-header-type
 				 :alloc-trans
-				 #-(or gengc x86 amd64 sparc) make-symbol
-				 #+(or gengc x86 amd64 sparc) %make-symbol)
+				 #-(or gengc x86 amd64 sparc ppc) make-symbol
+				 #+(or gengc x86 amd64 sparc ppc) %make-symbol)
   (value :set-trans %set-symbol-value
 	 :init :unbound)
-  #-(or gengc x86 amd64 sparc) unused
-  #+(or gengc x86 amd64 sparc)
+  #-(or gengc x86 amd64 sparc ppc) unused
+  #+(or gengc x86 amd64 sparc ppc)
   (hash :init :arg)
   (plist :ref-trans symbol-plist
 	 :set-trans %set-symbol-plist
