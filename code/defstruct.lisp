@@ -567,7 +567,8 @@
   (let ((def (info type structure-info type)))
     (if (and def (eq (dd-type def) 'structure) (dd-predicate def))
 	`(and (structurep ,object)
-	      (or (eq (%primitive header-ref ,object 0) ',type)
+	      (if (eq (%primitive header-ref ,object 0) ',type)
+		  t
 		  (,(dd-predicate def) ,object)))
 	`(lisp::structure-typep ,object ',type))))
 
