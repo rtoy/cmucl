@@ -3,6 +3,9 @@
 
 (when (find-package "PCL")
   ;;
+  ;; Blow away make-instance optimizer so that it doesn't confuse bootstrapping.
+  (setf (compiler-macro-function 'make-instance) nil)
+  ;;
   ;; Undefine all generic functions exported from Lisp so that bootstrapping
   ;; doesn't get confused.
   (let ((class (find-class 'generic-function nil)))
