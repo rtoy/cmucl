@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.3 1990/09/27 02:24:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.4 1990/10/03 15:55:58 ram Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.
@@ -57,6 +57,7 @@
 				  #'(lambda ()
 				      (throw 'top-level-catcher nil)))
 				 (load-init-file t)
+				 (enable-gc t)
 				 (print-herald t)
 				 (process-command-line t))
   "Saves a CMU Common Lisp core image in the file of the specified name.  The
@@ -86,7 +87,10 @@
   file is resumed.
   
   :print-herald
-      If true, print out the lisp system herald when starting."
+      If true, print out the lisp system herald when starting.
+
+  :enable-gc
+      If true, turn GC on if it was off."
   
   (if purify
       (purify :root-structures root-structures :constants constants)
@@ -124,6 +128,8 @@
 			 "init")))
 	  (load (merge-pathnames name (user-homedir-pathname))
 		:if-does-not-exist nil))))
+    (when enable-gc
+      (gc-on))
     (when print-herald
       (print-herald))
     (when process-command-line
