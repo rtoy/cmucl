@@ -567,7 +567,7 @@
   "Destroys the given font-list."
   ((flist font-list)) ())
 
-(def-toolkit-request "XmStringBaseline" compound-string-basline :confirm
+(def-toolkit-request "XmStringBaseline" compound-string-baseline :confirm
   "Returns the number of pixels between the top of the character box and
    the basline of the first line of text."
   ((flist font-list) (string xmstring)) (fixnum))
@@ -671,7 +671,7 @@
   "Copies the primary selection to the clipboard and deletes the selected text."
   ((w widget)) ((member t nil)))
 
-(def-toolkit-request "XmTextGetBaseline" text-get-basline :confirm
+(def-toolkit-request "XmTextGetBaseline" text-get-baseline :confirm
   "Accesses the x position of the first baseline."
   ((w widget)) (fixnum))
 
