@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.5 1997/04/23 18:52:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.6 1997/05/11 11:37:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1367,6 +1367,7 @@
 ;;; CDQ -- Convert Double Word to Quad Word. EDX:EAX <- sign_xtnd(EAX)
 ;;; 
 (define-instruction cdq (segment)
+  (:printer byte ((op #b10011001)))
   (:emitter
    (maybe-emit-operand-size-prefix segment :dword)
    (emit-byte segment #b10011001)))
