@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.22 1992/01/17 19:56:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.23 1992/02/12 16:10:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1009,6 +1009,9 @@
 
 ;;;; Floating point noise.
 
+(defun decimal-string (n)
+  (write-to-string n :base 10 :radix nil :escape nil))
+
 (def-format-directive #\F (colonp atsignp params)
   (when colonp
     (error 'format-error
@@ -1033,10 +1036,9 @@
 	  (format-fixed-aux stream
 			    (coerce number 'single-float)
 			    w d k ovf pad atsign)
-	  (let ((*print-base* 10))
-	    (format-write-field stream
-				(princ-to-string number)
-				w 1 0 #\space t)))))
+	  (format-write-field stream
+			      (decimal-string number)
+			      w 1 0 #\space t))))
 
 ;;; We return true if we overflowed, so that ~G can output the overflow char
 ;;; instead of spaces.
@@ -1109,10 +1111,9 @@
 	  (format-exp-aux stream
 			  (coerce number 'single-float)
 			  w d e k ovf pad marker atsign)
-	  (let ((*print-base* 10))
-	    (format-write-field stream
-				(princ-to-string number)
-				w 1 0 #\space t)))))
+	  (format-write-field stream
+			      (decimal-string number)
+			      w 1 0 #\space t))))
 
 (defun format-exponent-marker (number)
   (if (typep number *read-default-float-format*)
@@ -1136,14 +1137,13 @@
       (multiple-value-bind (num expt)
 			   (lisp::scale-exponent (abs number))
 	(let* ((expt (- expt k))
-	       (estr (princ-to-string (abs expt)))
+	       (estr (decimal-string (abs expt)))
 	       (elen (if e (max (length estr) e) (length estr)))
 	       (fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
 	       (fmin (if (minusp k) (- 1 k) nil))
 	       (spaceleft (if w (- w 2 elen) nil)))
 	  (when (or atsign (minusp number)) (decf spaceleft))
-	  (if (and w e ovf (> elen e))
-	      ;;exponent overflow
+	  (if (and w ovf e (> elen e)) ;exponent overflow
 	      (dotimes (i w) (write-char ovf stream))
 	      (multiple-value-bind
 		  (fstr flen lpoint)
@@ -1205,10 +1205,9 @@
 	  (format-general-aux stream
 			      (coerce number 'single-float)
 			      w d e k ovf pad marker atsign)
-	  (let ((*print-base* 10))
-	    (format-write-field stream
-				(princ-to-string number)
-				w 1 0 #\space t)))))
+	  (format-write-field stream
+			      (decimal-string number)
+			      w 1 0 #\space t))))
 
 (defun format-general-aux (stream number w d e k ovf pad marker atsign)
   (multiple-value-bind (ignore n) 
@@ -1260,10 +1259,9 @@
 	  (unless colon (write-string signstr stream))
 	  (dotimes (i (- n pointplace)) (write-char #\0 stream))
 	  (write-string str stream)))
-      (let ((*print-base* 10))
-	(format-write-field stream
-			    (princ-to-string number)
-			    w 1 0 #\space t))))
+      (format-write-field stream
+			  (decimal-string number)
+			  w 1 0 #\space t)))
 
 
 ;;;; line/page breaks and other stuff like that.
