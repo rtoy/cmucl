@@ -1,4 +1,40 @@
 %  					-*- Dictionary: design; Package: C -*-
+\chapter{Debugger}
+Two classes of errors are handled by the Lisp debugger.  These are
+synchronous errors caused by something erring in program code and
+asynchronous errors caused by some external context of execution
+(clock interrupts, control-c interrupts).  Asynchronous errors can
+often be postponed if they are delivered at an inconvenient time.
+
+Synchronous errors are frequently handled by directly invoking the
+debugger.  However, there are several places where the strategy of
+jumping into the debugger is not used.  In those situations the
+compiler emits a stylized breakpoint; a breakpoint instruction
+(usually an INT3) followed by several bytes of argument data.  This
+will cause a trip through the operating system and ultimately the
+invocation of the C-level SIGTRAP handler which, in turn, interprets
+the argument bytes following the breakpoint and dispatches to the
+correct handler.  There is a switch statement in ``sigtrap\_handler''
+which gives the whole story on what types of errors rely on this
+mechanism.  The most commonly invoked handler is probably
+``interrupt\_internal\_error'' as it fields such common exceptions as
+the use of unbound symbols.  To familiarize with the context these
+traps are created in, one can disassemble just about any function and
+look at the bottom of the disassembly for blocks of error handling code.
+There will often be ``BREAK 10'' opcodes followed by several ``BYTE''
+opcodes with the meaning of the arguments in neatly decoded form off
+in the right-hand column.
+
+The other types of synchronous errors are those errors delivered by
+the operating system such as FPU traps and SIGSEGVs.  The invocation
+of those signals should be funneled through a C-level trampoline which
+makes a callback into Lisp passing all of the signal handler
+arguments.  That code is pretty straight forward and the
+``interrupt\_handle\_now'' function is pretty much where all of the
+runtime logic is localized.
+
+Handling asynchronous errors and deferred asynchronous errors is a bit more
+involved\ldots
 
 \chapter{Debugger Information}
 \index{debugger information}
