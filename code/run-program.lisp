@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.11 1992/02/18 02:20:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.12 1992/07/28 00:22:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -480,15 +480,16 @@
 		    (multiple-value-bind
 			(child-pid errno)
 			(unix:unix-fork)
-		      (cond ((zerop child-pid)
-			     ;; We are the child. Note: setup-child NEVER returns
-			     (setup-child pfile args env stdin stdout stderr
-					  pty-name before-execve))
-			    ((minusp child-pid)
+		      (cond ((null child-pid)
 			     ;; This should only happen if the bozo has too
 			     ;; many running procs.
 			     (error "Could not fork child process: ~A"
 				    (unix:get-unix-error-msg errno)))
+			    ((zerop child-pid)
+			     ;; We are the child. Note: setup-child NEVER
+			     ;; returns
+			     (setup-child pfile args env stdin stdout stderr
+					  pty-name before-execve))
 			    (t
 			     ;; We are the parent.
 			     (setf proc (make-process :pid child-pid
