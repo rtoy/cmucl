@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.35 1993/07/02 14:18:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.36 1993/07/22 00:15:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1344,15 +1344,15 @@ See the CMU Common Lisp User's Manual for more information.
 			    (or *debug-print-level* *print-level*)))
 	 (*print-length* (if verbose
 			     nil
-			     (or *debug-print-length* *print-length*))))
+			     (or *debug-print-length* *print-length*)))
+	 (form-num (di:code-location-form-number location)))
     (multiple-value-bind (translations form)
 			 (get-top-level-form location)
-      
-      (prin1 (di:source-path-context
-	      form
-	      (svref translations
-		     (di:code-location-form-number location))
-	      context)))))
+      (unless (< form-num (length translations))
+	(error "Source path no longer exists."))
+      (prin1 (di:source-path-context form
+				     (svref translations form-num)
+				     context)))))
 
 
 ;;;
