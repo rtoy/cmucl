@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.3 2003/08/03 11:27:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.4 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,8 +207,7 @@
 		      (inst lr temp offset)
 		      (inst lwzx result object temp))))
 	     (unless (zerop extra)
-	       (inst srwi result result
-		     (logxor (* extra ,bits) ,(1- elements-per-word))))
+	       (inst srwi result result (* ,bits extra)))
 	     (unless (= extra ,(1- elements-per-word))
 	       (inst andi. result result ,(1- (ash 1 bits)))))))
        (define-vop (,(symbolicate 'data-vector-set/ type))

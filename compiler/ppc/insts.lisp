@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.3 2002/01/11 16:27:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.4 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -249,16 +249,36 @@
          (lk-bit (if lk-p 1 0)))
     (if aa-p                            ; Not bloody likely, bwth.
       (emit-b-form-inst segment 16 bo bi target aa-bit lk-bit)
-      (emit-back-patch segment 4
-		       #'(lambda (segment posn)
-		           (emit-b-form-inst 
-                            segment
-                            16
-                            bo
-                            bi
-                            (ash (- (label-position target) posn) -2)
-                            aa-bit
-                            lk-bit))))))
+      ;; the target may be >+-8k away, in which case we have to invert the
+      ;; test and do an absolute branch
+      (emit-chooser
+       ;; We emit either 4 or 8 bytes, so I think we declare this as
+       ;; preserving 4 byte alignment.  If this gives us no joy, we can
+       ;; stick a nop in the long branch and then we will be
+       ;; preserving 8 byte alignment
+       segment 8 2 ; 2^2 is 4 byte alignment.  I think
+       #'(lambda (segment posn magic-value)
+	   (let ((delta (ash (- (label-position target posn magic-value) posn)
+			     -2)))
+	     (when (typep delta '(signed-byte 14))
+	       (emit-back-patch segment 4
+				#'(lambda (segment posn)
+				    (emit-b-form-inst 
+				     segment 16 bo bi
+				     (ash (- (label-position target) posn) -2)
+				     aa-bit lk-bit)))
+	       t)))
+       #'(lambda (segment posn)
+	   (let ((bo (logxor 8 bo))) ;; invert the test
+	     (emit-b-form-inst segment 16 bo bi
+			       2 ; skip over next instruction
+			       0 0)
+	     (emit-back-patch segment 4
+			      #'(lambda (segment posn)
+				  (emit-i-form-branch segment target lk-p)))))
+       ))))
+	     
+
 
 ; non-absolute I-form: B, BL.
 (defun emit-i-form-branch (segment target &optional lk-p)
@@ -1689,7 +1709,7 @@
 (define-instruction mffs. (segment frd)
   (:printer x-22 ((op 63)  (xo 583) (rc 1)))
   (:delay 1)
-  (:dependencies (reads :fpscr) (writes frd))
+  (:dependencies (reads :fpscr) (writes frd) (writes :ccr))
   (:emitter (emit-x-form-inst segment 
                           63 
                           (fp-reg-tn-encoding frd)
@@ -2028,6 +2048,7 @@
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
 			  (- other-pointer-type
+			     #+PPC-FUN-HACK-MAYBE
 			     function-pointer-type
 			     (label-position label posn delta-if-after)
 			     (component-header-length))))))

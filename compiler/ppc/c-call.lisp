@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.3 2003/07/20 13:53:11 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.4 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,18 @@
 ;;;
 (in-package "PPC")
 
+;;; Return the number of bytes needed for the current non-descriptor
+;;; stack frame.  Non-descriptor stack frames must be multiples of 16
+;;; bytes under the PPC SVr4 ABI (though the EABI may be less
+;;; restrictive).  On linux, two words are reserved for the stack
+;;; backlink and saved LR (see SB!VM::NUMBER-STACK-DISPLACEMENT).
+
+(defconstant +stack-alignment-bytes+
+  ;; Duh.  PPC Linux (and VxWorks) adhere to the EABI.
+  #-darwin 7
+  ;; But Darwin doesn't
+  #+darwin 15)
+
 (defun my-make-wired-tn (prim-type-name sc-name offset)
   (make-wired-tn (primitive-type-or-lose prim-type-name *backend*)
 		 (sc-number-or-lose sc-name *backend*)
@@ -26,8 +38,13 @@
 (defstruct arg-state
   (gpr-args 0)
   (fpr-args 0)
-  ;SVR4 [a]abi wants two words on stack (callee saved lr, backpointer).
-  (stack-frame-size 2))
+  ;; SVR4 [a]abi wants two words on stack (callee saved lr, backpointer).
+  #-darwin
+  (stack-frame-size 2)
+  ;; PowerOpen ABI wants 8 words on the stack corresponding to GPR3-10
+  ;; in addition to the 6 words of link area (see number-stack-displacement)
+  #+darwin
+  (stack-frame-size (+ 8 6)))
 
 (defun int-arg (state prim-type reg-sc stack-sc)
   (let ((reg-args (arg-state-gpr-args state)))
@@ -48,10 +65,11 @@
   (declare (ignore type))
   (int-arg state 'system-area-pointer 'sap-reg 'sap-stack))
 
-; If a single-float arg has to go on the stack, it's promoted to
-; double.  That way, C programs can get subtle rounding errors
-; when unrelated arguments are introduced.
+;;; If a single-float arg has to go on the stack, it's promoted to
+;;; double.  That way, C programs can get subtle rounding errors
+;;; when unrelated arguments are introduced.
 
+#-darwin
 (def-alien-type-method (single-float :arg-tn) (type state)
   (declare (ignore type))
   (let* ((fprs (arg-state-fpr-args state)))
@@ -66,6 +84,36 @@
 	     (setf (arg-state-stack-frame-size state) (+ stack-offset 2))
 	     (my-make-wired-tn 'double-float 'double-stack stack-offset))))))
 
+#+darwin
+(def-alien-type-method (single-float :arg-tn) (type state)
+  (declare (ignore type))
+  (let* ((fprs (arg-state-fpr-args state))
+	 (gprs (arg-state-gpr-args state)))
+    (cond ((< gprs 8) ; and by implication also (< fprs 13)
+	   ;; Corresponding GPR is kept empty for functions with fixed args
+	   (incf (arg-state-gpr-args state))
+	   (incf (arg-state-fpr-args state))
+	   ;; Assign outgoing FPRs starting at FP1
+	   (my-make-wired-tn 'single-float 'single-reg (1+ fprs)))
+	  ((< fprs 13)
+	   ;; According to PowerOpen ABI, we need to pass those both in the
+	   ;; FPRs _and_ the stack.  However empiric testing on OS X/gcc
+	   ;; shows they are only passed in FPRs, AFAICT.
+	   ;;
+	   ;; "I" in "AFAICT" probably refers to PRM.  -- CSR, still
+	   ;; reverse-engineering comments in 2003 :-)
+	   ;;
+	   ;; Yes, it does -- me :)
+	   (incf (arg-state-fpr-args state))
+	   (incf (arg-state-stack-frame-size state))
+	   (my-make-wired-tn 'single-float 'single-reg (1+ fprs)))
+	  (t
+	   ;; Pass on stack only
+	   (let ((stack-offset (arg-state-stack-frame-size state)))
+	     (incf (arg-state-stack-frame-size state))
+	     (my-make-wired-tn 'single-float 'single-stack stack-offset))))))
+
+#-darwin
 (def-alien-type-method (double-float :arg-tn) (type state)
   (declare (ignore type))
   (let* ((fprs (arg-state-fpr-args state)))
@@ -80,27 +128,71 @@
 	     (setf (arg-state-stack-frame-size state) (+ stack-offset 2))
 	     (my-make-wired-tn 'double-float 'double-stack stack-offset))))))
 	   
-(def-alien-type-method (integer :result-tn) (type)
-  (if (alien-integer-type-signed type)
-      (my-make-wired-tn 'signed-byte-32 'signed-reg nl0-offset)
-      (my-make-wired-tn 'unsigned-byte-32 'unsigned-reg nl0-offset)))
-
-
-(def-alien-type-method (system-area-pointer :result-tn) (type)
+#+darwin
+(def-alien-type-method (double-float :arg-tn) (type state)
   (declare (ignore type))
-  (my-make-wired-tn 'system-area-pointer 'sap-reg nl0-offset))
+  (let ((fprs (arg-state-fpr-args state))
+	(gprs (arg-state-gpr-args state)))
+    (cond ((< gprs 8) ; and by implication also (< fprs 13)
+	   ;; Corresponding GPRs are also kept empty
+	   (incf (arg-state-gpr-args state) 2)
+	   (when (> (arg-state-gpr-args state) 8)
+	     ;; Spill one word to stack
+	     (decf (arg-state-gpr-args state))
+	     (incf (arg-state-stack-frame-size state)))
+	   (incf (arg-state-fpr-args state))
+	   ;; Assign outgoing FPRs starting at FP1
+	   (my-make-wired-tn 'double-float 'double-reg (1+ fprs)))
+	  ((< fprs 13)
+	   ;; According to PowerOpen ABI, we need to pass those both in the
+	   ;; FPRs _and_ the stack.  However empiric testing on OS X/gcc
+	   ;; shows they are only passed in FPRs, AFAICT.
+	   (incf (arg-state-stack-frame-size state) 2)
+	   (incf (arg-state-fpr-args state))
+	   (my-make-wired-tn 'double-float 'double-reg (1+ fprs)))
+	  (t
+	   ;; Pass on stack only
+	   (let ((stack-offset (arg-state-stack-frame-size state)))
+	     (incf (arg-state-stack-frame-size state) 2)
+	     (my-make-wired-tn 'double-float 'double-stack stack-offset))))))
 
-(def-alien-type-method (single-float :result-tn) (type)
+;;; Result state handling
+
+(defstruct result-state
+  (num-results 0))
+
+(defun generate-result-reg-offset (state)
+  (let ((slot (result-state-num-results state)))
+    (incf (result-state-num-results state))
+    (ecase slot
+      (0 nl0-offset)
+      (1 nl1-offset))))
+
+(def-alien-type-method (integer :result-tn) (type state)
+  (let ((offset (generate-result-reg-offset state)))
+    (if (alien-integer-type-signed type)
+        (my-make-wired-tn 'signed-byte-32 'signed-reg offset)
+        (my-make-wired-tn 'unsigned-byte-32 'unsigned-reg offset))))
+
+
+(def-alien-type-method (system-area-pointer :result-tn) (type state)
   (declare (ignore type))
+  (my-make-wired-tn 'system-area-pointer 'sap-reg
+                    (generate-result-reg-offset state)))
+
+(def-alien-type-method (single-float :result-tn) (type state)
+  (declare (ignore type state))
   (my-make-wired-tn 'single-float 'single-reg 1))
 
-(def-alien-type-method (double-float :result-tn) (type)
-  (declare (ignore type))
+(def-alien-type-method (double-float :result-tn) (type state)
+  (declare (ignore type state))
   (my-make-wired-tn 'double-float 'double-reg 1))
 
-(def-alien-type-method (values :result-tn) (type)
+(def-alien-type-method (values :result-tn) (type state)
+  (when (> (length (alien-values-type-values type)) 2)
+    (error "Too many result values from c-call."))
   (mapcar #'(lambda (type)
-	      (invoke-alien-type-method :result-tn type))
+	      (invoke-alien-type-method :result-tn type state))
 	  (alien-values-type-values type)))
 
 
@@ -115,7 +207,62 @@
 	      (arg-tns)
 	      (invoke-alien-type-method
 	       :result-tn
-	       (alien-function-type-result-type type))))))
+	       (alien-function-type-result-type type)
+	       (make-result-state))))))
+
+(deftransform %alien-funcall ((function type &rest args))
+  (assert (c::constant-continuation-p type))
+  (let* ((type (c::continuation-value type))
+	 (arg-types (alien-function-type-arg-types type))
+	 (result-type (alien-function-type-result-type type)))
+    (assert (= (length arg-types) (length args)))
+    (if (or (some #'(lambda (type)
+		      (and (alien-integer-type-p type)
+			   (> (alien::alien-integer-type-bits type) 32)))
+		  arg-types)
+	    (and (alien-integer-type-p result-type)
+		 (> (alien::alien-integer-type-bits result-type) 32)))
+	(collect ((new-args) (lambda-vars) (new-arg-types))
+	  (dolist (type arg-types)
+	    (let ((arg (gensym)))
+	      (lambda-vars arg)
+	      (cond ((and (alien-integer-type-p type)
+			  (> (alien::alien-integer-type-bits type) 32))
+		     (new-args `(ash ,arg -32))
+		     (new-args `(logand ,arg #xffffffff))
+		     (if (alien-integer-type-signed type)
+			 (new-arg-types (parse-alien-type '(signed 32)))
+			 (new-arg-types (parse-alien-type '(unsigned 32))))
+		     (new-arg-types (parse-alien-type '(unsigned 32))))
+		    (t
+		     (new-args arg)
+		     (new-arg-types type)))))
+	  (cond ((and (alien-integer-type-p result-type)
+		      (> (alien::alien-integer-type-bits result-type) 32))
+		 (let ((new-result-type
+			(let ((alien::*values-type-okay* t))
+			  (parse-alien-type
+			   (if (alien-integer-type-signed result-type)
+			       '(values (signed 32) (unsigned 32))
+			       '(values (unsigned 32) (unsigned 32)))))))
+		   `(lambda (function type ,@(lambda-vars))
+		      (declare (ignore type))
+		      (multiple-value-bind (high low)
+			  (%alien-funcall function
+					  ',(make-alien-function-type
+					     :arg-types (new-arg-types)
+					     :result-type new-result-type)
+					  ,@(new-args))
+			(logior low (ash high 32))))))
+		(t
+		 `(lambda (function type ,@(lambda-vars))
+		    (declare (ignore type))
+		    (%alien-funcall function
+				    ',(make-alien-function-type
+				       :arg-types (new-arg-types)
+				       :result-type result-type)
+				    ,@(new-args))))))
+	(c::give-up))))
 
 
 (define-vop (foreign-symbol-address)
@@ -127,7 +274,7 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 2
-    (inst lr res  (make-fixup foreign-symbol :foreign))))
+    (inst lr res  (make-fixup (extern-alien-name foreign-symbol) :foreign))))
 
 (define-vop (call-out)
   (:args (function :scs (sap-reg) :target cfunc)
@@ -144,7 +291,7 @@
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (inst lr temp (make-fixup "call_into_c" :foreign))
+      (inst lr temp (make-fixup (extern-alien-name "call_into_c") :foreign))
       (inst mtctr temp)
       (move cfunc function)
       (inst bctrl)
@@ -158,7 +305,9 @@
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
     (unless (zerop amount)
-      (let ((delta (- (logandc2 (+ amount 8 7) 7))))
+      (let ((delta (- (logandc2 (+ amount number-stack-displacement
+                                   +stack-alignment-bytes+)
+				+stack-alignment-bytes+))))
 	(cond ((>= delta (ash -1 16))
 	       (inst stwu nsp-tn nsp-tn delta))
 	      (t
@@ -175,7 +324,9 @@
   (:policy :fast-safe)
   (:generator 0
     (unless (zerop amount)
-      (let ((delta (logandc2 (+ amount 8 7) 7)))
+      (let ((delta (logandc2 (+ amount number-stack-displacement
+                                +stack-alignment-bytes+)
+			     +stack-alignment-bytes+)))
 	(cond ((< delta (ash 1 16))
 	       (inst addi nsp-tn nsp-tn delta))
 	      (t

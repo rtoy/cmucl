@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.2 2001/02/11 16:43:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,10 +52,16 @@
 (defreg nl4 7)
 (defreg nl5 8)
 (defreg nl6 9)
-(defreg nl7 10)
+(defreg fdefn 10)
 (defreg nargs 11)
-(defreg nfp 12)
-(defreg cfunc 13)
+;;; The following two registers were originally reversed in the PPC Linux
+;;; port.  Putting the address of the called function in GPR12 is however
+;;; mandated by the OS X Mach-O ABI, in order to facilitate indirect
+;;; addressing of dynamically linked code, as described in the OS X Mach O
+;;; Runtime documentation.  Since swapping those two registers shouldn't
+;;; matter to PPC Linux, we swap them unconditionally.  -- PRM, 2003-12-28
+(defreg cfunc 12)
+(defreg nfp 13)
 (defreg bsp 14)
 (defreg cfp 15)
 (defreg csp 16)
@@ -76,10 +82,10 @@
 (defreg lip 31)
 
 (defregset non-descriptor-regs
-  nl0 nl1 nl2 nl3 nl4 nl5 nl6 nl7 cfunc nargs nfp)
+  nl0 nl1 nl2 nl3 nl4 nl5 nl6 cfunc nargs nfp)
 
 (defregset descriptor-regs
-  a0 a1 a2 a3  ocfp lra cname lexenv l0 l1 l2 )
+  fdefn a0 a1 a2 a3  ocfp lra cname lexenv l0 l1 l2 )
 
 (defregset register-arg-offsets
   a0 a1 a2 a3)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/move.lisp,v 1.2 2003/08/03 11:27:47 gerd Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/move.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -222,7 +222,7 @@
   (:generator 20
     (move x arg)
     (let ((done (gen-label)))
-      (inst mcrxr :cr0)                 ; clear sticky overflow bits in XER, CR0
+      (inst mtxer zero-tn)              ; clear sticky overflow bit in XER, CR0
       (inst addo temp x x)              ; set XER OV if top two bits differ
       (inst addo. temp temp temp)       ; set CR0 SO if any top three bits differ
       (inst slwi y x 2)                 ; assume fixnum (tagged ok, maybe lost some high bits)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.3 2003/08/03 11:27:47 gerd Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.4 2004/07/25 18:15:52 pmai Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -91,7 +91,6 @@
   (:results (r :scs (signed-reg)))
   (:result-types signed-num)
   (:note "inline (signed-byte 32) arithmetic"))
-
 
 (define-vop (fast-fixnum-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (any-reg zero)))
@@ -235,7 +234,7 @@
   (:note "safe inline fixnum arithmetic")
   (:generator 4
     (let* ((no-overflow (gen-label)))
-      (inst mcrxr :cr0)
+      (inst mtxer zero-tn)
       (inst addo. r x y)
       (inst bns no-overflow)
       (inst unimp (logior (ash (reg-tn-encoding r) 5)
@@ -250,7 +249,7 @@
   (:note "safe inline fixnum arithmetic")
   (:generator 4
     (let* ((no-overflow (gen-label)))
-      (inst mcrxr :cr0)
+      (inst mtxer zero-tn)
       (inst subo. r x y)
       (inst bns no-overflow)
       (inst unimp (logior (ash (reg-tn-encoding r) 5)
@@ -281,7 +280,7 @@
 	 (inst cmpwi ndesc 31)
 	 (inst srw result number ndesc)
 	 (inst ble done)
-	 (inst srwi result number 31)
+	 (move result zero-tn)
 	 (inst b done)
 
 	 (emit-label positive)
@@ -289,14 +288,12 @@
 	 (inst slw result number amount)
 
 	 (emit-label done)))
-
       (immediate
        (let ((amount (tn-value amount)))
-	 (if (minusp amount)
-	     (let ((amount (min 31 (- amount))))
-	       (inst srwi result number amount))
-	     (inst slwi result number amount)))))))
-
+	 (cond
+	  ((and (minusp amount) (< amount -31)) (move result zero-tn))
+	  ((minusp amount) (inst srwi result number (- amount)))
+	  (t (inst slwi result number amount))))))))
 
 (define-vop (fast-ash/signed=>signed)
   (:note "inline ASH")
@@ -792,11 +789,11 @@
 (define-vop (bignum-mult)
   (:translate bignum::%multiply)
   (:policy :fast-safe)
-  (:args (x :scs (unsigned-reg) :to (:result 1))
-	 (y :scs (unsigned-reg) :to (:result 1)))
+  (:args (x :scs (unsigned-reg) :to (:eval 1))
+	 (y :scs (unsigned-reg) :to (:eval 1)))
   (:arg-types unsigned-num unsigned-num)
-  (:results (hi :scs (unsigned-reg))
-	    (lo :scs (unsigned-reg)))
+  (:results (hi :scs (unsigned-reg) :from (:eval 1))
+	    (lo :scs (unsigned-reg) :from (:eval 0)))
   (:result-types unsigned-num unsigned-num)
   (:generator 40
     (inst mullw lo x y)

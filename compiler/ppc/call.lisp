@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.4 2003/08/05 15:51:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.5 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,11 +141,11 @@
 ;;; are reserved for the stack backlink and saved LR (see PPC::NUMBER-STACK-
 ;;; DISPLACEMENT.)
 ;;;
-;;; Duh.  PPC Linux (and VxWorks) adhere to the EABI.
+;;; Duh.  PPC Linux (and VxWorks) adhere to the EABI, but Darwin doesn't.
 (defun bytes-needed-for-non-descriptor-stack-frame ()
-  (logandc2 (+ 7 number-stack-displacement
+  (logandc2 (+ +stack-alignment-bytes+ number-stack-displacement
 	       (* (sb-allocated-size 'non-descriptor-stack) vm:word-bytes))
-	    7))
+	    +stack-alignment-bytes+))
 
 
 ;;; Used for setting up the Old-FP in local call.
@@ -178,16 +178,26 @@
     (align vm:lowtag-bits)
     (trace-table-entry trace-table-function-prologue)
     (emit-label start-lab)
+    #+PPC-FUN-HACK
     (let* ((entry-label (gen-label)))
       ;; Allocate function header.
       (inst function-header-word)
       (inst b entry-label)
       (dotimes (i (1- (1- vm:function-code-offset)))
 	(inst word 0))
-      (emit-label entry-label))
-    ;; The start of the actual code.
-    ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn code-tn code-tn start-lab temp)
+      (emit-label entry-label)
+      ;; The start of the actual code.
+      ;; Fix CODE, cause the function object was passed in.
+      (inst compute-code-from-fn code-tn code-tn start-lab temp))
+    #-PPC-FUN-HACK
+    (let* ((entry-label (gen-label)))
+      ;; Allocate function header.
+      (inst function-header-word)
+      (dotimes (i (1- vm:function-code-offset))
+	(inst word 0))
+      (emit-label entry-label)
+      ;; The start of the actual code.
+      (inst compute-code-from-fn code-tn lip-tn entry-label temp))
     ;; Build our stack frames.
     (inst addi csp-tn cfp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
@@ -358,9 +368,8 @@ default-value-8
 		      ((null remaining))
 		    (let ((def (car remaining)))
 		      (emit-label (car def))
-		      (when (null (cdr remaining))
-			(inst b defaulting-done))
 		      (store-stack-tn (cdr def) null-tn)))
+		  (inst b defaulting-done)
 		  (trace-table-entry trace-table-normal))))))
 
 	(inst compute-code-from-lra code-tn code-tn lra-label temp)))
@@ -697,7 +706,8 @@ default-value-8
 		 return-pc-pass)
 
      ,(if named
-	  `(:temporary (:sc descriptor-reg :offset cname-offset
+	  `(:temporary (:sc descriptor-reg :offset #+PPC-FUN-HACK cname-offset
+	                                           #-PPC-FUN-HACK fdefn-offset
 			    :from (:argument ,(if (eq return :tail) 0 1))
 			    :to :eval)
 		       name-pass)
@@ -724,6 +734,8 @@ default-value-8
      ,@(unless (eq return :tail)
 	 '((:temporary (:scs (non-descriptor-reg)) temp)
 	   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
+
+     (:temporary (:sc interior-reg :offset lip-offset) entry-point)
 
      (:generator ,(+ (if named 5 0)
 		     (if variable 19 1)
@@ -807,7 +819,11 @@ default-value-8
 		      (loadw name-pass code-tn (tn-offset name)
 			     vm:other-pointer-type)
 		      (do-next-filler)))
+		   #+PPC-FUN-HACK
 		   (loadw function name-pass fdefn-raw-addr-slot
+			  other-pointer-type)
+		   #-PPC-FUN-HACK
+		   (loadw entry-point name-pass fdefn-raw-addr-slot
 			  other-pointer-type)
 		   (do-next-filler))
 		 `((sc-case arg-fun
@@ -821,15 +837,19 @@ default-value-8
 		      (do-next-filler)))
 		   (loadw function lexenv vm:closure-function-slot
 			  vm:function-pointer-type)
-		   (do-next-filler)))
+		   (do-next-filler)
+		   #-PPC-FUN-HACK
+		   (inst addi entry-point function
+			      (- (ash vm:function-code-offset vm:word-shift)
+			         vm:function-pointer-type))))
 	   (loop
 	     (if filler
 		 (do-next-filler)
 		 (return)))
 	   
 	   (note-this-location vop :call-site)
-	   (inst mtctr function)
-	   (inst mr code-tn function)
+	   (inst mtctr #+PPC-FUN-HACK function #-PPC-FUN-HACK entry-point)
+	   #+PPC-FUN-HACK-MAYBE (inst mr code-tn function)
 	   (inst bctr)
 	   #|
 	   (inst j function
@@ -914,6 +934,8 @@ default-value-8
 	 (return-pc :scs (descriptor-reg))
 	 (value))
   (:ignore value)
+  #-PPC-FUN-HACK
+  (:temporary (:scs (interior-reg)) lip)
   (:vop-var vop)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
@@ -927,7 +949,10 @@ default-value-8
     (move csp-tn cfp-tn)
     (move cfp-tn old-fp)
     ;; Out of here.
+    #+PPC-FUN-HACK
     (lisp-return return-pc :offset 2)
+    #-PPC-FUN-HACK
+    (lisp-return return-pc lip :offset 2)
     (trace-table-entry trace-table-normal)))
 
 ;;; Do unknown-values return of a fixed number of values.  The Values are
@@ -956,6 +981,8 @@ default-value-8
   (:temporary (:sc descriptor-reg :offset a3-offset :from (:eval 0)) a3)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
   (:temporary (:sc any-reg :offset ocfp-offset) val-ptr)
+  #-PPC-FUN-HACK
+  (:temporary (:scs (interior-reg)) lip)
   (:vop-var vop)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
@@ -970,7 +997,10 @@ default-value-8
 	   (move csp-tn cfp-tn)
 	   (move cfp-tn old-fp)
 	   ;; Out of here.
-	   (lisp-return return-pc :offset 2))
+	   #+PPC-FUN-HACK
+	   (lisp-return return-pc :offset 2)
+	   #-PPC-FUN-HACK
+	   (lisp-return return-pc lip :offset 2))
 	  (t
 	   ;; Establish the values pointer and values count.
 	   (move val-ptr cfp-tn)
@@ -984,7 +1014,10 @@ default-value-8
 	     (dolist (reg (subseq (list a0 a1 a2 a3) nvals))
 	       (move reg null-tn)))
 	   ;; And away we go.
-	   (lisp-return return-pc)))
+	   #+PPC-FUN-HACK
+	   (lisp-return return-pc)
+	   #-PPC-FUN-HACK
+	   (lisp-return return-pc lip)))
     (trace-table-entry trace-table-normal)))
 
 ;;; Do unknown-values return of an arbitrary number of values (passed on the
@@ -1004,6 +1037,8 @@ default-value-8
   (:temporary (:sc any-reg :offset nl0-offset :from (:argument 2)) vals)
   (:temporary (:sc any-reg :offset nargs-offset :from (:argument 3)) nvals)
   (:temporary (:sc descriptor-reg :offset a0-offset) a0)
+  #-PPC-FUN-HACK
+  (:temporary (:scs (interior-reg)) lip)
 
 
   (:vop-var vop)
@@ -1026,7 +1061,10 @@ default-value-8
       ;; Return with one value.
       (move csp-tn cfp-tn)
       (move cfp-tn old-fp-arg)
+      #+PPC-FUN-HACK
       (lisp-return lra-arg :offset 2)
+      #-PPC-FUN-HACK
+      (lisp-return lra-arg lip :offset 2)
 		
       ;; Nope, not the single case.
       (emit-label not-single)

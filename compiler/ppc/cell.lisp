@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.1 2001/02/11 14:22:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.2 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,10 +123,16 @@
     (let ((normal-fn (gen-label)))
       (load-type type function (- function-pointer-type))
       (inst cmpwi type function-header-type)
+      #+PPC-FUN-HACK
       (inst mr lip function)
+      #-PPC-FUN-HACK
+      (inst addi lip function
+                 (- (ash vm:function-code-offset vm:word-shift)
+		    function-pointer-type))
       (inst beq normal-fn)
-      (inst lr lip  (make-fixup "closure_tramp" :foreign))
+      (inst lr lip  (make-fixup (extern-alien-name "closure_tramp") :foreign))
       (emit-label normal-fn)
+      ;;PRM:FIXME? Order of following stores is reversed in SBCL
       (storew function fdefn fdefn-function-slot other-pointer-type)
       (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
       (move result function))))
@@ -139,7 +145,7 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (storew null-tn fdefn fdefn-function-slot other-pointer-type)
-    (inst lr temp  (make-fixup "undefined_tramp" :foreign))
+    (inst lr temp  (make-fixup (extern-alien-name "undefined_tramp") :foreign))
     (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result fdefn)))
 
@@ -256,6 +262,7 @@
   (:translate %instance-ref)
   (:arg-types instance (:constant index)))
 
+;;PRM:FIXME? Commented out in SBCL
 (define-vop (instance-set slot-set)
   (:policy :fast-safe)
   (:translate %instance-set)

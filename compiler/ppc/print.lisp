@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/print.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/print.lisp,v 1.2 2004/07/25 18:15:52 pmai Rel $
 ;;;
 ;;; This file contains VOPs for things like printing during %initial-function
 ;;; before the world is initialized.
@@ -32,10 +32,10 @@
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
       (move nl0 object)
-      (inst lr temp  (make-fixup "call_into_c" :foreign))
+      (inst lr temp  (make-fixup (extern-alien-name "call_into_c") :foreign))
       (inst mr lip temp)
       (inst mtctr lip)
-      (inst lr cfunc (make-fixup "debug_print" :foreign))
+      (inst lr cfunc (make-fixup (extern-alien-name "debug_print") :foreign))
       (inst bctrl)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save))

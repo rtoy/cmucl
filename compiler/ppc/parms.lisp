@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.6 2003/09/26 15:37:11 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.7 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,9 +116,9 @@
 (defconstant float-round-to-negative 3)
 
 (defconstant float-rounding-mode (byte 2 0))	  ; RD 
-(defconstant float-sticky-bits (byte 10 19))
-(defconstant float-traps-byte (byte 6 3))	  ; 
-(defconstant float-exceptions-byte (byte 5 0))	  ; cexc
+(defconstant float-sticky-bits (byte 5 25))
+(defconstant float-traps-byte (byte 5 3))	  ; 
+(defconstant float-exceptions-byte (byte 5 25))	  ; cexc
 
 (defconstant float-fast-bit 2)		; Non-IEEE mode
 
@@ -131,7 +131,8 @@
 ;;; work.
 ;;; 
 (defconstant number-stack-displacement
-  (* 2 vm:word-bytes))
+  (* #-darwin 2
+     #+darwin 8 vm:word-bytes))
 
 
 ;;;; Description of the target address space.
@@ -145,8 +146,8 @@
 ;;; Where to put the different spaces.
 ;;; 
 (defparameter target-read-only-space-start #x01000000)
-(defparameter target-static-space-start    #x05000000)
-(defparameter target-dynamic-space-start   #x07000000)
+(defparameter target-static-space-start    #x08000000)
+(defparameter target-dynamic-space-start   #x40000000)
 (defparameter target-foreign-linkage-space-start #x0fc00000)
 (defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
@@ -225,6 +226,25 @@
     lisp::*free-interrupt-context-index*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
+
+    ;; Make the ..slot-unbound.. symbol static to optimise the
+    ;; common slot unbound check.
+    pcl::..slot-unbound..
+
+    ;; These are filled in the C run-time.
+    lisp::*cmucl-lib*
+    lisp::*cmucl-core-path*
+      
+    ;; Spare symbols.  Rename these when you need to add some static
+    ;; symbols and don't want to do a cross-compile.
+    spare-8
+    spare-7
+    spare-6
+    spare-5
+    spare-4
+    spare-3
+    spare-2
+    spare-1
 
     #|kernel::*current-thread*|#
     ))

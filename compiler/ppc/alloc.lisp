@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.4 2003/08/25 20:50:58 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.5 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,7 +130,7 @@
   (:translate make-fdefn)
   (:generator 37
     (with-fixed-allocation (result pa-flag temp fdefn-type fdefn-size)
-      (inst lr temp  (make-fixup "undefined_tramp" :foreign))
+      (inst lr temp  (make-fixup (extern-alien-name "undefined_tramp") :foreign))
       (storew name result fdefn-name-slot other-pointer-type)
       (storew null-tn result fdefn-function-slot other-pointer-type)
       (storew temp result fdefn-raw-addr-slot other-pointer-type))))
@@ -150,7 +150,9 @@
 	(inst ori result result function-pointer-type)
 	(inst lr temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
+    #+PPC-FUN-HACK
     (inst lis temp (ash 18 10))
+    #+PPC-FUN-HACK
     (storew temp result closure-jump-insn-slot function-pointer-type)
     (storew function result closure-function-slot function-pointer-type)))
 

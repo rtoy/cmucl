@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.2 2003/08/03 11:27:51 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,6 +39,8 @@
    (:temp flag non-descriptor-reg nl3-offset)
    (:temp lra descriptor-reg lra-offset)
    (:temp nargs any-reg nargs-offset)
+   #-PPC-FUN-HACK
+   (:temp lip interior-reg lip-offset)
    (:temp ocfp any-reg ocfp-offset))
   
   ; Clear the damned "sticky overflow" bit in :cr0 and :xer
@@ -54,15 +56,24 @@
   (inst add temp2 temp2 temp)
   (with-fixed-allocation (res flag temp bignum-type (1+ bignum-digits-offset))
     (storew temp2 res bignum-digits-offset other-pointer-type))
+  #+PPC-FUN-HACK
   (lisp-return lra :offset 2)
+  #-PPC-FUN-HACK
+  (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
+  #+PPC-FUN-HACK
   (inst lwz code-tn null-tn (static-function-offset 'two-arg-+))
+  #-PPC-FUN-HACK
+  (inst lwz lip null-tn (static-function-offset 'two-arg-+))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
+  #+PPC-FUN-HACK
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
+  #-PPC-FUN-HACK
+  (inst j lip 0)
 
   DONE
   (move res temp))
@@ -85,6 +96,8 @@
    (:temp flag non-descriptor-reg nl3-offset)
    (:temp lra descriptor-reg lra-offset)
    (:temp nargs any-reg nargs-offset)
+   #-PPC-FUN-HACK
+   (:temp lip interior-reg lip-offset)
    (:temp ocfp any-reg ocfp-offset))
 
   ; Clear the damned "sticky overflow" bit in :cr0
@@ -102,15 +115,24 @@
   (inst sub temp2 temp temp2)
   (with-fixed-allocation (res flag temp bignum-type (1+ bignum-digits-offset))
     (storew temp2 res bignum-digits-offset other-pointer-type))
+  #+PPC-FUN-HACK
   (lisp-return lra :offset 2)
+  #-PPC-FUN-HACK
+  (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
+  #+PPC-FUN-HACK
   (inst lwz code-tn null-tn (static-function-offset 'two-arg--))
+  #-PPC-FUN-HACK
+  (inst lwz lip null-tn (static-function-offset 'two-arg--))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
+  #+PPC-FUN-HACK
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
+  #-PPC-FUN-HACK
+  (inst j lip 0)
 
   DONE
   (move res temp))
@@ -136,6 +158,8 @@
    (:temp lo non-descriptor-reg nl1-offset)
    (:temp hi non-descriptor-reg nl2-offset)
    (:temp pa-flag non-descriptor-reg nl3-offset)
+   #-PPC-FUN-HACK
+   (:temp lip interior-reg lip-offset)
    (:temp lra descriptor-reg lra-offset)
    (:temp nargs any-reg nargs-offset)
    (:temp ocfp any-reg ocfp-offset))
@@ -182,15 +206,24 @@
       (storew lo res bignum-digits-offset other-pointer-type)))
   ;; Out of here
   GO-HOME
+  #+PPC-FUN-HACK
   (lisp-return lra :offset 2)
+  #-PPC-FUN-HACK
+  (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
+  #+PPC-FUN-HACK
   (inst lwz code-tn null-tn (static-function-offset 'two-arg-*))
+  #-PPC-FUN-HACK
+  (inst lwz lip null-tn (static-function-offset 'two-arg-*))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
+  #+PPC-FUN-HACK
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
+  #-PPC-FUN-HACK
+  (inst j lip 0)
 
   LOW-FITS-IN-FIXNUM
   (move res lo))
@@ -308,6 +341,8 @@
            
            (:res res descriptor-reg a0-offset)
            
+	   #-PPC-FUN-HACK
+	   (:temp lip interior-reg lip-offset)
            (:temp nargs any-reg nargs-offset)
            (:temp ocfp any-reg ocfp-offset))
                           
@@ -317,12 +352,18 @@
           (inst beq DO-COMPARE)
 	  
 	  DO-STATIC-FN
+	  #+PPC-FUN-HACK
 	  (inst lwz code-tn null-tn (static-function-offset ',static-fn))
+	  #-PPC-FUN-HACK
+	  (inst lwz lip null-tn (static-function-offset ',static-fn))
 	  (inst li nargs (fixnumize 2))
 	  (inst mr ocfp cfp-tn)
 	  (inst mr cfp-tn csp-tn)
+	  #+PPC-FUN-HACK
 	  (inst j code-tn
 		(- (* function-code-offset word-bytes) function-pointer-type))
+	  #-PPC-FUN-HACK
+	  (inst j lip 0)
 	  
 	  DO-COMPARE
 	  (load-symbol res t)
@@ -348,6 +389,8 @@
 			  (:res res descriptor-reg a0-offset)
 
 			  (:temp lra descriptor-reg lra-offset)
+			  #-PPC-FUN-HACK
+			  (:temp lip interior-reg lip-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst cmpw :cr1 x y)
@@ -359,15 +402,24 @@
 
   RETURN-NIL
   (inst mr res null-tn)
+  #+PPC-FUN-HACK
   (lisp-return lra :offset 2)
+  #-PPC-FUN-HACK
+  (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
+  #+PPC-FUN-HACK
   (inst lwz code-tn null-tn (static-function-offset 'eql))
+  #-PPC-FUN-HACK
+  (inst lwz lip null-tn (static-function-offset 'eql))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
+  #+PPC-FUN-HACK
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
+  #-PPC-FUN-HACK
+  (inst j lip 0)
 
   RETURN-T
   (load-symbol res t))
@@ -385,6 +437,8 @@
    (:res res descriptor-reg a0-offset)
    
    (:temp lra descriptor-reg lra-offset)
+   #-PPC-FUN-HACK
+   (:temp lip interior-reg lip-offset)
    (:temp nargs any-reg nargs-offset)
    (:temp ocfp any-reg ocfp-offset))
 
@@ -395,15 +449,24 @@
   (inst beq :cr1 RETURN-T)
 
   (inst mr res null-tn)
+  #+PPC-FUN-HACK
   (lisp-return lra :offset 2)
+  #-PPC-FUN-HACK
+  (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
+  #+PPC-FUN-HACK
   (inst lwz code-tn null-tn (static-function-offset 'two-arg-=))
+  #-PPC-FUN-HACK
+  (inst lwz lip null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
+  #+PPC-FUN-HACK
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
+  #-PPC-FUN-HACK
+  (inst j lip 0)
 
   RETURN-T
   (load-symbol res t))
@@ -420,6 +483,8 @@
 			  (:res res descriptor-reg a0-offset)
 
 			  (:temp lra descriptor-reg lra-offset)
+			  #-PPC-FUN-HACK
+			  (:temp lip interior-reg lip-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst or nargs x y)
@@ -429,14 +494,23 @@
   (inst beq :cr1 RETURN-NIL)
 
   (load-symbol res t)
+  #+PPC-FUN-HACK
   (lisp-return lra :offset 2)
+  #-PPC-FUN-HACK
+  (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
+  #+PPC-FUN-HACK
   (inst lwz code-tn null-tn (static-function-offset 'two-arg-=))
+  #-PPC-FUN-HACK
+  (inst lwz lip null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
+  #+PPC-FUN-HACK
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
+  #-PPC-FUN-HACK
+  (inst j lip 0)
   (inst mr cfp-tn csp-tn)
 
   RETURN-NIL
