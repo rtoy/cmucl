@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-corr.lisp,v 1.1.1.5 1991/02/08 16:37:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-corr.lisp,v 1.1.1.6 1991/09/04 14:08:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -751,7 +751,7 @@
 ;;;; Binary File Reading
 
 (defparameter default-binary-dictionary
-  "/usr/misc/.cmucl/lib/spell-dictionary.bin")
+  "library:spell-dictionary.bin")
 
 ;;; This is the first thing in a spell binary dictionary file to serve as a
 ;;; quick check of its proposed contents.  This particular number is
