@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.106 2003/11/21 04:33:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.107 2003/11/25 04:40:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1176,6 +1176,34 @@
 	      frame)))))
 
 
+#+(or sparc (and x86 linux))
+(defun find-foreign-function-name (address)
+  "Return a string describing the foreign function near ADDRESS"
+  (let ((addr (sys:sap-int address)))
+    (alien:with-alien ((info (alien:struct dl-info
+					   (filename c-call:c-string)
+					   (base alien:unsigned)
+					   (symbol c-call:c-string)
+					   (symbol-address alien:unsigned)))
+		       (dladdr (function alien:unsigned alien:unsigned
+					 (* (alien:struct dl-info)))
+			       :extern "dladdr"))
+      (let ((err (alien:alien-funcall dladdr addr (alien:addr info))))
+	(cond ((zerop err)
+	       "Foreign function call land")
+	      (t
+	       (format nil "~A+#x~x [#x~X] ~A"
+		       (alien:slot info 'symbol)
+		       (- addr (alien:slot info 'symbol-address))
+		       addr
+		       (alien:slot info 'filename)
+		       )))))))
+
+#-(or sparc (and x86 linux))
+(defun find-foreign-function-name (ra)
+  (declare (ignore ra))
+  "Foreign function call land")
+
 ;;; COMPUTE-CALLING-FRAME -- Internal.
 ;;;
 ;;; This returns a frame for the one existing in time immediately prior to the
@@ -1226,7 +1254,7 @@
 			   "The Undefined Function"))
 			 (:foreign-function
 			  (make-bogus-debug-function
-			   "Foreign function call land"))
+			   (find-foreign-function-name (sys:int-sap (kernel:get-lisp-obj-address lra)))))
 			 ((nil)
 			  (make-bogus-debug-function
 			   "Bogus stack frame"))
@@ -1237,34 +1265,6 @@
 							escaped)
 				 (if up-frame (1+ (frame-number up-frame)) 0)
 				 escaped))))))
-
-#+(and x86 linux)
-(defun find-foreign-function-name (address)
-  "Return a string describing the foreign function near ADDRESS"
-  (let ((addr (sys:sap-int address)))
-    (alien:with-alien ((info (alien:struct dl-info
-					   (filename c-call:c-string)
-					   (base alien:unsigned)
-					   (symbol c-call:c-string)
-					   (symbol-address alien:unsigned)))
-		       (dladdr (function alien:unsigned alien:unsigned
-					 (* (alien:struct dl-info)))
-			       :extern "dladdr"))
-      (let ((err (alien:alien-funcall dladdr addr (alien:addr info))))
-	(cond ((zerop err)
-	       "Foreign function call land")
-	      (t
-	       (format nil "~A+#x~x [#x~X] ~A"
-		       (alien:slot info 'symbol)
-		       (- addr (alien:slot info 'symbol-address))
-		       addr
-		       (alien:slot info 'filename)
-		       )))))))
-
-#+(and x86 (not linux))
-(defun find-foreign-function-name (ra)
-  (declare (ignore ra))
-  "Foreign function call land")
 
 #+x86
 (defun compute-calling-frame (caller ra up-frame)
