@@ -562,30 +562,177 @@
 		  name)))))))
 
 
-;;;; Redefinition checking:
+;;;; ASSERT-DEFINITION-TYPE
+
+
+;;; TRY-TYPE-INTERSECTIONS  --  Internal
 ;;;
-;;;    When we encounter a 
-
-#|
-
-
-;;; Valid-Redefinition  --  Interface
+;;;    Intersect Lambda's var types with Types, giving a warning if there is a
+;;; mismatch.  If all intersections are non-null, we return lists of the
+;;; variables, intersections and T.
 ;;;
-;;;    Check for reasonablness of redefining a function of type Old as type
-;;; New.
+(defun try-type-intersections (vars types)
+  (declare (list vars types))
+  (collect ((res))
+    (mapc #'(lambda (var type)
+	      (let* ((vtype (leaf-type var))
+		     (int (type-intersection vtype type)))
+		(cond
+		 ((eq int *empty-type*)
+		  (compiler-warning
+		   "Declared type for variable ~A:~%  ~S~@
+		   conflicts with this type from previous FTYPE ~
+		   declaration:~%  ~S"
+		   (leaf-name var) (type-specifier vtype)
+		   (type-specifier type))
+		  (return-from try-type-intersections (values nil nil nil)))
+		 (t
+		  (res int)))))
+	  vars types)
+    (values vars (res) t)))
+
+
+;;; FIND-OPTIONAL-DISPATCH-TYPES  --  Internal
 ;;;
-(proclaim '(function valid-redefinition (function-type function-type) ???))
-(defun valid-redefinition (old new)
-  ...)
+;;;    Check that the optional-dispatch OD conforms to Type.  We return two
+;;; values: the first is a list of types extracted from the function type that
+;;; should be applied to the variables of the main entry.  The second is a
+;;; boolean flag true when no syntax problems were detected.
+;;;
+(defun find-optional-dispatch-types (od type)
+  (declare (type optional-dispatch od) (type function-type type))
+  (let* ((min (optional-dispatch-min-args od))
+	 (req (function-type-required type))
+	 (opt (function-type-optional type))
+	 (win t))
+    (flet ((frob (x y what)
+	     (unless (= x y)
+	       (compiler-warning
+		"Definition has ~R ~A args, but previous declaration had ~R."
+		x what y)
+	       (setq win nil))))
+      (frob min (length req) "fixed")
+      (frob (- (optional-dispatch-max-args od) min) (length opt) "optional"))
+    (flet ((frob (x y what)
+	     (unless (eq x y)
+	       (compiler-warning
+		"Definition ~:[doesn't have~;has~] ~A, but previous ~
+		declaration ~:[doesn't~;does~]."
+		x what y)
+	       (setq win nil))))
+      (frob (optional-dispatch-keyp od) (function-type-keyp type)
+	    "keyword args")
+      (frob (and (not (null (optional-dispatch-more-entry od)))
+		 (not (optional-dispatch-keyp od)))
+	    (not (null (function-type-rest type)))
+	    "rest args")
+      (frob (optional-dispatch-allowp od) (function-type-allowp type)
+	    "&allow-other-keys"))
+
+    (unless win (return-from find-optional-dispatch-types (values nil nil)))
+    (collect ((res)
+	      (vars))
+      (let ((keys (function-type-keywords type))
+	    (arglist (optional-dispatch-arglist od)))
+	(dolist (arg arglist)
+	  (let ((info (lambda-var-arg-info arg)))
+	    (cond
+	     (info
+	      (ecase (arg-info-kind info)
+		(:keyword
+		 (let* ((key (arg-info-keyword info))
+			(kinfo (find key keys :key #'key-info-name)))
+		   (cond (kinfo (res (key-info-type kinfo)))
+			 (t
+			  (compiler-warning
+			   "Defining a ~S keyword not present in ~
+			   previous declaration."
+			   key)
+			  (res *universal-type*)
+			  (setq win nil)))))
+		(:required (res (pop req)))
+		(:optional (res (pop opt)))
+		(:rest (res (function-type-rest type))))
+	      (vars arg)
+	      (when (arg-info-supplied-p info)
+		(res *universal-type*)
+		(vars (arg-info-supplied-p info))))
+	     (t
+	      (res (pop req))
+	      (vars arg)))))
+
+	(dolist (key keys)
+	  (unless (find (key-info-name key) arglist
+			:key #'(lambda (x)
+				 (let ((info (lambda-var-arg-info x)))
+				   (when info
+				     (arg-info-keyword info)))))
+	    (compiler-warning
+	     "Definition lacks the ~S keyword present in previous ~
+	     declaration."
+	     (key-info-name key)))))
+
+      (if win
+	  (try-type-intersections (vars) (res))
+	  (values nil nil nil)))))
 
 
-;;; Assert-Definition-Type  --  Interface
+;;; FIND-LAMBDA-TYPES  --  Internal
+;;;
+;;;    Check that Type doesn't specify any funny args, and do the intersection.
+;;; 
+(defun find-lambda-types (lambda type)
+  (declare (type clambda lambda) (type function-type type))
+  (let ((win t))
+    (flet ((frob (x what)
+	     (when x
+	       (compiler-warning
+		"Definition has no ~A, but the prior FTYPE declaration did."
+		what)
+	       (setq win nil))))
+      (frob (function-type-optional type) "optional args")
+      (frob (function-type-keyp type) "keyword args")
+      (frob (function-type-rest type) "rest arg")
+      (if win
+	  (try-type-intersections (lambda-vars lambda)
+				  (function-type-required type))
+	  (values nil nil nil)))))
+
+
+;;; ASSERT-DEFINITION-TYPE  --  Interface
 ;;;
 ;;;    Propagate type constraints from Type to the variables and result of
 ;;; Functional.
 ;;;
-(proclaim '(function assert-definition-type (functional type) void))
+(proclaim '(function assert-definition-type (functional function-type) void))
 (defun assert-definition-type (functional type)
-  ...)
-|#
-
+  (multiple-value-bind
+      (vars types winp)
+      (if (function-type-wild-args type)
+	  (values nil nil t)
+	  (etypecase functional
+	    (optional-dispatch
+	     (find-optional-dispatch-types functional type))
+	    (clambda
+	     (find-lambda-types functional type))))
+    (let* ((return (lambda-return (main-entry functional)))
+	   (type-returns (function-type-returns type))
+	   (atype (when return
+		    (continuation-asserted-type (return-result return))))
+	   (result (if return
+		       (values-type-intersection type-returns atype)
+		       type-returns)))
+      (cond
+       ((eq result *empty-type*)
+	(compiler-warning
+	 "The result type from FTYPE declaration:~%  ~S~@
+	  conflicts with the definition's result type assertion:~%  ~S"
+	 (type-specifier type-returns) (type-specifier atype)))
+       ((not winp) nil)
+       (t
+	(when return
+	  (assert-continuation-type (return-result return) result))
+	(mapc #'(lambda (var type)
+		  (setf (leaf-type var) type))
+	      vars types)
+	t)))))
