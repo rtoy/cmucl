@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.68 2003/04/13 13:44:54 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.69 2003/04/16 19:41:05 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1139,7 +1139,9 @@
 (defmacro define-nil-returning-restart (name args doc)
   `(defun ,name (,@args &optional condition)
      ,doc
-     (if (find-restart ',name condition) (invoke-restart ',name ,@args))))
+     (let ((restart (find-restart ',name condition)))
+       (when restart
+	 (invoke-restart restart ,@args)))))
 
 (define-nil-returning-restart continue ()
   "Transfer control to a restart named continue, returning nil if none exists.")
