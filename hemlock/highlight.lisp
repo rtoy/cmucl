@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/highlight.lisp,v 1.3 1991/09/23 09:27:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/highlight.lisp,v 1.4 1991/10/27 08:28:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,6 +26,12 @@
   "When non-nil, causes open parens to be displayed in a different font when
    the cursor is directly to the right of the corresponding close paren."
   :value nil)
+
+(defhvar "Open Paren Finder Function"
+  "Should be a function that takes a mark for input and returns either NIL
+   if the mark is not after a close paren, or two (temporary) marks
+   surrounding the corresponding open paren."
+  :value 'lisp-open-paren-finder-function)
 
 (defhvar "Open Paren Highlighting Font"
   "The string name of the font to be used for highlighting open parens.
@@ -48,39 +54,39 @@
 (defun maybe-highlight-open-parens (window)
   (declare (ignore window))
   (when (value highlight-open-parens)
-    (with-mark ((mark (current-point)))
-      (cond ((and (value highlight-active-region) (region-active-p))
-	     (kill-open-paren-font-marks))
-	    ((eq (character-attribute :lisp-syntax (previous-character mark))
-		 :close-paren)
-	     (pre-command-parse-check mark)
-	     (cond ((not (and (valid-spot mark nil) (list-offset mark -1)))
-		    (kill-open-paren-font-marks))
-		   ((not *open-paren-font-marks*)
-		    (set-open-paren-font-marks mark))
-		   ((mark= (region-start *open-paren-font-marks*) mark))
-		   (t (reset-open-paren-font-marks mark))))
-	    (t (kill-open-paren-font-marks))))))
+    (if (and (value highlight-active-region) (region-active-p))
+	(kill-open-paren-font-marks)
+	(multiple-value-bind
+	    (start end)
+	    (funcall (value open-paren-finder-function)
+		     (current-point))
+	  (if (and start end)
+	      (set-open-paren-font-marks start end)
+	      (kill-open-paren-font-marks))))))
 ;;;
 (add-hook redisplay-hook 'maybe-highlight-open-parens)
 
-(defun set-open-paren-font-marks (mark)
-  (let ((line (mark-line mark)))
-    (setf *open-paren-font-marks*
-	  (region
-	   (font-mark line (mark-charpos mark) *open-paren-highlight-font*)
-	   (font-mark line (mark-charpos (mark-after mark)) 0)))))
-
-(defun reset-open-paren-font-marks (mark)
-  (move-font-mark (region-start *open-paren-font-marks*) mark)
-  (move-font-mark (region-end *open-paren-font-marks*)
-		  (mark-after mark)))
+(defun set-open-paren-font-marks (start end)
+  (if *open-paren-font-marks*
+      (flet ((maybe-move (dst src)
+	       (unless (mark= dst src)
+		 (move-font-mark dst src))))
+	(declare (inline maybe-move))
+	(maybe-move (region-start *open-paren-font-marks*) start)
+	(maybe-move (region-end *open-paren-font-marks*) end))
+      (let ((line (mark-line start)))
+	(setf *open-paren-font-marks*
+	      (region
+	       (font-mark line (mark-charpos start)
+			  *open-paren-highlight-font*)
+	       (font-mark line (mark-charpos end) 0))))))
 
 (defun kill-open-paren-font-marks ()
   (when *open-paren-font-marks*
     (delete-font-mark (region-start *open-paren-font-marks*))
     (delete-font-mark (region-end *open-paren-font-marks*))
     (setf *open-paren-font-marks* nil)))
+
 
 
 
