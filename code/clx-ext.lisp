@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.8 1991/09/04 14:02:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.9 1991/12/17 08:21:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -108,28 +108,18 @@
   path."
   (let ((font-path (xlib:font-path display))
 	(result ()))
-    (flet ((add (font-dir)
-	     (unless (member font-dir font-path :test #'string=)
-	       (push font-dir result))))
-      (dolist (elt font-pathnames)
-	(let* ((pn (pathname elt))
-	       (dev (pathname-device pn)))
-	  (cond ((stringp dev)
-		 (dolist (dir (lisp::resolve-search-list dev nil))
-		   (add (concatenate 'string dir
-				     (namestring
-				      (make-pathname :device nil
-						     :defaults pn))))))
-		(t
-		 (add (namestring pn)))))))
-
+    (dolist (elt font-pathnames)
+      (enumerate-search-list (pathname elt)
+	(lisp::enumerate-matches (name pathname)
+	  (unless (member name font-path :test #'string=)
+	    (push name result)))))
     (when result
       (ecase operation
 	(:prepend
 	 (setf (xlib:font-path display) (revappend result font-path)))
 	(:append
-	 (setf (xlib:font-path display) (append font-path (nreverse result))))))))
-
+	 (setf (xlib:font-path display)
+	       (append font-path (nreverse result))))))))
 
 
 ;;;; Enabling and disabling event handling through SYSTEM:SERVE-EVENT.
