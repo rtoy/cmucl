@@ -617,6 +617,10 @@
 ;;; for the actual continuation; in all other cases assertions on the dummy
 ;;; continuation are lost.
 ;;;
+;;;    We also intersect the derived type of the call with the derived type of
+;;; all the dummy continuation's uses.  This serves mainly to propagate
+;;; TRULY-THE through lets.
+;;;
 (defun move-return-uses (fun call)
   (declare (type clambda fun) (type basic-combination call))
   (let ((return (lambda-return fun)))
@@ -625,9 +629,14 @@
       (delete-return return)
 
       (let ((result (return-result return))
-	    (cont (node-cont call)))
+	    (cont (node-cont call))
+	    (call-type (node-derived-type call)))
 	(when (eq (continuation-use cont) call)
 	  (assert-continuation-type cont (continuation-asserted-type result)))
+	(unless (eq call-type *wild-type*)
+	  (do-uses (use result)
+	    (derive-node-type use call-type)))
+	  
 	(delete-continuation-use call)
 	(add-continuation-use call (node-prev (lambda-bind fun)))
 	(substitute-continuation-uses cont result))))
