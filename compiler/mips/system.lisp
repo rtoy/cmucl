@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.34 1990/11/06 00:56:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.35 1990/11/06 14:02:28 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -168,7 +168,7 @@
     (move struct vec)))
 
 
-(define-vop (make-fixnum)
+(define-vop (lisp::make-fixnum)
   (:args (ptr :scs (any-reg descriptor-reg)))
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
@@ -178,7 +178,7 @@
     (inst sll res ptr 3)
     (inst srl res res 1)))
 
-(define-vop (make-other-immediate-type)
+(define-vop (lisp::make-other-immediate-type)
   (:args (val :scs (any-reg descriptor-reg))
 	 (type :scs (any-reg descriptor-reg immediate unsigned-immediate)
 	       :target temp))
