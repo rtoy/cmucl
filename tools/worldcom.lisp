@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.35 1992/02/14 23:46:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.36 1992/02/15 13:06:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,6 @@
 (comf "target:code/fdefinition")
 
 (comf "target:code/error")
-(comf "target:code/salterror")
 
 (comf "target:compiler/type")
 (comf "target:compiler/generic/vm-type")
@@ -170,7 +169,7 @@
 
 ;;; Later so that miscellaneous structures are defined (not crucial, but nice.)
 (comf "target:code/describe")
-#+clx
+#+(and clx (not no-hemlock) pcl)
 (comf "target:code/inspect")
 (comf "target:code/tty-inspect")
 
