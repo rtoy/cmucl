@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.4 1997/04/13 21:04:51 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.5 1997/09/24 15:48:08 dtc Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -1454,23 +1454,57 @@ static void flip_spaces()
 #define ACROSS_STACK(var) var=(void**)BOS-1; var > (void**)&var; var--
 #endif
 
+void  preserve_pointer(void *ptr)
+{
+  if (ptr > heap_base && ptr < heap_end)
+    {
+      struct region *region = find_region(ptr);
+      if (region != NULL && region->space == oldspace)
+	{
+	  dprintf(0,("move %x\n",ptr));
+	  move_to_newspace(region);
+	}
+    }
+}
+
 static void preserve_stack()
 {
   void **addr;			/* auto var is current TOS */
   for (ACROSS_STACK(addr))
-    {
-      void *ptr = *addr;
-      if (ptr > heap_base && ptr < heap_end)
-	{
-	  struct region *region = find_region(ptr);
-	  if (region != NULL && region->space == oldspace)
-	    {
-	      dprintf(0,("move %x\n",ptr));
-	      move_to_newspace(region);
-	    }
-	}
-    }
+    preserve_pointer(*addr);
 }
+
+#ifdef CONTROL_STACKS
+/* Scavenge the thread stack conservative roots. */
+void scavenge_thread_stacks(void)
+{
+  lispobj thread_stacks = SymbolValue(CONTROL_STACKS);
+  int type = TypeOf(thread_stacks);
+  
+  if (LowtagOf(thread_stacks)==type_OtherPointer) {
+    struct vector *vector = (struct vector *) PTR(thread_stacks);
+    int length, i;
+    if (TypeOf(vector->header)!=type_SimpleVector)
+      return;
+    length = fixnum_value(vector->length);    
+    for (i=0; i<length; i++) {
+      lispobj stack_obj = vector->data[i];
+      if (LowtagOf(stack_obj)==type_OtherPointer) {
+	struct vector *stack = (struct vector *) PTR(stack_obj);
+	int length, j;
+	if (TypeOf(stack->header)!=type_SimpleArrayUnsignedByte32)
+	  return;
+	length = fixnum_value(stack->length);
+	/* fprintf(stderr,"Scavenging control stack %d of length %d words\n",
+		  i,length); */
+	for (j=0; j<length; j++)
+	  preserve_pointer((void *)stack->data[j]);
+      }
+    }
+  }
+}
+#endif
+
 static void zero_stack()
 {
   /* This is a bit tricky because we don't want to zap any
@@ -1785,6 +1819,7 @@ void cgc_collect_garbage()
   preserve_interrupt_contexts();
   dprintf(noise,("[Preserve Stack]\n"));
   preserve_stack();
+  scavenge_thread_stacks();
   dprintf(noise,("[Scavenge Roots]\n"));
   scavenge_roots();
   dprintf(noise,("[Scavenge New]\n"));
