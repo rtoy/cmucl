@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.11 1990/11/03 17:23:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.12 1991/02/02 18:26:37 wlott Exp $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
@@ -31,19 +31,33 @@
 ;;;   ntemp1, ntemp2, ntemp3  --  random non-descriptor temps.
 
 (defmacro do-copy ()
-  '(let ((wide-copy (gen-label)))
+  '(let ((wide-copy (gen-label))
+	 (copy-left (gen-label))
+	 (copy-right (gen-label)))
      (compute-bit/word-offsets src src-offset src-bit-offset)
      (compute-bit/word-offsets dst dst-offset dst-bit-offset)
      
      (inst addu temp1 dst-bit-offset length)
      (inst subu temp1 (fixnum 32))
      (inst bgez temp1 wide-copy)
-     (inst nop)
+     (inst sltu ntemp1 src dst)
 
      (narrow-copy)
 
      (emit-label wide-copy)
-     (wide-copy)))
+     (inst bne ntemp1 copy-right)
+     (inst nop)
+     (inst bne src dst copy-left)
+     (inst sltu ntemp1 src-bit-offset dst-bit-offset)
+     (inst bne ntemp1 copy-right)
+     (inst beq src-bit-offset dst-bit-offset done)
+     (inst nop)
+
+     (emit-label copy-left)
+     (wide-copy-left)
+
+     (emit-label copy-right)
+     (wide-copy-right)))
 
 (defmacro compute-bit/word-offsets (ptr offset bit)
   `(progn
@@ -101,7 +115,7 @@
      (inst sw ntemp1 dst)))
 
 
-(defmacro wide-copy ()
+(defmacro wide-copy-left ()
   '(let ((aligned (gen-label)))
      ;; Check to see if they are aligned.
      (inst beq src-bit-offset dst-bit-offset aligned)
@@ -146,9 +160,7 @@
 		   (inst subu ntemp3 zero-tn ntemp3)
 		   (inst srl ntemp1 ntemp3)
 		   (emit-label done-load))))))
-       (wide-copy-aux)
-       (inst b done)
-       (inst nop))
+       (wide-copy-left-aux))
 
      (macrolet
 	 ((get-src (where)
@@ -157,9 +169,9 @@
 	       (inst lw ntemp1 src)
 	       (inst addu src 4))))
        (emit-label aligned)
-       (wide-copy-aux))))
+       (wide-copy-left-aux))))
 
-(defmacro wide-copy-aux ()
+(defmacro wide-copy-left-aux ()
   '(let ((left-aligned (gen-label))
 	 (loop (gen-label))
 	 (check-right (gen-label))
@@ -209,6 +221,142 @@
      (inst and ntemp1 ntemp3)
      (inst nor ntemp3 zero-tn ntemp3)
      (inst and ntemp2 ntemp3)
+     (inst or ntemp1 ntemp2)
+     (inst b done)
+     (inst sw ntemp1 dst)))
+
+
+(defmacro wide-copy-right ()
+  '(let ((aligned (gen-label))
+	 (final-bits temp1))
+     ;; Compute final-bits, the number of bits in the final dst word.
+     (inst addu ntemp3 dst-bit-offset length)
+     (inst and final-bits ntemp3 (fixnum 31))
+
+     ;; Increase src and dst so they point to the end of the buffers instead
+     ;; of the beginning.
+     ;; 
+     (inst srl ntemp3 7)
+     (inst sll ntemp3 2)
+     (inst addu dst ntemp3)
+
+     (inst addu ntemp3 src-bit-offset length)
+     (inst subu ntemp3 final-bits)
+     (inst srl ntemp3 7)
+     (inst sll ntemp3 2)
+     (inst add src ntemp3)
+
+     ;; Check to see if they are aligned.
+     (inst beq src-bit-offset dst-bit-offset aligned)
+
+     ;; Calc src-shift
+     (inst subu src-shift dst-bit-offset src-bit-offset)
+     (inst and src-shift (fixnum 31))
+
+     (macrolet
+	 ((merge (&rest before-last-inst)
+	    `(progn
+	       (inst sra ntemp3 src-shift 2)
+	       (inst sll ntemp2 ntemp3)
+	       (inst subu ntemp3 zero-tn ntemp3)
+	       (inst srl ntemp1 ntemp3)
+	       ,@before-last-inst
+	       (inst or ntemp1 ntemp2)))
+	  (get-src (where)
+	     (ecase where
+	       (:left
+		'(let ((dont-load (gen-label))
+		       (done-load (gen-label)))
+		   (inst sltu ntemp1 src-bit-offset dst-bit-offset)
+		   (inst bne ntemp1 dont-load)
+		   (inst lw ntemp2 src 4)
+		   (inst lw ntemp1 src)
+		   (merge (inst b done-load))
+		   (emit-label dont-load)
+		   (inst sra ntemp3 src-shift 2)
+		   (inst sll ntemp1 ntemp2 ntemp3)
+		   (emit-label done-load)))
+	       (:middle
+		'(progn
+		   (inst lw ntemp1 src)
+		   (inst lw ntemp2 src 4)
+		   (merge)
+		   (inst subu src 4)))
+	       (:right
+		'(let ((dont-load (gen-label))
+		       (done-load (gen-label)))
+		   (inst sltu ntemp1 src-shift final-bits)
+		   (inst beq ntemp1 dont-load)
+		   (inst lw ntemp1 src)
+		   (inst lw ntemp2 src 4)
+		   (merge (inst b done-load))
+		   (emit-label dont-load)
+		   (inst sra ntemp3 src-shift 2)
+		   (inst subu ntemp3 zero-tn ntemp3)
+		   (inst srl ntemp1 ntemp3)
+		   (emit-label done-load)
+		   (inst subu src 4))))))
+       (wide-copy-right-aux)
+       (inst b done)
+       (inst nop))
+
+     (macrolet
+	 ((get-src (where)
+	    (declare (ignore where))
+	    '(progn
+	       (inst lw ntemp1 src)
+	       (inst subu src 4))))
+       (emit-label aligned)
+       (wide-copy-right-aux))))
+
+(defmacro wide-copy-right-aux ()
+  '(let ((right-aligned (gen-label))
+	 (loop (gen-label))
+	 (check-left (gen-label))
+	 (interior temp2))
+     (inst beq final-bits right-aligned)
+     (inst nop)
+     
+     (get-src :right)
+     (inst li ntemp3 (make-fixup "bit_bash_low_masks" :foreign))
+     (inst addu ntemp3 final-bits)
+     (inst lw ntemp3 ntemp3)
+     (inst lw ntemp2 dst)
+     (inst and ntemp1 ntemp3)
+     (inst nor ntemp3 ntemp3 zero-tn)
+     (inst and ntemp2 ntemp3)
+     (inst or ntemp2 ntemp1)
+     (inst sw ntemp2 dst)
+
+     (emit-label right-aligned)
+     (inst subu dst 4)
+
+     (inst subu ntemp1 length final-bits)
+     (inst srl ntemp1 7)
+     (inst beq ntemp1 check-left)
+     (inst sll interior ntemp1 2)
+
+     (emit-label loop)
+     (get-src :middle)
+     (inst sw ntemp1 dst)
+     (check-for-interrupts)
+     (inst subu interior 4)
+     (inst bgtz interior loop)
+     (inst subu dst 4)
+
+     (emit-label check-left)
+     (inst beq dst-bit-offset done)
+     (inst nop)
+
+     (get-src :left)
+     (inst li ntemp3 (make-fixup "bit_bash_low_masks" :foreign))
+     (inst addu ntemp3 dst-bit-offset)
+     (inst lw ntemp3 ntemp3)
+     (inst lw ntemp2 dst)
+     (inst nop)
+     (inst and ntemp2 ntemp3)
+     (inst nor ntemp3 zero-tn ntemp3)
+     (inst and ntemp1 ntemp3)
      (inst or ntemp1 ntemp2)
      (inst sw ntemp1 dst)))
      
