@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.19 1991/02/08 13:34:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.20 1991/04/16 01:28:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.19 1991/02/08 13:34:51 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.20 1991/04/16 01:28:25 ram Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -1343,7 +1343,11 @@
        (let ((type (get-type object)))
 	 (case type
 	   (#.vm:code-header-type
-	    (write-string "Code Object" stream))
+	    (write-string "Code Object" stream)
+	    (let ((dinfo (code-header-ref object vm:code-debug-info-slot)))
+	      (when dinfo
+		(write-char #\space stream)
+		(output-object (c::compiled-debug-info-name dinfo) stream))))
 	   ((#.vm:function-header-type #.vm:closure-function-header-type)
 	    (output-function-object object stream))
 	   (#.vm:return-pc-header-type
@@ -1357,7 +1361,8 @@
 	      (output-function-object (%primitive c::closure-function object)
 				      stream))))
 	   (#.vm:value-cell-header-type
-	    (write-string "Value Cell" stream))
+	    (write-string "Value Cell " stream)
+	    (output-object (%primitive value-cell-ref object) stream))
 	   (#.vm:unbound-marker-type
 	    (write-string "Unbound Marker" stream))
 	   (t
