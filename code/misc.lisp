@@ -19,31 +19,41 @@
 	  short-site-name long-site-name dribble))
 
 
-(defun documentation (symbol doc-type)
-  "Returns the documentation string of Doc-Type for the Symbol, or NIL if
+(defun documentation (name doc-type)
+  "Returns the documentation string of Doc-Type for Name, or NIL if
   none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,
   and SETF."
   (case doc-type
-    (variable (get symbol '%var-documentation))
-    (function (get symbol '%fun-documentation))
-    (structure (get symbol '%struct-documentation))
-    (type (get symbol '%type-documentation))
-    (setf (get symbol '%setf-documentation))
-    (t (cdr (assoc doc-type (get symbol '%documentation))))))
+    (variable (info variable documentation name))
+    (function (info function documentation name))
+    (structure
+     (when (eq (info type kind name) :structure)
+       (info type documentation name)))
+    (type
+     (info type documentation name))
+    (setf (info setf documentation name))
+    (t
+     (cdr (assoc doc-type (info random-documentation stuff name))))))
 
-(defun %set-documentation (symbol doc-type string)
+(defun %set-documentation (name doc-type string)
   (case doc-type
-    (variable (%put symbol '%var-documentation string))
-    (function (%put symbol '%fun-documentation string))
-    (structure (%put symbol '%struct-documentation string))
-    (type (%put symbol '%type-documentation string))
-    (setf (%put symbol '%setf-documentation string))
-    (t (let ((pair (assoc doc-type (get symbol '%documentation))))
-	 (if pair (%rplacd pair string)
-	     (push (cons doc-type string) (get symbol '%documentation))))))
+    (variable (setf (info variable documentation name) string))
+    (function (setf (info function documentation name) string))
+    (structure
+     (unless (eq (info type kind name) :structure)
+       (error "~S is not the name of a structure type." name))
+     (setf (info type documentation name) string))
+    (type (setf (info type documentation name) string))
+    (setf (setf (info setf documentation name) string))
+    (t
+     (let ((pair (assoc doc-type (info random-documentation stuff name))))
+       (if pair
+	   (setf (cdr pair) string)
+	   (push (cons doc-type string)
+		 (info random-documentation stuff name))))))
   string)
 
-(defvar *features* '(:common :cmu :mach :ibm-rt-pc :clos :new-compiler)
+(defvar *features* '(:common :cmu :mach :ibm-rt-pc :new-compiler)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 
