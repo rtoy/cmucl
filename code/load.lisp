@@ -668,7 +668,7 @@
   (prepare-for-fast-read-byte *fasl-file*
     (let* ((len (fast-read-u-integer 4))
 	   (size (fast-read-byte))
-	   (ac (integer-length size))
+	   (ac (1- (integer-length size)))
 	   (res (%primitive alloc-i-vector len ac)))
       (done-with-fast-read-byte)
       (unless (and (<= ac 5) (= size (ash 1 ac)))
@@ -676,42 +676,6 @@
       (read-n-bytes *fasl-file* res 0 (ash (+ (ash len ac) 7) -3))
       res)))
 
-#|
-;;; Fop-Int-Vector  --  Internal
-;;;
-;;;    Load an I-Vector using the Guy Steele memorial faslop.  If there
-;;; is no space at the end of a group, then we can read it using
-;;; Read-N-Bytes.  All vectors dumped by our compiler should be loadable
-;;; in this way.  If the other cases don't work, we may never know...
-;;;
-(define-fop (fop-int-vector 43)
-  (prepare-for-fast-read-byte *fasl-file*
-    (let* ((n (fast-read-u-integer 4))
-	   (size (fast-read-byte))
-	   (count (fast-read-byte))
-	   (res (make-array n :element-type `(unsigned-byte ,size))))
-      (multiple-value-bind (ints-per-entry extra)
-			   (truncate (* count 8) size)
-	(cond ((and (zerop extra) (<= size 16))
-	       (done-with-fast-read-byte)
-	       (read-n-bytes *fasl-file* res 0
-			     (* count (ceiling n ints-per-entry))))
-	      ((= ints-per-entry 1)
-	       (dotimes (i n)
-		 (setf (aref res i) (fast-read-variable-u-integer count)))
-	       (done-with-fast-read-byte))
-	      (t
-	       (let ((i 0))
-		 (loop
-		   (when (= i n) (return))
-		   (let ((byte (fast-read-byte)))
-		     (dotimes (j ints-per-entry)
-		       (setf (aref res i) (ldb (byte size (* size j)) byte))
-		       (incf i)
-		       (when (= i n) (return))))))
-	       (done-with-fast-read-byte))))
-      res)))
-|#
 
 (define-fop (fop-uniform-int-vector 44)
   (prepare-for-fast-read-byte *fasl-file*
