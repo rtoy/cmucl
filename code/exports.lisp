@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.82 1992/05/21 23:26:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.83 1992/06/12 01:33:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,6 +71,14 @@
 (if (find-package "RT")
     (rename-package "RT" "RT" '("VM" "OLD-RT"))
     (make-package "RT" :nicknames '("VM" "OLD-RT") :use nil))
+#+x86
+(if (find-package "X86")
+    (rename-package "X86" "X86" '("VM" "OLD-X86"))
+    (make-package "X86" :nicknames '("VM" "OLD-X86") :use nil))
+#+hppa
+(if (find-package "HPPA")
+    (rename-package "HPPA" "HPPA" '("VM" "OLD-HPPA"))
+    (make-package "HPPA" :nicknames '("VM" "OLD-HPPA") :use nil))
 (if (find-package "CONDITIONS")
     (rename-package "CONDITIONS" "CONDITIONS" 'nil)
     (make-package "CONDITIONS" :nicknames 'nil :use nil))
@@ -731,8 +739,10 @@
        "DOUBLE-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
   (intern name "KERNEL"))
 (defpackage #+pmax "MIPS" #+sparc "SPARC" #+ibmrt "RT"
+            #+x86 "X86" #+hppa "HPPA"
             (:nicknames "VM"
-			#+pmax "OLD-MIPS" #+sparc "OLD-SPARC" #+ibmrt "OLD-RT")
+			#+pmax "OLD-MIPS" #+sparc "OLD-SPARC" #+ibmrt "OLD-RT"
+			#+x86 "OLD-X86" #+hppa "HPPA")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
              "%SET-DOCUMENTATION" "%SET-FDEFINITION" "%SET-FILL-POINTER"
