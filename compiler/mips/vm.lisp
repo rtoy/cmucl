@@ -7,12 +7,14 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.3 1990/02/02 21:42:57 wlott Exp $
+;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
 ;;;
 ;;; Written by Christopher Hoover.
 ;;;
-(in-package 'c)
+(in-package "C")
 
 
 ;;;; SB and SC definition:
@@ -306,61 +308,71 @@
 
 ;;;; Magical Registers
 
+(eval-when (compile eval load)
+  (defconstant zero-offset 0)
+  (defconstant lip-offset 1)
+  (defconstant bsp-offset 24)
+  (defconstant csp-offset 25)
+  (defconstant null-offset 28)
+  (defconstant nsp-offset 29)
+  (defconstant code-offset 30)
+  (defconstant cont-offset 31))
+
 ;;; 
 ;;; Wired Zero
 (defparameter zero-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset 0))
+		  :offset zero-offset))
 
 ;;; 
 ;;; Lisp Interior Pointer
 (defparameter lip-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset 1))
+		  :offset lip-offset))
 
 ;;; 
 ;;; Binding stack pointer
 (defparameter bsp-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset 24))
+		  :offset bsp-offset))
 
 ;;; 
 ;;; Control stack pointer
 (defparameter csp-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset 25))
+		  :offset csp-offset))
 
 ;;;
 ;;; ``Wired'' NIL
 (defparameter null-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset 28))
+		  :offset null-offset))
 
 ;;; 
 ;;; Number stack pointer
 (defparameter nsp-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset 29))
+		  :offset nsp-offset))
 
 ;;; 
 ;;; Code Pointer
 (defparameter code-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset 30))
+		  :offset code-offset))
 
 ;;;
 ;;; Frame Pointer
 (defparameter cont-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset 31))
+		  :offset cont-offset))
 
 
 ;;;; Side-Effect Classes
