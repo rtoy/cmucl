@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.6 1990/06/18 18:17:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.7 1990/09/18 00:34:32 wlott Exp $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
@@ -19,7 +19,8 @@
 
 ;;;; Blitting macros.  Used only at assemble time.
 
-(eval-when (eval)
+#+assembler
+(eval-when (compile eval)
 
 ;;; The main dispatch.  Assumes that the following TNs are bound:
 ;;;   dst, dst-offset  --  where to put the stuff.
@@ -214,7 +215,7 @@
 (defmacro check-for-interrupts ()
   nil)
 
-) ; eval-when (eval)
+) ; eval-when (compile eval)
 
 
 

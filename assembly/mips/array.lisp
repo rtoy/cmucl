@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.12 1990/06/22 17:58:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.13 1990/09/18 00:34:09 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -16,7 +16,8 @@
 (in-package "C")
 
 
-(eval-when (eval)
+#+assembler
+(eval-when (compile eval)
 
 (defmacro allocate-vector (type length words vector ndescr)
   `(pseudo-atomic (,ndescr)
@@ -38,7 +39,7 @@
   (declare (ignore vector words))
   nil)
 
-); eval-when (eval)
+); eval-when (compile eval)
 
 
 (define-assembly-routine (allocate-vector
