@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hppa-lispregs.h,v 1.1 1992/09/04 08:16:35 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hppa-lispregs.h,v 1.2 1993/07/27 15:04:16 hallgren Exp $ */
 
 #define NREGS	(32)
 
@@ -54,6 +54,12 @@
     reg_L0, reg_L1, reg_L2 \
 }
 
+#ifdef hpux
+#define SC_REG(sc, n) (((unsigned long *)(&(sc)->sc_sl.sl_ss.ss_flags))[n])
+#define SC_PC(sc) ((sc)->sc_sl.sl_ss.ss_pcoq_head)
+#define SC_NPC(sc) ((sc)->sc_sl.sl_ss.ss_pcoq_tail)
+#else
 #define SC_REG(sc, n) (((unsigned long *)((sc)->sc_ap))[n])
 #define SC_PC(sc) ((sc)->sc_pcoqh)
 #define SC_NPC(sc) ((sc)->sc_pcoqt)
+#endif
