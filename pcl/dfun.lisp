@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.21 2003/03/26 17:15:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.22 2003/03/28 16:07:42 gerd Exp $")
 
 (in-package :pcl)
 
@@ -179,6 +179,64 @@ And so, we are saved.
 		       ,(apply (symbol-function (car generator-entry))
 			       (car args-entry))))
 		   collected))))))))
+
+
+;;; **********************************
+;;; Standard Class Slot Access *******
+;;; **********************************
+;;;
+;;; When trying to break vicious metacircles, we need a way to get at
+;;; the values of slots of some standard classes without going through
+;;; the whole meta machinery, because that would likely enter the
+;;; vicious circle again.  That's what the following is for.
+;;;
+
+(defvar *standard-classes*
+  '(standard-method standard-generic-function standard-class
+    standard-effective-slot-definition))
+
+(defvar *standard-slot-locations* (make-hash-table :test 'equal))
+
+(defun compute-standard-slot-locations ()
+  (clrhash *standard-slot-locations*)
+  (dolist (class-name *standard-classes*)
+    (let ((class (find-class class-name)))
+      (dolist (slot (class-slots class))
+	(setf (gethash (cons class (slot-definition-name slot))
+		       *standard-slot-locations*)
+	      (slot-definition-location slot))))))
+	      
+(defun maybe-update-standard-class-locations (class)
+  (when (and (eq *boot-state* 'complete)
+	     (memq (class-name class) *standard-classes*))
+    (compute-standard-slot-locations)))
+
+(defun standard-slot-value (object slot-name class)
+  (let ((location (gethash (cons class slot-name) *standard-slot-locations*)))
+    (if location
+	(let ((value (if (funcallable-instance-p object)
+			 (funcallable-standard-instance-access object location)
+			 (standard-instance-access object location))))
+	  (when (eq +slot-unbound+ value)
+	    (error "~@<Slot ~s of class ~s is unbound in object ~s~@:>"
+		   slot-name class object))
+	  value)
+	(error "~@<Cannot get standard value of slot ~s of class ~s ~
+                in object ~s~@:>"
+	       slot-name class object))))
+
+(defun standard-slot-value/gf (gf slot-name)
+  (standard-slot-value gf slot-name *the-class-standard-generic-function*))
+
+(defun standard-slot-value/method (method slot-name)
+  (standard-slot-value method slot-name *the-class-standard-method*))
+
+(defun standard-slot-value/eslotd (slotd slot-name)
+  (standard-slot-value slotd slot-name
+		       *the-class-standard-effective-slot-definition*))
+
+(defun standard-slot-value/class (class slot-name)
+  (standard-slot-value class slot-name *the-class-standard-class*))
 
 
 ;;;
@@ -1059,29 +1117,107 @@ And so, we are saved.
 ;;;
 ;;; Called from vector.lisp
 ;;;
+(defvar *cmv-stack* ())
+
 (defun cache-miss-values-internal (gf arg-info wrappers classes types state)
-  (let* ((for-accessor-p (eq state 'accessor))
-	 (for-cache-p (or (eq state 'caching) (eq state 'accessor)))
-	 (cam-std-p (or (null arg-info)
-			(gf-info-c-a-m-emf-std-p arg-info))))
-    (multiple-value-bind (methods all-applicable-and-sorted-p)
-	(if cam-std-p
-	    (compute-applicable-methods-using-types gf types)
-	    (compute-applicable-methods-using-classes gf classes))
-      (let ((emf (if (or cam-std-p all-applicable-and-sorted-p)
-		     (let ((generator (get-secondary-dispatch-function1
-				       gf methods types nil
-				       (and for-cache-p wrappers)
-				       all-applicable-and-sorted-p)))
-		       (make-callable gf methods generator nil
-				      (and for-cache-p wrappers)))
-		     (let ((fn (default-secondary-dispatch-function gf)))
-		       (set-emf-name gf methods fn)))))
-	(multiple-value-bind (index accessor-type)
-	    (and for-accessor-p all-applicable-and-sorted-p methods
-		 (accessor-values gf arg-info classes methods))
-	  (values (if (integerp index) index emf)
-		  methods accessor-type index))))))
+  (if (and classes (equal classes (cdr (assq gf *cmv-stack*))))
+      (break-vicious-metacircle gf classes arg-info)
+      (let ((*cmv-stack* (cons (cons gf classes) *cmv-stack*))
+	    (cam-std-p (or (null arg-info)
+			   (gf-info-c-a-m-emf-std-p arg-info))))
+	(multiple-value-bind (methods all-applicable-and-sorted-p)
+	    (if cam-std-p
+		(compute-applicable-methods-using-types gf types)
+		(compute-applicable-methods-using-classes gf classes))
+	  (let* ((for-accessor-p (eq state 'accessor))
+		 (for-cache-p (memq state '(caching accessor)))
+		 (emf (if (or cam-std-p all-applicable-and-sorted-p)
+			  (let ((generator (get-secondary-dispatch-function1
+					    gf methods types nil
+					    (and for-cache-p wrappers)
+					    all-applicable-and-sorted-p)))
+			    (make-callable gf methods generator nil
+					   (and for-cache-p wrappers)))
+			  (let ((fn (default-secondary-dispatch-function gf)))
+			    (set-emf-name gf methods fn)))))
+	    (multiple-value-bind (index accessor-type)
+		(and for-accessor-p all-applicable-and-sorted-p methods
+		     (accessor-values gf arg-info classes methods))
+	      (values (if (integerp index) index emf)
+		      methods accessor-type index)))))))
+
+;;;
+;;; Try to break a vicious circle while computing a cache miss.
+;;; GF is the generic function, CLASSES are the classes of actual
+;;; arguments, and ARG-INFO is the generic functions' arg-info.
+;;;
+;;; A vicious circle can be entered when the computation of the cache
+;;; miss values itself depends on the values being computed.  For
+;;; instance, adding a method which is an instance of a subclass of
+;;; STANDARD-METHOD leads to cache misses for slot accessors of
+;;; STANDARD-METHOD like METHOD-SPECIALIZERS, and METHOD-SPECIALIZERS
+;;; is itself used while we compute cache miss values.
+;;;
+(defun break-vicious-metacircle (gf classes arg-info)
+  (when (typep gf 'standard-generic-function)
+    (multiple-value-bind (class slotd accessor-type)
+	(accesses-standard-class-slot-p gf)
+      (when class
+	(let ((method (find-standard-class-accessor-method
+		       gf class accessor-type))
+	      (index (standard-slot-value/eslotd slotd 'location))
+	      (type (gf-info-simple-accessor-type arg-info)))
+	  (when (and method
+		     (subtypep (if (eq accessor-type 'reader)
+				   (car classes)
+				   (cadr classes))
+			       class))
+	    (return-from break-vicious-metacircle
+	      (values index (list method) type index)))))))
+  (error "~@<Vicious metacircle:  The computation of an ~
+	  effective method of ~s for arguments of types ~s uses ~
+	  the effective method being computed.~@:>"
+	 gf classes))
+
+;;;
+;;; Return (CLASS SLOTD ACCESSOR-TYPE) if some method of generic
+;;; function GF accesses a slot of some class in *STANDARD-CLASSES*.
+;;; CLASS is the class accessed, SLOTD is the effective slot definition
+;;; object of the slot accessed, and ACCESSOR-TYPE is one of the symbols
+;;; READER or WRITER describing the slot access.
+;;;
+(defun accesses-standard-class-slot-p (gf)
+  (flet ((standard-class-slot-access (gf class)
+	   (loop with gf-name = (standard-slot-value/gf gf 'name)
+		 for slotd in (standard-slot-value/class class 'slots)
+		 as readers = (standard-slot-value/eslotd slotd 'readers)
+		 as writers = (standard-slot-value/eslotd slotd 'writers)
+		 if (member gf-name readers :test #'equal)
+		   return (values slotd 'reader)
+		 else if (member gf-name writers :test #'equal)
+		   return (values slotd 'writer))))
+    (dolist (class-name *standard-classes*)
+      (let ((class (find-class class-name)))
+	(multiple-value-bind (slotd accessor-type)
+	    (standard-class-slot-access gf class)
+	  (when slotd
+	    (return (values class slotd accessor-type))))))))
+
+;;;
+;;; Find a slot reader/writer method among the methods of generic
+;;; function GF which reads/writes instances of class CLASS.
+;;; TYPE is one of the symbols READER or WRITER.
+;;;
+(defun find-standard-class-accessor-method (gf class type)
+  (dolist (method (standard-slot-value/gf gf 'methods))
+    (let ((specializers (standard-slot-value/method method 'specializers))
+	  (qualifiers (plist-value method 'qualifiers)))
+      (when (and (null qualifiers)
+		 (eq (ecase type
+		       (reader (car specializers))
+		       (writer (cadr specializers)))
+		     class))
+	(return method)))))
 
 ;;;
 ;;; Only used in this file.

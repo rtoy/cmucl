@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.45 2003/03/25 11:40:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.46 2003/03/28 16:07:42 gerd Exp $")
 
 (in-package :pcl)
 
@@ -817,7 +817,8 @@
 
       (unless (eq owrapper nwrapper)
 	(update-inline-access class)
-	(update-pv-table-cache-info class)))))
+	(update-pv-table-cache-info class)
+	(maybe-update-standard-class-locations class)))))
 
 (defun compute-class-slots (eslotds)
   (loop for eslotd in eslotds

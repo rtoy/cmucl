@@ -33,6 +33,9 @@
   (/show "PCL boot state COMPLETE")
   (setq *boot-state* 'complete))
 
+(/show "Computing standard slot locations")
+(compute-standard-slot-locations)
+
 (defun print-std-instance (instance stream depth)
   (declare (ignore depth))
   (print-object instance stream))
