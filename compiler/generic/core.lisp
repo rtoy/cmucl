@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.24 1993/05/13 19:52:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.25 1993/06/10 02:20:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -139,7 +139,7 @@
 	   (constants (ir2-component-constants 2comp))
 	   (trace-table (pack-trace-table trace-table))
 	   (trace-table-len (length trace-table))
-	   (trace-table-bits (* trace-table-len bits-per-entry))
+	   (trace-table-bits (* trace-table-len tt-bits-per-entry))
 	   (total-length (+ length (ceiling trace-table-bits vm:byte-bits)))
 	   (box-num (- (length constants) vm:code-trace-table-offset-slot))
 	   (code-obj (%primitive allocate-code-object box-num total-length))
