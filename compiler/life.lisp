@@ -477,7 +477,7 @@
 			  prev))))
 
 	  (dolist (b (block-succ block))
-	    (when (and (block-lambda b)
+	    (when (and (block-start b)
 		       (propagate-live-tns last (block-info b)))
 	      (setq did-something t)))
 
@@ -757,9 +757,8 @@
     (do ((conf (tn-global-conflicts y) (global-conflicts-tn-next conf)))
 	((null conf)
 	 nil)
-      (when (eq (lambda-environment
-		 (block-lambda
-		  (ir2-block-block (global-conflicts-block conf))))
+      (when (eq (block-environment
+		 (ir2-block-block (global-conflicts-block conf)))
 		env)
 	(return t)))))
 
@@ -770,9 +769,7 @@
 ;;;
 (defun tns-conflict-environment-local (x y)
   (declare (type tn x y))
-  (eq (lambda-environment
-       (block-lambda
-	(ir2-block-block (tn-local y))))
+  (eq (block-environment (ir2-block-block (tn-local y)))
       (tn-environment x)))
 
 
