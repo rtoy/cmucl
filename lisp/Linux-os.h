@@ -58,6 +58,7 @@ typedef struct sigcontext_struct sigcontext;
 #define sigcontext	sigcontext_struct 
 #define sa_sigaction	sa_handler
 #define SA_SIGINFO	0
+#define sc_efl		eflags
 
 #define sc_eax eax
 #define sc_ecx ecx
