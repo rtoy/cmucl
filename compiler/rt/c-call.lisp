@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.8 1992/03/10 12:33:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.9 1992/03/11 18:30:51 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -135,13 +135,13 @@
 	      (multiple-value-bind
 		  (hi lo)
 		  (%alien-funcall function
-				  (make-alien-function-type
-				   :arg-types arg-types
-				   :result-type
-				   (let ((*values-type-okay*))
-				     (parse-alien-type
-				      '(values (signed 32)
-					       (unsigned 32)))))
+				  ',(make-alien-function-type
+				     :arg-types arg-types
+				     :result-type
+				     (let ((*values-type-okay* t))
+				       (parse-alien-type
+					'(values (signed 32)
+						 (unsigned 32)))))
 				  ,@arg-names)
 	      (make-double-float hi lo)))))
 	(alien-single-float-type
@@ -149,10 +149,10 @@
 	   `(lambda (function type ,@arg-names)
 	      (declare (ignore type))
 	      (make-single-float
-	       (%alien-function function
-				',(parse-alien-type
-				   `(function (signed 32) ,@arg-types))
-				,@arg-names)))))
+	       (%alien-funcall function
+			       ',(parse-alien-type
+				  `(function (signed 32) ,@arg-types))
+			       ,@arg-names)))))
 	(t
 	 (c::give-up))))))
 
