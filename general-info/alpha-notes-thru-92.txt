@@ -1,3 +1,18 @@
+6/12/92 to 6/15/92
+
+Code:
+
+Reworked the internals of circularity detection and depth abbreviation.
+Structure print-functions that use PPRINT-LOGICAL-BLOCK will no longer be
+counted as as two levels against *PRINT-LEVEL*, and will no longer be
+printed as #1=#1# when *PRINT-CIRCLE* is set.  Also, printing various
+condition structures (for example, TYPE-ERROR) will no longer flame out
+when *PRINT-CIRCLE* is set.
+
+Note: any uses of PPRINT-LOGICAL-BLOCK will have to be recompiled.
+
+
+
 6/3/92 to 6/12/92
 
 Code:
