@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.26 2003/10/24 04:29:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.27 2004/01/16 03:08:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,11 +179,16 @@
 
 ;;; Where to put the different spaces.
 ;;; 
-(defparameter target-read-only-space-start #x10000000)
-(defparameter target-static-space-start    #+FreeBSD #x28F00000
-	      #-FreeBSD #x28000000)
-(defparameter target-dynamic-space-start   #x48000000)
-(defparameter target-foreign-linkage-space-start #xB0000000)
+(defconstant target-read-only-space-start #x10000000)
+(defconstant target-static-space-start
+  #+FreeBSD #x28F00000
+  #-FreeBSD #x28000000)
+(defconstant target-dynamic-space-start
+  #+linux #x58000000
+  #-linux #x48000000)
+(defconstant target-foreign-linkage-space-start
+  #+linux #xBE000000
+  #-linux #xB0000000)
 (defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
 ;;; Given that NIL is the first thing allocated in static space, we
