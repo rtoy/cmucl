@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.17 1993/01/13 17:33:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.18 1993/06/23 19:14:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 (export '(documentation *features* common variable room
 	  lisp-implementation-type lisp-implementation-version machine-type
 	  machine-version machine-instance software-type software-version
-	  short-site-name long-site-name dribble))
+	  short-site-name long-site-name dribble compiler-macro))
 
 (in-package "SYSTEM")
 (export '(*software-type* *short-site-name* *long-site-name*))
