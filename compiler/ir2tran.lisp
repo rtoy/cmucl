@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.16 1990/06/11 13:57:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.17 1990/06/20 14:05:46 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -132,7 +132,7 @@
   (let* ((arg (standard-argument-location 0))
 	 (res (standard-argument-location 0))
 	 (fun (emit-constant 'fdefinition))
-	 (fp (make-normal-tn *any-primitive-type*)))
+	 (fp (make-stack-pointer-tn)))
     (vop allocate-full-call-frame node block 1 fp)
     (vop* call-named node block (fp fun name nil) (res nil) (list arg) 1 1)
     (move-continuation-result node block (list res) (node-cont node)))
@@ -727,9 +727,9 @@
 (defun ir2-convert-local-call-args (node block env)
   (declare (type combination node) (type ir2-block block)
 	   (type ir2-environment env))
-  (let ((fp (make-normal-tn *any-primitive-type*))
-	(nfp (make-normal-tn *any-primitive-type*))
-	(old-fp (make-normal-tn *any-primitive-type*))
+  (let ((fp (make-stack-pointer-tn))
+	(nfp (make-number-stack-pointer-tn))
+	(old-fp (make-stack-pointer-tn))
 	(this-1env (node-environment node)))
 
     (vop current-fp node block old-fp)
@@ -944,7 +944,7 @@
 (defun ir2-convert-full-call-args (node block)
   (declare (type combination node) (type ir2-block block))
   (let* ((args (basic-combination-args node))
-	 (fp (make-normal-tn *any-primitive-type*))
+	 (fp (make-stack-pointer-tn))
 	 (nargs (length args)))
     (vop allocate-full-call-frame node block nargs fp)
     (collect ((locs))
@@ -1325,7 +1325,7 @@
   (let ((loc (find-in-environment (find-nlx-info (exit-entry node)
 						 (node-cont node))
 				  (node-environment node)))
-	(temp (make-normal-tn *any-primitive-type*))
+	(temp (make-stack-pointer-tn))
 	(value (exit-value node)))
     (vop value-cell-ref node block loc temp)
     (vop value-cell-set node block loc (emit-constant 0))
