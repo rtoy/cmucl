@@ -2438,58 +2438,59 @@
 
 
 (def-ir1-translator proclaim ((what) start cont :kind :function)
-  (when (constantp what)
-    (let ((form (eval what)))
-      (unless (consp form)
-	(compiler-error "Malformed PROCLAIM spec: ~S." form))
-       
-      (let ((name (first form))
-	    (args (rest form))
-	    (ignore nil))
-	(case (first form)
-	  (special
-	   (dolist (old (get-old-vars (rest form)))
-	     (when (or (constant-p old)
-		       (eq (global-var-kind old) :constant))
-	       (compiler-error
-		"Attempt to proclaim constant ~S to be special." name))
-
-	     (ecase (global-var-kind old)
-	       (:special)
-	       (:global
-		(let ((new (copy-global-var old)))
-		  (setf (global-var-kind new) :special)
-		  (setf (gethash name *free-variables*) new))))))
-	  (type
-	   (when (endp args)
-	     (compiler-error "Malformed TYPE proclamation: ~S." form))
-	   (process-type-proclamation (first args) (rest args)))
-	  (function
-	   (when (endp args)
-	     (compiler-error "Malformed FUNCTION proclamation: ~S." form))
-	   (process-ftype-proclamation `(function . ,(rest args))
-				       (list (first args))))
-	  (ftype
-	   (when (endp args)
-	     (compiler-error "Malformed FTYPE proclamation: ~S." form))
-	   (process-ftype-proclamation (first args) (rest args)))
-	  ;;
-	  ;; No non-global state to be updated.
-	  ((inline notinline maybe-inline optimize declaration freeze-type))
-	  (t
-	   (cond ((member name type-specifier-symbols)
-		  (process-type-proclamation name args))
-		 ((info declaration recognized name)
-		  (setq ignore t))
-		 (t
-		  (setq ignore t)
-		  (compiler-warning "Unrecognized proclamation: ~S." form)))))
-
-	(unless ignore
-	  (funcall #'%proclaim form))
-	(if ignore
-	    (ir1-convert start cont nil)
-	    (ir1-convert start cont `(%proclaim ,what)))))))
+  (if (constantp what)
+      (let ((form (eval what)))
+	(unless (consp form)
+	  (compiler-error "Malformed PROCLAIM spec: ~S." form))
+	
+	(let ((name (first form))
+	      (args (rest form))
+	      (ignore nil))
+	  (case (first form)
+	    (special
+	     (dolist (old (get-old-vars (rest form)))
+	       (when (or (constant-p old)
+			 (eq (global-var-kind old) :constant))
+		 (compiler-error
+		  "Attempt to proclaim constant ~S to be special." name))
+	       
+	       (ecase (global-var-kind old)
+		 (:special)
+		 (:global
+		  (let ((new (copy-global-var old)))
+		    (setf (global-var-kind new) :special)
+		    (setf (gethash name *free-variables*) new))))))
+	    (type
+	     (when (endp args)
+	       (compiler-error "Malformed TYPE proclamation: ~S." form))
+	     (process-type-proclamation (first args) (rest args)))
+	    (function
+	     (when (endp args)
+	       (compiler-error "Malformed FUNCTION proclamation: ~S." form))
+	     (process-ftype-proclamation `(function . ,(rest args))
+					 (list (first args))))
+	    (ftype
+	     (when (endp args)
+	       (compiler-error "Malformed FTYPE proclamation: ~S." form))
+	     (process-ftype-proclamation (first args) (rest args)))
+	    ;;
+	    ;; No non-global state to be updated.
+	    ((inline notinline maybe-inline optimize declaration freeze-type))
+	    (t
+	     (cond ((member name type-specifier-symbols)
+		    (process-type-proclamation name args))
+		   ((info declaration recognized name)
+		    (setq ignore t))
+		   (t
+		    (setq ignore t)
+		    (compiler-warning "Unrecognized proclamation: ~S." form)))))
+	  
+	  (unless ignore
+	    (funcall #'%proclaim form))
+	  (if ignore
+	      (ir1-convert start cont nil)
+	      (ir1-convert start cont `(%proclaim ,what)))))
+      (ir1-convert start cont nil)))
 
 
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
