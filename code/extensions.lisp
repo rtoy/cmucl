@@ -566,6 +566,5 @@
 (defun cache-hash-eq (x)
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
-  (the fixnum (ash (the fixnum (%primitive make-fixnum x))
-		   -3)))
+  (the fixnum (ash (truly-the fixnum (%primitive lisp::make-fixnum x)) -3)))
 

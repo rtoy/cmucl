@@ -799,15 +799,15 @@
 				   vm:word-bytes))
 		       (get-context-value
 			real
-			c::lra-save-offset
+			vm::lra-save-offset
 			(c::compiled-debug-function-return-pc c-d-f))
 		       frame)
 		      frame)))
 		  (bogus-debug-function
 		   (let ((fp (frame-pointer real)))
 		     (compute-calling-frame (sap-ref-sap fp
-							 c::old-fp-save-offset)
-					    (stack-ref fp c::lra-save-offset)
+							 vm::old-fp-save-offset)
+					    (stack-ref fp vm::lra-save-offset)
 					    frame))))))
 	down)))
 
@@ -850,11 +850,11 @@
 		       t))
       (when (= (sap-int frame-pointer)
 	       (alien-access
-		(mach:int-array-ref regs c::fp-offset)))
+		(mach:int-array-ref regs vm::fp-offset)))
 	(system:without-gcing
 	 (let ((code (code-object-from-bits
 		      (alien-access
-		       (mach:int-array-ref regs c::code-offset)))))
+		       (mach:int-array-ref regs vm::code-offset)))))
 	   (when (symbolp code)
 	     (return (values code 0 (alien-value sc))))
 	   (let* ((code-header-len (* (get-header-data code) vm:word-bytes))
@@ -877,7 +877,7 @@
 	       ;; the pc.
 	       (setf pc-offset
 		     (- (escape-register (alien-value sc)
-					 c::lra-offset)
+					 vm::lra-offset)
 			(get-lisp-obj-address code)
 			code-header-len)))
 	     (return
