@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.36 1993/02/26 08:25:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.37 1993/03/01 20:11:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,11 +168,6 @@
     (:primitive
      (when *type-system-initialized*
        (error "Illegal to redefine standard type: ~S." name)))
-    #+ns-boot
-    (:structure
-     (warn "Redefining structure type ~S with DEFTYPE." name)
-     (c::undefine-structure (info type structure-info name))
-     (setf (info type kind name) :defined))
     (:instance
      (warn "Redefining class ~S to be a DEFTYPE." name)
      (undefine-structure (layout-info (class-layout (info type class name))))

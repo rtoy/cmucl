@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.6 1993/02/25 02:24:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.7 1993/03/01 20:09:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -779,9 +779,6 @@
 	 ((and (not (eq spec orig))
 	       (info type builtin spec)))
 	 ((eq (info type kind spec) :instance)
-	  (find-class spec))
-	 #+ns-boot
-	 ((eq (info type kind spec) :structure)
 	  (find-class spec))
 	 ((typep spec 'class)
 	  (if (typep spec 'built-in-class)
@@ -2105,10 +2102,9 @@
     ((or numeric-type named-type member-type array-type built-in-class)
      (values (%typep obj type) t))
     (class
-     (if #-ns-boot(if (csubtypep type (specifier-type 'generic-function))
-		      (funcallable-instance-p obj)
-		      (%instancep obj))
-	 #+ns-boot(structurep obj)
+     (if (if (csubtypep type (specifier-type 'generic-function))
+	     (funcallable-instance-p obj)
+	     (%instancep obj))
 	 (if (eq (class-layout type)
 		 (info type compiler-layout (class-name type)))
 	     (values (typep obj type) t)
@@ -2198,12 +2194,8 @@
 	      (setf (numeric-type-low res) num)
 	      (setf (numeric-type-high res) num)))
        res))
-    #-ns-boot
     (instance
      (layout-class (%instance-layout x)))
-    #+ns-boot
-    (structure
-     (find-class (structure-ref x 0)))
     (array
      (let ((etype (specifier-type (array-element-type x))))
        (make-array-type :dimensions (array-dimensions x)

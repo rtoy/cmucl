@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-boot.lisp,v 1.7 1993/02/26 08:26:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-boot.lisp,v 1.8 1993/03/01 20:11:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,6 @@
 	    (%instance-ref tc i)))
     new))
 
-#-ns-boot
 ;;; Define the STRUCTURE-OBJECT class as a subclass of INSTANCE.  This must be
 ;;; the first DEFSTRUCT executed.
 ;;;

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.38 1993/02/26 08:25:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.39 1993/03/01 20:07:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,11 +33,6 @@
 
 ;;;; Structure frobbing primitives.
 
-#+ns-boot 
-(defun %instancep (x)
-  (structurep x))
-
-#-ns-boot
 (defun %make-instance (length)
   "Allocate a new instance with LENGTH data slots."
   (declare (type index length))
@@ -46,19 +41,12 @@
 (defun %instance-length (instance)
   "Given an instance, return its length."
   (declare (type instance instance))
-  #+ns-boot
-  (structure-length instance)
-  #-ns-boot
   (%instance-length instance))
 
 (defun %instance-ref (instance index)
   "Return the value from the INDEXth slot of INSTANCE.  This is SETFable."
-  #+ns-boot
-  (structure-ref instance index)
-  #-ns-boot
   (%instance-ref instance index))
 
-#-ns-boot (progn
 (defun %instance-set (instance index new-value)
   "Set the INDEXth slot of INSTANCE to NEW-VALUE."
   (setf (%instance-ref instance index) new-value))
@@ -79,15 +67,9 @@
   (declare (type index index))
   (%raw-set-double vec index val))
 
-); #-ns-boot progn
-
 (defun %instance-layout (instance)
-  #+ns-boot
-  (layout-of instance)
-  #-ns-boot
   (%instance-layout instance))
 
-#-ns-boot
 (defun %set-instance-layout (instance new-value)
   (%set-instance-layout instance new-value))
 
@@ -459,8 +441,7 @@
 
     (let* ((aname (concat-pnames (dd-conc-name defstruct) name))
 	   (existing (info function accessor-for aname)))
-      (if #-ns-boot
-	  (and (structure-class-p existing)
+      (if (and (structure-class-p existing)
 	       (not (eq (class-name existing) (dd-name defstruct)))
 	       (string= (dsd-%name (find aname
 					 (dd-slots
@@ -468,7 +449,6 @@
 					   (class-layout existing)))
 					 :key #'dsd-accessor))
 			name))
-	  #+ns-boot nil
 	  (setf (dsd-accessor islot) nil)
 	  (setf (dsd-accessor islot) aname)))
     
@@ -963,11 +943,6 @@
 ;;; general-case code.  Since the compiler will normally open-code accesors,
 ;;; the (minor) efficiency penalty is not a concern.
 
-#+ns-boot
-(defun %defstruct (&rest ignore)
-  (declare (ignore ignore)))
-
-#-ns-boot(progn
 ;;; Typep-To-Layout  --  Internal
 ;;;
 ;;;    Return true if Obj is an object of the structure type corresponding to
@@ -1078,7 +1053,6 @@
 
   (undefined-value))
 
-); #-ns-boot progn
 
 ;;;; Redefinition stuff:
 
@@ -1107,9 +1081,6 @@
 				   :inheritance-depth (length inherits)
 				   :length (dd-length info)
 				   :info info)))
-      #+ns-boot
-      (when (and old-layout (not (layout-info old-layout)))
-	(setf (layout-info old-layout) info))
       (cond
        ((not old-layout)
 	(values class new-layout nil))
@@ -1356,7 +1327,6 @@
 ;;;
 ;;;    Copy any old kind of structure.
 ;;;
-#-ns-boot
 (defun copy-structure (structure)
   "Return a copy of Structure with the same (EQL) slot values."
   (declare (type structure-object structure) (optimize (speed 3) (safety 0)))
@@ -1387,7 +1357,6 @@
 
 ;;; Default print and make-load-form methods.
 
-#-ns-boot
 (defun default-structure-print (structure stream depth)
   (declare (ignore depth))
   (let* ((type (%instance-layout structure))
@@ -1433,7 +1402,6 @@
 	    (write-char #\space stream)
 	    (output-object (%instance-ref structure index) stream))))))
 
-#-ns-boot
 (defun make-structure-load-form (structure)
   (declare (type structure-object structure))
   (let* ((class (layout-class (%instance-layout structure)))
