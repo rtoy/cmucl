@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.16 1990/06/18 18:37:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.17 1990/07/02 13:06:22 ram Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -59,9 +59,8 @@
 (def-source-transform char-int (x)
   `(char-code ,x))
 
-(def-source-transform abs (x)
-  (once-only ((n-x x))
-    `(if (< ,n-x 0) (- ,n-x) ,n-x)))
+(deftransform abs ((x) (rational))
+  '(if (< x 0) (- x) x))
 
 
 
