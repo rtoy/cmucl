@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.153 2004/08/16 18:09:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.154 2005/01/06 17:32:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2442,7 +2442,7 @@
 	     ;; Both are positive.
 	     (cond ((or (null x-len) (null y-len))
 		    (specifier-type 'unsigned-byte))
-		   ((or (zerop x-len) (zerop y-len))
+		   ((and (zerop x-len) (zerop y-len))
 		    (specifier-type '(integer 0 0)))
 		   ((and (<= x-len 32) (<= y-len 32))
 		    (let ((xlo (numeric-type-low x))
@@ -2495,7 +2495,7 @@
 	 ;; Both are positive
 	 (cond ((or (null x-len) (null y-len))
 		(specifier-type 'unsigned-byte))
-	       ((or (zerop x-len) (zerop y-len))
+	       ((and (zerop x-len) (zerop y-len))
 		(specifier-type '(integer 0 0)))
 	       ((and (<= x-len 32) (<= y-len 32))
 		(let ((xlo (numeric-type-low x))
