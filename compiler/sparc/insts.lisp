@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.24 2000/02/16 00:25:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.25 2000/02/17 14:30:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -798,7 +798,7 @@
 
 (define-f3-inst ldf #b11 #b100000 :dest-kind fp-reg :load-store :load)
 (define-f3-inst lddf #b11 #b100011 :dest-kind fp-reg :load-store :load)
-(define-f3-inst ldxf #b11 #b100010 :dest-kind fp-reg :load-store :load)	; v9
+(define-f3-inst ldqf #b11 #b100010 :dest-kind fp-reg :load-store :load)	; v9
 (define-f3-inst stb #b11 #b000101 :load-store :store)
 (define-f3-inst sth #b11 #b000110 :load-store :store)
 (define-f3-inst st #b11 #b000100 :load-store :store)
@@ -810,7 +810,7 @@
 
 (define-f3-inst stf #b11 #b100100 :dest-kind fp-reg :load-store :store)
 (define-f3-inst stdf #b11 #b100111 :dest-kind fp-reg :load-store :store)
-(define-f3-inst stxf #b11 #b100110 :dest-kind fp-reg :load-store :store) ; v9
+(define-f3-inst stqf #b11 #b100110 :dest-kind fp-reg :load-store :store) ; v9
 (define-f3-inst ldstub #b11 #b001101 :load-store t)
 
 ;; swap is deprecated on the Sparc V9
@@ -1342,61 +1342,73 @@
 
 (define-unary-fp-inst fitos #b011000100 :reads :fsr)
 (define-unary-fp-inst fitod #b011001000 :reads :fsr :extended t)
-(define-unary-fp-inst fitox #b011001100 :reads :fsr :extended t)	; v8
+(define-unary-fp-inst fitoq #b011001100 :reads :fsr :extended t)	; v8
 
+(define-unary-fp-inst fxtos #b010000100 :reads :fsr)                    ; v9
+(define-unary-fp-inst fxtod #b010001000 :reads :fsr :extended t)        ; v9
+(define-unary-fp-inst fxtoq #b010001100 :reads :fsr :extended t)	; v9
+
+
+;; I (toy@rtp.ericsson.se) don't think these f{sd}toir instructions
+;; exist on any Ultrasparc, but I only have a V9 manual.  The code in
+;; float.lisp seems to indicate that they only existed on non-sun4
+;; machines (sun3 68K machines?).
 (define-unary-fp-inst fstoir #b011000001 :reads :fsr)
-(define-unary-fp-inst fdtoir #b011000010 :reads :fsr :extended t)
-(define-unary-fp-inst fxtoir #b011000011 :reads :fsr :extended t)
+(define-unary-fp-inst fdtoir #b011000010 :reads :fsr)
 
 (define-unary-fp-inst fstoi #b011010001)
 (define-unary-fp-inst fdtoi #b011010010 :extended t)
-(define-unary-fp-inst fxtoi #b011010011 :extended t)	; v8
+(define-unary-fp-inst fqtoi #b011010011 :extended t)	; v8
+
+(define-unary-fp-inst fstox #b010000001)                ; v9
+(define-unary-fp-inst fdtox #b010000010 :extended t)    ; v9
+(define-unary-fp-inst fqtox #b010000011 :extended t)	; v9
 
 (define-unary-fp-inst fstod #b011001001 :reads :fsr)
-(define-unary-fp-inst fstox #b011001101 :reads :fsr)	; v8
+(define-unary-fp-inst fstoq #b011001101 :reads :fsr)	; v8
 (define-unary-fp-inst fdtos #b011000110 :reads :fsr)
-(define-unary-fp-inst fdtox #b011001110 :reads :fsr)	; v8
-(define-unary-fp-inst fxtos #b011000111 :reads :fsr)	; v8
-(define-unary-fp-inst fxtod #b011001011 :reads :fsr)	; v8
+(define-unary-fp-inst fdtoq #b011001110 :reads :fsr)	; v8
+(define-unary-fp-inst fqtos #b011000111 :reads :fsr)	; v8
+(define-unary-fp-inst fqtod #b011001011 :reads :fsr)	; v8
 
 (define-unary-fp-inst fmovs #b000000001)
 (define-unary-fp-inst fmovd #b000000010 :extended t)	; v9
-(define-unary-fp-inst fmovx #b000000011 :extended t)	; v9
+(define-unary-fp-inst fmovq #b000000011 :extended t)	; v9
 
 (define-unary-fp-inst fnegs #b000000101)
 (define-unary-fp-inst fnegd #b000000110 :extended t)	; v9
-(define-unary-fp-inst fnegx #b000000111 :extended t)	; v9
+(define-unary-fp-inst fnegq #b000000111 :extended t)	; v9
 
 (define-unary-fp-inst fabss #b000001001)
 (define-unary-fp-inst fabsd #b000001010 :extended t)	; v9
-(define-unary-fp-inst fabsx #b000001011 :extended t)	; v9
+(define-unary-fp-inst fabsq #b000001011 :extended t)	; v9
 
 (define-unary-fp-inst fsqrts #b000101001 :reads :fsr)		; V7
 (define-unary-fp-inst fsqrtd #b000101010 :reads :fsr :extended t)	; V7
-(define-unary-fp-inst fsqrtx #b000101011 :reads :fsr :extended t)	; v8
+(define-unary-fp-inst fsqrtq #b000101011 :reads :fsr :extended t)	; v8
 
 (define-binary-fp-inst fadds #b001000001)
 (define-binary-fp-inst faddd #b001000010 :extended t)
-(define-binary-fp-inst faddx #b001000011 :extended t)	; v8
+(define-binary-fp-inst faddq #b001000011 :extended t)	; v8
 (define-binary-fp-inst fsubs #b001000101)
 (define-binary-fp-inst fsubd #b001000110 :extended t)
-(define-binary-fp-inst fsubx #b001000111 :extended t)	; v8
+(define-binary-fp-inst fsubq #b001000111 :extended t)	; v8
 
 (define-binary-fp-inst fmuls #b001001001)
 (define-binary-fp-inst fmuld #b001001010 :extended t)
-(define-binary-fp-inst fmulx #b001001011 :extended t)	; v8
+(define-binary-fp-inst fmulq #b001001011 :extended t)	; v8
 (define-binary-fp-inst fdivs #b001001101)
 (define-binary-fp-inst fdivd #b001001110 :extended t)
-(define-binary-fp-inst fdivx #b001001111 :extended t)	; v8
+(define-binary-fp-inst fdivq #b001001111 :extended t)	; v8
 
 ;;; Float comparison instructions.
 ;;;
 (define-cmp-fp-inst fcmps #b0001)
 (define-cmp-fp-inst fcmpd #b0010 :extended t)
-(define-cmp-fp-inst fcmpx #b0011 :extended t) ;v8
+(define-cmp-fp-inst fcmpq #b0011 :extended t) ;v8
 (define-cmp-fp-inst fcmpes #b0101)
 (define-cmp-fp-inst fcmped #b0110 :extended t)
-(define-cmp-fp-inst fcmpex #b0111 :extended t)	; v8
+(define-cmp-fp-inst fcmpeq #b0111 :extended t)	; v8
 
 
 
