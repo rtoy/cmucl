@@ -5,7 +5,7 @@ vpath %.S $(PATH1)
 CPPFLAGS = -I. -I$(PATH1) -I/usr/X11R6/include
 CC = gcc3
 LD = ld
-NM = nm
+NM = $(PATH1)/darwin-nm
 CPP = cpp -no-cpp-precomp
 DEPEND = $(CC) -MM
 CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc
