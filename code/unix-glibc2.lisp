@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.7 1999/09/12 14:24:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.8 1999/12/04 15:59:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -135,7 +135,7 @@
 	  KBDSCLICK FIONREAD	  unix-exit unix-stat unix-lstat unix-fstat
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
-	  unix-utimes unix-setreuid
+	  unix-utimes unix-sched-yield unix-setreuid
 	  unix-setregid
 	  unix-getpid unix-getppid
 	  unix-getgid unix-getegid unix-getpgrp unix-setpgrp unix-getuid
@@ -1283,8 +1283,7 @@ length LEN and type TYPE."
   (int-syscall ("sched_getscheduler" pid-t)
 		pid))
 
-#+nil
-(defun unix-sched_yield ()
+(defun unix-sched-yield ()
   "Retrieve scheduling algorithm for a particular purpose."
   (int-syscall ("sched_yield")))
 
