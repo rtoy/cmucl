@@ -115,7 +115,7 @@
 ;;; converted: we could go into an infinite recursion trying to convert the
 ;;; definition of a macro which uses itself.
 ;;;
-(let ((c:compile-time-define-macros* nil))
+(let ((c:*compile-time-define-macros* nil))
   (comf "ncode:defstruct")
   (comf "ncode:defmacro")
   (comf "ncode:macros")
