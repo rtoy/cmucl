@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.15 1994/09/29 13:51:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.16 1994/10/01 00:38:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,9 @@
 
 #+pmax (defconstant foreign-segment-start #x00C00000)
 #+pmax (defconstant foreign-segment-size  #x00400000)
+
+#+hppa (defconstant foreign-segment-start #x10C00000)
+#+hppa (defconstant foreign-segment-size  #x00400000)
 
 (defvar *previous-linked-object-file* nil)
 (defvar *foreign-segment-free-pointer* foreign-segment-start)
@@ -151,6 +154,121 @@
 				       pad-size-1)
 			     unix:l_set)
 	    (unix:unix-read fd addr len-of-text-and-data)))
+      (unix:unix-close fd))))
+
+#+hppa
+(alien:def-alien-type nil
+    (alien:struct sys_clock
+                  (secs c-call:unsigned-int)
+                  (nanosecs c-call:unsigned-int)))
+#+hppa
+(alien:def-alien-type nil
+    (alien:struct header
+                  (system_id c-call:short)
+                  (a_magic c-call:short)
+                  (version_id c-call:unsigned-int)
+                  (file_time (alien:struct sys_clock))
+                  (entry_space c-call:unsigned-int)
+                  (entry_subspace c-call:unsigned-int)
+                  (entry_offset c-call:unsigned-int)
+                  (aux_header_location c-call:unsigned-int)
+                  (aux_header_size c-call:unsigned-int)
+                  (som_length c-call:unsigned-int)
+                  (presumed_dp c-call:unsigned-int)
+                  (space_location c-call:unsigned-int)
+                  (space_total c-call:unsigned-int)
+                  (subspace_location c-call:unsigned-int)
+                  (subspace_total c-call:unsigned-int)
+                  (loader_fixup_location c-call:unsigned-int)
+                  (loader_fixup_total c-call:unsigned-int)
+                  (space_strings_location c-call:unsigned-int)
+                  (space_strings_size c-call:unsigned-int)
+                  (init_array_location c-call:unsigned-int)
+                  (init_array_total c-call:unsigned-int)
+                  (compiler_location c-call:unsigned-int)
+                  (compiler_total c-call:unsigned-int)
+                  (symbol_location c-call:unsigned-int)
+                  (symbol_total c-call:unsigned-int)
+                  (fixup_request_location c-call:unsigned-int)
+                  (fixup_request_total c-call:unsigned-int)
+                  (symbol_strings_location c-call:unsigned-int)
+                  (symbol_strings_size c-call:unsigned-int)
+                  (unloadable_sp_location c-call:unsigned-int)
+                  (unloadable_sp_size c-call:unsigned-int)
+                  (checksum c-call:unsigned-int)))
+
+#+hppa
+(alien:def-alien-type nil
+    (alien:struct aux_id
+                  #|
+                  (mandatory c-call:unsigned-int 1)
+                  (copy c-call:unsigned-int 1)
+                  (append c-call:unsigned-int 1)
+                  (ignore c-call:unsigned-int 1)
+                  (reserved c-call:unsigned-int 12)
+                  (type c-call:unsigned-int 16)
+                  |#
+                  (dummy c-call:unsigned-int)
+                  (length c-call:unsigned-int)))
+#+hppa
+(alien:def-alien-type nil
+    (alien:struct som_exec_auxhdr
+                  (som_auxhdr (alien:struct aux_id))
+                  (exec_tsize c-call:long)
+                  (exec_tmem c-call:long)
+                  (exec_tfile c-call:long)
+                  (exec_dsize c-call:long)
+                  (exec_dmem c-call:long)
+                  (exec_dfile c-call:long)
+                  (exec_bsize c-call:long)
+                  (exec_entry c-call:long)
+                  (exec_flags c-call:long)
+                  (exec_bfill c-call:long)))
+
+#+hppa
+(alien:def-alien-routine ("bzero" unix-bzero) c-call:void
+  (s alien:system-area-pointer)
+  (n c-call:unsigned-long))
+
+#+hppa
+(defun load-object-file (name)
+  (format t ";;; Loading object file...~%")
+  (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
+    (unless fd
+      (error "Could not open ~S: ~A" name (unix:get-unix-error-msg errno)))
+    (unwind-protect
+        (alien:with-alien ((header (alien:struct som_exec_auxhdr)))
+          (unix:unix-lseek fd (alien:alien-size (alien:struct header) :bytes)
+                           unix:l_set)
+          (unix:unix-read fd
+                          (alien:alien-sap header)
+                          (alien:alien-size (alien:struct som_exec_auxhdr)
+                                            :bytes))
+          (let* ((tmem (alien:slot header 'exec_tmem))
+                 (tsize (alien:slot header 'exec_tsize))
+                 (dmem (alien:slot header 'exec_dmem))
+                 (dsize (alien:slot header 'exec_dsize))
+                 (bsize (alien:slot header 'exec_bsize))
+                 (memory-needed (+ tsize dsize bsize (* 2 4096)))
+                 (addr (allocate-space-in-foreign-segment memory-needed)))
+            (unix-bzero addr memory-needed) ;force valid
+            (unix:unix-lseek fd (alien:slot header 'exec_tfile) unix:l_set)
+            (unix:unix-read fd (system:int-sap tmem) tsize)
+            (unix:unix-lseek fd (alien:slot header 'exec_dfile) unix:l_set)
+            (unix:unix-read fd (system:int-sap dmem) dsize)
+            (unix-bzero (system:int-sap (+ dmem dsize)) bsize)
+            ;;(format t "tmem ~X tsize ~X dmem ~X dsize ~X bsize ~X~%"
+            ;;        tmem tsize dmem dsize bsize)
+            ;;(format t "tfile ~X dfile ~X~%"
+            ;;        (alien:slot header 'exec_tfile)
+            ;;        (alien:slot header 'exec_dfile))
+            (alien:alien-funcall (alien:extern-alien
+                                  "sanctify_for_execution"
+                                  (alien:function c-call:void
+                                                  alien:system-area-pointer
+                                                  c-call:unsigned-long))
+                                 addr (+ (- dmem tmem) dsize bsize))
+            ))
       (unix:unix-close fd))))
 
 (defun parse-symbol-table (name)
