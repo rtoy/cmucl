@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.13 1990/10/16 19:54:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.14 1990/10/25 23:44:55 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -283,12 +283,12 @@
 	 (and
 	  (or (atom hairy-spec)
 	      (dolist (spec (cdr hairy-spec))
-		(unless (%%typep object spec)
+		(unless (%%typep object (specifier-type spec))
 		  (return nil)))))
 	 (not
 	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
 	    (error "Invalid type specifier: ~S" hairy-spec))
-	  (not (%%typep object (cadr hairy-spec))))
+	  (not (%%typep object (cadr (specifier-type hairy-spec)))))
 	 (satisfies
 	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
 	    (error "Invalid type specifier: ~S" hairy-spec))
