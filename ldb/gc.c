@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.18 1990/10/23 00:03:13 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.19 1990/11/12 02:37:48 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -111,9 +111,11 @@ int nwords;
 
 	/* copy the object */
 	while (nwords > 0) {
-		*dest++ = *source++;
-		*dest++ = *source++;
-		nwords -= 2;
+            dest[0] = source[0];
+            dest[1] = source[1];
+            dest += 2;
+            source += 2;
+            nwords -= 2;
 	}
 
 	/* return lisp pointer of new object */
@@ -320,7 +322,42 @@ long nwords;
 		       (unsigned long) start, (unsigned long) object, type);
 #endif
 
+#if 0
 		words_scavenged = (scavtab[type])(start, object);
+#else
+                if (Pointerp(object)) {
+                    /* It be a pointer. */
+                    if (from_space_p(object)) {
+                        /* It currently points to old space.  Check for a */
+                        /* forwarding pointer. */
+                        lispobj first_word;
+
+                        first_word = *((lispobj *)PTR(object));
+                        if (new_space_p(first_word)) {
+                            /* Yep, there be a forwarding pointer. */
+                            *start = first_word;
+                            words_scavenged = 1;
+                        }
+                        else {
+                            /* Scavenge that pointer. */
+                            words_scavenged = (scavtab[type])(start, object);
+                        }
+                    }
+                    else {
+                        /* It points somewhere other than oldspace.  Leave */
+                        /* it alone. */
+                        words_scavenged = 1;
+                    }
+                }
+                else if ((object & 3) == 0) {
+                    /* It's a fixnum.  Real easy. */
+                    words_scavenged = 1;
+                }
+                else {
+                    /* It's some random header object. */
+                    words_scavenged = (scavtab[type])(start, object);
+                }
+#endif
 
 		start += words_scavenged;
 		nwords -= words_scavenged;
