@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.18 2000/10/23 20:20:42 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.19 2000/10/24 11:02:49 dtc Exp $
  *
  */
 
@@ -225,7 +225,7 @@ void main(int argc, char *argv[], char *envp[])
     while ((arg = *++argptr) != NULL)
       {
 	if (strcmp(arg, "-batch") == 0)
-	  SetSymbolGlobalValue(BATCH_MODE, T);
+	  SetSymbolValue(BATCH_MODE, T);
       }
 
     /*
