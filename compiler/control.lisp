@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.7 1991/11/08 22:20:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.8 1991/11/09 22:04:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,6 +102,10 @@
 ;;; through to.  (But it doesn't have to be from the last block walked, since
 ;;; that call might not have added anything.)
 ;;;
+;;;    We defer walking successors whose successor is the component tail (end
+;;; in an error, NLX or tail full call.)  This is to discourage making error
+;;; code the drop-through.
+;;;
 (defun control-analyze-block (block tail)
   (declare (type cblock block) (type ir2-block tail))
   (unless (block-flag block)
@@ -117,10 +121,15 @@
 		    (eq (basic-combination-kind last) :local))
 	       (combination-lambda last))
 	      (t
-	       (let ((fun nil))
-		 (dolist (succ (block-succ block))
-		   (let ((res (control-analyze-block succ tail)))
-		     (when res (setq fun res))))
+	       (let ((component-tail (component-tail (block-component block)))
+		     (block-succ (block-succ block))
+		     (fun nil))
+		 (dolist (succ block-succ)
+		   (unless (eq (first (block-succ succ)) component-tail)
+		     (let ((res (control-analyze-block succ tail)))
+		       (when res (setq fun res)))))
+		 (dolist (succ block-succ)
+		   (control-analyze-block succ tail))
 		 fun)))))))
 
 
