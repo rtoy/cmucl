@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.235 2004/07/30 01:05:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.236 2004/09/24 14:59:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1430,7 +1430,8 @@
 	   "SET-LOCATION-BREAKPOINT-FOR-EDITOR" "SOURCE-PATH-CONTEXT"
 	   "TOP-FRAME" "UNHANDLED-CONDITION" "UNKNOWN-CODE-LOCATION"
 	   "UNKNOWN-CODE-LOCATION-P" "UNKNOWN-DEBUG-VARIABLE"
-	   "CODE-LOCATION-KIND" "FLUSH-FRAMES-ABOVE"))
+	   "CODE-LOCATION-KIND" "FLUSH-FRAMES-ABOVE"
+	   "FIND-DEBUG-TAG-FOR-FRAME"))
 (dolist
     (name
      '("%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET" "%PUT"
@@ -1574,6 +1575,7 @@
 	   "HPPA-FASL-FILE-IMPLEMENTATION"
 	   "ALPHA-FASL-FILE-IMPLEMENTATION"
 	   "SGI-FASL-FILE-IMPLEMENTATION"
+	   "AMD64-FASL-FILE-IMPLEMENTATION"
 	   "MAKE-UNBOUND-MARKER"
 	   "RETURN-SINGLE"
 	   "BACKEND-PAGE-SIZE"
