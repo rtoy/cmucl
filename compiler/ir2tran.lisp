@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.30 1991/03/10 19:41:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.31 1991/05/31 14:22:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -906,7 +906,7 @@
   (declare (type continuation cont))
   (let* ((2cont (continuation-info cont))
 	 (name (if (eq (ir2-continuation-kind 2cont) :delayed)
-		   (let ((res (continuation-function-name cont)))
+		   (let ((res (continuation-function-name cont t)))
 		     (assert res)
 		     res)
 		   nil)))
