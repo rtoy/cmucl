@@ -54,7 +54,8 @@
    Otherwise, all locations are displayed.")
 
   "If true, list the code location type in the LIST-LOCATIONS command.")
-    (princ " ")))
+
+;;; A list of the types of code-locations that should not be stepped to and
 ;;; should not be listed when listing breakpoints.
 ;;;
   "A lambda of no args that prints the debugger prompt on *debug-io*.")
