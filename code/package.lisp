@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.19 1992/05/15 18:47:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.20 1992/05/15 19:11:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1191,8 +1191,10 @@
 	  (setq s (make-symbol name))
 	  (%set-symbol-package s package)
 	  (add-symbol internal s))
-	(pushnew s (package-%shadowing-symbols package))))))
+	(pushnew s (package-%shadowing-symbols package)))))
   t)
+
+
 
 ;;; Use-Package  --  Public
 ;;;
