@@ -80,7 +80,8 @@
     (do-live-tns (tn live block)
       (let ((leaf (tn-leaf tn)))
 	(when (and (lambda-var-p leaf)
-		   (or (not (eq (tn-kind tn) :environment))
+		   (or (not (member (tn-kind tn)
+				    '(:environment :debug-environment)))
 		       (rassoc leaf (lexenv-variables (node-lexenv node)))))
 	  (let ((num (gethash leaf var-locs)))
 	    (when num
@@ -332,6 +333,11 @@
 ;;; makes Var's name unique in the function.  Buffer is the vector we stick the
 ;;; result in.
 ;;;
+;;;    The debug-variable is only marked as always-live if the TN is
+;;; environment live and is an argument.  If a :debug-environment TN, then we
+;;; also exclude set variables, since the variable is not guranteed to be live
+;;; everywhere in that case.
+;;;
 (defun dump-1-variable (fun var tn id buffer)
   (declare (type lambda-var var) (type tn tn) (type unsigned-byte id)
 	   (type clambda fun))
@@ -339,12 +345,15 @@
 	 (package (symbol-package name))
 	 (package-p (and package (not (eq package *package*))))
 	 (save-tn (tn-save-tn tn))
+	 (kind (tn-kind tn))
 	 (flags 0))
     (unless package
       (setq flags (logior flags compiled-debug-variable-uninterned)))
     (when package-p
       (setq flags (logior flags compiled-debug-variable-packaged)))
-    (when (and (eq (tn-kind tn) :environment)
+    (when (and (or (eq kind :environment)
+		   (and (eq kind :debug-environment)
+			(null (basic-var-sets var))))
 	       (eq (lambda-var-home var) fun))
       (setq flags (logior flags compiled-debug-variable-environment-live)))
     (when save-tn
