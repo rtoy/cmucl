@@ -18,7 +18,7 @@
 ;;; express or implied warranty.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.13 2003/06/05 14:56:59 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.14 2003/06/06 15:04:55 toy Exp $")
 
 (in-package :xlib)
 
@@ -520,7 +520,7 @@
 ;;; display connection.  We inhibit GC notifications since display of them
 ;;; could cause recursive entry into CLX.
 ;;;
-#+mp
+#-mp
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
 			&body body)
   `(let ((ext:*gc-verbose* nil)
