@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.59 2004/05/24 23:28:21 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.60 2004/10/23 15:33:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2287,8 +2287,10 @@ incremental redefinition of callback functions."
 	,@decls
 	;; We assume sp-fixnum is word aligned and pass it untagged to
 	;; this function.  The shift compensates this.
-	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2))))
-	      (,ret (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,ret-addr 2)))))
+	(let ((,sp (sys:int-sap (bignum:%ashl (ldb (byte vm:word-bits 0) ,sp-fixnum)
+					      2)))
+	      (,ret (sys:int-sap (bignum:%ashl (ldb (byte vm:word-bits 0) ,ret-addr)
+					       2))))
 	  (declare (ignorable ,sp ,ret))
 	  ;; Copy all arguments to local variables.
 	  (with-alien ,(loop for offset = 0 then (+ offset 
