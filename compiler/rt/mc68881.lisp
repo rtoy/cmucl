@@ -423,14 +423,16 @@
        (sc-case res
 	 (mc68881-single-reg
 	  (storew bits (current-nfp-tn vop) (tn-offset stack-temp))
-	  (inst cal addr (* (tn-offset stack-temp) vm:word-bytes))
+	  (inst cal addr (current-nfp-tn vop)
+		(* (tn-offset stack-temp) vm:word-bytes))
 	  (inst mc68881-load res addr :single scratch))
 	 (single-stack
 	  (storew bits (current-nfp-tn vop) (tn-offset res)))))
       (signed-stack
        (sc-case res
 	 (mc68881-single-reg
-	  (inst cal addr (* (tn-offset bits) vm:word-bytes))
+	  (inst cal addr (current-nfp-tn vop)
+		(* (tn-offset bits) vm:word-bytes))
 	  (inst mc68881-load res addr :single scratch))
 	 (single-stack
 	  (unless (location= bits res)
@@ -457,7 +459,7 @@
       (storew hi-bits (current-nfp-tn vop) (tn-offset stack-tn))
       (storew lo-bits (current-nfp-tn vop) (1+ (tn-offset stack-tn))))
     (when (sc-is res mc68881-double-reg)
-      (inst cal addr (* (tn-offset temp) vm:word-bytes))
+      (inst cal addr (current-nfp-tn vop) (* (tn-offset temp) vm:word-bytes))
       (inst mc68881-load res addr :double scratch))))
 
 (define-vop (mc68881-single-float-bits)
