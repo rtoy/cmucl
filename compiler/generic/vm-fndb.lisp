@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.43 1992/04/14 02:57:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.44 1992/12/05 21:51:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.43 1992/04/14 02:57:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.44 1992/12/05 21:51:41 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -56,7 +56,7 @@
 	   simple-array-single-float-p simple-array-double-float-p
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
 	   weak-pointer-p scavenger-hook-p code-component-p lra-p
-	   funcallable-instance-p)
+	   funcallable-instance-p dylan::dylan-function-p)
   (t) boolean (movable foldable flushable))
 
 
