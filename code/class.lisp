@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.13 1993/03/01 20:04:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.14 1993/03/13 11:11:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,8 @@
 		 structure-class-print-function
 		 structure-class-make-load-form-fun find-layout
 		 class-proper-name class-layout class-state class-subclasses
-		 class-init))
+		 class-init
+		 basic-structure-class funcallable-structure-class))
 
 (in-package "LISP")
 (export '(class structure-class class-name find-class class-of built-in-class
@@ -198,7 +199,9 @@
 ;;; Non-structure "typed" defstructs are a special case, and don't have a
 ;;; corresponding class.
 ;;;
-(defstruct (structure-class (:include class))
+(defstruct (basic-structure-class (:include class)))
+
+(defstruct (structure-class (:include basic-structure-class))
   ;;
   ;; Structure print function, or NIL if none.
   (print-function nil :type (or function symbol null))
@@ -213,6 +216,11 @@
   ;;
   ;; If true, a default keyword constructor for this structure.
   (constructor nil :type (or function null)))
+
+;;; FUNCALLABLE-STRUCTURE-CLASS is used to represent funcallable structures,
+;;; which are used to implement generic functions.
+;;;
+(defstruct (funcallable-structure-class (:include basic-structure-class)))
 
 
 ;;;; Class namespace:
@@ -531,7 +539,7 @@
 			       (class-layout (find-class x)))
 			   inherits)
 		      (if hierarchical (length inherits) -1))
-	 nil nil)))))
+	 :invalidate nil)))))
 
 
 ;;; Now that we have set up the class heterarchy, seal the sealed classes.
@@ -613,6 +621,7 @@
   (setf (layout-inheritance-depth layout) -1)
   (let ((inherits (layout-inherits layout))
 	(class (layout-class layout)))
+    (modify-class class)
     (dotimes (i (length inherits))
       (let* ((super (svref inherits i))
 	     (subs (class-subclasses (layout-class super))))
@@ -628,13 +637,13 @@
 ;;; in the type system, clobbering any old layout.  However, this does not
 ;;; modify the class namespace; that is a separate operation (think anonymous
 ;;; classes.)
-;;; -- If INVALIDATE-P, then all the layouts for any old definition
+;;; -- If INVALIDATE, then all the layouts for any old definition
 ;;;    and subclasses are invalidated, and the SUBCLASSES slot is cleared.
-;;  -- If DESTRUCT-P, then there must be an old layout, and this old layout is
+;;  -- If DESTRUCT-LAYOUT, then this is some old layout, and is to be
 ;;;    destructively modified to hold the same type information.
 ;;;
-(defun register-layout (layout invalidate-p destruct-p)
-  (declare (type layout layout))
+(defun register-layout (layout &key (invalidate t) destruct-layout)
+  (declare (type layout layout) (type (or layout null) destruct-layout))
   (let* ((class (layout-class layout))
 	 (class-layout (class-layout class))
 	 (subclasses (class-subclasses class)))
@@ -644,18 +653,19 @@
       (when subclasses
 	(do-hash (c l subclasses)
 	  (modify-class c)
-	  (when invalidate-p (invalidate-layout l))))
-      (when invalidate-p
+	  (when invalidate (invalidate-layout l))))
+      (when invalidate
 	(invalidate-layout class-layout)
 	(setf (class-subclasses class) nil)))
     
-    (cond (destruct-p
-	   (setf (layout-invalid class-layout) nil)
-	   (setf (layout-inherits class-layout) (layout-inherits layout))
-	   (setf (layout-inheritance-depth class-layout)
+    (cond (destruct-layout
+	   (setf (layout-invalid destruct-layout) nil)
+	   (setf (layout-inherits destruct-layout) (layout-inherits layout))
+	   (setf (layout-inheritance-depth destruct-layout)
 		 (layout-inheritance-depth layout))
-	   (setf (layout-length class-layout) (layout-length layout))
-	   (setf (layout-info class-layout) (layout-info layout)))
+	   (setf (layout-length destruct-layout) (layout-length layout))
+	   (setf (layout-info destruct-layout) (layout-info layout))
+	   (setf (class-layout class) destruct-layout))
 	  (t
 	   (setf (layout-invalid layout) nil)
 	   (setf (class-layout class) layout)))
@@ -672,7 +682,7 @@
 		  (class-name super))
 	    (setf (class-state super) :read-only))
 	  (setf (gethash class subclasses)
-		(if destruct-p class-layout layout))))))
+		(or destruct-layout layout))))))
 
     (undefined-value))
 
