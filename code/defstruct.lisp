@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.47 1993/03/15 00:11:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.48 1993/07/13 16:58:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1150,7 +1150,8 @@
 ;;; forward referenced layout.)  The third value is true if this is an
 ;;; incompatible redefinition, in which case it is the old layout.
 ;;;
-(defun ensure-structure-class (info inherits old-context new-context)
+(defun ensure-structure-class (info inherits old-context new-context
+				    &optional compiler-layout)
   (multiple-value-bind
       (class old-layout)
       (destructuring-bind (&optional name (class 'structure-class)
@@ -1166,7 +1167,8 @@
 				   :inherits inherits
 				   :inheritance-depth (length inherits)
 				   :length (dd-length info)
-				   :info info)))
+				   :info info))
+	  (old-layout (or compiler-layout old-layout)))
       (cond
        ((not old-layout)
 	(values class new-layout nil))
@@ -1345,9 +1347,13 @@
 ;;; the INFO TYPE COMPILER-LAYOUT.
 ;;;
 (defun %compiler-only-defstruct (info inherits)
-  (multiple-value-bind (class layout old-layout)
-		       (ensure-structure-class info inherits
-					       "current" "compiled")
+  (multiple-value-bind
+      (class layout old-layout)
+      (let ((clayout (info type compiler-layout (dd-name info))))
+	(ensure-structure-class info inherits
+				(if clayout "previously compiled" "current")
+				"compiled"
+				clayout))
     (cond
      (old-layout
       (undefine-structure (layout-info old-layout))
