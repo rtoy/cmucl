@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.3 1997/09/29 05:08:28 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.4 1997/09/29 11:01:10 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -901,14 +901,14 @@
   (name nil)
   (process nil :type (or null process)))
 
-#-pentium
+#-i486
 (defun seize-lock (lock)
   (declare (type lock lock))
   (sys:without-interrupts
    (unless (lock-process lock)
      (setf (lock-process lock) *current-process*))))
 
-#-pentium
+#-i486
 (defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
 			  &body body)
   (let ((orig-process (gensym)))
@@ -926,8 +926,8 @@
 		    (not (eq (lock-process ,lock) *current-process*)))
 	  (setf (lock-process ,lock) nil))))))
 
-;;; Fast locking for the Pentium.
-#+pentium
+;;; Fast locking for the i486 and above.
+#+i486
 (defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
 			  &body body)
   (let ((orig-process (gensym)))
