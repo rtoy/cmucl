@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.16 1990/11/27 10:05:06 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.17 1990/11/28 17:14:26 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -15,6 +15,8 @@
 #include "validate.h"
 
 #define crap_out(msg) do { write(2, msg, sizeof(msg)); abort(); } while (0)
+
+boolean internal_errors_enabled = 0;
 
 struct sigcontext *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
@@ -122,12 +124,17 @@ struct sigcontext *context;
     handler = interrupt_handlers[signal];
     were_in_lisp = !foreign_function_call_active;
     
+    if (handler.c == SIG_DFL || handler.c == SIG_IGN)
+	/* This can happen if someone tries to ignore or default on of the */
+	/* signals we need for runtime support. */
+	return;
+
     if (were_in_lisp)
         fake_foreign_function_call(context);
     
     /* Allow signals again. */
     sigsetmask(context->sc_mask);
-    
+
     if (LowtagOf(handler.lisp) == type_EvenFixnum ||
         LowtagOf(handler.lisp) == type_OddFixnum)
         (*handler.c)(signal, code, context);
@@ -246,26 +253,36 @@ struct sigcontext *context;
 	crap_out("%primitive halt called; the party is over.\n");
 
       case trap_Error:
-	sigsetmask(context->sc_mask);
-	fake_foreign_function_call(context);
-	args = current_control_stack_pointer;
-	current_control_stack_pointer += 2;
-	args[0] = alloc_sap(context);
-	args[1] = NIL;
-	call_into_lisp(INTERNAL_ERROR,SymbolFunction(INTERNAL_ERROR),args,2);
-	undo_fake_foreign_function_call(context);
+	if (internal_errors_enabled) {
+	    sigsetmask(context->sc_mask);
+	    fake_foreign_function_call(context);
+	    args = current_control_stack_pointer;
+	    current_control_stack_pointer += 2;
+	    args[0] = alloc_sap(context);
+	    args[1] = NIL;
+	    call_into_lisp(INTERNAL_ERROR, SymbolFunction(INTERNAL_ERROR),
+			   args, 2);
+	    undo_fake_foreign_function_call(context);
+	}
+	else
+	    handle_now(signal, code, context);
 	break;
 
       case trap_Cerror:
-	sigsetmask(context->sc_mask);
-	fake_foreign_function_call(context);
-	args = current_control_stack_pointer;
-	current_control_stack_pointer += 2;
-	args[0] = alloc_sap(context);
-	args[1] = T;
-	call_into_lisp(INTERNAL_ERROR,SymbolFunction(INTERNAL_ERROR),args,2);
-	undo_fake_foreign_function_call(context);
-	skip_instruction(context);
+	if (internal_errors_enabled) {
+	    sigsetmask(context->sc_mask);
+	    fake_foreign_function_call(context);
+	    args = current_control_stack_pointer;
+	    current_control_stack_pointer += 2;
+	    args[0] = alloc_sap(context);
+	    args[1] = T;
+	    call_into_lisp(INTERNAL_ERROR, SymbolFunction(INTERNAL_ERROR),
+			   args, 2);
+	    undo_fake_foreign_function_call(context);
+	    skip_instruction(context);
+	}
+	else
+	    handle_now(signal, code, context);
 	break;
 
       default:
