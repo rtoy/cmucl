@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.40 1992/04/02 02:30:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.41 1992/04/07 22:56:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -659,7 +659,7 @@
 		    (write-char #\: stream)
 		    (write-string "::" stream)))))))
 	(output-symbol-name name stream))
-      (output-symbol-name name stream nil)))
+      (output-symbol-name (symbol-name object) stream nil)))
 	    
 ;;; OUTPUT-SYMBOL-NAME -- internal interface.
 ;;;
@@ -1699,7 +1699,7 @@
 
 (defun output-code-component (component stream)
   (print-unreadable-object (component stream :identity t)
-    (let ((dinfo (code-header-ref object vm:code-debug-info-slot)))
+    (let ((dinfo (code-header-ref component vm:code-debug-info-slot)))
       (cond ((eq dinfo :bogus-lra)
 	     (write-string "Bogus Code Object" stream))
 	    (t
