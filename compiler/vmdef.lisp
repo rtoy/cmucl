@@ -2289,7 +2289,8 @@
     (collect ((clauses))
       (do ((cases forms (rest cases)))
 	  ((null cases)
-	   (clauses `(t (error "Unknown SC to SC-Case for ~S." ,n-tn))))
+	   (clauses `(t (error "Unknown SC to SC-Case for ~S:~%  ~S" ,n-tn
+			       (sc-name (tn-sc ,n-tn))))))
 	(let ((case (first cases)))
 	  (when (atom case) 
 	    (error "Illegal SC-Case clause: ~S." case))
@@ -2398,14 +2399,12 @@
 
 ;;; NOTE-THIS-LOCATION  --  Interface
 ;;;
-(defmacro note-this-location (vop kind)
+(defun note-this-location (vop kind)
   "NOTE-THIS-LOCATION VOP Kind
   Node that the current code location is an interesting (to the debugger)
   location of the specified Kind.  VOP is the VOP responsible for this code.
   This VOP must specify some non-null :SAVE-P value (perhaps :COMPUTE-ONLY) so
   that the live set is computed."
-  (once-only ((n-lab '(gen-label)))
-    `(progn
-       (emit-label ,n-lab)
-       (note-debug-location ,vop ,n-lab ,kind))))
-
+  (let ((lab (gen-label)))
+    (emit-label lab)
+    (note-debug-location vop lab kind)))
