@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.29 1993/03/13 12:55:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.30 1993/03/14 18:50:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -993,10 +993,7 @@
 ;;; The type specifier for this function.
 (define-info-type function type ctype
   (if (fboundp name)
-      (let ((def (fdefinition name)))
-	(if (eval:interpreted-function-p def)
-	    (eval:interpreted-function-type def)
-	    (specifier-type (%function-type (%closure-function def)))))
+      (extract-function-type (fdefinition name))
       (specifier-type 'function)))
 
 ;;; The Assumed-Type for this function, if we have to infer the type due to not
