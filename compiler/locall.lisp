@@ -494,8 +494,8 @@
 		(let ((info (lambda-var-arg-info var)))
 		  (when (eq (arg-info-keyword info) name)
 		    (ignores dummy)
-		    (supplied (cons var val)))
-		    (return))))))
+		    (supplied (cons var val))
+		    (return)))))))
 	
 	(when (and loser (not (optional-dispatch-allowp fun)))
 	  (compiler-warning "Function called with unknown argument keyword ~S."
