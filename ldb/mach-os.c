@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mach-os.c,v 1.4 1992/03/02 04:10:36 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mach-os.c,v 1.5 1992/04/08 03:25:15 wlott Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -45,7 +45,7 @@ vm_size_t len;
 #endif
 
     if (res != KERN_SUCCESS)
-        mach_error("Could not vm_allocate memory: ", res);
+	return 0;
 
     segments = -1;
 
