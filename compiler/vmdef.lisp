@@ -151,9 +151,9 @@
   :Alternate-SCs (SC*)
       Indicates other SCs that can be used to hold values from this SC across
       calls or when storage in this SC is exhausted.  The SCs should be
-      specified in order of decreasing \"goodness\".  Unless this SC is only
-      used for restricted or wired TNs, then there must be a last SC in an
-      unbounded SB.
+      specified in order of decreasing \"goodness\".  There must be at least
+      one SC in an unbounded SB, unless this SC is only used for restricted or
+      wired TNs.
 
   :Constant-SCs (SC*)
       A list of the names of all the constant SCs that can be loaded into this
@@ -319,12 +319,14 @@
 	 (do-sc-pairs (from-sc to-sc ',scs)
 	   (dolist (dest-sc (cons to-sc (sc-alternate-scs to-sc)))
 	     (let ((vec (,accessor dest-sc)))
-	       (setf (svref vec (sc-number from-sc)) vop)
+	       (let ((scn (sc-number from-sc)))
+		 (setf (svref vec scn)
+		       (adjoin-template vop (svref vec scn))))
 	       (dolist (sc (append (sc-alternate-scs from-sc)
 				   (sc-constant-scs from-sc)))
 		 (let ((scn (sc-number sc)))
-		   (unless (svref vec scn) 
-		     (setf (svref vec scn) vop)))))))))))
+		   (setf (svref vec scn)
+			 (adjoin-template vop (svref vec scn))))))))))))
 
 
 ;;;; Primitive type definition:
@@ -1682,19 +1684,16 @@
 
 ;;; Adjoin-Template  --  Internal
 ;;;
-;;;    Add Template into Info's Templates, removing any old template with the
-;;; same name.
+;;;    Add Template into List, removing any old template with the same name.
+;;; We also maintain the increasing cost ordering.
 ;;;
-(defun adjoin-template (info template)
-  (declare (type function-info info) (type template template))
-  (setf (function-info-templates info)
-	(sort (cons template
-		    (remove (template-name template)
-			    (function-info-templates info)
-			    :key #'template-name))
-	      #'<=
-	      :key #'template-cost))
-  (undefined-value))
+(defun adjoin-template (template list)
+  (declare (type template template) (list list))
+  (sort (cons template
+	      (remove (template-name template) list
+		      :key #'template-name))
+	#'<=
+	:key #'template-cost))
 
 
 ;;; Set-Up-Function-Translation  --  Internal
@@ -1709,7 +1708,9 @@
   (declare (type vop-parse parse))
   (mapcar #'(lambda (name)
 	      `(let ((info (function-info-or-lose ',name)))
-		 (adjoin-template info ,n-template)
+		 (setf (function-info-templates info)
+		       (adjoin-template ,n-template
+					(function-info-templates info)))
 		 ,@(when (vop-parse-conditional-p parse)
 		     '((setf (function-info-attributes info)
 			     (attributes-union
