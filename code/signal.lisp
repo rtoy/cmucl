@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.18 1993/05/20 13:58:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.19 1993/08/02 19:22:09 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.18 1993/05/20 13:58:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.19 1993/08/02 19:22:09 hallgren Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -109,24 +109,32 @@
 (def-unix-signal :SIGPIPE 13 "Write on a pipe with no one to read it")
 (def-unix-signal :SIGALRM 14 "Alarm clock")
 (def-unix-signal :SIGTERM 15 "Software termination signal")
-(def-unix-signal :SIGURG 16 "Urgent condition present on socket")
-(def-unix-signal :SIGSTOP 17 "Stop")
-(def-unix-signal :SIGTSTP 18 "Stop signal generated from keyboard")
-(def-unix-signal :SIGCONT 19 "Continue after stop")
-(def-unix-signal :SIGCHLD 20 "Child status has changed")
-(def-unix-signal :SIGTTIN 21 "Background read attempted from control terminal")
-(def-unix-signal :SIGTTOU 22 "Background write attempted to control terminal")
-(def-unix-signal :SIGIO 23 "I/O is possible on a descriptor")
+(def-unix-signal :SIGURG #-hpux 16 #+hpux 29 
+  "Urgent condition present on socket")
+(def-unix-signal :SIGSTOP #-hpux 17 #+hpux 24 "Stop")
+(def-unix-signal :SIGTSTP #-hpux 18 #+hpux 25
+  "Stop signal generated from keyboard")
+(def-unix-signal :SIGCONT #-hpux 19 #+hpux 26 "Continue after stop")
+(def-unix-signal :SIGCHLD #-hpux 20 #+hpux 18 "Child status has changed")
+(def-unix-signal :SIGTTIN #-hpux 21 #+hpux 27
+  "Background read attempted from control terminal")
+(def-unix-signal :SIGTTOU #-hpux 22 #+hpux 28
+  "Background write attempted to control terminal")
+(def-unix-signal :SIGIO #-hpux 23 #+hpux 22 "I/O is possible on a descriptor")
+#-hpux
 (def-unix-signal :SIGXCPU 24 "Cpu time limit exceeded")
+#-hpux
 (def-unix-signal :SIGXFSZ 25 "File size limit exceeded")
-(def-unix-signal :SIGVTALRM 26 "Virtual time alarm")
-(def-unix-signal :SIGPROF 27 "Profiling timer alarm")
-(def-unix-signal :SIGWINCH 28 "Window size change")
-(def-unix-signal :SIGUSR1 30 "User defined signal 1")
-(def-unix-signal :SIGUSR2 31 "User defined signal 2")
+(def-unix-signal :SIGVTALRM #-hpux 26 #+hpux 20 "Virtual time alarm")
+(def-unix-signal :SIGPROF #-hpux 27 #+hpux 21 "Profiling timer alarm")
+(def-unix-signal :SIGWINCH #-hpux 28 #+hpux 23 "Window size change")
+(def-unix-signal :SIGUSR1 #-hpux 30 #+hpux 16 "User defined signal 1")
+(def-unix-signal :SIGUSR2 #-hpux 31 #+hpux 17 "User defined signal 2")
 ;;; 
 ;;; These are Mach Specific
+#+mach
 (def-unix-signal :SIGEMSG 30 "Mach Emergency message")
+#+mach
 (def-unix-signal :SIGMSG 31 "Mach message")
 
 ;;; SIGMASK -- Public
