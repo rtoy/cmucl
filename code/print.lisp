@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.52 1993/05/02 14:48:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.53 1993/05/07 11:47:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1518,7 +1518,7 @@
     (if (typep x *read-default-float-format*)
 	(unless (eql exp 0)
 	  (format stream "e~:[~;+~]~D" plusp exp))
-	(format stream "~A~:[~;+~]~D" 
+	(format stream "~C~:[~;+~]~D" 
 		(etypecase x
 		  (single-float #\f)
 		  (double-float #\d)
