@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.32 1999/02/25 13:03:04 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.33 2000/09/26 16:38:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -644,18 +644,6 @@
 	(internal-apply res nil '#()))))
 
 
-;;; MAKE-INDIRECT-VALUE-CELL -- Internal.
-;;;
-;;; Later this will probably be the same weird internal thing the compiler
-;;; makes to represent these things.
-;;;
-(defun make-indirect-value-cell (value)
-  (list value))
-;;;
-(defmacro indirect-value (value-cell)
-  `(car ,value-cell))
-
-
 ;;; VALUE -- Internal.
 ;;;
 ;;; This passes on a node's value appropriately, possibly returning from
@@ -708,7 +696,7 @@
 	(cond ((c::leaf-refs var)
 	       (setf (eval-stack-local frame-ptr (c::lambda-var-info var))
 		     (if (c::lambda-var-indirect var)
-			 (make-indirect-value-cell (pop args))
+			 (c:make-value-cell (pop args))
 			 (pop args))))
 	      (ignore-unused (pop args)))))
     (internal-apply-loop (c::lambda-bind lambda) frame-ptr lambda args
@@ -917,24 +905,27 @@
 ;;; SET-LEAF-VALUE-LAMBDA-VAR -- Internal Interface.
 ;;;
 ;;; This does SET-LEAF-VALUE for a lambda-var leaf.  The debugger tools'
-;;; internals uses this also to set interpreted local variables.
+;;; internals uses this also to set interpreted local variables. If the var
+;;; is a lexical variable with no refs, then we don't actually set anything,
+;;; since the variable has been deleted.
 ;;;
 (defun set-leaf-value-lambda-var (node var frame-ptr closure value)
-  (let ((env (c::node-environment node)))
-    (cond ((not (eq (c::lambda-environment (c::lambda-var-home var))
-		    env))
-	   (setf (indirect-value
-		  (svref closure
-			 (position var (c::environment-closure env)
-				   :test #'eq)))
-		 value))
-	  ((c::lambda-var-indirect var)
-	   (setf (indirect-value
-		  (eval-stack-local frame-ptr (c::lambda-var-info var)))
-		 value))
-	  (t
-	   (setf (eval-stack-local frame-ptr (c::lambda-var-info var))
-		 value)))))
+  (when (c::leaf-refs var)
+    (let ((env (c::node-environment node)))
+      (cond ((not (eq (c::lambda-environment (c::lambda-var-home var))
+		      env))
+	     (c:value-cell-set
+	      (svref closure (position var (c::environment-closure env)
+				       :test #'eq))
+	      value))
+	    ((c::lambda-var-indirect var)
+	     (c:value-cell-set
+	      (eval-stack-local frame-ptr (c::lambda-var-info var))
+	      value))
+	    (t
+	     (setf (eval-stack-local frame-ptr (c::lambda-var-info var))
+		   value)))))
+  value)
 
 ;;; LEAF-VALUE -- Internal.
 ;;;
@@ -1028,7 +1019,7 @@
 		     (position leaf (c::environment-closure env)
 			       :test #'eq)))))
     (if (c::lambda-var-indirect leaf)
-	(indirect-value temp)
+	(c:value-cell-ref temp)
 	temp)))
 
 ;;; COMPUTE-CLOSURE -- Internal.
@@ -1172,7 +1163,7 @@
       (when (c::leaf-refs v)
 	(setf (eval-stack-local frame-ptr (c::lambda-var-info v))
 	      (if (c::lambda-var-indirect v)
-		  (make-indirect-value-cell (pop args))
+		  (c:make-value-cell (pop args))
 		  (pop args)))))))
 
 ;;; STORE-MV-LET-VARS -- Internal.
@@ -1191,7 +1182,7 @@
       (if (c::leaf-refs v)
 	  (setf (eval-stack-local frame-ptr (c::lambda-var-info v))
 		(if (c::lambda-var-indirect v)
-		    (make-indirect-value-cell (pop args))
+		    (c:make-value-cell (pop args))
 		    (pop args)))
 	  (pop args)))))
 
@@ -1223,7 +1214,7 @@
 	(when (c::leaf-refs v)
 	  (setf (eval-stack-local frame-ptr (c::lambda-var-info v))
 		(if (c::lambda-var-indirect v)
-		    (make-indirect-value-cell (car remaining-args))
+		    (c:make-value-cell (car remaining-args))
 		    (car remaining-args))))
 	(cdr remaining-args))
       args))
