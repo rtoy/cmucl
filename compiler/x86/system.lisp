@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.6 1997/11/18 10:53:26 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.7 1997/12/31 18:03:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996, 1997, 1998.
 ;;;
 
 (in-package :x86)
@@ -317,14 +317,15 @@
 ;;;; Primitive multi-thread support.
 
 (export 'control-stack-fork)
-(defknown control-stack-fork ((simple-array (unsigned-byte 32) (*)))
+(defknown control-stack-fork ((simple-array (unsigned-byte 32) (*)) t)
   (member t nil))
 
 (define-vop (control-stack-fork)
   (:policy :fast-safe)
   (:translate control-stack-fork)
-  (:args (save-stack :scs (descriptor-reg) :to :result))
-  (:arg-types simple-array-unsigned-byte-32)
+  (:args (save-stack :scs (descriptor-reg) :to :result)
+	 (inherit :scs (descriptor-reg)))
+  (:arg-types simple-array-unsigned-byte-32 *)
   (:results (child :scs (descriptor-reg)))
   (:result-types t)
   (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) index)
@@ -332,8 +333,13 @@
   (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) temp)
   (:save-p t)
   (:generator 25
+    (inst cmp inherit nil-value)
+    (inst jmp :e FRESH-STACK)
+    
+    ;; Child inherits the stack of the parent.
+    
     ;; Setup the return context.
-    (inst push (make-fixup nil :code-object RETURN))
+    (inst push (make-fixup nil :code-object return))
     (inst push ebp-tn)
     ;; Save the stack.
     (inst xor index index)
@@ -345,9 +351,44 @@
     (inst inc index)
     (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
 				:foreign))
+    (inst jmp-short LOOP)
+
+    FRESH-STACK
+    ;; Child has a fresh control stack.
+
+    ;; Setup the return context.
+    (inst push (make-fixup nil :code-object return))
+    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
+				:foreign))
+    ;; New FP is the Top of the stack.
+    (inst push stack)
+    ;; Save the stack.
+    (inst xor index index)
+    ;; First save the adjusted stack-pointer.
+    (inst sub stack ebp-tn)
+    (inst add stack esp-tn)
+    (inst mov (make-ea :dword :base save-stack :index index :scale 4
+		       :disp (- (* vm:vector-data-offset vm:word-bytes)
+				vm:other-pointer-type))
+	  stack)
+    ;; Save the current frame, replacing the OCFP and RA by 0.
+    (inst mov (make-ea :dword :base save-stack :index index :scale 4
+		       :disp (- (* (+ vm:vector-data-offset 1) vm:word-bytes)
+				vm:other-pointer-type))
+	  0)
+    ;; Save 0 for the OCFP.
+    (inst mov (make-ea :dword :base save-stack :index index :scale 4
+		       :disp (- (* (+ vm:vector-data-offset 2) vm:word-bytes)
+				vm:other-pointer-type))
+	  0)
+    (inst add index 3)
+    ;; Copy the remainder of the frame, skiping the OCFP and RA which
+    ;; are saved above.
+    (inst lea stack (make-ea :byte :base ebp-tn :disp -8))
+
     LOOP
     (inst cmp stack esp-tn)
-    (inst jmp :le STACK-SAVE-DONE)
+    (inst jmp :le stack-save-done)
     (inst sub stack 4)
     (inst mov temp (make-ea :dword :base stack))
     (inst mov (make-ea :dword :base save-stack :index index :scale 4
