@@ -29,6 +29,8 @@
 
 (in-package 'pcl)
 
+(setf (getf ext:*herald-items* :pcl)
+      `("    CLOS based on PCL version:  " ,*pcl-system-date*))
 
 ;;; Just use our without-interrupts.  We don't have the INTERRUPTS-ON/OFF local
 ;;; macros spec'ed in low.lisp, but they aren't used.
