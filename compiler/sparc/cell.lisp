@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.11 1992/04/14 02:58:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.12 1992/12/13 15:24:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,62 +22,33 @@
 (in-package "SPARC")
 
 
-;;;; Data object definition macros.
+;;;; Data object ref/set stuff.
 
-(vm:define-for-each-primitive-object (obj)
-  (collect ((forms))
-    (let ((lowtag (vm:primitive-object-lowtag obj)))
-      (dolist (slot (vm:primitive-object-slots obj))
-	(let* ((name (vm:slot-name slot))
-	       (offset (vm:slot-offset slot))
-	       (rest-p (vm:slot-rest-p slot))
-	       (slot-opts (vm:slot-options slot))
-	       (ref-trans (getf slot-opts :ref-trans))
-	       (ref-vop (getf slot-opts :ref-vop ref-trans))
-	       (set-trans (getf slot-opts :set-trans))
-	       (setf-function-p (and (listp set-trans)
-				     (= (length set-trans) 2)
-				     (eq (car set-trans) 'setf)))
-	       (setf-vop (getf slot-opts :setf-vop
-			       (when setf-function-p
-				 (intern (concatenate
-					  'simple-string
-					  "SET-"
-					  (string (cadr set-trans)))))))
-	       (set-vop (getf slot-opts :set-vop
-			      (if setf-vop nil set-trans))))
-	  (when ref-vop
-	    (forms `(define-vop (,ref-vop ,(if rest-p 'slot-ref 'cell-ref))
-				(:variant ,offset ,lowtag)
-		      ,@(when ref-trans
-			  `((:translate ,ref-trans))))))
-	  (when (or set-vop setf-vop)
-	    (forms `(define-vop ,(cond ((and rest-p setf-vop)
-					(error "Can't automatically generate ~
-					a setf VOP for :rest-p ~
-					slots: ~S in ~S"
-					       name
-					       (vm:primitive-object-name obj)))
-				       (rest-p `(,set-vop slot-set))
-				       ((and set-vop setf-function-p)
-					(error "Setf functions (list ~S) must ~
-					use :setf-vops."
-					       set-trans))
-				       (set-vop `(,set-vop cell-set))
-				       (setf-function-p
-					`(,setf-vop cell-setf-function))
-				       (t
-					`(,setf-vop cell-setf)))
-		      (:variant ,offset ,lowtag)
-		      ,@(when set-trans
-			  `((:translate ,set-trans)))))))))
-    (when (forms)
-      `(progn
-	 ,@(forms)))))
+(define-vop (slot)
+  (:args (object :scs (descriptor-reg)))
+  (:info name offset lowtag)
+  (:ignore name)
+  (:results (result :scs (descriptor-reg any-reg)))
+  (:generator 1
+    (loadw result object offset lowtag)))
+
+(define-vop (set-slot)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (descriptor-reg any-reg)))
+  (:info name offset lowtag)
+  (:ignore name)
+  (:results)
+  (:generator 1
+    (storew value object offset lowtag)))
 
 
 
 ;;;; Symbol hacking VOPs:
+
+;;; The compiler likes to be able to directly SET symbols.
+;;;
+(define-vop (set cell-set)
+  (:variant symbol-value-slot other-pointer-type))
 
 ;;; Do a cell ref with an error check for being unbound.
 ;;;
@@ -242,6 +213,23 @@
 (define-vop (set-funcallable-instance-info word-index-set)
   (:variant funcallable-instance-info-offset function-pointer-type)
   (:translate %set-funcallable-instance-info))
+
+
+(define-vop (closure-ref slot-ref)
+  (:variant closure-info-offset function-pointer-type))
+
+(define-vop (closure-set slot-set)
+  (:variant closure-info-offset function-pointer-type))
+
+
+;;;; Value Cell hackery.
+
+(define-vop (value-cell-ref cell-ref)
+  (:variant value-cell-value-slot other-pointer-type))
+
+(define-vop (value-cell-set cell-set)
+  (:variant value-cell-value-slot other-pointer-type))
+
 
 
 ;;;; Structure hackery:
