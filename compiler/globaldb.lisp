@@ -477,24 +477,24 @@
 	 #x3FF)))
 
 
-(eval-when (compile load eval)
+(define-hash-cache info ((name eq) (type eq))
+  :values 2
+  :hash-function info-cache-hash
+  :hash-bits 10
+  :default (values nil :empty))
+
 
 ;;; INFO-CACHE-INIT  --  Internal
 ;;;
-;;;    Set up the info cache.  This is also called in GLOBALDB-INIT.
+;;;    Set up the info cache.  The top-level code of DEFINE-HASH-CACHE can't
+;;; initialize the cache, since it must be initialized before we run any
+;;; top-level forms. This is called in GLOBALDB-INIT.
 ;;;
-(defmacro info-cache-init ()
-  `(progn
-     (setq *cached-info-environment* nil)
-     (define-hash-cache info ((name eq) (type eq))
-       :values 2
-       :hash-function info-cache-hash
-       :hash-bits 10
-       :default (values nil :empty))))
-
-(info-cache-init)
-
-); Eval-When (Compile Load Eval)
+(defun info-cache-init ()
+  (setq *cached-info-environment* nil)
+  (setq *info-cache-vector* (make-array (* 4 (ash 2 10))))
+  (info-cache-clear)
+  (undefined-value))
 
 
 ;;; Whenever we GC, we must blow away the INFO cache, otherwise values might
@@ -970,7 +970,7 @@
     (setq *type-numbers*
 	  (make-array (ash 1 type-number-bits)  :initial-element nil)))
 
-  (info-cache-init)  
+  (info-cache-init)
   (function-info-init)
   (other-info-init))
 
