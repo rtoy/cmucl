@@ -223,7 +223,7 @@
 
 
 ;;;; Editor input from windowing system.
-#|
+#+clx
 (defstruct (windowed-editor-input
 	    (:include editor-input
 		      (:get #'windowed-get-key-event)
@@ -232,18 +232,21 @@
 		      (:clear #'windowed-clear-input))
 	    (:print-function
 	     (lambda (s stream d)
-	       (declare (ignore s d write))
+	       (declare (ignore s d))
 	       (write-string "#<Editor-Window-Input stream>" stream)))
 	    (:constructor make-windowed-editor-input
 			  (&optional (head (make-input-event)) (tail head))))
   hunks)      ; List of bitmap-hunks which input to this stream.
 
+#+clx
 (defun windowed-get-key-event (stream ignore-abort-attempts-p)
   (editor-input-method-macro))
 
+#+clx
 (defun windowed-unget-key-event (key-event stream)
   (un-event key-event stream))
 
+#+clx
 (defun windowed-clear-input (stream)
   (loop (unless (system:serve-event 0) (return)))
   (without-interrupts
@@ -255,6 +258,7 @@
 	       *free-input-events* next)
        (setf (editor-input-tail stream) head)))))
 
+#+clx
 (defun windowed-listen (stream)
   (loop (unless (system:serve-event 0)
 	  ;; If nothing is pending, check the queued input.
@@ -263,7 +267,7 @@
       ;; Don't service anymore events if we just got some input.
       (return t))))
 
-|#
+
 
 ;;;; Editor input from a tty.
 
