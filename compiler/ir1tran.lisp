@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.90 1993/07/14 13:46:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.91 1993/07/17 00:57:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,24 +166,6 @@
      :for class
      :slot slot)))
 
-#+ns-boot
-(defun find-old-slot-accessor (info name)
-  (declare (type defstruct-description info))
-  (let* ((accessor (if (listp name) (cadr name) name))
-	 (slot (find accessor (dd-slots info)
-		     :key #'dsd-accessor))
-	 (type (dd-name info))
-	 (slot-type (dsd-type slot)))
-    (assert slot () "Can't find slot ~S." type)
-    (make-slot-accessor
-     :name name
-     :type (specifier-type
-	    (if (listp name)
-		`(function (,slot-type ,type) ,slot-type)
-		`(function (,type) ,slot-type)))
-     :for info
-     :slot slot)))
-
 
 ;;; Find-Free-Function  --  Internal
 ;;;
@@ -220,17 +202,14 @@
 			 (null
 			  (find-free-really-function name))
 			 (structure-class
-			  #+ns-boot
-			  (if (layout-info (info type compiler-layout
-						 (class-name info)))
-			      (find-structure-slot-accessor info name)
-			      (find-free-really-function name))
-			  #-ns-boot
 			  (find-structure-slot-accessor info name))
-			 #+ns-boot
-			 (defstruct-description
-			  (find-old-slot-accessor info name)))))))))))
-
+			 (class
+			  (if (typep (layout-info (info type compiler-layout
+							(class-name info)))
+				     'defstruct-description)
+			      (find-structure-slot-accessor info name)
+			      (find-free-really-function name))))))))))))
+			  
 
 ;;; Find-Lexically-Apparent-Function  --  Internal
 ;;;
