@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.22 1992/03/11 21:21:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.23 1992/03/13 23:17:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -587,9 +587,16 @@
 	 (len (length table))
 	 (len-2 (- len 2))
 	 (hash2 (- len-2 (rem hash len-2))))
+    (declare (type index len-2 hash2))
     (macrolet ((lookup (test)
 		 `(do ((probe (rem hash len)
-			      (rem (+ probe hash2) len)))
+			      (let ((new (+ probe hash2)))
+				(declare (type index new))
+				;;
+				;; same as (mod new len), but faster.
+				(if (>= new len)
+				    (the index (- new len))
+				    new))))
 		      (nil)
 		    (let ((entry (svref table probe)))
 		      (when (eql entry 0)
