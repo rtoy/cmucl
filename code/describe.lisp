@@ -1,10 +1,14 @@
 ;;; -*- Mode: Lisp; Package: Lisp; Log: code.log -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (Scott.Fahlman@cs.cmu.edu). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.9 1991/02/08 13:32:09 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; This is the describe mechanism for Common Lisp.

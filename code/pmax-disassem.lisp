@@ -1,6 +1,15 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
-;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.16 1990/11/18 09:00:24 wlott Exp $
+;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.17 1991/02/08 13:34:36 ram Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;

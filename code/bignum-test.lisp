@@ -1,8 +1,19 @@
 ;;;; -*- Package: Bignum -*-
-;;;;
-;;;;    Some stuff to check that bignum operations are retuning the correct
-;;;; results.
-;;;; 
+;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum-test.lisp,v 1.2 1991/02/08 13:30:53 ram Exp $")
+;;;
+;;; **********************************************************************
+;;;
+;;;    Some stuff to check that bignum operations are retuning the correct
+;;; results.
+;;; 
 (in-package "BIGNUM")
 
 (defvar *in-bignum-wrapper* nil)

@@ -2,9 +2,13 @@
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
-;;; Carnegie Mellon University, and has been placed in the public
-;;; domain.  If you want to use this code or any part of CMU Common
-;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.16 1991/02/08 13:30:56 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains code to implement bignum support.
