@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.50 2001/01/27 14:18:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.51 2001/01/28 12:54:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1062,19 +1062,19 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 ;;; Two commands are made for each restart: one for the number, and one for
 ;;; the restart name (unless it's been shadowed by an earlier restart of the
-;;; same name.
+;;; same name, or it is nil).
 ;;;
 (defun make-restart-commands (&optional (restarts *debug-restarts*))
   (let ((commands)
 	(num 0))			; better be the same as show-restarts!
     (dolist (restart restarts)
       (let ((name (string (restart-name restart))))
-	(unless (find name commands :key #'car :test #'string=)
-	  (let ((restart-fun
-		 #'(lambda ()
-		     (invoke-restart-interactively restart))))
-	    (push (cons name restart-fun) commands)
-	    (push (cons (format nil "~d" num) restart-fun) commands))))
+        (let ((restart-fun
+	       #'(lambda () (invoke-restart-interactively restart))))
+	  (push (cons (format nil "~d" num) restart-fun) commands)
+	  (unless (or (null (restart-name restart)) 
+	              (find name commands :key #'car :test #'string=))
+	    (push (cons name restart-fun) commands))))
       (incf num))
     commands))
 
