@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.4 1992/03/02 01:59:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.5 1992/03/02 02:50:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,10 +92,10 @@
 	    (let ((arg (gensym)))
 	      (lambda-vars arg)
 	      (cond ((alien::alien-double-float-type-p type)
-		     (new-args `(double-float-low-bits ,arg))
 		     (new-args `(double-float-high-bits ,arg))
-		     (new-arg-types (parse-alien-type '(unsigned 32)))
-		     (new-arg-types (parse-alien-type '(signed 32))))
+		     (new-args `(double-float-low-bits ,arg))
+		     (new-arg-types (parse-alien-type '(signed 32)))
+		     (new-arg-types (parse-alien-type '(unsigned 32))))
 		    (t
 		     (new-args arg)
 		     (new-arg-types type)))))
