@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.6 1998/06/16 06:58:58 dtc Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.7 1999/02/02 10:58:24 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -59,6 +59,8 @@ typedef struct sigcontext_struct sigcontext;
 #define HANDLER_ARGS int signal, struct sigcontext_struct contextstruct
 #define GET_CONTEXT int code=0; struct sigcontext_struct *context=&contextstruct;
 #endif
+
+#define setfpucw(cw)	asm("fldcw %0" : : "m" (cw));
 
 #define sigvec          sigaction
 #define sv_mask         sa_mask

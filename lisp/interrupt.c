@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.15 1998/05/01 01:21:42 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.16 1999/02/02 10:58:25 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -267,7 +267,7 @@ interrupt_handle_now(HANDLER_ARGS)
     union interrupt_handler handler;
 
 #ifdef __linux__
-    __setfpucw(contextstruct.fpstate->cw);
+    setfpucw(contextstruct.fpstate->cw);
 #endif
     
     handler = interrupt_handlers[signal];
@@ -356,7 +356,7 @@ maybe_now_maybe_later(HANDLER_ARGS)
     SAVE_CONTEXT(); /**/
 
 #ifdef __linux__
-    __setfpucw(contextstruct.fpstate->cw);
+    setfpucw(contextstruct.fpstate->cw);
 #endif
 
     if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {

@@ -14,7 +14,7 @@
  * Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.4 1998/05/01 01:21:40 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.5 1999/02/02 10:58:24 dtc Exp $
  *
  */
 
@@ -97,7 +97,7 @@ os_init(void)
 #else
   os_vm_page_size=getpagesize();
 #endif
-__setfpucw(0x1372|4|8|16|32); /*no interrupts */
+  setfpucw(0x1372|4|8|16|32); /*no interrupts */
 }
 
 int
