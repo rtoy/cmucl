@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.11 1992/12/10 01:11:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.12 1993/08/30 21:48:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,7 +62,7 @@
 
 (define-condition unexpected-stream-command (error)
   ;; Context is a string to be plugged into the report text.
-  ((context))
+  ((context :reader unexpected-stream-command-context :initarg :context))
   (:report (lambda (condition stream)
 	     (format stream "~&Unexpected stream-command while ~A."
 		     (unexpected-stream-command-context condition)))))
