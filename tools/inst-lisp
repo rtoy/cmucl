@@ -1,8 +1,8 @@
 #!/bin/csh -fx
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/inst-lisp,v 1.8 1994/03/17 17:34:25 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/inst-lisp,v 1.9 1994/11/04 15:46:53 ram Exp $
 #
-# Utility for installing an alpha core.
+# Utility for installing CMU CL systems in the AFS release area.
 #
 
 if ($#argv > 0) then
@@ -24,8 +24,10 @@ rm -f $dst/lisp
 rm -f $dst/lisp.core
 rm -f $dst/site-init.*
 rm -f $dst/motifd
+rm -f $dst/spell-dictionary.bin
 
 cp -p $src/lisp/lisp $dst/lisp
 cp -p lisp.core $dst/lisp.core
 cp -p $src/code/cmu-site.*f $dst
 cp -p $src/motif/server/motifd $dst
+cp -p $src/hemlock/spell-dictionary.bin $dst
