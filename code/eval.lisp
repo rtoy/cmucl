@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.15 1992/03/26 16:40:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.16 1992/04/04 01:09:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 	  do do* dotimes dolist progv and or cond if the
 	  macro-function special-form-p *macroexpand-hook*
 	  macroexpand-1 macroexpand block return-from
+	  compiler-macroexpand compiler-macroexpand-1
+	  compiler-macro-function
 	  return function setq psetq apply funcall
 	  compiler-let progv flet labels macrolet
 	  mapcar maplist mapc mapl mapcan mapcon
@@ -49,6 +51,9 @@
 
 (in-package "EXTENSIONS")
 (export '(*top-level-auto-declare*))
+
+(in-package "KERNEL")
+(export '(invoke-macroexpand-hook))
 
 (in-package "LISP")
 
@@ -257,62 +262,41 @@
   whenever a runtime expansion is needed.  Initially this is set to
   FUNCALL.")
 
-
-;;; Macroexpand-1  --  Public
+;;; INVOKE-MACROEXPAND-HOOK -- public.
 ;;;
-;;;    The Env is a LEXENV or NIL (the null environment.)
+;;; The X3J13 cleanup FUNCTION-TYPE:X3J13-MARCH-88 specifies that:
+;;; 
+;;; "7. Clarify that the value of *MACROEXPAND-HOOK* is first coerced to a
+;;;     function before being called as the expansion interface hook by
+;;;     MACROEXPAND-1."
 ;;;
-(defun macroexpand-1 (form &optional env)
-  "If form is a macro (or symbol macro), expands it once.  Returns two values,
-  the expanded form and a T-or-NIL flag indicating whether the form was, in
-  fact, a macro.  Env is the lexical environment to expand in, which defaults
-  to the null environment."
-  (cond ((and (consp form) (symbolp (car form)))
-	 (let* ((fenv (when env (c::lexenv-functions env)))
-		(local-def (cdr (assoc (car form) fenv))))
-	   (if local-def
-	       (if (and (consp local-def) (eq (car local-def) 'MACRO))
-		   (values (funcall *macroexpand-hook* (cdr local-def)
-				    form env)
-			   t)
-		   (values form nil))
-	       (let ((global-def (macro-function (car form))))
-		 (if global-def
-		     (values (funcall *macroexpand-hook* global-def form env)
-			     t)
-		     (values form nil))))))
-	((symbolp form)
-	 (let* ((venv (when env (c::lexenv-variables env)))
-		(local-def (cdr (assoc form venv))))
-	   (if (and (consp local-def)
-		    (eq (car local-def) 'macro))
-	       (values (cdr local-def) t)
-	       (values form nil))))
-	(t
-	 (values form nil))))
+;;; This is a handy utility function that does just such a coercion.  It also
+;;; stores the result back in *macroexpand-hook* so we don't have to coerce
+;;; it again.
+;;; 
+(defun invoke-macroexpand-hook (fun form env)
+  "Invoke *MACROEXPAND-HOOK* on FUN, FORM, and ENV after coercing it to
+   a function."
+  (unless (functionp *macroexpand-hook*)
+    (setf *macroexpand-hook*
+	  (coerce *macroexpand-hook* 'function)))
+  (funcall *macroexpand-hook* fun form env))
 
-
-(defun macroexpand (form &optional env)
-  "If Form is a macro call, then the form is expanded until the result is not
-  a macro.  Returns as multiple values, the form after any expansion has
-  been done and T if expansion was done, or NIL otherwise.  Env is the
-  lexical environment to expand in, which defaults to the null environment."
-  (prog (flag)
-    (multiple-value-setq (form flag) (macroexpand-1 form env))
-    (unless flag (return (values form nil)))
-    loop
-    (multiple-value-setq (form flag) (macroexpand-1 form env))
-    (if flag (go loop) (return (values form t)))))
-
-
-(defun macro-function (symbol)
-  "If the symbol globally names a macro, returns the expansion function,
-  else returns NIL."
+(defun macro-function (symbol &optional env)
+  "If SYMBOL names a macro in ENV, returns the expansion function,
+   else returns NIL.  If ENV is unspecified or NIL, use the global
+   environment only."
   (declare (symbol symbol))
-  (if (eq (info function kind symbol) :macro)
-      (info function macro-function symbol)
-      nil))
-
+  (let* ((fenv (when env (c::lexenv-functions env)))
+	 (local-def (cdr (assoc symbol fenv))))
+    (cond (local-def
+	   (if (and (consp local-def) (eq (car local-def) 'MACRO))
+	       (cdr local-def)
+	       nil))
+	  ((eq (info function kind symbol) :macro)
+	   (values (info function macro-function symbol)))
+	  (t
+	   nil))))
 
 (defun (setf macro-function) (function symbol)
   (declare (symbol symbol) (type function function))
@@ -326,6 +310,88 @@
 	#'(lambda (&rest args) (declare (ignore args))
 	    (error "Cannot funcall macro functions.")))
   function)
+
+;;; Macroexpand-1  --  Public
+;;;
+;;;    The Env is a LEXENV or NIL (the null environment.)
+;;;
+(defun macroexpand-1 (form &optional env)
+  "If form is a macro (or symbol macro), expands it once.  Returns two values,
+   the expanded form and a T-or-NIL flag indicating whether the form was, in
+   fact, a macro.  Env is the lexical environment to expand in, which defaults
+   to the null environment."
+  (cond ((and (consp form) (symbolp (car form)))
+	 (let ((def (macro-function (car form))))
+	   (if def
+	       (values (invoke-macroexpand-hook def form env) t)
+	       (values form nil))))
+	((symbolp form)
+	 (let* ((venv (when env (c::lexenv-variables env)))
+		(local-def (cdr (assoc form venv))))
+	   (if (and (consp local-def)
+		    (eq (car local-def) 'macro))
+	       (values (cdr local-def) t)
+	       (values form nil))))
+	(t
+	 (values form nil))))
+
+(defun macroexpand (form &optional env)
+  "Repetitively call MACROEXPAND-1 until the form can no longer be expanded.
+   Returns the final resultant form, and T if it was expanded.  ENV is the
+   lexical environment to expand in, or NIL (the default) for the null
+   environment."
+  (labels ((frob (form expanded)
+	     (multiple-value-bind
+		 (new-form newly-expanded)
+		 (macroexpand-1 form env)
+	       (if newly-expanded
+		   (frob new-form t)
+		   (values new-form expanded)))))
+    (frob form nil)))
+
+(defun compiler-macro-function (name &optional env)
+  "If NAME names a compiler-macro, returns the expansion function,
+   else returns NIL.  Note: if the name is shadowed in ENV by a local
+   definition, or declared NOTINLINE, NIL is returned.  Can be
+   set with SETF."
+  (unless (or (and env (assoc name (c::lexenv-functions env) :test #'equal))
+	      (eq (or (and env
+			   (cdr (assoc name (c::lexenv-inlines env)
+				       :key #'c::leaf-name :test #'equal)))
+		      (info function inlinep name))
+		  :notinline))
+    (values (info function compiler-macro-function name))))
+
+(defun (setf compiler-macro-function) (function name)
+  (declare (type (or symbol list) name)
+	   (type (or function null) function))
+  (when (eq (info function kind name) :special-form)
+    (error "~S names a special form." name))
+  (setf (info function compiler-macro-function name) function)
+  function)
+
+(defun compiler-macroexpand-1 (form &optional env)
+  "If FORM is a function call for which a compiler-macro has been defined,
+   invoke the expander function using *macroexpand-hook* and return the
+   results and T.  Otherwise, return the original form and NIL."
+  (let ((fun (and (consp form) (compiler-macro-function (car form) env))))
+    (if fun
+	(let ((result (invoke-macroexpand-hook fun form env)))
+	  (values result (not (eq result form))))
+	(values form nil))))
+
+(defun compiler-macroexpand (form &optional env)
+  "Repetitively call COMPILER-MACROEXPAND-1 until the form can no longer be
+   expanded.  ENV is the lexical environment to expand in, or NIL (the
+   default) for the null environment."
+  (labels ((frob (form expanded)
+	     (multiple-value-bind
+		 (new-form newly-expanded)
+		 (compiler-macroexpand-1 form env)
+	       (if newly-expanded
+		   (frob new-form t)
+		   (values new-form expanded)))))
+    (frob form env)))
 
 
 (defun constantp (object)
