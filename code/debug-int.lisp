@@ -408,7 +408,8 @@
   (format str "#<~A-Debug-Function ~S>"
 	  (etypecase obj
 	    (compiled-debug-function "Compiled")
-	    (interpreted-debug-function "Interpreted"))
+	    (interpreted-debug-function "Interpreted")
+	    (bogus-debug-function "Bogus"))
 	  (debug-function-name obj)))
 
 
@@ -751,7 +752,8 @@
   (multiple-value-bind (fp pc)
 		       (kernel:%caller-frame-and-pc)
     (possibly-an-interpreted-frame
-     (compute-calling-frame fp pc nil)
+     (compute-calling-frame (int-sap (* (truly-the fixnum fp) vm:word-bytes))
+			    pc nil)
      nil)))
 
 
@@ -782,21 +784,31 @@
   (let ((down (frame-%down frame)))
     (if (eq down :unparsed)
 	(let* ((real (frame-real-frame frame))
-	       (c-d-f (compiled-debug-function-compiler-debug-fun
-		       (frame-debug-function real))))
+	       (debug-fun (frame-debug-function real)))
 	  (setf (frame-%down frame)
-		(possibly-an-interpreted-frame
-		 (compute-calling-frame
-		  (get-context-value
-		   real
-		   c::old-fp-save-offset
-		   (c::compiled-debug-function-old-fp c-d-f))
-		  (get-context-value
-		   real
-		   c::return-pc-save-offset
-		   (c::compiled-debug-function-return-pc c-d-f))
-		  frame)
-		 frame)))
+		(etypecase debug-fun
+		  (compiled-debug-function
+		   (let ((c-d-f (compiled-debug-function-compiler-debug-fun
+				 debug-fun)))
+		     (possibly-an-interpreted-frame
+		      (compute-calling-frame
+		       (int-sap (* (get-context-value
+				    real
+				    c::old-fp-save-offset
+				    (c::compiled-debug-function-old-fp c-d-f))
+				   vm:word-bytes))
+		       (get-context-value
+			real
+			c::lra-save-offset
+			(c::compiled-debug-function-return-pc c-d-f))
+		       frame)
+		      frame)))
+		  (bogus-debug-function
+		   (let ((fp (frame-pointer real)))
+		     (compute-calling-frame (sap-ref-sap fp
+							 c::old-fp-save-offset)
+					    (stack-ref fp c::lra-save-offset)
+					    frame))))))
 	down)))
 
 ;;; CODE-OBJECT-FROM-BITS  --  internal.
@@ -934,8 +946,6 @@
 ;;;
 (defun compute-calling-frame (caller lra up-frame)
   (declare (type system-area-pointer caller))
-  (unless (cstack-pointer-valid-p caller)
-    (return-from compute-calling-frame nil))
   (when (cstack-pointer-valid-p caller)
     (multiple-value-bind
 	(code pc-offset escaped)
@@ -963,12 +973,10 @@
 		       "Bogus stack frame"))
 		     (t
 		      (debug-function-from-pc code pc-offset)))))
-	(make-frame caller
-		    up-frame
-		    d-fun
-		    (code-location-from-pc d-fun pc-offset)
-		    (if up-frame (1+ (frame-number up-frame)) 0)
-		    escaped)))))
+	(make-compiled-frame caller up-frame d-fun
+			     (code-location-from-pc d-fun pc-offset escaped)
+			     (if up-frame (1+ (frame-number up-frame)) 0)
+			     escaped)))))
 
 
 ;;;
@@ -1064,7 +1072,7 @@
 	(let* ((lra (stack-ref catch vm:catch-block-entry-pc-slot))
 	       (word-offset (get-header-data lra)))
 	  (push (cons (stack-ref catch vm:catch-block-tag-slot)
-		      (make-code-location
+		      (make-compiled-code-location
 		       (* word-offset vm:word-bytes)
 		       (frame-debug-function frame)))
 		res)))
@@ -1126,7 +1134,8 @@
 		(interpreted-debug-function
 		 (c::lambda-eval-info-function
 		  (c::leaf-info
-		   (interpreted-debug-function-ir1-lambda debug-function))))))
+		   (interpreted-debug-function-ir1-lambda debug-function))))
+		(bogus-debug-function nil)))
 	cached-value)))
 
 
@@ -1275,7 +1284,9 @@
     (compiled-debug-function
      (compiled-debug-function-lambda-list debug-function))
     (interpreted-debug-function
-     (interpreted-debug-function-lambda-list debug-function))))
+     (interpreted-debug-function-lambda-list debug-function))
+    (bogus-debug-function
+     nil)))
 
 ;;; INTERPRETED-DEBUG-FUNCTION-LAMBDA-LIST -- Internal.
 ;;; 
@@ -2184,7 +2195,8 @@
       (interpreted-code-location-ir1-node (frame-code-location frame))
       (interpreted-debug-variable-ir1-var debug-var)
       (frame-pointer frame)
-      (interpreted-frame-closure frame))))
+      (interpreted-frame-closure frame)
+      value)))
   value)
 ;;;
 (defsetf debug-variable-value %set-debug-variable-value)
@@ -2249,15 +2261,15 @@
        (setf (stack-ref fp (c::sc-offset-offset sc-offset)) value))
       (#.c:base-character-stack-sc-number
        (with-nfp (nfp)
-	 (setf (stack-ref-32 nfp (c::sc-offset-offset sc-offset))
+	 (setf (sap-ref-32 nfp (c::sc-offset-offset sc-offset))
 	       (char-code (the character value)))))
       (#.c:unsigned-stack-sc-number
        (with-nfp (nfp)
-	 (setf (stack-ref-32 nfp (c::sc-offset-offset sc-offset))
+	 (setf (sap-ref-32 nfp (c::sc-offset-offset sc-offset))
 	       (the (unsigned-byte 32) value))))
       (#.c:signed-stack-sc-number
        (with-nfp (nfp)
-	 (setf (signed-stack-ref-32 nfp (c::sc-offset-offset sc-offset))
+	 (setf (signed-sap-ref-32 nfp (c::sc-offset-offset sc-offset))
 	       (the (signed-byte 32) value))))
       (#.c:sap-stack-sc-number
        (with-nfp (nfp)
