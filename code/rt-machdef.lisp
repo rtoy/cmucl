@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-machdef.lisp,v 1.1 1991/04/16 19:32:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-machdef.lisp,v 1.2 1991/04/23 01:25:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,10 +15,10 @@
 ;;;
 (in-package "MACH")
 
-(export '(sigcontext-onstack sigcontext-mask sigcontext-sp sigcontext-pc
-	  sigcontext-psr sigcontext-g1 sigcontext-o0
-	  sigcontext-regs sigcontext-fpregs sigcontext-y sigcontext-fsr
-	  sigcontext *sigcontext indirect-*sigcontext))
+(export '(sigcontext-onstack sigcontext-mask sigcontext-sp sigcontext-fp
+	  sigcontext-ap sigcontext-iar sigcontext-icscs sigcontext-saveiar
+	  sigcontext-regs sigcontext *sigcontext indirect-*sigcontext
+	  sigcontext-pc))
 
 (def-c-record sigcontext
   (onstack unsigned-long)
@@ -28,4 +28,9 @@
   (fp system-area-pointer)
   (ap system-area-pointer)
   (iar system-area-pointer)
-  (icscs unsigned-long))
+  (icscs unsigned-long)
+  (saveiar system-area-pointer)
+  (regs int-array))
+
+
+
