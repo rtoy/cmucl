@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.4 1990/10/18 02:56:15 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.5 1990/10/24 16:42:48 ram Exp $
 ;;;
 ;;; This file contains all the irrational functions.  Actually, most of the
 ;;; work is done by calling out to C...
@@ -23,12 +23,15 @@
 (defconstant pi 3.14159265358979323846264338327950288419716939937511L0)
 ;(defconstant e 2.71828182845904523536028747135266249775724709369996L0)
 
+;;; Make these INLINE, since the call to C is at least as compact as a Lisp
+;;; call, and saves number consing to boot.
+;;;
 (defmacro def-math-rtn (name num-args)
   (let ((function (intern (concatenate 'simple-string
 				       "%"
 				       (string-upcase name)))))
     `(progn
-       (proclaim '(maybe-inline ,function))
+       (proclaim '(inline ,function))
        (export ',function)
        (def-c-routine (,name ,function) (double-float)
 	 ,@(let ((results nil))
@@ -80,10 +83,6 @@
 
 
 ;;;; Power functions.
-
-;;; Let the C stubs be opportunistically inline expanded.
-;;;
-(proclaim '(optimize (space 0)))
 
 (defun exp (number)
   "Return e raised to the power NUMBER."
@@ -375,4 +374,3 @@
   "Return the hyperbolic arc tangent of NUMBER."
   (log (* (1+ number) (sqrt (/ (- 1 (* number number)))))))
 
-(proclaim '(optimize (space 1)))
