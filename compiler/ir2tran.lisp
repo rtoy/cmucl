@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.28 1991/02/20 14:58:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.29 1991/03/10 18:32:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.28 1991/02/20 14:58:11 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.29 1991/03/10 18:32:55 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -193,19 +193,24 @@
 ;;; gets interesting when the referenced function is a closure: we must make
 ;;; the closure and move the closed over values into it.
 ;;;
-;;; Leaf is the XEP lambda for the called function, since local call analysis
-;;; converts all closure references.
+;;; Leaf is either a :TOP-LEVEL-XEP functional or the XEP lambda for the called
+;;; function, since local call analysis converts all closure references.  If a
+;;; TL-XEP, we know it is not a closure.
 ;;;
 (defun ir2-convert-closure (node block leaf res)
   (declare (type ref node) (type ir2-block block)
 	   (type functional leaf) (type tn res))
   (unless (leaf-info leaf)
     (setf (leaf-info leaf) (make-entry-info)))
-  (let ((entry (make-load-time-constant-tn :entry leaf)))
-    (cond ((and (lambda-p leaf)
-		(environment-closure (lambda-environment leaf)))
-	   (let ((this-env (node-environment node))
-		 (closure (environment-closure (lambda-environment leaf))))
+  (let ((entry (make-load-time-constant-tn :entry leaf))
+	(closure (etypecase leaf
+		   (clambda
+		    (environment-closure (get-lambda-environment leaf)))
+		   (functional
+		    (assert (eq (functional-kind leaf) :top-level-xep))
+		    nil))))
+    (cond (closure
+	   (let ((this-env (node-environment node)))
 	     (vop make-closure node block (emit-constant (length closure))
 		  entry res)
 	     (let ((n -1))
