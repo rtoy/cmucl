@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.75 1997/11/15 07:36:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.76 1997/11/18 10:47:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -965,7 +965,7 @@
 ;; These return hopefully correct ofp ret values at a call site
 (defun maybe-lisp-from-c(fp)
   (declare (type system-area-pointer fp))
-  (let ((s0 (stack-ref-32 fp vm::old-fp-save-offset))
+  (let ((s0 (stack-ref-32 fp vm::ocfp-save-offset))
 	(s1 (stack-ref-32 fp vm::return-pc-save-offset)))
     (when (and (kernel:make-lisp-obj s0)(kernel:make-lisp-obj s1))
       (let ((lisp-ofp (int-sap s0))
@@ -981,7 +981,7 @@
 (defun maybe-lisp-from-lisp(fp)
     (declare (type system-area-pointer fp))
     (when (cstack-pointer-valid-p fp)
-      (let ((s0 (stack-ref-32 fp vm::old-fp-save-offset))
+      (let ((s0 (stack-ref-32 fp vm::ocfp-save-offset))
 	    (s1 (stack-ref-32 fp vm::return-pc-save-offset)))
 	(when (and (kernel:make-lisp-obj s0)
 		   (kernel:make-lisp-obj s1))

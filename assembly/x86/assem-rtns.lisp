@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.1 1997/01/21 00:30:28 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.2 1997/11/18 10:48:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -284,7 +284,7 @@
   ;; correct thing gets passed into the various nlx entry points although
   ;; I think the compiler really ought to do it.
 
-  (storew start ebp-tn (- (1+ old-fp-save-offset)))
+  (storew start ebp-tn (- (1+ ocfp-save-offset)))
 
   (inst jmp (make-ea :byte :base block
 		     :disp (* unwind-block-entry-pc-slot word-bytes))))
