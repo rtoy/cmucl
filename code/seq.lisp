@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.38 2002/10/02 17:28:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.39 2002/10/04 16:24:03 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -182,52 +182,54 @@
 	   (unless (valid-sequence-and-length-p spec-type length)
 	     (error 'simple-type-error
 		    :format-control
-		    "The length of ~S does not match the specified length of ~S."
+		    "The length of ~S does not match the specified ~
+                     length of ~S."
 		    :format-arguments
 		    (list (type-specifier spec-type) length)))))
 
     (let ((type (specifier-type type)))
-      (if (csubtypep type (specifier-type 'list))
-	  (make-list length :initial-element initial-element)
-	  (progn
-	    (cond ((csubtypep type (specifier-type 'string))
-		   (check-seq-len type length)
-		   (if iep
-		       (make-string length :initial-element initial-element)
-		       (make-string length)))
-		  ((csubtypep type (specifier-type 'simple-vector))
-		   (check-seq-len type length)
-		   (make-array length :initial-element initial-element))
-		  ((csubtypep type (specifier-type 'bit-vector))
-		   (check-seq-len type length)
-		   (if iep
-		       (make-array length :element-type '(mod 2)
-				   :initial-element initial-element)
-		       (make-array length :element-type '(mod 2))))
-		  ((csubtypep type (specifier-type 'vector))
-		   (if (typep type 'array-type)
-		       (let ((etype (type-specifier
-				     (array-type-specialized-element-type type)))
-			     (vlen (car (array-type-dimensions type))))
-			 (if (and (numberp vlen) (/= vlen length))
-			     (error 'simple-type-error
-				    ;; these two are under-specified by ANSI
-				    :datum (type-specifier type)
-				    :expected-type (type-specifier type)
-				    :format-control
-				    "The length of ~S does not match the specified length  of ~S."
-				    :format-arguments
-				    (list (type-specifier type) length)))
-			 (if iep
-			     (make-array length :element-type etype
-					 :initial-element initial-element)
-			     (make-array length :element-type etype)))
-		       (make-array length :initial-element initial-element)))
-		  (t (error 'simple-type-error
-			    :datum type
-			    :expected-type 'sequence
-			    :format-control "~S is a bad type specifier for sequences."
-			    :format-arguments (list (type-specifier type))))))))))
+      (cond
+	((csubtypep type (specifier-type 'list))
+	 (make-list length :initial-element initial-element))
+	((csubtypep type (specifier-type 'string))
+	 (check-seq-len type length)
+	 (if iep
+	     (make-string length :initial-element initial-element)
+	     (make-string length)))
+	((csubtypep type (specifier-type 'simple-vector))
+	 (check-seq-len type length)
+	 (make-array length :initial-element initial-element))
+	((csubtypep type (specifier-type 'bit-vector))
+	 (check-seq-len type length)
+	 (if iep
+	     (make-array length :element-type '(mod 2)
+			 :initial-element initial-element)
+	     (make-array length :element-type '(mod 2))))
+	((csubtypep type (specifier-type 'vector))
+	 (if (typep type 'array-type)
+	     (let ((etype (type-specifier
+			   (array-type-specialized-element-type type)))
+		   (vlen (car (array-type-dimensions type))))
+	       (if (and (numberp vlen) (/= vlen length))
+		   (error 'simple-type-error
+			  ;; these two are under-specified by ANSI
+			  :datum (type-specifier type)
+			  :expected-type (type-specifier type)
+			  :format-control
+			  "The length of ~S does not match the specified ~
+                           length  of ~S."
+			  :format-arguments
+			  (list (type-specifier type) length)))
+	       (if iep
+		   (make-array length :element-type etype
+			       :initial-element initial-element)
+		   (make-array length :element-type etype)))
+	     (make-array length :initial-element initial-element)))
+	(t (error 'simple-type-error
+		  :datum type
+		  :expected-type 'sequence
+		  :format-control "~S is a bad type specifier for sequences."
+		  :format-arguments (list (type-specifier type))))))))
 
 
 
