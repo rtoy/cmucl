@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34.2.1 1998/06/23 11:22:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34.2.2 2000/07/06 06:56:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -323,7 +323,7 @@
   (let* ((class (symbol-name class))
 	 (type (symbol-name type))
 	 (info (type-info-or-lose class type)))
-    `(truly-the ,(type-info-type info)
+    `(truly-the (values ,(type-info-type info) t)
 		(get-info-value ,name ,(type-info-number info)
 				,@(when env-list `(,env-list))))))
 ;;;
