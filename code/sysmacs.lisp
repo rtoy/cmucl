@@ -7,17 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.9 1991/04/24 23:39:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.10 1991/07/25 22:24:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Miscellaneous system hacking macros.
 ;;;
 (in-package "LISP" :use '("SYSTEM" "DEBUG"))
-
-#-new-compiler
-(eval-when (compile)
-  (setq lisp::*bootstrap-defmacro* t))
 
 ;;; WITH-ARRAY-DATA  --  Interface
 ;;;
@@ -105,45 +101,6 @@
 		      (hi::window-hunk (hi::current-window)))))
 	 (funcall (hi::device-init device) device)))))
 
-
-;;; With-Reply-Port  --  Public    
-;;;
-;;;    If we find that the number of ports in use (as indicated by
-;;; *reply-port-pointer*) disagrees with our dynamic depth in
-;;; With-Reply-Port forms (as indicated by *reply-port-depth*),
-;;; then we must have been unwound at some point in the past.
-;;; We reallocate the ports that were in use when we were
-;;; unwound, since they may have random messages hanging on them.
-;;;
-#+nil
-(defmacro with-reply-port ((var) &body body)
-  "With-Reply-Port (Var) {Form}*
-  Binds Var to a port during the evaluation of the Forms."
-  (let ((index (gensym))
-	(old-flag (gensym))
-	(res (gensym)))
-    `(let ((,old-flag %sp-interrupts-inhibited)
-	   ,res)
-       (without-interrupts
-	(let* ((,index *reply-port-depth*)
-	       (*reply-port-depth* (1+ ,index))
-	       ,var)
-	  (unless (eql ,index *reply-port-pointer*)
-	    (reallocate-reply-ports ,index))
-	  (setq ,var (svref *reply-port-stack* ,index))
-	  (setq *reply-port-pointer* (1+ ,index))
-	  (unless ,var (setq ,var (allocate-new-reply-ports)))
-	  (setq %sp-interrupts-inhibited ,old-flag)
-	  (setq ,res (multiple-value-list (progn ,@body)))
-	  (when (eql (car ,res) mach:rcv-timed-out)
-	    (gr-call mach:port_deallocate *task-self* ,var)
-	    (setf (svref *reply-port-stack* ,index)
-		  (gr-call* mach:port_allocate *task-self*)))
-	  (setq %sp-interrupts-inhibited (or ,old-flag T))
-	  (if (eql ,index (1- *reply-port-pointer*))
-	      (setq *reply-port-pointer* ,index)
-	      (reallocate-reply-ports (1+ ,index)))
-	  (values-list ,res))))))
 
 
 ;;; Eof-Or-Lose is a useful macro that handles EOF.
@@ -248,7 +205,3 @@
 (defmacro fast-read-byte (&rest stuff)
   `(fast-read-char ,@stuff))
 
-
-#-new-compiler
-(eval-when (compile)
-  (setq lisp::*bootstrap-defmacro* nil))
