@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.65 1998/07/25 23:37:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.66 1998/12/19 15:56:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -556,7 +556,7 @@
 		spec))
 	spec))
     (when (find name (dd-slots defstruct) :test #'string= :key #'dsd-%name)
-      (error 'program-error
+      (error 'simple-program-error
 	     :format-control "Duplicate slot name ~S."
 	     :format-arguments (list name)))
     (setf (dsd-%name islot) (string name))
@@ -1165,16 +1165,23 @@
 	#'(lambda (structure)
 	    (declare (optimize (speed 3) (safety 0)))
 	    (unless (typep-to-layout structure layout)
-	      (error "Structure for accessor ~S is not a ~S:~% ~S"
-		     (dsd-accessor dsd) (class-name (layout-class layout))
-		     structure))
+	      (error 'simple-type-error
+		     :datum structure
+		     :expected-type class
+		     :format-control "Structure for accessor ~S is not a ~S:~% ~S"
+		     :format-arguments (list (dsd-accessor dsd)
+					     (class-name class)
+					     structure)))
 	    (%instance-ref structure (dsd-index dsd)))
 	#'(lambda (structure)
 	    (declare (optimize (speed 3) (safety 0)))
 	    (unless (%typep structure class)
-	      (error "Structure for accessor ~S is not a ~S:~% ~S"
-		     (dsd-accessor dsd) class
-		     structure))
+	      (error 'simple-type-error
+		     :datum structure
+		     :expected-type class
+		     :format-control "Structure for accessor ~S is not a ~S:~% ~S"
+		     :format-arguments (list (dsd-accessor dsd) class
+					     structure)))
 	    (%instance-ref structure (dsd-index dsd))))))
 ;;;
 (defun structure-slot-setter (layout dsd)
@@ -1183,26 +1190,40 @@
 	#'(lambda (new-value structure)
 	    (declare (optimize (speed 3) (safety 0)))
 	    (unless (typep-to-layout structure layout)
-	      (error "Structure for setter ~S is not a ~S:~% ~S"
-		     `(setf ,(dsd-accessor dsd))
-		     (class-name (layout-class layout))
-		     structure))
+	      (error 'simple-type-error
+		     :datum structure
+		     :expected-type class
+		     :format-control "Structure for setter ~S is not a ~S:~% ~S"
+		     :format-arguments (list `(setf ,(dsd-accessor dsd))
+					     (class-name class)
+					     structure)))
 	    (unless (%typep new-value (dsd-type dsd))
-	      (error "New-Value for setter ~S is not a ~S:~% ~S."
-		     `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
-		     new-value))
+	      (error 'simple-type-error
+		     :datum new-value
+		     :expected-type (dsd-type dsd)
+		     :format-control "New-Value for setter ~S is not a ~S:~% ~S."
+		     :format-arguments (list `(setf ,(dsd-accessor dsd))
+					     (dsd-type dsd)
+					     new-value)))
 	    (setf (%instance-ref structure (dsd-index dsd)) new-value))
 	#'(lambda (new-value structure)
 	    (declare (optimize (speed 3) (safety 0)))
 	    (unless (%typep structure class)
-	      (error "Structure for setter ~S is not a ~S:~% ~S"
-		     `(setf ,(dsd-accessor dsd))
-		     (class-name class)
-		     structure))
+	      (error 'simple-type-error
+		     :datum structure
+		     :expected-type class
+		     :format-control "Structure for setter ~S is not a ~S:~% ~S"
+		     :format-arguments (list `(setf ,(dsd-accessor dsd))
+					     (class-name class)
+					     structure)))
 	    (unless (%typep new-value (dsd-type dsd))
-	      (error "New-Value for setter ~S is not a ~S:~% ~S."
-		     `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
-		     new-value))
+	      (error 'simple-type-error
+		     :datum new-value
+		     :expected-type (dsd-type dsd)
+		     :format-control "New-Value for setter ~S is not a ~S:~% ~S."
+		     :format-arguments (list `(setf ,(dsd-accessor dsd))
+					     (dsd-type dsd)
+					     new-value)))
 	    (setf (%instance-ref structure (dsd-index dsd)) new-value)))))
 
 
@@ -1216,7 +1237,7 @@
 (defun %defstruct (info inherits)
   (declare (type defstruct-description info))
   (multiple-value-bind (class layout old-layout)
-		       (ensure-structure-class info inherits "current" "new")
+      (ensure-structure-class info inherits "current" "new")
     (cond ((not old-layout)
 	   (unless (eq (class-layout class) layout)
 	     (register-layout layout)))
@@ -1255,13 +1276,15 @@
 	      #'(lambda (structure)
 		  (declare (optimize (speed 3) (safety 0)))
 		  (unless (typep-to-layout structure layout)
-		    (error "Structure for copier is not a ~S:~% ~S"
-			   (class-name (layout-class layout))
-			   structure))
-		  (copy-structure structure)))))
-  
+		    (error 'simple-type-error
+			   :datum structure
+			   :expected-type class
+			   :format-control "Structure for copier is not a ~S:~% ~S"
+			   :format-arguments (list class structure)))
+		  (copy-structure structure))))))
+
   (when (dd-doc info)
-    (setf (documentation (dd-name info) 'type) (dd-doc info))))
+    (setf (documentation (dd-name info) 'type) (dd-doc info)))
 
   (undefined-value))
 
