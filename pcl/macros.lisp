@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.11 1999/03/14 01:14:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.12 1999/04/15 22:38:15 pw Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -448,8 +448,9 @@
 
 (defun find-class (symbol &optional (errorp t) environment)
   (declare (ignore environment))
-  (find-class-from-cell
-   symbol (find-class-cell symbol errorp) errorp))
+  (let ((cell (find-class-cell symbol (not errorp))))
+    (when cell
+      (find-class-from-cell symbol cell errorp))))
 
 (defun find-class-predicate (symbol &optional (errorp t) environment)
   (declare (ignore environment))
