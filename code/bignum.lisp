@@ -196,7 +196,7 @@
 ;;;
 (defun %multiply-and-add (x-digit y-digit carry-in-digit &optional (res-digit 0))
   (declare (type bignum-element-type x-digit y-digit res-digit carry-in-digit))
-  (%multiple-and-add x-digit y-digit carry-in-digit res-digit))
+  (%multiply-and-add x-digit y-digit carry-in-digit res-digit))
 
 ;;; %LOGNOT -- Internal.
 ;;;
@@ -372,6 +372,7 @@
       ((= i end)
        (setf (%bignum-ref res end)
 	     (%add-with-carry (%sign-digit a end) sign-digit-b carry)))
+    (declare (type bignum-index i))
     (multiple-value-bind (v k)
 			 (%add-with-carry (%bignum-ref a i) sign-digit-b carry)
       (setf (%bignum-ref res i) v)
@@ -444,6 +445,7 @@
 	   (type bignum-index start end))
   (do ((i start (1+ i)))
       ((= i end))
+    (declare (type bignum-index i))
     (multiple-value-bind (v k)
 			 (%subtract-with-borrow (%bignum-ref a i) sign-digit-b
 						borrow)
@@ -457,6 +459,7 @@
 	   (type bignum-index start end))
   (do ((i start (1+ i)))
       ((= i end))
+    (declare (type bignum-index i))
     (multiple-value-bind (v k)
 			 (%subtract-with-borrow sign-digit-a (%bignum-ref b i)
 						borrow)
@@ -494,7 +497,7 @@
 			       (%multiply-and-add x (%bignum-ref b j)
 						  (%bignum-ref res k)
 						  carry-digit)
-	    (setf (%bignum-ref res k) final-low-digit)
+	    (setf (%bignum-ref res k) res-digit)
 	    (setf carry-digit big-carry)
 	    (incf k)))))
     (when negate-res (negate-bignum-in-place res))
@@ -532,6 +535,7 @@
     (multiple-value-bind (high low)
 			 (%multiply (%fixnum-to-digit (if a-minusp (- a) a))
 				    (%fixnum-to-digit (if b-minusp (- b) b)))
+      (declare (type bignum-element-type high low))
       (if (and (zerop high)
 	       (%digit-0-or-plusp low))
 	  (let ((low (ext:truly-the (unsigned-byte 31)
@@ -2070,26 +2074,26 @@
       (incf i))
     (setf (%bignum-ref *truncate-x* i)
 	  (%subtract-with-borrow (%bignum-ref *truncate-x* i)
-				 guess*y-hold borrow))
+				 carry-digit borrow))
     ;; See if guess is off by one, adding one Y back in if necessary.
     (cond ((%digit-0-or-plusp (%bignum-ref *truncate-x* i))
 	   guess)
 	  (t
 	   ;; If subtraction has negative result, add one divisor value back in.
 	   ;; The guess was one too large in magnitude.
-	   (setf i low-x-digit)
-	   (setf carry 0)
-	   (dotimes (j len-y)
-	     (multiple-value-bind (v k)
-				  (%add-with-carry (%bignum-ref *truncate-y* j)
-						   (%bignum-ref *truncate-x* i)
-						   carry)
-	       (declare (type bignum-element-type v))
-	       (setf (%bignum-ref *truncate-x* i) v)
-	       (setf carry k))
-	     (incf i))
-	   (setf (%bignum-ref *truncate-x* i)
-		 (%add-with-carry (%bignum-ref *truncate-x* i) carry 0))
+	   (let ((i low-x-digit)
+		 (carry 0))
+	     (dotimes (j len-y)
+	       (multiple-value-bind (v k)
+				    (%add-with-carry (%bignum-ref *truncate-y* j)
+						     (%bignum-ref *truncate-x* i)
+						     carry)
+		 (declare (type bignum-element-type v))
+		 (setf (%bignum-ref *truncate-x* i) v)
+		 (setf carry k))
+	       (incf i))
+	     (setf (%bignum-ref *truncate-x* i)
+		   (%add-with-carry (%bignum-ref *truncate-x* i) carry 0)))
 	   (if (%digit-0-or-plusp guess)
 	       (%subtract-with-borrow guess 1 1)
 	       (%add-with-carry guess 1 0))))))
@@ -2160,8 +2164,10 @@
     (if (zerop last)
 	(1- digit-size)
 	(- digit-size
-	   (dotimes (i digit-size)
-	     (when (zerop last) (return i))
+	   (do ((i 0 (1+ i)))
+	       ((zerop last)
+		;; I is guaranteed to be less than digit-size.
+		i)
 	     (setf last (ash last -1)))
 	   1))))
 
