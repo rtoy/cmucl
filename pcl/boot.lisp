@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.60 2003/05/25 14:33:50 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.61 2003/05/25 16:54:40 gerd Exp $")
 
 (in-package :pcl)
 
@@ -793,6 +793,7 @@ work during bootstrapping.
      (etypecase ,emf
        (fast-method-call
 	(invoke-fast-method-call ,emf ,@required-args+rest-arg))
+       ;;
        ,@(when (and (null restp) (= 1 (length required-args+rest-arg)))
 	  `((fixnum
 	     (let* ((.slots. (get-slots-or-nil
@@ -801,11 +802,33 @@ work during bootstrapping.
 	       (if (eq value +slot-unbound+)
 		   (slot-unbound-internal ,(car required-args+rest-arg) ,emf)
 		   value)))))
+       ;;
+       ;; This generates code in innocent methods that Python can
+       ;; prove not to succeed, for example:
+       ;;
+       ;; (defclass foo () ())
+       ;;
+       ;; (defmethod foo3 ((x foo) y)
+       ;;   (format y "Its methods are:~%")
+       ;;  (call-next-method))
+       ;;
+       ;; The CALL-NEXT-METHOD contains an INVOKE-EFFECTIVE-M-F.  From
+       ;; the use of Y in FORMAT, Python deduces what Y can be at the
+       ;; point of the INVOKE-EFFECTIVE-METHOD-FUNCTION, namely (OR
+       ;; (MEMBER NIL T) FUNCTION), and that's not something for which
+       ;; the code below is known to succeed.  So, it prints a note.
+       ;;
+       ;; Since the user can't do much about this, and we can't
+       ;; either, without tremendous effort, let's suppress warnings
+       ;; here.
        ,@(when (and (null restp) (= 2 (length required-args+rest-arg)))
 	   (destructuring-bind (new-value object) required-args+rest-arg
 	     `((fixnum
-		(setf (%slot-ref (get-slots-or-nil ,object) ,emf)
-		      ,new-value)))))
+		(locally
+		    (declare (optimize (ext:inhibit-warnings 3)))
+		  (setf (%slot-ref (get-slots-or-nil ,object) ,emf)
+			,new-value))))))
+       ;;
        (method-call
 	(invoke-method-call ,emf ,restp ,@required-args+rest-arg))
        (function
