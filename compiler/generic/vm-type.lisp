@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.16 1990/08/25 18:46:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.17 1990/09/06 17:47:05 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -56,7 +56,7 @@
 (deftype ash-index () 'fixnum)
 ;;;
 ;;; A lexical environment for macroexpansion.
-(deftype lexical-environment () 'list)
+(deftype lexical-environment () 'c::lexenv)
 ;;;
 ;;; Worst case values for float attributes.
 ;;; ### long-float exponent range seems to be this, but I don't know why.
