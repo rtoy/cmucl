@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.41 1991/09/03 18:46:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.42 1991/11/06 14:08:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 (export '(*compiler-notification-function*))
 (in-package "EXTENSIONS")
 (export '(*error-print-level* *error-print-length*
-	  *source-context-take-car-forms* *undefined-warning-limit*
+	  def-source-context *undefined-warning-limit*
 	  *enclosing-source-cutoff*))
 (in-package "C")
 
@@ -55,6 +55,7 @@
 (defun insert-cleanup-code (block1 block2 node form &optional cleanup)
   (declare (type cblock block1 block2) (type node node)
 	   (type (or cleanup null) cleanup))
+  (setf (component-reanalyze (block-component block1)) t)
   (with-ir1-environment node
     (let* ((start (make-continuation))
 	   (block (continuation-starts-block start))
@@ -1365,11 +1366,6 @@
 (proclaim '(type unsigned-byte *enclosing-source-cutoff*))
 
 
-(defparameter *source-context-take-car-forms* '(defstruct function)
-  "A list of form names for which we should we should compute the source
-  context by taking the CAR of the first arg when it is a list.")
-
-
 ;;; We separate the determination of compiler error contexts from the actual
 ;;; signalling of those errors by objectifying the error context.  This allows
 ;;; postponement of the determination of how (and if) to signal the error.
@@ -1416,6 +1412,45 @@
 (defvar *compiler-error-context* nil)
 
 
+;;; Hashtable mapping macro names to source context parsers.  Each parser
+;;; function returns the source-context list for that form.
+;;; 
+(defvar *source-context-methods* (make-hash-table))
+
+;;; DEF-SOURCE-CONTEXT  --  Public
+;;;
+(defmacro def-source-context (name ll &body body)
+  "DEF-SOURCE-CONTEXT Name Lambda-List Form*
+   This macro defines how to extract an abbreviated source context from the
+   Named form when it appears in the compiler input.  Lambda-List is a DEFMACRO
+   style lambda-list used to parse the arguments.  The Body should return a
+   list of subforms suitable for a \"~{~S ~}\" format string."
+  (let ((n-whole (gensym)))
+    `(setf (gethash ',name *source-context-methods*)
+	   #'(lambda (,n-whole)
+	       (destructuring-bind ,ll ,n-whole ,@body)))))
+
+(def-source-context defstruct (name-or-options &rest slots)
+  (declare (ignore slots))
+  `(defstruct ,(if (consp name-or-options)
+		   (car name-or-options)
+		   name-or-options)))
+
+(def-source-context function (thing)
+  (if (and (consp thing) (eq (first thing) 'lambda) (consp (rest thing)))
+      `(lambda ,(second thing))
+      `(function ,thing)))
+
+#+pcl
+(def-source-context pcl::defmethod (name &rest stuff)
+  (let ((arg-pos (position-if #'listp stuff)))
+    (if arg-pos
+	`(defmethod ,name ,@(subseq stuff 0 arg-pos)
+	   ,@(nth-value 2 (pcl::parse-specialized-lambda-list
+			   (elt stuff arg-pos))))
+	`(defmethod ,name "<illegal syntax>"))))
+
+
 ;;; SOURCE-FORM-CONTEXT  --  Internal
 ;;;
 ;;;    Return the first two elements of Form if Form is a list.  Take the car
@@ -1424,17 +1459,15 @@
 (defun source-form-context (form)
   (cond ((atom form) nil)
 	((>= (length form) 2)
-	 (let ((head (first form))
-	       (next (second form)))
-	   (list head
-		 (if (and (listp next)
-			  (member head *source-context-take-car-forms*))
-		     (car next)
-		     next))))
+	 (funcall (gethash (first form) *source-context-methods*
+			   #'(lambda (x)
+			       (declare (ignore x))
+			       (list (first form) (second form))))
+		  (rest form)))
 	(t
 	 form)))
 
-  
+
 ;;; Find-Original-Source  --  Internal
 ;;;
 ;;;    Given a source path, return the original source form and a description
