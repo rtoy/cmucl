@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.7 1993/11/16 19:13:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.8 1993/11/17 14:13:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,11 +45,20 @@ Loaded subsystems:"))
 ;;; have source for this font, since it was created by hand-editing the
 ;;; bitmaps.
 ;;;
-(declaim (function hi::%set-variable-value))
+;;; All this devious eval/intern stuff is to prevent lossage if Hemlock isn't
+;;; loaded.
+;;;
 (when (member :hemlock *features*)
-  (hi::%set-variable-value 'ed::open-paren-highlighting-font :global nil
-			   "*-courier-bold-r-normal--*-120-*")
-  (hi::%set-variable-value 'ed::default-font :global nil
-			   "*-courier-medium-r-normal--*-120-*")
-  (hi::%set-variable-value 'ed::active-region-highlighting-font :global nil
-			   "*-courier-medium-o-normal--*-120-*"))
+  (eval `(progn
+	   (hi::%set-variable-value
+	    ',(intern "OPEN-PAREN-HIGHLIGHTING-FONT" "ED")
+	    :global nil
+	    "*-courier-bold-r-normal--*-120-*")
+	   (hi::%set-variable-value
+	    ',(intern "DEFAULT-FONT" "ED")
+	    :global nil
+	    "*-courier-medium-r-normal--*-120-*")
+	   (hi::%set-variable-value
+	    (intern "ACTIVE-REGION-HIGHLIGHTING-FONT" "ED")
+	    :global nil
+	    "*-courier-medium-o-normal--*-120-*"))))
