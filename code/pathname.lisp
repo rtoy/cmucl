@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.12 1992/08/19 17:45:33 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.13 1992/09/03 12:52:51 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,9 +35,10 @@
 
 (in-package "LISP")
 
-
 
 ;;;; Structures and types.
+
+;;; Pathname structure holds the essential properties of the parsed path.
 
 (defstruct (pathname
 	    (:conc-name %pathname-)
@@ -46,15 +47,24 @@
 	     %make-pathname (host device directory name type version))
 	    (:predicate pathnamep)
 	    (:make-load-form-fun :just-dump-it-normally))
-  "Pathname is the structure of the file pathname.  It consists of a
-   host, a device, a directory, a name, and a type."
+  ;; Slot holds the host, at present either a UNIX or logical host.
   (host nil :type (or host null))
+  ;; Device is the name of a logical or physical device holding files.
   (device nil :type (member nil :unspecific))
+  ;; A list of strings that are the component subdirectory components.
   (directory nil :type list)
+  ;; The filename.
   (name nil :type (or simple-string pattern null))
+  ;; The type extension of the file.
   (type nil :type (or simple-string pattern null (member :unspecific)))
+  ;; The version number of the file, a positive integer, but not supported
+  ;; on standard UNIX filesystems.
   (version nil :type (or integer null (member :newest :wild))))
 
+;;; %PRINT-PATHNAME -- Internal
+;;;
+;;;   The printed representation of the pathname structure.
+;;;
 (defun %print-pathname (pathname stream depth)
   (declare (ignore depth))
   (let ((namestring (handler-case (namestring pathname)
@@ -87,6 +97,12 @@
 		    (%pathname-type pathname)
 		    (%pathname-version pathname))))))
 
+;;;; HOST structure
+
+;;;   The host structure holds the functions that both parse the pathname
+;;; information into sturcture slot entries, and after translation the inverse
+;;; (unparse) functions.
+;;;
 (defstruct (host
 	    (:print-function %print-host))
   (parse (required-argument) :type function)
@@ -97,6 +113,8 @@
   (unparse-enough (required-argument) :type function)
   (customary-case (required-argument) :type (member :upper :lower)))
 
+;;; %PRINT-HOST -- Internal
+;;;
 (defun %print-host (host stream depth)
   (declare (ignore depth))
   (print-unreadable-object (host stream :type t :identity t)))
@@ -104,12 +122,17 @@
 
 ;;;; Patterns
 
+;;;   Patterns are a list of entries and wildcards used for pattern matches
+;;; of translations.
+
 (defstruct (pattern
 	    (:print-function %print-pattern)
 	    (:make-load-form-fun :just-dump-it-normally)
 	    (:constructor make-pattern (pieces)))
   (pieces nil :type list))
 
+;;; %PRINT-PATTERN -- Internal
+;;;
 (defun %print-pattern (pattern stream depth)
   (declare (ignore depth))
   (print-unreadable-object (pattern stream :type t)
@@ -118,6 +141,8 @@
 	  (pprint-fill stream (pattern-pieces pattern) nil))
 	(prin1 (pattern-pieces pattern) stream))))
 
+;;; PATTERN= -- Internal
+;;;
 (defun pattern= (pattern1 pattern2)
   (declare (type pattern pattern1 pattern2))
   (let ((pieces1 (pattern-pieces pattern1))
@@ -137,10 +162,125 @@
 		pieces1
 		pieces2))))
 
+;;; PATTERN-MATCHES -- Internal
+;;;
+(defun pattern-matches (pattern string)
+  (declare (type pattern pattern)
+	   (type simple-string string))
+  (let ((len (length string)))
+    (labels ((maybe-prepend (subs cur-sub chars)
+	       (if cur-sub
+		   (let* ((len (length chars))
+			  (new (make-string len))
+			  (index len))
+		     (dolist (char chars)
+		       (setf (schar new (decf index)) char))
+		     (cons new subs))
+		   subs))
+	     (matches (pieces start subs cur-sub chars)
+	       (if (null pieces)
+		   (if (= start len)
+		       (values t (maybe-prepend subs cur-sub chars))
+		       (values nil nil))
+		   (let ((piece (car pieces)))
+		     (etypecase piece
+		       (simple-string
+			(let ((end (+ start (length piece))))
+			  (and (<= end len)
+			       (string= piece string
+					:start2 start :end2 end)
+			       (matches (cdr pieces) end
+					(maybe-prepend subs cur-sub chars)
+					nil nil))))
+		       (list
+			(ecase (car piece)
+			  (:character-set
+			   (and (< start len)
+				(let ((char (schar string start)))
+				  (if (find char (cdr piece) :test #'char=)
+				      (matches (cdr pieces) (1+ start) subs t
+					       (cons char chars))))))))
+		       ((member :single-char-wild)
+			(and (< start len)
+			     (matches (cdr pieces) (1+ start) subs t
+				      (cons (schar string start) chars))))
+		       ((member :multi-char-wild)
+			(multiple-value-bind
+			    (won new-subs)
+			    (matches (cdr pieces) start subs t chars)
+			  (if won
+			      (values t new-subs)
+			      (and (< start len)
+				   (matches pieces (1+ start) subs t
+					    (cons (schar string start)
+						  chars)))))))))))
+      (multiple-value-bind
+	  (won subs)
+	  (matches (pattern-pieces pattern) 0 nil nil nil)
+	(values won (reverse subs))))))
+
+;;; COMPONENTS-MATCH -- Internal
+;;;
+;;;   Wilds in to are matched against from where both are either lists
+;;; containing :wild and :wild-inferiors, patterns or strings.
+;;; FROM = :WILD-INFERIORS or :WILD handled separately for directory
+;;; component. Not communative.
+;;;
+(defun components-match (from to)
+  (or (eq from to)
+      (typecase from
+	(simple-base-string
+	 (typecase to
+	   (pattern
+	    (values (pattern-matches to from)))
+	   (simple-base-string
+	    (string-equal from to))))
+	(pattern
+	 (and (pattern-p to) (pattern= from to)))
+	((member :wild) ; :WILD component matches any string, or pattern or NIL.
+	 (or (stringp to)
+	     (logical-host-p to)
+	     (pattern-p to)
+	     (member to '(nil :unspecific :wild :wild-inferiors))))
+	(cons ; Watch for wildcards.
+	 (and (consp from)
+	      (let ((from1 (first from))
+		    (from2 nil)
+		    (to1 (first to)))
+		(typecase from1
+		  ((member :wild)
+		   (or (stringp to1)
+		       (pattern-p to1)
+		       (not to1)
+		       (eq to1 :unspecific)))
+		  ((member :wild-inferiors)
+		   (setf from2 (second from))
+		   (cond ((not from2)
+			  ;; Nothing left of from, hence anything else in to
+			  ;; matches :wild-inferiors. 
+			  t)
+			 ((components-match
+			   (rest (rest from))
+			   (rest (member from2 to :test #'equal))))))
+		  (keyword ; :unspecific, :up, :back
+		   (and (keywordp to1)
+			(eq from1 to1)
+			(components-match (rest from) (rest to))))
+		  (string
+		   (and (stringp to1)
+			(string-equal from1 to1)
+			(components-match (rest from) (rest to))))))))
+	((member :back :up :unspecific nil)
+	 (and (pattern-p from)
+	      (equal (pattern-pieces from) '(:multi-char-wild)))))))
 
 
 ;;;; Utilities.
 
+;;; COMPARE-COMPONENT  -- Internal
+;;;
+;;; A predicate for comparing two pathname slot component sub-entries.
+;;;
 (defun compare-component (this that)
   (or (eql this that)
       (typecase this
@@ -156,31 +296,14 @@
 	      (compare-component (cdr this) (cdr that)))))))
 
 
-;;;; Logical namestrings
-
-#|
-(defstruct (logical-host
-	    (:include host
-		      (:parse #'parse-logical-namestring)
-		      ...)
-	    (:print-function %print-logical-host))
-  name
-  translations)
-
-(deftype logical-pathname ()
-  '(satisfies logical-pathname-p))
-
-(defun logical-pathname-p (thing)
-  "Return T if THING is a LOGICAL-PATHNAME, and NIL if not."
-  (and (pathnamep thing)
-       (logical-host-p (%pathname-host thing))))
-|#
-
-
 ;;;; Pathname functions.
+
+;;;   Implementation determined defaults to pathname slots.
 
 (defvar *default-pathname-defaults*)
 
+;;; PATHNAME= -- Internal
+;;;
 (defun pathname= (pathname1 pathname2)
   (and (eq (%pathname-host pathname1)
 	   (%pathname-host pathname2))
@@ -195,6 +318,10 @@
        (compare-component (%pathname-version pathname1)
 			  (%pathname-version pathname2))))
 
+;;; WITH-PATHNAME -- Internal
+;;;   Converts the var, a pathname designator (a pathname, or string, or 
+;;; stream), into a pathname.
+;;;
 (defmacro with-pathname ((var expr) &body body)
   `(let ((,var (let ((,var ,expr))
 		 (etypecase ,var
@@ -203,101 +330,19 @@
 		   (stream (parse-namestring (file-name ,var)))))))
      ,@body))
 
-(defun %print-namestring-parse-error (condition stream)
-  (format stream "Parse error in namestring: ~?~%  ~A~%  ~V@T^"
-	  (namestring-parse-error-complaint condition)
-	  (namestring-parse-error-arguments condition)
-	  (namestring-parse-error-namestring condition)
-	  (namestring-parse-error-offset condition)))
 
-(define-condition namestring-parse-error (error)
-  ((complaint :init-form (required-argument))
-   (arguments :init-form nil)
-   (namestring :init-form (required-argument))
-   (offset :init-form (required-argument)))
-  (:report %print-namestring-parse-error))
-
-(defun %parse-namestring (namestr start end host junk-allowed)
-  (declare (type string namestr)
-	   (type index start end)
-	   (type host host)
-	   (values (or null pathname) index))
-  (cond (junk-allowed
-	 (handler-case (%parse-namestring namestr start end host nil)
-	   (namestring-parse-error (condition)
-	       (values nil (namestring-parse-error-offset condition)))))
-	((simple-string-p namestr)
-	 (multiple-value-bind
-	     (new-host device directory file type version)
-	     (funcall (host-parse host) namestr start end)
-	   (values (%make-pathname (or new-host host)
-				   device
-				   directory
-				   file
-				   type
-				   version)
-		   end)))
-	(t
-	 (%parse-namestring (coerce namestr 'simple-string)
-			    start end host nil))))
-
-(defun parse-namestring (thing
-			 &optional host (defaults *default-pathname-defaults*)
-			 &key (start 0) end junk-allowed)
-  (declare (type (or simple-base-string stream pathname) thing)
-	   (type (or null host) host)
-	   (type pathnamelike defaults)
-	   (type index start)
-	   (type (or index null) end)
-	   (type (or null (not null)) junk-allowed)
-	   (values (or null pathname) index))
-  (cond ((stringp thing)
-	 (let* ((end1 (or end (length thing)))
-		(things-host nil)
-		(hosts-name (when host
-			      (funcall (host-parse host) thing start end1))))
-	   (setf things-host
-		 (maybe-extract-logical-host thing start end1))
-	   (when (and host things-host) ; A logical host and host are defined.
-	     (unless (string= things-host hosts-name)
-	       (error "Hosts do not match: ~S in ~S and ~S."
-		      things-host thing host)))
-	   (if things-host
-	       (unless (gethash (string-downcase things-host) *search-lists*)
-		 ;; Not a search-list name, make it a logical-host name.
-		 (setf host (intern-logical-host things-host))))
-	   (%parse-namestring thing start end1
-			      (or host
-				  (with-pathname (defaults defaults)
-						 (%pathname-host defaults)))
-			      junk-allowed)))
-	((pathnamep thing)
-	 (when host
-	   (unless (eq host (%pathname-host thing))
-	     (error "Hosts do not match: ~S and ~S."
-		    host
-		    (%pathname-host thing))))
-	 (values thing start))
-	((streamp thing)
-	 (let ((host-name (funcall (host-unparse-host host) host))
-	       (stream-type (type-of thing))
-	       (stream-host-name (host-namestring thing)))
-	   (unless (or (eq stream-type 'fd-stream)
-		       ;;********Change fd-stream to file-stream in sources too.
-		       (eq stream-type 'synonym-stream))
-	     (error "Stream ~S was created with other than OPEN, WITH-OPEN-FILE~
-		     or MAKE-SYNONYM-FILE." thing))
-	   (unless (string-equal stream-host-name host-name)
-	     (error "Hosts do not match: ~S and ~S."
-		    host
-		    host-name)))
-	 (values thing start))))
-
+;;; PATHNAME -- Interface
+;;;
 (defun pathname (thing)
+  "Convert thing (a pathname, string or stream) into a pathname."
   (declare (type pathnamelike thing))
   (with-pathname (pathname thing)
     pathname))
 
+;;; MAYBE-DIDDLE-CASE  -- Internal
+;;;
+;;;   Change the case of thing if diddle-p T.
+;;;
 (defun maybe-diddle-case (thing diddle-p)
   (declare (type (or list pattern simple-base-string (member :unspecific))
 		 thing)
@@ -369,6 +414,8 @@
 		 thing))))
       thing))
 
+;;; MERGE-DIRECTORIES -- Internal
+;;;
 (defun merge-directories (dir1 dir2 diddle-case)
   (if (or (eq (car dir1) :absolute)
 	  (null dir2))
@@ -386,10 +433,14 @@
 	    (add dir)))
 	(reverse results))))
 
+;;; MERGE-PATHNAMES -- Interface
+;;;
 (defun merge-pathnames (pathname
 			&optional
 			(defaults *default-pathname-defaults*)
 			(default-version :newest))
+  "Construct a filled in pathname by completing the unspecified components
+   from the defaults."
   (with-pathname (defaults defaults)
     (let ((pathname (let ((*default-pathname-defaults* defaults))
 		      (pathname pathname))))
@@ -415,6 +466,8 @@
 			(or (%pathname-version pathname)
 			    default-version))))))
 
+;;; IMPORT-DIRECTORY -- Internal
+;;;
 (defun import-directory (directory diddle-case)
   (etypecase directory
     (null nil)
@@ -450,6 +503,8 @@
        ,(maybe-diddle-case (coerce directory 'simple-string)
 			   diddle-case)))))
 
+;;; MAKE-PATHNAME -- Interface
+;;;
 (defun make-pathname (&key (host nil hostp)
 			   (device nil devp)
 			   (directory nil dirp)
@@ -457,6 +512,8 @@
 			   (type nil typep)
 			   (version nil versionp)
 			   defaults (case :local))
+  "Makes a new pathname from the component arguments.  Note that host is a host-
+   structure."
   (declare (type (or host null) host)
 	   (type (member nil :unspecific) device)
 	   (type (or list string pattern (member :wild)) directory)
@@ -508,14 +565,20 @@
 	 (defaults (%pathname-version defaults))
 	 (t nil))))))
 
+;;; PATHNAME-HOST -- Interface
+;;;
 (defun pathname-host (pathname &key (case :local))
+  "Accessor for the pathname's host."
   (declare (type pathnamelike pathname)
 	   (type (member :local :common) case)
 	   (ignore case))
   (with-pathname (pathname pathname)
     (%pathname-host pathname)))
 
+;;; PATHNAME-DEVICE -- Interface
+;;;
 (defun pathname-device (pathname &key (case :local))
+  "Accessor for pathname's device."
   (declare (type pathnamelike pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -525,7 +588,10 @@
 				 (%pathname-host pathname))
 				:lower)))))
 
+;;; PATHNAME-DIRECTORY -- Interface
+;;;
 (defun pathname-directory (pathname &key (case :local))
+  "Accessor for the pathname's directory list."
   (declare (type pathnamelike pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -534,8 +600,10 @@
 			    (eq (host-customary-case
 				 (%pathname-host pathname))
 				:lower)))))
-
+;;; PATHNAME-NAME -- Interface
+;;;
 (defun pathname-name (pathname &key (case :local))
+  "Accessor for the pathname's name."
   (declare (type pathnamelike pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -545,7 +613,10 @@
 				 (%pathname-host pathname))
 				:lower)))))
 
+;;; PATHNAME-TYPE
+;;;
 (defun pathname-type (pathname &key (case :local))
+  "Accessor for the pathname's name."
   (declare (type pathnamelike pathname)
 	   (type (member :local :common) case))
   (with-pathname (pathname pathname)
@@ -554,12 +625,117 @@
 			    (eq (host-customary-case
 				 (%pathname-host pathname))
 				:lower)))))
-
+;;; PATHNAME-VERSION
+;;;
 (defun pathname-version (pathname)
+  "Accessor for the pathname's version."
   (declare (type pathnamelike pathname))
   (with-pathname (pathname pathname)
     (%pathname-version pathname)))
 
+
+;;;; Namestrings
+
+;;; %PRINT-NAMESTRING-PARSE-ERROR -- Internal
+;;;
+(defun %print-namestring-parse-error (condition stream)
+  (format stream "Parse error in namestring: ~?~%  ~A~%  ~V@T^"
+	  (namestring-parse-error-complaint condition)
+	  (namestring-parse-error-arguments condition)
+	  (namestring-parse-error-namestring condition)
+	  (namestring-parse-error-offset condition)))
+
+(define-condition namestring-parse-error (error)
+  ((complaint :init-form (required-argument))
+   (arguments :init-form nil)
+   (namestring :init-form (required-argument))
+   (offset :init-form (required-argument)))
+  (:report %print-namestring-parse-error))
+
+;;; %PARSE-NAMESTRING -- Internal
+;;;
+(defun %parse-namestring (namestr start end host junk-allowed)
+  (declare (type string namestr)
+	   (type index start end)
+	   (type host host)
+	   (values (or null pathname) index))
+  (cond (junk-allowed
+	 (handler-case (%parse-namestring namestr start end host nil)
+	   (namestring-parse-error (condition)
+	       (values nil (namestring-parse-error-offset condition)))))
+	((simple-string-p namestr)
+	 (multiple-value-bind
+	     (new-host device directory file type version)
+	     (funcall (host-parse host) namestr start end)
+	   (values (%make-pathname (or new-host host)
+				   device
+				   directory
+				   file
+				   type
+				   version)
+		   end)))
+	(t
+	 (%parse-namestring (coerce namestr 'simple-string)
+			    start end host nil))))
+
+;;; PARSE-NAMESTRING -- Interface
+;;;
+(defun parse-namestring (thing
+			 &optional host (defaults *default-pathname-defaults*)
+			 &key (start 0) end junk-allowed)
+  "Converts thing, a pathname designator, into a pathname structure, returns
+   the printed representation."
+  (declare (type (or simple-base-string stream pathname) thing)
+	   (type (or null host) host)
+	   (type pathnamelike defaults)
+	   (type index start)
+	   (type (or index null) end)
+	   (type (or null (not null)) junk-allowed)
+	   (values (or null pathname) index))
+  (cond ((stringp thing)
+	 (let* ((end1 (or end (length thing)))
+		(things-host nil)
+		(hosts-name (when host
+			      (funcall (host-parse host) thing start end1))))
+	   (setf things-host
+		 (maybe-extract-logical-host thing start end1))
+	   (when (and host things-host) ; A logical host and host are defined.
+	     (unless (string= things-host hosts-name)
+	       (error "Hosts do not match: ~S in ~S and ~S."
+		      things-host thing host)))
+	   (if things-host
+	       (unless (gethash (string-downcase things-host) *search-lists*)
+		 ;; Not a search-list name, make it a logical-host name.
+		 (setf host (intern-logical-host things-host))))
+	   (%parse-namestring thing start end1
+			      (or host
+				  (with-pathname (defaults defaults)
+						 (%pathname-host defaults)))
+			      junk-allowed)))
+	((pathnamep thing)
+	 (when host
+	   (unless (eq host (%pathname-host thing))
+	     (error "Hosts do not match: ~S and ~S."
+		    host
+		    (%pathname-host thing))))
+	 (values thing start))
+	((streamp thing)
+	 (let ((host-name (funcall (host-unparse-host host) host))
+	       (stream-type (type-of thing))
+	       (stream-host-name (host-namestring thing)))
+	   (unless (or (eq stream-type 'fd-stream)
+		       ;;********Change fd-stream to file-stream in sources too.
+		       (eq stream-type 'synonym-stream))
+	     (error "Stream ~S was created with other than OPEN, WITH-OPEN-FILE~
+		     or MAKE-SYNONYM-FILE." thing))
+	   (unless (string-equal stream-host-name host-name)
+	     (error "Hosts do not match: ~S and ~S."
+		    host
+		    host-name)))
+	 (values thing start))))
+
+;;; NAMESTRING -- Interface
+;;;
 (defun namestring (pathname)
   "Construct the full (name)string form of the pathname."
   (declare (type pathnamelike pathname))
@@ -574,7 +750,10 @@
 	      "Cannot determine the namestring for pathnames with no ~
 	       host:~%  ~S" pathname))))))
 
+;;; HOST-NAMESTRING -- Interface
+;;;
 (defun host-namestring (pathname)
+  "Returns a string representation of the name of the host in the pathname."
   (declare (type pathnamelike pathname))
   (with-pathname (pathname pathname)
     (let ((host (%pathname-host pathname)))
@@ -584,7 +763,10 @@
 	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
 
+;;; DIRECTORY-NAMESTRING -- Interface
+;;;
 (defun directory-namestring (pathname)
+  "Returns a string representation of the directories used in the pathname."
   (declare (type pathnamelike pathname))
   (with-pathname (pathname pathname)
     (let ((host (%pathname-host pathname)))
@@ -594,7 +776,10 @@
 	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
 
+;;; FILE-NAMESTRING -- Interface
+;;;
 (defun file-namestring (pathname)
+  "Returns a string representation of the name used in the pathname."
   (declare (type pathnamelike pathname))
   (with-pathname (pathname pathname)
     (let ((host (%pathname-host pathname)))
@@ -604,8 +789,12 @@
 	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
 
+;;; ENOUGH-NAMESTRING -- Interface
+;;;
 (defun enough-namestring (pathname
 			  &optional (defaults *default-pathname-defaults*))
+  "Returns an abbreviated pathname sufficent to identify the pathname relative
+   to the defaults."
   (declare (type pathnamelike pathname))
   (with-pathname (pathname pathname)
     (let ((host (%pathname-host pathname)))
@@ -619,7 +808,10 @@
 
 ;;;; Wild pathnames.
 
+;;; WILD-PATHNAME-P -- Interface
+;;;
 (defun wild-pathname-p (pathname &optional field-key)
+  "Predicate for determining whether pathname contains any wildcards."
   (declare (type pathnamelike pathname)
 	   (type (member nil :host :device :directory :name :type :version)
 		 field-key))
@@ -645,112 +837,8 @@
       (:version
        (eq (%pathname-version pathname) :wild)))))
 
-(defun pattern-matches (pattern string)
-  (declare (type pattern pattern)
-	   (type simple-string string))
-  (let ((len (length string)))
-    (labels ((maybe-prepend (subs cur-sub chars)
-	       (if cur-sub
-		   (let* ((len (length chars))
-			  (new (make-string len))
-			  (index len))
-		     (dolist (char chars)
-		       (setf (schar new (decf index)) char))
-		     (cons new subs))
-		   subs))
-	     (matches (pieces start subs cur-sub chars)
-	       (if (null pieces)
-		   (if (= start len)
-		       (values t (maybe-prepend subs cur-sub chars))
-		       (values nil nil))
-		   (let ((piece (car pieces)))
-		     (etypecase piece
-		       (simple-string
-			(let ((end (+ start (length piece))))
-			  (and (<= end len)
-			       (string= piece string
-					:start2 start :end2 end)
-			       (matches (cdr pieces) end
-					(maybe-prepend subs cur-sub chars)
-					nil nil))))
-		       (list
-			(ecase (car piece)
-			  (:character-set
-			   (and (< start len)
-				(let ((char (schar string start)))
-				  (if (find char (cdr piece) :test #'char=)
-				      (matches (cdr pieces) (1+ start) subs t
-					       (cons char chars))))))))
-		       ((member :single-char-wild)
-			(and (< start len)
-			     (matches (cdr pieces) (1+ start) subs t
-				      (cons (schar string start) chars))))
-		       ((member :multi-char-wild)
-			(multiple-value-bind
-			    (won new-subs)
-			    (matches (cdr pieces) start subs t chars)
-			  (if won
-			      (values t new-subs)
-			      (and (< start len)
-				   (matches pieces (1+ start) subs t
-					    (cons (schar string start)
-						  chars)))))))))))
-      (multiple-value-bind
-	  (won subs)
-	  (matches (pattern-pieces pattern) 0 nil nil nil)
-	(values won (reverse subs))))))
-
-(defun components-match (from to)
-  "Wilds in to are matched against from where both are either lists containing
-   :wild and :wild-inferiors, patterns or strings. FROM = :WILD-INFERIORS or
-   :WILD handled separately for directory component. Not communative."
-  (or (eq from to)
-      (typecase from
-	(simple-base-string
-	 (typecase to
-	   (pattern
-	    (values (pattern-matches to from)))
-	   (simple-base-string
-	    (string-equal from to))))
-	(pattern
-	 (and (pattern-p to) (pattern= from to)))
-	((member :wild) ; :WILD component matches any string, or pattern or NIL.
-	 (or (stringp to)
-	     (logical-host-p to)
-	     (pattern-p to)
-	     (member to '(nil :unspecific :wild :wild-inferiors))))
-	(cons ; Watch for wildcards.
-	 (and (consp from)
-	      (let ((from1 (first from))
-		    (from2 nil)
-		    (to1 (first to)))
-		(typecase from1
-		  ((member :wild)
-		   (or (stringp to1)
-		       (pattern-p to1)
-		       (not to1)
-		       (eq to1 ':unspecific)))
-		  ((member :wild-inferiors)
-		   (setf from2 (second from))
-		   (cond ((not from2)
-			  ;; Nothing left of from, hence anything else in to
-			  ;; matches :wild-inferiors. 
-			  t)
-			 ((components-match
-			   (rest (rest from))
-			   (rest (member from2 to :test #'equal))))))
-		  (keyword ; :unspecific, :up, :back
-		   (and (keywordp to1)
-			(eq from1 to1)
-			(components-match (rest from) (rest to))))
-		  (string
-		   (and (stringp to1)
-			(string-equal from1 to1)
-			(components-match (rest from) (rest to))))))))
-	((member :back :up :unspecific nil)
-	 (and (pattern-p from)
-	      (equal (pattern-pieces from) '(:multi-char-wild)))))))
-
+;;; PATHNAME-MATCH -- Interface
+;;;
 (defun pathname-match-p (pathname wildname)
   "Pathname matches the wildname template?"
   (with-pathname (pathname pathname)
@@ -769,6 +857,8 @@
 		 (eql (%pathname-version pathname)
 		      (%pathname-version wildname))))))))
 
+;;; SUBSTITUTE-INTO -- Internal
+;;;
 (defun substitute-into (pattern subs)
   (declare (type pattern pattern)
 	   (type list subs))
@@ -804,7 +894,11 @@
 	(car pieces)
 	(make-pattern (nreverse pieces)))))
 
-(defun translate-component (source from to)
+;;; TRANSLATE-COMPONENT -- Internal
+;;;
+;;;   Use the source as a pattern to fill the from path and form the to path.
+;;;
+(defun translate-component (source from to) 
   (typecase to
     (pattern
      (if (pattern-p from)
@@ -830,6 +924,8 @@
 	 to
 	 :error))))
 
+;;; TRANSLATE-DIRECTORIES -- Internal
+;;;
 (defun translate-directories (source from to)
   (if (null to)
       source
@@ -874,7 +970,11 @@
 			to-part))
 		to))))
 
+;;; TRANSLATE-PATHNAME -- Interface
+;;;
 (defun translate-pathname (source from-wildname to-wildname &key)
+  "Use the source pathname to translate the from-wildname's wild and
+   unspecified elements into a completed to-pathname based on the to-wildname."
   (declare (type pathnamelike source from-wildname to-wildname))
   (with-pathname (source source)
     (with-pathname (from from-wildname)
@@ -1143,7 +1243,7 @@
 		      (:unparse-directory #'unparse-logical-directory)
 		      (:unparse-file #'unparse-logical-file)
 		      (:unparse-enough #'identity)
-		      (:customary-case ':lower)))
+		      (:customary-case :upper)))
   (name "" :type simple-string)
   (translations nil :type list)
   (canon-transls nil :type list))
@@ -1151,6 +1251,8 @@
 (deftype logical-pathname ()
   '(satisfies logical-pathname-p))
 
+;;; LOGICAL-PATHNAME-P -- Public
+;;;
 (defun logical-pathname-p (thing)
   "Return T if THING is a LOGICAL-PATHNAME object."
   (and (pathnamep thing)
@@ -1170,6 +1272,8 @@
    (offset :init-form (required-argument)))
   (:report %print-namestring-parse-error))
 
+;;; MAYBE-MAKE-LOGICAL-PATTERN -- Internal
+;;;
 (defun maybe-make-logical-pattern (namestr start end)
   "Take the ; reduced strings and break them into words and wildcard-words."
   (declare (type simple-base-string namestr)
@@ -1224,11 +1328,13 @@
 	   (car (pattern)))
 	  ((= 1 (length (pattern)))
 	   (let ((elmt (first (pattern))))
-	     (if (or (eq elmt ':wild) (eq elmt ':wild-inferiors))
+	     (if (or (eq elmt :wild) (eq elmt :wild-inferiors))
 		 elmt)))
 	  (t
 	   (make-pattern (pattern)))))))
 
+;;; INTERN-LOGICAL-HOST
+;;;
 (defun intern-logical-host (name)
   (declare (simple-string name)
 	   (values logical-host))
@@ -1238,12 +1344,8 @@
 	  (setf (gethash name *logical-pathnames*) new)
 	  new))))
 
-;;; parse-namestring and merge-pathnames must be upgraded to include
-;;; logical-namestrings, as required by the ANSI spec.
-
-;;; A large set of functions must be upgraded to accept logical-pathnames,
-;;; even if they do not accept logical-pathname strings.
-
+;;; EXTRACT-LOGICAL-NAME-TYPE-AND-VERSION
+;;;
 (defun extract-logical-name-type-and-version (namestr start end)
   (declare (type simple-base-string namestr)
 	   (type index start end))
@@ -1283,20 +1385,11 @@
 		   nil
 		   version)))))
 
-(declaim (inline copy-string))
-
-(defun copy-string (str start end)
-  (declare (type simple-base-string str)
-	   (type index start end)
-	   (values simple-base-string))
-  (let* ((bnd (- end start))
-	 (len (length str))
-	 (res (make-string bnd)))
-    (if (and (<= start end) (<= bnd len))
-	(dotimes (i bnd res)
-	  (setf (schar res i) (schar str i)))
-	(error "Cannot copy string ~S given the bounds ~D,~D" str start end))))
-
+;;; LOGICAL-WORD-P -- Internal
+;;;
+;;;    Predicate for testing whether the syntax of the word is consistent
+;;; with the form of a logical host.
+;;;
 (defun logical-word-p (word)
   (declare (type simple-base-string word)
 	   (values boolean))
@@ -1307,28 +1400,34 @@
 	(return-from logical-word-p nil))))
   t)
 
+;;; MAYBE-EXTRACT-LOGICAL-HOST -- Internal
+;;;    Verify whether there is a logical host prefix in the namestr. If one is
+;;; found return its name and the index of the remainder of the namestring.
+;;; If not return nil.
+;;;
 (defun maybe-extract-logical-host (namestr start end)
-  "Verify whether there is a logical host prefix in the namestr. If one is
-   found return its name and the index of the remainder of the namestring.
-   If not return nil."
   (declare (type simple-base-string namestr)
 	   (type index start)
 	   (type index start end)
 	   (values (or (member :wild) simple-base-string null) (or null index)))
   (let ((colon-pos (position #\: namestr :start start :end end)))
     (if colon-pos
-	(let ((host (copy-string namestr start colon-pos)))
+	(let ((host (subseq namestr start colon-pos)))
 	  (cond ((logical-word-p host)
 		 (return-from maybe-extract-logical-host
 			      (values (string-upcase host) (1+ colon-pos))))
 		((string= host "*")
 		 (return-from maybe-extract-logical-host
-			      (values ':wild (1+ colon-pos))))))
+			      (values :wild (1+ colon-pos))))))
 	;; Implied host
 	(values nil 0))))
 
+;;; PARSE-LOGICAL-NAMESTRING  -- Internal
+;;;
+;;;   Break up a logical-namestring into its constituent parts.
+;;;
 (defun parse-logical-namestring (namestr start end)
-  "Break up a logical-namestring into its constituent parts."
+
   (declare (type simple-base-string namestr)
 	   (type index start end)
 	   (values (or logical-host null)
@@ -1361,7 +1460,7 @@
 				namestr tail-start tail-end)))
 	;; Now we have everything we want.  So return it.
 	(values host
-		':unspecific
+		:unspecific
 		(collect ((dirs))
 		  (dolist (piece pieces)
 		    (let ((piece-start (car piece))
@@ -1384,6 +1483,8 @@
 		type
 		version)))))
 
+;;; UNPARSE-LOGICAL-DIRECTORY-LIST -- Internal
+;;;
 (defun unparse-logical-directory-list (directory)
   (declare (type list directory))
   (collect ((pieces))
@@ -1399,18 +1500,22 @@
 	       (cond ((or (stringp dir) (pattern-p dir))
 		      (pieces (unparse-logical-piece dir))
 		      (pieces ";"))
-		     ((eq dir ':wild)
+		     ((eq dir :wild)
 		      (pieces "*;"))
-		     ((eq dir ':wild-inferiors)
+		     ((eq dir :wild-inferiors)
 		      (pieces "**;"))
 		     (t
 		      (error "Invalid directory component: ~S" dir)))))
 	   (apply #'concatenate 'simple-string (pieces))))
 
+;;; UNPARSE-LOGICAL-DIRECTORY -- Internal
+;;;
 (defun unparse-logical-directory (pathname)
   (declare (type pathname pathname))
   (unparse-logical-directory-list (%pathname-directory pathname)))
 
+;;; UNPARSE-LOGICAL-PIECE -- Internal
+;;;
 (defun unparse-logical-piece (thing)
   (etypecase thing
     (simple-string
@@ -1438,9 +1543,9 @@
 		  (simple-string
 		   (strings piece))
 		  (keyword
-		   (cond ((eq piece ':wild-inferiors)
+		   (cond ((eq piece :wild-inferiors)
 			  (strings "**"))
-			 ((eq piece ':wild)
+			 ((eq piece :wild)
 			  (strings "*"))
 			 (t (error "Invalid keyword: ~S" piece))))
 		  (t
@@ -1449,15 +1554,21 @@
 		     'simple-string
 		     (strings))))))
 
+;;; UNPARSE-LOGICAL-FILE -- Internal
+;;;
 (defun unparse-logical-file (pathname)
   (declare (type pathname pathname))
   (declare (type pathname pathname))
   (unparse-unix-file pathname))
 
+;;; UNPARSE-LOGICAL-HOST -- Internal
+;;;
 (defun unparse-logical-host (pathname)
   (declare (type logical-pathname pathname))
   (logical-host-name (%pathname-host pathname)))
-  
+
+;;; UNPARSE-LOGICAL-NAMESTRING -- Internal
+;;;
 (defun unparse-logical-namestring (pathname)
   (declare (type logical-pathname pathname))
   (concatenate 'simple-string
@@ -1465,8 +1576,10 @@
 	       (unparse-logical-directory pathname)
 	       (unparse-logical-file pathname)))
 
+;;; LOGICAL-PATHNAME -- Public
+;;;
 ;;; Logical-pathname must signal a type error of type type-error.
-
+;;;
 (defun logical-pathname (pathspec)
   "Converts the pathspec argument to a logical-pathname and returns it."
   (declare (type (or logical-pathname string stream) pathspec)
@@ -1488,10 +1601,12 @@
 		 a logical pathname namestring, or~%
 		 a stream named by a logical pathname." pathspec))))
 
-
+;;; TRANSLATIONS-TEST-P
+;;;
+;;;   Verify that the list of translations consists of lists and prepare
+;;; canonical translations from the pathnames.
+;;;
 (defun translations-test-p (transl-list host)
-  "Verify that the list of translations consists of lists and prepare
-   canonical translations from the pathnames."
   (declare (type logical-host host)
 	   (type list transl-list)
 	   (values boolean))
@@ -1520,6 +1635,8 @@
   (setf (logical-host-translations host) transl-list)
   t)
 
+;;; LOGICAL-PATHNAME-TRANSLATIONS -- Public
+;;;
 (defun logical-pathname-translations (host)
   "Return the (logical) host object argument's list of translations."
   (declare (type (or simple-base-string logical-host) host)
@@ -1534,6 +1651,8 @@
     (logical-host
      (logical-host-translations host))))
 
+;;; (SETF LOGICAL-PATHNAME-TRANSLATIONS) -- Public
+;;;
 (defun (setf logical-pathname-translations) (translations host)
   "Set the translations list for the logical host argument.
    Return translations."
@@ -1564,6 +1683,8 @@
 ;;; using setf.  The file for translations should have the name defined by
 ;;; the host name (a string) and with type component "translations".
 
+;;; SAVE-LOGICAL-PATHNAME-TRANSLATIONS -- Public
+;;;
 (defun save-logical-pathname-translations (host directory)
   "Save the translations for host in the file named host in
    the directory argument. This is an internal convenience function and
@@ -1590,12 +1711,16 @@
 		     ~S.~%" p-name new-transl host))))
 
 ;;; Define a SYS area for system dependent logical translations, should we
-;;; ever want to use them.
+;;; ever want to use them. ########### Decision still need to made whether
+;;; to take advantage of this area.
 
+#|
 (progn
   (intern-logical-host "SYS")
   (save-logical-pathname-translations "SYS" "library:"))
-
+|#
+;;; LOAD-LOGICAL-PATHNAME-TRANSLATIONS -- Public
+;;;
 (defun load-logical-pathname-translations (host)
   "Search for a logical pathname named host, if not already defined. If already
    defined no attempt to find or load a definition is attempted and NIL is
@@ -1632,6 +1757,8 @@
 		   (format t ";; Loading done.~%")
 		   (return-from load-logical-pathname-translations t))))))))
 
+;;; COMPILE-FILE-PATHNAME -- Public
+;;;
 (defun compile-file-pathname (file-path &key output-file)
   (declare (type (or string stream pathname logical-pathname) file-path)
 	   (type (or string stream pathname logical-pathname) output-file)
@@ -1647,6 +1774,8 @@
 	    (translate-logical-pathname path))
 	   (t file-path))))
 
+;;; TRANSLATE-WILD-P -- Internal
+;;;
 (defmacro translate-wild-p (to-obj)
   "Translate :wild?"
   (declare (type keyword to-obj))
@@ -1656,6 +1785,8 @@
 	  pattern)
       t)))
 
+;;; INTERMEDIATE-REP -- Internal
+;;;
 (defun intermediate-rep (from to)
   "A logical component transition function that translates from one argument
    to the other. This function is specific to the CMUCL implementation."
@@ -1713,26 +1844,23 @@
        (:newest to)
        ((member nil) from)))))
     
-(proclaim '(inline translate-logical-component copy-sublist))
+(proclaim '(inline translate-logical-component))
 
+;;; TRANSLATE-LOGICAL-COMPONENT -- Internal
+;;;
 (defun translate-logical-component (source from to)
   (intermediate-rep (intermediate-rep source from) to))
 
-(defun copy-sublist (lst &key start end)
-  (let* ((res (make-list (- end start))))
-    (do ((i start (1+ start))
-	 (j 0 (1+ j)))
-	((<= start i))
-      (setf (nth j res) (nth i lst)))
-    res))
-
+;;; TRANSLATE-LOGICAL-DIRECTORY  -- Internal
+;;;
+;;;   Translate logical directories within the UNIX heirarchical file system.
+;;;
 (defun translate-logical-directory (source from to)
-  "Translate logical directories within the UNIX heirarchical file system."
   ;; Handle unfilled components.
-  (if (or (eql source ':UNSPECIFIC)
-	  (eql from ':UNSPECIFIC)
-	  (eql to ':UNSPECIFIC))
-      (return-from translate-logical-directory ':UNSPECIFIC))
+  (if (or (eql source :UNSPECIFIC)
+	  (eql from :UNSPECIFIC)
+	  (eql to :UNSPECIFIC))
+      (return-from translate-logical-directory :UNSPECIFIC))
   (if (or (not source) (not from) (not to))
       (return-from translate-logical-directory nil))
   ;; Handle directory component abbreviated as a wildcard.
@@ -1757,20 +1885,20 @@
 	  (s-next-el nil)
 	  (f-el (nth j from) (nth j from)))
 	 ((<= slen i))
-      (cond ((eq s-el ':wild-inferiors)
+      (cond ((eq s-el :wild-inferiors)
 	     (setf s-next-el (nth (+ 1 i) source)) ; NIL if beyond end.
 	     (if (setf k (position s-next-el from :start (1+ j)))
 		 ;; Found it, splice this portion into ires.
 		 (setf ires
 		       (append ires
-			       (copy-sublist from :start j :end (1- k)))
+			       (subseq from j (1- k))))
 		       j (1- k))
 		 (progn
 		   ;; Either did not find next source element in from,
 		   ;; or was nil.
 		   (setf ires
 			 (append ires
-				 (copy-sublist from :start j :end flen)))
+				 (subseq from j flen)))
 		   (unless (= i (1- slen))
 		     (error "Source ~S inconsistent with from translation ~
 			     ~S~%." source from)))))
@@ -1788,20 +1916,20 @@
 	  (t-el (nth j to) (nth j to)))
 	 ((<= tlen i))
       ;; Remember to add leftover elements of to.
-      (cond ((eq ir-el ':wild-inferiors)
+      (cond ((eq ir-el :wild-inferiors)
 	     (setf ir-next-el (nth (+ 1 i) ires)) ; NIL if beyond end.
 	     (if (setf k (position ir-next-el from :start (1+ j)))
 		 ;; Found it, splice this portion into rres.
 		 (setf rres
 		       (append rres
-			       (copy-sublist from :start j :end (1- k)))
+			       (subseq from j (1- k)))
 		       j (1- k))
 		 (progn
 		   ;; Either did not find next source element in from,
 		   ;; or was nil.
 		   (setf rres
 			 (append rres
-				 (copy-sublist from :start j :end tlen)))
+				 (subseq from j tlen)))
 		   (unless (= i (1- irlen))
 		     (error "Intermediate path ~S inconsistent with to~
 			     translation ~S~%." ires to)))))
@@ -1811,10 +1939,16 @@
 	(setf rres (append rres (last to (- tlen flen)))))
     rres))
 
-(deftype physical-pathname ()
-  '(not (or (satisfies wild-pathname-p)
-	    (satisfies logical-pathname-p))))
+;;; A physical-pathname is a pathname that does not contain any wildcards,
+;;; but is not a logical-pathname. 
 
+(deftype physical-pathname ()
+  '(and (satisfies pathname-p)
+	(not (or (satisfies wild-pathname-p)
+		 (satisfies logical-pathname-p)))))
+
+;;; TRANSLATE-LOGICAL-PATHNAME  -- Public
+;;;
 (defun translate-logical-pathname (pathname &key)
   "Translates pathname to a physical pathname, which is returned."
   (declare (type logical-pathname pathname))
@@ -1844,7 +1978,7 @@
 				 result)))
 	       (setf result-path
 		     (%make-pathname (frob %pathname-host)
-				     ':unspecific
+				     :unspecific
 				     (let* ((from (first src-transl))
 					    (to (second src-transl))
 					    (result
@@ -1852,7 +1986,7 @@
 					      (%pathname-directory source)
 					      (%pathname-directory from)
 					      (%pathname-directory to))))
-				       (if (eq result ':error)
+				       (if (eq result :error)
 					   (error "~S doesn't match ~S"
 						  source from)
 					   result))
