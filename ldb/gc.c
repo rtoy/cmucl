@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.21 1990/12/05 10:57:41 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.22 1990/12/18 00:59:59 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1896,18 +1896,13 @@ void set_auto_gc_trigger(dynamic_usage)
     addr = round_page((vm_address_t)current_dynamic_space + dynamic_usage);
     length = DYNAMIC_SPACE_SIZE + (vm_address_t)current_dynamic_space - addr;
 
-#ifndef sparc
     os_protect(addr, length, 0);
-#endif
     current_auto_gc_trigger = (lispobj *)addr;
 }
 
 void clear_auto_gc_trigger()
 {
-#ifndef sparc
     os_protect((vm_address_t)current_dynamic_space, DYNAMIC_SPACE_SIZE,
-               VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE);
-#endif
+               OS_VM_PROT_READ | OS_VM_PROT_WRITE | OS_VM_PROT_EXECUTE);
     current_auto_gc_trigger = NULL;
 }
-
