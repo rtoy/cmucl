@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.13 1992/03/03 08:18:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.14 1992/03/29 21:54:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,7 +107,6 @@
 				      (throw 'top-level-catcher nil)))
 				 (load-init-file t)
 				 (site-init "library:site-init")
-				 (enable-gc t)
 				 (print-herald t)
 				 (process-command-line t))
   "Saves a CMU Common Lisp core image in the file of the specified name.  The
@@ -141,20 +140,17 @@
       library:site-init.  No error if this does not exist.
 
   :print-herald
-      If true, print out the lisp system herald when starting.
-
-  :enable-gc
-      If true, turn GC on if it was off."
+      If true, print out the lisp system herald when starting."
 
   (when (fboundp 'eval:flush-interpreted-function-cache)
     (eval:flush-interpreted-function-cache))
   (if purify
       (purify :root-structures root-structures :constants constants)
       (gc))
-  (unless (save (namestring core-file-name))
+  (unless (save (unix-namestring core-file-name nil))
+    (reinit)
     (dolist (f *before-save-initializations*) (funcall f))
     (dolist (f *after-save-initializations*) (funcall f))
-    (reinit)
     (environment-init)
     (when site-init (load site-init :if-does-not-exist nil :verbose nil))
     (when process-command-line (ext::process-command-strings))
@@ -177,8 +173,6 @@
 	      (load (merge-pathnames name #p"home:") :if-does-not-exist nil)
 	      (or (load "home:init" :if-does-not-exist nil)
 		  (load "home:.cmucl-init" :if-does-not-exist nil))))))
-    (when enable-gc
-      (gc-on))
     (when process-command-line
       (ext::invoke-switch-demons *command-line-switches*
 				 *command-switch-demons*))
@@ -213,6 +207,3 @@
 (defun assert-user-package ()
   (unless (eq *package* (find-package "USER"))
     (error "Change *PACKAGE* to the USER package and try again.")))
-
-(defun initial-init-function ()
-  (throw 'top-level-catcher nil))
