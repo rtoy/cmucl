@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.39 1990/04/01 23:53:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.40 1990/04/03 03:54:26 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -463,7 +463,8 @@
 
     ;; Static functions.
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
-    two-arg-<= two-arg->= two-arg-/= %negate length
+    two-arg-<= two-arg->= two-arg-/= %negate two-arg-and two-arg-ior two-arg-xor
+    length
     ))
 
 (defparameter exported-static-symbols
