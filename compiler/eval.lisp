@@ -15,7 +15,8 @@
 (in-package "EVAL")
 
 (export '(internal-eval *eval-stack-trace* *internal-apply-node-trace*
-			*interpreted-function-cache-size*
+			*interpreted-function-cache-minimum-size*
+			*interpreted-function-cache-threshold*
 			trace-eval interpreted-function-p
 			interpreted-function-lambda-expression
 			interpreted-function-closure
@@ -147,27 +148,32 @@
   ;; being removed.)
   (definition nil :type (or c::clambda null))
   ;;
-  ;; Timestamp for the last time this function was called.
-  (timestamp 0 :type c::index)
+  ;; Number of times this function was called since the last GC.
+  (count 0 :type c::index)
   ;;
   ;; True if Lambda has been converted at least once, and thus warnings should
   ;; be suppressed on additional conversions.
   (converted-once nil))
 
 
-(defvar *interpreted-function-cache-size* 25
-  "This many most-recently-used interpreted functions are retained across GC.
-  Any other functions must be reconverted as needed.")
+(defvar *interpreted-function-cache-minimum-size* 25
+  "If the interpreted function cache has more functions than this come GC time,
+  then attempt to prune it according to
+  *INTERPRETED-FUNCTION-CACHE-THRESHOLD*.")
+
+(defvar *interpreted-function-cache-threshold* 2
+  "If an interpreted function has been called fewer than this number of times
+  since the last GC, then it is eligible for flushing from the cache.")
+
+(proclaim '(type c::index
+		 *interpreted-function-cache-minimum-size*
+		 *interpreted-function-cache-threshold*))
+
 
 ;;; The list of EVAL-FUNCTIONS that have translated definitions.
 ;;;
 (defvar *interpreted-function-cache* nil)
 (proclaim '(type list *interpreted-function-cache*))
-
-;;; Timer used to create timestamps to determine the most recently used
-;;; interpreted functions.
-;;; 
-(defvar *interpreted-function-cache-tick* 0)
 
 
 ;;; MAKE-INTERPRETED-FUNCTION  --  Interface
@@ -180,10 +186,10 @@
     #'(lambda (&rest args)
 	(let ((fun (eval-function-definition eval-fun))
 	      (args (cons (length args) args)))
-	  (setf (eval-function-timestamp eval-fun)
-		(incf *interpreted-function-cache-tick*))
+	  (incf (eval-function-count eval-fun))
 	  (internal-apply (or fun (convert-eval-fun eval-fun))
 			  args '#())))))
+
 
 ;;; GET-EVAL-FUNCTION  --  Internal
 ;;;
@@ -192,13 +198,13 @@
     (assert res)
     res))
 
+
 ;;; CONVERT-EVAL-FUN  --  Internal
 ;;;
 ;;;    Eval a FUNCTION form, grab the definition and stick it in.
 ;;;
 (defun convert-eval-fun (eval-fun)
   (declare (type eval-function eval-fun))
-  (push eval-fun *interpreted-function-cache*)
   (let* ((new (eval-function-definition
 	       (get-eval-function
 		(internal-eval `#',(eval-function-lambda eval-fun)
@@ -206,6 +212,7 @@
 				     eval-fun)))))))
     (setf (eval-function-definition eval-fun) new)
     (setf (eval-function-converted-once eval-fun) t)
+    (push eval-fun *interpreted-function-cache*)
     new))
 
 
@@ -275,21 +282,21 @@
 	((= i len))
       (setf (svref *eval-stack* i) nil)))
 
-  (setq *interpreted-function-cache*
-	(sort *interpreted-function-cache*
-	      #'(lambda (x y)
-		  (> (eval-function-timestamp x)
-		     (eval-function-timestamp y)))))
-  
-  (do ((fun *interpreted-function-cache* (cdr fun))
-       (i 0 (1+ i)))
-      ((or (null fun) (> i *interpreted-function-cache-size*))
-       (dolist (nf (cdr fun))
-	 (setf (eval-function-definition nf) nil))
-       (when fun
-	 (setf (cdr fun) nil))))
-  
-  (setq *interpreted-function-cache-tick* 0))
+  (let ((num (- (length *intepreted-function-cache*)
+		*interpreted-function-cache-minimum-size*)))
+    (when (plusp num)
+      (setq *interpreted-function-cache*
+	    (delete-if #'(lambda (x)
+			   (when (< (eval-function-count x)
+				    *interpreted-function-cache-threshold*)
+			     (setf (eval-function-count x) 0)
+			     (setf (eval-function-definition x) nil)
+			     t))
+		       *interpreted-function-cache*
+		       :count num))))
+
+  (dolist (x *interpreted-function-cache*)
+    (setf (eval-function-count x) 0)))
 ;;;
 (pushnew 'interpreter-gc-hook ext:*before-gc-hooks*)
 
