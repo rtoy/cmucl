@@ -115,14 +115,17 @@
 ;;; ADD-TEST-CONSTRAINT  --  Internal
 ;;;
 ;;;    Add the indicated test constraint to Block, marking the block as having
-;;; a new assertion when the constriant was not already present.
+;;; a new assertion when the constriant was not already present.  We don't add
+;;; the constraint if the block has multiple predecessors, since it only holds
+;;; on this particular path.
 ;;;
 (defun add-test-constraint (block fun x y not-p)
-  (let ((con (find-constraint fun x y not-p))
-	(old (or (block-test-constraint block)
-		 (setf (block-test-constraint block) (make-sset)))))
-    (when (sset-adjoin con old)
-      (setf (block-type-asserted block) t)))
+  (unless (rest (block-pred block))
+    (let ((con (find-constraint fun x y not-p))
+	  (old (or (block-test-constraint block)
+		   (setf (block-test-constraint block) (make-sset)))))
+      (when (sset-adjoin con old)
+	(setf (block-type-asserted block) t))))
   (undefined-value))
 
 
@@ -202,6 +205,7 @@
 ;;; condition it tests.
 ;;;
 (defun find-test-constraints (block)
+  (declare (type cblock block))
   (let ((last (block-last block)))
     (when (if-p last)
       (let ((use (continuation-use (if-test last))))
@@ -220,6 +224,7 @@
 ;;;    those constraints to the set nuked by this block.
 ;;;    
 (defun find-block-type-constraints (block)
+  (declare (type cblock block))
   (let ((gen (make-sset))
 	(kill (make-sset)))
 
@@ -273,6 +278,7 @@
 ;;; (less) than Y's bound.
 ;;;
 (defun constrain-integer-type (x y greater or-equal)
+  (declare (type numeric-type x y))
   (flet ((exclude (x)
 	   (cond ((not x) nil)
 		 (or-equal x)
@@ -299,6 +305,7 @@
 ;;; restrictions from flow analysis In, set the type for Ref accordingly.
 ;;;
 (defun constrain-ref-type (ref constraints in)
+  (declare (type ref ref) (type sset constraints in))
   (let ((var-cons (copy-sset constraints)))
     (sset-intersection var-cons in)
     (let ((res (single-value-type (node-derived-type ref)))
@@ -325,7 +332,8 @@
 		     (when (or (constant-p other)
 			       (and (csubtypep other-type leaf-type)
 				    (not (type= other-type leaf-type))))
-		       (change-ref-leaf ref other))))))
+		       (change-ref-leaf ref other)
+		       (when (constant-p other) (return)))))))
 	    ((< >)
 	     (when (and (integer-type-p res) (integer-type-p y))
 	       (let ((greater (eq kind '>)))
@@ -333,9 +341,11 @@
 		   (setq res
 			 (constrain-integer-type res y greater not-p)))))))))
       
-      (let ((dest (continuation-dest (node-cont ref))))
+      (let* ((cont (node-cont ref))
+	     (dest (continuation-dest cont)))
 	(if (and (if-p dest)
-		 (csubtypep *null-type* not-res))
+		 (csubtypep *null-type* not-res)
+		 (eq (continuation-asserted-type cont) *wild-type*))
 	    (change-ref-leaf ref (find-constant 't))
 	    (derive-node-type ref (or (type-difference res not-res)
 				      res))))))
