@@ -24,6 +24,9 @@
 ;;;  Date	Author	Description
 ;;; -------------------------------------------------------------------------------------
 ;;; 12/10/87	LGO	Created
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/input.lisp,v 1.6 1998/12/19 15:21:18 dtc Exp $")
 
 (in-package :xlib)
 

@@ -15,6 +15,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.10 1998/12/19 15:21:15 dtc Exp $")
 
 ;; Primary Interface Author:
 ;;	Robert W. Scheifler

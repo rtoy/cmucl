@@ -17,6 +17,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/attributes.lisp,v 1.5 1998/12/19 15:21:14 dtc Exp $")
 
 ;;;	The special variable *window-attributes* is an alist containg:
 ;;;	(drawable attributes attribute-changes geometry geometry-changes)

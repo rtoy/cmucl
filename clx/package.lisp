@@ -10,6 +10,9 @@
 ;;; documentation, and that the name MIT not be used in advertising or
 ;;; publicity pertaining to distribution of the software without specific,
 ;;; written prior permission.
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/package.lisp,v 1.4 1998/12/19 15:21:20 dtc Exp $")
 
 ;;; The CLtL way
 

@@ -15,6 +15,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/macros.lisp,v 1.5 1998/12/19 15:21:18 dtc Exp $")
 
 ;;; CLX basicly implements a very low overhead remote procedure call
 ;;; to the server.  This file contains macros which generate the code
