@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.1 1991/05/08 15:46:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.2 1991/05/08 15:57:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,4 +58,7 @@
 ); eval-when (compile eval)
 
 (define-setters ("LISP")
-  aref bit sbit)
+  ;; Have explicit definitions...
+  aref bit sbit
+  ;; Semantically silly...
+  getf apply ldb mask-field logbitp)
