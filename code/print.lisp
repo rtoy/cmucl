@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.35 1992/02/11 16:56:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.36 1992/02/12 16:11:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1356,7 +1356,8 @@
 			      (integer-decode-float x)
 	   (let* ((precision (float-precision x))
 		  (digits (float-digits x))
-		  (fudge (- digits precision)))
+		  (fudge (- digits precision))
+		  (width (if width (max width 1) nil)))
 	   (float-string (ash sig (- fudge)) (+ exp fudge) precision width
 			 fdigits scale fmin))))))
 
