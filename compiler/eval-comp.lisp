@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.29 2001/03/04 20:12:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.30 2001/06/17 19:12:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,13 +292,19 @@
   (values-list (subseq args start count)))
 
 (defun %argument-count-error (args-passed-count)
-  (error "Wrong number of arguments passed -- ~S." args-passed-count))
+  (error 'simple-program-error
+	 :format-control "Wrong number of arguments passed -- ~S."
+	 :format-arguments (list args-passed-count)))
 
 (defun %odd-keyword-arguments-error ()
-  (error "Function called with odd number of keyword arguments."))
+  (error 'simple-program-error
+	 :format-control
+	 "Function called with odd number of keyword arguments."))
 
 (defun %unknown-keyword-argument-error (keyword)
-  (error "Unknown keyword argument -- ~S." keyword))
+  (error 'simple-program-error
+	 :format-control "Unknown keyword argument -- ~S."
+	 :format-arguments (list keyword)))
 
 (defun %cleanup-point ())
 

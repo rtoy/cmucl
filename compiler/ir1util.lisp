@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.82 2001/03/04 20:12:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.83 2001/06/17 19:12:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1958,7 +1958,7 @@
 ;;; between internal and user errors.  Non-compiler errors put us in the
 ;;; debugger.
 ;;;
-(define-condition compiler-error (simple-error) ())
+(define-condition compiler-error (simple-program-error) ())
 
 ;;; COMPILER-{ERROR,WARNING,STYLE-WARNING}-HANDLER  --  Interface
 ;;;

@@ -5,15 +5,13 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.10 2001/03/04 23:37:33 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.11 2001/06/17 19:12:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; Functions to implement strings for Spice Lisp
+;;; Functions to implement strings for CMU Common Lisp
 ;;; Written by David Dill
 ;;; Rewritten by Skef Wholey, Bill Chiles and Rob MacLachlan.
-;;;
-;;; Runs in the standard Spice Lisp environment.
 ;;;
 ;;; ****************************************************************
 ;;;
@@ -40,8 +38,11 @@
 	 (let ((res (make-string 1)))
 	   (setf (schar res 0) x) res))
 	(t
-	 (error "~S cannot be coerced to a string." x))))
-
+	 (error 'simple-type-error
+		:datum x
+		:expected-type '(or string symbol character)
+		:format-control "~S cannot be coerced to a string."
+		:format-arguments (list x)))))
 
 ;;; With-One-String is used to set up some string hacking things.  The keywords
 ;;; are parsed, and the string is hacked into a simple-string.
