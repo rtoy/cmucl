@@ -211,6 +211,7 @@
 	  ((c:target-featurep :hppa) "hppa/")
 	  ((c:target-featurep :sparc) "sparc/")
 	  ((c:target-featurep :x86) "x86/")
+	  ((c:target-featurep :alpha) "alpha/")
 	  (t
 	   (error "What machine is this?")))
     (make-pathname :directory (pathname-directory f)))))
