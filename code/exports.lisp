@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.36 1990/07/02 04:44:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.37 1990/07/02 16:44:57 ram Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -263,6 +263,7 @@
 (use-package "EXT")
 (use-package "SYSTEM")
 (use-package "BIGNUM")
+(use-package "VM")
 
 (export '(%array-fill-pointer %array-fill-pointer-p
 	  %array-available-elements %array-data-vector %array-displacement
@@ -318,7 +319,11 @@
 	  values-type-allowp values-type-intersect values-type-intersection
 	  values-type-keyp values-type-keywords values-type-optional
 	  values-type-p values-type-required values-type-rest
-	  values-type-union values-types values-types-intersect void))
+	  values-type-union values-types values-types-intersect void
+	  %unary-truncate %make-ratio %make-complex %single-float %double-float
+	  decode-single-float decode-double-float integer-decode-single-float
+	  integer-decode-double-float scale-single-float scale-double-float
+	  single-float-exponent double-float-exponent))
 
 
 (in-package "EXTENSIONS")
@@ -507,7 +512,18 @@
 	  vector-structure-subtype vector-valid-hashing-subtype
 	  vector-must-rehash-subtype vm-version word-bits word-bytes
 	  word-shift weak-pointer-type weak-pointer-size
-	  weak-pointer-value-slot weak-pointer-next-slot))
+	  weak-pointer-value-slot weak-pointer-next-slot
+	  
+	  single-float-bias
+	  double-float-bias single-float-significand-byte
+	  double-float-significand-byte
+	  single-float-exponent-byte double-float-exponent-byte
+	  single-float-normal-exponent-max single-float-normal-exponent-min
+	  double-float-normal-exponent-max double-float-normal-exponent-min
+	  single-float-hidden-bit double-float-hidden-bit
+	  float-sign-shift make-single-float make-double-float
+	  single-float-bits double-float-low-bits double-float-high-bits))
+
 
 
 (in-package "C")
