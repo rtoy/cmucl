@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.26 2001/10/12 15:27:21 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.27 2001/11/05 21:38:15 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,64 +387,118 @@
 
 ;;; Shifting
 
-(macrolet
-    ((frob (name sc-type type shift-right-inst)
-       `(define-vop (,name)
-	  (:note "inline ASH")
-	  (:args (number :scs (,sc-type) :to :save)
-		 (amount :scs (signed-reg immediate)))
-	  (:arg-types ,type signed-num)
-	  (:results (result :scs (,sc-type)))
-	  (:result-types ,type)
-	  (:translate ash)
-	  (:policy :fast-safe)
-	  (:temporary (:sc non-descriptor-reg) ndesc)
-	  (:generator 5
-	    (sc-case amount
-	      (signed-reg
-	       (cond ((backend-featurep :sparc-v9)
-		      (let ((done (gen-label))
-			    (positive (gen-label)))
-			(inst cmp amount)
-			(inst b :ge positive)
-			  (inst neg ndesc amount)
-			;; ndesc = max(-amount, 31)
-			(inst cmp ndesc 31)
-			(inst cmove :ge ndesc 31)
-			(inst b done)
-			  (inst ,shift-right-inst result number ndesc)
-			(emit-label positive)
-			;; The result-type assures us that this shift will not
-			;; overflow.
-			(inst sll result number amount)
-			;; We want a right shift of the appropriate size.
-			(emit-label done)))
-		     (t
-		      (let ((positive (gen-label))
-			    (done (gen-label)))
-			(inst cmp amount)
-			(inst b :ge positive)
-			(inst neg ndesc amount)
-			(inst cmp ndesc 31)
-			(inst b :le done)
-			(inst ,shift-right-inst result number ndesc)
-			(inst b done)
-			(inst ,shift-right-inst result number 31)
+(define-vop (fast-ash/signed=>signed)
+  (:note "inline (signed-byte 32) ASH")
+  (:args (number :scs (signed-reg) :to :save)
+	 (amount :scs (signed-reg immediate) :to :save))
+  (:arg-types signed-num signed-num)
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:generator 5
+    (sc-case amount
+      (signed-reg
+       (cond ((backend-featurep :sparc-v9)
+	      (let ((done (gen-label)))
+		(inst cmp amount)
+		(inst b :ge done)
+		;; The result-type assures us that this shift will not
+		;; overflow.
+		(inst sll result number amount)
+		(inst neg ndesc amount)
+		;; ndesc = max(-amount, 31)
+		(inst cmp ndesc 31)
+		(inst cmove :ge ndesc 31)
+		(inst sra result number ndesc)
+		(emit-label done)))
+	     (t
+	      (let ((done (gen-label)))
+		(inst cmp amount)
+		(inst b :ge done)
+		;; The result-type assures us that this shift will not overflow.
+		(inst sll result number amount)
 
-			(emit-label positive)
-			;; The result-type assures us that this shift will not overflow.
-			(inst sll result number amount)
+		;; Handle right shifts here.
+		(inst neg ndesc amount)
+		(inst cmp ndesc 31)
+		(inst b :le done)
+		(inst sra result number ndesc)
+		;; Right shift of greater than 31 bits is the same as a shift
+		;; of 31 bits for signed 32-bit numbers.
+		(inst sra result number 31)
 
-			(emit-label done)))))
+		(emit-label done)))))
 
-	      (immediate
-	       (let ((amount (tn-value amount)))
-		 (if (minusp amount)
-		     (let ((amount (min 31 (- amount))))
-		       (inst ,shift-right-inst result number amount))
-		     (inst sll result number amount)))))))))
-  (frob fast-ash/signed=>signed signed-reg signed-num sra)
-  (frob fast-ash/unsigned=>unsigned unsigned-reg unsigned-num srl))
+	(immediate
+	 (let ((amount (tn-value amount)))
+	   (cond ((< amount -31)
+		  (inst li result -1))
+		 ((< amount 0)
+		  (inst sra result number (- amount)))
+		 ((> amount 0)
+		  (inst sll result number amount))
+		 (t
+		  ;; amount = 0.  Shouldn't happen because of a
+		  ;; deftransform, but it's easy.
+		  (move result number))))))))
+
+(define-vop (fast-ash/unsigned=>unsigned)
+  (:note "inline (unsigned-byte 32) ASH")
+  (:args (number :scs (unsigned-reg) :to :save)
+	 (amount :scs (signed-reg immediate) :to :save))
+  (:arg-types unsigned-num signed-num)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:generator 5
+    (sc-case amount
+      (signed-reg
+       (cond ((backend-featurep :sparc-v9)
+	      (let ((done (gen-label)))
+		(inst cmp amount)
+		(inst b :ge done)
+		;; The result-type assures us that this shift will not
+		;; overflow.
+		(inst sll result number amount)
+		(inst neg ndesc amount)
+		;; A right shift of 32 or more results in zero.
+		(inst cmp ndesc 32)
+		(inst srl result number ndesc)
+		(inst cmove :ge result zero-tn)
+		(emit-label done)))
+	     (t
+	      (let ((done (gen-label)))
+		(inst cmp amount)
+		(inst b :ge done)
+		;; The result-type assures us that this shift will not
+		;; overflow.
+		(inst sll result number amount)
+		(inst neg ndesc amount)
+		(inst cmp ndesc 32)
+		(inst b :lt done)
+		(inst srl result number ndesc)
+		;; Right shift of 32 or more is the same as zero for unsigned
+		;; 32-bit numbers.
+		(move result zero-tn)
+
+		(emit-label done)))))
+
+      (immediate
+       (let ((amount (tn-value amount)))
+	 (cond ((< amount -31)
+		(move result zero-tn))
+	       ((< amount 0)
+		(inst srl result number (- amount)))
+	       ((> amount 0)
+		(inst sll result number amount))
+	       (t
+		;; amount = 0.  Shouldn't happen because of a
+		;; deftransform, but it's easy.
+		(move result number))))))))
 
 ;; Some special cases where we know we want a left shift.  Just do the
 ;; shift, instead of checking for the sign of the shift.
