@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.2.2.4 2000/05/23 16:38:28 pw Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.2.2.5 2000/07/31 10:03:55 dtc Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -72,6 +72,7 @@ PVE_stub_ ## fct: ;\
  doe(getrlimit)
  doe(getrusage)
  doe(getsockname)
+ doe(getsockopt)
  doe(gettimeofday)
  doe(getuid)
  doe(getwd)
@@ -106,6 +107,7 @@ PVE_stub_ ## fct: ;\
  doe(setregid)
  doe(setreuid)
  doe(setrlimit)
+ doe(setsockopt)
  doe(sigblock)
  doe(sigpause)
  doe(sigsetmask)
@@ -390,8 +392,6 @@ PVE_stub_ ## fct: ;\
 /*  doe(getsgent) */
 /*  doe(getsgnam) */
 /*  doe(getsid) */
-/*  doe(getsockname) */
-/*  doe(getsockopt) */
 /*  doe(getspent) */
 /*  doe(getspnam) */
 /*  doe(gettimeofday) */
@@ -700,7 +700,6 @@ PVE_stub_ ## fct: ;\
 /*  doe(setservent) */
 /*  doe(setsgent) */
 /*  doe(setsid) */
-/*  doe(setsockopt) */
 /*  doe(setspent) */
 /*  doe(setstate) */
 /*  doe(settimeofday) */
