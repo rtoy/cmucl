@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.26 1990/03/08 11:09:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.27 1990/03/08 21:38:05 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -250,7 +250,8 @@
     lisp::*eval-stack-top*
 
     ;; Static functions.
-    c::two-arg-+ c::two-arg-- c::two-arg-* c::two-arg-/ c::negate
+    c::two-arg-plus c::two-arg-minus c::two-arg-times c::two-arg-divide
+    c::negate
     ))
 
 (defun static-symbol-p (symbol)
