@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.13 1991/11/12 16:11:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.14 1992/01/31 19:10:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,7 +152,7 @@
 ;;; %Deftransform  --  Internal
 ;;;
 ;;;    Grab the Function-Info and enter the function, replacing any old one
-;;; with the same type.
+;;; with the same type and note.
 ;;;
 (proclaim '(function %deftransform
 		     (t list function &optional (or string null))))
@@ -160,8 +160,10 @@
   (let* ((ctype (specifier-type type))
 	 (note (or note "optimize"))
 	 (info (function-info-or-lose name))
-	 (old (find ctype (function-info-transforms info)
-		    :key #'transform-type :test #'type=)))
+	 (old (find-if #'(lambda (x)
+			   (and (type= (transform-type x) ctype)
+				(string-equal (transform-note x) note)))
+		       (function-info-transforms info))))
     (if old
 	(setf (transform-function old) fun  (transform-note old) note)
 	(push (make-transform :type ctype :function fun :note note)
