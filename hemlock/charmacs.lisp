@@ -7,33 +7,27 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.1.1.5 1991/06/04 15:07:19 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.1.1.6 1991/06/21 19:42:58 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Implementation specific character-hacking macros and constants.
 ;;;
 (in-package 'hemlock-internals)
-(export ' (syntax-char-code-limit command-char-bits-limit
-	   command-char-code-limit search-char-code-limit
-	   do-alpha-chars))
+(export ' (syntax-char-code-limit search-char-code-limit do-alpha-chars))
 
-;;; This file contains various constants and macros which are
-;;; implementation or ASCII dependant.  In particular it contains
-;;; all the character implementation parameters such as
-;;; Command-Char-Bits-Limit, and contains various versions
-;;; of char-code which don't check types and omit the top bit
-;;; so that various structures can be allocated 128 long instead
-;;; of 256, and we don't get errors if a loser visits a binary file.
+;;; This file contains various constants and macros which are implementation or
+;;; ASCII dependant.  It contains some versions of CHAR-CODE which do not check
+;;; types and ignore the top bit so that various structures can be allocated
+;;; 128 long instead of 256, and we don't get errors if a loser visits a binary
+;;; file.
+;;;
+;;; There are so many different constants and macros implemented the same.
+;;; This is to separate various mechanisms; for example, in principle the
+;;; char-code-limit for the syntax functions is independant of that for the
+;;; searching functions
+;;;
 
-;;; There are so many different constants and macros that do the same
-;;; thing because in principle the char-code-limit for the syntax
-;;; functions is independant of that for the searching functions, etc.
-
-;;; This file also contains code which adds any implementation specific
-;;; character names to the char file's Char-Name-Alist so that there
-;;; is a reasonable read-syntax and print-representation for all
-;;; characters a user might run across.
 
 
 ;;;; Stuff for the Syntax table functions (syntax)
@@ -43,22 +37,6 @@
   table functions may have.")
 
 (defmacro syntax-char-code (char)
-  `(char-code ,char))
-
-;;;; Stuff for the command interpreter (interp)
-;;;
-;;;    On the Perq we have bits for command bindings, on the VAX there 
-;;; aren't.  The code to interpret them is conditionally compiled
-;;; so that the VAX isnt't slowed down.
-;;;
-;;; Make command-char-code-limit 256 instead of 128 for X keyboard scan-codes.
-(defconstant command-char-code-limit 256
-  "The upper bound on character codes supported for key bindings.")
-(defconstant command-char-bits-limit 16
-  "The maximum value of character bits supported for key bindings.")
-(defmacro key-char-bits (char)
-  `(logand (char-bits ,char) #xF))
-(defmacro key-char-code (char)
   `(char-code ,char))
 
 
