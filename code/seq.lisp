@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.6 1991/02/08 13:35:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.7 1991/05/14 16:24:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,20 +75,22 @@
 	 (make-array length)))
     ((bit-vector simple-bit-vector)
      (make-array length :element-type '(mod 2)))
-    (t (error "~S is a bad type specifier for sequence functions." type))))
+    (t
+     (let ((exp (type-expand type)))
+       (if (eq exp type)
+	   (error "~S is a bad type specifier for sequence functions." type)
+	   (make-sequence-of-type exp length))))))
 
 (defun elt (sequence index)
   "Returns the element of SEQUENCE specified by INDEX."
   (etypecase sequence
     (list
-     (if (< index 0)
-	 (error "~S: index too small." index)
-	 (do ((count index (1- count)))
-	     ((= count 0) (car sequence))
-	   (declare (fixnum count))
-	   (if (atom sequence)
-	       (error "~S: index too large." index)
-	       (setq sequence (cdr sequence))))))
+     (do ((count index (1- count)))
+	 ((= count 0) (car sequence))
+       (declare (fixnum count))
+       (if (atom sequence)
+	   (error "~S: index too large." index)
+	   (setq sequence (cdr sequence)))))
     (vector
      (when (>= index (length sequence))
        (error "~S: index too large." index))
@@ -98,15 +100,13 @@
   "Store NEWVAL as the component of SEQUENCE specified by INDEX."
   (etypecase sequence
     (list
-     (if (< index 0)
-	 (error "~S: index too small." index)
-	 (do ((count index (1- count))
-	      (seq sequence))
-	     ((= count 0) (rplaca seq newval) sequence)
-	   (declare (fixnum count))
-	   (if (atom (cdr seq))
-	       (error "~S: index too large." index)
-	       (setq seq (cdr seq))))))
+     (do ((count index (1- count))
+	  (seq sequence))
+	 ((= count 0) (rplaca seq newval) sequence)
+       (declare (fixnum count))
+       (if (atom (cdr seq))
+	   (error "~S: index too large." index)
+	   (setq seq (cdr seq)))))
     (vector
      (when (>= index (length sequence))
        (error "~S: index too large." index))
@@ -540,14 +540,15 @@
 
 (defun concatenate (output-type-spec &rest sequences)
   "Returns a new sequence of all the argument sequences concatenated together
-   which shares no structure with the original argument sequences of the
-   specified OUTPUT-TYPE-SPEC."
-  (case (type-specifier-atom output-type-spec)
-    (list (apply #'concat-to-list* sequences))
-    ((simple-vector simple-string vector string array simple-array
-		    bit-vector simple-bit-vector base-string simple-base-string)
-     (apply #'concat-to-simple* output-type-spec sequences))
-    (t (error "~S: invalid output type specification." output-type-spec))))
+  which shares no structure with the original argument sequences of the
+  specified OUTPUT-TYPE-SPEC."
+  (let ((output-type-spec (type-expand output-type-spec)))
+    (case (type-specifier-atom output-type-spec)
+      (list (apply #'concat-to-list* sequences))
+      ((simple-vector simple-string vector string array simple-array
+	bit-vector simple-bit-vector base-string simple-base-string)
+       (apply #'concat-to-simple* output-type-spec sequences))
+      (t (error "~S: invalid output type specification." output-type-spec)))))
 
 ;;; Internal Frobs:
 
@@ -617,7 +618,8 @@
   "FUNCTION must take as many arguments as there are sequences provided.  The 
    result is a sequence such that element i is the result of applying FUNCTION
    to element i of each of the argument sequences."
-  (let ((sequences (cons first-sequence more-sequences)))
+  (let ((sequences (cons first-sequence more-sequences))
+	(output-type-spec (type-expand output-type-spec)))
     (case (type-specifier-atom output-type-spec)
       ((nil) (map-for-effect function sequences))
       (list (map-to-list function sequences))
