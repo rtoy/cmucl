@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.87 2002/03/14 21:30:51 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.88 2003/04/23 20:05:05 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,11 +275,15 @@
   `(integer 0 (,(ash 1 vm:double-float-digits))))
 
 (defknown decode-single-float (single-float)
-  (values single-float single-float-exponent (single-float -1f0 1f0))
+  (values (single-float 0.5f0 (1f0))
+	  single-float-exponent
+	  (member -1f0 1f0))
   (movable foldable flushable))
 
 (defknown decode-double-float (double-float)
-  (values double-float double-float-exponent (double-float -1d0 1d0))
+  (values (double-float 0.5d0 (1d0))
+	  double-float-exponent
+	  (member -1d0 1d0))
   (movable foldable flushable))
 
 (defknown integer-decode-single-float (single-float)
