@@ -383,16 +383,12 @@
 	   (convert-call ref call
 			 (elt (optional-dispatch-entry-points fun)
 			      (- call-args min-args))))
-	  ((not (optional-dispatch-more-entry fun))
+	  ((optional-dispatch-more-entry fun)
+	   (convert-more-call ref call fun))
+	  (t
 	   (compiler-warning "Function called with ~R argument~:P, but wants at most ~R."
 			     call-args max-args)
-	   (setf (ref-inlinep ref) :notinline))
-	  ((optional-dispatch-keyp fun)
-	   (cond ((oddp (- call-args max-args))
-		  (compiler-warning "Function called with odd number of ~
-				    arguments in keyword portion."))
-		 (t
-		  (convert-keyword-call ref call fun))))))
+	   (setf (ref-inlinep ref) :notinline))))
 
   (undefined-value))
 
@@ -418,17 +414,17 @@
 	 (with-ir1-environment call
 	   (ir1-convert-lambda
 	    `(lambda ,vars
-	       (declare (ignore . ,ignores))
+	       (declare (ignorable . ,ignores))
 	       (%funcall ,entry . ,args))))))
     (convert-call ref call new-fun)
     (dolist (ref (leaf-refs entry))
       (convert-call-if-possible ref (continuation-dest (node-cont ref))))))
 
 
-;;; Convert-Keyword-Call  --  Internal
+;;; Convert-More-Call  --  Internal
 ;;;
-;;;    Use Convert-Hairy-Fun-Entry to convert a keyword call to a known
-;;; functions into a local call to the Main-Entry.
+;;;    Use Convert-Hairy-Fun-Entry to convert a more-arg call to a known
+;;; function into a local call to the Main-Entry.
 ;;;
 ;;;    First we verify that all keywords are constant and legal.  If there
 ;;; aren't, then we warn the user and don't attempt to convert the call.
@@ -440,15 +436,19 @@
 ;;; (such as the keywords themselves) are discarded simply by not passing them
 ;;; along.
 ;;;
-(defun convert-keyword-call (ref call fun)
+;;;    If there is a rest arg, then we bundle up the args and pass them to
+;;; LIST.
+;;;
+(defun convert-more-call (ref call fun)
   (declare (type ref ref) (type combination call) (type optional-dispatch fun))
   (let* ((max (optional-dispatch-max-args fun))
 	 (arglist (optional-dispatch-arglist fun))
 	 (args (combination-args call))
-	 (keys (nthcdr max args))
+	 (more (nthcdr max args))
 	 (flame (policy call (or (> speed brevity) (> space brevity))))
 	 (loser nil))
     (collect ((temps)
+	      (more-temps)
 	      (ignores)
 	      (supplied)
 	      (key-vars))
@@ -457,49 +457,51 @@
 	(let ((info (lambda-var-arg-info var)))
 	  (when info
 	    (ecase (arg-info-kind info)
-	      (:rest
-	       (when flame
-		 (compiler-note
-		  "Rest arg prevents use of local call convention."))
-	       (setf (ref-inlinep ref) :notinline)
-	       (return-from convert-keyword-call))
 	      (:keyword
 	       (key-vars var))
-	      (:optional)))))
+	      (:rest :optional)))))
 
       (dotimes (i max)
-	(temps (gensym)))
+	(temps (gensym "FIXED-ARG-TEMP-")))
 
-      (do ((key keys (cddr key)))
-	  ((null key))
-	(let ((cont (first key)))
-	  (unless (constant-continuation-p cont)
-	    (when flame
-	      (compiler-note "Non-constant keyword in keyword call."))
-	    (setf (ref-inlinep ref) :notinline)
-	    (return-from convert-keyword-call))
+      (dotimes (i (length more))
+	(more-temps (gensym "MORE-ARG-TEMP-")))
 
-	  (let ((name (continuation-value cont)))
-	    (dolist (var (key-vars)
-			 (let ((dummy1 (gensym))
-			       (dummy2 (gensym)))
-			   (temps dummy1 dummy2)
-			   (ignores dummy1 dummy2)
-			   (setq loser name)))
-	      (let ((info (lambda-var-arg-info var)))
-		(when (eq (arg-info-keyword info) name)
-		  (let ((dummy (gensym))
-			(temp (gensym)))
-		    (temps dummy temp)
+      (when (optional-dispatch-keyp fun)
+	(when (oddp (length more))
+	  (compiler-warning "Function called with odd number of ~
+	  		     arguments in keyword portion.")
+	  (setf (ref-inlinep ref) :notinline)
+	  (return-from convert-more-call))
+
+	(do ((key more (cddr key))
+	     (temp (more-temps) (cddr temp)))
+	    ((null key))
+	  (let ((cont (first key)))
+	    (unless (constant-continuation-p cont)
+	      (when flame
+		(compiler-note "Non-constant keyword in keyword call."))
+	      (setf (ref-inlinep ref) :notinline)
+	      (return-from convert-more-call))
+	    
+	    (let ((name (continuation-value cont))
+		  (dummy (first temp))
+		  (val (second temp)))
+	      (dolist (var (key-vars)
+			   (progn
+			     (ignores dummy val)
+			     (setq loser name)))
+		(let ((info (lambda-var-arg-info var)))
+		  (when (eq (arg-info-keyword info) name)
 		    (ignores dummy)
-		    (supplied (cons var temp)))
-		  (return)))))))
-
-      (when (and loser (not (optional-dispatch-allowp fun)))
-	(compiler-warning "Function called with unknown argument keyword ~S."
-			  loser)
-	(setf (ref-inlinep ref) :notinline)
-	(return-from convert-keyword-call))
+		    (supplied (cons var val)))
+		    (return))))))
+	
+	(when (and loser (not (optional-dispatch-allowp fun)))
+	  (compiler-warning "Function called with unknown argument keyword ~S."
+			    loser)
+	  (setf (ref-inlinep ref) :notinline)
+	  (return-from convert-more-call)))
 
       (collect ((call-args))
 	(do ((var arglist (cdr var))
@@ -507,12 +509,15 @@
 	    (())
 	  (let ((info (lambda-var-arg-info (car var))))
 	    (if info
-		(case (arg-info-kind info)
+		(ecase (arg-info-kind info)
 		  (:optional
 		   (call-args (car temp))
 		   (when (arg-info-supplied-p info)
 		     (call-args t)))
-		  (t
+		  (:rest
+		   (call-args `(list ,@(more-temps)))
+		   (return))
+		  (:keyword
 		   (return)))
 		(call-args (car temp)))))
 
@@ -526,7 +531,8 @@
 	      (call-args (not (null temp))))))
 
 	(convert-hairy-fun-entry ref call (optional-dispatch-main-entry fun)
-				 (temps) (ignores) (call-args)))))
+				 (append (temps) (more-temps))
+				 (ignores) (call-args)))))
 
   (undefined-value))
 
