@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.13 2003/05/14 13:22:17 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.14 2003/05/14 14:38:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -307,46 +307,6 @@
   `(alien:deref (sap-alien 
 		 (sys:sap+ ,sp ,offset)
 		 (* ,type))))
-
-#+nil
-(defmacro def-callback (name (return-type &rest arg-specs) &body body)
-  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
-
-Define a function which can be called by foreign code.  The pointer
-returned by (callback NAME), when called by foreign code, invokes the
-lisp function.  The lisp function expects alien arguments of the
-specified ARG-TYPEs and returns an alien of type RETURN-TYPE.
-
-If (callback NAME) is already a callback function pointer, its value
-is not changed (though it's arranged that an updated version of the
-lisp callback function will be called).  This feature allows for
-incremental redefinition of callback functions."
-  (let ((sp-fixnum (gensym (string :sp-fixnum-)))
-	(ret-addr (gensym (string :ret-addr-)))
-	(sp (gensym (string :sp-)))
-	(ret (gensym (string :ret-))))
-    `(progn
-      (defun ,name (,sp-fixnum ,ret-addr)
-	(declare (type fixnum ,sp-fixnum)
-		 (type fixnum ,ret-addr))
-	;; We assume sp-fixnum is word aligned and pass it untagged to
-	;; this function.  The shift compensates this.
-	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2))))
-	      (,ret (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,ret-addr 2)))))
-	  (declare (ignorable ,sp))
-	  ;; Copy all arguments to local variables.
-	  (with-alien ,(loop for offset = 0 then (+ offset 
-						    (alien::argument-size type))
-			     for (name type) in arg-specs
-			     collect `(,name ,type
-				       :local (alien:deref (sap-alien 
-							    (sys:sap+ ,sp ,offset)
-							    (* ,type)))))
-	    ,(alien::return-exp return-type `(sys:sap+ ,ret 0) `(progn ,@body))
-	    (values))))
-      (alien::define-callback-function 
-	  ',name #',name ',(alien::parse-return-type return-type)))))
-
 
 (defun make-callback-trampoline (index return-type)
   "Cons up a piece of code which calls call-callback with INDEX and a

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.17 2003/05/14 13:22:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.18 2003/05/14 14:38:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -288,18 +288,6 @@
 ;;; Support for callbacks to Lisp.
 (export '(make-callback-trampoline callback-accessor-form))
 
-#+nil
-(defun compute-accessor (type sp offset)
-  (cond ((eq type 'double)
-	 ;; Due to sparc calling conventions, a double doesn't have to
-	 ;; be aligned on a double word boundary.  We have to get the
-	 ;; two words separately and create the double from them.
-	 `(kernel:make-double-float (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* int)))
-	                            (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset 4))
-						  (* c-call:unsigned-int)))))
-	(t
-	 `(deref (sap-alien (sys:sap+ ,sp ,offset) (* ,type))))))
-
 (defun callback-accessor-form (type sp offset)
   (cond ((eq type 'double)
 	 ;; Due to sparc calling conventions, a double doesn't have to
@@ -310,42 +298,6 @@
 						  (* c-call:unsigned-int)))))
 	(t
 	 `(deref (sap-alien (sys:sap+ ,sp ,offset) (* ,type))))))
-
-#+nil
-(defmacro def-callback (name (return-type &rest arg-specs) &body body)
-  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
-
-Define a function which can be called by foreign code.  The pointer
-returned by (callback NAME), when called by foreign code, invokes the
-lisp function.  The lisp function expects alien arguments of the
-specified ARG-TYPEs and returns an alien of type RETURN-TYPE.
-
-If (callback NAME) is already a callback function pointer, its value
-is not changed (though it's arranged that an updated version of the
-lisp callback function will be called).  This feature allows for
-incremental redefinition of callback functions."
-  (let ((sp-fixnum (gensym (string :sp-fixnum-)))
-	(ret-addr (gensym (string :ret-addr-)))
-	(sp (gensym (string :sp-)))
-	(ret (gensym (string :ret-))))
-    `(progn
-      (defun ,name (,sp-fixnum ,ret-addr)
-	(declare (type fixnum ,sp-fixnum ,ret-addr))
-	;; We assume sp-fixnum is word aligned and pass it untagged to
-	;; this function.  The shift compensates this.
-	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2))))
-	      (,ret (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,ret-addr 2)))))
-	  (declare (ignorable ,sp))
-	  ;; Copy all arguments to local variables.
-	  (with-alien ,(loop for offset = 0 then (+ offset 
-						    (alien::argument-size type))
-			     for (name type) in arg-specs
-			     collect `(,name ,type
-				       :local ,(compute-accessor type sp offset)))
-	    ,(alien::return-exp return-type `(sys:sap+ ,ret 0) `(progn ,@body))
-	    (values))))
-      (alien::define-callback-function 
-	  ',name #',name ',(alien::parse-return-type return-type)))))
 
 (defun make-callback-trampoline (index return-type)
   "Cons up a piece of code which calls call-callback with INDEX and a
@@ -386,7 +338,7 @@ pointer to the arguments."
 	   (%i3 (def-reg-tn vm::nfp-offset))
 	   (%i4 (def-reg-tn vm::cfunc-offset))
 	   (%i5 (def-reg-tn vm::code-offset))
-	   (%fp (def-reg-tn 30 #+nil vm::fp-offset))
+	   (%fp (def-reg-tn 30))
 	   (%i7 (def-reg-tn vm::lip-offset))
 	   (f0-s (c:make-random-tn :kind :normal
 				   :sc (c:sc-or-lose 'vm::single-reg)

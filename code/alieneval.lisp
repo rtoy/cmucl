@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.54 2003/05/14 13:22:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.55 2003/05/14 14:38:38 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2139,10 +2139,6 @@ incompatible redefinitions."
     (vector-push-extend cb *callbacks*)
     cb))
 
-#+nil
-(defun address-of-call-into-lisp ()
-  (sys:sap-int (alien-sap (extern-alien "call_into_lisp" (function (* t))))))
-
 (defun address-of-call-callback ()
   (kernel:get-lisp-obj-address #'call-callback))
 
@@ -2262,43 +2258,6 @@ Create new trampoline (old trampoline calls old lisp function).")))
 	((or single$ double$ pointer$ sap$)
 	 (store spec))
 	(t (error "Unsupported return type: ~A" spec))))))
-
-#+nil
-(defmacro def-callback (name (return-type &rest arg-specs) &body body)
-  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
-
-Define a function which can be called by foreign code.  The pointer
-returned by (callback NAME), when called by foreign code, invokes the
-lisp function.  The lisp function expects alien arguments of the
-specified ARG-TYPEs and returns an alien of type RETURN-TYPE.
-
-If (callback NAME) is already a callback function pointer, its value
-is not changed (though it's arranged that an updated version of the
-lisp callback function will be called).  This feature allows for
-incremental redefinition of callback functions."
-  (let ((sp-fixnum (gensym (string :sp-fixnum)))
-	(ret-addr (gensym (string :ret-addr)))
-	(sp (gensym (string :sp))))
-    `(progn
-      (defun ,name (,sp-fixnum ,ret-addr)
-	(declare (type fixnum ,sp-fixnum)
-		 (type fixnum ,ret-addr))
-	;; We assume sp-fixnum is word aligned and pass it untagged to
-	;; this function.  The shift compensates this.
-	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2)))))
-	  (declare (ignorable ,sp))
-	  ;; Copy all arguments to local variables.
-	  (with-alien ,(loop for offset = 0 then (+ offset 
-						    (argument-size type))
-			     for (name type) in arg-specs
-			     collect `(,name ,type
-				       :local (deref (sap-alien 
-						      (sys:sap+ ,sp ,offset)
-						      (* ,type)))))
-	    ,(return-exp return-type `(sys:sap+ ,ret-addr 0) `(progn ,@body))
-	    (values))))
-      (define-callback-function 
-	  ',name #',name ',(parse-return-type return-type)))))
 
 (defmacro def-callback (name (return-type &rest arg-specs) &body body)
   "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
