@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/entry.lisp,v 1.8 1991/02/20 14:57:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/entry.lisp,v 1.9 1991/05/16 00:24:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,7 @@
 ;;;
 (defun compute-entry-info (fun info)
   (declare (type clambda fun) (type entry-info info))
-  (let ((block (node-block (lambda-bind fun)))
+  (let ((bind (lambda-bind fun))
 	(internal-fun (functional-entry-function fun)))
     (setf (entry-info-closure-p info)
 	  (not (null (environment-closure (lambda-environment fun)))))
@@ -76,9 +76,10 @@
     (setf (entry-info-name info)
 	  (let ((name (leaf-name internal-fun)))
 	    (or name
-		(component-name (block-component block)))))
-    (setf (entry-info-arguments info) (make-arg-names internal-fun))
-    (setf (entry-info-type info) (type-specifier (leaf-type internal-fun))))
+		(component-name (block-component (node-block bind))))))
+    (when (policy bind (>= debug 1))
+      (setf (entry-info-arguments info) (make-arg-names internal-fun))
+      (setf (entry-info-type info) (type-specifier (leaf-type internal-fun)))))
   (undefined-value))
 
 
