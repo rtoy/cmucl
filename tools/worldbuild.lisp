@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.32 1994/06/06 00:06:53 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.33 1994/06/06 00:13:02 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -117,7 +117,7 @@
     ,@(when (c:backend-featurep :osf1)
 	'("target:code/osf1-os"))
     ,@(when (c:backend-featurep :irix)
-	'(:target:code/irix-os"))
+	'("target:code/irix-os"))
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"
