@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.26 1999/12/08 18:36:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.27 2000/12/27 15:42:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -807,7 +807,7 @@
 		  ((t) *terminal-io*)
 		  ((nil) *standard-output*)
 		  (t stream))))
-    (when (pretty-stream-p stream)
+    (when (and (pretty-stream-p stream) *print-pretty*)
       (enqueue-newline stream kind)))
   nil)
 
@@ -829,7 +829,7 @@
 		  ((t) *terminal-io*)
 		  ((nil) *standard-output*)
 		  (t stream))))
-    (when (pretty-stream-p stream)
+    (when (and (pretty-stream-p stream) *print-pretty*)
       (enqueue-indent stream relative-to n)))
   nil)
 
@@ -853,7 +853,7 @@
 		  ((t) *terminal-io*)
 		  ((nil) *standard-output*)
 		  (t stream))))
-    (when (pretty-stream-p stream)
+    (when (and (pretty-stream-p stream) *print-pretty*)
       (enqueue-tab stream kind colnum colinc)))
   nil)
 
