@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.33 1993/08/27 14:29:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.34 1993/08/27 14:39:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -392,11 +392,11 @@
   (thread)
   ;; Signal control magic.
   (foreign-fn-call-active :c-type "boolean")
-  (interrupts_enabled :c-type "boolean")
-  (interrupt_pending :c-type "boolean")
-  (pending_signal :c-type "int")
-  (pending_code :c-type "int")
-  (pending_mask :c-type "int")
+  (interrupts-disabled-count :c-type "int")
+  (interrupt-pending :c-type "boolean")
+  (pending-signal :c-type "int")
+  (pending-code :c-type "int")
+  (pending-mask :c-type "int")
   ;; Stacks.
   (control-stack-base :c-type "lispobj *")
   (control-stack-pointer :c-type "lispobj *")
