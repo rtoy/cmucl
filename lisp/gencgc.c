@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.11.2.2 2000/05/23 16:38:15 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.11.2.3 2000/06/22 12:55:39 dtc Exp $
  *
  */
 
@@ -2208,7 +2208,9 @@ static void apply_code_fixups(struct code *old_code, struct code *new_code)
   /* Could be pointing to a forwarding pointer. */
   if (Pointerp(fixups) && find_page_index((void*) fixups_vector) != -1
       && fixups_vector->header == 0x01) {
+#if 0
     fprintf(stderr, "* FF\n");
+#endif
     /* If so then follow it. */
     fixups_vector = (struct vector *) PTR((lispobj) fixups_vector->length);
   }
