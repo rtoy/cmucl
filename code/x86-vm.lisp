@@ -7,11 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.14 1998/03/21 08:12:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.15 1999/03/26 15:57:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the X86 specific runtime stuff.
+;;;
+;;; Code movement fixups by Douglas T. Crosher, 1997.
+;;; Thread support by Douglas T. Crosher, 1999.
 ;;;
 
 (in-package "X86")
@@ -453,14 +456,6 @@
 ;;; exits.
 (defvar *alien-stack*)
 
-;;;
-(defun kernel::%instance-set-conditional (object slot test-value new-value)
-  (declare (type instance object)
-	   (type index slot))
-  "Atomically compare object's slot value to test-value and if EQ store
-   new-value in the slot. The original value of the slot is returned."
-  (kernel::%instance-set-conditional object slot test-value new-value))
-
 ;;; Support for the MT19937 random number generator. The update
 ;;; function is implemented as an assembly routine. This definition is
 ;;; transformed to a call to this routine allowing its use in byte
@@ -469,3 +464,112 @@
 (defun random-mt19937 (state)
   (declare (type (simple-array (unsigned-byte 32) (627)) state))
   (random-mt19937 state))
+
+
+;;;; Useful definitions for writing thread safe code.
+
+(in-package "KERNEL")
+
+(export '(atomic-push-symbol-value atomic-pop-symbol-value
+	  atomic-pusha atomic-pushd atomic-push-vector))
+
+(defun %instance-set-conditional (object slot test-value new-value)
+  (declare (type instance object)
+	   (type index slot))
+  "Atomically compare object's slot value to test-value and if EQ store
+   new-value in the slot. The original value of the slot is returned."
+  (%instance-set-conditional object slot test-value new-value))
+
+(defun set-symbol-value-conditional (symbol test-value new-value)
+  (declare (type symbol symbol))
+  "Atomically compare symbol's value to test-value and if EQ store
+  new-value in symbol's value slot and return the original value."
+  (set-symbol-value-conditional symbol test-value new-value))
+
+(defun rplaca-conditional (cons test-value new-value)
+  (declare (type cons cons))
+  "Atomically compare the car of CONS to test-value and if EQ store
+  new-value its car and return the original value."
+  (rplaca-conditional cons test-value new-value))
+
+(defun rplacd-conditional (cons test-value new-value)
+  (declare (type cons cons))
+  "Atomically compare the cdr of CONS to test-value and if EQ store
+  new-value its cdr and return the original value."
+  (rplacd-conditional cons test-value new-value))
+
+(defun data-vector-set-conditional (vector index test-value new-value)
+  (declare (type simple-vector vector))
+  "Atomically compare an element of vector to test-value and if EQ store
+  new-value the element and return the original value."
+  (data-vector-set-conditional vector index test-value new-value))
+
+(defmacro atomic-push-symbol-value (val symbol)
+  "Thread safe push of val onto the list in the symbol global value."
+  (ext:once-only ((n-val val))
+    (let ((new-list (gensym))
+	  (old-list (gensym)))
+      `(let ((,new-list (cons ,n-val nil)))
+	 (loop
+	  (let ((,old-list ,symbol))
+	    (setf (cdr ,new-list) ,old-list)
+	    (when (eq (set-symbol-value-conditional
+		       ',symbol ,old-list ,new-list)
+		      ,old-list)
+	      (return ,new-list))))))))
+
+(defmacro atomic-pop-symbol-value (symbol)
+  "Thread safe pop from the list in the symbol global value."
+  (let ((new-list (gensym))
+	(old-list (gensym)))
+    `(loop
+      (let* ((,old-list ,symbol)
+	     (,new-list (cdr ,old-list)))
+	(when (eq (set-symbol-value-conditional
+		   ',symbol ,old-list ,new-list)
+		  ,old-list)
+	  (return (car ,old-list)))))))
+
+(defmacro atomic-pusha (val cons)
+  "Thread safe push of val onto the list in the car of cons."
+  (once-only ((n-val val)
+	      (n-cons cons))
+    (let ((new-list (gensym))
+	  (old-list (gensym)))
+      `(let ((,new-list (cons ,n-val nil)))
+	 (loop
+	  (let ((,old-list (car ,n-cons)))
+	    (setf (cdr ,new-list) ,old-list)
+	    (when (eq (rplaca-conditional ,n-cons ,old-list ,new-list)
+		      ,old-list)
+	      (return ,new-list))))))))
+
+(defmacro atomic-pushd (val cons)
+  "Thread safe push of val onto the list in the cdr of cons."
+  (once-only ((n-val val)
+	      (n-cons cons))
+    (let ((new-list (gensym))
+	  (old-list (gensym)))
+      `(let ((,new-list (cons ,n-val nil)))
+	 (loop
+	  (let ((,old-list (cdr ,n-cons)))
+	    (setf (cdr ,new-list) ,old-list)
+	    (when (eq (rplacd-conditional ,n-cons ,old-list ,new-list)
+		      ,old-list)
+	      (return ,new-list))))))))
+
+(defmacro atomic-push-vector (val vect index)
+  "Thread safe push of val onto the list in the vector element."
+  (once-only ((n-val val)
+	      (n-vect vect)
+	      (n-index index))
+    (let ((new-list (gensym))
+	  (old-list (gensym)))
+      `(let ((,new-list (cons ,n-val nil)))
+	 (loop
+	  (let ((,old-list (svref ,n-vect ,n-index)))
+	    (setf (cdr ,new-list) ,old-list)
+	    (when (eq (data-vector-set-conditional
+		       ,n-vect ,n-index ,old-list ,new-list)
+		      ,old-list)
+	      (return ,new-list))))))))
