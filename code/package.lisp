@@ -970,7 +970,7 @@
 	       (shadowing-import sym package)
 	       (return-from unintern t)))))))
       (setf (package-%shadowing-symbols package)
-	    (delete symbol shadowing-symbols)))
+	    (remove symbol shadowing-symbols)))
 
     (multiple-value-bind (s w) (find-symbol name package)
       (declare (ignore s))
@@ -1162,7 +1162,7 @@
 	    ;;
 	    ;; If it was shadowed, we don't want Unintern to flame out...
 	    (setf (package-%shadowing-symbols package)
-		  (delete s (the list (package-%shadowing-symbols package))))
+		  (remove s (the list (package-%shadowing-symbols package))))
 	    (unintern s package))
 	  (add-symbol internal sym))
 	(pushnew sym (package-%shadowing-symbols package)))))
@@ -1181,7 +1181,7 @@
   (let* ((package (package-or-lose package))
 	 (internal (package-internal-symbols package)))
     (dolist (name (mapcar #'string
-			  (if (consp symbols) symbols (list symbols))))
+			  (if (listp symbols) symbols (list symbols))))
       (multiple-value-bind (s w) (find-symbol name package)
 	(when (or (not w) (eq w :inherited))
 	  (setq s (make-symbol name))
@@ -1264,12 +1264,12 @@
   (let ((package (package-or-lose package)))
     (dolist (p (package-listify packages-to-unuse))
       (setf (package-%use-list package)
-	    (delete p (the list (package-%use-list package))))
+	    (remove p (the list (package-%use-list package))))
       (setf (package-tables package)
 	    (delete (package-external-symbols p)
 		    (the list (package-tables package))))
       (setf (package-%used-by-list p)
-	    (delete package (the list (package-%used-by-list p)))))
+	    (remove package (the list (package-%used-by-list p)))))
     t))
 
 ;;; Find-All-Symbols --  Public
