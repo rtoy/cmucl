@@ -672,13 +672,17 @@ work during bootstrapping.
 (defun method-function-plist (method-function)
   (gethash method-function *method-function-plist*))
 
-(defun (setf method-function-plist) (val method-function)
+(defun #+cmu (setf method-function-plist)
+       #-cmu SETF\ PCL\ METHOD-FUNCTION-PLIST
+      (val method-function)
   (setf (gethash method-function *method-function-plist*) val))
 
 (defun method-function-get (method-function key)
   (getf (method-function-plist method-function) key))
 
-(defun (setf method-function-get) (val method-function key)
+(defun #+cmu (setf method-function-get)
+       #-cmu SETF\ PCL\ METHOD-FUNCTION-GET
+      (val method-function key)
   (setf (getf  (method-function-plist method-function) key) val))
 
 
