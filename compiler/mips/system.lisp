@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.26 1990/06/25 21:14:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.27 1990/07/02 04:50:27 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -69,41 +69,48 @@
 
 ;;;; Type frobbing VOPs
 
-(define-vop (get-type)
+(define-vop (get-lowtag)
+  (:translate get-lowtag)
+  (:policy :fast-safe)
   (:args (object :scs (any-reg descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
-  (:results (result :scs (any-reg descriptor-reg)))
-  (:generator 10
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 1
+    (inst and result object vm:lowtag-mask)))
+
+(define-vop (get-type)
+  (:translate get-type)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 6
     (let ((other-ptr (gen-label))
-	  (shift (gen-label))
-	  (function-ptr (gen-label)))
+	  (function-ptr (gen-label))
+	  (done (gen-label)))
       (simple-test-simple-type object ndescr other-ptr
 			       nil vm:other-pointer-type)
       (simple-test-simple-type object ndescr function-ptr
 			       nil vm:function-pointer-type)
-      (inst and ndescr object (logand (logeqv vm:other-immediate-0-type
-					      vm:other-immediate-1-type)
-				      vm:lowtag-mask))
-      (inst xor ndescr ndescr (logand vm:other-immediate-0-type
+      (inst and result object (logand vm:other-immediate-0-type
 				      vm:other-immediate-1-type))
-      (inst bne ndescr zero-tn shift)
-      (inst and ndescr object vm:lowtag-mask)
-      
-      (inst b shift)
-      (inst and ndescr object vm:type-mask)
-      
+      (inst beq result done)
+      (inst nop)
+
+      (inst b done)
+      (inst and result object vm:type-mask)
+
       (emit-label function-ptr)
-      (load-type ndescr object (- vm:function-pointer-type))
-      (inst b shift)
+      (load-type result object (- vm:function-pointer-type))
+      (inst b done)
       (inst nop)
 
       (emit-label other-ptr)
-      (load-type ndescr object (- vm:other-pointer-type))
+      (load-type result object (- vm:other-pointer-type))
       (inst nop)
       
-      (emit-label shift)
-      (inst sll result ndescr 2))))
-
+      (emit-label done))))
 
 (define-vop (get-header-data)
   (:translate get-header-data)
