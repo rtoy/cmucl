@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.6 1990/11/23 09:23:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.7 1990/11/23 15:23:44 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -177,7 +177,7 @@
 				  (:return-style :full-call)
 				  (:policy :safe)
 				  (:translate ,translate)
-				  (:return-style :full-call))
+				  (:save-p t))
 				 ((:arg x (descriptor-reg any-reg) a0-offset)
 				  (:arg y (descriptor-reg any-reg) a1-offset)
 				  
@@ -221,7 +221,7 @@
 			  (:return-style :full-call)
 			  (:policy :safe)
 			  (:translate eql)
-			  (:return-style :full-call))
+			  (:save-p t))
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 			  
@@ -262,7 +262,7 @@
 			  (:return-style :full-call)
 			  (:policy :safe)
 			  (:translate =)
-			  (:return-style :full-call))
+			  (:save-p t))
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 			  
@@ -302,7 +302,7 @@
 			  (:return-style :full-call)
 			  (:policy :safe)
 			  (:translate /=)
-			  (:return-style :full-call))
+			  (:save-p t))
 			 ((:arg x (descriptor-reg any-reg) a0-offset)
 			  (:arg y (descriptor-reg any-reg) a1-offset)
 			  
