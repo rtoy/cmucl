@@ -463,7 +463,21 @@
 ;;;
 (defvar *cached-info-environment*)
 
-(eval-when (compile eval)
+
+;;; INFO-CACHE-HASH  --  Internal
+;;;
+;;;    Hash function used for INFO cache.
+;;;
+(defmacro info-cache-hash (name type)
+  `(the fixnum
+	(logand
+	 (the fixnum
+	      (logxor (the fixnum (cache-hash-eq ,name))
+		      (the fixnum (ash (the fixnum ,type) 7))))
+	 #x3FF)))
+
+
+(eval-when (compile #-new-compiler load eval)
 
 ;;; INFO-CACHE-INIT  --  Internal
 ;;;
@@ -490,19 +504,6 @@
   (setq *cached-info-environment* nil))
 ;;;
 (pushnew 'info-cache-gc-hook *after-gc-hooks*)
-
-
-;;; INFO-CACHE-HASH  --  Internal
-;;;
-;;;    Hash function used for INFO cache.
-;;;
-(defmacro info-cache-hash (name type)
-  `(the fixnum
-	(logand
-	 (the fixnum
-	      (logxor (the fixnum (cache-hash-eq ,name))
-		      (the fixnum (ash (the fixnum ,type) 7))))
-	 #x3FF)))
 
 
 ;;; CLEAR-INVALID-INFO-CACHE  --  Internal
