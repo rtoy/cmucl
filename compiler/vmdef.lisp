@@ -291,9 +291,8 @@
     
 ;;; DEFINE-MOVE-VOP  --  Public
 ;;;
-;;;    Note that we record the VOP in the Move[-Argument]-VOPS for all SCs that
-;;; we can move between (including implicit loading), whereas we only record
-;;; MOVE-COSTS for the explicitly specified SC pairs.
+;;;    We record the VOP and costs for all SCs that we can move between
+;;; (including implicit loading).
 ;;;
 (defmacro define-move-vop (name kind &rest scs)
   "Define-Move-VOP Name {:Move | :Move-Argument} {(From-SC*) (To-SC*)}*
