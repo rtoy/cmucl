@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.37 1991/03/20 03:04:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.38 1991/03/27 14:19:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.37 1991/03/20 03:04:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.38 1991/03/27 14:19:10 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -27,7 +27,15 @@
 	  function-code-header make-lisp-obj get-lisp-obj-address
 	  function-word-offset code-debug-info
 	  funcallable-instance-p %set-funcallable-instance-info
-	  code-header-ref code-header-set code-instructions))
+	  code-header-ref code-header-set code-instructions
+	  shift-towards-start shift-towards-end
+
+	  32bit-logical-not
+	  32bit-logical-and 32bit-logical-nand
+	  32bit-logical-or 32bit-logical-nor
+	  32bit-logical-xor 32bit-logical-eqv
+	  32bit-logical-andc1 32bit-logical-andc2
+	  32bit-logical-orc1 32bit-logical-orc2))
 
 (in-package "C")
 
@@ -144,6 +152,8 @@
 				      control-stack-pointer-sap)  ()
   system-area-pointer
   (flushable))
+
+
 
 ;;;; Debugger support:
 
@@ -167,9 +177,17 @@
 (defknown 32bit-logical-not ((unsigned-byte 32)) (unsigned-byte 32)
   (foldable flushable movable))
 
-(defknown (32bit-logical-and 32bit-logical-or 32bit-logical-xor
-			     32bit-logical-nor)
+(defknown (32bit-logical-and 32bit-logical-nand
+	   32bit-logical-or 32bit-logical-nor
+	   32bit-logical-xor 32bit-logical-eqv
+	   32bit-logical-andc1 32bit-logical-andc2
+	   32bit-logical-orc1 32bit-logical-orc2)
 	  ((unsigned-byte 32) (unsigned-byte 32)) (unsigned-byte 32)
+  (foldable flushable movable))
+
+
+(defknown (shift-towards-start shift-towards-end) ((unsigned-byte 32) fixnum)
+  (unsigned-byte 32)
   (foldable flushable movable))
 
 
