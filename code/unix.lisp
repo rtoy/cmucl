@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.61 1998/06/16 06:58:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.62 1998/10/04 07:38:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,6 +70,8 @@
           #+(or hpux svr4 linux freebsd) vsusp
 	  #+(or hpux svr4 linux freebsd) c-cflag
 	  #+(or hpux svr4 linux freebsd) c-cc
+	  #+(or bsd osf1) c-ispeed
+	  #+(or bsd osf1) c-ospeed
           #+(or hpux svr4 linux freebsd) tty-icanon
 	  #+(or hpux svr4 linux freebsd) vmin
           #+(or hpux svr4 linux freebsd) vtime
@@ -1544,6 +1546,15 @@
   (defconstant tty-cs7 #o40)
   (defconstant tty-cs8 #o60))
 
+#+freebsd
+(progn
+  ;; control modes
+  (defconstant tty-csize #x300)
+  (defconstant tty-cs5 #x000)
+  (defconstant tty-cs6 #x100)
+  (defconstant tty-cs7 #x200)
+  (defconstant tty-cs8 #x300))
+
 #+svr4
 (progn
   (defconstant tcsanow #x540e)
@@ -1644,6 +1655,7 @@
 
   ;; XXX rest of functions in this progn probably are present in linux, but
   ;; not verified.
+  #-freebsd
   (defun unix-cfgetospeed (termios)
     "Get terminal output speed."
     (multiple-value-bind (speed errno)
@@ -1652,12 +1664,24 @@
           (values (svref terminal-speeds speed) 0)
           (values speed errno))))
 
+  #+freebsd
+  (defun unix-cfgetospeed (termios)
+    "Get terminal output speed."
+    (int-syscall ("cfgetospeed" (* (struct termios))) termios))
+
+  #-freebsd
   (defun unix-cfsetospeed (termios speed)
     "Set terminal output speed."
     (let ((baud (or (position speed terminal-speeds)
                     (error "Bogus baud rate ~S" speed))))
       (void-syscall ("cfsetospeed" (* (struct termios)) int) termios baud)))
   
+  #+freebsd
+  (defun unix-cfsetospeed (termios speed)
+    "Set terminal output speed."
+    (void-syscall ("cfsetospeed" (* (struct termios)) int) termios speed))
+  
+  #-freebsd
   (defun unix-cfgetispeed (termios)
     "Get terminal input speed."
     (multiple-value-bind (speed errno)
@@ -1665,12 +1689,23 @@
       (if speed
           (values (svref terminal-speeds speed) 0)
           (values speed errno))))
+
+  #+freebsd
+  (defun unix-cfgetispeed (termios)
+    "Get terminal input speed."
+    (int-syscall ("cfgetispeed" (* (struct termios))) termios))
   
+  #-freebsd
   (defun unix-cfsetispeed (termios speed)
     "Set terminal input speed."
     (let ((baud (or (position speed terminal-speeds)
                     (error "Bogus baud rate ~S" speed))))
       (void-syscall ("cfsetispeed" (* (struct termios)) int) termios baud)))
+
+  #+freebsd
+  (defun unix-cfsetispeed (termios speed)
+    "Set terminal input speed."
+    (void-syscall ("cfsetispeed" (* (struct termios)) int) termios speed))
 
   (defun unix-tcsendbreak (fd duration)
     "Send break"
