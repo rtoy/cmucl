@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.37 1990/11/21 15:14:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.38 1990/12/06 22:27:35 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -278,3 +278,17 @@
   (:generator 1
     (inst break vm:halt-trap)))
 
+
+;;;; Dynamic vop count collection support
+
+(define-vop (count-me)
+  (:args (count-vector :scs (descriptor-reg)))
+  (:info index)
+  (:temporary (:scs (non-descriptor-reg)) count)
+  (:generator 1
+    (let ((offset
+	   (- (* (+ index vector-data-offset) word-bytes) other-pointer-type)))
+      (inst lw count count-vector offset)
+      (inst nop)
+      (inst addu count 1)
+      (inst sw count count-vector offset))))
