@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.17 1990/07/02 04:51:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.18 1990/07/04 21:02:49 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -69,6 +69,10 @@
   (foldable flushable))
 
 
+(defknown %closure-index-ref (function index) t
+  (flushable))
+
+
 (defknown vector-sap ((simple-unboxed-array (*))) system-area-pointer
   (flushable))
 
@@ -92,6 +96,10 @@
 
 (defknown %make-weak-pointer (t boolean) weak-pointer
   (flushable))
+(defknown %make-complex (real real) complex
+  (flushable movable))
+(defknown %make-ratio (rational rational) ratio
+  (flushable movable))
 
 
 (defknown (dynamic-space-free-pointer binding-stack-pointer-sap
