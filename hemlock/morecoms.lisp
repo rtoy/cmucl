@@ -136,7 +136,9 @@
 		     (insert-character mark #\space))
 		   (mark-before mark)))
 		((mark-before mark))
-		(t (return)))))
+		(t
+		 (setq errorp t)
+		 (return)))))
       (kill-characters point (- n))
       (when errorp
 	(editor-error "There were not ~D characters before point." n)))))
