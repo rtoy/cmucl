@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.16 2003/08/22 13:20:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.17 2003/08/26 11:50:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,38 @@
 (in-package "SPARC")
 
 
+;;;; Dynamic-Extent.
+
+;;;
+;;; Take an arg where to move the stack pointer instead of returning
+;;; it via :results, because the former generates a single move.
+;;;
+(define-vop (%dynamic-extent-start)
+  (:args (saved-stack-pointer :scs (any-reg control-stack)))
+  (:results)
+  (:policy :safe)
+  (:generator 0
+    (sc-case saved-stack-pointer
+      (control-stack
+       (let ((offset (tn-offset saved-stack-pointer)))
+	 (storew csp-tn cfp-tn offset)))
+      (any-reg
+       (format t "DE-START Using any-reg ~A~%" saved-stack-pointer)
+       (move saved-stack-pointer csp-tn)))))
+
+(define-vop (%dynamic-extent-end)
+  (:args (saved-stack-pointer :scs (any-reg control-stack)))
+  (:results)
+  (:policy :safe)
+  (:generator 0
+    (sc-case saved-stack-pointer
+      (control-stack
+       (let ((offset (tn-offset saved-stack-pointer)))
+	 (loadw csp-tn cfp-tn offset)))
+      (any-reg
+       (format t "DE-END Using any-reg ~A~%" saved-stack-pointer)
+       (move csp-tn saved-stack-pointer)))))
+
 ;;;; LIST and LIST*
 
 (define-vop (list-or-list*)
@@ -25,7 +57,8 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :type list :to (:result 0) :target result)
 	      res)
-  (:info num)
+  (:temporary (:scs (non-descriptor-reg)) alloc-temp)
+  (:info num dynamic-extent)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
   (:policy :safe)
@@ -47,7 +80,9 @@
 	     (let* ((cons-cells (if star (1- num) num))
 		    (alloc (* (pad-data-block cons-size) cons-cells)))
 	       (pseudo-atomic ()
-		 (allocation res alloc list-pointer-type :temp-tn temp)
+		 (allocation res alloc list-pointer-type
+			     :stack-p dynamic-extent
+			     :temp-tn alloc-temp)
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (storew (maybe-load (tn-ref-tn things)) ptr
@@ -82,7 +117,6 @@
   (:temporary (:scs (non-descriptor-reg)) size)
   (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
-  ;;(:temporary (:scs (any-reg)) gc-temp)
   (:generator 100
     (inst add boxed boxed-arg (fixnumize (1+ code-trace-table-offset-slot)))
     (inst and boxed (lognot lowtag-mask))
@@ -119,13 +153,11 @@
   (:info length dynamic-extent)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg)))
-  (:node-var node)
   (:generator 10
     (let ((size (+ length closure-info-offset)))
       (pseudo-atomic ()
         (allocation result (pad-data-block size) function-pointer-type
 		    :stack-p dynamic-extent
-		    :node node
 		    :temp-tn temp)
 	(inst li temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
@@ -154,13 +186,15 @@
 
 (define-vop (fixed-alloc)
   (:args)
-  (:info name words type lowtag)
+  (:info name words type lowtag dynamic-extent)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (pseudo-atomic ()
-      (allocation result (pad-data-block words) lowtag :temp-tn temp)
+      (allocation result (pad-data-block words) lowtag
+		  :stack-p dynamic-extent
+		  :temp-tn temp)
       (when type
 	(inst li temp (logior (ash (1- words) type-bits) type))
 	(storew temp result 0 lowtag)))))

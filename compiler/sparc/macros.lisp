@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.21 2003/08/22 13:20:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.22 2003/08/26 11:50:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.21 2003/08/22 13:20:03 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.22 2003/08/26 11:50:04 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -205,12 +205,12 @@
 ;; because a temp register is needed to do inline allocation.
 ;; TEMP-TN, in this case, can be any register, since it holds a
 ;; double-word aligned address (essentially a fixnum).
-(defmacro allocation (result-tn size lowtag &key stack-p node temp-tn)
+(defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
   ;; We assume we're in a pseudo-atomic so the pseudo-atomic bit is
   ;; set.  If the lowtag also has a 1 bit in the same position, we're all
   ;; set.  Otherwise, we need to zap out the lowtag from alloc-tn, and
   ;; then or in the lowtag.
-  `(cond ((and ,stack-p ,node (trust-dynamic-extent-declaration-p ,node))
+  `(cond (,stack-p
 	  ;; Stack allocation
 	  ;;
 	  ;; The control stack grows up, so round up CSP to a
