@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.72 2003/09/25 02:40:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.73 2004/10/19 15:23:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1412,8 +1412,11 @@
 	  (loop
 	   (cerror
 	    "prompt for a symbol to shadowing-import."
+	    'simple-package-error
+	    :package package
+	    :format-control
 	    "Uninterning symbol ~S causes name conflict among these symbols:~%~S"
-	    symbol cset)
+	    :format-arguments (list symbol cset))
 	   (write-string "Symbol to shadowing-import: " *query-io*)
 	   (let ((sym (read *query-io*)))
 	     (cond
