@@ -34,6 +34,7 @@
 ;(comf "code:clx-ext")
 (comf "code:commandline")
 (comf "code:eval")
+(comf "code:debug-info")
 (comf "code:debug-int")
 (comf "code:debug")
 (comf "code:trace")
@@ -76,7 +77,6 @@
 (comf "code:foreign")
 (comf "c:proclaim")
 (comf "c:knownfun")
-(comf "code:debug-info")
 
 ;;; Later so that miscellaneous structures are defined (not crucial, but nice.)
 (comf "code:describe")
