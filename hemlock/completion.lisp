@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/completion.lisp,v 1.3 1991/02/08 16:33:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/completion.lisp,v 1.4 1991/05/16 17:40:58 mbb Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,7 +30,7 @@
 
 (defconstant completion-table-size 991)
 
-(defvar *completions* (make-array completion-table-size))
+(defvar *completions* (make-array completion-table-size :initial-element nil))
 
 (defhvar "Completion Bucket Size"
   "This limits the number of completions saved for a particular combination of
