@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.4 1992/05/21 02:31:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.5 1992/05/21 22:36:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,9 +39,9 @@
 	    (inst ji ,temp (make-fixup ',name :assembly-routine))
 	    (inst nop)
 	    (emit-return-pc lra-label)
+	    (note-this-location ,vop :single-value-return)
 	    (move csp-tn ocfp-tn)
 	    (inst nop)
-	    (note-this-location ,vop :single-value-return)
 	    (inst compute-code-from-lra code-tn code-tn
 		  lra-label ,temp)
 	    (when cur-nfp
@@ -52,7 +52,8 @@
 			   :from (:eval 0) :to (:eval 1))
 		      ,lra)
 	  (:temporary (:scs (control-stack) :offset nfp-save-offset)
-		      ,nfp-save)))))
+		      ,nfp-save)
+	  (:save-p :compute-only)))))
     (:none
      (let ((temp (make-symbol "TEMP")))
        (values 
