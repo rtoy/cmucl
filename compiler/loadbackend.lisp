@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.1 1992/02/24 05:51:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.2 1992/02/24 06:09:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,6 @@
 #-rt (load "vm:parms")
 #+rt (load "vm:params")
 (load "vm:objdef")
-(load "vm:vm-fndb")
 (load "vm:vm-typetran")
 (load "assem:support")
 (load "vm:macros")
