@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.92 1993/07/31 14:34:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.93 1993/08/03 10:55:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -604,12 +604,12 @@
   ;;
   ;; If a file, the truename of the corresponding source file.  If from a Lisp
   ;; form, :LISP, if from a stream, :STREAM.
-  (name (required-argument) :type (or simple-string (member :lisp :stream)))
+  (name (required-argument) :type (or pathname (member :lisp :stream)))
   ;;
   ;; The defaulted, but not necessarily absolute file name (i.e. prior to
-  ;; TRUENAME call.)  Null if not a file.  This is only used to set
-  ;; *COMPILE-FILE-PATHNAME* 
-  (untruename nil :type (or simple-string null))
+  ;; TRUENAME call.)  Null if not a file.  This is used to set
+  ;; *COMPILE-FILE-PATHNAME*, and if absolute, is dumped in the debug-info.
+  (untruename nil :type (or pathname null))
   ;;
   ;; The file's write date (if relevant.)
   (write-date nil :type (or unsigned-byte null))
@@ -662,7 +662,7 @@
   (let ((file-info
 	 (mapcar #'(lambda (x)
 		     (make-file-info :name (namestring (truename x))
-				     :untruename (namestring x)
+				     :untruename x
 				     :write-date (file-write-date x)
 				     :language
 				     (if (string-equal (pathname-type x)
@@ -814,9 +814,8 @@
 	       (copy-cookie *initial-interface-cookie*))
 	 (let* ((finfo (first (source-info-current-file info)))
 		(name (file-info-name finfo)))
-	   (setq *compile-file-truename* (pathname name))
-	   (setq *compile-file-pathname*
-		 (pathname (file-info-untruename finfo)))
+	   (setq *compile-file-truename* name)
+	   (setq *compile-file-pathname* (file-info-untruename finfo))
 	   (setf (source-info-stream info)
 		 (open name :direction :input))))))
 
@@ -1595,7 +1594,7 @@
 					      :print-timezone nil))
   (dolist (x (source-info-files source-info))
     (compiler-mumble "Compiling: ~A ~A~%"
-		     (file-info-name x)
+		     (namestring (file-info-name x))
 		     (ext:format-universal-time nil (file-info-write-date x)
 						:style :government
 						:print-weekday nil
