@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.93 1993/08/03 10:55:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.94 1993/08/03 12:58:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -661,7 +661,7 @@
   (declare (list files))
   (let ((file-info
 	 (mapcar #'(lambda (x)
-		     (make-file-info :name (namestring (truename x))
+		     (make-file-info :name (truename x)
 				     :untruename x
 				     :write-date (file-write-date x)
 				     :language
