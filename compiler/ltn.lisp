@@ -357,6 +357,7 @@
   (declare (type mv-combination call)
 	   (type policies policy))
   (setf (basic-combination-kind call) :local)
+  (setf (node-tail-p call) nil)
   (annotate-fixed-values-continuation
    (first (basic-combination-args call)) policy
    (mapcar #'(lambda (var)
@@ -392,7 +393,8 @@
     (cond ((eq (continuation-function-name fun) '%throw)
 	   (setf (basic-combination-info call) :funny)
 	   (annotate-ordinary-continuation (first args) policy)
-	   (annotate-unknown-values-continuation (second args) policy))
+	   (annotate-unknown-values-continuation (second args) policy)
+	   (setf (node-tail-p call) nil))
 	  (t
 	   (setf (basic-combination-info call) :full)
 	   (annotate-function-continuation (basic-combination-fun call)
@@ -435,6 +437,7 @@
 ;;;
 (defun ltn-analyze-set (node policy)
   (declare (type cset node) (type policies policy))
+  (setf (node-tail-p node) nil)
   (annotate-ordinary-continuation (set-value node) policy)
   (undefined-value))
 
@@ -450,6 +453,7 @@
 ;;;
 (defun ltn-analyze-if (node policy)
   (declare (type cif node) (type policies policy))
+  (setf (node-tail-p node) nil)
   (let* ((test (if-test node))
 	 (use (continuation-use test)))
     (unless (and (combination-p use)
@@ -467,6 +471,7 @@
 ;;; degenerate by this point.
 ;;;
 (defun ltn-analyze-exit (node policy)
+  (setf (node-tail-p node) nil)
   (let ((value (exit-value node)))
     (when value
       (annotate-unknown-values-continuation value policy)))
@@ -486,6 +491,7 @@
 (defoptimizer (%unwind-protect ltn-annotate) ((escape cleanup) node policy)
   policy ; Ignore...
   (setf (basic-combination-info node) :funny)
+  (setf (node-tail-p node) nil)
   )
 
 
@@ -502,10 +508,12 @@
 ;;;
 (defoptimizer (%slot-accessor ltn-annotate) ((struct) node policy)
   (setf (basic-combination-info node) :funny)
+  (setf (node-tail-p node) nil)
   (annotate-ordinary-continuation struct policy))
 ;;;
 (defoptimizer (%slot-setter ltn-annotate) ((struct value) node policy)
   (setf (basic-combination-info node) :funny)
+  (setf (node-tail-p node) nil)
   (annotate-ordinary-continuation struct policy)
   (annotate-ordinary-continuation value policy))
 
@@ -834,6 +842,7 @@
 	(ltn-default-call call policy)
 	(return-from ltn-analyze-known-call (undefined-value)))
       (setf (basic-combination-info call) template)
+      (setf (node-tail-p call) nil)
       
       (flush-type-checks-according-to-policy call policy template)
       
@@ -906,9 +915,7 @@
 ;;;
 ;;;    If any unknown-values continations are received by this block (as
 ;;; indicated by IR2-Block-Popped, then we add the block to the
-;;; IR2-Component-Values-Receivers.  We also look at each use of the popped
-;;; continuations, adding the use block to the Generators.  Uses by Exit nodes
-;;; are ignored, since they correspond to non-local exits.
+;;; IR2-Component-Values-Receivers.
 ;;;
 ;;;    This is where we allocate IR2 blocks because it is the first place we
 ;;; need them.
@@ -923,16 +930,9 @@
       (let ((2block (make-ir2-block block)))
 	(setf (block-info block) 2block)
 	(ltn-analyze-block-macro)
-	
 	(let ((popped (ir2-block-popped 2block)))
 	  (when popped
-	    (push block (ir2-component-values-receivers 2comp))
-	    (dolist (pop popped)
-	      (do-uses (use pop)
-		(unless (exit-p use)
-		  (pushnew (node-block use)
-			   (ir2-component-values-generators 2comp))))))))))
-  
+	    (push block (ir2-component-values-receivers 2comp)))))))
   (undefined-value))
 
 
