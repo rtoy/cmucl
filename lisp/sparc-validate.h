@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.15 2003/10/06 17:15:06 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.16 2004/01/09 05:15:09 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -20,6 +20,21 @@
  *	0x80000000->0xc0000000 1024M Dynamic space 2
  *      0xc0000000->0xffffffff 1024M C stack, dynamic libs, etc.      
  *
+ * With GENCGC:
+ *
+ *	0x00000000->0x0f800000  248M C code and stuff(?)
+ *      0x0f800000->0x10000000    8M for linkage table area
+ *	0x10000000->0x20000000  256M Read-Only Space.
+ *	0x20000000->0x28000000  128M Binding stack growing up.
+ *	0x28000000->0x38000000  256M Static Space.
+ *	0x38000000->0x40000000  128M Control stack growing up.
+ *	0x40000000->0xc0000000 2048M Dynamic space 1
+ *      0xc0000000->0xffffffff 1024M C stack, dynamic libs, etc.      
+ *
+ * But look at the definitions below to see how much is really
+ * allocated.  The numbers above are the maximums allowed.  We might
+ * use less.
+ *
  * Almost.  We leave a hole of size 32 KB at the end of each of these
  * spaces.
  *
@@ -33,6 +48,10 @@
  *
  * Shared libraries can be mapped anywhere there's room.
  */
+
+/* Need this to define the spaces described in Lisp */
+
+/*#include "internals.h"*/
 
 /*
  *
@@ -55,7 +74,8 @@
  *
  * See the notes there!
  */
-#define FOREIGN_LINKAGE_SPACE_START (0x0f800000)
+
+#define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
 
 /*
  * This allows for about 510K symbols (assuming each entry is 16 bytes
@@ -66,20 +86,21 @@
 #endif
 
 
-#define READ_ONLY_SPACE_START	(0x10000000)
+#define READ_ONLY_SPACE_START	(SpaceStart_TargetReadOnly)
 #define READ_ONLY_SPACE_SIZE	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 256 MB max */
   
 #define BINDING_STACK_START 	(0x20000000)
 #define BINDING_STACK_SIZE  	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
 
-#define STATIC_SPACE_START  	(0x28000000)
-#define STATIC_SPACE_SIZE   	(0x04000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 256 MB max */
+#define STATIC_SPACE_START  	(SpaceStart_TargetStatic)
+#define STATIC_SPACE_SIZE   	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 256 MB max */
 
 #define CONTROL_STACK_START 	(0x38000000)
 #define CONTROL_STACK_SIZE  	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
 #define CONTROL_STACK_END       (CONTROL_STACK_START + CONTROL_STACK_SIZE)
 
-#define DYNAMIC_0_SPACE_START	(0x40000000)
+#define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
+
 /* This isn't used with GENCGC */
 #define DYNAMIC_1_SPACE_START	(0x80000000)
 
@@ -89,10 +110,10 @@
 /* The maximum dynamic space that we can allocate */
 #ifdef GENCGC
 /*
- * For GENCGC, we can use both dynamic spaces, so we get double the
- * heap size.
+ * For GENCGC, we can use both dynamic spaces, so we get at least
+ * double the heap size.
  */
-#define DYNAMIC_SPACE_SIZE      (0x80000000 - SPARSE_BLOCK_SIZE)    /* 2GB - 32 KB max */
+#define DYNAMIC_SPACE_SIZE      (0xB0000000 - SPARSE_BLOCK_SIZE)    /* 2816 MB - 32 KB max */
 #else
 #define DYNAMIC_SPACE_SIZE      (0x40000000 - SPARSE_BLOCK_SIZE)    /* 1GB - 32 KB max */
 #endif
