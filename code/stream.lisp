@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25.2.5 2000/07/23 14:59:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25.2.6 2000/07/23 14:59:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1687,12 +1687,17 @@
 	   ((or (simple-array (unsigned-byte 8) (*))
 		(simple-array (signed-byte 8) (*))
 		simple-string)
-	    (let* ((numbytes (- end start))
-		   (bytes-read (system:read-n-bytes
-				stream data offset-start numbytes nil)))
-	      (if (< bytes-read numbytes)
-		  (+ start bytes-read)
-		  end)))
+	    (let ((required (- end start)))
+	      (loop
+	       (let ((bytes-read (system:read-n-bytes stream data offset-start
+						      required nil)))
+		 (cond ((= bytes-read required)
+			(return end))
+		       ((zerop bytes-read)
+			(return (- end required)))
+		       (t
+			(decf required bytes-read)
+			(incf offset-start bytes-read)))))))
 	   (t
 	    (let ((read-function
 		   (if (subtypep (stream-element-type stream) 'character)
