@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.24 1997/08/16 09:32:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.25 1997/09/03 19:36:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,10 +61,7 @@
   "Returns the documentation string of Doc-Type for X, or NIL if
   none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,
   SETF, and T."
-  (flet ((try-generic-doc (x doc-type)
-	   (and (fboundp 'pcl::documentation)
-		(pcl::documentation x doc-type)))
-	 ;; CMUCL random-documentation.
+  (flet (;; CMUCL random-documentation.
 	 (try-cmucl-random-doc (x doc-type)
 	   (declare (symbol doc-type))
 	   (cdr (assoc doc-type
@@ -72,39 +69,31 @@
     (case doc-type
       (variable 
        (typecase x
-	 (symbol (values (info variable documentation x)))
-	 (t (try-generic-doc x doc-type))))
+	 (symbol (values (info variable documentation x)))))
       (function
        (typecase x
 	 (symbol (values (info function documentation x)))
 	 (function (function-doc x))
 	 (list ;; Must be '(setf symbol)
-	  (values (info function documentation (cadr x))))
-	 (t (try-generic-doc x doc-type))))
+	  (values (info function documentation (cadr x))))))
       (structure
        (typecase x
 	 (symbol (when (eq (info type kind x) :instance)
-		   (values (info type documentation x))))
-	 (t (try-generic-doc x doc-type))))
+		   (values (info type documentation x))))))
       (type
        (typecase x
 	 (structure-class (values (info type documentation (class-name x))))
-	 (t (or (and (typep x 'symbol) (values (info type documentation x)))
-		(try-generic-doc x doc-type)))))
+	 (t (and (typep x 'symbol) (values (info type documentation x))))))
       (setf (info setf documentation x))
       ((t)
        (typecase x
 	 (function (function-doc x))
 	 (package (package-doc-string x))
 	 (structure-class (values (info type documentation (class-name x))))
-	 (symbol (or (try-generic-doc x doc-type)
-		     (try-cmucl-random-doc x doc-type)))
-	 (t (try-generic-doc x doc-type))))
+	 (symbol (try-cmucl-random-doc x doc-type))))
       (t
        (typecase x
-	 (symbol (or (try-generic-doc x doc-type)
-		     (try-cmucl-random-doc x doc-type)))
-	 (t (try-generic-doc x doc-type)))))))
+	 (symbol (try-cmucl-random-doc x doc-type)))))))
 
 (defun %set-documentation (name doc-type string)
   (case doc-type
