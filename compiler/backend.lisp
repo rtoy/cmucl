@@ -110,7 +110,8 @@
   ;; Translates from SC numbers to SC info structures.  SC numbers are always
   ;; used instead of names at run time, so changing this vector changes all the
   ;; references.
-  (sc-numbers (make-array sc-number-limit) :type sc-vector)
+  (sc-numbers (make-array sc-number-limit :initial-element nil)
+	      :type sc-vector)
 
   ;; A list of all the SBs defined, so that we can easily iterate over them.
   (sb-list () :type list)
@@ -128,7 +129,8 @@
   (meta-sb-names (make-hash-table :test #'eq) :type hash-table)
 
   ;; Like *SC-Numbers*, but is updated at meta-compile time.
-  (meta-sc-numbers (make-array sc-number-limit) :type sc-vector)
+  (meta-sc-numbers (make-array sc-number-limit :initial-element nil)
+		   :type sc-vector)
 
   ;; Translates from primitive type names to the corresponding primitive-type
   ;; structure.
