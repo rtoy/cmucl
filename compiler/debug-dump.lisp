@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.32 1993/03/12 15:35:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.33 1993/05/17 10:07:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,7 +240,7 @@
 ;;; COMPUTE-DEBUG-BLOCKS  --  Internal
 ;;;
 ;;;    Return a vector and an integer (or null) suitable for use as the BLOCKS
-;;; and TLF-NUMBER in Fun's debug-function.  This requires three passes to
+;;; and TLF-NUMBER in Fun's debug-function.  This requires two passes to
 ;;; compute:
 ;;; -- Scan all blocks, dumping the header and successors followed by all the
 ;;;    non-elsewhere locations.
