@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/stack.lisp,v 1.4 1991/02/20 14:59:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/stack.lisp,v 1.5 1991/05/08 01:15:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,10 +71,24 @@
 ;;; it up if we discover that it isn't reachable at all.
 ;;;
 ;;;    If our final stack isn't empty, then we walk all the predecessor blocks
-;;; that have less stuff on their End-Stack than we have on our Start-Stack.
-;;; This is our termination condition for the graph walk.  We put the test
-;;; around the recursive call so that the initial call to this function will do
-;;; something even though there isn't initially anything on the stack.
+;;; that don't have all the continuations that we have on our Start-Stack on
+;;; their End-Stack.  This is our termination condition for the graph walk.  We
+;;; put the test around the recursive call so that the initial call to this
+;;; function will do something even though there isn't initially anything on
+;;; the stack.
+;;;
+;;;    We can use the tailp test, since the only time we want to bottom out
+;;; with a non-empty stack is when we intersect with another path from the same
+;;; top-level call to this function that has more values receivers on that
+;;; path.  When we bottom out in this way, we are counting on
+;;; DISCARD-UNUSED-VALUES doing its thing.
+;;;
+;;;    When we do recurse, we check that predecessor's END-STACK is a
+;;; subsequence of our START-STACK.  There may be extra stuff on the top
+;;; of our stack because the last path to the predecessor may have discarded
+;;; some values that we use.  There may be extra stuff on the bottom of our
+;;; stack because this walk may be from a values receiver whose lifetime
+;;; encloses that of the previous walk.
 ;;;
 ;;;    If a predecessor block is the component head, then it must be the case
 ;;; that this is a NLX entry stub.  If so, we just stop our walk, since the
@@ -103,7 +117,7 @@
 			    :key #'nlx-info-target))
 	      (let ((pred-stack (ir2-block-end-stack (block-info pred))))
 		(unless (tailp new-stack pred-stack)
-		  (assert (or (null pred-stack) (tailp pred-stack new-stack)))
+		  (assert (search pred-stack new-stack))
 		  (stack-simulation-walk pred new-stack))))))))
 
   (undefined-value))
@@ -173,8 +187,7 @@
 			   (- (length block1-stack)
 			      (length block2-stack)
 			      1))))
-    (assert (or (tailp block2-stack block1-stack)
-		(null block2-stack))) ; !@#%* tailp bug.
+    (assert (tailp block2-stack block1-stack))
 
     (let* ((block (insert-cleanup-code block1 block2
 				       (continuation-next (block-start block2))
