@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.3 1990/11/13 22:59:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.4 1990/11/21 11:12:45 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -147,11 +147,13 @@
   (:info amount)
   (:results (result :scs (sap-reg any-reg)))
   (:generator 0
-    (inst addu nsp-tn nsp-tn (- (logandc2 (+ amount 7) 7)))
+    (unless (zerop amount)
+      (inst addu nsp-tn nsp-tn (- (logandc2 (+ amount 7) 7))))
     (move result nsp-tn)))
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:policy :fast-safe)
   (:generator 0
-    (inst addu nsp-tn nsp-tn (logandc2 (+ amount 7) 7))))
+    (unless (zerop amount)
+      (inst addu nsp-tn nsp-tn (logandc2 (+ amount 7) 7)))))
