@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.4 1997/05/08 17:08:14 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.5 1997/05/11 11:40:44 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -404,7 +404,9 @@
   (:save-p :compute-only)
   (:generator 30
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
-      (inst cmp y 0)
+      (if (sc-is y signed-reg)
+	  (inst test y y)  ; Smaller instruction
+	  (inst cmp y 0))
       (inst jmp :eq zero))
     (move eax x)
     (inst cdq)
