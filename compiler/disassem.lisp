@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.14 1992/10/16 15:07:28 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.15 1992/10/17 13:49:17 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3307,6 +3307,9 @@
 ;;; ----------------------------------------------------------------
 ;;; Code for making useful segments from arbitrary lists of code-blocks
 
+;;; The maximum size of an instruction -- this includes pseudo-instructions
+;;; like error traps with their associated operands, so it should be big enough
+;;; to include them (i.e. it's not just 4 on a risc machine!).
 (defconstant max-instruction-size 16)
 
 (defun sap-to-vector (sap start end)
@@ -3340,6 +3343,14 @@
 		     connecting-vec
 		     (sap-to-vector sap 0 beginning-of-block-amount))
 		    connecting-vec)))
+	  (when (and (< (length connecting-vec) max-instruction-size)
+		     (not (null sap)))
+	    (return-from add-block-segments
+	      ;; We want connecting vectors to be large enough to hold
+	      ;; any instruction, and since the current sap wasn't large
+	      ;; enough to do this (and is now entirely on the end of the
+	      ;; overflow-vector), just save it for next time.
+	      (values seglist location connecting-vec)))
 	  (when (> (length connecting-vec) 0)
 	    (let ((seg
 		   (make-vector-segment connecting-vec
@@ -3349,29 +3360,34 @@
 					:virtual-location location)))
 	      (setf connecting-overflow (segment-overflow seg dstate))
 	      (addit seg connecting-overflow)))))
-      (if sap
-	  (let* ((initial-length
-		  (max (- amount
-			  connecting-overflow
-			  max-instruction-size)
-		       0))
-		 (seg
-		  (make-segment
-		   #'(lambda ()
-		       (system:sap+ sap connecting-overflow))
-		   initial-length
-		   :virtual-location location))
-		 (overflow
-		  (segment-overflow seg dstate)))
-	    (addit seg overflow)
-	    (values seglist
-		    location
-		    (sap-to-vector sap
-				   (+ connecting-overflow
-				      (seg-length seg)
-				      overflow)
-				   amount)))
-	  (values seglist location nil)))))
+      (cond ((null sap)
+	     ;; Nothing more to add.
+	     (values seglist location nil))
+	    ((< (- amount connecting-overflow) max-instruction-size)
+	     ;; We can't create a segment with the minimum size
+	     ;; required for an instruction, so just keep on accumulating
+	     ;; in the overflow vector for the time-being.
+	     (values seglist
+		     location
+		     (sap-to-vector sap connecting-overflow amount)))
+	    (t
+	     ;; Put as much as we can into a new segment, and the rest
+	     ;; into the overflow-vector.
+	     (let* ((initial-length
+		     (- amount connecting-overflow max-instruction-size))
+		    (seg
+		     (make-segment #'(lambda ()
+				       (system:sap+ sap connecting-overflow))
+				   initial-length
+				   :virtual-location location))
+		    (overflow
+		     (segment-overflow seg dstate)))
+	       (addit seg overflow)
+	       (values seglist
+		       location
+		       (sap-to-vector sap
+				      (+ connecting-overflow (seg-length seg))
+				      amount))))))))
 
 ;;; ----------------------------------------------------------------
 ;;; Code to disassemble assembler segments.
