@@ -2,7 +2,7 @@
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.6 1991/07/16 17:36:59 chiles Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.7 1991/10/03 13:55:08 ram Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -39,6 +39,11 @@ setenv BAZ $FOO
 setenv ACK $FOO
 setenv RAZ $FOO
 setenv GORP $FOO
+setenv BAR2 $FOO
+setenv BAZ2 $FOO
+setenv ACK2 $FOO
+setenv RAZ2 $FOO
+setenv GORP2 $FOO
 
 echo Building lisp.core dated $version from the \`\`$subdir\'\' subdir.
 
