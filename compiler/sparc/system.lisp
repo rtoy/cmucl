@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.16 2003/11/06 22:20:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.17 2004/01/16 03:24:49 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -279,4 +279,7 @@
 
 #+sparc-v9
 (defun read-cycle-counter ()
+  "Read the instruction cycle counter available on UltraSparcs.  The
+64-bit counter is returned as two 32-bit unsigned integers.  The low 32-bit
+result is the first value."
   (read-cycle-counter))
