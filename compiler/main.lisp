@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.90 1993/07/25 21:25:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.91 1993/07/31 02:10:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,8 @@
 			     *byte-compile-top-level*))
 (in-package "LISP")
 (export '(*compile-verbose* *compile-print* *compile-file-pathname*
-			    *compile-file-truename*))
+			    *compile-file-truename*
+			    compile-file-pathname))
 (in-package "C")
 
 (proclaim '(special *constants* *free-variables* *compile-component*
@@ -100,10 +101,10 @@
   "The default for the :PROGRESS argument to COMPILE-FILE.")
 
 (defvar *compile-file-pathname* nil
-  "The defaulted pathname of the file currently being compiler, or NIL if not
+  "The defaulted pathname of the file currently being compiled, or NIL if not
   compiling.")
 (defvar *compile-file-truename* nil
-  "The TRUENAME of the file currently being compiler, or NIL if not
+  "The TRUENAME of the file currently being compiled, or NIL if not
   compiling.")
 
 (declaim (type (or pathname null) *compile-file-pathname*
@@ -1877,3 +1878,24 @@
 	(setf (fdefinition name)
 	      (coerce (get-lambda-to-compile def) 'function))))
   name)
+
+
+;;; COMPILE-FILE-PATHNAME -- Public
+;;;
+(defun compile-file-pathname (file-path &key (output-file t) byte-compile
+					&allow-other-keys)
+  "Return a pathname describing what file COMPILE-FILE would write to given
+   these arguments."
+  (declare (values (or null pathname)))
+  (let ((pathname (pathname file-path)))
+    (cond ((not (eq output-file t))
+	   (when output-file
+	     (translate-logical-pathname (pathname output-file))))
+	  ((and (logical-pathname-p pathname) (not (eq byte-compile t)))
+	   (make-pathname :type "FASL" :defaults pathname
+			  :case :common))
+	  (t
+	   (make-pathname :defaults (translate-logical-pathname pathname)
+			  :type (if (eq byte-compile t)
+				    (backend-byte-fasl-file-type *backend*)
+				    (backend-fasl-file-type *backend*)))))))
