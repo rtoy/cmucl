@@ -150,7 +150,7 @@ Search Lists
 
 The Debugger
 
-* The Debugger Introduction::   
+* Debugger Introduction::       
 * The Command Loop::            
 * Stack Frames::                
 * Variable Access::             
@@ -158,8 +158,9 @@ The Debugger
 * Compiler Policy Control::     
 * Exiting Commands::            
 * Information Commands::        
-* Specials::                    
+* Breakpoint Commands::
 * Function Tracing::            
+* Specials::                    
 
 Stack Frames
 
@@ -180,13 +181,17 @@ Source Location Printing
 * How the Source is Found::     
 * Source Location Availability::  
 
+Breakpoint Commands
+
+* Breakpoint Example::
+
 Function Tracing
 
 * Encapsulation Functions::     
 
 The Compiler
 
-* The Compiler Introduction::   
+* Compiler Introduction::       
 * Calling the Compiler::        
 * Compilation Units::           
 * Interpreting Error Messages::  
@@ -444,20 +449,20 @@ The WIRE Package
 
 Debugger Programmer's Interface
 
-* DI Exceptional Conditions::
-* Debug-variables::
-* Frames::
-* Debug-functions::
-* Debug-blocks::
-* Breakpoints::
-* Code-locations::
-* Debug-sources::
-* Source Translation Utilities::
+* DI Exceptional Conditions::   
+* Debug-variables::             
+* Frames::                      
+* Debug-functions::             
+* Debug-blocks::                
+* Breakpoints::                 
+* Code-locations::              
+* Debug-sources::               
+* Source Translation Utilities::  
 
 DI Exceptional Conditions
 
-* Debug-conditions::
-* Debug-errors::
+* Debug-conditions::            
+* Debug-errors::                
 \end{menu}
 
 \node Introduction, Design Choices and Extensions, Top, Top
@@ -510,7 +515,7 @@ approved by X3J13.
 
 Until the X3J13 standard is completed, the second edition of \cltl2{} is
 probably the best available manual for the language and for our
-implmentation of it.  This book has no official role in the
+implementation of it.  This book has no official role in the
 standardization process, but it does include many of the changes adopted
 since the first edition was completed.
 
@@ -968,16 +973,13 @@ Possible exceptions are \kwd{underflow}, \kwd{overflow}, \kwd{inexact},
 \kwd{invalid} and \kwd{divide-by-zero}.  Initially all traps except
 \kwd{inexact} are enabled.  \xlref{float-traps}.
 
-\item[\kwd{rounding-mode}]
-The rounding mode to use when the result is not exact.
-Possible values are \kwd{nearest}, \kwd{positive-infinity},
+\item[\kwd{rounding-mode}] The rounding mode to use when the result is
+not exact.  Possible values are \kwd{nearest}, \kwd{positive-infinity},
 \kwd{negative-infinity} and \kwd{zero}.  Initially, the rounding mode is
-\kwd{nearest}.  See the warning in section \ref{float-rounding-modes} about use
-of other rounding modes.
+\kwd{nearest}.  See the warning in section \ref{float-rounding-modes}
+about use of other rounding modes.
 
-\kwd{current-exceptions}
-
-\item[\kwd{accrued-exceptions}]
+\item[\kwd{current-exceptions}, \kwd{accrued-exceptions}]
 Lists of exception keywords used to set the
 exception flags.  The \var{current-exceptions} are the exceptions for the
 previous operation, so setting it is not very useful.  The
@@ -1066,7 +1068,7 @@ have exported interfaces that may concern users.  The numerous internal
 packages which implement parts of the system are not described here.  Package
 nicknames are in parenthesis after the full name.  
 \begin{description}
-\item{\code{alien}, \code{c-call}} Export the features of the Alien foreign
+\item[\code{alien}, \code{c-call}] Export the features of the Alien foreign
 data structure facility (\pxlref{aliens}.)
 
 \item[\code{pcl}]
@@ -1076,7 +1078,7 @@ most (but not all) of the features in the CLOS chapter of \cltl2.
 
 \item[\code{debug}] 
 The \code{debug} package contains the command-line oriented
-debugger.  It exports utlilty various functions and switches.
+debugger.  It exports utility various functions and switches.
 
 \item[\code{debug-internals}] The \code{debug-internals} package exports the
 primitives used to write debuggers.  \xlref{debug-internals}.
@@ -1925,7 +1927,7 @@ is an integer specifying the hours west of Greenwich.
 \i{:Timezone} defaults to the current time zone.
 
 \item[\kwd{style}]
-specifies the style to use in formating the time.  The legal
+specifies the style to use in formatting the time.  The legal
 values are:
 \begin{description}
 
@@ -1952,7 +1954,7 @@ Otherwise, the time is placed first.
 if non-\false{} (default) will format the seconds as part of
 the time.  Otherwise, the seconds will be omitted.
 
-\item[\kwd{print-meridan}]
+\item[\kwd{print-meridian}]
 if non-\false{} (default) will format "AM" or "PM" as part of
 the time.  Otherwise, the "AM" or "PM" will be omitted.
 
@@ -2009,7 +2011,7 @@ way to browse the library.
 \label{debugger}
 
 \begin{menu}
-* The Debugger Introduction::   
+* Debugger Introduction::       
 * The Command Loop::            
 * Stack Frames::                
 * Variable Access::             
@@ -2017,12 +2019,13 @@ way to browse the library.
 * Compiler Policy Control::     
 * Exiting Commands::            
 * Information Commands::        
-* Specials::                    
+* Breakpoint Commands::
 * Function Tracing::            
+* Specials::                    
 \end{menu}
 
-\node The Debugger Introduction, The Command Loop, The Debugger, The Debugger
-\section{The Debugger Introduction}
+\node Debugger Introduction, The Command Loop, The Debugger, The Debugger
+\section{Debugger Introduction}
 
 The \cmucl{} debugger is unique in its level of support for source-level
 debugging of compiled code.  Although some other debuggers allow access of
@@ -2074,14 +2077,24 @@ this case, the only option is to return to top-level.  After printing its
 banner, the debugger prints the current frame and the debugger prompt.
 
 
-\node The Command Loop, Stack Frames, The Debugger Introduction, The Debugger
+\node The Command Loop, Stack Frames, Debugger Introduction, The Debugger
 \section{The Command Loop}
 
 The debugger is an interactive read-eval-print loop much like the normal
-top-level, but some symbols are interpreted as debugger commands instead of
-being evaluated.  A debugger command starts with the symbol name of the
-command, possibly followed by some arguments on the same line.  Some commands
-prompt for additional input.
+top-level, but some symbols are interpreted as debugger commands instead
+of being evaluated.  A debugger command starts with the symbol name of
+the command, possibly followed by some arguments on the same line.  Some
+commands prompt for additional input.  Debugger commands can be
+abbreviated by any unambiguous prefix: \code{help} can be typed as
+\code{h}, \code{he}, etc.  For convenience, some commands have
+ambiguous one-letter abbreviations: \code{f} for \code{frame}.
+
+The package is not significant in debugger commands; any symbol with the
+name of a debugger command will work.  If you want to show the value of
+a variable that happens also to be the name of a debugger command, you
+can use the \code{list-locals} command or the \code{debug:var}
+function, or you can wrap the variable in a \code{progn} to hide it from
+the command loop.
 
 The debugger prompt is "\var{frame}\code{]}", where \var{frame} is the number
 of the current frame.  Frames are numbered starting from zero at the top (most
@@ -2089,28 +2102,23 @@ recent call), increasing down to the bottom.  The current frame is the frame
 that commands refer to.  The current frame also provides the lexical
 environment for evaluation of non-command forms.
 
-The package is not significant in debugger commands; any symbol with the name
-of a debugger command will work.  If you want to show the value of a variable
-that happens also to be the name of a debugger command, you can use the
-"\code{L}" command or the \code{debug:var} function, or you can wrap the
-variable in a \code{progn} to hide it from the command loop.
-
 \cpsubindex{evaluation}{debugger} The debugger evaluates forms in the lexical
-environment of the functions being debugged.  The debugger can only access
-variables.  You can't \code{go} or \code{return-from} into a function, and you can't
-call local functions.  Special variable references are evaluated with their
-current value (the innermost binding around the debugger invocation) \dash{}
-you don't get the value that the special had in the current frame.
-\xlref{debug-vars} for more information on debugger variable access.
+environment of the functions being debugged.  The debugger can only
+access variables.  You can't \code{go} or \code{return-from} into a
+function, and you can't call local functions.  Special variable
+references are evaluated with their current value (the innermost binding
+around the debugger invocation) \dash{} you don't get the value that the
+special had in the current frame.  \xlref{debug-vars} for more
+information on debugger variable access.
 
 
 \node Stack Frames, Variable Access, The Command Loop, The Debugger
 \section{Stack Frames}
 \cindex{stack frames} \cpsubindex{frames}{stack}
 
-A stack frame is the run-time representation of a call to a function; the frame
-stores the state that a function needs to remember what it is doing.  Frames
-have:
+A stack frame is the run-time representation of a call to a function;
+the frame stores the state that a function needs to remember what it is
+doing.  Frames have:
 \begin{itemize}
 
 \item
@@ -2145,20 +2153,20 @@ These commands move to a new stack frame and print the name of the function
 and the values of its arguments in the style of a Lisp function call:
 \begin{description}
 
-\item[\key{U}]
+\item[\code{up}]
 Move up to the next higher frame.  More recent function calls are considered
 to be higher on the stack.
 
-\item[\key{D}]
+\item[\code{down}]
 Move down to the next lower frame.
 
-\item[\key{T}]
+\item[\code{top}]
 Move to the highest frame.
 
-\item[\key{B}]
+\item[\code{bottom}]
 Move to the lowest frame.
 
-\item[\key{F} [\var{n}]]
+\item[\code{frame} [\var{n}]]
 Move to the frame with the specified number.  Prompts for the number if not
 supplied.
 
@@ -2327,9 +2335,10 @@ Consider this backtrace:
 (BAR ...) 
 (FOO ...)
 \end{example}
-Because of tail recursion, it is not necessarily the case that \code{FOO} directly
-called \code{BAR}.  It may be that \code{FOO} called some other function \code{FOO2}
-which then called \code{BAR} tail-recursively, as in this example:
+Because of tail recursion, it is not necessarily the case that
+\code{FOO} directly called \code{BAR}.  It may be that \code{FOO} called
+some other function \code{FOO2} which then called \code{BAR}
+tail-recursively, as in this example:
 \begin{example}
 (defun foo ()
   ...
@@ -2344,10 +2353,11 @@ which then called \code{BAR} tail-recursively, as in this example:
   ...)
 \end{example}
 
-Usually the elimination of tail-recursive frames makes debugging more pleasant,
-since theses frames are mostly uninformative.  If there is any doubt about how
-one function called another, it can usually be eliminated by finding the source
-location in the calling frame (section \ref{source-locations}.)
+Usually the elimination of tail-recursive frames makes debugging more
+pleasant, since theses frames are mostly uninformative.  If there is any
+doubt about how one function called another, it can usually be
+eliminated by finding the source location in the calling frame (section
+\ref{source-locations}.)
 
 For a more thorough discussion of tail recursion, \pxlref{tail-recursion}.
 
@@ -2360,13 +2370,13 @@ For a more thorough discussion of tail recursion, \pxlref{tail-recursion}.
 \cindex{interrupts}
 \cpsubindex{errors}{run-time}
 
-The debugger operates using special debugging information attached to the
-compiled code.  This debug information tells the debugger what it needs to know
-about the locations in the code where the debugger can be invoked.  If the
-debugger somehow encounters a location not described in the debug information,
-then it is said to be \var{unknown}.  If the code location for a frame is
-unknown, then some variables may be inaccessible, and the source location
-cannot be precisely displayed.
+The debugger operates using special debugging information attached to
+the compiled code.  This debug information tells the debugger what it
+needs to know about the locations in the code where the debugger can be
+invoked.  If the debugger somehow encounters a location not described in
+the debug information, then it is said to be \var{unknown}.  If the code
+location for a frame is unknown, then some variables may be
+inaccessible, and the source location cannot be precisely displayed.
 
 There are three reasons why a code location could be unknown:
 \begin{itemize}
@@ -2379,12 +2389,13 @@ optimization quality.  \xlref{debugger-policy}.
 The debugger was entered because of an interrupt such as \code{^C}.
 
 \item
-A hardware error such as "\code{bus error}" occurred in code that was compiled
-unsafely due to the value of the \code{safety} optimization quality.  \xlref{optimize-declaration}.
+A hardware error such as "\code{bus error}" occurred in code that was
+compiled unsafely due to the value of the \code{safety} optimization
+quality.  \xlref{optimize-declaration}.
 \end{itemize}
 
-In the last two cases, the values of argument variables are accessible, but may
-be incorrect.  \xlref{debug-var-validity} for more details on
+In the last two cases, the values of argument variables are accessible,
+but may be incorrect.  \xlref{debug-var-validity} for more details on
 when variable values are accessible.
 
 It is possible for an interrupt to happen when a function call or return is in
@@ -2392,6 +2403,11 @@ progress.  The debugger may then flame out with some obscure error or insist
 that the bottom of the stack has been reached, when the real problem is that
 the current stack frame can't be located.  If this happens, return from the
 interrupt and try again.
+
+When running interpreted code, all locations should be known.  However,
+an interrupt might catch some subfunction of the interpreter at an
+unknown location.  In this case, you should be able to go up the stack a
+frame or two and reach an interpreted frame which can be debugged.
 
 
 \node Variable Access, Source Location Printing, Stack Frames, The Debugger
@@ -2413,18 +2429,19 @@ source location.  If the scopes of the two variables are not nested, then the
 debugger can resolve the ambiguity by observing that only one variable is
 accessible.
 
-When there are ambiguous variables, the evaluator assigns each one a small
-integer identifier.  The \code{debug:var} function and the "\code{L}" command use
-this identifier to distinguish between ambiguous variables:
+When there are ambiguous variables, the evaluator assigns each one a
+small integer identifier.  The \code{debug:var} function and the
+\code{list-locals} command use this identifier to distinguish between
+ambiguous variables:
 \begin{description}
 
-\item[\key{L} [\var{prefix}]]
-This command prints the name and value of all variables in the current frame
-whose name has the specified \var{prefix}.  \var{prefix} may be a string or a
-symbol.  If no \var{prefix} is given, then all available variables are printed.
-If a variable has a potentially ambiguous name, then the name is printed with a
-"\code{#}\var{identifier}" suffix, where \var{identifier} is the small integer used to
-make the name unique.
+\item[\code{list-locals} \mopt{\var{prefix}}]\hfill\\
+This command prints the name and value of all variables in the current
+frame whose name has the specified \var{prefix}.  \var{prefix} may be a
+string or a symbol.  If no \var{prefix} is given, then all available
+variables are printed.  If a variable has a potentially ambiguous name,
+then the name is printed with a "\code{#}\var{identifier}" suffix, where
+\var{identifier} is the small integer used to make the name unique.
 \end{description}
 
 \defun{var}[debug]{\args{\var{name} \&optional{} \var{identifier}}}
@@ -2433,10 +2450,11 @@ specified \var{name}.  If supplied, \var{identifier} determines which value to
 return when there are ambiguous variables.
 
 When \var{name} is a symbol, it is interpreted as the symbol name of the
-variable, i.e. the package is significant.  If \var{name} is an uninterned symbol
-(gensym), then return the value of the uninterned variable with the same name.
-If \var{name} is a string, \code{debug:var} interprets it as the prefix of a
-variable name, and must unambiguously complete to the name of a valid variable.
+variable, i.e. the package is significant.  If \var{name} is an
+uninterned symbol (gensym), then return the value of the uninterned
+variable with the same name.  If \var{name} is a string,
+\code{debug:var} interprets it as the prefix of a variable name, and
+must unambiguously complete to the name of a valid variable.
 
 This function is useful mainly for accessing the value of uninterned or
 ambiguous variables, since most variables can be evaluated directly.
@@ -2451,7 +2469,7 @@ ambiguous variables, since most variables can be evaluated directly.
 \node Variable Value Availability, Note On Lexical Variable Access, Variable Access, Variable Access
 \subsection{Variable Value Availability}
 \label{debug-var-validity}
-\cindex{availablility of debug variables}
+\cindex{availability of debug variables}
 \cindex{validity of debug variables}
 \cindex{debug optimization quality}
 
@@ -2541,26 +2559,27 @@ One of CMU \clisp{}'s unique capabilities is source level debugging of compiled
 code.  These commands display the source location for the current frame:
 \begin{description}
 
-\item[\code{source} [\var{context}]]
+\item[\code{source} \mopt{\var{context}}]\hfill\\
 This command displays the file that the current frame's function was defined
 from (if it was defined from a file), and then the source form responsible for
 generating the code that the current frame was executing.  If \var{context} is
 specified, then it is an integer specifying the number of enclosing levels of
 list structure to print.
 
-\item[\code{vsource} [\var{context}]]
-This command is identical to \code{source}, except that it uses the global
-values of \code{*print-level*} and \code{*print-length*} instead of the debugger
-printing control variables \code{*debug-print-level*} and
-\code{*debug-print-length*}.
+\item[\code{vsource} \mopt{\var{context}}]\hfill\\
+This command is identical to \code{source}, except that it uses the
+global values of \code{*print-level*} and \code{*print-length*} instead
+of the debugger printing control variables \code{*debug-print-level*}
+and \code{*debug-print-length*}.
 \end{description}
 
-The source form for a location in the code is the innermost list present in the
-original source that encloses the form responsible for generating that code.
-If the actual source form is not a list, then some enclosing list will be
-printed.  For example, if the source form was a reference to the variable
-\code{*some-random-special*}, then the innermost enclosing evaluated form will be
-printed.  Here are some possible enclosing forms:
+The source form for a location in the code is the innermost list present
+in the original source that encloses the form responsible for generating
+that code.  If the actual source form is not a list, then some enclosing
+list will be printed.  For example, if the source form was a reference
+to the variable \code{*some-random-special*}, then the innermost
+enclosing evaluated form will be printed.  Here are some possible
+enclosing forms:
 \begin{example}
 (let ((a *some-random-special*))
   ...)
@@ -2583,7 +2602,7 @@ expanded into that code will be printed.  Suppose the file
 If \code{foo} has called \code{myfun}, and is waiting for it to return, then the
 \code{source} command would print:
 \begin{example}
-File: /usr/me/mystuff.lisp
+; File: /usr/me/mystuff.lisp
 
 (MYMAC)
 \end{example}
@@ -2595,7 +2614,7 @@ If enclosing source is printed by giving an argument to \code{source} or
 whose first element is \code{#:***HERE***}.  In the previous example, 
 \w{\code{source 1}} would print:
 \begin{example}
-File: /usr/me/mystuff.lisp
+; File: /usr/me/mystuff.lisp
 
 (DEFUN FOO ()
   (#:***HERE***
@@ -2620,17 +2639,18 @@ prints by reading them from the original source file.  This is a
 potential problem, since the source file might have moved or changed
 since the time it was compiled.
 
-The source file is opened using the \code{truename} of the source file pathname
-originally given to the compiler.  This is an absolute pathname with all
-logical names and symbolic links expanded.  If the file can't be located using
-this name, then the debugger gives up and signals an error.
+The source file is opened using the \code{truename} of the source file
+pathname originally given to the compiler.  This is an absolute pathname
+with all logical names and symbolic links expanded.  If the file can't
+be located using this name, then the debugger gives up and signals an
+error.
 
 If the source file can be found, but has been modified since the time it was
 compiled, the debugger prints this warning:
 \begin{example}
-File has been modified since compilation:
-  \var{filename}
-Using form offset instead of character position.
+; File has been modified since compilation:
+;   \var{filename}
+; Using form offset instead of character position.
 \end{example}
 where \var{filename} is the name of the source file.  It then proceeds using a
 robust but not foolproof heuristic for locating the source.  This heuristic
@@ -2655,9 +2675,9 @@ noticeably slowed.
 
 Source location printing can also be confused if (after the source was
 compiled) a read-macro you used in the code was redefined to expand into
-something different, or if a read-macro ever returns the same \code{eq} list
-twice.  If you don't define read macros and don't use \code{##} in perverted ways,
-you don't need to worry about this.
+something different, or if a read-macro ever returns the same \code{eq}
+list twice.  If you don't define read macros and don't use \code{##} in
+perverted ways, you don't need to worry about this.
 
 
 \node Source Location Availability,  , How the Source is Found, Source Location Printing
@@ -2668,8 +2688,9 @@ Source location information is only available when the \code{debug}
 optimization quality is at least \code{2}.  If source location information is
 unavailable, the source commands will give an error message.
 
-If source location information is available, but the source location is unknown
-because of an interrupt or unexpected hardware error (\pxlref{unknown-locations}), then the command will print:
+If source location information is available, but the source location is
+unknown because of an interrupt or unexpected hardware error
+(\pxlref{unknown-locations}), then the command will print:
 \begin{example}
 Unknown location: using block start.
 \end{example}
@@ -2784,24 +2805,25 @@ These commands get you out of the debugger.
 
 \begin{description}
 
-\item[\key{q}]
+\item[\code{quit}]
 Throw to top level.
 
-\item[\code{restart} [\var{n}]]
-Invokes the \var{n}th restart case as displayed by the \code{error} command.  If
-\var{n} is not specified, the available restart cases are reported.
+\item[\code{restart} \mopt{\var{n}}]\hfill\\
+Invokes the \var{n}th restart case as displayed by the \code{error}
+command.  If \var{n} is not specified, the available restart cases are
+reported.
 
 \item[\code{go}]
 Calls \code{continue} on the condition given to \code{debug}.  If there is no
 restart case named \var{continue}, then an error is signaled.
 
 \item[\code{abort}]
-Effectively calls \code{abort} on the condition given to \code{debug}.  This is
+Calls \code{abort} on the condition given to \code{debug}.  This is
 useful for popping debug command loop levels or aborting to top level,
 as the case may be.
 
 \begin{ignore}
-(\code{debug:debug-return} \var{expression} [\var{frame}])
+(\code{debug:debug-return} \var{expression} \mopt{\var{frame}})
 
 \item
 From the current or specified frame, return the result of evaluating
@@ -2811,7 +2833,7 @@ called for multiple values.
 \end{description}
 
 
-\node Information Commands, Specials, Exiting Commands, The Debugger
+\node Information Commands, Breakpoint Commands, Exiting Commands, The Debugger
 \section{Information Commands}
 
 Most of these commands print information about the current frame or
@@ -2819,41 +2841,42 @@ function, but a few show general information.
 
 \begin{description}
 
-\item[\key{h}]
+\item[\code{help}, \code{?}]
 Displays a synopsis of debugger commands.
 
 \item[\code{describe}]
 Calls \code{describe} on the current function, displays number of local
 variables, and indicates whether the function is compiled or interpreted.
 
-\item[\key{p}]
+\item[\code{print}]
 Displays the current function call as it would be displayed by moving to
 this frame.
 
-\item[\code{pp}]
+\item[\code{vprint} (or \code{pp}) \mopt{\var{verbosity}}]\hfill\\
 Displays the current function call using \code{*print-level*} and
 \code{*print-length*} instead of \code{*debug-print-level*} and
-\code{*debug-print-length*}.
+\code{*debug-print-length*}.  \var{verbosity} is a small integer
+(default 2) that controls other dimensions of verbosity.
 
 \item[\code{error}]
 Prints the condition given to \code{invoke-debugger} and the active
 proceed cases.
 
-\item[\code{backtrace} [\var{n}]]
+\item[\code{backtrace} \mopt{\var{n}}]\hfill\\
 Displays all the frames from the current to the bottom.  Only shows
 \var{n} frames if specified.  The printing is controlled by
 \code{*debug-print-level*} and \code{*debug-print-length*}.
 
 \begin{ignore}
-(\code{debug:debug-function} [\var{n}])
+(\code{debug:debug-function} \mopt{\var{n}})
 
 \item
 Returns the function from the current or specified frame.
 
-\item[(\code{debug:function-name} [\var{n}])]
+\item[(\code{debug:function-name} \mopt{\var{n}])]
 Returns the function name from the current or specified frame.
 
-\item[(\code{debug:pc} [\var{frame}])]
+\item[(\code{debug:pc} \mopt{\var{frame}})]
 Returns the index of the instruction for the function in the current or
 specified frame.  This is useful in conjunction with \code{disassemble}.
 The pc returned points to the instruction after the one that was fatal.
@@ -2861,119 +2884,228 @@ The pc returned points to the instruction after the one that was fatal.
 \end{description}
 
 
-\node Specials, Function Tracing, Information Commands, The Debugger
-\section{Specials}
-These are the special variables that control the debugger action.
+\node Breakpoint Commands, Function Tracing, Information Commands, The Debugger
+\section{Breakpoint Commands}
 
-\defvar{debug-print-level}[extensions]
-\defvarx{debug-print-length}[extensions]
+\cmucl{} supports setting of breakpoints inside compiled functions and
+stepping of compiled code.  Breakpoints can only be set at at known
+locations (\pxlref{unknown-locations}), so these commands are largely
+useless unless the \code{debug} optimize quality is at least \code{2}
+(\pxlref{debugger-policy}).  These commands manipulate breakpoints:
+\begin{description}
+\item[\code{breakpoint} \var{location} \mstar{\var{option} \var{value}}]
+\hfill\\
+Set a breakpoint in some function.  \var{location} may be an integer
+code location number (as displayed by \code{list-locations}) or a
+keyword.  The keyword can be used to indicate setting a breakpoint at
+the function start (\code{:start}, \code{:s}) or function end
+(\code{:end}, \code{:e}).  The \code{breakpoint} command has
+\code{:condition}, \code{:break}, \code{:print} and \code{:function}
+options which work similarly to the \code{trace} options.
 
-\code{*print-level*} and \code{*print-length*} are bound to these values
-during the execution of some debug commands.  When evaluating
-arbitrary expressions in the debugger, the normal values of
-\code{*print-level*} and \code{*print-length*} are in effect.  These
-variables are initially set to 3 and 5, respectively.
-\enddefvar
+\item[\code{list-locations} (or \code{ll}) \mopt{\var{function}}]\hfill\\
+List all the code locations in the current frame's function, or in
+\var{function} if it is supplied.  The display format is the code
+location number, a colon and then the source form for that location:
+\begin{example}
+3: (1- N)
+\end{example}
+If consecutive locations have the same source, then a numeric range like
+\code{3-5:} will be printed.  For example, a default function call has a
+known location both immediately before and after the call, which would
+result in two code locations with the same source.  The listed function
+becomes the new default function for breakpoint setting (via the
+\code{breakpoint}) command.
+
+\item[\code{list-breakpoints} (or \code{lb})]\hfill\\
+List all currently active breakpoints with their breakpoint number.
+
+\item[\code{delete-breakpoint} (or \code{db}) \mopt{\var{number}}]\hfill\\
+Delete a breakpoint specified by its breakpoint number.  If no number is
+specified, delete all breakpoints.
+
+\item[\code{step}]\hfill\\
+Step to the next possible breakpoint location in the current function.
+This always steps over function calls, instead of stepping into them
+\end{description}
+
+\begin{menu}
+* Breakpoint Example::
+\end{menu}
+
+\node Breakpoint Example,  , Breakpoint Commands, Breakpoint Commands
+\subsection{Breakpoint Example}
+
+Consider this definition of the factorial function:
+\begin{lisp}
+(defun ! (n)
+  (if (zerop n)
+      1
+      (* n (! (1- n)))))
+\end{lisp}
+This debugger session demonstrates the use of breakpoints:
+\begin{example}
+common-lisp-user> (break) ; Invoke debugger
+
+Break
+
+Restarts:
+  0: [CONTINUE] Return from BREAK.
+  1: [ABORT   ] Return to Top-Level.
+
+Debug  (type H for help)
+
+(INTERACTIVE-EVAL (BREAK))
+0] ll #'!
+0: #'(LAMBDA (N) (BLOCK ! (IF # 1 #)))
+1: (ZEROP N)
+2: (* N (! (1- N)))
+3: (1- N)
+4: (! (1- N))
+5: (* N (! (1- N)))
+6: #'(LAMBDA (N) (BLOCK ! (IF # 1 #)))
+0] br 2
+(* N (! (1- N)))
+1: 2 in !
+Added.
+0] q
+
+common-lisp-user> (! 10) ; Call the function
+
+*Breakpoint hit*
+
+Restarts:
+  0: [CONTINUE] Return from BREAK.
+  1: [ABORT   ] Return to Top-Level.
+
+Debug  (type H for help)
+
+(! 10) ; We are now in first call (arg 10) before the multiply
+Source: (* N (! (1- N)))
+3] st
+
+*Step*
+
+(! 10) ; We have finished evaluation of (1- n)
+Source: (1- N)
+3] st
+
+*Breakpoint hit*
+
+Restarts:
+  0: [CONTINUE] Return from BREAK.
+  1: [ABORT   ] Return to Top-Level.
+
+Debug  (type H for help)
+
+(! 9) ; We hit the breakpoint in the recursive call
+Source: (* N (! (1- N)))
+3] 
+\end{example}
+
+
 
 
-\node Function Tracing,  , Specials, The Debugger
+\node Function Tracing, Specials, Breakpoint Commands, The Debugger
 \section{Function Tracing}
 \cindex{tracing}
-\cpsubindex{functions}{tracing}
+\cpsubindex{function}{tracing}
 
 The tracer causes selected functions to print their arguments and
 their results whenever they are called.  Options allow conditional
 printing of the trace information and conditional breakpoints on
-function entry.  Currently, tracing of \code{setf} functions is not
-supported.
+function entry or exit.
 
-\defmac{trace}{ \args{\&rest{} \var{specs}}}
-Invokes tracing on the specified functions, and pushes their names
-onto the global list in \code{*traced-function-list*}.  Each \var{spec}
-is either the name of a function, or the form
+\defmac{trace}{\mstar{option global-value} \mstar{name \mstar{option value}}}
+\code{trace} is a debugging tool that prints information when specified
+functions are called.  In its simplest form:
 \begin{example}
-(\var{function-name}
-   \var{trace-option-name} \var{value}
-   \var{trace-option-name} \var{value}
-   ...)
+(trace \var{name-1} \var{name-2} ...)
 \end{example}
+\code{trace} causes a printout on \vindexed{trace-output} each time that one
+of the named functions is entered or returns (the \var{names} are not
+evaluated.)  Trace output is indented according to the number of pending
+traced calls, and this trace depth is printed at the beginning of each
+line of output.  Printing verbosity of arguments and return values is
+controlled by \vindexed{debug-print-level} and \vindexed{debug-print-length}.
 
-If no \var{specs} are given, \code{trace} returns the list of all
-currently traced functions, \code{*traced-function-list*}.
-
-If a function is traced with no options, then each time it is called,
-a single line containing the name of the function, the arguments to
-the call, and the depth of the call will be printed on the stream
-\code{*trace-output*}. After it returns, another line will be printed which
-contains the depth of the call and all of the return values.  The
-lines are indented to highlight the depth of the calls.
+If no \var{names} or \var{options} are are given, \code{trace} returns the
+list of all currently traced functions, \code{*traced-function-list*}.
 
 Trace options can cause the normal printout to be suppressed, or cause
-extra information to be printed. Each traced function carries its own
-set of options which is independent of the options given for any
-other function.  Every time a function is specified in a call to
-trace, all of the old options are discarded. The available options are:
-
+extra information to be printed.  Each option is a pair of an option
+keyword and a value form.  Options may be interspersed with function
+names.  Options only affect tracing of the function whose name they
+appear immediately after.  Global options are specified before the first
+name, and affect all functions traced by a given use of \code{trace}.
+If an already traced function is traced again, any new options replace the
+old options.  The following options are defined:
 \begin{description}
+\item[\code{:condition} \var{form}, 
+\code{:condition-after} \var{form}, 
+\code{:condition-all} \var{form}]\hfill\\
+If \code{:condition} is specified, then \code{trace} does nothing unless
+\var{form} evaluates to true at the time of the call.  \code{:condition-after}
+is similar, but suppresses the initial printout, and is tested when the
+function returns.  \code{:condition-all} tries both before and after.
 
-\item[\code{:condition}]
-A form to eval before before each call to the
-function.  Trace printout will be suppressed whenever the form
-returns \false{}.
+\item[\code{:wherein} \var{names}]\hfill\\
+If specified, \var{names} is a function name or list of names.  \code{trace}
+does nothing unless a call to one of those functions encloses the call
+to this function (i.e. it would appear in a backtrace.)  Anonymous
+functions have string names like \code{"DEFUN FOO"}.
 
-\item[\code{:break}]
-A form to eval before each call to the function.  If the
-form returns non \false{}, then a breakpoint loop will be entered
-immediately before the function call.
+\item[\code{:break} \var{form}, 
+\code{:break-after} \var{form}, 
+\code{:break-all} \var{form}]\hfill\\
+If specified, and \var{form} evaluates to true, then the debugger is
+invoked at the start of the function, at the end of the function, or
+both, according to the respective option.
 
-\item[\code{:break-after}]
-Like \code{:break}, but the form is evaled and the break loop
-invoked after the function call.
+\item[\code{:print} \var{form}, 
+\code{:print-after} \var{form},
+\code{:print-all} \var{form}]\hfill\\
+In addition to the usual printout, the result of evaluating \var{form} is
+printed at the start of the function, at the end of the function, or
+both, according to the respective option.  Multiple print options cause
+multiple values to be printed.
 
-\item[\code{:break-all}]
-A form which should be used as both the \code{:break} and the
-\code{:break-after} args.
+\item[\code{:function} \var{function-form}]\hfill\\
+This is a not really an option, but rather another way of specifying
+what function to trace.  The \var{function-form} is evaluated immediately,
+and the resulting function is traced.
 
-\item[\code{:wherein}]
-A function name or a list of function names.  Trace
-printout for the traced function will only occur when it is called from
-within a call to one of the \code{:wherein} functions.
+\item[\code{:encapsulate \mgroup{:default | t | nil}}]\hfill\\ 
+In \cmucl, tracing can be done either by temporarily redefining the
+function name (encapsulation), or using breakpoints.  When breakpoints
+are used, the function object itself is destructively modified to cause
+the tracing action.  The advantage of using breakpoints is that tracing
+works even when the function is anonymously called via \code{funcall}.
 
-\item[\code{:print}]
-A list of forms which will be evaluated and printed
-whenever the function is called.  The values are printed one per line,
-and indented to match the other trace output.  This printout will be
-suppressed whenever the normal trace printout is suppressed.
-
-\item[\code{:print-after}]
-Like \code{:print} except that the values of the
-forms are printed whenever the function exits.
-
-\item[\code{:print-all}]
-This is used as the combination of \code{:print} and \code{:print-after}.
+When \code{:encapsulate} is true, tracing is done via encapsulation.
+\code{:default} is the default, and means to use encapsulation for
+interpreted functions and funcallable instances, breakpoints otherwise.
+When encapsulation is used, forms are {\it not} evaluated in the
+function's lexical environment, but \code{debug:arg} can still be used.
 \end{description}
+
+\code{:condition}, \code{:break} and \code{:print} forms are evaluated
+in the lexical environment of the called function; \code{debug:var} and
+\code{debug:arg} can be used.  The \code{-after} and \code{-all} forms
+are evaluated in the null environment.
 \enddefmac
 
 \defmac{untrace}{ \args{\&rest{} \var{function-names}}}
-This macro turns off tracing for the specified functions, and removes their
-names from \code{*traced-function-list*}.  If no \var{function-names} are given,
-then all currently traced functions are untraced.
+This macro turns off tracing for the specified functions, and removes
+their names from \code{*traced-function-list*}.  If no
+\var{function-names} are given, then all currently traced functions are
+untraced.
 \enddefmac
 
 \defvar{traced-function-list}[extensions]
 A list of function names maintained and used by \code{trace},
 \code{untrace}, and \code{untrace-all}.  This list should contain the names
 of all functions currently being traced.
-\enddefvar
-
-\defvar{trace-print-level}[extensions]
-\defvarx{trace-print-length}[extensions]
-These variables control the values of \code{*print-level*} and
-\code{*print-length*} when printing trace output.  The forms printed by
-the \code{:print} options are also affected.  \code{*trace-print-level*}
-and \code{*trace-print-length*} are initially set to \false{}.  When
-null, the global values of \code{*print-level*} and \code{*print-length*}
-are used.
 \enddefvar
 
 \defvar{max-trace-indentation}[extensions]
@@ -3116,15 +3248,30 @@ indenting.  Initially set to 40.
 
 \end{ignore}
 
-\hide{File:/afs/cs.cmu.edu/project/clisp/hackers/ram/docs/cmu-user/compiler.ms}
+
+\node Specials,  , Function Tracing, The Debugger
+\section{Specials}
+These are the special variables that control the debugger action.
 
+\defvar{debug-print-level}[extensions]
+\defvarx{debug-print-length}[extensions]
+
+\code{*print-level*} and \code{*print-length*} are bound to these values
+during the execution of some debug commands.  When evaluating
+arbitrary expressions in the debugger, the normal values of
+\code{*print-level*} and \code{*print-length*} are in effect.  These
+variables are initially set to 3 and 5, respectively.
+\enddefvar
+
+
+\hide{File:/afs/cs.cmu.edu/project/clisp/hackers/ram/docs/cmu-user/compiler.ms}
 
 
 \node The Compiler, Advanced Compiler Use and Efficiency Hints, The Debugger, Top
 \chapter{The Compiler} \hide{ -*- Dictionary: cmu-user -*-}
 
 \begin{menu}
-* The Compiler Introduction::   
+* Compiler Introduction::       
 * Calling the Compiler::        
 * Compilation Units::           
 * Interpreting Error Messages::  
@@ -3134,8 +3281,8 @@ indenting.  Initially set to 40.
 * Open Coding and Inline Expansion::  
 \end{menu}
 
-\node The Compiler Introduction, Calling the Compiler, The Compiler, The Compiler
-\section{The Compiler Introduction}
+\node Compiler Introduction, Calling the Compiler, The Compiler, The Compiler
+\section{Compiler Introduction}
 
 This chapter contains information about the compiler that every \cmucl{} user
 should be familiar with.  Chapter \ref{advanced-compiler} goes into greater
@@ -3172,7 +3319,7 @@ notes, flow analysis, and untagged number representations (see chapter
 
 
 
-\node Calling the Compiler, Compilation Units, The Compiler Introduction, The Compiler
+\node Calling the Compiler, Compilation Units, Compiler Introduction, The Compiler
 \section{Calling the Compiler}
 \cindex{compiling}
 Functions may be compiled using \code{compile}, \code{compile-file}, or 
@@ -3289,7 +3436,7 @@ This function returns the same two values as the last two values of
 
 \node Compilation Units, Interpreting Error Messages, Calling the Compiler, The Compiler
 \section{Compilation Units}
-\cindex{compilation units}
+\cpsubindex{compilation}{units}
 
 \cmucl{} supports the \code{with-compilation-unit} macro added to the language by
 the proposed X3J13 "with-compilation-unit" compiler cleanup.  This provides a
@@ -3405,7 +3552,7 @@ form:
 In the indicated context, the specified declare forms are inserted at
 the head of each definition.  The declare forms for all contexts that
 match are appended together, with earlier declarations getting
-predecence over later ones.  A simple example:
+precedence over later ones.  A simple example:
 \begin{example}
     :context-declarations
     '((:external (declare (optimize (safety 2)))))
@@ -3570,7 +3717,7 @@ responsible for the error.
 \item[\w{\code{--> ROQ PLOQ +}} ]
 This is the \i{processing path} that the compiler used to produce the
 errorful code.  The processing path is a representation of the evaluated forms
-enclosing the actual source that the compiler encoutered when processing the
+enclosing the actual source that the compiler encountered when processing the
 original source.  The path is the first element of each form, or the form
 itself if the form is not a list.  These forms result from the expansion of
 macros or source-to-source transformation done by the compiler.  In this
@@ -3857,8 +4004,8 @@ the unmatched open delimiter.
 
 \node Error Message Parameterization,  , Read Errors, Interpreting Error Messages
 \subsection{Error Message Parameterization}
-\cindex{error message verbosity}
-\cindex{verbosity of error messages}
+\cpsubindex{error messages}{verbosity}
+\cpsubindex{verbosity}{of error messages}
 
 There is some control over the verbosity of error messages.  See also
 \varref{undefined-warning-limit}, \code{*efficiency-note-limit*} and
@@ -3896,7 +4043,7 @@ anonymous functions.
 
 \node Types in Python, Getting Existing Programs to Run, Interpreting Error Messages, The Compiler
 \section{Types in Python}
-\cindex{Types in Python}
+\cpsubindex{types}{in python}
 
 A big difference between \Python{} and all other \llisp{} compilers
 is the approach to type checking and amount of knowledge about types:
@@ -3924,7 +4071,7 @@ See also sections \ref{advanced-type-stuff} and \ref{type-inference}.
 \node Compile Time Type Errors, Precise Type Checking, Types in Python, Types in Python
 \subsection{Compile Time Type Errors}
 \cindex{compile time type errors}
-\cindex{type errors at compile time}
+\cpsubindex{type checking}{at compile time}
 
 If the compiler can prove at compile time that some portion of the program
 cannot be executed without a type error, then it will give a warning at compile
@@ -4120,8 +4267,8 @@ Type-error in MYFUN:
 \node Getting Existing Programs to Run, Compiler Policy, Types in Python, The Compiler
 \section{Getting Existing Programs to Run}
 \cpsubindex{existing programs}{to run}
-\cindex{type system compatibility}
-\cindex{compatibility other Lisps}
+\cpsubindex{types}{portability}
+\cindex{compatibility with other Lisps}
 
 Since \Python{} does much more comprehensive type checking than other Lisp
 compilers, \Python{} will detect type errors in many programs that have been
@@ -4709,7 +4856,7 @@ good job coding, changes will be easy to introduce.
 \node More About Types in Python, Type Inference, Advanced Compiler Introduction, Advanced Compiler Use and Efficiency Hints
 \section{More About Types in Python}
 \label{advanced-type-stuff}
-\cindex{types in Python}
+\cpsubindex{types}{in python}
 
 This section goes into more detail describing what types and declarations are
 recognized by \python.  The area where \python{} differs most radically from
@@ -4794,7 +4941,7 @@ section \ref{array-types} for array types.
 
 \node Canonicalization, Member Types, More Types Meaningful, More About Types in Python
 \subsection{Canonicalization}
-\cindex{type equivalence}
+\cpsubindex{types}{equivalence}
 \cindex{canonicalization of types}
 \cindex{equivalence of types}
 
@@ -4901,7 +5048,7 @@ return, then (in safe compilation policies) a
 \node Function Types, The Values Declaration, The Empty Type, More About Types in Python
 \subsection{Function Types}
 \label{function-types}
-\cindex{function types}
+\cpsubindex{function}{types}
 \cpsubindex{types}{function}
 
 \findexed{function} types are understood in the restrictive sense, specifying:
@@ -5248,7 +5395,7 @@ variable's current value, as in: \code{(setq x (1+ x))}
 
 \node Local Function Type Inference, Global Function Type Inference, Variable Type Inference, Type Inference
 \subsection{Local Function Type Inference}
-\cindex{local call type inference}
+\cpsubindex{local call}{type inference}
 
 The types of arguments to local functions are inferred in the same was as any
 other local variable; the type is the union of the argument types across
@@ -5276,7 +5423,7 @@ recursion mentioned in section \ref{local-call-return}.
 \node Global Function Type Inference, Operation Specific Type Inference, Local Function Type Inference, Type Inference
 \subsection{Global Function Type Inference}
 \label{function-type-inference}
-\cindex{function type inference}
+\cpsubindex{function}{type inference}
 
 As described in section \ref{function-types}, a global function type
 (\tindexed{ftype}) declaration places implicit type assertions on the call arguments,
@@ -5326,7 +5473,7 @@ false, only information from \code{ftype} proclamations will be used.
 \label{operation-type-inference}
 \cindex{operation specific type inference}
 \cindex{arithmetic type inference}
-\cindex{numeric type inference}
+\cpsubindex{numeric}{type inference}
 
 Many of the standard \clisp{} functions have special type inference procedures
 that determine the result type as a function of the argument types.  For
@@ -5440,7 +5587,7 @@ is only done after the list-specific \code{car} operation.
 \node Type Check Optimization,  , Dynamic Type Inference, Type Inference
 \subsection{Type Check Optimization}
 \label{type-check-optimization}
-\cindex{type check optimization}
+\cpsubindex{type checking}{optimization}
 \cpsubindex{optimization}{type check}
 
 Python backs up its support for precise type checking by minimizing the cost of
@@ -6328,7 +6475,7 @@ the standard recursive definition of factorial can be written like this:
 \subsection{Return Values}
 \label{local-call-return}
 \cpsubindex{return values}{local call}
-\cindex{local call return values}
+\cpsubindex{local call}{return values}
 
 One of the more subtle costs of full call comes from allowing arbitrary numbers
 of return values.  This overhead can be avoided in local calls to functions
@@ -6791,7 +6938,7 @@ effect at the time of the call.
 \label{object-representation}
 \cindex{object representation}
 \cpsubindex{representation}{object}
-\cindex{efficiency of objects}
+\cpsubindex{efficiency}{of objects}
 
 A somewhat subtle aspect of writing efficient \clisp{} programs is choosing the
 correct data structures so that the underlying objects can be implemented
@@ -6822,7 +6969,7 @@ grown since Lisp 1.5 \dash{} new data types supersede lists for many purposes.
 
 \node Structures, Arrays, Think Before You Use a List, Object Representation
 \subsection{Structures}
-\cpsubindex{structures}{efficiency of}
+\cpsubindex{structure types}{efficiency of}
 One of the best ways of building complex data structures is to define
 appropriate structure types using \findexed{defstruct}.  In \python, access of
 structure slots is always at least as fast as list or vector access, and is
@@ -6971,7 +7118,7 @@ and also adds a modicum of typing and abstraction.  \xlref{advanced-type-stuff} 
 \node Numbers, General Efficiency Hints, Object Representation, Advanced Compiler Use and Efficiency Hints
 \section{Numbers}
 \label{numeric-types}
-\cindex{numeric types}
+\cpsubindex{numeric}{types}
 \cpsubindex{types}{numeric}
 
 Numbers are interesting because numbers are one of the few \llisp{} data types
@@ -7111,7 +7258,7 @@ call (\pxlref{number-local-call}).
 \label{ND-variables}
 \cpsubindex{variables}{non-descriptor}
 \cpsubindex{type declarations}{variable}
-\cindex{efficiency of numeric variables}
+\cpsubindex{efficiency}{of numeric variables}
 
 In order to use a non-descriptor representation for a variable or expression
 intermediate value, the compiler must be able to prove that the value is always
@@ -7156,7 +7303,7 @@ needn't continuously worry about the details of representation selection (\pxlre
 \label{generic-arithmetic}
 \cindex{generic arithmetic}
 \cpsubindex{arithmetic}{generic}
-\cindex{numeric operation efficiency}
+\cpsubindex{numeric}{operation efficiency}
 
 In \clisp, arithmetic operations are \var{generic}.\footnote{As Steele notes in CLTL
 II, this is a generic conception of generic, and is not to be confused with the
@@ -7489,7 +7636,7 @@ faster make interpreted code run slower.
 \cindex{consing}
 \cindex{garbage collection}
 \cindex{memory allocation}
-\cindex{efficient memory use}
+\cpsubindex{efficiency}{of memory use}
 
 \label{consing} Consing is another name for allocation of storage, as done by
 the \code{cons} function (hence its name.)  \code{cons} is by no means the only
@@ -7532,7 +7679,7 @@ consing in \python.
 \node Complex Argument Syntax, Mapping and Iteration, Avoid Unnecessary Consing, General Efficiency Hints
 \subsection{Complex Argument Syntax}
 \cpsubindex{argument syntax}{efficiency}
-\cindex{efficiency of argument syntax}
+\cpsubindex{efficiency}{of argument syntax}
 \cindex{keyword argument efficiency}
 \cindex{rest argument efficiency}
 
@@ -7731,7 +7878,7 @@ changing the definition of \code{eff-note}:
 
 \node Type Uncertainty, Efficiency Notes and Type Checking, Efficiency Notes, Efficiency Notes
 \subsection{Type Uncertainty}
-\cindex{type uncertainty}
+\cpsubindex{types}{uncertainty}
 \cindex{uncertainty of types}
 
 The main cause of inefficiency is the compiler's lack of adequate information
@@ -7759,8 +7906,8 @@ even though a vector access is more efficient than indexing a list.
 
 \node Efficiency Notes and Type Checking, Representation Efficiency Notes, Type Uncertainty, Efficiency Notes
 \subsection{Efficiency Notes and Type Checking}
-\cindex{type checking and efficiency}
-\cindex{efficient type checking}
+\cpsubindex{type checking}{efficiency of}
+\cpsubindex{efficiency}{of type checking}
 \cpsubindex{optimization}{type check}
 
 It is important that the \code{eff-note} example above used
@@ -7799,7 +7946,7 @@ always \var{are} \w{\code{(unsigned-byte 18)}} integers.
 \subsection{Representation Efficiency Notes}
 \label{representation-eff-note}
 \cindex{representation efficiency notes}
-\cindex{efficiency notes for representation}
+\cpsubindex{efficiency notes}{for representation}
 \cindex{object representation efficiency notes}
 \cindex{stack numbers}
 \cindex{non-descriptor representations}
@@ -7903,8 +8050,8 @@ destination, in which case the source context is the only clue.
 
 \node Verbosity Control,  , Representation Efficiency Notes, Efficiency Notes
 \subsection{Verbosity Control}
-\cindex{verbosity of efficiency notes}
-\cindex{efficiency note verbosity}
+\cpsubindex{verbosity}{of efficiency notes}
+\cpsubindex{efficiency notes}{verbosity}
 
 These variables control the verbosity of efficiency notes:
 
@@ -8363,7 +8510,9 @@ manuals and perform the translation from barbarous tongues.
 
 \node Type Translations, System Area Pointers, Lisp Equivalents for C Routines, UNIX Interface
 \section{Type Translations}
-\cindex{aliens}\cindex{types}
+\cindex{aliens}
+\cpsubindex{types}{alien}
+\cpsubindex{types}{foreign language}
 
 Lisp data types have very different representations from those used by
 conventional languages such as C.  Since the system interfaces are
@@ -9173,7 +9322,7 @@ same display connection.
 (defstruct (input-box (:print-function print-input-box)
                       (:constructor make-input-box (display window)))
   "Our program knows about input-boxes, and it doesn't care how they
-   are inplemented."
+   are implemented."
   display        ; The CLX display on which my input-box is displayed.
   window)        ; The CLX window in which the user types.
 ;;;
@@ -9359,16 +9508,23 @@ must be shared.
 
 \item The Lisp program can directly manipulate foreign objects through the
 use of extensions to the Lisp language.  Most Lisp systems make use of
-this approach, but the language for describing types and expressing accesses is
-often not powerful enough for complex objects to be easily manipulated.
+this approach, but the language for describing types and expressing
+accesses is often not powerful enough for complex objects to be easily
+manipulated.
 \end{itemize}
 \cmucl{} relies primarily on the automatic conversion and direct manipulation
-approaches --- glue code is usually not necessary.  Any foreign objects that
-can't automatically be converted into Lisp values are represented by
-objects of type \code{alien-value}.  Since Lisp is a dynamically typed
-language, even foreign objects must have a run-time type; this type information
-is provided by encapsulating the raw pointer to the foreign data within an
+approaches: Aliens of simple scalar types are automatically converted,
+while complex types are directly manipulated in their foreign
+representation.  Any foreign objects that can't automatically be
+converted into Lisp values are represented by objects of type
+\code{alien-value}.  Since Lisp is a dynamically typed language, even
+foreign objects must have a run-time type; this type information is
+provided by encapsulating the raw pointer to the foreign data within an
 \code{alien-value} object.
+
+The Alien type language and operations are most similar to those of the
+C language, but Aliens can also be used when communicating with most
+other languages that can be linked with C.
 
 
 \node Alien Types, Alien Operations, Introduction to Aliens, Alien Objects
@@ -9454,6 +9610,7 @@ Currently, the only way to detect a null pointer is:
 \begin{lisp}
 (zerop (sap-int (alien-sap \var{ptr})))
 \end{lisp}
+\xlref{system-area-pointers}
 \enddeftp
 
 \deftp{Alien type}{array}{\var{type} \mstar{\var{dimension}}} 
@@ -9608,10 +9765,10 @@ be set with \code{setf} to assign a new value.
 \defun{slot}[alien]{\var{struct-or-union} \var{slot-name}}
 This function extracts the value of slot \var{slot-name} from the an Alien
 \code{struct} or \code{union}.  If \var{struct-or-union} is a pointer to a
-structure or union, then it is automatically dereferenced.  This can be set
-with \code{setf} to assign a new value.  Note that \var{slot-name} is evaluated,
-and need not be a compile-time constant (but only constant slot accesses are
-open-coded.)
+structure or union, then it is automatically dereferenced.  This can be
+set with \code{setf} to assign a new value.  Note that \var{slot-name}
+is evaluated, and need not be a compile-time constant (but only constant
+slot accesses are efficiently compiled.)
 \enddefun
 
 \node Alien Coercion Operations, Alien Dynamic Allocation, Alien Access Operations, Alien Operations
@@ -9651,14 +9808,16 @@ can call \code{free} on the result of \code{make-alien}, and Lisp code can
 call \code{free-alien} on objects allocated by foreign code.
 
 \defmac{make-alien}[alien]{\var{type} \mopt{\var{size}}}
-This macro returns a dynamically allocated Alien of the specified \var{type}
-(which is not evaluated.)  If supplied, \var{size} is an expression to evaluate
-to compute the size of the allocated object.  There are two major cases:
+This macro returns a dynamically allocated Alien of the specified
+\var{type} (which is not evaluated.)  The allocated memory is not
+initialized, and may contain arbitrary junk.  If supplied, \var{size} is
+an expression to evaluate to compute the size of the allocated object.
+There are two major cases:
 \begin{itemize}
-\item When \var{type} is an array type, an array of that type is allocated and
-a \var{pointer} to it is returned.  Note that you must use \code{deref} to
-change the result to an array before you can use \code{deref} to read or write
-elements:
+\item When \var{type} is an array type, an array of that type is
+allocated and a \var{pointer} to it is returned.  Note that you must use
+\code{deref} to change the result to an array before you can use
+\code{deref} to read or write elements:
 \begin{lisp}
 (defvar *foo* (make-alien (array char 10)))
 
@@ -9736,7 +9895,8 @@ underscores with hyphens.
 \item Conversely, Lisp names are converted to Alien names by lowercasing and
 replacing hyphens with underscores. 
 
-\item Both names may be specified by using a list of the form:
+\item Both the Lisp symbol and Alien string names may be separately
+specified by using a list of the form:
 \begin{lisp}
 (\var{lisp-symbol} \var{alien-string})
 \end{lisp}
@@ -9910,7 +10070,7 @@ The type of \var{alien-function} must be \code{(alien (function ...))} or
 \code{(alien (* (function ...)))}, \xlref{alien-function-types}.  The function
 type is used to determine how to call the function (as through it was declared
 with a prototype.)  The type need not be known at compile time, but only
-known-type calls are open coded.  Limitations:
+known-type calls are efficiently compiled.  Limitations:
 \begin{itemize}
 \item Structure type return values are not implemented.
 \item Passing of structures by value is not implemented.
@@ -10543,7 +10703,7 @@ and returns that object.
 \subsection{Making Your Own Wires}
 You can create wires manually in addition to the \code{remote} package's
 interface creating them for you.  To create a wire, you need a Unix \i{file
-descriptor}.  If you are unfamiliar with Unix file descriptors, see secton 2 of
+descriptor}.  If you are unfamiliar with Unix file descriptors, see section 2 of
 the Unix manual pages.
 
 \defun{make-wire}[wire]{\args{\var{descriptor}}}
@@ -10563,7 +10723,7 @@ This function returns the file descriptor used by the \var{wire}.
 \node Out-Of-Band Data,  , The WIRE Package, Interprocess Communication under LISP
 \section{Out-Of-Band Data}
 
-The TCP/IP protocol allows users to send data asyncronusly, otherwise
+The TCP/IP protocol allows users to send data asynchronously, otherwise
 known as \var{out-of-band} data.  When using this feature, the operating
 system interrupts the receiving process if this process has chosen to be
 notified about out-of-band data.  The receiver can grab this input
@@ -10619,15 +10779,15 @@ takes either type, but when it specifically names the argument
 unknown code-location.
 
 \begin{menu}
-* DI Exceptional Conditions::
-* Debug-variables::
-* Frames::
-* Debug-functions::
-* Debug-blocks::
-* Breakpoints::
-* Code-locations::
-* Debug-sources::
-* Source Translation Utilities::
+* DI Exceptional Conditions::   
+* Debug-variables::             
+* Frames::                      
+* Debug-functions::             
+* Debug-blocks::                
+* Breakpoints::                 
+* Code-locations::              
+* Debug-sources::               
+* Source Translation Utilities::  
 \end{menu}
 
 
@@ -10650,8 +10810,8 @@ debugging conditions are not errors since it is no fault of the
 programmers that the conditions occur.
 
 \begin{menu}
-* Debug-conditions::
-* Debug-errors::
+* Debug-conditions::            
+* Debug-errors::                
 \end{menu}
 
 \node Debug-conditions, Debug-errors, DI Exceptional Conditions, DI Exceptional Conditions
@@ -10966,7 +11126,7 @@ possibly \var{debug-function} only knows about its arguments.
 
 \defun{ambiguous-debug-variables}{debug-function name-prefix-string}
 This function returns a list of debug-variables in \var{debug-function} whose
-names contain \var{name-prefix-string} as an intial substring.  The result of
+names contain \var{name-prefix-string} as an initial substring.  The result of
 this function is limited to the availability of variable information in
 \var{debug-function}; for example, possibly \var{debug-function} only knows
 about its arguments.
