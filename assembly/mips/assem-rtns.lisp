@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.5 1990/04/24 03:14:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.6 1990/04/26 22:25:27 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -114,3 +114,40 @@
   (inst li ndescr (make-fixup 'unwind :assembly-routine))
   (inst j ndescr)
   (inst nop))
+
+
+
+
+;;;; Byte-blt
+
+(define-assembly-routine (byte-blt (:arg src :sc sap-reg)
+				   (:arg src-offset :sc any-reg)
+				   (:arg dst :sc sap-reg)
+				   (:arg dst-offset :sc any-reg)
+				   (:arg dst-end :sc any-reg)
+				   (:temp temp :sc non-descriptor-reg))
+
+  ;; If there is nothing to do, don't do it.
+  (inst beq dst-offset dst-end done)
+
+  ;; Fix up the src and dst offsets.
+
+  (inst sra temp src-offset 2)
+  (inst addu src temp)
+  (inst sra temp dst-offset 2)
+  (inst addu dst temp)
+
+  ;; The loop
+
+  loop
+
+  (inst lbu temp src)
+  (inst addu src 1)
+  (inst sb temp dst)
+  (inst addu dst-offset (fixnum 1))
+  (inst bne dst-offset dst-end loop)
+  (inst addu dst 1)
+  
+  done
+
+  )
