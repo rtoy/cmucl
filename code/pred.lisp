@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.52 2000/05/02 04:44:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.53 2000/05/14 03:58:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -423,6 +423,21 @@
 	      (equalp (cdr x) (cdr y))))
 	((pathnamep x)
 	 (and (pathnamep y) (pathname= x y)))
+	((hash-table-p x)
+	 (and (hash-table-p y)
+	      (eql (hash-table-count x) (hash-table-count y))
+	      (eql (hash-table-test x) (hash-table-test y))
+	      (with-hash-table-iterator (next x)
+		(loop
+		 (multiple-value-bind (more x-key x-value)
+		     (next)
+		   (cond (more
+			  (multiple-value-bind (y-value foundp)
+			      (gethash x-key y)
+			    (unless (and foundp (equalp x-value y-value))
+			      (return nil))))
+			 (t
+			  (return t))))))))
 	((%instancep x)
 	 (let* ((layout-x (%instance-layout x))
 		(len (layout-length layout-x)))
