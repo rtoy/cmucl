@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.12 1990/04/25 23:53:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.13 1990/04/26 20:09:27 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -33,7 +33,8 @@
   (nuke "STRUCTURE-TYPE" "XP")
   (nuke "CONCAT-PNAMES" "LISP")
   (nuke "ONCE-ONLY" "COMPILER")
-  (nuke "CONSTANT" "COMPILER"))
+  (nuke "CONSTANT" "COMPILER")
+  (nuke "SAP+" "LISP"))
 
 (labels
     ((lisp->system (name)
@@ -54,8 +55,7 @@
   (lisp->system "MAKE-CT-A-VAL")
   (lisp->system "NATURALIZE-BOOLEAN")
   (lisp->system "NATURALIZE-INTEGER")
-  (lisp->system "SAP-REF-SAP")
-  (lisp->system "SAP+"))
+  (lisp->system "SAP-REF-SAP"))
 
 (let ((symbol (find-symbol "CHECK=" (find-package "COMPILER"))))
   (when symbol (import symbol (find-package "SYSTEM"))))
@@ -504,8 +504,8 @@
 	  define-pseudo-instruction define-random-resources
 	  define-register-file dump-segment emit-code-vector emit-label
 	  finalize-segment fixup fixup-flavor fixup-name fixup-offset
-	  fixup-p gen-label insert-segment inst label label-position
-	  make-fixup make-segment))
+	  fixup-p gen-label insert-segment inst label label-id label-position
+	  make-fixup make-segment nuke-segment))
 
 
 (in-package "EVAL")
