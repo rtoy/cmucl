@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.4 1990/02/03 13:06:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.5 1990/02/03 17:04:45 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -111,7 +111,16 @@
 (define-storage-class random-immediate 17 immediate-constant)
 
 
-;;;;
+;;;; Interfaces for stack sizes.
+
+(defun current-frame-size ()
+  (* word-bytes
+     (finite-sb-current-size
+      (sc-sb (svref *sc-numbers* (sc-number-or-lose 'control-stack))))))
+
+
+
+;;;; Move costs.
 
 ;;; ### this needs work
 
@@ -208,7 +217,7 @@
 |#
 
 
-;;;; 
+;;;; Primitive-type-of and friends.
 
 ;;; Primitive-Type-Of  --  Interface
 ;;;
