@@ -322,6 +322,9 @@
     (when *compiler-trace-output*
       (describe-component component *compiler-trace-output*))
     
+    (when *collect-dynamic-statistics*
+      (setup-dynamic-count-info component))
+
     (maybe-mumble "Code ")
     (let ((length (generate-code component)))
       
