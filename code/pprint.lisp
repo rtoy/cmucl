@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.7 1992/01/16 19:11:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.8 1992/01/24 04:34:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1132,7 +1132,7 @@
       (declare (ignore end))
       (labels ((output-guts (stream index dimensions)
 		 (if (null dimensions)
-		     (output-object (svref data index) stream)
+		     (output-object (aref data index) stream)
 		     (pprint-logical-block
 			 (stream nil :prefix "(" :suffix ")")
 		       (let ((dim (car dimensions)))
