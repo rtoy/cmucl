@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.76 2003/08/05 16:31:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.77 2004/01/09 04:11:07 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -961,7 +961,8 @@ optionally keeping some of the most recent old versions."
 	(pathname (merge-pathnames pathname
 				   (make-pathname :name :wild
 						  :type :wild
-						  :version :wild)
+						  :version :wild
+						  :defaults *default-pathname-defaults*)
 				   :wild))
       (enumerate-matches (name pathname nil :follow-links follow-links)
 	(when (or all
