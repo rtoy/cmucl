@@ -289,8 +289,10 @@
 		      val (pop tail))
 		(push ``(,',key ,,(make-initfunction val) ,',val) canonical))
 	  `(':direct-default-initargs (list ,@(nreverse canonical))))))
+    (:documentation
+      `(',(car option) ',(cadr option)))
     (otherwise
-      `(',(car option) ',(cdr option)))))
+     `(',(car option) ',(cdr option)))))
 
 
 ;;;
