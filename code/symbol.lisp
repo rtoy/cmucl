@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.9 1992/02/24 01:46:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.10 1992/03/02 17:22:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,15 +48,15 @@
   "VARIABLE must evaluate to a symbol.  This symbol's special value cell is
   set to the specified new value."
   (declare (type symbol variable))
-  (etypecase variable
-    (null
-     (error "Nilhil ex nilhil (Can't set NIL)."))
-    ((member t)
-     (error "Can't set T."))
-    (keyword
-     (error "Can't set keywords."))
-    (symbol
-     (%set-symbol-value variable new-value))))
+  (cond ((null variable)
+	 (error "Nihil ex nihil, can't set NIL."))
+	((eq variable t)
+	 (error "Veritas aeterna, can't set T."))
+	((and (boundp '*keyword-package*)
+	      (keywordp variable))
+	 (error "Can't set keywords."))
+	(t
+	 (%set-symbol-value variable new-value))))
 
 (defun %set-symbol-value (symbol new-value)
   (%set-symbol-value symbol new-value))
