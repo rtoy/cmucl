@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.39 1997/10/09 05:56:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.40 1997/10/15 17:01:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1109,112 +1109,41 @@
 ) ;end progn
 	   
 
-;;;; Here are the optimizers for sin, cos, and tan.  While computing
-;;;; the bounds for these functions is easy, I'm not sure about the
-;;;; reliability of these functions.  Mainly, these functions do a
-;;;; range reduction which may not be exactly the same as done in the
-;;;; trig functions so that roundoff may signficantly affect the
-;;;; limits returned.
-;;;;
-;;;; Thus, if x is (double-float 1d0 #.pi), the sin optimizer would
-;;;; return (double-float 1.2246467991473534d-16
-;;;; 0.8414709848078965d0), which is close to but not the same as
-;;;; (double-float 0d0 0.8414709848078965d0), which is closer to the
-;;;; truth.
-;;;;
-;;;; Proceed at your own risk here by adding propagate-trig-fun to
-;;;; your *features*.
+;;; Here are simple optimizers for sin, cos, and tan.  They do not
+;;; produce a minimal range for the result; the result is the widest
+;;; possible answer.  This gets around the problem of doing range
+;;; reduction correctly but still provides useful results when the
+;;; inputs are union types.
+;;;
+;;; However, there appears to be a harmless bug somewhere.  The result
+;;; type of (sin z) where z is complex is (complex (float -1.0 1.0)).
+;;; This is wrong, but it seems the compiler doesn't produce a
+;;; type-check to see if the elements of the complex are really (float
+;;; -1.0 1.0).
 
-#+(and propagate-fun-type propagate-trig-fun)
+#+progagate-fun-types
 (progn
-(defoptimizer (tan derive-type) ((num))
-  (let ((type (continuation-type num)))
-    (when (numeric-type-real-p type)
-      (let ((xl (numeric-type-low type))
-	    (xh (numeric-type-high type)))
-	(cond ((and xl xh
-		    (<= (- (bound-value xh) (bound-value xl)) pi))
-	       ;; We have a bounded input range and the range covers
-	       ;; no more than one period.  We can compute bounds now.
-	       ;; We reduce the argument range to a single period.
-	       (multiple-value-bind (npi x-lo)
-		   (truncate (bound-value xl) pi)
-		 (let* ((x-hi (- (bound-value xh) (* npi pi))))
-		   ;; If pi/2 is in the input range, the domain is the
-		   ;; whole real line.
-		   (format t "x-lo, x-hi = ~s ~s~%" x-lo x-hi)
-		   (if (<= x-lo #.(* 0.5d0 pi) x-hi)
-		       (make-numeric-type
-			:class 'float
-			:format (elfun-float-format (numeric-type-format type))
-			:complexp :real
-			:low nil
-			:high nil)
-		       (make-numeric-type
-			:class 'float
-			:format (elfun-float-format (numeric-type-format type))
-			:complexp :real
-			:low (set-bound (tan x-lo) (consp x-lo))
-			:high (set-bound (tan x-hi) (consp x-hi)))))))
-	      (t
-	       ;; The range covers more than one period, so the answer
-	       ;; is obvious.
-	       (make-numeric-type
-		:class 'float
-		:format (elfun-float-format (numeric-type-format type))
-		:complexp :real
-		:low nil
-		:high nil)))))))
-
-
-(defun trig-limits (num fun bound-one bound-minus-one)
-  (let ((type (continuation-type num)))
-    (when (numeric-type-real-p type)
-      (let ((two-pi #.(* 2 pi))
-	    (xl (numeric-type-low type))
-	    (xh (numeric-type-high type)))
-	(cond ((and xl xh
-		    (<= (- (bound-value xh) (bound-value xl)) #.(* 2 pi)))
-	       ;; We have a bounded input range and the range covers
-	       ;; no more than one period.  We can compute bounds now.
-	       ;; We reduce the argument range to a single period.
-	       (multiple-value-bind (nperiods x-lo)
-		   (ftruncate (bound-value xl) two-pi)
-		 (let* ((x-hi (- (bound-value xh) (* nperiods two-pi)))
-			(bound-list (list (set-bound (funcall fun x-lo)
-						     (consp xl))
-					  (set-bound (funcall fun x-hi)
-						     (consp xh)))))
-		   ;; Add the upper and lower values for bounds on the
-		   ;; function if the range covers the corresponding
-		   ;; points.
-		   (when (<= x-lo bound-one x-hi)
-		     (push 1 bound-list))
-		   (when (<= x-lo bound-minus-one x-hi)
-		     (push -1 bound-list))
-		   (make-numeric-type :class 'float
-				      :format (elfun-float-format
-					       (numeric-type-format type))
-				      :complexp :real
-				      :low (min-bound-list bound-list)
-				      :high (max-bound-list bound-list)))))
-	      (t
-	       ;; The range covers more than one period,
-	       ;; so the answer is obvious.
-	       (make-numeric-type :class 'float
-				  :format (elfun-float-format
-					   (numeric-type-format type))
-				  :complexp :real
-				  :low nil
-				  :high nil)))))))
-
 (defoptimizer (sin derive-type) ((num))
-  (trig-limits num #'sin #.(/ pi 2) #.(* 1.5d0 pi)))
-
+  (elfun-derive-type-union
+   (continuation-type num)
+   (constantly t)
+   #'(lambda (lo hi)
+       (declare (ignore lo hi))
+       (values -1d0 1d0))))
+       
 (defoptimizer (cos derive-type) ((num))
-  (trig-limits num #'cos 0 pi))
-	     
-) ; end progn
+  (elfun-derive-type-union
+   (continuation-type num)
+   (constantly t)
+   #'(lambda (lo hi)
+       (declare (ignore lo hi))
+       (values -1d0 1d0))))
 
-
-
+(defoptimizer (tan derive-type) ((num))
+  (elfun-derive-type-union
+   (continuation-type num)
+   (constantly t)
+   #'(lambda (lo hi)
+       (declare (ignore lo hi))
+       (values nil nil))))
+)					; end progn
