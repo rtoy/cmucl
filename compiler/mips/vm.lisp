@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.11 1990/02/25 18:35:05 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.12 1990/02/26 22:55:51 ch Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -54,8 +54,8 @@
   (interior-reg registers
    :locations (1))
 
-  ;; Unboxed string-chars
-  (string-char-reg registers
+  ;; Unboxed base-characters
+  (base-character-reg registers
    :locations (2 3 4 5 6 7))
 
   ;; Unboxed SAP's (arbitrary pointers into address space)
@@ -68,8 +68,8 @@
   ;; Stack for non-descriptor objects (not scanned by GC)
   (number-stack number-stack)
 
-  ;; Unboxed string-char stack
-  (string-char-stack number-stack)
+  ;; Unboxed base-character stack
+  (base-character-stack number-stack)
 
   ;; Unboxed SAP stack
   (sap-stack number-stack)
@@ -101,8 +101,8 @@
   ;; Immediate null/nil.
   (null immediate-constant)
 
-  ;; Immediate unboxed string-chars.
-  (immediate-string-char immediate-constant)
+  ;; Immediate unboxed base-characters.
+  (immediate-base-character immediate-constant)
 
   ;; Immediate unboxed SAP's.
   (immediate-sap immediate-constant)
@@ -124,35 +124,35 @@
 
 ;;;; Move costs.
 
-;;; ### this needs work
+;;; ### This needs work.
 
 ;;;
 ;;; Move costs for operand loading and storing
 (define-move-costs
   ((any-reg descriptor-reg non-descriptor-reg)
    (1 any-reg descriptor-reg non-descriptor-reg)
-   (2 string-char-reg sap-reg)
+   (2 base-character-reg sap-reg)
    (5 control-stack number-stack))
 
   ((control-stack number-stack constant)
    (5 any-reg descriptor-reg non-descriptor-reg)
-   (6 string-char-reg sap-reg))
+   (6 base-character-reg sap-reg))
 
   ((immediate zero null random-immediate)
    (1 any-reg descriptor-reg non-descriptor-reg))
 
-  ((immediate-string-char)
-   (1 string-char-reg)
+  ((immediate-base-character)
+   (1 base-character-reg)
    (2 any-reg descriptor-reg non-descriptor-reg))
 
   ((immediate-sap)
    (1 sap-reg)
    (2 any-reg descriptor-reg non-descriptor-reg))
 
-  ((string-char-reg)
-   (1 string-char-reg)
+  ((base-character-reg)
+   (1 base-character-reg)
    (2 any-reg descriptor-reg non-descriptor-reg)
-   (5 string-char-stack)
+   (5 base-character-stack)
    (6 control-stack number-stack))
 
   ((sap-reg)
@@ -161,8 +161,8 @@
    (5 sap-stack)
    (6 control-stack number-stack))
 
-  ((string-char-stack)
-   (5 string-char-reg))
+  ((base-character-stack)
+   (5 base-character-reg))
 
   ((sap-stack)
    (5 sap-reg)))
@@ -171,7 +171,7 @@
 ;;; SCs which must saved on a function call.
 (define-save-scs
   (control-stack any-reg descriptor-reg)
-  (string-char-stack string-char-reg)
+  (base-character-stack base-character-reg)
   (sap-stack sap-reg))
 
 
@@ -182,14 +182,13 @@
 
 ;;; 
 (def-primitive-type fixnum (any-reg control-stack))
-;;; ### what about character?
-(def-primitive-type string-char (string-char-reg any-reg
-						 string-char-stack
-						 control-stack))
+
+(def-primitive-type base-character (base-character-reg any-reg
+						       base-character-stack
+						       control-stack))
 
 ;;; 
 (def-primitive-type function (descriptor-reg control-stack))
-;;; ### what about structure?
 (def-primitive-type list (descriptor-reg control-stack))
 
 ;;;
@@ -210,6 +209,8 @@
 (def-primitive-type simple-array-unsigned-byte-32 (descriptor-reg control-stack))
 (def-primitive-type simple-array-single-float (descriptor-reg control-stack))
 (def-primitive-type simple-array-double-float (descriptor-reg control-stack))
+
+(def-primitive-type sap (sap-reg sap-stack))
 
 (def-primitive-type random (non-descriptor-reg))
 (def-primitive-type interior (interior-reg))
@@ -238,7 +239,7 @@
 
 ;;; 
 (defvar *simple-array-primitive-types*
-  '((string-char . simple-string)
+  '((base-character . simple-string)
     (bit . simple-bit-vector)
     ((unsigned-byte 2) . simple-array-unsigned-byte-2)
     ((unsigned-byte 4) . simple-array-unsigned-byte-4)
@@ -308,12 +309,14 @@
 	     nil))
     (named-type
      (case (named-type-name type)
-       ((t bignum ratio complex string-char function)
+       ((t bignum ratio complex function)
 	(values (primitive-type-or-lose (named-type-name type)) t))
+       (string-char
+	(values (primitive-type-or-lose 'base-character) t))
+       (standard-char
+	(values (primitive-type-or-lose 'base-character) nil))
        (cons
 	(values (primitive-type-or-lose 'list) nil))
-       (standard-char
-	(values (primitive-type-or-lose 'string-char) nil))
        (t
 	(values *any-primitive-type* nil))))
     (ctype
@@ -443,7 +446,7 @@
      ;;
      ;; ### hack around bug in (typep x 'string-char)
      (if (and (characterp value) (string-char-p value))
-	 (sc-number-or-lose 'immediate-string-char)
+	 (sc-number-or-lose 'immediate-base-character)
 	 nil))))
 
 
