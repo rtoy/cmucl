@@ -279,13 +279,14 @@
 (defun make-type-check-form (types)
   (collect ((temps))
     (dotimes (i (length types))
-      (declare (ignore i))
       (temps (gensym)))
 
     `(multiple-value-bind ,(temps)
 			  'dummy
        ,@(mapcar #'(lambda (temp type)
-		     (let* ((spec (type-specifier (second type)))
+		     (let* ((spec
+			     (let ((*unparse-function-type-simplify* t))
+			       (type-specifier (second type))))
 			    (test (if (first type) `(not ,spec) spec)))
 		       `(unless (typep ,temp ',test)
 			  (%type-check-error
