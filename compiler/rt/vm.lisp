@@ -19,7 +19,7 @@
 ;;;; SB and SC definition:
 
 (define-storage-base registers :finite :size 16)
-(define-storage-base 68881-float-registers :finite :size 8)
+(define-storage-base mc68881-float-registers :finite :size 8)
 (define-storage-base AFPA-float-registers :finite :size 64)
 (define-storage-base FPA-float-registers :finite :size 16)
 (define-storage-base control-stack :unbounded :size 8)
@@ -135,14 +135,14 @@
 
   ;; **** Things that can go in the floating point registers.
 
-  ;; Non-Descriptor 68881-single-floats.
-  (68881-single-reg 68881-float-registers
+  ;; Non-Descriptor mc68881-single-floats.
+  (mc68881-single-reg mc68881-float-registers
    :locations (0 1 2 3 4 5 6 7)
    :constant-scs (constant)
    :save-p t
    :alternate-scs (single-stack))
-  ;; Non-Descriptor 68881-double-floats.
-  (68881-double-reg 68881-float-registers
+  ;; Non-Descriptor mc68881-double-floats.
+  (mc68881-double-reg mc68881-float-registers
    :locations (0 1 2 3 4 5 6 7)
    :constant-scs (constant)
    :save-p t
@@ -250,8 +250,8 @@
 (def-primitive-type bignum (descriptor-reg))
 (def-primitive-type ratio (descriptor-reg))
 (def-primitive-type complex (descriptor-reg))
-(def-primitive-type 68881-single-float (68881-single-reg descriptor-reg))
-(def-primitive-type 68881-double-float (68881-double-reg descriptor-reg))
+(def-primitive-type mc68881-single-float (mc68881-single-reg descriptor-reg))
+(def-primitive-type mc68881-double-float (mc68881-double-reg descriptor-reg))
 (def-primitive-type FPA-single-float (FPA-single-reg descriptor-reg))
 (def-primitive-type FPA-double-float (FPA-double-reg descriptor-reg))
 (def-primitive-type AFPA-single-float (AFPA-single-reg descriptor-reg))
@@ -435,7 +435,7 @@
       ((short-float single-float)
        (ecase *target-float-hardware*
 	 (:mc68881
-	  (values (primitive-type-or-lose '68881-single-float) exact))
+	  (values (primitive-type-or-lose 'mc68881-single-float) exact))
 	 (:fpa
 	  (values (primitive-type-or-lose 'fpa-single-float) exact))
 	 (:afpa
@@ -445,7 +445,7 @@
       ((double-float long-float)
        (ecase *target-float-hardware*
 	 (:mc68881
-	  (values (primitive-type-or-lose '68881-double-float) exact))
+	  (values (primitive-type-or-lose 'mc68881-double-float) exact))
 	 (:fpa
 	  (values (primitive-type-or-lose 'fpa-double-float) exact))
 	 (:afpa
@@ -524,6 +524,13 @@
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
 		  :offset code-offset))
+
+;;; Random non-descriptor tn
+;;;
+(defparameter nl0-tn
+  (make-random-tn :kind :normal
+		  :sc (sc-or-lose 'non-descriptor-reg)
+		  :offset nl0-offset))
 
 
 
@@ -644,7 +651,7 @@
 	(offset (tn-offset tn)))
     (ecase sb
       (registers (svref register-names (tn-offset tn)))
-      ((68881-float-registers FPA-float-registers AFPA-float-registers)
+      ((mc68881-float-registers FPA-float-registers AFPA-float-registers)
        (format nil "F~D" offset))
       (control-stack (format nil "CS~D" offset))
       (non-descriptor-stack (format nil "NS~D" offset))
