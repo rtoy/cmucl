@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.23 1992/07/21 17:38:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.24 1993/08/15 19:18:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -464,24 +464,14 @@
   (let ((last (block-last block))
 	(succ (block-succ block)))
 
-    (let* ((comp (block-component block))
-	   (tail (component-tail comp)))
+    (let* ((comp (block-component block)))
       (dolist (b succ)
 	(unless (gethash b *seen-blocks*)
 	  (barf "Unseen successor ~S in ~S." b block))
 	(unless (member block (block-pred b))
 	  (barf "Bad successor link ~S in ~S." b block))
 	(unless (eq (block-component b) comp)
-	  (barf "Successor ~S in ~S is in a different component." b block))
-	(unless (or (not (eq b tail))
-		    (typep last '(or creturn exit))
-		    (and (basic-combination-p last)
-			 (or (node-tail-p last)
-			     (eq (node-derived-type last) *empty-type*)
-			     (eq (continuation-asserted-type (node-cont last))
-				 *empty-type*))))
-	  (barf "Component tail is successor of ~S when it shouldn't be."
-		block))))
+	  (barf "Successor ~S in ~S is in a different component." b block))))
     
     (typecase last
       (cif
