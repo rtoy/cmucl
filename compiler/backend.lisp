@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.26 1992/08/04 08:31:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.27 1993/11/03 18:42:24 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,7 +292,7 @@
       (rename-package pkg name (cons "VM" nicknames)))
     ;; And make sure we are using the necessary packages.
     (use-package '("C-CALL" "ALIEN-INTERNALS" "ALIEN" "BIGNUM" "UNIX"
-		   "LISP" "KERNEL" "EXTENSIONS" "SYSTEM" "C")
+		   "LISP" "KERNEL" "EXTENSIONS" "SYSTEM" "C" "NEW-ASSEM")
 		 pkg))
   ;; Make sure the native info env list is stored in *native-backend*
   (unless (backend-info-environment *native-backend*)
