@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.27 1992/12/06 15:52:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.28 1993/11/17 15:50:55 ram Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -165,7 +165,7 @@
 				 'rcs-keep-around-after-unlocking
 				 :buffer buffer))))
     (in-directory pathname
-      (do-command "rcsci" `(,@(if keep-lock '("-l"))
+      (do-command "ci" `(,@(if keep-lock '("-l"))
 			    ,@(if keep-working-copy '("-u"))
 			    ,filename)
 		  :input log-stream)
@@ -245,7 +245,7 @@
 	   (backup (if (probe-file file)
 		       (lisp::pick-backup-name file))))
       (when backup (rename-file file backup))
-      (do-command "rcsco" `(,@(if lock '("-l")) ,file))
+      (do-command "co" `(,@(if lock '("-l")) ,file))
       (invoke-hook rcs-check-out-file-hook buffer pathname)
       (when backup (delete-file backup)))))
 
@@ -285,7 +285,7 @@
     (unwind-protect
 	(progn
 	  (in-directory file
-  	    (do-command "rcsco" `("-p" ,(file-namestring file))
+  	    (do-command "co" `("-p" ,(file-namestring file))
 			:output (namestring name)))
 	  (when (buffer-different-from-file buffer name)
 	    (message
