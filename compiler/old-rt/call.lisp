@@ -374,7 +374,7 @@ default-value-5
   (:results (values :more t))
   (:save-p t)
   (:move-args :local-call)
-  (:info arg-locs return-pc target nvals)
+  (:info arg-locs callee target nvals)
   (:ignore arg-locs args nfp)
   (:node-var node)
   (:vop-var vop)
@@ -384,7 +384,7 @@ default-value-5
 	      env-save)
   (:generator 5
     (store-stack-tn env-save env-tn)
-    (inst balix return-pc target)
+    (inst balix (callee-return-pc-tn callee) target)
     (inst lr fp-tn fp)
     (no-op)
     (note-this-location vop :unknown-return)
@@ -403,7 +403,7 @@ default-value-5
 	 (args :more t))
   (:save-p t)
   (:move-args :local-call)
-  (:info arg-locs return-pc target)
+  (:info arg-locs callee target)
   (:ignore arg-locs args nfp)
   (:vop-var vop)
   (:temporary (:sc stack
@@ -411,7 +411,7 @@ default-value-5
 	      env-save)
   (:generator 20
     (store-stack-tn env-save env-tn)
-    (inst balix return-pc target)
+    (inst balix (callee-return-pc-tn callee) target)
     (inst lr fp-tn fp)
     (no-op)
     (note-this-location vop :unknown-return)
@@ -433,11 +433,11 @@ default-value-5
    (res :more t))
   (:move-args :local-call)
   (:save-p t)
-  (:info arg-locs return-pc target)
+  (:info arg-locs callee target)
   (:ignore arg-locs args res nfp)
   (:vop-var vop)
   (:generator 5
-    (inst balix return-pc target)
+    (inst balix (callee-return-pc-tn callee) target)
     (inst lr fp-tn fp)
     (no-op)
     (note-this-location vop :known-return)))
@@ -548,24 +548,24 @@ default-value-5
 
      (:temporary (:sc descriptor-reg
 		  :offset old-fp-offset
-		  :from (:argument ,(if (eq return :tail) 2 1))
+		  :from (:argument 1)
 		  :to :eval)
 		 old-fp-pass)
 
      (:temporary (:sc descriptor-reg
 		  :offset return-pc-offset
-		  :from (:argument ,(if (eq return :tail) 3 1))
+		  :from (:argument ,(if (eq return :tail) 2 1))
 		  :to :eval)
 		 return-pc-pass)
 
      ,@(when named 
-	 '((:temporary (:sc descriptor-reg
+	 `((:temporary (:sc descriptor-reg
 			:offset call-name-offset
-			:from (:argument 1)
+			:from (:argument ,(if (eq return :tail) 0 1))
 			:to :eval)
 		       name-pass)
 	   (:temporary (:scs (descriptor-reg)
-			     :from (:argument 1)
+			     :from (:argument ,(if (eq return :tail) 0 1))
 			     :to :eval)
 		       function)))
 
