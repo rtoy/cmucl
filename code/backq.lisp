@@ -7,11 +7,12 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.2 1991/02/08 13:30:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.3 1992/01/16 19:08:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    BACKQUOTE: Code Spice Lispified by Lee Schumacher.
+;;;   		  (unparsing by Miles Bader)
 ;;;
 (in-package 'lisp)
 
@@ -50,7 +51,6 @@
 (defvar *bq-dot-flag* '(|,.|))
 (defvar *bq-vector-flag* '(|bqv|))
 
-
 ;; This is the actual character macro.
 (defun backquote-macro (stream ignore)
   (declare (ignore ignore))
@@ -79,7 +79,7 @@
 	   (t (unread-char c stream)
 	      (cons *bq-comma-flag* (read stream t nil t))))
      'list)))
-
+
 ;;; This does the expansion from table 2.
 (defun backquotify (code)
   (cond ((atom code)
@@ -159,20 +159,129 @@
 	 (list  'quote thing))
 	((eq flag 'list*)
 	 (cond ((null (cddr thing))
-		(cons 'cons thing))
-	       (t (cons 'list* thing))))
+		(cons 'backq-cons thing))
+	       (t
+		(cons 'backq-list* thing))))
 	((eq flag 'vector)
-	 (list 'apply '#'vector thing))
+	 (list 'backq-vector thing))
 	(t (cons (cdr
 		  (assq flag
-			`((cons . cons) (list . list)
-			  (append . append) (nconc . nconc))))
+			'((cons . backq-cons)
+			  (list . backq-list)
+			  (append . backq-append)
+			  (nconc . backq-nconc))))
 		 thing))))
 
+
+;;;; Magic backq- versions of builtin functions.
 
+;;; Use synonyms for the lisp functions we use, so we can recognize backquoted
+;;; material when pretty-printing
 
+(defun backq-list (&rest args)
+  args)
+(defun backq-list* (&rest args)
+  (apply #'list* args))
+(defun backq-append (&rest args)
+  (apply #'append args))
+(defun backq-nconc (&rest args)
+  (apply #'nconc args))
+(defun backq-cons (x y)
+  (cons x y))
+(defun backq-vector (list)
+  (coerce list 'vector))
 
+
+;;;; Unparsing
+
+(defun backq-unparse-expr (form splicing)
+  (ecase splicing
+    ((nil)
+     `(backq-comma ,form))
+    ((t)
+     `((backq-comma-at ,form)))
+    (:nconc
+     `((backq-comma-dot ,form)))
+    ))
+
+(defun backq-unparse (form &optional splicing)
+  "Given a lisp form containing the magic functions BACKQ-LIST, BACKQ-LIST*,
+  BACKQ-APPEND, etc. produced by the backquote reader macro, will return a
+  corresponding backquote input form.  In this form, `,' `,@' and `,.' are
+  represented by lists whose cars are BACKQ-COMMA, BACKQ-COMMA-AT, and
+  BACKQ-COMMA-DOT respectively, and whose cadrs are the form after the comma.
+  SPLICING indicates whether a comma-escape return should be modified for
+  splicing with other forms: a value of T or :NCONC meaning that an extra
+  level of parentheses should be added."
+  (if (atom form)
+      (backq-unparse-expr form splicing)
+      (case (car form)
+	(backq-list
+	 (mapcar #'backq-unparse (cdr form)))
+	(backq-list*
+	 (do ((tail (cdr form) (cdr tail))
+	      (accum nil))
+	     ((null (cdr tail))
+	      (nconc (nreverse accum)
+		     (backq-unparse (car tail) t)))
+	   (push (backq-unparse (car tail)) accum)))
+	(backq-append
+	 (mapcan #'(lambda (el) (backq-unparse el t))
+		 (cdr form)))
+	(backq-nconc
+	 (mapcan #'(lambda (el) (backq-unparse el :nconc))
+		 (cdr form)))
+	(backq-cons
+	 (cons (backq-unparse (cadr form) nil)
+	       (backq-unparse (caddr form) t)))
+	(backq-vector
+	 (coerce (backq-unparse (cadr form)) 'vector))
+	(quote
+	 (cadr form))
+	(t
+	 (backq-unparse-expr form splicing)))))
+
+(defun pprint-backquote (stream form &rest noise)
+  (declare (ignore noise))
+  (write-char #\` stream)
+  (write (backq-unparse form) :stream stream))
+
+(defun pprint-backq-comma (stream form &rest noise)
+  (declare (ignore noise))
+  (ecase (car form)
+    (backq-comma
+     (write-char #\, stream))
+    (backq-comma-at
+     (princ ",@" stream))
+    (backq-comma-dot
+     (princ ",." stream)))
+  (write (cadr form) :stream stream))
+
+
+;;;; BACKQ-INIT and BACKQ-PP-INIT
+
+;;; BACKQ-INIT -- interface.
+;;;
+;;; This is called by %INITIAL-FUNCTION.
+;;; 
 (defun backq-init ()
   (let ((*readtable* std-lisp-readtable))
     (set-macro-character #\` #'backquote-macro)
     (set-macro-character #\, #'comma-macro)))
+
+;;; BACKQ-PP-INIT -- interface.
+;;;
+;;; This is called by PPRINT-INIT.  This must be seperate from BACKQ-INIT
+;;; because SET-PPRINT-DISPATCH doesn't work until the compiler is loaded.
+;;;
+(defun backq-pp-init ()
+  (set-pprint-dispatch '(cons (eql backq-list)) #'pprint-backquote)
+  (set-pprint-dispatch '(cons (eql backq-list*)) #'pprint-backquote)
+  (set-pprint-dispatch '(cons (eql backq-append)) #'pprint-backquote)
+  (set-pprint-dispatch '(cons (eql backq-nconc)) #'pprint-backquote)
+  (set-pprint-dispatch '(cons (eql backq-cons)) #'pprint-backquote)
+  (set-pprint-dispatch '(cons (eql backq-vector)) #'pprint-backquote)
+  
+  (set-pprint-dispatch '(cons (eql backq-comma)) #'pprint-backq-comma)
+  (set-pprint-dispatch '(cons (eql backq-comma-at)) #'pprint-backq-comma)
+  (set-pprint-dispatch '(cons (eql backq-comma-dot)) #'pprint-backq-comma))
