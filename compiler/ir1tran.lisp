@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.66 1992/02/24 01:25:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.67 1992/03/11 21:23:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2470,13 +2470,29 @@
 ;;; user policy settings.
 ;;;
 
-(def-source-transform funcall (function &rest args)
-  `(%funcall ,function ,@args))
+(deftransform funcall ((function &rest args))
+  (collect ((arg-names))
+    (dolist (arg args)
+      (declare (ignore arg))
+      (arg-names (gensym "FUNCALL-ARG-")))
+    `(lambda (function ,@(arg-names))
+       (%funcall ,(if (csubtypep (continuation-type function)
+				 (specifier-type 'function))
+		      'function
+		      '(if (functionp function)
+			   function
+			   (%coerce-to-function function)))
+		 ,@(arg-names)))))
 
 (def-ir1-translator %funcall ((function &rest args) start cont)
   (let ((fun-cont (make-continuation)))
     (ir1-convert start fun-cont function)
+    (assert-continuation-type fun-cont (specifier-type 'function))
     (ir1-convert-combination-args fun-cont cont args)))
+
+(deftransform %coerce-to-function ((thing))
+  (give-up "Might be a symbol, so must call FDEFINITION at runtime."))
+
 
 
 ;;;; Symbol macros:
@@ -3106,7 +3122,13 @@
 	 (node (if args
 		   (make-mv-combination fun-cont)
 		   (make-combination fun-cont))))
-    (ir1-convert start fun-cont fun)
+    (ir1-convert start fun-cont
+		 (if (and (consp fun) (eq (car fun) 'function))
+		     fun
+		     (once-only ((fun fun))
+		       `(if (functionp ,fun)
+			    ,fun
+			    (%coerce-to-function ,fun)))))
     (setf (continuation-dest fun-cont) node)
     (assert-continuation-type fun-cont
 			      (specifier-type '(or function symbol)))

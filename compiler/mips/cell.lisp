@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.56 1992/02/24 00:43:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.57 1992/03/11 21:26:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.56 1992/02/24 00:43:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.57 1992/03/11 21:26:25 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -105,27 +105,6 @@
       (inst beq temp zero-tn err-lab)
       (inst nop))))
 
-;;; With Symbol-Function, we check that the result is a function, so NIL is
-;;; always un-fbound.
-;;;
-(define-vop (symbol-function checked-cell-ref)
-  (:translate symbol-function)
-  (:generator 10
-    (move obj-temp object)
-    (loadw value obj-temp symbol-function-slot other-pointer-type)
-    (let ((err-lab (generate-error-code vop undefined-symbol-error obj-temp)))
-      (test-simple-type value temp err-lab t function-pointer-type))))
-
-#+nil
-(define-vop (symbol-setf-function checked-cell-ref)
-  (:translate symbol-setf-function)
-  (:generator 10
-    (move obj-temp object)
-    (loadw value obj-temp symbol-setf-function-slot other-pointer-type)
-    (let ((err-lab (generate-error-code vop undefined-symbol-error obj-temp)))
-      (test-simple-type value temp err-lab t function-pointer-type))))
-
-
 ;;; Like CHECKED-CELL-REF, only we are a predicate to see if the cell is bound.
 (define-vop (boundp-frob)
   (:args (object :scs (descriptor-reg)))
@@ -145,55 +124,37 @@
 	(inst bne temp zero-tn target))
     (inst nop)))
 
-
-;;; SYMBOL isn't a primitive type, so we can't use it for the arg restriction
-;;; on the symbol case of fboundp.  Instead, we transform to a funny function.
-
-(defknown fboundp/symbol (t) boolean (flushable))
-;;;
-(deftransform fboundp ((x) (symbol))
-  '(fboundp/symbol x))
-;;;
-(define-vop (fboundp/symbol boundp-frob)
-  (:translate fboundp/symbol)
-  (:generator 10
-    (loadw value object symbol-function-slot other-pointer-type)
-    (test-simple-type value temp target not-p function-pointer-type)))
-
-#+nil(progn
-(defknown fboundp/setf (t) boolean (flushable))
-;;;
-(deftransform fboundp ((x) (cons))
-  '(fboundp/setf (cadr x)))
-;;;
-(define-vop (fboundp/setf boundp-frob)
-  (:translate fboundp/setf)
-  (:generator 10
-    (loadw value object symbol-setf-function-slot other-pointer-type)
-    (test-simple-type value temp target not-p function-pointer-type)))
-)
-
 (define-vop (fast-symbol-value cell-ref)
   (:variant symbol-value-slot other-pointer-type)
   (:policy :fast)
   (:translate symbol-value))
 
-(define-vop (fast-symbol-function cell-ref)
-  (:variant symbol-function-slot other-pointer-type)
-  (:policy :fast)
-  (:translate symbol-function))
 
-(define-vop (set-symbol-function)
-  (:translate %set-symbol-function)
-  (:policy :fast-safe)
-  (:args (symbol :scs (descriptor-reg))
-	 (function :scs (descriptor-reg) :target result))
-  (:results (result :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) type)
-  (:temporary (:scs (any-reg)) temp)
-  (:save-p :compute-only)
+
+;;;; Fdefinition (fdefn) objects.
+
+(define-vop (safe-fdefn-function)
+  (:args (object :scs (descriptor-reg) :target obj-temp))
+  (:results (value :scs (descriptor-reg any-reg)))
   (:vop-var vop)
-  (:generator 30
+  (:save-p :compute-only)
+  (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp)
+  (:generator 10
+    (move obj-temp object)
+    (loadw value obj-temp fdefn-function-slot other-pointer-type)
+    (let ((err-lab (generate-error-code vop undefined-symbol-error obj-temp)))
+      (inst beq value null-tn err-lab))
+    (inst nop)))
+
+(define-vop (set-fdefn-function)
+  (:policy :fast-safe)
+  (:translate (setf fdefn-function))
+  (:args (function :scs (descriptor-reg) :target result)
+	 (fdefn :scs (descriptor-reg)))
+  (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:scs (non-descriptor-reg)) type)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 38
     (let ((closure (gen-label))
 	  (normal-fn (gen-label)))
       (load-type type function (- function-pointer-type))
@@ -205,40 +166,32 @@
       (inst beq type zero-tn closure)
       (inst xor type (logxor funcallable-instance-header-type
 			     function-header-type))
-      (inst beq type zero-tn normal-fn)
-      (inst addu temp function
+      (inst bne type zero-tn normal-fn)
+      (inst addu lip function
 	    (- (ash function-header-code-offset word-shift)
 	       function-pointer-type))
-      (error-call vop kernel:object-not-function-error function)
       (emit-label closure)
-      (inst li temp (make-fixup "closure_tramp" :foreign))
+      (inst li lip (make-fixup "closure_tramp" :foreign))
       (emit-label normal-fn)
-      (storew function symbol symbol-function-slot other-pointer-type)
-      (storew temp symbol symbol-raw-function-addr-slot other-pointer-type)
+      (storew function fdefn fdefn-function-slot other-pointer-type)
+      (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
       (move result function))))
 
-
-(defknown fmakunbound/symbol (symbol) symbol (unsafe))
-;;;
-(deftransform fmakunbound ((symbol) (symbol))
-  '(when symbol
-     (fmakunbound/symbol symbol)))
-;;;
-(define-vop (fmakunbound/symbol)
-  (:translate fmakunbound/symbol)
+(define-vop (fdefn-makunbound)
   (:policy :fast-safe)
-  (:args (symbol :scs (descriptor-reg) :target result))
-  (:results (result :scs (descriptor-reg)))
+  (:translate fdefn-makunbound)
+  (:args (fdefn :scs (descriptor-reg) :target result))
   (:temporary (:scs (non-descriptor-reg)) temp)
-  (:generator 5
-    (inst li temp unbound-marker-type)
-    (storew temp symbol symbol-function-slot other-pointer-type)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 38
+    (storew null-tn fdefn fdefn-function-slot other-pointer-type)
     (inst li temp (make-fixup "undefined_tramp" :foreign))
-    (storew temp symbol symbol-raw-function-addr-slot other-pointer-type)
-    (move result symbol)))
+    (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
+    (move result fdefn)))
 
 
-;;; Binding and Unbinding.
+
+;;;; Binding and Unbinding.
 
 ;;; BIND -- Establish VAL as a binding for SYMBOL.  Save the old value and
 ;;; the symbol on the binding stack and stuff the new value into the

@@ -1,4 +1,4 @@
-;;; -*- Package: C -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.15 1991/03/20 03:06:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.16 1992/03/11 21:26:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.15 1991/03/20 03:06:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.16 1992/03/11 21:26:13 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -108,24 +108,18 @@
       (storew null-tn result vm:code-entry-points-slot vm:other-pointer-type)
       (storew null-tn result vm:code-debug-info-slot vm:other-pointer-type))))
 
-(define-vop (make-symbol)
+(define-vop (make-fdefn)
+  (:policy :fast-safe)
+  (:translate make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg) :from :argument))
-  (:policy :fast-safe)
-  (:translate make-symbol)
   (:generator 37
-    (with-fixed-allocation (result temp vm:symbol-header-type vm:symbol-size)
-      (inst li temp vm:unbound-marker-type)
-      (storew temp result vm:symbol-value-slot vm:other-pointer-type)
-      (storew temp result vm:symbol-function-slot vm:other-pointer-type)
-      (storew temp result vm:symbol-setf-function-slot vm:other-pointer-type)
+    (with-fixed-allocation (result temp fdefn-type fdefn-size)
+      (storew name result fdefn-name-slot other-pointer-type)
+      (storew null-tn result fdefn-function-slot other-pointer-type)
       (inst li temp (make-fixup "undefined_tramp" :foreign))
-      (storew temp result vm:symbol-raw-function-addr-slot
-	      vm:other-pointer-type)
-      (storew null-tn result vm:symbol-plist-slot vm:other-pointer-type)
-      (storew name result vm:symbol-name-slot vm:other-pointer-type)
-      (storew null-tn result vm:symbol-package-slot vm:other-pointer-type))))
+      (storew temp result fdefn-raw-addr-slot other-pointer-type))))
 
 
 ;;;; Automatic allocators for primitive objects.
@@ -133,7 +127,6 @@
 (vm:define-for-each-primitive-object (obj)
   (collect ((forms))
     (let* ((options (vm:primitive-object-options obj))
-	   (obj-type (getf options :type t))
 	   (alloc-trans (getf options :alloc-trans))
 	   (alloc-vop (getf options :alloc-vop alloc-trans))
 	   (header (vm:primitive-object-header obj))

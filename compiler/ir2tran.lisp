@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.40 1991/12/19 22:11:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.41 1992/03/11 21:23:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,9 @@
 (in-package "KERNEL")
 (export '(%caller-frame-and-pc))
 (in-package "C")
+
+(export '(safe-fdefn-function))
+
 
 
 ;;;; Moves and type checks:
@@ -122,26 +125,6 @@
   (constant-tn (find-constant value)))
 
 
-;;; IR2-Convert-Hairy-Function-Ref  --  Internal
-;;;
-;;;    Handle a function Ref that can't be converted to a symbol access.  We
-;;; convert a call to FDEFINITION with Name as the argument.
-;;;
-(defun ir2-convert-hairy-function-ref (node block name)
-  (declare (type ref node) (type ir2-block block) (type tn name))
-  (when (policy node (> speed brevity))
-    (let ((*compiler-error-context* node))
-      (compiler-note "Compiling a full call to FDEFINITION.")))
-  (let* ((arg (standard-argument-location 0))
-	 (res (standard-argument-location 0))
-	 (fun (emit-constant 'fdefinition))
-	 (fp (make-stack-pointer-tn)))
-    (vop allocate-full-call-frame node block 1 fp)
-    (vop* call-named node block (fp fun name nil) (res nil) (list arg) 1 1)
-    (move-continuation-result node block (list res) (node-cont node)))
-  (undefined-value))
-
-
 ;;; IR2-Convert-Ref  --  Internal
 ;;;
 ;;;    Convert a Ref node.  The reference must not be delayed.
@@ -170,22 +153,19 @@
       (functional
        (ir2-convert-closure node block leaf res))
       (global-var
-       (let ((name-tn (emit-constant name))
-	     (unsafe (policy node (zerop safety))))
+       (let ((unsafe (policy node (zerop safety))))
 	 (ecase (global-var-kind leaf)
 	   ((:special :global :constant)
 	    (assert (symbolp name))
-	    (if unsafe
-		(vop fast-symbol-value node block name-tn res)
-		(vop symbol-value node block name-tn res)))
+	    (let ((name-tn (emit-constant name)))
+	      (if unsafe
+		  (vop fast-symbol-value node block name-tn res)
+		  (vop symbol-value node block name-tn res))))
 	   (:global-function
-	    (unless (symbolp name)
-	      (ir2-convert-hairy-function-ref node block name-tn)
-	      (return-from ir2-convert-ref (undefined-value)))
-
-	    (if unsafe
-		(vop fast-symbol-function node block name-tn res)
-		(vop symbol-function node block name-tn res)))))))
+	    (let ((fdefn-tn (make-load-time-constant-tn :fdefinition name)))
+	      (if unsafe
+		  (vop fdefn-function node block fdefn-tn res)
+		  (vop safe-fdefn-function node block fdefn-tn res))))))))
 
     (move-continuation-result node block locs cont))
   (undefined-value))
@@ -924,23 +904,19 @@
 
 ;;; Function-Continuation-TN  --  Internal
 ;;;
-;;;    Given a function continuation Fun, return as values a TN holding the
-;;; thing that we call and true if the thing is a symbol (false if it is a
-;;; function).  There are three interesting non-symbol cases:
+;;; Given a function continuation Fun, return as values a TN holding the
+;;; thing that we call and true if the thing is named (false if it is a
+;;; function).  There are two interesting non-named cases:
 ;;; -- Known to be a function, no check needed: return the continuation loc.
-;;; -- Known to be a function or a symbol, may need to be coerced.
 ;;; -- Not known what it is.
 ;;;
 (defun function-continuation-tn (node block cont)
   (declare (type continuation cont))
-  (let* ((2cont (continuation-info cont))
-	 (name (if (eq (ir2-continuation-kind 2cont) :delayed)
-		   (let ((res (continuation-function-name cont t)))
-		     (assert res)
-		     res)
-		   nil)))
-    (if name
-	(values (emit-constant name) t)
+  (let ((2cont (continuation-info cont)))
+    (if (eq (ir2-continuation-kind 2cont) :delayed)
+	(let ((name (continuation-function-name cont t)))
+	  (assert name)
+	  (values (make-load-time-constant-tn :fdefinition name) t))
 	(let* ((locs (ir2-continuation-locs 2cont))
 	       (loc (first locs))
 	       (check (continuation-type-check cont))
@@ -958,17 +934,7 @@
 			  (emit-type-check node block loc temp
 					   (specifier-type 'function)))
 			 (t
-			  (when (policy node (> speed brevity))
-			    (let ((*compiler-error-context* node))
-			      (compiler-note
-			       "Called function might be a ~
-			       symbol, so must coerce at run-time.")))
-
-			  (if (eq check t)
-			      (vop coerce-to-function node block loc temp)
-			      (vop fast-safe-coerce-to-function node block
-				   loc temp))))
-
+			  (error "This shouldn't happen.")))
 		   (values temp nil))))))))
 
 
@@ -1728,7 +1694,11 @@
 		     (vop nil-function-returned-error last 2block
 			  (if name
 			      (emit-constant name)
-			      (function-continuation-tn last 2block fun)))))))
+			      (multiple-value-bind
+				  (tn named)
+				  (function-continuation-tn last 2block fun)
+				(assert (not named))
+				tn)))))))
 	      ((not (eq (ir2-block-next 2block) (block-info target)))
 	       (vop branch last 2block (block-label target)))))))
   

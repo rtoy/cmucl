@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.15 1991/07/14 03:46:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.16 1992/03/11 21:26:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.15 1991/07/14 03:46:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.16 1992/03/11 21:26:48 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -30,7 +30,6 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
-  (:temporary (:sc descriptor-reg :offset cname-offset) cname)
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
   (:temporary (:sc any-reg :offset ocfp-offset) old-fp)
@@ -92,10 +91,7 @@
 		 (cur-nfp (current-nfp-tn vop)))
 	     ,@(moves (temp-names) (arg-names))
 	     (inst li nargs (fixnum ,num-args))
-	     (load-symbol cname symbol)
-	     (inst lw lip cname
-		   (- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
-		      vm:other-pointer-type))
+	     (inst lw lip null-tn (static-function-offset symbol))
 	     (when cur-nfp
 	       (store-stack-tn nfp-save cur-nfp))
 	     (inst move old-fp cfp-tn)

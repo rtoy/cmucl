@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.99 1992/02/14 23:50:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.100 1992/03/11 21:26:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.99 1992/02/14 23:50:29 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.100 1992/03/11 21:26:44 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -42,7 +42,7 @@
 (setf (backend-fasl-file-type *target-backend*) "pmaxf")
 (setf (backend-fasl-file-implementation *target-backend*)
       pmax-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 3)
+(setf (backend-fasl-file-version *target-backend*) 4)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :little-endian)
 
@@ -152,14 +152,15 @@
 
 ;;;; Static symbols.
 
-(export '(static-symbols exported-static-symbols))
+(export '(static-symbols static-functions))
 
-;;; These symbols are loaded into static space directly after NIL so
+;;; Static symbols are loaded into static space directly after NIL so
 ;;; that the system can compute their address by adding a constant
 ;;; amount to NIL.
 ;;;
-;;; The exported static symbols are a subset of the static symbols that get
-;;; exported to the C header file.
+;;; The fdefn objects for the static functions are loaded into static
+;;; space directly after the static symbols.  That way, the raw-addr
+;;; can be loaded directly out of them by indirecting relative to NIL.
 ;;;
 (defparameter static-symbols
   '(t
@@ -167,12 +168,14 @@
     ;; Random stuff needed for initialization.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
+    lisp::*initial-fdefn-objects*
 
     ;; Functions that the C code needs to call
     lisp::%initial-function
     lisp::maybe-gc
     kernel::internal-error
     di::handle-breakpoint
+    lisp::fdefinition-object
 
     ;; Free Pointers
     lisp::*read-only-space-free-pointer*
@@ -188,13 +191,10 @@
     lisp::*free-interrupt-context-index*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
-
-    ;; Static functions.
-    two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
-    two-arg-<= two-arg->= two-arg-/= eql %negate
-    two-arg-and two-arg-ior two-arg-xor
-    length two-arg-gcd two-arg-lcm
     ))
 
-(defparameter exported-static-symbols
-  (subseq static-symbols 0 (position 'two-arg-+ static-symbols)))
+(defparameter static-functions
+  '(two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
+    two-arg-<= two-arg->= two-arg-/= eql %negate
+    two-arg-and two-arg-ior two-arg-xor
+    length two-arg-gcd two-arg-lcm))

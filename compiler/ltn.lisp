@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.30 1992/02/13 09:30:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.31 1992/03/11 21:23:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,7 +153,7 @@
 ;;; Annotate-Function-Continuation  --  Internal
 ;;;
 ;;;    Annotate the function continuation for a full call.  If the only
-;;; reference is to a global symbol function and Delay is true, then we delay
+;;; reference is to a global function and Delay is true, then we delay
 ;;; the reference, otherwise we annotate for a single value.
 ;;;
 ;;;   Unlike for an argument, we only clear the type check flag when the policy
@@ -170,7 +170,7 @@
 	 (info (make-ir2-continuation ptype)))
     (setf (continuation-info cont) info)
     (let ((name (continuation-function-name cont t)))
-      (if (and delay name (symbolp name))
+      (if (and delay name)
 	  (setf (ir2-continuation-kind info) :delayed)
 	  (setf (ir2-continuation-locs info) (list (make-normal-tn ptype))))))
   (undefined-value))
