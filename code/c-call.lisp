@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.9 1992/02/21 17:57:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.10 1992/03/04 16:47:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,6 +68,7 @@
   (declare (ignore type))
   `(etypecase ,value
      (null (int-sap 0))
+     ((alien (* char)) (alien-sap ,value))
      (simple-base-string (vector-sap ,value))))
 
 (defun %naturalize-c-string (sap)
