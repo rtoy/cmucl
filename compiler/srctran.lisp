@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.50 1997/04/21 00:18:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51 1997/06/05 00:33:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; CLC, written by Wholey and Fahlman.
 ;;;
 ;;; Written by Rob MacLachlan
+;;;
+;;; Propagate-float-type extension by Raymond Toy.
 ;;;
 (in-package "C")
 
@@ -180,7 +182,11 @@
 		    (values nil t)
 		    `(,',fun ,x 1)))))
   (frob truncate)
-  (frob round))
+  (frob round)
+  #+propagate-float-type
+  (frob floor)
+  #+propagate-float-type
+  (frob ceiling))
 
 (def-source-transform lognand (x y) `(lognot (logand ,x ,y)))
 (def-source-transform lognor (x y) `(lognot (logior ,x ,y)))
@@ -338,6 +344,16 @@ turned off"
   (make-interval :low (numeric-type-low x)
 		 :high (numeric-type-high x)))
 
+(defun copy-interval-limit (limit)
+  (if (numberp limit)
+      limit
+      (copy-list limit)))
+
+(defun copy-interval (x)
+  (declare (type interval x))
+  (make-interval :low (copy-interval-limit (interval-low x))
+		 :high (copy-interval-limit (interval-high x))))
+
 ;;; INTERVAL-SPLIT
 ;;;
 ;;; Given a point P contained in the interval X, split X into two
@@ -348,10 +364,10 @@ turned off"
 (defun interval-split (p x &optional close-lower close-upper)
   (declare (type number p)
 	   (type interval x))
-  (list (make-interval :low (interval-low x)
+  (list (make-interval :low (copy-interval-limit (interval-low x))
 		       :high (if close-lower p (list p)))
 	(make-interval :low (if close-upper (list p) p)
-		       :high (interval-high x))))
+		       :high (copy-interval-limit (interval-high x)))))
 
 (defun interval-closure (x)
   (declare (type interval x))
@@ -524,10 +540,10 @@ turned off"
 		      ;; At least one bound is not finite.  The
 		      ;; non-finite bound always wins.
 		      nil)))))
-      (let* ((x-lo (interval-low x))
-	     (x-hi (interval-high x))
-	     (y-lo (interval-low y))
-	     (y-hi (interval-high y)))
+      (let* ((x-lo (copy-interval-limit (interval-low x)))
+	     (x-hi (copy-interval-limit (interval-high x)))
+	     (y-lo (copy-interval-limit (interval-low y)))
+	     (y-hi (copy-interval-limit (interval-high y))))
 	(make-interval :low (select-bound x-lo y-lo #'< #'>)
 		       :high (select-bound x-hi y-hi #'> #'<))))))
 
@@ -705,7 +721,7 @@ turned off"
   (declare (type interval x))
   (case (interval-range-info x)
     ('+
-     x)
+     (copy-interval x))
     ('-
      (interval-neg x))
     (t
@@ -871,35 +887,19 @@ turned off"
 
 (defun derive-simple-real-type (x y fun)
   (declare (type function fun))
-  (cond ((and (numeric-type-p x) (numeric-type-p y)
-	      (eq (numeric-type-complexp x) :real)
-	      (eq (numeric-type-complexp y) :real))
-	 (cond ((and (eq (numeric-type-class x) 'integer)
-		     (eq (numeric-type-class y) 'integer))
-		(multiple-value-bind (low high)
-		    (funcall fun x y)
-		  (make-numeric-type :class 'integer  :complexp :real
-				     :low low  :high high)))
-	       ((and (eq (numeric-type-class x) 'float)
-		     (eq (numeric-type-class y) 'float))
-		;; We have two floats of some kind.  We will handle float
-		;; contagion here instead of using the general
-		;; numeric-contagion which loses the bounds on the numbers,
-		;; if any.
-		(multiple-value-bind (low high)
-		    (funcall fun x y)
-		  (make-numeric-type
-		   :class 'float
-		   :format (float-format-max (numeric-type-format x)
-					     (numeric-type-format y))
-		   :complexp :real
-		   :low low  :high high)))
-	       (t
-		;; Some kind of unhandled numeric type like rational.  Punt.
-		(numeric-contagion x y))))
-	(t
-	 ;; The arguments are not reals, so punt
-	 (numeric-contagion x y))))
+  ;; We handle the case of real operands.  For the other cases, we use
+  ;; general numeric contagion.
+  (if (and (numeric-type-p x) (numeric-type-p y)
+	   (eq (numeric-type-complexp x) :real)
+	   (eq (numeric-type-complexp y) :real))
+      (multiple-value-bind (low high type format)
+	  (funcall fun x y)
+	(make-numeric-type :class type
+			   :complexp :real
+			   :format format
+			   :low low
+			   :high high))
+      (numeric-contagion x y)))
 ) ; end progn
 
 
@@ -963,8 +963,24 @@ turned off"
    #'(lambda (x y)
        (declare (type numeric-type x y))
        (let ((result (interval-add (numeric-type->interval x)
-				   (numeric-type->interval y))))
-	 (values (interval-low result) (interval-high result))))))
+				   (numeric-type->interval y)))
+	     (result-type (numeric-contagion x y)))
+	 ;; If the result type is a float, we need to be sure to
+	 ;; coerce the bounds into the correct type.
+	 (when (eq (numeric-type-class result-type) 'float)
+	   (setf result (interval-func
+			 #'(lambda (x)
+			     (coerce x (or (numeric-type-format result-type)
+					   'float)))
+			 result)))
+	 (values (interval-low result)
+		 (interval-high result)
+		 (if (and (eq (numeric-type-class x) 'integer)
+			  (eq (numeric-type-class y) 'integer))
+		     ;; The sum of integers is always an integer
+		     'integer
+		     (numeric-type-class result-type))
+		 (numeric-type-format result-type))))))
 
 (defoptimizer (- derive-type) ((x y))
   (derive-real-type
@@ -972,8 +988,24 @@ turned off"
    #'(lambda (x y)
        (declare (type numeric-type x y))
        (let ((result (interval-sub (numeric-type->interval x)
-				   (numeric-type->interval y))))
-	 (values (interval-low result) (interval-high result))))))
+				   (numeric-type->interval y)))
+	     (result-type (numeric-contagion x y)))
+	 ;; If the result type is a float, we need to be sure to
+	 ;; coerce the bounds into the correct type.
+	 (when (eq (numeric-type-class result-type) 'float)
+	   (setf result (interval-func
+			 #'(lambda (x)
+			     (coerce x (or (numeric-type-format result-type)
+					   'float)))
+			 result)))
+	 (values (interval-low result)
+		 (interval-high result)
+		 (if (and (eq (numeric-type-class x) 'integer)
+			  (eq (numeric-type-class y) 'integer))
+		     ;; The difference of integers is always an integer
+		     'integer
+		     (numeric-type-class result-type))
+		 (numeric-type-format result-type))))))
 
 (defoptimizer (* derive-type) ((x y))
   (let ((same-arg (same-leaf-ref-p x y)))
@@ -984,27 +1016,47 @@ turned off"
 		(if same-arg
 		    (interval-sqr (numeric-type->interval x))
 		    (interval-mul (numeric-type->interval x)
-				  (numeric-type->interval y)))))
-	   (values (interval-low result) (interval-high result)))))))
+				  (numeric-type->interval y))))
+	       (result-type (numeric-contagion x y)))
+	 ;; If the result type is a float, we need to be sure to
+	 ;; coerce the bounds into the correct type.
+	 (when (eq (numeric-type-class result-type) 'float)
+	   (setf result (interval-func
+			 #'(lambda (x)
+			     (coerce x (or (numeric-type-format result-type)
+					   'float)))
+			 result)))
+	   (values (interval-low result)
+		   (interval-high result)
+		   (if (and (eq (numeric-type-class x) 'integer)
+			    (eq (numeric-type-class y) 'integer))
+		       ;; The product of integers is always an integer
+		       'integer
+		       (numeric-type-class result-type))
+		   (numeric-type-format result-type)))))))
 
-(defoptimizer (/ derive-type) ((top bot))
-  ;; We only handle the case where both of the arguments are
-  ;; floats. Otherwise, the general numeric contagion holds.
 
-  (let ((x-num (continuation-type top))
-	(y-num (continuation-type bot)))
-    (if (not (and (numeric-type-p x-num) (numeric-type-p y-num)
-		  (eq (numeric-type-complexp x-num) :real)
-		  (eq (numeric-type-complexp y-num) :real)
-		  (eq (numeric-type-class x-num) 'float)
-		  (eq (numeric-type-class y-num) 'float)))
-	(numeric-contagion x-num y-num)
-	(derive-real-type
-	 top bot
-	 #'(lambda (x y)
-	     (let ((result (interval-div (numeric-type->interval x)
-					 (numeric-type->interval y))))
-	       (values (interval-low result) (interval-high result))))))))
+
+(defoptimizer (/ derive-type) ((x y))
+  (derive-real-type
+   x y
+   #'(lambda (x y)
+       (declare (type numeric-type x y))
+       (let ((result (interval-div (numeric-type->interval x)
+				   (numeric-type->interval y)))
+	     (result-type (numeric-contagion x y)))
+	 ;; If the result type is a float, we need to be sure to
+	 ;; coerce the bounds into the correct type.
+	 (when (eq (numeric-type-class result-type) 'float)
+	   (setf result (interval-func
+			 #'(lambda (x)
+			     (coerce x (or (numeric-type-format result-type)
+					   'float)))
+			 result)))
+	 (values (interval-low result)
+		 (interval-high result)
+		 (numeric-type-class result-type)
+		 (numeric-type-format result-type))))))
 
 ) ;end progn
 
@@ -1061,7 +1113,10 @@ turned off"
 		  (declare (ignore type2))
 		  (let ((lo (numeric-type-low type))
 			(hi (numeric-type-high type)))
-		    (values (if hi (,fun hi) nil) (if lo (,fun lo) nil))))))
+		    (values (if hi (,fun hi) nil)
+			    (if lo (,fun lo) nil)
+			    (numeric-type-class type)
+			    (numeric-type-format type))))))
 
   (defoptimizer (%negate derive-type) ((num))
     (flet ((negate-bound (b)
@@ -1137,73 +1192,377 @@ turned off"
 
 #+propagate-float-type
 (progn
+
+(defun rem-result-type (number-type divisor-type)
+  ;; Figure out what the remainder type is.  The remainder is an
+  ;; integer if both args are integers; a rational if both args are
+  ;; rational; and a float otherwise.
+  (cond ((and (csubtypep number-type (specifier-type 'integer))
+	      (csubtypep divisor-type (specifier-type 'integer)))
+	 'integer)
+	((and (csubtypep number-type (specifier-type 'rational))
+	      (csubtypep divisor-type (specifier-type 'rational)))
+	 'rational)
+	((and (csubtypep number-type (specifier-type 'float))
+	      (csubtypep divisor-type (specifier-type 'float)))
+	 ;; Both are floats so the result is also a float, of
+	 ;; the largest type.
+	 (or (float-format-max (numeric-type-format number-type)
+			       (numeric-type-format divisor-type))
+	     'float))
+	((and (csubtypep number-type (specifier-type 'float))
+	      (csubtypep divisor-type (specifier-type 'rational)))
+	 ;; One of the arguments is a float and the other is a
+	 ;; rational.  The remainder is a float of the same
+	 ;; type.
+	 (or (numeric-type-format number-type) 'float))
+	((and (csubtypep divisor-type (specifier-type 'float))
+	      (csubtypep number-type (specifier-type 'rational)))
+	 ;; One of the arguments is a float and the other is a
+	 ;; rational.  The remainder is a float of the same
+	 ;; type.
+	 (or (numeric-type-format divisor-type) 'float))
+	(t
+	 ;; Some unhandled combination.  Can this happen?
+	 'real)))
+
 (defoptimizer (truncate derive-type) ((number divisor))
-  (let ((number-type (continuation-type number))
-	(divisor-type (continuation-type divisor))
-	(real-type (specifier-type '(or integer real))))
-    (if (and (numeric-type-p number-type)
-	     (csubtypep number-type real-type)
-	     (numeric-type-p divisor-type)
-	     (csubtypep divisor-type real-type))
-	(let ((number-low (numeric-type-low number-type))
-	      (number-high (numeric-type-high number-type))
-	      (divisor-low (numeric-type-low divisor-type))
-	      (divisor-high (numeric-type-high divisor-type)))
-	  (setf number-low (if (consp number-low)
-			       (car number-low)
-			       number-low))
-	  (setf number-high (if (consp number-high)
-				(car number-high)
-				number-high))
-	  (setf divisor-low (if (consp divisor-low)
-				(car divisor-low)
-				divisor-low))
-	  (setf divisor-high (if (consp divisor-high)
-				 (car divisor-high)
-				 divisor-high))
-	  (if (and (csubtypep number-type (specifier-type 'integer))
-		   (csubtypep divisor-type (specifier-type 'integer)))
-	      ;; If both the number and the divisor are integers of
-	      ;; some type, then both results of truncate are
-	      ;; integers.  Figure out the appropriate ranges of the
-	      ;; results.
-	      (values-specifier-type
-	       `(values
-		 ,(integer-truncate-derive-type number-low number-high
-						divisor-low divisor-high
-						divisor-type)
-		 ,(integer-rem-derive-type number-low number-high
-					   divisor-low divisor-high)))
-	      ;; Otherwise, the first result of truncate is an integer
-	      ;; and the second result is a float of some type.
-	      ;; Figure out the ranges of the results and their
-	      ;; appropriate types.
-	      (values-specifier-type
-	       `(values
-		 ,(integer-truncate-derive-type number-low number-high
-						divisor-low divisor-high
-						divisor-type)
-		 ,(real-rem-derive-type number-low number-high
-					divisor-low divisor-high
-					number-type
-					divisor-type)))))
-	*universal-type*)))
+  (let* ((number-type (continuation-type number))
+	 (divisor-type (continuation-type divisor))
+	 (real-type (specifier-type 'real)))
+    (if (not (and (numeric-type-p number-type)
+		  (numeric-type-p divisor-type)
+		  (csubtypep number-type real-type)
+		  (csubtypep divisor-type real-type)))
+	;; There's nothing to do if the args are not real numbers
+	*universal-type*
+	(let* ((rem-type (rem-result-type number-type divisor-type))
+	       (number-interval (numeric-type->interval number-type))
+	       (divisor-interval (numeric-type->interval divisor-type))
+	       (rem (truncate-rem-bound number-interval divisor-interval)))
+	  ;;(declare (type (member '(integer rational float)) rem-type))
+	  ;; We have real numbers now.
+	  (cond ((eq rem-type 'integer)
+		 ;; Since the remainder type is INTEGER, both args are
+		 ;; INTEGERs.  
+		 (values-specifier-type
+		  `(values
+		    ,(integer-truncate-derive-type (interval-low number-interval)
+						   (interval-high number-interval)
+						   (interval-low divisor-interval)
+						   (interval-high divisor-interval))
+		    (,rem-type ,(or (interval-low rem) '*)
+		     ,(or (interval-high rem) '*)))))
+		(t
+		 (let ((quot (truncate-quotient-bound
+			      (interval-div number-interval divisor-interval))))
+		   (when (member rem-type '(float single-float double-float))
+		     (setf rem (interval-func #'(lambda (x)
+						  (coerce x rem-type))
+					      rem)))
+		   (values-specifier-type
+		    `(values
+		      (integer ,(or (interval-low quot) '*)
+		       ,(or (interval-high quot) '*))
+		      (,rem-type ,(or (interval-low rem) '*)
+		       ,(or (interval-high rem) '*)))))))))))
 
 (defoptimizer (%unary-truncate derive-type) ((number))
   (let ((number-type (continuation-type number)))
     (if (and (numeric-type-p number-type)
 	     (csubtypep number-type (specifier-type 'real)))
-	(let ((number-low (numeric-type-low number-type))
-	      (number-high (numeric-type-high number-type))
-	      (divisor (make-numeric-type
-			:class 'integer
-			:low 1
-			:high 1)))
-	  (setf number-low (if (consp number-low) (car number-low) number-low))
-	  (setf number-high (if (consp number-high) (car number-high) number-high))
-	  (specifier-type `,(integer-truncate-derive-type
-			     number-low number-high 1 1 divisor)))
+	(let ((quot (truncate-quotient-bound (numeric-type->interval number-type))))
+	  (specifier-type `(integer ,(or (interval-low quot) '*)
+			            ,(or (interval-high quot) '*))))
 	*universal-type*)))
+
+(macrolet ((frob-opt (name q-name r-name)
+	     `(defoptimizer (,name derive-type) ((number divisor))
+	       (let* ((number-type (continuation-type number))
+		      (divisor-type (continuation-type divisor))
+		      (real-type (specifier-type 'real)))
+		 (if (and (numeric-type-p number-type)
+			  (csubtypep number-type real-type)
+			  (numeric-type-p divisor-type)
+			  (csubtypep divisor-type real-type))
+		     (let* ((number-interval (numeric-type->interval number-type))
+			    (divisor-interval (numeric-type->interval divisor-type))
+			    (quot (,q-name (interval-div number-interval divisor-interval)))
+			    (rem (,r-name divisor-interval))
+			    (result-type (rem-result-type number-type divisor-type)))
+		       (when (member result-type '(float single-float double-float))
+			 ;; Make sure the limits on the interval have the right type.
+			 (setf rem (interval-func #'(lambda (x)
+						      (coerce x result-type))
+						  rem)))
+		       (values-specifier-type
+			`(values
+			  (integer ,(or (interval-low quot) '*)
+			   ,(or (interval-high quot) '*))
+			  (,result-type ,(or (interval-low rem) '*)
+			   ,(or (interval-high rem) '*)))))
+		     *universal-type*)))))
+  
+  (frob-opt floor floor-quotient-bound floor-rem-bound)
+  (frob-opt ceiling ceiling-quotient-bound ceiling-rem-bound))
+
+;;; Functions to compute the bounds on the quotient and remainder for
+;;; the FLOOR function.
+
+(defun floor-quotient-bound (quot)
+  ;; Take the floor of the quotient and then massage it into what we
+  ;; need.
+  (let ((lo (interval-low quot))
+	(hi (interval-high quot)))
+    ;; Take the floor of the lower bound.  The result is always a
+    ;; closed lower bound.
+    (setf lo
+	  (if lo
+	      (floor (bound-value lo))
+	      nil))
+    ;; For the upper bound, we need to be careful
+    (setf hi
+	  (cond ((consp hi)
+		 ;; An open bound.  We need to be careful here because
+		 ;; the floor of '(10.0) is 9, but the floor of
+		 ;; 10.0 is 10.
+		 (multiple-value-bind (q r)
+		     (floor (first hi))
+		   (if (zerop r)
+		       (1- q)
+		       q)))
+		(hi
+		 ;; A closed bound, so the answer is obvious.
+		 (floor hi))
+		(t
+		 hi)))
+    (make-interval :low lo :high hi)))
+
+(defun floor-rem-bound (div)
+  ;; The remainder depends only on the divisor.  Try to get the
+  ;; correct sign for the remainder if we can.
+
+  (case (interval-range-info div)
+    (+
+     ;; Divisor is always positive.  
+     (let ((rem (interval-abs div)))
+       (setf (interval-low rem) 0)
+       (when (numberp (interval-high rem))
+	 ;; The remainder never contains the upper bound.
+	 (setf (interval-high rem) (list (interval-high rem))))
+       rem))
+    (-
+     ;; Divisor is always negative
+     (let ((rem (interval-neg (interval-abs div))))
+       (setf (interval-high rem) 0)
+       (when (numberp (interval-low rem))
+	 ;; The remainder never contains the lower bound.
+	 (setf (interval-low rem) (list (interval-low rem))))
+       rem))
+    (otherwise
+     ;; The divisor can be positive or negative.  All bets off.
+     ;; The magnitude of remainder is the maximum value of the
+     ;; divisor.
+     (let ((limit (bound-value (interval-high (interval-abs div)))))
+       ;; The bound never reaches the limit, so make the interval open
+       (make-interval :low (if limit
+			       (list (- limit))
+			       limit)
+		      :high (list limit))))))
+#| Test cases
+(floor-quotient-bound (make-interval :low 0.3 :high 10.3))
+=> #S(INTERVAL :LOW 0 :HIGH 10)
+(floor-quotient-bound (make-interval :low 0.3 :high '(10.3)))
+=> #S(INTERVAL :LOW 0 :HIGH 10)
+(floor-quotient-bound (make-interval :low 0.3 :high 10))
+=> #S(INTERVAL :LOW 0 :HIGH 10)
+(floor-quotient-bound (make-interval :low 0.3 :high '(10)))
+=> #S(INTERVAL :LOW 0 :HIGH 9)
+(floor-quotient-bound (make-interval :low '(0.3) :high 10.3))
+=> #S(INTERVAL :LOW 0 :HIGH 10)
+(floor-quotient-bound (make-interval :low '(0.0) :high 10.3))
+=> #S(INTERVAL :LOW 0 :HIGH 10)
+(floor-quotient-bound (make-interval :low '(-1.3) :high 10.3))
+=> #S(INTERVAL :LOW -2 :HIGH 10)
+(floor-quotient-bound (make-interval :low '(-1.0) :high 10.3))
+=> #S(INTERVAL :LOW -1 :HIGH 10)
+(floor-quotient-bound (make-interval :low -1.0 :high 10.3))
+=> #S(INTERVAL :LOW -1 :HIGH 10)
+
+
+(floor-rem-bound (make-interval :low 0.3 :high 10.3))
+=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
+(floor-rem-bound (make-interval :low 0.3 :high '(10.3)))
+=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
+(floor-rem-bound (make-interval :low -10 :high -2.3))
+#S(INTERVAL :LOW (-10) :HIGH 0)
+(floor-rem-bound (make-interval :low 0.3 :high 10))
+=> #S(INTERVAL :LOW 0 :HIGH '(10))
+(floor-rem-bound (make-interval :low '(-1.3) :high 10.3))
+=> #S(INTERVAL :LOW '(-10.3) :HIGH '(10.3))
+(floor-rem-bound (make-interval :low '(-20.3) :high 10.3))
+=> #S(INTERVAL :LOW (-20.3) :HIGH (20.3))
+|#
+
+
+;;; Same functions for CEILING
+(defun ceiling-quotient-bound (quot)
+  ;; Take the ceiling of the quotient and then massage it into what we
+  ;; need.
+  (let ((lo (interval-low quot))
+	(hi (interval-high quot)))
+    ;; Take the ceiling of the upper bound.  The result is always a
+    ;; closed upper bound.
+    (setf hi
+	  (if hi
+	      (ceiling (bound-value hi))
+	      nil))
+    ;; For the lower bound, we need to be careful
+    (setf lo
+	  (cond ((consp lo)
+		 ;; An open bound.  We need to be careful here because
+		 ;; the ceiling of '(10.0) is 11, but the ceiling of
+		 ;; 10.0 is 10.
+		 (multiple-value-bind (q r)
+		     (ceiling (first lo))
+		   (if (zerop r)
+		       (1+ q)
+		       q)))
+		(lo
+		 ;; A closed bound, so the answer is obvious.
+		 (ceiling lo))
+		(t
+		 lo)))
+    (make-interval :low lo :high hi)))
+
+
+(defun ceiling-rem-bound (div)
+  ;; The remainder depends only on the divisor.  Try to get the
+  ;; correct sign for the remainder if we can.
+
+  (case (interval-range-info div)
+    (+
+     ;; Divisor is always positive.  The remainder is negative.
+     (let ((rem (interval-neg (interval-abs div))))
+       (setf (interval-high rem) 0)
+       (when (numberp (interval-low rem))
+	 ;; The remainder never contains the upper bound.
+	 (setf (interval-low rem) (list (interval-low rem))))
+       rem))
+    (-
+     ;; Divisor is always negative.  The remainder is positive
+     (let ((rem (interval-abs div)))
+       (setf (interval-low rem) 0)
+       (when (numberp (interval-high rem))
+	 ;; The remainder never contains the lower bound.
+	 (setf (interval-high rem) (list (interval-high rem))))
+       rem))
+    (otherwise
+     ;; The divisor can be positive or negative.  All bets off.
+     ;; The magnitude of remainder is the maximum value of the
+     ;; divisor.
+     (let ((limit (bound-value (interval-high (interval-abs div)))))
+       ;; The bound never reaches the limit, so make the interval open
+       (make-interval :low (if limit
+			       (list (- limit))
+			       limit)
+		      :high (list limit))))))
+
+#| Test cases
+(ceiling-quotient-bound (make-interval :low 0.3 :high 10.3))
+=> #S(INTERVAL :LOW 1 :HIGH 11)
+(ceiling-quotient-bound (make-interval :low 0.3 :high '(10.3)))
+=> #S(INTERVAL :LOW 1 :HIGH 11)
+(ceiling-quotient-bound (make-interval :low 0.3 :high 10))
+=> #S(INTERVAL :LOW 1 :HIGH 10)
+(ceiling-quotient-bound (make-interval :low 0.3 :high '(10)))
+=> #S(INTERVAL :LOW 1 :HIGH 10)
+(ceiling-quotient-bound (make-interval :low '(0.3) :high 10.3))
+=> #S(INTERVAL :LOW 1 :HIGH 11)
+(ceiling-quotient-bound (make-interval :low '(0.0) :high 10.3))
+=> #S(INTERVAL :LOW 1 :HIGH 11)
+(ceiling-quotient-bound (make-interval :low '(-1.3) :high 10.3))
+=> #S(INTERVAL :LOW -1 :HIGH 11)
+(ceiling-quotient-bound (make-interval :low '(-1.0) :high 10.3))
+=> #S(INTERVAL :LOW 0 :HIGH 11)
+(ceiling-quotient-bound (make-interval :low -1.0 :high 10.3))
+=> #S(INTERVAL :LOW -1 :HIGH 11)
+
+
+(ceiling-rem-bound (make-interval :low 0.3 :high 10.3))
+=> #S(INTERVAL :LOW (-10.3) :HIGH 0)
+(ceiling-rem-bound (make-interval :low 0.3 :high '(10.3)))
+=> #S(INTERVAL :LOW 0 :HIGH '(10.3))
+(ceiling-rem-bound (make-interval :low -10 :high -2.3))
+=> #S(INTERVAL :LOW 0 :HIGH (10))
+(ceiling-rem-bound (make-interval :low 0.3 :high 10))
+=> #S(INTERVAL :LOW (-10) :HIGH 0)
+(ceiling-rem-bound (make-interval :low '(-1.3) :high 10.3))
+=> #S(INTERVAL :LOW (-10.3) :HIGH (10.3))
+(ceiling-rem-bound (make-interval :low '(-20.3) :high 10.3))
+=> #S(INTERVAL :LOW (-20.3) :HIGH (20.3))
+|#
+
+
+
+
+
+(defun truncate-quotient-bound (quot)
+  ;; For positive quotients, truncate is exactly like floor.  For
+  ;; negative quotients, truncate is exactly like ceiling.  Otherwise,
+  ;; it's the union of the two pieces.
+  (case (interval-range-info quot)
+    (+
+     ;; Just like floor
+     (floor-quotient-bound quot))
+    (-
+     ;; Just like ceiling
+     (ceiling-quotient-bound quot))
+    (otherwise
+     ;; Split the interval into positive and negative pieces, compute
+     ;; the result for each piece and put them back together.
+     (destructuring-bind (neg pos)
+	 (interval-split 0 quot t t)
+       (interval-merge-pair (ceiling-quotient-bound neg)
+			    (floor-quotient-bound pos))))))
+
+
+(defun truncate-rem-bound (num div)
+  ;; This is significantly more complicated than floor or ceiling.  We
+  ;; need both the number and the divisor to determine the range.  The
+  ;; basic idea is to split the ranges of num and den into positive
+  ;; and negative pieces and deal with each of the four possibilities
+  ;; in turn.
+  (case (interval-range-info num)
+    (+
+     (case (interval-range-info div)
+       (+
+	(floor-rem-bound div))
+       (-
+	(ceiling-rem-bound div))
+       (otherwise
+	(destructuring-bind (neg pos)
+	    (interval-split 0 div t t)
+	  (interval-merge-pair (truncate-rem-bound num neg)
+			       (truncate-rem-bound num pos))))))
+    (-
+     (case (interval-range-info div)
+       (+
+	(ceiling-rem-bound div)
+	)
+       (-
+	(floor-rem-bound div)
+	)
+       (otherwise
+	(destructuring-bind (neg pos)
+	    (interval-split 0 div t t)
+	  (interval-merge-pair (truncate-rem-bound num neg)
+			       (truncate-rem-bound num pos))))))
+    (otherwise
+     (destructuring-bind (neg pos)
+	 (interval-split 0 num t t)
+       (interval-merge-pair (truncate-rem-bound neg div)
+			    (truncate-rem-bound pos div))))))
 )
 
 
@@ -1225,7 +1584,6 @@ turned off"
 
 ;;; INTEGER-TRUNCATE-DERIVE-TYPE -- internal
 ;;; 
-#-propagate-float-type
 (defun integer-truncate-derive-type
        (number-low number-high divisor-low divisor-high)
   ;; The result cannot be larger in magnitude than the number, but the sign
@@ -1290,6 +1648,7 @@ turned off"
 	     ;; anything about the result.
 	     'integer)))))
 
+#-propagate-float-type
 (defun integer-rem-derive-type
        (number-low number-high divisor-low divisor-high)
   (if (and divisor-low divisor-high)
@@ -1319,161 +1678,7 @@ turned off"
 		     0
 		     '*))))
 
-#+propagate-float-type
-(progn
-(defun truncate-carefully (x y)
-  (handler-case (truncate x y)
-    (arithmetic-error () '*)
-    ;; Until a better fix for integer-decode-float signalling error on inf
-    (error            () '*)))
 
-(defun negative-truncate-carefully (x y)
-  (handler-case (- (truncate x y))
-    (arithmetic-error () '*)
-    (error            () '*)))
-
-(defun integer-truncate-derive-type
-    (number-low number-high divisor-low divisor-high
-		divisor-type)
-  ;; The result cannot be larger in magnitude than the number, but the sign
-  ;; might change.  If we can determine the sign of either the number or
-  ;; the divisor, we can eliminate some of the cases.
-  (multiple-value-bind
-      (number-sign number-min number-max)
-      (numeric-range-info number-low number-high)
-    (multiple-value-bind
-	(divisor-sign divisor-min divisor-max)
-	(numeric-range-info divisor-low divisor-high)
-      (when (and divisor-max (zerop divisor-max))
-	;; We've got a problem: guarenteed division by zero.
-	(return-from integer-truncate-derive-type t))
-      (when (zerop divisor-min)
-	;; We'll assume that they aren't going to divide by zero.  Set
-	;; divisor min to be the smallest positive number of the
-	;; appropriate type.  (Does this really make sense for floats?
-	;; Let's go with it for now.)
-	(setf divisor-min
-	      (cond ((csubtypep divisor-type (specifier-type 'integer))
-		     1)
-		    ((csubtypep divisor-type (specifier-type 'double-float))
-		     least-positive-normalized-double-float)
-		    ((csubtypep divisor-type (specifier-type 'real))
-		     least-positive-normalized-single-float)
-		    (t
-		     (cerror "Return INTEGER as result of truncate"
-			     "This should not have happened!")
-		     (return-from integer-truncate-derive-type t)))))
-      (cond ((and number-sign divisor-sign)
-		 ;; We know the sign of both.
-		 (if (eq number-sign divisor-sign)
-		     ;; Same sign, so the result will be positive.
-		     `(integer ,(if divisor-max
-				    (truncate-carefully number-min divisor-max)
-				    0)
-		       ,(if number-max
-			    (truncate-carefully number-max divisor-min)
-			    '*))
-		     ;; Different signs, the result will be negative.
-		     `(integer ,(if number-max
-				    (negative-truncate-carefully number-max divisor-min)
-				    '*)
-		       ,(if divisor-max
-			    (negative-truncate-carefully number-min divisor-max)
-			    0))))
-		((eq divisor-sign '+)
-		 ;; The divisor is positive.  Therefore, the number will just
-		 ;; become closer to zero.
-		 `(integer ,(if number-low
-				(truncate-carefully number-low divisor-min)
-				'*)
-		   ,(if number-high
-			(truncate-carefully number-high divisor-min)
-			'*)))
-		((eq divisor-sign '-)
-		 ;; The divisor is negative.  Therefore, the absolute value of
-		 ;; the number will become closer to zero, but the sign will also
-		 ;; change.
-		 `(integer ,(if number-high
-				(negative-truncate-carefully number-high divisor-min)
-				'*)
-		   ,(if number-low
-			(negative-truncate-carefully number-low divisor-min)
-			'*)))
-		;; The divisor could be either positive or negative.
-		(number-max
-		 ;; The number we are dividing has a bound.  Divide that by the
-		 ;; smallest posible divisor.
-		 (let ((bound (truncate-carefully number-max divisor-min)))
-		   (if (numberp bound)
-		       `(integer ,(- bound) ,bound)
-		       `integer)))
-		(t
-		 ;; The number we are dividing is unbounded, so we can't tell
-		 ;; anything about the result.
-		 'integer)))))
-
-;;; This probably needs a lot of reworking to make sure everything is
-;;; covered.
-(defun real-rem-derive-type
-    (number-low number-high divisor-low divisor-high
-		number-type divisor-type)
-  ;; First figure out what the type of the result should be.
-  (let* ((result-type
-	  (cond ((csubtypep number-type (specifier-type 'integer))
-		 ;; If NUMBER is an integer, the result must be the
-		 ;; type of the divisor.  A numeric-type-format of nil
-		 ;; means either REAL or COMPLEX, but we know at this
-		 ;; point the numbers are not complex.
-		 (or (numeric-type-format divisor-type)
-		     'real))
-		((csubtypep divisor-type (specifier-type 'integer))
-		 ;; The divisor is an integer, so the result must be
-		 ;; the type of the number.
-		 (or (numeric-type-format number-type)
-		     'real))
-		(t
-		 ;; Hmm, neither are integers, so we take the largest format
-		 (or (float-format-max (numeric-type-format number-type)
-				   (numeric-type-format divisor-type))
-		     'real)))))
-    ;; Without the following sexp, RESULT-TYPE can sometimes be NIL!
-    ;; How can that be?  The above code looks like it always returns
-    ;; something besides nil!
-    (unless result-type
-      (setf result-type 'real)
-      (cerror "Use REAL as result type" "Shouldn't happen!  Result type was NIL"))
-    (if (and divisor-low divisor-high)
-	;; We know the range of the divisor, and the remainder must be smaller
-	;; than the divisor.  We can tell the sign of the remainer if we know
-	;; the sign of the number.
-	(let ((divisor-max (float (max (abs divisor-low) (abs divisor-high)))))
-	  `(,result-type ,(coerce (if (or (null number-low)
-					  (minusp number-low))
-				      (- divisor-max)
-				      0.0)
-				  result-type)
-	                  ,(coerce (if (or (null number-high)
-					   (plusp number-high))
-				       divisor-max
-				       0.0)
-				   result-type)))
-	;; The divisor is potentially either very positive or very negative.
-	;; Therefore, the remainer is unbounded, but we might be able to tell
-	;; something about the sign from the number.
-	`(,result-type ,(if (and number-low
-				 (not (minusp number-low)))
-			    ;; The number we are dividing is positive.
-			    ;; Therefore, the remainder must be
-			    ;; positive.
-			    (coerce 0.0 result-type)
-			    '*)
-	               ,(if (and number-high (not (plusp number-high)))
-			    ;; The number we are dividing is negative.
-			    ;; Therefore, the remainder must be
-			    ;; negative.
-			    (coerce 0.0 result-type)
-			    '*)))))
-)
 
 (defoptimizer (random derive-type) ((bound &optional state))
   (let ((type (continuation-type bound)))
