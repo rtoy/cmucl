@@ -22,7 +22,9 @@ struct ndir_entry {
 struct machine_state {
     lispobj *csp;
     lispobj *fp;
+#ifndef ibmrt
     lispobj *bsp;
+#endif
     char *number_stack_start;
 
     long sigcontext_page;
