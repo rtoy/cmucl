@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-lisp; Package: XLIB; Base: 10; Lowercase: Yes -*-
+;;; -*- Mode: Lisp; Package: Xlib; Log: clx.log -*-
 
 ;;; This file contains definitions for the DISPLAY object for Common-Lisp X windows version 11
 
@@ -73,7 +73,7 @@
 	  value-error
 	  window-error
 	  implementation-error
-	  #-ansi-common-lisp type-error
+	  #-(or ansi-common-lisp CMU) type-error
 	  closed-display
 	  lookup-error
 	  connection-failure
@@ -1593,7 +1593,7 @@
       (when (= code (second extension))
 	(return (first extension))))))
 
-#-(or ansi-common-lisp excl lcl3.0)
+#-(or ansi-common-lisp excl lcl3.0 CMU)
 (define-condition request-error (x-error)
   (display
    error-key
@@ -1618,7 +1618,7 @@
 
 ;; Since the :report arg is evaluated as (function report-request-error) the
 ;; define-condition must come after the function definition.
-#+(or ansi-common-lisp excl lcl3.0)
+#+(or ansi-common-lisp excl lcl3.0 CMU)
 (define-condition request-error (x-error)
   (display
    error-key
