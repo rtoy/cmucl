@@ -1,16 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.4 1992/05/21 02:31:59 wlott Exp $")
+;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.3 1992/03/06 11:03:58 wlott Exp $
-;;;
-;;; This file contains the machine specific support routines needed by
-;;; the file assembler.
 ;;;
 (in-package "SPARC")
 
@@ -36,12 +35,13 @@
 	    (when cur-nfp
 	      (store-stack-tn ,nfp-save cur-nfp))
 	    (inst compute-lra-from-code ,lra code-tn lra-label ,temp)
+	    (note-this-location ,vop :call-site)
 	    (inst ji ,temp (make-fixup ',name :assembly-routine))
 	    (inst nop)
 	    (emit-return-pc lra-label)
-	    (note-this-location ,vop :unknown-return)
 	    (move csp-tn ocfp-tn)
 	    (inst nop)
+	    (note-this-location ,vop :single-value-return)
 	    (inst compute-code-from-lra code-tn code-tn
 		  lra-label ,temp)
 	    (when cur-nfp
