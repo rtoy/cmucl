@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.30 1990/07/21 16:17:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.31 1990/09/09 20:39:52 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -240,6 +240,14 @@
 
 
 ;;;; Other random VOPs.
+
+
+(defknown mach::do-pending-interrupt () (values))
+(define-vop (mach::do-pending-interrupt)
+  (:policy :fast-safe)
+  (:translate mach::do-pending-interrupt)
+  (:generator 1
+    (inst break vm:pending-interrupt-trap)))
 
 
 (define-vop (halt)
