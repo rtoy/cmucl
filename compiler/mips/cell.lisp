@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.42 1990/09/17 23:43:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.43 1990/09/21 05:46:57 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -24,8 +24,7 @@
 
 (vm:define-for-each-primitive-object (obj)
   (collect ((forms))
-    (let* ((options (vm:primitive-object-options obj))
-	   (lowtag (vm:primitive-object-lowtag obj)))
+    (let ((lowtag (vm:primitive-object-lowtag obj)))
       (dolist (slot (vm:primitive-object-slots obj))
 	(let* ((name (vm:slot-name slot))
 	       (offset (vm:slot-offset slot))
@@ -177,6 +176,57 @@
   (:variant vm:symbol-function-slot vm:other-pointer-type)
   (:policy :fast)
   (:translate symbol-function))
+
+
+(define-vop (set-symbol-function)
+  (:translate %sp-set-definition)
+  (:policy :fast-safe)
+  (:args (symbol :scs (descriptor-reg))
+	 (function :scs (descriptor-reg) :target result))
+  (:results (result :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) type)
+  (:temporary (:scs (any-reg)) temp)
+  (:save-p :compute-only)
+  (:vop-var vop)
+  (:generator 30
+    (let ((closure (gen-label))
+	  (normal-fn (gen-label)))
+      (load-type type function (- vm:function-pointer-type))
+      (inst nop)
+      (inst xor type vm:closure-header-type)
+      (inst beq type zero-tn closure)
+      (inst xor type (logxor vm:closure-header-type vm:function-header-type))
+      (inst beq type zero-tn normal-fn)
+      (inst addu temp function
+	    (- vm:function-header-code-offset vm:function-pointer-type))
+      (error-call vop kernel:object-not-function-error function)
+      (emit-label closure)
+      (inst li temp (make-fixup "closure_tramp" :foreign))
+      (emit-label normal-fn)
+      (storew function symbol vm:symbol-function-slot vm:other-pointer-type)
+      (storew temp symbol vm:symbol-raw-function-addr-slot vm:other-pointer-type)
+      (move result function))))
+
+
+(defknown fmakunbound/symbol (symbol) symbol (unsafe))
+;;;
+(deftransform fmakunbound ((symbol) (symbol))
+  '(progn
+     (fmakunbound/symbol symbol)
+     t))
+;;;
+(define-vop (fmakunbound/symbol)
+  (:translate fmakunbound/symbol)
+  (:policy :fast-safe)
+  (:args (symbol :scs (descriptor-reg) :target result))
+  (:results (result :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:generator 5
+    (inst li temp vm:unbound-marker-type)
+    (storew temp symbol vm:symbol-function-slot vm:other-pointer-type)
+    (inst li temp (make-fixup "undefined_tramp" :foreign))
+    (storew temp symbol vm:symbol-raw-function-addr-slot vm:other-pointer-type)
+    (move result symbol)))
 
 
 ;;; Binding and Unbinding.
