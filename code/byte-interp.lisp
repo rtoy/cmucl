@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.17 1993/05/19 08:37:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.18 1993/05/21 12:38:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -926,10 +926,11 @@
 	   (type (unsigned-byte 8) byte))
   (locally (declare (optimize (inhibit-warnings 3)))
     (when *byte-trace*
-      (format *trace-output*
-	      "pc=~D, fp=~D, sp=~D, byte=#b~8,'0B, frame:~%    ~S~%"
-	      pc fp (current-stack-pointer) byte
-	      (subseq eval::*eval-stack* fp (current-stack-pointer)))))
+      (let ((*byte-trace* nil))
+	(format *trace-output*
+		"pc=~D, fp=~D, sp=~D, byte=#b~,'0X, frame:~%    ~S~%"
+		pc fp (current-stack-pointer) byte
+		(subseq eval::*eval-stack* fp (current-stack-pointer))))))
   (if (zerop (logand byte #x80))
       ;; Some stack operation.  No matter what, we need the operand,
       ;; so compute it.
@@ -1217,11 +1218,12 @@
 	     ((minusp old-pc)
 	      ;; We were called for multiple values.  So return multiple
 	      ;; values.
-	      (let ((results
-		     (multiple-value-list
-		      (with-debugger-info
-		       (old-component old-pc old-fp)
-		       (byte-apply function num-args old-sp)))))
+	      (let* ((old-pc (- old-pc))
+		     (results
+		      (multiple-value-list
+		       (with-debugger-info
+			(old-component old-pc old-fp)
+			(byte-apply function num-args old-sp)))))
 		(dolist (result results)
 		  (push-eval-stack result))
 		(push-eval-stack (length results)))
