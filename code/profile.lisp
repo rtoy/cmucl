@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.24 2002/11/05 22:45:41 cracauer Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.25 2003/01/07 15:31:29 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,8 @@
   (:export *timed-functions* profile profile-all unprofile reset-time 
 	   report-time report-time-custom *default-report-time-printfunction*
 	   with-spacereport print-spacereports reset-spacereports
-	   delete-spacereports *insert-spacereports*))
+	   delete-spacereports *insert-spacereports*
+	   *no-calls* *no-calls-limit*))
 
 (in-package "PROFILE")
 
@@ -611,8 +612,9 @@ this, the functions are listed.  If NIL, then always list the functions.")
     (:tail
      (format *trace-output*
 	     "-------------------------------------------------------------------~@
-	      ~11:D |~10:D |           |           |           | Total~%"
-	     (time-totals-consed time) (time-totals-calls time)))
+	      ~11:D |~10:D |~10,3F |           |           | Total~%"
+	     (time-totals-consed time) (time-totals-calls time)
+	     (time-totals-time time)))
     (:sort (sort time #'>= :key #'time-info-time))
     (:one-function
      (format *trace-output*
@@ -695,31 +697,37 @@ this, the functions are listed.  If NIL, then always list the functions.")
 
 	(funcall printfunction time :one-function)
 
-	#+nil
-	(let ((callers (time-info-callers time)))
+	(let ((callers (time-info-callers time))
+	      (*print-readably* nil))
 	  (when callers
 	    (dolist (x (subseq callers 0 (min (length callers) 5)))
-	      (format *trace-output* "~10:D: " (cdr x))
+	      (format *trace-output* "~13T~10:D: " (cdr x))
 	      (print-caller-info (car x) *trace-output*)
 	      (terpri *trace-output*))
 	    (terpri *trace-output*))))
       (funcall printfunction totals :tail))
     
-    #+nil
     (when no-call
-      (format *trace-output*
-	      "~%These functions were not called:~%~{~<~%~:; ~S~>~}~%"
-	      (sort no-call #'string<
-		    :key #'(lambda (n)
-			     (cond ((symbolp n)
-				    (symbol-name n))
-				   ((and (listp n)
-					 (eq (car n) 'setf)
-					 (consp (cdr n))
-					 (symbolp (cadr n)))
-				    (symbol-name (cadr n)))
-				   (t
-				    (princ-to-string n)))))))
+      (setf *no-calls* no-call)
+      (if (and (realp *no-calls-limit*)
+	       (>= (length no-call) *no-calls-limit*))
+	  (format *trace-output*
+		  "~%~D functions were not called.  ~
+                  See profile::*no-calls* for a list~%"
+		  (length no-call))
+	  (format *trace-output*
+		  "~%These functions were not called:~%~{~<~%~:; ~S~>~}~%"
+		  (sort no-call #'string<
+			:key #'(lambda (n)
+				 (cond ((symbolp n)
+					(symbol-name n))
+				       ((and (listp n)
+					     (eq (car n) 'setf)
+					     (consp (cdr n))
+					     (symbolp (cadr n)))
+					(symbol-name (cadr n)))
+				       (t
+					(princ-to-string n))))))))
     (values)))
 
 
