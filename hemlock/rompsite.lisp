@@ -869,7 +869,7 @@
 		      (:misc #'editor-window-misc))
 	    (:print-function
 	     (lambda (s stream d)
-	       (declare (ignore s d write))
+	       (declare (ignore s d))
 	       (write-string "#<Editor-Window-Input stream>" stream)))
 	    (:constructor make-editor-window-input-stream
 			  (&optional (head (make-key-event)) (tail head))))
