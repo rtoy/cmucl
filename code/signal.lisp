@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.26 1999/03/24 18:07:12 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.27 1999/03/24 19:42:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.26 1999/03/24 18:07:12 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.27 1999/03/24 19:42:00 pw Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -122,13 +122,13 @@
   #+linux 20 "Stop signal generated from keyboard")
 (def-unix-signal :SIGCONT #-(or hpux svr4 linux) 19 #+hpux 26 #+svr4 25
   #+linux 18 "Continue after stop")
-(def-unix-signal :SIGCHLD #-(or linux hpux) 20 
-  #+hpux 18 #+linux 17 "Child status has changed")
+(def-unix-signal :SIGCHLD #-(or linux hpux svr4) 20 
+  #+(or hpux svr4) 18 #+linux 17 "Child status has changed")
 (def-unix-signal :SIGTTIN #-(or hpux svr4) 21 #+hpux 27 #+svr4 26
   "Background read attempted from control terminal")
 (def-unix-signal :SIGTTOU #-(or hpux svr4) 22 #+hpux 28 #+svr4 27
   "Background write attempted to control terminal")
-(def-unix-signal :SIGIO #-(or hpux irix linux) 23 #+(or hpux irix) 22
+(def-unix-signal :SIGIO #-(or svr4 hpux irix linux) 23 #+(or svr4 hpux irix) 22
   #+linux 29
   "I/O is possible on a descriptor")
 #-hpux
