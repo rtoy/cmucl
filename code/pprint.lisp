@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.13 1992/12/08 20:01:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.14 1993/01/23 01:02:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,13 +33,13 @@
 ;;; There are three different units for measuring character positions:
 ;;;  COLUMN - offset (if characters) from the start of the current line.
 ;;;  INDEX - index into the output buffer.
-;;;  POSITION - some position in the stream of characters cycling through
+;;;  POSN - some position in the stream of characters cycling through
 ;;;             the output buffer.
 ;;; 
 (deftype column ()
   '(and fixnum unsigned-byte))
 ;;; The INDEX type is picked up from the kernel package.
-(deftype position ()
+(deftype posn ()
   'fixnum)
 
 (defconstant initial-buffer-size 128)
@@ -76,7 +76,7 @@
   ;; over.  This makes it difficult to keep references to locations in
   ;; the buffer.  Therefore, we have to keep track of the total amount of
   ;; stuff that has been shifted out of the buffer.
-  (buffer-offset 0 :type position)
+  (buffer-offset 0 :type posn)
   ;;
   ;; The column the first character in the buffer will appear in.  Normally
   ;; zero, but if we end up with a very long line with no breaks in it we
@@ -121,19 +121,19 @@
 	  (kernel:get-lisp-obj-address pstream)))
 
 
-(declaim (inline index-position position-index position-column))
-(defun index-position (index stream)
+(declaim (inline index-posn posn-index posn-column))
+(defun index-posn (index stream)
   (declare (type index index) (type pretty-stream stream)
-	   (values position))
+	   (values posn))
   (+ index (pretty-stream-buffer-offset stream)))
-(defun position-index (position stream)
-  (declare (type position position) (type pretty-stream stream)
+(defun posn-index (posn stream)
+  (declare (type posn posn) (type pretty-stream stream)
 	   (values index))
-  (- position (pretty-stream-buffer-offset stream)))
-(defun position-column (position stream)
-  (declare (type position position) (type pretty-stream stream)
-	   (values position))
-  (index-column (position-index position stream) stream))
+  (- posn (pretty-stream-buffer-offset stream)))
+(defun posn-column (posn stream)
+  (declare (type posn posn) (type pretty-stream stream)
+	   (values posn))
+  (index-column (posn-index posn stream) stream))
 
 
 ;;;; Stream interface routines.
@@ -284,15 +284,15 @@
 ;;;; The pending operation queue.
 
 (defstruct queued-op
-  (position 0 :type position))
+  (posn 0 :type posn))
 
 (defmacro enqueue (stream type &rest args)
   (let ((constructor (intern (concatenate 'string
 					  "MAKE-"
 					  (symbol-name type)))))
     (once-only ((stream stream)
-		(entry `(,constructor :position
-				      (index-position
+		(entry `(,constructor :posn
+				      (index-posn
 				       (pretty-stream-buffer-fill-pointer
 					,stream)
 				       ,stream)
@@ -406,9 +406,9 @@
   (let ((column (pretty-stream-buffer-start-column stream))
 	(section-start (logical-block-section-column
 			(first (pretty-stream-blocks stream))))
-	(end-position (index-position index stream)))
+	(end-posn (index-posn index stream)))
     (dolist (op (pretty-stream-queue-tail stream))
-      (when (>= (queued-op-position op) end-position)
+      (when (>= (queued-op-posn op) end-posn)
 	(return))
       (typecase op
 	(tab
@@ -416,11 +416,11 @@
 	       (compute-tab-size op
 				 section-start
 				 (+ column
-				    (position-index (tab-position op)
+				    (posn-index (tab-posn op)
 						    stream)))))
 	((or newline block-start)
 	 (setf section-start
-	       (+ column (position-index (queued-op-position op)
+	       (+ column (posn-index (queued-op-posn op)
 					 stream))))))
     (+ column index)))
 
@@ -433,7 +433,7 @@
     (dolist (op (pretty-stream-queue-tail stream))
       (typecase op
 	(tab
-	 (let* ((index (position-index (tab-position op) stream))
+	 (let* ((index (posn-index (tab-posn op) stream))
 		(tabsize (compute-tab-size op
 					   section-start
 					   (+ column index))))
@@ -443,7 +443,7 @@
 	     (incf column tabsize))))
 	((or newline block-start)
 	 (setf section-start
-	       (+ column (position-index (queued-op-position op) stream)))))
+	       (+ column (posn-index (queued-op-posn op) stream)))))
       (when (eq op through)
 	(return)))
     (when insertions
@@ -533,8 +533,8 @@
 				    (logical-block-start-column
 				     (car (pretty-stream-blocks stream))))
 				   (:current
-				    (position-column
-				     (indentation-position next)
+				    (posn-column
+				     (indentation-posn next)
 				     stream)))
 				 (indentation-amount next)))))
 	  (block-start
@@ -549,7 +549,7 @@
 	     ((nil)
 	      (really-start-logical-block
 	       stream
-	       (position-column (block-start-position next) stream)
+	       (posn-column (block-start-posn next) stream)
 	       (block-start-prefix next)
 	       (block-start-suffix next)))
 	     (:dont-know
@@ -576,7 +576,7 @@
       (decf available (logical-block-suffix-length
 		       (car (pretty-stream-blocks stream)))))
     (cond (until
-	   (<= (position-column (queued-op-position until) stream) available))
+	   (<= (posn-column (queued-op-posn until) stream) available))
 	  (force-newlines-p nil)
 	  ((> (index-column (pretty-stream-buffer-fill-pointer stream) stream)
 	      available)
@@ -591,7 +591,7 @@
 	 (buffer (pretty-stream-buffer stream))
 	 (kind (newline-kind until))
 	 (literal-p (eq kind :literal))
-	 (amount-to-consume (position-index (newline-position until) stream))
+	 (amount-to-consume (posn-index (newline-posn until) stream))
 	 (amount-to-print
 	  (if literal-p
 	      amount-to-consume
@@ -651,7 +651,7 @@
 	 (tail (pretty-stream-queue-tail stream))
 	 (count
 	  (if tail
-	      (position-index (queued-op-position (car tail)) stream)
+	      (posn-index (queued-op-posn (car tail)) stream)
 	      fill-ptr))
 	 (new-fill-ptr (- fill-ptr count))
 	 (buffer (pretty-stream-buffer stream)))
