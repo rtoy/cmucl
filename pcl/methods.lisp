@@ -1,4 +1,3 @@
-
 ;;;-*-Mode:LISP; Package: PCL; Base:10; Syntax:Common-lisp -*-
 ;;;
 ;;; *************************************************************************
@@ -27,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.22 2003/01/03 18:50:24 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.23 2003/01/03 18:52:14 pmai Exp $")
 ;;;
 
 (in-package :pcl)
