@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.32 1991/02/25 18:12:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.33 1991/02/26 22:07:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,12 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package 'c)
+
+;;; Some parameters controlling which optimizations we attempt (for debugging.)
+;;;
+(defparameter pack-assign-costs t)
+(defparameter pack-optimize-saves t)
+(defparameter pack-save-once t)
 
 
 ;;;; Conflict determination:
@@ -491,24 +497,67 @@
     (emit-operand-load node block save tn next)))
 
 
+;;; FIND-SINGLE-WRITER  --  Internal
+;;;
+;;;    Return a VOP after which is an o.k. place to save the value of TN.  For
+;;; correctness, it is only required that this location be after any possible
+;;; write and before any possible restore location.
+;;;
+;;;    In practice, we return the unique writer VOP, but give up if the TN is
+;;; ever read by a VOP with MOVE-ARGS :LOCAL-CALL.  This prevents us from being
+;;; confused by non-tail local calls.
+;;;
+;;; When looking for writes, we have to ignore uses of MOVE-OPERAND, since they
+;;; will correspond to restores that we have already done.
+;;;
+(defun find-single-writer (tn)
+  (declare (type tn tn))
+  (do ((write (tn-writes tn) (tn-ref-next write))
+       (res nil))
+      ((null write)
+       (when (and res
+		  (loop for read = (tn-reads tn) then (tn-ref-next read)
+		        while read
+		        never (eq (vop-info-move-args
+				   (vop-info
+				    (tn-ref-vop read)))
+				  :local-call)))
+	 (tn-ref-vop res)))
+
+    (unless (eq (vop-info-name (vop-info (tn-ref-vop write)))
+		'move-operand)
+      (when res (return nil))
+      (setq res write))))
+
+
 ;;; Save-Single-Writer-TN  --  Internal
 ;;;
-;;;    For TNs that have a single writer, we save the TN at the writer, and
-;;; only restore after the call.
+;;;    Try to save TN at a single location.  If we succeed, return T, otherwise
+;;; NIL.
 ;;;
-(defun save-single-writer-tn (tn vop)
+(defun save-single-writer-tn (tn)
+  (declare (type tn tn))
   (let* ((old-save (tn-save-tn tn))
-	 (save (or old-save (pack-save-tn tn))))
+	 (save (or old-save (pack-save-tn tn)))
+	 (writer (find-single-writer tn)))
+    (when (and writer
+	       (or (not old-save)
+		   (eq (tn-kind old-save) :specified-save)))
+      (emit-operand-load (vop-node writer) (vop-block writer)
+			 tn save (vop-next writer))
+      (setf (tn-kind save) :save-once)
+      t)))
 
-    (when (or (not old-save)
-	      (eq (tn-kind old-save) :specified-save))
-      (let ((writer (tn-ref-vop (tn-writes tn))))
-	(emit-operand-load (vop-node writer) (vop-block writer)
-			   tn save (vop-next writer)))
-      (setf (tn-kind save) :save-once))
 
+;;; RESTORE-SINGLE-WRITER-TN  --  Internal
+;;;
+;;;    Restore a TN with a :SAVE-ONCE save TN.
+;;;
+(defun restore-single-writer-tn (tn vop)
+  (declare (type tn) (type vop vop))
+  (let ((save (tn-save-tn tn)))
+    (assert (eq (tn-kind save) :save-once))
     (emit-operand-load (vop-node vop) (vop-block vop) save tn (vop-next vop)))
-
   (undefined-value))
 
 
@@ -519,12 +568,13 @@
 ;;;
 (defun basic-save-tn (tn vop)
   (declare (type tn tn) (type vop vop))
-  (let ((writes (tn-writes tn))
-	(save (tn-save-tn tn)))
-    (if (or (and save (eq (tn-kind save) :save-once))
-	    (and writes (null (tn-ref-next writes))))
-	(save-single-writer-tn tn vop)
-	(save-complex-writer-tn tn vop)))
+  (let ((save (tn-save-tn tn)))
+    (cond ((and save (eq (tn-kind save) :save-once))
+	   (restore-single-writer-tn tn vop))
+	  ((save-single-writer-tn tn)
+	   (restore-single-writer-tn tn vop))
+	  (t
+	   (save-complex-writer-tn tn vop))))
   (undefined-value))
 
 
@@ -548,13 +598,12 @@
 
 ;;;; Optimized saving:
 
+
 ;;; SAVE-IF-NECESSARY  --  Internal
 ;;;
 ;;;    Save TN if it isn't a single-writer TN that has already been saved.  If
 ;;; multi-write, we insert the save Before the specified VOP.  Context is a VOP
-;;; used to tell which node/block to use for the new VOP.  When looking for
-;;; writes, we have to ignore uses of MOVE-OPERAND, since they correspond to
-;;; restores that we have already done.
+;;; used to tell which node/block to use for the new VOP.
 ;;;
 (defun save-if-necessary (tn before context)
   (declare (type tn tn) (type (or vop null) before) (type vop context))
@@ -563,22 +612,9 @@
       (setf (tn-kind save) :save))
     (assert (member (tn-kind save) '(:save :save-once)))
     (unless (eq (tn-kind save) :save-once)
-      (let ((writer
-	     (do ((write (tn-writes tn) (tn-ref-next write))
-		  (res nil))
-		 ((null write) res)
-	       (unless (eq (vop-info-name (vop-info (tn-ref-vop write)))
-			   'move-operand)
-		 (when res (return nil))
-		 (setq res write)))))
-	(cond (writer
-	       (let ((vop (tn-ref-vop writer)))
-		 (emit-operand-load (vop-node vop) (vop-block vop)
-				    tn save (vop-next vop))
-		 (setf (tn-kind save) :save-once)))
-	      (t
-	       (emit-operand-load (vop-node context) (vop-block context)
-				  tn save before))))))
+      (or (save-single-writer-tn tn)
+	  (emit-operand-load (vop-node context) (vop-block context)
+			     tn save before))))
   (undefined-value))
 
 
@@ -1364,7 +1400,7 @@
     ;;
     ;; Assign costs to normal TNs so we know which ones should always be
     ;; packed on the stack.
-    (when optimize
+    (when (and optimize pack-assign-costs)
       (assign-tn-costs component))
     ;;
     ;; Pack normal TNs in the order that they appear in the code.  This
@@ -1391,7 +1427,7 @@
     ;; Do load TN packing and emit saves.
     (let ((*live-block* nil)
 	  (*live-vop* nil))
-      (cond (optimize
+      (cond ((and optimize pack-optimize-saves)
 	     (optimized-emit-saves component)
 	     (do-ir2-blocks (block component)
 	       (pack-load-tns block)))
