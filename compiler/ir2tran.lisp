@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.61 1997/04/16 18:06:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.62 1997/11/21 12:26:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1601,7 +1601,8 @@
 	 (2cont (continuation-info cont))
 	 (2info (nlx-info-info info))
 	 (top-loc (ir2-nlx-info-save-sp 2info))
-	 (start-loc (make-old-fp-passing-location t))
+	 (start-loc #-x86 (make-old-fp-passing-location t)
+		    #+x86 (make-nlx-entry-argument-start-location))
 	 (count-loc (make-argument-count-location))
 	 (target (ir2-nlx-info-target 2info)))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.2 1997/11/18 10:48:01 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.3 1997/11/21 12:26:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -17,6 +17,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski -- Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1997.
 ;;;
 (in-package :x86)
 
@@ -195,10 +196,6 @@
   (pushw ebp-tn -2)
 
   ;; And away we go.
-;  (inst jmp-indirect
-;	(make-ea :byte :base eax :disp (- (* closure-function-slot word-bytes)
-;					  function-pointer-type)))
-  ;; -- jrd
   (inst jmp
 	(make-ea :byte :base eax :disp (- (* closure-function-slot word-bytes)
 					  function-pointer-type)))
@@ -248,7 +245,7 @@
 			  (:arg start (any-reg descriptor-reg) ebx-offset)
 			  (:arg count (any-reg descriptor-reg) ecx-offset)
 			  (:temp uwp dword-reg esi-offset))
-  (declare (ignore count))
+  (declare (ignore start count))
 
   (let ((error (generate-error-code nil invalid-unwind-error)))
     (inst or block block)		; check for NULL pointer
@@ -256,8 +253,9 @@
   
   (load-symbol-value uwp lisp::*current-unwind-protect-block*)
 
-  (inst;; does *cuwpb* match value stored in argument cuwp slot?
-   cmp uwp (make-ea-for-object-slot block unwind-block-current-uwp-slot 0))
+  ;; Does *cuwpb* match value stored in argument cuwp slot?
+  (inst cmp uwp
+	(make-ea-for-object-slot block unwind-block-current-uwp-slot 0))
   ;; If a match, return to context in arg block.
   (inst jmp :e do-exit)
 
@@ -273,18 +271,9 @@
   
   (loadw ebp-tn block unwind-block-current-cont-slot)
   
-  ;; apparently a carefully held secret is that uwp-entry expects
-  ;; some things in known locations so that they can be saved on
-  ;; the stack! Jeesh!
- 
-  ;;(move edx-tn block)			; gets shoved into 'block'
-  ;;(move ecx-tn count)			; a noop
-
-  ;; This seems needed to properly save the 'start' value so that the
-  ;; correct thing gets passed into the various nlx entry points although
-  ;; I think the compiler really ought to do it.
-
-  (storew start ebp-tn (- (1+ ocfp-save-offset)))
+  ;; Uwp-entry expects some things in known locations so that they can
+  ;; be saved on the stack: the block in edx-tn; start in ebx-tn; and
+  ;; count in ecx-tn
 
   (inst jmp (make-ea :byte :base block
 		     :disp (* unwind-block-entry-pc-slot word-bytes))))
