@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.2 1997/11/29 20:32:41 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.3 1997/11/30 05:08:29 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -25,7 +25,7 @@
 #define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__)
 
-#if 1
+#if 0
 #define gc_assert(ex) do { \
 	if (!(ex)) gc_abort(); \
 } while (0)
@@ -48,10 +48,16 @@ boolean  enable_page_protection = TRUE;
 
 /* Hunt for pointers to old-space, when GCing generations >=
    verify_gen. Set to NUM_GENERATIONS to disable. */
-int verify_gens = NUM_GENERATIONS-1;
+int verify_gens = NUM_GENERATIONS;
 
 /* Enable a pre-scan verify of generation 0 before it's GCed */
 boolean pre_verify_gen_0 = FALSE;
+
+/*
+ * Enable checking for bad pointers after gc_free_heap called
+ * from purify
+ */
+boolean verify_after_free_heap = FALSE;
 
 /* Enable the printing of a note when code objects are found in the
    dynamic space during a heap verify. */
@@ -59,7 +65,7 @@ boolean verify_dynamic_code_check = FALSE;
 
 /* Enable the checking of code objects for fixup errors after they are
    transported. */
-boolean check_code_fixups = TRUE;
+boolean check_code_fixups = FALSE;
 
 /* To enable unmapping of a page and re-mmaping it to have it zero
    filled. */
@@ -72,6 +78,12 @@ boolean gencgc_unmap_zero = TRUE;
 
 /* Enable checking that newly allocated regions are zero filled. */
 boolean gencgc_zero_check = FALSE;
+
+/*
+ * Enable checking that free pages are zero filled during gc_free_heap
+ * called after purify.
+ */
+boolean gencgc_zero_check_during_free_heap = FALSE;
 
 /* The minimum size for a large object. */
 unsigned large_object_size = 4*4096;
@@ -1778,6 +1790,9 @@ sniff_code_object(struct code *code, unsigned displacement)
   void *code_start_addr, *code_end_addr;
   int fixup_found = 0;
   
+  if (!check_code_fixups)
+    return;
+
   /* It's ok if it's byte compiled code. The trace
      table offset will be a fixnum if it's x86
      compiled code - check. */
@@ -5497,53 +5512,67 @@ collect_garbage(unsigned last_gen)
    have been moved to the RO and Static heaps. The dynamic space will
    need a full re-initialisation. I don't bother having purify flush
    the current gc_alloc region, as the page_tables are re-initialised,
-   and every page zeroed to be sure.
+   and every page is zeroed to be sure.
    */
 void
 gc_free_heap(void)
 {
   unsigned long  allocated = bytes_allocated;
-  int i;
+  int page;
 
   if (gencgc_verbose)
     fprintf(stderr,"Free heap\n");
 
-  for (i = 0; i < NUM_PAGES; i++) {
-    void *page_start, *addr;
-    
-    /* Mark the page free. The other slots are assumed invalid when it
-       is a FREE_PAGE and bytes_used is 0 and it should not be write
-       protected - except that the generation is used for the current
-       region but it sets that up. */
-    page_table[i].allocated = FREE_PAGE;
-    page_table[i].bytes_used = 0;
-    
-    /* Zero the page. */
-    page_start = (void *)page_address(i);
-    
-    /* First remove any write protection */
-    os_protect(page_start, 4096, OS_VM_PROT_ALL);
-    page_table[i].write_protected = 0;
-    
-    os_invalidate(page_start,4096);
-    addr = os_validate(page_start,4096);
-    if(addr == NULL || addr != page_start)
-      fprintf(stderr,"gc_zero: page moved, 0x%08x ==> 0x%08x!\n",
-	      page_start,addr);
-  }
-  
+  for (page = 0; page < NUM_PAGES; page++)
+    /* Skip Free pages which should already be zero filled. */
+    if (page_table[page].allocated != FREE_PAGE) {
+      void *page_start, *addr;
+
+      /* Mark the page free. The other slots are assumed invalid when it
+	 is a FREE_PAGE and bytes_used is 0 and it should not be write
+	 protected - except that the generation is used for the current
+	 region but it sets that up. */
+      page_table[page].allocated = FREE_PAGE;
+      page_table[page].bytes_used = 0;
+      
+      /* Zero the page. */
+      page_start = (void *)page_address(page);
+      
+      /* First remove any write protection */
+      os_protect(page_start, 4096, OS_VM_PROT_ALL);
+      page_table[page].write_protected = 0;
+      
+      os_invalidate(page_start,4096);
+      addr = os_validate(page_start,4096);
+      if(addr == NULL || addr != page_start)
+	fprintf(stderr,"gc_zero: page moved, 0x%08x ==> 0x%08x!\n",
+		page_start,addr);
+    } else if (gencgc_zero_check_during_free_heap) {
+      int *page_start, i;
+
+      /* Double check that the page is zero filled. */
+      gc_assert(page_table[page].allocated == FREE_PAGE);
+      gc_assert(page_table[page].bytes_used == 0);
+      
+      page_start = (int *)page_address(i);
+
+      for(i=0; i<1024; i++)
+	if (page_start[i] != 0)
+	  fprintf(stderr,"** Free region not zero @ %x\n", page_start+i);
+    }
+
   bytes_allocated = 0;
   
   /* Initialise the generations. */
-  for (i = 0; i < NUM_GENERATIONS; i++) {
-    generations[i].alloc_start_page = 0;
-    generations[i].alloc_unboxed_start_page = 0;
-    generations[i].alloc_large_start_page = 0;
-    generations[i].alloc_large_unboxed_start_page = 0;
-    generations[i].bytes_allocated = 0;
-    generations[i].gc_trigger = 2000000;
-    generations[i].num_gc = 0;
-    generations[i].cum_sum_bytes_allocated = 0;
+  for (page = 0; page < NUM_GENERATIONS; page++) {
+    generations[page].alloc_start_page = 0;
+    generations[page].alloc_unboxed_start_page = 0;
+    generations[page].alloc_large_start_page = 0;
+    generations[page].alloc_large_unboxed_start_page = 0;
+    generations[page].bytes_allocated = 0;
+    generations[page].gc_trigger = 2000000;
+    generations[page].num_gc = 0;
+    generations[page].cum_sum_bytes_allocated = 0;
   }
   
   if (gencgc_verbose)
@@ -5573,9 +5602,11 @@ gc_free_heap(void)
   current_region_free_pointer = boxed_region.free_pointer;
   current_region_end_addr = boxed_region.end_addr;
 
-  /* Check if purify has left any bad pointers. */
-  fprintf(stderr,"Checking after free_heap.\n");
-  verify_gc();
+  if (verify_after_free_heap) {
+    /* Check if purify has left any bad pointers. */
+    fprintf(stderr,"Checking after free_heap.\n");
+    verify_gc();
+  }
 }
 
 
