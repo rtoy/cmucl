@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.70 1998/01/05 18:48:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.71 1998/01/05 23:00:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -800,13 +800,11 @@
 				      (flatten-helper (cdr x) r))))))
     (flatten-helper x nil)))
 
+;;; Take some type of continuation and massage it so that we get a
+;;; list of the constituent types.  If ARG is *EMPTY-TYPE*, return NIL
+;;; to indicate failure.
+;;;
 (defun prepare-arg-for-derive-type (arg)
-  ;; Take some type of continuation and massage it so that we get a
-  ;; list of the constituent types.  If ARG is *EMPTY-TYPE*, return
-  ;; NIL to indicate failure.
-  ;;
-  ;; WARNING: For some reason if ARG is of type (member 1 a), this
-  ;; routine only gets (member 1).  I don't know why.
   (flet ((listify (arg)
 	   (typecase arg
 	     (numeric-type
@@ -814,28 +812,24 @@
 	     (union-type
 	      (union-type-types arg))
 	     (t
-	      (list arg))))
-	 (convert-member-type (type)
-	   ;; Run down the list of members and convert to a list of
-	   ;; member types.
-	   (mapcar #'(lambda (element)
-		       (if (numberp element)
-			   (specifier-type `(member ,element))
-			   *empty-type*))
-		   (member-type-members type))))
-    (when (eq arg *empty-type*)
-      (return-from prepare-arg-for-derive-type nil))
-    ;; Make sure all args are some type of numeric-type.  For member
-    ;; types, convert the list of members into a union of equivalent
-    ;; single-element member-type's.
-    (let ((new-args (flatten-list (mapcar #'(lambda (x)
-					      (if (member-type-p x)
-						  (convert-member-type x)
-						  x))
-					  (listify arg)))))
-      (if (member *empty-type* new-args)
-	  nil
-	  new-args))))
+	      (list arg)))))
+    (unless (eq arg *empty-type*)
+      ;; Make sure all args are some type of numeric-type.  For member
+      ;; types, convert the list of members into a union of equivalent
+      ;; single-element member-type's.
+      (let ((new-args nil))
+	(dolist (arg (listify arg))
+	  (if (member-type-p arg)
+	      ;; Run down the list of members and convert to a list of
+	      ;; member types.
+	      (dolist (member (member-type-members arg))
+		(push (if (numberp member)
+			  (specifier-type `(member ,member))
+			  *empty-type*)
+		      new-args))
+	      (push arg new-args)))
+	(unless (member *empty-type* new-args)
+	  new-args)))))
 
 ;;; Convert from the standard type convention for which -0.0 and 0.0
 ;;; and equal to an intermediate convention for which they are
@@ -968,18 +962,23 @@
 ;;;
 #-negative-zero-is-not-zero
 (defun convert-back-numeric-type-list (type-list)
-  (declare (type (or list numeric-type) type-list))
-  (cond ((listp type-list)
-	 (collect ((results))
-		  (dolist (type type-list)
-		    (results (if (numeric-type-p type)
-				 (convert-back-numeric-type type)
-				 type)))
-		  (results)))
-	((numeric-type-p type-list)
-	 (convert-back-numeric-type type-list))
-	(t
-	 type-list)))
+  (typecase type-list
+    (list
+     (let ((results '()))
+       (dolist (type type-list)
+	 (if (numeric-type-p type)
+	     (let ((result (convert-back-numeric-type type)))
+	       (if (listp result)
+		   (setf results (append results result))
+		   (push result results)))
+	     (push type results)))
+       results))
+    (numeric-type
+     (convert-back-numeric-type type-list))
+    (union-type
+     (convert-back-numeric-type-list (union-type-types type-list)))
+    (t
+     type-list)))
 
 ;;; ONE-ARG-DERIVE-TYPE
 ;;;
@@ -1018,10 +1017,15 @@
 		  *universal-type*))))
 	;; Run down the list of args and derive the type of each one
 	;; and save all of the results in a list.
-	(let ((result (flatten-list (mapcar #'deriver arg-list))))
-	  (if (rest result)
-	      (make-union-type result)
-	      (first result)))))))
+	(let ((results nil))
+	  (dolist (arg arg-list)
+	    (let ((result (deriver arg)))
+	      (if (listp result)
+		  (setf results (append results result))
+		  (push result results))))
+	  (if (rest results)
+	      (make-union-type results)
+	      (first results)))))))
 
 ;;; TWO-ARG-DERIVE-TYPE
 ;;;
@@ -1104,24 +1108,28 @@
 		    *universal-type*))))
     (let ((same-arg (same-leaf-ref-p arg1 arg2))
 	  (a1 (prepare-arg-for-derive-type (continuation-type arg1)))
-	  (a2 (prepare-arg-for-derive-type (continuation-type arg2)))
-	  (result '()))
+	  (a2 (prepare-arg-for-derive-type (continuation-type arg2))))
       (when (and a1 a2)
-	(if same-arg
-	    ;; Since the args are the same continuation, just run down on
-	    ;; of the lists.
-	    (dolist (x a1)
-	      (push (deriver x x same-arg) result))
-	    ;; Try all pairwise combinations and gather the result
-	    (dolist (x a1)
-	      (dolist (y a2)
-		(push (or (deriver x y same-arg)
-			  (numeric-contagion x y))
-		      result))))
-	(setf result (flatten-list result))
-	(if (rest result)
-	    (make-union-type result)
-	    (first result))))))
+	(let ((results nil))
+	  (if same-arg
+	      ;; Since the args are the same continuation, just run
+	      ;; down the lists.
+	      (dolist (x a1)
+		(let ((result (deriver x x same-arg)))
+		  (if (listp result)
+		      (setf results (append results result))
+		      (push result results))))
+	      ;; Try all pairwise combinations.
+	      (dolist (x a1)
+		(dolist (y a2)
+		  (let ((result (or (deriver x y same-arg)
+				    (numeric-contagion x y))))
+		    (if (listp result)
+			(setf results (append results result))
+			(push result results))))))
+	  (if (rest results)
+	      (make-union-type results)
+	      (first results)))))))
 
 ) ; end progn
 
