@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.10 1991/05/28 17:50:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.11 1991/08/22 16:03:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,7 @@
 
 (defun %print-pathname (s stream d)
   (declare (ignore d))
-  (format stream "#.(pathname ~S)" (namestring s)))
+  (format stream "#p~S" (namestring s)))
 
 (defun make-pathname (&key defaults (host nil hostp) (device nil devicep)
 			   (directory nil directoryp) (name nil namep)
