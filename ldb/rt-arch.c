@@ -1,3 +1,9 @@
+#include <stdio.h>
+#include <mach.h>
+#include <sys/file.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+
 #include "ldb.h"
 #include "lisp.h"
 #include "globals.h"
@@ -7,8 +13,71 @@
 #include "lispregs.h"
 #include "signal.h"
 
-void arch_init()
+#define FL_NONE 0
+#define FL_FPA 2
+#define FL_AFPA 4
+#define FL_MC68881 1
+
+#define READ_MC68881_FPCR 0xfc3ec001
+#define WRITE_MC68881_FPCR 0xfc024001
+#define MC68881_ZIC 0xfc1c0003
+#define MC68881_PREC_MASK 0xff3f
+#define MC68881_DOUBLE_PREC 0x0080
+
+/* This is only used during arch_init to find out what kind of FP we have. */
+static sigsys_handler(signal, code, scp)
+int signal, code;
+struct sigcontext *scp;
 {
+    return (-1);
+}
+
+char *arch_init()
+{
+    int hw, i, rc;
+    int fs[5];
+    struct sigvec sv, osv;
+
+    /* Set up the state of the floating point hardware.  On the APC, there is
+       the onboard MC68881 which must be dealt with properly.  The signal
+       handling is necessary to be compatible with facilities version
+       of Mach.  */
+
+    sv.sv_handler = sigsys_handler;
+    sv.sv_mask = sigmask(SIGSYS);
+    sv.sv_onstack = FALSE;
+    rc = sigvec(SIGSYS, &sv, &osv);
+    i = 20;
+    rc = syscall(167, fs, &i);
+    if (rc == 0) {
+	i = fs[0];
+	hw = i & 7;
+	if (i & 1) {
+	    *(int *)READ_MC68881_FPCR = (int) &i;
+	    *(int *)MC68881_ZIC = 0;
+	    i = ((i & MC68881_PREC_MASK) | MC68881_DOUBLE_PREC);
+	    *(int *)WRITE_MC68881_FPCR = (int) &i;
+	    if (i & 2)
+		hw = hw & (~2);
+	}
+    }
+    else
+	hw = FL_FPA;
+
+    sigvec(SIGSYS, &osv, &sv);
+
+    switch (hw) {
+      case FL_FPA:
+	fprintf(stderr, "CMUCL only supports the AFPA and the MC68881 floating point options.\n");
+	exit(1);
+      case FL_AFPA:
+	return "eapc.core";
+      case FL_MC68881:
+	return NULL;
+      default:
+	fprintf(stderr, "CMUCL only supports the AFPA and the MC68881 floating point options.\nUse a different machine.\n");
+	exit(1);
+    }
 }
 
 os_vm_address_t arch_get_bad_addr(context)
