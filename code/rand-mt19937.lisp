@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.9 1999/08/14 15:40:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.10 2003/02/11 13:52:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 	  make-random-state))
 
 (in-package "KERNEL")
-(export '(%random-single-float %random-double-float random-chunk))
+(export '(%random-single-float %random-double-float random-chunk init-random-state))
 
 
 ;;;; Random state hackery:
@@ -36,29 +36,151 @@
 ;;;  2:     Index k.
 ;;;  3-626: State.
 
-;;; Generate and initialise a new random-state array. The states are
-;;; initialised to 32bit integers excluding zero, and the index is
-;;; initialised to mt19937-n forcing an update when the first number
-;;; is generated.
-;;;
-;;; Seed - A 32bit number, not zero.
-;;;
-;;; Apparently uses the generator Line 25 of Table 1 in
-;;; [KNUTH 1981, The Art of Computer Programming, Vol. 2 (2nd Ed.), pp102]
-;;;
-(defun init-random-state (&optional (seed 4357) state)
+;; GENERATE-SEED
+;;
+;; Generate a random seed that can be used for seeding the generator.
+;; If /dev/urandom is available, it is used to generate random data as
+;; the seed.  Otherwise, the current time is used as the seed.
+;;
+;; The /dev/urandom device exists on Linux, FreeBSD, Solaris 8 and
+;; later. (You need to have patch 112438-01 for Solaris 8 to get that
+;; device, though). It returns pseudorandom data with entropy that the
+;; kernel collects from the environment. Unlike the related
+;; /dev/random, this device does not block when the entropy pool has
+;; been depleted.
+(defun generate-seed (&optional (nwords 1))
+  (cond ((probe-file "/dev/urandom")
+	 (let ((words (make-array nwords :element-type '(unsigned-byte 32))))
+	   (with-open-file (rand "/dev/urandom"
+				 :direction :input
+				 :element-type '(unsigned-byte 32))
+	     (read-sequence words rand))
+	   (if (= nwords 1)
+	       (aref words 0)
+	       words)))
+        (t
+         (logand (get-universal-time) #xffffffff))))
+
+;; New initializer proposed by Takuji Nishimura and Makota Matsumoto.
+;; (See http://www.math.keio.ac.jp/~matumoto/MT2002/emt19937ar.html)
+;;
+;; This corrects a deficiency in the original initializer wherein the
+;; MSB of the seed was not well represented in the state.
+;;
+;; The initialization routine is described below.  Let s be the seed,
+;; mt[] be the state vector.  Then the algorithm is
+;;
+;; mt[0] = s & 0xffffffffUL
+;;
+;; for (k = 1; k < N; k++) {
+;;   mt[k] = 1812433253 * (mt[k-1] ^ (mt[k-1] >> 30)) + k
+;;   mt[k] &= 0xffffffffUL
+;; }
+;;
+;; The multiplier is from Knuth TAOCP Vol2, 3rd Ed., p. 106.
+;;
+
+(defun int-init-random-state (&optional (seed 5489) state)
   (declare (type (integer 1 #xffffffff) seed))
   (let ((state (or state (make-array 627 :element-type '(unsigned-byte 32)))))
     (declare (type (simple-array (unsigned-byte 32) (627)) state))
+    (setf (aref state 0) 0)
     (setf (aref state 1) #x9908b0df)
     (setf (aref state 2) mt19937-n)
     (setf (aref state 3) seed)
     (do ((k 1 (1+ k)))
 	((>= k 624))
       (declare (type (mod 625) k))
-      (setf (aref state (+ 3 k))
-	    (logand (* 69069 (aref state (+ 3 (1- k)))) #xffffffff)))
+      (let ((prev (aref state (+ 3 (1- k)))))
+	(setf (aref state (+ 3 k))
+	      (logand (+ (* 1812433253 (logxor prev (ash prev -30)))
+			 k)
+		      #xffffffff))))
     state))
+
+;; Initialize from an array.
+;;
+;; Here is the algorithm, in C.  init_genrand is the initalizer above,
+;; init_key is the seed vector of length key_length.
+;;
+;;     init_genrand(19650218UL);
+;;     i=1; j=0;
+;;     k = (N>key_length ? N : key_length);
+;;     for (; k; k--) {
+;;         mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 30)) * 1664525UL))
+;;           + init_key[j] + j; /* non linear */
+;;         mt[i] &= 0xffffffffUL; /* for WORDSIZE > 32 machines */
+;;         i++; j++;
+;;         if (i>=N) {
+;;           mt[0] = mt[N-1]; i=1;
+;;         }
+;;         if (j>=key_length) {
+;;           j=0;
+;;         }
+;;     }
+;;     for (k=N-1; k; k--) {
+;;         mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 30)) * 1566083941UL))
+;;           - i; /* non linear */
+;;         mt[i] &= 0xffffffffUL; /* for WORDSIZE > 32 machines */
+;;         i++;
+;;         if (i>=N) { mt[0] = mt[N-1]; i=1; }
+;;     }
+;;
+;;     mt[0] = 0x80000000UL; /* MSB is 1; assuring non-zero initial array */ 
+;;
+
+(defun vec-init-random-state (key &optional state)
+  (declare (type (array (unsigned-byte 32) (*)) key))
+  (let ((key-len (length key))
+	(state (init-random-state 19650218 state))
+	(i 1)
+	(j 0))
+    (loop for k from (max key-len mt19937-n) above 0 do
+	  (let ((prev (aref state (+ 3 (1- i)))))
+	    (setf (aref state (+ 3 i))
+		  (ldb (byte 32 0)
+		       (+ (aref key j) j
+			  (logxor (aref state (+ 3 i))
+				  (ldb (byte 32 0)
+				       (* 1664525
+					  (logxor prev (ash prev -30))))))))
+	    (incf i)
+	    (incf j)
+	    (when (>= i mt19937-n)
+	      (setf (aref state 3)
+		    (aref state (+ 3 (- mt19937-n 1))))
+	      (setf i 1))
+	    (when (>= j key-len)
+	      (setf j 0))))
+
+    (loop for k from (1- mt19937-n) above 0 do
+	  (let ((prev (aref state (+ 3 (1- i)))))
+	    (setf (aref state (+ 3 i))
+		  (ldb (byte 32 0)
+		       (- (logxor (aref state (+ 3 i))
+				  (* 1566083941
+				     (logxor prev (ash prev -30))))
+			  i)))
+	    (incf i)
+	    (when (>= i mt19937-n)
+	      (setf (aref state 3)
+		    (aref state (+ 3 (- mt19937-n 1))))
+	      (setf i 1))))
+    (setf (aref state 3) #x80000000)
+    state))
+
+;; 
+(defun init-random-state (&optional (seed 5489) state)
+  "Generate an random state vector from the given SEED.  The seed can be
+  either an integer or a vector of (unsigned-byte 32)"
+  (declare (type (or null integer
+		     (array (unsigned-byte 32) (*)))
+		 seed))
+  (etypecase seed
+    (integer
+     (int-init-random-state (ldb (byte 32 0) seed) state))
+    ((array (unsigned-byte 32) (*))
+     (vec-init-random-state seed state))))
 
 (defstruct (random-state
 	     (:constructor make-random-object)
@@ -68,10 +190,10 @@
 (defvar *random-state* (make-random-object))
 
 (defun make-random-state (&optional state)
-  "Make a random state object.  If State is not supplied, return a copy
-  of the default random state.  If State is a random state, then return a
-  copy of it.  If state is T then return a random state generated from
-  the universal time."
+  "Make a random state object.  If STATE is not supplied, return a copy
+  of the default random state.  If STATE is a random state, then return a
+  copy of it.  If STATE is T then return a random state generated from
+  the universal time or /dev/urandom if available."
   (flet ((copy-random-state (state)
 	   (let ((state (random-state-state state))
 		 (new-state
@@ -82,13 +204,11 @@
     (cond ((not state) (copy-random-state *random-state*))
 	  ((random-state-p state) (copy-random-state state))
 	  ((eq state t)
-	   (make-random-object :state (init-random-state
-				       (logand (get-universal-time)
-					       #xffffffff))))
+	   (make-random-object :state (init-random-state (generate-seed))))
 	  (t (error "Argument is not a RANDOM-STATE, T or NIL: ~S" state)))))
 
 (pushnew #'(lambda ()
-	     (init-random-state (logand (get-universal-time) #xffffffff)
+	     (init-random-state (generate-seed)
 				(random-state-state *random-state*)))
 	 ext:*after-save-initializations*)
 
