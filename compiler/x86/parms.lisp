@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.16 2000/10/16 17:30:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.17 2002/01/13 18:26:00 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -155,6 +155,10 @@
 (defconstant float-round-to-negative 1)
 (defconstant float-round-to-positive 2)
 (defconstant float-round-to-zero     3)
+
+(defconstant float-precision-24-bit  0)
+(defconstant float-precision-53-bit  2)
+(defconstant float-precision-64-bit  3)
 
 (defconstant float-rounding-mode   (byte 2 10))
 (defconstant float-sticky-bits     (byte 6 16))
