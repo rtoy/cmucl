@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.2 1992/12/15 19:33:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.3 1992/12/16 18:10:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,9 +75,7 @@
 	 (locs (continuation-result-tns
 		cont (list (backend-any-primitive-type *backend*))))
 	 (result (first locs)))
-    (vop fixed-alloc node block name words
-	 (and type (logior (ash words vm:type-bits) type))
-	 lowtag result)
+    (vop fixed-alloc node block name words type lowtag result)
     (do-inits node block name result lowtag inits args)
     (move-continuation-result node block locs cont)))
 
@@ -89,12 +87,9 @@
 	 (result (first locs)))
     (if (constant-continuation-p extra)
 	(let ((words (+ (continuation-value extra) words)))
-	  (vop fixed-alloc node block name words
-	       (logior (ash words vm:type-bits) type)
-	       lowtag result))
+	  (vop fixed-alloc node block name words type lowtag result))
 	(vop var-alloc node block (continuation-tn node block extra) name words
-	     (logior (ash words vm:type-bits) type)
-	     lowtag result))
+	     type lowtag result))
     (do-inits node block name result lowtag inits args)
     (move-continuation-result node block locs cont)))
 
