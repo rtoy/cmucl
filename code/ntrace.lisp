@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.8 1992/05/27 01:09:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.9 1992/07/10 17:46:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -306,7 +306,7 @@
 	     (if (trace-info-encapsulated info)
 		 (locally (declare (special basic-definition argument-list))
 		   (prin1 `(,(trace-info-what info) ,@argument-list)))
-		 (print-frame-call-1 frame nil))
+		 (print-frame-call frame))
 	     (terpri)
 	     (trace-print frame (trace-info-print info)))
 	   (trace-maybe-break info (trace-info-break info) "before" frame)))
