@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.50 1999/02/25 13:02:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.51 2000/01/10 15:25:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -411,7 +411,7 @@
   arrays must have identical dimensions and EQUALP elements, but may differ
   in their type restriction."
   (cond ((eq x y) t)
-	((characterp x) (char-equal x y))
+	((characterp x) (and (characterp y) (char-equal x y)))
 	((numberp x) (and (numberp y) (= x y)))
 	((consp x)
 	 (and (consp y)
