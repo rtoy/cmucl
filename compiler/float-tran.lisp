@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.14 1992/08/13 18:03:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.15 1993/05/07 16:03:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,11 +20,6 @@
 
 
 ;;;; Coercions:
-
-#-new-compiler
-(progn
-  (defun %single-float (x) (coerce x 'single-float))
-  (defun %double-float (x) (coerce x 'double-float)))
 
 (defknown %single-float (real) single-float (movable foldable flushable))
 (defknown %double-float (real) double-float (movable foldable flushable))
@@ -63,6 +58,21 @@
 		     (values res (- x res)))))))
   (frob truncate %unary-truncate)
   (frob round %unary-round))
+
+;;; Random:
+;;;
+(macrolet ((frob (fun type)
+	     `(deftransform random ((num &optional state)
+				    (,type &optional *))
+		"use inline float operations"
+		'(,fun num state))))
+  (frob %random-single-float single-float)
+  (frob %random-double-float double-float))
+
+(deftransform random ((num &optional state)
+		      ((integer 1 #.random-fixnum-max) &optional *))
+  "use inline fixnum operations"
+  '(rem (random-chunk (or state *random-state*)) num))
 
 
 ;;;; Float accessors:
