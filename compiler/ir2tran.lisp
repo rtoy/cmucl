@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.51 1993/05/15 09:25:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.52 1993/05/17 04:46:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1666,7 +1666,6 @@
 	(let ((block (ir2-block-block 2block)))
 	  (when (block-start block)
 	    (setf (block-number block) num)
-	    (incf num)
 	    (when *collect-dynamic-statistics*
 	      (let ((first-node (continuation-next (block-start block))))
 		(unless (or (and (bind-p first-node)
@@ -1676,7 +1675,8 @@
 				 (node-cont first-node))
 				'%nlx-entry))
 		  (vop count-me first-node 2block *dynamic-counts-tn* num))))
-	    (ir2-convert-block block))))))
+	    (ir2-convert-block block)
+	    (incf num))))))
   (undefined-value))
 
 
