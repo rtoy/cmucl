@@ -929,7 +929,7 @@
 	(device (device-hunk-device hunk)))
     (if upos
 	(let ((previous start)
-	      after-pos)
+	      (after-pos 0))
 	  (declare (fixnum previous after-pos))
 	  (loop (device-write-string string previous upos)
 		(setf after-pos (do ((i (1+ upos) (1+ i)))
@@ -1059,7 +1059,7 @@
     (when end-string (incf cost (length (the simple-string end-string))))
     (< cost insert-char-num)))
 
-(defun delete-char (hunk x y &optional n)
+(defun delete-char (hunk x y &optional (n 1))
   (declare (fixnum x y n))
   (update-cursor hunk x y)
   (let* ((device (device-hunk-device hunk))
@@ -1072,7 +1072,7 @@
     (when end-string (device-write-string end-string))))
 
 (defun worth-using-delete-mode (device delete-char-num clear-char-num)
-  (declare (fixnum num))
+  (declare (fixnum delete-char-num clear-char-num))
   (let ((init-string (tty-device-delete-init-string device))
 	(end-string (tty-device-delete-end-string device))
 	(delete-char-string (tty-device-delete-char-string device))
