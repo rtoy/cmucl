@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.10 1992/07/30 05:36:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.11 1992/11/06 04:10:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1201,7 +1201,7 @@
 (defun pprint-flet (stream list &rest noise)
   (declare (ignore noise))
   (funcall (formatter
-	    "~:<~^~W~^ ~@_~:<~@{~:<~W~^~3I ~:_~/PP:PPRINT-LAMBDA-LIST/~1I~:@_~@{~W~^ ~_~}~:>~^ ~_~}~:>~1I~@:_~@{~W~^ ~_~}~:>")
+	    "~:<~^~W~^ ~@_~:<~@{~:<~^~W~^~3I ~:_~/PP:PPRINT-LAMBDA-LIST/~1I~:@_~@{~W~^ ~_~}~:>~^ ~_~}~:>~1I~@:_~@{~W~^ ~_~}~:>")
 	   stream
 	   list))
 
