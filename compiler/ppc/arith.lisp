@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.6 2004/07/30 16:25:47 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.7 2004/08/02 03:15:17 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -272,6 +272,48 @@
 			  fixnum-additive-overflow-trap))
       (emit-label no-overflow))))
 
+(define-vop (fast-*/fixnum=>fixnum fast-fixnum-binop)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:translate *)
+  (:generator 2
+    (inst srawi temp y 2)
+    (inst mullw r x temp)))
+
+(define-vop (fast-*-c/fixnum=>fixnum fast-fixnum-binop-c)
+  (:translate *)
+  (:arg-types tagged-num 
+	      (:constant (and (signed-byte 16) (not (integer 0 0)))))
+  (:generator 1
+    (inst mulli r x y)))
+
+(define-vop (fast-*-bigc/fixnum=>fixnum fast-fixnum-binop-c)
+  (:translate *)
+  (:arg-types tagged-num
+	      (:constant (and fixnum (not (signed-byte 16)))))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:generator 1
+    (inst lr temp y)
+    (inst mullw r x temp)))
+
+(define-vop (fast-*/signed=>signed fast-signed-binop)
+  (:translate *)
+  (:generator 4
+    (inst mullw r x y)))
+
+(define-vop (fast-*-c/signed=>signed fast-signed-binop-c)
+  (:translate *)
+  (:generator 3
+    (inst mulli r x y)))
+
+(define-vop (fast-*/unsigned=>unsigned fast-unsigned-binop)
+  (:translate *)
+  (:generator 4
+    (inst mullw r x y)))
+
+(define-vop (fast-*-c/unsigned=>unsigned fast-unsigned-binop-c)
+  (:translate *)
+  (:generator 3
+    (inst mulli r x y)))
 
 ;;; Shifting
 
@@ -1011,7 +1053,7 @@
 (define-modular-backend logandc2)
 (define-modular-backend logorc1)
 (define-modular-backend logorc2)
-;;(define-modular-backend * t)
+(define-modular-backend * t)
 
 (def-source-transform lognand (x y)
   `(lognot (logand ,x ,y)))
