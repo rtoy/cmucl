@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.1 1990/04/01 17:35:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.2 1990/04/01 20:18:59 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -516,6 +516,7 @@
 (use-package "EXT")
 (use-package "KERNEL")
 (use-package "SYSTEM")
+(use-package "VM")
 
 (export '(*compile-time-define-macros* *compiling-for-interpreter*
 	  compile-for-eval entry-node-info-nlx-tag entry-node-info-st-top
