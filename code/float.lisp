@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.28 2002/07/22 17:01:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.29 2004/06/09 14:46:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1095,8 +1095,9 @@ rounding modes & do ieee round-to-integer.
 	   ;; Infinity or NaN.
 	   x)
 	  ((<= biased 0)
-	   ;; Number is less than 1
-	   0f0)
+	   ;; Number is less than 1.  IEEE 754 says it should have the
+	   ;; same sign.  Make it so.
+	   (* x 0f0))
 	  ((>= biased (float-digits x))
 	   ;; Number is an integer
 	   x)
@@ -1125,8 +1126,9 @@ rounding modes & do ieee round-to-integer.
     (cond ((= exp vm:double-float-normal-exponent-max)
 	   x)
 	  ((<= biased 0)
-	   ;; Number is less than 1
-	   0d0)
+	   ;; Number is less than 1.  IEEE 754 says it should have the
+	   ;; same sign.  Make it so.
+	   (* x 0d0))
 	  ((>= biased (float-digits x))
 	   ;; Number is an integer
 	   x)
