@@ -70,7 +70,7 @@
 	   (*compiler-warning-count* 0)
 	   (*compiler-note-count* 0)
 	   (*source-info* (make-lisp-source-info form)))
-      (clear-stuff)
+      (clear-stuff nil)
       (find-source-paths form 0)
       ;;
       ;; This LET comes from COMPILE-TOP-LEVEL.
