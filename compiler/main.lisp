@@ -1323,6 +1323,10 @@
 
       (when error-file-stream
 	(let ((name (pathname error-file-stream)))
+	  ;;
+	  ;; Leave this var pointing to something reasonable in case someone
+	  ;; tries to use it before the LET ends, e.g. during the LOAD.
+	  (setq *compiler-error-output* *error-output*)
 	  (close error-file-stream)
 	  (when (and compile-won (not error-severity))
 	    (delete-file name))))
