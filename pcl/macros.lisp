@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.27 2003/05/07 17:00:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.28 2003/05/23 11:05:16 gerd Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -68,6 +68,12 @@
   ;; (EFFECTIVE-METHOD GF-NAME METHOD-SPEC ...)
   (define-function-name-syntax effective-method (name)
     (valid-function-name-p (cadr name))))
+
+(defun pcl-internal-function-name-p (name)
+  (and (consp name)
+       (memq (car name)
+	     '(class-predicate slot-accessor
+	       method fast-method effective-method))))
 
 (import '(cl::make-keyword))
 

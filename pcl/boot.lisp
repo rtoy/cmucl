@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.58 2003/05/19 10:40:28 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.59 2003/05/23 11:05:16 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1561,10 +1561,7 @@ work during bootstrapping.
 	(setf (gf-info-simple-accessor-type arg-info) t))))
   ;;
   ;; Let dfuns and emfs be pre-computed for "normal" PCL methods, not
-  ;; the ones generated in the course of optimizations.  This
-  ;; implementation depends on the fact that the latter methods result
-  ;; in NIL being returned as second value of
-  ;; EXT:VALID-FUNCTION-NAME-P.
+  ;; the ones generated in the course of optimizations.
   (unless was-valid-p
     (let ((name (if (eq *boot-state* 'complete)
 		    (generic-function-name gf)
@@ -1572,7 +1569,8 @@ work during bootstrapping.
       (setf (gf-precompute-dfun-and-emf-p arg-info)
 	    (multiple-value-bind (valid sym)
 		(valid-function-name-p name)
-	      (and valid sym
+	      (and valid
+		   (not (pcl-internal-function-name-p name))
 		   (symbolp sym)
 		   (let ((pkg (symbol-package sym))
 			 (pcl *the-pcl-package*))
