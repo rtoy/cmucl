@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.58 2003/04/27 14:52:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.59 2003/06/06 12:22:33 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,19 +130,29 @@
 ;;; 
 (defun type-of (object)
   "Return the type of OBJECT."
-  (if (typep object '(or function array complex))
-      (type-specifier (ctype-of object))
-      (let* ((class (layout-class (layout-of object)))
-	     (name (%class-name class)))
-	(if (%instancep object)
-	    (case name
-	      (alien-internals:alien-value
-	       `(alien:alien
-		 ,(alien-internals:unparse-alien-type
-		   (alien-internals:alien-value-type object))))
-	      (t
-	       (class-proper-name class)))
-	    name))))
+  (typecase object
+    ((or array complex)
+     (type-specifier (ctype-of object)))
+    (integer
+     `(integer ,object ,object))
+    ((member t)
+     'boolean)
+    (keyword
+     'keyword)
+    (standard-char
+     'standard-char)
+    (t
+     (let* ((class (layout-class (layout-of object)))
+	    (name (%class-name class)))
+       (if (%instancep object)
+	   (if (eq name 'alien-internals:alien-value)
+	       `(alien:alien ,(alien-internals:unparse-alien-type
+			       (alien-internals:alien-value-type object)))
+	       (let ((proper-name (class-proper-name class)))
+		 (if (kernel::class-p proper-name)
+		     (%class-pcl-class proper-name)
+		     proper-name)))
+	   name)))))
 
 
 ;;;; UPGRADED-ARRAY-ELEMENT-TYPE  --  public

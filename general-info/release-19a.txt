@@ -99,6 +99,10 @@ New in this release:
      - FIND-METHOD signaling an error when called with specializers
        not corresponding to the number of required arguments of the
        supplied generic function.
+     - TYPE-OF returning KEYWORD for keywords, STANDARD-CHAR for
+       standard characters, BOOLEAN for T, (INTEGER <N> <N>) for
+       integers N, non-list types for functions, and CLOS classes for
+       instances whose class doesn't have a proper name.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
@@ -116,7 +120,6 @@ New in this release:
      - the signature of *COMPILER-NOTIFICATION-FUNCTION* has changed;
        it now has an extra argument that describes the nature of the
        error or warning. 
-
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/

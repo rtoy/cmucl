@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.38 2003/06/05 08:33:45 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.39 2003/06/06 12:22:32 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1539,3 +1539,6 @@
     (declare (ignore nreq nopt keysp restp))
     (values keywords allow-other-keys-p)))
 
+(defmethod (setf class-name) :before (new-name (class class))
+  (let ((kernel-class (kernel::find-class (class-name class))))
+    (setf (kernel:%class-name kernel-class) new-name)))
