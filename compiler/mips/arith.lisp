@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.30 1990/07/10 13:58:44 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.31 1990/07/12 12:18:40 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -222,9 +222,13 @@
 	 (inst subu ndesc zero-tn amount)
 	 (inst slt temp ndesc 31)
 	 (inst bne temp zero-tn done)
-	 (inst sra result number ndesc)
+	 (sc-case number
+	   (signed-reg (inst sra result number ndesc))
+	   (unsigned-reg (inst srl result number ndesc)))
 	 (inst b done)
-	 (inst sra result number 31)
+	 (sc-case number
+	   (signed-reg (inst sra result number 31))
+	   (unsigned-reg (inst srl result number 31)))
 
 	 (emit-label positive)
 	 ;; The result-type assures us that this shift will not overflow.
