@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.36 1992/08/18 04:48:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.37 1993/01/13 15:55:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,31 +20,53 @@
 
 ;;;; Allocator for the array header.
 
+#-gengc
 (define-vop (make-array-header)
   (:policy :fast-safe)
   (:translate make-array-header)
   (:args (type :scs (any-reg))
 	 (rank :scs (any-reg)))
   (:arg-types positive-fixnum positive-fixnum)
-  (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
-  (:temporary (:scs (any-reg)) temp1)
-  (:temporary (:scs (non-descriptor-reg)) temp2)
+  (:temporary (:scs (any-reg)) bytes)
+  (:temporary (:scs (non-descriptor-reg)) header)
   (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
   (:generator 13
+    (inst addu bytes rank (+ (* array-dimensions-offset word-bytes)
+			     lowtag-mask))
+    (inst li header (lognot lowtag-mask))
+    (inst and bytes header)
+    (inst addu header rank (fixnum (1- array-dimensions-offset)))
+    (inst sll header type-bits)
+    (inst or header header type)
+    (inst srl header 2)
     (pseudo-atomic (pa-flag)
-      (inst or header alloc-tn other-pointer-type)
-      (inst addu temp1 rank (+ (* array-dimensions-offset word-bytes)
-			       lowtag-mask))
-      (inst li temp2 (lognot lowtag-mask))
-      (inst and temp1 temp2)
-      (inst addu alloc-tn temp1)
-      (inst addu temp2 rank (fixnum (1- array-dimensions-offset)))
-      (inst sll temp2 type-bits)
-      (inst or temp2 temp2 type)
-      (inst srl temp2 2)
-      (storew temp2 header 0 other-pointer-type))
-    (move result header)))
+      (inst or result alloc-tn other-pointer-type)
+      (storew header alloc-tn)
+      (inst addu alloc-tn bytes))))
+
+#+gengc
+(define-vop (make-array-header)
+  (:args (type :scs (any-reg))
+	 (rank :scs (any-reg)))
+  (:arg-types positive-fixnum positive-fixnum)
+  (:temporary (:sc non-descriptor-reg :offset nl0-offset) nl0)
+  (:temporary (:sc non-descriptor-reg :offset nl1-offset) nl1)
+  (:temporary (:sc non-descriptor-reg :offset nl2-offset) nl2)
+  (:temporary (:sc descriptor-reg :offset a0-offset :target result
+	       :from (:argument 0) :to (:result 0))
+	      a0)
+  (:results (result :scs (descriptor-reg)))
+  (:ignore nl2)
+  (:generator 13
+    (inst addu a0 rank (fixnum (1+ array-dimensions-offset)))
+    (inst addu nl1 rank (fixnum (1- array-dimensions-offset)))
+    (inst sll nl1 (- type-bits 2))
+    (inst or nl1 type)
+    (inst jal (make-fixup 'var-alloc :assembly-routine))
+    (inst li nl0 other-pointer-type)
+    (move result a0)))
+
 
 
 ;;;; Additional accessors and setters for the array header.
@@ -60,7 +82,7 @@
 
 (define-full-setter %set-array-dimension *
   array-dimensions-offset other-pointer-type
-  (any-reg) positive-fixnum lisp::%set-array-dimension)
+  (any-reg) positive-fixnum lisp::%set-array-dimension nil)
 
 
 (defknown lisp::%array-rank (t) index (flushable))
@@ -117,7 +139,7 @@
        data-vector-ref)
      (define-full-setter ,(symbolicate "DATA-VECTOR-SET/" type) ,type
        vector-data-offset other-pointer-type ,scs ,element-type
-       data-vector-set)))
+       data-vector-set #+gengc ,(if (member 'descriptor-reg scs) t nil))))
 
 (defmacro def-partial-data-vector-frobs
 	  (type element-type size signed &rest scs)
@@ -412,7 +434,7 @@
 (define-full-reffer raw-bits * 0 other-pointer-type (unsigned-reg) unsigned-num
   %raw-bits)
 (define-full-setter set-raw-bits * 0 other-pointer-type (unsigned-reg)
-  unsigned-num %set-raw-bits)
+  unsigned-num %set-raw-bits #+gengc nil)
 
 
 
