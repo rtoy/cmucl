@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.13 1991/03/11 17:13:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.14 1991/03/18 13:06:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,6 +43,7 @@
   
   (find-non-local-exits component)
   (find-cleanup-points component)
+  (tail-annotate component)
   (undefined-value))
 
 
@@ -314,4 +315,27 @@
 				  (cleanup-mess-up cleanup2))
 				 cleanup1)))
 	      (emit-cleanups block1 block2)))))))
+  (undefined-value))
+
+
+;;; Tail-Annotate  --  Internal
+;;;
+;;;    Mark all tail-recursive uses of function result continuations with the
+;;; corresponding tail-set.  Nodes whose type is NIL (i.e. don't return) such
+;;; as calls to ERROR are never annotated as tail, so as to preserve debugging
+;;; information.
+;;;
+(defun tail-annotate (component)
+  (declare (type component component))
+  (dolist (fun (component-lambdas component))
+    (let ((ret (lambda-return fun)))
+      (when ret
+	(let ((result (return-result ret))
+	      (tails (lambda-tail-set fun)))
+	  (do-uses (use result)
+	    (when (and (immediately-used-p result use)
+		       (or (not (eq (node-derived-type use) *empty-type*))
+			   (not (basic-combination-p use))
+			   (eq (basic-combination-kind use) :local)))
+	      (setf (node-tail-p use) tails)))))))
   (undefined-value))
