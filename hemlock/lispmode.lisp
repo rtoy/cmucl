@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.10 1991/07/29 11:11:24 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.11 1991/09/27 17:52:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1455,13 +1455,16 @@
   (declare (ignore p))
   (let ((point (current-point)))
     (pre-command-parse-check point)
-    (with-mark ((m point))
+    (with-mark ((m point :left-inserting))
       (cond ((scan-char m :lisp-syntax :close-paren)
 	     (delete-horizontal-space m)
 	     (mark-after m)
 	     (move-mark point m)
+	     (delete-mark m)
 	     (indent-new-line-command 1))
-	    (t (editor-error))))))
+	    (t 
+	     (delete-mark m)
+	     (editor-error))))))
 
 
 (defcommand "Forward Up List" (p)
