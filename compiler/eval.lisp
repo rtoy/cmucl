@@ -148,8 +148,9 @@
   ;; being removed.)
   (definition nil :type (or c::clambda null))
   ;;
-  ;; Number of times this function was called since the last GC.
-  (count 0 :type c::index)
+  ;; The number of consequtive GCs that this function has been unused.  This is
+  ;; used to control cache replacement.
+  (gcs 0 :type c::index)
   ;;
   ;; True if Lambda has been converted at least once, and thus warnings should
   ;; be suppressed on additional conversions.
@@ -161,9 +162,9 @@
   then attempt to prune it according to
   *INTERPRETED-FUNCTION-CACHE-THRESHOLD*.")
 
-(defvar *interpreted-function-cache-threshold* 2
-  "If an interpreted function has been called fewer than this number of times
-  since the last GC, then it is eligible for flushing from the cache.")
+(defvar *interpreted-function-cache-threshold* 3
+  "If an interpreted function goes uncalled for more than this many GCs, then
+  it is eligible for flushing from the cache.")
 
 (proclaim '(type c::index
 		 *interpreted-function-cache-minimum-size*
@@ -186,7 +187,7 @@
     #'(lambda (&rest args)
 	(let ((fun (eval-function-definition eval-fun))
 	      (args (cons (length args) args)))
-	  (incf (eval-function-count eval-fun))
+	  (setf (eval-function-gcs eval-fun) 0)
 	  (internal-apply (or fun (convert-eval-fun eval-fun))
 			  args '#())))))
 
@@ -208,8 +209,7 @@
   (let* ((new (eval-function-definition
 	       (get-eval-function
 		(internal-eval `#',(eval-function-lambda eval-fun)
-			       (not (eval-function-converted-once
-				     eval-fun)))))))
+			       (eval-function-converted-once eval-fun))))))
     (setf (eval-function-definition eval-fun) new)
     (setf (eval-function-converted-once eval-fun) t)
     (push eval-fun *interpreted-function-cache*)
@@ -274,7 +274,7 @@
 ;;; INTERPRETER-GC-HOOK  --  Internal
 ;;;
 ;;;    Clear the unused portion of the eval stack, and flush the definitions of
-;;; all functions in the cache that haven't been used recently enough.
+;;; all functions in the cache that haven't been used enough.
 ;;;
 (defun interpreter-gc-hook ()
   (let ((len (length (the simple-vector *eval-stack*))))
@@ -287,16 +287,15 @@
     (when (plusp num)
       (setq *interpreted-function-cache*
 	    (delete-if #'(lambda (x)
-			   (when (< (eval-function-count x)
-				    *interpreted-function-cache-threshold*)
-			     (setf (eval-function-count x) 0)
+			   (when (>= (eval-function-gcs x)
+				     *interpreted-function-cache-threshold*)
 			     (setf (eval-function-definition x) nil)
 			     t))
 		       *interpreted-function-cache*
 		       :count num))))
 
-  (dolist (x *interpreted-function-cache*)
-    (setf (eval-function-count x) 0)))
+  (dolist (fun *interpreted-function-cache*)
+    (incf (eval-function-gcs fun))))
 ;;;
 (pushnew 'interpreter-gc-hook ext:*before-gc-hooks*)
 
