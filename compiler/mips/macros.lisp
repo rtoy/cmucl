@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.41 1990/11/07 13:16:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.42 1990/11/26 15:19:18 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -454,8 +454,6 @@
 	  (when vop
 	    (note-this-location vop :internal-error)))
 	(inst break ,kind)
-	;; ### Temporary compatibility marker.
-	(inst byte 255) 
 	(with-adjustable-vector (,vector)
 	  (write-var-integer (error-number-or-lose ',code) ,vector)
 	  ,@(mapcar #'(lambda (tn)
