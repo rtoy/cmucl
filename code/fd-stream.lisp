@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.80 2004/09/23 22:04:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.81 2005/02/10 17:49:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -592,17 +592,24 @@
 			(system:int-sap (+ (system:sap-int ibuf-sap) tail))
 			(- buflen tail))
       (cond ((null count)
-	     (if (eql errno unix:ewouldblock)
-		 (progn
-		   (unless #-mp (system:wait-until-fd-usable
-				 fd :input (fd-stream-timeout stream))
-			   #+mp (mp:process-wait-until-fd-usable
-				 fd :input (fd-stream-timeout stream))
-		     (error 'io-timeout :stream stream :direction :read))
-		   (do-input stream))
-		 (error "Error reading ~S: ~A"
-			stream
-			(unix:get-unix-error-msg errno))))
+	     ;; What kinds of errors do we want to look at and what do
+	     ;; we want them to do?
+	     (cond ((eql errno unix:ewouldblock)
+		    (unless #-mp (system:wait-until-fd-usable
+				  fd :input (fd-stream-timeout stream))
+			    #+mp (mp:process-wait-until-fd-usable
+				  fd :input (fd-stream-timeout stream))
+			    (error 'io-timeout :stream stream :direction :read))
+		    (do-input stream))
+		   ((eql errno unix:econnreset)
+		    (error 'socket-error
+			   :format-control "Socket connection reset: ~A"
+			   :format-arguments (list (unix:get-unix-error-msg errno))
+			   :errno errno))
+		   (t
+		    (error "Error reading ~S: ~A"
+			   stream
+			   (unix:get-unix-error-msg errno)))))
 	    ((zerop count)
 	     (setf (fd-stream-listen stream) :eof)
 	     (throw 'eof-input-catcher nil))
