@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.16 2003/07/16 17:04:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.17 2003/08/08 08:06:12 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,11 +49,8 @@
   (when string
     (let* ((string (coerce string 'simple-string))
 	   (length (length string))
-	   ;;pw-- "unix" is a signal to the connect_to_inet C code
-	   ;;     to open an AF_UNIX socket instead of an AF_INET one.
-	   ;;     This is supposed to be faster on a local server.
 	   (host-name "unix")
-	   (protocol :unix)
+	   (protocol :tcp)
 	   (auth-name nil)
 	   (auth-data nil)
 	   (display-num nil)
@@ -85,7 +82,13 @@
 				 (setf screen-num
 				       (parse-integer string :start start
 						      :end second-dot)))))))))))
-      (if (equal host-name "unix")
+      ;; If the $DISPLAY does not specify a hostname (for instance
+      ;; ":0"), or if the hostname is the special case of "unix", we
+      ;; connect to the X server using the :unix protocol. This is the
+      ;; most efficient transport to the local host, most often a Unix
+      ;; domain socket. In all other cases, we use the :tcp protocol. 
+      (when (equal host-name "unix")
+        (setq protocol :unix)
         (multiple-value-setq (auth-name auth-data)
           (xlib::get-best-authorization (machine-instance) display-num :tcp)))
       (let ((display (xlib:open-display host-name
