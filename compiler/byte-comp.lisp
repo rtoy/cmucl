@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.37 2003/09/02 15:00:58 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.38 2003/09/04 15:05:06 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -506,8 +506,14 @@
 	 (info (gethash name *inline-function-table*)))
     (flet ((annotate-args ()
 	     (annotate-basic-combination-args call)
+	     ;;
+	     ;; We cannot assume that we can delete type checks here.
+	     ;; For instance, (GCD X) will be source-transformed to
+	     ;; (ABS X), and GCD expects an integer argument while ABS
+	     ;; expects a number only.
 	     (dolist (arg args)
-	       (when (continuation-type-check arg)
+	       (when (and (continuation-type-check arg)
+			  (policy call (< safety 3)))
 		 (setf (continuation-%type-check arg) :deleted)))
 	     (annotate-continuation
 	      fun
