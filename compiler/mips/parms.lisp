@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.3 1990/02/14 21:10:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.4 1990/02/14 21:53:39 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -77,9 +77,6 @@
   "The byte order of the target machine.  :big-endian has the MSB first (RT)
   and :little-endian has the MSB last (VAX).")
 
-(defconstant register-names
-  '#(ZERO NL0 NL1 NL2 NL3 NL4 NL5 NL6/NARGS L0 L1 L2 L3 L4 L5 L6 L7
-	  A0 A1 A2 A3 A4 A5 ENV LRA BSP CSP K0 K1 NULL NSP CODE CONT))
 
 
 ;;;; Type definitions:
