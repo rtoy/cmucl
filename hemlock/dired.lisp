@@ -278,7 +278,7 @@
 	(multiple-value-bind (data byte-count mode)
 			     (read-file fd ses-name1)
 	  (unwind-protect (write-file ses-name2 data byte-count mode)
-	    (dispose-storage data byte-count)))
+	    (system:deallocate-system-memory data byte-count)))
       (close-file fd)))
   (set-write-date ses-name2 secs1)
   (funcall *report-function* "~&~S  ==>~%  ~S~%" ses-name1 ses-name2))
@@ -576,22 +576,14 @@
     (declare (ignore ino nlink uid gid rdev))
     (unless winp (funcall *error-function*
 			  "Opening ~S failed: ~A."  ses-name dev-or-err))
-    (let ((storage (lisp::fixnum-to-sap (allocate-storage size))))
+    (let ((storage (system:allocate-system-memory size)))
       (multiple-value-bind (read-bytes err)
 			   (mach:unix-read fd storage size)
 	(when (or (null read-bytes) (not (= size read-bytes)))
-	  (dispose-storage storage size)
+	  (system:deallocate-system-memory storage size)
 	  (funcall *error-function*
 		   "Reading file ~S failed: ~A." ses-name err)))
       (values storage size mode))))
-
-(defun dispose-storage (storage size)
-  (mach::vm_deallocate lisp::*task-self*
-		       (lisp::sap-to-fixnum storage)
-		       size))
-
-(defun allocate-storage (size)
-  (lisp::do-validate 0 size -1))
 
 (defun write-file (ses-name data byte-count mode)
   (multiple-value-bind (fd err) (mach:unix-creat ses-name #o644)
