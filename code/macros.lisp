@@ -1421,10 +1421,12 @@
   (cond ((numberp count)
          `(do ((,var 0 (1+ ,var)))
               ((>= ,var ,count) ,result)
+	    (declare (type unsigned-byte ,var))
             ,@body))
         (t (let ((v1 (gensym)))
              `(do ((,var 0 (1+ ,var)) (,v1 ,count))
                   ((>= ,var ,v1) ,result)
+		(declare (type unsigned-byte ,var))
                 ,@body)))))
 
 
