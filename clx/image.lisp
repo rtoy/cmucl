@@ -2652,7 +2652,8 @@
 	  (unless gcontext (xlib::required-arg gcontext))
 	(error "Pixmap depth ~d incompatable with image depth ~d"
 	       depth image-depth)))	       
-    (put-image pixmap gc image :x 0 :y 0 :bitmap-p (and (= image-depth 1) gcontext))
+    (put-image pixmap gc image :x 0 :y 0 :bitmap-p (and (= image-depth 1)
+							(not (null gcontext)))
     ;; Tile when image-width is less than the pixmap width, or
     ;; the image-height is less than the pixmap height.
     ;; ??? Would it be better to create a temporary pixmap and 
