@@ -227,7 +227,9 @@
     (setf (tn-global-conflicts structure) nil)
     (setf (tn-current-conflict structure) nil)
     (setf (tn-save-tn structure) nil)
-    (setf (tn-offset structure) nil))
+    (setf (tn-offset structure) nil)
+    (setf (tn-environment structure) nil)
+    (setf (tn-cost structure) 0))
   ((setf (tn-next structure) nil)
    (setf (tn-number structure) number)
    (setf (tn-kind structure) kind)
@@ -270,9 +272,6 @@
     (macrolet ((blast (slot)
 		 `(progn
 		    (zap-in (tn (,slot 2comp) tn-next)
-		      (let ((stn (tn-save-tn tn)))
-			(when stn
-			  (unmake-tn stn)))
 		      (unmake-tn tn))
 		    (setf (,slot 2comp) nil))))
       (blast ir2-component-normal-tns)
