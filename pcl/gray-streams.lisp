@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.7 2002/08/27 19:01:39 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.8 2002/10/09 14:19:11 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,7 +240,7 @@
 (defmethod stream-start-line-p ((stream fundamental-character-output-stream))
   (eql (stream-line-column stream) 0))
 
-(defgeneric stream-write-string (stream string &optional (start 0) end)
+(defgeneric stream-write-string (stream string &optional start end)
   (:documentation
    "This is used by WRITE-STRING.  It writes the string to the stream,
   optionally delimited by start and end, which default to 0 and NIL.

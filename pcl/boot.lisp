@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.32 2002/09/07 13:16:47 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.33 2002/10/09 14:19:11 pmai Exp $")
 
 (in-package :pcl)
 
@@ -168,7 +168,62 @@ work during bootstrapping.
   ;; seems to do the job just as well.
   (proclaim-defgeneric function-specifier lambda-list))
 
+;;;
+;;; ANSI 3.4.2, Generic Function Lambda Lists
+;;;
+
+(defun parse-generic-function-lambda-list (lambda-list)
+  ;; This is like kernel:parse-lambda-list, but returns an additional
+  ;; value AUXP which is true if LAMBDA-LIST contains any &aux keyword.
+  (multiple-value-bind (required optional restp rest keyp keys
+				 allow-other-keys-p aux morep
+				 more-context more-count)
+      (kernel:parse-lambda-list lambda-list)
+    (values required optional restp rest keyp keys allow-other-keys-p
+	    (or aux (member '&aux lambda-list :test #'eq)) aux
+	    morep more-context more-count)))
+
+(defun check-generic-function-lambda-list (function-specifier lambda-list)
+  (multiple-value-bind (required optional restp rest keyp keys
+				 allow-other-keys-p auxp aux morep
+				 more-context more-count)
+      (parse-generic-function-lambda-list lambda-list)
+    (declare (ignore restp rest keyp aux allow-other-keys-p more-context
+		     more-count))
+    (labels ((lambda-list-error (format-control &rest format-arguments)
+	       (simple-program-error "Generic function ~A:~%~?"
+				     function-specifier
+				     format-control format-arguments))
+	     (check-required-parameter (parameter)
+	       (unless (symbolp parameter)
+		 (lambda-list-error
+		  "Invalid generic function parameter name ~A"
+		  parameter)))
+	     (check-key-or-optional-parameter (parameter)
+	       (unless (or (symbolp parameter)
+			   (and (consp parameter)
+				(symbolp (car parameter))))
+		 (lambda-list-error
+		  "Invalid generic function parameter name: ~A"
+		  parameter))
+	       (when (and (consp parameter)
+			  (not (null (cdr parameter))))
+		 (lambda-list-error
+		  "Optional and key parameters of generic functions~%~
+                   may not have default values or supplied-p ~
+                   parameters: ~A" parameter))))
+      (when morep
+	(lambda-list-error
+	 "&MORE not allowed in generic function lambda lists"))
+      (when auxp
+	(lambda-list-error
+	 "&AUX not allowed in generic function lambda lists"))
+      (mapc #'check-required-parameter required)
+      (mapc #'check-key-or-optional-parameter optional)
+      (mapc #'check-key-or-optional-parameter keys))))
+
 (defmacro defgeneric (function-specifier lambda-list &body options)
+  (check-generic-function-lambda-list function-specifier lambda-list)
   (expand-defgeneric function-specifier lambda-list options))
 
 (defun expand-defgeneric (function-specifier lambda-list options)

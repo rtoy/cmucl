@@ -2,7 +2,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.10 2002/06/05 23:00:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.11 2002/10/09 14:19:11 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -710,10 +710,10 @@
 
 
 ;;; optional arguments  
-(defgeneric get-method (generic-function qualifiers specializers &optional (errorp t)))
+(defgeneric get-method (generic-function qualifiers specializers &optional errorp))
 ;          (standard-generic-function t t)
 
-(defgeneric find-method (generic-function qualifiers specializers &optional (errorp t)))
+(defgeneric find-method (generic-function qualifiers specializers &optional errorp))
 ;          (standard-generic-function t t)
 
 (defgeneric remove-named-method (generic-function-name argument-specifiers &optional extra))
