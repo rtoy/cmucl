@@ -11,7 +11,8 @@
      :conservative-float-type
      :hash-new :random-mt19937
      :darwin :bsd
-     :cmu :cmu18 :cmu18e
+     :cmu :cmu19 :cmu19a
+     :relative-package-names		; Relative package names from Allegro
      )
    ;; Features to remove from current *features* here
    '(:x86-bootstrap :alpha :osf1 :mips :x86 :i486 :pentium :ppro
