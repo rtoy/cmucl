@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.49 1991/12/14 05:27:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.50 1992/01/21 15:54:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1438,7 +1438,8 @@
   (context nil :type list)
   ;;
   ;; The FILE-INFO-NAME for the relevant FILE-INFO.
-  (file-name (required-argument) :type (or pathname (member :lisp :stream)))
+  (file-name (required-argument)
+	     :type (or simple-string (member :lisp :stream)))
   ;;
   ;; The file position at which the top-level form starts, if applicable.
   (file-position nil :type (or index null))
@@ -1675,8 +1676,7 @@
 	  (funcall *compiler-notification-function* severity 
 		   (format nil "~{~{~S~^ ~}~^ => ~}"
 			   (compiler-error-context-context context))
-		   (when (typep name 'pathname)
-		     (namestring name))
+		   (when (stringp name) name)
 		   (compiler-error-context-file-position context)))
 	(funcall *compiler-notification-function* severity nil nil nil)))
   (undefined-value))
@@ -1727,10 +1727,10 @@
 
 	(unless (and last
 		     (equal file (compiler-error-context-file-name last)))
-	  (when (typep file 'pathname)
+	  (when (stringp file)
 	    (note-message-repeats)
 	    (setq last nil)
-	    (format stream "~2&File: ~A~%" (namestring file))))
+	    (format stream "~2&File: ~A~%" file)))
 	
 	(unless (and last
 		     (equal in (compiler-error-context-context last)))
