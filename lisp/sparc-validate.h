@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.12 2003/08/15 18:35:36 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.13 2003/09/16 17:12:52 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -14,7 +14,7 @@
  *	0x10000000->0x20000000  256M Read-Only Space.
  *	0x20000000->0x28000000  128M Binding stack growing up.
  *	0x28000000->0x38000000  256M Static Space.
- *	0x38000000->0x40000000  128M Control stack growing down.
+ *	0x38000000->0x40000000  128M Control stack growing up.
  *	0x40000000->0x80000000 1024M Dynamic space 1
  *	0x80000000->0xc0000000 1024M Dynamic space 2
  *      0xc0000000->0xffffffff 1024M C stack, dynamic libs, etc.      
