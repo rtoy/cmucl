@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.29 1993/02/11 14:09:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.30 1993/02/11 14:12:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -226,8 +226,8 @@
 				  (:class ',name)
 				  ,@overrides)
 			(:constructor
-			 (intern (concatenate 'string "MAKE-"
-					      (string defstruct-name)))
+			 ,(intern (concatenate 'string "MAKE-"
+					       (string defstruct-name)))
 			 (&key class bits alignment
 			       ,@(mapcar #'(lambda (x)
 					     (if (atom x) x (car x)))
