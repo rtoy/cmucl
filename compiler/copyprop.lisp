@@ -61,14 +61,16 @@
 ;;; A TN is also inelegible if it has interned name, policy is such that we
 ;;; would dump it in the debug vars, and speed is not 3.
 ;;;
-;;; The SCs of the TNs primitive types intersect.  Moves between TNs of
-;;; different primitive type SCs may need to be changed into coercions, so we
-;;; can't squeeze them out.  The reason for testing for intersection of the SCs
-;;; instead of the same primitive type is that this test lets T be substituted
-;;; for LIST, POSITIVE-FIXNUM for FIXNUM, etc.
+;;; The SCs of the TN's primitive types is a subset of the SCs of the copied
+;;; TN.  Moves between TNs of different primitive type SCs may need to be
+;;; changed into coercions, so we can't squeeze them out.  The reason for
+;;; testing for subset of the SCs instead of the same primitive type is
+;;; that this test lets T be substituted for LIST, POSITIVE-FIXNUM for FIXNUM,
+;;; etc.  Note that more SCs implies fewer possible values, or a subtype
+;;; relationship, since more SCs implies more possible representations.
 ;;;
 (defun tn-is-copy-of (tn)
-  (declare (type tn tn) (inline member))
+  (declare (type tn tn) (inline subsetp))
   (let ((writes (tn-writes tn)))
     (and (eq (tn-kind tn) :normal)
 	 (not (tn-sc tn))		; Not wired or restricted. 
@@ -78,14 +80,10 @@
 		(let ((arg-tn (tn-ref-tn (vop-args vop))))
 		  (and (or (not (tn-sc arg-tn))
 			   (eq (tn-kind arg-tn) :constant))
-		       (let ((arg-scs (primitive-type-scs
-				       (tn-primitive-type arg-tn))))
-			 (dolist (tn-sc (primitive-type-scs
-					 (tn-primitive-type tn))
-					nil)
-			   (declare (type sc-number tn-sc))
-			   (when (member tn-sc arg-scs)
-			     (return t))))
+		       (subsetp (primitive-type-scs
+				 (tn-primitive-type tn))
+				(primitive-type-scs
+				 (tn-primitive-type arg-tn)))
 		       (let ((leaf (tn-leaf tn)))
 			 (or (not leaf)
 			     (not (symbol-package (leaf-name leaf)))
