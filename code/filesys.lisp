@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.9 1991/04/25 13:25:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.10 1991/05/28 17:50:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,32 +82,27 @@
   "Create a pathname from :host, :device, :directory, :name, :type and :version.
   If any field is ommitted, it is obtained from :defaults as though by 
   merge-pathnames."
+  (flet ((make-it (host device directory name type version)
+	   (%make-pathname
+	    (if host
+		(if (stringp host) (coerce host 'simple-string) host)
+		(%pathname-host *default-pathname-defaults*))
+	    (if (stringp device) (coerce device 'simple-string) device)
+	    (if (stringp directory)
+		(%pathname-directory (parse-namestring directory))
+		directory)
+	    (if (stringp name) (coerce name 'simple-string) name)
+	    (if (stringp type) (coerce type 'simple-string) type)
+	    version)))
   (if defaults
       (let ((defaults (pathname defaults)))
-	(unless hostp
-	  (setq host (%pathname-host defaults)))
-	(unless devicep
-	  (setq device (%pathname-device defaults)))
-	(unless directoryp
-	  (setq directory (%pathname-directory defaults)))
-	(unless namep
-	  (setq name (%pathname-name defaults)))
-	(unless typep
-	  (setq type (%pathname-type defaults)))
-	(unless versionp
-	  (setq version (%pathname-version defaults))))
-      (unless hostp
-	(setq host (%pathname-host *default-pathname-defaults*))))
-
-  (when (stringp directory)
-    (setq directory (%pathname-directory (parse-namestring directory))))
-  (%make-pathname
-   (if (stringp host) (coerce host 'simple-string) host)
-   (if (stringp device) (coerce device 'simple-string) device)
-   directory
-   (if (stringp name) (coerce name 'simple-string) name)
-   (if (stringp type) (coerce type 'simple-string) type)
-   version))
+	(make-it (if hostp host (%pathname-host defaults))
+		 (if devicep device (%pathname-device defaults))
+		 (if directoryp directory (%pathname-directory defaults))
+		 (if namep name (%pathname-name defaults))
+		 (if typep type (%pathname-type defaults))
+		 (if versionp version (%pathname-version defaults))))
+      (make-it host device directory name type version))))
 
 
 ;;; These can not be done by the accessors because the pathname arg may be
@@ -228,10 +223,8 @@
 				:name name
 				:type type))))
 	    (pathname
-	     (setf end start)
 	     thing)
 	    (stream
-	     (setf end start)
 	     (pathname (file-name thing))))))
     (unless (or (null host)
 		(null (pathname-host pathname))
@@ -241,7 +234,9 @@
 	      'parse-namestring
 	      (pathname-host pathname)
 	      host))
-    (values pathname end)))
+    ;;
+    ;; ### ??? what should the second value be???
+    (values pathname (or end start))))
 
 
 (defun pathname (thing)
@@ -265,22 +260,22 @@
   gets it from Default-Version."
   ;;
   ;; finish hairy argument defaulting
-  (setq pathname (pathname pathname))
-  (setq defaults (pathname defaults))
-  ;;
-  ;; make a new pathname
-  (let ((name (%pathname-name pathname))
-	(device (%pathname-device pathname)))
-    (%make-pathname
-     (or (%pathname-host pathname) (%pathname-host defaults))
-     (or device (%pathname-device defaults))
-     (or (%pathname-directory pathname) (%pathname-directory defaults))
-     (or name (%pathname-name defaults))
-     (or (%pathname-type pathname) (%pathname-type defaults))
-     (or (%pathname-version pathname)
-	 (if name
-	     default-version
-	     (or (%pathname-version defaults) default-version))))))
+  (let ((pathname (pathname pathname))
+	(defaults (pathname defaults)))
+    ;;
+    ;; make a new pathname
+    (let ((name (%pathname-name pathname))
+	  (device (%pathname-device pathname)))
+      (%make-pathname
+       (or (%pathname-host pathname) (%pathname-host defaults))
+       (or device (%pathname-device defaults))
+       (or (%pathname-directory pathname) (%pathname-directory defaults))
+       (or name (%pathname-name defaults))
+       (or (%pathname-type pathname) (%pathname-type defaults))
+       (or (%pathname-version pathname)
+	   (if name
+	       default-version
+	       (or (%pathname-version defaults) default-version)))))))
 
 
 ;;;; NAMESTRING and other stringification stuff.
@@ -450,9 +445,9 @@
 (defun enough-namestring (pathname &optional
 				   (defaults *default-pathname-defaults*))
   "Returns a string which uniquely identifies PATHNAME w.r.t. DEFAULTS." 
-  (setq pathname (pathname pathname))
-  (setq defaults (pathname defaults))
-  (let* ((device (%pathname-device pathname))
+  (let* ((pathname (pathname pathname))
+	 (defaults (pathname defaults))
+	 (device (%pathname-device pathname))
 	 (directory (%pathname-directory pathname))
 	 (name (%pathname-name pathname))
 	 (type (%pathname-type pathname))
