@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.96 2001/10/16 19:19:54 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.97 2002/02/22 14:55:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,7 +292,7 @@
   (movable foldable flushable explicit-check))
 
 (defknown (ffloor fceiling fround ftruncate)
-  (real &optional real) (values float float)
+  (real &optional real) (values float real)
   (movable foldable flushable explicit-check))
 
 (defknown decode-float (float) (values float float-exponent float)
