@@ -7,15 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/edit-defs.lisp,v 1.3 1991/11/07 17:44:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/edit-defs.lisp,v 1.4 1991/12/18 22:36:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Editing DEFMACRO and DEFUN definitions.  Also, has directory translation
 ;;; code for moved and/or different sources.
 ;;;
-;;; This file is not portable, but if the last function is replaced with its
-;;; commented-out original definition, the file will be portable.
 
 (in-package 'hemlock)
 
@@ -258,13 +256,11 @@
 	  (setf file f)
 	  (return f))))))
 
-;;; MAYBE-TRANSLATE-DEFINITION-FILE tries each directory subsequence from the
-;;; most specific to the least looking a user defined translation.  At the end
-;;; of the file there is a commented out version of this function that is
-;;; portable (no "/" monkeying around), but it only checks the entire directory
-;;; string for a translation.  This returns the portion of the input directory
-;;; sequence that was not matched (to be merged with the mapping of the matched
-;;; portion), the list of post image directories, and the file name.
+;;; MAYBE-TRANSLATE-DEFINITION-FILE tries each directory subsequence from
+;;; the most specific to the least looking a user defined translation.
+;;; This returns the portion of the input directory sequence that was not
+;;; matched (to be merged with the mapping of the matched portion), the
+;;; list of post image directories, and the file name.
 ;;; 
 (defun maybe-translate-definition-file (file)
   (let* ((pathname (pathname file))
@@ -272,10 +268,9 @@
 	 (dirs (pathname-directory maybe-truename))
 	 (len (length dirs))
 	 (i len))
-    (declare (simple-vector dirs)
-	     (fixnum len i))
+    (declare (fixnum len i))
     (loop
-      (when (zerop i) (return nil))
+      (when (<= i 1) (return nil))
       (let ((new-dirs (getstring (directory-namestring
 				 (make-pathname :defaults "/"
 						:directory (subseq dirs 0 i)))
@@ -286,15 +281,12 @@
       (decf i))))
 
 ;;; TRANSLATE-DEFINITION-FILE creates a directory sequence from unmatched-dir
-;;; and new-dir, creating a translated pathname for GO-TO-DEFINITION.  A
-;;; portable version of this is described at the end of this file.
+;;; and new-dir, creating a translated pathname for GO-TO-DEFINITION.
 ;;; 
 (defun translate-definition-file (unmatched-dir new-dir file-name)
   (make-pathname :defaults "/"
-		 :device (pathname-device new-dir)
-		 :directory (concatenate 'simple-vector
-					 (pathname-directory new-dir)
-					 unmatched-dir)
+		 :directory (append (pathname-directory new-dir)
+				    unmatched-dir)
 		 :name file-name))
 
 
@@ -318,19 +310,3 @@
 		    (values file :function name)
 		    (values nil :unknown-function name)))
 	      (error "~S is not a function." symbol))))))
-
-
-#|
-;;; Using this version of MAYBE-TRANSLATE-DEFINITION-FILE makes everything
-;;; portable.  TRANSLATE-DEFINITION-FILE should be rewritten to simply do
-;;; (merge-pathnames new-dir file-name).
-
-;;; This older version does not match longer, more specific directory specs
-;;; like the above one.  This one only matches complete directory specs.
-(defun maybe-translate-definition-file (file)
-  (let ((new-dir (getstring (directory-namestring file)
-			    *definition-directory-translation-table*)))
-    (if new-dir
-	(values (make-array 0) new-dir (file-namestring file)))))
-|#
-
