@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.30 2001/06/11 14:22:09 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.31 2002/07/22 17:05:00 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -340,6 +340,7 @@
   (suffix nil :type (or null simple-string)))
 
 (defun start-logical-block (stream prefix per-line-p suffix)
+  (declare (type (or null string) prefix))
   (when prefix
     (pretty-sout stream prefix 0 (length prefix)))
   (let* ((pending-blocks (pretty-stream-pending-blocks stream))
