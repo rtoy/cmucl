@@ -1,6 +1,6 @@
 ### amd64-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.7 2004/07/15 18:01:26 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.8 2004/07/20 22:36:54 cwang Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -252,10 +252,7 @@ Ldone:
 	.type	GNAME(fpu_save),@function
 	.align	2,0x90
 GNAME(fpu_save):
-#if TOO_LAME_TO_PORT_IT_YET
-	movl	4(%esp),%eax
-	fnsave	(%eax)		# Save the NPX state - Resets NPX
-#endif
+	fnsave	(%rdi)		# Save the NPX state - Resets NPX
 	ret
 	.size	GNAME(fpu_save),.-GNAME(fpu_save)
 
@@ -263,10 +260,7 @@ GNAME(fpu_save):
 	.type	GNAME(fpu_restore),@function
 	.align	2,0x90
 GNAME(fpu_restore):
-#if TOO_LAME_TO_PORT_IT_YET
-	movl	4(%esp),%eax
-	frstor	(%eax)		# Restore the NPX state.
-#endif
+	frstor	(%rdi)		# Restore the NPX state.
 	ret
 	.size	GNAME(fpu_restore),.-GNAME(fpu_restore)
 
