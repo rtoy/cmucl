@@ -828,8 +828,7 @@
   `(let ((*compiler-note* ,note)
 	 (*compiler-error-stream* ,error)
 	 (*compiler-wire* wire:*current-wire*)
-	 #-new-compiler
-	 (clc:*compiler-notification-function* #'compiler-note-in-editor))
+	 (c:*compiler-notification-function* #'compiler-note-in-editor))
      (do-operation (*compiler-note* ,package ,terminal-io)
 		   (unwind-protect
 		       (handler-bind ((error #'compiler-error-handler))
@@ -837,32 +836,25 @@
 		     (when *compiler-error-stream*
 		       (force-output *compiler-error-stream*))))))
 
-;;; COMPILER-NOTIFICATION -- Internal.
+;;; COMPILER-NOTE-IN-EDITOR -- Internal.
 ;;;
-;;; DO-COMPILER-OPERATION binds clc:*compiler-notification-function to this, so
+;;; DO-COMPILER-OPERATION binds c:*compiler-notification-function* to this, so
 ;;; interesting observations in the compilation can be propagated back to the
 ;;; editor.  If there is a notification point defined, we send information
 ;;; about the position and kind of error.  The actual error text is written out
 ;;; using typescript operations.
 ;;;
 ;;; Start and End are the compiler's best guess at the file position where the
-;;; error occurred.  Function is the symbolic name of the function in which the
-;;; error occurred.  We PRIN1 this to a string because sending the symbol back
-;;; to the editor could easily result in the editor trying to fetch a symbol
-;;; off the wire into a non-existing package.  We expect packages to exist in
-;;; the developing Lisp environment that are missing in the editor's Lisp.
+;;; error occurred.  Function is some string describing where the error was.
 ;;;
-#-new-compiler
-(defun compiler-note-in-editor (severity function)
+(defun compiler-note-in-editor (severity function name pos)
+  (declare (ignore name))
   (when *compiler-wire*
     (force-output *compiler-error-stream*)
-    (multiple-value-bind (start end)
-			 (clc:current-form-position)
-      (wire:remote *compiler-wire*
-	(compiler-error *compiler-note* start end
-			(prin1-to-string function)
-			severity)))
-    (wire:wire-force-output *compiler-wire*)))
+    (wire:remote *compiler-wire*
+      (compiler-error *compiler-note* pos pos function severity)))
+    (wire:wire-force-output *compiler-wire*))
+
 
 ;;; COMPILER-ERROR-HANDLER -- Internal.
 ;;;
@@ -871,15 +863,11 @@
 ;;; compilation form.
 ;;;
 (defun compiler-error-handler (condition)
-  #-new-compiler
+  (declare (ignore condition))
   (when *compiler-wire*
-    (multiple-value-bind (start end)
-			 (clc:current-form-position)
-      (wire:remote *compiler-wire*
-	(lisp-error *compiler-note* start end
-		    (format nil "~A~&" condition))))))
-
-
+    (wire:remote *compiler-wire*
+      (lisp-error *compiler-note* nil nil
+		  (format nil "~A~&" condition)))))
 
 
 ;;; SERVER-COMPILE-TEXT -- Public.
@@ -895,13 +883,13 @@
 	(terpri error-output)
 	(c::compile-from-stream input-stream
 				:error-stream error-output
-				:defined-from-pathname defined-from)))))
+				:source-info defined-from)))))
 
 ;;; SERVER-COMPILE-FILE -- Public.
 ;;;
 ;;;    Compiles the file sending error info back to the editor.
 ;;;
-(defun server-compile-file (note package input output error lap
+(defun server-compile-file (note package input output error trace
 			    load terminal background)
   (macrolet ((frob (x)
 	       `(if (wire:remote-object-p ,x)
@@ -912,7 +900,7 @@
 	(compile-file (frob input)
 		      :output-file (frob output)
 		      :error-file (frob error)
-		      :trace-file (frob lap)
+		      :trace-file (frob trace)
 		      :load load
 		      :error-output error-stream)))))
 
@@ -970,7 +958,7 @@
 (defun slave-switch-demon (switch)
   (let ((editor (ext:cmd-switch-arg switch)))
     (unless editor
-      (error "Editor to connect to unspesified."))
+      (error "Editor to connect to unspecified."))
     (start-slave editor)))
 ;;;
 (defswitch "slave" 'slave-switch-demon)
