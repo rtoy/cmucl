@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.19 1999/01/09 11:05:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.20 2000/06/06 10:00:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,3 +89,9 @@
        ((:or :macro (:match "$EARLY-") (:match "$BOOT-"))
 	(declare (optimize (speed 0))))))
  (pcl::compile-pcl))
+
+
+(cat-if-anything-changed
+ "pcl:gray-streams-library"
+ "pcl:gray-streams-class"
+ "pcl:gray-streams")
