@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.3 1992/09/04 08:11:54 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.4 1992/09/08 20:16:06 wlott Exp $
 
 all: lisp.nm
 
@@ -9,7 +9,7 @@ include Config
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c os-common.c \
 	vars.c parse.c interrupt.c search.c validate.c gc.c globals.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
-	socket.c ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC}
+	socket.c undefineds.c ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC}
 
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRCS)))
 
@@ -22,23 +22,17 @@ lisp.nm: lisp
 	$(NM) lisp >> ,lisp.nm
 	mv ,lisp.nm lisp.nm
 
-lisp: ${OBJS} version undefineds
+lisp: ${OBJS} version
 	echo -n '1 + ' | cat - version | bc > ,version
 	mv ,version version
 	$(CC) ${CFLAGS} -DVERSION=`cat version` -c version.c
-	$(CC) $(CFLAGS) ${OS_LINK_FLAGS} `cat undefineds` -o ,lisp \
+	$(CC) $(CFLAGS) ${OS_LINK_FLAGS} -o ,lisp \
 		${OBJS} version.o \
 		${OS_LIBS} -lm
 	mv -f ,lisp lisp
 
 version:
 	echo 0 > version
-
-undefineds: undefineds.src
-	${CPP} undefineds.src | \
-	sed -e '/^#/d' -e '/^[ 	]*$$/d' -e 's/.*/${UNDEFSYMPATTERN}/' | \
-	sort -u > ,undefineds
-	mv ,undefineds undefineds
 
 ### Socket.c needs to be compiled with UNIXCONN defined.
 socket.o: socket.c
@@ -49,7 +43,7 @@ internals.h:
 	@false
 
 clean:
-	rm -f Depends undefineds *.o lisp lisp.nm
+	rm -f Depends *.o lisp lisp.nm core
 
 depend:
 	$(CC) -MM -E ${CFLAGS} ${CPPFLAGS} ${SRCS} > ,depends
