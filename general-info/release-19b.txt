@@ -28,6 +28,8 @@ New in this release:
            o READ-SEQUENCE and WRITE-SEQUENCE for
              signed-byte/unsigned-byte 8 streams.
 	   o Memory-mapped file streams.
+      - Large file support for Solaris, so CMUCL can handle files
+        larger than 2GB.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -42,6 +44,7 @@ New in this release:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
         returned for negative args.
       - EXPT sometimes returne NaN instead of 1 when the power was 0.
+      - Weak pointers don't have O(n^2) GC behavior anymore.
         
   * Other changes:
      
