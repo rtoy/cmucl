@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.3 1991/07/29 11:23:34 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.4 1991/08/01 10:52:30 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -228,7 +228,7 @@
 
 (defcommand "Manual Page" (p)
   "Read the Unix manual pages in a View buffer.
-   If given an argument, this will put the man page in a Po-pup display."
+   If given an argument, this will put the man page in a Pop-up display."
   "Read the Unix manual pages in a View buffer.
    If given an argument, this will put the man page in a Pop-up display."
   (let ((topic (prompt-for-string :prompt "Read what man page: ")))
