@@ -1258,8 +1258,8 @@
 
 ;;; Parse-Temporary  --  Internal
 ;;;
-;;;    Parse a temporary specification, entering the Operand-Parse structures in
-;;; the Parse structure.
+;;;    Parse a temporary specification, entering the Operand-Parse structures
+;;; in the Parse structure.
 ;;;
 (defun parse-temporary (spec parse)
   (declare (list spec)
@@ -1267,6 +1267,12 @@
   (let ((len (length spec)))
     (unless (>= len 2)
       (error "Malformed temporary spec: ~S." spec))
+    (unless (listp (second spec))
+      (error "Malformed options list: ~S." (second spec)))
+    (unless (evenp (length (second spec)))
+      (error "Odd number of arguments in keyword options: ~S." spec))
+    (unless (consp (cddr spec))
+      (warn "Temporary spec allocates no temps:~%  ~S" spec))
     (dolist (name (cddr spec))
       (unless (symbolp name)
 	(error "Bad temporary name: ~S." name))
@@ -1274,8 +1280,6 @@
 				     :temp-temp (gensym)
 				     :born (parse-time-spec :load)
 				     :dies (parse-time-spec :save))))
-	(unless (evenp (length (second spec)))
-	  (error "Odd number of argument in keyword options: ~S." spec))
 	(do ((opt (second spec) (cddr opt)))
 	    ((null opt))
 	  (case (first opt)
