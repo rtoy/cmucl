@@ -733,10 +733,10 @@
 	(incf unused))
       (cond ((eq (tn-kind tn) :component)
 	     (incf comp))
-	    ((eq (tn-kind tn) :environment)
-	     (incf environment))
 	    ((tn-global-conflicts tn)
-	     (incf global)
+	     (case (tn-kind tn)
+	       ((:environment :debug-environment) (incf environment))
+	       (t (incf global)))
 	     (do ((conf (tn-global-conflicts tn)
 			(global-conflicts-tn-next conf)))
 		 ((null conf))
@@ -795,23 +795,6 @@
 	(unless (member tn (ir2-component-component-tns
 			    (component-info component)))
 	  (barf "~S not in Component-TNs for ~S." tn component)))
-       ((eq kind :environment)
-	(let ((env (tn-environment tn)))
-	  (macrolet ((frob (refs)
-		       `(do ((ref ,refs (tn-ref-next ref)))
-			    ((null ref))
-			  (unless (eq (block-environment
-				       (ir2-block-block
-					(vop-block (tn-ref-vop ref))))
-				      env)
-			    (barf "~S not in TN-Environment for ~S." ref
-				  tn)))))
-	    (frob (tn-reads tn))
-	    (frob (tn-writes tn)))
-	  (unless (member tn (ir2-environment-live-tns (environment-info env)))
-	    (barf "~S not in Live-TNs for ~S." tn env))
-	  (when (or (tn-local tn) (tn-global-conflicts tn))
-	    (barf ":Environment TN ~S has Local or Global-Conflicts." tn))))
        (conf
 	(do ((conf conf (global-conflicts-tn-next conf))
 	     (prev nil conf))
@@ -832,7 +815,7 @@
 	    (unless (> (ir2-block-number (global-conflicts-block conf))
 		       (ir2-block-number (global-conflicts-block prev)))
 	      (barf "~S and ~S out of order." prev conf)))))
-       ((eq (tn-kind tn) :constant))
+       ((member (tn-kind tn) '(:constant :specified-save)))
        (t
 	(let ((local (tn-local tn)))
 	  (unless local
@@ -894,9 +877,10 @@
   (dolist (fun (component-lambdas component))
     (let* ((env (lambda-environment fun))
 	   (2env (environment-info env))
-	   (locs (ir2-environment-arg-locs 2env))
+	   (vars (lambda-vars fun))
+	   (closure (ir2-environment-environment 2env))
 	   (pc (ir2-environment-return-pc-pass 2env))
-	   (fp (ir2-environment-old-fp-pass 2env))
+	   (fp (ir2-environment-old-fp 2env))
 	   (2block (block-info
 		    (node-block
 		     (lambda-bind
@@ -906,10 +890,13 @@
 	  ((null conf))
 	(let ((tn (global-conflicts-tn conf)))
 	  (unless (or (eq (global-conflicts-kind conf) :write)
-		      (eq (tn-kind tn) :cached-constant)
-		      (member tn locs)
 		      (eq tn pc)
-		      (eq tn fp))
+		      (eq tn fp)
+		      (and (external-entry-point-p fun)
+			   (tn-offset tn))
+		      (member (tn-kind tn) '(:environment :debug-environment))
+		      (member tn vars :key #'leaf-info)
+		      (member tn closure :key #'cdr))
 	    (barf "Strange TN live at head of ~S: ~S." env tn))))))
   (undefined-value))
 
@@ -1080,12 +1067,14 @@
   (declare (type tn tn))
   (let ((leaf (tn-leaf tn)))
     (cond (leaf
-	   (print-leaf leaf stream)
-	   (format stream "!~D" (tn-id tn)))
+	   (xp::princ (with-output-to-string (stream)
+			(print-leaf leaf stream))
+		      stream)
+	   (xp::format stream "!~D" (tn-id tn)))
 	  (t
-	   (format stream "t~D" (tn-id tn))))
+	   (xp::format stream "t~D" (tn-id tn))))
     (when (and (tn-sc tn) (tn-offset tn))
-      (format stream "[~A]" (location-print-name tn)))))
+      (xp::format stream "[~A]" (location-print-name tn)))))
 
 
 ;;; Print-Operands  --  Internal
@@ -1095,18 +1084,42 @@
 ;;;
 (defun print-operands (refs)
   (declare (type (or tn-ref null) refs))
-  (do ((ref refs (tn-ref-across ref)))
-      ((null ref))
-    (format t " ")
-    (let ((tn (tn-ref-tn ref))
-	  (ltn (tn-ref-load-tn ref)))
-      (cond ((not ltn)
-	     (print-tn tn))
-	    (t
-	     (print-tn tn)
-	     (write-char (if (tn-ref-write-p ref) #\< #\>))
-	     (print-tn ltn))))))
+  (xp:within-logical-block (nil nil)
+    (do ((ref refs (tn-ref-across ref)))
+	((null ref))
+      (let ((tn (tn-ref-tn ref))
+	    (ltn (tn-ref-load-tn ref)))
+	(cond ((not ltn)
+	       (print-tn tn))
+	      (t
+	       (print-tn tn)
+	       (xp::princ (if (tn-ref-write-p ref) #\< #\>))
+	       (print-tn ltn)))
+	(xp::princ #\space)
+	(xp:conditional-newline :fill)))))
 
+
+;;; Print-Vop -- internal
+;;;
+;;; Print the vop on a single line.
+;;;
+(defun print-vop (vop)
+  (xp:within-logical-block (nil nil)
+    (xp::princ (vop-info-name (vop-info vop)))
+    (xp::princ #\space)
+    (xp:logical-block-indent :current 0)
+    (print-operands (vop-args vop))
+    (xp:conditional-newline :linear)
+    (when (vop-codegen-info vop)
+      (xp::princ (with-output-to-string (stream)
+		   (let ((*print-level* 1)
+			 (*print-length* 3))
+		     (format stream "{~{~S~^ ~}} " (vop-codegen-info vop)))))
+      (xp:conditional-newline :linear))
+    (when (vop-results vop)
+      (xp::princ "=> ")
+      (print-operands (vop-results vop))))
+  (xp::terpri))
 
 ;;; Print-IR2-Block  --  Internal
 ;;;
@@ -1128,16 +1141,8 @@
 	    (vop-next vop))
        (number 0 (1+ number)))
       ((null vop))
-    (format t "~D: ~A" number (vop-info-name (vop-info vop)))
-    (print-operands (vop-args vop))
-    (when (vop-codegen-info vop)
-      (let ((*print-level* 1)
-	    (*print-length* 3))
-	(format t " {~{~S~^ ~}}" (vop-codegen-info vop))))
-    (when (vop-results vop)
-      (format t " =>")
-      (print-operands (vop-results vop)))
-    (terpri)))
+    (format t "~D: " number)
+    (print-vop vop)))
 
 
 ;;; Print-VOPs  --  Interface
@@ -1244,17 +1249,10 @@
 ;;;
 (defun list-conflicts (tn)
   "Return a list of a the TNs that conflict with TN.  Sort of, kind of.  For
-  debugging use only.  Probably doesn't work on :COMPONENT and :ENVIRONMENT
-  TNs."
-  (assert (member (tn-kind tn) '(:normal :cached-constant :environment)))
+  debugging use only.  Probably doesn't work on :COMPONENT TNs."
+  (assert (member (tn-kind tn) '(:normal :environment :debug-environment)))
   (let ((confs (tn-global-conflicts tn)))
-    (cond ((eq (tn-kind tn) :environment)
-	   (clrhash *list-conflicts-table*)
-	   (do-environment-ir2-blocks (env-block (tn-environment tn))
-	     (add-always-live-tns env-block tn)
-	     (add-all-local-tns env-block))
-	   (listify-conflicts-table))
-	  (confs
+    (cond (confs
 	   (clrhash *list-conflicts-table*)
 	   (do ((conf confs (global-conflicts-tn-next conf)))
 	       ((null conf))
