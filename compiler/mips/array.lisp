@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.25 1990/08/17 07:35:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.26 1990/10/02 00:36:20 ram Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -113,6 +113,7 @@
 		  ,(intern (concatenate 'simple-string
 					(string variant)
 					"-REF")))
+       (:note "inline array access")
        (:variant vm:vector-data-offset vm:other-pointer-type)
        (:translate data-vector-ref)
        (:arg-types ,type positive-fixnum)
@@ -124,6 +125,7 @@
 		  ,(intern (concatenate 'simple-string
 					(string variant)
 					"-SET")))
+       (:note "inline array store")
        (:variant vm:vector-data-offset vm:other-pointer-type)
        (:translate data-vector-set)
        (:arg-types ,type positive-fixnum ,element-type)
@@ -155,6 +157,7 @@
 	 (bit-shift (1- (integer-length elements-per-word))))
     `(progn
        (define-vop (,(symbolicate 'data-vector-ref/ type))
+	 (:note "inline array access")
 	 (:translate data-vector-ref)
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg))
@@ -201,6 +204,7 @@
 	     (unless (= extra ,(1- elements-per-word))
 	       (inst and result ,(1- (ash 1 bits)))))))
        (define-vop (,(symbolicate 'data-vector-set/ type))
+	 (:note "inline array store")
 	 (:translate data-vector-set)
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg))
@@ -311,6 +315,7 @@
 ;;; 
 
 (define-vop (data-vector-ref/simple-array-single-float)
+  (:note "inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -327,6 +332,7 @@
     (inst nop)))
 
 (define-vop (data-vector-set/simple-array-single-float)
+  (:note "inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -345,6 +351,7 @@
       (inst move :single result value))))
 
 (define-vop (data-vector-ref/simple-array-double-float)
+  (:note "inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
@@ -366,6 +373,7 @@
     (inst nop)))
 
 (define-vop (data-vector-set/simple-array-double-float)
+  (:note "inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
