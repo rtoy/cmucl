@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.6 1991/10/31 21:00:19 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.7 1991/10/31 21:03:13 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,7 @@
 ;;;
 (defun encapsulated-definition (name)
   "Returns whatever definition is stored for name, regardless of whether it is
-   encapsulated."
+   encapsulated.  This is SETF'able."
   (function-name-dispatch name
     (symbol-function name)
     (gethash (cadr name) *setf-functions*)))
@@ -195,7 +195,9 @@
 ;;;; FDEFINITION.
 
 (defun fdefinition (name)
-  "Return name's global function definition."
+  "Return name's global function definition taking care to regard any
+   encapsulations and to return the innermost encapsulated definition.
+   This is SETF'able."
   (macrolet ((basic-def (name fetch)
 	       `(let ((encap-info (gethash ,name *encapsulation-info*)))
 		  (if encap-info
