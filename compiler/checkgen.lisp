@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.29 2000/07/06 18:37:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.30 2000/07/09 13:59:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,6 +274,10 @@
 ;;; derived type and the asserted type, then we check for the negation of this
 ;;; type instead.
 ;;;
+;;; When the proven type represents an unknown number of values, but Cont's
+;;; destination receives only a single value, a :hairy type check is
+;;; generated for the single-values-type of the asserted type.
+;;;
 (defun continuation-check-types (cont)
   (declare (type continuation cont))
   (let ((atype (continuation-asserted-type cont))
@@ -297,8 +301,10 @@
 	     (assert (values-type-p atype))
 	     (assert (null (args-type-required atype)))
 	     (maybe-negate-check cont (args-type-optional atype) nil))
+	    ((or (exit-p dest) (return-p dest) (mv-combination-p dest))
+	     (values :too-hairy nil))
 	    (t
-	     (values :too-hairy nil))))))
+	     (maybe-negate-check cont (list (single-value-type atype)) t))))))
 
 
 ;;; Probable-Type-Check-P  --  Internal
