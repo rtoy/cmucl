@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.158 2003/08/05 14:04:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.159 2003/08/05 15:50:29 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1740,7 +1740,6 @@
 
       (when rest
 	(arg-vals `(%listify-rest-args ,n-context ,n-count
-				       #+x86
 				       ,(leaf-dynamic-extent rest))))
       (when morep
 	(arg-vals n-context)

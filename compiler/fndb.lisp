@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.122 2003/08/05 14:04:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.123 2003/08/05 15:50:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1146,7 +1146,7 @@
 (defknown %cleanup-point () void)
 (defknown %special-bind (t t) void)
 (defknown %special-unbind (t) void)
-(defknown %listify-rest-args (t index #+x86 t) list (flushable))
+(defknown %listify-rest-args (t index t) list (flushable))
 (defknown %more-arg-context (t t) (values t index) (flushable))
 (defknown %more-arg (t index) t)
 (defknown %more-arg-values (t index index) * (flushable))
