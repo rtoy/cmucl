@@ -1,14 +1,14 @@
-CPPFLAGS = -I. -I/usr/hallgren/lib/gcc-lib/alpha-dec-osf1/2.4.5/include \
-	-I/usr/include -I/usr/misc/.X11/include
-CC = gcc # -Wall -Wstrict-prototypes -Wmissing-prototypes
+P1=../../src/lisp
+CPPFLAGS = -I.-I/usr/include -I$(P1) -I-
+CC = cc -g -migrate
 LD = ld
 CPP = cpp
 CFLAGS = -Dosf1 -Dalpha
 ASFLAGS = -g -Dosf1 -Dalpha
-NM = alpha-nm
+NM = $(P1)/alpha-nm
 UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
 ASSEM_SRC = alpha-assem.S
 ARCH_SRC = alpha-arch.c
 OS_SRC = osf1-os.c os-common.c undefineds.c
-OS_LINK_FLAGS=-static
+OS_LINK_FLAGS= -non_shared -taso
 OS_LIBS=
