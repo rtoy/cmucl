@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.16 1992/05/15 17:53:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.17 1992/05/16 16:12:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -409,7 +409,7 @@
 		       (setf bucket (svref vector index))
 		       (,function)))))
 		#',function))))
-       (macrolet ((,function () (funcall ,n-function)))
+       (macrolet ((,function () '(funcall ,n-function)))
 	 ,@body))))
 
 
