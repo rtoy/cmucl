@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.8 1992/12/16 19:46:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.9 1992/12/17 08:59:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,7 +126,8 @@
   (:generator 10
     (let ((size (+ length closure-info-offset)))
       (pseudo-atomic (:extra (pad-data-block size))
-	(inst or result alloc-tn function-pointer-type)
+	(inst andn result alloc-tn lowtag-mask)
+	(inst or result function-pointer-type)
 	(inst li temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
     (storew function result closure-function-slot function-pointer-type)))
@@ -160,7 +161,11 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (pseudo-atomic (:extra (pad-data-block words))
-      (inst or result alloc-tn lowtag)
+      (cond ((logbitp 2 lowtag)
+	     (inst or result alloc-tn lowtag))
+	    (t
+	     (inst andn result alloc-tn lowtag-mask)
+	     (inst or result lowtag)))
       (when type
 	(inst li temp (logior (ash (1- words) type-bits) type))
 	(storew temp result 0 lowtag)))))
@@ -178,6 +183,10 @@
     (inst add header header (+ (ash -2 type-bits) type))
     (inst and bytes (lognot lowtag-mask))
     (pseudo-atomic ()
-      (inst or result alloc-tn lowtag)
+      (cond ((logbitp 2 lowtag)
+	     (inst or result alloc-tn lowtag))
+	    (t
+	     (inst andn result alloc-tn lowtag-mask)
+	     (inst or result lowtag)))
       (storew header result 0 lowtag)
       (inst add alloc-tn alloc-tn bytes))))
