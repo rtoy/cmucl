@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.12 1990/05/25 12:25:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.13 1990/05/26 22:48:08 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -1002,9 +1002,13 @@ default-value-5
 	(move result csp-tn))
       ;; Allocate the space on the stack.
       (cond ((zerop fixed)
-	     (inst addu csp-tn csp-tn nargs-tn))
+	     (inst addu csp-tn csp-tn nargs-tn)
+	     (inst beq nargs-tn done)
+	     (inst nop))
 	    (t
 	     (inst addu count nargs-tn (fixnum (- fixed)))
+	     (inst blez count done)
+	     (inst nop)
 	     (inst addu csp-tn csp-tn count)))
       (when (< fixed register-arg-count)
 	;; We must stop when we run out of stack args, not when we run out of
