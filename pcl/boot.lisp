@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.15 1998/07/16 13:30:53 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.16 1998/07/17 00:36:10 dtc Exp $")
 
 (in-package :pcl)
 
@@ -223,7 +223,7 @@ work during bootstrapping.
 	    (:method
 	     (push (cdr option) methods))
 	    (t ;unsuported things must get a 'program-error
-	     (error 'lisp::simple-program-error
+	     (error 'kernel:simple-program-error
 		    :format-control "Unsupported option ~S."
 		    :format-arguments (list option)))))
 
