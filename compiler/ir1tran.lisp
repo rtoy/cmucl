@@ -2857,6 +2857,22 @@
 ;;; to the %%DEFxxx function. 
 ;;;
 
+
+;;; REVERT-SOURCE-PATH  --  Internal
+;;;
+;;;    Return a new source path with any stuff intervening between the current
+;;; path and the first form beginning with Name stripped off.  This is used to
+;;; hide the guts of DEFmumble macros to prevent annoying error messages.
+;;; 
+(defun revert-source-path (name)
+  (do ((path *current-path* (cdr path)))
+      ((null path) *current-path*)
+    (let ((first (first path)))
+      (when (or (eq first name)
+		(eq first 'original-source-start))
+	(return path)))))
+
+
 ;;; Warn about incompatible or illegal definitions and add the macro to the
 ;;; compiler environment.  
 ;;;
@@ -2893,7 +2909,8 @@
 	    #+new-compiler (coerce def 'function)
 	    #-new-compiler def))
 
-    (let ((fun (ir1-convert-lambda def)))
+    (let* ((*current-path* (revert-source-path 'defmacro))
+	   (fun (ir1-convert-lambda def)))
       (setf (leaf-name fun)
 	    (concatenate 'string "DEFMACRO " (symbol-name name)))
       (setf (functional-arg-documentation fun) (eval lambda-list))
@@ -2916,7 +2933,8 @@
 	  (if (and (member (info function inlinep name)
 			   '(:inline :maybe-inline))
 		   (in-null-environment))
-	      (cadr def) nil)))
+	      (cadr def) nil))
+	 (*current-path* (revert-source-path 'defun)))
     (setf (info function where-from name) :defined)
     (setf (info function inline-expansion name) expansion)
     ;;
