@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.26 2003/05/11 11:30:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.27 2003/06/11 19:17:24 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -113,9 +113,6 @@
 
 (defgeneric class-incompatible-superclass-list (pcl-class))
 ;          (pcl-class)
-
-(defgeneric class-initialize-info (slot-class))
-;          (slot-class)
 
 (defgeneric class-name (class))
 ;          (class)
@@ -253,9 +250,6 @@
 
 (defgeneric (setf class-incompatible-superclass-list) (new-value pcl-class))
 ;          (t pcl-class)
-
-(defgeneric (setf class-initialize-info) (new-value slot-class))
-;          (t slot-class)
 
 (defgeneric (setf class-name) (new-value class))
 ;          (t class)

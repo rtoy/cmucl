@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.44 2003/06/06 14:00:05 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.45 2003/06/11 19:17:25 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -301,8 +301,7 @@
     (when (memq metaclass-name '(standard-class funcallable-standard-class
 				 structure-class slot-class condition-class))
       (set-slot 'direct-slots direct-slots)
-      (set-slot 'slots slots)
-      (set-slot 'initialize-info nil))
+      (set-slot 'slots slots))
     ;;
     ;; For all direct superclasses SUPER of CLASS, make sure CLASS is
     ;; a direct subclass of SUPER.  Note that METACLASS-NAME doesn't
