@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.33 1992/09/05 19:42:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.34 1993/06/24 12:50:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -422,7 +422,7 @@ See the CMU Common Lisp User's Manual for more information.
 	     (step current-frame))
 	    ((and step-hit-info (= 1 *number-of-steps*))
 	     (build-string "*Step*")
-	     (break (make-condition 'step-condition :format-string string)))
+	     (break (make-condition 'step-condition :format-control string)))
 	    (step-hit-info
 	     (decf *number-of-steps*)
 	     (step current-frame))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.5 1993/05/07 19:01:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.6 1993/06/24 12:57:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -199,5 +199,5 @@
     (%random-integer arg state))
    (t
     (error 'simple-type-error :expected-type '(real (0)) :datum arg
-	   :format-string "Argument is not a positive real number: ~S"
+	   :format-control "Argument is not a positive real number: ~S"
 	   :format-arguments (list arg)))))

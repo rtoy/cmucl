@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.27 1993/05/29 07:02:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.28 1993/06/24 12:53:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -229,13 +229,13 @@
 (deferr invalid-argument-count-error (nargs)
   (error 'simple-error
 	 :function-name name
-	 :format-string "Invalid number of arguments: ~S"
+	 :format-control "Invalid number of arguments: ~S"
 	 :format-arguments (list nargs)))
 
 (deferr bogus-argument-to-values-list-error (list)
   (error 'simple-error
 	 :function-name name
-	 :format-string "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
+	 :format-control "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
 	 :format-arguments (list list)))
 
 (deferr unbound-symbol-error (symbol)
@@ -256,19 +256,19 @@
 (deferr invalid-unwind-error ()
   (error 'control-error
 	 :function-name name
-	 :format-string
+	 :format-control
 	 "Attempt to RETURN-FROM a block or GO to a tag that no longer exists"))
 
 (deferr unseen-throw-tag-error (tag)
   (error 'control-error
 	 :function-name name
-	 :format-string "Attempt to THROW to a tag that does not exist: ~S"
+	 :format-control "Attempt to THROW to a tag that does not exist: ~S"
 	 :format-arguments (list tag)))
 
 (deferr nil-function-returned-error (function)
   (error 'control-error
 	 :function-name name
-	 :format-string
+	 :format-control
 	 "Function with declared result type NIL returned:~%  ~S"
 	 :format-arguments (list function)))
 
@@ -296,18 +296,18 @@
 (deferr odd-keyword-arguments-error ()
   (error 'simple-error
 	 :function-name name
-	 :format-string "Odd number of keyword arguments."))
+	 :format-control "Odd number of keyword arguments."))
 
 (deferr unknown-keyword-argument-error (key)
   (error 'simple-error
 	 :function-name name
-	 :format-string "Unknown keyword: ~S"
+	 :format-control "Unknown keyword: ~S"
 	 :format-arguments (list key)))
 
 (deferr invalid-array-index-error (array bound index)
   (error 'simple-error
 	 :function-name name
-	 :format-string
+	 :format-control
 	 "Invalid array index, ~D for ~S.  Should have been less than ~D"
 	 :format-arguments (list index array bound)))
 
@@ -512,7 +512,7 @@
 	   (cond ((null handler)
 		  (error 'simple-error
 			 :function-name name
-			 :format-string
+			 :format-control
 			 "Unknown internal error, ~D?  args=~S"
 			 :format-arguments
 			 (list error-number
@@ -523,7 +523,7 @@
 		 ((not (functionp handler))
 		  (error 'simple-error
 			 :function-name name
-			 :format-string
+			 :format-control
 			 "Internal error ~D: ~A.  args=~S"
 			 :format-arguments
 			 (list error-number

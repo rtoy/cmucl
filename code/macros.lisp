@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.39 1993/06/24 12:22:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.40 1993/06/24 12:55:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1291,7 +1291,7 @@
   (error 'simple-type-error
 	 :datum assertion
 	 :expected-type nil ;this needs some work in next revision. -kmp
-	 :format-string "The assertion ~S failed."
+	 :format-control "The assertion ~S failed."
 	 :format-arguments (list assertion)))
 
 (defun assert-report (names stream)
@@ -1336,13 +1336,13 @@
   (restart-case (if type-string
 		    (error 'simple-type-error
 			   :datum place :expected-type type
-			   :format-string
+			   :format-control
 			   "The value of ~S is ~S, which is not ~A."
 			   :format-arguments
 			   (list place place-value type-string))
 		    (error 'simple-type-error
 			   :datum place :expected-type type
-			   :format-string
+			   :format-control
 			   "The value of ~S is ~S, which is not of type ~S."
 			   :format-arguments
 			   (list place place-value type)))

@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.22 1993/06/17 22:14:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.23 1993/06/24 12:56:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.22 1993/06/17 22:14:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.23 1993/06/24 12:56:22 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -153,7 +153,7 @@
 		    ,block
 		    (error 'simple-type-error :datum ,var
 			   :expected-type ',type
-			   :format-string
+			   :format-control
 			   "Argument ~A is not a ~S: ~S."
 			   :format-arguments
 			   (list ',var ',type ,var))))))
