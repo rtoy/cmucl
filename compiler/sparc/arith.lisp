@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.8 1992/01/31 17:18:31 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.9 1992/08/02 20:17:04 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -509,17 +509,19 @@
   (:policy :fast-safe)
   (:args (num :scs (unsigned-reg))
 	 (amount :scs (signed-reg)))
-  (:arg-types unsigned-num fixnum)
+  (:arg-types unsigned-num tagged-num)
   (:results (r :scs (unsigned-reg)))
   (:result-types unsigned-num))
 
 (define-vop (shift-towards-start shift-towards-someplace)
   (:translate shift-towards-start)
+  (:note "shift-towards-start")
   (:generator 1
     (inst sll r num amount)))
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
+  (:note "shift-towards-end")
   (:generator 1
     (inst srl r num amount)))
 
