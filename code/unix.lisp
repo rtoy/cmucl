@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.5 1992/01/28 06:26:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.6 1992/01/28 07:33:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -941,16 +941,6 @@
 (define-ioctl-command TIOCGLTC #\t 116 (struct ltchars) :out)
 (define-ioctl-command TIOCSPGRP #\t 118 int :in)
 (define-ioctl-command TIOCGPGRP #\t 119 int :out)
-
-;;; Keyboard iotctl commands.
-(define-ioctl-command KBDCGET #\k 0 (struct kbdarg) :inout)
-(define-ioctl-command KBDCSET #\k 1 (struct kbdarg) :in)
-(define-ioctl-command KBDCRESET #\k 2 nil :void)
-(define-ioctl-command KBDCRST #\k 3 nil :void)
-(define-ioctl-command KBDCSSTD #\k 4 nil :void)
-(define-ioctl-command KBDSGET #\k 5 int :out)
-(define-ioctl-command KBDGCLICK #\k 6 int :out)
-(define-ioctl-command KBDSCLICK #\k 7 int :in)
 
 ;;; File ioctl commands.
 (define-ioctl-command FIONREAD #\f 127 int :out)
