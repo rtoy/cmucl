@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.42 1997/11/27 02:50:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.43 1997/12/04 04:02:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -538,9 +538,27 @@
 ;;; return NIL.
 
 
+;;; Compute a specifier like '(or float (complex float)), except float
+;;; should be the right kind of float.  Allow bounds for the float
+;;; part too.
+(defun float-or-complex-type (num &optional lo hi)
+  (declare (type numeric-type num))
+  (let* ((f-type (or (numeric-type-format num) 'float))
+	 (lo (and lo (coerce lo f-type)))
+	 (hi (and hi (coerce hi f-type))))
+    (specifier-type `(or (,f-type ,(or lo '*)
+			          ,(or hi '*))
+			 (complex ,f-type)))))
+
 (defun elfun-derive-type-1 (num cond limit-fun default-type)
   (declare (type numeric-type num))
-  (cond ((and (numeric-type-real-p num)
+  (cond ((eq (numeric-type-complexp num) :complex)
+	 ;; If the argument is complex, we return a complex, without
+	 ;; bounds.
+	 (make-numeric-type :class (numeric-type-class num)
+			    :format (numeric-type-format num)
+			    :complexp :complex))
+	((and (numeric-type-real-p num)
 	      (funcall cond (numeric-type-low num) (numeric-type-high num)))
 	 (with-float-traps-masked (:underflow :overflow)
 	   ;; The call to the limit-fun has (most) traps disabled.  It
@@ -563,13 +581,10 @@
 					       (float-infinity-p hi-lim))
 					  nil
 					  hi-lim)))))
-	((eq (numeric-type-complexp num) :complex)
-	 (copy-numeric-type num))
 	(default-type
 	    default-type)
 	(t
-	 (let ((f-type (or (numeric-type-format num) 'float)))
-	   (specifier-type `(or ,f-type (complex ,f-type)))))))
+	 (float-or-complex-type num))))
 
 ;;; Same as ELFUN-DERIVE-TYPE-1 except we can handle simple
 ;;; NUMERIC-TYPEs and UNION-TYPEs.
@@ -670,9 +685,6 @@
 	       (bound-func #'acos lo)))))
 
 
-;;; Optimizer for expt 
-#+notyet
-(progn
 ;;; Compute bounds for (expt x y).  This should be easy since (expt x
 ;;; y) = (exp (* y (log x))).  However, computations done this way
 ;;; have too much roundoff.  Thus we have to do it the hard way.
@@ -688,21 +700,22 @@
   (case (c::interval-range-info y)
     ('+
      ;; Y is positive and log X >= 0.  The range of exp(y * log(x)) is
-     ;; obvious.  We just have to be careful for infinite bounds
-     ;; (given by nil).
+     ;; obviously non-negative.  We just have to be careful for
+     ;; infinite bounds (given by nil).
      (let ((lo (safe-expt (c::bound-value (c::interval-low x))
 			  (c::bound-value (c::interval-low y))))
 	   (hi (safe-expt (c::bound-value (c::interval-high x))
 			  (c::bound-value (c::interval-high y)))))
-       (c::make-interval :low lo :high hi)))
+       (list (c::make-interval :low (or lo 1) :high hi))))
     ('-
      ;; Y is negative and log x >= 0.  The range of exp(y * log(x)) is
-     ;; obvious.  However, underflow (nil) means 0 is the result
+     ;; obviously [0, 1].  However, underflow (nil) means 0 is the
+     ;; result
      (let ((lo (safe-expt (c::bound-value (c::interval-high x))
 			  (c::bound-value (c::interval-low y))))
 	   (hi (safe-expt (c::bound-value (c::interval-low x))
 			  (c::bound-value (c::interval-high y)))))
-       (c::make-interval :low (or lo 0) :high (or hi 0))))
+       (list (c::make-interval :low (or lo 0) :high (or hi 1)))))
     (t
      ;; Split the interval in half
      (destructuring-bind (y- y+)
@@ -710,80 +723,64 @@
        (list (interval-expt-> x y-)
 	     (interval-expt-> x y+))))))
 
-;;; Handle the case when 0<= x <= 1
+;;; Handle the case when x <= 1
 (defun interval-expt-< (x y)
-  (case (c::interval-range-info y)
+  (case (c::interval-range-info x 0)
     ('+
-     ;; Y is positive and log X <= 0.  The range of exp(y * log(x)) is
-     ;; obvious.  We just have to be careful for infinite bounds
-     ;; (given by nil).
-     (let ((lo (safe-expt (c::bound-value (c::interval-low x))
-			  (c::bound-value (c::interval-high y))))
-	   (hi (safe-expt (c::bound-value (c::interval-high x))
-			  (c::bound-value (c::interval-low y)))))
-       (c::make-interval :low lo :high hi)))
+     ;; The case of 0 <= x <= 1 is easy
+     (case (c::interval-range-info y)
+       ('+
+	;; Y is positive and log X <= 0.  The range of exp(y * log(x)) is
+	;; obviously [0, 1].  We just have to be careful for infinite bounds
+	;; (given by nil).
+	(let ((lo (safe-expt (c::bound-value (c::interval-low x))
+			     (c::bound-value (c::interval-high y))))
+	      (hi (safe-expt (c::bound-value (c::interval-high x))
+			     (c::bound-value (c::interval-low y)))))
+	  (list (c::make-interval :low (or lo 0) :high (or hi 1)))))
+       ('-
+	;; Y is negative and log x <= 0.  The range of exp(y * log(x)) is
+	;; obviously [1, inf].
+	(let ((hi (safe-expt (c::bound-value (c::interval-low x))
+			     (c::bound-value (c::interval-low y))))
+	      (lo (safe-expt (c::bound-value (c::interval-high x))
+			     (c::bound-value (c::interval-high y)))))
+	  (list (c::make-interval :low (or lo 1) :high hi))))
+       (t
+	;; Split the interval in half
+	(destructuring-bind (y- y+)
+	    (c::interval-split 0 y t)
+	  (list (interval-expt-< x y-)
+		(interval-expt-< x y+))))))
     ('-
-     ;; Y is negative and log x <= 0.  The range of exp(y * log(x)) is
-     ;; obvious.
-     (let ((hi (safe-expt (c::bound-value (c::interval-low x))
-			  (c::bound-value (c::interval-low y))))
-	   (lo (safe-expt (c::bound-value (c::interval-high x))
-			  (c::bound-value (c::interval-high y)))))
-       (c::make-interval :low (or lo 0) :high (or hi 0))))
+     ;; The case where x <= 0.  Y MUST be an INTEGER for this to
+     ;; work!  The calling function must insure this! For now we'll
+     ;; just return the appropriate unbounded float type.
+     (list (c::make-interval :low nil :high nil)))
     (t
-     ;; Split the interval in half
-     (destructuring-bind (y- y+)
-	 (c::interval-split 0 y t)
-       (list (interval-expt-< x y-)
-	     (interval-expt-< x y+))))))
+     (destructuring-bind (neg pos)
+	 (interval-split 0 x t t)
+       (list (interval-expt-< neg y)
+	     (interval-expt-< pos y))))))
 
 ;;; Compute bounds for (expt x y)
+
 (defun interval-expt (x y)
-  (cond
-	((or (c::interval-< x (c::make-interval :low 1 :high 1))
-	     (and (c::interval-high x)
-		  (<= (c::bound-value (c::interval-high x)) 1)))
-	 ;; X is definitely less than or equal 1
-	 (interval-expt-< x y))
-	((or (c::interval-< (c::make-interval :low 1 :high 1) x)
-	     (and (c::interval-low x)
-		  (>= (c::bound-value (c::interval-low x))) 1))
-	 ;; X definitely greater than or equal to 1
+  (case (interval-range-info x 1)
+    ('+
+     ;; X >= 1
 	 (interval-expt-> x y))
-	(
-	 ;; Interval contains 1, so we need to break the problem into
-	 ;; two pieces
+    ('-
+     ;; X <= 1
+     (interval-expt-< x y))
+    (t
 	 (destructuring-bind (left right)
-	     (c::interval-split 1 x t t)
+	 (interval-split 1 x t t)
 	   (list (interval-expt left y)
 		 (interval-expt right y))))))
 
-;; Derive the type of (expt x-type y-type)
-(defun expt-derive-type-aux (x-type y-type)
-  (let ((x-int (numeric-type->interval x-type))
-	(y-int (numeric-type->interval y-type)))
-    (if (or (eq (numeric-type-complexp x-type) :complex)
-	    (eq (numeric-type-complexp y-type) :complex))
-	(numeric-contagion x-type y-type)
-	;; Several cases to consider
-	(cond ((>= (bound-value (interval-low x-int)) 0)
-	       ;; A positive number to some power is fairly easy to handle.
-	       (let ((bnd (interval-expt x-int y-int)))
-		 (cond ((atom bnd)
-			(fixup-interval-expt bnd x-int y-int x-type y-type))
-		       ((listp bnd)
-			(let ((union '()))
-			  (dolist (type bnd (first (merge-types-aux union)))
-			    (push (fixup-interval-expt type x-int y-int x-type y-type)
-				  union))))
-		       (t
-			(error "Shouldn't happen!")))))
-	      (t
-	       ;; A number to some power.  We punt here.
-	       (c::specifier-type '(or float (complex float))))))))
-		       
-  
 (defun fixup-interval-expt (bnd x-int y-int x-type y-type)
+  (declare (ignore x-int))
   (let ((lo (bound-value (interval-low bnd)))
 	(hi (bound-value (interval-high bnd))))
     ;; Figure out what the return type should be
@@ -792,106 +789,107 @@
 	       (case (numeric-type-class y-type)
 		 (integer
 		  ;; Positive integer to a integer power
-		  (if (>= (bound-value (interval-low y-int)) 0)
+		  (if (and (interval-low y-int)
+			   (>= (bound-value (interval-low y-int)) 0))
 		      (values 'integer nil)
 		      (values 'rational nil)))
 		 ((or rational float)
 		  ;; Integer to rational or float power is a float.
-		  (values 'float (or (numeric-type-format y-type) 'single-float)))))
+		  (values 'float
+			  (or (numeric-type-format y-type) 'single-float)))))
+	      ((eq (numeric-type-class x-type) 'rational)
+	       ;; Rational to a power
+	       (case (numeric-type-class y-type)
+		 (integer
+		  (values 'rational nil))
+		 (float
+		  (values 'float
+			  (or (numeric-type-format y-type) 'single-float)))))
 	      (t
 	       ;; Rational or float to a power is general numeric contagion
-	       (values 'float (numeric-type-format (numeric-contagion x-type y-type)))))
+	       (values 'float
+		       (numeric-type-format
+			(numeric-contagion x-type y-type)))))
       (when (member format '(single-float double-float))
-	(setf lo (coerce lo format))
-	(setf hi (coerce hi format)))
+	(setf lo (if lo (coerce lo format) lo))
+	(setf hi (if hi (coerce hi format) hi)))
       (make-numeric-type
        :class class
        :format format
        :low lo
        :high hi))))
   
+(defun merged-interval-expt (x-type y-type)
+  (labels ((flatten-helper (x r)      ;; 'r' is the stuff to the 'right'.
+	     (cond ((null x) r)
+		   ((atom x)
+		    (cons x r))
+		   (t (flatten-helper (car x)
+				      (flatten-helper (cdr x) r)))))
+	   (flatten (x) (flatten-helper x nil)))
+  (let* ((x-int (numeric-type->interval x-type))
+	 (y-int (numeric-type->interval y-type))
+	 (bnd (interval-expt x-int y-int))
+	 (union '()))
+    (dolist (type (flatten bnd))
+      (push (fixup-interval-expt type x-int y-int x-type y-type)
+	    union))
+    (let ((merged (derive-merged-union-types union)))
+      (assert (null (rest merged)))	; There should be only one thing left!
+      (first merged)))))
+
+;; Derive the type of (expt x-type y-type)
+(defun expt-derive-type-aux-numeric (x-type y-type)
+    (if (or (eq (numeric-type-complexp x-type) :complex)
+	    (eq (numeric-type-complexp y-type) :complex))
+	(numeric-contagion x-type y-type)
+	(if (eq (numeric-type-class y-type) 'integer)
+	    ;; A real raised to an integer power is well-defined
+	    (merged-interval-expt x-type y-type)
+	    ;; A real raised to a non-integral power can be a float or
+	    ;; a complex number.
+	    (cond ((and (bound-value (numeric-type-low x-type))
+			(>= (bound-value (numeric-type-low x-type)) 0))
+		   ;; A non-negative real to some power is fairly easy
+		   ;; to handle.
+		   (merged-interval-expt x-type y-type))
+		  (t
+		   ;; A number to some power.  We punt here.
+		   (format t "x-type, y-type = ~a ~a~%" x-type y-type)
+		   (error "Can't happen!")
+		   (specifier-type '(or float (complex float))))))))
+
+(defun expt-derive-type-aux (x-type y-type)
+  (let ((result (expt-derive-type-aux-numeric x-type y-type)))
+    (values (numeric-type-low result)
+	    (numeric-type-high result)
+	    (numeric-type-class result)
+	    (numeric-type-format result))))
+
+
 (defoptimizer (expt derive-type) ((x y))
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y)))
-    (derive-real-numeric-or-union-type x-type y-type #'expt-derive-type-aux)))
+    (if (or (eq (numeric-type-complexp x-type) :complex)
+	    (eq (numeric-type-complexp y-type) :complex))
+	(numeric-contagion x-type y-type)
+	(if (eq (numeric-type-class y-type) 'integer)
+	    ;; A real raised to an integer power is well-defined
+	    (merged-interval-expt x-type y-type)
+	    ;; A real raised to a non-integral power can be a float or
+	    ;; a complex number.
+	    (cond ((and (bound-value (numeric-type-low x-type))
+			(>= (bound-value (numeric-type-low x-type)) 0))
+		   ;; A non-negative real to some power is fairly easy
+		   ;; to handle.
+		   (derive-real-numeric-or-union-type
+		    x-type y-type #'expt-derive-type-aux))
 
-
-
-)  ; end progn
-
-
-;;; Compute return type for EXPT.  No bounds are computed because
-;;; that's pretty complicated in general.  We only return a lower
-;;; bound of 0 if we know that 0 is a lower bound.  The general case
-;;; will have to wait for another day.
-
-(defoptimizer (expt derive-type) ((x y))
-  (let ((x-type (continuation-type x))
-	(y-type (continuation-type y)))
-    (when (and (numeric-type-p x-type) (numeric-type-p y-type))
-      (let ((x-lo (numeric-type-low x-type))
-	    (y-lo (numeric-type-low y-type)))
-	;; There are several cases to handle for Y.  We only handle
-	;; the case where Y is an integer and Y is a float.  For Y
-	;; rational, the result could be a rational or float.
-
-	(cond ((eq (numeric-type-class y-type) 'integer)
-	       (cond ((and y-lo (>= (bound-value y-lo) 0))
-		      ;; When the power is a non-negative integer, the
-		      ;; result is of the same class and format as the
-		      ;; base.  If the base is known to be
-		      ;; non-negative, the result is too.  We can
-		      ;; easily compute the bound on the result in
-		      ;; this case, but that's for another day.
-		      (make-numeric-type
-		       :class (numeric-type-class x-type)
-		       :format (numeric-type-format x-type)
-		       :complexp :real
-		       :low (if (and x-lo (>= (bound-value x-lo) 0))
-				0
-				nil)
-		       :high nil))
-		     (t
-		      ;; The power maybe positive or negative.
-		      (let ((pos (and x-lo (>= (bound-value x-lo) 0))))
-			;; If the base is positive, the result is
-			;; positive.
-			(cond ((member (numeric-type-class x-type)
-				       '(integer rational))
-			       ;; Rational raised to a non-negative
-			       ;; integral power is rational.
-			       (make-numeric-type
-				:class 'rational
-				:complexp :real
-				:low (if pos 0 nil)
-				:high nil))
 			      (t
-			       ;; Float raised to integral power is a
-			       ;; float.
-			       (make-numeric-type
-				:class 'float
-				:format (numeric-type-format x-type)
-				:complexp :real
-				:low (if pos 0 nil)
-				:high nil)))))))
-	      ((eq (numeric-type-class y-type) 'float)
-	       ;; The power is a float.  The result is either a float
-	       ;; or complex.  We punt if the result is complex.
-	       (let ((pos (and x-lo (>= (bound-value x-lo) 0))))
-		 ;; If both the base and the power are non-negative,
-		 ;; the result is a non-negative real.  In any case
-		 ;; the result is a float of some time.
-		 (make-numeric-type
-		  :class 'float
-		  :format (if (or (eq (numeric-type-format x-type)
-				      'double-float)
-				  (eq (numeric-type-format y-type)
-				      'double-float))
-			      'double-float
-			      'single-float)
-		  :complexp :real
-		  :low (if pos 0 nil)
-		  :high nil))))))))
+		   ;; A number to some power.  We punt here.
+		   (float-or-complex-type
+		    (numeric-contagion x-type y-type))))))))
+
 
 (defoptimizer (log derive-type) ((x &optional y))
   (flet ((derive-type (arg)
@@ -925,11 +923,13 @@
 		     log-x log-y
 		     #'(lambda (x y)
 			 (declare (type numeric-type x y))
-			 (let ((result (interval-div (numeric-type->interval x)
+			 (let ((result
+				(interval-div (numeric-type->interval x)
 						     (numeric-type->interval y)))
 			       (result-type (numeric-contagion x y)))
-			   ;; If the result type is a float, we need to be sure to
-			   ;; coerce the bounds into the correct type.
+			   ;; If the result type is a float, we need
+			   ;; to be sure to coerce the bounds into the
+			   ;; correct type.
 			   (when (eq (numeric-type-class result-type) 'float)
 			     (setf result (interval-func
 					   #'(lambda (x)
@@ -941,9 +941,12 @@
 				   (numeric-type-class result-type)
 				   (numeric-type-format result-type))))))
 		   (t
-		    ;; Should do a better job than this and specialize
-		    ;; the float type if we can.
-		    (specifier-type '(or float (complex float))))))))))
+		    ;; The result can be a float or a complex.  Get
+		    ;; the right type of float, if possible.
+		    (float-or-complex-type
+		     (numeric-contagion
+		      (continuation-type x)
+		      (continuation-type y))))))))))
 
 (defoptimizer (atan derive-type) ((y &optional x))
   (cond ((null x)
@@ -1050,6 +1053,25 @@
 			(push res-1 result)))))
 	     (make-union-type (derive-merged-union-types result)))))))
 		 
+
+;;; Conjugate always returns the same type as the input type.
+;;;
+(defoptimizer (conjugate derive-type) ((num))
+  (continuation-type num))
+
+(defoptimizer (cis derive-type) ((num))
+  (let ((num-type (continuation-type num)))
+    (flet ((cis-type (x)
+	     ;; Cis of a double-float is (complex double-float).
+	     ;; Otherwise it's (complex single-float).
+	     (if (eq (numeric-type-format x) 'double-float)
+		 (c::specifier-type '(complex double-float))
+		 (c::specifier-type '(complex single-float)))))
+    (if (union-type-p num-type)
+	(make-union-type (mapcar #'cis-type
+				 (union-type-types num-type)))
+	(cis-type num-type)))))
+
 ) ;end progn for propagate-fun-type
 
 #+complex-float
@@ -1237,7 +1259,7 @@
 ;;; type-check to see if the elements of the complex are really (float
 ;;; -1.0 1.0).
 
-#+progagate-fun-types
+#+propagate-fun-type
 (progn
 (defoptimizer (sin derive-type) ((num))
   (elfun-derive-type-union
@@ -1245,7 +1267,10 @@
    (constantly t)
    #'(lambda (lo hi)
        (declare (ignore lo hi))
-       (values -1d0 1d0))))
+       (values -1d0 1d0))
+   ;; 
+   (float-or-complex-type (continuation-type num)
+			  -1d0 1d0)))
        
 (defoptimizer (cos derive-type) ((num))
   (elfun-derive-type-union
@@ -1253,7 +1278,9 @@
    (constantly t)
    #'(lambda (lo hi)
        (declare (ignore lo hi))
-       (values -1d0 1d0))))
+       (values -1d0 1d0))
+   (float-or-complex-type (continuation-type num)
+			  -1d0 1d0)))
 
 (defoptimizer (tan derive-type) ((num))
   (elfun-derive-type-union
