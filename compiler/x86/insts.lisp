@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.10 1997/09/29 16:51:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.11 1997/10/18 04:09:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2434,13 +2434,25 @@
 ;;;
 (define-instruction fstp (segment dest)
   (:printer floating-point ((op '(#b001 #b011))))
-  (:printer floating-point-fp ((op '(#b101 #b011))))
   (:emitter 
    (cond ((fp-reg-tn-p dest)
 	  (emit-byte segment #b11011101)
 	  (emit-fp-op segment dest #b011))
 	 (t
 	  (emit-byte segment #b11011001)
+	  (emit-fp-op segment dest #b011)))))
+;;;
+;;; store double from st(0) and pop
+;;;
+(define-instruction fstpd (segment dest)
+  (:printer floating-point ((op '(#b101 #b011))))
+  (:printer floating-point-fp ((op '(#b101 #b011))))
+  (:emitter 
+   (cond ((fp-reg-tn-p dest)
+	  (emit-byte segment #b11011101)
+	  (emit-fp-op segment dest #b011))
+	 (t
+	  (emit-byte segment #b11011101)
 	  (emit-fp-op segment dest #b011)))))
 ;;;
 ;;; decrement stack-top pointer
