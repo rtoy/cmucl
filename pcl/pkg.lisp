@@ -41,7 +41,7 @@
 	*the-pcl-package*)
 
 #+CMU
-(shadow '(destructuring-bind)
+(shadow '(destructuring-bind symbol-macrolet)
 	*the-pcl-package*)
 
 #+GCLisp
@@ -110,7 +110,7 @@
 		    standard-method
 		    standard-object
 		    structure-class
-		    symbol-macrolet
+		    #-cmu symbol-macrolet
 		    update-instance-for-different-class
 		    update-instance-for-redefined-class
 		    with-accessors
