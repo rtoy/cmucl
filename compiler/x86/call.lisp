@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.10 1997/12/03 19:57:49 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.11 1997/12/05 14:56:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -310,32 +310,35 @@
       (inst mov ebx-tn esp-tn)
       (emit-label regs-defaulted)
       (inst mov esp-tn ebx-tn)))
-   #+bogus-code-broken-optimization
-   ((<= nvals 6)
-    ;; 29+(nvals-3)*21 bytes for this branch.  For nvals=6 that is 92
-    ;; bytes, which is the same as using the blt below.
+   ((<= nvals 7)
+    ;; Number of byte depends on the relative jump instructions. Best
+    ;; case is 31+(n-3)*14, worst case is 35+(n-3)*18.  For nvals=6
+    ;; that is 73/89 bytes, and for nvals=7 that is 87/107 bytes which
+    ;; is likely better than using the blt below.
     (let ((regs-defaulted (gen-label))
 	  (defaulting-done (gen-label))
 	  (default-stack-slots (gen-label)))
+      (note-this-location vop :unknown-return)
       ;; Branch off to the MV case.
       (inst jmp-short regs-defaulted)
-
+      ;; Do the single value calse.
       ;; Default the register args
       (inst mov eax-tn nil-value)
-      (loop
-	for tn-ref = (tn-ref-across values)
-	         then (tn-ref-across tn-ref)
-	for count from 2 below register-arg-count
-	do count (inst mov (tn-ref-tn tn-ref) eax-tn))
+      (do ((i 1 (1+ i))
+	   (val (tn-ref-across values) (tn-ref-across val)))
+	  ((= i (min nvals register-arg-count)))
+	(inst mov (tn-ref-tn val) eax-tn))
+
       ;; Fake other registers so it looks like we returned with all the
       ;; registers filled in.
       (move ebx-tn esp-tn)
       (inst push edx-tn)
       (inst jmp default-stack-slots)
-
+      
       (emit-label regs-defaulted)
+
       (inst mov eax-tn nil-value)
-      (storew edx-tn ebx-tn (- word-bytes))
+      (storew edx-tn ebx-tn -1)
       (collect ((defaults))
 	(do ((i register-arg-count (1+ i))
 	     (val (do ((i 0 (1+ i))
@@ -349,24 +352,25 @@
 
 	    (inst cmp ecx-tn (fixnum i))
 	    (inst jmp :be default-lab)
-	    (loadw edx-tn ebx-tn i)
+	    (loadw edx-tn ebx-tn (- (1+ i)))
 	    (inst mov tn edx-tn)))
 	    
 	(emit-label defaulting-done)
-	(loadw edx-tn ebx-tn (- word-bytes))
+	(loadw edx-tn ebx-tn -1)
 	(move esp-tn ebx-tn)
 	    
 	(let ((defaults (defaults)))
 	  (when defaults
 	    (assemble (*elsewhere*)
 	      (trace-table-entry trace-table-function-prologue)
+	      (emit-label default-stack-slots)
 	      (dolist (default defaults)
 		(emit-label (car default))
 		(inst mov (cdr default) eax-tn))
 	      (inst jmp defaulting-done)
 	      (trace-table-entry trace-table-normal)))))))
    (t
-    ;; 92 bytes for this branch.
+    ;; 91 bytes for this branch.
     (let ((regs-defaulted (gen-label))
 	  (restore-edi (gen-label))
 	  (no-stack-args (gen-label))
@@ -430,9 +434,10 @@
       ;; Restore ESI.
       (loadw esi-tn ebx-tn (- (1+ 2)))
       ;; Now we have to default the remaining args.  Find out how many.
-      ;; If none, then just blow out of here.
       (inst sub eax-tn (fixnum (- nvals register-arg-count)))
-      (inst jmp :be restore-edi)
+      (inst neg eax-tn)
+      ;; If none, then just blow out of here.
+      (inst jmp :le restore-edi)
       (inst mov ecx-tn eax-tn)
       (inst shr ecx-tn word-shift)	; word count
       ;; Load EAX with NIL for fast storing.
