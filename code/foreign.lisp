@@ -7,13 +7,17 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.3 1991/01/31 01:20:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.4 1991/02/01 01:18:00 wlott Exp $
 ;;;
 ;;; Load-foreign and support routines.
 ;;;
 (in-package "SYSTEM")
 
+(in-package "EXT")
 (export '(load-foreign))
+(in-package "SYSTEM")
+(import 'ext:load-foreign)
+
 
 (defconstant foreign-segment-start #x00C00000)
 (defconstant foreign-segment-size  #x00400000)
