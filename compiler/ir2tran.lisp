@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.68 2000/07/06 18:37:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.69 2001/09/25 21:24:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,6 +22,15 @@
 (export '(safe-fdefn-function return-single instance-ref instance-set
 			      funcallable-instance-lexenv))
 
+
+#+sparc
+(defvar *always-clear-stack* nil
+  "Always perform stack clearing if non-NIL, independent of the
+compilation policy")
+
+#+sparc
+(defvar *enable-stack-clearing* t
+  "If non-NIL and the compilation policy allows, stack clearing is enabled.")
 
 
 ;;;; Moves and type checks:
@@ -822,6 +831,10 @@
       (vop current-fp node block old-fp)
       (vop allocate-frame node block
 	   (environment-info (lambda-environment fun))
+	   #+sparc
+	   (or *always-clear-stack*
+	       (and *enable-stack-clearing*
+		    (policy node (= speed 3) (>= space 2))))
 	   fp nfp)
       (values fp nfp temps (mapcar #'make-alias-tn locs)))))
 
@@ -1110,11 +1123,19 @@
     (let ((ef (functional-entry-function fun)))
       (cond ((and (optional-dispatch-p ef) (optional-dispatch-more-entry ef))
 	     ;; Special case the xep-allocate-frame + copy-more-arg case.
-	     (vop xep-allocate-frame node block start-label t)
+	     (vop xep-allocate-frame node block start-label t
+		  #+sparc
+		  (or *always-clear-stack*
+		      (and *enable-stack-clearing*
+			   (policy node (= speed 3) (>= space 2)))))
 	     (vop copy-more-arg node block (optional-dispatch-max-args ef)))
 	    (t
 	     ;; No more args, so normal entry.
-	     (vop xep-allocate-frame node block start-label nil)))
+	     (vop xep-allocate-frame node block start-label nil
+		  #+sparc
+		  (or *always-clear-stack*
+		      (and *enable-stack-clearing*
+			   (policy node (>= space 2) (= speed 3)))))))
       (if (ir2-environment-environment env)
 	  (let ((closure
 		 (make-normal-tn (backend-any-primitive-type *backend*))))
