@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.21 1990/10/23 03:19:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.22 1990/10/24 01:28:48 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -436,6 +436,7 @@
   (declare (type unsigned-byte code-handle) (list fixups)
 	   (type fasl-file file))
   (when fixups
+    (dump-push code-handle file)
     (dolist (info fixups)
       (let* ((kind (first info))
 	     (fixup (second info))
@@ -446,7 +447,6 @@
 	(let ((*cold-load-dump* t))
 	  (dump-object kind file))
 	(dump-fop 'lisp::fop-maybe-cold-load file)
-	(dump-push code-handle file)
 	(ecase flavor
 	  (:assembly-routine
 	   (assert (symbolp name))
