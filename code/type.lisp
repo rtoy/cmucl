@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.10 1993/07/30 11:00:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.11 1993/08/06 13:04:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -353,16 +353,14 @@
 ;;;    Return the type of the first value indicated by Type.  This is used by
 ;;; people who don't want to have to deal with values types.
 ;;;
+(declaim (freeze-type values-type) (inline single-value-type))
 (defun single-value-type (type)
   (declare (type ctype type))
   (cond ((values-type-p type)
-	 (cond ((args-type-required type)
-		(first (args-type-required type)))
-	       ((args-type-optional type)
-		(first (args-type-optional type)))
-	       ((args-type-rest type))
-	       (t
-		*universal-type*)))
+	 (or (car (args-type-required type))
+	     (car (args-type-optional type))
+	     (args-type-rest type)
+	     *universal-type*))
 	((eq type *wild-type*)
 	 *universal-type*)
 	(t
@@ -647,6 +645,7 @@
 			     type1 type2
 			     :complex-arg1 :complex-subtypep-arg1))))
 
+(declaim (start-block))
 
 ;;; Type=  --  Interface
 ;;;
@@ -680,6 +679,7 @@
 	(values (not res) t)
 	(values nil nil))))
 
+(declaim (end-block))
 
 ;;; Type-Union  --  Interface
 ;;;
