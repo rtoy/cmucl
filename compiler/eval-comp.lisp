@@ -273,8 +273,13 @@
     (error "Wrong argument count, wanted ~D and got ~D."
 	   defined-args supplied-args)))
 
-(defun %throw (tag &rest args)
-  (throw tag (values-list args)))
+;;; Use (SETF SYMBOL-FUNCTION) insetad of DEFUN so that the compiler
+;;; doesn't try to compile the hidden %THROW MV-CALL in the throw below as
+;;; a local recursive call.
+;;;
+(setf (symbol-function '%throw)
+      #'(lambda (tag &rest args)
+	  (throw tag (values-list args))))
 
 (defun %more-arg (args index)
   (nth index args))
