@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.34 1992/01/14 14:52:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.35 1992/01/14 15:07:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -553,14 +553,20 @@
 			  (%make-interpreted-debug-block block))
 		    res)))
 	  (dolist (block res)
-	    (let ((successors nil))
-	      (dolist (succ (c::block-succ
-			     (interpreted-debug-block-ir1-block block)))
-		(let ((dblock (gethash succ *ir1-block-debug-block*)))
-		  (unless dblock
-		    (error "Block ~S has successor ~S in different lambda."
-			   (interpreted-debug-block-ir1-block block) succ))
-		  (push dblock successors)))
+	    (let* ((successors nil)
+		   (cblock (interpreted-debug-block-ir1-block block))
+		   (succ (c::block-succ cblock))
+		   (valid-succ
+		    (if (and succ
+			     (eq (car succ)
+				 (c::component-tail
+				  (c::block-component cblock))))
+			()
+			succ)))
+	      (dolist (sblock valid-succ)
+		(let ((dblock (gethash sblock *ir1-block-debug-block*)))
+		  (when dblock
+		    (push dblock successors))))
 	      (setf (debug-block-successors block) (nreverse successors))))
 	  (gethash ir1-block *ir1-block-debug-block*)))))
 
@@ -3890,7 +3896,7 @@
      ;; Return the first location if there are any, otherwise nil.
      (handler-case (do-debug-function-blocks (block debug-fun nil)
 		     (do-debug-block-locations (loc block nil)
-		       (return loc)))
+		       (return-from debug-function-start-location loc)))
        (no-debug-blocks (condx)
 	 (declare (ignore condx))
 	 nil)))))
