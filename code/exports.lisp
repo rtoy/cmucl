@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.229 2004/03/23 12:16:47 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.230 2004/05/17 17:22:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1863,7 +1863,7 @@
 	   "%SET-SAP-REF-SAP" "%SET-SAP-REF-SINGLE"
 	   "%SET-SIGNED-SAP-REF-16" "%SET-SIGNED-SAP-REF-32"
 	   "%SET-SIGNED-SAP-REF-64" "%SET-SIGNED-SAP-REF-8" 
-	   "%SET-STACK-REF" "%SIN" "%SIN-QUICK"
+	   "%SET-STACK-REF" "%SIN" "%SET-SYMBOL-HASH" "%SIN-QUICK"
 	   "%SINGLE-FLOAT" "%SINH" "%SP-SET-DEFINITION" "%SP-SET-PLIST"
 	   "%SQRT" "%SXHASH-SIMPLE-STRING" "%SXHASH-SIMPLE-SUBSTRING" "%TAN"
 	   "%TAN-QUICK"

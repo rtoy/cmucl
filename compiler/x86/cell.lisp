@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.13 2003/08/03 11:27:45 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.14 2004/05/17 17:22:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,6 +146,11 @@
     ;; a fixnum.
     (loadw res symbol symbol-hash-slot other-pointer-type)
     (inst and res (lognot #b11))))
+
+
+(define-vop (%set-symbol-hash cell-set)
+  (:translate %set-symbol-hash)
+  (:variant symbol-hash-slot other-pointer-type))
 
 
 ;;;; Fdefinition (fdefn) objects.

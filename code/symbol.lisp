@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.34 2004/05/15 18:30:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.35 2004/05/17 17:22:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,7 +98,9 @@
   "Make and return a new symbol with the STRING as its print name."
   #-(or gengc x86 sparc) (make-symbol string)
   #+gengc (%make-symbol (random most-positive-fixnum) string)
-  #+(or sparc x86) (%make-symbol (sxhash string) string))
+  ;; Initialize the symbol-hash to 0 to make this fast.  It will get
+  ;; computed correctly later on.
+  #+(or sparc x86) (%make-symbol 0 string))
 
 #+(or gengc x86 sparc)
 (defun symbol-hash (symbol)
@@ -107,7 +109,7 @@
 
 #+sparc
 (defun (setf symbol-hash) (symbol hash)
-  (%set-symbol-hash symbol hash))
+  (kernel::%set-symbol-hash symbol hash))
 
 (defun get (symbol indicator &optional (default nil))
   "Look on the property list of SYMBOL for the specified INDICATOR.  If this

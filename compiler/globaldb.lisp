@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.48 2004/05/14 13:40:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.49 2004/05/17 17:22:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,16 +290,18 @@
   (cond
    ((symbolp x)
     #-(or gengc x86 sparc) (%sxhash-simple-string (symbol-name x))
-    #+(or gengc x86 sparc) (symbol-hash x))
+    #+(or gengc x86 sparc) (sxhash x))
    ((and (listp x)
 	 (eq (car x) 'setf)
 	 (let ((next (cdr x)))
 	   (when (listp next)
 	     (let ((name (car next)))
 	       (when (and (symbolp name) (null (cdr next)))
-		 (logxor #-(or gengc x86 sparc) (%sxhash-simple-string (symbol-name name))
-			 #+(or gengc x86 sparc) (symbol-hash name)
-			 110680597)))))))
+		 (let ((sym name))
+		   (declare (symbol sym))
+		   (logxor #-(or gengc x86 sparc) (%sxhash-simple-string (symbol-name sym))
+			   #+(or gengc x86 sparc) (sxhash sym)
+			   110680597))))))))
    (t
     (sxhash x))))
 
