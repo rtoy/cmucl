@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.8 1990/10/16 17:14:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.9 1990/10/23 02:30:47 wlott Exp $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
@@ -242,9 +242,13 @@
 			  (:temp dst-bit-offset descriptor-reg l0-offset)
 			  (:temp ntemp1 non-descriptor-reg nl1-offset)
 			  (:temp ntemp2 non-descriptor-reg nl2-offset)
-			  (:temp ntemp3 non-descriptor-reg nl3-offset))
+			  (:temp ntemp3 non-descriptor-reg nl3-offset)
+			  (:temp retaddr non-descriptor-reg nargs-offset))
 
   (progn res) ; don't complain that it's unused.
+
+  ;; Save the return address.
+  (inst subu retaddr lip-tn code-tn)
 
   (inst subu src src-arg vm:other-pointer-type)
   (inst and ntemp1 dst 3)
@@ -252,7 +256,10 @@
   (inst sll ntemp1 5)
   (inst addu dst-offset ntemp1)
   (do-copy)
-  done)
+  done
+
+  ;; Restore the return address.
+  (inst addu lip-tn retaddr code-tn))
 
 (define-assembly-routine (copy-from-system-area
 			  ((:policy :fast-safe)
@@ -274,8 +281,12 @@
 			  (:temp dst-bit-offset descriptor-reg l0-offset)
 			  (:temp ntemp1 non-descriptor-reg nl1-offset)
 			  (:temp ntemp2 non-descriptor-reg nl2-offset)
-			  (:temp ntemp3 non-descriptor-reg nl3-offset))
+			  (:temp ntemp3 non-descriptor-reg nl3-offset)
+			  (:temp retaddr non-descriptor-reg nargs-offset))
   (progn res) ; don't complain that it's unused.
+
+  ;; Save the return address.
+  (inst sub retaddr lip-tn code-tn)
 
   (inst and ntemp1 src 3)
   (inst xor src ntemp1)
@@ -283,7 +294,10 @@
   (inst addu src-offset ntemp1)
   (inst subu dst dst-arg vm:other-pointer-type)
   (do-copy)
-  done)
+  done
+
+  ;; Restore the return address.
+  (inst add lip-tn retaddr code-tn))
 
 (define-assembly-routine (system-area-copy
 			  ((:policy :fast-safe)

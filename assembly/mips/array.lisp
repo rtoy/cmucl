@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.13 1990/09/18 00:34:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.14 1990/10/23 02:29:54 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -64,7 +64,11 @@
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
+			  (:temp retaddr non-descriptor-reg nl1-offset)
 			  (:temp vector descriptor-reg a3-offset))
+
+  ;; Save the return address.
+  (inst subu retaddr lip-tn code-tn)
 
   (allocate-vector vm:simple-vector-type length length vector ndescr)
   (inst beq length zero-tn done)
@@ -80,7 +84,10 @@
 
   done
   
-  (move result vector))
+  (move result vector)
+
+  ;; Restore the return address.
+  (inst addu lip-tn retaddr code-tn))
 
 
 (define-assembly-routine (alloc-string
@@ -130,7 +137,12 @@
 			  (:temp length any-reg a2-offset)
 			  (:temp accum non-descriptor-reg nl0-offset)
 			  (:temp data non-descriptor-reg nl1-offset)
-			  (:temp byte non-descriptor-reg nl2-offset))
+			  (:temp byte non-descriptor-reg nl2-offset)
+			  (:temp retaddr non-descriptor-reg nl3-offset))
+
+  ;; Save the return address.
+  (inst subu retaddr lip-tn code-tn)
+
   (loadw length string vm:vector-length-slot vm:other-pointer-type)
   (inst addu lip string
 	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
@@ -209,7 +221,10 @@
   done
 
   (inst sll result accum 5)
-  (inst srl result result 3))
+  (inst srl result result 3)
+
+  ;; Restore the return address.
+  (inst addu lip-tn retaddr code-tn))
 
 
 (define-assembly-routine (sxhash-simple-substring
@@ -224,7 +239,11 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp accum non-descriptor-reg nl0-offset)
 			  (:temp data non-descriptor-reg nl1-offset)
-			  (:temp byte non-descriptor-reg nl2-offset))
+			  (:temp byte non-descriptor-reg nl2-offset)
+			  (:temp retaddr non-descriptor-reg nl3-offset))
+  ;; Save the return address.
+  (inst subu retaddr lip-tn code-tn)
+
   (inst addu lip string
 	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
   (inst b test)
@@ -302,5 +321,8 @@
   done
 
   (inst sll result accum 5)
-  (inst srl result result 3))
+  (inst srl result result 3)
+
+  ;; Restore the return address.
+  (inst addu lip-tn retaddr code-tn))
 
