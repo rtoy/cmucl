@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.12 1993/05/12 15:32:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.13 1993/05/12 16:15:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,8 @@
 (in-package "KERNEL")
 (export '(byte-function byte-function-name initialize-byte-compiled-function
 			byte-closure byte-closure-function
-			byte-closure-data byte-function-or-closure))
+			byte-closure-data byte-function-or-closure
+			*eval-stack* *eval-stack-top*))
 (in-package "C")
 
 
@@ -128,6 +129,12 @@
 
 
 ;;;; The stack.
+
+(defvar *eval-stack* (make-array 100)
+  "This is the interpreter's evaluation stack.")
+
+(defvar *eval-stack-top* 0
+  "This is the next free element of the interpreter's evaluation stack.")
 
 (declaim (inline current-stack-pointer))
 (defun current-stack-pointer ()
