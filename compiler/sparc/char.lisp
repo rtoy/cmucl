@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.5 1992/01/15 16:17:50 ram Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.6 1992/02/25 07:04:51 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;; 
 ;;; This file contains the SPARC VM definition of character operations.
 ;;;
@@ -118,10 +120,19 @@
 
 ;;; Comparison of base-chars.
 ;;;
-(define-vop (base-char-compare pointer-compare)
+(define-vop (base-char-compare)
   (:args (x :scs (base-char-reg))
 	 (y :scs (base-char-reg)))
-  (:arg-types base-char base-char))
+  (:arg-types base-char base-char)
+  (:conditional)
+  (:info target not-p)
+  (:policy :fast-safe)
+  (:note "inline comparison")
+  (:variant-vars condition not-condition)
+  (:generator 3
+    (inst cmp x y)
+    (inst b (if not-p not-condition condition) target)
+    (inst nop)))
 
 (define-vop (fast-char=/base-char base-char-compare)
   (:translate char=)
