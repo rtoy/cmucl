@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.30 1998/05/04 01:27:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.31 1998/05/05 00:12:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -947,8 +947,8 @@
 	     (:constructor internal-make-string-input-stream
 			   (string current end)))
   (string nil :type simple-string)
-  (current nil :type fixnum)
-  (end nil :type fixnum))
+  (current nil :type index)
+  (end nil :type index))
 
 (defun %print-string-input-stream (s stream d)
   (declare (ignore s d))
@@ -958,7 +958,7 @@
   (let ((string (string-input-stream-string stream))
 	(index (string-input-stream-current stream)))
     (declare (simple-string string) (fixnum index))
-    (cond ((= index (the fixnum (string-input-stream-end stream)))
+    (cond ((= index (the index (string-input-stream-end stream)))
 	   (eof-or-lose stream eof-errorp eof-value))
 	  (t
 	   (setf (string-input-stream-current stream) (1+ index))
@@ -967,8 +967,9 @@
 (defun string-binch (stream eof-errorp eof-value)
   (let ((string (string-input-stream-string stream))
 	(index (string-input-stream-current stream)))
-    (declare (simple-string string) (fixnum index))
-    (cond ((= index (the fixnum (string-input-stream-end stream)))
+    (declare (simple-string string)
+	     (type index index))
+    (cond ((= index (the index (string-input-stream-end stream)))
 	   (eof-or-lose stream eof-errorp eof-value))
 	  (t
 	   (setf (string-input-stream-current stream) (1+ index))
@@ -977,23 +978,26 @@
 (defun string-stream-read-n-bytes (stream buffer start requested eof-errorp)
   (declare (type string-input-stream stream)
 	   (type index start requested))
-  (let ((string (string-input-stream-string stream))
-	(index (string-input-stream-current stream))
-	(end (string-input-stream-end stream)))
-    (declare (simple-string string) (fixnum index end))
-    (cond ((>= (+ index requested) end)
-	   (eof-or-lose stream eof-errorp nil))
-	  (t
-	   (setf (string-input-stream-current stream) (+ index requested))
-	   (system:without-gcing
-	    (system-area-copy (vector-sap string)
-			      (* index vm:byte-bits)
-			      (if (typep buffer 'system-area-pointer)
-				  buffer
-				  (vector-sap buffer))
-			      (* start vm:byte-bits)
-			      (* requested vm:byte-bits)))
-	   requested))))
+  (let* ((string (string-input-stream-string stream))
+	 (index (string-input-stream-current stream))
+	 (available (- (string-input-stream-end stream) index))
+	 (copy (min available requested)))
+    (declare (simple-string string)
+	     (type index index available copy))
+    (when (plusp copy)
+      (setf (string-input-stream-current stream)
+	    (truly-the index (+ index copy)))
+      (system:without-gcing
+       (system-area-copy (vector-sap string)
+			 (* index vm:byte-bits)
+			 (if (typep buffer 'system-area-pointer)
+			     buffer
+			     (vector-sap buffer))
+			 (* start vm:byte-bits)
+			 (* copy vm:byte-bits))))
+    (if (and (> requested copy) eof-errorp)
+	(error 'end-of-file :stream stream)
+	copy)))
 
 (defun string-in-misc (stream operation &optional arg1 arg2)
   (declare (ignore arg2))
@@ -1556,33 +1560,34 @@
 	     ((or (endp rem) (>= i end)) i)
 	   (declare (type list rem)
 		    (type index i))
-	   (let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
-	     (when (eq el '%%RWSEQ-EOF%%)
+	   (let ((el (funcall read-function stream nil :eof)))
+	     (when (eq el :eof)
 	       (return i))
 	     (setf (first rem) el)))))
       (vector
        (with-array-data ((data seq) (offset-start start) (offset-end end))
-	 (if (or (typep data '(simple-array (unsigned-byte 8) (*)))
-		 #+signed-array
-		 (typep data '(simple-array (signed-byte 8) (*)))
-		 (and (simple-string-p data) (fd-stream-p stream)))
-	     (let* ((numbytes (- end start))
-		    (bytes-read (system:read-n-bytes
-				 stream data offset-start numbytes nil)))
-	       (if (< bytes-read numbytes)
-		   (+ start bytes-read)
-		   end))
-	     (let ((read-function
-		    (if (subtypep (stream-element-type stream) 'character)
-			#'read-char
-			#'read-byte)))
-	       (do ((i offset-start (1+ i)))
-		   ((>= i offset-end) end)
-		 (declare (type index i))
-		 (let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
-		   (when (eq el '%%RWSEQ-EOF%%)
-		     (return (- i offset-start)))
-		   (setf (aref data i) el))))))))))
+	 (typecase data
+	   ((or (simple-array (unsigned-byte 8) (*))
+		#+signed-array (simple-array (signed-byte 8) (*))
+		simple-string)
+	    (let* ((numbytes (- end start))
+		   (bytes-read (system:read-n-bytes
+				stream data offset-start numbytes nil)))
+	      (if (< bytes-read numbytes)
+		  (+ start bytes-read)
+		  end)))
+	   (t
+	    (let ((read-function
+		   (if (subtypep (stream-element-type stream) 'character)
+		       #'read-char
+		       #'read-byte)))
+	      (do ((i offset-start (1+ i)))
+		  ((>= i offset-end) end)
+		(declare (type index i))
+		(let ((el (funcall read-function stream nil :eof)))
+		  (when (eq el :eof)
+		    (return (+ start (- i offset-start))))
+		  (setf (aref data i) el)))))))))))
 
 ;;; WRITE-SEQUENCE -- Public
 ;;;
