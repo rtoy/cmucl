@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.34 2003/08/12 16:41:40 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.35 2003/08/18 20:48:38 toy Exp $
  *
  */
 
@@ -565,7 +565,11 @@ int main(int argc, char *argv[], char *envp[])
     if(initial_function_addr != 0) {
       extern int image_dynamic_space_size;
       int allocation_pointer = dynamic_0_space + (int)&image_dynamic_space_size;
+#ifdef i386
       SetSymbolValue(ALLOCATION_POINTER, (lispobj)allocation_pointer);
+#else
+      current_dynamic_space_free_pointer = (lispobj)allocation_pointer;
+#endif
     } else {
       initial_function = load_core_file(core);
     }
