@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.1.1.4 1991/02/08 16:33:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.1.1.5 1991/06/04 15:07:19 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,14 +38,12 @@
 
 ;;;; Stuff for the Syntax table functions (syntax)
 
-(defconstant syntax-char-code-limit 128
+(defconstant syntax-char-code-limit char-code-limit
   "The highest char-code which a character argument to the syntax
   table functions may have.")
-(defconstant syntax-char-code-mask #x+7f
-  "Mask we AND with characters given to syntax table functions to blow away
-  bits we don't want.")
+
 (defmacro syntax-char-code (char)
-  `(logand syntax-char-code-mask (char-code ,char)))
+  `(char-code ,char))
 
 ;;;; Stuff for the command interpreter (interp)
 ;;;
