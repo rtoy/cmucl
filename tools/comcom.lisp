@@ -63,7 +63,8 @@
 (comf "target:compiler/node")
 (comf "target:compiler/ctype")
 (comf "target:compiler/vop" :proceed t)
-(comf "target:compiler/vmdef" :load *load-stuff* :proceed t)
+(comf "target:compiler/vmdef")
+(comf "target:compiler/meta-vmdef" :load *load-stuff* :proceed t)
 
 (comf "target:compiler/disassem")
 (comf "target:compiler/new-assem")
