@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.9 1994/10/24 20:02:41 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.10 1997/02/05 18:01:13 pw Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -483,8 +483,10 @@ static void scavenge_interrupt_context(struct sigcontext *context)
 	for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
 		int index;
 	        lispobj foo;
-
+		
 		index = boxed_registers[i];
+		if (index==reg_NFP)
+		  continue;
                 foo = SC_REG(context,index);
                 scavenge((lispobj *) &foo, 1);
                 SC_REG(context,index) = foo;

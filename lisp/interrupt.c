@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.6 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.7 1997/02/05 18:01:15 pw Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -61,7 +61,10 @@ void
 fake_foreign_function_call(struct sigcontext *context)
 {
     int context_index;
-    
+#ifndef i386
+    lispobj oldcont;
+#endif
+
     /* Get current LISP state from context */
 #ifdef reg_ALLOC
     current_dynamic_space_free_pointer = (lispobj *)SC_REG(context, reg_ALLOC);

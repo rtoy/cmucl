@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.6 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.7 1997/02/05 18:08:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -383,7 +383,7 @@
 (eval-when (compile load eval)
 (defun command-case-tag (tag key-event char)
   (cond ((and (characterp tag) (standard-char-p tag))
-	 `(char= ,char ,tag))
+	 `(and ,char (char= ,char ,tag)))
 	((and (symbolp tag) (keywordp tag))
 	 `(logical-key-event-p ,key-event ,tag))
 	(t

@@ -2,30 +2,13 @@
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.16 1993/08/03 11:08:42 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.17 1997/02/05 18:13:01 pw Exp $
 
+# ignore historical option
 if ($#argv) then
     if ($argv[1] == "-now") then
-	set later = 0
 	shift
-    else
-	set later = 1
     endif
-else
-    set later = 1
-endif
-
-if ($later) then
-    set delay = (205 45 15 0)
-    set msg = ("in 5 minutes" "in 1 minute" "in 15 seconds" "now")
-  nextmsg:
-    foreach name (`who | sed -e 's/\([^ ]*\)  *\([^ ]*\) .*/\1:\2/'`)
-	echo Building core $msg[1] | write `echo $name | sed -e 's/:/ /'`
-    end
-    sleep $delay[1]
-    shift delay
-    shift msg
-    if ($#delay) goto nextmsg
 endif
 
 if ($#argv) then

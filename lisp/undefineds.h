@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.9 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.10 1997/02/05 18:01:19 pw Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -31,30 +31,30 @@ fork,
 fstat,
 fsync,
 ftruncate,
-#if !defined(hpux) && !defined(SVR4)
+#if !defined(hpux) && !defined(SVR4) || defined(SOLARIS25)
 getdtablesize,
 #endif
 getegid,
 geteuid,
 getgid,
 getgroups,
-#ifndef SOLARIS
+#if !defined (SOLARIS) || defined(SOLARIS25)
 gethostid,
 #endif
 gethostname,
 getitimer,
-#if !defined(hpux) && !defined(SVR4)
+#if !defined(hpux) && !defined(SVR4) || defined(SOLARIS25)
 getpagesize,
 #endif
 getpeername,
 getpgrp,
 getpid,
 getppid,
-#ifndef SVR4
+#if !defined(SVR4)  ||  defined(SOLARIS25)
 getpriority,
 #endif
 getrlimit,
-#ifndef SOLARIS
+#if !defined(SOLARIS) ||  defined(SOLARIS25)
 getrusage,
 #endif
 getsockname,
@@ -99,21 +99,21 @@ send,
 sendmsg,
 sendto,
 setgroups,
-#if !defined(SUNOS) && !defined(SOLARIS)
+#if !defined(SUNOS) && !defined(SOLARIS) ||  defined(SOLARIS25)
 sethostid,
 #endif
-#ifndef SVR4
+#if !defined(SVR4) ||  defined(SOLARIS25)
 sethostname,
 #endif
 setitimer,
 setpgrp,
-#ifndef SVR4
+#if !defined(SVR4) ||  defined(SOLARIS25)
 setpriority,
 #endif
-#ifdef mach
+#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__)
 setquota,
 #endif
-#if !defined(hpux) && !defined(SVR4)
+#if !defined(hpux) && !defined(SVR4) ||  defined(SOLARIS25)
 setregid,
 setreuid,
 #endif
@@ -128,7 +128,7 @@ sigpause,
 #if !defined(ibmrt) && !defined(hpux) && !defined(SVR4) && !defined(i386)
 sigreturn,
 #endif
-#if !defined SVR4 && !defined __FreeBSD__
+#if !defined(SVR4) && !defined(__FreeBSD__)
 sigsetmask,
 #ifndef __linux__
 sigstack,
@@ -164,11 +164,11 @@ utimes,
 #ifndef irix
 vfork,
 #endif
-#if !defined osf1 && !defined __FreeBSD__
+#if !defined(osf1) && !defined(__FreeBSD__)
 vhangup,
 #endif
 wait,
-#ifndef SOLARIS
+#if !defined(SOLARIS) ||  defined(SOLARIS25)
 wait3,
 #endif
 write,
@@ -187,11 +187,9 @@ atan2,
 sinh,
 cosh,
 tanh,
-#ifndef hpux
 asinh,
 acosh,
 atanh,
-#endif
 exp,
 #ifndef hpux
 expm1,
@@ -229,7 +227,7 @@ dlclose,
 dlerror,
 #endif
 #endif
-#ifndef SOLARIS
+#if !defined (SOLARIS) ||  defined(SOLARIS25)
 getwd,
 #endif
 ttyname

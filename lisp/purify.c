@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.7 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.8 1997/02/05 18:01:18 pw Exp $ */
 
 /* This file has been hacked a bunch by Werkowski as part of
  * the x86 port. Stack direction changes as well as more conservative
@@ -325,13 +325,14 @@ static lispobj ptrans_code(lispobj thing)
     code = (struct code *)PTR(thing);
     nwords = HeaderValue(code->header) + fixnum_value(code->code_size);
 
+#if defined(i386)
     /* Moving machine code around does not work on the x86 port, but
        byte compiled function code blocks can be moved.  Perhaps for
        all byte compiled code blocks the entry_points slot is nil.
        Check and print a warning. */
     if ( (code->entry_points) != NIL )
       fprintf(stderr,"** ptrans_code(%x)\n",thing);
-
+#endif
     new = (struct code *)read_only_free;
     read_only_free += CEILING(nwords, 2);
 
@@ -394,10 +395,10 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
     if (TypeOf(header) == type_FunctionHeader ||
         TypeOf(header) == type_ClosureFunctionHeader) {
 
-      /* Moving code around is not good on the x86 port; print a
-	 warning. */
+#if defined(i386)
+      /* Moving code around is not good on the x86 port; print a warning. */
       fprintf(stderr,"ptrans_function(%x, %x)\n",thing,header);
-
+#endif
 	/* We can only end up here if the code object has not been */
         /* scavenged, because if it had been scavenged, forwarding pointers */
         /* would have been left behind for all the entry points. */
@@ -954,16 +955,19 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj)static_free);
     
 #if !defined(ibmrt) && !defined(i386)
+    /* normal case for most ports */
     current_dynamic_space_free_pointer = current_dynamic_space;
-#endif
-
+#else
 #if defined X86_CGC_ACTIVE_P
+    /* X86 using CGC */
     if(SymbolValue(X86_CGC_ACTIVE_P) != T)
       SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
     else
       cgc_free_heap();
 #else
+    /* ibmrt or X86 using GC */
     SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
+#endif
 #endif
 
 #ifdef PRINTNOISE
