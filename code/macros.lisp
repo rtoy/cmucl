@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.86 2003/02/05 11:08:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.87 2003/02/08 11:33:39 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1646,48 +1646,47 @@
 ;;; matches the specified context.
 ;;;
 (defun evaluate-declaration-context (context name parent)
-  (let* ((base (if (and (consp name) (consp (cdr name)))
-		   (cadr name)
-		   name))
-	 (package (and (symbolp base) (symbol-package base))))
-    (if (atom context)
-	(multiple-value-bind (ignore how)
-			     (if package
-				 (find-symbol (symbol-name base) package)
-				 (values nil nil))
-	  (declare (ignore ignore))
-	  (case context
-	    (:internal (eq how :internal))
-	    (:external (eq how :external))
-	    (:uninterned (and (symbolp base) (not package)))
-	    (:anonymous (not name))
-	    (:macro (eq parent 'defmacro))
-	    (:function (member parent '(defun labels flet function)))
-	    (:global (member parent '(defun defmacro function)))
-	    (:local (member parent '(labels flet)))
-	    (t
-	     (error "Unknown declaration context: ~S." context))))
-	(case (first context)
-	  (:or
-	   (loop for x in (rest context)
-	     thereis (evaluate-declaration-context x name parent)))
-	  (:and
-	   (loop for x in (rest context)
-	     always (evaluate-declaration-context x name parent)))
-	  (:not
-	   (evaluate-declaration-context (second context) name parent))
-	  (:member
-	   (member name (rest context) :test #'equal))
-	  (:match
-	   (let ((name (concatenate 'string "$" (string base) "$")))
+  (multiple-value-bind (valid base)
+      (valid-function-name-p name)
+    (let ((package (and valid (symbolp base) (symbol-package base))))
+      (if (atom context)
+	  (multiple-value-bind (ignore how)
+	      (if package
+		  (find-symbol (symbol-name base) package)
+		  (values nil nil))
+	    (declare (ignore ignore))
+	    (case context
+	      (:internal (eq how :internal))
+	      (:external (eq how :external))
+	      (:uninterned (and (symbolp base) (not package)))
+	      (:anonymous (not name))
+	      (:macro (eq parent 'defmacro))
+	      (:function (member parent '(defun labels flet function)))
+	      (:global (member parent '(defun defmacro function)))
+	      (:local (member parent '(labels flet)))
+	      (t
+	       (error "Unknown declaration context: ~S." context))))
+	  (case (first context)
+	    (:or
 	     (loop for x in (rest context)
-	       thereis (search (string x) name))))
-	  (:package
-	   (and package
-		(loop for x in (rest context)
-		  thereis (eq (find-package (string x)) package))))
-	  (t
-	   (error "Unknown declaration context: ~S." context))))))
+		   thereis (evaluate-declaration-context x name parent)))
+	    (:and
+	     (loop for x in (rest context)
+		   always (evaluate-declaration-context x name parent)))
+	    (:not
+	     (evaluate-declaration-context (second context) name parent))
+	    (:member
+	     (member name (rest context) :test #'equal))
+	    (:match
+	     (let ((name (concatenate 'string "$" (string base) "$")))
+	       (loop for x in (rest context)
+		     thereis (search (string x) name))))
+	    (:package
+	     (and package
+		  (loop for x in (rest context)
+			thereis (eq (find-package (string x)) package))))
+	    (t
+	     (error "Unknown declaration context: ~S." context)))))))
 
   
 ;;; PROCESS-CONTEXT-DECLARATIONS  --  Internal
