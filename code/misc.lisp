@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.16 1992/03/07 13:25:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.17 1993/01/13 17:33:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,7 @@
 		 (info random-documentation stuff name))))))
   string)
 
-(defvar *features* '(:common :cmu :new-compiler)
+(defvar *features* '(:common :cmu :cmu17 :new-compiler)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 
