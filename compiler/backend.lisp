@@ -75,7 +75,7 @@
        (defun ,local-name ,ll ,@body)
        (setf (,(intern (concatenate 'simple-string "BACKEND-" (string name))
 		       (find-package "C"))
-	      *backend*)
+	      *target-backend*)
 	     #',local-name))))
 
 
@@ -157,13 +157,19 @@
   (parsed-vops (make-hash-table :test #'eq) :type hash-table)
 
   ;; The backend specific aspects of the info environment.
-  (info-environment (make-info-environment :name "Backend Info"))
+  (info-environment nil :type list)
+
+  ;; Support for the assembler.
+  (instruction-formats (make-hash-table :test #'eq) :type hash-table)
+  (instruction-flavors (make-hash-table :test #'equal) :type hash-table)
+  (special-arg-types (make-hash-table :test #'eq) :type hash-table)
 
   . #.(mapcar #'(lambda (slot)
 		  `(,slot nil :type (or null function)))
 	      (sort (copy-list vm-support-routines)
 		    #'string<
 		    :key #'symbol-name)))
+
 
 (defprinter backend
   name)
