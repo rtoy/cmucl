@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.45 2003/09/22 16:21:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.46 2003/10/13 16:07:54 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1736,8 +1736,8 @@ about function addresses and register values.")
   (:declare (type tn dst)
 	    (type (or tn integer) src1)
 	    (type (or null fixup tn (signed-byte 13)) src2))
-  (:printer format-3-reg ((op #b10) (op3 #b111000)) jal-printer)
-  (:printer format-3-immed ((op #b10) (op3 #b111000)) jal-printer)
+  (:printer format-3-reg ((op #b10) (op3 #b111000)) jal-printer :print-name 'jmpl)
+  (:printer format-3-immed ((op #b10) (op3 #b111000)) jal-printer :print-name 'jmpl)
   (:attributes branch)
   (:dependencies (reads src1) (if src2 (reads src2) (reads dst)) (writes dst))
   (:delay 1)
@@ -1982,7 +1982,7 @@ about function addresses and register values.")
        (unless (zerop lo)
 	 (inst add reg lo))
        ;; Sign-extend the result
-       (inst sra reg 0)))
+       (inst signx reg)))
     (fixup
      (inst sethi reg value)
      (inst add reg value))))
@@ -2010,7 +2010,7 @@ about function addresses and register values.")
        (unless (zerop lo)
 	 (inst add reg lo))
        ;; Sign-extend the result
-       (inst sra reg 0)))
+       (inst signx reg)))
     ((unsigned-byte 32)
      (let ((hi (ldb (byte 22 10) value))
 	   (lo (ldb (byte 10 0) value)))
@@ -2055,7 +2055,21 @@ about function addresses and register values.")
 (define-instruction-macro li64 (reg value &optional temp)
   `(%li64 ,reg ,value ,temp))
 
-)  
+)
+
+;; Define LDN/STN synthetic instructions to do "natural" loads and
+;; stores for 32-bit or 64-bit objects depending on whether this is a
+;; 32-bit or 64-bit build.  Change these to use ldx/stx/sllx/srlx/srax
+;; for 64-bit build.
+(macrolet ((frob (name inst)
+	     `(define-instruction-macro ,name (dst src1 &optional src2)
+	       `(inst ,',inst ,dst ,src1 ,src2))))
+  (frob ldn ld)
+  (frob stn st)
+  (frob slln sll)
+  (frob srln srl)
+  (frob sran sra))
+  
 ;;; Jal to a full 32-bit address.  Tmpreg is trashed.
 (define-instruction jali (segment link tmpreg value)
   (:declare (type tn link tmpreg)
