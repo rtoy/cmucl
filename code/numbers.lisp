@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.13 1990/10/01 15:02:58 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.14 1990/10/03 09:58:11 wlott Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -269,6 +269,18 @@
       (if (rationalp number)
 	  (if (plusp number) 1 -1)
 	  (/ number (abs number)))))
+
+
+;;;; Ratios.
+
+(defun numerator (number)
+  "Return the numerator of NUMBER, which must be rational."
+  (numerator number))
+
+(defun denominator (number)
+  "Return the denominator of NUMBER, which must be rational."
+  (denominator number))
+
 
 
 ;;;; Arithmetic Operations
