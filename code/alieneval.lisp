@@ -71,6 +71,11 @@
 	   (fixnum offset))
   (sap+ sap offset))
 
+(defun sap- (sap1 sap1)
+  "Return the byte offset between SAP1 and SAP2."
+  (declare (type system-area-pointer sap1 sap2))
+  (sap- sap1 sap2))
+
 (defun sap-int (sap)
   "Converts a System Area Pointer into an integer."
   (declare (type system-area-pointer sap))
@@ -1106,7 +1111,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
     (if (eq kind :read)
 	(let ((size (gensym))
 	      (str (gensym)))
-	  `(let* ((,size (%primitive 8bit-system-ref ,n-sap ,n-offset))
+	  `(let* ((,size (sap-ref-8 ,n-sap ,n-offset))
 		  (,str (make-string ,size)))
 	     (%primitive byte-blt ,n-sap (1+ ,n-offset) ,str 0 ,size)
 	     ,str))
@@ -1116,7 +1121,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 				    ,n-value)))
 		 (,1+off (1+ ,n-offset)))
 	     (check<= ,len ,(cadr type))
-	     (%primitive 8bit-system-set ,n-sap ,n-offset ,len)
+	     (setf (sap-ref-8 ,n-sap ,n-offset) ,len)
 	     (%primitive byte-blt ,n-value 0 ,n-sap ,1+off
 			 (+ ,1+off ,len)))))))
 
@@ -1134,16 +1139,18 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
     (declare (ignore size))
     (if (eq kind :read)
 	(let ((size (gensym))
-	      (str (gensym)))
-	  `(let* ((,size (the fixnum
-			      (- (the fixnum
-				      (%primitive find-character
-						  ,n-sap ,n-offset
-						  most-positive-fixnum 0))
-				 (the fixnum ,n-offset))))
-		  (,str (make-string ,size)))
-	     (%primitive byte-blt ,n-sap ,n-offset ,str 0 ,size)
-	     ,str))
+	      (str (gensym))
+	      (ptr (gensym))
+	      (start (gensym)))
+	  `(do ((,ptr ,n-sap (sap+ ,ptr 1))
+		(,start ,n-sap))
+	       ((zerop (sap-ref-8 ,ptr 0))
+		(let* ((,size (sap- ,ptr ,start))
+		       (,str (make-string ,size)))
+		  (%primitive byte-blt ,start ,n-offset
+			      (%primitive vector-sap ,str)
+			      0 ,size)
+		  ,str))))
 	(let ((len (gensym))
 	      (end (gensym)))
 	  `(let* ((,len (the fixnum (1+ (length (the simple-string
@@ -1151,9 +1158,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 		  (,end (the fixnum (+ (the fixnum ,len) ,n-offset))))
 	     (declare (fixnum ,len ,end))
 	     (check<= ,len ,(cadr type))
-	     (%primitive byte-blt ,n-value 0 ,n-sap ,n-offset ,end)
-	     (%primitive 8bit-system-set ,n-sap
-			 (the fixnum (1+ ,end)) 0))))))
+	     (%primitive byte-blt ,n-value 0 ,n-sap ,n-offset (1+ ,end)))))))
 
 
 ;;;; Pointer alien access:
@@ -1217,6 +1222,8 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	(let ((n-value (gensym)))
 	  `(setf (sap-ref-sap ,sap ,offset)
 		 (let ((,n-value ,value))
+		   ,@(when (and (consp type) (consp (cdr type)))
+		       `((declare (type ,(cadr type) ,n-value))))
 		   (etypecase ,n-value
 		     (null (int-sap 0))
 		     (system-area-pointer ,n-value)
