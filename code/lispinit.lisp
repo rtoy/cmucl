@@ -882,6 +882,7 @@
 				  #'(lambda ()
 				      (throw 'top-level-catcher nil)))
 				 (load-init-file t)
+				 (enable-gc t)
 				 (print-herald t)
 				 (process-command-line t))
   "Saves a Spice Lisp core image in the file of the specified name.  The
@@ -909,7 +910,10 @@
   file is resumed.
   
   :print-herald
-      If true, print out the lisp system herald when starting."
+      If true, print out the lisp system herald when starting.
+
+  :enable-gc
+      If true, turn GC on if it was off."
   
   (if purify
       (purify :root-structures root-structures)
@@ -937,22 +941,14 @@
 			 "init")))
 	  (load (merge-pathnames name (user-homedir-pathname))
 		:if-does-not-exist nil))))
+    (when enable-gc
+      (gc-on))
     (when print-herald
       (print-herald))
     (when process-command-line
       (ext::invoke-switch-demons *command-line-switches*
 				 *command-switch-demons*))
     (funcall init-function)))
-
-
-;;; WORLD-LOAD-INIT-FUNCTION  --  Interface
-;;;
-;;;    The init function we pass to SAVE-LISP in worldload.  We turn on GC and
-;;; thow to top level.
-;;;
-(defun world-load-init-function ()
-  (gc-on)
-  (abort))
 
 
 ;;; Quit gets us out, one way or another.
