@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.48 1991/12/11 17:20:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.49 1991/12/14 18:12:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -521,12 +521,12 @@
   ;;
   ;; If a file, the truename of the corresponding source file.  If from a Lisp
   ;; form, :LISP, if from a stream, :STREAM.
-  (name (required-argument) :type (or pathname (member :lisp :stream)))
+  (name (required-argument) :type (or simple-string (member :lisp :stream)))
   ;;
   ;; The defaulted, but not necessarily absolute file name (i.e. prior to
   ;; TRUENAME call.)  Null if not a file.  This is only used to set
   ;; *COMPILE-FILE-PATHNAME* 
-  (untruename nil :type (or pathname null))
+  (untruename nil :type (or simple-string null))
   ;;
   ;; The file's write date (if relevant.)
   (write-date nil :type (or unsigned-byte null))
@@ -576,8 +576,8 @@
   (declare (list files))
   (let ((file-info
 	 (mapcar #'(lambda (x)
-		     (make-file-info :name (truename x)
-				     :untruename x
+		     (make-file-info :name (namestring (truename x))
+				     :untruename (namestring x)
 				     :write-date (file-write-date x)))
 		 files)))
 
@@ -716,8 +716,9 @@
 	       (copy-cookie *initial-interface-cookie*))
 	 (let* ((finfo (first (source-info-current-file info)))
 		(name (file-info-name finfo)))
-	   (setq *compile-file-truename* name)
-	   (setq *compile-file-pathname* (file-info-untruename finfo))
+	   (setq *compile-file-truename* (pathname name))
+	   (setq *compile-file-pathname*
+		 (pathname (file-info-untruename finfo)))
 	   (setf (source-info-stream info) (open name :direction :input))))))
 
 ;;; CLOSE-SOURCE-INFO  --  Internal
@@ -1112,8 +1113,7 @@
 ;;;
 (defun emit-make-load-form (constant)
   (assert (fasl-file-p *compile-object*))
-  (unless (or (not (fboundp 'make-load-form))
-	      (fasl-constant-already-dumped constant *compile-object*))
+  (unless (fasl-constant-already-dumped constant *compile-object*)
     (let ((circular-ref (assoc constant *constants-being-created* :test #'eq)))
       (when circular-ref
 	(when (find constant *constants-created-sense-last-init* :test #'eq)
@@ -1121,45 +1121,59 @@
 	(throw 'pending-init circular-ref)))
     (multiple-value-bind
 	(creation-form init-form)
-	(make-load-form constant *lexical-environment*)
-      (unless (eq creation-form :just-dump-it-normally)
-	(let* ((name (let ((*print-level* 1) (*print-length* 2))
-		       (with-output-to-string (stream)
-			 (write constant :stream stream))))
-	       (info (if init-form
-			 (list constant name init-form)
-			 (list constant))))
-	  (let ((*constants-being-created*
-		 (cons info *constants-being-created*))
-		(*constants-created-sense-last-init*
-		 (cons constant *constants-created-sense-last-init*)))
-	    (when
-		(catch constant
-		  (fasl-note-handle-for-constant
-		   constant
-		   (compile-load-time-value
-		    creation-form
-		    (format nil "Creation Form for ~A" name))
-		   *compile-object*))
-	      (compiler-error "Circular references in creation form for ~S"
-			      constant)))
-	  (when (cdr info)
-	    (let* ((*constants-created-sense-last-init* nil)
-		   (circular-ref
-		    (catch 'pending-init
-		      (loop for (name form) on (cdr info) by #'cddr
-			collect name into names
-			collect form into forms
-			finally do
-			(compile-make-load-form-init-forms
-			 forms
-			 (format nil "Init Form~:[~;s~] for ~{~A~^, ~}"
-				 (cdr forms) names)))
-		      nil)))
-	      (when circular-ref
-		(setf (cdr circular-ref)
-		      (append (cdr circular-ref) (cdr info))))))))))
-  (undefined-value))
+	(handler-case
+	    (if (fboundp 'lisp::make-load-form)
+		(locally
+		 (declare (optimize (inhibit-warnings 3)))
+		 (lisp::make-load-form constant (make-null-environment)))
+		(make-structure-load-form constant))
+	  (error (condition)
+		 (compiler-error "(while making load form for ~S)~%~A"
+				 constant condition)))
+      (case creation-form
+	(:just-dump-it-normally
+	 (fasl-validate-structure constant *compile-object*)
+	 t)
+	(:ignore-it
+	 nil)
+	(t
+	 (let* ((name (let ((*print-level* 1) (*print-length* 2))
+			(with-output-to-string (stream)
+			  (write constant :stream stream))))
+		(info (if init-form
+			  (list constant name init-form)
+			  (list constant))))
+	   (let ((*constants-being-created*
+		  (cons info *constants-being-created*))
+		 (*constants-created-sense-last-init*
+		  (cons constant *constants-created-sense-last-init*)))
+	     (when
+		 (catch constant
+		   (fasl-note-handle-for-constant
+		    constant
+		    (compile-load-time-value
+		     creation-form
+		     (format nil "Creation Form for ~A" name))
+		    *compile-object*)
+		   nil)
+	       (compiler-error "Circular references in creation form for ~S"
+			       constant)))
+	   (when (cdr info)
+	     (let* ((*constants-created-sense-last-init* nil)
+		    (circular-ref
+		     (catch 'pending-init
+		       (loop for (name form) on (cdr info) by #'cddr
+			 collect name into names
+			 collect form into forms
+			 finally do
+			 (compile-make-load-form-init-forms
+			  forms
+			  (format nil "Init Form~:[~;s~] for ~{~A~^, ~}"
+				  (cdr forms) names)))
+		       nil)))
+	       (when circular-ref
+		 (setf (cdr circular-ref)
+		       (append (cdr circular-ref) (cdr info))))))))))))
 
 
 
@@ -1455,7 +1469,7 @@
 					      :print-timezone nil))
   (dolist (x (source-info-files source-info))
     (compiler-mumble "Compiling: ~A ~A~%"
-		     (namestring (file-info-name x))
+		     (file-info-name x)
 		     (ext:format-universal-time nil (file-info-write-date x)
 						:style :government
 						:print-weekday nil
