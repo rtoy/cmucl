@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.1 1997/01/18 14:31:24 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.2 1997/02/05 15:34:11 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -779,18 +779,20 @@
 (def-source-transform 32bit-logical-andc2 (x y)
   `(32bit-logical-and ,x (32bit-logical-not ,y)))
 
+;;; Only the lower 5 bits of the shift amount are significant.
 
 (define-vop (shift-towards-someplace)
   (:policy :fast-safe)
   (:args (num :scs (unsigned-reg) :target r)
-	 (amount :scs (unsigned-reg signed-reg) :target ecx))
-  (:arg-types unsigned-num positive-fixnum)
+	 (amount :scs (signed-reg) :target ecx))
+  (:arg-types unsigned-num tagged-num)
   (:temporary (:sc dword-reg :offset ecx-offset :from (:argument 1)) ecx)
-  (:results (r :scs (unsigned-reg)))
+  (:results (r :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num))
 
 (define-vop (shift-towards-start shift-towards-someplace)
   (:translate shift-towards-start)
+  (:note "SHIFT-TOWARDS-START")
   (:generator 1
     (move r num)
     (move ecx amount)
@@ -798,11 +800,11 @@
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
+  (:note "SHIFT-TOWARDS-END")
   (:generator 1
     (move r num)
     (move ecx amount)
     (inst shl r :cl)))
-
 
 
 ;;;; Bignum stuff.

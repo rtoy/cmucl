@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.1 1997/01/18 14:31:24 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.2 1997/02/05 15:34:13 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
 
@@ -296,6 +297,22 @@
 			:disp (- (* vm:vector-data-offset vm:word-bytes)
 				 vm:other-pointer-type))))))
 
+(define-vop (data-vector-ref-c/simple-array-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types simple-array-single-float (:constant (signed-byte 30)))
+  (:results (value :scs (single-reg)))
+  (:result-types single-float)
+  (:generator 4
+   (with-empty-tn@fp-top(value)
+     (inst fld (make-ea	:dword :base object
+			:disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				    (* 4 index))
+				 vm:other-pointer-type))))))
+
 (define-vop (data-vector-set/simple-array-single-float)
   (:note "inline array store")
   (:translate data-vector-set)
@@ -307,29 +324,67 @@
   (:results (result :scs (single-reg)))
   (:result-types single-float)
   (:generator 5
-    (if (zerop (tn-offset value))
-	(progn
-	  ;; Value is in ST0
-	  (inst fst (make-ea :dword :base object :index index :scale 1
-			     :disp (- (* vm:vector-data-offset vm:word-bytes)
-				      vm:other-pointer-type)))
-	  (unless (zerop (tn-offset result))
-	      ;; Value is in ST0 but not result.
-	      (inst fst result)))
-      (progn
-	;; Value is not in ST0.
-	(inst fxch value)
-	(inst fst (make-ea :dword :base object :index index :scale 1
-			   :disp (- (* vm:vector-data-offset vm:word-bytes)
-				    vm:other-pointer-type)))
-	(if (zerop (tn-offset result))
-	    ;; The result is in ST0.
-	    (inst fst value)
-	  (progn
-	    ;; Neither value or result are in ST0
-	    (unless (location= value result)
-		  (inst fst result))
-	    (inst fxch value)))))))
+    (cond ((zerop (tn-offset value))
+	   ;; Value is in ST0
+	   (inst fst (make-ea :dword :base object :index index :scale 1
+			      :disp (- (* vm:vector-data-offset vm:word-bytes)
+				       vm:other-pointer-type)))
+	   (unless (zerop (tn-offset result))
+		   ;; Value is in ST0 but not result.
+		   (inst fst result)))
+	  (t
+	   ;; Value is not in ST0.
+	   (inst fxch value)
+	   (inst fst (make-ea :dword :base object :index index :scale 1
+			      :disp (- (* vm:vector-data-offset vm:word-bytes)
+				       vm:other-pointer-type)))
+	   (cond ((zerop (tn-offset result))
+		  ;; The result is in ST0.
+		  (inst fst value))
+		 (t
+		  ;; Neither value or result are in ST0
+		  (unless (location= value result)
+			  (inst fst result))
+		  (inst fxch value)))))))
+
+(define-vop (data-vector-set-c/simple-array-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (single-reg) :target result))
+  (:info index)
+  (:arg-types simple-array-single-float (:constant (signed-byte 30))
+	      single-float)
+  (:results (result :scs (single-reg)))
+  (:result-types single-float)
+  (:generator 4
+    (cond ((zerop (tn-offset value))
+	   ;; Value is in ST0
+	   (inst fst (make-ea :dword :base object
+			      :disp (- (+ (* vm:vector-data-offset
+					     vm:word-bytes)
+					  (* 4 index))
+				       vm:other-pointer-type)))
+	   (unless (zerop (tn-offset result))
+		   ;; Value is in ST0 but not result.
+		   (inst fst result)))
+	  (t
+	   ;; Value is not in ST0.
+	   (inst fxch value)
+	   (inst fst (make-ea :dword :base object
+			      :disp (- (+ (* vm:vector-data-offset
+					     vm:word-bytes)
+					  (* 4 index))
+				       vm:other-pointer-type)))
+	   (cond ((zerop (tn-offset result))
+		  ;; The result is in ST0.
+		  (inst fst value))
+		 (t
+		  ;; Neither value or result are in ST0
+		  (unless (location= value result)
+			  (inst fst result))
+		  (inst fxch value)))))))
 
 (define-vop (data-vector-ref/simple-array-double-float)
   (:note "inline array access")
@@ -346,6 +401,22 @@
 			 :disp (- (* vm:vector-data-offset vm:word-bytes)
 				  vm:other-pointer-type))))))
 
+(define-vop (data-vector-ref-c/simple-array-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types simple-array-double-float (:constant (signed-byte 30)))
+  (:results (value :scs (double-reg)))
+  (:result-types double-float)
+  (:generator 6
+   (with-empty-tn@fp-top(value)
+     (inst fldd (make-ea :dword :base object
+			 :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				     (* 8 index))
+				  vm:other-pointer-type))))))
+
 (define-vop (data-vector-set/simple-array-double-float)
   (:note "inline array store")
   (:translate data-vector-set)
@@ -357,49 +428,102 @@
   (:results (result :scs (double-reg)))
   (:result-types double-float)
   (:generator 20
-    (if (zerop (tn-offset value))
-	(progn
-	  ;; Value is in ST0
-	  (inst fstd (make-ea :dword :base object :index index :scale 2
-			      :disp (- (* vm:vector-data-offset vm:word-bytes)
-				       vm:other-pointer-type)))
-	  (unless (zerop (tn-offset result))
-	      ;; Value is in ST0 but not result.
-	      (inst fstd result)))
-      (progn
-	;; Value is not in ST0.
-	(inst fxch value)
-	(inst fstd (make-ea :dword :base object :index index :scale 2
-			    :disp (- (* vm:vector-data-offset vm:word-bytes)
-				     vm:other-pointer-type)))
-	(if (zerop (tn-offset result))
-	    ;; The result is in ST0.
-	    (inst fstd value)
-	  (progn
-	    ;; Neither value or result are in ST0
-	    (unless (location= value result)
-		  (inst fstd result))
-	    (inst fxch value)))))))
+    (cond ((zerop (tn-offset value))
+	   ;; Value is in ST0
+	   (inst fstd (make-ea :dword :base object :index index :scale 2
+			       :disp (- (* vm:vector-data-offset vm:word-bytes)
+					vm:other-pointer-type)))
+	   (unless (zerop (tn-offset result))
+		   ;; Value is in ST0 but not result.
+		   (inst fstd result)))
+	  (t
+	   ;; Value is not in ST0.
+	   (inst fxch value)
+	   (inst fstd (make-ea :dword :base object :index index :scale 2
+			       :disp (- (* vm:vector-data-offset vm:word-bytes)
+					vm:other-pointer-type)))
+	   (cond ((zerop (tn-offset result))
+		  ;; The result is in ST0.
+		  (inst fstd value))
+		 (t
+		  ;; Neither value or result are in ST0
+		  (unless (location= value result)
+			  (inst fstd result))
+		  (inst fxch value)))))))
+
+
+(define-vop (data-vector-set-c/simple-array-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (double-reg) :target result))
+  (:info index)
+  (:arg-types simple-array-double-float (:constant (signed-byte 30))
+	      double-float)
+  (:results (result :scs (double-reg)))
+  (:result-types double-float)
+  (:generator 19
+    (cond ((zerop (tn-offset value))
+	   ;; Value is in ST0
+	   (inst fstd (make-ea :dword :base object
+			       :disp (- (+ (* vm:vector-data-offset
+					      vm:word-bytes)
+					   (* 8 index))
+					vm:other-pointer-type)))
+	   (unless (zerop (tn-offset result))
+		   ;; Value is in ST0 but not result.
+		   (inst fstd result)))
+	  (t
+	   ;; Value is not in ST0.
+	   (inst fxch value)
+	   (inst fstd (make-ea :dword :base object
+			       :disp (- (+ (* vm:vector-data-offset
+					      vm:word-bytes)
+					   (* 8 index))
+					vm:other-pointer-type)))
+	   (cond ((zerop (tn-offset result))
+		  ;; The result is in ST0.
+		  (inst fstd value))
+		 (t
+		  ;; Neither value or result are in ST0
+		  (unless (location= value result)
+			  (inst fstd result))
+		  (inst fxch value)))))))
+
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
 ;;; data is an unsigned-32 vector.
-;;; pfw-copied from hppa
-
+;;;
 (define-vop (raw-ref-single data-vector-ref/simple-array-single-float)
   (:translate %raw-ref-single)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+(define-vop (raw-ref-single-c data-vector-ref-c/simple-array-single-float)
+  (:translate %raw-ref-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
 ;;;
 (define-vop (raw-set-single data-vector-set/simple-array-single-float)
   (:translate %raw-set-single)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum single-float))
+(define-vop (raw-set-single-c data-vector-set-c/simple-array-single-float)
+  (:translate %raw-set-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
+	      single-float))
 ;;;
 (define-vop (raw-ref-double data-vector-ref/simple-array-double-float)
   (:translate %raw-ref-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+(define-vop (raw-ref-double-c data-vector-ref-c/simple-array-double-float)
+  (:translate %raw-ref-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
 ;;;
 (define-vop (raw-set-double data-vector-set/simple-array-double-float)
   (:translate %raw-set-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
+(define-vop (raw-set-double-c data-vector-set-c/simple-array-double-float)
+  (:translate %raw-set-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
+	      double-float))
 
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of
@@ -483,7 +607,8 @@
 	 (value :scs (unsigned-reg unsigned-stack signed-reg signed-stack)
 		:target eax))
   (:info index)
-  (:arg-types simple-array-unsigned-byte-8 (:constant (signed-byte 30)) positive-fixnum)
+  (:arg-types simple-array-unsigned-byte-8 (:constant (signed-byte 30))
+	      positive-fixnum)
   (:temporary (:sc dword-reg :offset eax-offset :target result
 		   :from (:argument 1) :to (:result 0))
 	      eax)
