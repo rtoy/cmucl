@@ -19,8 +19,7 @@
 
 (in-package "LISP")
 
-(export '(describe *describe-level* *describe-verbose*
-		   *describe-implementation-details* *describe-print-level*
+(export '(describe *describe-level* *describe-verbose* *describe-print-level*
 		   *describe-print-length* *describe-indentation*))
 
 
@@ -33,14 +32,13 @@
   "If non-nil, descriptions may provide interpretations of information and
   pointers to additional information.  Normally nil.")
 
-(defvar *describe-implementation-details* nil
-  "If non-null, normally concealed implementation information won't be.")
-
 (defvar *describe-print-level* 2
-  "*print-level* gets bound to this inside describe.")
+  "*print-level* gets bound to this inside describe.  If null, use
+  *print-level*")
 
 (defvar *describe-print-length* 5
-  "*print-length gets bound to this inside describe.")
+  "*print-length* gets bound to this inside describe.  If null, use
+  *print-length*.")
 
 (defvar *describe-indentation* 3
   "Number of spaces that sets off each line of a recursive description.")
@@ -63,8 +61,7 @@
 (defun describe (x &optional (stream *standard-output*))
   "Prints a description of the object X.
   See also *describe-level*, defdescribe, *describe-verbose*,
-  *describe-implementation-details*, *describe-print-level*,
-  *describe-print-length*, and *describe-indentation*."
+  *describe-print-level*, *describe-print-length*, and *describe-indentation*."
   (unless *describe-output*
     (setq *describe-output* (make-indenting-stream *standard-output*)))
   (cond (*in-describe*
@@ -76,8 +73,8 @@
 	(t
 	 (setf (indenting-stream-stream *describe-output*) stream)
 	 (let ((*standard-output* *describe-output*)
-	       (*print-level* *describe-print-level*)
-	       (*print-length* *describe-print-length*)
+	       (*print-level* (or *describe-print-level* *print-level*))
+	       (*print-length* (or *describe-print-length* *print-length*))
 	       (*used-documentation* ())
 	       (*described-objects* ())
 	       (*in-describe* t)
@@ -109,6 +106,12 @@
     (structure (describe-structure x))
     (array (describe-array x))
     (fixnum (describe-fixnum x))
+    (cons
+     (if (and (eq (car x) 'setf) (consp (cdr x)) (null (cddr x))
+	      (symbolp (cadr x))
+	      (fboundp x))
+	 (describe-function (fdefinition x))
+	 (default-describe x)))
     (t (default-describe x)))
   x)
 
@@ -119,11 +122,7 @@
 ;;; This supresses random garbage that users probably don't want to see.
 ;;;
 (defparameter *implementation-properties*
-  '(%loaded-address
-    ;;
-    ;; Documentation properties:
-    %var-documentation %fun-documentation %struct-documentation
-    %type-documentation %setf-documentation %documentation))
+  '(%loaded-address))
 
 
 ;;;; DESCRIBE methods.
@@ -152,48 +151,50 @@
 	(format t "~&~A is an uninterned symbol." x)))
   ;;
   ;; Describe the value cell.
-  (when (boundp x)
-    (let ((value (symbol-value x))
-	  (constantp (constantp x)))
-      (cond ((get x 'globally-special)
-	     (if constantp
-		 (format t "~&It is a constant; its value is ~S." value)
-		 (format t "~&It is a special variable; ~
-			    its current binding is ~S."
-			 value)))
-	    (t
-	     (fresh-line)
-	     (write-string "Its value is ")
-	     (print-for-describe value nil)))
-      (desc-doc x 'variable
-		(format nil "~:[Variable~;Constant~] Documentation:"
-			constantp))
-      (describe value)))
+  (let* ((kind (info variable kind x))
+	 (wot (ecase kind
+		(:special "special variable")
+		(:constant "constant")
+		(:global "undefined variable"))))
+    (cond
+     ((boundp x)
+      (let ((value (symbol-value x)))
+	(format t "~&It is a ~A; its value is ~S." wot value)
+	(describe value)))
+     ((not (eq kind :global))
+      (format t "~&It is a ~A; no current value." wot)))
+
+    (when (eq (info variable where-from x) :declared)
+      (format t "~&Its declared type is ~S."
+	      (type-specifier (info variable type x))))
+
+    (desc-doc x 'variable
+	      (format nil "~:[Variable~;Constant~] documentation:"
+		      (eq kind :constant))))
   ;;
   ;; Describe the function cell.
   (cond ((macro-function x)
 	 (let ((fun (macro-function x)))
 	   (format t "~&Its macroexpansion function is ~A." fun)
-	   (describe-function fun)
-	   (desc-doc x 'function "Macro Documentation:")))
+	   (describe-function fun t)
+	   (desc-doc x 'function "Macro documentation:")))
+	((special-form-p x)
+	 (desc-doc x 'function "Special form documentation:"))
 	((fboundp x)
-	 (describe-function (symbol-function x))))
+	 (describe-function (fdefinition x))))
   ;;
   ;; Print other documentation.
   (desc-doc x 'structure "Documentation on the structure:")
   (desc-doc x 'type "Documentation on the type:")
   (desc-doc x 'setf "Documentation on the SETF form:")
-  (dolist (assoc (get x '%documentation))
+  (dolist (assoc (info random-documentation stuff x))
     (unless (member (cdr assoc) *used-documentation*)
       (format t "~&Documentation on the ~(~A~):~%~A" (car assoc) (cdr assoc))))
   ;;
   ;; Print out properties, possibly ignoring implementation details.
-  (do ((plist (symbol-plist X) (cddr plist))
-       (properties-to-ignore (if *describe-implementation-details*
-				 nil
-				 *implementation-properties*)))
+  (do ((plist (symbol-plist X) (cddr plist)))
       ((null plist) ())
-    (unless (member (car plist) properties-to-ignore)
+    (unless (member (car plist) *implementation-properties*)
       (format t "~&Its ~S property is ~S." (car plist) (cadr plist))
       (describe (cadr plist)))))
 
@@ -227,29 +228,45 @@
 	   (format t " can be called with these arguments:~%")
 	   ,output))))
 
-(defun describe-function (x)
+(defun describe-function (x &optional macro-p)
   (declare (type function x))
   (case (get-type x)
     (#.vm:closure-header-type
-     (describe-function-lex-closure x))
+     (describe-function-lex-closure x macro-p))
     ((#.vm:function-header-type #.vm:closure-function-header-type)
-     (describe-function-compiled x))
+     (describe-function-compiled x macro-p))
     (t
      (format t "~&It is an unknown type of function."))))
 
-(defun describe-function-compiled (x)
+(defun describe-function-compiled (x macro-p)
   (let ((args (%function-header-arglist x)))
     (describe-function-arg-list
      *current-describe-object* (string= args "()") (write-string args)))
-  (let ((*print-level* nil)
-	(*print-length* nil)
-	(type (%function-header-type x)))
-    (format t "~&Its argument types are:~%  ~S" (second type))
-    (format t "~&Its result type is:~%  ~S" (third type)))
-  
-  (let ((name (%function-header-name x)))
-    (when (symbolp name)
-      (desc-doc name 'function "Function Documention:")))
+
+  (unless macro-p
+    (let ((name (%function-header-name x)))
+      (let ((*print-level* nil)
+	    (*print-length* nil))
+	(multiple-value-bind
+	    (type where)
+	    (if (stringp name)
+		(values (%function-header-type x)
+			:defined)
+		(values (type-specifier (info function type name))
+			(info function where-from name)))
+	  (when (consp type)
+	    (format t "~&Its ~(~A~) argument types are:~%  ~S"
+		    where (second type))
+	    (format t "~&Its result type is:~%  ~S" (third type)))))
+
+      (let ((inlinep (info function inlinep name)))
+	(when inlinep
+	  (format t "~&It is currently declared ~(~A~);~
+	             ~:[no~;~] expansion is available."
+		  inlinep (info function inline-expansion name))))
+    
+      (when (symbolp name)
+	(desc-doc name 'function "Function Documention:"))))
   
   (let ((info (di::code-debug-info (di::function-code-header x))))
     (when info
@@ -270,13 +287,13 @@
 	      (:stream (format t "~&~S" name))
 	      (:lisp (format t "~&~S" name)))))))))
 
-(defun describe-function-lex-closure (x)
+(defun describe-function-lex-closure (x macro-p)
   (print-for-describe x)
   (format t " is a lexical closure.~%")
-  (describe-function-compiled (%closure-function x))
+  (describe-function-compiled (%closure-function x) macro-p)
   (format t "~&Its lexical environment is:")
   (indenting-further *standard-output* 8)
-  (dotimes (i (get-closure-length x))
+  (dotimes (i (- (get-closure-length x) (1- vm:closure-info-offset)))
     (format t "~&~D: ~S" i (%closure-index-ref x i))))
 
 
