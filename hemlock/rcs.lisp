@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.22 1991/11/08 18:20:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.23 1991/11/09 13:20:14 ram Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -166,7 +166,7 @@
 				 :buffer buffer))))
     (in-directory pathname
       (do-command "rcsci" `(,@(if keep-lock '("-l"))
-			    ,@(if keep-working-copy "-u")
+			    ,@(if keep-working-copy '("-u"))
 			    ,filename)
 		  :input log-stream)
       (if keep-working-copy
