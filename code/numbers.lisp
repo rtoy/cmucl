@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.49 2003/08/22 09:20:02 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.50 2003/08/23 10:32:20 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -734,7 +734,7 @@
       (round number)
       (multiple-value-bind (tru rem) (truncate number divisor)
 	(if (zerop rem)
-	    (values (if (minusp tru) -1 1) rem)
+	    (values tru rem)
 	    (let ((thresh (/ (abs divisor) 2)))
 	      (cond ((or (> rem thresh)
 			 (and (= rem thresh) (oddp tru)))
