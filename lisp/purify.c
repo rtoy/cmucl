@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.16 1998/03/21 08:15:01 dtc Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.17 2000/01/19 18:11:13 dtc Exp $ 
 
    */
 #include <stdio.h>
@@ -1517,12 +1517,16 @@ int purify(lispobj static_roots, lispobj read_only_roots)
       os_zero((os_vm_address_t) current_dynamic_space,
 	      (os_vm_size_t) DYNAMIC_SPACE_SIZE);
 #else
+#if !defined(GENCGC)
     os_zero((os_vm_address_t) current_dynamic_space,
             (os_vm_size_t) DYNAMIC_SPACE_SIZE);
 #endif
+#endif
 
-    /* Zero stack. Note the stack is also zeroed by sub-gc calling
-       scrub-control-stack - this zeros the stack on the x86. */
+    /*
+     * Zero stack. Note the stack is also zeroed by sub-gc calling
+     * scrub-control-stack - this zeros the stack on the x86.
+     */
 #ifndef i386
     os_zero((os_vm_address_t) current_control_stack_pointer,
             (os_vm_size_t) (CONTROL_STACK_SIZE -
@@ -1533,24 +1537,26 @@ int purify(lispobj static_roots, lispobj read_only_roots)
 #if defined(WANT_CGC) && defined(STATIC_BLUE_BAG)
     {
       lispobj bag = SymbolValue(STATIC_BLUE_BAG);
-      struct cons*cons = (struct cons*)static_free;
+      struct cons*cons = (struct cons*) static_free;
       struct cons*pair = cons + 1;
-      static_free += 2*WORDS_PER_CONS;
+      static_free += 2 * WORDS_PER_CONS;
       if(bag == type_UnboundMarker)
 	bag = NIL;
       cons->cdr = bag;
-      cons->car = (lispobj)pair | type_ListPointer;
-      pair->car = (lispobj)static_end;
-      pair->cdr = (lispobj)static_free;
+      cons->car = (lispobj) pair | type_ListPointer;
+      pair->car = (lispobj) static_end;
+      pair->cdr = (lispobj) static_free;
       bag = (lispobj)cons | type_ListPointer;
       SetSymbolValue(STATIC_BLUE_BAG, bag);
     }
 #endif
 
-    /* It helps to update the heap free pointers so that free_heap can
-       verify after it's done. */
-    SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj)read_only_free);
-    SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj)static_free);
+    /*
+     * It helps to update the heap free pointers so that free_heap can
+     * verify after it's done.
+     */
+    SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj) read_only_free);
+    SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj) static_free);
 
 #if !defined(ibmrt) && !defined(i386)
     current_dynamic_space_free_pointer = current_dynamic_space;
@@ -1558,7 +1564,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)
     /* X86 using CGC */
     if(SymbolValue(X86_CGC_ACTIVE_P) != T)
-      SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
+      SetSymbolValue(ALLOCATION_POINTER, (lispobj) current_dynamic_space);
     else
       cgc_free_heap();
 #else
@@ -1566,7 +1572,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     gc_free_heap();
 #else
     /* ibmrt using GC */
-    SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
+    SetSymbolValue(ALLOCATION_POINTER, (lispobj) current_dynamic_space);
 #endif
 #endif
 #endif
@@ -1575,11 +1581,11 @@ int purify(lispobj static_roots, lispobj read_only_roots)
   /* Call the scavenger hook functions */
   {
     struct scavenger_hook *sh;
-    for (sh=PTR((int)scavenger_hooks); sh!=PTR(NIL);) {
-      struct scavenger_hook *sh_next = PTR((int)sh->next);
+    for (sh = PTR((int)scavenger_hooks); sh != PTR(NIL);) {
+      struct scavenger_hook *sh_next = PTR((int) sh->next);
       funcall0(sh->function);
-      sh->next=NULL;
-      sh=sh_next;
+      sh->next = NULL;
+      sh = sh_next;
     }
     scavenger_hooks = NIL;
   }
