@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.43 1992/02/24 00:41:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.44 1992/03/11 21:16:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1095,8 +1095,8 @@
 (defknown kernel:%with-array-data (array index (or index null))
   (values (simple-array * (*)) index index index)
   (foldable flushable))
-(defknown %set-symbol-function (symbol function) function (unsafe))
 (defknown %set-symbol-package (symbol t) t (unsafe))
+(defknown %coerce-to-function (t) function (flushable))
 
 ;;; Structure slot accessors or setters are magically "known" to be these
 ;;; functions, although the var remains the Slot-Accessor describing the actual
