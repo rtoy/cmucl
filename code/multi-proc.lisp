@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.32 1999/01/11 19:05:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.33 1999/03/06 03:42:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1720,15 +1720,31 @@
 
 ;;;
 (defstruct (lock
-	     (:constructor make-lock (&optional name))
+	     (:constructor nil)
 	     (:print-function %print-lock))
   (name nil :type (or null simple-base-string))
   (process nil :type (or null process)))
 
+(defstruct (recursive-lock
+	     (:include lock)
+	     (:constructor make-recursive-lock (&optional name))))
+
+(defstruct (error-check-lock
+	     (:include lock)
+	     (:constructor make-error-check-lock (&optional name))))
+
+(defun make-lock (&optional name &key (kind :recursive))
+  (ecase kind
+    (:recursive (make-recursive-lock name))
+    (:error-check (make-error-check-lock name))))
+
 (defun %print-lock (lock stream depth)
   (declare (type lock lock) (stream stream) (ignore depth))
   (print-unreadable-object (lock stream :identity t)
-    (write-string "Lock" stream)
+    (write-string (etypecase lock
+		    (recursive-lock "Recursive-lock")
+		    (error-check-lock "Error-Check-lock"))
+		  stream)
     (let ((name (lock-name lock)))
       (when name
 	(format stream " ~a" name)))
@@ -1787,35 +1803,47 @@
 
 ;;; With-Lock-Held  --  Public
 ;;;
-(defmacro with-lock-held ((lock &optional (whostate "Lock Wait") &key timeout)
+(defmacro with-lock-held ((lock &optional (whostate "Lock Wait")
+				&key (wait t) timeout)
 			  &body body)
-
   "Execute the body with the lock held. If the lock is held by another
-  process then the current process waits until the lock is released or a
-  optional timeout is reached - recursive locks are allowed. The
-  optional wait timeout is a time in seconds acceptable to
-  process-wait-with-timeout.  The results of the body are return upon
-  success and NIL is return if the timeout is reached."
+  process then the current process waits until the lock is released or
+  an optional timeout is reached. The optional wait timeout is a time in
+  seconds acceptable to process-wait-with-timeout.  The results of the
+  body are return upon success and NIL is return if the timeout is
+  reached. When the wait key is NIL and the lock is held by another
+  process then NIL is return immediately without processing the body."
   (let ((have-lock (gensym)))
     `(let ((,have-lock (eq (lock-process ,lock) *current-process*)))
       (unwind-protect
-	   ,(if timeout
-		`(when (cond (,have-lock)
-			     #+i486 ((null (kernel:%instance-set-conditional
-					    ,lock 2 nil *current-process*)))
-			     #-i486 ((seize-lock ,lock))
-			     ((null ,timeout)
-			      (lock-wait ,lock ,whostate))
-			     ((lock-wait-with-timeout
-			       ,lock ,whostate ,timeout)))
-		  ,@body)
-		`(progn
-		  (unless (or ,have-lock
+	   ,(cond ((and timeout wait)
+		   `(when (cond (,have-lock
+				 (when (error-check-lock-p ,lock)
+				   (error "Dead lock")))
+				#+i486 ((null (kernel:%instance-set-conditional
+					       ,lock 2 nil *current-process*)))
+				#-i486 ((seize-lock ,lock))
+				((null ,timeout)
+				 (lock-wait ,lock ,whostate))
+				((lock-wait-with-timeout
+				  ,lock ,whostate ,timeout)))
+		      ,@body))
+		  (wait
+		   `(progn
+		      (when (and (error-check-lock-p ,lock) ,have-lock)
+		        (error "Dead lock"))
+		      (unless (or ,have-lock
+				 #+i486 (null (kernel:%instance-set-conditional
+					       ,lock 2 nil *current-process*))
+				 #-i486 (seize-lock ,lock))
+			(lock-wait ,lock ,whostate))
+		      ,@body))
+		  (t
+		   `(when (or (and (recursive-lock-p ,lock) ,have-lock)
 			      #+i486 (null (kernel:%instance-set-conditional
 					    ,lock 2 nil *current-process*))
 			      #-i486 (seize-lock ,lock))
-		    (lock-wait ,lock ,whostate))
-		  ,@body))
+		      ,@body)))
 	(unless ,have-lock
 	  #+i486 (kernel:%instance-set-conditional
 		  ,lock 2 *current-process* nil)
