@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.43 1992/06/14 07:08:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.44 1992/07/28 01:57:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -606,13 +606,6 @@
 	  (write-char #\: stream))
 	 ;; Uninterned symbols print with a leading #:.
 	 ((null package)
-	  (when (or *print-circle* *print-readably*)
-	    (let ((marker (check-for-circularity object t)))
-	      (case marker
-		((:initiate nil))
-		(t
-		 (unless (handle-circularity marker stream)
-		   (return-from output-symbol nil))))))
 	  (when (or *print-gensym* *print-readably*)
 	    (write-string "#:" stream)))
 	 (t
