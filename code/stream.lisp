@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.69 2004/04/06 11:41:54 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.70 2004/04/06 17:30:12 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -962,7 +962,7 @@ streams."
   (let ((streams (broadcast-stream-streams stream)))
     (case operation
       (:charpos
-       (dolist (stream streams)
+       (dolist (stream streams 0)
 	 (let ((charpos (charpos stream)))
 	   (if charpos (return charpos)))))
       (:line-length
@@ -971,9 +971,16 @@ streams."
 	   (let ((res (line-length stream)))
 	     (when res (setq min (if min (min res min) res)))))))
       (:element-type
+       #+nil ; old, arguably more logical, version
        (let (res)
 	 (dolist (stream streams (if (> (length res) 1) `(and ,@res) t))
-	   (pushnew (stream-element-type stream) res :test #'equal))))
+	   (pushnew (stream-element-type stream) res :test #'equal)))
+       ;; ANSI-specified version (under System Class BROADCAST-STREAM)
+       (let ((res t))
+	 (do ((streams streams (cdr streams)))
+	     ((null streams) res)
+	   (when (null (cdr streams))
+	     (setq res (stream-element-type (car streams)))))))
       (:close)
       (t
        (let ((res nil))
@@ -2523,6 +2530,9 @@ SEQ:	a proper SEQUENCE
 		(write-vector-out seq stream start end))
 
 	       ((simple-array (signed-byte *) (*))
+		(write-vector-out seq stream start end))
+
+	       (bit-vector
 		(write-vector-out seq stream start end))
 	       )
 	     seq)))
