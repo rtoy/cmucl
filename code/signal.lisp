@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.2 1990/06/06 03:59:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.3 1990/07/02 04:37:34 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -58,6 +58,7 @@
 	       `(install-handler ,(mach:unix-signal-number signal)
 				 (di::get-lisp-obj-address ,handler))))
     #+nil (frob :sigint #'sigint-handler)
+    (frob :sigquit #'sigquit-handler)
     (frob :sigill #'sigill-handler)
     (frob :sigtrap #'internal-error)
     (frob :sigiot #'sigiot-handler)
