@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.12 1992/12/18 19:02:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.13 1993/12/09 12:56:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -313,7 +313,10 @@
 			     handler))
 		 *oob-handlers*)
 	   (system:enable-interrupt unix:sigurg #'sigurg-handler)
-	   (unix:unix-fcntl fd unix:f-setown (unix:unix-getpid)))))
+	   #-hpux
+	   (unix:unix-fcntl fd unix:f-setown (unix:unix-getpid))
+	   #+hpux
+	   (unix:siocspgrp fd (unix:unix-getpid)))))
   (values))
 
 ;;; REMOVE-OOB-HANDLER -- public
