@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.7 1997/08/23 16:00:22 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.8 1998/03/10 20:39:50 dtc Exp $ */
 #ifdef mach
 #include <machine/regdef.h>
 #else
@@ -281,7 +281,7 @@ undefined_tramp:
         .byte    4
         .byte    23
         .byte    254
-        .byte    204
+        .byte    (0xc0 + sc_DescriptorReg)
         .byte    1
         .align 2
 #endif
