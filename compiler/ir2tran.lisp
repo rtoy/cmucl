@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.32 1991/08/19 22:49:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.33 1991/11/09 22:08:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1668,22 +1668,34 @@
 ;;; Finish-IR2-Block  --  Internal
 ;;;
 ;;;    If necessary, emit a terminal unconditional branch to go to the
-;;; successor block.  When there is a deleted tail control transfer, no branch
-;;; is necessary.
+;;; successor block.  If the successor is the component tail, then there isn't
+;;; really any successor, but if the end is an unknown, non-tail call, then we
+;;; emit an error trap just in case the function really does return.
 ;;;
 (defun finish-ir2-block (block)
   (declare (type cblock block))
   (let* ((2block (block-info block))
 	 (last (block-last block))
 	 (succ (block-succ block)))
-    (unless (or (if-p last) (return-p last)
-		(and (null succ)
-		     (or (node-tail-p last)
-			 (exit-p last))))
+    (unless (if-p last)
       (assert (and succ (null (rest succ))))
       (let ((target (first succ)))
-	(unless (eq (ir2-block-next 2block) (block-info target))
-	  (vop branch last 2block (block-label target))))))
+	(cond ((eq target (component-tail (block-component block)))
+	       (when (and (basic-combination-p last)
+			  (eq (basic-combination-kind last) :full))
+		 (let* ((fun (basic-combination-fun last))
+			(use (continuation-use fun))
+			(name (and (ref-p use) (leaf-name (ref-leaf use)))))
+		   (unless (or (node-tail-p last)
+			       (info function info name)
+			       (policy last (zerop safety)))
+		     (vop nil-function-returned-error last 2block
+			  (if name
+			      (emit-constant name)
+			      (function-continuation-tn last 2block fun)))))))
+	      ((not (eq (ir2-block-next 2block) (block-info target)))
+	       (vop branch last 2block (block-label target)))))))
+  
   (undefined-value))
 
 
