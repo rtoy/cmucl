@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.10 1990/09/06 17:53:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.11 1990/10/05 15:13:04 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -575,19 +575,42 @@
 
 (defun default-structure-print (structure stream depth)
   (declare (ignore depth))
-  (write-string "#S(" stream)
-  (prin1 (svref structure 0) stream)
-  (do ((index 1 (1+ index))
-       (length (length structure))
-       (slots (dd-slots (info type defined-structure-info (svref structure 0)))
-	      (cdr slots)))
-      ((or (= index length)
-	   (and *print-length*
-		(= index *print-length*)))
-       (if (= index length)
-	   (write-string ")" stream)
-	   (write-string "...)" stream)))
-    (write-char #\space stream)
-    (prin1 (dsd-name (car slots)) stream)
-    (write-char #\space stream)
-    (prin1 (svref structure index) stream)))
+  (let* ((type (%primitive structure-ref structure 0))
+	 (dd (info type defined-structure-info type)))
+    (cond (*print-pretty*
+	   (let ((index 0))
+	     (declare (type index index))
+	     (xp:pprint-logical-block (stream (cons type (dd-slots dd))
+					      :prefix "#S("
+					      :suffix ")")
+	       (prin1 (xp:pprint-pop) stream)
+	       (xp:pprint-exit-if-list-exhausted)
+	       (write-char #\space stream)
+	       (xp:pprint-indent :current 0 stream)
+	       (loop
+		 (prin1 (dsd-name (xp:pprint-pop)) stream)
+		 (write-char #\space stream)
+		 (xp:pprint-newline :miser stream)
+		 (prin1 (%primitive structure-index-ref structure (incf index))
+			stream)
+		 (xp:pprint-exit-if-list-exhausted)
+		 (write-char #\space stream)
+		 (xp:pprint-newline :linear stream)))))
+	  (t
+	   (write-string "#S(" stream)
+	   (prin1 type stream)
+	   (do ((index 1 (1+ index))
+		(length (length structure))
+		(slots (dd-slots dd) (cdr slots)))
+	       ((or (= index length)
+		    (and *print-length*
+			 (= index *print-length*)))
+		(if (= index length)
+		    (write-string ")" stream)
+		    (write-string "...)" stream)))
+	     (declare (type index index))
+	     (write-char #\space stream)
+	     (prin1 (dsd-name (car slots)) stream)
+	     (write-char #\space stream)
+	     (prin1 (%primitive structure-index-ref structure index)
+		    stream))))))
