@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.17 1992/03/13 23:27:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.18 1992/05/15 17:44:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Re-Written by Rob MacLachlan.  Earlier version written by
 ;;; Lee Schumacher.  Apropos & iteration macros courtesy of Skef Wholey.
 ;;; Defpackage by Dan Zigmond.  With-Package-Iterator by Blaine Burks. 
+;;; Defpackage and do-mumble-symbols macros re-written by William Lott.
 ;;;
 (in-package 'lisp)
 (export '(package packagep *package* make-package in-package find-package
@@ -27,8 +28,16 @@
 	  do-external-symbols do-all-symbols apropos apropos-list defpackage))
 
 (in-package "EXTENSIONS")
-(export '(*keyword-package* *lisp-package*))
+(export '(*keyword-package* *lisp-package* *default-package-use-list*))
+
+(in-package "KERNEL")
+(export '(%in-package old-in-package))
+
 (in-package 'lisp)
+
+(defvar *default-package-use-list* '("COMMON-LISP")
+  "The list of packages to use by default of no :USE argument is supplied
+   to MAKE-PACKAGE or other package creation forms.")
 
 
 (defstruct (package
@@ -166,13 +175,16 @@
 ;;; must be between 2 and 255.
 ;;;
 (defmacro entry-hash (length sxhash)
-  `(the fixnum (+ (the fixnum (rem (the fixnum (logxor ,length
-						       ,sxhash
-						       (the fixnum (ash ,sxhash -8))
-						       (the fixnum (ash ,sxhash -16))
-						       (the fixnum (ash ,sxhash -19))))
-				   254))
-		  2)))
+  `(the fixnum
+	(+ (the fixnum
+		(rem (the fixnum
+			  (logxor ,length
+				  ,sxhash
+				  (the fixnum (ash ,sxhash -8))
+				  (the fixnum (ash ,sxhash -16))
+				  (the fixnum (ash ,sxhash -19))))
+		     254))
+	   2)))
 
 ;;; Make-Package-Hashtable  --  Internal
 ;;;
@@ -190,7 +202,8 @@
        (setf (package-hashtable-table res)
 	     (make-array n))
        (setf (package-hashtable-hash res)
-	     (make-array n :element-type '(unsigned-byte 8) :initial-element 0))
+	     (make-array n :element-type '(unsigned-byte 8)
+			 :initial-element 0))
        (let ((size (truncate (* n package-rehash-threshold))))
 	 (setf (package-hashtable-size res) size)
 	 (setf (package-hashtable-free res) size))
@@ -204,10 +217,16 @@
 ;;;    Return internal and external symbols.  Used by Genesis and stuff.
 ;;;
 (flet ((stuff (table)
-	      (let ((size (the fixnum (- (the fixnum (package-hashtable-size table))
-					 (the fixnum (package-hashtable-deleted table))))))
-		(declare (fixnum size))
-		(values (the fixnum (- size (the fixnum (package-hashtable-free table)))) size))))
+	 (let ((size (the fixnum
+			  (- (the fixnum (package-hashtable-size table))
+			     (the fixnum
+				  (package-hashtable-deleted table))))))
+	   (declare (fixnum size))
+	   (values (the fixnum
+			(- size
+			   (the fixnum
+				(package-hashtable-free table))))
+		   size))))
 
   (defun internal-symbol-count (package)
     (stuff (package-internal-symbols package)))
@@ -250,7 +269,8 @@
 		    (decf (the fixnum (package-hashtable-deleted table))))
 		(setf (svref vec i) symbol)
 		(setf (aref hash i)
-		      (entry-hash (length (the simple-string (symbol-name symbol)))
+		      (entry-hash (length (the simple-string
+					       (symbol-name symbol)))
 				  sxhash)))
 	     (declare (fixnum i)))))))
 
@@ -316,129 +336,82 @@
 
 ;;;; Iteration macros.
 
-;;; Instead of using slow, silly successor functions, we make the iteration
-;;; guys be big PROG's.  Yea!
-
-(eval-when (compile load eval)
-
-(defun make-do-symbols-vars ()
-  `(,(gensym)					; index
-    ,(gensym)					; hash
-    ,(gensym)					; hash-vector
-    ,(gensym)))					; terminus
-
-(defun make-do-symbols-code (vars var hash-table exit-form forms)
-  (let ((index (first vars))
-	(hash-vector (second vars))
-	(hash (third vars))
-	(terminus (fourth vars))
-	(TOP (gensym)))
-    `((setq ,index 0)
-      (setq ,hash-vector (package-hashtable-table ,hash-table))
-      (setq ,hash (package-hashtable-hash ,hash-table))
-      (setq ,terminus (length (the simple-vector ,hash-vector)))
-      ,TOP
-      (if (= (the fixnum ,index) (the fixnum ,terminus))
-	  ,exit-form)
-      (when (> (the fixnum (aref (the (simple-array (unsigned-byte 8)) ,hash)
-				 ,index))
-	       1)
-	(setq ,var (svref ,hash-vector ,index))
-	,@forms)
-      (incf ,index)
-      (go ,TOP))))
-
-); eval-when (compile load eval)
-
 (defmacro do-symbols ((var &optional (package '*package*) result-form)
-		      &body (code decls))
-  "Do-Symbols (Var [Package [Result-Form]]) {Declaration}* {Tag | Statement}*
-  Executes the Forms at least once for each symbol accessible in the given
-  Package with Var bound to the current symbol."
-  (let* ((DONE-INTERNAL (gensym))
-	 (DONE-EXTERNAL (gensym))
-	 (NEXT-INHERIT (gensym))
-	 (vars (make-do-symbols-vars))
-	 (n-package (gensym))
-	 (shadowed (gensym))
-	 (inherits (gensym))
-	 (this-inherit (gensym)))
-    `(prog* ((,n-package (package-or-lose ,package))
-	     (,shadowed (package-%shadowing-symbols ,n-package))
-	     (,inherits (package-%use-list ,n-package))
-	     ,var ,@vars ,this-inherit)
-       ,@decls
-       ,@(make-do-symbols-code
-	  vars var `(package-internal-symbols ,n-package)
-	  `(go ,DONE-INTERNAL)
-	  code)
-       ,DONE-INTERNAL
-
-       ,@(make-do-symbols-code
-	  vars var `(package-external-symbols ,n-package)
-	  `(go ,DONE-EXTERNAL)
-	  code)
-       ,DONE-EXTERNAL
-
-       ,NEXT-INHERIT
-       (when (null ,inherits)
-	 (setq ,var nil)
-	 (return ,result-form))
-
-       (setq ,this-inherit (package-external-symbols (car ,inherits)))
-       ,@(make-do-symbols-code
-	  vars var this-inherit
-	  `(progn
-	    (setq ,inherits (cdr ,inherits))
-	    (go ,NEXT-INHERIT))
-	  `((when (or (not ,shadowed)
-		      (eq (find-symbol (symbol-name ,var) ,n-package) ,var))
-	      ,@code))))))
+		      &body body)
+  "DO-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECLARATION}* {TAG | FORM}*
+   Executes the FORMs at least once for each symbol accessible in the given
+   PACKAGE with VAR bound to the current symbol."
+  (let ((flet-name (gensym "DO-SYMBOLS-")))
+    `(block nil
+       (flet ((,flet-name (,var) ,@body))
+	 (let* ((package (package-or-lose ,package))
+		(shadows (package-%shadowing-symbols package)))
+	   (flet ((iterate-over-hash-table (table ignore)
+		    (let ((hash-vec (package-hashtable-hash table))
+			  (sym-vec (package-hashtable-table table)))
+		      (declare (type (simple-array (unsigned-byte 8) (*))
+				     hash-vec)
+			       (type simple-vector sym-vec))
+		      (dotimes (i (length sym-vec))
+			(when (>= (aref hash-vec i) 2)
+			  (let ((sym (aref sym-vec i)))
+			    (unless (member sym ignore)
+			      (,flet-name sym))))))))
+	     (iterate-over-hash-table (package-internal-symbols package) nil)
+	     (iterate-over-hash-table (package-external-symbols package) nil)
+	     (dolist (table (cdr (package-tables package)))
+	       (iterate-over-hash-table table shadows)))))
+       (let ((,var nil))
+	 (declare (ignorable ,var))
+	 ,result-form))))
 
 (defmacro do-external-symbols ((var &optional (package '*package*) result-form)
-			       &body (code decls))
-  "Do-External-Symbols (Var [Package [Result-Form]])
-                       {Declaration}* {Tag | Statement}*
-  Executes the Forms once for each external symbol in the given Package with
-  Var bound to the current symbol."
-  (let ((vars (make-do-symbols-vars))
-	(n-package (gensym)))
-    `(prog ((,n-package (package-or-lose ,package))
-	    ,var ,@vars)
-       ,@decls
-       ,@(make-do-symbols-code
-	  vars var `(package-external-symbols ,n-package)
-	  `(return (progn (setq ,var nil) ,result-form))
-	  code))))
+			       &body body)
+  "DO-EXTERNAL-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECL}* {TAG | FORM}*
+   Executes the FORMs once for each external symbol in the given PACKAGE with
+   VAR bound to the current symbol."
+  (let ((flet-name (gensym "DO-SYMBOLS-")))
+    `(block nil
+       (flet ((,flet-name (,var)
+		,@body))
+	 (let* ((package (package-or-lose ,package))
+		(table (package-external-symbols package))
+		(hash-vec (package-hashtable-hash table))
+		(sym-vec (package-hashtable-table table)))
+	   (declare (type (simple-array (unsigned-byte 8) (*))
+			  hash-vec)
+		    (type simple-vector sym-vec))
+	   (dotimes (i (length sym-vec))
+	     (when (>= (aref hash-vec i) 2)
+	       (,flet-name (aref sym-vec i))))))
+       (let ((,var nil))
+	 (declare (ignorable ,var))
+	 ,result-form))))
 
-(defmacro do-all-symbols ((var &optional result-form)
-			  &body (code decls))
-  "Do-All-Symbols (Var [Result-Form]) {Declaration}* {Tag | Statement}*
-  Executes the Forms once for each symbol in each package with Var bound
-  to the current symbol."
-  (let* ((PACKAGE-LOOP (gensym))
-	 (TAG (gensym))
-	 (package-list (gensym))
-	 (vars (make-do-symbols-vars))
-	 (internal-code (make-do-symbols-code
-			 vars var `(package-internal-symbols (car ,package-list))
-			 `(go ,TAG)
-			 code))
-	 (external-code (make-do-symbols-code
-			 vars var `(package-external-symbols (car ,package-list))
-			 `(progn (setq ,package-list (cdr ,package-list))
-				 (go ,PACKAGE-LOOP))
-			 code)))
-    `(prog (,package-list ,var ,@vars)
-       ,@decls
-       (setq ,package-list (list-all-packages))
-      ,PACKAGE-LOOP
-       (when (null ,package-list)
-	 (setq ,var nil)
-	 (return ,result-form))
-       ,@internal-code
-      ,TAG
-       ,@external-code)))
+(defmacro do-all-symbols ((var &optional result-form) &body body)
+  "DO-ALL-SYMBOLS (VAR [RESULT-FORM]) {DECLARATION}* {TAG | FORM}*
+   Executes the FORMs once for each symbol in every package with VAR bound
+   to the current symbol."
+  (let ((flet-name (gensym "DO-SYMBOLS-")))
+    `(block nil
+       (flet ((,flet-name (,var)
+		,@body))
+	 (dolist (package (list-all-packages))
+	   (flet ((iterate-over-hash-table (table)
+		    (let ((hash-vec (package-hashtable-hash table))
+			  (sym-vec (package-hashtable-table table)))
+		      (declare (type (simple-array (unsigned-byte 8) (*))
+				     hash-vec)
+			       (type simple-vector sym-vec))
+		      (dotimes (i (length sym-vec))
+			(when (>= (aref hash-vec i) 2)
+			  (,flet-name (aref sym-vec i)))))))
+	     (iterate-over-hash-table (package-internal-symbols package))
+	     (iterate-over-hash-table (package-external-symbols package)))))
+       (let ((,var nil))
+	 (declare (ignorable ,var))
+	 ,result-form))))
+
 
 ;;;; WITH-PACKAGE-ITERATOR
 
@@ -574,179 +547,181 @@
 
 ;;;; DEFPACKAGE:
 
-(defmacro defpackage (package &rest arguments)
-  "Defines a new package called PACKAGE.  ARGUMENTS should a list of forms,
-   each of with is one of:
-       (:SIZE <integer>)
-       (:NICKNAMES {package-name}*)
-       (:SHADOW {symbol-name}*)
-       (:SHADOWING-IMPORT-FROM <package-name> {symbol-name}*)
-       (:USE {package-name}*)
-       (:IMPORT-FROM <package-name> {symbol-name}*)
-       (:INTERN {symbol-name}*)
-       (:EXPORT {symbol-name}*)
-   All keywords except :SIZE can be used multiple times."
-  (let ((body nil)
-	(package-name
-	 (etypecase package
-	   ;; Make sure we have a good package name to use.
-	   (string package)
-	   (symbol (symbol-name package)))))
-    (multiple-value-bind
-	(nicknames uses shadows imports shadowed-imports exports interns size)
-	(parse-defpackage-keywords arguments package-name)
-      ;; We set up the body of the form to return first things first
-      ;; for readability, even though (since we're using PUSH) we
-      ;; then have to NREVERSE at the end.  The order of operations
-      ;; must be: 1. :shadow and :shadowing-import-from
-      ;;          2. :use
-      ;;          3. :import-from and :return
-      ;;          4. :export
-      (when shadows
-	(push `(shadow (list ,@shadows) ,package-name)
-	      body))
-      (when shadowed-imports
-	(push `(shadowing-import (list ,@shadowed-imports) ,package-name)
-	      body))
-      (when uses
-	(push `(use-package (list ,@uses) ,package-name)
-	      body))
-      (when imports
-	(push `(import (list ,@imports) ,package-name)
-	      body))
-      (when interns
-	(dolist (symbol interns)
-	  (push `(intern ,symbol ,package-name)
-		body)))
-      (when exports
-	(push `(export (list ,@exports) ,package-name)
-	      body))
-      ;;
-      ;; We do :nicknames and :sizeat the top (where it's convenient).
-      ;; :Size is not implemented very well.  We assume, for absolutely
-      ;; no good reason, that approximates 1/5 of the symbols in a
-      ;; package will be external.
-      `(progn
-	 (eval-when (compile load eval)
-	   (unless (find-package ,package-name)
-	     (make-package
-	      ,package-name
-	      ,@(if nicknames `(:nicknames (list ,@nicknames)))
-	      ,@(if size `(:internal-symbols ,(round size 5/4)
-			   :external-symbols ,(round size 5))))))
-	 ,@(nreverse body)
-	 (find-package ,package-name)))))
-
-
-(defun parse-defpackage-keywords (rest-list n-package)
-  "Parses the arguments to DEFPACKAGE.  Returns eight arguments:
-       1. A list of the package's nicknames.
-       2. A list of the other packages that this package uses.
-       3. A list of shadows.
-       4. A list of lists of the form (package-name {symbol-name}*)
-          describing the symbols to be imported from package-name
-	  and placed on the shadowed symbols list.
-       5. A list of lists as above of symbols to be imported.
-       6. A list of symbols to export.
-       7. A list of symbols to intern.
-       8. The declared size of the package.
-   Nil is returned as any of these eight values if no value is provided
-   by the user.  Only mimimal error checking is done here."
-  (do* ((symbols-in nil)
-	(symbols-out)
-	(nicknames nil)
-	(uses nil)
-	(shadows nil)
-	(imports nil)
-	(shadowed-imports nil)
-	(exports nil)
-	(interns nil)
+(defmacro defpackage (package &rest options)
+  "Defines a new package called PACKAGE.  Each of OPTIONS should be one of the
+   following:
+     (:NICKNAMES {package-name}*)
+     (:SIZE <integer>)
+     (:SHADOW {symbol-name}*)
+     (:SHADOWING-IMPORT-FROM <package-name> {symbol-name}*)
+     (:USE {package-name}*)
+     (:IMPORT-FROM <package-name> {symbol-name}*)
+     (:INTERN {symbol-name}*)
+     (:EXPORT {symbol-name}*)
+   All options except :SIZE can be used multiple times."
+  (let ((nicknames nil)
 	(size nil)
-	(remaining-args rest-list (rest remaining-args))
-	(current-keyword (first (first remaining-args))
-			 (first (first remaining-args)))
-	(current-args (rest (first remaining-args))
-		      (rest (first remaining-args))))
-       ((endp remaining-args)
-	(values nicknames
-		uses
-		shadows
-		imports
-		shadowed-imports
-		exports
-		interns
-		size))
-    (case current-keyword
-      (:nicknames
-       (setf nicknames (append nicknames (stringify-symbols current-args))))
-      (:use
-       (setf uses (append uses (stringify-symbols current-args))))
-      (:shadow
-       (setf current-args (stringify-symbols current-args))
-       (setf symbols-in (append-but-lose-if-overlap symbols-in current-args))
-       (dolist (string current-args)
-	 (push string shadows)))
-      (:shadowing-import-from
-       (setf current-args (stringify-symbols current-args))
-       (setf symbols-in (append-but-lose-if-overlap symbols-in
-						    (rest current-args)))
-       (dolist (string (rest current-args))
-	 (push `(find-symbol-or-lose ,string ,(first current-args))
-	       shadowed-imports)))
-      (:import-from
-       (setf current-args (stringify-symbols current-args))
-       (setf symbols-in (append-but-lose-if-overlap symbols-in
-						    (rest current-args)))
-       (dolist (string (rest current-args))
-	 (push `(find-symbol-or-lose ,string ,(first current-args))
-	       imports)))
-      (:export
-       (setf symbols-out (append-but-lose-if-overlap symbols-out
-						     (rest current-args)))
-       (dolist (string (stringify-symbols current-args))
-	 (push `(intern ,string ,n-package)
-	       exports)))
-      (:intern
-       (setf current-args (stringify-symbols current-args))
-       (setf symbols-in (append-but-lose-if-overlap symbols-in current-args))
-       (setf symbols-out (append-but-lose-if-overlap symbols-out current-args))
-       (setf interns (append interns current-args)))
-      (:size
-       (if (null size)
-	   (if (= (length current-args) 1)
-	       (setf size (first current-args))
-	       (error "Too many arguments to :SIZE keyword in DEFPACAKGE."))
-	   (error ":SIZE keyword used more than once in DEFPACKAGE.")))
-      (otherwise
-       (error "Bad keyword passed to DEFPACKAGE: ~S." current-keyword)))))
+	(shadows nil)
+	(shadowing-imports nil)
+	(use nil)
+	(use-p nil)
+	(imports nil)
+	(interns nil)
+	(exports nil)
+	(incomming nil)
+	(outgoing nil))
+    (dolist (option options)
+      (unless (consp option)
+	(error "Bogus DEFPACKAGE option: ~S" option))
+      (case (car option)
+	(:nicknames
+	 (let ((new (stringify-names (cdr options) "package")))
+	   (setf nicknames (append-unique new nicknames :nicknames))))
+	(:size
+	 (cond (size
+		(error "Can't specify :SIZE twice."))
+	       ((and (consp (cdr option))
+		     (typep (second option) 'unsigned-byte))
+		(setf size (second option)))
+	       (t
+		(error "Bogus :SIZE, must be a positive integer: ~S"
+		       (second option)))))
+	(:shadow
+	 (let ((new (stringify-names (cdr option) "symbol")))
+	   (setf incomming (append-unique new incomming :shadow))
+	   (setf shadows (append shadows new))))
+	(:shadowing-import-from
+	 (let ((package-name (stringify-name (second option) "package"))
+	       (names (stringify-names (cddr option) "symbol")))
+	   (setf incomming (append-unique names incomming :shadowing-import))
+	   (let ((assoc (assoc package-name shadowing-imports
+			       :test #'string=)))
+	     (if assoc
+		 (setf (cdr assoc) (append (cdr assoc) names))
+		 (setf shadowing-imports
+		       (acons package-name names shadowing-imports))))))
+	(:use
+	 (let ((new (stringify-names (cdr options) "package")))
+	   (setf use (append-unique new nicknames :use))
+	   (setf use-p t)))
+	(:import-from
+	 (let ((package-name (stringify-name (second option) "package"))
+	       (names (stringify-names (cddr option) "symbol")))
+	   (setf incomming (append-unique names incomming :import-from))
+	   (let ((assoc (assoc package-name imports
+			       :test #'string=)))
+	     (if assoc
+		 (setf (cdr assoc) (append (cdr assoc) names))
+		 (setf imports (acons package-name names imports))))))
+	(:intern
+	 (let ((new (stringify-names (cdr option) "symbol")))
+	   (setf incomming (append-unique new incomming :intern))
+	   (setf outgoing (append-unique new incomming :intern))
+	   (setf interns (append interns new))))
+	(:export
+	 (let ((new (stringify-names (cdr option) "symbol")))
+	   (setf outgoing (append-unique new incomming :export))
+	   (setf exports (append exports new))))
+	(t
+	 (error "Bogus DEFPACKAGE option: ~S" option))))
+    `(eval-when (compile load eval)
+       (%defpackage ,(stringify-name package "package") ',nicknames ',size
+		    ',shadows ',shadowing-imports ',(if use-p use :default)
+		    ',imports ',interns ',exports))))
 
-(defun find-symbol-or-lose (symbol package)
-  "Tries to find SYMBOL in PACKAGE, but signals a continuable error if
-   it's not there."
-  (multiple-value-bind (sym how)
-		       (find-symbol symbol package)
-    (cond ((not how)
-	   (cerror "INTERN this symbol."
-		   "Can't find the symbol named ~S in ~S."
-		   symbol package)
-	   (values (intern symbol package)))
-	  (t sym))))
+(defun stringify-name (name kind)
+  (typecase name
+    (simple-string name)
+    (string (coerce name 'simple-string))
+    (symbol (symbol-name name))
+    (t
+     (error "Bogus ~A name: ~S" kind name))))
 
-(defun stringify-symbols (symbols)
-  "Takes a list of symbols and/or strings and returns a list of
-   strings using SYMBOL-NAME for any necessary coersion."
-  (mapcar #'(lambda (x)
-	      (etypecase x
-		(string x)
-		(symbol (symbol-name x))))
-	  symbols))
+(defun stringify-names (names kind)
+  (mapcar #'(lambda (name)
+	      (stringify-name name kind))
+	  names))
 
-(defun append-but-lose-if-overlap (list-one list-two &key (test #'string=))
-  "APPENDs two lists but screams if they intersect at all.
-   Uses STRING= as default test because that's what DEFPACKAGE wants to use."
-  (if (intersection list-one list-two :test test)
-      (error "Overlap found in argument lists.")
-      (append list-one list-two)))
+(defun append-unique (new old list)
+  (dolist (name new)
+    (if (member name old)
+	(cerror "Ignore it."
+		"Duplicate name in the ~S list: ~A" list name)
+	(push name old)))
+  old)
+
+(defun %defpackage (name nicknames size shadows shadowing-imports
+			 use imports interns exports)
+  (declare (type simple-base-string name)
+	   (type list nicknames shadows shadowing-imports
+		 imports interns exports)
+	   (type (or list (member :default)) use))
+  (let ((package (or (find-package name)
+		     (progn
+		       (when (eq use :default)
+			 (setf use *default-package-use-list*))
+		       (make-package name
+				     :use nil
+				     :internal-symbols (or size 10)
+				     :external-symbols (length exports))))))
+    (unless (string= (package-name name) name)
+      (error "~A is a nick-name for the package ~A"
+	     name (package-name name)))
+    (enter-new-nicknames package nicknames)
+    ;; Shadows and Shadowing-imports.
+    (let ((old-shadows (package-%shadowing-symbols package)))
+      (dolist (sym-name shadows)
+	(shadow sym-name package)
+	(setf old-shadows (remove (find-symbol sym-name package) old-shadows)))
+      (dolist (simports-from shadowing-imports)
+	(let ((other-package (package-or-lose (car simports-from))))
+	  (dolist (sym-name (cdr simports-from))
+	    (let ((sym (or (find-symbol sym-name other-package)
+			   (progn
+			     (cerror "INTERN it."
+				     "~A does not contain a symbol ~A"
+				     (package-name other-package)
+				     sym-name)
+			     (intern sym-name other-package)))))
+	      (shadowing-import sym package)
+	      (setf old-shadows (remove sym old-shadows))))))
+      (when old-shadows
+	(warn "~A also shadows the following symbols:~%  ~S"
+	      name old-shadows)))
+    ;; Use
+    (unless (eq use :default)
+      (let ((old-use-list (package-use-list package))
+	    (new-use-list (mapcar #'package-or-lose use)))
+	(dolist (other-package (set-difference new-use-list old-use-list))
+	  (use-package other-package package))
+	(dolist (other-package (set-difference old-use-list new-use-list))
+	  (unuse-package other-package package))))
+    ;; Import and Intern.
+    (dolist (sym-name interns)
+      (intern sym-name package))
+    (dolist (imports-from imports)
+      (let ((other-package (package-or-lose (car imports-from))))
+	(dolist (sym-name (cdr imports-from))
+	  (import (or (find-symbol sym-name other-package)
+		      (progn
+			(cerror "INTERN it."
+				"~A does not contain a symbol ~A"
+				(package-name other-package)
+				sym-name)
+			(intern sym-name other-package)))
+		  package))))
+    ;; Exports.
+    (let ((exports nil))
+      (do-external-symbols (sym package)
+	(push sym exports))
+      (dolist (sym-name exports)
+	(let ((sym (intern sym-name package)))
+	  (export sym package)
+	  (setf exports (delete sym exports :test #'eq))))
+      (when exports
+	(warn "~A also exports the following symbols:~%  ~S"
+	      name exports)))
+    package))
 
 
 ;;; Enter-New-Nicknames  --  Internal
@@ -782,7 +757,7 @@
 ;;; make the package.  Do a use-package for each thing in the use list
 ;;; so that checking for conflicting exports among used packages is done.
 ;;;
-(defun make-package (name &key (use '("LISP")) nicknames
+(defun make-package (name &key (use *default-package-use-list*) nicknames
 			  (internal-symbols 10) (external-symbols 10))
   "Makes a new package having the specified Name and Nicknames.  The
   package will inherit all external symbols from each package in
@@ -802,17 +777,17 @@
     (enter-new-nicknames package nicknames)
     (setf (gethash name *package-names*) package)))
 
-;;; In-Package  --  Public
+;;; Old-In-Package  --  Sorta Public.
 ;;;
-;;;    Like Make-Package, only different.
+;;;    Like Make-Package, only different.  Should go away someday.
 ;;;
-(defun in-package (name &rest keys &key nicknames use)
+(defun old-in-package (name &rest keys &key nicknames use)
   "Sets *package* to package with given name, creating the package if
-  it does not exist.  If the package already exists then it is modified
-  to agree with the :Use and :Nicknames arguments.  Any new nicknames
-  are added without removing any old ones not specified.  If any package
-  in the :Use list is not currently used, then it is added to the use
-  list."
+   it does not exist.  If the package already exists then it is modified
+   to agree with the :Use and :Nicknames arguments.  Any new nicknames
+   are added without removing any old ones not specified.  If any package
+   in the :Use list is not currently used, then it is added to the use
+   list."
   (let ((package (find-package name)))
     (cond
      (package
@@ -823,6 +798,20 @@
       (setq *package* package))
      (t
       (setq *package* (apply #'make-package name keys))))))
+
+;;; IN-PACKAGE -- public.
+;;; 
+(defmacro in-package (package &rest noise)
+  (cond ((or noise
+	     (not (or (stringp package) (symbolp package))))
+	 (warn "Old-style IN-PACKAGE.")
+	 `(old-in-package ,package ,@noise))
+	(t
+	 `(eval-when (compile load eval)
+	    (%in-package ',(stringify-name package))))))
+;;;
+(defun %in-package (name)
+  (setf *package* (package-or-lose name)))
 
 ;;; Rename-Package  --  Public
 ;;;
