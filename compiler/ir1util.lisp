@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.52 1992/02/23 17:41:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.53 1992/04/09 20:06:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1047,23 +1047,11 @@
     (typecase node
       (ref (delete-ref node))
       (basic-combination
-       (when (and (eq (basic-combination-kind node) :local)
-		  ;; Not already deleted...
-		  (continuation-use (basic-combination-fun node)))
-	 (let ((fun (combination-lambda node)))
-	   (when (member (functional-kind fun) '(:let :mv-let :assignment))
-	     (delete-lambda fun))))
        (flush-dest (basic-combination-fun node))
        (dolist (arg (basic-combination-args node))
 	 (when arg (flush-dest arg))))
       (cif
        (flush-dest (if-test node)))
-      (bind
-       (let ((lambda (bind-lambda node)))
-	 (unless (eq (functional-kind lambda) :deleted)
-	   (assert (member (functional-kind lambda)
-			   '(:let :mv-let :assignment)))
-	   (delete-lambda lambda))))
       (exit
        (let ((value (exit-value node))
 	     (entry (exit-entry node)))
