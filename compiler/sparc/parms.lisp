@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.25 1998/01/22 15:44:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.26 1998/03/11 18:04:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,9 +125,11 @@
 (defconstant float-traps-byte (byte 5 23))	  ; TEM
 (defconstant float-exceptions-byte (byte 5 0))	  ; cexc
 
-;;; According to the SPARC doc (as opposed to FPU doc), the fast mode bit (EFM)
-;;; is "reserved", and should always be zero.
-(defconstant float-fast-bit 0)
+;;; According to the SPARC doc (as opposed to FPU doc), the fast mode
+;;; bit (EFM) is "reserved", and should always be zero.  However, for
+;;; sparc-V8 and sparc-V9, it appears to work, causing denormals to
+;;; be truncated to 0 silently.
+(defconstant float-fast-bit (ash 1 22))
 
 ); eval-when
 
