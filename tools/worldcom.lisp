@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.66 1994/02/11 13:39:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.66.1.1 1994/10/24 19:09:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,7 +143,9 @@
 (when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))
 (when (c:backend-featurep :sparc)
-  (comf "target:code/sparc-vm"))
+  (if (c:backend-featurep :svr4)
+      (comf "target:code/sparc-svr4-vm")
+      (comf "target:code/sparc-vm")))
 (when (c:backend-featurep :rt)
   (comf "target:code/rt-vm"))
 (when (c:backend-featurep :hppa)

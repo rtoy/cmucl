@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.30 1993/08/31 13:46:57 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.30.1.1 1994/10/24 19:08:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,7 +123,9 @@
     ,@(when (c:backend-featurep :pmax)
 	'("target:code/pmax-vm"))
     ,@(when (c:backend-featurep :sparc)
-	'("target:code/sparc-vm"))
+	(if (c:backend-featurep :svr4)
+	    '("target:code/sparc-svr4-vm")
+	    '("target:code/sparc-vm")))
     ,@(when (c:backend-featurep :rt)
 	'("target:code/rt-vm"))
     ,@(when (c:backend-featurep :hppa)
