@@ -18,13 +18,26 @@
 
 ;;;; Utilities used during code generation.
 
-;;; Current-Frame-Size  --  Interface
+;;; SB-Allocated-Size  --  Interface
 ;;;
-;;;    The size of the currently compiled component's stack frame in bytes.
+(defun sb-allocated-size (name)
+  "The size of the Name'd SB in the currently compiled component.  Useful
+  mainly for finding the size for allocating stack frames."
+  (finite-sb-current-size (sb-or-lose name)))
+
+
+;;; Current-NFP-TN  --  Interface
 ;;;
-(defun current-frame-size ()
-  (* 4 (finite-sb-current-size
-	(sc-sb (svref *sc-numbers* (sc-number-or-lose 'stack))))))
+(defun current-nfp-tn (vop)
+  "Return the TN that is used to hold the number stack frame-pointer in VOP's
+  function.  Returns NIL if no number stack frame was allocated."
+  (unless (zerop (sb-allocated-size 'number-stack))
+    (let ((block (ir2-block-block (vop-block vop))))
+    (when (ir2-environment-number-stack-p
+	   (environment-info
+	    (lambda-environment
+	     (block-lambda block))))
+      (ir2-component-nfp (component-info (block-component block)))))))
 
 
 ;;; Generate-Code  --  Interface
