@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.14 1992/03/06 11:28:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.15 1992/03/10 18:33:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -536,10 +536,18 @@ The previous version is uglier, but it sets up unique run-time tags.
    If the condition is not handled, the debugger is invoked."
   (kernel:infinite-error-protect
     (let ((condition (coerce-to-condition datum arguments
-					  'simple-error 'error)))
-      (unless (error-function-name condition)
-	(setf (error-function-name condition) (kernel:find-caller-name)))
-      (signal condition)
+					  'simple-error 'error))
+	  (debug:*stack-top-hint* debug:*stack-top-hint*))
+      (unless (and (error-function-name condition) debug:*stack-top-hint*)
+	(multiple-value-bind
+	    (name frame)
+	    (kernel:find-caller-name)
+	  (unless (error-function-name condition)
+	    (setf (error-function-name condition) name))
+	  (unless debug:*stack-top-hint*
+	    (setf debug:*stack-top-hint* frame))))
+      (let ((debug:*stack-top-hint* nil))
+	(signal condition))
       (invoke-debugger condition))))
 
 ;;; CERROR must take care to not use arguments when datum is already a
@@ -552,10 +560,18 @@ The previous version is uglier, but it sets up unique run-time tags.
       (let ((condition (if (typep datum 'condition)
 			   datum
 			   (coerce-to-condition datum arguments
-						'simple-error 'error))))
-	(unless (error-function-name condition)
-	  (setf (error-function-name condition) (kernel:find-caller-name)))
-	(signal condition)
+						'simple-error 'error)))
+	    (debug:*stack-top-hint* debug:*stack-top-hint*))
+	(unless (and (error-function-name condition) debug:*stack-top-hint*)
+	  (multiple-value-bind
+	      (name frame)
+	      (kernel:find-caller-name)
+	    (unless (error-function-name condition)
+	      (setf (error-function-name condition) name))
+	    (unless debug:*stack-top-hint*
+	      (setf debug:*stack-top-hint* frame))))
+	(let ((debug:*stack-top-hint* nil))
+	  (signal condition))
 	(invoke-debugger condition))))
   nil)
 
@@ -564,10 +580,13 @@ The previous version is uglier, but it sets up unique run-time tags.
    of condition handling occurring."
   (kernel:infinite-error-protect
     (with-simple-restart (continue "Return from BREAK.")
-      (invoke-debugger
-       (make-condition 'simple-condition
-		       :format-string format-string
-		       :format-arguments format-arguments))))
+      (let ((debug:*stack-top-hint*
+	     (or debug:*stack-top-hint*
+		 (nth-value 1 (kernel:find-caller-name)))))
+	(invoke-debugger
+	 (make-condition 'simple-condition
+			 :format-string format-string
+			 :format-arguments format-arguments)))))
   nil)
 
 (define-condition warning (condition) ())
