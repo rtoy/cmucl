@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.16 1992/06/27 21:51:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.17 1993/03/12 15:18:43 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,8 @@
 	  make-restricted-tn environment-live-tn
 	  environment-debug-live-tn component-live-tn specify-save-tn
 	  make-constant-tn make-alias-tn make-load-time-constant-tn
-	  make-n-tns location= tn-value force-tn-to-stack))
+	  make-n-tns location= tn-value force-tn-to-stack
+	  *compile-component*))
 
 ;;; The component that is currently being compiled.  TNs are allocated in this
 ;;; component.
