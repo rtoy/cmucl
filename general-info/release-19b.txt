@@ -43,6 +43,8 @@ New in this release:
       - Pretty-printer for LOOP.
       - Added some more pprinters for various forms.
       - Callbacks supported on Mac OS X.
+      - Loop analysis code added to the compiler.  It's incorporated
+        into the build, but not used in any way yet.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -78,12 +80,14 @@ New in this release:
       - Signal appropriate error conditions instead of a plain error
         condition in many situations.
       - TYPECASE was treating the type T as an otherwise clause even
-        though it was not the last clause.  It's should be just a
+        though it was not the last clause.  It should be just a
         regular clause.
       - ASIN, ACOS, ACOSH, and ATANH were returning the wrong values
         when the arg was a real number on the branch cut.
       - Missed some places where loop variables were duplicated, which
         should signal a program-error.
+      - LOOP INITIALLY clauses occur after variable initialization for
+        FOR, WITH, and AS clauses, as required by ANSI CL.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -118,8 +122,16 @@ New in this release:
         larger than CLX expected.  Replaced card16 with card32.
       - Callbacks on sparc that returned double-floats were sometimes
         causing a sigbus error.
+      - Type specifiers like (float low high) where low and high were
+        outside the range of single-float numbers no longer cause
+        compiler errors.
+      - Fix source-form reporting in the disassembler.
 
   * Other changes:
+      - Infinite loops in map and friends caused by specifying
+        sequence types that are too hairy for CMUCL should no longer
+        occur.  But CMUCL will now signal an error, which may not be
+        compliant either.
      
   * Improvements to the PCL implementation of CLOS:
 
