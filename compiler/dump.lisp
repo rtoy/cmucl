@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.33 1991/03/20 03:02:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.34 1991/11/24 23:00:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.33 1991/03/20 03:02:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.34 1991/11/24 23:00:39 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -225,7 +225,7 @@
 				 (* n vm:byte-bits))
 		  (setf (fasl-file-buffer-index file) n))))))
   (undefined-value))
-      
+
 
 ;;; Dump-FOP  --  Internal
 ;;;
@@ -452,11 +452,8 @@
 		   (t
 		    (patches (cons info i))
 		    (dump-fop 'lisp::fop-misc-trap file)))))
-	       #+nil
-	       (:label
-		(dump-object (+ (label-position (cdr entry))
-				clc::i-vector-header-size)
-			     file))))
+	       (:load-time-value
+		(dump-push (cdr entry) file))))
 	    (null
 	     (dump-fop 'lisp::fop-misc-trap file)))))
 
@@ -677,26 +674,7 @@
 	      (dump-structure x file)
 	      (eq-save-object x file))
 	     (array
-	      (cond
-	       ((array-header-p x)
-		(dump-array x file)
-		(eq-save-object x file))
-	       (t
-		(typecase x
-		  (simple-base-string 
-		   (unless (equal-check-table x file)
-		     (dump-simple-string x file)
-		     (equal-save-object x file)))
-		  (simple-vector
-		   (dump-simple-vector x file)
-		   (eq-save-object x file))
-		  ((or (simple-array single-float (*))
-		       (simple-array double-float (*)))
-		   (dump-simple-vector (coerce x 'simple-vector) file)
-		   (eq-save-object x file))
-		  (t
-		   (dump-i-vector x file)
-		   (eq-save-object x file))))))
+	      (dump-array x file))
 	     (number
 	      (unless (equal-check-table x file)
 		(etypecase x
@@ -726,12 +704,9 @@
 ;;;
 (defun sub-dump-object (x file)
   (cond ((listp x)
-	 (cond ((null x) (dump-fop 'lisp::fop-empty-list file))
-	       #|
-	       ((eq (car x) '%eval-at-load-time) (load-time-eval x))
-	       |#
-	       (t
-		(dump-non-immediate-object x file))))
+	 (if x
+	     (dump-non-immediate-object x file)
+	     (dump-fop 'lisp::fop-empty-list file)))
 	((symbolp x)
 	 (if (eq x t)
 	     (dump-fop 'lisp::fop-truth file)
@@ -794,20 +769,42 @@
       (sub-dump-object x file)))
 
 
-#|
-;;; Load-Time-Eval  --  Internal
+;;;; Load-time-value and make-load-form support.
+
+;;; FASL-DUMP-LOAD-TIME-VALUE-LAMBDA -- interface.
 ;;;
-;;;    This guy deals with the magical %Eval-At-Load-Time marker that
-;;; #, turns into when the *compiler-is-reading* and a fasl file is being
-;;; written.
+;;; Emit a funcall of the function and return the handle for the result.
 ;;;
-(defun load-time-eval (x file)
-  (when *compile-to-lisp*
-    (error "#,~S in a bad place." (third x)))
-  (assemble-one-lambda (cadr x))
-  (dump-fop 'lisp::fop-funcall file)
-  (dump-byte 0 file))
-|#
+(defun fasl-dump-load-time-value-lambda (fun file)
+  (declare (type clambda fun) (type fasl-file file))
+  (let ((handle (gethash (leaf-info fun) (fasl-file-entry-table file))))
+    (assert handle)
+    (dump-push handle file)
+    (dump-fop 'lisp::fop-funcall file)
+    (dump-byte 0 file))
+  (dump-pop file))
+
+;;; FASL-CONSTANT-ALREADY-DUMPED -- interface.
+;;;
+;;; Return T iff CONSTANT has not already been dumped.  It's been dumped
+;;; if it's in the EQ table.
+;;; 
+(defun fasl-constant-already-dumped (constant file)
+  (if (gethash constant (fasl-file-eq-table file)) t nil))
+
+;;; FASL-NOTE-HANDLE-FOR-CONSTANT -- interface.
+;;;
+;;; Use HANDLE whenever we try to dump CONSTANT.  HANDLE should have been
+;;; returned earlier by FASL-DUMP-LOAD-TIME-VALUE-LAMBDA.
+;;;
+(defun fasl-note-handle-for-constant (constant handle file)
+  (let ((table (fasl-file-eq-table file)))
+    (when (gethash constant table)
+      (error "~S already dumped?" constant))
+    (setf (gethash constant table) handle))
+  (undefined-value))
+
+
 
 ;;;; Number Dumping:
 
@@ -1029,6 +1026,41 @@
 
 ;;;; Array dumping:
 
+;;; DUMP-ARRAY  --  Internal.
+;;;
+;;; Dump the array thing.
+;;;
+(defun dump-array (x file)
+  (if (vectorp x)
+      (dump-vector x file)
+      (dump-multi-dim-array x file)))
+
+;;; DUMP-VECTOR  --  Internal.
+;;;
+;;; Dump the vector object.  If it's not simple, then actually dump a simple
+;;; version of it.  But we enter the original in the EQ or EQUAL tables.
+;;; 
+(defun dump-vector (x file)
+  (let ((simple-version (if (array-header-p x)
+			    (coerce x 'simple-array)
+			    x)))
+    (typecase simple-version
+      (simple-base-string
+       (unless (equal-check-table x file)
+	 (dump-simple-string simple-version file)
+	 (equal-save-object x file)))
+      (simple-vector
+       (dump-simple-vector simple-version file)
+       (eq-save-object x file))
+      ((simple-array single-float (*))
+       (dump-single-float-vector simple-version file)
+       (eq-save-object x file))
+      ((simple-array double-float (*))
+       (dump-double-float-vector simple-version file)
+       (eq-save-object x file))
+      (t
+       (dump-i-vector simple-version file)
+       (eq-save-object x file)))))
 
 ;;; DUMP-SIMPLE-VECTOR  --  Internal
 ;;;
@@ -1052,7 +1084,6 @@
 	    (t
 	     (sub-dump-object obj file))))))
 
-
 ;;; DUMP-SIMPLE-STRING  --  Internal
 ;;;
 ;;;    Dump a SIMPLE-BASE-STRING.
@@ -1063,29 +1094,6 @@
     (dump-fop* length lisp::fop-small-string lisp::fop-string file)
     (dump-bytes s length file))
   (undefined-value))
-
-
-;;; Dump-Array  --  Internal
-;;;
-;;;    Dump a multi-dimensional array.  Someday when we figure out what
-;;; a displaced array looks like, we can fix this.
-;;;
-(defun dump-array (array file)
-  (unless #-new-compiler (zerop (%primitive header-ref
-					    array %array-displacement-slot))
-          #+new-compiler (not (lisp::%array-displaced-p array))
-    (error "Attempt to dump an array with a displacement, you lose big."))
-  (let ((rank (array-rank array)))
-    (dotimes (i rank)
-      (dump-integer (array-dimension array i) file))
-    (sub-dump-object #-new-compiler
-		     (%primitive header-ref array %array-data-slot)
-		     #+new-compiler
-		     (lisp::%array-data-vector array)
-		     file)
-    (dump-fop 'lisp::fop-array file)
-    (dump-unsigned-32 rank file)))
-
 
 ;;; DUMP-I-VECTOR  --  Internal
 ;;;
@@ -1098,10 +1106,7 @@
 ;;;
 (defun dump-i-vector (vec file &optional data-only)
   (declare (type (simple-array * (*)) vec))
-  (let* ((ac #-new-compiler
-	     (%primitive get-vector-access-code vec)
-	     #+new-compiler
-	     (etypecase vec
+  (let* ((ac (etypecase vec
 	       (simple-bit-vector 0)
 	       ((simple-array (unsigned-byte 2) (*)) 1)
 	       ((simple-array (unsigned-byte 4) (*)) 2)
@@ -1112,72 +1117,119 @@
 	 (size (ash 1 ac))
 	 (bytes (ash (+ (the index (ash len ac)) 7) -3)))
     (declare (type index ac len size bytes))
-    
     (unless data-only
       (dump-fop 'lisp::fop-int-vector file)
       (dump-unsigned-32 len file)
       (dump-byte size file))
-    (cond ((or (eq (backend-byte-order *backend*)
-		   (backend-byte-order *native-backend*))
-	       (= size 8))
-	   (dump-bytes vec bytes file))
-	  ((> size 8)
-	   (ecase (backend-byte-order *backend*)
-	     (:little-endian
-	      (dotimes (i len)
-		(let ((int (aref vec i)))
-		  (dump-var-signed int (ash size -3) file))))
-	     (:big-endian
-	      (dotimes (i len)
-		(declare (type index i))
-		(let ((int (aref vec i)))
-		  (declare (type (unsigned-byte 32) int))
-		  (do ((shift (- 8 size) (+ shift 8)))
-		      ((plusp shift))
-		    (declare (type fixnum shift))
-		    (dump-byte (logand (the (unsigned-byte 32)
-					    (ash int shift))
-				       #xFF)
-			       file)))))))
-	  (t
-	   (macrolet ((frob (initial step done)
-			`(let ((shift ,initial)
-			       (byte 0))
-			   (declare (type fixnum shift byte))
-			   (dotimes (i len)
-			     (let ((int (aref vec i)))
-			       (declare (type (unsigned-byte 8) int))
-			       (setq byte
-				     (logior byte
-					     (the (unsigned-byte 8)
-						  (ash int shift))))
-			       (,step shift size))
-			     (when ,done
-			       (dump-byte byte file)
-			       (setq shift ,initial  byte 0)))
-			   (unless (= shift ,initial) (dump-byte byte file)))))
-	   (ecase (backend-byte-order *backend*)
-	     (:little-endian
-	      (frob 0 incf (= shift 8)))
-	     (:big-endian
-	      (let ((initial-shift (- 8 size)))
-		(frob initial-shift decf (minusp shift))))))))))
+    (dump-data-maybe-byte-swapping vec bytes size file)))
+
+;;; DUMP-SINGLE-FLOAT-VECTOR  --  internal.
+;;; 
+(defun dump-single-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-single-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping vec (* length vm:word-bytes)
+				   vm:word-bytes file)))
+
+;;; DUMP-DOUBLE-FLOAT-VECTOR  --  internal.
+;;; 
+(defun dump-double-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-double-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2)
+				   (* vm:word-bytes 2) file)))
+
+;;; DUMP-DATA-BITS-MAYBE-BYTE-SWAPPING  --  internal.
+;;;
+;;; Dump BYTES of data from DATA-VECTOR (which much some unboxed vector)
+;;; byte-swapping if necessary.
+;;; 
+(defun dump-data-maybe-byte-swapping (data-vector bytes element-size file)
+  (declare (type (simple-array * (*)) data-vector)
+	   (type unsigned-byte bytes)
+	   (type (integer 1) element-size))
+  (cond ((or (eq (backend-byte-order *backend*)
+		 (backend-byte-order *native-backend*))
+	     (= element-size vm:byte-bits))
+	 (dump-bytes data-vector bytes file))
+	((>= element-size vm:word-bits)
+	 (let ((words-per-element (/ element-size vm:word-bits))
+	       (result (make-array bytes :element-type '(unsigned-byte 8))))
+	   (declare (type (integer 1 #.most-positive-fixnum)
+			  words-per-element))
+	   (dotimes (index (the integer (/ bytes words-per-element)))
+	     (dotimes (offset words-per-element)
+	       (let ((word (%raw-bits data-vector
+				      (+ (* index words-per-element)
+					 vm:vector-data-offset
+					 (1- words-per-element)
+					 (- offset)))))
+		 (setf (%raw-bits result (+ (* index words-per-element)
+					    vm:vector-data-offset
+					    offset))
+		       (logior (ash (ldb (byte 8 0) word) 24)
+			       (ash (ldb (byte 8 8) word) 16)
+			       (ash (ldb (byte 8 16) word) 8)
+			       (ldb (byte 8 24) word))))))
+	   (dump-bytes result bytes file)))
+	((> element-size vm:byte-bits)
+	 (let* ((bytes-per-element (/ element-size vm:byte-bits))
+		(elements (/ bytes bytes-per-element))
+		(result (make-array elements
+				    :element-type
+				    `(unsigned-byte ,element-size))))
+	   (declare (type (integer 1 #.most-positive-fixnum)
+			  bytes-per-element)
+		    (type unsigned-byte elements))
+	   (dotimes (index elements)
+	     (let ((element (aref data-vector index))
+		   (new-element 0))
+	       (dotimes (i bytes-per-element)
+		 (setf new-element
+		       (logior (ash new-element vm:byte-bits)
+			       (ldb (byte vm:byte-bits 0) element)))
+		 (setf element (ash element (- vm:byte-bits))))
+	       (setf (aref result index) new-element)))
+	   (dump-bytes result bytes file)))
+	(t
+	 (let* ((elements-per-byte (/ vm:byte-bits element-size))
+		(elements (* bytes elements-per-byte))
+		(result (make-array elements
+				    :element-type
+				    `(unsigned-byte ,element-size))))
+	   (dotimes (index elements)
+	     (multiple-value-bind (byte-index additional)
+				  (truncate index elements-per-byte)
+	       (setf (aref result index)
+		     (aref data-vector
+			   (+ byte-index
+			      (- elements-per-byte additional 1))))))
+	   (dump-bytes result bytes file)))))
+
+;;; Dump-Multi-Dim-Array  --  Internal
+;;;
+;;; Dump a multi-dimensional array.  Note: any displacements are folded out.
+;;;
+(defun dump-multi-dim-array (array file)
+  (let ((rank (array-rank array)))
+    (dotimes (i rank)
+      (dump-integer (array-dimension array i) file))
+    (lisp::with-array-data ((vector array) (start) (end))
+      (if (and (= start 0) (= end (length vector)))
+	  (sub-dump-object vector file)
+	  (sub-dump-object (subseq vector start end) file)))
+    (dump-fop 'lisp::fop-array file)
+    (dump-unsigned-32 rank file)
+    (eq-save-object array file)))
 
 
 ;;; Dump a character.
 
 (defun dump-character (ch file)
-  (cond
-   (#+new-compiler t
-    #-new-compiler (string-char-p ch)
-    (dump-fop 'lisp::fop-short-character file)
-    (dump-byte (char-code ch) file))
-   #-new-compiler
-   (t
-    (dump-fop 'lisp::fop-character file)
-    (dump-byte (char-code ch) file)
-    (dump-byte (char-bits ch) file)
-    (dump-byte (char-font ch) file))))
+  (dump-fop 'lisp::fop-short-character file)
+  (dump-byte (char-code ch) file))
 
 
 ;;; Dump a structure.
