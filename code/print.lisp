@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.69 1998/03/26 13:08:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.70 1998/04/03 03:37:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1488,9 +1488,10 @@
 	  (let* ((ex (round (* exponent (log 2l0 10))))
 		 (x (if (minusp ex)
 			(if (float-denormalized-p x)
-			    (* x 1.0l18 (expt 10.0l0 (- (- ex)
-							#-long-float 16
-							#+long-float 18)))
+			    #-long-float
+			    (* x 1.0l16 (expt 10.0l0 (- (- ex) 16)))
+			    #+long-float
+			    (* x 1.0l18 (expt 10.0l0 (- (- ex) 18)))
 			    (* x 10.0l0 (expt 10.0l0 (- (- ex) 1))))
 			(/ x 10.0l0 (expt 10.0l0 (1- ex))))))
 	    (do ((d 10.0l0 (* d 10.0l0))
