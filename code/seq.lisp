@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.18 1994/02/10 22:39:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.19 1994/10/30 18:02:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -807,16 +807,23 @@
      ((csubtypep type (specifier-type 'function))
       (eval `#',object))
      ((numberp object)
-      (cond
-       ((csubtypep type (specifier-type 'single-float))
-	(%single-float object))
-       ((csubtypep type (specifier-type 'double-float))
-	(%double-float object))
-       ((csubtypep type (specifier-type 'complex))
-	(complex object))
-       (t
-	(error "~S can't be converted to type ~S."
-	       object output-type-spec))))
+      (let ((res
+	     (cond
+	      ((csubtypep type (specifier-type 'single-float))
+	       (%single-float object))
+	      ((csubtypep type (specifier-type 'double-float))
+	       (%double-float object))
+	      ((csubtypep type (specifier-type 'float))
+	       (%single-float object))
+	      ((csubtypep type (specifier-type 'complex))
+	       (complex object))
+	      (t
+	       (error "~S can't be converted to type ~S."
+		      object output-type-spec)))))
+	(unless (typep res output-type-spec)
+	  (error "~S can't be converted to type ~S."
+		 object output-type-spec))
+	res))
      ((csubtypep type (specifier-type 'list))
       (if (vectorp object)
 	  (vector-to-list* object)
