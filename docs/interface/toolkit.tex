@@ -3,13 +3,28 @@
 
 %% LaTeX formatting by Marco Antoniotti based on internals.doc.
 
-\documentclass{article}
-\usepackage{a4wide}
+\documentclass[a4paper]{article}
+% \usepackage{a4wide}
+\usepackage{palatino}
+
+
+\newif\ifpdf
+\ifx\pdfoutput\undefined
+   \pdffalse
+\else
+   \pdfoutput=1
+   \pdftrue
+\fi
+\ifpdf
+\pdfinfo{
+/Title (The CMUCL Motif Toolkit)
+/Keywords (CMUCL, Motif, interface)
+}
 
 
 \newcommand{\functdescr}[1]{\paragraph{\texttt{#1}}}
 
-\title{CMUCL Motif Toolkit}
+\title{The CMUCL Motif Toolkit}
 
 \begin{document}
 
@@ -371,15 +386,61 @@ current application.
 \item Ability to send strings longer than 4096 bytes.
 \end{itemize}
 
-All these things should start appearing in the next few
-weeks\footnote{NOTE: This document was written at CMU many years ago.
-The ``formatter'' does not make any guarantees about the validity of
-this claim.}
 
 
 \section{A brief example}
 
+The following gives a simple example that pops up a window containing
+a ``Quit'' button. Clicking on the button exits the application. Note
+that the application runs concurrently with CMUCL: you can
+evaluate forms in the listener while the Motif application is running.
+Exiting the application does not cause CMUCL to exit; once you have
+quit the application, you can run it again.
+
+To run this example, save the code to a file named
+\verb|motif-example.lisp| and in the CMUCL listener, type
+
 \begin{verbatim}
+   USER> (compile-file "motif-example")
+   ; Loading #p"/opt/cmucl/lib/cmucl/lib/subsystems/clm-library.x86f".
+   ;; Loading #p"/opt/cmucl/lib/cmucl/lib/subsystems/clx-library.x86f".
+   ; Byte Compiling Top-Level Form: 
+   ; Converted my-callback.
+   ; Compiling defun my-callback: 
+   ; Converted test-init.
+   ; Compiling defun test-init: 
+   ; Converted test.
+   ; Compiling defun test: 
+   ; Byte Compiling Top-Level Form: 
+   #p"/home/CMUCL/motif-example.x86f"
+   nil
+   nil
+   USER> (load *)
+   ; Loading #p"/home/CMUCL/motif-example.x86f".
+   t
+   USER> (motif-example:test)
+   #<X Toolkit Connection, fd=5>
+   Got callback on #<X Toolkit Widget: push-button-gadget 82D89A0>
+   Callback reason was cr-activate
+   Quit button is #<X Toolkit Widget: push-button-gadget 82D7AD0>
+   USER> (quit)
+\end{verbatim}
+
+\newpage
+The source code:
+
+\begin{verbatim}
+;;; file motif-example.lisp
+
+(eval-when (:load-toplevel :compile-toplevel)
+  (require :clm))
+
+(defpackage :motif-example
+  (:use :cl :toolkit)
+  (:export #:test))
+
+(in-package :motif-example)
+
 
 (defun my-callback (widget call-data quit)
   (format t "Got callback on ~A~%" widget)
