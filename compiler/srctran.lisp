@@ -162,23 +162,32 @@
 ;;; With the ratio and complex accessors, we pick off the "identity" case, and
 ;;; use a primitive to handle the cell access case.
 ;;;
-(macrolet ((frob (fun)
-	     `(def-source-transform ,fun (num)
-		(once-only ((n-num `(the rational ,num)))
-		  `(if (ratiop ,n-num)
-		       (%primitive ,',fun ,n-num)
-		       ,n-num)))))
-  (frob numerator)
-  (frob denominator))
-
-(macrolet ((frob (fun)
-	     `(def-source-transform ,fun (num)
-		(once-only ((n-num num))
-		  `(if (complexp ,n-num)
-		       (%primitive ,',fun ,n-num)
-		       ,n-num)))))
-  (frob realpart)
-  (frob imagpart))
+(def-source-transform numerator (num)
+  (once-only ((n-num `(the rational ,num)))
+    `(if (ratiop ,n-num)
+	 (%primitive numerator ,n-num)
+	 ,n-num)))
+;;;
+(def-source-transform denominator (num)
+  (once-only ((n-num `(the rational ,num)))
+    `(if (ratiop ,n-num)
+	 (%primitive denominator ,n-num)
+	 1)))
+;;;
+(def-source-transform realpart (num)
+  (once-only ((n-num num))
+    `(if (complexp ,n-num)
+	 (%primitive realpart ,n-num)
+	 ,n-num)))
+;;;
+(def-source-transform imagpart (num)
+  (once-only ((n-num num))
+    `(cond ((complexp ,n-num)
+	    (%primitive imagpart ,n-num))
+	   ((floatp ,n-num)
+	    (float 0 ,n-num))
+	   (t
+	    0))))
 
 
 ;;;; Numeric Derive-Type methods:
