@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.38 2003/04/27 14:00:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.39 2003/04/30 16:48:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3737,8 +3737,7 @@ symbol object that we know about.")
 			assoc-with
 			(di:debug-variable-symbol
 			 (aref (dstate-debug-variables dstate)
-			       storage-location))
-		       stream))
+			       storage-location))))
 	    dstate)
       t)))
 

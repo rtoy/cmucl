@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.47 2003/01/23 21:05:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.48 2003/04/30 16:48:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2440,3 +2440,75 @@
                  (subseq name (1+ first-colon)))
                 (t name))
               package))))
+
+
+;;;; Compile-time checking of format arguments and control string
+
+;;;
+;;; Return the min/max numbers of arguments required for a call to
+;;; FORMAT with control string FORMAT-STRING, null if we can't tell,
+;;; or a string with an error message if parsing the control string
+;;; causes a FORMAT-ERROR.
+;;;
+;;; This is called from FORMAT deftransforms.
+;;;
+(defun min/max-format-arguments-count (string)
+  (handler-case
+      (catch 'give-up
+	;; For the side effect of validating the control string.
+	(%formatter string)
+	(%min/max-format-args (tokenize-control-string string)))
+    (format-error (e)
+      (format nil "~a" e))))
+
+(defun %min/max-format-args (directives)
+  (let ((min-req 0) (max-req 0))
+    (flet ((incf-both (&optional (n 1))
+	     (incf min-req n)
+	     (incf max-req n)))
+      (loop
+	 (let ((dir (pop directives)))
+	   (when (null dir)
+	     (return (values min-req max-req)))
+	   (when (format-directive-p dir)
+	     (incf-both (count :arg (format-directive-params dir) :key #'cdr))
+	     (let ((c (format-directive-character dir)))
+	       (cond ((find c "ABCDEFGORSWX$/")
+		      (incf-both))
+		     ((char= c #\P)
+		      (unless (format-directive-colonp dir)
+			(incf-both)))
+		     ((or (find c "IT%&|_<>();") (char= c #\newline)))
+		     ((char= c #\[)
+		      (multiple-value-bind (min max remaining)
+			  (%min/max-conditional-args dir directives)
+			(setq directives remaining)
+			(incf min-req min)
+			(incf max-req max)))
+		     (t (throw 'give-up nil))))))))))
+
+;;;
+;;; ANSI: if arg is out of range, no clause is selected.  That means
+;;; the minimum number of args required for the interior of ~[~] is
+;;; always zero.
+;;;
+(defun %min/max-conditional-args (conditional directives)
+  (multiple-value-bind (sublists last-semi-with-colon-p remaining)
+      (parse-conditional-directive directives)
+    (declare (ignore last-semi-with-colon-p))
+    (let ((sub-max (loop for s in sublists maximize
+			   (nth-value 1 (%min/max-format-args s))))
+	  (min-req 1)
+	  max-req)
+      (cond ((format-directive-atsignp conditional)
+	     (setq max-req (max 1 sub-max)))
+	    ((loop for p in (format-directive-params conditional)
+		   thereis (or (integerp (cdr p))
+			       (memq (cdr p) '(:remaining :arg))))
+	     (setq min-req 0)
+	     (setq max-req sub-max))
+	    (t
+	     (setq max-req (1+ sub-max))))
+      (values min-req max-req remaining))))
+
+

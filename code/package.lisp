@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.63 2003/04/19 20:52:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.64 2003/04/30 16:48:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1280,9 +1280,10 @@
 	   (let ((sym (read *query-io*)))
 	     (cond
 	      ((not (symbolp sym))
-	       (format *query-io* "~S is not a symbol."))
+	       (format *query-io* "~S is not a symbol." sym))
 	      ((not (member sym cset))
-	       (format *query-io* "~S is not one of the conflicting symbols."))
+	       (format *query-io* "~S is not one of the conflicting symbols."
+		       sym))
 	      (t
 	       (shadowing-import sym package)
 	       (return-from unintern t)))))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.117 2003/04/27 14:52:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.118 2003/04/30 16:48:49 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3329,15 +3329,41 @@
 ;;; Furthermore, if the destination is either a stream or T and the control
 ;;; string is a function (i.e. formatter), then convert the call to format to
 ;;; just a funcall of that function.
-;;; 
+;;;
+(defun check-format-args (string args)
+  (multiple-value-bind (min-args max-args)
+      (format::min/max-format-arguments-count string)
+    (when min-args
+      (let ((nargs (length args)))
+	(cond ((stringp min-args)
+	       (compiler-warning "~a" min-args))
+	      ((< nargs min-args)
+	       (compiler-warning
+		"Too few args (~d) to FORMAT, need at least ~d"
+		nargs min-args))
+	      ((> nargs max-args)
+	       (compiler-warning
+		"Too many args (~d) to FORMAT, wants at most ~d"
+		nargs max-args)))))))
+
 (deftransform format ((dest control &rest args) (t simple-string &rest t) *
 		      :policy (> speed space))
   (unless (constant-continuation-p control)
     (give-up "Control string is not a constant."))
-  (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
-    `(lambda (dest control ,@arg-names)
-       (declare (ignore control))
-       (format dest (formatter ,(continuation-value control)) ,@arg-names))))
+  (let ((string (continuation-value control)))
+    (check-format-args string args)
+    (let ((arg-names (mapcar (lambda (x) (declare (ignore x)) (gensym)) args)))
+      `(lambda (dest control ,@arg-names)
+	 (declare (ignore control))
+	 (format dest (formatter ,string) ,@arg-names)))))
+
+(deftransform format ((dest control &rest args) (t simple-string &rest t) *
+		      :policy (<= speed space))
+  (when (constant-continuation-p control)
+    (let ((string (continuation-value control)))
+      (check-format-args string args)
+      (give-up))))
+
 ;;;
 (deftransform format ((stream control &rest args) (stream function &rest t) *
 		      :policy (> speed space))
@@ -3353,3 +3379,4 @@
        (declare (ignore tee))
        (funcall control *standard-output* ,@arg-names)
        nil)))
+
