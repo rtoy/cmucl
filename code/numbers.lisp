@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.39 2001/09/28 14:56:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.40 2002/02/25 16:23:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -669,7 +669,9 @@
 ;;; maybe-inline for now, so that the power-of-2 ceiling and floor transforms
 ;;; get a chance.
 ;;;
-(declaim (inline rem mod fceiling ffloor ftruncate))
+;;; Don't inline ftruncate because it's probably too big now.
+;;;
+(declaim (inline rem mod fceiling ffloor))
 (declaim (maybe-inline ceiling floor))
 
 ;;; If the numbers do not divide exactly and the result of (/ number divisor)
@@ -742,20 +744,74 @@
 	rem)))
 
 
-(macrolet ((frob (name op doc)
-	     `(defun ,name (number &optional (divisor 1))
-		,doc
-		(multiple-value-bind (res rem) (,op number divisor)
-		  (values (float res (if (floatp rem) rem 1.0)) rem)))))
-  (frob ffloor floor
-    "Same as FLOOR, but returns first value as a float.")
-  (frob fceiling ceiling
-    "Same as CEILING, but returns first value as a float." )
-  (frob ftruncate truncate
-    "Same as TRUNCATE, but returns first value as a float.")
-  (frob fround round
-    "Same as ROUND, but returns first value as a float."))
+(defun ftruncate (number &optional (divisor 1))
+  "Same as TRUNCATE, but returns first value as a float."
+  (macrolet ((truncate-float (rtype)
+	       `(let* ((float-div (coerce divisor ',rtype))
+		       (res (%unary-ftruncate (/ number float-div))))
+		 (values res
+		  (- number
+		   (* (coerce res ',rtype) float-div))))))
+    (number-dispatch ((number real) (divisor real))
+      (((foreach fixnum bignum ratio) (or fixnum bignum ratio))
+       (multiple-value-bind (q r)
+	   (truncate number divisor)
+	 (values (float q) r)))
+      (((foreach single-float double-float)
+	(or rational single-float))
+       (if (eql divisor 1)
+	   (let ((res (%unary-ftruncate number)))
+	     (values res (- number (coerce res '(dispatch-type number)))))
+	   (truncate-float (dispatch-type number))))
+      ((double-float (or single-float double-float))
+       (truncate-float double-float))
+      ((single-float double-float)
+       (truncate-float double-float))
+      (((foreach fixnum bignum ratio)
+	(foreach single-float double-float))
+       (truncate-float (dispatch-type divisor))))))
 
+
+(defun ffloor (number &optional (divisor 1))
+  "Same as FLOOR, but returns first value as a float."
+  (multiple-value-bind (tru rem) (ftruncate number divisor)
+    (if (and (not (zerop rem))
+	     (if (minusp divisor)
+		 (plusp number)
+		 (minusp number)))
+	(values (1- tru) (+ rem divisor))
+	(values tru rem))))
+
+(defun fceiling (number &optional (divisor 1))
+  "Same as CEILING, but returns first value as a float." 
+  (multiple-value-bind (tru rem) (ftruncate number divisor)
+    (if (and (not (zerop rem))
+	     (if (minusp divisor)
+		 (minusp number)
+		 (plusp number)))
+	(values (+ tru 1) (- rem divisor))
+	(values tru rem))))
+
+
+(defun fround (number &optional (divisor 1))
+  "Same as ROUND, but returns first value as a float."
+  (if (eql divisor 1)
+      (round number)
+      (multiple-value-bind (tru rem)
+	  (ftruncate number divisor)
+	(let ((thresh (/ (abs divisor) 2)))
+	  (cond ((or (> rem thresh)
+		     (and (= rem thresh) (oddp tru)))
+		 (if (minusp divisor)
+		     (values (- tru 1) (+ rem divisor))
+		     (values (+ tru 1) (- rem divisor))))
+		((let ((-thresh (- thresh)))
+		   (or (< rem -thresh)
+		       (and (= rem -thresh) (oddp tru))))
+		 (if (minusp divisor)
+		     (values (+ tru 1) (- rem divisor))
+		     (values (- tru 1) (+ rem divisor))))
+		(t (values tru rem)))))))
 
 ;;;; Comparisons:
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.84 2001/09/24 15:25:38 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.85 2002/02/25 16:23:11 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,42 @@
 	(values (1+ tru) (- rem divisor))
 	(values tru rem))))
 
+(defknown %unary-ftruncate/single-float (single-float) single-float
+	  (movable foldable flushable))
+(defknown %unary-ftruncate/double-float (double-float) double-float
+	  (movable foldable flushable))
+
+(defknown %unary-ftruncate (float) float
+	  (movable foldable flushable))
+
+;; Convert (ftruncate x y) to the obvious implementation.  We only
+;; want this under certain conditions and let the generic ftruncate
+;; handle the rest.  (Note: if y = 1, the divide and multiply by y
+;; should be removed by other deftransforms.)
+
+(deftransform ftruncate ((x &optional (y 1))
+			(float &optional (or float integer)))
+  '(let ((res (%unary-ftruncate (/ x y))))
+     (values res (- x (* y res)))))
+
+;; Convert %unary-ftruncate to unary-ftruncate/{single,double}-float
+;; if x is known to be of the right type.  Also, if the result is
+;; known to fit in the same range as a (signed-byte 32), convert this
+;; to %unary-truncate, which might be a single instruction, and float
+;; the result.
+
+(macrolet ((frob (ftype func)
+	     `(deftransform %unary-ftruncate ((x) (,ftype))
+		(let* ((x-type (continuation-type x))
+		       (lo (numeric-type-low x-type))
+		       (hi (numeric-type-high x-type)))
+		  (if (and (numberp lo) (numberp hi)
+			   (< (- (ash 1 31)) lo)
+			   (< hi (ash 1 31)))
+		      '(coerce (%unary-truncate x) ',ftype)
+		      '(,func x))))))
+  (frob single-float %unary-ftruncate/single-float)
+  (frob double-float %unary-ftruncate/double-float))
 
 ;;; Random:
 ;;;
