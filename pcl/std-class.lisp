@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.41 2003/01/03 20:33:01 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.42 2003/01/03 21:41:00 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -731,18 +731,26 @@
     ;; old class is now obsolete.
     ;;
     (let* ((nlayout (mapcar #'slot-definition-name
-			    (sort instance-slots #'< :key #'slot-definition-location)))
+			    (sort instance-slots #'<
+				  :key #'slot-definition-location)))
 	   (nslots (length nlayout))
 	   (nwrapper-class-slots (compute-class-slots class-slots))
 	   (owrapper (class-wrapper class))
 	   (olayout (and owrapper (wrapper-instance-slots-layout owrapper)))
-	   (owrapper-class-slots (and owrapper (wrapper-class-slots owrapper)))
 	   (nwrapper
 	    (cond ((null owrapper)
 		   (make-wrapper nslots class))
+		  ;;
+		  ;; We cannot reuse the old wrapper easily when it
+		  ;; has class slot cells, even if these cells are
+		  ;; equal to the ones used in the new wrapper.  The
+		  ;; class slot cells of OWRAPPER may be referenced
+		  ;; from caches, and if we don't change the wrapper,
+		  ;; the caches won't notice that something has
+		  ;; changed.  We could do something here manually,
+		  ;; but I don't think it's worth it.
 		  ((and (equal nlayout olayout)
-			(every (lambda (o n) (eq (car o) (car n)))
-			       owrapper-class-slots nwrapper-class-slots))
+			(null (wrapper-class-slots owrapper)))
 		   owrapper)
 		  (t
 		   ;;
