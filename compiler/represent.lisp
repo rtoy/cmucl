@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.37 2004/12/16 21:55:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.38 2004/12/17 21:44:07 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -745,6 +745,9 @@
   (let ((costs (make-array sc-number-limit))
 	(2comp (component-info component)))
 
+    ;; Compute loop depths for each TN in the component.
+    (assign-tn-depths component)
+    
     ;; First pass; only allocate SCs where there is a distinct choice.
     (do ((tn (ir2-component-normal-tns 2comp)
 	     (tn-next tn)))
