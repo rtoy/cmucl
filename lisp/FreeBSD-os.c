@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.2 1997/11/25 17:59:16 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.3 1999/02/25 12:41:02 pw Exp $
  *
  */
 
@@ -32,7 +32,7 @@
 #include <signal.h>
 /* #include <sys/sysinfo.h> */
 #include <sys/proc.h>
-#include "x86-validate.h"
+#include "validate.h"
 vm_size_t os_vm_page_size;
 #define DPRINTF(t,a) {if(t)fprintf a;}
 
