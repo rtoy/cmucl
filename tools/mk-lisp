@@ -1,0 +1,36 @@
+#!/bin/csh -f
+
+if ($#argv) then
+	set subdir = $argv[1]
+else
+	set subdir = alpha
+endif
+
+set date = `/bin/date | awk '{print $2 "-" $3 "-" $6}'`
+
+# set a bunch of random env vars to fill up space.
+setenv FOO XXXXXXXXXXXXXXXX
+setenv FOO $FOO$FOO$FOO$FOO
+setenv FOO $FOO$FOO$FOO$FOO
+setenv BAR $FOO
+setenv BAZ $FOO
+setenv ACK $FOO
+
+echo Building lisp.core dated $date from the \`\`$subdir\'\' subdir.
+
+/afs/cs/project/clisp/new-compiler/@sys/$subdir/ldb/ldb -core /afs/cs/project/clisp/new-compiler/@sys/$subdir/ldb/kernel.core << EOF
+#+nil (push :no-xp *features*)
+#+nil (push :no-clx *features*)
+#+nil (push :no-hemlock *features*)
+#+nil (push :no-pcl *features*)
+(setf (search-list "lisp:")
+      '("/afs/cs/project/clisp/new-compiler/@sys/$subdir/"))
+(in-package "USER")
+(load (open "lisp:code/worldload.lisp"))
+$date
+$date
+$date
+(quit)
+EOF
+
+echo 

@@ -1,0 +1,14 @@
+#!/bin/csh -fx
+
+if ($#argv) then
+	set subdir = $argv[1]
+else
+	set subdir = alpha
+endif
+
+set src = /afs/cs/project/clisp/new-compiler/@sys/$subdir
+set dst = /afs/cs/misc/cmucl/@sys/alpha
+
+rm -f $dst/bin/lisp $dst/lib/lisp.core
+cp -p $src/ldb/ldb $dst/bin/lisp
+cp -p lisp.core $dst/lib/lisp.core
