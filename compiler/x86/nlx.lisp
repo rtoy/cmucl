@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.6 1997/11/04 09:11:12 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.7 1997/11/18 10:53:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,7 @@
     (load-symbol-value catch lisp::*current-catch-block*)
     (load-symbol-value eval lisp::*eval-stack-top*)
     (load-symbol-value alien-stack *alien-stack*)
-    (loadw oldfp ebp-tn  (- (1+ old-fp-save-offset)))))
+    (loadw oldfp ebp-tn  (- (1+ ocfp-save-offset)))))
   
 
 (define-vop (restore-dynamic-state)
@@ -73,10 +73,10 @@
     (store-symbol-value catch lisp::*current-catch-block*)
     (store-symbol-value eval lisp::*eval-stack-top*)
     (store-symbol-value alien-stack *alien-stack*)
-    (storew oldfp ebp-tn (- (1+ old-fp-save-offset)))))
+    (storew oldfp ebp-tn (- (1+ ocfp-save-offset)))))
 
 (define-vop (current-stack-pointer)
-  (:results (res :scs (any-reg descriptor-stack)))
+  (:results (res :scs (any-reg control-stack)))
   (:generator 1
     (move res esp-tn)))
 
@@ -208,7 +208,7 @@
 		    ;; (loadw tn start (- (1+ i)))
 		    (inst mov move-temp start)
 		    (loadw tn move-temp (- (1+ i))))
-		   ((descriptor-stack immediate-stack)
+		   ((control-stack immediate-stack)
 		    ;; (loadw move-temp start (- (1+ i)))
 		    (inst mov move-temp start)
 		    (loadw move-temp move-temp (- (1+ i)))
@@ -266,7 +266,7 @@
 		    ;; (loadw tn start (- (1+ i)))
 		    (move move-temp start)
 		    (loadw tn move-temp (- (1+ i))))
-		   ((descriptor-stack)
+		   ((control-stack)
 		    ;; (loadw move-temp start (- (1+ i)))
 		    (move move-temp start)
 		    (loadw move-temp move-temp (- (1+ i)))
@@ -346,7 +346,7 @@
   (:temporary (:sc dword-reg :offset esi-offset) esi)
   (:temporary (:sc dword-reg :offset edi-offset) edi)
   (:results (result :scs (any-reg) :from (:argument 0))
-	    (num :scs (any-reg descriptor-stack)))
+	    (num :scs (any-reg control-stack)))
   (:save-p :force-to-stack)
   (:vop-var vop)
   (:generator 30
@@ -360,7 +360,7 @@
     (emit-label label)
     (note-this-location vop :non-local-entry)
 
-    ;; The RISC implementations have old-fp-save wired to a register.
+    ;; The RISC implementations have ocfp-save wired to a register.
     ;; ir2tran calls (make-old-fp-save-location) to retrieve that tn
     ;; as the source address for the thrown results. Doing that here
     ;; provides the S0 slot as that source which is the wrong end of
@@ -368,9 +368,9 @@
     ;; that %ebx is the analog of OCFP here and at least in testing so
     ;; far does actually point (1 above)  the values.
     ;; Actually, now it seems that 'unwind' is supposed to set up
-    ;; edx and old-fp with certain values so that the compiler can
+    ;; edx and ocfp with certain values so that the compiler can
     ;; call these nlx entry points correctly. NOT.
-    (move esi source)			; old-fp
+    (move esi source)			; ocfp
     (inst lea esi (make-ea :dword :base esi :disp (- word-bytes)))
     ;; The 'top' arg contains the %esp value saved prior to creating
     ;; the catch block and dynamic save structures and points to where

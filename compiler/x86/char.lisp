@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.2 1997/11/04 09:11:02 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.3 1997/11/18 10:53:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -30,7 +30,7 @@
 ;;; Move a tagged char to an untagged representation.
 ;;;
 (define-vop (move-to-base-char)
-  (:args (x :scs (any-reg descriptor-stack) :target al))
+  (:args (x :scs (any-reg control-stack) :target al))
   (:temporary (:sc byte-reg :offset al-offset
 		   :from (:argument 0) :to (:eval 0)) al)
   (:ignore al)
@@ -43,7 +43,7 @@
     (move y ah)))
 ;;;
 (define-move-vop move-to-base-char :move
-  (any-reg descriptor-stack) (base-char-reg base-char-stack))
+  (any-reg control-stack) (base-char-reg base-char-stack))
 
 
 ;;; Move an untagged char to a tagged representation.
@@ -54,7 +54,7 @@
 		   :from (:argument 0) :to (:result 0)) al)
   (:temporary (:sc byte-reg :offset ah-offset
 		   :from (:argument 0) :to (:result 0)) ah)
-  (:results (y :scs (any-reg descriptor-reg descriptor-stack)))
+  (:results (y :scs (any-reg descriptor-reg control-stack)))
   (:note "character tagging")
   (:generator 1
     (move ah x)				; maybe move char byte
@@ -64,7 +64,7 @@
 
 ;;;
 (define-move-vop move-from-base-char :move
-  (base-char-reg base-char-stack) (any-reg descriptor-reg descriptor-stack))
+  (base-char-reg base-char-stack) (any-reg descriptor-reg control-stack))
 
 ;;; Move untagged base-char values.
 ;;;

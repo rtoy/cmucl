@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.4 1997/11/05 14:59:50 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.5 1997/11/18 10:53:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
 		  `(let ((reg
 			  (sc-case ,tn
 			    ((any-reg descriptor-reg) ,tn)
-			    ((descriptor-stack)
+			    ((control-stack)
 			     (move temp ,tn)
 			     temp))))
 		     (storew reg ,list ,slot vm:list-pointer-type))))

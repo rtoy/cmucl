@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/pred.lisp,v 1.2 1997/11/04 09:11:14 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/pred.lisp,v 1.3 1997/11/18 10:53:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,13 +36,13 @@
 ;;; Note: a constant-tn is allowed in CMP; it uses an EA displacement,
 ;;; not immediate data.
 (define-vop (if-eq)
-  (:args (x :scs (any-reg descriptor-reg descriptor-stack constant)
+  (:args (x :scs (any-reg descriptor-reg control-stack constant)
 	    :load-if (not (and (sc-is x immediate)
 			       (sc-is y any-reg descriptor-reg
-				      descriptor-stack constant))))
+				      control-stack constant))))
 	 (y :scs (any-reg descriptor-reg immediate)
 	    :load-if (not (and (sc-is x any-reg descriptor-reg immediate)
-			       (sc-is y descriptor-stack constant)))))
+			       (sc-is y control-stack constant)))))
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.5 1997/11/04 09:11:18 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.6 1997/11/18 10:53:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,7 +178,7 @@
   ;; **** The stacks.
 
   ;; The control stack.
-  (descriptor-stack stack)		; may be pointers, scanned by GC
+  (control-stack stack)			; may be pointers, scanned by GC
 
   ;; The non-descriptor stacks.
   (signed-stack stack)			; (signed-byte 32)
@@ -212,7 +212,7 @@
 ;	   :reserve-locations (#.eax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
-	   :alternate-scs (descriptor-stack))
+	   :alternate-scs (control-stack))
 
   ;; Pointer descriptor objects.  Must be seen by GC.
   (descriptor-reg registers
@@ -222,7 +222,7 @@
 		  :constant-scs
 		  (constant immediate)
 		  :save-p t
-		  :alternate-scs (descriptor-stack))
+		  :alternate-scs (control-stack))
 
   ;; Non-Descriptor characters
   (base-char-reg registers
@@ -321,19 +321,13 @@
 		      :reserve-locations ())
   )
 
-;;; zzz added by jrd; has somebody been changing names of these things on me?
-(export 'control-stack-sc-number)
-(defconstant control-stack-sc-number descriptor-stack-sc-number)
-
-
 (eval-when (compile load eval)
 
 (defconstant byte-sc-names '(base-char-reg byte-reg base-char-stack))
 (defconstant word-sc-names '(word-reg))
 (defconstant dword-sc-names
   '(any-reg descriptor-reg sap-reg signed-reg unsigned-reg dword-reg
-    descriptor-stack signed-stack unsigned-stack
-    sap-stack single-stack constant))
+    control-stack signed-stack unsigned-stack sap-stack single-stack constant))
 
 ;;;
 ;;; added by jrd.  I guess the right thing to do is to treat floats
@@ -384,27 +378,9 @@
 
 ;;; Immediate-Constant-SC
 ;;;
-;;; Basically, if it's easier to represent the value as an immediate in
-;;; some instruction instead of in the constants pool, then return
-;;; the immediate SC.
+;;; If value can be represented as an immediate constant, then return the
+;;; appropriate SC number, otherwise return NIL.
 ;;;
-#+nil ;; pw-- the way it was.
-(def-vm-support-routine immediate-constant-sc (value)
-  (if (or (and (symbolp value) (static-symbol-p value))
-	  #-cross-compiler
-	  (typep value 'fixnum)
-	  #+cross-compiler
-	  (and (typep value 'integer)
-	       (>= value (info variable constant-value 'most-negative-fixnum))
-	       (<= value (info variable constant-value 'most-positive-fixnum)))
-	  #-cross-compiler
-	  (typep value 'system-area-pointer)
-	  (typep value 
-                 #+lispworks3 'lisp::base-character 
-                 #-lispworks3 'base-char))
-      (sc-number-or-lose 'immediate *backend*)
-      nil))
-
 (def-vm-support-routine immediate-constant-sc (value)
   (typecase value
     ((or fixnum system-area-pointer character)
@@ -424,17 +400,16 @@
 ;;;; Function Call Parameters
 
 ;;; Offsets of special stack frame locations
-(defconstant old-fp-save-offset 0)
+(defconstant ocfp-save-offset 0)
 (defconstant return-pc-save-offset 1)
 (defconstant code-save-offset 2)
 
-
 ;;; names of these things seem to have changed.  these aliases by jrd
-(defconstant ocfp-save-offset old-fp-save-offset)
 (defconstant lra-save-offset return-pc-save-offset)
 
 (defconstant cfp-offset ebp-offset)	; pfw - needed by stuff in /code
 					; related to sigcontext stuff
+
 ;;; The number of arguments/return values passed in registers.
 ;;;
 (defconstant register-arg-count 3)

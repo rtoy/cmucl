@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/debug.lisp,v 1.2 1997/11/04 09:11:03 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/debug.lisp,v 1.3 1997/11/18 10:53:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,7 +143,7 @@
 (define-vop (get-lisp-obj-address)
   (:policy :fast-safe)
   (:translate di::get-lisp-obj-address)
-  (:args (thing :scs (descriptor-reg descriptor-stack) :target result))
+  (:args (thing :scs (descriptor-reg control-stack) :target result))
   (:results (result :scs (unsigned-reg)
 		    :load-if (not (and (sc-is thing descriptor-reg)
 				       (sc-is result unsigned-stack)))))

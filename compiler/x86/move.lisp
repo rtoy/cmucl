@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.4 1997/11/05 14:59:58 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.5 1997/11/18 10:53:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,7 @@
   (inst mov y x))
 
 (define-move-function (load-stack 5) (vop x y)
-  ((descriptor-stack) (any-reg descriptor-reg)
+  ((control-stack) (any-reg descriptor-reg)
    (base-char-stack) (base-char-reg)
    (sap-stack) (sap-reg)
    (signed-stack) (signed-reg)
@@ -61,7 +61,7 @@
   (inst mov y x))
 
 (define-move-function (store-stack 5) (vop x y)
-  ((any-reg descriptor-reg) (descriptor-stack)
+  ((any-reg descriptor-reg) (control-stack)
    (base-char-reg) (base-char-stack)
    (sap-reg) (sap-stack)
    (signed-reg) (signed-stack)
@@ -78,12 +78,12 @@
 	       :load-if
 	       (not (or (location= x y)
 			(and (sc-is x any-reg descriptor-reg immediate)
-			     (sc-is y descriptor-stack))))))
+			     (sc-is y control-stack))))))
   (:effects)
   (:affected)
   (:generator 0
     (if (and (sc-is x immediate)
-	     (sc-is y any-reg descriptor-reg descriptor-stack))
+	     (sc-is y any-reg descriptor-reg control-stack))
 	(let ((val (tn-value x)))
 	  (etypecase val
 	    (integer
@@ -117,7 +117,7 @@
 (define-vop (move-argument)
   (:args (x :scs (any-reg descriptor-reg immediate) :target y
 	    :load-if (not (and (sc-is y any-reg descriptor-reg)
-			       (sc-is x descriptor-stack))))
+			       (sc-is x control-stack))))
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y any-reg descriptor-reg))))
   (:results (y))
@@ -137,7 +137,7 @@
 	       (inst mov y (logior (ash (char-code val) type-bits)
 				   base-char-type)))))
 	 (move y x)))
-      ((descriptor-stack)
+      ((control-stack)
        (if (sc-is x immediate)
 	   (let ((val (tn-value x)))
 	     (if (= (tn-offset fp) esp-offset)

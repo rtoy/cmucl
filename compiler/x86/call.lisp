@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.5 1997/11/05 14:59:53 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.6 1997/11/18 10:53:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
   (if (< n register-arg-count)
       (make-wired-tn *any-primitive-type* descriptor-reg-sc-number
 		     (nth n register-arg-offsets))
-      (make-wired-tn *any-primitive-type* descriptor-stack-sc-number n)))
+      (make-wired-tn *any-primitive-type* control-stack-sc-number n)))
 
 
 ;;; Make-Return-PC-Passing-Location  --  Interface
@@ -50,7 +50,7 @@
 (def-vm-support-routine make-return-pc-passing-location (standard)
   (declare (ignore standard))
   (make-wired-tn *fixnum-primitive-type*
-		 descriptor-stack-sc-number
+		 control-stack-sc-number
 		 return-pc-save-offset))
 ;;;
 ;;; If standard is true, then use the standard (full call) location,
@@ -60,7 +60,7 @@
 #+nil
 (def-vm-support-routine make-return-pc-passing-location (standard)
   (if standard
-      (make-wired-tn *fixnum-primitive-type* descriptor-stack-sc-number
+      (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
 		     return-pc-save-offset)
       (make-normal-tn *fixnum-primitive-type*)))
 
@@ -78,9 +78,8 @@
 ;#+nil
 (def-vm-support-routine make-old-fp-passing-location (standard)
   (declare (ignore standard))
-  (make-wired-tn *fixnum-primitive-type*
-		 descriptor-stack-sc-number
-		 old-fp-save-offset))
+  (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
+		 ocfp-save-offset))
 ;;;
 ;;; If standard is true, then use the standard (full call) location,
 ;;; otherwise use any legal location.
@@ -89,7 +88,8 @@
 #+nil
 (def-vm-support-routine make-old-fp-passing-location (standard)
   (if standard
-      (make-wired-tn *fixnum-primitive-type* descriptor-stack-sc-number old-fp-save-offset)
+      (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
+		     ocfp-save-offset)
       (make-normal-tn *fixnum-primitive-type*)))
 
 ;;; Make-Old-FP-Save-Location, Make-Return-PC-Save-Location  --  Interface
@@ -102,8 +102,8 @@
 ;;; wire to the stack? No problems.
 (def-vm-support-routine make-old-fp-save-location (env)
   (environment-debug-live-tn (make-wired-tn *fixnum-primitive-type*
-					    descriptor-stack-sc-number
-					    old-fp-save-offset)
+					    control-stack-sc-number
+					    ocfp-save-offset)
 			     env))
 ;;;
 ;;; Using a save-tn. No problems.
@@ -112,7 +112,7 @@
   (specify-save-tn
    (environment-debug-live-tn (make-normal-tn *fixnum-primitive-type*) env)
    (make-wired-tn *fixnum-primitive-type*
-		  descriptor-stack-sc-number
+		  control-stack-sc-number
 		  ocfp-save-offset)))
 
 ;;;
@@ -120,7 +120,7 @@
 ;;; wire to the stack? No problems.
 (def-vm-support-routine make-return-pc-save-location (env)
   (environment-debug-live-tn (make-wired-tn *fixnum-primitive-type*
-					    descriptor-stack-sc-number
+					    control-stack-sc-number
 					    return-pc-save-offset)
 			     env))
 ;;;
@@ -131,7 +131,7 @@
     (specify-save-tn
      (environment-debug-live-tn (make-normal-tn ptype) env)
      (make-wired-tn ptype
-		    descriptor-stack-sc-number
+		    control-stack-sc-number
 		    return-pc-save-offset))))
 
 ;;; Make-Argument-Count-Location  --  Interface
@@ -195,7 +195,7 @@
 ;;; Used for setting up the Old-FP in local call.
 ;;;
 (define-vop (current-fp)
-  (:results (val :scs (any-reg descriptor-stack)))
+  (:results (val :scs (any-reg control-stack)))
   (:generator 1
     (move val ebp-tn)))
 
@@ -243,7 +243,7 @@
 ;;; callee (who has the same size stack as us).
 ;;; 
 (define-vop (allocate-frame)
-  (:results (res :scs (any-reg descriptor-stack))
+  (:results (res :scs (any-reg control-stack))
 	    (nfp))
   (:info callee)
   (:ignore nfp callee)
@@ -257,7 +257,7 @@
 ;;;
 (define-vop (allocate-full-call-frame)
   (:info nargs)
-  (:results (res :scs (any-reg descriptor-stack)))
+  (:results (res :scs (any-reg control-stack)))
   (:generator 2
     (move res esp-tn)
     (inst sub esp-tn (* (max nargs 3) vm:word-bytes))))
@@ -511,8 +511,8 @@
   (:temporary (:sc any-reg :offset ecx-offset
 	       :from :eval :to (:result 1))
 	      nvals)
-  (:results (start :scs (any-reg descriptor-stack))
-	    (count :scs (any-reg descriptor-stack))))
+  (:results (start :scs (any-reg control-stack))
+	    (count :scs (any-reg control-stack))))
 
 
 ;;;; Local call with unknown values convention return:
@@ -559,7 +559,7 @@
 
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((descriptor-stack)
+	((control-stack)
 #+nil	 (format t "*call-local: ret-tn on stack; offset=~s~%"
 		 (tn-offset ret-tn))
 	 ;; Stack
@@ -608,7 +608,7 @@
 
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((descriptor-stack)
+	((control-stack)
 #+nil	 (format t "*multiple-call-local: ret-tn on stack; offset=~s~%"
 		 (tn-offset ret-tn))
 	 ;; Stack
@@ -665,7 +665,7 @@
 
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((descriptor-stack)
+	((control-stack)
 #+nil	 (format t "*known-call-local: ret-tn on stack; offset=~s~%"
 		 (tn-offset ret-tn))
 	 ;; Stack
@@ -755,7 +755,7 @@
     (sc-case return-pc
       ((any-reg descriptor-reg)
        (sc-case old-fp
-         ((descriptor-stack)
+         ((control-stack)
 
 #+nil	  (format t "*known-return: old-fp ~s on stack; offset=~s~%"
 		  old-fp (tn-offset old-fp))
@@ -765,7 +765,7 @@
 		 (inst lea esp-tn
 		       (make-ea :dword :base ebp-tn
 				:disp
-				(- (* (1+ old-fp-save-offset) word-bytes))))
+				(- (* (1+ ocfp-save-offset) word-bytes))))
 		 ;; Restore the old fp from its save location on the stack,
 		 ;; and zot the stack.
 		 (inst pop ebp-tn))
@@ -784,7 +784,7 @@
        ;; Return; return-pc is in a register.
        (inst jmp return-pc))
 
-      ((descriptor-stack)
+      ((control-stack)
 
 #+nil       (format t "*known-return: return-pc ~s on stack; offset=~s~%"
 	       return-pc (tn-offset return-pc))
@@ -854,7 +854,7 @@
      ,@(unless (eq return :tail)
 	       '((new-fp :scs (any-reg) :to (:argument 1))))
      
-     (fun :scs (descriptor-reg descriptor-stack)
+     (fun :scs (descriptor-reg control-stack)
           :target eax :to (:argument 0))
      
      ,@(when (eq return :tail)
@@ -955,18 +955,18 @@
 		;; standard locations then these moves will be
 		;; un-necessary; this is probably best for the x86.
 		(sc-case old-fp
-		  ((descriptor-stack)
-		   (unless (= old-fp-save-offset (tn-offset old-fp))
+		  ((control-stack)
+		   (unless (= ocfp-save-offset (tn-offset old-fp))
 		     (format t "** tail-call old-fp not S0~%")
 		     (move old-fp-tmp old-fp)
-		     (storew old-fp-tmp ebp-tn (- (1+ old-fp-save-offset)))))
+		     (storew old-fp-tmp ebp-tn (- (1+ ocfp-save-offset)))))
 		  ((any-reg descriptor-reg)
 		     (format t "** tail-call old-fp in reg not S0~%")
-		   (storew old-fp ebp-tn (- (1+ old-fp-save-offset)))))
+		   (storew old-fp ebp-tn (- (1+ ocfp-save-offset)))))
 
 		#+x86-lra
 		(sc-case return-pc
-		  ((descriptor-stack)
+		  ((control-stack)
 		   (unless (= return-pc-save-offset (tn-offset return-pc))
 		     (format t "** tail-call ret-pc not S1~%")
 		     (move ret-pc-tmp return-pc)
@@ -997,7 +997,7 @@
 		     '(inst sub esp-tn (fixnum 3)))
 
 		;; Save the fp
-		(storew ebp-tn new-fp (- (1+ old-fp-save-offset)))
+		(storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
 
 		;; Save the return address.
 		#+x86-lra
@@ -1079,8 +1079,8 @@
 ;;; set things up so that it can find what it needs.
 ;;;
 (define-vop (tail-call-variable)
-  (:args (args :scs (any-reg descriptor-stack) :target esi)
-	 (function :scs (descriptor-reg descriptor-stack) :target eax)
+  (:args (args :scs (any-reg control-stack) :target esi)
+	 (function :scs (descriptor-reg control-stack) :target eax)
 	 (old-fp)
 	 (ret-addr))
   (:temporary (:sc dword-reg :offset esi-offset :from (:argument 0)) esi)
@@ -1093,10 +1093,10 @@
 
     ;; The following assumes that the return-pc and old-fp are on the
     ;; stack in their standard save locations - Check this.
-    (unless (and (sc-is old-fp descriptor-stack)
-		 (= (tn-offset old-fp) old-fp-save-offset))
-	    (error "tail-call-variable: old-fp not on stack in standard save location?"))
-    (unless (and (sc-is ret-addr descriptor-stack)
+    (unless (and (sc-is old-fp control-stack)
+		 (= (tn-offset old-fp) ocfp-save-offset))
+	    (error "tail-call-variable: ocfp not on stack in standard save location?"))
+    (unless (and (sc-is ret-addr control-stack)
 		 (= (tn-offset ret-addr) return-pc-save-offset))
 	    (error "tail-call-variable: ret-addr not on stack in standard save location?"))
     
