@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.15 1991/02/20 14:58:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.16 1991/03/10 18:35:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -297,18 +297,19 @@
 ;;;
 (defun convert-call-if-possible (ref call)
   (declare (type ref ref) (type basic-combination call))
-  (let ((fun (let ((fun (ref-leaf ref)))
-	       (if (external-entry-point-p fun)
-		   (functional-entry-function fun)
-		   fun)))
-	(*compiler-error-context* call))
-      (cond ((eq (basic-combination-kind call) :local))
-	    ((mv-combination-p call)
+  (unless (eq (basic-combination-kind call) :local)
+    (let ((fun (let ((fun (ref-leaf ref)))
+		 (if (external-entry-point-p fun)
+		     (functional-entry-function fun)
+		     fun)))
+	  (*compiler-error-context* call))
+      (assert (member (functional-kind fun) '(nil :escape :cleanup :optional)))
+      (cond ((mv-combination-p call)
 	     (convert-mv-call ref call fun))
 	    ((lambda-p fun)
 	     (convert-lambda-call ref call fun))
 	    (t
-	     (convert-hairy-call ref call fun))))
+	     (convert-hairy-call ref call fun)))))
   (undefined-value))
 
 
@@ -463,7 +464,7 @@
 	    (ecase (arg-info-kind info)
 	      (:keyword
 	       (key-vars var))
-	      (:rest :optional)))))
+	      ((:rest :optional))))))
 
       (dotimes (i max)
 	(temps (gensym "FIXED-ARG-TEMP-")))
@@ -683,12 +684,7 @@
   (insert-let-body fun call)
   (merge-lets fun call)
   (move-return-uses fun call)
-
-  (let* ((fun (or (lambda-optional-dispatch fun) fun))
-	 (entry (gethash (leaf-name fun) *free-functions*)))
-    (when (eq entry fun)
-      (remhash (leaf-name fun) *free-functions*)))
-
+  (maybe-remove-free-function fun)
   (dolist (arg (basic-combination-args call))
     (when arg
       (reoptimize-continuation arg)))
