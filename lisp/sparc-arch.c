@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.13 2003/08/22 13:20:03 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.14 2003/08/27 16:45:56 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -242,7 +242,7 @@ boolean allocation_trap_p(struct sigcontext *context)
 
   pc = SC_PC(context);
   
-  if (trap_inst_p(pc, &trapno) && (trapno == 31))
+  if (trap_inst_p(pc, &trapno) && (trapno == trap_Allocation))
     {
       /* Got the trap.  Is it preceeded by an OR instruction? */
       or_inst = pc[-1];
