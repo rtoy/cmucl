@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.20 1992/02/12 19:20:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.21 1992/02/23 17:39:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,6 +56,7 @@
 ;;;
 (proclaim '(function join-components (component component) void))
 (defun join-components (new old)
+  (assert (and (eq (component-kind new) nil) (eq (component-kind old) nil)))
   (let ((old-head (component-head old))
 	(old-tail (component-tail old))
 	(head (component-head new))
