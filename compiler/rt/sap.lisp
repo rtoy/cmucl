@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.6 1991/07/10 17:51:14 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.7 1991/09/28 12:43:50 ram Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -218,9 +218,6 @@
 	 (:arg-types system-area-pointer positive-fixnum)
 	 (:result-types ,result-type)
 	 (:temporary (:scs (sap-reg) :from (:argument 1)) base)
-	 (:temporary (:scs (non-descriptor-reg) :from (:eval 0) :to (:eval 1))
-		     bogus1 bogus2)
-	 (:ignore bogus1 bogus2)
 	 (:variant-vars signed)
 	 (:variant nil)
 	 (:generator 7
@@ -314,13 +311,6 @@
 		      :to (:eval 1)))
 	 (:arg-types system-area-pointer positive-fixnum ,data-type)
 	 (:temporary (:scs (sap-reg) :from (:argument 1) :to (:eval 2)) base)
-	 ;; Add some bullshit temporaries because of human understanding about
-	 ;; a peculiarity in compiler register allocation, so this will trick
-	 ;; the compiler into giving us enough non-descriptor-regs.
-	 ;; Bill did not write this!
-	 (:temporary (:scs (non-descriptor-reg) :from (:eval 1) :to (:eval 2))
-		     bogus1 bogus2)
-	 (:ignore bogus1 bogus2)
 	 (:results (result :scs (,@data-scs)))
 	 (:result-types ,data-type)
 	 (:generator 7
@@ -347,9 +337,33 @@
 (define-system-set 32bit-system-set 2 %set-sap-ref-32
   (signed-reg unsigned-reg) (:or signed-num unsigned-num))
 
-(define-system-set sap-system-set 2 %set-sap-ref-sap
-  (sap-reg) system-area-pointer)
-
+;;; Ugly, because there are only 2 free sap-regs.  We stash the data value in
+;;; NL0 to free up a sap-reg for BASE.
+;;;
+(define-vop (sap-system-set)
+  (:policy :fast-safe)
+  (:translate %set-sap-ref-sap)
+  (:args (object :scs (sap-reg))
+	 (offset :scs (any-reg) :target base)
+	 (data :scs (sap-reg sap-stack)))
+  (:arg-types system-area-pointer positive-fixnum system-area-pointer)
+  (:temporary (:scs (sap-reg) :from (:eval 0) :to (:eval 1)) base)
+  (:temporary (:scs (non-descriptor-reg) :offset nl0-offset
+	       :from (:eval 0) :to (:eval 1))
+	      save)
+  (:vop-var vop)
+  (:results (result :scs (sap-reg)))
+  (:result-types system-area-pointer)
+  (:generator 7
+    (sc-case data
+      (sap-reg (move save data))
+      (sap-stack
+       (loadw save (current-nfp-tn vop) (* (tn-offset data) vm:word-bytes))))
+       
+    (move base offset)
+    (inst cas base base object)
+    (inst st save base)
+    (move result save)))
 
 
 ;;;; Noise to convert normal lisp data objects into SAPs.
