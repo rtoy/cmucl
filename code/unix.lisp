@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.102 2005/02/07 00:47:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.103 2005/02/10 15:32:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3159,10 +3159,16 @@
        :shell (string (cast (slot result 'pw-shell) c-call:c-string))))))
 
 #+solaris
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; sysconf(_SC_GETGR_R_SIZE_MAX)
+  (defconstant +sc-getgr-r-size-max+ 7296
+    "The maximum size of the group entry buffer"))
+
+#+solaris
 (defun unix-getgrnam (name)
   "Return a GROUP-INFO structure for the group identified by NAME, or NIL if not found."
   (declare (type simple-string name))
-  (with-alien ((buf (array c-call:char 2048))
+  (with-alien ((buf (array c-call:char #.+sc-getgr-r-size-max+))
 	       (group-info (struct group)))
     (let ((result
 	   (alien-funcall
@@ -3175,7 +3181,7 @@
 	    name
 	    (addr group-info)
 	    (cast buf (* c-call:char))
-	    2048)))
+	    #.+sc-getgr-r-size-max+)))
       (unless (zerop (sap-int (alien-sap result)))
 	(make-group-info
 	 :name (string (cast (slot result 'gr-name) c-call:c-string))
@@ -3212,30 +3218,30 @@
 (defun unix-getgrgid (gid)
   "Return a GROUP-INFO structure for the group identified by GID, or NIL if not found."
   (declare (type unix-gid gid))
-  (with-alien ((buf (array c-call:char 2048))
+  (with-alien ((buf (array c-call:char #.+sc-getgr-r-size-max+))
 	       (group-info (struct group)))
     (let ((result
 	   (alien-funcall
 	    (extern-alien "getgrgid_r"
 			  (function (* (struct group))
-                                    c-call:unsigned-int
-                                    (* (struct group))
-                                    (* c-call:char)
-                                    c-call:unsigned-int))
+				     c-call:unsigned-int
+				     (* (struct group))
+				     (* c-call:char)
+				     c-call:unsigned-int))
 	    gid
 	    (addr group-info)
 	    (cast buf (* c-call:char))
-	    2048)))
+	    #.+sc-getgr-r-size-max+)))
       (unless (zerop (sap-int (alien-sap result)))
 	(make-group-info
 	 :name (string (cast (slot result 'gr-name) c-call:c-string))
 	 :password (string (cast (slot result 'gr-passwd) c-call:c-string))
 	 :gid (slot result 'gr-gid)
-         :members (loop :with members = (slot result 'gr-mem)
-                        :for i :from 0
-                        :for member = (deref members i)
-                        :until (zerop (sap-int (alien-sap member)))
-                        :collect (string (cast member c-call:c-string))))))))
+	 :members (loop :with members = (slot result 'gr-mem)
+		        :for i :from 0
+		        :for member = (deref members i)
+		        :until (zerop (sap-int (alien-sap member)))
+		        :collect (string (cast member c-call:c-string))))))))
 
 #+(or FreeBSD NetBSD)
 (defun unix-getgrgid (gid)
