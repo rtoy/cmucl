@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.60 1993/05/11 13:54:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.61 1993/05/12 11:22:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -851,7 +851,7 @@
   (let* ((ref (continuation-use (basic-combination-fun call)))
 	 (leaf (when (ref-p ref) (ref-leaf ref)))
 	 (inlinep (if (and (defined-function-p leaf)
-			   (not *byte-compiling*))
+			   (not (byte-compiling)))
 		      (defined-function-inlinep leaf)
 		      :no-chance)))
     (cond
