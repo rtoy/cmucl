@@ -5,6 +5,7 @@
   (rename-package "PCL" "OLD-PCL"))
 
 (setf c:*suppress-values-declaration* t)
+(pushnew :setf *features*)
 
 (setf (search-list "pcl:") '("target:pcl/"))
 
