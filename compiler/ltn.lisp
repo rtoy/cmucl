@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.24 1991/04/23 16:24:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.25 1991/05/31 14:21:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -154,7 +154,7 @@
 		     (single-value-type (continuation-proven-type cont)))))
 	 (info (make-ir2-continuation ptype)))
     (setf (continuation-info cont) info)
-    (let ((name (continuation-function-name cont)))
+    (let ((name (continuation-function-name cont t)))
       (if (and delay name (symbolp name))
 	  (setf (ir2-continuation-kind info) :delayed)
 	  (setf (ir2-continuation-locs info) (list (make-normal-tn ptype))))))
