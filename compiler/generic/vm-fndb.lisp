@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.35 1991/03/14 14:22:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.36 1991/03/14 21:42:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.35 1991/03/14 14:22:55 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.36 1991/03/14 21:42:22 ram Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -26,7 +26,7 @@
 	  current-sp current-fp 
 	  stack-ref %set-stack-ref lra-code-header
 	  function-code-header make-lisp-obj get-lisp-obj-address
-	  function-word-offset
+	  function-word-offset code-debug-info
 	  funcallable-instance-p %set-funcallable-instance-info))
 
 (in-package "C")
