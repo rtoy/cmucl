@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.35 1992/08/25 17:42:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.36 1992/09/07 16:08:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 (export '(tn-ref tn-ref-p make-tn-ref tn-ref-tn tn-ref-write-p
 	  tn-ref-next tn-ref-vop tn-ref-next-ref tn-ref-across
@@ -400,7 +400,6 @@
 ;;;
 (defstruct (ir2-environment
 	    (:print-function %print-ir2-environment))
-  unused-slot0
   ;;
   ;; The TNs that hold the passed environment within the function.  This is an
   ;; alist translating from the NLX-Info or lambda-var to the TN that holds
@@ -413,8 +412,6 @@
   ;; function has no return (and thus never uses them).  Null only temporarily.
   (old-fp nil :type (or tn null))
   (return-pc nil :type (or tn null))
-  ;;
-  unused-slot1
   ;;
   ;; The passing location for the Return-PC.  The return PC is treated
   ;; differently from the other arguments, since in some implementations we may
