@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.122 2001/03/13 15:58:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.123 2001/05/17 22:08:48 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1703,7 +1703,7 @@
       which is initially :MAYBE."
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
-	 (output-file-name nil)
+	 (output-file-pathname nil)
 	 (*compiler-error-output* *compiler-error-output*)
 	 (*compiler-trace-output* nil)
 	 (compile-won nil)
@@ -1715,19 +1715,18 @@
 	(progn
 	  (flet ((frob (file type)
 		   (if (eq file t)
-		       (make-pathname :type type
-				      :defaults
-				      (if (typep default 'logical-pathname)
-					  (translate-logical-pathname default)
-					  default))
+		       (make-pathname
+			:type type
+			:defaults (translate-logical-pathname default))
 		       (pathname file))))
 	    
 	    (when output-file
-	      (setq output-file-name
-		    (compile-file-pathname (first source)
-					   :output-file output-file
-					   :byte-compile *byte-compile*))
-	      (setq fasl-file (open-fasl-file output-file-name
+	      (setq output-file-pathname
+		    (translate-logical-pathname
+		     (compile-file-pathname (first source)
+					    :output-file output-file
+					    :byte-compile *byte-compile*)))
+	      (setq fasl-file (open-fasl-file output-file-pathname
 					      (namestring (first source))
 					      (eq *byte-compile* t))))
 	    
@@ -1762,9 +1761,10 @@
 
       (when fasl-file
 	(close-fasl-file fasl-file (not compile-won))
-	(setq output-file-name (pathname (fasl-file-stream fasl-file)))
+	(setq output-file-pathname (pathname (fasl-file-stream fasl-file)))
 	(when (and compile-won *compile-verbose*)
-	  (compiler-mumble "~2&~A written.~%" (namestring output-file-name))))
+	  (compiler-mumble "~2&~A written.~%"
+			   (namestring output-file-pathname))))
 
       (when *compile-verbose*
 	(finish-error-output source-info compile-won))
@@ -1785,11 +1785,11 @@
     (when load
       (unless output-file
 	(error "Can't :LOAD with no output file."))
-      (load output-file-name :verbose *compile-verbose*))
+      (load output-file-pathname :verbose *compile-verbose*))
 
     (values (if output-file
 		;; Hack around filesystem race condition...
-		(or (probe-file output-file-name) output-file-name)
+		(or (probe-file output-file-pathname) output-file-pathname)
 		nil)
 	    (not (null error-severity))
 	    (if (member error-severity '(:warning :error)) t nil))))
