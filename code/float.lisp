@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.20 1999/11/19 15:12:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.21 2000/05/06 17:21:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,16 +189,26 @@
 (defconstant single-float-negative-epsilon
   (single-from-bits 0 (- vm:single-float-bias vm:single-float-digits) 1))
 (defconstant short-float-negative-epsilon single-float-negative-epsilon)
+#-(and long-float x86)
 (defconstant double-float-epsilon
   (double-from-bits 0 (- vm:double-float-bias (1- vm:double-float-digits)) 1))
+#+(and long-float x86)
+(defconstant double-float-epsilon
+  (double-from-bits 0 (- vm:double-float-bias (1- vm:double-float-digits))
+		    (expt 2 42)))
 #-long-float
 (defconstant long-float-epsilon double-float-epsilon)
 #+(and long-float x86)
 (defconstant long-float-epsilon
   (long-from-bits 0 (- vm:long-float-bias (1- vm:long-float-digits))
 		  (+ 1 (ash vm:long-float-hidden-bit 32))))
+#-(and long-float x86)
 (defconstant double-float-negative-epsilon
   (double-from-bits 0 (- vm:double-float-bias vm:double-float-digits) 1))
+#+(and long-float x86)
+(defconstant double-float-negative-epsilon
+  (double-from-bits 0 (- vm:double-float-bias vm:double-float-digits)
+		    (expt 2 42)))
 #-long-float
 (defconstant long-float-negative-epsilon double-float-negative-epsilon)
 #+(and long-float x86)
