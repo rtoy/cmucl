@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.24 1991/05/24 16:58:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.25 1991/07/11 16:27:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -476,10 +476,6 @@
 ;;; of value forms, a list of the single store-value form, a storing function,
 ;;; and an accessing function.
 
-;;; Left over in case someone is still trying to call this.
-(defun foo-get-setf-method (form &optional environment)
-  (get-setf-method form environment))
-
 (eval-when (compile load eval)
 ;;;
 (defun get-setf-method (form &optional environment)
@@ -490,18 +486,19 @@
     (cond ((symbolp form)
 	   (let ((new-var (gensym)))
 	     (values nil nil (list new-var) `(setq ,form ,new-var) form)))
-	  ((and environment
-		(assoc (car form) (c::lexenv-functions environment)))
-	   (get-setf-method-inverse form `(funcall #'(setf ,(car form))) t))
 	  ;;
-	  ;; ### Bootstrap hack...
-	  ;; Ignore any DEFSETF info for structure accessors.
-	  ((info function accessor-for (car form))
+	  ;; Local functions inhibit global setf methods...
+	  ((and environment
+		(c::leaf-p (cdr (assoc (car form)
+				       (c::lexenv-functions environment)))))
 	   (get-setf-method-inverse form `(funcall #'(setf ,(car form))) t))
 	  ((setq temp (info setf inverse (car form)))
 	   (get-setf-method-inverse form `(,temp) nil))
 	  ((setq temp (info setf expander (car form)))
 	   (funcall temp form environment))
+	  ;;
+	  ;; If a macro, expand one level and try again.  If not, go for the
+	  ;; SETF function.
 	  (t
 	   (multiple-value-bind (res win)
 				(macroexpand-1 form environment)
