@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.25 2003/01/23 21:05:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.26 2003/07/03 17:17:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -349,6 +349,26 @@
 			      vm:other-pointer-type))
     (inst ldf value object offset)))
 
+(define-vop (data-vector-ref-c/simple-array-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:arg-types simple-array-single-float (:constant index))
+  (:info index)
+  (:results (value :scs (single-reg)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:result-types single-float)
+  (:generator 3
+    (let ((offset (+ (fixnum index)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type))))
+      (if (typep offset '(signed-byte 13))
+	  (inst ldf value object offset)
+	  (progn
+	    (inst li temp offset)
+	    (inst ldf value object temp))))))
+
 
 (define-vop (data-vector-set/simple-array-single-float)
   (:note "inline array store")
@@ -369,6 +389,31 @@
     (unless (location= result value)
       (inst fmovs result value))))
 
+(define-vop (data-vector-set-c/simple-array-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (single-reg) :target result))
+  (:arg-types simple-array-single-float
+	      (:constant index)
+	      single-float)
+  (:info index)
+  (:results (result :scs (single-reg)))
+  (:result-types single-float)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:generator 2
+    (let ((offset (+ (fixnum index)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type))))
+      (if (typep offset '(signed-byte 13))
+	  (inst stf value object offset)
+	  (progn
+	    (inst li temp offset)
+	    (inst stf value object temp)))
+      (unless (location= result value)
+	(inst fmovs result value)))))
+
 (define-vop (data-vector-ref/simple-array-double-float)
   (:note "inline array access")
   (:translate data-vector-ref)
@@ -384,6 +429,26 @@
     (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))
     (inst lddf value object offset)))
+
+(define-vop (data-vector-ref-c/simple-array-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:arg-types simple-array-double-float (:constant index))
+  (:info index)
+  (:results (value :scs (double-reg)))
+  (:result-types double-float)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:generator 3
+    (let ((offset (+ (* index 8)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type))))
+      (if (typep offset '(signed-byte 13))
+	  (inst lddf value object offset)
+	  (progn
+	    (inst li temp offset)
+	    (inst lddf value object temp))))))
 
 (define-vop (data-vector-set/simple-array-double-float)
   (:note "inline array store")
@@ -403,6 +468,31 @@
     (inst stdf value object offset)
     (unless (location= result value)
       (move-double-reg result value))))
+
+(define-vop (data-vector-set-c/simple-array-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (double-reg) :target result))
+  (:arg-types simple-array-double-float
+	      (:constant index)
+	      double-float)
+  (:info index)
+  (:results (result :scs (double-reg)))
+  (:result-types double-float)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:generator 10
+    (let ((offset (+ (* index 8)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type))))
+      (if (typep offset '(signed-byte 13))
+	  (inst stdf value object offset)
+	  (progn
+	    (inst li temp offset)
+	    (inst stdf value object temp)))
+      (unless (location= result value)
+	(move-double-reg result value)))))
 
 #+long-float
 (define-vop (data-vector-ref/simple-array-long-float)
@@ -521,6 +611,32 @@
       (inst add offset vm:word-bytes)
       (inst ldf imag-tn object offset))))
 
+(define-vop (data-vector-ref-c/simple-array-complex-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result))
+  (:arg-types simple-array-complex-single-float
+	      (:constant index))
+  (:info index)
+  (:results (value :scs (complex-single-reg)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:result-types complex-single-float)
+  (:generator 3
+    (let ((offset (+ (* index 8)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type)))
+	  (real-tn (complex-single-reg-real-tn value))
+	  (imag-tn (complex-single-reg-imag-tn value)))
+      (cond ((typep (+ offset 4) '(signed-byte 13))
+	     (inst ldf real-tn object offset)
+	     (inst ldf real-tn object (+ offset 4)))
+	    (t
+	     (inst li temp offset)
+	     (inst ldf real-tn object temp)
+	     (inst add temp 4)
+	     (inst ldf real-tn object temp))))))
+
 (define-vop (data-vector-set/simple-array-complex-single-float)
   (:note "inline array store")
   (:translate data-vector-set)
@@ -549,6 +665,40 @@
       (unless (location= result-imag value-imag)
 	(inst fmovs result-imag value-imag)))))
 
+(define-vop (data-vector-set-c/simple-array-complex-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (value :scs (complex-single-reg) :target result))
+  (:arg-types simple-array-complex-single-float
+	      (:constant index)
+	      complex-single-float)
+  (:info index)
+  (:results (result :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 3
+    (let ((offset (+ (* index 8)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type)))
+	  (value-real (complex-single-reg-real-tn value))
+	  (result-real (complex-single-reg-real-tn result))
+	  (value-imag (complex-single-reg-imag-tn value))
+	  (result-imag (complex-single-reg-imag-tn result)))
+      (cond ((typep (+ offset 4) '(signed-byte 13))
+	     (inst stf value-real object offset)
+	     (inst stf value-imag object (+ offset 4)))
+	    (t
+	     (inst li temp offset)
+	     (inst stf value-real object temp)
+	     (inst add temp 4)
+	     (inst stf value-imag object temp)))
+      (unless (location= result-real value-real)
+	(inst fmovs result-real value-real))
+      (unless (location= result-imag value-imag)
+	(inst fmovs result-imag value-imag)))))
+
 (define-vop (data-vector-ref/simple-array-complex-double-float)
   (:note "inline array access")
   (:translate data-vector-ref)
@@ -568,6 +718,31 @@
     (let ((imag-tn (complex-double-reg-imag-tn value)))
       (inst add offset (* 2 vm:word-bytes))
       (inst lddf imag-tn object offset))))
+
+(define-vop (data-vector-ref-c/simple-array-complex-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result))
+  (:arg-types simple-array-complex-double-float (:constant index))
+  (:info index)
+  (:results (value :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 5
+    (let ((offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type)))
+	  (real-tn (complex-double-reg-real-tn value))
+	  (imag-tn (complex-double-reg-imag-tn value)))
+      (cond ((typep (+ offset 8) '(signed-byte 13))
+	     (inst lddf real-tn object offset)
+	     (inst lddf imag-tn object (+ offset 8)))
+	    (t
+	     (inst li temp offset)
+	     (inst lddf real-tn object temp)
+	     (inst add temp (* 2 vm:word-bytes))
+	     (inst lddf imag-tn object temp))))))
 
 (define-vop (data-vector-set/simple-array-complex-double-float)
   (:note "inline array store")
@@ -596,6 +771,44 @@
       (inst stdf value-imag object offset)
       (unless (location= result-imag value-imag)
 	(move-double-reg result-imag value-imag)))))
+
+(define-vop (data-vector-set-c/simple-array-complex-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (value :scs (complex-double-reg) :target result))
+  (:arg-types simple-array-complex-double-float
+	      (:constant index)
+	      complex-double-float)
+  (:info index)
+  (:results (result :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 15
+    (let ((value-real (complex-double-reg-real-tn value))
+	  (result-real (complex-double-reg-real-tn result))
+	  (value-imag (complex-double-reg-imag-tn value))
+	  (result-imag (complex-double-reg-imag-tn result))
+	  (offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))))
+      ;; There's a possible optimization here if the offset for the
+      ;; real part fits in a signed-byte 13 but the imag part doesn't.
+      ;; We don't do this because it can't happen with the current
+      ;; values of vm:other-pointer-type and vm:vector-data-offset.
+      (cond ((typep (+ offset 8) '(signed-byte 13))
+	     (inst stdf value-real object offset)
+	     (inst stdf value-imag object (+ offset 8)))
+	    (t
+	     (inst li temp offset)
+	     (inst stdf value-real object temp)
+	     (inst add temp 8)
+	     (inst stdf value-imag object temp)))
+      (unless (location= result-real value-real)
+	(move-double-reg result-real value-real)))
+      (unless (location= result-imag value-imag)
+	(move-double-reg result-imag value-imag))))
 
 #+long-float
 (define-vop (data-vector-ref/simple-array-complex-long-float)
