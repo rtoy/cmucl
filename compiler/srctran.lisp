@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.21 1990/12/01 14:36:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.22 1990/12/04 19:36:55 wlott Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -492,18 +492,29 @@
 	  ;; X must be positive.
 	  (if (not y-neg)
 	      ;; The must both be positive.
-	      (specifier-type
-	       `(unsigned-byte ,(if (and x-len y-len)
-				    (min x-len y-len)
-				    '*)))
+	      (cond ((or (null x-len) (null y-len))
+		     (specifier-type 'unsigned-byte))
+		    ((or (zerop x-len) (zerop y-len))
+		     (specifier-type '(integer 0 0)))
+		    (t
+		     (specifier-type `(unsigned-byte ,(min x-len y-len)))))
 	      ;; X is positive, but Y might be negative.
-	      (specifier-type
-	       `(unsigned-byte ,(or x-len '*))))
+	      (cond ((null x-len)
+		     (specifier-type 'unsigned-byte))
+		    ((zerop x-len)
+		     (specifier-type '(integer 0 0)))
+		    (t
+		     (specifier-type `(unsigned-byte ,x-len)))))
 	  ;; X might be negative.
 	  (if (not y-neg)
 	      ;; Y must be positive.
-	      (specifier-type
-	       `(unsigned-byte ,(or y-len '*)))
+	      (cond ((null y-len)
+		     (specifier-type 'unsigned-byte))
+		    ((zerop y-len)
+		     (specifier-type '(integer 0 0)))
+		    (t
+		     (specifier-type
+		      `(unsigned-byte ,y-len))))
 	      ;; Either might be negative.
 	      (if (and x-len y-len)
 		  ;; The result is bounded.
