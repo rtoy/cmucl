@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.18 2000/10/27 19:42:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.19 2002/09/04 14:04:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,11 +77,18 @@
 (defreg nfp 27)				; %i3
 (defreg cfunc 28)			; %i4
 (defreg code 29)			; %i5
-;; we can't touch reg 30 if we ever want to return
+;; we can't touch reg 30 (aka %i6, aka %fp) if we ever want to return
 (defreg lip 31)				; %i7
 
 (defregset non-descriptor-regs
   nl0 nl1 nl2 nl3 nl4 nl5 cfunc nargs nfp)
+
+;; These are the non-descriptor-regs that can be used to hold 64-bit
+;; integers in v8plus mode.  Basically any %o register, except we
+;; don't want NSP.
+#+(and sparc-v9 sparc-v8plus)
+(defregset non-descriptor64-regs
+  nl0 nl1 nl2 nl3 nl4 nl5 nargs)
 
 (defregset descriptor-regs
   a0 a1 a2 a3 a4 a5 ocfp lra cname lexenv l0)
@@ -157,7 +164,6 @@
   ;; complex-long-floats.
   (complex-long-stack non-descriptor-stack :element-size 8 :alignment 4)
 
-
   ;; **** Things that can go in the integer registers.
 
   ;; Immediate descriptor objects.  Don't have to be seen by GC, but nothing
@@ -205,6 +211,33 @@
   ;; Random objects that must not be seen by GC.  Used only as temporaries.
   (non-descriptor-reg registers
    :locations #.non-descriptor-regs)
+
+  ;; 64-bit signed and unsigned integers
+
+  #+(and sparc-v9 sparc-v8plus)
+  (signed64-stack non-descriptor-stack :element-size 2 :alignment 2)
+  #+(and sparc-v9 sparc-v8plus)
+  (unsigned64-stack non-descriptor-stack :element-size 2 :alignment 2)
+
+  ;; 64-bit signed or unsigned integers.  Since CMUCL is still a
+  ;; 32-bit app, the v8plus ABI says that only the global and out
+  ;; registers can be 64-bit.  (Because task switches will only
+  ;; preserve all 64 bits of these registers.  The other registers get
+  ;; stored on the stack and thus only preserve 32 bits.)  Since the
+  ;; globals are already spoken for, only the out registers are
+  ;; available.
+  #+(and sparc-v9 sparc-v8plus)
+  (signed64-reg registers
+    :locations #.non-descriptor64-regs
+    :constant-scs (zero immediate)
+    :save-p t
+    :alternate-scs (signed64-stack))
+  #+(and sparc-v9 sparc-v8plus)
+  (unsigned64-reg registers
+    :locations #.non-descriptor64-regs
+    :constant-scs (zero immediate)
+    :save-p t
+    :alternate-scs (unsigned64-stack))
 
   ;; Pointers to the interior of objects.  Used only as an temporary.
   (interior-reg registers
@@ -270,7 +303,9 @@
 
 
   ;; A catch or unwind block.
-  (catch-block control-stack :element-size vm:catch-block-size))
+  (catch-block control-stack :element-size vm:catch-block-size)
+  
+  )
 
 
 

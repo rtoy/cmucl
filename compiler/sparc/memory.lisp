@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/memory.lisp,v 1.3 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/memory.lisp,v 1.4 2002/09/04 14:04:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,6 +103,10 @@
        ,@(when write-p
 	   '((move result value))))))
 
+#+sparc-v9
+(define-indexer signed-word-index-ref nil ldsw 0)
+#+sparc-v9
+(define-indexer signed-word-index-set nil st 0)
 (define-indexer word-index-ref nil ld 0)
 (define-indexer word-index-set t st 0)
 (define-indexer halfword-index-ref nil lduh 1)

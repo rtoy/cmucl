@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.21 2000/05/02 04:44:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.22 2002/09/04 14:04:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,6 +51,7 @@
 (def-primitive-type signed-byte-64 (signed-reg descriptor-reg)
   :type (signed-byte 64))
 
+
 (defvar *fixnum-primitive-type* (primitive-type-or-lose 'fixnum))
 
 (def-primitive-type-alias tagged-num (:or positive-fixnum fixnum))
@@ -65,6 +66,24 @@
 					  #-alpha unsigned-byte-31
 					  #+alpha unsigned-byte-63
 					  positive-fixnum))
+#+(and sparc-v9 sparc-v8plus)
+(progn
+(def-primitive-type unsigned-byte-63 (signed64-reg unsigned64-reg descriptor-reg)
+  :type (unsigned-byte 63))
+
+(def-primitive-type signed-byte-64 (signed64-reg descriptor-reg)
+  :type (signed-byte 64))
+
+(def-primitive-type unsigned-byte-64 (unsigned64-reg descriptor-reg)
+  :type (unsigned-byte 64))
+
+(def-primitive-type-alias signed64-num (:or signed-byte-64
+					    unsigned-byte-63))
+
+(def-primitive-type-alias unsigned64-num (:or unsigned-byte-64
+					      unsigned-byte-63))
+
+)
 
 ;;; Other primitive immediate types.
 (def-primitive-type base-char (base-char-reg any-reg))
@@ -78,7 +97,7 @@
 (def-primitive-type funcallable-instance (descriptor-reg))
 
 ;;; Primitive other-pointer number types.
-;;; 
+;;;
 (def-primitive-type bignum (descriptor-reg))
 (def-primitive-type ratio (descriptor-reg))
 (def-primitive-type complex (descriptor-reg))
@@ -222,11 +241,18 @@
 			  (eq t2-name #-alpha 'unsigned-byte-31
 				      #+alpha 'unsigned-byte-63)
 			  (eq t2-name #-alpha 'unsigned-byte-32
-				      #+alpha 'unsigned-byte-64))
+				      #+alpha 'unsigned-byte-64)
+			  #+(and sparc-v9 sparc-v8plus)
+			  (eq t2-name 'signed-byte-64)
+			  #+(and sparc-v9 sparc-v8plus)
+			  (eq t2-name 'unsigned-byte-64)
+			  )
 		      t2))
 		 (fixnum
 		  (case t2-name
 		    (#-alpha signed-byte-32 #+alpha signed-byte-64 t2)
+		    #+(and sparc-v9 sparc-v8plus)
+		    (signed-byte-64 t2)
 		    (#-alpha unsigned-byte-31 #+alpha unsigned-byte-63 
 		     (primitive-type-or-lose
 		      #-alpha 'signed-byte-32 #+alpha 'signed-byte-64
@@ -235,6 +261,9 @@
 		  (if (eq t2-name #-alpha 'unsigned-byte-31
 				  #+alpha 'unsigned-byte-63)
 		      t1))
+		 #+(and sparc-v9 sparc-v8plus)
+		 (signed-byte-64
+		  t1)
 		 (#-alpha unsigned-byte-31 #+alpha unsigned-byte-63
 		  (if (eq t2-name #-alpha 'unsigned-byte-32
 				  #+alpha 'unsigned-byte-64)
@@ -254,15 +283,15 @@
 				    (unsigned-byte-31 0 #.(1- (ash 1 31)))
 				    #-alpha
 				    (unsigned-byte-32 0 #.(1- (ash 1 32)))
-				    #+alpha
+				    #+(or alpha (and sparc-v9 sparc-v8plus))
 				    (unsigned-byte-63 0 #.(1- (ash 1 63)))
-				    #+alpha
+				    #+(or alpha (and sparc-v9 sparc-v8plus))
 				    (unsigned-byte-64 0 #.(1- (ash 1 64)))
 				    (fixnum #.(ash -1 29) #.(1- (ash 1 29)))
 				    #-alpha
 				    (signed-byte-32 #.(ash -1 31)
 						    #.(1- (ash 1 31)))
-				    #+alpha
+				    #+(or alpha (and sparc-v9 sparc-v8plus))
 				    (signed-byte-64 #.(ash -1 63)
 						    #.(1- (ash 1 63))))
 				 (if (or (< hi (ash -1 29))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.35 2002/08/07 13:51:15 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.36 2002/09/04 14:04:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1753,6 +1753,7 @@ about function addresses and register values.")
 
 ;;;; li, jali, ji, nop, cmp, not, neg, move, and more
 
+#-sparc-v9
 (defun %li (reg value)
   (etypecase value
     ((signed-byte 13)
@@ -1767,16 +1768,107 @@ about function addresses and register values.")
      (inst sethi reg value)
      (inst add reg value))))
 
+#+sparc-v9
+(defun %li (reg value)
+  (etypecase value
+    ((signed-byte 13)
+     (inst add reg zero-tn value))
+    ((unsigned-byte 32)
+     (let ((hi (ldb (byte 22 10) value))
+	   (lo (ldb (byte 10 0) value)))
+       ;; Sethi sets the top 32-bits to zero.
+       (inst sethi reg hi)
+       (unless (zerop lo)
+	 (inst add reg lo))))
+    ((signed-byte 32)
+     (let ((hi (ldb (byte 22 10) value))
+	   (lo (ldb (byte 10 0) value)))
+       ;; Sethi sets the top 32-bits to zero.
+       (inst sethi reg hi)
+       (unless (zerop lo)
+	 (inst add reg lo))
+       ;; Sign-extend the result
+       (inst sra reg 0)))
+    (fixup
+     (inst sethi reg value)
+     (inst add reg value))))
+
 (define-instruction-macro li (reg value)
   `(%li ,reg ,value))
 
+#+sparc-v9
+(progn
+(defun %li64 (reg value &optional temp)
+  (etypecase value
+    ((signed-byte 13)
+     (inst add reg zero-tn value))
+    ((unsigned-byte 32)
+     (let ((hi (ldb (byte 22 10) value))
+	   (lo (ldb (byte 10 0) value)))
+       (inst sethi reg hi)
+       (unless (zerop lo)
+	 (inst add reg lo))))
+    ((signed-byte 32)
+     (let ((hi (ldb (byte 22 10) value))
+	   (lo (ldb (byte 10 0) value)))
+       ;; Sethi sets the top 32-bits to zero.
+       (inst sethi reg hi)
+       (unless (zerop lo)
+	 (inst add reg lo))
+       ;; Sign-extend the result
+       (inst sra reg 0)))
+    ((unsigned-byte 32)
+     (let ((hi (ldb (byte 22 10) value))
+	   (lo (ldb (byte 10 0) value)))
+       ;; Sethi sets the top 32-bits to zero.
+       (inst sethi reg hi)
+       (unless (zerop lo)
+	 (inst add reg lo))))
+    ((or (signed-byte 64) (unsigned-byte 64))
+     (cond (temp
+	    ;; If we have a temp register to use, we can use this
+	    ;; shorter sequence
+	    (let ((hh (ldb (byte 22 42) value))
+		  (lm (ldb (byte 22 32) value))
+		  (hm (ldb (byte 22 10) value))
+		  (lo (ldb (byte 10 0) value)))
+	      (inst sethi temp hh)
+	      (inst sethi reg lm)
+	      (inst or temp hm)
+	      (inst or reg lo)
+	      (inst sllx temp 32)
+	      (inst or reg temp)))
+	   (t
+	    ;; Hmm, no temp register given, so we have to use the
+	    ;; following longer sequence.
+	    (let ((bits-63-48 (ldb (byte 16 48) value))
+		  (bits-47-36 (ldb (byte 12 36) value))
+		  (bits-35-24 (ldb (byte 12 24) value))
+		  (bits-23-12 (ldb (byte 12 12) value))
+		  (bits-11-00 (ldb (byte 12 0) value)))
+	      (inst sethi reg bits-63-48)
+	      (inst or reg bits-47-36)
+	      (inst sllx reg 12)
+	      (inst or reg bits-35-24)
+	      (inst sllx reg 12)
+	      (inst or reg bits-23-12)
+	      (inst sllx reg 12)
+	      (inst or reg bits-11-00)))))
+    (fixup
+     (inst sethi reg value)
+     (inst add reg value))))
+
+(define-instruction-macro li64 (reg value &optional temp)
+  `(%li64 ,reg ,value ,temp))
+
+)  
 ;;; Jal to a full 32-bit address.  Tmpreg is trashed.
 (define-instruction jali (segment link tmpreg value)
   (:declare (type tn link tmpreg)
 	    (type (or (signed-byte 13) (signed-byte 32) (unsigned-byte 32)
 		      fixup) value))
   (:attributes variable-length)
-  (:vop-var vop)
+ (:vop-var vop)
   (:attributes branch)
   (:dependencies (writes link) (writes tmpreg))
   (:delay 1)
@@ -1860,6 +1952,8 @@ about function addresses and register values.")
    (emit-format-3-reg segment #b10 (reg-tn-encoding dst) #b000100
 		      0 0 0 (reg-tn-encoding src1))))
 
+;; As in the suggested synthetic instructions, a register move is
+;; really just or'ing the src register with %g0.
 (define-instruction move (segment dst src1)
   (:declare (type tn dst src1))
   (:printer format-3-reg ((op #b10) (op3 #b000010) (rs1 0))

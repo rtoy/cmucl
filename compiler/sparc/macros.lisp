@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.16 2002/05/10 14:48:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.17 2002/09/04 14:04:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.16 2002/05/10 14:48:24 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.17 2002/09/04 14:04:18 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -57,7 +57,25 @@
 		     (inst ,',inst ,object ,base ,temp)))))
 	   `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
   (frob loadw ld word-shift)
+  #+(and sparc-v9 sparc-v8plus)
+  (frob loadsw ldsw word-shift)
   (frob storew st word-shift))
+
+#+(and sparc-v9 sparc-v8plus)
+(macrolet
+    ((frob (op inst shift)
+     `(defmacro ,op (object base &optional (offset 0) (lowtag 0) temp)
+       (if temp
+	   (let ((offs (gensym)))
+	     `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
+	       (if (typep ,offs '(signed-byte 13))
+		   (inst ,',inst ,object ,base ,offs)
+		   (progn
+		     (inst li ,temp ,offs)
+		     (inst ,',inst ,object ,base ,temp)))))
+	   `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
+  (frob loadq ldx (* 2 word-shift))
+  (frob storeq stx (* 2 word-shift)))
 
 (defmacro load-symbol (reg symbol)
   `(inst add ,reg null-tn (static-symbol-offset ,symbol)))
@@ -108,7 +126,7 @@
   "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
      (inst j ,function
-	   (- (ash function-code-offset word-shift) function-pointer-type))
+	   (- (ash function-code-offset word-shift) vm:function-pointer-type))
      (move code-tn ,function)))
 
 (defmacro lisp-return (return-pc &key (offset 0) (frob-code t))

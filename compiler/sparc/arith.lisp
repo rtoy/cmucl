@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.29 2002/08/07 15:22:05 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.30 2002/09/04 14:04:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,7 +63,6 @@
   (:generator 1
     (inst not res x)))
 
-
 
 ;;;; Binary fixnum operations.
 
@@ -93,7 +92,6 @@
   (:result-types signed-num)
   (:note "inline (signed-byte 32) arithmetic"))
 
-
 (define-vop (fast-fixnum-binop-c fast-safe-arith-op)
   (:args (x :target r :scs (any-reg zero)))
   (:info y)
@@ -120,7 +118,6 @@
   (:results (r :scs (signed-reg)))
   (:result-types signed-num)
   (:note "inline (signed-byte 32) arithmetic"))
-
 
 (eval-when (compile load eval)
 
@@ -357,6 +354,34 @@
       (unless (location= quo q)
 	(inst move quo q)))))
 
+#+nil
+(define-vop (fast-v9-truncate/signed64=>signed64 fast-safe-arith-op)
+  (:translate truncate)
+  (:args (x :scs (signed64-reg))
+	 (y :scs (signed64-reg)))
+  (:arg-types signed64-num signed64-num)
+  (:results (quo :scs (signed64-reg))
+	    (rem :scs (signed64-reg)))
+  (:result-types signed64-num signed64-num)
+  (:note "inline (signed-byte 32) arithmetic")
+  (:temporary (:scs (signed64-reg) :target quo) q)
+  (:temporary (:scs (signed64-reg)) r)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 8
+    (let ((zero (generate-error-code vop division-by-zero-error x y)))
+      (inst cmp y zero-tn)
+      (inst b :eq zero :pn :xcc)
+      (inst nop)
+
+      (inst sdivx q x y)
+      ;; Compute remainder
+      (inst mulx r q y)
+      (inst sub rem x r)
+      (unless (location= quo q)
+	(inst move quo q)))))
+
 (define-vop (fast-v9-truncate/unsigned=>unsigned fast-safe-arith-op)
   (:translate truncate)
   (:args (x :scs (unsigned-reg))
@@ -528,15 +553,54 @@
   (frob fast-ash-left/fixnum=>fixnum any-reg tagged-num any-reg 2)
   (frob fast-ash-left/unsigned=>unsigned unsigned-reg unsigned-num unsigned-reg 3))
 
+;;#+sparc-v9
+#+nil
+(define-vop (fast-ash-left/signed64=>signed64)
+    (:note "inline ASH")
+  (:translate ash)
+  (:args (number :scs (signed64-reg))
+	 (amount :scs (signed-reg unsigned-reg immediate)))
+  (:arg-types signed64-num positive-fixnum)
+  (:results (result :scs (signed64-reg)))
+  (:result-types ,type)
+  (:policy :fast-safe)
+  (:generator ,cost
+    ;; The result-type assures us that this shift will not
+    ;; overflow. And for fixnum's, the zero bits that get shifted in
+    ;; are just fine for the fixnum tag.
+    (sc-case amount
+      ((signed-reg unsigned-reg)
+       (inst sllx result number amount))
+      (immediate
+       (let ((amount (tn-value amount)))
+	 (assert (>= amount 0))
+	 (inst sllx result number amount))))))
+    
+#-(and sparc-v9 sparc-v8plus)
 (defknown ash-right-signed ((signed-byte #.vm:word-bits)
 			    (and fixnum unsigned-byte))
   (signed-byte #.vm:word-bits)
   (movable foldable flushable))
 
+#-(and sparc-v9 sparc-v8plus)
 (defknown ash-right-unsigned ((unsigned-byte #.vm:word-bits)
 			      (and fixnum unsigned-byte))
   (unsigned-byte #.vm:word-bits)
   (movable foldable flushable))
+
+#+(and sparc-v9 sparc-v8plus)
+(defknown ash-right-signed ((signed-byte #.(* 2 vm:word-bits))
+			    (and fixnum unsigned-byte))
+  (signed-byte #.(* 2 vm:word-bits))
+  (movable foldable flushable))
+
+#+(and sparc-v9 sparc-v8plus)
+(defknown ash-right-unsigned ((unsigned-byte #.(* 2 vm:word-bits))
+			      (and fixnum unsigned-byte))
+  (unsigned-byte #.(* 2 vm:word-bits))
+  (movable foldable flushable))
+
+
 
 ;; Some special cases where we want a right shift.  Just do the shift.
 ;; (Needs appropriate deftransforms to call these, though.)
@@ -562,7 +626,14 @@
   (frob ash-right-signed fast-ash-right/signed=>signed
 	signed-reg signed-num sra 3)
   (frob ash-right-unsigned fast-ash-right/unsigned=>unsigned
-	unsigned-reg unsigned-num srl 3))
+	unsigned-reg unsigned-num srl 3)
+  #+(and sparc-v9 sparc-v8plus)
+  (frob ash-right-signed fast-ash-right/signed64=>signed64
+	signed64-reg signed64-num srax 3)
+  #+(and sparc-v9 sparc-v8plus)
+  (frob ash-right-unsigned fast-ash-right/unsigned64=>unsigned64
+	unsigned64-reg unsigned64-num srlx 3)
+  )
 
 (define-vop (fast-ash-right/fixnum=>fixnum)
     (:note "inline right ASH")
@@ -801,6 +872,8 @@
 
 (define-vop (fast-eql-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg descriptor-reg zero)))
+  ;; This is a signed-byte 11 because after fixnum shifting, we get a
+  ;; 13-bit number, and that's the largest immediate allowed.
   (:arg-types tagged-num (:constant (signed-byte 11)))
   (:info target not-p y)
   (:translate eql)
@@ -810,6 +883,8 @@
     (inst nop)))
 ;;;
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
+  ;; This is a signed-byte 11 because after fixnum shifting, we get a
+  ;; 13-bit number, and that's the largest immediate allowed.
   (:arg-types * (:constant (signed-byte 11)))
   (:variant-cost 6))
 
@@ -1313,6 +1388,8 @@
 
 ;; Need these so constant folding works with the deftransform.
 
+#-(and sparc-v9 sparc-v8plus)
+(progn
 (defun ash-right-signed (num shift)
   (declare (type (signed-byte #.vm:word-bits) num)
 	   (type (integer 0 #.(1- vm:word-bits)) shift))
@@ -1322,12 +1399,27 @@
   (declare (type (unsigned-byte #.vm:word-bits) num)
 	   (type (integer 0 #.(1- vm:word-bits)) shift))
   (ash num (- shift)))
+)
+
+#+(and sparc-v9 sparc-v8plus)
+(progn
+(defun ash-right-signed (num shift)
+  (declare (type (signed-byte #.(* 2 vm:word-bits)) num)
+	   (type (integer 0 #.(1- (* 2 vm:word-bits))) shift))
+  (ash num (- shift)))
+
+(defun ash-right-unsigned (num shift)
+  (declare (type (unsigned-byte #.(* 2 vm:word-bits)) num)
+	   (type (integer 0 #.(1- (* 2 vm:word-bits))) shift))
+  (ash num (- shift)))
+)
 
 ;; If we can prove that we have a right shift, just do the right shift
 ;; instead of calling the inline ASH which has to check for the
 ;; direction of the shift at run-time.
 (in-package "C")
 
+#-(and sparc-v9 sparc-v8plus)
 (deftransform ash ((num shift) (integer integer))
   (let ((num-type (continuation-type num))
 	(shift-type (continuation-type shift)))
@@ -1356,3 +1448,681 @@
 	  (t
 	   (give-up)))))
 
+#+(and later sparc-v9 sparc-v8plus)
+(deftransform ash ((num shift) (integer integer))
+  (let ((num-type (continuation-type num))
+	(shift-type (continuation-type shift)))
+    ;; Can only handle right shifts
+    (unless (csubtypep shift-type (specifier-type '(integer * 0)))
+      (give-up))
+
+    ;; If we can prove the shift is so large that all bits are shifted
+    ;; out, return the appropriate constant.  If the shift is small
+    ;; enough, call the VOP.  Otherwise, check for the shift size and
+    ;; do the appropriate thing.  (Hmm, could we just leave the IF
+    ;; s-expr and depend on other parts of the compiler to delete the
+    ;; unreachable parts, if any?)
+    (cond ((csubtypep num-type (specifier-type '(signed-byte #.(* 2 vm:word-bits))))
+	   ;; A right shift by 31 is the same as a right shift by
+	   ;; larger amount.  We get just the sign.
+	   (if (csubtypep shift-type (specifier-type '(integer #.(- 1 (* 2 vm:word-bits)) 0)))
+	       `(sparc::ash-right-signed num (- shift))
+	       `(sparc::ash-right-signed num (min (- shift) #.(1- (* 2 vm:word-bits))))))
+	  ((csubtypep num-type (specifier-type '(unsigned-byte #.(* 2 vm:word-bits))))
+	   (if (csubtypep shift-type (specifier-type '(integer #.(- 1 (* 2 vm:word-bits)) 0)))
+	       `(sparc::ash-right-unsigned num (- shift))
+	       `(if (<= shift #.(- vm:word-bits))
+		 0
+		 (sparc::ash-right-unsigned num (- shift)))))
+	  (t
+	   (give-up)))))
+
+
+;;; 64-bit integer operations
+(in-package "SPARC")
+
+;; Unary operations
+
+#+(and sparc-v9 sparc-v8plus)
+(progn
+
+;;; The vops for the 64-bit operations are written this way because I
+;;; (RLT) can't figure out how to get representation selection to
+;;; convert signed-num and unsigned-num to signed64-num when
+;;; needed. (Actually, I don't even know how representation selection
+;;; works.)
+;;;
+;;; Thus, any arg that is a 64-bit register defines the SCS to include
+;;; the 64-bit reg and well as the 32-bit regs.  Then the generators
+;;; will have to dispatch on the sc type that is actually used.  This
+;;; probably generates lots of redundant moves, but we still win big
+;;; by not having to do bignum arithmetic.
+;;;
+;;; I think the dispatch could be simplified if we just sign or zero
+;;; extended the 32-bit registers in place.  However, we can't do that
+;;; in general because not all of the 32-bit regs preserve all 64-bits
+;;; on task switches.  If we constrain the 32-bit regs to be the same
+;;; 6 regs used for the 64-bit regs, we run out of regs when do
+;;; foreign function calls because we need 6 regs for that and we
+;;; don't have any more non-descriptor regs for temps.
+
+
+(define-vop (signed64-unop fast-safe-arith-op)
+  (:args (x :target res :scs (signed64-reg signed-reg unsigned-reg zero)))
+  (:results (res :scs (signed64-reg)))
+  (:arg-types (:or signed64-num signed-num unsigned-num))
+  (:result-types signed64-num)
+  (:temporary (:scs (signed64-reg)) x64)
+  (:note "inline (signed-byte 64) arithmetic"))
+
+(define-vop (fast-signed64-binop fast-safe-arith-op)
+  (:args (x :target r :scs (signed64-reg unsigned-reg signed-reg zero))
+	 (y :target r :scs (signed64-reg unsigned-reg signed-reg zero)))
+  (:arg-types (:or signed64-num signed-num unsigned-num)
+	      (:or signed64-num signed-num unsigned-num))
+  (:results (r :scs (signed64-reg)))
+  (:result-types signed64-num)
+  (:note "inline (signed-byte 64) arithmetic"))
+
+(define-vop (fast-signed64-binop-c fast-safe-arith-op)
+  (:args (x :target r :scs (signed64-reg unsigned-reg signed-reg zero)))
+  (:info y)
+  (:arg-types (:or signed64-num signed-num unsigned-num)
+	      (:constant (and (signed-byte 13) (not (integer 0 0)))))
+  (:results (r :scs (signed64-reg)))
+  (:result-types signed64-num)
+  (:note "inline (signed-byte 64) arithmetic"))
+
+(define-vop (fast-unsigned64-binop fast-safe-arith-op)
+  (:args (x :target r :scs (unsigned64-reg unsigned-reg zero))
+	 (y :target r :scs (unsigned64-reg unsigned-reg zero)))
+  (:arg-types (:or unsigned64-num unsigned-num)
+	      (:or unsigned64-num unsigned-num))
+  (:results (r :scs (unsigned64-reg)))
+  (:result-types unsigned64-num)
+  (:note "inline (unsigned-byte 64) arithmetic"))
+
+(define-vop (fast-unsigned64-binop-c fast-safe-arith-op)
+  (:args (x :target r :scs (unsigned64-reg unsigned-reg zero)))
+  (:info y)
+  (:arg-types (:or unsigned64-num unsigned-num)
+	      (:constant (and (signed-byte 13) (not (integer 0 0)))))
+  (:results (r :scs (unsigned64-reg)))
+  (:result-types unsigned64-num)
+  (:note "inline (unsigned-byte 64) arithmetic"))
+
+;; Extend the sign of Y appropriately and perform the desired
+;; operation. R is where the result should go, X is the first arg, Y
+;; is the second, and Y64 is a 64-bit temp reg for us to use.
+(defmacro sc-case-64 (r x y y64 op)
+  `(if (tn-p ,y)
+     (sc-case ,y
+       ((signed64-reg unsigned64-reg)
+	(inst ,op ,r ,x ,y))
+       (signed-reg
+	;; Sign-extend Y
+	(inst sra ,y64 ,y 0)
+	(inst ,op ,r ,x ,y64))
+       (unsigned-reg
+	;; Zero-extend Y
+	(inst srl ,y64 ,y 0)
+	(inst ,op ,r ,x ,y64))
+       (immediate
+	(inst ,op ,r ,x ,y)))
+      (inst ,op ,r ,x ,y)))
+
+;; Same as above, but we only have one arg.
+(defmacro sc-case-64-one-arg (r x x64 op)
+  `(sc-case ,x
+     ((signed64-reg unsigned64-reg)
+      (inst ,op ,r ,x))
+     (signed-reg
+      ;; Sign-extend X
+      (inst sra ,x64 ,x 0)
+      (inst ,op ,r ,x64))
+     (unsigned-reg
+      ;; Zero-extend X
+      (inst srl ,x64 ,x 0)
+      (inst ,op ,r ,x64))))
+  
+;; Try all possible combinations of signed64-reg, signed-reg, and
+;; unsigned-reg and appropriately extend the sign of the shorter
+;; operand and perform the desired operation on the 64-bit operands
+;; with a 64-bit result.
+;;
+;; FIXME: This should be more like numeric-dispatch so it can be used
+;; in other places.
+(defmacro sc-dispatch (r x y x64 y64 op)
+  `(sc-case x
+     ((signed64-reg unsigned64-reg)
+      ;; X is 64-bits
+      (sc-case-64 ,r ,x ,y ,y64 ,op))
+     (signed-reg
+      ;; Sign-extend X
+      (inst sra ,x64 ,x 0)
+      (sc-case-64 ,r ,x64 ,y ,y64 ,op))
+     (unsigned-reg
+      ;; Zero-extend X
+      (inst srl ,x64 ,x 0)
+      (sc-case-64 ,r ,x64 ,y ,y64 ,op))))
+
+;; Operations that result in 64-bit results.
+
+(defmacro define-binop-64 (translate op)
+  `(progn
+    (define-vop (,(symbolicate "FAST-" translate "/SIGNED64")
+		 fast-signed64-binop)
+      (:translate ,translate)
+      (:temporary (:scs (signed64-reg)) x64 y64)
+      (:generator 2
+       (sc-dispatch r x y x64 y64 ,op)))
+    (define-vop (,(symbolicate "FAST-" translate "/UNSIGNED64")
+		 fast-unsigned64-binop)
+      (:translate ,translate)
+      (:temporary (:scs (signed64-reg)) x64 y64)
+      (:generator 2
+       (sc-dispatch r x y x64 y64 ,op)))
+    (define-vop (,(symbolicate "FAST-" translate "-C/SIGNED64")
+		 fast-signed64-binop-c)
+      (:translate ,translate)
+      (:temporary (:scs (signed64-reg)) x64 y64)
+      (:generator 2
+       (sc-dispatch r x y x64 y64 ,op)))
+    (define-vop (,(symbolicate "FAST-" translate "-C/UNSIGNED64")
+		 fast-unsigned64-binop-c)
+      (:translate ,translate)
+      (:temporary (:scs (signed64-reg)) x64 y64)
+      (:generator 2
+       (sc-dispatch r x y x64 y64 ,op)))
+    ))
+
+(define-binop-64 + add)
+(define-binop-64 - sub)
+(define-binop-64 logand and)
+(define-binop-64 logandc2 andn)
+(define-binop-64 logior or)
+(define-binop-64 logorc2 orn)
+(define-binop-64 logxor xor)
+(define-binop-64 logeqv xnor)
+
+;; Some special cases for logand.
+(define-vop (fast-logand/signed64 fast-safe-arith-op)
+  (:args (x :target r :scs (signed64-reg signed-reg zero))
+	 (y :target r :scs (signed64-reg signed-reg zero)))
+  (:arg-types (:or signed64-num signed-num)
+	      (:or signed64-num signed-num))
+  (:results (r :scs (signed64-reg)))
+  (:result-types signed64-num)
+  (:translate logand)
+  (:temporary (:scs (signed64-reg)) x64 y64)
+  (:generator 2
+    (sc-dispatch r x y x64 y64 and)))
+
+(define-vop (fast-logand/u32-64=>signed fast-safe-arith-op)
+  (:args (x :target r :scs (unsigned-reg zero))
+	 (y :target r :scs (signed64-reg unsigned64-reg signed-reg  zero)))
+  (:arg-types (:or unsigned-num)
+	      (:or signed64-num unsigned64-num signed-num))
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate logand)
+  (:generator 2
+    (sc-case y
+      ((signed64-reg unsigned64-reg)
+       (inst srl r x 0)			; Zero-extend, just in case
+       (inst and r y)
+       (inst srl r 0)			; Zero-extend, just in case
+       )
+      (signed-reg
+       (inst and r x y)
+       ))))
+
+
+(define-vop (fast-logand/64-u32=>signed fast-safe-arith-op)
+  (:args (x :target r :scs (signed64-reg unsigned64-reg signed-reg zero))
+	 (y :target r :scs (unsigned-reg zero)))
+  (:arg-types (:or signed64-num unsigned64-num signed-num)
+	      (:or unsigned-num))
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate logand)
+  (:generator 2
+    (sc-case x
+      ((signed64-reg unsigned64-reg)
+       (inst srl r y 0)			; Zero-extend, just in case
+       (inst and r x y)
+       (inst srl r 0)			; Zero-extend, just in case
+       )
+      (signed-reg
+       (inst and r x y)
+       ))))
+
+(define-vop (fast-lognot/signed64 signed64-unop)
+  (:translate lognot)
+  (:generator 2
+    (sc-case-64-one-arg res x x64 not)))
+
+(define-vop (fast-negate/signed64 signed64-unop)
+  (:args (x :target res :scs (signed64-reg zero)))
+  (:arg-types signed64-num)
+  (:results (res :scs (signed64-reg)))
+  (:result-types signed64-num)
+  (:translate %negate)
+  (:generator 1
+    (inst neg res x)))
+
+(define-vop (fast-negate/unsigned=>signed64 fast-safe-arith-op)
+  (:args (x :target res :scs (unsigned-reg zero)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (signed64-reg)))
+  (:result-types signed64-num)
+  (:translate %negate)
+  (:generator 1
+    ;; Zero-extend	      
+    (inst srl res x 0)
+    (inst neg res)))
+
+(define-vop (fast-negate/signed=>signed64 fast-safe-arith-op)
+  (:args (x :target res :scs (signed-reg zero)))
+  (:arg-types signed-num)
+  (:results (res :scs (signed64-reg)))
+  (:result-types signed64-num)
+  (:translate %negate)
+  (:generator 1
+    ;; Sign-extend	      
+    (inst sra res x 0)
+    (inst neg res)))
+
+;; Signed 64x64->64 bit multiply
+(define-vop (fast-*/signed64 fast-safe-arith-op)
+  (:args (x :target r :scs (signed64-reg unsigned64-reg unsigned-reg signed-reg zero))
+	 (y :target r :scs (signed64-reg unsigned64-reg unsigned-reg signed-reg zero)))
+  (:arg-types (:or signed64-num unsigned64-num signed-num unsigned-num)
+	      (:or signed64-num unsigned64-num signed-num unsigned-num))
+  (:results (r :scs (signed64-reg unsigned64-reg)))
+  (:result-types signed64-num)
+  (:temporary (:scs (signed64-reg)) x64 y64)
+  (:translate *)
+  (:note "inline (signed-byte 64) arithmetic")
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 3
+    (sc-dispatch r x y x64 y64 mulx)))
+
+(define-vop (fast-*/unsigned64 fast-safe-arith-op)
+  (:args (x :target r :scs (signed64-reg unsigned64-reg unsigned-reg signed-reg zero))
+	 (y :target r :scs (signed64-reg unsigned64-reg unsigned-reg signed-reg zero)))
+  (:arg-types (:or signed64-num unsigned64-num signed-num unsigned-num)
+	      (:or signed64-num unsigned64-num signed-num unsigned-num))
+  (:results (r :scs (signed64-reg unsigned64-reg)))
+  (:result-types unsigned64-num)
+  (:temporary (:scs (signed64-reg)) x64 y64)
+  (:translate *)
+  (:note "inline (signed-byte 64) arithmetic")
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 3
+    (sc-dispatch r x y x64 y64 mulx)))
+
+
+;; Signed 32x32->64 multiply 
+(define-vop (fast-*/signed=>signed64 fast-safe-arith-op)
+  (:args (x :target r :scs (signed-reg unsigned-reg zero))
+	 (y :target r :scs (signed-reg unsigned-reg zero)))
+  (:arg-types (:or signed-num unsigned-num)
+	      (:or signed-num unsigned-num))
+  (:results (r :scs (signed64-reg unsigned64-reg)))
+  (:result-types signed64-num)
+  (:temporary (:scs (signed64-reg)) x64 y64)
+  (:translate *)
+  (:note "inline (signed-byte 64) arithmetic")
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 3
+    (sc-dispatch r x y x64 y64 mulx)))
+
+;; Unsigned 32x32->64 multiply
+(define-vop (fast-*/u32=>unsigned64 fast-safe-arith-op)
+  (:args (x :target r :scs (unsigned-reg zero))
+	 (y :target r :scs (unsigned-reg zero)))
+  (:arg-types (:or unsigned-num)
+	      (:or unsigned-num))
+  (:results (r :scs (signed64-reg unsigned64-reg)))
+  (:result-types unsigned64-num)
+  (:temporary (:scs (unsigned64-reg)) x64 y64)
+  (:translate *)
+  (:note "inline (unsigned-byte 64) arithmetic")
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 3
+    (sc-dispatch r x y x64 y64 mulx)))
+
+(define-vop (fast-ash/signed64=>signed64)
+  (:note "inline (signed-byte 64) ASH")
+  (:args (number :scs (signed64-reg unsigned-reg signed-reg) :to :save)
+	 (amount :scs (signed64-reg signed-reg unsigned-reg) :to :save))
+  (:arg-types (:or signed64-num signed-num unsigned-num)
+	      (:or signed64-num signed-num unsigned-num))
+  (:results (result :scs (signed64-reg)))
+  (:result-types signed64-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc signed64-reg) ndesc)
+  (:temporary (:scs (signed64-reg)) num64)
+  (:guard (and (backend-featurep :sparc-v9)
+	       (backend-featurep :sparc-v8plus)
+	       (not (backend-featurep :sparc-64))))
+  (:generator 5
+    (sc-case number
+      (signed64-reg
+       (move num64 number))
+      (signed-reg
+       (inst sra num64 number 0))
+      (unsigned-reg
+       (inst srl num64 number 0)))
+    (sc-case amount
+      (signed64-reg
+       (let ((done (gen-label)))
+	 (inst cmp amount)
+	 (inst b :ge done :pt :xcc)
+	 ;; The result-type assures us that this shift will not
+	 ;; overflow.
+	 (inst sllx result num64 amount)
+	 (inst neg ndesc amount)
+	 ;; ndesc = max(-amount, 31)
+	 (inst cmp ndesc 31)
+	 (inst cmove :ge ndesc 31 :xcc)
+	 (inst srax result num64 ndesc)
+	 (emit-label done)))
+      (signed-reg
+       (let ((done (gen-label)))
+	 (inst cmp amount)
+	 (inst b :ge done :pt)
+	 ;; The result-type assures us that this shift will not
+	 ;; overflow.
+	 (inst sllx result num64 amount)
+	 (inst neg ndesc amount)
+	 ;; ndesc = max(-amount, 31)
+	 (inst cmp ndesc 31)
+	 (inst cmove :ge ndesc 31)
+	 (inst srax result num64 ndesc)
+	 (emit-label done)))
+      (unsigned-reg
+       (inst sllx result num64 amount))
+
+      (immediate
+       (let ((amount (tn-value amount)))
+	 (cond ((< amount -63)
+		(inst li result -1))
+	       ((< amount 0)
+		(inst srax result num64 (- amount)))
+	       ((> amount 0)
+		(inst sllx result num64 amount))
+	       (t
+		;; amount = 0.  Shouldn't happen because of a
+		;; deftransform, but it's easy.
+		(move result num64))))))))
+
+(define-vop (fast-ash/unsigned64=>unsigned64)
+  (:note "inline (signed-byte 64) ASH")
+  (:args (number :scs (unsigned64-reg unsigned-reg) :to :save)
+	 (amount :scs (signed64-reg signed-reg unsigned-reg immediate) :to :save))
+  (:arg-types (:or unsigned64-num unsigned-num)
+	      (:or signed64-num signed-num unsigned-num))
+  (:results (result :scs (unsigned64-reg)))
+  (:result-types unsigned64-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:scs (unsigned64-reg)) ndesc num64)
+  (:guard (and (backend-featurep :sparc-v9)
+	       (backend-featurep :sparc-v8plus)
+	       (not (backend-featurep :sparc-64))))
+  (:generator 5
+    (sc-case number
+      (unsigned64-reg
+       (move num64 number))
+      (unsigned-reg
+       (inst srl num64 number 0)))
+    (sc-case amount
+      (signed64-reg
+       (let ((done (gen-label)))
+	 (inst cmp amount)
+	 (inst b :ge done :pt :xcc)
+	 ;; The result-type assures us that this shift will not
+	 ;; overflow.
+	 (inst sllx result num64 amount)
+	 (inst neg ndesc amount)
+	 ;; ndesc = max(-amount, 31)
+	 (inst cmp ndesc 31)
+	 (inst cmove :ge ndesc 31 :xcc)
+	 (inst srlx result num64 ndesc)
+	 (emit-label done)))
+      (signed-reg
+       (let ((done (gen-label)))
+	 (inst cmp amount)
+	 (inst b :ge done :pt)
+	 ;; The result-type assures us that this shift will not
+	 ;; overflow.
+	 (inst sllx result num64 amount)
+	 (inst neg ndesc amount)
+	 ;; ndesc = max(-amount, 31)
+	 (inst cmp ndesc 31)
+	 (inst cmove :ge ndesc 31)
+	 (inst srlx result num64 ndesc)
+	 (emit-label done)))
+      (unsigned-reg
+       (inst sllx result num64 amount))
+
+      (immediate
+       (let ((amount (tn-value amount)))
+	 (cond ((< amount -63)
+		(inst li result -1))
+	       ((< amount 0)
+		(inst srlx result num64 (- amount)))
+	       ((> amount 0)
+		(inst sllx result num64 amount))
+	       (t
+		;; amount = 0.  Shouldn't happen because of a
+		;; deftransform, but it's easy.
+		(move result num64))))))))
+
+
+
+;;; Conditional operations on 64-bit numbers
+
+(define-vop (fast-conditional-c/64-fixnum fast-conditional)
+  (:args (x :scs (signed64-reg unsigned-reg signed-reg zero)))
+  (:arg-types (:or signed64-num unsigned-num signed-num)
+	      (:constant (signed-byte 11)))
+  (:info target not-p y))
+	      
+(define-vop (fast-conditional/signed64 fast-conditional)
+  (:args (x :scs (signed64-reg unsigned-reg signed-reg zero))
+	 (y :scs (signed64-reg unsigned-reg signed-reg zero)))
+  (:arg-types (:or signed64-num unsigned-num signed-num)
+	      (:or signed64-num unsigned-num signed-num))
+  (:note "inline (signed-byte 64) comparison"))
+
+(define-vop (fast-conditional-c/signed64 fast-conditional)
+  (:args (x :scs (signed64-reg unsigned-reg signed-reg zero)))
+  (:arg-types (:or signed64-num unsigned-num signed-num)
+	      (:constant (signed-byte 13)))
+  (:info target not-p y)
+  (:note "inline (signed-byte 64) comparison"))
+
+(define-vop (fast-conditional/unsigned64 fast-conditional)
+  (:args (x :scs (unsigned64-reg zero))
+	 (y :scs (unsigned64-reg zero)))
+  (:arg-types (:or unsigned64-num)
+	      (:or unsigned64-num))
+  (:note "inline (unsigned-byte 64) comparison"))
+
+(define-vop (fast-conditional-c/unsigned64 fast-conditional)
+  (:args (x :scs (unsigned64-reg zero)))
+  (:arg-types (:or unsigned64-num)
+	      (:constant (unsigned-byte 12)))
+  (:info target not-p y)
+  (:note "inline (signed-byte 64) comparison"))
+
+;; If I were smarter, This would be a macro like it is for the 32-bit
+;; versions.  It's easier this way to see what's happening, though.
+;;
+(define-vop (fast-if-</signed64 fast-conditional/signed64)
+  (:translate <)
+  (:temporary (:scs (signed64-reg)) x64 y64)
+  (:generator 6
+    (sc-case x
+      (signed-reg
+       (inst sra x64 x 0))
+      (unsigned-reg
+       (inst srl x64 x 0))
+      (t
+       (move x64 x)))
+    (sc-case y
+      (signed-reg
+       (inst sra y64 y 0))
+      (unsigned-reg
+       (inst srl y64 y 0))
+      ((signed64-reg unsigned64-reg zero)
+       (move y64 y)))
+
+    (inst cmp x64 y64)
+    (inst b (if not-p :ge :lt)
+	  target :pt :xcc)
+    (inst nop)))
+
+(define-vop (fast-if->/signed64 fast-conditional/signed64)
+  (:translate >)
+  (:temporary (:scs (signed64-reg)) x64 y64)
+  (:generator 6
+    (sc-case x
+      (signed-reg
+       (inst sra x64 x 0))
+      (unsigned-reg
+       (inst srl x64 x 0))
+      (t
+       (move x64 x)))
+    (sc-case y
+      (signed-reg
+       (inst sra y64 y 0))
+      (unsigned-reg
+       (inst srl y64 y 0))
+      ((signed64-reg unsigned64-reg zero)
+       (move y64 y)))
+
+    (inst cmp x64 y64)
+    (inst b (if not-p :le :gt)
+	  target :pt :xcc)
+    (inst nop)))
+
+(define-vop (fast-if-eql/signed64 fast-conditional/signed64)
+  (:translate eql)
+  (:temporary (:scs (signed64-reg)) x64 y64)
+  (:generator 6
+    (sc-case x
+      (signed-reg
+       (inst sra x64 x 0))
+      (unsigned-reg
+       (inst srl x64 x 0))
+      (t
+       (move x64 x)))
+    (sc-case y
+      (signed-reg
+       (inst sra y64 y 0))
+      (unsigned-reg
+       (inst srl y64 y 0))
+      ((signed64-reg unsigned64-reg zero)
+       (move y64 y)))
+
+    (inst cmp x64 y64)
+    (inst b (if not-p :ne :eq)
+	  target :pt :xcc)
+    (inst nop)))
+
+(define-vop (fast-if-eql-c/signed64 fast-conditional-c/signed64)
+  (:translate eql)
+  (:temporary (:scs (signed64-reg)) x64)
+  (:generator 6
+    (sc-case x
+      (signed-reg
+       (inst sra x64 x 0))
+      (unsigned-reg
+       (inst srl x64 x 0))
+      (t
+       (move x64 x)))
+    (inst cmp x64 y)
+    (inst b (if not-p :ne :eq)
+	  target :pt :xcc)
+    (inst nop)))
+
+(define-vop (fast-if-</unsigned64 fast-conditional/unsigned64)
+  (:translate <)
+  (:temporary (:scs (unsigned64-reg)) x64 y64)
+  (:generator 6
+    (sc-case x
+      (unsigned-reg
+       (inst srl x64 x 0))
+      (t
+       (move x64 x)))
+    (sc-case y
+      (unsigned-reg
+       (inst srl y64 y 0))
+      ((signed64-reg unsigned64-reg zero)
+       (move y64 y)))
+
+    (inst cmp x64 y64)
+    (inst b (if not-p :geu :ltu)
+	  target :pt :xcc)
+    (inst nop)))
+
+(define-vop (fast-if->/unsigned64 fast-conditional/unsigned64)
+  (:translate >)
+  (:temporary (:scs (unsigned64-reg)) x64 y64)
+  (:generator 6
+    (sc-case x
+      (unsigned-reg
+       (inst srl x64 x 0))
+      (t
+       (move x64 x)))
+    (sc-case y
+      (unsigned-reg
+       (inst srl y64 y 0))
+      ((signed64-reg unsigned64-reg zero)
+       (move y64 y)))
+
+    (inst cmp x64 y64)
+    (inst b (if not-p :leu :gtu)
+	  target :pt :xcc)
+    (inst nop)))
+
+(define-vop (fast-if-eql/unsigned64 fast-conditional/unsigned64)
+  (:translate eql)
+  (:temporary (:scs (unsigned64-reg)) x64 y64)
+  (:generator 6
+    (sc-case x
+      (unsigned-reg
+       (inst srl x64 x 0))
+      (t
+       (move x64 x)))
+    (sc-case y
+      (unsigned-reg
+       (inst srl y64 y 0))
+      ((signed64-reg unsigned64-reg zero)
+       (move y64 y)))
+
+    (inst cmp x64 y64)
+    (inst b (if not-p :ne :eq)
+	  target :pt :xcc)
+    (inst nop)))
+
+(define-vop (fast-if-eql-c/unsigned64 fast-conditional-c/unsigned64)
+  (:translate eql)
+  (:temporary (:scs (unsigned64-reg)) x64)
+  (:generator 6
+    (sc-case x
+      (unsigned-reg
+       (inst srl x64 x 0))
+      (t
+       (move x64 x)))
+    (inst cmp x64 y)
+    (inst b (if not-p :ne :eq)
+	  target :pt :xcc)
+    (inst nop)))
+  
+)
