@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.2 1991/02/08 13:35:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.3 1992/02/15 12:50:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -264,7 +264,7 @@ to aborting due to a throw."
       ((wire-eof #'(lambda (condition)
 		     (declare (ignore condition))
 		     (system:invalidate-descriptor (wire-fd wire))
-		     (mach:unix-close (wire-fd wire))
+		     (unix:unix-close (wire-fd wire))
 		     (dolist (pending *pending-returns*)
 		       (when (eq (car pending)
 				 wire)
