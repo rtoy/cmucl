@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.2 1990/12/04 20:58:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.3 1991/03/07 18:42:29 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
@@ -94,7 +94,7 @@
     (let ((error (generate-error-code vop invalid-array-index-error
 				      array bound index)))
       (inst cmp index bound)
-      (inst b :gtu error)
+      (inst b :geu error)
       (inst nop)
       (move result index))))
 
