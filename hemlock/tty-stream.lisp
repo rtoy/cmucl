@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-stream.lisp,v 1.1.1.3 1991/11/09 03:06:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-stream.lisp,v 1.1.1.4 1993/08/25 02:11:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 ;;; (if only) difference is in TTY-HUNK-STREAM-NEWLINE.
 ;;;
 
-(in-package 'hemlock-internals)
+(in-package "HEMLOCK"-internals)
 
 
 

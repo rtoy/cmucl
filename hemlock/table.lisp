@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.1.1.5 1991/12/20 18:25:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.1.1.6 1993/08/25 02:10:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -220,7 +220,7 @@
 	    ;; move the buggers down a slot
 	    (replace ,vector ,vector :start1 (1+ ,pos) :start2 ,pos)
 	    (setf (svref ,vector ,pos) ,element)
-	    ,vector)))))
+	    ,vector))))
 
 (define-modify-macro nconcf (&rest args) nconc)
 

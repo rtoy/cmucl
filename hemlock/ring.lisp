@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ring.lisp,v 1.1.1.2 1991/02/08 16:37:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ring.lisp,v 1.1.1.3 1993/08/25 02:10:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;;  This file defines a ring-buffer type and access functions.
 ;;;
-(in-package 'hemlock-internals)
+(in-package "HEMLOCK"-internals)
 (export '(ring ringp make-ring ring-push ring-pop ring-length ring-ref
 	       rotate-ring))
 
@@ -35,9 +35,9 @@
 		 (:print-function %print-hring))
   "Used with Ring-Push and friends to implement ring buffers."
   (first -1 :type fixnum)	   ;The index of the first position used.
-  (bound () :type fixnum)	   ;The index after the last element.
-  delete-function		   ;The function  to be called on deletion. 
-  (vector () :type simple-vector)) ;The vector.
+  (bound (required-argument) :type fixnum)   ;The index after the last element.
+  delete-function ;The function  to be called on deletion. 
+  (vector (required-argument) :type simple-vector)) ;The vector.
 
 ;;; make-ring  --  Public
 ;;;

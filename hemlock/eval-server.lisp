@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.13 1992/02/15 01:05:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.14 1993/08/25 02:08:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -916,7 +916,6 @@
 ;;; compilation form.
 ;;;
 (defun compiler-error-handler (condition)
-  (declare (ignore condition))
   (when *compiler-wire*
     (wire:remote *compiler-wire*
       (lisp-error *compiler-note* nil nil

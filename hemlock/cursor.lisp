@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/cursor.lisp,v 1.1.1.4 1991/03/16 02:18:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/cursor.lisp,v 1.1.1.5 1993/08/25 02:08:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; Cursor: Routines for cursor positioning and recentering
 ;;;
-(in-package 'hemlock-internals)
+(in-package "HEMLOCK"-internals)
 (export '(mark-to-cursorpos center-window displayed-p scroll-window
 			    mark-column cursorpos-to-mark move-to-column))
 
