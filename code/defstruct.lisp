@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.28 1991/12/05 06:25:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.29 1991/12/14 08:56:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,12 +75,6 @@
 
 ;;; The legendary macro itself.
 
-;;; ### Bootstrap hack...
-;;; Install this definition only into the new compiler's environment so that we
-;;; don't break the bootstrap environment.
-;;;
-(compiler-let ((lisp::*bootstrap-defmacro* t))
-
 (defmacro defstruct (name-and-options &rest slot-descriptions)
   "Defstruct {Name | (Name Option*)} {Slot | (Slot [Default] {Key Value}*)}
   Define the structure type Name.  See the manual for details."
@@ -102,6 +96,12 @@
 			 ,(if (symbolp pf)
 			      `',pf
 			      `#',pf)))))
+	   ,@(let ((mlff (dd-make-load-form-fun defstruct)))
+	       (when mlff
+		 `((setf (info type load-form-maker ',name)
+			 ,(if (symbolp mlff)
+			      `',mlff
+			      `#',mlff)))))
 	   ',name)
 	`(progn
 	   (eval-when (compile load eval)
@@ -113,8 +113,6 @@
 	   ,@(define-accessors defstruct)
 	   ,@(define-copier defstruct)
 	   ',name))))
-
-); Compiler-Let
 	   
 
 ;;;; Parsing:
@@ -136,7 +134,9 @@
 	(saw-type)
 	(type 'structure)
 	(saw-named)
-	(offset 0))
+	(offset 0)
+	(make-load-form-fun nil)
+	(make-load-form-fun-p nil))
        ((null options)
 	(make-defstruct-description
 	 :name name
@@ -158,7 +158,8 @@
 			   (cons 'simple-array (cdr type)))
 			  (t (error "~S is a bad :TYPE for Defstruct." type)))
 	 :named (if saw-type saw-named t)
-	 :offset offset))
+	 :offset offset
+	 :make-load-form-fun make-load-form-fun))
     (if (atom (car options))
 	(case (car options)
 	  (:constructor
@@ -197,22 +198,26 @@
 	     (setf include args)
 	     (let* ((name (car include))
 		    (included-structure
-		     (info type structure-info name))
-		    (included-print-function
-		     (if included-structure
-			 (dd-print-function included-structure))))
+		     (info type structure-info name)))
 	       (unless included-structure
 		 (error "Cannot find description of structure ~S to use for ~
 		         inclusion."
 			name))
 	       (unless pf-supplied-p
-		 (setf print-function included-print-function))))
+		 (setf print-function
+		       (dd-print-function included-structure)))
+	       (unless make-load-form-fun-p
+		 (setf make-load-form-fun
+		       (dd-make-load-form-fun included-structure)))))
 	    (:print-function
 	     (setf print-function (car args))
 	     (setf pf-supplied-p t))
 	    (:type (setf saw-type t type (car args)))
 	    (:named (error "The Defstruct option :NAMED takes no arguments."))
 	    (:initial-offset (setf offset (car args)))
+	    (:make-load-form-fun
+	     (setf make-load-form-fun (car args))
+	     (setf make-load-form-fun-p t))
 	    (t (error "~S is an unknown Defstruct option." option)))))))
 
 
@@ -669,13 +674,14 @@
   (let* ((type (structure-ref structure 0))
 	 (dd (info type defined-structure-info type)))
     (cond (*print-pretty*
-	   (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
+	   (pprint-logical-block (stream structure :allow-atoms t
+					 :prefix "#S(" :suffix ")")
 	     (prin1 type stream)
 	     (let ((slots (dd-slots dd)))
 	       (when slots
 		 (write-char #\space stream)
-		 (pprint-indent :current 0 stream)
-		 (pprint-newline :miser stream)
+		 (pprint-indent :block 2 stream)
+		 (pprint-newline :linear stream)
 		 (loop
 		   (pprint-pop)
 		   (let ((slot (pop slots)))
@@ -705,3 +711,18 @@
 	     (output-object (dsd-name (car slots)) stream)
 	     (write-char #\space stream)
 	     (output-object (structure-ref structure index) stream))))))
+
+
+(defun make-structure-load-form (structure)
+  (declare (type structure structure))
+  (let* ((type (structure-ref structure 0))
+	 (fun (info type load-form-maker type)))
+    (etypecase fun
+      ((member :just-dump-it-normally :ignore-it)
+       fun)
+      (null
+       (error "Structures of type ~S cannot be dumped as constants." type))
+      (function
+       (funcall fun structure))
+      (symbol
+       (funcall (symbol-function fun) structure)))))
