@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.9 1999/05/30 23:13:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.10 2001/04/25 21:44:51 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -311,38 +311,56 @@
 	(primary ())
 	(after ())
 	(around ()))
-    (dolist (m applicable-methods)
-      (let ((qualifiers (if (listp m)
-			    (early-method-qualifiers m)
-			    (method-qualifiers m))))			    
-	(cond ((member ':before qualifiers)  (push m before))
-	      ((member ':after  qualifiers)  (push m after))
-	      ((member ':around  qualifiers) (push m around))
-	      (t
-	       (push m primary)))))
+    (flet ((lose (method why)
+	     (invalid-method-error
+	      method
+	      "The method ~S ~A.~%~
+               Standard method combination requires all methods to have one~%~
+               of the single qualifiers :AROUND, :BEFORE and :AFTER or to~%~
+               have no qualifier at all."
+	      method why)))
+      (dolist (m applicable-methods)
+	(let ((qualifiers (if (listp m)
+			      (early-method-qualifiers m)
+			      (method-qualifiers m))))
+	  (cond
+	    ((null qualifiers) (push m primary))
+	    ((cdr qualifiers)
+	     (lose m "has more than one qualifier"))
+	    ((eq (car qualifiers) :around)
+	     (push m around))
+	    ((eq (car qualifiers) :before)
+	     (push m before))
+	    ((eq (car qualifiers) :after)
+	     (push m after))
+	    (t
+	     (lose m "has an illegal qualifier"))))))
     (setq before  (reverse before)
 	  after   (reverse after)
 	  primary (reverse primary)
 	  around  (reverse around))
     (cond ((null primary)
-	   `(error "No primary method for the generic function ~S." ',generic-function))
+	   `(error "No primary method for the generic function ~S."
+	     ',generic-function))
 	  ((and (null before) (null after) (null around))
 	   ;;
-	   ;; By returning a single call-method `form' here we enable an important
-	   ;; implementation-specific optimization.
+	   ;; By returning a single call-method `form' here we enable an
+	   ;; important implementation-specific optimization.
 	   ;; 
 	   `(call-method ,(first primary) ,(rest primary)))
 	  (t
 	   (let ((main-effective-method
 		   (if (or before after)
 		       `(multiple-value-prog1
-			  (progn ,(make-call-methods before)
-				 (call-method ,(first primary) ,(rest primary)))
+			  (progn
+			    ,(make-call-methods before)
+			    (call-method ,(first primary) ,(rest primary)))
 			  ,(make-call-methods (reverse after)))
 		       `(call-method ,(first primary) ,(rest primary)))))
 	     (if around
 		 `(call-method ,(first around)
-			       (,@(rest around) (make-method ,main-effective-method)))
+			       (,@(rest around)
+				(make-method ,main-effective-method)))
 		 main-effective-method))))))
 
 ;;;
@@ -378,6 +396,8 @@
                DEFINE-METHOD-COMBINATION or a method on the generic~%~
                function COMPUTE-EFFECTIVE-METHOD).")))
 
+;This definition appears in defcombin.lisp.
+;
 ;(defmethod compute-effective-method :around        ;issue with magic
 ;	   ((generic-function generic-function)     ;generic functions
 ;	    (method-combination method-combination)

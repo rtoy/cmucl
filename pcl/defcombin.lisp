@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.10 1999/05/30 23:13:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.11 2001/04/25 21:44:51 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -41,6 +41,29 @@
 	   (listp (caddr form)))
       (expand-long-defcombin form)
       (expand-short-defcombin form)))
+
+
+;;;
+;;; Implementation of INVALID-METHOD-ERROR and METHOD-COMBINATION-ERROR
+;;;
+;;; See combin.lisp for rest of the implementation.  This method is
+;;; defined here because compute-effective-method is still a function
+;;; in combin.lisp.
+;;;
+(defmethod compute-effective-method :around
+    ((generic-function generic-function)
+     (method-combination method-combination)
+     applicable-methods)
+  (declare (ignore applicable-methods))
+  (flet ((real-invalid-method-error (method format-string &rest args)
+	   (declare (ignore method))
+	   (apply #'error format-string args))
+	 (real-method-combination-error (format-string &rest args)
+	   (apply #'error format-string args)))
+    (let ((*invalid-method-error* #'real-invalid-method-error)
+	  (*method-combination-error* #'real-method-combination-error))
+      (call-next-method))))
+
 
 
 ;;;
