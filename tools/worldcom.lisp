@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.83 2002/11/05 22:45:53 cracauer Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.84 2003/02/03 14:17:24 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,10 +208,8 @@
   (comf "target:code/gc")
   (comf "target:code/purify"))
 (when (c:backend-featurep :gengc)
-  (comf "target:code/gengc")
-  (comf "target:code/scavhook"))
-(when (c:backend-featurep :gencgc)
-  (comf "target:code/scavhook"))
+  (comf "target:code/gengc"))
+(comf "target:code/scavhook")
 
 (comf "target:code/save")
 
