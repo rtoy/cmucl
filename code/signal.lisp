@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.30 2001/03/04 20:12:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.31 2001/04/10 12:44:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,8 +179,9 @@
   "Unix-kill sends the signal signal to the process with process 
    id pid.  Signal should be a valid signal number or a keyword of the
    standard UNIX signal name."
-  (real-unix-kill pid (unix-signal-number signal)))
-
+  (if (minusp (real-unix-kill pid (unix-signal-number signal)))
+      (values nil unix-errno)
+      t))
 
 (declaim (inline real-unix-killpg))
 
@@ -192,8 +193,9 @@
   "Unix-killpg sends the signal signal to the all the process in process
   group PGRP.  Signal should be a valid signal number or a keyword of
   the standard UNIX signal name."
-  (real-unix-killpg pgrp (unix-signal-number signal)))
-
+  (if (minusp (real-unix-killpg pgrp (unix-signal-number signal)))
+      (values nil unix-errno)
+      t))
 
 (alien:def-alien-routine ("sigblock" unix-sigblock) c-call:unsigned-long
   "Unix-sigblock cause the signals specified in mask to be
