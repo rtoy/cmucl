@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.71 1997/02/08 17:22:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.72 1997/11/04 09:10:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -915,12 +915,19 @@
 ;	(format t "c-lra-fpc ~a ~a ~a~%" pc code pc-offset)
 	(values pc-offset code)))))
 
+#+x86
+(defun stack-ref-32 (stack offset)
+  (declare (type sys:system-area-pointer stack)
+	   (type fixnum offset)
+	   (optimize (speed 3) (safety 0)))
+  (kernel::get-lisp-obj-address (stack-ref stack offset)))
+
 ;;; maybe these should be generalized in xxx-vm.lisp
 ;;;(proclaim '(inline old-frame-pointer lisp-return-pc))
 (defun old-frame-pointer(scp)
   (declare (type (alien:alien (* unix:sigcontext)) scp))
   (let* #+x86 ((cfp (vm:sigcontext-register scp vm::ebp-offset))
-	       (ofp (kernel:stack-ref (int-sap cfp) vm::ocfp-save-offset)))
+	       (ofp (stack-ref-32 (int-sap cfp) vm::ocfp-save-offset)))
 	#-x86 ((ofp (vm:sigcontext-register scp vm::ocfp-offset)))
 	(declare (type (unsigned-byte 32) #+x86 cfp ofp))
 	(int-sap ofp)))
@@ -931,7 +938,7 @@
   ;;; return a value that can be used in computation
   (declare (type (alien:alien (* unix:sigcontext)) scp))
   (let* ((cfp (vm:sigcontext-register scp vm::ebp-offset))
-	 (lra (kernel:stack-ref (int-sap cfp) vm::return-pc-save-offset)))
+	 (lra (stack-ref-32 (int-sap cfp) vm::return-pc-save-offset)))
     lra))
 #-x86
 (defun lisp-return-pc(scp)
@@ -957,8 +964,8 @@
 ;; These return hopefully correct ofp ret values at a call site
 (defun maybe-lisp-from-c(fp)
   (declare (type system-area-pointer fp))
-  (let ((s0 (kernel:stack-ref fp vm::old-fp-save-offset))
-	(s1 (kernel:stack-ref fp vm::return-pc-save-offset)))
+  (let ((s0 (stack-ref-32 fp vm::old-fp-save-offset))
+	(s1 (stack-ref-32 fp vm::return-pc-save-offset)))
     (when (and (kernel:make-lisp-obj s0)(kernel:make-lisp-obj s1))
       (let ((lisp-ofp (int-sap s0))
 	    (lisp-lra (int-sap s1)))
@@ -973,8 +980,8 @@
 (defun maybe-lisp-from-lisp(fp)
     (declare (type system-area-pointer fp))
     (when (cstack-pointer-valid-p fp)
-      (let ((s0 (kernel:stack-ref fp vm::old-fp-save-offset))
-	    (s1 (kernel:stack-ref fp vm::return-pc-save-offset)))
+      (let ((s0 (stack-ref-32 fp vm::old-fp-save-offset))
+	    (s1 (stack-ref-32 fp vm::return-pc-save-offset)))
 	(when (and (kernel:make-lisp-obj s0)
 		   (kernel:make-lisp-obj s1))
 	  (let ((ofp (int-sap s0))
@@ -1145,9 +1152,9 @@
 	    (sub-access-debug-var-slot pointer loc escaped))))
 	(ecase stack-slot
 	  (#.vm::ocfp-save-offset
-	   (kernel:stack-ref pointer stack-slot))
+	   (stack-ref-32 pointer stack-slot))
 	  (#.vm::lra-save-offset
-	   (kernel:make-lisp-obj (kernel:stack-ref pointer stack-slot)))))))
+	   (kernel:stack-ref pointer stack-slot))))))
 
 ;;;
 (defun (setf get-context-value) (value frame stack-slot loc)
@@ -3082,9 +3089,8 @@
 	  (system:int-sap (- (system:sap-int fp)
 			  (* (+ (c::sc-offset-offset sc-offset) 2)
 				vm:word-bytes))) 0))
-      ((#.vm:control-stack-sc-number #.vm:immediate-stack-sc-number)
-       (kernel:make-lisp-obj
-	(kernel:stack-ref fp (c::sc-offset-offset sc-offset))))
+      (#.vm:control-stack-sc-number
+       (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
        (code-char
 	(system:sap-ref-32
@@ -3299,7 +3305,7 @@
 	      (system:sap+ fp (* (+ (c::sc-offset-offset sc-offset) 2)
 				 (- vm:word-bytes))) 0)
 	     (the double-float value)))
-      ((#.vm:control-stack-sc-number #.vm:immediate-stack-sc-number)
+      (#.vm:control-stack-sc-number
        (setf (kernel:stack-ref fp (c::sc-offset-offset sc-offset)) value))
       (#.vm:base-char-stack-sc-number
        (setf (system:sap-ref-32

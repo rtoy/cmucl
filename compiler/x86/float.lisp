@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.10 1997/11/01 22:58:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.11 1997/11/04 09:11:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -298,13 +298,11 @@
 (define-vop (move-from-single)
   (:args (x :scs (single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) ndescr)
   (:note "float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm:single-float-type
-			       vm:single-float-size)
-       (with-tn@fp-top(x)
-	 (inst fst (ea-for-sf-desc y))))))
+     (fixed-allocation y vm:single-float-type vm:single-float-size)
+     (with-tn@fp-top(x)
+       (inst fst (ea-for-sf-desc y)))))
 (define-move-vop move-from-single :move
   (single-reg) (descriptor-reg))
 
@@ -321,13 +319,11 @@
 (define-vop (move-from-double)
   (:args (x :scs (double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) ndescr)
   (:note "float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm:double-float-type
-			       vm:double-float-size)
-       (with-tn@fp-top(x)
-	 (inst fstd (ea-for-df-desc y))))))
+     (fixed-allocation y vm:double-float-type vm:double-float-size)
+     (with-tn@fp-top(x)
+       (inst fstd (ea-for-df-desc y)))))
 (define-move-vop move-from-double :move
   (double-reg) (descriptor-reg))
 
@@ -369,42 +365,36 @@
 (define-vop (move-from-complex-single)
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) ndescr)
   (:note "complex float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm:complex-single-float-type
-			       vm:complex-single-float-size)
-       (let ((real-tn (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg)
-				      :offset (tn-offset x))))
-	 (with-tn@fp-top(real-tn)
-	   (inst fst (ea-for-csf-real-desc y))))
-       (let ((imag-tn (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg)
-				      :offset (1+ (tn-offset x)))))
-	 (with-tn@fp-top(imag-tn)
-	   (inst fst (ea-for-csf-imag-desc y)))))))
+     (fixed-allocation y vm:complex-single-float-type
+		       vm:complex-single-float-size)
+     (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+				    :offset (tn-offset x))))
+       (with-tn@fp-top(real-tn)
+	 (inst fst (ea-for-csf-real-desc y))))
+     (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+				    :offset (1+ (tn-offset x)))))
+       (with-tn@fp-top(imag-tn)
+	 (inst fst (ea-for-csf-imag-desc y))))))
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
 
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
-  (:temporary (:sc dword-reg) ndescr)
   (:note "complex float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm:complex-double-float-type
-			       vm:complex-double-float-size)
-       (let ((real-tn (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (tn-offset x))))
-	 (with-tn@fp-top(real-tn)
-	   (inst fstd (ea-for-cdf-real-desc y))))
-       (let ((imag-tn (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1+ (tn-offset x)))))
-	 (with-tn@fp-top(imag-tn)
-	   (inst fstd (ea-for-cdf-imag-desc y)))))))
+     (fixed-allocation y vm:complex-double-float-type
+		       vm:complex-double-float-size)
+     (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+				    :offset (tn-offset x))))
+       (with-tn@fp-top(real-tn)
+	 (inst fstd (ea-for-cdf-real-desc y))))
+     (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+				    :offset (1+ (tn-offset x)))))
+       (with-tn@fp-top(imag-tn)
+	 (inst fstd (ea-for-cdf-imag-desc y))))))
 (define-move-vop move-from-complex-double :move
   (complex-double-reg) (descriptor-reg))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.4 1997/09/07 23:27:50 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.5 1997/11/04 09:10:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Debugging and Enhancements by Douglas Crosher 1996.
+;;; Debugging and Enhancements by Douglas Crosher 1996,1997.
 ;;;
 
 (in-package :x86)
@@ -205,7 +205,7 @@
   (:generator 0
     (assert (location= result esp-tn))
     (unless (zerop amount)
-      (let ( (delta (logandc2 (+ amount 3) 3)) )
+      (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub esp-tn delta)))
     (move result esp-tn)))
 
@@ -213,7 +213,7 @@
   (:info amount)
   (:generator 0
     (unless (zerop amount)
-      (let ( (delta (logandc2 (+ amount 3) 3)) )
+      (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst add esp-tn delta)))))
 
 (define-vop (alloc-alien-stack-space)
@@ -222,7 +222,7 @@
   (:generator 0
     (assert (not (location= result esp-tn)))
     (unless (zerop amount)
-      (let ( (delta (logandc2 (+ amount 3) 3)) )
+      (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub (make-ea :dword
 			   :disp (+ nil-value
 				    (static-symbol-offset '*alien-stack*)
@@ -235,7 +235,7 @@
   (:info amount)
   (:generator 0
     (unless (zerop amount)
-      (let ( (delta (logandc2 (+ amount 3) 3)) )
+      (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst add (make-ea :dword
 			   :disp (+ nil-value
 				    (static-symbol-offset '*alien-stack*)

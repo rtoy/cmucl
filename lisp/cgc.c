@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.6 1997/11/02 09:49:11 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.7 1997/11/04 09:11:21 dtc Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -404,7 +404,7 @@ static void new_cluster(int min_blocks)
     region->space = NULL;
 }
 
-unsigned long cgc_bytes_allocated = 0;	/* Seen by (dynamic-usage) */
+unsigned long bytes_allocated = 0;	/* Seen by (dynamic-usage) */
 static unsigned long auto_gc_trigger = 0;
 static int maybe_gc_called = 0;
 
@@ -471,7 +471,7 @@ static void *alloc_large(int nbytes)
     region->next = NULL;
     region->prev = NULL;
     region->space = NULL;
-    cgc_bytes_allocated += region->num_chunks*CHUNK_BYTES;
+    bytes_allocated += region->num_chunks*CHUNK_BYTES;
     move_to_newspace(region);
     return (char *)region + REGION_OVERHEAD;
 }
@@ -506,7 +506,7 @@ void *cgc_alloc(int nbytes)
 	  region->contains_small_objects = 1;
 	  space->alloc_ptr = (char *)region + REGION_OVERHEAD;
 	  space->alloc_end = (char *)region + CHUNK_BYTES;
-	  cgc_bytes_allocated += region->num_chunks*CHUNK_BYTES;
+	  bytes_allocated += region->num_chunks*CHUNK_BYTES;
 	}
       
       res = space->alloc_ptr;
@@ -1398,7 +1398,7 @@ scavengex(lispobj*obj)
 static void
 scavenge_space( lispobj*where, int words, char*name )
 {
-  int allocated = cgc_bytes_allocated;
+  int allocated = bytes_allocated;
   lispobj*end = where + words;
   lispobj*last;
   bytes_copied = 0;
@@ -1412,7 +1412,7 @@ scavenge_space( lispobj*where, int words, char*name )
   gc_assert(where == end);
   if(name)
     dprintf(noise,(" %ld bytes moved, %ld bytes allocated.\n",
-		   bytes_copied, cgc_bytes_allocated - allocated));
+		   bytes_copied, bytes_allocated - allocated));
 }
 
 static int boxed_registers[] = BOXED_REGISTERS;
@@ -1817,7 +1817,7 @@ static int dolog=0;			/* log copy ops to file */
 static int dover=0;			/* hunt pointers to oldspace */
 void cgc_collect_garbage()
 {
-  unsigned long allocated =  cgc_bytes_allocated;
+  unsigned long allocated =  bytes_allocated;
 
   dprintf(noise,("GC\n"));
   if(dolog && !log)
@@ -1850,10 +1850,10 @@ void cgc_collect_garbage()
   if(log)
     fclose(log);
   log=NULL;
-  dprintf(noise,("  %ld bytes copied.\n",(cgc_bytes_allocated - allocated)));
+  dprintf(noise,("  %ld bytes copied.\n",(bytes_allocated - allocated)));
   dprintf(noise,("  %ld bytes (%ld pages) reclaimed.\n",
 	     chunks_freed*CHUNK_BYTES, chunks_freed));
-  cgc_bytes_allocated -= chunks_freed*CHUNK_BYTES;
+  bytes_allocated -= chunks_freed*CHUNK_BYTES;
   maybe_gc_called = 0;
 }
 void cgc_free_heap()
@@ -1861,7 +1861,7 @@ void cgc_free_heap()
   /* Like above but just zap everything 'cause purify has
    * cleaned house!
    */
-  unsigned long allocated =  cgc_bytes_allocated;
+  unsigned long allocated =  bytes_allocated;
   flip_spaces();
   post_purify_fixup(oldspace);
   free_oldspace();
@@ -1869,7 +1869,7 @@ void cgc_free_heap()
 #if 0 /* purify is currently running on the C stack so don't do this */
   zero_stack();
 #endif
-  cgc_bytes_allocated -= chunks_freed*CHUNK_BYTES;
+  bytes_allocated -= chunks_freed*CHUNK_BYTES;
 }
 
 
@@ -1934,7 +1934,7 @@ char*alloc(int nbytes)
        * though because lisp will remember *need to collect garbage*
        * and get to it when it can.  */
       if( auto_gc_trigger		/* Only when enabled */
-	  && cgc_bytes_allocated > auto_gc_trigger
+	  && bytes_allocated > auto_gc_trigger
 	  && !maybe_gc_called++)		/* Only once         */
 	funcall0(SymbolFunction(MAYBE_GC));
       

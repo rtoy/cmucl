@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.2 1997/02/10 17:03:44 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.3 1997/11/04 09:10:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,24 +32,13 @@
 			 ((:arg type unsigned-reg eax-offset)
 			  (:arg length any-reg ebx-offset)
 			  (:arg words any-reg ecx-offset)
-			  (:res result descriptor-reg edx-offset)
-
-			  (:temp alloc dword-reg edi-offset))
-  #-cgc
-  (with-allocation (alloc)
-    (inst lea result (make-ea :byte :base alloc :disp other-pointer-type))
-    (inst add alloc
-	  (+ (1- (ash 1 lowtag-bits)) (* vector-data-offset word-bytes)))
-    (inst add alloc words)
-    (inst and alloc (lognot vm:lowtag-mask)))
-  #+cgc
-  (progn
-    (inst mov alloc (+ (1- (ash 1 lowtag-bits))
-		       (* vector-data-offset word-bytes)))
-    (inst add alloc words)
-    (inst and alloc (lognot vm:lowtag-mask))
-    (with-cgc-allocation(alloc alloc)
-      (inst lea result (make-ea :byte :base alloc :disp other-pointer-type))))
+			  (:res result descriptor-reg edx-offset))
+  (inst mov result (+ (1- (ash 1 lowtag-bits))
+		      (* vector-data-offset word-bytes)))
+  (inst add result words)
+  (inst and result (lognot vm:lowtag-mask))
+  (var-allocation result result)
+  (inst lea result (make-ea :byte :base result :disp other-pointer-type))
   (storew type result 0 other-pointer-type)
   (storew length result vector-length-slot other-pointer-type)
   (inst ret))

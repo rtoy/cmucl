@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34 1997/04/16 18:11:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.35 1997/11/04 09:10:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,16 +289,16 @@
 (defun info-hash (x)
   (cond
    ((symbolp x)
-    #-gengc (%sxhash-simple-string (symbol-name x))
-    #+gengc (symbol-hash x))
+    #-(or gengc x86) (%sxhash-simple-string (symbol-name x))
+    #+(or gengc x86) (symbol-hash x))
    ((and (listp x)
 	 (eq (car x) 'setf)
 	 (let ((next (cdr x)))
 	   (when (listp next)
 	     (let ((name (car next)))
 	       (when (and (symbolp name) (null (cdr next)))
-		 (logxor #-gengc (%sxhash-simple-string (symbol-name name))
-			 #+gengc (symbol-hash name)
+		 (logxor #-(or gengc x86) (%sxhash-simple-string (symbol-name name))
+			 #+(or gengc x86) (symbol-hash name)
 			 110680597)))))))
    (t
     (sxhash x))))
@@ -459,8 +459,8 @@
 	(logand
 	 (the fixnum
 	      (logxor (the fixnum
-			   #+gengc (info-hash ,name)
-			   #-gengc (cache-hash-eq ,name))
+			   #+(or gengc x86) (info-hash ,name)
+			   #-(or gengc x86) (cache-hash-eq ,name))
 		      (the fixnum (ash (the fixnum ,type) 7))))
 	 #x3FF)))
 
@@ -492,11 +492,11 @@
 ;;; Not needed with the gengc system, because we use an address independent
 ;;; hashing.
 ;;; 
-#-gengc
+#-(or gengc x86)
 (defun info-cache-gc-hook ()
   (setq *cached-info-environment* nil))
 ;;;
-#-gengc
+#-(or gengc x86)
 (pushnew 'info-cache-gc-hook *after-gc-hooks*)
 
 

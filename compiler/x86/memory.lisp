@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.3 1997/09/29 04:40:33 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.4 1997/11/04 09:11:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,6 +84,19 @@
 	     ,@(when set-trans
 		 `((:translate ,set-trans))))))))
 
+;;; X86 special
+(define-vop (cell-xadd)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (value :scs (any-reg) :target result))
+  (:results (result :scs (any-reg) :from (:argument 1)))
+  (:result-types tagged-num)
+  (:variant-vars offset lowtag)
+  (:policy :fast-safe)
+  (:generator 4
+    (move result value)
+    (inst xadd (make-ea :dword :base object
+			:disp (- (* offset word-bytes) lowtag))
+	  value)))
 
 ;;; Slot-Ref and Slot-Set are used to define VOPs like Closure-Ref, where the
 ;;; offset is constant at compile time, but varies for different uses.
@@ -141,3 +154,17 @@
 			   :disp (- (* (+ base offset) word-bytes) lowtag))
 	  temp)
     (move result eax)))
+
+;;; X86 special
+(define-vop (slot-xadd)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (value :scs (any-reg) :target result))
+  (:results (result :scs (any-reg) :from (:argument 1)))
+  (:result-types tagged-num)
+  (:variant-vars base lowtag)
+  (:info offset)
+  (:generator 4
+    (move result value)
+    (inst xadd (make-ea :dword :base object
+			:disp (- (* (+ base offset) word-bytes) lowtag))
+	  value)))

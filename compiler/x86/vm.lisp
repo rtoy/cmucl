@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.4 1997/11/01 22:58:46 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.5 1997/11/04 09:11:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996, 1997.
 ;;;
 
 (in-package :x86)
@@ -178,7 +179,6 @@
 
   ;; The control stack.
   (descriptor-stack stack)		; may be pointers, scanned by GC
-  (immediate-stack stack)		; isn't pointers, ignored by GC
 
   ;; The non-descriptor stacks.
   (signed-stack stack)			; (signed-byte 32)
@@ -198,36 +198,29 @@
 
   ;; **** Things that can go in the integer registers.
 
-  ;; We don't have to distinguish between descriptor and non-descriptor
-  ;; registers, because we dump explicit information about what descriptor
-  ;; values are live at any potential GC point.  Therefore, we only different
-  ;; scs to distinguish between descriptor and non-descriptor values and
-  ;; to specify size.
+  ;; We don't have to distinguish between descriptor and
+  ;; non-descriptor registers, because of the conservative GC.
+  ;; Therefore, we only use different scs to distinguish between
+  ;; descriptor and non-descriptor values and to specify size.
 
+
+  ;; Immediate descriptor objects.  Don't have to be seen by GC, but nothing
+  ;; bad will happen if they are.  (fixnums, characters, header values, etc).
   (any-reg registers
 	   :locations #.dword-regs
 	   :element-size 2
-	   :reserve-locations (#.eax-offset)
+;	   :reserve-locations (#.eax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
-	   :alternate-scs (immediate-stack))
+	   :alternate-scs (descriptor-stack))
 
   ;; Pointer descriptor objects.  Must be seen by GC.
   (descriptor-reg registers
 		  :locations #.dword-regs
 		  :element-size 2
-		  :reserve-locations (#.eax-offset)
+;		  :reserve-locations (#.eax-offset)
 		  :constant-scs
-		  (constant immediate 
-			    ;; zzz jrd added IMMEDIATE-STACK here.  
-			    ;; it seems right, and references elsewhere
-			    ;; in the code suggest that we expect to be
-			    ;; able to do this.  see 
-			    ;; DEFINE-MOVE-VOP MOVE :MOVE in MOVE.LISP
-			    
-			    ;; zzz this may not be right after all
-			    ;; immediate-stack
-			    )
+		  (constant immediate)
 		  :save-p t
 		  :alternate-scs (descriptor-stack))
 
@@ -243,7 +236,7 @@
   (sap-reg registers
 	   :locations #.dword-regs
 	   :element-size 2
-	   :reserve-locations (#.eax-offset)
+;	   :reserve-locations (#.eax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
 	   :alternate-scs (sap-stack))
@@ -252,14 +245,14 @@
   (signed-reg registers
 	      :locations #.dword-regs
 	      :element-size 2
-	      :reserve-locations (#.eax-offset)
+;	      :reserve-locations (#.eax-offset)
 	      :constant-scs (immediate)
 	      :save-p t
 	      :alternate-scs (signed-stack))
   (unsigned-reg registers
 		:locations #.dword-regs
 		:element-size 2
-		:reserve-locations (#.eax-offset)
+;		:reserve-locations (#.eax-offset)
 		:constant-scs (immediate)
 		:save-p t
 		:alternate-scs (unsigned-stack))
@@ -268,14 +261,17 @@
   (dword-reg registers
 	     :locations #.dword-regs
 	     :element-size 2
-	     :reserve-locations (#.eax-offset))
+;	     :reserve-locations (#.eax-offset)
+	     )
   (word-reg registers
 	    :locations #.word-regs
 	    :element-size 2
-	    :reserve-locations (#.ax-offset))
+;	    :reserve-locations (#.ax-offset)
+	    )
   (byte-reg registers
 	    :locations #.byte-regs
-	    :reserve-locations (#.al-offset #.ah-offset))
+;	    :reserve-locations (#.al-offset #.ah-offset)
+	    )
 
   ;; **** Things that can go in the floating point registers.
 
@@ -336,7 +332,7 @@
 (defconstant word-sc-names '(word-reg))
 (defconstant dword-sc-names
   '(any-reg descriptor-reg sap-reg signed-reg unsigned-reg dword-reg
-    descriptor-stack immediate-stack signed-stack unsigned-stack
+    descriptor-stack signed-stack unsigned-stack
     sap-stack single-stack constant))
 
 ;;;
@@ -392,7 +388,6 @@
 ;;; some instruction instead of in the constants pool, then return
 ;;; the immediate SC.
 ;;;
-
 #+nil ;; pw-- the way it was.
 (def-vm-support-routine immediate-constant-sc (value)
   (if (or (and (symbolp value) (static-symbol-p value))
@@ -409,24 +404,6 @@
                  #-lispworks3 'base-char))
       (sc-number-or-lose 'immediate *backend*)
       nil))
-
-;;; I probably should use double-from-bits here
-;;; to avoid any compilation errors, but lets see
-;;; what happens. These should be part of lisp like PI?
-(defconstant i387-lg2 3.010299956639811952137389d0)
-(defconstant i387-ln2 0.6931471805599453094172321d0)
-(defconstant i387-l10 2.3025850929940456840179915d0)
-(defconstant i387-l2e (/ i387-ln2))
-(defconstant i387-l2t (/ i387-l10 i387-ln2))
-(export '(i387-lg2 i387-ln2 i387-l10 i387-l2e i387-l2t))
-
-
-;;; pw-- A good try and it works, but it also results in
-;;; extra consing when the constant is an argument to
-;;; some function. The descriptor from the constants vector
-;;; would normally be passed instead. DTC processes zero and
-;;; one in move-from-single|double as static symbols to
-;;; save on CV space for these common values.
 
 (def-vm-support-routine immediate-constant-sc (value)
   (typecase value

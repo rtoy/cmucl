@@ -23,6 +23,8 @@
 
 #define BREAKPOINT_INST 0xcc	/* INT3 */
 
+unsigned long  fast_random_state = 1;
+
 char *
 arch_init(void)
 {

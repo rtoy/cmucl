@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.2 1997/02/23 09:42:02 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.3 1997/11/04 09:11:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
 
@@ -49,13 +49,11 @@
   (inst mov y (sap-int (tn-value x))))
 
 (define-move-function (load-constant 5) (vop x y)
-  ;; pfw adds any-reg to no effect
   ((constant) (descriptor-reg any-reg))
   (inst mov y x))
 
 (define-move-function (load-stack 5) (vop x y)
-  ((descriptor-stack) (descriptor-reg)
-   (immediate-stack) (any-reg)
+  ((descriptor-stack) (any-reg descriptor-reg)
    (base-char-stack) (base-char-reg)
    (sap-stack) (sap-reg)
    (signed-stack) (signed-reg)
@@ -63,26 +61,12 @@
   (inst mov y x))
 
 (define-move-function (store-stack 5) (vop x y)
-  ((descriptor-reg) (descriptor-stack)
-   (any-reg) (immediate-stack)
+  ((any-reg descriptor-reg) (descriptor-stack)
    (base-char-reg) (base-char-stack)
    (sap-reg) (sap-stack)
    (signed-reg) (signed-stack)
    (unsigned-reg) (unsigned-stack))
   (inst mov y x))
-
-;;;
-;;; ZZZZZ added by jrd.  add a move-function for immediate-stack -> descriptor-reg.
-;;; dunno if this is right, but we get into the pickle of trying to do this kind of
-;;; move a fair amount.  see if this fixes it
-;;;
-(define-move-function (load-immediate-stack 5) (vop x y)
-		      ((immediate-stack) (descriptor-reg))
-  (inst mov x y))
-
-(define-move-function (store-immediate-stack 5) (vop x y)
-		      ((descriptor-reg) (immediate-stack))
-  (inst mov x y))
 
 
 ;;;; The Move VOP:
@@ -94,12 +78,12 @@
 	       :load-if
 	       (not (or (location= x y)
 			(and (sc-is x any-reg descriptor-reg immediate)
-			     (sc-is y immediate-stack descriptor-stack))))))
+			     (sc-is y descriptor-stack))))))
   (:effects)
   (:affected)
   (:generator 0
     (if (and (sc-is x immediate)
-	     (sc-is y any-reg immediate-stack descriptor-reg descriptor-stack))
+	     (sc-is y any-reg descriptor-reg descriptor-stack))
 	(let ((val (tn-value x)))
 	  (etypecase val
 	    (integer
@@ -133,7 +117,7 @@
 (define-vop (move-argument)
   (:args (x :scs (any-reg descriptor-reg immediate) :target y
 	    :load-if (not (and (sc-is y any-reg descriptor-reg)
-			       (sc-is x immediate-stack))))
+			       (sc-is x descriptor-stack))))
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y any-reg descriptor-reg))))
   (:results (y))
@@ -153,7 +137,7 @@
 	       (inst mov y (logior (ash (char-code val) type-bits)
 				   base-char-type)))))
 	 (move y x)))
-      ((descriptor-stack immediate-stack)
+      ((descriptor-stack)
        (if (sc-is x immediate)
 	   (let ((val (tn-value x)))
 	     (if (= (tn-offset fp) esp-offset)
@@ -294,6 +278,7 @@
 ;;; Result may be a bignum, so we have to check.  Use a worst-case cost to make
 ;;; sure people know they may be number consing.
 ;;;
+#+nil
 (define-vop (move-from-signed)
   (:args (x :scs (signed-reg unsigned-reg) :target eax))
   (:temporary (:sc dword-reg :offset eax-offset :from (:argument 0)) eax)
@@ -311,18 +296,14 @@
     (move y ebx)))
 ;;;
 ;;; Faster inline version,
-#+nil
 (define-vop (move-from-signed)
-  (:args (x :scs (signed-reg unsigned-reg) :to :save))
-  (:temporary (:sc dword-reg) alloc)
-  (:results (y :scs (any-reg descriptor-reg)))
+  (:args (x :scs (signed-reg unsigned-reg) :to :result))
+  (:results (y :scs (any-reg descriptor-reg) :from :argument))
   (:note "signed word to integer coercion")
   (:generator 20
      (assert (not (location= x y)))
-     (assert (not (location= x alloc)))
-     (assert (not (location= y alloc)))
-     (let ( (bignum (gen-label))
-	    (done (gen-label)) )
+     (let ((bignum (gen-label))
+	   (done (gen-label)))
        (inst mov y x)
        (inst shl y 1)
        (inst jmp :o bignum)
@@ -332,9 +313,8 @@
 
        (assemble (*elsewhere*)
           (emit-label bignum)
-	  (with-fixed-allocation (y alloc bignum-type
-				    (+ bignum-digits-offset 1))
-             (storew x y bignum-digits-offset other-pointer-type))
+	  (fixed-allocation y bignum-type (+ bignum-digits-offset 1))
+	  (storew x y bignum-digits-offset other-pointer-type)
 	  (inst jmp done)))))
 ;;;
 (define-move-vop move-from-signed :move
@@ -344,7 +324,7 @@
 ;;; Check for fixnum, and possibly allocate one or two word bignum result.  Use
 ;;; a worst-case cost to make sure people know they may be number consing.
 ;;;
-
+#+nil
 (define-vop (move-from-unsigned)
   (:args (x :scs (signed-reg unsigned-reg) :target eax))
   (:temporary (:sc dword-reg :offset eax-offset :from (:argument 0)) eax)
@@ -362,7 +342,6 @@
     (move y ebx)))
 ;;;
 ;;; Faster inline version.
-#+nil
 (define-vop (move-from-unsigned)
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
   (:temporary (:sc dword-reg) alloc)
@@ -372,10 +351,10 @@
     (assert (not (location= x y)))
     (assert (not (location= x alloc)))
     (assert (not (location= y alloc)))
-    (let ( (bignum (gen-label))
-	   (done (gen-label))
-	   (one-word-bignum (gen-label))
-	   (l1 (gen-label)) )
+    (let ((bignum (gen-label))
+	  (done (gen-label))
+	  (one-word-bignum (gen-label))
+	  (l1 (gen-label)))
       (inst test x #xe0000000)
       (inst jmp :nz bignum)
       ;; Fixnum.
@@ -398,8 +377,7 @@
 	 (inst mov y (logior (ash (1- (+ bignum-digits-offset 1)) vm:type-bits)
 			     bignum-type))
 	 (emit-label l1)
-	 (with-cgc-allocation 
-	  (alloc (pad-data-block (+ bignum-digits-offset 2))))
+	 (allocation alloc (pad-data-block (+ bignum-digits-offset 2)))
 	 (storew y alloc)
 	 (inst lea y (make-ea :byte :base alloc :disp other-pointer-type))
 	 (storew x y bignum-digits-offset other-pointer-type)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.3 1997/10/05 16:44:57 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.4 1997/11/04 09:11:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,13 +39,12 @@
 ;;;
 
 (define-vop (move-from-sap)
-  (:args (sap :scs (sap-reg) :to :save))
-  (:temporary (:sc dword-reg) alloc)
-  (:results (res :scs (descriptor-reg)))
+  (:args (sap :scs (sap-reg) :to :result))
+  (:results (res :scs (descriptor-reg) :from :argument))
   (:note "SAP to pointer coercion") 
   (:generator 20
-    (with-fixed-allocation (res alloc sap-type sap-size)
-      (storew sap res sap-pointer-slot other-pointer-type))))
+    (fixed-allocation res sap-type sap-size)
+    (storew sap res sap-pointer-slot other-pointer-type)))
 	   
 ;;;
 (define-move-vop move-from-sap :move

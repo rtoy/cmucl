@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.5 1997/07/11 05:24:42 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.6 1997/11/04 09:11:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
 
@@ -57,7 +57,6 @@
 	    (eval :scs (descriptor-reg))
 	    (oldfp :scs (descriptor-reg))
 	    (alien-stack :scs (descriptor-reg)))
-  (:vop-var vop)
   (:generator 13
     (load-symbol-value catch lisp::*current-catch-block*)
     (load-symbol-value eval lisp::*eval-stack-top*)
@@ -70,7 +69,6 @@
 	 (eval :scs (descriptor-reg))
 	 (oldfp :scs (descriptor-reg))
 	 (alien-stack :scs (descriptor-reg)))
-  (:vop-var vop)
   (:generator 10
     (store-symbol-value catch lisp::*current-catch-block*)
     (store-symbol-value eval lisp::*eval-stack-top*)
@@ -78,7 +76,7 @@
     (storew oldfp ebp-tn (- (1+ old-fp-save-offset)))))
 
 (define-vop (current-stack-pointer)
-  (:results (res :scs (any-reg immediate-stack)))
+  (:results (res :scs (any-reg descriptor-stack)))
   (:generator 1
     (move res esp-tn)))
 
@@ -268,7 +266,7 @@
 		    ;; (loadw tn start (- (1+ i)))
 		    (move move-temp start)
 		    (loadw tn move-temp (- (1+ i))))
-		   ((descriptor-stack immediate-stack)
+		   ((descriptor-stack)
 		    ;; (loadw move-temp start (- (1+ i)))
 		    (move move-temp start)
 		    (loadw move-temp move-temp (- (1+ i)))
@@ -348,7 +346,7 @@
   (:temporary (:sc dword-reg :offset esi-offset) esi)
   (:temporary (:sc dword-reg :offset edi-offset) edi)
   (:results (result :scs (any-reg) :from (:argument 0))
-	    (num :scs (any-reg immediate-stack)))
+	    (num :scs (any-reg descriptor-stack)))
   (:save-p :force-to-stack)
   (:vop-var vop)
   (:generator 30

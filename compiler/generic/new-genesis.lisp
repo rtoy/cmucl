@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.25 1997/11/01 22:58:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.26 1997/11/04 09:10:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -543,6 +543,10 @@
 		 (or *cold-symbol-allocation-space* *dynamic*)
 		 vm:word-bits (1- vm:symbol-size) vm:symbol-header-type)))
     (write-indexed symbol vm:symbol-value-slot unbound-marker)
+    (when (c:backend-featurep :x86)
+      (write-indexed symbol vm:symbol-hash-slot
+		     (make-fixnum-descriptor
+		      (1+ (random vm:target-most-positive-fixnum)))))
     (write-indexed symbol vm:symbol-plist-slot *nil-descriptor*)
     (write-indexed symbol vm:symbol-name-slot (string-to-core name *dynamic*))
     (write-indexed symbol vm:symbol-package-slot *nil-descriptor*)
@@ -750,7 +754,8 @@
       (frob "*FP-CONSTANT-0D0*" "X86" (number-to-core 0d0))
       (frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
       (frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
-      (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0)))))
+      (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
+      (frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern t)))))
 
 ;;; Make-Make-Package-Args  --  Internal
 ;;;
@@ -1684,9 +1689,12 @@
      ((and is-linux (gethash (concatenate 'string "PVE_stub_" name)
 			     *cold-foreign-symbol-table* nil)))
      ;; Non-linux case
-     ((let ((value (gethash name *cold-foreign-symbol-table* nil)))
-        #+irix (when (and (numberp value) (zerop value))
-                 (warn "Not-really-defined foreign symbol: ~S" name))
+     (#-irix
+      (gethash name *cold-foreign-symbol-table* nil)
+      #+irix
+      (let ((value (gethash name *cold-foreign-symbol-table* nil)))
+        (when (and (numberp value) (zerop value))
+	  (warn "Not-really-defined foreign symbol: ~S" name))
         value))
      ((and is-linux (gethash (concatenate 'string "__libc_" name)
 			     *cold-foreign-symbol-table* nil)))

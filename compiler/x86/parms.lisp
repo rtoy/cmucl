@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.7 1997/09/24 06:15:39 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.8 1997/11/04 09:11:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
 (setf (backend-fasl-file-type *target-backend*) "x86f")
 (setf (backend-fasl-file-implementation *target-backend*)
       x86-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 1)
+(setf (backend-fasl-file-version *target-backend*) 2)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :little-endian)
 
@@ -240,35 +240,46 @@
       lisp::*current-catch-block*
       lisp::*current-unwind-protect-block*
       *eval-stack-top*
+      *alien-stack*
 
       ;; Interrupt Handling
       lisp::*free-interrupt-context-index*
       unix::*interrupts-enabled*
       unix::*interrupt-pending*
 
-      ;; added by pfw
       *allocation-pointer*
       *binding-stack-pointer*
-      *x86-cgc-active-p*
-      *internal-gc-trigger*	; Keep C code happy
+      *internal-gc-trigger*   ; Not used.
 
-      *fp-constant-1s0*
+      ;; The FP constants
+      *fp-constant-0d0*
       *fp-constant-1d0*
       *fp-constant-0s0*
-      *fp-constant-0d0*
+      *fp-constant-1s0*
 
-      *alien-stack*
+      ;; Used by gencgc.
+      *scavenge-read-only-space*
 
+      ;; Multi-process support.
       *control-stacks*
 
-      ;; Some unused static variables - very handy for hacking.
-      *unused-static-6*
-      *unused-static-5*
-      *unused-static-4*
-      *unused-static-3*
-      *unused-static-2*
-      *unused-static-1*
-
+      ;; Spare symbols
+      spare-13
+      spare-12
+      spare-11
+      spare-10
+      spare-9
+      spare-8
+      spare-7
+      spare-6
+      spare-5
+      spare-4
+      spare-3
+      spare-2
+      spare-1
+      
+      ;; Used by CGC.
+      *x86-cgc-active-p*
       *static-blue-bag*		; Must be last or change C code
       ))
 

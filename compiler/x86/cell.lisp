@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.4 1997/09/29 05:06:53 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.5 1997/11/04 09:11:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,6 +107,12 @@
   (:policy :fast)
   (:translate symbol-value))
 
+(defknown fast-symbol-value-xadd (symbol fixnum) fixnum ())
+(define-vop (fast-symbol-value-xadd cell-xadd)
+  (:variant symbol-value-slot other-pointer-type)
+  (:policy :fast)
+  (:translate fast-symbol-value-xadd)
+  (:arg-types * tagged-num))
 
 (define-vop (boundp)
   (:translate boundp)
@@ -119,6 +125,19 @@
     (loadw value object symbol-value-slot other-pointer-type)
     (inst cmp value unbound-marker-type)
     (inst jmp (if not-p :e :ne) target)))
+
+(define-vop (symbol-hash)
+  (:policy :fast-safe)
+  (:translate symbol-hash)
+  (:args (symbol :scs (descriptor-reg)))
+  (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
+  (:generator 2
+    ;; the symbol-hash slot of NIL holds NIL because it is also the cdr
+    ;; slot, so we have to strip off the two low bits to make sure it is
+    ;; a fixnum.
+    (loadw res symbol symbol-hash-slot other-pointer-type)
+    (inst and res (lognot #b11))))
 
 
 ;;;; Fdefinition (fdefn) objects.
@@ -323,6 +342,12 @@
 	  temp)
     (move result eax)))
 
+(defknown %instance-xadd (instance index fixnum) fixnum ())
+(define-vop (instance-xadd-c slot-xadd)
+  (:policy :fast-safe)
+  (:translate %instance-xadd)
+  (:variant instance-slots-offset instance-pointer-type)
+  (:arg-types instance (:constant index) tagged-num))
 
 
 ;;;; Code object frobbing.

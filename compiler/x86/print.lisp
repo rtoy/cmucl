@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.1 1997/01/18 14:31:22 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.2 1997/11/04 09:11:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; core to keep the user entertained.
 ;;;
 ;;; Written by William Lott.
+;;; Enhancements/debugging by Douglas T. Crosher 1996.
 ;;;
 (in-package :x86)
 

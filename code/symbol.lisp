@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.22 1997/02/27 22:40:38 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.23 1997/11/04 09:10:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,7 +99,7 @@
   #-gengc (make-symbol string)
   #+gengc (%make-symbol (random most-positive-fixnum) string))
 
-#+gengc
+#+(or gengc x86)
 (defun symbol-hash (symbol)
   "Return the hash value for symbol."
   (symbol-hash symbol))

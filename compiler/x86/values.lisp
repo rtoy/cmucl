@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.2 1997/02/08 21:38:35 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.3 1997/11/04 09:11:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
 ;;; %more-arg-values by Douglas Thomas Crosher, March 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996.
 
 (in-package :x86)
 

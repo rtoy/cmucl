@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.4 1997/09/24 06:15:39 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.5 1997/11/04 09:11:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,7 @@
 (define-vop (get-lowtag)
   (:translate get-lowtag)
   (:policy :fast-safe)
-  (:args (object :scs (any-reg descriptor-reg immediate-stack descriptor-stack)
+  (:args (object :scs (any-reg descriptor-reg descriptor-stack)
 		 :target result))
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.4 1997/09/15 10:40:12 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.5 1997/11/04 09:10:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,9 +78,8 @@
 
   (move ecx res)
 
-  (with-fixed-allocation (res ebx bignum-type (1+ bignum-digits-offset))
-    (storew ecx res bignum-digits-offset other-pointer-type))
-
+  (fixed-allocation res bignum-type (1+ bignum-digits-offset))
+  (storew ecx res bignum-digits-offset other-pointer-type)
   
   OKAY)
 
@@ -99,8 +98,8 @@
   
   (move ecx res)
   
-  (with-fixed-allocation (res ebx bignum-type (1+ bignum-digits-offset))
-    (storew ecx res bignum-digits-offset other-pointer-type))
+  (fixed-allocation res bignum-type (1+ bignum-digits-offset))
+  (storew ecx res bignum-digits-offset other-pointer-type)
   OKAY)
 
 (define-generic-arith-routine (* 30)
@@ -120,15 +119,15 @@
   (inst cmp x ecx)
   (inst jmp :e SINGLE-WORD-BIGNUM)
 
-  (with-fixed-allocation (res ebx bignum-type (+ bignum-digits-offset 2))
-    (storew eax res bignum-digits-offset other-pointer-type)
-    (storew ecx res (1+ bignum-digits-offset) other-pointer-type))
+  (fixed-allocation res bignum-type (+ bignum-digits-offset 2))
+  (storew eax res bignum-digits-offset other-pointer-type)
+  (storew ecx res (1+ bignum-digits-offset) other-pointer-type)
   (inst jmp DONE)
 
   SINGLE-WORD-BIGNUM
   
-  (with-fixed-allocation (res ebx bignum-type (1+ bignum-digits-offset))
-    (storew eax res bignum-digits-offset other-pointer-type))
+  (fixed-allocation res bignum-type (1+ bignum-digits-offset))
+  (storew eax res bignum-digits-offset other-pointer-type)
   (inst jmp DONE)
 
   OKAY
@@ -168,9 +167,8 @@
   (inst shr res 2)			; sign bit is data - remove type bits
   (move ecx res)
 
-  (with-fixed-allocation (res eax bignum-type (1+ bignum-digits-offset))
-    (storew ecx res bignum-digits-offset other-pointer-type))
-
+  (fixed-allocation res bignum-type (1+ bignum-digits-offset))
+  (storew ecx res bignum-digits-offset other-pointer-type)
   
   OKAY)
 

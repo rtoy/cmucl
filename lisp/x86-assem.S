@@ -1,8 +1,9 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.4 1997/09/07 23:27:48 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.5 1997/11/04 09:11:23 dtc Exp $
  *
- * Author:	Paul F. Werkowski <pw@snoopy.mv.com>
+ * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
+ *		Douglas T. Crosher
  *
  * This code was written to support the port of CMU Common Lisp
  * to the Intel X86 ISA and the FreeBSD operating system. The
@@ -324,7 +325,7 @@ GNAME(undefined_tramp):
 	.byte	trap_Cerror
         .byte   2
         .byte   23
-        .byte   14
+        .byte   sc_DescriptorReg # EAX in the Descriptor-reg SC.
 	ret
 	.size	GNAME(undefined_tramp), .-GNAME(undefined_tramp)
 
@@ -423,4 +424,313 @@ Lend:
 	popl	%ebp
 	ret
 	.size	GNAME(fastcopy16),.-GNAME(fastcopy16)
+	.end
+
+
+/*
+   Allocate bytes and return the start of the allocated space
+   in the specified destination register.
+
+   In the general case the size will be in the destination register.
+
+   All registers must be preserved except the destination.
+   The C conventions will preserve ebx, esi, edi, and ebp.
+   So only eax, ecx, and edx need special care here. */
+		
+	.globl	GNAME(alloc_to_eax)
+	.type	GNAME(alloc_to_eax),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_eax):
+	pushl	%ecx	# Save ecx and edx as C could destroy them.
+	pushl	%edx
+	pushl	%eax	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	popl	%edx	# Restore ecx and edx.
+	popl	%ecx
+	ret
+	.size	GNAME(alloc_to_eax),.-GNAME(alloc_to_eax)
+
+	.globl	GNAME(alloc_8_to_eax)
+	.type	GNAME(alloc_8_to_eax),@function
+	.align	align_4byte,0x90
+GNAME(alloc_8_to_eax):
+	pushl	%ecx	# Save ecx and edx as C could destroy them.
+	pushl	%edx
+	pushl	$8	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	popl	%edx	# Restore ecx and edx.
+	popl	%ecx
+	ret
+	.size	GNAME(alloc_8_to_eax),.-GNAME(alloc_8_to_eax)
+
+	.globl	GNAME(alloc_8_to_eax)
+	.type	GNAME(alloc_8_to_eax),@function
+	.align	align_4byte,0x90
+
+	.globl	GNAME(alloc_16_to_eax)
+	.type	GNAME(alloc_16_to_eax),@function
+	.align	align_4byte,0x90
+GNAME(alloc_16_to_eax):
+	pushl	%ecx	# Save ecx and edx as C could destroy them.
+	pushl	%edx
+	pushl	$16	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	popl	%edx	# Restore ecx and edx.
+	popl	%ecx
+	ret
+	.size	GNAME(alloc_16_to_eax),.-GNAME(alloc_16_to_eax)
+
+
+	.globl	GNAME(alloc_to_ecx)
+	.type	GNAME(alloc_to_ecx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_ecx):
+	pushl	%eax	# Save eax and edx as C could destroy them.
+	pushl	%edx
+	pushl	%ecx	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%ecx	# setup the destination.
+	popl	%edx	# Restore eax and edx.
+	popl	%eax
+	ret
+	.size	GNAME(alloc_to_ecx),.-GNAME(alloc_to_ecx)
+
+	.globl	GNAME(alloc_8_to_ecx)
+	.type	GNAME(alloc_8_to_ecx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_8_to_ecx):
+	pushl	%eax	# Save eax and edx as C could destroy them.
+	pushl	%edx
+	pushl	$8	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%ecx	# setup the destination.
+	popl	%edx	# Restore eax and edx.
+	popl	%eax
+	ret
+	.size	GNAME(alloc_8_to_ecx),.-GNAME(alloc_8_to_ecx)
+
+	.globl	GNAME(alloc_16_to_ecx)
+	.type	GNAME(alloc_16_to_ecx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_16_to_ecx):
+	pushl	%eax	# Save eax and edx as C could destroy them.
+	pushl	%edx
+	pushl	$16	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%ecx	# setup the destination.
+	popl	%edx	# Restore eax and edx.
+	popl	%eax
+	ret
+	.size	GNAME(alloc_16_to_ecx),.-GNAME(alloc_16_to_ecx)
+
+
+	.globl	GNAME(alloc_to_edx)
+	.type	GNAME(alloc_to_edx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_edx):
+	pushl	%eax	# Save eax and ecx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%edx	# setup the destination.
+	popl	%ecx	# Restore eax and ecx.
+	popl	%eax
+	ret
+	.size	GNAME(alloc_to_edx),.-GNAME(alloc_to_edx)
+
+	.globl	GNAME(alloc_8_to_edx)
+	.type	GNAME(alloc_8_to_edx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_8_to_edx):
+	pushl	%eax	# Save eax and ecx as C could destroy them.
+	pushl	%ecx
+	pushl	$8	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%edx	# setup the destination.
+	popl	%ecx	# Restore eax and ecx.
+	popl	%eax
+	ret
+	.size	GNAME(alloc_8_to_edx),.-GNAME(alloc_8_to_edx)
+
+	.globl	GNAME(alloc_16_to_edx)
+	.type	GNAME(alloc_16_to_edx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_16_to_edx):
+	pushl	%eax	# Save eax and ecx as C could destroy them.
+	pushl	%ecx
+	pushl	$16	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%edx	# setup the destination.
+	popl	%ecx	# Restore eax and ecx.
+	popl	%eax
+	ret
+	.size	GNAME(alloc_16_to_edx),.-GNAME(alloc_16_to_edx)
+
+
+
+	.globl	GNAME(alloc_to_ebx)
+	.type	GNAME(alloc_to_ebx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_ebx):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	%ebx	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%ebx	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_to_ebx),.-GNAME(alloc_to_ebx)
+
+	.globl	GNAME(alloc_8_to_ebx)
+	.type	GNAME(alloc_8_to_ebx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_8_to_ebx):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	$8	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%ebx	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_8_to_ebx),.-GNAME(alloc_8_to_ebx)
+
+	.globl	GNAME(alloc_16_to_ebx)
+	.type	GNAME(alloc_16_to_ebx),@function
+	.align	align_4byte,0x90
+GNAME(alloc_16_to_ebx):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	$16	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%ebx	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_16_to_ebx),.-GNAME(alloc_16_to_ebx)
+
+
+
+	.globl	GNAME(alloc_to_esi)
+	.type	GNAME(alloc_to_esi),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_esi):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	%esi	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%esi	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_to_esi),.-GNAME(alloc_to_esi)
+
+	.globl	GNAME(alloc_8_to_esi)
+	.type	GNAME(alloc_8_to_esi),@function
+	.align	align_4byte,0x90
+GNAME(alloc_8_to_esi):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	$8	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%esi	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_8_to_esi),.-GNAME(alloc_8_to_esi)
+
+	.globl	GNAME(alloc_16_to_esi)
+	.type	GNAME(alloc_16_to_esi),@function
+	.align	align_4byte,0x90
+GNAME(alloc_16_to_esi):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	$16	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%esi	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_16_to_esi),.-GNAME(alloc_16_to_esi)
+
+
+	.globl	GNAME(alloc_to_edi)
+	.type	GNAME(alloc_to_edi),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_edi):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	%edi	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%edi	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_to_edi),.-GNAME(alloc_to_edi)
+
+	.globl	GNAME(alloc_8_to_edi)
+	.type	GNAME(alloc_8_to_edi),@function
+	.align	align_4byte,0x90
+GNAME(alloc_8_to_edi):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	$8	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%edi	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_8_to_edi),.-GNAME(alloc_8_to_edi)
+
+	.globl	GNAME(alloc_16_to_edi)
+	.type	GNAME(alloc_16_to_edi),@function
+	.align	align_4byte,0x90
+GNAME(alloc_16_to_edi):
+	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
+	pushl	%ecx
+	pushl	%edx
+	pushl	$16	# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%edi	# setup the destination.
+	popl	%edx	# Restore eax, ecx and edx.
+	popl	%ecx
+	popl	%eax
+	ret
+	.size	GNAME(alloc_16_to_edi),.-GNAME(alloc_16_to_edi)
+		
 	.end

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.50 1997/09/15 16:47:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.51 1997/11/04 09:10:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -518,7 +518,8 @@
 	 (let ((loc (int-sap (- (sap-int ptr) offset))))
 	   (cond ((= offset bytes-per-scrub-unit)
 		  count)
-		 ((zerop (stack-ref loc 0))
+		 ((zerop (kernel::get-lisp-obj-address (stack-ref loc 0)))
+;		 ((zerop (stack-ref loc 0))
 		  (look ptr (+ offset vm:word-bytes) count))
 		 (t
 		  (scrub ptr offset (+ count vm:word-bytes)))))))
