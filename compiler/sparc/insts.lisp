@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.10 1992/07/23 17:46:06 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.11 1993/02/08 20:05:09 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,8 @@
 (use-package "C")
 
 (def-assembler-params
-    :scheduler-p nil)
+    :scheduler-p t
+  :max-locations 68)
 
 
 ;;;; Constants, types, conversion functions, some disassembler stuff.
@@ -49,7 +50,32 @@
 
 (defvar *disassem-use-lisp-reg-names* t)
 
-(defconstant reg-symbols
+(def-vm-support-routine location-number (loc)
+  (etypecase loc
+    (null)
+    (number)
+    (fixup)
+    (tn
+     (ecase (sb-name (sc-sb (tn-sc loc)))
+       (registers
+	(unless (zerop (tn-offset loc))
+	  (tn-offset loc)))
+       (float-registers
+	(+ (tn-offset loc) 32))
+       (control-registers
+	64)
+       (immediate-constant
+	nil)))
+    (symbol
+     (ecase loc
+       (:memory 0)
+       (:psr 65)
+       (:fsr 66)
+       (:y 67)))))
+
+;;; symbols used for disassembly printing
+;;;
+(defparameter reg-symbols
   (map 'vector
        #'(lambda (name)
 	   (cond ((null name) nil)
@@ -67,7 +93,7 @@
 		  regname
 		  dstate))))
 
-(defconstant float-reg-symbols
+(defparameter float-reg-symbols
   (coerce 
    (loop for n from 0 to 31 collect (make-symbol (format nil "%F~d" n)))
    'vector))
@@ -289,7 +315,7 @@
   (with-ref-format `(:NAME :TAB rd ", " ,ref-format)))
 
 (defmacro define-f3-inst (name op op3 &key fixup load-store (dest-kind 'reg)
-			       (printer :default))
+			       (printer :default) reads writes flushable)
   (let ((printer
 	 (if (eq printer :default)
 	     (case load-store
@@ -297,6 +323,10 @@
 	       ((:load t) 'load-printer)
 	       (:store 'store-printer))
 	     printer)))
+    (when (and (atom reads) (not (null reads)))
+      (setf reads (list reads)))
+    (when (and (atom writes) (not (null writes)))
+       (setf writes (list writes)))
     `(define-instruction ,name (segment dst src1 &optional src2)
        (:declare (type tn dst)
 		 ,(if (or fixup load-store)
@@ -309,6 +339,40 @@
 	     (:printer format-3-immed
 		       ((op ,op) (op3 ,op3) (rd nil :type ',dest-kind))
 		       ,printer)))
+       ,@(when flushable
+	   '((:attributes flushable)))
+       (:dependencies
+	(reads src1)
+	,@(let ((reads-list nil))
+	    (dolist (read reads)
+	      (push (list 'reads read) reads-list))
+	    reads-list)
+	,@(cond ((eq load-store :store)
+		 '((reads dst)
+		   (if src2 (reads src2))))
+		 ((eq load-store t)
+		  '((reads :memory)
+		    (reads dst)
+		    (if src2 (reads src2))))
+		((eq load-store :load)
+		 '((reads :memory)
+		   (if src2 (reads src2) (reads dst))))
+		(t
+		 '((if src2 (reads src2) (reads dst)))))
+	,@(let ((writes-list nil))
+	    (dolist (write writes)
+	      (push (list 'writes write) writes-list))
+	    writes-list)
+	,@(cond ((eq load-store :store)
+		 '((writes :memory :partially t)))
+		((eq load-store t)
+		 '((writes :memory :partially t)
+		   (writes dst)))
+		((eq load-store :load)
+		 '((writes dst)))
+		(t
+		 '((writes dst)))))
+       (:delay 0)
        (:emitter (emit-format-3-inst segment ,op ,op3 dst src1 src2
 				     :load-store ,load-store
 				     :fixup ,fixup
@@ -336,35 +400,35 @@
 (define-f3-inst ldstub #b11 #b001101 :load-store t)
 (define-f3-inst swap #b11 #b001111 :load-store t)
 (define-f3-inst add #b10 #b000000 :fixup t)
-(define-f3-inst addcc #b10 #b010000)
-(define-f3-inst addx #b10 #b001000)
-(define-f3-inst addxcc #b10 #b011000)
-(define-f3-inst taddcc #b10 #b100000)
-(define-f3-inst taddcctv #b10 #b100010)
+(define-f3-inst addcc #b10 #b010000 :writes :psr)
+(define-f3-inst addx #b10 #b001000 :reads :psr)
+(define-f3-inst addxcc #b10 #b011000 :reads :psr :writes :psr)
+(define-f3-inst taddcc #b10 #b100000 :writes :psr)
+(define-f3-inst taddcctv #b10 #b100010 :writes :psr)
 (define-f3-inst sub #b10 #b000100)
-(define-f3-inst subcc #b10 #b010100)
-(define-f3-inst subx #b10 #b001100)
-(define-f3-inst subxcc #b10 #b011100)
-(define-f3-inst tsubcc #b10 #b100001)
-(define-f3-inst tsubcctv #b10 #b100011)
-(define-f3-inst mulscc #b10 #b100100)
+(define-f3-inst subcc #b10 #b010100 :writes :psr)
+(define-f3-inst subx #b10 #b001100 :reads :psr)
+(define-f3-inst subxcc #b10 #b011100 :reads :psr :writes :psr)
+(define-f3-inst tsubcc #b10 #b100001 :writes :psr)
+(define-f3-inst tsubcctv #b10 #b100011 :writes :psr)
+(define-f3-inst mulscc #b10 #b100100 :reads :y :writes (:psr :y))
 (define-f3-inst and #b10 #b000001)
-(define-f3-inst andcc #b10 #b010001)
+(define-f3-inst andcc #b10 #b010001 :writes :psr)
 (define-f3-inst andn #b10 #b000101)
-(define-f3-inst andncc #b10 #b010101)
+(define-f3-inst andncc #b10 #b010101 :writes :psr)
 (define-f3-inst or #b10 #b000010)
-(define-f3-inst orcc #b10 #b010010)
+(define-f3-inst orcc #b10 #b010010 :writes :psr)
 (define-f3-inst orn #b10 #b000110)
-(define-f3-inst orncc #b10 #b010110)
+(define-f3-inst orncc #b10 #b010110 :writes :psr)
 (define-f3-inst xor #b10 #b000011)
-(define-f3-inst xorcc #b10 #b010011)
+(define-f3-inst xorcc #b10 #b010011 :writes :psr)
 (define-f3-inst xnor #b10 #b000111)
-(define-f3-inst xnorcc #b10 #b010111)
+(define-f3-inst xnorcc #b10 #b010111 :writes :psr)
 (define-f3-inst sll #b10 #b100101)
 (define-f3-inst srl #b10 #b100110)
 (define-f3-inst sra #b10 #b100111)
-(define-f3-inst save #b10 #b111100)
-(define-f3-inst restore #b10 #b111101)
+(define-f3-inst save #b10 #b111100 :reads :psr :writes :psr)
+(define-f3-inst restore #b10 #b111101 :reads :psr :writes :psr)
 
 
 
@@ -373,16 +437,16 @@
 (define-instruction ldfsr (segment src1 src2)
   (:declare (type tn src1) (type (signed-byte 13) src2))
   (:printer format-3-immed ((op #b11) (op3 #b100001)))
-  (:reads (list src1 :memory))
-  (:writes :float-status)
+  :pinned
+  (:delay 0)
   (:emitter (emit-format-3-immed segment #b11 0 #b100001
 				 (reg-tn-encoding src1) 1 src2)))
 
 (define-instruction stfsr (segment src1 src2)
   (:declare (type tn src1) (type (signed-byte 13) src2))
   (:printer format-3-immed ((op #b11) (op3 #b100101)))
-  (:reads (list src1 :float-status))
-  (:writes :memory)
+  :pinned
+  (:delay 0)
   (:emitter (emit-format-3-immed segment #b11 0 #b100101 
 				 (reg-tn-encoding src1) 1 src2)))
 
@@ -397,7 +461,8 @@
 	    (type (or (signed-byte 22) (unsigned-byte 22) fixup) src1))
   (:printer format-2-immed
             ((op2 #b100) (immed nil :printer #'sethi-arg-printer)))
-  (:writes dst)
+  (:dependencies (writes dst))
+  (:delay 0)
   (:emitter
    (etypecase src1
      (integer
@@ -411,7 +476,8 @@
   (:declare (type tn dst))
   (:printer format-3-immed ((op #b10) (op3 #b101000) (rs1 0) (immed 0))
             '('RD :tab '%Y ", " rd))
-  (:reads dst)
+  (:dependencies (reads :y) (writes dst))
+  (:delay 0)
   (:emitter (emit-format-3-immed segment #b10 (reg-tn-encoding dst) #b101000
 				 0 1 0)))
 
@@ -422,7 +488,7 @@
   (:declare (type tn src1) (type (or (signed-byte 13) tn null) src2))
   (:printer format-3-reg ((op #b10) (op3 #b110000) (rd 0)) wry-printer)
   (:printer format-3-immed ((op #b10) (op3 #b110000) (rd 0)) wry-printer)
-  (:writes (if src2 (list src1 src2) src1))
+  (:dependencies (reads src1) (if src2 (reads src2)) (writes :y))
   (:delay 3)
   (:emitter
    (etypecase src2
@@ -492,6 +558,7 @@
 (define-instruction unimp (segment data)
   (:declare (type (unsigned-byte 22) data))
   (:printer format-2-unimp () :default :control #'unimp-control)
+  (:delay 0)
   (:emitter (emit-format-2-unimp segment 0 0 0 data)))
 
 
@@ -500,22 +567,28 @@
 
 (defun emit-relative-branch (segment a op2 cond-or-target target &optional fp)
   (emit-back-patch segment 4
-		  #'(lambda (segment posn)
-		      (unless target
-			(setf target cond-or-target)
-			(setf cond-or-target :t))
-		      (emit-format-2-branch
-		       segment #b00 a
-		       (if fp
-			   (fp-branch-condition cond-or-target)
-			   (branch-condition cond-or-target))
-		       op2
-		       (ash (- (label-position target) posn) -2)))))
+    #'(lambda (segment posn)
+	(unless target
+	  (setf target cond-or-target)
+	  (setf cond-or-target :t))
+	(emit-format-2-branch
+	  segment #b00 a
+	  (if fp
+	      (fp-branch-condition cond-or-target)
+	      (branch-condition cond-or-target))
+	  op2
+	  (let ((offset (ash (- (label-position target) posn) -2)))
+	    (when (and (= a 1) (> 0 offset))
+	      (error "Offset of BA must be positive"))
+	    offset)))))
 
 (define-instruction b (segment cond-or-target &optional target)
   (:declare (type (or label branch-condition) cond-or-target)
 	    (type (or label null) target))
   (:printer format-2-branch ((op #b00) (op2 #b010)))
+  (:attributes branch)
+  (:dependencies (reads :psr))
+  (:delay 1)
   (:emitter
    (emit-relative-branch segment 0 #b010 cond-or-target target)))
 
@@ -525,6 +598,9 @@
   (:printer format-2-branch ((op #b00) (op2 #b010) (a 1))
             nil
             :print-name 'b)
+  (:attributes branch)
+  (:dependencies (reads :psr))
+  (:delay 0)
   (:emitter
    (emit-relative-branch segment 1 #b010 cond-or-target target)))
 
@@ -536,14 +612,20 @@
                             (op3 #b111010)
                             (rs1 0))
             '(:name rd :tab immed))
+  (:attributes branch)
+  (:dependencies (reads :psr))
+  (:delay 0)
   (:emitter (emit-format-3-immed segment #b10 (branch-condition condition)
 				 #b111010 0 1 target)))
 
 (define-instruction fb (segment condition target)
   (:declare (type fp-branch-condition condition) (type label target))
-  (:printer format-2-branch ((Op #B00)
+  (:printer format-2-branch ((op #B00)
                              (cond nil :type 'branch-fp-condition)
                              (op2 #b110)))
+  (:attributes branch)
+  (:dependencies (reads :fsr))
+  (:delay 1)
   (:emitter
    (emit-relative-branch segment 0 #b110 condition target t)))
 
@@ -561,6 +643,9 @@
 	    (type (or null fixup tn (signed-byte 13)) src2))
   (:printer format-3-reg ((op #b10) (op3 #b111000)) jal-printer)
   (:printer format-3-immed ((op #b10) (op3 #b111000)) jal-printer)
+  (:attributes branch)
+  (:dependencies (reads src1) (if src2 (reads src2) (reads dst)) (writes dst))
+  (:delay 1)
   (:emitter
    (unless src2
      (setf src2 src1)
@@ -584,6 +669,9 @@
   (:declare (type tn src1) (type (or tn (signed-byte 13) fixup null) src2))
   (:printer format-3-reg ((op #b10) (op3 #b111000) (rd 0)) jal-printer)
   (:printer format-3-immed ((op #b10) (op3 #b111000) (rd 0)) jal-printer)
+  (:attributes branch)
+  (:dependencies (reads src1) (if src2 (reads src2)))
+  (:delay 1)
   (:emitter
    (etypecase src2
      (null
@@ -603,59 +691,82 @@
 
 ;;;; Unary and binary fp insts.
 
-(defun emit-fp-inst (segment opf op3 dst src1 src2)
+(defun emit-fp-inst (segment opf op3 dst src1 src2 &optional odd)
   (unless src2
     (setf src2 src1)
     (setf src1 dst))
-  (emit-format-3-fpop segment #b10 (fp-reg-tn-encoding dst) op3
-		      (fp-reg-tn-encoding src1) opf (fp-reg-tn-encoding src2)))
+  (emit-format-3-fpop segment #b10 (fp-reg-tn-encoding dst odd) op3
+		      (fp-reg-tn-encoding src1 odd) opf
+		      (fp-reg-tn-encoding src2 odd)))
 
 (eval-when (compile eval)
 
-(defmacro define-unary-fp-inst (name opf)
-  `(define-instruction ,name (segment dst src1 &optional src2)
-     (:declare (type tn dst src1) (type (or null tn) src2))
+(defmacro define-unary-fp-inst (name opf &key reads odd)
+  `(define-instruction ,name (segment dst src1)
+     (:declare (type tn dst src1))
      (:printer format-3-fpop ((op #b10) (op3 #b110100) (opf ,opf)))
-     (:emitter (emit-fp-inst segment ,opf #b110100 dst src1 src2))))
+     (:dependencies
+      ,@(when reads
+	  `((reads ,reads)))
+      (reads dst)
+      (reads src1)
+      (writes dst))
+     (:delay 0)
+     (:emitter (emit-fp-inst segment ,opf #b110100 dst src1 nil ,odd))))
 
-(defmacro define-binary-fp-inst (name opf &optional (op3 #b110100))
+(defmacro define-binary-fp-inst (name opf
+				      &key (op3 #b110100) reads writes delay)
   `(define-instruction ,name (segment dst src1 &optional src2)
      (:declare (type tn dst src1) (type (or null tn) src2))
      (:printer format-3-fpop ((op #b10) (op3 ,op3) (opf ,opf)))
+     (:dependencies
+      ,@(when reads
+	  `((reads ,reads)))
+      (reads src1)
+      (if src2 (reads src2) (reads dst))
+      ,@(when writes
+	  `((writes ,writes)))
+      (writes dst))
+     ,@(if delay
+	   `((:delay ,delay))
+	   '((:delay 0)))
      (:emitter (emit-fp-inst segment ,opf ,op3 dst src1 src2))))
   
 ); eval-when (compile eval)
 
 
-(define-unary-fp-inst fitos #b011000100)
-(define-unary-fp-inst fitod #b011001000)
-(define-unary-fp-inst fitox #b011001100)
+(define-unary-fp-inst fitos #b011000100 :reads :fsr)
+(define-unary-fp-inst fitod #b011001000 :reads :fsr)
+(define-unary-fp-inst fitox #b011001100 :reads :fsr)
 
-(define-unary-fp-inst fstoir #b011000001)
-(define-unary-fp-inst fdtoir #b011000010)
-(define-unary-fp-inst fxtoir #b011000011)
+(define-unary-fp-inst fstoir #b011000001 :reads :fsr)
+(define-unary-fp-inst fdtoir #b011000010 :reads :fsr)
+(define-unary-fp-inst fxtoir #b011000011 :reads :fsr)
 
 (define-unary-fp-inst fstoi #b011010001)
 (define-unary-fp-inst fdtoi #b011010010)
 (define-unary-fp-inst fxtoi #b011010011)
 
-(define-unary-fp-inst fstod #b011001001)
-(define-unary-fp-inst fstox #b011001101)
-(define-unary-fp-inst fdtos #b011000110)
-(define-unary-fp-inst fdtox #b011001110)
-(define-unary-fp-inst fxtos #b011000111)
-(define-unary-fp-inst fxtod #b011001011)
+(define-unary-fp-inst fstod #b011001001 :reads :fsr)
+(define-unary-fp-inst fstox #b011001101 :reads :fsr)
+(define-unary-fp-inst fdtos #b011000110 :reads :fsr)
+(define-unary-fp-inst fdtox #b011001110 :reads :fsr)
+(define-unary-fp-inst fxtos #b011000111 :reads :fsr)
+(define-unary-fp-inst fxtod #b011001011 :reads :fsr)
 
 (define-unary-fp-inst fmovs #b000000001)
-(define-instruction fmovs-odd (segment dst src1 &optional src2)
-  (:declare (type tn dst src1) (type (or null tn) src2))
-  (:emitter (emit-fp-inst segment #b000000001 #b110100 dst src1 src2)))
+(define-instruction fmovs-odd (segment dst src1)
+  (:declare (type tn dst src1))
+  (:dependencies (reads dst) (reads src1) (writes dst))
+  (:delay 0)
+  (:emitter (emit-fp-inst segment #b000000001 #b110100 dst src1 nil t)))
+
 (define-unary-fp-inst fnegs #b000000101)
 (define-unary-fp-inst fabss #b000001001)
 
-(define-unary-fp-inst fsqrts #b000101001)
-(define-unary-fp-inst fsqrtd #b000101010)
-(define-unary-fp-inst fsqrtx #b000101011)
+(define-unary-fp-inst fsqrts #b000101001 :reads :fsr)
+(define-unary-fp-inst fsqrtd #b000101010 :reads :fsr)
+(define-unary-fp-inst fsqrtx #b000101011 :reads :fsr)
 
 
 
@@ -673,43 +784,44 @@
 (define-binary-fp-inst fdivd #b001001110)
 (define-binary-fp-inst fdivx #b001001111)
 
-(define-binary-fp-inst fcmps #b001010001 #b110101)
-(define-binary-fp-inst fcmpd #b001010010 #b110101)
-(define-binary-fp-inst fcmpx #b001010011 #b110101)
-(define-binary-fp-inst fcmpes #b001010101 #b110101)
-(define-binary-fp-inst fcmped #b001010110 #b110101)
-(define-binary-fp-inst fcmpex #b001010111 #b110101)
+(define-binary-fp-inst fcmps #b001010001 :op3 #b110101 :writes :fsr :delay 1)
+(define-binary-fp-inst fcmpd #b001010010 :op3 #b110101 :writes :fsr :delay 1)
+(define-binary-fp-inst fcmpx #b001010011 :op3 #b110101 :writes :fsr :delay 1)
+(define-binary-fp-inst fcmpes #b001010101 :op3 #b110101 :writes :fsr :delay 1)
+(define-binary-fp-inst fcmped #b001010110 :op3 #b110101 :writes :fsr :delay 1)
+(define-binary-fp-inst fcmpex #b001010111 :op3 #b110101 :writes :fsr :delay 1)
 
 
 
 ;;;; li, jali, ji, nop, cmp, not, neg, move, and more
 
-(define-instruction li (segment reg value)
-  (:declare (type tn reg)
-	    (type (or (signed-byte 13) (signed-byte 32) (unsigned-byte 32)
-		      fixup) value))
-  (:vop-var vop)
-  (:emitter
-   (assemble (segment vop)
-	     (etypecase value
-	       ((signed-byte 13)
-		(inst add reg zero-tn value))
-	       ((or (signed-byte 32) (unsigned-byte 32))
-		(let ((hi (ldb (byte 22 10) value))
-		      (lo (ldb (byte 10 0) value)))
-		  (inst sethi reg hi)
-		  (unless (zerop lo)
-		    (inst add reg lo))))
-	       (fixup
-		(inst sethi reg value)
-		(inst add reg value))))))
+(defun %li (reg value)
+  (etypecase value
+    ((signed-byte 13)
+     (inst add reg zero-tn value))
+    ((or (signed-byte 32) (unsigned-byte 32))
+     (let ((hi (ldb (byte 22 10) value))
+	   (lo (ldb (byte 10 0) value)))
+       (inst sethi reg hi)
+       (unless (zerop lo)
+	 (inst add reg lo))))
+    (fixup
+     (inst sethi reg value)
+     (inst add reg value))))
+  
+(define-instruction-macro li (reg value)
+  `(%li ,reg ,value))
 
 ;;; Jal to a full 32-bit address.  Tmpreg is trashed.
 (define-instruction jali (segment link tmpreg value)
   (:declare (type tn link tmpreg)
 	    (type (or (signed-byte 13) (signed-byte 32) (unsigned-byte 32)
 		      fixup) value))
+  (:attributes variable-length)
   (:vop-var vop)
+  (:attributes branch)
+  (:dependencies (writes link) (writes tmpreg))
+  (:delay 1)
   (:emitter
    (assemble (segment vop)
      (etypecase value
@@ -729,14 +841,23 @@
   (:declare (type tn tmpreg)
 	    (type (or (signed-byte 13) (signed-byte 32) (unsigned-byte 32)
 		      fixup) value))
+  (:attributes variable-length)
   (:vop-var vop)
+  (:attributes branch)
+  (:dependencies (writes tmpreg))
+  (:delay 1)
   (:emitter
    (assemble (segment vop)
 	     (inst jali zero-tn tmpreg value))))
 
 (define-instruction nop (segment)
   (:printer format-2-immed ((rd 0) (op2 #b100) (immed 0)) '(:name))
+  (:attributes flushable)
+  (:delay 0)
   (:emitter (emit-format-2-immed segment 0 0 #b100 0)))
+
+(def-vm-support-routine emit-nop (segment)
+  (emit-format-2-immed segment 0 0 #b100 0))
 
 (define-instruction cmp (segment src1 &optional src2)
   (:declare (type tn src1) (type (or null tn (signed-byte 13)) src2))
@@ -744,6 +865,8 @@
             '(:name :tab rs1 ", " rs2))
   (:printer format-3-immed ((op #b10) (op3 #b010100) (rd 0))
             '(:name :tab rs1 ", " immed))
+  (:dependencies (reads src1) (if src2 (reads src2)) (writes :psr))
+  (:delay 0)
   (:emitter
    (etypecase src2
      (null
@@ -759,6 +882,8 @@
   (:declare (type tn dst) (type (or tn null) src1))
   (:printer format-3-reg ((op #b10) (op3 #b000111) (rs2 0))
             '(:name :tab (:unless (:same-as rd) rs1 ", " ) rd))
+  (:dependencies (if src1 (reads src1) (reads dst)) (writes dst))
+  (:delay 0)
   (:emitter
    (unless src1
      (setf src1 dst))
@@ -769,6 +894,8 @@
   (:declare (type tn dst) (type (or tn null) src1))
   (:printer format-3-reg ((op #b10) (op3 #b000100) (rs1 0))
             '(:name :tab (:unless (:same-as rd) rs2 ", " ) rd))
+  (:dependencies (if src1 (reads src1) (reads dst)) (writes dst))
+  (:delay 0)
   (:emitter
    (unless src1
      (setf src1 dst))
@@ -779,6 +906,9 @@
   (:declare (type tn dst src1))
   (:printer format-3-reg ((op #b10) (op3 #b000010) (rs1 0))
             '(:name :tab rs2 ", " rd))
+  (:attributes flushable)
+  (:dependencies (reads src1) (writes dst))
+  (:delay 0)
   (:emitter (emit-format-3-reg segment #b10 (reg-tn-encoding dst) #b000010
 			       0 0 0 (reg-tn-encoding src1))))
 
@@ -789,25 +919,26 @@
 (define-instruction word (segment word)
   (:declare (type (or (unsigned-byte 32) (signed-byte 32)) word))
   :pinned
+  (:delay 0)
   (:emitter
    (emit-word segment word)))
 
 (define-instruction short (segment short)
   (:declare (type (or (unsigned-byte 16) (signed-byte 16)) short))
   :pinned
+  (:delay 0)
   (:emitter
    (emit-short segment short)))
 
 (define-instruction byte (segment byte)
   (:declare (type (or (unsigned-byte 8) (signed-byte 8)) byte))
   :pinned
+  (:delay 0)
   (:emitter
    (emit-byte segment byte)))
 
 (define-emitter emit-header-object 32
   (byte 24 8) (byte 8 0))
-
-
   
 (defun emit-header-data (segment type)
   (emit-back-patch
@@ -820,11 +951,13 @@
 
 (define-instruction function-header-word (segment)
   :pinned
+  (:delay 0)
   (:emitter
    (emit-header-data segment function-header-type)))
 
 (define-instruction lra-header-word (segment)
   :pinned
+  (:delay 0)
   (:emitter
    (emit-header-data segment return-pc-header-type)))
 
@@ -854,8 +987,9 @@
 ;; code = fn - fn-ptr-type - header - label-offset + other-pointer-tag
 (define-instruction compute-code-from-fn (segment dst src label temp)
   (:declare (type tn dst src temp) (type label label))
-  (:reads src)
-  (:writes (list dst temp))
+  (:attributes variable-length)
+  (:dependencies (reads src) (writes dst) (writes temp))
+  (:delay 0)
   (:vop-var vop)
   (:emitter
    (emit-compute-inst segment vop dst src label temp
@@ -868,8 +1002,9 @@
 ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
 (define-instruction compute-code-from-lra (segment dst src label temp)
   (:declare (type tn dst src temp) (type label label))
-  (:reads src)
-  (:writes (list dst temp))
+  (:attributes variable-length)
+  (:dependencies (reads src) (writes dst) (writes temp))
+  (:delay 0)
   (:vop-var vop)
   (:emitter
    (emit-compute-inst segment vop dst src label temp
@@ -880,8 +1015,9 @@
 ;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
 (define-instruction compute-lra-from-code (segment dst src label temp)
   (:declare (type tn dst src temp) (type label label))
-  (:reads src)
-  (:writes (list dst temp))
+  (:attributes variable-length)
+  (:dependencies (reads src) (writes dst) (writes temp))
+  (:delay 0)
   (:vop-var vop)
   (:emitter
    (emit-compute-inst segment vop dst src label temp
